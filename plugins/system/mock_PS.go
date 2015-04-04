@@ -1,8 +1,9 @@
 package system
 
-import "github.com/stretchr/testify/mock"
-
-import "github.com/shirou/gopsutil/load"
+import (
+	"github.com/influxdb/tivan/plugins/system/ps/load"
+	"github.com/stretchr/testify/mock"
+)
 
 type MockPS struct {
 	mock.Mock

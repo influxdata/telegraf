@@ -2,7 +2,7 @@ package system
 
 import (
 	"github.com/influxdb/tivan/plugins"
-	"github.com/shirou/gopsutil/load"
+	"github.com/influxdb/tivan/plugins/system/ps/load"
 	"github.com/vektra/cypress"
 )
 
