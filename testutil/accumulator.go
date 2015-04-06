@@ -13,8 +13,6 @@ type Accumulator struct {
 }
 
 func (a *Accumulator) Add(name string, value interface{}, tags map[string]string) {
-	fmt.Printf("Add: %s => %v (%#v)\n", name, value, tags)
-
 	a.Points = append(a.Points, &Point{name, value, tags})
 }
 
