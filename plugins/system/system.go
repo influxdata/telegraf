@@ -1,60 +1,68 @@
 package system
 
 import (
+	"fmt"
+
 	"github.com/influxdb/tivan/plugins"
+	"github.com/influxdb/tivan/plugins/system/ps/cpu"
 	"github.com/influxdb/tivan/plugins/system/ps/load"
-	"github.com/vektra/cypress"
 )
 
 type PS interface {
 	LoadAvg() (*load.LoadAvgStat, error)
+	CPUTimes() ([]cpu.CPUTimesStat, error)
 }
 
 type SystemStats struct {
-	ps   PS
-	tags map[string]string
+	ps PS
 }
 
-func (s *SystemStats) Read() ([]*cypress.Message, error) {
+func (s *SystemStats) add(acc plugins.Accumulator, name string, val float64) {
+	if val >= 0 {
+		acc.Add(name, val, nil)
+	}
+}
+
+func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 	lv, err := s.ps.LoadAvg()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	m1 := cypress.Metric()
-	m1.Add("type", "gauge")
-	m1.Add("name", "load1")
-	m1.Add("value", lv.Load1)
+	acc.Add("load1", lv.Load1, nil)
+	acc.Add("load5", lv.Load5, nil)
+	acc.Add("load15", lv.Load15, nil)
 
-	for k, v := range s.tags {
-		m1.AddTag(k, v)
+	times, err := s.ps.CPUTimes()
+	if err != nil {
+		return fmt.Errorf("error getting CPU info: %s", err)
 	}
 
-	m2 := cypress.Metric()
-	m2.Add("type", "gauge")
-	m2.Add("name", "load5")
-	m2.Add("value", lv.Load5)
-
-	for k, v := range s.tags {
-		m2.AddTag(k, v)
+	for _, cts := range times {
+		s.add(acc, cts.CPU+".user", cts.User)
+		s.add(acc, cts.CPU+".system", cts.System)
+		s.add(acc, cts.CPU+".idle", cts.Idle)
+		s.add(acc, cts.CPU+".nice", cts.Nice)
+		s.add(acc, cts.CPU+".iowait", cts.Iowait)
+		s.add(acc, cts.CPU+".irq", cts.Irq)
+		s.add(acc, cts.CPU+".softirq", cts.Softirq)
+		s.add(acc, cts.CPU+".steal", cts.Steal)
+		s.add(acc, cts.CPU+".guest", cts.Guest)
+		s.add(acc, cts.CPU+".guestNice", cts.GuestNice)
+		s.add(acc, cts.CPU+".stolen", cts.Stolen)
 	}
 
-	m3 := cypress.Metric()
-	m3.Add("type", "gauge")
-	m3.Add("name", "load15")
-	m3.Add("value", lv.Load15)
-
-	for k, v := range s.tags {
-		m3.AddTag(k, v)
-	}
-
-	return []*cypress.Message{m1, m2, m3}, nil
+	return nil
 }
 
 type systemPS struct{}
 
 func (s *systemPS) LoadAvg() (*load.LoadAvgStat, error) {
 	return load.LoadAvg()
+}
+
+func (s *systemPS) CPUTimes() ([]cpu.CPUTimesStat, error) {
+	return cpu.CPUTimes(true)
 }
 
 func init() {

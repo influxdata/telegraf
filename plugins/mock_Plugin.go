@@ -2,17 +2,14 @@ package plugins
 
 import "github.com/stretchr/testify/mock"
 
-import "github.com/vektra/cypress"
-
 type MockPlugin struct {
 	mock.Mock
 }
 
-func (m *MockPlugin) Read() ([]*cypress.Message, error) {
-	ret := m.Called()
+func (m *MockPlugin) Gather(_a0 Accumulator) error {
+	ret := m.Called(_a0)
 
-	r0 := ret.Get(0).([]*cypress.Message)
-	r1 := ret.Error(1)
+	r0 := ret.Error(0)
 
-	return r0, r1
+	return r0
 }

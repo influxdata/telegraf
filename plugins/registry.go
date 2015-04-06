@@ -1,9 +1,11 @@
 package plugins
 
-import "github.com/vektra/cypress"
+type Accumulator interface {
+	Add(name string, value interface{}, tags map[string]string)
+}
 
 type Plugin interface {
-	Read() ([]*cypress.Message, error)
+	Gather(Accumulator) error
 }
 
 type Creator func() Plugin

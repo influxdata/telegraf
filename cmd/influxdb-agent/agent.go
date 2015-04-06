@@ -32,7 +32,10 @@ func main() {
 		config = tivan.DefaultConfig()
 	}
 
-	ag := tivan.NewAgent(config)
+	ag, err := tivan.NewAgent(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if *fDebug {
 		ag.Debug = true

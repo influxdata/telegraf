@@ -1,13 +1,13 @@
 package tivan
 
 import (
-	"fmt"
 	"log"
+	"net/url"
 	"sort"
 
+	"github.com/influxdb/influxdb/client"
 	"github.com/influxdb/tivan/plugins"
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugins/metrics"
 )
 import "time"
 
@@ -23,47 +23,39 @@ type Agent struct {
 	Config *Config
 
 	plugins []plugins.Plugin
-	metrics Metrics
+
+	conn *client.Client
 
 	eachInternal []func()
 }
 
-func NewAgent(config *Config) *Agent {
-	m := metrics.NewMetricSink()
-
-	agent := &Agent{Config: config, metrics: m}
+func NewAgent(config *Config) (*Agent, error) {
+	agent := &Agent{Config: config}
 
 	err := config.Apply("agent", agent)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	if config.URL != "" {
-		icfg := metrics.DefaultInfluxConfig()
-		icfg.URL = config.URL
-		icfg.Username = config.Username
-		icfg.Password = config.Password
-		icfg.Database = config.Database
-		icfg.UserAgent = config.UserAgent
-
-		agent.eachInternal = append(agent.eachInternal, func() {
-			if agent.Debug {
-				log.Printf("flushing to influxdb")
-			}
-
-			m.FlushInflux(icfg)
-		})
+	u, err := url.Parse(config.URL)
+	if err != nil {
+		return nil, err
 	}
 
-	return agent
-}
+	c, err := client.NewClient(client.Config{
+		URL:       *u,
+		Username:  config.Username,
+		Password:  config.Password,
+		UserAgent: config.UserAgent,
+	})
 
-type HTTPInterface interface {
-	RunHTTP(string) error
-}
+	if err != nil {
+		return nil, err
+	}
 
-func (a *Agent) RunHTTP(addr string) {
-	a.metrics.(HTTPInterface).RunHTTP(addr)
+	agent.conn = c
+
+	return agent, nil
 }
 
 func (a *Agent) LoadPlugins() ([]string, error) {
@@ -80,36 +72,24 @@ func (a *Agent) LoadPlugins() ([]string, error) {
 }
 
 func (a *Agent) crank() error {
+	var acc BatchPoints
+
 	for _, plugin := range a.plugins {
-		msgs, err := plugin.Read()
+		err := plugin.Gather(&acc)
 		if err != nil {
 			return err
 		}
-
-		for _, m := range msgs {
-			for k, v := range a.Config.Tags {
-				m.AddTag(k, v)
-			}
-
-			if a.Debug {
-				fmt.Println(m.KVString())
-			}
-
-			err = a.metrics.Receive(m)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
-	return nil
+	acc.Tags = a.Config.Tags
+	acc.Timestamp = time.Now()
+	acc.Database = a.Config.Database
+
+	_, err := a.conn.Write(acc.BatchPoints)
+	return err
 }
 
 func (a *Agent) Run(shutdown chan struct{}) {
-	if a.HTTP != "" {
-		go a.RunHTTP(a.HTTP)
-	}
-
 	ticker := time.NewTicker(a.Interval.Duration)
 
 	for {

@@ -7,6 +7,6 @@ debug = true
 url = "http://localhost:8086"
 username = "root"
 password = "root"
-database = "cypress"
+database = "tivan"
 tags = { dc = "us-phx-1" }
 
