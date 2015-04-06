@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	common "github.com/shirou/gopsutil/common"
+	common "github.com/influxdb/tivan/plugins/system/ps/common"
 )
 
 // NetIOCounters returnes network I/O statistics for every network

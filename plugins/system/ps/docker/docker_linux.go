@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	common "github.com/shirou/gopsutil/common"
-	cpu "github.com/shirou/gopsutil/cpu"
+	"github.com/influxdb/tivan/plugins/system/ps/common"
+	"github.com/influxdb/tivan/plugins/system/ps/cpu"
 )
 
 // GetDockerIDList returnes a list of DockerID.
