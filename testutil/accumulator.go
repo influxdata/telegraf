@@ -1,5 +1,7 @@
 package testutil
 
+import "fmt"
+
 type Point struct {
 	Name  string
 	Value interface{}
@@ -11,6 +13,8 @@ type Accumulator struct {
 }
 
 func (a *Accumulator) Add(name string, value interface{}, tags map[string]string) {
+	fmt.Printf("Add: %s => %v (%#v)\n", name, value, tags)
+
 	a.Points = append(a.Points, &Point{name, value, tags})
 }
 
@@ -25,17 +29,32 @@ func (a *Accumulator) CheckValue(name string, val interface{}) bool {
 }
 
 func (a *Accumulator) CheckTaggedValue(name string, val interface{}, tags map[string]string) bool {
+	return a.ValidateTaggedValue(name, val, tags) == nil
+}
+
+func (a *Accumulator) ValidateTaggedValue(name string, val interface{}, tags map[string]string) error {
 	for _, p := range a.Points {
-		for k, v := range p.Tags {
-			if tags[k] != v {
-				continue
+		var found bool
+
+		if p.Tags == nil && tags == nil {
+			found = true
+		} else {
+			for k, v := range p.Tags {
+				if tags[k] == v {
+					found = true
+					break
+				}
 			}
 		}
 
-		if p.Name == name {
-			return p.Value == val
+		if found && p.Name == name {
+			if p.Value != val {
+				return fmt.Errorf("%v (%T) != %v (%T)", p.Value, p.Value, val, val)
+			}
+
+			return nil
 		}
 	}
 
-	return false
+	return fmt.Errorf("unknown value %s with tags %v", name, tags)
 }

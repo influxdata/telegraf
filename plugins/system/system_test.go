@@ -6,6 +6,7 @@ import (
 	"github.com/influxdb/tivan/plugins/system/ps/cpu"
 	"github.com/influxdb/tivan/plugins/system/ps/disk"
 	"github.com/influxdb/tivan/plugins/system/ps/load"
+	"github.com/influxdb/tivan/plugins/system/ps/mem"
 	"github.com/influxdb/tivan/plugins/system/ps/net"
 	"github.com/influxdb/tivan/testutil"
 	"github.com/stretchr/testify/assert"
@@ -84,6 +85,33 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("NetIO").Return([]net.NetIOCountersStat{netio}, nil)
 
+	vms := &mem.VirtualMemoryStat{
+		Total:       12400,
+		Available:   7600,
+		Used:        5000,
+		UsedPercent: 47.1,
+		Free:        1235,
+		Active:      8134,
+		Inactive:    1124,
+		Buffers:     771,
+		Cached:      4312,
+		Wired:       134,
+		Shared:      2142,
+	}
+
+	mps.On("VMStat").Return(vms, nil)
+
+	sms := &mem.SwapMemoryStat{
+		Total:       8123,
+		Used:        1232,
+		Free:        6412,
+		UsedPercent: 12.2,
+		Sin:         7,
+		Sout:        830,
+	}
+
+	mps.On("SwapStat").Return(sms, nil)
+
 	err := ss.Gather(&acc)
 	require.NoError(t, err)
 
@@ -139,4 +167,32 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("read_time", uint64(7123), dtags))
 	assert.True(t, acc.CheckTaggedValue("write_time", uint64(9087), dtags))
 	assert.True(t, acc.CheckTaggedValue("io_time", uint64(123552), dtags))
+
+	vmtags := map[string]string{
+		"memory": "virtual",
+	}
+
+	assert.NoError(t, acc.ValidateTaggedValue("total", uint64(12400), vmtags))
+	assert.True(t, acc.CheckTaggedValue("total", uint64(12400), vmtags))
+	assert.True(t, acc.CheckTaggedValue("available", uint64(7600), vmtags))
+	assert.True(t, acc.CheckTaggedValue("used", uint64(5000), vmtags))
+	assert.True(t, acc.CheckTaggedValue("used_prec", float64(47.1), vmtags))
+	assert.True(t, acc.CheckTaggedValue("free", uint64(1235), vmtags))
+	assert.True(t, acc.CheckTaggedValue("active", uint64(8134), vmtags))
+	assert.True(t, acc.CheckTaggedValue("inactive", uint64(1124), vmtags))
+	assert.True(t, acc.CheckTaggedValue("buffers", uint64(771), vmtags))
+	assert.True(t, acc.CheckTaggedValue("cached", uint64(4312), vmtags))
+	assert.True(t, acc.CheckTaggedValue("wired", uint64(134), vmtags))
+	assert.True(t, acc.CheckTaggedValue("shared", uint64(2142), vmtags))
+
+	swaptags := map[string]string{
+		"memory": "swap",
+	}
+
+	assert.True(t, acc.CheckTaggedValue("total", uint64(8123), swaptags))
+	assert.True(t, acc.CheckTaggedValue("used", uint64(1232), swaptags))
+	assert.True(t, acc.CheckTaggedValue("used_perc", float64(12.2), swaptags))
+	assert.True(t, acc.CheckTaggedValue("free", uint64(6412), swaptags))
+	assert.True(t, acc.CheckTaggedValue("swap_in", uint64(7), swaptags))
+	assert.True(t, acc.CheckTaggedValue("swap_out", uint64(830), swaptags))
 }

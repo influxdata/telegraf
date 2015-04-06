@@ -8,6 +8,7 @@ import (
 	"github.com/influxdb/tivan/plugins/system/ps/cpu"
 	"github.com/influxdb/tivan/plugins/system/ps/disk"
 	"github.com/influxdb/tivan/plugins/system/ps/load"
+	"github.com/influxdb/tivan/plugins/system/ps/mem"
 	"github.com/influxdb/tivan/plugins/system/ps/net"
 )
 
@@ -17,6 +18,8 @@ type PS interface {
 	DiskUsage() ([]*disk.DiskUsageStat, error)
 	NetIO() ([]net.NetIOCountersStat, error)
 	DiskIO() (map[string]disk.DiskIOCountersStat, error)
+	VMStat() (*mem.VirtualMemoryStat, error)
+	SwapStat() (*mem.SwapMemoryStat, error)
 }
 
 type SystemStats struct {
@@ -116,6 +119,43 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 		acc.Add("drop_out", io.Dropout, tags)
 	}
 
+	vm, err := s.ps.VMStat()
+	if err != nil {
+		return err
+	}
+
+	vmtags := map[string]string{
+		"memory": "virtual",
+	}
+
+	acc.Add("total", vm.Total, vmtags)
+	acc.Add("available", vm.Available, vmtags)
+	acc.Add("used", vm.Used, vmtags)
+	acc.Add("used_prec", vm.UsedPercent, vmtags)
+	acc.Add("free", vm.Free, vmtags)
+	acc.Add("active", vm.Active, vmtags)
+	acc.Add("inactive", vm.Inactive, vmtags)
+	acc.Add("buffers", vm.Buffers, vmtags)
+	acc.Add("cached", vm.Cached, vmtags)
+	acc.Add("wired", vm.Wired, vmtags)
+	acc.Add("shared", vm.Shared, vmtags)
+
+	swap, err := s.ps.SwapStat()
+	if err != nil {
+		return err
+	}
+
+	swaptags := map[string]string{
+		"memory": "swap",
+	}
+
+	acc.Add("total", swap.Total, swaptags)
+	acc.Add("used", swap.Used, swaptags)
+	acc.Add("free", swap.Free, swaptags)
+	acc.Add("used_perc", swap.UsedPercent, swaptags)
+	acc.Add("swap_in", swap.Sin, swaptags)
+	acc.Add("swap_out", swap.Sout, swaptags)
+
 	return nil
 }
 
@@ -160,6 +200,14 @@ func (s *systemPS) DiskIO() (map[string]disk.DiskIOCountersStat, error) {
 	}
 
 	return m, err
+}
+
+func (s *systemPS) VMStat() (*mem.VirtualMemoryStat, error) {
+	return mem.VirtualMemory()
+}
+
+func (s *systemPS) SwapStat() (*mem.SwapMemoryStat, error) {
+	return mem.SwapMemory()
 }
 
 func init() {
