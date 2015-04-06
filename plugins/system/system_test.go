@@ -56,6 +56,20 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("DiskUsage").Return([]*disk.DiskUsageStat{du}, nil)
 
+	diskio := disk.DiskIOCountersStat{
+		ReadCount:    888,
+		WriteCount:   5341,
+		ReadBytes:    100000,
+		WriteBytes:   200000,
+		ReadTime:     7123,
+		WriteTime:    9087,
+		Name:         "sda1",
+		IoTime:       123552,
+		SerialNumber: "ab-123-ad",
+	}
+
+	mps.On("DiskIO").Return(map[string]disk.DiskIOCountersStat{"sda1": diskio}, nil)
+
 	netio := net.NetIOCountersStat{
 		Name:        "eth0",
 		BytesSent:   1123,
@@ -112,4 +126,17 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("err_out", uint64(8), ntags))
 	assert.True(t, acc.CheckTaggedValue("drop_in", uint64(7), ntags))
 	assert.True(t, acc.CheckTaggedValue("drop_out", uint64(1), ntags))
+
+	dtags := map[string]string{
+		"name":   "sda1",
+		"serial": "ab-123-ad",
+	}
+
+	assert.True(t, acc.CheckTaggedValue("reads", uint64(888), dtags))
+	assert.True(t, acc.CheckTaggedValue("writes", uint64(5341), dtags))
+	assert.True(t, acc.CheckTaggedValue("read_bytes", uint64(100000), dtags))
+	assert.True(t, acc.CheckTaggedValue("write_bytes", uint64(200000), dtags))
+	assert.True(t, acc.CheckTaggedValue("read_time", uint64(7123), dtags))
+	assert.True(t, acc.CheckTaggedValue("write_time", uint64(9087), dtags))
+	assert.True(t, acc.CheckTaggedValue("io_time", uint64(123552), dtags))
 }

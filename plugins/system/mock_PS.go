@@ -43,3 +43,11 @@ func (m *MockPS) NetIO() ([]net.NetIOCountersStat, error) {
 
 	return r0, r1
 }
+func (m *MockPS) DiskIO() (map[string]disk.DiskIOCountersStat, error) {
+	ret := m.Called()
+
+	r0 := ret.Get(0).(map[string]disk.DiskIOCountersStat)
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
