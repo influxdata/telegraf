@@ -5,6 +5,7 @@ import "github.com/stretchr/testify/mock"
 import "github.com/influxdb/tivan/plugins/system/ps/cpu"
 import "github.com/influxdb/tivan/plugins/system/ps/disk"
 import "github.com/influxdb/tivan/plugins/system/ps/load"
+import "github.com/influxdb/tivan/plugins/system/ps/net"
 
 type MockPS struct {
 	mock.Mock
@@ -30,6 +31,14 @@ func (m *MockPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 	ret := m.Called()
 
 	r0 := ret.Get(0).([]*disk.DiskUsageStat)
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
+func (m *MockPS) NetIO() ([]net.NetIOCountersStat, error) {
+	ret := m.Called()
+
+	r0 := ret.Get(0).([]net.NetIOCountersStat)
 	r1 := ret.Error(1)
 
 	return r0, r1

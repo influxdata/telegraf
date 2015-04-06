@@ -7,12 +7,14 @@ import (
 	"github.com/influxdb/tivan/plugins/system/ps/cpu"
 	"github.com/influxdb/tivan/plugins/system/ps/disk"
 	"github.com/influxdb/tivan/plugins/system/ps/load"
+	"github.com/influxdb/tivan/plugins/system/ps/net"
 )
 
 type PS interface {
 	LoadAvg() (*load.LoadAvgStat, error)
 	CPUTimes() ([]cpu.CPUTimesStat, error)
 	DiskUsage() ([]*disk.DiskUsageStat, error)
+	NetIO() ([]net.NetIOCountersStat, error)
 }
 
 type SystemStats struct {
@@ -72,6 +74,26 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 		acc.Add("inodes_used", du.InodesTotal-du.InodesFree, tags)
 	}
 
+	netio, err := s.ps.NetIO()
+	if err != nil {
+		return err
+	}
+
+	for _, io := range netio {
+		tags := map[string]string{
+			"interface": io.Name,
+		}
+
+		acc.Add("bytes_sent", io.BytesSent, tags)
+		acc.Add("bytes_recv", io.BytesRecv, tags)
+		acc.Add("packets_sent", io.PacketsSent, tags)
+		acc.Add("packets_recv", io.PacketsRecv, tags)
+		acc.Add("err_in", io.Errin, tags)
+		acc.Add("err_out", io.Errout, tags)
+		acc.Add("drop_in", io.Dropin, tags)
+		acc.Add("drop_out", io.Dropout, tags)
+	}
+
 	return nil
 }
 
@@ -103,6 +125,10 @@ func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 	}
 
 	return usage, nil
+}
+
+func (s *systemPS) NetIO() ([]net.NetIOCountersStat, error) {
+	return net.NetIOCounters(true)
 }
 
 func init() {

@@ -6,6 +6,7 @@ import (
 	"github.com/influxdb/tivan/plugins/system/ps/cpu"
 	"github.com/influxdb/tivan/plugins/system/ps/disk"
 	"github.com/influxdb/tivan/plugins/system/ps/load"
+	"github.com/influxdb/tivan/plugins/system/ps/net"
 	"github.com/influxdb/tivan/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,6 +56,20 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("DiskUsage").Return([]*disk.DiskUsageStat{du}, nil)
 
+	netio := net.NetIOCountersStat{
+		Name:        "eth0",
+		BytesSent:   1123,
+		BytesRecv:   8734422,
+		PacketsSent: 781,
+		PacketsRecv: 23456,
+		Errin:       832,
+		Errout:      8,
+		Dropin:      7,
+		Dropout:     1,
+	}
+
+	mps.On("NetIO").Return([]net.NetIOCountersStat{netio}, nil)
+
 	err := ss.Gather(&acc)
 	require.NoError(t, err)
 
@@ -84,4 +99,17 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("inodes_total", uint64(1234), tags))
 	assert.True(t, acc.CheckTaggedValue("inodes_free", uint64(234), tags))
 	assert.True(t, acc.CheckTaggedValue("inodes_used", uint64(1000), tags))
+
+	ntags := map[string]string{
+		"interface": "eth0",
+	}
+
+	assert.True(t, acc.CheckTaggedValue("bytes_sent", uint64(1123), ntags))
+	assert.True(t, acc.CheckTaggedValue("bytes_recv", uint64(8734422), ntags))
+	assert.True(t, acc.CheckTaggedValue("packets_sent", uint64(781), ntags))
+	assert.True(t, acc.CheckTaggedValue("packets_recv", uint64(23456), ntags))
+	assert.True(t, acc.CheckTaggedValue("err_in", uint64(832), ntags))
+	assert.True(t, acc.CheckTaggedValue("err_out", uint64(8), ntags))
+	assert.True(t, acc.CheckTaggedValue("drop_in", uint64(7), ntags))
+	assert.True(t, acc.CheckTaggedValue("drop_out", uint64(1), ntags))
 }
