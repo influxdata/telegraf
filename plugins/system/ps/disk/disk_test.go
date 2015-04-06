@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+
+	"github.com/shirou/gopsutil/common"
 )
 
 func TestDisk_usage(t *testing.T) {
@@ -36,6 +38,10 @@ func TestDisk_partitions(t *testing.T) {
 func TestDisk_io_counters(t *testing.T) {
 	ret, err := DiskIOCounters()
 	if err != nil {
+		if err == common.NotImplementedError {
+			t.SkipNow()
+		}
+
 		t.Errorf("error %v", err)
 	}
 	if len(ret) == 0 {

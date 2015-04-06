@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/shirou/gopsutil/common"
 )
 
 func testGetProcess() Process {
@@ -60,6 +62,10 @@ func Test_Process_memory_maps(t *testing.T) {
 
 	mmaps, err := ret.MemoryMaps(false)
 	if err != nil {
+		if err == common.NotImplementedError {
+			t.SkipNow()
+		}
+
 		t.Errorf("memory map get error %v", err)
 	}
 	empty := MemoryMapsStat{}
@@ -123,6 +129,10 @@ func Test_Process_Terminal(t *testing.T) {
 
 	_, err := p.Terminal()
 	if err != nil {
+		if err == common.NotImplementedError {
+			t.SkipNow()
+		}
+
 		t.Errorf("geting terminal error %v", err)
 	}
 
@@ -138,6 +148,10 @@ func Test_Process_IOCounters(t *testing.T) {
 
 	v, err := p.IOCounters()
 	if err != nil {
+		if err == common.NotImplementedError {
+			t.SkipNow()
+		}
+
 		t.Errorf("geting iocounter error %v", err)
 		return
 	}
@@ -152,6 +166,10 @@ func Test_Process_NumCtx(t *testing.T) {
 
 	_, err := p.NumCtxSwitches()
 	if err != nil {
+		if err == common.NotImplementedError {
+			t.SkipNow()
+		}
+
 		t.Errorf("geting numctx error %v", err)
 		return
 	}
@@ -173,6 +191,10 @@ func Test_Process_NumThread(t *testing.T) {
 
 	n, err := p.NumThreads()
 	if err != nil {
+		if err == common.NotImplementedError {
+			t.SkipNow()
+		}
+
 		t.Errorf("geting NumThread error %v", err)
 	}
 	if n < 0 {
@@ -196,6 +218,10 @@ func Test_Process_Exe(t *testing.T) {
 
 	n, err := p.Exe()
 	if err != nil {
+		if err == common.NotImplementedError {
+			t.SkipNow()
+		}
+
 		t.Errorf("geting Exe error %v", err)
 	}
 	if !strings.Contains(n, "process.test") {
@@ -207,6 +233,10 @@ func Test_Process_CpuPercent(t *testing.T) {
 	p := testGetProcess()
 	percent, err := p.CPUPercent(0)
 	if err != nil {
+		if err == common.NotImplementedError {
+			t.SkipNow()
+		}
+
 		t.Errorf("error %v", err)
 	}
 	duration := time.Duration(1000) * time.Microsecond
@@ -231,6 +261,10 @@ func Test_Process_CpuPercentLoop(t *testing.T) {
 		duration := time.Duration(100) * time.Microsecond
 		percent, err := p.CPUPercent(duration)
 		if err != nil {
+			if err == common.NotImplementedError {
+				t.SkipNow()
+			}
+
 			t.Errorf("error %v", err)
 		}
 		//	if percent < 0.0 || percent > 100.0*float64(numcpu) { // TODO
