@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/influxdb/tivan/plugins/system/ps/cpu"
+	"github.com/influxdb/tivan/plugins/system/ps/disk"
 	"github.com/influxdb/tivan/plugins/system/ps/load"
 	"github.com/influxdb/tivan/testutil"
 	"github.com/stretchr/testify/assert"
@@ -44,6 +45,16 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("CPUTimes").Return([]cpu.CPUTimesStat{cts}, nil)
 
+	du := &disk.DiskUsageStat{
+		Path:        "/",
+		Total:       128,
+		Free:        23,
+		InodesTotal: 1234,
+		InodesFree:  234,
+	}
+
+	mps.On("DiskUsage").Return([]*disk.DiskUsageStat{du}, nil)
+
 	err := ss.Gather(&acc)
 	require.NoError(t, err)
 
@@ -62,4 +73,15 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckValue("all.guest", 8.1))
 	assert.True(t, acc.CheckValue("all.guestNice", 0.324))
 	assert.True(t, acc.CheckValue("all.stolen", 0.051))
+
+	tags := map[string]string{
+		"path": "/",
+	}
+
+	assert.True(t, acc.CheckTaggedValue("total", uint64(128), tags))
+	assert.True(t, acc.CheckTaggedValue("used", uint64(105), tags))
+	assert.True(t, acc.CheckTaggedValue("free", uint64(23), tags))
+	assert.True(t, acc.CheckTaggedValue("inodes_total", uint64(1234), tags))
+	assert.True(t, acc.CheckTaggedValue("inodes_free", uint64(234), tags))
+	assert.True(t, acc.CheckTaggedValue("inodes_used", uint64(1000), tags))
 }

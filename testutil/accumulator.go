@@ -23,3 +23,19 @@ func (a *Accumulator) CheckValue(name string, val interface{}) bool {
 
 	return false
 }
+
+func (a *Accumulator) CheckTaggedValue(name string, val interface{}, tags map[string]string) bool {
+	for _, p := range a.Points {
+		for k, v := range p.Tags {
+			if tags[k] != v {
+				continue
+			}
+		}
+
+		if p.Name == name {
+			return p.Value == val
+		}
+	}
+
+	return false
+}

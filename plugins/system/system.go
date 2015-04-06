@@ -5,12 +5,14 @@ import (
 
 	"github.com/influxdb/tivan/plugins"
 	"github.com/influxdb/tivan/plugins/system/ps/cpu"
+	"github.com/influxdb/tivan/plugins/system/ps/disk"
 	"github.com/influxdb/tivan/plugins/system/ps/load"
 )
 
 type PS interface {
 	LoadAvg() (*load.LoadAvgStat, error)
 	CPUTimes() ([]cpu.CPUTimesStat, error)
+	DiskUsage() ([]*disk.DiskUsageStat, error)
 }
 
 type SystemStats struct {
@@ -52,6 +54,24 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 		s.add(acc, cts.CPU+".stolen", cts.Stolen)
 	}
 
+	disks, err := s.ps.DiskUsage()
+	if err != nil {
+		return err
+	}
+
+	for _, du := range disks {
+		tags := map[string]string{
+			"path": du.Path,
+		}
+
+		acc.Add("total", du.Total, tags)
+		acc.Add("free", du.Free, tags)
+		acc.Add("used", du.Total-du.Free, tags)
+		acc.Add("inodes_total", du.InodesTotal, tags)
+		acc.Add("inodes_free", du.InodesFree, tags)
+		acc.Add("inodes_used", du.InodesTotal-du.InodesFree, tags)
+	}
+
 	return nil
 }
 
@@ -63,6 +83,26 @@ func (s *systemPS) LoadAvg() (*load.LoadAvgStat, error) {
 
 func (s *systemPS) CPUTimes() ([]cpu.CPUTimesStat, error) {
 	return cpu.CPUTimes(true)
+}
+
+func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
+	parts, err := disk.DiskPartitions(true)
+	if err != nil {
+		return nil, err
+	}
+
+	var usage []*disk.DiskUsageStat
+
+	for _, p := range parts {
+		du, err := disk.DiskUsage(p.Mountpoint)
+		if err != nil {
+			return nil, err
+		}
+
+		usage = append(usage, du)
+	}
+
+	return usage, nil
 }
 
 func init() {
