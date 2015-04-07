@@ -3,6 +3,7 @@ package tivan
 import (
 	"log"
 	"net/url"
+	"os"
 	"sort"
 	"time"
 
@@ -14,6 +15,7 @@ type Agent struct {
 	Interval Duration
 	Debug    bool
 	HTTP     string
+	Hostname string
 
 	Config *Config
 
@@ -28,6 +30,21 @@ func NewAgent(config *Config) (*Agent, error) {
 	err := config.Apply("agent", agent)
 	if err != nil {
 		return nil, err
+	}
+
+	if agent.Hostname == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			return nil, err
+		}
+
+		agent.Hostname = hostname
+
+		if config.Tags == nil {
+			config.Tags = map[string]string{}
+		}
+
+		config.Tags["host"] = agent.Hostname
 	}
 
 	return agent, nil
