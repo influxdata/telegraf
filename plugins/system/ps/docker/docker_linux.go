@@ -16,14 +16,24 @@ import (
 // GetDockerIDList returnes a list of DockerID.
 // This requires certain permission.
 func GetDockerIDList() ([]string, error) {
-	out, err := exec.Command("docker", "ps", "-q", "--no-trunc").Output()
+	path, err := exec.LookPath("docker")
+	if err != nil {
+		return nil, ErrNotAvailable
+	}
+
+	out, err := exec.Command(path, "ps", "-q", "--no-trunc").Output()
 	if err != nil {
 		return []string{}, err
 	}
+
 	lines := strings.Split(string(out), "\n")
 	ret := make([]string, 0, len(lines))
 
 	for _, l := range lines {
+		if l == "" {
+			continue
+		}
+
 		ret = append(ret, l)
 	}
 
