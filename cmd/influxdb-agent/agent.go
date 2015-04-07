@@ -12,7 +12,7 @@ import (
 )
 
 var fDebug = flag.Bool("debug", false, "show metrics as they're generated to stdout")
-
+var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 
 func main() {
@@ -42,6 +42,20 @@ func main() {
 	}
 
 	plugins, err := ag.LoadPlugins()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if *fTest {
+		err = ag.Test()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	err = ag.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}

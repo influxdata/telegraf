@@ -37,9 +37,15 @@ func NewAgent(config *Config) (*Agent, error) {
 		return nil, err
 	}
 
+	return agent, nil
+}
+
+func (agent *Agent) Connect() error {
+	config := agent.Config
+
 	u, err := url.Parse(config.URL)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	c, err := client.NewClient(client.Config{
@@ -50,12 +56,12 @@ func NewAgent(config *Config) (*Agent, error) {
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	agent.conn = c
 
-	return agent, nil
+	return nil
 }
 
 func (a *Agent) LoadPlugins() ([]string, error) {
@@ -74,6 +80,8 @@ func (a *Agent) LoadPlugins() ([]string, error) {
 func (a *Agent) crank() error {
 	var acc BatchPoints
 
+	acc.Debug = a.Debug
+
 	for _, plugin := range a.plugins {
 		err := plugin.Gather(&acc)
 		if err != nil {
@@ -87,6 +95,21 @@ func (a *Agent) crank() error {
 
 	_, err := a.conn.Write(acc.BatchPoints)
 	return err
+}
+
+func (a *Agent) Test() error {
+	var acc BatchPoints
+
+	acc.Debug = true
+
+	for _, plugin := range a.plugins {
+		err := plugin.Gather(&acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (a *Agent) Run(shutdown chan struct{}) {
