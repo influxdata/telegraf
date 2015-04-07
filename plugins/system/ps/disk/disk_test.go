@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/shirou/gopsutil/common"
+	"github.com/influxdb/tivan/plugins/system/ps/common"
 )
 
 func TestDisk_usage(t *testing.T) {
