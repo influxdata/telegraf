@@ -78,7 +78,14 @@ func (a *Agent) LoadPlugins() ([]string, error) {
 	var names []string
 
 	for name, creator := range plugins.Plugins {
-		a.plugins = append(a.plugins, creator())
+		plugin := creator()
+
+		err := a.Config.Apply(name, plugin)
+		if err != nil {
+			return nil, err
+		}
+
+		a.plugins = append(a.plugins, plugin)
 		names = append(names, name)
 	}
 
