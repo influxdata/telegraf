@@ -4,16 +4,11 @@ import (
 	"log"
 	"net/url"
 	"sort"
+	"time"
 
 	"github.com/influxdb/influxdb/client"
 	"github.com/influxdb/tivan/plugins"
-	"github.com/vektra/cypress"
 )
-import "time"
-
-type Metrics interface {
-	Receive(*cypress.Message) error
-}
 
 type Agent struct {
 	Interval Duration
@@ -25,8 +20,6 @@ type Agent struct {
 	plugins []plugins.Plugin
 
 	conn *client.Client
-
-	eachInternal []func()
 }
 
 func NewAgent(config *Config) (*Agent, error) {
@@ -119,10 +112,6 @@ func (a *Agent) Run(shutdown chan struct{}) {
 		err := a.crank()
 		if err != nil {
 			log.Printf("Error in plugins: %s", err)
-		}
-
-		for _, f := range a.eachInternal {
-			f()
 		}
 
 		select {
