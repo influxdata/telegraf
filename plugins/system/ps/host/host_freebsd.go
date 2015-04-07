@@ -13,7 +13,7 @@ import (
 	"strings"
 	"unsafe"
 
-	common "github.com/shirou/gopsutil/common"
+	common "github.com/influxdb/tivan/plugins/system/ps/common"
 )
 
 const (

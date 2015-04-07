@@ -7,9 +7,9 @@ import (
 	"encoding/binary"
 	"unsafe"
 
-	common "github.com/shirou/gopsutil/common"
-	cpu "github.com/shirou/gopsutil/cpu"
-	net "github.com/shirou/gopsutil/net"
+	common "github.com/influxdb/tivan/plugins/system/ps/common"
+	cpu "github.com/influxdb/tivan/plugins/system/ps/cpu"
+	net "github.com/influxdb/tivan/plugins/system/ps/net"
 )
 
 // MemoryInfoExStat is different between OSes

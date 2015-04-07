@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shirou/gopsutil/common"
+	"github.com/influxdb/tivan/plugins/system/ps/common"
 )
 
 func testGetProcess() Process {

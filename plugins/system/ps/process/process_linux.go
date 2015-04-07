@@ -11,10 +11,10 @@ import (
 	"strings"
 	"syscall"
 
-	common "github.com/shirou/gopsutil/common"
-	cpu "github.com/shirou/gopsutil/cpu"
-	host "github.com/shirou/gopsutil/host"
-	net "github.com/shirou/gopsutil/net"
+	common "github.com/influxdb/tivan/plugins/system/ps/common"
+	cpu "github.com/influxdb/tivan/plugins/system/ps/cpu"
+	host "github.com/influxdb/tivan/plugins/system/ps/host"
+	net "github.com/influxdb/tivan/plugins/system/ps/net"
 )
 
 const (
