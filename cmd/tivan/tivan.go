@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,9 +15,17 @@ import (
 var fDebug = flag.Bool("debug", false, "show metrics as they're generated to stdout")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
+var fVersion = flag.Bool("version", false, "display the version")
+
+var Version = "unreleased"
 
 func main() {
 	flag.Parse()
+
+	if *fVersion {
+		fmt.Printf("InfluxDB Tivan agent - Version %s\n", Version)
+		return
+	}
 
 	var (
 		config *tivan.Config
