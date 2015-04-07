@@ -2,7 +2,9 @@ package system
 
 import (
 	"fmt"
+	"strings"
 
+	dc "github.com/fsouza/go-dockerclient"
 	"github.com/influxdb/tivan/plugins"
 	"github.com/influxdb/tivan/plugins/system/ps/common"
 	"github.com/influxdb/tivan/plugins/system/ps/cpu"
@@ -14,9 +16,11 @@ import (
 )
 
 type DockerContainerStat struct {
-	Name string
-	CPU  *cpu.CPUTimesStat
-	Mem  *docker.CgroupMemStat
+	Id      string
+	Name    string
+	Command string
+	CPU     *cpu.CPUTimesStat
+	Mem     *docker.CgroupMemStat
 }
 
 type PS interface {
@@ -171,12 +175,14 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 
 	containers, err := s.ps.DockerStat()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting docker info: %s", err)
 	}
 
 	for _, cont := range containers {
 		tags := map[string]string{
-			"docker": cont.Name,
+			"docker":  cont.Id,
+			"name":    cont.Name,
+			"command": cont.Command,
 		}
 
 		cts := cont.CPU
@@ -225,7 +231,9 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 	return nil
 }
 
-type systemPS struct{}
+type systemPS struct {
+	dockerClient *dc.Client
+}
 
 func (s *systemPS) LoadAvg() (*load.LoadAvgStat, error) {
 	return load.LoadAvg()
@@ -277,29 +285,45 @@ func (s *systemPS) SwapStat() (*mem.SwapMemoryStat, error) {
 }
 
 func (s *systemPS) DockerStat() ([]*DockerContainerStat, error) {
-	list, err := docker.GetDockerIDList()
-	if err != nil {
-		if err == common.NotImplementedError {
-			return nil, nil
+	if s.dockerClient == nil {
+		c, err := dc.NewClient("unix:///var/run/docker.sock")
+		if err != nil {
+			return nil, err
 		}
 
-		return nil, err
+		s.dockerClient = c
+	}
+
+	opts := dc.ListContainersOptions{}
+
+	list, err := s.dockerClient.ListContainers(opts)
+	if err != nil {
+		fmt.Printf("list err: %s\n", err)
+		return nil, nil
 	}
 
 	var stats []*DockerContainerStat
 
 	for _, cont := range list {
-		ctu, err := docker.CgroupCPUDocker(cont)
+		ctu, err := docker.CgroupCPUDocker(cont.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		mem, err := docker.CgroupMemDocker(cont)
+		mem, err := docker.CgroupMemDocker(cont.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		stats = append(stats, &DockerContainerStat{cont, ctu, mem})
+		name := strings.Join(cont.Names, " ")
+
+		stats = append(stats, &DockerContainerStat{
+			Id:      cont.ID,
+			Name:    name,
+			Command: cont.Command,
+			CPU:     ctu,
+			Mem:     mem,
+		})
 	}
 
 	return stats, nil
