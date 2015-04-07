@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	gonet "net"
 	"strings"
 
 	dc "github.com/fsouza/go-dockerclient"
@@ -298,8 +299,11 @@ func (s *systemPS) DockerStat() ([]*DockerContainerStat, error) {
 
 	list, err := s.dockerClient.ListContainers(opts)
 	if err != nil {
-		fmt.Printf("list err: %s\n", err)
-		return nil, nil
+		if _, ok := err.(*gonet.OpError); ok {
+			return nil, nil
+		}
+
+		return nil, err
 	}
 
 	var stats []*DockerContainerStat
