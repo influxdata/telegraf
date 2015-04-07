@@ -105,7 +105,14 @@ func (a *Agent) Test() error {
 	return nil
 }
 
-func (a *Agent) Run(shutdown chan struct{}) {
+func (a *Agent) Run(shutdown chan struct{}) error {
+	if a.conn == nil {
+		err := a.Connect()
+		if err != nil {
+			return err
+		}
+	}
+
 	ticker := time.NewTicker(a.Interval.Duration)
 
 	for {
@@ -116,7 +123,7 @@ func (a *Agent) Run(shutdown chan struct{}) {
 
 		select {
 		case <-shutdown:
-			return
+			return nil
 		case <-ticker.C:
 			continue
 		}
