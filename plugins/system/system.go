@@ -52,9 +52,9 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 		return err
 	}
 
-	acc.Add("load1", lv.Load1, nil)
-	acc.Add("load5", lv.Load5, nil)
-	acc.Add("load15", lv.Load15, nil)
+	acc.Add("system.load1", lv.Load1, nil)
+	acc.Add("system.load5", lv.Load5, nil)
+	acc.Add("system.load15", lv.Load15, nil)
 
 	times, err := s.ps.CPUTimes()
 	if err != nil {
@@ -66,17 +66,17 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 			"cpu": cts.CPU,
 		}
 
-		s.add(acc, "user", cts.User, tags)
-		s.add(acc, "system", cts.System, tags)
-		s.add(acc, "idle", cts.Idle, tags)
-		s.add(acc, "nice", cts.Nice, tags)
-		s.add(acc, "iowait", cts.Iowait, tags)
-		s.add(acc, "irq", cts.Irq, tags)
-		s.add(acc, "softirq", cts.Softirq, tags)
-		s.add(acc, "steal", cts.Steal, tags)
-		s.add(acc, "guest", cts.Guest, tags)
-		s.add(acc, "guestNice", cts.GuestNice, tags)
-		s.add(acc, "stolen", cts.Stolen, tags)
+		s.add(acc, "cpu.user", cts.User, tags)
+		s.add(acc, "cpu.system", cts.System, tags)
+		s.add(acc, "cpu.idle", cts.Idle, tags)
+		s.add(acc, "cpu.nice", cts.Nice, tags)
+		s.add(acc, "cpu.iowait", cts.Iowait, tags)
+		s.add(acc, "cpu.irq", cts.Irq, tags)
+		s.add(acc, "cpu.softirq", cts.Softirq, tags)
+		s.add(acc, "cpu.steal", cts.Steal, tags)
+		s.add(acc, "cpu.guest", cts.Guest, tags)
+		s.add(acc, "cpu.guestNice", cts.GuestNice, tags)
+		s.add(acc, "cpu.stolen", cts.Stolen, tags)
 	}
 
 	disks, err := s.ps.DiskUsage()
@@ -89,12 +89,12 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 			"path": du.Path,
 		}
 
-		acc.Add("total", du.Total, tags)
-		acc.Add("free", du.Free, tags)
-		acc.Add("used", du.Total-du.Free, tags)
-		acc.Add("inodes_total", du.InodesTotal, tags)
-		acc.Add("inodes_free", du.InodesFree, tags)
-		acc.Add("inodes_used", du.InodesTotal-du.InodesFree, tags)
+		acc.Add("disk.total", du.Total, tags)
+		acc.Add("disk.free", du.Free, tags)
+		acc.Add("disk.used", du.Total-du.Free, tags)
+		acc.Add("disk.inodes_total", du.InodesTotal, tags)
+		acc.Add("disk.inodes_free", du.InodesFree, tags)
+		acc.Add("disk.inodes_used", du.InodesTotal-du.InodesFree, tags)
 	}
 
 	diskio, err := s.ps.DiskIO()
@@ -108,13 +108,13 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 			"serial": io.SerialNumber,
 		}
 
-		acc.Add("reads", io.ReadCount, tags)
-		acc.Add("writes", io.WriteCount, tags)
-		acc.Add("read_bytes", io.ReadBytes, tags)
-		acc.Add("write_bytes", io.WriteBytes, tags)
-		acc.Add("read_time", io.ReadTime, tags)
-		acc.Add("write_time", io.WriteTime, tags)
-		acc.Add("io_time", io.IoTime, tags)
+		acc.Add("io.reads", io.ReadCount, tags)
+		acc.Add("io.writes", io.WriteCount, tags)
+		acc.Add("io.read_bytes", io.ReadBytes, tags)
+		acc.Add("io.write_bytes", io.WriteBytes, tags)
+		acc.Add("io.read_time", io.ReadTime, tags)
+		acc.Add("io.write_time", io.WriteTime, tags)
+		acc.Add("io.io_time", io.IoTime, tags)
 	}
 
 	netio, err := s.ps.NetIO()
@@ -127,14 +127,14 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 			"interface": io.Name,
 		}
 
-		acc.Add("bytes_sent", io.BytesSent, tags)
-		acc.Add("bytes_recv", io.BytesRecv, tags)
-		acc.Add("packets_sent", io.PacketsSent, tags)
-		acc.Add("packets_recv", io.PacketsRecv, tags)
-		acc.Add("err_in", io.Errin, tags)
-		acc.Add("err_out", io.Errout, tags)
-		acc.Add("drop_in", io.Dropin, tags)
-		acc.Add("drop_out", io.Dropout, tags)
+		acc.Add("net.bytes_sent", io.BytesSent, tags)
+		acc.Add("net.bytes_recv", io.BytesRecv, tags)
+		acc.Add("net.packets_sent", io.PacketsSent, tags)
+		acc.Add("net.packets_recv", io.PacketsRecv, tags)
+		acc.Add("net.err_in", io.Errin, tags)
+		acc.Add("net.err_out", io.Errout, tags)
+		acc.Add("net.drop_in", io.Dropin, tags)
+		acc.Add("net.drop_out", io.Dropout, tags)
 	}
 
 	vm, err := s.ps.VMStat()
@@ -142,37 +142,33 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 		return fmt.Errorf("error getting virtual memory info: %s", err)
 	}
 
-	vmtags := map[string]string{
-		"memory": "virtual",
-	}
+	vmtags := map[string]string(nil)
 
-	acc.Add("total", vm.Total, vmtags)
-	acc.Add("available", vm.Available, vmtags)
-	acc.Add("used", vm.Used, vmtags)
-	acc.Add("used_prec", vm.UsedPercent, vmtags)
-	acc.Add("free", vm.Free, vmtags)
-	acc.Add("active", vm.Active, vmtags)
-	acc.Add("inactive", vm.Inactive, vmtags)
-	acc.Add("buffers", vm.Buffers, vmtags)
-	acc.Add("cached", vm.Cached, vmtags)
-	acc.Add("wired", vm.Wired, vmtags)
-	acc.Add("shared", vm.Shared, vmtags)
+	acc.Add("mem.total", vm.Total, vmtags)
+	acc.Add("mem.available", vm.Available, vmtags)
+	acc.Add("mem.used", vm.Used, vmtags)
+	acc.Add("mem.used_prec", vm.UsedPercent, vmtags)
+	acc.Add("mem.free", vm.Free, vmtags)
+	acc.Add("mem.active", vm.Active, vmtags)
+	acc.Add("mem.inactive", vm.Inactive, vmtags)
+	acc.Add("mem.buffers", vm.Buffers, vmtags)
+	acc.Add("mem.cached", vm.Cached, vmtags)
+	acc.Add("mem.wired", vm.Wired, vmtags)
+	acc.Add("mem.shared", vm.Shared, vmtags)
 
 	swap, err := s.ps.SwapStat()
 	if err != nil {
 		return fmt.Errorf("error getting swap memory info: %s", err)
 	}
 
-	swaptags := map[string]string{
-		"memory": "swap",
-	}
+	swaptags := map[string]string(nil)
 
-	acc.Add("total", swap.Total, swaptags)
-	acc.Add("used", swap.Used, swaptags)
-	acc.Add("free", swap.Free, swaptags)
-	acc.Add("used_perc", swap.UsedPercent, swaptags)
-	acc.Add("swap_in", swap.Sin, swaptags)
-	acc.Add("swap_out", swap.Sout, swaptags)
+	acc.Add("swap.total", swap.Total, swaptags)
+	acc.Add("swap.used", swap.Used, swaptags)
+	acc.Add("swap.free", swap.Free, swaptags)
+	acc.Add("swap.used_perc", swap.UsedPercent, swaptags)
+	acc.Add("swap.swap_in", swap.Sin, swaptags)
+	acc.Add("swap.swap_out", swap.Sout, swaptags)
 
 	containers, err := s.ps.DockerStat()
 	if err != nil {
@@ -181,52 +177,52 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 
 	for _, cont := range containers {
 		tags := map[string]string{
-			"docker":  cont.Id,
+			"id":      cont.Id,
 			"name":    cont.Name,
 			"command": cont.Command,
 		}
 
 		cts := cont.CPU
 
-		acc.Add("user", cts.User, tags)
-		acc.Add("system", cts.System, tags)
-		acc.Add("idle", cts.Idle, tags)
-		acc.Add("nice", cts.Nice, tags)
-		acc.Add("iowait", cts.Iowait, tags)
-		acc.Add("irq", cts.Irq, tags)
-		acc.Add("softirq", cts.Softirq, tags)
-		acc.Add("steal", cts.Steal, tags)
-		acc.Add("guest", cts.Guest, tags)
-		acc.Add("guestNice", cts.GuestNice, tags)
-		acc.Add("stolen", cts.Stolen, tags)
+		acc.Add("docker.user", cts.User, tags)
+		acc.Add("docker.system", cts.System, tags)
+		acc.Add("docker.idle", cts.Idle, tags)
+		acc.Add("docker.nice", cts.Nice, tags)
+		acc.Add("docker.iowait", cts.Iowait, tags)
+		acc.Add("docker.irq", cts.Irq, tags)
+		acc.Add("docker.softirq", cts.Softirq, tags)
+		acc.Add("docker.steal", cts.Steal, tags)
+		acc.Add("docker.guest", cts.Guest, tags)
+		acc.Add("docker.guestNice", cts.GuestNice, tags)
+		acc.Add("docker.stolen", cts.Stolen, tags)
 
-		acc.Add("cache", cont.Mem.Cache, tags)
-		acc.Add("rss", cont.Mem.RSS, tags)
-		acc.Add("rss_huge", cont.Mem.RSSHuge, tags)
-		acc.Add("mapped_file", cont.Mem.MappedFile, tags)
-		acc.Add("swap_in", cont.Mem.Pgpgin, tags)
-		acc.Add("swap_out", cont.Mem.Pgpgout, tags)
-		acc.Add("page_fault", cont.Mem.Pgfault, tags)
-		acc.Add("page_major_fault", cont.Mem.Pgmajfault, tags)
-		acc.Add("inactive_anon", cont.Mem.InactiveAnon, tags)
-		acc.Add("active_anon", cont.Mem.ActiveAnon, tags)
-		acc.Add("inactive_file", cont.Mem.InactiveFile, tags)
-		acc.Add("active_file", cont.Mem.ActiveFile, tags)
-		acc.Add("unevictable", cont.Mem.Unevictable, tags)
-		acc.Add("memory_limit", cont.Mem.HierarchicalMemoryLimit, tags)
-		acc.Add("total_cache", cont.Mem.TotalCache, tags)
-		acc.Add("total_rss", cont.Mem.TotalRSS, tags)
-		acc.Add("total_rss_huge", cont.Mem.TotalRSSHuge, tags)
-		acc.Add("total_mapped_file", cont.Mem.TotalMappedFile, tags)
-		acc.Add("total_swap_in", cont.Mem.TotalPgpgIn, tags)
-		acc.Add("total_swap_out", cont.Mem.TotalPgpgOut, tags)
-		acc.Add("total_page_fault", cont.Mem.TotalPgFault, tags)
-		acc.Add("total_page_major_fault", cont.Mem.TotalPgMajFault, tags)
-		acc.Add("total_inactive_anon", cont.Mem.TotalInactiveAnon, tags)
-		acc.Add("total_active_anon", cont.Mem.TotalActiveAnon, tags)
-		acc.Add("total_inactive_file", cont.Mem.TotalInactiveFile, tags)
-		acc.Add("total_active_file", cont.Mem.TotalActiveFile, tags)
-		acc.Add("total_unevictable", cont.Mem.TotalUnevictable, tags)
+		acc.Add("docker.cache", cont.Mem.Cache, tags)
+		acc.Add("docker.rss", cont.Mem.RSS, tags)
+		acc.Add("docker.rss_huge", cont.Mem.RSSHuge, tags)
+		acc.Add("docker.mapped_file", cont.Mem.MappedFile, tags)
+		acc.Add("docker.swap_in", cont.Mem.Pgpgin, tags)
+		acc.Add("docker.swap_out", cont.Mem.Pgpgout, tags)
+		acc.Add("docker.page_fault", cont.Mem.Pgfault, tags)
+		acc.Add("docker.page_major_fault", cont.Mem.Pgmajfault, tags)
+		acc.Add("docker.inactive_anon", cont.Mem.InactiveAnon, tags)
+		acc.Add("docker.active_anon", cont.Mem.ActiveAnon, tags)
+		acc.Add("docker.inactive_file", cont.Mem.InactiveFile, tags)
+		acc.Add("docker.active_file", cont.Mem.ActiveFile, tags)
+		acc.Add("docker.unevictable", cont.Mem.Unevictable, tags)
+		acc.Add("docker.memory_limit", cont.Mem.HierarchicalMemoryLimit, tags)
+		acc.Add("docker.total_cache", cont.Mem.TotalCache, tags)
+		acc.Add("docker.total_rss", cont.Mem.TotalRSS, tags)
+		acc.Add("docker.total_rss_huge", cont.Mem.TotalRSSHuge, tags)
+		acc.Add("docker.total_mapped_file", cont.Mem.TotalMappedFile, tags)
+		acc.Add("docker.total_swap_in", cont.Mem.TotalPgpgIn, tags)
+		acc.Add("docker.total_swap_out", cont.Mem.TotalPgpgOut, tags)
+		acc.Add("docker.total_page_fault", cont.Mem.TotalPgFault, tags)
+		acc.Add("docker.total_page_major_fault", cont.Mem.TotalPgMajFault, tags)
+		acc.Add("docker.total_inactive_anon", cont.Mem.TotalInactiveAnon, tags)
+		acc.Add("docker.total_active_anon", cont.Mem.TotalActiveAnon, tags)
+		acc.Add("docker.total_inactive_file", cont.Mem.TotalInactiveFile, tags)
+		acc.Add("docker.total_active_file", cont.Mem.TotalActiveFile, tags)
+		acc.Add("docker.total_unevictable", cont.Mem.TotalUnevictable, tags)
 	}
 
 	return nil

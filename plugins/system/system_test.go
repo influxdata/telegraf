@@ -32,7 +32,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	mps.On("LoadAvg").Return(lv, nil)
 
 	cts := cpu.CPUTimesStat{
-		CPU:       "all",
+		CPU:       "cpu0",
 		User:      3.1,
 		System:    8.2,
 		Idle:      80.1,
@@ -166,131 +166,127 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	err := ss.Gather(&acc)
 	require.NoError(t, err)
 
-	assert.True(t, acc.CheckValue("load1", 0.3))
-	assert.True(t, acc.CheckValue("load5", 1.5))
-	assert.True(t, acc.CheckValue("load15", 0.8))
+	assert.True(t, acc.CheckValue("system.load1", 0.3))
+	assert.True(t, acc.CheckValue("system.load5", 1.5))
+	assert.True(t, acc.CheckValue("system.load15", 0.8))
 
 	cputags := map[string]string{
-		"cpu": "all",
+		"cpu": "cpu0",
 	}
 
-	assert.True(t, acc.CheckTaggedValue("user", 3.1, cputags))
-	assert.True(t, acc.CheckTaggedValue("system", 8.2, cputags))
-	assert.True(t, acc.CheckTaggedValue("idle", 80.1, cputags))
-	assert.True(t, acc.CheckTaggedValue("nice", 1.3, cputags))
-	assert.True(t, acc.CheckTaggedValue("iowait", 0.2, cputags))
-	assert.True(t, acc.CheckTaggedValue("irq", 0.1, cputags))
-	assert.True(t, acc.CheckTaggedValue("softirq", 0.11, cputags))
-	assert.True(t, acc.CheckTaggedValue("steal", 0.0001, cputags))
-	assert.True(t, acc.CheckTaggedValue("guest", 8.1, cputags))
-	assert.True(t, acc.CheckTaggedValue("guestNice", 0.324, cputags))
-	assert.True(t, acc.CheckTaggedValue("stolen", 0.051, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.user", 3.1, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.system", 8.2, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.idle", 80.1, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.nice", 1.3, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.iowait", 0.2, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.irq", 0.1, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.softirq", 0.11, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.steal", 0.0001, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.guest", 8.1, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.guestNice", 0.324, cputags))
+	assert.True(t, acc.CheckTaggedValue("cpu.stolen", 0.051, cputags))
 
 	tags := map[string]string{
 		"path": "/",
 	}
 
-	assert.True(t, acc.CheckTaggedValue("total", uint64(128), tags))
-	assert.True(t, acc.CheckTaggedValue("used", uint64(105), tags))
-	assert.True(t, acc.CheckTaggedValue("free", uint64(23), tags))
-	assert.True(t, acc.CheckTaggedValue("inodes_total", uint64(1234), tags))
-	assert.True(t, acc.CheckTaggedValue("inodes_free", uint64(234), tags))
-	assert.True(t, acc.CheckTaggedValue("inodes_used", uint64(1000), tags))
+	assert.True(t, acc.CheckTaggedValue("disk.total", uint64(128), tags))
+	assert.True(t, acc.CheckTaggedValue("disk.used", uint64(105), tags))
+	assert.True(t, acc.CheckTaggedValue("disk.free", uint64(23), tags))
+	assert.True(t, acc.CheckTaggedValue("disk.inodes_total", uint64(1234), tags))
+	assert.True(t, acc.CheckTaggedValue("disk.inodes_free", uint64(234), tags))
+	assert.True(t, acc.CheckTaggedValue("disk.inodes_used", uint64(1000), tags))
 
 	ntags := map[string]string{
 		"interface": "eth0",
 	}
 
-	assert.True(t, acc.CheckTaggedValue("bytes_sent", uint64(1123), ntags))
-	assert.True(t, acc.CheckTaggedValue("bytes_recv", uint64(8734422), ntags))
-	assert.True(t, acc.CheckTaggedValue("packets_sent", uint64(781), ntags))
-	assert.True(t, acc.CheckTaggedValue("packets_recv", uint64(23456), ntags))
-	assert.True(t, acc.CheckTaggedValue("err_in", uint64(832), ntags))
-	assert.True(t, acc.CheckTaggedValue("err_out", uint64(8), ntags))
-	assert.True(t, acc.CheckTaggedValue("drop_in", uint64(7), ntags))
-	assert.True(t, acc.CheckTaggedValue("drop_out", uint64(1), ntags))
+	assert.True(t, acc.CheckTaggedValue("net.bytes_sent", uint64(1123), ntags))
+	assert.True(t, acc.CheckTaggedValue("net.bytes_recv", uint64(8734422), ntags))
+	assert.True(t, acc.CheckTaggedValue("net.packets_sent", uint64(781), ntags))
+	assert.True(t, acc.CheckTaggedValue("net.packets_recv", uint64(23456), ntags))
+	assert.True(t, acc.CheckTaggedValue("net.err_in", uint64(832), ntags))
+	assert.True(t, acc.CheckTaggedValue("net.err_out", uint64(8), ntags))
+	assert.True(t, acc.CheckTaggedValue("net.drop_in", uint64(7), ntags))
+	assert.True(t, acc.CheckTaggedValue("net.drop_out", uint64(1), ntags))
 
 	dtags := map[string]string{
 		"name":   "sda1",
 		"serial": "ab-123-ad",
 	}
 
-	assert.True(t, acc.CheckTaggedValue("reads", uint64(888), dtags))
-	assert.True(t, acc.CheckTaggedValue("writes", uint64(5341), dtags))
-	assert.True(t, acc.CheckTaggedValue("read_bytes", uint64(100000), dtags))
-	assert.True(t, acc.CheckTaggedValue("write_bytes", uint64(200000), dtags))
-	assert.True(t, acc.CheckTaggedValue("read_time", uint64(7123), dtags))
-	assert.True(t, acc.CheckTaggedValue("write_time", uint64(9087), dtags))
-	assert.True(t, acc.CheckTaggedValue("io_time", uint64(123552), dtags))
+	assert.True(t, acc.CheckTaggedValue("io.reads", uint64(888), dtags))
+	assert.True(t, acc.CheckTaggedValue("io.writes", uint64(5341), dtags))
+	assert.True(t, acc.CheckTaggedValue("io.read_bytes", uint64(100000), dtags))
+	assert.True(t, acc.CheckTaggedValue("io.write_bytes", uint64(200000), dtags))
+	assert.True(t, acc.CheckTaggedValue("io.read_time", uint64(7123), dtags))
+	assert.True(t, acc.CheckTaggedValue("io.write_time", uint64(9087), dtags))
+	assert.True(t, acc.CheckTaggedValue("io.io_time", uint64(123552), dtags))
 
-	vmtags := map[string]string{
-		"memory": "virtual",
-	}
+	vmtags := map[string]string(nil)
 
-	assert.True(t, acc.CheckTaggedValue("total", uint64(12400), vmtags))
-	assert.True(t, acc.CheckTaggedValue("available", uint64(7600), vmtags))
-	assert.True(t, acc.CheckTaggedValue("used", uint64(5000), vmtags))
-	assert.True(t, acc.CheckTaggedValue("used_prec", float64(47.1), vmtags))
-	assert.True(t, acc.CheckTaggedValue("free", uint64(1235), vmtags))
-	assert.True(t, acc.CheckTaggedValue("active", uint64(8134), vmtags))
-	assert.True(t, acc.CheckTaggedValue("inactive", uint64(1124), vmtags))
-	assert.True(t, acc.CheckTaggedValue("buffers", uint64(771), vmtags))
-	assert.True(t, acc.CheckTaggedValue("cached", uint64(4312), vmtags))
-	assert.True(t, acc.CheckTaggedValue("wired", uint64(134), vmtags))
-	assert.True(t, acc.CheckTaggedValue("shared", uint64(2142), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.total", uint64(12400), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.available", uint64(7600), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.used", uint64(5000), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.used_prec", float64(47.1), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.free", uint64(1235), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.active", uint64(8134), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.inactive", uint64(1124), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.buffers", uint64(771), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.cached", uint64(4312), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.wired", uint64(134), vmtags))
+	assert.True(t, acc.CheckTaggedValue("mem.shared", uint64(2142), vmtags))
 
-	swaptags := map[string]string{
-		"memory": "swap",
-	}
+	swaptags := map[string]string(nil)
 
-	assert.True(t, acc.CheckTaggedValue("total", uint64(8123), swaptags))
-	assert.True(t, acc.CheckTaggedValue("used", uint64(1232), swaptags))
-	assert.True(t, acc.CheckTaggedValue("used_perc", float64(12.2), swaptags))
-	assert.True(t, acc.CheckTaggedValue("free", uint64(6412), swaptags))
-	assert.True(t, acc.CheckTaggedValue("swap_in", uint64(7), swaptags))
-	assert.True(t, acc.CheckTaggedValue("swap_out", uint64(830), swaptags))
+	assert.True(t, acc.CheckTaggedValue("swap.total", uint64(8123), swaptags))
+	assert.True(t, acc.CheckTaggedValue("swap.used", uint64(1232), swaptags))
+	assert.True(t, acc.CheckTaggedValue("swap.used_perc", float64(12.2), swaptags))
+	assert.True(t, acc.CheckTaggedValue("swap.free", uint64(6412), swaptags))
+	assert.True(t, acc.CheckTaggedValue("swap.swap_in", uint64(7), swaptags))
+	assert.True(t, acc.CheckTaggedValue("swap.swap_out", uint64(830), swaptags))
 
 	dockertags := map[string]string{
-		"docker": "blah",
+		"id": "blah",
 	}
 
-	assert.True(t, acc.CheckTaggedValue("user", 3.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("system", 8.2, dockertags))
-	assert.True(t, acc.CheckTaggedValue("idle", 80.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("nice", 1.3, dockertags))
-	assert.True(t, acc.CheckTaggedValue("iowait", 0.2, dockertags))
-	assert.True(t, acc.CheckTaggedValue("irq", 0.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("softirq", 0.11, dockertags))
-	assert.True(t, acc.CheckTaggedValue("steal", 0.0001, dockertags))
-	assert.True(t, acc.CheckTaggedValue("guest", 8.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("guestNice", 0.324, dockertags))
-	assert.True(t, acc.CheckTaggedValue("stolen", 0.051, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.user", 3.1, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.system", 8.2, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.idle", 80.1, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.nice", 1.3, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.iowait", 0.2, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.irq", 0.1, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.softirq", 0.11, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.steal", 0.0001, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.guest", 8.1, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.guestNice", 0.324, dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.stolen", 0.051, dockertags))
 
-	assert.True(t, acc.CheckTaggedValue("cache", uint64(1), dockertags))
-	assert.True(t, acc.CheckTaggedValue("rss", uint64(2), dockertags))
-	assert.True(t, acc.CheckTaggedValue("rss_huge", uint64(3), dockertags))
-	assert.True(t, acc.CheckTaggedValue("mapped_file", uint64(4), dockertags))
-	assert.True(t, acc.CheckTaggedValue("swap_in", uint64(5), dockertags))
-	assert.True(t, acc.CheckTaggedValue("swap_out", uint64(6), dockertags))
-	assert.True(t, acc.CheckTaggedValue("page_fault", uint64(7), dockertags))
-	assert.True(t, acc.CheckTaggedValue("page_major_fault", uint64(8), dockertags))
-	assert.True(t, acc.CheckTaggedValue("inactive_anon", uint64(9), dockertags))
-	assert.True(t, acc.CheckTaggedValue("active_anon", uint64(10), dockertags))
-	assert.True(t, acc.CheckTaggedValue("inactive_file", uint64(11), dockertags))
-	assert.True(t, acc.CheckTaggedValue("active_file", uint64(12), dockertags))
-	assert.True(t, acc.CheckTaggedValue("unevictable", uint64(13), dockertags))
-	assert.True(t, acc.CheckTaggedValue("memory_limit", uint64(14), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_cache", uint64(15), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_rss", uint64(16), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_rss_huge", uint64(17), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_mapped_file", uint64(18), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_swap_in", uint64(19), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_swap_out", uint64(20), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_page_fault", uint64(21), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_page_major_fault", uint64(22), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_inactive_anon", uint64(23), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_active_anon", uint64(24), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_inactive_file", uint64(25), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_active_file", uint64(26), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_unevictable", uint64(27), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.cache", uint64(1), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.rss", uint64(2), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.rss_huge", uint64(3), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.mapped_file", uint64(4), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.swap_in", uint64(5), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.swap_out", uint64(6), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.page_fault", uint64(7), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.page_major_fault", uint64(8), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.inactive_anon", uint64(9), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.active_anon", uint64(10), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.inactive_file", uint64(11), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.active_file", uint64(12), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.unevictable", uint64(13), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.memory_limit", uint64(14), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_cache", uint64(15), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_rss", uint64(16), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_rss_huge", uint64(17), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_mapped_file", uint64(18), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_swap_in", uint64(19), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_swap_out", uint64(20), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_page_fault", uint64(21), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_page_major_fault", uint64(22), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_inactive_anon", uint64(23), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_active_anon", uint64(24), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_inactive_file", uint64(25), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_active_file", uint64(26), dockertags))
+	assert.True(t, acc.CheckTaggedValue("docker.total_unevictable", uint64(27), dockertags))
 }
