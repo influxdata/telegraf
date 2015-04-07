@@ -76,7 +76,7 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 
 	disks, err := s.ps.DiskUsage()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
 
 	for _, du := range disks {
@@ -94,7 +94,7 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 
 	diskio, err := s.ps.DiskIO()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting disk io info: %s", err)
 	}
 
 	for _, io := range diskio {
@@ -114,7 +114,7 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 
 	netio, err := s.ps.NetIO()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting net io info: %s", err)
 	}
 
 	for _, io := range netio {
@@ -134,7 +134,7 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 
 	vm, err := s.ps.VMStat()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting virtual memory info: %s", err)
 	}
 
 	vmtags := map[string]string{
@@ -155,7 +155,7 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 
 	swap, err := s.ps.SwapStat()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting swap memory info: %s", err)
 	}
 
 	swaptags := map[string]string{
