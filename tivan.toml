@@ -1,0 +1,44 @@
+# This config file tells tivan how and what to collect stats from this
+# system.
+
+# These are the setting that govern the agents overall operation.
+[agent]
+
+# How often to gather stats. 5s = 5 seconds, 10m = 10 minutes, etc.
+interval = "5s"
+
+# If the agent should run in debug mode, printing out the stats it
+# gathers as well as sending them to InfluxDB.
+debug = true
+
+
+# This section governs how tivan talks to influxdb
+[influxdb]
+
+# The location, in http url form, of your influxdb server
+url = "http://localhost:8086"
+
+# Username to connect to influx as
+username = "root"
+
+# Password for said user
+password = "root"
+
+# The database to store the metrics into
+database = "tivan"
+
+# A map of addition tags to apply to all metrics, for instance:
+# 
+# tags = { dc = "us-east-1" }
+# 
+# could be used to add a indicate which datacenter the metrics are
+# coming from
+
+# This section governs how and if tivan gathers stats from redis
+[redis]
+
+# Do not gather stats on redis, even if the address is configured
+# disabled = true
+
+# The address of your redis server to gather stats on
+# address = ":6379"
