@@ -10,3 +10,5 @@ password = "root"
 database = "tivan"
 tags = { dc = "us-phx-1" }
 
+[redis]
+address = ":6379"

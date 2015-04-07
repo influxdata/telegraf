@@ -56,3 +56,7 @@ func (a *Accumulator) ValidateTaggedValue(name string, val interface{}, tags map
 
 	return fmt.Errorf("unknown value %s with tags %v", name, tags)
 }
+
+func (a *Accumulator) ValidateValue(name string, val interface{}) error {
+	return a.ValidateTaggedValue(name, val, nil)
+}
