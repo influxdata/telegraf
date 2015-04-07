@@ -34,9 +34,10 @@ type SystemStats struct {
 	ps PS
 }
 
-func (s *SystemStats) add(acc plugins.Accumulator, name string, val float64) {
+func (s *SystemStats) add(acc plugins.Accumulator,
+	name string, val float64, tags map[string]string) {
 	if val >= 0 {
-		acc.Add(name, val, nil)
+		acc.Add(name, val, tags)
 	}
 }
 
@@ -56,17 +57,21 @@ func (s *SystemStats) Gather(acc plugins.Accumulator) error {
 	}
 
 	for _, cts := range times {
-		s.add(acc, cts.CPU+".user", cts.User)
-		s.add(acc, cts.CPU+".system", cts.System)
-		s.add(acc, cts.CPU+".idle", cts.Idle)
-		s.add(acc, cts.CPU+".nice", cts.Nice)
-		s.add(acc, cts.CPU+".iowait", cts.Iowait)
-		s.add(acc, cts.CPU+".irq", cts.Irq)
-		s.add(acc, cts.CPU+".softirq", cts.Softirq)
-		s.add(acc, cts.CPU+".steal", cts.Steal)
-		s.add(acc, cts.CPU+".guest", cts.Guest)
-		s.add(acc, cts.CPU+".guestNice", cts.GuestNice)
-		s.add(acc, cts.CPU+".stolen", cts.Stolen)
+		tags := map[string]string{
+			"cpu": cts.CPU,
+		}
+
+		s.add(acc, "user", cts.User, tags)
+		s.add(acc, "system", cts.System, tags)
+		s.add(acc, "idle", cts.Idle, tags)
+		s.add(acc, "nice", cts.Nice, tags)
+		s.add(acc, "iowait", cts.Iowait, tags)
+		s.add(acc, "irq", cts.Irq, tags)
+		s.add(acc, "softirq", cts.Softirq, tags)
+		s.add(acc, "steal", cts.Steal, tags)
+		s.add(acc, "guest", cts.Guest, tags)
+		s.add(acc, "guestNice", cts.GuestNice, tags)
+		s.add(acc, "stolen", cts.Stolen, tags)
 	}
 
 	disks, err := s.ps.DiskUsage()

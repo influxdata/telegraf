@@ -170,17 +170,21 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckValue("load5", 1.5))
 	assert.True(t, acc.CheckValue("load15", 0.8))
 
-	assert.True(t, acc.CheckValue("all.user", 3.1))
-	assert.True(t, acc.CheckValue("all.system", 8.2))
-	assert.True(t, acc.CheckValue("all.idle", 80.1))
-	assert.True(t, acc.CheckValue("all.nice", 1.3))
-	assert.True(t, acc.CheckValue("all.iowait", 0.2))
-	assert.True(t, acc.CheckValue("all.irq", 0.1))
-	assert.True(t, acc.CheckValue("all.softirq", 0.11))
-	assert.True(t, acc.CheckValue("all.steal", 0.0001))
-	assert.True(t, acc.CheckValue("all.guest", 8.1))
-	assert.True(t, acc.CheckValue("all.guestNice", 0.324))
-	assert.True(t, acc.CheckValue("all.stolen", 0.051))
+	cputags := map[string]string{
+		"cpu": "all",
+	}
+
+	assert.True(t, acc.CheckTaggedValue("user", 3.1, cputags))
+	assert.True(t, acc.CheckTaggedValue("system", 8.2, cputags))
+	assert.True(t, acc.CheckTaggedValue("idle", 80.1, cputags))
+	assert.True(t, acc.CheckTaggedValue("nice", 1.3, cputags))
+	assert.True(t, acc.CheckTaggedValue("iowait", 0.2, cputags))
+	assert.True(t, acc.CheckTaggedValue("irq", 0.1, cputags))
+	assert.True(t, acc.CheckTaggedValue("softirq", 0.11, cputags))
+	assert.True(t, acc.CheckTaggedValue("steal", 0.0001, cputags))
+	assert.True(t, acc.CheckTaggedValue("guest", 8.1, cputags))
+	assert.True(t, acc.CheckTaggedValue("guestNice", 0.324, cputags))
+	assert.True(t, acc.CheckTaggedValue("stolen", 0.051, cputags))
 
 	tags := map[string]string{
 		"path": "/",
