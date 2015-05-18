@@ -31,7 +31,7 @@ var sampleConfig = `
 # to sslmode=disable as well.
 # 
 
-address = "localhost"
+address = "sslmode=disable"
 
 # A list of databases to pull metrics about. If not specified, metrics for all
 # databases are gathered.
@@ -69,6 +69,10 @@ func (p *Postgresql) Gather(acc plugins.Accumulator) error {
 }
 
 func (p *Postgresql) gatherServer(serv *Server, acc plugins.Accumulator) error {
+	if serv.Address == "" {
+		serv = localhost
+	}
+
 	db, err := sql.Open("postgres", serv.Address)
 	if err != nil {
 		return err

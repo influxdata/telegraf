@@ -9,12 +9,8 @@ import (
 	"github.com/influxdb/tivan/plugins"
 )
 
-type Server struct {
-	Address string
-}
-
 type Mysql struct {
-	Servers []*Server
+	Servers []string
 }
 
 var sampleConfig = `
@@ -32,7 +28,7 @@ func (m *Mysql) Description() string {
 	return "Read metrics from one or many mysql servers"
 }
 
-var localhost = &Server{}
+var localhost = ""
 
 func (m *Mysql) Gather(acc plugins.Accumulator) error {
 	if len(m.Servers) == 0 {
@@ -80,8 +76,8 @@ var mappings = []*mapping{
 	},
 }
 
-func (m *Mysql) gatherServer(serv *Server, acc plugins.Accumulator) error {
-	db, err := sql.Open("mysql", serv.Address)
+func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
+	db, err := sql.Open("mysql", serv)
 	if err != nil {
 		return err
 	}

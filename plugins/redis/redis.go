@@ -94,11 +94,19 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 	return outerr
 }
 
+const defaultPort = "6379"
+
 func (g *Redis) gatherServer(addr string, acc plugins.Accumulator) error {
 	if g.c == nil {
+
+		_, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			addr = addr + ":" + defaultPort
+		}
+
 		c, err := net.Dial("tcp", addr)
 		if err != nil {
-			return err
+			return fmt.Errorf("Unable to connect to redis server '%s': %s", addr, err)
 		}
 
 		g.c = c

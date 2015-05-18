@@ -1,44 +1,101 @@
-# This config file tells tivan how and what to collect stats from this
-# system.
+# Tivan configuration
 
-# These are the setting that govern the agents overall operation.
-[agent]
+# Tivan is entirely plugin driven. All metrics are gathered from the
+# declared plugins.
 
-# How often to gather stats. 5s = 5 seconds, 10m = 10 minutes, etc.
-interval = "5s"
+# Even if a plugin has no configuration, it must be declared in here
+# to be active. Declaring a plugin means just specifying the name
+# as a section with no variables.
 
-# If the agent should run in debug mode, printing out the stats it
-# gathers as well as sending them to InfluxDB.
-debug = true
+# Configuration for influxdb server to send metrics to
+# [influxdb]
+# url = "http://10.20.2.4"
+# username = "tivan"
+# password = "metricsmetricsmetricsmetrics"
+# database = "tivan"
+# user_agent = "tivan"
+# tags = { "dc": "us-east-1" }
 
+# Tags can also be specified via a normal map, but only one form at a time:
 
-# This section governs how tivan talks to influxdb
-[influxdb]
+# [influxdb.tags]
+# dc = "us-east-1"
 
-# The location, in http url form, of your influxdb server
-url = "http://localhost:8086"
+# PLUGINS
 
-# Username to connect to influx as
-username = "root"
+# Read metrics about cpu usage
+[cpu]
+  # no configuration
 
-# Password for said user
-password = "root"
+# Read metrics about disk usage by mount point
+[disk]
+  # no configuration
 
-# The database to store the metrics into
-database = "tivan"
+# Read metrics about docker containers
+[docker]
+  # no configuration
 
-# A map of addition tags to apply to all metrics, for instance:
+# Read metrics about disk IO by device
+[io]
+  # no configuration
+
+# Read metrics about memory usage
+[mem]
+  # no configuration
+
+# Read metrics from one or many mysql servers
+[mysql]
+
+# specify servers via a url matching:
+#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+#
+# If no servers are specified, then localhost is used as the host.
+servers = ["localhost"]
+
+# Read metrics about network interface usage
+[net]
+  # no configuration
+
+# Read metrics from one or many postgresql servers
+[postgresql]
+
+# specify servers via an array of tables
+[[postgresql.servers]]
+
+# specify address via a url matching:
+#   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
+# or a simple string:
+#   host=localhost user=pqotest password=... sslmode=...
 # 
-# tags = { dc = "us-east-1" }
+# All connection parameters are optional. By default, the host is localhost
+# and the user is the currently running user. For localhost, we default
+# to sslmode=disable as well.
 # 
-# could be used to add a indicate which datacenter the metrics are
-# coming from
 
-# This section governs how and if tivan gathers stats from redis
+address = "sslmode=disable"
+
+# A list of databases to pull metrics about. If not specified, metrics for all
+# databases are gathered.
+
+# databases = ["app_production", "blah_testing"]
+
+# [[postgresql.servers]]
+# address = "influx@remoteserver"
+
+# Read metrics from one or many redis servers
 [redis]
 
-# Do not gather stats on redis, even if the address is configured
-# disabled = true
+# An array of address to gather stats about. Specify an ip on hostname
+# with optional port. ie localhost, 10.10.3.33:18832, etc.
+#
+# If no servers are specified, then localhost is used as the host.
+servers = ["localhost"]
 
-# The address of your redis server to gather stats on
-# address = ":6379"
+# Read metrics about swap memory usage
+[swap]
+  # no configuration
+
+# Read metrics about system load
+[system]
+  # no configuration
+
