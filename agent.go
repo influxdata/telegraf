@@ -77,8 +77,16 @@ func (agent *Agent) Connect() error {
 func (a *Agent) LoadPlugins() ([]string, error) {
 	var names []string
 
-	for name, creator := range plugins.Plugins {
-		plugin := creator()
+	var pluginNames []string
+
+	for name, _ := range plugins.Plugins {
+		pluginNames = append(pluginNames, name)
+	}
+
+	sort.Strings(pluginNames)
+
+	for _, name := range pluginNames {
+		plugin := plugins.Plugins[name]()
 
 		err := a.Config.Apply(name, plugin)
 		if err != nil {
