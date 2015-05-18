@@ -135,6 +135,11 @@ var header = `# Tivan configuration
 # Use 'tivan -config tivan.toml -test' to see what metrics a config
 # file would generate.
 
+# One rule that plugins conform is wherever a connection string
+# can be passed, the values '' and 'localhost' are treated specially.
+# They indicate to the plugin to use their own builtin configuration to
+# connect to the local system.
+
 # Configuration for influxdb server to send metrics to
 # [influxdb]
 # url = "http://10.20.2.4"

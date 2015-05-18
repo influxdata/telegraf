@@ -77,6 +77,10 @@ var mappings = []*mapping{
 }
 
 func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
+	if serv == "localhost" {
+		serv = ""
+	}
+
 	db, err := sql.Open("mysql", serv)
 	if err != nil {
 		return err

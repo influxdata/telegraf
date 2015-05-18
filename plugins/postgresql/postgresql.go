@@ -69,7 +69,7 @@ func (p *Postgresql) Gather(acc plugins.Accumulator) error {
 }
 
 func (p *Postgresql) gatherServer(serv *Server, acc plugins.Accumulator) error {
-	if serv.Address == "" {
+	if serv.Address == "" || serv.Address == "localhost" {
 		serv = localhost
 	}
 
