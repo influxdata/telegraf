@@ -16,6 +16,16 @@ func (a *Accumulator) Add(name string, value interface{}, tags map[string]string
 	a.Points = append(a.Points, &Point{name, value, tags})
 }
 
+func (a *Accumulator) Get(name string) (*Point, bool) {
+	for _, p := range a.Points {
+		if p.Name == name {
+			return p, true
+		}
+	}
+
+	return nil, false
+}
+
 func (a *Accumulator) CheckValue(name string, val interface{}) bool {
 	for _, p := range a.Points {
 		if p.Name == name {
@@ -59,4 +69,26 @@ func (a *Accumulator) ValidateTaggedValue(name string, val interface{}, tags map
 
 func (a *Accumulator) ValidateValue(name string, val interface{}) error {
 	return a.ValidateTaggedValue(name, val, nil)
+}
+
+func (a *Accumulator) HasIntValue(name string) bool {
+	for _, p := range a.Points {
+		if p.Name == name {
+			_, ok := p.Value.(int64)
+			return ok
+		}
+	}
+
+	return false
+}
+
+func (a *Accumulator) HasFloatValue(name string) bool {
+	for _, p := range a.Points {
+		if p.Name == name {
+			_, ok := p.Value.(float64)
+			return ok
+		}
+	}
+
+	return false
 }
