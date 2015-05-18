@@ -46,6 +46,12 @@ type CPUStats struct {
 	ps PS
 }
 
+func (_ *CPUStats) Description() string {
+	return "Read metrics about cpu usage"
+}
+
+func (_ *CPUStats) SampleConfig() string { return "" }
+
 func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 	times, err := s.ps.CPUTimes()
 	if err != nil {
@@ -77,6 +83,12 @@ type DiskStats struct {
 	ps PS
 }
 
+func (_ *DiskStats) Description() string {
+	return "Read metrics about disk usage by mount point"
+}
+
+func (_ *DiskStats) SampleConfig() string { return "" }
+
 func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 	disks, err := s.ps.DiskUsage()
 	if err != nil {
@@ -102,6 +114,12 @@ func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 type DiskIOStats struct {
 	ps PS
 }
+
+func (_ *DiskIOStats) Description() string {
+	return "Read metrics about disk IO by device"
+}
+
+func (_ *DiskIOStats) SampleConfig() string { return "" }
 
 func (s *DiskIOStats) Gather(acc plugins.Accumulator) error {
 	diskio, err := s.ps.DiskIO()
@@ -131,6 +149,12 @@ type NetIOStats struct {
 	ps PS
 }
 
+func (_ *NetIOStats) Description() string {
+	return "Read metrics about network interface usage"
+}
+
+func (_ *NetIOStats) SampleConfig() string { return "" }
+
 func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
 	netio, err := s.ps.NetIO()
 	if err != nil {
@@ -159,6 +183,12 @@ type MemStats struct {
 	ps PS
 }
 
+func (_ *MemStats) Description() string {
+	return "Read metrics about memory usage"
+}
+
+func (_ *MemStats) SampleConfig() string { return "" }
+
 func (s *MemStats) Gather(acc plugins.Accumulator) error {
 	vm, err := s.ps.VMStat()
 	if err != nil {
@@ -186,6 +216,12 @@ type SwapStats struct {
 	ps PS
 }
 
+func (_ *SwapStats) Description() string {
+	return "Read metrics about swap memory usage"
+}
+
+func (_ *SwapStats) SampleConfig() string { return "" }
+
 func (s *SwapStats) Gather(acc plugins.Accumulator) error {
 	swap, err := s.ps.SwapStat()
 	if err != nil {
@@ -207,6 +243,12 @@ func (s *SwapStats) Gather(acc plugins.Accumulator) error {
 type DockerStats struct {
 	ps PS
 }
+
+func (_ *DockerStats) Description() string {
+	return "Read metrics about docker containers"
+}
+
+func (_ *DockerStats) SampleConfig() string { return "" }
 
 func (s *DockerStats) Gather(acc plugins.Accumulator) error {
 	containers, err := s.ps.DockerStat()
@@ -270,6 +312,12 @@ func (s *DockerStats) Gather(acc plugins.Accumulator) error {
 type SystemStats struct {
 	ps PS
 }
+
+func (_ *SystemStats) Description() string {
+	return "Read metrics about system load"
+}
+
+func (_ *SystemStats) SampleConfig() string { return "" }
 
 func (s *SystemStats) add(acc plugins.Accumulator,
 	name string, val float64, tags map[string]string) {

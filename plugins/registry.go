@@ -5,6 +5,8 @@ type Accumulator interface {
 }
 
 type Plugin interface {
+	SampleConfig() string
+	Description() string
 	Gather(Accumulator) error
 }
 

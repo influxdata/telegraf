@@ -13,12 +13,25 @@ import (
 )
 
 type Redis struct {
-	Disabled bool
-	Address  string
-	Servers  []string
+	Servers []string
 
 	c   net.Conn
 	buf []byte
+}
+
+var sampleConfig = `
+# An array of address to gather stats about. Specify an ip on hostname
+# with optional port. ie localhost, 10.10.3.33:18832, etc.
+#
+# If no servers are specified, then localhost is used as the host.
+servers = ["localhost"]`
+
+func (r *Redis) SampleConfig() string {
+	return sampleConfig
+}
+
+func (r *Redis) Description() string {
+	return "Read metrics from one or many redis servers"
 }
 
 var Tracking = map[string]string{
@@ -59,19 +72,7 @@ var ErrProtocolError = errors.New("redis protocol error")
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (g *Redis) Gather(acc plugins.Accumulator) error {
-	if g.Disabled {
-		return nil
-	}
-
-	var servers []string
-
-	if g.Address != "" {
-		servers = append(servers, g.Address)
-	}
-
-	servers = append(servers, g.Servers...)
-
-	if len(servers) == 0 {
+	if len(g.Servers) == 0 {
 		g.gatherServer(":6379", acc)
 		return nil
 	}
@@ -80,7 +81,7 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 
 	var outerr error
 
-	for _, serv := range servers {
+	for _, serv := range g.Servers {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()

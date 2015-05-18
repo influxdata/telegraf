@@ -17,6 +17,39 @@ type Postgresql struct {
 	Servers []*Server
 }
 
+var sampleConfig = `
+# specify servers via an array of tables
+[[postgresql.servers]]
+
+# specify address via a url matching:
+#   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
+# or a simple string:
+#   host=localhost user=pqotest password=... sslmode=...
+# 
+# All connection parameters are optional. By default, the host is localhost
+# and the user is the currently running user. For localhost, we default
+# to sslmode=disable as well.
+# 
+
+address = "localhost"
+
+# A list of databases to pull metrics about. If not specified, metrics for all
+# databases are gathered.
+
+# databases = ["app_production", "blah_testing"]
+
+# [[postgresql.servers]]
+# address = "influx@remoteserver"
+`
+
+func (p *Postgresql) SampleConfig() string {
+	return sampleConfig
+}
+
+func (p *Postgresql) Description() string {
+	return "Read metrics from one or many postgresql servers"
+}
+
 var localhost = &Server{Address: "sslmode=disable"}
 
 func (p *Postgresql) Gather(acc plugins.Accumulator) error {

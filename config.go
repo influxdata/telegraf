@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdb/tivan/plugins"
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
 )
@@ -112,4 +113,75 @@ func (c *Config) ListTags() string {
 	sort.Strings(tags)
 
 	return strings.Join(tags, " ")
+}
+
+type hasConfig interface {
+	BasicConfig() string
+}
+
+type hasDescr interface {
+	Description() string
+}
+
+var header = `# Tivan configuration
+
+# Tivan is entirely plugin driven. All metrics are gathered from the
+# declared plugins.
+
+# Even if a plugin has no configuration, it must be declared in here
+# to be active. Declaring a plugin means just specifying the name
+# as a section with no variables.
+
+# Configuration for influxdb server to send metrics to
+# [influxdb]
+# url = "http://10.20.2.4"
+# username = "tivan"
+# password = "metricsmetricsmetricsmetrics"
+# database = "tivan"
+# user_agent = "tivan"
+# tags = { "dc": "us-east-1" }
+
+# Tags can also be specified via a normal map, but only one form at a time:
+
+# [influxdb.tags]
+# dc = "us-east-1"
+
+# PLUGINS
+
+`
+
+func PrintSampleConfig() {
+	fmt.Printf(header)
+
+	var names []string
+
+	for name, _ := range plugins.Plugins {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	for _, name := range names {
+		creator := plugins.Plugins[name]
+
+		plugin := creator()
+
+		fmt.Printf("# %s\n[%s]\n", plugin.Description(), name)
+
+		var config string
+
+		config = strings.TrimSpace(plugin.SampleConfig())
+
+		if config == "" {
+			fmt.Printf("  # no configuration\n\n")
+		} else {
+			fmt.Printf("\n")
+			lines := strings.Split(config, "\n")
+			for _, line := range lines {
+				fmt.Printf("%s\n", line)
+			}
+
+			fmt.Printf("\n")
+		}
+	}
 }

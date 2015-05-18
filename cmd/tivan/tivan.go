@@ -16,6 +16,7 @@ var fDebug = flag.Bool("debug", false, "show metrics as they're generated to std
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fVersion = flag.Bool("version", false, "display the version")
+var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
 
 var Version = "unreleased"
 
@@ -24,6 +25,11 @@ func main() {
 
 	if *fVersion {
 		fmt.Printf("InfluxDB Tivan agent - Version %s\n", Version)
+		return
+	}
+
+	if *fSampleConfig {
+		tivan.PrintSampleConfig()
 		return
 	}
 

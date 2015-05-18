@@ -14,17 +14,27 @@ type Server struct {
 }
 
 type Mysql struct {
-	Disabled bool
-	Servers  []*Server
+	Servers []*Server
+}
+
+var sampleConfig = `
+# specify servers via a url matching:
+#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+#
+# If no servers are specified, then localhost is used as the host.
+servers = ["localhost"]`
+
+func (m *Mysql) SampleConfig() string {
+	return sampleConfig
+}
+
+func (m *Mysql) Description() string {
+	return "Read metrics from one or many mysql servers"
 }
 
 var localhost = &Server{}
 
 func (m *Mysql) Gather(acc plugins.Accumulator) error {
-	if m.Disabled {
-		return nil
-	}
-
 	if len(m.Servers) == 0 {
 		// if we can't get stats in this case, thats fine, don't report
 		// an error.
