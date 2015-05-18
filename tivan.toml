@@ -54,7 +54,12 @@ servers = ["localhost"]
 
 # Read metrics about network interface usage
 [net]
-  # no configuration
+
+# By default, tivan gathers stats from any up interface (excluding loopback)
+# Setting interfaces will tell it to gather these explicit interfaces,
+# regardless of status.
+#
+# interfaces = ["eth0", ... ]
 
 # Read metrics from one or many postgresql servers
 [postgresql]

@@ -147,13 +147,25 @@ func (s *DiskIOStats) Gather(acc plugins.Accumulator) error {
 
 type NetIOStats struct {
 	ps PS
+
+	Interfaces []string
 }
 
 func (_ *NetIOStats) Description() string {
 	return "Read metrics about network interface usage"
 }
 
-func (_ *NetIOStats) SampleConfig() string { return "" }
+var netSampleConfig = `
+# By default, tivan gathers stats from any up interface (excluding loopback)
+# Setting interfaces will tell it to gather these explicit interfaces,
+# regardless of status.
+#
+# interfaces = ["eth0", ... ]
+`
+
+func (_ *NetIOStats) SampleConfig() string {
+	return netSampleConfig
+}
 
 func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
 	netio, err := s.ps.NetIO()
@@ -162,6 +174,34 @@ func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
 	}
 
 	for _, io := range netio {
+		if len(s.Interfaces) != 0 {
+			var found bool
+
+			for _, name := range s.Interfaces {
+				if name == io.Name {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				continue
+			}
+		} else {
+			iface, err := gonet.InterfaceByName(io.Name)
+			if err != nil {
+				continue
+			}
+
+			if iface.Flags&gonet.FlagLoopback == gonet.FlagLoopback {
+				continue
+			}
+
+			if iface.Flags&gonet.FlagUp == 0 {
+				continue
+			}
+		}
+
 		tags := map[string]string{
 			"interface": io.Name,
 		}
