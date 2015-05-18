@@ -50,6 +50,18 @@ func (c *Config) Apply(name string, v interface{}) error {
 	return nil
 }
 
+func (c *Config) PluginsDeclared() []string {
+	var plugins []string
+
+	for name, _ := range c.plugins {
+		plugins = append(plugins, name)
+	}
+
+	sort.Strings(plugins)
+
+	return plugins
+}
+
 func DefaultConfig() *Config {
 	return &Config{}
 }

@@ -1,6 +1,7 @@
 package tivan
 
 import (
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -82,16 +83,13 @@ func (agent *Agent) Connect() error {
 func (a *Agent) LoadPlugins() ([]string, error) {
 	var names []string
 
-	var pluginNames []string
+	for _, name := range a.Config.PluginsDeclared() {
+		creator, ok := plugins.Plugins[name]
+		if !ok {
+			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
+		}
 
-	for name, _ := range plugins.Plugins {
-		pluginNames = append(pluginNames, name)
-	}
-
-	sort.Strings(pluginNames)
-
-	for _, name := range pluginNames {
-		plugin := plugins.Plugins[name]()
+		plugin := creator()
 
 		err := a.Config.Apply(name, plugin)
 		if err != nil {
@@ -126,6 +124,35 @@ func (a *Agent) crank() error {
 
 	_, err := a.conn.Write(acc.BatchPoints)
 	return err
+}
+
+func (a *Agent) TestAllPlugins() error {
+	var names []string
+
+	for name, _ := range plugins.Plugins {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	var acc BatchPoints
+	acc.Debug = true
+
+	fmt.Printf("* Testing all plugins with default configuration\n")
+
+	for _, name := range names {
+		plugin := plugins.Plugins[name]()
+
+		fmt.Printf("* Plugin: %s\n", name)
+
+		acc.Prefix = name + "_"
+		err := plugin.Gather(&acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (a *Agent) Test() error {

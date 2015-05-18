@@ -56,7 +56,12 @@ func main() {
 	}
 
 	if *fTest {
-		err = ag.Test()
+		if *fConfig != "" {
+			err = ag.Test()
+		} else {
+			err = ag.TestAllPlugins()
+		}
+
 		if err != nil {
 			log.Fatal(err)
 		}
