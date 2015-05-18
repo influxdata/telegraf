@@ -17,7 +17,14 @@ type Postgresql struct {
 	Servers []*Server
 }
 
+var localhost = &Server{Address: "sslmode=disable"}
+
 func (p *Postgresql) Gather(acc plugins.Accumulator) error {
+	if len(p.Servers) == 0 {
+		p.gatherServer(localhost, acc)
+		return nil
+	}
+
 	for _, serv := range p.Servers {
 		err := p.gatherServer(serv, acc)
 		if err != nil {

@@ -63,10 +63,6 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 		return nil
 	}
 
-	var wg sync.WaitGroup
-
-	var outerr error
-
 	var servers []string
 
 	if g.Address != "" {
@@ -74,6 +70,15 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 	}
 
 	servers = append(servers, g.Servers...)
+
+	if len(servers) == 0 {
+		g.gatherServer(":6379", acc)
+		return nil
+	}
+
+	var wg sync.WaitGroup
+
+	var outerr error
 
 	for _, serv := range servers {
 		wg.Add(1)
