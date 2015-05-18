@@ -107,7 +107,7 @@ func (a *Agent) crank() error {
 	}
 
 	acc.Tags = a.Config.Tags
-	acc.Timestamp = time.Now()
+	acc.Time = time.Now()
 	acc.Database = a.Config.Database
 
 	_, err := a.conn.Write(acc.BatchPoints)
