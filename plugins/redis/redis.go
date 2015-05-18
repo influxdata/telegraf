@@ -7,13 +7,15 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/influxdb/tivan/plugins"
 )
 
-type Gatherer struct {
+type Redis struct {
 	Disabled bool
 	Address  string
+	Servers  []string
 
 	c   net.Conn
 	buf []byte
@@ -54,13 +56,41 @@ var Tracking = map[string]string{
 
 var ErrProtocolError = errors.New("redis protocol error")
 
-func (g *Gatherer) Gather(acc plugins.Accumulator) error {
-	if g.Address == "" || g.Disabled {
+// Reads stats from all configured servers accumulates stats.
+// Returns one of the errors encountered while gather stats (if any).
+func (g *Redis) Gather(acc plugins.Accumulator) error {
+	if g.Disabled {
 		return nil
 	}
 
+	var wg sync.WaitGroup
+
+	var outerr error
+
+	var servers []string
+
+	if g.Address != "" {
+		servers = append(servers, g.Address)
+	}
+
+	servers = append(servers, g.Servers...)
+
+	for _, serv := range servers {
+		wg.Add(1)
+		go func(serv string) {
+			defer wg.Done()
+			outerr = g.gatherServer(serv, acc)
+		}(serv)
+	}
+
+	wg.Wait()
+
+	return outerr
+}
+
+func (g *Redis) gatherServer(addr string, acc plugins.Accumulator) error {
 	if g.c == nil {
-		c, err := net.Dial("tcp", g.Address)
+		c, err := net.Dial("tcp", addr)
 		if err != nil {
 			return err
 		}
@@ -134,6 +164,6 @@ func (g *Gatherer) Gather(acc plugins.Accumulator) error {
 
 func init() {
 	plugins.Add("redis", func() plugins.Plugin {
-		return &Gatherer{}
+		return &Redis{}
 	})
 }
