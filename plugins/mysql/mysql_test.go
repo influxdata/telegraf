@@ -27,16 +27,16 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 		prefix string
 		count  int
 	}{
-		{"mysql_commands", 141},
-		{"mysql_handler", 18},
-		{"mysql_bytes", 2},
-		{"mysql_innodb", 51},
-		{"mysql_threads", 4},
+		{"commands", 141},
+		{"handler", 18},
+		{"bytes", 2},
+		{"innodb", 51},
+		{"threads", 4},
 	}
 
 	intMetrics := []string{
-		"mysql_queries",
-		"mysql_slow_queries",
+		"queries",
+		"slow_queries",
 	}
 
 	for _, prefix := range prefixes {

@@ -12,9 +12,13 @@ type BatchPoints struct {
 	client.BatchPoints
 
 	Debug bool
+
+	Prefix string
 }
 
 func (bp *BatchPoints) Add(name string, val interface{}, tags map[string]string) {
+	name = bp.Prefix + name
+
 	if bp.Debug {
 		var tg []string
 

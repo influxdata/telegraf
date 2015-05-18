@@ -24,24 +24,24 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	intMetrics := []string{
-		"postgresql_xact_commit",
-		"postgresql_xact_rollback",
-		"postgresql_blks_read",
-		"postgresql_blks_hit",
-		"postgresql_tup_returned",
-		"postgresql_tup_fetched",
-		"postgresql_tup_inserted",
-		"postgresql_tup_updated",
-		"postgresql_tup_deleted",
-		"postgresql_conflicts",
-		"postgresql_temp_files",
-		"postgresql_temp_bytes",
-		"postgresql_deadlocks",
+		"xact_commit",
+		"xact_rollback",
+		"blks_read",
+		"blks_hit",
+		"tup_returned",
+		"tup_fetched",
+		"tup_inserted",
+		"tup_updated",
+		"tup_deleted",
+		"conflicts",
+		"temp_files",
+		"temp_bytes",
+		"deadlocks",
 	}
 
 	floatMetrics := []string{
-		"postgresql_blk_read_time",
-		"postgresql_blk_write_time",
+		"blk_read_time",
+		"blk_write_time",
 	}
 
 	for _, metric := range intMetrics {
@@ -68,7 +68,7 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	err := p.Gather(&acc)
 	require.NoError(t, err)
 
-	point, ok := acc.Get("postgresql_xact_commit")
+	point, ok := acc.Get("xact_commit")
 	require.True(t, ok)
 
 	assert.Equal(t, "postgres", point.Tags["db"])
@@ -91,7 +91,7 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	var found bool
 
 	for _, pnt := range acc.Points {
-		if pnt.Name == "postgresql_xact_commit" {
+		if pnt.Name == "xact_commit" {
 			if pnt.Tags["db"] == "postgres" {
 				found = true
 				break

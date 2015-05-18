@@ -100,21 +100,21 @@ func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator) error {
 
 	tags := map[string]string{"db": name}
 
-	acc.Add("postgresql_xact_commit", commit, tags)
-	acc.Add("postgresql_xact_rollback", rollback, tags)
-	acc.Add("postgresql_blks_read", read, tags)
-	acc.Add("postgresql_blks_hit", hit, tags)
-	acc.Add("postgresql_tup_returned", returned, tags)
-	acc.Add("postgresql_tup_fetched", fetched, tags)
-	acc.Add("postgresql_tup_inserted", inserted, tags)
-	acc.Add("postgresql_tup_updated", updated, tags)
-	acc.Add("postgresql_tup_deleted", deleted, tags)
-	acc.Add("postgresql_conflicts", conflicts, tags)
-	acc.Add("postgresql_temp_files", temp_files, tags)
-	acc.Add("postgresql_temp_bytes", temp_bytes, tags)
-	acc.Add("postgresql_deadlocks", deadlocks, tags)
-	acc.Add("postgresql_blk_read_time", read_time, tags)
-	acc.Add("postgresql_blk_write_time", read_time, tags)
+	acc.Add("xact_commit", commit, tags)
+	acc.Add("xact_rollback", rollback, tags)
+	acc.Add("blks_read", read, tags)
+	acc.Add("blks_hit", hit, tags)
+	acc.Add("tup_returned", returned, tags)
+	acc.Add("tup_fetched", fetched, tags)
+	acc.Add("tup_inserted", inserted, tags)
+	acc.Add("tup_updated", updated, tags)
+	acc.Add("tup_deleted", deleted, tags)
+	acc.Add("conflicts", conflicts, tags)
+	acc.Add("temp_files", temp_files, tags)
+	acc.Add("temp_bytes", temp_bytes, tags)
+	acc.Add("deadlocks", deadlocks, tags)
+	acc.Add("blk_read_time", read_time, tags)
+	acc.Add("blk_write_time", read_time, tags)
 
 	return nil
 }

@@ -11,6 +11,11 @@ import (
 	"github.com/influxdb/tivan/plugins"
 )
 
+type runningPlugin struct {
+	name   string
+	plugin plugins.Plugin
+}
+
 type Agent struct {
 	Interval Duration
 	Debug    bool
@@ -19,7 +24,7 @@ type Agent struct {
 
 	Config *Config
 
-	plugins []plugins.Plugin
+	plugins []*runningPlugin
 
 	conn *client.Client
 }
@@ -93,7 +98,7 @@ func (a *Agent) LoadPlugins() ([]string, error) {
 			return nil, err
 		}
 
-		a.plugins = append(a.plugins, plugin)
+		a.plugins = append(a.plugins, &runningPlugin{name, plugin})
 		names = append(names, name)
 	}
 
@@ -108,7 +113,8 @@ func (a *Agent) crank() error {
 	acc.Debug = a.Debug
 
 	for _, plugin := range a.plugins {
-		err := plugin.Gather(&acc)
+		acc.Prefix = plugin.name + "_"
+		err := plugin.plugin.Gather(&acc)
 		if err != nil {
 			return err
 		}
@@ -128,7 +134,8 @@ func (a *Agent) Test() error {
 	acc.Debug = true
 
 	for _, plugin := range a.plugins {
-		err := plugin.Gather(&acc)
+		acc.Prefix = plugin.name + "_"
+		err := plugin.plugin.Gather(&acc)
 		if err != nil {
 			return err
 		}

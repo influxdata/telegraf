@@ -50,23 +50,23 @@ type mapping struct {
 var mappings = []*mapping{
 	{
 		onServer: "Bytes_",
-		inExport: "mysql_bytes_",
+		inExport: "bytes_",
 	},
 	{
 		onServer: "Com_",
-		inExport: "mysql_commands_",
+		inExport: "commands_",
 	},
 	{
 		onServer: "Handler_",
-		inExport: "mysql_handler_",
+		inExport: "handler_",
 	},
 	{
 		onServer: "Innodb_",
-		inExport: "mysql_innodb_",
+		inExport: "innodb_",
 	},
 	{
 		onServer: "Threads_",
-		inExport: "mysql_threads_",
+		inExport: "threads_",
 	},
 }
 
@@ -113,14 +113,14 @@ func (m *Mysql) gatherServer(serv *Server, acc plugins.Accumulator) error {
 				return err
 			}
 
-			acc.Add("mysql_queries", i, nil)
+			acc.Add("queries", i, nil)
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
 				return err
 			}
 
-			acc.Add("mysql_slow_queries", i, nil)
+			acc.Add("slow_queries", i, nil)
 		}
 	}
 

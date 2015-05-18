@@ -21,8 +21,6 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	ss := &SystemStats{ps: &mps}
-
 	lv := &load.LoadAvgStat{
 		Load1:  0.3,
 		Load5:  1.5,
@@ -163,6 +161,8 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("DockerStat").Return([]*DockerContainerStat{ds}, nil)
 
+	ss := &SystemStats{ps: &mps}
+
 	err := ss.Gather(&acc)
 	require.NoError(t, err)
 
@@ -170,9 +170,14 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckValue("system_load5", 1.5))
 	assert.True(t, acc.CheckValue("system_load15", 0.8))
 
+	cs := &CPUStats{ps: &mps}
+
 	cputags := map[string]string{
 		"cpu": "cpu0",
 	}
+
+	err = cs.Gather(&acc)
+	require.NoError(t, err)
 
 	assert.True(t, acc.CheckTaggedValue("cpu_user", 3.1, cputags))
 	assert.True(t, acc.CheckTaggedValue("cpu_system", 8.2, cputags))
@@ -186,6 +191,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("cpu_guestNice", 0.324, cputags))
 	assert.True(t, acc.CheckTaggedValue("cpu_stolen", 0.051, cputags))
 
+	err = (&DiskStats{&mps}).Gather(&acc)
+	require.NoError(t, err)
+
 	tags := map[string]string{
 		"path": "/",
 	}
@@ -196,6 +204,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("disk_inodes_total", uint64(1234), tags))
 	assert.True(t, acc.CheckTaggedValue("disk_inodes_free", uint64(234), tags))
 	assert.True(t, acc.CheckTaggedValue("disk_inodes_used", uint64(1000), tags))
+
+	err = (&NetIOStats{&mps}).Gather(&acc)
+	require.NoError(t, err)
 
 	ntags := map[string]string{
 		"interface": "eth0",
@@ -210,6 +221,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("net_drop_in", uint64(7), ntags))
 	assert.True(t, acc.CheckTaggedValue("net_drop_out", uint64(1), ntags))
 
+	err = (&DiskIOStats{&mps}).Gather(&acc)
+	require.NoError(t, err)
+
 	dtags := map[string]string{
 		"name":   "sda1",
 		"serial": "ab-123-ad",
@@ -222,6 +236,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("io_read_time", uint64(7123), dtags))
 	assert.True(t, acc.CheckTaggedValue("io_write_time", uint64(9087), dtags))
 	assert.True(t, acc.CheckTaggedValue("io_io_time", uint64(123552), dtags))
+
+	err = (&MemStats{&mps}).Gather(&acc)
+	require.NoError(t, err)
 
 	vmtags := map[string]string(nil)
 
@@ -237,6 +254,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("mem_wired", uint64(134), vmtags))
 	assert.True(t, acc.CheckTaggedValue("mem_shared", uint64(2142), vmtags))
 
+	err = (&SwapStats{&mps}).Gather(&acc)
+	require.NoError(t, err)
+
 	swaptags := map[string]string(nil)
 
 	assert.True(t, acc.CheckTaggedValue("swap_total", uint64(8123), swaptags))
@@ -245,6 +265,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("swap_free", uint64(6412), swaptags))
 	assert.True(t, acc.CheckTaggedValue("swap_in", uint64(7), swaptags))
 	assert.True(t, acc.CheckTaggedValue("swap_out", uint64(830), swaptags))
+
+	err = (&DockerStats{&mps}).Gather(&acc)
+	require.NoError(t, err)
 
 	dockertags := map[string]string{
 		"id": "blah",
