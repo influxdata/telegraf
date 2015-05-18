@@ -132,6 +132,9 @@ var header = `# Tivan configuration
 # to be active. Declaring a plugin means just specifying the name
 # as a section with no variables.
 
+# Use 'tivan -config tivan.toml -test' to see what metrics a config
+# file would generate.
+
 # Configuration for influxdb server to send metrics to
 # [influxdb]
 # url = "http://10.20.2.4"
