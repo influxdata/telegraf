@@ -14,10 +14,18 @@ type BatchPoints struct {
 	Debug bool
 
 	Prefix string
+
+	Config *ConfiguredPlugin
 }
 
 func (bp *BatchPoints) Add(name string, val interface{}, tags map[string]string) {
 	name = bp.Prefix + name
+
+	if bp.Config != nil {
+		if !bp.Config.ShouldPass(name) {
+			return
+		}
+	}
 
 	if bp.Debug {
 		var tg []string

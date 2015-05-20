@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/influxdb/influxdb/client"
@@ -15,12 +16,12 @@ import (
 type runningPlugin struct {
 	name   string
 	plugin plugins.Plugin
+	config *ConfiguredPlugin
 }
 
 type Agent struct {
 	Interval Duration
 	Debug    bool
-	HTTP     string
 	Hostname string
 
 	Config *Config
@@ -31,9 +32,9 @@ type Agent struct {
 }
 
 func NewAgent(config *Config) (*Agent, error) {
-	agent := &Agent{Config: config}
+	agent := &Agent{Config: config, Interval: Duration{10 * time.Second}}
 
-	err := config.Apply("agent", agent)
+	err := config.ApplyAgent(agent)
 	if err != nil {
 		return nil, err
 	}
@@ -91,18 +92,61 @@ func (a *Agent) LoadPlugins() ([]string, error) {
 
 		plugin := creator()
 
-		err := a.Config.Apply(name, plugin)
+		config, err := a.Config.ApplyPlugin(name, plugin)
 		if err != nil {
 			return nil, err
 		}
 
-		a.plugins = append(a.plugins, &runningPlugin{name, plugin})
+		a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
 		names = append(names, name)
 	}
 
 	sort.Strings(names)
 
 	return names, nil
+}
+
+func (a *Agent) crankParallel() error {
+	points := make(chan *BatchPoints, len(a.plugins))
+
+	var wg sync.WaitGroup
+
+	for _, plugin := range a.plugins {
+		if plugin.config.Interval != 0 {
+			continue
+		}
+
+		wg.Add(1)
+		go func(plugin *runningPlugin) {
+			defer wg.Done()
+
+			var acc BatchPoints
+			acc.Debug = a.Debug
+			acc.Prefix = plugin.name + "_"
+			acc.Config = plugin.config
+
+			plugin.plugin.Gather(&acc)
+
+			points <- &acc
+		}(plugin)
+	}
+
+	wg.Wait()
+
+	close(points)
+
+	var acc BatchPoints
+	acc.Tags = a.Config.Tags
+	acc.Time = time.Now()
+	acc.Database = a.Config.Database
+
+	for sub := range points {
+		acc.Points = append(acc.Points, sub.Points...)
+	}
+
+	return nil
+	// _, err := a.conn.Write(acc.BatchPoints)
+	// return err
 }
 
 func (a *Agent) crank() error {
@@ -112,6 +156,7 @@ func (a *Agent) crank() error {
 
 	for _, plugin := range a.plugins {
 		acc.Prefix = plugin.name + "_"
+		acc.Config = plugin.config
 		err := plugin.plugin.Gather(&acc)
 		if err != nil {
 			return err
@@ -124,6 +169,36 @@ func (a *Agent) crank() error {
 
 	_, err := a.conn.Write(acc.BatchPoints)
 	return err
+}
+
+func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
+	ticker := time.NewTicker(plugin.config.Interval)
+
+	for {
+		var acc BatchPoints
+
+		acc.Debug = a.Debug
+
+		acc.Prefix = plugin.name + "_"
+		acc.Config = plugin.config
+		err := plugin.plugin.Gather(&acc)
+		if err != nil {
+			return err
+		}
+
+		acc.Tags = a.Config.Tags
+		acc.Time = time.Now()
+		acc.Database = a.Config.Database
+
+		a.conn.Write(acc.BatchPoints)
+
+		select {
+		case <-shutdown:
+			return nil
+		case <-ticker.C:
+			continue
+		}
+	}
 }
 
 func (a *Agent) TestAllPlugins() error {
@@ -162,6 +237,13 @@ func (a *Agent) Test() error {
 
 	for _, plugin := range a.plugins {
 		acc.Prefix = plugin.name + "_"
+		acc.Config = plugin.config
+
+		fmt.Printf("* Plugin: %s\n", plugin.name)
+		if plugin.config.Interval != 0 {
+			fmt.Printf("* Internal: %s\n", plugin.config.Interval)
+		}
+
 		err := plugin.plugin.Gather(&acc)
 		if err != nil {
 			return err
@@ -179,10 +261,24 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}
 	}
 
+	var wg sync.WaitGroup
+
+	for _, plugin := range a.plugins {
+		if plugin.config.Interval != 0 {
+			wg.Add(1)
+			go func(plugin *runningPlugin) {
+				defer wg.Done()
+				a.crankSeparate(shutdown, plugin)
+			}(plugin)
+		}
+	}
+
+	defer wg.Wait()
+
 	ticker := time.NewTicker(a.Interval.Duration)
 
 	for {
-		err := a.crank()
+		err := a.crankParallel()
 		if err != nil {
 			log.Printf("Error in plugins: %s", err)
 		}

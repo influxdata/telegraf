@@ -36,6 +36,7 @@ type Config struct {
 	UserAgent string
 	Tags      map[string]string
 
+	agent   *ast.Table
 	plugins map[string]*ast.Table
 }
 
@@ -43,12 +44,96 @@ func (c *Config) Plugins() map[string]*ast.Table {
 	return c.plugins
 }
 
-func (c *Config) Apply(name string, v interface{}) error {
-	if tbl, ok := c.plugins[name]; ok {
-		return toml.UnmarshalTable(tbl, v)
+type ConfiguredPlugin struct {
+	Name string
+
+	Drop []string
+	Pass []string
+
+	Interval time.Duration
+}
+
+func (cp *ConfiguredPlugin) ShouldPass(name string) bool {
+	if cp.Pass != nil {
+		for _, pat := range cp.Pass {
+			if strings.HasPrefix(name, pat) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	if cp.Drop != nil {
+		for _, pat := range cp.Drop {
+			if strings.HasPrefix(name, pat) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	return true
+}
+
+func (c *Config) ApplyAgent(v interface{}) error {
+	if c.agent != nil {
+		return toml.UnmarshalTable(c.agent, v)
 	}
 
 	return nil
+}
+
+func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, error) {
+	cp := &ConfiguredPlugin{Name: name}
+
+	if tbl, ok := c.plugins[name]; ok {
+
+		if node, ok := tbl.Fields["pass"]; ok {
+			if kv, ok := node.(*ast.KeyValue); ok {
+				if ary, ok := kv.Value.(*ast.Array); ok {
+					for _, elem := range ary.Value {
+						if str, ok := elem.(*ast.String); ok {
+							cp.Pass = append(cp.Pass, str.Value)
+						}
+					}
+				}
+			}
+		}
+
+		if node, ok := tbl.Fields["drop"]; ok {
+			if kv, ok := node.(*ast.KeyValue); ok {
+				if ary, ok := kv.Value.(*ast.Array); ok {
+					for _, elem := range ary.Value {
+						if str, ok := elem.(*ast.String); ok {
+							cp.Drop = append(cp.Drop, str.Value)
+						}
+					}
+				}
+			}
+		}
+
+		if node, ok := tbl.Fields["interval"]; ok {
+			if kv, ok := node.(*ast.KeyValue); ok {
+				if str, ok := kv.Value.(*ast.String); ok {
+					dur, err := time.ParseDuration(str.Value)
+					if err != nil {
+						return nil, err
+					}
+
+					cp.Interval = dur
+				}
+			}
+		}
+
+		delete(tbl.Fields, "drop")
+		delete(tbl.Fields, "pass")
+		delete(tbl.Fields, "interval")
+		return cp, toml.UnmarshalTable(tbl, v)
+	}
+
+	return cp, nil
 }
 
 func (c *Config) PluginsDeclared() []string {
@@ -90,12 +175,15 @@ func LoadConfig(path string) (*Config, error) {
 			return nil, ErrInvalidConfig
 		}
 
-		if name == "influxdb" {
+		switch name {
+		case "influxdb":
 			err := toml.UnmarshalTable(subtbl, c)
 			if err != nil {
 				return nil, err
 			}
-		} else {
+		case "agent":
+			c.agent = subtbl
+		default:
 			c.plugins[name] = subtbl
 		}
 	}
@@ -153,6 +241,12 @@ var header = `# Tivan configuration
 
 # [influxdb.tags]
 # dc = "us-east-1"
+
+# Configuration for tivan itself
+# [agent]
+# interval = "10s"
+# debug = false
+# hostname = "prod3241"
 
 # PLUGINS
 
