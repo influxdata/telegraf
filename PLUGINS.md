@@ -26,6 +26,47 @@ type Plugin interface {
 	Description() string
 	Gather(Accumulator) error
 }
+
+type Accumulator interface {
+	Add(name string, value interface{}, tags map[string]string)
+}
+```
+
+### Accumulator
+
+The way that a plugin emits metrics is by interacting with the Accumulator.
+
+The `Add` function takes 3 arguments:
+* **name**: A string which names the metric. For instance `bytes_read` or `faults`.
+* **value**: A value for the metric. Ths accepts 5 different types of value:
+  * **int**: The most common type. All int types are accepted but favor using `int64`
+  Useful for counters, etc.
+  * **float**: Favor `float64`, useful for gauges, percentages, etc.
+  * **bool**: `true` or `false`, useful to indicate the presence of a state. `light_on`, etc.
+  * **string**: Typically used to indicate a message, or some kind of freeform information.
+  * **time.Time**: Useful for indicating when a state last occured, for instance `light_on_since`.
+* **tags**: This is a map of strings to strings to describe the where or who about the metric. For instance, the `net` plugin adds a tag named `"interface"` set to the name of the network interface, like `"eth0"`.
+
+Let's say you've written a plugin that emits metrics abuot processes on the current host.
+
+```go
+
+type Process struct {
+  CPUTime float64
+  MemoryBytes int64
+  PID int
+}
+
+func Gather(acc plugins.Accumulator) error {
+  for _, process := range system.Processes() {
+    tags := map[string]string {
+      "pid": fmt.Sprintf("%d", process.Pid),
+    }
+
+    acc.Add("cpu", process.CPUTime, tags)
+    acc.Add("memoory", process.MemoryBytes, tags)
+  }
+}
 ```
 
 ### Example
