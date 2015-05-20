@@ -14,7 +14,7 @@ developers don't have to worry about thread safety within these functions.
 it prepended. This is to keep plugins honest.
 * Plugins should call `plugins.Add` in their `init` function to register themselves.
 See below for a quick example.
-* To be available within Tivan itself, plugins must add themselves to the `plugins.all/all.go` file.
+* To be available within Tivan itself, plugins must add themselves to the `github.com/influxdb/tivan/plugins/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the plugin can be configured. This is include in `tivan -sample-config`.
 * The `Description` function should say in one line what this plugin does.
 
@@ -32,7 +32,7 @@ type Plugin interface {
 
 ```go
 
-# simple.go
+// simple.go
 
 import "github.com/influxdb/tivan/plugins"
 
