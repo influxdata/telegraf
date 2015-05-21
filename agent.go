@@ -144,9 +144,8 @@ func (a *Agent) crankParallel() error {
 		acc.Points = append(acc.Points, sub.Points...)
 	}
 
-	return nil
-	// _, err := a.conn.Write(acc.BatchPoints)
-	// return err
+	_, err := a.conn.Write(acc.BatchPoints)
+	return err
 }
 
 func (a *Agent) crank() error {
