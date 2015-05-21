@@ -228,12 +228,15 @@ var header = `# Tivan configuration
 # They indicate to the plugin to use their own builtin configuration to
 # connect to the local system.
 
+# NOTE: The configuration has a few required parameters. They are marked
+# with 'required'. Be sure to edit those to make this configuration work.
+
 # Configuration for influxdb server to send metrics to
-# [influxdb]
-# url = "http://10.20.2.4"
+[influxdb]
+url = "http://10.20.2.4:8086" # required. Host and port are necessary as well.
+database = "tivan" # required. You need to pre-create this in influxdb
 # username = "tivan"
 # password = "metricsmetricsmetricsmetrics"
-# database = "tivan"
 # user_agent = "tivan"
 # tags = { "dc": "us-east-1" }
 
