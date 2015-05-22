@@ -1,4 +1,4 @@
-Tivan is entirely plugin driven. This interface allows for operators to
+Telegraf is entirely plugin driven. This interface allows for operators to
 pick and chose what is gathered as well as makes it easy for developers
 to create new ways of generating metrics.
 
@@ -8,14 +8,14 @@ and submit new plugins.
 ## Guidelines
 
 * A plugin must conform to the `plugins.Plugin` interface.
-* Tivan promises to run each plugin's Gather function serially. This means
+* Telegraf promises to run each plugin's Gather function serially. This means
 developers don't have to worry about thread safety within these functions.
 * Each generated metric automatically has the name of the plugin that generated
 it prepended. This is to keep plugins honest.
 * Plugins should call `plugins.Add` in their `init` function to register themselves.
 See below for a quick example.
-* To be available within Tivan itself, plugins must add themselves to the `github.com/influxdb/tivan/plugins/all/all.go` file.
-* The `SampleConfig` function should return valid toml that describes how the plugin can be configured. This is include in `tivan -sample-config`.
+* To be available within Telegraf itself, plugins must add themselves to the `github.com/influxdb/telegraf/plugins/all/all.go` file.
+* The `SampleConfig` function should return valid toml that describes how the plugin can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this plugin does.
 
 ### Plugin interface
@@ -75,7 +75,7 @@ func Gather(acc plugins.Accumulator) error {
 
 // simple.go
 
-import "github.com/influxdb/tivan/plugins"
+import "github.com/influxdb/telegraf/plugins"
 
 type Simple struct {
   Ok bool

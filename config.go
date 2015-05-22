@@ -1,4 +1,4 @@
-package tivan
+package telegraf
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdb/tivan/plugins"
+	"github.com/influxdb/telegraf/plugins"
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
 )
@@ -211,12 +211,12 @@ type hasDescr interface {
 	Description() string
 }
 
-var header = `# Tivan configuration
+var header = `# Telegraf configuration
 
 # If this file is missing an [agent] section, you must first generate a
-# valid config with 'tivan -sample-config > tivan.toml'
+# valid config with 'telegraf -sample-config > telegraf.toml'
 
-# Tivan is entirely plugin driven. All metrics are gathered from the
+# Telegraf is entirely plugin driven. All metrics are gathered from the
 # declared plugins.
 
 # Even if a plugin has no configuration, it must be declared in here
@@ -224,7 +224,7 @@ var header = `# Tivan configuration
 # as a section with no variables. To deactivate a plugin, comment
 # out the name and any variables.
 
-# Use 'tivan -config tivan.toml -test' to see what metrics a config
+# Use 'telegraf -config telegraf.toml -test' to see what metrics a config
 # file would generate.
 
 # One rule that plugins conform to is wherever a connection string
@@ -241,13 +241,13 @@ var header = `# Tivan configuration
 url = "http://10.20.2.4:8086" # required.
 
 # The target database for metrics. This database must already exist
-database = "tivan" # required.
+database = "telegraf" # required.
 
-# username = "tivan"
+# username = "telegraf"
 # password = "metricsmetricsmetricsmetrics"
 
 # Set the user agent for the POSTs (can be useful for log differentiation)
-# user_agent = "tivan"
+# user_agent = "telegraf"
 # tags = { "dc": "us-east-1" }
 
 # Tags can also be specified via a normal map, but only one form at a time:
@@ -255,7 +255,7 @@ database = "tivan" # required.
 # [influxdb.tags]
 # dc = "us-east-1"
 
-# Configuration for tivan itself
+# Configuration for telegraf itself
 # [agent]
 # interval = "10s"
 # debug = false

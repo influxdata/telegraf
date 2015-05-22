@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdb/tivan/plugins/system/ps/common"
+	"github.com/influxdb/telegraf/plugins/system/ps/common"
 )
 
 func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {

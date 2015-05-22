@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/influxdb/tivan/plugins/system/ps/common"
+	"github.com/influxdb/telegraf/plugins/system/ps/common"
 )
 
 func DiskPartitions(all bool) ([]DiskPartitionStat, error) {

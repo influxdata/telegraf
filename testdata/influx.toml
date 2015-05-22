@@ -7,7 +7,7 @@ debug = true
 url = "http://localhost:8086"
 username = "root"
 password = "root"
-database = "tivan"
+database = "telegraf"
 tags = { dc = "us-phx-1" }
 
 [redis]

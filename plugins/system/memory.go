@@ -3,7 +3,7 @@ package system
 import (
 	"fmt"
 
-	"github.com/influxdb/tivan/plugins"
+	"github.com/influxdb/telegraf/plugins"
 )
 
 type MemStats struct {

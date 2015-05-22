@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/influxdb/tivan/plugins"
+	"github.com/influxdb/telegraf/plugins"
 )
 
 type NetIOStats struct {
@@ -18,7 +18,7 @@ func (_ *NetIOStats) Description() string {
 }
 
 var netSampleConfig = `
-# By default, tivan gathers stats from any up interface (excluding loopback)
+# By default, telegraf gathers stats from any up interface (excluding loopback)
 # Setting interfaces will tell it to gather these explicit interfaces,
 # regardless of status.
 #

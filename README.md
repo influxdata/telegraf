@@ -1,20 +1,20 @@
-# Tivan - A native agent for InfluxDB
+# Telegraf - A native agent for InfluxDB
 
 ## Quickstart
 
-* Build from source or download tivan (binaries forthcoming)
-* Run `tivan -sample-config > tivan.toml` to create an initial configuration
+* Build from source or download telegraf (binaries forthcoming)
+* Run `telegraf -sample-config > telegraf.toml` to create an initial configuration
 * Edit the configuration to match your needs
-* Run `tivan -config tivan.toml -test` to output one full measurement sample to STDOUT
-* Run `tivan -config tivan.toml` to gather and send metrics to InfluxDB
+* Run `telegraf -config telegraf.toml -test` to output one full measurement sample to STDOUT
+* Run `telegraf -config telegraf.toml` to gather and send metrics to InfluxDB
 
-## Tivan Options
+## Telegraf Options
 
-Tivan has a few options you can configure under the `agent` section of the config. If you don't see an `agent` section run `tivan -sample-config > tivan.toml` to create a valid initial configuration:
+Telegraf has a few options you can configure under the `agent` section of the config. If you don't see an `agent` section run `telegraf -sample-config > telegraf.toml` to create a valid initial configuration:
 
-* **hostname**: The hostname is passed as a tag. By default this should be set to the name of the machine running Tivan. You can override that behavior here.
+* **hostname**: The hostname is passed as a tag. By default this should be set to the name of the machine running Telegraf. You can override that behavior here.
 * **interval**: How ofter to gather metrics. Uses a simple number + unit parser, ie "10s" for 10 seconds or "5m" for 5 minutes.
-* **debug**: currently non-functional. Run `tivan -config tivan.toml -debug` to gather and send metrics to InfluxDB and to STDOUT for debugging purposes
+* **debug**: currently non-functional. Run `telegraf -config telegraf.toml -debug` to gather and send metrics to InfluxDB and to STDOUT for debugging purposes
 
 ## Plugin Options
 

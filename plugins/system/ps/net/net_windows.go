@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	common "github.com/influxdb/tivan/plugins/system/ps/common"
+	common "github.com/influxdb/telegraf/plugins/system/ps/common"
 )
 
 var (

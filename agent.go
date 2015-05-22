@@ -1,4 +1,4 @@
-package tivan
+package telegraf
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdb/influxdb/client"
-	"github.com/influxdb/tivan/plugins"
+	"github.com/influxdb/telegraf/plugins"
 )
 
 type runningPlugin struct {

@@ -1,6 +1,6 @@
 package system
 
-import "github.com/influxdb/tivan/plugins"
+import "github.com/influxdb/telegraf/plugins"
 
 type SystemStats struct {
 	ps PS

@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"time"
 
-	cpu "github.com/influxdb/tivan/plugins/system/ps/cpu"
+	cpu "github.com/influxdb/telegraf/plugins/system/ps/cpu"
 )
 
 type Process struct {

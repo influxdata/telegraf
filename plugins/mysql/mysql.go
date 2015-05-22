@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/influxdb/tivan/plugins"
+	"github.com/influxdb/telegraf/plugins"
 )
 
 type Mysql struct {

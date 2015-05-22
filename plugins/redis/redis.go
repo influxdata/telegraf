@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdb/tivan/plugins"
+	"github.com/influxdb/telegraf/plugins"
 )
 
 type Redis struct {

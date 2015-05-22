@@ -3,13 +3,13 @@ package system
 import (
 	"testing"
 
-	"github.com/influxdb/tivan/plugins/system/ps/cpu"
-	"github.com/influxdb/tivan/plugins/system/ps/disk"
-	"github.com/influxdb/tivan/plugins/system/ps/docker"
-	"github.com/influxdb/tivan/plugins/system/ps/load"
-	"github.com/influxdb/tivan/plugins/system/ps/mem"
-	"github.com/influxdb/tivan/plugins/system/ps/net"
-	"github.com/influxdb/tivan/testutil"
+	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
+	"github.com/influxdb/telegraf/plugins/system/ps/disk"
+	"github.com/influxdb/telegraf/plugins/system/ps/docker"
+	"github.com/influxdb/telegraf/plugins/system/ps/load"
+	"github.com/influxdb/telegraf/plugins/system/ps/mem"
+	"github.com/influxdb/telegraf/plugins/system/ps/net"
+	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

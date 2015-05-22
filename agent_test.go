@@ -1,4 +1,4 @@
-package tivan
+package telegraf
 
 /*
 func TestAgent_DrivesMetrics(t *testing.T) {

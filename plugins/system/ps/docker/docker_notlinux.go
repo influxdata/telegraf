@@ -5,8 +5,8 @@ package docker
 import (
 	"encoding/json"
 
-	"github.com/influxdb/tivan/plugins/system/ps/common"
-	"github.com/influxdb/tivan/plugins/system/ps/cpu"
+	"github.com/influxdb/telegraf/plugins/system/ps/common"
+	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
 )
 
 // GetDockerIDList returnes a list of DockerID.

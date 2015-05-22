@@ -11,10 +11,10 @@ import (
 	"strings"
 	"syscall"
 
-	common "github.com/influxdb/tivan/plugins/system/ps/common"
-	cpu "github.com/influxdb/tivan/plugins/system/ps/cpu"
-	host "github.com/influxdb/tivan/plugins/system/ps/host"
-	net "github.com/influxdb/tivan/plugins/system/ps/net"
+	common "github.com/influxdb/telegraf/plugins/system/ps/common"
+	cpu "github.com/influxdb/telegraf/plugins/system/ps/cpu"
+	host "github.com/influxdb/telegraf/plugins/system/ps/host"
+	net "github.com/influxdb/telegraf/plugins/system/ps/net"
 )
 
 const (

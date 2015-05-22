@@ -1,4 +1,4 @@
-package tivan
+package telegraf
 
 import (
 	"fmt"

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	common "github.com/influxdb/tivan/plugins/system/ps/common"
-	process "github.com/influxdb/tivan/plugins/system/ps/process"
+	common "github.com/influxdb/telegraf/plugins/system/ps/common"
+	process "github.com/influxdb/telegraf/plugins/system/ps/process"
 )
 
 var (

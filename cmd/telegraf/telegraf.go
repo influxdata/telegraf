@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/influxdb/tivan"
-	_ "github.com/influxdb/tivan/plugins/all"
+	"github.com/influxdb/telegraf"
+	_ "github.com/influxdb/telegraf/plugins/all"
 )
 
 var fDebug = flag.Bool("debug", false, "show metrics as they're generated to stdout")
@@ -24,30 +24,30 @@ func main() {
 	flag.Parse()
 
 	if *fVersion {
-		fmt.Printf("InfluxDB Tivan agent - Version %s\n", Version)
+		fmt.Printf("InfluxDB Telegraf agent - Version %s\n", Version)
 		return
 	}
 
 	if *fSampleConfig {
-		tivan.PrintSampleConfig()
+		telegraf.PrintSampleConfig()
 		return
 	}
 
 	var (
-		config *tivan.Config
+		config *telegraf.Config
 		err    error
 	)
 
 	if *fConfig != "" {
-		config, err = tivan.LoadConfig(*fConfig)
+		config, err = telegraf.LoadConfig(*fConfig)
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		config = tivan.DefaultConfig()
+		config = telegraf.DefaultConfig()
 	}
 
-	ag, err := tivan.NewAgent(config)
+	ag, err := telegraf.NewAgent(config)
 	if err != nil {
 		log.Fatal(err)
 	}
