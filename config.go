@@ -213,12 +213,16 @@ type hasDescr interface {
 
 var header = `# Tivan configuration
 
+# If this file is missing an [agent] section, you must first generate a
+# valid config with 'tivan -sample-config > tivan.toml'
+
 # Tivan is entirely plugin driven. All metrics are gathered from the
 # declared plugins.
 
 # Even if a plugin has no configuration, it must be declared in here
 # to be active. Declaring a plugin means just specifying the name
-# as a section with no variables.
+# as a section with no variables. To deactivate a plugin, comment
+# out the name and any variables.
 
 # Use 'tivan -config tivan.toml -test' to see what metrics a config
 # file would generate.
@@ -233,10 +237,16 @@ var header = `# Tivan configuration
 
 # Configuration for influxdb server to send metrics to
 [influxdb]
-url = "http://10.20.2.4:8086" # required. Host and port are necessary as well.
-database = "tivan" # required. You need to pre-create this in influxdb
+# The full HTTP endpoint URL for your InfluxDB instance
+url = "http://10.20.2.4:8086" # required.
+
+# The target database for metrics. This database must already exist
+database = "tivan" # required.
+
 # username = "tivan"
 # password = "metricsmetricsmetricsmetrics"
+
+# Set the user agent for the POSTs (can be useful for log differentiation)
 # user_agent = "tivan"
 # tags = { "dc": "us-east-1" }
 

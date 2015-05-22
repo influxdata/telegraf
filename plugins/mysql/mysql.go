@@ -16,6 +16,7 @@ type Mysql struct {
 var sampleConfig = `
 # specify servers via a url matching:
 #  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+#  e.g. root:root@http://10.0.0.18/?tls=false
 #
 # If no servers are specified, then localhost is used as the host.
 servers = ["localhost"]`
