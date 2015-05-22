@@ -2,19 +2,19 @@
 
 ## Quickstart
 
-* Download tivan
+* Build from source or download tivan (binaries forthcoming)
 * Run `tivan -sample-config > tivan.toml` to create an initial configuration
 * Edit the configuration to match your needs
-* Run `tivan -config tivan.toml -test` to see what metrics are gather by your config
-* Run `tivan -config tivan.toml` to gather and send metrics
+* Run `tivan -config tivan.toml -test` to output one full measurement sample to STDOUT
+* Run `tivan -config tivan.toml` to gather and send metrics to InfluxDB
 
 ## Tivan Options
 
-Tivan has a few options you can configure under the `agent` section of the config:
+Tivan has a few options you can configure under the `agent` section of the config. If you don't see an `agent` section run `tivan -sample-config > tivan.toml` to create a valid initial configuration:
 
-* **hostname**: The name of this machine. The hostname is included in the metric tags for filtering and is by default the hosts hostname. You can override that behavior here.
+* **hostname**: The hostname is passed as a tag. By default this should be set to the name of the machine running Tivan. You can override that behavior here.
 * **interval**: How ofter to gather metrics. Uses a simple number + unit parser, ie "10s" for 10 seconds or "5m" for 5 minutes.
-* **debug**: Tell tivan to output information about gathered metrics.
+* **debug**: currently non-functional. Run `tivan -config tivan.toml -debug` to gather and send metrics to InfluxDB and to STDOUT for debugging purposes
 
 ## Plugin Options
 
