@@ -1,5 +1,8 @@
 # Tivan configuration
 
+# If this file is missing an [agent] section, you must first generate a
+# valid config with `tivan -sample-config > tivan.toml`
+
 # Tivan is entirely plugin driven. All metrics are gathered from the
 # declared plugins.
 
