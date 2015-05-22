@@ -5,31 +5,47 @@
 
 # Even if a plugin has no configuration, it must be declared in here
 # to be active. Declaring a plugin means just specifying the name
-# as a section with no variables.
+# as a section with no variables. To deactivate a plugin, comment 
+# out the name and any variables.
 
 # Use 'tivan -config tivan.toml -test' to see what metrics a config
 # file would generate.
 
-# One rule that plugins conform is wherever a connection string
+# One rule that plugins conform to is wherever a connection string
 # can be passed, the values '' and 'localhost' are treated specially.
 # They indicate to the plugin to use their own builtin configuration to
 # connect to the local system.
 
-# Configuration for influxdb server to send metrics to
-# [influxdb]
-# url = "http://10.20.2.4"
+## Configure target InfluxDB database (required)
+
+# Configuration for influxdb server to which to send metrics
+ [influxdb]
+# The full HTTP endpoint URL for your InfluxDB instance
+ url = "http://localhost:8086"
+# The target database for metrics. This database must already exist
+ database = "tivan"
+# Enter valid InfluxDB authentication credentials, if relevant
 # username = "tivan"
 # password = "metricsmetricsmetricsmetrics"
-# database = "tivan"
-# user_agent = "tivan"
-# tags = { "dc": "us-east-1" }
+# Set the user agent for the POSTs (can be useful for log differentiation)
+ user_agent = "tivan"
+# set any tags that should be applied to all points written by Tivan
+# tags = { "dc": "us-east-1", "app", "nginx" }
 
 # Tags can also be specified via a normal map, but only one form at a time:
-
 # [influxdb.tags]
 # dc = "us-east-1"
+# app = "nginx"
 
-# PLUGINS
+## PLUGINS
+
+## system stats
+
+# By default, tivan gathers stats from any up interface (excluding loopback)
+# Setting interfaces will tell it to gather these explicit interfaces,
+# regardless of status.
+#
+# interfaces = ["eth0", ... ]
 
 # Read metrics about cpu usage
 [cpu]
@@ -37,10 +53,6 @@
 
 # Read metrics about disk usage by mount point
 [disk]
-  # no configuration
-
-# Read metrics about docker containers
-[docker]
   # no configuration
 
 # Read metrics about disk IO by device
@@ -51,58 +63,8 @@
 [mem]
   # no configuration
 
-# Read metrics from one or many mysql servers
-[mysql]
-
-# specify servers via a url matching:
-#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
-#
-# If no servers are specified, then localhost is used as the host.
-servers = ["localhost"]
-
 # Read metrics about network interface usage
 [net]
-
-# By default, tivan gathers stats from any up interface (excluding loopback)
-# Setting interfaces will tell it to gather these explicit interfaces,
-# regardless of status.
-#
-# interfaces = ["eth0", ... ]
-
-# Read metrics from one or many postgresql servers
-[postgresql]
-
-# specify servers via an array of tables
-[[postgresql.servers]]
-
-# specify address via a url matching:
-#   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
-# or a simple string:
-#   host=localhost user=pqotest password=... sslmode=...
-# 
-# All connection parameters are optional. By default, the host is localhost
-# and the user is the currently running user. For localhost, we default
-# to sslmode=disable as well.
-# 
-
-address = "sslmode=disable"
-
-# A list of databases to pull metrics about. If not specified, metrics for all
-# databases are gathered.
-
-# databases = ["app_production", "blah_testing"]
-
-# [[postgresql.servers]]
-# address = "influx@remoteserver"
-
-# Read metrics from one or many redis servers
-[redis]
-
-# An array of address to gather stats about. Specify an ip on hostname
-# with optional port. ie localhost, 10.10.3.33:18832, etc.
-#
-# If no servers are specified, then localhost is used as the host.
-servers = ["localhost"]
 
 # Read metrics about swap memory usage
 [swap]
@@ -111,4 +73,51 @@ servers = ["localhost"]
 # Read metrics about system load
 [system]
   # no configuration
+
+## Application stats
+
+# Read metrics about docker containers
+[docker]
+  # no configuration
+
+
+# Read metrics from one or many mysql servers
+[mysql]
+# specify servers via a url matching:
+#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+#  e.g. root:root@http://10.0.0.18/?tls=false
+# If no servers are specified, then localhost is used as the host.
+servers = ["localhost"]
+
+
+# Read metrics from one or many postgresql servers
+[postgresql]
+# specify servers via an array of tables
+ [[postgresql.servers]]
+# specify address via a url matching:
+#   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
+# or a simple string:
+#   host=localhost user=pqotest password=... sslmode=...
+# 
+# All connection parameters are optional. By default, the host is localhost
+# and the user is the currently running user. For localhost, we default
+# to sslmode=disable as well.
+address = "sslmode=disable"
+
+# A list of databases to pull metrics about. If not specified, metrics for all
+# databases are gathered.
+
+# databases = ["app_production", "blah_testing"]
+
+ [[postgresql.servers]]
+# address = "influx@remoteserver"
+
+
+# Read metrics from one or many redis servers
+[redis]
+# An array of address to gather stats about. Specify an ip on hostname
+# with optional port. ie localhost, 10.10.3.33:18832, etc.
+#
+# If no servers are specified, then localhost is used as the host.
+servers = ["localhost"]
 
