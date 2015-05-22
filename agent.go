@@ -46,13 +46,13 @@ func NewAgent(config *Config) (*Agent, error) {
 		}
 
 		agent.Hostname = hostname
-
-		if config.Tags == nil {
-			config.Tags = map[string]string{}
-		}
-
-		config.Tags["host"] = agent.Hostname
 	}
+
+	if config.Tags == nil {
+		config.Tags = map[string]string{}
+	}
+
+	config.Tags["host"] = agent.Hostname
 
 	return agent, nil
 }
