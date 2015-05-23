@@ -12,7 +12,7 @@
 
 Telegraf has a few options you can configure under the `agent` section of the config. If you don't see an `agent` section run `telegraf -sample-config > telegraf.toml` to create a valid initial configuration:
 
-* **hostname**: The hostname is passed as a tag. By default this should be set to the name of the machine running Telegraf. You can override that behavior here.
+* **hostname**: The hostname is passed as a tag. By default this will be the hostname of the machine running Telegraf. You can override that value here.
 * **interval**: How ofter to gather metrics. Uses a simple number + unit parser, ie "10s" for 10 seconds or "5m" for 5 minutes.
 * **debug**: currently non-functional. Run `telegraf -config telegraf.toml -debug` to gather and send metrics to InfluxDB and to STDOUT for debugging purposes
 
