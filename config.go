@@ -238,7 +238,7 @@ var header = `# Telegraf configuration
 # Configuration for influxdb server to send metrics to
 [influxdb]
 # The full HTTP endpoint URL for your InfluxDB instance
-url = "http://10.20.2.4:8086" # required.
+url = "http://localhost:8086" # required.
 
 # The target database for metrics. This database must already exist
 database = "telegraf" # required.
