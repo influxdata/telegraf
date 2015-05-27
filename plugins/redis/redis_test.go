@@ -43,7 +43,7 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 	addr := l.Addr().String()
 
 	r := &Redis{
-		Address: addr,
+		Servers: []string{addr},
 	}
 
 	var acc testutil.Accumulator

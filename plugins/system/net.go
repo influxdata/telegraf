@@ -10,6 +10,7 @@ import (
 type NetIOStats struct {
 	ps PS
 
+	skipChecks bool
 	Interfaces []string
 }
 
@@ -49,7 +50,7 @@ func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
 			if !found {
 				continue
 			}
-		} else {
+		} else if !s.skipChecks {
 			iface, err := net.InterfaceByName(io.Name)
 			if err != nil {
 				continue

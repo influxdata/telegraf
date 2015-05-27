@@ -11,11 +11,7 @@ import (
 
 func TestMysqlGeneratesMetrics(t *testing.T) {
 	m := &Mysql{
-		Servers: []*Server{
-			{
-				Address: "",
-			},
-		},
+		Servers: []string{""},
 	}
 
 	var acc testutil.Accumulator
