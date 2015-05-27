@@ -1,11 +1,16 @@
 package testutil
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Point struct {
-	Name  string
-	Value interface{}
-	Tags  map[string]string
+	Name   string
+	Value  interface{}
+	Tags   map[string]string
+	Values map[string]interface{}
+	Time   time.Time
 }
 
 type Accumulator struct {
@@ -13,7 +18,31 @@ type Accumulator struct {
 }
 
 func (a *Accumulator) Add(name string, value interface{}, tags map[string]string) {
-	a.Points = append(a.Points, &Point{name, value, tags})
+	a.Points = append(
+		a.Points,
+		&Point{
+			Name:  name,
+			Value: value,
+			Tags:  tags,
+		},
+	)
+}
+
+func (a *Accumulator) AddValuesWithTime(
+	name string,
+	values map[string]interface{},
+	tags map[string]string,
+	timestamp time.Time,
+) {
+	a.Points = append(
+		a.Points,
+		&Point{
+			Name:   name,
+			Values: values,
+			Tags:   tags,
+			Time:   timestamp,
+		},
+	)
 }
 
 func (a *Accumulator) Get(name string) (*Point, bool) {

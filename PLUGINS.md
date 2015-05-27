@@ -28,7 +28,8 @@ type Plugin interface {
 }
 
 type Accumulator interface {
-	Add(name string, value interface{}, tags map[string]string)
+  Add(name string, value interface{}, tags map[string]string)
+  AddValuesWithTime(name string, values map[string]interface{}, tags map[string]string, timestamp time.Time)
 }
 ```
 
@@ -38,14 +39,18 @@ The way that a plugin emits metrics is by interacting with the Accumulator.
 
 The `Add` function takes 3 arguments:
 * **name**: A string which names the metric. For instance `bytes_read` or `faults`.
-* **value**: A value for the metric. Ths accepts 5 different types of value:
+* **value**: A value for the metric. This accepts 5 different types of value:
   * **int**: The most common type. All int types are accepted but favor using `int64`
   Useful for counters, etc.
   * **float**: Favor `float64`, useful for gauges, percentages, etc.
   * **bool**: `true` or `false`, useful to indicate the presence of a state. `light_on`, etc.
   * **string**: Typically used to indicate a message, or some kind of freeform information.
-  * **time.Time**: Useful for indicating when a state last occured, for instance `light_on_since`.
+  * **time.Time**: Useful for indicating when a state last occurred, for instance `light_on_since`.
 * **tags**: This is a map of strings to strings to describe the where or who about the metric. For instance, the `net` plugin adds a tag named `"interface"` set to the name of the network interface, like `"eth0"`.
+
+The `AddValuesWithTime` allows multiple values for a point to be passed. The values
+used are the same type profile as **value** above. The **timestamp** argument
+allows a point to be registered as having occurred at an arbitrary time.
 
 Let's say you've written a plugin that emits metrics abuot processes on the current host.
 
