@@ -3,16 +3,16 @@ package plugins
 import "time"
 
 type Accumulator interface {
-	// Create a named point with a value, decorating it with named tags
+	// Create a point with a value, decorating it with tags
 	// NOTE: tags is expected to be owned by the caller, don't mutate
 	// it after passing to Add.
-	Add(name string, value interface{}, tags map[string]string)
+	Add(measurement string, value interface{}, tags map[string]string)
 
-	// Create a named point with a set of values, decorating it with named tags
+	// Create a point with a set of values, decorating it with tags
 	// NOTE: tags and values are expected to be owned by the caller, don't mutate
 	// them after passing to AddValuesWithTime.
 	AddValuesWithTime(
-		name string,
+		measurement string,
 		values map[string]interface{},
 		tags map[string]string,
 		timestamp time.Time,
