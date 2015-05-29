@@ -53,10 +53,10 @@ type ConfiguredPlugin struct {
 	Interval time.Duration
 }
 
-func (cp *ConfiguredPlugin) ShouldPass(name string) bool {
+func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
 	if cp.Pass != nil {
 		for _, pat := range cp.Pass {
-			if strings.HasPrefix(name, pat) {
+			if strings.HasPrefix(measurement, pat) {
 				return true
 			}
 		}
@@ -66,7 +66,7 @@ func (cp *ConfiguredPlugin) ShouldPass(name string) bool {
 
 	if cp.Drop != nil {
 		for _, pat := range cp.Drop {
-			if strings.HasPrefix(name, pat) {
+			if strings.HasPrefix(measurement, pat) {
 				return false
 			}
 		}

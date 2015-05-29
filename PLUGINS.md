@@ -28,8 +28,8 @@ type Plugin interface {
 }
 
 type Accumulator interface {
-  Add(name string, value interface{}, tags map[string]string)
-  AddValuesWithTime(name string, values map[string]interface{}, tags map[string]string, timestamp time.Time)
+  Add(measurement string, value interface{}, tags map[string]string)
+  AddValuesWithTime(measurement string, values map[string]interface{}, tags map[string]string, timestamp time.Time)
 }
 ```
 
@@ -38,7 +38,7 @@ type Accumulator interface {
 The way that a plugin emits metrics is by interacting with the Accumulator.
 
 The `Add` function takes 3 arguments:
-* **name**: A string which names the metric. For instance `bytes_read` or `faults`.
+* **measurement**: A string description of the metric. For instance `bytes_read` or `faults`.
 * **value**: A value for the metric. This accepts 5 different types of value:
   * **int**: The most common type. All int types are accepted but favor using `int64`
   Useful for counters, etc.
@@ -52,7 +52,7 @@ The `AddValuesWithTime` allows multiple values for a point to be passed. The val
 used are the same type profile as **value** above. The **timestamp** argument
 allows a point to be registered as having occurred at an arbitrary time.
 
-Let's say you've written a plugin that emits metrics abuot processes on the current host.
+Let's say you've written a plugin that emits metrics about processes on the current host.
 
 ```go
 
