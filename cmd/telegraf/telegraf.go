@@ -17,8 +17,10 @@ var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
+var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 
 var Version = "unreleased"
+var Commit = ""
 
 func main() {
 	flag.Parse()
@@ -102,6 +104,17 @@ func main() {
 	if config.URL != "" {
 		log.Printf("Sending metrics to: %s", config.URL)
 		log.Printf("Tags enabled: %v", config.ListTags())
+	}
+
+	if *fPidfile != "" {
+		f, err := os.Create(*fPidfile)
+		if err != nil {
+			log.Fatalf("Unable to create pidfile: %s", err)
+		}
+
+		fmt.Fprintf(f, "%d\n", os.Getpid())
+
+		f.Close()
 	}
 
 	ag.Run(shutdown)
