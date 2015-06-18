@@ -21,7 +21,7 @@ func (a *Accumulator) Add(measurement string, value interface{}, tags map[string
 	a.Points = append(
 		a.Points,
 		&Point{
-			measurement: measurement,
+			Measurement: measurement,
 			Value:       value,
 			Tags:        tags,
 		},
