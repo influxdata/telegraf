@@ -19,11 +19,11 @@ type BatchPoints struct {
 	Config *ConfiguredPlugin
 }
 
-func (bp *BatchPoints) Add(name string, val interface{}, tags map[string]string) {
-	name = bp.Prefix + name
+func (bp *BatchPoints) Add(measurement string, val interface{}, tags map[string]string) {
+	measurement = bp.Prefix + measurement
 
 	if bp.Config != nil {
-		if !bp.Config.ShouldPass(name) {
+		if !bp.Config.ShouldPass(measurement) {
 			return
 		}
 	}
@@ -37,12 +37,12 @@ func (bp *BatchPoints) Add(name string, val interface{}, tags map[string]string)
 
 		sort.Strings(tg)
 
-		fmt.Printf("> [%s] %s value=%v\n", strings.Join(tg, " "), name, val)
+		fmt.Printf("> [%s] %s value=%v\n", strings.Join(tg, " "), measurement, val)
 	}
 
 	bp.Points = append(bp.Points, client.Point{
-		Name: name,
-		Tags: tags,
+		Measurement: measurement,
+		Tags:        tags,
 		Fields: map[string]interface{}{
 			"value": val,
 		},
@@ -50,15 +50,15 @@ func (bp *BatchPoints) Add(name string, val interface{}, tags map[string]string)
 }
 
 func (bp *BatchPoints) AddValuesWithTime(
-	name string,
+	measurement string,
 	values map[string]interface{},
 	tags map[string]string,
 	timestamp time.Time,
 ) {
-	name = bp.Prefix + name
+	measurement = bp.Prefix + measurement
 
 	if bp.Config != nil {
-		if !bp.Config.ShouldPass(name) {
+		if !bp.Config.ShouldPass(measurement) {
 			return
 		}
 	}
@@ -79,13 +79,13 @@ func (bp *BatchPoints) AddValuesWithTime(
 		sort.Strings(tg)
 		sort.Strings(vals)
 
-		fmt.Printf("> [%s] %s %s\n", strings.Join(tg, " "), name, strings.Join(vals, " "))
+		fmt.Printf("> [%s] %s %s\n", strings.Join(tg, " "), measurement, strings.Join(vals, " "))
 	}
 
 	bp.Points = append(bp.Points, client.Point{
-		Name:   name,
-		Tags:   tags,
-		Fields: values,
-		Time:   timestamp,
+		Measurement: measurement,
+		Tags:        tags,
+		Fields:      values,
+		Time:        timestamp,
 	})
 }
