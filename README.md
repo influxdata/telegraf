@@ -2,9 +2,9 @@
 
 Telegraf is an agent written in Go for collecting metrics from the system it's running on or from other services and writing them into InfluxDB.
 
-Design goals are to have a minimal memory footprint with a plugin system so that developers in the community can easily add support for collecting metrics from well known services and third party APIs.
+Design goals are to have a minimal memory footprint with a plugin system so that developers in the community can easily add support for collecting metrics from well known services (like Hadoop, or Postgres, or Redis) and third party APIs (like Mailchimp, AWS CloudWatch, or Google Analytics).
 
-We'll happily accept pull requests for new plugins and will manage the set of plugins that Telegraf supports. See the bottom of this doc for instructions on writing new plugins.
+We'll eagerly accept pull requests for new plugins and will manage the set of plugins that Telegraf supports. See the bottom of this doc for instructions on writing new plugins.
 
 ## Quickstart
 
