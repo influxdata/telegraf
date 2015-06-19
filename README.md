@@ -28,6 +28,18 @@ Telegraf has a few options you can configure under the `agent` section of the co
 * **interval**: How ofter to gather metrics. Uses a simple number + unit parser, ie "10s" for 10 seconds or "5m" for 5 minutes.
 * **debug**: Set to true to gather and send metrics to STDOUT as well as InfluxDB.
 
+## Supported Plugins
+
+Telegraf currently has support for collecting metrics from:
+
+* Sysmtem (memory, CPU, network, etc.)
+* Docker
+* MySQL
+* PostgreSQL
+* Redis
+
+We'll be adding support for many more over the coming months. Read on if you want to add support for another service or third-party API.
+
 ## Plugin Options
 
 There are 3 configuration options that are configurable per plugin:
