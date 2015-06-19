@@ -32,7 +32,7 @@ Telegraf has a few options you can configure under the `agent` section of the co
 
 Telegraf currently has support for collecting metrics from:
 
-* Sysmtem (memory, CPU, network, etc.)
+* System (memory, CPU, network, etc.)
 * Docker
 * MySQL
 * PostgreSQL
