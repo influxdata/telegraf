@@ -5,18 +5,21 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/influxdb/influxdb/client"
 	"github.com/influxdb/telegraf/plugins"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type runningPlugin struct {
 	name   string
 	plugin plugins.Plugin
 	config *ConfiguredPlugin
+	mu     sync.Mutex
 }
 
 type Agent struct {
@@ -53,6 +56,7 @@ func NewAgent(config *Config) (*Agent, error) {
 	}
 
 	config.Tags["host"] = agent.Hostname
+	prometheus.MustRegister(agent)
 
 	return agent, nil
 }
@@ -97,7 +101,7 @@ func (a *Agent) LoadPlugins() ([]string, error) {
 			return nil, err
 		}
 
-		a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
+		a.plugins = append(a.plugins, &runningPlugin{name, plugin, config, sync.Mutex{}})
 		names = append(names, name)
 	}
 
@@ -125,7 +129,9 @@ func (a *Agent) crankParallel() error {
 			acc.Prefix = plugin.name + "_"
 			acc.Config = plugin.config
 
+			plugin.mu.Lock()
 			plugin.plugin.Gather(&acc)
+			plugin.mu.Unlock()
 
 			points <- &acc
 		}(plugin)
@@ -156,7 +162,9 @@ func (a *Agent) crank() error {
 	for _, plugin := range a.plugins {
 		acc.Prefix = plugin.name + "_"
 		acc.Config = plugin.config
+		plugin.mu.Lock()
 		err := plugin.plugin.Gather(&acc)
+		plugin.mu.Unlock()
 		if err != nil {
 			return err
 		}
@@ -180,7 +188,9 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 
 		acc.Prefix = plugin.name + "_"
 		acc.Config = plugin.config
+		plugin.mu.Lock()
 		err := plugin.plugin.Gather(&acc)
+		plugin.mu.Unlock()
 		if err != nil {
 			return err
 		}
@@ -198,6 +208,56 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 			continue
 		}
 	}
+}
+
+// Implements prometheus.Collector
+func (a *Agent) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.NewGauge(prometheus.GaugeOpts{Name: "Dummy", Help: "Dummy"}).Describe(ch)
+}
+
+// Implements prometheus.Collector
+func (a *Agent) Collect(ch chan<- prometheus.Metric) {
+	var wg sync.WaitGroup
+
+	invalidNameCharRE := regexp.MustCompile(`[^a-zA-Z0-9_]`)
+
+	for _, plugin := range a.plugins {
+		wg.Add(1)
+		go func(plugin *runningPlugin) {
+			defer wg.Done()
+			var acc BatchPoints
+			acc.Prefix = plugin.name + "_"
+
+			plugin.mu.Lock()
+			err := plugin.plugin.Gather(&acc)
+			plugin.mu.Unlock()
+			if err != nil {
+				return
+			}
+
+			for _, point := range acc.Points {
+				var value float64
+				switch point.Fields["value"].(type) {
+				case float64, int64:
+					value = point.Fields["value"].(float64)
+				default:
+					continue
+				}
+				tags := map[string]string{}
+				for k, v := range point.Tags {
+					tags[invalidNameCharRE.ReplaceAllString(k, "_")] = v
+				}
+				desc := prometheus.NewDesc(invalidNameCharRE.ReplaceAllString(point.Measurement, "_"), point.Measurement, nil, tags)
+				metric, err := prometheus.NewConstMetric(desc, prometheus.UntypedValue, value)
+				if err == nil {
+					ch <- metric
+				}
+			}
+
+		}(plugin)
+	}
+
+	wg.Wait()
 }
 
 func (a *Agent) TestAllPlugins() error {

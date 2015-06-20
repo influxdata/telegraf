@@ -36,8 +36,13 @@ type Config struct {
 	UserAgent string
 	Tags      map[string]string
 
-	agent   *ast.Table
-	plugins map[string]*ast.Table
+	agent               *ast.Table
+	plugins             map[string]*ast.Table
+	prometheusCollector *ast.Table
+}
+
+type PrometheusCollector struct {
+	ListenAddress string
 }
 
 func (c *Config) Plugins() map[string]*ast.Table {
@@ -80,6 +85,14 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
 func (c *Config) ApplyAgent(v interface{}) error {
 	if c.agent != nil {
 		return toml.UnmarshalTable(c.agent, v)
+	}
+
+	return nil
+}
+
+func (c *Config) ApplyPrometheusCollector(v interface{}) error {
+	if c.prometheusCollector != nil {
+		return toml.UnmarshalTable(c.prometheusCollector, v)
 	}
 
 	return nil
@@ -183,6 +196,8 @@ func LoadConfig(path string) (*Config, error) {
 			}
 		case "agent":
 			c.agent = subtbl
+		case "prometheus_collector":
+			c.prometheusCollector = subtbl
 		default:
 			c.plugins[name] = subtbl
 		}
@@ -260,6 +275,10 @@ database = "telegraf" # required.
 # interval = "10s"
 # debug = false
 # hostname = "prod3241"
+
+[prometheus_collector]
+# If set, expose all metrics on this address for Prometheus
+# listen_address = ":9115"
 
 # PLUGINS
 
