@@ -45,8 +45,8 @@ ARCH=`uname -i`
 LICENSE=MIT
 URL=influxdb.com
 MAINTAINER=support@influxdb.com
-VENDOR=Influxdb
-DESCRIPTION="InfluxDB agent"
+VENDOR=InfluxDB
+DESCRIPTION="InfluxDB Telegraf agent"
 PKG_DEPS=(coreutils)
 GO_VERSION="go1.4.2"
 GOPATH_INSTALL=
@@ -340,15 +340,8 @@ if [ "x$response" == "xy" ]; then
     for filepath in `ls *.{deb,rpm}`; do
         echo "Uploading $filepath to S3"
         filename=`basename $filepath`
-        bucket=influxdb
-        echo "Uploading $filename to s3://influxdb/$filename"
-        AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://influxdb/$filename --acl public-read --region us-east-1
-        if [ $? -ne 0 ]; then
-            echo "Upload failed -- aborting".
-            cleanup_exit 1
-        fi
-        echo "Uploading $filename to s3://get.influxdb.org/$filename"
-        AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://get.influxdb.org/$filename --acl public-read --region us-east-1
+        echo "Uploading $filename to s3://get.influxdb.org/telegraf/$filename"
+        AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://get.influxdb.org/telegraf/$filename --acl public-read --region us-east-1
         if [ $? -ne 0 ]; then
             echo "Upload failed -- aborting".
             cleanup_exit 1
