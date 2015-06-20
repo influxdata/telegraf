@@ -91,7 +91,7 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	var found bool
 
 	for _, pnt := range acc.Points {
-		if pnt.Name == "xact_commit" {
+		if pnt.Measurement == "xact_commit" {
 			if pnt.Tags["db"] == "postgres" {
 				found = true
 				break
