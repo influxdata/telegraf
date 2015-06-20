@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -18,6 +19,9 @@ type Accumulator struct {
 }
 
 func (a *Accumulator) Add(measurement string, value interface{}, tags map[string]string) {
+	if tags == nil {
+		tags = map[string]string{}
+	}
 	a.Points = append(
 		a.Points,
 		&Point{
@@ -70,30 +74,23 @@ func (a *Accumulator) CheckTaggedValue(measurement string, val interface{}, tags
 }
 
 func (a *Accumulator) ValidateTaggedValue(measurement string, val interface{}, tags map[string]string) error {
+	if tags == nil {
+		tags = map[string]string{}
+	}
 	for _, p := range a.Points {
-		var found bool
-
-		if p.Tags == nil && tags == nil {
-			found = true
-		} else {
-			for k, v := range p.Tags {
-				if tags[k] == v {
-					found = true
-					break
-				}
-			}
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
 		}
 
-		if found && p.Measurement == measurement {
+		if p.Measurement == measurement {
 			if p.Value != val {
 				return fmt.Errorf("%v (%T) != %v (%T)", p.Value, p.Value, val, val)
 			}
-
 			return nil
 		}
 	}
 
-	return fmt.Errorf("unknown value %s with tags %v", measurement, tags)
+	return fmt.Errorf("unknown measurement %s with tags %v", measurement, tags)
 }
 
 func (a *Accumulator) ValidateValue(measurement string, val interface{}) error {
