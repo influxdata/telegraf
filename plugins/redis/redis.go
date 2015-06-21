@@ -157,11 +157,12 @@ func (g *Redis) gatherServer(addr string, acc plugins.Accumulator) error {
 			continue
 		}
 
+		tags := map[string]string{"host": addr}
 		val := strings.TrimSpace(parts[1])
 
 		ival, err := strconv.ParseUint(val, 10, 64)
 		if err == nil {
-			acc.Add(metric, ival, nil)
+			acc.Add(metric, ival, tags)
 			continue
 		}
 
@@ -170,7 +171,7 @@ func (g *Redis) gatherServer(addr string, acc plugins.Accumulator) error {
 			return err
 		}
 
-		acc.Add(metric, fval, nil)
+		acc.Add(metric, fval, tags)
 	}
 
 	return nil
