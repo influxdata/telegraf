@@ -89,7 +89,7 @@ func (p *Postgresql) gatherServer(serv *Server, acc plugins.Accumulator) error {
 		defer rows.Close()
 
 		for rows.Next() {
-			err := p.accRow(rows, acc)
+			err := p.accRow(rows, acc, serv.Address)
 			if err != nil {
 				return err
 			}
@@ -100,7 +100,7 @@ func (p *Postgresql) gatherServer(serv *Server, acc plugins.Accumulator) error {
 		for _, name := range serv.Databases {
 			row := db.QueryRow(`SELECT * FROM pg_stat_database WHERE datname=$1`, name)
 
-			err := p.accRow(row, acc)
+			err := p.accRow(row, acc, serv.Address)
 			if err != nil {
 				return err
 			}
@@ -114,7 +114,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator) error {
+func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator, server string) error {
 	var ignore interface{}
 	var name string
 	var commit, rollback, read, hit int64
@@ -135,7 +135,7 @@ func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator) error {
 		return err
 	}
 
-	tags := map[string]string{"db": name}
+	tags := map[string]string{"server": server, "db": name}
 
 	acc.Add("xact_commit", commit, tags)
 	acc.Add("xact_rollback", rollback, tags)
