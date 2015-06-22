@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdb/influxdb/client"
 )
 
 type BatchPoints struct {
+	mu sync.Mutex
+
 	client.BatchPoints
 
 	Debug bool
@@ -20,6 +23,9 @@ type BatchPoints struct {
 }
 
 func (bp *BatchPoints) Add(measurement string, val interface{}, tags map[string]string) {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+
 	measurement = bp.Prefix + measurement
 
 	if bp.Config != nil {
@@ -55,6 +61,9 @@ func (bp *BatchPoints) AddValuesWithTime(
 	tags map[string]string,
 	timestamp time.Time,
 ) {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+
 	measurement = bp.Prefix + measurement
 
 	if bp.Config != nil {
