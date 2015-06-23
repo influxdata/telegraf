@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,8 +21,9 @@ type Redis struct {
 }
 
 var sampleConfig = `
-# An array of address to gather stats about. Specify an ip on hostname
-# with optional port. ie localhost, 10.10.3.33:18832, etc.
+# An array of URI to gather stats about. Specify an ip or hostname
+# with optional port add password. ie redis://localhost, redis://10.10.3.33:18832,
+# 10.0.0.1:10000, etc.
 #
 # If no servers are specified, then localhost is used as the host.
 servers = ["localhost"]`
@@ -73,7 +75,10 @@ var ErrProtocolError = errors.New("redis protocol error")
 // Returns one of the errors encountered while gather stats (if any).
 func (g *Redis) Gather(acc plugins.Accumulator) error {
 	if len(g.Servers) == 0 {
-		g.gatherServer(":6379", acc)
+		url := &url.URL{
+			Host: ":6379",
+		}
+		g.gatherServer(url, acc)
 		return nil
 	}
 
@@ -82,10 +87,17 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 	var outerr error
 
 	for _, serv := range g.Servers {
+		u, err := url.Parse(serv)
+		if err != nil {
+			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
+		} else if u.Scheme == "" {
+			// fallback to simple string based address (i.e. "10.0.0.1:10000")
+			u.Host = serv
+		}
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherServer(serv, acc)
+			outerr = g.gatherServer(u, acc)
 		}(serv)
 	}
 
@@ -96,17 +108,34 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 
 const defaultPort = "6379"
 
-func (g *Redis) gatherServer(addr string, acc plugins.Accumulator) error {
+func (g *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 	if g.c == nil {
 
-		_, _, err := net.SplitHostPort(addr)
+		_, _, err := net.SplitHostPort(addr.Host)
 		if err != nil {
-			addr = addr + ":" + defaultPort
+			addr.Host = addr.Host + ":" + defaultPort
 		}
 
-		c, err := net.Dial("tcp", addr)
+		c, err := net.Dial("tcp", addr.Host)
 		if err != nil {
-			return fmt.Errorf("Unable to connect to redis server '%s': %s", addr, err)
+			return fmt.Errorf("Unable to connect to redis server '%s': %s", addr.Host, err)
+		}
+
+		if addr.User != nil {
+			pwd, set := addr.User.Password()
+			if set && pwd != "" {
+				c.Write([]byte(fmt.Sprintf("AUTH %s\n", pwd)))
+
+				r := bufio.NewReader(c)
+
+				line, err := r.ReadString('\n')
+				if err != nil {
+					return err
+				}
+				if line[0] != '+' {
+					return fmt.Errorf("%s", strings.TrimSpace(line)[1:])
+				}
+			}
 		}
 
 		g.c = c

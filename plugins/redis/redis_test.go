@@ -40,7 +40,7 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 		}
 	}()
 
-	addr := l.Addr().String()
+	addr := fmt.Sprintf("redis://%s", l.Addr().String())
 
 	r := &Redis{
 		Servers: []string{addr},
@@ -131,7 +131,7 @@ func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
 		}
 	}()
 
-	addr := l.Addr().String()
+	addr := fmt.Sprintf("redis://%s", l.Addr().String())
 
 	r := &Redis{
 		Servers: []string{addr},
