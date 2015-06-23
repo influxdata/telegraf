@@ -18,14 +18,9 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 	err := m.Gather(&acc)
 	require.NoError(t, err)
 
-	intMetrics := []string{"get_hits", "get_misses", "evictions"}
-	floatMetrics := []string{"usage"}
+	intMetrics := []string{"get_hits", "get_misses", "evictions", "limit_maxbytes", "bytes"}
 
 	for _, metric := range intMetrics {
 		assert.True(t, acc.HasIntValue(metric), metric)
-	}
-
-	for _, metric := range floatMetrics {
-		assert.True(t, acc.HasFloatValue(metric), metric)
 	}
 }

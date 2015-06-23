@@ -30,6 +30,8 @@ var sendAsIs = []string{
 	"get_hits",
 	"get_misses",
 	"evictions",
+	"limit_maxbytes",
+	"bytes",
 }
 
 // SampleConfig returns sample configuration message
@@ -122,23 +124,7 @@ func (m *Memcached) gatherServer(address string, acc plugins.Accumulator) error 
 			}
 		}
 	}
-
-	// Usage
-	acc.Add("usage", m.calcUsage(values), tags)
 	return nil
-}
-
-func (m *Memcached) calcUsage(values map[string]string) float64 {
-	maxBytes, maxOk := values["limit_maxbytes"]
-	bytes, bytesOk := values["bytes"]
-	if maxOk && bytesOk {
-		if fMax, errMax := strconv.ParseFloat(maxBytes, 64); errMax == nil && fMax > 0 {
-			if fBytes, errBytes := strconv.ParseFloat(bytes, 64); errBytes == nil {
-				return fBytes / fMax
-			}
-		}
-	}
-	return 0
 }
 
 func init() {
