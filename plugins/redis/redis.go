@@ -92,7 +92,9 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
 		} else if u.Scheme == "" {
 			// fallback to simple string based address (i.e. "10.0.0.1:10000")
+			u.Scheme = "tcp"
 			u.Host = serv
+			u.Path = ""
 		}
 		wg.Add(1)
 		go func(serv string) {
