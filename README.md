@@ -133,7 +133,7 @@ func Gather(acc plugins.Accumulator) error {
     }
 
     acc.Add("cpu", process.CPUTime, tags)
-    acc.Add("memoory", process.MemoryBytes, tags)
+    acc.Add("memory", process.MemoryBytes, tags)
   }
 }
 ```
