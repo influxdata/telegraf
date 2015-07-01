@@ -1,4 +1,4 @@
-## v0.1.2 [unreleased]
+## v0.1.2 [2015-07-01]
 
 ### Features
 - [#12](https://github.com/influxdb/influxdb/pull/12): Add Linux/ARM to the list of built binaries. Thanks @voxxit!
