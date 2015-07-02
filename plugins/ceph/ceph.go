@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/influxdb/telegraf/plugins"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -62,13 +64,11 @@ func (ceph *CephMetrics) gatherMetrics(acc plugins.Accumulator) {
 
 	var quorum QuorumStat
 
-	out, err := exec.Command("/bin/hostname").Output()
+	hostname, err := os.Hostname()
 
 	if err != nil {
 		return
 	}
-
-	hostname := string(out)
 
 	if err := ceph.cephCommand(&quorum, "quorum_status"); err != nil {
 		return
@@ -77,7 +77,7 @@ func (ceph *CephMetrics) gatherMetrics(acc plugins.Accumulator) {
 	ceph.getOSDPerf(acc)
 
 	if strings.TrimSpace(hostname) != strings.TrimSpace(quorum.LeaderName) {
-		fmt.Printf("Not a leader: quorum leader %s, host %s", quorum.LeaderName, hostname)
+		fmt.Printf("Not a leader: Quorum leader %s, Host %s", quorum.LeaderName, hostname)
 		return
 	}
 
@@ -118,26 +118,22 @@ func (ceph *CephMetrics) getCommon(acc plugins.Accumulator) {
 	tags := map[string]string{"cluster": ceph.Cluster}
 
 	//Monitors
-	var monitorStr string
 	monitors := quorum.MonitorMap.Mons
+	monitorNames := make([]string, len(monitors))
 	monitorValueMap := make(map[string]interface{})
 	monitorValueMap["value"] = len(monitors)
 
-	for _, value := range monitors {
-		monitorStr = fmt.Sprint(monitorStr, ",", value.Name)
+	for i, value := range monitors {
+		monitorNames[i] = value.Name
 	}
-	monitorValueMap["name"] = monitorStr
+
+	monitorValueMap["name"] = strings.Join(monitorNames, ",")
 
 	//Quorum Names
-	var memberStr string
 	quorum_name := quorum.QuorumName
 	quorumValueMap := make(map[string]interface{})
 	quorumValueMap["value"] = len(quorum_name)
-
-	for _, value := range quorum_name {
-		memberStr = fmt.Sprint(memberStr, ",", value)
-	}
-	quorumValueMap["members"] = memberStr
+	quorumValueMap["members"] = strings.Join(quorum_name, ",")
 
 	//clientIOs
 	sumOps := 0
@@ -149,13 +145,13 @@ func (ceph *CephMetrics) getCommon(acc plugins.Accumulator) {
 
 	// OSD Epoch
 	epoch := cephStatus.OSDMap.OSDMap.Epoch
-	acc.Add("osd_epoch", fmt.Sprintf("%d", epoch), map[string]string{"cluster": ceph.Cluster})
+	acc.Add("osd_epoch", epoch, map[string]string{"cluster": ceph.Cluster})
 	acc.Add("health", health.OverallStatus, tags)
 	acc.Add("total_storage", cephDf.Stats.TotalBytes, tags)
 	acc.Add("used", cephDf.Stats.TotalUsedBytes, tags)
 	acc.Add("available", cephDf.Stats.TotalAvailableBytes, tags)
-	acc.Add("client_io_kbs", fmt.Sprintf("%d", sumWrs), tags)
-	acc.Add("client_io_ops", fmt.Sprintf("%d", sumOps), tags)
+	acc.Add("client_io_kbs", sumWrs, tags)
+	acc.Add("client_io_ops", sumOps, tags)
 	acc.AddValuesWithTime("monitor", monitorValueMap, tags, time.Now())
 	acc.AddValuesWithTime("quorum", quorumValueMap, tags, time.Now())
 }
@@ -369,27 +365,27 @@ func (ceph *CephMetrics) getOSDDaemon(acc plugins.Accumulator) {
 func (ceph *CephMetrics) getOSDPerf(acc plugins.Accumulator) {
 	var osdPerf OsdPerfDump
 
-	out, err := exec.Command("/bin/ls", ceph.SocketDir).Output()
+	osdsArray, err := ioutil.ReadDir(ceph.SocketDir)
 	if err != nil {
 		return
 	}
-	fileStr := string(out)
-	osdsArray := strings.Split(fileStr, "\n")
-	osds := make([]string, len(osdsArray))
-	index := 0
 
-	for _, value := range osdsArray {
-		if !strings.Contains(value, "osd") {
+	for _, file := range osdsArray {
+		name := file.Name()
+
+		if !strings.HasPrefix(name, ceph.Cluster+"-osd") {
 			continue
 		}
-		osds[index] = value
-		index++
-		location := fmt.Sprint(ceph.SocketDir, "/", value)
+
+		location := fmt.Sprint(ceph.SocketDir, "/", name)
 		args := []string{"--admin-daemon", location, "perf", "dump"}
+
 		if err := ceph.cephCommand(&osdPerf, args...); err != nil {
+			fmt.Println("error ", err)
 			return
 		}
-		osdId := string(value[strings.LastIndex(value, ".")-1])
+
+		osdId := string(name[strings.LastIndex(name, ".")-1])
 		tags := map[string]string{"cluster": ceph.Cluster, "osd": osdId}
 		osd := osdPerf.Osd
 
@@ -426,7 +422,7 @@ func getOSDLatencyCalc(osdLatency *OSDLatency) map[string]interface{} {
 }
 
 func (ceph *CephMetrics) cephCommand(v interface{}, args ...string) error {
-	args = append(args, "-f", "json")
+	args = append(args, "-f", "json", "--cluster="+ceph.Cluster)
 	out, err := exec.Command(ceph.BinLocation, args...).Output()
 	if err != nil {
 		return err
