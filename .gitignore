@@ -1,3 +1,5 @@
 pkg/
 tivan
 .vagrant
+telegraf
+telegraf.toml

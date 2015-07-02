@@ -99,11 +99,11 @@ servers = ["localhost"]
 #   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
 # or a simple string:
 #   host=localhost user=pqotest password=... sslmode=...
-# 
+#
 # All connection parameters are optional. By default, the host is localhost
 # and the user is the currently running user. For localhost, we default
 # to sslmode=disable as well.
-# 
+#
 
 address = "sslmode=disable"
 
@@ -123,6 +123,16 @@ address = "sslmode=disable"
 #
 # If no servers are specified, then localhost is used as the host.
 servers = ["localhost"]
+
+# Read metrics from one or many rethinkdb servers
+[rethinkdb]
+
+# An array of URI to gather stats about. Specify an ip or hostname
+# with optional port add password. ie rethinkdb://user:auth_key@localhost,
+# rethinkdb://10.10.3.33:18832, 10.0.0.1:10000, etc.
+#
+# If no servers are specified, then 127.0.0.1 is used as the host and 28015 as the port.
+servers = ["127.0.0.1:28015"]
 
 # Read metrics about swap memory usage
 [swap]
