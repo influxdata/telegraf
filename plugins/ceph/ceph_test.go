@@ -62,7 +62,6 @@ func TestCephGenerateMetrics(t *testing.T) {
 	}
 
 	for _, metric := range intMetrics {
-
 		assert.True(t, acc.HasIntValue(metric))
 	}
 
