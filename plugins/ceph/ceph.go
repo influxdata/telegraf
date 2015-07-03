@@ -136,11 +136,11 @@ func (ceph *CephMetrics) getCommon(acc plugins.Accumulator) {
 	quorumValueMap["members"] = strings.Join(quorum_name, ",")
 
 	//clientIOs
-	sumOps := 0
-	sumWrs := 0
+	sumOps := int64(0)
+	sumWrs := int64(0)
 	for _, stat := range poolStatsList {
-		sumOps += stat.ClientIoRate.OpsPerSec
-		sumWrs += stat.ClientIoRate.WriteBytesPerSecond / 1024
+		sumOps += int64(stat.ClientIoRate.OpsPerSec)
+		sumWrs += int64(stat.ClientIoRate.WriteBytesPerSecond) / 1024
 	}
 
 	// OSD Epoch
@@ -148,8 +148,8 @@ func (ceph *CephMetrics) getCommon(acc plugins.Accumulator) {
 	acc.Add("osd_epoch", epoch, map[string]string{"cluster": ceph.Cluster})
 	acc.Add("health", health.OverallStatus, tags)
 	acc.Add("total_storage", cephDf.Stats.TotalBytes, tags)
-	acc.Add("used", cephDf.Stats.TotalUsedBytes, tags)
-	acc.Add("available", cephDf.Stats.TotalAvailableBytes, tags)
+	acc.Add("used_storage", cephDf.Stats.TotalUsedBytes, tags)
+	acc.Add("available_storage", cephDf.Stats.TotalAvailableBytes, tags)
 	acc.Add("client_io_kbs", sumWrs, tags)
 	acc.Add("client_io_ops", sumOps, tags)
 	acc.AddValuesWithTime("monitor", monitorValueMap, tags, time.Now())
@@ -241,9 +241,9 @@ func (ceph *CephMetrics) getPg(acc plugins.Accumulator) {
 	tags := map[string]string{"cluster": ceph.Cluster}
 	acc.Add("pg_map_count", pgMap.PgCount, tags)
 	acc.Add("pg_data_bytes", pgMap.DataBytes, tags)
-	acc.Add("pg_data_avail", pgMap.BytesAvail, tags)
-	acc.Add("pg_data_total", pgMap.BytesTotal, tags)
-	acc.Add("pg_data_used", pgMap.BytesUsed, tags)
+	acc.Add("pg_data_available_storage", pgMap.BytesAvail, tags)
+	acc.Add("pg_data_total_storage", pgMap.BytesTotal, tags)
+	acc.Add("pg_data_used_storage", pgMap.BytesUsed, tags)
 
 	var pgDump PgDump
 	if err := ceph.cephCommand(&pgDump, "pg", "dump"); err != nil {
@@ -251,25 +251,25 @@ func (ceph *CephMetrics) getPg(acc plugins.Accumulator) {
 	}
 
 	poolOsdPgMap := make(PoolOsdPgMap, len(pgDump.PoolStats))
-	totalOsdPgs := make(map[int]int, len(pgDump.OsdStats))
+	totalOsdPgs := make(map[int64]int64, len(pgDump.OsdStats))
 
 	for _, pgStat := range pgDump.PgStats {
-		poolId, _ := strconv.Atoi(strings.Split(pgStat.PgId, ".")[0])
+		poolId, _ := strconv.ParseInt(strings.Split(pgStat.PgId, ".")[0], 10, 64)
 
 		osdPgMap := poolOsdPgMap[poolId]
 		if osdPgMap == nil {
-			osdPgMap = make(map[int]int, len(pgDump.OsdStats))
+			osdPgMap = make(map[int64]int64, len(pgDump.OsdStats))
 			poolOsdPgMap[poolId] = osdPgMap
 		}
 
 		for _, osd := range pgStat.Up {
-			osdPgMap[osd] = osdPgMap[osd] + 1
-			totalOsdPgs[osd] = totalOsdPgs[osd] + 1
+			osdPgMap[osd] = int64(osdPgMap[osd] + 1)
+			totalOsdPgs[osd] = int64(totalOsdPgs[osd] + 1)
 		}
 	}
 
 	for poolId, osdPgMap := range poolOsdPgMap {
-		poolPg := 0
+		poolPg := int64(0)
 		for osdId, pgs := range osdPgMap {
 			tags := map[string]string{"cluster": ceph.Cluster, "pool": fmt.Sprintf("%d", poolId), "osd": fmt.Sprintf("%d", osdId)}
 			poolPg += pgs
@@ -381,7 +381,6 @@ func (ceph *CephMetrics) getOSDPerf(acc plugins.Accumulator) {
 		args := []string{"--admin-daemon", location, "perf", "dump"}
 
 		if err := ceph.cephCommand(&osdPerf, args...); err != nil {
-			fmt.Println("error ", err)
 			return
 		}
 
