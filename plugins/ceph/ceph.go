@@ -136,11 +136,11 @@ func (ceph *CephMetrics) getCommon(acc plugins.Accumulator) {
 	quorumValueMap["members"] = strings.Join(quorum_name, ",")
 
 	//clientIOs
-	sumOps := int64(0)
-	sumWrs := int64(0)
+	var sumOps int64 = 0
+	var sumWrs int64 = 0
 	for _, stat := range poolStatsList {
-		sumOps += int64(stat.ClientIoRate.OpsPerSec)
-		sumWrs += int64(stat.ClientIoRate.WriteBytesPerSecond) / 1024
+		sumOps += stat.ClientIoRate.OpsPerSec
+		sumWrs += stat.ClientIoRate.WriteBytesPerSecond / 1024
 	}
 
 	// OSD Epoch
@@ -269,7 +269,7 @@ func (ceph *CephMetrics) getPg(acc plugins.Accumulator) {
 	}
 
 	for poolId, osdPgMap := range poolOsdPgMap {
-		poolPg := int64(0)
+		var poolPg int64 = 0
 		for osdId, pgs := range osdPgMap {
 			tags := map[string]string{"cluster": ceph.Cluster, "pool": fmt.Sprintf("%d", poolId), "osd": fmt.Sprintf("%d", osdId)}
 			poolPg += pgs
@@ -346,8 +346,8 @@ func (ceph *CephMetrics) getOSDDaemon(acc plugins.Accumulator) {
 
 		tag := map[string]string{"cluster": ceph.Cluster, "osd": fmt.Sprintf("%d", osdNum)}
 		acc.Add("osd_utilization", utilized, tag)
-		acc.Add("osd_used", utilized, tag)
-		acc.Add("osd_total", total, tag)
+		acc.Add("osd_used_storage", used, tag)
+		acc.Add("osd_total_storage", total, tag)
 	}
 
 	//OSD Commit and Apply Latency
