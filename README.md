@@ -47,6 +47,7 @@ Telegraf currently has support for collecting metrics from:
 * System (memory, CPU, network, etc.)
 * Docker
 * MySQL
+* Prometheus (client libraries and exporters)
 * PostgreSQL
 * Redis
 
