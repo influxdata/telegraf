@@ -141,6 +141,7 @@ func Gather(acc plugins.Accumulator) error {
 ### Example
 
 ```go
+package simple
 
 // simple.go
 
@@ -169,7 +170,7 @@ func (s *Simple) Gather(acc plugins.Accumulator) error {
 }
 
 func init() {
-  plugins.Add("simple", func() plugins.Plugin { &Simple{} })
+  plugins.Add("simple", func() plugins.Plugin { return &Simple{} })
 }
 ```
 
