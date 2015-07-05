@@ -39,7 +39,7 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 		var count int
 
 		for _, p := range acc.Points {
-			if strings.HasPrefix(p.Name, prefix.prefix) {
+			if strings.HasPrefix(p.Measurement, prefix.prefix) {
 				count++
 			}
 		}
