@@ -12,7 +12,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address:   "host=localhost user=ubuntu sslmode=disable",
+				Address:   "host=localhost user=postgres sslmode=disable",
 				Databases: []string{"postgres"},
 			},
 		},
@@ -57,7 +57,7 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address:   "host=localhost user=ubuntu sslmode=disable",
+				Address:   "host=localhost user=postgres sslmode=disable",
 				Databases: []string{"postgres"},
 			},
 		},
@@ -78,7 +78,7 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address: "host=localhost user=ubuntu sslmode=disable",
+				Address: "host=localhost user=postgres sslmode=disable",
 			},
 		},
 	}
