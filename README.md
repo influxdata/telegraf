@@ -175,3 +175,16 @@ func init() {
 }
 ```
 
+## Testing
+
+As Telegraf collects metrics from several third-party services it becomes a difficult task to mock each service as
+some of them have complicated protocols which would take some time to replicate. 
+
+To overcome this situation we've decided to use docker containers to provide a fast and reproducible environment
+to test those services which require it. For other situations (i.e: https://github.com/influxdb/telegraf/blob/master/plugins/redis/redis_test.go ) a simple mock will suffice. 
+
+To execute Telegraf tests follow this simple steps:
+
+- Install docker compose following [these](https://docs.docker.com/compose/install/) instructions
+- execute `make test`
+

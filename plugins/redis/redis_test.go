@@ -83,7 +83,7 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, c := range checkInt {
-		assert.NoError(t, acc.ValidateValue(c.name, c.value))
+		assert.True(t, acc.CheckValue(c.name, c.value))
 	}
 
 	checkFloat := []struct {
@@ -98,7 +98,7 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, c := range checkFloat {
-		assert.NoError(t, acc.ValidateValue(c.name, c.value))
+		assert.True(t, acc.CheckValue(c.name, c.value))
 	}
 }
 
@@ -174,7 +174,7 @@ func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
 	}
 
 	for _, c := range checkInt {
-		assert.NoError(t, acc.ValidateValue(c.name, c.value))
+		assert.True(t, acc.CheckValue(c.name, c.value))
 	}
 
 	checkFloat := []struct {
@@ -189,7 +189,7 @@ func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
 	}
 
 	for _, c := range checkFloat {
-		assert.NoError(t, acc.ValidateValue(c.name, c.value))
+		assert.True(t, acc.CheckValue(c.name, c.value))
 	}
 }
 

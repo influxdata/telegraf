@@ -1,0 +1,16 @@
+mysql:
+    image: mysql
+    ports:
+        - "3306:3306"
+    environment:
+        MYSQL_ALLOW_EMPTY_PASSWORD: true
+
+memcached:
+    image: memcached
+    ports:
+        - "11211:11211"
+
+postgres:
+    image: postgres
+    ports:
+        - "5432:5432"
