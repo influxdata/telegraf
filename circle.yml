@@ -1,0 +1,15 @@
+machine:
+  python:
+    version: 2.7.3
+  services:
+    - docker
+
+dependencies:
+  pre:
+    - pip install -U docker-compose==1.2.0
+    - docker-compose pull
+
+
+test:
+  override:
+    - make test
