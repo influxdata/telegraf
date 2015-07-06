@@ -3,7 +3,7 @@ mysql:
     ports:
         - "3306:3306"
     environment:
-        MYSQL_ALLOW_EMPTY_PASSWORD: true
+        MYSQL_ALLOW_EMPTY_PASSWORD: yes
 
 memcached:
     image: memcached
@@ -14,3 +14,5 @@ postgres:
     image: postgres
     ports:
         - "5432:5432"
+    environment:
+        POSTGRES_USER: ubuntu
