@@ -32,9 +32,9 @@
 
 AWS_FILE=~/aws.conf
 
-INSTALL_ROOT_DIR=/opt/influxdb
-TELEGRAF_LOG_DIR=/var/log/influxdb
-CONFIG_ROOT_DIR=/etc/opt/influxdb
+INSTALL_ROOT_DIR=/opt/telegraf
+TELEGRAF_LOG_DIR=/var/log/telegraf
+CONFIG_ROOT_DIR=/etc/opt/telegraf
 
 SAMPLE_CONFIGURATION=etc/config.sample.toml
 INITD_SCRIPT=scripts/init.sh
