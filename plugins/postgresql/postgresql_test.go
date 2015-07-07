@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
@@ -12,7 +13,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address:   "host=localhost user=postgres sslmode=disable",
+				Address:   fmt.Sprintf("host=%s user=postgres sslmode=disable", testutil.GetLocalHost()),
 				Databases: []string{"postgres"},
 			},
 		},
@@ -57,7 +58,7 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address:   "host=localhost user=postgres sslmode=disable",
+				Address:   fmt.Sprintf("host=%s user=postgres sslmode=disable", testutil.GetLocalHost()),
 				Databases: []string{"postgres"},
 			},
 		},
@@ -78,7 +79,7 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address: "host=localhost user=postgres sslmode=disable",
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable", testutil.GetLocalHost()),
 			},
 		},
 	}
