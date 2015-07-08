@@ -70,6 +70,9 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	if r.StatusCode != http.StatusOK {
+		return fmt.Errorf("elasticsearch: API responded with status-code %d, expected %d", r.StatusCode, http.StatusOK)
+	}
 	d := json.NewDecoder(r.Body)
 	esRes := &struct {
 		ClusterName string           `json:"cluster_name"`
