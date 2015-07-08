@@ -249,6 +249,7 @@ func TestElasticsearch(t *testing.T) {
 
 	tags := map[string]string{
 		"node_host":    "test",
+		"node_name":    "test.host.com",
 		"cluster_name": "es-testcluster",
 	}
 
