@@ -13,8 +13,8 @@ We'll eagerly accept pull requests for new plugins and will manage the set of pl
 ### Linux packages for Debian/Ubuntu and RHEL/CentOS:
 
 ```
-http://get.influxdb.org/telegraf/telegraf_0.1.3_amd64.deb
-http://get.influxdb.org/telegraf/telegraf-0.1.3-1.x86_64.rpm
+http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
+http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
 ```
 
 ### OSX via Homebrew:
@@ -51,6 +51,8 @@ Telegraf currently has support for collecting metrics from:
 * PostgreSQL
 * Redis
 * Elasticsearch (indices stats)
+* RethinkDB
+* Kafka
 
 We'll be adding support for many more over the coming months. Read on if you want to add support for another service or third-party API.
 

@@ -1,3 +1,12 @@
+## v0.1.4 [2015-07-09]
+
+### Features
+- [#56](https://github.com/influxdb/telegraf/pull/56): Update README for Kafka plugin. Thanks @EmilS!
+
+### Bugfixes
+- [#50](https://github.com/influxdb/telegraf/pull/50): Fix init.sh script to use telegraf directory. Thanks @jseriff!
+- [#52](https://github.com/influxdb/telegraf/pull/52): Update CHANGELOG to reference updated directory. Thanks @benfb!
+
 ## v0.1.3 [2015-07-05]
 
 ### Features
