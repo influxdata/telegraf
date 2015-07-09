@@ -12,10 +12,10 @@ const indicesStatsPath = "/_nodes/stats/indices"
 const indicesStatsPathLocal = "/_nodes/_local/stats/indices"
 
 type node struct {
-	Host       string                            `json:"host"`
-	Name       string                            `json:"name"`
-	Attributes map[string]string                 `json:"attributes"`
-	Indices    map[string]map[string]interface{} `json:"indices"`
+	Host       string            `json:"host"`
+	Name       string            `json:"name"`
+	Attributes map[string]string `json:"attributes"`
+	Indices    interface{}       `json:"indices"`
 }
 
 const sampleConfig = `
@@ -96,19 +96,30 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 			tags["node_attribute_"+k] = v
 		}
 
-		for group, stats := range n.Indices {
-			for statName, value := range stats {
-				floatVal, ok := value.(float64)
-				if !ok {
-					// there are a couple of values that we can't cast to float,
-					// this is fine :-)
-					continue
-				}
-				acc.Add(fmt.Sprintf("indices_%s_%s", group, statName), int(floatVal), tags)
-			}
+		if err := e.parseInterface(acc, "indices", tags, n.Indices); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+func (e *Elasticsearch) parseInterface(acc plugins.Accumulator, prefix string, tags map[string]string, v interface{}) error {
+	switch t := v.(type) {
+	case map[string]interface{}:
+		for k, v := range t {
+			if err := e.parseInterface(acc, prefix+"_"+k, tags, v); err != nil {
+				return err
+			}
+		}
+	case float64:
+		acc.Add(prefix, t, tags)
+	case bool, string:
+		// ignored bool and string
+		return nil
+	default:
+		return fmt.Errorf("elasticsearch: got unexpected type %T with value %v (%s)", t, t, prefix)
+	}
 	return nil
 }
 
