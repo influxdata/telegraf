@@ -367,6 +367,20 @@ const statsResponse = `
           "largest": 1,
           "completed": 0
         }
+      },
+      "network": {
+        "tcp": {
+          "active_opens": 13,
+          "passive_opens": 16,
+          "curr_estab": 29,
+          "in_segs": 113,
+          "out_segs": 97,
+          "retrans_segs": 0,
+          "estab_resets": 0,
+          "attempt_fails": 0,
+          "in_errs": 0,
+          "out_rsts": 0
+        }
       }
     }
   }
@@ -613,4 +627,17 @@ var threadPoolExpected = map[string]float64{
 	"thread_pool_flush_rejected":                1,
 	"thread_pool_flush_largest":                 5,
 	"thread_pool_flush_completed":               3,
+}
+
+var networkExpected = map[string]float64{
+	"network_tcp_in_errs":       0,
+	"network_tcp_passive_opens": 16,
+	"network_tcp_curr_estab":    29,
+	"network_tcp_in_segs":       113,
+	"network_tcp_out_segs":      97,
+	"network_tcp_retrans_segs":  0,
+	"network_tcp_attempt_fails": 0,
+	"network_tcp_active_opens":  13,
+	"network_tcp_estab_resets":  0,
+	"network_tcp_out_rsts":      0,
 }
