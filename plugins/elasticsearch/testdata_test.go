@@ -411,6 +411,32 @@ const statsResponse = `
       "http": {
         "current_open": 3,
         "total_opened": 3
+      },
+      "breakers": {
+        "fielddata": {
+          "limit_size_in_bytes": 623326003,
+          "limit_size": "594.4mb",
+          "estimated_size_in_bytes": 0,
+          "estimated_size": "0b",
+          "overhead": 1.03,
+          "tripped": 0
+        },
+        "request": {
+          "limit_size_in_bytes": 415550668,
+          "limit_size": "396.2mb",
+          "estimated_size_in_bytes": 0,
+          "estimated_size": "0b",
+          "overhead": 1.0,
+          "tripped": 0
+        },
+        "parent": {
+          "limit_size_in_bytes": 727213670,
+          "limit_size": "693.5mb",
+          "estimated_size_in_bytes": 0,
+          "estimated_size": "0b",
+          "overhead": 1.0,
+          "tripped": 0
+        }
       }
     }
   }
@@ -690,4 +716,19 @@ var transportExpected = map[string]float64{
 var httpExpected = map[string]float64{
 	"http_current_open": 3,
 	"http_total_opened": 3,
+}
+
+var breakersExpected = map[string]float64{
+	"breakers_fielddata_estimated_size_in_bytes": 0,
+	"breakers_fielddata_overhead":                1.03,
+	"breakers_fielddata_tripped":                 0,
+	"breakers_fielddata_limit_size_in_bytes":     623326003,
+	"breakers_request_estimated_size_in_bytes":   0,
+	"breakers_request_overhead":                  1.0,
+	"breakers_request_tripped":                   0,
+	"breakers_request_limit_size_in_bytes":       415550668,
+	"breakers_parent_overhead":                   1.0,
+	"breakers_parent_tripped":                    0,
+	"breakers_parent_limit_size_in_bytes":        727213670,
+	"breakers_parent_estimated_size_in_bytes":    0,
 }

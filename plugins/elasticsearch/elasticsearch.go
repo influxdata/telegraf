@@ -24,6 +24,7 @@ type node struct {
 	FS         interface{}       `json:"fs"`
 	Transport  interface{}       `json:"transport"`
 	HTTP       interface{}       `json:"http"`
+	Breakers   interface{}       `json:"breakers"`
 }
 
 const sampleConfig = `
@@ -129,6 +130,9 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 			return err
 		}
 		if err := e.parseInterface(acc, "http", tags, n.HTTP); err != nil {
+			return err
+		}
+		if err := e.parseInterface(acc, "breakers", tags, n.Breakers); err != nil {
 			return err
 		}
 	}
