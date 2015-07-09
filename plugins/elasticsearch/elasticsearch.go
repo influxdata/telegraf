@@ -8,8 +8,8 @@ import (
 	"github.com/influxdb/telegraf/plugins"
 )
 
-const indicesStatsPath = "/_nodes/stats"
-const indicesStatsPathLocal = "/_nodes/_local/stats"
+const statsPath = "/_nodes/stats"
+const statsPathLocal = "/_nodes/_local/stats"
 
 type node struct {
 	Host       string            `json:"host"`
@@ -56,7 +56,7 @@ func (e *Elasticsearch) SampleConfig() string {
 
 // Description returns the plugin description.
 func (e *Elasticsearch) Description() string {
-	return "Read indices stats from one or more Elasticsearch servers or clusters"
+	return "Read stats from one or more Elasticsearch servers or clusters"
 }
 
 // Gather reads the stats from Elasticsearch and writes it to the
@@ -65,9 +65,9 @@ func (e *Elasticsearch) Gather(acc plugins.Accumulator) error {
 	for _, serv := range e.Servers {
 		var url string
 		if e.Local {
-			url = serv + indicesStatsPathLocal
+			url = serv + statsPathLocal
 		} else {
-			url = serv + indicesStatsPath
+			url = serv + statsPath
 		}
 		if err := e.gatherUrl(url, acc); err != nil {
 			return err
