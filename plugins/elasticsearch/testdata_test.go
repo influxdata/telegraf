@@ -407,6 +407,10 @@ const statsResponse = `
         "rx_size_in_bytes": 1380,
         "tx_count": 6,
         "tx_size_in_bytes": 1380
+      },
+      "http": {
+        "current_open": 3,
+        "total_opened": 3
       }
     }
   }
@@ -681,4 +685,9 @@ var transportExpected = map[string]float64{
 	"transport_rx_size_in_bytes": 1380,
 	"transport_tx_count":         6,
 	"transport_tx_size_in_bytes": 1380,
+}
+
+var httpExpected = map[string]float64{
+	"http_current_open": 3,
+	"http_total_opened": 3,
 }

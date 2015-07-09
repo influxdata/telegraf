@@ -82,4 +82,7 @@ func TestElasticsearch(t *testing.T) {
 	for key, val := range transportExpected {
 		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
 	}
+	for key, val := range httpExpected {
+		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
+	}
 }
