@@ -1,6 +1,7 @@
 package all
 
 import (
+	_ "github.com/influxdb/telegraf/plugins/ceph"
 	_ "github.com/influxdb/telegraf/plugins/kafka_consumer"
 	_ "github.com/influxdb/telegraf/plugins/memcached"
 	_ "github.com/influxdb/telegraf/plugins/mysql"
