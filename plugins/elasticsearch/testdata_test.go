@@ -381,6 +381,25 @@ const statsResponse = `
           "in_errs": 0,
           "out_rsts": 0
         }
+      },
+      "fs": {
+        "timestamp": 1436460392946,
+        "total": {
+          "total_in_bytes": 19507089408,
+          "free_in_bytes": 16909316096,
+          "available_in_bytes": 15894814720
+        },
+        "data": [
+          {
+            "path": "/usr/share/elasticsearch/data/elasticsearch/nodes/0",
+            "mount": "/usr/share/elasticsearch/data",
+            "dev": "/dev/sda1",
+            "type": "ext4",
+            "total_in_bytes": 19507089408,
+            "free_in_bytes": 16909316096,
+            "available_in_bytes": 15894814720
+          }
+        ]
       }
     }
   }
@@ -640,4 +659,11 @@ var networkExpected = map[string]float64{
 	"network_tcp_active_opens":  13,
 	"network_tcp_estab_resets":  0,
 	"network_tcp_out_rsts":      0,
+}
+
+var fsExpected = map[string]float64{
+	"fs_timestamp":                1436460392946,
+	"fs_total_free_in_bytes":      16909316096,
+	"fs_total_available_in_bytes": 15894814720,
+	"fs_total_total_in_bytes":     19507089408,
 }
