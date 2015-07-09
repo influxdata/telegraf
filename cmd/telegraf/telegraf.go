@@ -18,7 +18,7 @@ var fConfig = flag.String("config", "", "configuration file to load")
 var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
-var fPLuginsFilter = flag.String("filter", "", "filter the plugin to enable")
+var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 var Version = "unreleased"
 var Commit = ""
