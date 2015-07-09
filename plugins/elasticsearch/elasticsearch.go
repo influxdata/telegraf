@@ -12,9 +12,10 @@ const indicesStatsPath = "/_nodes/stats/indices"
 const indicesStatsPathLocal = "/_nodes/_local/stats/indices"
 
 type node struct {
-	Host    string                            `json:"host"`
-	Name    string                            `json:"name"`
-	Indices map[string]map[string]interface{} `json:"indices"`
+	Host       string                            `json:"host"`
+	Name       string                            `json:"name"`
+	Attributes map[string]string                 `json:"attributes"`
+	Indices    map[string]map[string]interface{} `json:"indices"`
 }
 
 const sampleConfig = `
@@ -83,11 +84,16 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 		return err
 	}
 
-	for _, n := range esRes.Nodes {
+	for id, n := range esRes.Nodes {
 		tags := map[string]string{
+			"node_id":      id,
 			"node_host":    n.Host,
 			"node_name":    n.Name,
 			"cluster_name": esRes.ClusterName,
+		}
+
+		for k, v := range n.Attributes {
+			tags["node_attribute_"+k] = v
 		}
 
 		for group, stats := range n.Indices {

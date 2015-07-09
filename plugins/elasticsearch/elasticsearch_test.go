@@ -248,9 +248,11 @@ func TestElasticsearch(t *testing.T) {
 	}
 
 	tags := map[string]string{
-		"node_host":    "test",
-		"node_name":    "test.host.com",
-		"cluster_name": "es-testcluster",
+		"cluster_name":          "es-testcluster",
+		"node_attribute_master": "true",
+		"node_id":               "SDFsfSDFsdfFSDSDfSFDSDF",
+		"node_name":             "test.host.com",
+		"node_host":             "test",
 	}
 
 	for key, val := range indicesExpected {
