@@ -66,4 +66,8 @@ func TestElasticsearch(t *testing.T) {
 	for key, val := range jvmExpected {
 		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
 	}
+
+	for key, val := range threadPoolExpected {
+		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
+	}
 }
