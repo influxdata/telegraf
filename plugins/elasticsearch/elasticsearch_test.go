@@ -51,41 +51,22 @@ func TestElasticsearch(t *testing.T) {
 		"node_host":             "test",
 	}
 
-	for key, val := range indicesExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
+	testTables := []map[string]float64{
+		indicesExpected,
+		osExpected,
+		processExpected,
+		jvmExpected,
+		threadPoolExpected,
+		networkExpected,
+		fsExpected,
+		transportExpected,
+		httpExpected,
+		breakersExpected,
 	}
 
-	for key, val := range osExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
-	}
-
-	for key, val := range processExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
-	}
-
-	for key, val := range jvmExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
-	}
-
-	for key, val := range threadPoolExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
-	}
-
-	for key, val := range networkExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
-	}
-
-	for key, val := range fsExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
-	}
-
-	for key, val := range transportExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
-	}
-	for key, val := range httpExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
-	}
-	for key, val := range breakersExpected {
-		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
+	for _, testTable := range testTables {
+		for k, v := range testTable {
+			assert.NoError(t, acc.ValidateTaggedValue(k, v, tags))
+		}
 	}
 }
