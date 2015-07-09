@@ -22,6 +22,7 @@ type node struct {
 	ThreadPool interface{}       `json:"thread_pool"`
 	Network    interface{}       `json:"network"`
 	FS         interface{}       `json:"fs"`
+	Transport  interface{}       `json:"transport"`
 }
 
 const sampleConfig = `
@@ -121,6 +122,9 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 			return err
 		}
 		if err := e.parseInterface(acc, "fs", tags, n.FS); err != nil {
+			return err
+		}
+		if err := e.parseInterface(acc, "transport", tags, n.Transport); err != nil {
 			return err
 		}
 	}

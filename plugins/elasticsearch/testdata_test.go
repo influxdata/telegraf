@@ -400,6 +400,13 @@ const statsResponse = `
             "available_in_bytes": 15894814720
           }
         ]
+      },
+      "transport": {
+        "server_open": 13,
+        "rx_count": 6,
+        "rx_size_in_bytes": 1380,
+        "tx_count": 6,
+        "tx_size_in_bytes": 1380
       }
     }
   }
@@ -666,4 +673,12 @@ var fsExpected = map[string]float64{
 	"fs_total_free_in_bytes":      16909316096,
 	"fs_total_available_in_bytes": 15894814720,
 	"fs_total_total_in_bytes":     19507089408,
+}
+
+var transportExpected = map[string]float64{
+	"transport_server_open":      13,
+	"transport_rx_count":         6,
+	"transport_rx_size_in_bytes": 1380,
+	"transport_tx_count":         6,
+	"transport_tx_size_in_bytes": 1380,
 }
