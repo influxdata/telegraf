@@ -8,8 +8,8 @@ import (
 	"github.com/influxdb/telegraf/plugins"
 )
 
-const indicesStatsPath = "/_nodes/stats/indices"
-const indicesStatsPathLocal = "/_nodes/_local/stats/indices"
+const indicesStatsPath = "/_nodes/stats"
+const indicesStatsPathLocal = "/_nodes/_local/stats"
 
 type node struct {
 	Host       string            `json:"host"`
@@ -30,7 +30,7 @@ type node struct {
 const sampleConfig = `
 # specify a list of one or more Elasticsearch servers
 servers = ["http://localhost:9200"]
-#
+
 # set local to false when you want to read the indices stats from all nodes
 # within the cluster
 local = true
