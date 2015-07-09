@@ -50,6 +50,8 @@ Telegraf currently has support for collecting metrics from:
 * Prometheus (client libraries and exporters)
 * PostgreSQL
 * Redis
+* RethinkDB
+* Kafka
 
 We'll be adding support for many more over the coming months. Read on if you want to add support for another service or third-party API.
 
