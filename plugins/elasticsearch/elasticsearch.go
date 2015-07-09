@@ -17,6 +17,7 @@ type node struct {
 	Attributes map[string]string `json:"attributes"`
 	Indices    interface{}       `json:"indices"`
 	Os         interface{}       `json:"os"`
+	Process    interface{}       `json:"process"`
 }
 
 const sampleConfig = `
@@ -101,6 +102,9 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 			return err
 		}
 		if err := e.parseInterface(acc, "os", tags, n.Os); err != nil {
+			return err
+		}
+		if err := e.parseInterface(acc, "process", tags, n.Process); err != nil {
 			return err
 		}
 	}

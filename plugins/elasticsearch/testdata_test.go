@@ -154,6 +154,21 @@ const statsResponse = `
           "used_in_bytes": 0,
           "free_in_bytes": 487997440
         }
+      },
+      "process": {
+        "timestamp": 1436460392945,
+        "open_file_descriptors": 160,
+        "cpu": {
+          "percent": 2,
+          "sys_in_millis": 1870,
+          "user_in_millis": 13610,
+          "total_in_millis": 15480
+        },
+        "mem": {
+          "resident_in_bytes": 246382592,
+          "share_in_bytes": 18747392,
+          "total_virtual_in_bytes": 4747890688
+        }
       }
     }
   }
@@ -248,4 +263,16 @@ var osExpected = map[string]float64{
 	"os_mem_actual_used_in_bytes": 534159360,
 	"os_mem_free_in_bytes":        477761536,
 	"os_mem_used_in_bytes":        1621868544,
+}
+
+var processExpected = map[string]float64{
+	"process_mem_resident_in_bytes":      246382592,
+	"process_mem_share_in_bytes":         18747392,
+	"process_mem_total_virtual_in_bytes": 4747890688,
+	"process_timestamp":                  1436460392945,
+	"process_open_file_descriptors":      160,
+	"process_cpu_total_in_millis":        15480,
+	"process_cpu_percent":                2,
+	"process_cpu_sys_in_millis":          1870,
+	"process_cpu_user_in_millis":         13610,
 }
