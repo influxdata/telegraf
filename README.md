@@ -13,8 +13,8 @@ We'll eagerly accept pull requests for new plugins and will manage the set of pl
 ### Linux packages for Debian/Ubuntu and RHEL/CentOS:
 
 ```
-http://get.influxdb.org/telegraf/telegraf_0.1.2_amd64.deb
-http://get.influxdb.org/telegraf/telegraf-0.1.2-1.x86_64.rpm
+http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
+http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
 ```
 
 ### OSX via Homebrew:
@@ -47,9 +47,11 @@ Telegraf currently has support for collecting metrics from:
 * System (memory, CPU, network, etc.)
 * Docker
 * MySQL
+* Prometheus (client libraries and exporters)
 * PostgreSQL
 * Redis
 * RethinkDB
+* Kafka
 * MongoDB
 
 We'll be adding support for many more over the coming months. Read on if you want to add support for another service or third-party API.
@@ -143,6 +145,7 @@ func Gather(acc plugins.Accumulator) error {
 ### Example
 
 ```go
+package simple
 
 // simple.go
 
@@ -171,7 +174,7 @@ func (s *Simple) Gather(acc plugins.Accumulator) error {
 }
 
 func init() {
-  plugins.Add("simple", func() plugins.Plugin { &Simple{} })
+  plugins.Add("simple", func() plugins.Plugin { return &Simple{} })
 }
 ```
 

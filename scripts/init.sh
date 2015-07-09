@@ -42,7 +42,7 @@ if [ ! -f "$STDOUT" ]; then
 fi
 
 if [ -z "$STDERR" ]; then
-    STDERR=/var/log/influxdb/telegraf.log
+    STDERR=/var/log/telegraf/telegraf.log
 fi
 if [ ! -f "$STDERR" ]; then
     mkdir -p `dirname $STDERR`
@@ -92,10 +92,10 @@ function log_success_msg() {
 name=telegraf
 
 # Daemon name, where is the actual executable
-daemon=/opt/influxdb/telegraf
+daemon=/opt/telegraf/telegraf
 
 # pid file for the daemon
-pidfile=/var/run/influxdb/telegraf.pid
+pidfile=/var/run/telegraf/telegraf.pid
 piddir=`dirname $pidfile`
 
 if [ ! -d "$piddir" ]; then
@@ -104,7 +104,7 @@ if [ ! -d "$piddir" ]; then
 fi
 
 # Configuration file
-config=/etc/opt/influxdb/telegraf.conf
+config=/etc/opt/telegraf/telegraf.conf
 
 # If the daemon is not there, then exit.
 [ -x $daemon ] || exit 5

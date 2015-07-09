@@ -55,9 +55,12 @@ func (s *DiskIOStats) Gather(acc plugins.Accumulator) error {
 	}
 
 	for _, io := range diskio {
-		tags := map[string]string{
-			"name":   io.Name,
-			"serial": io.SerialNumber,
+		tags := map[string]string{}
+		if len(io.Name) != 0 {
+			tags["name"] = io.Name
+		}
+		if len(io.SerialNumber) != 0 {
+			tags["serial"] = io.SerialNumber
 		}
 
 		acc.Add("reads", io.ReadCount, tags)
