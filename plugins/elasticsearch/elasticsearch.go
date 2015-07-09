@@ -16,7 +16,7 @@ type node struct {
 	Name       string            `json:"name"`
 	Attributes map[string]string `json:"attributes"`
 	Indices    interface{}       `json:"indices"`
-	Os         interface{}       `json:"os"`
+	OS         interface{}       `json:"os"`
 	Process    interface{}       `json:"process"`
 	JVM        interface{}       `json:"jvm"`
 	ThreadPool interface{}       `json:"thread_pool"`
@@ -105,35 +105,23 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 			tags["node_attribute_"+k] = v
 		}
 
-		if err := e.parseInterface(acc, "indices", tags, n.Indices); err != nil {
-			return err
+		stats := map[string]interface{}{
+			"indices":     n.Indices,
+			"os":          n.OS,
+			"process":     n.Process,
+			"jvm":         n.JVM,
+			"thread_pool": n.ThreadPool,
+			"network":     n.Network,
+			"fs":          n.FS,
+			"transport":   n.Transport,
+			"http":        n.HTTP,
+			"breakers":    n.Breakers,
 		}
-		if err := e.parseInterface(acc, "os", tags, n.Os); err != nil {
-			return err
-		}
-		if err := e.parseInterface(acc, "process", tags, n.Process); err != nil {
-			return err
-		}
-		if err := e.parseInterface(acc, "jvm", tags, n.JVM); err != nil {
-			return err
-		}
-		if err := e.parseInterface(acc, "thread_pool", tags, n.ThreadPool); err != nil {
-			return err
-		}
-		if err := e.parseInterface(acc, "network", tags, n.Network); err != nil {
-			return err
-		}
-		if err := e.parseInterface(acc, "fs", tags, n.FS); err != nil {
-			return err
-		}
-		if err := e.parseInterface(acc, "transport", tags, n.Transport); err != nil {
-			return err
-		}
-		if err := e.parseInterface(acc, "http", tags, n.HTTP); err != nil {
-			return err
-		}
-		if err := e.parseInterface(acc, "breakers", tags, n.Breakers); err != nil {
-			return err
+
+		for p, s := range stats {
+			if err := e.parseInterface(acc, p, tags, s); err != nil {
+				return err
+			}
 		}
 	}
 
