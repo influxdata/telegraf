@@ -16,7 +16,7 @@ func TestGetDefaultTags(t *testing.T) {
 		in  string
 		out string
 	}{
-		{"host", server.Url.Host},
+		{"hostname", server.Url.Host},
 	}
 	defaultTags := server.getDefaultTags()
 	for _, tt := range tagTests {

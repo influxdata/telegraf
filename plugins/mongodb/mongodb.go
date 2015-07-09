@@ -1,7 +1,10 @@
 package mongodb
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"net"
 	"net/url"
 	"sync"
 	"time"
@@ -12,7 +15,13 @@ import (
 
 type MongoDB struct {
 	Servers []string
+	Ssl     Ssl
 	mongos  map[string]*Server
+}
+
+type Ssl struct {
+	Enabled bool
+	CaCerts []string `toml:"cacerts"`
 }
 
 var sampleConfig = `
@@ -92,8 +101,33 @@ func (m *MongoDB) gatherServer(server *Server, acc plugins.Accumulator) error {
 		}
 		dialInfo.Direct = true
 		dialInfo.Timeout = time.Duration(10) * time.Second
+
+		if m.Ssl.Enabled {
+			tlsConfig := &tls.Config{}
+			if len(m.Ssl.CaCerts) > 0 {
+				roots := x509.NewCertPool()
+				for _, caCert := range m.Ssl.CaCerts {
+					ok := roots.AppendCertsFromPEM([]byte(caCert))
+					if !ok {
+						return fmt.Errorf("failed to parse root certificate")
+					}
+				}
+				tlsConfig.RootCAs = roots
+			} else {
+				tlsConfig.InsecureSkipVerify = true
+			}
+			dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+				conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
+				if err != nil {
+					fmt.Printf("error in Dial, %s\n", err.Error())
+				}
+				return conn, err
+			}
+		}
+
 		sess, err := mgo.DialWithInfo(dialInfo)
 		if err != nil {
+			fmt.Printf("error dialing over ssl, %s\n", err.Error())
 			return fmt.Errorf("Unable to connect to MongoDB, %s\n", err.Error())
 		}
 		server.Session = sess
