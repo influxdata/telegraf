@@ -126,6 +126,34 @@ const statsResponse = `
           "current_as_target": 0,
           "throttle_time_in_millis": 0
         }
+      },
+      "os": {
+        "timestamp": 1436460392944,
+        "uptime_in_millis": 25092,
+        "load_average": [
+          0.01,
+          0.04,
+          0.05
+        ],
+        "cpu": {
+          "sys": 0,
+          "user": 0,
+          "idle": 99,
+          "usage": 0,
+          "stolen": 0
+        },
+        "mem": {
+          "free_in_bytes": 477761536,
+          "used_in_bytes": 1621868544,
+          "free_percent": 74,
+          "used_percent": 25,
+          "actual_free_in_bytes": 1565470720,
+          "actual_used_in_bytes": 534159360
+        },
+        "swap": {
+          "used_in_bytes": 0,
+          "free_in_bytes": 487997440
+        }
       }
     }
   }
@@ -202,4 +230,22 @@ var indicesExpected = map[string]float64{
 	"indices_segments_index_writer_max_memory_in_bytes": 172368955,
 	"indices_segments_version_map_memory_in_bytes":      611844,
 	"indices_segments_fixed_bit_set_memory_in_bytes":    0,
+}
+
+var osExpected = map[string]float64{
+	"os_swap_used_in_bytes":       0,
+	"os_swap_free_in_bytes":       487997440,
+	"os_timestamp":                1436460392944,
+	"os_uptime_in_millis":         25092,
+	"os_cpu_sys":                  0,
+	"os_cpu_user":                 0,
+	"os_cpu_idle":                 99,
+	"os_cpu_usage":                0,
+	"os_cpu_stolen":               0,
+	"os_mem_free_percent":         74,
+	"os_mem_used_percent":         25,
+	"os_mem_actual_free_in_bytes": 1565470720,
+	"os_mem_actual_used_in_bytes": 534159360,
+	"os_mem_free_in_bytes":        477761536,
+	"os_mem_used_in_bytes":        1621868544,
 }

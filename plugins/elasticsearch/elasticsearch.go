@@ -16,6 +16,7 @@ type node struct {
 	Name       string            `json:"name"`
 	Attributes map[string]string `json:"attributes"`
 	Indices    interface{}       `json:"indices"`
+	Os         interface{}       `json:"os"`
 }
 
 const sampleConfig = `
@@ -99,6 +100,9 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 		if err := e.parseInterface(acc, "indices", tags, n.Indices); err != nil {
 			return err
 		}
+		if err := e.parseInterface(acc, "os", tags, n.Os); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -114,8 +118,8 @@ func (e *Elasticsearch) parseInterface(acc plugins.Accumulator, prefix string, t
 		}
 	case float64:
 		acc.Add(prefix, t, tags)
-	case bool, string:
-		// ignored bool and string
+	case bool, string, []interface{}:
+		// ignored types
 		return nil
 	default:
 		return fmt.Errorf("elasticsearch: got unexpected type %T with value %v (%s)", t, t, prefix)

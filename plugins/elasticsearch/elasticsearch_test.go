@@ -54,4 +54,8 @@ func TestElasticsearch(t *testing.T) {
 	for key, val := range indicesExpected {
 		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
 	}
+
+	for key, val := range osExpected {
+		assert.NoError(t, acc.ValidateTaggedValue(key, val, tags))
+	}
 }
