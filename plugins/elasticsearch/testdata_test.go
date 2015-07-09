@@ -169,6 +169,66 @@ const statsResponse = `
           "share_in_bytes": 18747392,
           "total_virtual_in_bytes": 4747890688
         }
+      },
+      "jvm": {
+        "timestamp": 1436460392945,
+        "uptime_in_millis": 202245,
+        "mem": {
+          "heap_used_in_bytes": 52709568,
+          "heap_used_percent": 5,
+          "heap_committed_in_bytes": 259522560,
+          "heap_max_in_bytes": 1038876672,
+          "non_heap_used_in_bytes": 39634576,
+          "non_heap_committed_in_bytes": 40841216,
+          "pools": {
+            "young": {
+              "used_in_bytes": 32685760,
+              "max_in_bytes": 279183360,
+              "peak_used_in_bytes": 71630848,
+              "peak_max_in_bytes": 279183360
+            },
+            "survivor": {
+              "used_in_bytes": 8912880,
+              "max_in_bytes": 34865152,
+              "peak_used_in_bytes": 8912888,
+              "peak_max_in_bytes": 34865152
+            },
+            "old": {
+              "used_in_bytes": 11110928,
+              "max_in_bytes": 724828160,
+              "peak_used_in_bytes": 14354608,
+              "peak_max_in_bytes": 724828160
+            }
+          }
+        },
+        "threads": {
+          "count": 44,
+          "peak_count": 45
+        },
+        "gc": {
+          "collectors": {
+            "young": {
+              "collection_count": 2,
+              "collection_time_in_millis": 98
+            },
+            "old": {
+              "collection_count": 1,
+              "collection_time_in_millis": 24
+            }
+          }
+        },
+        "buffer_pools": {
+          "direct": {
+            "count": 40,
+            "used_in_bytes": 6304239,
+            "total_capacity_in_bytes": 6304239
+          },
+          "mapped": {
+            "count": 0,
+            "used_in_bytes": 0,
+            "total_capacity_in_bytes": 0
+          }
+        }
       }
     }
   }
@@ -275,4 +335,39 @@ var processExpected = map[string]float64{
 	"process_cpu_percent":                2,
 	"process_cpu_sys_in_millis":          1870,
 	"process_cpu_user_in_millis":         13610,
+}
+
+var jvmExpected = map[string]float64{
+	"jvm_timestamp":                                     1436460392945,
+	"jvm_uptime_in_millis":                              202245,
+	"jvm_mem_non_heap_used_in_bytes":                    39634576,
+	"jvm_mem_non_heap_committed_in_bytes":               40841216,
+	"jvm_mem_pools_young_max_in_bytes":                  279183360,
+	"jvm_mem_pools_young_peak_used_in_bytes":            71630848,
+	"jvm_mem_pools_young_peak_max_in_bytes":             279183360,
+	"jvm_mem_pools_young_used_in_bytes":                 32685760,
+	"jvm_mem_pools_survivor_peak_used_in_bytes":         8912888,
+	"jvm_mem_pools_survivor_peak_max_in_bytes":          34865152,
+	"jvm_mem_pools_survivor_used_in_bytes":              8912880,
+	"jvm_mem_pools_survivor_max_in_bytes":               34865152,
+	"jvm_mem_pools_old_peak_max_in_bytes":               724828160,
+	"jvm_mem_pools_old_used_in_bytes":                   11110928,
+	"jvm_mem_pools_old_max_in_bytes":                    724828160,
+	"jvm_mem_pools_old_peak_used_in_bytes":              14354608,
+	"jvm_mem_heap_used_in_bytes":                        52709568,
+	"jvm_mem_heap_used_percent":                         5,
+	"jvm_mem_heap_committed_in_bytes":                   259522560,
+	"jvm_mem_heap_max_in_bytes":                         1038876672,
+	"jvm_threads_peak_count":                            45,
+	"jvm_threads_count":                                 44,
+	"jvm_gc_collectors_young_collection_count":          2,
+	"jvm_gc_collectors_young_collection_time_in_millis": 98,
+	"jvm_gc_collectors_old_collection_count":            1,
+	"jvm_gc_collectors_old_collection_time_in_millis":   24,
+	"jvm_buffer_pools_direct_count":                     40,
+	"jvm_buffer_pools_direct_used_in_bytes":             6304239,
+	"jvm_buffer_pools_direct_total_capacity_in_bytes":   6304239,
+	"jvm_buffer_pools_mapped_count":                     0,
+	"jvm_buffer_pools_mapped_used_in_bytes":             0,
+	"jvm_buffer_pools_mapped_total_capacity_in_bytes":   0,
 }

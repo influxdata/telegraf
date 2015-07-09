@@ -18,6 +18,7 @@ type node struct {
 	Indices    interface{}       `json:"indices"`
 	Os         interface{}       `json:"os"`
 	Process    interface{}       `json:"process"`
+	JVM        interface{}       `json:"jvm"`
 }
 
 const sampleConfig = `
@@ -105,6 +106,9 @@ func (e *Elasticsearch) gatherUrl(url string, acc plugins.Accumulator) error {
 			return err
 		}
 		if err := e.parseInterface(acc, "process", tags, n.Process); err != nil {
+			return err
+		}
+		if err := e.parseInterface(acc, "jvm", tags, n.JVM); err != nil {
 			return err
 		}
 	}
