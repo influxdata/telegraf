@@ -4,12 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 
 	"github.com/influxdb/telegraf"
 	_ "github.com/influxdb/telegraf/plugins/all"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var fDebug = flag.Bool("debug", false, "show metrics as they're generated to stdout")
@@ -115,6 +117,22 @@ func main() {
 		fmt.Fprintf(f, "%d\n", os.Getpid())
 
 		f.Close()
+	}
+
+	pc := &telegraf.PrometheusCollector{ListenAddress: ""}
+	err = config.ApplyPrometheusCollector(pc)
+        if err != nil {
+                log.Fatal(err)
+        }
+	if pc.ListenAddress != "" {
+		http.Handle("/metrics", prometheus.Handler())
+                log.Printf("Listening on %s for Prometheus", pc.ListenAddress)
+                go func() {
+                    err := http.ListenAndServe(pc.ListenAddress, nil)
+                    if err != nil {
+                            log.Fatal(err)
+                    }
+                }()
 	}
 
 	ag.Run(shutdown)
