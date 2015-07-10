@@ -3,15 +3,19 @@ package telegraf
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 )
+
+type runningOutput struct {
+	name   string
+	output outputs.Output
+}
 
 type runningPlugin struct {
 	name   string
@@ -26,9 +30,8 @@ type Agent struct {
 
 	Config *Config
 
+	outputs []*runningOutput
 	plugins []*runningPlugin
-
-	conn *client.Client
 }
 
 func NewAgent(config *Config) (*Agent, error) {
@@ -57,28 +60,39 @@ func NewAgent(config *Config) (*Agent, error) {
 	return agent, nil
 }
 
-func (agent *Agent) Connect() error {
-	config := agent.Config
-
-	u, err := url.Parse(config.URL)
-	if err != nil {
-		return err
+func (a *Agent) Connect() error {
+	for _, o := range a.outputs {
+		err := o.output.Connect()
+		if err != nil {
+			return err
+		}
 	}
-
-	c, err := client.NewClient(client.Config{
-		URL:       *u,
-		Username:  config.Username,
-		Password:  config.Password,
-		UserAgent: config.UserAgent,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	agent.conn = c
-
 	return nil
+}
+
+func (a *Agent) LoadOutputs() ([]string, error) {
+	var names []string
+
+	for _, name := range a.Config.OutputsDeclared() {
+		creator, ok := outputs.Outputs[name]
+		if !ok {
+			return nil, fmt.Errorf("Undefined but requested output: %s", name)
+		}
+
+		output := creator()
+
+		err := a.Config.ApplyOutput(name, output)
+		if err != nil {
+			return nil, err
+		}
+
+		a.outputs = append(a.outputs, &runningOutput{name, output})
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	return names, nil
 }
 
 func (a *Agent) LoadPlugins() ([]string, error) {
@@ -135,17 +149,15 @@ func (a *Agent) crankParallel() error {
 
 	close(points)
 
-	var acc BatchPoints
-	acc.Tags = a.Config.Tags
-	acc.Time = time.Now()
-	acc.Database = a.Config.Database
+	var bp BatchPoints
+	bp.Tags = a.Config.Tags
+	bp.Time = time.Now()
 
 	for sub := range points {
-		acc.Points = append(acc.Points, sub.Points...)
+		bp.Points = append(bp.Points, sub.Points...)
 	}
 
-	_, err := a.conn.Write(acc.BatchPoints)
-	return err
+	return a.flush(bp)
 }
 
 func (a *Agent) crank() error {
@@ -164,10 +176,8 @@ func (a *Agent) crank() error {
 
 	acc.Tags = a.Config.Tags
 	acc.Time = time.Now()
-	acc.Database = a.Config.Database
 
-	_, err := a.conn.Write(acc.BatchPoints)
-	return err
+	return a.flush(acc)
 }
 
 func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
@@ -187,9 +197,11 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 
 		acc.Tags = a.Config.Tags
 		acc.Time = time.Now()
-		acc.Database = a.Config.Database
 
-		a.conn.Write(acc.BatchPoints)
+		err = a.flush(acc)
+		if err != nil {
+			return err
+		}
 
 		select {
 		case <-shutdown:
@@ -198,6 +210,22 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 			continue
 		}
 	}
+}
+
+func (a *Agent) flush(bp BatchPoints) error {
+	var wg sync.WaitGroup
+	var outerr error
+	for _, o := range a.outputs {
+		wg.Add(1)
+		go func(output *runningOutput) {
+			defer wg.Done()
+			outerr = o.output.Write(bp.BatchPoints)
+		}(o)
+	}
+
+	wg.Wait()
+
+	return outerr
 }
 
 func (a *Agent) TestAllPlugins() error {
@@ -253,13 +281,6 @@ func (a *Agent) Test() error {
 }
 
 func (a *Agent) Run(shutdown chan struct{}) error {
-	if a.conn == nil {
-		err := a.Connect()
-		if err != nil {
-			return err
-		}
-	}
-
 	var wg sync.WaitGroup
 
 	for _, plugin := range a.plugins {

@@ -29,19 +29,19 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 }
 
 type Config struct {
-	URL       string
-	Username  string
-	Password  string
-	Database  string
-	UserAgent string
-	Tags      map[string]string
+	Tags map[string]string
 
 	agent   *ast.Table
 	plugins map[string]*ast.Table
+	outputs map[string]*ast.Table
 }
 
 func (c *Config) Plugins() map[string]*ast.Table {
 	return c.plugins
+}
+
+func (c *Config) Outputs() map[string]*ast.Table {
+	return c.outputs
 }
 
 type ConfiguredPlugin struct {
@@ -75,6 +75,14 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
 	}
 
 	return true
+}
+
+func (c *Config) ApplyOutput(name string, v interface{}) error {
+	if c.outputs[name] != nil {
+		return toml.UnmarshalTable(c.outputs[name], v)
+	}
+
+	return nil
 }
 
 func (c *Config) ApplyAgent(v interface{}) error {
@@ -137,15 +145,23 @@ func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, err
 }
 
 func (c *Config) PluginsDeclared() []string {
-	var plugins []string
+	return declared(c.plugins)
+}
 
-	for name, _ := range c.plugins {
-		plugins = append(plugins, name)
+func (c *Config) OutputsDeclared() []string {
+	return declared(c.outputs)
+}
+
+func declared(endpoints map[string]*ast.Table) []string {
+	var names []string
+
+	for name, _ := range endpoints {
+		names = append(names, name)
 	}
 
-	sort.Strings(plugins)
+	sort.Strings(names)
 
-	return plugins
+	return names
 }
 
 func DefaultConfig() *Config {
@@ -167,6 +183,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	c := &Config{
 		plugins: make(map[string]*ast.Table),
+		outputs: make(map[string]*ast.Table),
 	}
 
 	for name, val := range tbl.Fields {
@@ -176,13 +193,16 @@ func LoadConfig(path string) (*Config, error) {
 		}
 
 		switch name {
-		case "influxdb":
-			err := toml.UnmarshalTable(subtbl, c)
-			if err != nil {
-				return nil, err
-			}
 		case "agent":
 			c.agent = subtbl
+		case "outputs":
+			for outputName, outputVal := range subtbl.Fields {
+				outputSubtbl, ok := outputVal.(*ast.Table)
+				if !ok {
+					return nil, ErrInvalidConfig
+				}
+				c.outputs[outputName] = outputSubtbl
+			}
 		default:
 			c.plugins[name] = subtbl
 		}
