@@ -10,19 +10,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type tranportMock struct {
+type transportMock struct {
 	statusCode int
 	body       string
 }
 
 func newTransportMock(statusCode int, body string) http.RoundTripper {
-	return &tranportMock{
+	return &transportMock{
 		statusCode: statusCode,
 		body:       body,
 	}
 }
 
-func (t *tranportMock) RoundTrip(r *http.Request) (*http.Response, error) {
+func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 	res := &http.Response{
 		Header:     make(http.Header),
 		Request:    r,
