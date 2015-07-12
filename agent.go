@@ -70,7 +70,7 @@ func (agent *Agent) Connect() error {
 		Username:  config.Username,
 		Password:  config.Password,
 		UserAgent: config.UserAgent,
-		Timeout:   config.Timeout * time.Second,
+		Timeout:   config.Timeout.Duration,
 	})
 
 	if err != nil {

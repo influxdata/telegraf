@@ -34,7 +34,7 @@ type Config struct {
 	Password  string
 	Database  string
 	UserAgent string
-	Timeout   time.Duration
+	Timeout   Duration
 	Tags      map[string]string
 
 	agent   *ast.Table
@@ -244,9 +244,10 @@ url = "http://localhost:8086" # required.
 # The target database for metrics. This database must already exist
 database = "telegraf" # required.
 
-# Timeout in seconds (for the connection with InfluxDB).
+# Connection timeout (for the connection with InfluxDB), formatted as a string.
+# Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 # If not provided, will default to 0 (no timeout)
-# timeout = 5
+# timeout = "5s"
 
 # username = "telegraf"
 # password = "metricsmetricsmetricsmetrics"
