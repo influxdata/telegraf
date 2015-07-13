@@ -31,7 +31,7 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 				return
 			}
 
-			if line != "info\n" {
+			if line != "info\r\n" {
 				return
 			}
 
@@ -122,7 +122,7 @@ func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
 				return
 			}
 
-			if line != "info\n" {
+			if line != "info\r\n" {
 				return
 			}
 

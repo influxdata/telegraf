@@ -126,7 +126,7 @@ func (g *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 		if addr.User != nil {
 			pwd, set := addr.User.Password()
 			if set && pwd != "" {
-				c.Write([]byte(fmt.Sprintf("AUTH %s\n", pwd)))
+				c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
 
 				r := bufio.NewReader(c)
 
@@ -143,7 +143,7 @@ func (g *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 		g.c = c
 	}
 
-	g.c.Write([]byte("info\n"))
+	g.c.Write([]byte("info\r\n"))
 
 	r := bufio.NewReader(g.c)
 
