@@ -8,7 +8,6 @@ import (
 
 type Point struct {
 	Measurement string
-	Value       interface{}
 	Tags        map[string]string
 	Values      map[string]interface{}
 	Time        time.Time
@@ -26,7 +25,7 @@ func (a *Accumulator) Add(measurement string, value interface{}, tags map[string
 		a.Points,
 		&Point{
 			Measurement: measurement,
-			Value:       value,
+			Values:      map[string]interface{}{"value": value},
 			Tags:        tags,
 		},
 	)
@@ -62,7 +61,7 @@ func (a *Accumulator) Get(measurement string) (*Point, bool) {
 func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			return p.Value == val
+			return p.Values["value"] == val
 		}
 	}
 
@@ -83,8 +82,8 @@ func (a *Accumulator) ValidateTaggedValue(measurement string, val interface{}, t
 		}
 
 		if p.Measurement == measurement {
-			if p.Value != val {
-				return fmt.Errorf("%v (%T) != %v (%T)", p.Value, p.Value, val, val)
+			if p.Values["value"] != val {
+				return fmt.Errorf("%v (%T) != %v (%T)", p.Values["value"], p.Values["value"], val, val)
 			}
 			return nil
 		}
@@ -100,7 +99,7 @@ func (a *Accumulator) ValidateValue(measurement string, val interface{}) error {
 func (a *Accumulator) HasIntValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			_, ok := p.Value.(int64)
+			_, ok := p.Values["value"].(int64)
 			return ok
 		}
 	}
@@ -111,7 +110,7 @@ func (a *Accumulator) HasIntValue(measurement string) bool {
 func (a *Accumulator) HasFloatValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			_, ok := p.Value.(float64)
+			_, ok := p.Values["value"].(float64)
 			return ok
 		}
 	}
