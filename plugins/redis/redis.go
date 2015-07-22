@@ -188,7 +188,12 @@ func (g *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 			continue
 		}
 
-		tags := map[string]string{"host": addr.String()}
+		_, rPort, err := net.SplitHostPort(addr.Host)
+		if err != nil {
+			rPort = defaultPort
+		}
+		tags := map[string]string{"host": addr.String(), "port": rPort}
+
 		val := strings.TrimSpace(parts[1])
 
 		ival, err := strconv.ParseUint(val, 10, 64)
