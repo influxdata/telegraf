@@ -18,8 +18,13 @@ const (
 	KernDevstatAll = 772
 )
 
-func DiskPartitions(all bool) ([]DiskPartitionStat, error) {
+func DiskPartitions(fstypes []string) ([]DiskPartitionStat, error) {
 	var ret []DiskPartitionStat
+
+	set := make(map[string]struct{}, len(fstypes))
+	for _, s := range fstypes {
+		set[s] = struct{}{}
+	}
 
 	// get length
 	count, err := syscall.Getfsstat(nil, MNT_WAIT)
@@ -87,7 +92,12 @@ func DiskPartitions(all bool) ([]DiskPartitionStat, error) {
 			Fstype:     common.IntToString(stat.Fstypename[:]),
 			Opts:       opts,
 		}
-		ret = append(ret, d)
+
+		_, ok := set[d.Fstype]
+		if ok || len(fstypes) == 0 {
+			ret = append(ret, d)
+		}
+
 	}
 
 	return ret, nil

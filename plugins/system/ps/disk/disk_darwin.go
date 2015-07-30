@@ -9,8 +9,13 @@ import (
 	"github.com/influxdb/telegraf/plugins/system/ps/common"
 )
 
-func DiskPartitions(all bool) ([]DiskPartitionStat, error) {
+func DiskPartitions(fstypes []string) ([]DiskPartitionStat, error) {
 	var ret []DiskPartitionStat
+
+	set := make(map[string]struct{}, len(fstypes))
+	for _, s := range fstypes {
+		set[s] = struct{}{}
+	}
 
 	count, err := Getfsstat(nil, MntWait)
 	if err != nil {
@@ -74,7 +79,10 @@ func DiskPartitions(all bool) ([]DiskPartitionStat, error) {
 			Fstype:     common.IntToString(stat.Fstypename[:]),
 			Opts:       opts,
 		}
-		ret = append(ret, d)
+		_, ok := set[d.Fstype]
+		if ok || len(fstypes) == 0 {
+			ret = append(ret, d)
+		}
 	}
 
 	return ret, nil
