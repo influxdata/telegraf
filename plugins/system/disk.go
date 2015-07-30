@@ -8,16 +8,25 @@ import (
 
 type DiskStats struct {
 	ps PS
+    Fstypes []string
 }
 
 func (_ *DiskStats) Description() string {
 	return "Read metrics about disk usage by mount point"
 }
 
-func (_ *DiskStats) SampleConfig() string { return "" }
+var diskSampleConfig = `
+# By default, telegraf gathers stats from any mounted partition, including
+# NFS shares, /proc, tmpfs.
+# fstypes = ["xfs", "ext4", ...]
+`
+
+func (_ *DiskStats) SampleConfig() string {
+    return diskSampleConfig
+}
 
 func (s *DiskStats) Gather(acc plugins.Accumulator) error {
-	disks, err := s.ps.DiskUsage()
+	disks, err := s.ps.DiskUsage(s.Fstypes)
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}

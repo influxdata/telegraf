@@ -17,7 +17,7 @@ const (
 
 // Get disk partitions.
 // should use setmntent(3) but this implement use /etc/mtab file
-func DiskPartitions(all bool) ([]DiskPartitionStat, error) {
+func DiskPartitions(fstypes []string) ([]DiskPartitionStat, error) {
 
 	filename := "/etc/mtab"
 	lines, err := common.ReadLines(filename)
@@ -25,17 +25,25 @@ func DiskPartitions(all bool) ([]DiskPartitionStat, error) {
 		return nil, err
 	}
 
+	set := make(map[string]struct{}, len(fstypes))
+	for _, s := range fstypes {
+		set[s] = struct{}{}
+	}
+
 	ret := make([]DiskPartitionStat, 0, len(lines))
 
 	for _, line := range lines {
 		fields := strings.Fields(line)
-		d := DiskPartitionStat{
-			Device:     fields[0],
-			Mountpoint: fields[1],
-			Fstype:     fields[2],
-			Opts:       fields[3],
+		_, ok := set[fields[2]]
+		if ok || len(fstypes) == 0 {
+			d := DiskPartitionStat{
+				Device:     fields[0],
+				Mountpoint: fields[1],
+				Fstype:     fields[2],
+				Opts:       fields[3],
+			}
+			ret = append(ret, d)
 		}
-		ret = append(ret, d)
 	}
 
 	return ret, nil
