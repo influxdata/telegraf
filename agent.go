@@ -8,6 +8,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"strings"
 
 	"github.com/influxdb/influxdb/client"
 	"github.com/influxdb/telegraf/plugins"
@@ -82,24 +83,49 @@ func (agent *Agent) Connect() error {
 	return nil
 }
 
-func (a *Agent) LoadPlugins() ([]string, error) {
+func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
 	var names []string
+	var filters []string
+
+	pluginsFilter = strings.TrimSpace(pluginsFilter)
+	if pluginsFilter != "" {
+		filters = strings.Split(":"+pluginsFilter+":", ":")
+	}
 
 	for _, name := range a.Config.PluginsDeclared() {
+
 		creator, ok := plugins.Plugins[name]
+
 		if !ok {
 			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
 		}
 
-		plugin := creator()
-
-		config, err := a.Config.ApplyPlugin(name, plugin)
-		if err != nil {
-			return nil, err
+		// to know if plugin is enabled or not through filter flag
+		isPluginEnabled := false
+		if len(filters)>0 {
+			for _, runeValue := range filters {
+				if runeValue != "" && strings.ToLower(runeValue) == strings.ToLower(name) {
+					fmt.Printf("plugin [%s] is enabled because present is filter options\n", name)
+					isPluginEnabled = true
+					break
+				}
+			}
+		} else {
+			// if no filter, we ALWAYS accept the plugin
+			isPluginEnabled = true
 		}
 
-		a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
-		names = append(names, name)
+		if isPluginEnabled {
+			plugin := creator()
+			config, err := a.Config.ApplyPlugin(name, plugin)
+			if err != nil {
+				return nil, err
+			}
+
+			a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
+			names = append(names, name)
+		}
+
 	}
 
 	sort.Strings(names)
