@@ -10,7 +10,7 @@ import (
 
 func TestMemcachedGeneratesMetrics(t *testing.T) {
 	m := &Memcached{
-		Servers: []string{"localhost"},
+		Servers: []string{testutil.GetLocalHost()},
 	}
 
 	var acc testutil.Accumulator
