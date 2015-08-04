@@ -3,9 +3,9 @@
 package common
 
 import (
-	"syscall"
 	"os/exec"
 	"strings"
+	"syscall"
 	"unsafe"
 )
 
@@ -58,4 +58,3 @@ func CallSyscall(mib []int32) ([]byte, uint64, error) {
 
 	return buf, length, nil
 }
-
