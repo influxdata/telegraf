@@ -10,10 +10,15 @@ import (
 )
 
 func TestPostgresqlGeneratesMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address:   fmt.Sprintf("host=%s user=postgres sslmode=disable", testutil.GetLocalHost()),
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+					testutil.GetLocalHost()),
 				Databases: []string{"postgres"},
 			},
 		},
@@ -55,10 +60,15 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 }
 
 func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address:   fmt.Sprintf("host=%s user=postgres sslmode=disable", testutil.GetLocalHost()),
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+					testutil.GetLocalHost()),
 				Databases: []string{"postgres"},
 			},
 		},
@@ -76,10 +86,15 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 }
 
 func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable", testutil.GetLocalHost()),
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+					testutil.GetLocalHost()),
 			},
 		},
 	}

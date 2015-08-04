@@ -12,6 +12,10 @@ import (
 )
 
 func TestRedisGeneratesMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	l, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 
@@ -103,6 +107,10 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 }
 
 func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	l, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 

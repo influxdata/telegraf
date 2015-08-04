@@ -11,6 +11,10 @@ import (
 )
 
 func TestMysqlGeneratesMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	m := &Mysql{
 		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
 	}
@@ -54,6 +58,10 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 }
 
 func TestMysqlDefaultsToLocal(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	m := &Mysql{
 		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
 	}
