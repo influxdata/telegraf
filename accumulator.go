@@ -10,6 +10,8 @@ import (
 	"github.com/influxdb/influxdb/client"
 )
 
+// BatchPoints is used to send a batch of data in a single write from telegraf
+// to influx
 type BatchPoints struct {
 	mu sync.Mutex
 
@@ -22,6 +24,7 @@ type BatchPoints struct {
 	Config *ConfiguredPlugin
 }
 
+// Add adds a measurement
 func (bp *BatchPoints) Add(measurement string, val interface{}, tags map[string]string) {
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
@@ -55,6 +58,7 @@ func (bp *BatchPoints) Add(measurement string, val interface{}, tags map[string]
 	})
 }
 
+// AddValuesWithTime adds a measurement with a provided timestamp
 func (bp *BatchPoints) AddValuesWithTime(
 	measurement string,
 	values map[string]interface{},

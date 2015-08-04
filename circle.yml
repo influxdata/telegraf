@@ -1,0 +1,17 @@
+dependencies:
+  post:
+    # install golint
+    - go get github.com/golang/lint/golint
+    # install binaries
+    - go install ./...
+
+test:
+  pre:
+    # Vet go code for any potential errors
+    - go vet ./...
+  override:
+    # Enforce that testutil, cmd, and main directory are fully linted
+    - golint .
+    - golint testutil/...
+    - golint cmd/...
+    # TODO run unit tests
