@@ -1,4 +1,4 @@
-# Telegraf - A native agent for InfluxDB
+# Telegraf - A native agent for InfluxDB [![Circle CI](https://circleci.com/gh/influxdb/telegraf.svg?style=svg)](https://circleci.com/gh/influxdb/telegraf)
 
 Telegraf is an agent written in Go for collecting metrics from the system it's running on or from other services and writing them into InfluxDB.
 
