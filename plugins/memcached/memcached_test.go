@@ -9,6 +9,10 @@ import (
 )
 
 func TestMemcachedGeneratesMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	m := &Memcached{
 		Servers: []string{testutil.GetLocalHost()},
 	}
