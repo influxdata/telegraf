@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 const sampleTextFormat = `# HELP go_gc_duration_seconds A summary of the GC invocation durations.
 # TYPE go_gc_duration_seconds summary
 go_gc_duration_seconds{quantile="0"} 0.00010425500000000001
@@ -27,9 +26,9 @@ go_goroutines 15
 `
 
 func TestPrometheusGeneratesMetrics(t *testing.T) {
-        ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            fmt.Fprintln(w, sampleTextFormat)
-          }))
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, sampleTextFormat)
+	}))
 	defer ts.Close()
 
 	p := &Prometheus{
@@ -44,7 +43,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	expected := []struct {
 		name  string
 		value float64
-		tags map[string]string
+		tags  map[string]string
 	}{
 		{"go_gc_duration_seconds_count", 7, map[string]string{}},
 		{"go_goroutines", 15, map[string]string{}},

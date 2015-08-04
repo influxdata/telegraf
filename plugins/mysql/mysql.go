@@ -72,9 +72,9 @@ var mappings = []*mapping{
 		inExport: "innodb_",
 	},
 	{
-                onServer: "Tokudb_",
-                inExport: "tokudb_",
-        },
+		onServer: "Tokudb_",
+		inExport: "tokudb_",
+	},
 	{
 		onServer: "Threads_",
 		inExport: "threads_",

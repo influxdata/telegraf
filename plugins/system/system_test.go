@@ -272,8 +272,8 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	require.NoError(t, err)
 
 	dockertags := map[string]string{
-		"name": "blah",
-		"id": "",
+		"name":    "blah",
+		"id":      "",
 		"command": "",
 	}
 
