@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Point defines a single point measurement
 type Point struct {
 	Measurement string
 	Tags        map[string]string
@@ -13,10 +14,12 @@ type Point struct {
 	Time        time.Time
 }
 
+// Accumulator defines a mocked out accumulator
 type Accumulator struct {
 	Points []*Point
 }
 
+// Add adds a measurement point to the accumulator
 func (a *Accumulator) Add(measurement string, value interface{}, tags map[string]string) {
 	if tags == nil {
 		tags = map[string]string{}
@@ -31,6 +34,7 @@ func (a *Accumulator) Add(measurement string, value interface{}, tags map[string
 	)
 }
 
+// AddValuesWithTime adds a measurement point with a specified timestamp.
 func (a *Accumulator) AddValuesWithTime(
 	measurement string,
 	values map[string]interface{},
@@ -48,6 +52,7 @@ func (a *Accumulator) AddValuesWithTime(
 	)
 }
 
+// Get gets the specified measurement point from the accumulator
 func (a *Accumulator) Get(measurement string) (*Point, bool) {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
@@ -58,6 +63,8 @@ func (a *Accumulator) Get(measurement string) (*Point, bool) {
 	return nil, false
 }
 
+// CheckValue checks that the accumulators point for the given measurement
+// is the same as the given value.
 func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
@@ -68,11 +75,22 @@ func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
 	return false
 }
 
-func (a *Accumulator) CheckTaggedValue(measurement string, val interface{}, tags map[string]string) bool {
+// CheckTaggedValue calls ValidateTaggedValue
+func (a *Accumulator) CheckTaggedValue(
+	measurement string,
+	val interface{},
+	tags map[string]string,
+) bool {
 	return a.ValidateTaggedValue(measurement, val, tags) == nil
 }
 
-func (a *Accumulator) ValidateTaggedValue(measurement string, val interface{}, tags map[string]string) error {
+// ValidateTaggedValue validates that the given measurement and value exist
+// in the accumulator and with the given tags.
+func (a *Accumulator) ValidateTaggedValue(
+	measurement string,
+	val interface{},
+	tags map[string]string,
+) error {
 	if tags == nil {
 		tags = map[string]string{}
 	}
@@ -83,7 +101,8 @@ func (a *Accumulator) ValidateTaggedValue(measurement string, val interface{}, t
 
 		if p.Measurement == measurement {
 			if p.Values["value"] != val {
-				return fmt.Errorf("%v (%T) != %v (%T)", p.Values["value"], p.Values["value"], val, val)
+				return fmt.Errorf("%v (%T) != %v (%T)",
+					p.Values["value"], p.Values["value"], val, val)
 			}
 			return nil
 		}
@@ -92,10 +111,12 @@ func (a *Accumulator) ValidateTaggedValue(measurement string, val interface{}, t
 	return fmt.Errorf("unknown measurement %s with tags %v", measurement, tags)
 }
 
+// ValidateValue calls ValidateTaggedValue
 func (a *Accumulator) ValidateValue(measurement string, val interface{}) error {
 	return a.ValidateTaggedValue(measurement, val, nil)
 }
 
+// HasIntValue returns true if the measurement has an Int value
 func (a *Accumulator) HasIntValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
@@ -107,17 +128,7 @@ func (a *Accumulator) HasIntValue(measurement string) bool {
 	return false
 }
 
-func (a *Accumulator) HasUIntValue(measurement string) bool {
-	for _, p := range a.Points {
-		if p.Measurement == measurement {
-			_, ok := p.Values["value"].(uint64)
-			return ok
-		}
-	}
-
-	return false
-}
-
+// HasFloatValue returns true if the given measurement has a float value
 func (a *Accumulator) HasFloatValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {

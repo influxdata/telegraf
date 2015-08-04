@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 
 func TestMysqlGeneratesMetrics(t *testing.T) {
 	m := &Mysql{
-		Servers: []string{""},
+		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
 	}
 
 	var acc testutil.Accumulator
@@ -53,7 +54,9 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 }
 
 func TestMysqlDefaultsToLocal(t *testing.T) {
-	m := &Mysql{}
+	m := &Mysql{
+		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
+	}
 
 	var acc testutil.Accumulator
 

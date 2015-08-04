@@ -457,7 +457,7 @@ func NewStatLine(oldStat, newStat ServerStatus, key string, all bool, sampleSecs
 		oldStat.ExtraInfo.PageFaults != nil && newStat.ExtraInfo.PageFaults != nil {
 		returnVal.Faults = diff(*(newStat.ExtraInfo.PageFaults), *(oldStat.ExtraInfo.PageFaults), sampleSecs)
 	}
-	if !returnVal.IsMongos && oldStat.Locks != nil && oldStat.Locks != nil {
+	if !returnVal.IsMongos && oldStat.Locks != nil {
 		globalCheck, hasGlobal := oldStat.Locks["Global"]
 		if hasGlobal && globalCheck.AcquireCount != nil {
 			// This appears to be a 3.0+ server so the data in these fields do *not* refer to

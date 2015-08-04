@@ -45,7 +45,7 @@ func TestDisk_io_counters(t *testing.T) {
 		t.Errorf("error %v", err)
 	}
 	if len(ret) == 0 {
-		t.Errorf("ret is empty", ret)
+		t.Errorf("ret is empty: %s", ret)
 	}
 	empty := DiskIOCountersStat{}
 	for part, io := range ret {
