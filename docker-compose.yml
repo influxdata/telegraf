@@ -14,3 +14,14 @@ postgres:
     image: postgres
     ports:
         - "5432:5432"
+
+# advertised host env variable must be set at runtime, ie,
+#   ADVERTISED_HOST=`boot2docker ip` docker-compose up -d
+kafka:
+    image: spotify/kafka
+    ports:
+        - "2181:2181"
+        - "9092:9092"
+    environment:
+        ADVERTISED_HOST:
+        ADVERTISED_PORT: 9092
