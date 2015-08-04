@@ -26,7 +26,7 @@ type DockerContainerStat struct {
 type PS interface {
 	LoadAvg() (*load.LoadAvgStat, error)
 	CPUTimes() ([]cpu.CPUTimesStat, error)
-	DiskUsage() ([]*disk.DiskUsageStat, error)
+	DiskUsage(fstypes []string) ([]*disk.DiskUsageStat, error)
 	NetIO() ([]net.NetIOCountersStat, error)
 	DiskIO() (map[string]disk.DiskIOCountersStat, error)
 	VMStat() (*mem.VirtualMemoryStat, error)
@@ -53,8 +53,8 @@ func (s *systemPS) CPUTimes() ([]cpu.CPUTimesStat, error) {
 	return cpu.CPUTimes(true)
 }
 
-func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
-	parts, err := disk.DiskPartitions(true)
+func (s *systemPS) DiskUsage(fstypes []string) ([]*disk.DiskUsageStat, error) {
+	parts, err := disk.DiskPartitions(fstypes)
 	if err != nil {
 		return nil, err
 	}
