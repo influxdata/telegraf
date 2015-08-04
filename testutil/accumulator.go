@@ -107,6 +107,17 @@ func (a *Accumulator) HasIntValue(measurement string) bool {
 	return false
 }
 
+func (a *Accumulator) HasUIntValue(measurement string) bool {
+	for _, p := range a.Points {
+		if p.Measurement == measurement {
+			_, ok := p.Values["value"].(uint64)
+			return ok
+		}
+	}
+
+	return false
+}
+
 func (a *Accumulator) HasFloatValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
