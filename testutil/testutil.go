@@ -8,6 +8,8 @@ import (
 
 var localhost = "localhost"
 
+// GetLocalHost returns the DOCKER_HOST environment variable, parsing
+// out any scheme or ports so that only the IP address is returned.
 func GetLocalHost() string {
 	if dockerHostVar := os.Getenv("DOCKER_HOST"); dockerHostVar != "" {
 		u, err := url.Parse(dockerHostVar)

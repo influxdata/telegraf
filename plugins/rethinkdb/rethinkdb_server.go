@@ -118,7 +118,7 @@ func (s *Server) addClusterStats(acc plugins.Accumulator) error {
 	defer cursor.Close()
 	var clusterStats stats
 	if err := cursor.One(&clusterStats); err != nil {
-		return fmt.Errorf("failure to parse cluster stats, $s\n", err.Error())
+		return fmt.Errorf("failure to parse cluster stats, %s\n", err.Error())
 	}
 
 	tags := s.getDefaultTags()
@@ -146,7 +146,7 @@ func (s *Server) addMemberStats(acc plugins.Accumulator) error {
 	defer cursor.Close()
 	var memberStats stats
 	if err := cursor.One(&memberStats); err != nil {
-		return fmt.Errorf("failure to parse member stats, $s\n", err.Error())
+		return fmt.Errorf("failure to parse member stats, %s\n", err.Error())
 	}
 
 	tags := s.getDefaultTags()
