@@ -128,6 +128,7 @@ func (a *Accumulator) HasIntValue(measurement string) bool {
 	return false
 }
 
+// HasUIntValue returns true if the measurement has a UInt value
 func (a *Accumulator) HasUIntValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
