@@ -54,6 +54,9 @@ Telegraf currently has support for collecting metrics from:
 * RethinkDB
 * Kafka
 * MongoDB
+* Disque
+* Lustre2
+* Memcached
 
 We'll be adding support for many more over the coming months. Read on if you want to add support for another service or third-party API.
 
