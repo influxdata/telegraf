@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"testing"
 	"time"
@@ -94,5 +95,10 @@ func TestCPUPercent(t *testing.T) {
 }
 
 func TestCPUPercentPerCpu(t *testing.T) {
+	// Skip Per-CPU tests when running from a Circle CI container,
+	// see: https://github.com/golang/go/issues/11609
+	if os.Getenv("CIRCLE_BUILD_NUM") != "" {
+		t.Skip("Detected that we are in a circleci container, skipping Per-CPU tests")
+	}
 	testCPUPercent(t, true)
 }

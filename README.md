@@ -202,9 +202,9 @@ To execute Telegraf tests follow these simple steps:
 - Install docker compose following [these](https://docs.docker.com/compose/install/) instructions
     - NOTE: mac users should be able to simply do `brew install boot2docker`
       and `brew install docker-compose`
-
-execute `make test`
+- execute `make test`
 
 ### Unit test troubleshooting:
 
-Try killing your docker containers via `docker-compose kill` and then re-running
+Try cleaning up your test environment by executing `make test-cleanup` and
+re-running
