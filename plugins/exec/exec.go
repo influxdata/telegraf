@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/bitly/go-simplejson"
 	"github.com/gonuts/go-shellquote"
 	"github.com/influxdb/telegraf/plugins"
 	"os/exec"
@@ -91,12 +90,13 @@ func (e *Exec) gatherCommand(c *Command, acc plugins.Accumulator) error {
 		return err
 	}
 
-	jsonOut, err := simplejson.NewJson(out)
+	var jsonOut interface{}
+	err = json.Unmarshal(out, &jsonOut)
 	if err != nil {
 		return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s", c.Command, err)
 	}
 
-	return processResponse(acc, c.Name, map[string]string{}, jsonOut.Interface())
+	return processResponse(acc, c.Name, map[string]string{}, jsonOut)
 }
 
 func processResponse(acc plugins.Accumulator, prefix string, tags map[string]string, v interface{}) error {
@@ -107,12 +107,8 @@ func processResponse(acc plugins.Accumulator, prefix string, tags map[string]str
 				return err
 			}
 		}
-	case json.Number:
-		value, err := v.(json.Number).Float64()
-		if err != nil {
-			return err
-		}
-		acc.Add(prefix, value, tags)
+	case float64:
+		acc.Add(prefix, v, tags)
 	case bool, string, []interface{}:
 		// ignored types
 		return nil
