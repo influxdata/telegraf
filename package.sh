@@ -32,11 +32,13 @@
 
 AWS_FILE=~/aws.conf
 
-INSTALL_ROOT_DIR=/opt/influxdb
-TELEGRAF_LOG_DIR=/var/log/influxdb
-CONFIG_ROOT_DIR=/etc/opt/influxdb
+INSTALL_ROOT_DIR=/opt/telegraf
+TELEGRAF_LOG_DIR=/var/log/telegraf
+CONFIG_ROOT_DIR=/etc/opt/telegraf
+LOGROTATE_DIR=/etc/logrotate.d
 
 SAMPLE_CONFIGURATION=etc/config.sample.toml
+LOGROTATE_CONFIGURATION=etc/logrotate.d/telegraf
 INITD_SCRIPT=scripts/init.sh
 
 TMP_WORK_DIR=`mktemp -d`
@@ -140,6 +142,11 @@ make_dir_tree() {
         cleanup_exit 1
     fi
     mkdir -p $work_dir/$CONFIG_ROOT_DIR
+    if [ $? -ne 0 ]; then
+        echo "Failed to create configuration directory -- aborting."
+        cleanup_exit 1
+    fi
+    mkdir -p $work_dir/$LOGROTATE_DIR
     if [ $? -ne 0 ]; then
         echo "Failed to create configuration directory -- aborting."
         cleanup_exit 1
@@ -248,6 +255,12 @@ echo "$INITD_SCRIPT copied to $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION/
 cp $SAMPLE_CONFIGURATION $TMP_WORK_DIR/$CONFIG_ROOT_DIR/telegraf.conf
 if [ $? -ne 0 ]; then
     echo "Failed to copy $SAMPLE_CONFIGURATION to packaging directory -- aborting."
+    cleanup_exit 1
+fi
+
+cp $LOGROTATE_CONFIGURATION $TMP_WORK_DIR/$LOGROTATE_DIR/telegraf.conf
+if [ $? -ne 0 ]; then
+    echo "Failed to copy $LOGROTATE_CONFIGURATION to packaging directory -- aborting."
     cleanup_exit 1
 fi
 

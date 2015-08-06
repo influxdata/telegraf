@@ -2,8 +2,6 @@ package kafka_consumer
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -14,19 +12,13 @@ import (
 )
 
 func TestReadsMetricsFromKafka(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	var zkPeers, brokerPeers []string
 
-	if len(os.Getenv("ZOOKEEPER_PEERS")) == 0 {
-		zkPeers = []string{"localhost:2181"}
-	} else {
-		zkPeers = strings.Split(os.Getenv("ZOOKEEPER_PEERS"), ",")
-	}
-
-	if len(os.Getenv("KAFKA_PEERS")) == 0 {
-		brokerPeers = []string{"localhost:9092"}
-	} else {
-		brokerPeers = strings.Split(os.Getenv("KAFKA_PEERS"), ",")
-	}
+	zkPeers = []string{testutil.GetLocalHost() + ":2181"}
+	brokerPeers = []string{testutil.GetLocalHost() + ":9092"}
 
 	k := &Kafka{
 		ConsumerGroupName: "telegraf_test_consumers",

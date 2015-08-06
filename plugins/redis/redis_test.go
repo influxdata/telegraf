@@ -12,6 +12,10 @@ import (
 )
 
 func TestRedisGeneratesMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	l, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 
@@ -31,7 +35,7 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 				return
 			}
 
-			if line != "info\n" {
+			if line != "info\r\n" {
 				return
 			}
 
@@ -83,7 +87,7 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, c := range checkInt {
-		assert.NoError(t, acc.ValidateValue(c.name, c.value))
+		assert.True(t, acc.CheckValue(c.name, c.value))
 	}
 
 	checkFloat := []struct {
@@ -98,11 +102,15 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, c := range checkFloat {
-		assert.NoError(t, acc.ValidateValue(c.name, c.value))
+		assert.True(t, acc.CheckValue(c.name, c.value))
 	}
 }
 
 func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	l, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 
@@ -122,7 +130,7 @@ func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
 				return
 			}
 
-			if line != "info\n" {
+			if line != "info\r\n" {
 				return
 			}
 
@@ -174,7 +182,7 @@ func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
 	}
 
 	for _, c := range checkInt {
-		assert.NoError(t, acc.ValidateValue(c.name, c.value))
+		assert.True(t, acc.CheckValue(c.name, c.value))
 	}
 
 	checkFloat := []struct {
@@ -189,7 +197,7 @@ func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
 	}
 
 	for _, c := range checkFloat {
-		assert.NoError(t, acc.ValidateValue(c.name, c.value))
+		assert.True(t, acc.CheckValue(c.name, c.value))
 	}
 }
 

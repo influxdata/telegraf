@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -10,8 +11,12 @@ import (
 )
 
 func TestMysqlGeneratesMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	m := &Mysql{
-		Servers: []string{""},
+		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
 	}
 
 	var acc testutil.Accumulator
@@ -39,7 +44,7 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 		var count int
 
 		for _, p := range acc.Points {
-			if strings.HasPrefix(p.Name, prefix.prefix) {
+			if strings.HasPrefix(p.Measurement, prefix.prefix) {
 				count++
 			}
 		}
@@ -53,7 +58,13 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 }
 
 func TestMysqlDefaultsToLocal(t *testing.T) {
-	m := &Mysql{}
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &Mysql{
+		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
+	}
 
 	var acc testutil.Accumulator
 

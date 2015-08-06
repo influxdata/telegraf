@@ -23,8 +23,13 @@ type runningPlugin struct {
 	config *ConfiguredPlugin
 }
 
+// Agent runs telegraf and collects data based on the given config
 type Agent struct {
+
+	// Interval at which to gather information
 	Interval Duration
+
+	// Run in debug mode?
 	Debug    bool
 	Hostname string
 
@@ -34,6 +39,7 @@ type Agent struct {
 	plugins []*runningPlugin
 }
 
+// NewAgent returns an Agent struct based off the given Config
 func NewAgent(config *Config) (*Agent, error) {
 	agent := &Agent{Config: config, Interval: Duration{10 * time.Second}}
 
@@ -95,6 +101,7 @@ func (a *Agent) LoadOutputs() ([]string, error) {
 	return names, nil
 }
 
+// LoadPlugins loads the agent's plugins
 func (a *Agent) LoadPlugins() ([]string, error) {
 	var names []string
 
@@ -228,10 +235,12 @@ func (a *Agent) flush(bp BatchPoints) error {
 	return outerr
 }
 
+// TestAllPlugins verifies that we can 'Gather' from all plugins with the
+// default configuration
 func (a *Agent) TestAllPlugins() error {
 	var names []string
 
-	for name, _ := range plugins.Plugins {
+	for name := range plugins.Plugins {
 		names = append(names, name)
 	}
 
@@ -257,6 +266,8 @@ func (a *Agent) TestAllPlugins() error {
 	return nil
 }
 
+// Test verifies that we can 'Gather' from all plugins with their configured
+// Config struct
 func (a *Agent) Test() error {
 	var acc BatchPoints
 
@@ -280,6 +291,7 @@ func (a *Agent) Test() error {
 	return nil
 }
 
+// Run runs the agent daemon, gathering every Interval
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 

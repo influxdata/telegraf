@@ -13,10 +13,12 @@ import (
 	"github.com/naoina/toml/ast"
 )
 
+// Duration just wraps time.Duration
 type Duration struct {
 	time.Duration
 }
 
+// UnmarshalTOML parses the duration from the TOML config file
 func (d *Duration) UnmarshalTOML(b []byte) error {
 	dur, err := time.ParseDuration(string(b[1 : len(b)-1]))
 	if err != nil {
@@ -28,6 +30,9 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	return nil
 }
 
+// Config specifies the URL/user/password for the database that telegraf
+// will be logging to, as well as all the plugins that the user has
+// specified
 type Config struct {
 	Tags map[string]string
 
@@ -36,14 +41,17 @@ type Config struct {
 	outputs map[string]*ast.Table
 }
 
+// Plugins returns the configured plugins as a map of name -> plugin toml
 func (c *Config) Plugins() map[string]*ast.Table {
 	return c.plugins
 }
 
+// Outputs returns the configured outputs as a map of name -> output toml
 func (c *Config) Outputs() map[string]*ast.Table {
 	return c.outputs
 }
 
+// ConfiguredPlugin containing a name, interval, and drop/pass prefix lists
 type ConfiguredPlugin struct {
 	Name string
 
@@ -53,6 +61,7 @@ type ConfiguredPlugin struct {
 	Interval time.Duration
 }
 
+// ShouldPass returns true if the metric should pass, false if should drop
 func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
 	if cp.Pass != nil {
 		for _, pat := range cp.Pass {
@@ -77,6 +86,7 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
 	return true
 }
 
+// ApplyOutput loads the toml config into the given interface
 func (c *Config) ApplyOutput(name string, v interface{}) error {
 	if c.outputs[name] != nil {
 		return toml.UnmarshalTable(c.outputs[name], v)
@@ -85,6 +95,7 @@ func (c *Config) ApplyOutput(name string, v interface{}) error {
 	return nil
 }
 
+// ApplyAgent loads the toml config into the given interface
 func (c *Config) ApplyAgent(v interface{}) error {
 	if c.agent != nil {
 		return toml.UnmarshalTable(c.agent, v)
@@ -93,6 +104,9 @@ func (c *Config) ApplyAgent(v interface{}) error {
 	return nil
 }
 
+// ApplyPlugin takes defined plugin names and applies them to the given
+// interface, returning a ConfiguredPlugin object in the end that can
+// be inserted into a runningPlugin by the agent.
 func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, error) {
 	cp := &ConfiguredPlugin{Name: name}
 
@@ -144,10 +158,12 @@ func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, err
 	return cp, nil
 }
 
+// PluginsDeclared returns the name of all plugins declared in the config.
 func (c *Config) PluginsDeclared() []string {
 	return declared(c.plugins)
 }
 
+// OutputsDeclared returns the name of all outputs declared in the config.
 func (c *Config) OutputsDeclared() []string {
 	return declared(c.outputs)
 }
@@ -164,12 +180,14 @@ func declared(endpoints map[string]*ast.Table) []string {
 	return names
 }
 
+// DefaultConfig returns an empty default configuration
 func DefaultConfig() *Config {
 	return &Config{}
 }
 
-var ErrInvalidConfig = errors.New("invalid configuration")
+var errInvalidConfig = errors.New("invalid configuration")
 
+// LoadConfig loads the given config file and returns a *Config pointer
 func LoadConfig(path string) (*Config, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -189,7 +207,7 @@ func LoadConfig(path string) (*Config, error) {
 	for name, val := range tbl.Fields {
 		subtbl, ok := val.(*ast.Table)
 		if !ok {
-			return nil, ErrInvalidConfig
+			return nil, errInvalidConfig
 		}
 
 		switch name {
@@ -211,6 +229,8 @@ func LoadConfig(path string) (*Config, error) {
 	return c, nil
 }
 
+// ListTags returns a string of tags specified in the config,
+// line-protocol style
 func (c *Config) ListTags() string {
 	var tags []string
 
@@ -263,6 +283,11 @@ url = "http://localhost:8086" # required.
 # The target database for metrics. This database must already exist
 database = "telegraf" # required.
 
+# Connection timeout (for the connection with InfluxDB), formatted as a string.
+# Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+# If not provided, will default to 0 (no timeout)
+# timeout = "5s"
+
 # username = "telegraf"
 # password = "metricsmetricsmetricsmetrics"
 
@@ -285,12 +310,13 @@ database = "telegraf" # required.
 
 `
 
+// PrintSampleConfig prints the sample config!
 func PrintSampleConfig() {
 	fmt.Printf(header)
 
 	var names []string
 
-	for name, _ := range plugins.Plugins {
+	for name := range plugins.Plugins {
 		names = append(names, name)
 	}
 

@@ -72,6 +72,10 @@ var mappings = []*mapping{
 		inExport: "innodb_",
 	},
 	{
+		onServer: "Tokudb_",
+		inExport: "tokudb_",
+	},
+	{
 		onServer: "Threads_",
 		inExport: "threads_",
 	},
@@ -91,7 +95,7 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 
 	rows, err := db.Query(`SHOW /*!50002 GLOBAL */ STATUS`)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for rows.Next() {

@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
@@ -9,10 +10,15 @@ import (
 )
 
 func TestPostgresqlGeneratesMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address:   "sslmode=disable",
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+					testutil.GetLocalHost()),
 				Databases: []string{"postgres"},
 			},
 		},
@@ -54,10 +60,15 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 }
 
 func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address:   "sslmode=disable",
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+					testutil.GetLocalHost()),
 				Databases: []string{"postgres"},
 			},
 		},
@@ -75,10 +86,15 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 }
 
 func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	p := &Postgresql{
 		Servers: []*Server{
 			{
-				Address: "sslmode=disable",
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+					testutil.GetLocalHost()),
 			},
 		},
 	}
@@ -91,7 +107,7 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	var found bool
 
 	for _, pnt := range acc.Points {
-		if pnt.Name == "xact_commit" {
+		if pnt.Measurement == "xact_commit" {
 			if pnt.Tags["db"] == "postgres" {
 				found = true
 				break

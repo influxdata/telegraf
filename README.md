@@ -1,4 +1,4 @@
-# Telegraf - A native agent for InfluxDB
+# Telegraf - A native agent for InfluxDB [![Circle CI](https://circleci.com/gh/influxdb/telegraf.svg?style=svg)](https://circleci.com/gh/influxdb/telegraf)
 
 Telegraf is an agent written in Go for collecting metrics from the system it's running on or from other services and writing them into InfluxDB.
 
@@ -13,8 +13,8 @@ We'll eagerly accept pull requests for new plugins and will manage the set of pl
 ### Linux packages for Debian/Ubuntu and RHEL/CentOS:
 
 ```
-http://get.influxdb.org/telegraf/telegraf_0.1.2_amd64.deb
-http://get.influxdb.org/telegraf/telegraf-0.1.2-1.x86_64.rpm
+http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
+http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
 ```
 
 ### OSX via Homebrew:
@@ -47,8 +47,16 @@ Telegraf currently has support for collecting metrics from:
 * System (memory, CPU, network, etc.)
 * Docker
 * MySQL
+* Prometheus (client libraries and exporters)
 * PostgreSQL
 * Redis
+* Elasticsearch
+* RethinkDB
+* Kafka
+* MongoDB
+* Disque
+* Lustre2
+* Memcached
 
 We'll be adding support for many more over the coming months. Read on if you want to add support for another service or third-party API.
 
@@ -141,6 +149,7 @@ func Gather(acc plugins.Accumulator) error {
 ### Example
 
 ```go
+package simple
 
 // simple.go
 
@@ -169,7 +178,36 @@ func (s *Simple) Gather(acc plugins.Accumulator) error {
 }
 
 func init() {
-  plugins.Add("simple", func() plugins.Plugin { &Simple{} })
+  plugins.Add("simple", func() plugins.Plugin { return &Simple{} })
 }
 ```
 
+## Testing
+
+### Execute short tests:
+
+execute `make short-test`
+
+### Execute long tests:
+
+As Telegraf collects metrics from several third-party services it becomes a
+difficult task to mock each service as some of them have complicated protocols
+which would take some time to replicate.
+
+To overcome this situation we've decided to use docker containers to provide a
+fast and reproducible environment to test those services which require it.
+For other situations
+(i.e: https://github.com/influxdb/telegraf/blob/master/plugins/redis/redis_test.go )
+a simple mock will suffice.
+
+To execute Telegraf tests follow these simple steps:
+
+- Install docker compose following [these](https://docs.docker.com/compose/install/) instructions
+    - NOTE: mac users should be able to simply do `brew install boot2docker`
+      and `brew install docker-compose`
+- execute `make test`
+
+### Unit test troubleshooting:
+
+Try cleaning up your test environment by executing `make test-cleanup` and
+re-running

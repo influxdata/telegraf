@@ -1,0 +1,24 @@
+dependencies:
+  post:
+    # install golint
+    - go get github.com/golang/lint/golint
+    # install binaries
+    - go install ./...
+
+test:
+  pre:
+    # Vet go code for any potential errors
+    - go vet ./...
+    # Verify that all files are properly go formatted
+    - "[ `git ls-files | grep '.go$' | xargs gofmt -l 2>&1 | wc -l` -eq 0 ]"
+    # Only docker-compose up kafka, the other services are already running
+    # see: https://circleci.com/docs/environment#databases
+    # - docker-compose up -d kafka
+  override:
+    # Enforce that testutil, cmd, and main directory are fully linted
+    - golint .
+    - golint testutil/...
+    - golint cmd/...
+    # Run short unit tests
+    - make test-short
+    # TODO run full unit test suite

@@ -272,7 +272,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	require.NoError(t, err)
 
 	dockertags := map[string]string{
-		"id": "blah",
+		"name":    "blah",
+		"id":      "",
+		"command": "",
 	}
 
 	assert.True(t, acc.CheckTaggedValue("user", 3.1, dockertags))
