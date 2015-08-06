@@ -164,7 +164,7 @@ func (a *Agent) crankParallel() error {
 		bp.Points = append(bp.Points, sub.Points...)
 	}
 
-	return a.flush(bp)
+	return a.flush(&bp)
 }
 
 func (a *Agent) crank() error {
@@ -184,7 +184,7 @@ func (a *Agent) crank() error {
 	acc.Tags = a.Config.Tags
 	acc.Time = time.Now()
 
-	return a.flush(acc)
+	return a.flush(&acc)
 }
 
 func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
@@ -205,7 +205,7 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 		acc.Tags = a.Config.Tags
 		acc.Time = time.Now()
 
-		err = a.flush(*acc)
+		err = a.flush(&acc)
 		if err != nil {
 			return err
 		}
@@ -224,9 +224,9 @@ func (a *Agent) flush(bp *BatchPoints) error {
 	var outerr error
 	for _, o := range a.outputs {
 		wg.Add(1)
-		go func(output *runningOutput) {
+		go func(ro *runningOutput) {
 			defer wg.Done()
-			outerr = output.Write(bp.BatchPoints)
+			outerr = ro.output.Write(bp.BatchPoints)
 		}(o)
 	}
 
