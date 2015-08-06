@@ -205,7 +205,7 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 		acc.Tags = a.Config.Tags
 		acc.Time = time.Now()
 
-		err = a.flush(acc)
+		err = a.flush(*acc)
 		if err != nil {
 			return err
 		}
@@ -219,14 +219,14 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 	}
 }
 
-func (a *Agent) flush(bp BatchPoints) error {
+func (a *Agent) flush(bp *BatchPoints) error {
 	var wg sync.WaitGroup
 	var outerr error
 	for _, o := range a.outputs {
 		wg.Add(1)
 		go func(output *runningOutput) {
 			defer wg.Done()
-			outerr = o.output.Write(bp.BatchPoints)
+			outerr = output.Write(bp.BatchPoints)
 		}(o)
 	}
 
