@@ -65,6 +65,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if len(plugins) == 0 {
+		log.Printf("Error: no plugins found, did you provide a config file?")
+		os.Exit(1)
+	}
 
 	if *fTest {
 		if *fConfig != "" {
