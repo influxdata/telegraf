@@ -5,10 +5,10 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/influxdb/influxdb/tsdb"
 	"github.com/influxdb/telegraf/plugins"
 	"github.com/wvanbergen/kafka/consumergroup"
-	"gopkg.in/Shopify/sarama.v1"
 )
 
 type Kafka struct {
