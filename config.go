@@ -217,7 +217,7 @@ func LoadConfig(path string) (*Config, error) {
 			for outputName, outputVal := range subtbl.Fields {
 				outputSubtbl, ok := outputVal.(*ast.Table)
 				if !ok {
-					return nil, ErrInvalidConfig
+					return nil, errInvalidConfig
 				}
 				c.outputs[outputName] = outputSubtbl
 			}
