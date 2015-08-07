@@ -57,18 +57,12 @@ func NewAgent(config *Config) (*Agent, error) {
 		agent.Hostname = hostname
 	}
 
-	if config.Tags == nil {
-		config.Tags = map[string]string{}
-	}
-
-	config.Tags["host"] = agent.Hostname
-
 	return agent, nil
 }
 
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
-		err := o.output.Connect()
+		err := o.output.Connect(a.Hostname)
 		if err != nil {
 			return err
 		}
@@ -157,7 +151,6 @@ func (a *Agent) crankParallel() error {
 	close(points)
 
 	var bp BatchPoints
-	bp.Tags = a.Config.Tags
 	bp.Time = time.Now()
 
 	for sub := range points {
@@ -181,7 +174,6 @@ func (a *Agent) crank() error {
 		}
 	}
 
-	acc.Tags = a.Config.Tags
 	acc.Time = time.Now()
 
 	return a.flush(&acc)
@@ -202,7 +194,6 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 			return err
 		}
 
-		acc.Tags = a.Config.Tags
 		acc.Time = time.Now()
 
 		err = a.flush(&acc)

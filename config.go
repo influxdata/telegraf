@@ -34,8 +34,6 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	Tags map[string]string
-
 	agent   *ast.Table
 	plugins map[string]*ast.Table
 	outputs map[string]*ast.Table
@@ -200,7 +198,6 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	c := &Config{
-		Tags:    make(map[string]string),
 		plugins: make(map[string]*ast.Table),
 		outputs: make(map[string]*ast.Table),
 	}
@@ -214,10 +211,6 @@ func LoadConfig(path string) (*Config, error) {
 		switch name {
 		case "agent":
 			c.agent = subtbl
-		case "tags":
-			if err := toml.UnmarshalTable(subtbl, c.Tags); err != nil {
-				return nil, errInvalidConfig
-			}
 		case "outputs":
 			for outputName, outputVal := range subtbl.Fields {
 				outputSubtbl, ok := outputVal.(*ast.Table)
@@ -232,20 +225,6 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	return c, nil
-}
-
-// ListTags returns a string of tags specified in the config,
-// line-protocol style
-func (c *Config) ListTags() string {
-	var tags []string
-
-	for k, v := range c.Tags {
-		tags = append(tags, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	sort.Strings(tags)
-
-	return strings.Join(tags, " ")
 }
 
 type hasConfig interface {
@@ -280,8 +259,11 @@ var header = `# Telegraf configuration
 # NOTE: The configuration has a few required parameters. They are marked
 # with 'required'. Be sure to edit those to make this configuration work.
 
+# OUTPUTS
+[outputs]
+
 # Configuration for influxdb server to send metrics to
-[influxdb]
+[outputs.influxdb]
 # The full HTTP endpoint URL for your InfluxDB instance
 url = "http://localhost:8086" # required.
 
@@ -298,12 +280,8 @@ database = "telegraf" # required.
 
 # Set the user agent for the POSTs (can be useful for log differentiation)
 # user_agent = "telegraf"
-# tags = { "dc": "us-east-1" }
 
-# Tags can also be specified via a normal map, but only one form at a time:
-
-# [influxdb.tags]
-# dc = "us-east-1"
+# tags = { "dc" = "us-east-1" }
 
 # Configuration for telegraf itself
 # [agent]

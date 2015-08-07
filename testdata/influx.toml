@@ -9,9 +9,7 @@ url = "http://localhost:8086"
 username = "root"
 password = "root"
 database = "telegraf"
-
-[tags]
-dc = "us-phx-1"
+tags = { "dc" = "us-phx-1" }
 
 [redis]
 address = ":6379"
