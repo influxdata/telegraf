@@ -48,6 +48,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	du := &disk.DiskUsageStat{
 		Path:        "/",
+		Fstype:      "ext4",
 		Total:       128,
 		Free:        23,
 		InodesTotal: 1234,
@@ -195,7 +196,8 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{
-		"path": "/",
+		"path":   "/",
+		"fstype": "ext4",
 	}
 
 	assert.True(t, acc.CheckTaggedValue("total", uint64(128), tags))

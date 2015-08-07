@@ -71,6 +71,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if len(plugins) == 0 {
+		log.Printf("Error: no plugins found, did you provide a config file?")
+		os.Exit(1)
+	}
 
 	if *fTest {
 		if *fConfig != "" {
@@ -102,17 +106,13 @@ func main() {
 		close(shutdown)
 	}()
 
-	log.Print("InfluxDB Agent running")
+	log.Print("Telegraf Agent running")
 	log.Printf("Loaded outputs: %s", strings.Join(outputs, " "))
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
 	if ag.Debug {
 		log.Printf("Debug: enabled")
 		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
 			ag.Interval, ag.Debug, ag.Hostname)
-	}
-
-	if len(outputs) > 0 {
-		log.Printf("Tags enabled: %v", config.ListTags())
 	}
 
 	if *fPidfile != "" {

@@ -1,24 +1,29 @@
 dependencies:
   post:
+    # install rpm & fpm for packaging
+    - which rpmbuild || sudo apt-get install rpm
+    - gem install fpm
     # install golint
     - go get github.com/golang/lint/golint
-    # install binaries
-    - go install ./...
+    # install gox
+    - go get -u -f github.com/mitchellh/gox
 
 test:
   pre:
-    # Vet go code for any potential errors
-    - go vet ./...
-    # Verify that all files are properly go formatted
+    # install binaries
+    - go install ./...
+    # Go fmt should pass all files
     - "[ `git ls-files | grep '.go$' | xargs gofmt -l 2>&1 | wc -l` -eq 0 ]"
-    # Only docker-compose up kafka, the other services are already running
-    # see: https://circleci.com/docs/environment#databases
-    # - docker-compose up -d kafka
-  override:
-    # Enforce that testutil, cmd, and main directory are fully linted
+    - go vet ./...
     - golint .
     - golint testutil/...
     - golint cmd/...
-    # Run short unit tests
+  override:
     - make test-short
-    # TODO run full unit test suite
+  post:
+    # Build linux binaries
+    - gox -os="linux" -arch="386 amd64" ./...
+    - mv telegraf* $CIRCLE_ARTIFACTS
+    # Build .deb and .rpm files
+    - "GOPATH=/home/ubuntu/.go_project ./package.sh `git rev-parse --short HEAD`"
+    - mv telegraf*{deb,rpm} $CIRCLE_ARTIFACTS

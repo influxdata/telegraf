@@ -3,8 +3,10 @@ package telegraf
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -66,9 +68,10 @@ func NewAgent(config *Config) (*Agent, error) {
 	return agent, nil
 }
 
+// Connect connects to the agent's config URL
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
-		err := o.output.Connect()
+		err := o.output.Connect(a.Hostname)
 		if err != nil {
 			return err
 		}
@@ -96,7 +99,19 @@ func (a *Agent) LoadOutputs() ([]string, error) {
 		names = append(names, name)
 	}
 
+<<<<<<< HEAD
+	_, err = c.Query(client.Query{
+		Command: fmt.Sprintf("CREATE DATABASE telegraf"),
+	})
+
+	if err != nil && !strings.Contains(err.Error(), "database already exists") {
+		log.Fatal(err)
+	}
+
+	a.conn = c
+=======
 	sort.Strings(names)
+>>>>>>> jipperinbham-outputs-phase1
 
 	return names, nil
 }
@@ -157,7 +172,6 @@ func (a *Agent) crankParallel() error {
 	close(points)
 
 	var bp BatchPoints
-	bp.Tags = a.Config.Tags
 	bp.Time = time.Now()
 
 	for sub := range points {
@@ -181,7 +195,6 @@ func (a *Agent) crank() error {
 		}
 	}
 
-	acc.Tags = a.Config.Tags
 	acc.Time = time.Now()
 
 	return a.flush(&acc)
@@ -204,6 +217,7 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 
 		acc.Tags = a.Config.Tags
 		acc.Time = time.Now()
+		acc.Database = a.Config.Database
 
 		err = a.flush(&acc)
 		if err != nil {

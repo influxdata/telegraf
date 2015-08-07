@@ -34,8 +34,6 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	Tags map[string]string
-
 	agent   *ast.Table
 	plugins map[string]*ast.Table
 	outputs map[string]*ast.Table
@@ -45,24 +43,41 @@ type Config struct {
 func (c *Config) Plugins() map[string]*ast.Table {
 	return c.plugins
 }
+type TagFilter struct {
+	Name   string
+	Filter []string
+}
 
 // Outputs returns the configured outputs as a map of name -> output toml
 func (c *Config) Outputs() map[string]*ast.Table {
 	return c.outputs
 }
 
+// The name of a tag, and the values on which to filter
+type TagFilter struct {
+	Name   string
+	Filter []string
+}
+
 // ConfiguredPlugin containing a name, interval, and drop/pass prefix lists
+// Also lists the tags to filter
 type ConfiguredPlugin struct {
 	Name string
 
 	Drop []string
 	Pass []string
+	TagDrop []TagFilter
+
+	TagPass []TagFilter
+
+	TagDrop []TagFilter
+	TagPass []TagFilter
 
 	Interval time.Duration
 }
 
 // ShouldPass returns true if the metric should pass, false if should drop
-func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
+func (cp *ConfiguredPlugin) ShouldPass(measurement string, tags map[string]string) bool {
 	if cp.Pass != nil {
 		for _, pat := range cp.Pass {
 			if strings.HasPrefix(measurement, pat) {
@@ -83,16 +98,48 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
 		return true
 	}
 
+	if cp.TagPass != nil {
+		for _, pat := range cp.TagPass {
+			if tagval, ok := tags[pat.Name]; ok {
+				for _, filter := range pat.Filter {
+					if filter == tagval {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+
+<<<<<<< HEAD
+=======
+
+>>>>>>> jipperinbham-outputs-phase1
+	if cp.TagDrop != nil {
+		for _, pat := range cp.TagDrop {
+			if tagval, ok := tags[pat.Name]; ok {
+				for _, filter := range pat.Filter {
+					if filter == tagval {
+						return false
+					}
+				}
+			}
+		}
+		return true
+	}
+
+<<<<<<< HEAD
 	return true
+=======
+	return nil
 }
 
 // ApplyOutput loads the toml config into the given interface
 func (c *Config) ApplyOutput(name string, v interface{}) error {
 	if c.outputs[name] != nil {
 		return toml.UnmarshalTable(c.outputs[name], v)
-	}
-
-	return nil
+    }
+>>>>>>> jipperinbham-outputs-phase1
 }
 
 // ApplyAgent loads the toml config into the given interface
@@ -149,9 +196,47 @@ func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, err
 			}
 		}
 
+		if node, ok := tbl.Fields["tagpass"]; ok {
+			if subtbl, ok := node.(*ast.Table); ok {
+				for name, val := range subtbl.Fields {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						tagfilter := &TagFilter{Name: name}
+						if ary, ok := kv.Value.(*ast.Array); ok {
+							for _, elem := range ary.Value {
+								if str, ok := elem.(*ast.String); ok {
+									tagfilter.Filter = append(tagfilter.Filter, str.Value)
+								}
+							}
+						}
+						cp.TagPass = append(cp.TagPass, *tagfilter)
+					}
+				}
+			}
+		}
+
+		if node, ok := tbl.Fields["tagdrop"]; ok {
+			if subtbl, ok := node.(*ast.Table); ok {
+				for name, val := range subtbl.Fields {
+					if kv, ok := val.(*ast.KeyValue); ok {
+						tagfilter := &TagFilter{Name: name}
+						if ary, ok := kv.Value.(*ast.Array); ok {
+							for _, elem := range ary.Value {
+								if str, ok := elem.(*ast.String); ok {
+									tagfilter.Filter = append(tagfilter.Filter, str.Value)
+								}
+							}
+						}
+						cp.TagDrop = append(cp.TagDrop, *tagfilter)
+					}
+				}
+			}
+		}
+
 		delete(tbl.Fields, "drop")
 		delete(tbl.Fields, "pass")
 		delete(tbl.Fields, "interval")
+		delete(tbl.Fields, "tagdrop")
+		delete(tbl.Fields, "tagpass")
 		return cp, toml.UnmarshalTable(tbl, v)
 	}
 
@@ -200,7 +285,6 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	c := &Config{
-		Tags:    make(map[string]string),
 		plugins: make(map[string]*ast.Table),
 		outputs: make(map[string]*ast.Table),
 	}
@@ -214,10 +298,6 @@ func LoadConfig(path string) (*Config, error) {
 		switch name {
 		case "agent":
 			c.agent = subtbl
-		case "tags":
-			if err := toml.UnmarshalTable(subtbl, c.Tags); err != nil {
-				return nil, errInvalidConfig
-			}
 		case "outputs":
 			for outputName, outputVal := range subtbl.Fields {
 				outputSubtbl, ok := outputVal.(*ast.Table)
@@ -280,8 +360,11 @@ var header = `# Telegraf configuration
 # NOTE: The configuration has a few required parameters. They are marked
 # with 'required'. Be sure to edit those to make this configuration work.
 
+# OUTPUTS
+[outputs]
+
 # Configuration for influxdb server to send metrics to
-[influxdb]
+[outputs.influxdb]
 # The full HTTP endpoint URL for your InfluxDB instance
 url = "http://localhost:8086" # required.
 
@@ -298,12 +381,11 @@ database = "telegraf" # required.
 
 # Set the user agent for the POSTs (can be useful for log differentiation)
 # user_agent = "telegraf"
-# tags = { "dc": "us-east-1" }
 
 # Tags can also be specified via a normal map, but only one form at a time:
 
 # [influxdb.tags]
-# dc = "us-east-1"
+# tags = { "dc" = "us-east-1" }
 
 # Configuration for telegraf itself
 # [agent]

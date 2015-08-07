@@ -151,6 +151,7 @@ make_dir_tree() {
         echo "Failed to create configuration directory -- aborting."
         cleanup_exit 1
     fi
+
 }
 
 
@@ -195,11 +196,11 @@ if which update-rc.d > /dev/null 2>&1 ; then
     update-rc.d -f telegraf remove
     update-rc.d telegraf defaults
 else
-    chkconfig --add telegraf 
+    chkconfig --add telegraf
 fi
 
 if ! id telegraf >/dev/null 2>&1; then
-        useradd --system -U -M telegraf 
+        useradd --system -U -M telegraf
 fi
 chown -R -L telegraf:telegraf $INSTALL_ROOT_DIR
 chmod -R a+rX $INSTALL_ROOT_DIR
@@ -223,10 +224,14 @@ fi
 
 echo -e "\nStarting package process...\n"
 
-check_gvm
+if [ $CIRCLE_BRANCH == "" ]; then
+    check_gvm
+fi
 check_gopath
-check_clean_tree
-update_tree
+if [ $CIRCLE_BRANCH == "" ]; then
+    check_clean_tree
+    update_tree
+fi
 check_tag_exists $VERSION
 do_build $VERSION
 make_dir_tree $TMP_WORK_DIR $VERSION
@@ -258,7 +263,7 @@ if [ $? -ne 0 ]; then
     cleanup_exit 1
 fi
 
-cp $LOGROTATE_CONFIGURATION $TMP_WORK_DIR/$LOGROTATE_DIR/telegraf.conf
+cp $LOGROTATE_CONFIGURATION $TMP_WORK_DIR/$LOGROTATE_DIR/telegraf
 if [ $? -ne 0 ]; then
     echo "Failed to copy $LOGROTATE_CONFIGURATION to packaging directory -- aborting."
     cleanup_exit 1
@@ -269,12 +274,14 @@ generate_postinstall_script $VERSION
 ###########################################################################
 # Create the actual packages.
 
-echo -n "Commence creation of $ARCH packages, version $VERSION? [Y/n] "
-read response
-response=`echo $response | tr 'A-Z' 'a-z'`
-if [ "x$response" == "xn" ]; then
-    echo "Packaging aborted."
-    cleanup_exit 1
+if [ $CIRCLE_BRANCH == "" ]; then
+    echo -n "Commence creation of $ARCH packages, version $VERSION? [Y/n] "
+    read response
+    response=`echo $response | tr 'A-Z' 'a-z'`
+    if [ "x$response" == "xn" ]; then
+        echo "Packaging aborted."
+        cleanup_exit 1
+    fi
 fi
 
 if [ $ARCH == "i386" ]; then
@@ -308,51 +315,54 @@ echo "Debian package created successfully."
 ###########################################################################
 # Offer to tag the repo.
 
-echo -n "Tag source tree with v$VERSION and push to repo? [y/N] "
-read response
-response=`echo $response | tr 'A-Z' 'a-z'`
-if [ "x$response" == "xy" ]; then
-    echo "Creating tag v$VERSION and pushing to repo"
-    git tag v$VERSION
-    if [ $? -ne 0 ]; then
-        echo "Failed to create tag v$VERSION -- aborting"
-        cleanup_exit 1
+if [ $CIRCLE_BRANCH == "" ]; then
+    echo -n "Tag source tree with v$VERSION and push to repo? [y/N] "
+    read response
+    response=`echo $response | tr 'A-Z' 'a-z'`
+    if [ "x$response" == "xy" ]; then
+        echo "Creating tag v$VERSION and pushing to repo"
+        git tag v$VERSION
+        if [ $? -ne 0 ]; then
+            echo "Failed to create tag v$VERSION -- aborting"
+            cleanup_exit 1
+        fi
+        git push origin v$VERSION
+        if [ $? -ne 0 ]; then
+            echo "Failed to push tag v$VERSION to repo -- aborting"
+            cleanup_exit 1
+        fi
+    else
+        echo "Not creating tag v$VERSION."
     fi
-    git push origin v$VERSION
-    if [ $? -ne 0 ]; then
-        echo "Failed to push tag v$VERSION to repo -- aborting"
-        cleanup_exit 1
-    fi
-else
-    echo "Not creating tag v$VERSION."
 fi
-
 
 ###########################################################################
 # Offer to publish the packages.
 
-echo -n "Publish packages to S3? [y/N] "
-read response
-response=`echo $response | tr 'A-Z' 'a-z'`
-if [ "x$response" == "xy" ]; then
-    echo "Publishing packages to S3."
-    if [ ! -e "$AWS_FILE" ]; then
-        echo "$AWS_FILE does not exist -- aborting."
-        cleanup_exit 1
-    fi
-
-    for filepath in `ls *.{deb,rpm}`; do
-        echo "Uploading $filepath to S3"
-        filename=`basename $filepath`
-        echo "Uploading $filename to s3://get.influxdb.org/telegraf/$filename"
-        AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://get.influxdb.org/telegraf/$filename --acl public-read --region us-east-1
-        if [ $? -ne 0 ]; then
-            echo "Upload failed -- aborting".
+if [ $CIRCLE_BRANCH == "" ]; then
+    echo -n "Publish packages to S3? [y/N] "
+    read response
+    response=`echo $response | tr 'A-Z' 'a-z'`
+    if [ "x$response" == "xy" ]; then
+        echo "Publishing packages to S3."
+        if [ ! -e "$AWS_FILE" ]; then
+            echo "$AWS_FILE does not exist -- aborting."
             cleanup_exit 1
         fi
-    done
-else
-    echo "Not publishing packages to S3."
+
+        for filepath in `ls *.{deb,rpm}`; do
+            echo "Uploading $filepath to S3"
+            filename=`basename $filepath`
+            echo "Uploading $filename to s3://get.influxdb.org/telegraf/$filename"
+            AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://get.influxdb.org/telegraf/$filename --acl public-read --region us-east-1
+            if [ $? -ne 0 ]; then
+                echo "Upload failed -- aborting".
+                cleanup_exit 1
+            fi
+        done
+    else
+        echo "Not publishing packages to S3."
+    fi
 fi
 
 ###########################################################################

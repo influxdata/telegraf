@@ -13,11 +13,12 @@ type InfluxDB struct {
 	Password  string
 	Database  string
 	UserAgent string
+	Tags      map[string]string
 
 	conn *client.Client
 }
 
-func (i *InfluxDB) Connect() error {
+func (i *InfluxDB) Connect(host string) error {
 	u, err := url.Parse(i.URL)
 	if err != nil {
 		return err
@@ -34,12 +35,18 @@ func (i *InfluxDB) Connect() error {
 		return err
 	}
 
+	if i.Tags == nil {
+		i.Tags = make(map[string]string)
+	}
+	i.Tags["host"] = host
+
 	i.conn = c
 	return nil
 }
 
 func (i *InfluxDB) Write(bp client.BatchPoints) error {
 	bp.Database = i.Database
+	bp.Tags = i.Tags
 	if _, err := i.conn.Write(bp); err != nil {
 		return err
 	}
