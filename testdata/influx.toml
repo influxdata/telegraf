@@ -3,12 +3,15 @@ interval = "5s"
 http = ":11213"
 debug = true
 
-[influxdb]
+[outputs]
+[outputs.influxdb]
 url = "http://localhost:8086"
 username = "root"
 password = "root"
 database = "telegraf"
-tags = { dc = "us-phx-1" }
+
+[tags.influxdb]
+tags = { "dc" = "us-phx-1" }
 
 [redis]
 address = ":6379"

@@ -59,6 +59,11 @@ func main() {
 		ag.Debug = true
 	}
 
+	outputs, err := ag.LoadOutputs()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	plugins, err := ag.LoadPlugins(*fPLuginsFilter)
 	if err != nil {
 		log.Fatal(err)
@@ -99,16 +104,12 @@ func main() {
 	}()
 
 	log.Printf("Starting Telegraf (version %s)\n", Version)
+	log.Printf("Loaded outputs: %s", strings.Join(outputs, " "))
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
 	if ag.Debug {
 		log.Printf("Debug: enabled")
 		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
 			ag.Interval, ag.Debug, ag.Hostname)
-	}
-
-	if config.URL != "" {
-		log.Printf("Sending metrics to: %s", config.URL)
-		log.Printf("Tags enabled: %v", config.ListTags())
 	}
 
 	if *fPidfile != "" {

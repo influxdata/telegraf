@@ -35,12 +35,11 @@ database = "telegraf" # required.
 
 # Set the user agent for the POSTs (can be useful for log differentiation)
 # user_agent = "telegraf"
-# tags = { "dc": "us-east-1" }
 
 # Tags can also be specified via a normal map, but only one form at a time:
 
 # [influxdb.tags]
-# dc = "us-east-1"
+# tags = { "dc" = "us-east-1" }
 
 # Configuration for telegraf itself
 # [agent]
