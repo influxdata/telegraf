@@ -30,7 +30,7 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	return nil
 }
 
-// Config specifies the URL/user/password for the database that telegraf
+// Config specifies the outputs that telegraf
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
@@ -200,6 +200,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	c := &Config{
+		Tags:    make(map[string]string),
 		plugins: make(map[string]*ast.Table),
 		outputs: make(map[string]*ast.Table),
 	}
@@ -213,6 +214,10 @@ func LoadConfig(path string) (*Config, error) {
 		switch name {
 		case "agent":
 			c.agent = subtbl
+		case "tags":
+			if err := toml.UnmarshalTable(subtbl, c.Tags); err != nil {
+				return nil, errInvalidConfig
+			}
 		case "outputs":
 			for outputName, outputVal := range subtbl.Fields {
 				outputSubtbl, ok := outputVal.(*ast.Table)
