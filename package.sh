@@ -259,7 +259,7 @@ if [ $? -ne 0 ]; then
     cleanup_exit 1
 fi
 
-cp $LOGROTATE_CONFIGURATION $TMP_WORK_DIR/$LOGROTATE_DIR/telegraf.conf
+cp $LOGROTATE_CONFIGURATION $TMP_WORK_DIR/$LOGROTATE_DIR/telegraf
 if [ $? -ne 0 ]; then
     echo "Failed to copy $LOGROTATE_CONFIGURATION to packaging directory -- aborting."
     cleanup_exit 1
