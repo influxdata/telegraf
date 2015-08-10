@@ -63,6 +63,7 @@ func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 
 	for _, p := range parts {
 		du, err := disk.DiskUsage(p.Mountpoint)
+		du.Fstype = p.Fstype
 		if err != nil {
 			return nil, err
 		}
