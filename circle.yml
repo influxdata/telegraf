@@ -1,14 +1,17 @@
 dependencies:
   post:
+    # install rpm & fpm for packaging
+    - which rpmbuild || sudo apt-get install rpm
+    - gem install fpm
     # install golint
     - go get github.com/golang/lint/golint
     # install gox
     - go get -u -f github.com/mitchellh/gox
-    # install binaries
-    - go install ./...
 
 test:
   pre:
+    # install binaries
+    - go install ./...
     # Go fmt should pass all files
     - "[ `git ls-files | grep '.go$' | xargs gofmt -l 2>&1 | wc -l` -eq 0 ]"
     - go vet ./...
@@ -18,5 +21,9 @@ test:
   override:
     - make test-short
   post:
+    # Build linux binaries
     - gox -os="linux" -arch="386 amd64" ./...
     - mv telegraf* $CIRCLE_ARTIFACTS
+    # Build .deb and .rpm files
+    - "GOPATH=/home/ubuntu/.go_project ./package.sh `git rev-parse --short HEAD`"
+    - mv telegraf*{deb,rpm} $CIRCLE_ARTIFACTS
