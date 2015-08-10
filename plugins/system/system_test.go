@@ -196,7 +196,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{
-		"path": "/",
+		"path":   "/",
 		"fstype": "ext4",
 	}
 
