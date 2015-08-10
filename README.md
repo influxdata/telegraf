@@ -91,7 +91,7 @@ This is tested on metrics that have passed the tagpass test.
 global interval, but if one particular plugin should be run less or more often,
 you can configure that here.
 
-### Plugin Configuration Example
+### Plugin Configuration Examples
 
 ```
 # Read metrics about disk usage by mount point
@@ -102,13 +102,21 @@ interval = "1m" # Run at a 1 minute interval instead of the default
 # These tag conditions are OR, not AND.
 # If the (filesystem is ext4 or xfs) or (the path is /opt or /home) then the metric passes
 fstype = [ "ext4", "xfs" ]
-path = [ "/", /opt", "/home" ]
+path = [ "/opt", "/home" ]
 
-# Any metrics that succeed at 'tagpass' are then checked to see if they should be dropped
+[postgresql]
+
+[postgresql.tagdrop]
+# Don't report stats about the database name 'testdatabase'
+db = [ "testdatabase" ]
+
+```
+
+```
+[disk]
+# Don't report stats about the following filesystem types
 [disk.tagdrop]
-# Drop the root mountpoint from the metrics
-path = [ "/" ]
-
+fstype = [ "nfs", "tmpfs", "ecryptfs" ]
 ```
 
 ## Plugins
