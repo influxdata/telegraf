@@ -3,8 +3,10 @@ package telegraf
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,9 +59,16 @@ func NewAgent(config *Config) (*Agent, error) {
 		agent.Hostname = hostname
 	}
 
+	if config.Tags == nil {
+		config.Tags = map[string]string{}
+	}
+
+	config.Tags["host"] = agent.Hostname
+
 	return agent, nil
 }
 
+// Connect connects to the agent's config URL
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
 		err := o.output.Connect(a.Hostname)
@@ -194,7 +203,9 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 			return err
 		}
 
+		acc.Tags = a.Config.Tags
 		acc.Time = time.Now()
+		acc.Database = a.Config.Database
 
 		err = a.flush(&acc)
 		if err != nil {
