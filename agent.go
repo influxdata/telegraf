@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -82,6 +83,14 @@ func (a *Agent) Connect() error {
 
 	if err != nil {
 		return err
+	}
+
+	_, err = c.Query(client.Query{
+		Command: fmt.Sprintf("CREATE DATABASE telegraf"),
+	})
+
+	if err != nil && !strings.Contains(err.Error(), "database already exists") {
+		log.Fatal(err)
 	}
 
 	a.conn = c
