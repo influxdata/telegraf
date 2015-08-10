@@ -1,11 +1,22 @@
-machine:
-    pre:
-        - bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-        - source $HOME/.gvm/scripts/gvm; gvm install go1.4.2 --binary
-
 dependencies:
-    override:
-        - echo "Dummy override, so no Circle dependencies execute"
+  post:
+    # install golint
+    - go get github.com/golang/lint/golint
+    # install gox
+    - go get -u -f github.com/mitchellh/gox
+    # install binaries
+    - go install ./...
+
 test:
-    override:
-        - bash circle-test.sh
+  pre:
+    # Go fmt should pass all files
+    - "[ `git ls-files | grep '.go$' | xargs gofmt -l 2>&1 | wc -l` -eq 0 ]"
+    - go vet ./...
+    - golint .
+    - golint testutil/...
+    - golint cmd/...
+  override:
+    - make test-short
+  post:
+    - gox -os="linux" -arch="386 amd64" ./...
+    - mv telegraf* $CIRCLE_ARTIFACTS
