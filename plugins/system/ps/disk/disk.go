@@ -6,6 +6,7 @@ import (
 
 type DiskUsageStat struct {
 	Path              string  `json:"path"`
+	Fstype            string  `json:"fstype"`
 	Total             uint64  `json:"total"`
 	Free              uint64  `json:"free"`
 	Used              uint64  `json:"used"`
