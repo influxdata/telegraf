@@ -86,7 +86,7 @@ func (a *Agent) Connect() error {
 	}
 
 	_, err = c.Query(client.Query{
-		Command: fmt.Sprintf("CREATE DATABASE telegraf"),
+		Command: fmt.Sprintf("CREATE DATABASE %s", config.Database),
 	})
 
 	if err != nil && !strings.Contains(err.Error(), "database already exists") {
