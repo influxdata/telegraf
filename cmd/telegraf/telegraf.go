@@ -18,6 +18,7 @@ var fConfig = flag.String("config", "", "configuration file to load")
 var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 // Telegraf version
 var Version = "unreleased"
@@ -61,7 +62,7 @@ func main() {
 		ag.Debug = true
 	}
 
-	plugins, err := ag.LoadPlugins()
+	plugins, err := ag.LoadPlugins(*fPLuginsFilter)
 	if err != nil {
 		log.Fatal(err)
 	}

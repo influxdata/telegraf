@@ -1,5 +1,47 @@
 package telegraf
 
+import (
+	"testing"
+	"github.com/stretchr/testify/assert"
+
+// needing to load the plugins
+	_ "github.com/influxdb/telegraf/plugins/all"
+)
+
+func TestAgent_LoadPlugin(t *testing.T) {
+
+	// load a dedicated configuration file
+	config, _ := LoadConfig("./testdata/telegraf-agent.toml")
+	a, _ := NewAgent(config)
+
+	pluginsEnabled, _ := a.LoadPlugins("mysql")
+	assert.Equal(t, 1, len(pluginsEnabled))
+
+	pluginsEnabled, _ = a.LoadPlugins("foo")
+	assert.Equal(t, 0, len(pluginsEnabled))
+
+	pluginsEnabled, _ = a.LoadPlugins("mysql:foo")
+	assert.Equal(t, 1, len(pluginsEnabled))
+
+	pluginsEnabled, _ = a.LoadPlugins("mysql:redis")
+	assert.Equal(t, 2, len(pluginsEnabled))
+
+	pluginsEnabled, _ = a.LoadPlugins(":mysql:foo:redis:bar")
+	assert.Equal(t, 2, len(pluginsEnabled))
+
+	pluginsEnabled, _ = a.LoadPlugins("")
+	assert.Equal(t, 24, len(pluginsEnabled))
+
+	pluginsEnabled, _ = a.LoadPlugins(" ")
+	assert.Equal(t, 24, len(pluginsEnabled))
+
+	pluginsEnabled, _ = a.LoadPlugins("		")
+	assert.Equal(t, 24, len(pluginsEnabled))
+
+	pluginsEnabled, _ = a.LoadPlugins("\n\t")
+	assert.Equal(t, 24, len(pluginsEnabled))
+}
+
 /*
 func TestAgent_DrivesMetrics(t *testing.T) {
 	var (
