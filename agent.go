@@ -114,9 +114,8 @@ func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
 			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
 		}
 
-
 		isPluginEnabled := false
-		if len(filters)>0 {
+		if len(filters) > 0 {
 			for _, runeValue := range filters {
 				if runeValue != "" && strings.ToLower(runeValue) == strings.ToLower(name) {
 					fmt.Printf("plugin [%s] is enabled (filter options)\n", name)

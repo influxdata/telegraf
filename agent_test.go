@@ -1,10 +1,10 @@
 package telegraf
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 
-// needing to load the plugins
+	// needing to load the plugins
 	_ "github.com/influxdb/telegraf/plugins/all"
 )
 
