@@ -30,27 +30,25 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	return nil
 }
 
-// Config specifies the outputs that telegraf
+// Config specifies the URL/user/password for the database that telegraf
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
+	URL       string
+	Username  string
+	Password  string
+	Database  string
+	UserAgent string
+	Timeout   Duration
+	Tags      map[string]string
+
 	agent   *ast.Table
 	plugins map[string]*ast.Table
-	outputs map[string]*ast.Table
 }
 
 // Plugins returns the configured plugins as a map of name -> plugin toml
 func (c *Config) Plugins() map[string]*ast.Table {
 	return c.plugins
-}
-type TagFilter struct {
-	Name   string
-	Filter []string
-}
-
-// Outputs returns the configured outputs as a map of name -> output toml
-func (c *Config) Outputs() map[string]*ast.Table {
-	return c.outputs
 }
 
 // The name of a tag, and the values on which to filter
@@ -66,9 +64,6 @@ type ConfiguredPlugin struct {
 
 	Drop []string
 	Pass []string
-	TagDrop []TagFilter
-
-	TagPass []TagFilter
 
 	TagDrop []TagFilter
 	TagPass []TagFilter
@@ -111,10 +106,6 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string, tags map[string]strin
 		return false
 	}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> jipperinbham-outputs-phase1
 	if cp.TagDrop != nil {
 		for _, pat := range cp.TagDrop {
 			if tagval, ok := tags[pat.Name]; ok {
@@ -128,18 +119,7 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string, tags map[string]strin
 		return true
 	}
 
-<<<<<<< HEAD
 	return true
-=======
-	return nil
-}
-
-// ApplyOutput loads the toml config into the given interface
-func (c *Config) ApplyOutput(name string, v interface{}) error {
-	if c.outputs[name] != nil {
-		return toml.UnmarshalTable(c.outputs[name], v)
-    }
->>>>>>> jipperinbham-outputs-phase1
 }
 
 // ApplyAgent loads the toml config into the given interface
@@ -245,24 +225,15 @@ func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, err
 
 // PluginsDeclared returns the name of all plugins declared in the config.
 func (c *Config) PluginsDeclared() []string {
-	return declared(c.plugins)
-}
+	var plugins []string
 
-// OutputsDeclared returns the name of all outputs declared in the config.
-func (c *Config) OutputsDeclared() []string {
-	return declared(c.outputs)
-}
-
-func declared(endpoints map[string]*ast.Table) []string {
-	var names []string
-
-	for name, _ := range endpoints {
-		names = append(names, name)
+	for name := range c.plugins {
+		plugins = append(plugins, name)
 	}
 
-	sort.Strings(names)
+	sort.Strings(plugins)
 
-	return names
+	return plugins
 }
 
 // DefaultConfig returns an empty default configuration
@@ -286,7 +257,6 @@ func LoadConfig(path string) (*Config, error) {
 
 	c := &Config{
 		plugins: make(map[string]*ast.Table),
-		outputs: make(map[string]*ast.Table),
 	}
 
 	for name, val := range tbl.Fields {
@@ -296,16 +266,13 @@ func LoadConfig(path string) (*Config, error) {
 		}
 
 		switch name {
+		case "influxdb":
+			err := toml.UnmarshalTable(subtbl, c)
+			if err != nil {
+				return nil, err
+			}
 		case "agent":
 			c.agent = subtbl
-		case "outputs":
-			for outputName, outputVal := range subtbl.Fields {
-				outputSubtbl, ok := outputVal.(*ast.Table)
-				if !ok {
-					return nil, errInvalidConfig
-				}
-				c.outputs[outputName] = outputSubtbl
-			}
 		default:
 			c.plugins[name] = subtbl
 		}
@@ -360,11 +327,8 @@ var header = `# Telegraf configuration
 # NOTE: The configuration has a few required parameters. They are marked
 # with 'required'. Be sure to edit those to make this configuration work.
 
-# OUTPUTS
-[outputs]
-
 # Configuration for influxdb server to send metrics to
-[outputs.influxdb]
+[influxdb]
 # The full HTTP endpoint URL for your InfluxDB instance
 url = "http://localhost:8086" # required.
 
@@ -381,11 +345,12 @@ database = "telegraf" # required.
 
 # Set the user agent for the POSTs (can be useful for log differentiation)
 # user_agent = "telegraf"
+# tags = { "dc": "us-east-1" }
 
 # Tags can also be specified via a normal map, but only one form at a time:
 
 # [influxdb.tags]
-# tags = { "dc" = "us-east-1" }
+# dc = "us-east-1"
 
 # Configuration for telegraf itself
 # [agent]

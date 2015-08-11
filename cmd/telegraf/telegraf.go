@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/influxdb/telegraf"
-	_ "github.com/influxdb/telegraf/outputs/all"
 	_ "github.com/influxdb/telegraf/plugins/all"
 )
 
@@ -62,11 +61,6 @@ func main() {
 		ag.Debug = true
 	}
 
-	outputs, err := ag.LoadOutputs()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	plugins, err := ag.LoadPlugins()
 	if err != nil {
 		log.Fatal(err)
@@ -106,13 +100,17 @@ func main() {
 		close(shutdown)
 	}()
 
-	log.Print("Telegraf Agent running")
-	log.Printf("Loaded outputs: %s", strings.Join(outputs, " "))
+	log.Print("InfluxDB Agent running")
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
 	if ag.Debug {
 		log.Printf("Debug: enabled")
 		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
 			ag.Interval, ag.Debug, ag.Hostname)
+	}
+
+	if config.URL != "" {
+		log.Printf("Sending metrics to: %s", config.URL)
+		log.Printf("Tags enabled: %v", config.ListTags())
 	}
 
 	if *fPidfile != "" {
