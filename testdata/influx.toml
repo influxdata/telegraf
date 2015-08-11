@@ -10,8 +10,8 @@ username = "root"
 password = "root"
 database = "telegraf"
 
-[tags.influxdb]
-tags = { "dc" = "us-phx-1" }
+[tags]
+dc = "us-phx-1" }
 
 [redis]
 address = ":6379"

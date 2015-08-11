@@ -34,6 +34,8 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
+	Tags map[string]string
+
 	agent   *ast.Table
 	plugins map[string]*ast.Table
 	outputs map[string]*ast.Table
@@ -42,10 +44,6 @@ type Config struct {
 // Plugins returns the configured plugins as a map of name -> plugin toml
 func (c *Config) Plugins() map[string]*ast.Table {
 	return c.plugins
-}
-type TagFilter struct {
-	Name   string
-	Filter []string
 }
 
 // Outputs returns the configured outputs as a map of name -> output toml
@@ -66,9 +64,6 @@ type ConfiguredPlugin struct {
 
 	Drop []string
 	Pass []string
-	TagDrop []TagFilter
-
-	TagPass []TagFilter
 
 	TagDrop []TagFilter
 	TagPass []TagFilter
@@ -131,7 +126,8 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string, tags map[string]strin
 func (c *Config) ApplyOutput(name string, v interface{}) error {
 	if c.outputs[name] != nil {
 		return toml.UnmarshalTable(c.outputs[name], v)
-    }
+	}
+	return nil
 }
 
 // ApplyAgent loads the toml config into the given interface
@@ -246,15 +242,15 @@ func (c *Config) OutputsDeclared() []string {
 }
 
 func declared(endpoints map[string]*ast.Table) []string {
-	var plugins []string
+	var names []string
 
-	for name := range c.plugins {
-		plugins = append(plugins, name)
+	for name := range endpoints {
+		names = append(names, name)
 	}
 
-	sort.Strings(plugins)
+	sort.Strings(names)
 
-	return plugins
+	return names
 }
 
 // DefaultConfig returns an empty default configuration
@@ -376,8 +372,8 @@ database = "telegraf" # required.
 
 # Tags can also be specified via a normal map, but only one form at a time:
 
-# [influxdb.tags]
-# tags = { "dc" = "us-east-1" }
+# [tags]
+# dc = "us-east-1" }
 
 # Configuration for telegraf itself
 # [agent]

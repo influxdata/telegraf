@@ -3,7 +3,6 @@ package telegraf
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -71,7 +70,7 @@ func NewAgent(config *Config) (*Agent, error) {
 // Connect connects to the agent's config URL
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
-		err := o.output.Connect(a.Hostname)
+		err := o.output.Connect()
 		if err != nil {
 			return err
 		}
@@ -79,6 +78,7 @@ func (a *Agent) Connect() error {
 	return nil
 }
 
+// LoadOutputs loads the agent's outputs
 func (a *Agent) LoadOutputs() ([]string, error) {
 	var names []string
 
@@ -99,15 +99,7 @@ func (a *Agent) LoadOutputs() ([]string, error) {
 		names = append(names, name)
 	}
 
-	_, err = c.Query(client.Query{
-		Command: fmt.Sprintf("CREATE DATABASE telegraf"),
-	})
-
-	if err != nil && !strings.Contains(err.Error(), "database already exists") {
-		log.Fatal(err)
-	}
-
-	a.conn = c
+	sort.Strings(names)
 
 	return names, nil
 }
@@ -127,8 +119,6 @@ func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
 		if !ok {
 			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
 		}
-
-		plugin := creator()
 
 		isPluginEnabled := false
 		if len(filters) > 0 {
@@ -190,60 +180,56 @@ func (a *Agent) crankParallel() error {
 
 	close(points)
 
-	var acc BatchPoints
-	acc.Tags = a.Config.Tags
-	acc.Time = time.Now()
-	acc.Database = a.Config.Database
+	var bp BatchPoints
+	bp.Time = time.Now()
+	bp.Tags = a.Config.Tags
 
 	for sub := range points {
-		acc.Points = append(acc.Points, sub.Points...)
+		bp.Points = append(bp.Points, sub.Points...)
 	}
 
-	_, err := a.conn.Write(acc.BatchPoints)
-	return err
+	return a.flush(&bp)
 }
 
 func (a *Agent) crank() error {
-	var acc BatchPoints
+	var bp BatchPoints
 
-	acc.Debug = a.Debug
+	bp.Debug = a.Debug
 
 	for _, plugin := range a.plugins {
-		acc.Prefix = plugin.name + "_"
-		acc.Config = plugin.config
-		err := plugin.plugin.Gather(&acc)
+		bp.Prefix = plugin.name + "_"
+		bp.Config = plugin.config
+		err := plugin.plugin.Gather(&bp)
 		if err != nil {
 			return err
 		}
 	}
 
-	acc.Tags = a.Config.Tags
-	acc.Time = time.Now()
-	acc.Database = a.Config.Database
+	bp.Time = time.Now()
+	bp.Tags = a.Config.Tags
 
-	return a.flush(&acc)
+	return a.flush(&bp)
 }
 
 func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
 	ticker := time.NewTicker(plugin.config.Interval)
 
 	for {
-		var acc BatchPoints
+		var bp BatchPoints
 
-		acc.Debug = a.Debug
+		bp.Debug = a.Debug
 
-		acc.Prefix = plugin.name + "_"
-		acc.Config = plugin.config
-		err := plugin.plugin.Gather(&acc)
+		bp.Prefix = plugin.name + "_"
+		bp.Config = plugin.config
+		err := plugin.plugin.Gather(&bp)
 		if err != nil {
 			return err
 		}
 
-		acc.Tags = a.Config.Tags
-		acc.Time = time.Now()
-		acc.Database = a.Config.Database
+		bp.Tags = a.Config.Tags
+		bp.Time = time.Now()
 
-		err = a.flush(&acc)
+		err = a.flush(&bp)
 		if err != nil {
 			return err
 		}
