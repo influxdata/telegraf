@@ -19,6 +19,7 @@
 - [#85](https://github.com/influxdb/telegraf/pull/85): Fix GetLocalHost testutil function for mac users
 - [#89](https://github.com/influxdb/telegraf/pull/89): go fmt fixes
 - [#94](https://github.com/influxdb/telegraf/pull/94): Fix for issue #93, explicitly call sarama.v1 -> sarama
+- [#101](https://github.com/influxdb/telegraf/issues/101): switch back from master branch if building locally
 
 ## v0.1.4 [2015-07-09]
 
