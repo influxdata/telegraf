@@ -36,8 +36,21 @@ brew install telegraf
 * Edit the configuration to match your needs
 * Run `telegraf -config telegraf.toml -test` to output one full measurement sample to STDOUT
 * Run `telegraf -config telegraf.toml` to gather and send metrics to InfluxDB
+* Run `telegraf -config telegraf.toml -filter system:swap` to enable only two plugins described into config file
 
+### Telegraf Usage 
 
+```telegraf --help```
+
+*  -config="": configuration file to load
+*  -debug=false: show metrics as they're generated to stdout
+*  -filter="": filter the plugins to enable, separator is :
+*  -httptest.serve="": if non-empty, httptest.NewServer serves on this address and blocks
+*  -pidfile="": file to write our pid to
+*  -sample-config=false: print out full sample configuration
+*  -test=false: gather metrics, print them out, and exit
+*  -version=false: display the version
+  
 ## Telegraf Options
 
 Telegraf has a few options you can configure under the `agent` section of the
