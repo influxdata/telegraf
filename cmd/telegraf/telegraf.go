@@ -21,16 +21,13 @@ var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 // Telegraf version
-var Version = "unreleased"
-
-// Telegraf commit
-var Commit = ""
+var Version = "0.1.5-dev"
 
 func main() {
 	flag.Parse()
 
 	if *fVersion {
-		fmt.Printf("InfluxDB Telegraf agent - Version %s\n", Version)
+		fmt.Printf("Telegraf - Version %s\n", Version)
 		return
 	}
 
@@ -101,7 +98,7 @@ func main() {
 		close(shutdown)
 	}()
 
-	log.Print("InfluxDB Agent running")
+	log.Printf("Starting Telegraf (version %s)\n", Version)
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
 	if ag.Debug {
 		log.Printf("Debug: enabled")
