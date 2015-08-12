@@ -3,16 +3,20 @@ package telegraf
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 )
+
+type runningOutput struct {
+	name   string
+	output outputs.Output
+}
 
 type runningPlugin struct {
 	name   string
@@ -32,9 +36,8 @@ type Agent struct {
 
 	Config *Config
 
+	outputs []*runningOutput
 	plugins []*runningPlugin
-
-	conn *client.Client
 }
 
 // NewAgent returns an Agent struct based off the given Config
@@ -64,38 +67,50 @@ func NewAgent(config *Config) (*Agent, error) {
 	return agent, nil
 }
 
-// Connect connects to the agent's config URL
+// Connect connects to all configured outputs
 func (a *Agent) Connect() error {
-	config := a.Config
-
-	u, err := url.Parse(config.URL)
-	if err != nil {
-		return err
+	for _, o := range a.outputs {
+		err := o.output.Connect()
+		if err != nil {
+			return err
+		}
 	}
-
-	c, err := client.NewClient(client.Config{
-		URL:       *u,
-		Username:  config.Username,
-		Password:  config.Password,
-		UserAgent: config.UserAgent,
-		Timeout:   config.Timeout.Duration,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	_, err = c.Query(client.Query{
-		Command: fmt.Sprintf("CREATE DATABASE %s", config.Database),
-	})
-
-	if err != nil && !strings.Contains(err.Error(), "database already exists") {
-		log.Fatal(err)
-	}
-
-	a.conn = c
-
 	return nil
+}
+
+// Close closes the connection to all configured outputs
+func (a *Agent) Close() error {
+	var err error
+	for _, o := range a.outputs {
+		err = o.output.Close()
+	}
+	return err
+}
+
+// LoadOutputs loads the agent's outputs
+func (a *Agent) LoadOutputs() ([]string, error) {
+	var names []string
+
+	for _, name := range a.Config.OutputsDeclared() {
+		creator, ok := outputs.Outputs[name]
+		if !ok {
+			return nil, fmt.Errorf("Undefined but requested output: %s", name)
+		}
+
+		output := creator()
+
+		err := a.Config.ApplyOutput(name, output)
+		if err != nil {
+			return nil, err
+		}
+
+		a.outputs = append(a.outputs, &runningOutput{name, output})
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	return names, nil
 }
 
 // LoadPlugins loads the agent's plugins
@@ -174,61 +189,59 @@ func (a *Agent) crankParallel() error {
 
 	close(points)
 
-	var acc BatchPoints
-	acc.Tags = a.Config.Tags
-	acc.Time = time.Now()
-	acc.Database = a.Config.Database
+	var bp BatchPoints
+	bp.Time = time.Now()
+	bp.Tags = a.Config.Tags
 
 	for sub := range points {
-		acc.Points = append(acc.Points, sub.Points...)
+		bp.Points = append(bp.Points, sub.Points...)
 	}
 
-	_, err := a.conn.Write(acc.BatchPoints)
-	return err
+	return a.flush(&bp)
 }
 
 func (a *Agent) crank() error {
-	var acc BatchPoints
+	var bp BatchPoints
 
-	acc.Debug = a.Debug
+	bp.Debug = a.Debug
 
 	for _, plugin := range a.plugins {
-		acc.Prefix = plugin.name + "_"
-		acc.Config = plugin.config
-		err := plugin.plugin.Gather(&acc)
+		bp.Prefix = plugin.name + "_"
+		bp.Config = plugin.config
+		err := plugin.plugin.Gather(&bp)
 		if err != nil {
 			return err
 		}
 	}
 
-	acc.Tags = a.Config.Tags
-	acc.Time = time.Now()
-	acc.Database = a.Config.Database
+	bp.Time = time.Now()
+	bp.Tags = a.Config.Tags
 
-	_, err := a.conn.Write(acc.BatchPoints)
-	return err
+	return a.flush(&bp)
 }
 
 func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
 	ticker := time.NewTicker(plugin.config.Interval)
 
 	for {
-		var acc BatchPoints
+		var bp BatchPoints
 
-		acc.Debug = a.Debug
+		bp.Debug = a.Debug
 
-		acc.Prefix = plugin.name + "_"
-		acc.Config = plugin.config
-		err := plugin.plugin.Gather(&acc)
+		bp.Prefix = plugin.name + "_"
+		bp.Config = plugin.config
+		err := plugin.plugin.Gather(&bp)
 		if err != nil {
 			return err
 		}
 
-		acc.Tags = a.Config.Tags
-		acc.Time = time.Now()
-		acc.Database = a.Config.Database
+		bp.Tags = a.Config.Tags
+		bp.Time = time.Now()
 
-		a.conn.Write(acc.BatchPoints)
+		err = a.flush(&bp)
+		if err != nil {
+			return err
+		}
 
 		select {
 		case <-shutdown:
@@ -237,6 +250,22 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 			continue
 		}
 	}
+}
+
+func (a *Agent) flush(bp *BatchPoints) error {
+	var wg sync.WaitGroup
+	var outerr error
+	for _, o := range a.outputs {
+		wg.Add(1)
+		go func(ro *runningOutput) {
+			defer wg.Done()
+			outerr = ro.output.Write(bp.BatchPoints)
+		}(o)
+	}
+
+	wg.Wait()
+
+	return outerr
 }
 
 // TestAllPlugins verifies that we can 'Gather' from all plugins with the
@@ -297,13 +326,6 @@ func (a *Agent) Test() error {
 
 // Run runs the agent daemon, gathering every Interval
 func (a *Agent) Run(shutdown chan struct{}) error {
-	if a.conn == nil {
-		err := a.Connect()
-		if err != nil {
-			return err
-		}
-	}
-
 	var wg sync.WaitGroup
 
 	for _, plugin := range a.plugins {
