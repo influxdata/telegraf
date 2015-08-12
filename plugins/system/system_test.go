@@ -1,6 +1,8 @@
 package system
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
@@ -42,6 +44,21 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 		Guest:     8.1,
 		GuestNice: 0.324,
 		Stolen:    0.051,
+	}
+
+	cts2 := cpu.CPUTimesStat{
+		CPU:       "cpu0",
+		User:      11.4,     // increased by 8.3
+		System:    10.9,     // increased by 2.7
+		Idle:      158.8699, // increased by 78.7699 (for total increase of 100)
+		Nice:      2.5,      // increased by 1.2
+		Iowait:    0.7,      // increased by 0.5
+		Irq:       1.2,      // increased by 1.1
+		Softirq:   0.31,     // increased by 0.2
+		Steal:     0.0002,   // increased by 0.0001
+		Guest:     12.9,     // increased by 4.8
+		GuestNice: 2.524,    // increased by 2.2
+		Stolen:    0.281,    // increased by 0.23
 	}
 
 	mps.On("CPUTimes").Return([]cpu.CPUTimesStat{cts}, nil)
@@ -171,26 +188,72 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckValue("load5", 1.5))
 	assert.True(t, acc.CheckValue("load15", 0.8))
 
-	cs := &CPUStats{ps: &mps}
+	cs := NewCPUStats(&mps)
 
 	cputags := map[string]string{
 		"cpu": "cpu0",
 	}
 
+	preCPUPoints := len(acc.Points)
+	err = cs.Gather(&acc)
+	require.NoError(t, err)
+	numCPUPoints := len(acc.Points) - preCPUPoints
+
+	expectedCPUPoints := 12
+	assert.Equal(t, numCPUPoints, expectedCPUPoints)
+
+	// Computed values are checked with delta > 0 becasue of floating point arithmatic
+	// imprecision
+	assertContainsTaggedFloat(t, acc, "user", 3.1, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "system", 8.2, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "idle", 80.1, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "nice", 1.3, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "iowait", 0.2, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "irq", 0.1, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "softirq", 0.11, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "steal", 0.0001, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "guest", 8.1, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "guestNice", 0.324, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "stolen", 0.051, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "busy", 21.4851, 0.0005, cputags)
+
+	mps2 := MockPS{}
+	mps2.On("CPUTimes").Return([]cpu.CPUTimesStat{cts2}, nil)
+	cs.ps = &mps2
+
+	// Should have added cpu percentages too
 	err = cs.Gather(&acc)
 	require.NoError(t, err)
 
-	assert.True(t, acc.CheckTaggedValue("user", 3.1, cputags))
-	assert.True(t, acc.CheckTaggedValue("system", 8.2, cputags))
-	assert.True(t, acc.CheckTaggedValue("idle", 80.1, cputags))
-	assert.True(t, acc.CheckTaggedValue("nice", 1.3, cputags))
-	assert.True(t, acc.CheckTaggedValue("iowait", 0.2, cputags))
-	assert.True(t, acc.CheckTaggedValue("irq", 0.1, cputags))
-	assert.True(t, acc.CheckTaggedValue("softirq", 0.11, cputags))
-	assert.True(t, acc.CheckTaggedValue("steal", 0.0001, cputags))
-	assert.True(t, acc.CheckTaggedValue("guest", 8.1, cputags))
-	assert.True(t, acc.CheckTaggedValue("guestNice", 0.324, cputags))
-	assert.True(t, acc.CheckTaggedValue("stolen", 0.051, cputags))
+	numCPUPoints = len(acc.Points) - (preCPUPoints + numCPUPoints)
+	expectedCPUPoints = 24
+	assert.Equal(t, numCPUPoints, expectedCPUPoints)
+
+	assertContainsTaggedFloat(t, acc, "user", 11.4, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "system", 10.9, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "idle", 158.8699, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "nice", 2.5, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "iowait", 0.7, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "irq", 1.2, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "softirq", 0.31, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "steal", 0.0002, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "guest", 12.9, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "guestNice", 2.524, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "stolen", 0.281, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "busy", 42.7152, 0.0005, cputags)
+
+	assertContainsTaggedFloat(t, acc, "percentageUser", 8.3, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageSystem", 2.7, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageIdle", 78.7699, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageNice", 1.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageIowait", 0.5, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageIrq", 1.1, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageSoftirq", 0.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageSteal", 0.0001, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageGuest", 4.8, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageGuestNice", 2.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageStolen", 0.23, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "percentageBusy", 21.2301, 0.0005, cputags)
 
 	err = (&DiskStats{&mps}).Gather(&acc)
 	require.NoError(t, err)
@@ -318,4 +381,45 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("total_inactive_file", uint64(25), dockertags))
 	assert.True(t, acc.CheckTaggedValue("total_active_file", uint64(26), dockertags))
 	assert.True(t, acc.CheckTaggedValue("total_unevictable", uint64(27), dockertags))
+}
+
+// Asserts that a given accumulator contains a measurment of type float64 with
+// specific tags within a certain distance of a given expected value. Asserts a failure
+// if the measurement is of the wrong type, or if no matching measurements are found
+//
+// Paramaters:
+//     t *testing.T            : Testing object to use
+//     acc testutil.Accumulator: Accumulator to examine
+//     measurement string      : Name of the measurement to examine
+//     expectedValue float64   : Value to search for within the measurement
+//     delta float64           : Maximum acceptable distance of an accumulated value
+//                               from the expectedValue parameter. Useful when
+//                               floating-point arithmatic imprecision makes looking
+//                               for an exact match impractical
+//     tags map[string]string  : Tag set the found measurement must have. Set to nil to
+//                               ignore the tag set.
+func assertContainsTaggedFloat(
+	t *testing.T,
+	acc testutil.Accumulator,
+	measurement string,
+	expectedValue float64,
+	delta float64,
+	tags map[string]string,
+) {
+	for _, pt := range acc.Points {
+		if pt.Measurement == measurement {
+			if (tags == nil) || reflect.DeepEqual(pt.Tags, tags) {
+				if value, ok := pt.Values["value"].(float64); ok {
+					if (value >= expectedValue-delta) && (value <= expectedValue+delta) {
+						// Found the point, return without failing
+						return
+					}
+				} else {
+					assert.Fail(t, fmt.Sprintf("Measurement \"%s\" does not have type float64", measurement))
+				}
+
+			}
+		}
+	}
+	assert.Fail(t, fmt.Sprintf("Could not find measurement \"%s\" with requested tags within %f of %f", measurement, delta, expectedValue))
 }
