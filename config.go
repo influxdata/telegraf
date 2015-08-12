@@ -30,9 +30,8 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	return nil
 }
 
-// Config specifies the URL/user/password for the database that telegraf
-// will be logging to, as well as all the plugins that the user has
-// specified
+// Config specifies the outputs that telegraf will be logging to,
+// as well as all the plugins that the user has specified
 type Config struct {
 	Tags map[string]string
 
@@ -51,6 +50,7 @@ func (c *Config) Outputs() map[string]*ast.Table {
 	return c.outputs
 }
 
+// The name of a tag, and the values on which to filter
 type TagFilter struct {
 	Name   string
 	Filter []string
@@ -243,7 +243,7 @@ func (c *Config) OutputsDeclared() []string {
 func declared(endpoints map[string]*ast.Table) []string {
 	var names []string
 
-	for name, _ := range endpoints {
+	for name := range endpoints {
 		names = append(names, name)
 	}
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/influxdb/telegraf"
+	_ "github.com/influxdb/telegraf/outputs/all"
 	_ "github.com/influxdb/telegraf/plugins/all"
 )
 
@@ -21,16 +22,13 @@ var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 // Telegraf version
-var Version = "unreleased"
-
-// Telegraf commit
-var Commit = ""
+var Version = "0.1.5-dev"
 
 func main() {
 	flag.Parse()
 
 	if *fVersion {
-		fmt.Printf("InfluxDB Telegraf agent - Version %s\n", Version)
+		fmt.Printf("Telegraf - Version %s\n", Version)
 		return
 	}
 
@@ -60,6 +58,15 @@ func main() {
 
 	if *fDebug {
 		ag.Debug = true
+	}
+
+	outputs, err := ag.LoadOutputs()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(outputs) == 0 {
+		log.Printf("Error: no outputs found, did you provide a config file?")
+		os.Exit(1)
 	}
 
 	plugins, err := ag.LoadPlugins(*fPLuginsFilter)
@@ -105,7 +112,7 @@ func main() {
 		close(shutdown)
 	}()
 
-	log.Print("Telegraf Agent running")
+	log.Printf("Starting Telegraf (version %s)\n", Version)
 	log.Printf("Loaded outputs: %s", strings.Join(outputs, " "))
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
 	if ag.Debug {
@@ -113,6 +120,8 @@ func main() {
 		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
 			ag.Interval, ag.Debug, ag.Hostname)
 	}
+
+	log.Printf("Tags enabled: %v", config.ListTags())
 
 	if *fPidfile != "" {
 		f, err := os.Create(*fPidfile)

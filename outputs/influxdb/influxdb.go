@@ -1,9 +1,13 @@
 package influxdb
 
 import (
+	"fmt"
+	"log"
 	"net/url"
+	"strings"
 
 	"github.com/influxdb/influxdb/client"
+	t "github.com/influxdb/telegraf"
 	"github.com/influxdb/telegraf/outputs"
 )
 
@@ -13,7 +17,7 @@ type InfluxDB struct {
 	Password  string
 	Database  string
 	UserAgent string
-	Timeout   Duration
+	Timeout   t.Duration
 
 	conn *client.Client
 }
@@ -50,7 +54,6 @@ func (i *InfluxDB) Connect() error {
 
 func (i *InfluxDB) Write(bp client.BatchPoints) error {
 	bp.Database = i.Database
-	bp.Tags = i.Tags
 	if _, err := i.conn.Write(bp); err != nil {
 		return err
 	}

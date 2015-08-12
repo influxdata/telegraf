@@ -3,7 +3,6 @@ package telegraf
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -79,6 +78,7 @@ func (a *Agent) Connect() error {
 	return nil
 }
 
+// LoadOutputs loads the agent's outputs
 func (a *Agent) LoadOutputs() ([]string, error) {
 	var names []string
 
@@ -188,7 +188,7 @@ func (a *Agent) crankParallel() error {
 		bp.Points = append(bp.Points, sub.Points...)
 	}
 
-	return a.flush(bp)
+	return a.flush(&bp)
 }
 
 func (a *Agent) crank() error {
@@ -208,7 +208,7 @@ func (a *Agent) crank() error {
 	bp.Time = time.Now()
 	bp.Tags = a.Config.Tags
 
-	return a.flush(bp)
+	return a.flush(&bp)
 }
 
 func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
@@ -229,7 +229,7 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 		bp.Tags = a.Config.Tags
 		bp.Time = time.Now()
 
-		err = a.flush(acc)
+		err = a.flush(&bp)
 		if err != nil {
 			return err
 		}
@@ -243,14 +243,14 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 	}
 }
 
-func (a *Agent) flush(bp BatchPoints) error {
+func (a *Agent) flush(bp *BatchPoints) error {
 	var wg sync.WaitGroup
 	var outerr error
 	for _, o := range a.outputs {
 		wg.Add(1)
-		go func(output *runningOutput) {
+		go func(ro *runningOutput) {
 			defer wg.Done()
-			outerr = o.output.Write(bp.BatchPoints)
+			outerr = ro.output.Write(bp.BatchPoints)
 		}(o)
 	}
 
