@@ -51,7 +51,7 @@ func (c *Config) Outputs() map[string]*ast.Table {
 	return c.outputs
 }
 
-// The name of a tag, and the values on which to filter
+// TagFilter is the name of a tag, and the values on which to filter
 type TagFilter struct {
 	Name   string
 	Filter []string
