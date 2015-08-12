@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/influxdb/telegraf"
-	_ "github.com/influxdb/telegraf/outputs/all"
 	_ "github.com/influxdb/telegraf/plugins/all"
 )
 
@@ -19,6 +18,7 @@ var fConfig = flag.String("config", "", "configuration file to load")
 var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 // Telegraf version
 var Version = "unreleased"
@@ -62,14 +62,13 @@ func main() {
 		ag.Debug = true
 	}
 
-	outputs, err := ag.LoadOutputs()
+	plugins, err := ag.LoadPlugins(*fPLuginsFilter)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	plugins, err := ag.LoadPlugins()
-	if err != nil {
-		log.Fatal(err)
+	if len(plugins) == 0 {
+		log.Printf("Error: no plugins found, did you provide a config file?")
+		os.Exit(1)
 	}
 	if len(plugins) == 0 {
 		log.Printf("Error: no plugins found, did you provide a config file?")

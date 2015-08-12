@@ -13,12 +13,12 @@ type InfluxDB struct {
 	Password  string
 	Database  string
 	UserAgent string
-	Tags      map[string]string
+	Timeout   Duration
 
 	conn *client.Client
 }
 
-func (i *InfluxDB) Connect(host string) error {
+func (i *InfluxDB) Connect() error {
 	u, err := url.Parse(i.URL)
 	if err != nil {
 		return err
@@ -29,16 +29,20 @@ func (i *InfluxDB) Connect(host string) error {
 		Username:  i.Username,
 		Password:  i.Password,
 		UserAgent: i.UserAgent,
+		Timeout:   i.Timeout.Duration,
 	})
 
 	if err != nil {
 		return err
 	}
 
-	if i.Tags == nil {
-		i.Tags = make(map[string]string)
+	_, err = c.Query(client.Query{
+		Command: fmt.Sprintf("CREATE DATABASE telegraf"),
+	})
+
+	if err != nil && !strings.Contains(err.Error(), "database already exists") {
+		log.Fatal(err)
 	}
-	i.Tags["host"] = host
 
 	i.conn = c
 	return nil

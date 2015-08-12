@@ -30,10 +30,12 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	return nil
 }
 
-// Config specifies the outputs that telegraf
+// Config specifies the URL/user/password for the database that telegraf
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
+	Tags map[string]string
+
 	agent   *ast.Table
 	plugins map[string]*ast.Table
 	outputs map[string]*ast.Table
@@ -43,17 +45,12 @@ type Config struct {
 func (c *Config) Plugins() map[string]*ast.Table {
 	return c.plugins
 }
-type TagFilter struct {
-	Name   string
-	Filter []string
-}
 
 // Outputs returns the configured outputs as a map of name -> output toml
 func (c *Config) Outputs() map[string]*ast.Table {
 	return c.outputs
 }
 
-// The name of a tag, and the values on which to filter
 type TagFilter struct {
 	Name   string
 	Filter []string
@@ -66,9 +63,6 @@ type ConfiguredPlugin struct {
 
 	Drop []string
 	Pass []string
-	TagDrop []TagFilter
-
-	TagPass []TagFilter
 
 	TagDrop []TagFilter
 	TagPass []TagFilter
@@ -111,10 +105,6 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string, tags map[string]strin
 		return false
 	}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> jipperinbham-outputs-phase1
 	if cp.TagDrop != nil {
 		for _, pat := range cp.TagDrop {
 			if tagval, ok := tags[pat.Name]; ok {
@@ -128,18 +118,15 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string, tags map[string]strin
 		return true
 	}
 
-<<<<<<< HEAD
 	return true
-=======
-	return nil
 }
 
 // ApplyOutput loads the toml config into the given interface
 func (c *Config) ApplyOutput(name string, v interface{}) error {
 	if c.outputs[name] != nil {
 		return toml.UnmarshalTable(c.outputs[name], v)
-    }
->>>>>>> jipperinbham-outputs-phase1
+	}
+	return nil
 }
 
 // ApplyAgent loads the toml config into the given interface
@@ -285,6 +272,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	c := &Config{
+		Tags:    make(map[string]string),
 		plugins: make(map[string]*ast.Table),
 		outputs: make(map[string]*ast.Table),
 	}
@@ -298,6 +286,10 @@ func LoadConfig(path string) (*Config, error) {
 		switch name {
 		case "agent":
 			c.agent = subtbl
+		case "tags":
+			if err := toml.UnmarshalTable(subtbl, c.Tags); err != nil {
+				return nil, errInvalidConfig
+			}
 		case "outputs":
 			for outputName, outputVal := range subtbl.Fields {
 				outputSubtbl, ok := outputVal.(*ast.Table)
@@ -382,10 +374,9 @@ database = "telegraf" # required.
 # Set the user agent for the POSTs (can be useful for log differentiation)
 # user_agent = "telegraf"
 
-# Tags can also be specified via a normal map, but only one form at a time:
-
-# [influxdb.tags]
-# tags = { "dc" = "us-east-1" }
+# Tags can be specified via a normal map, but only one form at a time:
+[tags]
+dc = "us-east-1"
 
 # Configuration for telegraf itself
 # [agent]

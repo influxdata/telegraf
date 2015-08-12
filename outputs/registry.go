@@ -5,7 +5,7 @@ import (
 )
 
 type Output interface {
-	Connect(string) error
+	Connect() error
 	Write(client.BatchPoints) error
 }
 

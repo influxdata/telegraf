@@ -71,7 +71,7 @@ func NewAgent(config *Config) (*Agent, error) {
 // Connect connects to the agent's config URL
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
-		err := o.output.Connect(a.Hostname)
+		err := o.output.Connect()
 		if err != nil {
 			return err
 		}
@@ -99,26 +99,20 @@ func (a *Agent) LoadOutputs() ([]string, error) {
 		names = append(names, name)
 	}
 
-<<<<<<< HEAD
-	_, err = c.Query(client.Query{
-		Command: fmt.Sprintf("CREATE DATABASE telegraf"),
-	})
-
-	if err != nil && !strings.Contains(err.Error(), "database already exists") {
-		log.Fatal(err)
-	}
-
-	a.conn = c
-=======
 	sort.Strings(names)
->>>>>>> jipperinbham-outputs-phase1
 
 	return names, nil
 }
 
 // LoadPlugins loads the agent's plugins
-func (a *Agent) LoadPlugins() ([]string, error) {
+func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
 	var names []string
+	var filters []string
+
+	pluginsFilter = strings.TrimSpace(pluginsFilter)
+	if pluginsFilter != "" {
+		filters = strings.Split(":"+pluginsFilter+":", ":")
+	}
 
 	for _, name := range a.Config.PluginsDeclared() {
 		creator, ok := plugins.Plugins[name]
@@ -126,15 +120,30 @@ func (a *Agent) LoadPlugins() ([]string, error) {
 			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
 		}
 
-		plugin := creator()
-
-		config, err := a.Config.ApplyPlugin(name, plugin)
-		if err != nil {
-			return nil, err
+		isPluginEnabled := false
+		if len(filters) > 0 {
+			for _, runeValue := range filters {
+				if runeValue != "" && strings.ToLower(runeValue) == strings.ToLower(name) {
+					fmt.Printf("plugin [%s] is enabled (filter options)\n", name)
+					isPluginEnabled = true
+					break
+				}
+			}
+		} else {
+			// if no filter, we ALWAYS accept the plugin
+			isPluginEnabled = true
 		}
 
-		a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
-		names = append(names, name)
+		if isPluginEnabled {
+			plugin := creator()
+			config, err := a.Config.ApplyPlugin(name, plugin)
+			if err != nil {
+				return nil, err
+			}
+
+			a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
+			names = append(names, name)
+		}
 	}
 
 	sort.Strings(names)
@@ -173,53 +182,54 @@ func (a *Agent) crankParallel() error {
 
 	var bp BatchPoints
 	bp.Time = time.Now()
+	bp.Tags = a.Config.Tags
 
 	for sub := range points {
 		bp.Points = append(bp.Points, sub.Points...)
 	}
 
-	return a.flush(&bp)
+	return a.flush(bp)
 }
 
 func (a *Agent) crank() error {
-	var acc BatchPoints
+	var bp BatchPoints
 
-	acc.Debug = a.Debug
+	bp.Debug = a.Debug
 
 	for _, plugin := range a.plugins {
-		acc.Prefix = plugin.name + "_"
-		acc.Config = plugin.config
-		err := plugin.plugin.Gather(&acc)
+		bp.Prefix = plugin.name + "_"
+		bp.Config = plugin.config
+		err := plugin.plugin.Gather(&bp)
 		if err != nil {
 			return err
 		}
 	}
 
-	acc.Time = time.Now()
+	bp.Time = time.Now()
+	bp.Tags = a.Config.Tags
 
-	return a.flush(&acc)
+	return a.flush(bp)
 }
 
 func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
 	ticker := time.NewTicker(plugin.config.Interval)
 
 	for {
-		var acc BatchPoints
+		var bp BatchPoints
 
-		acc.Debug = a.Debug
+		bp.Debug = a.Debug
 
-		acc.Prefix = plugin.name + "_"
-		acc.Config = plugin.config
-		err := plugin.plugin.Gather(&acc)
+		bp.Prefix = plugin.name + "_"
+		bp.Config = plugin.config
+		err := plugin.plugin.Gather(&bp)
 		if err != nil {
 			return err
 		}
 
-		acc.Tags = a.Config.Tags
-		acc.Time = time.Now()
-		acc.Database = a.Config.Database
+		bp.Tags = a.Config.Tags
+		bp.Time = time.Now()
 
-		err = a.flush(&acc)
+		err = a.flush(acc)
 		if err != nil {
 			return err
 		}
@@ -233,14 +243,14 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 	}
 }
 
-func (a *Agent) flush(bp *BatchPoints) error {
+func (a *Agent) flush(bp BatchPoints) error {
 	var wg sync.WaitGroup
 	var outerr error
 	for _, o := range a.outputs {
 		wg.Add(1)
-		go func(ro *runningOutput) {
+		go func(output *runningOutput) {
 			defer wg.Done()
-			outerr = ro.output.Write(bp.BatchPoints)
+			outerr = o.output.Write(bp.BatchPoints)
 		}(o)
 	}
 
