@@ -273,6 +273,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	c := &Config{
+		Tags:    make(map[string]string),
 		plugins: make(map[string]*ast.Table),
 		outputs: make(map[string]*ast.Table),
 	}
@@ -286,6 +287,10 @@ func LoadConfig(path string) (*Config, error) {
 		switch name {
 		case "agent":
 			c.agent = subtbl
+		case "tags":
+			if err := toml.UnmarshalTable(subtbl, c.Tags); err != nil {
+				return nil, errInvalidConfig
+			}
 		case "outputs":
 			for outputName, outputVal := range subtbl.Fields {
 				outputSubtbl, ok := outputVal.(*ast.Table)

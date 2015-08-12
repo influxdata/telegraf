@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/influxdb/telegraf"
+	_ "github.com/influxdb/telegraf/outputs/all"
 	_ "github.com/influxdb/telegraf/plugins/all"
 )
 
@@ -63,6 +64,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if len(outputs) == 0 {
+		log.Printf("Error: no ouputs found, did you provide a config file?")
+		os.Exit(1)
+	}
 
 	plugins, err := ag.LoadPlugins(*fPLuginsFilter)
 	if err != nil {
@@ -111,6 +116,7 @@ func main() {
 		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
 			ag.Interval, ag.Debug, ag.Hostname)
 	}
+	log.Printf("Tags enabled: %v", config.ListTags)
 
 	if *fPidfile != "" {
 		f, err := os.Create(*fPidfile)
