@@ -52,6 +52,11 @@ func (i *InfluxDB) Connect() error {
 	return nil
 }
 
+func (i *InfluxDB) Close() error {
+	// InfluxDB client does not provide a Close() function
+	return nil
+}
+
 func (i *InfluxDB) Write(bp client.BatchPoints) error {
 	bp.Database = i.Database
 	if _, err := i.conn.Write(bp); err != nil {

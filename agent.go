@@ -67,7 +67,7 @@ func NewAgent(config *Config) (*Agent, error) {
 	return agent, nil
 }
 
-// Connect connects to the agent's config URL
+// Connect connects to all configured outputs
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
 		err := o.output.Connect()
@@ -76,6 +76,15 @@ func (a *Agent) Connect() error {
 		}
 	}
 	return nil
+}
+
+// Close closes the connection to all configured outputs
+func (a *Agent) Close() error {
+	var err error
+	for _, o := range a.outputs {
+		err = o.output.Close()
+	}
+	return err
 }
 
 // LoadOutputs loads the agent's outputs

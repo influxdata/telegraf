@@ -6,6 +6,7 @@ import (
 
 type Output interface {
 	Connect() error
+	Close() error
 	Write(client.BatchPoints) error
 }
 
