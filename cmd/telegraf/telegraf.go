@@ -116,7 +116,7 @@ func main() {
 		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
 			ag.Interval, ag.Debug, ag.Hostname)
 	}
-	log.Printf("Tags enabled: %v", config.ListTags)
+	log.Printf("Tags enabled: %s", config.ListTags())
 
 	if *fPidfile != "" {
 		f, err := os.Create(*fPidfile)

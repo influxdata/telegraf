@@ -11,7 +11,7 @@ password = "root"
 database = "telegraf"
 
 [tags]
-dc = "us-phx-1" }
+dc = "us-phx-1"
 
 [redis]
 address = ":6379"
