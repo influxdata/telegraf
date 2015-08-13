@@ -8,16 +8,27 @@ import (
 
 type CPUStats struct {
 	ps PS
+
+	PerCPU   bool `toml:"percpu"`
+	TotalCPU bool `toml:"totalcpu"`
 }
 
 func (_ *CPUStats) Description() string {
 	return "Read metrics about cpu usage"
 }
 
-func (_ *CPUStats) SampleConfig() string { return "" }
+var sampleConfig = `
+# Whether to report per-cpu stats or not
+percpu = true
+# Whether to report total system cpu stats or not
+totalcpu = true`
+
+func (_ *CPUStats) SampleConfig() string {
+	return sampleConfig
+}
 
 func (s *CPUStats) Gather(acc plugins.Accumulator) error {
-	times, err := s.ps.CPUTimes()
+	times, err := s.ps.CPUTimes(s.PerCPU, s.TotalCPU)
 	if err != nil {
 		return fmt.Errorf("error getting CPU info: %s", err)
 	}

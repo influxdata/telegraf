@@ -21,7 +21,7 @@ func (m *MockPS) LoadAvg() (*load.LoadAvgStat, error) {
 
 	return r0, r1
 }
-func (m *MockPS) CPUTimes() ([]cpu.CPUTimesStat, error) {
+func (m *MockPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error) {
 	ret := m.Called()
 
 	r0 := ret.Get(0).([]cpu.CPUTimesStat)

@@ -85,18 +85,11 @@ func perCPUTimes() ([]CPUTimesStat, error) {
 		}
 
 		c := CPUTimesStat{
-			CPU:       fmt.Sprintf("cpu%d", i),
-			User:      float64(cpu_ticks[C.CPU_STATE_USER]) / ClocksPerSec,
-			System:    float64(cpu_ticks[C.CPU_STATE_SYSTEM]) / ClocksPerSec,
-			Nice:      float64(cpu_ticks[C.CPU_STATE_NICE]) / ClocksPerSec,
-			Idle:      float64(cpu_ticks[C.CPU_STATE_IDLE]) / ClocksPerSec,
-			Iowait:    -1,
-			Irq:       -1,
-			Softirq:   -1,
-			Steal:     -1,
-			Guest:     -1,
-			GuestNice: -1,
-			Stolen:    -1,
+			CPU:    fmt.Sprintf("cpu%d", i),
+			User:   float64(cpu_ticks[C.CPU_STATE_USER]) / ClocksPerSec,
+			System: float64(cpu_ticks[C.CPU_STATE_SYSTEM]) / ClocksPerSec,
+			Nice:   float64(cpu_ticks[C.CPU_STATE_NICE]) / ClocksPerSec,
+			Idle:   float64(cpu_ticks[C.CPU_STATE_IDLE]) / ClocksPerSec,
 		}
 
 		ret = append(ret, c)
@@ -119,18 +112,11 @@ func allCPUTimes() ([]CPUTimesStat, error) {
 	}
 
 	c := CPUTimesStat{
-		CPU:       "cpu-total",
-		User:      float64(cpuload.cpu_ticks[C.CPU_STATE_USER]) / ClocksPerSec,
-		System:    float64(cpuload.cpu_ticks[C.CPU_STATE_SYSTEM]) / ClocksPerSec,
-		Nice:      float64(cpuload.cpu_ticks[C.CPU_STATE_NICE]) / ClocksPerSec,
-		Idle:      float64(cpuload.cpu_ticks[C.CPU_STATE_IDLE]) / ClocksPerSec,
-		Iowait:    -1,
-		Irq:       -1,
-		Softirq:   -1,
-		Steal:     -1,
-		Guest:     -1,
-		GuestNice: -1,
-		Stolen:    -1,
+		CPU:    "cpu-total",
+		User:   float64(cpuload.cpu_ticks[C.CPU_STATE_USER]) / ClocksPerSec,
+		System: float64(cpuload.cpu_ticks[C.CPU_STATE_SYSTEM]) / ClocksPerSec,
+		Nice:   float64(cpuload.cpu_ticks[C.CPU_STATE_NICE]) / ClocksPerSec,
+		Idle:   float64(cpuload.cpu_ticks[C.CPU_STATE_IDLE]) / ClocksPerSec,
 	}
 
 	return []CPUTimesStat{c}, nil

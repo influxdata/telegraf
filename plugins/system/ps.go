@@ -25,7 +25,7 @@ type DockerContainerStat struct {
 
 type PS interface {
 	LoadAvg() (*load.LoadAvgStat, error)
-	CPUTimes() ([]cpu.CPUTimesStat, error)
+	CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error)
 	DiskUsage() ([]*disk.DiskUsageStat, error)
 	NetIO() ([]net.NetIOCountersStat, error)
 	DiskIO() (map[string]disk.DiskIOCountersStat, error)
@@ -49,8 +49,23 @@ func (s *systemPS) LoadAvg() (*load.LoadAvgStat, error) {
 	return load.LoadAvg()
 }
 
-func (s *systemPS) CPUTimes() ([]cpu.CPUTimesStat, error) {
-	return cpu.CPUTimes(true)
+func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error) {
+	var cpuTimes []cpu.CPUTimesStat
+	if perCPU {
+		if perCPUTimes, err := cpu.CPUTimes(true); err == nil {
+			cpuTimes = append(cpuTimes, perCPUTimes...)
+		} else {
+			return nil, err
+		}
+	}
+	if totalCPU {
+		if totalCPUTimes, err := cpu.CPUTimes(false); err == nil {
+			cpuTimes = append(cpuTimes, totalCPUTimes...)
+		} else {
+			return nil, err
+		}
+	}
+	return cpuTimes, nil
 }
 
 func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
