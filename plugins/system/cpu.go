@@ -10,19 +10,15 @@ import (
 type CPUStats struct {
 	ps        PS
 	lastStats []cpu.CPUTimesStat
-    
-    PerCPU   bool `toml:"percpu"`
-    TotalCPU bool `toml:"totalcpu"`
+
+	PerCPU   bool `toml:"percpu"`
+	TotalCPU bool `toml:"totalcpu"`
 }
 
 func NewCPUStats(ps PS) *CPUStats {
-	times, _ := ps.CPUTimes()
-	stats := CPUStats{
-		ps:        ps,
-		lastStats: times,
+	return &CPUStats{
+		ps: ps,
 	}
-
-	return &stats
 }
 
 func (_ *CPUStats) Description() string {
@@ -67,6 +63,10 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 		add(acc, "busy", busy, tags)
 
 		// Add in percentage
+		if len(s.lastStats) == 0 {
+			// If it's the 1st gather, can't get CPU stats yet
+			continue
+		}
 		lastCts := s.lastStats[i]
 		lastBusy, lastTotal := busyAndTotalCpuTime(lastCts)
 		busyDelta := busy - lastBusy
@@ -77,7 +77,7 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 		}
 
 		if totalDelta == 0 {
-			return nil
+			continue
 		}
 
 		add(acc, "percentageUser", 100*(cts.User-lastCts.User)/totalDelta, tags)
@@ -110,7 +110,6 @@ func busyAndTotalCpuTime(t cpu.CPUTimesStat) (float64, float64) {
 
 func init() {
 	plugins.Add("cpu", func() plugins.Plugin {
-		realPS := &systemPS{}
-		return NewCPUStats(realPS)
+		return &CPUStats{ps: &systemPS{}}
 	})
 }

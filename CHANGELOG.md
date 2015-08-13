@@ -15,6 +15,8 @@
 - [#103](https://github.com/influxdb/telegraf/pull/103): Filter by metric tags. Thanks @srfraser!
 - [#106](https://github.com/influxdb/telegraf/pull/106): Options to filter plugins on startup. Thanks @zepouet!
 - [#107](https://github.com/influxdb/telegraf/pull/107): Multiple outputs beyong influxdb. Thanks @jipperinbham!
+- [#108](https://github.com/influxdb/telegraf/issues/108): Support setting per-CPU and total-CPU gathering.
+- [#111](https://github.com/influxdb/telegraf/pull/111): Report CPU Usage in cpu plugin. Thanks @jpalay!
 
 ### Bugfixes
 - [#85](https://github.com/influxdb/telegraf/pull/85): Fix GetLocalHost testutil function for mac users
