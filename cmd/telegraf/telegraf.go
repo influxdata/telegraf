@@ -48,7 +48,9 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		config = telegraf.DefaultConfig()
+		fmt.Println("Usage: Telegraf")
+		flag.PrintDefaults()
+		return
 	}
 
 	ag, err := telegraf.NewAgent(config)
@@ -65,7 +67,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if len(outputs) == 0 {
-		log.Printf("Error: no ouputs found, did you provide a config file?")
+		log.Printf("Error: no outputs found, did you provide a valid config file?")
 		os.Exit(1)
 	}
 
@@ -74,7 +76,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if len(plugins) == 0 {
-		log.Printf("Error: no plugins found, did you provide a config file?")
+		log.Printf("Error: no plugins found, did you provide a valid config file?")
 		os.Exit(1)
 	}
 

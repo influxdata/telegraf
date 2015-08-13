@@ -253,11 +253,6 @@ func declared(endpoints map[string]*ast.Table) []string {
 	return names
 }
 
-// DefaultConfig returns an empty default configuration
-func DefaultConfig() *Config {
-	return &Config{}
-}
-
 var errInvalidConfig = errors.New("invalid configuration")
 
 // LoadConfig loads the given config file and returns a *Config pointer
