@@ -224,7 +224,7 @@ EOF
 
 if [ $# -ne 1 ]; then
     usage 1
-elif [ $1 == "-h" ]; then
+elif [ "$1" == "-h" ]; then
     usage 0
 else
     VERSION=$1
@@ -232,11 +232,11 @@ fi
 
 echo -e "\nStarting package process...\n"
 
-if [ $CIRCLE_BRANCH == "" ]; then
+if [ "$CIRCLE_BRANCH" == "" ]; then
     check_gvm
 fi
 check_gopath
-if [ $CIRCLE_BRANCH == "" ]; then
+if [ "$CIRCLE_BRANCH" == "" ]; then
     check_clean_tree
     update_tree
 fi
@@ -282,7 +282,7 @@ generate_postinstall_script $VERSION
 ###########################################################################
 # Create the actual packages.
 
-if [ $CIRCLE_BRANCH == "" ]; then
+if [ "$CIRCLE_BRANCH" == "" ]; then
     echo -n "Commence creation of $ARCH packages, version $VERSION? [Y/n] "
     read response
     response=`echo $response | tr 'A-Z' 'a-z'`
@@ -323,7 +323,7 @@ echo "Debian package created successfully."
 ###########################################################################
 # Offer to tag the repo.
 
-if [ $CIRCLE_BRANCH == "" ]; then
+if [ "$CIRCLE_BRANCH" == "" ]; then
     echo -n "Tag source tree with v$VERSION and push to repo? [y/N] "
     read response
     response=`echo $response | tr 'A-Z' 'a-z'`
@@ -347,7 +347,7 @@ fi
 ###########################################################################
 # Offer to publish the packages.
 
-if [ $CIRCLE_BRANCH == "" ]; then
+if [ "$CIRCLE_BRANCH" == "" ]; then
     echo -n "Publish packages to S3? [y/N] "
     read response
     response=`echo $response | tr 'A-Z' 'a-z'`
