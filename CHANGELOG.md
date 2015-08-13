@@ -1,4 +1,10 @@
-## v0.1.5 [unreleased]
+## v0.1.6 [unreleased]
+
+### Features
+
+### Bugfixes
+
+## v0.1.5 [2015-08-13]
 
 ### Features
 - [#54](https://github.com/influxdb/telegraf/pull/54): MongoDB plugin. Thanks @jipperinbham!

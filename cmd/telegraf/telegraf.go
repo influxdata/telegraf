@@ -22,7 +22,7 @@ var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 // Telegraf version
-var Version = "0.1.5-dev"
+var Version = "0.1.6-dev"
 
 func main() {
 	flag.Parse()

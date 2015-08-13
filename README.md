@@ -18,9 +18,14 @@ writing new plugins.
 
 ### Linux packages for Debian/Ubuntu and RHEL/CentOS:
 
+NOTE: version 0.1.5 has introduced some breaking changes! A 0.1.5 telegraf
+agent is NOT backwards-compatible with a config file from 0.1.4 and below.
+That being said, the difference is not huge, see below for an example on
+how to setup the new config file.
+
 ```
-http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
-http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
+http://get.influxdb.org/telegraf/telegraf_0.1.5_amd64.deb
+http://get.influxdb.org/telegraf/telegraf-0.1.5-1.x86_64.rpm
 ```
 
 ### OSX via Homebrew:
