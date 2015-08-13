@@ -51,7 +51,7 @@ func (c *Config) Outputs() map[string]*ast.Table {
 	return c.outputs
 }
 
-// The name of a tag, and the values on which to filter
+// TagFilter is the name of a tag, and the values on which to filter
 type TagFilter struct {
 	Name   string
 	Filter []string
@@ -251,11 +251,6 @@ func declared(endpoints map[string]*ast.Table) []string {
 	sort.Strings(names)
 
 	return names
-}
-
-// DefaultConfig returns an empty default configuration
-func DefaultConfig() *Config {
-	return &Config{}
 }
 
 var errInvalidConfig = errors.New("invalid configuration")

@@ -57,7 +57,8 @@ database = "telegraf" # required.
 
 # Read metrics about cpu usage
 [cpu]
-  # no configuration
+totalcpu = true
+percpu = false
 
 # Read metrics about disk usage by mount point
 [disk]

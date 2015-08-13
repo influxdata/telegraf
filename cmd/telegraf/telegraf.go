@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"strings"
 
+	"github.com/influxdb/telegraf"
+	_ "github.com/influxdb/telegraf/outputs/all"
 	_ "github.com/influxdb/telegraf/plugins/all"
-	"github.com/jipperinbham/telegraf"
-	_ "github.com/jipperinbham/telegraf/outputs/all"
 )
 
 var fDebug = flag.Bool("debug", false, "show metrics as they're generated to stdout")
@@ -22,7 +22,7 @@ var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 // Telegraf version
-var Version = "0.1.5-dev"
+var Version = "0.1.6-dev"
 
 func main() {
 	flag.Parse()
@@ -48,7 +48,9 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		config = telegraf.DefaultConfig()
+		fmt.Println("Usage: Telegraf")
+		flag.PrintDefaults()
+		return
 	}
 
 	ag, err := telegraf.NewAgent(config)
@@ -65,7 +67,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if len(outputs) == 0 {
-		log.Printf("Error: no outputs found, did you provide a config file?")
+		log.Printf("Error: no outputs found, did you provide a valid config file?")
 		os.Exit(1)
 	}
 
@@ -74,7 +76,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if len(plugins) == 0 {
-		log.Printf("Error: no plugins found, did you provide a config file?")
+		log.Printf("Error: no plugins found, did you provide a valid config file?")
 		os.Exit(1)
 	}
 
@@ -116,7 +118,7 @@ func main() {
 		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
 			ag.Interval, ag.Debug, ag.Hostname)
 	}
-	log.Printf("Tags enabled: %v", config.ListTags())
+	log.Printf("Tags enabled: %s", config.ListTags())
 
 	if *fPidfile != "" {
 		f, err := os.Create(*fPidfile)

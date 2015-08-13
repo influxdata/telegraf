@@ -13,11 +13,11 @@ test:
     # install binaries
     - go install ./...
     # Go fmt should pass all files
-    - "[ `git ls-files | grep '.go$' | xargs gofmt -l 2>&1 | wc -l` -eq 0 ]"
+    - "[ `git ls-files | grep '.go$' | xargs gofmt -l | tee /tmp/foo | wc -l` -eq 0 ] || (cat /tmp/foo; exit 1)"
     - go vet ./...
-    - golint .
-    - golint testutil/...
-    - golint cmd/...
+    - "[ `golint . | tee /tmp/foo | wc -l` == 0 ] || (cat /tmp/foo; exit 1)"
+    - "[ `golint testutil/... | tee /tmp/foo | wc -l` == 0 ] || (cat /tmp/foo; exit 1)"
+    - "[ `golint cmd/... | tee /tmp/foo | wc -l` == 0 ] || (cat /tmp/foo; exit 1)"
   override:
     - make test-short
   post:
