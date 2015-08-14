@@ -1,6 +1,7 @@
 ## v0.1.6 [unreleased]
 
 ### Features
+[#112](://github.com/influxdb/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
 
 ### Bugfixes
 
