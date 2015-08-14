@@ -14,6 +14,7 @@ const validJson = `
     "num_processes": 82,
     "cpu": {
         "status": "red",
+        "nil_status": null,
         "used": 8234,
         "free": 32
     },

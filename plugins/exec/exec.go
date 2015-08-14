@@ -96,26 +96,19 @@ func (e *Exec) gatherCommand(c *Command, acc plugins.Accumulator) error {
 		return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s", c.Command, err)
 	}
 
-	return processResponse(acc, c.Name, map[string]string{}, jsonOut)
+	processResponse(acc, c.Name, map[string]string{}, jsonOut)
+	return nil
 }
 
-func processResponse(acc plugins.Accumulator, prefix string, tags map[string]string, v interface{}) error {
+func processResponse(acc plugins.Accumulator, prefix string, tags map[string]string, v interface{}) {
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {
-			if err := processResponse(acc, prefix+"_"+k, tags, v); err != nil {
-				return err
-			}
+			processResponse(acc, prefix+"_"+k, tags, v)
 		}
 	case float64:
 		acc.Add(prefix, v, tags)
-	case bool, string, []interface{}:
-		// ignored types
-		return nil
-	default:
-		return fmt.Errorf("exec: got unexpected type %T with value %v (%s)", t, v, prefix)
 	}
-	return nil
 }
 
 func init() {
