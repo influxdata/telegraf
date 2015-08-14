@@ -4,6 +4,7 @@
 [#112](://github.com/influxdb/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
 
 ### Bugfixes
+[113](https://github.com/influxdb/telegraf/issues/113): Update README with Telegraf/InfluxDB compatibility
 
 ## v0.1.5 [2015-08-13]
 
@@ -30,6 +31,7 @@
 - [#89](https://github.com/influxdb/telegraf/pull/89): go fmt fixes
 - [#94](https://github.com/influxdb/telegraf/pull/94): Fix for issue #93, explicitly call sarama.v1 -> sarama
 - [#101](https://github.com/influxdb/telegraf/issues/101): switch back from master branch if building locally
+- [#99](https://github.com/influxdb/telegraf/issues/99): update integer output to new InfluxDB line protocol format
 
 ## v0.1.4 [2015-07-09]
 

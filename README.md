@@ -23,10 +23,19 @@ agent is NOT backwards-compatible with a config file from 0.1.4 and below.
 That being said, the difference is not huge, see below for an example on
 how to setup the new config file.
 
-```
-http://get.influxdb.org/telegraf/telegraf_0.1.5_amd64.deb
-http://get.influxdb.org/telegraf/telegraf-0.1.5-1.x86_64.rpm
-```
+As well, due to a breaking change to the InfluxDB integer line-protocol, there
+are some InfluxDB compatibility requirements:
+
+* InfluxDB 0.9.3+ (including nightly builds) requires Telegraf 0.1.5+
+* InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
+
+Telegraf 0.1.5
+* http://get.influxdb.org/telegraf/telegraf_0.1.5_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.1.5-1.x86_64.rpm
+
+Telegraf 0.1.4
+* http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
 
 ### OSX via Homebrew:
 
@@ -79,8 +88,27 @@ you can configure that here.
 ### Plugin Configuration Examples
 
 This is a full working config that will output CPU data to an InfluxDB instance
-at 192.168.59.103:8086, tagging measurements with dc="Denver-1". It will output
+at 192.168.59.103:8086, tagging measurements with dc="denver-1". It will output
 measurements at a 10s interval and will collect totalcpu & percpu data.
+
+##### 0.1.4:
+
+```
+[influxdb]
+url = "http://192.168.59.103:8086" # required.
+database = "telegraf" # required.
+
+[tags]
+dc = "denver-1"
+
+[agent]
+interval = "10s"
+
+[cpu]
+```
+
+##### 0.1.5:
+
 ```
 [outputs]
 [outputs.influxdb]
