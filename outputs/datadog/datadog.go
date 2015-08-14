@@ -78,9 +78,7 @@ func (d *Datadog) Write(bp client.BatchPoints) error {
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	fmt.Printf("making POST call\n")
 	resp, err := d.client.Do(req)
-	fmt.Printf("POST call made, err is: %+v\n", err)
 	defer resp.Body.Close()
 	if err != nil {
 		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())

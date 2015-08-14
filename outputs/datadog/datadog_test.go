@@ -30,7 +30,9 @@ func testData() client.BatchPoints {
 	bp.Time = time.Now()
 	bp.Tags = map[string]string{"tag1": "value1"}
 	bp.Points = []client.Point{
-		Fields: map[string]interface{}{"value": 1.0},
+		{
+			Fields: map[string]interface{}{"value": 1.0},
+		},
 	}
 	return bp
 }
@@ -43,7 +45,10 @@ func TestUriOverride(t *testing.T) {
 	defer ts.Close()
 
 	d := NewDatadog(ts.URL)
-	err := d.Write(testData())
+	d.Apikey = "123456"
+	err := d.Connect()
+	require.NoError(t, err)
+	err = d.Write(testData())
 	require.NoError(t, err)
 }
 
@@ -59,11 +64,14 @@ func TestBadStatusCode(t *testing.T) {
 	defer ts.Close()
 
 	d := NewDatadog(ts.URL)
-	err := d.Write(testData())
+	d.Apikey = "123456"
+	err := d.Connect()
+	require.NoError(t, err)
+	err = d.Write(testData())
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
-		require.EqualError(t, fmt.Errorf("error POSTing metrics, "), err.Error())
+		require.EqualError(t, fmt.Errorf("received bad status code, 500\n"), err.Error())
 	}
 }
 
