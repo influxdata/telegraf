@@ -3,6 +3,7 @@
 ### Features
 [#112](https://github.com/influxdb/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
 [#116](https://github.com/influxdb/telegraf/pull/116): Use godep to vendor all dependencies
+[#120](https://github.com/influxdb/telegraf/pull/120): Httpjson plugin. Thanks @jpalay & @alvaromorales!
 
 ### Bugfixes
 [#113](https://github.com/influxdb/telegraf/issues/113): Update README with Telegraf/InfluxDB compatibility
