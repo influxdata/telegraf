@@ -8,21 +8,18 @@ ifeq ($(UNAME), Linux)
 endif
 
 prepare:
-	go get -d -v -t ./...
+	godep go install ./...
 
 docker-compose:
 	docker-compose up -d
 
 test: prepare docker-compose
-	go test -v ./...
+	godep go test -v ./...
 
 test-short: prepare
-	go test -v -short ./...
+	godep go test -v -short ./...
 
 test-cleanup:
 	docker-compose kill
-
-update:
-	go get -u -v -d -t ./...
 
 .PHONY: test

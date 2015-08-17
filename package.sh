@@ -167,19 +167,8 @@ do_build() {
     for b in ${BINS[*]}; do
         rm -f $GOPATH_INSTALL/bin/$b
     done
-    # If the branch has an upstream, go get switches to master for some reason
-    # unsetting the upstream causes go get to stay on the current branch, but
-    # is admittedly a little annoying
-    git branch --unset-upstream
-    if [ $? == 0 ]; then
-        echo "WARNING: upstream branch unset for go get command to work"
-    fi
-    go get -u -f ./...
-    if [ $? -ne 0 ]; then
-        echo "WARNING: failed to 'go get' packages."
-    fi
 
-    go install -a -ldflags="-X main.Version $version -X main.Commit $commit" ./...
+    godep go install -a -ldflags="-X main.Version $version" ./...
     if [ $? -ne 0 ]; then
         echo "Build failed, unable to create package -- aborting"
         cleanup_exit 1

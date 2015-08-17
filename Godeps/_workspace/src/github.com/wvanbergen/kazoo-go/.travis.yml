@@ -1,0 +1,31 @@
+language: go
+go:
+- 1.3.3
+- 1.4.2
+
+env:
+  global:
+  - ZOOKEEPER_PEERS=localhost:2181
+  - DEBUG=true
+
+install:
+- make dependencies
+
+before_script:
+- make confluent/kafka/start
+- make test/create_kafka_topics
+
+script:
+- make test
+- make vet
+- make errcheck
+- make fmt
+
+matrix:
+  include:
+    - go: tip
+  allow_failures:
+    - go: tip
+  fast_finish: true
+
+sudo: false
