@@ -31,17 +31,16 @@ type Config struct {
 	Dir                 string        `toml:"dir"`
 	Hostname            string        `toml:"hostname"`
 	BindAddress         string        `toml:"bind-address"`
-	Peers               []string      `toml:"-"`
+	Peers               []string      `toml:"peers"`
 	RetentionAutoCreate bool          `toml:"retention-autocreate"`
 	ElectionTimeout     toml.Duration `toml:"election-timeout"`
 	HeartbeatTimeout    toml.Duration `toml:"heartbeat-timeout"`
 	LeaderLeaseTimeout  toml.Duration `toml:"leader-lease-timeout"`
 	CommitTimeout       toml.Duration `toml:"commit-timeout"`
-	ClusterTracing      bool          `toml:"cluster-tracing"`
 }
 
-func NewConfig() *Config {
-	return &Config{
+func NewConfig() Config {
+	return Config{
 		Hostname:            DefaultHostname,
 		BindAddress:         DefaultBindAddress,
 		RetentionAutoCreate: true,

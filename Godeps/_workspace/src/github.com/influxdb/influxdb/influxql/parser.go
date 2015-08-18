@@ -1471,17 +1471,10 @@ func (p *Parser) parseFields() (Fields, error) {
 func (p *Parser) parseField() (*Field, error) {
 	f := &Field{}
 
-	_, pos, _ := p.scanIgnoreWhitespace()
-	p.unscan()
 	// Parse the expression first.
 	expr, err := p.ParseExpr()
 	if err != nil {
 		return nil, err
-	}
-	var c validateField
-	Walk(&c, expr)
-	if c.foundInvalid {
-		return nil, fmt.Errorf("invalid operator %s in SELECT clause at line %d, char %d; operator is intended for WHERE clause", c.badToken, pos.Line+1, pos.Char+1)
 	}
 	f.Expr = expr
 
@@ -1496,30 +1489,6 @@ func (p *Parser) parseField() (*Field, error) {
 	p.consumeWhitespace()
 
 	return f, nil
-}
-
-// validateField checks if the Expr is a valid field. We disallow all binary expression
-// that return a boolean
-type validateField struct {
-	foundInvalid bool
-	badToken     Token
-}
-
-func (c *validateField) Visit(n Node) Visitor {
-	e, ok := n.(*BinaryExpr)
-	if !ok {
-		return c
-	}
-
-	switch e.Op {
-	case EQ, NEQ, EQREGEX,
-		NEQREGEX, LT, LTE, GT, GTE,
-		AND, OR:
-		c.foundInvalid = true
-		c.badToken = e.Op
-		return nil
-	}
-	return c
 }
 
 // parseAlias parses the "AS (IDENT|STRING)" alias for fields and dimensions.
@@ -1691,31 +1660,31 @@ func (p *Parser) parseFill() (FillOption, interface{}, error) {
 		p.unscan()
 		return NullFill, nil, nil
 	}
-	lit, ok := expr.(*Call)
-	if !ok {
+	if lit, ok := expr.(*Call); !ok {
 		p.unscan()
 		return NullFill, nil, nil
-	}
-	if strings.ToLower(lit.Name) != "fill" {
-		p.unscan()
-		return NullFill, nil, nil
-	}
-	if len(lit.Args) != 1 {
-		return NullFill, nil, errors.New("fill requires an argument, e.g.: 0, null, none, previous")
-	}
-	switch lit.Args[0].String() {
-	case "null":
-		return NullFill, nil, nil
-	case "none":
-		return NoFill, nil, nil
-	case "previous":
-		return PreviousFill, nil, nil
-	default:
-		num, ok := lit.Args[0].(*NumberLiteral)
-		if !ok {
-			return NullFill, nil, fmt.Errorf("expected number argument in fill()")
+	} else {
+		if strings.ToLower(lit.Name) != "fill" {
+			p.unscan()
+			return NullFill, nil, nil
 		}
-		return NumberFill, num.Val, nil
+		if len(lit.Args) != 1 {
+			return NullFill, nil, errors.New("fill requires an argument, e.g.: 0, null, none, previous")
+		}
+		switch lit.Args[0].String() {
+		case "null":
+			return NullFill, nil, nil
+		case "none":
+			return NoFill, nil, nil
+		case "previous":
+			return PreviousFill, nil, nil
+		default:
+			num, ok := lit.Args[0].(*NumberLiteral)
+			if !ok {
+				return NullFill, nil, fmt.Errorf("expected number argument in fill()")
+			}
+			return NumberFill, num.Val, nil
+		}
 	}
 }
 
@@ -2217,11 +2186,6 @@ func QuoteIdent(segments ...string) string {
 
 // IdentNeedsQuotes returns true if the ident string given would require quotes.
 func IdentNeedsQuotes(ident string) bool {
-	// check if this identifier is a keyword
-	tok := Lookup(ident)
-	if tok != IDENT {
-		return true
-	}
 	for i, r := range ident {
 		if i == 0 && !isIdentFirstChar(r) {
 			return true

@@ -166,8 +166,12 @@ func newBinaryExprEvaluator(op Token, lhs, rhs Processor) Processor {
 		return func(values []interface{}) interface{} {
 			l := lhs(values)
 			r := rhs(values)
-			if lf, rf, ok := processorValuesAsFloat64(l, r); ok {
-				return lf + rf
+			if lv, ok := l.(float64); ok {
+				if rv, ok := r.(float64); ok {
+					if rv != 0 {
+						return lv + rv
+					}
+				}
 			}
 			return nil
 		}
@@ -175,8 +179,12 @@ func newBinaryExprEvaluator(op Token, lhs, rhs Processor) Processor {
 		return func(values []interface{}) interface{} {
 			l := lhs(values)
 			r := rhs(values)
-			if lf, rf, ok := processorValuesAsFloat64(l, r); ok {
-				return lf - rf
+			if lv, ok := l.(float64); ok {
+				if rv, ok := r.(float64); ok {
+					if rv != 0 {
+						return lv - rv
+					}
+				}
 			}
 			return nil
 		}
@@ -184,8 +192,12 @@ func newBinaryExprEvaluator(op Token, lhs, rhs Processor) Processor {
 		return func(values []interface{}) interface{} {
 			l := lhs(values)
 			r := rhs(values)
-			if lf, rf, ok := processorValuesAsFloat64(l, r); ok {
-				return lf * rf
+			if lv, ok := l.(float64); ok {
+				if rv, ok := r.(float64); ok {
+					if rv != 0 {
+						return lv * rv
+					}
+				}
 			}
 			return nil
 		}
@@ -193,8 +205,12 @@ func newBinaryExprEvaluator(op Token, lhs, rhs Processor) Processor {
 		return func(values []interface{}) interface{} {
 			l := lhs(values)
 			r := rhs(values)
-			if lf, rf, ok := processorValuesAsFloat64(l, r); ok {
-				return lf / rf
+			if lv, ok := l.(float64); ok {
+				if rv, ok := r.(float64); ok {
+					if rv != 0 {
+						return lv / rv
+					}
+				}
 			}
 			return nil
 		}
@@ -204,28 +220,4 @@ func newBinaryExprEvaluator(op Token, lhs, rhs Processor) Processor {
 			return nil
 		}
 	}
-}
-
-func processorValuesAsFloat64(lhs interface{}, rhs interface{}) (float64, float64, bool) {
-	var lf float64
-	var rf float64
-	var ok bool
-
-	lf, ok = lhs.(float64)
-	if !ok {
-		var li int64
-		if li, ok = lhs.(int64); !ok {
-			return 0, 0, false
-		}
-		lf = float64(li)
-	}
-	rf, ok = rhs.(float64)
-	if !ok {
-		var ri int64
-		if ri, ok = rhs.(int64); !ok {
-			return 0, 0, false
-		}
-		rf = float64(ri)
-	}
-	return lf, rf, true
 }

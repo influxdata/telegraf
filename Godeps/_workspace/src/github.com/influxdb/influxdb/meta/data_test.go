@@ -127,10 +127,14 @@ func TestData_CreateRetentionPolicy_ErrNameRequired(t *testing.T) {
 	}
 }
 
-// Ensure that creating a policy with a replication factor less than 1 returns an error.
-func TestData_CreateRetentionPolicy_ErrReplicationFactorTooLow(t *testing.T) {
-	data := meta.Data{Nodes: []meta.NodeInfo{{ID: 1}}}
-	if err := data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 0}); err != meta.ErrReplicationFactorTooLow {
+// Ensure that creating a policy with a replication factor that doesn't match
+// the number of nodes in the cluster will return an error. This is a temporary
+// restriction until v0.9.1 is released.
+func TestData_CreateRetentionPolicy_ErrReplicationFactorMismatch(t *testing.T) {
+	data := meta.Data{
+		Nodes: []meta.NodeInfo{{ID: 1}, {ID: 2}, {ID: 3}},
+	}
+	if err := data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 2}); err != meta.ErrReplicationFactorMismatch {
 		t.Fatalf("unexpected error: %s", err)
 	}
 }
@@ -148,10 +152,10 @@ func TestData_CreateRetentionPolicy_ErrRetentionPolicyExists(t *testing.T) {
 	var data meta.Data
 	if err := data.CreateDatabase("db0"); err != nil {
 		t.Fatal(err)
-	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 1}); err != nil {
+	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 1}); err != meta.ErrRetentionPolicyExists {
+	if err := data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0"}); err != meta.ErrRetentionPolicyExists {
 		t.Fatalf("unexpected error: %s", err)
 	}
 }
@@ -161,7 +165,7 @@ func TestData_UpdateRetentionPolicy(t *testing.T) {
 	var data meta.Data
 	if err := data.CreateDatabase("db0"); err != nil {
 		t.Fatal(err)
-	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 1}); err != nil {
+	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -190,7 +194,7 @@ func TestData_DropRetentionPolicy(t *testing.T) {
 	var data meta.Data
 	if err := data.CreateDatabase("db0"); err != nil {
 		t.Fatal(err)
-	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 1}); err != nil {
+	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -225,9 +229,9 @@ func TestData_RetentionPolicy(t *testing.T) {
 	var data meta.Data
 	if err := data.CreateDatabase("db0"); err != nil {
 		t.Fatal(err)
-	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 1}); err != nil {
+	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0"}); err != nil {
 		t.Fatal(err)
-	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp1", ReplicaN: 1}); err != nil {
+	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp1"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -236,7 +240,6 @@ func TestData_RetentionPolicy(t *testing.T) {
 	} else if !reflect.DeepEqual(rpi, &meta.RetentionPolicyInfo{
 		Name:               "rp0",
 		ShardGroupDuration: 604800000000000,
-		ReplicaN:           1,
 	}) {
 		t.Fatalf("unexpected value: %#v", rpi)
 	}
@@ -255,7 +258,7 @@ func TestData_SetDefaultRetentionPolicy(t *testing.T) {
 	var data meta.Data
 	if err := data.CreateDatabase("db0"); err != nil {
 		t.Fatal(err)
-	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 1}); err != nil {
+	} else if err = data.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0"}); err != nil {
 		t.Fatal(err)
 	}
 

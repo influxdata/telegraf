@@ -1,4 +1,4 @@
-package tsdb_test
+package tsdb
 
 import (
 	"fmt"
@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/influxdb/influxdb/tsdb"
 )
 
 func TestShardWriteAndIndex(t *testing.T) {
@@ -18,43 +16,42 @@ func TestShardWriteAndIndex(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	tmpShard := path.Join(tmpDir, "shard")
 
-	index := tsdb.NewDatabaseIndex()
-	sh := tsdb.NewShard(index, tmpShard, tsdb.NewEngineOptions())
+	index := NewDatabaseIndex()
+	sh := NewShard(index, tmpShard)
 	if err := sh.Open(); err != nil {
 		t.Fatalf("error openeing shard: %s", err.Error())
 	}
 
-	pt := tsdb.NewPoint(
+	pt := NewPoint(
 		"cpu",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0},
 		time.Unix(1, 2),
 	)
 
-	err := sh.WritePoints([]tsdb.Point{pt})
+	err := sh.WritePoints([]Point{pt})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 
 	pt.SetTime(time.Unix(2, 3))
-	err = sh.WritePoints([]tsdb.Point{pt})
+	err = sh.WritePoints([]Point{pt})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 
 	validateIndex := func() {
-		if !reflect.DeepEqual(index.Names(), []string{"cpu"}) {
+		if !reflect.DeepEqual(index.names, []string{"cpu"}) {
 			t.Fatalf("measurement names in shard didn't match")
 		}
-		if index.SeriesN() != 1 {
+		if len(index.series) != 1 {
 			t.Fatalf("series wasn't in index")
 		}
-
-		seriesTags := index.Series(string(pt.Key())).Tags
+		seriesTags := index.series[string(pt.Key())].Tags
 		if len(seriesTags) != len(pt.Tags()) || pt.Tags()["host"] != seriesTags["host"] {
-			t.Fatalf("tags weren't properly saved to series index: %v, %v", pt.Tags(), seriesTags)
+			t.Fatalf("tags weren't properly saved to series index: %v, %v", pt.Tags(), index.series[string(pt.Key())].Tags)
 		}
-		if !reflect.DeepEqual(index.Measurement("cpu").TagKeys(), []string{"host"}) {
+		if !reflect.DeepEqual(index.measurements["cpu"].TagKeys(), []string{"host"}) {
 			t.Fatalf("tag key wasn't saved to measurement index")
 		}
 	}
@@ -64,8 +61,8 @@ func TestShardWriteAndIndex(t *testing.T) {
 	// ensure the index gets loaded after closing and opening the shard
 	sh.Close()
 
-	index = tsdb.NewDatabaseIndex()
-	sh = tsdb.NewShard(index, tmpShard, tsdb.NewEngineOptions())
+	index = NewDatabaseIndex()
+	sh = NewShard(index, tmpShard)
 	if err := sh.Open(); err != nil {
 		t.Fatalf("error openeing shard: %s", err.Error())
 	}
@@ -74,7 +71,7 @@ func TestShardWriteAndIndex(t *testing.T) {
 
 	// and ensure that we can still write data
 	pt.SetTime(time.Unix(2, 6))
-	err = sh.WritePoints([]tsdb.Point{pt})
+	err = sh.WritePoints([]Point{pt})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -85,52 +82,52 @@ func TestShardWriteAddNewField(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	tmpShard := path.Join(tmpDir, "shard")
 
-	index := tsdb.NewDatabaseIndex()
-	sh := tsdb.NewShard(index, tmpShard, tsdb.NewEngineOptions())
+	index := NewDatabaseIndex()
+	sh := NewShard(index, tmpShard)
 	if err := sh.Open(); err != nil {
 		t.Fatalf("error openeing shard: %s", err.Error())
 	}
 	defer sh.Close()
 
-	pt := tsdb.NewPoint(
+	pt := NewPoint(
 		"cpu",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0},
 		time.Unix(1, 2),
 	)
 
-	err := sh.WritePoints([]tsdb.Point{pt})
+	err := sh.WritePoints([]Point{pt})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 
-	pt = tsdb.NewPoint(
+	pt = NewPoint(
 		"cpu",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0, "value2": 2.0},
 		time.Unix(1, 2),
 	)
 
-	err = sh.WritePoints([]tsdb.Point{pt})
+	err = sh.WritePoints([]Point{pt})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 
-	if !reflect.DeepEqual(index.Names(), []string{"cpu"}) {
+	if !reflect.DeepEqual(index.names, []string{"cpu"}) {
 		t.Fatalf("measurement names in shard didn't match")
 	}
-	if index.SeriesN() != 1 {
+	if len(index.series) != 1 {
 		t.Fatalf("series wasn't in index")
 	}
-	seriesTags := index.Series(string(pt.Key())).Tags
+	seriesTags := index.series[string(pt.Key())].Tags
 	if len(seriesTags) != len(pt.Tags()) || pt.Tags()["host"] != seriesTags["host"] {
-		t.Fatalf("tags weren't properly saved to series index: %v, %v", pt.Tags(), seriesTags)
+		t.Fatalf("tags weren't properly saved to series index: %v, %v", pt.Tags(), index.series[string(pt.Key())].Tags)
 	}
-	if !reflect.DeepEqual(index.Measurement("cpu").TagKeys(), []string{"host"}) {
+	if !reflect.DeepEqual(index.measurements["cpu"].TagKeys(), []string{"host"}) {
 		t.Fatalf("tag key wasn't saved to measurement index")
 	}
 
-	if len(index.Measurement("cpu").FieldNames()) != 2 {
+	if len(index.measurements["cpu"].FieldNames()) != 2 {
 		t.Fatalf("field names wasn't saved to measurement index")
 	}
 
@@ -142,11 +139,10 @@ func TestShard_Autoflush(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	// Open shard with a really low size threshold, high flush interval.
-	sh := tsdb.NewShard(tsdb.NewDatabaseIndex(), filepath.Join(path, "shard"), tsdb.EngineOptions{
-		MaxWALSize:             1024, // 1KB
-		WALFlushInterval:       1 * time.Hour,
-		WALPartitionFlushDelay: 1 * time.Millisecond,
-	})
+	sh := NewShard(NewDatabaseIndex(), filepath.Join(path, "shard"))
+	sh.MaxWALSize = 1024 // 1KB
+	sh.WALFlushInterval = 1 * time.Hour
+	sh.WALPartitionFlushDelay = 1 * time.Millisecond
 	if err := sh.Open(); err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +150,7 @@ func TestShard_Autoflush(t *testing.T) {
 
 	// Write a bunch of points.
 	for i := 0; i < 100; i++ {
-		if err := sh.WritePoints([]tsdb.Point{tsdb.NewPoint(
+		if err := sh.WritePoints([]Point{NewPoint(
 			fmt.Sprintf("cpu%d", i),
 			map[string]string{"host": "server"},
 			map[string]interface{}{"value": 1.0},
@@ -181,11 +177,10 @@ func TestShard_Autoflush_FlushInterval(t *testing.T) {
 	defer os.RemoveAll(path)
 
 	// Open shard with a high size threshold, small time threshold.
-	sh := tsdb.NewShard(tsdb.NewDatabaseIndex(), filepath.Join(path, "shard"), tsdb.EngineOptions{
-		MaxWALSize:             10 * 1024 * 1024, // 10MB
-		WALFlushInterval:       100 * time.Millisecond,
-		WALPartitionFlushDelay: 1 * time.Millisecond,
-	})
+	sh := NewShard(NewDatabaseIndex(), filepath.Join(path, "shard"))
+	sh.MaxWALSize = 10 * 1024 * 1024 // 10MB
+	sh.WALFlushInterval = 100 * time.Millisecond
+	sh.WALPartitionFlushDelay = 1 * time.Millisecond
 	if err := sh.Open(); err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +188,7 @@ func TestShard_Autoflush_FlushInterval(t *testing.T) {
 
 	// Write some points.
 	for i := 0; i < 100; i++ {
-		if err := sh.WritePoints([]tsdb.Point{tsdb.NewPoint(
+		if err := sh.WritePoints([]Point{NewPoint(
 			fmt.Sprintf("cpu%d", i),
 			map[string]string{"host": "server"},
 			map[string]interface{}{"value": 1.0},
@@ -245,12 +240,12 @@ func benchmarkWritePoints(b *testing.B, mCnt, tkCnt, tvCnt, pntCnt int) {
 	// Generate test series (measurements + unique tag sets).
 	series := genTestSeries(mCnt, tkCnt, tvCnt)
 	// Create index for the shard to use.
-	index := tsdb.NewDatabaseIndex()
+	index := NewDatabaseIndex()
 	// Generate point data to write to the shard.
-	points := []tsdb.Point{}
+	points := []Point{}
 	for _, s := range series {
 		for val := 0.0; val < float64(pntCnt); val++ {
-			p := tsdb.NewPoint(s.Measurement, s.Series.Tags, map[string]interface{}{"value": val}, time.Now())
+			p := NewPoint(s.Measurement, s.Series.Tags, map[string]interface{}{"value": val}, time.Now())
 			points = append(points, p)
 		}
 	}
@@ -263,7 +258,7 @@ func benchmarkWritePoints(b *testing.B, mCnt, tkCnt, tvCnt, pntCnt int) {
 	for n := 0; n < b.N; n++ {
 		tmpDir, _ := ioutil.TempDir("", "shard_test")
 		tmpShard := path.Join(tmpDir, "shard")
-		shard := tsdb.NewShard(index, tmpShard, tsdb.NewEngineOptions())
+		shard := NewShard(index, tmpShard)
 		shard.Open()
 
 		b.StartTimer()
@@ -285,12 +280,12 @@ func benchmarkWritePointsExistingSeries(b *testing.B, mCnt, tkCnt, tvCnt, pntCnt
 	// Generate test series (measurements + unique tag sets).
 	series := genTestSeries(mCnt, tkCnt, tvCnt)
 	// Create index for the shard to use.
-	index := tsdb.NewDatabaseIndex()
+	index := NewDatabaseIndex()
 	// Generate point data to write to the shard.
-	points := []tsdb.Point{}
+	points := []Point{}
 	for _, s := range series {
 		for val := 0.0; val < float64(pntCnt); val++ {
-			p := tsdb.NewPoint(s.Measurement, s.Series.Tags, map[string]interface{}{"value": val}, time.Now())
+			p := NewPoint(s.Measurement, s.Series.Tags, map[string]interface{}{"value": val}, time.Now())
 			points = append(points, p)
 		}
 	}
@@ -298,7 +293,7 @@ func benchmarkWritePointsExistingSeries(b *testing.B, mCnt, tkCnt, tvCnt, pntCnt
 	tmpDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(tmpDir)
 	tmpShard := path.Join(tmpDir, "shard")
-	shard := tsdb.NewShard(index, tmpShard, tsdb.NewEngineOptions())
+	shard := NewShard(index, tmpShard)
 	shard.Open()
 	defer shard.Close()
 	chunkedWrite(shard, points)
@@ -319,7 +314,7 @@ func benchmarkWritePointsExistingSeries(b *testing.B, mCnt, tkCnt, tvCnt, pntCnt
 	}
 }
 
-func chunkedWrite(shard *tsdb.Shard, points []tsdb.Point) {
+func chunkedWrite(shard *Shard, points []Point) {
 	nPts := len(points)
 	chunkSz := 10000
 	start := 0

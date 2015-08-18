@@ -469,14 +469,14 @@ SHOW MEASUREMENTS WHERE region = 'uswest' AND host = 'serverA';
 ### SHOW RETENTION POLICIES
 
 ```
-show_retention_policies = "SHOW RETENTION POLICIES ON" db_name .
+show_retention_policies = "SHOW RETENTION POLICIES" db_name .
 ```
 
 #### Example:
 
 ```sql
 -- show all retention policies on a database
-SHOW RETENTION POLICIES ON mydb;
+SHOW RETENTION POLICIES mydb;
 ```
 
 ### SHOW SERIES

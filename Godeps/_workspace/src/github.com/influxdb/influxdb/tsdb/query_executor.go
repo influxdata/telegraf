@@ -44,13 +44,13 @@ type QueryExecutor struct {
 	Logger *log.Logger
 
 	// the local data store
-	Store *Store
+	store *Store
 }
 
 // NewQueryExecutor returns an initialized QueryExecutor
 func NewQueryExecutor(store *Store) *QueryExecutor {
 	return &QueryExecutor{
-		Store:  store,
+		store:  store,
 		Logger: log.New(os.Stderr, "[query] ", log.LstdFlags),
 	}
 }
@@ -199,7 +199,7 @@ func (q *QueryExecutor) ExecuteQuery(query *influxql.Query, database string, chu
 }
 
 // Plan creates an execution plan for the given SelectStatement and returns an Executor.
-func (q *QueryExecutor) Plan(stmt *influxql.SelectStatement, chunkSize int) (*Executor, error) {
+func (q *QueryExecutor) plan(stmt *influxql.SelectStatement, chunkSize int) (Executor, error) {
 	shards := map[uint64]meta.ShardInfo{} // Shards requiring mappers.
 
 	// Replace instances of "now()" with the current time, and check the resultant times.
@@ -245,14 +245,31 @@ func (q *QueryExecutor) Plan(stmt *influxql.SelectStatement, chunkSize int) (*Ex
 		mappers = append(mappers, m)
 	}
 
-	executor := NewExecutor(stmt, mappers, chunkSize)
+	var executor Executor
+	if len(mappers) > 0 {
+		// All Mapper are of same type, so check first to determine correct Executor type.
+		if _, ok := mappers[0].(*RawMapper); ok {
+			executor = NewRawExecutor(stmt, mappers, chunkSize)
+		} else {
+			executor = NewAggregateExecutor(stmt, mappers)
+		}
+	} else {
+		// With no mappers, the Executor type doesn't matter.
+		executor = NewRawExecutor(stmt, nil, chunkSize)
+	}
 	return executor, nil
 }
 
 // executeSelectStatement plans and executes a select statement against a database.
 func (q *QueryExecutor) executeSelectStatement(statementID int, stmt *influxql.SelectStatement, results chan *influxql.Result, chunkSize int) error {
+	// Perform any necessary query re-writing.
+	stmt, err := q.rewriteSelectStatement(stmt)
+	if err != nil {
+		return err
+	}
+
 	// Plan statement execution.
-	e, err := q.Plan(stmt, chunkSize)
+	e, err := q.plan(stmt, chunkSize)
 	if err != nil {
 		return err
 	}
@@ -265,9 +282,10 @@ func (q *QueryExecutor) executeSelectStatement(statementID int, stmt *influxql.S
 	for row := range ch {
 		if row.Err != nil {
 			return row.Err
+		} else {
+			resultSent = true
+			results <- &influxql.Result{StatementID: statementID, Series: []*influxql.Row{row}}
 		}
-		resultSent = true
-		results <- &influxql.Result{StatementID: statementID, Series: []*influxql.Row{row}}
 	}
 
 	if !resultSent {
@@ -275,6 +293,85 @@ func (q *QueryExecutor) executeSelectStatement(statementID int, stmt *influxql.S
 	}
 
 	return nil
+}
+
+// rewriteSelectStatement performs any necessary query re-writing.
+func (q *QueryExecutor) rewriteSelectStatement(stmt *influxql.SelectStatement) (*influxql.SelectStatement, error) {
+	var err error
+
+	// Expand regex expressions in the FROM clause.
+	sources, err := q.expandSources(stmt.Sources)
+	if err != nil {
+		return nil, err
+	}
+	stmt.Sources = sources
+
+	// Expand wildcards in the fields or GROUP BY.
+	if stmt.HasWildcard() {
+		stmt, err = q.expandWildcards(stmt)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	stmt.RewriteDistinct()
+
+	return stmt, nil
+}
+
+// expandWildcards returns a new SelectStatement with wildcards in the fields
+// and/or GROUP BY expanded with actual field names.
+func (q *QueryExecutor) expandWildcards(stmt *influxql.SelectStatement) (*influxql.SelectStatement, error) {
+	// If there are no wildcards in the statement, return it as-is.
+	if !stmt.HasWildcard() {
+		return stmt, nil
+	}
+
+	// Use sets to avoid duplicate field names.
+	fieldSet := map[string]struct{}{}
+	dimensionSet := map[string]struct{}{}
+
+	var fields influxql.Fields
+	var dimensions influxql.Dimensions
+
+	// Iterate measurements in the FROM clause getting the fields & dimensions for each.
+	for _, src := range stmt.Sources {
+		if m, ok := src.(*influxql.Measurement); ok {
+			// Lookup the database. The database may not exist if no data for this database
+			// was ever written to the shard.
+			db := q.store.DatabaseIndex(m.Database)
+			if db == nil {
+				return stmt, nil
+			}
+
+			// Lookup the measurement in the database.
+			mm := db.measurements[m.Name]
+			if mm == nil {
+				return nil, ErrMeasurementNotFound(m.String())
+			}
+
+			// Get the fields for this measurement.
+			for _, name := range mm.FieldNames() {
+				if _, ok := fieldSet[name]; ok {
+					continue
+				}
+				fieldSet[name] = struct{}{}
+				fields = append(fields, &influxql.Field{Expr: &influxql.VarRef{Val: name}})
+			}
+
+			// Get the dimensions for this measurement.
+			for _, t := range mm.TagKeys() {
+				if _, ok := dimensionSet[t]; ok {
+					continue
+				}
+				dimensionSet[t] = struct{}{}
+				dimensions = append(dimensions, &influxql.Dimension{Expr: &influxql.VarRef{Val: t}})
+			}
+		}
+	}
+
+	// Return a new SelectStatement with the wild cards rewritten.
+	return stmt.RewriteWildcards(fields, dimensions), nil
 }
 
 // expandSources expands regex sources and removes duplicates.
@@ -297,7 +394,7 @@ func (q *QueryExecutor) expandSources(sources influxql.Sources) (influxql.Source
 			}
 
 			// Lookup the database.
-			db := q.Store.DatabaseIndex(src.Database)
+			db := q.store.DatabaseIndex(src.Database)
 			if db == nil {
 				return nil, nil
 			}
@@ -356,7 +453,7 @@ func (q *QueryExecutor) executeDropDatabaseStatement(stmt *influxql.DropDatabase
 		}
 	}
 
-	err = q.Store.DeleteDatabase(stmt.Name, shardIDs)
+	err = q.store.DeleteDatabase(stmt.Name, shardIDs)
 	if err != nil {
 		return &influxql.Result{Err: err}
 	}
@@ -367,7 +464,7 @@ func (q *QueryExecutor) executeDropDatabaseStatement(stmt *influxql.DropDatabase
 // executeDropMeasurementStatement removes the measurement and all series data from the local store for the given measurement
 func (q *QueryExecutor) executeDropMeasurementStatement(stmt *influxql.DropMeasurementStatement, database string) *influxql.Result {
 	// Find the database.
-	db := q.Store.DatabaseIndex(database)
+	db := q.store.DatabaseIndex(database)
 	if db == nil {
 		return &influxql.Result{}
 	}
@@ -381,7 +478,7 @@ func (q *QueryExecutor) executeDropMeasurementStatement(stmt *influxql.DropMeasu
 	db.DropMeasurement(m.Name)
 
 	// now drop the raw data
-	if err := q.Store.deleteMeasurement(m.Name, m.SeriesKeys()); err != nil {
+	if err := q.store.deleteMeasurement(m.Name, m.SeriesKeys()); err != nil {
 		return &influxql.Result{Err: err}
 	}
 
@@ -391,7 +488,7 @@ func (q *QueryExecutor) executeDropMeasurementStatement(stmt *influxql.DropMeasu
 // executeDropSeriesStatement removes all series from the local store that match the drop query
 func (q *QueryExecutor) executeDropSeriesStatement(stmt *influxql.DropSeriesStatement, database string) *influxql.Result {
 	// Find the database.
-	db := q.Store.DatabaseIndex(database)
+	db := q.store.DatabaseIndex(database)
 	if db == nil {
 		return &influxql.Result{}
 	}
@@ -409,7 +506,7 @@ func (q *QueryExecutor) executeDropSeriesStatement(stmt *influxql.DropSeriesStat
 
 	var seriesKeys []string
 	for _, m := range measurements {
-		var ids SeriesIDs
+		var ids seriesIDs
 		if stmt.Condition != nil {
 			// Get series IDs that match the WHERE clause.
 			ids, _, err = m.walkWhereForSeriesIds(stmt.Condition)
@@ -427,7 +524,7 @@ func (q *QueryExecutor) executeDropSeriesStatement(stmt *influxql.DropSeriesStat
 	}
 
 	// delete the raw series data
-	if err := q.Store.deleteSeries(seriesKeys); err != nil {
+	if err := q.store.deleteSeries(seriesKeys); err != nil {
 		return &influxql.Result{Err: err}
 	}
 	// remove them from the index
@@ -438,7 +535,7 @@ func (q *QueryExecutor) executeDropSeriesStatement(stmt *influxql.DropSeriesStat
 
 func (q *QueryExecutor) executeShowSeriesStatement(stmt *influxql.ShowSeriesStatement, database string) *influxql.Result {
 	// Find the database.
-	db := q.Store.DatabaseIndex(database)
+	db := q.store.DatabaseIndex(database)
 	if db == nil {
 		return &influxql.Result{}
 	}
@@ -462,7 +559,7 @@ func (q *QueryExecutor) executeShowSeriesStatement(stmt *influxql.ShowSeriesStat
 
 	// Loop through measurements to build result. One result row / measurement.
 	for _, m := range measurements {
-		var ids SeriesIDs
+		var ids seriesIDs
 
 		if stmt.Condition != nil {
 			// Get series IDs that match the WHERE clause.
@@ -549,7 +646,7 @@ func (q *QueryExecutor) filterShowSeriesResult(limit, offset int, rows influxql.
 
 func (q *QueryExecutor) executeShowMeasurementsStatement(stmt *influxql.ShowMeasurementsStatement, database string) *influxql.Result {
 	// Find the database.
-	db := q.Store.DatabaseIndex(database)
+	db := q.store.DatabaseIndex(database)
 	if db == nil {
 		return &influxql.Result{}
 	}
@@ -608,7 +705,7 @@ func (q *QueryExecutor) executeShowMeasurementsStatement(stmt *influxql.ShowMeas
 
 func (q *QueryExecutor) executeShowTagKeysStatement(stmt *influxql.ShowTagKeysStatement, database string) *influxql.Result {
 	// Find the database.
-	db := q.Store.DatabaseIndex(database)
+	db := q.store.DatabaseIndex(database)
 	if db == nil {
 		return &influxql.Result{}
 	}
@@ -661,7 +758,7 @@ func (q *QueryExecutor) executeShowTagKeysStatement(stmt *influxql.ShowTagKeysSt
 
 func (q *QueryExecutor) executeShowTagValuesStatement(stmt *influxql.ShowTagValuesStatement, database string) *influxql.Result {
 	// Find the database.
-	db := q.Store.DatabaseIndex(database)
+	db := q.store.DatabaseIndex(database)
 	if db == nil {
 		return &influxql.Result{}
 	}
@@ -685,7 +782,7 @@ func (q *QueryExecutor) executeShowTagValuesStatement(stmt *influxql.ShowTagValu
 
 	tagValues := make(map[string]stringSet)
 	for _, m := range measurements {
-		var ids SeriesIDs
+		var ids seriesIDs
 
 		if stmt.Condition != nil {
 			// Get series IDs that match the WHERE clause.
@@ -739,7 +836,7 @@ func (q *QueryExecutor) executeShowFieldKeysStatement(stmt *influxql.ShowFieldKe
 	var err error
 
 	// Find the database.
-	db := q.Store.DatabaseIndex(database)
+	db := q.store.DatabaseIndex(database)
 	if db == nil {
 		return &influxql.Result{}
 	}

@@ -1,4 +1,4 @@
-package tsdb_test
+package tsdb
 
 import (
 	"io/ioutil"
@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/influxdb/influxdb/tsdb"
 )
 
 func TestStoreOpen(t *testing.T) {
@@ -21,13 +19,13 @@ func TestStoreOpen(t *testing.T) {
 		t.Fatalf("failed to create test db dir: %v", err)
 	}
 
-	s := tsdb.NewStore(dir)
+	s := NewStore(dir)
 	if err := s.Open(); err != nil {
 		t.Fatalf("Store.Open() failed: %v", err)
 	}
 
-	if got, exp := s.DatabaseIndexN(), 1; got != exp {
-		t.Fatalf("database index count mismatch: got %v, exp %v", got, exp)
+	if exp := 1; len(s.databaseIndexes) != exp {
+		t.Fatalf("database index count mismatch: got %v, exp %v", len(s.databaseIndexes), exp)
 	}
 }
 
@@ -48,25 +46,26 @@ func TestStoreOpenShard(t *testing.T) {
 		t.Fatalf("Store.Open() failed to create test shard 1: %v", err)
 	}
 
-	s := tsdb.NewStore(dir)
+	s := NewStore(dir)
 	if err := s.Open(); err != nil {
 		t.Fatalf("Store.Open() failed: %v", err)
 	}
 
-	if got, exp := s.DatabaseIndexN(), 1; got != exp {
-		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", got, exp)
+	if exp := 1; len(s.databaseIndexes) != exp {
+		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", len(s.databaseIndexes), exp)
 	}
 
-	if di := s.DatabaseIndex("mydb"); di == nil {
+	if _, ok := s.databaseIndexes["mydb"]; !ok {
 		t.Errorf("Store.Open() database myb does not exist")
 	}
 
-	if got, exp := s.ShardN(), 1; got != exp {
-		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", got, exp)
+	if exp := 1; len(s.shards) != exp {
+		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", len(s.shards), exp)
 	}
 
-	if sh := s.Shard(1); sh.Path() != shardPath {
-		t.Errorf("Store.Open() shard path mismatch: got %v, exp %v", sh.Path(), shardPath)
+	sh := s.shards[uint64(1)]
+	if sh.path != shardPath {
+		t.Errorf("Store.Open() shard path mismatch: got %v, exp %v", sh.path, shardPath)
 	}
 }
 
@@ -81,16 +80,16 @@ func TestStoreOpenShardCreateDelete(t *testing.T) {
 		t.Fatalf("Store.Open() failed to create test db dir: %v", err)
 	}
 
-	s := tsdb.NewStore(dir)
+	s := NewStore(dir)
 	if err := s.Open(); err != nil {
 		t.Fatalf("Store.Open() failed: %v", err)
 	}
 
-	if got, exp := s.DatabaseIndexN(), 1; got != exp {
-		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", got, exp)
+	if exp := 1; len(s.databaseIndexes) != exp {
+		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", len(s.databaseIndexes), exp)
 	}
 
-	if di := s.DatabaseIndex("mydb"); di == nil {
+	if _, ok := s.databaseIndexes["mydb"]; !ok {
 		t.Errorf("Store.Open() database mydb does not exist")
 	}
 
@@ -98,8 +97,8 @@ func TestStoreOpenShardCreateDelete(t *testing.T) {
 		t.Fatalf("Store.Open() failed to create shard")
 	}
 
-	if got, exp := s.ShardN(), 1; got != exp {
-		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", got, exp)
+	if exp := 1; len(s.shards) != exp {
+		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", len(s.shards), exp)
 	}
 
 	shardIDs := s.ShardIDs()
@@ -111,7 +110,7 @@ func TestStoreOpenShardCreateDelete(t *testing.T) {
 		t.Fatalf("Store.Open() failed to delete shard: %v", err)
 	}
 
-	if sh := s.Shard(1); sh != nil {
+	if _, ok := s.shards[uint64(1)]; ok {
 		t.Fatal("Store.Open() shard ID 1 still exists")
 	}
 }
@@ -128,17 +127,17 @@ func TestStoreOpenNotDatabaseDir(t *testing.T) {
 		t.Fatalf("Store.Open() failed to create test db dir: %v", err)
 	}
 
-	s := tsdb.NewStore(dir)
+	s := NewStore(dir)
 	if err := s.Open(); err != nil {
 		t.Fatalf("Store.Open() failed: %v", err)
 	}
 
-	if got, exp := s.DatabaseIndexN(), 0; got != exp {
-		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", got, exp)
+	if exp := 0; len(s.databaseIndexes) != exp {
+		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", len(s.databaseIndexes), exp)
 	}
 
-	if got, exp := s.ShardN(), 0; got != exp {
-		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", got, exp)
+	if exp := 0; len(s.shards) != exp {
+		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", len(s.shards), exp)
 	}
 }
 
@@ -158,21 +157,21 @@ func TestStoreOpenNotRPDir(t *testing.T) {
 		t.Fatalf("Store.Open() failed to create test retention policy directory: %v", err)
 	}
 
-	s := tsdb.NewStore(dir)
+	s := NewStore(dir)
 	if err := s.Open(); err != nil {
 		t.Fatalf("Store.Open() failed: %v", err)
 	}
 
-	if got, exp := s.DatabaseIndexN(), 1; got != exp {
-		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", got, exp)
+	if exp := 1; len(s.databaseIndexes) != exp {
+		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", len(s.databaseIndexes), exp)
 	}
 
-	if di := s.DatabaseIndex("mydb"); di == nil {
+	if _, ok := s.databaseIndexes["mydb"]; !ok {
 		t.Errorf("Store.Open() database myb does not exist")
 	}
 
-	if got, exp := s.ShardN(), 0; got != exp {
-		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", got, exp)
+	if exp := 0; len(s.shards) != exp {
+		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", len(s.shards), exp)
 	}
 }
 
@@ -194,21 +193,21 @@ func TestStoreOpenShardBadShardPath(t *testing.T) {
 		t.Fatalf("Store.Open() failed to create test shard 1: %v", err)
 	}
 
-	s := tsdb.NewStore(dir)
+	s := NewStore(dir)
 	if err := s.Open(); err != nil {
 		t.Fatalf("Store.Open() failed: %v", err)
 	}
 
-	if got, exp := s.DatabaseIndexN(), 1; got != exp {
-		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", got, exp)
+	if exp := 1; len(s.databaseIndexes) != exp {
+		t.Fatalf("Store.Open() database index count mismatch: got %v, exp %v", len(s.databaseIndexes), exp)
 	}
 
-	if di := s.DatabaseIndex("mydb"); di == nil {
+	if _, ok := s.databaseIndexes["mydb"]; !ok {
 		t.Errorf("Store.Open() database myb does not exist")
 	}
 
-	if got, exp := s.ShardN(), 0; got != exp {
-		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", got, exp)
+	if exp := 0; len(s.shards) != exp {
+		t.Fatalf("Store.Open() shard count mismatch: got %v, exp %v", len(s.shards), exp)
 	}
 
 }
@@ -219,17 +218,17 @@ func benchmarkStoreOpen(b *testing.B, mCnt, tkCnt, tvCnt, pntCnt, shardCnt int) 
 	// Generate test series (measurements + unique tag sets).
 	series := genTestSeries(mCnt, tkCnt, tvCnt)
 	// Generate point data to write to the shards.
-	points := []tsdb.Point{}
+	points := []Point{}
 	for _, s := range series {
 		for val := 0.0; val < float64(pntCnt); val++ {
-			p := tsdb.NewPoint(s.Measurement, s.Series.Tags, map[string]interface{}{"value": val}, time.Now())
+			p := NewPoint(s.Measurement, s.Series.Tags, map[string]interface{}{"value": val}, time.Now())
 			points = append(points, p)
 		}
 	}
 	// Create a temporary directory for the test data.
 	dir, _ := ioutil.TempDir("", "store_test")
 	// Create the store.
-	store := tsdb.NewStore(dir)
+	store := NewStore(dir)
 	// Open the store.
 	if err := store.Open(); err != nil {
 		b.Fatalf("benchmarkStoreOpen: %s", err)
@@ -250,7 +249,7 @@ func benchmarkStoreOpen(b *testing.B, mCnt, tkCnt, tvCnt, pntCnt, shardCnt int) 
 	// Run the benchmark loop.
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		store := tsdb.NewStore(dir)
+		store := NewStore(dir)
 		if err := store.Open(); err != nil {
 			b.Fatalf("benchmarkStoreOpen: %s", err)
 		}
@@ -261,7 +260,7 @@ func benchmarkStoreOpen(b *testing.B, mCnt, tkCnt, tvCnt, pntCnt, shardCnt int) 
 	}
 }
 
-func chunkedWriteStoreShard(store *tsdb.Store, shardID int, points []tsdb.Point) {
+func chunkedWriteStoreShard(store *Store, shardID int, points []Point) {
 	nPts := len(points)
 	chunkSz := 10000
 	start := 0
