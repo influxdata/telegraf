@@ -18,8 +18,8 @@ writing new plugins.
 
 ### Linux packages for Debian/Ubuntu and RHEL/CentOS:
 
-NOTE: version 0.1.5 has introduced some breaking changes! A 0.1.5 telegraf
-agent is NOT backwards-compatible with a config file from 0.1.4 and below.
+NOTE: version 0.1.4+ has introduced some breaking changes! A 0.1.4+ telegraf
+agent is NOT backwards-compatible with a config file from 0.1.3 and below.
 That being said, the difference is not huge, see below for an example on
 how to setup the new config file.
 
@@ -97,24 +97,6 @@ This is a full working config that will output CPU data to an InfluxDB instance
 at 192.168.59.103:8086, tagging measurements with dc="denver-1". It will output
 measurements at a 10s interval and will collect totalcpu & percpu data.
 
-##### 0.1.4:
-
-```
-[influxdb]
-url = "http://192.168.59.103:8086" # required.
-database = "telegraf" # required.
-
-[tags]
-dc = "denver-1"
-
-[agent]
-interval = "10s"
-
-[cpu]
-```
-
-##### 0.1.5:
-
 ```
 [outputs]
 [outputs.influxdb]
@@ -133,7 +115,7 @@ percpu = true
 totalcpu = true
 ```
 
-Below is how to configure `tagpass` parameters (added in 0.1.5)
+Below is how to configure `tagpass` parameters (added in 0.1.4)
 
 ```
 # Don't collect CPU data for cpu6 & cpu7
