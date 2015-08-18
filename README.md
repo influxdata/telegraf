@@ -44,6 +44,12 @@ brew update
 brew install telegraf
 ```
 
+### From Source:
+
+Telegraf manages dependencies via `godep`, which gets installed via the Makefile.
+Assuming you have your GOPATH setup, `make build` should be enough to gather dependencies
+and build telegraf.
+
 ### How to use it:
 
 * Run `telegraf -sample-config > telegraf.toml` to create an initial configuration

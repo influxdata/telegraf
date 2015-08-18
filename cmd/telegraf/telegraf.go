@@ -22,13 +22,15 @@ var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 // Telegraf version
-var Version = "0.1.6-dev"
+//	-ldflags "-X main.Version `git describe --always --tags`"
+var Version string
 
 func main() {
 	flag.Parse()
 
 	if *fVersion {
-		fmt.Printf("Telegraf - Version %s\n", Version)
+		v := fmt.Sprintf("Telegraf - Version %s", Version)
+		fmt.Println(v)
 		return
 	}
 

@@ -24,7 +24,9 @@ function exit_if_fail {
 # build takes three arguments: GOOS & GOARCH & VERSION
 function build {
   echo -n "=> $1-$2: "
-  GOOS=$1 GOARCH=$2 godep go build -o telegraf-$1-$2 -ldflags "-X main.Version $3" ./cmd/telegraf/telegraf.go
+  GOOS=$1 GOARCH=$2 godep go build -o telegraf-$1-$2 \
+                    -ldflags "-X main.Version $3" \
+                    ./cmd/telegraf/telegraf.go
   du -h telegraf-$1-$2
 }
 
@@ -59,9 +61,9 @@ exit_if_fail godep go vet ./...
 exit_if_fail godep go test -v -short ./...
 
 # Build binaries
-build "linux" "amd64" `git rev-parse --short HEAD`
-build "linux" "386" `git rev-parse --short HEAD`
-build "linux" "arm" `git rev-parse --short HEAD`
+build "linux" "amd64" `git describe --always --tags`
+build "linux" "386" `git describe --always --tags`
+build "linux" "arm" `git describe --always --tags`
 # Artifact binaries
 mv telegraf* $CIRCLE_ARTIFACTS
 
