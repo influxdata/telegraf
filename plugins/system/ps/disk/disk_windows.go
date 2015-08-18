@@ -26,10 +26,8 @@ var (
 
 const WaitMSec = 500
 
-func DiskUsage(path string) (DiskUsageStat, error) {
-	ret := DiskUsageStat{}
+func DiskUsage(path string) (*DiskUsageStat, error) {
 
-	ret.Path = path
 	lpFreeBytesAvailable := int64(0)
 	lpTotalNumberOfBytes := int64(0)
 	lpTotalNumberOfFreeBytes := int64(0)
@@ -39,19 +37,21 @@ func DiskUsage(path string) (DiskUsageStat, error) {
 		uintptr(unsafe.Pointer(&lpTotalNumberOfBytes)),
 		uintptr(unsafe.Pointer(&lpTotalNumberOfFreeBytes)))
 	if diskret == 0 {
-		return ret, err
+		return nil, err
 	}
-	ret.Total = uint64(lpTotalNumberOfBytes)
-	//	ret.Free = uint64(lpFreeBytesAvailable) // python psutil does not use this
-	ret.Free = uint64(lpTotalNumberOfFreeBytes)
-	ret.Used = ret.Total - ret.Free
-	ret.UsedPercent = float64(ret.Used) / float64(ret.Total) * 100.0
 
-	//TODO: implement inodes stat
-	ret.InodesTotal = 0
-	ret.InodesUsed = 0
-	ret.InodesFree = 0
-	ret.InodesUsedPercent = 0.0
+	ret := &DiskUsageStat{
+		Path:  path,
+		Total: uint64(lpTotalNumberOfBytes),
+		Free:  uint64(lpTotalNumberOfFreeBytes),
+		// Used: uint64(lpTotalNumberOfBytes) - uint64(lpTotalNumberOfFreeBytes)
+		// UsedPercent: (float64(lpTotalNumberOfBytes) - float64(lpTotalNumberOfFreeBytes)) / float64(lpTotalNumberOfBytes) * 100
+		// InodesTotal: 0,
+		// InodesFree: 0,
+		// InodesUsed: 0,
+		// InodesUsedPercent: 0,
+	}
+
 	return ret, nil
 }
 
