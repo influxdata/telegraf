@@ -1,6 +1,9 @@
 {
 	"ImportPath": "github.com/influxdb/telegraf",
 	"GoVersion": "go1.4.2",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Shopify/sarama",
@@ -169,6 +172,11 @@
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/mock",
+			"Comment": "v1.0-21-gf552045",
+			"Rev": "f5520455607c0233cb6d7b056f71b22c1d265ef1"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/require",
 			"Comment": "v1.0-21-gf552045",
 			"Rev": "f5520455607c0233cb6d7b056f71b22c1d265ef1"
 		},
