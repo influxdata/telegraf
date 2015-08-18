@@ -1,10 +1,12 @@
 ## v0.1.6 [unreleased]
 
 ### Features
-[#112](://github.com/influxdb/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
+[#112](https://github.com/influxdb/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
+[#116](https://github.com/influxdb/telegraf/pull/116): Use godep to vendor all dependencies
 
 ### Bugfixes
-[113](https://github.com/influxdb/telegraf/issues/113): Update README with Telegraf/InfluxDB compatibility
+[#113](https://github.com/influxdb/telegraf/issues/113): Update README with Telegraf/InfluxDB compatibility
+[#118](https://github.com/influxdb/telegraf/pull/118): Fix for disk usage stats in Windows. Thanks @srfraser!
 
 ## v0.1.5 [2015-08-13]
 
