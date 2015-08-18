@@ -10,13 +10,12 @@
 #    https://github.com/jordansissel/fpm
 #    http://aws.amazon.com/cli/
 #
-# Packaging process: to package a build, simple execute:
+# Packaging process: to package a build, simply execute:
 #
-#    package.sh <version>
+#    package.sh
 #
-# where <version> is the desired version. If generation of a debian and RPM
-# package is successful, the script will offer to tag the repo using the
-# supplied version string.
+# The script will automatically determined the version number from git using
+# `git describe --always --tags`
 #
 # AWS upload: the script will also offer to upload the packages to S3. If
 # this option is selected, the credentials should be present in the file
@@ -61,7 +60,7 @@ BINS=(
 
 # usage prints simple usage information.
 usage() {
-    echo -e "$0 [<version>] [-h]\n"
+    echo -e "$0\n"
     cleanup_exit $1
 }
 
@@ -106,54 +105,6 @@ check_clean_tree() {
     fi
     echo "Git tree is clean."
 }
-
-# update_tree ensures the tree is in-sync with the repo.
-update_tree() {
-    git pull origin master
-    if [ $? -ne 0 ]; then
-        echo "Failed to pull latest code -- aborting."
-        cleanup_exit 1
-    fi
-    git fetch --tags
-    if [ $? -ne 0 ]; then
-        echo "Failed to fetch tags -- aborting."
-        cleanup_exit 1
-    fi
-    echo "Git tree updated successfully."
-}
-
-# check_tag_exists checks if the existing release already exists in the tags.
-check_tag_exists () {
-    version=$1
-    git tag | grep -q "^v$version$"
-    if [ $? -eq 0 ]; then
-        echo "Proposed version $version already exists as a tag -- aborting."
-        cleanup_exit 1
-    fi
-}
-
-# make_dir_tree creates the directory structure within the packages.
-make_dir_tree() {
-    work_dir=$1
-    version=$2
-    mkdir -p $work_dir/$INSTALL_ROOT_DIR/versions/$version/scripts
-    if [ $? -ne 0 ]; then
-        echo "Failed to create installation directory -- aborting."
-        cleanup_exit 1
-    fi
-    mkdir -p $work_dir/$CONFIG_ROOT_DIR
-    if [ $? -ne 0 ]; then
-        echo "Failed to create configuration directory -- aborting."
-        cleanup_exit 1
-    fi
-    mkdir -p $work_dir/$LOGROTATE_DIR
-    if [ $? -ne 0 ]; then
-        echo "Failed to create configuration directory -- aborting."
-        cleanup_exit 1
-    fi
-
-}
-
 
 # do_build builds the code. The version and commit must be passed in.
 do_build() {
@@ -211,27 +162,19 @@ EOF
 ###########################################################################
 # Start the packaging process.
 
-if [ $# -ne 1 ]; then
-    usage 1
-elif [ "$1" == "-h" ]; then
+if [ "$1" == "-h" ]; then
     usage 0
-else
-    VERSION=$1
 fi
 
-echo -e "\nStarting package process...\n"
+VERSION=`git describe --always --tags`
+
+echo -e "\nStarting package process, version: $VERSION\n"
 
 if [ "$CIRCLE_BRANCH" == "" ]; then
     check_gvm
 fi
 check_gopath
-if [ "$CIRCLE_BRANCH" == "" ]; then
-    check_clean_tree
-    update_tree
-fi
-check_tag_exists $VERSION
 do_build $VERSION
-make_dir_tree $TMP_WORK_DIR $VERSION
 
 ###########################################################################
 # Copy the assets to the installation directories.
@@ -308,30 +251,6 @@ if [ $? -ne 0 ]; then
     cleanup_exit 1
 fi
 echo "Debian package created successfully."
-
-###########################################################################
-# Offer to tag the repo.
-
-if [ "$CIRCLE_BRANCH" == "" ]; then
-    echo -n "Tag source tree with v$VERSION and push to repo? [y/N] "
-    read response
-    response=`echo $response | tr 'A-Z' 'a-z'`
-    if [ "x$response" == "xy" ]; then
-        echo "Creating tag v$VERSION and pushing to repo"
-        git tag v$VERSION
-        if [ $? -ne 0 ]; then
-            echo "Failed to create tag v$VERSION -- aborting"
-            cleanup_exit 1
-        fi
-        git push origin v$VERSION
-        if [ $? -ne 0 ]; then
-            echo "Failed to push tag v$VERSION to repo -- aborting"
-            cleanup_exit 1
-        fi
-    else
-        echo "Not creating tag v$VERSION."
-    fi
-fi
 
 ###########################################################################
 # Offer to publish the packages.
