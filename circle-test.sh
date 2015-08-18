@@ -6,6 +6,8 @@
 
 BUILD_DIR=$HOME/telegraf-build
 # GO_VERSION=go1.4.2
+# source $HOME/.gvm/scripts/gvm
+# exit_if_fail gvm use $GO_VERSION
 
 # Executes the given statement, and exits if the command returns a non-zero code.
 function exit_if_fail {
@@ -19,8 +21,12 @@ function exit_if_fail {
     fi
 }
 
-# source $HOME/.gvm/scripts/gvm
-# exit_if_fail gvm use $GO_VERSION
+# build takes three arguments: GOOS & GOARCH & VERSION
+function build {
+  echo -n "=> $1-$2: "
+  GOOS=$1 GOARCH=$2 godep go build -o telegraf-$1-$2 -ldflags "-X main.Version $3" ./cmd/telegraf/telegraf.go
+  du -h telegraf-$1-$2
+}
 
 # Set up the build directory, and then GOPATH.
 exit_if_fail mkdir $BUILD_DIR
@@ -30,8 +36,6 @@ exit_if_fail mkdir -p $GOPATH/src/github.com/influxdb
 
 # Get golint
 go get github.com/golang/lint/golint
-# Get gox (cross-compiler)
-go get github.com/mitchellh/gox
 # Get godep tool
 go get github.com/tools/godep
 
@@ -55,9 +59,9 @@ exit_if_fail godep go vet ./...
 exit_if_fail godep go test -v -short ./...
 
 # Build binaries
-GOPATH=`godep path`:$GOPATH gox -os="linux" -arch="386 amd64" ./...
-# Check return code of gox command
-exit_if_fail return $?
+build "linux" "amd64" `git rev-parse --short HEAD`
+build "linux" "386" `git rev-parse --short HEAD`
+build "linux" "arm" `git rev-parse --short HEAD`
 # Artifact binaries
 mv telegraf* $CIRCLE_ARTIFACTS
 
