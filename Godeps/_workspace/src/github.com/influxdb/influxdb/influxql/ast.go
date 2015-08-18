@@ -936,6 +936,11 @@ func (s *SelectStatement) walkForTime(node Node) bool {
 
 // HasWildcard returns whether or not the select statement has at least 1 wildcard
 func (s *SelectStatement) HasWildcard() bool {
+	return s.HasFieldWildcard() || s.HasDimensionWildcard()
+}
+
+// HasFieldWildcard returns whether or not the select statement has at least 1 wildcard in the fields
+func (s *SelectStatement) HasFieldWildcard() bool {
 	for _, f := range s.Fields {
 		_, ok := f.Expr.(*Wildcard)
 		if ok {
@@ -943,6 +948,12 @@ func (s *SelectStatement) HasWildcard() bool {
 		}
 	}
 
+	return false
+}
+
+// HasDimensionWildcard returns whether or not the select statement has
+// at least 1 wildcard in the dimensions aka `GROUP BY`
+func (s *SelectStatement) HasDimensionWildcard() bool {
 	for _, d := range s.Dimensions {
 		_, ok := d.Expr.(*Wildcard)
 		if ok {
@@ -990,11 +1001,27 @@ func (s *SelectStatement) validate(tr targetRequirement) error {
 		return err
 	}
 
+	if err := s.validateWildcard(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
-	// First, determine if specific calls have at least one and only one argument
+	// First, if 1 field is an aggregate, then all fields must be an aggregate. This is
+	// a explicit limitation of the current system.
+	numAggregates := 0
+	for _, f := range s.Fields {
+		if _, ok := f.Expr.(*Call); ok {
+			numAggregates++
+		}
+	}
+	if numAggregates != 0 && numAggregates != len(s.Fields) {
+		return fmt.Errorf("mixing aggregate and non-aggregate queries is not supported")
+	}
+
+	// Secondly, determine if specific calls have at least one and only one argument
 	for _, f := range s.Fields {
 		if c, ok := f.Expr.(*Call); ok {
 			switch c.Name {
@@ -1029,6 +1056,13 @@ func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 		if !s.IsRawQuery && groupByDuration > 0 && !s.hasTimeDimensions(s.Condition) {
 			return fmt.Errorf("aggregate functions with GROUP BY time require a WHERE time clause")
 		}
+	}
+	return nil
+}
+
+func (s *SelectStatement) validateWildcard() error {
+	if s.HasWildcard() && len(s.Fields) > 1 {
+		return fmt.Errorf("wildcards can not be combined with other fields")
 	}
 	return nil
 }
@@ -1316,6 +1350,17 @@ func (s *SelectStatement) NamesInSelect() []string {
 
 	for _, f := range s.Fields {
 		a = append(a, walkNames(f.Expr)...)
+	}
+
+	return a
+}
+
+// NamesInDimension returns the field and tag names (idents) in the group by
+func (s *SelectStatement) NamesInDimension() []string {
+	var a []string
+
+	for _, d := range s.Dimensions {
+		a = append(a, walkNames(d.Expr)...)
 	}
 
 	return a
@@ -1953,6 +1998,32 @@ func (s *ShowFieldKeysStatement) RequiredPrivileges() ExecutionPrivileges {
 // Fields represents a list of fields.
 type Fields []*Field
 
+// AliasNames returns a list of calculated field names in
+// order of alias, function name, then field.
+func (a Fields) AliasNames() []string {
+	names := []string{}
+	for _, f := range a {
+		names = append(names, f.Name())
+	}
+	return names
+}
+
+// Names returns a list of raw field names.
+func (a Fields) Names() []string {
+	names := []string{}
+	for _, f := range a {
+		var name string
+		switch expr := f.Expr.(type) {
+		case *Call:
+			name = expr.Name
+		case *VarRef:
+			name = expr.Val
+		}
+		names = append(names, name)
+	}
+	return names
+}
+
 // String returns a string representation of the fields.
 func (a Fields) String() string {
 	var str []string
@@ -1991,26 +2062,6 @@ func (f *Field) Name() string {
 // String returns a string representation of the field.
 func (f *Field) String() string {
 	str := f.Expr.String()
-
-	switch f.Expr.(type) {
-	case *VarRef:
-		quoted := false
-		// Escape any double-quotes in the field
-		if strings.Contains(str, `"`) {
-			str = strings.Replace(str, `"`, `\"`, -1)
-			quoted = true
-		}
-
-		// Escape any single-quotes in the field
-		if strings.Contains(str, `'`) {
-			quoted = true
-		}
-
-		// Double-quote field names with spaces or that were previously escaped
-		if strings.Contains(str, " ") || quoted {
-			str = fmt.Sprintf("\"%s\"", str)
-		}
-	}
 
 	if f.Alias == "" {
 		return str
@@ -2132,7 +2183,9 @@ type VarRef struct {
 }
 
 // String returns a string representation of the variable reference.
-func (r *VarRef) String() string { return r.Val }
+func (r *VarRef) String() string {
+	return QuoteIdent(r.Val)
+}
 
 // Call represents a function call.
 type Call struct {
