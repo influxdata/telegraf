@@ -64,6 +64,28 @@ usage() {
     cleanup_exit $1
 }
 
+# make_dir_tree creates the directory structure within the packages.
+make_dir_tree() {
+    work_dir=$1
+    version=$2
+    mkdir -p $work_dir/$INSTALL_ROOT_DIR/versions/$version/scripts
+    if [ $? -ne 0 ]; then
+        echo "Failed to create installation directory -- aborting."
+        cleanup_exit 1
+    fi
+    mkdir -p $work_dir/$CONFIG_ROOT_DIR
+    if [ $? -ne 0 ]; then
+        echo "Failed to create configuration directory -- aborting."
+        cleanup_exit 1
+    fi
+    mkdir -p $work_dir/$LOGROTATE_DIR
+    if [ $? -ne 0 ]; then
+        echo "Failed to create configuration directory -- aborting."
+        cleanup_exit 1
+    fi
+
+}
+
 # cleanup_exit removes all resources created during the process and exits with
 # the supplied returned code.
 cleanup_exit() {
@@ -175,6 +197,7 @@ if [ "$CIRCLE_BRANCH" == "" ]; then
 fi
 check_gopath
 do_build $VERSION
+make_dir_tree $TMP_WORK_DIR $VERSION
 
 ###########################################################################
 # Copy the assets to the installation directories.
