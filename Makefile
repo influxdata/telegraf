@@ -8,7 +8,6 @@ build: prepare
 
 prepare:
 	go get github.com/tools/godep
-	$(GOPATH)/bin/godep go install ./...
 
 docker-compose:
 	docker-compose up -d

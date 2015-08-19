@@ -23,7 +23,8 @@
 # with 'required'. Be sure to edit those to make this configuration work.
 
 # Configuration for influxdb server to send metrics to
-[influxdb]
+[outputs]
+[outputs.influxdb]
 # The full HTTP endpoint URL for your InfluxDB instance
 url = "http://localhost:8086" # required.
 
@@ -51,14 +52,13 @@ database = "telegraf" # required.
 
 # Read metrics about cpu usage
 [cpu]
-  # no configuration
+# Whether to report per-cpu stats or not
+percpu = true
+# # Whether to report total system cpu stats or not
+totalcpu = true
 
 # Read metrics about disk usage by mount point
 [disk]
-  # no configuration
-
-# Read metrics about docker containers
-[docker]
   # no configuration
 
 # Read metrics about disk IO by device
@@ -68,74 +68,3 @@ database = "telegraf" # required.
 # Read metrics about memory usage
 [mem]
   # no configuration
-
-# Read metrics from one or many mysql servers
-[mysql]
-
-# specify servers via a url matching:
-#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
-#  e.g. root:root@http://10.0.0.18/?tls=false
-#
-# If no servers are specified, then localhost is used as the host.
-servers = ["localhost"]
-
-# Read metrics about network interface usage
-[net]
-
-# By default, telegraf gathers stats from any up interface (excluding loopback)
-# Setting interfaces will tell it to gather these explicit interfaces,
-# regardless of status.
-#
-# interfaces = ["eth0", ... ]
-
-# Read metrics from one or many postgresql servers
-[postgresql]
-
-# specify servers via an array of tables
-[[postgresql.servers]]
-
-# specify address via a url matching:
-#   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
-# or a simple string:
-#   host=localhost user=pqotest password=... sslmode=...
-#
-# All connection parameters are optional. By default, the host is localhost
-# and the user is the currently running user. For localhost, we default
-# to sslmode=disable as well.
-#
-
-address = "sslmode=disable"
-
-# A list of databases to pull metrics about. If not specified, metrics for all
-# databases are gathered.
-
-# databases = ["app_production", "blah_testing"]
-
-# [[postgresql.servers]]
-# address = "influx@remoteserver"
-
-# Read metrics from one or many redis servers
-[redis]
-
-# An array of address to gather stats about. Specify an ip on hostname
-# with optional port. ie localhost, 10.10.3.33:18832, etc.
-#
-# If no servers are specified, then localhost is used as the host.
-servers = ["localhost"]
-
-[mongodb]
-# An array of URI to gather stats about. Specify an ip or hostname
-# with optional port add password. ie mongodb://user:auth_key@10.10.3.30:27017,
-# mongodb://10.10.3.33:18832, 10.0.0.1:10000, etc.
-#
-# If no servers are specified, then 127.0.0.1 is used as the host and 27107 as the port.
-servers = ["127.0.0.1:27017"]
-
-# Read metrics about swap memory usage
-[swap]
-  # no configuration
-
-# Read metrics about system load
-[system]
-  # no configuration
-
