@@ -25,7 +25,7 @@ function exit_if_fail {
 function build {
   echo -n "=> $1-$2: "
   GOOS=$1 GOARCH=$2 godep go build -o telegraf-$1-$2 \
-                    -ldflags "-X main.Version $3" \
+                    -ldflags "-X main.Version=$3" \
                     ./cmd/telegraf/telegraf.go
   du -h telegraf-$1-$2
 }

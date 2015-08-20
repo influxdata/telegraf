@@ -22,7 +22,7 @@ var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
 
 // Telegraf version
-//	-ldflags "-X main.Version `git describe --always --tags`"
+//	-ldflags "-X main.Version=`git describe --always --tags`"
 var Version string
 
 func main() {
