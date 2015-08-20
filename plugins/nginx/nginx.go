@@ -20,7 +20,7 @@ type Nginx struct {
 
 var sampleConfig = `
 # An array of Nginx stub_status URI to gather stats.
-urls = ["localhost/status"]`
+urls = ["http://localhost/status"]`
 
 func (n *Nginx) SampleConfig() string {
 	return sampleConfig
@@ -125,8 +125,8 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 		return err
 	}
 
-	host, _, _ := net.SplitHostPort(addr.Host)
-	tags := map[string]string{"server": host}
+	tags := getTags(addr)
+
 	acc.Add("active", active, tags)
 	acc.Add("accepts", accepts, tags)
 	acc.Add("handled", handled, tags)
@@ -136,6 +136,18 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 	acc.Add("waiting", waiting, tags)
 
 	return nil
+}
+
+// Get tag(s) for the nginx plugin
+func getTags(addr *url.URL) map[string]string {
+	h := addr.Host
+	var htag string
+	if host, _, err := net.SplitHostPort(h); err == nil {
+		htag = host
+	} else {
+		htag = h
+	}
+	return map[string]string{"server": htag}
 }
 
 func init() {

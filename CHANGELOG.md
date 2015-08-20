@@ -1,14 +1,15 @@
 ## v0.1.6 [unreleased]
 
 ### Features
-[#112](https://github.com/influxdb/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
-[#116](https://github.com/influxdb/telegraf/pull/116): Use godep to vendor all dependencies
-[#120](https://github.com/influxdb/telegraf/pull/120): Httpjson plugin. Thanks @jpalay & @alvaromorales!
+- [#112](https://github.com/influxdb/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
+- [#116](https://github.com/influxdb/telegraf/pull/116): Use godep to vendor all dependencies
+- [#120](https://github.com/influxdb/telegraf/pull/120): Httpjson plugin. Thanks @jpalay & @alvaromorales!
 
 ### Bugfixes
-[#113](https://github.com/influxdb/telegraf/issues/113): Update README with Telegraf/InfluxDB compatibility
-[#118](https://github.com/influxdb/telegraf/pull/118): Fix for disk usage stats in Windows. Thanks @srfraser!
-[#122](https://github.com/influxdb/telegraf/issues/122): Fix for DiskUsage segv fault. Thanks @srfraser!
+- [#113](https://github.com/influxdb/telegraf/issues/113): Update README with Telegraf/InfluxDB compatibility
+- [#118](https://github.com/influxdb/telegraf/pull/118): Fix for disk usage stats in Windows. Thanks @srfraser!
+- [#122](https://github.com/influxdb/telegraf/issues/122): Fix for DiskUsage segv fault. Thanks @srfraser!
+- [#126](https://github.com/influxdb/telegraf/issues/126): Nginx plugin not catching net.SplitHostPort error
 
 ## v0.1.5 [2015-08-13]
 

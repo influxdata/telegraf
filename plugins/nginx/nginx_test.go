@@ -14,11 +14,22 @@ import (
 )
 
 const sampleResponse = `
-Active connections: 585 
+Active connections: 585
 server accepts handled requests
- 85340 85340 35085 
-Reading: 4 Writing: 135 Waiting: 446 
+ 85340 85340 35085
+Reading: 4 Writing: 135 Waiting: 446
 `
+
+// Verify that nginx tags are properly parsed based on the server
+func TestNginxTags(t *testing.T) {
+	urls := []string{"http://localhost/endpoint", "http://localhost:80/endpoint"}
+	var addr *url.URL
+	for _, url1 := range urls {
+		addr, _ = url.Parse(url1)
+		tagMap := getTags(addr)
+		assert.Contains(t, tagMap["server"], "localhost")
+	}
+}
 
 func TestNginxGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
