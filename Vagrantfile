@@ -22,7 +22,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     gvm install go1.4.2 --prefer-binary
     gvm use go1.4.2 --default
     echo "export PATH=$PATH:$GOPATH/bin"   >> "$HOME/.bashrc"
-    cd "$HOME/go/src/github.com/influxdb/telegraf" && make
+    echo 'export GOPATH=/home/vagrant/go'  >> "$HOME/.bashrc"
+    cd "$HOME/go/src/github.com/influxdb/telegraf" &&\
+      rm -rf Godeps/_workspace/pkg &&\
+      GOPATH="$HOME/go" make
   SHELL
 
   config.vm.provider "virtualbox" do |vb|
