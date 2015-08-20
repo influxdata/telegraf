@@ -29,11 +29,11 @@ are some InfluxDB compatibility requirements:
 * InfluxDB 0.9.3+ (including nightly builds) requires Telegraf 0.1.5+
 * InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
 
-Telegraf 0.1.5
+Latest:
 * http://get.influxdb.org/telegraf/telegraf_0.1.6_amd64.deb
 * http://get.influxdb.org/telegraf/telegraf-0.1.6-1.x86_64.rpm
 
-Telegraf 0.1.4
+0.1.4:
 * http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
 * http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
 
