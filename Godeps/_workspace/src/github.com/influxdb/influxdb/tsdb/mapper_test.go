@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -426,7 +427,7 @@ func TestShardMapper_WriteAndSingleMapperAggregateQuery(t *testing.T) {
 	}
 }
 
-func TestShardMapper_LocalMapperTagSets(t *testing.T) {
+func TestShardMapper_LocalMapperTagSetsFields(t *testing.T) {
 	tmpDir, _ := ioutil.TempDir("", "shard_test")
 	defer os.RemoveAll(tmpDir)
 	shard := mustCreateShard(tmpDir)
@@ -451,50 +452,64 @@ func TestShardMapper_LocalMapperTagSets(t *testing.T) {
 	}
 
 	var tests = []struct {
-		stmt     string
-		expected []string
+		stmt           string
+		expectedFields []string
+		expectedTags   []string
 	}{
 		{
-			stmt:     `SELECT sum(value) FROM cpu`,
-			expected: []string{"cpu"},
+			stmt:           `SELECT sum(value) FROM cpu`,
+			expectedFields: []string{"value"},
+			expectedTags:   []string{"cpu"},
 		},
 		{
-			stmt:     `SELECT sum(value) FROM cpu GROUP BY host`,
-			expected: []string{"cpu|host|serverA", "cpu|host|serverB"},
+			stmt:           `SELECT sum(value) FROM cpu GROUP BY host`,
+			expectedFields: []string{"value"},
+			expectedTags:   []string{"cpu|host|serverA", "cpu|host|serverB"},
 		},
 		{
-			stmt:     `SELECT sum(value) FROM cpu GROUP BY region`,
-			expected: []string{"cpu|region|us-east"},
+			stmt:           `SELECT sum(value) FROM cpu GROUP BY region`,
+			expectedFields: []string{"value"},
+			expectedTags:   []string{"cpu|region|us-east"},
 		},
 		{
-			stmt:     `SELECT sum(value) FROM cpu WHERE host='serverA'`,
-			expected: []string{"cpu"},
+			stmt:           `SELECT sum(value) FROM cpu WHERE host='serverA'`,
+			expectedFields: []string{"value"},
+			expectedTags:   []string{"cpu"},
 		},
 		{
-			stmt:     `SELECT sum(value) FROM cpu WHERE host='serverB'`,
-			expected: []string{"cpu"},
+			stmt:           `SELECT sum(value) FROM cpu WHERE host='serverB'`,
+			expectedFields: []string{"value"},
+			expectedTags:   []string{"cpu"},
 		},
 		{
-			stmt:     `SELECT sum(value) FROM cpu WHERE host='serverC'`,
-			expected: []string{},
+			stmt:           `SELECT sum(value) FROM cpu WHERE host='serverC'`,
+			expectedFields: []string{"value"},
+			expectedTags:   []string{},
 		},
 	}
 
 	for _, tt := range tests {
 		stmt := mustParseSelectStatement(tt.stmt)
 		mapper := openLocalMapperOrFail(t, shard, stmt)
-		got := mapper.TagSets()
-		if !reflect.DeepEqual(got, tt.expected) {
-			t.Errorf("test '%s'\n\tgot      %s\n\texpected %s", tt.stmt, got, tt.expected)
+
+		fields := mapper.Fields()
+		if !reflect.DeepEqual(fields, tt.expectedFields) {
+			t.Errorf("test '%s'\n\tgot      %s\n\texpected %s", tt.stmt, fields, tt.expectedFields)
+		}
+
+		tags := mapper.TagSets()
+		if !reflect.DeepEqual(tags, tt.expectedTags) {
+			t.Errorf("test '%s'\n\tgot      %s\n\texpected %s", tt.stmt, tags, tt.expectedTags)
 		}
 	}
-
 }
 
 func mustCreateShard(dir string) *tsdb.Shard {
 	tmpShard := path.Join(dir, "shard")
 	index := tsdb.NewDatabaseIndex()
-	sh := tsdb.NewShard(index, tmpShard, tsdb.NewEngineOptions())
+	opts := tsdb.NewEngineOptions()
+	opts.Config.WALDir = filepath.Join(dir, "wal")
+	sh := tsdb.NewShard(1, index, tmpShard, opts)
 	if err := sh.Open(); err != nil {
 		panic(fmt.Sprintf("error opening shard: %s", err.Error()))
 	}
