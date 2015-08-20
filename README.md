@@ -30,8 +30,8 @@ are some InfluxDB compatibility requirements:
 * InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
 
 Telegraf 0.1.5
-* http://get.influxdb.org/telegraf/telegraf_0.1.5_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.1.5-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.1.6_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.1.6-1.x86_64.rpm
 
 Telegraf 0.1.4
 * http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
@@ -135,19 +135,24 @@ path = [ "/opt", "/home" ]
 
 Telegraf currently has support for collecting metrics from:
 
-* System (memory, CPU, network, etc.)
-* Docker
-* MySQL
-* Prometheus (client libraries and exporters)
-* PostgreSQL
-* Redis
-* Elasticsearch
-* RethinkDB
-* Kafka
-* MongoDB
-* Disque
-* Lustre2
-* Memcached
+* disque
+* elasticsearch
+* exec (generic executable JSON-gathering plugin)
+* haproxy
+* httpjson (generic JSON-emitting http service plugin)
+* kafka_consumer
+* leofs
+* lustre2
+* memcached
+* mongodb
+* mysql
+* nginx
+* postgresql
+* prometheus
+* rabbitmq
+* redis
+* rethinkdb
+* system (mem, CPU, load, etc.)
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.
