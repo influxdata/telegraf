@@ -5,6 +5,7 @@
 # build process for InfluxDB.
 
 BUILD_DIR=$HOME/telegraf-build
+VERSION=`git describe --always --tags`
 # GO_VERSION=go1.4.2
 # source $HOME/.gvm/scripts/gvm
 # exit_if_fail gvm use $GO_VERSION
@@ -13,7 +14,7 @@ BUILD_DIR=$HOME/telegraf-build
 function exit_if_fail {
     command=$@
     echo "Executing '$command'"
-    $command
+    eval $command
     rc=$?
     if [ $rc -ne 0 ]; then
         echo "'$command' returned $rc."
@@ -25,7 +26,7 @@ function exit_if_fail {
 function build {
   echo -n "=> $1-$2: "
   GOOS=$1 GOARCH=$2 godep go build -o telegraf-$1-$2 \
-                    -ldflags "-X main.Version=$3" \
+                    -ldflags "-X main.Version $3" \
                     ./cmd/telegraf/telegraf.go
   du -h telegraf-$1-$2
 }
@@ -61,11 +62,14 @@ exit_if_fail godep go vet ./...
 exit_if_fail godep go test -v -short ./...
 
 # Build binaries
-build "linux" "amd64" `git describe --always --tags`
-build "linux" "386" `git describe --always --tags`
-build "linux" "arm" `git describe --always --tags`
+build "linux" "amd64" $VERSION
+build "linux" "386" $VERSION
+build "linux" "arm" $VERSION
 
-# simple integration test
+# Simple Integration Tests
+#   check that version was properly set
+exit_if_fail "./telegraf-linux-amd64 -version | grep $VERSION"
+#   check that one test cpu & mem output work
 tmpdir=$(mktemp -d)
 ./telegraf-linux-amd64 -sample-config > $tmpdir/config.toml
 exit_if_fail ./telegraf-linux-amd64 -config $tmpdir/config.toml \
