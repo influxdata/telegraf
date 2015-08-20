@@ -64,6 +64,13 @@ exit_if_fail godep go test -v -short ./...
 build "linux" "amd64" `git describe --always --tags`
 build "linux" "386" `git describe --always --tags`
 build "linux" "arm" `git describe --always --tags`
+
+# simple integration test
+tmpdir=$(mktemp -d)
+./telegraf-linux-amd64 -sample-config > $tmpdir/config.toml
+exit_if_fail ./telegraf-linux-amd64 -config $tmpdir/config.toml \
+    -test -filter cpu:mem
+
 # Artifact binaries
 mv telegraf* $CIRCLE_ARTIFACTS
 
