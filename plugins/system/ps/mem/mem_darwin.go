@@ -53,7 +53,7 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 	}
 
 	ret := &VirtualMemoryStat{
-		Total: parsed[0] * p,
+		Total: parsed[0],
 		Free:  parsed[1] * p,
 	}
 
