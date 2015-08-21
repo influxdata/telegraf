@@ -1,3 +1,10 @@
+## v0.1.7 [unreleased]
+
+### Features
+
+### Bigfixes
+- [#129](https://github.com/influxdb/telegraf/issues/129): Latest pkg url fix.
+
 ## v0.1.6 [2015-08-20]
 
 ### Features

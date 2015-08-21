@@ -30,8 +30,8 @@ are some InfluxDB compatibility requirements:
 * InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.1.6_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.1.6-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_v0.1.6_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-v0.1.6-1.x86_64.rpm
 
 0.1.4:
 * http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
