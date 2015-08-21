@@ -30,17 +30,17 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 		}
 		switch key {
 		case "MemTotal":
-			ret.Total = t * 1000
+			ret.Total = t * 1024
 		case "MemFree":
-			ret.Free = t * 1000
+			ret.Free = t * 1024
 		case "Buffers":
-			ret.Buffers = t * 1000
+			ret.Buffers = t * 1024
 		case "Cached":
-			ret.Cached = t * 1000
+			ret.Cached = t * 1024
 		case "Active":
-			ret.Active = t * 1000
+			ret.Active = t * 1024
 		case "Inactive":
-			ret.Inactive = t * 1000
+			ret.Inactive = t * 1024
 		}
 	}
 	ret.Available = ret.Free + ret.Buffers + ret.Cached
