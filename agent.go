@@ -184,7 +184,6 @@ func (a *Agent) crankParallel() error {
 				log.Printf("Error in plugins: %s", err)
 			}
 
-
 			points <- &acc
 		}(plugin)
 	}
