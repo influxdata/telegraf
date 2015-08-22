@@ -179,7 +179,11 @@ func (a *Agent) crankParallel() error {
 			acc.Prefix = plugin.name + "_"
 			acc.Config = plugin.config
 
-			plugin.plugin.Gather(&acc)
+			err := plugin.plugin.Gather(&acc)
+			if err != nil {
+				log.Printf("Error in plugins: %s", err)
+			}
+
 
 			points <- &acc
 		}(plugin)
@@ -333,7 +337,10 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			wg.Add(1)
 			go func(plugin *runningPlugin) {
 				defer wg.Done()
-				a.crankSeparate(shutdown, plugin)
+				err := a.crankSeparate(shutdown, plugin)
+				if err != nil {
+					log.Printf("Error in plugins: %s", err)
+				}
 			}(plugin)
 		}
 	}
