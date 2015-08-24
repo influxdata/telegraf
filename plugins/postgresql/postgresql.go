@@ -25,11 +25,11 @@ var sampleConfig = `
 #   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
 # or a simple string:
 #   host=localhost user=pqotest password=... sslmode=...
-# 
+#
 # All connection parameters are optional. By default, the host is localhost
 # and the user is the currently running user. For localhost, we default
 # to sslmode=disable as well.
-# 
+#
 
 address = "sslmode=disable"
 

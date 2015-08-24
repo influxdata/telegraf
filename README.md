@@ -133,11 +133,14 @@ path = [ "/opt", "/home" ]
 
 ## Supported Plugins
 
-Telegraf currently has support for collecting metrics from:
+**You can view usage instructions for each plugin by running**
+`telegraf -usage <pluginname>`
+
+Telegraf currently has support for collecting metrics from
 
 * disque
 * elasticsearch
-* exec (generic executable JSON-gathering plugin)
+* exec (generic JSON-emitting executable plugin)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * kafka_consumer
