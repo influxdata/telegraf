@@ -188,7 +188,7 @@ if [ "$1" == "-h" ]; then
     usage 0
 fi
 
-VERSION=`git describe --always --tags`
+VERSION=`git describe --always --tags | tr -d v`
 
 echo -e "\nStarting package process, version: $VERSION\n"
 
