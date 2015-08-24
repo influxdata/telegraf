@@ -181,7 +181,7 @@ func (a *Agent) crankParallel() error {
 
 			err := plugin.plugin.Gather(&acc)
 			if err != nil {
-				log.Printf("Error in plugins: %s", err)
+				log.Printf("Error in plugin [%s]: %s", plugin.name, err)
 			}
 
 			points <- &acc
@@ -338,7 +338,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 				defer wg.Done()
 				err := a.crankSeparate(shutdown, plugin)
 				if err != nil {
-					log.Printf("Error in plugins: %s", err)
+					log.Printf("Error in plugin [%s]: %s", plugin.name, err)
 				}
 			}(plugin)
 		}
