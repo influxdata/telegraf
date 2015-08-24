@@ -2,6 +2,7 @@
 
 ### Features
 - [#133](https://github.com/influxdb/telegraf/pull/133): Add plugin.Gather error logging. Thanks @nickscript0!
+- [#136](https://github.com/influxdb/telegraf/issues/136): Add a -usage flag for printing usage of a single plugin.
 
 ### Bugfixes
 - [#128](https://github.com/influxdb/telegraf/issues/128): system_load measurement missing.
