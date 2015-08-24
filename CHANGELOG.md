@@ -1,6 +1,7 @@
 ## v0.1.7 [unreleased]
 
 ### Features
+ - [#133](https://github.com/influxdb/telegraf/pull/133): Add plugin.Gather error logging. Thanks @nickscript0!
 
 ### Bigfixes
 - [#129](https://github.com/influxdb/telegraf/issues/129): Latest pkg url fix.
