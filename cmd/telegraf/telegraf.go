@@ -13,13 +13,18 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/all"
 )
 
-var fDebug = flag.Bool("debug", false, "show metrics as they're generated to stdout")
+var fDebug = flag.Bool("debug", false,
+	"show metrics as they're generated to stdout")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fVersion = flag.Bool("version", false, "display the version")
-var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
+var fSampleConfig = flag.Bool("sample-config", false,
+	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
-var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
+var fPLuginsFilter = flag.String("filter", "",
+	"filter the plugins to enable, separator is :")
+var fUsage = flag.String("usage", "",
+	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 
 // Telegraf version
 //	-ldflags "-X main.Version=`git describe --always --tags`"
@@ -36,6 +41,13 @@ func main() {
 
 	if *fSampleConfig {
 		telegraf.PrintSampleConfig()
+		return
+	}
+
+	if *fUsage != "" {
+		if err := telegraf.PrintPluginConfig(*fUsage); err != nil {
+			log.Fatal(err)
+		}
 		return
 	}
 
