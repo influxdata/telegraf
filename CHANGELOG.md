@@ -3,7 +3,8 @@
 ### Features
 - [#133](https://github.com/influxdb/telegraf/pull/133): Add plugin.Gather error logging. Thanks @nickscript0!
 
-### Bigfixes
+### Bugfixes
+- [#128](https://github.com/influxdb/telegraf/issues/128): system_load measurement missing.
 - [#129](https://github.com/influxdb/telegraf/issues/129): Latest pkg url fix.
 
 ## v0.1.6 [2015-08-20]

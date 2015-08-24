@@ -68,3 +68,9 @@ totalcpu = true
 # Read metrics about memory usage
 [mem]
   # no configuration
+
+[system]
+  # no configuration
+
+[swap]
+  # no configuration
