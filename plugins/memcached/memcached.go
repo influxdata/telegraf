@@ -109,7 +109,7 @@ func (m *Memcached) gatherServer(address string, acc plugins.Accumulator) error 
 		values[string(s[1])] = string(s[2])
 	}
 
-	//
+	// Add server address as a tag
 	tags := map[string]string{"server": address}
 
 	// Process values

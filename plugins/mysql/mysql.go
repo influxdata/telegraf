@@ -111,10 +111,19 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 
 		var found bool
 
+		// Parse out user/password from server address tag if given
+		var servtag string
+		if strings.Contains(serv, "@") {
+			servtag = strings.Split(serv, "@")[1]
+		} else {
+			servtag = serv
+		}
+		tags := map[string]string{"server": servtag}
+
 		for _, mapped := range mappings {
 			if strings.HasPrefix(name, mapped.onServer) {
 				i, _ := strconv.Atoi(string(val.([]byte)))
-				acc.Add(mapped.inExport+name[len(mapped.onServer):], i, nil)
+				acc.Add(mapped.inExport+name[len(mapped.onServer):], i, tags)
 				found = true
 			}
 		}
@@ -130,14 +139,14 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 				return err
 			}
 
-			acc.Add("queries", i, nil)
+			acc.Add("queries", i, tags)
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
 				return err
 			}
 
-			acc.Add("slow_queries", i, nil)
+			acc.Add("slow_queries", i, tags)
 		}
 	}
 
