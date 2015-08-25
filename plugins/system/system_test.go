@@ -310,7 +310,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("total", uint64(12400), vmtags))
 	assert.True(t, acc.CheckTaggedValue("available", uint64(7600), vmtags))
 	assert.True(t, acc.CheckTaggedValue("used", uint64(5000), vmtags))
-	assert.True(t, acc.CheckTaggedValue("used_prec", float64(47.1), vmtags))
+	assert.True(t, acc.CheckTaggedValue("used_perc", float64(47.1), vmtags))
 	assert.True(t, acc.CheckTaggedValue("free", uint64(1235), vmtags))
 	assert.True(t, acc.CheckTaggedValue("active", uint64(8134), vmtags))
 	assert.True(t, acc.CheckTaggedValue("inactive", uint64(1124), vmtags))
