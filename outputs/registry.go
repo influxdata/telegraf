@@ -7,6 +7,8 @@ import (
 type Output interface {
 	Connect() error
 	Close() error
+	Description() string
+	SampleConfig() string
 	Write(client.BatchPoints) error
 }
 

@@ -22,6 +22,25 @@ type InfluxDB struct {
 	conn *client.Client
 }
 
+var sampleConfig = `
+	# The full HTTP endpoint URL for your InfluxDB instance
+	url = "http://localhost:8086" # required.
+
+	# The target database for metrics. This database must already exist
+	database = "telegraf" # required.
+
+	# Connection timeout (for the connection with InfluxDB), formatted as a string.
+	# Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+	# If not provided, will default to 0 (no timeout)
+	# timeout = "5s"
+
+	# username = "telegraf"
+	# password = "metricsmetricsmetricsmetrics"
+
+	# Set the user agent for the POSTs (can be useful for log differentiation)
+	# user_agent = "telegraf"
+`
+
 func (i *InfluxDB) Connect() error {
 	u, err := url.Parse(i.URL)
 	if err != nil {
@@ -55,6 +74,14 @@ func (i *InfluxDB) Connect() error {
 func (i *InfluxDB) Close() error {
 	// InfluxDB client does not provide a Close() function
 	return nil
+}
+
+func (i *InfluxDB) SampleConfig() string {
+	return sampleConfig
+}
+
+func (i *InfluxDB) Description() string {
+	return "Configuration for influxdb server to send metrics to"
 }
 
 func (i *InfluxDB) Write(bp client.BatchPoints) error {

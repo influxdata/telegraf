@@ -5,6 +5,7 @@
 - [#136](https://github.com/influxdb/telegraf/issues/136): Add a -usage flag for printing usage of a single plugin.
 - [#137](https://github.com/influxdb/telegraf/issues/137): Memcached: fix when a value contains a space
 - [#138](https://github.com/influxdb/telegraf/issues/138): MySQL server address tag.
+- [#142](https://github.com/influxdb/telegraf/pull/142): Add Description and SampleConfig funcs to output interface
 
 ### Bugfixes
 - [#128](https://github.com/influxdb/telegraf/issues/128): system_load measurement missing.
