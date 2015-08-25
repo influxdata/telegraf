@@ -9,6 +9,7 @@
 ### Bugfixes
 - [#128](https://github.com/influxdb/telegraf/issues/128): system_load measurement missing.
 - [#129](https://github.com/influxdb/telegraf/issues/129): Latest pkg url fix.
+- [#140](https://github.com/influxdb/telegraf/issues/140): Memory plugin prec->perc typo fix. Thanks @brunoqc!
 
 ## v0.1.6 [2015-08-20]
 
