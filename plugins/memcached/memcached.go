@@ -100,14 +100,13 @@ func (m *Memcached) gatherServer(address string, acc plugins.Accumulator) error 
 			break
 		}
 		// Read values
-		var name, value string
-		n, errScan := fmt.Sscanf(string(line), "STAT %s %s\r\n", &name, &value)
-		if errScan != nil || n != 2 {
+		s := bytes.SplitN(line, []byte(" "), 3)
+		if len(s) != 3 || !bytes.Equal(s[0], []byte("STAT")) {
 			return fmt.Errorf("unexpected line in stats response: %q", line)
 		}
 
 		// Save values
-		values[name] = value
+		values[string(s[1])] = string(s[2])
 	}
 
 	//
