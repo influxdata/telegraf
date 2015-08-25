@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
@@ -326,9 +327,6 @@ type hasDescr interface {
 
 var header = `# Telegraf configuration
 
-# If this file is missing an [agent] section, you must first generate a
-# valid config with 'telegraf -sample-config > telegraf.toml'
-
 # Telegraf is entirely plugin driven. All metrics are gathered from the
 # declared plugins.
 
@@ -348,40 +346,28 @@ var header = `# Telegraf configuration
 # NOTE: The configuration has a few required parameters. They are marked
 # with 'required'. Be sure to edit those to make this configuration work.
 
-# OUTPUTS
-[outputs]
-
-# Configuration for influxdb server to send metrics to
-[outputs.influxdb]
-# The full HTTP endpoint URL for your InfluxDB instance
-url = "http://localhost:8086" # required.
-
-# The target database for metrics. This database must already exist
-database = "telegraf" # required.
-
-# Connection timeout (for the connection with InfluxDB), formatted as a string.
-# Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-# If not provided, will default to 0 (no timeout)
-# timeout = "5s"
-
-# username = "telegraf"
-# password = "metricsmetricsmetricsmetrics"
-
-# Set the user agent for the POSTs (can be useful for log differentiation)
-# user_agent = "telegraf"
-
 # Tags can also be specified via a normal map, but only one form at a time:
-
-# [tags]
-# dc = "us-east-1" }
+[tags]
+	# dc = "us-east-1"
 
 # Configuration for telegraf itself
-# [agent]
-# interval = "10s"
-# debug = false
-# hostname = "prod3241"
+[agent]
+	# interval = "10s"
+	# debug = false
+	# hostname = "prod3241"
 
-# PLUGINS
+###############################################################################
+#                                  OUTPUTS                                    #
+###############################################################################
+
+[outputs]
+`
+
+var header2 = `
+
+###############################################################################
+#                                  PLUGINS                                    #
+###############################################################################
 
 `
 
@@ -389,34 +375,52 @@ database = "telegraf" # required.
 func PrintSampleConfig() {
 	fmt.Printf(header)
 
-	var names []string
+	// Print Outputs
+	var onames []string
 
-	for name := range plugins.Plugins {
-		names = append(names, name)
+	for oname := range outputs.Outputs {
+		onames = append(onames, oname)
+	}
+	sort.Strings(onames)
+
+	for _, oname := range onames {
+		creator := outputs.Outputs[oname]
+		output := creator()
+
+		fmt.Printf("\n# %s\n[outputs.%s]\n", output.Description(), oname)
+
+		config := output.SampleConfig()
+		if config == "" {
+			fmt.Printf(" 	# no configuration\n\n")
+		} else {
+			fmt.Printf(config)
+		}
 	}
 
-	sort.Strings(names)
+	fmt.Printf(header2)
 
-	for _, name := range names {
-		creator := plugins.Plugins[name]
+	// Print Plugins
+	var pnames []string
 
+	for pname := range plugins.Plugins {
+		pnames = append(pnames, pname)
+	}
+	sort.Strings(pnames)
+
+	for _, pname := range pnames {
+		creator := plugins.Plugins[pname]
 		plugin := creator()
 
-		fmt.Printf("# %s\n[%s]\n", plugin.Description(), name)
+		fmt.Printf("# %s\n[%s]\n", plugin.Description(), pname)
 
-		var config string
-
-		config = strings.TrimSpace(plugin.SampleConfig())
-
+		config := plugin.SampleConfig()
 		if config == "" {
-			fmt.Printf("  # no configuration\n\n")
+			fmt.Printf("	# no configuration\n\n")
 		} else {
-			fmt.Printf("\n")
 			lines := strings.Split(config, "\n")
 			for _, line := range lines {
 				fmt.Printf("%s\n", line)
 			}
-
 			fmt.Printf("\n")
 		}
 	}
