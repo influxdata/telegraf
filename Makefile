@@ -10,17 +10,14 @@ prepare:
 	go get github.com/tools/godep
 
 docker-compose:
-	docker-compose up -d
-
-test:
 ifeq ($(UNAME), Darwin)
-	ADVERTISED_HOST=$(shell sh -c 'boot2docker ip') $(MAKE) test-full
+	ADVERTISED_HOST=$(shell sh -c 'boot2docker ip') docker-compose up -d
 endif
 ifeq ($(UNAME), Linux)
-	ADVERTISED_HOST=localhost $(MAKE) test-full
+	ADVERTISED_HOST=localhost docker-compose up -d
 endif
 
-test-full: prepare docker-compose
+test: prepare docker-compose
 	$(GOPATH)/bin/godep go test -v ./...
 
 test-short: prepare
