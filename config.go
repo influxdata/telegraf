@@ -387,11 +387,11 @@ func PrintSampleConfig() {
 		creator := outputs.Outputs[oname]
 		output := creator()
 
-		fmt.Printf("\n# %s\n[outputs.%s]\n", output.Description(), oname)
+		fmt.Printf("\n# %s\n[outputs.%s]", output.Description(), oname)
 
 		config := output.SampleConfig()
 		if config == "" {
-			fmt.Printf(" 	# no configuration\n\n")
+			fmt.Printf("\n	# no configuration\n")
 		} else {
 			fmt.Printf(config)
 		}
@@ -411,17 +411,13 @@ func PrintSampleConfig() {
 		creator := plugins.Plugins[pname]
 		plugin := creator()
 
-		fmt.Printf("# %s\n[%s]\n", plugin.Description(), pname)
+		fmt.Printf("\n# %s\n[%s]", plugin.Description(), pname)
 
 		config := plugin.SampleConfig()
 		if config == "" {
-			fmt.Printf("	# no configuration\n\n")
+			fmt.Printf("\n	# no configuration\n")
 		} else {
-			lines := strings.Split(config, "\n")
-			for _, line := range lines {
-				fmt.Printf("%s\n", line)
-			}
-			fmt.Printf("\n")
+			fmt.Printf(config)
 		}
 	}
 }

@@ -19,8 +19,9 @@ type Nginx struct {
 }
 
 var sampleConfig = `
-# An array of Nginx stub_status URI to gather stats.
-urls = ["http://localhost/status"]`
+	# An array of Nginx stub_status URI to gather stats.
+	urls = ["http://localhost/status"]
+`
 
 func (n *Nginx) SampleConfig() string {
 	return sampleConfig

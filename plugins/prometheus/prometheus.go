@@ -17,8 +17,9 @@ type Prometheus struct {
 }
 
 var sampleConfig = `
-# An array of urls to scrape metrics from.
-urls = ["http://localhost:9100/metrics"]`
+	# An array of urls to scrape metrics from.
+	urls = ["http://localhost:9100/metrics"]
+`
 
 func (r *Prometheus) SampleConfig() string {
 	return sampleConfig

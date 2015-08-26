@@ -26,10 +26,11 @@ func (_ *CPUStats) Description() string {
 }
 
 var sampleConfig = `
-# Whether to report per-cpu stats or not
-percpu = true
-# Whether to report total system cpu stats or not
-totalcpu = true`
+	# Whether to report per-cpu stats or not
+	percpu = true
+	# Whether to report total system cpu stats or not
+	totalcpu = true
+`
 
 func (_ *CPUStats) SampleConfig() string {
 	return sampleConfig

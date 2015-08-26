@@ -11,13 +11,13 @@ import (
 )
 
 const sampleConfig = `
-# specify commands via an array of tables
-[[exec.commands]]
-# the command to run
-command = "/usr/bin/mycollector --foo=bar"
+	# specify commands via an array of tables
+	[[exec.commands]]
+	# the command to run
+	command = "/usr/bin/mycollector --foo=bar"
 
-# name of the command (used as a prefix for measurements)
-name = "mycollector"
+	# name of the command (used as a prefix for measurements)
+	name = "mycollector"
 `
 
 type Command struct {

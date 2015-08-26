@@ -18,28 +18,28 @@ type Postgresql struct {
 }
 
 var sampleConfig = `
-# specify servers via an array of tables
-[[postgresql.servers]]
+	# specify servers via an array of tables
+	[[postgresql.servers]]
 
-# specify address via a url matching:
-#   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
-# or a simple string:
-#   host=localhost user=pqotest password=... sslmode=...
-#
-# All connection parameters are optional. By default, the host is localhost
-# and the user is the currently running user. For localhost, we default
-# to sslmode=disable as well.
-#
+	# specify address via a url matching:
+	#   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
+	# or a simple string:
+	#   host=localhost user=pqotest password=... sslmode=...
+	#
+	# All connection parameters are optional. By default, the host is localhost
+	# and the user is the currently running user. For localhost, we default
+	# to sslmode=disable as well.
+	#
 
-address = "sslmode=disable"
+	address = "sslmode=disable"
 
-# A list of databases to pull metrics about. If not specified, metrics for all
-# databases are gathered.
+	# A list of databases to pull metrics about. If not specified, metrics for all
+	# databases are gathered.
 
-# databases = ["app_production", "blah_testing"]
+	# databases = ["app_production", "blah_testing"]
 
-# [[postgresql.servers]]
-# address = "influx@remoteserver"
+	# [[postgresql.servers]]
+	# address = "influx@remoteserver"
 `
 
 func (p *Postgresql) SampleConfig() string {

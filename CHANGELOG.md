@@ -6,6 +6,7 @@
 - [#137](https://github.com/influxdb/telegraf/issues/137): Memcached: fix when a value contains a space
 - [#138](https://github.com/influxdb/telegraf/issues/138): MySQL server address tag.
 - [#142](https://github.com/influxdb/telegraf/pull/142): Add Description and SampleConfig funcs to output interface
+- Indent the toml config file for readability
 
 ### Bugfixes
 - [#128](https://github.com/influxdb/telegraf/issues/128): system_load measurement missing.

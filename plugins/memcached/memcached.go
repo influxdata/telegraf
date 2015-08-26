@@ -17,11 +17,12 @@ type Memcached struct {
 }
 
 var sampleConfig = `
-# An array of address to gather stats about. Specify an ip on hostname
-# with optional port. ie localhost, 10.0.0.1:11211, etc.
-#
-# If no servers are specified, then localhost is used as the host.
-servers = ["localhost"]`
+	# An array of address to gather stats about. Specify an ip on hostname
+	# with optional port. ie localhost, 10.0.0.1:11211, etc.
+	#
+	# If no servers are specified, then localhost is used as the host.
+	servers = ["localhost"]
+`
 
 var defaultTimeout = 5 * time.Second
 
