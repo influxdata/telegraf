@@ -1,7 +1,7 @@
 ## v0.1.7 [unreleased]
 
 ### Features
-- [#38](https://github.com/influxdb/telegraf/pull/38): Kafka output sink.
+- [#38](https://github.com/influxdb/telegraf/pull/38): Kafka output producer.
 - [#133](https://github.com/influxdb/telegraf/pull/133): Add plugin.Gather error logging. Thanks @nickscript0!
 - [#136](https://github.com/influxdb/telegraf/issues/136): Add a -usage flag for printing usage of a single plugin.
 - [#137](https://github.com/influxdb/telegraf/issues/137): Memcached: fix when a value contains a space
