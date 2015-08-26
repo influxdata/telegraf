@@ -74,6 +74,9 @@ func (a *Agent) Connect() error {
 		if err != nil {
 			return err
 		}
+		if a.Debug {
+			log.Printf("Successfully connected to output: %s\n", o.name)
+		}
 	}
 	return nil
 }
@@ -160,6 +163,8 @@ func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
 	return names, nil
 }
 
+// crankParallel runs the plugins that are using the same reporting interval
+// as the telegraf agent.
 func (a *Agent) crankParallel() error {
 	points := make(chan *BatchPoints, len(a.plugins))
 
@@ -203,6 +208,7 @@ func (a *Agent) crankParallel() error {
 	return a.flush(&bp)
 }
 
+// crank is mostly for test purposes.
 func (a *Agent) crank() error {
 	var bp BatchPoints
 
@@ -223,6 +229,8 @@ func (a *Agent) crank() error {
 	return a.flush(&bp)
 }
 
+// crankSeparate runs the plugins that have been configured with their own
+// reporting interval.
 func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
 	ticker := time.NewTicker(plugin.config.Interval)
 

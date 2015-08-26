@@ -103,21 +103,22 @@ at 192.168.59.103:8086, tagging measurements with dc="denver-1". It will output
 measurements at a 10s interval and will collect totalcpu & percpu data.
 
 ```
-[outputs]
-[outputs.influxdb]
-url = "http://192.168.59.103:8086" # required.
-database = "telegraf" # required.
-
 [tags]
-dc = "denver-1"
+    dc = "denver-1"
 
 [agent]
-interval = "10s"
+    interval = "10s"
+
+# OUTPUTS
+[outputs]
+[outputs.influxdb]
+    url = "http://192.168.59.103:8086" # required.
+    database = "telegraf" # required.
 
 # PLUGINS
 [cpu]
-percpu = true
-totalcpu = true
+    percpu = true
+    totalcpu = true
 ```
 
 Below is how to configure `tagpass` parameters (added in 0.1.4)
@@ -125,15 +126,15 @@ Below is how to configure `tagpass` parameters (added in 0.1.4)
 ```
 # Don't collect CPU data for cpu6 & cpu7
 [cpu.tagdrop]
-cpu = [ "cpu6", "cpu7" ]
+    cpu = [ "cpu6", "cpu7" ]
 
 [disk]
 [disk.tagpass]
-# tagpass conditions are OR, not AND.
-# If the (filesystem is ext4 or xfs) OR (the path is /opt or /home)
-# then the metric passes
-fstype = [ "ext4", "xfs" ]
-path = [ "/opt", "/home" ]
+    # tagpass conditions are OR, not AND.
+    # If the (filesystem is ext4 or xfs) OR (the path is /opt or /home)
+    # then the metric passes
+    fstype = [ "ext4", "xfs" ]
+    path = [ "/opt", "/home" ]
 ```
 
 ## Supported Plugins

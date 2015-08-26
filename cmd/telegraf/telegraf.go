@@ -114,11 +114,8 @@ func main() {
 	}
 
 	shutdown := make(chan struct{})
-
 	signals := make(chan os.Signal)
-
 	signal.Notify(signals, os.Interrupt)
-
 	go func() {
 		<-signals
 		close(shutdown)
