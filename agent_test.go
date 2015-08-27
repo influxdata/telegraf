@@ -30,16 +30,16 @@ func TestAgent_LoadPlugin(t *testing.T) {
 	assert.Equal(t, 2, len(pluginsEnabled))
 
 	pluginsEnabled, _ = a.LoadPlugins("")
-	assert.Equal(t, 24, len(pluginsEnabled))
+	assert.Equal(t, 23, len(pluginsEnabled))
 
 	pluginsEnabled, _ = a.LoadPlugins(" ")
-	assert.Equal(t, 24, len(pluginsEnabled))
+	assert.Equal(t, 23, len(pluginsEnabled))
 
 	pluginsEnabled, _ = a.LoadPlugins("		")
-	assert.Equal(t, 24, len(pluginsEnabled))
+	assert.Equal(t, 23, len(pluginsEnabled))
 
 	pluginsEnabled, _ = a.LoadPlugins("\n\t")
-	assert.Equal(t, 24, len(pluginsEnabled))
+	assert.Equal(t, 23, len(pluginsEnabled))
 }
 
 /*
