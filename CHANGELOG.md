@@ -1,4 +1,12 @@
-## v0.1.7 [unreleased]
+## v0.1.8 [unreleased]
+
+### Features
+
+[#158](https://github.com/influxdb/telegraf/pull/158): Apache Plugin
+
+### Bugfixes
+
+## v0.1.7 [2015-08-28]
 
 ### Features
 - [#38](https://github.com/influxdb/telegraf/pull/38): Kafka output producer.

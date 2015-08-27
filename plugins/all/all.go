@@ -1,6 +1,7 @@
 package all
 
 import (
+	_ "github.com/influxdb/telegraf/plugins/apache"
 	_ "github.com/influxdb/telegraf/plugins/disque"
 	_ "github.com/influxdb/telegraf/plugins/elasticsearch"
 	_ "github.com/influxdb/telegraf/plugins/exec"
