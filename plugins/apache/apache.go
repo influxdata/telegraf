@@ -14,7 +14,7 @@ import (
 	"github.com/influxdb/telegraf/plugins"
 )
 
-type ApacheConf struct {
+type Apache struct {
 	Urls []string
 }
 
@@ -22,15 +22,15 @@ var sampleConfig = `
 # An array of Apache status URI to gather stats.
 urls = ["http://localhost/server-status?auto"]`
 
-func (n *ApacheConf) SampleConfig() string {
+func (n *Apache) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *ApacheConf) Description() string {
+func (n *Apache) Description() string {
 	return "Read Apache status information (mod_status)"
 }
 
-func (n *ApacheConf) Gather(acc plugins.Accumulator) error {
+func (n *Apache) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 	var outerr error
 
@@ -58,7 +58,7 @@ var tr = &http.Transport{
 
 var client = &http.Client{Transport: tr}
 
-func (n *ApacheConf) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
+func (n *Apache) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 	resp, err := client.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
@@ -144,6 +144,6 @@ func getTags(addr *url.URL) map[string]string {
 
 func init() {
 	plugins.Add("apache", func() plugins.Plugin {
-		return &ApacheConf{}
+		return &Apache{}
 	})
 }

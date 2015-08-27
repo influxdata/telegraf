@@ -19,4 +19,5 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/redis"
 	_ "github.com/influxdb/telegraf/plugins/rethinkdb"
 	_ "github.com/influxdb/telegraf/plugins/system"
+	_ "github.com/influxdb/telegraf/plugins/apache"
 )
