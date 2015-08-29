@@ -20,7 +20,8 @@ type Apache struct {
 
 var sampleConfig = `
 # An array of Apache status URI to gather stats.
-urls = ["http://localhost/server-status?auto"]`
+urls = ["http://localhost/server-status?auto"]
+`
 
 func (n *Apache) SampleConfig() string {
 	return sampleConfig
