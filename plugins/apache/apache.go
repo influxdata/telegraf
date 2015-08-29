@@ -81,7 +81,7 @@ func (n *Apache) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 	        switch key {
 	            
                 case "Scoreboard":
-                    n.gatherScores(part, acc)
+                    n.gatherScores(part, acc, tags)
                 default:
                     value, err := strconv.ParseFloat(part, 32)
                     if err != nil {
