@@ -10,7 +10,7 @@ import (
 
 	"github.com/influxdb/telegraf"
 	_ "github.com/influxdb/telegraf/outputs/all"
-	_ "github.com/influxdb/telegraf/plugins/all"
+	_ "github.com/KPACHbIuLLIAnO4/telegraf/plugins/all"
 )
 
 var fDebug = flag.Bool("debug", false,
