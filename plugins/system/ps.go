@@ -10,7 +10,6 @@ import (
 	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
 	"github.com/influxdb/telegraf/plugins/system/ps/disk"
 	"github.com/influxdb/telegraf/plugins/system/ps/docker"
-	"github.com/influxdb/telegraf/plugins/system/ps/load"
 	"github.com/influxdb/telegraf/plugins/system/ps/mem"
 	"github.com/influxdb/telegraf/plugins/system/ps/net"
 )
@@ -24,7 +23,6 @@ type DockerContainerStat struct {
 }
 
 type PS interface {
-	LoadAvg() (*load.LoadAvgStat, error)
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error)
 	DiskUsage() ([]*disk.DiskUsageStat, error)
 	NetIO() ([]net.NetIOCountersStat, error)
@@ -43,10 +41,6 @@ func add(acc plugins.Accumulator,
 
 type systemPS struct {
 	dockerClient *dc.Client
-}
-
-func (s *systemPS) LoadAvg() (*load.LoadAvgStat, error) {
-	return load.LoadAvg()
 }
 
 func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error) {

@@ -2,7 +2,8 @@
 
 ### Features
 
-[#158](https://github.com/influxdb/telegraf/pull/158): Apache Plugin
+[#150](https://github.com/influxdb/telegraf/pull/150): Add Host Uptime metric to system plugin
+[#158](https://github.com/influxdb/telegraf/pull/158): Apache Plugin. Thanks @KPACHbIuLLIAnO4
 
 ### Bugfixes
 

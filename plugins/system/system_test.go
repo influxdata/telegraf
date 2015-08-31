@@ -7,7 +7,6 @@ import (
 
 	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
 	"github.com/influxdb/telegraf/plugins/system/ps/disk"
-	"github.com/influxdb/telegraf/plugins/system/ps/load"
 	"github.com/influxdb/telegraf/plugins/system/ps/mem"
 	"github.com/influxdb/telegraf/plugins/system/ps/net"
 	"github.com/influxdb/telegraf/testutil"
@@ -21,14 +20,6 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	defer mps.AssertExpectations(t)
 
 	var acc testutil.Accumulator
-
-	lv := &load.LoadAvgStat{
-		Load1:  0.3,
-		Load5:  1.5,
-		Load15: 0.8,
-	}
-
-	mps.On("LoadAvg").Return(lv, nil)
 
 	cts := cpu.CPUTimesStat{
 		CPU:       "cpu0",
@@ -128,15 +119,6 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("SwapStat").Return(sms, nil)
 
-	ss := &SystemStats{ps: &mps}
-
-	err := ss.Gather(&acc)
-	require.NoError(t, err)
-
-	assert.True(t, acc.CheckValue("load1", 0.3))
-	assert.True(t, acc.CheckValue("load5", 1.5))
-	assert.True(t, acc.CheckValue("load15", 0.8))
-
 	cs := NewCPUStats(&mps)
 
 	cputags := map[string]string{
@@ -144,7 +126,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	}
 
 	preCPUPoints := len(acc.Points)
-	err = cs.Gather(&acc)
+	err := cs.Gather(&acc)
 	require.NoError(t, err)
 	numCPUPoints := len(acc.Points) - preCPUPoints
 
