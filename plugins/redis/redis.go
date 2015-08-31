@@ -74,12 +74,12 @@ var ErrProtocolError = errors.New("redis protocol error")
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *Redis) Gather(acc plugins.Accumulator) error {
-	if len(g.Servers) == 0 {
+func (r *Redis) Gather(acc plugins.Accumulator) error {
+	if len(r.Servers) == 0 {
 		url := &url.URL{
 			Host: ":6379",
 		}
-		g.gatherServer(url, acc)
+		r.gatherServer(url, acc)
 		return nil
 	}
 
@@ -87,7 +87,7 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 
 	var outerr error
 
-	for _, serv := range g.Servers {
+	for _, serv := range r.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
 			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
@@ -100,7 +100,7 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherServer(u, acc)
+			outerr = r.gatherServer(u, acc)
 		}(serv)
 	}
 
@@ -111,8 +111,8 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 
 const defaultPort = "6379"
 
-func (g *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
-	if g.c == nil {
+func (r *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
+	if r.c == nil {
 
 		_, _, err := net.SplitHostPort(addr.Host)
 		if err != nil {
@@ -141,12 +141,12 @@ func (g *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 			}
 		}
 
-		g.c = c
+		r.c = c
 	}
 
-	g.c.Write([]byte("info\r\n"))
+	r.c.Write([]byte("info\r\n"))
 
-	r := bufio.NewReader(g.c)
+	r := bufio.NewReader(r.c)
 
 	line, err := r.ReadString('\n')
 	if err != nil {
