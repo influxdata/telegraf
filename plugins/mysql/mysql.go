@@ -59,6 +59,10 @@ type mapping struct {
 
 var mappings = []*mapping{
 	{
+		onServer: "Aborted_",
+		inExport: "aborted_",
+	},
+	{
 		onServer: "Bytes_",
 		inExport: "bytes_",
 	},
@@ -67,12 +71,36 @@ var mappings = []*mapping{
 		inExport: "commands_",
 	},
 	{
+		onServer: "Created_",
+		inExport: "created_",
+	},
+	{
 		onServer: "Handler_",
 		inExport: "handler_",
 	},
 	{
 		onServer: "Innodb_",
 		inExport: "innodb_",
+	},
+	{
+		onServer: "Key_",
+		inExport: "key_",
+	},
+	{
+		onServer: "Open_",
+		inExport: "open_",
+	},
+	{
+		onServer: "Opened_",
+		inExport: "opened_",
+	},
+	{
+		onServer: "Qcache_",
+		inExport: "qcache_",
+	},
+	{
+		onServer: "Table_",
+		inExport: "table_",
 	},
 	{
 		onServer: "Tokudb_",
