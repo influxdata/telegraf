@@ -1,7 +1,8 @@
 ## v0.1.8 [unreleased]
 
 ### Release Notes
-Telegraf will now write data in UTC at second precision by default
+- Telegraf will now write data in UTC at second precision by default
+- Now using Go 1.5 to build telegraf
 
 ### Features
 - [#150](https://github.com/influxdb/telegraf/pull/150): Add Host Uptime metric to system plugin
@@ -10,6 +11,7 @@ Telegraf will now write data in UTC at second precision by default
 - [#165](https://github.com/influxdb/telegraf/pull/165): Add additional metrics to mysql plugin. Thanks @nickscript0
 - [#162](https://github.com/influxdb/telegraf/pull/162): Write UTC by default, provide option
 - [#166](https://github.com/influxdb/telegraf/pull/166): Upload binaries to S3
+- [#169](https://github.com/influxdb/telegraf/pull/169): Ping plugin
 
 ### Bugfixes
 

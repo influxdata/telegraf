@@ -439,8 +439,8 @@ func PrintSampleConfig() {
 func PrintPluginConfig(name string) error {
 	if creator, ok := plugins.Plugins[name]; ok {
 		plugin := creator()
-		fmt.Printf("# %s\n[%s]\n", plugin.Description(), name)
-		fmt.Printf(strings.TrimSpace(plugin.SampleConfig()))
+		fmt.Printf("# %s\n[%s]", plugin.Description(), name)
+		fmt.Printf(plugin.SampleConfig())
 	} else {
 		return errors.New(fmt.Sprintf("Plugin %s not found", name))
 	}
