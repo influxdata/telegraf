@@ -87,10 +87,10 @@ There are 5 configuration options that are configurable per plugin:
 current plugin. Each string in the array is tested as a prefix against metric names
 and if it matches, the metric is emitted.
 * **drop**: The inverse of pass, if a metric name matches, it is not emitted.
-* **tagpass**: tag names and arrays of strings that are used to filter metrics by
+* **tagpass**: (added in 0.1.5) tag names and arrays of strings that are used to filter metrics by
 the current plugin. Each string in the array is tested as an exact match against
 the tag name, and if it matches the metric is emitted.
-* **tagdrop**: The inverse of tagpass. If a tag matches, the metric is not emitted.
+* **tagdrop**: (added in 0.1.5) The inverse of tagpass. If a tag matches, the metric is not emitted.
 This is tested on metrics that have passed the tagpass test.
 * **interval**: How often to gather this metric. Normal plugins use a single
 global interval, but if one particular plugin should be run less or more often,
@@ -121,7 +121,7 @@ measurements at a 10s interval and will collect totalcpu & percpu data.
     totalcpu = true
 ```
 
-Below is how to configure `tagpass` parameters (added in 0.1.4)
+Below is how to configure `tagpass` and `tagdrop` parameters (added in 0.1.5)
 
 ```
 # Don't collect CPU data for cpu6 & cpu7
