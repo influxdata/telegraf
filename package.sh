@@ -260,7 +260,9 @@ else
     debian_package=telegraf_${VERSION}_amd64.deb
 fi
 
-COMMON_FPM_ARGS="-C $TMP_WORK_DIR --vendor $VENDOR --url $URL --license $LICENSE --maintainer $MAINTAINER --after-install $POST_INSTALL_PATH --name telegraf --version $VERSION --config-files $CONFIG_ROOT_DIR ."
+COMMON_FPM_ARGS="-C $TMP_WORK_DIR --vendor $VENDOR --url $URL --license $LICENSE \
+                --maintainer $MAINTAINER --after-install $POST_INSTALL_PATH \
+                --name telegraf --version $VERSION --config-files $CONFIG_ROOT_DIR ."
 $rpm_args fpm -s dir -t rpm --description "$DESCRIPTION" $COMMON_FPM_ARGS
 if [ $? -ne 0 ]; then
     echo "Failed to create RPM package -- aborting."
@@ -289,13 +291,32 @@ if [ "$CIRCLE_BRANCH" == "" ]; then
             cleanup_exit 1
         fi
 
+        # Upload .deb and .rpm packages
         for filepath in `ls *.{deb,rpm}`; do
             echo "Uploading $filepath to S3"
             filename=`basename $filepath`
             echo "Uploading $filename to s3://get.influxdb.org/telegraf/$filename"
-            AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://get.influxdb.org/telegraf/$filename --acl public-read --region us-east-1
+            AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath \
+                s3://get.influxdb.org/telegraf/$filename \
+                --acl public-read --region us-east-1
             if [ $? -ne 0 ]; then
                 echo "Upload failed -- aborting".
+                cleanup_exit 1
+            fi
+        done
+
+        # Upload binaries
+        for b in ${BINS[*]}; do
+            bin = $GOPATH_INSTALL/bin/$b
+            zippedbin = $b_$VERSION_linux_x86_64.tar.gz
+            # Zip the binary
+            tar -zcf $TMP_WORK_DIR/$zippedbin $bin
+            echo "Uploading binary: $zippedbin to S3"
+            AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $TMP_WORK_DIR/$zippedbin \
+                s3://get.influxdb.org/telegraf/$zippedbin \
+                --acl public-read --region us-east-1
+            if [ $? -ne 0 ]; then
+                echo "Binary upload failed -- aborting".
                 cleanup_exit 1
             fi
         done
