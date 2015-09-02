@@ -1,9 +1,9 @@
 ## v0.1.8 [unreleased]
 
 ### Features
-
-[#150](https://github.com/influxdb/telegraf/pull/150): Add Host Uptime metric to system plugin
-[#158](https://github.com/influxdb/telegraf/pull/158): Apache Plugin. Thanks @KPACHbIuLLIAnO4
+- [#150](https://github.com/influxdb/telegraf/pull/150): Add Host Uptime metric to system plugin
+- [#158](https://github.com/influxdb/telegraf/pull/158): Apache Plugin. Thanks @KPACHbIuLLIAnO4
+- [#165](https://github.com/influxdb/telegraf/pull/165): Add additional metrics to mysql plugin. Thanks @nickscript0
 
 ### Bugfixes
 
