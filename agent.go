@@ -31,7 +31,14 @@ type Agent struct {
 	// Interval at which to gather information
 	Interval Duration
 
-	// Run in debug mode?
+	// Option for outputting data in UTC
+	UTC bool `toml:"utc"`
+
+	// Precision to write data at
+	// Valid values for Precision are n, u, ms, s, m, and h
+	Precision string
+
+	// Option for running in debug mode
 	Debug    bool
 	Hostname string
 
@@ -43,8 +50,14 @@ type Agent struct {
 
 // NewAgent returns an Agent struct based off the given Config
 func NewAgent(config *Config) (*Agent, error) {
-	agent := &Agent{Config: config, Interval: Duration{10 * time.Second}}
+	agent := &Agent{
+		Config:    config,
+		Interval:  Duration{10 * time.Second},
+		UTC:       true,
+		Precision: "s",
+	}
 
+	// Apply the toml table to the agent config, overriding defaults
 	err := config.ApplyAgent(agent)
 	if err != nil {
 		return nil, err
@@ -199,7 +212,11 @@ func (a *Agent) crankParallel() error {
 
 	var bp BatchPoints
 	bp.Time = time.Now()
+	if a.UTC {
+		bp.Time = bp.Time.UTC()
+	}
 	bp.Tags = a.Config.Tags
+	bp.Precision = a.Precision
 
 	for sub := range points {
 		bp.Points = append(bp.Points, sub.Points...)
@@ -223,8 +240,12 @@ func (a *Agent) crank() error {
 		}
 	}
 
-	bp.Time = time.Now()
 	bp.Tags = a.Config.Tags
+	bp.Time = time.Now()
+	if a.UTC {
+		bp.Time = bp.Time.UTC()
+	}
+	bp.Precision = a.Precision
 
 	return a.flush(&bp)
 }
@@ -250,6 +271,10 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 
 		bp.Tags = a.Config.Tags
 		bp.Time = time.Now()
+		if a.UTC {
+			bp.Time = bp.Time.UTC()
+		}
+		bp.Precision = a.Precision
 
 		if err := a.flush(&bp); err != nil {
 			outerr = errors.New("Error encountered processing plugins & outputs")

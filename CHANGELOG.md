@@ -1,9 +1,14 @@
 ## v0.1.8 [unreleased]
 
+### Release Notes
+Telegraf will now write data in UTC at second precision by default
+
 ### Features
 - [#150](https://github.com/influxdb/telegraf/pull/150): Add Host Uptime metric to system plugin
 - [#158](https://github.com/influxdb/telegraf/pull/158): Apache Plugin. Thanks @KPACHbIuLLIAnO4
+- [#159](https://github.com/influxdb/telegraf/pull/159): Use second precision for InfluxDB writes
 - [#165](https://github.com/influxdb/telegraf/pull/165): Add additional metrics to mysql plugin. Thanks @nickscript0
+- [#162](https://github.com/influxdb/telegraf/pull/162): Write UTC by default, provide option
 - [#166](https://github.com/influxdb/telegraf/pull/166): Upload binaries to S3
 
 ### Bugfixes

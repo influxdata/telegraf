@@ -126,8 +126,9 @@ func main() {
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
 	if ag.Debug {
 		log.Printf("Debug: enabled")
-		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
-			ag.Interval, ag.Debug, ag.Hostname)
+		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
+			"Precision:%#v, UTC: %#v\n",
+			ag.Interval, ag.Debug, ag.Hostname, ag.Precision, ag.UTC)
 	}
 	log.Printf("Tags enabled: %s", config.ListTags())
 

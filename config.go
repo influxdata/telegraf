@@ -131,10 +131,11 @@ func (c *Config) ApplyOutput(name string, v interface{}) error {
 	return nil
 }
 
-// ApplyAgent loads the toml config into the given interface
-func (c *Config) ApplyAgent(v interface{}) error {
+// ApplyAgent loads the toml config into the given Agent object, overriding
+// defaults (such as collection duration) with the values from the toml config.
+func (c *Config) ApplyAgent(a *Agent) error {
 	if c.agent != nil {
-		return toml.UnmarshalTable(c.agent, v)
+		return toml.UnmarshalTable(c.agent, a)
 	}
 
 	return nil
@@ -350,11 +351,23 @@ var header = `# Telegraf configuration
 [tags]
 	# dc = "us-east-1"
 
-# Configuration for telegraf itself
+# Configuration for telegraf agent
 [agent]
-	# interval = "10s"
-	# debug = false
-	# hostname = "prod3241"
+	# Default data collection interval for all plugins
+	interval = "10s"
+
+	# If utc = false, uses local time (utc is highly recommended)
+	utc = true
+
+	# Precision of writes, valid values are n, u, ms, s, m, and h
+	# note: using second precision greatly helps InfluxDB compression
+	precision = "s"
+
+	# run telegraf in debug mode
+	debug = false
+
+	# Override default hostname, if empty use os.Hostname()
+	hostname = ""
 
 
 ###############################################################################
