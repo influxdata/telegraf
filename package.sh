@@ -307,10 +307,9 @@ if [ "$CIRCLE_BRANCH" == "" ]; then
 
         # Upload binaries
         for b in ${BINS[*]}; do
-            bin=$GOPATH_INSTALL/bin/$b
-            zippedbin=$b_$VERSION_linux_x86_64.tar.gz
+            zippedbin=${b}_${VERSION}_linux_x86_64.tar.gz
             # Zip the binary
-            tar -zcf $TMP_WORK_DIR/$zippedbin $bin
+            tar -zcf $TMP_WORK_DIR/$zippedbin -C $GOPATH_INSTALL/bin ./$b
             echo "Uploading binary: $zippedbin to S3"
             AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $TMP_WORK_DIR/$zippedbin \
                 s3://get.influxdb.org/telegraf/$zippedbin \
