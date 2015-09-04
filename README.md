@@ -34,7 +34,9 @@ Latest:
 * http://get.influxdb.org/telegraf/telegraf-0.1.8-1.x86_64.rpm
 
 Binaries:
-* http://get.influxdb.org/telegraf/telegraf_0.1.8_linux_x86_64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.1.8.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.1.8.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.1.8.tar.gz
 
 0.1.4:
 * http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
