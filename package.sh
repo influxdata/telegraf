@@ -303,13 +303,15 @@ if [ "$CIRCLE_BRANCH" == "" ]; then
                 echo "Upload failed -- aborting".
                 cleanup_exit 1
             fi
+            rm $filepath
         done
 
-        # Upload binaries
-        for b in ${BINS[*]}; do
-            zippedbin=${b}_${VERSION}_linux_x86_64.tar.gz
+        # Make and upload linux amd64, 386, and arm
+        make build-linux-bins
+        for b in `ls telegraf_*`; do
+            zippedbin=${b}_${VERSION}.tar.gz
             # Zip the binary
-            tar -zcf $TMP_WORK_DIR/$zippedbin -C $GOPATH_INSTALL/bin ./$b
+            tar -zcf $TMP_WORK_DIR/$zippedbin ./$b
             echo "Uploading binary: $zippedbin to S3"
             AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $TMP_WORK_DIR/$zippedbin \
                 s3://get.influxdb.org/telegraf/$zippedbin \

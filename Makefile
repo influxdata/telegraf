@@ -6,6 +6,17 @@ build: prepare
 		"-X main.Version $(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
+build-linux-bins: prepare
+	GOARCH=amd64 GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_amd64 \
+                     -ldflags "-X main.Version $(VERSION)" \
+                     ./cmd/telegraf/telegraf.go
+	GOARCH=386 GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_386 \
+                     -ldflags "-X main.Version $(VERSION)" \
+                     ./cmd/telegraf/telegraf.go
+	GOARCH=arm GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_arm \
+                     -ldflags "-X main.Version $(VERSION)" \
+                     ./cmd/telegraf/telegraf.go
+
 prepare:
 	go get github.com/tools/godep
 
