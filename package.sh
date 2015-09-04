@@ -307,8 +307,8 @@ if [ "$CIRCLE_BRANCH" == "" ]; then
 
         # Upload binaries
         for b in ${BINS[*]}; do
-            bin = $GOPATH_INSTALL/bin/$b
-            zippedbin = $b_$VERSION_linux_x86_64.tar.gz
+            bin=$GOPATH_INSTALL/bin/$b
+            zippedbin=$b_$VERSION_linux_x86_64.tar.gz
             # Zip the binary
             tar -zcf $TMP_WORK_DIR/$zippedbin $bin
             echo "Uploading binary: $zippedbin to S3"
