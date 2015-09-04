@@ -149,6 +149,7 @@ Below is how to configure `tagpass` and `tagdrop` parameters (added in 0.1.5)
 
 Telegraf currently has support for collecting metrics from
 
+* apache
 * disque
 * elasticsearch
 * exec (generic JSON-emitting executable plugin)
@@ -161,12 +162,19 @@ Telegraf currently has support for collecting metrics from
 * mongodb
 * mysql
 * nginx
+* ping
 * postgresql
 * prometheus
 * rabbitmq
 * redis
 * rethinkdb
-* system (mem, CPU, load, etc.)
+* system
+    * cpu
+    * mem
+    * io
+    * net
+    * disk
+    * swap
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.
