@@ -39,6 +39,7 @@ LOGROTATE_DIR=/etc/logrotate.d
 SAMPLE_CONFIGURATION=etc/config.sample.toml
 LOGROTATE_CONFIGURATION=etc/logrotate.d/telegraf
 INITD_SCRIPT=scripts/init.sh
+SYSTEMD_SCRIPT=scripts/telegraf.service
 
 TMP_WORK_DIR=`mktemp -d`
 POST_INSTALL_PATH=`mktemp`
@@ -156,27 +157,41 @@ generate_postinstall_script() {
     cat  <<EOF >$POST_INSTALL_PATH
 rm -f $INSTALL_ROOT_DIR/telegraf
 rm -f $INSTALL_ROOT_DIR/init.sh
-ln -s $INSTALL_ROOT_DIR/versions/$version/telegraf $INSTALL_ROOT_DIR/telegraf
-ln -s $INSTALL_ROOT_DIR/versions/$version/scripts/init.sh $INSTALL_ROOT_DIR/init.sh
-
-rm -f /etc/init.d/telegraf
-ln -sfn $INSTALL_ROOT_DIR/init.sh /etc/init.d/telegraf
-chmod +x /etc/init.d/telegraf
-if which update-rc.d > /dev/null 2>&1 ; then
-    update-rc.d -f telegraf remove
-    update-rc.d telegraf defaults
-else
-    chkconfig --add telegraf
-fi
+ln -sfn $INSTALL_ROOT_DIR/versions/$version/telegraf $INSTALL_ROOT_DIR/telegraf
 
 if ! id telegraf >/dev/null 2>&1; then
         useradd --system -U -M telegraf
 fi
+
+# Systemd
+if which systemctl > /dev/null 2>&1 ; then
+    cp $INSTALL_ROOT_DIR/versions/$version/scripts/telegraf.service \
+        /lib/systemd/system/telegraf.service
+    systemctl enable telegraf
+
+# Sysv
+else
+    ln -sfn $INSTALL_ROOT_DIR/versions/$version/scripts/init.sh \
+        $INSTALL_ROOT_DIR/init.sh
+    rm -f /etc/init.d/telegraf
+    ln -sfn $INSTALL_ROOT_DIR/init.sh /etc/init.d/telegraf
+    chmod +x /etc/init.d/telegraf
+    # update-rc.d sysv service:
+    if which update-rc.d > /dev/null 2>&1 ; then
+        update-rc.d -f telegraf remove
+        update-rc.d telegraf defaults
+    # CentOS-style sysv:
+    else
+        chkconfig --add telegraf
+    fi
+
+    mkdir -p $TELEGRAF_LOG_DIR
+    chown -R -L telegraf:telegraf $TELEGRAF_LOG_DIR
+fi
+
 chown -R -L telegraf:telegraf $INSTALL_ROOT_DIR
 chmod -R a+rX $INSTALL_ROOT_DIR
 
-mkdir -p $TELEGRAF_LOG_DIR
-chown -R -L telegraf:telegraf $TELEGRAF_LOG_DIR
 EOF
     echo "Post-install script created successfully at $POST_INSTALL_PATH"
 }
@@ -213,12 +228,18 @@ done
 echo "${BINS[*]} copied to $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION"
 
 cp $INITD_SCRIPT $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION/scripts
-
 if [ $? -ne 0 ]; then
     echo "Failed to copy init.d script to packaging directory -- aborting."
     cleanup_exit 1
 fi
 echo "$INITD_SCRIPT copied to $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION/scripts"
+
+cp $SYSTEMD_SCRIPT $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION/scripts
+if [ $? -ne 0 ]; then
+    echo "Failed to copy systemd file to packaging directory -- aborting."
+    cleanup_exit 1
+fi
+echo "$SYSTEMD_SCRIPT copied to $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION/scripts"
 
 cp $SAMPLE_CONFIGURATION $TMP_WORK_DIR/$CONFIG_ROOT_DIR/telegraf.conf
 if [ $? -ne 0 ]; then
