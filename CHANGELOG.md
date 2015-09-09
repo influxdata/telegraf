@@ -1,6 +1,11 @@
 ## v0.1.9 [unreleased]
 
+### Release Notes
+- InfluxDB output config change: `url` is now `urls`, and is a list. Config files
+will still be backwards compatible if only `url` is specified.
+
 ### Features
+- [#143](https://github.com/influxdb/telegraf/issues/143): InfluxDB clustering support
 
 ### Bugfixes
 - [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support

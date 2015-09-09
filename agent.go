@@ -84,6 +84,9 @@ func NewAgent(config *Config) (*Agent, error) {
 // Connect connects to all configured outputs
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
+		if a.Debug {
+			log.Printf("Attempting connection to output: %s\n", o.name)
+		}
 		err := o.output.Connect()
 		if err != nil {
 			return err
