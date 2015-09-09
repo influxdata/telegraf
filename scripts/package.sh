@@ -204,7 +204,7 @@ if [ "$1" == "-h" ]; then
 fi
 
 VERSION=`git describe --always --tags | tr -d v`
-
+cd `git rev-parse --show-toplevel`
 echo -e "\nStarting package process, version: $VERSION\n"
 
 if [ "$CIRCLE_BRANCH" == "" ]; then

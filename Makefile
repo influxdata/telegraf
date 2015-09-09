@@ -22,10 +22,11 @@ prepare:
 
 docker-compose:
 ifeq ($(UNAME), Darwin)
-	ADVERTISED_HOST=$(shell sh -c 'boot2docker ip') docker-compose up -d
+	ADVERTISED_HOST=$(shell sh -c 'boot2docker ip || docker-machine ip default') \
+		docker-compose --file scripts/docker-compose.yml up -d
 endif
 ifeq ($(UNAME), Linux)
-	ADVERTISED_HOST=localhost docker-compose up -d
+	ADVERTISED_HOST=localhost docker-compose --file scripts/docker-compose.yml up -d
 endif
 
 test: prepare docker-compose
@@ -35,6 +36,6 @@ test-short: prepare
 	$(GOPATH)/bin/godep go test -short ./...
 
 test-cleanup:
-	docker-compose kill
+	docker-compose --file scripts/docker-compose.yml kill
 
 .PHONY: test

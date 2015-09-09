@@ -151,9 +151,11 @@ To execute Telegraf tests follow these simple steps:
 
 - Install docker compose following [these](https://docs.docker.com/compose/install/)
 instructions
-    - mac users should be able to simply do `brew install boot2docker`
-      and `brew install docker-compose`
 - execute `make test`
+
+**OSX users**: you will need to install `boot2docker` or `docker-machine`.
+The Makefile will assume that you have a `docker-machine` box called `default` to
+get the IP address.
 
 ### Unit test troubleshooting
 
