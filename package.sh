@@ -50,7 +50,7 @@ MAINTAINER=support@influxdb.com
 VENDOR=InfluxDB
 DESCRIPTION="InfluxDB Telegraf agent"
 PKG_DEPS=(coreutils)
-GO_VERSION="go1.4.2"
+GO_VERSION="go1.5"
 GOPATH_INSTALL=
 BINS=(
     telegraf
