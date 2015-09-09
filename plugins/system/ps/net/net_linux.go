@@ -15,7 +15,7 @@ import (
 // every network interface installed on the system is returned
 // separately.
 func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
-	filename := "/proc/net/dev"
+	filename := "/rootfs/proc/net/dev"
 	lines, err := common.ReadLines(filename)
 	if err != nil {
 		return nil, err

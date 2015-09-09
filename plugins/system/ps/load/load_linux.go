@@ -9,7 +9,7 @@ import (
 )
 
 func LoadAvg() (*LoadAvgStat, error) {
-	filename := "/proc/loadavg"
+	filename := "/rootfs/proc/loadavg"
 	line, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err

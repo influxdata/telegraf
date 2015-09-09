@@ -12,7 +12,7 @@ import (
 )
 
 func CPUTimes(percpu bool) ([]CPUTimesStat, error) {
-	filename := "/proc/stat"
+	filename := "/rootfs/proc/stat"
 	var lines = []string{}
 	if percpu {
 		var startIdx uint = 1
@@ -43,7 +43,7 @@ func CPUTimes(percpu bool) ([]CPUTimesStat, error) {
 }
 
 func CPUInfo() ([]CPUInfoStat, error) {
-	filename := "/proc/cpuinfo"
+	filename := "/rootfs/proc/cpuinfo"
 	lines, _ := common.ReadLines(filename)
 
 	var ret []CPUInfoStat

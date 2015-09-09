@@ -181,7 +181,7 @@ func (p *Process) IsRunning() (bool, error) {
 	return true, common.NotImplementedError
 }
 
-// MemoryMaps get memory maps from /proc/(pid)/smaps
+// MemoryMaps get memory maps from /rootfs/proc/(pid)/smaps
 func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 	pid := p.Pid
 	var ret []MemoryMapsStat
@@ -263,7 +263,7 @@ func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 ** Internal functions
 **/
 
-// Get num_fds from /proc/(pid)/fd
+// Get num_fds from /rootfs/proc/(pid)/fd
 func (p *Process) fillFromfd() (int32, []*OpenFilesStat, error) {
 	pid := p.Pid
 	statPath := filepath.Join("/", "proc", strconv.Itoa(int(pid)), "fd")
@@ -296,7 +296,7 @@ func (p *Process) fillFromfd() (int32, []*OpenFilesStat, error) {
 	return numFDs, openfiles, nil
 }
 
-// Get cwd from /proc/(pid)/cwd
+// Get cwd from /rootfs/proc/(pid)/cwd
 func (p *Process) fillFromCwd() (string, error) {
 	pid := p.Pid
 	cwdPath := filepath.Join("/", "proc", strconv.Itoa(int(pid)), "cwd")
@@ -307,7 +307,7 @@ func (p *Process) fillFromCwd() (string, error) {
 	return string(cwd), nil
 }
 
-// Get exe from /proc/(pid)/exe
+// Get exe from /rootfs/proc/(pid)/exe
 func (p *Process) fillFromExe() (string, error) {
 	pid := p.Pid
 	exePath := filepath.Join("/", "proc", strconv.Itoa(int(pid)), "exe")
@@ -318,7 +318,7 @@ func (p *Process) fillFromExe() (string, error) {
 	return string(exe), nil
 }
 
-// Get cmdline from /proc/(pid)/cmdline
+// Get cmdline from /rootfs/proc/(pid)/cmdline
 func (p *Process) fillFromCmdline() (string, error) {
 	pid := p.Pid
 	cmdPath := filepath.Join("/", "proc", strconv.Itoa(int(pid)), "cmdline")
@@ -336,7 +336,7 @@ func (p *Process) fillFromCmdline() (string, error) {
 	return strings.Join(ret, " "), nil
 }
 
-// Get IO status from /proc/(pid)/io
+// Get IO status from /rootfs/proc/(pid)/io
 func (p *Process) fillFromIO() (*IOCountersStat, error) {
 	pid := p.Pid
 	ioPath := filepath.Join("/", "proc", strconv.Itoa(int(pid)), "io")
@@ -375,7 +375,7 @@ func (p *Process) fillFromIO() (*IOCountersStat, error) {
 	return ret, nil
 }
 
-// Get memory info from /proc/(pid)/statm
+// Get memory info from /rootfs/proc/(pid)/statm
 func (p *Process) fillFromStatm() (*MemoryInfoStat, *MemoryInfoExStat, error) {
 	pid := p.Pid
 	memPath := filepath.Join("/", "proc", strconv.Itoa(int(pid)), "statm")
@@ -427,7 +427,7 @@ func (p *Process) fillFromStatm() (*MemoryInfoStat, *MemoryInfoExStat, error) {
 	return memInfo, memInfoEx, nil
 }
 
-// Get various status from /proc/(pid)/status
+// Get various status from /rootfs/proc/(pid)/status
 func (p *Process) fillFromStatus() error {
 	pid := p.Pid
 	statPath := filepath.Join("/", "proc", strconv.Itoa(int(pid)), "status")

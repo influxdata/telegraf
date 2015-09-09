@@ -280,12 +280,12 @@ func GetVirtualization() (string, string, error) {
 	var system string
 	var role string
 
-	if common.PathExists("/proc/xen") {
+	if common.PathExists("/rootfs/proc/xen") {
 		system = "xen"
 		role = "guest" // assume guest
 
-		if common.PathExists("/proc/xen/capabilities") {
-			contents, err := common.ReadLines("/proc/xen/capabilities")
+		if common.PathExists("/rootfs/proc/xen/capabilities") {
+			contents, err := common.ReadLines("/rootfs/proc/xen/capabilities")
 			if err == nil {
 				if common.StringContains(contents, "control_d") {
 					role = "host"
@@ -293,8 +293,8 @@ func GetVirtualization() (string, string, error) {
 			}
 		}
 	}
-	if common.PathExists("/proc/modules") {
-		contents, err := common.ReadLines("/proc/modules")
+	if common.PathExists("/rootfs/proc/modules") {
+		contents, err := common.ReadLines("/rootfs/proc/modules")
 		if err == nil {
 			if common.StringContains(contents, "kvm") {
 				system = "kvm"
@@ -309,8 +309,8 @@ func GetVirtualization() (string, string, error) {
 		}
 	}
 
-	if common.PathExists("/proc/cpuinfo") {
-		contents, err := common.ReadLines("/proc/cpuinfo")
+	if common.PathExists("/rootfs/proc/cpuinfo") {
+		contents, err := common.ReadLines("/rootfs/proc/cpuinfo")
 		if err == nil {
 			if common.StringContains(contents, "QEMU Virtual CPU") ||
 				common.StringContains(contents, "Common KVM processor") ||
@@ -321,18 +321,18 @@ func GetVirtualization() (string, string, error) {
 		}
 	}
 
-	if common.PathExists("/proc/bc/0") {
+	if common.PathExists("/rootfs/proc/bc/0") {
 		system = "openvz"
 		role = "host"
-	} else if common.PathExists("/proc/vz") {
+	} else if common.PathExists("/rootfs/proc/vz") {
 		system = "openvz"
 		role = "guest"
 	}
 
 	// not use dmidecode because it requires root
 
-	if common.PathExists("/proc/self/status") {
-		contents, err := common.ReadLines("/proc/self/status")
+	if common.PathExists("/rootfs/proc/self/status") {
+		contents, err := common.ReadLines("/rootfs/proc/self/status")
 		if err == nil {
 
 			if common.StringContains(contents, "s_context:") ||
@@ -343,8 +343,8 @@ func GetVirtualization() (string, string, error) {
 		}
 	}
 
-	if common.PathExists("/proc/self/cgroup") {
-		contents, err := common.ReadLines("/proc/self/cgroup")
+	if common.PathExists("/rootfs/proc/self/cgroup") {
+		contents, err := common.ReadLines("/rootfs/proc/self/cgroup")
 		if err == nil {
 
 			if common.StringContains(contents, "lxc") ||

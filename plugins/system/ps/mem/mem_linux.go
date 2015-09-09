@@ -11,7 +11,7 @@ import (
 )
 
 func VirtualMemory() (*VirtualMemoryStat, error) {
-	filename := "/proc/meminfo"
+	filename := "/rootfs/proc/meminfo"
 	lines, _ := common.ReadLines(filename)
 
 	ret := &VirtualMemoryStat{}
@@ -67,7 +67,7 @@ func SwapMemory() (*SwapMemoryStat, error) {
 	} else {
 		ret.UsedPercent = 0
 	}
-	lines, _ := common.ReadLines("/proc/vmstat")
+	lines, _ := common.ReadLines("/rootfs/proc/vmstat")
 	for _, l := range lines {
 		fields := strings.Fields(l)
 		if len(fields) < 2 {
