@@ -1,4 +1,11 @@
-## v0.1.8 [unreleased]
+## v0.1.9 [unreleased]
+
+### Features
+
+### Bugfixes
+- [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
+
+## v0.1.8 [2015-09-04]
 
 ### Release Notes
 - Telegraf will now write data in UTC at second precision by default

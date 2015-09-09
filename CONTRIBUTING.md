@@ -128,3 +128,34 @@ func init() {
 ## Outputs
 
 TODO: this section will describe requirements for contributing an output
+
+## Unit Tests
+
+### Execute short tests
+
+execute `make test-short`
+
+### Execute long tests
+
+As Telegraf collects metrics from several third-party services it becomes a
+difficult task to mock each service as some of them have complicated protocols
+which would take some time to replicate.
+
+To overcome this situation we've decided to use docker containers to provide a
+fast and reproducible environment to test those services which require it.
+For other situations
+(i.e: https://github.com/influxdb/telegraf/blob/master/plugins/redis/redis_test.go )
+a simple mock will suffice.
+
+To execute Telegraf tests follow these simple steps:
+
+- Install docker compose following [these](https://docs.docker.com/compose/install/)
+instructions
+    - mac users should be able to simply do `brew install boot2docker`
+      and `brew install docker-compose`
+- execute `make test`
+
+### Unit test troubleshooting
+
+Try cleaning up your test environment by executing `make test-cleanup` and
+re-running
