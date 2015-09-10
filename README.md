@@ -190,6 +190,7 @@ found by running `telegraf -sample-config`
 * influxdb
 * kafka
 * datadog
+* opentsdb
 
 ## Contributing
 
