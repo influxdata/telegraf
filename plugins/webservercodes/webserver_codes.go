@@ -1,17 +1,17 @@
 package webservercodes
 
 import (
-	"net/http"
-	"strconv"
-	"sync"
-	"time"
-	"os"
-	"io"
-	"regexp"
-	"errors"
-	
-	"github.com/rogpeppe/rog-go/reverse"
-	"github.com/influxdb/telegraf/plugins"
+    "net/http"
+    "strconv"
+    "sync"
+    "time"
+    "os"
+    "io"
+    "regexp"
+    "errors"
+    
+    "github.com/rogpeppe/rog-go/reverse"
+    "github.com/influxdb/telegraf/plugins"
 )
 
 type Vhost struct {
@@ -22,7 +22,7 @@ type Vhost struct {
 }
 
 type Webservercodes struct {
-	Vhosts []*Vhost
+    Vhosts []*Vhost
 }
 
 type HttpStats struct {
@@ -48,16 +48,16 @@ interval = "10s"
 `
 
 func (n *Webservercodes) SampleConfig() string {
-	return sampleConfig
+    return sampleConfig
 }
 
 func (n *Webservercodes) Description() string {
-	return "Read webserver access log files and collects http return codes stats"
+    return "Read webserver access log files and count http return codes found"
 }
 
 func (n *Webservercodes) Gather(acc plugins.Accumulator) error {
-	var wg sync.WaitGroup
-	
+    var wg sync.WaitGroup
+    
     hostStats := map[string]HttpStats{}
     errChan := make(chan error)
     successChan := make(chan bool)
@@ -92,12 +92,12 @@ func (n *Webservercodes) Gather(acc plugins.Accumulator) error {
     }
     
     wg.Wait()
-	
+    
     for vhost, stats := range hostStats {
         n.gatherCodes(vhost, stats, acc)
     }
-	
-	return nil
+    
+    return nil
 }
 
 func SearchStringInSlice(a string, list []string) bool {
@@ -249,7 +249,7 @@ func (n *Webservercodes) gatherCodes(vhost string, stats HttpStats, acc plugins.
 }
 
 func init() {
-	plugins.Add("webservercodes", func() plugins.Plugin {
-		return &Webservercodes{}
-	})
+    plugins.Add("webservercodes", func() plugins.Plugin {
+        return &Webservercodes{}
+    })
 }
