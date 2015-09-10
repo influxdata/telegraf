@@ -6,6 +6,7 @@ will still be backwards compatible if only `url` is specified.
 
 ### Features
 - [#143](https://github.com/influxdb/telegraf/issues/143): InfluxDB clustering support
+- [#181](https://github.com/influxdb/telegraf/issues/181): Makefile GOBIN support. Thanks @Vye!
 
 ### Bugfixes
 - [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
