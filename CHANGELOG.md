@@ -9,6 +9,7 @@ will still be backwards compatible if only `url` is specified.
 
 ### Bugfixes
 - [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
+- [#175](https://github.com/influxdb/telegraf/issues/175): Set write precision before gathering metrics
 
 ## v0.1.8 [2015-09-04]
 
