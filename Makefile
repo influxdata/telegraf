@@ -1,19 +1,22 @@
 UNAME := $(shell sh -c 'uname')
 VERSION := $(shell sh -c 'git describe --always --tags')
+ifndef GOBIN
+	GOBIN = $(GOPATH)/bin
+endif
 
 build: prepare
-	$(GOPATH)/bin/godep go build -o telegraf -ldflags \
+	$(GOBIN)/godep go build -o telegraf -ldflags \
 		"-X main.Version $(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
 build-linux-bins: prepare
-	GOARCH=amd64 GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_amd64 \
+	GOARCH=amd64 GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_amd64 \
                      -ldflags "-X main.Version $(VERSION)" \
                      ./cmd/telegraf/telegraf.go
-	GOARCH=386 GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_386 \
+	GOARCH=386 GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_386 \
                      -ldflags "-X main.Version $(VERSION)" \
                      ./cmd/telegraf/telegraf.go
-	GOARCH=arm GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_arm \
+	GOARCH=arm GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_arm \
                      -ldflags "-X main.Version $(VERSION)" \
                      ./cmd/telegraf/telegraf.go
 
@@ -30,10 +33,10 @@ ifeq ($(UNAME), Linux)
 endif
 
 test: prepare docker-compose
-	$(GOPATH)/bin/godep go test -v ./...
+	$(GOBIN)/godep go test -v ./...
 
 test-short: prepare
-	$(GOPATH)/bin/godep go test -short ./...
+	$(GOBIN)/godep go test -short ./...
 
 test-cleanup:
 	docker-compose --file scripts/docker-compose.yml kill
