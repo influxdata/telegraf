@@ -1,46 +1,58 @@
 # Telegraf - A native agent for InfluxDB [![Circle CI](https://circleci.com/gh/influxdb/telegraf.svg?style=svg)](https://circleci.com/gh/influxdb/telegraf)
 
 Telegraf is an agent written in Go for collecting metrics from the system it's
-running on or from other services and writing them into InfluxDB.
+running on, or from other services, and writing them into InfluxDB.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from well known services (like Hadoop, or Postgres, or Redis) and third party
+from well known services (like Hadoop, Postgres, or Redis) and third party
 APIs (like Mailchimp, AWS CloudWatch, or Google Analytics).
 
 We'll eagerly accept pull requests for new plugins and will manage the set of
-plugins that Telegraf supports. See the bottom of this doc for instructions on
+plugins that Telegraf supports. See the
+[contributing guide](CONTRIBUTING.md) for instructions on
 writing new plugins.
 
-## Quickstart
+## Installation:
 
-* Build from source or download telegraf:
-
-### Linux packages for Debian/Ubuntu and RHEL/CentOS:
-
-NOTE: version 0.1.4+ has introduced some breaking changes! A 0.1.4+ telegraf
-agent is NOT backwards-compatible with a config file from 0.1.3 and below.
-That being said, the difference is not huge, see below for an example on
-how to setup the new config file.
-
-As well, due to a breaking change to the InfluxDB integer line-protocol, there
+Due to a breaking change to the InfluxDB integer line-protocol, there
 are some InfluxDB compatibility requirements:
 
-* InfluxDB 0.9.3+ (including nightly builds) requires Telegraf 0.1.5+
+* InfluxDB 0.9.3+ requires Telegraf 0.1.5+
 * InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
+
+### Linux deb and rpm packages:
 
 Latest:
 * http://get.influxdb.org/telegraf/telegraf_0.1.8_amd64.deb
 * http://get.influxdb.org/telegraf/telegraf-0.1.8-1.x86_64.rpm
 
-Binaries:
+0.1.4:
+* http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
+
+##### Package instructions:
+
+* Telegraf binary is installed in `/opt/telegraf/telegraf`
+* Telegraf daemon configuration file is in `/etc/opt/telegraf/telegraf.conf`
+* On sysv systems, the telegraf daemon can be controlled via
+`service telegraf [action]`
+* On systemd systems (such as Ubuntu 15+), the telegraf daemon can be
+controlled via `systemctl [action] telegraf`
+
+### Linux binaries:
+
+Latest:
 * http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.1.8.tar.gz
 * http://get.influxdb.org/telegraf/telegraf_linux_386_0.1.8.tar.gz
 * http://get.influxdb.org/telegraf/telegraf_linux_arm_0.1.8.tar.gz
 
-0.1.4:
-* http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
+##### Binary instructions:
+
+These are standalone binaries that can be unpacked and executed on any linux
+system. They can be unpacked and renamed in a location such as
+`/usr/local/bin` for convenience. A config file will need to be generated,
+see "How to use it" below.
 
 ### OSX via Homebrew:
 
@@ -62,19 +74,17 @@ if you don't have it already. You also must build with golang version 1.4+
 
 ### How to use it:
 
-* Run `telegraf -sample-config > telegraf.toml` to create an initial configuration
+* Run `telegraf -sample-config > telegraf.conf` to create an initial configuration
 * Edit the configuration to match your needs
-* Run `telegraf -config telegraf.toml -test` to output one full measurement sample to STDOUT
-* Run `telegraf -config telegraf.toml` to gather and send metrics to configured outputs.
-* Run `telegraf -config telegraf.toml -filter system:swap`
+* Run `telegraf -config telegraf.conf -test` to output one full measurement sample to STDOUT
+* Run `telegraf -config telegraf.conf` to gather and send metrics to configured outputs.
+* Run `telegraf -config telegraf.conf -filter system:swap`
 to enable only the system & swap plugins defined in the config.
 
 ## Telegraf Options
 
 Telegraf has a few options you can configure under the `agent` section of the
-config. If you don't see an `agent` section run
-`telegraf -sample-config > telegraf.toml` to create a valid initial
-configuration:
+config.
 
 * **hostname**: The hostname is passed as a tag. By default this will be
 the value retured by `hostname` on the machine running Telegraf.
@@ -195,36 +205,5 @@ found by running `telegraf -sample-config`
 ## Contributing
 
 Please see the
-[contributing guide](https://github.com/influxdb/telegraf/blob/master/CONTRIBUTING.md)
+[contributing guide](CONTRIBUTING.md)
 for details on contributing a plugin or output to Telegraf
-
-## Testing
-
-### Execute short tests
-
-execute `make test-short`
-
-### Execute long tests
-
-As Telegraf collects metrics from several third-party services it becomes a
-difficult task to mock each service as some of them have complicated protocols
-which would take some time to replicate.
-
-To overcome this situation we've decided to use docker containers to provide a
-fast and reproducible environment to test those services which require it.
-For other situations
-(i.e: https://github.com/influxdb/telegraf/blob/master/plugins/redis/redis_test.go )
-a simple mock will suffice.
-
-To execute Telegraf tests follow these simple steps:
-
-- Install docker compose following [these](https://docs.docker.com/compose/install/)
-instructions
-    - mac users should be able to simply do `brew install boot2docker`
-      and `brew install docker-compose`
-- execute `make test`
-
-### Unit test troubleshooting
-
-Try cleaning up your test environment by executing `make test-cleanup` and
-re-running
