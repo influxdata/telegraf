@@ -8,7 +8,7 @@ A plugin supports per-virtualhost configuration. Config may contains one or more
 [[webservercodes.vhosts]]
 host = "defaulthost"
 access_log = "/var/log/apache2/access.log"
-regex_parsestring = '\[(?P<time>[^\]]+)\] ".*?" (?P<code>\d{3})'
+regex_parsestring = `\[(?P<time>[^\]]+)\] ".*?" (?P<code>\d{3})`
 parse_interval = "10s"
 
 - 'host' is the name of virtualhost. It's preferred to use main domain as a value.
