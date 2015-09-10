@@ -3,18 +3,18 @@ VERSION := $(shell sh -c 'git describe --always --tags')
 
 build: prepare
 	$(GOPATH)/bin/godep go build -o telegraf -ldflags \
-		"-X main.Version $(VERSION)" \
+		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
 build-linux-bins: prepare
 	GOARCH=amd64 GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_amd64 \
-                     -ldflags "-X main.Version $(VERSION)" \
+                     -ldflags "-X main.Version=$(VERSION)" \
                      ./cmd/telegraf/telegraf.go
 	GOARCH=386 GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_386 \
-                     -ldflags "-X main.Version $(VERSION)" \
+                     -ldflags "-X main.Version=$(VERSION)" \
                      ./cmd/telegraf/telegraf.go
 	GOARCH=arm GOOS=linux $(GOPATH)/bin/godep go build -o telegraf_linux_arm \
-                     -ldflags "-X main.Version $(VERSION)" \
+                     -ldflags "-X main.Version=$(VERSION)" \
                      ./cmd/telegraf/telegraf.go
 
 prepare:
