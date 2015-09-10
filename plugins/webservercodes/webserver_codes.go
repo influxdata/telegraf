@@ -18,7 +18,7 @@ type Vhost struct {
     Host string
     AccessLog string
     RegexParsestring string
-    Interval string
+    ParseInterval string
 }
 
 type Webservercodes struct {
@@ -30,21 +30,27 @@ type HttpStats struct {
 }
 
 var sampleConfig = `
-# List of virtualhosts for http codes collecting (each section for one virtualhost, none for disable collecting codes)
+# List of virtualhosts for http codes collecting
+# (each section for one virtualhost, none for disable collecting codes)
 [[webservercodes.vhosts]]
 # 'host' field should match hostname in appropriate status url
 host = "defaulthost"
 
-# telegraf user must have read permissions to this log file (shell command 'sudo adduser telegraf adm' for apache on Ubuntu)
+# Telegraf user must have read permissions to this log file
+# (shell command 'sudo adduser telegraf adm' for apache on Ubuntu)
 access_log = "/var/log/apache2/access.log"
 
-# Regular expression for fetching codes from log file strings. You can adjust regex for your custom log format
-# example for apache "common" and "combined" log formats, nginx default log format ("combined"):
+# Regular expression for fetching codes from log file strings.
+# You can adjust this pattern for your custom log format
+# Example for apache "common" and "combined" log formats, nginx default log format ("combined"):
 #   '\[(?P<time>[^\]]+)\] ".*?" (?P<code>\d{3})'
+# This pattern matches for strings like (example):
+# 127.0.0.1 - - [30/Aug/2015:05:59:36 +0000] "GET / HTTP/1.1" 404 379 "-" "-"
 regex_parsestring = '\[(?P<time>[^\]]+)\] ".*?" (?P<code>\d{3})'
 
-# plugin will count http codes in this interval. Interval must be in time.Duration format (see https://golang.org/pkg/time/#ParseDuration)
-interval = "10s"
+# Plugin will parse log for http codes from 'now' till 'now - parse_interval' moments.
+# parse_interval must be in time.Duration format (see https://golang.org/pkg/time/#ParseDuration)
+parse_interval = "10s"
 `
 
 func (n *Webservercodes) SampleConfig() string {
@@ -64,7 +70,7 @@ func (n *Webservercodes) Gather(acc plugins.Accumulator) error {
     remainingItems := len(n.Vhosts)
     
     for _, vhost := range n.Vhosts {
-        if duration, err := time.ParseDuration(vhost.Interval); err == nil {
+        if duration, err := time.ParseDuration(vhost.ParseInterval); err == nil {
             wg.Add(1)
             go func(host string, logfile string, regex string, duration time.Duration, successChan chan bool, errChan chan error) {
                 defer wg.Done()
@@ -118,7 +124,8 @@ func (n Webservercodes) ParseRegex(regex string, f io.ReadSeeker) (*regexp.Regex
             
             reader := reverse.NewScanner(f)
             if (reader.Scan()) {
-                // we will check regexp validity by scan the last log line and parse it, assuming that other lines will match as well
+                // we will check regexp validity by scan the last log line
+                // and parse it, assuming that other lines will match as well
                 parsedLine := rx.FindStringSubmatch(reader.Text())
                 if len(parsedLine) >= 3 {
                     
