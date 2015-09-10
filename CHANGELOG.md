@@ -13,6 +13,7 @@ will still be backwards compatible if only `url` is specified.
 - [#175](https://github.com/influxdb/telegraf/issues/175): Set write precision before gathering metrics
 - [#178](https://github.com/influxdb/telegraf/issues/178): redis plugin, multiple server thread hang bug
 - Fix net plugin on darwin
+- [#84](https://github.com/influxdb/telegraf/issues/84): Fix docker plugin on CentOS. Thanks @neezgee!
 
 ## v0.1.8 [2015-09-04]
 
