@@ -3,19 +3,10 @@ package opentsdb
 import (
 	"reflect"
 	"testing"
-)
 
-var (
-	fakeHost = "metrics.example.com"
-	fakePort = 4242
+        "github.com/influxdb/telegraf/testutil"
+        "github.com/stretchr/testify/require"
 )
-
-func fakeOpenTSDB() *OpenTSDB {
-	var o OpenTSDB
-	o.Host = fakeHost
-	o.Port = fakePort
-	return &o
-}
 
 func TestBuildTagsTelnet(t *testing.T) {
 	var tagtests = []struct {
@@ -50,4 +41,22 @@ func TestBuildTagsTelnet(t *testing.T) {
 			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outTags, tags)
 		}
 	}
+}
+func TestWrite(t *testing.T) {
+        if testing.Short() {
+                t.Skip("Skipping integration test in short mode")
+        }
+
+        o := &OpenTSDB{
+                Host: testutil.GetLocalHost() ,
+                Port: 24242,
+        }
+
+        // Verify that we can connect to the OpenTSDB instance
+        err := o.Connect()
+        require.NoError(t, err)
+
+        // Verify that we can successfully write data to OpenTSDB
+        err = o.Write(testutil.MockBatchPoints())
+        require.NoError(t, err)
 }

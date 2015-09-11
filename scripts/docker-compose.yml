@@ -25,3 +25,9 @@ kafka:
     environment:
         ADVERTISED_HOST:
         ADVERTISED_PORT: 9092
+
+opentsdb:
+    image: lancope/opentsdb
+    ports:
+        - "24242:4242"
+
