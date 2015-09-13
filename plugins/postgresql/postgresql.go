@@ -105,13 +105,14 @@ func (p *Postgresql) gatherServer(serv *Server, acc plugins.Accumulator) error {
 
 	defer rows.Close()
 
+	// grab the column information from the result
 	serv.OrderedColumns, err = rows.Columns()
 	if err != nil {
 		return err
 	}
 
 	for rows.Next() {
-		err := p.accRow(rows, acc, serv)
+		err = p.accRow(rows, acc, serv)
 		if err != nil {
 			return err
 		}
@@ -128,22 +129,26 @@ func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator, serv *Server) 
 	var columnVars []interface{}
 	var dbname bytes.Buffer
 
+	// this is where we'll store the column name with its *interface{}
 	columnMap := make(map[string]*interface{})
 
 	for _, column := range serv.OrderedColumns {
 		columnMap[column] = new(interface{})
 	}
 
+	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
 		columnVars = append(columnVars, columnMap[serv.OrderedColumns[i]])
 	}
 
+	// deconstruct array of variables and send to Scan
 	err := row.Scan(columnVars...)
 
 	if err != nil {
 		return err
 	}
 
+	// extract the database name from the column map
 	dbnameChars := (*columnMap["datname"]).([]uint8)
 	for i := 0; i < len(dbnameChars); i++ {
 		dbname.WriteString(string(dbnameChars[i]))
