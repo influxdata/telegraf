@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-        "github.com/influxdb/telegraf/testutil"
-        "github.com/stretchr/testify/require"
+	"github.com/influxdb/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBuildTagsTelnet(t *testing.T) {
@@ -43,20 +43,21 @@ func TestBuildTagsTelnet(t *testing.T) {
 	}
 }
 func TestWrite(t *testing.T) {
-        if testing.Short() {
-                t.Skip("Skipping integration test in short mode")
-        }
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
-        o := &OpenTSDB{
-                Host: testutil.GetLocalHost() ,
-                Port: 24242,
-        }
+	o := &OpenTSDB{
+		Host:   testutil.GetLocalHost(),
+		Port:   24242,
+		Prefix: "prefix.test.",
+	}
 
-        // Verify that we can connect to the OpenTSDB instance
-        err := o.Connect()
-        require.NoError(t, err)
+	// Verify that we can connect to the OpenTSDB instance
+	err := o.Connect()
+	require.NoError(t, err)
 
-        // Verify that we can successfully write data to OpenTSDB
-        err = o.Write(testutil.MockBatchPoints())
-        require.NoError(t, err)
+	// Verify that we can successfully write data to OpenTSDB
+	err = o.Write(testutil.MockBatchPoints())
+	require.NoError(t, err)
 }
