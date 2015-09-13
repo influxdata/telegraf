@@ -119,9 +119,9 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 }
 
 func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
-	// if testing.Short() {
-	// 	t.Skip("Skipping integration test in short mode")
-	// }
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	p := &Postgresql{
 		Servers: []*Server{
