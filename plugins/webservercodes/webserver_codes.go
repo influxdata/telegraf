@@ -29,6 +29,11 @@ type HttpStats struct {
     codes map[int]int
 }
 
+type CombinedEntry struct {
+    time time.Time
+    code int
+}
+
 var sampleConfig = `
 # List of virtualhosts for http codes collecting
 # (each section for one virtualhost, none for disable collecting codes)
@@ -115,40 +120,74 @@ func SearchStringInSlice(a string, list []string) bool {
     return false
 }
 
-func (n Webservercodes) ParseRegex(regex string, f io.ReadSeeker) (*regexp.Regexp, error) {
+func (n Webservercodes) CombineKeysValues(keys []string, values []string) (*CombinedEntry, error) {
     
-    if rx, err := regexp.Compile(regex); err == nil {
-        
-        keys := rx.SubexpNames();
-        if SearchStringInSlice("time", keys) && SearchStringInSlice("code", keys) {
-            
-            reader := reverse.NewScanner(f)
-            if (reader.Scan()) {
-                // we will check regexp validity by scan the last log line
-                // and parse it, assuming that other lines will match as well
-                parsedLine := rx.FindStringSubmatch(reader.Text())
-                if len(parsedLine) >= 3 {
-                    
-                    logDt := parsedLine[1]
-                    if _, err := time.Parse("02/Jan/2006:15:04:05 -0700", logDt); err == nil {
-                        
-                        return rx, nil
-                    } else {
-                        return nil, errors.New("Time must be in apache %t format. Example: '02/Jan/2006:15:04:05 -0700'")
-                    }
-                } else {
-                    return nil, errors.New("Cannot find matches for regex in log line")
-                }
-            } else {
-                // if not Scanned, file is empty, so we don't need to return regex error
-                return rx, nil
-            }
+    if len(values) < len(keys) {
+        return nil, errors.New("Not enough substrings")
+    }
+    
+    items := map[string]string{}
+    for k, v := range keys {
+        items[v] = values[k]
+    }
+    
+    combined := CombinedEntry{}
+    if logDt, ok := items["time"]; ok {
+        if time, err := time.Parse("02/Jan/2006:15:04:05 -0700", logDt); err == nil {
+            combined.time = time
         } else {
-            return nil, errors.New("Regexp must define 'time' and 'code' fields")
+            return nil, errors.New("Time must be in apache %t format. Example: '02/Jan/2006:15:04:05 -0700'")
         }
     } else {
-        return nil, err
+        return nil, errors.New("Time is absent in log line")
     }
+    
+    if _, ok := items["code"]; ok {
+        code, _ := strconv.Atoi(items["code"])
+        combined.code = code
+    } else {
+        return nil, errors.New("Http code is absent in log line")
+    }
+    
+    return &combined, nil
+}
+
+func (n Webservercodes) ValidateRegexp(regex string, f io.ReadSeeker) (*regexp.Regexp, []string, error) {
+    
+    keys := []string{}
+    var rx *regexp.Regexp
+    var err error
+    
+    if rx, err = regexp.Compile(regex); err != nil {
+        // error in case of malformed regexp
+        return nil, keys, err
+    }
+    
+    keys = rx.SubexpNames();
+    if !(SearchStringInSlice("time", keys) && SearchStringInSlice("code", keys)) {
+        // error if fields 'time' or 'code' are defined
+        return nil, keys, errors.New("Regexp must define 'time' and 'code' fields")
+    }
+    
+    // we will check regexp validity by scan the last log line
+    // and parse it, assuming that other lines will match as well
+    reader := reverse.NewScanner(f)
+    if (!reader.Scan()) {
+        // if not Scanned, file is empty, so we don't need to return regex error
+        return rx, keys, nil
+    }
+    
+    strings := rx.FindStringSubmatch(reader.Text())
+    if len(strings) == 0 {
+        // error if regexp mismatch
+        return nil, keys, errors.New("Log entries are not match regexp")
+    }
+    if _, err := n.CombineKeysValues(keys, strings); err != nil {
+        // error if no values for 'time' or 'code' are found in parsed log line
+        return nil, keys, err
+    }
+    
+    return rx, keys, nil
 }
 
 func (n *Webservercodes) ParseHttpCodes(file string, regex string, duration time.Duration) (*HttpStats, error) {
@@ -156,36 +195,44 @@ func (n *Webservercodes) ParseHttpCodes(file string, regex string, duration time
     stats := HttpStats{codes: make(map[int]int)}
     
     if f, err := os.Open(file); err == nil {
-        
         defer f.Close()
         
-        if rx, err := n.ParseRegex(regex, f); err == nil {
-            var text, logDt string
-            var parsedLine []string
-            
+        if rx, keys, err := n.ValidateRegexp(regex, f); err == nil {
             curTime := time.Now()
-            reader := reverse.NewScanner(f)
+            errorsCounter := 0
+            errorsMax := 100 // there is something wrong if more than errorsMax parse errors
+            var vastedLoop bool
+            var strings []string
             
+            reader := reverse.NewScanner(f)
             for reader.Scan() {
-                text = reader.Text()
-                
-                parsedLine = rx.FindStringSubmatch(text)
-                if len(parsedLine) > 0 {
-                    logDt = parsedLine[1]
-                    
-                    if time, err := time.Parse("02/Jan/2006:15:04:05 -0700", logDt); err == nil {
-                        if curTime.Sub(time) > duration {
+                vastedLoop = false
+                strings = rx.FindStringSubmatch(reader.Text())
+                if len(strings) > 0 {
+                    if parsedLine, err := n.CombineKeysValues(keys, strings); err == nil {
+                        if curTime.Sub(parsedLine.time) > duration {
                             break
                         }
-                        if code, err := strconv.Atoi(parsedLine[2]); err == nil {
-                            if _, ok := stats.codes[code]; ok {
-                                stats.codes[code]++
-                            } else {
-                                stats.codes[code] = 1
-                            }
+                        if _, ok := stats.codes[parsedLine.code]; ok {
+                            stats.codes[parsedLine.code]++
+                        } else {
+                            stats.codes[parsedLine.code] = 1
                         }
+                    } else {
+                        vastedLoop = true
                     }
+                } else {
+                    vastedLoop = true
                 }
+                if vastedLoop {
+                    errorsCounter++
+                }
+                if errorsCounter >= errorsMax {
+                    break
+                }
+            }
+            if errorsCounter >= errorsMax {
+                return nil, errors.New("Too many entries with wrong format in log file. Check regex_parsestring")
             }
         } else {
             return nil, err
