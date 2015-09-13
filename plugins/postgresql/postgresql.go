@@ -33,10 +33,11 @@ var sampleConfig = `
 	# All connection parameters are optional. By default, the host is localhost
 	# and the user is the currently running user. For localhost, we default
 	# to sslmode=disable as well.
-    # Without the dbname parameter, the driver will default to a database
-    # with the same name as the user. This dbname is just for instantiating a
-    # connection with the server and doesn't restrict the databases we are trying
-    # to grab metrics for.
+	#
+	# Without the dbname parameter, the driver will default to a database
+	# with the same name as the user. This dbname is just for instantiating a
+	# connection with the server and doesn't restrict the databases we are trying
+	# to grab metrics for.
 	#
 
 	address = "sslmode=disable"
