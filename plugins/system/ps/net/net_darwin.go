@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdb/telegraf/plugins/system/ps/common"
+	"github.com/shirou/gopsutil/common"
 )
 
 func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
@@ -26,7 +26,7 @@ func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
 			// skip first line
 			continue
 		}
-		if common.StringContains(exists, values[0]) {
+		if common.StringsHas(exists, values[0]) {
 			// skip if already get
 			continue
 		}
@@ -38,11 +38,14 @@ func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
 			base = 0
 		}
 
-		parsed := make([]uint64, 0, 3)
+		parsed := make([]uint64, 0, 6)
 		vv := []string{
-			values[base+3], // PacketsRecv
-			values[base+4], // Errin
-			values[base+5], // Dropin
+			values[base+3], // Ipkts == PacketsRecv
+			values[base+4], // Ierrs == Errin
+			values[base+5], // Ibytes == BytesRecv
+			values[base+6], // Opkts == PacketsSent
+			values[base+7], // Oerrs == Errout
+			values[base+8], // Obytes == BytesSent
 		}
 		for _, target := range vv {
 			if target == "-" {
@@ -61,7 +64,10 @@ func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
 			Name:        values[0],
 			PacketsRecv: parsed[0],
 			Errin:       parsed[1],
-			Dropin:      parsed[2],
+			BytesRecv:   parsed[2],
+			PacketsSent: parsed[3],
+			Errout:      parsed[4],
+			BytesSent:   parsed[5],
 		}
 		ret = append(ret, n)
 	}

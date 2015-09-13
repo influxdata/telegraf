@@ -15,9 +15,6 @@ import (
 
 type Redis struct {
 	Servers []string
-
-	c   net.Conn
-	buf []byte
 }
 
 var sampleConfig = `
@@ -112,41 +109,37 @@ func (r *Redis) Gather(acc plugins.Accumulator) error {
 const defaultPort = "6379"
 
 func (r *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
-	if r.c == nil {
-
-		_, _, err := net.SplitHostPort(addr.Host)
-		if err != nil {
-			addr.Host = addr.Host + ":" + defaultPort
-		}
-
-		c, err := net.Dial("tcp", addr.Host)
-		if err != nil {
-			return fmt.Errorf("Unable to connect to redis server '%s': %s", addr.Host, err)
-		}
-
-		if addr.User != nil {
-			pwd, set := addr.User.Password()
-			if set && pwd != "" {
-				c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
-
-				rdr := bufio.NewReader(c)
-
-				line, err := rdr.ReadString('\n')
-				if err != nil {
-					return err
-				}
-				if line[0] != '+' {
-					return fmt.Errorf("%s", strings.TrimSpace(line)[1:])
-				}
-			}
-		}
-
-		r.c = c
+	_, _, err := net.SplitHostPort(addr.Host)
+	if err != nil {
+		addr.Host = addr.Host + ":" + defaultPort
 	}
 
-	r.c.Write([]byte("info\r\n"))
+	c, err := net.Dial("tcp", addr.Host)
+	if err != nil {
+		return fmt.Errorf("Unable to connect to redis server '%s': %s", addr.Host, err)
+	}
+	defer c.Close()
 
-	rdr := bufio.NewReader(r.c)
+	if addr.User != nil {
+		pwd, set := addr.User.Password()
+		if set && pwd != "" {
+			c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
+
+			rdr := bufio.NewReader(c)
+
+			line, err := rdr.ReadString('\n')
+			if err != nil {
+				return err
+			}
+			if line[0] != '+' {
+				return fmt.Errorf("%s", strings.TrimSpace(line)[1:])
+			}
+		}
+	}
+
+	c.Write([]byte("info\r\n"))
+
+	rdr := bufio.NewReader(c)
 
 	line, err := rdr.ReadString('\n')
 	if err != nil {

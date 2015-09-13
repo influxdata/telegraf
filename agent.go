@@ -84,6 +84,9 @@ func NewAgent(config *Config) (*Agent, error) {
 // Connect connects to all configured outputs
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
+		if a.Debug {
+			log.Printf("Attempting connection to output: %s\n", o.name)
+		}
 		err := o.output.Connect()
 		if err != nil {
 			return err
@@ -193,16 +196,17 @@ func (a *Agent) crankParallel() error {
 		go func(plugin *runningPlugin) {
 			defer wg.Done()
 
-			var acc BatchPoints
-			acc.Debug = a.Debug
-			acc.Prefix = plugin.name + "_"
-			acc.Config = plugin.config
+			var bp BatchPoints
+			bp.Debug = a.Debug
+			bp.Prefix = plugin.name + "_"
+			bp.Config = plugin.config
+			bp.Precision = a.Precision
 
-			if err := plugin.plugin.Gather(&acc); err != nil {
+			if err := plugin.plugin.Gather(&bp); err != nil {
 				log.Printf("Error in plugin [%s]: %s", plugin.name, err)
 			}
 
-			points <- &acc
+			points <- &bp
 		}(plugin)
 	}
 
@@ -230,6 +234,7 @@ func (a *Agent) crank() error {
 	var bp BatchPoints
 
 	bp.Debug = a.Debug
+	bp.Precision = a.Precision
 
 	for _, plugin := range a.plugins {
 		bp.Prefix = plugin.name + "_"
@@ -245,7 +250,6 @@ func (a *Agent) crank() error {
 	if a.UTC {
 		bp.Time = bp.Time.UTC()
 	}
-	bp.Precision = a.Precision
 
 	return a.flush(&bp)
 }
@@ -263,6 +267,7 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 
 		bp.Prefix = plugin.name + "_"
 		bp.Config = plugin.config
+		bp.Precision = a.Precision
 
 		if err := plugin.plugin.Gather(&bp); err != nil {
 			log.Printf("Error in plugin [%s]: %s", plugin.name, err)
@@ -274,7 +279,6 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 		if a.UTC {
 			bp.Time = bp.Time.UTC()
 		}
-		bp.Precision = a.Precision
 
 		if err := a.flush(&bp); err != nil {
 			outerr = errors.New("Error encountered processing plugins & outputs")
