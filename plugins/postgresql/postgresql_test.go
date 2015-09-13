@@ -117,3 +117,34 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 
 	assert.True(t, found)
 }
+
+func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
+	// if testing.Short() {
+	// 	t.Skip("Skipping integration test in short mode")
+	// }
+
+	p := &Postgresql{
+		Servers: []*Server{
+			{
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+					testutil.GetLocalHost()),
+			},
+		},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	var found bool
+
+	for _, pnt := range acc.Points {
+		if pnt.Measurement == "datname" || pnt.Measurement == "datid" || pnt.Measurement == "stats_reset" {
+			found = true
+			break
+		}
+	}
+
+	assert.False(t, found)
+}
