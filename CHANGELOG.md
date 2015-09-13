@@ -1,4 +1,21 @@
-## v0.1.8 [unreleased]
+## v0.1.9 [unreleased]
+
+### Release Notes
+- InfluxDB output config change: `url` is now `urls`, and is a list. Config files
+will still be backwards compatible if only `url` is specified.
+
+### Features
+- [#143](https://github.com/influxdb/telegraf/issues/143): InfluxDB clustering support
+- [#181](https://github.com/influxdb/telegraf/issues/181): Makefile GOBIN support. Thanks @Vye!
+
+### Bugfixes
+- [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
+- [#175](https://github.com/influxdb/telegraf/issues/175): Set write precision before gathering metrics
+- [#178](https://github.com/influxdb/telegraf/issues/178): redis plugin, multiple server thread hang bug
+- Fix net plugin on darwin
+- [#84](https://github.com/influxdb/telegraf/issues/84): Fix docker plugin on CentOS. Thanks @neezgee!
+
+## v0.1.8 [2015-09-04]
 
 ### Release Notes
 - Telegraf will now write data in UTC at second precision by default

@@ -8,6 +8,8 @@ EnvironmentFile=-/etc/default/telegraf
 User=telegraf
 ExecStart=/opt/telegraf/telegraf -config /etc/opt/telegraf/telegraf.conf $TELEGRAF_OPTS
 Restart=on-failure
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target
+Alias=telegraf.service

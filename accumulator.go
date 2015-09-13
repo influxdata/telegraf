@@ -25,7 +25,11 @@ type BatchPoints struct {
 }
 
 // Add adds a measurement
-func (bp *BatchPoints) Add(measurement string, val interface{}, tags map[string]string) {
+func (bp *BatchPoints) Add(
+	measurement string,
+	val interface{},
+	tags map[string]string,
+) {
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
 
