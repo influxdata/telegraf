@@ -17,6 +17,8 @@ type OpenTSDB struct {
 
 	Host string
 	Port int
+
+	Debug bool
 }
 
 var sampleConfig = `
@@ -29,6 +31,9 @@ var sampleConfig = `
 
 	# Port of the OpenTSDB server in telnet mode
 	port = 4242
+
+	# Debug true - Prints OpenTSDB communication
+	debug = false
 `
 
 type MetricLine struct {
@@ -70,15 +75,20 @@ func (o *OpenTSDB) Write(bp client.BatchPoints) error {
 			Metric:    fmt.Sprintf("%s%s", o.Prefix, pt.Measurement),
 			Timestamp: timeNow.Unix(),
 		}
-		if metricValue, err := buildValue(bp, pt); err == nil {
-			metric.Value = metricValue
+		metricValue, buildError := buildValue(bp, pt);
+		if buildError != nil {
+			fmt.Printf("OpenTSDB: %s\n", buildError.Error())
+			continue
 		}
+		metric.Value = metricValue
 
 		tagsSlice := buildTags(bp.Tags, pt.Tags)
 		metric.Tags = fmt.Sprint(strings.Join(tagsSlice, " "))
 
 		messageLine := fmt.Sprintf("put %s %v %s %s\n", metric.Metric, metric.Timestamp, metric.Value, metric.Tags)
-		fmt.Print(messageLine)
+		if (o.Debug) {
+			fmt.Print(messageLine)
+		}
 		_, err := connection.Write([]byte(messageLine))
 		if err != nil {
 			fmt.Errorf("OpenTSDB: Telnet writing error %s", err.Error())
@@ -115,7 +125,7 @@ func buildValue(bp client.BatchPoints, pt client.Point) (string, error) {
 	case float64:
 		retv = FloatToString(float64(p))
 	default:
-		return retv, fmt.Errorf("undeterminable type for telegraf")
+		return retv, fmt.Errorf("unexpected type %T with value %v for OpenTSDB", v, v)
 	}
 	return retv, nil
 }
