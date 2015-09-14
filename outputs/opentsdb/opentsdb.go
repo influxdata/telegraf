@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdb/influxdb/client"
-    "github.com/influxdb/telegraf/outputs"
+	"github.com/influxdb/telegraf/outputs"
 )
 
 type OpenTSDB struct {
@@ -75,7 +75,7 @@ func (o *OpenTSDB) Write(bp client.BatchPoints) error {
 			Metric:    fmt.Sprintf("%s%s", o.Prefix, pt.Measurement),
 			Timestamp: timeNow.Unix(),
 		}
-		metricValue, buildError := buildValue(bp, pt);
+		metricValue, buildError := buildValue(bp, pt)
 		if buildError != nil {
 			fmt.Printf("OpenTSDB: %s\n", buildError.Error())
 			continue
@@ -86,7 +86,7 @@ func (o *OpenTSDB) Write(bp client.BatchPoints) error {
 		metric.Tags = fmt.Sprint(strings.Join(tagsSlice, " "))
 
 		messageLine := fmt.Sprintf("put %s %v %s %s\n", metric.Metric, metric.Timestamp, metric.Value, metric.Tags)
-		if (o.Debug) {
+		if o.Debug {
 			fmt.Print(messageLine)
 		}
 		_, err := connection.Write([]byte(messageLine))
