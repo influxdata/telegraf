@@ -21,6 +21,8 @@ type Postgresql struct {
 	Servers []*Server
 }
 
+var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
+
 var sampleConfig = `
 	# specify servers via an array of tables
 	[[postgresql.servers]]
@@ -59,8 +61,11 @@ func (p *Postgresql) Description() string {
 	return "Read metrics from one or many postgresql servers"
 }
 
+func (p *Postgresql) IgnoredColumns() map[string]bool {
+	return ignoredColumns
+}
+
 var localhost = &Server{Address: "sslmode=disable"}
-var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
 
 func (p *Postgresql) Gather(acc plugins.Accumulator) error {
 	if len(p.Servers) == 0 {
@@ -157,7 +162,8 @@ func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator, serv *Server) 
 	tags := map[string]string{"server": serv.Address, "db": dbname.String()}
 
 	for col, val := range columnMap {
-		if !ignoredColumns[col] {
+		_, ignore := ignoredColumns[col]
+		if !ignore {
 			acc.Add(col, *val, tags)
 		}
 	}
