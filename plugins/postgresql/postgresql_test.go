@@ -156,14 +156,7 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 	err := p.Gather(&acc)
 	require.NoError(t, err)
 
-	var found bool
-
-	for _, pnt := range acc.Points {
-		if pnt.Measurement == "datname" || pnt.Measurement == "datid" || pnt.Measurement == "stats_reset" {
-			found = true
-			break
-		}
+	for col := range p.IgnoredColumns() {
+		assert.False(t, acc.HasMeasurement(col))
 	}
-
-	assert.False(t, found)
 }
