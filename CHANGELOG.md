@@ -14,6 +14,7 @@ will still be backwards compatible if only `url` is specified.
 - [#178](https://github.com/influxdb/telegraf/issues/178): redis plugin, multiple server thread hang bug
 - Fix net plugin on darwin
 - [#84](https://github.com/influxdb/telegraf/issues/84): Fix docker plugin on CentOS. Thanks @neezgee!
+- [#189](https://github.com/influxdb/telegraf/pull/189): Fix mem_used_perc. Thanks @mced!
 - [#192](https://github.com/influxdb/telegraf/issues/192): Increase compatibility of postgresql plugin. Now supports versions 8.1+
 
 ## v0.1.8 [2015-09-04]

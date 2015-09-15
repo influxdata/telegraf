@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shirou/gopsutil/common"
+	"github.com/influxdb/telegraf/plugins/system/ps/common"
 )
 
 func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
@@ -26,7 +26,7 @@ func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
 			// skip first line
 			continue
 		}
-		if common.StringsHas(exists, values[0]) {
+		if common.StringContains(exists, values[0]) {
 			// skip if already get
 			continue
 		}
