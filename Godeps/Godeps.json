@@ -167,6 +167,10 @@
 			"Rev": "5bb5cfc093ad18a28148c578f8632cfdb4d802e4"
 		},
 		{
+			"ImportPath": "github.com/streadway/amqp",
+			"Rev": "f4879ba28fffbb576743b03622a9ff20461826b2"
+		},
+		{
 			"ImportPath": "github.com/stretchr/objx",
 			"Rev": "cbeaeb16a013161a98496fad62933b1d21786672"
 		},
