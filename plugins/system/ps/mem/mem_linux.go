@@ -45,7 +45,7 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 	}
 	ret.Available = ret.Free + ret.Buffers + ret.Cached
 	ret.Used = ret.Total - ret.Free
-	ret.UsedPercent = float64(ret.Total-ret.Available) / float64(ret.Total) * 100.0
+	ret.UsedPercent = float64(ret.Used) / float64(ret.Total) * 100.0
 
 	return ret, nil
 }
@@ -63,7 +63,7 @@ func SwapMemory() (*SwapMemoryStat, error) {
 	ret.Used = ret.Total - ret.Free
 	//check Infinity
 	if ret.Total != 0 {
-		ret.UsedPercent = float64(ret.Total-ret.Free) / float64(ret.Total) * 100.0
+		ret.UsedPercent = float64(ret.Used) / float64(ret.Total) * 100.0
 	} else {
 		ret.UsedPercent = 0
 	}
