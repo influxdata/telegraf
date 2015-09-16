@@ -93,7 +93,7 @@ func emitMetrics(k *Kafka, acc plugins.Accumulator, metricConsumer <-chan []byte
 			}
 
 			for _, point := range points {
-				acc.AddValuesWithTime(point.Name(), point.Fields(), point.Tags(), point.Time())
+				acc.AddFieldsWithTime(point.Name(), point.Fields(), point.Tags(), point.Time())
 			}
 		case <-timeout:
 			return nil

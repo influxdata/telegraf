@@ -10,8 +10,8 @@ type Accumulator interface {
 
 	// Create a point with a set of values, decorating it with tags
 	// NOTE: tags and values are expected to be owned by the caller, don't mutate
-	// them after passing to AddValuesWithTime.
-	AddValuesWithTime(
+	// them after passing to AddFieldsWithTime.
+	AddFieldsWithTime(
 		measurement string,
 		values map[string]interface{},
 		tags map[string]string,

@@ -39,7 +39,7 @@ type Plugin interface {
 
 type Accumulator interface {
     Add(measurement string, value interface{}, tags map[string]string)
-    AddValuesWithTime(measurement string,
+    AddFieldsWithTime(measurement string,
         values map[string]interface{},
         tags map[string]string,
         timestamp time.Time)
@@ -63,7 +63,7 @@ The `Add` function takes 3 arguments:
 about the metric. For instance, the `net` plugin adds a tag named `"interface"`
 set to the name of the network interface, like `"eth0"`.
 
-The `AddValuesWithTime` allows multiple values for a point to be passed. The values
+The `AddFieldsWithTime` allows multiple values for a point to be passed. The values
 used are the same type profile as **value** above. The **timestamp** argument
 allows a point to be registered as having occurred at an arbitrary time.
 

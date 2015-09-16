@@ -34,8 +34,8 @@ func (a *Accumulator) Add(measurement string, value interface{}, tags map[string
 	)
 }
 
-// AddValuesWithTime adds a measurement point with a specified timestamp.
-func (a *Accumulator) AddValuesWithTime(
+// AddFieldsWithTime adds a measurement point with a specified timestamp.
+func (a *Accumulator) AddFieldsWithTime(
 	measurement string,
 	values map[string]interface{},
 	tags map[string]string,
