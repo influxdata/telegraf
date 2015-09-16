@@ -132,7 +132,7 @@ func (data *Data) RetentionPolicy(database, name string) (*RetentionPolicyInfo, 
 			return &di.RetentionPolicies[i], nil
 		}
 	}
-	return nil, ErrRetentionPolicyNotFound
+	return nil, nil
 }
 
 // CreateRetentionPolicy creates a new retention policy on a database.
@@ -170,6 +170,11 @@ func (data *Data) DropRetentionPolicy(database, name string) error {
 	di := data.Database(database)
 	if di == nil {
 		return ErrDatabaseNotFound
+	}
+
+	// Prohibit dropping the default retention policy.
+	if di.DefaultRetentionPolicy == name {
+		return ErrRetentionPolicyDefault
 	}
 
 	// Remove from list.
@@ -212,6 +217,7 @@ func (data *Data) UpdateRetentionPolicy(database, name string, rpu *RetentionPol
 	}
 	if rpu.Duration != nil {
 		rpi.Duration = *rpu.Duration
+		rpi.ShardGroupDuration = shardGroupDuration(rpi.Duration)
 	}
 	if rpu.ReplicaN != nil {
 		rpi.ReplicaN = *rpu.ReplicaN
@@ -272,7 +278,6 @@ func (data *Data) ShardGroupsByTimeRange(database, policy string, tmin, tmax tim
 		}
 		groups = append(groups, g)
 	}
-	sort.Sort(ShardGroupInfos(groups))
 	return groups, nil
 }
 
@@ -343,13 +348,16 @@ func (data *Data) CreateShardGroup(database, policy string, timestamp time.Time)
 		si := &sgi.Shards[i]
 		for j := 0; j < replicaN; j++ {
 			nodeID := data.Nodes[nodeIndex%len(data.Nodes)].ID
-			si.OwnerIDs = append(si.OwnerIDs, nodeID)
+			si.Owners = append(si.Owners, ShardOwner{NodeID: nodeID})
 			nodeIndex++
 		}
 	}
 
-	// Retention policy has a new shard group, so update the policy.
+	// Retention policy has a new shard group, so update the policy. Shard
+	// Groups must be stored in sorted order, as other parts of the system
+	// assume this to be the case.
 	rpi.ShardGroups = append(rpi.ShardGroups, sgi)
+	sort.Sort(ShardGroupInfos(rpi.ShardGroups))
 
 	return nil
 }
@@ -661,6 +669,31 @@ func (di DatabaseInfo) RetentionPolicy(name string) *RetentionPolicyInfo {
 	return nil
 }
 
+// ShardInfos returns a list of all shards' info for the database.
+func (di DatabaseInfo) ShardInfos() []ShardInfo {
+	shards := map[uint64]*ShardInfo{}
+	for i := range di.RetentionPolicies {
+		for j := range di.RetentionPolicies[i].ShardGroups {
+			sg := di.RetentionPolicies[i].ShardGroups[j]
+			// Skip deleted shard groups
+			if sg.Deleted() {
+				continue
+			}
+			for k := range sg.Shards {
+				si := &di.RetentionPolicies[i].ShardGroups[j].Shards[k]
+				shards[si.ID] = si
+			}
+		}
+	}
+
+	infos := make([]ShardInfo, 0, len(shards))
+	for _, info := range shards {
+		infos = append(infos, *info)
+	}
+
+	return infos
+}
+
 // clone returns a deep copy of di.
 func (di DatabaseInfo) clone() DatabaseInfo {
 	other := di
@@ -916,14 +949,14 @@ func (sgi *ShardGroupInfo) unmarshal(pb *internal.ShardGroupInfo) {
 
 // ShardInfo represents metadata about a shard.
 type ShardInfo struct {
-	ID       uint64
-	OwnerIDs []uint64
+	ID     uint64
+	Owners []ShardOwner
 }
 
 // OwnedBy returns whether the shard's owner IDs includes nodeID.
 func (si ShardInfo) OwnedBy(nodeID uint64) bool {
-	for _, id := range si.OwnerIDs {
-		if id == nodeID {
+	for _, so := range si.Owners {
+		if so.NodeID == nodeID {
 			return true
 		}
 	}
@@ -934,9 +967,11 @@ func (si ShardInfo) OwnedBy(nodeID uint64) bool {
 func (si ShardInfo) clone() ShardInfo {
 	other := si
 
-	if si.OwnerIDs != nil {
-		other.OwnerIDs = make([]uint64, len(si.OwnerIDs))
-		copy(other.OwnerIDs, si.OwnerIDs)
+	if si.Owners != nil {
+		other.Owners = make([]ShardOwner, len(si.Owners))
+		for i := range si.Owners {
+			other.Owners[i] = si.Owners[i].clone()
+		}
 	}
 
 	return other
@@ -948,17 +983,64 @@ func (si ShardInfo) marshal() *internal.ShardInfo {
 		ID: proto.Uint64(si.ID),
 	}
 
-	pb.OwnerIDs = make([]uint64, len(si.OwnerIDs))
-	copy(pb.OwnerIDs, si.OwnerIDs)
+	pb.Owners = make([]*internal.ShardOwner, len(si.Owners))
+	for i := range si.Owners {
+		pb.Owners[i] = si.Owners[i].marshal()
+	}
 
 	return pb
+}
+
+// UnmarshalBinary decodes the object from a binary format.
+func (si *ShardInfo) UnmarshalBinary(buf []byte) error {
+	var pb internal.ShardInfo
+	if err := proto.Unmarshal(buf, &pb); err != nil {
+		return err
+	}
+	si.unmarshal(&pb)
+	return nil
 }
 
 // unmarshal deserializes from a protobuf representation.
 func (si *ShardInfo) unmarshal(pb *internal.ShardInfo) {
 	si.ID = pb.GetID()
-	si.OwnerIDs = make([]uint64, len(pb.GetOwnerIDs()))
-	copy(si.OwnerIDs, pb.GetOwnerIDs())
+
+	// If deprecated "OwnerIDs" exists then convert it to "Owners" format.
+	if len(pb.GetOwnerIDs()) > 0 {
+		si.Owners = make([]ShardOwner, len(pb.GetOwnerIDs()))
+		for i, x := range pb.GetOwnerIDs() {
+			si.Owners[i].unmarshal(&internal.ShardOwner{
+				NodeID: proto.Uint64(x),
+			})
+		}
+	} else if len(pb.GetOwners()) > 0 {
+		si.Owners = make([]ShardOwner, len(pb.GetOwners()))
+		for i, x := range pb.GetOwners() {
+			si.Owners[i].unmarshal(x)
+		}
+	}
+}
+
+// ShardOwner represents a node that owns a shard.
+type ShardOwner struct {
+	NodeID uint64
+}
+
+// clone returns a deep copy of so.
+func (so ShardOwner) clone() ShardOwner {
+	return so
+}
+
+// marshal serializes to a protobuf representation.
+func (so ShardOwner) marshal() *internal.ShardOwner {
+	return &internal.ShardOwner{
+		NodeID: proto.Uint64(so.NodeID),
+	}
+}
+
+// unmarshal deserializes from a protobuf representation.
+func (so *ShardOwner) unmarshal(pb *internal.ShardOwner) {
+	so.NodeID = pb.GetNodeID()
 }
 
 // ContinuousQueryInfo represents metadata about a continuous query.

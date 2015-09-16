@@ -632,6 +632,18 @@ func TestParsePointUnescape(t *testing.T) {
 			},
 			time.Unix(0, 0)))
 
+	// measurement, tag and tag value with equals
+	test(t, `cpu=load,equals\=foo=tag\=value value=1i`,
+		tsdb.NewPoint(
+			"cpu=load", // Not escaped
+			tsdb.Tags{
+				"equals=foo": "tag=value", // Tag and value unescaped
+			},
+			tsdb.Fields{
+				"value": 1,
+			},
+			time.Unix(0, 0)))
+
 }
 
 func TestParsePointWithTags(t *testing.T) {
@@ -740,6 +752,64 @@ func TestParsePointWithStringWithCommas(t *testing.T) {
 			},
 			time.Unix(1, 0)),
 	)
+}
+
+func TestParsePointQuotedMeasurement(t *testing.T) {
+	// non-escaped comma
+	test(t, `"cpu",host=serverA,region=us-east value=1.0 1000000000`,
+		tsdb.NewPoint(
+			`"cpu"`,
+			tsdb.Tags{
+				"host":   "serverA",
+				"region": "us-east",
+			},
+			tsdb.Fields{
+				"value": 1.0,
+			},
+			time.Unix(1, 0)),
+	)
+}
+
+func TestParsePointQuotedTags(t *testing.T) {
+	test(t, `cpu,"host"="serverA",region=us-east value=1.0 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{
+				`"host"`: `"serverA"`,
+				"region": "us-east",
+			},
+			tsdb.Fields{
+				"value": 1.0,
+			},
+			time.Unix(1, 0)),
+	)
+}
+
+func TestParsePointsUnbalancedQuotedTags(t *testing.T) {
+	pts, err := tsdb.ParsePointsString("baz,mytag=\"a x=1 1441103862125\nbaz,mytag=a z=1 1441103862126")
+	if err != nil {
+		t.Fatalf("ParsePoints failed: %v", err)
+	}
+
+	if exp := 2; len(pts) != exp {
+		t.Fatalf("ParsePoints count mismatch. got %v, exp %v", len(pts), exp)
+	}
+
+	// Expected " in the tag value
+	exp := tsdb.NewPoint("baz", tsdb.Tags{"mytag": `"a`},
+		tsdb.Fields{"x": float64(1)}, time.Unix(0, 1441103862125))
+
+	if pts[0].String() != exp.String() {
+		t.Errorf("Point mismatch:\ngot: %v\nexp: %v", pts[0].String(), exp.String())
+	}
+
+	// Expected two points to ensure we did not overscan the line
+	exp = tsdb.NewPoint("baz", tsdb.Tags{"mytag": `a`},
+		tsdb.Fields{"z": float64(1)}, time.Unix(0, 1441103862126))
+
+	if pts[1].String() != exp.String() {
+		t.Errorf("Point mismatch:\ngot: %v\nexp: %v", pts[1].String(), exp.String())
+	}
 
 }
 
@@ -771,7 +841,6 @@ func TestParsePointEscapedStringsAndCommas(t *testing.T) {
 			},
 			time.Unix(1, 0)),
 	)
-
 }
 
 func TestParsePointWithStringWithEquals(t *testing.T) {
@@ -785,6 +854,48 @@ func TestParsePointWithStringWithEquals(t *testing.T) {
 			tsdb.Fields{
 				"value": 1.0,
 				"str":   "foo=bar", // spaces in string value
+			},
+			time.Unix(1, 0)),
+	)
+}
+
+func TestParsePointWithStringWithBackslash(t *testing.T) {
+	test(t, `cpu value="test\\\"" 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": `test\"`,
+			},
+			time.Unix(1, 0)),
+	)
+
+	test(t, `cpu value="test\\" 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": `test\`,
+			},
+			time.Unix(1, 0)),
+	)
+
+	test(t, `cpu value="test\\\"" 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": `test\"`,
+			},
+			time.Unix(1, 0)),
+	)
+
+	test(t, `cpu value="test\"" 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": `test"`,
 			},
 			time.Unix(1, 0)),
 	)
@@ -908,6 +1019,17 @@ func TestNewPointNaN(t *testing.T) {
 			},
 			time.Unix(1, 0)),
 	)
+
+	test(t, `nan value=NaN`,
+		tsdb.NewPoint(
+			"nan",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": math.NaN(),
+			},
+			time.Unix(0, 0)),
+	)
+
 }
 
 func TestNewPointLargeNumberOfTags(t *testing.T) {
@@ -968,7 +1090,7 @@ func TestParsePointKeyUnsorted(t *testing.T) {
 }
 
 func TestParsePointToString(t *testing.T) {
-	line := `cpu,host=serverA,region=us-east bool=false,float=11.0,float2=12.123,int=10i,str="string val" 1000000000`
+	line := `cpu,host=serverA,region=us-east bool=false,float=11,float2=12.123,int=10i,str="string val" 1000000000`
 	pts, err := tsdb.ParsePoints([]byte(line))
 	if err != nil {
 		t.Fatalf(`ParsePoints() failed. got %s`, err)
@@ -1181,19 +1303,19 @@ cpu,host=serverA,region=us-east value=1.0 946730096789012345`,
 func TestNewPointEscaped(t *testing.T) {
 	// commas
 	pt := tsdb.NewPoint("cpu,main", tsdb.Tags{"tag,bar": "value"}, tsdb.Fields{"name,bar": 1.0}, time.Unix(0, 0))
-	if exp := `cpu\,main,tag\,bar=value name\,bar=1.0 0`; pt.String() != exp {
+	if exp := `cpu\,main,tag\,bar=value name\,bar=1 0`; pt.String() != exp {
 		t.Errorf("NewPoint().String() mismatch.\ngot %v\nexp %v", pt.String(), exp)
 	}
 
 	// spaces
 	pt = tsdb.NewPoint("cpu main", tsdb.Tags{"tag bar": "value"}, tsdb.Fields{"name bar": 1.0}, time.Unix(0, 0))
-	if exp := `cpu\ main,tag\ bar=value name\ bar=1.0 0`; pt.String() != exp {
+	if exp := `cpu\ main,tag\ bar=value name\ bar=1 0`; pt.String() != exp {
 		t.Errorf("NewPoint().String() mismatch.\ngot %v\nexp %v", pt.String(), exp)
 	}
 
 	// equals
 	pt = tsdb.NewPoint("cpu=main", tsdb.Tags{"tag=bar": "value=foo"}, tsdb.Fields{"name=bar": 1.0}, time.Unix(0, 0))
-	if exp := `cpu\=main,tag\=bar=value\=foo name\=bar=1.0 0`; pt.String() != exp {
+	if exp := `cpu=main,tag\=bar=value\=foo name\=bar=1 0`; pt.String() != exp {
 		t.Errorf("NewPoint().String() mismatch.\ngot %v\nexp %v", pt.String(), exp)
 	}
 }
@@ -1214,5 +1336,80 @@ func TestNewPointUnhandledType(t *testing.T) {
 
 	if exp := "1970-01-01 00:00:00 +0000 UTC"; pt.Fields()["value"] != exp {
 		t.Errorf("NewPoint().String() mismatch.\ngot %v\nexp %v", pt.String(), exp)
+	}
+}
+
+func TestMakeKeyEscaped(t *testing.T) {
+	if exp, got := `cpu\ load`, tsdb.MakeKey([]byte(`cpu\ load`), tsdb.Tags{}); string(got) != exp {
+		t.Errorf("MakeKey() mismatch.\ngot %v\nexp %v", got, exp)
+	}
+
+	if exp, got := `cpu\ load`, tsdb.MakeKey([]byte(`cpu load`), tsdb.Tags{}); string(got) != exp {
+		t.Errorf("MakeKey() mismatch.\ngot %v\nexp %v", got, exp)
+	}
+
+	if exp, got := `cpu\,load`, tsdb.MakeKey([]byte(`cpu\,load`), tsdb.Tags{}); string(got) != exp {
+		t.Errorf("MakeKey() mismatch.\ngot %v\nexp %v", got, exp)
+	}
+
+	if exp, got := `cpu\,load`, tsdb.MakeKey([]byte(`cpu,load`), tsdb.Tags{}); string(got) != exp {
+		t.Errorf("MakeKey() mismatch.\ngot %v\nexp %v", got, exp)
+	}
+
+}
+
+func TestPrecisionString(t *testing.T) {
+	tags := map[string]interface{}{"value": float64(1)}
+	tm, _ := time.Parse(time.RFC3339Nano, "2000-01-01T12:34:56.789012345Z")
+	tests := []struct {
+		name      string
+		precision string
+		exp       string
+	}{
+		{
+			name:      "no precision",
+			precision: "",
+			exp:       "cpu value=1 946730096789012345",
+		},
+		{
+			name:      "nanosecond precision",
+			precision: "ns",
+			exp:       "cpu value=1 946730096789012345",
+		},
+		{
+			name:      "microsecond precision",
+			precision: "u",
+			exp:       "cpu value=1 946730096789012",
+		},
+		{
+			name:      "millisecond precision",
+			precision: "ms",
+			exp:       "cpu value=1 946730096789",
+		},
+		{
+			name:      "second precision",
+			precision: "s",
+			exp:       "cpu value=1 946730096",
+		},
+		{
+			name:      "minute precision",
+			precision: "m",
+			exp:       "cpu value=1 15778834",
+		},
+		{
+			name:      "hour precision",
+			precision: "h",
+			exp:       "cpu value=1 262980",
+		},
+	}
+
+	for _, test := range tests {
+		pt := tsdb.NewPoint("cpu", nil, tags, tm)
+		act := pt.PrecisionString(test.precision)
+
+		if act != test.exp {
+			t.Errorf("%s: PrecisionString() mismatch:\n actual:	%v\n exp:		%v",
+				test.name, act, test.exp)
+		}
 	}
 }

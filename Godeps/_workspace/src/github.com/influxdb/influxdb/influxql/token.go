@@ -50,6 +50,7 @@ const (
 	LPAREN    // (
 	RPAREN    // )
 	COMMA     // ,
+	COLON     // :
 	SEMICOLON // ;
 	DOT       // .
 
@@ -91,6 +92,7 @@ const (
 	LIMIT
 	MEASUREMENT
 	MEASUREMENTS
+	NOT
 	OFFSET
 	ON
 	ORDER
@@ -109,6 +111,7 @@ const (
 	SERVERS
 	SET
 	SHOW
+	SHARDS
 	SLIMIT
 	STATS
 	DIAGNOSTICS
@@ -159,6 +162,7 @@ var tokens = [...]string{
 	LPAREN:    "(",
 	RPAREN:    ")",
 	COMMA:     ",",
+	COLON:     ":",
 	SEMICOLON: ";",
 	DOT:       ".",
 
@@ -198,6 +202,7 @@ var tokens = [...]string{
 	LIMIT:        "LIMIT",
 	MEASUREMENT:  "MEASUREMENT",
 	MEASUREMENTS: "MEASUREMENTS",
+	NOT:          "NOT",
 	OFFSET:       "OFFSET",
 	ON:           "ON",
 	ORDER:        "ORDER",
@@ -216,6 +221,7 @@ var tokens = [...]string{
 	SERVERS:      "SERVERS",
 	SET:          "SET",
 	SHOW:         "SHOW",
+	SHARDS:       "SHARDS",
 	SLIMIT:       "SLIMIT",
 	SOFFSET:      "SOFFSET",
 	STATS:        "STATS",

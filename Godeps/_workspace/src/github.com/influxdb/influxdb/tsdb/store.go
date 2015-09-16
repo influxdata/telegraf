@@ -37,6 +37,7 @@ type Store struct {
 
 	EngineOptions EngineOptions
 	Logger        *log.Logger
+	closing       chan struct{}
 }
 
 // Path returns the store's root path.
@@ -67,6 +68,12 @@ func (s *Store) CreateShard(database, retentionPolicy string, shardID uint64) er
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	select {
+	case <-s.closing:
+		return fmt.Errorf("closing")
+	default:
+	}
+
 	// shard already exists
 	if _, ok := s.shards[shardID]; ok {
 		return nil
@@ -74,6 +81,12 @@ func (s *Store) CreateShard(database, retentionPolicy string, shardID uint64) er
 
 	// created the db and retention policy dirs if they don't exist
 	if err := os.MkdirAll(filepath.Join(s.path, database, retentionPolicy), 0700); err != nil {
+		return err
+	}
+
+	// create the WAL directory
+	walPath := filepath.Join(s.EngineOptions.Config.WALDir, database, retentionPolicy, fmt.Sprintf("%d", shardID))
+	if err := os.MkdirAll(walPath, 0700); err != nil {
 		return err
 	}
 
@@ -85,7 +98,7 @@ func (s *Store) CreateShard(database, retentionPolicy string, shardID uint64) er
 	}
 
 	shardPath := filepath.Join(s.path, database, retentionPolicy, strconv.FormatUint(shardID, 10))
-	shard := NewShard(shardID, db, shardPath, s.EngineOptions)
+	shard := NewShard(shardID, db, shardPath, walPath, s.EngineOptions)
 	if err := shard.Open(); err != nil {
 		return err
 	}
@@ -114,6 +127,10 @@ func (s *Store) DeleteShard(shardID uint64) error {
 		return err
 	}
 
+	if err := os.RemoveAll(sh.walPath); err != nil {
+		return err
+	}
+
 	delete(s.shards, shardID)
 
 	return nil
@@ -130,6 +147,9 @@ func (s *Store) DeleteDatabase(name string, shardIDs []uint64) error {
 		}
 	}
 	if err := os.RemoveAll(filepath.Join(s.path, name)); err != nil {
+		return err
+	}
+	if err := os.RemoveAll(filepath.Join(s.EngineOptions.Config.WALDir, name)); err != nil {
 		return err
 	}
 	delete(s.databaseIndexes, name)
@@ -161,6 +181,17 @@ func (s *Store) DatabaseIndex(name string) *DatabaseIndex {
 	return s.databaseIndexes[name]
 }
 
+// Databases returns all the databases in the indexes
+func (s *Store) Databases() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	databases := []string{}
+	for db := range s.databaseIndexes {
+		databases = append(databases, db)
+	}
+	return databases
+}
+
 func (s *Store) Measurement(database, name string) *Measurement {
 	s.mu.RLock()
 	db := s.databaseIndexes[database]
@@ -169,6 +200,22 @@ func (s *Store) Measurement(database, name string) *Measurement {
 		return nil
 	}
 	return db.Measurement(name)
+}
+
+// DiskSize returns the size of all the shard files in bytes.  This size does not include the WAL size.
+func (s *Store) DiskSize() (int64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var size int64
+	for _, shardID := range s.ShardIDs() {
+		shard := s.Shard(shardID)
+		sz, err := shard.DiskSize()
+		if err != nil {
+			return 0, err
+		}
+		size += sz
+	}
+	return size, nil
 }
 
 // deleteSeries loops through the local shards and deletes the series data and metadata for the passed in series keys
@@ -231,6 +278,7 @@ func (s *Store) loadShards() error {
 			}
 			for _, sh := range shards {
 				path := filepath.Join(s.path, db, rp.Name(), sh.Name())
+				walPath := filepath.Join(s.EngineOptions.Config.WALDir, db, rp.Name(), sh.Name())
 
 				// Shard file names are numeric shardIDs
 				shardID, err := strconv.ParseUint(sh.Name(), 10, 64)
@@ -239,7 +287,7 @@ func (s *Store) loadShards() error {
 					continue
 				}
 
-				shard := NewShard(shardID, s.databaseIndexes[db], path, s.EngineOptions)
+				shard := NewShard(shardID, s.databaseIndexes[db], path, walPath, s.EngineOptions)
 				err = shard.Open()
 				if err != nil {
 					return fmt.Errorf("failed to open shard %d: %s", shardID, err)
@@ -255,6 +303,8 @@ func (s *Store) loadShards() error {
 func (s *Store) Open() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	s.closing = make(chan struct{})
 
 	s.shards = map[uint64]*Shard{}
 	s.databaseIndexes = map[string]*DatabaseIndex{}
@@ -289,23 +339,17 @@ func (s *Store) WriteToShard(shardID uint64, points []Point) error {
 	return sh.WritePoints(points)
 }
 
-func (s *Store) CreateMapper(shardID uint64, query string, chunkSize int) (Mapper, error) {
-	q, err := influxql.NewParser(strings.NewReader(query)).ParseStatement()
-	if err != nil {
-		return nil, err
-	}
-	stmt, ok := q.(*influxql.SelectStatement)
-	if !ok {
-		return nil, fmt.Errorf("query is not a SELECT statement: %s", err.Error())
-	}
-
+func (s *Store) CreateMapper(shardID uint64, stmt influxql.Statement, chunkSize int) (Mapper, error) {
 	shard := s.Shard(shardID)
-	if shard == nil {
-		// This can happen if the shard has been assigned, but hasn't actually been created yet.
-		return nil, nil
-	}
 
-	return NewLocalMapper(shard, stmt, chunkSize), nil
+	switch st := stmt.(type) {
+	case *influxql.SelectStatement:
+		return NewSelectMapper(shard, st, chunkSize), nil
+	case *influxql.ShowMeasurementsStatement:
+		return NewShowMeasurementsMapper(shard, st, chunkSize), nil
+	default:
+		return nil, fmt.Errorf("can't create mapper for statement type: %v", st)
+	}
 }
 
 func (s *Store) Close() error {
@@ -317,6 +361,10 @@ func (s *Store) Close() error {
 			return err
 		}
 	}
+	if s.closing != nil {
+		close(s.closing)
+	}
+	s.closing = nil
 	s.shards = nil
 	s.databaseIndexes = nil
 

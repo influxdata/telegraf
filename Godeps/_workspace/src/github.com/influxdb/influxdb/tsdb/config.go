@@ -30,7 +30,7 @@ const (
 
 	// DefaultFlushColdInterval specifies how long after a partition has been cold
 	// for writes that a full flush and compaction are forced
-	DefaultFlushColdInterval = 5 * time.Minute
+	DefaultFlushColdInterval = 5 * time.Second
 
 	// DefaultParititionSizeThreshold specifies when a partition gets to this size in
 	// memory, we should slow down writes until it gets a chance to compact.
@@ -52,7 +52,7 @@ type Config struct {
 
 	// WAL configuration options for bz1 (introduced in 0.9.3)
 	WALDir                    string        `toml:"wal-dir"`
-	WALEnableLogging          bool          `toml:"wal-enable-logging"`
+	WALLoggingEnabled         bool          `toml:"wal-logging-enabled"`
 	WALReadySeriesSize        int           `toml:"wal-ready-series-size"`
 	WALCompactionThreshold    float64       `toml:"wal-compaction-threshold"`
 	WALMaxSeriesSize          int           `toml:"wal-max-series-size"`
@@ -66,7 +66,7 @@ func NewConfig() Config {
 		WALFlushInterval:       toml.Duration(DefaultWALFlushInterval),
 		WALPartitionFlushDelay: toml.Duration(DefaultWALPartitionFlushDelay),
 
-		WALEnableLogging:          true,
+		WALLoggingEnabled:         true,
 		WALReadySeriesSize:        DefaultReadySeriesSize,
 		WALCompactionThreshold:    DefaultCompactionThreshold,
 		WALMaxSeriesSize:          DefaultMaxSeriesSize,

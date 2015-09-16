@@ -625,13 +625,13 @@ func TestStatementExecutor_ExecuteStatement_CreateContinuousQuery(t *testing.T) 
 			t.Fatalf("unexpected database: %s", database)
 		} else if name != "cq0" {
 			t.Fatalf("unexpected name: %s", name)
-		} else if query != `CREATE CONTINUOUS QUERY cq0 ON db0 BEGIN SELECT count(*) INTO db1 FROM db0 GROUP BY time(1h) END` {
+		} else if query != `CREATE CONTINUOUS QUERY cq0 ON db0 BEGIN SELECT count(field1) INTO db1 FROM db0 GROUP BY time(1h) END` {
 			t.Fatalf("unexpected query: %s", query)
 		}
 		return nil
 	}
 
-	stmt := influxql.MustParseStatement(`CREATE CONTINUOUS QUERY cq0 ON db0 BEGIN SELECT count(*) INTO db1 FROM db0 GROUP BY time(1h) END`)
+	stmt := influxql.MustParseStatement(`CREATE CONTINUOUS QUERY cq0 ON db0 BEGIN SELECT count(field1) INTO db1 FROM db0 GROUP BY time(1h) END`)
 	if res := e.ExecuteStatement(stmt); res.Err != nil {
 		t.Fatal(res.Err)
 	} else if res.Series != nil {
@@ -646,7 +646,7 @@ func TestStatementExecutor_ExecuteStatement_CreateContinuousQuery_Err(t *testing
 		return errors.New("marker")
 	}
 
-	stmt := influxql.MustParseStatement(`CREATE CONTINUOUS QUERY cq0 ON db0 BEGIN SELECT count(*) INTO db1 FROM db0 GROUP BY time(1h) END`)
+	stmt := influxql.MustParseStatement(`CREATE CONTINUOUS QUERY cq0 ON db0 BEGIN SELECT count(field1) INTO db1 FROM db0 GROUP BY time(1h) END`)
 	if res := e.ExecuteStatement(stmt); res.Err == nil || res.Err.Error() != "marker" {
 		t.Fatalf("unexpected error: %s", res.Err)
 	}
@@ -693,14 +693,14 @@ func TestStatementExecutor_ExecuteStatement_ShowContinuousQueries(t *testing.T) 
 			{
 				Name: "db0",
 				ContinuousQueries: []meta.ContinuousQueryInfo{
-					{Name: "cq0", Query: "SELECT count(*) INTO db1 FROM db0"},
-					{Name: "cq1", Query: "SELECT count(*) INTO db2 FROM db0"},
+					{Name: "cq0", Query: "SELECT count(field1) INTO db1 FROM db0"},
+					{Name: "cq1", Query: "SELECT count(field1) INTO db2 FROM db0"},
 				},
 			},
 			{
 				Name: "db1",
 				ContinuousQueries: []meta.ContinuousQueryInfo{
-					{Name: "cq2", Query: "SELECT count(*) INTO db3 FROM db1"},
+					{Name: "cq2", Query: "SELECT count(field1) INTO db3 FROM db1"},
 				},
 			},
 		}, nil
@@ -714,15 +714,15 @@ func TestStatementExecutor_ExecuteStatement_ShowContinuousQueries(t *testing.T) 
 			Name:    "db0",
 			Columns: []string{"name", "query"},
 			Values: [][]interface{}{
-				{"cq0", "SELECT count(*) INTO db1 FROM db0"},
-				{"cq1", "SELECT count(*) INTO db2 FROM db0"},
+				{"cq0", "SELECT count(field1) INTO db1 FROM db0"},
+				{"cq1", "SELECT count(field1) INTO db2 FROM db0"},
 			},
 		},
 		{
 			Name:    "db1",
 			Columns: []string{"name", "query"},
 			Values: [][]interface{}{
-				{"cq2", "SELECT count(*) INTO db3 FROM db1"},
+				{"cq2", "SELECT count(field1) INTO db3 FROM db1"},
 			},
 		},
 	}) {
@@ -755,13 +755,64 @@ func TestStatementExecutor_ExecuteStatement_Unsupported(t *testing.T) {
 
 		// Execute a SELECT statement.
 		NewStatementExecutor().ExecuteStatement(
-			influxql.MustParseStatement(`SELECT count(*) FROM db0`),
+			influxql.MustParseStatement(`SELECT count(field1) FROM db0`),
 		)
 	}()
 
 	// Ensure that the executor panicked.
 	if !panicked {
 		t.Fatal("executor did not panic")
+	}
+}
+
+// Ensure a SHOW SHARDS statement can be executed.
+func TestStatementExecutor_ExecuteStatement_ShowShards(t *testing.T) {
+	e := NewStatementExecutor()
+	e.Store.DatabasesFn = func() ([]meta.DatabaseInfo, error) {
+		return []meta.DatabaseInfo{
+			{
+				Name: "foo",
+				RetentionPolicies: []meta.RetentionPolicyInfo{
+					{
+						Duration: time.Second,
+						ShardGroups: []meta.ShardGroupInfo{
+							{
+								StartTime: time.Unix(0, 0),
+								EndTime:   time.Unix(1, 0),
+								Shards: []meta.ShardInfo{
+									{
+										ID: 1,
+										Owners: []meta.ShardOwner{
+											{NodeID: 1},
+											{NodeID: 2},
+											{NodeID: 3},
+										},
+									},
+									{
+										ID: 2,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
+	if res := e.ExecuteStatement(influxql.MustParseStatement(`SHOW SHARDS`)); res.Err != nil {
+		t.Fatal(res.Err)
+	} else if !reflect.DeepEqual(res.Series, influxql.Rows{
+		{
+			Name:    "foo",
+			Columns: []string{"id", "start_time", "end_time", "expiry_time", "owners"},
+			Values: [][]interface{}{
+				{uint64(1), "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z", "1,2,3"},
+				{uint64(2), "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z", ""},
+			},
+		},
+	}) {
+		t.Fatalf("unexpected rows: %s", spew.Sdump(res.Series))
 	}
 }
 

@@ -129,6 +129,8 @@ func (p *Parser) parseShowStatement() (Statement, error) {
 		return nil, newParseError(tokstr(tok, lit), []string{"POLICIES"}, pos)
 	case SERIES:
 		return p.parseShowSeriesStatement()
+	case SHARDS:
+		return p.parseShowShardsStatement()
 	case STATS:
 		return p.parseShowStatsStatement()
 	case DIAGNOSTICS:
@@ -488,6 +490,9 @@ func (p *Parser) parseSegmentedIdents() ([]string, error) {
 		if ch := p.peekRune(); ch == '/' {
 			// Next segment is a regex so we're done.
 			break
+		} else if ch == ':' {
+			// Next segment is context-specific so let caller handle it.
+			break
 		} else if ch == '.' {
 			// Add an empty identifier.
 			idents = append(idents, "")
@@ -799,7 +804,18 @@ func (p *Parser) parseTarget(tr targetRequirement) (*Target, error) {
 		return nil, err
 	}
 
-	t := &Target{Measurement: &Measurement{}}
+	if len(idents) < 3 {
+		// Check for source measurement reference.
+		if ch := p.peekRune(); ch == ':' {
+			if err := p.parseTokens([]Token{COLON, MEASUREMENT}); err != nil {
+				return nil, err
+			}
+			// Append empty measurement name.
+			idents = append(idents, "")
+		}
+	}
+
+	t := &Target{Measurement: &Measurement{IsTarget: true}}
 
 	switch len(idents) {
 	case 1:
@@ -1250,6 +1266,16 @@ func (p *Parser) parseCreateContinuousQueryStatement() (*CreateContinuousQuerySt
 func (p *Parser) parseCreateDatabaseStatement() (*CreateDatabaseStatement, error) {
 	stmt := &CreateDatabaseStatement{}
 
+	// Look for "IF NOT EXISTS"
+	if tok, _, _ := p.scanIgnoreWhitespace(); tok == IF {
+		if err := p.parseTokens([]Token{NOT, EXISTS}); err != nil {
+			return nil, err
+		}
+		stmt.IfNotExists = true
+	} else {
+		p.unscan()
+	}
+
 	// Parse the name of the database to be created.
 	lit, err := p.parseIdent()
 	if err != nil {
@@ -1385,6 +1411,12 @@ func (p *Parser) parseRetentionPolicy() (name string, dfault bool, err error) {
 	return
 }
 
+// parseShowShardsStatement parses a string for "SHOW SHARDS" statement.
+// This function assumes the "SHOW SHARDS" tokens have already been consumed.
+func (p *Parser) parseShowShardsStatement() (*ShowShardsStatement, error) {
+	return &ShowShardsStatement{}, nil
+}
+
 // parseShowStatsStatement parses a string and returns a ShowStatsStatement.
 // This function assumes the "SHOW STATS" tokens have already been consumed.
 func (p *Parser) parseShowStatsStatement() (*ShowStatsStatement, error) {
@@ -1440,13 +1472,6 @@ func (p *Parser) parseDropContinuousQueryStatement() (*DropContinuousQueryStatem
 // parseFields parses a list of one or more fields.
 func (p *Parser) parseFields() (Fields, error) {
 	var fields Fields
-
-	// Check for "*" (i.e., "all fields")
-	if tok, _, _ := p.scanIgnoreWhitespace(); tok == MUL {
-		fields = append(fields, &Field{&Wildcard{}, ""})
-		return fields, nil
-	}
-	p.unscan()
 
 	for {
 		// Parse the field.
@@ -1777,24 +1802,29 @@ func (p *Parser) parseOrderBy() (SortFields, error) {
 func (p *Parser) parseSortFields() (SortFields, error) {
 	var fields SortFields
 
-	// If first token is ASC or DESC, all fields are sorted.
-	if tok, pos, lit := p.scanIgnoreWhitespace(); tok == ASC || tok == DESC {
-		if tok == DESC {
-			// Token must be ASC, until other sort orders are supported.
-			return nil, errors.New("only ORDER BY time ASC supported at this time")
+	tok, pos, lit := p.scanIgnoreWhitespace()
+
+	switch tok {
+	// The first field after an order by may not have a field name (e.g. ORDER BY ASC)
+	case ASC, DESC:
+		fields = append(fields, &SortField{Ascending: (tok == ASC)})
+	// If it's a token, parse it as a sort field.  At least one is required.
+	case IDENT:
+		p.unscan()
+		field, err := p.parseSortField()
+		if err != nil {
+			return nil, err
 		}
-		return append(fields, &SortField{Ascending: (tok == ASC)}), nil
-	} else if tok != IDENT {
+
+		if lit != "time" {
+			return nil, errors.New("only ORDER BY time supported at this time")
+		}
+
+		fields = append(fields, field)
+	// Parse error...
+	default:
 		return nil, newParseError(tokstr(tok, lit), []string{"identifier", "ASC", "DESC"}, pos)
 	}
-	p.unscan()
-
-	// At least one field is required.
-	field, err := p.parseSortField()
-	if err != nil {
-		return nil, err
-	}
-	fields = append(fields, field)
 
 	// Parse additional fields.
 	for {
@@ -1813,9 +1843,8 @@ func (p *Parser) parseSortFields() (SortFields, error) {
 		fields = append(fields, field)
 	}
 
-	// First SortField must be time ASC, until other sort orders are supported.
-	if len(fields) > 1 || fields[0].Name != "time" || !fields[0].Ascending {
-		return nil, errors.New("only ORDER BY time ASC supported at this time")
+	if len(fields) > 1 {
+		return nil, errors.New("only ORDER BY time supported at this time")
 	}
 
 	return fields, nil
