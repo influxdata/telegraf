@@ -7,6 +7,8 @@ will still be backwards compatible if only `url` is specified.
 ### Features
 - [#143](https://github.com/influxdb/telegraf/issues/143): InfluxDB clustering support
 - [#181](https://github.com/influxdb/telegraf/issues/181): Makefile GOBIN support. Thanks @Vye!
+- [#203](https://github.com/influxdb/telegraf/pull/200): AMQP output. Thanks @ekini!
+- [#182](https://github.com/influxdb/telegraf/pull/182): OpenTSDB output. Thanks @rplessl!
 
 ### Bugfixes
 - [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
@@ -16,6 +18,7 @@ will still be backwards compatible if only `url` is specified.
 - [#84](https://github.com/influxdb/telegraf/issues/84): Fix docker plugin on CentOS. Thanks @neezgee!
 - [#189](https://github.com/influxdb/telegraf/pull/189): Fix mem_used_perc. Thanks @mced!
 - [#192](https://github.com/influxdb/telegraf/issues/192): Increase compatibility of postgresql plugin. Now supports versions 8.1+
+- [#203](https://github.com/influxdb/telegraf/issues/203): EL5 rpm support. Thanks @ekini!
 
 ## v0.1.8 [2015-09-04]
 
