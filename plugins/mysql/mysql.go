@@ -144,6 +144,8 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 		var servtag string
 		if strings.Contains(serv, "@") {
 			servtag = strings.Split(serv, "@")[1]
+		} else if serv == "" {
+			servtag = "localhost"
 		} else {
 			servtag = serv
 		}
