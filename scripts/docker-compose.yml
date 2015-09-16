@@ -25,3 +25,10 @@ kafka:
     environment:
         ADVERTISED_HOST:
         ADVERTISED_PORT: 9092
+
+rabbitmq:
+    image: rabbitmq:3-management
+    hostname: docker_rabbit
+    ports:
+        - "15672:15672"
+        - "5672:5672"
