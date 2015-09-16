@@ -14,6 +14,8 @@ type Kafka struct {
 	Brokers []string
 	// Kafka topic
 	Topic string
+	// Routing Key Tag
+	RoutingTag string `toml:"routing_tag"`
 
 	producer sarama.SyncProducer
 }
@@ -23,6 +25,9 @@ var sampleConfig = `
 	brokers = ["localhost:9092"]
 	# Kafka topic for producer messages
 	topic = "telegraf"
+	# Telegraf tag to use as a routing key
+	#  ie, if this tag exists, it's value will be used as the routing key
+	routing_tag = "host"
 `
 
 func (k *Kafka) Connect() error {
@@ -71,7 +76,7 @@ func (k *Kafka) Write(bp client.BatchPoints) error {
 			Topic: k.Topic,
 			Value: sarama.StringEncoder(value),
 		}
-		if h, ok := p.Tags["host"]; ok {
+		if h, ok := p.Tags[k.RoutingTag]; ok {
 			m.Key = sarama.StringEncoder(h)
 		}
 

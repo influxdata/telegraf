@@ -13,8 +13,8 @@ type AMQP struct {
 	URL string
 	// AMQP exchange
 	Exchange string
-	// Routing key
-	RoutingTag string
+	// Routing Key Tag
+	RoutingTag string `toml:"routing_tag"`
 
 	channel *amqp.Channel
 }
@@ -24,9 +24,9 @@ var sampleConfig = `
 	url = "amqp://localhost:5672/influxdb"
 	# AMQP exchange
 	exchange = "telegraf"
-	# AMQP tag name used as a routing key
-	# If there's no tag in a point, empty routing key will be used
-	routing_tag = "dc"
+	# Telegraf tag to use as a routing key
+	#  ie, if this tag exists, it's value will be used as the routing key
+	routing_tag = "host"
 `
 
 func (q *AMQP) Connect() error {
