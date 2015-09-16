@@ -14,7 +14,7 @@ type AMQP struct {
 	// AMQP exchange
 	Exchange string
 	// Routing key
-	RoutingKey string
+	RoutingTag string
 
 	channel *amqp.Channel
 }
@@ -24,6 +24,9 @@ var sampleConfig = `
 	url = "amqp://localhost:5672/influxdb"
 	# AMQP exchange
 	exchange = "telegraf"
+	# AMQP tag name used as a routing key
+	# If there's no tag in a point, empty routing key will be used
+	routing_tag = "dc"
 `
 
 func (q *AMQP) Connect() error {
@@ -71,7 +74,7 @@ func (q *AMQP) Write(bp client.BatchPoints) error {
 
 	for _, p := range bp.Points {
 		// Combine tags from Point and BatchPoints and grab the resulting
-		// line-protocol output string to write to Kafka
+		// line-protocol output string to write to AMQP
 		var value, key string
 		if p.Raw != "" {
 			value = p.Raw
@@ -85,8 +88,10 @@ func (q *AMQP) Write(bp client.BatchPoints) error {
 			value = p.MarshalString()
 		}
 
-		if h, ok := p.Tags["dc"]; ok {
-			key = h
+		if q.RoutingTag != "" {
+			if h, ok := p.Tags[q.RoutingTag]; ok {
+				key = h
+			}
 		}
 
 		err := q.channel.Publish(
@@ -99,7 +104,7 @@ func (q *AMQP) Write(bp client.BatchPoints) error {
 				Body:        []byte(value),
 			})
 		if err != nil {
-			return fmt.Errorf("FAILED to send amqp message: %s\n", err)
+			return fmt.Errorf("FAILED to send amqp message: %s", err)
 		}
 	}
 	return nil
