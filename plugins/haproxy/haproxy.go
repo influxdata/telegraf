@@ -245,6 +245,11 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				if err == nil {
 					acc.Add("http_response.4xx", ival, tags)
 				}
+			case HF_HRSP_5xx:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("http_response.5xx", ival, tags)
+				}
 			case HF_EREQ:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
