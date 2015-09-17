@@ -201,6 +201,7 @@ found by running `telegraf -sample-config`
 * kafka
 * datadog
 * opentsdb
+* amqp (rabbitmq)
 
 ## Contributing
 
