@@ -3,6 +3,9 @@
 ### Release Notes
 - InfluxDB output config change: `url` is now `urls`, and is a list. Config files
 will still be backwards compatible if only `url` is specified.
+- **Breaking Change**: The CPU collection plugin has been refactored to fix some
+bugs and outdated dependency issues. At the same time, I also decided to fix
+a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle
 
 ### Features
 - [#143](https://github.com/influxdb/telegraf/issues/143): InfluxDB clustering support
@@ -19,6 +22,7 @@ will still be backwards compatible if only `url` is specified.
 - [#189](https://github.com/influxdb/telegraf/pull/189): Fix mem_used_perc. Thanks @mced!
 - [#192](https://github.com/influxdb/telegraf/issues/192): Increase compatibility of postgresql plugin. Now supports versions 8.1+
 - [#203](https://github.com/influxdb/telegraf/issues/203): EL5 rpm support. Thanks @ekini!
+- [#206](https://github.com/influxdb/telegraf/issues/206): CPU steal/guest values wrong on linux.
 
 ## v0.1.8 [2015-09-04]
 

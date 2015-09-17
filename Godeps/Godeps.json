@@ -143,38 +143,38 @@
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/common",
-			"Comment": "1.0.0-146-g9c0474c",
-			"Rev": "9c0474c2a7cbea73ea2d93fc5e1ef1c024caf761"
+			"Comment": "1.0.0-148-ga369a88",
+			"Rev": "a369a8857c47ba9bcf8bbcf316897fa123d73639"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/cpu",
-			"Comment": "1.0.0-146-g9c0474c",
-			"Rev": "9c0474c2a7cbea73ea2d93fc5e1ef1c024caf761"
+			"Comment": "1.0.0-148-ga369a88",
+			"Rev": "a369a8857c47ba9bcf8bbcf316897fa123d73639"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/disk",
-			"Comment": "1.0.0-146-g9c0474c",
-			"Rev": "9c0474c2a7cbea73ea2d93fc5e1ef1c024caf761"
+			"Comment": "1.0.0-148-ga369a88",
+			"Rev": "a369a8857c47ba9bcf8bbcf316897fa123d73639"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/docker",
-			"Comment": "1.0.0-146-g9c0474c",
-			"Rev": "9c0474c2a7cbea73ea2d93fc5e1ef1c024caf761"
+			"Comment": "1.0.0-148-ga369a88",
+			"Rev": "a369a8857c47ba9bcf8bbcf316897fa123d73639"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/load",
-			"Comment": "1.0.0-146-g9c0474c",
-			"Rev": "9c0474c2a7cbea73ea2d93fc5e1ef1c024caf761"
+			"Comment": "1.0.0-148-ga369a88",
+			"Rev": "a369a8857c47ba9bcf8bbcf316897fa123d73639"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/mem",
-			"Comment": "1.0.0-146-g9c0474c",
-			"Rev": "9c0474c2a7cbea73ea2d93fc5e1ef1c024caf761"
+			"Comment": "1.0.0-148-ga369a88",
+			"Rev": "a369a8857c47ba9bcf8bbcf316897fa123d73639"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/net",
-			"Comment": "1.0.0-146-g9c0474c",
-			"Rev": "9c0474c2a7cbea73ea2d93fc5e1ef1c024caf761"
+			"Comment": "1.0.0-148-ga369a88",
+			"Rev": "a369a8857c47ba9bcf8bbcf316897fa123d73639"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",

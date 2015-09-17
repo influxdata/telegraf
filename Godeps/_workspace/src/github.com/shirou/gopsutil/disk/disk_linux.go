@@ -318,7 +318,7 @@ func GetDiskSerialNumber(name string) string {
 }
 
 func getFsType(stat syscall.Statfs_t) string {
-	t := stat.Type
+	t := int64(stat.Type)
 	ret, ok := fsTypeMap[t]
 	if !ok {
 		return ""

@@ -13,6 +13,9 @@ plugins that Telegraf supports. See the
 [contributing guide](CONTRIBUTING.md) for instructions on
 writing new plugins.
 
+NOTE: Telegraf 0.1.9 will change the name of some cpu usage metrics, see
+[CHANGELOG](CHANGELOG.md) for more details.
+
 ## Installation:
 
 Due to a breaking change to the InfluxDB integer line-protocol, there
