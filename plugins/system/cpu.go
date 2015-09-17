@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/influxdb/telegraf/plugins"
-	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
+	"github.com/shirou/gopsutil/cpu"
 )
 
 type CPUStats struct {

@@ -2,12 +2,12 @@ package system
 
 import "github.com/stretchr/testify/mock"
 
-import "github.com/influxdb/telegraf/plugins/system/ps/cpu"
-import "github.com/influxdb/telegraf/plugins/system/ps/disk"
+import "github.com/shirou/gopsutil/cpu"
+import "github.com/shirou/gopsutil/disk"
 
-import "github.com/influxdb/telegraf/plugins/system/ps/load"
-import "github.com/influxdb/telegraf/plugins/system/ps/mem"
-import "github.com/influxdb/telegraf/plugins/system/ps/net"
+import "github.com/shirou/gopsutil/load"
+import "github.com/shirou/gopsutil/mem"
+import "github.com/shirou/gopsutil/net"
 
 type MockPS struct {
 	mock.Mock
