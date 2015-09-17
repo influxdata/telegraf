@@ -23,6 +23,8 @@ a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle
 - [#192](https://github.com/influxdb/telegraf/issues/192): Increase compatibility of postgresql plugin. Now supports versions 8.1+
 - [#203](https://github.com/influxdb/telegraf/issues/203): EL5 rpm support. Thanks @ekini!
 - [#206](https://github.com/influxdb/telegraf/issues/206): CPU steal/guest values wrong on linux.
+- [#212](https://github.com/influxdb/telegraf/issues/212): Add hashbang to postinstall script. Thanks @ekini!
+- [#212](https://github.com/influxdb/telegraf/issues/212): Fix makefile warning. Thanks @ekini!
 
 ## v0.1.8 [2015-09-04]
 

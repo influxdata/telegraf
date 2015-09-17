@@ -155,6 +155,7 @@ do_build() {
 generate_postinstall_script() {
     version=$1
     cat  <<EOF >$POST_INSTALL_PATH
+#!/bin/sh
 rm -f $INSTALL_ROOT_DIR/telegraf
 rm -f $INSTALL_ROOT_DIR/init.sh
 ln -sfn $INSTALL_ROOT_DIR/versions/$version/telegraf $INSTALL_ROOT_DIR/telegraf
