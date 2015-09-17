@@ -2,6 +2,7 @@ package system
 
 import (
 	gonet "net"
+	"os"
 	"strings"
 
 	dc "github.com/fsouza/go-dockerclient"
@@ -71,12 +72,14 @@ func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 	var usage []*disk.DiskUsageStat
 
 	for _, p := range parts {
-		du, err := disk.DiskUsage(p.Mountpoint)
-		if err != nil {
-			return nil, err
+		if _, err := os.Stat(p.Mountpoint); err == nil {
+			du, err := disk.DiskUsage(p.Mountpoint)
+			if err != nil {
+				return nil, err
+			}
+			du.Fstype = p.Fstype
+			usage = append(usage, du)
 		}
-		du.Fstype = p.Fstype
-		usage = append(usage, du)
 	}
 
 	return usage, nil
