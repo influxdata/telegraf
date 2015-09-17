@@ -3,18 +3,14 @@ package cluster
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
-	"net"
 	"testing"
 
-	"github.com/influxdb/influxdb/influxql"
 	"github.com/influxdb/influxdb/tsdb"
 )
 
 // remoteShardResponder implements the remoteShardConn interface.
 type remoteShardResponder struct {
-	net.Conn
 	t       *testing.T
 	rxBytes []byte
 
@@ -43,7 +39,8 @@ func newRemoteShardResponder(outputs []*tsdb.MapperOutput, tagsets []string) *re
 	return r
 }
 
-func (r remoteShardResponder) Close() error { return nil }
+func (r remoteShardResponder) MarkUnusable() { return }
+func (r remoteShardResponder) Close() error  { return nil }
 func (r remoteShardResponder) Read(p []byte) (n int, err error) {
 	return io.ReadFull(r.buffer, p)
 }
@@ -66,7 +63,7 @@ func TestShardWriter_RemoteMapper_Success(t *testing.T) {
 
 	c := newRemoteShardResponder([]*tsdb.MapperOutput{expOutput, nil}, expTagSets)
 
-	r := NewRemoteMapper(c, 1234, mustParseStmt("SELECT * FROM CPU"), 10)
+	r := NewRemoteMapper(c, 1234, "SELECT * FROM CPU", 10)
 	if err := r.Open(); err != nil {
 		t.Fatalf("failed to open remote mapper: %s", err.Error())
 	}
@@ -80,13 +77,9 @@ func TestShardWriter_RemoteMapper_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get next chunk from mapper: %s", err.Error())
 	}
-	b, ok := chunk.([]byte)
+	output, ok := chunk.(*tsdb.MapperOutput)
 	if !ok {
 		t.Fatal("chunk is not of expected type")
-	}
-	output := &tsdb.MapperOutput{}
-	if err := json.Unmarshal(b, output); err != nil {
-		t.Fatal(err)
 	}
 	if output.Name != "cpu" {
 		t.Fatalf("received output incorrect, exp: %v, got %v", expOutput, output)
@@ -100,15 +93,4 @@ func TestShardWriter_RemoteMapper_Success(t *testing.T) {
 	if chunk != nil {
 		t.Fatal("received more chunks when none expected")
 	}
-}
-
-// mustParseStmt parses a single statement or panics.
-func mustParseStmt(stmt string) influxql.Statement {
-	q, err := influxql.ParseQuery(stmt)
-	if err != nil {
-		panic(err)
-	} else if len(q.Statements) != 1 {
-		panic(fmt.Sprintf("expected 1 statement but got %d", len(q.Statements)))
-	}
-	return q.Statements[0]
 }

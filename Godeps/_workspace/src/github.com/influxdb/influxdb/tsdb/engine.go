@@ -33,8 +33,6 @@ type Engine interface {
 	DeleteSeries(keys []string) error
 	DeleteMeasurement(name string, seriesKeys []string) error
 	SeriesCount() (n int, err error)
-
-	io.WriterTo
 }
 
 // NewEngineFunc creates a new engine.
@@ -123,7 +121,7 @@ func NewEngineOptions() EngineOptions {
 type Tx interface {
 	io.WriterTo
 
-	Cursor(series string, direction Direction) Cursor
+	Cursor(series string) Cursor
 	Size() int64
 	Commit() error
 	Rollback() error
@@ -133,7 +131,6 @@ type Tx interface {
 type Cursor interface {
 	Seek(seek []byte) (key, value []byte)
 	Next() (key, value []byte)
-	Direction() Direction
 }
 
 // DedupeEntries returns slices with unique keys (the first 8 bytes).

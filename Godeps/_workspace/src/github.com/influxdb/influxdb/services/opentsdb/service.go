@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/tls"
-	"expvar"
 	"io"
 	"log"
 	"net"
@@ -16,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdb/influxdb"
 	"github.com/influxdb/influxdb/cluster"
 	"github.com/influxdb/influxdb/meta"
 	"github.com/influxdb/influxdb/tsdb"
@@ -24,32 +22,12 @@ import (
 
 const leaderWaitTimeout = 30 * time.Second
 
-// statistics gathered by the openTSDB package.
-const (
-	statHTTPConnectionsHandled   = "http_connections_handled"
-	statTelnetConnectionsActive  = "tl_connections_active"
-	statTelnetConnectionsHandled = "tl_connections_handled"
-	statTelnetPointsReceived     = "tl_points_rx"
-	statTelnetBytesReceived      = "tl_bytes_rx"
-	statTelnetReadError          = "tl_read_err"
-	statTelnetBadLine            = "tl_bad_line"
-	statTelnetBadTime            = "tl_bad_time"
-	statTelnetBadTag             = "tl_bad_tag"
-	statTelnetBadFloat           = "tl_bad_float"
-	statBatchesTrasmitted        = "batches_tx"
-	statPointsTransmitted        = "points_tx"
-	statBatchesTransmitFail      = "batches_tx_fail"
-	statConnectionsActive        = "connections_active"
-	statConnectionsHandled       = "connections_handled"
-)
-
 // Service manages the listener and handler for an HTTP endpoint.
 type Service struct {
 	ln     net.Listener  // main listener
 	httpln *chanListener // http channel-based listener
 
 	wg   sync.WaitGroup
-	done chan struct{}
 	err  chan error
 	tls  bool
 	cert string
@@ -67,14 +45,7 @@ type Service struct {
 		CreateDatabaseIfNotExists(name string) (*meta.DatabaseInfo, error)
 	}
 
-	// Points received over the telnet protocol are batched.
-	batchSize    int
-	batchPending int
-	batchTimeout time.Duration
-	batcher      *tsdb.PointBatcher
-
-	Logger  *log.Logger
-	statMap *expvar.Map
+	Logger *log.Logger
 }
 
 // NewService returns a new instance of Service.
@@ -85,7 +56,6 @@ func NewService(c Config) (*Service, error) {
 	}
 
 	s := &Service{
-		done:             make(chan struct{}),
 		tls:              c.TLSEnabled,
 		cert:             c.Certificate,
 		err:              make(chan error),
@@ -93,9 +63,6 @@ func NewService(c Config) (*Service, error) {
 		Database:         c.Database,
 		RetentionPolicy:  c.RetentionPolicy,
 		ConsistencyLevel: consistencyLevel,
-		batchSize:        c.BatchSize,
-		batchPending:     c.BatchPending,
-		batchTimeout:     time.Duration(c.BatchTimeout),
 		Logger:           log.New(os.Stderr, "[opentsdb] ", log.LstdFlags),
 	}
 	return s, nil
@@ -104,12 +71,6 @@ func NewService(c Config) (*Service, error) {
 // Open starts the service
 func (s *Service) Open() error {
 	s.Logger.Println("Starting OpenTSDB service")
-
-	// Configure expvar monitoring. It's OK to do this even if the service fails to open and
-	// should be done before any data could arrive for the service.
-	key := strings.Join([]string{"opentsdb", s.BindAddress}, ":")
-	tags := map[string]string{"bind": s.BindAddress}
-	s.statMap = influxdb.NewStatistics(key, "opentsdb", tags)
 
 	if err := s.MetaStore.WaitForLeader(leaderWaitTimeout); err != nil {
 		s.Logger.Printf("Failed to detect a cluster leader: %s", err.Error())
@@ -120,13 +81,6 @@ func (s *Service) Open() error {
 		s.Logger.Printf("Failed to ensure target database %s exists: %s", s.Database, err.Error())
 		return err
 	}
-
-	s.batcher = tsdb.NewPointBatcher(s.batchSize, s.batchPending, s.batchTimeout)
-	s.batcher.Start()
-
-	// Start processing batches.
-	s.wg.Add(1)
-	go s.processBatches(s.batcher)
 
 	// Open listener.
 	if s.tls {
@@ -169,8 +123,6 @@ func (s *Service) Close() error {
 		return s.ln.Close()
 	}
 
-	s.batcher.Stop()
-	close(s.done)
 	s.wg.Wait()
 	return nil
 }
@@ -211,10 +163,6 @@ func (s *Service) serve() {
 
 // handleConn processes conn. This is run in a separate goroutine.
 func (s *Service) handleConn(conn net.Conn) {
-	defer s.statMap.Add(statConnectionsActive, -1)
-	s.statMap.Add(statConnectionsActive, 1)
-	s.statMap.Add(statConnectionsHandled, 1)
-
 	// Read header into buffer to check if it's HTTP.
 	var buf bytes.Buffer
 	r := bufio.NewReader(io.TeeReader(conn, &buf))
@@ -228,7 +176,6 @@ func (s *Service) handleConn(conn net.Conn) {
 
 	// If no HTTP parsing error occurred then process as HTTP.
 	if err == nil {
-		s.statMap.Add(statHTTPConnectionsHandled, 1)
 		s.httpln.ch <- conn
 		return
 	}
@@ -244,26 +191,15 @@ func (s *Service) handleConn(conn net.Conn) {
 func (s *Service) handleTelnetConn(conn net.Conn) {
 	defer conn.Close()
 	defer s.wg.Done()
-	defer s.statMap.Add(statTelnetConnectionsActive, -1)
-	s.statMap.Add(statTelnetConnectionsActive, 1)
-	s.statMap.Add(statTelnetConnectionsHandled, 1)
-
-	// Get connection details.
-	remoteAddr := conn.RemoteAddr().String()
 
 	// Wrap connection in a text protocol reader.
 	r := textproto.NewReader(bufio.NewReader(conn))
 	for {
 		line, err := r.ReadLine()
 		if err != nil {
-			if err != io.EOF {
-				s.statMap.Add(statTelnetReadError, 1)
-				s.Logger.Println("error reading from openTSDB connection", err.Error())
-			}
+			s.Logger.Println("error reading from openTSDB connection", err.Error())
 			return
 		}
-		s.statMap.Add(statTelnetPointsReceived, 1)
-		s.statMap.Add(statTelnetBytesReceived, int64(len(line)))
 
 		inputStrs := strings.Fields(line)
 
@@ -273,8 +209,7 @@ func (s *Service) handleTelnetConn(conn net.Conn) {
 		}
 
 		if len(inputStrs) < 4 || inputStrs[0] != "put" {
-			s.statMap.Add(statTelnetBadLine, 1)
-			s.Logger.Printf("malformed line '%s' from %s", line, remoteAddr)
+			s.Logger.Println("TSDBServer: malformed line, skipping: ", line)
 			continue
 		}
 
@@ -286,8 +221,7 @@ func (s *Service) handleTelnetConn(conn net.Conn) {
 		var t time.Time
 		ts, err := strconv.ParseInt(tsStr, 10, 64)
 		if err != nil {
-			s.statMap.Add(statTelnetBadTime, 1)
-			s.Logger.Printf("malformed time '%s' from %s", tsStr, remoteAddr)
+			s.Logger.Println("TSDBServer: malformed time, skipping: ", tsStr)
 		}
 
 		switch len(tsStr) {
@@ -298,8 +232,7 @@ func (s *Service) handleTelnetConn(conn net.Conn) {
 			t = time.Unix(ts/1000, (ts%1000)*1000)
 			break
 		default:
-			s.statMap.Add(statTelnetBadTime, 1)
-			s.Logger.Printf("bad time '%s' must be 10 or 13 chars, from %s ", tsStr, remoteAddr)
+			s.Logger.Println("TSDBServer: time must be 10 or 13 chars, skipping: ", tsStr)
 			continue
 		}
 
@@ -307,8 +240,7 @@ func (s *Service) handleTelnetConn(conn net.Conn) {
 		for t := range tagStrs {
 			parts := strings.SplitN(tagStrs[t], "=", 2)
 			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-				s.statMap.Add(statTelnetBadTag, 1)
-				s.Logger.Printf("malformed tag data '%v' from %s", tagStrs[t], remoteAddr)
+				s.Logger.Println("TSDBServer: malformed tag data", tagStrs[t])
 				continue
 			}
 			k := parts[0]
@@ -319,12 +251,20 @@ func (s *Service) handleTelnetConn(conn net.Conn) {
 		fields := make(map[string]interface{})
 		fields["value"], err = strconv.ParseFloat(valueStr, 64)
 		if err != nil {
-			s.statMap.Add(statTelnetBadFloat, 1)
-			s.Logger.Printf("bad float '%s' from %s", valueStr, remoteAddr)
+			s.Logger.Println("TSDBServer: could not parse value as float: ", valueStr)
 			continue
 		}
 
-		s.batcher.In() <- tsdb.NewPoint(measurement, tags, fields, t)
+		p := tsdb.NewPoint(measurement, tags, fields, t)
+		if err := s.PointsWriter.WritePoints(&cluster.WritePointsRequest{
+			Database:         s.Database,
+			RetentionPolicy:  s.RetentionPolicy,
+			ConsistencyLevel: s.ConsistencyLevel,
+			Points:           []tsdb.Point{p},
+		}); err != nil {
+			s.Logger.Println("TSDB cannot write data: ", err)
+			continue
+		}
 	}
 }
 
@@ -338,29 +278,4 @@ func (s *Service) serveHTTP() {
 		Logger:           s.Logger,
 	}}
 	srv.Serve(s.httpln)
-}
-
-// processBatches continually drains the given batcher and writes the batches to the database.
-func (s *Service) processBatches(batcher *tsdb.PointBatcher) {
-	defer s.wg.Done()
-	for {
-		select {
-		case batch := <-batcher.Out():
-			if err := s.PointsWriter.WritePoints(&cluster.WritePointsRequest{
-				Database:         s.Database,
-				RetentionPolicy:  s.RetentionPolicy,
-				ConsistencyLevel: s.ConsistencyLevel,
-				Points:           batch,
-			}); err == nil {
-				s.statMap.Add(statBatchesTrasmitted, 1)
-				s.statMap.Add(statPointsTransmitted, int64(len(batch)))
-			} else {
-				s.Logger.Printf("failed to write point batch to database %q: %s", s.Database, err)
-				s.statMap.Add(statBatchesTransmitFail, 1)
-			}
-
-		case <-s.done:
-			return
-		}
-	}
 }

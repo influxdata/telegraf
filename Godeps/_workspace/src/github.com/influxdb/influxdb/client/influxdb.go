@@ -79,7 +79,6 @@ type Config struct {
 	Password  string
 	UserAgent string
 	Timeout   time.Duration
-	Precision string
 }
 
 // NewConfig will create a config to be used in connecting to the client
@@ -96,7 +95,6 @@ type Client struct {
 	password   string
 	httpClient *http.Client
 	userAgent  string
-	precision  string
 }
 
 const (
@@ -114,7 +112,6 @@ func NewClient(c Config) (*Client, error) {
 		password:   c.Password,
 		httpClient: &http.Client{Timeout: c.Timeout},
 		userAgent:  c.UserAgent,
-		precision:  c.Precision,
 	}
 	if client.userAgent == "" {
 		client.userAgent = "InfluxDBClient"
@@ -128,11 +125,6 @@ func (c *Client) SetAuth(u, p string) {
 	c.password = p
 }
 
-// SetPrecision will update the precision
-func (c *Client) SetPrecision(precision string) {
-	c.precision = precision
-}
-
 // Query sends a command to the server and returns the Response
 func (c *Client) Query(q Query) (*Response, error) {
 	u := c.url
@@ -141,9 +133,6 @@ func (c *Client) Query(q Query) (*Response, error) {
 	values := u.Query()
 	values.Set("q", q.Command)
 	values.Set("db", q.Database)
-	if c.precision != "" {
-		values.Set("epoch", c.precision)
-	}
 	u.RawQuery = values.Encode()
 
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -460,11 +449,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Point) MarshalString() string {
-	pt := tsdb.NewPoint(p.Measurement, p.Tags, p.Fields, p.Time)
-	if p.Precision == "" || p.Precision == "ns" || p.Precision == "n" {
-		return pt.String()
-	}
-	return pt.PrecisionString(p.Precision)
+	return tsdb.NewPoint(p.Measurement, p.Tags, p.Fields, p.Time).String()
 }
 
 // UnmarshalJSON decodes the data into the Point struct

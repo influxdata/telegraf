@@ -51,16 +51,8 @@ func TestPointsWriter_MapShards_One(t *testing.T) {
 func TestPointsWriter_MapShards_Multiple(t *testing.T) {
 	ms := MetaStore{}
 	rp := NewRetentionPolicy("myp", time.Hour, 3)
-	AttachShardGroupInfo(rp, []meta.ShardOwner{
-		{NodeID: 1},
-		{NodeID: 2},
-		{NodeID: 3},
-	})
-	AttachShardGroupInfo(rp, []meta.ShardOwner{
-		{NodeID: 1},
-		{NodeID: 2},
-		{NodeID: 3},
-	})
+	AttachShardGroupInfo(rp, []uint64{1, 2, 3})
+	AttachShardGroupInfo(rp, []uint64{1, 2, 3})
 
 	ms.NodeIDFn = func() uint64 { return 1 }
 	ms.RetentionPolicyFn = func(db, retentionPolicy string) (*meta.RetentionPolicyInfo, error) {
@@ -257,25 +249,13 @@ func TestPointsWriter_WritePoints(t *testing.T) {
 		theTest := test
 		sm := cluster.NewShardMapping()
 		sm.MapPoint(
-			&meta.ShardInfo{ID: uint64(1), Owners: []meta.ShardOwner{
-				{NodeID: 1},
-				{NodeID: 2},
-				{NodeID: 3},
-			}},
+			&meta.ShardInfo{ID: uint64(1), OwnerIDs: []uint64{uint64(1), uint64(2), uint64(3)}},
 			pr.Points[0])
 		sm.MapPoint(
-			&meta.ShardInfo{ID: uint64(2), Owners: []meta.ShardOwner{
-				{NodeID: 1},
-				{NodeID: 2},
-				{NodeID: 3},
-			}},
+			&meta.ShardInfo{ID: uint64(2), OwnerIDs: []uint64{uint64(1), uint64(2), uint64(3)}},
 			pr.Points[1])
 		sm.MapPoint(
-			&meta.ShardInfo{ID: uint64(2), Owners: []meta.ShardOwner{
-				{NodeID: 1},
-				{NodeID: 2},
-				{NodeID: 3},
-			}},
+			&meta.ShardInfo{ID: uint64(2), OwnerIDs: []uint64{uint64(1), uint64(2), uint64(3)}},
 			pr.Points[2])
 
 		// Local cluster.Node ShardWriter
@@ -354,16 +334,8 @@ func (f *fakeStore) CreateShard(database, retentionPolicy string, shardID uint64
 func NewMetaStore() *MetaStore {
 	ms := &MetaStore{}
 	rp := NewRetentionPolicy("myp", time.Hour, 3)
-	AttachShardGroupInfo(rp, []meta.ShardOwner{
-		{NodeID: 1},
-		{NodeID: 2},
-		{NodeID: 3},
-	})
-	AttachShardGroupInfo(rp, []meta.ShardOwner{
-		{NodeID: 1},
-		{NodeID: 2},
-		{NodeID: 3},
-	})
+	AttachShardGroupInfo(rp, []uint64{1, 2, 3})
+	AttachShardGroupInfo(rp, []uint64{1, 2, 3})
 
 	ms.RetentionPolicyFn = func(db, retentionPolicy string) (*meta.RetentionPolicyInfo, error) {
 		return rp, nil
@@ -408,15 +380,15 @@ func (m MetaStore) ShardOwner(shardID uint64) (string, string, *meta.ShardGroupI
 
 func NewRetentionPolicy(name string, duration time.Duration, nodeCount int) *meta.RetentionPolicyInfo {
 	shards := []meta.ShardInfo{}
-	owners := []meta.ShardOwner{}
+	ownerIDs := []uint64{}
 	for i := 1; i <= nodeCount; i++ {
-		owners = append(owners, meta.ShardOwner{NodeID: uint64(i)})
+		ownerIDs = append(ownerIDs, uint64(i))
 	}
 
 	// each node is fully replicated with each other
 	shards = append(shards, meta.ShardInfo{
-		ID:     nextShardID(),
-		Owners: owners,
+		ID:       nextShardID(),
+		OwnerIDs: ownerIDs,
 	})
 
 	rp := &meta.RetentionPolicyInfo{
@@ -436,7 +408,7 @@ func NewRetentionPolicy(name string, duration time.Duration, nodeCount int) *met
 	return rp
 }
 
-func AttachShardGroupInfo(rp *meta.RetentionPolicyInfo, owners []meta.ShardOwner) {
+func AttachShardGroupInfo(rp *meta.RetentionPolicyInfo, ownerIDs []uint64) {
 	var startTime, endTime time.Time
 	if len(rp.ShardGroups) == 0 {
 		startTime = time.Unix(0, 0)
@@ -451,8 +423,8 @@ func AttachShardGroupInfo(rp *meta.RetentionPolicyInfo, owners []meta.ShardOwner
 		EndTime:   endTime,
 		Shards: []meta.ShardInfo{
 			meta.ShardInfo{
-				ID:     nextShardID(),
-				Owners: owners,
+				ID:       nextShardID(),
+				OwnerIDs: ownerIDs,
 			},
 		},
 	}

@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -22,16 +20,6 @@ import (
 	"github.com/influxdb/influxdb/tsdb/engine/bz1"
 	"github.com/influxdb/influxdb/tsdb/engine/wal"
 )
-
-var QuickConfig quick.Config
-
-func init() {
-	// Limit the number of iterations on CI so it doesn't take so long.
-	if os.Getenv("CI") == "true" {
-		QuickConfig.MaxCount = 10
-		fmt.Fprintf(os.Stderr, "Limiting quickchecks to %d iterations (CI)\n", QuickConfig.MaxCount)
-	}
-}
 
 // Ensure the engine can write series metadata and reload it.
 func TestEngine_LoadMetadataIndex_Series(t *testing.T) {
@@ -176,7 +164,7 @@ func TestEngine_WriteIndex_Append(t *testing.T) {
 	defer tx.Rollback()
 
 	// Iterate over "cpu" series.
-	c := tx.Cursor("cpu", tsdb.Forward)
+	c := tx.Cursor("cpu")
 	if k, v := c.Seek(u64tob(0)); !reflect.DeepEqual(k, []byte{0, 0, 0, 0, 0, 0, 0, 1}) || !reflect.DeepEqual(v, []byte{0x10}) {
 		t.Fatalf("unexpected key/value: %x / %x", k, v)
 	} else if k, v = c.Next(); !reflect.DeepEqual(k, []byte{0, 0, 0, 0, 0, 0, 0, 2}) || !reflect.DeepEqual(v, []byte{0x20}) {
@@ -186,7 +174,7 @@ func TestEngine_WriteIndex_Append(t *testing.T) {
 	}
 
 	// Iterate over "mem" series.
-	c = tx.Cursor("mem", tsdb.Forward)
+	c = tx.Cursor("mem")
 	if k, v := c.Seek(u64tob(0)); !reflect.DeepEqual(k, []byte{0, 0, 0, 0, 0, 0, 0, 0}) || !reflect.DeepEqual(v, []byte{0x30}) {
 		t.Fatalf("unexpected key/value: %x / %x", k, v)
 	} else if k, _ = c.Next(); k != nil {
@@ -236,7 +224,7 @@ func TestEngine_WriteIndex_Insert(t *testing.T) {
 	defer tx.Rollback()
 
 	// Iterate over "cpu" series.
-	c := tx.Cursor("cpu", tsdb.Forward)
+	c := tx.Cursor("cpu")
 	if k, v := c.Seek(u64tob(0)); btou64(k) != 9 || !bytes.Equal(v, []byte{0x09}) {
 		t.Fatalf("unexpected key/value: %x / %x", k, v)
 	} else if k, v = c.Next(); btou64(k) != 10 || !bytes.Equal(v, []byte{0xFF}) {
@@ -248,64 +236,6 @@ func TestEngine_WriteIndex_Insert(t *testing.T) {
 	} else if k, v = c.Next(); btou64(k) != 30 || !bytes.Equal(v, []byte{0x30}) {
 		t.Fatalf("unexpected key/value: %x / %x", k, v)
 	} else if k, v = c.Next(); btou64(k) != 31 || !bytes.Equal(v, []byte{0xFF}) {
-		t.Fatalf("unexpected key/value: %x / %x", k, v)
-	}
-}
-
-// Ensure the engine can rewrite blocks that contain the new point range.
-func TestEngine_Cursor_Reverse(t *testing.T) {
-	e := OpenDefaultEngine()
-	defer e.Close()
-
-	// Write initial points to index.
-	if err := e.WriteIndex(map[string][][]byte{
-		"cpu": [][]byte{
-			append(u64tob(10), 0x10),
-			append(u64tob(20), 0x20),
-			append(u64tob(30), 0x30),
-		},
-	}, nil, nil); err != nil {
-		t.Fatal(err)
-	}
-
-	// Write overlapping points to index.
-	if err := e.WriteIndex(map[string][][]byte{
-		"cpu": [][]byte{
-			append(u64tob(9), 0x09),
-			append(u64tob(10), 0xFF),
-			append(u64tob(25), 0x25),
-			append(u64tob(31), 0x31),
-		},
-	}, nil, nil); err != nil {
-		t.Fatal(err)
-	}
-
-	// Write overlapping points to index again.
-	if err := e.WriteIndex(map[string][][]byte{
-		"cpu": [][]byte{
-			append(u64tob(31), 0xFF),
-		},
-	}, nil, nil); err != nil {
-		t.Fatal(err)
-	}
-
-	// Start transaction.
-	tx := e.MustBegin(false)
-	defer tx.Rollback()
-
-	// Iterate over "cpu" series.
-	c := tx.Cursor("cpu", tsdb.Reverse)
-	if k, v := c.Seek(u64tob(math.MaxUint64)); btou64(k) != 31 || !bytes.Equal(v, []byte{0xFF}) {
-		t.Fatalf("unexpected key/value: %x / %x", k, v)
-	} else if k, v = c.Next(); btou64(k) != 30 || !bytes.Equal(v, []byte{0x30}) {
-		t.Fatalf("unexpected key/value: %x / %x", k, v)
-	} else if k, v = c.Next(); btou64(k) != 25 || !bytes.Equal(v, []byte{0x25}) {
-		t.Fatalf("unexpected key/value: %x / %x", k, v)
-	} else if k, v = c.Next(); btou64(k) != 20 || !bytes.Equal(v, []byte{0x20}) {
-		t.Fatalf("unexpected key/value: %x / %x", k, v)
-	} else if k, v = c.Next(); btou64(k) != 10 || !bytes.Equal(v, []byte{0xFF}) {
-		t.Fatalf("unexpected key/value: %x / %x", k, v)
-	} else if k, v = c.Seek(u64tob(0)); btou64(k) != 9 || !bytes.Equal(v, []byte{0x09}) {
 		t.Fatalf("unexpected key/value: %x / %x", k, v)
 	}
 }
@@ -335,7 +265,7 @@ func TestEngine_WriteIndex_SeekAgainstInBlockValue(t *testing.T) {
 	defer tx.Rollback()
 
 	// Ensure that we can seek to a block in the middle
-	c := tx.Cursor("cpu", tsdb.Forward)
+	c := tx.Cursor("cpu")
 	if k, _ := c.Seek(u64tob(15)); btou64(k) != 20 {
 		t.Fatalf("expected to seek to time 20, but got %d", btou64(k))
 	}
@@ -393,7 +323,7 @@ func TestEngine_WriteIndex_Quick(t *testing.T) {
 
 		// Iterate over results to ensure they are correct.
 		for _, key := range keys {
-			c := tx.Cursor(key, tsdb.Forward)
+			c := tx.Cursor(key)
 
 			// Read list of key/values.
 			var got [][]byte
@@ -407,7 +337,7 @@ func TestEngine_WriteIndex_Quick(t *testing.T) {
 		}
 
 		return true
-	}, &QuickConfig)
+	}, nil)
 }
 
 // Ensure the engine can accept randomly generated append-only points.
@@ -440,7 +370,7 @@ func TestEngine_WriteIndex_Quick_Append(t *testing.T) {
 
 		// Iterate over results to ensure they are correct.
 		for _, key := range keys {
-			c := tx.Cursor(key, tsdb.Forward)
+			c := tx.Cursor(key)
 
 			// Read list of key/values.
 			var got [][]byte
@@ -454,7 +384,7 @@ func TestEngine_WriteIndex_Quick_Append(t *testing.T) {
 		}
 
 		return true
-	}, &QuickConfig)
+	}, nil)
 }
 
 func BenchmarkEngine_WriteIndex_512b(b *testing.B)  { benchmarkEngine_WriteIndex(b, 512) }
@@ -582,18 +512,13 @@ func (w *EnginePointsWriter) Open() error { return nil }
 
 func (w *EnginePointsWriter) Close() error { return nil }
 
-func (w *EnginePointsWriter) Cursor(key string, direction tsdb.Direction) tsdb.Cursor {
-	return &Cursor{direction: direction}
-}
+func (w *EnginePointsWriter) Cursor(key string) tsdb.Cursor { return &Cursor{} }
 
 func (w *EnginePointsWriter) Flush() error { return nil }
 
 // Cursor represents a mock that implements tsdb.Curosr.
 type Cursor struct {
-	direction tsdb.Direction
 }
-
-func (c *Cursor) Direction() tsdb.Direction { return c.direction }
 
 func (c *Cursor) Seek(key []byte) ([]byte, []byte) { return nil, nil }
 

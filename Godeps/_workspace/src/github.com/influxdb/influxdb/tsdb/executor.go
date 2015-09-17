@@ -21,15 +21,9 @@ const (
 	IgnoredChunkSize = 0
 )
 
-// Executor is an interface for a query executor.
-type Executor interface {
-	Execute() <-chan *influxql.Row
-}
-
 // Mapper is the interface all Mapper types must implement.
 type Mapper interface {
 	Open() error
-	SetRemote(m Mapper) error
 	TagSets() []string
 	Fields() []string
 	NextChunk() (interface{}, error)
@@ -59,20 +53,20 @@ func (sm *StatefulMapper) NextChunk() (*MapperOutput, error) {
 	return chunk, nil
 }
 
-type SelectExecutor struct {
+type Executor struct {
 	stmt           *influxql.SelectStatement
 	mappers        []*StatefulMapper
 	chunkSize      int
 	limitedTagSets map[string]struct{} // Set tagsets for which data has reached the LIMIT.
 }
 
-// NewSelectExecutor returns a new SelectExecutor.
-func NewSelectExecutor(stmt *influxql.SelectStatement, mappers []Mapper, chunkSize int) *SelectExecutor {
+// NewExecutor returns a new Executor.
+func NewExecutor(stmt *influxql.SelectStatement, mappers []Mapper, chunkSize int) *Executor {
 	a := []*StatefulMapper{}
 	for _, m := range mappers {
 		a = append(a, &StatefulMapper{m, nil, false})
 	}
-	return &SelectExecutor{
+	return &Executor{
 		stmt:           stmt,
 		mappers:        a,
 		chunkSize:      chunkSize,
@@ -81,12 +75,12 @@ func NewSelectExecutor(stmt *influxql.SelectStatement, mappers []Mapper, chunkSi
 }
 
 // Execute begins execution of the query and returns a channel to receive rows.
-func (e *SelectExecutor) Execute() <-chan *influxql.Row {
+func (e *Executor) Execute() <-chan *influxql.Row {
 	// Create output channel and stream data in a separate goroutine.
 	out := make(chan *influxql.Row, 0)
 
-	// Certain operations on the SELECT statement can be performed by the SelectExecutor without
-	// assistance from the Mappers. This allows the SelectExecutor to prepare aggregation functions
+	// Certain operations on the SELECT statement can be performed by the Executor without
+	// assistance from the Mappers. This allows the Executor to prepare aggregation functions
 	// and mathematical functions.
 	e.stmt.RewriteDistinct()
 
@@ -99,7 +93,7 @@ func (e *SelectExecutor) Execute() <-chan *influxql.Row {
 }
 
 // mappersDrained returns whether all the executors Mappers have been drained of data.
-func (e *SelectExecutor) mappersDrained() bool {
+func (e *Executor) mappersDrained() bool {
 	for _, m := range e.mappers {
 		if !m.drained {
 			return false
@@ -109,7 +103,7 @@ func (e *SelectExecutor) mappersDrained() bool {
 }
 
 // nextMapperTagset returns the alphabetically lowest tagset across all Mappers.
-func (e *SelectExecutor) nextMapperTagSet() string {
+func (e *Executor) nextMapperTagSet() string {
 	tagset := ""
 	for _, m := range e.mappers {
 		if m.bufferedChunk != nil {
@@ -124,7 +118,7 @@ func (e *SelectExecutor) nextMapperTagSet() string {
 }
 
 // nextMapperLowestTime returns the lowest minimum time across all Mappers, for the given tagset.
-func (e *SelectExecutor) nextMapperLowestTime(tagset string) int64 {
+func (e *Executor) nextMapperLowestTime(tagset string) int64 {
 	minTime := int64(math.MaxInt64)
 	for _, m := range e.mappers {
 		if !m.drained && m.bufferedChunk != nil {
@@ -140,35 +134,18 @@ func (e *SelectExecutor) nextMapperLowestTime(tagset string) int64 {
 	return minTime
 }
 
-// nextMapperHighestTime returns the highest time across all Mappers, for the given tagset.
-func (e *SelectExecutor) nextMapperHighestTime(tagset string) int64 {
-	maxTime := int64(math.MinInt64)
-	for _, m := range e.mappers {
-		if !m.drained && m.bufferedChunk != nil {
-			if m.bufferedChunk.key() != tagset {
-				continue
-			}
-			t := m.bufferedChunk.Values[0].Time
-			if t > maxTime {
-				maxTime = t
-			}
-		}
-	}
-	return maxTime
-}
-
 // tagSetIsLimited returns whether data for the given tagset has been LIMITed.
-func (e *SelectExecutor) tagSetIsLimited(tagset string) bool {
+func (e *Executor) tagSetIsLimited(tagset string) bool {
 	_, ok := e.limitedTagSets[tagset]
 	return ok
 }
 
 // limitTagSet marks the given taset as LIMITed.
-func (e *SelectExecutor) limitTagSet(tagset string) {
+func (e *Executor) limitTagSet(tagset string) {
 	e.limitedTagSets[tagset] = struct{}{}
 }
 
-func (e *SelectExecutor) executeRaw(out chan *influxql.Row) {
+func (e *Executor) executeRaw(out chan *influxql.Row) {
 	// It's important that all resources are released when execution completes.
 	defer e.close()
 
@@ -263,20 +240,9 @@ func (e *SelectExecutor) executeRaw(out chan *influxql.Row) {
 			rowWriter = nil
 		}
 
-		ascending := true
-		if len(e.stmt.SortFields) > 0 {
-			ascending = e.stmt.SortFields[0].Ascending
-		}
-
-		var timeBoundary int64
-
-		if ascending {
-			// Process the mapper outputs. We can send out everything up to the min of the last time
-			// of the chunks for the next tagset.
-			timeBoundary = e.nextMapperLowestTime(tagset)
-		} else {
-			timeBoundary = e.nextMapperHighestTime(tagset)
-		}
+		// Process the mapper outputs. We can send out everything up to the min of the last time
+		// of the chunks for the next tagset.
+		minTime := e.nextMapperLowestTime(tagset)
 
 		// Now empty out all the chunks up to the min time. Create new output struct for this data.
 		var chunkedOutput *MapperOutput
@@ -285,30 +251,19 @@ func (e *SelectExecutor) executeRaw(out chan *influxql.Row) {
 				continue
 			}
 
-			chunkBoundary := false
-			if ascending {
-				chunkBoundary = m.bufferedChunk.Values[0].Time > timeBoundary
-			} else {
-				chunkBoundary = m.bufferedChunk.Values[0].Time < timeBoundary
-			}
-
 			// This mapper's next chunk is not for the next tagset, or the very first value of
 			// the chunk is at a higher acceptable timestamp. Skip it.
-			if m.bufferedChunk.key() != tagset || chunkBoundary {
+			if m.bufferedChunk.key() != tagset || m.bufferedChunk.Values[0].Time > minTime {
 				continue
 			}
 
 			// Find the index of the point up to the min.
 			ind := len(m.bufferedChunk.Values)
 			for i, mo := range m.bufferedChunk.Values {
-				if ascending && mo.Time > timeBoundary {
-					ind = i
-					break
-				} else if !ascending && mo.Time < timeBoundary {
+				if mo.Time > minTime {
 					ind = i
 					break
 				}
-
 			}
 
 			// Add up to the index to the values
@@ -332,12 +287,8 @@ func (e *SelectExecutor) executeRaw(out chan *influxql.Row) {
 			}
 		}
 
-		if ascending {
-			// Sort the values by time first so we can then handle offset and limit
-			sort.Sort(MapperValues(chunkedOutput.Values))
-		} else {
-			sort.Sort(sort.Reverse(MapperValues(chunkedOutput.Values)))
-		}
+		// Sort the values by time first so we can then handle offset and limit
+		sort.Sort(MapperValues(chunkedOutput.Values))
 
 		// Now that we have full name and tag details, initialize the rowWriter.
 		// The Name and Tags will be the same for all mappers.
@@ -377,7 +328,7 @@ func (e *SelectExecutor) executeRaw(out chan *influxql.Row) {
 	close(out)
 }
 
-func (e *SelectExecutor) executeAggregate(out chan *influxql.Row) {
+func (e *Executor) executeAggregate(out chan *influxql.Row) {
 	// It's important to close all resources when execution completes.
 	defer e.close()
 
@@ -386,9 +337,9 @@ func (e *SelectExecutor) executeAggregate(out chan *influxql.Row) {
 	// the offsets within the value slices that are returned by the
 	// mapper.
 	aggregates := e.stmt.FunctionCalls()
-	reduceFuncs := make([]reduceFunc, len(aggregates))
+	reduceFuncs := make([]influxql.ReduceFunc, len(aggregates))
 	for i, c := range aggregates {
-		reduceFunc, err := initializeReduceFunc(c)
+		reduceFunc, err := influxql.InitializeReduceFunc(c)
 		if err != nil {
 			out <- &influxql.Row{Err: err}
 			return
@@ -397,7 +348,11 @@ func (e *SelectExecutor) executeAggregate(out chan *influxql.Row) {
 	}
 
 	// Put together the rows to return, starting with columns.
-	columnNames := e.stmt.ColumnNames()
+	columnNames := make([]string, len(e.stmt.Fields)+1)
+	columnNames[0] = "time"
+	for i, f := range e.stmt.Fields {
+		columnNames[i+1] = f.Name()
+	}
 
 	// Open the mappers.
 	for _, m := range e.mappers {
@@ -427,11 +382,6 @@ func (e *SelectExecutor) executeAggregate(out chan *influxql.Row) {
 		if m.bufferedChunk == nil {
 			m.drained = true
 		}
-	}
-
-	ascending := true
-	if len(e.stmt.SortFields) > 0 {
-		ascending = e.stmt.SortFields[0].Ascending
 	}
 
 	// Keep looping until all mappers drained.
@@ -506,12 +456,7 @@ func (e *SelectExecutor) executeAggregate(out chan *influxql.Row) {
 		for k, _ := range buckets {
 			tMins = append(tMins, k)
 		}
-
-		if ascending {
-			sort.Sort(tMins)
-		} else {
-			sort.Sort(sort.Reverse(tMins))
-		}
+		sort.Sort(tMins)
 
 		values := make([][]interface{}, len(tMins))
 		for i, t := range tMins {
@@ -522,12 +467,6 @@ func (e *SelectExecutor) executeAggregate(out chan *influxql.Row) {
 				reducedVal := f(buckets[t][j])
 				values[i] = append(values[i], reducedVal)
 			}
-		}
-
-		// Perform top/bottom unwraps
-		values, err = e.processTopBottom(values, columnNames)
-		if err != nil {
-			out <- &influxql.Row{Err: err}
 		}
 
 		// Perform any mathematics.
@@ -553,7 +492,7 @@ func (e *SelectExecutor) executeAggregate(out chan *influxql.Row) {
 
 // processFill will take the results and return new results (or the same if no fill modifications are needed)
 // with whatever fill options the query has.
-func (e *SelectExecutor) processFill(results [][]interface{}) [][]interface{} {
+func (e *Executor) processFill(results [][]interface{}) [][]interface{} {
 	// don't do anything if we're supposed to leave the nulls
 	if e.stmt.Fill == influxql.NullFill {
 		return results
@@ -599,7 +538,7 @@ func (e *SelectExecutor) processFill(results [][]interface{}) [][]interface{} {
 }
 
 // processDerivative returns the derivatives of the results
-func (e *SelectExecutor) processDerivative(results [][]interface{}) [][]interface{} {
+func (e *Executor) processDerivative(results [][]interface{}) [][]interface{} {
 	// Return early if we're not supposed to process the derivatives
 	if e.stmt.HasDerivative() {
 		interval, err := derivativeInterval(e.stmt)
@@ -616,73 +555,12 @@ func (e *SelectExecutor) processDerivative(results [][]interface{}) [][]interfac
 
 // Close closes the executor such that all resources are released. Once closed,
 // an executor may not be re-used.
-func (e *SelectExecutor) close() {
+func (e *Executor) close() {
 	if e != nil {
 		for _, m := range e.mappers {
 			m.Close()
 		}
 	}
-}
-
-func (e *SelectExecutor) processTopBottom(results [][]interface{}, columnNames []string) ([][]interface{}, error) {
-	aggregates := e.stmt.FunctionCalls()
-	var call *influxql.Call
-	process := false
-	for _, c := range aggregates {
-		if c.Name == "top" || c.Name == "bottom" {
-			process = true
-			call = c
-			break
-		}
-	}
-	if !process {
-		return results, nil
-	}
-	var values [][]interface{}
-
-	// Check if we have a group by, if not, rewrite the entire result by flattening it out
-	//if len(e.stmt.Dimensions) == 0 {
-	for _, vals := range results {
-		// start at 1 because the first value is always time
-		for j := 1; j < len(vals); j++ {
-			switch v := vals[j].(type) {
-			case PositionPoints:
-				tMin := vals[0].(time.Time)
-				for _, p := range v {
-					result := e.topBottomPointToQueryResult(p, tMin, call, columnNames)
-					values = append(values, result)
-				}
-			case nil:
-				continue
-			default:
-				return nil, fmt.Errorf("unrechable code - processTopBottom")
-			}
-		}
-	}
-	return values, nil
-}
-
-func (e *SelectExecutor) topBottomPointToQueryResult(p PositionPoint, tMin time.Time, call *influxql.Call, columnNames []string) []interface{} {
-	tm := time.Unix(0, p.Time).UTC().Format(time.RFC3339Nano)
-	// If we didn't explicity ask for time, and we have a group by, then use TMIN for the time returned
-	if len(e.stmt.Dimensions) > 0 && !e.stmt.HasTimeFieldSpecified() {
-		tm = tMin.UTC().Format(time.RFC3339Nano)
-	}
-	vals := []interface{}{tm}
-	for _, c := range columnNames {
-		if c == call.Name {
-			vals = append(vals, p.Value)
-			continue
-		}
-		// TODO in the future fields will also be available to us.
-		// we should always favor fields over tags if there is a name collision
-
-		// look in the tags for a value
-		if t, ok := p.Tags[c]; ok {
-			vals = append(vals, t)
-		}
-	}
-	return vals
 }
 
 // limitedRowWriter accepts raw mapper values, and will emit those values as rows in chunks

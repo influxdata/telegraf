@@ -86,20 +86,7 @@ reporting-disabled = false
 
 [retention]
   enabled = true
-  check-interval = "30m"
-
-###
-### Controls the system self-monitoring, statistics and diagnostics.
-###
-### The retention policy for this data is the default retention policy within
-### the internal database. The internal database is created automatically if
-### if it does not already exist, as is the default retention policy. If you
-### want to use a non-default retention policy, it must be explicitly created.
-
-[monitor]
-  store-enabled = true # Whether to record statistics internally.
-  store-database = "_internal" # The destination database for recorded statistics
-  store-interval = "10s" # The interval at which to record statistics
+  check-interval = "10m"
 
 ###
 ### [admin]
@@ -145,11 +132,10 @@ reporting-disabled = false
   # name-separator = "."
 
   # These next lines control how batching works. You should have this enabled
-  # otherwise you could get dropped metrics or poor performance. Batching
+  # otherwise you could get dropped metrics or poor performance. Batching 
   # will buffer points in memory if you have many coming in.
 
   # batch-size = 1000 # will flush if this many points get buffered
-  # batch-pending = 5 # number of batches that may be pending in memory
   # batch-timeout = "1s" # will flush at least this often even if we haven't hit buffer limit
 
   ## "name-schema" configures tag names for parsing the metric name from graphite protocol;
@@ -185,11 +171,10 @@ reporting-disabled = false
   # typesdb = ""
 
   # These next lines control how batching works. You should have this enabled
-  # otherwise you could get dropped metrics or poor performance. Batching
+  # otherwise you could get dropped metrics or poor performance. Batching 
   # will buffer points in memory if you have many coming in.
 
   # batch-size = 1000 # will flush if this many points get buffered
-  # batch-pending = 5 # number of batches that may be pending in memory
   # batch-timeout = "1s" # will flush at least this often even if we haven't hit buffer limit
 
 ###
@@ -204,14 +189,6 @@ reporting-disabled = false
   # database = ""
   # retention-policy = ""
 
-  # These next lines control how batching works. You should have this enabled
-  # otherwise you could get dropped metrics or poor performance. Only points
-  # metrics received over the telnet protocol undergo batching.
-
-  # batch-size = 1000 # will flush if this many points get buffered
-  # batch-pending = 5 # number of batches that may be pending in memory
-  # batch-timeout = "1s" # will flush at least this often even if we haven't hit buffer limit
-
 ###
 ### [[udp]]
 ###
@@ -224,12 +201,19 @@ reporting-disabled = false
   # database = ""
 
   # These next lines control how batching works. You should have this enabled
-  # otherwise you could get dropped metrics or poor performance. Batching
+  # otherwise you could get dropped metrics or poor performance. Batching 
   # will buffer points in memory if you have many coming in.
 
   # batch-size = 1000 # will flush if this many points get buffered
-  # batch-pending = 5 # number of batches that may be pending in memory
   # batch-timeout = "1s" # will flush at least this often even if we haven't hit buffer limit
+
+###
+### [monitoring]
+###
+
+[monitoring]
+  enabled = true
+  write-interval = "24h"
 
 ###
 ### [continuous_queries]

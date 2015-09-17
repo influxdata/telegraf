@@ -2,7 +2,6 @@
 package run_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,12 +30,7 @@ type Server struct {
 
 // NewServer returns a new instance of Server.
 func NewServer(c *run.Config) *Server {
-	buildInfo := &run.BuildInfo{
-		Version: "testServer",
-		Commit:  "testCommit",
-		Branch:  "testBranch",
-	}
-	srv, _ := run.NewServer(c, buildInfo)
+	srv, _ := run.NewServer(c, "testServer")
 	s := Server{
 		Server: srv,
 		Config: c,
@@ -59,12 +53,7 @@ func OpenServer(c *run.Config, joinURLs string) *Server {
 
 // OpenServerWithVersion opens a test server with a specific version.
 func OpenServerWithVersion(c *run.Config, version string) *Server {
-	buildInfo := &run.BuildInfo{
-		Version: version,
-		Commit:  "",
-		Branch:  "",
-	}
-	srv, _ := run.NewServer(c, buildInfo)
+	srv, _ := run.NewServer(c, version)
 	s := Server{
 		Server: srv,
 		Config: c,
@@ -116,14 +105,10 @@ func (s *Server) QueryWithParams(query string, values url.Values) (results strin
 		values = url.Values{}
 	}
 	values.Set("q", query)
-	return s.HTTPGet(s.URL() + "/query?" + values.Encode())
-}
-
-// HTTPGet makes an HTTP GET request to the server and returns the response.
-func (s *Server) HTTPGet(url string) (results string, err error) {
-	resp, err := http.Get(url)
+	resp, err := http.Get(s.URL() + "/query?" + values.Encode())
 	if err != nil {
 		return "", err
+		//} else if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
 	}
 	body := string(MustReadAll(resp.Body))
 	switch resp.StatusCode {
@@ -133,27 +118,6 @@ func (s *Server) HTTPGet(url string) (results string, err error) {
 		}
 		return body, nil
 	case http.StatusOK:
-		return body, nil
-	default:
-		return "", fmt.Errorf("unexpected status code: code=%d, body=%s", resp.StatusCode, body)
-	}
-}
-
-// HTTPPost makes an HTTP POST request to the server and returns the response.
-func (s *Server) HTTPPost(url string, content []byte) (results string, err error) {
-	buf := bytes.NewBuffer(content)
-	resp, err := http.Post(url, "application/json", buf)
-	if err != nil {
-		return "", err
-	}
-	body := string(MustReadAll(resp.Body))
-	switch resp.StatusCode {
-	case http.StatusBadRequest:
-		if !expectPattern(".*error parsing query*.", body) {
-			return "", fmt.Errorf("unexpected status code: code=%d, body=%s", resp.StatusCode, body)
-		}
-		return body, nil
-	case http.StatusOK, http.StatusNoContent:
 		return body, nil
 	default:
 		return "", fmt.Errorf("unexpected status code: code=%d, body=%s", resp.StatusCode, body)
@@ -184,8 +148,6 @@ func (s *Server) Write(db, rp, body string, params url.Values) (results string, 
 func NewConfig() *run.Config {
 	c := run.NewConfig()
 	c.ReportingDisabled = true
-	c.Cluster.ShardWriterTimeout = toml.Duration(30 * time.Second)
-	c.Cluster.WriteTimeout = toml.Duration(30 * time.Second)
 	c.Meta.Dir = MustTempFile()
 	c.Meta.BindAddress = "127.0.0.1:0"
 	c.Meta.HeartbeatTimeout = toml.Duration(50 * time.Millisecond)
@@ -195,15 +157,12 @@ func NewConfig() *run.Config {
 
 	c.Data.Dir = MustTempFile()
 	c.Data.WALDir = MustTempFile()
-	c.Data.WALLoggingEnabled = false
 
 	c.HintedHandoff.Dir = MustTempFile()
 
 	c.HTTPD.Enabled = true
 	c.HTTPD.BindAddress = "127.0.0.1:0"
 	c.HTTPD.LogEnabled = testing.Verbose()
-
-	c.Monitor.StoreEnabled = false
 
 	return c
 }
@@ -273,7 +232,6 @@ type Query struct {
 	exp, act string
 	pattern  bool
 	skip     bool
-	repeat   int
 }
 
 // Execute runs the command and returns an err if it fails
@@ -345,8 +303,6 @@ func configureLogging(s *Server) {
 		s.MetaStore.Logger = nullLogger
 		s.TSDBStore.Logger = nullLogger
 		s.HintedHandoff.SetLogger(nullLogger)
-		s.Monitor.SetLogger(nullLogger)
-		s.QueryExecutor.SetLogger(nullLogger)
 		for _, service := range s.Services {
 			if service, ok := service.(logSetter); ok {
 				service.SetLogger(nullLogger)

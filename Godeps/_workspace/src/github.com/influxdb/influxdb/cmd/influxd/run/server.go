@@ -14,11 +14,9 @@ import (
 
 	"github.com/influxdb/influxdb/cluster"
 	"github.com/influxdb/influxdb/meta"
-	"github.com/influxdb/influxdb/monitor"
 	"github.com/influxdb/influxdb/services/admin"
 	"github.com/influxdb/influxdb/services/collectd"
 	"github.com/influxdb/influxdb/services/continuous_querier"
-	"github.com/influxdb/influxdb/services/copier"
 	"github.com/influxdb/influxdb/services/graphite"
 	"github.com/influxdb/influxdb/services/hh"
 	"github.com/influxdb/influxdb/services/httpd"
@@ -32,18 +30,11 @@ import (
 	_ "github.com/influxdb/influxdb/tsdb/engine"
 )
 
-// BuildInfo represents the build details for the server code.
-type BuildInfo struct {
-	Version string
-	Commit  string
-	Branch  string
-}
-
 // Server represents a container for the metadata and storage data and services.
 // It is built using a Config and it manages the startup and shutdown of all
 // services in the proper order.
 type Server struct {
-	buildInfo BuildInfo
+	version string // Build version
 
 	err     chan error
 	closing chan struct{}
@@ -65,9 +56,6 @@ type Server struct {
 	// These references are required for the tcp muxer.
 	ClusterService     *cluster.Service
 	SnapshotterService *snapshotter.Service
-	CopierService      *copier.Service
-
-	Monitor *monitor.Monitor
 
 	// Server reporting
 	reportingDisabled bool
@@ -78,23 +66,21 @@ type Server struct {
 }
 
 // NewServer returns a new instance of Server built from a config.
-func NewServer(c *Config, buildInfo *BuildInfo) (*Server, error) {
+func NewServer(c *Config, version string) (*Server, error) {
 	// Construct base meta store and data store.
 	tsdbStore := tsdb.NewStore(c.Data.Dir)
 	tsdbStore.EngineOptions.Config = c.Data
 
 	s := &Server{
-		buildInfo: *buildInfo,
-		err:       make(chan error),
-		closing:   make(chan struct{}),
+		version: version,
+		err:     make(chan error),
+		closing: make(chan struct{}),
 
 		Hostname:    c.Meta.Hostname,
 		BindAddress: c.Meta.BindAddress,
 
 		MetaStore: meta.NewStore(c.Meta),
 		TSDBStore: tsdbStore,
-
-		Monitor: monitor.New(c.Monitor),
 
 		reportingDisabled: c.ReportingDisabled,
 	}
@@ -114,7 +100,6 @@ func NewServer(c *Config, buildInfo *BuildInfo) (*Server, error) {
 	s.QueryExecutor = tsdb.NewQueryExecutor(s.TSDBStore)
 	s.QueryExecutor.MetaStore = s.MetaStore
 	s.QueryExecutor.MetaStatementExecutor = &meta.StatementExecutor{Store: s.MetaStore}
-	s.QueryExecutor.MonitorStatementExecutor = &monitor.StatementExecutor{Monitor: s.Monitor}
 	s.QueryExecutor.ShardMapper = s.ShardMapper
 
 	// Set the shard writer
@@ -132,18 +117,10 @@ func NewServer(c *Config, buildInfo *BuildInfo) (*Server, error) {
 	s.PointsWriter.ShardWriter = s.ShardWriter
 	s.PointsWriter.HintedHandoff = s.HintedHandoff
 
-	// Initialize the monitor
-	s.Monitor.Version = s.buildInfo.Version
-	s.Monitor.Commit = s.buildInfo.Commit
-	s.Monitor.Branch = s.buildInfo.Branch
-	s.Monitor.MetaStore = s.MetaStore
-	s.Monitor.PointsWriter = s.PointsWriter
-
 	// Append services.
 	s.appendClusterService(c.Cluster)
 	s.appendPrecreatorService(c.Precreator)
 	s.appendSnapshotterService()
-	s.appendCopierService()
 	s.appendAdminService(c.Admin)
 	s.appendContinuousQueryService(c.ContinuousQuery)
 	s.appendHTTPDService(c.HTTPD)
@@ -180,13 +157,6 @@ func (s *Server) appendSnapshotterService() {
 	s.SnapshotterService = srv
 }
 
-func (s *Server) appendCopierService() {
-	srv := copier.NewService()
-	srv.TSDBStore = s.TSDBStore
-	s.Services = append(s.Services, srv)
-	s.CopierService = srv
-}
-
 func (s *Server) appendRetentionPolicyService(c retention.Config) {
 	if !c.Enabled {
 		return
@@ -213,7 +183,7 @@ func (s *Server) appendHTTPDService(c httpd.Config) {
 	srv.Handler.MetaStore = s.MetaStore
 	srv.Handler.QueryExecutor = s.QueryExecutor
 	srv.Handler.PointsWriter = s.PointsWriter
-	srv.Handler.Version = s.buildInfo.Version
+	srv.Handler.Version = s.version
 
 	// If a ContinuousQuerier service has been started, attach it.
 	for _, srvc := range s.Services {
@@ -260,7 +230,6 @@ func (s *Server) appendGraphiteService(c graphite.Config) error {
 
 	srv.PointsWriter = s.PointsWriter
 	srv.MetaStore = s.MetaStore
-	srv.Monitor = s.Monitor
 	s.Services = append(s.Services, srv)
 	return nil
 }
@@ -341,7 +310,6 @@ func (s *Server) Open() error {
 
 		s.ClusterService.Listener = mux.Listen(cluster.MuxHeader)
 		s.SnapshotterService.Listener = mux.Listen(snapshotter.MuxHeader)
-		s.CopierService.Listener = mux.Listen(copier.MuxHeader)
 		go mux.Serve(ln)
 
 		// Open meta store.
@@ -352,10 +320,6 @@ func (s *Server) Open() error {
 
 		// Wait for the store to initialize.
 		<-s.MetaStore.Ready()
-
-		if err := s.Monitor.Open(); err != nil {
-			return fmt.Errorf("open monitor: %v", err)
-		}
 
 		// Open TSDB store.
 		if err := s.TSDBStore.Open(); err != nil {
@@ -392,33 +356,20 @@ func (s *Server) Open() error {
 func (s *Server) Close() error {
 	stopProfile()
 
-	// Close the listener first to stop any new connections
 	if s.Listener != nil {
 		s.Listener.Close()
 	}
-
-	// Close services to allow any inflight requests to complete
-	// and prevent new requests from being accepted.
-	for _, service := range s.Services {
-		service.Close()
+	if s.MetaStore != nil {
+		s.MetaStore.Close()
 	}
-
-	if s.Monitor != nil {
-		s.Monitor.Close()
-	}
-
-	if s.HintedHandoff != nil {
-		s.HintedHandoff.Close()
-	}
-
-	// Close the TSDBStore, no more reads or writes at this point
 	if s.TSDBStore != nil {
 		s.TSDBStore.Close()
 	}
-
-	// Finally close the meta-store since everything else depends on it
-	if s.MetaStore != nil {
-		s.MetaStore.Close()
+	if s.HintedHandoff != nil {
+		s.HintedHandoff.Close()
+	}
+	for _, service := range s.Services {
+		service.Close()
 	}
 
 	close(s.closing)
@@ -475,7 +426,7 @@ func (s *Server) reportServer() {
     "name":"reports",
     "columns":["os", "arch", "version", "server_id", "cluster_id", "num_series", "num_measurements", "num_databases"],
     "points":[["%s", "%s", "%s", "%x", "%x", "%d", "%d", "%d"]]
-  }]`, runtime.GOOS, runtime.GOARCH, s.buildInfo.Version, s.MetaStore.NodeID(), clusterID, numSeries, numMeasurements, numDatabases)
+  }]`, runtime.GOOS, runtime.GOARCH, s.version, s.MetaStore.NodeID(), clusterID, numSeries, numMeasurements, numDatabases)
 
 	data := bytes.NewBufferString(json)
 

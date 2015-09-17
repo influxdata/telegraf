@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/influxdb/influxdb/pkg/slices"
 )
 
 // DataType represents the primitive data types available in InfluxQL.
@@ -107,7 +105,6 @@ func (*ShowFieldKeysStatement) node()         {}
 func (*ShowRetentionPoliciesStatement) node() {}
 func (*ShowMeasurementsStatement) node()      {}
 func (*ShowSeriesStatement) node()            {}
-func (*ShowShardsStatement) node()            {}
 func (*ShowStatsStatement) node()             {}
 func (*ShowDiagnosticsStatement) node()       {}
 func (*ShowTagKeysStatement) node()           {}
@@ -209,7 +206,6 @@ func (*ShowFieldKeysStatement) stmt()         {}
 func (*ShowMeasurementsStatement) stmt()      {}
 func (*ShowRetentionPoliciesStatement) stmt() {}
 func (*ShowSeriesStatement) stmt()            {}
-func (*ShowShardsStatement) stmt()            {}
 func (*ShowStatsStatement) stmt()             {}
 func (*ShowDiagnosticsStatement) stmt()       {}
 func (*ShowTagKeysStatement) stmt()           {}
@@ -278,7 +274,7 @@ type SortField struct {
 // String returns a string representation of a sort field
 func (field *SortField) String() string {
 	var buf bytes.Buffer
-	if field.Name != "" {
+	if field.Name == "" {
 		_, _ = buf.WriteString(field.Name)
 		_, _ = buf.WriteString(" ")
 	}
@@ -306,19 +302,12 @@ func (a SortFields) String() string {
 type CreateDatabaseStatement struct {
 	// Name of the database to be created.
 	Name string
-
-	// IfNotExists indicates whether to return without error if the database
-	// already exists.
-	IfNotExists bool
 }
 
 // String returns a string representation of the create database statement.
 func (s *CreateDatabaseStatement) String() string {
 	var buf bytes.Buffer
 	_, _ = buf.WriteString("CREATE DATABASE ")
-	if s.IfNotExists {
-		_, _ = buf.WriteString("IF NOT EXISTS ")
-	}
 	_, _ = buf.WriteString(s.Name)
 	return buf.String()
 }
@@ -859,48 +848,6 @@ func (s *SelectStatement) RewriteDistinct() {
 	}
 }
 
-// ColumnNames will walk all fields and functions and return the appropriate field names for the select statement
-// while maintaining order of the field names
-func (s *SelectStatement) ColumnNames() []string {
-	// Always set the first column to be time, even if they didn't specify it
-	columnNames := []string{"time"}
-
-	// First walk each field
-	for _, field := range s.Fields {
-		switch f := field.Expr.(type) {
-		case *Call:
-			if f.Name == "top" || f.Name == "bottom" {
-				if len(f.Args) == 2 {
-					columnNames = append(columnNames, f.Name)
-					continue
-				}
-				// We have a special case now where we have to add the column names for the fields TOP or BOTTOM asked for as well
-				columnNames = slices.Union(columnNames, f.Fields(), true)
-				continue
-			}
-			columnNames = append(columnNames, field.Name())
-		default:
-			// time is always first, and we already added it, so ignore it if they asked for it anywhere else.
-			if field.Name() != "time" {
-				columnNames = append(columnNames, field.Name())
-			}
-		}
-	}
-
-	return columnNames
-}
-
-// HasTimeFieldSpecified will walk all fields and determine if the user explicitly asked for time
-// This is needed to determine re-write behaviors for functions like TOP and BOTTOM
-func (s *SelectStatement) HasTimeFieldSpecified() bool {
-	for _, f := range s.Fields {
-		if f.Name() == "time" {
-			return true
-		}
-	}
-	return false
-}
-
 // String returns a string representation of the select statement.
 func (s *SelectStatement) String() string {
 	var buf bytes.Buffer
@@ -1042,10 +989,6 @@ func (s *SelectStatement) validate(tr targetRequirement) error {
 		return err
 	}
 
-	if err := s.validateDimensions(); err != nil {
-		return err
-	}
-
 	if err := s.validateDistinct(); err != nil {
 		return err
 	}
@@ -1062,6 +1005,10 @@ func (s *SelectStatement) validate(tr targetRequirement) error {
 		return err
 	}
 
+	if err := s.validateWildcard(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -1073,133 +1020,40 @@ func (s *SelectStatement) validateFields() error {
 	return nil
 }
 
-func (s *SelectStatement) validateDimensions() error {
-	var dur time.Duration
-	for _, dim := range s.Dimensions {
-		switch expr := dim.Expr.(type) {
-		case *Call:
-			// Ensure the call is time() and it only has one duration argument.
-			// If we already have a duration
-			if expr.Name != "time" {
-				return errors.New("only time() calls allowed in dimensions")
-			} else if len(expr.Args) != 1 {
-				return errors.New("time dimension expected one argument")
-			} else if lit, ok := expr.Args[0].(*DurationLiteral); !ok {
-				return errors.New("time dimension must have one duration argument")
-			} else if dur != 0 {
-				return errors.New("multiple time dimensions not allowed")
-			} else {
-				dur = lit.Val
-			}
-		case *VarRef:
-			if strings.ToLower(expr.Val) == "time" {
-				return errors.New("time() is a function and expects at least one argument")
-			}
-		case *Wildcard:
-		default:
-			return errors.New("only time and tag dimensions allowed")
-		}
-	}
-	return nil
-}
-
-// validSelectWithAggregate determines if a SELECT statement has the correct
-// combination of aggregate functions combined with selected fields and tags
-// Currently we don't have support for all aggregates, but aggregates that
-// can be combined with fields/tags are:
-//  TOP, BOTTOM, MAX, MIN, FIRST, LAST
-func (s *SelectStatement) validSelectWithAggregate(numAggregates int) error {
-	if numAggregates != 0 && numAggregates != len(s.Fields) {
-		return fmt.Errorf("mixing aggregate and non-aggregate queries is not supported")
-	}
-	return nil
-}
-
 func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
-	// Curently most aggregates can be the ONLY thing in a select statement
-	// Others, like TOP/BOTTOM can mix aggregates and tags/fields
+	// First, if 1 field is an aggregate, then all fields must be an aggregate. This is
+	// a explicit limitation of the current system.
 	numAggregates := 0
 	for _, f := range s.Fields {
 		if _, ok := f.Expr.(*Call); ok {
 			numAggregates++
 		}
 	}
+	if numAggregates != 0 && numAggregates != len(s.Fields) {
+		return fmt.Errorf("mixing aggregate and non-aggregate queries is not supported")
+	}
 
+	// Secondly, determine if specific calls have at least one and only one argument
 	for _, f := range s.Fields {
-		switch expr := f.Expr.(type) {
-		case *Call:
-			switch expr.Name {
+		if c, ok := f.Expr.(*Call); ok {
+			switch c.Name {
 			case "derivative", "non_negative_derivative":
-				if err := s.validSelectWithAggregate(numAggregates); err != nil {
-					return err
+				if min, max, got := 1, 2, len(c.Args); got > max || got < min {
+					return fmt.Errorf("invalid number of arguments for %s, expected at least %d but no more than %d, got %d", c.Name, min, max, got)
 				}
-				if min, max, got := 1, 2, len(expr.Args); got > max || got < min {
-					return fmt.Errorf("invalid number of arguments for %s, expected at least %d but no more than %d, got %d", expr.Name, min, max, got)
-				}
-				// Validate that if they have a time dimension, they need a sub-call like min/max, etc.
-				if s.hasTimeDimensions(s.Condition) {
-					if _, ok := expr.Args[0].(*Call); !ok {
-						return fmt.Errorf("aggregate function required inside the call to %s", expr.Name)
-					}
-				}
-
 			case "percentile":
-				if err := s.validSelectWithAggregate(numAggregates); err != nil {
-					return err
-				}
-				if exp, got := 2, len(expr.Args); got != exp {
-					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", expr.Name, exp, got)
-				}
-				_, ok := expr.Args[1].(*NumberLiteral)
-				if !ok {
-					return fmt.Errorf("expected float argument in percentile()")
-				}
-			case "top", "bottom":
-				if exp, got := 2, len(expr.Args); got < exp {
-					return fmt.Errorf("invalid number of arguments for %s, expected at least %d, got %d", expr.Name, exp, got)
-				}
-				if len(expr.Args) > 1 {
-					callLimit, ok := expr.Args[len(expr.Args)-1].(*NumberLiteral)
-					if !ok {
-						return fmt.Errorf("expected integer as last argument in %s(), found %s", expr.Name, expr.Args[len(expr.Args)-1])
-					}
-					// Check if they asked for a limit smaller than what they passed into the call
-					if int64(callLimit.Val) > int64(s.Limit) && s.Limit != 0 {
-						return fmt.Errorf("limit (%d) in %s function can not be larger than the LIMIT (%d) in the select statement", int64(callLimit.Val), expr.Name, int64(s.Limit))
-					}
-
-					for _, v := range expr.Args[:len(expr.Args)-1] {
-						if _, ok := v.(*VarRef); !ok {
-							return fmt.Errorf("only fields or tags are allowed in %s(), found %s", expr.Name, v)
-						}
-					}
+				if exp, got := 2, len(c.Args); got != exp {
+					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", c.Name, exp, got)
 				}
 			default:
-				if err := s.validSelectWithAggregate(numAggregates); err != nil {
-					return err
-				}
-				if exp, got := 1, len(expr.Args); got != exp {
-					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", expr.Name, exp, got)
-				}
-				switch fc := expr.Args[0].(type) {
-				case *VarRef:
-					// do nothing
-				case *Call:
-					if fc.Name != "distinct" {
-						return fmt.Errorf("expected field argument in %s()", expr.Name)
-					}
-				case *Distinct:
-					if expr.Name != "count" {
-						return fmt.Errorf("expected field argument in %s()", expr.Name)
-					}
-				default:
-					return fmt.Errorf("expected field argument in %s()", expr.Name)
+				if exp, got := 1, len(c.Args); got != exp {
+					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", c.Name, exp, got)
 				}
 			}
 		}
 	}
 
-	// Check that we have valid duration and where clauses for aggregates
+	// Now, check that we have valid duration and where clauses for aggregates
 
 	// fetch the group by duration
 	groupByDuration, _ := s.GroupByInterval()
@@ -1214,6 +1068,13 @@ func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 		if !s.IsRawQuery && groupByDuration > 0 && !s.hasTimeDimensions(s.Condition) {
 			return fmt.Errorf("aggregate functions with GROUP BY time require a WHERE time clause")
 		}
+	}
+	return nil
+}
+
+func (s *SelectStatement) validateWildcard() error {
+	if s.HasWildcard() && len(s.Fields) > 1 {
+		return fmt.Errorf("wildcards can not be combined with other fields")
 	}
 	return nil
 }
@@ -1640,9 +1501,6 @@ func (t *Target) String() string {
 	var buf bytes.Buffer
 	_, _ = buf.WriteString("INTO ")
 	_, _ = buf.WriteString(t.Measurement.String())
-	if t.Measurement.Name == "" {
-		_, _ = buf.WriteString(":MEASUREMENT")
-	}
 
 	return buf.String()
 }
@@ -1973,17 +1831,6 @@ func (s *ShowStatsStatement) RequiredPrivileges() ExecutionPrivileges {
 	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
 }
 
-// ShowShardsStatement represents a command for displaying shards in the cluster.
-type ShowShardsStatement struct{}
-
-// String returns a string representation.
-func (s *ShowShardsStatement) String() string { return "SHOW SHARDS" }
-
-// RequiredPrivileges returns the privileges required to execute the statement.
-func (s *ShowShardsStatement) RequiredPrivileges() ExecutionPrivileges {
-	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
-}
-
 // ShowDiagnosticsStatement represents a command for show node diagnostics.
 type ShowDiagnosticsStatement struct{}
 
@@ -2253,21 +2100,37 @@ func (a Dimensions) String() string {
 
 // Normalize returns the interval and tag dimensions separately.
 // Returns 0 if no time interval is specified.
-func (a Dimensions) Normalize() (time.Duration, []string) {
+// Returns an error if multiple time dimensions exist or if non-VarRef dimensions are specified.
+func (a Dimensions) Normalize() (time.Duration, []string, error) {
 	var dur time.Duration
 	var tags []string
 
 	for _, dim := range a {
 		switch expr := dim.Expr.(type) {
 		case *Call:
-			lit, _ := expr.Args[0].(*DurationLiteral)
-			dur = lit.Val
+			// Ensure the call is time() and it only has one duration argument.
+			// If we already have a duration
+			if expr.Name != "time" {
+				return 0, nil, errors.New("only time() calls allowed in dimensions")
+			} else if len(expr.Args) != 1 {
+				return 0, nil, errors.New("time dimension expected one argument")
+			} else if lit, ok := expr.Args[0].(*DurationLiteral); !ok {
+				return 0, nil, errors.New("time dimension must have one duration argument")
+			} else if dur != 0 {
+				return 0, nil, errors.New("multiple time dimensions not allowed")
+			} else {
+				dur = lit.Val
+			}
+
 		case *VarRef:
 			tags = append(tags, expr.Val)
+
+		default:
+			return 0, nil, errors.New("only time and tag dimensions allowed")
 		}
 	}
 
-	return dur, tags
+	return dur, tags, nil
 }
 
 // Dimension represents an expression that a select statement is grouped by.
@@ -2296,7 +2159,6 @@ type Measurement struct {
 	RetentionPolicy string
 	Name            string
 	Regex           *RegexLiteral
-	IsTarget        bool
 }
 
 // String returns a string representation of the measurement.
@@ -2353,33 +2215,6 @@ func (c *Call) String() string {
 
 	// Write function name and args.
 	return fmt.Sprintf("%s(%s)", c.Name, strings.Join(str, ", "))
-}
-
-// Fields will extract any field names from the call.  Only specific calls support this.
-func (c *Call) Fields() []string {
-	switch c.Name {
-	case "top", "bottom":
-		// maintain the order the user specified in the query
-		keyMap := make(map[string]struct{})
-		keys := []string{}
-		for i, a := range c.Args {
-			if i == 0 {
-				// special case, first argument is always the name of the function regardless of the field name
-				keys = append(keys, c.Name)
-				continue
-			}
-			switch v := a.(type) {
-			case *VarRef:
-				if _, ok := keyMap[v.Val]; !ok {
-					keyMap[v.Val] = struct{}{}
-					keys = append(keys, v.Val)
-				}
-			}
-		}
-		return keys
-	default:
-		return []string{}
-	}
 }
 
 // Distinct represents a DISTINCT expression.

@@ -27,6 +27,7 @@ type DatabaseIndex struct {
 	mu           sync.RWMutex
 	measurements map[string]*Measurement // measurement name to object and index
 	series       map[string]*Series      // map series key to the Series object
+	names        []string                // sorted list of the measurement names
 	lastID       uint64                  // last used series ID. They're in memory only for this shard
 }
 
@@ -34,7 +35,15 @@ func NewDatabaseIndex() *DatabaseIndex {
 	return &DatabaseIndex{
 		measurements: make(map[string]*Measurement),
 		series:       make(map[string]*Series),
+		names:        make([]string, 0),
 	}
+}
+
+// Names returns a sorted list of measurement names.
+func (d *DatabaseIndex) Names() []string {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.names
 }
 
 // Series returns a series by key.
@@ -97,6 +106,8 @@ func (s *DatabaseIndex) CreateMeasurementIndexIfNotExists(name string) *Measurem
 	if m == nil {
 		m = NewMeasurement(name, s)
 		s.measurements[name] = m
+		s.names = append(s.names, name)
+		sort.Strings(s.names)
 	}
 	return m
 }
@@ -264,6 +275,14 @@ func (db *DatabaseIndex) DropMeasurement(name string) {
 	for _, s := range m.seriesByID {
 		delete(db.series, s.Key)
 	}
+
+	var names []string
+	for _, n := range db.names {
+		if n != name {
+			names = append(names, n)
+		}
+	}
+	db.names = names
 }
 
 // DropSeries removes the series keys and their tags from the index
@@ -1194,17 +1213,6 @@ func (m *Measurement) TagKeys() []string {
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-// TagValues returns all the values for the given tag key
-func (m *Measurement) TagValues(key string) []string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	values := []string{}
-	for v := range m.seriesByTagKeyValue[key] {
-		values = append(values, v)
-	}
-	return values
 }
 
 // SetFieldName adds the field name to the measurement.

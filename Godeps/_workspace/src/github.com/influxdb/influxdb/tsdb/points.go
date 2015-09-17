@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+	"math"
 	"regexp"
 	"sort"
 	"strconv"
@@ -33,15 +34,7 @@ type Point interface {
 	Data() []byte
 	SetData(buf []byte)
 
-	// String returns a string representation of the point object, if there is a
-	// timestamp associated with the point then it will be specified with the default
-	// precision of nanoseconds
 	String() string
-
-	// PrecisionString returns a string representation of the point object, if there
-	// is a timestamp associated with the point then it will be specified in the
-	// given unit
-	PrecisionString(precision string) string
 }
 
 // Points represents a sortable list of points by timestamp.
@@ -747,19 +740,14 @@ func skipWhitespace(buf []byte, i int) int {
 func scanLine(buf []byte, i int) (int, []byte) {
 	start := i
 	quoted := false
-	fields := false
 	for {
 		// reached the end of buf?
 		if i >= len(buf) {
 			break
 		}
 
-		if buf[i] == ' ' {
-			fields = true
-		}
-
 		// If we see a double quote, makes sure it is not escaped
-		if fields && buf[i] == '"' && (i-1 > 0 && buf[i-1] != '\\') {
+		if buf[i] == '"' && (i-1 > 0 && buf[i-1] != '\\') {
 			i += 1
 			quoted = !quoted
 			continue
@@ -1174,14 +1162,6 @@ func (p *point) String() string {
 	return fmt.Sprintf("%s %s %d", p.Key(), string(p.fields), p.UnixNano())
 }
 
-func (p *point) PrecisionString(precision string) string {
-	if p.Time().IsZero() {
-		return fmt.Sprintf("%s %s", p.Key(), string(p.fields))
-	}
-	return fmt.Sprintf("%s %s %d", p.Key(), string(p.fields),
-		p.UnixNano()/p.GetPrecisionMultiplier(precision))
-}
-
 func (p *point) unmarshalBinary() Fields {
 	return newFieldsFromBinary(p.fields)
 }
@@ -1311,10 +1291,6 @@ func newFieldsFromBinary(buf []byte) Fields {
 	return fields
 }
 
-// MarshalBinary encodes all the fields to their proper type and returns the binary
-// represenation
-// NOTE: uint64 is specifically not supported due to potential overflow when we decode
-// again later to an int64
 func (p Fields) MarshalBinary() []byte {
 	b := []byte{}
 	keys := make([]string, len(p))
@@ -1333,36 +1309,25 @@ func (p Fields) MarshalBinary() []byte {
 		case int:
 			b = append(b, []byte(strconv.FormatInt(int64(t), 10))...)
 			b = append(b, 'i')
-		case int8:
-			b = append(b, []byte(strconv.FormatInt(int64(t), 10))...)
-			b = append(b, 'i')
-		case int16:
-			b = append(b, []byte(strconv.FormatInt(int64(t), 10))...)
-			b = append(b, 'i')
 		case int32:
 			b = append(b, []byte(strconv.FormatInt(int64(t), 10))...)
+			b = append(b, 'i')
+		case uint64:
+			b = append(b, []byte(strconv.FormatUint(t, 10))...)
 			b = append(b, 'i')
 		case int64:
 			b = append(b, []byte(strconv.FormatInt(t, 10))...)
 			b = append(b, 'i')
-		case uint:
-			b = append(b, []byte(strconv.FormatInt(int64(t), 10))...)
-			b = append(b, 'i')
-		case uint8:
-			b = append(b, []byte(strconv.FormatInt(int64(t), 10))...)
-			b = append(b, 'i')
-		case uint16:
-			b = append(b, []byte(strconv.FormatInt(int64(t), 10))...)
-			b = append(b, 'i')
-		case uint32:
-			b = append(b, []byte(strconv.FormatInt(int64(t), 10))...)
-			b = append(b, 'i')
-		case float32:
-			val := []byte(strconv.FormatFloat(float64(t), 'f', -1, 32))
-			b = append(b, val...)
 		case float64:
+			// ensure there is a decimal in the encoded for
+
 			val := []byte(strconv.FormatFloat(t, 'f', -1, 64))
+			_, frac := math.Modf(t)
+			hasDecimal := frac != 0
 			b = append(b, val...)
+			if !hasDecimal {
+				b = append(b, []byte(".0")...)
+			}
 		case bool:
 			b = append(b, []byte(strconv.FormatBool(t))...)
 		case []byte:

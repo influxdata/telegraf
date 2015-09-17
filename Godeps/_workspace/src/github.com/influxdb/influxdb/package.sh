@@ -18,8 +18,6 @@
 # package is successful, the script will offer to tag the repo using the
 # supplied version string.
 #
-# See package.sh -h for options
-#
 # AWS upload: the script will also offer to upload the packages to S3. If
 # this option is selected, the credentials should be present in the file
 # ~/aws.conf. The contents should be of the form:
@@ -40,12 +38,9 @@ INSTALL_ROOT_DIR=/opt/influxdb
 INFLUXDB_LOG_DIR=/var/log/influxdb
 INFLUXDB_DATA_DIR=/var/opt/influxdb
 CONFIG_ROOT_DIR=/etc/opt/influxdb
-LOGROTATE_DIR=/etc/logrotate.d
 
 SAMPLE_CONFIGURATION=etc/config.sample.toml
 INITD_SCRIPT=scripts/init.sh
-SYSTEMD_SCRIPT=scripts/influxdb.service
-LOGROTATE=scripts/logrotate
 
 TMP_WORK_DIR=`mktemp -d`
 POST_INSTALL_PATH=`mktemp`
@@ -62,7 +57,7 @@ if [ -z "$FPM" ]; then
     FPM=`which fpm`
 fi
 
-GO_VERSION="go1.5"
+GO_VERSION="go1.4.2"
 GOPATH_INSTALL=
 BINS=(
     influxd
@@ -74,16 +69,7 @@ BINS=(
 
 # usage prints simple usage information.
 usage() {
-    cat << EOF >&2
-$0 [-h] [-p|-w] [-t <dist>] <version>
-    -p just build packages
-    -w build packages for current working directory
-       imply -p
-    -t <dist>
-       build package for <dist>
-       <dist> can be rpm, tar or deb
-       can have multiple -t
-EOF
+    echo -e "$0 [<version>] [-h]\n"
     cleanup_exit $1
 }
 
@@ -182,41 +168,20 @@ make_dir_tree() {
         echo "Failed to create configuration directory -- aborting."
         cleanup_exit 1
     fi
-    mkdir -p $work_dir/$LOGROTATE_DIR
-    if [ $? -ne 0 ]; then
-        echo "Failed to create logrotate directory -- aborting."
-        cleanup_exit 1
-    fi
 }
+
 
 # do_build builds the code. The version and commit must be passed in.
 do_build() {
     for b in ${BINS[*]}; do
         rm -f $GOPATH_INSTALL/bin/$b
     done
-
-    if [ -n "$WORKING_DIR" ]; then
-        STASH=`git stash create -a`
-        if [ $? -ne 0 ]; then
-            echo "WARNING: failed to stash uncommited local changes"
-        fi
-        git reset --hard
-    fi
-
     go get -u -f -d ./...
     if [ $? -ne 0 ]; then
         echo "WARNING: failed to 'go get' packages."
     fi
 
     git checkout $TARGET_BRANCH # go get switches to master, so ensure we're back.
-
-    if [ -n "$WORKING_DIR" ]; then
-        git stash apply $STASH
-        if [ $? -ne 0 ]; then #and apply previous uncommited local changes
-            echo "WARNING: failed to restore uncommited local changes"
-        fi
-    fi
-
     version=$1
     commit=`git rev-parse HEAD`
     branch=`current_branch`
@@ -225,7 +190,7 @@ do_build() {
         cleanup_exit 1
     fi
 
-    go install -a -ldflags="-X main.version=$version -X main.branch=$branch -X main.commit=$commit" ./...
+    go install -a -ldflags="-X main.version $version -X main.branch $branch -X main.commit $commit" ./...
     if [ $? -ne 0 ]; then
         echo "Build failed, unable to create package -- aborting"
         cleanup_exit 1
@@ -245,29 +210,19 @@ ln -s $INSTALL_ROOT_DIR/versions/$version/influxd $INSTALL_ROOT_DIR/influxd
 ln -s $INSTALL_ROOT_DIR/versions/$version/influx $INSTALL_ROOT_DIR/influx
 ln -s $INSTALL_ROOT_DIR/versions/$version/scripts/init.sh $INSTALL_ROOT_DIR/init.sh
 
+rm -f /etc/init.d/influxdb
+ln -sfn $INSTALL_ROOT_DIR/init.sh /etc/init.d/influxdb
+chmod +x /etc/init.d/influxdb
+if which update-rc.d > /dev/null 2>&1 ; then
+    update-rc.d -f influxdb remove
+    update-rc.d influxdb defaults
+else
+    chkconfig --add influxdb
+fi
+
 if ! id influxdb >/dev/null 2>&1; then
         useradd --system -U -M influxdb
 fi
-
-# Systemd
-if which systemctl > /dev/null 2>&1 ; then
-    cp $INSTALL_ROOT_DIR/versions/$version/scripts/influxdb.service \
-        /lib/systemd/system/influxdb.service
-    systemctl enable influxdb
-
-# Sysv
-else
-    rm -f /etc/init.d/influxdb
-    ln -sfn $INSTALL_ROOT_DIR/init.sh /etc/init.d/influxdb
-    chmod +x /etc/init.d/influxdb
-    if which update-rc.d > /dev/null 2>&1 ; then
-        update-rc.d -f influxdb remove
-        update-rc.d influxdb defaults
-    else
-        chkconfig --add influxdb
-    fi
-fi
-
 chown -R -L influxdb:influxdb $INSTALL_ROOT_DIR
 chmod -R a+rX $INSTALL_ROOT_DIR
 
@@ -280,80 +235,22 @@ EOF
 }
 
 ###########################################################################
-# Process options
-while :
-do
-  case $1 in
-    -h | --help)
-	    usage 0
-	    ;;
-
-    -p | --packages-only)
-	    PACKAGES_ONLY="PACKAGES_ONLY"
-	    shift
-	    ;;
-
-    -t | --target)
-        case "$2" in
-            'tar') TAR_WANTED="gz"
-                 ;;
-            'deb') DEB_WANTED="deb"
-                 ;;
-            'rpm') RPM_WANTED="rpm"
-                 ;;
-            *)
-                 echo "Unknown target distribution $2"
-                 usage 1
-                 ;;
-        esac
-        shift 2
-        ;;
-
-    -w | --working-directory)
-	PACKAGES_ONLY="PACKAGES_ONLY"
-        WORKING_DIR="WORKING_DIR"
-	    shift
-	    ;;
-
-    -*)
-        echo "Unknown option $1"
-        usage 1
-        ;;
-
-    ?*)
-        if [ -z $VERSION ]; then
-           VERSION=$1
-           VERSION_UNDERSCORED=`echo "$VERSION" | tr - _`
-           shift
-        else
-           echo "$1 : aborting version already set to $VERSION"
-           usage 1
-        fi
-        ;;
-
-     *) break
-  esac
-done
-
-if [ -z "$DEB_WANTED$RPM_WANTED$TAR_WANTED" ]; then
-  TAR_WANTED="gz"
-  DEB_WANTED="deb"
-  RPM_WANTED="rpm"
-fi
-
-if [ -z "$VERSION" ]; then
-  echo -e "Missing version"
-  usage 1
-fi
-
-###########################################################################
 # Start the packaging process.
+
+if [ $# -ne 1 ]; then
+    usage 1
+elif [ $1 == "-h" ]; then
+    usage 0
+else
+    VERSION=$1
+    VERSION_UNDERSCORED=`echo "$VERSION" | tr - _`
+fi
 
 echo -e "\nStarting package process...\n"
 
 # Ensure the current is correct.
 TARGET_BRANCH=`current_branch`
-if [ -z "$NIGHTLY_BUILD" -a -z "$PACKAGES_ONLY" ]; then
+if [ -z "$NIGHTLY_BUILD" ]; then
 echo -n "Current branch is $TARGET_BRANCH. Start packaging this branch? [Y/n] "
     read response
     response=`echo $response | tr 'A-Z' 'a-z'`
@@ -365,7 +262,7 @@ fi
 
 check_gvm
 check_gopath
-if [ -z "$NIGHTLY_BUILD" -a -z "$PACKAGES_ONLY" ]; then
+if [ -z "$NIGHTLY_BUILD" ]; then
        check_clean_tree
        update_tree
        check_tag_exists $VERSION
@@ -393,22 +290,9 @@ if [ $? -ne 0 ]; then
 fi
 echo "$INITD_SCRIPT copied to $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION/scripts"
 
-cp $SYSTEMD_SCRIPT $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION/scripts
-if [ $? -ne 0 ]; then
-    echo "Failed to copy systemd script to packaging directory -- aborting."
-    cleanup_exit 1
-fi
-echo "$SYSTEMD_SCRIPT copied to $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION/scripts"
-
 cp $SAMPLE_CONFIGURATION $TMP_WORK_DIR/$CONFIG_ROOT_DIR/influxdb.conf
 if [ $? -ne 0 ]; then
     echo "Failed to copy $SAMPLE_CONFIGURATION to packaging directory -- aborting."
-    cleanup_exit 1
-fi
-
-cp $LOGROTATE $TMP_WORK_DIR/$LOGROTATE_DIR/influxd
-if [ $? -ne 0 ]; then
-    echo "Failed to copy logrotate configuration to packaging directory -- aborting."
     cleanup_exit 1
 fi
 
@@ -417,7 +301,7 @@ generate_postinstall_script $VERSION
 ###########################################################################
 # Create the actual packages.
 
-if [ -z "$NIGHTLY_BUILD" -a -z "$PACKAGES_ONLY" ]; then
+if [ -z "$NIGHTLY_BUILD" ]; then
     echo -n "Commence creation of $ARCH packages, version $VERSION? [Y/n] "
     read response
     response=`echo $response | tr 'A-Z' 'a-z'`
@@ -440,39 +324,32 @@ else
     debian_package=influxdb_${VERSION}_amd64.deb
 fi
 
-COMMON_FPM_ARGS="--log error -C $TMP_WORK_DIR --vendor $VENDOR --url $URL --license $LICENSE --maintainer $MAINTAINER --after-install $POST_INSTALL_PATH --name influxdb --version $VERSION --config-files $CONFIG_ROOT_DIR --config-files $LOGROTATE_DIR ."
-
-if [ -n "$DEB_WANTED" ]; then
-    $FPM -s dir -t deb $deb_args --description "$DESCRIPTION" $COMMON_FPM_ARGS
-    if [ $? -ne 0 ]; then
-        echo "Failed to create Debian package -- aborting."
-        cleanup_exit 1
-    fi
-    echo "Debian package created successfully."
+COMMON_FPM_ARGS="-C $TMP_WORK_DIR --vendor $VENDOR --url $URL --license $LICENSE --maintainer $MAINTAINER --after-install $POST_INSTALL_PATH --name influxdb --version $VERSION --config-files $CONFIG_ROOT_DIR ."
+$rpm_args $FPM -s dir -t rpm --description "$DESCRIPTION" $COMMON_FPM_ARGS
+if [ $? -ne 0 ]; then
+    echo "Failed to create RPM package -- aborting."
+    cleanup_exit 1
 fi
+echo "RPM package created successfully."
 
-if [ -n "$TAR_WANTED" ]; then
-    $FPM -s dir -t tar --prefix influxdb_${VERSION}_${ARCH} -p influxdb_${VERSION}_${ARCH}.tar.gz --description "$DESCRIPTION" $COMMON_FPM_ARGS
-    if [ $? -ne 0 ]; then
-        echo "Failed to create Tar package -- aborting."
-        cleanup_exit 1
-    fi
-    echo "Tar package created successfully."
+$FPM -s dir -t deb $deb_args --description "$DESCRIPTION" $COMMON_FPM_ARGS
+if [ $? -ne 0 ]; then
+    echo "Failed to create Debian package -- aborting."
+    cleanup_exit 1
 fi
+echo "Debian package created successfully."
 
-if [ -n "$RPM_WANTED" ]; then
-    $rpm_args $FPM -s dir -t rpm --description "$DESCRIPTION" $COMMON_FPM_ARGS
-    if [ $? -ne 0 ]; then
-        echo "Failed to create RPM package -- aborting."
-        cleanup_exit 1
-    fi
-    echo "RPM package created successfully."
+$FPM -s dir -t tar --prefix influxdb_${VERSION}_${ARCH} -p influxdb_${VERSION}_${ARCH}.tar.gz --description "$DESCRIPTION" $COMMON_FPM_ARGS
+if [ $? -ne 0 ]; then
+    echo "Failed to create Tar package -- aborting."
+    cleanup_exit 1
 fi
+echo "Tar package created successfully."
 
 ###########################################################################
 # Offer to tag the repo.
 
-if [ -z "$NIGHTLY_BUILD" -a -z "$PACKAGES_ONLY" ]; then
+if [ -z "$NIGHTLY_BUILD" ]; then
     echo -n "Tag source tree with v$VERSION and push to repo? [y/N] "
     read response
     response=`echo $response | tr 'A-Z' 'a-z'`
@@ -483,13 +360,11 @@ if [ -z "$NIGHTLY_BUILD" -a -z "$PACKAGES_ONLY" ]; then
             echo "Failed to create tag v$VERSION -- aborting"
             cleanup_exit 1
         fi
-        echo "Tag v$VERSION created"
         git push origin v$VERSION
         if [ $? -ne 0 ]; then
             echo "Failed to push tag v$VERSION to repo -- aborting"
             cleanup_exit 1
         fi
-        echo "Tag v$VERSION pushed to repo"
     else
         echo "Not creating tag v$VERSION."
     fi
@@ -498,7 +373,7 @@ fi
 ###########################################################################
 # Offer to publish the packages.
 
-if [ -z "$NIGHTLY_BUILD" -a -z "$PACKAGES_ONLY" ]; then
+if [ -z "$NIGHTLY_BUILD" ]; then
     echo -n "Publish packages to S3? [y/N] "
     read response
     response=`echo $response | tr 'A-Z' 'a-z'`
@@ -511,7 +386,7 @@ if [ "x$response" == "xy" -o -n "$NIGHTLY_BUILD" ]; then
         cleanup_exit 1
     fi
 
-    for filepath in `ls *.{$DEB_WANTED,$RPM_WANTED,$TAR_WANTED} 2> /dev/null`; do
+    for filepath in `ls *.{deb,rpm,gz}`; do
         filename=`basename $filepath`
         if [ -n "$NIGHTLY_BUILD" ]; then
             filename=`echo $filename | sed s/$VERSION/nightly/`
@@ -519,10 +394,9 @@ if [ "x$response" == "xy" -o -n "$NIGHTLY_BUILD" ]; then
         fi
         AWS_CONFIG_FILE=$AWS_FILE aws s3 cp $filepath s3://influxdb/$filename --acl public-read --region us-east-1
         if [ $? -ne 0 ]; then
-            echo "Upload failed ($filename) -- aborting".
+            echo "Upload failed -- aborting".
             cleanup_exit 1
         fi
-        echo "$filename uploaded"
     done
 else
     echo "Not publishing packages to S3."

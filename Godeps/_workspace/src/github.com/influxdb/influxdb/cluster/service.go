@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdb/influxdb/influxql"
 	"github.com/influxdb/influxdb/meta"
 	"github.com/influxdb/influxdb/tsdb"
 )
@@ -38,7 +37,7 @@ type Service struct {
 	TSDBStore interface {
 		CreateShard(database, policy string, shardID uint64) error
 		WriteToShard(shardID uint64, points []tsdb.Point) error
-		CreateMapper(shardID uint64, stmt influxql.Statement, chunkSize int) (tsdb.Mapper, error)
+		CreateMapper(shardID uint64, query string, chunkSize int) (tsdb.Mapper, error)
 	}
 
 	Logger *log.Logger
@@ -108,7 +107,7 @@ func (s *Service) Close() error {
 
 	// Shut down all handlers.
 	close(s.closing)
-	s.wg.Wait()
+	// s.wg.Wait() // FIXME(benbjohnson)
 
 	return nil
 }
@@ -185,7 +184,7 @@ func (s *Service) processWriteShardRequest(buf []byte) error {
 			// If we can't find it, then we need to drop this request
 			// as it is no longer valid.  This could happen if writes were queued via
 			// hinted handoff and delivered after a shard group was deleted.
-			s.Logger.Printf("drop write request: shard=%d. shard group does not exist or was deleted", req.ShardID())
+			s.Logger.Printf("drop write request: shard=%d", req.ShardID())
 			return nil
 		}
 
@@ -233,15 +232,7 @@ func (s *Service) processMapShardRequest(w io.Writer, buf []byte) error {
 		return err
 	}
 
-	// Parse the statement.
-	q, err := influxql.ParseQuery(req.Query())
-	if err != nil {
-		return fmt.Errorf("processing map shard: %s", err)
-	} else if len(q.Statements) != 1 {
-		return fmt.Errorf("processing map shard: expected 1 statement but got %d", len(q.Statements))
-	}
-
-	m, err := s.TSDBStore.CreateMapper(req.ShardID(), q.Statements[0], int(req.ChunkSize()))
+	m, err := s.TSDBStore.CreateMapper(req.ShardID(), req.Query(), int(req.ChunkSize()))
 	if err != nil {
 		return fmt.Errorf("create mapper: %s", err)
 	}
@@ -268,10 +259,6 @@ func (s *Service) processMapShardRequest(w io.Writer, buf []byte) error {
 		if err != nil {
 			return fmt.Errorf("next chunk: %s", err)
 		}
-
-		// NOTE: Even if the chunk is nil, we still need to send one
-		// empty response to let the other side know we're out of data.
-
 		if chunk != nil {
 			b, err := json.Marshal(chunk)
 			if err != nil {

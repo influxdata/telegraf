@@ -45,7 +45,7 @@ PIDFILE=/var/run/influxdb/influxd.pid
 PIDDIR=`dirname $PIDFILE`
 if [ ! -d "$PIDDIR" ]; then
     mkdir -p $PIDDIR
-    chown $USER:$GROUP $PIDDIR
+    chown $GROUP:$USER $PIDDIR
 fi
 
 # Max open files
@@ -103,20 +103,7 @@ function killproc() {
 
     PID=`cat $2`
 
-    /bin/kill -s $3 $PID
-    while true; do
-        pidof `basename $DAEMON` >/dev/null
-        if [ $? -ne 0 ]; then
-            return 0
-        fi
-
-        sleep 1
-        n=$(expr $n + 1)
-        if [ $n -eq 30 ]; then
-            /bin/kill -s SIGKILL $PID
-            return 0
-        fi
-    done
+    kill -s $3 $PID
 }
 
 function log_failure_msg() {
@@ -164,7 +151,7 @@ case $1 in
         if which start-stop-daemon > /dev/null 2>&1; then
             start-stop-daemon --chuid $GROUP:$USER --start --quiet --pidfile $PIDFILE --exec $DAEMON -- -pidfile $PIDFILE -config $CONFIG $INFLUXD_OPTS >>$STDOUT 2>>$STDERR &
         else
-            su -s /bin/sh -c "nohup $DAEMON -pidfile $PIDFILE -config $CONFIG $INFLUXD_OPTS >>$STDOUT 2>>$STDERR &" $USER
+            nohup $DAEMON -pidfile $PIDFILE -config $CONFIG $INFLUXD_OPTS >>$STDOUT 2>>$STDERR &
         fi
         log_success_msg "$NAME process was started"
         ;;

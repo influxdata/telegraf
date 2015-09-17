@@ -20,10 +20,6 @@ cmd/influxd/version.go
 
 # executables
 
-influx_stress
-**/influx_stress
-!**/influx_stress/
-
 influxd
 **/influxd
 !**/influxd/
@@ -69,6 +65,3 @@ integration/migration_data/
 
 # goconvey config files
 *.goconvey
-
-// Ingnore SourceGraph directory
-.srclib-store/

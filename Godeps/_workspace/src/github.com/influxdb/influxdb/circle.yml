@@ -1,15 +1,11 @@
 machine:
-    services:
-        - docker
     pre:
         - bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-        - source $HOME/.gvm/scripts/gvm; gvm install go1.5 --binary
+        - source $HOME/.gvm/scripts/gvm; gvm install go1.4.2 --binary
 
 dependencies:
     override:
-        - mkdir -p ~/docker
-    cache_directories:
-        - "~/docker"
+        - echo "Dummy override, so no Circle dependencies execute"
 test:
     override:
         - bash circle-test.sh:

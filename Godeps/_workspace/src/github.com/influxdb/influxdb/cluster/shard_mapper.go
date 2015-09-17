@@ -1,14 +1,16 @@
 package cluster
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"time"
 
-	"github.com/influxdb/influxdb/influxql"
 	"github.com/influxdb/influxdb/meta"
 	"github.com/influxdb/influxdb/tsdb"
+	"gopkg.in/fatih/pool.v2"
 )
 
 // ShardMapper is responsible for providing mappers for requested shards. It is
@@ -23,7 +25,7 @@ type ShardMapper struct {
 	}
 
 	TSDBStore interface {
-		CreateMapper(shardID uint64, stmt influxql.Statement, chunkSize int) (tsdb.Mapper, error)
+		CreateMapper(shardID uint64, query string, chunkSize int) (tsdb.Mapper, error)
 	}
 
 	timeout time.Duration
@@ -39,58 +41,67 @@ func NewShardMapper(timeout time.Duration) *ShardMapper {
 }
 
 // CreateMapper returns a Mapper for the given shard ID.
-func (s *ShardMapper) CreateMapper(sh meta.ShardInfo, stmt influxql.Statement, chunkSize int) (tsdb.Mapper, error) {
-	m, err := s.TSDBStore.CreateMapper(sh.ID, stmt, chunkSize)
-	if err != nil {
-		return nil, err
-	}
-
-	if !sh.OwnedBy(s.MetaStore.NodeID()) || s.ForceRemoteMapping {
+func (s *ShardMapper) CreateMapper(sh meta.ShardInfo, stmt string, chunkSize int) (tsdb.Mapper, error) {
+	var err error
+	var m tsdb.Mapper
+	if sh.OwnedBy(s.MetaStore.NodeID()) && !s.ForceRemoteMapping {
+		m, err = s.TSDBStore.CreateMapper(sh.ID, stmt, chunkSize)
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		// Pick a node in a pseudo-random manner.
-		conn, err := s.dial(sh.Owners[rand.Intn(len(sh.Owners))].NodeID)
+		conn, err := s.dial(sh.OwnerIDs[rand.Intn(len(sh.OwnerIDs))])
 		if err != nil {
 			return nil, err
 		}
 		conn.SetDeadline(time.Now().Add(s.timeout))
 
-		m.SetRemote(NewRemoteMapper(conn, sh.ID, stmt, chunkSize))
+		rm := NewRemoteMapper(conn.(*pool.PoolConn), sh.ID, stmt, chunkSize)
+		m = rm
 	}
 
 	return m, nil
 }
 
 func (s *ShardMapper) dial(nodeID uint64) (net.Conn, error) {
-	ni, err := s.MetaStore.Node(nodeID)
-	if err != nil {
-		return nil, err
-	}
-	conn, err := net.Dial("tcp", ni.Host)
-	if err != nil {
-		return nil, err
-	}
+	// If we don't have a connection pool for that addr yet, create one
+	_, ok := s.pool.getPool(nodeID)
+	if !ok {
+		factory := &connFactory{nodeID: nodeID, clientPool: s.pool, timeout: s.timeout}
+		factory.metaStore = s.MetaStore
 
-	// Write the cluster multiplexing header byte
-	conn.Write([]byte{MuxHeader})
+		p, err := pool.NewChannelPool(1, 3, factory.dial)
+		if err != nil {
+			return nil, err
+		}
+		s.pool.setPool(nodeID, p)
+	}
+	return s.pool.conn(nodeID)
+}
 
-	return conn, nil
+type remoteShardConn interface {
+	io.ReadWriter
+	Close() error
+	MarkUnusable()
 }
 
 // RemoteMapper implements the tsdb.Mapper interface. It connects to a remote node,
 // sends a query, and interprets the stream of data that comes back.
 type RemoteMapper struct {
 	shardID   uint64
-	stmt      influxql.Statement
+	stmt      string
 	chunkSize int
 
 	tagsets []string
 	fields  []string
 
-	conn             net.Conn
+	conn             remoteShardConn
 	bufferedResponse *MapShardResponse
 }
 
 // NewRemoteMapper returns a new remote mapper using the given connection.
-func NewRemoteMapper(c net.Conn, shardID uint64, stmt influxql.Statement, chunkSize int) *RemoteMapper {
+func NewRemoteMapper(c remoteShardConn, shardID uint64, stmt string, chunkSize int) *RemoteMapper {
 	return &RemoteMapper{
 		conn:      c,
 		shardID:   shardID,
@@ -109,7 +120,7 @@ func (r *RemoteMapper) Open() (err error) {
 	// Build Map request.
 	var request MapShardRequest
 	request.SetShardID(r.shardID)
-	request.SetQuery(r.stmt.String())
+	request.SetQuery(r.stmt)
 	request.SetChunkSize(int32(r.chunkSize))
 
 	// Marshal into protocol buffers.
@@ -120,12 +131,14 @@ func (r *RemoteMapper) Open() (err error) {
 
 	// Write request.
 	if err := WriteTLV(r.conn, mapShardRequestMessage, buf); err != nil {
+		r.conn.MarkUnusable()
 		return err
 	}
 
 	// Read the response.
 	_, buf, err = ReadTLV(r.conn)
 	if err != nil {
+		r.conn.MarkUnusable()
 		return err
 	}
 
@@ -141,13 +154,8 @@ func (r *RemoteMapper) Open() (err error) {
 
 	// Decode the first response to get the TagSets.
 	r.tagsets = r.bufferedResponse.TagSets()
-	r.fields = r.bufferedResponse.Fields()
 
 	return nil
-}
-
-func (r *RemoteMapper) SetRemote(m tsdb.Mapper) error {
-	return fmt.Errorf("cannot set remote mapper on a remote mapper")
 }
 
 func (r *RemoteMapper) TagSets() []string {
@@ -160,7 +168,9 @@ func (r *RemoteMapper) Fields() []string {
 
 // NextChunk returns the next chunk read from the remote node to the client.
 func (r *RemoteMapper) NextChunk() (chunk interface{}, err error) {
+	output := &tsdb.MapperOutput{}
 	var response *MapShardResponse
+
 	if r.bufferedResponse != nil {
 		response = r.bufferedResponse
 		r.bufferedResponse = nil
@@ -170,6 +180,7 @@ func (r *RemoteMapper) NextChunk() (chunk interface{}, err error) {
 		// Read the response.
 		_, buf, err := ReadTLV(r.conn)
 		if err != nil {
+			r.conn.MarkUnusable()
 			return nil, err
 		}
 
@@ -186,8 +197,8 @@ func (r *RemoteMapper) NextChunk() (chunk interface{}, err error) {
 	if response.Data() == nil {
 		return nil, nil
 	}
-
-	return response.Data(), err
+	err = json.Unmarshal(response.Data(), output)
+	return output, err
 }
 
 // Close the Mapper

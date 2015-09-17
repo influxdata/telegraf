@@ -415,7 +415,7 @@ func TestShardMapper_WriteAndSingleMapperAggregateQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		stmt := mustParseSelectStatement(tt.stmt)
-		mapper := openSelectMapperOrFail(t, shard, stmt)
+		mapper := openLocalMapperOrFail(t, shard, stmt)
 
 		for i := range tt.expected {
 			got := aggIntervalAsJson(t, mapper)
@@ -427,7 +427,7 @@ func TestShardMapper_WriteAndSingleMapperAggregateQuery(t *testing.T) {
 	}
 }
 
-func TestShardMapper_SelectMapperTagSetsFields(t *testing.T) {
+func TestShardMapper_LocalMapperTagSetsFields(t *testing.T) {
 	tmpDir, _ := ioutil.TempDir("", "shard_test")
 	defer os.RemoveAll(tmpDir)
 	shard := mustCreateShard(tmpDir)
@@ -490,7 +490,7 @@ func TestShardMapper_SelectMapperTagSetsFields(t *testing.T) {
 
 	for _, tt := range tests {
 		stmt := mustParseSelectStatement(tt.stmt)
-		mapper := openSelectMapperOrFail(t, shard, stmt)
+		mapper := openLocalMapperOrFail(t, shard, stmt)
 
 		fields := mapper.Fields()
 		if !reflect.DeepEqual(fields, tt.expectedFields) {
@@ -526,17 +526,8 @@ func mustParseSelectStatement(s string) *influxql.SelectStatement {
 	return stmt.(*influxql.SelectStatement)
 }
 
-// mustParseStatement parses a statement. Panic on error.
-func mustParseStatement(s string) influxql.Statement {
-	stmt, err := influxql.NewParser(strings.NewReader(s)).ParseStatement()
-	if err != nil {
-		panic(err)
-	}
-	return stmt
-}
-
 func openRawMapperOrFail(t *testing.T, shard *tsdb.Shard, stmt *influxql.SelectStatement, chunkSize int) tsdb.Mapper {
-	mapper := tsdb.NewSelectMapper(shard, stmt, chunkSize)
+	mapper := tsdb.NewLocalMapper(shard, stmt, chunkSize)
 
 	if err := mapper.Open(); err != nil {
 		t.Fatalf("failed to open raw mapper: %s", err.Error())
@@ -556,8 +547,8 @@ func nextRawChunkAsJson(t *testing.T, mapper tsdb.Mapper) string {
 	return string(b)
 }
 
-func openSelectMapperOrFail(t *testing.T, shard *tsdb.Shard, stmt *influxql.SelectStatement) *tsdb.SelectMapper {
-	mapper := tsdb.NewSelectMapper(shard, stmt, 0)
+func openLocalMapperOrFail(t *testing.T, shard *tsdb.Shard, stmt *influxql.SelectStatement) *tsdb.LocalMapper {
+	mapper := tsdb.NewLocalMapper(shard, stmt, 0)
 
 	if err := mapper.Open(); err != nil {
 		t.Fatalf("failed to open aggregate mapper: %s", err.Error())
@@ -565,7 +556,7 @@ func openSelectMapperOrFail(t *testing.T, shard *tsdb.Shard, stmt *influxql.Sele
 	return mapper
 }
 
-func aggIntervalAsJson(t *testing.T, mapper *tsdb.SelectMapper) string {
+func aggIntervalAsJson(t *testing.T, mapper *tsdb.LocalMapper) string {
 	r, err := mapper.NextChunk()
 	if err != nil {
 		t.Fatalf("failed to get chunk from aggregate mapper: %s", err.Error())

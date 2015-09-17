@@ -1,83 +1,14 @@
-## v0.9.5 [unreleased]
-
-### Features
-- [#4065](https://github.com/influxdb/influxdb/pull/4065): Added precision support in cmd client. Thanks @sbouchex
-
-### Bugfixes
-- [#3457](https://github.com/influxdb/influxdb/issues/3457): [0.9.3] cannot select field names with prefix + "." that match the measurement name
-- [#4111](https://github.com/influxdb/influxdb/pull/4111): Update pre-commit hook for go vet composites
-
-## v0.9.4 [2015-09-14]
-
-### Release Notes
-With this release InfluxDB is moving to Go 1.5.
-
-### Features
-- [#4050](https://github.com/influxdb/influxdb/pull/4050): Add stats to collectd
-- [#3771](https://github.com/influxdb/influxdb/pull/3771): Close idle Graphite TCP connections
-- [#3755](https://github.com/influxdb/influxdb/issues/3755): Add option to build script. Thanks @fg2it
-- [#3863](https://github.com/influxdb/influxdb/pull/3863): Move to Go 1.5
-- [#3892](https://github.com/influxdb/influxdb/pull/3892): Support IF NOT EXISTS for CREATE DATABASE
-- [#3916](https://github.com/influxdb/influxdb/pull/3916): New statistics and diagnostics support. Graphite first to be instrumented.
-- [#3901](https://github.com/influxdb/influxdb/pull/3901): Add consistency level option to influx cli Thanks @takayuki
-- [#4048](https://github.com/influxdb/influxdb/pull/4048): Add statistics to Continuous Query service
-- [#4049](https://github.com/influxdb/influxdb/pull/4049): Add stats to the UDP input
-- [#3876](https://github.com/influxdb/influxdb/pull/3876): Allow the following syntax in CQs: INTO "1hPolicy".:MEASUREMENT
-- [#3975](https://github.com/influxdb/influxdb/pull/3975): Add shard copy service
-- [#3986](https://github.com/influxdb/influxdb/pull/3986): Support sorting by time desc
-- [#3930](https://github.com/influxdb/influxdb/pull/3930): Wire up TOP aggregate function - fixes [#1821](https://github.com/influxdb/influxdb/issues/1821)
-- [#4045](https://github.com/influxdb/influxdb/pull/4045): Instrument cluster-level points writer
-- [#3996](https://github.com/influxdb/influxdb/pull/3996): Add statistics to httpd package
-- [#4003](https://github.com/influxdb/influxdb/pull/4033): Add logrotate configuration.
-- [#4043](https://github.com/influxdb/influxdb/pull/4043): Add stats and batching to openTSDB input
-- [#4042](https://github.com/influxdb/influxdb/pull/4042): Add pending batches control to batcher
-- [#4006](https://github.com/influxdb/influxdb/pull/4006): Add basic statistics for shards
-- [#4072](https://github.com/influxdb/influxdb/pull/4072): Add statistics for the WAL.
-
-### Bugfixes
-- [#4042](https://github.com/influxdb/influxdb/pull/4042): Set UDP input batching defaults as needed.
-- [#3785](https://github.com/influxdb/influxdb/issues/3785): Invalid time stamp in graphite metric causes panic
-- [#3804](https://github.com/influxdb/influxdb/pull/3804): init.d script fixes, fixes issue 3803.
-- [#3823](https://github.com/influxdb/influxdb/pull/3823): Deterministic ordering for first() and last()
-- [#3869](https://github.com/influxdb/influxdb/issues/3869): Seemingly deadlocked when ingesting metrics via graphite plugin
-- [#3856](https://github.com/influxdb/influxdb/pull/3856): Minor changes to retention enforcement.
-- [#3884](https://github.com/influxdb/influxdb/pull/3884): Fix two panics in WAL that can happen at server startup
-- [#3868](https://github.com/influxdb/influxdb/pull/3868): Add shell option to start the daemon on CentOS. Thanks @SwannCroiset.
-- [#3886](https://github.com/influxdb/influxdb/pull/3886): Prevent write timeouts due to lock contention in WAL
-- [#3574](https://github.com/influxdb/influxdb/issues/3574): Querying data node causes panic
-- [#3913](https://github.com/influxdb/influxdb/issues/3913): Convert meta shard owners to objects
-- [#4026](https://github.com/influxdb/influxdb/pull/4026): Support multiple Graphite inputs. Fixes issue [#3636](https://github.com/influxdb/influxdb/issues/3636)
-- [#3927](https://github.com/influxdb/influxdb/issues/3927): Add WAL lock to prevent timing lock contention
-- [#3928](https://github.com/influxdb/influxdb/issues/3928): Write fails for multiple points when tag starts with quote
-- [#3901](https://github.com/influxdb/influxdb/pull/3901): Unblock relaxed write consistency level Thanks @takayuki!
-- [#3950](https://github.com/influxdb/influxdb/pull/3950): Limit bz1 quickcheck tests to 10 iterations on CI
-- [#3977](https://github.com/influxdb/influxdb/pull/3977): Silence wal logging during testing
-- [#3931](https://github.com/influxdb/influxdb/pull/3931): Don't precreate shard groups entirely in the past
-- [#3960](https://github.com/influxdb/influxdb/issues/3960): possible "catch up" bug with nodes down in a cluster
-- [#3980](https://github.com/influxdb/influxdb/pull/3980): 'service stop' waits until service actually stops. Fixes issue #3548.
-- [#4016](https://github.com/influxdb/influxdb/pull/4016): Shutdown Graphite UDP on SIGTERM.
-- [#4034](https://github.com/influxdb/influxdb/pull/4034): Rollback bolt tx on mapper open error
-- [#3848](https://github.com/influxdb/influxdb/issues/3848): restart influxdb causing panic
-- [#3881](https://github.com/influxdb/influxdb/issues/3881): panic: runtime error: invalid memory address or nil pointer dereference
-- [#3926](https://github.com/influxdb/influxdb/issues/3926): First or last value of `GROUP BY time(x)` is often null. Fixed by [#4038](https://github.com/influxdb/influxdb/pull/4038)
-- [#4053](https://github.com/influxdb/influxdb/pull/4053): Prohibit dropping default retention policy.
-- [#4060](https://github.com/influxdb/influxdb/pull/4060): Don't log EOF error in openTSDB input.
-- [#3978](https://github.com/influxdb/influxdb/issues/3978): [0.9.3] (regression) cannot use GROUP BY * with more than a single field in SELECT clause
-- [#4058](https://github.com/influxdb/influxdb/pull/4058): Disable bz1 recompression
-- [#3902](https://github.com/influxdb/influxdb/issues/3902): [0.9.3] DB should not crash when using invalid expression "GROUP BY time"
-- [#3718](https://github.com/influxdb/influxdb/issues/3718): Derivative query with group by time but no aggregate function should fail parse
-
-## v0.9.3 [2015-08-26]
+## v0.9.3 [unreleased]
 
 ### Release Notes
 
 There are breaking changes in this release.
- - To store data points as integers you must now append `i` to the number if using the line protocol.
- - If you have a UDP input configured, you should check the UDP section of [the new sample configuration file](https://github.com/influxdb/influxdb/blob/master/etc/config.sample.toml) to learn how to modify existing configuration files, as 0.9.3 now expects multiple UDP inputs.
+ - To store data points as integers you must now append i to the number if using the line protocol.
+ - If you have a UDP input configured, you should check the UDP section of [the new sample configuration file](https://github.com/influxdb/influxdb/blob/master/etc/config.sample.toml) to learn how to modify existing configuration files, as 0.9.3 now expects multiple UDP inputs. 
  - Configuration files must now have an entry for `wal-dir` in the `[data]` section. Check [new sample configuration file](https://github.com/influxdb/influxdb/blob/master/etc/config.sample.toml) for more details.
  - The implicit `GROUP BY *` that was added to every `SELECT *` has been removed. Instead any tags in the data are now part of the columns in the returned query.
 
-Please see the *Features* section below for full details.
+Please see the *Features* section below for full details. 
 
 ### Features
 - [#3376](https://github.com/influxdb/influxdb/pull/3376): Support for remote shard query mapping

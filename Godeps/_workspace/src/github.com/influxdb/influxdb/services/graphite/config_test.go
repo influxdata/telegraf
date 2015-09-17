@@ -17,7 +17,6 @@ database = "mydb"
 enabled = true
 protocol = "tcp"
 batch-size=100
-batch-pending=77
 batch-timeout="1s"
 consistency-level="one"
 templates=["servers.* .host.measurement*"]
@@ -37,8 +36,6 @@ tags=["region=us-east"]
 		t.Fatalf("unexpected graphite protocol: %s", c.Protocol)
 	} else if c.BatchSize != 100 {
 		t.Fatalf("unexpected graphite batch size: %d", c.BatchSize)
-	} else if c.BatchPending != 77 {
-		t.Fatalf("unexpected graphite batch pending: %d", c.BatchPending)
 	} else if time.Duration(c.BatchTimeout) != time.Second {
 		t.Fatalf("unexpected graphite batch timeout: %v", c.BatchTimeout)
 	} else if c.ConsistencyLevel != "one" {
@@ -54,7 +51,7 @@ tags=["region=us-east"]
 }
 
 func TestConfigValidateEmptyTemplate(t *testing.T) {
-	c := &graphite.Config{}
+	c := graphite.NewConfig()
 	c.Templates = []string{""}
 	if err := c.Validate(); err == nil {
 		t.Errorf("config validate expected error. got nil")
@@ -67,7 +64,7 @@ func TestConfigValidateEmptyTemplate(t *testing.T) {
 }
 
 func TestConfigValidateTooManyField(t *testing.T) {
-	c := &graphite.Config{}
+	c := graphite.NewConfig()
 	c.Templates = []string{"a measurement b c"}
 	if err := c.Validate(); err == nil {
 		t.Errorf("config validate expected error. got nil")
@@ -75,7 +72,7 @@ func TestConfigValidateTooManyField(t *testing.T) {
 }
 
 func TestConfigValidateTemplatePatterns(t *testing.T) {
-	c := &graphite.Config{}
+	c := graphite.NewConfig()
 	c.Templates = []string{"*measurement"}
 	if err := c.Validate(); err == nil {
 		t.Errorf("config validate expected error. got nil")
@@ -88,7 +85,7 @@ func TestConfigValidateTemplatePatterns(t *testing.T) {
 }
 
 func TestConfigValidateFilter(t *testing.T) {
-	c := &graphite.Config{}
+	c := graphite.NewConfig()
 	c.Templates = []string{".server measurement*"}
 	if err := c.Validate(); err == nil {
 		t.Errorf("config validate expected error. got nil")
@@ -106,7 +103,7 @@ func TestConfigValidateFilter(t *testing.T) {
 }
 
 func TestConfigValidateTemplateTags(t *testing.T) {
-	c := &graphite.Config{}
+	c := graphite.NewConfig()
 	c.Templates = []string{"*.server measurement* foo"}
 	if err := c.Validate(); err == nil {
 		t.Errorf("config validate expected error. got nil")
@@ -129,7 +126,7 @@ func TestConfigValidateTemplateTags(t *testing.T) {
 }
 
 func TestConfigValidateDefaultTags(t *testing.T) {
-	c := &graphite.Config{}
+	c := graphite.NewConfig()
 	c.Tags = []string{"foo"}
 	if err := c.Validate(); err == nil {
 		t.Errorf("config validate expected error. got nil")
@@ -152,7 +149,7 @@ func TestConfigValidateDefaultTags(t *testing.T) {
 }
 
 func TestConfigValidateFilterDuplicates(t *testing.T) {
-	c := &graphite.Config{}
+	c := graphite.NewConfig()
 	c.Templates = []string{"foo measurement*", "foo .host.measurement"}
 	if err := c.Validate(); err == nil {
 		t.Errorf("config validate expected error. got nil")

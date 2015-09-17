@@ -79,7 +79,7 @@ second to sign our CLA, which can be found
 
 Installing Go
 -------------
-InfluxDB requires Go 1.5 or greater.
+InfluxDB requires Go 1.4 or greater.
 
 At InfluxDB we find gvm, a Go version manager, useful for installing Go. For instructions
 on how to install it see [the gvm page on github](https://github.com/moovweb/gvm).
@@ -87,40 +87,29 @@ on how to install it see [the gvm page on github](https://github.com/moovweb/gvm
 After installing gvm you can install and set the default go version by
 running the following:
 
-    gvm install go1.5
-    gvm use go1.5 --default
+    gvm install go1.4
+    gvm use go1.4 --default
 
 Revision Control Systems
--------------
+------
 Go has the ability to import remote packages via revision control systems with the `go get` command.  To ensure that you can retrieve any remote package, be sure to install the following rcs software to your system.
 Currently the project only depends on `git` and `mercurial`.
 
 * [Install Git](http://git-scm.com/book/en/Getting-Started-Installing-Git)
 * [Install Mercurial](http://mercurial.selenic.com/wiki/Download)
 
-Getting the source
-------
-Setup the project structure and fetch the repo like so:
-
-    mkdir $HOME/gocodez
-    export GOPATH=$HOME/gocodez
-    go get github.com/influxdb/influxdb
-
-You can add the line `export GOPATH=$HOME/gocodez` to your bash/zsh file to be set for every shell instead of having to manually run it everytime.
-
-Cloning a fork
--------------
-If you wish to work with fork of InfluxDB, your own fork for example, you must still follow the directory structure above. But instead of cloning the main repo, instead clone your fork. Follow the steps below to work with a fork:
+Project structure
+-----------------
+First you need to setup the project structure:
 
     export GOPATH=$HOME/gocodez
     mkdir -p $GOPATH/src/github.com/influxdb
     cd $GOPATH/src/github.com/influxdb
-    git clone git@github.com:<username>/influxdb
+    git clone git@github.com:influxdb/influxdb
 
-Retaining the directory structure `$GOPATH/src/github.com/influxdb` is necessary so that Go imports work correctly.
-
-Pre-commit checks
--------------
+You can add the line `export GOPATH=$HOME/gocodez` to your bash/zsh
+file to be set for every shell instead of having to manually run it
+everytime.
 
 We have a pre commit hook to make sure code is formatted properly
 and vetted before you commit any changes. We strongly recommend using the pre
@@ -167,15 +156,10 @@ go install ./...
 To set the version and commit flags during the build pass the following to the build command:
 
 ```bash
--ldflags="-X main.version=$VERSION -X main.branch=$BRANCH -X main.commit=$COMMIT"
+-ldflags="-X main.version $VERSION -X main.branch $BRANCH -X main.commit $COMMIT"
 ```
 
 where `$VERSION` is the version, `$BRANCH` is the branch, and `$COMMIT` is the git commit hash.
-
-If you want to build packages, see `package.sh` help:
-```bash
-package.sh -h
-```
 
 To run the tests, execute the following command:
 

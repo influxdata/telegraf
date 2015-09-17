@@ -52,28 +52,8 @@ func TestServer_DatabaseCommands(t *testing.T) {
 				exp:     `{"results":[{"error":"database already exists"}]}`,
 			},
 			&Query{
-				name:    "create database should not error with existing database with IF NOT EXISTS",
-				command: `CREATE DATABASE IF NOT EXISTS db0`,
-				exp:     `{"results":[{}]}`,
-			},
-			&Query{
-				name:    "create database should create non-existing database with IF NOT EXISTS",
-				command: `CREATE DATABASE IF NOT EXISTS db1`,
-				exp:     `{"results":[{}]}`,
-			},
-			&Query{
-				name:    "show database should succeed",
-				command: `SHOW DATABASES`,
-				exp:     `{"results":[{"series":[{"name":"databases","columns":["name"],"values":[["db0"],["db1"]]}]}]}`,
-			},
-			&Query{
-				name:    "drop database db0 should succeed",
+				name:    "drop database should succeed",
 				command: `DROP DATABASE db0`,
-				exp:     `{"results":[{}]}`,
-			},
-			&Query{
-				name:    "drop database db1 should succeed",
-				command: `DROP DATABASE db1`,
 				exp:     `{"results":[{}]}`,
 			},
 			&Query{
@@ -370,34 +350,14 @@ func TestServer_RetentionPolicyCommands(t *testing.T) {
 				exp:     `{"results":[{"series":[{"columns":["name","duration","replicaN","default"],"values":[["rp0","2h0m0s",3,true]]}]}]}`,
 			},
 			&Query{
-				name:    "dropping default retention policy should not succeed",
+				name:    "drop retention policy should succeed",
 				command: `DROP RETENTION POLICY rp0 ON db0`,
-				exp:     `{"results":[{"error":"retention policy is default"}]}`,
-			},
-			&Query{
-				name:    "show retention policy should still show policy",
-				command: `SHOW RETENTION POLICIES ON db0`,
-				exp:     `{"results":[{"series":[{"columns":["name","duration","replicaN","default"],"values":[["rp0","2h0m0s",3,true]]}]}]}`,
-			},
-			&Query{
-				name:    "create a second non-default retention policy",
-				command: `CREATE RETENTION POLICY rp2 ON db0 DURATION 1h REPLICATION 1`,
 				exp:     `{"results":[{}]}`,
 			},
 			&Query{
-				name:    "show retention policy should show both",
+				name:    "show retention policy should be empty after dropping them",
 				command: `SHOW RETENTION POLICIES ON db0`,
-				exp:     `{"results":[{"series":[{"columns":["name","duration","replicaN","default"],"values":[["rp0","2h0m0s",3,true],["rp2","1h0m0s",1,false]]}]}]}`,
-			},
-			&Query{
-				name:    "dropping non-default retention policy succeed",
-				command: `DROP RETENTION POLICY rp2 ON db0`,
-				exp:     `{"results":[{}]}`,
-			},
-			&Query{
-				name:    "show retention policy should show just default",
-				command: `SHOW RETENTION POLICIES ON db0`,
-				exp:     `{"results":[{"series":[{"columns":["name","duration","replicaN","default"],"values":[["rp0","2h0m0s",3,true]]}]}]}`,
+				exp:     `{"results":[{"series":[{"columns":["name","duration","replicaN","default"]}]}]}`,
 			},
 			&Query{
 				name:    "Ensure retention policy with unacceptable retention cannot be created",
@@ -1013,7 +973,7 @@ func TestServer_Query_Count(t *testing.T) {
 		&Query{
 			name:    "selecting count(*) should error",
 			command: `SELECT count(*) FROM db0.rp0.cpu`,
-			exp:     `{"error":"error parsing query: expected field argument in count()"}`,
+			exp:     `{"results":[{"error":"expected field argument in count()"}]}`,
 		},
 	}...)
 
@@ -2221,348 +2181,6 @@ func TestServer_Query_Aggregates(t *testing.T) {
 			command: `SELECT sum(value)/2 FROM load`,
 			exp:     `{"results":[{"series":[{"name":"load","columns":["time",""],"values":[["1970-01-01T00:00:00Z",75]]}]}]}`,
 		},
-
-		// order by time desc
-		&Query{
-			name:    "aggregate order by time desc",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT max(value) FROM intmany where time >= '2000-01-01T00:00:00Z' AND time <= '2000-01-01T00:01:00Z' group by time(10s) order by time desc`,
-			exp:     `{"results":[{"series":[{"name":"intmany","columns":["time","max"],"values":[["2000-01-01T00:01:00Z",7],["2000-01-01T00:00:50Z",5],["2000-01-01T00:00:40Z",5],["2000-01-01T00:00:30Z",4],["2000-01-01T00:00:20Z",4],["2000-01-01T00:00:10Z",4],["2000-01-01T00:00:00Z",2]]}]}]}`,
-		},
-	}...)
-
-	for i, query := range test.queries {
-		if i == 0 {
-			if err := test.init(s); err != nil {
-				t.Fatalf("test init failed: %s", err)
-			}
-		}
-		if query.skip {
-			t.Logf("SKIP:: %s", query.name)
-			continue
-		}
-		if err := query.Execute(s); err != nil {
-			t.Error(query.Error(err))
-		} else if !query.success() {
-			t.Error(query.failureMessage())
-		}
-	}
-}
-
-func TestServer_Query_AggregatesTopInt(t *testing.T) {
-	t.Parallel()
-	s := OpenServer(NewConfig(), "")
-	defer s.Close()
-
-	if err := s.CreateDatabaseAndRetentionPolicy("db0", newRetentionPolicyInfo("rp0", 1, 0)); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.MetaStore.SetDefaultRetentionPolicy("db0", "rp0"); err != nil {
-		t.Fatal(err)
-	}
-
-	writes := []string{
-		// cpu data with overlapping duplicate values
-		// hour 0
-		fmt.Sprintf(`cpu,host=server01 value=2.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`cpu,host=server02 value=3.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:10Z").UnixNano()),
-		fmt.Sprintf(`cpu,host=server03 value=4.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:20Z").UnixNano()),
-		// hour 1
-		fmt.Sprintf(`cpu,host=server04 value=5.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T01:00:00Z").UnixNano()),
-		fmt.Sprintf(`cpu,host=server05 value=7.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T01:00:10Z").UnixNano()),
-		fmt.Sprintf(`cpu,host=server06 value=6.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T01:00:20Z").UnixNano()),
-		// hour 2
-		fmt.Sprintf(`cpu,host=server07 value=7.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T02:00:00Z").UnixNano()),
-		fmt.Sprintf(`cpu,host=server08 value=9.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T02:00:10Z").UnixNano()),
-
-		// memory data
-		// hour 0
-		fmt.Sprintf(`memory,host=a,service=redis value=1000i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`memory,host=b,service=mysql value=2000i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`memory,host=b,service=redis value=1500i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		// hour 1
-		fmt.Sprintf(`memory,host=a,service=redis value=1001i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T01:00:00Z").UnixNano()),
-		fmt.Sprintf(`memory,host=b,service=mysql value=2001i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T01:00:00Z").UnixNano()),
-		fmt.Sprintf(`memory,host=b,service=redis value=1501i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T01:00:00Z").UnixNano()),
-		// hour 2
-		fmt.Sprintf(`memory,host=a,service=redis value=1002i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T02:00:00Z").UnixNano()),
-		fmt.Sprintf(`memory,host=b,service=mysql value=2002i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T02:00:00Z").UnixNano()),
-		fmt.Sprintf(`memory,host=b,service=redis value=1502i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T02:00:00Z").UnixNano()),
-	}
-
-	test := NewTest("db0", "rp0")
-	test.write = strings.Join(writes, "\n")
-
-	test.addQueries([]*Query{
-		&Query{
-			name:    "top - cpu",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 1) FROM cpu`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T02:00:10Z",9]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - 2 values",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 2) FROM cpu`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T01:00:10Z",7],["2000-01-01T02:00:10Z",9]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - 3 values - sorts on tie properly",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 3) FROM cpu`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T01:00:10Z",7],["2000-01-01T02:00:00Z",7],["2000-01-01T02:00:10Z",9]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - with tag",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, host, 2) FROM cpu`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top","host"],"values":[["2000-01-01T01:00:10Z",7,"server05"],["2000-01-01T02:00:10Z",9,"server08"]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - 3 values with limit 2",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 3) FROM cpu limit 2`,
-			exp:     `{"error":"error parsing query: limit (3) in top function can not be larger than the LIMIT (2) in the select statement"}`,
-		},
-		&Query{
-			name:    "top - cpu - hourly",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 1) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T00:00:00Z",4],["2000-01-01T01:00:00Z",7],["2000-01-01T02:00:00Z",9]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - time specified - hourly",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT time, TOP(value, 1) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T00:00:20Z",4],["2000-01-01T01:00:10Z",7],["2000-01-01T02:00:10Z",9]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - time specified (not first) - hourly",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 1), time FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T00:00:20Z",4],["2000-01-01T01:00:10Z",7],["2000-01-01T02:00:10Z",9]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - 2 values hourly",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 2) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T00:00:00Z",4],["2000-01-01T00:00:00Z",3],["2000-01-01T01:00:00Z",7],["2000-01-01T01:00:00Z",6],["2000-01-01T02:00:00Z",9],["2000-01-01T02:00:00Z",7]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - time specified -  2 values hourly",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 2), time FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T00:00:10Z",3],["2000-01-01T00:00:20Z",4],["2000-01-01T01:00:10Z",7],["2000-01-01T01:00:20Z",6],["2000-01-01T02:00:00Z",7],["2000-01-01T02:00:10Z",9]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - 3 values hourly - validates that a bucket can have less than limit if no values exist in that time bucket",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 3) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T00:00:00Z",4],["2000-01-01T00:00:00Z",3],["2000-01-01T00:00:00Z",2],["2000-01-01T01:00:00Z",7],["2000-01-01T01:00:00Z",6],["2000-01-01T01:00:00Z",5],["2000-01-01T02:00:00Z",9],["2000-01-01T02:00:00Z",7]]}]}]}`,
-		},
-		&Query{
-			name:    "top - cpu - time specified - 3 values hourly - validates that a bucket can have less than limit if no values exist in that time bucket",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 3), time FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T00:00:00Z",2],["2000-01-01T00:00:10Z",3],["2000-01-01T00:00:20Z",4],["2000-01-01T01:00:00Z",5],["2000-01-01T01:00:10Z",7],["2000-01-01T01:00:20Z",6],["2000-01-01T02:00:00Z",7],["2000-01-01T02:00:10Z",9]]}]}]}`,
-		},
-		&Query{
-			name:    "top - memory - 2 values, two tags",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, 2), host, service FROM memory`,
-			exp:     `{"results":[{"series":[{"name":"memory","columns":["time","top","host","service"],"values":[["2000-01-01T01:00:00Z",2001,"b","mysql"],["2000-01-01T02:00:00Z",2002,"b","mysql"]]}]}]}`,
-		},
-		&Query{
-			name:    "top - memory - host tag with limit 2",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, host, 2) FROM memory`,
-			exp:     `{"results":[{"series":[{"name":"memory","columns":["time","top","host"],"values":[["2000-01-01T02:00:00Z",2002,"b"],["2000-01-01T02:00:00Z",1002,"a"]]}]}]}`,
-		},
-		&Query{
-			name:    "top - memory - host tag with limit 2, service tag in select",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, host, 2), service FROM memory`,
-			exp:     `{"results":[{"series":[{"name":"memory","columns":["time","top","host","service"],"values":[["2000-01-01T02:00:00Z",2002,"b","mysql"],["2000-01-01T02:00:00Z",1002,"a","redis"]]}]}]}`,
-		},
-		&Query{
-			name:    "top - memory - service tag with limit 2, host tag in select",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, service, 2), host FROM memory`,
-			exp:     `{"results":[{"series":[{"name":"memory","columns":["time","top","service","host"],"values":[["2000-01-01T02:00:00Z",2002,"mysql","b"],["2000-01-01T02:00:00Z",1502,"redis","b"]]}]}]}`,
-		},
-		&Query{
-			name:    "top - memory - host and service tag with limit 2",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, host, service, 2) FROM memory`,
-			exp:     `{"results":[{"series":[{"name":"memory","columns":["time","top","host","service"],"values":[["2000-01-01T02:00:00Z",2002,"b","mysql"],["2000-01-01T02:00:00Z",1502,"b","redis"]]}]}]}`,
-		},
-		&Query{
-			name:    "top - memory - host tag with limit 2 with service tag in select",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, host, 2), service FROM memory`,
-			exp:     `{"results":[{"series":[{"name":"memory","columns":["time","top","host","service"],"values":[["2000-01-01T02:00:00Z",2002,"b","mysql"],["2000-01-01T02:00:00Z",1002,"a","redis"]]}]}]}`,
-		},
-		&Query{
-			name:    "top - memory - host and service tag with limit 3",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT TOP(value, host, service, 3) FROM memory`,
-			exp:     `{"results":[{"series":[{"name":"memory","columns":["time","top","host","service"],"values":[["2000-01-01T02:00:00Z",2002,"b","mysql"],["2000-01-01T02:00:00Z",1502,"b","redis"],["2000-01-01T02:00:00Z",1002,"a","redis"]]}]}]}`,
-		},
-
-		// TODO
-		// - Test that specifiying fields or tags in the function will rewrite the query to expand them to the fields
-		// - Test that a field can be used in the top function
-		// - Test that asking for a field will come back before a tag if they have the same name for a tag and a field
-		// - Test that `select top(value, host, 2)` when there is only one value for `host` it will only bring back one value
-		// - Test that `select top(value, host, 4) from foo where time > now() - 1d and time < now() group by time(1h)` and host is unique in some time buckets that it returns only the unique ones, and not always 4 values
-
-	}...)
-
-	for i, query := range test.queries {
-		if i == 0 {
-			if err := test.init(s); err != nil {
-				t.Fatalf("test init failed: %s", err)
-			}
-		}
-		if query.skip {
-			t.Logf("SKIP: %s", query.name)
-			continue
-		}
-		if err := query.Execute(s); err != nil {
-			t.Error(query.Error(err))
-		} else if !query.success() {
-			t.Error(query.failureMessage())
-		}
-	}
-}
-
-// Test various aggregates when different series only have data for the same timestamp.
-func TestServer_Query_AggregatesIdenticalTime(t *testing.T) {
-	t.Parallel()
-	s := OpenServer(NewConfig(), "")
-	defer s.Close()
-
-	if err := s.CreateDatabaseAndRetentionPolicy("db0", newRetentionPolicyInfo("rp0", 1, 0)); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.MetaStore.SetDefaultRetentionPolicy("db0", "rp0"); err != nil {
-		t.Fatal(err)
-	}
-
-	writes := []string{
-		fmt.Sprintf(`series,host=a value=1 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`series,host=b value=2 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`series,host=c value=3 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`series,host=d value=4 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`series,host=e value=5 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`series,host=f value=5 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`series,host=g value=5 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`series,host=h value=5 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`series,host=i value=5 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-	}
-
-	test := NewTest("db0", "rp0")
-	test.write = strings.Join(writes, "\n")
-
-	test.addQueries([]*Query{
-		&Query{
-			name:    "last from multiple series with identical timestamp",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT last(value) FROM "series"`,
-			exp:     `{"results":[{"series":[{"name":"series","columns":["time","last"],"values":[["1970-01-01T00:00:00Z",5]]}]}]}`,
-			repeat:  100,
-		},
-		&Query{
-			name:    "first from multiple series with identical timestamp",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT first(value) FROM "series"`,
-			exp:     `{"results":[{"series":[{"name":"series","columns":["time","first"],"values":[["1970-01-01T00:00:00Z",5]]}]}]}`,
-			repeat:  100,
-		},
-	}...)
-
-	for i, query := range test.queries {
-		if i == 0 {
-			if err := test.init(s); err != nil {
-				t.Fatalf("test init failed: %s", err)
-			}
-		}
-		if query.skip {
-			t.Logf("SKIP:: %s", query.name)
-			continue
-		}
-		for n := 0; n <= query.repeat; n++ {
-			if err := query.Execute(s); err != nil {
-				t.Error(query.Error(err))
-			} else if !query.success() {
-				t.Error(query.failureMessage())
-			}
-		}
-	}
-}
-
-// This will test that when using a group by, that it observes the time you asked for
-// but will only put the values in the bucket that match the time range
-func TestServer_Query_GroupByTimeCutoffs(t *testing.T) {
-	t.Parallel()
-	s := OpenServer(NewConfig(), "")
-	defer s.Close()
-
-	if err := s.CreateDatabaseAndRetentionPolicy("db0", newRetentionPolicyInfo("rp0", 1, 0)); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.MetaStore.SetDefaultRetentionPolicy("db0", "rp0"); err != nil {
-		t.Fatal(err)
-	}
-
-	writes := []string{
-		fmt.Sprintf(`cpu value=1i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`cpu value=2i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:01Z").UnixNano()),
-		fmt.Sprintf(`cpu value=3i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:05Z").UnixNano()),
-		fmt.Sprintf(`cpu value=4i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:08Z").UnixNano()),
-		fmt.Sprintf(`cpu value=5i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:09Z").UnixNano()),
-		fmt.Sprintf(`cpu value=6i %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:10Z").UnixNano()),
-	}
-	test := NewTest("db0", "rp0")
-	test.write = strings.Join(writes, "\n")
-
-	test.addQueries([]*Query{
-		&Query{
-			name:    "sum all time",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT SUM(value) FROM cpu`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","sum"],"values":[["1970-01-01T00:00:00Z",21]]}]}]}`,
-		},
-		&Query{
-			name:    "sum all time grouped by time 5s",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT SUM(value) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T00:00:10Z' group by time(5s)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","sum"],"values":[["2000-01-01T00:00:00Z",3],["2000-01-01T00:00:05Z",12],["2000-01-01T00:00:10Z",6]]}]}]}`,
-		},
-		&Query{
-			name:    "sum all time grouped by time 5s missing first point",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT SUM(value) FROM cpu where time >= '2000-01-01T00:00:01Z' and time <= '2000-01-01T00:00:10Z' group by time(5s)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","sum"],"values":[["2000-01-01T00:00:00Z",2],["2000-01-01T00:00:05Z",12],["2000-01-01T00:00:10Z",6]]}]}]}`,
-		},
-		&Query{
-			name:    "sum all time grouped by time 5s missing first points (null for bucket)",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT SUM(value) FROM cpu where time >= '2000-01-01T00:00:02Z' and time <= '2000-01-01T00:00:10Z' group by time(5s)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","sum"],"values":[["2000-01-01T00:00:00Z",null],["2000-01-01T00:00:05Z",12],["2000-01-01T00:00:10Z",6]]}]}]}`,
-		},
-		&Query{
-			name:    "sum all time grouped by time 5s missing last point - 2 time intervals",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT SUM(value) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T00:00:09Z' group by time(5s)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","sum"],"values":[["2000-01-01T00:00:00Z",3],["2000-01-01T00:00:05Z",12]]}]}]}`,
-		},
-		&Query{
-			name:    "sum all time grouped by time 5s missing last 2 points - 2 time intervals",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT SUM(value) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T00:00:08Z' group by time(5s)`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","sum"],"values":[["2000-01-01T00:00:00Z",3],["2000-01-01T00:00:05Z",7]]}]}]}`,
-		},
 	}...)
 
 	for i, query := range test.queries {
@@ -2718,9 +2336,6 @@ func TestServer_Query_Wildcards(t *testing.T) {
 		fmt.Sprintf(`wgroup,region=us-east value=10.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
 		fmt.Sprintf(`wgroup,region=us-east value=20.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:10Z").UnixNano()),
 		fmt.Sprintf(`wgroup,region=us-west value=30.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:20Z").UnixNano()),
-
-		fmt.Sprintf(`m1,region=us-east value=10.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-		fmt.Sprintf(`m2,host=server01 field=20.0 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:01Z").UnixNano()),
 	}
 
 	test := NewTest("db0", "rp0")
@@ -2750,48 +2365,6 @@ func TestServer_Query_Wildcards(t *testing.T) {
 			params:  url.Values{"db": []string{"db0"}},
 			command: `SELECT mean(value) FROM wgroup WHERE time >= '2000-01-01T00:00:00Z' AND time < '2000-01-01T00:01:00Z' GROUP BY *,TIME(1m)`,
 			exp:     `{"results":[{"series":[{"name":"wgroup","tags":{"region":"us-east"},"columns":["time","mean"],"values":[["2000-01-01T00:00:00Z",15]]},{"name":"wgroup","tags":{"region":"us-west"},"columns":["time","mean"],"values":[["2000-01-01T00:00:00Z",30]]}]}]}`,
-		},
-		&Query{
-			name:    "wildcard and field in select",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT value, * FROM wildcard`,
-			exp:     `{"results":[{"series":[{"name":"wildcard","columns":["time","region","value","valx"],"values":[["2000-01-01T00:00:00Z","us-east",10,null],["2000-01-01T00:00:10Z","us-east",null,20],["2000-01-01T00:00:20Z","us-east",30,40]]}]}]}`,
-		},
-		&Query{
-			name:    "field and wildcard in select",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT value, * FROM wildcard`,
-			exp:     `{"results":[{"series":[{"name":"wildcard","columns":["time","region","value","valx"],"values":[["2000-01-01T00:00:00Z","us-east",10,null],["2000-01-01T00:00:10Z","us-east",null,20],["2000-01-01T00:00:20Z","us-east",30,40]]}]}]}`,
-		},
-		&Query{
-			name:    "field and wildcard in group by",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT * FROM wildcard GROUP BY region, *`,
-			exp:     `{"results":[{"series":[{"name":"wildcard","tags":{"region":"us-east"},"columns":["time","value","valx"],"values":[["2000-01-01T00:00:00Z",10,null],["2000-01-01T00:00:10Z",null,20],["2000-01-01T00:00:20Z",30,40]]}]}]}`,
-		},
-		&Query{
-			name:    "wildcard and field in group by",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT * FROM wildcard GROUP BY *, region`,
-			exp:     `{"results":[{"series":[{"name":"wildcard","tags":{"region":"us-east"},"columns":["time","value","valx"],"values":[["2000-01-01T00:00:00Z",10,null],["2000-01-01T00:00:10Z",null,20],["2000-01-01T00:00:20Z",30,40]]}]}]}`,
-		},
-		&Query{
-			name:    "wildcard with multiple measurements",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT * FROM m1, m2`,
-			exp:     `{"results":[{"series":[{"name":"m1","columns":["time","field","host","region","value"],"values":[["2000-01-01T00:00:00Z",null,null,"us-east",10]]},{"name":"m2","columns":["time","field","host","region","value"],"values":[["2000-01-01T00:00:01Z",20,"server01",null,null]]}]}]}`,
-		},
-		&Query{
-			name:    "wildcard with multiple measurements via regex",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT * FROM /^m.*/`,
-			exp:     `{"results":[{"series":[{"name":"m1","columns":["time","field","host","region","value"],"values":[["2000-01-01T00:00:00Z",null,null,"us-east",10]]},{"name":"m2","columns":["time","field","host","region","value"],"values":[["2000-01-01T00:00:01Z",20,"server01",null,null]]}]}]}`,
-		},
-		&Query{
-			name:    "wildcard with multiple measurements via regex and limit",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `SELECT * FROM db0../^m.*/ LIMIT 2`,
-			exp:     `{"results":[{"series":[{"name":"m1","columns":["time","field","host","region","value"],"values":[["2000-01-01T00:00:00Z",null,null,"us-east",10]]},{"name":"m2","columns":["time","field","host","region","value"],"values":[["2000-01-01T00:00:01Z",20,"server01",null,null]]}]}]}`,
 		},
 	}...)
 
@@ -3973,8 +3546,7 @@ func TestServer_Query_ShowFieldKeys(t *testing.T) {
 	}
 }
 
-func TestServer_ContinuousQuery(t *testing.T) {
-	t.Skip()
+func TestServer_Query_CreateContinuousQuery(t *testing.T) {
 	t.Parallel()
 	s := OpenServer(NewConfig(), "")
 	defer s.Close()
@@ -3986,112 +3558,37 @@ func TestServer_ContinuousQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	runTest := func(test *Test, t *testing.T) {
-		for i, query := range test.queries {
-			if i == 0 {
-				if err := test.init(s); err != nil {
-					t.Fatalf("test init failed: %s", err)
-				}
-			}
-			if query.skip {
-				t.Logf("SKIP:: %s", query.name)
-				continue
-			}
-			if err := query.Execute(s); err != nil {
-				t.Error(query.Error(err))
-			} else if !query.success() {
-				t.Error(query.failureMessage())
-			}
-		}
-	}
-
-	// Start times of CQ intervals.
-	interval0 := time.Now().Add(-time.Second).Round(time.Second * 5)
-	interval1 := interval0.Add(-time.Second * 5)
-	interval2 := interval0.Add(-time.Second * 10)
-	interval3 := interval0.Add(-time.Second * 15)
-
-	writes := []string{
-		// Point too far in the past for CQ to pick up.
-		fmt.Sprintf(`cpu,host=server01,region=uswest value=100 %d`, interval3.Add(time.Second).UnixNano()),
-
-		// Points two intervals ago.
-		fmt.Sprintf(`cpu,host=server01 value=100 %d`, interval2.Add(time.Second).UnixNano()),
-		fmt.Sprintf(`cpu,host=server01,region=uswest value=100 %d`, interval2.Add(time.Second*2).UnixNano()),
-		fmt.Sprintf(`cpu,host=server01,region=useast value=100 %d`, interval2.Add(time.Second*3).UnixNano()),
-
-		// Points one interval ago.
-		fmt.Sprintf(`gpu,host=server02,region=useast value=100 %d`, interval1.Add(time.Second).UnixNano()),
-		fmt.Sprintf(`gpu,host=server03,region=caeast value=100 %d`, interval1.Add(time.Second*2).UnixNano()),
-
-		// Points in the current interval.
-		fmt.Sprintf(`gpu,host=server03,region=caeast value=100 %d`, interval0.Add(time.Second).UnixNano()),
-		fmt.Sprintf(`disk,host=server03,region=caeast value=100 %d`, interval0.Add(time.Second*2).UnixNano()),
-	}
-
 	test := NewTest("db0", "rp0")
-	test.write = strings.Join(writes, "\n")
+
 	test.addQueries([]*Query{
 		&Query{
-			name:    `create another retention policy for CQ to write into`,
-			command: `CREATE RETENTION POLICY rp1 ON db0 DURATION 1h REPLICATION 1`,
-			exp:     `{"results":[{}]}`,
-		},
-		&Query{
-			name:    "create continuous query with backreference",
-			command: `CREATE CONTINUOUS QUERY "cq1" ON db0 BEGIN SELECT count(value) INTO "rp1".:MEASUREMENT FROM /[cg]pu/ GROUP BY time(5s) END`,
-			exp:     `{"results":[{}]}`,
-		},
-		&Query{
-			name:    `create another retention policy for CQ to write into`,
-			command: `CREATE RETENTION POLICY rp2 ON db0 DURATION 1h REPLICATION 1`,
-			exp:     `{"results":[{}]}`,
-		},
-		&Query{
-			name:    "create continuous query with backreference and group by time",
-			command: `CREATE CONTINUOUS QUERY "cq2" ON db0 BEGIN SELECT count(value) INTO "rp2".:MEASUREMENT FROM /[cg]pu/ GROUP BY time(5s), * END`,
+			name:    "create continuous query",
+			command: `CREATE CONTINUOUS QUERY "my.query" ON db0 BEGIN SELECT count(value) INTO measure1 FROM myseries GROUP BY time(10m) END`,
 			exp:     `{"results":[{}]}`,
 		},
 		&Query{
 			name:    `show continuous queries`,
 			command: `SHOW CONTINUOUS QUERIES`,
-			exp:     `{"results":[{"series":[{"name":"db0","columns":["name","query"],"values":[["cq1","CREATE CONTINUOUS QUERY cq1 ON db0 BEGIN SELECT count(value) INTO \"db0\".\"rp1\".:MEASUREMENT FROM \"db0\".\"rp0\"./[cg]pu/ GROUP BY time(5s) END"],["cq2","CREATE CONTINUOUS QUERY cq2 ON db0 BEGIN SELECT count(value) INTO \"db0\".\"rp2\".:MEASUREMENT FROM \"db0\".\"rp0\"./[cg]pu/ GROUP BY time(5s), * END"]]}]}]}`,
+			exp:     `{"results":[{"series":[{"name":"db0","columns":["name","query"],"values":[["my.query","CREATE CONTINUOUS QUERY \"my.query\" ON db0 BEGIN SELECT count(value) INTO \"db0\".\"rp0\".measure1 FROM \"db0\".\"rp0\".myseries GROUP BY time(10m) END"]]}]}]}`,
 		},
 	}...)
 
-	// Run first test to create CQs.
-	runTest(&test, t)
-
-	// Trigger CQs to run.
-	u := fmt.Sprintf("%s/data/process_continuous_queries?time=%d", s.URL(), interval0.UnixNano())
-	if _, err := s.HTTPPost(u, nil); err != nil {
-		t.Fatal(err)
+	for i, query := range test.queries {
+		if i == 0 {
+			if err := test.init(s); err != nil {
+				t.Fatalf("test init failed: %s", err)
+			}
+		}
+		if query.skip {
+			t.Logf("SKIP:: %s", query.name)
+			continue
+		}
+		if err := query.Execute(s); err != nil {
+			t.Error(query.Error(err))
+		} else if !query.success() {
+			t.Error(query.failureMessage())
+		}
 	}
-
-	// Wait for CQs to run. TODO: fix this ugly hack
-	time.Sleep(time.Second * 5)
-
-	// Setup tests to check the CQ results.
-	test2 := NewTest("db0", "rp1")
-	test2.addQueries([]*Query{
-		&Query{
-			name:    "check results of cq1",
-			command: `SELECT * FROM "rp1"./[cg]pu/`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","count","host","region","value"],"values":[["` + interval2.UTC().Format(time.RFC3339Nano) + `",3,null,null,null]]},{"name":"gpu","columns":["time","count","host","region","value"],"values":[["` + interval1.UTC().Format(time.RFC3339Nano) + `",2,null,null,null],["` + interval0.UTC().Format(time.RFC3339Nano) + `",1,null,null,null]]}]}]}`,
-			params:  url.Values{"db": []string{"db0"}},
-		},
-		// TODO: restore this test once this is fixed: https://github.com/influxdb/influxdb/issues/3968
-		&Query{
-			skip:    true,
-			name:    "check results of cq2",
-			command: `SELECT * FROM "rp2"./[cg]pu/`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","count","host","region","value"],"values":[["` + interval2.UTC().Format(time.RFC3339Nano) + `",1,"server01","uswest",null],["` + interval2.UTC().Format(time.RFC3339Nano) + `",1,"server01","",null],["` + interval2.UTC().Format(time.RFC3339Nano) + `",1,"server01","useast",null]]},{"name":"gpu","columns":["time","count","host","region","value"],"values":[["` + interval1.UTC().Format(time.RFC3339Nano) + `",1,"server02","useast",null],["` + interval1.UTC().Format(time.RFC3339Nano) + `",1,"server03","caeast",null],["` + interval0.UTC().Format(time.RFC3339Nano) + `",1,"server03","caeast",null]]}]}]}`,
-			params:  url.Values{"db": []string{"db0"}},
-		},
-	}...)
-
-	// Run second test to check CQ results.
-	runTest(&test2, t)
 }
 
 // Tests that a known CQ query with concurrent writes does not deadlock the server
@@ -4200,158 +3697,6 @@ func TestServer_Query_EvilIdentifiers(t *testing.T) {
 			command: `SELECT "select", "in-bytes" FROM cpu`,
 			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","select","in-bytes"],"values":[["2000-01-01T00:00:00Z",1,2]]}]}]}`,
 			params:  url.Values{"db": []string{"db0"}},
-		},
-	}...)
-
-	for i, query := range test.queries {
-		if i == 0 {
-			if err := test.init(s); err != nil {
-				t.Fatalf("test init failed: %s", err)
-			}
-		}
-		if query.skip {
-			t.Logf("SKIP:: %s", query.name)
-			continue
-		}
-		if err := query.Execute(s); err != nil {
-			t.Error(query.Error(err))
-		} else if !query.success() {
-			t.Error(query.failureMessage())
-		}
-	}
-}
-
-func TestServer_Query_OrderByTime(t *testing.T) {
-	t.Parallel()
-	s := OpenServer(NewConfig(), "")
-	defer s.Close()
-
-	if err := s.CreateDatabaseAndRetentionPolicy("db0", newRetentionPolicyInfo("rp0", 1, 0)); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.MetaStore.SetDefaultRetentionPolicy("db0", "rp0"); err != nil {
-		t.Fatal(err)
-	}
-
-	writes := []string{
-		fmt.Sprintf(`cpu,host=server1 value=1 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:01Z").UnixNano()),
-		fmt.Sprintf(`cpu,host=server1 value=2 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:02Z").UnixNano()),
-		fmt.Sprintf(`cpu,host=server1 value=3 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:03Z").UnixNano()),
-	}
-
-	test := NewTest("db0", "rp0")
-	test.write = strings.Join(writes, "\n")
-
-	test.addQueries([]*Query{
-		&Query{
-			name:    "order on points",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `select value from "cpu" ORDER BY time DESC`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","value"],"values":[["2000-01-01T00:00:03Z",3],["2000-01-01T00:00:02Z",2],["2000-01-01T00:00:01Z",1]]}]}]}`,
-		},
-	}...)
-
-	for i, query := range test.queries {
-		if i == 0 {
-			if err := test.init(s); err != nil {
-				t.Fatalf("test init failed: %s", err)
-			}
-		}
-		if query.skip {
-			t.Logf("SKIP:: %s", query.name)
-			continue
-		}
-		if err := query.Execute(s); err != nil {
-			t.Error(query.Error(err))
-		} else if !query.success() {
-			t.Error(query.failureMessage())
-		}
-	}
-}
-
-func TestServer_Query_FieldWithMultiplePeriods(t *testing.T) {
-	t.Parallel()
-	s := OpenServer(NewConfig(), "")
-	defer s.Close()
-
-	if err := s.CreateDatabaseAndRetentionPolicy("db0", newRetentionPolicyInfo("rp0", 1, 0)); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.MetaStore.SetDefaultRetentionPolicy("db0", "rp0"); err != nil {
-		t.Fatal(err)
-	}
-
-	writes := []string{
-		fmt.Sprintf(`cpu foo.bar.baz=1 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-	}
-
-	test := NewTest("db0", "rp0")
-	test.write = strings.Join(writes, "\n")
-
-	test.addQueries([]*Query{
-		&Query{
-			name:    "baseline",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `select * from cpu`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","foo.bar.baz"],"values":[["2000-01-01T00:00:00Z",1]]}]}]}`,
-		},
-		&Query{
-			name:    "select field with periods",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `select "foo.bar.baz" from cpu`,
-			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","foo.bar.baz"],"values":[["2000-01-01T00:00:00Z",1]]}]}]}`,
-		},
-	}...)
-
-	for i, query := range test.queries {
-		if i == 0 {
-			if err := test.init(s); err != nil {
-				t.Fatalf("test init failed: %s", err)
-			}
-		}
-		if query.skip {
-			t.Logf("SKIP:: %s", query.name)
-			continue
-		}
-		if err := query.Execute(s); err != nil {
-			t.Error(query.Error(err))
-		} else if !query.success() {
-			t.Error(query.failureMessage())
-		}
-	}
-}
-
-func TestServer_Query_FieldWithMultiplePeriodsMeasurementPrefixMatch(t *testing.T) {
-	t.Parallel()
-	s := OpenServer(NewConfig(), "")
-	defer s.Close()
-
-	if err := s.CreateDatabaseAndRetentionPolicy("db0", newRetentionPolicyInfo("rp0", 1, 0)); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.MetaStore.SetDefaultRetentionPolicy("db0", "rp0"); err != nil {
-		t.Fatal(err)
-	}
-
-	writes := []string{
-		fmt.Sprintf(`foo foo.bar.baz=1 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
-	}
-
-	test := NewTest("db0", "rp0")
-	test.write = strings.Join(writes, "\n")
-
-	test.addQueries([]*Query{
-		&Query{
-			name:    "baseline",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `select * from foo`,
-			exp:     `{"results":[{"series":[{"name":"foo","columns":["time","foo.bar.baz"],"values":[["2000-01-01T00:00:00Z",1]]}]}]}`,
-		},
-		&Query{
-			name:    "select field with periods",
-			params:  url.Values{"db": []string{"db0"}},
-			command: `select "foo.bar.baz" from foo`,
-			exp:     `{"results":[{"series":[{"name":"foo","columns":["time","foo.bar.baz"],"values":[["2000-01-01T00:00:00Z",1]]}]}]}`,
 		},
 	}...)
 

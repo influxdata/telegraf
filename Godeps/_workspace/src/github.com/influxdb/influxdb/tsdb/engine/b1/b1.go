@@ -524,25 +524,6 @@ func (e *Engine) Begin(writable bool) (tsdb.Tx, error) {
 // DB returns the underlying Bolt database.
 func (e *Engine) DB() *bolt.DB { return e.db }
 
-// WriteTo writes the length and contents of the engine to w.
-func (e *Engine) WriteTo(w io.Writer) (n int64, err error) {
-	tx, err := e.db.Begin(false)
-	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-
-	// Write size.
-	if err := binary.Write(w, binary.BigEndian, uint64(tx.Size())); err != nil {
-		return 0, err
-	}
-
-	// Write data.
-	n, err = tx.WriteTo(w)
-	n += 8 // size header
-	return
-}
-
 // Tx represents a transaction.
 type Tx struct {
 	*bolt.Tx
@@ -550,7 +531,7 @@ type Tx struct {
 }
 
 // Cursor returns an iterator for a key.
-func (tx *Tx) Cursor(key string, direction tsdb.Direction) tsdb.Cursor {
+func (tx *Tx) Cursor(key string) tsdb.Cursor {
 	// Retrieve key bucket.
 	b := tx.Bucket([]byte(key))
 
@@ -568,17 +549,9 @@ func (tx *Tx) Cursor(key string, direction tsdb.Direction) tsdb.Cursor {
 	copy(cache, tx.engine.cache[partitionID][key])
 
 	// Build a cursor that merges the bucket and cache together.
-	cur := &Cursor{cache: cache, direction: direction}
+	cur := &Cursor{cache: cache}
 	if b != nil {
 		cur.cursor = b.Cursor()
-	}
-
-	// If it's a reverse cursor, set the current location to the end.
-	if direction.Reverse() {
-		cur.index = len(cache) - 1
-		if cur.cursor != nil {
-			cur.cursor.Last()
-		}
 	}
 	return cur
 }
@@ -597,12 +570,7 @@ type Cursor struct {
 
 	// Previously read key.
 	prev []byte
-
-	// The direction the cursor pointer moves after each call to Next()
-	direction tsdb.Direction
 }
-
-func (c *Cursor) Direction() tsdb.Direction { return c.direction }
 
 // Seek moves the cursor to a position and returns the closest key/value pair.
 func (c *Cursor) Seek(seek []byte) (key, value []byte) {
@@ -615,12 +583,6 @@ func (c *Cursor) Seek(seek []byte) (key, value []byte) {
 	c.index = sort.Search(len(c.cache), func(i int) bool {
 		return bytes.Compare(c.cache[i][0:8], seek) != -1
 	})
-
-	// Search will return an index after the length of cache if the seek value is greater
-	// than all the values.  Clamp it to the end of the cache.
-	if c.direction.Reverse() && c.index >= len(c.cache) {
-		c.index = len(c.cache) - 1
-	}
 
 	c.prev = nil
 	return c.read()
@@ -635,10 +597,20 @@ func (c *Cursor) Next() (key, value []byte) {
 func (c *Cursor) read() (key, value []byte) {
 	// Continue skipping ahead through duplicate keys in the cache list.
 	for {
-		if c.direction.Forward() {
-			key, value = c.readForward()
+		// Read next value from the cursor.
+		if c.buf.key == nil && c.cursor != nil {
+			c.buf.key, c.buf.value = c.cursor.Next()
+		}
+
+		// Read from the buffer or cache, which ever is lower.
+		if c.buf.key != nil && (c.index >= len(c.cache) || bytes.Compare(c.buf.key, c.cache[c.index][0:8]) == -1) {
+			key, value = c.buf.key, c.buf.value
+			c.buf.key, c.buf.value = nil, nil
+		} else if c.index < len(c.cache) {
+			key, value = c.cache[c.index][0:8], c.cache[c.index][8:]
+			c.index++
 		} else {
-			key, value = c.readReverse()
+			key, value = nil, nil
 		}
 
 		// Exit loop if we're at the end of the cache or the next key is different.
@@ -648,46 +620,6 @@ func (c *Cursor) read() (key, value []byte) {
 	}
 
 	c.prev = key
-	return
-}
-
-// readForward returns the next key/value from the cursor and moves the current location forward.
-func (c *Cursor) readForward() (key, value []byte) {
-	// Read next value from the cursor.
-	if c.buf.key == nil && c.cursor != nil {
-		c.buf.key, c.buf.value = c.cursor.Next()
-	}
-
-	// Read from the buffer or cache, which ever is lower.
-	if c.buf.key != nil && (c.index >= len(c.cache) || bytes.Compare(c.buf.key, c.cache[c.index][0:8]) == -1) {
-		key, value = c.buf.key, c.buf.value
-		c.buf.key, c.buf.value = nil, nil
-	} else if c.index < len(c.cache) {
-		key, value = c.cache[c.index][0:8], c.cache[c.index][8:]
-		c.index++
-	} else {
-		key, value = nil, nil
-	}
-	return
-}
-
-// readReverse returns the next key/value from the cursor and moves the current location backwards.
-func (c *Cursor) readReverse() (key, value []byte) {
-	// Read prev value from the cursor.
-	if c.buf.key == nil && c.cursor != nil {
-		c.buf.key, c.buf.value = c.cursor.Prev()
-	}
-
-	// Read from the buffer or cache, which ever is lower.
-	if c.buf.key != nil && (c.index < 0 || bytes.Compare(c.buf.key, c.cache[c.index][0:8]) == 1) {
-		key, value = c.buf.key, c.buf.value
-		c.buf.key, c.buf.value = nil, nil
-	} else if c.index >= 0 && c.index < len(c.cache) {
-		key, value = c.cache[c.index][0:8], c.cache[c.index][8:]
-		c.index--
-	} else {
-		key, value = nil, nil
-	}
 	return
 }
 

@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
-	"expvar"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -74,18 +73,16 @@ type Handler struct {
 	Logger         *log.Logger
 	loggingEnabled bool // Log every HTTP access.
 	WriteTrace     bool // Detailed logging of write path
-	statMap        *expvar.Map
 }
 
 // NewHandler returns a new instance of handler with routes.
-func NewHandler(requireAuthentication, loggingEnabled, writeTrace bool, statMap *expvar.Map) *Handler {
+func NewHandler(requireAuthentication, loggingEnabled, writeTrace bool) *Handler {
 	h := &Handler{
 		mux: pat.New(),
 		requireAuthentication: requireAuthentication,
 		Logger:                log.New(os.Stderr, "[http] ", log.LstdFlags),
 		loggingEnabled:        loggingEnabled,
 		WriteTrace:            writeTrace,
-		statMap:               statMap,
 	}
 
 	h.SetRoutes([]route{
@@ -152,8 +149,6 @@ func (h *Handler) SetRoutes(routes []route) {
 
 // ServeHTTP responds to HTTP request to the handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.statMap.Add(statRequest, 1)
-
 	// FIXME(benbjohnson): Add pprof enabled flag.
 	if strings.HasPrefix(r.URL.Path, "/debug/pprof") {
 		switch r.URL.Path {
@@ -166,16 +161,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		default:
 			pprof.Index(w, r)
 		}
-	} else if strings.HasPrefix(r.URL.Path, "/debug/vars") {
-		serveExpvar(w, r)
-	} else {
-		h.mux.ServeHTTP(w, r)
+		return
 	}
+
+	h.mux.ServeHTTP(w, r)
 }
 
 func (h *Handler) serveProcessContinuousQueries(w http.ResponseWriter, r *http.Request, user *meta.UserInfo) {
-	h.statMap.Add(statCQRequest, 1)
-
 	// If the continuous query service isn't configured, return 404.
 	if h.ContinuousQuerier == nil {
 		w.WriteHeader(http.StatusNotImplemented)
@@ -188,25 +180,9 @@ func (h *Handler) serveProcessContinuousQueries(w http.ResponseWriter, r *http.R
 	db := q.Get("db")
 	// Get the name of the CQ to run (blank means run all).
 	name := q.Get("name")
-	// Get the time for which the CQ should be evaluated.
-	var t time.Time
-	var err error
-	s := q.Get("time")
-	if s != "" {
-		t, err = time.Parse(time.RFC3339Nano, s)
-		if err != nil {
-			// Try parsing as an int64 nanosecond timestamp.
-			i, err := strconv.ParseInt(s, 10, 64)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			t = time.Unix(0, i)
-		}
-	}
 
 	// Pass the request to the CQ service.
-	if err := h.ContinuousQuerier.Run(db, name, t); err != nil {
+	if err := h.ContinuousQuerier.Run(db, name); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -216,8 +192,6 @@ func (h *Handler) serveProcessContinuousQueries(w http.ResponseWriter, r *http.R
 
 // serveQuery parses an incoming query and, if valid, executes the query.
 func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request, user *meta.UserInfo) {
-	h.statMap.Add(statQueryRequest, 1)
-
 	q := r.URL.Query()
 	pretty := q.Get("pretty") == "true"
 
@@ -296,10 +270,9 @@ func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request, user *meta.
 
 		// Write out result immediately if chunked.
 		if chunked {
-			n, _ := w.Write(MarshalJSON(Response{
+			w.Write(MarshalJSON(Response{
 				Results: []*influxql.Result{r},
 			}, pretty))
-			h.statMap.Add(statQueryRequestBytesTransmitted, int64(n))
 			w.(http.Flusher).Flush()
 			continue
 		}
@@ -336,13 +309,11 @@ func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request, user *meta.
 
 	// If it's not chunked we buffered everything in memory, so write it out
 	if !chunked {
-		n, _ := w.Write(MarshalJSON(resp, pretty))
-		h.statMap.Add(statQueryRequestBytesTransmitted, int64(n))
+		w.Write(MarshalJSON(resp, pretty))
 	}
 }
 
 func (h *Handler) serveWrite(w http.ResponseWriter, r *http.Request, user *meta.UserInfo) {
-	h.statMap.Add(statWriteRequest, 1)
 
 	// Handle gzip decoding of the body
 	body := r.Body
@@ -364,7 +335,6 @@ func (h *Handler) serveWrite(w http.ResponseWriter, r *http.Request, user *meta.
 		h.writeError(w, influxql.Result{Err: err}, http.StatusBadRequest)
 		return
 	}
-	h.statMap.Add(statWriteRequestBytesReceived, int64(len(b)))
 	if h.WriteTrace {
 		h.Logger.Printf("write body received by handler: %s", string(b))
 	}
@@ -427,16 +397,13 @@ func (h *Handler) serveWriteJSON(w http.ResponseWriter, r *http.Request, body []
 		RetentionPolicy:  bp.RetentionPolicy,
 		ConsistencyLevel: cluster.ConsistencyLevelOne,
 		Points:           points,
-	}); err != nil {
-		h.statMap.Add(statPointsWrittenFail, int64(len(points)))
-		if influxdb.IsClientError(err) {
-			h.writeError(w, influxql.Result{Err: err}, http.StatusBadRequest)
-		} else {
-			h.writeError(w, influxql.Result{Err: err}, http.StatusInternalServerError)
-		}
+	}); influxdb.IsClientError(err) {
+		resultError(w, influxql.Result{Err: err}, http.StatusBadRequest)
+		return
+	} else if err != nil {
+		resultError(w, influxql.Result{Err: err}, http.StatusInternalServerError)
 		return
 	}
-	h.statMap.Add(statPointsWrittenOK, int64(len(points)))
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -527,16 +494,13 @@ func (h *Handler) serveWriteLine(w http.ResponseWriter, r *http.Request, body []
 		ConsistencyLevel: consistency,
 		Points:           points,
 	}); influxdb.IsClientError(err) {
-		h.statMap.Add(statPointsWrittenFail, int64(len(points)))
 		h.writeError(w, influxql.Result{Err: err}, http.StatusBadRequest)
 		return
 	} else if err != nil {
-		h.statMap.Add(statPointsWrittenFail, int64(len(points)))
 		h.writeError(w, influxql.Result{Err: err}, http.StatusInternalServerError)
 		return
 	}
 
-	h.statMap.Add(statPointsWrittenOK, int64(len(points)))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -547,7 +511,6 @@ func (h *Handler) serveOptions(w http.ResponseWriter, r *http.Request) {
 
 // servePing returns a simple response to let the client know the server is running.
 func (h *Handler) servePing(w http.ResponseWriter, r *http.Request) {
-	h.statMap.Add(statPingRequest, 1)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -604,21 +567,6 @@ type Batch struct {
 	Database        string  `json:"database"`
 	RetentionPolicy string  `json:"retentionPolicy"`
 	Points          []Point `json:"points"`
-}
-
-// serveExpvar serves registered expvar information over HTTP.
-func serveExpvar(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	fmt.Fprintf(w, "{\n")
-	first := true
-	expvar.Do(func(kv expvar.KeyValue) {
-		if !first {
-			fmt.Fprintf(w, ",\n")
-		}
-		first = false
-		fmt.Fprintf(w, "%q: %s", kv.Key, kv.Value)
-	})
-	fmt.Fprintf(w, "\n}\n")
 }
 
 // httpError writes an error to the client in a standard format.
@@ -686,19 +634,16 @@ func authenticate(inner func(http.ResponseWriter, *http.Request, *meta.UserInfo)
 		if requireAuthentication && len(uis) > 0 {
 			username, password, err := parseCredentials(r)
 			if err != nil {
-				h.statMap.Add(statAuthFail, 1)
 				httpError(w, err.Error(), false, http.StatusUnauthorized)
 				return
 			}
 			if username == "" {
-				h.statMap.Add(statAuthFail, 1)
 				httpError(w, "username required", false, http.StatusUnauthorized)
 				return
 			}
 
 			user, err = h.MetaStore.Authenticate(username, password)
 			if err != nil {
-				h.statMap.Add(statAuthFail, 1)
 				httpError(w, err.Error(), false, http.StatusUnauthorized)
 				return
 			}

@@ -3,7 +3,6 @@ package tsdb
 import (
 	"container/heap"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -40,10 +39,9 @@ func (mo *MapperOutput) key() string {
 	return mo.cursorKey
 }
 
-// SelectMapper is for retrieving data for a query, from a given shard.
-type SelectMapper struct {
+// LocalMapper is for retrieving data for a query, from a given shard.
+type LocalMapper struct {
 	shard           *Shard
-	remote          Mapper
 	stmt            influxql.Statement
 	selectStmt      *influxql.SelectStatement
 	rawMode         bool
@@ -59,17 +57,17 @@ type SelectMapper struct {
 
 	// The following attributes are only used when mappers are for aggregate queries.
 
-	queryTMinWindow int64     // Minimum time of the query floored to start of interval.
-	intervalSize    int64     // Size of each interval.
-	numIntervals    int       // Maximum number of intervals to return.
-	currInterval    int       // Current interval for which data is being fetched.
-	mapFuncs        []mapFunc // The mapping functions.
-	fieldNames      []string  // the field name being read for mapping.
+	queryTMinWindow int64              // Minimum time of the query floored to start of interval.
+	intervalSize    int64              // Size of each interval.
+	numIntervals    int                // Maximum number of intervals to return.
+	currInterval    int                // Current interval for which data is being fetched.
+	mapFuncs        []influxql.MapFunc // The mapping functions.
+	fieldNames      []string           // the field name being read for mapping.
 }
 
-// NewSelectMapper returns a mapper for the given shard, which will return data for the SELECT statement.
-func NewSelectMapper(shard *Shard, stmt influxql.Statement, chunkSize int) *SelectMapper {
-	return &SelectMapper{
+// NewLocalMapper returns a mapper for the given shard, which will return data for the SELECT statement.
+func NewLocalMapper(shard *Shard, stmt influxql.Statement, chunkSize int) *LocalMapper {
+	return &LocalMapper{
 		shard:     shard,
 		stmt:      stmt,
 		chunkSize: chunkSize,
@@ -78,32 +76,13 @@ func NewSelectMapper(shard *Shard, stmt influxql.Statement, chunkSize int) *Sele
 }
 
 // openMeta opens the mapper for a meta query.
-func (lm *SelectMapper) openMeta() error {
+func (lm *LocalMapper) openMeta() error {
 	return errors.New("not implemented")
 }
 
-func (lm *SelectMapper) timeDirection() Direction {
-	if len(lm.selectStmt.SortFields) > 0 {
-		if lm.selectStmt.SortFields[0].Ascending {
-			return Forward
-		} else {
-			return Reverse
-		}
-	}
-	return Forward
-}
-
 // Open opens the local mapper.
-func (lm *SelectMapper) Open() error {
-	if lm.remote != nil {
-		return lm.remote.Open()
-	}
-
-	// This can happen when a shard has been assigned to this node but we have not
-	// written to it so it may not exist yet.
-	if lm.shard == nil {
-		return nil
-	}
+func (lm *LocalMapper) Open() error {
+	var err error
 
 	// Get a read-only transaction.
 	tx, err := lm.shard.engine.Begin(false)
@@ -112,234 +91,180 @@ func (lm *SelectMapper) Open() error {
 	}
 	lm.tx = tx
 
-	if err := func() error {
-		if s, ok := lm.stmt.(*influxql.SelectStatement); ok {
-			stmt, err := lm.rewriteSelectStatement(s)
-			if err != nil {
-				return err
-			}
-			lm.selectStmt = stmt
-			lm.rawMode = (s.IsRawQuery && !s.HasDistinct()) || s.IsSimpleDerivative()
+	if s, ok := lm.stmt.(*influxql.SelectStatement); ok {
+		stmt, err := lm.rewriteSelectStatement(s)
+		if err != nil {
+			return err
+		}
+		lm.selectStmt = stmt
+		lm.rawMode = (s.IsRawQuery && !s.HasDistinct()) || s.IsSimpleDerivative()
+	} else {
+		return lm.openMeta()
+	}
+
+	// Set all time-related parameters on the mapper.
+	lm.queryTMin, lm.queryTMax = influxql.TimeRangeAsEpochNano(lm.selectStmt.Condition)
+
+	if !lm.rawMode {
+		if err := lm.initializeMapFunctions(); err != nil {
+			return err
+		}
+
+		// For GROUP BY time queries, limit the number of data points returned by the limit and offset
+		d, err := lm.selectStmt.GroupByInterval()
+		if err != nil {
+			return err
+		}
+		lm.intervalSize = d.Nanoseconds()
+		if lm.queryTMin == 0 || lm.intervalSize == 0 {
+			lm.numIntervals = 1
+			lm.intervalSize = lm.queryTMax - lm.queryTMin
 		} else {
-			return lm.openMeta()
+			intervalTop := lm.queryTMax/lm.intervalSize*lm.intervalSize + lm.intervalSize
+			intervalBottom := lm.queryTMin / lm.intervalSize * lm.intervalSize
+			lm.numIntervals = int((intervalTop - intervalBottom) / lm.intervalSize)
 		}
 
-		// Set all time-related parameters on the mapper.
-		lm.queryTMin, lm.queryTMax = influxql.TimeRangeAsEpochNano(lm.selectStmt.Condition)
-
-		if !lm.rawMode {
-			if err := lm.initializeMapFunctions(); err != nil {
-				return err
-			}
-
-			// For GROUP BY time queries, limit the number of data points returned by the limit and offset
-			d, err := lm.selectStmt.GroupByInterval()
-			if err != nil {
-				return err
-			}
-			lm.intervalSize = d.Nanoseconds()
-			if lm.queryTMin == 0 || lm.intervalSize == 0 {
-				lm.numIntervals = 1
-				lm.intervalSize = lm.queryTMax - lm.queryTMin
-			} else {
-				intervalTop := lm.queryTMax/lm.intervalSize*lm.intervalSize + lm.intervalSize
-				intervalBottom := lm.queryTMin / lm.intervalSize * lm.intervalSize
-				lm.numIntervals = int((intervalTop - intervalBottom) / lm.intervalSize)
-			}
-
-			if lm.selectStmt.Limit > 0 || lm.selectStmt.Offset > 0 {
-				// ensure that the offset isn't higher than the number of points we'd get
-				if lm.selectStmt.Offset > lm.numIntervals {
-					return nil
-				}
-
-				// Take the lesser of either the pre computed number of GROUP BY buckets that
-				// will be in the result or the limit passed in by the user
-				if lm.selectStmt.Limit < lm.numIntervals {
-					lm.numIntervals = lm.selectStmt.Limit
-				}
-			}
-
-			// If we are exceeding our MaxGroupByPoints error out
-			if lm.numIntervals > MaxGroupByPoints {
-				return errors.New("too many points in the group by interval. maybe you forgot to specify a where time clause?")
-			}
-
-			// Ensure that the start time for the results is on the start of the window.
-			lm.queryTMinWindow = lm.queryTMin
-			if lm.intervalSize > 0 && lm.numIntervals > 1 {
-				lm.queryTMinWindow = lm.queryTMinWindow / lm.intervalSize * lm.intervalSize
-			}
-		}
-
-		selectFields := newStringSet()
-		selectTags := newStringSet()
-		whereFields := newStringSet()
-
-		// Create the TagSet cursors for the Mapper.
-		for _, src := range lm.selectStmt.Sources {
-			mm, ok := src.(*influxql.Measurement)
-			if !ok {
-				return fmt.Errorf("invalid source type: %#v", src)
-			}
-
-			m := lm.shard.index.Measurement(mm.Name)
-			if m == nil {
-				// This shard have never received data for the measurement. No Mapper
-				// required.
+		if lm.selectStmt.Limit > 0 || lm.selectStmt.Offset > 0 {
+			// ensure that the offset isn't higher than the number of points we'd get
+			if lm.selectStmt.Offset > lm.numIntervals {
 				return nil
 			}
 
-			// Validate that ANY GROUP BY is not a field for the measurement.
-			if err := m.ValidateGroupBy(lm.selectStmt); err != nil {
-				return err
+			// Take the lesser of either the pre computed number of GROUP BY buckets that
+			// will be in the result or the limit passed in by the user
+			if lm.selectStmt.Limit < lm.numIntervals {
+				lm.numIntervals = lm.selectStmt.Limit
 			}
-
-			// Create tagset cursors and determine various field types within SELECT statement.
-			tsf, err := createTagSetsAndFields(m, lm.selectStmt)
-			if err != nil {
-				return err
-			}
-			tagSets := tsf.tagSets
-			selectFields.add(tsf.selectFields...)
-			selectTags.add(tsf.selectTags...)
-			whereFields.add(tsf.whereFields...)
-
-			// If we only have tags in our select clause we just return
-			if len(selectFields) == 0 && len(selectTags) > 0 {
-				return fmt.Errorf("statement must have at least one field in select clause")
-			}
-
-			// Validate that any GROUP BY is not on a field
-			if err := m.ValidateGroupBy(lm.selectStmt); err != nil {
-				return err
-			}
-
-			// SLIMIT and SOFFSET the unique series
-			if lm.selectStmt.SLimit > 0 || lm.selectStmt.SOffset > 0 {
-				if lm.selectStmt.SOffset > len(tagSets) {
-					tagSets = nil
-				} else {
-					if lm.selectStmt.SOffset+lm.selectStmt.SLimit > len(tagSets) {
-						lm.selectStmt.SLimit = len(tagSets) - lm.selectStmt.SOffset
-					}
-
-					tagSets = tagSets[lm.selectStmt.SOffset : lm.selectStmt.SOffset+lm.selectStmt.SLimit]
-				}
-			}
-
-			// For aggregate functions, we iterate the cursors in forward order but return the
-			// time bucket results in reverse order.  This simplifies the aggregate code in that
-			// they do not need to hand forward and revers semantics.  For raw queries, we do need
-			// iterate in reverse order if using order by time desc.
-			direction := Forward
-			if lm.rawMode {
-				direction = lm.timeDirection()
-			}
-			// Create all cursors for reading the data from this shard.
-			for _, t := range tagSets {
-				cursors := []*seriesCursor{}
-
-				for i, key := range t.SeriesKeys {
-					c := lm.tx.Cursor(key, direction)
-					if c == nil {
-						// No data exists for this key.
-						continue
-					}
-					seriesTags := lm.shard.index.TagsForSeries(key)
-					cm := newSeriesCursor(c, t.Filters[i], seriesTags)
-					cursors = append(cursors, cm)
-				}
-
-				tsc := newTagSetCursor(m.Name, t.Tags, cursors, lm.shard.FieldCodec(m.Name))
-				if lm.rawMode {
-					tsc.pointHeap = newPointHeap()
-					//Prime the buffers.
-					for i := 0; i < len(tsc.cursors); i++ {
-						var k int64
-						var v []byte
-						if direction.Forward() {
-							k, v = tsc.cursors[i].SeekTo(lm.queryTMin)
-						} else {
-							k, v = tsc.cursors[i].SeekTo(lm.queryTMax)
-						}
-
-						if k == -1 {
-							k, v = tsc.cursors[i].Next()
-						}
-
-						if k == -1 {
-							continue
-						}
-						p := &pointHeapItem{
-							timestamp: k,
-							value:     v,
-							cursor:    tsc.cursors[i],
-						}
-						heap.Push(tsc.pointHeap, p)
-					}
-				}
-				lm.cursors = append(lm.cursors, tsc)
-			}
-			sort.Sort(tagSetCursors(lm.cursors))
 		}
 
-		lm.selectFields = selectFields.list()
-		lm.selectTags = selectTags.list()
-		lm.whereFields = whereFields.list()
-
-		// If the query does not aggregate, then at least 1 SELECT field should be present.
-		if lm.rawMode && len(lm.selectFields) == 0 {
-			// None of the SELECT fields exist in this data. Wipe out all tagset cursors.
-			lm.cursors = nil
+		// If we are exceeding our MaxGroupByPoints error out
+		if lm.numIntervals > MaxGroupByPoints {
+			return errors.New("too many points in the group by interval. maybe you forgot to specify a where time clause?")
 		}
 
-		return nil
-	}(); err != nil {
-		lm.tx.Rollback()
-		return err
+		// Ensure that the start time for the results is on the start of the window.
+		lm.queryTMinWindow = lm.queryTMin
+		if lm.intervalSize > 0 && lm.numIntervals > 1 {
+			lm.queryTMinWindow = lm.queryTMinWindow / lm.intervalSize * lm.intervalSize
+		}
 	}
 
-	return nil
-}
+	selectFields := newStringSet()
+	selectTags := newStringSet()
+	whereFields := newStringSet()
 
-func (lm *SelectMapper) SetRemote(m Mapper) error {
-	lm.remote = m
-	return nil
-}
+	// Create the TagSet cursors for the Mapper.
+	for _, src := range lm.selectStmt.Sources {
+		mm, ok := src.(*influxql.Measurement)
+		if !ok {
+			return fmt.Errorf("invalid source type: %#v", src)
+		}
 
-func (lm *SelectMapper) NextChunk() (interface{}, error) {
-	// If set, use remote mapper.
-	if lm.remote != nil {
-		b, err := lm.remote.NextChunk()
+		m := lm.shard.index.Measurement(mm.Name)
+		if m == nil {
+			// This shard have never received data for the measurement. No Mapper
+			// required.
+			return nil
+		}
+
+		// Validate that ANY GROUP BY is not a field for thie measurement.
+		if err := m.ValidateGroupBy(lm.selectStmt); err != nil {
+			return err
+		}
+
+		// Create tagset cursors and determine various field types within SELECT statement.
+		tsf, err := createTagSetsAndFields(m, lm.selectStmt)
 		if err != nil {
-			return nil, err
-		} else if b == nil {
-			return nil, nil
+			return err
+		}
+		tagSets := tsf.tagSets
+		selectFields.add(tsf.selectFields...)
+		selectTags.add(tsf.selectTags...)
+		whereFields.add(tsf.whereFields...)
+
+		// If we only have tags in our select clause we just return
+		if len(selectFields) == 0 && len(selectTags) > 0 {
+			return fmt.Errorf("statement must have at least one field in select clause")
 		}
 
-		mo := &MapperOutput{}
-		if err := json.Unmarshal(b.([]byte), mo); err != nil {
-			return nil, err
-		} else if len(mo.Values) == 0 {
-			// Mapper on other node sent 0 values so it's done.
-			return nil, nil
+		// Validate that any GROUP BY is not on a field
+		if err := m.ValidateGroupBy(lm.selectStmt); err != nil {
+			return err
 		}
-		return mo, nil
+
+		// SLIMIT and SOFFSET the unique series
+		if lm.selectStmt.SLimit > 0 || lm.selectStmt.SOffset > 0 {
+			if lm.selectStmt.SOffset > len(tagSets) {
+				tagSets = nil
+			} else {
+				if lm.selectStmt.SOffset+lm.selectStmt.SLimit > len(tagSets) {
+					lm.selectStmt.SLimit = len(tagSets) - lm.selectStmt.SOffset
+				}
+
+				tagSets = tagSets[lm.selectStmt.SOffset : lm.selectStmt.SOffset+lm.selectStmt.SLimit]
+			}
+		}
+
+		// Create all cursors for reading the data from this shard.
+		for _, t := range tagSets {
+			cursors := []*seriesCursor{}
+
+			for i, key := range t.SeriesKeys {
+				c := lm.tx.Cursor(key)
+				if c == nil {
+					// No data exists for this key.
+					continue
+				}
+				seriesTags := lm.shard.index.TagsForSeries(key)
+				cm := newSeriesCursor(c, t.Filters[i], seriesTags)
+				cursors = append(cursors, cm)
+			}
+
+			tsc := newTagSetCursor(m.Name, t.Tags, cursors, lm.shard.FieldCodec(m.Name))
+			tsc.pointHeap = newPointHeap()
+			//Prime the buffers.
+			for i := 0; i < len(tsc.cursors); i++ {
+				k, v := tsc.cursors[i].SeekTo(lm.queryTMin)
+				if k == -1 {
+					continue
+				}
+				p := &pointHeapItem{
+					timestamp: k,
+					value:     v,
+					cursor:    tsc.cursors[i],
+				}
+				heap.Push(tsc.pointHeap, p)
+			}
+			lm.cursors = append(lm.cursors, tsc)
+		}
+		sort.Sort(tagSetCursors(lm.cursors))
 	}
 
-	// Remote mapper not set so get values from local shard.
+	lm.selectFields = selectFields.list()
+	lm.selectTags = selectTags.list()
+	lm.whereFields = whereFields.list()
+
+	// If the query does not aggregate, then at least 1 SELECT field should be present.
+	if lm.rawMode && len(lm.selectFields) == 0 {
+		// None of the SELECT fields exist in this data. Wipe out all tagset cursors.
+		lm.cursors = nil
+	}
+
+	return nil
+}
+
+func (lm *LocalMapper) NextChunk() (interface{}, error) {
 	if lm.rawMode {
 		return lm.nextChunkRaw()
 	}
-
 	return lm.nextChunkAgg()
 }
 
 // nextChunkRaw returns the next chunk of data. Data comes in the same order as the
 // tags return by TagSets. A chunk never contains data for more than 1 tagset.
 // If there is no more data for any tagset, nil will be returned.
-func (lm *SelectMapper) nextChunkRaw() (interface{}, error) {
+func (lm *LocalMapper) nextChunkRaw() (*MapperOutput, error) {
 	var output *MapperOutput
 	for {
 		if lm.currCursorIndex == len(lm.cursors) {
@@ -348,7 +273,7 @@ func (lm *SelectMapper) nextChunkRaw() (interface{}, error) {
 		}
 		cursor := lm.cursors[lm.currCursorIndex]
 
-		k, v := cursor.Next(lm.queryTMin, lm.queryTMax, lm.selectFields, lm.whereFields)
+		k, v, t := cursor.Next(lm.queryTMin, lm.queryTMax, lm.selectFields, lm.whereFields)
 		if v == nil {
 			// Tagset cursor is empty, move to next one.
 			lm.currCursorIndex++
@@ -360,6 +285,7 @@ func (lm *SelectMapper) nextChunkRaw() (interface{}, error) {
 				continue
 			}
 		}
+
 		if output == nil {
 			output = &MapperOutput{
 				Name:      cursor.measurement,
@@ -368,7 +294,7 @@ func (lm *SelectMapper) nextChunkRaw() (interface{}, error) {
 				cursorKey: cursor.key(),
 			}
 		}
-		value := &MapperValue{Time: k, Value: v, Tags: cursor.Tags()}
+		value := &MapperValue{Time: k, Value: v, Tags: t}
 		output.Values = append(output.Values, value)
 		if len(output.Values) == lm.chunkSize {
 			return output, nil
@@ -380,7 +306,7 @@ func (lm *SelectMapper) nextChunkRaw() (interface{}, error) {
 // for the current tagset. Tagsets are always processed in the same order as that
 // returned by AvailTagsSets(). When there is no more data for any tagset nil
 // is returned.
-func (lm *SelectMapper) nextChunkAgg() (interface{}, error) {
+func (lm *LocalMapper) nextChunkAgg() (*MapperOutput, error) {
 	var output *MapperOutput
 	for {
 		if lm.currCursorIndex == len(lm.cursors) {
@@ -414,16 +340,11 @@ func (lm *SelectMapper) nextChunkAgg() (interface{}, error) {
 				Value: make([]interface{}, 0)}
 		}
 
-		// Always clamp tmin and tmax. This can happen as bucket-times are bucketed to the nearest
-		// interval. This is necessary to grab the "partial" buckets at the beginning and end of the time range
+		// Always clamp tmin. This can happen as bucket-times are bucketed to the nearest
+		// interval, and this can be less than the times in the query.
 		qmin := tmin
 		if qmin < lm.queryTMin {
 			qmin = lm.queryTMin
-		}
-		qmax := tmax
-		if qmax > lm.queryTMax {
-			// Need to offset by one nanosecond for the logic to work properly in the tagset cursor Next
-			qmax = lm.queryTMax + 1
 		}
 
 		tsc.pointHeap = newPointHeap()
@@ -433,8 +354,8 @@ func (lm *SelectMapper) nextChunkAgg() (interface{}, error) {
 			// changes to the mapper functions, which can come later.
 			// Prime the buffers.
 			for i := 0; i < len(tsc.cursors); i++ {
-				k, v := tsc.cursors[i].SeekTo(qmin)
-				if k == -1 || k > tmax {
+				k, v := tsc.cursors[i].SeekTo(tmin)
+				if k == -1 {
 					continue
 				}
 				p := &pointHeapItem{
@@ -445,29 +366,13 @@ func (lm *SelectMapper) nextChunkAgg() (interface{}, error) {
 				heap.Push(tsc.pointHeap, p)
 			}
 			// Wrap the tagset cursor so it implements the mapping functions interface.
-			nextf := func() (_ int64, value interface{}) {
-				k, v := tsc.Next(qmin, qmax, []string{lm.fieldNames[i]}, lm.whereFields)
+			f := func() (time int64, value interface{}) {
+				k, v, _ := tsc.Next(qmin, tmax, []string{lm.fieldNames[i]}, lm.whereFields)
 				return k, v
 			}
 
-			tagf := func() map[string]string {
-				return tsc.Tags()
-			}
-
-			tminf := func() int64 {
-				if len(lm.selectStmt.Dimensions) == 0 {
-					return -1
-				}
-				if !lm.selectStmt.HasTimeFieldSpecified() {
-					return tmin
-				}
-				return -1
-			}
-
 			tagSetCursor := &aggTagSetCursor{
-				nextFunc: nextf,
-				tagsFunc: tagf,
-				tMinFunc: tminf,
+				nextFunc: f,
 			}
 
 			// Execute the map function which walks the entire interval, and aggregates
@@ -481,7 +386,7 @@ func (lm *SelectMapper) nextChunkAgg() (interface{}, error) {
 
 // nextInterval returns the next interval for which to return data. If start is less than 0
 // there are no more intervals.
-func (lm *SelectMapper) nextInterval() (start, end int64) {
+func (lm *LocalMapper) nextInterval() (start, end int64) {
 	t := lm.queryTMinWindow + int64(lm.currInterval+lm.selectStmt.Offset)*lm.intervalSize
 
 	// Onto next interval.
@@ -496,14 +401,14 @@ func (lm *SelectMapper) nextInterval() (start, end int64) {
 
 // initializeMapFunctions initialize the mapping functions for the mapper. This only applies
 // to aggregate queries.
-func (lm *SelectMapper) initializeMapFunctions() error {
+func (lm *LocalMapper) initializeMapFunctions() error {
 	var err error
 	// Set up each mapping function for this statement.
 	aggregates := lm.selectStmt.FunctionCalls()
-	lm.mapFuncs = make([]mapFunc, len(aggregates))
+	lm.mapFuncs = make([]influxql.MapFunc, len(aggregates))
 	lm.fieldNames = make([]string, len(lm.mapFuncs))
 	for i, c := range aggregates {
-		lm.mapFuncs[i], err = initializeMapFunc(c)
+		lm.mapFuncs[i], err = influxql.InitializeMapFunc(c)
 		if err != nil {
 			return err
 		}
@@ -530,10 +435,10 @@ func (lm *SelectMapper) initializeMapFunctions() error {
 }
 
 // rewriteSelectStatement performs any necessary query re-writing.
-func (lm *SelectMapper) rewriteSelectStatement(stmt *influxql.SelectStatement) (*influxql.SelectStatement, error) {
+func (lm *LocalMapper) rewriteSelectStatement(stmt *influxql.SelectStatement) (*influxql.SelectStatement, error) {
 	var err error
 	// Expand regex expressions in the FROM clause.
-	sources, err := expandSources(stmt.Sources, lm.shard.index)
+	sources, err := lm.expandSources(stmt.Sources)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +456,7 @@ func (lm *SelectMapper) rewriteSelectStatement(stmt *influxql.SelectStatement) (
 // If only a `SELECT *` is present, without a `GROUP BY *`, both tags and fields expand in the SELECT
 // If a `SELECT *` and a `GROUP BY *` are both present, then only fiels are expanded in the `SELECT` and only
 // tags are expanded in the `GROUP BY`
-func (lm *SelectMapper) expandWildcards(stmt *influxql.SelectStatement) (*influxql.SelectStatement, error) {
+func (lm *LocalMapper) expandWildcards(stmt *influxql.SelectStatement) (*influxql.SelectStatement, error) {
 	// If there are no wildcards in the statement, return it as-is.
 	if !stmt.HasWildcard() {
 		return stmt, nil
@@ -613,29 +518,65 @@ func (lm *SelectMapper) expandWildcards(stmt *influxql.SelectStatement) (*influx
 	return stmt.RewriteWildcards(fields, dimensions), nil
 }
 
-// TagSets returns the list of TagSets for which this mapper has data.
-func (lm *SelectMapper) TagSets() []string {
-	if lm.remote != nil {
-		return lm.remote.TagSets()
+// expandSources expands regex sources and removes duplicates.
+// NOTE: sources must be normalized (db and rp set) before calling this function.
+func (lm *LocalMapper) expandSources(sources influxql.Sources) (influxql.Sources, error) {
+	// Use a map as a set to prevent duplicates. Two regexes might produce
+	// duplicates when expanded.
+	set := map[string]influxql.Source{}
+	names := []string{}
+	// Iterate all sources, expanding regexes when they're found.
+	for _, source := range sources {
+		switch src := source.(type) {
+		case *influxql.Measurement:
+			if src.Regex == nil {
+				name := src.String()
+				set[name] = src
+				names = append(names, name)
+				continue
+			}
+			// Get measurements from the database that match the regex.
+			measurements := lm.shard.index.measurementsByRegex(src.Regex.Val)
+			// Add those measurements to the set.
+			for _, m := range measurements {
+				m2 := &influxql.Measurement{
+					Database:        src.Database,
+					RetentionPolicy: src.RetentionPolicy,
+					Name:            m.Name,
+				}
+				name := m2.String()
+				if _, ok := set[name]; !ok {
+					set[name] = m2
+					names = append(names, name)
+				}
+			}
+		default:
+			return nil, fmt.Errorf("expandSources: unsuported source type: %T", source)
+		}
 	}
+	// Sort the list of source names.
+	sort.Strings(names)
+	// Convert set to a list of Sources.
+	expanded := make(influxql.Sources, 0, len(set))
+	for _, name := range names {
+		expanded = append(expanded, set[name])
+	}
+	return expanded, nil
+}
+
+// TagSets returns the list of TagSets for which this mapper has data.
+func (lm *LocalMapper) TagSets() []string {
 	return tagSetCursors(lm.cursors).Keys()
 }
 
 // Fields returns any SELECT fields. If this Mapper is not processing a SELECT query
 // then an empty slice is returned.
-func (lm *SelectMapper) Fields() []string {
-	if lm.remote != nil {
-		return lm.remote.Fields()
-	}
+func (lm *LocalMapper) Fields() []string {
 	return append(lm.selectFields, lm.selectTags...)
 }
 
 // Close closes the mapper.
-func (lm *SelectMapper) Close() {
-	if lm.remote != nil {
-		lm.remote.Close()
-		return
-	}
+func (lm *LocalMapper) Close() {
 	if lm != nil && lm.tx != nil {
 		_ = lm.tx.Rollback()
 	}
@@ -645,24 +586,12 @@ func (lm *SelectMapper) Close() {
 // by intervals.
 type aggTagSetCursor struct {
 	nextFunc func() (time int64, value interface{})
-	tagsFunc func() map[string]string
-	tMinFunc func() int64
 }
 
 // Next returns the next value for the aggTagSetCursor. It implements the interface expected
 // by the mapping functions.
 func (a *aggTagSetCursor) Next() (time int64, value interface{}) {
 	return a.nextFunc()
-}
-
-// Tags returns the current tags for the cursor
-func (a *aggTagSetCursor) Tags() map[string]string {
-	return a.tagsFunc()
-}
-
-// TMin returns the current floor time for the bucket being worked on
-func (a *aggTagSetCursor) TMin() int64 {
-	return a.tMinFunc()
 }
 
 type pointHeapItem struct {
@@ -708,7 +637,6 @@ type tagSetCursor struct {
 	tags        map[string]string // Tag key-value pairs
 	cursors     []*seriesCursor   // Underlying series cursors.
 	decoder     *FieldCodec       // decoder for the raw data bytes
-	currentTags map[string]string // the current tags for the underlying series cursor in play
 
 	// pointHeap is a min-heap, ordered by timestamp, that contains the next
 	// point from each seriesCursor. Queries sometimes pull points from
@@ -762,53 +690,42 @@ func (tsc *tagSetCursor) key() string {
 
 // Next returns the next matching series-key, timestamp byte slice and meta tags for the tagset. Filtering
 // is enforced on the values. If there is no matching value, then a nil result is returned.
-func (tsc *tagSetCursor) Next(tmin, tmax int64, selectFields, whereFields []string) (int64, interface{}) {
+func (tsc *tagSetCursor) Next(tmin, tmax int64, selectFields, whereFields []string) (int64, interface{}, map[string]string) {
 	for {
 		// If we're out of points, we're done.
 		if tsc.pointHeap.Len() == 0 {
-			return -1, nil
+			return -1, nil, nil
 		}
 
 		// Grab the next point with the lowest timestamp.
 		p := heap.Pop(tsc.pointHeap).(*pointHeapItem)
 
 		// We're done if the point is outside the query's time range [tmin:tmax).
-		if p.timestamp != tmin && (p.timestamp < tmin || p.timestamp >= tmax) {
-			return -1, nil
+		if p.timestamp != tmin && (tmin > p.timestamp || p.timestamp >= tmax) {
+			return -1, nil, nil
 		}
-
-		// Decode the raw point.
-		value := tsc.decodeRawPoint(p, selectFields, whereFields)
-		timestamp := p.timestamp
-
-		// Keep track of the current tags for the series cursor so we can
-		// respond with them if asked
-		tsc.currentTags = p.cursor.tags
 
 		// Advance the cursor
 		nextKey, nextVal := p.cursor.Next()
 		if nextKey != -1 {
-			*p = pointHeapItem{
+			nextPoint := &pointHeapItem{
 				timestamp: nextKey,
 				value:     nextVal,
 				cursor:    p.cursor,
 			}
-			heap.Push(tsc.pointHeap, p)
+			heap.Push(tsc.pointHeap, nextPoint)
 		}
+
+		// Decode the raw point.
+		value := tsc.decodeRawPoint(p, selectFields, whereFields)
 
 		// Value didn't match, look for the next one.
 		if value == nil {
 			continue
 		}
 
-		return timestamp, value
+		return p.timestamp, value, p.cursor.tags
 	}
-}
-
-// Tags returns the current tags of the current cursor
-// if there is no current currsor, it returns nil
-func (tsc *tagSetCursor) Tags() map[string]string {
-	return tsc.currentTags
 }
 
 // decodeRawPoint decodes raw point data into field names & values and does WHERE filtering.
@@ -851,14 +768,9 @@ func (tsc *tagSetCursor) decodeRawPoint(p *pointHeapItem, selectFields, whereFie
 
 // seriesCursor is a cursor that walks a single series. It provides lookahead functionality.
 type seriesCursor struct {
-	cursor     Cursor // BoltDB cursor for a series
-	filter     influxql.Expr
-	tags       map[string]string
-	seekto     int64
-	seekResult struct {
-		k int64
-		v []byte
-	}
+	cursor Cursor // BoltDB cursor for a series
+	filter influxql.Expr
+	tags   map[string]string
 }
 
 // newSeriesCursor returns a new instance of a series cursor.
@@ -867,38 +779,22 @@ func newSeriesCursor(cur Cursor, filter influxql.Expr, tags map[string]string) *
 		cursor: cur,
 		filter: filter,
 		tags:   tags,
-		seekto: -1,
 	}
 }
 
 // Seek positions returning the timestamp and value at that key.
 func (sc *seriesCursor) SeekTo(key int64) (timestamp int64, value []byte) {
-	if sc.seekto != -1 && sc.seekto < key && (sc.seekResult.k == -1 || sc.seekResult.k >= key) {
-		// we've seeked on this cursor. This seek is after that previous cached seek
-		// and the result it gave was after the key for this seek.
-		//
-		// In this case, any seek would just return what we got before, so there's
-		// no point in reseeking.
-		return sc.seekResult.k, sc.seekResult.v
-	}
 	k, v := sc.cursor.Seek(u64tob(uint64(key)))
 	if k == nil {
 		timestamp = -1
 	} else {
 		timestamp, value = int64(btou64(k)), v
 	}
-	sc.seekto = key
-	sc.seekResult.k = timestamp
-	sc.seekResult.v = v
 	return
 }
 
 // Next returns the next timestamp and value from the cursor.
 func (sc *seriesCursor) Next() (key int64, value []byte) {
-	// calling next on this cursor means that we need to invalidate the seek
-	sc.seekto = -1
-	sc.seekResult.k = 0
-	sc.seekResult.v = nil
 	k, v := sc.cursor.Next()
 	if k == nil {
 		key = -1
@@ -915,56 +811,13 @@ type tagSetsAndFields struct {
 	whereFields  []string
 }
 
-// expandSources expands regex sources and removes duplicates.
-// NOTE: sources must be normalized (db and rp set) before calling this function.
-func expandSources(sources influxql.Sources, di *DatabaseIndex) (influxql.Sources, error) {
-	// Use a map as a set to prevent duplicates. Two regexes might produce
-	// duplicates when expanded.
-	set := map[string]influxql.Source{}
-	names := []string{}
-	// Iterate all sources, expanding regexes when they're found.
-	for _, source := range sources {
-		switch src := source.(type) {
-		case *influxql.Measurement:
-			if src.Regex == nil {
-				name := src.String()
-				set[name] = src
-				names = append(names, name)
-				continue
-			}
-			// Get measurements from the database that match the regex.
-			measurements := di.measurementsByRegex(src.Regex.Val)
-			// Add those measurements to the set.
-			for _, m := range measurements {
-				m2 := &influxql.Measurement{
-					Database:        src.Database,
-					RetentionPolicy: src.RetentionPolicy,
-					Name:            m.Name,
-				}
-				name := m2.String()
-				if _, ok := set[name]; !ok {
-					set[name] = m2
-					names = append(names, name)
-				}
-			}
-		default:
-			return nil, fmt.Errorf("expandSources: unsuported source type: %T", source)
-		}
-	}
-	// Sort the list of source names.
-	sort.Strings(names)
-	// Convert set to a list of Sources.
-	expanded := make(influxql.Sources, 0, len(set))
-	for _, name := range names {
-		expanded = append(expanded, set[name])
-	}
-	return expanded, nil
-}
-
 // createTagSetsAndFields returns the tagsets and various fields given a measurement and
 // SELECT statement.
 func createTagSetsAndFields(m *Measurement, stmt *influxql.SelectStatement) (*tagSetsAndFields, error) {
-	_, tagKeys := stmt.Dimensions.Normalize()
+	_, tagKeys, err := stmt.Dimensions.Normalize()
+	if err != nil {
+		return nil, err
+	}
 
 	sfs := newStringSet()
 	sts := newStringSet()

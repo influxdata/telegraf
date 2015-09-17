@@ -17,7 +17,6 @@ import (
 	"text/tabwriter"
 
 	"github.com/influxdb/influxdb/client"
-	"github.com/influxdb/influxdb/cluster"
 	"github.com/influxdb/influxdb/importer/v8"
 	"github.com/peterh/liner"
 )
@@ -31,35 +30,30 @@ const (
 	// defaultFormat is the default format of the results when issuing queries
 	defaultFormat = "column"
 
-	// defaultPrecision is the default timestamp format of the results when issuing queries
-	defaultPrecision = "ns"
-
 	// defaultPPS is the default points per second that the import will throttle at
 	// by default it's 0, which means it will not throttle
 	defaultPPS = 0
 )
 
 type CommandLine struct {
-	Client           *client.Client
-	Line             *liner.State
-	Host             string
-	Port             int
-	Username         string
-	Password         string
-	Database         string
-	Ssl              bool
-	RetentionPolicy  string
-	Version          string
-	Pretty           bool   // controls pretty print for json
-	Format           string // controls the output format.  Valid values are json, csv, or column
-	Precision        string
-	WriteConsistency string
-	Execute          string
-	ShowVersion      bool
-	Import           bool
-	PPS              int // Controls how many points per second the import will allow via throttling
-	Path             string
-	Compressed       bool
+	Client          *client.Client
+	Line            *liner.State
+	Host            string
+	Port            int
+	Username        string
+	Password        string
+	Database        string
+	Ssl             bool
+	RetentionPolicy string
+	Version         string
+	Pretty          bool   // controls pretty print for json
+	Format          string // controls the output format.  Valid values are json, csv, or column
+	Execute         string
+	ShowVersion     bool
+	Import          bool
+	PPS             int // Controls how many points per second the import will allow via throttling
+	Path            string
+	Compressed      bool
 }
 
 func main() {
@@ -73,8 +67,6 @@ func main() {
 	fs.StringVar(&c.Database, "database", c.Database, "Database to connect to the server.")
 	fs.BoolVar(&c.Ssl, "ssl", false, "Use https for connecting to cluster.")
 	fs.StringVar(&c.Format, "format", defaultFormat, "Format specifies the format of the server responses:  json, csv, or column.")
-	fs.StringVar(&c.Precision, "precision", defaultPrecision, "Precision specifies the format of the timestamp:  rfc3339,h,m,s,ms,u or ns.")
-	fs.StringVar(&c.WriteConsistency, "consistency", "any", "Set write consistency level: any, one, quorum, or all.")
 	fs.BoolVar(&c.Pretty, "pretty", false, "Turns on pretty print for the json format.")
 	fs.StringVar(&c.Execute, "execute", c.Execute, "Execute command and quit.")
 	fs.BoolVar(&c.ShowVersion, "version", false, "Displays the InfluxDB version.")
@@ -104,10 +96,6 @@ func main() {
        Execute command and quit.
   -format 'json|csv|column'
        Format specifies the format of the server responses:  json, csv, or column.
-  -precision 'rfc3339|h|m|s|ms|u|ns'
-       Precision specifies the format of the timestamp:  rfc3339, h, m, s, ms, u or ns.
-  -consistency 'any|one|quorum|all'
-       Set write consistency level: any, one, quorum, or all
   -pretty
        Turns on pretty print for the json format.
   -import
@@ -165,8 +153,6 @@ Examples:
 	}
 
 	if c.Execute != "" {
-		// Modify precision before executing query
-		c.SetPrecision(c.Precision)
 		if err := c.ExecuteQuery(c.Execute); err != nil {
 			c.Line.Close()
 			os.Exit(1)
@@ -193,7 +179,6 @@ Examples:
 		config.URL = u
 		config.Compressed = c.Compressed
 		config.PPS = c.PPS
-		config.Precision = c.Precision
 
 		i := v8.NewImporter(config)
 		if err := i.Import(); err != nil {
@@ -259,10 +244,6 @@ func (c *CommandLine) ParseCommand(cmd string) bool {
 		c.help()
 	case strings.HasPrefix(lcmd, "format"):
 		c.SetFormat(cmd)
-	case strings.HasPrefix(lcmd, "precision"):
-		c.SetPrecision(cmd)
-	case strings.HasPrefix(lcmd, "consistency"):
-		c.SetWriteConsistency(cmd)
 	case strings.HasPrefix(lcmd, "settings"):
 		c.Settings()
 	case strings.HasPrefix(lcmd, "pretty"):
@@ -307,7 +288,6 @@ func (c *CommandLine) connect(cmd string) error {
 	config.Username = c.Username
 	config.Password = c.Password
 	config.UserAgent = "InfluxDBShell/" + version
-	config.Precision = c.Precision
 	cl, err := client.NewClient(config)
 	if err != nil {
 		return fmt.Errorf("Could not create client %s", err)
@@ -364,24 +344,6 @@ func (c *CommandLine) use(cmd string) {
 	fmt.Printf("Using database %s\n", d)
 }
 
-func (c *CommandLine) SetPrecision(cmd string) {
-	// Remove the "precision" keyword if it exists
-	cmd = strings.TrimSpace(strings.Replace(cmd, "precision", "", -1))
-	// normalize cmd
-	cmd = strings.ToLower(cmd)
-
-	switch cmd {
-	case "h", "m", "s", "ms", "u", "ns":
-		c.Precision = cmd
-		c.Client.SetPrecision(c.Precision)
-	case "rfc3339":
-		c.Precision = ""
-		c.Client.SetPrecision(c.Precision)
-	default:
-		fmt.Printf("Unknown precision %q. Please use rfc3339, h, m, s, ms, u or ns.\n", cmd)
-	}
-}
-
 func (c *CommandLine) SetFormat(cmd string) {
 	// Remove the "format" keyword if it exists
 	cmd = strings.TrimSpace(strings.Replace(cmd, "format", "", -1))
@@ -394,20 +356,6 @@ func (c *CommandLine) SetFormat(cmd string) {
 	default:
 		fmt.Printf("Unknown format %q. Please use json, csv, or column.\n", cmd)
 	}
-}
-
-func (c *CommandLine) SetWriteConsistency(cmd string) {
-	// Remove the "consistency" keyword if it exists
-	cmd = strings.TrimSpace(strings.Replace(cmd, "consistency", "", -1))
-	// normalize cmd
-	cmd = strings.ToLower(cmd)
-
-	_, err := cluster.ParseConsistencyLevel(cmd)
-	if err != nil {
-		fmt.Printf("Unknown consistency level %q. Please use any, one, quorum, or all.\n", cmd)
-		return
-	}
-	c.WriteConsistency = cmd
 }
 
 // isWhitespace returns true if the rune is a space, tab, or newline.
@@ -496,7 +444,7 @@ func (c *CommandLine) Insert(stmt string) error {
 		Database:         c.Database,
 		RetentionPolicy:  c.RetentionPolicy,
 		Precision:        "n",
-		WriteConsistency: c.WriteConsistency,
+		WriteConsistency: client.ConsistencyAny,
 	})
 	if err != nil {
 		fmt.Printf("ERR: %s\n", err)
@@ -693,7 +641,6 @@ func (c *CommandLine) Settings() {
 	fmt.Fprintf(w, "Database\t%s\n", c.Database)
 	fmt.Fprintf(w, "Pretty\t%v\n", c.Pretty)
 	fmt.Fprintf(w, "Format\t%s\n", c.Format)
-	fmt.Fprintf(w, "Write Consistency\t%s\n", c.WriteConsistency)
 	fmt.Fprintln(w)
 	w.Flush()
 }
@@ -705,8 +652,6 @@ func (c *CommandLine) help() {
         pretty                toggle pretty print
         use <db_name>         set current databases
         format <format>       set the output format: json, csv, or column
-        precision <format>    set the timestamp format: h,m,s,ms,u,ns
-        consistency <level>   set write consistency level: any, one, quorum, or all
         settings              output the current settings for the shell
         exit                  quit the influx shell
 

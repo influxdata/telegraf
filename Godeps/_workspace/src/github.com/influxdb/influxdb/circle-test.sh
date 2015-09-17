@@ -5,7 +5,7 @@
 # build process for InfluxDB.
 
 BUILD_DIR=$HOME/influxdb-build
-GO_VERSION=go1.5
+GO_VERSION=go1.4.2
 PARALLELISM="-parallel 256"
 TIMEOUT="-timeout 480s"
 
@@ -19,25 +19,6 @@ function exit_if_fail {
         echo "'$command' returned $rc."
         exit $rc
     fi
-}
-
-# Check that go fmt has been run.
-function check_go_fmt {
-	fmtcount=`git ls-files | grep '.go$' | xargs gofmt -l 2>&1 | wc -l`
-	if [ $fmtcount -gt 0 ]; then
-	    echo "run 'go fmt ./...' to format your source code."
-	    exit 1
-	fi
-}
-
-# Check that go vet passes.
-function check_go_vet {
-	# Due to the way composites work, vet will fail for some of our tests so we ignore it
-	vetcount=`go tool vet --composites=false ./ 2>&1  | wc -l`
-	if [ $vetcount -gt 0 ]; then
-	    echo "run 'go tool vet --composites=false ./' to see the errors it flags and correct your source code."
-	    exit 1
-	fi
 }
 
 source $HOME/.gvm/scripts/gvm
@@ -64,29 +45,16 @@ exit_if_fail git branch --set-upstream-to=origin/$CIRCLE_BRANCH $CIRCLE_BRANCH
 exit_if_fail cd $GOPATH/src/github.com/influxdb/influxdb
 exit_if_fail go get -t -d -v ./...
 exit_if_fail git checkout $CIRCLE_BRANCH # 'go get' switches to master. Who knew? Switch back.
-check_go_fmt
-check_go_vet
 exit_if_fail go build -v ./...
 
 # Run the tests.
+exit_if_fail go tool vet --composites=false .
 case $CIRCLE_NODE_INDEX in
     0)
         go test $PARALLELISM $TIMEOUT -v ./... 2>&1 | tee $CIRCLE_ARTIFACTS/test_logs.txt
         rc=${PIPESTATUS[0]}
         ;;
     1)
-        # 32bit tests.
-        if [[ -e ~/docker/image.tar ]]; then docker load -i ~/docker/image.tar; fi
-        docker build -f Dockerfile_test_ubuntu32 -t ubuntu-32-influxdb-test .
-        mkdir -p ~/docker; docker save ubuntu-32-influxdb-test > ~/docker/image.tar
-        exit_if_fail docker build -f Dockerfile_test_ubuntu32 -t ubuntu-32-influxdb-test .
-        docker run -v $(pwd):/root/go/src/github.com/influxdb/influxdb -e "CI=${CI}" \
-                        -v ${CIRCLE_ARTIFACTS}:/tmp/artifacts \
-                        -t ubuntu-32-influxdb-test bash \
-                        -c "cd /root/go/src/github.com/influxdb/influxdb && go get -t -d -v ./... && go build -v ./... && go test ${PARALLELISM} ${TIMEOUT} -v ./... 2>&1 | tee /tmp/artifacts/test_logs_i386.txt && exit \${PIPESTATUS[0]}"
-        rc=$?
-        ;;
-    2)
        GORACE="halt_on_error=1" go test $PARALLELISM $TIMEOUT -v -race ./... 2>&1 | tee $CIRCLE_ARTIFACTS/test_logs_race.txt
        rc=${PIPESTATUS[0]}
        ;;

@@ -2,7 +2,6 @@ package graphite
 
 import (
 	"bufio"
-	"expvar"
 	"fmt"
 	"log"
 	"math"
@@ -12,10 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdb/influxdb"
 	"github.com/influxdb/influxdb/cluster"
 	"github.com/influxdb/influxdb/meta"
-	"github.com/influxdb/influxdb/monitor"
 	"github.com/influxdb/influxdb/tsdb"
 )
 
@@ -24,89 +21,25 @@ const (
 	leaderWaitTimeout = 30 * time.Second
 )
 
-// Initialize the graphite stats and diags
-func init() {
-	tcpConnections = make(map[string]*tcpConnectionDiag)
-}
-
-// Package-level tracking of connections for diagnostics.
-var monitorOnce sync.Once
-
-type tcpConnectionDiag struct {
-	conn        net.Conn
-	connectTime time.Time
-}
-
-var tcpConnectionsMu sync.Mutex
-var tcpConnections map[string]*tcpConnectionDiag
-
-func addConnection(c net.Conn) {
-	tcpConnectionsMu.Lock()
-	defer tcpConnectionsMu.Unlock()
-	tcpConnections[c.RemoteAddr().String()] = &tcpConnectionDiag{
-		conn:        c,
-		connectTime: time.Now().UTC(),
-	}
-}
-func removeConnection(c net.Conn) {
-	tcpConnectionsMu.Lock()
-	defer tcpConnectionsMu.Unlock()
-	delete(tcpConnections, c.RemoteAddr().String())
-}
-
-func handleDiagnostics() (*monitor.Diagnostic, error) {
-	tcpConnectionsMu.Lock()
-	defer tcpConnectionsMu.Unlock()
-
-	d := &monitor.Diagnostic{
-		Columns: []string{"local", "remote", "connect time"},
-		Rows:    make([][]interface{}, 0, len(tcpConnections)),
-	}
-	for _, v := range tcpConnections {
-		_ = v
-		d.Rows = append(d.Rows, []interface{}{v.conn.LocalAddr().String(), v.conn.RemoteAddr().String(), v.connectTime})
-	}
-	return d, nil
-}
-
-// statistics gathered by the graphite package.
-const (
-	statPointsReceived      = "points_rx"
-	statBytesReceived       = "bytes_rx"
-	statPointsParseFail     = "points_parse_fail"
-	statPointsUnsupported   = "points_unsupported_fail"
-	statBatchesTrasmitted   = "batches_tx"
-	statPointsTransmitted   = "points_tx"
-	statBatchesTransmitFail = "batches_tx_fail"
-	statConnectionsActive   = "connections_active"
-	statConnectionsHandled  = "connections_handled"
-)
-
 type Service struct {
 	bindAddress      string
 	database         string
 	protocol         string
 	batchSize        int
-	batchPending     int
 	batchTimeout     time.Duration
 	consistencyLevel cluster.ConsistencyLevel
 
 	batcher *tsdb.PointBatcher
 	parser  *Parser
 
-	logger  *log.Logger
-	statMap *expvar.Map
+	logger *log.Logger
 
-	ln      net.Listener
-	addr    net.Addr
-	udpConn *net.UDPConn
+	ln   net.Listener
+	addr net.Addr
 
 	wg   sync.WaitGroup
 	done chan struct{}
 
-	Monitor interface {
-		RegisterDiagnosticsClient(name string, client monitor.DiagsClient) error
-	}
 	PointsWriter interface {
 		WritePoints(p *cluster.WritePointsRequest) error
 	}
@@ -126,7 +59,6 @@ func NewService(c Config) (*Service, error) {
 		database:     d.Database,
 		protocol:     d.Protocol,
 		batchSize:    d.BatchSize,
-		batchPending: d.BatchPending,
 		batchTimeout: time.Duration(d.BatchTimeout),
 		logger:       log.New(os.Stderr, "[graphite] ", log.LstdFlags),
 		done:         make(chan struct{}),
@@ -155,21 +87,6 @@ func NewService(c Config) (*Service, error) {
 func (s *Service) Open() error {
 	s.logger.Printf("Starting graphite service, batch size %d, batch timeout %s", s.batchSize, s.batchTimeout)
 
-	// Configure expvar monitoring. It's OK to do this even if the service fails to open and
-	// should be done before any data could arrive for the service.
-	key := strings.Join([]string{"graphite", s.protocol, s.bindAddress}, ":")
-	tags := map[string]string{"proto": s.protocol, "bind": s.bindAddress}
-	s.statMap = influxdb.NewStatistics(key, "graphite", tags)
-
-	// One Graphite service hooks up diagnostics for all Graphite functionality.
-	monitorOnce.Do(func() {
-		if s.Monitor == nil {
-			s.logger.Println("no monitor service available, no monitoring will be performed")
-			return
-		}
-		s.Monitor.RegisterDiagnosticsClient("graphite", monitor.DiagsClientFunc(handleDiagnostics))
-	})
-
 	if err := s.MetaStore.WaitForLeader(leaderWaitTimeout); err != nil {
 		s.logger.Printf("Failed to detect a cluster leader: %s", err.Error())
 		return err
@@ -180,7 +97,7 @@ func (s *Service) Open() error {
 		return err
 	}
 
-	s.batcher = tsdb.NewPointBatcher(s.batchSize, s.batchPending, s.batchTimeout)
+	s.batcher = tsdb.NewPointBatcher(s.batchSize, s.batchTimeout)
 	s.batcher.Start()
 
 	// Start processing batches.
@@ -207,9 +124,6 @@ func (s *Service) Open() error {
 func (s *Service) Close() error {
 	if s.ln != nil {
 		s.ln.Close()
-	}
-	if s.udpConn != nil {
-		s.udpConn.Close()
 	}
 
 	s.batcher.Stop()
@@ -260,13 +174,8 @@ func (s *Service) openTCPServer() (net.Addr, error) {
 
 // handleTCPConnection services an individual TCP connection for the Graphite input.
 func (s *Service) handleTCPConnection(conn net.Conn) {
-	defer s.wg.Done()
 	defer conn.Close()
-	defer removeConnection(conn)
-	defer s.statMap.Add(statConnectionsActive, -1)
-	addConnection(conn)
-	s.statMap.Add(statConnectionsActive, 1)
-	s.statMap.Add(statConnectionsHandled, 1)
+	defer s.wg.Done()
 
 	reader := bufio.NewReader(conn)
 
@@ -280,8 +189,6 @@ func (s *Service) handleTCPConnection(conn net.Conn) {
 		// Trim the buffer, even though there should be no padding
 		line := strings.TrimSpace(string(buf))
 
-		s.statMap.Add(statPointsReceived, 1)
-		s.statMap.Add(statBytesReceived, int64(len(buf)))
 		s.handleLine(line)
 	}
 }
@@ -293,7 +200,7 @@ func (s *Service) openUDPServer() (net.Addr, error) {
 		return nil, err
 	}
 
-	s.udpConn, err = net.ListenUDP("udp", addr)
+	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		return nil, err
 	}
@@ -303,33 +210,27 @@ func (s *Service) openUDPServer() (net.Addr, error) {
 	go func() {
 		defer s.wg.Done()
 		for {
-			n, _, err := s.udpConn.ReadFromUDP(buf)
+			n, _, err := conn.ReadFromUDP(buf)
 			if err != nil {
-				s.udpConn.Close()
+				conn.Close()
 				return
 			}
-
-			lines := strings.Split(string(buf[:n]), "\n")
-			for _, line := range lines {
+			for _, line := range strings.Split(string(buf[:n]), "\n") {
 				s.handleLine(line)
 			}
-			s.statMap.Add(statPointsReceived, int64(len(lines)))
-			s.statMap.Add(statBytesReceived, int64(n))
 		}
 	}()
-	return s.udpConn.LocalAddr(), nil
+	return conn.LocalAddr(), nil
 }
 
 func (s *Service) handleLine(line string) {
 	if line == "" {
 		return
 	}
-
 	// Parse it.
 	point, err := s.parser.Parse(line)
 	if err != nil {
 		s.logger.Printf("unable to parse line: %s", err)
-		s.statMap.Add(statPointsParseFail, 1)
 		return
 	}
 
@@ -338,7 +239,6 @@ func (s *Service) handleLine(line string) {
 		// Drop NaN and +/-Inf data points since they are not supported values
 		if math.IsNaN(f) || math.IsInf(f, 0) {
 			s.logger.Printf("dropping unsupported value: '%v'", line)
-			s.statMap.Add(statPointsUnsupported, 1)
 			return
 		}
 	}
@@ -357,14 +257,9 @@ func (s *Service) processBatches(batcher *tsdb.PointBatcher) {
 				RetentionPolicy:  "",
 				ConsistencyLevel: s.consistencyLevel,
 				Points:           batch,
-			}); err == nil {
-				s.statMap.Add(statBatchesTrasmitted, 1)
-				s.statMap.Add(statPointsTransmitted, int64(len(batch)))
-			} else {
+			}); err != nil {
 				s.logger.Printf("failed to write point batch to database %q: %s", s.database, err)
-				s.statMap.Add(statBatchesTransmitFail, 1)
 			}
-
 		case <-s.done:
 			return
 		}

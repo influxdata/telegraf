@@ -66,14 +66,13 @@ func (cmd *Command) Run(args ...string) error {
 	// Print sweet InfluxDB logo.
 	fmt.Print(logo)
 
-	// Mark start-up in log.
-	log.Printf("InfluxDB starting, version %s, branch %s, commit %s", cmd.Version, cmd.Branch, cmd.Commit)
-	log.Printf("Go version %s, GOMAXPROCS set to %d", runtime.Version(), runtime.GOMAXPROCS(0))
-
 	// Write the PID file.
 	if err := cmd.writePIDFile(options.PIDFile); err != nil {
 		return fmt.Errorf("write pid file: %s", err)
 	}
+
+	// Set parallelism.
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// Turn on block profiling to debug stuck databases
 	runtime.SetBlockProfileRate(int(1 * time.Second))
@@ -104,8 +103,7 @@ func (cmd *Command) Run(args ...string) error {
 	}
 
 	// Create server from config and start it.
-	buildInfo := &BuildInfo{Version: cmd.Version, Commit: cmd.Commit, Branch: cmd.Branch}
-	s, err := NewServer(config, buildInfo)
+	s, err := NewServer(config, cmd.Version)
 	if err != nil {
 		return fmt.Errorf("create server: %s", err)
 	}
@@ -115,6 +113,10 @@ func (cmd *Command) Run(args ...string) error {
 		return fmt.Errorf("open server: %s", err)
 	}
 	cmd.Server = s
+
+	// Mark start-up in log.
+	log.Printf("InfluxDB starting, version %s, branch %s, commit %s", cmd.Version, cmd.Branch, cmd.Commit)
+	log.Println("GOMAXPROCS set to", runtime.GOMAXPROCS(0))
 
 	// Begin monitoring the server's error channel.
 	go cmd.monitorServerErrors()
@@ -188,11 +190,11 @@ func (cmd *Command) writePIDFile(path string) error {
 func (cmd *Command) ParseConfig(path string) (*Config, error) {
 	// Use demo configuration if no config path is specified.
 	if path == "" {
-		log.Println("no configuration provided, using default settings")
+		fmt.Fprintln(cmd.Stdout, "no configuration provided, using default settings")
 		return NewDemoConfig()
 	}
 
-	log.Printf("Using configuration at: %s\n", path)
+	fmt.Fprintf(cmd.Stdout, "Using configuration at: %s\n", path)
 
 	config := NewConfig()
 	if _, err := toml.DecodeFile(path, &config); err != nil {

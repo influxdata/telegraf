@@ -1,11 +1,5 @@
 package opentsdb
 
-import (
-	"time"
-
-	"github.com/influxdb/influxdb/toml"
-)
-
 const (
 	// DefaultBindAddress is the default address that the service binds to.
 	DefaultBindAddress = ":4242"
@@ -18,28 +12,16 @@ const (
 
 	// DefaultConsistencyLevel is the default write consistency level.
 	DefaultConsistencyLevel = "one"
-
-	// DefaultBatchSize is the default Graphite batch size.
-	DefaultBatchSize = 1000
-
-	// DefaultBatchTimeout is the default Graphite batch timeout.
-	DefaultBatchTimeout = time.Second
-
-	// DefaultBatchPending is the default number of batches that can be in the queue.
-	DefaultBatchPending = 5
 )
 
 type Config struct {
-	Enabled          bool          `toml:"enabled"`
-	BindAddress      string        `toml:"bind-address"`
-	Database         string        `toml:"database"`
-	RetentionPolicy  string        `toml:"retention-policy"`
-	ConsistencyLevel string        `toml:"consistency-level"`
-	TLSEnabled       bool          `toml:"tls-enabled"`
-	Certificate      string        `toml:"certificate"`
-	BatchSize        int           `toml:"batch-size"`
-	BatchPending     int           `toml:"batch-pending"`
-	BatchTimeout     toml.Duration `toml:"batch-timeout"`
+	Enabled          bool   `toml:"enabled"`
+	BindAddress      string `toml:"bind-address"`
+	Database         string `toml:"database"`
+	RetentionPolicy  string `toml:"retention-policy"`
+	ConsistencyLevel string `toml:"consistency-level"`
+	TLSEnabled       bool   `toml:"tls-enabled"`
+	Certificate      string `toml:"certificate"`
 }
 
 func NewConfig() Config {
@@ -50,8 +32,5 @@ func NewConfig() Config {
 		ConsistencyLevel: DefaultConsistencyLevel,
 		TLSEnabled:       false,
 		Certificate:      "/etc/ssl/influxdb.pem",
-		BatchSize:        DefaultBatchSize,
-		BatchPending:     DefaultBatchPending,
-		BatchTimeout:     toml.Duration(DefaultBatchTimeout),
 	}
 }
