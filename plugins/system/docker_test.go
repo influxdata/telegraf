@@ -31,7 +31,6 @@ func TestDockerStats_GenerateStats(t *testing.T) {
 			Steal:     0.0001,
 			Guest:     8.1,
 			GuestNice: 0.324,
-			Stolen:    0.051,
 		},
 		Mem: &docker.CgroupMemStat{
 			ContainerID:             "blah",
@@ -85,8 +84,7 @@ func TestDockerStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("softirq", 0.11, dockertags))
 	assert.True(t, acc.CheckTaggedValue("steal", 0.0001, dockertags))
 	assert.True(t, acc.CheckTaggedValue("guest", 8.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("guestNice", 0.324, dockertags))
-	assert.True(t, acc.CheckTaggedValue("stolen", 0.051, dockertags))
+	assert.True(t, acc.CheckTaggedValue("guest_nice", 0.324, dockertags))
 
 	assert.True(t, acc.CheckTaggedValue("cache", uint64(1), dockertags))
 	assert.True(t, acc.CheckTaggedValue("rss", uint64(2), dockertags))

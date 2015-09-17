@@ -42,8 +42,7 @@ func (s *DockerStats) Gather(acc plugins.Accumulator) error {
 		acc.Add("softirq", cts.Softirq, tags)
 		acc.Add("steal", cts.Steal, tags)
 		acc.Add("guest", cts.Guest, tags)
-		acc.Add("guestNice", cts.GuestNice, tags)
-		acc.Add("stolen", cts.Stolen, tags)
+		acc.Add("guest_nice", cts.GuestNice, tags)
 
 		acc.Add("cache", cont.Mem.Cache, tags)
 		acc.Add("rss", cont.Mem.RSS, tags)

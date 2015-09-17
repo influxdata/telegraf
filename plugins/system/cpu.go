@@ -47,7 +47,7 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 			"cpu": cts.CPU,
 		}
 
-		busy, total := busyAndTotalCpuTime(cts)
+		total := totalCpuTime(cts)
 
 		// Add total cpu numbers
 		add(acc, "user", cts.User, tags)
@@ -59,9 +59,7 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 		add(acc, "softirq", cts.Softirq, tags)
 		add(acc, "steal", cts.Steal, tags)
 		add(acc, "guest", cts.Guest, tags)
-		add(acc, "guestNice", cts.GuestNice, tags)
-		add(acc, "stolen", cts.Stolen, tags)
-		add(acc, "busy", busy, tags)
+		add(acc, "guest_nice", cts.GuestNice, tags)
 
 		// Add in percentage
 		if len(s.lastStats) == 0 {
@@ -69,8 +67,7 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 			continue
 		}
 		lastCts := s.lastStats[i]
-		lastBusy, lastTotal := busyAndTotalCpuTime(lastCts)
-		busyDelta := busy - lastBusy
+		lastTotal := totalCpuTime(lastCts)
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
@@ -81,19 +78,18 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 			continue
 		}
 
-		add(acc, "percentageUser", 100*(cts.User-lastCts.User)/totalDelta, tags)
-		add(acc, "percentageSystem", 100*(cts.System-lastCts.System)/totalDelta, tags)
-		add(acc, "percentageIdle", 100*(cts.Idle-lastCts.Idle)/totalDelta, tags)
-		add(acc, "percentageNice", 100*(cts.Nice-lastCts.Nice)/totalDelta, tags)
-		add(acc, "percentageIowait", 100*(cts.Iowait-lastCts.Iowait)/totalDelta, tags)
-		add(acc, "percentageIrq", 100*(cts.Irq-lastCts.Irq)/totalDelta, tags)
-		add(acc, "percentageSoftirq", 100*(cts.Softirq-lastCts.Softirq)/totalDelta, tags)
-		add(acc, "percentageSteal", 100*(cts.Steal-lastCts.Steal)/totalDelta, tags)
-		add(acc, "percentageGuest", 100*(cts.Guest-lastCts.Guest)/totalDelta, tags)
-		add(acc, "percentageGuestNice", 100*(cts.GuestNice-lastCts.GuestNice)/totalDelta, tags)
-		add(acc, "percentageStolen", 100*(cts.Stolen-lastCts.Stolen)/totalDelta, tags)
-
-		add(acc, "percentageBusy", 100*busyDelta/totalDelta, tags)
+		usage_idle := 100 * (cts.Idle - lastCts.Idle) / totalDelta
+		add(acc, "usage_user", 100*(cts.User-lastCts.User)/totalDelta, tags)
+		add(acc, "usage_system", 100*(cts.System-lastCts.System)/totalDelta, tags)
+		add(acc, "usage_idle", usage_idle, tags)
+		add(acc, "usage_nice", 100*(cts.Nice-lastCts.Nice)/totalDelta, tags)
+		add(acc, "usage_iowait", 100*(cts.Iowait-lastCts.Iowait)/totalDelta, tags)
+		add(acc, "usage_irq", 100*(cts.Irq-lastCts.Irq)/totalDelta, tags)
+		add(acc, "usage_softirq", 100*(cts.Softirq-lastCts.Softirq)/totalDelta, tags)
+		add(acc, "usage_steal", 100*(cts.Steal-lastCts.Steal)/totalDelta, tags)
+		add(acc, "usage_guest", 100*(cts.Guest-lastCts.Guest)/totalDelta, tags)
+		add(acc, "usage_guest_nice", 100*(cts.GuestNice-lastCts.GuestNice)/totalDelta, tags)
+		add(acc, "usage_busy", 100.0-usage_idle, tags)
 
 	}
 
@@ -102,11 +98,10 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 	return nil
 }
 
-func busyAndTotalCpuTime(t cpu.CPUTimesStat) (float64, float64) {
-	busy := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal +
-		t.Guest + t.GuestNice + t.Stolen
-
-	return busy, busy + t.Idle
+func totalCpuTime(t cpu.CPUTimesStat) float64 {
+	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal +
+		t.Guest + t.GuestNice + t.Idle
+	return total
 }
 
 func init() {
