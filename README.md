@@ -13,9 +13,6 @@ plugins that Telegraf supports. See the
 [contributing guide](CONTRIBUTING.md) for instructions on
 writing new plugins.
 
-NOTE: Telegraf 0.1.9 will change the name of some cpu usage metrics, see
-[CHANGELOG](CHANGELOG.md) for more details.
-
 ## Installation:
 
 Due to a breaking change to the InfluxDB integer line-protocol, there
@@ -23,6 +20,9 @@ are some InfluxDB compatibility requirements:
 
 * InfluxDB 0.9.3+ requires Telegraf 0.1.5+
 * InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
+
+NOTE: Telegraf 0.1.9 will change the name of some cpu usage metrics, see
+[CHANGELOG](CHANGELOG.md) for more details.
 
 ### Linux deb and rpm packages:
 
