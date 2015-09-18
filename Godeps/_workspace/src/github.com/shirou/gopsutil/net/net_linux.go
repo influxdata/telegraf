@@ -90,7 +90,13 @@ func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
 	return ret, nil
 }
 
+// Return a list of network connections opened.
 func NetConnections(kind string) ([]NetConnectionStat, error) {
+	return NetConnectionsPid(kind, 0)
+}
+
+// Return a list of network connections opened by a process.
+func NetConnectionsPid(kind string, pid int32) ([]NetConnectionStat, error) {
 	var ret []NetConnectionStat
 
 	args := []string{"-i"}
@@ -124,7 +130,7 @@ func NetConnections(kind string) ([]NetConnectionStat, error) {
 	}
 
 	// we can not use -F filter to get all of required information at once.
-	r, err := common.CallLsof(invoke, 0, args...)
+	r, err := common.CallLsof(invoke, pid, args...)
 	if err != nil {
 		return nil, err
 	}

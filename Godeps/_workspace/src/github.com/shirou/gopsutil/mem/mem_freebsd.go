@@ -77,10 +77,8 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 		Wired:    parsed[6] * p,
 	}
 
-	// TODO: platform independent (worked freebsd?)
-	ret.Available = ret.Free + ret.Buffers + ret.Cached
-
-	ret.Used = ret.Total - ret.Free
+	ret.Available = ret.Inactive + ret.Cached + ret.Free
+	ret.Used = ret.Active + ret.Wired + ret.Cached
 	ret.UsedPercent = float64(ret.Total-ret.Available) / float64(ret.Total) * 100.0
 
 	return ret, nil
