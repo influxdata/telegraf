@@ -29,8 +29,10 @@ func (s *MemStats) Gather(acc plugins.Accumulator) error {
 	acc.Add("actual_used", vm.Total-vm.Available, vmtags)
 	acc.Add("used", vm.Used, vmtags)
 	acc.Add("free", vm.Free, vmtags)
-	acc.Add("used_percent", 100*vm.Used/vm.Total, vmtags)
-	acc.Add("actual_used_percent", 100*(vm.Total-vm.Available)/vm.Total, vmtags)
+	acc.Add("used_percent", 100*float64(vm.Used)/float64(vm.Total), vmtags)
+	acc.Add("actual_used_percent",
+		100*float64(vm.Total-vm.Available)/float64(vm.Total),
+		vmtags)
 
 	return nil
 }

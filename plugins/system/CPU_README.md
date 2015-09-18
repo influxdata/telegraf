@@ -1,5 +1,11 @@
 # Telegraf plugin: CPU
 
+#### Plugin arguments:
+- **totalcpu** boolean: If true, include `cpu-total` data
+- **percpu** boolean: If true, include data on a per-cpu basis `cpu0, cpu1, etc.`
+
+#### Description
+
 The CPU plugin collects standard CPU metrics as defined in `man proc`. All
 architectures do not support all of these metrics.
 

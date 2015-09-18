@@ -91,17 +91,16 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	mps.On("NetIO").Return([]net.NetIOCountersStat{netio}, nil)
 
 	vms := &mem.VirtualMemoryStat{
-		Total:       12400,
-		Available:   7600,
-		Used:        5000,
-		UsedPercent: 47.1,
-		Free:        1235,
-		Active:      8134,
-		Inactive:    1124,
-		Buffers:     771,
-		Cached:      4312,
-		Wired:       134,
-		Shared:      2142,
+		Total:     12400,
+		Available: 7600,
+		Used:      5000,
+		Free:      1235,
+		// Active:      8134,
+		// Inactive:    1124,
+		// Buffers:     771,
+		// Cached:      4312,
+		// Wired:       134,
+		// Shared:      2142,
 	}
 
 	mps.On("VMStat").Return(vms, nil)
@@ -231,16 +230,16 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	vmtags := map[string]string(nil)
 
 	assert.True(t, acc.CheckTaggedValue("total", uint64(12400), vmtags))
-	assert.True(t, acc.CheckTaggedValue("available", uint64(7600), vmtags))
+	assert.True(t, acc.CheckTaggedValue("actual_free", uint64(7600), vmtags))
+	assert.True(t, acc.CheckTaggedValue("actual_used", uint64(12400-7600), vmtags))
 	assert.True(t, acc.CheckTaggedValue("used", uint64(5000), vmtags))
-	assert.True(t, acc.CheckTaggedValue("used_perc", float64(47.1), vmtags))
+	assert.True(t, acc.CheckTaggedValue("actual_used_percent",
+		float64(12400-7600)/float64(12400)*100,
+		vmtags))
+	assert.True(t, acc.CheckTaggedValue("used_percent",
+		float64(5000)/float64(12400)*100,
+		vmtags))
 	assert.True(t, acc.CheckTaggedValue("free", uint64(1235), vmtags))
-	assert.True(t, acc.CheckTaggedValue("active", uint64(8134), vmtags))
-	assert.True(t, acc.CheckTaggedValue("inactive", uint64(1124), vmtags))
-	assert.True(t, acc.CheckTaggedValue("buffers", uint64(771), vmtags))
-	assert.True(t, acc.CheckTaggedValue("cached", uint64(4312), vmtags))
-	assert.True(t, acc.CheckTaggedValue("wired", uint64(134), vmtags))
-	assert.True(t, acc.CheckTaggedValue("shared", uint64(2142), vmtags))
 
 	acc.Points = nil
 
@@ -251,7 +250,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	assert.NoError(t, acc.ValidateTaggedValue("total", uint64(8123), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("used", uint64(1232), swaptags))
-	assert.NoError(t, acc.ValidateTaggedValue("used_perc", float64(12.2), swaptags))
+	assert.NoError(t, acc.ValidateTaggedValue("used_percent", float64(12.2), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("free", uint64(6412), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("in", uint64(7), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("out", uint64(830), swaptags))
