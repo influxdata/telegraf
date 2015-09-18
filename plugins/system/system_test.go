@@ -153,7 +153,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	require.NoError(t, err)
 
 	numCPUPoints = len(acc.Points) - (preCPUPoints + numCPUPoints)
-	expectedCPUPoints = 21
+	expectedCPUPoints = 20
 	assert.Equal(t, numCPUPoints, expectedCPUPoints)
 
 	assertContainsTaggedFloat(t, acc, "user", 11.4, 0, cputags)
@@ -177,7 +177,6 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assertContainsTaggedFloat(t, acc, "usage_steal", 0.2301, 0.0005, cputags)
 	assertContainsTaggedFloat(t, acc, "usage_guest", 4.8, 0.0005, cputags)
 	assertContainsTaggedFloat(t, acc, "usage_guest_nice", 2.2, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_busy", 21.2301, 0.0005, cputags)
 
 	err = (&DiskStats{&mps}).Gather(&acc)
 	require.NoError(t, err)

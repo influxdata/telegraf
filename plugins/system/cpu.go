@@ -78,10 +78,9 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 			continue
 		}
 
-		usage_idle := 100 * (cts.Idle - lastCts.Idle) / totalDelta
 		add(acc, "usage_user", 100*(cts.User-lastCts.User)/totalDelta, tags)
 		add(acc, "usage_system", 100*(cts.System-lastCts.System)/totalDelta, tags)
-		add(acc, "usage_idle", usage_idle, tags)
+		add(acc, "usage_idle", 100*(cts.Idle-lastCts.Idle)/totalDelta, tags)
 		add(acc, "usage_nice", 100*(cts.Nice-lastCts.Nice)/totalDelta, tags)
 		add(acc, "usage_iowait", 100*(cts.Iowait-lastCts.Iowait)/totalDelta, tags)
 		add(acc, "usage_irq", 100*(cts.Irq-lastCts.Irq)/totalDelta, tags)
@@ -89,7 +88,6 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 		add(acc, "usage_steal", 100*(cts.Steal-lastCts.Steal)/totalDelta, tags)
 		add(acc, "usage_guest", 100*(cts.Guest-lastCts.Guest)/totalDelta, tags)
 		add(acc, "usage_guest_nice", 100*(cts.GuestNice-lastCts.GuestNice)/totalDelta, tags)
-		add(acc, "usage_busy", 100.0-usage_idle, tags)
 
 	}
 
