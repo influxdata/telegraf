@@ -25,16 +25,12 @@ func (s *MemStats) Gather(acc plugins.Accumulator) error {
 	vmtags := map[string]string(nil)
 
 	acc.Add("total", vm.Total, vmtags)
-	acc.Add("available", vm.Available, vmtags)
+	acc.Add("actual_free", vm.Available, vmtags)
+	acc.Add("actual_used", vm.Total-vm.Available, vmtags)
 	acc.Add("used", vm.Used, vmtags)
-	acc.Add("used_perc", vm.UsedPercent, vmtags)
 	acc.Add("free", vm.Free, vmtags)
-	acc.Add("active", vm.Active, vmtags)
-	acc.Add("inactive", vm.Inactive, vmtags)
-	acc.Add("buffers", vm.Buffers, vmtags)
-	acc.Add("cached", vm.Cached, vmtags)
-	acc.Add("wired", vm.Wired, vmtags)
-	acc.Add("shared", vm.Shared, vmtags)
+	acc.Add("used_percent", 100*vm.Used/vm.Total, vmtags)
+	acc.Add("actual_used_percent", 100*(vm.Total-vm.Available)/vm.Total, vmtags)
 
 	return nil
 }
@@ -60,7 +56,7 @@ func (s *SwapStats) Gather(acc plugins.Accumulator) error {
 	acc.Add("total", swap.Total, swaptags)
 	acc.Add("used", swap.Used, swaptags)
 	acc.Add("free", swap.Free, swaptags)
-	acc.Add("used_perc", swap.UsedPercent, swaptags)
+	acc.Add("used_percent", swap.UsedPercent, swaptags)
 	acc.Add("in", swap.Sin, swaptags)
 	acc.Add("out", swap.Sout, swaptags)
 
