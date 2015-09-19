@@ -12,6 +12,7 @@ a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle
 - [#181](https://github.com/influxdb/telegraf/issues/181): Makefile GOBIN support. Thanks @Vye!
 - [#203](https://github.com/influxdb/telegraf/pull/200): AMQP output. Thanks @ekini!
 - [#182](https://github.com/influxdb/telegraf/pull/182): OpenTSDB output. Thanks @rplessl!
+- [#187](https://github.com/influxdb/telegraf/pull/187): Retry output sink connections on startup.
 
 ### Bugfixes
 - [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
