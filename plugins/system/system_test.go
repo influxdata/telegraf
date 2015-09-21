@@ -230,11 +230,10 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	vmtags := map[string]string(nil)
 
 	assert.True(t, acc.CheckTaggedValue("total", uint64(12400), vmtags))
-	assert.True(t, acc.CheckTaggedValue("actual_free", uint64(7600), vmtags))
-	assert.True(t, acc.CheckTaggedValue("actual_used", uint64(12400-7600), vmtags))
+	assert.True(t, acc.CheckTaggedValue("available", uint64(7600), vmtags))
 	assert.True(t, acc.CheckTaggedValue("used", uint64(5000), vmtags))
-	assert.True(t, acc.CheckTaggedValue("actual_used_percent",
-		float64(12400-7600)/float64(12400)*100,
+	assert.True(t, acc.CheckTaggedValue("available_percent",
+		float64(7600)/float64(12400)*100,
 		vmtags))
 	assert.True(t, acc.CheckTaggedValue("used_percent",
 		float64(5000)/float64(12400)*100,
