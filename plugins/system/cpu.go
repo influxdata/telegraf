@@ -30,6 +30,8 @@ var sampleConfig = `
 	percpu = true
 	# Whether to report total system cpu stats or not
 	totalcpu = true
+	# Comment this line if you want the raw CPU time metrics
+	drop = ["cpu_time"]
 `
 
 func (_ *CPUStats) SampleConfig() string {
@@ -50,16 +52,16 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 		total := totalCpuTime(cts)
 
 		// Add total cpu numbers
-		add(acc, "user", cts.User, tags)
-		add(acc, "system", cts.System, tags)
-		add(acc, "idle", cts.Idle, tags)
-		add(acc, "nice", cts.Nice, tags)
-		add(acc, "iowait", cts.Iowait, tags)
-		add(acc, "irq", cts.Irq, tags)
-		add(acc, "softirq", cts.Softirq, tags)
-		add(acc, "steal", cts.Steal, tags)
-		add(acc, "guest", cts.Guest, tags)
-		add(acc, "guest_nice", cts.GuestNice, tags)
+		add(acc, "time_user", cts.User, tags)
+		add(acc, "time_system", cts.System, tags)
+		add(acc, "time_idle", cts.Idle, tags)
+		add(acc, "time_nice", cts.Nice, tags)
+		add(acc, "time_iowait", cts.Iowait, tags)
+		add(acc, "time_irq", cts.Irq, tags)
+		add(acc, "time_softirq", cts.Softirq, tags)
+		add(acc, "time_steal", cts.Steal, tags)
+		add(acc, "time_guest", cts.Guest, tags)
+		add(acc, "time_guest_nice", cts.GuestNice, tags)
 
 		// Add in percentage
 		if len(s.lastStats) == 0 {

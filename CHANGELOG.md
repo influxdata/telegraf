@@ -3,9 +3,13 @@
 ### Release Notes
 - InfluxDB output config change: `url` is now `urls`, and is a list. Config files
 will still be backwards compatible if only `url` is specified.
+- The -test flag will now output two metric collections
 - **Breaking Change**: The CPU collection plugin has been refactored to fix some
 bugs and outdated dependency issues. At the same time, I also decided to fix
-a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle
+a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle.
+Also, all CPU time measurements now have it indicated in their name, so cp_idle
+will become cpu_time_idle, additionally, these cpu_time measurements are going
+to be dropped in the default config with a plugin drop parameter.
 
 ### Features
 - [#143](https://github.com/influxdb/telegraf/issues/143): InfluxDB clustering support

@@ -363,11 +363,17 @@ func (a *Agent) Test() error {
 		acc.Prefix = plugin.name + "_"
 		acc.Config = plugin.config
 
-		fmt.Printf("* Plugin: %s\n", plugin.name)
+		fmt.Printf("* Plugin: %s Collection 1\n", plugin.name)
 		if plugin.config.Interval != 0 {
 			fmt.Printf("* Internal: %s\n", plugin.config.Interval)
 		}
 
+		if err := plugin.plugin.Gather(&acc); err != nil {
+			return err
+		}
+
+		time.Sleep(500 * time.Millisecond)
+		fmt.Printf("* Plugin: %s Collection 2\n", plugin.name)
 		if err := plugin.plugin.Gather(&acc); err != nil {
 			return err
 		}

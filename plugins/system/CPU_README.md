@@ -47,16 +47,16 @@ Meta:
 - tags: `cpu=<cpuN> or <cpu-total>`
 
 Measurement names:
-- cpu_user
-- cpu_system
-- cpu_idle
-- cpu_nice
-- cpu_iowait
-- cpu_irq
-- cpu_softirq
-- cpu_steal
-- cpu_guest
-- cpu_guest_nice
+- cpu_time_user
+- cpu_time_system
+- cpu_time_idle
+- cpu_time_nice
+- cpu_time_iowait
+- cpu_time_irq
+- cpu_time_softirq
+- cpu_time_steal
+- cpu_time_guest
+- cpu_time_guest_nice
 
 ### CPU Usage Percent Measurements:
 
