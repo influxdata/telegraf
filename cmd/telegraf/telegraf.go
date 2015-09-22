@@ -21,8 +21,10 @@ var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
-var fPLuginsFilter = flag.String("filter", "",
+var fPLuginFilters = flag.String("filter", "",
 	"filter the plugins to enable, separator is :")
+var fOutputFilters = flag.String("outputfilter", "",
+	"filter the outputs to enable, separator is :")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 
@@ -33,6 +35,18 @@ var Version string
 func main() {
 	flag.Parse()
 
+	var pluginFilters []string
+	if *fPLuginFilters != "" {
+		pluginsFilter := strings.TrimSpace(*fPLuginFilters)
+		pluginFilters = strings.Split(":"+pluginsFilter+":", ":")
+	}
+
+	var outputFilters []string
+	if *fOutputFilters != "" {
+		outputFilter := strings.TrimSpace(*fOutputFilters)
+		outputFilters = strings.Split(":"+outputFilter+":", ":")
+	}
+
 	if *fVersion {
 		v := fmt.Sprintf("Telegraf - Version %s", Version)
 		fmt.Println(v)
@@ -40,7 +54,7 @@ func main() {
 	}
 
 	if *fSampleConfig {
-		telegraf.PrintSampleConfig()
+		telegraf.PrintSampleConfig(pluginFilters, outputFilters)
 		return
 	}
 
@@ -76,7 +90,7 @@ func main() {
 		ag.Debug = true
 	}
 
-	outputs, err := ag.LoadOutputs()
+	outputs, err := ag.LoadOutputs(outputFilters)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,7 +99,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	plugins, err := ag.LoadPlugins(*fPLuginsFilter)
+	plugins, err := ag.LoadPlugins(pluginFilters)
 	if err != nil {
 		log.Fatal(err)
 	}
