@@ -2,7 +2,9 @@ UNAME := $(shell sh -c 'uname')
 VERSION := $(shell sh -c 'git describe --always --tags')
 
 build: prepare
-	$(GOPATH)/bin/godep go build -o telegraf -ldflags \
+		CGO_ENABLED=0 GOOS=linux ARCH=amd64 $(GOPATH)/bin/godep go build -a -installsuffix cgo \
+		-o telegraf \
+		-ldflags \
 		"-X main.Version $(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
