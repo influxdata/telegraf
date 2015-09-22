@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -113,24 +112,28 @@ func (a *Agent) Close() error {
 }
 
 // LoadOutputs loads the agent's outputs
-func (a *Agent) LoadOutputs() ([]string, error) {
+func (a *Agent) LoadOutputs(filters []string) ([]string, error) {
 	var names []string
 
 	for _, name := range a.Config.OutputsDeclared() {
+		fmt.Println(outputs.Outputs)
 		creator, ok := outputs.Outputs[name]
 		if !ok {
 			return nil, fmt.Errorf("Undefined but requested output: %s", name)
 		}
 
-		output := creator()
+		if sliceContains(name, filters) || len(filters) == 0 {
+			fmt.Println("OUTPUT ENABLED: ", name)
+			output := creator()
 
-		err := a.Config.ApplyOutput(name, output)
-		if err != nil {
-			return nil, err
+			err := a.Config.ApplyOutput(name, output)
+			if err != nil {
+				return nil, err
+			}
+
+			a.outputs = append(a.outputs, &runningOutput{name, output})
+			names = append(names, name)
 		}
-
-		a.outputs = append(a.outputs, &runningOutput{name, output})
-		names = append(names, name)
 	}
 
 	sort.Strings(names)
@@ -139,14 +142,8 @@ func (a *Agent) LoadOutputs() ([]string, error) {
 }
 
 // LoadPlugins loads the agent's plugins
-func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
+func (a *Agent) LoadPlugins(filters []string) ([]string, error) {
 	var names []string
-	var filters []string
-
-	pluginsFilter = strings.TrimSpace(pluginsFilter)
-	if pluginsFilter != "" {
-		filters = strings.Split(":"+pluginsFilter+":", ":")
-	}
 
 	for _, name := range a.Config.PluginsDeclared() {
 		creator, ok := plugins.Plugins[name]
@@ -154,22 +151,9 @@ func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
 			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
 		}
 
-		isPluginEnabled := false
-		if len(filters) > 0 {
-			for _, runeValue := range filters {
-				if runeValue != "" && strings.ToLower(runeValue) == strings.ToLower(name) {
-					fmt.Printf("plugin [%s] is enabled (filter options)\n", name)
-					isPluginEnabled = true
-					break
-				}
-			}
-		} else {
-			// if no filter, we ALWAYS accept the plugin
-			isPluginEnabled = true
-		}
-
-		if isPluginEnabled {
+		if sliceContains(name, filters) || len(filters) == 0 {
 			plugin := creator()
+
 			config, err := a.Config.ApplyPlugin(name, plugin)
 			if err != nil {
 				return nil, err

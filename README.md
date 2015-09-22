@@ -78,11 +78,13 @@ if you don't have it already. You also must build with golang version 1.4+
 ### How to use it:
 
 * Run `telegraf -sample-config > telegraf.conf` to create an initial configuration
+* Or run `telegraf -sample-config -filter cpu:mem -outputfilter influxdb > telegraf.conf`
+to create a config file with only CPU and memory plugins defined, and InfluxDB output defined
 * Edit the configuration to match your needs
 * Run `telegraf -config telegraf.conf -test` to output one full measurement sample to STDOUT
 * Run `telegraf -config telegraf.conf` to gather and send metrics to configured outputs.
 * Run `telegraf -config telegraf.conf -filter system:swap`
-to enable only the system & swap plugins defined in the config.
+to run telegraf with only the system & swap plugins defined in the config.
 
 ## Telegraf Options
 

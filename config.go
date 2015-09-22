@@ -384,15 +384,16 @@ var header2 = `
 ###############################################################################
 `
 
-// PrintSampleConfig prints the sample config!
-func PrintSampleConfig() {
+// PrintSampleConfig prints the sample config
+func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 	fmt.Printf(header)
 
 	// Print Outputs
 	var onames []string
-
 	for oname := range outputs.Outputs {
-		onames = append(onames, oname)
+		if len(outputFilters) == 0 || sliceContains(oname, outputFilters) {
+			onames = append(onames, oname)
+		}
 	}
 	sort.Strings(onames)
 
@@ -414,9 +415,10 @@ func PrintSampleConfig() {
 
 	// Print Plugins
 	var pnames []string
-
 	for pname := range plugins.Plugins {
-		pnames = append(pnames, pname)
+		if len(pluginFilters) == 0 || sliceContains(pname, pluginFilters) {
+			pnames = append(pnames, pname)
+		}
 	}
 	sort.Strings(pnames)
 
@@ -433,6 +435,15 @@ func PrintSampleConfig() {
 			fmt.Printf(config)
 		}
 	}
+}
+
+func sliceContains(name string, list []string) bool {
+	for _, b := range list {
+		if b == name {
+			return true
+		}
+	}
+	return false
 }
 
 // PrintPluginConfig prints the config usage of a single plugin.
