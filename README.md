@@ -27,8 +27,8 @@ NOTE: Telegraf 0.1.9 will change the name of some cpu usage metrics, see
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.1.8_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.1.8-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.1.9_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.1.9-1.x86_64.rpm
 
 0.1.4:
 * http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
@@ -46,9 +46,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.1.8.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.1.8.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.1.8.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.1.9.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.1.9.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.1.9.tar.gz
 
 ##### Binary instructions:
 

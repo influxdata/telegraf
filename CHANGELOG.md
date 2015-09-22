@@ -1,4 +1,4 @@
-## v0.1.9 [unreleased]
+## v0.1.9 [2015-09-22]
 
 ### Release Notes
 - InfluxDB output config change: `url` is now `urls`, and is a list. Config files
