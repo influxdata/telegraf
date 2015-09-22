@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/koksan83/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 

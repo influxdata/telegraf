@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/influxdb/telegraf/plugins"
+	"github.com/koksan83/telegraf/plugins"
 )
 
 type NetIOStats struct {

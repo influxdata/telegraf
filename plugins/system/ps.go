@@ -5,14 +5,14 @@ import (
 	"strings"
 
 	dc "github.com/fsouza/go-dockerclient"
-	"github.com/influxdb/telegraf/plugins"
-	"github.com/influxdb/telegraf/plugins/system/ps/common"
-	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
-	"github.com/influxdb/telegraf/plugins/system/ps/disk"
-	"github.com/influxdb/telegraf/plugins/system/ps/docker"
-	"github.com/influxdb/telegraf/plugins/system/ps/load"
-	"github.com/influxdb/telegraf/plugins/system/ps/mem"
-	"github.com/influxdb/telegraf/plugins/system/ps/net"
+	"github.com/koksan83/telegraf/plugins"
+	"github.com/koksan83/telegraf/plugins/system/ps/common"
+	"github.com/koksan83/telegraf/plugins/system/ps/cpu"
+	"github.com/koksan83/telegraf/plugins/system/ps/disk"
+	"github.com/koksan83/telegraf/plugins/system/ps/docker"
+	"github.com/koksan83/telegraf/plugins/system/ps/load"
+	"github.com/koksan83/telegraf/plugins/system/ps/mem"
+	"github.com/koksan83/telegraf/plugins/system/ps/net"
 )
 
 type DockerContainerStat struct {

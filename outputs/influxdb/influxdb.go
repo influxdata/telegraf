@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/influxdb/influxdb/client"
-	t "github.com/influxdb/telegraf"
-	"github.com/influxdb/telegraf/outputs"
+	t "github.com/koksan83/telegraf"
+	"github.com/koksan83/telegraf/outputs"
 )
 
 type InfluxDB struct {

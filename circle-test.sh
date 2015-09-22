@@ -51,7 +51,7 @@ echo "\$CIRCLE_BRANCH: $CIRCLE_BRANCH"
 
 # Move the checked-out source to a better location
 exit_if_fail mv $HOME/telegraf $GOPATH/src/github.com/influxdb
-exit_if_fail cd $GOPATH/src/github.com/influxdb/telegraf
+exit_if_fail cd $GOPATH/src/github.com/koksan83/telegraf
 
 # Install the code
 exit_if_fail godep go build -v ./...

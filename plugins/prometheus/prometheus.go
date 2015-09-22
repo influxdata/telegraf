@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdb/telegraf/plugins"
+	"github.com/koksan83/telegraf/plugins"
 	"github.com/prometheus/client_golang/extraction"
 	"github.com/prometheus/client_golang/model"
 )

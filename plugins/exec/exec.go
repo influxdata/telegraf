@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gonuts/go-shellquote"
-	"github.com/influxdb/telegraf/plugins"
+	"github.com/koksan83/telegraf/plugins"
 	"os/exec"
 	"sync"
 )

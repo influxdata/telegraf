@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdb/telegraf/plugins"
-	common "github.com/influxdb/telegraf/plugins/system/ps/common"
+	"github.com/koksan83/telegraf/plugins"
+	common "github.com/koksan83/telegraf/plugins/system/ps/common"
 )
 
 // Lustre proc files can change between versions, so we want to future-proof

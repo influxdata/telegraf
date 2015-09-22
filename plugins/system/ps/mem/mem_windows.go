@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	common "github.com/influxdb/telegraf/plugins/system/ps/common"
+	common "github.com/koksan83/telegraf/plugins/system/ps/common"
 )
 
 var (
