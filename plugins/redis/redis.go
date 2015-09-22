@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"strconv"
+	// "strconv"
 	"strings"
 	"sync"
 
@@ -140,69 +140,81 @@ func (r *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 	c.Write([]byte("info\r\n"))
 
 	rdr := bufio.NewReader(c)
-
-	line, err := rdr.ReadString('\n')
-	if err != nil {
-		return err
+	scanner := bufio.NewScanner(rdr)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Println("reading standard input:", err)
 	}
 
-	if line[0] != '$' {
-		return fmt.Errorf("bad line start: %s", ErrProtocolError)
-	}
+	// line, err := rdr.ReadString('\n')
+	// if err != nil {
+	// 	return err
+	// }
 
-	line = strings.TrimSpace(line)
+	// if line[0] != '$' {
+	// 	return fmt.Errorf("bad line start: %s", ErrProtocolError)
+	// }
 
-	szStr := line[1:]
+	// line = strings.TrimSpace(line)
 
-	sz, err := strconv.Atoi(szStr)
-	if err != nil {
-		return fmt.Errorf("bad size string <<%s>>: %s", szStr, ErrProtocolError)
-	}
+	// szStr := line[0:]
 
-	var read int
+	// sz, err := strconv.Atoi(szStr)
+	// if err != nil {
+	// 	return fmt.Errorf("bad size string <<%s>>: %s", szStr, ErrProtocolError)
+	// }
 
-	for read < sz {
-		line, err := rdr.ReadString('\n')
-		if err != nil {
-			return err
-		}
+	// var read int
 
-		read += len(line)
+	// for read < sz {
+	// 	line, err := rdr.ReadString('\n')
+	// 	fmt.Printf(line)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		if len(line) == 1 || line[0] == '#' {
-			continue
-		}
+	// 	read += len(line)
+	// 	if len(line) == 1 || line[0] == '#' {
+	// 		continue
+	// 	}
 
-		parts := strings.SplitN(line, ":", 2)
+	// 	_, rPort, err := net.SplitHostPort(addr.Host)
+	// 	if err != nil {
+	// 		rPort = defaultPort
+	// 	}
+	// 	tags := map[string]string{"host": addr.String(), "port": rPort}
 
-		name := string(parts[0])
+	// 	parts := strings.SplitN(line, ":", 2)
+	// 	if len(parts) < 2 {
+	// 		continue
+	// 	}
+	// 	name := string(parts[0])
+	// 	metric, ok := Tracking[name]
+	// 	if !ok {
+	// 		// See if this is the keyspace line
+	// 		if strings.Contains(string(parts[1]), "keys=") {
+	// 			tags["database"] = name
+	// 			acc.Add("foo", 999, tags)
+	// 		}
+	// 		continue
+	// 	}
 
-		metric, ok := Tracking[name]
-		if !ok {
-			continue
-		}
+	// 	val := strings.TrimSpace(parts[1])
+	// 	ival, err := strconv.ParseUint(val, 10, 64)
+	// 	if err == nil {
+	// 		acc.Add(metric, ival, tags)
+	// 		continue
+	// 	}
 
-		_, rPort, err := net.SplitHostPort(addr.Host)
-		if err != nil {
-			rPort = defaultPort
-		}
-		tags := map[string]string{"host": addr.String(), "port": rPort}
+	// 	fval, err := strconv.ParseFloat(val, 64)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		val := strings.TrimSpace(parts[1])
-
-		ival, err := strconv.ParseUint(val, 10, 64)
-		if err == nil {
-			acc.Add(metric, ival, tags)
-			continue
-		}
-
-		fval, err := strconv.ParseFloat(val, 64)
-		if err != nil {
-			return err
-		}
-
-		acc.Add(metric, fval, tags)
-	}
+	// 	acc.Add(metric, fval, tags)
+	// }
 
 	return nil
 }
