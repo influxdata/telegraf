@@ -105,20 +105,6 @@ check_gopath() {
     echo "GOPATH ($GOPATH) looks sane, using $GOPATH_INSTALL for installation."
 }
 
-check_gvm() {
-    source $HOME/.gvm/scripts/gvm
-    which gvm
-    if [ $? -ne 0 ]; then
-        echo "gvm not found -- aborting."
-        cleanup_exit $1
-    fi
-    gvm use $GO_VERSION
-    if [ $? -ne 0 ]; then
-        echo "gvm cannot find Go version $GO_VERSION -- aborting."
-        cleanup_exit $1
-    fi
-}
-
 # check_clean_tree ensures that no source file is locally modified.
 check_clean_tree() {
     modified=$(git ls-files --modified | wc -l)
@@ -218,9 +204,6 @@ fi
 cd `git rev-parse --show-toplevel`
 echo -e "\nStarting package process, version: $VERSION\n"
 
-if [ "$CIRCLE_BRANCH" == "" ]; then
-    check_gvm
-fi
 check_gopath
 do_build $VERSION
 make_dir_tree $TMP_WORK_DIR $VERSION
