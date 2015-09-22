@@ -134,11 +134,18 @@ func (n *Apache) gatherScores(data string, acc plugins.Accumulator, tags map[str
 // Get tag(s) for the apache plugin
 func getTags(addr *url.URL) map[string]string {
 	h := addr.Host
-	if host, port, err := net.SplitHostPort(h); err == nil {
-		return map[string]string{"server": host, "port": port}
-	} else {
-		return map[string]string{"server": h, "port": "80"}
+	host, port, err := net.SplitHostPort(h)
+        if err != nil {
+            host = addr.Host
+            if addr.Scheme == "http" {
+                port = "80"
+            } else if addr.Scheme == "https" {
+                port = "443"
+            } else {
+                port = ""
+            }
 	}
+	return map[string]string{"server": host, "port": port}
 }
 
 func init() {
