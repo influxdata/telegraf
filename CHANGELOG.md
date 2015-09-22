@@ -4,6 +4,13 @@
 - InfluxDB output config change: `url` is now `urls`, and is a list. Config files
 will still be backwards compatible if only `url` is specified.
 - The -test flag will now output two metric collections
+- Support for filtering telegraf outputs on the CLI -- Telegraf will now
+allow filtering of output sinks on the command-line using the `-outputfilter`
+flag, much like how the `-filter` flag works for plugins.
+- Support for filtering on config-file creation -- Telegraf now supports
+filtering to -sample-config command. You can now run
+`telegraf -sample-config -filter cpu -outputfilter influxdb` to get a config
+file with only the cpu plugin defined, and the influxdb output defined.
 - **Breaking Change**: The CPU collection plugin has been refactored to fix some
 bugs and outdated dependency issues. At the same time, I also decided to fix
 a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle.
@@ -19,6 +26,8 @@ re-added in a "verbose" mode if there is demand for it.
 - [#182](https://github.com/influxdb/telegraf/pull/182): OpenTSDB output. Thanks @rplessl!
 - [#187](https://github.com/influxdb/telegraf/pull/187): Retry output sink connections on startup.
 - [#220](https://github.com/influxdb/telegraf/pull/220): Add port tag to apache plugin. Thanks @neezgee!
+- [#217](https://github.com/influxdb/telegraf/pull/217): Add filtering for output sinks
+and filtering when specifying a config file.
 
 ### Bugfixes
 - [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
