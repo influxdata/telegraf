@@ -209,9 +209,12 @@ EOF
 
 if [ "$1" == "-h" ]; then
     usage 0
+elif [ "$1" == "" ]; then
+    VERSION=`git describe --always --tags | tr -d v`
+else
+    VERSION="$1"
 fi
 
-VERSION=`git describe --always --tags | tr -d v`
 cd `git rev-parse --show-toplevel`
 echo -e "\nStarting package process, version: $VERSION\n"
 
