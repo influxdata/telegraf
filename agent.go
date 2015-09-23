@@ -116,14 +116,15 @@ func (a *Agent) LoadOutputs(filters []string) ([]string, error) {
 	var names []string
 
 	for _, name := range a.Config.OutputsDeclared() {
-		fmt.Println(outputs.Outputs)
 		creator, ok := outputs.Outputs[name]
 		if !ok {
 			return nil, fmt.Errorf("Undefined but requested output: %s", name)
 		}
 
 		if sliceContains(name, filters) || len(filters) == 0 {
-			fmt.Println("OUTPUT ENABLED: ", name)
+			if a.Debug {
+				log.Println("Output Enabled: ", name)
+			}
 			output := creator()
 
 			err := a.Config.ApplyOutput(name, output)
@@ -306,36 +307,6 @@ func (a *Agent) flush(bp *BatchPoints) error {
 	return outerr
 }
 
-// TestAllPlugins verifies that we can 'Gather' from all plugins with the
-// default configuration
-func (a *Agent) TestAllPlugins() error {
-	var names []string
-
-	for name := range plugins.Plugins {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	var acc BatchPoints
-	acc.Debug = true
-
-	fmt.Printf("* Testing all plugins with default configuration\n")
-
-	for _, name := range names {
-		plugin := plugins.Plugins[name]()
-
-		fmt.Printf("* Plugin: %s\n", name)
-
-		acc.Prefix = name + "_"
-		if err := plugin.Gather(&acc); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // Test verifies that we can 'Gather' from all plugins with their configured
 // Config struct
 func (a *Agent) Test() error {
@@ -347,7 +318,7 @@ func (a *Agent) Test() error {
 		acc.Prefix = plugin.name + "_"
 		acc.Config = plugin.config
 
-		fmt.Printf("* Plugin: %s Collection 1\n", plugin.name)
+		fmt.Printf("* Plugin: %s, Collection 1\n", plugin.name)
 		if plugin.config.Interval != 0 {
 			fmt.Printf("* Internal: %s\n", plugin.config.Interval)
 		}
@@ -356,13 +327,18 @@ func (a *Agent) Test() error {
 			return err
 		}
 
-		time.Sleep(500 * time.Millisecond)
-		fmt.Printf("* Plugin: %s Collection 2\n", plugin.name)
-		if err := plugin.plugin.Gather(&acc); err != nil {
-			return err
+		// Special instructions for some plugins. cpu, for example, needs to be
+		// run twice in order to return cpu usage percentages.
+		switch plugin.name {
+		case "cpu":
+			time.Sleep(500 * time.Millisecond)
+			fmt.Printf("* Plugin: %s, Collection 2\n", plugin.name)
+			if err := plugin.plugin.Gather(&acc); err != nil {
+				return err
+			}
 		}
-	}
 
+	}
 	return nil
 }
 

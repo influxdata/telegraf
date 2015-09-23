@@ -1,6 +1,7 @@
 ## v0.1.10 [unreleased]
 
 ### Release Notes
+- The -test flag will now only output 2 collections for plugins that need it
 
 ### Features
 - [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info
