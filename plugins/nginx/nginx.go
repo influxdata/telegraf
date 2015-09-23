@@ -141,15 +141,21 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 
 // Get tag(s) for the nginx plugin
 func getTags(addr *url.URL) map[string]string {
-	h := addr.Host
-	var htag string
-	if host, _, err := net.SplitHostPort(h); err == nil {
-		htag = host
-	} else {
-		htag = h
-	}
-	return map[string]string{"server": htag}
+        h := addr.Host
+        host, port, err := net.SplitHostPort(h)
+        if err != nil {
+            host = addr.Host
+            if addr.Scheme == "http" {
+                port = "80"
+            } else if addr.Scheme == "https" {
+                port = "443"
+            } else {
+                port = ""
+            }
+        }
+        return map[string]string{"server": host, "port": port}
 }
+
 
 func init() {
 	plugins.Add("nginx", func() plugins.Plugin {
