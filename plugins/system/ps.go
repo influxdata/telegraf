@@ -19,6 +19,7 @@ type DockerContainerStat struct {
 	Id      string
 	Name    string
 	Command string
+	Labels  map[string]string
 	CPU     *cpu.CPUTimesStat
 	Mem     *docker.CgroupMemStat
 }
@@ -118,7 +119,7 @@ func (s *systemPS) DockerStat() ([]*DockerContainerStat, error) {
 
 	opts := dc.ListContainersOptions{}
 
-	list, err := s.dockerClient.ListContainers(opts)
+	containers, err := s.dockerClient.ListContainers(opts)
 	if err != nil {
 		if _, ok := err.(*gonet.OpError); ok {
 			return nil, nil
@@ -129,23 +130,24 @@ func (s *systemPS) DockerStat() ([]*DockerContainerStat, error) {
 
 	var stats []*DockerContainerStat
 
-	for _, cont := range list {
-		ctu, err := docker.CgroupCPUDocker(cont.ID)
+	for _, container := range containers {
+		ctu, err := docker.CgroupCPUDocker(container.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		mem, err := docker.CgroupMemDocker(cont.ID)
+		mem, err := docker.CgroupMemDocker(container.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		name := strings.Join(cont.Names, " ")
+		name := strings.Join(container.Names, " ")
 
 		stats = append(stats, &DockerContainerStat{
-			Id:      cont.ID,
+			Id:      container.ID,
 			Name:    name,
-			Command: cont.Command,
+			Command: container.Command,
+			Labels:  container.Labels,
 			CPU:     ctu,
 			Mem:     mem,
 		})

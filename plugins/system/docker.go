@@ -30,6 +30,9 @@ func (s *DockerStats) Gather(acc plugins.Accumulator) error {
 			"name":    cont.Name,
 			"command": cont.Command,
 		}
+		for k, v := range cont.Labels {
+			tags[k] = v
+		}
 
 		cts := cont.CPU
 
