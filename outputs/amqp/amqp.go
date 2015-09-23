@@ -2,6 +2,7 @@ package amqp
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdb/influxdb/client"
 	"github.com/influxdb/telegraf/outputs"
@@ -72,6 +73,7 @@ func (q *AMQP) Write(bp client.BatchPoints) error {
 		return nil
 	}
 
+	var zero_time time.Time
 	for _, p := range bp.Points {
 		// Combine tags from Point and BatchPoints and grab the resulting
 		// line-protocol output string to write to AMQP
@@ -84,6 +86,13 @@ func (q *AMQP) Write(bp client.BatchPoints) error {
 					p.Tags = make(map[string]string, len(bp.Tags))
 				}
 				p.Tags[k] = v
+			}
+			if p.Time == zero_time {
+				if bp.Time == zero_time {
+					p.Time = time.Now()
+				} else {
+					p.Time = bp.Time
+				}
 			}
 			value = p.MarshalString()
 		}
