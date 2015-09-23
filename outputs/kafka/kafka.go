@@ -3,6 +3,7 @@ package kafka
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdb/influxdb/client"
@@ -56,6 +57,7 @@ func (k *Kafka) Write(bp client.BatchPoints) error {
 		return nil
 	}
 
+	var zero_time time.Time
 	for _, p := range bp.Points {
 		// Combine tags from Point and BatchPoints and grab the resulting
 		// line-protocol output string to write to Kafka
@@ -68,6 +70,13 @@ func (k *Kafka) Write(bp client.BatchPoints) error {
 					p.Tags = make(map[string]string, len(bp.Tags))
 				}
 				p.Tags[k] = v
+			}
+			if p.Time == zero_time {
+				if bp.Time == zero_time {
+					p.Time = time.Now()
+				} else {
+					p.Time = bp.Time
+				}
 			}
 			value = p.MarshalString()
 		}
