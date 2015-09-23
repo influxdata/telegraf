@@ -8,6 +8,7 @@
 - [#226](https://github.com/influxdb/telegraf/pull/226): Add timestamps to points in Kafka/AMQP outputs. Thanks @ekini
 - [#90](https://github.com/influxdb/telegraf/issues/90): Add Docker labels to tags in docker plugin
 - [#223](https://github.com/influxdb/telegraf/pull/223): Add port tag to nginx plugin. Thanks @neezgee!
+- [#227](https://github.com/influxdb/telegraf/pull/227): Add command intervals to exec plugin. Thanks @jpalay!
 
 ### Bugfixes
 
