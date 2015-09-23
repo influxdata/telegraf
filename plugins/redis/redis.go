@@ -18,12 +18,15 @@ type Redis struct {
 }
 
 var sampleConfig = `
-	# An array of URI to gather stats about. Specify an ip or hostname
-	# with optional port add password. ie redis://localhost, redis://10.10.3.33:18832,
-	# 10.0.0.1:10000, etc.
+	# specify servers via a url matching:
+	#  [protocol://][:password]@address[:port]
+	#  e.g.
+	#    tcp://localhost:6379
+	#    tcp://:password@192.168.99.100
 	#
 	# If no servers are specified, then localhost is used as the host.
-	servers = ["localhost"]
+	# If no port is specified, 6379 is used
+	servers = ["tcp://localhost:6379"]
 `
 
 func (r *Redis) SampleConfig() string {
@@ -142,11 +145,10 @@ func (r *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 	rdr := bufio.NewReader(c)
 
 	// Setup tags for all redis metrics
-	_, rPort, err := net.SplitHostPort(addr.Host)
-	if err != nil {
-		rPort = defaultPort
-	}
-	tags := map[string]string{"host": addr.String(), "port": rPort}
+	host, port := "unknown", "unknown"
+	// If there's an error, ignore and use 'unknown' tags
+	host, port, _ = net.SplitHostPort(addr.Host)
+	tags := map[string]string{"host": host, "port": port}
 
 	return gatherInfoOutput(rdr, acc, tags)
 }
