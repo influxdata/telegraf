@@ -63,7 +63,7 @@ func (c CommandRunner) Run(command *Command) ([]byte, error) {
 	cmd.Stdout = &out
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("exec: %s for command '%s'", err, command)
+		return nil, fmt.Errorf("exec: %s for command '%s'", err, command.command)
 	}
 
 	return out.Bytes(), nil
