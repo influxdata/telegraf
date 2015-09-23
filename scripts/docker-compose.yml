@@ -26,11 +26,6 @@ kafka:
         ADVERTISED_HOST:
         ADVERTISED_PORT: 9092
 
-opentsdb:
-    image: lancope/opentsdb
-    ports:
-        - "24242:4242"
-
 rabbitmq:
     image: rabbitmq:3-management
     hostname: docker_rabbit
