@@ -26,7 +26,6 @@ kafka:
         ADVERTISED_HOST:
         ADVERTISED_PORT: 9092
 
-
 opentsdb:
     image: lancope/opentsdb
     ports:
@@ -43,3 +42,8 @@ opentsdb:
     image: lancope/opentsdb
     ports:
         - "24242:4242"
+
+redis:
+    image: redis
+    ports:
+        - "6379:6379"

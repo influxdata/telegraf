@@ -71,7 +71,7 @@ func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
 			return p.Values["value"] == val
 		}
 	}
-
+	fmt.Printf("CheckValue failed, measurement %s, value %s", measurement, val)
 	return false
 }
 

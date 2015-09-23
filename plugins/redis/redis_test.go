@@ -3,7 +3,7 @@ package redis
 import (
 	"bufio"
 	"fmt"
-	"net"
+	"strings"
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
@@ -11,40 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRedisGeneratesMetrics(t *testing.T) {
+func TestRedisConnect(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	l, err := net.Listen("tcp", ":0")
-	require.NoError(t, err)
-
-	defer l.Close()
-
-	go func() {
-		c, err := l.Accept()
-		if err != nil {
-			return
-		}
-
-		buf := bufio.NewReader(c)
-
-		for {
-			line, err := buf.ReadString('\n')
-			if err != nil {
-				return
-			}
-
-			if line != "info\r\n" {
-				return
-			}
-
-			fmt.Fprintf(c, "$%d\n", len(testOutput))
-			c.Write([]byte(testOutput))
-		}
-	}()
-
-	addr := fmt.Sprintf("redis://%s", l.Addr().String())
+	addr := fmt.Sprintf(testutil.GetLocalHost() + ":6379")
 
 	r := &Redis{
 		Servers: []string{addr},
@@ -52,102 +24,16 @@ func TestRedisGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err := r.Gather(&acc)
 	require.NoError(t, err)
-
-	checkInt := []struct {
-		name  string
-		value uint64
-	}{
-		{"uptime", 238},
-		{"clients", 1},
-		{"used_memory", 1003936},
-		{"used_memory_rss", 811008},
-		{"used_memory_peak", 1003936},
-		{"used_memory_lua", 33792},
-		{"rdb_changes_since_last_save", 0},
-		{"total_connections_received", 2},
-		{"total_commands_processed", 1},
-		{"instantaneous_ops_per_sec", 0},
-		{"sync_full", 0},
-		{"sync_partial_ok", 0},
-		{"sync_partial_err", 0},
-		{"expired_keys", 0},
-		{"evicted_keys", 0},
-		{"keyspace_hits", 0},
-		{"keyspace_misses", 0},
-		{"pubsub_channels", 0},
-		{"pubsub_patterns", 0},
-		{"latest_fork_usec", 0},
-		{"connected_slaves", 0},
-		{"master_repl_offset", 0},
-		{"repl_backlog_active", 0},
-		{"repl_backlog_size", 1048576},
-		{"repl_backlog_histlen", 0},
-	}
-
-	for _, c := range checkInt {
-		assert.True(t, acc.CheckValue(c.name, c.value))
-	}
-
-	checkFloat := []struct {
-		name  string
-		value float64
-	}{
-		{"mem_fragmentation_ratio", 0.81},
-		{"used_cpu_sys", 0.14},
-		{"used_cpu_user", 0.05},
-		{"used_cpu_sys_children", 0.00},
-		{"used_cpu_user_children", 0.00},
-	}
-
-	for _, c := range checkFloat {
-		assert.True(t, acc.CheckValue(c.name, c.value))
-	}
 }
 
-func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	l, err := net.Listen("tcp", ":0")
-	require.NoError(t, err)
-
-	defer l.Close()
-
-	go func() {
-		c, err := l.Accept()
-		if err != nil {
-			return
-		}
-
-		buf := bufio.NewReader(c)
-
-		for {
-			line, err := buf.ReadString('\n')
-			if err != nil {
-				return
-			}
-
-			if line != "info\r\n" {
-				return
-			}
-
-			fmt.Fprintf(c, "$%d\n", len(testOutput))
-			c.Write([]byte(testOutput))
-		}
-	}()
-
-	addr := fmt.Sprintf("redis://%s", l.Addr().String())
-
-	r := &Redis{
-		Servers: []string{addr},
-	}
-
+func TestRedis_ParseMetrics(t *testing.T) {
 	var acc testutil.Accumulator
+	tags := map[string]string{"host": "redis.net"}
+	rdr := bufio.NewReader(strings.NewReader(testOutput))
 
-	err = r.Gather(&acc)
+	err := gatherInfoOutput(rdr, &acc, tags)
 	require.NoError(t, err)
 
 	checkInt := []struct {
@@ -179,6 +65,9 @@ func TestRedisCanPullStatsFromMultipleServers(t *testing.T) {
 		{"repl_backlog_active", 0},
 		{"repl_backlog_size", 1048576},
 		{"repl_backlog_histlen", 0},
+		{"keys", 2},
+		{"expires", 0},
+		{"avg_ttl", 0},
 	}
 
 	for _, c := range checkInt {
@@ -284,5 +173,7 @@ used_cpu_sys_children:0.00
 used_cpu_user_children:0.00
 
 # Keyspace
+db0:keys=2,expires=0,avg_ttl=0
 
+(error) ERR unknown command 'eof'
 `

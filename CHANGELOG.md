@@ -1,3 +1,12 @@
+## v0.1.10 [unreleased]
+
+### Release Notes
+
+### Features
+- [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info
+
+### Bugfixes
+
 ## v0.1.9 [2015-09-22]
 
 ### Release Notes
@@ -14,7 +23,9 @@ file with only the cpu plugin defined, and the influxdb output defined.
 - **Breaking Change**: The CPU collection plugin has been refactored to fix some
 bugs and outdated dependency issues. At the same time, I also decided to fix
 a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle.
-Also, all CPU time measurements now have it indicated in their name, so cpu_idle will become cpu_time_idle. Additionally, cpu_time measurements are going to be dropped in the default config.
+Also, all CPU time measurements now have it indicated in their name, so cpu_idle
+will become cpu_time_idle. Additionally, cpu_time measurements are going to be
+dropped in the default config.
 - **Breaking Change**: The memory plugin has been refactored and some measurements
 have been renamed for consistency. Some measurements have also been removed from being outputted. They are still being collected by gopsutil, and could easily be
 re-added in a "verbose" mode if there is demand for it.

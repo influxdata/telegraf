@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	// "strconv"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -137,86 +137,88 @@ func (r *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 		}
 	}
 
-	c.Write([]byte("info\r\n"))
-
+	c.Write([]byte("INFO\r\n"))
+	c.Write([]byte("EOF\r\n"))
 	rdr := bufio.NewReader(c)
+
+	// Setup tags for all redis metrics
+	_, rPort, err := net.SplitHostPort(addr.Host)
+	if err != nil {
+		rPort = defaultPort
+	}
+	tags := map[string]string{"host": addr.String(), "port": rPort}
+
+	return gatherInfoOutput(rdr, acc, tags)
+}
+
+// gatherInfoOutput gathers
+func gatherInfoOutput(
+	rdr *bufio.Reader,
+	acc plugins.Accumulator,
+	tags map[string]string,
+) error {
 	scanner := bufio.NewScanner(rdr)
 	for scanner.Scan() {
-		fmt.Println(scanner.Text())
+		line := scanner.Text()
+		if strings.Contains(line, "ERR") {
+			break
+		}
+
+		if len(line) == 0 || line[0] == '#' {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) < 2 {
+			continue
+		}
+
+		name := string(parts[0])
+		metric, ok := Tracking[name]
+		if !ok {
+			kline := strings.TrimSpace(string(parts[1]))
+			gatherKeyspaceLine(name, kline, acc, tags)
+			continue
+		}
+
+		val := strings.TrimSpace(parts[1])
+		ival, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			acc.Add(metric, ival, tags)
+			continue
+		}
+
+		fval, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			return err
+		}
+
+		acc.Add(metric, fval, tags)
 	}
-	if err := scanner.Err(); err != nil {
-		fmt.Println("reading standard input:", err)
-	}
-
-	// line, err := rdr.ReadString('\n')
-	// if err != nil {
-	// 	return err
-	// }
-
-	// if line[0] != '$' {
-	// 	return fmt.Errorf("bad line start: %s", ErrProtocolError)
-	// }
-
-	// line = strings.TrimSpace(line)
-
-	// szStr := line[0:]
-
-	// sz, err := strconv.Atoi(szStr)
-	// if err != nil {
-	// 	return fmt.Errorf("bad size string <<%s>>: %s", szStr, ErrProtocolError)
-	// }
-
-	// var read int
-
-	// for read < sz {
-	// 	line, err := rdr.ReadString('\n')
-	// 	fmt.Printf(line)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	read += len(line)
-	// 	if len(line) == 1 || line[0] == '#' {
-	// 		continue
-	// 	}
-
-	// 	_, rPort, err := net.SplitHostPort(addr.Host)
-	// 	if err != nil {
-	// 		rPort = defaultPort
-	// 	}
-	// 	tags := map[string]string{"host": addr.String(), "port": rPort}
-
-	// 	parts := strings.SplitN(line, ":", 2)
-	// 	if len(parts) < 2 {
-	// 		continue
-	// 	}
-	// 	name := string(parts[0])
-	// 	metric, ok := Tracking[name]
-	// 	if !ok {
-	// 		// See if this is the keyspace line
-	// 		if strings.Contains(string(parts[1]), "keys=") {
-	// 			tags["database"] = name
-	// 			acc.Add("foo", 999, tags)
-	// 		}
-	// 		continue
-	// 	}
-
-	// 	val := strings.TrimSpace(parts[1])
-	// 	ival, err := strconv.ParseUint(val, 10, 64)
-	// 	if err == nil {
-	// 		acc.Add(metric, ival, tags)
-	// 		continue
-	// 	}
-
-	// 	fval, err := strconv.ParseFloat(val, 64)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	acc.Add(metric, fval, tags)
-	// }
-
 	return nil
+}
+
+// Parse the special Keyspace line at end of redis stats
+// This is a special line that looks something like:
+//     db0:keys=2,expires=0,avg_ttl=0
+// And there is one for each db on the redis instance
+func gatherKeyspaceLine(
+	name string,
+	line string,
+	acc plugins.Accumulator,
+	tags map[string]string,
+) {
+	if strings.Contains(line, "keys=") {
+		tags["database"] = name
+		dbparts := strings.Split(line, ",")
+		for _, dbp := range dbparts {
+			kv := strings.Split(dbp, "=")
+			ival, err := strconv.ParseUint(kv[1], 10, 64)
+			if err == nil {
+				acc.Add(kv[0], ival, tags)
+			}
+		}
+	}
 }
 
 func init() {
