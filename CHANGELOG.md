@@ -7,6 +7,7 @@
 - [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info
 - [#226](https://github.com/influxdb/telegraf/pull/226): Add timestamps to points in Kafka/AMQP outputs. Thanks @ekini
 - [#90](https://github.com/influxdb/telegraf/issues/90): Add Docker labels to tags in docker plugin
+- [#223](https://github.com/influxdb/telegraf/pull/223): Add port tag to nginx plugin. Thanks @neezgee!
 
 ### Bugfixes
 

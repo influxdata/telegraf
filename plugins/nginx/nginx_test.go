@@ -70,8 +70,20 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	host, _, _ := net.SplitHostPort(addr.Host)
-	tags := map[string]string{"server": host}
+
+        host, port, err := net.SplitHostPort(addr.Host)
+        if err != nil {
+            host = addr.Host
+            if addr.Scheme == "http" {
+                port = "80"
+            } else if addr.Scheme == "https" {
+                port = "443"
+            } else {
+                port = ""
+            }
+        }
+
+	tags := map[string]string{"server": host, "port": port}
 
 	for _, m := range metrics {
 		assert.NoError(t, acc.ValidateTaggedValue(m.name, m.value, tags))
