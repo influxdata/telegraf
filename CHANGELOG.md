@@ -11,6 +11,7 @@
 - [#227](https://github.com/influxdb/telegraf/pull/227): Add command intervals to exec plugin. Thanks @jpalay!
 
 ### Bugfixes
+- [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
 
 ## v0.1.9 [2015-09-22]
 
