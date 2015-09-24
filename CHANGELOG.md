@@ -9,6 +9,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - HAProxy plugin tag has changed from `host` to `server`
 
 ### Features
+- [#357](https://github.com/influxdb/telegraf/pull/357): Libvirt plugin. Thanks @neckhair!
 - [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!
 - [#318](https://github.com/influxdb/telegraf/pull/318): Prometheus output. Thanks @oldmantaiter!
 - [#338](https://github.com/influxdb/telegraf/pull/338): Restart Telegraf on package upgrade. Thanks @linsomniac!

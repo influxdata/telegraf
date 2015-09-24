@@ -176,6 +176,7 @@ Telegraf currently has support for collecting metrics from:
 * jolokia (remote JMX with JSON over HTTP)
 * kafka_consumer
 * leofs
+* libvirt
 * lustre2
 * memcached
 * mongodb
