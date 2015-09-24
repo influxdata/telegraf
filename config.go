@@ -377,10 +377,17 @@ var header = `# Telegraf configuration
 [outputs]
 `
 
-var header2 = `
+var pluginHeader = `
 
 ###############################################################################
 #                                  PLUGINS                                    #
+###############################################################################
+`
+
+var servicePluginHeader = `
+
+###############################################################################
+#                              SERVICE PLUGINS                                #
 ###############################################################################
 `
 
@@ -388,7 +395,7 @@ var header2 = `
 func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 	fmt.Printf(header)
 
-	// Print Outputs
+	// Filter outputs
 	var onames []string
 	for oname := range outputs.Outputs {
 		if len(outputFilters) == 0 || sliceContains(oname, outputFilters) {
@@ -397,6 +404,7 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 	}
 	sort.Strings(onames)
 
+	// Print Outputs
 	for _, oname := range onames {
 		creator := outputs.Outputs[oname]
 		output := creator()
@@ -411,9 +419,7 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 		}
 	}
 
-	fmt.Printf(header2)
-
-	// Print Plugins
+	// Filter plugins
 	var pnames []string
 	for pname := range plugins.Plugins {
 		if len(pluginFilters) == 0 || sliceContains(pname, pluginFilters) {
@@ -422,18 +428,36 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 	}
 	sort.Strings(pnames)
 
+	// Print Plugins
+	fmt.Printf(pluginHeader)
+	servPlugins := make(map[string]plugins.ServicePlugin)
 	for _, pname := range pnames {
 		creator := plugins.Plugins[pname]
 		plugin := creator()
 
-		fmt.Printf("\n# %s\n[%s]", plugin.Description(), pname)
-
-		config := plugin.SampleConfig()
-		if config == "" {
-			fmt.Printf("\n	# no configuration\n")
-		} else {
-			fmt.Printf(config)
+		switch p := plugin.(type) {
+		case plugins.ServicePlugin:
+			servPlugins[pname] = p
+			continue
 		}
+
+		printConfig(pname, plugin)
+	}
+
+	// Print Service Plugins
+	fmt.Printf(servicePluginHeader)
+	for name, plugin := range servPlugins {
+		printConfig(name, plugin)
+	}
+}
+
+func printConfig(name string, plugin plugins.Plugin) {
+	fmt.Printf("\n# %s\n[%s]", plugin.Description(), name)
+	config := plugin.SampleConfig()
+	if config == "" {
+		fmt.Printf("\n	# no configuration\n")
+	} else {
+		fmt.Printf(config)
 	}
 }
 
@@ -449,9 +473,7 @@ func sliceContains(name string, list []string) bool {
 // PrintPluginConfig prints the config usage of a single plugin.
 func PrintPluginConfig(name string) error {
 	if creator, ok := plugins.Plugins[name]; ok {
-		plugin := creator()
-		fmt.Printf("# %s\n[%s]", plugin.Description(), name)
-		fmt.Printf(plugin.SampleConfig())
+		printConfig(name, creator())
 	} else {
 		return errors.New(fmt.Sprintf("Plugin %s not found", name))
 	}

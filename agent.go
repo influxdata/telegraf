@@ -361,6 +361,20 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 
 	for _, plugin := range a.plugins {
+
+		// Start service of any ServicePlugins
+		switch p := plugin.plugin.(type) {
+		case plugins.ServicePlugin:
+			if err := p.Start(); err != nil {
+				log.Printf("Service for plugin %s failed to start, exiting\n%s\n",
+					plugin.name, err.Error())
+				return err
+			}
+			defer p.Stop()
+		}
+
+		// Special handling for plugins that have their own collection interval
+		// configured. Default intervals are handled below with crankParallel
 		if plugin.config.Interval != 0 {
 			wg.Add(1)
 			go func(plugin *runningPlugin) {

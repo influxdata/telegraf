@@ -20,9 +20,33 @@ type Accumulator interface {
 }
 
 type Plugin interface {
+	// SampleConfig returns the default configuration of the Plugin
 	SampleConfig() string
+
+	// Description returns a one-sentence description on the Plugin
 	Description() string
+
+	// Gather takes in an accumulator and adds the metrics that the Plugin
+	// gathers. This is called every "interval"
 	Gather(Accumulator) error
+}
+
+type ServicePlugin interface {
+	// SampleConfig returns the default configuration of the Plugin
+	SampleConfig() string
+
+	// Description returns a one-sentence description on the Plugin
+	Description() string
+
+	// Gather takes in an accumulator and adds the metrics that the Plugin
+	// gathers. This is called every "interval"
+	Gather(Accumulator) error
+
+	// Start starts the ServicePlugin's service, whatever that may be
+	Start() error
+
+	// Stop stops the services and closes any necessary channels and connections
+	Stop()
 }
 
 type Creator func() Plugin

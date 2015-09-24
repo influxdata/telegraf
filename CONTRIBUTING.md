@@ -16,8 +16,6 @@ and submit new plugins.
 ### Plugin Guidelines
 
 * A plugin must conform to the `plugins.Plugin` interface.
-* Telegraf promises to run each plugin's Gather function serially. This means
-developers don't have to worry about thread safety within these functions.
 * Each generated metric automatically has the name of the plugin that generated
 it prepended. This is to keep plugins honest.
 * Plugins should call `plugins.Add` in their `init` function to register themselves.
