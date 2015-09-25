@@ -20,17 +20,18 @@ type Kafka struct {
 }
 
 var sampleConfig = `
-# topic to consume
-topic = "topic_with_metrics"
+	# topic to consume
+	topic = "topic_with_metrics"
 
-# the name of the consumer group
-consumerGroupName = "telegraf_metrics_consumers"
+	# the name of the consumer group
+	consumerGroupName = "telegraf_metrics_consumers"
 
-# an array of Zookeeper connection strings
-zookeeperPeers = ["localhost:2181"]
+	# an array of Zookeeper connection strings
+	zookeeperPeers = ["localhost:2181"]
 
-# Batch size of points sent to InfluxDB
-batchSize = 1000`
+	# Batch size of points sent to InfluxDB
+	batchSize = 1000
+`
 
 func (k *Kafka) SampleConfig() string {
 	return sampleConfig
@@ -92,7 +93,7 @@ func emitMetrics(k *Kafka, acc plugins.Accumulator, metricConsumer <-chan []byte
 			}
 
 			for _, point := range points {
-				acc.AddValuesWithTime(point.Name(), point.Fields(), point.Tags(), point.Time())
+				acc.AddFieldsWithTime(point.Name(), point.Fields(), point.Tags(), point.Time())
 			}
 		case <-timeout:
 			return nil

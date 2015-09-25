@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/influxdb/telegraf/plugins"
-	common "github.com/influxdb/telegraf/plugins/system/ps/common"
+	common "github.com/shirou/gopsutil/common"
 )
 
 // Lustre proc files can change between versions, so we want to future-proof
@@ -25,11 +25,12 @@ type Lustre2 struct {
 }
 
 var sampleConfig = `
-# An array of /proc globs to search for Lustre stats
-# If not specified, the default will work on Lustre 2.5.x
-#
-# ost_procfiles = ["/proc/fs/lustre/obdfilter/*/stats", "/proc/fs/lustre/osd-ldiskfs/*/stats"]
-# mds_procfiles = ["/proc/fs/lustre/mdt/*/md_stats"]`
+	# An array of /proc globs to search for Lustre stats
+	# If not specified, the default will work on Lustre 2.5.x
+	#
+	# ost_procfiles = ["/proc/fs/lustre/obdfilter/*/stats", "/proc/fs/lustre/osd-ldiskfs/*/stats"]
+	# mds_procfiles = ["/proc/fs/lustre/mdt/*/md_stats"]
+`
 
 /* The wanted fields would be a []string if not for the
 lines that start with read_bytes/write_bytes and contain

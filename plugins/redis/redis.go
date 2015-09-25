@@ -15,18 +15,19 @@ import (
 
 type Redis struct {
 	Servers []string
-
-	c   net.Conn
-	buf []byte
 }
 
 var sampleConfig = `
-# An array of URI to gather stats about. Specify an ip or hostname
-# with optional port add password. ie redis://localhost, redis://10.10.3.33:18832,
-# 10.0.0.1:10000, etc.
-#
-# If no servers are specified, then localhost is used as the host.
-servers = ["localhost"]`
+	# specify servers via a url matching:
+	#  [protocol://][:password]@address[:port]
+	#  e.g.
+	#    tcp://localhost:6379
+	#    tcp://:password@192.168.99.100
+	#
+	# If no servers are specified, then localhost is used as the host.
+	# If no port is specified, 6379 is used
+	servers = ["tcp://localhost:6379"]
+`
 
 func (r *Redis) SampleConfig() string {
 	return sampleConfig
@@ -73,12 +74,12 @@ var ErrProtocolError = errors.New("redis protocol error")
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *Redis) Gather(acc plugins.Accumulator) error {
-	if len(g.Servers) == 0 {
+func (r *Redis) Gather(acc plugins.Accumulator) error {
+	if len(r.Servers) == 0 {
 		url := &url.URL{
 			Host: ":6379",
 		}
-		g.gatherServer(url, acc)
+		r.gatherServer(url, acc)
 		return nil
 	}
 
@@ -86,7 +87,7 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 
 	var outerr error
 
-	for _, serv := range g.Servers {
+	for _, serv := range r.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
 			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
@@ -99,7 +100,7 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherServer(u, acc)
+			outerr = r.gatherServer(u, acc)
 		}(serv)
 	}
 
@@ -110,92 +111,79 @@ func (g *Redis) Gather(acc plugins.Accumulator) error {
 
 const defaultPort = "6379"
 
-func (g *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
-	if g.c == nil {
+func (r *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
+	_, _, err := net.SplitHostPort(addr.Host)
+	if err != nil {
+		addr.Host = addr.Host + ":" + defaultPort
+	}
 
-		_, _, err := net.SplitHostPort(addr.Host)
-		if err != nil {
-			addr.Host = addr.Host + ":" + defaultPort
-		}
+	c, err := net.Dial("tcp", addr.Host)
+	if err != nil {
+		return fmt.Errorf("Unable to connect to redis server '%s': %s", addr.Host, err)
+	}
+	defer c.Close()
 
-		c, err := net.Dial("tcp", addr.Host)
-		if err != nil {
-			return fmt.Errorf("Unable to connect to redis server '%s': %s", addr.Host, err)
-		}
+	if addr.User != nil {
+		pwd, set := addr.User.Password()
+		if set && pwd != "" {
+			c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
 
-		if addr.User != nil {
-			pwd, set := addr.User.Password()
-			if set && pwd != "" {
-				c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
+			rdr := bufio.NewReader(c)
 
-				r := bufio.NewReader(c)
-
-				line, err := r.ReadString('\n')
-				if err != nil {
-					return err
-				}
-				if line[0] != '+' {
-					return fmt.Errorf("%s", strings.TrimSpace(line)[1:])
-				}
+			line, err := rdr.ReadString('\n')
+			if err != nil {
+				return err
+			}
+			if line[0] != '+' {
+				return fmt.Errorf("%s", strings.TrimSpace(line)[1:])
 			}
 		}
-
-		g.c = c
 	}
 
-	g.c.Write([]byte("info\r\n"))
+	c.Write([]byte("INFO\r\n"))
+	c.Write([]byte("EOF\r\n"))
+	rdr := bufio.NewReader(c)
 
-	r := bufio.NewReader(g.c)
+	// Setup tags for all redis metrics
+	host, port := "unknown", "unknown"
+	// If there's an error, ignore and use 'unknown' tags
+	host, port, _ = net.SplitHostPort(addr.Host)
+	tags := map[string]string{"host": host, "port": port}
 
-	line, err := r.ReadString('\n')
-	if err != nil {
-		return err
-	}
+	return gatherInfoOutput(rdr, acc, tags)
+}
 
-	if line[0] != '$' {
-		return fmt.Errorf("bad line start: %s", ErrProtocolError)
-	}
-
-	line = strings.TrimSpace(line)
-
-	szStr := line[1:]
-
-	sz, err := strconv.Atoi(szStr)
-	if err != nil {
-		return fmt.Errorf("bad size string <<%s>>: %s", szStr, ErrProtocolError)
-	}
-
-	var read int
-
-	for read < sz {
-		line, err := r.ReadString('\n')
-		if err != nil {
-			return err
+// gatherInfoOutput gathers
+func gatherInfoOutput(
+	rdr *bufio.Reader,
+	acc plugins.Accumulator,
+	tags map[string]string,
+) error {
+	scanner := bufio.NewScanner(rdr)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "ERR") {
+			break
 		}
 
-		read += len(line)
-
-		if len(line) == 1 || line[0] == '#' {
+		if len(line) == 0 || line[0] == '#' {
 			continue
 		}
 
 		parts := strings.SplitN(line, ":", 2)
-
-		name := string(parts[0])
-
-		metric, ok := Tracking[name]
-		if !ok {
+		if len(parts) < 2 {
 			continue
 		}
 
-		_, rPort, err := net.SplitHostPort(addr.Host)
-		if err != nil {
-			rPort = defaultPort
+		name := string(parts[0])
+		metric, ok := Tracking[name]
+		if !ok {
+			kline := strings.TrimSpace(string(parts[1]))
+			gatherKeyspaceLine(name, kline, acc, tags)
+			continue
 		}
-		tags := map[string]string{"host": addr.String(), "port": rPort}
 
 		val := strings.TrimSpace(parts[1])
-
 		ival, err := strconv.ParseUint(val, 10, 64)
 		if err == nil {
 			acc.Add(metric, ival, tags)
@@ -209,8 +197,30 @@ func (g *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 
 		acc.Add(metric, fval, tags)
 	}
-
 	return nil
+}
+
+// Parse the special Keyspace line at end of redis stats
+// This is a special line that looks something like:
+//     db0:keys=2,expires=0,avg_ttl=0
+// And there is one for each db on the redis instance
+func gatherKeyspaceLine(
+	name string,
+	line string,
+	acc plugins.Accumulator,
+	tags map[string]string,
+) {
+	if strings.Contains(line, "keys=") {
+		tags["database"] = name
+		dbparts := strings.Split(line, ",")
+		for _, dbp := range dbparts {
+			kv := strings.Split(dbp, "=")
+			ival, err := strconv.ParseUint(kv[1], 10, 64)
+			if err == nil {
+				acc.Add(kv[0], ival, tags)
+			}
+		}
+	}
 }
 
 func init() {

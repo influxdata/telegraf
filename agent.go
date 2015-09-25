@@ -1,11 +1,11 @@
 package telegraf
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,7 +30,14 @@ type Agent struct {
 	// Interval at which to gather information
 	Interval Duration
 
-	// Run in debug mode?
+	// Option for outputting data in UTC
+	UTC bool `toml:"utc"`
+
+	// Precision to write data at
+	// Valid values for Precision are n, u, ms, s, m, and h
+	Precision string
+
+	// Option for running in debug mode
 	Debug    bool
 	Hostname string
 
@@ -42,8 +49,14 @@ type Agent struct {
 
 // NewAgent returns an Agent struct based off the given Config
 func NewAgent(config *Config) (*Agent, error) {
-	agent := &Agent{Config: config, Interval: Duration{10 * time.Second}}
+	agent := &Agent{
+		Config:    config,
+		Interval:  Duration{10 * time.Second},
+		UTC:       true,
+		Precision: "s",
+	}
 
+	// Apply the toml table to the agent config, overriding defaults
 	err := config.ApplyAgent(agent)
 	if err != nil {
 		return nil, err
@@ -70,9 +83,20 @@ func NewAgent(config *Config) (*Agent, error) {
 // Connect connects to all configured outputs
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
+		if a.Debug {
+			log.Printf("Attempting connection to output: %s\n", o.name)
+		}
 		err := o.output.Connect()
 		if err != nil {
-			return err
+			log.Printf("Failed to connect to output %s, retrying in 15s\n", o.name)
+			time.Sleep(15 * time.Second)
+			err = o.output.Connect()
+			if err != nil {
+				return err
+			}
+		}
+		if a.Debug {
+			log.Printf("Successfully connected to output: %s\n", o.name)
 		}
 	}
 	return nil
@@ -88,7 +112,7 @@ func (a *Agent) Close() error {
 }
 
 // LoadOutputs loads the agent's outputs
-func (a *Agent) LoadOutputs() ([]string, error) {
+func (a *Agent) LoadOutputs(filters []string) ([]string, error) {
 	var names []string
 
 	for _, name := range a.Config.OutputsDeclared() {
@@ -97,15 +121,20 @@ func (a *Agent) LoadOutputs() ([]string, error) {
 			return nil, fmt.Errorf("Undefined but requested output: %s", name)
 		}
 
-		output := creator()
+		if sliceContains(name, filters) || len(filters) == 0 {
+			if a.Debug {
+				log.Println("Output Enabled: ", name)
+			}
+			output := creator()
 
-		err := a.Config.ApplyOutput(name, output)
-		if err != nil {
-			return nil, err
+			err := a.Config.ApplyOutput(name, output)
+			if err != nil {
+				return nil, err
+			}
+
+			a.outputs = append(a.outputs, &runningOutput{name, output})
+			names = append(names, name)
 		}
-
-		a.outputs = append(a.outputs, &runningOutput{name, output})
-		names = append(names, name)
 	}
 
 	sort.Strings(names)
@@ -114,14 +143,8 @@ func (a *Agent) LoadOutputs() ([]string, error) {
 }
 
 // LoadPlugins loads the agent's plugins
-func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
+func (a *Agent) LoadPlugins(filters []string) ([]string, error) {
 	var names []string
-	var filters []string
-
-	pluginsFilter = strings.TrimSpace(pluginsFilter)
-	if pluginsFilter != "" {
-		filters = strings.Split(":"+pluginsFilter+":", ":")
-	}
 
 	for _, name := range a.Config.PluginsDeclared() {
 		creator, ok := plugins.Plugins[name]
@@ -129,22 +152,9 @@ func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
 			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
 		}
 
-		isPluginEnabled := false
-		if len(filters) > 0 {
-			for _, runeValue := range filters {
-				if runeValue != "" && strings.ToLower(runeValue) == strings.ToLower(name) {
-					fmt.Printf("plugin [%s] is enabled (filter options)\n", name)
-					isPluginEnabled = true
-					break
-				}
-			}
-		} else {
-			// if no filter, we ALWAYS accept the plugin
-			isPluginEnabled = true
-		}
-
-		if isPluginEnabled {
+		if sliceContains(name, filters) || len(filters) == 0 {
 			plugin := creator()
+
 			config, err := a.Config.ApplyPlugin(name, plugin)
 			if err != nil {
 				return nil, err
@@ -160,6 +170,8 @@ func (a *Agent) LoadPlugins(pluginsFilter string) ([]string, error) {
 	return names, nil
 }
 
+// crankParallel runs the plugins that are using the same reporting interval
+// as the telegraf agent.
 func (a *Agent) crankParallel() error {
 	points := make(chan *BatchPoints, len(a.plugins))
 
@@ -174,14 +186,17 @@ func (a *Agent) crankParallel() error {
 		go func(plugin *runningPlugin) {
 			defer wg.Done()
 
-			var acc BatchPoints
-			acc.Debug = a.Debug
-			acc.Prefix = plugin.name + "_"
-			acc.Config = plugin.config
+			var bp BatchPoints
+			bp.Debug = a.Debug
+			bp.Prefix = plugin.name + "_"
+			bp.Config = plugin.config
+			bp.Precision = a.Precision
 
-			plugin.plugin.Gather(&acc)
+			if err := plugin.plugin.Gather(&bp); err != nil {
+				log.Printf("Error in plugin [%s]: %s", plugin.name, err)
+			}
 
-			points <- &acc
+			points <- &bp
 		}(plugin)
 	}
 
@@ -191,7 +206,11 @@ func (a *Agent) crankParallel() error {
 
 	var bp BatchPoints
 	bp.Time = time.Now()
+	if a.UTC {
+		bp.Time = bp.Time.UTC()
+	}
 	bp.Tags = a.Config.Tags
+	bp.Precision = a.Precision
 
 	for sub := range points {
 		bp.Points = append(bp.Points, sub.Points...)
@@ -200,10 +219,12 @@ func (a *Agent) crankParallel() error {
 	return a.flush(&bp)
 }
 
+// crank is mostly for test purposes.
 func (a *Agent) crank() error {
 	var bp BatchPoints
 
 	bp.Debug = a.Debug
+	bp.Precision = a.Precision
 
 	for _, plugin := range a.plugins {
 		bp.Prefix = plugin.name + "_"
@@ -214,33 +235,47 @@ func (a *Agent) crank() error {
 		}
 	}
 
-	bp.Time = time.Now()
 	bp.Tags = a.Config.Tags
+	bp.Time = time.Now()
+	if a.UTC {
+		bp.Time = bp.Time.UTC()
+	}
 
 	return a.flush(&bp)
 }
 
+// crankSeparate runs the plugins that have been configured with their own
+// reporting interval.
 func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) error {
 	ticker := time.NewTicker(plugin.config.Interval)
 
 	for {
 		var bp BatchPoints
+		var outerr error
 
 		bp.Debug = a.Debug
 
 		bp.Prefix = plugin.name + "_"
 		bp.Config = plugin.config
-		err := plugin.plugin.Gather(&bp)
-		if err != nil {
-			return err
+		bp.Precision = a.Precision
+
+		if err := plugin.plugin.Gather(&bp); err != nil {
+			log.Printf("Error in plugin [%s]: %s", plugin.name, err)
+			outerr = errors.New("Error encountered processing plugins & outputs")
 		}
 
 		bp.Tags = a.Config.Tags
 		bp.Time = time.Now()
+		if a.UTC {
+			bp.Time = bp.Time.UTC()
+		}
 
-		err = a.flush(&bp)
-		if err != nil {
-			return err
+		if err := a.flush(&bp); err != nil {
+			outerr = errors.New("Error encountered processing plugins & outputs")
+		}
+
+		if outerr != nil {
+			return outerr
 		}
 
 		select {
@@ -255,48 +290,21 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 func (a *Agent) flush(bp *BatchPoints) error {
 	var wg sync.WaitGroup
 	var outerr error
+
 	for _, o := range a.outputs {
 		wg.Add(1)
 		go func(ro *runningOutput) {
 			defer wg.Done()
-			outerr = ro.output.Write(bp.BatchPoints)
+			// Log all output errors:
+			if err := ro.output.Write(bp.BatchPoints); err != nil {
+				log.Printf("Error in output [%s]: %s", ro.name, err)
+				outerr = errors.New("Error encountered flushing outputs")
+			}
 		}(o)
 	}
 
 	wg.Wait()
-
 	return outerr
-}
-
-// TestAllPlugins verifies that we can 'Gather' from all plugins with the
-// default configuration
-func (a *Agent) TestAllPlugins() error {
-	var names []string
-
-	for name := range plugins.Plugins {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	var acc BatchPoints
-	acc.Debug = true
-
-	fmt.Printf("* Testing all plugins with default configuration\n")
-
-	for _, name := range names {
-		plugin := plugins.Plugins[name]()
-
-		fmt.Printf("* Plugin: %s\n", name)
-
-		acc.Prefix = name + "_"
-		err := plugin.Gather(&acc)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // Test verifies that we can 'Gather' from all plugins with their configured
@@ -310,17 +318,27 @@ func (a *Agent) Test() error {
 		acc.Prefix = plugin.name + "_"
 		acc.Config = plugin.config
 
-		fmt.Printf("* Plugin: %s\n", plugin.name)
+		fmt.Printf("* Plugin: %s, Collection 1\n", plugin.name)
 		if plugin.config.Interval != 0 {
 			fmt.Printf("* Internal: %s\n", plugin.config.Interval)
 		}
 
-		err := plugin.plugin.Gather(&acc)
-		if err != nil {
+		if err := plugin.plugin.Gather(&acc); err != nil {
 			return err
 		}
-	}
 
+		// Special instructions for some plugins. cpu, for example, needs to be
+		// run twice in order to return cpu usage percentages.
+		switch plugin.name {
+		case "cpu":
+			time.Sleep(500 * time.Millisecond)
+			fmt.Printf("* Plugin: %s, Collection 2\n", plugin.name)
+			if err := plugin.plugin.Gather(&acc); err != nil {
+				return err
+			}
+		}
+
+	}
 	return nil
 }
 
@@ -333,7 +351,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			wg.Add(1)
 			go func(plugin *runningPlugin) {
 				defer wg.Done()
-				a.crankSeparate(shutdown, plugin)
+				if err := a.crankSeparate(shutdown, plugin); err != nil {
+					log.Printf(err.Error())
+				}
 			}(plugin)
 		}
 	}
@@ -343,9 +363,8 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	ticker := time.NewTicker(a.Interval.Duration)
 
 	for {
-		err := a.crankParallel()
-		if err != nil {
-			log.Printf("Error in plugins: %s", err)
+		if err := a.crankParallel(); err != nil {
+			log.Printf(err.Error())
 		}
 
 		select {

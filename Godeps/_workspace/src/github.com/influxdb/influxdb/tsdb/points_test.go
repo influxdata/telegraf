@@ -632,6 +632,18 @@ func TestParsePointUnescape(t *testing.T) {
 			},
 			time.Unix(0, 0)))
 
+	// measurement, tag and tag value with equals
+	test(t, `cpu=load,equals\=foo=tag\=value value=1i`,
+		tsdb.NewPoint(
+			"cpu=load", // Not escaped
+			tsdb.Tags{
+				"equals=foo": "tag=value", // Tag and value unescaped
+			},
+			tsdb.Fields{
+				"value": 1,
+			},
+			time.Unix(0, 0)))
+
 }
 
 func TestParsePointWithTags(t *testing.T) {
@@ -740,7 +752,37 @@ func TestParsePointWithStringWithCommas(t *testing.T) {
 			},
 			time.Unix(1, 0)),
 	)
+}
 
+func TestParsePointQuotedMeasurement(t *testing.T) {
+	// non-escaped comma
+	test(t, `"cpu",host=serverA,region=us-east value=1.0 1000000000`,
+		tsdb.NewPoint(
+			`"cpu"`,
+			tsdb.Tags{
+				"host":   "serverA",
+				"region": "us-east",
+			},
+			tsdb.Fields{
+				"value": 1.0,
+			},
+			time.Unix(1, 0)),
+	)
+}
+
+func TestParsePointQuotedTags(t *testing.T) {
+	test(t, `cpu,"host"="serverA",region=us-east value=1.0 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{
+				`"host"`: `"serverA"`,
+				"region": "us-east",
+			},
+			tsdb.Fields{
+				"value": 1.0,
+			},
+			time.Unix(1, 0)),
+	)
 }
 
 func TestParsePointEscapedStringsAndCommas(t *testing.T) {
@@ -771,7 +813,6 @@ func TestParsePointEscapedStringsAndCommas(t *testing.T) {
 			},
 			time.Unix(1, 0)),
 	)
-
 }
 
 func TestParsePointWithStringWithEquals(t *testing.T) {
@@ -785,6 +826,48 @@ func TestParsePointWithStringWithEquals(t *testing.T) {
 			tsdb.Fields{
 				"value": 1.0,
 				"str":   "foo=bar", // spaces in string value
+			},
+			time.Unix(1, 0)),
+	)
+}
+
+func TestParsePointWithStringWithBackslash(t *testing.T) {
+	test(t, `cpu value="test\\\"" 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": `test\"`,
+			},
+			time.Unix(1, 0)),
+	)
+
+	test(t, `cpu value="test\\" 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": `test\`,
+			},
+			time.Unix(1, 0)),
+	)
+
+	test(t, `cpu value="test\\\"" 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": `test\"`,
+			},
+			time.Unix(1, 0)),
+	)
+
+	test(t, `cpu value="test\"" 1000000000`,
+		tsdb.NewPoint(
+			"cpu",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": `test"`,
 			},
 			time.Unix(1, 0)),
 	)
@@ -908,6 +991,17 @@ func TestNewPointNaN(t *testing.T) {
 			},
 			time.Unix(1, 0)),
 	)
+
+	test(t, `nan value=NaN`,
+		tsdb.NewPoint(
+			"nan",
+			tsdb.Tags{},
+			tsdb.Fields{
+				"value": math.NaN(),
+			},
+			time.Unix(0, 0)),
+	)
+
 }
 
 func TestNewPointLargeNumberOfTags(t *testing.T) {
@@ -1193,7 +1287,7 @@ func TestNewPointEscaped(t *testing.T) {
 
 	// equals
 	pt = tsdb.NewPoint("cpu=main", tsdb.Tags{"tag=bar": "value=foo"}, tsdb.Fields{"name=bar": 1.0}, time.Unix(0, 0))
-	if exp := `cpu\=main,tag\=bar=value\=foo name\=bar=1.0 0`; pt.String() != exp {
+	if exp := `cpu=main,tag\=bar=value\=foo name\=bar=1.0 0`; pt.String() != exp {
 		t.Errorf("NewPoint().String() mismatch.\ngot %v\nexp %v", pt.String(), exp)
 	}
 }
@@ -1215,4 +1309,23 @@ func TestNewPointUnhandledType(t *testing.T) {
 	if exp := "1970-01-01 00:00:00 +0000 UTC"; pt.Fields()["value"] != exp {
 		t.Errorf("NewPoint().String() mismatch.\ngot %v\nexp %v", pt.String(), exp)
 	}
+}
+
+func TestMakeKeyEscaped(t *testing.T) {
+	if exp, got := `cpu\ load`, tsdb.MakeKey([]byte(`cpu\ load`), tsdb.Tags{}); string(got) != exp {
+		t.Errorf("MakeKey() mismatch.\ngot %v\nexp %v", got, exp)
+	}
+
+	if exp, got := `cpu\ load`, tsdb.MakeKey([]byte(`cpu load`), tsdb.Tags{}); string(got) != exp {
+		t.Errorf("MakeKey() mismatch.\ngot %v\nexp %v", got, exp)
+	}
+
+	if exp, got := `cpu\,load`, tsdb.MakeKey([]byte(`cpu\,load`), tsdb.Tags{}); string(got) != exp {
+		t.Errorf("MakeKey() mismatch.\ngot %v\nexp %v", got, exp)
+	}
+
+	if exp, got := `cpu\,load`, tsdb.MakeKey([]byte(`cpu,load`), tsdb.Tags{}); string(got) != exp {
+		t.Errorf("MakeKey() mismatch.\ngot %v\nexp %v", got, exp)
+	}
+
 }

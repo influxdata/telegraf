@@ -1,9 +1,97 @@
-## v0.1.7 [unreleased]
+## v0.1.10 [unreleased]
+
+### Release Notes
+- The -test flag will now only output 2 collections for plugins that need it
 
 ### Features
+- [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info
+- [#226](https://github.com/influxdb/telegraf/pull/226): Add timestamps to points in Kafka/AMQP outputs. Thanks @ekini
+- [#90](https://github.com/influxdb/telegraf/issues/90): Add Docker labels to tags in docker plugin
+- [#223](https://github.com/influxdb/telegraf/pull/223): Add port tag to nginx plugin. Thanks @neezgee!
+- [#227](https://github.com/influxdb/telegraf/pull/227): Add command intervals to exec plugin. Thanks @jpalay!
 
-### Bigfixes
+### Bugfixes
+- [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
+
+## v0.1.9 [2015-09-22]
+
+### Release Notes
+- InfluxDB output config change: `url` is now `urls`, and is a list. Config files
+will still be backwards compatible if only `url` is specified.
+- The -test flag will now output two metric collections
+- Support for filtering telegraf outputs on the CLI -- Telegraf will now
+allow filtering of output sinks on the command-line using the `-outputfilter`
+flag, much like how the `-filter` flag works for plugins.
+- Support for filtering on config-file creation -- Telegraf now supports
+filtering to -sample-config command. You can now run
+`telegraf -sample-config -filter cpu -outputfilter influxdb` to get a config
+file with only the cpu plugin defined, and the influxdb output defined.
+- **Breaking Change**: The CPU collection plugin has been refactored to fix some
+bugs and outdated dependency issues. At the same time, I also decided to fix
+a naming consistency issue, so cpu_percentageIdle will become cpu_usage_idle.
+Also, all CPU time measurements now have it indicated in their name, so cpu_idle
+will become cpu_time_idle. Additionally, cpu_time measurements are going to be
+dropped in the default config.
+- **Breaking Change**: The memory plugin has been refactored and some measurements
+have been renamed for consistency. Some measurements have also been removed from being outputted. They are still being collected by gopsutil, and could easily be
+re-added in a "verbose" mode if there is demand for it.
+
+### Features
+- [#143](https://github.com/influxdb/telegraf/issues/143): InfluxDB clustering support
+- [#181](https://github.com/influxdb/telegraf/issues/181): Makefile GOBIN support. Thanks @Vye!
+- [#203](https://github.com/influxdb/telegraf/pull/200): AMQP output. Thanks @ekini!
+- [#182](https://github.com/influxdb/telegraf/pull/182): OpenTSDB output. Thanks @rplessl!
+- [#187](https://github.com/influxdb/telegraf/pull/187): Retry output sink connections on startup.
+- [#220](https://github.com/influxdb/telegraf/pull/220): Add port tag to apache plugin. Thanks @neezgee!
+- [#217](https://github.com/influxdb/telegraf/pull/217): Add filtering for output sinks
+and filtering when specifying a config file.
+
+### Bugfixes
+- [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
+- [#175](https://github.com/influxdb/telegraf/issues/175): Set write precision before gathering metrics
+- [#178](https://github.com/influxdb/telegraf/issues/178): redis plugin, multiple server thread hang bug
+- Fix net plugin on darwin
+- [#84](https://github.com/influxdb/telegraf/issues/84): Fix docker plugin on CentOS. Thanks @neezgee!
+- [#189](https://github.com/influxdb/telegraf/pull/189): Fix mem_used_perc. Thanks @mced!
+- [#192](https://github.com/influxdb/telegraf/issues/192): Increase compatibility of postgresql plugin. Now supports versions 8.1+
+- [#203](https://github.com/influxdb/telegraf/issues/203): EL5 rpm support. Thanks @ekini!
+- [#206](https://github.com/influxdb/telegraf/issues/206): CPU steal/guest values wrong on linux.
+- [#212](https://github.com/influxdb/telegraf/issues/212): Add hashbang to postinstall script. Thanks @ekini!
+- [#212](https://github.com/influxdb/telegraf/issues/212): Fix makefile warning. Thanks @ekini!
+
+## v0.1.8 [2015-09-04]
+
+### Release Notes
+- Telegraf will now write data in UTC at second precision by default
+- Now using Go 1.5 to build telegraf
+
+### Features
+- [#150](https://github.com/influxdb/telegraf/pull/150): Add Host Uptime metric to system plugin
+- [#158](https://github.com/influxdb/telegraf/pull/158): Apache Plugin. Thanks @KPACHbIuLLIAnO4
+- [#159](https://github.com/influxdb/telegraf/pull/159): Use second precision for InfluxDB writes
+- [#165](https://github.com/influxdb/telegraf/pull/165): Add additional metrics to mysql plugin. Thanks @nickscript0
+- [#162](https://github.com/influxdb/telegraf/pull/162): Write UTC by default, provide option
+- [#166](https://github.com/influxdb/telegraf/pull/166): Upload binaries to S3
+- [#169](https://github.com/influxdb/telegraf/pull/169): Ping plugin
+
+### Bugfixes
+
+## v0.1.7 [2015-08-28]
+
+### Features
+- [#38](https://github.com/influxdb/telegraf/pull/38): Kafka output producer.
+- [#133](https://github.com/influxdb/telegraf/pull/133): Add plugin.Gather error logging. Thanks @nickscript0!
+- [#136](https://github.com/influxdb/telegraf/issues/136): Add a -usage flag for printing usage of a single plugin.
+- [#137](https://github.com/influxdb/telegraf/issues/137): Memcached: fix when a value contains a space
+- [#138](https://github.com/influxdb/telegraf/issues/138): MySQL server address tag.
+- [#142](https://github.com/influxdb/telegraf/pull/142): Add Description and SampleConfig funcs to output interface
+- Indent the toml config file for readability
+
+### Bugfixes
+- [#128](https://github.com/influxdb/telegraf/issues/128): system_load measurement missing.
 - [#129](https://github.com/influxdb/telegraf/issues/129): Latest pkg url fix.
+- [#131](https://github.com/influxdb/telegraf/issues/131): Fix memory reporting on linux & darwin. Thanks @subhachandrachandra!
+- [#140](https://github.com/influxdb/telegraf/issues/140): Memory plugin prec->perc typo fix. Thanks @brunoqc!
 
 ## v0.1.6 [2015-08-20]
 

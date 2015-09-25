@@ -5,13 +5,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
-	"github.com/influxdb/telegraf/plugins/system/ps/disk"
-	"github.com/influxdb/telegraf/plugins/system/ps/docker"
-	"github.com/influxdb/telegraf/plugins/system/ps/load"
-	"github.com/influxdb/telegraf/plugins/system/ps/mem"
-	"github.com/influxdb/telegraf/plugins/system/ps/net"
 	"github.com/influxdb/telegraf/testutil"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,14 +21,6 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	lv := &load.LoadAvgStat{
-		Load1:  0.3,
-		Load5:  1.5,
-		Load15: 0.8,
-	}
-
-	mps.On("LoadAvg").Return(lv, nil)
-
 	cts := cpu.CPUTimesStat{
 		CPU:       "cpu0",
 		User:      3.1,
@@ -40,10 +30,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 		Iowait:    0.2,
 		Irq:       0.1,
 		Softirq:   0.11,
-		Steal:     0.0001,
+		Steal:     0.0511,
 		Guest:     8.1,
 		GuestNice: 0.324,
-		Stolen:    0.051,
 	}
 
 	cts2 := cpu.CPUTimesStat{
@@ -55,10 +44,9 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 		Iowait:    0.7,      // increased by 0.5
 		Irq:       1.2,      // increased by 1.1
 		Softirq:   0.31,     // increased by 0.2
-		Steal:     0.0002,   // increased by 0.0001
+		Steal:     0.2812,   // increased by 0.0001
 		Guest:     12.9,     // increased by 4.8
 		GuestNice: 2.524,    // increased by 2.2
-		Stolen:    0.281,    // increased by 0.23
 	}
 
 	mps.On("CPUTimes").Return([]cpu.CPUTimesStat{cts}, nil)
@@ -103,17 +91,16 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	mps.On("NetIO").Return([]net.NetIOCountersStat{netio}, nil)
 
 	vms := &mem.VirtualMemoryStat{
-		Total:       12400,
-		Available:   7600,
-		Used:        5000,
-		UsedPercent: 47.1,
-		Free:        1235,
-		Active:      8134,
-		Inactive:    1124,
-		Buffers:     771,
-		Cached:      4312,
-		Wired:       134,
-		Shared:      2142,
+		Total:     12400,
+		Available: 7600,
+		Used:      5000,
+		Free:      1235,
+		// Active:      8134,
+		// Inactive:    1124,
+		// Buffers:     771,
+		// Cached:      4312,
+		// Wired:       134,
+		// Shared:      2142,
 	}
 
 	mps.On("VMStat").Return(vms, nil)
@@ -129,65 +116,6 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("SwapStat").Return(sms, nil)
 
-	ds := &DockerContainerStat{
-		Name: "blah",
-		CPU: &cpu.CPUTimesStat{
-			CPU:       "all",
-			User:      3.1,
-			System:    8.2,
-			Idle:      80.1,
-			Nice:      1.3,
-			Iowait:    0.2,
-			Irq:       0.1,
-			Softirq:   0.11,
-			Steal:     0.0001,
-			Guest:     8.1,
-			GuestNice: 0.324,
-			Stolen:    0.051,
-		},
-		Mem: &docker.CgroupMemStat{
-			ContainerID:             "blah",
-			Cache:                   1,
-			RSS:                     2,
-			RSSHuge:                 3,
-			MappedFile:              4,
-			Pgpgin:                  5,
-			Pgpgout:                 6,
-			Pgfault:                 7,
-			Pgmajfault:              8,
-			InactiveAnon:            9,
-			ActiveAnon:              10,
-			InactiveFile:            11,
-			ActiveFile:              12,
-			Unevictable:             13,
-			HierarchicalMemoryLimit: 14,
-			TotalCache:              15,
-			TotalRSS:                16,
-			TotalRSSHuge:            17,
-			TotalMappedFile:         18,
-			TotalPgpgIn:             19,
-			TotalPgpgOut:            20,
-			TotalPgFault:            21,
-			TotalPgMajFault:         22,
-			TotalInactiveAnon:       23,
-			TotalActiveAnon:         24,
-			TotalInactiveFile:       25,
-			TotalActiveFile:         26,
-			TotalUnevictable:        27,
-		},
-	}
-
-	mps.On("DockerStat").Return([]*DockerContainerStat{ds}, nil)
-
-	ss := &SystemStats{ps: &mps}
-
-	err := ss.Gather(&acc)
-	require.NoError(t, err)
-
-	assert.True(t, acc.CheckValue("load1", 0.3))
-	assert.True(t, acc.CheckValue("load5", 1.5))
-	assert.True(t, acc.CheckValue("load15", 0.8))
-
 	cs := NewCPUStats(&mps)
 
 	cputags := map[string]string{
@@ -195,27 +123,25 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	}
 
 	preCPUPoints := len(acc.Points)
-	err = cs.Gather(&acc)
+	err := cs.Gather(&acc)
 	require.NoError(t, err)
 	numCPUPoints := len(acc.Points) - preCPUPoints
 
-	expectedCPUPoints := 12
+	expectedCPUPoints := 10
 	assert.Equal(t, numCPUPoints, expectedCPUPoints)
 
 	// Computed values are checked with delta > 0 becasue of floating point arithmatic
 	// imprecision
-	assertContainsTaggedFloat(t, acc, "user", 3.1, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "system", 8.2, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "idle", 80.1, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "nice", 1.3, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "iowait", 0.2, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "irq", 0.1, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "softirq", 0.11, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "steal", 0.0001, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "guest", 8.1, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "guestNice", 0.324, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "stolen", 0.051, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "busy", 21.4851, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "time_user", 3.1, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_system", 8.2, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_idle", 80.1, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_nice", 1.3, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_iowait", 0.2, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_irq", 0.1, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_softirq", 0.11, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_steal", 0.0511, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_guest", 8.1, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_guest_nice", 0.324, 0, cputags)
 
 	mps2 := MockPS{}
 	mps2.On("CPUTimes").Return([]cpu.CPUTimesStat{cts2}, nil)
@@ -226,34 +152,30 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	require.NoError(t, err)
 
 	numCPUPoints = len(acc.Points) - (preCPUPoints + numCPUPoints)
-	expectedCPUPoints = 24
+	expectedCPUPoints = 20
 	assert.Equal(t, numCPUPoints, expectedCPUPoints)
 
-	assertContainsTaggedFloat(t, acc, "user", 11.4, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "system", 10.9, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "idle", 158.8699, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "nice", 2.5, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "iowait", 0.7, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "irq", 1.2, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "softirq", 0.31, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "steal", 0.0002, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "guest", 12.9, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "guestNice", 2.524, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "stolen", 0.281, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "busy", 42.7152, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "time_user", 11.4, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_system", 10.9, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_idle", 158.8699, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_nice", 2.5, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_iowait", 0.7, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_irq", 1.2, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_softirq", 0.31, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_steal", 0.2812, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_guest", 12.9, 0, cputags)
+	assertContainsTaggedFloat(t, acc, "time_guest_nice", 2.524, 0, cputags)
 
-	assertContainsTaggedFloat(t, acc, "percentageUser", 8.3, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageSystem", 2.7, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageIdle", 78.7699, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageNice", 1.2, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageIowait", 0.5, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageIrq", 1.1, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageSoftirq", 0.2, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageSteal", 0.0001, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageGuest", 4.8, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageGuestNice", 2.2, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageStolen", 0.23, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "percentageBusy", 21.2301, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_user", 8.3, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_system", 2.7, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_idle", 78.7699, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_nice", 1.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_iowait", 0.5, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_irq", 1.1, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_softirq", 0.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_steal", 0.2301, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_guest", 4.8, 0.0005, cputags)
+	assertContainsTaggedFloat(t, acc, "usage_guest_nice", 2.2, 0.0005, cputags)
 
 	err = (&DiskStats{&mps}).Gather(&acc)
 	require.NoError(t, err)
@@ -310,14 +232,13 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.True(t, acc.CheckTaggedValue("total", uint64(12400), vmtags))
 	assert.True(t, acc.CheckTaggedValue("available", uint64(7600), vmtags))
 	assert.True(t, acc.CheckTaggedValue("used", uint64(5000), vmtags))
-	assert.True(t, acc.CheckTaggedValue("used_prec", float64(47.1), vmtags))
+	assert.True(t, acc.CheckTaggedValue("available_percent",
+		float64(7600)/float64(12400)*100,
+		vmtags))
+	assert.True(t, acc.CheckTaggedValue("used_percent",
+		float64(5000)/float64(12400)*100,
+		vmtags))
 	assert.True(t, acc.CheckTaggedValue("free", uint64(1235), vmtags))
-	assert.True(t, acc.CheckTaggedValue("active", uint64(8134), vmtags))
-	assert.True(t, acc.CheckTaggedValue("inactive", uint64(1124), vmtags))
-	assert.True(t, acc.CheckTaggedValue("buffers", uint64(771), vmtags))
-	assert.True(t, acc.CheckTaggedValue("cached", uint64(4312), vmtags))
-	assert.True(t, acc.CheckTaggedValue("wired", uint64(134), vmtags))
-	assert.True(t, acc.CheckTaggedValue("shared", uint64(2142), vmtags))
 
 	acc.Points = nil
 
@@ -328,59 +249,10 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	assert.NoError(t, acc.ValidateTaggedValue("total", uint64(8123), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("used", uint64(1232), swaptags))
-	assert.NoError(t, acc.ValidateTaggedValue("used_perc", float64(12.2), swaptags))
+	assert.NoError(t, acc.ValidateTaggedValue("used_percent", float64(12.2), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("free", uint64(6412), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("in", uint64(7), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("out", uint64(830), swaptags))
-
-	err = (&DockerStats{&mps}).Gather(&acc)
-	require.NoError(t, err)
-
-	dockertags := map[string]string{
-		"name":    "blah",
-		"id":      "",
-		"command": "",
-	}
-
-	assert.True(t, acc.CheckTaggedValue("user", 3.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("system", 8.2, dockertags))
-	assert.True(t, acc.CheckTaggedValue("idle", 80.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("nice", 1.3, dockertags))
-	assert.True(t, acc.CheckTaggedValue("iowait", 0.2, dockertags))
-	assert.True(t, acc.CheckTaggedValue("irq", 0.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("softirq", 0.11, dockertags))
-	assert.True(t, acc.CheckTaggedValue("steal", 0.0001, dockertags))
-	assert.True(t, acc.CheckTaggedValue("guest", 8.1, dockertags))
-	assert.True(t, acc.CheckTaggedValue("guestNice", 0.324, dockertags))
-	assert.True(t, acc.CheckTaggedValue("stolen", 0.051, dockertags))
-
-	assert.True(t, acc.CheckTaggedValue("cache", uint64(1), dockertags))
-	assert.True(t, acc.CheckTaggedValue("rss", uint64(2), dockertags))
-	assert.True(t, acc.CheckTaggedValue("rss_huge", uint64(3), dockertags))
-	assert.True(t, acc.CheckTaggedValue("mapped_file", uint64(4), dockertags))
-	assert.True(t, acc.CheckTaggedValue("swap_in", uint64(5), dockertags))
-	assert.True(t, acc.CheckTaggedValue("swap_out", uint64(6), dockertags))
-	assert.True(t, acc.CheckTaggedValue("page_fault", uint64(7), dockertags))
-	assert.True(t, acc.CheckTaggedValue("page_major_fault", uint64(8), dockertags))
-	assert.True(t, acc.CheckTaggedValue("inactive_anon", uint64(9), dockertags))
-	assert.True(t, acc.CheckTaggedValue("active_anon", uint64(10), dockertags))
-	assert.True(t, acc.CheckTaggedValue("inactive_file", uint64(11), dockertags))
-	assert.True(t, acc.CheckTaggedValue("active_file", uint64(12), dockertags))
-	assert.True(t, acc.CheckTaggedValue("unevictable", uint64(13), dockertags))
-	assert.True(t, acc.CheckTaggedValue("memory_limit", uint64(14), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_cache", uint64(15), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_rss", uint64(16), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_rss_huge", uint64(17), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_mapped_file", uint64(18), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_swap_in", uint64(19), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_swap_out", uint64(20), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_page_fault", uint64(21), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_page_major_fault", uint64(22), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_inactive_anon", uint64(23), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_active_anon", uint64(24), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_inactive_file", uint64(25), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_active_file", uint64(26), dockertags))
-	assert.True(t, acc.CheckTaggedValue("total_unevictable", uint64(27), dockertags))
 }
 
 // Asserts that a given accumulator contains a measurment of type float64 with
@@ -406,20 +278,25 @@ func assertContainsTaggedFloat(
 	delta float64,
 	tags map[string]string,
 ) {
+	var actualValue float64
 	for _, pt := range acc.Points {
 		if pt.Measurement == measurement {
 			if (tags == nil) || reflect.DeepEqual(pt.Tags, tags) {
 				if value, ok := pt.Values["value"].(float64); ok {
+					actualValue = value
 					if (value >= expectedValue-delta) && (value <= expectedValue+delta) {
 						// Found the point, return without failing
 						return
 					}
 				} else {
-					assert.Fail(t, fmt.Sprintf("Measurement \"%s\" does not have type float64", measurement))
+					assert.Fail(t, fmt.Sprintf("Measurement \"%s\" does not have type float64",
+						measurement))
 				}
 
 			}
 		}
 	}
-	assert.Fail(t, fmt.Sprintf("Could not find measurement \"%s\" with requested tags within %f of %f", measurement, delta, expectedValue))
+	msg := fmt.Sprintf("Could not find measurement \"%s\" with requested tags within %f of %f, Actual: %f",
+		measurement, delta, expectedValue, actualValue)
+	assert.Fail(t, msg)
 }

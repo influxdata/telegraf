@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"math"
-	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -36,7 +35,7 @@ func init() {
 
 const (
 	// DefaultBlockSize is the default size of uncompressed points blocks.
-	DefaultBlockSize = 32 * 1024 // 32KB
+	DefaultBlockSize = 4 * 1024 // 4KB
 )
 
 // Ensure Engine implements the interface.
@@ -63,12 +62,13 @@ type WAL interface {
 	Cursor(key string) tsdb.Cursor
 	Open() error
 	Close() error
+	Flush() error
 }
 
 // NewEngine returns a new instance of Engine.
-func NewEngine(path string, opt tsdb.EngineOptions) tsdb.Engine {
+func NewEngine(path string, walPath string, opt tsdb.EngineOptions) tsdb.Engine {
 	// create the writer with a directory of the same name as the shard, but with the wal extension
-	w := wal.NewLog(filepath.Join(opt.Config.WALDir, filepath.Base(path)))
+	w := wal.NewLog(walPath)
 
 	w.ReadySeriesSize = opt.Config.WALReadySeriesSize
 	w.FlushColdInterval = time.Duration(opt.Config.WALFlushColdInterval)
@@ -76,6 +76,7 @@ func NewEngine(path string, opt tsdb.EngineOptions) tsdb.Engine {
 	w.CompactionThreshold = opt.Config.WALCompactionThreshold
 	w.PartitionSizeThreshold = opt.Config.WALPartitionSizeThreshold
 	w.ReadySeriesSize = opt.Config.WALReadySeriesSize
+	w.EnableLogging = opt.Config.WALEnableLogging
 
 	e := &Engine{
 		path: path,
@@ -135,10 +136,12 @@ func (e *Engine) Open() error {
 func (e *Engine) Close() error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if err := e.close(); err != nil {
+
+	if err := e.WAL.Close(); err != nil {
 		return err
 	}
-	return e.WAL.Close()
+
+	return e.close()
 }
 
 func (e *Engine) close() error {
@@ -358,11 +361,30 @@ func (e *Engine) writeIndex(tx *bolt.Tx, key string, a [][]byte) error {
 	//
 	// This is the optimized fast path. Otherwise we need to merge the points
 	// with existing blocks on disk and rewrite all the blocks for that range.
-	if k, v := c.Last(); k == nil || int64(btou64(v[0:8])) < tmin {
+	if k, v := c.Last(); k == nil {
+		bkt.FillPercent = 1.0
 		if err := e.writeBlocks(bkt, a); err != nil {
-			return fmt.Errorf("append blocks: %s", err)
+			return fmt.Errorf("new blocks: %s", err)
 		}
 		return nil
+	} else {
+		// Determine uncompressed block size.
+		sz, err := snappy.DecodedLen(v[8:])
+		if err != nil {
+			return fmt.Errorf("snappy decoded len: %s", err)
+		}
+
+		// Append new blocks if our time range is past the last on-disk time
+		// and if our previous block was at least the minimum block size.
+		if int64(btou64(v[0:8])) < tmin && sz >= e.BlockSize {
+			bkt.FillPercent = 1.0
+			if err := e.writeBlocks(bkt, a); err != nil {
+				return fmt.Errorf("append blocks: %s", err)
+			}
+			return nil
+		}
+
+		// Otherwise fallthrough to slower insert mode.
 	}
 
 	// Generate map of inserted keys.
@@ -540,6 +562,18 @@ func (e *Engine) Stats() (stats Stats, err error) {
 	return stats, err
 }
 
+// SeriesBucketStats returns internal BoltDB stats for a series bucket.
+func (e *Engine) SeriesBucketStats(key string) (stats bolt.BucketStats, err error) {
+	err = e.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket([]byte("points")).Bucket([]byte(key))
+		if bkt != nil {
+			stats = bkt.Stats()
+		}
+		return nil
+	})
+	return stats, err
+}
+
 // Stats represents internal engine statistics.
 type Stats struct {
 	Size int64 // BoltDB data size
@@ -564,7 +598,6 @@ func (tx *Tx) Cursor(key string) tsdb.Cursor {
 
 	c := &Cursor{
 		cursor: b.Cursor(),
-		buf:    make([]byte, DefaultBlockSize),
 	}
 
 	return tsdb.MultiCursor(walCursor, c)
@@ -580,7 +613,17 @@ type Cursor struct {
 // Seek moves the cursor to a position and returns the closest key/value pair.
 func (c *Cursor) Seek(seek []byte) (key, value []byte) {
 	// Move cursor to appropriate block and set to buffer.
-	_, v := c.cursor.Seek(seek)
+	k, v := c.cursor.Seek(seek)
+	if v == nil { // get the last block, it might have this time
+		_, v = c.cursor.Last()
+	} else if bytes.Compare(seek, k) == -1 { // the seek key is less than this block, go back one and check
+		_, v = c.cursor.Prev()
+
+		// if the previous block max time is less than the seek value, reset to where we were originally
+		if v == nil || bytes.Compare(seek, v[0:8]) > 0 {
+			_, v = c.cursor.Seek(seek)
+		}
+	}
 	c.setBuf(v)
 
 	// Read current block up to seek position.

@@ -14,6 +14,7 @@ const DefaultURL = "http://localhost:15672"
 
 type Server struct {
 	URL      string
+	Name     string
 	Username string
 	Password string
 	Nodes    []string
@@ -68,15 +69,16 @@ type Node struct {
 }
 
 var sampleConfig = `
-# Specify servers via an array of tables
-[[rabbitmq.servers]]
-# url = "http://localhost:15672"
-# username = "guest"
-# password = "guest"
+	# Specify servers via an array of tables
+	[[rabbitmq.servers]]
+	# name = "rmq-server-1" # optional tag
+	# url = "http://localhost:15672"
+	# username = "guest"
+	# password = "guest"
 
-# A list of nodes to pull metrics about. If not specified, metrics for
-# all nodes are gathered.
-# nodes = ["rabbit@node1", "rabbit@node2"]
+	# A list of nodes to pull metrics about. If not specified, metrics for
+	# all nodes are gathered.
+	# nodes = ["rabbit@node1", "rabbit@node2"]
 `
 
 func (r *RabbitMQ) SampleConfig() string {
@@ -117,7 +119,10 @@ func (r *RabbitMQ) gatherServer(serv *Server, acc plugins.Accumulator) error {
 		return err
 	}
 
-	tags := map[string]string{}
+	tags := map[string]string{"url": serv.URL}
+	if serv.Name != "" {
+		tags["name"] = serv.Name
+	}
 
 	acc.Add("messages", overview.QueueTotals.Messages, tags)
 	acc.Add("messages_ready", overview.QueueTotals.MessagesReady, tags)
@@ -147,7 +152,7 @@ func (r *RabbitMQ) gatherServer(serv *Server, acc plugins.Accumulator) error {
 			continue
 		}
 
-		tags = map[string]string{"node": node.Name}
+		tags["node"] = node.Name
 
 		acc.Add("disk_free", node.DiskFree, tags)
 		acc.Add("disk_free_limit", node.DiskFreeLimit, tags)

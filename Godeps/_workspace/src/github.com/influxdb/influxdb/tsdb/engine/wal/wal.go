@@ -182,6 +182,12 @@ func NewLog(path string) *Log {
 
 // Open opens and initializes the Log. Will recover from previous unclosed shutdowns
 func (l *Log) Open() error {
+	l.logger = log.New(l.LogOutput, "[wal] ", log.LstdFlags)
+
+	if l.EnableLogging {
+		l.logger.Printf("WAL starting with %d ready series size, %0.2f compaction threshold, and %d partition size threshold\n", l.ReadySeriesSize, l.CompactionThreshold, l.PartitionSizeThreshold)
+		l.logger.Printf("WAL writing to %s\n", l.path)
+	}
 	if err := os.MkdirAll(l.path, 0777); err != nil {
 		return err
 	}
@@ -205,8 +211,6 @@ func (l *Log) Open() error {
 		return err
 	}
 
-	l.logger = log.New(l.LogOutput, "[wal] ", log.LstdFlags)
-
 	l.flushCheckTimer = time.NewTimer(l.flushCheckInterval)
 
 	// Start background goroutines.
@@ -226,16 +230,17 @@ func (l *Log) Cursor(key string) tsdb.Cursor {
 }
 
 func (l *Log) WritePoints(points []tsdb.Point, fields map[string]*tsdb.MeasurementFields, series []*tsdb.SeriesCreate) error {
-	partitionsToWrite := l.pointsToPartitions(points)
-
+	// persist the series and fields if there are any
 	if err := l.writeSeriesAndFields(fields, series); err != nil {
-		l.logger.Println("error writing series and fields: ", err.Error())
+		l.logger.Println("error writing series and fields:", err.Error())
 		return err
 	}
 
-	// get it to disk
+	// persist the raw point data
 	l.mu.RLock()
 	defer l.mu.RUnlock()
+
+	partitionsToWrite := l.pointsToPartitions(points)
 
 	for p, points := range partitionsToWrite {
 		if err := p.Write(points); err != nil {
@@ -320,13 +325,13 @@ func (l *Log) LoadMetadataIndex(index *tsdb.DatabaseIndex, measurementFields map
 // is meant to be called by bz1 BEFORE it updates its own index, since the metadata
 // is flushed here first.
 func (l *Log) DeleteSeries(keys []string) error {
-	// we want to stop any writes from happening to ensure the data gets cleared
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	if err := l.flushMetadata(); err != nil {
 		return err
 	}
+
+	// we want to stop any writes from happening to ensure the data gets cleared
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
 	for _, p := range l.partitions {
 		p.deleteSeries(keys)
@@ -349,7 +354,7 @@ func (l *Log) readMetadataFile(fileName string) ([]*seriesAndFields, error) {
 	length := make([]byte, 8)
 	for {
 		// get the length of the compressed seriesAndFields blob
-		_, err := f.Read(length)
+		_, err := io.ReadFull(f, length)
 		if err == io.EOF {
 			break
 		} else if err != nil {
@@ -365,26 +370,26 @@ func (l *Log) readMetadataFile(fileName string) ([]*seriesAndFields, error) {
 		// read in the compressed block and decod it
 		b := make([]byte, dataLength)
 
-		_, err = f.Read(b)
+		_, err = io.ReadFull(f, b)
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			// print the error and move on since we can't recover the file
-			l.logger.Println("error reading lenght of metadata: ", err.Error())
+			l.logger.Println("error reading lenght of metadata:", err.Error())
 			break
 		}
 
 		buf, err := snappy.Decode(nil, b)
 		if err != nil {
 			// print the error and move on since we can't recover the file
-			l.logger.Println("error reading compressed metadata info: ", err.Error())
+			l.logger.Println("error reading compressed metadata info:", err.Error())
 			break
 		}
 
 		sf := &seriesAndFields{}
 		if err := json.Unmarshal(buf, sf); err != nil {
 			// print the error and move on since we can't recover the file
-			l.logger.Println("error unmarshaling json for new series and fields: ", err.Error())
+			l.logger.Println("error unmarshaling json for new series and fields:", err.Error())
 			break
 		}
 
@@ -430,6 +435,9 @@ func (l *Log) writeSeriesAndFields(fields map[string]*tsdb.MeasurementFields, se
 // nextMetaFile will close the current file if there is one open and open a new file to log
 // metadata updates to. This function assumes that you've locked l.mu elsewhere.
 func (l *Log) nextMetaFile() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	if l.metaFile != nil {
 		if err := l.metaFile.Close(); err != nil {
 			return err
@@ -450,7 +458,7 @@ func (l *Log) nextMetaFile() error {
 			return err
 		}
 
-		id = int(n)
+		id = int(n) + 1
 	}
 
 	nextFileName := filepath.Join(l.path, fmt.Sprintf("%06d.%s", id, MetaFileExtension))
@@ -530,27 +538,35 @@ func (l *Log) openPartitionFiles() error {
 // Close will finish any flush that is currently in process and close file handles
 func (l *Log) Close() error {
 	// stop the autoflushing process so it doesn't try to kick another one off
+	l.mu.Lock()
 	if l.closing != nil {
 		close(l.closing)
 		l.closing = nil
 	}
+	l.mu.Unlock()
 
+	// Allow goroutines to finish running.
 	l.wg.Wait()
 
+	// Lock the remainder of the closing process.
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	// clear the cache
-	l.partitions = nil
+	if err := l.close(); err != nil {
+		return err
+	}
 
-	return l.close()
+	l.partitions = nil
+	return nil
 }
 
 // close all the open Log partitions and file handles
 func (l *Log) close() error {
 	for _, p := range l.partitions {
 		if err := p.Close(); err != nil {
-			return err
+			// log and skip so we can close the other partitions
+			l.logger.Println("error closing partition:", err)
 		}
 	}
 
@@ -593,11 +609,11 @@ func (l *Log) autoflusher(closing chan struct{}) {
 			l.flushCheckTimer.Reset(l.flushCheckInterval)
 		case <-l.flush:
 			if err := l.Flush(); err != nil {
-				l.logger.Printf("flush error: %s", err)
+				l.logger.Println("flush error:", err)
 			}
 		case <-metaFlushTicker.C:
 			if err := l.flushMetadata(); err != nil {
-				l.logger.Printf("metadata flush error: %s", err.Error())
+				l.logger.Println("metadata flush error:", err)
 			}
 		}
 	}
@@ -607,6 +623,28 @@ func (l *Log) autoflusher(closing chan struct{}) {
 // metadata from previous files to the index. After a sucessful write, the metadata files
 // will be removed. While the flush to index is happening we aren't blocked for new metadata writes.
 func (l *Log) flushMetadata() error {
+	// make sure there's actually something in the metadata file to flush
+	size, err := func() (int64, error) {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+
+		if l.metaFile == nil {
+			return 0, nil
+		}
+		st, err := l.metaFile.Stat()
+		if err != nil {
+			return 0, err
+		}
+
+		return st.Size(), nil
+	}()
+	if err != nil {
+		return err
+	} else if size == 0 {
+		return nil
+	}
+
+	// we have data, get a list of the existing files and rotate to a new one, then flush
 	files, err := l.metadataFiles()
 	if err != nil {
 		return err
@@ -635,9 +673,16 @@ func (l *Log) flushMetadata() error {
 		}
 	}
 
+	startTime := time.Now()
+	if l.EnableLogging {
+		l.logger.Printf("Flushing %d measurements and %d series to index\n", len(measurements), len(series))
+	}
 	// write them to the index
 	if err := l.Index.WriteIndex(nil, measurements, series); err != nil {
 		return err
+	}
+	if l.EnableLogging {
+		l.logger.Println("Metadata flush took", time.Since(startTime))
 	}
 
 	// remove the old files now that we've persisted them elsewhere
@@ -740,6 +785,9 @@ func (p *Partition) Close() error {
 	defer p.mu.Unlock()
 
 	p.cache = nil
+	if p.currentSegmentFile == nil {
+		return nil
+	}
 	if err := p.currentSegmentFile.Close(); err != nil {
 		return err
 	}
@@ -954,6 +1002,7 @@ func (p *Partition) prepareSeriesToFlush(readySeriesSize int, flush flushType) (
 
 	p.flushCache = c.seriesToFlush
 	c.compactFilesLessThan = p.currentSegmentID
+	c.countCompacting = len(p.cache)
 
 	return c, nil
 }
@@ -996,7 +1045,13 @@ func (p *Partition) flushAndCompact(flush flushType) error {
 
 	startTime := time.Now()
 	if p.log.EnableLogging {
-		p.log.logger.Printf("compacting %d series from partition %d\n", len(c.seriesToFlush), p.id)
+		ftype := "idle"
+		if flush == thresholdFlush {
+			ftype = "threshold"
+		} else if flush == memoryFlush {
+			ftype = "memory"
+		}
+		p.log.logger.Printf("Flush due to %s. Flushing %d series with %d bytes from partition %d. Compacting %d series\n", ftype, len(c.seriesToFlush), c.flushSize, p.id, c.countCompacting)
 	}
 
 	// write the data to the index first
@@ -1056,7 +1111,7 @@ func (p *Partition) compactFiles(c *compactionInfo, flush flushType) error {
 			return err
 		}
 
-		sf := newSegment(f)
+		sf := newSegment(f, p.log.logger)
 		var entries []*entry
 		for {
 			name, a, err := sf.readCompressedBlock()
@@ -1161,7 +1216,7 @@ func (p *Partition) recoverCompactionFile() error {
 	defer f.Close()
 
 	// Iterate through all named blocks.
-	sf := newSegment(f)
+	sf := newSegment(f, p.log.logger)
 	var hasData bool
 	for {
 		// Only read named blocks.
@@ -1231,7 +1286,7 @@ func (p *Partition) readFile(path string) (entries []*entry, err error) {
 		return nil, err
 	}
 
-	sf := newSegment(f)
+	sf := newSegment(f, p.log.logger)
 	for {
 		name, a, err := sf.readCompressedBlock()
 		if name != "" {
@@ -1277,7 +1332,9 @@ func (p *Partition) addToCache(key, data []byte, timestamp int64) {
 	}
 
 	// Determine if we'll need to sort the values for this key later
-	entry.isDirtySort = bytes.Compare(entry.points[len(entry.points)-1][0:8], v[0:8]) != -1
+	if !entry.isDirtySort { // don't bother if we already know it has to be sorted
+		entry.isDirtySort = bytes.Compare(entry.points[len(entry.points)-1][0:8], v[0:8]) != -1
+	}
 	entry.points = append(entry.points, v)
 	entry.size += len(v)
 }
@@ -1289,7 +1346,7 @@ func (p *Partition) cursor(key string) *cursor {
 
 	entry := p.cache[key]
 	if entry == nil {
-		return &cursor{}
+		entry = &cacheEntry{}
 	}
 
 	// if we're in the middle of a flush, combine the previous cache
@@ -1300,7 +1357,8 @@ func (p *Partition) cursor(key string) *cursor {
 			copy(c, fc)
 			c = append(c, entry.points...)
 
-			return &cursor{cache: tsdb.DedupeEntries(c)}
+			dedupe := tsdb.DedupeEntries(c)
+			return &cursor{cache: dedupe}
 		}
 	}
 
@@ -1309,7 +1367,10 @@ func (p *Partition) cursor(key string) *cursor {
 		entry.isDirtySort = false
 	}
 
-	return &cursor{cache: entry.points}
+	// build a copy so modifications to the partition don't change the result set
+	a := make([][]byte, len(entry.points))
+	copy(a, entry.points)
+	return &cursor{cache: a}
 }
 
 // idFromFileName parses the segment file ID from its name
@@ -1368,6 +1429,7 @@ type compactionInfo struct {
 	seriesToFlush        map[string][][]byte
 	compactFilesLessThan uint32
 	flushSize            int
+	countCompacting      int
 }
 
 // segmentFile is a struct for reading in segment files from the WAL. Used on startup only while loading
@@ -1376,12 +1438,14 @@ type segment struct {
 	block  []byte
 	length []byte
 	size   int64
+	logger *log.Logger
 }
 
-func newSegment(f *os.File) *segment {
+func newSegment(f *os.File, l *log.Logger) *segment {
 	return &segment{
 		length: make([]byte, 8),
 		f:      f,
+		logger: l,
 	}
 }
 
@@ -1397,7 +1461,7 @@ func (s *segment) readCompressedBlock() (name string, entries []*entry, err erro
 		return "", nil, fmt.Errorf("read length: %s", err)
 	} else if n != len(s.length) {
 		// seek back before this length so we can start overwriting the file from here
-		log.Println("unable to read the size of a data block from file: ", s.f.Name())
+		s.logger.Println("unable to read the size of a data block from file:", s.f.Name())
 		s.f.Seek(-int64(n), 1)
 		return "", nil, nil
 	}
@@ -1431,7 +1495,7 @@ func (s *segment) readCompressedBlock() (name string, entries []*entry, err erro
 	// read the compressed block and decompress it. if partial or corrupt,
 	// overwrite with zeroes so we can start over on this wal file
 	if n != int(dataLength) {
-		log.Println("partial compressed block in file: ", s.f.Name())
+		s.logger.Println("partial compressed block in file:", s.f.Name())
 
 		// seek back to before this block and its size so we can overwrite the corrupt data
 		s.f.Seek(-int64(len(s.length)+n), 1)
@@ -1450,7 +1514,7 @@ func (s *segment) readCompressedBlock() (name string, entries []*entry, err erro
 	// if there was an error decoding, this is a corrupt block so we zero out the rest of the file
 	buf, err := snappy.Decode(nil, s.block[:dataLength])
 	if err != nil {
-		log.Println("corrupt compressed block in file: ", err.Error(), s.f.Name())
+		s.logger.Println("corrupt compressed block in file:", err.Error(), s.f.Name())
 
 		// go back to the start of this block and zero out the rest of the file
 		s.f.Seek(-int64(len(s.length)+n), 1)

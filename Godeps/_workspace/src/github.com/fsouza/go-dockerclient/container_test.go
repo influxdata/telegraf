@@ -1122,10 +1122,7 @@ func TestAttachToContainerRawTerminalFalse(t *testing.T) {
 		Stream:       true,
 		RawTerminal:  false,
 	}
-	err := client.AttachToContainer(opts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	client.AttachToContainer(opts)
 	expected := map[string][]string{
 		"stdin":  {"1"},
 		"stdout": {"1"},
@@ -1374,6 +1371,7 @@ func TestExportContainerViaUnixSocket(t *testing.T) {
 	u, _ := parseEndpoint(endpoint, false)
 	client := Client{
 		HTTPClient:             http.DefaultClient,
+		Dialer:                 &net.Dialer{},
 		endpoint:               endpoint,
 		endpointURL:            u,
 		SkipServerVersionCheck: true,
@@ -1429,17 +1427,60 @@ func TestExportContainerNoId(t *testing.T) {
 	}
 }
 
+func TestUploadToContainer(t *testing.T) {
+	content := "File content"
+	in := stdinMock{bytes.NewBufferString(content)}
+	fakeRT := &FakeRoundTripper{status: http.StatusOK}
+	client := newTestClient(fakeRT)
+	opts := UploadToContainerOptions{
+		Path:        "abc",
+		InputStream: in,
+	}
+	err := client.UploadToContainer("a123456", opts)
+	if err != nil {
+		t.Errorf("UploadToContainer: caught error %#v while uploading archive to container, expected nil", err)
+	}
+
+	req := fakeRT.requests[0]
+
+	if req.Method != "PUT" {
+		t.Errorf("UploadToContainer{Path:abc}: Wrong HTTP method.  Want PUT. Got %s", req.Method)
+	}
+
+	if pathParam := req.URL.Query().Get("path"); pathParam != "abc" {
+		t.Errorf("ListImages({Path:abc}): Wrong parameter. Want path=abc.  Got path=%s", pathParam)
+	}
+
+}
+
+func TestDownloadFromContainer(t *testing.T) {
+	filecontent := "File content"
+	client := newTestClient(&FakeRoundTripper{message: filecontent, status: http.StatusOK})
+
+	var out bytes.Buffer
+	opts := DownloadFromContainerOptions{
+		OutputStream: &out,
+	}
+	err := client.DownloadFromContainer("a123456", opts)
+	if err != nil {
+		t.Errorf("DownloadFromContainer: caught error %#v while downloading from container, expected nil", err.Error())
+	}
+	if out.String() != filecontent {
+		t.Errorf("DownloadFromContainer: wrong stdout. Want %#v. Got %#v.", filecontent, out.String())
+	}
+}
+
 func TestCopyFromContainer(t *testing.T) {
 	content := "File content"
 	out := stdoutMock{bytes.NewBufferString(content)}
 	client := newTestClient(&FakeRoundTripper{status: http.StatusOK})
 	opts := CopyFromContainerOptions{
 		Container:    "a123456",
-		OutputStream: out,
+		OutputStream: &out,
 	}
 	err := client.CopyFromContainer(opts)
 	if err != nil {
-		t.Errorf("CopyFromContainer: caugh error %#v while copying from container, expected nil", err.Error())
+		t.Errorf("CopyFromContainer: caught error %#v while copying from container, expected nil", err.Error())
 	}
 	if out.String() != content {
 		t.Errorf("CopyFromContainer: wrong stdout. Want %#v. Got %#v.", content, out.String())
@@ -1587,7 +1628,6 @@ func TestTopContainerWithPsArgs(t *testing.T) {
 }
 
 func TestStatsTimeout(t *testing.T) {
-
 	l, err := net.Listen("unix", "/tmp/docker_test.sock")
 	if err != nil {
 		t.Fatal(err)
@@ -1597,7 +1637,7 @@ func TestStatsTimeout(t *testing.T) {
 	go func() {
 		l.Accept()
 		received = true
-		time.Sleep(time.Millisecond * 250)
+		time.Sleep(time.Second)
 	}()
 	client, _ := NewClient("unix:///tmp/docker_test.sock")
 	client.SkipServerVersionCheck = true

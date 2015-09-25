@@ -84,13 +84,13 @@ type haproxy struct {
 }
 
 var sampleConfig = `
-# An array of address to gather stats about. Specify an ip on hostname
-# with optional port. ie localhost, 10.10.3.33:1936, etc.
-#
-# If no servers are specified, then default to 127.0.0.1:1936
-servers = ["http://myhaproxy.com:1936", "http://anotherhaproxy.com:1936"]
-# Or you can also use local socket(not work yet)
-# servers = ["socket:/run/haproxy/admin.sock"]
+	# An array of address to gather stats about. Specify an ip on hostname
+	# with optional port. ie localhost, 10.10.3.33:1936, etc.
+	#
+	# If no servers are specified, then default to 127.0.0.1:1936
+	servers = ["http://myhaproxy.com:1936", "http://anotherhaproxy.com:1936"]
+	# Or you can also use local socket(not work yet)
+	# servers = ["socket:/run/haproxy/admin.sock"]
 `
 
 func (r *haproxy) SampleConfig() string {
@@ -244,6 +244,11 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
 					acc.Add("http_response.4xx", ival, tags)
+				}
+			case HF_HRSP_5xx:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("http_response.5xx", ival, tags)
 				}
 			case HF_EREQ:
 				ival, err := strconv.ParseUint(v, 10, 64)

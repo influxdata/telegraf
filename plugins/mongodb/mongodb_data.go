@@ -89,7 +89,7 @@ func (d *MongodbData) addStat(acc plugins.Accumulator, statLine reflect.Value, s
 }
 
 func (d *MongodbData) add(acc plugins.Accumulator, key string, val interface{}) {
-	acc.AddValuesWithTime(
+	acc.AddFieldsWithTime(
 		key,
 		map[string]interface{}{
 			"value": val,

@@ -17,11 +17,12 @@ type Memcached struct {
 }
 
 var sampleConfig = `
-# An array of address to gather stats about. Specify an ip on hostname
-# with optional port. ie localhost, 10.0.0.1:11211, etc.
-#
-# If no servers are specified, then localhost is used as the host.
-servers = ["localhost"]`
+	# An array of address to gather stats about. Specify an ip on hostname
+	# with optional port. ie localhost, 10.0.0.1:11211, etc.
+	#
+	# If no servers are specified, then localhost is used as the host.
+	servers = ["localhost"]
+`
 
 var defaultTimeout = 5 * time.Second
 
@@ -100,17 +101,16 @@ func (m *Memcached) gatherServer(address string, acc plugins.Accumulator) error 
 			break
 		}
 		// Read values
-		var name, value string
-		n, errScan := fmt.Sscanf(string(line), "STAT %s %s\r\n", &name, &value)
-		if errScan != nil || n != 2 {
+		s := bytes.SplitN(line, []byte(" "), 3)
+		if len(s) != 3 || !bytes.Equal(s[0], []byte("STAT")) {
 			return fmt.Errorf("unexpected line in stats response: %q", line)
 		}
 
 		// Save values
-		values[name] = value
+		values[string(s[1])] = string(s[2])
 	}
 
-	//
+	// Add server address as a tag
 	tags := map[string]string{"server": address}
 
 	// Process values

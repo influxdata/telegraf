@@ -1,7 +1,10 @@
 package postgresql
 
 import (
+	"bytes"
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"github.com/influxdb/telegraf/plugins"
 
@@ -9,37 +12,45 @@ import (
 )
 
 type Server struct {
-	Address   string
-	Databases []string
+	Address        string
+	Databases      []string
+	OrderedColumns []string
 }
 
 type Postgresql struct {
 	Servers []*Server
 }
 
+var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
+
 var sampleConfig = `
-# specify servers via an array of tables
-[[postgresql.servers]]
+	# specify servers via an array of tables
+	[[postgresql.servers]]
 
-# specify address via a url matching:
-#   postgres://[pqgotest[:password]]@localhost?sslmode=[disable|verify-ca|verify-full]
-# or a simple string:
-#   host=localhost user=pqotest password=... sslmode=...
-# 
-# All connection parameters are optional. By default, the host is localhost
-# and the user is the currently running user. For localhost, we default
-# to sslmode=disable as well.
-# 
+	# specify address via a url matching:
+	#   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
+	# or a simple string:
+	#   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+	#
+	# All connection parameters are optional. By default, the host is localhost
+	# and the user is the currently running user. For localhost, we default
+	# to sslmode=disable as well.
+	#
+	# Without the dbname parameter, the driver will default to a database
+	# with the same name as the user. This dbname is just for instantiating a
+	# connection with the server and doesn't restrict the databases we are trying
+	# to grab metrics for.
+	#
 
-address = "sslmode=disable"
+	address = "sslmode=disable"
 
-# A list of databases to pull metrics about. If not specified, metrics for all
-# databases are gathered.
+	# A list of databases to pull metrics about. If not specified, metrics for all
+	# databases are gathered.
 
-# databases = ["app_production", "blah_testing"]
+	# databases = ["app_production", "blah_testing"]
 
-# [[postgresql.servers]]
-# address = "influx@remoteserver"
+	# [[postgresql.servers]]
+	# address = "influx@remoteserver"
 `
 
 func (p *Postgresql) SampleConfig() string {
@@ -48,6 +59,10 @@ func (p *Postgresql) SampleConfig() string {
 
 func (p *Postgresql) Description() string {
 	return "Read metrics from one or many postgresql servers"
+}
+
+func (p *Postgresql) IgnoredColumns() map[string]bool {
+	return ignoredColumns
 }
 
 var localhost = &Server{Address: "sslmode=disable"}
@@ -69,6 +84,8 @@ func (p *Postgresql) Gather(acc plugins.Accumulator) error {
 }
 
 func (p *Postgresql) gatherServer(serv *Server, acc plugins.Accumulator) error {
+	var query string
+
 	if serv.Address == "" || serv.Address == "localhost" {
 		serv = localhost
 	}
@@ -81,77 +98,75 @@ func (p *Postgresql) gatherServer(serv *Server, acc plugins.Accumulator) error {
 	defer db.Close()
 
 	if len(serv.Databases) == 0 {
-		rows, err := db.Query(`SELECT * FROM pg_stat_database`)
+		query = `SELECT * FROM pg_stat_database`
+	} else {
+		query = fmt.Sprintf(`SELECT * FROM pg_stat_database WHERE datname IN ('%s')`, strings.Join(serv.Databases, "','"))
+	}
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	// grab the column information from the result
+	serv.OrderedColumns, err = rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		err = p.accRow(rows, acc, serv)
 		if err != nil {
 			return err
 		}
-
-		defer rows.Close()
-
-		for rows.Next() {
-			err := p.accRow(rows, acc, serv.Address)
-			if err != nil {
-				return err
-			}
-		}
-
-		return rows.Err()
-	} else {
-		for _, name := range serv.Databases {
-			row := db.QueryRow(`SELECT * FROM pg_stat_database WHERE datname=$1`, name)
-
-			err := p.accRow(row, acc, serv.Address)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
-	return nil
+	return rows.Err()
 }
 
 type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator, server string) error {
-	var ignore interface{}
-	var name string
-	var commit, rollback, read, hit int64
-	var returned, fetched, inserted, updated, deleted int64
-	var conflicts, temp_files, temp_bytes, deadlocks int64
-	var read_time, write_time float64
+func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator, serv *Server) error {
+	var columnVars []interface{}
+	var dbname bytes.Buffer
 
-	err := row.Scan(&ignore, &name, &ignore,
-		&commit, &rollback,
-		&read, &hit,
-		&returned, &fetched, &inserted, &updated, &deleted,
-		&conflicts, &temp_files, &temp_bytes,
-		&deadlocks, &read_time, &write_time,
-		&ignore,
-	)
+	// this is where we'll store the column name with its *interface{}
+	columnMap := make(map[string]*interface{})
+
+	for _, column := range serv.OrderedColumns {
+		columnMap[column] = new(interface{})
+	}
+
+	// populate the array of interface{} with the pointers in the right order
+	for i := 0; i < len(columnMap); i++ {
+		columnVars = append(columnVars, columnMap[serv.OrderedColumns[i]])
+	}
+
+	// deconstruct array of variables and send to Scan
+	err := row.Scan(columnVars...)
 
 	if err != nil {
 		return err
 	}
 
-	tags := map[string]string{"server": server, "db": name}
+	// extract the database name from the column map
+	dbnameChars := (*columnMap["datname"]).([]uint8)
+	for i := 0; i < len(dbnameChars); i++ {
+		dbname.WriteString(string(dbnameChars[i]))
+	}
 
-	acc.Add("xact_commit", commit, tags)
-	acc.Add("xact_rollback", rollback, tags)
-	acc.Add("blks_read", read, tags)
-	acc.Add("blks_hit", hit, tags)
-	acc.Add("tup_returned", returned, tags)
-	acc.Add("tup_fetched", fetched, tags)
-	acc.Add("tup_inserted", inserted, tags)
-	acc.Add("tup_updated", updated, tags)
-	acc.Add("tup_deleted", deleted, tags)
-	acc.Add("conflicts", conflicts, tags)
-	acc.Add("temp_files", temp_files, tags)
-	acc.Add("temp_bytes", temp_bytes, tags)
-	acc.Add("deadlocks", deadlocks, tags)
-	acc.Add("blk_read_time", read_time, tags)
-	acc.Add("blk_write_time", read_time, tags)
+	tags := map[string]string{"server": serv.Address, "db": dbname.String()}
+
+	for col, val := range columnMap {
+		_, ignore := ignoredColumns[col]
+		if !ignore {
+			acc.Add(col, *val, tags)
+		}
+	}
 
 	return nil
 }

@@ -21,6 +21,14 @@ type Datadog struct {
 	client *http.Client
 }
 
+var sampleConfig = `
+	# Datadog API key
+	apikey = "my-secret-key" # required.
+
+	# Connection timeout.
+	# timeout = "5s"
+`
+
 type TimeSeries struct {
 	Series []*Metric `json:"series"`
 }
@@ -89,6 +97,14 @@ func (d *Datadog) Write(bp client.BatchPoints) error {
 	}
 
 	return nil
+}
+
+func (d *Datadog) SampleConfig() string {
+	return sampleConfig
+}
+
+func (d *Datadog) Description() string {
+	return "Configuration for DataDog API to send metrics to."
 }
 
 func (d *Datadog) authenticatedUrl() string {

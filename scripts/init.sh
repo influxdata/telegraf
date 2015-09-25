@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+# chkconfig: 2345 99 01
+# description: Telegraf daemon
+
 ### BEGIN INIT INFO
 # Provides:          telegraf
 # Required-Start:    $all

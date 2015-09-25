@@ -34,8 +34,8 @@ func (a *Accumulator) Add(measurement string, value interface{}, tags map[string
 	)
 }
 
-// AddValuesWithTime adds a measurement point with a specified timestamp.
-func (a *Accumulator) AddValuesWithTime(
+// AddFieldsWithTime adds a measurement point with a specified timestamp.
+func (a *Accumulator) AddFieldsWithTime(
 	measurement string,
 	values map[string]interface{},
 	tags map[string]string,
@@ -71,7 +71,7 @@ func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
 			return p.Values["value"] == val
 		}
 	}
-
+	fmt.Printf("CheckValue failed, measurement %s, value %s", measurement, val)
 	return false
 }
 
@@ -149,5 +149,16 @@ func (a *Accumulator) HasFloatValue(measurement string) bool {
 		}
 	}
 
+	return false
+}
+
+// HasMeasurement returns true if the accumulator has a measurement with the
+// given name
+func (a *Accumulator) HasMeasurement(measurement string) bool {
+	for _, p := range a.Points {
+		if p.Measurement == measurement {
+			return true
+		}
+	}
 	return false
 }

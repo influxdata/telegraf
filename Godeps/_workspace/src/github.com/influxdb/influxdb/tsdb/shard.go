@@ -37,10 +37,11 @@ var (
 // Data can be split across many shards. The query engine in TSDB is responsible
 // for combining the output of many shards into a single query result.
 type Shard struct {
-	db    *bolt.DB // underlying data store
-	index *DatabaseIndex
-	path  string
-	id    uint64
+	db      *bolt.DB // underlying data store
+	index   *DatabaseIndex
+	path    string
+	walPath string
+	id      uint64
 
 	engine  Engine
 	options EngineOptions
@@ -52,11 +53,12 @@ type Shard struct {
 	LogOutput io.Writer
 }
 
-// NewShard returns a new initialized Shard
-func NewShard(id uint64, index *DatabaseIndex, path string, options EngineOptions) *Shard {
+// NewShard returns a new initialized Shard. walPath doesn't apply to the b1 type index
+func NewShard(id uint64, index *DatabaseIndex, path string, walPath string, options EngineOptions) *Shard {
 	return &Shard{
 		index:             index,
 		path:              path,
+		walPath:           walPath,
 		id:                id,
 		options:           options,
 		measurementFields: make(map[string]*MeasurementFields),
@@ -83,7 +85,7 @@ func (s *Shard) Open() error {
 		}
 
 		// Initialize underlying engine.
-		e, err := NewEngine(s.path, s.options)
+		e, err := NewEngine(s.path, s.walPath, s.options)
 		if err != nil {
 			return fmt.Errorf("new engine: %s", err)
 		}
@@ -151,7 +153,7 @@ type SeriesCreate struct {
 
 // WritePoints will write the raw data points and any new metadata to the index in the shard
 func (s *Shard) WritePoints(points []Point) error {
-	seriesToCreate, fieldsToCreate, err := s.validateSeriesAndFields(points)
+	seriesToCreate, fieldsToCreate, seriesToAddShardTo, err := s.validateSeriesAndFields(points)
 	if err != nil {
 		return err
 	}
@@ -161,6 +163,17 @@ func (s *Shard) WritePoints(points []Point) error {
 		s.index.mu.Lock()
 		for _, ss := range seriesToCreate {
 			s.index.CreateSeriesIndexIfNotExists(ss.Measurement, ss.Series)
+		}
+		s.index.mu.Unlock()
+	}
+
+	if len(seriesToAddShardTo) > 0 {
+		s.index.mu.Lock()
+		for _, k := range seriesToAddShardTo {
+			ss := s.index.series[k]
+			if ss != nil {
+				ss.shardIDs[s.id] = true
+			}
 		}
 		s.index.mu.Unlock()
 	}
@@ -314,9 +327,10 @@ func (s *Shard) createFieldsAndMeasurements(fieldsToCreate []*FieldCreate) (map[
 }
 
 // validateSeriesAndFields checks which series and fields are new and whose metadata should be saved and indexed
-func (s *Shard) validateSeriesAndFields(points []Point) ([]*SeriesCreate, []*FieldCreate, error) {
+func (s *Shard) validateSeriesAndFields(points []Point) ([]*SeriesCreate, []*FieldCreate, []string, error) {
 	var seriesToCreate []*SeriesCreate
 	var fieldsToCreate []*FieldCreate
+	var seriesToAddShardTo []string
 
 	// get the mutex for the in memory index, which is shared across shards
 	s.index.mu.RLock()
@@ -331,10 +345,11 @@ func (s *Shard) validateSeriesAndFields(points []Point) ([]*SeriesCreate, []*Fie
 		if ss := s.index.series[string(p.Key())]; ss == nil {
 			series := NewSeries(string(p.Key()), p.Tags())
 			seriesToCreate = append(seriesToCreate, &SeriesCreate{p.Name(), series})
+			seriesToAddShardTo = append(seriesToAddShardTo, series.Key)
 		} else if !ss.shardIDs[s.id] {
 			// this is the first time this series is being written into this shard, persist it
-			ss.shardIDs[s.id] = true
 			seriesToCreate = append(seriesToCreate, &SeriesCreate{p.Name(), ss})
+			seriesToAddShardTo = append(seriesToAddShardTo, ss.Key)
 		}
 
 		// see if the field definitions need to be saved to the shard
@@ -351,7 +366,7 @@ func (s *Shard) validateSeriesAndFields(points []Point) ([]*SeriesCreate, []*Fie
 			if f := mf.Fields[name]; f != nil {
 				// Field present in shard metadata, make sure there is no type conflict.
 				if f.Type != influxql.InspectDataType(value) {
-					return nil, nil, fmt.Errorf("field type conflict: input field \"%s\" on measurement \"%s\" is type %T, already exists as type %s", name, p.Name(), value, f.Type)
+					return nil, nil, nil, fmt.Errorf("field type conflict: input field \"%s\" on measurement \"%s\" is type %T, already exists as type %s", name, p.Name(), value, f.Type)
 				}
 
 				continue // Field is present, and it's of the same type. Nothing more to do.
@@ -361,7 +376,7 @@ func (s *Shard) validateSeriesAndFields(points []Point) ([]*SeriesCreate, []*Fie
 		}
 	}
 
-	return seriesToCreate, fieldsToCreate, nil
+	return seriesToCreate, fieldsToCreate, seriesToAddShardTo, nil
 }
 
 // SeriesCount returns the number of series buckets on the shard.

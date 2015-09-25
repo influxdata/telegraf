@@ -33,6 +33,13 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 		{"bytes", 2},
 		{"innodb", 51},
 		{"threads", 4},
+		{"aborted", 2},
+		{"created", 3},
+		{"key", 7},
+		{"open", 7},
+		{"opened", 3},
+		{"qcache", 8},
+		{"table", 5},
 	}
 
 	intMetrics := []string{

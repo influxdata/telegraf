@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/influxdb/telegraf",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5",
 	"Packages": [
 		"./..."
 	],
@@ -29,6 +29,11 @@
 			"Rev": "4dc77674aceaabba2c7e3da25d4c823edfb73f99"
 		},
 		{
+			"ImportPath": "github.com/cloudfoundry/gosigar",
+			"Comment": "scotty_09012012-27-g3ed7c74",
+			"Rev": "3ed7c74352dae6dc00bdc8c74045375352e3ec05"
+		},
+		{
 			"ImportPath": "github.com/dancannon/gorethink/encoding",
 			"Comment": "v1.x.x-1-g786f12a",
 			"Rev": "786f12ae730ea93485c4eb2c44b3ede6e1e8745f"
@@ -55,7 +60,7 @@
 		},
 		{
 			"ImportPath": "github.com/fsouza/go-dockerclient",
-			"Rev": "42d06e2b125654477366c320dcea99107a86e9c2"
+			"Rev": "af9789bbd78acf3e279274caa54682185eb7ed33"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
@@ -91,34 +96,9 @@
 			"Rev": "d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee"
 		},
 		{
-			"ImportPath": "github.com/influxdb/influxdb/client",
-			"Comment": "v0.9.3-rc1",
-			"Rev": "f4077764b2bb2b03241452d88e9db321c62bb560"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/influxql",
-			"Comment": "v0.9.3-rc1",
-			"Rev": "f4077764b2bb2b03241452d88e9db321c62bb560"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/meta",
-			"Comment": "v0.9.3-rc1",
-			"Rev": "f4077764b2bb2b03241452d88e9db321c62bb560"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/snapshot",
-			"Comment": "v0.9.3-rc1",
-			"Rev": "f4077764b2bb2b03241452d88e9db321c62bb560"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/toml",
-			"Comment": "v0.9.3-rc1",
-			"Rev": "f4077764b2bb2b03241452d88e9db321c62bb560"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/tsdb",
-			"Comment": "v0.9.3-rc1",
-			"Rev": "f4077764b2bb2b03241452d88e9db321c62bb560"
+			"ImportPath": "github.com/influxdb/influxdb",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
@@ -160,6 +140,45 @@
 		{
 			"ImportPath": "github.com/samuel/go-zookeeper/zk",
 			"Rev": "5bb5cfc093ad18a28148c578f8632cfdb4d802e4"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/common",
+			"Comment": "1.0.0-158-g0fd612e",
+			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/cpu",
+			"Comment": "1.0.0-158-g0fd612e",
+			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/disk",
+			"Comment": "1.0.0-158-g0fd612e",
+			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/docker",
+			"Comment": "1.0.0-158-g0fd612e",
+			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/load",
+			"Comment": "1.0.0-158-g0fd612e",
+			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/mem",
+			"Comment": "1.0.0-158-g0fd612e",
+			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/net",
+			"Comment": "1.0.0-158-g0fd612e",
+			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+		},
+		{
+			"ImportPath": "github.com/streadway/amqp",
+			"Rev": "f4879ba28fffbb576743b03622a9ff20461826b2"
 		},
 		{
 			"ImportPath": "github.com/stretchr/objx",

@@ -6,51 +6,75 @@ import (
 	"fmt"
 	"github.com/gonuts/go-shellquote"
 	"github.com/influxdb/telegraf/plugins"
+	"math"
 	"os/exec"
 	"sync"
+	"time"
 )
 
 const sampleConfig = `
-# specify commands via an array of tables
-[[exec.commands]]
-# the command to run
-command = "/usr/bin/mycollector --foo=bar"
+	# specify commands via an array of tables
+	[[exec.commands]]
+	# the command to run
+	command = "/usr/bin/mycollector --foo=bar"
 
-# name of the command (used as a prefix for measurements)
-name = "mycollector"
+	# name of the command (used as a prefix for measurements)
+	name = "mycollector"
+
+	# Only run this command if it has been at least this many
+	# seconds since it last ran
+	interval = 10
 `
-
-type Command struct {
-	Command string
-	Name    string
-}
 
 type Exec struct {
 	Commands []*Command
 	runner   Runner
+	clock    Clock
+}
+
+type Command struct {
+	Command   string
+	Name      string
+	Interval  int
+	lastRunAt time.Time
 }
 
 type Runner interface {
-	Run(string, ...string) ([]byte, error)
+	Run(*Command) ([]byte, error)
 }
 
-type CommandRunner struct {
+type Clock interface {
+	Now() time.Time
 }
 
-func NewExec() *Exec {
-	return &Exec{runner: CommandRunner{}}
-}
+type CommandRunner struct{}
 
-func (c CommandRunner) Run(command string, args ...string) ([]byte, error) {
-	cmd := exec.Command(command, args...)
+type RealClock struct{}
+
+func (c CommandRunner) Run(command *Command) ([]byte, error) {
+	command.lastRunAt = time.Now()
+	split_cmd, err := shellquote.Split(command.Command)
+	if err != nil || len(split_cmd) == 0 {
+		return nil, fmt.Errorf("exec: unable to parse command, %s", err)
+	}
+
+	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("exec: %s for command '%s'", err, command)
+		return nil, fmt.Errorf("exec: %s for command '%s'", err, command.Command)
 	}
 
 	return out.Bytes(), nil
+}
+
+func (c RealClock) Now() time.Time {
+	return time.Now()
+}
+
+func NewExec() *Exec {
+	return &Exec{runner: CommandRunner{}, clock: RealClock{}}
 }
 
 func (e *Exec) SampleConfig() string {
@@ -80,23 +104,28 @@ func (e *Exec) Gather(acc plugins.Accumulator) error {
 }
 
 func (e *Exec) gatherCommand(c *Command, acc plugins.Accumulator) error {
-	words, err := shellquote.Split(c.Command)
-	if err != nil || len(words) == 0 {
-		return fmt.Errorf("exec: unable to parse command, %s", err)
+	secondsSinceLastRun := 0.0
+
+	if c.lastRunAt.Unix() == 0 { // means time is uninitialized
+		secondsSinceLastRun = math.Inf(1)
+	} else {
+		secondsSinceLastRun = (e.clock.Now().Sub(c.lastRunAt)).Seconds()
 	}
 
-	out, err := e.runner.Run(words[0], words[1:]...)
-	if err != nil {
-		return err
-	}
+	if secondsSinceLastRun >= float64(c.Interval) {
+		out, err := e.runner.Run(c)
+		if err != nil {
+			return err
+		}
 
-	var jsonOut interface{}
-	err = json.Unmarshal(out, &jsonOut)
-	if err != nil {
-		return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s", c.Command, err)
-	}
+		var jsonOut interface{}
+		err = json.Unmarshal(out, &jsonOut)
+		if err != nil {
+			return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s", c.Command, err)
+		}
 
-	processResponse(acc, c.Name, map[string]string{}, jsonOut)
+		processResponse(acc, c.Name, map[string]string{}, jsonOut)
+	}
 	return nil
 }
 

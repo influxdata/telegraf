@@ -2,29 +2,29 @@ package system
 
 import (
 	gonet "net"
+	"os"
 	"strings"
 
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/influxdb/telegraf/plugins"
-	"github.com/influxdb/telegraf/plugins/system/ps/common"
-	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
-	"github.com/influxdb/telegraf/plugins/system/ps/disk"
-	"github.com/influxdb/telegraf/plugins/system/ps/docker"
-	"github.com/influxdb/telegraf/plugins/system/ps/load"
-	"github.com/influxdb/telegraf/plugins/system/ps/mem"
-	"github.com/influxdb/telegraf/plugins/system/ps/net"
+	"github.com/shirou/gopsutil/common"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/docker"
+	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 )
 
 type DockerContainerStat struct {
 	Id      string
 	Name    string
 	Command string
+	Labels  map[string]string
 	CPU     *cpu.CPUTimesStat
 	Mem     *docker.CgroupMemStat
 }
 
 type PS interface {
-	LoadAvg() (*load.LoadAvgStat, error)
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error)
 	DiskUsage() ([]*disk.DiskUsageStat, error)
 	NetIO() ([]net.NetIOCountersStat, error)
@@ -43,10 +43,6 @@ func add(acc plugins.Accumulator,
 
 type systemPS struct {
 	dockerClient *dc.Client
-}
-
-func (s *systemPS) LoadAvg() (*load.LoadAvgStat, error) {
-	return load.LoadAvg()
 }
 
 func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error) {
@@ -77,12 +73,14 @@ func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 	var usage []*disk.DiskUsageStat
 
 	for _, p := range parts {
-		du, err := disk.DiskUsage(p.Mountpoint)
-		if err != nil {
-			return nil, err
+		if _, err := os.Stat(p.Mountpoint); err == nil {
+			du, err := disk.DiskUsage(p.Mountpoint)
+			if err != nil {
+				return nil, err
+			}
+			du.Fstype = p.Fstype
+			usage = append(usage, du)
 		}
-		du.Fstype = p.Fstype
-		usage = append(usage, du)
 	}
 
 	return usage, nil
@@ -121,7 +119,7 @@ func (s *systemPS) DockerStat() ([]*DockerContainerStat, error) {
 
 	opts := dc.ListContainersOptions{}
 
-	list, err := s.dockerClient.ListContainers(opts)
+	containers, err := s.dockerClient.ListContainers(opts)
 	if err != nil {
 		if _, ok := err.(*gonet.OpError); ok {
 			return nil, nil
@@ -132,23 +130,24 @@ func (s *systemPS) DockerStat() ([]*DockerContainerStat, error) {
 
 	var stats []*DockerContainerStat
 
-	for _, cont := range list {
-		ctu, err := docker.CgroupCPUDocker(cont.ID)
+	for _, container := range containers {
+		ctu, err := docker.CgroupCPUDocker(container.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		mem, err := docker.CgroupMemDocker(cont.ID)
+		mem, err := docker.CgroupMemDocker(container.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		name := strings.Join(cont.Names, " ")
+		name := strings.Join(container.Names, " ")
 
 		stats = append(stats, &DockerContainerStat{
-			Id:      cont.ID,
+			Id:      container.ID,
 			Name:    name,
-			Command: cont.Command,
+			Command: container.Command,
+			Labels:  container.Labels,
 			CPU:     ctu,
 			Mem:     mem,
 		})

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdb/telegraf/testutil"
+
 	"github.com/influxdb/influxdb/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,18 +27,6 @@ func fakeDatadog() *Datadog {
 	return d
 }
 
-func testData() client.BatchPoints {
-	var bp client.BatchPoints
-	bp.Time = time.Now()
-	bp.Tags = map[string]string{"tag1": "value1"}
-	bp.Points = []client.Point{
-		{
-			Fields: map[string]interface{}{"value": 1.0},
-		},
-	}
-	return bp
-}
-
 func TestUriOverride(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -48,7 +38,7 @@ func TestUriOverride(t *testing.T) {
 	d.Apikey = "123456"
 	err := d.Connect()
 	require.NoError(t, err)
-	err = d.Write(testData())
+	err = d.Write(testutil.MockBatchPoints())
 	require.NoError(t, err)
 }
 
@@ -67,7 +57,7 @@ func TestBadStatusCode(t *testing.T) {
 	d.Apikey = "123456"
 	err := d.Connect()
 	require.NoError(t, err)
-	err = d.Write(testData())
+	err = d.Write(testutil.MockBatchPoints())
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {

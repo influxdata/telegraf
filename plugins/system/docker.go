@@ -1,3 +1,5 @@
+// +build linux
+
 package system
 
 import (
@@ -28,6 +30,9 @@ func (s *DockerStats) Gather(acc plugins.Accumulator) error {
 			"name":    cont.Name,
 			"command": cont.Command,
 		}
+		for k, v := range cont.Labels {
+			tags[k] = v
+		}
 
 		cts := cont.CPU
 
@@ -40,8 +45,7 @@ func (s *DockerStats) Gather(acc plugins.Accumulator) error {
 		acc.Add("softirq", cts.Softirq, tags)
 		acc.Add("steal", cts.Steal, tags)
 		acc.Add("guest", cts.Guest, tags)
-		acc.Add("guestNice", cts.GuestNice, tags)
-		acc.Add("stolen", cts.Stolen, tags)
+		acc.Add("guest_nice", cts.GuestNice, tags)
 
 		acc.Add("cache", cont.Mem.Cache, tags)
 		acc.Add("rss", cont.Mem.RSS, tags)

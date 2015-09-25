@@ -13,13 +13,20 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/all"
 )
 
-var fDebug = flag.Bool("debug", false, "show metrics as they're generated to stdout")
+var fDebug = flag.Bool("debug", false,
+	"show metrics as they're generated to stdout")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fVersion = flag.Bool("version", false, "display the version")
-var fSampleConfig = flag.Bool("sample-config", false, "print out full sample configuration")
+var fSampleConfig = flag.Bool("sample-config", false,
+	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
-var fPLuginsFilter = flag.String("filter", "", "filter the plugins to enable, separator is :")
+var fPLuginFilters = flag.String("filter", "",
+	"filter the plugins to enable, separator is :")
+var fOutputFilters = flag.String("outputfilter", "",
+	"filter the outputs to enable, separator is :")
+var fUsage = flag.String("usage", "",
+	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 
 // Telegraf version
 //	-ldflags "-X main.Version=`git describe --always --tags`"
@@ -28,6 +35,18 @@ var Version string
 func main() {
 	flag.Parse()
 
+	var pluginFilters []string
+	if *fPLuginFilters != "" {
+		pluginsFilter := strings.TrimSpace(*fPLuginFilters)
+		pluginFilters = strings.Split(":"+pluginsFilter+":", ":")
+	}
+
+	var outputFilters []string
+	if *fOutputFilters != "" {
+		outputFilter := strings.TrimSpace(*fOutputFilters)
+		outputFilters = strings.Split(":"+outputFilter+":", ":")
+	}
+
 	if *fVersion {
 		v := fmt.Sprintf("Telegraf - Version %s", Version)
 		fmt.Println(v)
@@ -35,7 +54,14 @@ func main() {
 	}
 
 	if *fSampleConfig {
-		telegraf.PrintSampleConfig()
+		telegraf.PrintSampleConfig(pluginFilters, outputFilters)
+		return
+	}
+
+	if *fUsage != "" {
+		if err := telegraf.PrintPluginConfig(*fUsage); err != nil {
+			log.Fatal(err)
+		}
 		return
 	}
 
@@ -64,7 +90,7 @@ func main() {
 		ag.Debug = true
 	}
 
-	outputs, err := ag.LoadOutputs()
+	outputs, err := ag.LoadOutputs(outputFilters)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,7 +99,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	plugins, err := ag.LoadPlugins(*fPLuginsFilter)
+	plugins, err := ag.LoadPlugins(pluginFilters)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,16 +109,10 @@ func main() {
 	}
 
 	if *fTest {
-		if *fConfig != "" {
-			err = ag.Test()
-		} else {
-			err = ag.TestAllPlugins()
-		}
-
+		err = ag.Test()
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		return
 	}
 
@@ -102,11 +122,8 @@ func main() {
 	}
 
 	shutdown := make(chan struct{})
-
 	signals := make(chan os.Signal)
-
 	signal.Notify(signals, os.Interrupt)
-
 	go func() {
 		<-signals
 		close(shutdown)
@@ -117,8 +134,9 @@ func main() {
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
 	if ag.Debug {
 		log.Printf("Debug: enabled")
-		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v\n",
-			ag.Interval, ag.Debug, ag.Hostname)
+		log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
+			"Precision:%#v, UTC: %#v\n",
+			ag.Interval, ag.Debug, ag.Hostname, ag.Precision, ag.UTC)
 	}
 	log.Printf("Tags enabled: %s", config.ListTags())
 

@@ -60,6 +60,7 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 		{"http_response.2xx", 1314093},
 		{"http_response.3xx", 537036},
 		{"http_response.4xx", 123452},
+		{"http_response.5xx", 11966},
 		{"dreq", 1102},
 		{"dresp", 80},
 		{"wretr", 17},

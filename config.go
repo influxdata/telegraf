@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
@@ -130,10 +131,11 @@ func (c *Config) ApplyOutput(name string, v interface{}) error {
 	return nil
 }
 
-// ApplyAgent loads the toml config into the given interface
-func (c *Config) ApplyAgent(v interface{}) error {
+// ApplyAgent loads the toml config into the given Agent object, overriding
+// defaults (such as collection duration) with the values from the toml config.
+func (c *Config) ApplyAgent(a *Agent) error {
 	if c.agent != nil {
-		return toml.UnmarshalTable(c.agent, v)
+		return toml.UnmarshalTable(c.agent, a)
 	}
 
 	return nil
@@ -326,9 +328,6 @@ type hasDescr interface {
 
 var header = `# Telegraf configuration
 
-# If this file is missing an [agent] section, you must first generate a
-# valid config with 'telegraf -sample-config > telegraf.toml'
-
 # Telegraf is entirely plugin driven. All metrics are gathered from the
 # declared plugins.
 
@@ -348,76 +347,113 @@ var header = `# Telegraf configuration
 # NOTE: The configuration has a few required parameters. They are marked
 # with 'required'. Be sure to edit those to make this configuration work.
 
-# OUTPUTS
-[outputs]
-
-# Configuration for influxdb server to send metrics to
-[outputs.influxdb]
-# The full HTTP endpoint URL for your InfluxDB instance
-url = "http://localhost:8086" # required.
-
-# The target database for metrics. This database must already exist
-database = "telegraf" # required.
-
-# Connection timeout (for the connection with InfluxDB), formatted as a string.
-# Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-# If not provided, will default to 0 (no timeout)
-# timeout = "5s"
-
-# username = "telegraf"
-# password = "metricsmetricsmetricsmetrics"
-
-# Set the user agent for the POSTs (can be useful for log differentiation)
-# user_agent = "telegraf"
-
 # Tags can also be specified via a normal map, but only one form at a time:
+[tags]
+	# dc = "us-east-1"
 
-# [tags]
-# dc = "us-east-1" }
+# Configuration for telegraf agent
+[agent]
+	# Default data collection interval for all plugins
+	interval = "10s"
 
-# Configuration for telegraf itself
-# [agent]
-# interval = "10s"
-# debug = false
-# hostname = "prod3241"
+	# If utc = false, uses local time (utc is highly recommended)
+	utc = true
 
-# PLUGINS
+	# Precision of writes, valid values are n, u, ms, s, m, and h
+	# note: using second precision greatly helps InfluxDB compression
+	precision = "s"
 
+	# run telegraf in debug mode
+	debug = false
+
+	# Override default hostname, if empty use os.Hostname()
+	hostname = ""
+
+
+###############################################################################
+#                                  OUTPUTS                                    #
+###############################################################################
+
+[outputs]
 `
 
-// PrintSampleConfig prints the sample config!
-func PrintSampleConfig() {
+var header2 = `
+
+###############################################################################
+#                                  PLUGINS                                    #
+###############################################################################
+`
+
+// PrintSampleConfig prints the sample config
+func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 	fmt.Printf(header)
 
-	var names []string
-
-	for name := range plugins.Plugins {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	for _, name := range names {
-		creator := plugins.Plugins[name]
-
-		plugin := creator()
-
-		fmt.Printf("# %s\n[%s]\n", plugin.Description(), name)
-
-		var config string
-
-		config = strings.TrimSpace(plugin.SampleConfig())
-
-		if config == "" {
-			fmt.Printf("  # no configuration\n\n")
-		} else {
-			fmt.Printf("\n")
-			lines := strings.Split(config, "\n")
-			for _, line := range lines {
-				fmt.Printf("%s\n", line)
-			}
-
-			fmt.Printf("\n")
+	// Print Outputs
+	var onames []string
+	for oname := range outputs.Outputs {
+		if len(outputFilters) == 0 || sliceContains(oname, outputFilters) {
+			onames = append(onames, oname)
 		}
 	}
+	sort.Strings(onames)
+
+	for _, oname := range onames {
+		creator := outputs.Outputs[oname]
+		output := creator()
+
+		fmt.Printf("\n# %s\n[outputs.%s]", output.Description(), oname)
+
+		config := output.SampleConfig()
+		if config == "" {
+			fmt.Printf("\n	# no configuration\n")
+		} else {
+			fmt.Printf(config)
+		}
+	}
+
+	fmt.Printf(header2)
+
+	// Print Plugins
+	var pnames []string
+	for pname := range plugins.Plugins {
+		if len(pluginFilters) == 0 || sliceContains(pname, pluginFilters) {
+			pnames = append(pnames, pname)
+		}
+	}
+	sort.Strings(pnames)
+
+	for _, pname := range pnames {
+		creator := plugins.Plugins[pname]
+		plugin := creator()
+
+		fmt.Printf("\n# %s\n[%s]", plugin.Description(), pname)
+
+		config := plugin.SampleConfig()
+		if config == "" {
+			fmt.Printf("\n	# no configuration\n")
+		} else {
+			fmt.Printf(config)
+		}
+	}
+}
+
+func sliceContains(name string, list []string) bool {
+	for _, b := range list {
+		if b == name {
+			return true
+		}
+	}
+	return false
+}
+
+// PrintPluginConfig prints the config usage of a single plugin.
+func PrintPluginConfig(name string) error {
+	if creator, ok := plugins.Plugins[name]; ok {
+		plugin := creator()
+		fmt.Printf("# %s\n[%s]", plugin.Description(), name)
+		fmt.Printf(plugin.SampleConfig())
+	} else {
+		return errors.New(fmt.Sprintf("Plugin %s not found", name))
+	}
+	return nil
 }

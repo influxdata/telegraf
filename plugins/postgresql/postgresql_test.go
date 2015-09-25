@@ -29,6 +29,11 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	err := p.Gather(&acc)
 	require.NoError(t, err)
 
+	availableColumns := make(map[string]bool)
+	for _, col := range p.Servers[0].OrderedColumns {
+		availableColumns[col] = true
+	}
+
 	intMetrics := []string{
 		"xact_commit",
 		"xact_rollback",
@@ -43,6 +48,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		"temp_files",
 		"temp_bytes",
 		"deadlocks",
+		"numbackends",
 	}
 
 	floatMetrics := []string{
@@ -50,13 +56,26 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		"blk_write_time",
 	}
 
+	metricsCounted := 0
+
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntValue(metric))
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasIntValue(metric))
+			metricsCounted++
+		}
 	}
 
 	for _, metric := range floatMetrics {
-		assert.True(t, acc.HasFloatValue(metric))
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasFloatValue(metric))
+			metricsCounted++
+		}
 	}
+
+	assert.True(t, metricsCounted > 0)
+	assert.Equal(t, len(availableColumns) - len(p.IgnoredColumns()), metricsCounted)
 }
 
 func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
@@ -116,4 +135,28 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	}
 
 	assert.True(t, found)
+}
+
+func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Servers: []*Server{
+			{
+				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+					testutil.GetLocalHost()),
+			},
+		},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	for col := range p.IgnoredColumns() {
+		assert.False(t, acc.HasMeasurement(col))
+	}
 }

@@ -14,12 +14,15 @@ type Mysql struct {
 }
 
 var sampleConfig = `
-# specify servers via a url matching:
-#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
-#  e.g. root:root@http://10.0.0.18/?tls=false
-#
-# If no servers are specified, then localhost is used as the host.
-servers = ["localhost"]`
+	# specify servers via a url matching:
+	#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+	#  e.g.
+	#    root:root@http://10.0.0.18/?tls=false
+	#    root:passwd@tcp(127.0.0.1:3036)/
+	#
+	# If no servers are specified, then localhost is used as the host.
+	servers = ["localhost"]
+`
 
 func (m *Mysql) SampleConfig() string {
 	return sampleConfig
@@ -56,6 +59,10 @@ type mapping struct {
 
 var mappings = []*mapping{
 	{
+		onServer: "Aborted_",
+		inExport: "aborted_",
+	},
+	{
 		onServer: "Bytes_",
 		inExport: "bytes_",
 	},
@@ -64,12 +71,36 @@ var mappings = []*mapping{
 		inExport: "commands_",
 	},
 	{
+		onServer: "Created_",
+		inExport: "created_",
+	},
+	{
 		onServer: "Handler_",
 		inExport: "handler_",
 	},
 	{
 		onServer: "Innodb_",
 		inExport: "innodb_",
+	},
+	{
+		onServer: "Key_",
+		inExport: "key_",
+	},
+	{
+		onServer: "Open_",
+		inExport: "open_",
+	},
+	{
+		onServer: "Opened_",
+		inExport: "opened_",
+	},
+	{
+		onServer: "Qcache_",
+		inExport: "qcache_",
+	},
+	{
+		onServer: "Table_",
+		inExport: "table_",
 	},
 	{
 		onServer: "Tokudb_",
@@ -109,10 +140,21 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 
 		var found bool
 
+		// Parse out user/password from server address tag if given
+		var servtag string
+		if strings.Contains(serv, "@") {
+			servtag = strings.Split(serv, "@")[1]
+		} else if serv == "" {
+			servtag = "localhost"
+		} else {
+			servtag = serv
+		}
+		tags := map[string]string{"server": servtag}
+
 		for _, mapped := range mappings {
 			if strings.HasPrefix(name, mapped.onServer) {
 				i, _ := strconv.Atoi(string(val.([]byte)))
-				acc.Add(mapped.inExport+name[len(mapped.onServer):], i, nil)
+				acc.Add(mapped.inExport+name[len(mapped.onServer):], i, tags)
 				found = true
 			}
 		}
@@ -128,14 +170,14 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 				return err
 			}
 
-			acc.Add("queries", i, nil)
+			acc.Add("queries", i, tags)
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
 				return err
 			}
 
-			acc.Add("slow_queries", i, nil)
+			acc.Add("slow_queries", i, tags)
 		}
 	}
 
