@@ -149,7 +149,7 @@ ln -sfn $INSTALL_ROOT_DIR/versions/$version/telegraf $INSTALL_ROOT_DIR/telegraf
 if ! id telegraf >/dev/null 2>&1; then
     useradd --help 2>&1| grep -- --system > /dev/null 2>&1
     old_useradd=\$?
-    if [[ \$old_useradd == 0 ]]
+    if [ \$old_useradd -eq 0 ]
     then
         useradd --system -U -M telegraf
     else
