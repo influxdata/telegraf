@@ -177,12 +177,15 @@ func (a *Agent) crankParallel() error {
 
 	var wg sync.WaitGroup
 
+	start := time.Now()
+	counter := 0
 	for _, plugin := range a.plugins {
 		if plugin.config.Interval != 0 {
 			continue
 		}
 
 		wg.Add(1)
+		counter++
 		go func(plugin *runningPlugin) {
 			defer wg.Done()
 
@@ -216,6 +219,9 @@ func (a *Agent) crankParallel() error {
 		bp.Points = append(bp.Points, sub.Points...)
 	}
 
+	elapsed := time.Since(start)
+	log.Printf("Cranking default interval, gathered %d metrics from %d plugins in %s\n",
+		len(bp.Points), counter, elapsed)
 	return a.flush(&bp)
 }
 
@@ -252,6 +258,7 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 	for {
 		var bp BatchPoints
 		var outerr error
+		start := time.Now()
 
 		bp.Debug = a.Debug
 
@@ -270,6 +277,9 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 			bp.Time = bp.Time.UTC()
 		}
 
+		elapsed := time.Since(start)
+		log.Printf("Cranking separate interval, gathered %d metrics from %s in %s\n",
+			len(bp.Points), plugin.name, elapsed)
 		if err := a.flush(&bp); err != nil {
 			outerr = errors.New("Error encountered processing plugins & outputs")
 		}
