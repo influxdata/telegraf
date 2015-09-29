@@ -9,9 +9,13 @@
 - [#90](https://github.com/influxdb/telegraf/issues/90): Add Docker labels to tags in docker plugin
 - [#223](https://github.com/influxdb/telegraf/pull/223): Add port tag to nginx plugin. Thanks @neezgee!
 - [#227](https://github.com/influxdb/telegraf/pull/227): Add command intervals to exec plugin. Thanks @jpalay!
+- Memory plugin: cached and buffered measurements re-added
+- Logging: additional logging for each collection interval, track the number
+of metrics collected and from how many plugins.
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
+- [#232](https://github.com/influxdb/telegraf/pull/232): Fix bashism run during deb package installation. Thanks @yankcrime!
 
 ## v0.1.9 [2015-09-22]
 
