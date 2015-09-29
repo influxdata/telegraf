@@ -220,8 +220,8 @@ func (a *Agent) crankParallel() error {
 	}
 
 	elapsed := time.Since(start)
-	log.Printf("Cranking default interval, gathered %d metrics from %d plugins in %s\n",
-		len(bp.Points), counter, elapsed)
+	log.Printf("Cranking default (%s) interval, gathered %d metrics from %d plugins in %s\n",
+		a.Interval, len(bp.Points), counter, elapsed)
 	return a.flush(&bp)
 }
 
@@ -278,8 +278,8 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 		}
 
 		elapsed := time.Since(start)
-		log.Printf("Cranking separate interval, gathered %d metrics from %s in %s\n",
-			len(bp.Points), plugin.name, elapsed)
+		log.Printf("Cranking separate (%s) interval, gathered %d metrics from %s in %s\n",
+			plugin.config.Interval, len(bp.Points), plugin.name, elapsed)
 		if err := a.flush(&bp); err != nil {
 			outerr = errors.New("Error encountered processing plugins & outputs")
 		}
