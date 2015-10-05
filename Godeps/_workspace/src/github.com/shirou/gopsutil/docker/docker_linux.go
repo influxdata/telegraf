@@ -4,7 +4,6 @@ package docker
 
 import (
 	"encoding/json"
-        "os"
 	"os/exec"
 	"path"
 	"strconv"
@@ -47,13 +46,9 @@ func CgroupCPU(containerid string, base string) (*cpu.CPUTimesStat, error) {
 	if len(base) == 0 {
 		base = "/sys/fs/cgroup/cpuacct/docker"
 	}
-	statfile := path.Join(base, containerid, "cpuacct.stat")
+	path := path.Join(base, containerid, "cpuacct.stat")
 
-        if _, err := os.Stat(statfile); os.IsNotExist(err) {
-            statfile = path.Join("/sys/fs/cgroup/cpuacct/system.slice",  "docker-" + containerid + ".scope", "cpuacct.stat")
-        }
-
-	lines, err := common.ReadLines(statfile)
+	lines, err := common.ReadLines(path)
 	if err != nil {
 		return nil, err
 	}
@@ -89,17 +84,12 @@ func CgroupMem(containerid string, base string) (*CgroupMemStat, error) {
 	if len(base) == 0 {
 		base = "/sys/fs/cgroup/memory/docker"
 	}
-	statfile := path.Join(base, containerid, "memory.stat")
-
-        if _, err := os.Stat(statfile); os.IsNotExist(err) {
-            statfile = path.Join("/sys/fs/cgroup/memory/system.slice",  "docker-" + containerid + ".scope", "memory.stat")
-        }
-
+	path := path.Join(base, containerid, "memory.stat")
 	// empty containerid means all cgroup
 	if len(containerid) == 0 {
 		containerid = "all"
 	}
-	lines, err := common.ReadLines(statfile)
+	lines, err := common.ReadLines(path)
 	if err != nil {
 		return nil, err
 	}

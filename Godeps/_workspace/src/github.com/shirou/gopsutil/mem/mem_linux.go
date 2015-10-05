@@ -13,8 +13,6 @@ import (
 func VirtualMemory() (*VirtualMemoryStat, error) {
 	filename := "/proc/meminfo"
 	lines, _ := common.ReadLines(filename)
-	// flag if MemAvailable is in /proc/meminfo (kernel 3.14+)
-	memavail := false
 
 	ret := &VirtualMemoryStat{}
 	for _, line := range lines {
@@ -35,9 +33,6 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 			ret.Total = t * 1024
 		case "MemFree":
 			ret.Free = t * 1024
-		case "MemAvailable":
-			memavail = true
-			ret.Available = t * 1024
 		case "Buffers":
 			ret.Buffers = t * 1024
 		case "Cached":
@@ -48,9 +43,7 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 			ret.Inactive = t * 1024
 		}
 	}
-	if !memavail {
-		ret.Available = ret.Free + ret.Buffers + ret.Cached
-	}
+	ret.Available = ret.Free + ret.Buffers + ret.Cached
 	ret.Used = ret.Total - ret.Free
 	ret.UsedPercent = float64(ret.Total-ret.Available) / float64(ret.Total) * 100.0
 
