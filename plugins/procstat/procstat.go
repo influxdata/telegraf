@@ -98,7 +98,7 @@ func pidFromExe(exe string) (int, error) {
 }
 
 func init() {
-	plugins.Add("process", func() plugins.Plugin {
+	plugins.Add("procstat", func() plugins.Plugin {
 		return NewProcstat()
 	})
 }
