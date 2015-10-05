@@ -1,6 +1,7 @@
 package statsd
 
 import (
+	"errors"
 	"log"
 	"net"
 	"strconv"
@@ -42,6 +43,20 @@ type Statsd struct {
 		Name   string
 		Tagmap map[string]int
 	}
+}
+
+func NewStatsd() *Statsd {
+	s := Statsd{}
+
+	// Make data structures
+	s.done = make(chan struct{})
+	s.in = make(chan string, s.AllowedPendingMessages)
+	s.inmetrics = make(chan metric, s.AllowedPendingMessages)
+	s.gauges = make(map[string]cachedmetric)
+	s.counters = make(map[string]cachedmetric)
+	s.sets = make(map[string]cachedmetric)
+
+	return &s
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
@@ -201,7 +216,7 @@ func (s *Statsd) parser() error {
 
 // parseStatsdLine will parse the given statsd line, validating it as it goes.
 // If the line is valid, it will be cached for the next call to Gather()
-func (s *Statsd) parseStatsdLine(line string) {
+func (s *Statsd) parseStatsdLine(line string) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -209,21 +224,21 @@ func (s *Statsd) parseStatsdLine(line string) {
 	m := metric{}
 	parts1 := strings.Split(line, "|")
 	if len(parts1) < 2 {
-		log.Printf("Error splitting '|', Unable to parse metric: %s\n", line)
-		return
+		log.Printf("Error: splitting '|', Unable to parse metric: %s\n", line)
+		return errors.New("Error Parsing statsd line")
 	} else if len(parts1) > 2 {
 		sr := parts1[2]
+		errmsg := "Error: parsing sample rate, %s, it must be in format like: " +
+			"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
 		if strings.Contains(sr, "@") && len(sr) > 1 {
 			samplerate, err := strconv.ParseFloat(sr[1:], 64)
 			if err != nil {
-				log.Printf("Error parsing sample rate: %s\n", err.Error())
+				log.Printf(errmsg, err.Error(), line)
 			} else {
 				m.samplerate = samplerate
 			}
 		} else {
-			msg := "Error parsing sample rate, it must be in format like: " +
-				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
-			log.Printf(msg, line)
+			log.Printf(errmsg, "", line)
 		}
 	}
 
@@ -232,15 +247,15 @@ func (s *Statsd) parseStatsdLine(line string) {
 	case "g", "c", "s", "ms", "h":
 		m.mtype = parts1[1]
 	default:
-		log.Printf("Statsd Metric type %s unsupported", parts1[1])
-		return
+		log.Printf("Error: Statsd Metric type %s unsupported", parts1[1])
+		return errors.New("Error Parsing statsd line")
 	}
 
 	// Validate splitting the rest of the line on ":"
 	parts2 := strings.Split(parts1[0], ":")
 	if len(parts2) != 2 {
-		log.Printf("Error splitting ':', Unable to parse metric: %s\n", line)
-		return
+		log.Printf("Error: splitting ':', Unable to parse metric: %s\n", line)
+		return errors.New("Error Parsing statsd line")
 	}
 	m.bucket = parts2[0]
 
@@ -248,14 +263,14 @@ func (s *Statsd) parseStatsdLine(line string) {
 	if strings.ContainsAny(parts2[1], "-+") {
 		if m.mtype != "g" {
 			log.Printf("Error: +- values are only supported for gauges: %s\n", line)
-			return
+			return errors.New("Error Parsing statsd line")
 		}
 		m.additive = true
 	}
 	v, err := strconv.ParseInt(parts2[1], 10, 64)
 	if err != nil {
 		log.Printf("Error: parsing value to int64: %s\n", line)
-		return
+		return errors.New("Error Parsing statsd line")
 	}
 	// If a sample rate is given with a counter, divide value by the rate
 	if m.samplerate != 0 && m.mtype == "c" {
@@ -278,6 +293,7 @@ func (s *Statsd) parseStatsdLine(line string) {
 			log.Printf(dropwarn, line)
 		}
 	}
+	return nil
 }
 
 // parseName parses the given bucket name with the list of bucket maps in the

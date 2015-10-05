@@ -75,5 +75,5 @@ implementation. In short, the telegraf statsd listener will accept:
     - `users.unique:101|s`
     - `users.unique:101|s`
     - `users.unique:102|s` <- would result in a count of 2 for `users.unique`
-- Timers
+- Timings
     - TODO
