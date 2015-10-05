@@ -26,7 +26,7 @@ func NewProcstat() *Procstat {
 }
 
 var sampleConfig = `
-  [[process.specifications]]
+  [[procstat.specifications]]
 	# pid file
 	pid_file = "/path/to/foo.pid"
 	# executable name (used by pgrep)
