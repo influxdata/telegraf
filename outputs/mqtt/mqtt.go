@@ -37,8 +37,9 @@ type MQTT struct {
 var sampleConfig = `
  	servers = ["localhost:1883"] # required.
 
-        # MQTT outputs send metrics
-        #    "<topic_prefix>/host/<hostname>/mem_used_percent"
+        # MQTT outputs send metrics to this topic format
+        #    "<topic_prefix>/host/<hostname>/<pluginname>/"
+        #   ex: prefix/host/web01.example.com/mem/available
         # topic_prefix = "prefix"
 
         # Set hostname used in the sending topic. if empty use os.Hostname().
@@ -97,7 +98,11 @@ func (m *MQTT) Write(bp client.BatchPoints) error {
 		if m.TopicPrefix != "" {
 			t = append(t, m.TopicPrefix)
 		}
-		t = append(t, "host", m.Hostname, p.Measurement)
+		tm := strings.Split(p.Measurement, "_")
+		if len(tm) < 2 {
+			tm = []string{p.Measurement, "stat"}
+		}
+		t = append(t, "host", m.Hostname, tm[0], tm[1])
 		topic := strings.Join(t, "/")
 
 		var value string
