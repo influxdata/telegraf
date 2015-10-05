@@ -32,6 +32,7 @@ type PS interface {
 	VMStat() (*mem.VirtualMemoryStat, error)
 	SwapStat() (*mem.SwapMemoryStat, error)
 	DockerStat() ([]*DockerContainerStat, error)
+	NetConnections() ([]net.NetConnectionStat, error)
 }
 
 func add(acc plugins.Accumulator,
@@ -88,6 +89,10 @@ func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 
 func (s *systemPS) NetIO() ([]net.NetIOCountersStat, error) {
 	return net.NetIOCounters(true)
+}
+
+func (s *systemPS) NetConnections() ([]net.NetConnectionStat, error) {
+	return net.NetConnections("all")
 }
 
 func (s *systemPS) DiskIO() (map[string]disk.DiskIOCountersStat, error) {
