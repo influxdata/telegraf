@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"sync"
 
@@ -27,7 +26,6 @@ type MQTT struct {
 	Database    string
 	Timeout     t.Duration
 	TopicPrefix string
-	Hostname    string
 
 	Client *paho.Client
 	Opts   *paho.ClientOptions
@@ -42,18 +40,12 @@ var sampleConfig = `
         #   ex: prefix/host/web01.example.com/mem/available
         # topic_prefix = "prefix"
 
-        # Set hostname used in the sending topic. if empty use os.Hostname().
-        # This is not inherit from agent config
-        # hostname = "mytelegraf"
-
         # username and password to connect MQTT server.
  	# username = "telegraf"
  	# password = "metricsmetricsmetricsmetrics"
 `
 
 func (m *MQTT) Connect() error {
-	m.setHostname()
-
 	var err error
 	m.Lock()
 	defer m.Unlock()
@@ -92,6 +84,10 @@ func (m *MQTT) Write(bp client.BatchPoints) error {
 	if len(bp.Points) == 0 {
 		return nil
 	}
+	hostname, ok := bp.Tags["host"]
+	if !ok {
+		hostname = ""
+	}
 
 	for _, p := range bp.Points {
 		var t []string
@@ -102,7 +98,7 @@ func (m *MQTT) Write(bp client.BatchPoints) error {
 		if len(tm) < 2 {
 			tm = []string{p.Measurement, "stat"}
 		}
-		t = append(t, "host", m.Hostname, tm[0], tm[1])
+		t = append(t, "host", hostname, tm[0], tm[1])
 		topic := strings.Join(t, "/")
 
 		var value string
@@ -206,18 +202,6 @@ func getCertPool(pemPath string) (*x509.CertPool, error) {
 	}
 	certs.AppendCertsFromPEM(pemData)
 	return certs, nil
-}
-
-// setHostname overwrites default hostname.
-// TODO: should use agent.Hostname
-func (m *MQTT) setHostname() {
-	if m.Hostname == "" {
-		hostname, err := os.Hostname()
-		if err != nil {
-			hostname = ""
-		}
-		m.Hostname = hostname
-	}
 }
 
 func init() {

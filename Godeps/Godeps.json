@@ -6,6 +6,11 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git",
+			"Comment": "v0.9.1-14-g546c47a",
+			"Rev": "546c47a6d0e9492e77f6f37473d59c36a708e08b"
+		},
+		{
 			"ImportPath": "github.com/Shopify/sarama",
 			"Comment": "v1.4.3-45-g5b18996",
 			"Rev": "5b18996ef1cd555a60562ae4c5d7843ae137e12d"
@@ -96,7 +101,32 @@
 			"Rev": "d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee"
 		},
 		{
-			"ImportPath": "github.com/influxdb/influxdb",
+			"ImportPath": "github.com/influxdb/influxdb/client",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/influxql",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/meta",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/snapshot",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/toml",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/tsdb",
 			"Comment": "v0.9.3",
 			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
 		},
@@ -116,6 +146,10 @@
 		{
 			"ImportPath": "github.com/naoina/toml",
 			"Rev": "5811abcabb29d6af0fdf060f96d328962bd3cd5e"
+		},
+		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Rev": "ca53cad383cad2479bbba7f7a1a05797ec1386e4"
 		},
 		{
 			"ImportPath": "github.com/prometheus/client_golang/extraction",
@@ -216,6 +250,10 @@
 			"Rev": "173ce04bfaf66c7bb0fa9d5c0bfd93e773909dbd"
 		},
 		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "db8e4de5b2d6653f66aea53094624468caad15d2"
+		},
+		{
 			"ImportPath": "gopkg.in/dancannon/gorethink.v1",
 			"Comment": "v1.x.x",
 			"Rev": "8aca6ba2cc6e873299617d730fac0d7f6593113a"
@@ -224,11 +262,6 @@
 			"ImportPath": "gopkg.in/mgo.v2",
 			"Comment": "r2015.06.03-3-g3569c88",
 			"Rev": "3569c88678d88179dcbd68d02ab081cbca3cd4d0"
-		},
-		{
-			"ImportPath": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git",
-			"Comment": "v0.9.1-14-g546c47a",
-			"Rev": "546c47a6d0e9492e77f6f37473d59c36a708e08b"
 		}
 	]
 }
