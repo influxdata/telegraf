@@ -5,9 +5,9 @@ package system
 import (
 	"testing"
 
-	"github.com/influxdb/telegraf/plugins/system/ps/cpu"
-	"github.com/influxdb/telegraf/plugins/system/ps/docker"
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/koksan83/telegraf/plugins/system/ps/cpu"
+	"github.com/koksan83/telegraf/plugins/system/ps/docker"
+	"github.com/koksan83/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

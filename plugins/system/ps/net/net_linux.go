@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	common "github.com/influxdb/telegraf/plugins/system/ps/common"
+	common "github.com/koksan83/telegraf/plugins/system/ps/common"
 )
 
 // NetIOCounters returnes network I/O statistics for every network
@@ -15,7 +15,7 @@ import (
 // every network interface installed on the system is returned
 // separately.
 func NetIOCounters(pernic bool) ([]NetIOCountersStat, error) {
-	filename := "/proc/net/dev"
+	filename := "/rootfs/proc/net/dev"
 	lines, err := common.ReadLines(filename)
 	if err != nil {
 		return nil, err

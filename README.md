@@ -1,4 +1,4 @@
-# Telegraf - A native agent for InfluxDB [![Circle CI](https://circleci.com/gh/influxdb/telegraf.svg?style=svg)](https://circleci.com/gh/influxdb/telegraf)
+# Telegraf - A native agent for InfluxDB [![Circle CI](https://circleci.com/gh/koksan83/telegraf.svg?style=svg)](https://circleci.com/gh/koksan83/telegraf)
 
 Telegraf is an agent written in Go for collecting metrics from the system it's
 running on or from other services and writing them into InfluxDB.
@@ -51,8 +51,8 @@ if you don't have it already. You also must build with golang version 1.4+
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
-3. run `go get github.com/influxdb/telegraf`
-4. `cd $GOPATH/src/github.com/influxdb/telegraf`
+3. run `go get github.com/koksan83/telegraf`
+4. `cd $GOPATH/src/github.com/koksan83/telegraf`
 5. run `make`
 
 ### How to use it:
@@ -186,7 +186,7 @@ it prepended. This is to keep plugins honest.
 * Plugins should call `plugins.Add` in their `init` function to register themselves.
 See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
-`github.com/influxdb/telegraf/plugins/all/all.go` file.
+`github.com/koksan83/telegraf/plugins/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 plugin can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this plugin does.
@@ -259,7 +259,7 @@ package simple
 
 // simple.go
 
-import "github.com/influxdb/telegraf/plugins"
+import "github.com/koksan83/telegraf/plugins"
 
 type Simple struct {
 	Ok bool
@@ -303,7 +303,7 @@ which would take some time to replicate.
 To overcome this situation we've decided to use docker containers to provide a
 fast and reproducible environment to test those services which require it.
 For other situations
-(i.e: https://github.com/influxdb/telegraf/blob/master/plugins/redis/redis_test.go )
+(i.e: https://github.com/koksan83/telegraf/blob/master/plugins/redis/redis_test.go )
 a simple mock will suffice.
 
 To execute Telegraf tests follow these simple steps:

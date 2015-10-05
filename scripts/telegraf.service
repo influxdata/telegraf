@@ -1,6 +1,6 @@
 [Unit]
 Description=The plugin-driven server agent for reporting metrics into InfluxDB
-Documentation=https://github.com/influxdb/telegraf
+Documentation=https://github.com/koksan83/telegraf
 After=network.target
 
 [Service]

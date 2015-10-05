@@ -7,7 +7,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdb/influxdb/tsdb"
-	"github.com/influxdb/telegraf/plugins"
+	"github.com/koksan83/telegraf/plugins"
 	"github.com/wvanbergen/kafka/consumergroup"
 )
 

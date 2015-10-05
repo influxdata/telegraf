@@ -7,10 +7,12 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.box = "ubuntu/trusty64"
-  config.vm.synced_folder ".", "/home/vagrant/go/src/github.com/influxdb/telegraf",
+  config.vm.synced_folder ".", "/home/vagrant/go/src/github.com/koksan83/telegraf",
     type: "rsync",
-    rsync__args: ["--verbose", "--archive", "--delete", "-z", "--safe-links"],
-    rsync__exclude: ["./telegraf", ".vagrant/"]
+    rsync__args: ["--verbose"],
+#    rsync__args: ["--verbose", "--archive", "--delete", "-z", "--safe-links"],
+    rsync__exclude: [".vagrant/"]
+ #   rsync__exclude: ["./telegraf", ".vagrant/"]
 
   config.vm.provision "shell", name: "sudo", inline: <<-SHELL
     chown -R vagrant:vagrant /home/vagrant/go
@@ -26,7 +28,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     gvm use go1.4.2 --default
     echo "export PATH=$PATH:$GOPATH/bin"   >> "$HOME/.bashrc"
     echo 'export GOPATH=/home/vagrant/go'  >> "$HOME/.bashrc"
-    cd "$HOME/go/src/github.com/influxdb/telegraf" &&\
+    cd "$HOME/go/src/github.com/koksan83/telegraf" &&\
       rm -rf Godeps/_workspace/pkg &&\
       GOPATH="$HOME/go" make
   SHELL
