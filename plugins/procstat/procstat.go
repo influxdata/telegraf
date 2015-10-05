@@ -12,7 +12,7 @@ import (
 )
 
 type Specification struct {
-	PidFile string `toml:pid_file`
+	PidFile string
 	Exe     string
 	Prefix  string
 }
