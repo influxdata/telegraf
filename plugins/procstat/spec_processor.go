@@ -2,8 +2,10 @@ package procstat
 
 import (
 	"fmt"
-	"github.com/influxdb/telegraf/plugins"
+
 	"github.com/shirou/gopsutil/process"
+
+	"github.com/influxdb/telegraf/plugins"
 )
 
 type SpecProcessor struct {

@@ -2,13 +2,15 @@ package procstat
 
 import (
 	"fmt"
-	"github.com/influxdb/telegraf/plugins"
-	"github.com/shirou/gopsutil/process"
 	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/shirou/gopsutil/process"
+
+	"github.com/influxdb/telegraf/plugins"
 )
 
 type Specification struct {
@@ -26,12 +28,12 @@ func NewProcstat() *Procstat {
 }
 
 var sampleConfig = `
-  [[process.specifications]]
-	# pid file
-	pid_file = "/path/to/foo.pid"
+	[[procstat.specifications]]
+	prefix = "nginx" # required
+	# Use one of pid_file or exe to find process
+	pid_file = "/var/run/nginx.pid"
 	# executable name (used by pgrep)
-	exe = "/path/to/foo"
-	name = "foo" # required
+	# exe = "nginx"
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -39,7 +41,7 @@ func (_ *Procstat) SampleConfig() string {
 }
 
 func (_ *Procstat) Description() string {
-	return "Monitor  process cpu and memory usage"
+	return "Monitor process cpu and memory usage"
 }
 
 func (p *Procstat) Gather(acc plugins.Accumulator) error {

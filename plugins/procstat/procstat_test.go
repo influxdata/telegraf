@@ -1,13 +1,15 @@
 package procstat
 
 import (
-	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdb/telegraf/testutil"
 )
 
 func TestGather(t *testing.T) {
