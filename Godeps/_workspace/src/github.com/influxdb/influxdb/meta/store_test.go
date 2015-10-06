@@ -151,7 +151,7 @@ func TestStore_DeleteNode(t *testing.T) {
 	}
 
 	// Remove second node.
-	if err := s.DeleteNode(3); err != nil {
+	if err := s.DeleteNode(3, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -173,7 +173,7 @@ func TestStore_DeleteNode_ErrNodeNotFound(t *testing.T) {
 	s := MustOpenStore()
 	defer s.Close()
 
-	if err := s.DeleteNode(2); err != meta.ErrNodeNotFound {
+	if err := s.DeleteNode(2, false); err != meta.ErrNodeNotFound {
 		t.Fatalf("unexpected error: %s", err)
 	}
 }
@@ -272,6 +272,47 @@ func TestStore_CreateRetentionPolicy(t *testing.T) {
 	}) {
 		t.Fatalf("unexpected policy: %#v", rpi)
 	}
+}
+
+// Ensure the store can create and get a retention policy on a database.
+func TestStore_CreateAndGetRetentionPolicy(t *testing.T) {
+	t.Parallel()
+	s := MustOpenStore()
+	defer s.Close()
+
+	// Create an additional nodes and database.
+	if _, err := s.CreateNode("hostX"); err != nil {
+		t.Fatal(err)
+	} else if _, err := s.CreateDatabase("db0"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create policy on database.
+	if _, err := s.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{
+		Name:     "rp0",
+		ReplicaN: 2,
+		Duration: 48 * time.Hour,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Get the policy on database.
+	if rpi, err := s.RetentionPolicy("db0", "rp0"); err != nil {
+		t.Fatal(err)
+	} else if !reflect.DeepEqual(rpi, &meta.RetentionPolicyInfo{
+		Name:               "rp0",
+		ReplicaN:           2,
+		Duration:           48 * time.Hour,
+		ShardGroupDuration: 24 * time.Hour,
+	}) {
+		t.Fatalf("unexpected policy: %#v", rpi)
+	}
+
+	// Get non-existent policies.
+	if _, err := s.RetentionPolicy("db0", "rp0"); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 // Ensure the store can delete a retention policy.
@@ -489,29 +530,56 @@ func TestStore_PrecreateShardGroup(t *testing.T) {
 	s := MustOpenStore()
 	defer s.Close()
 
-	// Create node, database, policy, & group.
+	// Create node, database, policy, & groups.
 	if _, err := s.CreateNode("host0"); err != nil {
 		t.Fatal(err)
 	} else if _, err := s.CreateDatabase("db0"); err != nil {
 		t.Fatal(err)
 	} else if _, err = s.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp0", ReplicaN: 2, Duration: 1 * time.Hour}); err != nil {
 		t.Fatal(err)
-	} else if _, err := s.CreateShardGroup("db0", "rp0", time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+	} else if _, err = s.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp1", ReplicaN: 2, Duration: 1 * time.Hour}); err != nil {
 		t.Fatal(err)
-	} else if err := s.PrecreateShardGroups(time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+	} else if _, err = s.CreateRetentionPolicy("db0", &meta.RetentionPolicyInfo{Name: "rp2", ReplicaN: 2, Duration: 1 * time.Hour}); err != nil {
+		t.Fatal(err)
+	} else if _, err := s.CreateShardGroup("db0", "rp0", time.Date(2001, time.January, 1, 1, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	} else if _, err := s.CreateShardGroup("db0", "rp1", time.Date(2000, time.January, 1, 1, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
 
+	if err := s.PrecreateShardGroups(time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC), time.Date(2001, time.January, 1, 3, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+
+	// rp0 should undergo precreation.
 	groups, err := s.ShardGroups("db0", "rp0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(groups) != 2 {
-		t.Fatalf("shard group precreation failed to create new shard group")
+		t.Fatalf("shard group precreation failed to create new shard group for rp0")
 	}
-	if groups[1].StartTime != time.Date(2000, time.January, 1, 1, 0, 0, 0, time.UTC) {
+	if groups[1].StartTime != time.Date(2001, time.January, 1, 2, 0, 0, 0, time.UTC) {
 		t.Fatalf("precreated shard group has wrong start time, exp %s, got %s",
 			time.Date(2000, time.January, 1, 1, 0, 0, 0, time.UTC), groups[1].StartTime)
+	}
+
+	// rp1 should not undergo precreation since it is completely in the past.
+	groups, err = s.ShardGroups("db0", "rp1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(groups) != 1 {
+		t.Fatalf("shard group precreation created new shard group for rp1")
+	}
+
+	// rp2 should not undergo precreation since it has no shards.
+	groups, err = s.ShardGroups("db0", "rp2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(groups) != 0 {
+		t.Fatalf("shard group precreation created new shard group for rp2")
 	}
 }
 
@@ -828,14 +896,14 @@ func TestCluster_Restart(t *testing.T) {
 		t.Fatal("no leader found")
 	}
 
-	// Add 5 more ndes, 2 should become raft peers, 3 remote raft clients
+	// Add 5 more nodes, 2 should become raft peers, 3 remote raft clients
 	for i := 0; i < 5; i++ {
 		if err := c.Join(); err != nil {
 			t.Fatalf("failed to join cluster: %v", err)
 		}
 	}
 
-	// The tests use a host host assigned listener port.  We need to re-use
+	// The tests use a host assigned listener port.  We need to re-use
 	// the original ports when the new cluster is restarted so that the existing
 	// peer store addresses can be reached.
 	addrs := []string{}
@@ -858,10 +926,25 @@ func TestCluster_Restart(t *testing.T) {
 
 	// Re-create the cluster nodes from existing disk paths and addresses
 	stores := []*Store{}
+	storeChan := make(chan *Store)
 	for i, s := range c.Stores {
-		store := MustOpenStoreWithPath(addrs[i], s.Path())
+
+		// Need to start each instance asynchronously because they have existing raft peers
+		// store.  Starting one will block indefinitely because it will not be able to become
+		// leader until another peer is available to hold an election.
+		go func(addr, path string) {
+			store := MustOpenStoreWithPath(addr, path)
+			storeChan <- store
+		}(addrs[i], s.Path())
+
+	}
+
+	// Collect up our restart meta-stores
+	for range c.Stores {
+		store := <-storeChan
 		stores = append(stores, store)
 	}
+
 	c.Stores = stores
 
 	// Wait for the cluster to stabilize

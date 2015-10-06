@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/influxdb/influxdb/pkg/slices"
 )
 
 // DataType represents the primitive data types available in InfluxQL.
@@ -90,6 +92,7 @@ func (*DropDatabaseStatement) node()          {}
 func (*DropMeasurementStatement) node()       {}
 func (*DropRetentionPolicyStatement) node()   {}
 func (*DropSeriesStatement) node()            {}
+func (*DropServerStatement) node()            {}
 func (*DropUserStatement) node()              {}
 func (*GrantStatement) node()                 {}
 func (*GrantAdminStatement) node()            {}
@@ -105,6 +108,7 @@ func (*ShowFieldKeysStatement) node()         {}
 func (*ShowRetentionPoliciesStatement) node() {}
 func (*ShowMeasurementsStatement) node()      {}
 func (*ShowSeriesStatement) node()            {}
+func (*ShowShardsStatement) node()            {}
 func (*ShowStatsStatement) node()             {}
 func (*ShowDiagnosticsStatement) node()       {}
 func (*ShowTagKeysStatement) node()           {}
@@ -195,6 +199,7 @@ func (*DropDatabaseStatement) stmt()          {}
 func (*DropMeasurementStatement) stmt()       {}
 func (*DropRetentionPolicyStatement) stmt()   {}
 func (*DropSeriesStatement) stmt()            {}
+func (*DropServerStatement) stmt()            {}
 func (*DropUserStatement) stmt()              {}
 func (*GrantStatement) stmt()                 {}
 func (*GrantAdminStatement) stmt()            {}
@@ -206,6 +211,7 @@ func (*ShowFieldKeysStatement) stmt()         {}
 func (*ShowMeasurementsStatement) stmt()      {}
 func (*ShowRetentionPoliciesStatement) stmt() {}
 func (*ShowSeriesStatement) stmt()            {}
+func (*ShowShardsStatement) stmt()            {}
 func (*ShowStatsStatement) stmt()             {}
 func (*ShowDiagnosticsStatement) stmt()       {}
 func (*ShowTagKeysStatement) stmt()           {}
@@ -274,7 +280,7 @@ type SortField struct {
 // String returns a string representation of a sort field
 func (field *SortField) String() string {
 	var buf bytes.Buffer
-	if field.Name == "" {
+	if field.Name != "" {
 		_, _ = buf.WriteString(field.Name)
 		_, _ = buf.WriteString(" ")
 	}
@@ -302,12 +308,19 @@ func (a SortFields) String() string {
 type CreateDatabaseStatement struct {
 	// Name of the database to be created.
 	Name string
+
+	// IfNotExists indicates whether to return without error if the database
+	// already exists.
+	IfNotExists bool
 }
 
 // String returns a string representation of the create database statement.
 func (s *CreateDatabaseStatement) String() string {
 	var buf bytes.Buffer
 	_, _ = buf.WriteString("CREATE DATABASE ")
+	if s.IfNotExists {
+		_, _ = buf.WriteString("IF NOT EXISTS ")
+	}
 	_, _ = buf.WriteString(s.Name)
 	return buf.String()
 }
@@ -707,6 +720,18 @@ type SelectStatement struct {
 	FillValue interface{}
 }
 
+// SourceNames returns a list of source names.
+func (s *SelectStatement) SourceNames() []string {
+	a := make([]string, 0, len(s.Sources))
+	for _, src := range s.Sources {
+		switch src := src.(type) {
+		case *Measurement:
+			a = append(a, src.Name)
+		}
+	}
+	return a
+}
+
 // HasDerivative returns true if one of the function calls in the statement is a
 // derivative aggregate
 func (s *SelectStatement) HasDerivative() bool {
@@ -730,6 +755,11 @@ func (s *SelectStatement) IsSimpleDerivative() bool {
 		}
 	}
 	return false
+}
+
+// TimeAscending returns true if the time field is sorted in chronological order.
+func (s *SelectStatement) TimeAscending() bool {
+	return len(s.SortFields) == 0 || s.SortFields[0].Ascending
 }
 
 // Clone returns a deep copy of the statement.
@@ -846,6 +876,48 @@ func (s *SelectStatement) RewriteDistinct() {
 			s.IsRawQuery = false
 		}
 	}
+}
+
+// ColumnNames will walk all fields and functions and return the appropriate field names for the select statement
+// while maintaining order of the field names
+func (s *SelectStatement) ColumnNames() []string {
+	// Always set the first column to be time, even if they didn't specify it
+	columnNames := []string{"time"}
+
+	// First walk each field
+	for _, field := range s.Fields {
+		switch f := field.Expr.(type) {
+		case *Call:
+			if f.Name == "top" || f.Name == "bottom" {
+				if len(f.Args) == 2 {
+					columnNames = append(columnNames, f.Name)
+					continue
+				}
+				// We have a special case now where we have to add the column names for the fields TOP or BOTTOM asked for as well
+				columnNames = slices.Union(columnNames, f.Fields(), true)
+				continue
+			}
+			columnNames = append(columnNames, field.Name())
+		default:
+			// time is always first, and we already added it, so ignore it if they asked for it anywhere else.
+			if field.Name() != "time" {
+				columnNames = append(columnNames, field.Name())
+			}
+		}
+	}
+
+	return columnNames
+}
+
+// HasTimeFieldSpecified will walk all fields and determine if the user explicitly asked for time
+// This is needed to determine re-write behaviors for functions like TOP and BOTTOM
+func (s *SelectStatement) HasTimeFieldSpecified() bool {
+	for _, f := range s.Fields {
+		if f.Name() == "time" {
+			return true
+		}
+	}
+	return false
 }
 
 // String returns a string representation of the select statement.
@@ -989,6 +1061,10 @@ func (s *SelectStatement) validate(tr targetRequirement) error {
 		return err
 	}
 
+	if err := s.validateDimensions(); err != nil {
+		return err
+	}
+
 	if err := s.validateDistinct(); err != nil {
 		return err
 	}
@@ -1005,10 +1081,6 @@ func (s *SelectStatement) validate(tr targetRequirement) error {
 		return err
 	}
 
-	if err := s.validateWildcard(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -1020,40 +1092,155 @@ func (s *SelectStatement) validateFields() error {
 	return nil
 }
 
-func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
-	// First, if 1 field is an aggregate, then all fields must be an aggregate. This is
-	// a explicit limitation of the current system.
+func (s *SelectStatement) validateDimensions() error {
+	var dur time.Duration
+	for _, dim := range s.Dimensions {
+		switch expr := dim.Expr.(type) {
+		case *Call:
+			// Ensure the call is time() and it only has one duration argument.
+			// If we already have a duration
+			if expr.Name != "time" {
+				return errors.New("only time() calls allowed in dimensions")
+			} else if len(expr.Args) != 1 {
+				return errors.New("time dimension expected one argument")
+			} else if lit, ok := expr.Args[0].(*DurationLiteral); !ok {
+				return errors.New("time dimension must have one duration argument")
+			} else if dur != 0 {
+				return errors.New("multiple time dimensions not allowed")
+			} else {
+				dur = lit.Val
+			}
+		case *VarRef:
+			if strings.ToLower(expr.Val) == "time" {
+				return errors.New("time() is a function and expects at least one argument")
+			}
+		case *Wildcard:
+		default:
+			return errors.New("only time and tag dimensions allowed")
+		}
+	}
+	return nil
+}
+
+// validSelectWithAggregate determines if a SELECT statement has the correct
+// combination of aggregate functions combined with selected fields and tags
+// Currently we don't have support for all aggregates, but aggregates that
+// can be combined with fields/tags are:
+//  TOP, BOTTOM, MAX, MIN, FIRST, LAST
+func (s *SelectStatement) validSelectWithAggregate() error {
+	calls := map[string]struct{}{}
 	numAggregates := 0
 	for _, f := range s.Fields {
-		if _, ok := f.Expr.(*Call); ok {
+		if c, ok := f.Expr.(*Call); ok {
+			calls[c.Name] = struct{}{}
 			numAggregates++
 		}
 	}
+	// For TOP, BOTTOM, MAX, MIN, FIRST, LAST (selector functions) it is ok to ask for fields and tags
+	// but only if one function is specified.  Combining multiple functions and fields and tags is not currently supported
+	onlySelectors := true
+	for k := range calls {
+		switch k {
+		case "top", "bottom", "max", "min", "first", "last":
+		default:
+			onlySelectors = false
+			break
+		}
+	}
+	if onlySelectors {
+		// If they only have one selector, they can have as many fields or tags as they want
+		if numAggregates == 1 {
+			return nil
+		}
+		// If they have multiple selectors, they are not allowed to have any other fields or tags specified
+		if numAggregates > 1 && len(s.Fields) != numAggregates {
+			return fmt.Errorf("mixing multiple selector functions with tags or fields is not supported")
+		}
+	}
+
 	if numAggregates != 0 && numAggregates != len(s.Fields) {
 		return fmt.Errorf("mixing aggregate and non-aggregate queries is not supported")
 	}
+	return nil
+}
 
-	// Secondly, determine if specific calls have at least one and only one argument
+func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 	for _, f := range s.Fields {
-		if c, ok := f.Expr.(*Call); ok {
-			switch c.Name {
+		switch expr := f.Expr.(type) {
+		case *Call:
+			switch expr.Name {
 			case "derivative", "non_negative_derivative":
-				if min, max, got := 1, 2, len(c.Args); got > max || got < min {
-					return fmt.Errorf("invalid number of arguments for %s, expected at least %d but no more than %d, got %d", c.Name, min, max, got)
+				if err := s.validSelectWithAggregate(); err != nil {
+					return err
 				}
+				if min, max, got := 1, 2, len(expr.Args); got > max || got < min {
+					return fmt.Errorf("invalid number of arguments for %s, expected at least %d but no more than %d, got %d", expr.Name, min, max, got)
+				}
+				// Validate that if they have grouping by time, they need a sub-call like min/max, etc.
+				groupByInterval, _ := s.GroupByInterval()
+				if groupByInterval > 0 {
+					if _, ok := expr.Args[0].(*Call); !ok {
+						return fmt.Errorf("aggregate function required inside the call to %s", expr.Name)
+					}
+				}
+
 			case "percentile":
-				if exp, got := 2, len(c.Args); got != exp {
-					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", c.Name, exp, got)
+				if err := s.validSelectWithAggregate(); err != nil {
+					return err
+				}
+				if exp, got := 2, len(expr.Args); got != exp {
+					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", expr.Name, exp, got)
+				}
+				_, ok := expr.Args[1].(*NumberLiteral)
+				if !ok {
+					return fmt.Errorf("expected float argument in percentile()")
+				}
+			case "top", "bottom":
+				if exp, got := 2, len(expr.Args); got < exp {
+					return fmt.Errorf("invalid number of arguments for %s, expected at least %d, got %d", expr.Name, exp, got)
+				}
+				if len(expr.Args) > 1 {
+					callLimit, ok := expr.Args[len(expr.Args)-1].(*NumberLiteral)
+					if !ok {
+						return fmt.Errorf("expected integer as last argument in %s(), found %s", expr.Name, expr.Args[len(expr.Args)-1])
+					}
+					// Check if they asked for a limit smaller than what they passed into the call
+					if int64(callLimit.Val) > int64(s.Limit) && s.Limit != 0 {
+						return fmt.Errorf("limit (%d) in %s function can not be larger than the LIMIT (%d) in the select statement", int64(callLimit.Val), expr.Name, int64(s.Limit))
+					}
+
+					for _, v := range expr.Args[:len(expr.Args)-1] {
+						if _, ok := v.(*VarRef); !ok {
+							return fmt.Errorf("only fields or tags are allowed in %s(), found %s", expr.Name, v)
+						}
+					}
 				}
 			default:
-				if exp, got := 1, len(c.Args); got != exp {
-					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", c.Name, exp, got)
+				if err := s.validSelectWithAggregate(); err != nil {
+					return err
+				}
+				if exp, got := 1, len(expr.Args); got != exp {
+					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", expr.Name, exp, got)
+				}
+				switch fc := expr.Args[0].(type) {
+				case *VarRef:
+					// do nothing
+				case *Call:
+					if fc.Name != "distinct" {
+						return fmt.Errorf("expected field argument in %s()", expr.Name)
+					}
+				case *Distinct:
+					if expr.Name != "count" {
+						return fmt.Errorf("expected field argument in %s()", expr.Name)
+					}
+				default:
+					return fmt.Errorf("expected field argument in %s()", expr.Name)
 				}
 			}
 		}
 	}
 
-	// Now, check that we have valid duration and where clauses for aggregates
+	// Check that we have valid duration and where clauses for aggregates
 
 	// fetch the group by duration
 	groupByDuration, _ := s.GroupByInterval()
@@ -1068,13 +1255,6 @@ func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 		if !s.IsRawQuery && groupByDuration > 0 && !s.hasTimeDimensions(s.Condition) {
 			return fmt.Errorf("aggregate functions with GROUP BY time require a WHERE time clause")
 		}
-	}
-	return nil
-}
-
-func (s *SelectStatement) validateWildcard() error {
-	if s.HasWildcard() && len(s.Fields) > 1 {
-		return fmt.Errorf("wildcards can not be combined with other fields")
 	}
 	return nil
 }
@@ -1378,6 +1558,25 @@ func (s *SelectStatement) NamesInDimension() []string {
 	return a
 }
 
+// LimitTagSets returns a tag set list with SLIMIT and SOFFSET applied.
+func (s *SelectStatement) LimitTagSets(a []*TagSet) []*TagSet {
+	// Ignore if no limit or offset is specified.
+	if s.SLimit == 0 && s.SOffset == 0 {
+		return a
+	}
+
+	// If offset is beyond the number of tag sets then return nil.
+	if s.SOffset > len(a) {
+		return nil
+	}
+
+	// Clamp limit to the max number of tag sets.
+	if s.SOffset+s.SLimit > len(a) {
+		s.SLimit = len(a) - s.SOffset
+	}
+	return a[s.SOffset : s.SOffset+s.SLimit]
+}
+
 // walkNames will walk the Expr and return the database fields
 func walkNames(exp Expr) []string {
 	switch expr := exp.(type) {
@@ -1410,6 +1609,15 @@ func (s *SelectStatement) FunctionCalls() []*Call {
 	var a []*Call
 	for _, f := range s.Fields {
 		a = append(a, walkFunctionCalls(f.Expr)...)
+	}
+	return a
+}
+
+// FunctionCallsByPosition returns the Call objects from the query in the order they appear in the select statement
+func (s *SelectStatement) FunctionCallsByPosition() [][]*Call {
+	var a [][]*Call
+	for _, f := range s.Fields {
+		a = append(a, walkFunctionCalls(f.Expr))
 	}
 	return a
 }
@@ -1501,6 +1709,9 @@ func (t *Target) String() string {
 	var buf bytes.Buffer
 	_, _ = buf.WriteString("INTO ")
 	_, _ = buf.WriteString(t.Measurement.String())
+	if t.Measurement.Name == "" {
+		_, _ = buf.WriteString(":MEASUREMENT")
+	}
 
 	return buf.String()
 }
@@ -1613,6 +1824,30 @@ func (s *DropSeriesStatement) String() string {
 // RequiredPrivileges returns the privilege required to execute a DropSeriesStatement.
 func (s DropSeriesStatement) RequiredPrivileges() ExecutionPrivileges {
 	return ExecutionPrivileges{{Admin: false, Name: "", Privilege: WritePrivilege}}
+}
+
+// DropServerStatement represents a command for removing a server from the cluster.
+type DropServerStatement struct {
+	// ID of the node to be dropped.
+	NodeID uint64
+	// Force will force the server to drop even it it means losing data
+	Force bool
+}
+
+// String returns a string representation of the drop series statement.
+func (s *DropServerStatement) String() string {
+	var buf bytes.Buffer
+	_, _ = buf.WriteString("DROP SERVER ")
+	_, _ = buf.WriteString(strconv.FormatUint(s.NodeID, 10))
+	if s.Force {
+		_, _ = buf.WriteString(" FORCE")
+	}
+	return buf.String()
+}
+
+// RequiredPrivileges returns the privilege required to execute a DropServerStatement.
+func (s *DropServerStatement) RequiredPrivileges() ExecutionPrivileges {
+	return ExecutionPrivileges{{Name: "", Privilege: AllPrivileges}}
 }
 
 // ShowContinuousQueriesStatement represents a command for listing continuous queries.
@@ -1810,18 +2045,19 @@ func (s *ShowRetentionPoliciesStatement) RequiredPrivileges() ExecutionPrivilege
 	return ExecutionPrivileges{{Admin: false, Name: "", Privilege: ReadPrivilege}}
 }
 
-// ShowRetentionPoliciesStatement represents a command for displaying stats for a given server.
+// ShowStats statement displays statistics for a given module.
 type ShowStatsStatement struct {
-	// Hostname or IP of the server for stats.
-	Host string
+	// Module
+	Module string
 }
 
 // String returns a string representation of a ShowStatsStatement.
 func (s *ShowStatsStatement) String() string {
 	var buf bytes.Buffer
 	_, _ = buf.WriteString("SHOW STATS ")
-	if s.Host != "" {
-		_, _ = buf.WriteString(s.Host)
+	if s.Module != "" {
+		_, _ = buf.WriteString("FOR ")
+		_, _ = buf.WriteString(s.Module)
 	}
 	return buf.String()
 }
@@ -1831,11 +2067,33 @@ func (s *ShowStatsStatement) RequiredPrivileges() ExecutionPrivileges {
 	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
 }
 
+// ShowShardsStatement represents a command for displaying shards in the cluster.
+type ShowShardsStatement struct{}
+
+// String returns a string representation.
+func (s *ShowShardsStatement) String() string { return "SHOW SHARDS" }
+
+// RequiredPrivileges returns the privileges required to execute the statement.
+func (s *ShowShardsStatement) RequiredPrivileges() ExecutionPrivileges {
+	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
+}
+
 // ShowDiagnosticsStatement represents a command for show node diagnostics.
-type ShowDiagnosticsStatement struct{}
+type ShowDiagnosticsStatement struct {
+	// Module
+	Module string
+}
 
 // String returns a string representation of the ShowDiagnosticsStatement.
-func (s *ShowDiagnosticsStatement) String() string { return "SHOW DIAGNOSTICS" }
+func (s *ShowDiagnosticsStatement) String() string {
+	var buf bytes.Buffer
+	_, _ = buf.WriteString("SHOW DIAGNOSTICS ")
+	if s.Module != "" {
+		_, _ = buf.WriteString("FOR ")
+		_, _ = buf.WriteString(s.Module)
+	}
+	return buf.String()
+}
 
 // RequiredPrivileges returns the privilege required to execute a ShowDiagnosticsStatement
 func (s *ShowDiagnosticsStatement) RequiredPrivileges() ExecutionPrivileges {
@@ -1853,12 +2111,17 @@ type ShowTagKeysStatement struct {
 	// Fields to sort results by
 	SortFields SortFields
 
-	// Maximum number of rows to be returned.
-	// Unlimited if zero.
+	// Maximum number of tag keys per measurement. Unlimited if zero.
 	Limit int
 
-	// Returns rows starting at an offset from the first row.
+	// Returns tag keys starting at an offset from the first row.
 	Offset int
+
+	// Maxiumum number of series to be returned. Unlimited if zero.
+	SLimit int
+
+	// Returns series starting at an offset from the first one.
+	SOffset int
 }
 
 // String returns a string representation of the statement.
@@ -1885,6 +2148,14 @@ func (s *ShowTagKeysStatement) String() string {
 	if s.Offset > 0 {
 		_, _ = buf.WriteString(" OFFSET ")
 		_, _ = buf.WriteString(strconv.Itoa(s.Offset))
+	}
+	if s.SLimit > 0 {
+		_, _ = buf.WriteString(" SLIMIT ")
+		_, _ = buf.WriteString(strconv.Itoa(s.SLimit))
+	}
+	if s.SOffset > 0 {
+		_, _ = buf.WriteString(" SOFFSET ")
+		_, _ = buf.WriteString(strconv.Itoa(s.SOffset))
 	}
 	return buf.String()
 }
@@ -2100,37 +2371,21 @@ func (a Dimensions) String() string {
 
 // Normalize returns the interval and tag dimensions separately.
 // Returns 0 if no time interval is specified.
-// Returns an error if multiple time dimensions exist or if non-VarRef dimensions are specified.
-func (a Dimensions) Normalize() (time.Duration, []string, error) {
+func (a Dimensions) Normalize() (time.Duration, []string) {
 	var dur time.Duration
 	var tags []string
 
 	for _, dim := range a {
 		switch expr := dim.Expr.(type) {
 		case *Call:
-			// Ensure the call is time() and it only has one duration argument.
-			// If we already have a duration
-			if expr.Name != "time" {
-				return 0, nil, errors.New("only time() calls allowed in dimensions")
-			} else if len(expr.Args) != 1 {
-				return 0, nil, errors.New("time dimension expected one argument")
-			} else if lit, ok := expr.Args[0].(*DurationLiteral); !ok {
-				return 0, nil, errors.New("time dimension must have one duration argument")
-			} else if dur != 0 {
-				return 0, nil, errors.New("multiple time dimensions not allowed")
-			} else {
-				dur = lit.Val
-			}
-
+			lit, _ := expr.Args[0].(*DurationLiteral)
+			dur = lit.Val
 		case *VarRef:
 			tags = append(tags, expr.Val)
-
-		default:
-			return 0, nil, errors.New("only time and tag dimensions allowed")
 		}
 	}
 
-	return dur, tags, nil
+	return dur, tags
 }
 
 // Dimension represents an expression that a select statement is grouped by.
@@ -2159,6 +2414,7 @@ type Measurement struct {
 	RetentionPolicy string
 	Name            string
 	Regex           *RegexLiteral
+	IsTarget        bool
 }
 
 // String returns a string representation of the measurement.
@@ -2215,6 +2471,47 @@ func (c *Call) String() string {
 
 	// Write function name and args.
 	return fmt.Sprintf("%s(%s)", c.Name, strings.Join(str, ", "))
+}
+
+// Fields will extract any field names from the call.  Only specific calls support this.
+func (c *Call) Fields() []string {
+	switch c.Name {
+	case "top", "bottom":
+		// maintain the order the user specified in the query
+		keyMap := make(map[string]struct{})
+		keys := []string{}
+		for i, a := range c.Args {
+			if i == 0 {
+				// special case, first argument is always the name of the function regardless of the field name
+				keys = append(keys, c.Name)
+				continue
+			}
+			switch v := a.(type) {
+			case *VarRef:
+				if _, ok := keyMap[v.Val]; !ok {
+					keyMap[v.Val] = struct{}{}
+					keys = append(keys, v.Val)
+				}
+			}
+		}
+		return keys
+	case "min", "max", "first", "last", "sum", "mean":
+		// maintain the order the user specified in the query
+		keyMap := make(map[string]struct{})
+		keys := []string{}
+		for _, a := range c.Args {
+			switch v := a.(type) {
+			case *VarRef:
+				if _, ok := keyMap[v.Val]; !ok {
+					keyMap[v.Val] = struct{}{}
+					keys = append(keys, v.Val)
+				}
+			}
+		}
+		return keys
+	default:
+		panic(fmt.Sprintf("*call.Fields is unable to provide information on %s", c.Name))
+	}
 }
 
 // Distinct represents a DISTINCT expression.
@@ -2525,6 +2822,10 @@ func Walk(v Visitor, node Node) {
 			Walk(v, c)
 		}
 
+	case *DropSeriesStatement:
+		Walk(v, n.Sources)
+		Walk(v, n.Condition)
+
 	case *Field:
 		Walk(v, n.Expr)
 
@@ -2770,6 +3071,13 @@ func evalBinaryExpr(expr *BinaryExpr, m map[string]interface{}) interface{} {
 		}
 	}
 	return nil
+}
+
+// EvalBool evaluates expr and returns true if result is a boolean true.
+// Otherwise returns false.
+func EvalBool(expr Expr, m map[string]interface{}) bool {
+	v, _ := Eval(expr, m).(bool)
+	return v
 }
 
 // Reduce evaluates expr using the available values in valuer.

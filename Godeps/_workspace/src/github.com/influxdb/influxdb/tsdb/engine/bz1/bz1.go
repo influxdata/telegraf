@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"expvar"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/golang/snappy"
+	"github.com/influxdb/influxdb"
+	"github.com/influxdb/influxdb/models"
 	"github.com/influxdb/influxdb/tsdb"
 	"github.com/influxdb/influxdb/tsdb/engine/wal"
 )
@@ -27,6 +30,15 @@ var (
 const (
 	// Format is the file format name of this engine.
 	Format = "bz1"
+)
+
+const (
+	statSlowInsert               = "slow_insert"
+	statPointsWrite              = "points_write"
+	statPointsWriteDedupe        = "points_write_dedupe"
+	statBlocksWrite              = "blks_write"
+	statBlocksWriteBytes         = "blks_write_bytes"
+	statBlocksWriteBytesCompress = "blks_write_bytes_c"
 )
 
 func init() {
@@ -47,6 +59,9 @@ type Engine struct {
 	path string
 	db   *bolt.DB
 
+	// expvar-based statistics collection.
+	statMap *expvar.Map
+
 	// Write-ahead log storage.
 	WAL WAL
 
@@ -56,10 +71,10 @@ type Engine struct {
 
 // WAL represents a write ahead log that can be queried
 type WAL interface {
-	WritePoints(points []tsdb.Point, measurementFieldsToSave map[string]*tsdb.MeasurementFields, seriesToCreate []*tsdb.SeriesCreate) error
+	WritePoints(points []models.Point, measurementFieldsToSave map[string]*tsdb.MeasurementFields, seriesToCreate []*tsdb.SeriesCreate) error
 	LoadMetadataIndex(index *tsdb.DatabaseIndex, measurementFields map[string]*tsdb.MeasurementFields) error
 	DeleteSeries(keys []string) error
-	Cursor(key string) tsdb.Cursor
+	Cursor(series string, fields []string, dec *tsdb.FieldCodec, ascending bool) tsdb.Cursor
 	Open() error
 	Close() error
 	Flush() error
@@ -67,6 +82,11 @@ type WAL interface {
 
 // NewEngine returns a new instance of Engine.
 func NewEngine(path string, walPath string, opt tsdb.EngineOptions) tsdb.Engine {
+	// Configure statistics collection.
+	key := fmt.Sprintf("engine:%s:%s", opt.EngineVersion, path)
+	tags := map[string]string{"path": path, "version": opt.EngineVersion}
+	statMap := influxdb.NewStatistics(key, "engine", tags)
+
 	// create the writer with a directory of the same name as the shard, but with the wal extension
 	w := wal.NewLog(walPath)
 
@@ -76,11 +96,12 @@ func NewEngine(path string, walPath string, opt tsdb.EngineOptions) tsdb.Engine 
 	w.CompactionThreshold = opt.Config.WALCompactionThreshold
 	w.PartitionSizeThreshold = opt.Config.WALPartitionSizeThreshold
 	w.ReadySeriesSize = opt.Config.WALReadySeriesSize
-	w.EnableLogging = opt.Config.WALEnableLogging
+	w.LoggingEnabled = opt.Config.WALLoggingEnabled
 
 	e := &Engine{
 		path: path,
 
+		statMap:   statMap,
 		BlockSize: DefaultBlockSize,
 		WAL:       w,
 	}
@@ -92,6 +113,14 @@ func NewEngine(path string, walPath string, opt tsdb.EngineOptions) tsdb.Engine 
 
 // Path returns the path the engine was opened with.
 func (e *Engine) Path() string { return e.path }
+
+// PerformMaintenance is for periodic maintenance of the store. A no-op for bz1
+func (e *Engine) PerformMaintenance() {}
+
+// Format returns the format type of this engine
+func (e *Engine) Format() tsdb.EngineFormat {
+	return tsdb.BZ1Format
+}
 
 // Open opens and initializes the engine.
 func (e *Engine) Open() error {
@@ -155,7 +184,7 @@ func (e *Engine) close() error {
 func (e *Engine) SetLogOutput(w io.Writer) {}
 
 // LoadMetadataIndex loads the shard metadata into memory.
-func (e *Engine) LoadMetadataIndex(index *tsdb.DatabaseIndex, measurementFields map[string]*tsdb.MeasurementFields) error {
+func (e *Engine) LoadMetadataIndex(shard *tsdb.Shard, index *tsdb.DatabaseIndex, measurementFields map[string]*tsdb.MeasurementFields) error {
 	if err := e.db.View(func(tx *bolt.Tx) error {
 		// Load measurement metadata
 		fields, err := e.readFields(tx)
@@ -194,7 +223,7 @@ func (e *Engine) LoadMetadataIndex(index *tsdb.DatabaseIndex, measurementFields 
 		return err
 	}
 
-	// now flush the metadata that was in the WAL, but hand't yet been flushed
+	// now flush the metadata that was in the WAL, but hadn't yet been flushed
 	if err := e.WAL.LoadMetadataIndex(index, measurementFields); err != nil {
 		return err
 	}
@@ -205,7 +234,7 @@ func (e *Engine) LoadMetadataIndex(index *tsdb.DatabaseIndex, measurementFields 
 
 // WritePoints writes metadata and point data into the engine.
 // Returns an error if new points are added to an existing key.
-func (e *Engine) WritePoints(points []tsdb.Point, measurementFieldsToSave map[string]*tsdb.MeasurementFields, seriesToCreate []*tsdb.SeriesCreate) error {
+func (e *Engine) WritePoints(points []models.Point, measurementFieldsToSave map[string]*tsdb.MeasurementFields, seriesToCreate []*tsdb.SeriesCreate) error {
 	// Write points to the WAL.
 	if err := e.WAL.WritePoints(points, measurementFieldsToSave, seriesToCreate); err != nil {
 		return fmt.Errorf("write points: %s", err)
@@ -337,6 +366,7 @@ func (e *Engine) writeIndex(tx *bolt.Tx, key string, a [][]byte) error {
 	if len(a) == 0 {
 		return nil
 	}
+	e.statMap.Add(statPointsWrite, int64(len(a)))
 
 	// Create or retrieve series bucket.
 	bkt, err := tx.Bucket([]byte("points")).CreateBucketIfNotExists([]byte(key))
@@ -347,6 +377,7 @@ func (e *Engine) writeIndex(tx *bolt.Tx, key string, a [][]byte) error {
 
 	// Ensure the slice is sorted before retrieving the time range.
 	a = tsdb.DedupeEntries(a)
+	e.statMap.Add(statPointsWriteDedupe, int64(len(a)))
 
 	// Convert the raw time and byte slices to entries with lengths
 	for i, p := range a {
@@ -367,24 +398,14 @@ func (e *Engine) writeIndex(tx *bolt.Tx, key string, a [][]byte) error {
 			return fmt.Errorf("new blocks: %s", err)
 		}
 		return nil
-	} else {
-		// Determine uncompressed block size.
-		sz, err := snappy.DecodedLen(v[8:])
-		if err != nil {
-			return fmt.Errorf("snappy decoded len: %s", err)
-		}
 
-		// Append new blocks if our time range is past the last on-disk time
-		// and if our previous block was at least the minimum block size.
-		if int64(btou64(v[0:8])) < tmin && sz >= e.BlockSize {
-			bkt.FillPercent = 1.0
-			if err := e.writeBlocks(bkt, a); err != nil {
-				return fmt.Errorf("append blocks: %s", err)
-			}
-			return nil
+	} else if int64(btou64(v[0:8])) < tmin {
+		// Append new blocks if our time range is past the last on-disk time.
+		bkt.FillPercent = 1.0
+		if err := e.writeBlocks(bkt, a); err != nil {
+			return fmt.Errorf("append blocks: %s", err)
 		}
-
-		// Otherwise fallthrough to slower insert mode.
+		return nil
 	}
 
 	// Generate map of inserted keys.
@@ -458,6 +479,9 @@ func (e *Engine) writeBlocks(bkt *bolt.Bucket, a [][]byte) error {
 		// If the block is larger than the target block size or this is the
 		// last point then flush the block to the bucket.
 		if len(block) >= e.BlockSize || i == len(a)-1 {
+			e.statMap.Add(statBlocksWrite, 1)
+			e.statMap.Add(statBlocksWriteBytes, int64(len(block)))
+
 			// Encode block in the following format:
 			//   tmax int64
 			//   data []byte (snappy compressed)
@@ -467,6 +491,7 @@ func (e *Engine) writeBlocks(bkt *bolt.Bucket, a [][]byte) error {
 			if err := bkt.Put(u64tob(uint64(tmin)), value); err != nil {
 				return fmt.Errorf("put: ts=%d-%d, err=%s", tmin, tmax, err)
 			}
+			e.statMap.Add(statBlocksWriteBytesCompress, int64(len(value)))
 
 			// Reset the block & time range.
 			block = nil
@@ -574,6 +599,25 @@ func (e *Engine) SeriesBucketStats(key string) (stats bolt.BucketStats, err erro
 	return stats, err
 }
 
+// WriteTo writes the length and contents of the engine to w.
+func (e *Engine) WriteTo(w io.Writer) (n int64, err error) {
+	tx, err := e.db.Begin(false)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	// Write size.
+	if err := binary.Write(w, binary.BigEndian, uint64(tx.Size())); err != nil {
+		return 0, err
+	}
+
+	// Write data.
+	n, err = tx.WriteTo(w)
+	n += 8 // size header
+	return
+}
+
 // Stats represents internal engine statistics.
 type Stats struct {
 	Size int64 // BoltDB data size
@@ -587,17 +631,24 @@ type Tx struct {
 }
 
 // Cursor returns an iterator for a key.
-func (tx *Tx) Cursor(key string) tsdb.Cursor {
-	walCursor := tx.wal.Cursor(key)
+func (tx *Tx) Cursor(series string, fields []string, dec *tsdb.FieldCodec, ascending bool) tsdb.Cursor {
+	walCursor := tx.wal.Cursor(series, fields, dec, ascending)
 
 	// Retrieve points bucket. Ignore if there is no bucket.
-	b := tx.Bucket([]byte("points")).Bucket([]byte(key))
+	b := tx.Bucket([]byte("points")).Bucket([]byte(series))
 	if b == nil {
 		return walCursor
 	}
 
 	c := &Cursor{
-		cursor: b.Cursor(),
+		cursor:    b.Cursor(),
+		fields:    fields,
+		dec:       dec,
+		ascending: ascending,
+	}
+
+	if !ascending {
+		c.last()
 	}
 
 	return tsdb.MultiCursor(walCursor, c)
@@ -605,29 +656,44 @@ func (tx *Tx) Cursor(key string) tsdb.Cursor {
 
 // Cursor provides ordered iteration across a series.
 type Cursor struct {
-	cursor *bolt.Cursor
-	buf    []byte // uncompressed buffer
-	off    int    // buffer offset
+	cursor       *bolt.Cursor
+	buf          []byte // uncompressed buffer
+	off          int    // buffer offset
+	ascending    bool
+	fieldIndices []int
+	index        int
+
+	fields []string
+	dec    *tsdb.FieldCodec
 }
 
+func (c *Cursor) last() {
+	_, v := c.cursor.Last()
+	c.setBuf(v)
+}
+
+func (c *Cursor) Ascending() bool { return c.ascending }
+
 // Seek moves the cursor to a position and returns the closest key/value pair.
-func (c *Cursor) Seek(seek []byte) (key, value []byte) {
+func (c *Cursor) SeekTo(seek int64) (key int64, value interface{}) {
+	seekBytes := u64tob(uint64(seek))
+
 	// Move cursor to appropriate block and set to buffer.
-	k, v := c.cursor.Seek(seek)
+	k, v := c.cursor.Seek(seekBytes)
 	if v == nil { // get the last block, it might have this time
 		_, v = c.cursor.Last()
-	} else if bytes.Compare(seek, k) == -1 { // the seek key is less than this block, go back one and check
+	} else if seek < int64(btou64(k)) { // the seek key is less than this block, go back one and check
 		_, v = c.cursor.Prev()
 
 		// if the previous block max time is less than the seek value, reset to where we were originally
-		if v == nil || bytes.Compare(seek, v[0:8]) > 0 {
-			_, v = c.cursor.Seek(seek)
+		if v == nil || seek > int64(btou64(v[0:8])) {
+			_, v = c.cursor.Seek(seekBytes)
 		}
 	}
 	c.setBuf(v)
 
 	// Read current block up to seek position.
-	c.seekBuf(seek)
+	c.seekBuf(seekBytes)
 
 	// Return current entry.
 	return c.read()
@@ -640,24 +706,51 @@ func (c *Cursor) seekBuf(seek []byte) (key, value []byte) {
 		buf := c.buf[c.off:]
 
 		// Exit if current entry's timestamp is on or after the seek.
-		if len(buf) == 0 || bytes.Compare(buf[0:8], seek) != -1 {
+		if len(buf) == 0 {
 			return
 		}
 
-		// Otherwise skip ahead to the next entry.
-		c.off += entryHeaderSize + entryDataSize(buf)
+		if c.ascending && bytes.Compare(buf[0:8], seek) != -1 {
+			return
+		} else if !c.ascending && bytes.Compare(buf[0:8], seek) != 1 {
+			return
+		}
+
+		if c.ascending {
+			// Otherwise skip ahead to the next entry.
+			c.off += entryHeaderSize + entryDataSize(buf)
+		} else {
+			c.index -= 1
+			if c.index < 0 {
+				return
+			}
+			c.off = c.fieldIndices[c.index]
+		}
 	}
 }
 
 // Next returns the next key/value pair from the cursor.
-func (c *Cursor) Next() (key, value []byte) {
+func (c *Cursor) Next() (key int64, value interface{}) {
 	// Ignore if there is no buffer.
 	if len(c.buf) == 0 {
-		return nil, nil
+		return tsdb.EOF, nil
 	}
 
-	// Move forward to next entry.
-	c.off += entryHeaderSize + entryDataSize(c.buf[c.off:])
+	if c.ascending {
+		// Move forward to next entry.
+		c.off += entryHeaderSize + entryDataSize(c.buf[c.off:])
+	} else {
+		// If we've move past the beginning of buf, grab the previous block
+		if c.index < 0 {
+			_, v := c.cursor.Prev()
+			c.setBuf(v)
+		}
+
+		if len(c.fieldIndices) > 0 {
+			c.off = c.fieldIndices[c.index]
+		}
+		c.index -= 1
+	}
 
 	// If no items left then read first item from next block.
 	if c.off >= len(c.buf) {
@@ -672,7 +765,7 @@ func (c *Cursor) Next() (key, value []byte) {
 func (c *Cursor) setBuf(block []byte) {
 	// Clear if the block is empty.
 	if len(block) == 0 {
-		c.buf, c.off = c.buf[0:0], 0
+		c.buf, c.off, c.fieldIndices, c.index = c.buf[0:0], 0, c.fieldIndices[0:0], 0
 		return
 	}
 
@@ -683,20 +776,45 @@ func (c *Cursor) setBuf(block []byte) {
 		c.buf = c.buf[0:0]
 		log.Printf("block decode error: %s", err)
 	}
-	c.buf, c.off = buf, 0
+
+	if c.ascending {
+		c.buf, c.off = buf, 0
+	} else {
+		c.buf, c.off = buf, 0
+
+		// Buf contains multiple fields packed into a byte slice with timestamp
+		// and data lengths.  We need to build an index into this byte slice that
+		// tells us where each field block is in buf so we can iterate backward without
+		// rescanning the buf each time Next is called.  Forward iteration does not
+		// need this because we know the entries lenghth and the header size so we can
+		// skip forward that many bytes.
+		c.fieldIndices = []int{}
+		for {
+			if c.off >= len(buf) {
+				break
+			}
+
+			c.fieldIndices = append(c.fieldIndices, c.off)
+			c.off += entryHeaderSize + entryDataSize(buf[c.off:])
+		}
+
+		c.off = c.fieldIndices[len(c.fieldIndices)-1]
+		c.index = len(c.fieldIndices) - 1
+	}
 }
 
 // read reads the current key and value from the current block.
-func (c *Cursor) read() (key, value []byte) {
+func (c *Cursor) read() (key int64, value interface{}) {
 	// Return nil if the offset is at the end of the buffer.
 	if c.off >= len(c.buf) {
-		return nil, nil
+		return tsdb.EOF, nil
 	}
 
 	// Otherwise read the current entry.
 	buf := c.buf[c.off:]
 	dataSize := entryDataSize(buf)
-	return buf[0:8], buf[entryHeaderSize : entryHeaderSize+dataSize]
+
+	return wal.DecodeKeyValue(c.fields, c.dec, buf[0:8], buf[entryHeaderSize:entryHeaderSize+dataSize])
 }
 
 // MarshalEntry encodes point data into a single byte slice.

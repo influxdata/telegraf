@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/influxdb/influxdb/influxql"
+	"github.com/influxdb/influxdb/models"
 	"github.com/influxdb/influxdb/tsdb"
 )
 
@@ -22,20 +23,20 @@ func TestShardMapper_RawMapperTagSetsFields(t *testing.T) {
 	shard := mustCreateShard(tmpDir)
 
 	pt1time := time.Unix(1, 0).UTC()
-	pt1 := tsdb.NewPoint(
+	pt1 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA", "region": "us-east"},
 		map[string]interface{}{"idle": 60},
 		pt1time,
 	)
 	pt2time := time.Unix(2, 0).UTC()
-	pt2 := tsdb.NewPoint(
+	pt2 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverB", "region": "us-east"},
 		map[string]interface{}{"load": 60},
 		pt2time,
 	)
-	err := shard.WritePoints([]tsdb.Point{pt1, pt2})
+	err := shard.WritePoints([]models.Point{pt1, pt2})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -112,20 +113,20 @@ func TestShardMapper_WriteAndSingleMapperRawQuerySingleValue(t *testing.T) {
 	shard := mustCreateShard(tmpDir)
 
 	pt1time := time.Unix(1, 0).UTC()
-	pt1 := tsdb.NewPoint(
+	pt1 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA", "region": "us-east"},
 		map[string]interface{}{"load": 42},
 		pt1time,
 	)
 	pt2time := time.Unix(2, 0).UTC()
-	pt2 := tsdb.NewPoint(
+	pt2 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverB", "region": "us-east"},
 		map[string]interface{}{"load": 60},
 		pt2time,
 	)
-	err := shard.WritePoints([]tsdb.Point{pt1, pt2})
+	err := shard.WritePoints([]models.Point{pt1, pt2})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -219,20 +220,20 @@ func TestShardMapper_WriteAndSingleMapperRawQueryMultiValue(t *testing.T) {
 	shard := mustCreateShard(tmpDir)
 
 	pt1time := time.Unix(1, 0).UTC()
-	pt1 := tsdb.NewPoint(
+	pt1 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA", "region": "us-east"},
 		map[string]interface{}{"foo": 42, "bar": 43},
 		pt1time,
 	)
 	pt2time := time.Unix(2, 0).UTC()
-	pt2 := tsdb.NewPoint(
+	pt2 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverB", "region": "us-east"},
 		map[string]interface{}{"foo": 60, "bar": 61},
 		pt2time,
 	)
-	err := shard.WritePoints([]tsdb.Point{pt1, pt2})
+	err := shard.WritePoints([]models.Point{pt1, pt2})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -272,20 +273,20 @@ func TestShardMapper_WriteAndSingleMapperRawQueryMultiSource(t *testing.T) {
 	shard := mustCreateShard(tmpDir)
 
 	pt1time := time.Unix(1, 0).UTC()
-	pt1 := tsdb.NewPoint(
+	pt1 := models.NewPoint(
 		"cpu0",
 		map[string]string{"host": "serverA", "region": "us-east"},
 		map[string]interface{}{"foo": 42},
 		pt1time,
 	)
 	pt2time := time.Unix(2, 0).UTC()
-	pt2 := tsdb.NewPoint(
+	pt2 := models.NewPoint(
 		"cpu1",
 		map[string]string{"host": "serverB", "region": "us-east"},
 		map[string]interface{}{"bar": 60},
 		pt2time,
 	)
-	err := shard.WritePoints([]tsdb.Point{pt1, pt2})
+	err := shard.WritePoints([]models.Point{pt1, pt2})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -337,20 +338,20 @@ func TestShardMapper_WriteAndSingleMapperAggregateQuery(t *testing.T) {
 	shard := mustCreateShard(tmpDir)
 
 	pt1time := time.Unix(10, 0).UTC()
-	pt1 := tsdb.NewPoint(
+	pt1 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA", "region": "us-east"},
 		map[string]interface{}{"value": 1},
 		pt1time,
 	)
 	pt2time := time.Unix(20, 0).UTC()
-	pt2 := tsdb.NewPoint(
+	pt2 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverB", "region": "us-east"},
 		map[string]interface{}{"value": 60},
 		pt2time,
 	)
-	err := shard.WritePoints([]tsdb.Point{pt1, pt2})
+	err := shard.WritePoints([]models.Point{pt1, pt2})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -415,7 +416,7 @@ func TestShardMapper_WriteAndSingleMapperAggregateQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		stmt := mustParseSelectStatement(tt.stmt)
-		mapper := openLocalMapperOrFail(t, shard, stmt)
+		mapper := openAggregateMapperOrFail(t, shard, stmt)
 
 		for i := range tt.expected {
 			got := aggIntervalAsJson(t, mapper)
@@ -427,26 +428,26 @@ func TestShardMapper_WriteAndSingleMapperAggregateQuery(t *testing.T) {
 	}
 }
 
-func TestShardMapper_LocalMapperTagSetsFields(t *testing.T) {
+func TestShardMapper_SelectMapperTagSetsFields(t *testing.T) {
 	tmpDir, _ := ioutil.TempDir("", "shard_test")
 	defer os.RemoveAll(tmpDir)
 	shard := mustCreateShard(tmpDir)
 
 	pt1time := time.Unix(1, 0).UTC()
-	pt1 := tsdb.NewPoint(
+	pt1 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA", "region": "us-east"},
 		map[string]interface{}{"value": 42},
 		pt1time,
 	)
 	pt2time := time.Unix(2, 0).UTC()
-	pt2 := tsdb.NewPoint(
+	pt2 := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverB", "region": "us-east"},
 		map[string]interface{}{"value": 60},
 		pt2time,
 	)
-	err := shard.WritePoints([]tsdb.Point{pt1, pt2})
+	err := shard.WritePoints([]models.Point{pt1, pt2})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -490,7 +491,7 @@ func TestShardMapper_LocalMapperTagSetsFields(t *testing.T) {
 
 	for _, tt := range tests {
 		stmt := mustParseSelectStatement(tt.stmt)
-		mapper := openLocalMapperOrFail(t, shard, stmt)
+		mapper := openAggregateMapperOrFail(t, shard, stmt)
 
 		fields := mapper.Fields()
 		if !reflect.DeepEqual(fields, tt.expectedFields) {
@@ -526,13 +527,22 @@ func mustParseSelectStatement(s string) *influxql.SelectStatement {
 	return stmt.(*influxql.SelectStatement)
 }
 
-func openRawMapperOrFail(t *testing.T, shard *tsdb.Shard, stmt *influxql.SelectStatement, chunkSize int) tsdb.Mapper {
-	mapper := tsdb.NewLocalMapper(shard, stmt, chunkSize)
+// mustParseStatement parses a statement. Panic on error.
+func mustParseStatement(s string) influxql.Statement {
+	stmt, err := influxql.NewParser(strings.NewReader(s)).ParseStatement()
+	if err != nil {
+		panic(err)
+	}
+	return stmt
+}
 
-	if err := mapper.Open(); err != nil {
+func openRawMapperOrFail(t *testing.T, shard *tsdb.Shard, stmt *influxql.SelectStatement, chunkSize int) tsdb.Mapper {
+	m := tsdb.NewRawMapper(shard, stmt)
+	m.ChunkSize = chunkSize
+	if err := m.Open(); err != nil {
 		t.Fatalf("failed to open raw mapper: %s", err.Error())
 	}
-	return mapper
+	return m
 }
 
 func nextRawChunkAsJson(t *testing.T, mapper tsdb.Mapper) string {
@@ -540,30 +550,67 @@ func nextRawChunkAsJson(t *testing.T, mapper tsdb.Mapper) string {
 	if err != nil {
 		t.Fatalf("failed to get next chunk from mapper: %s", err.Error())
 	}
-	b, err := json.Marshal(r)
-	if err != nil {
-		t.Fatalf("failed to marshal chunk as JSON: %s", err.Error())
-	}
-	return string(b)
+	return mustMarshalMapperOutput(r)
 }
 
-func openLocalMapperOrFail(t *testing.T, shard *tsdb.Shard, stmt *influxql.SelectStatement) *tsdb.LocalMapper {
-	mapper := tsdb.NewLocalMapper(shard, stmt, 0)
-
-	if err := mapper.Open(); err != nil {
+func openAggregateMapperOrFail(t *testing.T, shard *tsdb.Shard, stmt *influxql.SelectStatement) *tsdb.AggregateMapper {
+	m := tsdb.NewAggregateMapper(shard, stmt)
+	if err := m.Open(); err != nil {
 		t.Fatalf("failed to open aggregate mapper: %s", err.Error())
 	}
-	return mapper
+	return m
 }
 
-func aggIntervalAsJson(t *testing.T, mapper *tsdb.LocalMapper) string {
+func aggIntervalAsJson(t *testing.T, mapper *tsdb.AggregateMapper) string {
 	r, err := mapper.NextChunk()
 	if err != nil {
-		t.Fatalf("failed to get chunk from aggregate mapper: %s", err.Error())
+		t.Fatalf("failed to get next chunk from aggregate mapper: %s", err.Error())
 	}
-	b, err := json.Marshal(r)
+	return mustMarshalMapperOutput(r)
+}
+
+// mustMarshalMapperOutput manually converts a mapper output to JSON, to avoid the
+// built-in encoding.
+func mustMarshalMapperOutput(r interface{}) string {
+	if r == nil {
+		b, err := json.Marshal(nil)
+		if err != nil {
+			panic("failed to marshal nil chunk as JSON")
+		}
+		return string(b)
+	}
+	mo := r.(*tsdb.MapperOutput)
+
+	type v struct {
+		Time  int64             `json:"time,omitempty"`
+		Value interface{}       `json:"value,omitempty"`
+		Tags  map[string]string `json:"tags,omitempty"`
+	}
+
+	values := make([]*v, len(mo.Values))
+	for i, value := range mo.Values {
+		values[i] = &v{
+			Time:  value.Time,
+			Value: value.Value,
+			Tags:  value.Tags,
+		}
+	}
+
+	var o struct {
+		Name   string            `json:"name,omitempty"`
+		Tags   map[string]string `json:"tags,omitempty"`
+		Fields []string          `json:"fields,omitempty"`
+		Values []*v              `json:"values,omitempty"`
+	}
+
+	o.Name = mo.Name
+	o.Tags = mo.Tags
+	o.Fields = mo.Fields
+	o.Values = values
+
+	b, err := json.Marshal(o)
 	if err != nil {
-		t.Fatalf("failed to marshal chunk as JSON: %s", err.Error())
+		panic("failed to marshal MapperOutput")
 	}
 	return string(b)
 }

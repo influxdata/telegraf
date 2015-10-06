@@ -45,7 +45,12 @@ the configuration below.
 package main
 
 import "github.com/influxdb/influxdb/client"
-import "net/url"
+import (
+	  "net/url"
+	  "fmt"
+	  "log"
+	  "os"
+)
 
 const (
 	MyHost        = "localhost"
@@ -190,8 +195,8 @@ for i, row := range res[0].Series[0].Values {
 	if err != nil {
 		log.Fatal(err)
 	}
-	val, err := row[1].(json.Number).Int64()
-	log.Printf("[%2d] %s: %03d\n", i, t.Format(time.Stamp), val)
+	val := row[1].(string)
+	log.Printf("[%2d] %s: %s\n", i, t.Format(time.Stamp), val)
 }
 ```
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdb/influxdb/influxql"
+	"github.com/influxdb/influxdb/pkg/escape"
 	"github.com/influxdb/influxdb/tsdb/internal"
 
 	"github.com/gogo/protobuf/proto"
@@ -27,7 +28,6 @@ type DatabaseIndex struct {
 	mu           sync.RWMutex
 	measurements map[string]*Measurement // measurement name to object and index
 	series       map[string]*Series      // map series key to the Series object
-	names        []string                // sorted list of the measurement names
 	lastID       uint64                  // last used series ID. They're in memory only for this shard
 }
 
@@ -35,15 +35,7 @@ func NewDatabaseIndex() *DatabaseIndex {
 	return &DatabaseIndex{
 		measurements: make(map[string]*Measurement),
 		series:       make(map[string]*Series),
-		names:        make([]string, 0),
 	}
-}
-
-// Names returns a sorted list of measurement names.
-func (d *DatabaseIndex) Names() []string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return d.names
 }
 
 // Series returns a series by key.
@@ -65,6 +57,20 @@ func (d *DatabaseIndex) Measurement(name string) *Measurement {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	return d.measurements[name]
+}
+
+// MeasurementsByName returns a list of measurements.
+func (d *DatabaseIndex) MeasurementsByName(names []string) []*Measurement {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	a := make([]*Measurement, 0, len(names))
+	for _, name := range names {
+		if m := d.measurements[name]; m != nil {
+			a = append(a, m)
+		}
+	}
+	return a
 }
 
 // MeasurementSeriesCounts returns the number of measurements and series currently indexed by the database.
@@ -101,13 +107,11 @@ func (s *DatabaseIndex) CreateSeriesIndexIfNotExists(measurementName string, ser
 
 // CreateMeasurementIndexIfNotExists creates or retrieves an in memory index object for the measurement
 func (s *DatabaseIndex) CreateMeasurementIndexIfNotExists(name string) *Measurement {
-	name = unescapeString(name)
+	name = escape.UnescapeString(name)
 	m := s.measurements[name]
 	if m == nil {
 		m = NewMeasurement(name, s)
 		s.measurements[name] = m
-		s.names = append(s.names, name)
-		sort.Strings(s.names)
 	}
 	return m
 }
@@ -180,7 +184,7 @@ func (db *DatabaseIndex) measurementsByExpr(expr influxql.Expr) (Measurements, e
 	return nil, fmt.Errorf("%#v", expr)
 }
 
-// measurementsByTagFilters returns the measurements matching the filters on tag values.
+// measurementsByTagFilters returns the sorted measurements matching the filters on tag values.
 func (db *DatabaseIndex) measurementsByTagFilters(filters []*TagFilter) Measurements {
 	// If no filters, then return all measurements.
 	if len(filters) == 0 {
@@ -238,6 +242,7 @@ func (db *DatabaseIndex) measurementsByTagFilters(filters []*TagFilter) Measurem
 		}
 	}
 
+	sort.Sort(measurements)
 	return measurements
 }
 
@@ -275,14 +280,6 @@ func (db *DatabaseIndex) DropMeasurement(name string) {
 	for _, s := range m.seriesByID {
 		delete(db.series, s.Key)
 	}
-
-	var names []string
-	for _, n := range db.names {
-		if n != name {
-			names = append(names, n)
-		}
-	}
-	db.names = names
 }
 
 // DropSeries removes the series keys and their tags from the index
@@ -297,6 +294,142 @@ func (db *DatabaseIndex) DropSeries(keys []string) {
 		series.measurement.DropSeries(series.id)
 		delete(db.series, k)
 	}
+}
+
+// RewriteSelectStatement performs any necessary query re-writing.
+func (db *DatabaseIndex) RewriteSelectStatement(stmt *influxql.SelectStatement) (*influxql.SelectStatement, error) {
+	// Expand regex expressions in the FROM clause.
+	sources, err := db.ExpandSources(stmt.Sources)
+	if err != nil {
+		return nil, err
+	}
+	stmt.Sources = sources
+
+	// Expand wildcards in the fields or GROUP BY.
+	stmt, err = db.ExpandWildcards(stmt)
+	if err != nil {
+		return nil, err
+	}
+
+	stmt.RewriteDistinct()
+
+	return stmt, nil
+}
+
+// expandWildcards returns a new SelectStatement with wildcards expanded
+// If only a `SELECT *` is present, without a `GROUP BY *`, both tags and fields expand in the SELECT
+// If a `SELECT *` and a `GROUP BY *` are both present, then only fiels are expanded in the `SELECT` and only
+// tags are expanded in the `GROUP BY`
+func (db *DatabaseIndex) ExpandWildcards(stmt *influxql.SelectStatement) (*influxql.SelectStatement, error) {
+	// If there are no wildcards in the statement, return it as-is.
+	if !stmt.HasWildcard() {
+		return stmt, nil
+	}
+	// Use sets to avoid duplicate field names.
+	fieldSet := map[string]struct{}{}
+	dimensionSet := map[string]struct{}{}
+
+	// keep track of where the wildcards are in the select statement
+	hasFieldWildcard := stmt.HasFieldWildcard()
+	hasDimensionWildcard := stmt.HasDimensionWildcard()
+
+	// Iterate measurements in the FROM clause getting the fields & dimensions for each.
+	var fields influxql.Fields
+	var dimensions influxql.Dimensions
+	for _, src := range stmt.Sources {
+		if m, ok := src.(*influxql.Measurement); ok {
+			// Lookup the measurement in the database.
+			mm := db.Measurement(m.Name)
+			if mm == nil {
+				// This shard have never received data for the measurement. No Mapper
+				// required.
+				return stmt, nil
+			}
+
+			// Get the fields for this measurement.
+			for _, name := range mm.FieldNames() {
+				if _, ok := fieldSet[name]; ok {
+					continue
+				}
+				fieldSet[name] = struct{}{}
+				fields = append(fields, &influxql.Field{Expr: &influxql.VarRef{Val: name}})
+			}
+
+			// Add tags to fields if a field wildcard was provided and a dimension wildcard was not.
+			if hasFieldWildcard && !hasDimensionWildcard {
+				for _, t := range mm.TagKeys() {
+					if _, ok := fieldSet[t]; ok {
+						continue
+					}
+					fieldSet[t] = struct{}{}
+					fields = append(fields, &influxql.Field{Expr: &influxql.VarRef{Val: t}})
+				}
+			}
+
+			// Get the dimensions for this measurement.
+			if hasDimensionWildcard {
+				for _, t := range mm.TagKeys() {
+					if _, ok := dimensionSet[t]; ok {
+						continue
+					}
+					dimensionSet[t] = struct{}{}
+					dimensions = append(dimensions, &influxql.Dimension{Expr: &influxql.VarRef{Val: t}})
+				}
+			}
+		}
+	}
+
+	// Return a new SelectStatement with the wild cards rewritten.
+	return stmt.RewriteWildcards(fields, dimensions), nil
+}
+
+// expandSources expands regex sources and removes duplicates.
+// NOTE: sources must be normalized (db and rp set) before calling this function.
+func (di *DatabaseIndex) ExpandSources(sources influxql.Sources) (influxql.Sources, error) {
+	// Use a map as a set to prevent duplicates. Two regexes might produce
+	// duplicates when expanded.
+	set := map[string]influxql.Source{}
+	names := []string{}
+
+	// Iterate all sources, expanding regexes when they're found.
+	for _, source := range sources {
+		switch src := source.(type) {
+		case *influxql.Measurement:
+			if src.Regex == nil {
+				name := src.String()
+				set[name] = src
+				names = append(names, name)
+				continue
+			}
+			// Get measurements from the database that match the regex.
+			measurements := di.measurementsByRegex(src.Regex.Val)
+			// Add those measurements to the set.
+			for _, m := range measurements {
+				m2 := &influxql.Measurement{
+					Database:        src.Database,
+					RetentionPolicy: src.RetentionPolicy,
+					Name:            m.Name,
+				}
+				name := m2.String()
+				if _, ok := set[name]; !ok {
+					set[name] = m2
+					names = append(names, name)
+				}
+			}
+		default:
+			return nil, fmt.Errorf("expandSources: unsuported source type: %T", source)
+		}
+	}
+
+	// Sort the list of source names.
+	sort.Strings(names)
+
+	// Convert set to a list of Sources.
+	expanded := make(influxql.Sources, 0, len(set))
+	for _, name := range names {
+		expanded = append(expanded, set[name])
+	}
+	return expanded, nil
 }
 
 // Measurement represents a collection of time series in a database. It also contains in memory
@@ -920,12 +1053,109 @@ func (m *Measurement) uniqueTagValues(expr influxql.Expr) map[string][]string {
 	return out
 }
 
+// SelectFields returns a list of fields in the SELECT section of stmt.
+func (m *Measurement) SelectFields(stmt *influxql.SelectStatement) []string {
+	set := newStringSet()
+	for _, name := range stmt.NamesInSelect() {
+		if m.HasField(name) {
+			set.add(name)
+			continue
+		}
+	}
+	return set.list()
+}
+
+// SelectTags returns a list of non-field tags in the SELECT section of stmt.
+func (m *Measurement) SelectTags(stmt *influxql.SelectStatement) []string {
+	set := newStringSet()
+	for _, name := range stmt.NamesInSelect() {
+		if !m.HasField(name) && m.HasTagKey(name) {
+			set.add(name)
+		}
+	}
+	return set.list()
+}
+
+// WhereFields returns a list of non-"time" fields in the WHERE section of stmt.
+func (m *Measurement) WhereFields(stmt *influxql.SelectStatement) []string {
+	set := newStringSet()
+	for _, name := range stmt.NamesInWhere() {
+		if name != "time" && m.HasField(name) {
+			set.add(name)
+		}
+	}
+	return set.list()
+}
+
+// DimensionTagSets returns list of tag sets from the GROUP BY section of stmt.
+func (m *Measurement) DimensionTagSets(stmt *influxql.SelectStatement) ([]*influxql.TagSet, error) {
+	_, tagKeys := stmt.Dimensions.Normalize()
+
+	for _, n := range stmt.NamesInDimension() {
+		if m.HasTagKey(n) {
+			tagKeys = append(tagKeys, n)
+		}
+	}
+
+	// Get the sorted unique tag sets for this statement.
+	tagSets, err := m.TagSets(stmt, tagKeys)
+	if err != nil {
+		return nil, err
+	}
+	return tagSets, nil
+}
+
+type SelectInfo struct {
+	SelectFields []string
+	SelectTags   []string
+	WhereFields  []string
+}
+
 // Measurements represents a list of *Measurement.
 type Measurements []*Measurement
 
 func (a Measurements) Len() int           { return len(a) }
 func (a Measurements) Less(i, j int) bool { return a[i].Name < a[j].Name }
 func (a Measurements) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
+// SelectFields returns a list of fields in the SELECT section of stmt.
+func (a Measurements) SelectFields(stmt *influxql.SelectStatement) []string {
+	set := newStringSet()
+	for _, name := range stmt.NamesInSelect() {
+		for _, m := range a {
+			if m.HasField(name) {
+				set.add(name)
+			}
+		}
+	}
+	return set.list()
+}
+
+// SelectTags returns a list of non-field tags in the SELECT section of stmt.
+func (a Measurements) SelectTags(stmt *influxql.SelectStatement) []string {
+	set := newStringSet()
+	for _, name := range stmt.NamesInSelect() {
+		for _, m := range a {
+			if !m.HasField(name) && m.HasTagKey(name) {
+				set.add(name)
+			}
+		}
+	}
+	return set.list()
+}
+
+// WhereFields returns a list of non-"time" fields in the WHERE section of stmt.
+func (a Measurements) WhereFields(stmt *influxql.SelectStatement) []string {
+	set := newStringSet()
+	for _, name := range stmt.NamesInWhere() {
+		for _, m := range a {
+			if name != "time" && m.HasField(name) {
+				set.add(name)
+			}
+		}
+	}
+	return set.list()
+}
 
 func (a Measurements) intersect(other Measurements) Measurements {
 	l := a
@@ -1213,6 +1443,17 @@ func (m *Measurement) TagKeys() []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// TagValues returns all the values for the given tag key
+func (m *Measurement) TagValues(key string) []string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	values := []string{}
+	for v := range m.seriesByTagKeyValue[key] {
+		values = append(values, v)
+	}
+	return values
 }
 
 // SetFieldName adds the field name to the measurement.

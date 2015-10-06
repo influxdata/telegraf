@@ -1,17 +1,24 @@
 package meta
 
 import (
+	"bytes"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/influxdb/influxdb/influxql"
+	"github.com/influxdb/influxdb/models"
 )
 
 // StatementExecutor translates InfluxQL queries to meta store methods.
 type StatementExecutor struct {
 	Store interface {
+		Node(id uint64) (ni *NodeInfo, err error)
 		Nodes() ([]NodeInfo, error)
 		Peers() ([]string, error)
+		Leader() string
 
+		DeleteNode(nodeID uint64, force bool) error
 		Database(name string) (*DatabaseInfo, error)
 		Databases() ([]DatabaseInfo, error)
 		CreateDatabase(name string) (*DatabaseInfo, error)
@@ -80,8 +87,12 @@ func (e *StatementExecutor) ExecuteStatement(stmt influxql.Statement) *influxql.
 		return e.executeDropContinuousQueryStatement(stmt)
 	case *influxql.ShowContinuousQueriesStatement:
 		return e.executeShowContinuousQueriesStatement(stmt)
+	case *influxql.ShowShardsStatement:
+		return e.executeShowShardsStatement(stmt)
 	case *influxql.ShowStatsStatement:
 		return e.executeShowStatsStatement(stmt)
+	case *influxql.DropServerStatement:
+		return e.executeDropServerStatement(stmt)
 	default:
 		panic(fmt.Sprintf("unsupported statement type: %T", stmt))
 	}
@@ -89,6 +100,9 @@ func (e *StatementExecutor) ExecuteStatement(stmt influxql.Statement) *influxql.
 
 func (e *StatementExecutor) executeCreateDatabaseStatement(q *influxql.CreateDatabaseStatement) *influxql.Result {
 	_, err := e.Store.CreateDatabase(q.Name)
+	if err == ErrDatabaseExists && q.IfNotExists {
+		err = nil
+	}
 	return &influxql.Result{Err: err}
 }
 
@@ -102,11 +116,11 @@ func (e *StatementExecutor) executeShowDatabasesStatement(q *influxql.ShowDataba
 		return &influxql.Result{Err: err}
 	}
 
-	row := &influxql.Row{Name: "databases", Columns: []string{"name"}}
+	row := &models.Row{Name: "databases", Columns: []string{"name"}}
 	for _, di := range dis {
 		row.Values = append(row.Values, []interface{}{di.Name})
 	}
-	return &influxql.Result{Series: []*influxql.Row{row}}
+	return &influxql.Result{Series: []*models.Row{row}}
 }
 
 func (e *StatementExecutor) executeShowGrantsForUserStatement(q *influxql.ShowGrantsForUserStatement) *influxql.Result {
@@ -115,11 +129,11 @@ func (e *StatementExecutor) executeShowGrantsForUserStatement(q *influxql.ShowGr
 		return &influxql.Result{Err: err}
 	}
 
-	row := &influxql.Row{Columns: []string{"database", "privilege"}}
+	row := &models.Row{Columns: []string{"database", "privilege"}}
 	for d, p := range priv {
 		row.Values = append(row.Values, []interface{}{d, p.String()})
 	}
-	return &influxql.Result{Series: []*influxql.Row{row}}
+	return &influxql.Result{Series: []*models.Row{row}}
 }
 
 func (e *StatementExecutor) executeShowServersStatement(q *influxql.ShowServersStatement) *influxql.Result {
@@ -133,11 +147,35 @@ func (e *StatementExecutor) executeShowServersStatement(q *influxql.ShowServersS
 		return &influxql.Result{Err: err}
 	}
 
-	row := &influxql.Row{Columns: []string{"id", "cluster_addr", "raft"}}
+	leader := e.Store.Leader()
+
+	row := &models.Row{Columns: []string{"id", "cluster_addr", "raft", "raft-leader"}}
 	for _, ni := range nis {
-		row.Values = append(row.Values, []interface{}{ni.ID, ni.Host, contains(peers, ni.Host)})
+		row.Values = append(row.Values, []interface{}{ni.ID, ni.Host, contains(peers, ni.Host), leader == ni.Host})
 	}
-	return &influxql.Result{Series: []*influxql.Row{row}}
+	return &influxql.Result{Series: []*models.Row{row}}
+}
+
+func (e *StatementExecutor) executeDropServerStatement(q *influxql.DropServerStatement) *influxql.Result {
+	ni, err := e.Store.Node(q.NodeID)
+	if err != nil {
+		return &influxql.Result{Err: err}
+	}
+	if ni == nil {
+		return &influxql.Result{Err: ErrNodeNotFound}
+	}
+
+	// Dropping only non-Raft nodes supported.
+	peers, err := e.Store.Peers()
+	if err != nil {
+		return &influxql.Result{Err: err}
+	}
+	if contains(peers, ni.Host) {
+		return &influxql.Result{Err: ErrNodeRaft}
+	}
+
+	err = e.Store.DeleteNode(q.NodeID, q.Force)
+	return &influxql.Result{Err: err}
 }
 
 func (e *StatementExecutor) executeCreateUserStatement(q *influxql.CreateUserStatement) *influxql.Result {
@@ -159,11 +197,11 @@ func (e *StatementExecutor) executeShowUsersStatement(q *influxql.ShowUsersState
 		return &influxql.Result{Err: err}
 	}
 
-	row := &influxql.Row{Columns: []string{"user", "admin"}}
+	row := &models.Row{Columns: []string{"user", "admin"}}
 	for _, ui := range uis {
 		row.Values = append(row.Values, []interface{}{ui.Name, ui.Admin})
 	}
-	return &influxql.Result{Series: []*influxql.Row{row}}
+	return &influxql.Result{Series: []*models.Row{row}}
 }
 
 func (e *StatementExecutor) executeGrantStatement(stmt *influxql.GrantStatement) *influxql.Result {
@@ -245,11 +283,11 @@ func (e *StatementExecutor) executeShowRetentionPoliciesStatement(q *influxql.Sh
 		return &influxql.Result{Err: ErrDatabaseNotFound}
 	}
 
-	row := &influxql.Row{Columns: []string{"name", "duration", "replicaN", "default"}}
+	row := &models.Row{Columns: []string{"name", "duration", "replicaN", "default"}}
 	for _, rpi := range di.RetentionPolicies {
 		row.Values = append(row.Values, []interface{}{rpi.Name, rpi.Duration.String(), rpi.ReplicaN, di.DefaultRetentionPolicy == rpi.Name})
 	}
-	return &influxql.Result{Series: []*influxql.Row{row}}
+	return &influxql.Result{Series: []*models.Row{row}}
 }
 
 func (e *StatementExecutor) executeCreateContinuousQueryStatement(q *influxql.CreateContinuousQueryStatement) *influxql.Result {
@@ -270,9 +308,9 @@ func (e *StatementExecutor) executeShowContinuousQueriesStatement(stmt *influxql
 		return &influxql.Result{Err: err}
 	}
 
-	rows := []*influxql.Row{}
+	rows := []*models.Row{}
 	for _, di := range dis {
-		row := &influxql.Row{Columns: []string{"name", "query"}, Name: di.Name}
+		row := &models.Row{Columns: []string{"name", "query"}, Name: di.Name}
 		for _, cqi := range di.ContinuousQueries {
 			row.Values = append(row.Values, []interface{}{cqi.Name, cqi.Query})
 		}
@@ -281,6 +319,50 @@ func (e *StatementExecutor) executeShowContinuousQueriesStatement(stmt *influxql
 	return &influxql.Result{Series: rows}
 }
 
+func (e *StatementExecutor) executeShowShardsStatement(stmt *influxql.ShowShardsStatement) *influxql.Result {
+	dis, err := e.Store.Databases()
+	if err != nil {
+		return &influxql.Result{Err: err}
+	}
+
+	rows := []*models.Row{}
+	for _, di := range dis {
+		row := &models.Row{Columns: []string{"id", "start_time", "end_time", "expiry_time", "owners"}, Name: di.Name}
+		for _, rpi := range di.RetentionPolicies {
+			for _, sgi := range rpi.ShardGroups {
+				for _, si := range sgi.Shards {
+					ownerIDs := make([]uint64, len(si.Owners))
+					for i, owner := range si.Owners {
+						ownerIDs[i] = owner.NodeID
+					}
+
+					row.Values = append(row.Values, []interface{}{
+						si.ID,
+						sgi.StartTime.UTC().Format(time.RFC3339),
+						sgi.EndTime.UTC().Format(time.RFC3339),
+						sgi.EndTime.Add(rpi.Duration).UTC().Format(time.RFC3339),
+						joinUint64(ownerIDs),
+					})
+				}
+			}
+		}
+		rows = append(rows, row)
+	}
+	return &influxql.Result{Series: rows}
+}
+
 func (e *StatementExecutor) executeShowStatsStatement(stmt *influxql.ShowStatsStatement) *influxql.Result {
 	return &influxql.Result{Err: fmt.Errorf("SHOW STATS is not implemented yet")}
+}
+
+// joinUint64 returns a comma-delimited string of uint64 numbers.
+func joinUint64(a []uint64) string {
+	var buf bytes.Buffer
+	for i, x := range a {
+		buf.WriteString(strconv.FormatUint(x, 10))
+		if i < len(a)-1 {
+			buf.WriteRune(',')
+		}
+	}
+	return buf.String()
 }

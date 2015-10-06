@@ -254,7 +254,10 @@ func (s *Store) Open() error {
 		close(s.ready)
 	}
 
-	return nil
+	// Wait for a leader to be elected so we know the raft log is loaded
+	// and up to date
+	<-s.ready
+	return s.WaitForLeader(0)
 }
 
 // syncNodeInfo continuously tries to update the current nodes hostname
@@ -689,7 +692,7 @@ func (s *Store) handleExecConn(conn net.Conn) {
 
 		// Apply against the raft log.
 		if err := s.apply(buf); err != nil {
-			return fmt.Errorf("apply: %s", err)
+			return err
 		}
 		return nil
 	}()
@@ -820,10 +823,16 @@ func (s *Store) UpdateNode(id uint64, host string) (*NodeInfo, error) {
 }
 
 // DeleteNode removes a node from the metastore by id.
-func (s *Store) DeleteNode(id uint64) error {
+func (s *Store) DeleteNode(id uint64, force bool) error {
+	ni := s.data.Node(id)
+	if ni == nil {
+		return ErrNodeNotFound
+	}
+
 	return s.exec(internal.Command_DeleteNodeCommand, internal.E_DeleteNodeCommand_Command,
 		&internal.DeleteNodeCommand{
-			ID: proto.Uint64(id),
+			ID:    proto.Uint64(id),
+			Force: proto.Bool(force),
 		},
 	)
 }
@@ -858,6 +867,7 @@ func (s *Store) CreateDatabase(name string) (*DatabaseInfo, error) {
 	); err != nil {
 		return nil, err
 	}
+	s.Logger.Printf("database '%s' created", name)
 
 	if s.retentionAutoCreate {
 		// Read node count.
@@ -977,6 +987,7 @@ func (s *Store) CreateRetentionPolicy(database string, rpi *RetentionPolicyInfo)
 		return nil, err
 	}
 
+	s.Logger.Printf("retention policy '%s' for database '%s' created", rpi.Name, database)
 	return s.RetentionPolicy(database, rpi.Name)
 }
 
@@ -1046,8 +1057,6 @@ func (s *Store) DropRetentionPolicy(database, name string) error {
 		},
 	)
 }
-
-// FIX: CreateRetentionPolicyIfNotExists(database string, rp *RetentionPolicyInfo) (*RetentionPolicyInfo, error)
 
 // CreateShardGroup creates a new shard group in a retention policy for a given time.
 func (s *Store) CreateShardGroup(database, policy string, timestamp time.Time) (*ShardGroupInfo, error) {
@@ -1389,38 +1398,34 @@ func (s *Store) UserCount() (count int, err error) {
 	return
 }
 
-// PrecreateShardGroups creates shard groups whose endtime is before the cutoff time passed in. This
-// avoid the need for these shards to be created when data for the corresponding time range arrives.
-// Shard creation involves Raft consensus, and precreation avoids taking the hit at write-time.
-func (s *Store) PrecreateShardGroups(cutoff time.Time) error {
+// PrecreateShardGroups creates shard groups whose endtime is before the 'to' time passed in, but
+// is yet to expire before 'from'. This is to avoid the need for these shards to be created when data
+// for the corresponding time range arrives. Shard creation involves Raft consensus, and precreation
+// avoids taking the hit at write-time.
+func (s *Store) PrecreateShardGroups(from, to time.Time) error {
 	s.read(func(data *Data) error {
 		for _, di := range data.Databases {
 			for _, rp := range di.RetentionPolicies {
-				for _, g := range rp.ShardGroups {
-					// Check to see if it is not deleted and going to end before our interval
-					if !g.Deleted() && g.EndTime.Before(cutoff) {
-						nextShardGroupTime := g.EndTime.Add(1 * time.Nanosecond)
+				if len(rp.ShardGroups) == 0 {
+					// No data was ever written to this group, or all groups have been deleted.
+					continue
+				}
+				g := rp.ShardGroups[len(rp.ShardGroups)-1] // Get the last group in time.
+				if !g.Deleted() && g.EndTime.Before(to) && g.EndTime.After(from) {
+					// Group is not deleted, will end before the future time, but is still yet to expire.
+					// This last check is important, so the system doesn't create shards groups wholly
+					// in the past.
 
-						// Check if successive shard group exists.
-						if sgi, err := s.ShardGroupByTimestamp(di.Name, rp.Name, nextShardGroupTime); err != nil {
-							s.Logger.Printf("failed to check if successive shard group for group exists %d: %s",
-								g.ID, err.Error())
-							continue
-						} else if sgi != nil && !sgi.Deleted() {
-							continue
-						}
-
-						// It doesn't. Create it.
-						if newGroup, err := s.CreateShardGroupIfNotExists(di.Name, rp.Name, nextShardGroupTime); err != nil {
-							s.Logger.Printf("failed to create successive shard group for group %d: %s",
-								g.ID, err.Error())
-						} else {
-							s.Logger.Printf("new shard group %d successfully created for database %s, retention policy %s",
-								newGroup.ID, di.Name, rp.Name)
-						}
+					// Create successive shard group.
+					nextShardGroupTime := g.EndTime.Add(1 * time.Nanosecond)
+					if newGroup, err := s.CreateShardGroupIfNotExists(di.Name, rp.Name, nextShardGroupTime); err != nil {
+						s.Logger.Printf("failed to create successive shard group for group %d: %s",
+							g.ID, err.Error())
+					} else {
+						s.Logger.Printf("new shard group %d successfully created for database %s, retention policy %s",
+							newGroup.ID, di.Name, rp.Name)
 					}
 				}
-
 			}
 		}
 		return nil
@@ -1554,7 +1559,7 @@ func (s *Store) remoteExec(b []byte) error {
 	if err := proto.Unmarshal(buf, &resp); err != nil {
 		return fmt.Errorf("unmarshal response: %s", err)
 	} else if !resp.GetOK() {
-		return fmt.Errorf("exec failed: %s", resp.GetError())
+		return lookupError(fmt.Errorf(resp.GetError()))
 	}
 
 	// Wait for local FSM to sync to index.
@@ -1707,10 +1712,13 @@ func (fsm *storeFSM) applyDeleteNodeCommand(cmd *internal.Command) interface{} {
 
 	// Copy data and update.
 	other := fsm.data.Clone()
-	if err := other.DeleteNode(v.GetID()); err != nil {
+	if err := other.DeleteNode(v.GetID(), v.GetForce()); err != nil {
 		return err
 	}
 	fsm.data = other
+
+	id := v.GetID()
+	fsm.Logger.Printf("node '%d' removed", id)
 
 	return nil
 }

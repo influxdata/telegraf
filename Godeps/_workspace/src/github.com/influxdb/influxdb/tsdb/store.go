@@ -9,8 +9,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdb/influxdb/influxql"
+	"github.com/influxdb/influxdb/models"
 )
 
 func NewStore(path string) *Store {
@@ -26,6 +28,11 @@ func NewStore(path string) *Store {
 
 var (
 	ErrShardNotFound = fmt.Errorf("shard not found")
+	ErrStoreClosed   = fmt.Errorf("store is closed")
+)
+
+const (
+	MaintenanceCheckInterval = time.Minute
 )
 
 type Store struct {
@@ -37,6 +44,10 @@ type Store struct {
 
 	EngineOptions EngineOptions
 	Logger        *log.Logger
+
+	closing chan struct{}
+	wg      sync.WaitGroup
+	opened  bool
 }
 
 // Path returns the store's root path.
@@ -66,6 +77,12 @@ func (s *Store) ShardN() int {
 func (s *Store) CreateShard(database, retentionPolicy string, shardID uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	select {
+	case <-s.closing:
+		return ErrStoreClosed
+	default:
+	}
 
 	// shard already exists
 	if _, ok := s.shards[shardID]; ok {
@@ -116,7 +133,7 @@ func (s *Store) DeleteShard(shardID uint64) error {
 		return err
 	}
 
-	if err := os.Remove(sh.path); err != nil {
+	if err := os.RemoveAll(sh.path); err != nil {
 		return err
 	}
 
@@ -174,6 +191,17 @@ func (s *Store) DatabaseIndex(name string) *DatabaseIndex {
 	return s.databaseIndexes[name]
 }
 
+// Databases returns all the databases in the indexes
+func (s *Store) Databases() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	databases := []string{}
+	for db := range s.databaseIndexes {
+		databases = append(databases, db)
+	}
+	return databases
+}
+
 func (s *Store) Measurement(database, name string) *Measurement {
 	s.mu.RLock()
 	db := s.databaseIndexes[database]
@@ -182,6 +210,22 @@ func (s *Store) Measurement(database, name string) *Measurement {
 		return nil
 	}
 	return db.Measurement(name)
+}
+
+// DiskSize returns the size of all the shard files in bytes.  This size does not include the WAL size.
+func (s *Store) DiskSize() (int64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var size int64
+	for _, shardID := range s.ShardIDs() {
+		shard := s.Shard(shardID)
+		sz, err := shard.DiskSize()
+		if err != nil {
+			return 0, err
+		}
+		size += sz
+	}
+	return size, nil
 }
 
 // deleteSeries loops through the local shards and deletes the series data and metadata for the passed in series keys
@@ -266,9 +310,46 @@ func (s *Store) loadShards() error {
 
 }
 
+// periodicMaintenance is the method called in a goroutine on the opening of the store
+// to perform periodic maintenance of the shards.
+func (s *Store) periodicMaintenance() {
+	t := time.NewTicker(MaintenanceCheckInterval)
+	for {
+		select {
+		case <-t.C:
+			s.performMaintenance()
+		case <-s.closing:
+			t.Stop()
+			return
+		}
+	}
+}
+
+// performMaintenance will loop through the shars and tell them
+// to perform any maintenance tasks. Those tasks should kick off
+// their own goroutines if it's anything that could take time.
+func (s *Store) performMaintenance() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, sh := range s.shards {
+		s.performMaintenanceOnShard(sh)
+	}
+}
+
+func (s *Store) performMaintenanceOnShard(shard *Shard) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.Logger.Printf("recovered eror in maintenance on shard %d", shard.id)
+		}
+	}()
+	shard.PerformMaintenance()
+}
+
 func (s *Store) Open() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	s.closing = make(chan struct{})
 
 	s.shards = map[uint64]*Shard{}
 	s.databaseIndexes = map[string]*DatabaseIndex{}
@@ -289,12 +370,22 @@ func (s *Store) Open() error {
 		return err
 	}
 
+	go s.periodicMaintenance()
+	s.opened = true
+
 	return nil
 }
 
-func (s *Store) WriteToShard(shardID uint64, points []Point) error {
+func (s *Store) WriteToShard(shardID uint64, points []models.Point) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
+	select {
+	case <-s.closing:
+		return ErrStoreClosed
+	default:
+	}
+
 	sh, ok := s.shards[shardID]
 	if !ok {
 		return ErrShardNotFound
@@ -303,34 +394,44 @@ func (s *Store) WriteToShard(shardID uint64, points []Point) error {
 	return sh.WritePoints(points)
 }
 
-func (s *Store) CreateMapper(shardID uint64, query string, chunkSize int) (Mapper, error) {
-	q, err := influxql.NewParser(strings.NewReader(query)).ParseStatement()
-	if err != nil {
-		return nil, err
-	}
-	stmt, ok := q.(*influxql.SelectStatement)
-	if !ok {
-		return nil, fmt.Errorf("query is not a SELECT statement: %s", err.Error())
-	}
-
+func (s *Store) CreateMapper(shardID uint64, stmt influxql.Statement, chunkSize int) (Mapper, error) {
 	shard := s.Shard(shardID)
-	if shard == nil {
-		// This can happen if the shard has been assigned, but hasn't actually been created yet.
-		return nil, nil
-	}
 
-	return NewLocalMapper(shard, stmt, chunkSize), nil
+	switch stmt := stmt.(type) {
+	case *influxql.SelectStatement:
+		if (stmt.IsRawQuery && !stmt.HasDistinct()) || stmt.IsSimpleDerivative() {
+			m := NewRawMapper(shard, stmt)
+			m.ChunkSize = chunkSize
+			return m, nil
+		}
+		return NewAggregateMapper(shard, stmt), nil
+
+	case *influxql.ShowMeasurementsStatement:
+		m := NewShowMeasurementsMapper(shard, stmt)
+		m.ChunkSize = chunkSize
+		return m, nil
+	case *influxql.ShowTagKeysStatement:
+		return NewShowTagKeysMapper(shard, stmt, chunkSize), nil
+	default:
+		return nil, fmt.Errorf("can't create mapper for statement type: %T", stmt)
+	}
 }
 
 func (s *Store) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.opened {
+		close(s.closing)
+	}
+	s.wg.Wait()
+
 	for _, sh := range s.shards {
 		if err := sh.Close(); err != nil {
 			return err
 		}
 	}
+	s.opened = false
 	s.shards = nil
 	s.databaseIndexes = nil
 

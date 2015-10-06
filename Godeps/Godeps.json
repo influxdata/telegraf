@@ -101,34 +101,9 @@
 			"Rev": "d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee"
 		},
 		{
-			"ImportPath": "github.com/influxdb/influxdb/client",
-			"Comment": "v0.9.3",
-			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/influxql",
-			"Comment": "v0.9.3",
-			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/meta",
-			"Comment": "v0.9.3",
-			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/snapshot",
-			"Comment": "v0.9.3",
-			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/toml",
-			"Comment": "v0.9.3",
-			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb/tsdb",
-			"Comment": "v0.9.3",
-			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+			"ImportPath": "github.com/influxdb/influxdb",
+			"Comment": "v0.9.4-rc1-457-g883d32c",
+			"Rev": "883d32cfd06e8cf14e6d9fc75dbe7b7b92345623"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
@@ -267,6 +242,10 @@
 			"ImportPath": "gopkg.in/dancannon/gorethink.v1",
 			"Comment": "v1.x.x",
 			"Rev": "8aca6ba2cc6e873299617d730fac0d7f6593113a"
+		},
+		{
+			"ImportPath": "gopkg.in/fatih/pool.v2",
+			"Rev": "cba550ebf9bce999a02e963296d4bc7a486cb715"
 		},
 		{
 			"ImportPath": "gopkg.in/mgo.v2",

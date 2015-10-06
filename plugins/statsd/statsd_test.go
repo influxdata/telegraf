@@ -135,6 +135,14 @@ func TestParse_NameMapTags(t *testing.T) {
 	}
 }
 
+// Test that measurements with the same name, but different tags, are treated
+// as different values in the statsd cache
+func TestParse_MeasurementsWithSameName(t *testing.T) {
+	if false {
+		t.Errorf("TODO")
+	}
+}
+
 // Valid lines should be parsed and their values should be cached
 func TestParse_ValidLines(t *testing.T) {
 	s := NewStatsd()
@@ -429,8 +437,16 @@ func test_validate_set(
 	value int64,
 	cache map[string]cachedset,
 ) error {
-	metric, ok := cache[name]
-	if !ok {
+	var metric cachedset
+	var found bool
+	for _, v := range cache {
+		if v.name == name {
+			metric = v
+			found = true
+			break
+		}
+	}
+	if !found {
 		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
 	}
 
@@ -446,8 +462,16 @@ func test_validate_counter(
 	value int64,
 	cache map[string]cachedcounter,
 ) error {
-	metric, ok := cache[name]
-	if !ok {
+	var metric cachedcounter
+	var found bool
+	for _, v := range cache {
+		if v.name == name {
+			metric = v
+			found = true
+			break
+		}
+	}
+	if !found {
 		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
 	}
 
@@ -463,8 +487,16 @@ func test_validate_gauge(
 	value float64,
 	cache map[string]cachedgauge,
 ) error {
-	metric, ok := cache[name]
-	if !ok {
+	var metric cachedgauge
+	var found bool
+	for _, v := range cache {
+		if v.name == name {
+			metric = v
+			found = true
+			break
+		}
+	}
+	if !found {
 		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
 	}
 

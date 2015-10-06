@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/influxdb/influxdb/tsdb"
+	"github.com/influxdb/influxdb/models"
 	"github.com/influxdb/telegraf/plugins"
 	"github.com/wvanbergen/kafka/consumergroup"
 )
@@ -86,9 +86,9 @@ func emitMetrics(k *Kafka, acc plugins.Accumulator, metricConsumer <-chan []byte
 	for {
 		select {
 		case batch := <-metricConsumer:
-			var points []tsdb.Point
+			var points []models.Point
 			var err error
-			if points, err = tsdb.ParsePoints(batch); err != nil {
+			if points, err = models.ParsePoints(batch); err != nil {
 				return err
 			}
 

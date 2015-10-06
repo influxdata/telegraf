@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/influxdb/influxdb/models"
 	"github.com/influxdb/influxdb/tsdb"
 )
 
@@ -89,6 +90,14 @@ func NewEngine(path string, walPath string, opt tsdb.EngineOptions) tsdb.Engine 
 
 // Path returns the path the engine was initialized with.
 func (e *Engine) Path() string { return e.path }
+
+// PerformMaintenance is for periodic maintenance of the store. A no-op for b1
+func (e *Engine) PerformMaintenance() {}
+
+// Format returns the format type of this engine
+func (e *Engine) Format() tsdb.EngineFormat {
+	return tsdb.B1Format
+}
 
 // Open opens and initializes the engine.
 func (e *Engine) Open() error {
@@ -173,7 +182,7 @@ func (e *Engine) close() error {
 func (e *Engine) SetLogOutput(w io.Writer) { e.LogOutput = w }
 
 // LoadMetadataIndex loads the shard metadata into memory.
-func (e *Engine) LoadMetadataIndex(index *tsdb.DatabaseIndex, measurementFields map[string]*tsdb.MeasurementFields) error {
+func (e *Engine) LoadMetadataIndex(shard *tsdb.Shard, index *tsdb.DatabaseIndex, measurementFields map[string]*tsdb.MeasurementFields) error {
 	return e.db.View(func(tx *bolt.Tx) error {
 		// load measurement metadata
 		meta := tx.Bucket([]byte("fields"))
@@ -206,7 +215,7 @@ func (e *Engine) LoadMetadataIndex(index *tsdb.DatabaseIndex, measurementFields 
 }
 
 // WritePoints will write the raw data points and any new metadata to the index in the shard
-func (e *Engine) WritePoints(points []tsdb.Point, measurementFieldsToSave map[string]*tsdb.MeasurementFields, seriesToCreate []*tsdb.SeriesCreate) error {
+func (e *Engine) WritePoints(points []models.Point, measurementFieldsToSave map[string]*tsdb.MeasurementFields, seriesToCreate []*tsdb.SeriesCreate) error {
 	// save to the underlying bolt instance
 	if err := e.db.Update(func(tx *bolt.Tx) error {
 		// save any new metadata
@@ -524,34 +533,66 @@ func (e *Engine) Begin(writable bool) (tsdb.Tx, error) {
 // DB returns the underlying Bolt database.
 func (e *Engine) DB() *bolt.DB { return e.db }
 
+// WriteTo writes the length and contents of the engine to w.
+func (e *Engine) WriteTo(w io.Writer) (n int64, err error) {
+	tx, err := e.db.Begin(false)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	// Write size.
+	if err := binary.Write(w, binary.BigEndian, uint64(tx.Size())); err != nil {
+		return 0, err
+	}
+
+	// Write data.
+	n, err = tx.WriteTo(w)
+	n += 8 // size header
+	return
+}
+
 // Tx represents a transaction.
 type Tx struct {
 	*bolt.Tx
 	engine *Engine
 }
 
-// Cursor returns an iterator for a key.
-func (tx *Tx) Cursor(key string) tsdb.Cursor {
-	// Retrieve key bucket.
-	b := tx.Bucket([]byte(key))
+// Cursor returns an iterator for a key over a single field.
+func (tx *Tx) Cursor(series string, fields []string, dec *tsdb.FieldCodec, ascending bool) tsdb.Cursor {
+	// Retrieve series bucket.
+	b := tx.Bucket([]byte(series))
 
 	tx.engine.mu.RLock()
 	defer tx.engine.mu.RUnlock()
 
 	// Ignore if there is no bucket or points in the cache.
-	partitionID := WALPartition([]byte(key))
-	if b == nil && len(tx.engine.cache[partitionID][key]) == 0 {
+	partitionID := WALPartition([]byte(series))
+	if b == nil && len(tx.engine.cache[partitionID][series]) == 0 {
 		return nil
 	}
 
-	// Retrieve a copy of the in-cache points for the key.
-	cache := make([][]byte, len(tx.engine.cache[partitionID][key]))
-	copy(cache, tx.engine.cache[partitionID][key])
+	// Retrieve a copy of the in-cache points for the series.
+	cache := make([][]byte, len(tx.engine.cache[partitionID][series]))
+	copy(cache, tx.engine.cache[partitionID][series])
 
 	// Build a cursor that merges the bucket and cache together.
-	cur := &Cursor{cache: cache}
+	cur := &Cursor{
+		cache:     cache,
+		fields:    fields,
+		dec:       dec,
+		ascending: ascending,
+	}
 	if b != nil {
 		cur.cursor = b.Cursor()
+	}
+
+	// If it's a reverse cursor, set the current location to the end.
+	if !ascending {
+		cur.index = len(cache) - 1
+		if cur.cursor != nil {
+			cur.cursor.Last()
+		}
 	}
 	return cur
 }
@@ -564,62 +605,134 @@ type Cursor struct {
 		key, value []byte
 	}
 
+	// Fields and codec.
+	fields []string
+	dec    *tsdb.FieldCodec
+
 	// Cache and current cache index.
 	cache [][]byte
 	index int
 
 	// Previously read key.
 	prev []byte
+
+	// The direction the cursor pointer moves after each call to Next()
+	ascending bool
 }
 
+func (c *Cursor) Ascending() bool { return c.ascending }
+
 // Seek moves the cursor to a position and returns the closest key/value pair.
-func (c *Cursor) Seek(seek []byte) (key, value []byte) {
+func (c *Cursor) SeekTo(seek int64) (key int64, value interface{}) {
 	// Seek bolt cursor.
+	seekBytes := u64tob(uint64(seek))
 	if c.cursor != nil {
-		c.buf.key, c.buf.value = c.cursor.Seek(seek)
+		c.buf.key, c.buf.value = c.cursor.Seek(seekBytes)
 	}
 
 	// Seek cache index.
 	c.index = sort.Search(len(c.cache), func(i int) bool {
-		return bytes.Compare(c.cache[i][0:8], seek) != -1
+		return bytes.Compare(c.cache[i][0:8], seekBytes) != -1
 	})
+
+	// Search will return an index after the length of cache if the seek value is greater
+	// than all the values.  Clamp it to the end of the cache.
+	if !c.ascending && c.index >= len(c.cache) {
+		c.index = len(c.cache) - 1
+	}
 
 	c.prev = nil
 	return c.read()
 }
 
 // Next returns the next key/value pair from the cursor.
-func (c *Cursor) Next() (key, value []byte) {
+func (c *Cursor) Next() (key int64, value interface{}) {
 	return c.read()
 }
 
 // read returns the next key/value in the cursor buffer or cache.
-func (c *Cursor) read() (key, value []byte) {
+func (c *Cursor) read() (key int64, value interface{}) {
 	// Continue skipping ahead through duplicate keys in the cache list.
+	var k, v []byte
 	for {
-		// Read next value from the cursor.
-		if c.buf.key == nil && c.cursor != nil {
-			c.buf.key, c.buf.value = c.cursor.Next()
-		}
-
-		// Read from the buffer or cache, which ever is lower.
-		if c.buf.key != nil && (c.index >= len(c.cache) || bytes.Compare(c.buf.key, c.cache[c.index][0:8]) == -1) {
-			key, value = c.buf.key, c.buf.value
-			c.buf.key, c.buf.value = nil, nil
-		} else if c.index < len(c.cache) {
-			key, value = c.cache[c.index][0:8], c.cache[c.index][8:]
-			c.index++
+		if c.ascending {
+			k, v = c.readForward()
 		} else {
-			key, value = nil, nil
+			k, v = c.readReverse()
 		}
 
 		// Exit loop if we're at the end of the cache or the next key is different.
-		if key == nil || !bytes.Equal(key, c.prev) {
+		if k == nil || !bytes.Equal(k, c.prev) {
 			break
 		}
 	}
 
-	c.prev = key
+	// Save key so it's not re-read.
+	c.prev = k
+
+	// Exit if no keys left.
+	if k == nil {
+		return tsdb.EOF, nil
+	}
+
+	// Convert key to timestamp.
+	key = int64(btou64(k))
+
+	// Decode fields. Optimize for single field, if possible.
+	if len(c.fields) == 1 {
+		decValue, err := c.dec.DecodeByName(c.fields[0], v)
+		if err != nil {
+			return key, nil
+		}
+		return key, decValue
+	} else if len(c.fields) > 1 {
+		m, err := c.dec.DecodeFieldsWithNames(v)
+		if err != nil {
+			return key, nil
+		}
+		return key, m
+	} else {
+		return key, nil
+	}
+}
+
+// readForward returns the next key/value from the cursor and moves the current location forward.
+func (c *Cursor) readForward() (key, value []byte) {
+	// Read next value from the cursor.
+	if c.buf.key == nil && c.cursor != nil {
+		c.buf.key, c.buf.value = c.cursor.Next()
+	}
+
+	// Read from the buffer or cache, which ever is lower.
+	if c.buf.key != nil && (c.index >= len(c.cache) || bytes.Compare(c.buf.key, c.cache[c.index][0:8]) == -1) {
+		key, value = c.buf.key, c.buf.value
+		c.buf.key, c.buf.value = nil, nil
+	} else if c.index < len(c.cache) {
+		key, value = c.cache[c.index][0:8], c.cache[c.index][8:]
+		c.index++
+	} else {
+		key, value = nil, nil
+	}
+	return
+}
+
+// readReverse returns the next key/value from the cursor and moves the current location backwards.
+func (c *Cursor) readReverse() (key, value []byte) {
+	// Read prev value from the cursor.
+	if c.buf.key == nil && c.cursor != nil {
+		c.buf.key, c.buf.value = c.cursor.Prev()
+	}
+
+	// Read from the buffer or cache, which ever is lower.
+	if c.buf.key != nil && (c.index < 0 || bytes.Compare(c.buf.key, c.cache[c.index][0:8]) == 1) {
+		key, value = c.buf.key, c.buf.value
+		c.buf.key, c.buf.value = nil, nil
+	} else if c.index >= 0 && c.index < len(c.cache) {
+		key, value = c.cache[c.index][0:8], c.cache[c.index][8:]
+		c.index--
+	} else {
+		key, value = nil, nil
+	}
 	return
 }
 
@@ -687,6 +800,9 @@ func u64tob(v uint64) []byte {
 	binary.BigEndian.PutUint64(b, v)
 	return b
 }
+
+// btou64 converts an 8-byte slice to a uint64.
+func btou64(b []byte) uint64 { return binary.BigEndian.Uint64(b) }
 
 // byteSlices represents a sortable slice of byte slices.
 type byteSlices [][]byte

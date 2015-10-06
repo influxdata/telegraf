@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdb/influxdb/influxql"
 	"github.com/influxdb/influxdb/meta"
+	"github.com/influxdb/influxdb/models"
 	"github.com/influxdb/influxdb/tsdb"
 )
 
@@ -34,8 +35,8 @@ func TestWritePointsAndExecuteTwoShards(t *testing.T) {
 					EndTime:   time.Now().Add(time.Hour),
 					Shards: []meta.ShardInfo{
 						{
-							ID:       uint64(sID0),
-							OwnerIDs: []uint64{nID},
+							ID:     uint64(sID0),
+							Owners: []meta.ShardOwner{{NodeID: nID}},
 						},
 					},
 				},
@@ -45,8 +46,8 @@ func TestWritePointsAndExecuteTwoShards(t *testing.T) {
 					EndTime:   time.Now().Add(-time.Hour),
 					Shards: []meta.ShardInfo{
 						{
-							ID:       uint64(sID1),
-							OwnerIDs: []uint64{nID},
+							ID:     uint64(sID1),
+							Owners: []meta.ShardOwner{{NodeID: nID}},
 						},
 					},
 				},
@@ -56,7 +57,7 @@ func TestWritePointsAndExecuteTwoShards(t *testing.T) {
 
 	// Write two points across shards.
 	pt1time := time.Unix(1, 0).UTC()
-	if err := store.WriteToShard(sID0, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID0, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA", "region": "us-east"},
 		map[string]interface{}{"value": 100},
@@ -65,7 +66,7 @@ func TestWritePointsAndExecuteTwoShards(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 	pt2time := time.Unix(2, 0).UTC()
-	if err := store.WriteToShard(sID1, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID1, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverB", "region": "us-east"},
 		map[string]interface{}{"value": 200},
@@ -139,7 +140,7 @@ func TestWritePointsAndExecuteTwoShards(t *testing.T) {
 			t.Logf("Skipping test %s", tt.stmt)
 			continue
 		}
-		executor, err := query_executor.Plan(mustParseSelectStatement(tt.stmt), tt.chunkSize)
+		executor, err := query_executor.PlanSelect(mustParseSelectStatement(tt.stmt), tt.chunkSize)
 		if err != nil {
 			t.Fatalf("failed to plan query: %s", err.Error())
 		}
@@ -164,8 +165,8 @@ func TestWritePointsAndExecuteTwoShardsAlign(t *testing.T) {
 					EndTime:   time.Now().Add(-time.Hour),
 					Shards: []meta.ShardInfo{
 						{
-							ID:       uint64(sID1),
-							OwnerIDs: []uint64{nID},
+							ID:     uint64(sID1),
+							Owners: []meta.ShardOwner{{NodeID: nID}},
 						},
 					},
 				},
@@ -175,8 +176,8 @@ func TestWritePointsAndExecuteTwoShardsAlign(t *testing.T) {
 					EndTime:   time.Now().Add(time.Hour),
 					Shards: []meta.ShardInfo{
 						{
-							ID:       uint64(sID0),
-							OwnerIDs: []uint64{nID},
+							ID:     uint64(sID0),
+							Owners: []meta.ShardOwner{{NodeID: nID}},
 						},
 					},
 				},
@@ -185,7 +186,7 @@ func TestWritePointsAndExecuteTwoShardsAlign(t *testing.T) {
 	}
 
 	// Write interleaving, by time, chunks to the shards.
-	if err := store.WriteToShard(sID0, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID0, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA"},
 		map[string]interface{}{"value": 100},
@@ -193,7 +194,7 @@ func TestWritePointsAndExecuteTwoShardsAlign(t *testing.T) {
 	)}); err != nil {
 		t.Fatalf(err.Error())
 	}
-	if err := store.WriteToShard(sID1, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID1, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverB"},
 		map[string]interface{}{"value": 200},
@@ -201,7 +202,7 @@ func TestWritePointsAndExecuteTwoShardsAlign(t *testing.T) {
 	)}); err != nil {
 		t.Fatalf(err.Error())
 	}
-	if err := store.WriteToShard(sID1, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID1, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA"},
 		map[string]interface{}{"value": 300},
@@ -238,7 +239,7 @@ func TestWritePointsAndExecuteTwoShardsAlign(t *testing.T) {
 			t.Logf("Skipping test %s", tt.stmt)
 			continue
 		}
-		executor, err := query_executor.Plan(mustParseSelectStatement(tt.stmt), tt.chunkSize)
+		executor, err := query_executor.PlanSelect(mustParseSelectStatement(tt.stmt), tt.chunkSize)
 		if err != nil {
 			t.Fatalf("failed to plan query: %s", err.Error())
 		}
@@ -251,7 +252,7 @@ func TestWritePointsAndExecuteTwoShardsAlign(t *testing.T) {
 
 // Test to ensure the engine handles query re-writing across stores.
 func TestWritePointsAndExecuteTwoShardsQueryRewrite(t *testing.T) {
-	// Create two distinct stores, ensuring shard mappers will shard nothing.
+	// Create two distinct stores, ensuring shard mappers will share nothing.
 	store0 := testStore()
 	defer os.RemoveAll(store0.Path())
 	store1 := testStore()
@@ -265,7 +266,7 @@ func TestWritePointsAndExecuteTwoShardsQueryRewrite(t *testing.T) {
 
 	// Write two points across shards.
 	pt1time := time.Unix(1, 0).UTC()
-	if err := store0.WriteToShard(sID0, []tsdb.Point{tsdb.NewPoint(
+	if err := store0.WriteToShard(sID0, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverA"},
 		map[string]interface{}{"value1": 100},
@@ -274,7 +275,7 @@ func TestWritePointsAndExecuteTwoShardsQueryRewrite(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 	pt2time := time.Unix(2, 0).UTC()
-	if err := store1.WriteToShard(sID1, []tsdb.Point{tsdb.NewPoint(
+	if err := store1.WriteToShard(sID1, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "serverB"},
 		map[string]interface{}{"value2": 200},
@@ -306,15 +307,15 @@ func TestWritePointsAndExecuteTwoShardsQueryRewrite(t *testing.T) {
 		parsedSelectStmt := mustParseSelectStatement(tt.stmt)
 
 		// Create Mappers and Executor.
-		mapper0, err := store0.CreateMapper(sID0, tt.stmt, tt.chunkSize)
+		mapper0, err := store0.CreateMapper(sID0, parsedSelectStmt, tt.chunkSize)
 		if err != nil {
 			t.Fatalf("failed to create mapper0: %s", err.Error())
 		}
-		mapper1, err := store1.CreateMapper(sID1, tt.stmt, tt.chunkSize)
+		mapper1, err := store1.CreateMapper(sID1, parsedSelectStmt, tt.chunkSize)
 		if err != nil {
 			t.Fatalf("failed to create mapper1: %s", err.Error())
 		}
-		executor := tsdb.NewExecutor(parsedSelectStmt, []tsdb.Mapper{mapper0, mapper1}, tt.chunkSize)
+		executor := tsdb.NewSelectExecutor(parsedSelectStmt, []tsdb.Mapper{mapper0, mapper1}, tt.chunkSize)
 
 		// Check the results.
 		got := executeAndGetResults(executor)
@@ -338,8 +339,8 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 					ID: sgID,
 					Shards: []meta.ShardInfo{
 						{
-							ID:       uint64(sID0),
-							OwnerIDs: []uint64{nID},
+							ID:     uint64(sID0),
+							Owners: []meta.ShardOwner{{NodeID: nID}},
 						},
 					},
 				},
@@ -347,8 +348,8 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 					ID: sgID,
 					Shards: []meta.ShardInfo{
 						{
-							ID:       uint64(sID1),
-							OwnerIDs: []uint64{nID},
+							ID:     uint64(sID1),
+							Owners: []meta.ShardOwner{{NodeID: nID}},
 						},
 					},
 				},
@@ -357,7 +358,7 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 	}
 
 	// Write tagsets "y" and "z" to first shard.
-	if err := store.WriteToShard(sID0, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID0, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "y"},
 		map[string]interface{}{"value": 100},
@@ -365,7 +366,7 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 	)}); err != nil {
 		t.Fatalf(err.Error())
 	}
-	if err := store.WriteToShard(sID0, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID0, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "z"},
 		map[string]interface{}{"value": 200},
@@ -375,7 +376,7 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 	}
 
 	// Write tagsets "x", y" and "z" to second shard.
-	if err := store.WriteToShard(sID1, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID1, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "x"},
 		map[string]interface{}{"value": 300},
@@ -383,7 +384,7 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 	)}); err != nil {
 		t.Fatalf(err.Error())
 	}
-	if err := store.WriteToShard(sID1, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID1, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "y"},
 		map[string]interface{}{"value": 400},
@@ -391,7 +392,7 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 	)}); err != nil {
 		t.Fatalf(err.Error())
 	}
-	if err := store.WriteToShard(sID1, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(sID1, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "z"},
 		map[string]interface{}{"value": 500},
@@ -421,7 +422,7 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 			t.Logf("Skipping test %s", tt.stmt)
 			continue
 		}
-		executor, err := query_executor.Plan(mustParseSelectStatement(tt.stmt), tt.chunkSize)
+		executor, err := query_executor.PlanSelect(mustParseSelectStatement(tt.stmt), tt.chunkSize)
 		if err != nil {
 			t.Fatalf("failed to plan query: %s", err.Error())
 		}
@@ -429,6 +430,232 @@ func TestWritePointsAndExecuteTwoShardsTagSetOrdering(t *testing.T) {
 		if got != tt.expected {
 			t.Fatalf("Test %s\nexp: %s\ngot: %s\n", tt.stmt, tt.expected, got)
 		}
+	}
+}
+
+// Test to ensure the engine handles measurements across stores.
+func TestShowMeasurementsMultipleShards(t *testing.T) {
+	// Create two distinct stores, ensuring shard mappers will share nothing.
+	store0 := testStore()
+	defer os.RemoveAll(store0.Path())
+	store1 := testStore()
+	defer os.RemoveAll(store1.Path())
+
+	// Create a shard in each store.
+	database := "foo"
+	retentionPolicy := "bar"
+	store0.CreateShard(database, retentionPolicy, sID0)
+	store1.CreateShard(database, retentionPolicy, sID1)
+
+	// Write two points across shards.
+	pt1time := time.Unix(1, 0).UTC()
+	if err := store0.WriteToShard(sID0, []models.Point{
+		models.NewPoint(
+			"cpu_user",
+			map[string]string{"host": "serverA", "region": "east", "cpuid": "cpu0"},
+			map[string]interface{}{"value1": 100},
+			pt1time,
+		),
+		models.NewPoint(
+			"mem_free",
+			map[string]string{"host": "serverA", "region": "east"},
+			map[string]interface{}{"value2": 200},
+			pt1time,
+		),
+	}); err != nil {
+		t.Fatalf(err.Error())
+	}
+	pt2time := time.Unix(2, 0).UTC()
+	if err := store1.WriteToShard(sID1, []models.Point{models.NewPoint(
+		"mem_used",
+		map[string]string{"host": "serverB", "region": "west"},
+		map[string]interface{}{"value3": 300},
+		pt2time,
+	),
+		models.NewPoint(
+			"cpu_sys",
+			map[string]string{"host": "serverB", "region": "west", "cpuid": "cpu0"},
+			map[string]interface{}{"value4": 400},
+			pt2time,
+		),
+	}); err != nil {
+		t.Fatalf(err.Error())
+	}
+	var tests = []struct {
+		skip      bool   // Skip test
+		stmt      string // Query statement
+		chunkSize int    // Chunk size for driving the executor
+		expected  string // Expected results, rendered as a string
+	}{
+		{
+			stmt:     `SHOW MEASUREMENTS`,
+			expected: `[{"name":"measurements","columns":["name"],"values":[["cpu_sys"],["cpu_user"],["mem_free"],["mem_used"]]}]`,
+		},
+		{
+			stmt:     `SHOW MEASUREMENTS WHERE host='serverB'`,
+			expected: `[{"name":"measurements","columns":["name"],"values":[["cpu_sys"],["mem_used"]]}]`,
+		},
+		{
+			stmt:     `SHOW MEASUREMENTS WHERE cpuid != '' AND region != ''`,
+			expected: `[{"name":"measurements","columns":["name"],"values":[["cpu_sys"],["cpu_user"]]}]`,
+		},
+		{
+			stmt:     `SHOW MEASUREMENTS WHERE host='serverX'`,
+			expected: `null`,
+		},
+	}
+	for _, tt := range tests {
+		if tt.skip {
+			t.Logf("Skipping test %s", tt.stmt)
+			continue
+		}
+
+		parsedStmt := mustParseStatement(tt.stmt).(*influxql.ShowMeasurementsStatement)
+
+		// Create Mappers and Executor.
+		mapper0, err := store0.CreateMapper(sID0, parsedStmt, tt.chunkSize)
+		if err != nil {
+			t.Fatalf("failed to create mapper0: %s", err.Error())
+		}
+		mapper1, err := store1.CreateMapper(sID1, parsedStmt, tt.chunkSize)
+		if err != nil {
+			t.Fatalf("failed to create mapper1: %s", err.Error())
+		}
+		executor := tsdb.NewShowMeasurementsExecutor(parsedStmt, []tsdb.Mapper{mapper0, mapper1}, tt.chunkSize)
+
+		// Check the results.
+		got := executeAndGetResults(executor)
+		if got != tt.expected {
+			t.Fatalf("Test %s\nexp: %s\ngot: %s\n", tt.stmt, tt.expected, got)
+		}
+
+	}
+}
+
+// Test to ensure the engine handles tag keys across stores.
+func TestShowShowTagKeysMultipleShards(t *testing.T) {
+	// Create two distinct stores, ensuring shard mappers will share nothing.
+	store0 := testStore()
+	defer os.RemoveAll(store0.Path())
+	store1 := testStore()
+	defer os.RemoveAll(store1.Path())
+
+	// Create a shard in each store.
+	database := "foo"
+	retentionPolicy := "bar"
+	store0.CreateShard(database, retentionPolicy, sID0)
+	store1.CreateShard(database, retentionPolicy, sID1)
+
+	// Write two points across shards.
+	pt1time := time.Unix(1, 0).UTC()
+	if err := store0.WriteToShard(sID0, []models.Point{
+		models.NewPoint(
+			"cpu",
+			map[string]string{"host": "serverA", "region": "uswest"},
+			map[string]interface{}{"value1": 100},
+			pt1time,
+		),
+		models.NewPoint(
+			"cpu",
+			map[string]string{"host": "serverB", "region": "useast"},
+			map[string]interface{}{"value1": 100},
+			pt1time,
+		),
+	}); err != nil {
+		t.Fatalf(err.Error())
+	}
+	pt2time := time.Unix(2, 0).UTC()
+	if err := store1.WriteToShard(sID1, []models.Point{
+		models.NewPoint(
+			"cpu",
+			map[string]string{"host": "serverB", "region": "useast", "rack": "12"},
+			map[string]interface{}{"value1": 100},
+			pt1time,
+		),
+		models.NewPoint(
+			"mem",
+			map[string]string{"host": "serverB"},
+			map[string]interface{}{"value2": 200},
+			pt2time,
+		)}); err != nil {
+		t.Fatalf(err.Error())
+	}
+	var tests = []struct {
+		skip      bool   // Skip test
+		stmt      string // Query statement
+		chunkSize int    // Chunk size for driving the executor
+		expected  string // Expected results, rendered as a string
+	}{
+		{
+			stmt:     `SHOW TAG KEYS`,
+			expected: `[{"name":"cpu","columns":["tagKey"],"values":[["host"],["rack"],["region"]]},{"name":"mem","columns":["tagKey"],"values":[["host"]]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS SLIMIT 1`,
+			expected: `[{"name":"cpu","columns":["tagKey"],"values":[["host"],["rack"],["region"]]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS SLIMIT 1 SOFFSET 1`,
+			expected: `[{"name":"mem","columns":["tagKey"],"values":[["host"]]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS SOFFSET 1`,
+			expected: `[{"name":"mem","columns":["tagKey"],"values":[["host"]]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS LIMIT 1`,
+			expected: `[{"name":"cpu","columns":["tagKey"],"values":[["host"]]},{"name":"mem","columns":["tagKey"],"values":[["host"]]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS LIMIT 1 OFFSET 1`,
+			expected: `[{"name":"cpu","columns":["tagKey"],"values":[["rack"]]},{"name":"mem","columns":["tagKey"]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS OFFSET 1`,
+			expected: `[{"name":"cpu","columns":["tagKey"],"values":[["rack"],["region"]]},{"name":"mem","columns":["tagKey"]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS FROM cpu`,
+			expected: `[{"name":"cpu","columns":["tagKey"],"values":[["host"],["rack"],["region"]]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS FROM cpu WHERE region = 'uswest'`,
+			expected: `[{"name":"cpu","columns":["tagKey"],"values":[["host"],["region"]]}]`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS FROM doesntexist`,
+			expected: `null`,
+		},
+		{
+			stmt:     `SHOW TAG KEYS FROM cpu WHERE region = 'doesntexist'`,
+			expected: `null`,
+		},
+	}
+	for _, tt := range tests {
+		if tt.skip {
+			t.Logf("Skipping test %s", tt.stmt)
+			continue
+		}
+
+		parsedStmt := mustParseStatement(tt.stmt).(*influxql.ShowTagKeysStatement)
+
+		// Create Mappers and Executor.
+		mapper0, err := store0.CreateMapper(sID0, parsedStmt, tt.chunkSize)
+		if err != nil {
+			t.Fatalf("failed to create mapper0: %s", err.Error())
+		}
+		mapper1, err := store1.CreateMapper(sID1, parsedStmt, tt.chunkSize)
+		if err != nil {
+			t.Fatalf("failed to create mapper1: %s", err.Error())
+		}
+		executor := tsdb.NewShowTagKeysExecutor(parsedStmt, []tsdb.Mapper{mapper0, mapper1}, tt.chunkSize)
+
+		// Check the results.
+		got := executeAndGetResults(executor)
+		if got != tt.expected {
+			t.Fatalf("Test %s\nexp: %s\ngot: %s\n", tt.stmt, tt.expected, got)
+		}
+
 	}
 }
 
@@ -633,7 +860,43 @@ func TestProcessAggregateDerivative(t *testing.T) {
 			},
 			exp: [][]interface{}{
 				[]interface{}{
-					time.Unix(0, 0), 0.0,
+					time.Unix(0, 0).Add(24 * time.Hour), nil,
+				},
+				[]interface{}{
+					time.Unix(0, 0).Add(48 * time.Hour), nil,
+				},
+				[]interface{}{
+					time.Unix(0, 0).Add(72 * time.Hour), nil,
+				},
+			},
+		},
+		{
+			name:     "bool derivatives",
+			fn:       "derivative",
+			interval: 24 * time.Hour,
+			in: [][]interface{}{
+				[]interface{}{
+					time.Unix(0, 0), "1.0",
+				},
+				[]interface{}{
+					time.Unix(0, 0).Add(24 * time.Hour), true,
+				},
+				[]interface{}{
+					time.Unix(0, 0).Add(48 * time.Hour), true,
+				},
+				[]interface{}{
+					time.Unix(0, 0).Add(72 * time.Hour), true,
+				},
+			},
+			exp: [][]interface{}{
+				[]interface{}{
+					time.Unix(0, 0).Add(24 * time.Hour), nil,
+				},
+				[]interface{}{
+					time.Unix(0, 0).Add(48 * time.Hour), nil,
+				},
+				[]interface{}{
+					time.Unix(0, 0).Add(72 * time.Hour), nil,
 				},
 			},
 		},
@@ -896,8 +1159,53 @@ func TestProcessRawQueryDerivative(t *testing.T) {
 			},
 			exp: []*tsdb.MapperValue{
 				{
+					Time:  time.Unix(0, 0).Add(24 * time.Hour).UnixNano(),
+					Value: nil,
+				},
+				{
+					Time:  time.Unix(0, 0).Add(48 * time.Hour).UnixNano(),
+					Value: nil,
+				},
+				{
+					Time:  time.Unix(0, 0).Add(72 * time.Hour).UnixNano(),
+					Value: nil,
+				},
+			},
+		},
+		{
+			name:     "bool derivatives",
+			fn:       "derivative",
+			interval: 24 * time.Hour,
+			in: []*tsdb.MapperValue{
+				{
 					Time:  time.Unix(0, 0).Unix(),
-					Value: 0.0,
+					Value: true,
+				},
+				{
+					Time:  time.Unix(0, 0).Add(24 * time.Hour).UnixNano(),
+					Value: true,
+				},
+				{
+					Time:  time.Unix(0, 0).Add(48 * time.Hour).UnixNano(),
+					Value: false,
+				},
+				{
+					Time:  time.Unix(0, 0).Add(72 * time.Hour).UnixNano(),
+					Value: false,
+				},
+			},
+			exp: []*tsdb.MapperValue{
+				{
+					Time:  time.Unix(0, 0).Add(24 * time.Hour).UnixNano(),
+					Value: nil,
+				},
+				{
+					Time:  time.Unix(0, 0).Add(48 * time.Hour).UnixNano(),
+					Value: nil,
+				},
+				{
+					Time:  time.Unix(0, 0).Add(72 * time.Hour).UnixNano(),
+					Value: nil,
 				},
 			},
 		},
@@ -915,8 +1223,14 @@ func TestProcessRawQueryDerivative(t *testing.T) {
 		}
 
 		for i := 0; i < len(test.exp); i++ {
-			if test.exp[i].Time != got[i].Time || math.Abs((test.exp[i].Value.(float64)-got[i].Value.(float64))) > 0.0000001 {
-				t.Fatalf("RawQueryDerivativeProcessor - %s results mismatch:\ngot %v\nexp %v", test.name, got, test.exp)
+			if v, ok := test.exp[i].Value.(float64); ok {
+				if test.exp[i].Time != got[i].Time || math.Abs((v-got[i].Value.(float64))) > 0.0000001 {
+					t.Fatalf("RawQueryDerivativeProcessor - %s results mismatch:\ngot %v\nexp %v", test.name, got, test.exp)
+				}
+			} else {
+				if test.exp[i].Time != got[i].Time || test.exp[i].Value != got[i].Value {
+					t.Fatalf("RawQueryDerivativeProcessor - %s results mismatch:\ngot %v\nexp %v", test.name, got, test.exp)
+				}
 			}
 		}
 	}
@@ -974,14 +1288,14 @@ type testQEShardMapper struct {
 	store *tsdb.Store
 }
 
-func (t *testQEShardMapper) CreateMapper(shard meta.ShardInfo, stmt string, chunkSize int) (tsdb.Mapper, error) {
+func (t *testQEShardMapper) CreateMapper(shard meta.ShardInfo, stmt influxql.Statement, chunkSize int) (tsdb.Mapper, error) {
 	return t.store.CreateMapper(shard.ID, stmt, chunkSize)
 }
 
-func executeAndGetResults(executor *tsdb.Executor) string {
+func executeAndGetResults(executor tsdb.Executor) string {
 	ch := executor.Execute()
 
-	var rows []*influxql.Row
+	var rows []*models.Row
 	for r := range ch {
 		rows = append(rows, r)
 	}

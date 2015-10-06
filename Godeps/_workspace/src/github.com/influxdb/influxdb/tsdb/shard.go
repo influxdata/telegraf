@@ -4,17 +4,28 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"expvar"
 	"fmt"
 	"io"
 	"math"
 	"os"
 	"sync"
 
+	"github.com/influxdb/influxdb"
 	"github.com/influxdb/influxdb/influxql"
+	"github.com/influxdb/influxdb/models"
 	"github.com/influxdb/influxdb/tsdb/internal"
 
-	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+)
+
+const (
+	statWriteReq        = "write_req"
+	statSeriesCreate    = "series_create"
+	statFieldsCreate    = "fields_create"
+	statWritePointsFail = "write_points_fail"
+	statWritePointsOK   = "write_points_ok"
+	statWriteBytes      = "write_bytes"
 )
 
 var (
@@ -37,7 +48,6 @@ var (
 // Data can be split across many shards. The query engine in TSDB is responsible
 // for combining the output of many shards into a single query result.
 type Shard struct {
-	db      *bolt.DB // underlying data store
 	index   *DatabaseIndex
 	path    string
 	walPath string
@@ -49,12 +59,20 @@ type Shard struct {
 	mu                sync.RWMutex
 	measurementFields map[string]*MeasurementFields // measurement name to their fields
 
+	// expvar-based stats.
+	statMap *expvar.Map
+
 	// The writer used by the logger.
 	LogOutput io.Writer
 }
 
 // NewShard returns a new initialized Shard. walPath doesn't apply to the b1 type index
 func NewShard(id uint64, index *DatabaseIndex, path string, walPath string, options EngineOptions) *Shard {
+	// Configure statistics collection.
+	key := fmt.Sprintf("shard:%s:%d", path, id)
+	tags := map[string]string{"path": path, "id": fmt.Sprintf("%d", id), "engine": options.EngineVersion}
+	statMap := influxdb.NewStatistics(key, "shard", tags)
+
 	return &Shard{
 		index:             index,
 		path:              path,
@@ -63,12 +81,19 @@ func NewShard(id uint64, index *DatabaseIndex, path string, walPath string, opti
 		options:           options,
 		measurementFields: make(map[string]*MeasurementFields),
 
+		statMap:   statMap,
 		LogOutput: os.Stderr,
 	}
 }
 
 // Path returns the path set on the shard when it was created.
 func (s *Shard) Path() string { return s.path }
+
+// PerformMaintenance gets called periodically to have the engine perform
+// any maintenance tasks like WAL flushing and compaction
+func (s *Shard) PerformMaintenance() {
+	s.engine.PerformMaintenance()
+}
 
 // open initializes and opens the shard's store.
 func (s *Shard) Open() error {
@@ -100,7 +125,7 @@ func (s *Shard) Open() error {
 		}
 
 		// Load metadata index.
-		if err := s.engine.LoadMetadataIndex(s.index, s.measurementFields); err != nil {
+		if err := s.engine.LoadMetadataIndex(s, s.index, s.measurementFields); err != nil {
 			return fmt.Errorf("load metadata index: %s", err)
 		}
 
@@ -125,6 +150,25 @@ func (s *Shard) close() error {
 		return s.engine.Close()
 	}
 	return nil
+}
+
+// DiskSize returns the size on disk of this shard
+func (s *Shard) DiskSize() (int64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	stats, err := os.Stat(s.path)
+	var size int64
+	if err != nil {
+		return 0, err
+	}
+	size += stats.Size()
+	return size, nil
+}
+
+// ReadOnlyTx returns a read-only transaction for the shard.  The transaction must be rolled back to
+// release resources.
+func (s *Shard) ReadOnlyTx() (Tx, error) {
+	return s.engine.Begin(false)
 }
 
 // TODO: this is temporarily exported to make tx.go work. When the query engine gets refactored
@@ -152,11 +196,15 @@ type SeriesCreate struct {
 }
 
 // WritePoints will write the raw data points and any new metadata to the index in the shard
-func (s *Shard) WritePoints(points []Point) error {
+func (s *Shard) WritePoints(points []models.Point) error {
+	s.statMap.Add(statWriteReq, 1)
+
 	seriesToCreate, fieldsToCreate, seriesToAddShardTo, err := s.validateSeriesAndFields(points)
 	if err != nil {
 		return err
 	}
+	s.statMap.Add(statSeriesCreate, int64(len(seriesToCreate)))
+	s.statMap.Add(statFieldsCreate, int64(len(fieldsToCreate)))
 
 	// add any new series to the in-memory index
 	if len(seriesToCreate) > 0 {
@@ -185,33 +233,38 @@ func (s *Shard) WritePoints(points []Point) error {
 	}
 
 	// make sure all data is encoded before attempting to save to bolt
-	for _, p := range points {
-		// Ignore if raw data has already been marshaled.
-		if p.Data() != nil {
-			continue
-		}
+	// only required for the b1 and bz1 formats
+	if s.engine.Format() != TSM1Format {
+		for _, p := range points {
+			// Ignore if raw data has already been marshaled.
+			if p.Data() != nil {
+				continue
+			}
 
-		// This was populated earlier, don't need to validate that it's there.
-		s.mu.RLock()
-		mf := s.measurementFields[p.Name()]
-		s.mu.RUnlock()
+			// This was populated earlier, don't need to validate that it's there.
+			s.mu.RLock()
+			mf := s.measurementFields[p.Name()]
+			s.mu.RUnlock()
 
-		// If a measurement is dropped while writes for it are in progress, this could be nil
-		if mf == nil {
-			return ErrFieldNotFound
-		}
+			// If a measurement is dropped while writes for it are in progress, this could be nil
+			if mf == nil {
+				return ErrFieldNotFound
+			}
 
-		data, err := mf.Codec.EncodeFields(p.Fields())
-		if err != nil {
-			return err
+			data, err := mf.Codec.EncodeFields(p.Fields())
+			if err != nil {
+				return err
+			}
+			p.SetData(data)
 		}
-		p.SetData(data)
 	}
 
 	// Write to the engine.
 	if err := s.engine.WritePoints(points, measurementFieldsToSave, seriesToCreate); err != nil {
+		s.statMap.Add(statWritePointsFail, 1)
 		return fmt.Errorf("engine: %s", err)
 	}
+	s.statMap.Add(statWritePointsOK, int64(len(points)))
 
 	return nil
 }
@@ -244,7 +297,7 @@ func (s *Shard) ValidateAggregateFieldsInStatement(measurementName string, stmt 
 
 		switch lit := nested.Args[0].(type) {
 		case *influxql.VarRef:
-			if influxql.IsNumeric(nested) {
+			if IsNumeric(nested) {
 				f := m.Fields[lit.Val]
 				if err := validateType(a.Name, f.Name, f.Type); err != nil {
 					return err
@@ -254,7 +307,7 @@ func (s *Shard) ValidateAggregateFieldsInStatement(measurementName string, stmt 
 			if nested.Name != "count" {
 				return fmt.Errorf("aggregate call didn't contain a field %s", a.String())
 			}
-			if influxql.IsNumeric(nested) {
+			if IsNumeric(nested) {
 				f := m.Fields[lit.Val]
 				if err := validateType(a.Name, f.Name, f.Type); err != nil {
 					return err
@@ -314,7 +367,9 @@ func (s *Shard) createFieldsAndMeasurements(fieldsToCreate []*FieldCreate) (map[
 		measurementsToSave[f.Measurement] = m
 
 		// add the field to the in memory index
-		if err := m.CreateFieldIfNotExists(f.Field.Name, f.Field.Type); err != nil {
+		// only limit the field count for non-tsm eninges
+		limitFieldCount := s.engine.Format() == B1Format || s.engine.Format() == BZ1Format
+		if err := m.CreateFieldIfNotExists(f.Field.Name, f.Field.Type, limitFieldCount); err != nil {
 			return nil, err
 		}
 
@@ -327,7 +382,7 @@ func (s *Shard) createFieldsAndMeasurements(fieldsToCreate []*FieldCreate) (map[
 }
 
 // validateSeriesAndFields checks which series and fields are new and whose metadata should be saved and indexed
-func (s *Shard) validateSeriesAndFields(points []Point) ([]*SeriesCreate, []*FieldCreate, []string, error) {
+func (s *Shard) validateSeriesAndFields(points []models.Point) ([]*SeriesCreate, []*FieldCreate, []string, error) {
 	var seriesToCreate []*SeriesCreate
 	var fieldsToCreate []*FieldCreate
 	var seriesToAddShardTo []string
@@ -382,6 +437,13 @@ func (s *Shard) validateSeriesAndFields(points []Point) ([]*SeriesCreate, []*Fie
 // SeriesCount returns the number of series buckets on the shard.
 func (s *Shard) SeriesCount() (int, error) { return s.engine.SeriesCount() }
 
+// WriteTo writes the shard's data to w.
+func (s *Shard) WriteTo(w io.Writer) (int64, error) {
+	n, err := s.engine.WriteTo(w)
+	s.statMap.Add(statWriteBytes, int64(n))
+	return n, err
+}
+
 type MeasurementFields struct {
 	Fields map[string]*Field `json:"fields"`
 	Codec  *FieldCodec
@@ -415,7 +477,7 @@ func (m *MeasurementFields) UnmarshalBinary(buf []byte) error {
 // CreateFieldIfNotExists creates a new field with an autoincrementing ID.
 // Returns an error if 255 fields have already been created on the measurement or
 // the fields already exists with a different type.
-func (m *MeasurementFields) CreateFieldIfNotExists(name string, typ influxql.DataType) error {
+func (m *MeasurementFields) CreateFieldIfNotExists(name string, typ influxql.DataType, limitCount bool) error {
 	// Ignore if the field already exists.
 	if f := m.Fields[name]; f != nil {
 		if f.Type != typ {
@@ -424,8 +486,8 @@ func (m *MeasurementFields) CreateFieldIfNotExists(name string, typ influxql.Dat
 		return nil
 	}
 
-	// Only 255 fields are allowed. If we go over that then return an error.
-	if len(m.Fields)+1 > math.MaxUint8 {
+	// If we're supposed to limit the number of fields, only 255 are allowed. If we go over that then return an error.
+	if len(m.Fields)+1 > math.MaxUint8 && limitCount {
 		return ErrFieldOverflow
 	}
 
@@ -688,15 +750,22 @@ func (f *FieldCodec) DecodeByID(targetID uint8, b []byte) (interface{}, error) {
 // DecodeByName scans a byte slice for a field with the given name, converts it to its
 // expected type, and return that value.
 func (f *FieldCodec) DecodeByName(name string, b []byte) (interface{}, error) {
-	fi := f.fieldByName(name)
+	fi := f.FieldByName(name)
 	if fi == nil {
 		return 0, ErrFieldNotFound
 	}
 	return f.DecodeByID(fi.ID, b)
 }
 
+func (f *FieldCodec) Fields() (a []*Field) {
+	for _, f := range f.fieldsByID {
+		a = append(a, f)
+	}
+	return
+}
+
 // FieldByName returns the field by its name. It will return a nil if not found
-func (f *FieldCodec) fieldByName(name string) *Field {
+func (f *FieldCodec) FieldByName(name string) *Field {
 	return f.fieldsByName[name]
 }
 

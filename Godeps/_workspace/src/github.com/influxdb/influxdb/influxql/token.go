@@ -50,6 +50,7 @@ const (
 	LPAREN    // (
 	RPAREN    // )
 	COMMA     // ,
+	COLON     // :
 	SEMICOLON // ;
 	DOT       // .
 
@@ -76,6 +77,7 @@ const (
 	EXPLAIN
 	FIELD
 	FOR
+	FORCE
 	FROM
 	GRANT
 	GRANTS
@@ -91,6 +93,7 @@ const (
 	LIMIT
 	MEASUREMENT
 	MEASUREMENTS
+	NOT
 	OFFSET
 	ON
 	ORDER
@@ -106,9 +109,11 @@ const (
 	REVOKE
 	SELECT
 	SERIES
+	SERVER
 	SERVERS
 	SET
 	SHOW
+	SHARDS
 	SLIMIT
 	STATS
 	DIAGNOSTICS
@@ -159,6 +164,7 @@ var tokens = [...]string{
 	LPAREN:    "(",
 	RPAREN:    ")",
 	COMMA:     ",",
+	COLON:     ":",
 	SEMICOLON: ";",
 	DOT:       ".",
 
@@ -183,6 +189,7 @@ var tokens = [...]string{
 	EXPLAIN:      "EXPLAIN",
 	FIELD:        "FIELD",
 	FOR:          "FOR",
+	FORCE:        "FORCE",
 	FROM:         "FROM",
 	GRANT:        "GRANT",
 	GRANTS:       "GRANTS",
@@ -198,6 +205,7 @@ var tokens = [...]string{
 	LIMIT:        "LIMIT",
 	MEASUREMENT:  "MEASUREMENT",
 	MEASUREMENTS: "MEASUREMENTS",
+	NOT:          "NOT",
 	OFFSET:       "OFFSET",
 	ON:           "ON",
 	ORDER:        "ORDER",
@@ -213,9 +221,11 @@ var tokens = [...]string{
 	REVOKE:       "REVOKE",
 	SELECT:       "SELECT",
 	SERIES:       "SERIES",
+	SERVER:       "SERVER",
 	SERVERS:      "SERVERS",
 	SET:          "SET",
 	SHOW:         "SHOW",
+	SHARDS:       "SHARDS",
 	SLIMIT:       "SLIMIT",
 	SOFFSET:      "SOFFSET",
 	STATS:        "STATS",

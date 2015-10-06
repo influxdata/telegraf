@@ -4,6 +4,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/influxdb/influxdb/models"
 )
 
 // PointBatcher accepts Points and will emit a batch of those points when either
@@ -15,21 +17,24 @@ type PointBatcher struct {
 	duration time.Duration
 
 	stop  chan struct{}
-	in    chan Point
-	out   chan []Point
+	in    chan models.Point
+	out   chan []models.Point
 	flush chan struct{}
 
 	wg *sync.WaitGroup
 }
 
-// NewPointBatcher returns a new PointBatcher.
-func NewPointBatcher(sz int, d time.Duration) *PointBatcher {
+// NewPointBatcher returns a new PointBatcher. sz is the batching size,
+// bp is the maximum number of batches that may be pending. d is the time
+// after which a batch will be emitted after the first point is received
+// for the batch, regardless of its size.
+func NewPointBatcher(sz int, bp int, d time.Duration) *PointBatcher {
 	return &PointBatcher{
 		size:     sz,
 		duration: d,
 		stop:     make(chan struct{}),
-		in:       make(chan Point),
-		out:      make(chan []Point),
+		in:       make(chan models.Point, bp*sz),
+		out:      make(chan []models.Point),
 		flush:    make(chan struct{}),
 	}
 }
@@ -51,7 +56,7 @@ func (b *PointBatcher) Start() {
 	}
 
 	var timer *time.Timer
-	var batch []Point
+	var batch []models.Point
 	var timerCh <-chan time.Time
 
 	emit := func() {
@@ -76,7 +81,7 @@ func (b *PointBatcher) Start() {
 			case p := <-b.in:
 				atomic.AddUint64(&b.stats.PointTotal, 1)
 				if batch == nil {
-					batch = make([]Point, 0, b.size)
+					batch = make([]models.Point, 0, b.size)
 					if b.duration > 0 {
 						timer = time.NewTimer(b.duration)
 						timerCh = timer.C
@@ -115,12 +120,12 @@ func (b *PointBatcher) Stop() {
 }
 
 // In returns the channel to which points should be written.
-func (b *PointBatcher) In() chan<- Point {
+func (b *PointBatcher) In() chan<- models.Point {
 	return b.in
 }
 
 // Out returns the channel from which batches should be read.
-func (b *PointBatcher) Out() <-chan []Point {
+func (b *PointBatcher) Out() <-chan []models.Point {
 	return b.out
 }
 

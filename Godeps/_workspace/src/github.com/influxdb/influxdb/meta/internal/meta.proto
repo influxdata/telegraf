@@ -49,8 +49,13 @@ message ShardGroupInfo {
 }
 
 message ShardInfo {
-	required uint64 ID = 1;
-	repeated uint64 OwnerIDs = 2;
+    required uint64 ID = 1;
+    repeated uint64 OwnerIDs = 2 [deprecated=true];
+    repeated ShardOwner Owners = 3;
+}
+
+message ShardOwner {
+    required uint64 NodeID = 1;
 }
 
 message ContinuousQueryInfo {
@@ -118,6 +123,7 @@ message DeleteNodeCommand {
         optional DeleteNodeCommand command = 102;
     }
 	required uint64 ID = 1;
+	required bool Force = 2;
 }
 
 message CreateDatabaseCommand {
