@@ -23,7 +23,6 @@ func TestParse_InvalidLines(t *testing.T) {
 		"invalid.value:foobar|c",
 		"invalid.value:d11|c",
 		"invalid.value:1d1|c",
-		"invalid.value:1.1|c",
 	}
 	for _, line := range invalid_lines {
 		err := s.parseStatsdLine(line)
@@ -50,38 +49,38 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 		}
 	}
 
-	validations := []struct {
+	counter_validations := []struct {
 		name  string
 		value int64
-		cache map[string]cachedmetric
+		cache map[string]cachedcounter
 	}{
 		{
-			"invalid_sample_rate_counter",
+			"invalid_sample_rate",
 			45,
 			s.counters,
 		},
 		{
-			"invalid_sample_rate_2_counter",
+			"invalid_sample_rate_2",
 			45,
 			s.counters,
-		},
-		{
-			"invalid_sample_rate_gauge",
-			45,
-			s.gauges,
-		},
-		{
-			"invalid_sample_rate_set",
-			1,
-			s.sets,
 		},
 	}
 
-	for _, test := range validations {
-		err := test_validate_value(test.name, test.value, test.cache)
+	for _, test := range counter_validations {
+		err := test_validate_counter(test.name, test.value, test.cache)
 		if err != nil {
 			t.Error(err.Error())
 		}
+	}
+
+	err := test_validate_gauge("invalid_sample_rate", 45, s.gauges)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	err = test_validate_set("invalid_sample_rate", 1, s.sets)
+	if err != nil {
+		t.Error(err.Error())
 	}
 }
 
@@ -105,17 +104,17 @@ func TestParse_DefaultNameParsing(t *testing.T) {
 		value int64
 	}{
 		{
-			"valid_counter",
+			"valid",
 			1,
 		},
 		{
-			"valid_foo__bar_counter",
+			"valid_foo__bar",
 			11,
 		},
 	}
 
 	for _, test := range validations {
-		err := test_validate_value(test.name, test.value, s.counters)
+		err := test_validate_counter(test.name, test.value, s.counters)
 		if err != nil {
 			t.Error(err.Error())
 		}
@@ -154,34 +153,12 @@ func TestParse_ValidLines(t *testing.T) {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
 	}
+}
 
-	validations := []struct {
-		name  string
-		value int64
-		cache map[string]cachedmetric
-	}{
-		{
-			"valid_counter",
-			45,
-			s.counters,
-		},
-		{
-			"valid_set",
-			1,
-			s.sets,
-		},
-		{
-			"valid_gauge",
-			45,
-			s.gauges,
-		},
-	}
-
-	for _, test := range validations {
-		err := test_validate_value(test.name, test.value, test.cache)
-		if err != nil {
-			t.Error(err.Error())
-		}
+// Test that floats are handled as expected for all metric types
+func TestParse_Floats(t *testing.T) {
+	if false {
+		t.Errorf("TODO")
 	}
 }
 
@@ -215,36 +192,36 @@ func TestParse_Gauges(t *testing.T) {
 
 	validations := []struct {
 		name  string
-		value int64
+		value float64
 	}{
 		{
-			"plus_minus_gauge",
+			"plus_minus",
 			120,
 		},
 		{
-			"plus_plus_gauge",
+			"plus_plus",
 			300,
 		},
 		{
-			"minus_minus_gauge",
+			"minus_minus",
 			-100,
 		},
 		{
-			"lone_plus_gauge",
+			"lone_plus",
 			100,
 		},
 		{
-			"lone_minus_gauge",
+			"lone_minus",
 			-100,
 		},
 		{
-			"overwrite_gauge",
+			"overwrite",
 			300,
 		},
 	}
 
 	for _, test := range validations {
-		err := test_validate_value(test.name, test.value, s.gauges)
+		err := test_validate_gauge(test.name, test.value, s.gauges)
 		if err != nil {
 			t.Error(err.Error())
 		}
@@ -282,17 +259,17 @@ func TestParse_Sets(t *testing.T) {
 		value int64
 	}{
 		{
-			"unique_user_ids_set",
+			"unique_user_ids",
 			4,
 		},
 		{
-			"oneuser_id_set",
+			"oneuser_id",
 			1,
 		},
 	}
 
 	for _, test := range validations {
-		err := test_validate_value(test.name, test.value, s.sets)
+		err := test_validate_set(test.name, test.value, s.sets)
 		if err != nil {
 			t.Error(err.Error())
 		}
@@ -328,25 +305,25 @@ func TestParse_Counters(t *testing.T) {
 		value int64
 	}{
 		{
-			"small_inc_counter",
+			"small_inc",
 			2,
 		},
 		{
-			"big_inc_counter",
+			"big_inc",
 			1100101,
 		},
 		{
-			"zero_init_counter",
+			"zero_init",
 			0,
 		},
 		{
-			"sample_rate_counter",
+			"sample_rate",
 			11,
 		},
 	}
 
 	for _, test := range validations {
-		err := test_validate_value(test.name, test.value, s.counters)
+		err := test_validate_counter(test.name, test.value, s.counters)
 		if err != nil {
 			t.Error(err.Error())
 		}
@@ -373,14 +350,14 @@ func TestParse_Gauges_Delete(t *testing.T) {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
 
-	err = test_validate_value("current_users_gauge", 100, s.gauges)
+	err = test_validate_gauge("current_users", 100, s.gauges)
 	if err != nil {
 		t.Error(err.Error())
 	}
 
 	s.Gather(fakeacc)
 
-	err = test_validate_value("current_users_gauge", 100, s.gauges)
+	err = test_validate_gauge("current_users", 100, s.gauges)
 	if err == nil {
 		t.Error("current_users_gauge metric should have been deleted")
 	}
@@ -399,14 +376,14 @@ func TestParse_Sets_Delete(t *testing.T) {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
 
-	err = test_validate_value("unique_user_ids_set", 1, s.sets)
+	err = test_validate_set("unique_user_ids", 1, s.sets)
 	if err != nil {
 		t.Error(err.Error())
 	}
 
 	s.Gather(fakeacc)
 
-	err = test_validate_value("unique_user_ids_set", 1, s.sets)
+	err = test_validate_set("unique_user_ids", 1, s.sets)
 	if err == nil {
 		t.Error("unique_user_ids_set metric should have been deleted")
 	}
@@ -425,14 +402,14 @@ func TestParse_Counters_Delete(t *testing.T) {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
 
-	err = test_validate_value("total_users_counter", 100, s.counters)
+	err = test_validate_counter("total_users", 100, s.counters)
 	if err != nil {
 		t.Error(err.Error())
 	}
 
 	s.Gather(fakeacc)
 
-	err = test_validate_value("total_users_counter", 100, s.counters)
+	err = test_validate_counter("total_users", 100, s.counters)
 	if err == nil {
 		t.Error("total_users_counter metric should have been deleted")
 	}
@@ -447,14 +424,52 @@ func TestListen(t *testing.T) {
 
 // Test utility functions
 
-func test_validate_value(name string, value int64, cache map[string]cachedmetric) error {
+func test_validate_set(
+	name string,
+	value int64,
+	cache map[string]cachedset,
+) error {
+	metric, ok := cache[name]
+	if !ok {
+		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
+	}
+
+	if value != int64(len(metric.set)) {
+		return errors.New(fmt.Sprintf("Measurement: %s, expected %d, actual %d\n",
+			name, value, len(metric.set)))
+	}
+	return nil
+}
+
+func test_validate_counter(
+	name string,
+	value int64,
+	cache map[string]cachedcounter,
+) error {
 	metric, ok := cache[name]
 	if !ok {
 		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
 	}
 
 	if value != metric.value {
-		return errors.New(fmt.Sprintf("Measurement: %s, expected %d, actual %d",
+		return errors.New(fmt.Sprintf("Measurement: %s, expected %d, actual %d\n",
+			name, value, metric.value))
+	}
+	return nil
+}
+
+func test_validate_gauge(
+	name string,
+	value float64,
+	cache map[string]cachedgauge,
+) error {
+	metric, ok := cache[name]
+	if !ok {
+		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
+	}
+
+	if value != metric.value {
+		return errors.New(fmt.Sprintf("Measurement: %s, expected %f, actual %f\n",
 			name, value, metric.value))
 	}
 	return nil
