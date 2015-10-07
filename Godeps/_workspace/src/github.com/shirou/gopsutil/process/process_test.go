@@ -270,8 +270,16 @@ func Test_Process_CreateTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("error %v", err)
 	}
+
 	if c < 1420000000 {
 		t.Errorf("process created time is wrong.")
+	}
+
+	gotElapsed := time.Since(time.Unix(int64(c/1000), 0))
+	maxElapsed := time.Duration(5 * time.Second)
+
+	if gotElapsed >= maxElapsed {
+		t.Errorf("this process has not been running for %v", gotElapsed)
 	}
 }
 

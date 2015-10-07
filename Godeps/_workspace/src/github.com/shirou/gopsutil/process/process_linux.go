@@ -596,8 +596,8 @@ func (p *Process) fillFromStat() (string, int32, *cpu.CPUTimesStat, int64, int32
 	if err != nil {
 		return "", 0, nil, 0, 0, err
 	}
-	ctime := (t / uint64(ClockTicks)) + uint64(bootTime)*1000
-	createTime := int64(ctime)
+	ctime := (t / uint64(ClockTicks)) + uint64(bootTime)
+	createTime := int64(ctime * 1000)
 
 	//	p.Nice = mustParseInt32(fields[18])
 	// use syscall instead of parse Stat file

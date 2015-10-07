@@ -197,8 +197,8 @@
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/host",
-			"Comment": "1.0.0-153-gc1313e7",
-			"Rev": "c1313e76341b18456212c5645d1daa7f132ac50e"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/load",
@@ -217,8 +217,8 @@
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/process",
-			"Comment": "1.0.0-153-gc1313e7",
-			"Rev": "c1313e76341b18456212c5645d1daa7f132ac50e"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",
