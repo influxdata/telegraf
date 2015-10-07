@@ -179,6 +179,7 @@ Telegraf currently has support for collecting metrics from
 * nginx
 * ping
 * postgresql
+* procstat
 * prometheus
 * rabbitmq
 * redis

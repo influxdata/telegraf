@@ -3,6 +3,7 @@ package procstat
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -29,7 +30,7 @@ func NewProcstat() *Procstat {
 
 var sampleConfig = `
 	[[procstat.specifications]]
-	prefix = "nginx" # required
+	prefix = "" # optional string to prefix measurements
 	# Use one of pid_file or exe to find process
 	pid_file = "/var/run/nginx.pid"
 	# executable name (used by pgrep)
@@ -46,39 +47,65 @@ func (_ *Procstat) Description() string {
 
 func (p *Procstat) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
-	var outerr error
+
 	for _, specification := range p.Specifications {
 		wg.Add(1)
 		go func(spec *Specification, acc plugins.Accumulator) {
 			defer wg.Done()
-			proc, err := spec.createProcess()
+			procs, err := spec.createProcesses()
 			if err != nil {
-				outerr = err
+				log.Printf("Error: procstat getting process, exe: %s, pidfile: %s, %s",
+					spec.Exe, spec.PidFile, err.Error())
 			} else {
-				outerr = NewSpecProcessor(spec.Prefix, acc, proc).pushMetrics()
+				for _, proc := range procs {
+					p := NewSpecProcessor(spec.Prefix, acc, proc)
+					p.pushMetrics()
+				}
 			}
 		}(specification, acc)
 	}
 	wg.Wait()
-	return outerr
+
+	return nil
 }
 
-func (spec *Specification) createProcess() (*process.Process, error) {
+func (spec *Specification) createProcesses() ([]*process.Process, error) {
+	var out []*process.Process
+	var errstring string
+	var outerr error
+	var pids []int32
+
 	if spec.PidFile != "" {
 		pid, err := pidFromFile(spec.PidFile)
 		if err != nil {
-			return nil, err
+			errstring += err.Error() + " "
+		} else {
+			pids = append(pids, int32(pid))
 		}
-		return process.NewProcess(int32(pid))
 	} else if spec.Exe != "" {
-		pid, err := pidFromExe(spec.Exe)
+		exepids, err := pidsFromExe(spec.Exe)
 		if err != nil {
-			return nil, err
+			errstring += err.Error() + " "
 		}
-		return process.NewProcess(int32(pid))
+		pids = append(pids, exepids...)
 	} else {
-		return nil, fmt.Errorf("Either exe or pid_file has to be specified")
+		errstring += fmt.Sprintf("Either exe or pid_file has to be specified")
 	}
+
+	for _, pid := range pids {
+		p, err := process.NewProcess(int32(pid))
+		if err == nil {
+			out = append(out, p)
+		} else {
+			errstring += err.Error() + " "
+		}
+	}
+
+	if errstring != "" {
+		outerr = fmt.Errorf("%s", errstring)
+	}
+
+	return out, outerr
 }
 
 func pidFromFile(file string) (int, error) {
@@ -90,13 +117,24 @@ func pidFromFile(file string) (int, error) {
 	}
 }
 
-func pidFromExe(exe string) (int, error) {
-	pidString, err := exec.Command("pgrep", exe).Output()
+func pidsFromExe(exe string) ([]int32, error) {
+	var out []int32
+	var outerr error
+	pgrep, err := exec.Command("pgrep", exe).Output()
 	if err != nil {
-		return -1, fmt.Errorf("Failed to execute pgrep. Error: '%s'", err)
+		return out, fmt.Errorf("Failed to execute pgrep. Error: '%s'", err)
 	} else {
-		return strconv.Atoi(strings.TrimSpace(string(pidString)))
+		pids := strings.Fields(string(pgrep))
+		for _, pid := range pids {
+			ipid, err := strconv.Atoi(pid)
+			if err == nil {
+				out = append(out, int32(ipid))
+			} else {
+				outerr = err
+			}
+		}
 	}
+	return out, outerr
 }
 
 func init() {
