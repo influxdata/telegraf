@@ -31,7 +31,7 @@ var sampleConfig = `
 	pid_file = "/path/to/foo.pid"
 	# executable name (used by pgrep)
 	exe = "/path/to/foo"
-	name = "foo" # required
+	prefix = "foo" # required
 `
 
 func (_ *Procstat) SampleConfig() string {
