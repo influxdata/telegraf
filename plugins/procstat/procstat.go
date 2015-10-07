@@ -54,7 +54,7 @@ func (p *Procstat) Gather(acc plugins.Accumulator) error {
 			defer wg.Done()
 			procs, err := spec.createProcesses()
 			if err != nil {
-				log.Printf("Error: procstat getting process, exe: %s, pidfile: %s, %s",
+				log.Printf("Error: procstat getting process, exe: [%s] pidfile: [%s] %s",
 					spec.Exe, spec.PidFile, err.Error())
 			} else {
 				for _, proc := range procs {
@@ -73,23 +73,10 @@ func (spec *Specification) createProcesses() ([]*process.Process, error) {
 	var out []*process.Process
 	var errstring string
 	var outerr error
-	var pids []int32
 
-	if spec.PidFile != "" {
-		pid, err := pidFromFile(spec.PidFile)
-		if err != nil {
-			errstring += err.Error() + " "
-		} else {
-			pids = append(pids, int32(pid))
-		}
-	} else if spec.Exe != "" {
-		exepids, err := pidsFromExe(spec.Exe)
-		if err != nil {
-			errstring += err.Error() + " "
-		}
-		pids = append(pids, exepids...)
-	} else {
-		errstring += fmt.Sprintf("Either exe or pid_file has to be specified")
+	pids, err := spec.getAllPids()
+	if err != nil {
+		errstring += err.Error() + " "
 	}
 
 	for _, pid := range pids {
@@ -108,13 +95,36 @@ func (spec *Specification) createProcesses() ([]*process.Process, error) {
 	return out, outerr
 }
 
-func pidFromFile(file string) (int, error) {
+func (spec *Specification) getAllPids() ([]int32, error) {
+	var pids []int32
+	var err error
+
+	if spec.PidFile != "" {
+		pids, err = pidsFromFile(spec.PidFile)
+	} else if spec.Exe != "" {
+		pids, err = pidsFromExe(spec.Exe)
+	} else {
+		err = fmt.Errorf("Either exe or pid_file has to be specified")
+	}
+
+	return pids, err
+}
+
+func pidsFromFile(file string) ([]int32, error) {
+	var out []int32
+	var outerr error
 	pidString, err := ioutil.ReadFile(file)
 	if err != nil {
-		return -1, fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'", file, err)
+		outerr = fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'", file, err)
 	} else {
-		return strconv.Atoi(strings.TrimSpace(string(pidString)))
+		pid, err := strconv.Atoi(strings.TrimSpace(string(pidString)))
+		if err != nil {
+			outerr = err
+		} else {
+			out = append(out, int32(pid))
+		}
 	}
+	return out, outerr
 }
 
 func pidsFromExe(exe string) ([]int32, error) {
