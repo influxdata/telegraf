@@ -91,7 +91,7 @@ func (o *OpenTSDB) Write(bp client.BatchPoints) error {
 		}
 		_, err := connection.Write([]byte(messageLine))
 		if err != nil {
-			fmt.Errorf("OpenTSDB: Telnet writing error %s", err.Error())
+			return fmt.Errorf("OpenTSDB: Telnet writing error %s", err.Error())
 		}
 	}
 	defer connection.Close()
