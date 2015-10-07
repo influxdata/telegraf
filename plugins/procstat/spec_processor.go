@@ -2,6 +2,7 @@ package procstat
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/shirou/gopsutil/process"
 
@@ -19,10 +20,16 @@ func (p *SpecProcessor) add(metric string, value interface{}) {
 	p.acc.Add(p.Prefix+"_"+metric, value, p.tags)
 }
 
-func NewSpecProcessor(prefix string, acc plugins.Accumulator, p *process.Process) *SpecProcessor {
+func NewSpecProcessor(
+	prefix string,
+	acc plugins.Accumulator,
+	p *process.Process,
+) *SpecProcessor {
+	tags := make(map[string]string)
+	tags["pid"] = fmt.Sprintf("%v", p.Pid)
 	return &SpecProcessor{
 		Prefix: prefix,
-		tags:   map[string]string{},
+		tags:   tags,
 		acc:    acc,
 		proc:   p,
 	}
@@ -30,19 +37,19 @@ func NewSpecProcessor(prefix string, acc plugins.Accumulator, p *process.Process
 
 func (p *SpecProcessor) pushMetrics() error {
 	if err := p.pushFDStats(); err != nil {
-		return err
+		log.Printf(err.Error())
 	}
 	if err := p.pushCtxStats(); err != nil {
-		return err
+		log.Printf(err.Error())
 	}
 	if err := p.pushIOStats(); err != nil {
-		return err
+		log.Printf(err.Error())
 	}
 	if err := p.pushCPUStats(); err != nil {
-		return err
+		log.Printf(err.Error())
 	}
 	if err := p.pushMemoryStats(); err != nil {
-		return err
+		log.Printf(err.Error())
 	}
 	return nil
 }
