@@ -1,59 +1,5 @@
 # Telegraf Service Plugin: statsd
 
-#### Plugin arguments:
-
-- **service_address** string: Address to listen for statsd UDP packets on
-- **delete_gauges** boolean: Delete gauges on every collection interval
-- **delete_counters** boolean: Delete counters on every collection interval
-- **delete_sets** boolean: Delete set counters on every collection interval
-- **allowed_pending_messages** integer: Number of messages allowed to queue up
-on the UDP listener before the next flush. NOTE: gauge, counter, and set
-measurements are aggregated as they arrive, so this is not a straight counter of
-the number of total messages that the listener can handle between flushes.
-
-#### Statsd bucket -> InfluxDB Mapping
-
-By default, statsd buckets are converted to measurement names with the rules:
-- "." -> "_"
-- "-" -> "__"
-
-This plugin also accepts a list of config tables to describe a mapping of a statsd
-bucket to an InfluxDB measurement name and tags.
-
-Each mapping must specify a match glob pattern. It can optionally take a name
-for the measurement and a map of bucket indices to tag names.
-
-For example, the following configuration:
-
-```
-    [[statsd.mappings]]
-    match = "users.current.*.*"
-    name = "current_users"
-    [statsd.mappings.tagmap]
-    unit = 0
-    server = 2
-    service = 3
-
-    [[statsd.mappings]]
-    match = "deploys.*.*"
-    name = "service_deploys"
-    [statsd.mappings.tagmap]
-    service_type = 1
-    service_name = 2
-```
-
-Will map statsd -> influx like so:
-```
-users.current.den001.myapp:32|g
-=> [server="den001" service="myapp" unit="users"] statsd_current_users_gauge value=32
-
-deploys.test.myservice:1|c
-=> [service_name="myservice" service_type="test"] statsd_service_deploys_counter value=1
-
-random.jumping-sheep:10|c
-=> [] statsd_random_jumping__sheep_counter value=10
-```
-
 #### Description
 
 The statsd plugin is a special type of plugin which runs a backgrounded statsd
@@ -70,10 +16,129 @@ implementation. In short, the telegraf statsd listener will accept:
 - Counters
     - `deploys.test.myservice:1|c` <- increments by 1
     - `deploys.test.myservice:101|c` <- increments by 101
-    - `deploys.test.myservice:1|c|@0.1` <- sample rate, increments by 10
+    - `deploys.test.myservice:1|c|@0.1` <- with sample rate, increments by 10
 - Sets
     - `users.unique:101|s`
     - `users.unique:101|s`
     - `users.unique:102|s` <- would result in a count of 2 for `users.unique`
-- Timings
-    - TODO
+- Timings & Histograms
+    - `load.time:320|ms`
+    - `load.time.nanoseconds:1|h`
+    - `load.time:200|ms|@0.1` <- sampled 1/10 of the time
+
+#### Influx Statsd
+
+In order to take advantage of InfluxDB's tagging system, we have made a couple
+additions to the standard statsd protocol. First, you can specify
+tags in a manner similar to the line-protocol, like this:
+
+```
+users.current,service=payroll,region=us-west:32|g
+```
+
+COMING SOON: there will be a way to specify multiple fields.
+<!-- TODO Second, you can specify multiple fields within a measurement:
+
+```
+current.users,service=payroll,server=host01:west=10,east=10,central=2,south=10|g
+``` -->
+
+#### Measurements:
+
+Meta:
+- tags: `metric_type=<gauge|set|counter|timing|histogram>`
+
+Outputted measurements will depend entirely on the measurements that the user
+sends, but here is a brief rundown of what you can expect to find from each
+metric type:
+
+- Gauges
+    - Gauges are a constant data type. They are not subject to averaging, and they
+    don’t change unless you change them. That is, once you set a gauge value, it
+    will be a flat line on the graph until you change it again.
+- Counters
+    - Counters are the most basic type. They are treated as a count of a type of
+    event. They will continually increase unless you set `delete_counters=true`.
+- Sets
+    - Sets count the number of unique values passed to a key. For example, you
+    could count the number of users accessing your system using `users:<user_id>|s`.
+    No matter how many times the same user_id is sent, the count will only increase
+    by 1.
+- Timings & Histograms
+    - Timers are meant to track how long something took. They are an invaluable
+    tool for tracking application performance.
+    - The following aggregate measurements are made for timers:
+        - `statsd_<name>_lower`: The lower bound is the lowest value statsd saw
+        for that stat during that interval.
+        - `statsd_<name>_upper`: The upper bound is the highest value statsd saw
+        for that stat during that interval.
+        - `statsd_<name>_mean`: The mean is the average of all values statsd saw
+        for that stat during that interval.
+        - `statsd_<name>_stddev`: The stddev is the sample standard deviation
+        of all values statsd saw for that stat during that interval.
+        - `statsd_<name>_count`: The count is the number of timings statsd saw
+        for that stat during that interval. It is not averaged.
+        - `statsd_<name>_percentile_<P>` The `Pth` percentile is a value x such
+        that `P%` of all the values statsd saw for that stat during that time
+        period are below x. The most common value that people use for `P` is the
+        `90`, this is a great number to try to optimize.
+
+#### Plugin arguments
+
+- **service_address** string: Address to listen for statsd UDP packets on
+- **delete_gauges** boolean: Delete gauges on every collection interval
+- **delete_counters** boolean: Delete counters on every collection interval
+- **delete_sets** boolean: Delete set counters on every collection interval
+- **delete_timings** boolean: Delete timings on every collection interval
+- **percentiles** []int: Percentiles to calculate for timing & histogram stats
+- **allowed_pending_messages** integer: Number of messages allowed to queue up
+waiting to be processed. When this fills, messages will be dropped and logged.
+- **percentile_limit** integer: Number of timing/histogram values to track
+per-measurement in the calculation of percentiles. Raising this limit increases
+the accuracy of percentiles but also increases the memory usage and cpu time.
+- **templates** []string: Templates for transforming statsd buckets into influx
+measurements and tags.
+
+#### Statsd bucket -> InfluxDB line-protocol Templates
+
+The plugin supports specifying templates for transforming statsd buckets into
+InfluxDB measurement names and tags. The templates have a _measurement_ keyword,
+which can be used to specify parts of the bucket that are to be used in the
+measurement name. Other words in the template are used as tag names. For example,
+the following template:
+
+```
+templates = [
+    "measurement.measurement.region"
+]
+```
+
+would result in the following transformation:
+
+```
+cpu.load.us-west:100|g
+=> cpu_load,region=us-west 100
+```
+
+Users can also filter the template to use based on the name of the bucket,
+using glob matching, like so:
+
+```
+templates = [
+    "cpu.* measurement.measurement.region",
+    "mem.* measurement.measurement.host"
+]
+```
+
+which would result in the following transformation:
+
+```
+cpu.load.us-west:100|g
+=> cpu_load,region=us-west 100
+
+mem.cached.localhost:256|g
+=> mem_cached,host=localhost 256
+```
+
+There are many more options available,
+[More details can be found here](https://github.com/influxdb/influxdb/tree/master/services/graphite#templates)

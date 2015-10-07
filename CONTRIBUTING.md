@@ -5,7 +5,7 @@ which can be found [on our website](http://influxdb.com/community/cla.html)
 
 ## Plugins
 
-This section is for developers that want to create new collection plugins.
+This section is for developers who want to create new collection plugins.
 Telegraf is entirely plugin driven. This interface allows for operators to
 pick and chose what is gathered as well as makes it easy for developers
 to create new ways of generating metrics.
@@ -87,7 +87,7 @@ func Gather(acc plugins.Accumulator) error {
 }
 ```
 
-### Example
+### Plugin Example
 
 ```go
 package simple
@@ -123,9 +123,109 @@ func init() {
 }
 ```
 
+## Service Plugins
+
+This section is for developers who want to create new "service" collection
+plugins. A service plugin differs from a regular plugin in that it operates
+a background service while Telegraf is running. One example would be the `statsd`
+plugin, which operates a statsd server.
+
+Service Plugins are substantially more complicated than a regular plugin, as they
+will require threads and locks to verify data integrity. Service Plugins should
+be avoided unless there is no way to create their behavior with a regular plugin.
+
+Their interface is quite similar to a regular plugin, with the addition of `Start()`
+and `Stop()` methods.
+
+### Service Plugin Guidelines
+
+* Same as the `Plugin` guidelines, except that they must conform to the
+`plugins.ServicePlugin` interface.
+
+### Service Plugin interface
+
+```go
+type ServicePlugin interface {
+    SampleConfig() string
+    Description() string
+    Gather(Accumulator) error
+    Start() error
+    Stop()
+}
+```
+
 ## Outputs
 
-TODO: this section will describe requirements for contributing an output
+This section is for developers who want to create a new output sink. Outputs
+are created in a similar manner as collection plugins, and their interface has
+similar constructs.
+
+### Output Guidelines
+
+* An output must conform to the `outputs.Output` interface.
+* Outputs should call `outputs.Add` in their `init` function to register themselves.
+See below for a quick example.
+* To be available within Telegraf itself, plugins must add themselves to the
+`github.com/influxdb/telegraf/outputs/all/all.go` file.
+* The `SampleConfig` function should return valid toml that describes how the
+output can be configured. This is include in `telegraf -sample-config`.
+* The `Description` function should say in one line what this output does.
+
+### Output interface
+
+```go
+type Output interface {
+    Connect() error
+    Close() error
+    Description() string
+    SampleConfig() string
+    Write(client.BatchPoints) error
+}
+```
+
+### Output Example
+
+```go
+package simpleoutput
+
+// simpleoutput.go
+
+import "github.com/influxdb/telegraf/outputs"
+
+type Simple struct {
+    Ok bool
+}
+
+func (s *Simple) Description() string {
+    return "a demo output"
+}
+
+func (s *Simple) SampleConfig() string {
+    return "url = localhost"
+}
+
+func (s *Simple) Connect() error {
+    // Make a connection to the URL here
+    return nil
+}
+
+func (s *Simple) Close() error {
+    // Close connection to the URL here
+    return nil
+}
+
+func (s *Simple) Write(bp client.BatchPoints) error {
+    for _, pt := range bp {
+        // write `pt` to the output sink here
+    }
+    return nil
+}
+
+func init() {
+    outputs.Add("simpleoutput", func() outputs.Output { return &Simple{} })
+}
+
+```
 
 ## Unit Tests
 

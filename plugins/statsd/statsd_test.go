@@ -121,25 +121,208 @@ func TestParse_DefaultNameParsing(t *testing.T) {
 	}
 }
 
-// Test that name mappings match and work
-func TestParse_NameMap(t *testing.T) {
+// Test that template name transformation works
+func TestParse_Template(t *testing.T) {
+	s := NewStatsd()
+	s.Templates = []string{
+		"measurement.measurement.host.service",
+	}
+
+	lines := []string{
+		"cpu.idle.localhost:1|c",
+		"cpu.busy.host01.myservice:11|c",
+	}
+
+	for _, line := range lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"cpu_idle",
+			1,
+		},
+		{
+			"cpu_busy",
+			11,
+		},
+	}
+
+	// Validate counters
+	for _, test := range validations {
+		err := test_validate_counter(test.name, test.value, s.counters)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+}
+
+// Test that template filters properly
+func TestParse_TemplateFilter(t *testing.T) {
+	s := NewStatsd()
+	s.Templates = []string{
+		"cpu.idle.* measurement.measurement.host",
+	}
+
+	lines := []string{
+		"cpu.idle.localhost:1|c",
+		"cpu.busy.host01.myservice:11|c",
+	}
+
+	for _, line := range lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"cpu_idle",
+			1,
+		},
+		{
+			"cpu_busy_host01_myservice",
+			11,
+		},
+	}
+
+	// Validate counters
+	for _, test := range validations {
+		err := test_validate_counter(test.name, test.value, s.counters)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+}
+
+// Test that most specific template is chosen
+func TestParse_TemplateSpecificity(t *testing.T) {
+	s := NewStatsd()
+	s.Templates = []string{
+		"cpu.* measurement.foo.host",
+		"cpu.idle.* measurement.measurement.host",
+	}
+
+	lines := []string{
+		"cpu.idle.localhost:1|c",
+	}
+
+	for _, line := range lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"cpu_idle",
+			1,
+		},
+	}
+
+	// Validate counters
+	for _, test := range validations {
+		err := test_validate_counter(test.name, test.value, s.counters)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+}
+
+// Test that fields are parsed correctly
+func TestParse_Fields(t *testing.T) {
 	if false {
 		t.Errorf("TODO")
 	}
 }
 
-// Test that name map tags are applied properly
-func TestParse_NameMapTags(t *testing.T) {
-	if false {
-		t.Errorf("TODO")
+// Test that tags within the bucket are parsed correctly
+func TestParse_Tags(t *testing.T) {
+	s := NewStatsd()
+
+	tests := []struct {
+		bucket string
+		name   string
+		tags   map[string]string
+	}{
+		{
+			"cpu.idle,host=localhost",
+			"cpu_idle",
+			map[string]string{
+				"host": "localhost",
+			},
+		},
+		{
+			"cpu.idle,host=localhost,region=west",
+			"cpu_idle",
+			map[string]string{
+				"host":   "localhost",
+				"region": "west",
+			},
+		},
+		{
+			"cpu.idle,host=localhost,color=red,region=west",
+			"cpu_idle",
+			map[string]string{
+				"host":   "localhost",
+				"region": "west",
+				"color":  "red",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		name, tags := s.parseName(test.bucket)
+		if name != test.name {
+			t.Errorf("Expected: %s, got %s", test.name, name)
+		}
+
+		for k, v := range test.tags {
+			actual, ok := tags[k]
+			if !ok {
+				t.Errorf("Expected key: %s not found", k)
+			}
+			if actual != v {
+				t.Errorf("Expected %s, got %s", v, actual)
+			}
+		}
 	}
 }
 
 // Test that measurements with the same name, but different tags, are treated
-// as different values in the statsd cache
+// as different outputs
 func TestParse_MeasurementsWithSameName(t *testing.T) {
-	if false {
-		t.Errorf("TODO")
+	s := NewStatsd()
+
+	// Test that counters work
+	valid_lines := []string{
+		"test.counter,host=localhost:1|c",
+		"test.counter,host=localhost,region=west:1|c",
+	}
+
+	for _, line := range valid_lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	if len(s.counters) != 2 {
+		t.Errorf("Expected 2 separate measurements, found %d", len(s.counters))
 	}
 }
 
@@ -150,9 +333,8 @@ func TestParse_ValidLines(t *testing.T) {
 		"valid:45|c",
 		"valid:45|s",
 		"valid:45|g",
-		// TODO(cam): timings
-		//"valid.timer:45|ms",
-		//"valid.timer:45|h",
+		"valid.timer:45|ms",
+		"valid.timer:45|h",
 	}
 
 	for _, line := range valid_lines {
@@ -160,13 +342,6 @@ func TestParse_ValidLines(t *testing.T) {
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
-	}
-}
-
-// Test that floats are handled as expected for all metric types
-func TestParse_Floats(t *testing.T) {
-	if false {
-		t.Errorf("TODO")
 	}
 }
 
@@ -340,8 +515,86 @@ func TestParse_Counters(t *testing.T) {
 
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
-	if false {
-		t.Errorf("TODO")
+	s := NewStatsd()
+	s.Percentiles = []int{90}
+	testacc := &testutil.Accumulator{}
+
+	// Test that counters work
+	valid_lines := []string{
+		"test.timing:1|ms",
+		"test.timing:1|ms",
+		"test.timing:1|ms",
+		"test.timing:1|ms",
+		"test.timing:1|ms",
+	}
+
+	for _, line := range valid_lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	s.Gather(testacc)
+
+	tests := []struct {
+		name  string
+		value interface{}
+	}{
+		{
+			"test_timing_mean",
+			float64(1),
+		},
+		{
+			"test_timing_stddev",
+			float64(0),
+		},
+		{
+			"test_timing_upper",
+			float64(1),
+		},
+		{
+			"test_timing_lower",
+			float64(1),
+		},
+		{
+			"test_timing_count",
+			int64(5),
+		},
+		{
+			"test_timing_percentile_90",
+			float64(1),
+		},
+	}
+
+	for _, test := range tests {
+		if !testacc.CheckValue(test.name, test.value) {
+			t.Errorf("Did not find measurement %s with value %v",
+				test.name, test.value)
+		}
+	}
+}
+
+func TestParse_Timings_Delete(t *testing.T) {
+	s := NewStatsd()
+	s.DeleteTimings = true
+	fakeacc := &testutil.Accumulator{}
+	var err error
+
+	line := "timing:100|ms"
+	err = s.parseStatsdLine(line)
+	if err != nil {
+		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+	}
+
+	if len(s.timings) != 1 {
+		t.Errorf("Should be 1 timing, found %d", len(s.timings))
+	}
+
+	s.Gather(fakeacc)
+
+	if len(s.timings) != 0 {
+		t.Errorf("All timings should have been deleted, found %d", len(s.timings))
 	}
 }
 
@@ -423,10 +676,21 @@ func TestParse_Counters_Delete(t *testing.T) {
 	}
 }
 
-// Integration test the listener starting up and receiving UDP packets
-func TestListen(t *testing.T) {
-	if false {
-		t.Errorf("TODO")
+func TestParseKeyValue(t *testing.T) {
+	k, v := parseKeyValue("foo=bar")
+	if k != "foo" {
+		t.Errorf("Expected %s, got %s", "foo", k)
+	}
+	if v != "bar" {
+		t.Errorf("Expected %s, got %s", "bar", v)
+	}
+
+	k2, v2 := parseKeyValue("baz")
+	if k2 != "" {
+		t.Errorf("Expected %s, got %s", "", k2)
+	}
+	if v2 != "baz" {
+		t.Errorf("Expected %s, got %s", "baz", v2)
 	}
 }
 

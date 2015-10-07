@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"expvar"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,9 +19,13 @@ import (
 )
 
 const (
-	pointsHint  = "points_hint"
-	pointsWrite = "points_write"
-	bytesWrite  = "bytes_write"
+	pointsHint   = "points_hint"
+	pointsWrite  = "points_write"
+	bytesWrite   = "bytes_write"
+	writeErr     = "write_err"
+	unmarshalErr = "unmarshal_err"
+	advanceErr   = "advance_err"
+	currentErr   = "current_err"
 )
 
 type Processor struct {
@@ -98,10 +103,9 @@ func (p *Processor) loadQueues() error {
 	return nil
 }
 
+// addQueue adds a hinted-handoff queue for the given node. This function is not thread-safe
+// and the caller must ensure this function is not called concurrently.
 func (p *Processor) addQueue(nodeID uint64) (*queue, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	path := filepath.Join(p.dir, strconv.FormatUint(nodeID, 10))
 	if err := os.MkdirAll(path, 0700); err != nil {
 		return nil, err
@@ -123,11 +127,27 @@ func (p *Processor) addQueue(nodeID uint64) (*queue, error) {
 	return queue, nil
 }
 
+// WriteShard writes hinted-handoff data for the given shard and node. Since it may manipulate
+// hinted-handoff queues, and be called concurrently, it takes a lock during queue access.
 func (p *Processor) WriteShard(shardID, ownerID uint64, points []models.Point) error {
+	p.mu.RLock()
 	queue, ok := p.queues[ownerID]
+	p.mu.RUnlock()
 	if !ok {
-		var err error
-		if queue, err = p.addQueue(ownerID); err != nil {
+		if err := func() error {
+			// Check again under write-lock.
+			p.mu.Lock()
+			defer p.mu.Unlock()
+
+			queue, ok = p.queues[ownerID]
+			if !ok {
+				var err error
+				if queue, err = p.addQueue(ownerID); err != nil {
+					return err
+				}
+			}
+			return nil
+		}(); err != nil {
 			return err
 		}
 	}
@@ -162,6 +182,9 @@ func (p *Processor) Process() error {
 				// Get the current block from the queue
 				buf, err := q.Current()
 				if err != nil {
+					if err != io.EOF {
+						p.nodeStatMaps[nodeID].Add(currentErr, 1)
+					}
 					res <- nil
 					break
 				}
@@ -169,15 +192,20 @@ func (p *Processor) Process() error {
 				// unmarshal the byte slice back to shard ID and points
 				shardID, points, err := p.unmarshalWrite(buf)
 				if err != nil {
+					p.nodeStatMaps[nodeID].Add(unmarshalErr, 1)
 					p.Logger.Printf("unmarshal write failed: %v", err)
 					if err := q.Advance(); err != nil {
+						p.nodeStatMaps[nodeID].Add(advanceErr, 1)
 						res <- err
 					}
-					return
+
+					// Skip and try the next block.
+					continue
 				}
 
 				// Try to send the write to the node
 				if err := p.writer.WriteShard(shardID, nodeID, points); err != nil && tsdb.IsRetryable(err) {
+					p.nodeStatMaps[nodeID].Add(writeErr, 1)
 					p.Logger.Printf("remote write failed: %v", err)
 					res <- nil
 					break
@@ -187,6 +215,7 @@ func (p *Processor) Process() error {
 
 				// If we get here, the write succeeded so advance the queue to the next item
 				if err := q.Advance(); err != nil {
+					p.nodeStatMaps[nodeID].Add(advanceErr, 1)
 					res <- err
 					return
 				}

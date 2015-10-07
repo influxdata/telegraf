@@ -27,8 +27,8 @@ type BatchPoints struct {
 // deepcopy returns a deep copy of the BatchPoints object. This is primarily so
 // we can do multithreaded output flushing (see Agent.flush)
 func (bp *BatchPoints) deepcopy() *BatchPoints {
-	bp.mu.Lock()
-	defer bp.mu.Unlock()
+	bp.Lock()
+	defer bp.Unlock()
 
 	var bpc BatchPoints
 	bpc.Time = bp.Time
@@ -71,36 +71,9 @@ func (bp *BatchPoints) Add(
 	val interface{},
 	tags map[string]string,
 ) {
-	bp.Lock()
-	defer bp.Unlock()
-
-	measurement = bp.Prefix + measurement
-
-	if bp.Config != nil {
-		if !bp.Config.ShouldPass(measurement, tags) {
-			return
-		}
-	}
-
-	if bp.Debug {
-		var tg []string
-
-		for k, v := range tags {
-			tg = append(tg, fmt.Sprintf("%s=\"%s\"", k, v))
-		}
-
-		sort.Strings(tg)
-
-		fmt.Printf("> [%s] %s value=%v\n", strings.Join(tg, " "), measurement, val)
-	}
-
-	bp.Points = append(bp.Points, client.Point{
-		Measurement: measurement,
-		Tags:        tags,
-		Fields: map[string]interface{}{
-			"value": val,
-		},
-	})
+	fields := make(map[string]interface{})
+	fields["value"] = val
+	bp.AddFields(measurement, fields, tags)
 }
 
 // AddFieldsWithTime adds a measurement with a provided timestamp
@@ -166,6 +139,16 @@ func (bp *BatchPoints) AddFields(
 	if bp.Config != nil {
 		if !bp.Config.ShouldPass(measurement, tags) {
 			return
+		}
+	}
+
+	// Apply BatchPoints tags to tags passed in, giving precedence to those
+	// passed in. This is so that plugins have the ability to override global
+	// tags.
+	for k, v := range bp.Tags {
+		_, ok := tags[k]
+		if !ok {
+			tags[k] = v
 		}
 	}
 

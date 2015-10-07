@@ -194,6 +194,7 @@ func (a *Agent) crankParallel() error {
 			bp.Prefix = plugin.name + "_"
 			bp.Config = plugin.config
 			bp.Precision = a.Precision
+			bp.Tags = a.Config.Tags
 
 			if err := plugin.plugin.Gather(&bp); err != nil {
 				log.Printf("Error in plugin [%s]: %s", plugin.name, err)
@@ -212,7 +213,6 @@ func (a *Agent) crankParallel() error {
 	if a.UTC {
 		bp.Time = bp.Time.UTC()
 	}
-	bp.Tags = a.Config.Tags
 	bp.Precision = a.Precision
 
 	for sub := range points {
@@ -265,13 +265,13 @@ func (a *Agent) crankSeparate(shutdown chan struct{}, plugin *runningPlugin) err
 		bp.Prefix = plugin.name + "_"
 		bp.Config = plugin.config
 		bp.Precision = a.Precision
+		bp.Tags = a.Config.Tags
 
 		if err := plugin.plugin.Gather(&bp); err != nil {
 			log.Printf("Error in plugin [%s]: %s", plugin.name, err)
 			outerr = errors.New("Error encountered processing plugins & outputs")
 		}
 
-		bp.Tags = a.Config.Tags
 		bp.Time = time.Now()
 		if a.UTC {
 			bp.Time = bp.Time.UTC()

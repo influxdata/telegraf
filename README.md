@@ -194,6 +194,12 @@ Telegraf currently has support for collecting metrics from
     * disk
     * swap
 
+## Service Plugins
+
+Telegraf can collect metrics via the following services
+
+* statsd
+
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.
 

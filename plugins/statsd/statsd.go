@@ -26,21 +26,27 @@ type Statsd struct {
 	// fills up, packets will get dropped until the next Gather interval is ran.
 	AllowedPendingMessages int
 
+	// Percentiles specifies the percentiles that will be calculated for timing
+	// and histogram stats.
+	Percentiles     []int
+	PercentileLimit int
+
 	DeleteGauges   bool
 	DeleteCounters bool
 	DeleteSets     bool
+	DeleteTimings  bool
 
 	sync.Mutex
 
 	// Channel for all incoming statsd messages
-	in        chan string
-	inmetrics chan metric
-	done      chan struct{}
+	in   chan string
+	done chan struct{}
 
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
 	gauges   map[string]cachedgauge
 	counters map[string]cachedcounter
 	sets     map[string]cachedset
+	timings  map[string]cachedtimings
 
 	// bucket -> influx templates
 	Templates []string
@@ -52,10 +58,10 @@ func NewStatsd() *Statsd {
 	// Make data structures
 	s.done = make(chan struct{})
 	s.in = make(chan string, s.AllowedPendingMessages)
-	s.inmetrics = make(chan metric, s.AllowedPendingMessages)
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
+	s.timings = make(map[string]cachedtimings)
 
 	return &s
 }
@@ -91,10 +97,10 @@ type cachedcounter struct {
 	tags  map[string]string
 }
 
-type cachedtiming struct {
-	name    string
-	timings []float64
-	tags    map[string]string
+type cachedtimings struct {
+	name  string
+	stats RunningStats
+	tags  map[string]string
 }
 
 func (_ *Statsd) Description() string {
@@ -104,16 +110,29 @@ func (_ *Statsd) Description() string {
 const sampleConfig = `
     # Address and port to host UDP listener on
     service_address = ":8125"
-    # Delete gauges every interval
+    # Delete gauges every interval (default=false)
     delete_gauges = false
-    # Delete counters every interval
+    # Delete counters every interval (default=false)
     delete_counters = false
-    # Delete sets every interval
+    # Delete sets every interval (default=false)
     delete_sets = false
+    # Delete timings & histograms every interval (default=true)
+    delete_timings = true
+    # Percentiles to calculate for timing & histogram stats
+    percentiles = [90]
 
-    # Number of messages allowed to queue up, once filled,
+    # templates = [
+    #     "cpu.* measurement*"
+    # ]
+
+    # Number of UDP messages allowed to queue up, once filled,
     # the statsd server will start dropping packets
     allowed_pending_messages = 10000
+
+    # Number of timing/histogram values to track per-measurement in the
+    # calculation of percentiles. Raising this limit increases the accuracy
+    # of percentiles but also increases the memory usage and cpu time.
+    percentile_limit = 1000
 `
 
 func (_ *Statsd) SampleConfig() string {
@@ -124,35 +143,37 @@ func (s *Statsd) Gather(acc plugins.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
 
-	items := len(s.inmetrics)
-	for i := 0; i < items; i++ {
-
-		m := <-s.inmetrics
-
-		switch m.mtype {
-		case "c", "g", "s":
-			log.Println("ERROR: Uh oh, this should not have happened")
-		case "ms", "h":
-			// TODO
+	for _, metric := range s.timings {
+		acc.Add(metric.name+"_mean", metric.stats.Mean(), metric.tags)
+		acc.Add(metric.name+"_stddev", metric.stats.Stddev(), metric.tags)
+		acc.Add(metric.name+"_upper", metric.stats.Upper(), metric.tags)
+		acc.Add(metric.name+"_lower", metric.stats.Lower(), metric.tags)
+		acc.Add(metric.name+"_count", metric.stats.Count(), metric.tags)
+		for _, percentile := range s.Percentiles {
+			name := fmt.Sprintf("%s_percentile_%v", metric.name, percentile)
+			acc.Add(name, metric.stats.Percentile(percentile), metric.tags)
 		}
 	}
+	if s.DeleteTimings {
+		s.timings = make(map[string]cachedtimings)
+	}
 
-	for _, cmetric := range s.gauges {
-		acc.Add(cmetric.name, cmetric.value, cmetric.tags)
+	for _, metric := range s.gauges {
+		acc.Add(metric.name, metric.value, metric.tags)
 	}
 	if s.DeleteGauges {
 		s.gauges = make(map[string]cachedgauge)
 	}
 
-	for _, cmetric := range s.counters {
-		acc.Add(cmetric.name, cmetric.value, cmetric.tags)
+	for _, metric := range s.counters {
+		acc.Add(metric.name, metric.value, metric.tags)
 	}
 	if s.DeleteCounters {
 		s.counters = make(map[string]cachedcounter)
 	}
 
-	for _, cmetric := range s.sets {
-		acc.Add(cmetric.name, int64(len(cmetric.set)), cmetric.tags)
+	for _, metric := range s.sets {
+		acc.Add(metric.name, int64(len(metric.set)), metric.tags)
 	}
 	if s.DeleteSets {
 		s.sets = make(map[string]cachedset)
@@ -167,10 +188,10 @@ func (s *Statsd) Start() error {
 	// Make data structures
 	s.done = make(chan struct{})
 	s.in = make(chan string, s.AllowedPendingMessages)
-	s.inmetrics = make(chan metric, s.AllowedPendingMessages)
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
+	s.timings = make(map[string]cachedtimings)
 
 	// Start the UDP listener
 	go s.udpListen()
@@ -216,8 +237,7 @@ func (s *Statsd) udpListen() error {
 }
 
 // parser monitors the s.in channel, if there is a line ready, it parses the
-// statsd string into a usable metric struct and either aggregates the value
-// or pushes it into the s.inmetrics channel.
+// statsd string into a usable metric struct and aggregates the value
 func (s *Statsd) parser() error {
 	for {
 		select {
@@ -235,14 +255,15 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	// Validate splitting the line on "|"
 	m := metric{}
-	parts1 := strings.Split(line, "|")
-	if len(parts1) < 2 {
+
+	// Validate splitting the line on "|"
+	pipesplit := strings.Split(line, "|")
+	if len(pipesplit) < 2 {
 		log.Printf("Error: splitting '|', Unable to parse metric: %s\n", line)
 		return errors.New("Error Parsing statsd line")
-	} else if len(parts1) > 2 {
-		sr := parts1[2]
+	} else if len(pipesplit) > 2 {
+		sr := pipesplit[2]
 		errmsg := "Error: parsing sample rate, %s, it must be in format like: " +
 			"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
 		if strings.Contains(sr, "@") && len(sr) > 1 {
@@ -250,6 +271,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			if err != nil {
 				log.Printf(errmsg, err.Error(), line)
 			} else {
+				// sample rate successfully parsed
 				m.samplerate = samplerate
 			}
 		} else {
@@ -258,24 +280,24 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	}
 
 	// Validate metric type
-	switch parts1[1] {
+	switch pipesplit[1] {
 	case "g", "c", "s", "ms", "h":
-		m.mtype = parts1[1]
+		m.mtype = pipesplit[1]
 	default:
-		log.Printf("Error: Statsd Metric type %s unsupported", parts1[1])
+		log.Printf("Error: Statsd Metric type %s unsupported", pipesplit[1])
 		return errors.New("Error Parsing statsd line")
 	}
 
 	// Validate splitting the rest of the line on ":"
-	parts2 := strings.Split(parts1[0], ":")
-	if len(parts2) != 2 {
+	colonsplit := strings.Split(pipesplit[0], ":")
+	if len(colonsplit) != 2 {
 		log.Printf("Error: splitting ':', Unable to parse metric: %s\n", line)
 		return errors.New("Error Parsing statsd line")
 	}
-	m.bucket = parts2[0]
+	m.bucket = colonsplit[0]
 
 	// Parse the value
-	if strings.ContainsAny(parts2[1], "-+") {
+	if strings.ContainsAny(colonsplit[1], "-+") {
 		if m.mtype != "g" {
 			log.Printf("Error: +- values are only supported for gauges: %s\n", line)
 			return errors.New("Error Parsing statsd line")
@@ -285,14 +307,14 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 	switch m.mtype {
 	case "g", "ms", "h":
-		v, err := strconv.ParseFloat(parts2[1], 64)
+		v, err := strconv.ParseFloat(colonsplit[1], 64)
 		if err != nil {
 			log.Printf("Error: parsing value to float64: %s\n", line)
 			return errors.New("Error Parsing statsd line")
 		}
 		m.floatvalue = v
 	case "c", "s":
-		v, err := strconv.ParseInt(parts2[1], 10, 64)
+		v, err := strconv.ParseInt(colonsplit[1], 10, 64)
 		if err != nil {
 			log.Printf("Error: parsing value to int64: %s\n", line)
 			return errors.New("Error Parsing statsd line")
@@ -304,8 +326,20 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		m.intvalue = v
 	}
 
-	// Parse the name
-	m.name, m.tags = s.parseName(m)
+	// Parse the name & tags from bucket
+	m.name, m.tags = s.parseName(m.bucket)
+	switch m.mtype {
+	case "c":
+		m.tags["metric_type"] = "counter"
+	case "g":
+		m.tags["metric_type"] = "gauge"
+	case "s":
+		m.tags["metric_type"] = "set"
+	case "ms":
+		m.tags["metric_type"] = "timing"
+	case "h":
+		m.tags["metric_type"] = "histogram"
+	}
 
 	// Make a unique key for the measurement name/tags
 	var tg []string
@@ -315,18 +349,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	sort.Strings(tg)
 	m.hash = fmt.Sprintf("%s%s", strings.Join(tg, ""), m.name)
 
-	switch m.mtype {
-	// Aggregate gauges, counters and sets as we go
-	case "g", "c", "s":
-		s.aggregate(m)
-	// Timers get processed at flush time
-	default:
-		select {
-		case s.inmetrics <- m:
-		default:
-			log.Printf(dropwarn, line)
-		}
-	}
+	s.aggregate(m)
 	return nil
 }
 
@@ -334,42 +357,79 @@ func (s *Statsd) parseStatsdLine(line string) error {
 // config file. If there is a match, it will parse the name of the metric and
 // map of tags.
 // Return values are (<name>, <tags>)
-func (s *Statsd) parseName(m metric) (string, map[string]string) {
-	name := m.bucket
+func (s *Statsd) parseName(bucket string) (string, map[string]string) {
 	tags := make(map[string]string)
 
-	o := graphite.Options{
-		Separator: "_",
-		Templates: s.Templates,
+	bucketparts := strings.Split(bucket, ",")
+	// Parse out any tags in the bucket
+	if len(bucketparts) > 1 {
+		for _, btag := range bucketparts[1:] {
+			k, v := parseKeyValue(btag)
+			if k != "" {
+				tags[k] = v
+			}
+		}
 	}
 
+	o := graphite.Options{
+		Separator:   "_",
+		Templates:   s.Templates,
+		DefaultTags: tags,
+	}
+
+	name := bucketparts[0]
 	p, err := graphite.NewParserWithOptions(o)
 	if err == nil {
-		name, tags = p.ApplyTemplate(m.bucket)
+		name, tags = p.ApplyTemplate(name)
 	}
 	name = strings.Replace(name, ".", "_", -1)
 	name = strings.Replace(name, "-", "__", -1)
 
-	switch m.mtype {
-	case "c":
-		tags["metric_type"] = "counter"
-	case "g":
-		tags["metric_type"] = "gauge"
-	case "s":
-		tags["metric_type"] = "set"
-	case "ms", "h":
-		tags["metric_type"] = "timer"
-	}
-
 	return name, tags
 }
 
-// aggregate takes in a metric of type "counter", "gauge", or "set". It then
-// aggregates and caches the current value. It does not deal with the
-// DeleteCounters, DeleteGauges or DeleteSets options, because those are dealt
-// with in the Gather function.
+// Parse the key,value out of a string that looks like "key=value"
+func parseKeyValue(keyvalue string) (string, string) {
+	var key, val string
+
+	split := strings.Split(keyvalue, "=")
+	// Must be exactly 2 to get anything meaningful out of them
+	if len(split) == 2 {
+		key = split[0]
+		val = split[1]
+	} else if len(split) == 1 {
+		val = split[0]
+	}
+
+	return key, val
+}
+
+// aggregate takes in a metric. It then
+// aggregates and caches the current value(s). It does not deal with the
+// Delete* options, because those are dealt with in the Gather function.
 func (s *Statsd) aggregate(m metric) {
 	switch m.mtype {
+	case "ms", "h":
+		cached, ok := s.timings[m.hash]
+		if !ok {
+			cached = cachedtimings{
+				name: m.name,
+				tags: m.tags,
+				stats: RunningStats{
+					PercLimit: s.PercentileLimit,
+				},
+			}
+		}
+
+		if m.samplerate > 0 {
+			for i := 0; i < int(1.0/m.samplerate); i++ {
+				cached.stats.AddValue(m.floatvalue)
+			}
+			s.timings[m.hash] = cached
+		} else {
+			cached.stats.AddValue(m.floatvalue)
+			s.timings[m.hash] = cached
+		}
 	case "c":
 		cached, ok := s.counters[m.hash]
 		if !ok {
@@ -380,7 +440,6 @@ func (s *Statsd) aggregate(m metric) {
 			}
 		} else {
 			cached.value += m.intvalue
-			cached.tags = m.tags
 			s.counters[m.hash] = cached
 		}
 	case "g":
@@ -397,7 +456,6 @@ func (s *Statsd) aggregate(m metric) {
 			} else {
 				cached.value = m.floatvalue
 			}
-			cached.tags = m.tags
 			s.gauges[m.hash] = cached
 		}
 	case "s":
@@ -422,7 +480,6 @@ func (s *Statsd) Stop() {
 	log.Println("Stopping the statsd service")
 	close(s.done)
 	close(s.in)
-	close(s.inmetrics)
 }
 
 func init() {

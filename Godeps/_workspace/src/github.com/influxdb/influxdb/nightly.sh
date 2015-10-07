@@ -21,14 +21,20 @@ function send_failure_notification {
         --body "The nightly build has failed, version: $version"
 }
 
-if [ $# -ne 4 ]; then
-    echo "$0 <smtp server> <user> <password> <to>"
+if [ $# -lt 4 ]; then
+    echo "$0 <smtp server> <user> <password> <to> [RACE_ENABLED]"
     exit 1
 fi
 SMTP=$1
 USER=$2
 PASSWORD=$3
 TO=$4
+RACE_ENABLED=$5
+
+if [ -n "$RACE_ENABLED" ]; then
+    race="-x"
+    echo "Race-detection build enabled."
+fi
 
 REPO_DIR=`mktemp -d`
 echo "Using $REPO_DIR for all work..."
@@ -41,7 +47,7 @@ git clone https://github.com/influxdb/influxdb.git
 
 cd $GOPATH/src/github.com/influxdb/influxdb
 VERSION="$MASTER_VERSION-nightly-`git log --pretty=format:'%h' -n 1`"
-NIGHTLY_BUILD=true ./package.sh $VERSION
+NIGHTLY_BUILD=true ./package.sh $race $VERSION
 
 if [ $? -ne 0 ]; then
     # Send notification e-mail.
