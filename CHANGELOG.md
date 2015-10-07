@@ -13,6 +13,7 @@
 - Memory plugin: cached and buffered measurements re-added
 - Logging: additional logging for each collection interval, track the number
 of metrics collected and from how many plugins.
+- [#240](https://github.com/influxdb/telegraf/pull/240): procstat plugin, thanks @ranjib!
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!

@@ -17,7 +17,13 @@ type SpecProcessor struct {
 }
 
 func (p *SpecProcessor) add(metric string, value interface{}) {
-	p.acc.Add(p.Prefix+"_"+metric, value, p.tags)
+	var mname string
+	if p.Prefix == "" {
+		mname = metric
+	} else {
+		mname = p.Prefix + "_" + metric
+	}
+	p.acc.Add(mname, value, p.tags)
 }
 
 func NewSpecProcessor(
@@ -27,6 +33,9 @@ func NewSpecProcessor(
 ) *SpecProcessor {
 	tags := make(map[string]string)
 	tags["pid"] = fmt.Sprintf("%v", p.Pid)
+	if name, err := p.Name(); err == nil {
+		tags["name"] = name
+	}
 	return &SpecProcessor{
 		Prefix: prefix,
 		tags:   tags,
@@ -35,23 +44,22 @@ func NewSpecProcessor(
 	}
 }
 
-func (p *SpecProcessor) pushMetrics() error {
+func (p *SpecProcessor) pushMetrics() {
 	if err := p.pushFDStats(); err != nil {
-		log.Printf(err.Error())
+		log.Printf("procstat, fd stats not available: %s", err.Error())
 	}
 	if err := p.pushCtxStats(); err != nil {
-		log.Printf(err.Error())
+		log.Printf("procstat, ctx stats not available: %s", err.Error())
 	}
 	if err := p.pushIOStats(); err != nil {
-		log.Printf(err.Error())
+		log.Printf("procstat, io stats not available: %s", err.Error())
 	}
 	if err := p.pushCPUStats(); err != nil {
-		log.Printf(err.Error())
+		log.Printf("procstat, cpu stats not available: %s", err.Error())
 	}
 	if err := p.pushMemoryStats(); err != nil {
-		log.Printf(err.Error())
+		log.Printf("procstat, mem stats not available: %s", err.Error())
 	}
-	return nil
 }
 
 func (p *SpecProcessor) pushFDStats() error {
