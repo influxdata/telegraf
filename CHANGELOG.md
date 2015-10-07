@@ -9,9 +9,11 @@
 - [#90](https://github.com/influxdb/telegraf/issues/90): Add Docker labels to tags in docker plugin
 - [#223](https://github.com/influxdb/telegraf/pull/223): Add port tag to nginx plugin. Thanks @neezgee!
 - [#227](https://github.com/influxdb/telegraf/pull/227): Add command intervals to exec plugin. Thanks @jpalay!
+- [#241](https://github.com/influxdb/telegraf/pull/241): MQTT Output. Thanks @shirou!
 - Memory plugin: cached and buffered measurements re-added
 - Logging: additional logging for each collection interval, track the number
 of metrics collected and from how many plugins.
+- [#240](https://github.com/influxdb/telegraf/pull/240): procstat plugin, thanks @ranjib!
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!

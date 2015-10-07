@@ -1,10 +1,15 @@
 {
 	"ImportPath": "github.com/influxdb/telegraf",
-	"GoVersion": "go1.5",
+	"GoVersion": "go1.5.1",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
+		{
+			"ImportPath": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git",
+			"Comment": "v0.9.1-14-g546c47a",
+			"Rev": "546c47a6d0e9492e77f6f37473d59c36a708e08b"
+		},
 		{
 			"ImportPath": "github.com/Shopify/sarama",
 			"Comment": "v1.4.3-45-g5b18996",
@@ -96,7 +101,32 @@
 			"Rev": "d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee"
 		},
 		{
-			"ImportPath": "github.com/influxdb/influxdb",
+			"ImportPath": "github.com/influxdb/influxdb/client",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/influxql",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/meta",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/snapshot",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/toml",
+			"Comment": "v0.9.3",
+			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/tsdb",
 			"Comment": "v0.9.3",
 			"Rev": "5d42b212fca8facfe9db0c83822f09b88be643ec"
 		},
@@ -116,6 +146,10 @@
 		{
 			"ImportPath": "github.com/naoina/toml",
 			"Rev": "5811abcabb29d6af0fdf060f96d328962bd3cd5e"
+		},
+		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Rev": "ca53cad383cad2479bbba7f7a1a05797ec1386e4"
 		},
 		{
 			"ImportPath": "github.com/prometheus/client_golang/extraction",
@@ -143,38 +177,48 @@
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/common",
-			"Comment": "1.0.0-158-g0fd612e",
-			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/cpu",
-			"Comment": "1.0.0-158-g0fd612e",
-			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/disk",
-			"Comment": "1.0.0-158-g0fd612e",
-			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/docker",
-			"Comment": "1.0.0-158-g0fd612e",
-			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/host",
+			"Comment": "1.0.0-153-gc1313e7",
+			"Rev": "c1313e76341b18456212c5645d1daa7f132ac50e"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/load",
-			"Comment": "1.0.0-158-g0fd612e",
-			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/mem",
-			"Comment": "1.0.0-158-g0fd612e",
-			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/net",
-			"Comment": "1.0.0-158-g0fd612e",
-			"Rev": "0fd612ec7b9079dc624ae4815acadf1903d82011"
+			"Comment": "1.0.0-161-g3303647",
+			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/process",
+			"Comment": "1.0.0-153-gc1313e7",
+			"Rev": "c1313e76341b18456212c5645d1daa7f132ac50e"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",
@@ -214,6 +258,10 @@
 		{
 			"ImportPath": "golang.org/x/crypto/blowfish",
 			"Rev": "173ce04bfaf66c7bb0fa9d5c0bfd93e773909dbd"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "db8e4de5b2d6653f66aea53094624468caad15d2"
 		},
 		{
 			"ImportPath": "gopkg.in/dancannon/gorethink.v1",

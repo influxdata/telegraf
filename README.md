@@ -179,6 +179,7 @@ Telegraf currently has support for collecting metrics from
 * nginx
 * ping
 * postgresql
+* procstat
 * prometheus
 * rabbitmq
 * redis
@@ -207,6 +208,7 @@ found by running `telegraf -sample-config`
 * datadog
 * opentsdb
 * amqp (rabbitmq)
+* mqtt
 
 ## Contributing
 
