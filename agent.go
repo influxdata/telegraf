@@ -303,10 +303,14 @@ func (a *Agent) flush(bp *BatchPoints) error {
 
 	for _, o := range a.outputs {
 		wg.Add(1)
+
+		// Copy BatchPoints
+		bpc := bp.deepcopy()
+
 		go func(ro *runningOutput) {
 			defer wg.Done()
 			// Log all output errors:
-			if err := ro.output.Write(bp.BatchPoints); err != nil {
+			if err := ro.output.Write(bpc.BatchPoints); err != nil {
 				log.Printf("Error in output [%s]: %s", ro.name, err)
 				outerr = errors.New("Error encountered flushing outputs")
 			}

@@ -24,6 +24,47 @@ type BatchPoints struct {
 	Config *ConfiguredPlugin
 }
 
+// deepcopy returns a deep copy of the BatchPoints object. This is primarily so
+// we can do multithreaded output flushing (see Agent.flush)
+func (bp *BatchPoints) deepcopy() *BatchPoints {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+
+	var bpc BatchPoints
+	bpc.Time = bp.Time
+	bpc.Precision = bp.Precision
+
+	bpc.Tags = make(map[string]string)
+	for k, v := range bp.Tags {
+		bpc.Tags[k] = v
+	}
+
+	var pts []client.Point
+	for _, pt := range bp.Points {
+		var ptc client.Point
+
+		ptc.Measurement = pt.Measurement
+		ptc.Time = pt.Time
+		ptc.Precision = pt.Precision
+		ptc.Raw = pt.Raw
+
+		ptc.Tags = make(map[string]string)
+		ptc.Fields = make(map[string]interface{})
+
+		for k, v := range pt.Tags {
+			ptc.Tags[k] = v
+		}
+
+		for k, v := range pt.Fields {
+			ptc.Fields[k] = v
+		}
+		pts = append(pts, ptc)
+	}
+
+	bpc.Points = pts
+	return &bpc
+}
+
 // Add adds a measurement
 func (bp *BatchPoints) Add(
 	measurement string,
