@@ -10,7 +10,6 @@ type DiskStats struct {
 	ps PS
 
 	Mountpoints []string
-	SkipInodeUsage bool
 }
 
 func (_ *DiskStats) Description() string {
@@ -18,16 +17,14 @@ func (_ *DiskStats) Description() string {
 }
 
 var diskSampleConfig = `
-	# By default, telegraf gather stats for all mountpoints and for inodes.
+	# By default, telegraf gather stats for all mountpoints.
 	# Setting mountpoints will restrict the stats to the specified ones.
 	# mountpoints.
 	# Mountpoints=["/"]
-	# Setting SkipInodeUsage will skip the reporting of inode stats.
-	# SkipInodeUsage=true
-`	
+`
 
-func (_ *DiskStats) SampleConfig() string { 
-	return diskSampleConfig 
+func (_ *DiskStats) SampleConfig() string {
+	return diskSampleConfig
 }
 
 func (s *DiskStats) Gather(acc plugins.Accumulator) error {
@@ -36,14 +33,18 @@ func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
 
+	var restrictMpoints bool
 	mPoints := make(map[string]bool)
-	for _, mp := range s.Mountpoints {
-		mPoints[mp] = true
+	if len(s.Mountpoints) != 0 {
+		restrictMpoints = true
+		for _, mp := range s.Mountpoints {
+			mPoints[mp] = true
+		}
 	}
 
 	for _, du := range disks {
-		_, member := mPoints[ du.Path ]
-		if !member {
+		_, member := mPoints[du.Path]
+		if restrictMpoints && !member {
 			continue
 		}
 		tags := map[string]string{
@@ -53,11 +54,9 @@ func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 		acc.Add("total", du.Total, tags)
 		acc.Add("free", du.Free, tags)
 		acc.Add("used", du.Total-du.Free, tags)
-		if !s.SkipInodeUsage {
-			acc.Add("inodes_total", du.InodesTotal, tags)
-			acc.Add("inodes_free", du.InodesFree, tags)
-			acc.Add("inodes_used", du.InodesTotal-du.InodesFree, tags)
-		}
+		acc.Add("inodes_total", du.InodesTotal, tags)
+		acc.Add("inodes_free", du.InodesFree, tags)
+		acc.Add("inodes_used", du.InodesTotal-du.InodesFree, tags)
 	}
 
 	return nil

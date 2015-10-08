@@ -51,16 +51,26 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("CPUTimes").Return([]cpu.CPUTimesStat{cts}, nil)
 
-	du := &disk.DiskUsageStat{
-		Path:        "/",
-		Fstype:      "ext4",
-		Total:       128,
-		Free:        23,
-		InodesTotal: 1234,
-		InodesFree:  234,
+	du := []*disk.DiskUsageStat{
+		{
+			Path:        "/",
+			Fstype:      "ext4",
+			Total:       128,
+			Free:        23,
+			InodesTotal: 1234,
+			InodesFree:  234,
+		},
+		{
+			Path:        "/home",
+			Fstype:      "ext4",
+			Total:       256,
+			Free:        46,
+			InodesTotal: 2468,
+			InodesFree:  468,
+		},
 	}
 
-	mps.On("DiskUsage").Return([]*disk.DiskUsageStat{du}, nil)
+	mps.On("DiskUsage").Return(du, nil)
 
 	diskio := disk.DiskIOCountersStat{
 		ReadCount:    888,
@@ -128,7 +138,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	numCPUPoints := len(acc.Points) - preCPUPoints
 
 	expectedCPUPoints := 10
-	assert.Equal(t, numCPUPoints, expectedCPUPoints)
+	assert.Equal(t, expectedCPUPoints, numCPUPoints)
 
 	// Computed values are checked with delta > 0 becasue of floating point arithmatic
 	// imprecision
@@ -153,7 +163,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	numCPUPoints = len(acc.Points) - (preCPUPoints + numCPUPoints)
 	expectedCPUPoints = 20
-	assert.Equal(t, numCPUPoints, expectedCPUPoints)
+	assert.Equal(t, expectedCPUPoints, numCPUPoints)
 
 	assertContainsTaggedFloat(t, acc, "time_user", 11.4, 0, cputags)
 	assertContainsTaggedFloat(t, acc, "time_system", 10.9, 0, cputags)
@@ -177,20 +187,46 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assertContainsTaggedFloat(t, acc, "usage_guest", 4.8, 0.0005, cputags)
 	assertContainsTaggedFloat(t, acc, "usage_guest_nice", 2.2, 0.0005, cputags)
 
-	err = (&DiskStats{&mps}).Gather(&acc)
+	preDiskPoints := len(acc.Points)
+
+	err = (&DiskStats{ps: &mps}).Gather(&acc)
 	require.NoError(t, err)
 
-	tags := map[string]string{
+	numDiskPoints := len(acc.Points) - preDiskPoints
+	expectedAllDiskPoints := 12
+	assert.Equal(t, expectedAllDiskPoints, numDiskPoints)
+
+	tags1 := map[string]string{
 		"path":   "/",
 		"fstype": "ext4",
 	}
+	tags2 := map[string]string{
+		"path":   "/home",
+		"fstype": "ext4",
+	}
 
-	assert.True(t, acc.CheckTaggedValue("total", uint64(128), tags))
-	assert.True(t, acc.CheckTaggedValue("used", uint64(105), tags))
-	assert.True(t, acc.CheckTaggedValue("free", uint64(23), tags))
-	assert.True(t, acc.CheckTaggedValue("inodes_total", uint64(1234), tags))
-	assert.True(t, acc.CheckTaggedValue("inodes_free", uint64(234), tags))
-	assert.True(t, acc.CheckTaggedValue("inodes_used", uint64(1000), tags))
+	assert.True(t, acc.CheckTaggedValue("total", uint64(128), tags1))
+	assert.True(t, acc.CheckTaggedValue("used", uint64(105), tags1))
+	assert.True(t, acc.CheckTaggedValue("free", uint64(23), tags1))
+	assert.True(t, acc.CheckTaggedValue("inodes_total", uint64(1234), tags1))
+	assert.True(t, acc.CheckTaggedValue("inodes_free", uint64(234), tags1))
+	assert.True(t, acc.CheckTaggedValue("inodes_used", uint64(1000), tags1))
+	assert.True(t, acc.CheckTaggedValue("total", uint64(256), tags2))
+	assert.True(t, acc.CheckTaggedValue("used", uint64(210), tags2))
+	assert.True(t, acc.CheckTaggedValue("free", uint64(46), tags2))
+	assert.True(t, acc.CheckTaggedValue("inodes_total", uint64(2468), tags2))
+	assert.True(t, acc.CheckTaggedValue("inodes_free", uint64(468), tags2))
+	assert.True(t, acc.CheckTaggedValue("inodes_used", uint64(2000), tags2))
+
+	// We expect 6 more DiskPoints to show up with an explicit match on "/"
+	// and /home not matching the /dev in Mountpoints
+	err = (&DiskStats{ps: &mps, Mountpoints: []string{"/", "/dev"}}).Gather(&acc)
+	assert.Equal(t, preDiskPoints+expectedAllDiskPoints+6, len(acc.Points))
+
+	// We should see all the diskpoints as Mountpoints includes both
+	// / and /home
+	err = (&DiskStats{ps: &mps, Mountpoints: []string{"/", "/home"}}).Gather(&acc)
+	assert.Equal(t, preDiskPoints+2*expectedAllDiskPoints+6, len(acc.Points))
 
 	err = (&NetIOStats{ps: &mps, skipChecks: true}).Gather(&acc)
 	require.NoError(t, err)
