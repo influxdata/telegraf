@@ -77,3 +77,11 @@ func (m *MockPS) DockerStat() ([]*DockerContainerStat, error) {
 
 	return r0, r1
 }
+func (m *MockPS) NetConnections() ([]net.NetConnectionStat, error) {
+	ret := m.Called()
+
+	r0 := ret.Get(0).([]net.NetConnectionStat)
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
