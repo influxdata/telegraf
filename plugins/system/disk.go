@@ -8,13 +8,24 @@ import (
 
 type DiskStats struct {
 	ps PS
+
+	Mountpoints []string
 }
 
 func (_ *DiskStats) Description() string {
 	return "Read metrics about disk usage by mount point"
 }
 
-func (_ *DiskStats) SampleConfig() string { return "" }
+var diskSampleConfig = `
+	# By default, telegraf gather stats for all mountpoints.
+	# Setting mountpoints will restrict the stats to the specified ones.
+	# mountpoints.
+	# Mountpoints=["/"]
+`
+
+func (_ *DiskStats) SampleConfig() string {
+	return diskSampleConfig
+}
 
 func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 	disks, err := s.ps.DiskUsage()
@@ -22,7 +33,20 @@ func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
 
+	var restrictMpoints bool
+	mPoints := make(map[string]bool)
+	if len(s.Mountpoints) != 0 {
+		restrictMpoints = true
+		for _, mp := range s.Mountpoints {
+			mPoints[mp] = true
+		}
+	}
+
 	for _, du := range disks {
+		_, member := mPoints[du.Path]
+		if restrictMpoints && !member {
+			continue
+		}
 		tags := map[string]string{
 			"path":   du.Path,
 			"fstype": du.Fstype,
