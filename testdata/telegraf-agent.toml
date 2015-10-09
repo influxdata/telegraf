@@ -222,8 +222,8 @@ urls = ["http://localhost/server-status?auto"]
 	# specify servers via a url matching:
 	#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
 	#  e.g.
-	#    root:root@http://10.0.0.18/?tls=false
-	#    root:passwd@tcp(127.0.0.1:3036)/
+	#    servers = ["root:root@http://10.0.0.18/?tls=false"]
+	#    servers = ["root:passwd@tcp(127.0.0.1:3306)/"]
 	#
 	# If no servers are specified, then localhost is used as the host.
 	servers = ["localhost"]
