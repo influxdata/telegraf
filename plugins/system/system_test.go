@@ -3,6 +3,7 @@ package system
 import (
 	"fmt"
 	"reflect"
+	"syscall"
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
@@ -115,6 +116,23 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	}
 
 	mps.On("SwapStat").Return(sms, nil)
+
+	netstats := []net.NetConnectionStat{
+		net.NetConnectionStat{
+			Type: syscall.SOCK_DGRAM,
+		},
+		net.NetConnectionStat{
+			Status: "ESTABLISHED",
+		},
+		net.NetConnectionStat{
+			Status: "ESTABLISHED",
+		},
+		net.NetConnectionStat{
+			Status: "CLOSE",
+		},
+	}
+
+	mps.On("NetConnections").Return(netstats, nil)
 
 	cs := NewCPUStats(&mps)
 
@@ -253,6 +271,17 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.NoError(t, acc.ValidateTaggedValue("free", uint64(6412), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("in", uint64(7), swaptags))
 	assert.NoError(t, acc.ValidateTaggedValue("out", uint64(830), swaptags))
+
+	acc.Points = nil
+
+	err = (&NetStats{&mps}).Gather(&acc)
+	require.NoError(t, err)
+	netstattags := map[string]string(nil)
+
+	assert.NoError(t, acc.ValidateTaggedValue("tcp_established", 2, netstattags))
+	assert.NoError(t, acc.ValidateTaggedValue("tcp_close", 1, netstattags))
+	assert.NoError(t, acc.ValidateTaggedValue("udp_socket", 1, netstattags))
+
 }
 
 // Asserts that a given accumulator contains a measurment of type float64 with
