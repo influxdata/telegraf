@@ -14,6 +14,7 @@
 - Logging: additional logging for each collection interval, track the number
 of metrics collected and from how many plugins.
 - [#240](https://github.com/influxdb/telegraf/pull/240): procstat plugin, thanks @ranjib!
+- [#244](https://github.com/influxdb/telegraf/pull/244): netstat plugin, thanks @shirou!
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
