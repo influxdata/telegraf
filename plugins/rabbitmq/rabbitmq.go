@@ -119,6 +119,10 @@ func (r *RabbitMQ) gatherServer(serv *Server, acc plugins.Accumulator) error {
 		return err
 	}
 
+	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil {
+		return fmt.Errorf("Wrong answer from rabbitmq. Probably auth issue")
+	}
+
 	tags := map[string]string{"url": serv.URL}
 	if serv.Name != "" {
 		tags["name"] = serv.Name
@@ -134,11 +138,9 @@ func (r *RabbitMQ) gatherServer(serv *Server, acc plugins.Accumulator) error {
 	acc.Add("exchanges", overview.ObjectTotals.Exchanges, tags)
 	acc.Add("queues", overview.ObjectTotals.Queues, tags)
 
-	if overview.MessageStats != nil {
-		acc.Add("messages_acked", overview.MessageStats.Ack, tags)
-		acc.Add("messages_delivered", overview.MessageStats.Deliver, tags)
-		acc.Add("messages_published", overview.MessageStats.Publish, tags)
-	}
+	acc.Add("messages_acked", overview.MessageStats.Ack, tags)
+	acc.Add("messages_delivered", overview.MessageStats.Deliver, tags)
+	acc.Add("messages_published", overview.MessageStats.Publish, tags)
 
 	nodes := make([]Node, 0)
 
