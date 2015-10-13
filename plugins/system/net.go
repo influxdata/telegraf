@@ -2,7 +2,9 @@ package system
 
 import (
 	"fmt"
+	"math"
 	"net"
+	"time"
 
 	"github.com/influxdb/telegraf/plugins"
 )
@@ -12,6 +14,12 @@ type NetIOStats struct {
 
 	skipChecks bool
 	Interfaces []string
+
+	prevTime        time.Time
+	prevBytesSent   uint64
+	prevBytesRecv   uint64
+	prevPacketsSent uint64
+	prevPacketsRecv uint64
 }
 
 func (_ *NetIOStats) Description() string {
@@ -28,6 +36,10 @@ var netSampleConfig = `
 
 func (_ *NetIOStats) SampleConfig() string {
 	return netSampleConfig
+}
+
+func calcSpeed(current uint64, prev uint64, duration time.Duration) uint64 {
+	return uint64(math.Floor(float64(current-prev)/duration.Seconds() + 0.5))
 }
 
 func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
@@ -77,6 +89,24 @@ func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
 		acc.Add("err_out", io.Errout, tags)
 		acc.Add("drop_in", io.Dropin, tags)
 		acc.Add("drop_out", io.Dropout, tags)
+
+		now := time.Now()
+		if !s.prevTime.IsZero() {
+			delta := now.Sub(s.prevTime)
+
+			if delta.Seconds() > 0 {
+				acc.Add("bits_per_second_sent", calcSpeed(io.BytesSent, s.prevBytesSent, delta)*8, tags)
+				acc.Add("bits_per_second_recv", calcSpeed(io.BytesRecv, s.prevBytesRecv, delta)*8, tags)
+				acc.Add("packets_per_second_sent", calcSpeed(io.PacketsSent, s.prevPacketsSent, delta), tags)
+				acc.Add("packets_per_second_recv", calcSpeed(io.PacketsRecv, s.prevPacketsRecv, delta), tags)
+			}
+		}
+
+		s.prevTime = time.Now()
+		s.prevBytesSent = io.BytesSent
+		s.prevBytesRecv = io.BytesRecv
+		s.prevPacketsSent = io.PacketsSent
+		s.prevPacketsRecv = io.PacketsRecv
 	}
 
 	return nil
