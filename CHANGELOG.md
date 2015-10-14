@@ -22,6 +22,7 @@ of metrics collected and from how many plugins.
 - [#232](https://github.com/influxdb/telegraf/pull/232): Fix bashism run during deb package installation. Thanks @yankcrime!
 - [#261](https://github.com/influxdb/telegraf/issues/260): RabbitMQ panics if wrong credentials given. Thanks @ekini!
 - [#245](https://github.com/influxdb/telegraf/issues/245): Document Exec plugin example. Thanks @ekini!
+- [#264](https://github.com/influxdb/telegraf/issues/264): logrotate config file fixes. Thanks @linsomniac!
 
 ## v0.1.9 [2015-09-22]
 

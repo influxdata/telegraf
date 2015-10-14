@@ -3,8 +3,9 @@
     rotate 6
     daily
     missingok
+    dateext
+    copytruncate
     notifempty
-    nocreate
     compress
 }
 
