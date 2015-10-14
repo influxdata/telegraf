@@ -42,3 +42,8 @@ redis:
     image: redis
     ports:
         - "6379:6379"
+
+zookeeper:
+    image: spotify/kafka
+    ports:
+        - "2181:2181"
