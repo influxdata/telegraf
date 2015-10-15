@@ -59,14 +59,17 @@ function pidofproc() {
         echo "Expected three arguments, e.g. $0 -p pidfile daemon-name"
     fi
 
-    pid=`pgrep -f $3`
+    if [ ! -f "$2" ]; then
+        return 1
+    fi
+
     local pidfile=`cat $2`
 
     if [ "x$pidfile" == "x" ]; then
         return 1
     fi
 
-    if [ "x$pid" != "x" -a "$pidfile" == "$pid" ]; then
+    if ps --pid "$pidfile" | grep -q $(basename $3); then
         return 0
     fi
 
