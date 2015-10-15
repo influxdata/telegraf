@@ -32,8 +32,9 @@
 AWS_FILE=~/aws.conf
 
 INSTALL_ROOT_DIR=/opt/telegraf
+INSTALL_BIN_DIR=/bin
 TELEGRAF_LOG_DIR=/var/log/telegraf
-CONFIG_ROOT_DIR=/etc/opt/telegraf
+CONFIG_ROOT_DIR=/etc/telegraf
 LOGROTATE_DIR=/etc/logrotate.d
 
 SAMPLE_CONFIGURATION=etc/config.sample.toml
@@ -144,7 +145,6 @@ generate_postinstall_script() {
 #!/bin/sh
 rm -f $INSTALL_ROOT_DIR/telegraf
 rm -f $INSTALL_ROOT_DIR/init.sh
-ln -sfn $INSTALL_ROOT_DIR/versions/$version/telegraf $INSTALL_ROOT_DIR/telegraf
 
 if ! id telegraf >/dev/null 2>&1; then
     useradd --help 2>&1| grep -- --system > /dev/null 2>&1
@@ -168,7 +168,8 @@ else
     ln -sfn $INSTALL_ROOT_DIR/versions/$version/scripts/init.sh \
         $INSTALL_ROOT_DIR/init.sh
     rm -f /etc/init.d/telegraf
-    ln -sfn $INSTALL_ROOT_DIR/init.sh /etc/init.d/telegraf
+    ln -sfn $INSTALL_ROOT_DIR/versions/$version/scripts/init.sh \
+        /etc/init.d/telegraf
     chmod +x /etc/init.d/telegraf
     # update-rc.d sysv service:
     if which update-rc.d > /dev/null 2>&1 ; then
@@ -211,10 +212,16 @@ make_dir_tree $TMP_WORK_DIR $VERSION
 ###########################################################################
 # Copy the assets to the installation directories.
 
+mkdir -p $TMP_WORK_DIR/$INSTALL_BIN_DIR
 for b in ${BINS[*]}; do
     cp $GOPATH_INSTALL/bin/$b $TMP_WORK_DIR/$INSTALL_ROOT_DIR/versions/$VERSION
     if [ $? -ne 0 ]; then
         echo "Failed to copy binaries to packaging directory -- aborting."
+        cleanup_exit 1
+    fi
+    ln -s /$INSTALL_ROOT_DIR/versions/$VERSION $TMP_WORK_DIR/$INSTALL_BIN_DIR
+    if [ $? -ne 0 ]; then
+        echo "Failed to link binaries to packaging directory -- aborting."
         cleanup_exit 1
     fi
 done
