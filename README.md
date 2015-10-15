@@ -36,8 +36,8 @@ Latest:
 
 ##### Package instructions:
 
-* Telegraf binary is installed in `/opt/telegraf/telegraf`
-* Telegraf daemon configuration file is in `/etc/opt/telegraf/telegraf.conf`
+* Telegraf binary is installed in `/usr/sbin/telegraf`
+* Telegraf daemon configuration file is in `/etc/telegraf/telegraf.conf`
 * On sysv systems, the telegraf daemon can be controlled via
 `service telegraf [action]`
 * On systemd systems (such as Ubuntu 15+), the telegraf daemon can be
