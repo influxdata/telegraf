@@ -21,7 +21,7 @@ are some InfluxDB compatibility requirements:
 * InfluxDB 0.9.3+ requires Telegraf 0.1.5+
 * InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
 
-NOTE: Telegraf 0.1.9 will change the name of some cpu usage metrics, see
+NOTE: Telegraf 0.1.9 will change the name of some CPU usage metrics, see
 [CHANGELOG](CHANGELOG.md) for more details.
 
 ### Linux deb and rpm packages:
@@ -92,10 +92,10 @@ Telegraf has a few options you can configure under the `agent` section of the
 config.
 
 * **hostname**: The hostname is passed as a tag. By default this will be
-the value retured by `hostname` on the machine running Telegraf.
+the value returned by `hostname` on the machine running Telegraf.
 You can override that value here.
-* **interval**: How ofter to gather metrics. Uses a simple number +
-unit parser, ie "10s" for 10 seconds or "5m" for 5 minutes.
+* **interval**: How often to gather metrics. Uses a simple number +
+unit parser, e.g. "10s" for 10 seconds or "5m" for 5 minutes.
 * **debug**: Set to true to gather and send metrics to STDOUT as well as
 InfluxDB.
 
