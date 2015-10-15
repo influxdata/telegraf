@@ -26,12 +26,12 @@ func (_ *CPUStats) Description() string {
 }
 
 var sampleConfig = `
-	# Whether to report per-cpu stats or not
-	percpu = true
-	# Whether to report total system cpu stats or not
-	totalcpu = true
-	# Comment this line if you want the raw CPU time metrics
-	drop = ["cpu_time"]
+  # Whether to report per-cpu stats or not
+  percpu = true
+  # Whether to report total system cpu stats or not
+  totalcpu = true
+  # Comment this line if you want the raw CPU time metrics
+  drop = ["cpu_time"]
 `
 
 func (_ *CPUStats) SampleConfig() string {

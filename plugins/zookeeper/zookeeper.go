@@ -19,12 +19,12 @@ type Zookeeper struct {
 }
 
 var sampleConfig = `
-	# An array of address to gather stats about. Specify an ip or hostname
-	# with port. ie localhost:2181, 10.0.0.1:2181, etc.
+  # An array of address to gather stats about. Specify an ip or hostname
+  # with port. ie localhost:2181, 10.0.0.1:2181, etc.
 
-	# If no servers are specified, then localhost is used as the host.
-	# If no port is specified, 2181 is used
-	servers = [":2181"]
+  # If no servers are specified, then localhost is used as the host.
+  # If no port is specified, 2181 is used
+  servers = [":2181"]
 `
 
 var defaultTimeout = time.Second * time.Duration(5)

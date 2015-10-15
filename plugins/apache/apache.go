@@ -19,8 +19,8 @@ type Apache struct {
 }
 
 var sampleConfig = `
-	# An array of Apache status URI to gather stats.
-	urls = ["http://localhost/server-status?auto"]
+  # An array of Apache status URI to gather stats.
+  urls = ["http://localhost/server-status?auto"]
 `
 
 func (n *Apache) SampleConfig() string {
@@ -68,82 +68,93 @@ func (n *Apache) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
 	}
-	
+
 	tags := getTags(addr)
-	
+
 	sc := bufio.NewScanner(resp.Body)
 	for sc.Scan() {
-	    line := sc.Text()
-	    if strings.Contains(line, ":") {
-	        
-            parts := strings.SplitN(line, ":", 2)
-            key, part := strings.Replace(parts[0], " ", "", -1), strings.TrimSpace(parts[1])
-            
-	        switch key {
-	            
-                case "Scoreboard":
-                    n.gatherScores(part, acc, tags)
-                default:
-                    value, err := strconv.ParseFloat(part, 32)
-                    if err != nil {
-                        continue
-                    }
-                    acc.Add(key, value, tags)
-	        }
-	    }
+		line := sc.Text()
+		if strings.Contains(line, ":") {
+
+			parts := strings.SplitN(line, ":", 2)
+			key, part := strings.Replace(parts[0], " ", "", -1), strings.TrimSpace(parts[1])
+
+			switch key {
+
+			case "Scoreboard":
+				n.gatherScores(part, acc, tags)
+			default:
+				value, err := strconv.ParseFloat(part, 32)
+				if err != nil {
+					continue
+				}
+				acc.Add(key, value, tags)
+			}
+		}
 	}
 
 	return nil
 }
 
 func (n *Apache) gatherScores(data string, acc plugins.Accumulator, tags map[string]string) {
-    
-    var waiting, open int = 0, 0
-    var S, R, W, K, D, C, L, G, I int = 0, 0, 0, 0, 0, 0, 0, 0, 0
-    
-    for _, s := range strings.Split(data, "") {
-        
-        switch s {
-            case "_": waiting++
-            case "S": S++
-            case "R": R++
-            case "W": W++
-            case "K": K++
-            case "D": D++
-            case "C": C++
-            case "L": L++
-            case "G": G++
-            case "I": I++
-            case ".": open++
-        }
-    }
-    
-    acc.Add("scboard_waiting",      float64(waiting), tags);
-    acc.Add("scboard_starting",     float64(S),       tags);
-    acc.Add("scboard_reading",      float64(R),       tags);
-    acc.Add("scboard_sending",      float64(W),       tags);
-    acc.Add("scboard_keepalive",    float64(K),       tags);
-    acc.Add("scboard_dnslookup",    float64(D),       tags);
-    acc.Add("scboard_closing",      float64(C),       tags);
-    acc.Add("scboard_logging",      float64(L),       tags);
-    acc.Add("scboard_finishing",    float64(G),       tags);
-    acc.Add("scboard_idle_cleanup", float64(I),       tags);
-    acc.Add("scboard_open",         float64(open),    tags);
+
+	var waiting, open int = 0, 0
+	var S, R, W, K, D, C, L, G, I int = 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+	for _, s := range strings.Split(data, "") {
+
+		switch s {
+		case "_":
+			waiting++
+		case "S":
+			S++
+		case "R":
+			R++
+		case "W":
+			W++
+		case "K":
+			K++
+		case "D":
+			D++
+		case "C":
+			C++
+		case "L":
+			L++
+		case "G":
+			G++
+		case "I":
+			I++
+		case ".":
+			open++
+		}
+	}
+
+	acc.Add("scboard_waiting", float64(waiting), tags)
+	acc.Add("scboard_starting", float64(S), tags)
+	acc.Add("scboard_reading", float64(R), tags)
+	acc.Add("scboard_sending", float64(W), tags)
+	acc.Add("scboard_keepalive", float64(K), tags)
+	acc.Add("scboard_dnslookup", float64(D), tags)
+	acc.Add("scboard_closing", float64(C), tags)
+	acc.Add("scboard_logging", float64(L), tags)
+	acc.Add("scboard_finishing", float64(G), tags)
+	acc.Add("scboard_idle_cleanup", float64(I), tags)
+	acc.Add("scboard_open", float64(open), tags)
 }
 
 // Get tag(s) for the apache plugin
 func getTags(addr *url.URL) map[string]string {
 	h := addr.Host
 	host, port, err := net.SplitHostPort(h)
-        if err != nil {
-            host = addr.Host
-            if addr.Scheme == "http" {
-                port = "80"
-            } else if addr.Scheme == "https" {
-                port = "443"
-            } else {
-                port = ""
-            }
+	if err != nil {
+		host = addr.Host
+		if addr.Scheme == "http" {
+			port = "80"
+		} else if addr.Scheme == "https" {
+			port = "443"
+		} else {
+			port = ""
+		}
 	}
 	return map[string]string{"server": host, "port": port}
 }

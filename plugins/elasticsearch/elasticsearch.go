@@ -28,12 +28,12 @@ type node struct {
 }
 
 const sampleConfig = `
-	# specify a list of one or more Elasticsearch servers
-	servers = ["http://localhost:9200"]
+  # specify a list of one or more Elasticsearch servers
+  servers = ["http://localhost:9200"]
 
-	# set local to false when you want to read the indices stats from all nodes
-	# within the cluster
-	local = true
+  # set local to false when you want to read the indices stats from all nodes
+  # within the cluster
+  local = true
 `
 
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch

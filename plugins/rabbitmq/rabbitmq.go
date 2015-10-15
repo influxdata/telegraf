@@ -69,16 +69,16 @@ type Node struct {
 }
 
 var sampleConfig = `
-	# Specify servers via an array of tables
-	[[rabbitmq.servers]]
-	# name = "rmq-server-1" # optional tag
-	# url = "http://localhost:15672"
-	# username = "guest"
-	# password = "guest"
+  # Specify servers via an array of tables
+  [[rabbitmq.servers]]
+  # name = "rmq-server-1" # optional tag
+  # url = "http://localhost:15672"
+  # username = "guest"
+  # password = "guest"
 
-	# A list of nodes to pull metrics about. If not specified, metrics for
-	# all nodes are gathered.
-	# nodes = ["rabbit@node1", "rabbit@node2"]
+  # A list of nodes to pull metrics about. If not specified, metrics for
+  # all nodes are gathered.
+  # nodes = ["rabbit@node1", "rabbit@node2"]
 `
 
 func (r *RabbitMQ) SampleConfig() string {

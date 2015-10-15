@@ -33,16 +33,16 @@ type MQTT struct {
 }
 
 var sampleConfig = `
- 	servers = ["localhost:1883"] # required.
+  servers = ["localhost:1883"] # required.
 
-        # MQTT outputs send metrics to this topic format
-        #    "<topic_prefix>/host/<hostname>/<pluginname>/"
-        #   ex: prefix/host/web01.example.com/mem/available
-        # topic_prefix = "prefix"
+  # MQTT outputs send metrics to this topic format
+  #    "<topic_prefix>/host/<hostname>/<pluginname>/"
+  #   ex: prefix/host/web01.example.com/mem/available
+  # topic_prefix = "prefix"
 
-        # username and password to connect MQTT server.
- 	# username = "telegraf"
- 	# password = "metricsmetricsmetricsmetrics"
+  # username and password to connect MQTT server.
+  # username = "telegraf"
+  # password = "metricsmetricsmetricsmetrics"
 `
 
 func (m *MQTT) Connect() error {

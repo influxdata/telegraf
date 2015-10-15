@@ -22,13 +22,13 @@ type Kafka struct {
 }
 
 var sampleConfig = `
-	# URLs of kafka brokers
-	brokers = ["localhost:9092"]
-	# Kafka topic for producer messages
-	topic = "telegraf"
-	# Telegraf tag to use as a routing key
-	#  ie, if this tag exists, it's value will be used as the routing key
-	routing_tag = "host"
+  # URLs of kafka brokers
+  brokers = ["localhost:9092"]
+  # Kafka topic for producer messages
+  topic = "telegraf"
+  # Telegraf tag to use as a routing key
+  #  ie, if this tag exists, it's value will be used as the routing key
+  routing_tag = "host"
 `
 
 func (k *Kafka) Connect() error {

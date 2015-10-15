@@ -14,14 +14,14 @@ type Mysql struct {
 }
 
 var sampleConfig = `
-	# specify servers via a url matching:
-	#  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
-	#  e.g.
-	#    root:root@http://10.0.0.18/?tls=false
-	#    root:passwd@tcp(127.0.0.1:3036)/
-	#
-	# If no servers are specified, then localhost is used as the host.
-	servers = ["localhost"]
+  # specify servers via a url matching:
+  #  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  #  e.g.
+  #    root:root@http://10.0.0.18/?tls=false
+  #    root:passwd@tcp(127.0.0.1:3036)/
+  #
+  # If no servers are specified, then localhost is used as the host.
+  servers = ["localhost"]
 `
 
 func (m *Mysql) SampleConfig() string {

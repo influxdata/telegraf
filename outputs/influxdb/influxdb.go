@@ -27,20 +27,20 @@ type InfluxDB struct {
 }
 
 var sampleConfig = `
-	# The full HTTP endpoint URL for your InfluxDB instance
-	# Multiple urls can be specified for InfluxDB cluster support.
-	urls = ["http://localhost:8086"] # required
-	# The target database for metrics (telegraf will create it if not exists)
-	database = "telegraf" # required
+  # The full HTTP endpoint URL for your InfluxDB instance
+  # Multiple urls can be specified for InfluxDB cluster support.
+  urls = ["http://localhost:8086"] # required
+  # The target database for metrics (telegraf will create it if not exists)
+  database = "telegraf" # required
 
-	# # Connection timeout (for the connection with InfluxDB), formatted as a string.
-	# # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-	# # If not provided, will default to 0 (no timeout)
-	# timeout = "5s"
-	# username = "telegraf"
-	# password = "metricsmetricsmetricsmetrics"
-	# # Set the user agent for the POSTs (can be useful for log differentiation)
-	# user_agent = "telegraf"
+  # Connection timeout (for the connection with InfluxDB), formatted as a string.
+  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+  # If not provided, will default to 0 (no timeout)
+  # timeout = "5s"
+  # username = "telegraf"
+  # password = "metricsmetricsmetricsmetrics"
+  # Set the user agent for the POSTs (can be useful for log differentiation)
+  # user_agent = "telegraf"
 `
 
 func (i *InfluxDB) Connect() error {

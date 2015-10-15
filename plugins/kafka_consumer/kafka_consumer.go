@@ -20,17 +20,17 @@ type Kafka struct {
 }
 
 var sampleConfig = `
-	# topic to consume
-	topic = "topic_with_metrics"
+  # topic to consume
+  topic = "topic_with_metrics"
 
-	# the name of the consumer group
-	consumerGroupName = "telegraf_metrics_consumers"
+  # the name of the consumer group
+  consumerGroupName = "telegraf_metrics_consumers"
 
-	# an array of Zookeeper connection strings
-	zookeeperPeers = ["localhost:2181"]
+  # an array of Zookeeper connection strings
+  zookeeperPeers = ["localhost:2181"]
 
-	# Batch size of points sent to InfluxDB
-	batchSize = 1000
+  # Batch size of points sent to InfluxDB
+  batchSize = 1000
 `
 
 func (k *Kafka) SampleConfig() string {

@@ -104,35 +104,35 @@ type cachedtimings struct {
 }
 
 func (_ *Statsd) Description() string {
-	return "Statsd listener"
+	return "Statsd Server"
 }
 
 const sampleConfig = `
-    # Address and port to host UDP listener on
-    service_address = ":8125"
-    # Delete gauges every interval (default=false)
-    delete_gauges = false
-    # Delete counters every interval (default=false)
-    delete_counters = false
-    # Delete sets every interval (default=false)
-    delete_sets = false
-    # Delete timings & histograms every interval (default=true)
-    delete_timings = true
-    # Percentiles to calculate for timing & histogram stats
-    percentiles = [90]
+  # Address and port to host UDP listener on
+  service_address = ":8125"
+  # Delete gauges every interval (default=false)
+  delete_gauges = false
+  # Delete counters every interval (default=false)
+  delete_counters = false
+  # Delete sets every interval (default=false)
+  delete_sets = false
+  # Delete timings & histograms every interval (default=true)
+  delete_timings = true
+  # Percentiles to calculate for timing & histogram stats
+  percentiles = [90]
 
-    # templates = [
-    #     "cpu.* measurement*"
-    # ]
+  # templates = [
+  #     "cpu.* measurement*"
+  # ]
 
-    # Number of UDP messages allowed to queue up, once filled,
-    # the statsd server will start dropping packets
-    allowed_pending_messages = 10000
+  # Number of UDP messages allowed to queue up, once filled,
+  # the statsd server will start dropping packets
+  allowed_pending_messages = 10000
 
-    # Number of timing/histogram values to track per-measurement in the
-    # calculation of percentiles. Raising this limit increases the accuracy
-    # of percentiles but also increases the memory usage and cpu time.
-    percentile_limit = 1000
+  # Number of timing/histogram values to track per-measurement in the
+  # calculation of percentiles. Raising this limit increases the accuracy
+  # of percentiles but also increases the memory usage and cpu time.
+  percentile_limit = 1000
 `
 
 func (_ *Statsd) SampleConfig() string {

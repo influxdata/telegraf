@@ -22,11 +22,11 @@ type Datadog struct {
 }
 
 var sampleConfig = `
-	# Datadog API key
-	apikey = "my-secret-key" # required.
+  # Datadog API key
+  apikey = "my-secret-key" # required.
 
-	# Connection timeout.
-	# timeout = "5s"
+  # Connection timeout.
+  # timeout = "5s"
 `
 
 type TimeSeries struct {

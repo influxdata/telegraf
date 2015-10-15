@@ -46,25 +46,25 @@ func (c RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 }
 
 var sampleConfig = `
-	# Specify services via an array of tables
-	[[httpjson.services]]
+  # Specify services via an array of tables
+  [[httpjson.services]]
 
-		# a name for the service being polled
-		name = "webserver_stats"
+    # a name for the service being polled
+    name = "webserver_stats"
 
-		# URL of each server in the service's cluster
-		servers = [
-			"http://localhost:9999/stats/",
-			"http://localhost:9998/stats/",
-		]
+    # URL of each server in the service's cluster
+    servers = [
+      "http://localhost:9999/stats/",
+      "http://localhost:9998/stats/",
+    ]
 
-		# HTTP method to use (case-sensitive)
-		method = "GET"
+    # HTTP method to use (case-sensitive)
+    method = "GET"
 
-		# HTTP parameters (all values must be strings)
-		[httpjson.services.parameters]
-			event_type = "cpu_spike"
-			threshold = "0.75"
+    # HTTP parameters (all values must be strings)
+    [httpjson.services.parameters]
+      event_type = "cpu_spike"
+      threshold = "0.75"
 `
 
 func (h *HttpJson) SampleConfig() string {

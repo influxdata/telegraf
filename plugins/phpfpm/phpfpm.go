@@ -39,19 +39,19 @@ type phpfpm struct {
 }
 
 var sampleConfig = `
-	# An array of addresses to gather stats about. Specify an ip or hostname
-	# with optional port and path.
-	#
-	# Plugin can be configured in two modes (both can be used):
-	#   - http: the URL must start with http:// or https://, ex:
-	#		"http://localhost/status"
-	#		"http://192.168.130.1/status?full"
-	#   - unixsocket: path to fpm socket, ex:
-	#		"/var/run/php5-fpm.sock"
-	#		"192.168.10.10:/var/run/php5-fpm-www2.sock"
-	#
-	# If no servers are specified, then default to 127.0.0.1/server-status
-	urls = ["http://localhost/status"]
+  # An array of addresses to gather stats about. Specify an ip or hostname
+  # with optional port and path.
+  #
+  # Plugin can be configured in two modes (both can be used):
+  #   - http: the URL must start with http:// or https://, ex:
+  #       "http://localhost/status"
+  #       "http://192.168.130.1/status?full"
+  #   - unixsocket: path to fpm socket, ex:
+  #       "/var/run/php5-fpm.sock"
+  #       "192.168.10.10:/var/run/php5-fpm-www2.sock"
+  #
+  # If no servers are specified, then default to 127.0.0.1/server-status
+  urls = ["http://localhost/status"]
 `
 
 func (r *phpfpm) SampleConfig() string {

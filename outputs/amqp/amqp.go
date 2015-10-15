@@ -24,13 +24,13 @@ type AMQP struct {
 }
 
 var sampleConfig = `
-	# AMQP url
-	url = "amqp://localhost:5672/influxdb"
-	# AMQP exchange
-	exchange = "telegraf"
-	# Telegraf tag to use as a routing key
-	#  ie, if this tag exists, it's value will be used as the routing key
-	routing_tag = "host"
+  # AMQP url
+  url = "amqp://localhost:5672/influxdb"
+  # AMQP exchange
+  exchange = "telegraf"
+  # Telegraf tag to use as a routing key
+  #  ie, if this tag exists, it's value will be used as the routing key
+  routing_tag = "host"
 `
 
 func (q *AMQP) Connect() error {

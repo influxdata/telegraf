@@ -349,25 +349,21 @@ var header = `# Telegraf configuration
 
 # Tags can also be specified via a normal map, but only one form at a time:
 [tags]
-	# dc = "us-east-1"
+  # dc = "us-east-1"
 
 # Configuration for telegraf agent
 [agent]
-	# Default data collection interval for all plugins
-	interval = "10s"
-
-	# If utc = false, uses local time (utc is highly recommended)
-	utc = true
-
-	# Precision of writes, valid values are n, u, ms, s, m, and h
-	# note: using second precision greatly helps InfluxDB compression
-	precision = "s"
-
-	# run telegraf in debug mode
-	debug = false
-
-	# Override default hostname, if empty use os.Hostname()
-	hostname = ""
+  # Default data collection interval for all plugins
+  interval = "10s"
+  # If utc = false, uses local time (utc is highly recommended)
+  utc = true
+  # Precision of writes, valid values are n, u, ms, s, m, and h
+  # note: using second precision greatly helps InfluxDB compression
+  precision = "s"
+  # run telegraf in debug mode
+  debug = false
+  # Override default hostname, if empty use os.Hostname()
+  hostname = ""
 
 
 ###############################################################################
@@ -413,7 +409,7 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 
 		config := output.SampleConfig()
 		if config == "" {
-			fmt.Printf("\n	# no configuration\n")
+			fmt.Printf("\n  # no configuration\n")
 		} else {
 			fmt.Printf(config)
 		}
@@ -455,7 +451,7 @@ func printConfig(name string, plugin plugins.Plugin) {
 	fmt.Printf("\n# %s\n[%s]", plugin.Description(), name)
 	config := plugin.SampleConfig()
 	if config == "" {
-		fmt.Printf("\n	# no configuration\n")
+		fmt.Printf("\n  # no configuration\n")
 	} else {
 		fmt.Printf(config)
 	}

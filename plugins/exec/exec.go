@@ -13,17 +13,17 @@ import (
 )
 
 const sampleConfig = `
-	# specify commands via an array of tables
-	[[exec.commands]]
-	# the command to run
-	command = "/usr/bin/mycollector --foo=bar"
+  # specify commands via an array of tables
+  [[exec.commands]]
+  # the command to run
+  command = "/usr/bin/mycollector --foo=bar"
 
-	# name of the command (used as a prefix for measurements)
-	name = "mycollector"
+  # name of the command (used as a prefix for measurements)
+  name = "mycollector"
 
-	# Only run this command if it has been at least this many
-	# seconds since it last ran
-	interval = 10
+  # Only run this command if it has been at least this many
+  # seconds since it last ran
+  interval = 10
 `
 
 type Exec struct {
