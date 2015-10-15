@@ -32,7 +32,7 @@
 AWS_FILE=~/aws.conf
 
 INSTALL_ROOT_DIR=/opt/telegraf
-INSTALL_BIN_DIR=/bin
+INSTALL_BIN_DIR=/usr/bin
 TELEGRAF_LOG_DIR=/var/log/telegraf
 CONFIG_ROOT_DIR=/etc/telegraf
 LOGROTATE_DIR=/etc/logrotate.d
