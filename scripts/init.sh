@@ -95,7 +95,7 @@ function log_success_msg() {
 name=telegraf
 
 # Daemon name, where is the actual executable
-daemon=/bin/telegraf
+daemon=/usr/bin/telegraf
 
 # pid file for the daemon
 pidfile=/var/run/telegraf/telegraf.pid
