@@ -22,6 +22,7 @@ type Service struct {
 	Name       string
 	Servers    []string
 	Method     string
+	Tags       []string
 	Parameters map[string]string
 }
 
@@ -60,6 +61,12 @@ var sampleConfig = `
 
     # HTTP method to use (case-sensitive)
     method = "GET"
+
+    # List of tag names to extract from server response
+    tags = [
+    	"my_tag_1",
+    	"my_tag_2"
+    ]
 
     # HTTP parameters (all values must be strings)
     [httpjson.services.parameters]
@@ -126,13 +133,21 @@ func (h *HttpJson) gatherServer(acc plugins.Accumulator, service Service, server
 		return err
 	}
 
-	var jsonOut interface{}
+	var jsonOut map[string]interface{}
 	if err = json.Unmarshal([]byte(resp), &jsonOut); err != nil {
 		return errors.New("Error decoding JSON response")
 	}
 
 	tags := map[string]string{
 		"server": serverURL,
+	}
+
+	for _, tag := range service.Tags {
+		switch v := jsonOut[tag].(type) {
+			case string:
+		    tags[tag] = v
+		}
+		delete(jsonOut, tag)
 	}
 
 	processResponse(acc, service.Name, tags, jsonOut)
