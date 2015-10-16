@@ -28,6 +28,14 @@ const validJSON = `
 		}
 	}`
 
+const validJSONTags = `
+	{
+		"value": 15,
+		"role": "master",
+		"build": "123"
+	}`
+
+
 const invalidJSON = "I don't think this is JSON"
 
 const empty = ""
@@ -87,14 +95,18 @@ func genMockHttpJson(response string, statusCode int) *HttpJson {
 			},
 			Service{
 				Servers: []string{
-					"http://server1.example.com/metrics/",
-					"http://server2.example.com/metrics/",
+					"http://server3.example.com/metrics/",
+					"http://server4.example.com/metrics/",
 				},
 				Name:   "other_webapp",
 				Method: "POST",
 				Parameters: map[string]string{
 					"httpParam1": "12",
 					"httpParam2": "the second parameter",
+				},
+				Tags: []string{
+					"role",
+					"build",
 				},
 			},
 		},
@@ -184,4 +196,29 @@ func TestHttpJsonEmptyResponse(t *testing.T) {
 	// 4 error lines for (2 urls) * (2 services)
 	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 4)
 	assert.Equal(t, 0, len(acc.Points))
+}
+
+// Test that the proper values are ignored or collected
+func TestHttpJson200Tags(t *testing.T) {
+	httpjson := genMockHttpJson(validJSONTags, 200)
+
+	var acc testutil.Accumulator
+	err := httpjson.Gather(&acc)
+	require.NoError(t, err)
+
+	assert.Equal(t, 4, len(acc.Points))
+
+	for _, service := range httpjson.Services {
+		if service.Name == "other_webapp" {
+			for _, srv := range service.Servers {
+				require.NoError(t,
+					acc.ValidateTaggedValue(
+						fmt.Sprintf("%s_value", service.Name),
+						15.0,
+						map[string]string{"server": srv, "role": "master", "build": "123"},
+					),
+				)
+			}
+		}
+	}
 }
