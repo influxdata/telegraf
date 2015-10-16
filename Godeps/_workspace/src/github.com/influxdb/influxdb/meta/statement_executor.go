@@ -23,6 +23,7 @@ type StatementExecutor struct {
 		Databases() ([]DatabaseInfo, error)
 		CreateDatabase(name string) (*DatabaseInfo, error)
 		DropDatabase(name string) error
+		RenameDatabase(oldName, newName string) error
 
 		DefaultRetentionPolicy(database string) (*RetentionPolicyInfo, error)
 		CreateRetentionPolicy(database string, rpi *RetentionPolicyInfo) (*RetentionPolicyInfo, error)
@@ -41,6 +42,9 @@ type StatementExecutor struct {
 
 		CreateContinuousQuery(database, name, query string) error
 		DropContinuousQuery(database, name string) error
+
+		CreateSubscription(database, rp, name, mode string, destinations []string) error
+		DropSubscription(database, rp, name string) error
 	}
 }
 
@@ -69,6 +73,8 @@ func (e *StatementExecutor) ExecuteStatement(stmt influxql.Statement) *influxql.
 		return e.executeGrantStatement(stmt)
 	case *influxql.GrantAdminStatement:
 		return e.executeGrantAdminStatement(stmt)
+	case *influxql.AlterDatabaseRenameStatement:
+		return e.executeAlterDatabaseRenameStatement(stmt)
 	case *influxql.RevokeStatement:
 		return e.executeRevokeStatement(stmt)
 	case *influxql.RevokeAdminStatement:
@@ -93,6 +99,12 @@ func (e *StatementExecutor) ExecuteStatement(stmt influxql.Statement) *influxql.
 		return e.executeShowStatsStatement(stmt)
 	case *influxql.DropServerStatement:
 		return e.executeDropServerStatement(stmt)
+	case *influxql.CreateSubscriptionStatement:
+		return e.executeCreateSubscriptionStatement(stmt)
+	case *influxql.DropSubscriptionStatement:
+		return e.executeDropSubscriptionStatement(stmt)
+	case *influxql.ShowSubscriptionsStatement:
+		return e.executeShowSubscriptionsStatement(stmt)
 	default:
 		panic(fmt.Sprintf("unsupported statement type: %T", stmt))
 	}
@@ -212,6 +224,10 @@ func (e *StatementExecutor) executeGrantAdminStatement(stmt *influxql.GrantAdmin
 	return &influxql.Result{Err: e.Store.SetAdminPrivilege(stmt.User, true)}
 }
 
+func (e *StatementExecutor) executeAlterDatabaseRenameStatement(q *influxql.AlterDatabaseRenameStatement) *influxql.Result {
+	return &influxql.Result{Err: e.Store.RenameDatabase(q.OldName, q.NewName)}
+}
+
 func (e *StatementExecutor) executeRevokeStatement(stmt *influxql.RevokeStatement) *influxql.Result {
 	priv := influxql.NoPrivileges
 
@@ -315,6 +331,39 @@ func (e *StatementExecutor) executeShowContinuousQueriesStatement(stmt *influxql
 			row.Values = append(row.Values, []interface{}{cqi.Name, cqi.Query})
 		}
 		rows = append(rows, row)
+	}
+	return &influxql.Result{Series: rows}
+}
+
+func (e *StatementExecutor) executeCreateSubscriptionStatement(q *influxql.CreateSubscriptionStatement) *influxql.Result {
+	return &influxql.Result{
+		Err: e.Store.CreateSubscription(q.Database, q.RetentionPolicy, q.Name, q.Mode, q.Destinations),
+	}
+}
+
+func (e *StatementExecutor) executeDropSubscriptionStatement(q *influxql.DropSubscriptionStatement) *influxql.Result {
+	return &influxql.Result{
+		Err: e.Store.DropSubscription(q.Database, q.RetentionPolicy, q.Name),
+	}
+}
+
+func (e *StatementExecutor) executeShowSubscriptionsStatement(stmt *influxql.ShowSubscriptionsStatement) *influxql.Result {
+	dis, err := e.Store.Databases()
+	if err != nil {
+		return &influxql.Result{Err: err}
+	}
+
+	rows := []*models.Row{}
+	for _, di := range dis {
+		row := &models.Row{Columns: []string{"retention_policy", "name", "mode", "destinations"}, Name: di.Name}
+		for _, rpi := range di.RetentionPolicies {
+			for _, si := range rpi.Subscriptions {
+				row.Values = append(row.Values, []interface{}{rpi.Name, si.Name, si.Mode, si.Destinations})
+			}
+		}
+		if len(row.Values) > 0 {
+			rows = append(rows, row)
+		}
 	}
 	return &influxql.Result{Series: rows}
 }

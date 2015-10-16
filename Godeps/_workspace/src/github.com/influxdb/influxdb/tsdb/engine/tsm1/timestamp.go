@@ -56,7 +56,7 @@ type TimeEncoder interface {
 	Bytes() ([]byte, error)
 }
 
-// TimeEncoder decodes byte slices to time.Time values.
+// TimeDecoder decodes byte slices to time.Time values.
 type TimeDecoder interface {
 	Next() bool
 	Read() time.Time
@@ -124,7 +124,7 @@ func (e *encoder) Bytes() ([]byte, error) {
 	max, div, rle, dts := e.reduce()
 
 	// The deltas are all the same, so we can run-length encode them
-	if rle && len(e.ts) > 60 {
+	if rle && len(e.ts) > 1 {
 		return e.encodeRLE(e.ts[0], e.ts[1], div, len(e.ts))
 	}
 
@@ -264,7 +264,7 @@ func (d *decoder) decodeRLE(b []byte) {
 
 	// Lower 4 bits hold the 10 based exponent so we can scale the values back up
 	mod := int64(math.Pow10(int(b[i] & 0xF)))
-	i += 1
+	i++
 
 	// Next 8 bytes is the starting timestamp
 	first := binary.BigEndian.Uint64(b[i : i+8])
@@ -278,7 +278,7 @@ func (d *decoder) decodeRLE(b []byte) {
 	i += n
 
 	// Last 1-10 bytes is how many times the value repeats
-	count, n := binary.Uvarint(b[i:])
+	count, _ := binary.Uvarint(b[i:])
 
 	// Rebuild construct the original values now
 	deltas := make([]uint64, count)

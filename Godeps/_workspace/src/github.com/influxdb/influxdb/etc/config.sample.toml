@@ -8,6 +8,10 @@
 # Change this option to true to disable reporting.
 reporting-disabled = false
 
+# Enterprise registration control
+# enterprise-url = "https://enterprise.influxdata.com" # The Enterprise server URL
+# enterprise-token = "" # Registration token for Enterprise server
+
 ###
 ### [meta]
 ###
@@ -235,7 +239,7 @@ reporting-disabled = false
 [[udp]]
   enabled = false
   # bind-address = ""
-  # database = ""
+  # database = "udp"
   # retention-policy = ""
 
   # These next lines control how batching works. You should have this enabled

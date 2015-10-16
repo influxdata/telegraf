@@ -1,6 +1,7 @@
 ## v0.9.5 [unreleased]
 
 ### Features
+- [#4098](https://github.com/influxdb/influxdb/issues/4098): Enable `golint` on the code base - uuid subpackage
 - [#4141](https://github.com/influxdb/influxdb/pull/4141): Control whether each query should be logged
 - [#4065](https://github.com/influxdb/influxdb/pull/4065): Added precision support in cmd client. Thanks @sbouchex
 - [#4140](https://github.com/influxdb/influxdb/pull/4140): Make storage engine configurable
@@ -13,8 +14,16 @@
 - [#4265](https://github.com/influxdb/influxdb/pull/4265): Add statistics for Hinted-Handoff
 - [#4284](https://github.com/influxdb/influxdb/pull/4284): Add exponential backoff for hinted-handoff failures
 - [#4310](https://github.com/influxdb/influxdb/pull/4310): Support dropping non-Raft nodes. Work mostly by @corylanou
+- [#4348](https://github.com/influxdb/influxdb/pull/4348): Public ApplyTemplate function for graphite parser.
+- [#4178](https://github.com/influxdb/influxdb/pull/4178): Support fields in graphite parser. Thanks @roobert!
+- [#4291](https://github.com/influxdb/influxdb/pull/4291): Added ALTER DATABASE RENAME. Thanks @linearb
+- [#4409](https://github.com/influxdb/influxdb/pull/4409): wire up INTO queries.
+- [#4379](https://github.com/influxdb/influxdb/pull/4379): Auto-create database for UDP input.
+- [#4375](https://github.com/influxdb/influxdb/pull/4375): Add Subscriptions so data can be 'forked' out of InfluxDB to another third party.
+- [#4459](https://github.com/influxdb/influxdb/pull/4459): Register with Enterprise service if token available.
 
 ### Bugfixes
+- [#4389](https://github.com/influxdb/influxdb/pull/4389): Don't add a new segment file on each hinted-handoff purge cycle.
 - [#4166](https://github.com/influxdb/influxdb/pull/4166): Fix parser error on invalid SHOW
 - [#3457](https://github.com/influxdb/influxdb/issues/3457): [0.9.3] cannot select field names with prefix + "." that match the measurement name
 - [#4225](https://github.com/influxdb/influxdb/pull/4225): Always display diags in name-sorted order
@@ -36,13 +45,32 @@
 - [#4263](https://github.com/influxdb/influxdb/issues/4263): derivative does not work when data is missing
 - [#4293](https://github.com/influxdb/influxdb/pull/4293): Ensure shell is invoked when touching PID file. Thanks @christopherjdickson
 - [#4296](https://github.com/influxdb/influxdb/pull/4296): Reject line protocol ending with '-'. Fixes [#4272](https://github.com/influxdb/influxdb/issues/4272)
-- [#4333](https://github.com/influxdb/influxdb/pull/4333): Retry monitor storage creation and only on Leader.
+- [#4333](https://github.com/influxdb/influxdb/pull/4333): Retry monitor storage creation and storage only on Leader.
 - [#4276](https://github.com/influxdb/influxdb/issues/4276): Walk DropSeriesStatement & check for empty sources
+- [#4465](https://github.com/influxdb/influxdb/pull/4465): Actually display a message if the CLI can't connect to the database.
 - [#4342](https://github.com/influxdb/influxdb/pull/4342): Fix mixing aggregates and math with non-aggregates. Thanks @kostya-sh.
 - [#4349](https://github.com/influxdb/influxdb/issues/4349): If HH can't unmarshal a block, skip that block.
 - [#4354](https://github.com/influxdb/influxdb/pull/4353): Fully lock node queues during hinted handoff. Fixes one cause of missing data on clusters.
 - [#4357](https://github.com/influxdb/influxdb/issues/4357): Fix similar float values encoding overflow Thanks @dgryski!
 - [#4344](https://github.com/influxdb/influxdb/issues/4344): Make client.Write default to client.precision if none is given.
+- [#3429](https://github.com/influxdb/influxdb/issues/3429): Incorrect parsing of regex containing '/'
+- [#4374](https://github.com/influxdb/influxdb/issues/4374): Add tsm1 quickcheck tests
+- [#4377](https://github.com/influxdb/influxdb/pull/4377): Hinted handoff should not process dropped nodes
+- [#4365](https://github.com/influxdb/influxdb/issues/4365): Prevent panic in DecodeSameTypeBlock
+- [#4280](https://github.com/influxdb/influxdb/issues/4280): Only drop points matching WHERE clause
+- [#4443](https://github.com/influxdb/influxdb/pull/4443): Fix race condition while listing store's shards. Fixes [#4442](https://github.com/influxdb/influxdb/issues/4442)
+- [#4410](https://github.com/influxdb/influxdb/pull/4410): Fix infinite recursion in statement string(). Thanks @kostya-sh
+- [#4360](https://github.com/influxdb/influxdb/issues/4360): Aggregate Selectors overwrite values during post-processing
+- [#4421](https://github.com/influxdb/influxdb/issues/4421): Fix line protocol accepting tags with no values
+- [#4434](https://github.com/influxdb/influxdb/pull/4434): Allow 'E' for scientific values. Fixes [#4433](https://github.com/influxdb/influxdb/issues/4433)
+- [#4431](https://github.com/influxdb/influxdb/issues/4431): Add tsm1 WAL QuickCheck
+- [#4438](https://github.com/influxdb/influxdb/pull/4438): openTSDB service shutdown fixes
+- [#4447](https://github.com/influxdb/influxdb/pull/4447): Fixes to logrotate file. Thanks @linsomniac.
+- [#3820](https://github.com/influxdb/influxdb/issues/3820): Fix js error in admin UI.
+- [#4460](https://github.com/influxdb/influxdb/issues/4460): tsm1 meta lint
+- [#4415](https://github.com/influxdb/influxdb/issues/4415): Selector (like max, min, first, etc) return a string instead of timestamp
+- [#4472](https://github.com/influxdb/influxdb/issues/4472): Fix 'too many points in GROUP BY interval' error
+- [#4475](https://github.com/influxdb/influxdb/issues/4475): Fix SHOW TAG VALUES error message.
 
 ## v0.9.4 [2015-09-14]
 

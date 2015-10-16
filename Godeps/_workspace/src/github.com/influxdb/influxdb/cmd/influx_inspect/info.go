@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -13,15 +12,9 @@ import (
 	"text/tabwriter"
 
 	"github.com/influxdb/influxdb/tsdb"
-	_ "github.com/influxdb/influxdb/tsdb/engine"
 )
 
-func main() {
-
-	var path string
-	flag.StringVar(&path, "p", os.Getenv("HOME")+"/.influxdb", "Root storage path. [$HOME/.influxdb]")
-	flag.Parse()
-
+func cmdInfo(path string) {
 	tstore := tsdb.NewStore(filepath.Join(path, "data"))
 	tstore.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
 	tstore.EngineOptions.Config.Dir = filepath.Join(path, "data")
@@ -38,9 +31,8 @@ func main() {
 	}
 
 	// Summary stats
-	fmt.Printf("Shards: %d, Indexes: %d, Databases: %d, Disk Size: %d, Series: %d\n",
+	fmt.Printf("Shards: %d, Indexes: %d, Databases: %d, Disk Size: %d, Series: %d\n\n",
 		tstore.ShardN(), tstore.DatabaseIndexN(), len(tstore.Databases()), size, countSeries(tstore))
-	fmt.Println()
 
 	tw := tabwriter.NewWriter(os.Stdout, 16, 8, 0, '\t', 0)
 
@@ -70,34 +62,14 @@ func main() {
 			// Sample a point from each measurement to determine the field types
 			for _, shardID := range shardIDs {
 				shard := tstore.Shard(shardID)
-				tx, err := shard.ReadOnlyTx()
-				if err != nil {
-					fmt.Printf("Failed to get transaction: %v", err)
+				codec := shard.FieldCodec(m.Name)
+				for _, field := range codec.Fields() {
+					ft := fmt.Sprintf("%s:%s", field.Name, field.Type)
+					fmt.Fprintf(tw, "%d\t%s\t%s\t%d/%d\t%d [%s]\t%d\n", shardID, db, m.Name, len(tags), tagValues,
+						len(fields), ft, len(series))
+
 				}
 
-				for _, key := range series {
-					fieldSummary := []string{}
-					cursor := tx.Cursor(key, m.FieldNames(), shard.FieldCodec(m.Name), true)
-
-					// Series doesn't exist in this shard
-					if cursor == nil {
-						continue
-					}
-
-					// Seek to the beginning
-					_, fields := cursor.SeekTo(0)
-					if fields, ok := fields.(map[string]interface{}); ok {
-						for field, value := range fields {
-							fieldSummary = append(fieldSummary, fmt.Sprintf("%s:%T", field, value))
-						}
-						sort.Strings(fieldSummary)
-
-						fmt.Fprintf(tw, "%d\t%s\t%s\t%d/%d\t%d [%s]\t%d\n", shardID, db, m.Name, len(tags), tagValues,
-							len(fields), strings.Join(fieldSummary, ","), len(series))
-					}
-					break
-				}
-				tx.Rollback()
 			}
 		}
 	}

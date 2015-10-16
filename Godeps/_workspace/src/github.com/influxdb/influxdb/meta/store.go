@@ -927,6 +927,16 @@ func (s *Store) DropDatabase(name string) error {
 	)
 }
 
+// RenameDatabase renames a database in the metastore
+func (s *Store) RenameDatabase(oldName, newName string) error {
+	return s.exec(internal.Command_RenameDatabaseCommand, internal.E_RenameDatabaseCommand_Command,
+		&internal.RenameDatabaseCommand{
+			OldName: proto.String(oldName),
+			NewName: proto.String(newName),
+		},
+	)
+}
+
 // RetentionPolicy returns a retention policy for a database by name.
 func (s *Store) RetentionPolicy(database, name string) (rpi *RetentionPolicyInfo, err error) {
 	err = s.read(func(data *Data) error {
@@ -1197,6 +1207,30 @@ func (s *Store) DropContinuousQuery(database, name string) error {
 		&internal.DropContinuousQueryCommand{
 			Database: proto.String(database),
 			Name:     proto.String(name),
+		},
+	)
+}
+
+// CreateSubscription creates a new subscription on the store.
+func (s *Store) CreateSubscription(database, rp, name, mode string, destinations []string) error {
+	return s.exec(internal.Command_CreateSubscriptionCommand, internal.E_CreateSubscriptionCommand_Command,
+		&internal.CreateSubscriptionCommand{
+			Database:        proto.String(database),
+			RetentionPolicy: proto.String(rp),
+			Name:            proto.String(name),
+			Mode:            proto.String(mode),
+			Destinations:    destinations,
+		},
+	)
+}
+
+// DropSubscription removes a subscription from the store.
+func (s *Store) DropSubscription(database, rp, name string) error {
+	return s.exec(internal.Command_DropSubscriptionCommand, internal.E_DropSubscriptionCommand_Command,
+		&internal.DropSubscriptionCommand{
+			Database:        proto.String(database),
+			RetentionPolicy: proto.String(rp),
+			Name:            proto.String(name),
 		},
 	)
 }
@@ -1602,6 +1636,14 @@ func (s *Store) SetHashPasswordFn(fn HashPasswordFn) {
 	s.hashPassword = fn
 }
 
+// notifiyChanged will close a changed channel which brooadcasts to all waiting
+// goroutines that the meta store has been updated.  Callers are responsible for locking
+// the meta store before calling this.
+func (s *Store) notifyChanged() {
+	close(s.changed)
+	s.changed = make(chan struct{})
+}
+
 // storeFSM represents the finite state machine used by Store to interact with Raft.
 type storeFSM Store
 
@@ -1626,6 +1668,8 @@ func (fsm *storeFSM) Apply(l *raft.Log) interface{} {
 			return fsm.applyCreateDatabaseCommand(&cmd)
 		case internal.Command_DropDatabaseCommand:
 			return fsm.applyDropDatabaseCommand(&cmd)
+		case internal.Command_RenameDatabaseCommand:
+			return fsm.applyRenameDatabaseCommand(&cmd)
 		case internal.Command_CreateRetentionPolicyCommand:
 			return fsm.applyCreateRetentionPolicyCommand(&cmd)
 		case internal.Command_DropRetentionPolicyCommand:
@@ -1642,6 +1686,10 @@ func (fsm *storeFSM) Apply(l *raft.Log) interface{} {
 			return fsm.applyCreateContinuousQueryCommand(&cmd)
 		case internal.Command_DropContinuousQueryCommand:
 			return fsm.applyDropContinuousQueryCommand(&cmd)
+		case internal.Command_CreateSubscriptionCommand:
+			return fsm.applyCreateSubscriptionCommand(&cmd)
+		case internal.Command_DropSubscriptionCommand:
+			return fsm.applyDropSubscriptionCommand(&cmd)
 		case internal.Command_CreateUserCommand:
 			return fsm.applyCreateUserCommand(&cmd)
 		case internal.Command_DropUserCommand:
@@ -1664,8 +1712,7 @@ func (fsm *storeFSM) Apply(l *raft.Log) interface{} {
 	// Copy term and index to new metadata.
 	fsm.data.Term = l.Term
 	fsm.data.Index = l.Index
-	close(s.changed)
-	s.changed = make(chan struct{})
+	s.notifyChanged()
 
 	return err
 }
@@ -1744,6 +1791,20 @@ func (fsm *storeFSM) applyDropDatabaseCommand(cmd *internal.Command) interface{}
 	// Copy data and update.
 	other := fsm.data.Clone()
 	if err := other.DropDatabase(v.GetName()); err != nil {
+		return err
+	}
+	fsm.data = other
+
+	return nil
+}
+
+func (fsm *storeFSM) applyRenameDatabaseCommand(cmd *internal.Command) interface{} {
+	ext, _ := proto.GetExtension(cmd, internal.E_RenameDatabaseCommand_Command)
+	v := ext.(*internal.RenameDatabaseCommand)
+
+	// Copy data and update.
+	other := fsm.data.Clone()
+	if err := other.RenameDatabase(v.GetOldName(), v.GetNewName()); err != nil {
 		return err
 	}
 	fsm.data = other
@@ -1874,6 +1935,34 @@ func (fsm *storeFSM) applyDropContinuousQueryCommand(cmd *internal.Command) inte
 	// Copy data and update.
 	other := fsm.data.Clone()
 	if err := other.DropContinuousQuery(v.GetDatabase(), v.GetName()); err != nil {
+		return err
+	}
+	fsm.data = other
+
+	return nil
+}
+
+func (fsm *storeFSM) applyCreateSubscriptionCommand(cmd *internal.Command) interface{} {
+	ext, _ := proto.GetExtension(cmd, internal.E_CreateSubscriptionCommand_Command)
+	v := ext.(*internal.CreateSubscriptionCommand)
+
+	// Copy data and update.
+	other := fsm.data.Clone()
+	if err := other.CreateSubscription(v.GetDatabase(), v.GetRetentionPolicy(), v.GetName(), v.GetMode(), v.GetDestinations()); err != nil {
+		return err
+	}
+	fsm.data = other
+
+	return nil
+}
+
+func (fsm *storeFSM) applyDropSubscriptionCommand(cmd *internal.Command) interface{} {
+	ext, _ := proto.GetExtension(cmd, internal.E_DropSubscriptionCommand_Command)
+	v := ext.(*internal.DropSubscriptionCommand)
+
+	// Copy data and update.
+	other := fsm.data.Clone()
+	if err := other.DropSubscription(v.GetDatabase(), v.GetRetentionPolicy(), v.GetName()); err != nil {
 		return err
 	}
 	fsm.data = other

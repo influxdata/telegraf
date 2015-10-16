@@ -18,8 +18,10 @@ import (
 )
 
 const (
-	// floatUncompressed is an uncompressed format using 8 bytes per value
+	// floatUncompressed is an uncompressed format using 8 bytes per value.
+	// Not yet implemented.
 	floatUncompressed = 0
+
 	// floatCompressedGorilla is a compressed format using the gorilla paper encoding
 	floatCompressedGorilla = 1
 )
@@ -154,6 +156,13 @@ func (it *FloatDecoder) Next() bool {
 
 	if it.first {
 		it.first = false
+
+		// mark as finished if there were no values.
+		if math.IsNaN(it.val) {
+			it.finished = true
+			return false
+		}
+
 		return true
 	}
 

@@ -150,6 +150,7 @@ func TestScanner_Scan(t *testing.T) {
 		{s: `QUERIES`, tok: influxql.QUERIES},
 		{s: `QUERY`, tok: influxql.QUERY},
 		{s: `READ`, tok: influxql.READ},
+		{s: `RENAME`, tok: influxql.RENAME},
 		{s: `RETENTION`, tok: influxql.RETENTION},
 		{s: `REVOKE`, tok: influxql.REVOKE},
 		{s: `SELECT`, tok: influxql.SELECT},
@@ -276,6 +277,7 @@ func TestScanRegex(t *testing.T) {
 		{in: `/foo\/bar/`, tok: influxql.REGEX, lit: `foo/bar`},
 		{in: `/foo\\/bar/`, tok: influxql.REGEX, lit: `foo\/bar`},
 		{in: `/foo\\bar/`, tok: influxql.REGEX, lit: `foo\\bar`},
+		{in: `/http\:\/\/www\.example\.com/`, tok: influxql.REGEX, lit: `http\://www\.example\.com`},
 	}
 
 	for i, tt := range tests {

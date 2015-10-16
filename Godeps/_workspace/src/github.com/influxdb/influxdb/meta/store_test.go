@@ -244,6 +244,76 @@ func TestStore_DropDatabase_ErrDatabaseNotFound(t *testing.T) {
 	}
 }
 
+// Ensure the store can rename an existing database.
+func TestStore_RenameDatabase(t *testing.T) {
+	t.Parallel()
+	s := MustOpenStore()
+	defer s.Close()
+
+	// Create three databases.
+	for i := 0; i < 3; i++ {
+		if _, err := s.CreateDatabase(fmt.Sprintf("db%d", i)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Rename database db1, leaving db0 and db2 unchanged.
+	if err := s.RenameDatabase("db1", "db3"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure the nodes are correct.
+	exp := &meta.DatabaseInfo{Name: "db0"}
+	if di, _ := s.Database("db0"); !reflect.DeepEqual(di, exp) {
+		t.Fatalf("unexpected database(0): \ngot: %#v\nexp: %#v", di, exp)
+
+	}
+	if di, _ := s.Database("db1"); di != nil {
+		t.Fatalf("unexpected database(1): %#v", di)
+	}
+
+	exp = &meta.DatabaseInfo{Name: "db2"}
+	if di, _ := s.Database("db2"); !reflect.DeepEqual(di, exp) {
+		t.Fatalf("unexpected database(2): \ngot: %#v\nexp: %#v", di, exp)
+	}
+
+	exp = &meta.DatabaseInfo{Name: "db3"}
+	if di, _ := s.Database("db3"); !reflect.DeepEqual(di, exp) {
+		t.Fatalf("unexpected database(2): \ngot: %#v\nexp: %#v", di, exp)
+	}
+}
+
+// Ensure the store returns an error when renaming a database that doesn't exist.
+func TestStore_RenameDatabase_ErrDatabaseNotFound(t *testing.T) {
+	t.Parallel()
+	s := MustOpenStore()
+	defer s.Close()
+
+	if err := s.RenameDatabase("no_such_database", "another_database"); err != meta.ErrDatabaseNotFound {
+		t.Fatalf("unexpected error: %s", err)
+	}
+}
+
+// Ensure the store returns an error when renaming a database to a database that already exists.
+func TestStore_RenameDatabase_ErrDatabaseExists(t *testing.T) {
+	t.Parallel()
+	s := MustOpenStore()
+	defer s.Close()
+
+	// create two databases
+	if _, err := s.CreateDatabase("db00"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.CreateDatabase("db01"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.RenameDatabase("db00", "db01"); err != meta.ErrDatabaseExists {
+		t.Fatalf("unexpected error: %s", err)
+	}
+}
+
 // Ensure the store can create a retention policy on a database.
 func TestStore_CreateRetentionPolicy(t *testing.T) {
 	t.Parallel()
@@ -646,6 +716,90 @@ func TestStore_DropContinuousQuery(t *testing.T) {
 		{Name: "cq2", Query: "SELECT count() FROM baz"},
 	}) {
 		t.Fatalf("unexpected queries: %#v", di.ContinuousQueries)
+	}
+}
+
+// Ensure the store can create a new subscription.
+func TestStore_CreateSubscription(t *testing.T) {
+	t.Parallel()
+	s := MustOpenStore()
+	defer s.Close()
+
+	// Create subscription.
+	rpi := &meta.RetentionPolicyInfo{
+		Name:     "rp0",
+		ReplicaN: 3,
+	}
+	if _, err := s.CreateDatabase("db0"); err != nil {
+		t.Fatal(err)
+	} else if _, err := s.CreateRetentionPolicy("db0", rpi); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateSubscription("db0", "rp0", "s0", "t0", []string{"h0", "h1"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Ensure that creating an existing subscription returns an error.
+func TestStore_CreateSubscription_ErrSubscriptionExists(t *testing.T) {
+	t.Parallel()
+	s := MustOpenStore()
+	defer s.Close()
+
+	// Create subscription.
+	rpi := &meta.RetentionPolicyInfo{
+		Name:     "rp0",
+		ReplicaN: 3,
+	}
+	if _, err := s.CreateDatabase("db0"); err != nil {
+		t.Fatal(err)
+	} else if _, err := s.CreateRetentionPolicy("db0", rpi); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateSubscription("db0", "rp0", "s0", "t0", []string{"h0", "h1"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create it again.
+	if err := s.CreateSubscription("db0", "rp0", "s0", "t0", []string{"h0", "h1"}); err != meta.ErrSubscriptionExists {
+		t.Fatalf("unexpected error: %s", err)
+	}
+}
+
+// Ensure the store can delete a subscription.
+func TestStore_DropSubscription(t *testing.T) {
+	t.Parallel()
+	s := MustOpenStore()
+	defer s.Close()
+
+	// Create subscription.
+	rpi := &meta.RetentionPolicyInfo{
+		Name:     "rp0",
+		ReplicaN: 3,
+	}
+	if _, err := s.CreateDatabase("db0"); err != nil {
+		t.Fatal(err)
+	} else if _, err := s.CreateRetentionPolicy("db0", rpi); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateSubscription("db0", "rp0", "s0", "ANY", []string{"udp://h0:1234", "udp://h1:1234"}); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateSubscription("db0", "rp0", "s1", "ALL", []string{"udp://h0:1234", "udp://h1:1234"}); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateSubscription("db0", "rp0", "s2", "ANY", []string{"udp://h0:1234", "udp://h1:1234"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Remove one of the subscriptions.
+	if err := s.DropSubscription("db0", "rp0", "s0"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure the resulting subscriptions are correct.
+	if rpi, err := s.RetentionPolicy("db0", "rp0"); err != nil {
+		t.Fatal(err)
+	} else if !reflect.DeepEqual(rpi.Subscriptions, []meta.SubscriptionInfo{
+		{Name: "s1", Mode: "ALL", Destinations: []string{"udp://h0:1234", "udp://h1:1234"}},
+		{Name: "s2", Mode: "ANY", Destinations: []string{"udp://h0:1234", "udp://h1:1234"}},
+	}) {
+		t.Fatalf("unexpected subscriptions: %#v", rpi.Subscriptions)
 	}
 }
 

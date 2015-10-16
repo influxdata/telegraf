@@ -80,10 +80,12 @@ type Node interface {
 func (*Query) node()     {}
 func (Statements) node() {}
 
+func (*AlterDatabaseRenameStatement) node()   {}
 func (*AlterRetentionPolicyStatement) node()  {}
 func (*CreateContinuousQueryStatement) node() {}
 func (*CreateDatabaseStatement) node()        {}
 func (*CreateRetentionPolicyStatement) node() {}
+func (*CreateSubscriptionStatement) node()    {}
 func (*CreateUserStatement) node()            {}
 func (*Distinct) node()                       {}
 func (*DeleteStatement) node()                {}
@@ -93,6 +95,7 @@ func (*DropMeasurementStatement) node()       {}
 func (*DropRetentionPolicyStatement) node()   {}
 func (*DropSeriesStatement) node()            {}
 func (*DropServerStatement) node()            {}
+func (*DropSubscriptionStatement) node()      {}
 func (*DropUserStatement) node()              {}
 func (*GrantStatement) node()                 {}
 func (*GrantAdminStatement) node()            {}
@@ -110,6 +113,7 @@ func (*ShowMeasurementsStatement) node()      {}
 func (*ShowSeriesStatement) node()            {}
 func (*ShowShardsStatement) node()            {}
 func (*ShowStatsStatement) node()             {}
+func (*ShowSubscriptionsStatement) node()     {}
 func (*ShowDiagnosticsStatement) node()       {}
 func (*ShowTagKeysStatement) node()           {}
 func (*ShowTagValuesStatement) node()         {}
@@ -188,10 +192,12 @@ type ExecutionPrivilege struct {
 // ExecutionPrivileges is a list of privileges required to execute a statement.
 type ExecutionPrivileges []ExecutionPrivilege
 
+func (*AlterDatabaseRenameStatement) stmt()   {}
 func (*AlterRetentionPolicyStatement) stmt()  {}
 func (*CreateContinuousQueryStatement) stmt() {}
 func (*CreateDatabaseStatement) stmt()        {}
 func (*CreateRetentionPolicyStatement) stmt() {}
+func (*CreateSubscriptionStatement) stmt()    {}
 func (*CreateUserStatement) stmt()            {}
 func (*DeleteStatement) stmt()                {}
 func (*DropContinuousQueryStatement) stmt()   {}
@@ -200,6 +206,7 @@ func (*DropMeasurementStatement) stmt()       {}
 func (*DropRetentionPolicyStatement) stmt()   {}
 func (*DropSeriesStatement) stmt()            {}
 func (*DropServerStatement) stmt()            {}
+func (*DropSubscriptionStatement) stmt()      {}
 func (*DropUserStatement) stmt()              {}
 func (*GrantStatement) stmt()                 {}
 func (*GrantAdminStatement) stmt()            {}
@@ -213,6 +220,7 @@ func (*ShowRetentionPoliciesStatement) stmt() {}
 func (*ShowSeriesStatement) stmt()            {}
 func (*ShowShardsStatement) stmt()            {}
 func (*ShowStatsStatement) stmt()             {}
+func (*ShowSubscriptionsStatement) stmt()     {}
 func (*ShowDiagnosticsStatement) stmt()       {}
 func (*ShowTagKeysStatement) stmt()           {}
 func (*ShowTagValuesStatement) stmt()         {}
@@ -499,6 +507,30 @@ func (s *GrantAdminStatement) String() string {
 
 // RequiredPrivileges returns the privilege required to execute a GrantAdminStatement.
 func (s *GrantAdminStatement) RequiredPrivileges() ExecutionPrivileges {
+	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
+}
+
+// AlterDatabaseRenameStatement represents a command for renaming a database.
+type AlterDatabaseRenameStatement struct {
+	// Current name of the database
+	OldName string
+	// New name of the database
+	NewName string
+}
+
+// String returns a string representation of the rename database statement.
+func (s *AlterDatabaseRenameStatement) String() string {
+	var buf bytes.Buffer
+	_, _ = buf.WriteString("ALTER DATABASE ")
+	_, _ = buf.WriteString(s.OldName)
+	_, _ = buf.WriteString(" RENAME ")
+	_, _ = buf.WriteString(" TO ")
+	_, _ = buf.WriteString(s.NewName)
+	return buf.String()
+}
+
+// RequiredPrivileges returns the privilege required to execute an AlterDatabaseRenameStatement.
+func (s *AlterDatabaseRenameStatement) RequiredPrivileges() ExecutionPrivileges {
 	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
 }
 
@@ -981,31 +1013,6 @@ func (s *SelectStatement) RequiredPrivileges() ExecutionPrivileges {
 	return ep
 }
 
-// OnlyTimeDimensions returns true if the statement has a where clause with only time constraints
-func (s *SelectStatement) OnlyTimeDimensions() bool {
-	return s.walkForTime(s.Condition)
-}
-
-// walkForTime is called by the OnlyTimeDimensions method to walk the where clause to determine if
-// the only things specified are based on time
-func (s *SelectStatement) walkForTime(node Node) bool {
-	switch n := node.(type) {
-	case *BinaryExpr:
-		if n.Op == AND || n.Op == OR {
-			return s.walkForTime(n.LHS) && s.walkForTime(n.RHS)
-		}
-		if ref, ok := n.LHS.(*VarRef); ok && strings.ToLower(ref.Val) == "time" {
-			return true
-		}
-		return false
-	case *ParenExpr:
-		// walk down the tree
-		return s.walkForTime(n.Expr)
-	default:
-		return false
-	}
-}
-
 // HasWildcard returns whether or not the select statement has at least 1 wildcard
 func (s *SelectStatement) HasWildcard() bool {
 	return s.HasFieldWildcard() || s.HasDimensionWildcard()
@@ -1034,26 +1041,6 @@ func (s *SelectStatement) HasDimensionWildcard() bool {
 	}
 
 	return false
-}
-
-// hasTimeDimensions returns whether or not the select statement has at least 1
-// where condition with time as the condition
-func (s *SelectStatement) hasTimeDimensions(node Node) bool {
-	switch n := node.(type) {
-	case *BinaryExpr:
-		if n.Op == AND || n.Op == OR {
-			return s.hasTimeDimensions(n.LHS) || s.hasTimeDimensions(n.RHS)
-		}
-		if ref, ok := n.LHS.(*VarRef); ok && strings.ToLower(ref.Val) == "time" {
-			return true
-		}
-		return false
-	case *ParenExpr:
-		// walk down the tree
-		return s.hasTimeDimensions(n.Expr)
-	default:
-		return false
-	}
 }
 
 func (s *SelectStatement) validate(tr targetRequirement) error {
@@ -1254,7 +1241,7 @@ func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 
 	// If we have an aggregate function with a group by time without a where clause, it's an invalid statement
 	if tr == targetNotRequired { // ignore create continuous query statements
-		if !s.IsRawQuery && groupByDuration > 0 && !s.hasTimeDimensions(s.Condition) {
+		if !s.IsRawQuery && groupByDuration > 0 && !HasTimeExpr(s.Condition) {
 			return fmt.Errorf("aggregate functions with GROUP BY time require a WHERE time clause")
 		}
 	}
@@ -1736,7 +1723,7 @@ func (s *DeleteStatement) String() string {
 		_, _ = buf.WriteString(" WHERE ")
 		_, _ = buf.WriteString(s.Condition.String())
 	}
-	return s.String()
+	return buf.String()
 }
 
 // RequiredPrivileges returns the privilege required to execute a DeleteStatement.
@@ -2099,6 +2086,65 @@ func (s *ShowDiagnosticsStatement) String() string {
 
 // RequiredPrivileges returns the privilege required to execute a ShowDiagnosticsStatement
 func (s *ShowDiagnosticsStatement) RequiredPrivileges() ExecutionPrivileges {
+	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
+}
+
+// CreateSubscriptionStatement represents a command to add a subscription to the incoming data stream
+type CreateSubscriptionStatement struct {
+	Name            string
+	Database        string
+	RetentionPolicy string
+	Destinations    []string
+	Mode            string
+}
+
+// String returns a string representation of the CreateSubscriptionStatement.
+func (s *CreateSubscriptionStatement) String() string {
+	var destinations bytes.Buffer
+	for i, dest := range s.Destinations {
+		if i != 0 {
+			destinations.Write([]byte(`, `))
+		}
+		destinations.Write([]byte(`'`))
+		destinations.Write([]byte(dest))
+		destinations.Write([]byte(`'`))
+	}
+	return fmt.Sprintf(`CREATE SUBSCRIPTION "%s" ON "%s"."%s" DESTINATIONS %s %s `, s.Name, s.Database, s.RetentionPolicy, s.Mode, string(destinations.Bytes()))
+}
+
+// RequiredPrivileges returns the privilege required to execute a CreateSubscriptionStatement
+func (s *CreateSubscriptionStatement) RequiredPrivileges() ExecutionPrivileges {
+	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
+}
+
+// DropSubscriptionStatement represents a command to drop a subscription to the incoming data stream.
+type DropSubscriptionStatement struct {
+	Name            string
+	Database        string
+	RetentionPolicy string
+}
+
+// String returns a string representation of the DropSubscriptionStatement.
+func (s *DropSubscriptionStatement) String() string {
+	return fmt.Sprintf(`DROP SUBSCRIPTION "%s" ON "%s"."%s"`, s.Name, s.Database, s.RetentionPolicy)
+}
+
+// RequiredPrivileges returns the privilege required to execute a DropSubscriptionStatement
+func (s *DropSubscriptionStatement) RequiredPrivileges() ExecutionPrivileges {
+	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
+}
+
+// ShowSubscriptionsStatement represents a command to show a list of subscriptions.
+type ShowSubscriptionsStatement struct {
+}
+
+// String returns a string representation of the ShowSubscriptionStatement.
+func (s *ShowSubscriptionsStatement) String() string {
+	return "SHOW SUBSCRIPTIONS"
+}
+
+// RequiredPrivileges returns the privilege required to execute a ShowSubscriptionStatement
+func (s *ShowSubscriptionsStatement) RequiredPrivileges() ExecutionPrivileges {
 	return ExecutionPrivileges{{Admin: true, Name: "", Privilege: AllPrivileges}}
 }
 
@@ -2635,7 +2681,7 @@ type RegexLiteral struct {
 // String returns a string representation of the literal.
 func (r *RegexLiteral) String() string {
 	if r.Val != nil {
-		return fmt.Sprintf("/%s/", r.Val.String())
+		return fmt.Sprintf("/%s/", strings.Replace(r.Val.String(), `/`, `\/`, -1))
 	}
 	return ""
 }
@@ -2696,6 +2742,47 @@ func CloneExpr(expr Expr) Expr {
 		return &Wildcard{}
 	}
 	panic("unreachable")
+}
+
+// HasTimeExpr returns true if the expression has a time term.
+func HasTimeExpr(expr Expr) bool {
+	switch n := expr.(type) {
+	case *BinaryExpr:
+		if n.Op == AND || n.Op == OR {
+			return HasTimeExpr(n.LHS) || HasTimeExpr(n.RHS)
+		}
+		if ref, ok := n.LHS.(*VarRef); ok && strings.ToLower(ref.Val) == "time" {
+			return true
+		}
+		return false
+	case *ParenExpr:
+		// walk down the tree
+		return HasTimeExpr(n.Expr)
+	default:
+		return false
+	}
+}
+
+// OnlyTimeExpr returns true if the expression only has time constraints.
+func OnlyTimeExpr(expr Expr) bool {
+	if expr == nil {
+		return false
+	}
+	switch n := expr.(type) {
+	case *BinaryExpr:
+		if n.Op == AND || n.Op == OR {
+			return OnlyTimeExpr(n.LHS) && OnlyTimeExpr(n.RHS)
+		}
+		if ref, ok := n.LHS.(*VarRef); ok && strings.ToLower(ref.Val) == "time" {
+			return true
+		}
+		return false
+	case *ParenExpr:
+		// walk down the tree
+		return OnlyTimeExpr(n.Expr)
+	default:
+		return false
+	}
 }
 
 // TimeRange returns the minimum and maximum times specified by an expression.

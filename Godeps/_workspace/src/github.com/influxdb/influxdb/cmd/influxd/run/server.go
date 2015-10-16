@@ -2,7 +2,9 @@ package run
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -26,6 +28,7 @@ import (
 	"github.com/influxdb/influxdb/services/precreator"
 	"github.com/influxdb/influxdb/services/retention"
 	"github.com/influxdb/influxdb/services/snapshotter"
+	"github.com/influxdb/influxdb/services/subscriber"
 	"github.com/influxdb/influxdb/services/udp"
 	"github.com/influxdb/influxdb/tcp"
 	"github.com/influxdb/influxdb/tsdb"
@@ -60,6 +63,7 @@ type Server struct {
 	ShardWriter   *cluster.ShardWriter
 	ShardMapper   *cluster.ShardMapper
 	HintedHandoff *hh.Service
+	Subscriber    *subscriber.Service
 
 	Services []Service
 
@@ -70,8 +74,10 @@ type Server struct {
 
 	Monitor *monitor.Monitor
 
-	// Server reporting
+	// Server reporting and registration
 	reportingDisabled bool
+	enterpriseURL     string
+	enterpriseToken   string
 
 	// Profiling
 	CPUProfile string
@@ -98,6 +104,8 @@ func NewServer(c *Config, buildInfo *BuildInfo) (*Server, error) {
 		Monitor: monitor.New(c.Monitor),
 
 		reportingDisabled: c.ReportingDisabled,
+		enterpriseURL:     c.EnterpriseURL,
+		enterpriseToken:   c.EnterpriseToken,
 	}
 
 	// Copy TSDB configuration.
@@ -125,7 +133,11 @@ func NewServer(c *Config, buildInfo *BuildInfo) (*Server, error) {
 	s.ShardWriter.MetaStore = s.MetaStore
 
 	// Create the hinted handoff service
-	s.HintedHandoff = hh.NewService(c.HintedHandoff, s.ShardWriter)
+	s.HintedHandoff = hh.NewService(c.HintedHandoff, s.ShardWriter, s.MetaStore)
+
+	// Create the Subscriber service
+	s.Subscriber = subscriber.NewService(c.Subscriber)
+	s.Subscriber.MetaStore = s.MetaStore
 
 	// Initialize points writer.
 	s.PointsWriter = cluster.NewPointsWriter()
@@ -134,6 +146,10 @@ func NewServer(c *Config, buildInfo *BuildInfo) (*Server, error) {
 	s.PointsWriter.TSDBStore = s.TSDBStore
 	s.PointsWriter.ShardWriter = s.ShardWriter
 	s.PointsWriter.HintedHandoff = s.HintedHandoff
+	s.PointsWriter.Subscriber = s.Subscriber
+
+	// needed for executing INTO queries.
+	s.QueryExecutor.IntoWriter = s.PointsWriter
 
 	// Initialize the monitor
 	s.Monitor.Version = s.buildInfo.Version
@@ -289,6 +305,7 @@ func (s *Server) appendUDPService(c udp.Config) {
 	}
 	srv := udp.NewService(c)
 	srv.PointsWriter = s.PointsWriter
+	srv.MetaStore = s.MetaStore
 	s.Services = append(s.Services, srv)
 }
 
@@ -299,7 +316,6 @@ func (s *Server) appendContinuousQueryService(c continuous_querier.Config) {
 	srv := continuous_querier.NewService(c)
 	srv.MetaStore = s.MetaStore
 	srv.QueryExecutor = s.QueryExecutor
-	srv.PointsWriter = s.PointsWriter
 	s.Services = append(s.Services, srv)
 }
 
@@ -371,6 +387,11 @@ func (s *Server) Open() error {
 			return fmt.Errorf("open hinted handoff: %s", err)
 		}
 
+		// Open the subcriber service
+		if err := s.Subscriber.Open(); err != nil {
+			return fmt.Errorf("open subscriber: %s", err)
+		}
+
 		for _, service := range s.Services {
 			if err := service.Open(); err != nil {
 				return fmt.Errorf("open service: %s", err)
@@ -380,6 +401,11 @@ func (s *Server) Open() error {
 		// Start the reporting service, if not disabled.
 		if !s.reportingDisabled {
 			go s.startServerReporting()
+		}
+
+		// Register server
+		if err := s.registerServer(); err != nil {
+			log.Printf("failed to register server: %s", err.Error())
 		}
 
 		return nil
@@ -418,6 +444,10 @@ func (s *Server) Close() error {
 	// Close the TSDBStore, no more reads or writes at this point
 	if s.TSDBStore != nil {
 		s.TSDBStore.Close()
+	}
+
+	if s.Subscriber != nil {
+		s.Subscriber.Close()
 	}
 
 	// Finally close the meta-store since everything else depends on it
@@ -487,6 +517,59 @@ func (s *Server) reportServer() {
 
 	client := http.Client{Timeout: time.Duration(5 * time.Second)}
 	go client.Post("http://m.influxdb.com:8086/db/reporting/series?u=reporter&p=influxdb", "application/json", data)
+}
+
+// registerServer registers the server on start-up.
+func (s *Server) registerServer() error {
+	if s.enterpriseToken == "" {
+		return nil
+	}
+
+	clusterID, err := s.MetaStore.ClusterID()
+	if err != nil {
+		log.Printf("failed to retrieve cluster ID for registration: %s", err.Error())
+		return err
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	j := map[string]interface{}{
+		"cluster_id": fmt.Sprintf("%d", clusterID),
+		"server_id":  fmt.Sprintf("%d", s.MetaStore.NodeID()),
+		"host":       hostname,
+		"product":    "influxdb",
+		"version":    s.buildInfo.Version,
+	}
+	b, err := json.Marshal(j)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/api/v1/servers?token=%s", s.enterpriseURL, s.enterpriseToken)
+	go func() {
+		client := http.Client{Timeout: time.Duration(5 * time.Second)}
+		resp, err := client.Post(url, "application/json", bytes.NewBuffer(b))
+		if err != nil {
+			log.Printf("failed to register server with %s: %s", s.enterpriseURL, err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusCreated {
+			return
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("failed to read response from registration server: %s", err.Error())
+			return
+		}
+		log.Printf("failed to register server with %s: received code %s, body: %s", s.enterpriseURL, resp.Status, string(body))
+	}()
+	return nil
 }
 
 // monitorErrorChan reads an error channel and resends it through the server.

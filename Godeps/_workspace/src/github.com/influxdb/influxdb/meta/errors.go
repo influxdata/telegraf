@@ -47,6 +47,9 @@ var (
 
 	// ErrDatabaseNameRequired is returned when creating a database without a name.
 	ErrDatabaseNameRequired = newError("database name required")
+
+	// ErrDatabaseRenameCQConflict is returned when attempting to rename a database in use by a CQ.
+	ErrDatabaseRenameCQConflict = newError("database rename conflict with existing continuous query")
 )
 
 var (
@@ -95,6 +98,14 @@ var (
 
 	// ErrContinuousQueryNotFound is returned when removing a continuous query that doesn't exist.
 	ErrContinuousQueryNotFound = newError("continuous query not found")
+)
+
+var (
+	// ErrSubscriptionExists is returned when creating an already existing subscription.
+	ErrSubscriptionExists = newError("subscription already exists")
+
+	// ErrSubscriptionNotFound is returned when removing a subscription that doesn't exist.
+	ErrSubscriptionNotFound = newError("subscription not found")
 )
 
 var (

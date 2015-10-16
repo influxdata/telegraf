@@ -198,7 +198,6 @@ func TestParsePointNoFields(t *testing.T) {
 	if err == nil {
 		t.Errorf(`ParsePoints("%s") mismatch. got nil, exp error`, "cpu,,, value=1")
 	}
-
 }
 
 func TestParsePointNoTimestamp(t *testing.T) {
@@ -212,7 +211,7 @@ func TestParsePointMissingQuote(t *testing.T) {
 	}
 }
 
-func TestParsePointMissingTagName(t *testing.T) {
+func TestParsePointMissingTagKey(t *testing.T) {
 	_, err := models.ParsePointsString(`cpu,host=serverA,=us-east value=1i`)
 	if err == nil {
 		t.Errorf(`ParsePoints("%s") mismatch. got nil, exp error`, `cpu,host=serverA,=us-east value=1i`)
@@ -248,6 +247,10 @@ func TestParsePointMissingTagValue(t *testing.T) {
 	if err == nil {
 		t.Errorf(`ParsePoints("%s") mismatch. got nil, exp error`, `cpu,host=serverA,region= value=1i`)
 	}
+	_, err = models.ParsePointsString(`cpu,host=serverA,region=,zone=us-west value=1i`)
+	if err == nil {
+		t.Errorf(`ParsePoints("%s") mismatch. got nil, exp error`, `cpu,host=serverA,region=,zone=us-west value=1i`)
+	}
 }
 
 func TestParsePointMissingFieldName(t *testing.T) {
@@ -269,7 +272,6 @@ func TestParsePointMissingFieldName(t *testing.T) {
 	if err == nil {
 		t.Errorf(`ParsePoints("%s") mismatch. got nil, exp error`, `cpu,host=serverA,region=us-west value=123i,=456i`)
 	}
-
 }
 
 func TestParsePointMissingFieldValue(t *testing.T) {
@@ -468,7 +470,22 @@ func TestParsePointFloatScientific(t *testing.T) {
 	if pts[0].Fields()["value"] != 1e4 {
 		t.Errorf(`ParsePoints("%s") mismatch. got %v, exp nil`, `cpu,host=serverA,region=us-west value=1e4`, err)
 	}
+}
 
+func TestParsePointFloatScientificUpper(t *testing.T) {
+	_, err := models.ParsePointsString(`cpu,host=serverA,region=us-west value=1.0E4`)
+	if err != nil {
+		t.Errorf(`ParsePoints("%s") mismatch. got %v, exp nil`, `cpu,host=serverA,region=us-west value=1.0E4`, err)
+	}
+
+	pts, err := models.ParsePointsString(`cpu,host=serverA,region=us-west value=1E4`)
+	if err != nil {
+		t.Errorf(`ParsePoints("%s") mismatch. got %v, exp nil`, `cpu,host=serverA,region=us-west value=1.0E4`, err)
+	}
+
+	if pts[0].Fields()["value"] != 1e4 {
+		t.Errorf(`ParsePoints("%s") mismatch. got %v, exp nil`, `cpu,host=serverA,region=us-west value=1E4`, err)
+	}
 }
 
 func TestParsePointFloatScientificDecimal(t *testing.T) {
@@ -543,7 +560,7 @@ func TestParsePointUnescape(t *testing.T) {
 	test(t, `cpu,region\,zone=east value=1.0`,
 		models.NewPoint("cpu",
 			models.Tags{
-				"region,zone": "east", // comma in the tag name
+				"region,zone": "east", // comma in the tag key
 			},
 			models.Fields{
 				"value": 1.0,
@@ -554,7 +571,7 @@ func TestParsePointUnescape(t *testing.T) {
 	test(t, `cpu,region\ zone=east value=1.0`,
 		models.NewPoint("cpu",
 			models.Tags{
-				"region zone": "east", // comma in the tag name
+				"region zone": "east", // comma in the tag key
 			},
 			models.Fields{
 				"value": 1.0,
@@ -583,25 +600,25 @@ func TestParsePointUnescape(t *testing.T) {
 			},
 			time.Unix(0, 0)))
 
-	// commas in field names
+	// commas in field keys
 	test(t, `cpu,regions=east value\,ms=1.0`,
 		models.NewPoint("cpu",
 			models.Tags{
 				"regions": "east",
 			},
 			models.Fields{
-				"value,ms": 1.0, // comma in the field name
+				"value,ms": 1.0, // comma in the field keys
 			},
 			time.Unix(0, 0)))
 
-	// spaces in field names
+	// spaces in field keys
 	test(t, `cpu,regions=east value\ ms=1.0`,
 		models.NewPoint("cpu",
 			models.Tags{
 				"regions": "east",
 			},
 			models.Fields{
-				"value ms": 1.0, // comma in the field name
+				"value ms": 1.0, // comma in the field keys
 			},
 			time.Unix(0, 0)))
 
@@ -640,7 +657,7 @@ func TestParsePointUnescape(t *testing.T) {
 			},
 			time.Unix(0, 0)))
 
-	// field name using escape char.
+	// field keys using escape char.
 	test(t, `cpu \a=1i`,
 		models.NewPoint(
 			"cpu",

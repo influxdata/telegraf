@@ -122,10 +122,7 @@ Retaining the directory structure `$GOPATH/src/github.com/influxdb` is necessary
 Pre-commit checks
 -------------
 
-We have a pre commit hook to make sure code is formatted properly
-and vetted before you commit any changes. We strongly recommend using the pre
-commit hook to guard against accidentally committing unformatted
-code. To use the pre-commit hook, run the following:
+We have a pre-commit hook to make sure code is formatted properly and vetted before you commit any changes. We strongly recommend using the pre-commit hook to guard against accidentally committing unformatted code. To use the pre-commit hook, run the following:
 
     cd $GOPATH/src/github.com/influxdb/influxdb
     cp .hooks/pre-commit .git/hooks/
@@ -229,11 +226,13 @@ When troubleshooting problems with CPU or memory the Go toolchain can be helpful
 # start influx with profiling
 ./influxd -cpuprofile influxd.prof
 # run queries, writes, whatever you're testing
-# open up pprof
-go tool pprof influxd influxd.prof
+# Quit out of influxd and influxd.prof will then be written.
+# open up pprof to examine the profiling data.
+go tool pprof ./influxd influxd.prof
 # once inside run "web", opens up browser with the CPU graph
 # can also run "web <function name>" to zoom in. Or "list <function name>" to see specific lines
 ```
+Note that when you pass the binary to `go tool pprof` *you must specify the path to the binary*.
 
 Continuous Integration testing
 -----

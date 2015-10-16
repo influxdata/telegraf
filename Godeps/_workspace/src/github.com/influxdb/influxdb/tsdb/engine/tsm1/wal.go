@@ -44,8 +44,6 @@ const (
 	// idleFlush indicates that we should flush all series in the parition,
 	// delete all segment files and hold off on opening a new one
 	idleFlush
-	// deleteFlush indicates that we're flushing because series need to be removed from the WAL
-	deleteFlush
 	// startupFlush indicates that we're flushing because the database is starting up
 	startupFlush
 )
@@ -62,9 +60,6 @@ const (
 
 type Log struct {
 	path string
-
-	flushCheckTimer    *time.Timer // check this often to see if a background flush should happen
-	flushCheckInterval time.Duration
 
 	// write variables
 	writeLock          sync.Mutex
@@ -100,8 +95,8 @@ type Log struct {
 	// MaxMemorySizeThreshold specifies the limit at which writes to the WAL should be rejected
 	MaxMemorySizeThreshold int
 
-	// Index is the database series will be flushed to
-	Index IndexWriter
+	// IndexWriter is the database series will be flushed to
+	IndexWriter IndexWriter
 
 	// LoggingEnabled specifies if detailed logs should be output
 	LoggingEnabled bool
@@ -135,6 +130,9 @@ func NewLog(path string) *Log {
 		logger:                   log.New(os.Stderr, "[tsm1wal] ", log.LstdFlags),
 	}
 }
+
+// Path returns the path the log was initialized with.
+func (l *Log) Path() string { return l.path }
 
 // Open opens and initializes the Log. Will recover from previous unclosed shutdowns
 func (l *Log) Open() error {
@@ -383,7 +381,7 @@ func (l *Log) readFileToCache(fileName string) error {
 			}
 			l.addToCache(nil, fields, nil, false)
 		case seriesEntry:
-			series := make([]*tsdb.SeriesCreate, 0)
+			var series []*tsdb.SeriesCreate
 			if err := json.Unmarshal(data, &series); err != nil {
 				return err
 			}
@@ -393,8 +391,8 @@ func (l *Log) readFileToCache(fileName string) error {
 			if err := json.Unmarshal(data, &d); err != nil {
 				return err
 			}
-			l.Index.MarkDeletes(d.Keys)
-			l.Index.MarkMeasurementDelete(d.MeasurementName)
+			l.IndexWriter.MarkDeletes(d.Keys)
+			l.IndexWriter.MarkMeasurementDelete(d.MeasurementName)
 			l.deleteKeysFromCache(d.Keys)
 			if d.MeasurementName != "" {
 				l.deleteMeasurementFromCache(d.MeasurementName)
@@ -505,28 +503,11 @@ func (l *Log) Close() error {
 	l.cache = nil
 	l.measurementFieldsCache = nil
 	l.seriesToCreateCache = nil
-	if l.currentSegmentFile == nil {
-		return nil
-	}
-	if err := l.currentSegmentFile.Close(); err != nil {
-		return err
-	}
-	l.currentSegmentFile = nil
 
-	return nil
-}
-
-// close all the open Log partitions and file handles
-func (l *Log) close() error {
-	l.cache = nil
-	l.cacheDirtySort = nil
-	if l.currentSegmentFile == nil {
-		return nil
+	if l.currentSegmentFile != nil {
+		l.currentSegmentFile.Close()
+		l.currentSegmentFile = nil
 	}
-	if err := l.currentSegmentFile.Close(); err != nil {
-		return err
-	}
-	l.currentSegmentFile = nil
 
 	return nil
 }
@@ -578,7 +559,7 @@ func (l *Log) flush(flush flushType) error {
 		valueCount += len(v)
 	}
 	l.cache = make(map[string]Values)
-	for k, _ := range l.cacheDirtySort {
+	for k := range l.cacheDirtySort {
 		l.flushCache[k] = l.flushCache[k].Deduplicate()
 	}
 	l.cacheDirtySort = make(map[string]bool)
@@ -614,7 +595,7 @@ func (l *Log) flush(flush flushType) error {
 	}
 
 	startTime := time.Now()
-	if err := l.Index.Write(l.flushCache, mfc, scc); err != nil {
+	if err := l.IndexWriter.Write(l.flushCache, mfc, scc); err != nil {
 		return err
 	}
 	if l.LoggingEnabled {
@@ -658,7 +639,7 @@ func (l *Log) segmentFileNames() ([]string, error) {
 
 // newSegmentFile will close the current segment file and open a new one, updating bookkeeping info on the log
 func (l *Log) newSegmentFile() error {
-	l.currentSegmentID += 1
+	l.currentSegmentID++
 	if l.currentSegmentFile != nil {
 		if err := l.currentSegmentFile.Close(); err != nil {
 			return err

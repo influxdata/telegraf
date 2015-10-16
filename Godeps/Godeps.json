@@ -102,8 +102,8 @@
 		},
 		{
 			"ImportPath": "github.com/influxdb/influxdb",
-			"Comment": "v0.9.4-rc1-478-g73a630d",
-			"Rev": "73a630dfa64003c27782a1b0a6b817e839c5c3ea"
+			"Comment": "v0.9.4-rc1-652-gd9f0413",
+			"Rev": "d9f04132ef567bb9671690e4db226ff3dab9feb5"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",

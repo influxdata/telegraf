@@ -1,7 +1,9 @@
 package meta
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -175,6 +177,69 @@ func (data *Data) DropDatabase(name string) error {
 		}
 	}
 	return ErrDatabaseNotFound
+}
+
+// RenameDatabase renames a database.
+// Returns an error if oldName or newName is blank
+// or if a database with the newName already exists
+// or if a database with oldName does not exist
+func (data *Data) RenameDatabase(oldName, newName string) error {
+	if newName == "" || oldName == "" {
+		return ErrDatabaseNameRequired
+	}
+	if data.Database(newName) != nil {
+		return ErrDatabaseExists
+	}
+	if data.Database(oldName) == nil {
+		return ErrDatabaseNotFound
+	}
+	// TODO should rename database in continuous queries also
+	// for now, just return an error if there is a possible conflict
+	if data.isDatabaseNameUsedInCQ(oldName) {
+		return ErrDatabaseRenameCQConflict
+	}
+	// find database named oldName and rename it to newName
+	for i := range data.Databases {
+		if data.Databases[i].Name == oldName {
+			data.Databases[i].Name = newName
+			data.switchDatabaseUserPrivileges(oldName, newName)
+			return nil
+		}
+	}
+	return ErrDatabaseNotFound
+}
+
+// isDatabaseNameUsedInCQ returns true if a database name is used in any continuous query
+func (data *Data) isDatabaseNameUsedInCQ(dbName string) bool {
+	CQOnDb := fmt.Sprintf(" ON %s ", dbName)
+	CQIntoDb := fmt.Sprintf(" INTO \"%s\".", dbName)
+	CQFromDb := fmt.Sprintf(" FROM \"%s\".", dbName)
+	for i := range data.Databases {
+		for j := range data.Databases[i].ContinuousQueries {
+			query := data.Databases[i].ContinuousQueries[j].Query
+			if strings.Contains(query, CQOnDb) {
+				return true
+			}
+			if strings.Contains(query, CQIntoDb) {
+				return true
+			}
+			if strings.Contains(query, CQFromDb) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// switchDatabaseUserPrivileges changes the database associated with user privileges
+func (data *Data) switchDatabaseUserPrivileges(oldDatabase, newDatabase string) error {
+	for i := range data.Users {
+		if p, ok := data.Users[i].Privileges[oldDatabase]; ok {
+			data.Users[i].Privileges[newDatabase] = p
+			delete(data.Users[i].Privileges, oldDatabase)
+		}
+	}
+	return nil
 }
 
 // RetentionPolicy returns a retention policy for a database by name.
@@ -477,6 +542,49 @@ func (data *Data) DropContinuousQuery(database, name string) error {
 		}
 	}
 	return ErrContinuousQueryNotFound
+}
+
+// CreateSubscription adds a named subscription to a database and retention policy.
+func (data *Data) CreateSubscription(database, rp, name, mode string, destinations []string) error {
+	rpi, err := data.RetentionPolicy(database, rp)
+	if err != nil {
+		return err
+	}
+	if rpi == nil {
+		return ErrRetentionPolicyNotFound
+	}
+
+	// Ensure the name doesn't already exist.
+	for i := range rpi.Subscriptions {
+		if rpi.Subscriptions[i].Name == name {
+			return ErrSubscriptionExists
+		}
+	}
+
+	// Append new query.
+	rpi.Subscriptions = append(rpi.Subscriptions, SubscriptionInfo{
+		Name:         name,
+		Mode:         mode,
+		Destinations: destinations,
+	})
+
+	return nil
+}
+
+// DropSubscription removes a subscription.
+func (data *Data) DropSubscription(database, rp, name string) error {
+	rpi, err := data.RetentionPolicy(database, rp)
+	if err != nil {
+		return err
+	}
+
+	for i := range rpi.Subscriptions {
+		if rpi.Subscriptions[i].Name == name {
+			rpi.Subscriptions = append(rpi.Subscriptions[:i], rpi.Subscriptions[i+1:]...)
+			return nil
+		}
+	}
+	return ErrSubscriptionNotFound
 }
 
 // User returns a user by username.
@@ -818,6 +926,7 @@ type RetentionPolicyInfo struct {
 	Duration           time.Duration
 	ShardGroupDuration time.Duration
 	ShardGroups        []ShardGroupInfo
+	Subscriptions      []SubscriptionInfo
 }
 
 // NewRetentionPolicyInfo returns a new instance of RetentionPolicyInfo with defaults set.
@@ -892,6 +1001,12 @@ func (rpi *RetentionPolicyInfo) unmarshal(pb *internal.RetentionPolicyInfo) {
 		rpi.ShardGroups = make([]ShardGroupInfo, len(pb.GetShardGroups()))
 		for i, x := range pb.GetShardGroups() {
 			rpi.ShardGroups[i].unmarshal(x)
+		}
+	}
+	if len(pb.GetSubscriptions()) > 0 {
+		rpi.Subscriptions = make([]SubscriptionInfo, len(pb.GetSubscriptions()))
+		for i, x := range pb.GetSubscriptions() {
+			rpi.Subscriptions[i].unmarshal(x)
 		}
 	}
 }
@@ -1074,6 +1189,39 @@ func (si *ShardInfo) unmarshal(pb *internal.ShardInfo) {
 		si.Owners = make([]ShardOwner, len(pb.GetOwners()))
 		for i, x := range pb.GetOwners() {
 			si.Owners[i].unmarshal(x)
+		}
+	}
+}
+
+type SubscriptionInfo struct {
+	Name         string
+	Mode         string
+	Destinations []string
+}
+
+// marshal serializes to a protobuf representation.
+func (si SubscriptionInfo) marshal() *internal.SubscriptionInfo {
+	pb := &internal.SubscriptionInfo{
+		Name: proto.String(si.Name),
+		Mode: proto.String(si.Mode),
+	}
+
+	pb.Destinations = make([]string, len(si.Destinations))
+	for i := range si.Destinations {
+		pb.Destinations[i] = si.Destinations[i]
+	}
+	return pb
+}
+
+// unmarshal deserializes from a protobuf representation.
+func (si *SubscriptionInfo) unmarshal(pb *internal.SubscriptionInfo) {
+	si.Name = pb.GetName()
+	si.Mode = pb.GetMode()
+
+	if len(pb.GetDestinations()) > 0 {
+		si.Destinations = make([]string, len(pb.GetDestinations()))
+		for i, h := range pb.GetDestinations() {
+			si.Destinations[i] = h
 		}
 	}
 }

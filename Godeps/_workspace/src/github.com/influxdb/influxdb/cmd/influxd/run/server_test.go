@@ -67,17 +67,42 @@ func TestServer_DatabaseCommands(t *testing.T) {
 				exp:     `{"results":[{"series":[{"name":"databases","columns":["name"],"values":[["db0"],["db1"]]}]}]}`,
 			},
 			&Query{
+				name:    "rename database should succeed",
+				command: `ALTER DATABASE db1 RENAME TO db2`,
+				exp:     `{"results":[{}]}`,
+			},
+			&Query{
+				name:    "show databases should reflect change of name",
+				command: `SHOW DATABASES`,
+				exp:     `{"results":[{"series":[{"name":"databases","columns":["name"],"values":[["db0"],["db2"]]}]}]}`,
+			},
+			&Query{
+				name:    "rename non-existent database should fail",
+				command: `ALTER DATABASE db4 RENAME TO db5`,
+				exp:     `{"results":[{"error":"database not found"}]}`,
+			},
+			&Query{
+				name:    "rename database to illegal name should fail",
+				command: `ALTER DATABASE db2 RENAME TO 0xdb0`,
+				exp:     `{"error":"error parsing query: found 0, expected identifier at line 1, char 30"}`,
+			},
+			&Query{
+				name:    "rename database to already existing datbase should fail",
+				command: `ALTER DATABASE db2 RENAME TO db0`,
+				exp:     `{"results":[{"error":"database already exists"}]}`,
+			},
+			&Query{
 				name:    "drop database db0 should succeed",
 				command: `DROP DATABASE db0`,
 				exp:     `{"results":[{}]}`,
 			},
 			&Query{
-				name:    "drop database db1 should succeed",
-				command: `DROP DATABASE db1`,
+				name:    "drop database db2 should succeed",
+				command: `DROP DATABASE db2`,
 				exp:     `{"results":[{}]}`,
 			},
 			&Query{
-				name:    "show database should have no results",
+				name:    "show databases should have no results after dropping all databases",
 				command: `SHOW DATABASES`,
 				exp:     `{"results":[{"series":[{"name":"databases","columns":["name"]}]}]}`,
 			},
@@ -241,6 +266,96 @@ func TestServer_Query_DropDatabaseIsolated(t *testing.T) {
 	}
 }
 
+func TestServer_Query_RenameDatabase(t *testing.T) {
+	t.Parallel()
+	s := OpenServer(NewConfig(), "")
+	defer s.Close()
+
+	if err := s.CreateDatabaseAndRetentionPolicy("db0", newRetentionPolicyInfo("rp0", 1, 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MetaStore.SetDefaultRetentionPolicy("db0", "rp0"); err != nil {
+		t.Fatal(err)
+	}
+
+	writes := []string{
+		fmt.Sprintf(`cpu,host=serverA,region=uswest val=23.2 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
+	}
+
+	test := NewTest("db0", "rp0")
+	test.write = strings.Join(writes, "\n")
+
+	test.addQueries([]*Query{
+		&Query{
+			name:    "Query data from db0 database",
+			command: `SELECT * FROM cpu`,
+			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","host","region","val"],"values":[["2000-01-01T00:00:00Z","serverA","uswest",23.2]]}]}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    "Query data from db0 database with GROUP BY *",
+			command: `SELECT * FROM cpu GROUP BY *`,
+			exp:     `{"results":[{"series":[{"name":"cpu","tags":{"host":"serverA","region":"uswest"},"columns":["time","val"],"values":[["2000-01-01T00:00:00Z",23.2]]}]}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    "Create continuous query using db0",
+			command: `CREATE CONTINUOUS QUERY "cq1" ON db0 BEGIN SELECT count(value) INTO "rp1".:MEASUREMENT FROM cpu GROUP BY time(5s) END`,
+			exp:     `{"results":[{}]}`,
+		},
+		&Query{
+			name:    "Rename database should fail because of conflicting CQ",
+			command: `ALTER DATABASE db0 RENAME TO db1`,
+			exp:     `{"results":[{"error":"database rename conflict with existing continuous query"}]}`,
+		},
+		&Query{
+			name:    "Drop conflicting CQ",
+			command: `DROP CONTINUOUS QUERY "cq1" on db0`,
+			exp:     `{"results":[{}]}`,
+		},
+		&Query{
+			name:    "Rename database should succeed now",
+			command: `ALTER DATABASE db0 RENAME TO db1`,
+			exp:     `{"results":[{}]}`,
+		},
+		&Query{
+			name:    "Query data from db0 database and ensure it's gone",
+			command: `SELECT * FROM cpu`,
+			exp:     `{"results":[{"error":"database not found: db0"}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    "Query data from now renamed database db1 and ensure that's there",
+			command: `SELECT * FROM cpu`,
+			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","host","region","val"],"values":[["2000-01-01T00:00:00Z","serverA","uswest",23.2]]}]}]}`,
+			params:  url.Values{"db": []string{"db1"}},
+		},
+		&Query{
+			name:    "Query data from now renamed database db1 and ensure it's still there with GROUP BY *",
+			command: `SELECT * FROM cpu GROUP BY *`,
+			exp:     `{"results":[{"series":[{"name":"cpu","tags":{"host":"serverA","region":"uswest"},"columns":["time","val"],"values":[["2000-01-01T00:00:00Z",23.2]]}]}]}`,
+			params:  url.Values{"db": []string{"db1"}},
+		},
+	}...)
+
+	for i, query := range test.queries {
+		if i == 0 {
+			if err := test.init(s); err != nil {
+				t.Fatalf("test init failed: %s", err)
+			}
+		}
+		if query.skip {
+			t.Logf("SKIP:: %s", query.name)
+			continue
+		}
+		if err := query.Execute(s); err != nil {
+			t.Error(query.Error(err))
+		} else if !query.success() {
+			t.Error(query.failureMessage())
+		}
+	}
+}
+
 func TestServer_Query_DropAndRecreateSeries(t *testing.T) {
 	t.Parallel()
 	s := OpenServer(NewConfig(), "")
@@ -380,6 +495,24 @@ func TestServer_Query_DropSeriesFromRegex(t *testing.T) {
 			name:    "make sure DROP SERIES doesn't delete anything when regex doesn't match",
 			command: `SHOW SERIES`,
 			exp:     `{"results":[{"series":[{"name":"b","columns":["_key","host","region"],"values":[["b,host=serverA,region=uswest","serverA","uswest"]]},{"name":"c","columns":["_key","host","region"],"values":[["c,host=serverA,region=uswest","serverA","uswest"]]}]}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    "Drop series with WHERE field should error",
+			command: `DROP SERIES FROM c WHERE val > 50.0`,
+			exp:     `{"results":[{"error":"DROP SERIES doesn't support fields in WHERE clause"}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    "make sure DROP SERIES with field in WHERE didn't delete data",
+			command: `SHOW SERIES`,
+			exp:     `{"results":[{"series":[{"name":"b","columns":["_key","host","region"],"values":[["b,host=serverA,region=uswest","serverA","uswest"]]},{"name":"c","columns":["_key","host","region"],"values":[["c,host=serverA,region=uswest","serverA","uswest"]]}]}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    "Drop series with WHERE time should error",
+			command: `DROP SERIES FROM c WHERE time > now() - 1d`,
+			exp:     `{"results":[{"error":"DROP SERIES doesn't support time in WHERE clause"}]}`,
 			params:  url.Values{"db": []string{"db0"}},
 		},
 	}...)
@@ -1258,6 +1391,9 @@ func TestServer_Query_Tags(t *testing.T) {
 
 		fmt.Sprintf("cpu3,company=acme01 value=100 %d", mustParseTime(time.RFC3339Nano, "2015-02-28T01:03:36.703820946Z").UnixNano()),
 		fmt.Sprintf("cpu3 value=200 %d", mustParseTime(time.RFC3339Nano, "2012-02-28T01:03:38.703820946Z").UnixNano()),
+
+		fmt.Sprintf("status_code,url=http://www.example.com value=404 %d", mustParseTime(time.RFC3339Nano, "2015-07-22T08:13:54.929026672Z").UnixNano()),
+		fmt.Sprintf("status_code,url=https://influxdb.com value=418 %d", mustParseTime(time.RFC3339Nano, "2015-07-22T09:52:24.914395083Z").UnixNano()),
 	}
 
 	test := NewTest("db0", "rp0")
@@ -1378,6 +1514,16 @@ func TestServer_Query_Tags(t *testing.T) {
 			name:    "single field (regex tag match)",
 			command: `SELECT value FROM db0.rp0.cpu3 WHERE company !~ /acme[23]/`,
 			exp:     `{"results":[{"series":[{"name":"cpu3","columns":["time","value"],"values":[["2012-02-28T01:03:38.703820946Z",200],["2015-02-28T01:03:36.703820946Z",100]]}]}]}`,
+		},
+		&Query{
+			name:    "single field (regex tag match with escaping)",
+			command: `SELECT value FROM db0.rp0.status_code WHERE url !~ /https\:\/\/influxdb\.com/`,
+			exp:     `{"results":[{"series":[{"name":"status_code","columns":["time","value"],"values":[["2015-07-22T08:13:54.929026672Z",404]]}]}]}`,
+		},
+		&Query{
+			name:    "single field (regex tag match with escaping)",
+			command: `SELECT value FROM db0.rp0.status_code WHERE url =~ /https\:\/\/influxdb\.com/`,
+			exp:     `{"results":[{"series":[{"name":"status_code","columns":["time","value"],"values":[["2015-07-22T09:52:24.914395083Z",418]]}]}]}`,
 		},
 	}...)
 
@@ -1998,6 +2144,12 @@ func TestServer_Query_AggregatesCommon(t *testing.T) {
 			exp:     `{"results":[{"series":[{"name":"intmany","columns":["time","first"],"values":[["2000-01-01T00:00:00Z",2]]}]}]}`,
 		},
 		&Query{
+			name:    "first - int - epoch ms",
+			params:  url.Values{"db": []string{"db0"}, "epoch": []string{"ms"}},
+			command: `SELECT FIRST(value) FROM intmany`,
+			exp:     fmt.Sprintf(`{"results":[{"series":[{"name":"intmany","columns":["time","first"],"values":[[%d,2]]}]}]}`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()/int64(time.Millisecond)),
+		},
+		&Query{
 			name:    "last - int",
 			params:  url.Values{"db": []string{"db0"}},
 			command: `SELECT LAST(value) FROM intmany`,
@@ -2419,6 +2571,17 @@ func TestServer_Query_AggregateSelectors(t *testing.T) {
 			exp:     `{"results":[{"series":[{"name":"network","columns":["time","max"],"values":[["2000-01-01T00:00:00Z",40],["2000-01-01T00:00:30Z",50],["2000-01-01T00:01:00Z",90]]}]}]}`,
 		},
 		&Query{
+			name:    "max - baseline 30s - epoch ms",
+			params:  url.Values{"db": []string{"db0"}, "epoch": []string{"ms"}},
+			command: `SELECT max(rx) FROM network where time >= '2000-01-01T00:00:00Z' AND time <= '2000-01-01T00:01:29Z' group by time(30s)`,
+			exp: fmt.Sprintf(
+				`{"results":[{"series":[{"name":"network","columns":["time","max"],"values":[[%d,40],[%d,50],[%d,90]]}]}]}`,
+				mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()/int64(time.Millisecond),
+				mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:30Z").UnixNano()/int64(time.Millisecond),
+				mustParseTime(time.RFC3339Nano, "2000-01-01T00:01:00Z").UnixNano()/int64(time.Millisecond),
+			),
+		},
+		&Query{
 			name:    "max - tx",
 			params:  url.Values{"db": []string{"db0"}},
 			command: `SELECT tx, max(rx) FROM network where time >= '2000-01-01T00:00:00Z' AND time <= '2000-01-01T00:01:29Z' group by time(30s)`,
@@ -2459,6 +2622,12 @@ func TestServer_Query_AggregateSelectors(t *testing.T) {
 			params:  url.Values{"db": []string{"db0"}},
 			command: `SELECT time, tx, min(rx) FROM network where time >= '2000-01-01T00:00:00Z' AND time <= '2000-01-01T00:01:29Z' group by time(30s)`,
 			exp:     `{"results":[{"series":[{"name":"network","columns":["time","tx","min"],"values":[["2000-01-01T00:00:00Z",20,10],["2000-01-01T00:00:30Z",60,40],["2000-01-01T00:01:20Z",4,5]]}]}]}`,
+		},
+		&Query{
+			name:    "max,min - baseline 30s",
+			params:  url.Values{"db": []string{"db0"}},
+			command: `SELECT max(rx), min(rx) FROM network where time >= '2000-01-01T00:00:00Z' AND time <= '2000-01-01T00:01:29Z' group by time(30s)`,
+			exp:     `{"results":[{"series":[{"name":"network","columns":["time","max","min"],"values":[["2000-01-01T00:00:00Z",40,10],["2000-01-01T00:00:30Z",50,40],["2000-01-01T00:01:00Z",90,5]]}]}]}`,
 		},
 		&Query{
 			name:    "first - baseline 30s",
@@ -2741,6 +2910,17 @@ func TestServer_Query_TopInt(t *testing.T) {
 			params:  url.Values{"db": []string{"db0"}},
 			command: `SELECT time, TOP(value, 1) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
 			exp:     `{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[["2000-01-01T00:00:20Z",4],["2000-01-01T01:00:10Z",7],["2000-01-01T02:00:10Z",9]]}]}]}`,
+		},
+		&Query{
+			name:    "top - cpu - time specified - hourly - epoch ms",
+			params:  url.Values{"db": []string{"db0"}, "epoch": []string{"ms"}},
+			command: `SELECT time, TOP(value, 1) FROM cpu where time >= '2000-01-01T00:00:00Z' and time <= '2000-01-01T02:00:10Z' group by time(1h)`,
+			exp: fmt.Sprintf(
+				`{"results":[{"series":[{"name":"cpu","columns":["time","top"],"values":[[%d,4],[%d,7],[%d,9]]}]}]}`,
+				mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:20Z").UnixNano()/int64(time.Millisecond),
+				mustParseTime(time.RFC3339Nano, "2000-01-01T01:00:10Z").UnixNano()/int64(time.Millisecond),
+				mustParseTime(time.RFC3339Nano, "2000-01-01T02:00:10Z").UnixNano()/int64(time.Millisecond),
+			),
 		},
 		&Query{
 			name:    "top - cpu - time specified (not first) - hourly",
@@ -3280,7 +3460,7 @@ func TestServer_Query_WildcardExpansion(t *testing.T) {
 			exp:     `{"results":[{"series":[{"name":"wildcard","columns":["time","c","h","region","value"],"values":[["2000-01-01T00:00:00Z",80,"A","us-east",10],["2000-01-01T00:00:10Z",90,"B","us-east",20],["2000-01-01T00:00:20Z",70,"B","us-west",30],["2000-01-01T00:00:30Z",60,"A","us-east",40]]}]}]}`,
 		},
 		&Query{
-			name:    "duplicate tag and field name, always favor field over tag",
+			name:    "duplicate tag and field key, always favor field over tag",
 			command: `SELECT * FROM dupnames`,
 			params:  url.Values{"db": []string{"db0"}},
 			exp:     `{"results":[{"series":[{"name":"dupnames","columns":["time","day","region","value"],"values":[["2000-01-01T00:00:00Z",3,"us-east",10],["2000-01-01T00:00:10Z",2,"us-east",20],["2000-01-01T00:00:20Z",1,"us-west",30]]}]}]}`,
@@ -4127,6 +4307,18 @@ func TestServer_Query_ShowSeries(t *testing.T) {
 			exp:     `{"results":[{"series":[{"name":"cpu","columns":["_key","host","region"],"values":[["cpu,host=server01,region=useast","server01","useast"],["cpu,host=server02,region=useast","server02","useast"]]}]}]}`,
 			params:  url.Values{"db": []string{"db0"}},
 		},
+		&Query{
+			name:    `show series with WHERE time should fail`,
+			command: "SHOW SERIES WHERE time > now() - 1h",
+			exp:     `{"results":[{"error":"SHOW SERIES doesn't support time in WHERE clause"}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    `show series with WHERE field should fail`,
+			command: "SHOW SERIES WHERE value > 10.0",
+			exp:     `{"results":[{"error":"SHOW SERIES doesn't support fields in WHERE clause"}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
 	}...)
 
 	for i, query := range test.queries {
@@ -4189,6 +4381,12 @@ func TestServer_Query_ShowMeasurements(t *testing.T) {
 			name:    `show measurements where tag does not match a regular expression`,
 			command: "SHOW MEASUREMENTS WHERE region !~ /ca.*/",
 			exp:     `{"results":[{"series":[{"name":"measurements","columns":["name"],"values":[["cpu"]]}]}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    `show measurements with time in WHERE clauses errors`,
+			command: `SHOW MEASUREMENTS WHERE time > now() - 1h`,
+			exp:     `{"results":[{"error":"SHOW MEASUREMENTS doesn't support time in WHERE clause"}]}`,
 			params:  url.Values{"db": []string{"db0"}},
 		},
 	}...)
@@ -4262,6 +4460,12 @@ func TestServer_Query_ShowTagKeys(t *testing.T) {
 			params:  url.Values{"db": []string{"db0"}},
 		},
 		&Query{
+			name:    "show tag keys with time in WHERE clause errors",
+			command: "SHOW TAG KEYS FROM cpu WHERE time > now() - 1h",
+			exp:     `{"results":[{"error":"SHOW TAG KEYS doesn't support time in WHERE clause"}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
 			name:    "show tag values with key",
 			command: "SHOW TAG VALUES WITH KEY = host",
 			exp:     `{"results":[{"series":[{"name":"hostTagValues","columns":["host"],"values":[["server01"],["server02"],["server03"]]}]}]}`,
@@ -4295,6 +4499,12 @@ func TestServer_Query_ShowTagKeys(t *testing.T) {
 			name:    `show tag values with key and measurement matches regular expression`,
 			command: `SHOW TAG VALUES FROM /[cg]pu/ WITH KEY = host`,
 			exp:     `{"results":[{"series":[{"name":"hostTagValues","columns":["host"],"values":[["server01"],["server02"],["server03"]]}]}]}`,
+			params:  url.Values{"db": []string{"db0"}},
+		},
+		&Query{
+			name:    `show tag values with key and time in WHERE clause should error`,
+			command: `SHOW TAG VALUES WITH KEY = host WHERE time > now() - 1h`,
+			exp:     `{"results":[{"error":"SHOW TAG VALUES doesn't support time in WHERE clause"}]}`,
 			params:  url.Values{"db": []string{"db0"}},
 		},
 	}...)
@@ -4769,6 +4979,60 @@ func TestServer_Query_FieldWithMultiplePeriodsMeasurementPrefixMatch(t *testing.
 				t.Fatalf("test init failed: %s", err)
 			}
 		}
+		if query.skip {
+			t.Logf("SKIP:: %s", query.name)
+			continue
+		}
+		if err := query.Execute(s); err != nil {
+			t.Error(query.Error(err))
+		} else if !query.success() {
+			t.Error(query.failureMessage())
+		}
+	}
+}
+
+func TestServer_Query_IntoTarget(t *testing.T) {
+	t.Parallel()
+	s := OpenServer(NewConfig(), "")
+	defer s.Close()
+
+	if err := s.CreateDatabaseAndRetentionPolicy("db0", newRetentionPolicyInfo("rp0", 1, 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MetaStore.SetDefaultRetentionPolicy("db0", "rp0"); err != nil {
+		t.Fatal(err)
+	}
+
+	writes := []string{
+		fmt.Sprintf(`foo value=1 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:00Z").UnixNano()),
+		fmt.Sprintf(`foo value=2 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:10Z").UnixNano()),
+		fmt.Sprintf(`foo value=3 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:20Z").UnixNano()),
+		fmt.Sprintf(`foo value=4 %d`, mustParseTime(time.RFC3339Nano, "2000-01-01T00:00:30Z").UnixNano()),
+	}
+
+	test := NewTest("db0", "rp0")
+	test.write = strings.Join(writes, "\n")
+
+	test.addQueries([]*Query{
+		&Query{
+			name:    "into",
+			params:  url.Values{"db": []string{"db0"}},
+			command: `SELECT value AS something INTO baz FROM foo`,
+			exp:     `{"results":[{"series":[{"name":"result","columns":["time","written"],"values":[["1970-01-01T00:00:00Z",4]]}]}]}`,
+		},
+		&Query{
+			name:    "confirm results",
+			params:  url.Values{"db": []string{"db0"}},
+			command: `SELECT something FROM baz`,
+			exp:     `{"results":[{"series":[{"name":"baz","columns":["time","something"],"values":[["2000-01-01T00:00:00Z",1],["2000-01-01T00:00:10Z",2],["2000-01-01T00:00:20Z",3],["2000-01-01T00:00:30Z",4]]}]}]}`,
+		},
+	}...)
+
+	if err := test.init(s); err != nil {
+		t.Fatalf("test init failed: %s", err)
+	}
+
+	for _, query := range test.queries {
 		if query.skip {
 			t.Logf("SKIP:: %s", query.name)
 			continue

@@ -1418,6 +1418,12 @@ func TestParser_ParseStatement(t *testing.T) {
 			stmt: newAlterRetentionPolicyStatement("default", "testdb", -1, 4, false),
 		},
 
+		// ALTER DATABASE RENAME
+		{
+			s:    `ALTER DATABASE db0 RENAME TO db1`,
+			stmt: newAlterDatabaseRenameStatement("db0", "db1"),
+		},
+
 		// SHOW STATS
 		{
 			s: `SHOW STATS`,
@@ -1448,6 +1454,34 @@ func TestParser_ParseStatement(t *testing.T) {
 			stmt: &influxql.ShowDiagnosticsStatement{
 				Module: "build",
 			},
+		},
+
+		// CREATE SUBSCRIPTION
+		{
+			s: `CREATE SUBSCRIPTION "name" ON "db"."rp" DESTINATIONS ANY 'udp://host1:9093', 'udp://host2:9093'`,
+			stmt: &influxql.CreateSubscriptionStatement{
+				Name:            "name",
+				Database:        "db",
+				RetentionPolicy: "rp",
+				Destinations:    []string{"udp://host1:9093", "udp://host2:9093"},
+				Mode:            "ANY",
+			},
+		},
+
+		// DROP SUBSCRIPTION
+		{
+			s: `DROP SUBSCRIPTION "name" ON "db"."rp"`,
+			stmt: &influxql.DropSubscriptionStatement{
+				Name:            "name",
+				Database:        "db",
+				RetentionPolicy: "rp",
+			},
+		},
+
+		// SHOW SUBSCRIPTIONS
+		{
+			s:    `SHOW SUBSCRIPTIONS`,
+			stmt: &influxql.ShowSubscriptionsStatement{},
 		},
 
 		// Errors
@@ -1535,7 +1569,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `SHOW RETENTION POLICIES`, err: `found EOF, expected ON at line 1, char 25`},
 		{s: `SHOW RETENTION POLICIES mydb`, err: `found mydb, expected ON at line 1, char 25`},
 		{s: `SHOW RETENTION POLICIES ON`, err: `found EOF, expected identifier at line 1, char 28`},
-		{s: `SHOW FOO`, err: `found FOO, expected CONTINUOUS, DATABASES, DIAGNOSTICS, FIELD, GRANTS, MEASUREMENTS, RETENTION, SERIES, SERVERS, SHARDS, STATS, TAG, USERS at line 1, char 6`},
+		{s: `SHOW FOO`, err: `found FOO, expected CONTINUOUS, DATABASES, DIAGNOSTICS, FIELD, GRANTS, MEASUREMENTS, RETENTION, SERIES, SERVERS, SHARDS, STATS, SUBSCRIPTIONS, TAG, USERS at line 1, char 6`},
 		{s: `SHOW STATS FOR`, err: `found EOF, expected string at line 1, char 16`},
 		{s: `SHOW DIAGNOSTICS FOR`, err: `found EOF, expected string at line 1, char 22`},
 		{s: `SHOW GRANTS`, err: `found EOF, expected FOR at line 1, char 13`},
@@ -1546,7 +1580,8 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `DROP CONTINUOUS QUERY myquery ON`, err: `found EOF, expected identifier at line 1, char 34`},
 		{s: `CREATE CONTINUOUS`, err: `found EOF, expected QUERY at line 1, char 19`},
 		{s: `CREATE CONTINUOUS QUERY`, err: `found EOF, expected identifier at line 1, char 25`},
-		{s: `DROP FOO`, err: `found FOO, expected SERIES, CONTINUOUS, MEASUREMENT at line 1, char 6`},
+		{s: `DROP FOO`, err: `found FOO, expected SERIES, CONTINUOUS, MEASUREMENT, SERVER, SUBSCRIPTION at line 1, char 6`},
+		{s: `CREATE FOO`, err: `found FOO, expected CONTINUOUS, DATABASE, USER, RETENTION, SUBSCRIPTION at line 1, char 8`},
 		{s: `CREATE DATABASE`, err: `found EOF, expected identifier at line 1, char 17`},
 		{s: `CREATE DATABASE IF`, err: `found EOF, expected NOT at line 1, char 20`},
 		{s: `CREATE DATABASE IF NOT`, err: `found EOF, expected EXISTS at line 1, char 24`},
@@ -1557,11 +1592,24 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `DROP RETENTION POLICY "1h.cpu"`, err: `found EOF, expected ON at line 1, char 31`},
 		{s: `DROP RETENTION POLICY "1h.cpu" ON`, err: `found EOF, expected identifier at line 1, char 35`},
 		{s: `DROP USER`, err: `found EOF, expected identifier at line 1, char 11`},
+		{s: `DROP SUBSCRIPTION`, err: `found EOF, expected identifier at line 1, char 19`},
+		{s: `DROP SUBSCRIPTION "name"`, err: `found EOF, expected ON at line 1, char 25`},
+		{s: `DROP SUBSCRIPTION "name" ON `, err: `found EOF, expected identifier at line 1, char 30`},
+		{s: `DROP SUBSCRIPTION "name" ON "db"`, err: `found EOF, expected . at line 1, char 33`},
+		{s: `DROP SUBSCRIPTION "name" ON "db".`, err: `found EOF, expected identifier at line 1, char 34`},
 		{s: `CREATE USER testuser`, err: `found EOF, expected WITH at line 1, char 22`},
 		{s: `CREATE USER testuser WITH`, err: `found EOF, expected PASSWORD at line 1, char 27`},
 		{s: `CREATE USER testuser WITH PASSWORD`, err: `found EOF, expected string at line 1, char 36`},
 		{s: `CREATE USER testuser WITH PASSWORD 'pwd' WITH`, err: `found EOF, expected ALL at line 1, char 47`},
 		{s: `CREATE USER testuser WITH PASSWORD 'pwd' WITH ALL`, err: `found EOF, expected PRIVILEGES at line 1, char 51`},
+		{s: `CREATE SUBSCRIPTION`, err: `found EOF, expected identifier at line 1, char 21`},
+		{s: `CREATE SUBSCRIPTION "name"`, err: `found EOF, expected ON at line 1, char 27`},
+		{s: `CREATE SUBSCRIPTION "name" ON `, err: `found EOF, expected identifier at line 1, char 32`},
+		{s: `CREATE SUBSCRIPTION "name" ON "db"`, err: `found EOF, expected . at line 1, char 35`},
+		{s: `CREATE SUBSCRIPTION "name" ON "db".`, err: `found EOF, expected identifier at line 1, char 36`},
+		{s: `CREATE SUBSCRIPTION "name" ON "db"."rp"`, err: `found EOF, expected DESTINATIONS at line 1, char 40`},
+		{s: `CREATE SUBSCRIPTION "name" ON "db"."rp" DESTINATIONS`, err: `found EOF, expected ALL, ANY at line 1, char 54`},
+		{s: `CREATE SUBSCRIPTION "name" ON "db"."rp" DESTINATIONS ALL `, err: `found EOF, expected string at line 1, char 59`},
 		{s: `GRANT`, err: `found EOF, expected READ, WRITE, ALL [PRIVILEGES] at line 1, char 7`},
 		{s: `GRANT BOGUS`, err: `found BOGUS, expected READ, WRITE, ALL [PRIVILEGES] at line 1, char 7`},
 		{s: `GRANT READ`, err: `found EOF, expected ON at line 1, char 12`},
@@ -1639,11 +1687,15 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION 0`, err: `invalid value 0: must be 1 <= n <= 2147483647 at line 1, char 67`},
 		{s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION bad`, err: `found bad, expected number at line 1, char 67`},
 		{s: `CREATE RETENTION POLICY policy1 ON testdb DURATION 1h REPLICATION 1 foo`, err: `found foo, expected DEFAULT at line 1, char 69`},
-		{s: `ALTER`, err: `found EOF, expected RETENTION at line 1, char 7`},
+		{s: `ALTER`, err: `found EOF, expected RETENTION, DATABASE at line 1, char 7`},
 		{s: `ALTER RETENTION`, err: `found EOF, expected POLICY at line 1, char 17`},
 		{s: `ALTER RETENTION POLICY`, err: `found EOF, expected identifier at line 1, char 24`},
 		{s: `ALTER RETENTION POLICY policy1`, err: `found EOF, expected ON at line 1, char 32`}, {s: `ALTER RETENTION POLICY policy1 ON`, err: `found EOF, expected identifier at line 1, char 35`},
 		{s: `ALTER RETENTION POLICY policy1 ON testdb`, err: `found EOF, expected DURATION, RETENTION, DEFAULT at line 1, char 42`},
+		{s: `ALTER DATABASE`, err: `found EOF, expected identifier at line 1, char 16`},
+		{s: `ALTER DATABASE db0`, err: `found EOF, expected RENAME at line 1, char 20`},
+		{s: `ALTER DATABASE db0 RENAME`, err: `found EOF, expected TO at line 1, char 27`},
+		{s: `ALTER DATABASE db0 RENAME TO`, err: `found EOF, expected identifier at line 1, char 30`},
 		{s: `SET`, err: `found EOF, expected PASSWORD at line 1, char 5`},
 		{s: `SET PASSWORD`, err: `found EOF, expected FOR at line 1, char 14`},
 		{s: `SET PASSWORD something`, err: `found something, expected FOR at line 1, char 14`},
@@ -1768,11 +1820,21 @@ func TestParser_ParseExpr(t *testing.T) {
 
 		// Binary expression with regex.
 		{
-			s: "region =~ /us.*/",
+			s: `region =~ /us.*/`,
 			expr: &influxql.BinaryExpr{
 				Op:  influxql.EQREGEX,
 				LHS: &influxql.VarRef{Val: "region"},
 				RHS: &influxql.RegexLiteral{Val: regexp.MustCompile(`us.*`)},
+			},
+		},
+
+		// Binary expression with quoted '/' regex.
+		{
+			s: `url =~ /http\:\/\/www\.example\.com/`,
+			expr: &influxql.BinaryExpr{
+				Op:  influxql.EQREGEX,
+				LHS: &influxql.VarRef{Val: "url"},
+				RHS: &influxql.RegexLiteral{Val: regexp.MustCompile(`http\://www\.example\.com`)},
 			},
 		},
 
@@ -2065,6 +2127,14 @@ func newAlterRetentionPolicyStatement(name string, DB string, d time.Duration, r
 	}
 
 	return stmt
+}
+
+// newAlterDatabaseRenameStatement creates an initialized AlterDatabaseRenameStatement.
+func newAlterDatabaseRenameStatement(oldName, newName string) *influxql.AlterDatabaseRenameStatement {
+	return &influxql.AlterDatabaseRenameStatement{
+		OldName: oldName,
+		NewName: newName,
+	}
 }
 
 // mustMarshalJSON encodes a value to JSON.

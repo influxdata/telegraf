@@ -207,7 +207,7 @@ func parsePoint(buf []byte, defaultTime time.Time, precision string) (Point, err
 		if err != nil {
 			return nil, err
 		}
-		pt.time = time.Unix(0, ts*pt.GetPrecisionMultiplier(precision))
+		pt.time = time.Unix(0, ts*pt.GetPrecisionMultiplier(precision)).UTC()
 	}
 	return pt, nil
 }
@@ -248,28 +248,28 @@ func scanKey(buf []byte, i int) (int, []byte, error) {
 			break
 		}
 
-		// equals is special in the tags section.  It must be escaped if part of a tag name or value.
+		// equals is special in the tags section.  It must be escaped if part of a tag key or value.
 		// It does not need to be escaped if part of the measurement.
 		if buf[i] == '=' && commas > 0 {
 			if i-1 < 0 || i-2 < 0 {
-				return i, buf[start:i], fmt.Errorf("missing tag name")
+				return i, buf[start:i], fmt.Errorf("missing tag key")
 			}
 
 			// Check for "cpu,=value" but allow "cpu,a\,=value"
 			if buf[i-1] == ',' && buf[i-2] != '\\' {
-				return i, buf[start:i], fmt.Errorf("missing tag name")
+				return i, buf[start:i], fmt.Errorf("missing tag key")
 			}
 
 			// Check for "cpu,\ =value"
 			if buf[i-1] == ' ' && buf[i-2] != '\\' {
-				return i, buf[start:i], fmt.Errorf("missing tag name")
+				return i, buf[start:i], fmt.Errorf("missing tag key")
 			}
 
 			i += 1
 			equals += 1
 
-			// Check for "cpu,a=1,b= value=1"
-			if i < len(buf) && buf[i] == ' ' {
+			// Check for "cpu,a=1,b= value=1" or "cpu,a=1,b=,c=foo value=1"
+			if i < len(buf) && (buf[i] == ' ' || buf[i] == ',') {
 				return i, buf[start:i], fmt.Errorf("missing tag value")
 			}
 			continue
@@ -459,12 +459,12 @@ func scanFields(buf []byte, i int) (int, []byte, error) {
 
 			// check for "... =123" but allow "a\ =123"
 			if buf[i-1] == ' ' && buf[i-2] != '\\' {
-				return i, buf[start:i], fmt.Errorf("missing field name")
+				return i, buf[start:i], fmt.Errorf("missing field key")
 			}
 
 			// check for "...a=123,=456" but allow "a=123,a\,=456"
 			if buf[i-1] == ',' && buf[i-2] != '\\' {
-				return i, buf[start:i], fmt.Errorf("missing field name")
+				return i, buf[start:i], fmt.Errorf("missing field key")
 			}
 
 			// check for "... value="
@@ -597,14 +597,14 @@ func scanNumber(buf []byte, i int) (int, error) {
 		}
 
 		// `e` is valid for floats but not as the first char
-		if i > start && (buf[i] == 'e') {
+		if i > start && (buf[i] == 'e' || buf[i] == 'E') {
 			scientific = true
 			i += 1
 			continue
 		}
 
 		// + and - are only valid at this point if they follow an e (scientific notation)
-		if (buf[i] == '+' || buf[i] == '-') && buf[i-1] == 'e' {
+		if (buf[i] == '+' || buf[i] == '-') && (buf[i-1] == 'e' || buf[i-1] == 'E') {
 			i += 1
 			continue
 		}

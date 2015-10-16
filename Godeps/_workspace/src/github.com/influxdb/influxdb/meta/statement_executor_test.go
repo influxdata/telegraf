@@ -46,6 +46,26 @@ func TestStatementExecutor_ExecuteStatement_DropDatabase(t *testing.T) {
 	}
 }
 
+// Ensure an ALTER DATABASE ... RENAME TO ... statement can be executed.
+func TestStatementExecutor_ExecuteStatement_AlterDatabaseRename(t *testing.T) {
+	e := NewStatementExecutor()
+	e.Store.RenameDatabaseFn = func(oldName, newName string) error {
+		if oldName != "old_foo" {
+			t.Fatalf("unexpected name: %s", oldName)
+		}
+		if newName != "new_foo" {
+			t.Fatalf("unexpected name: %s", newName)
+		}
+		return nil
+	}
+
+	if res := e.ExecuteStatement(influxql.MustParseStatement(`ALTER DATABASE old_foo RENAME TO new_foo`)); res.Err != nil {
+		t.Fatal(res.Err)
+	} else if res.Series != nil {
+		t.Fatalf("unexpected rows: %#v", res.Series)
+	}
+}
+
 // Ensure a SHOW DATABASES statement can be executed.
 func TestStatementExecutor_ExecuteStatement_ShowDatabases(t *testing.T) {
 	e := NewStatementExecutor()
@@ -786,6 +806,159 @@ func TestStatementExecutor_ExecuteStatement_ShowContinuousQueries_Err(t *testing
 	}
 }
 
+// Ensure a CREATE SUBSCRIPTION statement can be executed.
+func TestStatementExecutor_ExecuteStatement_CreateSubscription(t *testing.T) {
+	e := NewStatementExecutor()
+	e.Store.CreateSubscriptionFn = func(database, rp, name, mode string, destinations []string) error {
+		if database != "db0" {
+			t.Fatalf("unexpected database: %s", database)
+		} else if rp != "rp0" {
+			t.Fatalf("unexpected rp: %s", rp)
+		} else if name != "s0" {
+			t.Fatalf("unexpected name: %s", name)
+		} else if mode != "ANY" {
+			t.Fatalf("unexpected mode: %s", mode)
+		} else if len(destinations) != 2 {
+			t.Fatalf("unexpected destinations: %s", destinations)
+		} else if destinations[0] != "udp://h0:1234" {
+			t.Fatalf("unexpected destinations[0]: %s", destinations[0])
+		} else if destinations[1] != "udp://h1:1234" {
+			t.Fatalf("unexpected destinations[1]: %s", destinations[1])
+		}
+		return nil
+	}
+
+	stmt := influxql.MustParseStatement(`CREATE SUBSCRIPTION s0 ON db0.rp0 DESTINATIONS ANY 'udp://h0:1234', 'udp://h1:1234'`)
+	if res := e.ExecuteStatement(stmt); res.Err != nil {
+		t.Fatal(res.Err)
+	} else if res.Series != nil {
+		t.Fatalf("unexpected rows: %#v", res.Series)
+	}
+}
+
+// Ensure a CREATE SUBSCRIPTION statement can return an error from the store.
+func TestStatementExecutor_ExecuteStatement_CreateSubscription_Err(t *testing.T) {
+	e := NewStatementExecutor()
+	e.Store.CreateSubscriptionFn = func(database, rp, name, mode string, destinations []string) error {
+		return errors.New("marker")
+	}
+
+	stmt := influxql.MustParseStatement(`CREATE SUBSCRIPTION s0 ON db0.rp0 DESTINATIONS ANY 'udp://h0:1234', 'udp://h1:1234'`)
+	if res := e.ExecuteStatement(stmt); res.Err == nil || res.Err.Error() != "marker" {
+		t.Fatalf("unexpected error: %s", res.Err)
+	}
+}
+
+// Ensure a DROP SUBSCRIPTION statement can be executed.
+func TestStatementExecutor_ExecuteStatement_DropSubscription(t *testing.T) {
+	e := NewStatementExecutor()
+	e.Store.DropSubscriptionFn = func(database, rp, name string) error {
+		if database != "db0" {
+			t.Fatalf("unexpected database: %s", database)
+		} else if rp != "rp0" {
+			t.Fatalf("unexpected rp: %s", rp)
+		} else if name != "s0" {
+			t.Fatalf("unexpected name: %s", name)
+		}
+		return nil
+	}
+
+	stmt := influxql.MustParseStatement(`DROP SUBSCRIPTION s0 ON db0.rp0`)
+	if res := e.ExecuteStatement(stmt); res.Err != nil {
+		t.Fatal(res.Err)
+	} else if res.Series != nil {
+		t.Fatalf("unexpected rows: %#v", res.Series)
+	}
+}
+
+// Ensure a DROP SUBSCRIPTION statement can return an error from the store.
+func TestStatementExecutor_ExecuteStatement_DropSubscription_Err(t *testing.T) {
+	e := NewStatementExecutor()
+	e.Store.DropSubscriptionFn = func(database, rp, name string) error {
+		return errors.New("marker")
+	}
+
+	stmt := influxql.MustParseStatement(`DROP SUBSCRIPTION s0 ON db0.rp0`)
+	if res := e.ExecuteStatement(stmt); res.Err == nil || res.Err.Error() != "marker" {
+		t.Fatalf("unexpected error: %s", res.Err)
+	}
+}
+
+// Ensure a SHOW SUBSCRIPTIONS statement can be executed.
+func TestStatementExecutor_ExecuteStatement_ShowSubscriptions(t *testing.T) {
+	e := NewStatementExecutor()
+	e.Store.DatabasesFn = func() ([]meta.DatabaseInfo, error) {
+		return []meta.DatabaseInfo{
+			{
+				Name: "db0",
+				RetentionPolicies: []meta.RetentionPolicyInfo{
+					{
+						Name: "rp0",
+						Subscriptions: []meta.SubscriptionInfo{
+							{Name: "s0", Mode: "ALL", Destinations: []string{"udp://h0:1234", "udp://h1:1234"}},
+							{Name: "s1", Mode: "ANY", Destinations: []string{"udp://h2:1234", "udp://h3:1234"}},
+						},
+					},
+					{
+						Name: "rp1",
+						Subscriptions: []meta.SubscriptionInfo{
+							{Name: "s2", Mode: "ALL", Destinations: []string{"udp://h4:1234", "udp://h5:1234"}},
+						},
+					},
+				},
+			},
+			{
+				Name: "db1",
+				RetentionPolicies: []meta.RetentionPolicyInfo{
+					{
+						Name: "rp2",
+						Subscriptions: []meta.SubscriptionInfo{
+							{Name: "s3", Mode: "ANY", Destinations: []string{"udp://h6:1234", "udp://h7:1234"}},
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
+	stmt := influxql.MustParseStatement(`SHOW SUBSCRIPTIONS`)
+	if res := e.ExecuteStatement(stmt); res.Err != nil {
+		t.Fatal(res.Err)
+	} else if !reflect.DeepEqual(res.Series, models.Rows{
+		{
+			Name:    "db0",
+			Columns: []string{"retention_policy", "name", "mode", "destinations"},
+			Values: [][]interface{}{
+				{"rp0", "s0", "ALL", []string{"udp://h0:1234", "udp://h1:1234"}},
+				{"rp0", "s1", "ANY", []string{"udp://h2:1234", "udp://h3:1234"}},
+				{"rp1", "s2", "ALL", []string{"udp://h4:1234", "udp://h5:1234"}},
+			},
+		},
+		{
+			Name:    "db1",
+			Columns: []string{"retention_policy", "name", "mode", "destinations"},
+			Values: [][]interface{}{
+				{"rp2", "s3", "ANY", []string{"udp://h6:1234", "udp://h7:1234"}},
+			},
+		},
+	}) {
+		t.Fatalf("unexpected rows: %s", spew.Sdump(res.Series))
+	}
+}
+
+// Ensure a SHOW SUBSCRIPTIONS statement can return an error from the store.
+func TestStatementExecutor_ExecuteStatement_ShowSubscriptions_Err(t *testing.T) {
+	e := NewStatementExecutor()
+	e.Store.DatabasesFn = func() ([]meta.DatabaseInfo, error) {
+		return nil, errors.New("marker")
+	}
+
+	stmt := influxql.MustParseStatement(`SHOW SUBSCRIPTIONS`)
+	if res := e.ExecuteStatement(stmt); res.Err == nil || res.Err.Error() != "marker" {
+		t.Fatal(res.Err)
+	}
+}
+
 // Ensure that executing an unsupported statement will panic.
 func TestStatementExecutor_ExecuteStatement_Unsupported(t *testing.T) {
 	var panicked bool
@@ -883,6 +1056,7 @@ type StatementExecutorStore struct {
 	CreateDatabaseFn            func(name string) (*meta.DatabaseInfo, error)
 	DropDatabaseFn              func(name string) error
 	DeleteNodeFn                func(nodeID uint64, force bool) error
+	RenameDatabaseFn            func(oldName, newName string) error
 	DefaultRetentionPolicyFn    func(database string) (*meta.RetentionPolicyInfo, error)
 	CreateRetentionPolicyFn     func(database string, rpi *meta.RetentionPolicyInfo) (*meta.RetentionPolicyInfo, error)
 	UpdateRetentionPolicyFn     func(database, name string, rpu *meta.RetentionPolicyUpdate) error
@@ -899,6 +1073,8 @@ type StatementExecutorStore struct {
 	ContinuousQueriesFn         func() ([]meta.ContinuousQueryInfo, error)
 	CreateContinuousQueryFn     func(database, name, query string) error
 	DropContinuousQueryFn       func(database, name string) error
+	CreateSubscriptionFn        func(database, rp, name, typ string, hosts []string) error
+	DropSubscriptionFn          func(database, rp, name string) error
 }
 
 func (s *StatementExecutorStore) Node(id uint64) (*meta.NodeInfo, error) {
@@ -938,6 +1114,10 @@ func (s *StatementExecutorStore) CreateDatabase(name string) (*meta.DatabaseInfo
 
 func (s *StatementExecutorStore) DropDatabase(name string) error {
 	return s.DropDatabaseFn(name)
+}
+
+func (s *StatementExecutorStore) RenameDatabase(oldName, newName string) error {
+	return s.RenameDatabaseFn(oldName, newName)
 }
 
 func (s *StatementExecutorStore) DefaultRetentionPolicy(database string) (*meta.RetentionPolicyInfo, error) {
@@ -1002,4 +1182,12 @@ func (s *StatementExecutorStore) CreateContinuousQuery(database, name, query str
 
 func (s *StatementExecutorStore) DropContinuousQuery(database, name string) error {
 	return s.DropContinuousQueryFn(database, name)
+}
+
+func (s *StatementExecutorStore) CreateSubscription(database, rp, name, typ string, hosts []string) error {
+	return s.CreateSubscriptionFn(database, rp, name, typ, hosts)
+}
+
+func (s *StatementExecutorStore) DropSubscription(database, rp, name string) error {
+	return s.DropSubscriptionFn(database, rp, name)
 }
