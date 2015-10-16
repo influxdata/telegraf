@@ -177,6 +177,7 @@ Telegraf currently has support for collecting metrics from
 * mongodb
 * mysql
 * nginx
+* phpfpm
 * ping
 * postgresql
 * procstat
