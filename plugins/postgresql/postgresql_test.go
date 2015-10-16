@@ -75,7 +75,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	}
 
 	assert.True(t, metricsCounted > 0)
-	assert.Equal(t, len(availableColumns) - len(p.IgnoredColumns()), metricsCounted)
+	assert.Equal(t, len(availableColumns)-len(p.IgnoredColumns()), metricsCounted)
 }
 
 func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {

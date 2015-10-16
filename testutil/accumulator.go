@@ -3,8 +3,8 @@ package testutil
 import (
 	"fmt"
 	"reflect"
-	"time"
 	"sync"
+	"time"
 )
 
 // Point defines a single point measurement

@@ -71,17 +71,17 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		panic(err)
 	}
 
-        host, port, err := net.SplitHostPort(addr.Host)
-        if err != nil {
-            host = addr.Host
-            if addr.Scheme == "http" {
-                port = "80"
-            } else if addr.Scheme == "https" {
-                port = "443"
-            } else {
-                port = ""
-            }
-        }
+	host, port, err := net.SplitHostPort(addr.Host)
+	if err != nil {
+		host = addr.Host
+		if addr.Scheme == "http" {
+			port = "80"
+		} else if addr.Scheme == "https" {
+			port = "443"
+		} else {
+			port = ""
+		}
+	}
 
 	tags := map[string]string{"server": host, "port": port}
 

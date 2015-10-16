@@ -22,6 +22,15 @@ function exit_if_fail {
     fi
 }
 
+# Check that go fmt has been run.
+function check_go_fmt {
+    fmtcount=`git ls-files | grep '.go$' | grep -v Godep | xargs gofmt -l 2>&1 | wc -l`
+    if [ $fmtcount -gt 0 ]; then
+        echo "run 'go fmt ./...' to format your source code."
+        exit 1
+    fi
+}
+
 # build takes three arguments: GOOS & GOARCH & VERSION
 function build {
   echo -n "=> $1-$2: "
@@ -52,6 +61,9 @@ echo "\$CIRCLE_BRANCH: $CIRCLE_BRANCH"
 # Move the checked-out source to a better location
 exit_if_fail mv $HOME/telegraf $GOPATH/src/github.com/influxdb
 exit_if_fail cd $GOPATH/src/github.com/influxdb/telegraf
+
+# Verify that go fmt has been run
+check_go_fmt
 
 # Install the code
 exit_if_fail godep go build -v ./...
