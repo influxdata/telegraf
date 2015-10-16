@@ -2,12 +2,13 @@ package puppetagent
 
 import (
 	"fmt"
-	"github.com/influxdb/telegraf/plugins"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/influxdb/telegraf/plugins"
 )
 
 // PuppetAgent is a PuppetAgent plugin
@@ -16,8 +17,8 @@ type PuppetAgent struct {
 }
 
 var sampleConfig = `
-	#Location of puppet last run summary file
-	location = "/var/lib/puppet/state/last_run_summary.yaml"
+  # Location of puppet last run summary file
+  location = "/var/lib/puppet/state/last_run_summary.yaml"
 `
 
 type State struct {
@@ -57,7 +58,7 @@ type time struct {
 	Exec             float64 `yaml:"exec"`
 	Anchor           float64 `yaml:"anchor"`
 	SSHAuthorizedKey float64 `yaml:"ssh_authorized_key"`
-	Service          float64 `yaml:"server"`
+	Service          float64 `yaml:"service"`
 	Package          float64 `yaml:"package"`
 	Total            float64 `yaml:"total"`
 	ConfigRetrieval  float64 `yaml:"config_retrieval"`

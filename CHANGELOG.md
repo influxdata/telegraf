@@ -17,6 +17,7 @@ of metrics collected and from how many plugins.
 - [#244](https://github.com/influxdb/telegraf/pull/244): netstat plugin, thanks @shirou!
 - [#262](https://github.com/influxdb/telegraf/pull/262): zookeeper plugin, thanks @jrxFive!
 - [#237](https://github.com/influxdb/telegraf/pull/237): statsd service plugin, thanks @sparrc
+- [#273](https://github.com/influxdb/telegraf/pull/273): puppet agent plugin, thats @jrxFive!
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!

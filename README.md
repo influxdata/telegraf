@@ -182,6 +182,7 @@ Telegraf currently has support for collecting metrics from
 * postgresql
 * procstat
 * prometheus
+* puppetagent
 * rabbitmq
 * redis
 * rethinkdb
