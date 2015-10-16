@@ -57,7 +57,7 @@ type time struct {
 	Exec             float64 `yaml:"exec"`
 	Anchor           float64 `yaml:"anchor"`
 	SSHAuthorizedKey float64 `yaml:"ssh_authorized_key"`
-	Service          float64 `yaml:"server"`
+	Service          float64 `yaml:"service"`
 	Package          float64 `yaml:"package"`
 	Total            float64 `yaml:"total"`
 	ConfigRetrieval  float64 `yaml:"config_retrieval"`
