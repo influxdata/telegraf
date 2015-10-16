@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"sort"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 	t "github.com/influxdb/telegraf"
 	"github.com/influxdb/telegraf/outputs"
 )
@@ -59,19 +59,19 @@ func (d *Datadog) Connect() error {
 	return nil
 }
 
-func (d *Datadog) Write(bp client.BatchPoints) error {
-	if len(bp.Points) == 0 {
+func (d *Datadog) Write(points []*client.Point) error {
+	if len(points) == 0 {
 		return nil
 	}
 	ts := TimeSeries{
-		Series: make([]*Metric, len(bp.Points)),
+		Series: make([]*Metric, len(points)),
 	}
-	for index, pt := range bp.Points {
+	for index, pt := range points {
 		metric := &Metric{
-			Metric: pt.Measurement,
-			Tags:   buildTags(bp.Tags, pt.Tags),
+			Metric: pt.Name(),
+			Tags:   buildTags(pt.Tags()),
 		}
-		if p, err := buildPoint(bp, pt); err == nil {
+		if p, err := buildPoint(pt); err == nil {
 			metric.Points[0] = p
 		}
 		ts.Series[index] = metric
@@ -114,32 +114,24 @@ func (d *Datadog) authenticatedUrl() string {
 	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
 }
 
-func buildTags(bpTags map[string]string, ptTags map[string]string) []string {
-	tags := make([]string, (len(bpTags) + len(ptTags)))
-	index := 0
-	for k, v := range bpTags {
-		tags[index] = fmt.Sprintf("%s:%s", k, v)
-		index += 1
+func buildPoint(pt *client.Point) (Point, error) {
+	var p Point
+	if err := p.setValue(pt.Fields()["value"]); err != nil {
+		return p, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
 	}
+	p[0] = float64(pt.Time().Unix())
+	return p, nil
+}
+
+func buildTags(ptTags map[string]string) []string {
+	tags := make([]string, len(ptTags))
+	index := 0
 	for k, v := range ptTags {
 		tags[index] = fmt.Sprintf("%s:%s", k, v)
 		index += 1
 	}
 	sort.Strings(tags)
 	return tags
-}
-
-func buildPoint(bp client.BatchPoints, pt client.Point) (Point, error) {
-	var p Point
-	if err := p.setValue(pt.Fields["value"]); err != nil {
-		return p, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
-	}
-	if pt.Time.IsZero() {
-		p[0] = float64(bp.Time.Unix())
-	} else {
-		p[0] = float64(pt.Time.Unix())
-	}
-	return p, nil
 }
 
 func (p *Point) setValue(v interface{}) error {

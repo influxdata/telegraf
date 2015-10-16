@@ -50,5 +50,5 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 		"direction": "in",
 		"region":    "us-west",
 	}, point.Tags)
-	assert.Equal(t, time.Unix(0, 1422568543702900257), point.Time)
+	assert.Equal(t, time.Unix(0, 1422568543702900257).Unix(), point.Time.Unix())
 }

@@ -1,7 +1,7 @@
 package outputs
 
 import (
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 )
 
 type Output interface {
@@ -9,7 +9,7 @@ type Output interface {
 	Close() error
 	Description() string
 	SampleConfig() string
-	Write(client.BatchPoints) error
+	Write(points []*client.Point) error
 }
 
 type Creator func() Output

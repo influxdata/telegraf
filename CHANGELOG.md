@@ -2,6 +2,13 @@
 
 ### Release Notes
 - The -test flag will now only output 2 collections for plugins that need it
+- There is a new agent configuration option: `flush_interval`. This option tells
+Telegraf how often to flush data to InfluxDB and other output sinks. For example,
+users can set `interval = "2s"` and `flush_interval = "60s"` for Telegraf to
+collect data every 2 seconds, and flush every 60 seconds.
+- `precision` and `utc` are no longer valid agent config values. `precision` has
+moved to the `influxdb` output config, where it will continue to default to "s"
+- debug and test output will now print the raw line-protocol string
 
 ### Features
 - [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info
@@ -18,6 +25,8 @@ of metrics collected and from how many plugins.
 - [#262](https://github.com/influxdb/telegraf/pull/262): zookeeper plugin, thanks @jrxFive!
 - [#237](https://github.com/influxdb/telegraf/pull/237): statsd service plugin, thanks @sparrc
 - [#273](https://github.com/influxdb/telegraf/pull/273): puppet agent plugin, thats @jrxFive!
+- [#280](https://github.com/influxdb/telegraf/issues/280): Use InfluxDB client v2.
+- [#281](https://github.com/influxdb/telegraf/issues/281): Eliminate need to deep copy Batch Points.
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
@@ -25,6 +34,8 @@ of metrics collected and from how many plugins.
 - [#261](https://github.com/influxdb/telegraf/issues/260): RabbitMQ panics if wrong credentials given. Thanks @ekini!
 - [#245](https://github.com/influxdb/telegraf/issues/245): Document Exec plugin example. Thanks @ekini!
 - [#264](https://github.com/influxdb/telegraf/issues/264): logrotate config file fixes. Thanks @linsomniac!
+- [#290](https://github.com/influxdb/telegraf/issues/290): Fix some plugins sending their values as strings.
+- [#289](https://github.com/influxdb/telegraf/issues/289): Fix accumulator panic on nil tags.
 
 ## v0.1.9 [2015-09-22]
 

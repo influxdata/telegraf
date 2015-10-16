@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 	t "github.com/influxdb/telegraf"
 	"github.com/influxdb/telegraf/outputs"
 )
@@ -78,35 +78,31 @@ func (m *MQTT) Description() string {
 	return "Configuration for MQTT server to send metrics to"
 }
 
-func (m *MQTT) Write(bp client.BatchPoints) error {
+func (m *MQTT) Write(points []*client.Point) error {
 	m.Lock()
 	defer m.Unlock()
-	if len(bp.Points) == 0 {
+	if len(points) == 0 {
 		return nil
 	}
-	hostname, ok := bp.Tags["host"]
+	hostname, ok := points[0].Tags()["host"]
 	if !ok {
 		hostname = ""
 	}
 
-	for _, p := range bp.Points {
+	for _, p := range points {
 		var t []string
 		if m.TopicPrefix != "" {
 			t = append(t, m.TopicPrefix)
 		}
-		tm := strings.Split(p.Measurement, "_")
+		tm := strings.Split(p.Name(), "_")
 		if len(tm) < 2 {
-			tm = []string{p.Measurement, "stat"}
+			tm = []string{p.Name(), "stat"}
 		}
+
 		t = append(t, "host", hostname, tm[0], tm[1])
 		topic := strings.Join(t, "/")
 
-		var value string
-		if p.Raw != "" {
-			value = p.Raw
-		} else {
-			value = getValue(p.Fields["value"])
-		}
+		value := p.String()
 		err := m.publish(topic, value)
 		if err != nil {
 			return fmt.Errorf("Could not write to MQTT server, %s", err)
@@ -114,23 +110,6 @@ func (m *MQTT) Write(bp client.BatchPoints) error {
 	}
 
 	return nil
-}
-
-func getValue(v interface{}) string {
-	var ret string
-	switch v.(type) {
-	default:
-		ret = fmt.Sprintf("%v", v)
-	case bool:
-		ret = fmt.Sprintf("%t", v)
-	case float32, float64:
-		ret = fmt.Sprintf("%f", v)
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		ret = fmt.Sprintf("%d", v)
-	case string, []byte:
-		ret = fmt.Sprintf("%s", v)
-	}
-	return ret
 }
 
 func (m *MQTT) publish(topic, body string) error {

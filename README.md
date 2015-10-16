@@ -134,6 +134,7 @@ measurements at a 10s interval and will collect totalcpu & percpu data.
 [outputs.influxdb]
     url = "http://192.168.59.103:8086" # required.
     database = "telegraf" # required.
+    precision = "s"
 
 # PLUGINS
 [cpu]
@@ -196,7 +197,7 @@ Telegraf currently has support for collecting metrics from
     * disk
     * swap
 
-## Service Plugins
+## Supported Service Plugins
 
 Telegraf can collect metrics via the following services
 

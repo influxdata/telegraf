@@ -23,6 +23,6 @@ func TestConnectAndWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the kafka broker
-	err = k.Write(testutil.MockBatchPoints())
+	err = k.Write(testutil.MockBatchPoints().Points())
 	require.NoError(t, err)
 }

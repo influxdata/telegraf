@@ -74,7 +74,7 @@ func TestAgent_DrivesMetrics(t *testing.T) {
 	plugin.On("Add", "foo", 1.2, nil).Return(nil)
 	plugin.On("Add", "bar", 888, nil).Return(nil)
 
-	err := a.crank()
+	err := a.gather()
 	require.NoError(t, err)
 }
 
@@ -112,7 +112,7 @@ func TestAgent_AppliesTags(t *testing.T) {
 	plugin.On("Read").Return(msgs, nil)
 	metrics.On("Receive", m2).Return(nil)
 
-	err := a.crank()
+	err := a.gather()
 	require.NoError(t, err)
 }
 */

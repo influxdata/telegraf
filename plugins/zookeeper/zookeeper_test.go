@@ -22,19 +22,20 @@ func TestZookeeperGeneratesMetrics(t *testing.T) {
 	err := z.Gather(&acc)
 	require.NoError(t, err)
 
-	intMetrics := []string{"zookeeper_avg_latency",
-		"zookeeper_max_latency",
-		"zookeeper_min_latency",
-		"zookeeper_packets_received",
-		"zookeeper_packets_sent",
-		"zookeeper_outstanding_requests",
-		"zookeeper_znode_count",
-		"zookeeper_watch_count",
-		"zookeeper_ephemerals_count",
-		"zookeeper_approximate_data_size",
-		"zookeeper_pending_syncs",
-		"zookeeper_open_file_descriptor_count",
-		"zookeeper_max_file_descriptor_count"}
+	intMetrics := []string{
+		"avg_latency",
+		"max_latency",
+		"min_latency",
+		"packets_received",
+		"packets_sent",
+		"outstanding_requests",
+		"znode_count",
+		"watch_count",
+		"ephemerals_count",
+		"approximate_data_size",
+		"open_file_descriptor_count",
+		"max_file_descriptor_count",
+	}
 
 	for _, metric := range intMetrics {
 		assert.True(t, acc.HasIntValue(metric), metric)

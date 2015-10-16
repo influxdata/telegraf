@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 	t "github.com/influxdb/telegraf"
 	"github.com/influxdb/telegraf/outputs"
 )
@@ -21,9 +21,10 @@ type InfluxDB struct {
 	Password  string
 	Database  string
 	UserAgent string
+	Precision string
 	Timeout   t.Duration
 
-	conns []*client.Client
+	conns []client.Client
 }
 
 var sampleConfig = `
@@ -32,6 +33,7 @@ var sampleConfig = `
   urls = ["http://localhost:8086"] # required
   # The target database for metrics (telegraf will create it if not exists)
   database = "telegraf" # required
+  precision = "s"
 
   # Connection timeout (for the connection with InfluxDB), formatted as a string.
   # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
@@ -63,18 +65,15 @@ func (i *InfluxDB) Connect() error {
 		urls = append(urls, u)
 	}
 
-	var conns []*client.Client
+	var conns []client.Client
 	for _, parsed_url := range urls {
-		c, err := client.NewClient(client.Config{
-			URL:       *parsed_url,
+		c := client.NewClient(client.Config{
+			URL:       parsed_url,
 			Username:  i.Username,
 			Password:  i.Password,
 			UserAgent: i.UserAgent,
 			Timeout:   i.Timeout.Duration,
 		})
-		if err != nil {
-			return err
-		}
 		conns = append(conns, c)
 	}
 
@@ -113,15 +112,22 @@ func (i *InfluxDB) Description() string {
 
 // Choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
-func (i *InfluxDB) Write(bp client.BatchPoints) error {
-	bp.Database = i.Database
+func (i *InfluxDB) Write(points []*client.Point) error {
+	bp, _ := client.NewBatchPoints(client.BatchPointsConfig{
+		Database:  i.Database,
+		Precision: i.Precision,
+	})
+
+	for _, point := range points {
+		bp.AddPoint(point)
+	}
 
 	// This will get set to nil if a successful write occurs
 	err := errors.New("Could not write to any InfluxDB server in cluster")
 
 	p := rand.Perm(len(i.conns))
 	for _, n := range p {
-		if _, e := i.conns[n].Write(bp); e != nil {
+		if e := i.conns[n].Write(bp); e != nil {
 			log.Println("ERROR: " + e.Error())
 		} else {
 			err = nil

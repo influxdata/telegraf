@@ -355,11 +355,8 @@ var header = `# Telegraf configuration
 [agent]
   # Default data collection interval for all plugins
   interval = "10s"
-  # If utc = false, uses local time (utc is highly recommended)
-  utc = true
-  # Precision of writes, valid values are n, u, ms, s, m, and h
-  # note: using second precision greatly helps InfluxDB compression
-  precision = "s"
+  # Default data flushing interval for all outputs
+  flush_interval = "10s"
   # run telegraf in debug mode
   debug = false
   # Override default hostname, if empty use os.Hostname()

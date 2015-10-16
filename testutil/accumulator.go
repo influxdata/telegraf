@@ -22,7 +22,12 @@ type Accumulator struct {
 }
 
 // Add adds a measurement point to the accumulator
-func (a *Accumulator) Add(measurement string, value interface{}, tags map[string]string) {
+func (a *Accumulator) Add(
+	measurement string,
+	value interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
 	a.Lock()
 	defer a.Unlock()
 	if tags == nil {
@@ -38,22 +43,56 @@ func (a *Accumulator) Add(measurement string, value interface{}, tags map[string
 	)
 }
 
-// AddFieldsWithTime adds a measurement point with a specified timestamp.
-func (a *Accumulator) AddFieldsWithTime(
+// AddFields adds a measurement point with a specified timestamp.
+func (a *Accumulator) AddFields(
 	measurement string,
 	values map[string]interface{},
 	tags map[string]string,
-	timestamp time.Time,
+	timestamp ...time.Time,
 ) {
+	a.Lock()
+	defer a.Unlock()
+	var t time.Time
+	if len(timestamp) > 0 {
+		t = timestamp[0]
+	} else {
+		t = time.Now()
+	}
 	a.Points = append(
 		a.Points,
 		&Point{
 			Measurement: measurement,
 			Values:      values,
 			Tags:        tags,
-			Time:        timestamp,
+			Time:        t,
 		},
 	)
+}
+
+func (a *Accumulator) SetDefaultTags(tags map[string]string) {
+	// stub for implementing Accumulator interface.
+}
+
+func (a *Accumulator) AddDefaultTag(key, value string) {
+	// stub for implementing Accumulator interface.
+}
+
+func (a *Accumulator) Prefix() string {
+	// stub for implementing Accumulator interface.
+	return ""
+}
+
+func (a *Accumulator) SetPrefix(prefix string) {
+	// stub for implementing Accumulator interface.
+}
+
+func (a *Accumulator) Debug() bool {
+	// stub for implementing Accumulator interface.
+	return true
+}
+
+func (a *Accumulator) SetDebug(debug bool) {
+	// stub for implementing Accumulator interface.
 }
 
 // Get gets the specified measurement point from the accumulator
