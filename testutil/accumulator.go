@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+	"sync"
 )
 
 // Point defines a single point measurement
@@ -16,11 +17,14 @@ type Point struct {
 
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
+	sync.Mutex
 	Points []*Point
 }
 
 // Add adds a measurement point to the accumulator
 func (a *Accumulator) Add(measurement string, value interface{}, tags map[string]string) {
+	a.Lock()
+	defer a.Unlock()
 	if tags == nil {
 		tags = map[string]string{}
 	}
