@@ -380,7 +380,7 @@ func (s *Statsd) parseName(bucket string) (string, map[string]string) {
 	name := bucketparts[0]
 	p, err := graphite.NewParserWithOptions(o)
 	if err == nil {
-		name, tags = p.ApplyTemplate(name)
+		name, tags, _, _ = p.ApplyTemplate(name)
 	}
 	name = strings.Replace(name, ".", "_", -1)
 	name = strings.Replace(name, "-", "__", -1)
