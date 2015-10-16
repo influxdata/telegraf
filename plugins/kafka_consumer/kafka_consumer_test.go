@@ -71,7 +71,11 @@ func TestEmitMetricsSendMetricsToAcc(t *testing.T) {
 		"region":    "us-west",
 	}, point.Tags)
 
-	assert.Equal(t, time.Unix(0, 1422568543702900257), point.Time)
+	if time.Unix(0, 1422568543702900257).Unix() != point.Time.Unix() {
+		t.Errorf("Expected: %v, received %v\n",
+			time.Unix(0, 1422568543702900257).Unix(),
+			point.Time.Unix())
+	}
 }
 
 func TestEmitMetricsTimesOut(t *testing.T) {
