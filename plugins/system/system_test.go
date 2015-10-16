@@ -160,16 +160,16 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	// Computed values are checked with delta > 0 becasue of floating point arithmatic
 	// imprecision
-	assertContainsTaggedFloat(t, acc, "time_user", 3.1, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_system", 8.2, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_idle", 80.1, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_nice", 1.3, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_iowait", 0.2, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_irq", 0.1, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_softirq", 0.11, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_steal", 0.0511, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_guest", 8.1, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_guest_nice", 0.324, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_user", 3.1, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_system", 8.2, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_idle", 80.1, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_nice", 1.3, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_iowait", 0.2, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_irq", 0.1, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_softirq", 0.11, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_steal", 0.0511, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_guest", 8.1, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_guest_nice", 0.324, 0, cputags)
 
 	mps2 := MockPS{}
 	mps2.On("CPUTimes").Return([]cpu.CPUTimesStat{cts2}, nil)
@@ -183,27 +183,27 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	expectedCPUPoints = 20
 	assert.Equal(t, expectedCPUPoints, numCPUPoints)
 
-	assertContainsTaggedFloat(t, acc, "time_user", 11.4, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_system", 10.9, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_idle", 158.8699, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_nice", 2.5, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_iowait", 0.7, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_irq", 1.2, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_softirq", 0.31, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_steal", 0.2812, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_guest", 12.9, 0, cputags)
-	assertContainsTaggedFloat(t, acc, "time_guest_nice", 2.524, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_user", 11.4, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_system", 10.9, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_idle", 158.8699, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_nice", 2.5, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_iowait", 0.7, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_irq", 1.2, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_softirq", 0.31, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_steal", 0.2812, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_guest", 12.9, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "time_guest_nice", 2.524, 0, cputags)
 
-	assertContainsTaggedFloat(t, acc, "usage_user", 8.3, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_system", 2.7, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_idle", 78.7699, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_nice", 1.2, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_iowait", 0.5, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_irq", 1.1, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_softirq", 0.2, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_steal", 0.2301, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_guest", 4.8, 0.0005, cputags)
-	assertContainsTaggedFloat(t, acc, "usage_guest_nice", 2.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_user", 8.3, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_system", 2.7, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_idle", 78.7699, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_nice", 1.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_iowait", 0.5, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_irq", 1.1, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_softirq", 0.2, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_steal", 0.2301, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_guest", 4.8, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "usage_guest_nice", 2.2, 0.0005, cputags)
 
 	preDiskPoints := len(acc.Points)
 
@@ -337,7 +337,7 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 //                               ignore the tag set.
 func assertContainsTaggedFloat(
 	t *testing.T,
-	acc testutil.Accumulator,
+	acc *testutil.Accumulator,
 	measurement string,
 	expectedValue float64,
 	delta float64,
