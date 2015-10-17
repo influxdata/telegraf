@@ -22,7 +22,7 @@ type Service struct {
 	Name       string
 	Servers    []string
 	Method     string
-	TagKeys       []string
+	TagKeys    []string
 	Parameters map[string]string
 }
 
@@ -62,8 +62,8 @@ var sampleConfig = `
     # HTTP method to use (case-sensitive)
     method = "GET"
 
-    # List of tag names to extract from server response
-    # tagKeys = [
+    # List of tag names to extract from top-level of JSON server response
+    # tag_keys = [
     # 	"my_tag_1",
     # 	"my_tag_2"
     # ]
@@ -144,8 +144,8 @@ func (h *HttpJson) gatherServer(acc plugins.Accumulator, service Service, server
 
 	for _, tag := range service.TagKeys {
 		switch v := jsonOut[tag].(type) {
-			case string:
-		    tags[tag] = v
+		case string:
+			tags[tag] = v
 		}
 		delete(jsonOut, tag)
 	}
