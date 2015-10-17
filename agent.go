@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdb/telegraf/duration"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 
@@ -29,10 +30,10 @@ type runningPlugin struct {
 type Agent struct {
 
 	// Interval at which to gather information
-	Interval Duration
+	Interval duration.Duration
 
 	// Interval at which to flush data
-	FlushInterval Duration
+	FlushInterval duration.Duration
 
 	// FlushRetries is the number of times to retry each data flush
 	FlushRetries int
@@ -62,8 +63,8 @@ type Agent struct {
 func NewAgent(config *Config) (*Agent, error) {
 	agent := &Agent{
 		Tags:          make(map[string]string),
-		Interval:      Duration{10 * time.Second},
-		FlushInterval: Duration{10 * time.Second},
+		Interval:      duration.Duration{10 * time.Second},
+		FlushInterval: duration.Duration{10 * time.Second},
 		FlushRetries:  2,
 		UTC:           true,
 		Precision:     "s",

@@ -15,23 +15,6 @@ import (
 	"github.com/naoina/toml/ast"
 )
 
-// Duration just wraps time.Duration
-type Duration struct {
-	time.Duration
-}
-
-// UnmarshalTOML parses the duration from the TOML config file
-func (d *Duration) UnmarshalTOML(b []byte) error {
-	dur, err := time.ParseDuration(string(b[1 : len(b)-1]))
-	if err != nil {
-		return err
-	}
-
-	d.Duration = dur
-
-	return nil
-}
-
 // Config specifies the URL/user/password for the database that telegraf
 // will be logging to, as well as all the plugins that the user has
 // specified

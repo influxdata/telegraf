@@ -11,7 +11,7 @@ import (
 
 	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 	"github.com/influxdb/influxdb/client/v2"
-	t "github.com/influxdb/telegraf"
+	"github.com/influxdb/telegraf/duration"
 	"github.com/influxdb/telegraf/outputs"
 )
 
@@ -24,7 +24,7 @@ type MQTT struct {
 	Username    string
 	Password    string
 	Database    string
-	Timeout     t.Duration
+	Timeout     duration.Duration
 	TopicPrefix string
 
 	Client *paho.Client
