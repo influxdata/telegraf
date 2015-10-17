@@ -52,7 +52,7 @@ type Agent struct {
 	Debug    bool
 	Hostname string
 
-	Config *Config
+	Tags map[string]string
 
 	outputs []*runningOutput
 	plugins []*runningPlugin
@@ -61,7 +61,7 @@ type Agent struct {
 // NewAgent returns an Agent struct based off the given Config
 func NewAgent(config *Config) (*Agent, error) {
 	agent := &Agent{
-		Config:        config,
+		Tags:          make(map[string]string),
 		Interval:      Duration{10 * time.Second},
 		FlushInterval: Duration{10 * time.Second},
 		FlushRetries:  2,
@@ -84,11 +84,7 @@ func NewAgent(config *Config) (*Agent, error) {
 		agent.Hostname = hostname
 	}
 
-	if config.Tags == nil {
-		config.Tags = map[string]string{}
-	}
-
-	config.Tags["host"] = agent.Hostname
+	agent.Tags["host"] = agent.Hostname
 
 	return agent, nil
 }
@@ -125,10 +121,10 @@ func (a *Agent) Close() error {
 }
 
 // LoadOutputs loads the agent's outputs
-func (a *Agent) LoadOutputs(filters []string) ([]string, error) {
+func (a *Agent) LoadOutputs(filters []string, config *Config) ([]string, error) {
 	var names []string
 
-	for _, name := range a.Config.OutputsDeclared() {
+	for _, name := range config.OutputsDeclared() {
 		creator, ok := outputs.Outputs[name]
 		if !ok {
 			return nil, fmt.Errorf("Undefined but requested output: %s", name)
@@ -140,7 +136,7 @@ func (a *Agent) LoadOutputs(filters []string) ([]string, error) {
 			}
 			output := creator()
 
-			err := a.Config.ApplyOutput(name, output)
+			err := config.ApplyOutput(name, output)
 			if err != nil {
 				return nil, err
 			}
@@ -156,10 +152,10 @@ func (a *Agent) LoadOutputs(filters []string) ([]string, error) {
 }
 
 // LoadPlugins loads the agent's plugins
-func (a *Agent) LoadPlugins(filters []string) ([]string, error) {
+func (a *Agent) LoadPlugins(filters []string, config *Config) ([]string, error) {
 	var names []string
 
-	for _, name := range a.Config.PluginsDeclared() {
+	for _, name := range config.PluginsDeclared() {
 		creator, ok := plugins.Plugins[name]
 		if !ok {
 			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
@@ -168,7 +164,7 @@ func (a *Agent) LoadPlugins(filters []string) ([]string, error) {
 		if sliceContains(name, filters) || len(filters) == 0 {
 			plugin := creator()
 
-			config, err := a.Config.ApplyPlugin(name, plugin)
+			config, err := config.ApplyPlugin(name, plugin)
 			if err != nil {
 				return nil, err
 			}
@@ -203,7 +199,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 			acc := NewAccumulator(plugin.config, pointChan)
 			acc.SetDebug(a.Debug)
 			acc.SetPrefix(plugin.name + "_")
-			acc.SetDefaultTags(a.Config.Tags)
+			acc.SetDefaultTags(a.Tags)
 
 			if err := plugin.plugin.Gather(acc); err != nil {
 				log.Printf("Error in plugin [%s]: %s", plugin.name, err)
@@ -236,7 +232,7 @@ func (a *Agent) gatherSeparate(
 		acc := NewAccumulator(plugin.config, pointChan)
 		acc.SetDebug(a.Debug)
 		acc.SetPrefix(plugin.name + "_")
-		acc.SetDefaultTags(a.Config.Tags)
+		acc.SetDefaultTags(a.Tags)
 
 		if err := plugin.plugin.Gather(acc); err != nil {
 			log.Printf("Error in plugin [%s]: %s", plugin.name, err)

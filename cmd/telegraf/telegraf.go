@@ -90,7 +90,7 @@ func main() {
 		ag.Debug = true
 	}
 
-	outputs, err := ag.LoadOutputs(outputFilters)
+	outputs, err := ag.LoadOutputs(outputFilters, config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	plugins, err := ag.LoadPlugins(pluginFilters)
+	plugins, err := ag.LoadPlugins(pluginFilters, config)
 	if err != nil {
 		log.Fatal(err)
 	}
