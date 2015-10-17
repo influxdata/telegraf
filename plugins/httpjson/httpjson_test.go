@@ -35,7 +35,6 @@ const validJSONTags = `
 		"build": "123"
 	}`
 
-
 const invalidJSON = "I don't think this is JSON"
 
 const empty = ""

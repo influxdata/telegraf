@@ -22,7 +22,7 @@ type Service struct {
 	Name       string
 	Servers    []string
 	Method     string
-	TagKeys       []string
+	TagKeys    []string
 	Parameters map[string]string
 }
 
@@ -144,8 +144,8 @@ func (h *HttpJson) gatherServer(acc plugins.Accumulator, service Service, server
 
 	for _, tag := range service.TagKeys {
 		switch v := jsonOut[tag].(type) {
-			case string:
-		    tags[tag] = v
+		case string:
+			tags[tag] = v
 		}
 		delete(jsonOut, tag)
 	}
