@@ -22,7 +22,7 @@ type Service struct {
 	Name       string
 	Servers    []string
 	Method     string
-	Tags       []string
+	TagKeys       []string
 	Parameters map[string]string
 }
 
@@ -63,10 +63,10 @@ var sampleConfig = `
     method = "GET"
 
     # List of tag names to extract from server response
-    tags = [
-    	"my_tag_1",
-    	"my_tag_2"
-    ]
+    # tagKeys = [
+    # 	"my_tag_1",
+    # 	"my_tag_2"
+    # ]
 
     # HTTP parameters (all values must be strings)
     [httpjson.services.parameters]
@@ -142,7 +142,7 @@ func (h *HttpJson) gatherServer(acc plugins.Accumulator, service Service, server
 		"server": serverURL,
 	}
 
-	for _, tag := range service.Tags {
+	for _, tag := range service.TagKeys {
 		switch v := jsonOut[tag].(type) {
 			case string:
 		    tags[tag] = v

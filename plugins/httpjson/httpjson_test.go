@@ -104,7 +104,7 @@ func genMockHttpJson(response string, statusCode int) *HttpJson {
 					"httpParam1": "12",
 					"httpParam2": "the second parameter",
 				},
-				Tags: []string{
+				TagKeys: []string{
 					"role",
 					"build",
 				},
