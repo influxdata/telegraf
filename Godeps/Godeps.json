@@ -219,6 +219,11 @@
 			"Rev": "f5520455607c0233cb6d7b056f71b22c1d265ef1"
 		},
 		{
+			"ImportPath": "github.com/stretchr/testify/suite",
+			"Comment": "v1.0-21-gf552045",
+			"Rev": "f5520455607c0233cb6d7b056f71b22c1d265ef1"
+		},
+		{
 			"ImportPath": "github.com/wvanbergen/kafka/consumergroup",
 			"Rev": "b0e5c20a0d7c3ccfd37a5965ae30a3a0fd15945d"
 		},
