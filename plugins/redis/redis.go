@@ -159,6 +159,8 @@ func gatherInfoOutput(
 	acc plugins.Accumulator,
 	tags map[string]string,
 ) error {
+	var keyspace_hits, keyspace_misses uint64 = 0,0
+
 	scanner := bufio.NewScanner(rdr)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -185,6 +187,15 @@ func gatherInfoOutput(
 
 		val := strings.TrimSpace(parts[1])
 		ival, err := strconv.ParseUint(val, 10, 64)
+
+		if name == "keyspace_hits" {
+			keyspace_hits = ival
+		}
+
+		if name == "keyspace_misses" {
+			keyspace_misses = ival
+		}
+
 		if err == nil {
 			acc.Add(metric, ival, tags)
 			continue
@@ -197,6 +208,12 @@ func gatherInfoOutput(
 
 		acc.Add(metric, fval, tags)
 	}
+	var keyspace_hitrate float64 = 0.0
+	if keyspace_hits != 0 || keyspace_misses != 0 {
+		keyspace_hitrate = float64(keyspace_hits) / float64(keyspace_hits + keyspace_misses)
+	}
+	fmt.Println(keyspace_hitrate)
+	acc.Add("keyspace_hitrate", keyspace_hitrate, tags)
 	return nil
 }
 
