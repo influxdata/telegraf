@@ -212,7 +212,6 @@ func gatherInfoOutput(
 	if keyspace_hits != 0 || keyspace_misses != 0 {
 		keyspace_hitrate = float64(keyspace_hits) / float64(keyspace_hits+keyspace_misses)
 	}
-	fmt.Println(keyspace_hitrate)
 	acc.Add("keyspace_hitrate", keyspace_hitrate, tags)
 	return nil
 }

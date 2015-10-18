@@ -116,7 +116,7 @@ client_longest_output_list:0
 client_biggest_input_buf:0
 blocked_clients:0
 
-# Memor2
+# Memory
 used_memory:1003936
 used_memory_human:980.41K
 used_memory_rss:811008
