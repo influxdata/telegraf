@@ -45,6 +45,7 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 	intMetrics := []string{
 		"queries",
 		"slow_queries",
+		"connections",
 	}
 
 	for _, prefix := range prefixes {

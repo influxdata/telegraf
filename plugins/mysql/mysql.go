@@ -129,6 +129,15 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 		return err
 	}
 
+	// Parse out user/password from server address tag if given
+	var servtag string
+	if strings.Contains(serv, "@") {
+		servtag = strings.Split(serv, "@")[1]
+	} else if serv == "" {
+		servtag = "localhost"
+	} else {
+		servtag = serv
+	}
 	for rows.Next() {
 		var name string
 		var val interface{}
@@ -140,15 +149,6 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 
 		var found bool
 
-		// Parse out user/password from server address tag if given
-		var servtag string
-		if strings.Contains(serv, "@") {
-			servtag = strings.Split(serv, "@")[1]
-		} else if serv == "" {
-			servtag = "localhost"
-		} else {
-			servtag = serv
-		}
 		tags := map[string]string{"server": servtag}
 
 		for _, mapped := range mappings {
@@ -179,6 +179,29 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 
 			acc.Add("slow_queries", i, tags)
 		}
+	}
+
+	conn_rows, err := db.Query("SELECT user, sum(1) FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
+
+	for conn_rows.Next() {
+		var user string
+		var connections int64
+
+		err = conn_rows.Scan(&user, &connections)
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag,
+								  "user": user}
+		fmt.Println("user: " + user)
+		fmt.Println(connections)
+		//fmt.Println("connections: " + string(connections))
+
+		if err != nil {
+			return err
+		}
+		acc.Add("connections", connections, tags)
 	}
 
 	return nil
