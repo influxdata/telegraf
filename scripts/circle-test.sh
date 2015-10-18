@@ -6,9 +6,6 @@
 
 BUILD_DIR=$HOME/telegraf-build
 VERSION=`git describe --always --tags`
-# GO_VERSION=go1.4.2
-# source $HOME/.gvm/scripts/gvm
-# exit_if_fail gvm use $GO_VERSION
 
 # Executes the given statement, and exits if the command returns a non-zero code.
 function exit_if_fail {
@@ -35,7 +32,7 @@ function check_go_fmt {
 function build {
   echo -n "=> $1-$2: "
   GOOS=$1 GOARCH=$2 godep go build -o telegraf-$1-$2 \
-                    -ldflags "-X main.Version $3" \
+                    -ldflags "-X main.Version=$3" \
                     ./cmd/telegraf/telegraf.go
   du -h telegraf-$1-$2
 }
@@ -43,6 +40,8 @@ function build {
 # Set up the build directory, and then GOPATH.
 exit_if_fail mkdir $BUILD_DIR
 export GOPATH=$BUILD_DIR
+# Turning off GOGC speeds up build times
+export GOGC=off
 export PATH=$GOPATH/bin:$PATH
 exit_if_fail mkdir -p $GOPATH/src/github.com/influxdb
 
@@ -65,9 +64,8 @@ exit_if_fail cd $GOPATH/src/github.com/influxdb/telegraf
 # Verify that go fmt has been run
 check_go_fmt
 
-# Install the code
+# Build the code
 exit_if_fail godep go build -v ./...
-exit_if_fail godep go install -v ./...
 
 # Run the tests
 exit_if_fail godep go vet ./...
