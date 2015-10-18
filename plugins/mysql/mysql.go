@@ -193,7 +193,7 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 		}
 
 		tags := map[string]string{"server": servtag,
-								  "user": user}
+			"user": user}
 		fmt.Println("user: " + user)
 		fmt.Println(connections)
 		//fmt.Println("connections: " + string(connections))
