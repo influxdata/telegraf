@@ -55,8 +55,8 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		{"sync_partial_err", 0},
 		{"expired_keys", 0},
 		{"evicted_keys", 0},
-		{"keyspace_hits", 0},
-		{"keyspace_misses", 0},
+		{"keyspace_hits", 1},
+		{"keyspace_misses", 1},
 		{"pubsub_channels", 0},
 		{"pubsub_patterns", 0},
 		{"latest_fork_usec", 0},
@@ -83,6 +83,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		{"used_cpu_user", 0.05},
 		{"used_cpu_sys_children", 0.00},
 		{"used_cpu_user_children", 0.00},
+		{"keyspace_hitrate", 0.50},
 	}
 
 	for _, c := range checkFloat {
@@ -151,8 +152,8 @@ sync_partial_ok:0
 sync_partial_err:0
 expired_keys:0
 evicted_keys:0
-keyspace_hits:0
-keyspace_misses:0
+keyspace_hits:1
+keyspace_misses:1
 pubsub_channels:0
 pubsub_patterns:0
 latest_fork_usec:0
