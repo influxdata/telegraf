@@ -166,6 +166,7 @@ Below is how to configure `tagpass` and `tagdrop` parameters (added in 0.1.5)
 Telegraf currently has support for collecting metrics from
 
 * apache
+* bcache
 * disque
 * elasticsearch
 * exec (generic JSON-emitting executable plugin)

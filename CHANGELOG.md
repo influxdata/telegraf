@@ -27,6 +27,7 @@ of metrics collected and from how many plugins.
 - [#273](https://github.com/influxdb/telegraf/pull/273): puppet agent plugin, thats @jrxFive!
 - [#280](https://github.com/influxdb/telegraf/issues/280): Use InfluxDB client v2.
 - [#281](https://github.com/influxdb/telegraf/issues/281): Eliminate need to deep copy Batch Points.
+- [#286](https://github.com/influxdb/telegraf/issues/286): bcache plugin, thanks @cornerot!
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
