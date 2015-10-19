@@ -67,23 +67,23 @@ brew install telegraf
 ### From Source:
 
 Telegraf manages dependencies via `godep`, which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.4+
+if you don't have it already. You also must build with golang version 1.4+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
-3. run `go get github.com/influxdb/telegraf`
-4. `cd $GOPATH/src/github.com/influxdb/telegraf`
-5. run `make`
+3. Run `go get github.com/influxdb/telegraf`
+4. Run `cd $GOPATH/src/github.com/influxdb/telegraf`
+5. Run `make`
 
 ### How to use it:
 
-* Run `telegraf -sample-config > telegraf.conf` to create an initial configuration
-* Or run `telegraf -sample-config -filter cpu:mem -outputfilter influxdb > telegraf.conf`
-to create a config file with only CPU and memory plugins defined, and InfluxDB output defined
-* Edit the configuration to match your needs
-* Run `telegraf -config telegraf.conf -test` to output one full measurement sample to STDOUT
+* Run `telegraf -sample-config > telegraf.conf` to create an initial configuration.
+* Or run `telegraf -sample-config -filter cpu:mem -outputfilter influxdb > telegraf.conf`.
+to create a config file with only CPU and memory plugins defined, and InfluxDB output defined.
+* Edit the configuration to match your needs.
+* Run `telegraf -config telegraf.conf -test` to output one full measurement sample to STDOUT.
 * Run `telegraf -config telegraf.conf` to gather and send metrics to configured outputs.
-* Run `telegraf -config telegraf.conf -filter system:swap`
+* Run `telegraf -config telegraf.conf -filter system:swap`.
 to run telegraf with only the system & swap plugins defined in the config.
 
 ## Telegraf Options
@@ -161,9 +161,9 @@ Below is how to configure `tagpass` and `tagdrop` parameters (added in 0.1.5)
 ## Supported Plugins
 
 **You can view usage instructions for each plugin by running**
-`telegraf -usage <pluginname>`
+`telegraf -usage <pluginname>`.
 
-Telegraf currently has support for collecting metrics from
+Telegraf currently has support for collecting metrics from:
 
 * apache
 * bcache
@@ -200,7 +200,7 @@ Telegraf currently has support for collecting metrics from
 
 ## Supported Service Plugins
 
-Telegraf can collect metrics via the following services
+Telegraf can collect metrics via the following services:
 
 * statsd
 
@@ -211,7 +211,7 @@ want to add support for another service or third-party API.
 
 Telegraf also supports specifying multiple output sinks to send data to,
 configuring each output sink is different, but examples can be
-found by running `telegraf -sample-config`
+found by running `telegraf -sample-config`.
 
 ## Supported Outputs
 
@@ -226,4 +226,4 @@ found by running `telegraf -sample-config`
 
 Please see the
 [contributing guide](CONTRIBUTING.md)
-for details on contributing a plugin or output to Telegraf
+for details on contributing a plugin or output to Telegraf.
