@@ -17,6 +17,8 @@ var fDebug = flag.Bool("debug", false,
 	"show metrics as they're generated to stdout")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
+var fConfigDirectory = flag.String("configdirectory", "",
+	"directory containing additional configuration files")
 var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -79,6 +81,13 @@ func main() {
 		fmt.Println("Usage: Telegraf")
 		flag.PrintDefaults()
 		return
+	}
+
+	if *fConfigDirectory != "" {
+		err = config.LoadDirectory(*fConfigDirectory)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	ag, err := telegraf.NewAgent(config)

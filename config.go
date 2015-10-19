@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -373,6 +374,81 @@ func mergeStruct(base, overlay interface{}, fields []string) error {
 			baseFieldValue.Set(reflect.AppendSlice(baseFieldValue, overlayFieldValue))
 		} else {
 			baseValue.FieldByNameFunc(fieldMatch(field)).Set(overlayFieldValue)
+		}
+	}
+	return nil
+}
+
+func (c *Config) LoadDirectory(path string) error {
+	directoryEntries, err := ioutil.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	for _, entry := range directoryEntries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if name[len(name)-5:] != ".conf" {
+			continue
+		}
+		subConfig, err := LoadConfig(filepath.Join(path, name))
+		if err != nil {
+			return err
+		}
+		if subConfig.agent != nil {
+			err = mergeStruct(c.agent, subConfig.agent, subConfig.agentFieldsSet)
+			if err != nil {
+				return err
+			}
+			for _, field := range subConfig.agentFieldsSet {
+				if !sliceContains(field, c.agentFieldsSet) {
+					c.agentFieldsSet = append(c.agentFieldsSet, field)
+				}
+			}
+		}
+		for pluginName, plugin := range subConfig.plugins {
+			if _, ok := c.plugins[pluginName]; !ok {
+				c.plugins[pluginName] = plugin
+				c.pluginFieldsSet[pluginName] = subConfig.pluginFieldsSet[pluginName]
+				c.pluginConfigurations[pluginName] = subConfig.pluginConfigurations[pluginName]
+				c.pluginConfigurationFieldsSet[pluginName] = subConfig.pluginConfigurationFieldsSet[pluginName]
+				continue
+			}
+			err = mergeStruct(c.plugins[pluginName], plugin, subConfig.pluginFieldsSet[pluginName])
+			if err != nil {
+				return err
+			}
+			for _, field := range subConfig.pluginFieldsSet[pluginName] {
+				if !sliceContains(field, c.pluginFieldsSet[pluginName]) {
+					c.pluginFieldsSet[pluginName] = append(c.pluginFieldsSet[pluginName], field)
+				}
+			}
+			err = mergeStruct(c.pluginConfigurations[pluginName], subConfig.pluginConfigurations[pluginName], subConfig.pluginConfigurationFieldsSet[pluginName])
+			if err != nil {
+				return err
+			}
+			for _, field := range subConfig.pluginConfigurationFieldsSet[pluginName] {
+				if !sliceContains(field, c.pluginConfigurationFieldsSet[pluginName]) {
+					c.pluginConfigurationFieldsSet[pluginName] = append(c.pluginConfigurationFieldsSet[pluginName], field)
+				}
+			}
+		}
+		for outputName, output := range subConfig.outputs {
+			if _, ok := c.outputs[outputName]; !ok {
+				c.outputs[outputName] = output
+				c.outputFieldsSet[outputName] = subConfig.outputFieldsSet[outputName]
+				continue
+			}
+			err = mergeStruct(c.outputs[outputName], output, subConfig.outputFieldsSet[outputName])
+			if err != nil {
+				return err
+			}
+			for _, field := range subConfig.outputFieldsSet[outputName] {
+				if !sliceContains(field, c.outputFieldsSet[outputName]) {
+					c.outputFieldsSet[outputName] = append(c.outputFieldsSet[outputName], field)
+				}
+			}
 		}
 	}
 	return nil
