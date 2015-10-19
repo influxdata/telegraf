@@ -20,6 +20,37 @@ Measurement names:
 - cache_misses
 - cache_readaheads
 
+### Description
+
+```
+dirty_data
+  Amount of dirty data for this backing device in the cache. Continuously
+  updated unlike the cache set's version, but may be slightly off.
+  
+bypassed
+  Amount of IO (both reads and writes) that has bypassed the cache
+  
+
+cache_bypass_hits
+cache_bypass_misses
+  Hits and misses for IO that is intended to skip the cache are still counted,
+  but broken out here.
+  
+cache_hits
+cache_misses
+cache_hit_ratio
+  Hits and misses are counted per individual IO as bcache sees them; a
+  partial hit is counted as a miss.
+  
+cache_miss_collisions
+  Counts instances where data was going to be inserted into the cache from a
+  cache miss, but raced with a write and data was already present (usually 0
+  since the synchronization for cache misses was rewritten)
+  
+cache_readaheads
+  Count of times readahead occurred.
+```
+
 # Example output
 
 Using this configuration:
