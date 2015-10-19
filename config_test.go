@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/influxdb/telegraf/plugins"
+	"github.com/influxdb/telegraf/plugins/exec"
 	"github.com/influxdb/telegraf/plugins/kafka_consumer"
+	"github.com/influxdb/telegraf/plugins/procstat"
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
 	"github.com/stretchr/testify/assert"
@@ -236,7 +238,7 @@ func TestConfig_parsePlugin(t *testing.T) {
 	kafka.ZookeeperPeers = []string{"test.example.com:2181"}
 	kafka.BatchSize = 1000
 
-	pConfig := &ConfiguredPlugin{
+	kConfig := &ConfiguredPlugin{
 		Name: "kafka",
 		Drop: []string{"other", "stuff"},
 		Pass: []string{"some", "strings"},
@@ -256,5 +258,76 @@ func TestConfig_parsePlugin(t *testing.T) {
 	}
 
 	assert.Equal(t, kafka, c.plugins["kafka"], "Testdata did not produce a correct kafka struct.")
-	assert.Equal(t, pConfig, c.pluginConfigurations["kafka"], "Testdata did not produce correct config metadata.")
+	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"], "Testdata did not produce correct kafka metadata.")
+}
+
+func TestConfig_LoadDirectory(t *testing.T) {
+	c, err := LoadConfig("./testdata/telegraf-agent.toml")
+	if err != nil {
+		t.Error(err)
+	}
+	err = c.LoadDirectory("./testdata/subconfig")
+	if err != nil {
+		t.Error(err)
+	}
+
+	kafka := plugins.Plugins["kafka"]().(*kafka_consumer.Kafka)
+	kafka.ConsumerGroupName = "telegraf_metrics_consumers"
+	kafka.Topic = "topic_with_metrics"
+	kafka.ZookeeperPeers = []string{"localhost:2181", "test.example.com:2181"}
+	kafka.BatchSize = 10000
+
+	kConfig := &ConfiguredPlugin{
+		Name: "kafka",
+		Drop: []string{"other", "stuff"},
+		Pass: []string{"some", "strings"},
+		TagDrop: []TagFilter{
+			TagFilter{
+				Name:   "badtag",
+				Filter: []string{"othertag"},
+			},
+		},
+		TagPass: []TagFilter{
+			TagFilter{
+				Name:   "goodtag",
+				Filter: []string{"mytag"},
+			},
+		},
+		Interval: 5 * time.Second,
+	}
+
+	ex := plugins.Plugins["exec"]().(*exec.Exec)
+	ex.Commands = []*exec.Command{
+		&exec.Command{
+			Command: "/usr/bin/mycollector --foo=bar",
+			Name:    "mycollector",
+		},
+		&exec.Command{
+			Command: "/usr/bin/myothercollector --foo=bar",
+			Name:    "myothercollector",
+		},
+	}
+
+	eConfig := &ConfiguredPlugin{Name: "exec"}
+
+	pstat := plugins.Plugins["procstat"]().(*procstat.Procstat)
+	pstat.Specifications = []*procstat.Specification{
+		&procstat.Specification{
+			PidFile: "/var/run/grafana-server.pid",
+		},
+		&procstat.Specification{
+			PidFile: "/var/run/influxdb/influxd.pid",
+		},
+	}
+
+	pConfig := &ConfiguredPlugin{Name: "procstat"}
+
+	assert.Equal(t, kafka, c.plugins["kafka"], "Merged Testdata did not produce a correct kafka struct.")
+	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"], "Merged Testdata did not produce correct kafka metadata.")
+
+	assert.Equal(t, ex, c.plugins["exec"], "Merged Testdata did not produce a correct exec struct.")
+	assert.Equal(t, eConfig, c.pluginConfigurations["exec"], "Merged Testdata did not produce correct exec metadata.")
+
+	assert.Equal(t, pstat, c.plugins["procstat"], "Merged Testdata did not produce a correct procstat struct.")
+	assert.Equal(t, pConfig, c.pluginConfigurations["procstat"], "Merged Testdata did not produce correct procstat metadata.")
 }
