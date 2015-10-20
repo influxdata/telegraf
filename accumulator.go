@@ -134,6 +134,16 @@ func (bp *BatchPoints) AddFields(
 	bp.Lock()
 	defer bp.Unlock()
 
+	// InfluxDB does not support writing uint64
+	for k, v := range fields {
+		switch val := v.(type) {
+		case uint64:
+			if val < uint64(9223372036854775808) {
+				fields[k] = int64(val)
+			}
+		}
+	}
+
 	measurement = bp.Prefix + measurement
 
 	if bp.Config != nil {
