@@ -133,8 +133,8 @@ func main() {
 	log.Printf("Loaded outputs: %s", strings.Join(outputs, " "))
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
 	log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
-		"Precision:%#v, UTC: %#v\n",
-		ag.Interval, ag.Debug, ag.Hostname, ag.Precision, ag.UTC)
+		"Flush Interval:%s\n",
+		ag.Interval, ag.Debug, ag.Hostname, ag.FlushInterval)
 	log.Printf("Tags enabled: %s", config.ListTags())
 
 	if *fPidfile != "" {
