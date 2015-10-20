@@ -16,11 +16,11 @@
 - [#4310](https://github.com/influxdb/influxdb/pull/4310): Support dropping non-Raft nodes. Work mostly by @corylanou
 - [#4348](https://github.com/influxdb/influxdb/pull/4348): Public ApplyTemplate function for graphite parser.
 - [#4178](https://github.com/influxdb/influxdb/pull/4178): Support fields in graphite parser. Thanks @roobert!
-- [#4291](https://github.com/influxdb/influxdb/pull/4291): Added ALTER DATABASE RENAME. Thanks @linearb
 - [#4409](https://github.com/influxdb/influxdb/pull/4409): wire up INTO queries.
 - [#4379](https://github.com/influxdb/influxdb/pull/4379): Auto-create database for UDP input.
 - [#4375](https://github.com/influxdb/influxdb/pull/4375): Add Subscriptions so data can be 'forked' out of InfluxDB to another third party.
-- [#4459](https://github.com/influxdb/influxdb/pull/4459): Register with Enterprise service if token available.
+- [#4506](https://github.com/influxdb/influxdb/pull/4506): Register with Enterprise service and upload stats, if token is available.
+- [#4501](https://github.com/influxdb/influxdb/pull/4501): Allow filtering SHOW MEASUREMENTS by regex.
 
 ### Bugfixes
 - [#4389](https://github.com/influxdb/influxdb/pull/4389): Don't add a new segment file on each hinted-handoff purge cycle.
@@ -50,6 +50,7 @@
 - [#4465](https://github.com/influxdb/influxdb/pull/4465): Actually display a message if the CLI can't connect to the database.
 - [#4342](https://github.com/influxdb/influxdb/pull/4342): Fix mixing aggregates and math with non-aggregates. Thanks @kostya-sh.
 - [#4349](https://github.com/influxdb/influxdb/issues/4349): If HH can't unmarshal a block, skip that block.
+- [#4502](https://github.com/influxdb/influxdb/pull/4502): Don't crash on Graphite close, if Graphite not fully open. Thanks for the report @ranjib
 - [#4354](https://github.com/influxdb/influxdb/pull/4353): Fully lock node queues during hinted handoff. Fixes one cause of missing data on clusters.
 - [#4357](https://github.com/influxdb/influxdb/issues/4357): Fix similar float values encoding overflow Thanks @dgryski!
 - [#4344](https://github.com/influxdb/influxdb/issues/4344): Make client.Write default to client.precision if none is given.
@@ -71,6 +72,9 @@
 - [#4415](https://github.com/influxdb/influxdb/issues/4415): Selector (like max, min, first, etc) return a string instead of timestamp
 - [#4472](https://github.com/influxdb/influxdb/issues/4472): Fix 'too many points in GROUP BY interval' error
 - [#4475](https://github.com/influxdb/influxdb/issues/4475): Fix SHOW TAG VALUES error message.
+- [#4486](https://github.com/influxdb/influxdb/pull/4486): Fix missing comments for runner package
+- [#4497](https://github.com/influxdb/influxdb/pull/4497): Fix sequence in meta proto
+- [#3367](https://github.com/influxdb/influxdb/issues/3367): Negative timestamps are parsed correctly by the line protocol.
 
 ## v0.9.4 [2015-09-14]
 

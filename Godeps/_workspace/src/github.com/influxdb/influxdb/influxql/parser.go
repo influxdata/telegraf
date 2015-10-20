@@ -226,18 +226,14 @@ func (p *Parser) parseDropStatement() (Statement, error) {
 // This function assumes the ALTER token has already been consumed.
 func (p *Parser) parseAlterStatement() (Statement, error) {
 	tok, pos, lit := p.scanIgnoreWhitespace()
-
-	switch tok {
-	case RETENTION:
+	if tok == RETENTION {
 		if tok, pos, lit = p.scanIgnoreWhitespace(); tok != POLICY {
 			return nil, newParseError(tokstr(tok, lit), []string{"POLICY"}, pos)
 		}
 		return p.parseAlterRetentionPolicyStatement()
-	case DATABASE:
-		return p.parseAlterDatabaseRenameStatement()
 	}
 
-	return nil, newParseError(tokstr(tok, lit), []string{"RETENTION", "DATABASE"}, pos)
+	return nil, newParseError(tokstr(tok, lit), []string{"RETENTION"}, pos)
 }
 
 // parseSetPasswordUserStatement parses a string and returns a set statement.
@@ -1011,6 +1007,29 @@ func (p *Parser) parseShowMeasurementsStatement() (*ShowMeasurementsStatement, e
 	stmt := &ShowMeasurementsStatement{}
 	var err error
 
+	// Parse optional WITH clause.
+	if tok, _, _ := p.scanIgnoreWhitespace(); tok == WITH {
+		// Parse required MEASUREMENT token.
+		if err := p.parseTokens([]Token{MEASUREMENT}); err != nil {
+			return nil, err
+		}
+
+		// Parse required operator: = or =~.
+		tok, pos, lit := p.scanIgnoreWhitespace()
+		switch tok {
+		case EQ, EQREGEX:
+			// Parse required source (measurement name or regex).
+			if stmt.Source, err = p.parseSource(); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, newParseError(tokstr(tok, lit), []string{"=", "=~"}, pos)
+		}
+	} else {
+		// Not a WITH clause so put the token back.
+		p.unscan()
+	}
+
 	// Parse condition: "WHERE EXPR".
 	if stmt.Condition, err = p.parseCondition(); err != nil {
 		return nil, err
@@ -1445,33 +1464,6 @@ func (p *Parser) parseDropDatabaseStatement() (*DropDatabaseStatement, error) {
 		return nil, err
 	}
 	stmt.Name = lit
-
-	return stmt, nil
-}
-
-// parseAlterDatabaseRenameStatement parses a string and returns an AlterDatabaseRenameStatement.
-// This function assumes the "ALTER DATABASE" tokens have already been consumed.
-func (p *Parser) parseAlterDatabaseRenameStatement() (*AlterDatabaseRenameStatement, error) {
-	stmt := &AlterDatabaseRenameStatement{}
-
-	// Parse the name of the database to be renamed.
-	lit, err := p.parseIdent()
-	if err != nil {
-		return nil, err
-	}
-	stmt.OldName = lit
-
-	// Parse required RENAME TO tokens.
-	if err := p.parseTokens([]Token{RENAME, TO}); err != nil {
-		return nil, err
-	}
-
-	// Parse the new name of the database.
-	lit, err = p.parseIdent()
-	if err != nil {
-		return nil, err
-	}
-	stmt.NewName = lit
 
 	return stmt, nil
 }

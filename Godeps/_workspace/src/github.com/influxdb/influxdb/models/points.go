@@ -341,7 +341,7 @@ func scanKey(buf []byte, i int) (int, []byte, error) {
 	}
 
 	// Now we know where the key region is within buf, and the locations of tags, we
-	// need to deterimine if duplicate tags exist and if the tags are sorted.  This iterates
+	// need to determine if duplicate tags exist and if the tags are sorted.  This iterates
 	// 1/2 of the list comparing each end with each other, walking towards the center from
 	// both sides.
 	for j := 0; j < commas/2; j++ {
@@ -531,9 +531,14 @@ func scanTime(buf []byte, i int) (int, []byte, error) {
 			break
 		}
 
-		// Timestamps should integers, make sure they are so we don't need to actually
+		// Timestamps should be integers, make sure they are so we don't need to actually
 		// parse the timestamp until needed
 		if buf[i] < '0' || buf[i] > '9' {
+			// Handle negative timestamps
+			if i == start && buf[i] == '-' {
+				i += 1
+				continue
+			}
 			return i, buf[start:i], fmt.Errorf("bad timestamp")
 		}
 
