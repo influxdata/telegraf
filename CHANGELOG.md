@@ -28,6 +28,7 @@ of metrics collected and from how many plugins.
 - [#280](https://github.com/influxdb/telegraf/issues/280): Use InfluxDB client v2.
 - [#281](https://github.com/influxdb/telegraf/issues/281): Eliminate need to deep copy Batch Points.
 - [#286](https://github.com/influxdb/telegraf/issues/286): bcache plugin, thanks @cornerot!
+- [#287](https://github.com/influxdb/telegraf/issues/287): Batch AMQP output, thanks @ekini!
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
