@@ -1,6 +1,7 @@
 package all
 
 import (
+	_ "github.com/influxdb/telegraf/plugins/aerospike"
 	_ "github.com/influxdb/telegraf/plugins/apache"
 	_ "github.com/influxdb/telegraf/plugins/bcache"
 	_ "github.com/influxdb/telegraf/plugins/disque"

@@ -42,3 +42,8 @@ redis:
     image: redis
     ports:
         - "6379:6379"
+
+aerospike:
+    image: aerospike/aerospike-server
+    ports:
+        - "3000:3000"
