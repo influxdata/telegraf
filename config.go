@@ -357,6 +357,8 @@ var header = `# Telegraf configuration
   interval = "10s"
   # Default data flushing interval for all outputs
   flush_interval = "10s"
+  # Number of times to retry each data flush
+  flush_retries = 2
   # run telegraf in debug mode
   debug = false
   # Override default hostname, if empty use os.Hostname()
