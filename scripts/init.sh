@@ -98,7 +98,7 @@ function log_success_msg() {
 name=telegraf
 
 # Daemon name, where is the actual executable
-daemon=/opt/telegraf/telegraf
+daemon=/usr/bin/telegraf
 
 # pid file for the daemon
 pidfile=/var/run/telegraf/telegraf.pid
@@ -110,7 +110,7 @@ if [ ! -d "$piddir" ]; then
 fi
 
 # Configuration file
-config=/etc/opt/telegraf/telegraf.conf
+config=/etc/telegraf/telegraf.conf
 
 # If the daemon is not there, then exit.
 [ -x $daemon ] || exit 5
