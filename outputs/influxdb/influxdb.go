@@ -33,10 +33,11 @@ var sampleConfig = `
   urls = ["http://localhost:8086"] # required
   # The target database for metrics (telegraf will create it if not exists)
   database = "telegraf" # required
+  # Precision of writes, valid values are n, u, ms, s, m, and h
+  # note: using second precision greatly helps InfluxDB compression
   precision = "s"
 
   # Connection timeout (for the connection with InfluxDB), formatted as a string.
-  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
   # If not provided, will default to 0 (no timeout)
   # timeout = "5s"
   # username = "telegraf"

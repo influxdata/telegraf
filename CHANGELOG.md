@@ -9,6 +9,11 @@ collect data every 2 seconds, and flush every 60 seconds.
 - `precision` and `utc` are no longer valid agent config values. `precision` has
 moved to the `influxdb` output config, where it will continue to default to "s"
 - debug and test output will now print the raw line-protocol string
+- Telegraf will now, by default, round the collection interval to the nearest
+even interval. This means that `interval="10s"` will collect every :00, :10, etc.
+To ease scale concerns, flushing will be "jittered" by a random amount so that
+all Telegraf instances do not flush at the same time. Both of these options can
+be controlled via the `round_interval` and `flush_jitter` config options.
 
 ### Features
 - [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info

@@ -27,11 +27,19 @@
 [agent]
   # Default data collection interval for all plugins
   interval = "10s"
+  # Rounds collection interval to 'interval'
+  # ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  round_interval = true
+
   # Default data flushing interval for all outputs
   flush_interval = "10s"
+  # Jitter the flush interval by a random range
+  # ie, a jitter of 5s and interval 10s means flush will happen every 10-15s
+  flush_jitter = "5s"
   # Number of times to retry each data flush
   flush_retries = 2
-  # run telegraf in debug mode
+
+  # Run telegraf in debug mode
   debug = false
   # Override default hostname, if empty use os.Hostname()
   hostname = ""
