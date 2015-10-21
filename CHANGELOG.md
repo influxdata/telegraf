@@ -14,6 +14,8 @@ even interval. This means that `interval="10s"` will collect every :00, :10, etc
 To ease scale concerns, flushing will be "jittered" by a random amount so that
 all Telegraf instances do not flush at the same time. Both of these options can
 be controlled via the `round_interval` and `flush_jitter` config options.
+- Telegraf will now retry metric flushes, twice by default. This can be configued
+via the `flush_retries` agent config option.
 
 ### Features
 - [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info
@@ -34,6 +36,8 @@ of metrics collected and from how many plugins.
 - [#281](https://github.com/influxdb/telegraf/issues/281): Eliminate need to deep copy Batch Points.
 - [#286](https://github.com/influxdb/telegraf/issues/286): bcache plugin, thanks @cornerot!
 - [#287](https://github.com/influxdb/telegraf/issues/287): Batch AMQP output, thanks @ekini!
+- [#301](https://github.com/influxdb/telegraf/issues/301): Collect on even intervals
+- [#298](https://github.com/influxdb/telegraf/pull/298): Support retrying output writes
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
