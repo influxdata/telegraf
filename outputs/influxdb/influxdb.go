@@ -78,24 +78,20 @@ func (i *InfluxDB) Connect() error {
 		conns = append(conns, c)
 	}
 
-	// This will get set to nil if a successful connection is made
-	err := errors.New("Could not create database on any server")
-
 	for _, conn := range conns {
 		_, e := conn.Query(client.Query{
 			Command: fmt.Sprintf("CREATE DATABASE %s", i.Database),
 		})
 
 		if e != nil && !strings.Contains(e.Error(), "database already exists") {
-			log.Println("ERROR: " + e.Error())
+			log.Println("Database creation failed: " + e.Error())
 		} else {
-			err = nil
 			break
 		}
 	}
 
 	i.conns = conns
-	return err
+	return nil
 }
 
 func (i *InfluxDB) Close() error {
