@@ -38,6 +38,7 @@ of metrics collected and from how many plugins.
 - [#287](https://github.com/influxdb/telegraf/issues/287): Batch AMQP output, thanks @ekini!
 - [#301](https://github.com/influxdb/telegraf/issues/301): Collect on even intervals
 - [#298](https://github.com/influxdb/telegraf/pull/298): Support retrying output writes
+- [#300](https://github.com/influxdb/telegraf/issues/300): aerospike plugin. Thanks @oldmantaiter!
 
 ### Bugfixes
 - [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
