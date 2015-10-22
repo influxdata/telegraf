@@ -271,7 +271,17 @@ func (a *Agent) Test() error {
 	defer close(shutdown)
 	pointChan := make(chan *client.Point)
 
-	go a.flusher(shutdown, pointChan)
+	// dummy receiver for the point channel
+	go func() {
+		for {
+			select {
+			case <-pointChan:
+				// do nothing
+			case <-shutdown:
+				return
+			}
+		}
+	}()
 
 	for _, plugin := range a.plugins {
 		acc := NewAccumulator(plugin.config, pointChan)
