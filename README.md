@@ -219,6 +219,7 @@ found by running `telegraf -sample-config`.
 * librato
 * prometheus
 * amon
+* riemann
 
 ## Contributing
 
