@@ -142,7 +142,6 @@ func (s *MergeStructSuite) TestFullMerge() {
 		s.T().Error(err)
 	}
 	s.Equal(result, s.FullStruct, fmt.Sprintf("Full merge of %v onto FullStruct failed.", s.AnotherFullStruct))
-	s.T().Log("hi")
 }
 
 func (s *MergeStructSuite) TestPartialMergeWithoutSlices() {

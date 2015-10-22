@@ -21,7 +21,7 @@ import (
 // specified
 type Config struct {
 	// This lives outside the agent because mergeStruct doesn't need to handle maps normally.
-	// We just copy the elements manually in applyAgent.
+	// We just copy the elements manually in ApplyAgent.
 	Tags map[string]string
 
 	agent                *Agent
@@ -129,10 +129,10 @@ func (c *Config) ApplyOutput(name string, v interface{}) error {
 // Overrides only values in the given struct that were set in the config.
 func (c *Config) ApplyAgent(a *Agent) error {
 	if c.agent != nil {
+		for key, value := range c.Tags {
+			a.Tags[key] = value
+		}
 		return mergeStruct(a, c.agent, c.agentFieldsSet)
-	}
-	for key, value := range c.Tags {
-		a.Tags[key] = value
 	}
 
 	return nil
