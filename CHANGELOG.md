@@ -48,6 +48,7 @@ of metrics collected and from how many plugins.
 - [#264](https://github.com/influxdb/telegraf/issues/264): logrotate config file fixes. Thanks @linsomniac!
 - [#290](https://github.com/influxdb/telegraf/issues/290): Fix some plugins sending their values as strings.
 - [#289](https://github.com/influxdb/telegraf/issues/289): Fix accumulator panic on nil tags.
+- [#302](https://github.com/influxdb/telegraf/issues/302): Fix `[tags]` getting applied, thanks @gotyaoi!
 
 ## v0.1.9 [2015-09-22]
 
