@@ -62,7 +62,9 @@ func main() {
 
 	if *fUsage != "" {
 		if err := telegraf.PrintPluginConfig(*fUsage); err != nil {
-			log.Fatal(err)
+			if err2 := telegraf.PrintOutputConfig(*fUsage); err2 != nil {
+				log.Fatalf("%s and %s", err, err2)
+			}
 		}
 		return
 	}

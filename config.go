@@ -325,9 +325,14 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 	}
 }
 
-func printConfig(name string, plugin plugins.Plugin) {
-	fmt.Printf("\n# %s\n[%s]", plugin.Description(), name)
-	config := plugin.SampleConfig()
+type printer interface {
+	Description() string
+	SampleConfig() string
+}
+
+func printConfig(name string, p printer) {
+	fmt.Printf("\n# %s\n[%s]", p.Description(), name)
+	config := p.SampleConfig()
 	if config == "" {
 		fmt.Printf("\n  # no configuration\n")
 	} else {
@@ -350,6 +355,16 @@ func PrintPluginConfig(name string) error {
 		printConfig(name, creator())
 	} else {
 		return errors.New(fmt.Sprintf("Plugin %s not found", name))
+	}
+	return nil
+}
+
+// PrintOutputConfig prints the config usage of a single output.
+func PrintOutputConfig(name string) error {
+	if creator, ok := outputs.Outputs[name]; ok {
+		printConfig(name, creator())
+	} else {
+		return errors.New(fmt.Sprintf("Output %s not found", name))
 	}
 	return nil
 }
