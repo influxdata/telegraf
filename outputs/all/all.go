@@ -7,4 +7,5 @@ import (
 	_ "github.com/influxdb/telegraf/outputs/kafka"
 	_ "github.com/influxdb/telegraf/outputs/mqtt"
 	_ "github.com/influxdb/telegraf/outputs/opentsdb"
+	_ "github.com/influxdb/telegraf/outputs/prometheus_client"
 )

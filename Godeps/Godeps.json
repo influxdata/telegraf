@@ -6,6 +6,11 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "bitbucket.org/ww/goautoneg",
+			"Comment": "null-5",
+			"Rev": "75cd24fc2f2c2a2088577d12123ddee5f54e0675"
+		},
+		{
 			"ImportPath": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git",
 			"Comment": "v0.9.1-14-g546c47a",
 			"Rev": "546c47a6d0e9492e77f6f37473d59c36a708e08b"
@@ -23,6 +28,10 @@
 		{
 			"ImportPath": "github.com/armon/go-metrics",
 			"Rev": "b2d95e5291cdbc26997d1301a5e467ecbb240e25"
+		},
+		{
+			"ImportPath": "github.com/beorn7/perks/quantile",
+			"Rev": "b965b613227fddccbfffe13eae360ed3fa822f8d"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -127,24 +136,26 @@
 			"Rev": "ca53cad383cad2479bbba7f7a1a05797ec1386e4"
 		},
 		{
-			"ImportPath": "github.com/prometheus/client_golang/extraction",
-			"Comment": "0.7.0-22-gbbd006b",
-			"Rev": "bbd006bc5e64ea2c807381d50263be5f230b427d"
-		},
-		{
-			"ImportPath": "github.com/prometheus/client_golang/model",
-			"Comment": "0.7.0-22-gbbd006b",
-			"Rev": "bbd006bc5e64ea2c807381d50263be5f230b427d"
-		},
-		{
-			"ImportPath": "github.com/prometheus/client_golang/text",
-			"Comment": "0.7.0-22-gbbd006b",
-			"Rev": "bbd006bc5e64ea2c807381d50263be5f230b427d"
+			"ImportPath": "github.com/prometheus/client_golang/prometheus",
+			"Comment": "0.7.0-52-ge51041b",
+			"Rev": "e51041b3fa41cece0dca035740ba6411905be473"
 		},
 		{
 			"ImportPath": "github.com/prometheus/client_model/go",
 			"Comment": "model-0.0.2-12-gfa8ad6f",
 			"Rev": "fa8ad6fec33561be4280a8f0514318c79d7f6cb6"
+		},
+		{
+			"ImportPath": "github.com/prometheus/common/expfmt",
+			"Rev": "369ec0491ce7be15431bd4f23b7fa17308f94190"
+		},
+		{
+			"ImportPath": "github.com/prometheus/common/model",
+			"Rev": "369ec0491ce7be15431bd4f23b7fa17308f94190"
+		},
+		{
+			"ImportPath": "github.com/prometheus/procfs",
+			"Rev": "454a56f35412459b5e684fd5ec0f9211b94f002a"
 		},
 		{
 			"ImportPath": "github.com/samuel/go-zookeeper/zk",
