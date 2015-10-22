@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"database/sql"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -132,7 +133,8 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 	// Parse out user/password from server address tag if given
 	var servtag string
 	if strings.Contains(serv, "@") {
-		servtag = strings.Split(serv, "@")[1]
+		r, _ := regexp.Compile("(.*)[:](.*)[@]([a-z]+)[(|:][/]*(.*)[:]([0-9]+)[)]?[/]([^?]*)[?]?([^?]*)")
+		servtag = r.FindStringSubmatch(serv)[4]
 	} else if serv == "" {
 		servtag = "localhost"
 	} else {
