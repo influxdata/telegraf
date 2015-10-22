@@ -132,7 +132,8 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 	// Parse out user/password from server address tag if given
 	var servtag string
 	if strings.Contains(serv, "@") {
-		servtag = strings.Split(serv, "@")[1]
+		servSplit := strings.Split(serv, "@")
+		servtag = servSplit[len(servSplit) - 1] //last item
 	} else if serv == "" {
 		servtag = "localhost"
 	} else {
