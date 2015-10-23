@@ -29,7 +29,10 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	msg := "cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257"
 	producer, err := sarama.NewSyncProducer(brokerPeers, nil)
 	require.NoError(t, err)
+
 	_, _, err = producer.SendMessage(&sarama.ProducerMessage{Topic: k.Topic, Value: sarama.StringEncoder(msg)})
+	require.NoError(t, err)
+
 	producer.Close()
 
 	var acc testutil.Accumulator
