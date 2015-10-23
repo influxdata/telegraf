@@ -46,7 +46,7 @@ func TestWrite(t *testing.T) {
 
 	o := &OpenTSDB{
 		Host:   testutil.GetLocalHost(),
-		Port:   24242,
+		Port:   4242,
 		Prefix: "prefix.test.",
 	}
 
