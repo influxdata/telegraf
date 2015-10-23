@@ -28,7 +28,7 @@ func TestMysqlGeneratesMetrics(t *testing.T) {
 		prefix string
 		count  int
 	}{
-		{"commands", 141},
+		{"commands", 147},
 		{"handler", 18},
 		{"bytes", 2},
 		{"innodb", 51},
