@@ -14,8 +14,7 @@ even interval. This means that `interval="10s"` will collect every :00, :10, etc
 To ease scale concerns, flushing will be "jittered" by a random amount so that
 all Telegraf instances do not flush at the same time. Both of these options can
 be controlled via the `round_interval` and `flush_jitter` config options.
-- Telegraf will now retry metric flushes, twice by default. This can be configued
-via the `flush_retries` agent config option.
+- Telegraf will now retry metric flushes twice
 
 ### Features
 - [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info

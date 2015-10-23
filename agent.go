@@ -1,9 +1,10 @@
 package telegraf
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/big"
 	"os"
 	"sort"
 	"sync"
@@ -381,9 +382,10 @@ func (a *Agent) flusher(shutdown chan struct{}, pointChan chan *client.Point) er
 	// Inelegant, but this sleep is to allow the Gather threads to run, so that
 	// the flusher will flush after metrics are collected.
 	time.Sleep(time.Millisecond * 100)
+
 	ticker := time.NewTicker(a.FlushInterval.Duration)
 	points := make([]*client.Point, 0)
-	jitter := rand.Int63n(int64(a.FlushJitter.Duration))
+
 	for {
 		select {
 		case <-shutdown:
@@ -391,15 +393,7 @@ func (a *Agent) flusher(shutdown chan struct{}, pointChan chan *client.Point) er
 			a.flush(points, shutdown, true)
 			return nil
 		case <-ticker.C:
-			timer := time.NewTimer(time.Duration(jitter))
-			select {
-			case <-timer.C:
-				a.flush(points, shutdown, false)
-			case <-shutdown:
-				log.Println("Hang on, flushing any cached points before shutdown")
-				a.flush(points, shutdown, true)
-				return nil
-			}
+			a.flush(points, shutdown, false)
 			points = make([]*client.Point, 0)
 		case pt := <-pointChan:
 			points = append(points, pt)
@@ -407,9 +401,37 @@ func (a *Agent) flusher(shutdown chan struct{}, pointChan chan *client.Point) er
 	}
 }
 
+// jitterInterval applies the the interval jitter to the flush interval using
+// crypto/rand number generator
+func jitterInterval(ininterval, injitter time.Duration) time.Duration {
+	var jitter int64
+	outinterval := ininterval
+	if injitter.Nanoseconds() != 0 {
+		maxjitter := big.NewInt(injitter.Nanoseconds())
+		if j, err := rand.Int(rand.Reader, maxjitter); err == nil {
+			jitter = j.Int64()
+		}
+		outinterval = time.Duration(jitter + ininterval.Nanoseconds())
+	}
+
+	if outinterval.Nanoseconds() < time.Duration(500*time.Millisecond).Nanoseconds() {
+		log.Printf("Flush interval %s too low, setting to 500ms\n", outinterval)
+		outinterval = time.Duration(500 * time.Millisecond)
+	}
+
+	return outinterval
+}
+
 // Run runs the agent daemon, gathering every Interval
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
+
+	a.FlushInterval.Duration = jitterInterval(a.FlushInterval.Duration,
+		a.FlushJitter.Duration)
+
+	log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
+		"Flush Interval:%s\n",
+		a.Interval, a.Debug, a.Hostname, a.FlushInterval)
 
 	// channel shared between all plugin threads for accumulating points
 	pointChan := make(chan *client.Point, 1000)

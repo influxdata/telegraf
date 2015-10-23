@@ -143,9 +143,6 @@ func main() {
 	log.Printf("Starting Telegraf (version %s)\n", Version)
 	log.Printf("Loaded outputs: %s", strings.Join(outputs, " "))
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
-	log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
-		"Flush Interval:%s\n",
-		ag.Interval, ag.Debug, ag.Hostname, ag.FlushInterval)
 	log.Printf("Tags enabled: %s", config.ListTags())
 
 	if *fPidfile != "" {

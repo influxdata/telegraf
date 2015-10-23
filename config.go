@@ -230,13 +230,13 @@ var header = `# Telegraf configuration
   # ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  # Default data flushing interval for all outputs
+  # Default data flushing interval for all outputs. You should not set this below
+  # interval. Maximum flush_interval will be flush_interval + flush_jitter
   flush_interval = "10s"
-  # Jitter the flush interval by a random range
-  # ie, a jitter of 5s and interval 10s means flush will happen every 10-15s
-  flush_jitter = "5s"
-  # Number of times to retry each data flush
-  flush_retries = 2
+  # Jitter the flush interval by a random amount. This is primarily to avoid
+  # large write spikes for users running a large number of telegraf instances.
+  # ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  flush_jitter = "0s"
 
   # Run telegraf in debug mode
   debug = false
