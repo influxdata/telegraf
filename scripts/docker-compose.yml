@@ -34,9 +34,9 @@ rabbitmq:
         - "5672:5672"
 
 opentsdb:
-    image: lancope/opentsdb
+    image: petergrace/opentsdb-docker
     ports:
-        - "24242:4242"
+        - "4242:4242"
 
 redis:
     image: redis
