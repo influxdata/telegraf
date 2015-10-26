@@ -16,22 +16,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestConfig_fieldMatch(t *testing.T) {
-	assert := assert.New(t)
-
-	matchFunc := fieldMatch("testfield")
-	assert.True(matchFunc("testField"), "testfield should match testField")
-	assert.True(matchFunc("TestField"), "testfield should match TestField")
-	assert.True(matchFunc("TESTFIELD"), "testfield should match TESTFIELD")
-	assert.False(matchFunc("OtherField"), "testfield should not match OtherField")
-
-	matchFunc = fieldMatch("test_field")
-	assert.True(matchFunc("testField"), "test_field should match testField")
-	assert.True(matchFunc("TestField"), "test_field should match TestField")
-	assert.True(matchFunc("TESTFIELD"), "test_field should match TESTFIELD")
-	assert.False(matchFunc("OtherField"), "test_field should not match OtherField")
-}
-
 type subTest struct {
 	AField       string
 	AnotherField int
@@ -40,7 +24,7 @@ type test struct {
 	StringField     string
 	IntegerField    int
 	FloatField      float32
-	BooleanField    bool
+	BooleansField   bool `toml:"boolean_field"`
 	DatetimeField   time.Time
 	ArrayField      []string
 	TableArrayField []subTest
@@ -67,7 +51,7 @@ func (s *MergeStructSuite) SetupTest() {
 		StringField:   "one",
 		IntegerField:  1,
 		FloatField:    1.1,
-		BooleanField:  false,
+		BooleansField: false,
 		DatetimeField: time.Date(1963, time.August, 28, 17, 0, 0, 0, time.UTC),
 		ArrayField:    []string{"one", "two", "three"},
 		TableArrayField: []subTest{
@@ -85,7 +69,7 @@ func (s *MergeStructSuite) SetupTest() {
 		StringField:   "two",
 		IntegerField:  2,
 		FloatField:    2.2,
-		BooleanField:  true,
+		BooleansField: true,
 		DatetimeField: time.Date(1965, time.March, 25, 17, 0, 0, 0, time.UTC),
 		ArrayField:    []string{"four", "five", "six"},
 		TableArrayField: []subTest{
@@ -114,7 +98,7 @@ func (s *MergeStructSuite) TestFullMerge() {
 		StringField:   "two",
 		IntegerField:  2,
 		FloatField:    2.2,
-		BooleanField:  true,
+		BooleansField: true,
 		DatetimeField: time.Date(1965, time.March, 25, 17, 0, 0, 0, time.UTC),
 		ArrayField:    []string{"one", "two", "three", "four", "five", "six"},
 		TableArrayField: []subTest{
@@ -149,7 +133,7 @@ func (s *MergeStructSuite) TestPartialMergeWithoutSlices() {
 		StringField:   "two",
 		IntegerField:  1,
 		FloatField:    2.2,
-		BooleanField:  false,
+		BooleansField: false,
 		DatetimeField: time.Date(1965, time.March, 25, 17, 0, 0, 0, time.UTC),
 		ArrayField:    []string{"one", "two", "three"},
 		TableArrayField: []subTest{
@@ -176,7 +160,7 @@ func (s *MergeStructSuite) TestPartialMergeWithSlices() {
 		StringField:   "two",
 		IntegerField:  1,
 		FloatField:    2.2,
-		BooleanField:  false,
+		BooleansField: false,
 		DatetimeField: time.Date(1965, time.March, 25, 17, 0, 0, 0, time.UTC),
 		ArrayField:    []string{"one", "two", "three"},
 		TableArrayField: []subTest{

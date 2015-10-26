@@ -369,12 +369,29 @@ func PrintOutputConfig(name string) error {
 	return nil
 }
 
-// Used for fuzzy matching struct field names in FieldByNameFunc calls below
-func fieldMatch(field string) func(string) bool {
-	return func(name string) bool {
-		r := strings.NewReplacer("_", "")
-		return strings.ToLower(name) == strings.ToLower(r.Replace(field))
+// Find the field with a name matching fieldName, respecting the struct tag and ignoring case and underscores.
+// If no field is found, return the zero reflect.Value, which should be checked for with .IsValid().
+func findField(fieldName string, value reflect.Value) reflect.Value {
+	r := strings.NewReplacer("_", "")
+	vType := value.Type()
+	for i := 0; i < vType.NumField(); i++ {
+		fieldType := vType.Field(i)
+
+		// if we have toml tag, use it
+		if tag := fieldType.Tag.Get("toml"); tag != "" {
+			if tag == "-" { // omit
+				continue
+			}
+			if tag == fieldName {
+				return value.Field(i)
+			}
+		} else {
+			if strings.ToLower(fieldType.Name) == strings.ToLower(r.Replace(fieldName)) {
+				return value.Field(i)
+			}
+		}
 	}
+	return reflect.Value{}
 }
 
 // A very limited merge. Merges the fields named in the fields parameter, replacing most values, but appending to arrays.
@@ -388,15 +405,15 @@ func mergeStruct(base, overlay interface{}, fields []string) error {
 		return fmt.Errorf("Tried to merge two different types: %v and %v", baseValue.Type(), overlayValue.Type())
 	}
 	for _, field := range fields {
-		overlayFieldValue := overlayValue.FieldByNameFunc(fieldMatch(field))
+		overlayFieldValue := findField(field, overlayValue)
 		if !overlayFieldValue.IsValid() {
 			return fmt.Errorf("could not find field in %v matching %v", overlayValue.Type(), field)
 		}
+		baseFieldValue := findField(field, baseValue)
 		if overlayFieldValue.Kind() == reflect.Slice {
-			baseFieldValue := baseValue.FieldByNameFunc(fieldMatch(field))
 			baseFieldValue.Set(reflect.AppendSlice(baseFieldValue, overlayFieldValue))
 		} else {
-			baseValue.FieldByNameFunc(fieldMatch(field)).Set(overlayFieldValue)
+			baseFieldValue.Set(overlayFieldValue)
 		}
 	}
 	return nil
