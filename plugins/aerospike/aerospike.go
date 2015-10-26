@@ -104,11 +104,11 @@ type Aerospike struct {
 
 var sampleConfig = `
   # Aerospike servers to connect to (with port)
-  # Default: servers = ["127.0.0.1:3000"]
+  # Default: servers = ["localhost:3000"]
   #
   # This plugin will query all namespaces the aerospike
   # server has configured and get stats for them.
-  servers = ["aerospike01:3000"]
+  servers = ["localhost:3000"]
  `
 
 func (a *Aerospike) SampleConfig() string {
