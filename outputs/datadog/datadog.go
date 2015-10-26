@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -65,10 +66,10 @@ func (d *Datadog) Write(points []*client.Point) error {
 	if len(points) == 0 {
 		return nil
 	}
-	ts := TimeSeries{
-		Series: make([]*Metric, len(points)),
-	}
-	for index, pt := range points {
+	ts := TimeSeries{}
+	var tempSeries = make([]*Metric, len(points))
+	var acceptablePoints = 0
+	for _, pt := range points {
 		metric := &Metric{
 			Metric: strings.Replace(pt.Name(), "_", ".", -1),
 			Tags:   buildTags(pt.Tags()),
@@ -76,9 +77,14 @@ func (d *Datadog) Write(points []*client.Point) error {
 		}
 		if p, err := buildPoint(pt); err == nil {
 			metric.Points[0] = p
+			tempSeries[acceptablePoints] = metric
+			acceptablePoints += 1
+		} else {
+			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
 		}
-		ts.Series[index] = metric
 	}
+	ts.Series = make([]*Metric, acceptablePoints)
+	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
 		return fmt.Errorf("unable to marshal TimeSeries, %s\n", err.Error())
