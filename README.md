@@ -214,6 +214,7 @@ found by running `telegraf -sample-config`.
 ## Supported Outputs
 
 * influxdb
+* nsq
 * kafka
 * datadog
 * opentsdb
