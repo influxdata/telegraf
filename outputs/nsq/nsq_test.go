@@ -23,6 +23,6 @@ func TestConnectAndWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the NSQ daemon
-	err = n.Write(testutil.MockBatchPoints())
+	err = n.Write(testutil.MockBatchPoints().Points())
 	require.NoError(t, err)
 }
