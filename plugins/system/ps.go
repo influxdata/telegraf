@@ -7,10 +7,10 @@ import (
 
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/influxdb/telegraf/plugins"
-	"github.com/shirou/gopsutil/common"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/docker"
+	"github.com/shirou/gopsutil/internal/common"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/net"
 )
