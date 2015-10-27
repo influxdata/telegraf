@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/influxdb/telegraf/plugins"
-	common "github.com/shirou/gopsutil/common"
+	common "github.com/shirou/gopsutil/internal/common"
 )
 
 // Lustre proc files can change between versions, so we want to future-proof
