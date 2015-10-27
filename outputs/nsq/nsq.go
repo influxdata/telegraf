@@ -2,10 +2,9 @@ package nsq
 
 import (
 	"fmt"
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/nsqio/go-nsq"
-	"time"
 )
 
 type NSQ struct {
@@ -46,34 +45,15 @@ func (n *NSQ) Description() string {
 	return "Send telegraf measurements to NSQD"
 }
 
-func (n *NSQ) Write(bp client.BatchPoints) error {
-	if len(bp.Points) == 0 {
+func (n *NSQ) Write(points []*client.Point) error {
+	if len(points) == 0 {
 		return nil
 	}
 
-	var zeroTime time.Time
-	for _, p := range bp.Points {
+	for _, p := range points {
 		// Combine tags from Point and BatchPoints and grab the resulting
 		// line-protocol output string to write to NSQ
-		var value string
-		if p.Raw != "" {
-			value = p.Raw
-		} else {
-			for k, v := range bp.Tags {
-				if p.Tags == nil {
-					p.Tags = make(map[string]string, len(bp.Tags))
-				}
-				p.Tags[k] = v
-			}
-			if p.Time == zeroTime {
-				if bp.Time == zeroTime {
-					p.Time = time.Now()
-				} else {
-					p.Time = bp.Time
-				}
-			}
-			value = p.MarshalString()
-		}
+		value := p.String()
 
 		err := n.producer.Publish(n.Topic, []byte(value))
 
@@ -82,7 +62,6 @@ func (n *NSQ) Write(bp client.BatchPoints) error {
 		}
 	}
 	return nil
-
 }
 
 func init() {
