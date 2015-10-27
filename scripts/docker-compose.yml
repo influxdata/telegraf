@@ -47,3 +47,8 @@ aerospike:
     image: aerospike/aerospike-server
     ports:
         - "3000:3000"
+
+nsq:
+    image: nsqio/nsq
+    ports:
+        - "4150:4150"
