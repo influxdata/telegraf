@@ -1,4 +1,12 @@
-## v0.1.10 [unreleased]
+## v0.2.1 [unreleased]
+
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+## v0.2.0 [2015-10-27]
 
 ### Release Notes
 - The -test flag will now only output 2 collections for plugins that need it
