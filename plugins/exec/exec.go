@@ -3,11 +3,13 @@ package exec
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gonuts/go-shellquote"
 	"github.com/influxdb/telegraf/plugins"
 	"math"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -88,19 +90,32 @@ func (e *Exec) Description() string {
 func (e *Exec) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 
-	var outerr error
+	errorChannel := make(chan error, len(e.Commands))
 
 	for _, c := range e.Commands {
 		wg.Add(1)
 		go func(c *Command, acc plugins.Accumulator) {
 			defer wg.Done()
-			outerr = e.gatherCommand(c, acc)
+			err := e.gatherCommand(c, acc)
+			if err != nil {
+				errorChannel <- err
+			}
 		}(c, acc)
 	}
 
 	wg.Wait()
+	close(errorChannel)
 
-	return outerr
+	// Get all errors and return them as one giant error
+	errorStrings := []string{}
+	for err := range errorChannel {
+		errorStrings = append(errorStrings, err.Error())
+	}
+
+	if len(errorStrings) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(errorStrings, "\n"))
 }
 
 func (e *Exec) gatherCommand(c *Command, acc plugins.Accumulator) error {

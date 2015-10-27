@@ -2,178 +2,138 @@ package telegraf
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 )
 
-// BatchPoints is used to send a batch of data in a single write from telegraf
-// to influx
-type BatchPoints struct {
+type Accumulator interface {
+	Add(measurement string, value interface{},
+		tags map[string]string, t ...time.Time)
+	AddFields(measurement string, fields map[string]interface{},
+		tags map[string]string, t ...time.Time)
+
+	SetDefaultTags(tags map[string]string)
+	AddDefaultTag(key, value string)
+
+	Prefix() string
+	SetPrefix(prefix string)
+
+	Debug() bool
+	SetDebug(enabled bool)
+}
+
+func NewAccumulator(
+	plugin *ConfiguredPlugin,
+	points chan *client.Point,
+) Accumulator {
+	acc := accumulator{}
+	acc.points = points
+	acc.plugin = plugin
+	return &acc
+}
+
+type accumulator struct {
 	sync.Mutex
 
-	client.BatchPoints
+	points chan *client.Point
 
-	Debug bool
+	defaultTags map[string]string
 
-	Prefix string
+	debug bool
 
-	Config *ConfiguredPlugin
+	plugin *ConfiguredPlugin
+
+	prefix string
 }
 
-// deepcopy returns a deep copy of the BatchPoints object. This is primarily so
-// we can do multithreaded output flushing (see Agent.flush)
-func (bp *BatchPoints) deepcopy() *BatchPoints {
-	bp.Lock()
-	defer bp.Unlock()
-
-	var bpc BatchPoints
-	bpc.Time = bp.Time
-	bpc.Precision = bp.Precision
-
-	bpc.Tags = make(map[string]string)
-	for k, v := range bp.Tags {
-		bpc.Tags[k] = v
-	}
-
-	var pts []client.Point
-	for _, pt := range bp.Points {
-		var ptc client.Point
-
-		ptc.Measurement = pt.Measurement
-		ptc.Time = pt.Time
-		ptc.Precision = pt.Precision
-		ptc.Raw = pt.Raw
-
-		ptc.Tags = make(map[string]string)
-		ptc.Fields = make(map[string]interface{})
-
-		for k, v := range pt.Tags {
-			ptc.Tags[k] = v
-		}
-
-		for k, v := range pt.Fields {
-			ptc.Fields[k] = v
-		}
-		pts = append(pts, ptc)
-	}
-
-	bpc.Points = pts
-	return &bpc
-}
-
-// Add adds a measurement
-func (bp *BatchPoints) Add(
+func (ac *accumulator) Add(
 	measurement string,
-	val interface{},
+	value interface{},
 	tags map[string]string,
+	t ...time.Time,
 ) {
 	fields := make(map[string]interface{})
-	fields["value"] = val
-	bp.AddFields(measurement, fields, tags)
+	fields["value"] = value
+	ac.AddFields(measurement, fields, tags, t...)
 }
 
-// AddFieldsWithTime adds a measurement with a provided timestamp
-func (bp *BatchPoints) AddFieldsWithTime(
+func (ac *accumulator) AddFields(
 	measurement string,
 	fields map[string]interface{},
 	tags map[string]string,
-	timestamp time.Time,
+	t ...time.Time,
 ) {
-	// TODO this function should add the fields with the timestamp, but that will
-	// need to wait for the InfluxDB point precision/unit to be fixed
-	bp.AddFields(measurement, fields, tags)
-	// bp.Lock()
-	// defer bp.Unlock()
 
-	// measurement = bp.Prefix + measurement
+	if tags == nil {
+		tags = make(map[string]string)
+	}
 
-	// if bp.Config != nil {
-	// 	if !bp.Config.ShouldPass(measurement, tags) {
-	// 		return
-	// 	}
-	// }
+	// InfluxDB client/points does not support writing uint64
+	// TODO fix when it does
+	// https://github.com/influxdb/influxdb/pull/4508
+	for k, v := range fields {
+		switch val := v.(type) {
+		case uint64:
+			if val < uint64(9223372036854775808) {
+				fields[k] = int64(val)
+			} else {
+				fields[k] = int64(9223372036854775807)
+			}
+		}
+	}
 
-	// if bp.Debug {
-	// 	var tg []string
+	var timestamp time.Time
+	if len(t) > 0 {
+		timestamp = t[0]
+	} else {
+		timestamp = time.Now()
+	}
 
-	// 	for k, v := range tags {
-	// 		tg = append(tg, fmt.Sprintf("%s=\"%s\"", k, v))
-	// 	}
-
-	// 	var vals []string
-
-	// 	for k, v := range fields {
-	// 		vals = append(vals, fmt.Sprintf("%s=%v", k, v))
-	// 	}
-
-	// 	sort.Strings(tg)
-	// 	sort.Strings(vals)
-
-	// 	fmt.Printf("> [%s] %s %s\n", strings.Join(tg, " "), measurement, strings.Join(vals, " "))
-	// }
-
-	// bp.Points = append(bp.Points, client.Point{
-	// 	Measurement: measurement,
-	// 	Tags:        tags,
-	// 	Fields:      fields,
-	// 	Time:        timestamp,
-	// })
-}
-
-// AddFields will eventually replace the Add function, once we move to having a
-// single plugin as a single measurement with multiple fields
-func (bp *BatchPoints) AddFields(
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-) {
-	bp.Lock()
-	defer bp.Unlock()
-
-	measurement = bp.Prefix + measurement
-
-	if bp.Config != nil {
-		if !bp.Config.ShouldPass(measurement, tags) {
+	if ac.plugin != nil {
+		if !ac.plugin.ShouldPass(measurement, tags) {
 			return
 		}
 	}
 
-	// Apply BatchPoints tags to tags passed in, giving precedence to those
-	// passed in. This is so that plugins have the ability to override global
-	// tags.
-	for k, v := range bp.Tags {
-		_, ok := tags[k]
-		if !ok {
+	for k, v := range ac.defaultTags {
+		if _, ok := tags[k]; !ok {
 			tags[k] = v
 		}
 	}
 
-	if bp.Debug {
-		var tg []string
-
-		for k, v := range tags {
-			tg = append(tg, fmt.Sprintf("%s=\"%s\"", k, v))
-		}
-
-		var vals []string
-
-		for k, v := range fields {
-			vals = append(vals, fmt.Sprintf("%s=%v", k, v))
-		}
-
-		sort.Strings(tg)
-		sort.Strings(vals)
-
-		fmt.Printf("> [%s] %s %s\n", strings.Join(tg, " "), measurement, strings.Join(vals, " "))
+	if ac.prefix != "" {
+		measurement = ac.prefix + measurement
 	}
 
-	bp.Points = append(bp.Points, client.Point{
-		Measurement: measurement,
-		Tags:        tags,
-		Fields:      fields,
-	})
+	pt := client.NewPoint(measurement, tags, fields, timestamp)
+	if ac.debug {
+		fmt.Println("> " + pt.String())
+	}
+	ac.points <- pt
+}
+
+func (ac *accumulator) SetDefaultTags(tags map[string]string) {
+	ac.defaultTags = tags
+}
+
+func (ac *accumulator) AddDefaultTag(key, value string) {
+	ac.defaultTags[key] = value
+}
+
+func (ac *accumulator) Prefix() string {
+	return ac.prefix
+}
+
+func (ac *accumulator) SetPrefix(prefix string) {
+	ac.prefix = prefix
+}
+
+func (ac *accumulator) Debug() bool {
+	return ac.debug
+}
+
+func (ac *accumulator) SetDebug(debug bool) {
+	ac.debug = debug
 }

@@ -4,9 +4,8 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"time"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 )
 
 var localhost = "localhost"
@@ -34,13 +33,14 @@ func GetLocalHost() string {
 // MockBatchPoints returns a mock BatchPoints object for using in unit tests
 // of telegraf output sinks.
 func MockBatchPoints() client.BatchPoints {
-	var bp client.BatchPoints
-	bp.Time = time.Now()
-	bp.Tags = map[string]string{"tag1": "value1"}
-	bp.Points = []client.Point{
-		{
-			Fields: map[string]interface{}{"value": 1.0},
-		},
-	}
+	// Create a new point batch
+	bp, _ := client.NewBatchPoints(client.BatchPointsConfig{})
+
+	// Create a point and add to batch
+	tags := map[string]string{"tag1": "value1"}
+	fields := map[string]interface{}{"value": 1.0}
+	pt := client.NewPoint("test_point", tags, fields)
+	bp.AddPoint(pt)
+
 	return bp
 }

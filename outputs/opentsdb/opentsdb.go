@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/outputs"
 )
 
@@ -51,15 +51,15 @@ func (o *OpenTSDB) Connect() error {
 		return fmt.Errorf("OpenTSDB: TCP address cannot be resolved")
 	}
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
-	defer connection.Close()
 	if err != nil {
 		return fmt.Errorf("OpenTSDB: Telnet connect fail")
 	}
+	defer connection.Close()
 	return nil
 }
 
-func (o *OpenTSDB) Write(bp client.BatchPoints) error {
-	if len(bp.Points) == 0 {
+func (o *OpenTSDB) Write(points []*client.Point) error {
+	if len(points) == 0 {
 		return nil
 	}
 	var timeNow = time.Now()
@@ -70,19 +70,20 @@ func (o *OpenTSDB) Write(bp client.BatchPoints) error {
 	if err != nil {
 		return fmt.Errorf("OpenTSDB: Telnet connect fail")
 	}
-	for _, pt := range bp.Points {
+	for _, pt := range points {
 		metric := &MetricLine{
-			Metric:    fmt.Sprintf("%s%s", o.Prefix, pt.Measurement),
+			Metric:    fmt.Sprintf("%s%s", o.Prefix, pt.Name()),
 			Timestamp: timeNow.Unix(),
 		}
-		metricValue, buildError := buildValue(bp, pt)
+
+		metricValue, buildError := buildValue(pt)
 		if buildError != nil {
 			fmt.Printf("OpenTSDB: %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue
 
-		tagsSlice := buildTags(bp.Tags, pt.Tags)
+		tagsSlice := buildTags(pt.Tags())
 		metric.Tags = fmt.Sprint(strings.Join(tagsSlice, " "))
 
 		messageLine := fmt.Sprintf("put %s %v %s %s\n", metric.Metric, metric.Timestamp, metric.Value, metric.Tags)
@@ -99,13 +100,9 @@ func (o *OpenTSDB) Write(bp client.BatchPoints) error {
 	return nil
 }
 
-func buildTags(bpTags map[string]string, ptTags map[string]string) []string {
-	tags := make([]string, (len(bpTags) + len(ptTags)))
+func buildTags(ptTags map[string]string) []string {
+	tags := make([]string, len(ptTags))
 	index := 0
-	for k, v := range bpTags {
-		tags[index] = fmt.Sprintf("%s=%s", k, v)
-		index += 1
-	}
 	for k, v := range ptTags {
 		tags[index] = fmt.Sprintf("%s=%s", k, v)
 		index += 1
@@ -114,9 +111,9 @@ func buildTags(bpTags map[string]string, ptTags map[string]string) []string {
 	return tags
 }
 
-func buildValue(bp client.BatchPoints, pt client.Point) (string, error) {
+func buildValue(pt *client.Point) (string, error) {
 	var retv string
-	var v = pt.Fields["value"]
+	var v = pt.Fields()["value"]
 	switch p := v.(type) {
 	case int64:
 		retv = IntToString(int64(p))

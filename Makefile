@@ -37,8 +37,11 @@ ifeq ($(UNAME), Linux)
 	ADVERTISED_HOST=localhost docker-compose --file scripts/docker-compose.yml up -d
 endif
 
-test: prepare docker-compose
-	$(GOBIN)/godep go test ./...
+test: test-cleanup prepare docker-compose
+	# Sleeping for kafka leadership election, TSDB setup, etc.
+	sleep 30
+	# Setup SUCCESS, running tests
+	godep go test ./...
 
 test-short: prepare
 	$(GOBIN)/godep go test -short ./...

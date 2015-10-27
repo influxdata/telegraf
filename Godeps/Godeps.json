@@ -102,8 +102,8 @@
 		},
 		{
 			"ImportPath": "github.com/influxdb/influxdb",
-			"Comment": "v0.9.4-rc1-652-gd9f0413",
-			"Rev": "d9f04132ef567bb9671690e4db226ff3dab9feb5"
+			"Comment": "v0.9.4-rc1-703-g956efae",
+			"Rev": "956efaeb94ee57ecd8dc23e2f654b5231204e28f"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
@@ -215,6 +215,11 @@
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/require",
+			"Comment": "v1.0-21-gf552045",
+			"Rev": "f5520455607c0233cb6d7b056f71b22c1d265ef1"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/suite",
 			"Comment": "v1.0-21-gf552045",
 			"Rev": "f5520455607c0233cb6d7b056f71b22c1d265ef1"
 		},

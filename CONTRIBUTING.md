@@ -36,11 +36,14 @@ type Plugin interface {
 }
 
 type Accumulator interface {
-    Add(measurement string, value interface{}, tags map[string]string)
-    AddFieldsWithTime(measurement string,
-        values map[string]interface{},
+    Add(measurement string,
+        value interface{},
         tags map[string]string,
-        timestamp time.Time)
+        timestamp ...time.Time)
+    AddFields(measurement string,
+        fields map[string]interface{},
+        tags map[string]string,
+        timestamp ...time.Time)
 }
 ```
 
@@ -81,8 +84,8 @@ func Gather(acc plugins.Accumulator) error {
             "pid": fmt.Sprintf("%d", process.Pid),
         }
 
-        acc.Add("cpu", process.CPUTime, tags)
-        acc.Add("memory", process.MemoryBytes, tags)
+        acc.Add("cpu", process.CPUTime, tags, time.Now())
+        acc.Add("memory", process.MemoryBytes, tags, time.Now())
     }
 }
 ```
@@ -179,7 +182,7 @@ type Output interface {
     Close() error
     Description() string
     SampleConfig() string
-    Write(client.BatchPoints) error
+    Write(points []*client.Point) error
 }
 ```
 
@@ -214,8 +217,8 @@ func (s *Simple) Close() error {
     return nil
 }
 
-func (s *Simple) Write(bp client.BatchPoints) error {
-    for _, pt := range bp {
+func (s *Simple) Write(points []*client.Point) error {
+    for _, pt := range points {
         // write `pt` to the output sink here
     }
     return nil

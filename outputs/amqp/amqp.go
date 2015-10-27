@@ -1,12 +1,13 @@
 package amqp
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"sync"
 	"time"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/streadway/amqp"
 )
@@ -82,43 +83,29 @@ func (q *AMQP) Description() string {
 	return "Configuration for the AMQP server to send metrics to"
 }
 
-func (q *AMQP) Write(bp client.BatchPoints) error {
+func (q *AMQP) Write(points []*client.Point) error {
 	q.Lock()
 	defer q.Unlock()
-	if len(bp.Points) == 0 {
+	if len(points) == 0 {
 		return nil
 	}
+	var outbuf = make(map[string][][]byte)
 
-	var zero_time time.Time
-	for _, p := range bp.Points {
+	for _, p := range points {
 		// Combine tags from Point and BatchPoints and grab the resulting
 		// line-protocol output string to write to AMQP
 		var value, key string
-		if p.Raw != "" {
-			value = p.Raw
-		} else {
-			for k, v := range bp.Tags {
-				if p.Tags == nil {
-					p.Tags = make(map[string]string, len(bp.Tags))
-				}
-				p.Tags[k] = v
-			}
-			if p.Time == zero_time {
-				if bp.Time == zero_time {
-					p.Time = time.Now()
-				} else {
-					p.Time = bp.Time
-				}
-			}
-			value = p.MarshalString()
-		}
+		value = p.String()
 
 		if q.RoutingTag != "" {
-			if h, ok := p.Tags[q.RoutingTag]; ok {
+			if h, ok := p.Tags()[q.RoutingTag]; ok {
 				key = h
 			}
 		}
+		outbuf[key] = append(outbuf[key], []byte(value))
 
+	}
+	for key, buf := range outbuf {
 		err := q.channel.Publish(
 			q.Exchange, // exchange
 			key,        // routing key
@@ -126,7 +113,7 @@ func (q *AMQP) Write(bp client.BatchPoints) error {
 			false,      // immediate
 			amqp.Publishing{
 				ContentType: "text/plain",
-				Body:        []byte(value),
+				Body:        bytes.Join(buf, []byte("\n")),
 			})
 		if err != nil {
 			return fmt.Errorf("FAILED to send amqp message: %s", err)

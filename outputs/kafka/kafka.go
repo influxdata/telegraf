@@ -3,10 +3,9 @@ package kafka
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/outputs"
 )
 
@@ -52,40 +51,21 @@ func (k *Kafka) Description() string {
 	return "Configuration for the Kafka server to send metrics to"
 }
 
-func (k *Kafka) Write(bp client.BatchPoints) error {
-	if len(bp.Points) == 0 {
+func (k *Kafka) Write(points []*client.Point) error {
+	if len(points) == 0 {
 		return nil
 	}
 
-	var zero_time time.Time
-	for _, p := range bp.Points {
+	for _, p := range points {
 		// Combine tags from Point and BatchPoints and grab the resulting
 		// line-protocol output string to write to Kafka
-		var value string
-		if p.Raw != "" {
-			value = p.Raw
-		} else {
-			for k, v := range bp.Tags {
-				if p.Tags == nil {
-					p.Tags = make(map[string]string, len(bp.Tags))
-				}
-				p.Tags[k] = v
-			}
-			if p.Time == zero_time {
-				if bp.Time == zero_time {
-					p.Time = time.Now()
-				} else {
-					p.Time = bp.Time
-				}
-			}
-			value = p.MarshalString()
-		}
+		value := p.String()
 
 		m := &sarama.ProducerMessage{
 			Topic: k.Topic,
 			Value: sarama.StringEncoder(value),
 		}
-		if h, ok := p.Tags[k.RoutingTag]; ok {
+		if h, ok := p.Tags()[k.RoutingTag]; ok {
 			m.Key = sarama.StringEncoder(h)
 		}
 

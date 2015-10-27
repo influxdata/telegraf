@@ -27,17 +27,20 @@
 [agent]
   # Default data collection interval for all plugins
   interval = "10s"
+  # Rounds collection interval to 'interval'
+  # ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  round_interval = true
 
-  # If utc = false, uses local time (utc is highly recommended)
-  utc = true
+  # Default data flushing interval for all outputs
+  flush_interval = "10s"
+  # Jitter the flush interval by a random range
+  # ie, a jitter of 5s and interval 10s means flush will happen every 10-15s
+  flush_jitter = "5s"
+  # Number of times to retry each data flush
+  flush_retries = 2
 
-  # Precision of writes, valid values are n, u, ms, s, m, and h
-  # note: using second precision greatly helps InfluxDB compression
-  precision = "s"
-
-  # run telegraf in debug mode
+  # Run telegraf in debug mode
   debug = false
-
   # Override default hostname, if empty use os.Hostname()
   hostname = ""
 
@@ -54,15 +57,16 @@
   # Multiple urls can be specified for InfluxDB cluster support. Server to
   # write to will be randomly chosen each interval.
   urls = ["http://localhost:8086"] # required.
-
   # The target database for metrics. This database must already exist
   database = "telegraf" # required.
+  # Precision of writes, valid values are n, u, ms, s, m, and h
+  # note: using second precision greatly helps InfluxDB compression
+  precision = "s"
 
   # Connection timeout (for the connection with InfluxDB), formatted as a string.
   # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
   # If not provided, will default to 0 (no timeout)
   # timeout = "5s"
-
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 

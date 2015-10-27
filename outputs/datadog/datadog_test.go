@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdb/telegraf/testutil"
 
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdb/influxdb/client/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +38,7 @@ func TestUriOverride(t *testing.T) {
 	d.Apikey = "123456"
 	err := d.Connect()
 	require.NoError(t, err)
-	err = d.Write(testutil.MockBatchPoints())
+	err = d.Write(testutil.MockBatchPoints().Points())
 	require.NoError(t, err)
 }
 
@@ -57,7 +57,7 @@ func TestBadStatusCode(t *testing.T) {
 	d.Apikey = "123456"
 	err := d.Connect()
 	require.NoError(t, err)
-	err = d.Write(testutil.MockBatchPoints())
+	err = d.Write(testutil.MockBatchPoints().Points())
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
@@ -74,28 +74,24 @@ func TestAuthenticatedUrl(t *testing.T) {
 
 func TestBuildTags(t *testing.T) {
 	var tagtests = []struct {
-		bpIn    map[string]string
 		ptIn    map[string]string
 		outTags []string
 	}{
 		{
-			map[string]string{"one": "two"},
-			map[string]string{"three": "four"},
+			map[string]string{"one": "two", "three": "four"},
 			[]string{"one:two", "three:four"},
 		},
 		{
 			map[string]string{"aaa": "bbb"},
-			map[string]string{},
 			[]string{"aaa:bbb"},
 		},
 		{
-			map[string]string{},
 			map[string]string{},
 			[]string{},
 		},
 	}
 	for _, tt := range tagtests {
-		tags := buildTags(tt.bpIn, tt.ptIn)
+		tags := buildTags(tt.ptIn)
 		if !reflect.DeepEqual(tags, tt.outTags) {
 			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outTags, tags)
 		}
@@ -103,92 +99,114 @@ func TestBuildTags(t *testing.T) {
 }
 
 func TestBuildPoint(t *testing.T) {
+	tags := make(map[string]string)
 	var tagtests = []struct {
-		bpIn  client.BatchPoints
-		ptIn  client.Point
+		ptIn  *client.Point
 		outPt Point
 		err   error
 	}{
 		{
-			client.BatchPoints{
-				Time: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			client.NewPoint(
+				"test1",
+				tags,
+				map[string]interface{}{"value": 0.0},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				0.0,
 			},
-			client.Point{
-				Fields: map[string]interface{}{"value": 0.0},
-			},
-			Point{float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()), 0.0},
 			nil,
 		},
 		{
-			client.BatchPoints{},
-			client.Point{
-				Fields: map[string]interface{}{"value": 1.0},
-				Time:   time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
+			client.NewPoint(
+				"test2",
+				tags,
+				map[string]interface{}{"value": 1.0},
+				time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
+			),
+			Point{
+				float64(time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				1.0,
 			},
-			Point{float64(time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix()), 1.0},
 			nil,
 		},
 		{
-			client.BatchPoints{
-				Time: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			client.NewPoint(
+				"test3",
+				tags,
+				map[string]interface{}{"value": 10},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				10.0,
 			},
-			client.Point{
-				Fields: map[string]interface{}{"value": 10},
-			},
-			Point{float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()), 10.0},
 			nil,
 		},
 		{
-			client.BatchPoints{
-				Time: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			client.NewPoint(
+				"test4",
+				tags,
+				map[string]interface{}{"value": int32(112345)},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				112345.0,
 			},
-			client.Point{
-				Fields: map[string]interface{}{"value": int32(112345)},
-			},
-			Point{float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()), 112345.0},
 			nil,
 		},
 		{
-			client.BatchPoints{
-				Time: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			client.NewPoint(
+				"test5",
+				tags,
+				map[string]interface{}{"value": int64(112345)},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				112345.0,
 			},
-			client.Point{
-				Fields: map[string]interface{}{"value": int64(112345)},
-			},
-			Point{float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()), 112345.0},
 			nil,
 		},
 		{
-			client.BatchPoints{
-				Time: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			client.NewPoint(
+				"test6",
+				tags,
+				map[string]interface{}{"value": float32(11234.5)},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				11234.5,
 			},
-			client.Point{
-				Fields: map[string]interface{}{"value": float32(11234.5)},
-			},
-			Point{float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()), 11234.5},
 			nil,
 		},
 		{
-			client.BatchPoints{
-				Time: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			client.NewPoint(
+				"test7",
+				tags,
+				map[string]interface{}{"value": "11234.5"},
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+			),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				11234.5,
 			},
-			client.Point{
-				Fields: map[string]interface{}{"value": "11234.5"},
-			},
-			Point{float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()), 11234.5},
 			fmt.Errorf("unable to extract value from Fields, undeterminable type"),
 		},
 	}
 	for _, tt := range tagtests {
-		pt, err := buildPoint(tt.bpIn, tt.ptIn)
+		pt, err := buildPoint(tt.ptIn)
 		if err != nil && tt.err == nil {
-			t.Errorf("unexpected error, %+v\n", err)
+			t.Errorf("%s: unexpected error, %+v\n", tt.ptIn.Name(), err)
 		}
 		if tt.err != nil && err == nil {
-			t.Errorf("expected an error (%s) but none returned", tt.err.Error())
+			t.Errorf("%s: expected an error (%s) but none returned", tt.ptIn.Name(), tt.err.Error())
 		}
 		if !reflect.DeepEqual(pt, tt.outPt) && tt.err == nil {
-			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outPt, pt)
+			t.Errorf("%s: \nexpected %+v\ngot %+v\n", tt.ptIn.Name(), tt.outPt, pt)
 		}
 	}
 }

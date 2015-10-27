@@ -4,18 +4,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 
-	"github.com/influxdb/influxdb/client"
-	t "github.com/influxdb/telegraf"
+	"github.com/influxdb/influxdb/client/v2"
+	"github.com/influxdb/telegraf/duration"
 	"github.com/influxdb/telegraf/outputs"
 )
 
 type Datadog struct {
 	Apikey  string
-	Timeout t.Duration
+	Timeout duration.Duration
 
 	apiUrl string
 	client *http.Client
@@ -36,6 +38,7 @@ type TimeSeries struct {
 type Metric struct {
 	Metric string   `json:"metric"`
 	Points [1]Point `json:"points"`
+	Host   string   `json:"host"`
 	Tags   []string `json:"tags,omitempty"`
 }
 
@@ -59,23 +62,29 @@ func (d *Datadog) Connect() error {
 	return nil
 }
 
-func (d *Datadog) Write(bp client.BatchPoints) error {
-	if len(bp.Points) == 0 {
+func (d *Datadog) Write(points []*client.Point) error {
+	if len(points) == 0 {
 		return nil
 	}
-	ts := TimeSeries{
-		Series: make([]*Metric, len(bp.Points)),
-	}
-	for index, pt := range bp.Points {
+	ts := TimeSeries{}
+	var tempSeries = make([]*Metric, len(points))
+	var acceptablePoints = 0
+	for _, pt := range points {
 		metric := &Metric{
-			Metric: pt.Measurement,
-			Tags:   buildTags(bp.Tags, pt.Tags),
+			Metric: strings.Replace(pt.Name(), "_", ".", -1),
+			Tags:   buildTags(pt.Tags()),
+			Host:   pt.Tags()["host"],
 		}
-		if p, err := buildPoint(bp, pt); err == nil {
+		if p, err := buildPoint(pt); err == nil {
 			metric.Points[0] = p
+			tempSeries[acceptablePoints] = metric
+			acceptablePoints += 1
+		} else {
+			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
 		}
-		ts.Series[index] = metric
 	}
+	ts.Series = make([]*Metric, acceptablePoints)
+	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
 		return fmt.Errorf("unable to marshal TimeSeries, %s\n", err.Error())
@@ -87,10 +96,10 @@ func (d *Datadog) Write(bp client.BatchPoints) error {
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
 		return fmt.Errorf("received bad status code, %d\n", resp.StatusCode)
@@ -114,32 +123,24 @@ func (d *Datadog) authenticatedUrl() string {
 	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
 }
 
-func buildTags(bpTags map[string]string, ptTags map[string]string) []string {
-	tags := make([]string, (len(bpTags) + len(ptTags)))
-	index := 0
-	for k, v := range bpTags {
-		tags[index] = fmt.Sprintf("%s:%s", k, v)
-		index += 1
+func buildPoint(pt *client.Point) (Point, error) {
+	var p Point
+	if err := p.setValue(pt.Fields()["value"]); err != nil {
+		return p, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
 	}
+	p[0] = float64(pt.Time().Unix())
+	return p, nil
+}
+
+func buildTags(ptTags map[string]string) []string {
+	tags := make([]string, len(ptTags))
+	index := 0
 	for k, v := range ptTags {
 		tags[index] = fmt.Sprintf("%s:%s", k, v)
 		index += 1
 	}
 	sort.Strings(tags)
 	return tags
-}
-
-func buildPoint(bp client.BatchPoints, pt client.Point) (Point, error) {
-	var p Point
-	if err := p.setValue(pt.Fields["value"]); err != nil {
-		return p, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
-	}
-	if pt.Time.IsZero() {
-		p[0] = float64(bp.Time.Unix())
-	} else {
-		p[0] = float64(pt.Time.Unix())
-	}
-	return p, nil
 }
 
 func (p *Point) setValue(v interface{}) error {

@@ -367,7 +367,11 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 }
 
 func diff(newVal, oldVal, sampleTime int64) int64 {
-	return (newVal - oldVal) / sampleTime
+	d := newVal - oldVal
+	if d <= 0 {
+		d = newVal
+	}
+	return d / sampleTime
 }
 
 // NewStatLine constructs a StatLine object from two ServerStatus objects.

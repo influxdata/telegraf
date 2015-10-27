@@ -1,5 +1,5 @@
 mysql:
-    image: mysql
+    image: mysql:5.7
     ports:
         - "3306:3306"
     environment:
@@ -34,11 +34,16 @@ rabbitmq:
         - "5672:5672"
 
 opentsdb:
-    image: lancope/opentsdb
+    image: petergrace/opentsdb-docker
     ports:
-        - "24242:4242"
+        - "4242:4242"
 
 redis:
     image: redis
     ports:
         - "6379:6379"
+
+aerospike:
+    image: aerospike/aerospike-server
+    ports:
+        - "3000:3000"

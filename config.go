@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -14,41 +16,32 @@ import (
 	"github.com/naoina/toml/ast"
 )
 
-// Duration just wraps time.Duration
-type Duration struct {
-	time.Duration
-}
-
-// UnmarshalTOML parses the duration from the TOML config file
-func (d *Duration) UnmarshalTOML(b []byte) error {
-	dur, err := time.ParseDuration(string(b[1 : len(b)-1]))
-	if err != nil {
-		return err
-	}
-
-	d.Duration = dur
-
-	return nil
-}
-
 // Config specifies the URL/user/password for the database that telegraf
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
+	// This lives outside the agent because mergeStruct doesn't need to handle maps normally.
+	// We just copy the elements manually in ApplyAgent.
 	Tags map[string]string
 
-	agent   *ast.Table
-	plugins map[string]*ast.Table
-	outputs map[string]*ast.Table
+	agent                *Agent
+	plugins              map[string]plugins.Plugin
+	pluginConfigurations map[string]*ConfiguredPlugin
+	outputs              map[string]outputs.Output
+
+	agentFieldsSet               []string
+	pluginFieldsSet              map[string][]string
+	pluginConfigurationFieldsSet map[string][]string
+	outputFieldsSet              map[string][]string
 }
 
-// Plugins returns the configured plugins as a map of name -> plugin toml
-func (c *Config) Plugins() map[string]*ast.Table {
+// Plugins returns the configured plugins as a map of name -> plugins.Plugin
+func (c *Config) Plugins() map[string]plugins.Plugin {
 	return c.plugins
 }
 
-// Outputs returns the configured outputs as a map of name -> output toml
-func (c *Config) Outputs() map[string]*ast.Table {
+// Outputs returns the configured outputs as a map of name -> outputs.Output
+func (c *Config) Outputs() map[string]outputs.Output {
 	return c.outputs
 }
 
@@ -123,185 +116,63 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string, tags map[string]strin
 	return true
 }
 
-// ApplyOutput loads the toml config into the given interface
+// ApplyOutput loads the Output struct built from the config into the given Output struct.
+// Overrides only values in the given struct that were set in the config.
 func (c *Config) ApplyOutput(name string, v interface{}) error {
 	if c.outputs[name] != nil {
-		return toml.UnmarshalTable(c.outputs[name], v)
+		return mergeStruct(v, c.outputs[name], c.outputFieldsSet[name])
 	}
 	return nil
 }
 
-// ApplyAgent loads the toml config into the given Agent object, overriding
-// defaults (such as collection duration) with the values from the toml config.
+// ApplyAgent loads the Agent struct built from the config into the given Agent struct.
+// Overrides only values in the given struct that were set in the config.
 func (c *Config) ApplyAgent(a *Agent) error {
 	if c.agent != nil {
-		return toml.UnmarshalTable(c.agent, a)
+		for key, value := range c.Tags {
+			a.Tags[key] = value
+		}
+		return mergeStruct(a, c.agent, c.agentFieldsSet)
 	}
 
 	return nil
 }
 
-// ApplyPlugin takes defined plugin names and applies them to the given
-// interface, returning a ConfiguredPlugin object in the end that can
-// be inserted into a runningPlugin by the agent.
+// ApplyPlugin loads the Plugin struct built from the config into the given Plugin struct.
+// Overrides only values in the given struct that were set in the config.
+// Additionally return a ConfiguredPlugin, which is always generated from the config.
 func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, error) {
-	cp := &ConfiguredPlugin{Name: name}
-
-	if tbl, ok := c.plugins[name]; ok {
-
-		if node, ok := tbl.Fields["pass"]; ok {
-			if kv, ok := node.(*ast.KeyValue); ok {
-				if ary, ok := kv.Value.(*ast.Array); ok {
-					for _, elem := range ary.Value {
-						if str, ok := elem.(*ast.String); ok {
-							cp.Pass = append(cp.Pass, str.Value)
-						}
-					}
-				}
-			}
+	if c.plugins[name] != nil {
+		err := mergeStruct(v, c.plugins[name], c.pluginFieldsSet[name])
+		if err != nil {
+			return nil, err
 		}
-
-		if node, ok := tbl.Fields["drop"]; ok {
-			if kv, ok := node.(*ast.KeyValue); ok {
-				if ary, ok := kv.Value.(*ast.Array); ok {
-					for _, elem := range ary.Value {
-						if str, ok := elem.(*ast.String); ok {
-							cp.Drop = append(cp.Drop, str.Value)
-						}
-					}
-				}
-			}
-		}
-
-		if node, ok := tbl.Fields["interval"]; ok {
-			if kv, ok := node.(*ast.KeyValue); ok {
-				if str, ok := kv.Value.(*ast.String); ok {
-					dur, err := time.ParseDuration(str.Value)
-					if err != nil {
-						return nil, err
-					}
-
-					cp.Interval = dur
-				}
-			}
-		}
-
-		if node, ok := tbl.Fields["tagpass"]; ok {
-			if subtbl, ok := node.(*ast.Table); ok {
-				for name, val := range subtbl.Fields {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						tagfilter := &TagFilter{Name: name}
-						if ary, ok := kv.Value.(*ast.Array); ok {
-							for _, elem := range ary.Value {
-								if str, ok := elem.(*ast.String); ok {
-									tagfilter.Filter = append(tagfilter.Filter, str.Value)
-								}
-							}
-						}
-						cp.TagPass = append(cp.TagPass, *tagfilter)
-					}
-				}
-			}
-		}
-
-		if node, ok := tbl.Fields["tagdrop"]; ok {
-			if subtbl, ok := node.(*ast.Table); ok {
-				for name, val := range subtbl.Fields {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						tagfilter := &TagFilter{Name: name}
-						if ary, ok := kv.Value.(*ast.Array); ok {
-							for _, elem := range ary.Value {
-								if str, ok := elem.(*ast.String); ok {
-									tagfilter.Filter = append(tagfilter.Filter, str.Value)
-								}
-							}
-						}
-						cp.TagDrop = append(cp.TagDrop, *tagfilter)
-					}
-				}
-			}
-		}
-
-		delete(tbl.Fields, "drop")
-		delete(tbl.Fields, "pass")
-		delete(tbl.Fields, "interval")
-		delete(tbl.Fields, "tagdrop")
-		delete(tbl.Fields, "tagpass")
-		return cp, toml.UnmarshalTable(tbl, v)
+		return c.pluginConfigurations[name], nil
 	}
 
-	return cp, nil
+	return nil, nil
 }
+
+// Couldn't figure out how to get this to work with the declared function.
 
 // PluginsDeclared returns the name of all plugins declared in the config.
 func (c *Config) PluginsDeclared() []string {
-	return declared(c.plugins)
+	var names []string
+	for name := range c.plugins {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // OutputsDeclared returns the name of all outputs declared in the config.
 func (c *Config) OutputsDeclared() []string {
-	return declared(c.outputs)
-}
-
-func declared(endpoints map[string]*ast.Table) []string {
 	var names []string
-
-	for name := range endpoints {
+	for name := range c.outputs {
 		names = append(names, name)
 	}
-
 	sort.Strings(names)
-
 	return names
-}
-
-var errInvalidConfig = errors.New("invalid configuration")
-
-// LoadConfig loads the given config file and returns a *Config pointer
-func LoadConfig(path string) (*Config, error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	tbl, err := toml.Parse(data)
-	if err != nil {
-		return nil, err
-	}
-
-	c := &Config{
-		Tags:    make(map[string]string),
-		plugins: make(map[string]*ast.Table),
-		outputs: make(map[string]*ast.Table),
-	}
-
-	for name, val := range tbl.Fields {
-		subtbl, ok := val.(*ast.Table)
-		if !ok {
-			return nil, errInvalidConfig
-		}
-
-		switch name {
-		case "agent":
-			c.agent = subtbl
-		case "tags":
-			if err := toml.UnmarshalTable(subtbl, c.Tags); err != nil {
-				return nil, errInvalidConfig
-			}
-		case "outputs":
-			for outputName, outputVal := range subtbl.Fields {
-				outputSubtbl, ok := outputVal.(*ast.Table)
-				if !ok {
-					return nil, errInvalidConfig
-				}
-				c.outputs[outputName] = outputSubtbl
-			}
-		default:
-			c.plugins[name] = subtbl
-		}
-	}
-
-	return c, nil
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -355,12 +226,19 @@ var header = `# Telegraf configuration
 [agent]
   # Default data collection interval for all plugins
   interval = "10s"
-  # If utc = false, uses local time (utc is highly recommended)
-  utc = true
-  # Precision of writes, valid values are n, u, ms, s, m, and h
-  # note: using second precision greatly helps InfluxDB compression
-  precision = "s"
-  # run telegraf in debug mode
+  # Rounds collection interval to 'interval'
+  # ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  round_interval = true
+
+  # Default data flushing interval for all outputs. You should not set this below
+  # interval. Maximum flush_interval will be flush_interval + flush_jitter
+  flush_interval = "10s"
+  # Jitter the flush interval by a random amount. This is primarily to avoid
+  # large write spikes for users running a large number of telegraf instances.
+  # ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  flush_jitter = "0s"
+
+  # Run telegraf in debug mode
   debug = false
   # Override default hostname, if empty use os.Hostname()
   hostname = ""
@@ -447,9 +325,14 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 	}
 }
 
-func printConfig(name string, plugin plugins.Plugin) {
-	fmt.Printf("\n# %s\n[%s]", plugin.Description(), name)
-	config := plugin.SampleConfig()
+type printer interface {
+	Description() string
+	SampleConfig() string
+}
+
+func printConfig(name string, p printer) {
+	fmt.Printf("\n# %s\n[%s]", p.Description(), name)
+	config := p.SampleConfig()
 	if config == "" {
 		fmt.Printf("\n  # no configuration\n")
 	} else {
@@ -473,5 +356,327 @@ func PrintPluginConfig(name string) error {
 	} else {
 		return errors.New(fmt.Sprintf("Plugin %s not found", name))
 	}
+	return nil
+}
+
+// PrintOutputConfig prints the config usage of a single output.
+func PrintOutputConfig(name string) error {
+	if creator, ok := outputs.Outputs[name]; ok {
+		printConfig(name, creator())
+	} else {
+		return errors.New(fmt.Sprintf("Output %s not found", name))
+	}
+	return nil
+}
+
+// Used for fuzzy matching struct field names in FieldByNameFunc calls below
+func fieldMatch(field string) func(string) bool {
+	return func(name string) bool {
+		r := strings.NewReplacer("_", "")
+		return strings.ToLower(name) == strings.ToLower(r.Replace(field))
+	}
+}
+
+// A very limited merge. Merges the fields named in the fields parameter, replacing most values, but appending to arrays.
+func mergeStruct(base, overlay interface{}, fields []string) error {
+	baseValue := reflect.ValueOf(base).Elem()
+	overlayValue := reflect.ValueOf(overlay).Elem()
+	if baseValue.Kind() != reflect.Struct {
+		return fmt.Errorf("Tried to merge something that wasn't a struct: type %v was %v", baseValue.Type(), baseValue.Kind())
+	}
+	if baseValue.Type() != overlayValue.Type() {
+		return fmt.Errorf("Tried to merge two different types: %v and %v", baseValue.Type(), overlayValue.Type())
+	}
+	for _, field := range fields {
+		overlayFieldValue := overlayValue.FieldByNameFunc(fieldMatch(field))
+		if !overlayFieldValue.IsValid() {
+			return fmt.Errorf("could not find field in %v matching %v", overlayValue.Type(), field)
+		}
+		if overlayFieldValue.Kind() == reflect.Slice {
+			baseFieldValue := baseValue.FieldByNameFunc(fieldMatch(field))
+			baseFieldValue.Set(reflect.AppendSlice(baseFieldValue, overlayFieldValue))
+		} else {
+			baseValue.FieldByNameFunc(fieldMatch(field)).Set(overlayFieldValue)
+		}
+	}
+	return nil
+}
+
+func (c *Config) LoadDirectory(path string) error {
+	directoryEntries, err := ioutil.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	for _, entry := range directoryEntries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if name[len(name)-5:] != ".conf" {
+			continue
+		}
+		subConfig, err := LoadConfig(filepath.Join(path, name))
+		if err != nil {
+			return err
+		}
+		if subConfig.agent != nil {
+			err = mergeStruct(c.agent, subConfig.agent, subConfig.agentFieldsSet)
+			if err != nil {
+				return err
+			}
+			for _, field := range subConfig.agentFieldsSet {
+				if !sliceContains(field, c.agentFieldsSet) {
+					c.agentFieldsSet = append(c.agentFieldsSet, field)
+				}
+			}
+		}
+		for pluginName, plugin := range subConfig.plugins {
+			if _, ok := c.plugins[pluginName]; !ok {
+				c.plugins[pluginName] = plugin
+				c.pluginFieldsSet[pluginName] = subConfig.pluginFieldsSet[pluginName]
+				c.pluginConfigurations[pluginName] = subConfig.pluginConfigurations[pluginName]
+				c.pluginConfigurationFieldsSet[pluginName] = subConfig.pluginConfigurationFieldsSet[pluginName]
+				continue
+			}
+			err = mergeStruct(c.plugins[pluginName], plugin, subConfig.pluginFieldsSet[pluginName])
+			if err != nil {
+				return err
+			}
+			for _, field := range subConfig.pluginFieldsSet[pluginName] {
+				if !sliceContains(field, c.pluginFieldsSet[pluginName]) {
+					c.pluginFieldsSet[pluginName] = append(c.pluginFieldsSet[pluginName], field)
+				}
+			}
+			err = mergeStruct(c.pluginConfigurations[pluginName], subConfig.pluginConfigurations[pluginName], subConfig.pluginConfigurationFieldsSet[pluginName])
+			if err != nil {
+				return err
+			}
+			for _, field := range subConfig.pluginConfigurationFieldsSet[pluginName] {
+				if !sliceContains(field, c.pluginConfigurationFieldsSet[pluginName]) {
+					c.pluginConfigurationFieldsSet[pluginName] = append(c.pluginConfigurationFieldsSet[pluginName], field)
+				}
+			}
+		}
+		for outputName, output := range subConfig.outputs {
+			if _, ok := c.outputs[outputName]; !ok {
+				c.outputs[outputName] = output
+				c.outputFieldsSet[outputName] = subConfig.outputFieldsSet[outputName]
+				continue
+			}
+			err = mergeStruct(c.outputs[outputName], output, subConfig.outputFieldsSet[outputName])
+			if err != nil {
+				return err
+			}
+			for _, field := range subConfig.outputFieldsSet[outputName] {
+				if !sliceContains(field, c.outputFieldsSet[outputName]) {
+					c.outputFieldsSet[outputName] = append(c.outputFieldsSet[outputName], field)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// hazmat area. Keeping the ast parsing here.
+
+// LoadConfig loads the given config file and returns a *Config pointer
+func LoadConfig(path string) (*Config, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	tbl, err := toml.Parse(data)
+	if err != nil {
+		return nil, err
+	}
+
+	c := &Config{
+		Tags:                         make(map[string]string),
+		plugins:                      make(map[string]plugins.Plugin),
+		pluginConfigurations:         make(map[string]*ConfiguredPlugin),
+		outputs:                      make(map[string]outputs.Output),
+		pluginFieldsSet:              make(map[string][]string),
+		pluginConfigurationFieldsSet: make(map[string][]string),
+		outputFieldsSet:              make(map[string][]string),
+	}
+
+	for name, val := range tbl.Fields {
+		subtbl, ok := val.(*ast.Table)
+		if !ok {
+			return nil, errors.New("invalid configuration")
+		}
+
+		switch name {
+		case "agent":
+			err := c.parseAgent(subtbl)
+			if err != nil {
+				return nil, err
+			}
+		case "tags":
+			if err = toml.UnmarshalTable(subtbl, c.Tags); err != nil {
+				return nil, err
+			}
+		case "outputs":
+			for outputName, outputVal := range subtbl.Fields {
+				outputSubtbl, ok := outputVal.(*ast.Table)
+				if !ok {
+					return nil, err
+				}
+				err = c.parseOutput(outputName, outputSubtbl)
+				if err != nil {
+					return nil, err
+				}
+			}
+		default:
+			err = c.parsePlugin(name, subtbl)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return c, nil
+}
+
+// Needs to have the field names, for merging later.
+func extractFieldNames(ast *ast.Table) []string {
+	// A reasonable capacity?
+	var names []string
+	for name := range ast.Fields {
+		names = append(names, name)
+	}
+	return names
+}
+
+// Parse the agent config out of the given *ast.Table.
+func (c *Config) parseAgent(agentAst *ast.Table) error {
+	c.agentFieldsSet = extractFieldNames(agentAst)
+	agent := &Agent{}
+	err := toml.UnmarshalTable(agentAst, agent)
+	if err != nil {
+		return err
+	}
+	c.agent = agent
+	return nil
+}
+
+// Parse an output config out of the given *ast.Table.
+func (c *Config) parseOutput(name string, outputAst *ast.Table) error {
+	c.outputFieldsSet[name] = extractFieldNames(outputAst)
+	creator, ok := outputs.Outputs[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested output: %s", name)
+	}
+	output := creator()
+	err := toml.UnmarshalTable(outputAst, output)
+	if err != nil {
+		return err
+	}
+	c.outputs[name] = output
+	return nil
+}
+
+// Parse a plugin config, plus plugin meta-config, out of the given *ast.Table.
+func (c *Config) parsePlugin(name string, pluginAst *ast.Table) error {
+	creator, ok := plugins.Plugins[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested plugin: %s", name)
+	}
+	plugin := creator()
+	cp := &ConfiguredPlugin{Name: name}
+	cpFields := make([]string, 0, 5)
+
+	if node, ok := pluginAst.Fields["pass"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						cp.Pass = append(cp.Pass, str.Value)
+					}
+				}
+				cpFields = append(cpFields, "pass")
+			}
+		}
+	}
+
+	if node, ok := pluginAst.Fields["drop"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						cp.Drop = append(cp.Drop, str.Value)
+					}
+				}
+				cpFields = append(cpFields, "drop")
+			}
+		}
+	}
+
+	if node, ok := pluginAst.Fields["interval"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return err
+				}
+
+				cp.Interval = dur
+				cpFields = append(cpFields, "interval")
+			}
+		}
+	}
+
+	if node, ok := pluginAst.Fields["tagpass"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					tagfilter := &TagFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								tagfilter.Filter = append(tagfilter.Filter, str.Value)
+							}
+						}
+					}
+					cp.TagPass = append(cp.TagPass, *tagfilter)
+					cpFields = append(cpFields, "tagpass")
+				}
+			}
+		}
+	}
+
+	if node, ok := pluginAst.Fields["tagdrop"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					tagfilter := &TagFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								tagfilter.Filter = append(tagfilter.Filter, str.Value)
+							}
+						}
+					}
+					cp.TagDrop = append(cp.TagDrop, *tagfilter)
+					cpFields = append(cpFields, "tagdrop")
+				}
+			}
+		}
+	}
+
+	delete(pluginAst.Fields, "drop")
+	delete(pluginAst.Fields, "pass")
+	delete(pluginAst.Fields, "interval")
+	delete(pluginAst.Fields, "tagdrop")
+	delete(pluginAst.Fields, "tagpass")
+	c.pluginFieldsSet[name] = extractFieldNames(pluginAst)
+	c.pluginConfigurationFieldsSet[name] = cpFields
+	err := toml.UnmarshalTable(pluginAst, plugin)
+	if err != nil {
+		return err
+	}
+	c.plugins[name] = plugin
+	c.pluginConfigurations[name] = cp
 	return nil
 }

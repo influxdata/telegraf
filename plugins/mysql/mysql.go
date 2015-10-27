@@ -16,12 +16,13 @@ type Mysql struct {
 var sampleConfig = `
   # specify servers via a url matching:
   #  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  #  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   #  e.g.
-  #    root:root@http://10.0.0.18/?tls=false
-  #    root:passwd@tcp(127.0.0.1:3036)/
+  #    root:passwd@tcp(127.0.0.1:3306)/?tls=false
+  #    root@tcp(127.0.0.1:3306)/?tls=false
   #
   # If no servers are specified, then localhost is used as the host.
-  servers = ["localhost"]
+  servers = ["tcp(127.0.0.1:3306)/"]
 `
 
 func (m *Mysql) SampleConfig() string {
@@ -113,7 +114,10 @@ var mappings = []*mapping{
 }
 
 func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
-	if serv == "localhost" {
+	// If user forgot the '/', add it
+	if strings.HasSuffix(serv, ")") {
+		serv = serv + "/"
+	} else if serv == "localhost" {
 		serv = ""
 	}
 
@@ -129,14 +133,10 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 		return err
 	}
 
-	// Parse out user/password from server address tag if given
 	var servtag string
-	if strings.Contains(serv, "@") {
-		servtag = strings.Split(serv, "@")[1]
-	} else if serv == "" {
+	servtag, err = parseDSN(serv)
+	if err != nil {
 		servtag = "localhost"
-	} else {
-		servtag = serv
 	}
 	for rows.Next() {
 		var name string

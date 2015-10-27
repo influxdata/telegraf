@@ -17,6 +17,8 @@ var fDebug = flag.Bool("debug", false,
 	"show metrics as they're generated to stdout")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
+var fConfigDirectory = flag.String("configdirectory", "",
+	"directory containing additional configuration files")
 var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -60,7 +62,9 @@ func main() {
 
 	if *fUsage != "" {
 		if err := telegraf.PrintPluginConfig(*fUsage); err != nil {
-			log.Fatal(err)
+			if err2 := telegraf.PrintOutputConfig(*fUsage); err2 != nil {
+				log.Fatalf("%s and %s", err, err2)
+			}
 		}
 		return
 	}
@@ -81,6 +85,13 @@ func main() {
 		return
 	}
 
+	if *fConfigDirectory != "" {
+		err = config.LoadDirectory(*fConfigDirectory)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	ag, err := telegraf.NewAgent(config)
 	if err != nil {
 		log.Fatal(err)
@@ -90,7 +101,7 @@ func main() {
 		ag.Debug = true
 	}
 
-	outputs, err := ag.LoadOutputs(outputFilters)
+	outputs, err := ag.LoadOutputs(outputFilters, config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,7 +110,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	plugins, err := ag.LoadPlugins(pluginFilters)
+	plugins, err := ag.LoadPlugins(pluginFilters, config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -132,9 +143,6 @@ func main() {
 	log.Printf("Starting Telegraf (version %s)\n", Version)
 	log.Printf("Loaded outputs: %s", strings.Join(outputs, " "))
 	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
-	log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
-		"Precision:%#v, UTC: %#v\n",
-		ag.Interval, ag.Debug, ag.Hostname, ag.Precision, ag.UTC)
 	log.Printf("Tags enabled: %s", config.ListTags())
 
 	if *fPidfile != "" {
