@@ -52,6 +52,16 @@ endif
 	docker run --name aerospike -p "3000:3000" -d aerospike
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 
+docker-run-circle:
+	docker run --name kafka \
+		-e ADVERTISED_HOST=localhost \
+		-e ADVERTISED_PORT=9092 \
+		-p "2181:2181" -p "9092:9092" \
+		-d spotify/kafka
+	docker run --name opentsdb -p "4242:4242" -d petergrace/opentsdb-docker
+	docker run --name aerospike -p "3000:3000" -d aerospike
+	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
+
 docker-kill:
 	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka
 	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka
@@ -59,8 +69,8 @@ docker-kill:
 test: docker-kill prepare docker-run
 	# Sleeping for kafka leadership election, TSDB setup, etc.
 	sleep 60
-	# Setup SUCCESS, running tests
-	godep go test ./...
+	# SUCCESS, running tests
+	godep go test -race ./...
 
 test-short: prepare
 	$(GOBIN)/godep go test -short ./...

@@ -14,7 +14,7 @@ func TestZookeeperGeneratesMetrics(t *testing.T) {
 	}
 
 	z := &Zookeeper{
-		Servers: []string{testutil.GetLocalHost()},
+		Servers: []string{testutil.GetLocalHost() + ":2181"},
 	}
 
 	var acc testutil.Accumulator

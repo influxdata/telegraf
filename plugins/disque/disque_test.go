@@ -16,7 +16,7 @@ func TestDisqueGeneratesMetrics(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	l, err := net.Listen("tcp", ":0")
+	l, err := net.Listen("tcp", "localhost:0")
 	require.NoError(t, err)
 
 	defer l.Close()
@@ -98,7 +98,7 @@ func TestDisqueCanPullStatsFromMultipleServers(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	l, err := net.Listen("tcp", ":0")
+	l, err := net.Listen("tcp", "localhost:0")
 	require.NoError(t, err)
 
 	defer l.Close()

@@ -1,5 +1,8 @@
 machine:
+  services:
+    - docker
   post:
+    - sudo service zookeeper stop
     - go version
     - go version | grep 1.5.1 || sudo rm -rf /usr/local/go
     - wget https://storage.googleapis.com/golang/go1.5.1.linux-amd64.tar.gz
@@ -8,9 +11,8 @@ machine:
 
 dependencies:
   override:
-    - echo "Dummy override, so no Circle dependencies execute"
+    - docker info
 
 test:
   override:
     - bash scripts/circle-test.sh
-
