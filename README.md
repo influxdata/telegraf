@@ -21,14 +21,11 @@ are some InfluxDB compatibility requirements:
 * InfluxDB 0.9.3+ requires Telegraf 0.1.5+
 * InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
 
-NOTE: Telegraf 0.1.9 will change the name of some CPU usage metrics, see
-[CHANGELOG](CHANGELOG.md) for more details.
-
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.1.9_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.1.9-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.2.0_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.2.0-1.x86_64.rpm
 
 0.1.4:
 * http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
@@ -46,9 +43,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.1.9.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.1.9.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.1.9.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.0.tar.gz
 
 ##### Binary instructions:
 
