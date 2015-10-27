@@ -28,25 +28,41 @@ build-linux-bins: prepare
 prepare:
 	go get github.com/tools/godep
 
-docker-compose:
+docker-run:
 ifeq ($(UNAME), Darwin)
-	ADVERTISED_HOST=$(shell sh -c 'boot2docker ip || docker-machine ip default') \
-		docker-compose --file scripts/docker-compose.yml up -d
+	docker run --name kafka \
+		-e ADVERTISED_HOST=$(shell sh -c 'boot2docker ip || docker-machine ip default') \
+		-e ADVERTISED_PORT=9092 \
+		-p "2181:2181" -p "9092:9092" \
+		-d spotify/kafka
 endif
 ifeq ($(UNAME), Linux)
-	ADVERTISED_HOST=localhost docker-compose --file scripts/docker-compose.yml up -d
+	docker run --name kafka \
+		-e ADVERTISED_HOST=localhost \
+		-e ADVERTISED_PORT=9092 \
+		-p "2181:2181" -p "9092:9092" \
+		-d spotify/kafka
 endif
+	docker run --name mysql -p "3306:3306" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql
+	docker run --name memcached -p "11211:11211" -d memcached
+	docker run --name postgres -p "5432:5432" -d postgres
+	docker run --name rabbitmq -p "15672:15672" -p "5672:5672" -d rabbitmq:3-management
+	docker run --name opentsdb -p "4242:4242" -d petergrace/opentsdb-docker
+	docker run --name redis -p "6379:6379" -d redis
+	docker run --name aerospike -p "3000:3000" -d aerospike
+	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 
-test: test-cleanup prepare docker-compose
+docker-kill:
+	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka
+	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka
+
+test: docker-kill prepare docker-run
 	# Sleeping for kafka leadership election, TSDB setup, etc.
-	sleep 30
+	sleep 60
 	# Setup SUCCESS, running tests
 	godep go test ./...
 
 test-short: prepare
 	$(GOBIN)/godep go test -short ./...
-
-test-cleanup:
-	docker-compose --file scripts/docker-compose.yml kill
 
 .PHONY: test

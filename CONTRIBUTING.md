@@ -250,7 +250,7 @@ a simple mock will suffice.
 
 To execute Telegraf tests follow these simple steps:
 
-- Install docker compose following [these](https://docs.docker.com/compose/install/)
+- Install docker following [these](https://docs.docker.com/installation/)
 instructions
 - execute `make test`
 
@@ -260,5 +260,5 @@ get the IP address.
 
 ### Unit test troubleshooting
 
-Try cleaning up your test environment by executing `make test-cleanup` and
+Try cleaning up your test environment by executing `make docker-kill` and
 re-running
