@@ -34,6 +34,7 @@ AWS_FILE=~/aws.conf
 INSTALL_ROOT_DIR=/opt/telegraf
 TELEGRAF_LOG_DIR=/var/log/telegraf
 CONFIG_ROOT_DIR=/etc/opt/telegraf
+CONFIG_D_DIR=/etc/opt/telegraf/telegraf.d
 LOGROTATE_DIR=/etc/logrotate.d
 
 SAMPLE_CONFIGURATION=etc/config.sample.toml
@@ -79,9 +80,14 @@ make_dir_tree() {
         echo "Failed to create configuration directory -- aborting."
         cleanup_exit 1
     fi
+    mkdir -p $work_dir/$CONFIG_D_DIR
+    if [ $? -ne 0 ]; then
+        echo "Failed to create configuration subdirectory -- aborting."
+        cleanup_exit 1
+    fi
     mkdir -p $work_dir/$LOGROTATE_DIR
     if [ $? -ne 0 ]; then
-        echo "Failed to create configuration directory -- aborting."
+        echo "Failed to create logrotate directory -- aborting."
         cleanup_exit 1
     fi
 
