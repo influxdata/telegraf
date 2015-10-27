@@ -14,7 +14,7 @@ func TestConnectAndWrite(t *testing.T) {
 
 	server := []string{testutil.GetLocalHost() + ":4150"}
 	n := &NSQ{
-		Server: server,
+		Server: server[0],
 		Topic:  "telegraf",
 	}
 
