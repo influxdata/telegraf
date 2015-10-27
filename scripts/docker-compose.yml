@@ -52,4 +52,3 @@ nsq:
     image: nsqio/nsq
     ports:
         - "4150:4150"
-        - "4151:4151"
