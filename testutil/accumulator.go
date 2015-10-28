@@ -159,6 +159,30 @@ func (a *Accumulator) ValidateValue(measurement string, val interface{}) error {
 	return a.ValidateTaggedValue(measurement, val, nil)
 }
 
+func (a *Accumulator) ValidateTaggedFields(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+) error {
+	if tags == nil {
+		tags = map[string]string{}
+	}
+	for _, p := range a.Points {
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
+		}
+
+		if p.Measurement == measurement {
+			if !reflect.DeepEqual(fields, p.Values) {
+				return fmt.Errorf("%v (%T) != %v (%T)",
+					p.Values, p.Values, fields, fields)
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("unknown measurement %s with tags %v", measurement, tags)
+}
+
 // HasIntValue returns true if the measurement has an Int value
 func (a *Accumulator) HasIntValue(measurement string) bool {
 	for _, p := range a.Points {
