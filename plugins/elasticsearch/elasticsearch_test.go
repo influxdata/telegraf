@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type transportMock struct {
@@ -68,5 +69,41 @@ func TestElasticsearch(t *testing.T) {
 		for k, v := range testTable {
 			assert.NoError(t, acc.ValidateTaggedValue(k, v, tags))
 		}
+	}
+}
+
+func TestGatherClusterStats(t *testing.T) {
+	es := NewElasticsearch()
+	es.Servers = []string{"http://example.com:9200"}
+	es.ClusterHealth = true
+	es.client.Transport = newTransportMock(http.StatusOK, clusterResponse)
+
+	var acc testutil.Accumulator
+	require.NoError(t, es.Gather(&acc))
+
+	var clusterHealthTests = []struct {
+		measurement string
+		fields      map[string]interface{}
+		tags        map[string]string
+	}{
+		{
+			"cluster_health",
+			clusterHealthExpected,
+			map[string]string{"name": "elasticsearch_telegraf"},
+		},
+		{
+			"indices",
+			v1IndexExpected,
+			map[string]string{"index": "v1"},
+		},
+		{
+			"indices",
+			v2IndexExpected,
+			map[string]string{"index": "v2"},
+		},
+	}
+
+	for _, exp := range clusterHealthTests {
+		assert.NoError(t, acc.ValidateTaggedFields(exp.measurement, exp.fields, exp.tags))
 	}
 }

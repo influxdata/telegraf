@@ -1,5 +1,76 @@
 package elasticsearch
 
+const clusterResponse = `
+{
+   "cluster_name": "elasticsearch_telegraf",
+   "status": "green",
+   "timed_out": false,
+   "number_of_nodes": 3,
+   "number_of_data_nodes": 3,
+   "active_primary_shards": 5,
+   "active_shards": 15,
+   "relocating_shards": 0,
+   "initializing_shards": 0,
+   "unassigned_shards": 0,
+   "indices": {
+      "v1": {
+         "status": "green",
+         "number_of_shards": 10,
+         "number_of_replicas": 1,
+         "active_primary_shards": 10,
+         "active_shards": 20,
+         "relocating_shards": 0,
+         "initializing_shards": 0,
+         "unassigned_shards": 0
+      },
+      "v2": {
+         "status": "red",
+         "number_of_shards": 10,
+         "number_of_replicas": 1,
+         "active_primary_shards": 0,
+         "active_shards": 0,
+         "relocating_shards": 0,
+         "initializing_shards": 0,
+         "unassigned_shards": 20
+      }
+   }
+}
+`
+
+var clusterHealthExpected = map[string]interface{}{
+	"status":                "green",
+	"timed_out":             false,
+	"number_of_nodes":       3,
+	"number_of_data_nodes":  3,
+	"active_primary_shards": 5,
+	"active_shards":         15,
+	"relocating_shards":     0,
+	"initializing_shards":   0,
+	"unassigned_shards":     0,
+}
+
+var v1IndexExpected = map[string]interface{}{
+	"status":                "green",
+	"number_of_shards":      10,
+	"number_of_replicas":    1,
+	"active_primary_shards": 10,
+	"active_shards":         20,
+	"relocating_shards":     0,
+	"initializing_shards":   0,
+	"unassigned_shards":     0,
+}
+
+var v2IndexExpected = map[string]interface{}{
+	"status":                "red",
+	"number_of_shards":      10,
+	"number_of_replicas":    1,
+	"active_primary_shards": 0,
+	"active_shards":         0,
+	"relocating_shards":     0,
+	"initializing_shards":   0,
+	"unassigned_shards":     20,
+}
+
 const statsResponse = `
 {
   "cluster_name": "es-testcluster",
