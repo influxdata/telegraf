@@ -32,13 +32,16 @@ type Jolokia struct {
   Context   string
   Servers   []Server
   Metrics   []Metric
-
+	Tags			map[string]string
 }
 
 
 func (j *Jolokia) SampleConfig() string {
 	return `[jolokia]
   context = "/jolokia/read"
+
+	[[jolokia.tags]]
+		group = "as"
 
   [[jolokia.servers]]
         name = "stable"
@@ -147,10 +150,12 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
   context := j.Context //"/jolokia/read"
   servers := j.Servers
   metrics := j.Metrics
+	tags := j.Tags
 
-  var tags = map[string]string{
-    "group": "application_server",
-  }
+	if tags == nil{
+			tags = map[string]string{}
+	}
+
 
   for _, server := range servers {
     for _, metric := range metrics {
@@ -174,7 +179,7 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
             acc.Add(measurement, values.(interface{}), tags)
         }
       }else{
-        fmt.Println("Missing key value")
+        fmt.Printf("Missing key 'value' in '%s' output response\n", url)
       }
     }
   }
