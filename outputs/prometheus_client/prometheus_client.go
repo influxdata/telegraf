@@ -2,15 +2,15 @@ package prometheus_client
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/prometheus/client_golang/prometheus"
-	"net/http"
 )
 
 type PrometheusClient struct {
 	Listen  string
-	server  *http.Server
 	metrics map[string]*prometheus.UntypedVec
 }
 
@@ -21,16 +21,16 @@ var sampleConfig = `
 
 func (p *PrometheusClient) Start() error {
 	if p.Listen == "" {
-		p.Listen = ":9126"
+		p.Listen = "localhost:9126"
 	}
+
 	http.Handle("/metrics", prometheus.Handler())
 	server := &http.Server{
-		Addr:    p.Listen,
-		Handler: prometheus.Handler(),
+		Addr: p.Listen,
 	}
-	p.server = server
+
 	p.metrics = make(map[string]*prometheus.UntypedVec)
-	go p.server.ListenAndServe()
+	go server.ListenAndServe()
 	return nil
 }
 

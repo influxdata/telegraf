@@ -221,6 +221,7 @@ found by running `telegraf -sample-config`.
 * amqp (rabbitmq)
 * mqtt
 * librato
+* prometheus
 
 ## Contributing
 

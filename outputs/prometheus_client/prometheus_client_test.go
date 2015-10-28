@@ -1,26 +1,21 @@
 package prometheus_client
 
 import (
+	"testing"
+
 	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/plugins/prometheus"
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
-var pTesting *PrometheusClient = &PrometheusClient{}
-
-func TestPrometheusStart(t *testing.T) {
-	require.NoError(t, pTesting.Start())
-}
+var pTesting *PrometheusClient
 
 func TestPrometheusWritePointEmptyTag(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+
 	p := &prometheus.Prometheus{
-		Urls: []string{"http://" + testutil.GetLocalHost() + ":9126/metrics"},
+		Urls: []string{"http://localhost:9126/metrics"},
 	}
 	tags := make(map[string]string)
 	var points = []*client.Point{
@@ -53,11 +48,9 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 }
 
 func TestPrometheusWritePointTag(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+
 	p := &prometheus.Prometheus{
-		Urls: []string{"http://" + testutil.GetLocalHost() + ":9126/metrics"},
+		Urls: []string{"http://localhost:9126/metrics"},
 	}
 	tags := make(map[string]string)
 	tags["testtag"] = "testvalue"
@@ -87,4 +80,9 @@ func TestPrometheusWritePointTag(t *testing.T) {
 	for _, e := range expected {
 		assert.True(t, acc.CheckTaggedValue(e.name, e.value, tags))
 	}
+}
+
+func init() {
+	pTesting = &PrometheusClient{Listen: "localhost:9126"}
+	pTesting.Start()
 }
