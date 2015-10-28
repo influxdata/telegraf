@@ -4,6 +4,7 @@
 - Telegraf will no longer use docker-compose for "long" unit test, it has been
 changed to just run docker commands in the Makefile. See `make docker-run` and
 `make docker-kill`. `make test` will still run all unit tests with docker.
+- Long unit tests are now run in CircleCI, with docker & race detector
 
 ### Features
 - [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!

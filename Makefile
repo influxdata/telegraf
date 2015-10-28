@@ -4,16 +4,19 @@ ifndef GOBIN
 	GOBIN = $(GOPATH)/bin
 endif
 
+# Standard Telegraf build
 build: prepare
 	$(GOBIN)/godep go build -o telegraf -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
+# Build with race detector
 dev: prepare
 	$(GOBIN)/godep go build -race -o telegraf -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
+# Build linux 64-bit, 32-bit and arm architectures
 build-linux-bins: prepare
 	GOARCH=amd64 GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_amd64 \
                      -ldflags "-X main.Version=$(VERSION)" \
@@ -25,9 +28,11 @@ build-linux-bins: prepare
                      -ldflags "-X main.Version=$(VERSION)" \
                      ./cmd/telegraf/telegraf.go
 
+# Get godep
 prepare:
 	go get github.com/tools/godep
 
+# Run all docker containers necessary for unit tests
 docker-run:
 ifeq ($(UNAME), Darwin)
 	docker run --name kafka \
@@ -52,6 +57,7 @@ endif
 	docker run --name aerospike -p "3000:3000" -d aerospike
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 
+# Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
 	docker run --name kafka \
 		-e ADVERTISED_HOST=localhost \
@@ -62,16 +68,19 @@ docker-run-circle:
 	docker run --name aerospike -p "3000:3000" -d aerospike
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 
+# Kill all docker containers, ignore errors
 docker-kill:
 	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka
 	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka
 
+# Run full unit tests using docker containers (includes setup and teardown)
 test: docker-kill prepare docker-run
 	# Sleeping for kafka leadership election, TSDB setup, etc.
 	sleep 60
 	# SUCCESS, running tests
 	godep go test -race ./...
 
+# Run "short" unit tests
 test-short: prepare
 	$(GOBIN)/godep go test -short ./...
 

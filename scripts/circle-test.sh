@@ -28,15 +28,6 @@ function check_go_fmt {
     fi
 }
 
-# build takes three arguments: GOOS & GOARCH & VERSION
-function build {
-  echo -n "=> $1-$2: "
-  GOOS=$1 GOARCH=$2 godep go build -o telegraf-$1-$2 \
-                    -ldflags "-X main.Version=$3" \
-                    ./cmd/telegraf/telegraf.go
-  du -h telegraf-$1-$2
-}
-
 # Set up the build directory, and then GOPATH.
 exit_if_fail mkdir $BUILD_DIR
 export GOPATH=$BUILD_DIR
@@ -44,11 +35,6 @@ export GOPATH=$BUILD_DIR
 export GOGC=off
 export PATH=$GOPATH/bin:$PATH
 exit_if_fail mkdir -p $GOPATH/src/github.com/influxdb
-
-# Get golint
-go get github.com/golang/lint/golint
-# Get godep tool
-go get github.com/tools/godep
 
 # Dump some test config to the log.
 echo "Test configuration"
@@ -65,29 +51,21 @@ exit_if_fail cd $GOPATH/src/github.com/influxdb/telegraf
 check_go_fmt
 
 # Build the code
-exit_if_fail godep go build -v ./...
+exit_if_fail make
 
 # Run the tests
 exit_if_fail godep go vet ./...
 exit_if_fail make docker-run-circle
-sleep 30
+sleep 10
 exit_if_fail godep go test -race ./...
-
-# Build binaries
-build "linux" "amd64" $VERSION
-build "linux" "386" $VERSION
-build "linux" "arm" $VERSION
 
 # Simple Integration Tests
 #   check that version was properly set
-exit_if_fail "./telegraf-linux-amd64 -version | grep $VERSION"
+exit_if_fail "./telegraf -version | grep $VERSION"
 #   check that one test cpu & mem output work
 tmpdir=$(mktemp -d)
-./telegraf-linux-amd64 -sample-config > $tmpdir/config.toml
-exit_if_fail ./telegraf-linux-amd64 -config $tmpdir/config.toml \
+./telegraf -sample-config > $tmpdir/config.toml
+exit_if_fail ./telegraf -config $tmpdir/config.toml \
     -test -filter cpu:mem
-
-# Artifact binaries
-mv telegraf* $CIRCLE_ARTIFACTS
 
 exit $rc
