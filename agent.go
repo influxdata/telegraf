@@ -102,6 +102,15 @@ func NewAgent(config *Config) (*Agent, error) {
 // Connect connects to all configured outputs
 func (a *Agent) Connect() error {
 	for _, o := range a.outputs {
+		switch ot := o.output.(type) {
+		case outputs.ServiceOutput:
+			if err := ot.Start(); err != nil {
+				log.Printf("Service for output %s failed to start, exiting\n%s\n",
+					o.name, err.Error())
+				return err
+			}
+		}
+
 		if a.Debug {
 			log.Printf("Attempting connection to output: %s\n", o.name)
 		}
@@ -126,6 +135,10 @@ func (a *Agent) Close() error {
 	var err error
 	for _, o := range a.outputs {
 		err = o.output.Close()
+		switch ot := o.output.(type) {
+		case outputs.ServiceOutput:
+			ot.Stop()
+		}
 	}
 	return err
 }

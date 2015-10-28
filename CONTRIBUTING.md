@@ -230,6 +230,35 @@ func init() {
 
 ```
 
+## Service Outputs
+
+This section is for developers who want to create new "service" output. A
+service output differs from a regular output in that it operates a background service
+while Telegraf is running. One example would be the `prometheus_client` output,
+which operates an HTTP server.
+
+Their interface is quite similar to a regular output, with the addition of `Start()`
+and `Stop()` methods.
+
+### Service Output Guidelines
+
+* Same as the `Output` guidelines, except that they must conform to the
+`plugins.ServiceOutput` interface.
+
+### Service Output interface
+
+```go
+type ServiceOutput interface {
+    Connect() error
+    Close() error
+    Description() string
+    SampleConfig() string
+    Write(points []*client.Point) error
+    Start() error
+    Stop()
+}
+```
+
 ## Unit Tests
 
 ### Execute short tests
