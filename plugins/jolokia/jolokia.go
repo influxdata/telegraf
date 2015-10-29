@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	// "net/url"
+	"net/url"
 	"strings"
 	// "sync"
 
@@ -72,9 +72,9 @@ func (j *Jolokia) Description() string {
 
 
 
-func getAttr(url string) (map[string]interface{}, error) {
+func getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
   //make request
-	resp, err := http.Get(url)
+	resp, err := http.Get(requestUrl.String())
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func getAttr(url string) (map[string]interface{}, error) {
   // Process response
   if resp.StatusCode != http.StatusOK {
     err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-      url,
+      requestUrl,
       resp.StatusCode,
       http.StatusText(resp.StatusCode),
       http.StatusOK,
@@ -167,9 +167,13 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
 			tags["port"] = server.Port
 			tags["host"] = server.Host
 
-      url := "http://" + server.Host + ":" + server.Port + context + jmxPath
-      //fmt.Println(url)
-      out, _ := getAttr(url)
+			// Prepare URL
+			requestUrl, err := url.Parse("http://" + server.Host + ":" + server.Port + context + jmxPath)
+			if err != nil {
+				return err
+			}
+
+      out, _ := getAttr(requestUrl)
 
       if values, ok := out["value"]; ok {
         switch values.(type) {
@@ -179,7 +183,7 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
             acc.Add(measurement, values.(interface{}), tags)
         }
       }else{
-        fmt.Printf("Missing key 'value' in '%s' output response\n", url)
+        fmt.Printf("Missing key 'value' in '%s' output response\n", requestUrl.String())
       }
     }
   }
