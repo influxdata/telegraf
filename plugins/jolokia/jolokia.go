@@ -26,7 +26,20 @@ type Metric struct {
 	Drop []string
 }
 
+type JolokiaClient interface {
+	MakeRequest(req *http.Request) (*http.Response, error)
+}
+
+type JolokiaClientImpl struct {
+	client *http.Client
+}
+
+func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error) {
+	return c.client.Do(req)
+}
+
 type Jolokia struct {
+	jClient JolokiaClient
 	Context string
 	Servers []Server
 	Metrics []Metric
@@ -67,9 +80,18 @@ func (j *Jolokia) Description() string {
 	return "Read JMX metrics through Jolokia"
 }
 
-func getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
-	//make request
-	resp, err := http.Get(requestUrl.String())
+func (j *Jolokia) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
+	// Create + send request
+	req, err := http.NewRequest("GET", requestUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := j.jClient.MakeRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +188,7 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
 				return err
 			}
 
-			out, _ := getAttr(requestUrl)
+			out, _ := j.getAttr(requestUrl)
 
 			if values, ok := out["value"]; ok {
 				switch values.(type) {
@@ -186,6 +208,6 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
 
 func init() {
 	plugins.Add("jolokia", func() plugins.Plugin {
-		return &Jolokia{}
+		return &Jolokia{jClient: &JolokiaClientImpl{client: &http.Client{}}}
 	})
 }
