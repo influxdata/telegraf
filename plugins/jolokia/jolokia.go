@@ -34,10 +34,10 @@ type Jolokia struct {
 }
 
 func (j *Jolokia) SampleConfig() string {
-	return `[jolokia]
+	return `
   context = "/jolokia/read"
 
-	[[jolokia.tags]]
+	[jolokia.tags]
 		group = "as"
 
   [[jolokia.servers]]
