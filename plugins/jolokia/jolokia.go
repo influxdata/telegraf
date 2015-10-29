@@ -13,28 +13,25 @@ import (
 	"github.com/influxdb/telegraf/plugins"
 )
 
-
 type Server struct {
-  Name string
-  Host string
-  Port string
+	Name string
+	Host string
+	Port string
 }
 
 type Metric struct {
-  Name string
-  Jmx string
-  Pass []string
-  Drop []string
+	Name string
+	Jmx  string
+	Pass []string
+	Drop []string
 }
 
 type Jolokia struct {
-
-  Context   string
-  Servers   []Server
-  Metrics   []Metric
-	Tags			map[string]string
+	Context string
+	Servers []Server
+	Metrics []Metric
+	Tags    map[string]string
 }
-
 
 func (j *Jolokia) SampleConfig() string {
 	return `[jolokia]
@@ -70,100 +67,96 @@ func (j *Jolokia) Description() string {
 	return "Read JMX metrics through Jolokia"
 }
 
-
-
 func getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
-  //make request
+	//make request
 	resp, err := http.Get(requestUrl.String())
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-  // Process response
-  if resp.StatusCode != http.StatusOK {
-    err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-      requestUrl,
-      resp.StatusCode,
-      http.StatusText(resp.StatusCode),
-      http.StatusOK,
-      http.StatusText(http.StatusOK))
-    return nil, err
-  }
+	// Process response
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+			requestUrl,
+			resp.StatusCode,
+			http.StatusText(resp.StatusCode),
+			http.StatusOK,
+			http.StatusText(http.StatusOK))
+		return nil, err
+	}
 
-  // read body
-  body, err := ioutil.ReadAll(resp.Body)
+	// read body
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-  // Unmarshal json
-  var jsonOut map[string]interface{}
-  if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
-    return nil, errors.New("Error decoding JSON response")
-  }
+	// Unmarshal json
+	var jsonOut map[string]interface{}
+	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
+		return nil, errors.New("Error decoding JSON response")
+	}
 
-  return jsonOut, nil
+	return jsonOut, nil
 }
 
 func (m *Metric) shouldPass(field string) bool {
 
-  if m.Pass != nil {
+	if m.Pass != nil {
 
-    for _, pass := range m.Pass{
-      if strings.HasPrefix(field, pass) {
+		for _, pass := range m.Pass {
+			if strings.HasPrefix(field, pass) {
 				return true
 			}
-    }
+		}
 
-    return false
-  }
+		return false
+	}
 
-  if m.Drop != nil {
+	if m.Drop != nil {
 
-    for _, drop := range m.Drop{
-      if strings.HasPrefix(field, drop) {
+		for _, drop := range m.Drop {
+			if strings.HasPrefix(field, drop) {
 				return false
 			}
-    }
+		}
 
-    return true
-  }
+		return true
+	}
 
-  return true
+	return true
 }
 
 func (m *Metric) filterFields(fields map[string]interface{}) map[string]interface{} {
 
-  for field, _ := range fields{
-    if !m.shouldPass(field) {
+	for field, _ := range fields {
+		if !m.shouldPass(field) {
 			delete(fields, field)
 		}
-  }
+	}
 
-  return fields
+	return fields
 }
-
 
 func (j *Jolokia) Gather(acc plugins.Accumulator) error {
 
-  context := j.Context //"/jolokia/read"
-  servers := j.Servers
-  metrics := j.Metrics
+	context := j.Context //"/jolokia/read"
+	servers := j.Servers
+	metrics := j.Metrics
 	tags := j.Tags
 
-	if tags == nil{
-			tags = map[string]string{}
+	if tags == nil {
+		tags = map[string]string{}
 	}
 
+	for _, server := range servers {
+		for _, metric := range metrics {
 
-  for _, server := range servers {
-    for _, metric := range metrics {
+			measurement := metric.Name
+			jmxPath := metric.Jmx
 
-      measurement := metric.Name
-      jmxPath := metric.Jmx
-
-      tags["server"] = server.Name
+			tags["server"] = server.Name
 			tags["port"] = server.Port
 			tags["host"] = server.Host
 
@@ -173,22 +166,22 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
 				return err
 			}
 
-      out, _ := getAttr(requestUrl)
+			out, _ := getAttr(requestUrl)
 
-      if values, ok := out["value"]; ok {
-        switch values.(type) {
-          case map[string]interface{}:
-            acc.AddFields(measurement, metric.filterFields(values.(map[string]interface{})), tags)
-          case interface{}:
-            acc.Add(measurement, values.(interface{}), tags)
-        }
-      }else{
-        fmt.Printf("Missing key 'value' in '%s' output response\n", requestUrl.String())
-      }
-    }
-  }
+			if values, ok := out["value"]; ok {
+				switch values.(type) {
+				case map[string]interface{}:
+					acc.AddFields(measurement, metric.filterFields(values.(map[string]interface{})), tags)
+				case interface{}:
+					acc.Add(measurement, values.(interface{}), tags)
+				}
+			} else {
+				fmt.Printf("Missing key 'value' in '%s' output response\n", requestUrl.String())
+			}
+		}
+	}
 
-  return nil
+	return nil
 }
 
 func init() {
