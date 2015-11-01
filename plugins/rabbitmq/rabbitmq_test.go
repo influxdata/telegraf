@@ -13,7 +13,7 @@ import (
 
 const sampleOverviewResponse = `
 {
-	"message_stats": {
+    "message_stats": {
         "ack": 5246,
         "ack_details": {
             "rate": 0.0
@@ -132,16 +132,260 @@ const sampleNodesResponse = `
     }
 ]
 `
+const sampleQueuesResponse = `
+[
+  {
+    "memory": 21960,
+    "messages": 0,
+    "messages_details": {
+      "rate": 0
+    },
+    "messages_ready": 0,
+    "messages_ready_details": {
+      "rate": 0
+    },
+    "messages_unacknowledged": 0,
+    "messages_unacknowledged_details": {
+      "rate": 0
+    },
+    "idle_since": "2015-11-01 8:22:15",
+    "consumer_utilisation": "",
+    "policy": "federator",
+    "exclusive_consumer_tag": "",
+    "consumers": 0,
+    "recoverable_slaves": "",
+    "state": "running",
+    "messages_ram": 0,
+    "messages_ready_ram": 0,
+    "messages_unacknowledged_ram": 0,
+    "messages_persistent": 0,
+    "message_bytes": 0,
+    "message_bytes_ready": 0,
+    "message_bytes_unacknowledged": 0,
+    "message_bytes_ram": 0,
+    "message_bytes_persistent": 0,
+    "disk_reads": 0,
+    "disk_writes": 0,
+    "backing_queue_status": {
+      "q1": 0,
+      "q2": 0,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        "undefined"
+      ],
+      "q3": 0,
+      "q4": 0,
+      "len": 0,
+      "target_ram_count": "infinity",
+      "next_seq_id": 0,
+      "avg_ingress_rate": 0,
+      "avg_egress_rate": 0,
+      "avg_ack_ingress_rate": 0,
+      "avg_ack_egress_rate": 0
+    },
+    "name": "collectd-queue",
+    "vhost": "collectd",
+    "durable": true,
+    "auto_delete": false,
+    "arguments": {},
+    "node": "rabbit@testhost"
+  },
+  {
+    "memory": 55528,
+    "message_stats": {
+    "ack": 223654927,
+    "ack_details": {
+      "rate": 0
+    },
+    "deliver": 224518745,
+    "deliver_details": {
+      "rate": 0
+    },
+    "deliver_get": 224518829,
+    "deliver_get_details": {
+      "rate": 0
+    },
+    "get": 19,
+    "get_details": {
+      "rate": 0
+    },
+    "get_no_ack": 65,
+    "get_no_ack_details": {
+      "rate": 0
+    },
+    "publish": 223883765,
+    "publish_details": {
+      "rate": 0
+    },
+    "redeliver": 863805,
+    "redeliver_details": {
+      "rate": 0
+    }
+    },
+    "messages": 24,
+    "messages_details": {
+      "rate": 0
+    },
+    "messages_ready": 24,
+    "messages_ready_details": {
+      "rate": 0
+    },
+    "messages_unacknowledged": 0,
+    "messages_unacknowledged_details": {
+      "rate": 0
+    },
+    "idle_since": "2015-11-01 8:22:14",
+    "consumer_utilisation": "",
+    "policy": "",
+    "exclusive_consumer_tag": "",
+    "consumers": 0,
+    "recoverable_slaves": "",
+    "state": "running",
+    "messages_ram": 24,
+    "messages_ready_ram": 24,
+    "messages_unacknowledged_ram": 0,
+    "messages_persistent": 0,
+    "message_bytes": 149220,
+    "message_bytes_ready": 149220,
+    "message_bytes_unacknowledged": 0,
+    "message_bytes_ram": 149220,
+    "message_bytes_persistent": 0,
+    "disk_reads": 0,
+    "disk_writes": 0,
+    "backing_queue_status": {
+      "q1": 0,
+      "q2": 0,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        "undefined"
+      ],
+      "q3": 0,
+      "q4": 24,
+      "len": 24,
+      "target_ram_count": "infinity",
+      "next_seq_id": 223883765,
+      "avg_ingress_rate": 0,
+      "avg_egress_rate": 0,
+      "avg_ack_ingress_rate": 0,
+      "avg_ack_egress_rate": 0
+    },
+    "name": "telegraf",
+    "vhost": "collectd",
+    "durable": true,
+    "auto_delete": false,
+    "arguments": {},
+    "node": "rabbit@testhost"
+  },
+  {
+    "message_stats": {
+      "ack": 1296077,
+      "ack_details": {
+        "rate": 0
+      },
+      "deliver": 1513176,
+      "deliver_details": {
+        "rate": 0.4
+      },
+      "deliver_get": 1513239,
+      "deliver_get_details": {
+        "rate": 0.4
+      },
+      "disk_writes": 7976,
+      "disk_writes_details": {
+        "rate": 0
+      },
+      "get": 40,
+      "get_details": {
+        "rate": 0
+      },
+      "get_no_ack": 23,
+      "get_no_ack_details": {
+        "rate": 0
+      },
+      "publish": 1325628,
+      "publish_details": {
+        "rate": 0.4
+      },
+      "redeliver": 216034,
+      "redeliver_details": {
+        "rate": 0
+      }
+    },
+    "messages": 5,
+    "messages_details": {
+      "rate": 0.4
+    },
+    "messages_ready": 0,
+    "messages_ready_details": {
+      "rate": 0
+    },
+    "messages_unacknowledged": 5,
+    "messages_unacknowledged_details": {
+      "rate": 0.4
+    },
+    "policy": "federator",
+    "exclusive_consumer_tag": "",
+    "consumers": 1,
+    "consumer_utilisation": 1,
+    "memory": 122856,
+    "recoverable_slaves": "",
+    "state": "running",
+    "messages_ram": 5,
+    "messages_ready_ram": 0,
+    "messages_unacknowledged_ram": 5,
+    "messages_persistent": 0,
+    "message_bytes": 150096,
+    "message_bytes_ready": 0,
+    "message_bytes_unacknowledged": 150096,
+    "message_bytes_ram": 150096,
+    "message_bytes_persistent": 0,
+    "disk_reads": 0,
+    "disk_writes": 7976,
+    "backing_queue_status": {
+      "q1": 0,
+      "q2": 0,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        "undefined"
+      ],
+      "q3": 0,
+      "q4": 0,
+      "len": 0,
+      "target_ram_count": "infinity",
+      "next_seq_id": 1325628,
+      "avg_ingress_rate": 0.19115840579934168,
+      "avg_egress_rate": 0.19115840579934168,
+      "avg_ack_ingress_rate": 0.19115840579934168,
+      "avg_ack_egress_rate": 0.1492766485341716
+    },
+    "name": "telegraf",
+    "vhost": "metrics",
+    "durable": true,
+    "auto_delete": false,
+    "arguments": {},
+    "node": "rabbit@testhost"
+  }
+]
+`
 
 func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 
-		if r.URL.Path == "/api/overview" {
+		switch r.URL.Path {
+		case "/api/overview":
 			rsp = sampleOverviewResponse
-		} else if r.URL.Path == "/api/nodes" {
+		case "/api/nodes":
 			rsp = sampleNodesResponse
-		} else {
+		case "/api/queues":
+			rsp = sampleQueuesResponse
+		default:
 			panic("Cannot handle request")
 		}
 
@@ -199,4 +443,6 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	for _, metric := range nodeIntMetrics {
 		assert.True(t, acc.HasIntValue(metric))
 	}
+
+	assert.True(t, acc.HasMeasurement("queue"))
 }
