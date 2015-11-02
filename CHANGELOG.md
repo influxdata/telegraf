@@ -5,12 +5,14 @@
 changed to just run docker commands in the Makefile. See `make docker-run` and
 `make docker-kill`. `make test` will still run all unit tests with docker.
 - Long unit tests are now run in CircleCI, with docker & race detector
+- Redis plugin tag has changed from `host` to `server`
 
 ### Features
 - [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!
 - [#318](https://github.com/influxdb/telegraf/pull/318): Prometheus output. Thanks @oldmantaiter!
 
 ### Bugfixes
+- [#331](https://github.com/influxdb/telegraf/pull/331): Dont overwrite host tag in redis plugin.
 
 ## v0.2.0 [2015-10-27]
 

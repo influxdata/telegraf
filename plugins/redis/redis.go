@@ -148,7 +148,7 @@ func (r *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 	host, port := "unknown", "unknown"
 	// If there's an error, ignore and use 'unknown' tags
 	host, port, _ = net.SplitHostPort(addr.Host)
-	tags := map[string]string{"host": host, "port": port}
+	tags := map[string]string{"server": host, "port": port}
 
 	return gatherInfoOutput(rdr, acc, tags)
 }
