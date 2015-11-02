@@ -169,6 +169,11 @@ if which systemctl > /dev/null 2>&1 ; then
         /lib/systemd/system/telegraf.service
     systemctl enable telegraf
 
+    #  restart on upgrade of package
+    if [ "$#" -eq 2 ]; then
+        systemctl restart telegraf
+    fi
+
 # Sysv
 else
     ln -sfn $INSTALL_ROOT_DIR/versions/$version/scripts/init.sh \
@@ -183,6 +188,11 @@ else
     # CentOS-style sysv:
     else
         chkconfig --add telegraf
+    fi
+
+    #  restart on upgrade of package
+    if [ "$#" -eq 2 ]; then
+        /etc/init.d/telegraf restart
     fi
 
     mkdir -p $TELEGRAF_LOG_DIR
