@@ -106,15 +106,20 @@ func (a *Accumulator) Get(measurement string) (*Point, bool) {
 	return nil, false
 }
 
+// CheckValue calls CheckFieldsValue passing a single-value map as fields
+func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
+	return a.CheckFieldsValue(measurement, map[string]interface{}{"value": val})
+}
+
 // CheckValue checks that the accumulators point for the given measurement
 // is the same as the given value.
-func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
+func (a *Accumulator) CheckFieldsValue(measurement string, fields map[string]interface{}) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			return p.Values["value"] == val
+			return reflect.DeepEqual(fields, p.Values)
 		}
 	}
-	fmt.Printf("CheckValue failed, measurement %s, value %s", measurement, val)
+	fmt.Printf("CheckFieldsValue failed, measurement %s, fields %s", measurement, fields)
 	return false
 }
 
@@ -127,11 +132,34 @@ func (a *Accumulator) CheckTaggedValue(
 	return a.ValidateTaggedValue(measurement, val, tags) == nil
 }
 
-// ValidateTaggedValue validates that the given measurement and value exist
-// in the accumulator and with the given tags.
+// ValidateTaggedValue calls ValidateTaggedFieldsValue passing a single-value map as fields
 func (a *Accumulator) ValidateTaggedValue(
 	measurement string,
 	val interface{},
+	tags map[string]string,
+) error {
+	return a.ValidateTaggedFieldsValue(measurement, map[string]interface{}{"value": val}, tags)
+}
+
+// ValidateValue calls ValidateTaggedValue
+func (a *Accumulator) ValidateValue(measurement string, val interface{}) error {
+	return a.ValidateTaggedValue(measurement, val, nil)
+}
+
+// CheckTaggedFieldsValue calls ValidateTaggedFieldsValue
+func (a *Accumulator) CheckTaggedFieldsValue(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+) bool {
+	return a.ValidateTaggedFieldsValue(measurement, fields, tags) == nil
+}
+
+// ValidateTaggedValue validates that the given measurement and value exist
+// in the accumulator and with the given tags.
+func (a *Accumulator) ValidateTaggedFieldsValue(
+	measurement string,
+	fields map[string]interface{},
 	tags map[string]string,
 ) error {
 	if tags == nil {
@@ -143,9 +171,8 @@ func (a *Accumulator) ValidateTaggedValue(
 		}
 
 		if p.Measurement == measurement {
-			if p.Values["value"] != val {
-				return fmt.Errorf("%v (%T) != %v (%T)",
-					p.Values["value"], p.Values["value"], val, val)
+			if !reflect.DeepEqual(fields, p.Values) {
+				return fmt.Errorf("%v != %v ", fields, p.Values)
 			}
 			return nil
 		}
@@ -154,9 +181,12 @@ func (a *Accumulator) ValidateTaggedValue(
 	return fmt.Errorf("unknown measurement %s with tags %v", measurement, tags)
 }
 
-// ValidateValue calls ValidateTaggedValue
-func (a *Accumulator) ValidateValue(measurement string, val interface{}) error {
-	return a.ValidateTaggedValue(measurement, val, nil)
+// ValidateFieldsValue calls ValidateTaggedFieldsValue
+func (a *Accumulator) ValidateFieldsValue(
+	measurement string,
+	fields map[string]interface{},
+) error {
+	return a.ValidateTaggedValue(measurement, fields, nil)
 }
 
 // HasIntValue returns true if the measurement has an Int value
