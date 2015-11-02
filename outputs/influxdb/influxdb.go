@@ -15,14 +15,15 @@ import (
 
 type InfluxDB struct {
 	// URL is only for backwards compatability
-	URL       string
-	URLs      []string `toml:"urls"`
-	Username  string
-	Password  string
-	Database  string
-	UserAgent string
-	Precision string
-	Timeout   duration.Duration
+	URL        string
+	URLs       []string `toml:"urls"`
+	Username   string
+	Password   string
+	Database   string
+	UserAgent  string
+	Precision  string
+	MultiWrite bool `toml:"multi_write"`
+	Timeout    duration.Duration
 
 	conns []client.Client
 }
@@ -36,6 +37,12 @@ var sampleConfig = `
   # Precision of writes, valid values are n, u, ms, s, m, and h
   # note: using second precision greatly helps InfluxDB compression
   precision = "s"
+
+  # MultiWrite treats the urls section (a list of backend nodes) as distinct
+  # nodes to write to, instead of nodes of cluster. In cases where you'd like
+  # to specify writing to multiple backends, set this value to true (default: false)
+  # NOTE: requires use of "urls" instead of deprecated "url"
+  multi_write = false
 
   # Connection timeout (for the connection with InfluxDB), formatted as a string.
   # If not provided, will default to 0 (no timeout)
@@ -117,6 +124,28 @@ func (i *InfluxDB) Write(points []*client.Point) error {
 
 	for _, point := range points {
 		bp.AddPoint(point)
+	}
+
+	// Fork here if we see i.MultiWrite; instead of writing to one node in the
+	// list of urls hoping for success, we write too each and every one!
+	// THIS IS USED FOR WRITING TO MULTIPLE BACKENDS
+	// (e.g. multi_write = true; urls = ["http://prodhost:8086", "http://devhost:8086"]
+	if i.MultiWrite {
+		var is_err bool = false
+
+		err := errors.New("Could not write to url in list.")
+		for _, conn := range i.conns {
+			if e := conn.Write(bp); e != nil {
+				log.Println("ERROR: " + e.Error())
+				is_err = true
+			}
+		}
+
+		if !is_err {
+			return nil
+		}
+
+		return err
 	}
 
 	// This will get set to nil if a successful write occurs
