@@ -14,6 +14,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 
 ### Bugfixes
 - [#331](https://github.com/influxdb/telegraf/pull/331): Dont overwrite host tag in redis plugin.
+- [#336](https://github.com/influxdb/telegraf/pull/336): Mongodb plugin should take 2 measurements.
 
 ## v0.2.0 [2015-10-27]
 

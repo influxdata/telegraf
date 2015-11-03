@@ -314,7 +314,7 @@ func (a *Agent) Test() error {
 		// Special instructions for some plugins. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
 		switch plugin.name {
-		case "cpu":
+		case "cpu", "mongodb":
 			time.Sleep(500 * time.Millisecond)
 			fmt.Printf("* Plugin: %s, Collection 2\n", plugin.name)
 			if err := plugin.plugin.Gather(acc); err != nil {
