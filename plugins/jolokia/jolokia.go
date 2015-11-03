@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	// "sync"
 
 	"github.com/influxdb/telegraf/plugins"
 )
@@ -48,31 +47,42 @@ type Jolokia struct {
 
 func (j *Jolokia) SampleConfig() string {
 	return `
+	# This is the context root used to compose the jolokia url
   context = "/jolokia/read"
 
+	# Tags added to each measurements
 	[jolokia.tags]
 		group = "as"
 
+	# List of servers exposing jolokia read service
   [[jolokia.servers]]
-        name = "stable"
-        host = "192.168.103.2"
-        port = "8180"
+    name = "stable"
+    host = "192.168.103.2"
+    port = "8180"
 
+	# List of metrics collected on above servers
+	# Each metric consists in a name, a jmx path and either a pass or drop slice attributes
+	# This collect all heap memory usage metrics
   [[jolokia.metrics]]
-        name = "heap_memory_usage"
-        jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
-        pass = ["used"]
+    name = "heap_memory_usage"
+    jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
 
-  [[jolokia.metrics]]
-        name = "memory_eden"
-        jmx  = "/java.lang:type=MemoryPool,name=PS Eden Space/Usage"
-        pass = ["used"]
 
+  # This drops the 'committed' value from Eden space measurement
   [[jolokia.metrics]]
-        name = "heap_threads"
-        jmx  = "/java.lang:type=Threading"
- #      drop = ["AllThread"]
-        pass = ["CurrentThreadCpuTime","CurrentThreadUserTime","DaemonThreadCount","ThreadCount","TotalStartedThreadCount"]
+    name = "memory_eden"
+    jmx  = "/java.lang:type=MemoryPool,name=PS Eden Space/Usage"
+    drop = [ "committed" ]
+
+
+	# This passes only DaemonThreadCount and ThreadCount
+  [[jolokia.metrics]]
+		name = "heap_threads"
+    jmx  = "/java.lang:type=Threading"
+    pass = [
+			"DaemonThreadCount",
+			"ThreadCount"
+		]
 `
 }
 
