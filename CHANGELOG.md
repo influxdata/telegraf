@@ -12,6 +12,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!
 - [#318](https://github.com/influxdb/telegraf/pull/318): Prometheus output. Thanks @oldmantaiter!
 - [#338](https://github.com/influxdb/telegraf/pull/338): Restart Telegraf on package upgrade. Thanks @linsomniac!
+- [#337](https://github.com/influxdb/telegraf/pull/337): Jolokia plugin, thanks @saiello!
 
 ### Bugfixes
 - [#331](https://github.com/influxdb/telegraf/pull/331): Dont overwrite host tag in redis plugin.
