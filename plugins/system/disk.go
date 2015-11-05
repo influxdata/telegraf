@@ -18,8 +18,7 @@ func (_ *DiskStats) Description() string {
 
 var diskSampleConfig = `
   # By default, telegraf gather stats for all mountpoints.
-  # Setting mountpoints will restrict the stats to the specified ones.
-  # mountpoints.
+  # Setting mountpoints will restrict the stats to the specified mountpoints.
   # Mountpoints=["/"]
 `
 
@@ -64,13 +63,27 @@ func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 
 type DiskIOStats struct {
 	ps PS
+
+	Devices          []string
+	SkipSerialNumber bool
 }
 
 func (_ *DiskIOStats) Description() string {
 	return "Read metrics about disk IO by device"
 }
 
-func (_ *DiskIOStats) SampleConfig() string { return "" }
+var diskIoSampleConfig = `
+  # By default, telegraf will gather stats for all devices including 
+  # disk partitions.
+  # Setting devices will restrict the stats to the specified devcies.
+  # Devices=["sda","sdb"]
+  # Uncomment the following line if you do not need disk serial numbers.
+  # SkipSerialNumber = true
+`
+
+func (_ *DiskIOStats) SampleConfig() string {
+	return diskIoSampleConfig
+}
 
 func (s *DiskIOStats) Gather(acc plugins.Accumulator) error {
 	diskio, err := s.ps.DiskIO()
@@ -78,12 +91,25 @@ func (s *DiskIOStats) Gather(acc plugins.Accumulator) error {
 		return fmt.Errorf("error getting disk io info: %s", err)
 	}
 
+	var restrictDevices bool
+	devices := make(map[string]bool)
+	if len(s.Devices) != 0 {
+		restrictDevices = true
+		for _, dev := range s.Devices {
+			devices[dev] = true
+		}
+	}
+
 	for _, io := range diskio {
+		_, member := devices[io.Name]
+		if restrictDevices && !member {
+			continue
+		}
 		tags := map[string]string{}
 		if len(io.Name) != 0 {
 			tags["name"] = io.Name
 		}
-		if len(io.SerialNumber) != 0 {
+		if len(io.SerialNumber) != 0 && !s.SkipSerialNumber {
 			tags["serial"] = io.SerialNumber
 		}
 
