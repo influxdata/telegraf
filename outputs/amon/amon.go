@@ -25,8 +25,8 @@ var sampleConfig = `
   # Amon Server Key
   serverkey = "my-server-key" # required.
 
-  # Amon Insance URL
-  amoninstance = "https://youramoninstance" # required
+  # Amon Instance URL
+  amon_instance = "https://youramoninstance" # required
 
   # Connection timeout.
   # timeout = "5s"
@@ -45,7 +45,7 @@ type Point [2]float64
 
 func (a *Amon) Connect() error {
 	if a.ServerKey == "" || a.AmonInstance == "" {
-		return fmt.Errorf("serverkey and amoninstance are required fields for amon output")
+		return fmt.Errorf("serverkey and amon_instance are required fields for amon output")
 	}
 	a.client = &http.Client{
 		Timeout: a.Timeout.Duration,
