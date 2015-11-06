@@ -227,6 +227,7 @@ found by running `telegraf -sample-config`.
 * mqtt
 * librato
 * prometheus
+* amon
 
 ## Contributing
 
