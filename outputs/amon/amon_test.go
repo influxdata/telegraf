@@ -39,31 +39,6 @@ func TestUriOverride(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestBadStatusCode(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(`{ 'errors': [
-    	'Something bad happened to the server.',
-    	'Your query made the server very sad.'
-  		]
-		}`)
-	}))
-	defer ts.Close()
-
-	a := &Amon{
-		ServerKey:    fakeServerKey,
-		AmonInstance: fakeAmonInstance,
-	}
-	err := a.Connect()
-	require.NoError(t, err)
-	err = a.Write(testutil.MockBatchPoints().Points())
-	if err == nil {
-		t.Errorf("error expected but none returned")
-	} else {
-		require.EqualError(t, fmt.Errorf("received bad status code, 500\n"), err.Error())
-	}
-}
-
 func TestAuthenticatedUrl(t *testing.T) {
 	a := &Amon{
 		ServerKey:    fakeServerKey,
