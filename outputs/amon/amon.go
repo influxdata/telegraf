@@ -23,7 +23,7 @@ type Amon struct {
 
 var sampleConfig = `
   # Amon Server Key
-  serverkey = "my-server-key" # required.
+  server_key = "my-server-key" # required.
 
   # Amon Instance URL
   amon_instance = "https://youramoninstance" # required
