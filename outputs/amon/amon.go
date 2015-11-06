@@ -14,9 +14,9 @@ import (
 )
 
 type Amon struct {
-	ServerKey  string
+	ServerKey    string
 	AmonInstance string
-	Timeout duration.Duration
+	Timeout      duration.Duration
 
 	client *http.Client
 }
@@ -42,7 +42,6 @@ type Metric struct {
 }
 
 type Point [2]float64
-
 
 func (a *Amon) Connect() error {
 	if a.ServerKey == "" || a.AmonInstance == "" {
@@ -107,7 +106,7 @@ func (a *Amon) Description() string {
 }
 
 func (a *Amon) authenticatedUrl() string {
-	
+
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
 
