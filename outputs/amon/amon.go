@@ -22,8 +22,10 @@ type Amon struct {
 }
 
 var sampleConfig = `
-  # Amon 
+  # Amon Server Key
   serverkey = "my-server-key" # required.
+
+  # Amon Insance URL
   amoninstance = "https://youramoninstance" # required
 
   # Connection timeout.
@@ -101,7 +103,7 @@ func (a *Amon) SampleConfig() string {
 }
 
 func (a *Amon) Description() string {
-	return "Configuration for Amon API to send metrics to."
+	return "Configuration for Amon Server to send metrics to."
 }
 
 func (a *Amon) authenticatedUrl() string {
