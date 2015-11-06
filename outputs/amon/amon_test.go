@@ -21,7 +21,6 @@ var (
 	fakeAmonInstance = "https://demo.amon.cx"
 )
 
-
 func TestUriOverride(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -30,10 +29,10 @@ func TestUriOverride(t *testing.T) {
 	defer ts.Close()
 
 	a := &Amon{
-		ServerKey: fakeServerKey,
+		ServerKey:    fakeServerKey,
 		AmonInstance: fakeAmonInstance,
 	}
-	
+
 	err := a.Connect()
 	require.NoError(t, err)
 	err = a.Write(testutil.MockBatchPoints().Points())
@@ -52,7 +51,7 @@ func TestBadStatusCode(t *testing.T) {
 	defer ts.Close()
 
 	a := &Amon{
-		ServerKey: fakeServerKey,
+		ServerKey:    fakeServerKey,
 		AmonInstance: fakeAmonInstance,
 	}
 	err := a.Connect()
@@ -67,14 +66,13 @@ func TestBadStatusCode(t *testing.T) {
 
 func TestAuthenticatedUrl(t *testing.T) {
 	a := &Amon{
-		ServerKey: fakeServerKey,
+		ServerKey:    fakeServerKey,
 		AmonInstance: fakeAmonInstance,
 	}
 
 	authUrl := a.authenticatedUrl()
 	assert.EqualValues(t, fmt.Sprintf("%s/api/system/%s", fakeAmonInstance, fakeServerKey), authUrl)
 }
-
 
 func TestBuildPoint(t *testing.T) {
 	tags := make(map[string]string)
