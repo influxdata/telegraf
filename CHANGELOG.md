@@ -29,6 +29,7 @@ same type can be specified, like this:
 - [#375](https://github.com/influxdb/telegraf/pull/375): kafka_consumer service plugin.
 - [#392](https://github.com/influxdb/telegraf/pull/392): Procstat plugin can now accept pgrep -f pattern, thanks @ecarreras!
 - [#383](https://github.com/influxdb/telegraf/pull/383): Specify plugins as a list.
+- [#354](https://github.com/influxdb/telegraf/pull/354): Add ability to specify multiple metrics in one statsd line. Thanks @MerlinDMC!
 
 ### Bugfixes
 - [#371](https://github.com/influxdb/telegraf/issues/371): Kafka consumer plugin not functioning.

@@ -26,6 +26,22 @@ implementation. In short, the telegraf statsd listener will accept:
     - `load.time.nanoseconds:1|h`
     - `load.time:200|ms|@0.1` <- sampled 1/10 of the time
 
+It is possible to omit repetitive names and merge individual stats into a
+single line by separating them with additional colons:
+
+  - `users.current.den001.myapp:32|g:+10|g:-10|g`
+  - `deploys.test.myservice:1|c:101|c:1|c|@0.1`
+  - `users.unique:101|s:101|s:102|s`
+  - `load.time:320|ms:200|ms|@0.1`
+
+This also allows for mixed types in a single line:
+
+  - `foo:1|c:200|ms`
+
+The string `foo:1|c:200|ms` is internally split into two individual metrics
+`foo:1|c` and `foo:200|ms` which are added to the aggregator separately.
+
+
 #### Influx Statsd
 
 In order to take advantage of InfluxDB's tagging system, we have made a couple
