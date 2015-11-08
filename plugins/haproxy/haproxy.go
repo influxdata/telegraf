@@ -137,7 +137,7 @@ func (g *haproxy) gatherServer(addr string, acc plugins.Accumulator) error {
 		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s/;csv", u.Scheme, u.Host, u.Path), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s?%s;csv", u.Scheme, u.Host, u.Path, u.RawQuery), nil)
 	if u.User != nil {
 		p, _ := u.User.Password()
 		req.SetBasicAuth(u.User.Username(), p)
