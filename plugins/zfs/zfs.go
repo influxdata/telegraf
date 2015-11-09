@@ -62,7 +62,7 @@ func (z *Zfs) Gather(acc plugins.Accumulator) error {
 	for _, metric := range kstatMetrics {
 		lines, err := common.ReadLines(kstatPath + "/" + metric)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		for i, line := range lines {
 			if i == 0 || i == 1 {
