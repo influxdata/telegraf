@@ -42,9 +42,9 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{
-		"host":  ts.Listener.Addr().String(),
-		"proxy": "be_app",
-		"sv":    "host0",
+		"server": ts.Listener.Addr().String(),
+		"proxy":  "be_app",
+		"sv":     "host0",
 	}
 
 	assert.NoError(t, acc.ValidateTaggedValue("stot", uint64(171014), tags))
@@ -109,9 +109,9 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{
-		"proxy": "be_app",
-		"host":  ts.Listener.Addr().String(),
-		"sv":    "host0",
+		"proxy":  "be_app",
+		"server": ts.Listener.Addr().String(),
+		"sv":     "host0",
 	}
 
 	assert.NoError(t, acc.ValidateTaggedValue("stot", uint64(171014), tags))

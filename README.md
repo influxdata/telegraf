@@ -76,9 +76,12 @@ if you don't have it already. You also must build with golang version 1.4+.
 
 * Run `telegraf -sample-config > telegraf.conf` to create an initial configuration.
 * Or run `telegraf -sample-config -filter cpu:mem -outputfilter influxdb > telegraf.conf`.
-to create a config file with only CPU and memory plugins defined, and InfluxDB output defined.
+to create a config file with only CPU and memory plugins defined, and InfluxDB
+output defined.
 * Edit the configuration to match your needs.
-* Run `telegraf -config telegraf.conf -test` to output one full measurement sample to STDOUT.
+* Run `telegraf -config telegraf.conf -test` to output one full measurement
+sample to STDOUT. NOTE: you may want to run as the telegraf user if you are using
+the linux packages `sudo -u telegraf telegraf -config telegraf.conf -test`
 * Run `telegraf -config telegraf.conf` to gather and send metrics to configured outputs.
 * Run `telegraf -config telegraf.conf -filter system:swap`.
 to run telegraf with only the system & swap plugins defined in the config.
@@ -170,6 +173,7 @@ Telegraf currently has support for collecting metrics from:
 * exec (generic JSON-emitting executable plugin)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
+* jolokia (remote JMX with JSON over HTTP)
 * kafka_consumer
 * leofs
 * lustre2

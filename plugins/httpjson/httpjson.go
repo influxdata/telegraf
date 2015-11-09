@@ -127,7 +127,11 @@ func (h *HttpJson) Gather(acc plugins.Accumulator) error {
 //
 // Returns:
 //     error: Any error that may have occurred
-func (h *HttpJson) gatherServer(acc plugins.Accumulator, service Service, serverURL string) error {
+func (h *HttpJson) gatherServer(
+	acc plugins.Accumulator,
+	service Service,
+	serverURL string,
+) error {
 	resp, err := h.sendRequest(service, serverURL)
 	if err != nil {
 		return err

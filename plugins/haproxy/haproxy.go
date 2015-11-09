@@ -165,9 +165,9 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 
 		for field, v := range row {
 			tags := map[string]string{
-				"host":  host,
-				"proxy": row[HF_PXNAME],
-				"sv":    row[HF_SVNAME],
+				"server": host,
+				"proxy":  row[HF_PXNAME],
+				"sv":     row[HF_SVNAME],
 			}
 			switch field {
 			case HF_QCUR:

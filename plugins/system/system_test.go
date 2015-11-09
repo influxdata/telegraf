@@ -73,7 +73,8 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("DiskUsage").Return(du, nil)
 
-	diskio := disk.DiskIOCountersStat{
+	diskio1 := disk.DiskIOCountersStat{
+
 		ReadCount:    888,
 		WriteCount:   5341,
 		ReadBytes:    100000,
@@ -84,8 +85,19 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 		IoTime:       123552,
 		SerialNumber: "ab-123-ad",
 	}
+	diskio2 := disk.DiskIOCountersStat{
+		ReadCount:    444,
+		WriteCount:   2341,
+		ReadBytes:    200000,
+		WriteBytes:   400000,
+		ReadTime:     3123,
+		WriteTime:    6087,
+		Name:         "sdb1",
+		IoTime:       246552,
+		SerialNumber: "bb-123-ad",
+	}
 
-	mps.On("DiskIO").Return(map[string]disk.DiskIOCountersStat{"sda1": diskio}, nil)
+	mps.On("DiskIO").Return(map[string]disk.DiskIOCountersStat{"sda1": diskio1, "sdb1": diskio2}, nil)
 
 	netio := net.NetIOCountersStat{
 		Name:        "eth0",
@@ -262,21 +274,55 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.NoError(t, acc.ValidateTaggedValue("drop_in", uint64(7), ntags))
 	assert.NoError(t, acc.ValidateTaggedValue("drop_out", uint64(1), ntags))
 
-	err = (&DiskIOStats{&mps}).Gather(&acc)
+	preDiskIOPoints := len(acc.Points)
+
+	err = (&DiskIOStats{ps: &mps}).Gather(&acc)
 	require.NoError(t, err)
 
-	dtags := map[string]string{
+	numDiskIOPoints := len(acc.Points) - preDiskIOPoints
+	expectedAllDiskIOPoints := 14
+	assert.Equal(t, expectedAllDiskIOPoints, numDiskIOPoints)
+
+	dtags1 := map[string]string{
 		"name":   "sda1",
 		"serial": "ab-123-ad",
 	}
+	dtags2 := map[string]string{
+		"name":   "sdb1",
+		"serial": "bb-123-ad",
+	}
 
-	assert.True(t, acc.CheckTaggedValue("reads", uint64(888), dtags))
-	assert.True(t, acc.CheckTaggedValue("writes", uint64(5341), dtags))
-	assert.True(t, acc.CheckTaggedValue("read_bytes", uint64(100000), dtags))
-	assert.True(t, acc.CheckTaggedValue("write_bytes", uint64(200000), dtags))
-	assert.True(t, acc.CheckTaggedValue("read_time", uint64(7123), dtags))
-	assert.True(t, acc.CheckTaggedValue("write_time", uint64(9087), dtags))
-	assert.True(t, acc.CheckTaggedValue("io_time", uint64(123552), dtags))
+	assert.True(t, acc.CheckTaggedValue("reads", uint64(888), dtags1))
+	assert.True(t, acc.CheckTaggedValue("writes", uint64(5341), dtags1))
+	assert.True(t, acc.CheckTaggedValue("read_bytes", uint64(100000), dtags1))
+	assert.True(t, acc.CheckTaggedValue("write_bytes", uint64(200000), dtags1))
+	assert.True(t, acc.CheckTaggedValue("read_time", uint64(7123), dtags1))
+	assert.True(t, acc.CheckTaggedValue("write_time", uint64(9087), dtags1))
+	assert.True(t, acc.CheckTaggedValue("io_time", uint64(123552), dtags1))
+	assert.True(t, acc.CheckTaggedValue("reads", uint64(444), dtags2))
+	assert.True(t, acc.CheckTaggedValue("writes", uint64(2341), dtags2))
+	assert.True(t, acc.CheckTaggedValue("read_bytes", uint64(200000), dtags2))
+	assert.True(t, acc.CheckTaggedValue("write_bytes", uint64(400000), dtags2))
+	assert.True(t, acc.CheckTaggedValue("read_time", uint64(3123), dtags2))
+	assert.True(t, acc.CheckTaggedValue("write_time", uint64(6087), dtags2))
+	assert.True(t, acc.CheckTaggedValue("io_time", uint64(246552), dtags2))
+
+	// We expect 7 more DiskIOPoints to show up with an explicit match on "sdb1"
+	// and serial should be missing from the tags with SkipSerialNumber set
+	err = (&DiskIOStats{ps: &mps, Devices: []string{"sdb1"}, SkipSerialNumber: true}).Gather(&acc)
+	assert.Equal(t, preDiskIOPoints+expectedAllDiskIOPoints+7, len(acc.Points))
+
+	dtags3 := map[string]string{
+		"name": "sdb1",
+	}
+
+	assert.True(t, acc.CheckTaggedValue("reads", uint64(444), dtags3))
+	assert.True(t, acc.CheckTaggedValue("writes", uint64(2341), dtags3))
+	assert.True(t, acc.CheckTaggedValue("read_bytes", uint64(200000), dtags3))
+	assert.True(t, acc.CheckTaggedValue("write_bytes", uint64(400000), dtags3))
+	assert.True(t, acc.CheckTaggedValue("read_time", uint64(3123), dtags3))
+	assert.True(t, acc.CheckTaggedValue("write_time", uint64(6087), dtags3))
+	assert.True(t, acc.CheckTaggedValue("io_time", uint64(246552), dtags3))
 
 	err = (&MemStats{&mps}).Gather(&acc)
 	require.NoError(t, err)
