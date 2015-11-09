@@ -190,6 +190,7 @@ Telegraf currently has support for collecting metrics from:
 * rabbitmq
 * redis
 * rethinkdb
+* zfs
 * zookeeper
 * system
     * cpu
