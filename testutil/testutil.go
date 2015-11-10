@@ -39,7 +39,7 @@ func MockBatchPoints() client.BatchPoints {
 	// Create a point and add to batch
 	tags := map[string]string{"tag1": "value1"}
 	fields := map[string]interface{}{"value": 1.0}
-	pt := client.NewPoint("test_point", tags, fields)
+	pt, _ := client.NewPoint("test_point", tags, fields)
 	bp.AddPoint(pt)
 
 	return bp

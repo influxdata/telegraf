@@ -25,7 +25,7 @@ func init() {
 }
 
 func CPUTimes(percpu bool) ([]CPUTimesStat, error) {
-	filename := "/proc/stat"
+	filename := common.GetEnv("HOST_PROC", "/proc") + "/stat"
 	var lines = []string{}
 	if percpu {
 		var startIdx uint = 1
@@ -56,7 +56,7 @@ func CPUTimes(percpu bool) ([]CPUTimesStat, error) {
 }
 
 func CPUInfo() ([]CPUInfoStat, error) {
-	filename := "/proc/cpuinfo"
+	filename := common.GetEnv("HOST_PROC", "/proc") + "cpuinfo"
 	lines, _ := common.ReadLines(filename)
 
 	var ret []CPUInfoStat

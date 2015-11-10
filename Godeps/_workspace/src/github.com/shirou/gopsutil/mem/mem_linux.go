@@ -11,7 +11,7 @@ import (
 )
 
 func VirtualMemory() (*VirtualMemoryStat, error) {
-	filename := "/proc/meminfo"
+	filename := common.GetEnv("HOST_PROC", "/proc") + "/meminfo"
 	lines, _ := common.ReadLines(filename)
 	// flag if MemAvailable is in /proc/meminfo (kernel 3.14+)
 	memavail := false
@@ -74,7 +74,8 @@ func SwapMemory() (*SwapMemoryStat, error) {
 	} else {
 		ret.UsedPercent = 0
 	}
-	lines, _ := common.ReadLines("/proc/vmstat")
+	filename := common.GetEnv("HOST_PROC", "/proc") + "/vmstat"
+	lines, _ := common.ReadLines(filename)
 	for _, l := range lines {
 		fields := strings.Fields(l)
 		if len(fields) < 2 {

@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/influxdb/telegraf",
 	"GoVersion": "go1.5.1",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "bitbucket.org/ww/goautoneg",
@@ -172,39 +169,9 @@
 			"Rev": "5bb5cfc093ad18a28148c578f8632cfdb4d802e4"
 		},
 		{
-			"ImportPath": "github.com/shirou/gopsutil/cpu",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
-		},
-		{
-			"ImportPath": "github.com/shirou/gopsutil/disk",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
-		},
-		{
-			"ImportPath": "github.com/shirou/gopsutil/docker",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
-		},
-		{
-			"ImportPath": "github.com/shirou/gopsutil/load",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
-		},
-		{
-			"ImportPath": "github.com/shirou/gopsutil/mem",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
-		},
-		{
-			"ImportPath": "github.com/shirou/gopsutil/net",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
-		},
-		{
-			"ImportPath": "github.com/shirou/gopsutil/process",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"ImportPath": "github.com/shirou/gopsutil",
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",
