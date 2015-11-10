@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdb/telegraf/duration"
+	"github.com/influxdb/telegraf/internal"
 
 	// needing to load the plugins
 	_ "github.com/influxdb/telegraf/plugins/all"
@@ -61,8 +61,8 @@ func TestAgent_LoadOutput(t *testing.T) {
 
 func TestAgent_ZeroJitter(t *testing.T) {
 	a := &Agent{
-		FlushInterval: duration.Duration{10 * time.Second},
-		FlushJitter:   duration.Duration{0 * time.Second},
+		FlushInterval: internal.Duration{10 * time.Second},
+		FlushJitter:   internal.Duration{0 * time.Second},
 	}
 	flushinterval := jitterInterval(a.FlushInterval.Duration,
 		a.FlushJitter.Duration)
@@ -81,8 +81,8 @@ func TestAgent_ZeroInterval(t *testing.T) {
 
 	for i := 0; i < 1000; i++ {
 		a := &Agent{
-			FlushInterval: duration.Duration{0 * time.Second},
-			FlushJitter:   duration.Duration{5 * time.Second},
+			FlushInterval: internal.Duration{0 * time.Second},
+			FlushJitter:   internal.Duration{5 * time.Second},
 		}
 
 		flushinterval := jitterInterval(a.FlushInterval.Duration,
@@ -102,8 +102,8 @@ func TestAgent_ZeroInterval(t *testing.T) {
 
 func TestAgent_ZeroBoth(t *testing.T) {
 	a := &Agent{
-		FlushInterval: duration.Duration{0 * time.Second},
-		FlushJitter:   duration.Duration{0 * time.Second},
+		FlushInterval: internal.Duration{0 * time.Second},
+		FlushJitter:   internal.Duration{0 * time.Second},
 	}
 
 	flushinterval := jitterInterval(a.FlushInterval.Duration,
@@ -122,8 +122,8 @@ func TestAgent_JitterMax(t *testing.T) {
 
 	for i := 0; i < 1000; i++ {
 		a := &Agent{
-			FlushInterval: duration.Duration{30 * time.Second},
-			FlushJitter:   duration.Duration{2 * time.Second},
+			FlushInterval: internal.Duration{30 * time.Second},
+			FlushJitter:   internal.Duration{2 * time.Second},
 		}
 		flushinterval := jitterInterval(a.FlushInterval.Duration,
 			a.FlushJitter.Duration)
@@ -140,8 +140,8 @@ func TestAgent_JitterMin(t *testing.T) {
 
 	for i := 0; i < 1000; i++ {
 		a := &Agent{
-			FlushInterval: duration.Duration{30 * time.Second},
-			FlushJitter:   duration.Duration{2 * time.Second},
+			FlushInterval: internal.Duration{30 * time.Second},
+			FlushJitter:   internal.Duration{2 * time.Second},
 		}
 		flushinterval := jitterInterval(a.FlushInterval.Duration,
 			a.FlushJitter.Duration)

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdb/telegraf/duration"
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 
@@ -32,20 +32,20 @@ type runningPlugin struct {
 type Agent struct {
 
 	// Interval at which to gather information
-	Interval duration.Duration
+	Interval internal.Duration
 
 	// RoundInterval rounds collection interval to 'interval'.
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
 	// Interval at which to flush data
-	FlushInterval duration.Duration
+	FlushInterval internal.Duration
 
 	// FlushRetries is the number of times to retry each data flush
 	FlushRetries int
 
 	// FlushJitter tells
-	FlushJitter duration.Duration
+	FlushJitter internal.Duration
 
 	// TODO(cam): Remove UTC and Precision parameters, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
@@ -72,11 +72,11 @@ type Agent struct {
 func NewAgent(config *Config) (*Agent, error) {
 	agent := &Agent{
 		Tags:          make(map[string]string),
-		Interval:      duration.Duration{10 * time.Second},
+		Interval:      internal.Duration{10 * time.Second},
 		RoundInterval: true,
-		FlushInterval: duration.Duration{10 * time.Second},
+		FlushInterval: internal.Duration{10 * time.Second},
 		FlushRetries:  2,
-		FlushJitter:   duration.Duration{5 * time.Second},
+		FlushJitter:   internal.Duration{5 * time.Second},
 	}
 
 	// Apply the toml table to the agent config, overriding defaults

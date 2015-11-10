@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/plugins"
-	"github.com/shirou/gopsutil/common"
 )
 
 type Zfs struct {
@@ -60,7 +60,7 @@ func (z *Zfs) Gather(acc plugins.Accumulator) error {
 	tags := getTags(kstatPath)
 
 	for _, metric := range kstatMetrics {
-		lines, err := common.ReadLines(kstatPath + "/" + metric)
+		lines, err := internal.ReadLines(kstatPath + "/" + metric)
 		if err != nil {
 			return err
 		}

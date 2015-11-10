@@ -5,9 +5,10 @@ import (
 	"os"
 	"strings"
 
-	dc "github.com/fsouza/go-dockerclient"
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/plugins"
-	"github.com/shirou/gopsutil/common"
+
+	dc "github.com/fsouza/go-dockerclient"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/docker"
@@ -97,7 +98,7 @@ func (s *systemPS) NetConnections() ([]net.NetConnectionStat, error) {
 
 func (s *systemPS) DiskIO() (map[string]disk.DiskIOCountersStat, error) {
 	m, err := disk.DiskIOCounters()
-	if err == common.NotImplementedError {
+	if err == internal.NotImplementedError {
 		return nil, nil
 	}
 

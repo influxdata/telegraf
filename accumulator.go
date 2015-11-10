@@ -2,6 +2,7 @@ package telegraf
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -107,7 +108,10 @@ func (ac *accumulator) AddFields(
 		measurement = ac.prefix + measurement
 	}
 
-	pt := client.NewPoint(measurement, tags, fields, timestamp)
+	pt, err := client.NewPoint(measurement, tags, fields, timestamp)
+	if err != nil {
+		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
+	}
 	if ac.debug {
 		fmt.Println("> " + pt.String())
 	}

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/influxdb/influxdb/client/v2"
-	"github.com/influxdb/telegraf/duration"
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/outputs"
 )
 
@@ -22,7 +22,7 @@ type InfluxDB struct {
 	Database  string
 	UserAgent string
 	Precision string
-	Timeout   duration.Duration
+	Timeout   internal.Duration
 
 	conns []client.Client
 }

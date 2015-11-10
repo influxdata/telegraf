@@ -9,14 +9,14 @@ import (
 	"strings"
 
 	"github.com/influxdb/influxdb/client/v2"
-	"github.com/influxdb/telegraf/duration"
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/outputs"
 )
 
 type Amon struct {
 	ServerKey    string
 	AmonInstance string
-	Timeout      duration.Duration
+	Timeout      internal.Duration
 
 	client *http.Client
 }
