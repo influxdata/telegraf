@@ -22,13 +22,13 @@ const leaderWaitTimeout = 30 * time.Second
 
 // statistics gathered by the collectd service.
 const (
-	statPointsReceived      = "points_rx"
-	statBytesReceived       = "bytes_rx"
-	statPointsParseFail     = "points_parse_fail"
-	statReadFail            = "read_fail"
-	statBatchesTrasmitted   = "batches_tx"
-	statPointsTransmitted   = "points_tx"
-	statBatchesTransmitFail = "batches_tx_fail"
+	statPointsReceived      = "pointsRx"
+	statBytesReceived       = "bytesRx"
+	statPointsParseFail     = "pointsParseFail"
+	statReadFail            = "readFail"
+	statBatchesTrasmitted   = "batchesTx"
+	statPointsTransmitted   = "pointsTx"
+	statBatchesTransmitFail = "batchesTxFail"
 )
 
 // pointsWriter is an internal interface to make testing easier.
@@ -53,7 +53,7 @@ type Service struct {
 	wg      sync.WaitGroup
 	err     chan error
 	stop    chan struct{}
-	ln      *net.UDPConn
+	conn    *net.UDPConn
 	batcher *tsdb.PointBatcher
 	typesdb gollectd.Types
 	addr    net.Addr
@@ -118,13 +118,21 @@ func (s *Service) Open() error {
 	s.addr = addr
 
 	// Start listening
-	ln, err := net.ListenUDP("udp", addr)
+	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		return fmt.Errorf("unable to listen on UDP: %s", err)
 	}
-	s.ln = ln
 
-	s.Logger.Println("Listening on UDP: ", ln.LocalAddr().String())
+	if s.Config.ReadBuffer != 0 {
+		err = conn.SetReadBuffer(s.Config.ReadBuffer)
+		if err != nil {
+			return fmt.Errorf("unable to set UDP read buffer to %d: %s",
+				s.Config.ReadBuffer, err)
+		}
+	}
+	s.conn = conn
+
+	s.Logger.Println("Listening on UDP: ", conn.LocalAddr().String())
 
 	// Start the points batcher.
 	s.batcher = tsdb.NewPointBatcher(s.Config.BatchSize, s.Config.BatchPending, time.Duration(s.Config.BatchDuration))
@@ -147,8 +155,8 @@ func (s *Service) Close() error {
 	if s.stop != nil {
 		close(s.stop)
 	}
-	if s.ln != nil {
-		s.ln.Close()
+	if s.conn != nil {
+		s.conn.Close()
 	}
 	if s.batcher != nil {
 		s.batcher.Stop()
@@ -157,7 +165,7 @@ func (s *Service) Close() error {
 
 	// Release all remaining resources.
 	s.stop = nil
-	s.ln = nil
+	s.conn = nil
 	s.batcher = nil
 	s.Logger.Println("collectd UDP closed")
 	return nil
@@ -179,7 +187,7 @@ func (s *Service) Err() chan error { return s.err }
 
 // Addr returns the listener's address. Returns nil if listener is closed.
 func (s *Service) Addr() net.Addr {
-	return s.ln.LocalAddr()
+	return s.conn.LocalAddr()
 }
 
 func (s *Service) serve() {
@@ -204,7 +212,7 @@ func (s *Service) serve() {
 			// Keep processing.
 		}
 
-		n, _, err := s.ln.ReadFromUDP(buffer)
+		n, _, err := s.conn.ReadFromUDP(buffer)
 		if err != nil {
 			s.statMap.Add(statReadFail, 1)
 			s.Logger.Printf("collectd ReadFromUDP error: %s", err)
@@ -293,7 +301,11 @@ func Unmarshal(packet *gollectd.Packet) []models.Point {
 		if packet.TypeInstance != "" {
 			tags["type_instance"] = packet.TypeInstance
 		}
-		p := models.NewPoint(name, tags, fields, timestamp)
+		p, err := models.NewPoint(name, tags, fields, timestamp)
+		// Drop points values of NaN since they are not supported
+		if err != nil {
+			continue
+		}
 
 		points = append(points, p)
 	}

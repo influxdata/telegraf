@@ -26,21 +26,34 @@ const (
 	// measurment parts in a template.
 	DefaultSeparator = "."
 
-	// DefaultBatchSize is the default Graphite batch size.
-	DefaultBatchSize = 1000
+	// DefaultBatchSize is the default write batch size.
+	DefaultBatchSize = 5000
 
-	// DefaultBatchPending is the default number of pending Graphite batches.
-	DefaultBatchPending = 5
+	// DefaultBatchPending is the default number of pending write batches.
+	DefaultBatchPending = 10
 
 	// DefaultBatchTimeout is the default Graphite batch timeout.
 	DefaultBatchTimeout = time.Second
+
+	// DefaultUDPReadBuffer is the default buffer size for the UDP listener.
+	// Sets the size of the operating system's receive buffer associated with
+	// the UDP traffic. Keep in mind that the OS must be able
+	// to handle the number set here or the UDP listener will error and exit.
+	//
+	// DefaultReadBuffer = 0 means to use the OS default, which is usually too
+	// small for high UDP performance.
+	//
+	// Increasing OS buffer limits:
+	//     Linux:      sudo sysctl -w net.core.rmem_max=<read-buffer>
+	//     BSD/Darwin: sudo sysctl -w kern.ipc.maxsockbuf=<read-buffer>
+	DefaultUDPReadBuffer = 0
 )
 
 // Config represents the configuration for Graphite endpoints.
 type Config struct {
+	Enabled          bool          `toml:"enabled"`
 	BindAddress      string        `toml:"bind-address"`
 	Database         string        `toml:"database"`
-	Enabled          bool          `toml:"enabled"`
 	Protocol         string        `toml:"protocol"`
 	BatchSize        int           `toml:"batch-size"`
 	BatchPending     int           `toml:"batch-pending"`
@@ -49,6 +62,20 @@ type Config struct {
 	Templates        []string      `toml:"templates"`
 	Tags             []string      `toml:"tags"`
 	Separator        string        `toml:"separator"`
+	UDPReadBuffer    int           `toml:"udp-read-buffer"`
+}
+
+func NewConfig() Config {
+	return Config{
+		BindAddress:      DefaultBindAddress,
+		Database:         DefaultDatabase,
+		Protocol:         DefaultProtocol,
+		BatchSize:        DefaultBatchSize,
+		BatchPending:     DefaultBatchPending,
+		BatchTimeout:     toml.Duration(DefaultBatchTimeout),
+		ConsistencyLevel: DefaultConsistencyLevel,
+		Separator:        DefaultSeparator,
+	}
 }
 
 // WithDefaults takes the given config and returns a new config with any required
@@ -78,6 +105,9 @@ func (c *Config) WithDefaults() *Config {
 	}
 	if d.Separator == "" {
 		d.Separator = DefaultSeparator
+	}
+	if d.UDPReadBuffer == 0 {
+		d.UDPReadBuffer = DefaultUDPReadBuffer
 	}
 	return &d
 }

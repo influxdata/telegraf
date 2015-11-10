@@ -174,15 +174,6 @@ func (e *StatementExecutor) executeDropServerStatement(q *influxql.DropServerSta
 		return &influxql.Result{Err: ErrNodeNotFound}
 	}
 
-	// Dropping only non-Raft nodes supported.
-	peers, err := e.Store.Peers()
-	if err != nil {
-		return &influxql.Result{Err: err}
-	}
-	if contains(peers, ni.Host) {
-		return &influxql.Result{Err: ErrNodeRaft}
-	}
-
 	err = e.Store.DeleteNode(q.NodeID, q.Force)
 	return &influxql.Result{Err: err}
 }
@@ -369,9 +360,15 @@ func (e *StatementExecutor) executeShowShardsStatement(stmt *influxql.ShowShards
 
 	rows := []*models.Row{}
 	for _, di := range dis {
-		row := &models.Row{Columns: []string{"id", "start_time", "end_time", "expiry_time", "owners"}, Name: di.Name}
+		row := &models.Row{Columns: []string{"id", "database", "retention_policy", "shard_group", "start_time", "end_time", "expiry_time", "owners"}, Name: di.Name}
 		for _, rpi := range di.RetentionPolicies {
 			for _, sgi := range rpi.ShardGroups {
+				// Shards associated with deleted shard groups are effectively deleted.
+				// Don't list them.
+				if sgi.Deleted() {
+					continue
+				}
+
 				for _, si := range sgi.Shards {
 					ownerIDs := make([]uint64, len(si.Owners))
 					for i, owner := range si.Owners {
@@ -380,6 +377,9 @@ func (e *StatementExecutor) executeShowShardsStatement(stmt *influxql.ShowShards
 
 					row.Values = append(row.Values, []interface{}{
 						si.ID,
+						di.Name,
+						rpi.Name,
+						sgi.ID,
 						sgi.StartTime.UTC().Format(time.RFC3339),
 						sgi.EndTime.UTC().Format(time.RFC3339),
 						sgi.EndTime.Add(rpi.Duration).UTC().Format(time.RFC3339),

@@ -20,6 +20,7 @@ import (
 	"github.com/influxdb/influxdb/cluster"
 	"github.com/influxdb/influxdb/importer/v8"
 	"github.com/peterh/liner"
+	"io/ioutil"
 )
 
 // These variables are populated via the Go linker.
@@ -37,6 +38,10 @@ const (
 	// defaultPPS is the default points per second that the import will throttle at
 	// by default it's 0, which means it will not throttle
 	defaultPPS = 0
+)
+
+const (
+	noTokenMsg = "Visit https://enterprise.influxdata.com to register for updates, InfluxDB server management, and monitoring.\n"
 )
 
 type CommandLine struct {
@@ -163,7 +168,16 @@ Examples:
 			c.Client.Addr())
 		return
 	}
+
 	if c.Execute == "" && !c.Import {
+		token, err := c.DatabaseToken()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to check token: %s\n", err.Error())
+			return
+		}
+		if token == "" {
+			fmt.Printf(noTokenMsg)
+		}
 		fmt.Printf("Connected to %s version %s\n", c.Client.Addr(), c.Version)
 	}
 
@@ -248,41 +262,54 @@ func showVersion() {
 
 func (c *CommandLine) ParseCommand(cmd string) bool {
 	lcmd := strings.TrimSpace(strings.ToLower(cmd))
-	switch {
-	case strings.HasPrefix(lcmd, "exit"):
-		// signal the program to exit
-		return false
-	case strings.HasPrefix(lcmd, "gopher"):
-		c.gopher()
-	case strings.HasPrefix(lcmd, "connect"):
-		c.connect(cmd)
-	case strings.HasPrefix(lcmd, "auth"):
-		c.SetAuth(cmd)
-	case strings.HasPrefix(lcmd, "help"):
-		c.help()
-	case strings.HasPrefix(lcmd, "format"):
-		c.SetFormat(cmd)
-	case strings.HasPrefix(lcmd, "precision"):
-		c.SetPrecision(cmd)
-	case strings.HasPrefix(lcmd, "consistency"):
-		c.SetWriteConsistency(cmd)
-	case strings.HasPrefix(lcmd, "settings"):
-		c.Settings()
-	case strings.HasPrefix(lcmd, "pretty"):
-		c.Pretty = !c.Pretty
-		if c.Pretty {
-			fmt.Println("Pretty print enabled")
-		} else {
-			fmt.Println("Pretty print disabled")
+
+	split := strings.Split(lcmd, " ")
+	var tokens []string
+	for _, token := range split {
+		if token != "" {
+			tokens = append(tokens, token)
 		}
-	case strings.HasPrefix(lcmd, "use"):
-		c.use(cmd)
-	case strings.HasPrefix(lcmd, "insert"):
-		c.Insert(cmd)
-	case lcmd == "":
-		break
-	default:
-		c.ExecuteQuery(cmd)
+	}
+
+	if len(tokens) > 0 {
+		switch tokens[0] {
+		case "":
+			break
+		case "exit":
+			// signal the program to exit
+			return false
+		case "gopher":
+			c.gopher()
+		case "connect":
+			c.connect(cmd)
+		case "auth":
+			c.SetAuth(cmd)
+		case "help":
+			c.help()
+		case "history":
+			c.history()
+		case "format":
+			c.SetFormat(cmd)
+		case "precision":
+			c.SetPrecision(cmd)
+		case "consistency":
+			c.SetWriteConsistency(cmd)
+		case "settings":
+			c.Settings()
+		case "pretty":
+			c.Pretty = !c.Pretty
+			if c.Pretty {
+				fmt.Println("Pretty print enabled")
+			} else {
+				fmt.Println("Pretty print disabled")
+			}
+		case "use":
+			c.use(cmd)
+		case "insert":
+			c.Insert(cmd)
+		default:
+			c.ExecuteQuery(cmd)
+		}
 	}
 	return true
 }
@@ -531,6 +558,24 @@ func (c *CommandLine) ExecuteQuery(query string) error {
 	return nil
 }
 
+func (c *CommandLine) DatabaseToken() (string, error) {
+	response, err := c.Client.Query(client.Query{Command: "SHOW DIAGNOSTICS for 'registration'"})
+	if err != nil {
+		return "", err
+	}
+	if response.Error() != nil || len((*response).Results[0].Series) == 0 {
+		return "", nil
+	}
+
+	// Look for position of "token" column.
+	for i, s := range (*response).Results[0].Series[0].Columns {
+		if s == "token" {
+			return (*response).Results[0].Series[0].Values[0][i].(string), nil
+		}
+	}
+	return "", nil
+}
+
 func (c *CommandLine) FormatResponse(response *client.Response, w io.Writer) {
 	switch c.Format {
 	case "json":
@@ -722,6 +767,17 @@ func (c *CommandLine) help() {
         a full list of influxql commands can be found at:
         https://influxdb.com/docs/v0.9/query_language/spec.html
 `)
+}
+
+func (c *CommandLine) history() {
+	usr, err := user.Current()
+	// Only load history if we can get the user
+	if err == nil {
+		historyFile := filepath.Join(usr.HomeDir, ".influx_history")
+		if history, err := ioutil.ReadFile(historyFile); err == nil {
+			fmt.Print(string(history))
+		}
+	}
 }
 
 func (c *CommandLine) gopher() {

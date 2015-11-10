@@ -6,11 +6,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/influxdb/influxdb/models"
+)
+
+// UDPPayloadSize is a reasonable default payload size for UDP packets that
+// could be travelling over the internet.
+const (
+	UDPPayloadSize = 512
 )
 
 type Config struct {
@@ -34,6 +41,15 @@ type Config struct {
 	InsecureSkipVerify bool
 }
 
+type UDPConfig struct {
+	// Addr should be of the form "host:port" or "[ipv6-host%zone]:port".
+	Addr string
+
+	// PayloadSize is the maximum size of a UDP client message, optional
+	// Tune this based on your network. Defaults to UDPBufferSize.
+	PayloadSize int
+}
+
 type BatchPointsConfig struct {
 	// Precision is the write precision of the points, defaults to "ns"
 	Precision string
@@ -48,12 +64,17 @@ type BatchPointsConfig struct {
 	WriteConsistency string
 }
 
+// Client is a client interface for writing & querying the database
 type Client interface {
 	// Write takes a BatchPoints object and writes all Points to InfluxDB.
 	Write(bp BatchPoints) error
 
-	// Query makes an InfluxDB Query on the database
+	// Query makes an InfluxDB Query on the database. This will fail if using
+	// the UDP client.
 	Query(q Query) (*Response, error)
+
+	// Close releases any resources a Client may be using.
+	Close() error
 }
 
 // NewClient creates a client interface from the given config.
@@ -78,12 +99,52 @@ func NewClient(conf Config) Client {
 	}
 }
 
+// Close releases the client's resources.
+func (c *client) Close() error {
+	return nil
+}
+
+// NewUDPClient returns a client interface for writing to an InfluxDB UDP
+// service from the given config.
+func NewUDPClient(conf UDPConfig) (Client, error) {
+	var udpAddr *net.UDPAddr
+	udpAddr, err := net.ResolveUDPAddr("udp", conf.Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	payloadSize := conf.PayloadSize
+	if payloadSize == 0 {
+		payloadSize = UDPPayloadSize
+	}
+
+	return &udpclient{
+		conn:        conn,
+		payloadSize: payloadSize,
+	}, nil
+}
+
+// Close releases the udpclient's resources.
+func (uc *udpclient) Close() error {
+	return uc.conn.Close()
+}
+
 type client struct {
 	url        *url.URL
 	username   string
 	password   string
 	useragent  string
 	httpClient *http.Client
+}
+
+type udpclient struct {
+	conn        *net.UDPConn
+	payloadSize int
 }
 
 // BatchPoints is an interface into a batched grouping of points to write into
@@ -198,14 +259,19 @@ func NewPoint(
 	tags map[string]string,
 	fields map[string]interface{},
 	t ...time.Time,
-) *Point {
+) (*Point, error) {
 	var T time.Time
 	if len(t) > 0 {
 		T = t[0]
 	}
-	return &Point{
-		pt: models.NewPoint(name, tags, fields, T),
+
+	pt, err := models.NewPoint(name, tags, fields, T)
+	if err != nil {
+		return nil, err
 	}
+	return &Point{
+		pt: pt,
+	}, nil
 }
 
 // String returns a line-protocol string of the Point
@@ -243,11 +309,34 @@ func (p *Point) Fields() map[string]interface{} {
 	return p.pt.Fields()
 }
 
-func (c *client) Write(bp BatchPoints) error {
-	u := c.url
-	u.Path = "write"
-
+func (uc *udpclient) Write(bp BatchPoints) error {
 	var b bytes.Buffer
+	var d time.Duration
+	d, _ = time.ParseDuration("1" + bp.Precision())
+
+	for _, p := range bp.Points() {
+		pointstring := p.pt.RoundedString(d) + "\n"
+
+		// Write and reset the buffer if we reach the max size
+		if b.Len()+len(pointstring) >= uc.payloadSize {
+			if _, err := uc.conn.Write(b.Bytes()); err != nil {
+				return err
+			}
+			b.Reset()
+		}
+
+		if _, err := b.WriteString(pointstring); err != nil {
+			return err
+		}
+	}
+
+	_, err := uc.conn.Write(b.Bytes())
+	return err
+}
+
+func (c *client) Write(bp BatchPoints) error {
+	var b bytes.Buffer
+
 	for _, p := range bp.Points() {
 		if _, err := b.WriteString(p.pt.PrecisionString(bp.Precision())); err != nil {
 			return err
@@ -258,6 +347,8 @@ func (c *client) Write(bp BatchPoints) error {
 		}
 	}
 
+	u := c.url
+	u.Path = "write"
 	req, err := http.NewRequest("POST", u.String(), &b)
 	if err != nil {
 		return err
@@ -327,27 +418,32 @@ type Result struct {
 	Err    error
 }
 
+func (uc *udpclient) Query(q Query) (*Response, error) {
+	return nil, fmt.Errorf("Querying via UDP is not supported")
+}
+
 // Query sends a command to the server and returns the Response
 func (c *client) Query(q Query) (*Response, error) {
 	u := c.url
-
 	u.Path = "query"
-	values := u.Query()
-	values.Set("q", q.Command)
-	values.Set("db", q.Database)
-	if q.Precision != "" {
-		values.Set("epoch", q.Precision)
-	}
-	u.RawQuery = values.Encode()
 
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Content-Type", "")
 	req.Header.Set("User-Agent", c.useragent)
 	if c.username != "" {
 		req.SetBasicAuth(c.username, c.password)
 	}
+
+	params := req.URL.Query()
+	params.Set("q", q.Command)
+	params.Set("db", q.Database)
+	if q.Precision != "" {
+		params.Set("epoch", q.Precision)
+	}
+	req.URL.RawQuery = params.Encode()
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

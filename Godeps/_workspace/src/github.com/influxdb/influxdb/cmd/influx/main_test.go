@@ -20,6 +20,7 @@ func TestParseCommand_CommandsExist(t *testing.T) {
 		{cmd: "gopher"},
 		{cmd: "connect"},
 		{cmd: "help"},
+		{cmd: "history"},
 		{cmd: "pretty"},
 		{cmd: "use"},
 		{cmd: ""}, // test that a blank command just returns
@@ -28,6 +29,42 @@ func TestParseCommand_CommandsExist(t *testing.T) {
 		if !c.ParseCommand(test.cmd) {
 			t.Fatalf(`Command failed for %q.`, test.cmd)
 		}
+	}
+}
+
+func TestParseCommand_CommandsSamePrefix(t *testing.T) {
+	t.Parallel()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var data client.Response
+		w.WriteHeader(http.StatusNoContent)
+		_ = json.NewEncoder(w).Encode(data)
+	}))
+	defer ts.Close()
+
+	u, _ := url.Parse(ts.URL)
+	config := client.Config{URL: *u}
+	c, err := client.NewClient(config)
+	if err != nil {
+		t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+	}
+	m := main.CommandLine{Client: c}
+
+	tests := []struct {
+		cmd string
+	}{
+		{cmd: "use db"},
+		{cmd: "user nodb"},
+		{cmd: "puse nodb"},
+		{cmd: ""}, // test that a blank command just returns
+	}
+	for _, test := range tests {
+		if !m.ParseCommand(test.cmd) {
+			t.Fatalf(`Command failed for %q.`, test.cmd)
+		}
+	}
+
+	if m.Database != "db" {
+		t.Fatalf(`Command "use" changed database to %q. Expected db`, m.Database)
 	}
 }
 
@@ -214,6 +251,25 @@ func TestParseCommand_InsertInto(t *testing.T) {
 		}
 		if m.RetentionPolicy != test.rp {
 			t.Fatalf(`Command "insert into" rp parsing failed, expected: %q, actual: %q`, test.rp, m.RetentionPolicy)
+		}
+	}
+}
+
+func TestParseCommand_History(t *testing.T) {
+	t.Parallel()
+	c := main.CommandLine{}
+	tests := []struct {
+		cmd string
+	}{
+		{cmd: "history"},
+		{cmd: " history"},
+		{cmd: "history "},
+		{cmd: "History "},
+	}
+
+	for _, test := range tests {
+		if !c.ParseCommand(test.cmd) {
+			t.Fatalf(`Command "history" failed for %q.`, test.cmd)
 		}
 	}
 }

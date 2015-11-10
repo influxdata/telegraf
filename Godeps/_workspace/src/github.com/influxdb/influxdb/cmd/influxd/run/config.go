@@ -69,8 +69,10 @@ func NewConfig() *Config {
 	c.Monitor = monitor.NewConfig()
 	c.Subscriber = subscriber.NewConfig()
 	c.HTTPD = httpd.NewConfig()
+	c.Graphites = []graphite.Config{graphite.NewConfig()}
 	c.Collectd = collectd.NewConfig()
 	c.OpenTSDB = opentsdb.NewConfig()
+	c.UDPs = []udp.Config{udp.NewConfig()}
 
 	c.ContinuousQuery = continuous_querier.NewConfig()
 	c.Retention = retention.NewConfig()
@@ -108,12 +110,12 @@ func NewDemoConfig() (*Config, error) {
 func (c *Config) Validate() error {
 	if c.Meta.Dir == "" {
 		return errors.New("Meta.Dir must be specified")
-	} else if c.Data.Dir == "" {
-		return errors.New("Data.Dir must be specified")
 	} else if c.HintedHandoff.Dir == "" {
 		return errors.New("HintedHandoff.Dir must be specified")
-	} else if c.Data.WALDir == "" {
-		return errors.New("Data.WALDir must be specified")
+	}
+
+	if err := c.Data.Validate(); err != nil {
+		return err
 	}
 
 	for _, g := range c.Graphites {

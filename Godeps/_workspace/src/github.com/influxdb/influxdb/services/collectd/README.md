@@ -2,6 +2,11 @@
 
 The _collectd_ input allows InfluxDB to accept data transmitted in collectd native format. This data is transmitted over UDP.
 
+## A note on UDP/IP OS Buffer sizes
+
+If you're running Linux or FreeBSD, please adjust your OS UDP buffer
+size limit, [see here for more details.](../udp/README.md#a-note-on-udpip-os-buffer-sizes)
+
 ## Configuration
 
 Each collectd input allows the binding address, target database, and target retention policy to be set. If the database does not exist, it will be created automatically when the input is initialized. If the retention policy is not configured, then the default retention policy for the database is used. However if the retention policy is set, the retention policy must be explicitly created. The input will not automatically create it.
@@ -13,3 +18,18 @@ The path to the collectd types database file may also be set
 ## Large UDP packets
 
 Please note that UDP packages larger than the standard size of 1452 are dropped at the time of ingestion, so be sure to set `MaxPacketSize` to 1452 in the collectd configuration.
+
+## Config Example
+
+```
+[collectd]
+  enabled = false
+  bind-address = ":25826" # the bind address
+  database = "collectd" # Name of the database that will be written to
+  retention-policy = ""
+  batch-size = 5000 # will flush if this many points get buffered
+  batch-pending = 10 # number of batches that may be pending in memory
+  batch-timeout = "10s"
+  read-buffer = 0 # UDP read buffer size, 0 means to use OS default
+  typesdb = "/usr/share/collectd/types.db"
+```

@@ -58,6 +58,8 @@ const (
 	deleteEntry walEntryType = 0x04
 )
 
+var ErrWALClosed = fmt.Errorf("WAL closed")
+
 type Log struct {
 	path string
 
@@ -68,6 +70,7 @@ type Log struct {
 	currentSegmentSize int
 
 	// cache and flush variables
+	closing                chan struct{}
 	cacheLock              sync.RWMutex
 	lastWriteTime          time.Time
 	flushRunning           bool
@@ -128,6 +131,7 @@ func NewLog(path string) *Log {
 		FlushMemorySizeThreshold: tsdb.DefaultFlushMemorySizeThreshold,
 		MaxMemorySizeThreshold:   tsdb.DefaultMaxMemorySizeThreshold,
 		logger:                   log.New(os.Stderr, "[tsm1wal] ", log.LstdFlags),
+		closing:                  make(chan struct{}),
 	}
 }
 
@@ -136,7 +140,6 @@ func (l *Log) Path() string { return l.path }
 
 // Open opens and initializes the Log. Will recover from previous unclosed shutdowns
 func (l *Log) Open() error {
-
 	if l.LoggingEnabled {
 		l.logger.Printf("tsm1 WAL starting with %d flush memory size threshold and %d max memory size threshold\n", l.FlushMemorySizeThreshold, l.MaxMemorySizeThreshold)
 		l.logger.Printf("tsm1 WAL writing to %s\n", l.path)
@@ -148,6 +151,7 @@ func (l *Log) Open() error {
 	l.cache = make(map[string]Values)
 	l.cacheDirtySort = make(map[string]bool)
 	l.measurementFieldsCache = make(map[string]*tsdb.MeasurementFields)
+	l.closing = make(chan struct{})
 
 	// flush out any WAL entries that are there from before
 	if err := l.readAndFlushWAL(); err != nil {
@@ -194,8 +198,8 @@ func (l *Log) Cursor(series string, fields []string, dec *tsdb.FieldCodec, ascen
 
 func (l *Log) WritePoints(points []models.Point, fields map[string]*tsdb.MeasurementFields, series []*tsdb.SeriesCreate) error {
 	// add everything to the cache, or return an error if we've hit our max memory
-	if addedToCache := l.addToCache(points, fields, series, true); !addedToCache {
-		return fmt.Errorf("WAL backed up flushing to index, hit max memory")
+	if err := l.addToCache(points, fields, series, true); err != nil {
+		return err
 	}
 
 	// make the write durable if specified
@@ -240,7 +244,9 @@ func (l *Log) WritePoints(points []models.Point, fields map[string]*tsdb.Measure
 	// usually skipping the cache is only for testing purposes and this was the easiest
 	// way to represent the logic (to cache and then immediately flush)
 	if l.SkipCache {
-		l.flush(idleFlush)
+		if err := l.flush(idleFlush); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -248,20 +254,31 @@ func (l *Log) WritePoints(points []models.Point, fields map[string]*tsdb.Measure
 
 // addToCache will add the points, measurements, and fields to the cache and return true if successful. They will be queryable
 // immediately after return and will be flushed at the next flush cycle. Before adding to the cache we check if we're over the
-// max memory threshold. If we are we request a flush in a new goroutine and return false, indicating we didn't add the values
+// max memory threshold. If we are we request a flush in a new goroutine and return an error, indicating we didn't add the values
 // to the cache and that writes should return a failure.
-func (l *Log) addToCache(points []models.Point, fields map[string]*tsdb.MeasurementFields, series []*tsdb.SeriesCreate, checkMemory bool) bool {
+func (l *Log) addToCache(points []models.Point, fields map[string]*tsdb.MeasurementFields, series []*tsdb.SeriesCreate, checkMemory bool) error {
 	l.cacheLock.Lock()
 	defer l.cacheLock.Unlock()
+
+	// Make sure the log has not been closed
+	select {
+	case <-l.closing:
+		return ErrWALClosed
+	default:
+	}
 
 	// if we should check memory and we're over the threshold, mark a flush as running and kick one off in a goroutine
 	if checkMemory && l.memorySize > l.FlushMemorySizeThreshold {
 		if !l.flushRunning {
 			l.flushRunning = true
-			go l.flush(memoryFlush)
+			go func() {
+				if err := l.flush(memoryFlush); err != nil {
+					l.logger.Printf("addToCache: failed to flush: %v", err)
+				}
+			}()
 		}
 		if l.memorySize > l.MaxMemorySizeThreshold {
-			return false
+			return fmt.Errorf("WAL backed up flushing to index, hit max memory")
 		}
 	}
 
@@ -289,7 +306,7 @@ func (l *Log) addToCache(points []models.Point, fields map[string]*tsdb.Measurem
 	l.seriesToCreateCache = append(l.seriesToCreateCache, series...)
 	l.lastWriteTime = time.Now()
 
-	return true
+	return nil
 }
 
 func (l *Log) LastWriteTime() time.Time {
@@ -371,6 +388,7 @@ func (l *Log) readFileToCache(fileName string) error {
 		case pointsEntry:
 			points, err := models.ParsePoints(data)
 			if err != nil {
+				l.logger.Printf("failed to parse points: %v", err)
 				return err
 			}
 			l.addToCache(points, nil, nil, false)
@@ -405,10 +423,18 @@ func (l *Log) writeToLog(writeType walEntryType, data []byte) error {
 	l.writeLock.Lock()
 	defer l.writeLock.Unlock()
 
+	// Make sure the log has not been closed
+	select {
+	case <-l.closing:
+		return ErrWALClosed
+	default:
+	}
+
 	if l.currentSegmentFile == nil || l.currentSegmentSize > DefaultSegmentSize {
 		if err := l.newSegmentFile(); err != nil {
-			// fail hard since we can't write data
-			panic(fmt.Sprintf("error opening new segment file for wal: %s", err.Error()))
+			// A drop database or RP call could trigger this error if writes were in-flight
+			// when the drop statement executes.
+			return fmt.Errorf("error opening new segment file for wal: %s", err.Error())
 		}
 	}
 
@@ -495,10 +521,16 @@ func (l *Log) deleteKeysFromCache(keys []string) {
 
 // Close will finish any flush that is currently in process and close file handles
 func (l *Log) Close() error {
-	l.writeLock.Lock()
 	l.cacheLock.Lock()
-	defer l.writeLock.Unlock()
+	l.writeLock.Lock()
 	defer l.cacheLock.Unlock()
+	defer l.writeLock.Unlock()
+
+	// If cache is nil, then we're not open.  This avoids a double-close in tests.
+	if l.cache != nil {
+		// Close, but don't set to nil so future goroutines can still be signaled
+		close(l.closing)
+	}
 
 	l.cache = nil
 	l.measurementFieldsCache = nil
@@ -514,6 +546,13 @@ func (l *Log) Close() error {
 
 // flush writes all wal data in memory to the index
 func (l *Log) flush(flush flushType) error {
+	// Make sure the log has not been closed
+	select {
+	case <-l.closing:
+		return ErrWALClosed
+	default:
+	}
+
 	// only flush if there isn't one already running. Memory flushes are only triggered
 	// by writes, which will mark the flush as running, so we can ignore it.
 	l.cacheLock.Lock()
@@ -538,15 +577,18 @@ func (l *Log) flush(flush flushType) error {
 	if flush == idleFlush {
 		if l.currentSegmentFile != nil {
 			if err := l.currentSegmentFile.Close(); err != nil {
-				return err
+				l.cacheLock.Unlock()
+				l.writeLock.Unlock()
+				return fmt.Errorf("error closing current segment: %v", err)
 			}
 			l.currentSegmentFile = nil
 			l.currentSegmentSize = 0
 		}
 	} else {
 		if err := l.newSegmentFile(); err != nil {
-			// there's no recovering from this, fail hard
-			panic(fmt.Sprintf("error creating new wal file: %s", err.Error()))
+			l.cacheLock.Unlock()
+			l.writeLock.Unlock()
+			return fmt.Errorf("error creating new wal file: %v", err)
 		}
 	}
 	l.writeLock.Unlock()
@@ -596,6 +638,7 @@ func (l *Log) flush(flush flushType) error {
 
 	startTime := time.Now()
 	if err := l.IndexWriter.Write(l.flushCache, mfc, scc); err != nil {
+		l.logger.Printf("failed to flush to index: %v", err)
 		return err
 	}
 	if l.LoggingEnabled {
@@ -617,9 +660,9 @@ func (l *Log) flush(flush flushType) error {
 			return err
 		}
 		if id <= lastFileID {
-			err := os.Remove(fn)
+			err := os.RemoveAll(fn)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to remove: %v: %v", fn, err)
 			}
 		}
 	}

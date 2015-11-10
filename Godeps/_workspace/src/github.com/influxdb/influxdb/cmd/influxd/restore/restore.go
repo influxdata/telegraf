@@ -158,6 +158,7 @@ func (cmd *Command) unpackMeta(mr *snapshot.MultiReader, sf snapshot.File, confi
 	store := meta.NewStore(config.Meta)
 	store.RaftListener = newNopListener()
 	store.ExecListener = newNopListener()
+	store.RPCListener = newNopListener()
 
 	// Determine advertised address.
 	_, port, err := net.SplitHostPort(config.Meta.BindAddress)
@@ -172,6 +173,7 @@ func (cmd *Command) unpackMeta(mr *snapshot.MultiReader, sf snapshot.File, confi
 		return fmt.Errorf("resolve tcp: addr=%s, err=%s", hostport, err)
 	}
 	store.Addr = addr
+	store.RemoteAddr = addr
 
 	// Open the meta store.
 	if err := store.Open(); err != nil {
@@ -246,5 +248,12 @@ func (ln *nopListener) Accept() (net.Conn, error) {
 	return nil, errors.New("listener closing")
 }
 
-func (ln *nopListener) Close() error   { close(ln.closing); return nil }
+func (ln *nopListener) Close() error {
+	if ln.closing != nil {
+		close(ln.closing)
+		ln.closing = nil
+	}
+	return nil
+}
+
 func (ln *nopListener) Addr() net.Addr { return nil }

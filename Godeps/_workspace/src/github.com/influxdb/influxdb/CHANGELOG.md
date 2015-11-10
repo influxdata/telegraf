@@ -1,6 +1,10 @@
 ## v0.9.5 [unreleased]
 
+### Release Notes
+- Field names for the internal stats have been changed to be more inline with Go style.
+
 ### Features
+- [#4098](https://github.com/influxdb/influxdb/pull/4702): Support 'history' command at CLI
 - [#4098](https://github.com/influxdb/influxdb/issues/4098): Enable `golint` on the code base - uuid subpackage
 - [#4141](https://github.com/influxdb/influxdb/pull/4141): Control whether each query should be logged
 - [#4065](https://github.com/influxdb/influxdb/pull/4065): Added precision support in cmd client. Thanks @sbouchex
@@ -20,12 +24,26 @@
 - [#4379](https://github.com/influxdb/influxdb/pull/4379): Auto-create database for UDP input.
 - [#4375](https://github.com/influxdb/influxdb/pull/4375): Add Subscriptions so data can be 'forked' out of InfluxDB to another third party.
 - [#4506](https://github.com/influxdb/influxdb/pull/4506): Register with Enterprise service and upload stats, if token is available.
+- [#4516](https://github.com/influxdb/influxdb/pull/4516): Hinted-handoff refactor, with new statistics and diagnostics
 - [#4501](https://github.com/influxdb/influxdb/pull/4501): Allow filtering SHOW MEASUREMENTS by regex.
+- [#4547](https://github.com/influxdb/influxdb/pull/4547): Allow any node to be dropped, even a raft node (even the leader).
+- [#4600](https://github.com/influxdb/influxdb/pull/4600): ping endpoint can wait for leader
+- [#4648](https://github.com/influxdb/influxdb/pull/4648): UDP Client (v2 client)
+- [#4690](https://github.com/influxdb/influxdb/pull/4690): SHOW SHARDS now includes database and policy. Thanks @pires
+- [#4676](https://github.com/influxdb/influxdb/pull/4676): UDP service listener performance enhancements
+- [#4659](https://github.com/influxdb/influxdb/pull/4659): Support IF EXISTS for DROP DATABASE. Thanks @ch33hau
+- [#4721](https://github.com/influxdb/influxdb/pull/4721): Export tsdb.InterfaceValues
+- [#4681](https://github.com/influxdb/influxdb/pull/4681): Increase default buffer size for collectd and graphite listeners
+- [#4659](https://github.com/influxdb/influxdb/pull/4659): Support IF EXISTS for DROP DATABASE
 
 ### Bugfixes
+- [#4715](https://github.com/influxdb/influxdb/pull/4715): Fix panic during Raft-close. Fix [issue #4707](https://github.com/influxdb/influxdb/issues/4707). Thanks @oiooj
+- [#4643](https://github.com/influxdb/influxdb/pull/4643): Fix panic during backup restoration. Thanks @oiooj
+- [#4632](https://github.com/influxdb/influxdb/pull/4632): Fix parsing of IPv6 hosts in client package. Thanks @miguelxpn
 - [#4389](https://github.com/influxdb/influxdb/pull/4389): Don't add a new segment file on each hinted-handoff purge cycle.
 - [#4166](https://github.com/influxdb/influxdb/pull/4166): Fix parser error on invalid SHOW
 - [#3457](https://github.com/influxdb/influxdb/issues/3457): [0.9.3] cannot select field names with prefix + "." that match the measurement name
+- [#4704](https://github.com/influxdb/influxdb/pull/4704). Tighten up command parsing within CLI. Thanks @pires
 - [#4225](https://github.com/influxdb/influxdb/pull/4225): Always display diags in name-sorted order
 - [#4111](https://github.com/influxdb/influxdb/pull/4111): Update pre-commit hook for go vet composites
 - [#4136](https://github.com/influxdb/influxdb/pull/4136): Return an error-on-write if target retention policy does not exist. Thanks for the report @ymettier
@@ -33,6 +51,7 @@
 - [#4124](https://github.com/influxdb/influxdb/issues/4124): Missing defer/recover/panic idiom in HTTPD service
 - [#4238](https://github.com/influxdb/influxdb/pull/4238): Fully disable hinted-handoff service if so requested.
 - [#4165](https://github.com/influxdb/influxdb/pull/4165): Tag all Go runtime stats when writing to internal database.
+- [#4586](https://github.com/influxdb/influxdb/pull/4586): Exit when invalid engine is selected
 - [#4118](https://github.com/influxdb/influxdb/issues/4118): Return consistent, correct result for SHOW MEASUREMENTS with multiple AND conditions
 - [#4191](https://github.com/influxdb/influxdb/pull/4191): Correctly marshal remote mapper responses. Fixes [#4170](https://github.com/influxdb/influxdb/issues/4170)
 - [#4222](https://github.com/influxdb/influxdb/pull/4222): Graphite TCP connections should not block shutdown
@@ -41,6 +60,8 @@
 - [#4264](https://github.com/influxdb/influxdb/issues/4264): Refactor map functions to use list of values
 - [#4278](https://github.com/influxdb/influxdb/pull/4278): Fix error marshalling across the cluster
 - [#4149](https://github.com/influxdb/influxdb/pull/4149): Fix derivative unnecessarily requires aggregate function.  Thanks @peekeri!
+- [#4674](https://github.com/influxdb/influxdb/pull/4674): Fix panic during restore. Thanks @simcap.
+- [#4725](https://github.com/influxdb/influxdb/pull/4725): Don't list deleted shards during SHOW SHARDS.
 - [#4237](https://github.com/influxdb/influxdb/issues/4237): DERIVATIVE() edge conditions
 - [#4263](https://github.com/influxdb/influxdb/issues/4263): derivative does not work when data is missing
 - [#4293](https://github.com/influxdb/influxdb/pull/4293): Ensure shell is invoked when touching PID file. Thanks @christopherjdickson
@@ -56,6 +77,7 @@
 - [#4344](https://github.com/influxdb/influxdb/issues/4344): Make client.Write default to client.precision if none is given.
 - [#3429](https://github.com/influxdb/influxdb/issues/3429): Incorrect parsing of regex containing '/'
 - [#4374](https://github.com/influxdb/influxdb/issues/4374): Add tsm1 quickcheck tests
+- [#4644](https://github.com/influxdb/influxdb/pull/4644): Check for response errors during token check, fixes issue [#4641](https://github.com/influxdb/influxdb/issues/4641)
 - [#4377](https://github.com/influxdb/influxdb/pull/4377): Hinted handoff should not process dropped nodes
 - [#4365](https://github.com/influxdb/influxdb/issues/4365): Prevent panic in DecodeSameTypeBlock
 - [#4280](https://github.com/influxdb/influxdb/issues/4280): Only drop points matching WHERE clause
@@ -75,6 +97,20 @@
 - [#4486](https://github.com/influxdb/influxdb/pull/4486): Fix missing comments for runner package
 - [#4497](https://github.com/influxdb/influxdb/pull/4497): Fix sequence in meta proto
 - [#3367](https://github.com/influxdb/influxdb/issues/3367): Negative timestamps are parsed correctly by the line protocol.
+- [#4563](https://github.com/influxdb/influxdb/pull/4536): Fix broken subscriptions updates.
+- [#4538](https://github.com/influxdb/influxdb/issues/4538): Dropping database under a write load causes panics
+- [#4582](https://github.com/influxdb/influxdb/pull/4582): Correct logging tags in cluster and TCP package. Thanks @oiooj
+- [#4513](https://github.com/influxdb/influxdb/issues/4513): TSM1: panic: runtime error: index out of range
+- [#4521](https://github.com/influxdb/influxdb/issues/4521): TSM1: panic: decode of short block: got 1, exp 9
+- [#4587](https://github.com/influxdb/influxdb/pull/4587): Prevent NaN float values from being stored
+- [#4596](https://github.com/influxdb/influxdb/pull/4596): Skip empty string for start position when parsing line protocol @Thanks @ch33hau
+- [#4610](https://github.com/influxdb/influxdb/pull/4610): Make internal stats names consistent with Go style.
+- [#4625](https://github.com/influxdb/influxdb/pull/4625): Correctly handle bad write requests. Thanks @oiooj.
+- [#4650](https://github.com/influxdb/influxdb/issues/4650): Importer should skip empty lines
+- [#4651](https://github.com/influxdb/influxdb/issues/4651): Importer doesn't flush out last batch
+- [#4602](https://github.com/influxdb/influxdb/issues/4602): Fixes data race between PointsWriter and Subscriber services.
+- [#4691](https://github.com/influxdb/influxdb/issues/4691): Enable toml test `TestConfig_Encode`.
+- [#4684](https://github.com/influxdb/influxdb/pull/4684): Add Graphite and UDP section to default config. Thanks @nkatsaros
 
 ## v0.9.4 [2015-09-14]
 

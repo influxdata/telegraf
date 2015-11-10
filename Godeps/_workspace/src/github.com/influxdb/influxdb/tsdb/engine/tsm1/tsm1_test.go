@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -236,6 +237,225 @@ func TestEngine_WriteOverwritePreviousPoint(t *testing.T) {
 	if k != tsdb.EOF {
 		t.Fatal("expected EOF")
 	}
+}
+
+// Tests that writing a point that before the earliest point
+// is queryable before and after a full compaction
+func TestEngine_Write_BeforeFirstPoint(t *testing.T) {
+	e := OpenDefaultEngine()
+	defer e.Close()
+
+	e.RotateFileSize = 1
+
+	fields := []string{"value"}
+
+	p1 := parsePoint("cpu,host=A value=1.1 1000000000")
+	p2 := parsePoint("cpu,host=A value=1.2 2000000000")
+	p3 := parsePoint("cpu,host=A value=1.3 3000000000")
+	p4 := parsePoint("cpu,host=A value=1.4 0000000000") // earlier than first point
+
+	verify := func(points []models.Point) {
+		tx2, _ := e.Begin(false)
+		defer tx2.Rollback()
+		c := tx2.Cursor("cpu,host=A", fields, nil, true)
+		k, v := c.SeekTo(0)
+
+		for _, p := range points {
+			if k != p.UnixNano() {
+				t.Fatalf("time wrong:\n\texp:%d\n\tgot:%d\n", p.UnixNano(), k)
+			}
+			if v != p.Fields()["value"] {
+				t.Fatalf("data wrong:\n\texp:%f\n\tgot:%f", p.Fields()["value"], v.(float64))
+			}
+			k, v = c.Next()
+		}
+	}
+
+	// Write each point individually to force file rotation
+	for _, p := range []models.Point{p1, p2} {
+		if err := e.WritePoints([]models.Point{p}, nil, nil); err != nil {
+			t.Fatalf("failed to write points: %s", err.Error())
+		}
+	}
+
+	verify([]models.Point{p1, p2})
+
+	// Force a full compaction
+	e.CompactionAge = time.Duration(0)
+	if err := e.Compact(true); err != nil {
+		t.Fatalf("failed to run full compaction: %v", err)
+	}
+
+	// Write a point before the earliest data file
+	if err := e.WritePoints([]models.Point{p3, p4}, nil, nil); err != nil {
+		t.Fatalf("failed to write points: %s", err.Error())
+	}
+
+	// Verify earlier point is returned in the correct order before compaction
+	verify([]models.Point{p4, p1, p2, p3})
+
+	if err := e.Compact(true); err != nil {
+		t.Fatalf("failed to run full compaction: %v", err)
+	}
+	// Verify earlier point is returned in the correct order after compaction
+	verify([]models.Point{p4, p1, p2, p3})
+}
+
+// Tests that writing a series with different fields is queryable before and
+// after a full compaction
+func TestEngine_Write_MixedFields(t *testing.T) {
+	e := OpenDefaultEngine()
+	defer e.Close()
+
+	e.RotateFileSize = 1
+
+	fields := []string{"value", "value2"}
+
+	p1 := parsePoint("cpu,host=A value=1.1 1000000000")
+	p2 := parsePoint("cpu,host=A value=1.2,value2=2.1 2000000000")
+	p3 := parsePoint("cpu,host=A value=1.3 3000000000")
+	p4 := parsePoint("cpu,host=A value=1.4 4000000000")
+
+	verify := func(points []models.Point) {
+		tx2, _ := e.Begin(false)
+		defer tx2.Rollback()
+		c := tx2.Cursor("cpu,host=A", fields, nil, true)
+		k, v := c.SeekTo(0)
+
+		for _, p := range points {
+			if k != p.UnixNano() {
+				t.Fatalf("time wrong:\n\texp:%d\n\tgot:%d\n", p.UnixNano(), k)
+			}
+
+			pv := v.(map[string]interface{})
+			for _, key := range fields {
+				if pv[key] != p.Fields()[key] {
+					t.Fatalf("data wrong:\n\texp:%v\n\tgot:%v", p.Fields()[key], pv[key])
+				}
+			}
+			k, v = c.Next()
+		}
+	}
+
+	// Write each point individually to force file rotation
+	for _, p := range []models.Point{p1, p2} {
+		if err := e.WritePoints([]models.Point{p}, nil, nil); err != nil {
+			t.Fatalf("failed to write points: %s", err.Error())
+		}
+	}
+
+	verify([]models.Point{p1, p2})
+
+	// Force a full compaction
+	e.CompactionAge = time.Duration(0)
+	if err := e.Compact(true); err != nil {
+		t.Fatalf("failed to run full compaction: %v", err)
+	}
+
+	// Write a point before the earliest data file
+	if err := e.WritePoints([]models.Point{p3, p4}, nil, nil); err != nil {
+		t.Fatalf("failed to write points: %s", err.Error())
+	}
+
+	// Verify points returned in the correct order before compaction
+	verify([]models.Point{p1, p2, p3, p4})
+
+	if err := e.Compact(true); err != nil {
+		t.Fatalf("failed to run full compaction: %v", err)
+	}
+	// Verify points returned in the correct order after compaction
+	verify([]models.Point{p1, p2, p3, p4})
+}
+
+// Tests that writing and compactions running concurrently does not
+// fail.
+func TestEngine_WriteCompaction_Concurrent(t *testing.T) {
+	e := OpenDefaultEngine()
+	defer e.Close()
+
+	e.RotateFileSize = 1
+
+	done := make(chan struct{})
+	total := 1000
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		i := 0
+		for {
+			if i > total {
+				return
+			}
+
+			pt := models.MustNewPoint("cpu",
+				map[string]string{"host": "A"},
+				map[string]interface{}{"value": i},
+				time.Unix(int64(i), 0),
+			)
+			if err := e.WritePoints([]models.Point{pt}, nil, nil); err != nil {
+				t.Fatalf("failed to write points: %s", err.Error())
+			}
+			i++
+		}
+	}()
+
+	// Force a compactions to happen
+	e.CompactionAge = time.Duration(0)
+
+	// Run compactions concurrently
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-done:
+				return
+			default:
+			}
+
+			if err := e.Compact(false); err != nil {
+				t.Fatalf("failed to run full compaction: %v", err)
+			}
+		}
+	}()
+
+	// Let the goroutines run for a second
+	select {
+	case <-time.After(1 * time.Second):
+		close(done)
+	}
+
+	// Wait for them to exit
+	wg.Wait()
+
+	tx2, _ := e.Begin(false)
+	defer tx2.Rollback()
+	c := tx2.Cursor("cpu,host=A", []string{"value"}, nil, true)
+	k, v := c.SeekTo(0)
+
+	// Verify we wrote and can read all the points
+	i := 0
+	for {
+		if exp := time.Unix(int64(i), 0).UnixNano(); k != exp {
+			t.Fatalf("time wrong:\n\texp:%d\n\tgot:%d\n", exp, k)
+		}
+
+		if exp := int64(i); v != exp {
+			t.Fatalf("value wrong:\n\texp:%v\n\tgot:%v", exp, v)
+		}
+
+		k, v = c.Next()
+		if k == tsdb.EOF {
+			break
+		}
+		i += 1
+	}
+
+	if i != total {
+		t.Fatalf("point count mismatch: got %v, exp %v", i, total)
+	}
+
 }
 
 func TestEngine_CursorCombinesWALAndIndex(t *testing.T) {
@@ -860,7 +1080,6 @@ func TestEngine_CompactionWithCopiedBlocks(t *testing.T) {
 
 	e.RotateFileSize = 10
 	e.MaxPointsPerBlock = 1
-	e.RotateBlockSize = 10
 
 	p1 := parsePoint("cpu,host=A value=1.1 1000000000")
 	p2 := parsePoint("cpu,host=A value=1.2 2000000000")
@@ -1451,6 +1670,134 @@ func TestEngine_DecodeAndCombine_NoNewValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
+
+func TestEngine_Write_Concurrent(t *testing.T) {
+	e := OpenDefaultEngine()
+	defer e.Engine.Close()
+
+	values1 := make(tsm1.Values, 1)
+	values1[0] = tsm1.NewValue(time.Unix(0, 0), float64(1))
+
+	pointsByKey1 := map[string]tsm1.Values{
+		"foo": values1,
+	}
+
+	values2 := make(tsm1.Values, 1)
+	values2[0] = tsm1.NewValue(time.Unix(10, 0), float64(1))
+
+	pointsByKey2 := map[string]tsm1.Values{
+		"foo": values2,
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			e.Write(pointsByKey1, nil, nil)
+			wg.Done()
+		}()
+		wg.Add(1)
+		go func() {
+			e.Write(pointsByKey2, nil, nil)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+
+// Ensure the index won't compact files that would cause the
+// resulting file to be larger than the max file size
+func TestEngine_IndexFileSizeLimitedDuringCompaction(t *testing.T) {
+	e := OpenDefaultEngine()
+	defer e.Close()
+
+	e.RotateFileSize = 10
+	e.MaxFileSize = 100
+	e.MaxPointsPerBlock = 3
+
+	p1 := parsePoint("cpu,host=A value=1.1 1000000000")
+	p2 := parsePoint("cpu,host=A value=1.2 2000000000")
+	p3 := parsePoint("cpu,host=A value=1.3 3000000000")
+	p4 := parsePoint("cpu,host=A value=1.5 4000000000")
+	p5 := parsePoint("cpu,host=A value=1.6 5000000000")
+	p6 := parsePoint("cpu,host=B value=2.1 2000000000")
+
+	if err := e.WritePoints([]models.Point{p1, p2}, nil, nil); err != nil {
+		t.Fatalf("failed to write points: %s", err.Error())
+	}
+	if err := e.WritePoints([]models.Point{p3}, nil, nil); err != nil {
+		t.Fatalf("failed to write points: %s", err.Error())
+	}
+
+	if err := e.WritePoints([]models.Point{p4, p5, p6}, nil, nil); err != nil {
+		t.Fatalf("failed to write points: %s", err.Error())
+	}
+
+	if count := e.DataFileCount(); count != 3 {
+		t.Fatalf("execpted 3 data file but got %d", count)
+	}
+
+	if err := checkPoints(e, "cpu,host=A", []models.Point{p1, p2, p3, p4, p5}); err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := checkPoints(e, "cpu,host=B", []models.Point{p6}); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if err := e.Compact(true); err != nil {
+		t.Fatalf("error compacting: %s", err.Error())
+	}
+
+	if err := checkPoints(e, "cpu,host=A", []models.Point{p1, p2, p3, p4, p5}); err != nil {
+		t.Fatal(err.Error())
+	}
+	if err := checkPoints(e, "cpu,host=B", []models.Point{p6}); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if count := e.DataFileCount(); count != 2 {
+		t.Fatalf("expected 1 data file but got %d", count)
+	}
+}
+
+// Ensure the index will split a large data file in two if a write
+// will cause the resulting data file to be larger than the max file
+// size limit
+func TestEngine_IndexFilesSplitOnWriteToLargeFile(t *testing.T) {
+}
+
+// checkPoints will ensure that the engine has the points passed in the block
+// along with checking that seeks in the middle work and an EOF is hit at the end
+func checkPoints(e *Engine, key string, points []models.Point) error {
+	tx, _ := e.Begin(false)
+	defer tx.Rollback()
+	c := tx.Cursor(key, []string{"value"}, nil, true)
+	k, v := c.SeekTo(0)
+	if k != points[0].UnixNano() {
+		return fmt.Errorf("wrong time:\n\texp: %d\n\tgot: %d", points[0].UnixNano(), k)
+	}
+	if got := points[0].Fields()["value"]; v != got {
+		return fmt.Errorf("wrong value:\n\texp: %v\n\tgot: %v", v, got)
+	}
+	points = points[1:]
+	for _, p := range points {
+		k, v = c.Next()
+		if k != p.UnixNano() {
+			return fmt.Errorf("wrong time:\n\texp: %d\n\tgot: %d", p.UnixNano(), k)
+		}
+		if got := p.Fields()["value"]; v != got {
+			return fmt.Errorf("wrong value:\n\texp: %v\n\tgot: %v", v, got)
+		}
+	}
+	k, _ = c.Next()
+	if k != tsdb.EOF {
+		return fmt.Errorf("expected EOF but got: %d", k)
+	}
+
+	// TODO: seek tests
+
+	return nil
 }
 
 // Engine represents a test wrapper for tsm1.Engine.

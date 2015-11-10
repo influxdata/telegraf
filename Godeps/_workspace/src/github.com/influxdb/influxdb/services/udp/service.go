@@ -18,18 +18,23 @@ import (
 )
 
 const (
+	// Maximum UDP packet size
+	// see https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 	UDPBufferSize = 65536
+
+	// Arbitrary, testing indicated that this doesn't typically get over 10
+	parserChanLen = 1000
 )
 
 // statistics gathered by the UDP package.
 const (
-	statPointsReceived      = "points_rx"
-	statBytesReceived       = "bytes_rx"
-	statPointsParseFail     = "points_parse_fail"
-	statReadFail            = "read_fail"
-	statBatchesTrasmitted   = "batches_tx"
-	statPointsTransmitted   = "points_tx"
-	statBatchesTransmitFail = "batches_tx_fail"
+	statPointsReceived      = "pointsRx"
+	statBytesReceived       = "bytesRx"
+	statPointsParseFail     = "pointsParseFail"
+	statReadFail            = "readFail"
+	statBatchesTrasmitted   = "batchesTx"
+	statPointsTransmitted   = "pointsTx"
+	statBatchesTransmitFail = "batchesTxFail"
 )
 
 //
@@ -43,8 +48,9 @@ type Service struct {
 	wg   sync.WaitGroup
 	done chan struct{}
 
-	batcher *tsdb.PointBatcher
-	config  Config
+	parserChan chan []byte
+	batcher    *tsdb.PointBatcher
+	config     Config
 
 	PointsWriter interface {
 		WritePoints(p *cluster.WritePointsRequest) error
@@ -61,10 +67,11 @@ type Service struct {
 func NewService(c Config) *Service {
 	d := *c.WithDefaults()
 	return &Service{
-		config:  d,
-		done:    make(chan struct{}),
-		batcher: tsdb.NewPointBatcher(d.BatchSize, d.BatchPending, time.Duration(d.BatchTimeout)),
-		Logger:  log.New(os.Stderr, "[udp] ", log.LstdFlags),
+		config:     d,
+		done:       make(chan struct{}),
+		parserChan: make(chan []byte, parserChanLen),
+		batcher:    tsdb.NewPointBatcher(d.BatchSize, d.BatchPending, time.Duration(d.BatchTimeout)),
+		Logger:     log.New(os.Stderr, "[udp] ", log.LstdFlags),
 	}
 }
 
@@ -98,16 +105,26 @@ func (s *Service) Open() (err error) {
 		return err
 	}
 
+	if s.config.ReadBuffer != 0 {
+		err = s.conn.SetReadBuffer(s.config.ReadBuffer)
+		if err != nil {
+			s.Logger.Printf("Failed to set UDP read buffer to %d: %s",
+				s.config.ReadBuffer, err)
+			return err
+		}
+	}
+
 	s.Logger.Printf("Started listening on UDP: %s", s.config.BindAddress)
 
-	s.wg.Add(2)
+	s.wg.Add(3)
 	go s.serve()
-	go s.writePoints()
+	go s.parser()
+	go s.writer()
 
 	return nil
 }
 
-func (s *Service) writePoints() {
+func (s *Service) writer() {
 	defer s.wg.Done()
 
 	for {
@@ -137,7 +154,6 @@ func (s *Service) serve() {
 
 	s.batcher.Start()
 	for {
-		buf := make([]byte, UDPBufferSize)
 
 		select {
 		case <-s.done:
@@ -145,27 +161,39 @@ func (s *Service) serve() {
 			return
 		default:
 			// Keep processing.
+			buf := make([]byte, UDPBufferSize)
+			n, _, err := s.conn.ReadFromUDP(buf)
+			if err != nil {
+				s.statMap.Add(statReadFail, 1)
+				s.Logger.Printf("Failed to read UDP message: %s", err)
+				continue
+			}
+			s.statMap.Add(statBytesReceived, int64(n))
+			s.parserChan <- buf[:n]
 		}
+	}
+}
 
-		n, _, err := s.conn.ReadFromUDP(buf)
-		if err != nil {
-			s.statMap.Add(statReadFail, 1)
-			s.Logger.Printf("Failed to read UDP message: %s", err)
-			continue
-		}
-		s.statMap.Add(statBytesReceived, int64(n))
+func (s *Service) parser() {
+	defer s.wg.Done()
 
-		points, err := models.ParsePoints(buf[:n])
-		if err != nil {
-			s.statMap.Add(statPointsParseFail, 1)
-			s.Logger.Printf("Failed to parse points: %s", err)
-			continue
-		}
+	for {
+		select {
+		case <-s.done:
+			return
+		case buf := <-s.parserChan:
+			points, err := models.ParsePoints(buf)
+			if err != nil {
+				s.statMap.Add(statPointsParseFail, 1)
+				s.Logger.Printf("Failed to parse points: %s", err)
+				return
+			}
 
-		for _, point := range points {
-			s.batcher.In() <- point
+			for _, point := range points {
+				s.batcher.In() <- point
+			}
+			s.statMap.Add(statPointsReceived, int64(len(points)))
 		}
-		s.statMap.Add(statPointsReceived, int64(len(points)))
 	}
 }
 

@@ -7,17 +7,36 @@ import (
 )
 
 const (
+	// DefaultBindAddress is the default binding interface if none is specified.
+	DefaultBindAddress = ":8089"
+
 	// DefaultDatabase is the default database for UDP traffic.
 	DefaultDatabase = "udp"
 
+	// DefaultRetentionPolicy is the default retention policy used for writes.
+	DefaultRetentionPolicy = ""
+
 	// DefaultBatchSize is the default UDP batch size.
-	DefaultBatchSize = 1000
+	DefaultBatchSize = 5000
 
 	// DefaultBatchPending is the default number of pending UDP batches.
-	DefaultBatchPending = 5
+	DefaultBatchPending = 10
 
 	// DefaultBatchTimeout is the default UDP batch timeout.
 	DefaultBatchTimeout = time.Second
+
+	// DefaultReadBuffer is the default buffer size for the UDP listener.
+	// Sets the size of the operating system's receive buffer associated with
+	// the UDP traffic. Keep in mind that the OS must be able
+	// to handle the number set here or the UDP listener will error and exit.
+	//
+	// DefaultReadBuffer = 0 means to use the OS default, which is usually too
+	// small for high UDP performance.
+	//
+	// Increasing OS buffer limits:
+	//     Linux:      sudo sysctl -w net.core.rmem_max=<read-buffer>
+	//     BSD/Darwin: sudo sysctl -w kern.ipc.maxsockbuf=<read-buffer>
+	DefaultReadBuffer = 0
 )
 
 type Config struct {
@@ -28,7 +47,19 @@ type Config struct {
 	RetentionPolicy string        `toml:"retention-policy"`
 	BatchSize       int           `toml:"batch-size"`
 	BatchPending    int           `toml:"batch-pending"`
+	ReadBuffer      int           `toml:"read-buffer"`
 	BatchTimeout    toml.Duration `toml:"batch-timeout"`
+}
+
+func NewConfig() Config {
+	return Config{
+		BindAddress:     DefaultBindAddress,
+		Database:        DefaultDatabase,
+		RetentionPolicy: DefaultRetentionPolicy,
+		BatchSize:       DefaultBatchSize,
+		BatchPending:    DefaultBatchPending,
+		BatchTimeout:    toml.Duration(DefaultBatchTimeout),
+	}
 }
 
 // WithDefaults takes the given config and returns a new config with any required
@@ -46,6 +77,9 @@ func (c *Config) WithDefaults() *Config {
 	}
 	if d.BatchTimeout == 0 {
 		d.BatchTimeout = toml.Duration(DefaultBatchTimeout)
+	}
+	if d.ReadBuffer == 0 {
+		d.ReadBuffer = DefaultReadBuffer
 	}
 	return &d
 }

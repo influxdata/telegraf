@@ -234,6 +234,7 @@ func (q *QueryExecutor) ExecuteQuery(query *influxql.Query, database string, chu
 
 // Plan creates an execution plan for the given SelectStatement and returns an Executor.
 func (q *QueryExecutor) PlanSelect(stmt *influxql.SelectStatement, chunkSize int) (Executor, error) {
+	var shardIDs []uint64
 	shards := map[uint64]meta.ShardInfo{} // Shards requiring mappers.
 
 	// It is important to "stamp" this time so that everywhere we evaluate `now()` in the statement is EXACTLY the same `now`
@@ -263,14 +264,22 @@ func (q *QueryExecutor) PlanSelect(stmt *influxql.SelectStatement, chunkSize int
 		}
 		for _, g := range shardGroups {
 			for _, sh := range g.Shards {
-				shards[sh.ID] = sh
+				if _, ok := shards[sh.ID]; !ok {
+					shards[sh.ID] = sh
+					shardIDs = append(shardIDs, sh.ID)
+				}
 			}
 		}
 	}
 
+	// Sort shard IDs to make testing deterministic.
+	sort.Sort(uint64Slice(shardIDs))
+
 	// Build the Mappers, one per shard.
 	mappers := []Mapper{}
-	for _, sh := range shards {
+	for _, shardID := range shardIDs {
+		sh := shards[shardID]
+
 		m, err := q.ShardMapper.CreateMapper(sh, stmt, chunkSize)
 		if err != nil {
 			return nil, err
@@ -282,8 +291,16 @@ func (q *QueryExecutor) PlanSelect(stmt *influxql.SelectStatement, chunkSize int
 		mappers = append(mappers, m)
 	}
 
-	executor := NewSelectExecutor(stmt, mappers, chunkSize)
-	return executor, nil
+	// Certain operations on the SELECT statement can be performed by the AggregateExecutor without
+	// assistance from the Mappers. This allows the AggregateExecutor to prepare aggregation functions
+	// and mathematical functions.
+	stmt.RewriteDistinct()
+
+	if (stmt.IsRawQuery && !stmt.HasDistinct()) || stmt.IsSimpleDerivative() {
+		return NewRawExecutor(stmt, mappers, chunkSize), nil
+	} else {
+		return NewAggregateExecutor(stmt, mappers), nil
+	}
 }
 
 // expandSources expands regex sources and removes duplicates.
@@ -353,6 +370,9 @@ func (q *QueryExecutor) executeDropDatabaseStatement(stmt *influxql.DropDatabase
 	if err != nil {
 		return &influxql.Result{Err: err}
 	} else if dbi == nil {
+		if stmt.IfExists {
+			return &influxql.Result{}
+		}
 		return &influxql.Result{Err: ErrDatabaseNotFound(stmt.Name)}
 	}
 
@@ -365,12 +385,17 @@ func (q *QueryExecutor) executeDropDatabaseStatement(stmt *influxql.DropDatabase
 		}
 	}
 
+	// Remove database from meta-store first so that in-flight writes can complete without error, but new ones will
+	// be rejected.
+	res := q.MetaStatementExecutor.ExecuteStatement(stmt)
+
+	// Remove the database from the local store
 	err = q.Store.DeleteDatabase(stmt.Name, shardIDs)
 	if err != nil {
 		return &influxql.Result{Err: err}
 	}
 
-	return q.MetaStatementExecutor.ExecuteStatement(stmt)
+	return res
 }
 
 // executeDropMeasurementStatement removes the measurement and all series data from the local store for the given measurement
@@ -1023,3 +1048,9 @@ var (
 func ErrDatabaseNotFound(name string) error { return fmt.Errorf("database not found: %s", name) }
 
 func ErrMeasurementNotFound(name string) error { return fmt.Errorf("measurement not found: %s", name) }
+
+type uint64Slice []uint64
+
+func (a uint64Slice) Len() int           { return len(a) }
+func (a uint64Slice) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a uint64Slice) Less(i, j int) bool { return a[i] < a[j] }
