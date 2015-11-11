@@ -70,47 +70,31 @@ func TestBadStatusCode(t *testing.T) {
 }
 
 func TestBuildGauge(t *testing.T) {
-	tags := make(map[string]string)
 	var gaugeTests = []struct {
 		ptIn     *client.Point
 		outGauge *Gauge
 		err      error
 	}{
 		{
-			client.NewPoint(
-				"test1",
-				tags,
-				map[string]interface{}{"value": 0.0},
-				time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(0.0, "test1"),
 			&Gauge{
 				Name:        "test1",
-				MeasureTime: time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       0.0,
 			},
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test2",
-				tags,
-				map[string]interface{}{"value": 1.0},
-				time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(1.0, "test2"),
 			&Gauge{
 				Name:        "test2",
-				MeasureTime: time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       1.0,
 			},
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test3",
-				tags,
-				map[string]interface{}{"value": 10},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(10, "test3"),
 			&Gauge{
 				Name:        "test3",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -119,12 +103,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test4",
-				tags,
-				map[string]interface{}{"value": int32(112345)},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(int32(112345), "test4"),
 			&Gauge{
 				Name:        "test4",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -133,12 +112,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test5",
-				tags,
-				map[string]interface{}{"value": int64(112345)},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(int64(112345), "test5"),
 			&Gauge{
 				Name:        "test5",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -147,12 +121,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test6",
-				tags,
-				map[string]interface{}{"value": float32(11234.5)},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(float32(11234.5), "test6"),
 			&Gauge{
 				Name:        "test6",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -161,12 +130,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test7",
-				tags,
-				map[string]interface{}{"value": "11234.5"},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint("11234.5", "test7"),
 			&Gauge{
 				Name:        "test7",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -192,18 +156,26 @@ func TestBuildGauge(t *testing.T) {
 }
 
 func TestBuildGaugeWithSource(t *testing.T) {
+	pt1, _ := client.NewPoint(
+		"test1",
+		map[string]string{"hostname": "192.168.0.1"},
+		map[string]interface{}{"value": 0.0},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	pt2, _ := client.NewPoint(
+		"test2",
+		map[string]string{"hostnam": "192.168.0.1"},
+		map[string]interface{}{"value": 1.0},
+		time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
+	)
 	var gaugeTests = []struct {
 		ptIn     *client.Point
 		outGauge *Gauge
 		err      error
 	}{
+
 		{
-			client.NewPoint(
-				"test1",
-				map[string]string{"hostname": "192.168.0.1"},
-				map[string]interface{}{"value": 0.0},
-				time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			pt1,
 			&Gauge{
 				Name:        "test1",
 				MeasureTime: time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -213,12 +185,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test2",
-				map[string]string{"hostnam": "192.168.0.1"},
-				map[string]interface{}{"value": 1.0},
-				time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
-			),
+			pt2,
 			&Gauge{
 				Name:        "test2",
 				MeasureTime: time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix(),
