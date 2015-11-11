@@ -114,7 +114,7 @@ const defaultPort = "6379"
 func (r *Redis) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 	_, _, err := net.SplitHostPort(addr.Host)
 	if err != nil {
-		addr.Host = net.JoinHostPort(addr.Host, defaultPort)
+		addr.Host = addr.Host + ":" + defaultPort
 	}
 
 	c, err := net.Dial("tcp", addr.Host)
