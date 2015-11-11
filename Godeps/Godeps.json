@@ -26,6 +26,11 @@
 			"Rev": "9c060de643590dae45da9d7c26276463bfc46fa0"
 		},
 		{
+			"ImportPath": "github.com/alexzorin/libvirt-go",
+			"Comment": "v2.12.0",
+			"Rev": "66d8e5e3d8594066da97a9502693a47ab2a35469"
+		},
+		{
 			"ImportPath": "github.com/armon/go-metrics",
 			"Rev": "b2d95e5291cdbc26997d1301a5e467ecbb240e25"
 		},
@@ -124,12 +129,22 @@
 			"Rev": "fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a"
 		},
 		{
+			"ImportPath": "github.com/mreiferson/go-snappystream",
+			"Comment": "v0.2.3",
+			"Rev": "028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504"
+		},
+		{
 			"ImportPath": "github.com/naoina/go-stringutil",
 			"Rev": "360db0db4b01d34e12a2ec042c09e7d37fece761"
 		},
 		{
 			"ImportPath": "github.com/naoina/toml",
 			"Rev": "5811abcabb29d6af0fdf060f96d328962bd3cd5e"
+		},
+		{
+			"ImportPath": "github.com/nsqio/go-nsq",
+			"Comment": "v1.0.5-6-g2118015",
+			"Rev": "2118015c120962edc5d03325c680daf3163a8b5f"
 		},
 		{
 			"ImportPath": "github.com/pborman/uuid",
@@ -271,16 +286,6 @@
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
 			"Rev": "7ad95dd0798a40da1ccdff6dff35fd177b5edf40"
-		},
-		{
-			"ImportPath": "github.com/mreiferson/go-snappystream",
-			"Comment": "v0.2.3",
-			"Rev": "028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504"
-		},
-		{
-			"ImportPath": "github.com/nsqio/go-nsq",
-			"Comment": "v1.0.5-6-g2118015",
-			"Rev": "2118015c120962edc5d03325c680daf3163a8b5f"
 		}
 	]
 }
