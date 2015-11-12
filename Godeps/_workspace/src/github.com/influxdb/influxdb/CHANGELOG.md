@@ -2,6 +2,7 @@
 
 ### Release Notes
 - Field names for the internal stats have been changed to be more inline with Go style.
+- 0.9.5 is reverting to Go 1.4.2 due to unresolved issues with Go 1.5.1.
 
 ### Features
 - [#4098](https://github.com/influxdb/influxdb/pull/4702): Support 'history' command at CLI
@@ -35,6 +36,7 @@
 - [#4721](https://github.com/influxdb/influxdb/pull/4721): Export tsdb.InterfaceValues
 - [#4681](https://github.com/influxdb/influxdb/pull/4681): Increase default buffer size for collectd and graphite listeners
 - [#4659](https://github.com/influxdb/influxdb/pull/4659): Support IF EXISTS for DROP DATABASE
+- [#4685](https://github.com/influxdb/influxdb/pull/4685): Automatically promote node to raft peer if drop server results in removing a raft peer.
 
 ### Bugfixes
 - [#4715](https://github.com/influxdb/influxdb/pull/4715): Fix panic during Raft-close. Fix [issue #4707](https://github.com/influxdb/influxdb/issues/4707). Thanks @oiooj
@@ -110,7 +112,8 @@
 - [#4651](https://github.com/influxdb/influxdb/issues/4651): Importer doesn't flush out last batch
 - [#4602](https://github.com/influxdb/influxdb/issues/4602): Fixes data race between PointsWriter and Subscriber services.
 - [#4691](https://github.com/influxdb/influxdb/issues/4691): Enable toml test `TestConfig_Encode`.
-- [#4684](https://github.com/influxdb/influxdb/pull/4684): Add Graphite and UDP section to default config. Thanks @nkatsaros
+- [#4283](https://github.com/influxdb/influxdb/pull/4283): Disable HintedHandoff if configuration is not set.
+- [#4703](https://github.com/influxdb/influxdb/pull/4703): Complete lint for cmd/influx. Thanks @pablolmiranda
 
 ## v0.9.4 [2015-09-14]
 

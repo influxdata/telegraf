@@ -69,10 +69,8 @@ func NewConfig() *Config {
 	c.Monitor = monitor.NewConfig()
 	c.Subscriber = subscriber.NewConfig()
 	c.HTTPD = httpd.NewConfig()
-	c.Graphites = []graphite.Config{graphite.NewConfig()}
 	c.Collectd = collectd.NewConfig()
 	c.OpenTSDB = opentsdb.NewConfig()
-	c.UDPs = []udp.Config{udp.NewConfig()}
 
 	c.ContinuousQuery = continuous_querier.NewConfig()
 	c.Retention = retention.NewConfig()
@@ -101,6 +99,7 @@ func NewDemoConfig() (*Config, error) {
 	c.HintedHandoff.Dir = filepath.Join(homeDir, ".influxdb/hh")
 	c.Data.WALDir = filepath.Join(homeDir, ".influxdb/wal")
 
+	c.HintedHandoff.Enabled = true
 	c.Admin.Enabled = true
 
 	return c, nil
@@ -110,7 +109,7 @@ func NewDemoConfig() (*Config, error) {
 func (c *Config) Validate() error {
 	if c.Meta.Dir == "" {
 		return errors.New("Meta.Dir must be specified")
-	} else if c.HintedHandoff.Dir == "" {
+	} else if c.HintedHandoff.Enabled && c.HintedHandoff.Dir == "" {
 		return errors.New("HintedHandoff.Dir must be specified")
 	}
 
@@ -126,6 +125,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// ApplyEnvOverrides apply the environment configuration on top of the config.
 func (c *Config) ApplyEnvOverrides() error {
 	return c.applyEnvOverrides("INFLUXDB", reflect.ValueOf(c))
 }

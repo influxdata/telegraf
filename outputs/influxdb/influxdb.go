@@ -66,6 +66,11 @@ func (i *InfluxDB) Connect() error {
 	for _, u := range urls {
 		switch {
 		case strings.HasPrefix(u, "udp"):
+			parsed_url, err := url.Parse(u)
+			if err != nil {
+				return err
+			}
+
 			if i.UDPPayload == 0 {
 				i.UDPPayload = client.UDPPayloadSize
 			}
@@ -80,7 +85,7 @@ func (i *InfluxDB) Connect() error {
 		default:
 			// If URL doesn't start with "udp", assume HTTP client
 			c, err := client.NewHTTPClient(client.HTTPConfig{
-				Addr:      parsed_url.String(),
+				Addr:      u,
 				Username:  i.Username,
 				Password:  i.Password,
 				UserAgent: i.UserAgent,
