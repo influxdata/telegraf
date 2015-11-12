@@ -129,7 +129,7 @@ func (g *phpfpm) gatherServer(addr string, acc plugins.Accumulator) error {
 			}
 			socketAddr := strings.Split(u.Host, ":")
 			fcgiIp := socketAddr[0]
-			fcgiPort := strconv.Atoi(socketAddr[1])
+			fcgiPort,_ := strconv.Atoi(socketAddr[1])
 			fcgiAddr = u.Host
 			fcgi, _ = NewClient(fcgiIp, fcgiPort)
 		} else {
