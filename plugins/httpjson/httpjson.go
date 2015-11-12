@@ -64,8 +64,8 @@ var sampleConfig = `
 
     # List of tag names to extract from top-level of JSON server response
     # tag_keys = [
-    # 	"my_tag_1",
-    # 	"my_tag_2"
+    #   "my_tag_1",
+    #   "my_tag_2"
     # ]
 
     # HTTP parameters (all values must be strings)

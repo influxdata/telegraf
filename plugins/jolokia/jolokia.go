@@ -47,22 +47,22 @@ type Jolokia struct {
 
 func (j *Jolokia) SampleConfig() string {
 	return `
-	# This is the context root used to compose the jolokia url
+  # This is the context root used to compose the jolokia url
   context = "/jolokia/read"
 
-	# Tags added to each measurements
-	[jolokia.tags]
-		group = "as"
+  # Tags added to each measurements
+  [jolokia.tags]
+    group = "as"
 
-	# List of servers exposing jolokia read service
+  # List of servers exposing jolokia read service
   [[jolokia.servers]]
     name = "stable"
     host = "192.168.103.2"
     port = "8180"
 
-	# List of metrics collected on above servers
-	# Each metric consists in a name, a jmx path and either a pass or drop slice attributes
-	# This collect all heap memory usage metrics
+  # List of metrics collected on above servers
+  # Each metric consists in a name, a jmx path and either a pass or drop slice attributes
+  # This collect all heap memory usage metrics
   [[jolokia.metrics]]
     name = "heap_memory_usage"
     jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
@@ -75,14 +75,14 @@ func (j *Jolokia) SampleConfig() string {
     drop = [ "committed" ]
 
 
-	# This passes only DaemonThreadCount and ThreadCount
+  # This passes only DaemonThreadCount and ThreadCount
   [[jolokia.metrics]]
-		name = "heap_threads"
+    name = "heap_threads"
     jmx  = "/java.lang:type=Threading"
     pass = [
-			"DaemonThreadCount",
-			"ThreadCount"
-		]
+      "DaemonThreadCount",
+      "ThreadCount"
+    ]
 `
 }
 
