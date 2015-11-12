@@ -42,13 +42,16 @@ var sampleConfig = `
   # An array of addresses to gather stats about. Specify an ip or hostname
   # with optional port and path.
   #
-  # Plugin can be configured in two modes (both can be used):
+  # Plugin can be configured in three modes (both can be used):
   #   - http: the URL must start with http:// or https://, ex:
   #       "http://localhost/status"
   #       "http://192.168.130.1/status?full"
   #   - unixsocket: path to fpm socket, ex:
   #       "/var/run/php5-fpm.sock"
   #       "192.168.10.10:/var/run/php5-fpm-www2.sock"
+  #   - fcgi: the URL mush start with fcgi:// or cgi://, and port must present, ex:
+  #       "fcgi://10.0.0.12:9000/status"
+  #       "cgi://10.0.10.12:9001/status"
   #
   # If no servers are specified, then default to 127.0.0.1/server-status
   urls = ["http://localhost/status"]
@@ -115,9 +118,25 @@ func (g *phpfpm) gatherServer(addr string, acc plugins.Accumulator) error {
 
 		importMetric(res.Body, acc, u.Host)
 	} else {
-		socketAddr := strings.Split(addr, ":")
-
-		fcgi, _ := NewClient("unix", socketAddr[1])
+		var (
+			fcgi     *FCGIClient
+			fcgiAddr string
+		)
+		if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
+			u, err := url.Parse(addr)
+			if err != nil {
+				return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
+			}
+			socketAddr := strings.Split(u.Host, ":")
+			fcgiIp := socketAddr[0]
+			fcgiPort, _ := strconv.Atoi(socketAddr[1])
+			fcgiAddr = u.Host
+			fcgi, _ = NewClient(fcgiIp, fcgiPort)
+		} else {
+			socketAddr := strings.Split(addr, ":")
+			fcgiAddr = socketAddr[0]
+			fcgi, _ = NewClient("unix", socketAddr[1])
+		}
 		resOut, resErr, err := fcgi.Request(map[string]string{
 			"SCRIPT_NAME":     "/status",
 			"SCRIPT_FILENAME": "status",
@@ -125,7 +144,7 @@ func (g *phpfpm) gatherServer(addr string, acc plugins.Accumulator) error {
 		}, "")
 
 		if len(resErr) == 0 && err == nil {
-			importMetric(bytes.NewReader(resOut), acc, socketAddr[0])
+			importMetric(bytes.NewReader(resOut), acc, fcgiAddr)
 		}
 
 	}
