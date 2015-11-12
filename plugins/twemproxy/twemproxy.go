@@ -17,18 +17,16 @@ type Twemproxy struct {
 }
 
 type TwemproxyInstance struct {
-	StatsAddr string
-	Pools     []string
+	Addr  string
+	Pools []string
 }
 
 var sampleConfig = `
-  # Twemproxy plugin config
-  [twemproxy]
-    [[twemproxy.instances]]
-      # Twemproxy stats address and port(NO scheme!)
-      statsAddr = "10.16.29.1:22222"
-      # Monitor pool name
-      pools = ["redis_pool", "mc_pool"]
+  [[twemproxy.instances]]
+    # Twemproxy stats address and port (no scheme)
+    addr = "localhost:22222"
+    # Monitor pool name
+    pools = ["redis_pool", "mc_pool"]
 `
 
 func (t *Twemproxy) SampleConfig() string {
@@ -69,7 +67,7 @@ func (t *Twemproxy) Gather(acc plugins.Accumulator) error {
 func (ti *TwemproxyInstance) Gather(
 	acc plugins.Accumulator,
 ) error {
-	conn, err := net.DialTimeout("tcp", ti.StatsAddr, 1*time.Second)
+	conn, err := net.DialTimeout("tcp", ti.Addr, 1*time.Second)
 	if err != nil {
 		return err
 	}
@@ -84,7 +82,7 @@ func (ti *TwemproxyInstance) Gather(
 	}
 
 	tags := make(map[string]string)
-	tags["twemproxy"] = ti.StatsAddr
+	tags["twemproxy"] = ti.Addr
 	ti.processStat(acc, tags, stats)
 
 	return nil

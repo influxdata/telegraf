@@ -1,16 +1,16 @@
 package twemproxy
 
 import (
+	"encoding/json"
 	"net"
 	"testing"
-	"encoding/json"
 
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const sampleStatsAddr = "127.0.0.1:22222"
+const sampleAddr = "127.0.0.1:22222"
 
 const sampleStats = `{
   "total_connections": 276448,
@@ -61,7 +61,7 @@ const sampleStats = `{
 }`
 
 func mockTwemproxyServer() (net.Listener, error) {
-	listener, err := net.Listen("tcp", sampleStatsAddr)
+	listener, err := net.Listen("tcp", sampleAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,8 @@ func TestGather(t *testing.T) {
 	twemproxy := &Twemproxy{
 		Instances: []TwemproxyInstance{
 			TwemproxyInstance{
-				StatsAddr: sampleStatsAddr,
-				Pools:     []string{"demo"},
+				Addr:  sampleAddr,
+				Pools: []string{"demo"},
 			},
 		},
 	}
@@ -104,7 +104,7 @@ func TestGather(t *testing.T) {
 
 	metrics := []string{"total_connections", "curr_connections", "timestamp"}
 	tags := map[string]string{
-		"twemproxy": sampleStatsAddr,
+		"twemproxy": sampleAddr,
 		"source":    sourceData["source"].(string),
 	}
 	for _, m := range metrics {
