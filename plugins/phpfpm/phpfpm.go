@@ -123,7 +123,7 @@ func (g *phpfpm) gatherServer(addr string, acc plugins.Accumulator) error {
 			fcgiAddr string
 		)
 		if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
-			u, err := url.Parge(addr)
+			u, err := url.Parse(addr)
 			if err != nil {
 				return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
 			}
