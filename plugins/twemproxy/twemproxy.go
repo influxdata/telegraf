@@ -22,13 +22,11 @@ type TwemproxyInstance struct {
 }
 
 var sampleConfig = `
-  # Twemproxy plugin config
-  [twemproxy]
-    [[twemproxy.instances]]
-      # Twemproxy stats address and port(NO scheme!)
-      addr = "10.16.29.1:22222"
-      # Monitor pool name
-      pools = ["redis_pool", "mc_pool"]
+  [[twemproxy.instances]]
+    # Twemproxy stats address and port (no scheme)
+    addr = "10.16.29.1:22222"
+    # Monitor pool name
+    pools = ["redis_pool", "mc_pool"]
 `
 
 func (t *Twemproxy) SampleConfig() string {
