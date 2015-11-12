@@ -92,6 +92,10 @@ func (ac *accumulator) AddFields(
 		timestamp = time.Now()
 	}
 
+	if ac.prefix != "" {
+		measurement = ac.prefix + measurement
+	}
+
 	if ac.plugin != nil {
 		if !ac.plugin.ShouldPass(measurement, tags) {
 			return
@@ -102,10 +106,6 @@ func (ac *accumulator) AddFields(
 		if _, ok := tags[k]; !ok {
 			tags[k] = v
 		}
-	}
-
-	if ac.prefix != "" {
-		measurement = ac.prefix + measurement
 	}
 
 	pt, err := client.NewPoint(measurement, tags, fields, timestamp)
