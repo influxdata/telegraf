@@ -27,5 +27,6 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/rethinkdb"
 	_ "github.com/influxdb/telegraf/plugins/statsd"
 	_ "github.com/influxdb/telegraf/plugins/system"
+	_ "github.com/influxdb/telegraf/plugins/twemproxy"
 	_ "github.com/influxdb/telegraf/plugins/zookeeper"
 )
