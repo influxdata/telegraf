@@ -1,9 +1,9 @@
 package twemproxy
 
 import (
+	"encoding/json"
 	"net"
 	"testing"
-	"encoding/json"
 
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
