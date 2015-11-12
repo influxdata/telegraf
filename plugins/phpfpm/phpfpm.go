@@ -118,25 +118,25 @@ func (g *phpfpm) gatherServer(addr string, acc plugins.Accumulator) error {
 
 		importMetric(res.Body, acc, u.Host)
 	} else {
-        var (
-            fcgi *FCGIClient
-            fcgiAddr string
-        )
-        if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
-            u, err := url.Parge(addr)
-		    if err != nil {
-			    return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
-		    }
-            socketAddr := strings.Split(u.Host,":")
-            fcgiIp := socketAddr[0]
-            fcgiPort := strconv.Atoi(socketAddr[1])
-            fcgiAddr = u.Host
-            fcgi, _ = NewClient(fcgiIp,fcgiPort)
-        } else {
-		    socketAddr := strings.Split(addr, ":")
-            fcgiAddr = socketAddr[0]
-		    fcgi, _ = NewClient("unix", socketAddr[1])
-        }
+		var (
+			fcgi     *FCGIClient
+			fcgiAddr string
+		)
+		if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
+			u, err := url.Parge(addr)
+			if err != nil {
+				return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
+			}
+			socketAddr := strings.Split(u.Host, ":")
+			fcgiIp := socketAddr[0]
+			fcgiPort := strconv.Atoi(socketAddr[1])
+			fcgiAddr = u.Host
+			fcgi, _ = NewClient(fcgiIp, fcgiPort)
+		} else {
+			socketAddr := strings.Split(addr, ":")
+			fcgiAddr = socketAddr[0]
+			fcgi, _ = NewClient("unix", socketAddr[1])
+		}
 		resOut, resErr, err := fcgi.Request(map[string]string{
 			"SCRIPT_NAME":     "/status",
 			"SCRIPT_FILENAME": "status",
