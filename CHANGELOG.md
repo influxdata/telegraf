@@ -7,6 +7,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - Long unit tests are now run in CircleCI, with docker & race detector
 - Redis plugin tag has changed from `host` to `server`
 - HAProxy plugin tag has changed from `host` to `server`
+- UDP output now supported
 
 ### Features
 - [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!
@@ -15,6 +16,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - [#337](https://github.com/influxdb/telegraf/pull/337): Jolokia plugin, thanks @saiello!
 - [#350](https://github.com/influxdb/telegraf/pull/350): Amon output.
 - [#317](https://github.com/influxdb/telegraf/issues/317): ZFS plugin, thanks @cornerot!
+- [#364](https://github.com/influxdb/telegraf/pull/364): Support InfluxDB UDP output.
 
 ### Bugfixes
 - [#331](https://github.com/influxdb/telegraf/pull/331): Dont overwrite host tag in redis plugin.
