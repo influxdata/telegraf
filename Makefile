@@ -56,6 +56,7 @@ endif
 	docker run --name redis -p "6379:6379" -d redis
 	docker run --name aerospike -p "3000:3000" -d aerospike
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
+	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -67,11 +68,12 @@ docker-run-circle:
 	docker run --name opentsdb -p "4242:4242" -d petergrace/opentsdb-docker
 	docker run --name aerospike -p "3000:3000" -d aerospike
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
+	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka
-	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka
+	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt
+	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: docker-kill prepare docker-run
