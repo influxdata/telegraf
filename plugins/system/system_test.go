@@ -393,7 +393,7 @@ func assertContainsTaggedFloat(
 	for _, pt := range acc.Points {
 		if pt.Measurement == measurement {
 			if (tags == nil) || reflect.DeepEqual(pt.Tags, tags) {
-				if value, ok := pt.Values["value"].(float64); ok {
+				if value, ok := pt.Fields["value"].(float64); ok {
 					actualValue = value
 					if (value >= expectedValue-delta) && (value <= expectedValue+delta) {
 						// Found the point, return without failing

@@ -11,8 +11,12 @@ import (
 type Point struct {
 	Measurement string
 	Tags        map[string]string
-	Values      map[string]interface{}
+	Fields      map[string]interface{}
 	Time        time.Time
+}
+
+func (p *Point) String() string {
+	return fmt.Sprintf("%s %v", p.Measurement, p.Fields)
 }
 
 // Accumulator defines a mocked out accumulator
@@ -28,44 +32,40 @@ func (a *Accumulator) Add(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	a.Lock()
-	defer a.Unlock()
-	if tags == nil {
-		tags = map[string]string{}
-	}
-	a.Points = append(
-		a.Points,
-		&Point{
-			Measurement: measurement,
-			Values:      map[string]interface{}{"value": value},
-			Tags:        tags,
-		},
-	)
+	fields := map[string]interface{}{"value": value}
+	a.AddFields(measurement, fields, tags, t...)
 }
 
 // AddFields adds a measurement point with a specified timestamp.
 func (a *Accumulator) AddFields(
 	measurement string,
-	values map[string]interface{},
+	fields map[string]interface{},
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
 	a.Lock()
 	defer a.Unlock()
+	if tags == nil {
+		tags = map[string]string{}
+	}
+
 	var t time.Time
 	if len(timestamp) > 0 {
 		t = timestamp[0]
 	} else {
 		t = time.Now()
 	}
+
+	p := &Point{
+		Measurement: measurement,
+		Fields:      fields,
+		Tags:        tags,
+		Time:        t,
+	}
+
 	a.Points = append(
 		a.Points,
-		&Point{
-			Measurement: measurement,
-			Values:      values,
-			Tags:        tags,
-			Time:        t,
-		},
+		p,
 	)
 }
 
@@ -116,10 +116,16 @@ func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
 func (a *Accumulator) CheckFieldsValue(measurement string, fields map[string]interface{}) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			return reflect.DeepEqual(fields, p.Values)
+			if reflect.DeepEqual(fields, p.Fields) {
+				return true
+			} else {
+				fmt.Printf("Measurement %s Failure, expected: %v, got %v\n",
+					measurement, fields, p.Fields)
+				return false
+			}
 		}
 	}
-	fmt.Printf("CheckFieldsValue failed, measurement %s, fields %s", measurement, fields)
+	fmt.Printf("Measurement %s, fields %s not found\n", measurement, fields)
 	return false
 }
 
@@ -171,8 +177,8 @@ func (a *Accumulator) ValidateTaggedFieldsValue(
 		}
 
 		if p.Measurement == measurement {
-			if !reflect.DeepEqual(fields, p.Values) {
-				return fmt.Errorf("%v != %v ", fields, p.Values)
+			if !reflect.DeepEqual(fields, p.Fields) {
+				return fmt.Errorf("%v != %v ", fields, p.Fields)
 			}
 			return nil
 		}
@@ -203,9 +209,9 @@ func (a *Accumulator) ValidateTaggedFields(
 		}
 
 		if p.Measurement == measurement {
-			if !reflect.DeepEqual(fields, p.Values) {
+			if !reflect.DeepEqual(fields, p.Fields) {
 				return fmt.Errorf("%v (%T) != %v (%T)",
-					p.Values, p.Values, fields, fields)
+					p.Fields, p.Fields, fields, fields)
 			}
 			return nil
 		}
@@ -217,7 +223,7 @@ func (a *Accumulator) ValidateTaggedFields(
 func (a *Accumulator) HasIntValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			_, ok := p.Values["value"].(int64)
+			_, ok := p.Fields["value"].(int64)
 			return ok
 		}
 	}
@@ -229,7 +235,7 @@ func (a *Accumulator) HasIntValue(measurement string) bool {
 func (a *Accumulator) HasUIntValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			_, ok := p.Values["value"].(uint64)
+			_, ok := p.Fields["value"].(uint64)
 			return ok
 		}
 	}
@@ -241,7 +247,7 @@ func (a *Accumulator) HasUIntValue(measurement string) bool {
 func (a *Accumulator) HasFloatValue(measurement string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			_, ok := p.Values["value"].(float64)
+			_, ok := p.Fields["value"].(float64)
 			return ok
 		}
 	}
