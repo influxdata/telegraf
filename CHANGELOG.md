@@ -14,6 +14,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - [#338](https://github.com/influxdb/telegraf/pull/338): Restart Telegraf on package upgrade. Thanks @linsomniac!
 - [#337](https://github.com/influxdb/telegraf/pull/337): Jolokia plugin, thanks @saiello!
 - [#350](https://github.com/influxdb/telegraf/pull/350): Amon output.
+- [#365](https://github.com/influxdb/telegraf/pull/365): Twemproxy plugin by @codeb2cc
 - [#317](https://github.com/influxdb/telegraf/issues/317): ZFS plugin, thanks @cornerot!
 
 ### Bugfixes
