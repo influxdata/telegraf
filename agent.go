@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -147,17 +148,13 @@ func (a *Agent) Close() error {
 func (a *Agent) LoadOutputs(filters []string, config *Config) ([]string, error) {
 	var names []string
 
-	for _, name := range config.OutputsDeclared() {
-		creator, ok := outputs.Outputs[name]
-		if !ok {
-			return nil, fmt.Errorf("Undefined but requested output: %s", name)
-		}
-
-		if sliceContains(name, filters) || len(filters) == 0 {
+	for name, output := range config.OutputsDeclared() {
+		// Trim the ID off the output name for filtering
+		filtername := strings.TrimRight(name, "-0123456789")
+		if sliceContains(filtername, filters) || len(filters) == 0 {
 			if a.Debug {
 				log.Println("Output Enabled: ", name)
 			}
-			output := creator()
 
 			err := config.ApplyOutput(name, output)
 			if err != nil {
@@ -178,15 +175,8 @@ func (a *Agent) LoadOutputs(filters []string, config *Config) ([]string, error) 
 func (a *Agent) LoadPlugins(filters []string, config *Config) ([]string, error) {
 	var names []string
 
-	for _, name := range config.PluginsDeclared() {
-		creator, ok := plugins.Plugins[name]
-		if !ok {
-			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
-		}
-
+	for name, plugin := range config.PluginsDeclared() {
 		if sliceContains(name, filters) || len(filters) == 0 {
-			plugin := creator()
-
 			config, err := config.ApplyPlugin(name, plugin)
 			if err != nil {
 				return nil, err

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -20,8 +21,8 @@ import (
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	// This lives outside the agent because mergeStruct doesn't need to handle maps normally.
-	// We just copy the elements manually in ApplyAgent.
+	// This lives outside the agent because mergeStruct doesn't need to handle
+	// maps normally. We just copy the elements manually in ApplyAgent.
 	Tags map[string]string
 
 	agent                *Agent
@@ -156,23 +157,13 @@ func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, err
 // Couldn't figure out how to get this to work with the declared function.
 
 // PluginsDeclared returns the name of all plugins declared in the config.
-func (c *Config) PluginsDeclared() []string {
-	var names []string
-	for name := range c.plugins {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+func (c *Config) PluginsDeclared() map[string]plugins.Plugin {
+	return c.plugins
 }
 
 // OutputsDeclared returns the name of all outputs declared in the config.
-func (c *Config) OutputsDeclared() []string {
-	var names []string
-	for name := range c.outputs {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+func (c *Config) OutputsDeclared() map[string]outputs.Output {
+	return c.outputs
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -283,7 +274,7 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 		creator := outputs.Outputs[oname]
 		output := creator()
 
-		fmt.Printf("\n# %s\n[outputs.%s]", output.Description(), oname)
+		fmt.Printf("\n# %s\n[[outputs.%s]]", output.Description(), oname)
 
 		config := output.SampleConfig()
 		if config == "" {
@@ -394,20 +385,24 @@ func findField(fieldName string, value reflect.Value) reflect.Value {
 	return reflect.Value{}
 }
 
-// A very limited merge. Merges the fields named in the fields parameter, replacing most values, but appending to arrays.
+// A very limited merge. Merges the fields named in the fields parameter,
+// replacing most values, but appending to arrays.
 func mergeStruct(base, overlay interface{}, fields []string) error {
 	baseValue := reflect.ValueOf(base).Elem()
 	overlayValue := reflect.ValueOf(overlay).Elem()
 	if baseValue.Kind() != reflect.Struct {
-		return fmt.Errorf("Tried to merge something that wasn't a struct: type %v was %v", baseValue.Type(), baseValue.Kind())
+		return fmt.Errorf("Tried to merge something that wasn't a struct: type %v was %v",
+			baseValue.Type(), baseValue.Kind())
 	}
 	if baseValue.Type() != overlayValue.Type() {
-		return fmt.Errorf("Tried to merge two different types: %v and %v", baseValue.Type(), overlayValue.Type())
+		return fmt.Errorf("Tried to merge two different types: %v and %v",
+			baseValue.Type(), overlayValue.Type())
 	}
 	for _, field := range fields {
 		overlayFieldValue := findField(field, overlayValue)
 		if !overlayFieldValue.IsValid() {
-			return fmt.Errorf("could not find field in %v matching %v", overlayValue.Type(), field)
+			return fmt.Errorf("could not find field in %v matching %v",
+				overlayValue.Type(), field)
 		}
 		baseFieldValue := findField(field, baseValue)
 		if overlayFieldValue.Kind() == reflect.Slice {
@@ -519,34 +514,49 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	for name, val := range tbl.Fields {
-		subtbl, ok := val.(*ast.Table)
+		subTable, ok := val.(*ast.Table)
 		if !ok {
 			return nil, errors.New("invalid configuration")
 		}
 
 		switch name {
 		case "agent":
-			err := c.parseAgent(subtbl)
+			err := c.parseAgent(subTable)
 			if err != nil {
+				log.Printf("Could not parse [agent] config\n")
 				return nil, err
 			}
 		case "tags":
-			if err = toml.UnmarshalTable(subtbl, c.Tags); err != nil {
+			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
+				log.Printf("Could not parse [tags] config\n")
 				return nil, err
 			}
 		case "outputs":
-			for outputName, outputVal := range subtbl.Fields {
-				outputSubtbl, ok := outputVal.(*ast.Table)
-				if !ok {
-					return nil, err
-				}
-				err = c.parseOutput(outputName, outputSubtbl)
-				if err != nil {
-					return nil, err
+			for outputName, outputVal := range subTable.Fields {
+				switch outputSubTable := outputVal.(type) {
+				case *ast.Table:
+					err = c.parseOutput(outputName, outputSubTable, 0)
+					if err != nil {
+						log.Printf("Could not parse config for output: %s\n",
+							outputName)
+						return nil, err
+					}
+				case []*ast.Table:
+					for id, t := range outputSubTable {
+						err = c.parseOutput(outputName, t, id)
+						if err != nil {
+							log.Printf("Could not parse config for output: %s\n",
+								outputName)
+							return nil, err
+						}
+					}
+				default:
+					return nil, fmt.Errorf("Unsupported config format: %s",
+						outputName)
 				}
 			}
 		default:
-			err = c.parsePlugin(name, subtbl)
+			err = c.parsePlugin(name, subTable)
 			if err != nil {
 				return nil, err
 			}
@@ -579,7 +589,7 @@ func (c *Config) parseAgent(agentAst *ast.Table) error {
 }
 
 // Parse an output config out of the given *ast.Table.
-func (c *Config) parseOutput(name string, outputAst *ast.Table) error {
+func (c *Config) parseOutput(name string, outputAst *ast.Table, id int) error {
 	c.outputFieldsSet[name] = extractFieldNames(outputAst)
 	creator, ok := outputs.Outputs[name]
 	if !ok {
@@ -590,7 +600,7 @@ func (c *Config) parseOutput(name string, outputAst *ast.Table) error {
 	if err != nil {
 		return err
 	}
-	c.outputs[name] = output
+	c.outputs[fmt.Sprintf("%s-%d", name, id)] = output
 	return nil
 }
 
