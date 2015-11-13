@@ -1,10 +1,7 @@
 package amon
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
@@ -22,12 +19,6 @@ var (
 )
 
 func TestUriOverride(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"status":"ok"}`)
-	}))
-	defer ts.Close()
-
 	a := &Amon{
 		ServerKey:    fakeServerKey,
 		AmonInstance: fakeAmonInstance,

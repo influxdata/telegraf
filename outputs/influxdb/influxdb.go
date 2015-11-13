@@ -23,7 +23,7 @@ type InfluxDB struct {
 	UserAgent  string
 	Precision  string
 	Timeout    internal.Duration
-	UDPPayload int
+	UDPPayload int `toml:"udp_payload"`
 
 	conns []client.Client
 }
