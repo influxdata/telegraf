@@ -457,6 +457,7 @@ type HostConfig struct {
 	Binds            []string               `json:"Binds,omitempty" yaml:"Binds,omitempty"`
 	CapAdd           []string               `json:"CapAdd,omitempty" yaml:"CapAdd,omitempty"`
 	CapDrop          []string               `json:"CapDrop,omitempty" yaml:"CapDrop,omitempty"`
+	GroupAdd         []string               `json:"GroupAdd,omitempty" yaml:"GroupAdd,omitempty"`
 	ContainerIDFile  string                 `json:"ContainerIDFile,omitempty" yaml:"ContainerIDFile,omitempty"`
 	LxcConf          []KeyValuePair         `json:"LxcConf,omitempty" yaml:"LxcConf,omitempty"`
 	Privileged       bool                   `json:"Privileged,omitempty" yaml:"Privileged,omitempty"`

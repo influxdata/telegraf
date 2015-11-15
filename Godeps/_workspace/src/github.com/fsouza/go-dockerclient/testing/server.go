@@ -931,10 +931,15 @@ func (s *DockerServer) createExecContainer(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+
+	execID := s.generateID()
+	container.ExecIDs = append(container.ExecIDs, execID)
+
 	exec := docker.ExecInspect{
-		ID:        s.generateID(),
+		ID:        execID,
 		Container: *container,
 	}
+
 	var params docker.CreateExecOptions
 	err = json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
@@ -947,6 +952,10 @@ func (s *DockerServer) createExecContainer(w http.ResponseWriter, r *http.Reques
 			exec.ProcessConfig.Arguments = params.Cmd[1:]
 		}
 	}
+
+	exec.ProcessConfig.User = params.User
+	exec.ProcessConfig.Tty = params.Tty
+
 	s.execMut.Lock()
 	s.execs = append(s.execs, &exec)
 	s.execMut.Unlock()

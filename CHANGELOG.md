@@ -8,6 +8,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - Redis plugin tag has changed from `host` to `server`
 - HAProxy plugin tag has changed from `host` to `server`
 - UDP output now supported
+- Telegraf will now compile on FreeBSD
 
 ### Features
 - [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!
@@ -18,6 +19,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - [#365](https://github.com/influxdb/telegraf/pull/365): Twemproxy plugin by @codeb2cc
 - [#317](https://github.com/influxdb/telegraf/issues/317): ZFS plugin, thanks @cornerot!
 - [#364](https://github.com/influxdb/telegraf/pull/364): Support InfluxDB UDP output.
+- [#372](https://github.com/influxdb/telegraf/pull/372): Remove gosigar and update go-dockerclient for FreeBSD support. Thanks @MerlinDMC!
 
 ### Bugfixes
 - [#331](https://github.com/influxdb/telegraf/pull/331): Dont overwrite host tag in redis plugin.
