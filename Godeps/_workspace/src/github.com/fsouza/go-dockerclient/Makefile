@@ -7,6 +7,7 @@
 	fmtcheck \
 	pretest \
 	test \
+	integration \
 	cov \
 	clean
 
@@ -31,12 +32,15 @@ fmt:
 	gofmt -w $(SRCS)
 
 fmtcheck:
-	$(foreach file,$(SRCS),gofmt $(file) | diff -u $(file) - || exit;)
+	$(foreach file,$(SRCS),gofmt -d $(file);)
 
 pretest: lint vet fmtcheck
 
 test: pretest
 	$(foreach pkg,$(PKGS),go test $(pkg) || exit;)
+
+integration:
+	go test -tags docker_integration -run TestIntegration -v
 
 cov:
 	@ go get -v github.com/axw/gocov/gocov

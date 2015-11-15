@@ -40,11 +40,6 @@
 			"Rev": "4dc77674aceaabba2c7e3da25d4c823edfb73f99"
 		},
 		{
-			"ImportPath": "github.com/cloudfoundry/gosigar",
-			"Comment": "scotty_09012012-27-g3ed7c74",
-			"Rev": "3ed7c74352dae6dc00bdc8c74045375352e3ec05"
-		},
-		{
 			"ImportPath": "github.com/dancannon/gorethink/encoding",
 			"Comment": "v1.x.x-1-g786f12a",
 			"Rev": "786f12ae730ea93485c4eb2c44b3ede6e1e8745f"
@@ -71,7 +66,7 @@
 		},
 		{
 			"ImportPath": "github.com/fsouza/go-dockerclient",
-			"Rev": "af9789bbd78acf3e279274caa54682185eb7ed33"
+			"Rev": "ef410296f87750305e1e1acf9ad2ba3833dcb004"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",

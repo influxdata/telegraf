@@ -83,7 +83,7 @@ type CreateNetworkOptions struct {
 // CreateNetwork creates a new network, returning the network instance,
 // or an error in case of failure.
 //
-// See http://goo.gl/mErxNp for more details.
+// See https://goo.gl/FDkCdQ for more details.
 func (c *Client) CreateNetwork(opts CreateNetworkOptions) (*Network, error) {
 	resp, err := c.do(
 		"POST",
@@ -116,6 +116,21 @@ func (c *Client) CreateNetwork(opts CreateNetworkOptions) (*Network, error) {
 	network.Type = opts.NetworkType
 
 	return &network, nil
+}
+
+// RemoveNetwork removes a network or an error in case of failure.
+//
+// See https://goo.gl/FDkCdQ for more details.
+func (c *Client) RemoveNetwork(id string) error {
+	resp, err := c.do("DELETE", "/networks/"+id, doOptions{})
+	if err != nil {
+		if e, ok := err.(*Error); ok && e.Status == http.StatusNotFound {
+			return &NoSuchNetwork{ID: id}
+		}
+		return err
+	}
+	resp.Body.Close()
+	return nil
 }
 
 // NoSuchNetwork is the error returned when a given network does not exist.
