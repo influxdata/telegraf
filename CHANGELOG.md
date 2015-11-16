@@ -9,6 +9,8 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - HAProxy plugin tag has changed from `host` to `server`
 - UDP output now supported
 - Telegraf will now compile on FreeBSD
+- Users can now specify outputs as lists, specifying multiple outputs of the
+same type.
 
 ### Features
 - [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!
@@ -19,6 +21,7 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - [#365](https://github.com/influxdb/telegraf/pull/365): Twemproxy plugin by @codeb2cc
 - [#317](https://github.com/influxdb/telegraf/issues/317): ZFS plugin, thanks @cornerot!
 - [#364](https://github.com/influxdb/telegraf/pull/364): Support InfluxDB UDP output.
+- [#370](https://github.com/influxdb/telegraf/pull/370): Support specifying multiple outputs, as lists.
 - [#372](https://github.com/influxdb/telegraf/pull/372): Remove gosigar and update go-dockerclient for FreeBSD support. Thanks @MerlinDMC!
 
 ### Bugfixes

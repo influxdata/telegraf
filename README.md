@@ -131,7 +131,7 @@ measurements at a 10s interval and will collect totalcpu & percpu data.
 
 # OUTPUTS
 [outputs]
-[outputs.influxdb]
+[[outputs.influxdb]]
     url = "http://192.168.59.103:8086" # required.
     database = "telegraf" # required.
     precision = "s"

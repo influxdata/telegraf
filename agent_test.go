@@ -41,22 +41,22 @@ func TestAgent_LoadOutput(t *testing.T) {
 	a, _ := NewAgent(config)
 
 	outputsEnabled, _ := a.LoadOutputs([]string{"influxdb"}, config)
-	assert.Equal(t, 1, len(outputsEnabled))
+	assert.Equal(t, 2, len(outputsEnabled))
 
 	outputsEnabled, _ = a.LoadOutputs([]string{}, config)
-	assert.Equal(t, 2, len(outputsEnabled))
+	assert.Equal(t, 3, len(outputsEnabled))
 
 	outputsEnabled, _ = a.LoadOutputs([]string{"foo"}, config)
 	assert.Equal(t, 0, len(outputsEnabled))
 
 	outputsEnabled, _ = a.LoadOutputs([]string{"influxdb", "foo"}, config)
-	assert.Equal(t, 1, len(outputsEnabled))
+	assert.Equal(t, 2, len(outputsEnabled))
 
 	outputsEnabled, _ = a.LoadOutputs([]string{"influxdb", "kafka"}, config)
-	assert.Equal(t, 2, len(outputsEnabled))
+	assert.Equal(t, 3, len(outputsEnabled))
 
 	outputsEnabled, _ = a.LoadOutputs([]string{"influxdb", "foo", "kafka", "bar"}, config)
-	assert.Equal(t, 2, len(outputsEnabled))
+	assert.Equal(t, 3, len(outputsEnabled))
 }
 
 func TestAgent_ZeroJitter(t *testing.T) {
