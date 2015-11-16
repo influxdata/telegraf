@@ -1,4 +1,12 @@
-## v0.2.1 [unreleased]
+## v0.2.2 [unreleased]
+
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+## v0.2.1 [2015-11-16]
 
 ### Release Notes
 - Telegraf will no longer use docker-compose for "long" unit test, it has been

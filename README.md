@@ -15,21 +15,11 @@ writing new plugins.
 
 ## Installation:
 
-Due to a breaking change to the InfluxDB integer line-protocol, there
-are some InfluxDB compatibility requirements:
-
-* InfluxDB 0.9.3+ requires Telegraf 0.1.5+
-* InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
-
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.2.0_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.2.0-1.x86_64.rpm
-
-0.1.4:
-* http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.2.1_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.2.1-1.x86_64.rpm
 
 ##### Package instructions:
 
@@ -43,9 +33,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.1.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.1.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.1.tar.gz
 
 ##### Binary instructions:
 
