@@ -1,12 +1,20 @@
 ## v0.2.3 [unreleased]
 
 ### Release Notes
+- **breaking change** The `kafka` plugin has been renamed to `kafka_consumer`.
+and most of the config option names have changed.
+This only affects the kafka consumer _plugin_ (not the
+output). There were a number of problems with the kafka plugin that led to it
+only collecting data once at startup, so the kafka plugin was basically non-
+functional.
 - Riemann output added
 
 ### Features
 - [#379](https://github.com/influxdb/telegraf/pull/379): Riemann output, thanks @allenj!
+- [#375](https://github.com/influxdb/telegraf/pull/375): kafka_consumer service plugin.
 
 ### Bugfixes
+- [#371](https://github.com/influxdb/telegraf/issues/371): Kafka consumer plugin not functioning.
 
 ## v0.2.2 [2015-11-18]
 

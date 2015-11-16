@@ -29,8 +29,9 @@ type InfluxDB struct {
 }
 
 var sampleConfig = `
-  # The full HTTP or UDP endpoint URL for your InfluxDB instance
-  # Multiple urls can be specified for InfluxDB cluster support.
+  # The full HTTP or UDP endpoint URL for your InfluxDB instance.
+  # Multiple urls can be specified but it is assumed that they are part of the same
+  # cluster, this means that only ONE of the urls will be written to each interval.
   # urls = ["udp://localhost:8089"] # UDP endpoint example
   urls = ["http://localhost:8086"] # required
   # The target database for metrics (telegraf will create it if not exists)

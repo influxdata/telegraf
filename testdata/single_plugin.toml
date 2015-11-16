@@ -1,12 +1,9 @@
-[kafka]
-  topic = "topic_with_metrics"
-  consumerGroupName = "telegraf_metrics_consumers"
-  zookeeperPeers = ["test.example.com:2181"]
-  batchSize = 1000
+[memcached]
+  servers = ["localhost"]
   pass = ["some", "strings"]
   drop = ["other", "stuff"]
   interval = "5s"
-  [kafka.tagpass]
+  [memcached.tagpass]
     goodtag = ["mytag"]
-  [kafka.tagdrop]
+  [memcached.tagdrop]
     badtag = ["othertag"]

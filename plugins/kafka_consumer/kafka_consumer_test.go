@@ -1,92 +1,91 @@
 package kafka_consumer
 
 import (
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/influxdb/influxdb/models"
 	"github.com/influxdb/telegraf/testutil"
+
+	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-const testMsg = "cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257"
+const (
+	testMsg     = "cpu_load_short,host=server01 value=23422.0 1422568543702900257"
+	invalidMsg  = "cpu_load_short,host=server01 1422568543702900257"
+	pointBuffer = 5
+)
 
-func TestReadFromKafkaBatchesMsgsOnBatchSize(t *testing.T) {
-	halt := make(chan bool, 1)
-	metricChan := make(chan []byte, 1)
-	kafkaChan := make(chan *sarama.ConsumerMessage, 10)
-	for i := 0; i < 10; i++ {
-		kafkaChan <- saramaMsg(testMsg)
+func NewTestKafka() (*Kafka, chan *sarama.ConsumerMessage) {
+	in := make(chan *sarama.ConsumerMessage, pointBuffer)
+	k := Kafka{
+		ConsumerGroup:   "test",
+		Topics:          []string{"telegraf"},
+		ZookeeperPeers:  []string{"localhost:2181"},
+		PointBuffer:     pointBuffer,
+		Offset:          "oldest",
+		in:              in,
+		doNotCommitMsgs: true,
+		errs:            make(chan *sarama.ConsumerError, pointBuffer),
+		done:            make(chan struct{}),
+		pointChan:       make(chan models.Point, pointBuffer),
 	}
-
-	expectedBatch := strings.Repeat(testMsg+"\n", 9) + testMsg
-	readFromKafka(kafkaChan, metricChan, 10, func(msg *sarama.ConsumerMessage) error {
-		batch := <-metricChan
-		assert.Equal(t, expectedBatch, string(batch))
-
-		halt <- true
-
-		return nil
-	}, halt)
+	return &k, in
 }
 
-func TestReadFromKafkaBatchesMsgsOnTimeout(t *testing.T) {
-	halt := make(chan bool, 1)
-	metricChan := make(chan []byte, 1)
-	kafkaChan := make(chan *sarama.ConsumerMessage, 10)
-	for i := 0; i < 3; i++ {
-		kafkaChan <- saramaMsg(testMsg)
-	}
+// Test that the parser parses kafka messages into points
+func TestRunParser(t *testing.T) {
+	k, in := NewTestKafka()
+	defer close(k.done)
 
-	expectedBatch := strings.Repeat(testMsg+"\n", 2) + testMsg
-	readFromKafka(kafkaChan, metricChan, 10, func(msg *sarama.ConsumerMessage) error {
-		batch := <-metricChan
-		assert.Equal(t, expectedBatch, string(batch))
+	go k.parser()
+	in <- saramaMsg(testMsg)
+	time.Sleep(time.Millisecond)
 
-		halt <- true
-
-		return nil
-	}, halt)
+	assert.Equal(t, len(k.pointChan), 1)
 }
 
-func TestEmitMetricsSendMetricsToAcc(t *testing.T) {
-	k := &Kafka{}
-	var acc testutil.Accumulator
-	testChan := make(chan []byte, 1)
-	testChan <- []byte(testMsg)
+// Test that the parser ignores invalid messages
+func TestRunParserInvalidMsg(t *testing.T) {
+	k, in := NewTestKafka()
+	defer close(k.done)
 
-	err := emitMetrics(k, &acc, testChan)
-	require.NoError(t, err)
+	go k.parser()
+	in <- saramaMsg(invalidMsg)
+	time.Sleep(time.Millisecond)
 
-	assert.Equal(t, 1, len(acc.Points), "there should be a single point")
-
-	point := acc.Points[0]
-	assert.Equal(t, "cpu_load_short", point.Measurement)
-	assert.Equal(t, map[string]interface{}{"value": 23422.0}, point.Fields)
-	assert.Equal(t, map[string]string{
-		"host":      "server01",
-		"direction": "in",
-		"region":    "us-west",
-	}, point.Tags)
-
-	if time.Unix(0, 1422568543702900257).Unix() != point.Time.Unix() {
-		t.Errorf("Expected: %v, received %v\n",
-			time.Unix(0, 1422568543702900257).Unix(),
-			point.Time.Unix())
-	}
+	assert.Equal(t, len(k.pointChan), 0)
 }
 
-func TestEmitMetricsTimesOut(t *testing.T) {
-	k := &Kafka{}
-	var acc testutil.Accumulator
-	testChan := make(chan []byte)
+// Test that points are dropped when we hit the buffer limit
+func TestRunParserRespectsBuffer(t *testing.T) {
+	k, in := NewTestKafka()
+	defer close(k.done)
 
-	err := emitMetrics(k, &acc, testChan)
-	require.NoError(t, err)
+	go k.parser()
+	for i := 0; i < pointBuffer+1; i++ {
+		in <- saramaMsg(testMsg)
+	}
+	time.Sleep(time.Millisecond)
 
-	assert.Equal(t, 0, len(acc.Points), "there should not be a any points")
+	assert.Equal(t, len(k.pointChan), 5)
+}
+
+// Test that the parser parses kafka messages into points
+func TestRunParserAndGather(t *testing.T) {
+	k, in := NewTestKafka()
+	defer close(k.done)
+
+	go k.parser()
+	in <- saramaMsg(testMsg)
+	time.Sleep(time.Millisecond)
+
+	acc := testutil.Accumulator{}
+	k.Gather(&acc)
+
+	assert.Equal(t, len(acc.Points), 1)
+	assert.True(t, acc.CheckValue("cpu_load_short", 23422.0))
 }
 
 func saramaMsg(val string) *sarama.ConsumerMessage {

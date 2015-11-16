@@ -164,7 +164,6 @@ Telegraf currently has support for collecting metrics from:
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * jolokia (remote JMX with JSON over HTTP)
-* kafka_consumer
 * leofs
 * lustre2
 * memcached
@@ -197,6 +196,7 @@ Telegraf currently has support for collecting metrics from:
 Telegraf can collect metrics via the following services:
 
 * statsd
+* kafka_consumer
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.

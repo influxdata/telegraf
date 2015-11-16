@@ -183,8 +183,6 @@ func (s *Statsd) Gather(acc plugins.Accumulator) error {
 }
 
 func (s *Statsd) Start() error {
-	log.Println("Starting up the statsd service")
-
 	// Make data structures
 	s.done = make(chan struct{})
 	s.in = make(chan string, s.AllowedPendingMessages)
@@ -197,6 +195,7 @@ func (s *Statsd) Start() error {
 	go s.udpListen()
 	// Start the line parser
 	go s.parser()
+	log.Printf("Started the statsd service on %s\n", s.ServiceAddress)
 	return nil
 }
 

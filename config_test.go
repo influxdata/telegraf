@@ -8,7 +8,7 @@ import (
 
 	"github.com/influxdb/telegraf/plugins"
 	"github.com/influxdb/telegraf/plugins/exec"
-	"github.com/influxdb/telegraf/plugins/kafka_consumer"
+	"github.com/influxdb/telegraf/plugins/memcached"
 	"github.com/influxdb/telegraf/plugins/procstat"
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
@@ -205,17 +205,14 @@ func TestConfig_parsePlugin(t *testing.T) {
 		pluginConfigurationFieldsSet: make(map[string][]string),
 	}
 
-	subtbl := tbl.Fields["kafka"].(*ast.Table)
-	err = c.parsePlugin("kafka", subtbl)
+	subtbl := tbl.Fields["memcached"].(*ast.Table)
+	err = c.parsePlugin("memcached", subtbl)
 
-	kafka := plugins.Plugins["kafka"]().(*kafka_consumer.Kafka)
-	kafka.ConsumerGroupName = "telegraf_metrics_consumers"
-	kafka.Topic = "topic_with_metrics"
-	kafka.ZookeeperPeers = []string{"test.example.com:2181"}
-	kafka.BatchSize = 1000
+	memcached := plugins.Plugins["memcached"]().(*memcached.Memcached)
+	memcached.Servers = []string{"localhost"}
 
-	kConfig := &ConfiguredPlugin{
-		Name: "kafka",
+	mConfig := &ConfiguredPlugin{
+		Name: "memcached",
 		Drop: []string{"other", "stuff"},
 		Pass: []string{"some", "strings"},
 		TagDrop: []TagFilter{
@@ -233,10 +230,10 @@ func TestConfig_parsePlugin(t *testing.T) {
 		Interval: 5 * time.Second,
 	}
 
-	assert.Equal(t, kafka, c.plugins["kafka"],
-		"Testdata did not produce a correct kafka struct.")
-	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"],
-		"Testdata did not produce correct kafka metadata.")
+	assert.Equal(t, memcached, c.plugins["memcached"],
+		"Testdata did not produce a correct memcached struct.")
+	assert.Equal(t, mConfig, c.pluginConfigurations["memcached"],
+		"Testdata did not produce correct memcached metadata.")
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
@@ -249,14 +246,11 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		t.Error(err)
 	}
 
-	kafka := plugins.Plugins["kafka"]().(*kafka_consumer.Kafka)
-	kafka.ConsumerGroupName = "telegraf_metrics_consumers"
-	kafka.Topic = "topic_with_metrics"
-	kafka.ZookeeperPeers = []string{"test.example.com:2181"}
-	kafka.BatchSize = 10000
+	memcached := plugins.Plugins["memcached"]().(*memcached.Memcached)
+	memcached.Servers = []string{"192.168.1.1"}
 
-	kConfig := &ConfiguredPlugin{
-		Name: "kafka",
+	mConfig := &ConfiguredPlugin{
+		Name: "memcached",
 		Drop: []string{"other", "stuff"},
 		Pass: []string{"some", "strings"},
 		TagDrop: []TagFilter{
@@ -296,10 +290,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	pConfig := &ConfiguredPlugin{Name: "procstat"}
 
-	assert.Equal(t, kafka, c.plugins["kafka"],
-		"Merged Testdata did not produce a correct kafka struct.")
-	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"],
-		"Merged Testdata did not produce correct kafka metadata.")
+	assert.Equal(t, memcached, c.plugins["memcached"],
+		"Merged Testdata did not produce a correct memcached struct.")
+	assert.Equal(t, mConfig, c.pluginConfigurations["memcached"],
+		"Merged Testdata did not produce correct memcached metadata.")
 
 	assert.Equal(t, ex, c.plugins["exec"],
 		"Merged Testdata did not produce a correct exec struct.")
