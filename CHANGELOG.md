@@ -1,5 +1,13 @@
 ## v0.2.3 [unreleased]
 
+### Release Notes
+- Riemann output added
+
+### Features
+- [#379](https://github.com/influxdb/telegraf/pull/379): Riemann output, thanks @allenj!
+
+### Bugfixes
+
 ## v0.2.2 [2015-11-18]
 
 ### Release Notes

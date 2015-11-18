@@ -14,7 +14,7 @@ type Riemann struct {
 	URL       string
 	Transport string
 
-	client raidman.Client
+	client *raidman.Client
 }
 
 var sampleConfig = `
@@ -31,7 +31,7 @@ func (r *Riemann) Connect() error {
 		return err
 	}
 
-	r.client = *c
+	r.client = c
 	return nil
 }
 
@@ -56,7 +56,7 @@ func (r *Riemann) Write(points []*client.Point) error {
 	var events []*raidman.Event
 	for _, p := range points {
 		ev := buildEvent(p)
-		events = append(events, &ev)
+		events = append(events, ev)
 	}
 
 	var senderr = r.client.SendMulti(events)
@@ -68,10 +68,9 @@ func (r *Riemann) Write(points []*client.Point) error {
 	return nil
 }
 
-func buildEvent(p *client.Point) raidman.Event {
-	host := p.Tags()["host"]
-
-	if len(host) == 0 {
+func buildEvent(p *client.Point) *raidman.Event {
+	host, ok := p.Tags()["host"]
+	if !ok {
 		hostname, err := os.Hostname()
 		if err != nil {
 			host = "unknown"
@@ -86,7 +85,7 @@ func buildEvent(p *client.Point) raidman.Event {
 		Metric:  p.Fields()["value"],
 	}
 
-	return *event
+	return event
 }
 
 func init() {
