@@ -18,8 +18,8 @@ writing new plugins.
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.2.1_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.2.1-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.2.2_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.2.2-1.x86_64.rpm
 
 ##### Package instructions:
 
@@ -33,9 +33,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.1.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.1.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.1.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.2.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.2.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.2.tar.gz
 
 ##### Binary instructions:
 
