@@ -10,6 +10,8 @@ machine:
     - go version
 
 dependencies:
+  pre:
+    - sudo apt-get update; sudo apt-get install -y libvirt-dev
   override:
     - docker info
 
