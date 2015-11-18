@@ -61,7 +61,7 @@ func TestParseVmStat(t *testing.T) {
 	}
 
 	if ret.Cached != uint64(128967*4096+449242.*4096) {
-		t.Errorf("Cached pages, actual: %d, expected: %d", ret.Cached,
+		t.Errorf("Cached pages, actual: %d, expected: %f", ret.Cached,
 			128967*4096+449242.*4096)
 	}
 }

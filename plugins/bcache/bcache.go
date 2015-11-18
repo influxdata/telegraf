@@ -1,6 +1,7 @@
 package bcache
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,17 +33,6 @@ func (b *Bcache) SampleConfig() string {
 
 func (b *Bcache) Description() string {
 	return "Read metrics of bcache from stats_total and dirty_data"
-}
-
-func getBackingDevs(bcachePath string) []string {
-	bdevs, err := filepath.Glob(bcachePath + "/*/bdev*")
-	if len(bdevs) < 1 {
-		panic("Can't found any bcache device")
-	}
-	if err != nil {
-		panic(err)
-	}
-	return bdevs
 }
 
 func getTags(bdev string) map[string]string {
@@ -83,11 +73,11 @@ func (b *Bcache) gatherBcache(bdev string, acc plugins.Accumulator) error {
 	tags := getTags(bdev)
 	metrics, err := filepath.Glob(bdev + "/stats_total/*")
 	if len(metrics) < 0 {
-		panic("Can't read any stats file")
+		return errors.New("Can't read any stats file")
 	}
 	file, err := ioutil.ReadFile(bdev + "/dirty_data")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	rawValue := strings.TrimSpace(string(file))
 	value := prettyToBytes(rawValue)
@@ -98,7 +88,7 @@ func (b *Bcache) gatherBcache(bdev string, acc plugins.Accumulator) error {
 		file, err := ioutil.ReadFile(path)
 		rawValue := strings.TrimSpace(string(file))
 		if err != nil {
-			panic(err)
+			return err
 		}
 		if key == "bypassed" {
 			value := prettyToBytes(rawValue)
@@ -125,7 +115,11 @@ func (b *Bcache) Gather(acc plugins.Accumulator) error {
 	if len(bcachePath) == 0 {
 		bcachePath = "/sys/fs/bcache"
 	}
-	for _, bdev := range getBackingDevs(bcachePath) {
+	bdevs, _ := filepath.Glob(bcachePath + "/*/bdev*")
+	if len(bdevs) < 1 {
+		return errors.New("Can't found any bcache device")
+	}
+	for _, bdev := range bdevs {
 		if restrictDevs {
 			bcacheDev := getTags(bdev)["bcache_dev"]
 			if !bcacheDevsChecked[bcacheDev] {

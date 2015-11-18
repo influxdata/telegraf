@@ -23,10 +23,9 @@ func HostInfo() (*HostInfoStat, error) {
 	}
 
 	hostname, err := os.Hostname()
-	if err != nil {
-		return ret, err
+	if err == nil {
+		ret.Hostname = hostname
 	}
-	ret.Hostname = hostname
 
 	platform, family, version, err := GetPlatformInformation()
 	if err == nil {
@@ -46,9 +45,8 @@ func HostInfo() (*HostInfoStat, error) {
 		v := strings.Replace(values[2], ",", "", 1)
 		t, err := strconv.ParseUint(v, 10, 64)
 		if err != nil {
-			return ret, err
+			ret.Uptime = t
 		}
-		ret.Uptime = t
 	}
 
 	return ret, nil

@@ -49,7 +49,7 @@ func (b *blockStats) inc(typ int, enc byte) {
 	for len(b.counts[typ]) <= int(enc) {
 		b.counts[typ] = append(b.counts[typ], 0)
 	}
-	b.counts[typ][enc] += 1
+	b.counts[typ][enc]++
 }
 
 func (b *blockStats) size(sz int) {
@@ -300,7 +300,7 @@ func cmdDumpTsm1(opts *tsdmDumpOpts) {
 
 			// Possible corruption? Try to read as much as we can and point to the problem.
 			if key == "" {
-				errors = append(errors, fmt.Errorf("index pos %d, field id: %d, missing key for id.", i, block.id))
+				errors = append(errors, fmt.Errorf("index pos %d, field id: %d, missing key for id", i, block.id))
 			} else if len(split) < 2 {
 				errors = append(errors, fmt.Errorf("index pos %d, field id: %d, key corrupt: got '%v'", i, block.id, key))
 			} else {
@@ -353,7 +353,8 @@ func cmdDumpTsm1(opts *tsdmDumpOpts) {
 
 		encoded := buf[9:]
 
-		v, err := tsm1.DecodeBlock(buf)
+		var v []tsm1.Value
+		err := tsm1.DecodeBlock(buf, &v)
 		if err != nil {
 			fmt.Printf("error: %v\n", err.Error())
 			os.Exit(1)
@@ -381,7 +382,7 @@ func cmdDumpTsm1(opts *tsdmDumpOpts) {
 
 		if opts.filterKey != "" && !strings.Contains(invIds[id], opts.filterKey) {
 			i += (12 + int64(length))
-			blockCount += 1
+			blockCount++
 			continue
 		}
 
@@ -398,7 +399,7 @@ func cmdDumpTsm1(opts *tsdmDumpOpts) {
 		}, "\t"))
 
 		i += (12 + int64(length))
-		blockCount += 1
+		blockCount++
 	}
 	if opts.dumpBlocks {
 		println("Blocks:")

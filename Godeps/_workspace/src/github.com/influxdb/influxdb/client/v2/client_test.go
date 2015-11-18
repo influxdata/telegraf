@@ -4,12 +4,58 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestUDPClient_Query(t *testing.T) {
+	config := UDPConfig{Addr: "localhost:8089"}
+	c, err := NewUDPClient(config)
+	if err != nil {
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
+	}
+	defer c.Close()
+	query := Query{}
+	_, err = c.Query(query)
+	if err == nil {
+		t.Error("Querying UDP client should fail")
+	}
+}
+
+func TestUDPClient_Write(t *testing.T) {
+	config := UDPConfig{Addr: "localhost:8089"}
+	c, err := NewUDPClient(config)
+	if err != nil {
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
+	}
+	defer c.Close()
+
+	bp, err := NewBatchPoints(BatchPointsConfig{})
+	if err != nil {
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
+	}
+
+	fields := make(map[string]interface{})
+	fields["value"] = 1.0
+	pt, _ := NewPoint("cpu", make(map[string]string), fields)
+	bp.AddPoint(pt)
+
+	err = c.Write(bp)
+	if err != nil {
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
+	}
+}
+
+func TestUDPClient_BadAddr(t *testing.T) {
+	config := UDPConfig{Addr: "foobar@wahoo"}
+	c, err := NewUDPClient(config)
+	if err == nil {
+		defer c.Close()
+		t.Error("Expected resolve error")
+	}
+}
 
 func TestClient_Query(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -19,14 +65,14 @@ func TestClient_Query(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	u, _ := url.Parse(ts.URL)
-	config := Config{URL: u}
-	c := NewClient(config)
+	config := HTTPConfig{Addr: ts.URL}
+	c, _ := NewHTTPClient(config)
+	defer c.Close()
 
 	query := Query{}
 	_, err := c.Query(query)
 	if err != nil {
-		t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
 	}
 }
 
@@ -49,15 +95,14 @@ func TestClient_BasicAuth(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	u, _ := url.Parse(ts.URL)
-	u.User = url.UserPassword("username", "password")
-	config := Config{URL: u, Username: "username", Password: "password"}
-	c := NewClient(config)
+	config := HTTPConfig{Addr: ts.URL, Username: "username", Password: "password"}
+	c, _ := NewHTTPClient(config)
+	defer c.Close()
 
 	query := Query{}
 	_, err := c.Query(query)
 	if err != nil {
-		t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
 	}
 }
 
@@ -69,17 +114,17 @@ func TestClient_Write(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	u, _ := url.Parse(ts.URL)
-	config := Config{URL: u}
-	c := NewClient(config)
+	config := HTTPConfig{Addr: ts.URL}
+	c, _ := NewHTTPClient(config)
+	defer c.Close()
 
 	bp, err := NewBatchPoints(BatchPointsConfig{})
 	if err != nil {
-		t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
 	}
 	err = c.Write(bp)
 	if err != nil {
-		t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
 	}
 }
 
@@ -96,7 +141,7 @@ func TestClient_UserAgent(t *testing.T) {
 
 	_, err := http.Get(ts.URL)
 	if err != nil {
-		t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+		t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
 	}
 
 	tests := []struct {
@@ -117,37 +162,38 @@ func TestClient_UserAgent(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		u, _ := url.Parse(ts.URL)
-		config := Config{URL: u, UserAgent: test.userAgent}
-		c := NewClient(config)
+
+		config := HTTPConfig{Addr: ts.URL, UserAgent: test.userAgent}
+		c, _ := NewHTTPClient(config)
+		defer c.Close()
 
 		receivedUserAgent = ""
 		query := Query{}
 		_, err = c.Query(query)
 		if err != nil {
-			t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+			t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
 		}
 		if !strings.HasPrefix(receivedUserAgent, test.expected) {
-			t.Fatalf("Unexpected user agent. expected %v, actual %v", test.expected, receivedUserAgent)
+			t.Errorf("Unexpected user agent. expected %v, actual %v", test.expected, receivedUserAgent)
 		}
 
 		receivedUserAgent = ""
 		bp, _ := NewBatchPoints(BatchPointsConfig{})
 		err = c.Write(bp)
 		if err != nil {
-			t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+			t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
 		}
 		if !strings.HasPrefix(receivedUserAgent, test.expected) {
-			t.Fatalf("Unexpected user agent. expected %v, actual %v", test.expected, receivedUserAgent)
+			t.Errorf("Unexpected user agent. expected %v, actual %v", test.expected, receivedUserAgent)
 		}
 
 		receivedUserAgent = ""
 		_, err := c.Query(query)
 		if err != nil {
-			t.Fatalf("unexpected error.  expected %v, actual %v", nil, err)
+			t.Errorf("unexpected error.  expected %v, actual %v", nil, err)
 		}
 		if receivedUserAgent != test.expected {
-			t.Fatalf("Unexpected user agent. expected %v, actual %v", test.expected, receivedUserAgent)
+			t.Errorf("Unexpected user agent. expected %v, actual %v", test.expected, receivedUserAgent)
 		}
 	}
 }
@@ -157,7 +203,7 @@ func TestClient_PointString(t *testing.T) {
 	time1, _ := time.Parse(shortForm, "2013-Feb-03")
 	tags := map[string]string{"cpu": "cpu-total"}
 	fields := map[string]interface{}{"idle": 10.1, "system": 50.9, "user": 39.0}
-	p := NewPoint("cpu_usage", tags, fields, time1)
+	p, _ := NewPoint("cpu_usage", tags, fields, time1)
 
 	s := "cpu_usage,cpu=cpu-total idle=10.1,system=50.9,user=39 1359849600000000000"
 	if p.String() != s {
@@ -174,7 +220,7 @@ func TestClient_PointString(t *testing.T) {
 func TestClient_PointWithoutTimeString(t *testing.T) {
 	tags := map[string]string{"cpu": "cpu-total"}
 	fields := map[string]interface{}{"idle": 10.1, "system": 50.9, "user": 39.0}
-	p := NewPoint("cpu_usage", tags, fields)
+	p, _ := NewPoint("cpu_usage", tags, fields)
 
 	s := "cpu_usage,cpu=cpu-total idle=10.1,system=50.9,user=39"
 	if p.String() != s {
@@ -190,7 +236,7 @@ func TestClient_PointWithoutTimeString(t *testing.T) {
 func TestClient_PointName(t *testing.T) {
 	tags := map[string]string{"cpu": "cpu-total"}
 	fields := map[string]interface{}{"idle": 10.1, "system": 50.9, "user": 39.0}
-	p := NewPoint("cpu_usage", tags, fields)
+	p, _ := NewPoint("cpu_usage", tags, fields)
 
 	exp := "cpu_usage"
 	if p.Name() != exp {
@@ -202,7 +248,7 @@ func TestClient_PointName(t *testing.T) {
 func TestClient_PointTags(t *testing.T) {
 	tags := map[string]string{"cpu": "cpu-total"}
 	fields := map[string]interface{}{"idle": 10.1, "system": 50.9, "user": 39.0}
-	p := NewPoint("cpu_usage", tags, fields)
+	p, _ := NewPoint("cpu_usage", tags, fields)
 
 	if !reflect.DeepEqual(tags, p.Tags()) {
 		t.Errorf("Error, got %v, expected %v",
@@ -215,7 +261,7 @@ func TestClient_PointUnixNano(t *testing.T) {
 	time1, _ := time.Parse(shortForm, "2013-Feb-03")
 	tags := map[string]string{"cpu": "cpu-total"}
 	fields := map[string]interface{}{"idle": 10.1, "system": 50.9, "user": 39.0}
-	p := NewPoint("cpu_usage", tags, fields, time1)
+	p, _ := NewPoint("cpu_usage", tags, fields, time1)
 
 	exp := int64(1359849600000000000)
 	if p.UnixNano() != exp {
@@ -227,7 +273,7 @@ func TestClient_PointUnixNano(t *testing.T) {
 func TestClient_PointFields(t *testing.T) {
 	tags := map[string]string{"cpu": "cpu-total"}
 	fields := map[string]interface{}{"idle": 10.1, "system": 50.9, "user": 39.0}
-	p := NewPoint("cpu_usage", tags, fields)
+	p, _ := NewPoint("cpu_usage", tags, fields)
 
 	if !reflect.DeepEqual(fields, p.Fields()) {
 		t.Errorf("Error, got %v, expected %v",

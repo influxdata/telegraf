@@ -18,15 +18,17 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		Urls: []string{"http://localhost:9126/metrics"},
 	}
 	tags := make(map[string]string)
+	pt1, _ := client.NewPoint(
+		"test_point_1",
+		tags,
+		map[string]interface{}{"value": 0.0})
+	pt2, _ := client.NewPoint(
+		"test_point_2",
+		tags,
+		map[string]interface{}{"value": 1.0})
 	var points = []*client.Point{
-		client.NewPoint(
-			"test_point_1",
-			tags,
-			map[string]interface{}{"value": 0.0}),
-		client.NewPoint(
-			"test_point_2",
-			tags,
-			map[string]interface{}{"value": 1.0}),
+		pt1,
+		pt2,
 	}
 	require.NoError(t, pTesting.Write(points))
 
@@ -54,15 +56,17 @@ func TestPrometheusWritePointTag(t *testing.T) {
 	}
 	tags := make(map[string]string)
 	tags["testtag"] = "testvalue"
+	pt1, _ := client.NewPoint(
+		"test_point_3",
+		tags,
+		map[string]interface{}{"value": 0.0})
+	pt2, _ := client.NewPoint(
+		"test_point_4",
+		tags,
+		map[string]interface{}{"value": 1.0})
 	var points = []*client.Point{
-		client.NewPoint(
-			"test_point_3",
-			tags,
-			map[string]interface{}{"value": 0.0}),
-		client.NewPoint(
-			"test_point_4",
-			tags,
-			map[string]interface{}{"value": 1.0}),
+		pt1,
+		pt2,
 	}
 	require.NoError(t, pTesting.Write(points))
 

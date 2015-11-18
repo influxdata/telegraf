@@ -47,7 +47,7 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 
 	point := acc.Points[0]
 	assert.Equal(t, "cpu_load_short", point.Measurement)
-	assert.Equal(t, map[string]interface{}{"value": 23422.0}, point.Values)
+	assert.Equal(t, map[string]interface{}{"value": 23422.0}, point.Fields)
 	assert.Equal(t, map[string]string{
 		"host":      "server01",
 		"direction": "in",

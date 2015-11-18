@@ -28,12 +28,14 @@ type raftState interface {
 	sync(index uint64, timeout time.Duration) error
 	setPeers(addrs []string) error
 	addPeer(addr string) error
+	removePeer(addr string) error
 	peers() ([]string, error)
 	invalidate() error
 	close() error
 	lastIndex() uint64
 	apply(b []byte) error
 	snapshot() error
+	isLocal() bool
 }
 
 // localRaft is a consensus strategy that uses a local raft implementation for
@@ -91,7 +93,7 @@ func (r *localRaft) invalidate() error {
 
 	ms, err := r.store.rpc.fetchMetaData(false)
 	if err != nil {
-		return err
+		return fmt.Errorf("error fetching meta data: %s", err)
 	}
 
 	r.updateMetaData(ms)
@@ -113,14 +115,15 @@ func (r *localRaft) open() error {
 	config.ElectionTimeout = s.ElectionTimeout
 	config.LeaderLeaseTimeout = s.LeaderLeaseTimeout
 	config.CommitTimeout = s.CommitTimeout
+	// Since we actually never call `removePeer` this is safe.
+	// If in the future we decide to call remove peer we have to re-evaluate how to handle this
+	config.ShutdownOnRemove = false
 
 	// If no peers are set in the config or there is one and we are it, then start as a single server.
 	if len(s.peers) <= 1 {
 		config.EnableSingleNode = true
 		// Ensure we can always become the leader
 		config.DisableBootstrapAfterElect = false
-		// Don't shutdown raft automatically if we renamed our hostname back to a previous name
-		config.ShutdownOnRemove = false
 	}
 
 	// Build raft layer to multiplex listener.
@@ -151,7 +154,7 @@ func (r *localRaft) open() error {
 	// is difficult to resolve automatically because we need to have all the raft peers agree on the current members
 	// of the cluster before we can change them.
 	if len(peers) > 0 && !raft.PeerContained(peers, s.RemoteAddr.String()) {
-		s.Logger.Printf("%v is not in the list of raft peers. Please update %v/peers.json on all raft nodes to have the same contents.", s.RemoteAddr.String(), s.Path())
+		s.Logger.Printf("%s is not in the list of raft peers. Please update %v/peers.json on all raft nodes to have the same contents.", s.RemoteAddr.String(), s.Path())
 		return fmt.Errorf("peers out of sync: %v not in %v", s.RemoteAddr.String(), peers)
 	}
 
@@ -206,11 +209,6 @@ func (r *localRaft) close() error {
 	if r.transport != nil {
 		r.transport.Close()
 		r.transport = nil
-	}
-
-	if r.raftLayer != nil {
-		r.raftLayer.Close()
-		r.raftLayer = nil
 	}
 
 	// Shutdown raft.
@@ -318,6 +316,18 @@ func (r *localRaft) addPeer(addr string) error {
 	return nil
 }
 
+// removePeer removes addr from the list of peers in the cluster.
+func (r *localRaft) removePeer(addr string) error {
+	// Only do this on the leader
+	if !r.isLeader() {
+		return errors.New("not the leader")
+	}
+	if fut := r.raft.RemovePeer(addr); fut.Error() != nil {
+		return fut.Error()
+	}
+	return nil
+}
+
 // setPeers sets a list of peers in the cluster.
 func (r *localRaft) setPeers(addrs []string) error {
 	return r.raft.SetPeers(addrs).Error()
@@ -340,6 +350,10 @@ func (r *localRaft) isLeader() bool {
 		return false
 	}
 	return r.raft.State() == raft.Leader
+}
+
+func (r *localRaft) isLocal() bool {
+	return true
 }
 
 // remoteRaft is a consensus strategy that uses a remote raft cluster for
@@ -377,7 +391,7 @@ func (r *remoteRaft) updateMetaData(ms *Data) {
 func (r *remoteRaft) invalidate() error {
 	ms, err := r.store.rpc.fetchMetaData(false)
 	if err != nil {
-		return err
+		return fmt.Errorf("error fetching meta data: %s", err)
 	}
 
 	r.updateMetaData(ms)
@@ -399,6 +413,11 @@ func (r *remoteRaft) setPeers(addrs []string) error {
 // addPeer adds addr to the list of peers in the cluster.
 func (r *remoteRaft) addPeer(addr string) error {
 	return fmt.Errorf("cannot add peer using remote raft")
+}
+
+// removePeer does nothing for remoteRaft.
+func (r *remoteRaft) removePeer(addr string) error {
+	return nil
 }
 
 func (r *remoteRaft) peers() ([]string, error) {
@@ -452,6 +471,10 @@ func (r *remoteRaft) leader() string {
 }
 
 func (r *remoteRaft) isLeader() bool {
+	return false
+}
+
+func (r *remoteRaft) isLocal() bool {
 	return false
 }
 

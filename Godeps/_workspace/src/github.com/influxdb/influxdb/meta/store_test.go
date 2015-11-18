@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -971,6 +972,7 @@ func TestCluster_OpenRaft(t *testing.T) {
 
 // Ensure a multi-node cluster can restart
 func TestCluster_Restart(t *testing.T) {
+	t.Skip("ISSUE https://github.com/influxdb/influxdb/issues/4723")
 	// Start a single node.
 	c := MustOpenCluster(1)
 	defer c.Close()
@@ -1041,6 +1043,90 @@ func TestCluster_Restart(t *testing.T) {
 
 	// ensure all the nodes see the same metastore data
 	assertDatabaseReplicated(t, c)
+	var wg sync.WaitGroup
+	wg.Add(len(c.Stores))
+	for _, s := range c.Stores {
+		go func(s *Store) {
+			defer wg.Done()
+			if err := s.Close(); err != nil {
+				t.Fatalf("error closing store %s", err)
+			}
+		}(s)
+	}
+	wg.Wait()
+}
+
+// Ensure a multi-node cluster can start, join the cluster, and the first three members are raft nodes., then add a 4th non raft
+// Remove a raft node, ensure the 4th promotes to raft
+func TestCluster_ReplaceRaft(t *testing.T) {
+	t.Parallel()
+	// Start a single node.
+	c := MustOpenCluster(1)
+	defer c.Close()
+
+	// Check that the node becomes leader.
+	if s := c.Leader(); s == nil {
+		t.Fatal("no leader found")
+	}
+
+	// Add 2 more nodes.
+	for i := 0; i < 2; i++ {
+		if err := c.Join(); err != nil {
+			t.Fatalf("failed to join cluster: %v", err)
+		}
+	}
+
+	// sleep to let them become raft
+	time.Sleep(time.Second)
+
+	// ensure we have 3 raft nodes
+	for _, s := range c.Stores {
+		if !s.IsLocal() {
+			t.Fatalf("node %d is not a local raft instance.", s.NodeID())
+		}
+	}
+
+	// ensure all the nodes see the same metastore data
+	assertDatabaseReplicated(t, c)
+
+	// Add another node
+	if err := c.Join(); err != nil {
+		t.Fatalf("failed to join cluster: %v", err)
+	}
+
+	var leader, follower *Store
+
+	// find a non-leader node
+	for _, s := range c.Stores {
+		if s.IsLeader() {
+			leader = s
+		}
+		// Find any follower to remove
+		if !s.IsLeader() && s.IsLocal() {
+			follower = s
+		}
+		if leader != nil && follower != nil {
+			break
+		}
+	}
+
+	// drop the node
+	if err := leader.DeleteNode(follower.NodeID(), true); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Remove(follower.NodeID()); err != nil {
+		t.Fatal(err)
+	}
+
+	// sleep to let them become raft
+	time.Sleep(1 * time.Second)
+
+	// ensure we have 3 raft nodes
+	for _, s := range c.Stores {
+		if !s.IsLocal() {
+			t.Fatalf("node %d is not a local raft instance.", s.NodeID())
+		}
+	}
 }
 
 // Store is a test wrapper for meta.Store.
@@ -1057,7 +1143,9 @@ func NewStore(c *meta.Config) *Store {
 	s := &Store{
 		Store: meta.NewStore(c),
 	}
-	s.Logger = log.New(&s.Stderr, "", log.LstdFlags)
+	if !testing.Verbose() {
+		s.Logger = log.New(&s.Stderr, "", log.LstdFlags)
+	}
 	s.SetHashPasswordFn(mockHashPassword)
 	return s
 }
@@ -1134,13 +1222,14 @@ func (s *Store) Close() error {
 // NewConfig returns the default test configuration.
 func NewConfig(path string) *meta.Config {
 	return &meta.Config{
-		Dir:                path,
-		Hostname:           "localhost",
-		BindAddress:        "127.0.0.1:0",
-		HeartbeatTimeout:   toml.Duration(500 * time.Millisecond),
-		ElectionTimeout:    toml.Duration(500 * time.Millisecond),
-		LeaderLeaseTimeout: toml.Duration(500 * time.Millisecond),
-		CommitTimeout:      toml.Duration(5 * time.Millisecond),
+		Dir:                  path,
+		Hostname:             "localhost",
+		BindAddress:          "127.0.0.1:0",
+		HeartbeatTimeout:     toml.Duration(500 * time.Millisecond),
+		ElectionTimeout:      toml.Duration(500 * time.Millisecond),
+		LeaderLeaseTimeout:   toml.Duration(500 * time.Millisecond),
+		CommitTimeout:        toml.Duration(5 * time.Millisecond),
+		RaftPromotionEnabled: true,
 	}
 }
 
@@ -1195,6 +1284,17 @@ func (c *Cluster) Join() error {
 	return nil
 }
 
+func (c *Cluster) Remove(nodeID uint64) error {
+	for i, s := range c.Stores {
+		if s.NodeID() == nodeID {
+			// This could hang for a variety of reasons, so don't wait for it
+			go s.Close()
+			c.Stores = append(c.Stores[:i], c.Stores[i+1:]...)
+		}
+	}
+	return nil
+}
+
 // Open opens and initializes all stores in the cluster.
 func (c *Cluster) Open() error {
 	if err := func() error {
@@ -1219,9 +1319,16 @@ func (c *Cluster) Open() error {
 
 // Close shuts down all stores.
 func (c *Cluster) Close() error {
+	var wg sync.WaitGroup
+	wg.Add(len(c.Stores))
+
 	for _, s := range c.Stores {
-		s.Close()
+		go func(s *Store) {
+			defer wg.Done()
+			s.Close()
+		}(s)
 	}
+	wg.Wait()
 	return nil
 }
 

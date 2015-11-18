@@ -1,9 +1,6 @@
 {
 	"ImportPath": "github.com/influxdb/telegraf",
 	"GoVersion": "go1.5.1",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
 		{
 			"ImportPath": "bitbucket.org/ww/goautoneg",
@@ -26,6 +23,10 @@
 			"Rev": "9c060de643590dae45da9d7c26276463bfc46fa0"
 		},
 		{
+			"ImportPath": "github.com/amir/raidman",
+			"Rev": "6a8e089bbe32e6b907feae5ba688841974b3c339"
+		},
+		{
 			"ImportPath": "github.com/armon/go-metrics",
 			"Rev": "b2d95e5291cdbc26997d1301a5e467ecbb240e25"
 		},
@@ -41,11 +42,6 @@
 		{
 			"ImportPath": "github.com/cenkalti/backoff",
 			"Rev": "4dc77674aceaabba2c7e3da25d4c823edfb73f99"
-		},
-		{
-			"ImportPath": "github.com/cloudfoundry/gosigar",
-			"Comment": "scotty_09012012-27-g3ed7c74",
-			"Rev": "3ed7c74352dae6dc00bdc8c74045375352e3ec05"
 		},
 		{
 			"ImportPath": "github.com/dancannon/gorethink/encoding",
@@ -74,7 +70,7 @@
 		},
 		{
 			"ImportPath": "github.com/fsouza/go-dockerclient",
-			"Rev": "af9789bbd78acf3e279274caa54682185eb7ed33"
+			"Rev": "ef410296f87750305e1e1acf9ad2ba3833dcb004"
 		},
 		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
@@ -111,8 +107,8 @@
 		},
 		{
 			"ImportPath": "github.com/influxdb/influxdb",
-			"Comment": "v0.9.4-rc1-703-g956efae",
-			"Rev": "956efaeb94ee57ecd8dc23e2f654b5231204e28f"
+			"Comment": "v0.9.4-rc1-922-gb0e9f7e",
+			"Rev": "b0e9f7e844225b05abf9f4455229490f99348ac4"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
@@ -124,12 +120,22 @@
 			"Rev": "fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a"
 		},
 		{
+			"ImportPath": "github.com/mreiferson/go-snappystream",
+			"Comment": "v0.2.3",
+			"Rev": "028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504"
+		},
+		{
 			"ImportPath": "github.com/naoina/go-stringutil",
 			"Rev": "360db0db4b01d34e12a2ec042c09e7d37fece761"
 		},
 		{
 			"ImportPath": "github.com/naoina/toml",
 			"Rev": "5811abcabb29d6af0fdf060f96d328962bd3cd5e"
+		},
+		{
+			"ImportPath": "github.com/nsqio/go-nsq",
+			"Comment": "v1.0.5-6-g2118015",
+			"Rev": "2118015c120962edc5d03325c680daf3163a8b5f"
 		},
 		{
 			"ImportPath": "github.com/pborman/uuid",
@@ -163,48 +169,48 @@
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/common",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/cpu",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/disk",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/docker",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/host",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/load",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/mem",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/net",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/process",
-			"Comment": "1.0.0-161-g3303647",
-			"Rev": "3303647209557312e5db51450ea8bbdef56d5176"
+			"Comment": "1.0.0-173-g1e9aabb",
+			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",
@@ -271,16 +277,6 @@
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
 			"Rev": "7ad95dd0798a40da1ccdff6dff35fd177b5edf40"
-		},
-		{
-			"ImportPath": "github.com/mreiferson/go-snappystream",
-			"Comment": "v0.2.3",
-			"Rev": "028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504"
-		},
-		{
-			"ImportPath": "github.com/nsqio/go-nsq",
-			"Comment": "v1.0.5-6-g2118015",
-			"Rev": "2118015c120962edc5d03325c680daf3163a8b5f"
 		}
 	]
 }

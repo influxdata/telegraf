@@ -1,6 +1,10 @@
 package tsdb
 
 import (
+	"errors"
+	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/influxdb/influxdb/toml"
@@ -98,8 +102,14 @@ type Config struct {
 }
 
 func NewConfig() Config {
+	defaultEngine := DefaultEngine
+	if engine := os.Getenv("INFLUXDB_DATA_ENGINE"); engine != "" {
+		log.Println("TSDB engine selected via environment variable:", engine)
+		defaultEngine = engine
+	}
+
 	return Config{
-		Engine:                 DefaultEngine,
+		Engine:                 defaultEngine,
 		MaxWALSize:             DefaultMaxWALSize,
 		WALFlushInterval:       toml.Duration(DefaultWALFlushInterval),
 		WALPartitionFlushDelay: toml.Duration(DefaultWALPartitionFlushDelay),
@@ -119,4 +129,25 @@ func NewConfig() Config {
 
 		QueryLogEnabled: true,
 	}
+}
+
+func (c *Config) Validate() error {
+	if c.Dir == "" {
+		return errors.New("Data.Dir must be specified")
+	} else if c.WALDir == "" {
+		return errors.New("Data.WALDir must be specified")
+	}
+
+	valid := false
+	for _, e := range RegisteredEngines() {
+		if e == c.Engine {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return fmt.Errorf("unrecognized engine %s", c.Engine)
+	}
+
+	return nil
 }

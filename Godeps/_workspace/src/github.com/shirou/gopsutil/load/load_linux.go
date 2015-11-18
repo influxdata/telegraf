@@ -6,10 +6,12 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+
+	common "github.com/shirou/gopsutil/common"
 )
 
 func LoadAvg() (*LoadAvgStat, error) {
-	filename := "/proc/loadavg"
+	filename := common.GetEnv("HOST_PROC", "/proc") + "/loadavg"
 	line, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err

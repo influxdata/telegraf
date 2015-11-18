@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"github.com/influxdb/influxdb/client/v2"
-	"github.com/influxdb/telegraf/duration"
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/outputs"
 )
 
 type Datadog struct {
 	Apikey  string
-	Timeout duration.Duration
+	Timeout internal.Duration
 
 	apiUrl string
 	client *http.Client

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+	"math"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdb/influxdb/pkg/escape"
@@ -55,6 +57,11 @@ type Point interface {
 	// is a timestamp associated with the point then it will be specified in the
 	// given unit
 	PrecisionString(precision string) string
+
+	// RoundedString returns a string representation of the point object, if there
+	// is a timestamp associated with the point, then it will be rounded to the
+	// given duration
+	RoundedString(d time.Duration) string
 }
 
 // Points represents a sortable list of points by timestamp.
@@ -112,7 +119,8 @@ func ParsePointsString(buf string) ([]Point, error) {
 }
 
 // ParsePoints returns a slice of Points from a text representation of a point
-// with each point separated by newlines.
+// with each point separated by newlines.  If any points fail to parse, a non-nil error
+// will be returned in addition to the points that parsed successfully.
 func ParsePoints(buf []byte) ([]Point, error) {
 	return ParsePointsWithPrecision(buf, time.Now().UTC(), "n")
 }
@@ -120,8 +128,9 @@ func ParsePoints(buf []byte) ([]Point, error) {
 func ParsePointsWithPrecision(buf []byte, defaultTime time.Time, precision string) ([]Point, error) {
 	points := []Point{}
 	var (
-		pos   int
-		block []byte
+		pos    int
+		block  []byte
+		failed []string
 	)
 	for {
 		pos, block = scanLine(buf, pos)
@@ -150,14 +159,18 @@ func ParsePointsWithPrecision(buf []byte, defaultTime time.Time, precision strin
 
 		pt, err := parsePoint(block[start:len(block)], defaultTime, precision)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse '%s': %v", string(block[start:len(block)]), err)
+			failed = append(failed, fmt.Sprintf("unable to parse '%s': %v", string(block[start:len(block)]), err))
+		} else {
+			points = append(points, pt)
 		}
-		points = append(points, pt)
 
 		if pos >= len(buf) {
 			break
 		}
 
+	}
+	if len(failed) > 0 {
+		return points, fmt.Errorf("%s", strings.Join(failed, "\n"))
 	}
 	return points, nil
 
@@ -614,14 +627,11 @@ func scanNumber(buf []byte, i int) (int, error) {
 			continue
 		}
 
-		// NaN is a valid float
+		// NaN is an unsupported value
 		if i+2 < len(buf) && (buf[i] == 'N' || buf[i] == 'n') {
-			if (buf[i+1] == 'a' || buf[i+1] == 'A') && (buf[i+2] == 'N' || buf[i+2] == 'n') {
-				i += 3
-				continue
-			}
 			return i, fmt.Errorf("invalid number")
 		}
+
 		if !isNumeric(buf[i]) {
 			return i, fmt.Errorf("invalid number")
 		}
@@ -721,16 +731,11 @@ func scanBoolean(buf []byte, i int) (int, []byte, error) {
 // skipWhitespace returns the end position within buf, starting at i after
 // scanning over spaces in tags
 func skipWhitespace(buf []byte, i int) int {
-	for {
-		if i >= len(buf) {
-			return i
+	for i < len(buf) {
+		if buf[i] != ' ' && buf[i] != '\t' && buf[i] != 0 {
+			break
 		}
-
-		if buf[i] == ' ' || buf[i] == '\t' {
-			i += 1
-			continue
-		}
-		break
+		i++
 	}
 	return i
 }
@@ -954,13 +959,33 @@ func unescapeStringField(in string) string {
 	return string(out)
 }
 
-// NewPoint returns a new point with the given measurement name, tags, fields and timestamp
-func NewPoint(name string, tags Tags, fields Fields, time time.Time) Point {
+// NewPoint returns a new point with the given measurement name, tags, fields and timestamp.  If
+// an unsupported field value (NaN) is passed, this function returns an error.
+func NewPoint(name string, tags Tags, fields Fields, time time.Time) (Point, error) {
+	for key, value := range fields {
+		if fv, ok := value.(float64); ok {
+			// Ensure the caller validates and handles invalid field values
+			if math.IsNaN(fv) {
+				return nil, fmt.Errorf("NaN is an unsupported value for field %s", key)
+			}
+		}
+	}
+
 	return &point{
 		key:    MakeKey([]byte(name), tags),
 		time:   time,
 		fields: fields.MarshalBinary(),
+	}, nil
+}
+
+// NewPoint returns a new point with the given measurement name, tags, fields and timestamp.  If
+// an unsupported field value (NaN) is passed, this function panics.
+func MustNewPoint(name string, tags Tags, fields Fields, time time.Time) Point {
+	pt, err := NewPoint(name, tags, fields, time)
+	if err != nil {
+		panic(err.Error())
 	}
+	return pt
 }
 
 func (p *point) Data() []byte {
@@ -1121,6 +1146,14 @@ func (p *point) PrecisionString(precision string) string {
 	}
 	return fmt.Sprintf("%s %s %d", p.Key(), string(p.fields),
 		p.UnixNano()/p.GetPrecisionMultiplier(precision))
+}
+
+func (p *point) RoundedString(d time.Duration) string {
+	if p.Time().IsZero() {
+		return fmt.Sprintf("%s %s", p.Key(), string(p.fields))
+	}
+	return fmt.Sprintf("%s %s %d", p.Key(), string(p.fields),
+		p.time.Round(d).UnixNano())
 }
 
 func (p *point) unmarshalBinary() Fields {

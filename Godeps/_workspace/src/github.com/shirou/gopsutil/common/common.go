@@ -207,3 +207,12 @@ func PathExists(filename string) bool {
 	}
 	return false
 }
+
+//GetEnv retreives the environment variable key. If it does not exist it returns the default.
+func GetEnv(key string, dfault string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		value = dfault
+	}
+	return value
+}

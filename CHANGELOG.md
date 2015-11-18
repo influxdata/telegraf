@@ -1,4 +1,23 @@
-## v0.2.1 [unreleased]
+## v0.2.3 [unreleased]
+
+### Release Notes
+- Riemann output added
+
+### Features
+- [#379](https://github.com/influxdb/telegraf/pull/379): Riemann output, thanks @allenj!
+
+### Bugfixes
+
+## v0.2.2 [2015-11-18]
+
+### Release Notes
+- 0.2.1 has a bug where all lists within plugins get duplicated, this includes
+lists of servers/URLs. 0.2.2 is being released solely to fix that bug
+
+### Bugfixes
+- [#377](https://github.com/influxdb/telegraf/pull/377): Fix for duplicate slices in plugins.
+
+## v0.2.1 [2015-11-16]
 
 ### Release Notes
 - Telegraf will no longer use docker-compose for "long" unit test, it has been
@@ -7,15 +26,28 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 - Long unit tests are now run in CircleCI, with docker & race detector
 - Redis plugin tag has changed from `host` to `server`
 - HAProxy plugin tag has changed from `host` to `server`
+- UDP output now supported
+- Telegraf will now compile on FreeBSD
+- Users can now specify outputs as lists, specifying multiple outputs of the
+same type.
 
 ### Features
 - [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!
 - [#318](https://github.com/influxdb/telegraf/pull/318): Prometheus output. Thanks @oldmantaiter!
 - [#338](https://github.com/influxdb/telegraf/pull/338): Restart Telegraf on package upgrade. Thanks @linsomniac!
+- [#337](https://github.com/influxdb/telegraf/pull/337): Jolokia plugin, thanks @saiello!
+- [#350](https://github.com/influxdb/telegraf/pull/350): Amon output.
+- [#365](https://github.com/influxdb/telegraf/pull/365): Twemproxy plugin by @codeb2cc
+- [#317](https://github.com/influxdb/telegraf/issues/317): ZFS plugin, thanks @cornerot!
+- [#364](https://github.com/influxdb/telegraf/pull/364): Support InfluxDB UDP output.
+- [#370](https://github.com/influxdb/telegraf/pull/370): Support specifying multiple outputs, as lists.
+- [#372](https://github.com/influxdb/telegraf/pull/372): Remove gosigar and update go-dockerclient for FreeBSD support. Thanks @MerlinDMC!
 
 ### Bugfixes
 - [#331](https://github.com/influxdb/telegraf/pull/331): Dont overwrite host tag in redis plugin.
 - [#336](https://github.com/influxdb/telegraf/pull/336): Mongodb plugin should take 2 measurements.
+- [#351](https://github.com/influxdb/telegraf/issues/317): Fix continual "CREATE DATABASE" in writes
+- [#360](https://github.com/influxdb/telegraf/pull/360): Apply prefix before ShouldPass check. Thanks @sotfo!
 
 ## v0.2.0 [2015-10-27]
 

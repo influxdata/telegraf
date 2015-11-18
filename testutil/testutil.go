@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/influxdb/influxdb/client/v2"
 )
@@ -35,12 +36,29 @@ func GetLocalHost() string {
 func MockBatchPoints() client.BatchPoints {
 	// Create a new point batch
 	bp, _ := client.NewBatchPoints(client.BatchPointsConfig{})
-
-	// Create a point and add to batch
-	tags := map[string]string{"tag1": "value1"}
-	fields := map[string]interface{}{"value": 1.0}
-	pt := client.NewPoint("test_point", tags, fields)
-	bp.AddPoint(pt)
-
+	bp.AddPoint(TestPoint(1.0))
 	return bp
+}
+
+// TestPoint Returns a simple test point:
+//     measurement -> "test1" or name
+//     tags -> "tag1":"value1"
+//     value -> value
+//     time -> time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
+func TestPoint(value interface{}, name ...string) *client.Point {
+	if value == nil {
+		panic("Cannot use a nil value")
+	}
+	measurement := "test1"
+	if len(name) > 0 {
+		measurement = name[0]
+	}
+	tags := map[string]string{"tag1": "value1"}
+	pt, _ := client.NewPoint(
+		measurement,
+		tags,
+		map[string]interface{}{"value": value},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	return pt
 }

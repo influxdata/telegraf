@@ -15,21 +15,11 @@ writing new plugins.
 
 ## Installation:
 
-Due to a breaking change to the InfluxDB integer line-protocol, there
-are some InfluxDB compatibility requirements:
-
-* InfluxDB 0.9.3+ requires Telegraf 0.1.5+
-* InfluxDB 0.9.2 and prior requires Telegraf 0.1.4
-
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.2.0_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.2.0-1.x86_64.rpm
-
-0.1.4:
-* http://get.influxdb.org/telegraf/telegraf_0.1.4_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.1.4-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.2.2_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.2.2-1.x86_64.rpm
 
 ##### Package instructions:
 
@@ -43,9 +33,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.2.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.2.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.2.tar.gz
 
 ##### Binary instructions:
 
@@ -131,7 +121,7 @@ measurements at a 10s interval and will collect totalcpu & percpu data.
 
 # OUTPUTS
 [outputs]
-[outputs.influxdb]
+[[outputs.influxdb]]
     url = "http://192.168.59.103:8086" # required.
     database = "telegraf" # required.
     precision = "s"
@@ -173,6 +163,7 @@ Telegraf currently has support for collecting metrics from:
 * exec (generic JSON-emitting executable plugin)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
+* jolokia (remote JMX with JSON over HTTP)
 * kafka_consumer
 * leofs
 * lustre2
@@ -189,6 +180,8 @@ Telegraf currently has support for collecting metrics from:
 * rabbitmq
 * redis
 * rethinkdb
+* twemproxy
+* zfs
 * zookeeper
 * system
     * cpu
@@ -225,6 +218,8 @@ found by running `telegraf -sample-config`.
 * mqtt
 * librato
 * prometheus
+* amon
+* riemann
 
 ## Contributing
 

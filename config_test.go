@@ -39,7 +39,8 @@ type MergeStructSuite struct {
 }
 
 func (s *MergeStructSuite) SetupSuite() {
-	s.AllFields = []string{"string_field", "integer_field", "float_field", "boolean_field", "date_time_field", "array_field", "table_array_field"}
+	s.AllFields = []string{"string_field", "integer_field", "float_field",
+		"boolean_field", "date_time_field", "array_field", "table_array_field"}
 }
 
 func (s *MergeStructSuite) SetupTest() {
@@ -90,7 +91,8 @@ func (s *MergeStructSuite) TestEmptyMerge() {
 	if err != nil {
 		s.T().Error(err)
 	}
-	s.Equal(s.FullStruct, s.EmptyStruct, fmt.Sprintf("Full merge of %v onto an empty struct failed.", s.FullStruct))
+	s.Equal(s.FullStruct, s.EmptyStruct,
+		fmt.Sprintf("Full merge of %v onto an empty struct failed.", s.FullStruct))
 }
 
 func (s *MergeStructSuite) TestFullMerge() {
@@ -100,16 +102,8 @@ func (s *MergeStructSuite) TestFullMerge() {
 		FloatField:    2.2,
 		BooleansField: true,
 		DatetimeField: time.Date(1965, time.March, 25, 17, 0, 0, 0, time.UTC),
-		ArrayField:    []string{"one", "two", "three", "four", "five", "six"},
+		ArrayField:    []string{"four", "five", "six"},
 		TableArrayField: []subTest{
-			subTest{
-				AField:       "one",
-				AnotherField: 1,
-			},
-			subTest{
-				AField:       "two",
-				AnotherField: 2,
-			},
 			subTest{
 				AField:       "three",
 				AnotherField: 3,
@@ -125,7 +119,8 @@ func (s *MergeStructSuite) TestFullMerge() {
 	if err != nil {
 		s.T().Error(err)
 	}
-	s.Equal(result, s.FullStruct, fmt.Sprintf("Full merge of %v onto FullStruct failed.", s.AnotherFullStruct))
+	s.Equal(result, s.FullStruct,
+		fmt.Sprintf("Full merge of %v onto FullStruct failed.", s.AnotherFullStruct))
 }
 
 func (s *MergeStructSuite) TestPartialMergeWithoutSlices() {
@@ -148,11 +143,14 @@ func (s *MergeStructSuite) TestPartialMergeWithoutSlices() {
 		},
 	}
 
-	err := mergeStruct(s.FullStruct, s.AnotherFullStruct, []string{"string_field", "float_field", "date_time_field"})
+	err := mergeStruct(s.FullStruct, s.AnotherFullStruct,
+		[]string{"string_field", "float_field", "date_time_field"})
 	if err != nil {
 		s.T().Error(err)
 	}
-	s.Equal(result, s.FullStruct, fmt.Sprintf("Partial merge without slices of %v onto FullStruct failed.", s.AnotherFullStruct))
+	s.Equal(result, s.FullStruct,
+		fmt.Sprintf("Partial merge without slices of %v onto FullStruct failed.",
+			s.AnotherFullStruct))
 }
 
 func (s *MergeStructSuite) TestPartialMergeWithSlices() {
@@ -165,14 +163,6 @@ func (s *MergeStructSuite) TestPartialMergeWithSlices() {
 		ArrayField:    []string{"one", "two", "three"},
 		TableArrayField: []subTest{
 			subTest{
-				AField:       "one",
-				AnotherField: 1,
-			},
-			subTest{
-				AField:       "two",
-				AnotherField: 2,
-			},
-			subTest{
 				AField:       "three",
 				AnotherField: 3,
 			},
@@ -183,11 +173,14 @@ func (s *MergeStructSuite) TestPartialMergeWithSlices() {
 		},
 	}
 
-	err := mergeStruct(s.FullStruct, s.AnotherFullStruct, []string{"string_field", "float_field", "date_time_field", "table_array_field"})
+	err := mergeStruct(s.FullStruct, s.AnotherFullStruct,
+		[]string{"string_field", "float_field", "date_time_field", "table_array_field"})
 	if err != nil {
 		s.T().Error(err)
 	}
-	s.Equal(result, s.FullStruct, fmt.Sprintf("Partial merge with slices of %v onto FullStruct failed.", s.AnotherFullStruct))
+	s.Equal(result, s.FullStruct,
+		fmt.Sprintf("Partial merge with slices of %v onto FullStruct failed.",
+			s.AnotherFullStruct))
 }
 
 func TestConfig_mergeStruct(t *testing.T) {
@@ -240,8 +233,10 @@ func TestConfig_parsePlugin(t *testing.T) {
 		Interval: 5 * time.Second,
 	}
 
-	assert.Equal(t, kafka, c.plugins["kafka"], "Testdata did not produce a correct kafka struct.")
-	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"], "Testdata did not produce correct kafka metadata.")
+	assert.Equal(t, kafka, c.plugins["kafka"],
+		"Testdata did not produce a correct kafka struct.")
+	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"],
+		"Testdata did not produce correct kafka metadata.")
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
@@ -257,7 +252,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	kafka := plugins.Plugins["kafka"]().(*kafka_consumer.Kafka)
 	kafka.ConsumerGroupName = "telegraf_metrics_consumers"
 	kafka.Topic = "topic_with_metrics"
-	kafka.ZookeeperPeers = []string{"localhost:2181", "test.example.com:2181"}
+	kafka.ZookeeperPeers = []string{"test.example.com:2181"}
 	kafka.BatchSize = 10000
 
 	kConfig := &ConfiguredPlugin{
@@ -282,10 +277,6 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	ex := plugins.Plugins["exec"]().(*exec.Exec)
 	ex.Commands = []*exec.Command{
 		&exec.Command{
-			Command: "/usr/bin/mycollector --foo=bar",
-			Name:    "mycollector",
-		},
-		&exec.Command{
 			Command: "/usr/bin/myothercollector --foo=bar",
 			Name:    "myothercollector",
 		},
@@ -305,12 +296,18 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	pConfig := &ConfiguredPlugin{Name: "procstat"}
 
-	assert.Equal(t, kafka, c.plugins["kafka"], "Merged Testdata did not produce a correct kafka struct.")
-	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"], "Merged Testdata did not produce correct kafka metadata.")
+	assert.Equal(t, kafka, c.plugins["kafka"],
+		"Merged Testdata did not produce a correct kafka struct.")
+	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"],
+		"Merged Testdata did not produce correct kafka metadata.")
 
-	assert.Equal(t, ex, c.plugins["exec"], "Merged Testdata did not produce a correct exec struct.")
-	assert.Equal(t, eConfig, c.pluginConfigurations["exec"], "Merged Testdata did not produce correct exec metadata.")
+	assert.Equal(t, ex, c.plugins["exec"],
+		"Merged Testdata did not produce a correct exec struct.")
+	assert.Equal(t, eConfig, c.pluginConfigurations["exec"],
+		"Merged Testdata did not produce correct exec metadata.")
 
-	assert.Equal(t, pstat, c.plugins["procstat"], "Merged Testdata did not produce a correct procstat struct.")
-	assert.Equal(t, pConfig, c.pluginConfigurations["procstat"], "Merged Testdata did not produce correct procstat metadata.")
+	assert.Equal(t, pstat, c.plugins["procstat"],
+		"Merged Testdata did not produce a correct procstat struct.")
+	assert.Equal(t, pConfig, c.pluginConfigurations["procstat"],
+		"Merged Testdata did not produce correct procstat metadata.")
 }

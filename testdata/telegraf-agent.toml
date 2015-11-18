@@ -49,7 +49,7 @@
 [outputs]
 
 # Configuration for influxdb server to send metrics to
-[outputs.influxdb]
+[[outputs.influxdb]]
 	# The full HTTP endpoint URL for your InfluxDB instance
 	# Multiple urls can be specified for InfluxDB cluster support. Server to
 	# write to will be randomly chosen each interval.
@@ -69,8 +69,12 @@
 	# Set the user agent for the POSTs (can be useful for log differentiation)
 	# user_agent = "telegraf"
 
+[[outputs.influxdb]]
+  urls = ["udp://localhost:8089"]
+  database = "udp-telegraf"
+
 # Configuration for the Kafka server to send metrics to
-[outputs.kafka]
+[[outputs.kafka]]
 	# URLs of kafka brokers
 	brokers = ["localhost:9092"]
 	# Kafka topic for producer messages

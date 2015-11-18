@@ -114,6 +114,7 @@ message Command {
 		UpdateNodeCommand                = 19;
 		CreateSubscriptionCommand        = 21;
 		DropSubscriptionCommand          = 22;
+		RemovePeerCommand                = 23;
     }
 
     required Type type = 1;
@@ -296,6 +297,14 @@ message DropSubscriptionCommand {
     required string RetentionPolicy = 3;
 }
 
+message RemovePeerCommand {
+    extend Command {
+        optional RemovePeerCommand command = 123;
+    }
+	required uint64 ID = 1;
+	required string Addr = 2;
+}
+
 message Response {
 	required bool OK = 1;
 	optional string Error = 2;
@@ -313,6 +322,7 @@ enum RPCType {
     Error = 1;
     FetchData = 2;
     Join = 3;
+    PromoteRaft = 4;
 }
 
 message ResponseHeader {
@@ -353,4 +363,15 @@ message JoinResponse {
 
     // The node ID assigned to the requesting node.
     optional uint64 NodeID = 4;
+}
+
+message PromoteRaftRequest {
+    required string Addr = 1;
+    repeated string RaftNodes = 2;
+}
+
+message PromoteRaftResponse {
+    required ResponseHeader Header = 1;
+
+    optional bool Success = 2;
 }

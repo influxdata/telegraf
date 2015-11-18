@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/plugins"
-	common "github.com/shirou/gopsutil/common"
 )
 
 // Lustre proc files can change between versions, so we want to future-proof
@@ -144,7 +144,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 			"name": name,
 		}
 
-		lines, err := common.ReadLines(file)
+		lines, err := internal.ReadLines(file)
 		if err != nil {
 			return err
 		}

@@ -7,10 +7,11 @@ import (
 	"math/big"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/influxdb/telegraf/duration"
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 
@@ -32,20 +33,20 @@ type runningPlugin struct {
 type Agent struct {
 
 	// Interval at which to gather information
-	Interval duration.Duration
+	Interval internal.Duration
 
 	// RoundInterval rounds collection interval to 'interval'.
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
 	// Interval at which to flush data
-	FlushInterval duration.Duration
+	FlushInterval internal.Duration
 
 	// FlushRetries is the number of times to retry each data flush
 	FlushRetries int
 
 	// FlushJitter tells
-	FlushJitter duration.Duration
+	FlushJitter internal.Duration
 
 	// TODO(cam): Remove UTC and Precision parameters, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
@@ -72,11 +73,11 @@ type Agent struct {
 func NewAgent(config *Config) (*Agent, error) {
 	agent := &Agent{
 		Tags:          make(map[string]string),
-		Interval:      duration.Duration{10 * time.Second},
+		Interval:      internal.Duration{10 * time.Second},
 		RoundInterval: true,
-		FlushInterval: duration.Duration{10 * time.Second},
+		FlushInterval: internal.Duration{10 * time.Second},
 		FlushRetries:  2,
-		FlushJitter:   duration.Duration{5 * time.Second},
+		FlushJitter:   internal.Duration{5 * time.Second},
 	}
 
 	// Apply the toml table to the agent config, overriding defaults
@@ -147,17 +148,13 @@ func (a *Agent) Close() error {
 func (a *Agent) LoadOutputs(filters []string, config *Config) ([]string, error) {
 	var names []string
 
-	for _, name := range config.OutputsDeclared() {
-		creator, ok := outputs.Outputs[name]
-		if !ok {
-			return nil, fmt.Errorf("Undefined but requested output: %s", name)
-		}
-
-		if sliceContains(name, filters) || len(filters) == 0 {
+	for name, output := range config.OutputsDeclared() {
+		// Trim the ID off the output name for filtering
+		filtername := strings.TrimRight(name, "-0123456789")
+		if sliceContains(filtername, filters) || len(filters) == 0 {
 			if a.Debug {
 				log.Println("Output Enabled: ", name)
 			}
-			output := creator()
 
 			err := config.ApplyOutput(name, output)
 			if err != nil {
@@ -178,20 +175,9 @@ func (a *Agent) LoadOutputs(filters []string, config *Config) ([]string, error) 
 func (a *Agent) LoadPlugins(filters []string, config *Config) ([]string, error) {
 	var names []string
 
-	for _, name := range config.PluginsDeclared() {
-		creator, ok := plugins.Plugins[name]
-		if !ok {
-			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
-		}
-
+	for name, plugin := range config.PluginsDeclared() {
 		if sliceContains(name, filters) || len(filters) == 0 {
-			plugin := creator()
-
-			config, err := config.ApplyPlugin(name, plugin)
-			if err != nil {
-				return nil, err
-			}
-
+			config := config.GetPluginConfig(name)
 			a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
 			names = append(names, name)
 		}

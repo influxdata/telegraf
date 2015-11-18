@@ -13,7 +13,7 @@ Remember the golden rule of bug reports: **The easier you make it for us to repr
 If you have never written a bug report before, or if you want to brush up on your bug reporting skills, we recommend reading [Simon Tatham's essay "How to Report Bugs Effectively."](http://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
 
 Test cases should be in the form of `curl` commands. For example:
-```
+```bash
 # create database
 curl -G http://localhost:8086/query --data-urlencode "q=CREATE DATABASE mydb"
 
@@ -64,12 +64,6 @@ To assist in review for the PR, please add the following to your pull request co
 - [ ] Sign [CLA](http://influxdb.com/community/cla.html) (if not already signed)
 ```
 
-Use of third-party packages
-------------
-A third-party package is defined as one that is not part of the standard Go distribution. Generally speaking we prefer to minimize our use of third-party packages, and avoid them unless absolutely necessarily. We'll often write a little bit of code rather than pull in a third-party package. Of course, we do use some third-party packages -- most importantly we use [BoltDB](https://github.com/boltdb/bolt) as the storage engine. So to maximise the chance your change will be accepted by us, use only the standard libraries, or the third-party packages we have decided to use.
-
-For rationale, check out the post [The Case Against Third Party Libraries](http://blog.gopheracademy.com/advent-2014/case-against-3pl/).
-
 Signing the CLA
 ---------------
 
@@ -79,7 +73,7 @@ second to sign our CLA, which can be found
 
 Installing Go
 -------------
-InfluxDB requires Go 1.5 or greater.
+InfluxDB requires Go 1.4 or greater.
 
 At InfluxDB we find gvm, a Go version manager, useful for installing Go. For instructions
 on how to install it see [the gvm page on github](https://github.com/moovweb/gvm).
@@ -87,8 +81,8 @@ on how to install it see [the gvm page on github](https://github.com/moovweb/gvm
 After installing gvm you can install and set the default go version by
 running the following:
 
-    gvm install go1.5
-    gvm use go1.5 --default
+    gvm install go1.4.2
+    gvm use go1.4.2 --default
 
 Revision Control Systems
 -------------
@@ -102,9 +96,11 @@ Getting the source
 ------
 Setup the project structure and fetch the repo like so:
 
+```bash
     mkdir $HOME/gocodez
     export GOPATH=$HOME/gocodez
     go get github.com/influxdb/influxdb
+```
 
 You can add the line `export GOPATH=$HOME/gocodez` to your bash/zsh file to be set for every shell instead of having to manually run it everytime.
 
@@ -112,10 +108,12 @@ Cloning a fork
 -------------
 If you wish to work with fork of InfluxDB, your own fork for example, you must still follow the directory structure above. But instead of cloning the main repo, instead clone your fork. Follow the steps below to work with a fork:
 
+```bash
     export GOPATH=$HOME/gocodez
     mkdir -p $GOPATH/src/github.com/influxdb
     cd $GOPATH/src/github.com/influxdb
     git clone git@github.com:<username>/influxdb
+```
 
 Retaining the directory structure `$GOPATH/src/github.com/influxdb` is necessary so that Go imports work correctly.
 
@@ -123,10 +121,10 @@ Pre-commit checks
 -------------
 
 We have a pre-commit hook to make sure code is formatted properly and vetted before you commit any changes. We strongly recommend using the pre-commit hook to guard against accidentally committing unformatted code. To use the pre-commit hook, run the following:
-
+```bash
     cd $GOPATH/src/github.com/influxdb/influxdb
     cp .hooks/pre-commit .git/hooks/
-
+```
 In case the commit is rejected because it's not formatted you can run
 the following to format the code:
 
@@ -164,7 +162,7 @@ go install ./...
 To set the version and commit flags during the build pass the following to the build command:
 
 ```bash
--ldflags="-X main.version=$VERSION -X main.branch=$BRANCH -X main.commit=$COMMIT -X main.buildTime=$TIME"
+-ldflags="-X main.version $VERSION -X main.branch $BRANCH -X main.commit $COMMIT -X main.buildTime $TIME"
 ```
 
 where `$VERSION` is the version, `$BRANCH` is the branch, `$COMMIT` is the git commit hash, and `$TIME` is the build timestamp.
@@ -233,6 +231,12 @@ go tool pprof ./influxd influxd.prof
 # can also run "web <function name>" to zoom in. Or "list <function name>" to see specific lines
 ```
 Note that when you pass the binary to `go tool pprof` *you must specify the path to the binary*.
+
+Use of third-party packages
+------------
+A third-party package is defined as one that is not part of the standard Go distribution. Generally speaking we prefer to minimize our use of third-party packages, and avoid them unless absolutely necessarily. We'll often write a little bit of code rather than pull in a third-party package. Of course, we do use some third-party packages -- most importantly we use [BoltDB](https://github.com/boltdb/bolt) as the storage engine. So to maximise the chance your change will be accepted by us, use only the standard libraries, or the third-party packages we have decided to use.
+
+For rationale, check out the post [The Case Against Third Party Libraries](http://blog.gopheracademy.com/advent-2014/case-against-3pl/).
 
 Continuous Integration testing
 -----

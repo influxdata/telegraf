@@ -99,19 +99,13 @@ func TestBuildTags(t *testing.T) {
 }
 
 func TestBuildPoint(t *testing.T) {
-	tags := make(map[string]string)
 	var tagtests = []struct {
 		ptIn  *client.Point
 		outPt Point
 		err   error
 	}{
 		{
-			client.NewPoint(
-				"test1",
-				tags,
-				map[string]interface{}{"value": 0.0},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(0.0, "test1"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -119,25 +113,15 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test2",
-				tags,
-				map[string]interface{}{"value": 1.0},
-				time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(1.0, "test2"),
 			Point{
-				float64(time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
 			},
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test3",
-				tags,
-				map[string]interface{}{"value": 10},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(10, "test3"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				10.0,
@@ -145,12 +129,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test4",
-				tags,
-				map[string]interface{}{"value": int32(112345)},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(int32(112345), "test4"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				112345.0,
@@ -158,12 +137,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test5",
-				tags,
-				map[string]interface{}{"value": int64(112345)},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(int64(112345), "test5"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				112345.0,
@@ -171,12 +145,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test6",
-				tags,
-				map[string]interface{}{"value": float32(11234.5)},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint(float32(11234.5), "test6"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,
@@ -184,12 +153,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			client.NewPoint(
-				"test7",
-				tags,
-				map[string]interface{}{"value": "11234.5"},
-				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-			),
+			testutil.TestPoint("11234.5", "test7"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,

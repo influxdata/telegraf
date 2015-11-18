@@ -5,7 +5,6 @@ import (
 	"expvar"
 	"fmt"
 	"log"
-	"math"
 	"net"
 	"os"
 	"strings"
@@ -26,15 +25,15 @@ const (
 
 // statistics gathered by the graphite package.
 const (
-	statPointsReceived      = "points_rx"
-	statBytesReceived       = "bytes_rx"
-	statPointsParseFail     = "points_parse_fail"
-	statPointsUnsupported   = "points_unsupported_fail"
-	statBatchesTrasmitted   = "batches_tx"
-	statPointsTransmitted   = "points_tx"
-	statBatchesTransmitFail = "batches_tx_fail"
-	statConnectionsActive   = "connections_active"
-	statConnectionsHandled  = "connections_handled"
+	statPointsReceived      = "pointsRx"
+	statBytesReceived       = "bytesRx"
+	statPointsParseFail     = "pointsParseFail"
+	statPointsUnsupported   = "pointsUnsupportedFail"
+	statBatchesTrasmitted   = "batchesTx"
+	statPointsTransmitted   = "pointsTx"
+	statBatchesTransmitFail = "batchesTxFail"
+	statConnectionsActive   = "connsActive"
+	statConnectionsHandled  = "connsHandled"
 )
 
 type tcpConnection struct {
@@ -56,6 +55,7 @@ type Service struct {
 	batchPending     int
 	batchTimeout     time.Duration
 	consistencyLevel cluster.ConsistencyLevel
+	udpReadBuffer    int
 
 	batcher *tsdb.PointBatcher
 	parser  *Parser
@@ -96,6 +96,7 @@ func NewService(c Config) (*Service, error) {
 		protocol:       d.Protocol,
 		batchSize:      d.BatchSize,
 		batchPending:   d.BatchPending,
+		udpReadBuffer:  d.UDPReadBuffer,
 		batchTimeout:   time.Duration(d.BatchTimeout),
 		logger:         log.New(os.Stderr, "[graphite] ", log.LstdFlags),
 		tcpConnections: make(map[string]*tcpConnection),
@@ -295,6 +296,14 @@ func (s *Service) openUDPServer() (net.Addr, error) {
 		return nil, err
 	}
 
+	if s.udpReadBuffer != 0 {
+		err = s.udpConn.SetReadBuffer(s.udpReadBuffer)
+		if err != nil {
+			return nil, fmt.Errorf("unable to set UDP read buffer to %d: %s",
+				s.udpReadBuffer, err)
+		}
+	}
+
 	buf := make([]byte, udpBufferSize)
 	s.wg.Add(1)
 	go func() {
@@ -325,19 +334,9 @@ func (s *Service) handleLine(line string) {
 	// Parse it.
 	point, err := s.parser.Parse(line)
 	if err != nil {
-		s.logger.Printf("unable to parse line: %s", err)
+		s.logger.Printf("unable to parse line: %s: %s", line, err)
 		s.statMap.Add(statPointsParseFail, 1)
 		return
-	}
-
-	f, ok := point.Fields()["value"].(float64)
-	if ok {
-		// Drop NaN and +/-Inf data points since they are not supported values
-		if math.IsNaN(f) || math.IsInf(f, 0) {
-			s.logger.Printf("dropping unsupported value: '%v'", line)
-			s.statMap.Add(statPointsUnsupported, 1)
-			return
-		}
 	}
 
 	s.batcher.In() <- point

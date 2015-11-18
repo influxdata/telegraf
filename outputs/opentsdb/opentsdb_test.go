@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -60,17 +59,11 @@ func TestWrite(t *testing.T) {
 
 	// Verify postive and negative test cases of writing data
 	bp := testutil.MockBatchPoints()
-	tags := make(map[string]string)
-	bp.AddPoint(client.NewPoint("justametric.float", tags,
-		map[string]interface{}{"value": float64(1.0)}))
-	bp.AddPoint(client.NewPoint("justametric.int", tags,
-		map[string]interface{}{"value": int64(123456789)}))
-	bp.AddPoint(client.NewPoint("justametric.uint", tags,
-		map[string]interface{}{"value": uint64(123456789012345)}))
-	bp.AddPoint(client.NewPoint("justametric.string", tags,
-		map[string]interface{}{"value": "Lorem Ipsum"}))
-	bp.AddPoint(client.NewPoint("justametric.anotherfloat", tags,
-		map[string]interface{}{"value": float64(42.0)}))
+	bp.AddPoint(testutil.TestPoint(float64(1.0), "justametric.float"))
+	bp.AddPoint(testutil.TestPoint(int64(123456789), "justametric.int"))
+	bp.AddPoint(testutil.TestPoint(uint64(123456789012345), "justametric.uint"))
+	bp.AddPoint(testutil.TestPoint("Lorem Ipsum", "justametric.string"))
+	bp.AddPoint(testutil.TestPoint(float64(42.0), "justametric.anotherfloat"))
 
 	err = o.Write(bp.Points())
 	require.NoError(t, err)

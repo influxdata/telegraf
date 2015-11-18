@@ -72,6 +72,9 @@ func (cmd *Command) Run(args ...string) error {
 		cmd.Version, cmd.Branch, cmd.Commit, cmd.BuildTime)
 	log.Printf("Go version %s, GOMAXPROCS set to %d", runtime.Version(), runtime.GOMAXPROCS(0))
 
+	// Set parallelism.
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	// Write the PID file.
 	if err := cmd.writePIDFile(options.PIDFile); err != nil {
 		return fmt.Errorf("write pid file: %s", err)
@@ -102,7 +105,7 @@ func (cmd *Command) Run(args ...string) error {
 
 	// Validate the configuration.
 	if err := config.Validate(); err != nil {
-		return fmt.Errorf("%s. To generate a valid configuration file run `influxd config > influxdb.generated.conf`.", err)
+		return fmt.Errorf("%s. To generate a valid configuration file run `influxd config > influxdb.generated.conf`", err)
 	}
 
 	// Create server from config and start it.

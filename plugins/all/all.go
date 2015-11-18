@@ -9,6 +9,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/exec"
 	_ "github.com/influxdb/telegraf/plugins/haproxy"
 	_ "github.com/influxdb/telegraf/plugins/httpjson"
+	_ "github.com/influxdb/telegraf/plugins/jolokia"
 	_ "github.com/influxdb/telegraf/plugins/kafka_consumer"
 	_ "github.com/influxdb/telegraf/plugins/leofs"
 	_ "github.com/influxdb/telegraf/plugins/lustre2"
@@ -27,5 +28,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/rethinkdb"
 	_ "github.com/influxdb/telegraf/plugins/statsd"
 	_ "github.com/influxdb/telegraf/plugins/system"
+	_ "github.com/influxdb/telegraf/plugins/twemproxy"
+	_ "github.com/influxdb/telegraf/plugins/zfs"
 	_ "github.com/influxdb/telegraf/plugins/zookeeper"
 )

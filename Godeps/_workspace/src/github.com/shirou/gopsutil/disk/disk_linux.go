@@ -238,7 +238,7 @@ func DiskPartitions(all bool) ([]DiskPartitionStat, error) {
 }
 
 func DiskIOCounters() (map[string]DiskIOCountersStat, error) {
-	filename := "/proc/diskstats"
+	filename := common.GetEnv("HOST_PROC", "/proc") + "/diskstats"
 	lines, err := common.ReadLines(filename)
 	if err != nil {
 		return nil, err

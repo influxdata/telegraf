@@ -1,0 +1,45 @@
+# Telegraf plugin: Apache
+
+#### Plugin arguments:
+- **urls** []string: List of apache-status URLs to collect from.
+
+#### Description
+
+The Apache plugin collects from the /server-status?auto URL. See
+[apache.org/server-status?auto](http://www.apache.org/server-status?auto) for an
+example. And
+[here](http://httpd.apache.org/docs/2.2/mod/mod_status.html) for the apache
+mod_status documentation.
+
+# Measurements:
+
+Meta:
+- tags: `port=<port>`, `server=url`
+
+- apache_TotalAccesses
+- apache_TotalkBytes
+- apache_CPULoad
+- apache_Uptime
+- apache_ReqPerSec
+- apache_BytesPerSec
+- apache_BytesPerReq
+- apache_BusyWorkers
+- apache_IdleWorkers
+- apache_ConnsTotal
+- apache_ConnsAsyncWriting
+- apache_ConnsAsyncKeepAlive
+- apache_ConnsAsyncClosing
+
+### Scoreboard measurements
+
+- apache_scboard_waiting
+- apache_scboard_starting
+- apache_scboard_reading
+- apache_scboard_sending
+- apache_scboard_keepalive
+- apache_scboard_dnslookup
+- apache_scboard_closing
+- apache_scboard_logging
+- apache_scboard_finishing
+- apache_scboard_idle_cleanup
+- apache_scboard_open

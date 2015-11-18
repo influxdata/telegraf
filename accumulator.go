@@ -2,6 +2,7 @@ package telegraf
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -91,6 +92,10 @@ func (ac *accumulator) AddFields(
 		timestamp = time.Now()
 	}
 
+	if ac.prefix != "" {
+		measurement = ac.prefix + measurement
+	}
+
 	if ac.plugin != nil {
 		if !ac.plugin.ShouldPass(measurement, tags) {
 			return
@@ -103,11 +108,10 @@ func (ac *accumulator) AddFields(
 		}
 	}
 
-	if ac.prefix != "" {
-		measurement = ac.prefix + measurement
+	pt, err := client.NewPoint(measurement, tags, fields, timestamp)
+	if err != nil {
+		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
 	}
-
-	pt := client.NewPoint(measurement, tags, fields, timestamp)
 	if ac.debug {
 		fmt.Println("> " + pt.String())
 	}

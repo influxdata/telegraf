@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +47,6 @@ const ExecMagic = "EXEC"
 const (
 	AutoCreateRetentionPolicyName   = "default"
 	AutoCreateRetentionPolicyPeriod = 0
-	RetentionPolicyMinDuration      = time.Hour
 
 	// MaxAutoCreatedRetentionPolicyReplicaN is the maximum replication factor that will
 	// be set for auto-created retention policies.
@@ -124,6 +124,10 @@ type Store struct {
 	// Returns an error if the password is invalid or a hash cannot be generated.
 	hashPassword HashPasswordFn
 
+	// raftPromotionEnabled determines if non-raft nodes should be automatically
+	// promoted to a raft node to self-heal a raft cluster
+	raftPromotionEnabled bool
+
 	Logger *log.Logger
 }
 
@@ -146,6 +150,7 @@ func NewStore(c *Config) *Store {
 
 		clusterTracingEnabled: c.ClusterTracing,
 		retentionAutoCreate:   c.RetentionAutoCreate,
+		raftPromotionEnabled:  c.RaftPromotionEnabled,
 
 		HeartbeatTimeout:   time.Duration(c.HeartbeatTimeout),
 		ElectionTimeout:    time.Duration(c.ElectionTimeout),
@@ -230,7 +235,6 @@ func (s *Store) Open() error {
 
 		return nil
 	}(); err != nil {
-		s.close()
 		return err
 	}
 
@@ -257,7 +261,17 @@ func (s *Store) Open() error {
 	// Wait for a leader to be elected so we know the raft log is loaded
 	// and up to date
 	<-s.ready
-	return s.WaitForLeader(0)
+	if err := s.WaitForLeader(0); err != nil {
+		return err
+	}
+
+	if s.raftPromotionEnabled {
+		s.wg.Add(1)
+		s.Logger.Printf("spun up monitoring for %d", s.NodeID())
+		go s.monitorPeerHealth()
+	}
+
+	return nil
 }
 
 // syncNodeInfo continuously tries to update the current nodes hostname
@@ -375,6 +389,9 @@ func (s *Store) joinCluster() error {
 }
 
 func (s *Store) enableLocalRaft() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if _, ok := s.raftState.(*localRaft); ok {
 		return nil
 	}
@@ -395,20 +412,92 @@ func (s *Store) enableRemoteRaft() error {
 }
 
 func (s *Store) changeState(state raftState) error {
-	if err := s.raftState.close(); err != nil {
-		return err
-	}
+	if s.raftState != nil {
+		if err := s.raftState.close(); err != nil {
+			return err
+		}
 
-	// Clear out any persistent state
-	if err := s.raftState.remove(); err != nil {
-		return err
+		// Clear out any persistent state
+		if err := s.raftState.remove(); err != nil {
+			return err
+		}
 	}
-
 	s.raftState = state
 
 	if err := s.raftState.open(); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// monitorPeerHealth periodically checks if we have a node that can be promoted to a
+// raft peer to fill any missing slots.
+// This function runs in a separate goroutine.
+func (s *Store) monitorPeerHealth() {
+	defer s.wg.Done()
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		// Wait for next tick or timeout.
+		select {
+		case <-ticker.C:
+		case <-s.closing:
+			return
+		}
+		if err := s.promoteNodeToPeer(); err != nil {
+			s.Logger.Printf("error promoting node to raft peer: %s", err)
+		}
+	}
+}
+
+func (s *Store) promoteNodeToPeer() error {
+	// Only do this if you are the leader
+
+	if !s.IsLeader() {
+		return nil
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	peers, err := s.raftState.peers()
+	if err != nil {
+		return err
+	}
+
+	nodes := s.data.Nodes
+	var nonraft NodeInfos
+	for _, n := range nodes {
+		if contains(peers, n.Host) {
+			continue
+		}
+		nonraft = append(nonraft, n)
+	}
+
+	// Check to see if any action is required or possible
+	if len(peers) >= 3 || len(nonraft) == 0 {
+		return nil
+	}
+
+	// Sort the nodes
+	sort.Sort(nonraft)
+
+	// Get the lowest node for a deterministic outcome
+	n := nonraft[0]
+	// Set peers on the leader now to the new peers
+	if err := s.AddPeer(n.Host); err != nil {
+		return fmt.Errorf("unable to add raft peer %s on leader: %s", n.Host, err)
+	}
+
+	// add node to peers list
+	peers = append(peers, n.Host)
+	if err := s.rpc.enableRaft(n.Host, peers); err != nil {
+		return fmt.Errorf("error notifying raft peer: %s", err)
+	}
+	s.Logger.Printf("promoted nodeID %d, host %s to raft peer", n.ID, n.Host)
 
 	return nil
 }
@@ -454,14 +543,33 @@ func (s *Store) close() error {
 	}
 	s.opened = false
 
-	// Notify goroutines of close.
-	close(s.closing)
-	// FIXME(benbjohnson): s.wg.Wait()
+	// Close our exec listener
+	if err := s.ExecListener.Close(); err != nil {
+		s.Logger.Printf("error closing ExecListener %s", err)
+	}
+
+	// Close our RPC listener
+	if err := s.RPCListener.Close(); err != nil {
+		s.Logger.Printf("error closing ExecListener %s", err)
+	}
 
 	if s.raftState != nil {
 		s.raftState.close()
-		s.raftState = nil
 	}
+
+	// Because a go routine could of already fired in the time we acquired the lock
+	// it could then try to acquire another lock, and will deadlock.
+	// For that reason, we will release our lock and signal the close so that
+	// all go routines can exit cleanly and fullfill their contract to the wait group.
+	s.mu.Unlock()
+	// Notify goroutines of close.
+	close(s.closing)
+	s.wg.Wait()
+
+	// Now that all go routines are cleaned up, w lock to do final clean up and exit
+	s.mu.Lock()
+
+	s.raftState = nil
 
 	return nil
 }
@@ -519,7 +627,9 @@ func (s *Store) createLocalNode() error {
 	}
 
 	// Set ID locally.
+	s.mu.Lock()
 	s.id = ni.ID
+	s.mu.Unlock()
 
 	s.Logger.Printf("Created local node: id=%d, host=%s", s.id, s.RemoteAddr)
 
@@ -578,10 +688,14 @@ func (s *Store) Err() <-chan error { return s.err }
 func (s *Store) IsLeader() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if s.raftState == nil {
-		return false
-	}
 	return s.raftState.isLeader()
+}
+
+// IsLocal returns true if the store is currently participating in local raft.
+func (s *Store) IsLocal() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.raftState.isLocal()
 }
 
 // Leader returns what the store thinks is the current leader. An empty
@@ -619,6 +733,7 @@ func (s *Store) serveExecListener() {
 
 	for {
 		// Accept next TCP connection.
+		var err error
 		conn, err := s.ExecListener.Accept()
 		if err != nil {
 			if strings.Contains(err.Error(), "connection closed") {
@@ -631,6 +746,12 @@ func (s *Store) serveExecListener() {
 		// Handle connection in a separate goroutine.
 		s.wg.Add(1)
 		go s.handleExecConn(conn)
+
+		select {
+		case <-s.closing:
+			return
+		default:
+		}
 	}
 }
 
@@ -727,10 +848,10 @@ func (s *Store) serveRPCListener() {
 		if err != nil {
 			if strings.Contains(err.Error(), "connection closed") {
 				return
-			} else {
-				s.Logger.Printf("temporary accept error: %s", err)
-				continue
 			}
+
+			s.Logger.Printf("temporary accept error: %s", err)
+			continue
 		}
 
 		// Handle connection in a separate goroutine.
@@ -739,6 +860,12 @@ func (s *Store) serveRPCListener() {
 			defer s.wg.Done()
 			s.rpc.handleRPCConn(conn)
 		}()
+
+		select {
+		case <-s.closing:
+			return
+		default:
+		}
 	}
 }
 
@@ -829,10 +956,21 @@ func (s *Store) DeleteNode(id uint64, force bool) error {
 		return ErrNodeNotFound
 	}
 
-	return s.exec(internal.Command_DeleteNodeCommand, internal.E_DeleteNodeCommand_Command,
+	err := s.exec(internal.Command_DeleteNodeCommand, internal.E_DeleteNodeCommand_Command,
 		&internal.DeleteNodeCommand{
 			ID:    proto.Uint64(id),
 			Force: proto.Bool(force),
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	// Need to send a second message to remove the peer
+	return s.exec(internal.Command_RemovePeerCommand, internal.E_RemovePeerCommand_Command,
+		&internal.RemovePeerCommand{
+			ID:   proto.Uint64(id),
+			Addr: proto.String(ni.Host),
 		},
 	)
 }
@@ -975,7 +1113,7 @@ func (s *Store) RetentionPolicies(database string) (a []RetentionPolicyInfo, err
 
 // CreateRetentionPolicy creates a new retention policy for a database.
 func (s *Store) CreateRetentionPolicy(database string, rpi *RetentionPolicyInfo) (*RetentionPolicyInfo, error) {
-	if rpi.Duration < RetentionPolicyMinDuration && rpi.Duration != 0 {
+	if rpi.Duration < MinRetentionPolicyDuration && rpi.Duration != 0 {
 		return nil, ErrRetentionPolicyDurationTooLow
 	}
 	if err := s.exec(internal.Command_CreateRetentionPolicyCommand, internal.E_CreateRetentionPolicyCommand_Command,
@@ -1155,6 +1293,8 @@ func (s *Store) ShardGroupByTimestamp(database, policy string, timestamp time.Ti
 	return
 }
 
+// ShardOwner looks up for a specific shard and return the shard group information
+// related with the shard.
 func (s *Store) ShardOwner(shardID uint64) (database, policy string, sgi *ShardGroupInfo) {
 	s.read(func(data *Data) error {
 		for _, dbi := range data.Databases {
@@ -1443,10 +1583,10 @@ func (s *Store) PrecreateShardGroups(from, to time.Time) error {
 					// Create successive shard group.
 					nextShardGroupTime := g.EndTime.Add(1 * time.Nanosecond)
 					if newGroup, err := s.CreateShardGroupIfNotExists(di.Name, rp.Name, nextShardGroupTime); err != nil {
-						s.Logger.Printf("failed to create successive shard group for group %d: %s",
+						s.Logger.Printf("failed to precreate successive shard group for group %d: %s",
 							g.ID, err.Error())
 					} else {
-						s.Logger.Printf("new shard group %d successfully created for database %s, retention policy %s",
+						s.Logger.Printf("new shard group %d successfully precreated for database %s, retention policy %s",
 							newGroup.ID, di.Name, rp.Name)
 					}
 				}
@@ -1539,7 +1679,7 @@ func (s *Store) remoteExec(b []byte) error {
 	// Retrieve the current known leader.
 	leader := s.raftState.leader()
 	if leader == "" {
-		return errors.New("no leader")
+		return errors.New("no leader detected during remoteExec")
 	}
 
 	// Create a connection to the leader.
@@ -1650,6 +1790,8 @@ func (fsm *storeFSM) Apply(l *raft.Log) interface{} {
 
 	err := func() interface{} {
 		switch cmd.GetType() {
+		case internal.Command_RemovePeerCommand:
+			return fsm.applyRemovePeerCommand(&cmd)
 		case internal.Command_CreateNodeCommand:
 			return fsm.applyCreateNodeCommand(&cmd)
 		case internal.Command_DeleteNodeCommand:
@@ -1703,6 +1845,33 @@ func (fsm *storeFSM) Apply(l *raft.Log) interface{} {
 	s.notifyChanged()
 
 	return err
+}
+
+func (fsm *storeFSM) applyRemovePeerCommand(cmd *internal.Command) interface{} {
+	ext, _ := proto.GetExtension(cmd, internal.E_RemovePeerCommand_Command)
+	v := ext.(*internal.RemovePeerCommand)
+
+	id := v.GetID()
+	addr := v.GetAddr()
+
+	// Only do this if you are the leader
+	if fsm.raftState.isLeader() {
+		//Remove that node from the peer
+		fsm.Logger.Printf("removing peer for node id %d, %s", id, addr)
+		if err := fsm.raftState.removePeer(addr); err != nil {
+			fsm.Logger.Printf("error removing peer: %s", err)
+		}
+	}
+
+	// If this is the node being shutdown, close raft
+	if fsm.id == id {
+		fsm.Logger.Printf("shutting down raft for %s", addr)
+		if err := fsm.raftState.close(); err != nil {
+			fsm.Logger.Printf("failed to shut down raft: %s", err)
+		}
+	}
+
+	return nil
 }
 
 func (fsm *storeFSM) applyCreateNodeCommand(cmd *internal.Command) interface{} {
@@ -2138,9 +2307,14 @@ type RetentionPolicyUpdate struct {
 	ReplicaN *int
 }
 
-func (rpu *RetentionPolicyUpdate) SetName(v string)            { rpu.Name = &v }
+// SetName sets the RetentionPolicyUpdate.Name
+func (rpu *RetentionPolicyUpdate) SetName(v string) { rpu.Name = &v }
+
+// SetDuration sets the RetentionPolicyUpdate.Duration
 func (rpu *RetentionPolicyUpdate) SetDuration(v time.Duration) { rpu.Duration = &v }
-func (rpu *RetentionPolicyUpdate) SetReplicaN(v int)           { rpu.ReplicaN = &v }
+
+// SetReplicaN sets the RetentionPolicyUpdate.ReplicaN
+func (rpu *RetentionPolicyUpdate) SetReplicaN(v int) { rpu.ReplicaN = &v }
 
 // assert will panic with a given formatted message if the given condition is false.
 func assert(condition bool, msg string, v ...interface{}) {

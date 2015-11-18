@@ -166,8 +166,12 @@ func TestStatementExecutor_ExecuteStatement_DropServer(t *testing.T) {
 		}, nil
 	}
 
-	// Ensure Raft nodes cannot be dropped.
-	if res := e.ExecuteStatement(influxql.MustParseStatement(`DROP SERVER 1`)); res.Err != meta.ErrNodeRaft {
+	e.Store.DeleteNodeFn = func(id uint64, force bool) error {
+		return nil
+	}
+
+	// Ensure Raft nodes can be dropped.
+	if res := e.ExecuteStatement(influxql.MustParseStatement(`DROP SERVER 1`)); res.Err != nil {
 		t.Fatalf("unexpected error: %s", res.Err)
 	}
 
@@ -970,9 +974,11 @@ func TestStatementExecutor_ExecuteStatement_ShowShards(t *testing.T) {
 				Name: "foo",
 				RetentionPolicies: []meta.RetentionPolicyInfo{
 					{
+						Name:     "rpi_foo",
 						Duration: time.Second,
 						ShardGroups: []meta.ShardGroupInfo{
 							{
+								ID:        66,
 								StartTime: time.Unix(0, 0),
 								EndTime:   time.Unix(1, 0),
 								Shards: []meta.ShardInfo{
@@ -1001,10 +1007,10 @@ func TestStatementExecutor_ExecuteStatement_ShowShards(t *testing.T) {
 	} else if !reflect.DeepEqual(res.Series, models.Rows{
 		{
 			Name:    "foo",
-			Columns: []string{"id", "start_time", "end_time", "expiry_time", "owners"},
+			Columns: []string{"id", "database", "retention_policy", "shard_group", "start_time", "end_time", "expiry_time", "owners"},
 			Values: [][]interface{}{
-				{uint64(1), "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z", "1,2,3"},
-				{uint64(2), "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z", ""},
+				{uint64(1), "foo", "rpi_foo", uint64(66), "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z", "1,2,3"},
+				{uint64(2), "foo", "rpi_foo", uint64(66), "1970-01-01T00:00:00Z", "1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z", ""},
 			},
 		},
 	}) {

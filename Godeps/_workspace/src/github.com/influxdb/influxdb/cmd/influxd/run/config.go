@@ -99,6 +99,7 @@ func NewDemoConfig() (*Config, error) {
 	c.HintedHandoff.Dir = filepath.Join(homeDir, ".influxdb/hh")
 	c.Data.WALDir = filepath.Join(homeDir, ".influxdb/wal")
 
+	c.HintedHandoff.Enabled = true
 	c.Admin.Enabled = true
 
 	return c, nil
@@ -108,12 +109,12 @@ func NewDemoConfig() (*Config, error) {
 func (c *Config) Validate() error {
 	if c.Meta.Dir == "" {
 		return errors.New("Meta.Dir must be specified")
-	} else if c.Data.Dir == "" {
-		return errors.New("Data.Dir must be specified")
-	} else if c.HintedHandoff.Dir == "" {
+	} else if c.HintedHandoff.Enabled && c.HintedHandoff.Dir == "" {
 		return errors.New("HintedHandoff.Dir must be specified")
-	} else if c.Data.WALDir == "" {
-		return errors.New("Data.WALDir must be specified")
+	}
+
+	if err := c.Data.Validate(); err != nil {
+		return err
 	}
 
 	for _, g := range c.Graphites {
@@ -124,6 +125,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// ApplyEnvOverrides apply the environment configuration on top of the config.
 func (c *Config) ApplyEnvOverrides() error {
 	return c.applyEnvOverrides("INFLUXDB", reflect.ValueOf(c))
 }

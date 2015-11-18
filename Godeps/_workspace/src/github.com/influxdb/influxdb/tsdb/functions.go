@@ -14,16 +14,18 @@ import (
 	"math/rand"
 	"reflect"
 	"sort"
-	"strings"
 
+	// "github.com/davecgh/go-spew/spew"
 	"github.com/influxdb/influxdb/influxql"
 )
 
+// MapInput represents a collection of values to be processed by the mapper.
 type MapInput struct {
 	TMin  int64
 	Items []MapItem
 }
 
+// MapItem represents a single item in a collection that's processed by the mapper.
 type MapItem struct {
 	Timestamp int64
 	Value     interface{}
@@ -205,7 +207,7 @@ func InitializeUnmarshaller(c *influxql.Call) (UnmarshalFunc, error) {
 		}, nil
 	case "distinct":
 		return func(b []byte) (interface{}, error) {
-			var val interfaceValues
+			var val InterfaceValues
 			err := json.Unmarshal(b, &val)
 			return val, err
 		}, nil
@@ -254,11 +256,11 @@ func MapCount(input *MapInput) interface{} {
 	return nil
 }
 
-type interfaceValues []interface{}
+type InterfaceValues []interface{}
 
-func (d interfaceValues) Len() int      { return len(d) }
-func (d interfaceValues) Swap(i, j int) { d[i], d[j] = d[j], d[i] }
-func (d interfaceValues) Less(i, j int) bool {
+func (d InterfaceValues) Len() int      { return len(d) }
+func (d InterfaceValues) Swap(i, j int) { d[i], d[j] = d[j], d[i] }
+func (d InterfaceValues) Less(i, j int) bool {
 	cmpt, a, b := typeCompare(d[i], d[j])
 	cmpv := valueCompare(a, b)
 	if cmpv == 0 {
@@ -278,7 +280,7 @@ func MapDistinct(input *MapInput) interface{} {
 		return nil
 	}
 
-	results := make(interfaceValues, len(m))
+	results := make(InterfaceValues, len(m))
 	var i int
 	for value, _ := range m {
 		results[i] = value
@@ -296,7 +298,7 @@ func ReduceDistinct(values []interface{}) interface{} {
 		if v == nil {
 			continue
 		}
-		d, ok := v.(interfaceValues)
+		d, ok := v.(InterfaceValues)
 		if !ok {
 			msg := fmt.Sprintf("expected distinctValues, got: %T", v)
 			panic(msg)
@@ -307,7 +309,7 @@ func ReduceDistinct(values []interface{}) interface{} {
 	}
 
 	// convert map keys to an array
-	results := make(interfaceValues, len(index))
+	results := make(InterfaceValues, len(index))
 	var i int
 	for k, _ := range index {
 		results[i] = k
@@ -432,9 +434,9 @@ func MapMean(input *MapInput) interface{} {
 		out.Count++
 		switch v := item.Value.(type) {
 		case float64:
-			out.Mean += (v - out.Mean) / float64(out.Count)
+			out.Total += v
 		case int64:
-			out.Mean += (float64(v) - out.Mean) / float64(out.Count)
+			out.Total += float64(v)
 			out.ResultType = Int64Type
 		}
 	}
@@ -443,27 +445,24 @@ func MapMean(input *MapInput) interface{} {
 
 type meanMapOutput struct {
 	Count      int
-	Mean       float64
+	Total      float64
 	ResultType NumberType
 }
 
 // ReduceMean computes the mean of values for each key.
 func ReduceMean(values []interface{}) interface{} {
-	out := &meanMapOutput{}
-	var countSum int
+	var total float64
+	var count int
 	for _, v := range values {
-		if v == nil {
-			continue
+		if v, _ := v.(*meanMapOutput); v != nil {
+			count += v.Count
+			total += v.Total
 		}
-		val := v.(*meanMapOutput)
-		countSum = out.Count + val.Count
-		out.Mean = val.Mean*(float64(val.Count)/float64(countSum)) + out.Mean*(float64(out.Count)/float64(countSum))
-		out.Count = countSum
 	}
-	if out.Count > 0 {
-		return out.Mean
+	if count == 0 {
+		return nil
 	}
-	return nil
+	return total / float64(count)
 }
 
 // ReduceMedian computes the median of values
@@ -658,6 +657,7 @@ func MapMin(input *MapInput, fieldName string) interface{} {
 			min.Tags = item.Tags
 			pointsYielded = true
 		}
+
 		current := min.Val
 		min.Val = math.Min(min.Val, val)
 
@@ -676,55 +676,41 @@ func MapMin(input *MapInput, fieldName string) interface{} {
 
 // ReduceMin computes the min of value.
 func ReduceMin(values []interface{}) interface{} {
-	min := &minMaxMapOut{}
-	pointsYielded := false
-
+	var curr *minMaxMapOut
 	for _, value := range values {
-		if value == nil {
+		v, _ := value.(*minMaxMapOut)
+		if v == nil {
 			continue
 		}
 
-		v, ok := value.(*minMaxMapOut)
-		if !ok {
-			continue
+		// Replace current if lower value.
+		if curr == nil || v.Val < curr.Val || (v.Val == curr.Val && v.Time < curr.Time) {
+			curr = v
 		}
+	}
 
-		// Initialize min
-		if !pointsYielded {
-			min.Time = v.Time
-			min.Val = v.Val
-			min.Type = v.Type
-			min.Fields = v.Fields
-			min.Tags = v.Tags
-			pointsYielded = true
-		}
-		min.Val = math.Min(min.Val, v.Val)
-		current := min.Val
-		if current != min.Val {
-			min.Time = v.Time
-			min.Fields = v.Fields
-			min.Tags = v.Tags
-		}
+	if curr == nil {
+		return nil
 	}
-	if pointsYielded {
-		switch min.Type {
-		case Float64Type:
-			return PositionPoint{
-				Time:   min.Time,
-				Value:  min.Val,
-				Fields: min.Fields,
-				Tags:   min.Tags,
-			}
-		case Int64Type:
-			return PositionPoint{
-				Time:   min.Time,
-				Value:  int64(min.Val),
-				Fields: min.Fields,
-				Tags:   min.Tags,
-			}
+
+	switch curr.Type {
+	case Float64Type:
+		return PositionPoint{
+			Time:   curr.Time,
+			Value:  curr.Val,
+			Fields: curr.Fields,
+			Tags:   curr.Tags,
 		}
+	case Int64Type:
+		return PositionPoint{
+			Time:   curr.Time,
+			Value:  int64(curr.Val),
+			Fields: curr.Fields,
+			Tags:   curr.Tags,
+		}
+	default:
+		return nil
 	}
-	return nil
 }
 
 func decodeValueAndNumberType(v interface{}) (float64, NumberType, bool) {
@@ -786,55 +772,41 @@ func MapMax(input *MapInput, fieldName string) interface{} {
 
 // ReduceMax computes the max of value.
 func ReduceMax(values []interface{}) interface{} {
-	max := &minMaxMapOut{}
-	pointsYielded := false
-
+	var curr *minMaxMapOut
 	for _, value := range values {
-		if value == nil {
+		v, _ := value.(*minMaxMapOut)
+		if v == nil {
 			continue
 		}
 
-		v, ok := value.(*minMaxMapOut)
-		if !ok {
-			continue
+		// Replace current if higher value.
+		if curr == nil || v.Val > curr.Val || (v.Val == curr.Val && v.Time < curr.Time) {
+			curr = v
 		}
+	}
 
-		// Initialize max
-		if !pointsYielded {
-			max.Time = v.Time
-			max.Val = v.Val
-			max.Type = v.Type
-			max.Fields = v.Fields
-			max.Tags = v.Tags
-			pointsYielded = true
-		}
-		current := max.Val
-		max.Val = math.Max(max.Val, v.Val)
-		if current != max.Val {
-			max.Time = v.Time
-			max.Fields = v.Fields
-			max.Tags = v.Tags
-		}
+	if curr == nil {
+		return nil
 	}
-	if pointsYielded {
-		switch max.Type {
-		case Float64Type:
-			return PositionPoint{
-				Time:   max.Time,
-				Value:  max.Val,
-				Fields: max.Fields,
-				Tags:   max.Tags,
-			}
-		case Int64Type:
-			return PositionPoint{
-				Time:   max.Time,
-				Value:  int64(max.Val),
-				Fields: max.Fields,
-				Tags:   max.Tags,
-			}
+
+	switch curr.Type {
+	case Float64Type:
+		return PositionPoint{
+			Time:   curr.Time,
+			Value:  curr.Val,
+			Fields: curr.Fields,
+			Tags:   curr.Tags,
 		}
+	case Int64Type:
+		return PositionPoint{
+			Time:   curr.Time,
+			Value:  int64(curr.Val),
+			Fields: curr.Fields,
+			Tags:   curr.Tags,
+		}
+	default:
+		return nil
 	}
-	return nil
 }
 
 type spreadMapOutput struct {
@@ -1180,7 +1152,7 @@ func inferFloat(v reflect.Value) (weight int, value interface{}) {
 	case reflect.String:
 		return stringWeight, v.Interface()
 	}
-	panic(fmt.Sprintf("interfaceValues.Less - unreachable code; type was %T", v.Interface()))
+	panic(fmt.Sprintf("InterfaceValues.Less - unreachable code; type was %T", v.Interface()))
 }
 
 func cmpFloat(a, b float64) int {
@@ -1315,7 +1287,13 @@ func valueCompare(a, b interface{}) int {
 		d1, ok1 := a.(string)
 		d2, ok2 := b.(string)
 		if ok1 && ok2 {
-			return strings.Compare(d1, d2)
+			if d1 == d2 {
+				return 0
+			}
+			if d1 > d2 {
+				return 1
+			}
+			return -1
 		}
 	}
 	panic(fmt.Sprintf("unreachable code; types were %T, %T", a, b))
@@ -1492,6 +1470,7 @@ func MapTopBottom(input *MapInput, limit int, fields []string, argCount int, cal
 
 	// buffer so we don't allocate every time through
 	var pp PositionPoint
+
 	if argCount > 2 {
 		// this is a tag aggregating query.
 		// For each unique permutation of the tags given,
@@ -1582,7 +1561,6 @@ func MapTopBottom(input *MapInput, limit int, fields []string, argCount int, cal
 // ReduceTop computes the top values for each key.
 // This function assumes that its inputs are in sorted ascending order.
 func ReduceTopBottom(values []interface{}, limit int, fields []string, callName string) interface{} {
-
 	out := positionOut{callArgs: fields}
 	minheap := topBottomMapOut{&out, callName == "bottom"}
 	results := make([]PositionPoints, 0, len(values))
@@ -1591,36 +1569,58 @@ func ReduceTopBottom(values []interface{}, limit int, fields []string, callName 
 		if v == nil {
 			continue
 		}
+
 		o, ok := v.(PositionPoints)
-		if ok {
-			results = append(results, o)
+		if !ok {
+			continue
 		}
+
+		results = append(results, o)
 	}
+
 	// These ranges are all in sorted ascending order
 	// so we can grab the top value out of all of them
 	// to figure out the top X ones.
+	keys := map[string]struct{}{}
 	for i := 0; i < limit; i++ {
 		var max *PositionPoint
 		whichselected := -1
 		for iter, v := range results {
-			if len(v) > 0 && (max == nil || minheap.positionPointLess(max, &v[0])) {
-				max = &v[0]
-				whichselected = iter
+			// ignore if there are no values or if value is less.
+			if len(v) == 0 {
+				continue
+			} else if max != nil && !minheap.positionPointLess(max, &v[0]) {
+				continue
 			}
+
+			// ignore if we've already appended this key.
+			if len(fields) > 0 {
+				tagkey := tagkeytop(fields, nil, v[0].Tags)
+				if _, ok := keys[tagkey]; ok {
+					continue
+				}
+			}
+
+			max = &v[0]
+			whichselected = iter
 		}
+
 		if whichselected == -1 {
-			// none of the points have any values
-			// so we can return what we have now
-			sort.Sort(topBottomReduceOut{out, callName == "bottom"})
-			return out.points
+			break
 		}
+
 		v := results[whichselected]
+
+		tagkey := tagkeytop(fields, nil, v[0].Tags)
+		keys[tagkey] = struct{}{}
+
 		out.points = append(out.points, v[0])
 		results[whichselected] = v[1:]
 	}
 
 	// now we need to resort the tops by time
 	sort.Sort(topBottomReduceOut{out, callName == "bottom"})
+
 	return out.points
 }
 
