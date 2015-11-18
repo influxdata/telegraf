@@ -57,6 +57,7 @@ endif
 	docker run --name aerospike -p "3000:3000" -d aerospike
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
+	docker run --name riemann -p "5555:5555" -d blalor/riemann
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -69,6 +70,7 @@ docker-run-circle:
 	docker run --name aerospike -p "3000:3000" -d aerospike
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
+	docker run --name riemann -p "5555:5555" -d blalor/riemann
 
 # Kill all docker containers, ignore errors
 docker-kill:
