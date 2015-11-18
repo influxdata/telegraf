@@ -1,10 +1,13 @@
-## v0.2.2 [unreleased]
+## v0.2.3 [unreleased]
+
+## v0.2.2 [2015-11-18]
 
 ### Release Notes
-
-### Features
+- 0.2.1 has a bug where all lists within plugins get duplicated, this includes
+lists of servers/URLs. 0.2.2 is being released solely to fix that bug
 
 ### Bugfixes
+- [#377](https://github.com/influxdb/telegraf/pull/377): Fix for duplicate slices in plugins.
 
 ## v0.2.1 [2015-11-16]
 

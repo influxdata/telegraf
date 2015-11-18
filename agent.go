@@ -177,11 +177,7 @@ func (a *Agent) LoadPlugins(filters []string, config *Config) ([]string, error) 
 
 	for name, plugin := range config.PluginsDeclared() {
 		if sliceContains(name, filters) || len(filters) == 0 {
-			config, err := config.ApplyPlugin(name, plugin)
-			if err != nil {
-				return nil, err
-			}
-
+			config := config.GetPluginConfig(name)
 			a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
 			names = append(names, name)
 		}

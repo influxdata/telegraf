@@ -139,19 +139,8 @@ func (c *Config) ApplyAgent(a *Agent) error {
 	return nil
 }
 
-// ApplyPlugin loads the Plugin struct built from the config into the given Plugin struct.
-// Overrides only values in the given struct that were set in the config.
-// Additionally return a ConfiguredPlugin, which is always generated from the config.
-func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, error) {
-	if c.plugins[name] != nil {
-		err := mergeStruct(v, c.plugins[name], c.pluginFieldsSet[name])
-		if err != nil {
-			return nil, err
-		}
-		return c.pluginConfigurations[name], nil
-	}
-
-	return nil, nil
+func (c *Config) GetPluginConfig(name string) *ConfiguredPlugin {
+	return c.pluginConfigurations[name]
 }
 
 // Couldn't figure out how to get this to work with the declared function.
@@ -405,11 +394,7 @@ func mergeStruct(base, overlay interface{}, fields []string) error {
 				overlayValue.Type(), field)
 		}
 		baseFieldValue := findField(field, baseValue)
-		if overlayFieldValue.Kind() == reflect.Slice {
-			baseFieldValue.Set(reflect.AppendSlice(baseFieldValue, overlayFieldValue))
-		} else {
-			baseFieldValue.Set(overlayFieldValue)
-		}
+		baseFieldValue.Set(overlayFieldValue)
 	}
 	return nil
 }
