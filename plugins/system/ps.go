@@ -29,6 +29,7 @@ type PS interface {
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error)
 	DiskUsage() ([]*disk.DiskUsageStat, error)
 	NetIO() ([]net.NetIOCountersStat, error)
+	NetProto() ([]net.NetProtoCountersStat, error)
 	DiskIO() (map[string]disk.DiskIOCountersStat, error)
 	VMStat() (*mem.VirtualMemoryStat, error)
 	SwapStat() (*mem.SwapMemoryStat, error)
@@ -86,6 +87,10 @@ func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 	}
 
 	return usage, nil
+}
+
+func (s *systemPS) NetProto() ([]net.NetProtoCountersStat, error) {
+	return net.NetProtoCounters(nil)
 }
 
 func (s *systemPS) NetIO() ([]net.NetIOCountersStat, error) {

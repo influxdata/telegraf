@@ -3,6 +3,7 @@ package system
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/influxdb/telegraf/plugins"
 )
@@ -77,6 +78,15 @@ func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
 		acc.Add("err_out", io.Errout, tags)
 		acc.Add("drop_in", io.Dropin, tags)
 		acc.Add("drop_out", io.Dropout, tags)
+	}
+
+	// Get system wide stats for different network protocols
+	netprotos, err := s.ps.NetProto()
+	for _, proto := range netprotos {
+		for stat, value := range proto.Stats {
+			name := fmt.Sprintf("%s_%s", proto.Protocol, strings.ToLower(stat))
+			acc.Add(name, value, nil)
+		}
 	}
 
 	return nil
