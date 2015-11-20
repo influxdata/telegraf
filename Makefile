@@ -1,30 +1,32 @@
 UNAME := $(shell sh -c 'uname')
 VERSION := $(shell sh -c 'git describe --always --tags')
-ifndef GOBIN
-	GOBIN = $(GOPATH)/bin
+ifdef GOBIN
+PATH := $(GOBIN):$(PATH)
+else
+PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
 
 # Standard Telegraf build
 build: prepare
-	$(GOBIN)/godep go build -o telegraf -ldflags \
+	godep go build -o telegraf -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
 # Build with race detector
 dev: prepare
-	$(GOBIN)/godep go build -race -o telegraf -ldflags \
+	godep go build -race -o telegraf -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
 # Build linux 64-bit, 32-bit and arm architectures
 build-linux-bins: prepare
-	GOARCH=amd64 GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_amd64 \
+	GOARCH=amd64 GOOS=linux godep go build -o telegraf_linux_amd64 \
 								-ldflags "-X main.Version=$(VERSION)" \
 								./cmd/telegraf/telegraf.go
-	GOARCH=386 GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_386 \
+	GOARCH=386 GOOS=linux godep go build -o telegraf_linux_386 \
 								-ldflags "-X main.Version=$(VERSION)" \
 								./cmd/telegraf/telegraf.go
-	GOARCH=arm GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_arm \
+	GOARCH=arm GOOS=linux godep go build -o telegraf_linux_arm \
 								-ldflags "-X main.Version=$(VERSION)" \
 								./cmd/telegraf/telegraf.go
 
@@ -86,6 +88,6 @@ test: docker-kill prepare docker-run
 
 # Run "short" unit tests
 test-short: prepare
-	$(GOBIN)/godep go test -short ./...
+	godep go test -short ./...
 
 .PHONY: test
