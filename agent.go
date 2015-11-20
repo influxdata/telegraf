@@ -24,9 +24,10 @@ type runningOutput struct {
 }
 
 type runningPlugin struct {
-	name   string
-	plugin plugins.Plugin
-	config *ConfiguredPlugin
+	name       string
+	filtername string
+	plugin     plugins.Plugin
+	config     *ConfiguredPlugin
 }
 
 // Agent runs telegraf and collects data based on the given config
@@ -176,9 +177,11 @@ func (a *Agent) LoadPlugins(filters []string, config *Config) ([]string, error) 
 	var names []string
 
 	for name, plugin := range config.PluginsDeclared() {
-		if sliceContains(name, filters) || len(filters) == 0 {
+		// Trim the ID off the output name for filtering
+		filtername := strings.TrimRight(name, "-0123456789")
+		if sliceContains(filtername, filters) || len(filters) == 0 {
 			config := config.GetPluginConfig(name)
-			a.plugins = append(a.plugins, &runningPlugin{name, plugin, config})
+			a.plugins = append(a.plugins, &runningPlugin{name, filtername, plugin, config})
 			names = append(names, name)
 		}
 	}
@@ -207,7 +210,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 			acc := NewAccumulator(plugin.config, pointChan)
 			acc.SetDebug(a.Debug)
-			acc.SetPrefix(plugin.name + "_")
+			acc.SetPrefix(plugin.filtername + "_")
 			acc.SetDefaultTags(a.Tags)
 
 			if err := plugin.plugin.Gather(acc); err != nil {
@@ -240,7 +243,7 @@ func (a *Agent) gatherSeparate(
 
 		acc := NewAccumulator(plugin.config, pointChan)
 		acc.SetDebug(a.Debug)
-		acc.SetPrefix(plugin.name + "_")
+		acc.SetPrefix(plugin.filtername + "_")
 		acc.SetDefaultTags(a.Tags)
 
 		if err := plugin.plugin.Gather(acc); err != nil {
@@ -286,7 +289,7 @@ func (a *Agent) Test() error {
 	for _, plugin := range a.plugins {
 		acc := NewAccumulator(plugin.config, pointChan)
 		acc.SetDebug(true)
-		acc.SetPrefix(plugin.name + "_")
+		acc.SetPrefix(plugin.filtername + "_")
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", plugin.name)
 		if plugin.config.Interval != 0 {
@@ -299,7 +302,7 @@ func (a *Agent) Test() error {
 
 		// Special instructions for some plugins. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
-		switch plugin.name {
+		switch plugin.filtername {
 		case "cpu", "mongodb":
 			time.Sleep(500 * time.Millisecond)
 			fmt.Printf("* Plugin: %s, Collection 2\n", plugin.name)

@@ -206,7 +206,7 @@ func TestConfig_parsePlugin(t *testing.T) {
 	}
 
 	subtbl := tbl.Fields["memcached"].(*ast.Table)
-	err = c.parsePlugin("memcached", subtbl)
+	err = c.parsePlugin("memcached", subtbl, 0)
 
 	memcached := plugins.Plugins["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
@@ -230,9 +230,9 @@ func TestConfig_parsePlugin(t *testing.T) {
 		Interval: 5 * time.Second,
 	}
 
-	assert.Equal(t, memcached, c.plugins["memcached"],
+	assert.Equal(t, memcached, c.plugins["memcached-0"],
 		"Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.pluginConfigurations["memcached"],
+	assert.Equal(t, mConfig, c.pluginConfigurations["memcached-0"],
 		"Testdata did not produce correct memcached metadata.")
 }
 
@@ -290,18 +290,18 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	pConfig := &ConfiguredPlugin{Name: "procstat"}
 
-	assert.Equal(t, memcached, c.plugins["memcached"],
+	assert.Equal(t, memcached, c.plugins["memcached-0"],
 		"Merged Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.pluginConfigurations["memcached"],
+	assert.Equal(t, mConfig, c.pluginConfigurations["memcached-0"],
 		"Merged Testdata did not produce correct memcached metadata.")
 
-	assert.Equal(t, ex, c.plugins["exec"],
+	assert.Equal(t, ex, c.plugins["exec-0"],
 		"Merged Testdata did not produce a correct exec struct.")
-	assert.Equal(t, eConfig, c.pluginConfigurations["exec"],
+	assert.Equal(t, eConfig, c.pluginConfigurations["exec-0"],
 		"Merged Testdata did not produce correct exec metadata.")
 
-	assert.Equal(t, pstat, c.plugins["procstat"],
+	assert.Equal(t, pstat, c.plugins["procstat-0"],
 		"Merged Testdata did not produce a correct procstat struct.")
-	assert.Equal(t, pConfig, c.pluginConfigurations["procstat"],
+	assert.Equal(t, pConfig, c.pluginConfigurations["procstat-0"],
 		"Merged Testdata did not produce correct procstat metadata.")
 }

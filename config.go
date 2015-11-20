@@ -236,6 +236,8 @@ var pluginHeader = `
 ###############################################################################
 #                                  PLUGINS                                    #
 ###############################################################################
+
+[plugins]
 `
 
 var servicePluginHeader = `
@@ -311,7 +313,7 @@ type printer interface {
 }
 
 func printConfig(name string, p printer) {
-	fmt.Printf("\n# %s\n[%s]", p.Description(), name)
+	fmt.Printf("\n# %s\n[[plugins.%s]]", p.Description(), name)
 	config := p.SampleConfig()
 	if config == "" {
 		fmt.Printf("\n  # no configuration\n")
@@ -540,8 +542,34 @@ func LoadConfig(path string) (*Config, error) {
 						outputName)
 				}
 			}
+		case "plugins":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case *ast.Table:
+					err = c.parsePlugin(pluginName, pluginSubTable, 0)
+					if err != nil {
+						log.Printf("Could not parse config for plugin: %s\n",
+							pluginName)
+						return nil, err
+					}
+				case []*ast.Table:
+					for id, t := range pluginSubTable {
+						err = c.parsePlugin(pluginName, t, id)
+						if err != nil {
+							log.Printf("Could not parse config for plugin: %s\n",
+								pluginName)
+							return nil, err
+						}
+					}
+				default:
+					return nil, fmt.Errorf("Unsupported config format: %s",
+						pluginName)
+				}
+			}
+		// Assume it's a plugin for legacy config file support if no other
+		// identifiers are present
 		default:
-			err = c.parsePlugin(name, subTable)
+			err = c.parsePlugin(name, subTable, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -590,7 +618,7 @@ func (c *Config) parseOutput(name string, outputAst *ast.Table, id int) error {
 }
 
 // Parse a plugin config, plus plugin meta-config, out of the given *ast.Table.
-func (c *Config) parsePlugin(name string, pluginAst *ast.Table) error {
+func (c *Config) parsePlugin(name string, pluginAst *ast.Table, id int) error {
 	creator, ok := plugins.Plugins[name]
 	if !ok {
 		return fmt.Errorf("Undefined but requested plugin: %s", name)
@@ -682,13 +710,14 @@ func (c *Config) parsePlugin(name string, pluginAst *ast.Table) error {
 	delete(pluginAst.Fields, "interval")
 	delete(pluginAst.Fields, "tagdrop")
 	delete(pluginAst.Fields, "tagpass")
-	c.pluginFieldsSet[name] = extractFieldNames(pluginAst)
-	c.pluginConfigurationFieldsSet[name] = cpFields
+	nameID := fmt.Sprintf("%s-%d", name, id)
+	c.pluginFieldsSet[nameID] = extractFieldNames(pluginAst)
+	c.pluginConfigurationFieldsSet[nameID] = cpFields
 	err := toml.UnmarshalTable(pluginAst, plugin)
 	if err != nil {
 		return err
 	}
-	c.plugins[name] = plugin
-	c.pluginConfigurations[name] = cp
+	c.plugins[nameID] = plugin
+	c.pluginConfigurations[nameID] = cp
 	return nil
 }
