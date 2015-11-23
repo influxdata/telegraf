@@ -36,6 +36,20 @@ type Config struct {
 	outputFieldsSet              map[string][]string
 }
 
+// Returns a new, empty config object.
+func NewConfig() *Config {
+	c := &Config{
+		Tags:                         make(map[string]string),
+		plugins:                      make(map[string]plugins.Plugin),
+		pluginConfigurations:         make(map[string]*ConfiguredPlugin),
+		outputs:                      make(map[string]outputs.Output),
+		pluginFieldsSet:              make(map[string][]string),
+		pluginConfigurationFieldsSet: make(map[string][]string),
+		outputFieldsSet:              make(map[string][]string),
+	}
+	return c
+}
+
 // Plugins returns the configured plugins as a map of name -> plugins.Plugin
 func (c *Config) Plugins() map[string]plugins.Plugin {
 	return c.plugins
@@ -414,64 +428,11 @@ func (c *Config) LoadDirectory(path string) error {
 		if name[len(name)-5:] != ".conf" {
 			continue
 		}
-		subConfig, err := LoadConfig(filepath.Join(path, name))
+		err := c.LoadConfig(filepath.Join(path, name))
 		if err != nil {
 			return err
 		}
-		if subConfig.agent != nil {
-			err = mergeStruct(c.agent, subConfig.agent, subConfig.agentFieldsSet)
-			if err != nil {
-				return err
-			}
-			for _, field := range subConfig.agentFieldsSet {
-				if !sliceContains(field, c.agentFieldsSet) {
-					c.agentFieldsSet = append(c.agentFieldsSet, field)
-				}
-			}
-		}
-		for pluginName, plugin := range subConfig.plugins {
-			if _, ok := c.plugins[pluginName]; !ok {
-				c.plugins[pluginName] = plugin
-				c.pluginFieldsSet[pluginName] = subConfig.pluginFieldsSet[pluginName]
-				c.pluginConfigurations[pluginName] = subConfig.pluginConfigurations[pluginName]
-				c.pluginConfigurationFieldsSet[pluginName] = subConfig.pluginConfigurationFieldsSet[pluginName]
-				continue
-			}
-			err = mergeStruct(c.plugins[pluginName], plugin, subConfig.pluginFieldsSet[pluginName])
-			if err != nil {
-				return err
-			}
-			for _, field := range subConfig.pluginFieldsSet[pluginName] {
-				if !sliceContains(field, c.pluginFieldsSet[pluginName]) {
-					c.pluginFieldsSet[pluginName] = append(c.pluginFieldsSet[pluginName], field)
-				}
-			}
-			err = mergeStruct(c.pluginConfigurations[pluginName], subConfig.pluginConfigurations[pluginName], subConfig.pluginConfigurationFieldsSet[pluginName])
-			if err != nil {
-				return err
-			}
-			for _, field := range subConfig.pluginConfigurationFieldsSet[pluginName] {
-				if !sliceContains(field, c.pluginConfigurationFieldsSet[pluginName]) {
-					c.pluginConfigurationFieldsSet[pluginName] = append(c.pluginConfigurationFieldsSet[pluginName], field)
-				}
-			}
-		}
-		for outputName, output := range subConfig.outputs {
-			if _, ok := c.outputs[outputName]; !ok {
-				c.outputs[outputName] = output
-				c.outputFieldsSet[outputName] = subConfig.outputFieldsSet[outputName]
-				continue
-			}
-			err = mergeStruct(c.outputs[outputName], output, subConfig.outputFieldsSet[outputName])
-			if err != nil {
-				return err
-			}
-			for _, field := range subConfig.outputFieldsSet[outputName] {
-				if !sliceContains(field, c.outputFieldsSet[outputName]) {
-					c.outputFieldsSet[outputName] = append(c.outputFieldsSet[outputName], field)
-				}
-			}
-		}
+
 	}
 	return nil
 }
@@ -479,31 +440,21 @@ func (c *Config) LoadDirectory(path string) error {
 // hazmat area. Keeping the ast parsing here.
 
 // LoadConfig loads the given config file and returns a *Config pointer
-func LoadConfig(path string) (*Config, error) {
+func (c *Config) LoadConfig(path string) error {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	tbl, err := toml.Parse(data)
 	if err != nil {
-		return nil, err
-	}
-
-	c := &Config{
-		Tags:                         make(map[string]string),
-		plugins:                      make(map[string]plugins.Plugin),
-		pluginConfigurations:         make(map[string]*ConfiguredPlugin),
-		outputs:                      make(map[string]outputs.Output),
-		pluginFieldsSet:              make(map[string][]string),
-		pluginConfigurationFieldsSet: make(map[string][]string),
-		outputFieldsSet:              make(map[string][]string),
+		return err
 	}
 
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return nil, errors.New("invalid configuration")
+			return errors.New("invalid configuration")
 		}
 
 		switch name {
@@ -511,12 +462,12 @@ func LoadConfig(path string) (*Config, error) {
 			err := c.parseAgent(subTable)
 			if err != nil {
 				log.Printf("Could not parse [agent] config\n")
-				return nil, err
+				return err
 			}
 		case "tags":
 			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("Could not parse [tags] config\n")
-				return nil, err
+				return err
 			}
 		case "outputs":
 			for outputName, outputVal := range subTable.Fields {
@@ -526,7 +477,7 @@ func LoadConfig(path string) (*Config, error) {
 					if err != nil {
 						log.Printf("Could not parse config for output: %s\n",
 							outputName)
-						return nil, err
+						return err
 					}
 				case []*ast.Table:
 					for id, t := range outputSubTable {
@@ -534,11 +485,11 @@ func LoadConfig(path string) (*Config, error) {
 						if err != nil {
 							log.Printf("Could not parse config for output: %s\n",
 								outputName)
-							return nil, err
+							return err
 						}
 					}
 				default:
-					return nil, fmt.Errorf("Unsupported config format: %s",
+					return fmt.Errorf("Unsupported config format: %s",
 						outputName)
 				}
 			}
@@ -550,7 +501,7 @@ func LoadConfig(path string) (*Config, error) {
 					if err != nil {
 						log.Printf("Could not parse config for plugin: %s\n",
 							pluginName)
-						return nil, err
+						return err
 					}
 				case []*ast.Table:
 					for id, t := range pluginSubTable {
@@ -558,11 +509,11 @@ func LoadConfig(path string) (*Config, error) {
 						if err != nil {
 							log.Printf("Could not parse config for plugin: %s\n",
 								pluginName)
-							return nil, err
+							return err
 						}
 					}
 				default:
-					return nil, fmt.Errorf("Unsupported config format: %s",
+					return fmt.Errorf("Unsupported config format: %s",
 						pluginName)
 				}
 			}
@@ -571,12 +522,12 @@ func LoadConfig(path string) (*Config, error) {
 		default:
 			err = c.parsePlugin(name, subTable, 0)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	return c, nil
+	return nil
 }
 
 // Needs to have the field names, for merging later.

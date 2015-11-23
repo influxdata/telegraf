@@ -75,7 +75,8 @@ func main() {
 	)
 
 	if *fConfig != "" {
-		config, err = telegraf.LoadConfig(*fConfig)
+		config = telegraf.NewConfig()
+		err = config.LoadConfig(*fConfig)
 		if err != nil {
 			log.Fatal(err)
 		}
