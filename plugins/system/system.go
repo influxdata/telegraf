@@ -40,7 +40,7 @@ func (_ *SystemStats) Gather(acc plugins.Accumulator) error {
 	acc.Add("load1", loadavg.Load1, nil)
 	acc.Add("load5", loadavg.Load5, nil)
 	acc.Add("load15", loadavg.Load15, nil)
-	acc.Add("uptime", hostinfo.Uptime, nil)
+	acc.Add("uptime", float64(hostinfo.Uptime), nil)
 	acc.Add("uptime_format", format_uptime(hostinfo.Uptime), nil)
 
 	return nil
