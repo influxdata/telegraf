@@ -3,6 +3,7 @@ package telegraf
 import (
 	"fmt"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -66,23 +67,30 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-
-	if tags == nil {
-		tags = make(map[string]string)
-	}
-
-	// InfluxDB client/points does not support writing uint64
-	// TODO fix when it does
-	// https://github.com/influxdb/influxdb/pull/4508
+	// Validate uint64 and float64 fields
 	for k, v := range fields {
 		switch val := v.(type) {
 		case uint64:
+			// InfluxDB does not support writing uint64
 			if val < uint64(9223372036854775808) {
 				fields[k] = int64(val)
 			} else {
 				fields[k] = int64(9223372036854775807)
 			}
+		case float64:
+			// NaNs are invalid values in influxdb, skip measurement
+			if math.IsNaN(val) || math.IsInf(val, 0) {
+				if ac.debug {
+					log.Printf("Measurement [%s] has a NaN or Inf field, skipping",
+						measurement)
+				}
+				return
+			}
 		}
+	}
+
+	if tags == nil {
+		tags = make(map[string]string)
 	}
 
 	var timestamp time.Time
@@ -111,6 +119,7 @@ func (ac *accumulator) AddFields(
 	pt, err := client.NewPoint(measurement, tags, fields, timestamp)
 	if err != nil {
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
+		return
 	}
 	if ac.debug {
 		fmt.Println("> " + pt.String())

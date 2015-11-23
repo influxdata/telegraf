@@ -87,7 +87,8 @@ func (g *Prometheus) gatherURL(url string, acc plugins.Accumulator) error {
 				}
 				tags[string(key)] = string(value)
 			}
-			acc.Add(string(sample.Metric[model.MetricNameLabel]), float64(sample.Value), tags)
+			acc.Add(string(sample.Metric[model.MetricNameLabel]),
+				float64(sample.Value), tags)
 		}
 	}
 
