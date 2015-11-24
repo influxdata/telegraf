@@ -30,7 +30,7 @@ func NewProcstat() *Procstat {
 }
 
 var sampleConfig = `
-  [[procstat.specifications]]
+  [[plugins.procstat.specifications]]
   prefix = "" # optional string to prefix measurements
   # Must specify one of: pid_file, exe, or pattern
   # PID file to monitor process

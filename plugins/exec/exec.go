@@ -16,7 +16,7 @@ import (
 
 const sampleConfig = `
   # specify commands via an array of tables
-  [[exec.commands]]
+  [[plugins.exec.commands]]
   # the command to run
   command = "/usr/bin/mycollector --foo=bar"
 

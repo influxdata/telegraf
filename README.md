@@ -110,42 +110,59 @@ you can configure that here.
 
 This is a full working config that will output CPU data to an InfluxDB instance
 at 192.168.59.103:8086, tagging measurements with dc="denver-1". It will output
-measurements at a 10s interval and will collect totalcpu & percpu data.
+measurements at a 10s interval and will collect per-cpu data, dropping any
+measurements which begin with `cpu_time`.
 
 ```
 [tags]
-    dc = "denver-1"
+  dc = "denver-1"
 
 [agent]
-    interval = "10s"
+  interval = "10s"
 
 # OUTPUTS
 [outputs]
 [[outputs.influxdb]]
-    url = "http://192.168.59.103:8086" # required.
-    database = "telegraf" # required.
-    precision = "s"
+  url = "http://192.168.59.103:8086" # required.
+  database = "telegraf" # required.
+  precision = "s"
 
 # PLUGINS
-[cpu]
-    percpu = true
-    totalcpu = true
+[plugins]
+[[plugins.cpu]]
+  percpu = true
+  totalcpu = false
+  drop = ["cpu_time"]
 ```
 
 Below is how to configure `tagpass` and `tagdrop` parameters (added in 0.1.5)
 
 ```
-# Don't collect CPU data for cpu6 & cpu7
-[cpu.tagdrop]
+[plugins]
+[[plugins.cpu]]
+  percpu = true
+  totalcpu = false
+  drop = ["cpu_time"]
+  # Don't collect CPU data for cpu6 & cpu7
+  [plugins.cpu.tagdrop]
     cpu = [ "cpu6", "cpu7" ]
 
-[disk]
-[disk.tagpass]
+[[plugins.disk]]
+  [plugins.disk.tagpass]
     # tagpass conditions are OR, not AND.
     # If the (filesystem is ext4 or xfs) OR (the path is /opt or /home)
     # then the metric passes
     fstype = [ "ext4", "xfs" ]
     path = [ "/opt", "/home" ]
+```
+
+Additional plugins (or outputs) of the same type can be specified,
+just define another instance in the config file:
+
+```
+[[plugins.cpu]]
+  percpu = false
+  totalcpu = true
 ```
 
 ## Supported Plugins

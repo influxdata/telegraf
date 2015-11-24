@@ -22,7 +22,7 @@ type TwemproxyInstance struct {
 }
 
 var sampleConfig = `
-  [[twemproxy.instances]]
+  [[plugins.twemproxy.instances]]
     # Twemproxy stats address and port (no scheme)
     addr = "localhost:22222"
     # Monitor pool name

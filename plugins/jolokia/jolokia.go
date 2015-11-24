@@ -55,7 +55,7 @@ func (j *Jolokia) SampleConfig() string {
     group = "as"
 
   # List of servers exposing jolokia read service
-  [[jolokia.servers]]
+  [[plugins.jolokia.servers]]
     name = "stable"
     host = "192.168.103.2"
     port = "8180"
@@ -63,20 +63,20 @@ func (j *Jolokia) SampleConfig() string {
   # List of metrics collected on above servers
   # Each metric consists in a name, a jmx path and either a pass or drop slice attributes
   # This collect all heap memory usage metrics
-  [[jolokia.metrics]]
+  [[plugins.jolokia.metrics]]
     name = "heap_memory_usage"
     jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
 
 
   # This drops the 'committed' value from Eden space measurement
-  [[jolokia.metrics]]
+  [[plugins.jolokia.metrics]]
     name = "memory_eden"
     jmx  = "/java.lang:type=MemoryPool,name=PS Eden Space/Usage"
     drop = [ "committed" ]
 
 
   # This passes only DaemonThreadCount and ThreadCount
-  [[jolokia.metrics]]
+  [[plugins.jolokia.metrics]]
     name = "heap_threads"
     jmx  = "/java.lang:type=Threading"
     pass = [

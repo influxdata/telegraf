@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/influxdb/telegraf"
+	"github.com/influxdb/telegraf/internal/config"
 	_ "github.com/influxdb/telegraf/outputs/all"
 	_ "github.com/influxdb/telegraf/plugins/all"
 )
@@ -56,13 +57,13 @@ func main() {
 	}
 
 	if *fSampleConfig {
-		telegraf.PrintSampleConfig(pluginFilters, outputFilters)
+		config.PrintSampleConfig(pluginFilters, outputFilters)
 		return
 	}
 
 	if *fUsage != "" {
-		if err := telegraf.PrintPluginConfig(*fUsage); err != nil {
-			if err2 := telegraf.PrintOutputConfig(*fUsage); err2 != nil {
+		if err := config.PrintPluginConfig(*fUsage); err != nil {
+			if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
 				log.Fatalf("%s and %s", err, err2)
 			}
 		}
@@ -70,13 +71,15 @@ func main() {
 	}
 
 	var (
-		config *telegraf.Config
-		err    error
+		c   *config.Config
+		err error
 	)
 
 	if *fConfig != "" {
-		config = telegraf.NewConfig()
-		err = config.LoadConfig(*fConfig)
+		c = config.NewConfig()
+		c.OutputFilters = outputFilters
+		c.PluginFilters = pluginFilters
+		err = c.LoadConfig(*fConfig)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -87,37 +90,25 @@ func main() {
 	}
 
 	if *fConfigDirectory != "" {
-		err = config.LoadDirectory(*fConfigDirectory)
+		err = c.LoadDirectory(*fConfigDirectory)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+	if len(c.Outputs) == 0 {
+		log.Fatalf("Error: no outputs found, did you provide a valid config file?")
+	}
+	if len(c.Plugins) == 0 {
+		log.Fatalf("Error: no plugins found, did you provide a valid config file?")
+	}
 
-	ag, err := telegraf.NewAgent(config)
+	ag, err := telegraf.NewAgent(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if *fDebug {
 		ag.Debug = true
-	}
-
-	outputs, err := ag.LoadOutputs(outputFilters)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(outputs) == 0 {
-		log.Printf("Error: no outputs found, did you provide a valid config file?")
-		os.Exit(1)
-	}
-
-	plugins, err := ag.LoadPlugins(pluginFilters)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(plugins) == 0 {
-		log.Printf("Error: no plugins found, did you provide a valid config file?")
-		os.Exit(1)
 	}
 
 	if *fTest {
@@ -142,9 +133,9 @@ func main() {
 	}()
 
 	log.Printf("Starting Telegraf (version %s)\n", Version)
-	log.Printf("Loaded outputs: %s", strings.Join(outputs, " "))
-	log.Printf("Loaded plugins: %s", strings.Join(plugins, " "))
-	log.Printf("Tags enabled: %s", config.ListTags())
+	log.Printf("Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	log.Printf("Loaded plugins: %s", strings.Join(c.PluginNames(), " "))
+	log.Printf("Tags enabled: %s", c.ListTags())
 
 	if *fPidfile != "" {
 		f, err := os.Create(*fPidfile)

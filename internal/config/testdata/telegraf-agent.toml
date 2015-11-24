@@ -88,13 +88,15 @@
 #                                  PLUGINS                                    #
 ###############################################################################
 
+[plugins]
+
 # Read Apache status information (mod_status)
-[apache]
+[[plugins.apache]]
 # An array of Apache status URI to gather stats.
 urls = ["http://localhost/server-status?auto"]
 
 # Read metrics about cpu usage
-[cpu]
+[[plugins.cpu]]
   # Whether to report per-cpu stats or not
   percpu = true
   # Whether to report total system cpu stats or not
@@ -103,11 +105,11 @@ urls = ["http://localhost/server-status?auto"]
   drop = ["cpu_time"]
 
 # Read metrics about disk usage by mount point
-[disk]
+[[plugins.disk]]
   # no configuration
 
 # Read metrics from one or many disque servers
-[disque]
+[[plugins.disque]]
   # An array of URI to gather stats about. Specify an ip or hostname
   # with optional port and password. ie disque://localhost, disque://10.10.3.33:18832,
   # 10.0.0.1:10000, etc.
@@ -116,7 +118,7 @@ urls = ["http://localhost/server-status?auto"]
   servers = ["localhost"]
 
 # Read stats from one or more Elasticsearch servers or clusters
-[elasticsearch]
+[[plugins.elasticsearch]]
   # specify a list of one or more Elasticsearch servers
   servers = ["http://localhost:9200"]
 
@@ -125,7 +127,7 @@ urls = ["http://localhost/server-status?auto"]
   local = true
 
 # Read flattened metrics from one or more commands that output JSON to stdout
-[exec]
+[[plugins.exec]]
   # specify commands via an array of tables
   [[exec.commands]]
   # the command to run
@@ -135,7 +137,7 @@ urls = ["http://localhost/server-status?auto"]
   name = "mycollector"
 
 # Read metrics of haproxy, via socket or csv stats page
-[haproxy]
+[[plugins.haproxy]]
   # An array of address to gather stats about. Specify an ip on hostname
   # with optional port. ie localhost, 10.10.3.33:1936, etc.
   #
@@ -145,7 +147,7 @@ urls = ["http://localhost/server-status?auto"]
   # servers = ["socket:/run/haproxy/admin.sock"]
 
 # Read flattened metrics from one or more JSON HTTP endpoints
-[httpjson]
+[[plugins.httpjson]]
   # Specify services via an array of tables
   [[httpjson.services]]
 
@@ -167,11 +169,11 @@ urls = ["http://localhost/server-status?auto"]
       threshold = "0.75"
 
 # Read metrics about disk IO by device
-[io]
+[[plugins.io]]
   # no configuration
 
 # read metrics from a Kafka topic
-[kafka_consumer]
+[[plugins.kafka_consumer]]
   # topic(s) to consume
   topics = ["telegraf"]
   # an array of Zookeeper connection strings
@@ -184,7 +186,7 @@ urls = ["http://localhost/server-status?auto"]
   offset = "oldest"
 
 # Read metrics from a LeoFS Server via SNMP
-[leofs]
+[[plugins.leofs]]
   # An array of URI to gather stats about LeoFS.
   # Specify an ip or hostname with port. ie 127.0.0.1:4020
   #
@@ -192,7 +194,7 @@ urls = ["http://localhost/server-status?auto"]
   servers = ["127.0.0.1:4021"]
 
 # Read metrics from local Lustre service on OST, MDS
-[lustre2]
+[[plugins.lustre2]]
   # An array of /proc globs to search for Lustre stats
   # If not specified, the default will work on Lustre 2.5.x
   #
@@ -200,11 +202,11 @@ urls = ["http://localhost/server-status?auto"]
   # mds_procfiles = ["/proc/fs/lustre/mdt/*/md_stats"]
 
 # Read metrics about memory usage
-[mem]
+[[plugins.mem]]
   # no configuration
 
 # Read metrics from one or many memcached servers
-[memcached]
+[[plugins.memcached]]
   # An array of address to gather stats about. Specify an ip on hostname
   # with optional port. ie localhost, 10.0.0.1:11211, etc.
   #
@@ -212,7 +214,7 @@ urls = ["http://localhost/server-status?auto"]
   servers = ["localhost"]
 
 # Read metrics from one or many MongoDB servers
-[mongodb]
+[[plugins.mongodb]]
   # An array of URI to gather stats about. Specify an ip or hostname
   # with optional port add password. ie mongodb://user:auth_key@10.10.3.30:27017,
   # mongodb://10.10.3.33:18832, 10.0.0.1:10000, etc.
@@ -221,7 +223,7 @@ urls = ["http://localhost/server-status?auto"]
   servers = ["127.0.0.1:27017"]
 
 # Read metrics from one or many mysql servers
-[mysql]
+[[plugins.mysql]]
   # specify servers via a url matching:
   #  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
   #  e.g.
@@ -232,7 +234,7 @@ urls = ["http://localhost/server-status?auto"]
   servers = ["localhost"]
 
 # Read metrics about network interface usage
-[net]
+[[plugins.net]]
   # By default, telegraf gathers stats from any up interface (excluding loopback)
   # Setting interfaces will tell it to gather these explicit interfaces,
   # regardless of status.
@@ -240,12 +242,12 @@ urls = ["http://localhost/server-status?auto"]
   # interfaces = ["eth0", ... ]
 
 # Read Nginx's basic status information (ngx_http_stub_status_module)
-[nginx]
+[[plugins.nginx]]
   # An array of Nginx stub_status URI to gather stats.
   urls = ["http://localhost/status"]
 
 # Ping given url(s) and return statistics
-[ping]
+[[plugins.ping]]
   # urls to ping
   urls = ["www.google.com"] # required
   # number of pings to send (ping -c <COUNT>)
@@ -258,7 +260,7 @@ urls = ["http://localhost/server-status?auto"]
   interface = ""
 
 # Read metrics from one or many postgresql servers
-[postgresql]
+[[plugins.postgresql]]
   # specify servers via an array of tables
   [[postgresql.servers]]
 
@@ -288,12 +290,12 @@ urls = ["http://localhost/server-status?auto"]
   # address = "influx@remoteserver"
 
 # Read metrics from one or many prometheus clients
-[prometheus]
+[[plugins.prometheus]]
   # An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
 
 # Read metrics from one or many RabbitMQ servers via the management API
-[rabbitmq]
+[[plugins.rabbitmq]]
   # Specify servers via an array of tables
   [[rabbitmq.servers]]
   # name = "rmq-server-1" # optional tag
@@ -306,7 +308,7 @@ urls = ["http://localhost/server-status?auto"]
   # nodes = ["rabbit@node1", "rabbit@node2"]
 
 # Read metrics from one or many redis servers
-[redis]
+[[plugins.redis]]
   # An array of URI to gather stats about. Specify an ip or hostname
   # with optional port add password. ie redis://localhost, redis://10.10.3.33:18832,
   # 10.0.0.1:10000, etc.
@@ -315,7 +317,7 @@ urls = ["http://localhost/server-status?auto"]
   servers = ["localhost"]
 
 # Read metrics from one or many RethinkDB servers
-[rethinkdb]
+[[plugins.rethinkdb]]
   # An array of URI to gather stats about. Specify an ip or hostname
   # with optional port add password. ie rethinkdb://user:auth_key@10.10.3.30:28105,
   # rethinkdb://10.10.3.33:18832, 10.0.0.1:10000, etc.
@@ -324,9 +326,9 @@ urls = ["http://localhost/server-status?auto"]
   servers = ["127.0.0.1:28015"]
 
 # Read metrics about swap memory usage
-[swap]
+[[plugins.swap]]
   # no configuration
 
 # Read metrics about system load & uptime
-[system]
+[[plugins.system]]
   # no configuration

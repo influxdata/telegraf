@@ -7,15 +7,31 @@ This only affects the kafka consumer _plugin_ (not the
 output). There were a number of problems with the kafka plugin that led to it
 only collecting data once at startup, so the kafka plugin was basically non-
 functional.
+- Plugins can now be specified as a list, and multiple plugin instances of the
+same type can be specified, like this:
+
+```
+[[plugins.cpu]]
+  percpu = false
+  totalcpu = true
+
+[[plugins.cpu]]
+  percpu = true
+  totalcpu = false
+  drop = ["cpu_time"]
+```
+
 - Riemann output added
 
 ### Features
 - [#379](https://github.com/influxdb/telegraf/pull/379): Riemann output, thanks @allenj!
 - [#375](https://github.com/influxdb/telegraf/pull/375): kafka_consumer service plugin.
 - [#392](https://github.com/influxdb/telegraf/pull/392): Procstat plugin can now accept pgrep -f pattern, thanks @ecarreras!
+- [#383](https://github.com/influxdb/telegraf/pull/383): Specify plugins as a list.
 
 ### Bugfixes
 - [#371](https://github.com/influxdb/telegraf/issues/371): Kafka consumer plugin not functioning.
+- [#389](https://github.com/influxdb/telegraf/issues/389): NaN value panic
 
 ## v0.2.2 [2015-11-18]
 

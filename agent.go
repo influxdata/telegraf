@@ -6,29 +6,16 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"sort"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/influxdb/telegraf/internal"
+	"github.com/influxdb/telegraf/internal/config"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 
 	"github.com/influxdb/influxdb/client/v2"
 )
-
-type runningOutput struct {
-	name   string
-	output outputs.Output
-}
-
-type runningPlugin struct {
-	name       string
-	filtername string
-	plugin     plugins.Plugin
-	config     *ConfiguredPlugin
-}
 
 // Agent runs telegraf and collects data based on the given config
 type Agent struct {
@@ -66,14 +53,11 @@ type Agent struct {
 
 	Tags map[string]string
 
-	Config *Config
-
-	outputs []*runningOutput
-	plugins []*runningPlugin
+	Config *config.Config
 }
 
 // NewAgent returns an Agent struct based off the given Config
-func NewAgent(config *Config) (*Agent, error) {
+func NewAgent(config *config.Config) (*Agent, error) {
 	agent := &Agent{
 		Tags:          make(map[string]string),
 		Config:        config,
@@ -110,30 +94,30 @@ func NewAgent(config *Config) (*Agent, error) {
 
 // Connect connects to all configured outputs
 func (a *Agent) Connect() error {
-	for _, o := range a.outputs {
-		switch ot := o.output.(type) {
+	for _, o := range a.Config.Outputs {
+		switch ot := o.Output.(type) {
 		case outputs.ServiceOutput:
 			if err := ot.Start(); err != nil {
 				log.Printf("Service for output %s failed to start, exiting\n%s\n",
-					o.name, err.Error())
+					o.Name, err.Error())
 				return err
 			}
 		}
 
 		if a.Debug {
-			log.Printf("Attempting connection to output: %s\n", o.name)
+			log.Printf("Attempting connection to output: %s\n", o.Name)
 		}
-		err := o.output.Connect()
+		err := o.Output.Connect()
 		if err != nil {
-			log.Printf("Failed to connect to output %s, retrying in 15s\n", o.name)
+			log.Printf("Failed to connect to output %s, retrying in 15s\n", o.Name)
 			time.Sleep(15 * time.Second)
-			err = o.output.Connect()
+			err = o.Output.Connect()
 			if err != nil {
 				return err
 			}
 		}
 		if a.Debug {
-			log.Printf("Successfully connected to output: %s\n", o.name)
+			log.Printf("Successfully connected to output: %s\n", o.Name)
 		}
 	}
 	return nil
@@ -142,75 +126,14 @@ func (a *Agent) Connect() error {
 // Close closes the connection to all configured outputs
 func (a *Agent) Close() error {
 	var err error
-	for _, o := range a.outputs {
-		err = o.output.Close()
-		switch ot := o.output.(type) {
+	for _, o := range a.Config.Outputs {
+		err = o.Output.Close()
+		switch ot := o.Output.(type) {
 		case outputs.ServiceOutput:
 			ot.Stop()
 		}
 	}
 	return err
-}
-
-// LoadOutputs loads the agent's outputs
-func (a *Agent) LoadOutputs(filters []string) ([]string, error) {
-	var names []string
-
-	for _, name := range a.Config.OutputsDeclared() {
-		// Trim the ID off the output name for filtering
-		filtername := strings.TrimRight(name, "-0123456789")
-		creator, ok := outputs.Outputs[filtername]
-		if !ok {
-			return nil, fmt.Errorf("Undefined but requested output: %s", name)
-		}
-
-		if sliceContains(filtername, filters) || len(filters) == 0 {
-			output := creator()
-
-			err := a.Config.ApplyOutput(name, output)
-			if err != nil {
-				return nil, err
-			}
-
-			a.outputs = append(a.outputs, &runningOutput{name, output})
-			names = append(names, name)
-		}
-	}
-
-	sort.Strings(names)
-
-	return names, nil
-}
-
-// LoadPlugins loads the agent's plugins
-func (a *Agent) LoadPlugins(filters []string) ([]string, error) {
-	var names []string
-
-	for _, name := range a.Config.PluginsDeclared() {
-		// Trim the ID off the output name for filtering
-		filtername := strings.TrimRight(name, "-0123456789")
-		creator, ok := plugins.Plugins[filtername]
-		if !ok {
-			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
-		}
-
-		if sliceContains(filtername, filters) || len(filters) == 0 {
-			plugin := creator()
-
-			config, err := a.Config.ApplyPlugin(name, plugin)
-			if err != nil {
-				return nil, err
-			}
-
-			a.plugins = append(a.plugins,
-				&runningPlugin{name, filtername, plugin, config})
-			names = append(names, name)
-		}
-	}
-
-	sort.Strings(names)
-
-	return names, nil
 }
 
 // gatherParallel runs the plugins that are using the same reporting interval
@@ -220,23 +143,23 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 	start := time.Now()
 	counter := 0
-	for _, plugin := range a.plugins {
-		if plugin.config.Interval != 0 {
+	for _, plugin := range a.Config.Plugins {
+		if plugin.Config.Interval != 0 {
 			continue
 		}
 
 		wg.Add(1)
 		counter++
-		go func(plugin *runningPlugin) {
+		go func(plugin *config.RunningPlugin) {
 			defer wg.Done()
 
-			acc := NewAccumulator(plugin.config, pointChan)
+			acc := NewAccumulator(plugin.Config, pointChan)
 			acc.SetDebug(a.Debug)
-			acc.SetPrefix(plugin.filtername + "_")
+			acc.SetPrefix(plugin.Name + "_")
 			acc.SetDefaultTags(a.Tags)
 
-			if err := plugin.plugin.Gather(acc); err != nil {
-				log.Printf("Error in plugin [%s]: %s", plugin.name, err)
+			if err := plugin.Plugin.Gather(acc); err != nil {
+				log.Printf("Error in plugin [%s]: %s", plugin.Name, err)
 			}
 
 		}(plugin)
@@ -254,27 +177,27 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 // reporting interval.
 func (a *Agent) gatherSeparate(
 	shutdown chan struct{},
-	plugin *runningPlugin,
+	plugin *config.RunningPlugin,
 	pointChan chan *client.Point,
 ) error {
-	ticker := time.NewTicker(plugin.config.Interval)
+	ticker := time.NewTicker(plugin.Config.Interval)
 
 	for {
 		var outerr error
 		start := time.Now()
 
-		acc := NewAccumulator(plugin.config, pointChan)
+		acc := NewAccumulator(plugin.Config, pointChan)
 		acc.SetDebug(a.Debug)
-		acc.SetPrefix(plugin.filtername + "_")
+		acc.SetPrefix(plugin.Name + "_")
 		acc.SetDefaultTags(a.Tags)
 
-		if err := plugin.plugin.Gather(acc); err != nil {
-			log.Printf("Error in plugin [%s]: %s", plugin.name, err)
+		if err := plugin.Plugin.Gather(acc); err != nil {
+			log.Printf("Error in plugin [%s]: %s", plugin.Name, err)
 		}
 
 		elapsed := time.Since(start)
 		log.Printf("Gathered metrics, (separate %s interval), from %s in %s\n",
-			plugin.config.Interval, plugin.name, elapsed)
+			plugin.Config.Interval, plugin.Name, elapsed)
 
 		if outerr != nil {
 			return outerr
@@ -308,27 +231,27 @@ func (a *Agent) Test() error {
 		}
 	}()
 
-	for _, plugin := range a.plugins {
-		acc := NewAccumulator(plugin.config, pointChan)
+	for _, plugin := range a.Config.Plugins {
+		acc := NewAccumulator(plugin.Config, pointChan)
 		acc.SetDebug(true)
-		acc.SetPrefix(plugin.filtername + "_")
+		acc.SetPrefix(plugin.Name + "_")
 
-		fmt.Printf("* Plugin: %s, Collection 1\n", plugin.name)
-		if plugin.config.Interval != 0 {
-			fmt.Printf("* Internal: %s\n", plugin.config.Interval)
+		fmt.Printf("* Plugin: %s, Collection 1\n", plugin.Name)
+		if plugin.Config.Interval != 0 {
+			fmt.Printf("* Internal: %s\n", plugin.Config.Interval)
 		}
 
-		if err := plugin.plugin.Gather(acc); err != nil {
+		if err := plugin.Plugin.Gather(acc); err != nil {
 			return err
 		}
 
 		// Special instructions for some plugins. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
-		switch plugin.filtername {
+		switch plugin.Name {
 		case "cpu", "mongodb":
 			time.Sleep(500 * time.Millisecond)
-			fmt.Printf("* Plugin: %s, Collection 2\n", plugin.name)
-			if err := plugin.plugin.Gather(acc); err != nil {
+			fmt.Printf("* Plugin: %s, Collection 2\n", plugin.Name)
+			if err := plugin.Plugin.Gather(acc); err != nil {
 				return err
 			}
 		}
@@ -341,7 +264,7 @@ func (a *Agent) Test() error {
 // Optionally takes a `done` channel to indicate that it is done writing.
 func (a *Agent) writeOutput(
 	points []*client.Point,
-	ro *runningOutput,
+	ro *config.RunningOutput,
 	shutdown chan struct{},
 	wg *sync.WaitGroup,
 ) {
@@ -354,12 +277,12 @@ func (a *Agent) writeOutput(
 	start := time.Now()
 
 	for {
-		err := ro.output.Write(points)
+		err := ro.Output.Write(points)
 		if err == nil {
 			// Write successful
 			elapsed := time.Since(start)
 			log.Printf("Flushed %d metrics to output %s in %s\n",
-				len(points), ro.name, elapsed)
+				len(points), ro.Name, elapsed)
 			return
 		}
 
@@ -371,12 +294,12 @@ func (a *Agent) writeOutput(
 				// No more retries
 				msg := "FATAL: Write to output [%s] failed %d times, dropping" +
 					" %d metrics\n"
-				log.Printf(msg, ro.name, retries+1, len(points))
+				log.Printf(msg, ro.Name, retries+1, len(points))
 				return
 			} else if err != nil {
 				// Sleep for a retry
 				log.Printf("Error in output [%s]: %s, retrying in %s",
-					ro.name, err.Error(), a.FlushInterval.Duration)
+					ro.Name, err.Error(), a.FlushInterval.Duration)
 				time.Sleep(a.FlushInterval.Duration)
 			}
 		}
@@ -392,7 +315,7 @@ func (a *Agent) flush(
 	wait bool,
 ) {
 	var wg sync.WaitGroup
-	for _, o := range a.outputs {
+	for _, o := range a.Config.Outputs {
 		wg.Add(1)
 		go a.writeOutput(points, o, shutdown, &wg)
 	}
@@ -476,14 +399,14 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}
 	}()
 
-	for _, plugin := range a.plugins {
+	for _, plugin := range a.Config.Plugins {
 
 		// Start service of any ServicePlugins
-		switch p := plugin.plugin.(type) {
+		switch p := plugin.Plugin.(type) {
 		case plugins.ServicePlugin:
 			if err := p.Start(); err != nil {
 				log.Printf("Service for plugin %s failed to start, exiting\n%s\n",
-					plugin.name, err.Error())
+					plugin.Name, err.Error())
 				return err
 			}
 			defer p.Stop()
@@ -491,9 +414,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 
 		// Special handling for plugins that have their own collection interval
 		// configured. Default intervals are handled below with gatherParallel
-		if plugin.config.Interval != 0 {
+		if plugin.Config.Interval != 0 {
 			wg.Add(1)
-			go func(plugin *runningPlugin) {
+			go func(plugin *config.RunningPlugin) {
 				defer wg.Done()
 				if err := a.gatherSeparate(shutdown, plugin, pointChan); err != nil {
 					log.Printf(err.Error())

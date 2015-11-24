@@ -48,7 +48,7 @@ func (c RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 
 var sampleConfig = `
   # Specify services via an array of tables
-  [[httpjson.services]]
+  [[plugins.httpjson.services]]
 
     # a name for the service being polled
     name = "webserver_stats"
@@ -69,7 +69,7 @@ var sampleConfig = `
     # ]
 
     # HTTP parameters (all values must be strings)
-    [httpjson.services.parameters]
+    [plugins.httpjson.services.parameters]
       event_type = "cpu_spike"
       threshold = "0.75"
 `

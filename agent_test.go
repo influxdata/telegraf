@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdb/telegraf/internal"
+	"github.com/influxdb/telegraf/internal/config"
 
 	// needing to load the plugins
 	_ "github.com/influxdb/telegraf/plugins/all"
@@ -14,49 +15,73 @@ import (
 )
 
 func TestAgent_LoadPlugin(t *testing.T) {
+	c := config.NewConfig()
+	c.PluginFilters = []string{"mysql"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ := NewAgent(c)
+	assert.Equal(t, 1, len(a.Config.Plugins))
 
-	// load a dedicated configuration file
-	config, _ := LoadConfig("./testdata/telegraf-agent.toml")
-	a, _ := NewAgent(config)
+	c = config.NewConfig()
+	c.PluginFilters = []string{"foo"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 0, len(a.Config.Plugins))
 
-	pluginsEnabled, _ := a.LoadPlugins([]string{"mysql"}, config)
-	assert.Equal(t, 1, len(pluginsEnabled))
+	c = config.NewConfig()
+	c.PluginFilters = []string{"mysql", "foo"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 1, len(a.Config.Plugins))
 
-	pluginsEnabled, _ = a.LoadPlugins([]string{"foo"}, config)
-	assert.Equal(t, 0, len(pluginsEnabled))
+	c = config.NewConfig()
+	c.PluginFilters = []string{"mysql", "redis"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 2, len(a.Config.Plugins))
 
-	pluginsEnabled, _ = a.LoadPlugins([]string{"mysql", "foo"}, config)
-	assert.Equal(t, 1, len(pluginsEnabled))
-
-	pluginsEnabled, _ = a.LoadPlugins([]string{"mysql", "redis"}, config)
-	assert.Equal(t, 2, len(pluginsEnabled))
-
-	pluginsEnabled, _ = a.LoadPlugins([]string{"mysql", "foo", "redis", "bar"}, config)
-	assert.Equal(t, 2, len(pluginsEnabled))
+	c = config.NewConfig()
+	c.PluginFilters = []string{"mysql", "foo", "redis", "bar"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 2, len(a.Config.Plugins))
 }
 
 func TestAgent_LoadOutput(t *testing.T) {
-	// load a dedicated configuration file
-	config, _ := LoadConfig("./testdata/telegraf-agent.toml")
-	a, _ := NewAgent(config)
+	c := config.NewConfig()
+	c.OutputFilters = []string{"influxdb"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ := NewAgent(c)
+	assert.Equal(t, 2, len(a.Config.Outputs))
 
-	outputsEnabled, _ := a.LoadOutputs([]string{"influxdb"}, config)
-	assert.Equal(t, 2, len(outputsEnabled))
+	c = config.NewConfig()
+	c.OutputFilters = []string{}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 3, len(a.Config.Outputs))
 
-	outputsEnabled, _ = a.LoadOutputs([]string{}, config)
-	assert.Equal(t, 3, len(outputsEnabled))
+	c = config.NewConfig()
+	c.OutputFilters = []string{"foo"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 0, len(a.Config.Outputs))
 
-	outputsEnabled, _ = a.LoadOutputs([]string{"foo"}, config)
-	assert.Equal(t, 0, len(outputsEnabled))
+	c = config.NewConfig()
+	c.OutputFilters = []string{"influxdb", "foo"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 2, len(a.Config.Outputs))
 
-	outputsEnabled, _ = a.LoadOutputs([]string{"influxdb", "foo"}, config)
-	assert.Equal(t, 2, len(outputsEnabled))
+	c = config.NewConfig()
+	c.OutputFilters = []string{"influxdb", "kafka"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 3, len(a.Config.Outputs))
 
-	outputsEnabled, _ = a.LoadOutputs([]string{"influxdb", "kafka"}, config)
-	assert.Equal(t, 3, len(outputsEnabled))
-
-	outputsEnabled, _ = a.LoadOutputs([]string{"influxdb", "foo", "kafka", "bar"}, config)
-	assert.Equal(t, 3, len(outputsEnabled))
+	c = config.NewConfig()
+	c.OutputFilters = []string{"influxdb", "foo", "kafka", "bar"}
+	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	a, _ = NewAgent(c)
+	assert.Equal(t, 3, len(a.Config.Outputs))
 }
 
 func TestAgent_ZeroJitter(t *testing.T) {

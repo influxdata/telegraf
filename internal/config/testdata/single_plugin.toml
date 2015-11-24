@@ -1,9 +1,9 @@
-[memcached]
-  servers = ["192.168.1.1"]
+[[plugins.memcached]]
+  servers = ["localhost"]
   pass = ["some", "strings"]
   drop = ["other", "stuff"]
   interval = "5s"
-  [memcached.tagpass]
+  [plugins.memcached.tagpass]
     goodtag = ["mytag"]
-  [memcached.tagdrop]
+  [plugins.memcached.tagdrop]
     badtag = ["othertag"]

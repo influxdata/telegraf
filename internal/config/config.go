@@ -1,4 +1,4 @@
-package telegraf
+package config
 
 import (
 	"errors"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
+
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
 )
@@ -20,18 +21,22 @@ import (
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	Tags map[string]string
+	Tags          map[string]string
+	PluginFilters []string
+	OutputFilters []string
 
-	agent   *ast.Table
-	plugins map[string]*ast.Table
-	outputs map[string]*ast.Table
+	Agent   *ast.Table
+	Plugins []*RunningPlugin
+	Outputs []*RunningOutput
 }
 
 func NewConfig() *Config {
 	c := &Config{
-		Tags:    make(map[string]string),
-		plugins: make(map[string]*ast.Table),
-		outputs: make(map[string]*ast.Table),
+		Tags:          make(map[string]string),
+		Plugins:       make([]*RunningPlugin, 0),
+		Outputs:       make([]*RunningOutput, 0),
+		PluginFilters: make([]string, 0),
+		OutputFilters: make([]string, 0),
 	}
 	return c
 }
@@ -42,9 +47,20 @@ type TagFilter struct {
 	Filter []string
 }
 
-// ConfiguredPlugin containing a name, interval, and drop/pass prefix lists
+type RunningOutput struct {
+	Name   string
+	Output outputs.Output
+}
+
+type RunningPlugin struct {
+	Name   string
+	Plugin plugins.Plugin
+	Config *PluginConfig
+}
+
+// PluginConfig containing a name, interval, and drop/pass prefix lists
 // Also lists the tags to filter
-type ConfiguredPlugin struct {
+type PluginConfig struct {
 	Name string
 
 	Drop []string
@@ -58,7 +74,7 @@ type ConfiguredPlugin struct {
 
 // ShouldPass returns true if the metric should pass, false if should drop
 // based on the drop/pass plugin parameters
-func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
+func (cp *PluginConfig) ShouldPass(measurement string) bool {
 	if cp.Pass != nil {
 		for _, pat := range cp.Pass {
 			if strings.HasPrefix(measurement, pat) {
@@ -82,7 +98,7 @@ func (cp *ConfiguredPlugin) ShouldPass(measurement string) bool {
 
 // ShouldTagsPass returns true if the metric should pass, false if should drop
 // based on the tagdrop/tagpass plugin parameters
-func (cp *ConfiguredPlugin) ShouldTagsPass(tags map[string]string) bool {
+func (cp *PluginConfig) ShouldTagsPass(tags map[string]string) bool {
 	if cp.TagPass != nil {
 		for _, pat := range cp.TagPass {
 			if tagval, ok := tags[pat.Name]; ok {
@@ -112,136 +128,32 @@ func (cp *ConfiguredPlugin) ShouldTagsPass(tags map[string]string) bool {
 	return true
 }
 
-// ApplyOutput loads the toml config into the given interface
-func (c *Config) ApplyOutput(name string, v interface{}) error {
-	if c.outputs[name] != nil {
-		return toml.UnmarshalTable(c.outputs[name], v)
+// Plugins returns a list of strings of the configured plugins.
+func (c *Config) PluginNames() []string {
+	var name []string
+	for _, plugin := range c.Plugins {
+		name = append(name, plugin.Name)
 	}
-	return nil
+	return name
+}
+
+// Outputs returns a list of strings of the configured plugins.
+func (c *Config) OutputNames() []string {
+	var name []string
+	for _, output := range c.Outputs {
+		name = append(name, output.Name)
+	}
+	return name
 }
 
 // ApplyAgent loads the toml config into the given Agent object, overriding
 // defaults (such as collection duration) with the values from the toml config.
-func (c *Config) ApplyAgent(a *Agent) error {
-	if c.agent != nil {
-		return toml.UnmarshalTable(c.agent, a)
+func (c *Config) ApplyAgent(a interface{}) error {
+	if c.Agent != nil {
+		return toml.UnmarshalTable(c.Agent, a)
 	}
 
 	return nil
-}
-
-// ApplyPlugin takes defined plugin names and applies them to the given
-// interface, returning a ConfiguredPlugin object in the end that can
-// be inserted into a runningPlugin by the agent.
-func (c *Config) ApplyPlugin(name string, v interface{}) (*ConfiguredPlugin, error) {
-	cp := &ConfiguredPlugin{Name: name}
-
-	if tbl, ok := c.plugins[name]; ok {
-
-		if node, ok := tbl.Fields["pass"]; ok {
-			if kv, ok := node.(*ast.KeyValue); ok {
-				if ary, ok := kv.Value.(*ast.Array); ok {
-					for _, elem := range ary.Value {
-						if str, ok := elem.(*ast.String); ok {
-							cp.Pass = append(cp.Pass, str.Value)
-						}
-					}
-				}
-			}
-		}
-
-		if node, ok := tbl.Fields["drop"]; ok {
-			if kv, ok := node.(*ast.KeyValue); ok {
-				if ary, ok := kv.Value.(*ast.Array); ok {
-					for _, elem := range ary.Value {
-						if str, ok := elem.(*ast.String); ok {
-							cp.Drop = append(cp.Drop, str.Value)
-						}
-					}
-				}
-			}
-		}
-
-		if node, ok := tbl.Fields["interval"]; ok {
-			if kv, ok := node.(*ast.KeyValue); ok {
-				if str, ok := kv.Value.(*ast.String); ok {
-					dur, err := time.ParseDuration(str.Value)
-					if err != nil {
-						return nil, err
-					}
-
-					cp.Interval = dur
-				}
-			}
-		}
-
-		if node, ok := tbl.Fields["tagpass"]; ok {
-			if subtbl, ok := node.(*ast.Table); ok {
-				for name, val := range subtbl.Fields {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						tagfilter := &TagFilter{Name: name}
-						if ary, ok := kv.Value.(*ast.Array); ok {
-							for _, elem := range ary.Value {
-								if str, ok := elem.(*ast.String); ok {
-									tagfilter.Filter = append(tagfilter.Filter, str.Value)
-								}
-							}
-						}
-						cp.TagPass = append(cp.TagPass, *tagfilter)
-					}
-				}
-			}
-		}
-
-		if node, ok := tbl.Fields["tagdrop"]; ok {
-			if subtbl, ok := node.(*ast.Table); ok {
-				for name, val := range subtbl.Fields {
-					if kv, ok := val.(*ast.KeyValue); ok {
-						tagfilter := &TagFilter{Name: name}
-						if ary, ok := kv.Value.(*ast.Array); ok {
-							for _, elem := range ary.Value {
-								if str, ok := elem.(*ast.String); ok {
-									tagfilter.Filter = append(tagfilter.Filter, str.Value)
-								}
-							}
-						}
-						cp.TagDrop = append(cp.TagDrop, *tagfilter)
-					}
-				}
-			}
-		}
-
-		delete(tbl.Fields, "drop")
-		delete(tbl.Fields, "pass")
-		delete(tbl.Fields, "interval")
-		delete(tbl.Fields, "tagdrop")
-		delete(tbl.Fields, "tagpass")
-		return cp, toml.UnmarshalTable(tbl, v)
-	}
-
-	return cp, nil
-}
-
-// PluginsDeclared returns the name of all plugins declared in the config.
-func (c *Config) PluginsDeclared() []string {
-	return declared(c.plugins)
-}
-
-// OutputsDeclared returns the name of all outputs declared in the config.
-func (c *Config) OutputsDeclared() []string {
-	return declared(c.outputs)
-}
-
-func declared(endpoints map[string]*ast.Table) []string {
-	var names []string
-
-	for name := range endpoints {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	return names
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -256,14 +168,6 @@ func (c *Config) ListTags() string {
 	sort.Strings(tags)
 
 	return strings.Join(tags, " ")
-}
-
-type hasConfig interface {
-	BasicConfig() string
-}
-
-type hasDescr interface {
-	Description() string
 }
 
 var header = `# Telegraf configuration
@@ -353,15 +257,7 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 	for _, oname := range onames {
 		creator := outputs.Outputs[oname]
 		output := creator()
-
-		fmt.Printf("\n# %s\n[[outputs.%s]]", output.Description(), oname)
-
-		config := output.SampleConfig()
-		if config == "" {
-			fmt.Printf("\n  # no configuration\n")
-		} else {
-			fmt.Printf(config)
-		}
+		printConfig(oname, output, "outputs")
 	}
 
 	// Filter plugins
@@ -386,13 +282,13 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 			continue
 		}
 
-		printConfig(pname, plugin)
+		printConfig(pname, plugin, "plugins")
 	}
 
 	// Print Service Plugins
 	fmt.Printf(servicePluginHeader)
 	for name, plugin := range servPlugins {
-		printConfig(name, plugin)
+		printConfig(name, plugin, "plugins")
 	}
 }
 
@@ -401,8 +297,8 @@ type printer interface {
 	SampleConfig() string
 }
 
-func printConfig(name string, p printer) {
-	fmt.Printf("\n# %s\n[[plugins.%s]]", p.Description(), name)
+func printConfig(name string, p printer, op string) {
+	fmt.Printf("\n# %s\n[[%s.%s]]", p.Description(), op, name)
 	config := p.SampleConfig()
 	if config == "" {
 		fmt.Printf("\n  # no configuration\n")
@@ -423,7 +319,7 @@ func sliceContains(name string, list []string) bool {
 // PrintPluginConfig prints the config usage of a single plugin.
 func PrintPluginConfig(name string) error {
 	if creator, ok := plugins.Plugins[name]; ok {
-		printConfig(name, creator())
+		printConfig(name, creator(), "plugins")
 	} else {
 		return errors.New(fmt.Sprintf("Plugin %s not found", name))
 	}
@@ -433,7 +329,7 @@ func PrintPluginConfig(name string) error {
 // PrintOutputConfig prints the config usage of a single output.
 func PrintOutputConfig(name string) error {
 	if creator, ok := outputs.Outputs[name]; ok {
-		printConfig(name, creator())
+		printConfig(name, creator(), "outputs")
 	} else {
 		return errors.New(fmt.Sprintf("Output %s not found", name))
 	}
@@ -461,7 +357,7 @@ func (c *Config) LoadDirectory(path string) error {
 	return nil
 }
 
-// LoadConfig loads the given config file and returns a *Config pointer
+// LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -481,7 +377,7 @@ func (c *Config) LoadConfig(path string) error {
 
 		switch name {
 		case "agent":
-			c.agent = subTable
+			c.Agent = subTable
 		case "tags":
 			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("Could not parse [tags] config\n")
@@ -491,11 +387,14 @@ func (c *Config) LoadConfig(path string) error {
 			for outputName, outputVal := range subTable.Fields {
 				switch outputSubTable := outputVal.(type) {
 				case *ast.Table:
-					c.outputs[outputName] = outputSubTable
+					if err = c.addOutput(outputName, outputSubTable); err != nil {
+						return err
+					}
 				case []*ast.Table:
-					for id, t := range outputSubTable {
-						nameID := fmt.Sprintf("%s-%d", outputName, id)
-						c.outputs[nameID] = t
+					for _, t := range outputSubTable {
+						if err = c.addOutput(outputName, t); err != nil {
+							return err
+						}
 					}
 				default:
 					return fmt.Errorf("Unsupported config format: %s",
@@ -506,11 +405,14 @@ func (c *Config) LoadConfig(path string) error {
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
 				case *ast.Table:
-					c.plugins[pluginName] = pluginSubTable
+					if err = c.addPlugin(pluginName, pluginSubTable); err != nil {
+						return err
+					}
 				case []*ast.Table:
-					for id, t := range pluginSubTable {
-						nameID := fmt.Sprintf("%s-%d", pluginName, id)
-						c.plugins[nameID] = t
+					for _, t := range pluginSubTable {
+						if err = c.addPlugin(pluginName, t); err != nil {
+							return err
+						}
 					}
 				default:
 					return fmt.Errorf("Unsupported config format: %s",
@@ -520,8 +422,142 @@ func (c *Config) LoadConfig(path string) error {
 		// Assume it's a plugin for legacy config file support if no other
 		// identifiers are present
 		default:
-			c.plugins[name] = subTable
+			if err = c.addPlugin(name, subTable); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+func (c *Config) addOutput(name string, table *ast.Table) error {
+	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
+		return nil
+	}
+	creator, ok := outputs.Outputs[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested output: %s", name)
+	}
+	o := creator()
+
+	if err := toml.UnmarshalTable(table, o); err != nil {
+		return err
+	}
+
+	ro := &RunningOutput{
+		Name:   name,
+		Output: o,
+	}
+	c.Outputs = append(c.Outputs, ro)
+	return nil
+}
+
+func (c *Config) addPlugin(name string, table *ast.Table) error {
+	if len(c.PluginFilters) > 0 && !sliceContains(name, c.PluginFilters) {
+		return nil
+	}
+	creator, ok := plugins.Plugins[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested plugin: %s", name)
+	}
+	plugin := creator()
+
+	pluginConfig, err := applyPlugin(name, table, plugin)
+	if err != nil {
+		return err
+	}
+	rp := &RunningPlugin{
+		Name:   name,
+		Plugin: plugin,
+		Config: pluginConfig,
+	}
+	c.Plugins = append(c.Plugins, rp)
+	return nil
+}
+
+// applyPlugin takes defined plugin names and applies them to the given
+// interface, returning a PluginConfig object in the end that can
+// be inserted into a runningPlugin by the agent.
+func applyPlugin(name string, tbl *ast.Table, p plugins.Plugin) (*PluginConfig, error) {
+	cp := &PluginConfig{Name: name}
+
+	if node, ok := tbl.Fields["pass"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						cp.Pass = append(cp.Pass, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["drop"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						cp.Drop = append(cp.Drop, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["interval"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				cp.Interval = dur
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["tagpass"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					tagfilter := &TagFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								tagfilter.Filter = append(tagfilter.Filter, str.Value)
+							}
+						}
+					}
+					cp.TagPass = append(cp.TagPass, *tagfilter)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["tagdrop"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					tagfilter := &TagFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								tagfilter.Filter = append(tagfilter.Filter, str.Value)
+							}
+						}
+					}
+					cp.TagDrop = append(cp.TagDrop, *tagfilter)
+				}
+			}
+		}
+	}
+
+	delete(tbl.Fields, "drop")
+	delete(tbl.Fields, "pass")
+	delete(tbl.Fields, "interval")
+	delete(tbl.Fields, "tagdrop")
+	delete(tbl.Fields, "tagpass")
+	return cp, toml.UnmarshalTable(tbl, p)
 }

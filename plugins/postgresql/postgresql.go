@@ -25,7 +25,7 @@ var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_rese
 
 var sampleConfig = `
   # specify servers via an array of tables
-  [[postgresql.servers]]
+  [[plugins.postgresql.servers]]
 
   # specify address via a url matching:
   #   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
@@ -49,7 +49,7 @@ var sampleConfig = `
 
   # databases = ["app_production", "blah_testing"]
 
-  # [[postgresql.servers]]
+  # [[plugins.postgresql.servers]]
   # address = "influx@remoteserver"
 `
 

@@ -100,7 +100,7 @@ var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
 
 var sampleConfig = `
   # Specify servers via an array of tables
-  [[rabbitmq.servers]]
+  [[plugins.rabbitmq.servers]]
   # name = "rmq-server-1" # optional tag
   # url = "http://localhost:15672"
   # username = "guest"
