@@ -105,7 +105,7 @@ func (ac *accumulator) AddFields(
 	}
 
 	if ac.plugin != nil {
-		if !ac.plugin.ShouldPass(measurement, tags) {
+		if !ac.plugin.ShouldPass(measurement) || !ac.plugin.ShouldTagsPass(tags) {
 			return
 		}
 	}

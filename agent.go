@@ -66,6 +66,8 @@ type Agent struct {
 
 	Tags map[string]string
 
+	Config *Config
+
 	outputs []*runningOutput
 	plugins []*runningPlugin
 }
@@ -74,6 +76,7 @@ type Agent struct {
 func NewAgent(config *Config) (*Agent, error) {
 	agent := &Agent{
 		Tags:          make(map[string]string),
+		Config:        config,
 		Interval:      internal.Duration{10 * time.Second},
 		RoundInterval: true,
 		FlushInterval: internal.Duration{10 * time.Second},
@@ -96,7 +99,11 @@ func NewAgent(config *Config) (*Agent, error) {
 		agent.Hostname = hostname
 	}
 
-	agent.Tags["host"] = agent.Hostname
+	if config.Tags == nil {
+		config.Tags = map[string]string{}
+	}
+
+	config.Tags["host"] = agent.Hostname
 
 	return agent, nil
 }
@@ -146,18 +153,21 @@ func (a *Agent) Close() error {
 }
 
 // LoadOutputs loads the agent's outputs
-func (a *Agent) LoadOutputs(filters []string, config *Config) ([]string, error) {
+func (a *Agent) LoadOutputs(filters []string) ([]string, error) {
 	var names []string
 
-	for name, output := range config.OutputsDeclared() {
+	for _, name := range a.Config.OutputsDeclared() {
 		// Trim the ID off the output name for filtering
 		filtername := strings.TrimRight(name, "-0123456789")
-		if sliceContains(filtername, filters) || len(filters) == 0 {
-			if a.Debug {
-				log.Println("Output Enabled: ", name)
-			}
+		creator, ok := outputs.Outputs[filtername]
+		if !ok {
+			return nil, fmt.Errorf("Undefined but requested output: %s", name)
+		}
 
-			err := config.ApplyOutput(name, output)
+		if sliceContains(filtername, filters) || len(filters) == 0 {
+			output := creator()
+
+			err := a.Config.ApplyOutput(name, output)
 			if err != nil {
 				return nil, err
 			}
@@ -173,15 +183,27 @@ func (a *Agent) LoadOutputs(filters []string, config *Config) ([]string, error) 
 }
 
 // LoadPlugins loads the agent's plugins
-func (a *Agent) LoadPlugins(filters []string, config *Config) ([]string, error) {
+func (a *Agent) LoadPlugins(filters []string) ([]string, error) {
 	var names []string
 
-	for name, plugin := range config.PluginsDeclared() {
+	for _, name := range a.Config.PluginsDeclared() {
 		// Trim the ID off the output name for filtering
 		filtername := strings.TrimRight(name, "-0123456789")
+		creator, ok := plugins.Plugins[filtername]
+		if !ok {
+			return nil, fmt.Errorf("Undefined but requested plugin: %s", name)
+		}
+
 		if sliceContains(filtername, filters) || len(filters) == 0 {
-			config := config.GetPluginConfig(name)
-			a.plugins = append(a.plugins, &runningPlugin{name, filtername, plugin, config})
+			plugin := creator()
+
+			config, err := a.Config.ApplyPlugin(name, plugin)
+			if err != nil {
+				return nil, err
+			}
+
+			a.plugins = append(a.plugins,
+				&runningPlugin{name, filtername, plugin, config})
 			names = append(names, name)
 		}
 	}
