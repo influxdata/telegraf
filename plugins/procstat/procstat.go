@@ -18,6 +18,7 @@ type Specification struct {
 	PidFile string `toml:"pid_file"`
 	Exe     string
 	Prefix  string
+	Pattern string
 }
 
 type Procstat struct {
@@ -35,6 +36,7 @@ var sampleConfig = `
   pid_file = "/var/run/nginx.pid"
   # executable name (used by pgrep)
   # exe = "nginx"
+  # pattern = "nginx"
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -54,8 +56,8 @@ func (p *Procstat) Gather(acc plugins.Accumulator) error {
 			defer wg.Done()
 			procs, err := spec.createProcesses()
 			if err != nil {
-				log.Printf("Error: procstat getting process, exe: [%s] pidfile: [%s] %s",
-					spec.Exe, spec.PidFile, err.Error())
+				log.Printf("Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] %s",
+					spec.Exe, spec.PidFile, spec.Pattern, err.Error())
 			} else {
 				for _, proc := range procs {
 					p := NewSpecProcessor(spec.Prefix, acc, proc)
@@ -103,8 +105,10 @@ func (spec *Specification) getAllPids() ([]int32, error) {
 		pids, err = pidsFromFile(spec.PidFile)
 	} else if spec.Exe != "" {
 		pids, err = pidsFromExe(spec.Exe)
+	} else if spec.Pattern != "" {
+		pids, err = pidsFromPattern(spec.Pattern)
 	} else {
-		err = fmt.Errorf("Either exe or pid_file has to be specified")
+		err = fmt.Errorf("Either exe, pid_file or pattern has to be specified")
 	}
 
 	return pids, err
@@ -131,6 +135,26 @@ func pidsFromExe(exe string) ([]int32, error) {
 	var out []int32
 	var outerr error
 	pgrep, err := exec.Command("pgrep", exe).Output()
+	if err != nil {
+		return out, fmt.Errorf("Failed to execute pgrep. Error: '%s'", err)
+	} else {
+		pids := strings.Fields(string(pgrep))
+		for _, pid := range pids {
+			ipid, err := strconv.Atoi(pid)
+			if err == nil {
+				out = append(out, int32(ipid))
+			} else {
+				outerr = err
+			}
+		}
+	}
+	return out, outerr
+}
+
+func pidsFromPattern(pattern string) ([]int32, error) {
+	var out []int32
+	var outerr error
+	pgrep, err := exec.Command("pgrep", "-f", pattern).Output()
 	if err != nil {
 		return out, fmt.Errorf("Failed to execute pgrep. Error: '%s'", err)
 	} else {
