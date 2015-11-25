@@ -36,6 +36,7 @@ var sampleConfig = `
   pid_file = "/var/run/nginx.pid"
   # executable name (used by pgrep)
   # exe = "nginx"
+  # pattern as argument for pgrep -f
   # pattern = "nginx"
 `
 
