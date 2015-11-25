@@ -18,7 +18,7 @@ var fDebug = flag.Bool("debug", false,
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("configdirectory", "",
-	"directory containing additional configuration files")
+	"directory containing additional *.conf files")
 var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
