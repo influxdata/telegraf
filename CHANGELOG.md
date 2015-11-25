@@ -12,6 +12,7 @@ functional.
 ### Features
 - [#379](https://github.com/influxdb/telegraf/pull/379): Riemann output, thanks @allenj!
 - [#375](https://github.com/influxdb/telegraf/pull/375): kafka_consumer service plugin.
+- [#392](https://github.com/influxdb/telegraf/pull/392): Procstat plugin can now accept pgrep -f pattern, thanks @ecarreras!
 
 ### Bugfixes
 - [#371](https://github.com/influxdb/telegraf/issues/371): Kafka consumer plugin not functioning.

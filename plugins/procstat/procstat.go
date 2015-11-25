@@ -32,11 +32,12 @@ func NewProcstat() *Procstat {
 var sampleConfig = `
   [[procstat.specifications]]
   prefix = "" # optional string to prefix measurements
-  # Use one of pid_file or exe to find process
+  # Must specify one of: pid_file, exe, or pattern
+  # PID file to monitor process
   pid_file = "/var/run/nginx.pid"
-  # executable name (used by pgrep)
+  # executable name (ie, pgrep <exe>)
   # exe = "nginx"
-  # pattern as argument for pgrep -f
+  # pattern as argument for pgrep (ie, pgrep -f <pattern>)
   # pattern = "nginx"
 `
 
