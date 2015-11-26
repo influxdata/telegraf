@@ -108,7 +108,7 @@ func main() {
 	}
 
 	if *fDebug {
-		ag.Debug = true
+		ag.Config.Agent.Debug = true
 	}
 
 	if *fTest {

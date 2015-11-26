@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/internal/config"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
@@ -19,77 +18,27 @@ import (
 
 // Agent runs telegraf and collects data based on the given config
 type Agent struct {
-
-	// Interval at which to gather information
-	Interval internal.Duration
-
-	// RoundInterval rounds collection interval to 'interval'.
-	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
-	RoundInterval bool
-
-	// Interval at which to flush data
-	FlushInterval internal.Duration
-
-	// FlushRetries is the number of times to retry each data flush
-	FlushRetries int
-
-	// FlushJitter tells
-	FlushJitter internal.Duration
-
-	// TODO(cam): Remove UTC and Precision parameters, they are no longer
-	// valid for the agent config. Leaving them here for now for backwards-
-	// compatability
-
-	// Option for outputting data in UTC
-	UTC bool `toml:"utc"`
-
-	// Precision to write data at
-	// Valid values for Precision are n, u, ms, s, m, and h
-	Precision string
-
-	// Option for running in debug mode
-	Debug    bool
-	Hostname string
-
-	Tags map[string]string
-
 	Config *config.Config
 }
 
 // NewAgent returns an Agent struct based off the given Config
 func NewAgent(config *config.Config) (*Agent, error) {
-	agent := &Agent{
-		Tags:          make(map[string]string),
-		Config:        config,
-		Interval:      internal.Duration{10 * time.Second},
-		RoundInterval: true,
-		FlushInterval: internal.Duration{10 * time.Second},
-		FlushRetries:  2,
-		FlushJitter:   internal.Duration{5 * time.Second},
+	a := &Agent{
+		Config: config,
 	}
 
-	// Apply the toml table to the agent config, overriding defaults
-	err := config.ApplyAgent(agent)
-	if err != nil {
-		return nil, err
-	}
-
-	if agent.Hostname == "" {
+	if a.Config.Agent.Hostname == "" {
 		hostname, err := os.Hostname()
 		if err != nil {
 			return nil, err
 		}
 
-		agent.Hostname = hostname
+		a.Config.Agent.Hostname = hostname
 	}
 
-	if config.Tags == nil {
-		config.Tags = map[string]string{}
-	}
+	config.Tags["host"] = a.Config.Agent.Hostname
 
-	config.Tags["host"] = agent.Hostname
-
-	return agent, nil
+	return a, nil
 }
 
 // Connect connects to all configured outputs
@@ -104,7 +53,7 @@ func (a *Agent) Connect() error {
 			}
 		}
 
-		if a.Debug {
+		if a.Config.Agent.Debug {
 			log.Printf("Attempting connection to output: %s\n", o.Name)
 		}
 		err := o.Output.Connect()
@@ -116,7 +65,7 @@ func (a *Agent) Connect() error {
 				return err
 			}
 		}
-		if a.Debug {
+		if a.Config.Agent.Debug {
 			log.Printf("Successfully connected to output: %s\n", o.Name)
 		}
 	}
@@ -154,9 +103,9 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 			defer wg.Done()
 
 			acc := NewAccumulator(plugin.Config, pointChan)
-			acc.SetDebug(a.Debug)
+			acc.SetDebug(a.Config.Agent.Debug)
 			acc.SetPrefix(plugin.Name + "_")
-			acc.SetDefaultTags(a.Tags)
+			acc.SetDefaultTags(a.Config.Tags)
 
 			if err := plugin.Plugin.Gather(acc); err != nil {
 				log.Printf("Error in plugin [%s]: %s", plugin.Name, err)
@@ -169,7 +118,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 	elapsed := time.Since(start)
 	log.Printf("Gathered metrics, (%s interval), from %d plugins in %s\n",
-		a.Interval, counter, elapsed)
+		a.Config.Agent.Interval, counter, elapsed)
 	return nil
 }
 
@@ -187,9 +136,9 @@ func (a *Agent) gatherSeparate(
 		start := time.Now()
 
 		acc := NewAccumulator(plugin.Config, pointChan)
-		acc.SetDebug(a.Debug)
+		acc.SetDebug(a.Config.Agent.Debug)
 		acc.SetPrefix(plugin.Name + "_")
-		acc.SetDefaultTags(a.Tags)
+		acc.SetDefaultTags(a.Config.Tags)
 
 		if err := plugin.Plugin.Gather(acc); err != nil {
 			log.Printf("Error in plugin [%s]: %s", plugin.Name, err)
@@ -273,7 +222,7 @@ func (a *Agent) writeOutput(
 		return
 	}
 	retry := 0
-	retries := a.FlushRetries
+	retries := a.Config.Agent.FlushRetries
 	start := time.Now()
 
 	for {
@@ -299,8 +248,8 @@ func (a *Agent) writeOutput(
 			} else if err != nil {
 				// Sleep for a retry
 				log.Printf("Error in output [%s]: %s, retrying in %s",
-					ro.Name, err.Error(), a.FlushInterval.Duration)
-				time.Sleep(a.FlushInterval.Duration)
+					ro.Name, err.Error(), a.Config.Agent.FlushInterval.Duration)
+				time.Sleep(a.Config.Agent.FlushInterval.Duration)
 			}
 		}
 
@@ -330,7 +279,7 @@ func (a *Agent) flusher(shutdown chan struct{}, pointChan chan *client.Point) er
 	// the flusher will flush after metrics are collected.
 	time.Sleep(time.Millisecond * 100)
 
-	ticker := time.NewTicker(a.FlushInterval.Duration)
+	ticker := time.NewTicker(a.Config.Agent.FlushInterval.Duration)
 	points := make([]*client.Point, 0)
 
 	for {
@@ -373,22 +322,23 @@ func jitterInterval(ininterval, injitter time.Duration) time.Duration {
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 
-	a.FlushInterval.Duration = jitterInterval(a.FlushInterval.Duration,
-		a.FlushJitter.Duration)
+	a.Config.Agent.FlushInterval.Duration = jitterInterval(a.Config.Agent.FlushInterval.Duration,
+		a.Config.Agent.FlushJitter.Duration)
 
 	log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
 		"Flush Interval:%s\n",
-		a.Interval, a.Debug, a.Hostname, a.FlushInterval)
+		a.Config.Agent.Interval, a.Config.Agent.Debug,
+		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval)
 
 	// channel shared between all plugin threads for accumulating points
 	pointChan := make(chan *client.Point, 1000)
 
 	// Round collection to nearest interval by sleeping
-	if a.RoundInterval {
-		i := int64(a.Interval.Duration)
+	if a.Config.Agent.RoundInterval {
+		i := int64(a.Config.Agent.Interval.Duration)
 		time.Sleep(time.Duration(i - (time.Now().UnixNano() % i)))
 	}
-	ticker := time.NewTicker(a.Interval.Duration)
+	ticker := time.NewTicker(a.Config.Agent.Interval.Duration)
 
 	wg.Add(1)
 	go func() {

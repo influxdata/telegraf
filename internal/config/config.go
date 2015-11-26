@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/outputs"
 	"github.com/influxdb/telegraf/plugins"
 
@@ -25,13 +26,22 @@ type Config struct {
 	PluginFilters []string
 	OutputFilters []string
 
-	Agent   *ast.Table
+	Agent   *AgentConfig
 	Plugins []*RunningPlugin
 	Outputs []*RunningOutput
 }
 
 func NewConfig() *Config {
 	c := &Config{
+		// Agent defaults:
+		Agent: &AgentConfig{
+			Interval:      internal.Duration{10 * time.Second},
+			RoundInterval: true,
+			FlushInterval: internal.Duration{10 * time.Second},
+			FlushRetries:  2,
+			FlushJitter:   internal.Duration{5 * time.Second},
+		},
+
 		Tags:          make(map[string]string),
 		Plugins:       make([]*RunningPlugin, 0),
 		Outputs:       make([]*RunningOutput, 0),
@@ -39,6 +49,34 @@ func NewConfig() *Config {
 		OutputFilters: make([]string, 0),
 	}
 	return c
+}
+
+type AgentConfig struct {
+	// Interval at which to gather information
+	Interval internal.Duration
+
+	// RoundInterval rounds collection interval to 'interval'.
+	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
+	RoundInterval bool
+
+	// Interval at which to flush data
+	FlushInterval internal.Duration
+
+	// FlushRetries is the number of times to retry each data flush
+	FlushRetries int
+
+	// FlushJitter tells
+	FlushJitter internal.Duration
+
+	// TODO(cam): Remove UTC and Precision parameters, they are no longer
+	// valid for the agent config. Leaving them here for now for backwards-
+	// compatability
+	UTC       bool `toml:"utc"`
+	Precision string
+
+	// Option for running in debug mode
+	Debug    bool
+	Hostname string
 }
 
 // TagFilter is the name of a tag, and the values on which to filter
@@ -144,16 +182,6 @@ func (c *Config) OutputNames() []string {
 		name = append(name, output.Name)
 	}
 	return name
-}
-
-// ApplyAgent loads the toml config into the given Agent object, overriding
-// defaults (such as collection duration) with the values from the toml config.
-func (c *Config) ApplyAgent(a interface{}) error {
-	if c.Agent != nil {
-		return toml.UnmarshalTable(c.Agent, a)
-	}
-
-	return nil
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -346,7 +374,7 @@ func (c *Config) LoadDirectory(path string) error {
 			continue
 		}
 		name := entry.Name()
-		if name[len(name)-5:] != ".conf" {
+		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			continue
 		}
 		err := c.LoadConfig(filepath.Join(path, name))
@@ -377,7 +405,10 @@ func (c *Config) LoadConfig(path string) error {
 
 		switch name {
 		case "agent":
-			c.Agent = subTable
+			if err = toml.UnmarshalTable(subTable, c.Agent); err != nil {
+				log.Printf("Could not parse [agent] config\n")
+				return err
+			}
 		case "tags":
 			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("Could not parse [tags] config\n")
