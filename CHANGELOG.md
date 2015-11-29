@@ -22,6 +22,7 @@ same type can be specified, like this:
 ```
 
 - Riemann output added
+- Aerospike plugin: tag changed from `host` -> `aerospike_host`
 
 ### Features
 - [#379](https://github.com/influxdb/telegraf/pull/379): Riemann output, thanks @allenj!

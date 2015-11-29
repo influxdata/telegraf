@@ -67,8 +67,8 @@ func TestReadAerospikeStatsNamespace(t *testing.T) {
 	readAerospikeStats(stats, &acc, "host1", "test")
 
 	tags := map[string]string{
-		"host":      "host1",
-		"namespace": "test",
+		"aerospike_host": "host1",
+		"namespace":      "test",
 	}
 	for k := range stats {
 		assert.True(t, acc.ValidateTaggedValue(k, int64(12345), tags) == nil)
