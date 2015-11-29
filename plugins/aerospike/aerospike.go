@@ -250,8 +250,8 @@ func get(key []byte, host string) (map[string]string, error) {
 func readAerospikeStats(stats map[string]string, acc plugins.Accumulator, host, namespace string) {
 	for key, value := range stats {
 		tags := map[string]string{
-			"host":      host,
-			"namespace": "_service",
+			"aerospike_host": host,
+			"namespace":      "_service",
 		}
 
 		if namespace != "" {
