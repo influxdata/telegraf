@@ -326,6 +326,136 @@ func TestParse_MeasurementsWithSameName(t *testing.T) {
 	}
 }
 
+// Test that measurements with multiple bits, are treated as different outputs
+// but are equal to their single-measurement representation
+func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
+	single_lines := []string{
+		"valid.multiple:0|ms|@0.1",
+		"valid.multiple:0|ms|",
+		"valid.multiple:1|ms",
+		"valid.multiple.duplicate:1|c",
+		"valid.multiple.duplicate:1|c",
+		"valid.multiple.duplicate:2|c",
+		"valid.multiple.duplicate:1|c",
+		"valid.multiple.duplicate:1|h",
+		"valid.multiple.duplicate:1|h",
+		"valid.multiple.duplicate:2|h",
+		"valid.multiple.duplicate:1|h",
+		"valid.multiple.duplicate:1|s",
+		"valid.multiple.duplicate:1|s",
+		"valid.multiple.duplicate:2|s",
+		"valid.multiple.duplicate:1|s",
+		"valid.multiple.duplicate:1|g",
+		"valid.multiple.duplicate:1|g",
+		"valid.multiple.duplicate:2|g",
+		"valid.multiple.duplicate:1|g",
+		"valid.multiple.mixed:1|c",
+		"valid.multiple.mixed:1|ms",
+		"valid.multiple.mixed:2|s",
+		"valid.multiple.mixed:1|g",
+	}
+
+	multiple_lines := []string{
+		"valid.multiple:0|ms|@0.1:0|ms|:1|ms",
+		"valid.multiple.duplicate:1|c:1|c:2|c:1|c",
+		"valid.multiple.duplicate:1|h:1|h:2|h:1|h",
+		"valid.multiple.duplicate:1|s:1|s:2|s:1|s",
+		"valid.multiple.duplicate:1|g:1|g:2|g:1|g",
+		"valid.multiple.mixed:1|c:1|ms:2|s:1|g",
+	}
+
+	s_single := NewStatsd()
+	s_multiple := NewStatsd()
+
+	for _, line := range single_lines {
+		err := s_single.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	for _, line := range multiple_lines {
+		err := s_multiple.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	if len(s_single.timings) != 3 {
+		t.Errorf("Expected 3 measurement, found %d", len(s_single.timings))
+	}
+
+	if cachedtiming, ok := s_single.timings["metric_type=timingvalid_multiple"]; !ok {
+		t.Errorf("Expected cached measurement with hash 'metric_type=timingvalid_multiple' not found")
+	} else {
+		if cachedtiming.name != "valid_multiple" {
+			t.Errorf("Expected the name to be 'valid_multiple', got %s", cachedtiming.name)
+		}
+
+		// A 0 at samplerate 0.1 will add 10 values of 0,
+		// A 0 with invalid samplerate will add a single 0,
+		// plus the last bit of value 1
+		// which adds up to 12 individual datapoints to be cached
+		if cachedtiming.stats.n != 12 {
+			t.Errorf("Expected 11 additions, got %d", cachedtiming.stats.n)
+		}
+
+		if cachedtiming.stats.upper != 1 {
+			t.Errorf("Expected max input to be 1, got %f", cachedtiming.stats.upper)
+		}
+	}
+
+	// test if s_single and s_multiple did compute the same stats for valid.multiple.duplicate
+	if err := test_validate_set("valid_multiple_duplicate", 2, s_single.sets); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_set("valid_multiple_duplicate", 2, s_multiple.sets); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_counter("valid_multiple_duplicate", 5, s_single.counters); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_counter("valid_multiple_duplicate", 5, s_multiple.counters); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_gauge("valid_multiple_duplicate", 1, s_single.gauges); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_gauge("valid_multiple_duplicate", 1, s_multiple.gauges); err != nil {
+		t.Error(err.Error())
+	}
+
+	// test if s_single and s_multiple did compute the same stats for valid.multiple.mixed
+	if err := test_validate_set("valid_multiple_mixed", 1, s_single.sets); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_set("valid_multiple_mixed", 1, s_multiple.sets); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_counter("valid_multiple_mixed", 1, s_single.counters); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_counter("valid_multiple_mixed", 1, s_multiple.counters); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_gauge("valid_multiple_mixed", 1, s_single.gauges); err != nil {
+		t.Error(err.Error())
+	}
+
+	if err := test_validate_gauge("valid_multiple_mixed", 1, s_multiple.gauges); err != nil {
+		t.Error(err.Error())
+	}
+}
+
 // Valid lines should be parsed and their values should be cached
 func TestParse_ValidLines(t *testing.T) {
 	s := NewStatsd()

@@ -254,101 +254,109 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	m := metric{}
-
-	// Validate splitting the line on "|"
-	pipesplit := strings.Split(line, "|")
-	if len(pipesplit) < 2 {
-		log.Printf("Error: splitting '|', Unable to parse metric: %s\n", line)
-		return errors.New("Error Parsing statsd line")
-	} else if len(pipesplit) > 2 {
-		sr := pipesplit[2]
-		errmsg := "Error: parsing sample rate, %s, it must be in format like: " +
-			"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
-		if strings.Contains(sr, "@") && len(sr) > 1 {
-			samplerate, err := strconv.ParseFloat(sr[1:], 64)
-			if err != nil {
-				log.Printf(errmsg, err.Error(), line)
-			} else {
-				// sample rate successfully parsed
-				m.samplerate = samplerate
-			}
-		} else {
-			log.Printf(errmsg, "", line)
-		}
-	}
-
-	// Validate metric type
-	switch pipesplit[1] {
-	case "g", "c", "s", "ms", "h":
-		m.mtype = pipesplit[1]
-	default:
-		log.Printf("Error: Statsd Metric type %s unsupported", pipesplit[1])
-		return errors.New("Error Parsing statsd line")
-	}
-
-	// Validate splitting the rest of the line on ":"
-	colonsplit := strings.Split(pipesplit[0], ":")
-	if len(colonsplit) != 2 {
+	// Validate splitting the line on ":"
+	bits := strings.Split(line, ":")
+	if len(bits) < 2 {
 		log.Printf("Error: splitting ':', Unable to parse metric: %s\n", line)
 		return errors.New("Error Parsing statsd line")
 	}
-	m.bucket = colonsplit[0]
 
-	// Parse the value
-	if strings.ContainsAny(colonsplit[1], "-+") {
-		if m.mtype != "g" {
-			log.Printf("Error: +- values are only supported for gauges: %s\n", line)
+	// Extract bucket name from individual metric bits
+	bucketName, bits := bits[0], bits[1:]
+
+	// Add a metric for each bit available
+	for _, bit := range bits {
+		m := metric{}
+
+		m.bucket = bucketName
+
+		// Validate splitting the bit on "|"
+		pipesplit := strings.Split(bit, "|")
+		if len(pipesplit) < 2 {
+			log.Printf("Error: splitting '|', Unable to parse metric: %s\n", line)
+			return errors.New("Error Parsing statsd line")
+		} else if len(pipesplit) > 2 {
+			sr := pipesplit[2]
+			errmsg := "Error: parsing sample rate, %s, it must be in format like: " +
+				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
+			if strings.Contains(sr, "@") && len(sr) > 1 {
+				samplerate, err := strconv.ParseFloat(sr[1:], 64)
+				if err != nil {
+					log.Printf(errmsg, err.Error(), line)
+				} else {
+					// sample rate successfully parsed
+					m.samplerate = samplerate
+				}
+			} else {
+				log.Printf(errmsg, "", line)
+			}
+		}
+
+		// Validate metric type
+		switch pipesplit[1] {
+		case "g", "c", "s", "ms", "h":
+			m.mtype = pipesplit[1]
+		default:
+			log.Printf("Error: Statsd Metric type %s unsupported", pipesplit[1])
 			return errors.New("Error Parsing statsd line")
 		}
-		m.additive = true
-	}
 
-	switch m.mtype {
-	case "g", "ms", "h":
-		v, err := strconv.ParseFloat(colonsplit[1], 64)
-		if err != nil {
-			log.Printf("Error: parsing value to float64: %s\n", line)
-			return errors.New("Error Parsing statsd line")
+		// Parse the value
+		if strings.ContainsAny(pipesplit[0], "-+") {
+			if m.mtype != "g" {
+				log.Printf("Error: +- values are only supported for gauges: %s\n", line)
+				return errors.New("Error Parsing statsd line")
+			}
+			m.additive = true
 		}
-		m.floatvalue = v
-	case "c", "s":
-		v, err := strconv.ParseInt(colonsplit[1], 10, 64)
-		if err != nil {
-			log.Printf("Error: parsing value to int64: %s\n", line)
-			return errors.New("Error Parsing statsd line")
+
+		switch m.mtype {
+		case "g", "ms", "h":
+			v, err := strconv.ParseFloat(pipesplit[0], 64)
+			if err != nil {
+				log.Printf("Error: parsing value to float64: %s\n", line)
+				return errors.New("Error Parsing statsd line")
+			}
+			m.floatvalue = v
+		case "c", "s":
+			v, err := strconv.ParseInt(pipesplit[0], 10, 64)
+			if err != nil {
+				log.Printf("Error: parsing value to int64: %s\n", line)
+				return errors.New("Error Parsing statsd line")
+			}
+			// If a sample rate is given with a counter, divide value by the rate
+			if m.samplerate != 0 && m.mtype == "c" {
+				v = int64(float64(v) / m.samplerate)
+			}
+			m.intvalue = v
 		}
-		// If a sample rate is given with a counter, divide value by the rate
-		if m.samplerate != 0 && m.mtype == "c" {
-			v = int64(float64(v) / m.samplerate)
+
+		// Parse the name & tags from bucket
+		m.name, m.tags = s.parseName(m.bucket)
+		switch m.mtype {
+		case "c":
+			m.tags["metric_type"] = "counter"
+		case "g":
+			m.tags["metric_type"] = "gauge"
+		case "s":
+			m.tags["metric_type"] = "set"
+		case "ms":
+			m.tags["metric_type"] = "timing"
+		case "h":
+			m.tags["metric_type"] = "histogram"
 		}
-		m.intvalue = v
+
+		// Make a unique key for the measurement name/tags
+		var tg []string
+		for k, v := range m.tags {
+			tg = append(tg, fmt.Sprintf("%s=%s", k, v))
+		}
+		sort.Strings(tg)
+		m.hash = fmt.Sprintf("%s%s", strings.Join(tg, ""), m.name)
+
+		s.aggregate(m)
 	}
 
-	// Parse the name & tags from bucket
-	m.name, m.tags = s.parseName(m.bucket)
-	switch m.mtype {
-	case "c":
-		m.tags["metric_type"] = "counter"
-	case "g":
-		m.tags["metric_type"] = "gauge"
-	case "s":
-		m.tags["metric_type"] = "set"
-	case "ms":
-		m.tags["metric_type"] = "timing"
-	case "h":
-		m.tags["metric_type"] = "histogram"
-	}
-
-	// Make a unique key for the measurement name/tags
-	var tg []string
-	for k, v := range m.tags {
-		tg = append(tg, fmt.Sprintf("%s=%s", k, v))
-	}
-	sort.Strings(tg)
-	m.hash = fmt.Sprintf("%s%s", strings.Join(tg, ""), m.name)
-
-	s.aggregate(m)
 	return nil
 }
 
