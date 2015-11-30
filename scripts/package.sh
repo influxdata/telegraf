@@ -37,7 +37,7 @@ CONFIG_ROOT_DIR=/etc/opt/telegraf
 CONFIG_D_DIR=/etc/opt/telegraf/telegraf.d
 LOGROTATE_DIR=/etc/logrotate.d
 
-SAMPLE_CONFIGURATION=etc/config.sample.toml
+SAMPLE_CONFIGURATION=etc/telegraf.conf
 LOGROTATE_CONFIGURATION=etc/logrotate.d/telegraf
 INITD_SCRIPT=scripts/init.sh
 SYSTEMD_SCRIPT=scripts/telegraf.service
