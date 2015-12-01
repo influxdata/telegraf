@@ -1,7 +1,6 @@
 package trig
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/influxdb/telegraf/plugins"
@@ -37,8 +36,6 @@ func (s *Trig) Gather(acc plugins.Accumulator) error {
 
 	s.x += 1.0
 	acc.AddFields("trig", fields, tags)
-
-	fmt.Printf("%#v\n", fields)
 
 	return nil
 }

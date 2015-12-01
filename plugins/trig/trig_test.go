@@ -1,7 +1,6 @@
 package trig
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
@@ -27,8 +26,6 @@ func TestTrig(t *testing.T) {
 		fields := make(map[string]interface{})
 		fields["sine"] = sine
 		fields["cosine"] = cosine
-
-		fmt.Printf("%#v\n", fields)
 
 		assert.True(t, acc.CheckFieldsValue("trig", fields))
 
