@@ -13,6 +13,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/kafka_consumer"
 	_ "github.com/influxdb/telegraf/plugins/leofs"
 	_ "github.com/influxdb/telegraf/plugins/lustre2"
+	_ "github.com/influxdb/telegraf/plugins/mailchimp"
 	_ "github.com/influxdb/telegraf/plugins/memcached"
 	_ "github.com/influxdb/telegraf/plugins/mongodb"
 	_ "github.com/influxdb/telegraf/plugins/mysql"

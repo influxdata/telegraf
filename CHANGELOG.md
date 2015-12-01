@@ -5,9 +5,12 @@
 - [#410](https://github.com/influxdb/telegraf/pull/410): Additional redis metrics. Thanks @vlaadbrain!
 - [#414](https://github.com/influxdb/telegraf/issues/414): Jolokia plugin auth parameters
 - [#415](https://github.com/influxdb/telegraf/issues/415): memcached plugin: support unix sockets
+- [#418](https://github.com/influxdb/telegraf/pull/418): memcached plugin additional unit tests.
+- [#408](https://github.com/influxdb/telegraf/pull/408): MailChimp plugin.
 
 ### Bugfixes
 - [#405](https://github.com/influxdb/telegraf/issues/405): Prometheus output cardinality issue
+- [#388](https://github.com/influxdb/telegraf/issues/388): Fix collection hangup when cpu times decrement.
 
 ## v0.2.3 [2015-11-30]
 

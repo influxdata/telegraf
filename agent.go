@@ -114,6 +114,10 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 		}(plugin)
 	}
 
+	if counter == 0 {
+		return nil
+	}
+
 	wg.Wait()
 
 	elapsed := time.Since(start)
