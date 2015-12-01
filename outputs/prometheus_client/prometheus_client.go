@@ -2,6 +2,7 @@ package prometheus_client
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/influxdb/influxdb/client/v2"
@@ -64,8 +65,7 @@ func (p *PrometheusClient) Write(points []*client.Point) error {
 
 	for _, point := range points {
 		var labels []string
-		name := point.Name()
-		key := name
+		key := point.Name()
 
 		for k, _ := range point.Tags() {
 			if len(k) > 0 {
@@ -77,7 +77,7 @@ func (p *PrometheusClient) Write(points []*client.Point) error {
 			p.metrics[key] = prometheus.NewUntypedVec(
 				prometheus.UntypedOpts{
 					Name: key,
-					Help: fmt.Sprintf("Telegraf collected point '%s'", name),
+					Help: fmt.Sprintf("Telegraf collected point '%s'", key),
 				},
 				labels,
 			)
@@ -90,12 +90,28 @@ func (p *PrometheusClient) Write(points []*client.Point) error {
 		}
 
 		for _, val := range point.Fields() {
-			switch val.(type) {
+			switch val := val.(type) {
+			default:
+				log.Printf("Prometheus output, unsupported type. key: %s, type: %T\n",
+					key, val)
 			case int64:
-				ival := val.(int64)
-				p.metrics[key].With(l).Set(float64(ival))
+				m, err := p.metrics[key].GetMetricWith(l)
+				if err != nil {
+					log.Printf("ERROR Getting metric in Prometheus output, "+
+						"key: %s, labels: %v,\nerr: %s\n",
+						key, l, err.Error())
+					continue
+				}
+				m.Set(float64(val))
 			case float64:
-				p.metrics[key].With(l).Set(val.(float64))
+				m, err := p.metrics[key].GetMetricWith(l)
+				if err != nil {
+					log.Printf("ERROR Getting metric in Prometheus output, "+
+						"key: %s, labels: %v,\nerr: %s\n",
+						key, l, err.Error())
+					continue
+				}
+				m.Set(val)
 			}
 		}
 	}
