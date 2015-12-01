@@ -1,14 +1,14 @@
 package trig
 
 import (
-	"math"
 	"fmt"
+	"math"
 
 	"github.com/influxdb/telegraf/plugins"
 )
 
 type Trig struct {
-	x float64
+	x         float64
 	Amplitude float64
 }
 
@@ -26,8 +26,8 @@ func (s *Trig) Description() string {
 }
 
 func (s *Trig) Gather(acc plugins.Accumulator) error {
-	sinner := math.Sin((s.x * math.Pi) / 5.0) * s.Amplitude
-	cosinner := math.Cos((s.x * math.Pi) / 5.0) * s.Amplitude
+	sinner := math.Sin((s.x*math.Pi)/5.0) * s.Amplitude
+	cosinner := math.Cos((s.x*math.Pi)/5.0) * s.Amplitude
 
 	fields := make(map[string]interface{})
 	fields["sine"] = sinner
@@ -36,15 +36,14 @@ func (s *Trig) Gather(acc plugins.Accumulator) error {
 	tags := make(map[string]string)
 
 	s.x += 1.0
-	acc.AddFields("trig",fields,tags)
+	acc.AddFields("trig", fields, tags)
 
-	fmt.Printf("%#v\n",fields)
+	fmt.Printf("%#v\n", fields)
 
 	return nil
 }
 
-
 func init() {
 
-plugins.Add("Trig", func() plugins.Plugin { return &Trig{x: 0.0} })
+	plugins.Add("Trig", func() plugins.Plugin { return &Trig{x: 0.0} })
 }

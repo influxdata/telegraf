@@ -1,9 +1,9 @@
 package trig
 
 import (
-	"testing"
-	"math"
 	"fmt"
+	"math"
+	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -15,13 +15,12 @@ func TestTrig(t *testing.T) {
 		Amplitude: 10.0,
 	}
 
-
-	for i:=0.0; i < 10.0; i++ {
+	for i := 0.0; i < 10.0; i++ {
 
 		var acc testutil.Accumulator
 
-		sine := math.Sin((i * math.Pi) / 5.0) * s.Amplitude
-		cosine := math.Cos((i * math.Pi) / 5.0) * s.Amplitude
+		sine := math.Sin((i*math.Pi)/5.0) * s.Amplitude
+		cosine := math.Cos((i*math.Pi)/5.0) * s.Amplitude
 
 		s.Gather(&acc)
 
@@ -29,10 +28,9 @@ func TestTrig(t *testing.T) {
 		fields["sine"] = sine
 		fields["cosine"] = cosine
 
-		fmt.Printf("%#v\n",fields)
+		fmt.Printf("%#v\n", fields)
 
 		assert.True(t, acc.CheckFieldsValue("trig", fields))
-	
+
 	}
 }
-
