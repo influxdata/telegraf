@@ -20,19 +20,22 @@ func TestConfig_LoadSinglePlugin(t *testing.T) {
 
 	mConfig := &PluginConfig{
 		Name: "memcached",
-		Drop: []string{"other", "stuff"},
-		Pass: []string{"some", "strings"},
-		TagDrop: []TagFilter{
-			TagFilter{
-				Name:   "badtag",
-				Filter: []string{"othertag"},
+		Filter: Filter{
+			Drop: []string{"other", "stuff"},
+			Pass: []string{"some", "strings"},
+			TagDrop: []TagFilter{
+				TagFilter{
+					Name:   "badtag",
+					Filter: []string{"othertag"},
+				},
 			},
-		},
-		TagPass: []TagFilter{
-			TagFilter{
-				Name:   "goodtag",
-				Filter: []string{"mytag"},
+			TagPass: []TagFilter{
+				TagFilter{
+					Name:   "goodtag",
+					Filter: []string{"mytag"},
+				},
 			},
+			IsActive: true,
 		},
 		Interval: 5 * time.Second,
 	}
@@ -59,19 +62,22 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	mConfig := &PluginConfig{
 		Name: "memcached",
-		Drop: []string{"other", "stuff"},
-		Pass: []string{"some", "strings"},
-		TagDrop: []TagFilter{
-			TagFilter{
-				Name:   "badtag",
-				Filter: []string{"othertag"},
+		Filter: Filter{
+			Drop: []string{"other", "stuff"},
+			Pass: []string{"some", "strings"},
+			TagDrop: []TagFilter{
+				TagFilter{
+					Name:   "badtag",
+					Filter: []string{"othertag"},
+				},
 			},
-		},
-		TagPass: []TagFilter{
-			TagFilter{
-				Name:   "goodtag",
-				Filter: []string{"mytag"},
+			TagPass: []TagFilter{
+				TagFilter{
+					Name:   "goodtag",
+					Filter: []string{"mytag"},
+				},
 			},
+			IsActive: true,
 		},
 		Interval: 5 * time.Second,
 	}
