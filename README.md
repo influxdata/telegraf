@@ -113,7 +113,7 @@ at 192.168.59.103:8086, tagging measurements with dc="denver-1". It will output
 measurements at a 10s interval and will collect per-cpu data, dropping any
 measurements which begin with `cpu_time`.
 
-```
+```toml
 [tags]
   dc = "denver-1"
 
@@ -137,7 +137,7 @@ measurements which begin with `cpu_time`.
 
 Below is how to configure `tagpass` and `tagdrop` parameters (added in 0.1.5)
 
-```
+```toml
 [plugins]
 [[plugins.cpu]]
   percpu = true
@@ -156,10 +156,23 @@ Below is how to configure `tagpass` and `tagdrop` parameters (added in 0.1.5)
     path = [ "/opt", "/home" ]
 ```
 
+Below is how to configure `pass` and `drop` parameters (added in 0.1.5)
+
+```toml
+# Drop all metrics for guest CPU usage
+[[plugins.cpu]]
+  drop = [ "cpu_usage_guest" ]
+
+# Only store inode related metrics for disks
+[[plugins.disk]]
+  pass = [ "disk_inodes" ]
+```
+
+
 Additional plugins (or outputs) of the same type can be specified,
 just define another instance in the config file:
 
-```
+```toml
 [[plugins.cpu]]
   percpu = false
   totalcpu = true
@@ -224,6 +237,33 @@ want to add support for another service or third-party API.
 Telegraf also supports specifying multiple output sinks to send data to,
 configuring each output sink is different, but examples can be
 found by running `telegraf -sample-config`.
+
+Outputs also support the same configurable options as plugins (pass, drop, tagpass, tagdrop)
+
+```toml
+[[outputs.influxdb]]
+  urls = [ "http://localhost:8086" ]
+  database = "telegraf"
+  precision = "s"
+  # Drop all measurements that start with "aerospike"
+  drop = ["aerospike"]
+
+[[outputs.influxdb]]
+  urls = [ "http://localhost:8086" ]
+  database = "telegraf-aerospike-data"
+  precision = "s"
+  # Only accept aerospike data:
+  pass = ["aerospike"]
+
+[[outputs.influxdb]]
+  urls = [ "http://localhost:8086" ]
+  database = "telegraf-cpu0-data"
+  precision = "s"
+  # Only store measurements where the tag "cpu" matches the value "cpu0"
+  [outputs.influxdb.tagpass]
+    cpu = ["cpu0"]
+```
+
 
 ## Supported Outputs
 

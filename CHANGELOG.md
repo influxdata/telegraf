@@ -8,6 +8,7 @@
 - [#418](https://github.com/influxdb/telegraf/pull/418): memcached plugin additional unit tests.
 - [#408](https://github.com/influxdb/telegraf/pull/408): MailChimp plugin.
 - [#382](https://github.com/influxdb/telegraf/pull/382): Add system wide network protocol stats to `net` plugin.
+- [#401](https://github.com/influxdb/telegraf/pull/401): Support pass/drop/tagpass/tagdrop for outputs. Thanks @oldmantaiter!
 
 ### Bugfixes
 - [#405](https://github.com/influxdb/telegraf/issues/405): Prometheus output cardinality issue
