@@ -1,4 +1,4 @@
-## v0.2.3 [unreleased]
+## v0.2.3 [2015-11-30]
 
 ### Release Notes
 - **breaking change** The `kafka` plugin has been renamed to `kafka_consumer`.
