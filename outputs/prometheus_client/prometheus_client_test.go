@@ -13,6 +13,9 @@ import (
 var pTesting *PrometheusClient
 
 func TestPrometheusWritePointEmptyTag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	p := &prometheus.Prometheus{
 		Urls: []string{"http://localhost:9126/metrics"},
@@ -50,6 +53,9 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 }
 
 func TestPrometheusWritePointTag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	p := &prometheus.Prometheus{
 		Urls: []string{"http://localhost:9126/metrics"},
