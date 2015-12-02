@@ -12,8 +12,8 @@ type Trig struct {
 }
 
 var TrigConfig = `
-# Set the amplitude
-amplitude = 10.0
+  # Set the amplitude
+  amplitude = 10.0
 `
 
 func (s *Trig) SampleConfig() string {
@@ -21,7 +21,7 @@ func (s *Trig) SampleConfig() string {
 }
 
 func (s *Trig) Description() string {
-	return "Insert trig data"
+	return "Inserts sine and cosine waves for demonstration purposes"
 }
 
 func (s *Trig) Gather(acc plugins.Accumulator) error {
