@@ -49,7 +49,6 @@ var sendAsIs = []string{
 	"decr_misses",
 	"cas_hits",
 	"cas_misses",
-	"cas_badvalue",
 	"evictions",
 	"bytes_read",
 	"bytes_written",
