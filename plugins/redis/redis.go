@@ -48,6 +48,8 @@ var Tracking = map[string]string{
 	"total_connections_received":  "total_connections_received",
 	"total_commands_processed":    "total_commands_processed",
 	"instantaneous_ops_per_sec":   "instantaneous_ops_per_sec",
+	"instantaneous_input_kbps":    "instantaneous_input_kbps",
+	"instantaneous_output_kbps":   "instantaneous_output_kbps",
 	"sync_full":                   "sync_full",
 	"sync_partial_ok":             "sync_partial_ok",
 	"sync_partial_err":            "sync_partial_err",
