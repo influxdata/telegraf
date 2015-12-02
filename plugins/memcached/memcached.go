@@ -54,7 +54,7 @@ var sendAsIs = []string{
 	"bytes_read",
 	"bytes_written",
 	"threads",
-	"conn_yields"
+	"conn_yields",
 }
 
 // SampleConfig returns sample configuration message
