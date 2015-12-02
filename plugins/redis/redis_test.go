@@ -79,6 +79,8 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		value float64
 	}{
 		{"mem_fragmentation_ratio", 0.81},
+		{"instantaneous_input_kbps", 876.16},
+		{"instantaneous_output_kbps", 3010.23},
 		{"used_cpu_sys", 0.14},
 		{"used_cpu_user", 0.05},
 		{"used_cpu_sys_children", 0.00},
@@ -146,6 +148,8 @@ aof_last_write_status:ok
 total_connections_received:2
 total_commands_processed:1
 instantaneous_ops_per_sec:0
+instantaneous_input_kbps:876.16
+instantaneous_output_kbps:3010.23
 rejected_connections:0
 sync_full:0
 sync_partial_ok:0
