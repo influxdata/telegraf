@@ -1,3 +1,12 @@
+## v0.2.4 [unreleased]
+
+### Features
+- [#412](https://github.com/influxdb/telegraf/pull/412): Additional memcached stats. Thanks @mgresser!
+- [#410](https://github.com/influxdb/telegraf/pull/410): Additional redis metrics. Thanks @vlaadbrain!
+
+### Bugfixes
+- [#405](https://github.com/influxdb/telegraf/issues/405): Prometheus output cardinality issue
+
 ## v0.2.3 [2015-11-30]
 
 ### Release Notes

@@ -73,12 +73,12 @@ func (_ *DiskIOStats) Description() string {
 }
 
 var diskIoSampleConfig = `
-  # By default, telegraf will gather stats for all devices including 
+  # By default, telegraf will gather stats for all devices including
   # disk partitions.
   # Setting devices will restrict the stats to the specified devcies.
-  # Devices=["sda","sdb"]
+  # devices = ["sda","sdb"]
   # Uncomment the following line if you do not need disk serial numbers.
-  # SkipSerialNumber = true
+  # skip_serial_number = true
 `
 
 func (_ *DiskIOStats) SampleConfig() string {
@@ -106,11 +106,13 @@ func (s *DiskIOStats) Gather(acc plugins.Accumulator) error {
 			continue
 		}
 		tags := map[string]string{}
-		if len(io.Name) != 0 {
-			tags["name"] = io.Name
-		}
-		if len(io.SerialNumber) != 0 && !s.SkipSerialNumber {
-			tags["serial"] = io.SerialNumber
+		tags["name"] = io.Name
+		if !s.SkipSerialNumber {
+			if len(io.SerialNumber) != 0 {
+				tags["serial"] = io.SerialNumber
+			} else {
+				tags["serial"] = "unknown"
+			}
 		}
 
 		acc.Add("reads", io.ReadCount, tags)
