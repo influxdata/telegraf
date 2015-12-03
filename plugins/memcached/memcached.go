@@ -28,8 +28,8 @@ var sampleConfig = `
 
 var defaultTimeout = 5 * time.Second
 
-// The list of metrics tha should be calculated
-var sendAsIs = []string{
+// The list of metrics that should be sent
+var sendMetrics = []string{
 	"get_hits",
 	"get_misses",
 	"evictions",
@@ -128,34 +128,16 @@ func (m *Memcached) gatherServer(
 		return err
 	}
 
-	// Read response
-	values := make(map[string]string)
-
-	for {
-		// Read line
-		line, _, errRead := rw.Reader.ReadLine()
-		if errRead != nil {
-			return errRead
-		}
-		// Done
-		if bytes.Equal(line, []byte("END")) {
-			break
-		}
-		// Read values
-		s := bytes.SplitN(line, []byte(" "), 3)
-		if len(s) != 3 || !bytes.Equal(s[0], []byte("STAT")) {
-			return fmt.Errorf("unexpected line in stats response: %q", line)
-		}
-
-		// Save values
-		values[string(s[1])] = string(s[2])
+	values, err := parseResponse(rw.Reader)
+	if err != nil {
+		return err
 	}
 
 	// Add server address as a tag
 	tags := map[string]string{"server": address}
 
 	// Process values
-	for _, key := range sendAsIs {
+	for _, key := range sendMetrics {
 		if value, ok := values[key]; ok {
 			// Mostly it is the number
 			if iValue, errParse := strconv.ParseInt(value, 10, 64); errParse != nil {
@@ -166,6 +148,31 @@ func (m *Memcached) gatherServer(
 		}
 	}
 	return nil
+}
+
+func parseResponse(r *bufio.Reader) (map[string]string, error) {
+	values := make(map[string]string)
+
+	for {
+		// Read line
+		line, _, errRead := r.ReadLine()
+		if errRead != nil {
+			return values, errRead
+		}
+		// Done
+		if bytes.Equal(line, []byte("END")) {
+			break
+		}
+		// Read values
+		s := bytes.SplitN(line, []byte(" "), 3)
+		if len(s) != 3 || !bytes.Equal(s[0], []byte("STAT")) {
+			return values, fmt.Errorf("unexpected line in stats response: %q", line)
+		}
+
+		// Save values
+		values[string(s[1])] = string(s[2])
+	}
+	return values, nil
 }
 
 func init() {
