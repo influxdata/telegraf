@@ -73,6 +73,7 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
+			s.lastStats = times
 			return fmt.Errorf("Error: current total CPU time is less than previous total CPU time")
 		}
 
