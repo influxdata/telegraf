@@ -3,6 +3,7 @@
 ### Features
 - [#412](https://github.com/influxdb/telegraf/pull/412): Additional memcached stats. Thanks @mgresser!
 - [#410](https://github.com/influxdb/telegraf/pull/410): Additional redis metrics. Thanks @vlaadbrain!
+- [#414](https://github.com/influxdb/telegraf/issues/414): Jolokia plugin auth parameters
 
 ### Bugfixes
 - [#405](https://github.com/influxdb/telegraf/issues/405): Prometheus output cardinality issue

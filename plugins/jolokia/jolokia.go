@@ -13,9 +13,11 @@ import (
 )
 
 type Server struct {
-	Name string
-	Host string
-	Port string
+	Name     string
+	Host     string
+	Username string
+	Password string
+	Port     string
 }
 
 type Metric struct {
@@ -59,6 +61,8 @@ func (j *Jolokia) SampleConfig() string {
     name = "stable"
     host = "192.168.103.2"
     port = "8180"
+    # username = "myuser"
+    # password = "mypassword"
 
   # List of metrics collected on above servers
   # Each metric consists in a name, a jmx path and either a pass or drop slice attributes
@@ -193,9 +197,13 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
 			tags["host"] = server.Host
 
 			// Prepare URL
-			requestUrl, err := url.Parse("http://" + server.Host + ":" + server.Port + context + jmxPath)
+			requestUrl, err := url.Parse("http://" + server.Host + ":" +
+				server.Port + context + jmxPath)
 			if err != nil {
 				return err
+			}
+			if server.Username != "" || server.Password != "" {
+				requestUrl.User = url.UserPassword(server.Username, server.Password)
 			}
 
 			out, _ := j.getAttr(requestUrl)
