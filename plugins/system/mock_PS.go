@@ -1,13 +1,15 @@
 package system
 
-import "github.com/stretchr/testify/mock"
+import (
+	"github.com/stretchr/testify/mock"
 
-import "github.com/shirou/gopsutil/cpu"
-import "github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/disk"
 
-import "github.com/shirou/gopsutil/load"
-import "github.com/shirou/gopsutil/mem"
-import "github.com/shirou/gopsutil/net"
+	"github.com/shirou/gopsutil/load"
+	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
+)
 
 type MockPS struct {
 	mock.Mock
@@ -21,6 +23,7 @@ func (m *MockPS) LoadAvg() (*load.LoadAvgStat, error) {
 
 	return r0, r1
 }
+
 func (m *MockPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error) {
 	ret := m.Called()
 
@@ -29,6 +32,7 @@ func (m *MockPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error) {
 
 	return r0, r1
 }
+
 func (m *MockPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 	ret := m.Called()
 
@@ -37,6 +41,7 @@ func (m *MockPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
 
 	return r0, r1
 }
+
 func (m *MockPS) NetIO() ([]net.NetIOCountersStat, error) {
 	ret := m.Called()
 
@@ -45,6 +50,16 @@ func (m *MockPS) NetIO() ([]net.NetIOCountersStat, error) {
 
 	return r0, r1
 }
+
+func (m *MockPS) NetProto() ([]net.NetProtoCountersStat, error) {
+	ret := m.Called()
+
+	r0 := ret.Get(0).([]net.NetProtoCountersStat)
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
+
 func (m *MockPS) DiskIO() (map[string]disk.DiskIOCountersStat, error) {
 	ret := m.Called()
 
@@ -53,6 +68,7 @@ func (m *MockPS) DiskIO() (map[string]disk.DiskIOCountersStat, error) {
 
 	return r0, r1
 }
+
 func (m *MockPS) VMStat() (*mem.VirtualMemoryStat, error) {
 	ret := m.Called()
 
@@ -61,6 +77,7 @@ func (m *MockPS) VMStat() (*mem.VirtualMemoryStat, error) {
 
 	return r0, r1
 }
+
 func (m *MockPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	ret := m.Called()
 
@@ -69,6 +86,7 @@ func (m *MockPS) SwapStat() (*mem.SwapMemoryStat, error) {
 
 	return r0, r1
 }
+
 func (m *MockPS) DockerStat() ([]*DockerContainerStat, error) {
 	ret := m.Called()
 
@@ -77,6 +95,7 @@ func (m *MockPS) DockerStat() ([]*DockerContainerStat, error) {
 
 	return r0, r1
 }
+
 func (m *MockPS) NetConnections() ([]net.NetConnectionStat, error) {
 	ret := m.Called()
 

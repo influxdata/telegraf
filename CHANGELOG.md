@@ -7,6 +7,7 @@
 - [#415](https://github.com/influxdb/telegraf/issues/415): memcached plugin: support unix sockets
 - [#418](https://github.com/influxdb/telegraf/pull/418): memcached plugin additional unit tests.
 - [#408](https://github.com/influxdb/telegraf/pull/408): MailChimp plugin.
+- [#382](https://github.com/influxdb/telegraf/pull/382): Add system wide network protocol stats to `net` plugin.
 
 ### Bugfixes
 - [#405](https://github.com/influxdb/telegraf/issues/405): Prometheus output cardinality issue
@@ -83,7 +84,6 @@ same type.
 - [#364](https://github.com/influxdb/telegraf/pull/364): Support InfluxDB UDP output.
 - [#370](https://github.com/influxdb/telegraf/pull/370): Support specifying multiple outputs, as lists.
 - [#372](https://github.com/influxdb/telegraf/pull/372): Remove gosigar and update go-dockerclient for FreeBSD support. Thanks @MerlinDMC!
-- [#382](https://github.com/influxdb/telegraf/pull/382): Add system wide network protocol stats to `net` plugin.
 
 ### Bugfixes
 - [#331](https://github.com/influxdb/telegraf/pull/331): Dont overwrite host tag in redis plugin.

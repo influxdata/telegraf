@@ -81,10 +81,12 @@ func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
 	}
 
 	// Get system wide stats for different network protocols
-	netprotos, err := s.ps.NetProto()
+	// (ignore these stats if the call fails)
+	netprotos, _ := s.ps.NetProto()
 	for _, proto := range netprotos {
 		for stat, value := range proto.Stats {
-			name := fmt.Sprintf("%s_%s", proto.Protocol, strings.ToLower(stat))
+			name := fmt.Sprintf("%s_%s", strings.ToLower(proto.Protocol),
+				strings.ToLower(stat))
 			acc.Add(name, value, nil)
 		}
 	}

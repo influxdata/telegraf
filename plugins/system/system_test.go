@@ -113,6 +113,17 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 
 	mps.On("NetIO").Return([]net.NetIOCountersStat{netio}, nil)
 
+	netprotos := []net.NetProtoCountersStat{
+		net.NetProtoCountersStat{
+			Protocol: "Udp",
+			Stats: map[string]int64{
+				"InDatagrams": 4655,
+				"NoPorts":     892592,
+			},
+		},
+	}
+	mps.On("NetProto").Return(netprotos, nil)
+
 	vms := &mem.VirtualMemoryStat{
 		Total:     12400,
 		Available: 7600,
@@ -273,6 +284,8 @@ func TestSystemStats_GenerateStats(t *testing.T) {
 	assert.NoError(t, acc.ValidateTaggedValue("err_out", uint64(8), ntags))
 	assert.NoError(t, acc.ValidateTaggedValue("drop_in", uint64(7), ntags))
 	assert.NoError(t, acc.ValidateTaggedValue("drop_out", uint64(1), ntags))
+	assert.NoError(t, acc.ValidateValue("udp_noports", int64(892592)))
+	assert.NoError(t, acc.ValidateValue("udp_indatagrams", int64(4655)))
 
 	preDiskIOPoints := len(acc.Points)
 
