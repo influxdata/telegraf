@@ -3,12 +3,13 @@
 package net
 
 import (
+	"errors"
 	"net"
 	"os"
 	"syscall"
 	"unsafe"
 
-	common "github.com/shirou/gopsutil/common"
+	"github.com/shirou/gopsutil/internal/common"
 )
 
 var (
@@ -95,4 +96,12 @@ func getAdapterList() (*syscall.IpAdapterInfo, error) {
 		return nil, os.NewSyscallError("GetAdaptersInfo", err)
 	}
 	return a, nil
+}
+
+// NetProtoCounters returns network statistics for the entire system
+// If protocols is empty then all protocols are returned, otherwise
+// just the protocols in the list are returned.
+// Not Implemented for Windows
+func NetProtoCounters(protocols []string) ([]NetProtoCountersStat, error) {
+	return nil, errors.New("NetProtoCounters not implemented for windows")
 }

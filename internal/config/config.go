@@ -35,11 +35,11 @@ func NewConfig() *Config {
 	c := &Config{
 		// Agent defaults:
 		Agent: &AgentConfig{
-			Interval:      internal.Duration{10 * time.Second},
+			Interval:      internal.Duration{Duration: 10 * time.Second},
 			RoundInterval: true,
-			FlushInterval: internal.Duration{10 * time.Second},
+			FlushInterval: internal.Duration{Duration: 10 * time.Second},
 			FlushRetries:  2,
-			FlushJitter:   internal.Duration{5 * time.Second},
+			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
 		},
 
 		Tags:          make(map[string]string),

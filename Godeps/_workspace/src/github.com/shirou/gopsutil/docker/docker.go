@@ -34,4 +34,8 @@ type CgroupMemStat struct {
 	TotalInactiveFile       uint64 `json:"total_inactive_file"`
 	TotalActiveFile         uint64 `json:"total_active_file"`
 	TotalUnevictable        uint64 `json:"total_unevictable"`
+	MemUsageInBytes         uint64 `json:"mem_usage_in_bytes"`
+	MemMaxUsageInBytes      uint64 `json:"mem_max_usage_in_bytes"`
+	MemLimitInBytes         uint64 `json:"memory.limit_in_bytes"`
+	MemFailCnt              uint64 `json:"memory.failcnt"`
 }

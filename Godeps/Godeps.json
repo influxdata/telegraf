@@ -168,49 +168,44 @@
 			"Rev": "5bb5cfc093ad18a28148c578f8632cfdb4d802e4"
 		},
 		{
-			"ImportPath": "github.com/shirou/gopsutil/common",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
-		},
-		{
 			"ImportPath": "github.com/shirou/gopsutil/cpu",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
+			"Comment": "1.0.0-208-g759e96e",
+			"Rev": "759e96ebaffb01c3cba0e8b129ef29f56507b323"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/disk",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
+			"Comment": "1.0.0-208-g759e96e",
+			"Rev": "759e96ebaffb01c3cba0e8b129ef29f56507b323"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/docker",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
+			"Comment": "1.0.0-208-g759e96e",
+			"Rev": "759e96ebaffb01c3cba0e8b129ef29f56507b323"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/host",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
+			"Comment": "1.0.0-208-g759e96e",
+			"Rev": "759e96ebaffb01c3cba0e8b129ef29f56507b323"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/load",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
+			"Comment": "1.0.0-208-g759e96e",
+			"Rev": "759e96ebaffb01c3cba0e8b129ef29f56507b323"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/mem",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
+			"Comment": "1.0.0-208-g759e96e",
+			"Rev": "759e96ebaffb01c3cba0e8b129ef29f56507b323"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/net",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
+			"Comment": "1.0.0-208-g759e96e",
+			"Rev": "759e96ebaffb01c3cba0e8b129ef29f56507b323"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/process",
-			"Comment": "1.0.0-173-g1e9aabb",
-			"Rev": "1e9aabb3c8132314662698c9d1c0aef68d9da617"
+			"Comment": "1.0.0-208-g759e96e",
+			"Rev": "759e96ebaffb01c3cba0e8b129ef29f56507b323"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",

@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-
-	common "github.com/shirou/gopsutil/common"
+	"errors"
+	"github.com/shirou/gopsutil/internal/common"
 )
 
 func VirtualMemory() (*VirtualMemoryStat, error) {
@@ -91,7 +91,6 @@ func SwapMemory() (*SwapMemoryStat, error) {
 	if err != nil {
 		return nil, err
 	}
-	var ret *SwapMemoryStat
 	for _, line := range strings.Split(string(out), "\n") {
 		values := strings.Fields(line)
 		// skip title line
@@ -117,13 +116,13 @@ func SwapMemory() (*SwapMemoryStat, error) {
 			return nil, err
 		}
 
-		ret = &SwapMemoryStat{
+		return &SwapMemoryStat{
 			Total:       total_v,
 			Used:        used_v,
 			Free:        free_v,
 			UsedPercent: up_v,
-		}
+		}, nil
 	}
 
-	return ret, nil
+	return nil, errors.New("no swap devices found")
 }

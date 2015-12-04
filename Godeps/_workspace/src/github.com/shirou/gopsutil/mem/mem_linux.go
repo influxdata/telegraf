@@ -7,11 +7,11 @@ import (
 	"strings"
 	"syscall"
 
-	common "github.com/shirou/gopsutil/common"
+	"github.com/shirou/gopsutil/internal/common"
 )
 
 func VirtualMemory() (*VirtualMemoryStat, error) {
-	filename := common.GetEnv("HOST_PROC", "/proc") + "/meminfo"
+	filename := common.HostProc("meminfo")
 	lines, _ := common.ReadLines(filename)
 	// flag if MemAvailable is in /proc/meminfo (kernel 3.14+)
 	memavail := false
@@ -74,7 +74,7 @@ func SwapMemory() (*SwapMemoryStat, error) {
 	} else {
 		ret.UsedPercent = 0
 	}
-	filename := common.GetEnv("HOST_PROC", "/proc") + "/vmstat"
+	filename := common.HostProc("vmstat")
 	lines, _ := common.ReadLines(filename)
 	for _, l := range lines {
 		fields := strings.Fields(l)

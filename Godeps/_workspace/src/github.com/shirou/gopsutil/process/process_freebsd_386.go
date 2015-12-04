@@ -10,7 +10,37 @@ const (
 	KernProcPID      = 1  // by process id
 	KernProcProc     = 8  // only return procs
 	KernProcPathname = 12 // path to executable
+	KernProcArgs     = 7  // get/set arguments/proctitle
 )
+
+type Timespec struct {
+	Sec  int32
+	Nsec int32
+}
+
+type Timeval struct {
+	Sec  int32
+	Usec int32
+}
+
+type Rusage struct {
+	Utime    Timeval
+	Stime    Timeval
+	Maxrss   int32
+	Ixrss    int32
+	Idrss    int32
+	Isrss    int32
+	Minflt   int32
+	Majflt   int32
+	Nswap    int32
+	Inblock  int32
+	Oublock  int32
+	Msgsnd   int32
+	Msgrcv   int32
+	Nsignals int32
+	Nvcsw    int32
+	Nivcsw   int32
+}
 
 // copied from sys/user.h
 type KinfoProc struct {
@@ -83,7 +113,7 @@ type KinfoProc struct {
 	KiNumthreads   int32
 	KiTid          int32
 	KiPri          int32
-	KiRusage       [72]byte
+	KiRusage       Rusage
 	KiRusageCh     [72]byte
 	KiPcb          int32
 	KiKstack       int32

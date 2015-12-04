@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	common "github.com/shirou/gopsutil/common"
+	"github.com/shirou/gopsutil/internal/common"
 )
 
 func LoadAvg() (*LoadAvgStat, error) {
-	filename := common.GetEnv("HOST_PROC", "/proc") + "/loadavg"
+	filename := common.HostProc("loadavg")
 	line, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err

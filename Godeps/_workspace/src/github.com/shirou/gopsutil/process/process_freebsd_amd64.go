@@ -1,6 +1,5 @@
 // +build freebsd
 // +build amd64
-
 package process
 
 // copied from sys/sysctl.h
@@ -10,7 +9,37 @@ const (
 	KernProcPID      = 1  // by process id
 	KernProcProc     = 8  // only return procs
 	KernProcPathname = 12 // path to executable
+	KernProcArgs     = 7  // get/set arguments/proctitle
 )
+
+type Timespec struct {
+	Sec  int64
+	Nsec int64
+}
+
+type Timeval struct {
+	Sec  int64
+	Usec int64
+}
+
+type Rusage struct {
+	Utime    Timeval
+	Stime    Timeval
+	Maxrss   int64
+	Ixrss    int64
+	Idrss    int64
+	Isrss    int64
+	Minflt   int64
+	Majflt   int64
+	Nswap    int64
+	Inblock  int64
+	Oublock  int64
+	Msgsnd   int64
+	Msgrcv   int64
+	Nsignals int64
+	Nvcsw    int64
+	Nivcsw   int64
+}
 
 // copied from sys/user.h
 type KinfoProc struct {
@@ -83,7 +112,7 @@ type KinfoProc struct {
 	KiNumthreads   int32
 	KiTid          int32
 	KiPri          int32
-	KiRusage       [144]byte
+	KiRusage       Rusage
 	KiRusageCh     [144]byte
 	KiPcb          int64
 	KiKstack       int64

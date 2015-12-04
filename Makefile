@@ -7,32 +7,37 @@ PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
 
 # Standard Telegraf build
-build: prepare
-	godep go build -o telegraf -ldflags \
+default: prepare build
+
+# Only run the build (no dependency grabbing)
+build:
+	go build -o telegraf -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
 # Build with race detector
 dev: prepare
-	godep go build -race -o telegraf -ldflags \
+	go build -race -o telegraf -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
 # Build linux 64-bit, 32-bit and arm architectures
 build-linux-bins: prepare
-	GOARCH=amd64 GOOS=linux godep go build -o telegraf_linux_amd64 \
+	GOARCH=amd64 GOOS=linux go build -o telegraf_linux_amd64 \
 								-ldflags "-X main.Version=$(VERSION)" \
 								./cmd/telegraf/telegraf.go
-	GOARCH=386 GOOS=linux godep go build -o telegraf_linux_386 \
+	GOARCH=386 GOOS=linux go build -o telegraf_linux_386 \
 								-ldflags "-X main.Version=$(VERSION)" \
 								./cmd/telegraf/telegraf.go
-	GOARCH=arm GOOS=linux godep go build -o telegraf_linux_arm \
+	GOARCH=arm GOOS=linux go build -o telegraf_linux_arm \
 								-ldflags "-X main.Version=$(VERSION)" \
 								./cmd/telegraf/telegraf.go
 
-# Get godep
+# Get dependencies and use godep to checkout changesets
 prepare:
+	go get ./...
 	go get github.com/tools/godep
+	godep restore
 
 # Run all docker containers necessary for unit tests
 docker-run:
@@ -84,10 +89,10 @@ test: docker-kill prepare docker-run
 	# Sleeping for kafka leadership election, TSDB setup, etc.
 	sleep 60
 	# SUCCESS, running tests
-	godep go test -race ./...
+	go test -race ./...
 
 # Run "short" unit tests
 test-short: prepare
-	godep go test -short ./...
+	go test -short ./...
 
 .PHONY: test

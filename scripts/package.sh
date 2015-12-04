@@ -134,7 +134,8 @@ do_build() {
         rm -f $GOPATH_INSTALL/bin/$b
     done
 
-    godep go install -ldflags="-X main.Version $version" ./...
+    godep restore
+    go install -ldflags="-X main.Version $version" ./...
     if [ $? -ne 0 ]; then
         echo "Build failed, unable to create package -- aborting"
         cleanup_exit 1

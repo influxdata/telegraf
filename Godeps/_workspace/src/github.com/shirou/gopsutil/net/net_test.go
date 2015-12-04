@@ -26,6 +26,22 @@ func TestNetIOCountersStatString(t *testing.T) {
 	}
 }
 
+func TestNetProtoCountersStatString(t *testing.T) {
+	v := NetProtoCountersStat{
+		Protocol: "tcp",
+		Stats: map[string]int64{
+			"MaxConn":      -1,
+			"ActiveOpens":  4000,
+			"PassiveOpens": 3000,
+		},
+	}
+	e := `{"protocol":"tcp","stats":{"ActiveOpens":4000,"MaxConn":-1,"PassiveOpens":3000}}`
+	if e != fmt.Sprintf("%v", v) {
+		t.Errorf("NetProtoCountersStat string is invalid: %v", v)
+	}
+
+}
+
 func TestNetConnectionStatString(t *testing.T) {
 	v := NetConnectionStat{
 		Fd:     10,
@@ -118,6 +134,45 @@ func TestNetInterfaces(t *testing.T) {
 	for _, vv := range v {
 		if vv.Name == "" {
 			t.Errorf("Invalid NetInterface: %v", vv)
+		}
+	}
+}
+
+func TestNetProtoCountersStatsAll(t *testing.T) {
+	v, err := NetProtoCounters(nil)
+	if err != nil {
+		t.Fatalf("Could not get NetProtoCounters: %v", err)
+	}
+	if len(v) == 0 {
+		t.Fatalf("Could not get NetProtoCounters: %v", err)
+	}
+	for _, vv := range v {
+		if vv.Protocol == "" {
+			t.Errorf("Invalid NetProtoCountersStat: %v", vv)
+		}
+		if len(vv.Stats) == 0 {
+			t.Errorf("Invalid NetProtoCountersStat: %v", vv)
+		}
+	}
+}
+
+func TestNetProtoCountersStats(t *testing.T) {
+	v, err := NetProtoCounters([]string{"tcp", "ip"})
+	if err != nil {
+		t.Fatalf("Could not get NetProtoCounters: %v", err)
+	}
+	if len(v) == 0 {
+		t.Fatalf("Could not get NetProtoCounters: %v", err)
+	}
+	if len(v) != 2 {
+		t.Fatalf("Go incorrect number of NetProtoCounters: %v", err)
+	}
+	for _, vv := range v {
+		if vv.Protocol != "tcp" && vv.Protocol != "ip" {
+			t.Errorf("Invalid NetProtoCountersStat: %v", vv)
+		}
+		if len(vv.Stats) == 0 {
+			t.Errorf("Invalid NetProtoCountersStat: %v", vv)
 		}
 	}
 }

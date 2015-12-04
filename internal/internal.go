@@ -10,7 +10,7 @@ import (
 
 // Duration just wraps time.Duration
 type Duration struct {
-	time.Duration
+	Duration time.Duration
 }
 
 // UnmarshalTOML parses the duration from the TOML config file

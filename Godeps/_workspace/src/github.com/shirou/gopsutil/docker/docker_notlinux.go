@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 
 	"github.com/shirou/gopsutil/cpu"
+        "github.com/shirou/gopsutil/internal/common"
 )
 
 // GetDockerIDList returnes a list of DockerID.
@@ -23,7 +24,7 @@ func CgroupCPU(containerid string, base string) (*cpu.CPUTimesStat, error) {
 }
 
 func CgroupCPUDocker(containerid string) (*cpu.CPUTimesStat, error) {
-	return CgroupCPU(containerid, "/sys/fs/cgroup/cpuacct/docker")
+	return CgroupCPU(containerid, common.HostSys("fs/cgroup/cpuacct/docker"))
 }
 
 func CgroupMem(containerid string, base string) (*CgroupMemStat, error) {
@@ -31,7 +32,7 @@ func CgroupMem(containerid string, base string) (*CgroupMemStat, error) {
 }
 
 func CgroupMemDocker(containerid string) (*CgroupMemStat, error) {
-	return CgroupMem(containerid, "/sys/fs/cgroup/memory/docker")
+	return CgroupMem(containerid, common.HostSys("fs/cgroup/memory/docker"))
 }
 
 func (m CgroupMemStat) String() string {

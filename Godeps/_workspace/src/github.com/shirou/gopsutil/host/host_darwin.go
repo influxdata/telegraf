@@ -11,9 +11,10 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 
-	common "github.com/shirou/gopsutil/common"
+	"github.com/shirou/gopsutil/internal/common"
 )
 
 func HostInfo() (*HostInfoStat, error) {
@@ -39,14 +40,10 @@ func HostInfo() (*HostInfoStat, error) {
 		ret.VirtualizationRole = role
 	}
 
-	values, err := common.DoSysctrl("kern.boottime")
+	boot, err := BootTime()
 	if err == nil {
-		// ex: { sec = 1392261637, usec = 627534 } Thu Feb 13 12:20:37 2014
-		v := strings.Replace(values[2], ",", "", 1)
-		t, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			ret.Uptime = t
-		}
+		ret.BootTime = boot
+		ret.Uptime = uptime(boot)
 	}
 
 	return ret, nil
@@ -59,13 +56,24 @@ func BootTime() (uint64, error) {
 	}
 	// ex: { sec = 1392261637, usec = 627534 } Thu Feb 13 12:20:37 2014
 	v := strings.Replace(values[2], ",", "", 1)
-
 	boottime, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
 		return 0, err
 	}
 
 	return uint64(boottime), nil
+}
+
+func uptime(boot uint64) uint64 {
+	return uint64(time.Now().Unix()) - boot
+}
+
+func Uptime() (uint64, error) {
+	boot, err := BootTime()
+	if err != nil {
+		return 0, err
+	}
+	return uptime(boot), nil
 }
 
 func Users() ([]UserStat, error) {

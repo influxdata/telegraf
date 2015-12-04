@@ -13,9 +13,10 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 
-	common "github.com/shirou/gopsutil/common"
+	"github.com/shirou/gopsutil/internal/common"
 )
 
 type LSB struct {
@@ -46,9 +47,10 @@ func HostInfo() (*HostInfoStat, error) {
 		ret.VirtualizationSystem = system
 		ret.VirtualizationRole = role
 	}
-	uptime, err := BootTime()
+	boot, err := BootTime()
 	if err == nil {
-		ret.Uptime = uptime
+		ret.BootTime = boot
+		ret.Uptime = uptime(boot)
 	}
 
 	return ret, nil
@@ -56,7 +58,7 @@ func HostInfo() (*HostInfoStat, error) {
 
 // BootTime returns the system boot time expressed in seconds since the epoch.
 func BootTime() (uint64, error) {
-	filename := common.GetEnv("HOST_PROC", "/proc") + "/stat"
+	filename := common.HostProc("stat")
 	lines, err := common.ReadLines(filename)
 	if err != nil {
 		return 0, err
@@ -76,6 +78,18 @@ func BootTime() (uint64, error) {
 	}
 
 	return 0, fmt.Errorf("could not find btime")
+}
+
+func uptime(boot uint64) uint64 {
+	return uint64(time.Now().Unix()) - boot
+}
+
+func Uptime() (uint64, error) {
+	boot, err := BootTime()
+	if err != nil {
+		return 0, err
+	}
+	return uptime(boot), nil
 }
 
 func Users() ([]UserStat, error) {
@@ -321,7 +335,7 @@ func GetVirtualization() (string, string, error) {
 	var system string
 	var role string
 
-	filename := common.GetEnv("HOST_PROC", "/proc") + "/xen"
+	filename := common.HostProc("xen")
 	if common.PathExists(filename) {
 		system = "xen"
 		role = "guest" // assume guest
@@ -336,7 +350,7 @@ func GetVirtualization() (string, string, error) {
 		}
 	}
 
-	filename = common.GetEnv("HOST_PROC", "/proc") + "/modules"
+	filename = common.HostProc("modules")
 	if common.PathExists(filename) {
 		contents, err := common.ReadLines(filename)
 		if err == nil {
@@ -353,7 +367,7 @@ func GetVirtualization() (string, string, error) {
 		}
 	}
 
-	filename = common.GetEnv("HOST_PROC", "/proc") + "/cpuinfo"
+	filename = common.HostProc("cpuinfo")
 	if common.PathExists(filename) {
 		contents, err := common.ReadLines(filename)
 		if err == nil {
@@ -366,7 +380,7 @@ func GetVirtualization() (string, string, error) {
 		}
 	}
 
-	filename = common.GetEnv("HOST_PROC", "/proc")
+	filename = common.HostProc()
 	if common.PathExists(filename + "/bc/0") {
 		system = "openvz"
 		role = "host"

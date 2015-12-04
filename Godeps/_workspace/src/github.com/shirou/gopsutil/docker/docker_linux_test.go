@@ -2,9 +2,7 @@
 
 package docker
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestGetDockerIDList(t *testing.T) {
 	// If there is not docker environment, this test always fail.

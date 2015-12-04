@@ -12,9 +12,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/shirou/gopsutil/common"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/internal/common"
 	"github.com/shirou/gopsutil/net"
 )
 
@@ -203,11 +203,32 @@ func (p *Process) MemoryPercent() (float32, error) {
 }
 
 func (p *Process) Children() ([]*Process, error) {
-	return nil, common.NotImplementedError
+	pids, err := common.CallPgrep(invoke, p.Pid)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]*Process, 0, len(pids))
+	for _, pid := range pids {
+		np, err := NewProcess(pid)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, np)
+	}
+	return ret, nil
 }
 
 func (p *Process) OpenFiles() ([]OpenFilesStat, error) {
-	return nil, common.NotImplementedError
+	_, ofs, err := p.fillFromfd()
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]OpenFilesStat, 0, len(ofs))
+	for i, o := range ofs {
+		ret[i] = *o
+	}
+
+	return ret, nil
 }
 
 func (p *Process) Connections() ([]net.NetConnectionStat, error) {
@@ -222,7 +243,7 @@ func (p *Process) IsRunning() (bool, error) {
 func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 	pid := p.Pid
 	var ret []MemoryMapsStat
-	smapsPath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "smaps")
+	smapsPath := common.HostProc(strconv.Itoa(int(pid)), "smaps")
 	contents, err := ioutil.ReadFile(smapsPath)
 	if err != nil {
 		return nil, err
@@ -303,7 +324,7 @@ func (p *Process) MemoryMaps(grouped bool) (*[]MemoryMapsStat, error) {
 // Get num_fds from /proc/(pid)/fd
 func (p *Process) fillFromfd() (int32, []*OpenFilesStat, error) {
 	pid := p.Pid
-	statPath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "fd")
+	statPath := common.HostProc(strconv.Itoa(int(pid)), "fd")
 	d, err := os.Open(statPath)
 	if err != nil {
 		return 0, nil, err
@@ -336,7 +357,7 @@ func (p *Process) fillFromfd() (int32, []*OpenFilesStat, error) {
 // Get cwd from /proc/(pid)/cwd
 func (p *Process) fillFromCwd() (string, error) {
 	pid := p.Pid
-	cwdPath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "cwd")
+	cwdPath := common.HostProc(strconv.Itoa(int(pid)), "cwd")
 	cwd, err := os.Readlink(cwdPath)
 	if err != nil {
 		return "", err
@@ -347,7 +368,7 @@ func (p *Process) fillFromCwd() (string, error) {
 // Get exe from /proc/(pid)/exe
 func (p *Process) fillFromExe() (string, error) {
 	pid := p.Pid
-	exePath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "exe")
+	exePath := common.HostProc(strconv.Itoa(int(pid)), "exe")
 	exe, err := os.Readlink(exePath)
 	if err != nil {
 		return "", err
@@ -358,7 +379,7 @@ func (p *Process) fillFromExe() (string, error) {
 // Get cmdline from /proc/(pid)/cmdline
 func (p *Process) fillFromCmdline() (string, error) {
 	pid := p.Pid
-	cmdPath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "cmdline")
+	cmdPath := common.HostProc(strconv.Itoa(int(pid)), "cmdline")
 	cmdline, err := ioutil.ReadFile(cmdPath)
 	if err != nil {
 		return "", err
@@ -376,7 +397,7 @@ func (p *Process) fillFromCmdline() (string, error) {
 // Get IO status from /proc/(pid)/io
 func (p *Process) fillFromIO() (*IOCountersStat, error) {
 	pid := p.Pid
-	ioPath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "io")
+	ioPath := common.HostProc(strconv.Itoa(int(pid)), "io")
 	ioline, err := ioutil.ReadFile(ioPath)
 	if err != nil {
 		return nil, err
@@ -415,7 +436,7 @@ func (p *Process) fillFromIO() (*IOCountersStat, error) {
 // Get memory info from /proc/(pid)/statm
 func (p *Process) fillFromStatm() (*MemoryInfoStat, *MemoryInfoExStat, error) {
 	pid := p.Pid
-	memPath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "statm")
+	memPath := common.HostProc(strconv.Itoa(int(pid)), "statm")
 	contents, err := ioutil.ReadFile(memPath)
 	if err != nil {
 		return nil, nil, err
@@ -467,7 +488,7 @@ func (p *Process) fillFromStatm() (*MemoryInfoStat, *MemoryInfoExStat, error) {
 // Get various status from /proc/(pid)/status
 func (p *Process) fillFromStatus() error {
 	pid := p.Pid
-	statPath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "status")
+	statPath := common.HostProc(strconv.Itoa(int(pid)), "status")
 	contents, err := ioutil.ReadFile(statPath)
 	if err != nil {
 		return err
@@ -554,7 +575,7 @@ func (p *Process) fillFromStatus() error {
 
 func (p *Process) fillFromStat() (string, int32, *cpu.CPUTimesStat, int64, int32, error) {
 	pid := p.Pid
-	statPath := filepath.Join(common.GetEnv("HOST_PROC", "/proc"), strconv.Itoa(int(pid)), "stat")
+	statPath := common.HostProc(strconv.Itoa(int(pid)), "stat")
 	contents, err := ioutil.ReadFile(statPath)
 	if err != nil {
 		return "", 0, nil, 0, 0, err
@@ -610,7 +631,7 @@ func (p *Process) fillFromStat() (string, int32, *cpu.CPUTimesStat, int64, int32
 func Pids() ([]int32, error) {
 	var ret []int32
 
-	d, err := os.Open(common.GetEnv("HOST_PROC", "/proc"))
+	d, err := os.Open(common.HostProc())
 	if err != nil {
 		return nil, err
 	}

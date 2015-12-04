@@ -9,7 +9,7 @@ import (
 	"strings"
 	"syscall"
 
-	common "github.com/shirou/gopsutil/common"
+	"github.com/shirou/gopsutil/internal/common"
 )
 
 const (
@@ -238,7 +238,7 @@ func DiskPartitions(all bool) ([]DiskPartitionStat, error) {
 }
 
 func DiskIOCounters() (map[string]DiskIOCountersStat, error) {
-	filename := common.GetEnv("HOST_PROC", "/proc") + "/diskstats"
+	filename := common.HostProc("diskstats")
 	lines, err := common.ReadLines(filename)
 	if err != nil {
 		return nil, err
