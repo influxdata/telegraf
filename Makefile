@@ -85,14 +85,14 @@ docker-kill:
 	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann
 
 # Run full unit tests using docker containers (includes setup and teardown)
-test: docker-kill prepare docker-run
+test: docker-kill docker-run
 	# Sleeping for kafka leadership election, TSDB setup, etc.
 	sleep 60
 	# SUCCESS, running tests
 	go test -race ./...
 
 # Run "short" unit tests
-test-short: prepare
+test-short:
 	go test -short ./...
 
 .PHONY: test
