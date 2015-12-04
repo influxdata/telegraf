@@ -230,12 +230,13 @@ func (a *Agent) writeOutput(
 	start := time.Now()
 
 	for {
-		err := ro.Output.Write(points)
+		filtered := ro.FilterPoints(points)
+		err := ro.Output.Write(filtered)
 		if err == nil {
 			// Write successful
 			elapsed := time.Since(start)
 			log.Printf("Flushed %d metrics to output %s in %s\n",
-				len(points), ro.Name, elapsed)
+				len(filtered), ro.Name, elapsed)
 			return
 		}
 

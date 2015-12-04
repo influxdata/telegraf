@@ -156,6 +156,19 @@ Below is how to configure `tagpass` and `tagdrop` parameters (added in 0.1.5)
     path = [ "/opt", "/home" ]
 ```
 
+Below is how to configure `pass` and `drop` parameters (added in 0.1.5)
+
+```
+# Drop all metrics for guest CPU usage
+[[plugins.cpu]]
+  drop = [ "cpu_usage_guest" ]
+
+# Only store inode related metrics for disks
+[[plugins.disk]]
+  pass = [ "disk_inodes" ]
+```
+
+
 Additional plugins (or outputs) of the same type can be specified,
 just define another instance in the config file:
 
@@ -224,6 +237,27 @@ want to add support for another service or third-party API.
 Telegraf also supports specifying multiple output sinks to send data to,
 configuring each output sink is different, but examples can be
 found by running `telegraf -sample-config`.
+
+Outputs also support the same configurable options as plugins (pass, drop, tagpass, tagdrop)
+
+```
+[[outputs.influxdb]]
+  urls = [ "http://localhost:8086" ]
+  database = "telegraf"
+  # Drop all measurements that start with "aerospike"
+  drop = ["aerospike"]
+
+# Send to a different database
+[[outputs.influxdb]]
+  urls = [ "http://localhost:8086" ]
+  database = "mydb"
+  precision = "s"
+
+# Only store measurements where the tag "mytag" matches the value "B"
+[outputs.influxdb.tagpass]
+  mytag = ["B"]
+```
+
 
 ## Supported Outputs
 
