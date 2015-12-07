@@ -18,8 +18,8 @@ writing new plugins.
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.2.3_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.2.3-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.2.4-1.x86_64.rpm
 
 ##### Package instructions:
 
@@ -33,9 +33,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.3.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.3.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.3.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.4.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.4.tar.gz
 
 ##### Binary instructions:
 
@@ -243,7 +243,8 @@ Telegraf also supports specifying multiple output sinks to send data to,
 configuring each output sink is different, but examples can be
 found by running `telegraf -sample-config`.
 
-Outputs also support the same configurable options as plugins (pass, drop, tagpass, tagdrop)
+Outputs also support the same configurable options as plugins
+(pass, drop, tagpass, tagdrop), added in 0.2.4
 
 ```toml
 [[outputs.influxdb]]
