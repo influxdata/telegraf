@@ -31,7 +31,7 @@ var sampleConfig = `
   # Whether to report total system cpu stats or not
   totalcpu = true
   # Comment this line if you want the raw CPU time metrics
-  drop = ["cpu_time"]
+  drop = ["cpu_time*"]
 `
 
 func (_ *CPUStats) SampleConfig() string {

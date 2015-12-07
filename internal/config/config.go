@@ -145,7 +145,9 @@ func (ro *RunningOutput) FilterPoints(points []*client.Point) []*client.Point {
 func (f Filter) ShouldPass(measurement string) bool {
 	if f.Pass != nil {
 		for _, pat := range f.Pass {
-			if strings.HasPrefix(measurement, pat) {
+			// TODO remove HasPrefix check, leaving it for now for legacy support.
+			// Cam, 2015-12-07
+			if strings.HasPrefix(measurement, pat) || internal.Glob(pat, measurement) {
 				return true
 			}
 		}
@@ -154,7 +156,9 @@ func (f Filter) ShouldPass(measurement string) bool {
 
 	if f.Drop != nil {
 		for _, pat := range f.Drop {
-			if strings.HasPrefix(measurement, pat) {
+			// TODO remove HasPrefix check, leaving it for now for legacy support.
+			// Cam, 2015-12-07
+			if strings.HasPrefix(measurement, pat) || internal.Glob(pat, measurement) {
 				return false
 			}
 		}
@@ -171,7 +175,7 @@ func (f Filter) ShouldTagsPass(tags map[string]string) bool {
 		for _, pat := range f.TagPass {
 			if tagval, ok := tags[pat.Name]; ok {
 				for _, filter := range pat.Filter {
-					if filter == tagval {
+					if internal.Glob(filter, tagval) {
 						return true
 					}
 				}
@@ -184,7 +188,7 @@ func (f Filter) ShouldTagsPass(tags map[string]string) bool {
 		for _, pat := range f.TagDrop {
 			if tagval, ok := tags[pat.Name]; ok {
 				for _, filter := range pat.Filter {
-					if filter == tagval {
+					if internal.Glob(filter, tagval) {
 						return false
 					}
 				}
