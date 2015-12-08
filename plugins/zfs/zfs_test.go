@@ -1,7 +1,6 @@
 package zfs
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -121,12 +120,60 @@ delegations                     4    0
 hits                            4    0
 misses                          4    0
 `
+const pool_ioContents = `11 3 0x00 1 80 2225326830828 32953476980628
+nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt    
+1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0       
+`
 
 var testKstatPath = os.TempDir() + "/telegraf/proc/spl/kstat/zfs"
 
 type metrics struct {
 	name  string
 	value int64
+}
+
+func TestZfsPoolMetrics(t *testing.T) {
+	err := os.MkdirAll(testKstatPath, 0755)
+	require.NoError(t, err)
+
+	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/HOME/io", []byte(pool_ioContents), 0644)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
+	require.NoError(t, err)
+
+	poolMetrics := getPoolMetrics()
+
+	var acc testutil.Accumulator
+
+	//one pool, all metrics
+	tags := map[string]string{
+		"pool": "HOME",
+	}
+
+	z := &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	for _, metric := range poolMetrics {
+		assert.True(t, !acc.HasIntValue(metric.name), metric.name)
+		assert.True(t, !acc.CheckTaggedValue(metric.name, metric.value, tags))
+	}
+
+	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, PoolMetrics: true}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	for _, metric := range poolMetrics {
+		assert.True(t, acc.HasIntValue(metric.name), metric.name)
+		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
+	}
+
+	err = os.RemoveAll(os.TempDir() + "/telegraf")
+	require.NoError(t, err)
 }
 
 func TestZfsGeneratesMetrics(t *testing.T) {
@@ -148,7 +195,60 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = ioutil.WriteFile(testKstatPath+"/vdev_cache_stats", []byte(vdev_cache_statsContents), 0644)
 	require.NoError(t, err)
 
-	intMetrics := []*metrics{
+	intMetrics := getKstatMetrics()
+
+	var acc testutil.Accumulator
+
+	//one pool, all metrics
+	tags := map[string]string{
+		"pools": "HOME",
+	}
+
+	z := &Zfs{KstatPath: testKstatPath}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	for _, metric := range intMetrics {
+		assert.True(t, acc.HasIntValue(metric.name), metric.name)
+		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
+	}
+
+	//two pools, all metrics
+	err = os.MkdirAll(testKstatPath+"/STORAGE", 0755)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/STORAGE/io", []byte(""), 0644)
+	require.NoError(t, err)
+
+	tags = map[string]string{
+		"pools": "HOME::STORAGE",
+	}
+
+	z = &Zfs{KstatPath: testKstatPath}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	for _, metric := range intMetrics {
+		assert.True(t, acc.HasIntValue(metric.name), metric.name)
+		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
+	}
+
+	//two pools, one metric
+	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	for _, metric := range intMetrics {
+		assert.True(t, acc.HasIntValue(metric.name), metric.name)
+		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
+	}
+
+	err = os.RemoveAll(os.TempDir() + "/telegraf")
+	require.NoError(t, err)
+}
+
+func getKstatMetrics() []*metrics {
+	return []*metrics{
 		{
 			name:  "arcstats_hits",
 			value: 5968846374,
@@ -550,54 +650,57 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 			value: 0,
 		},
 	}
+}
 
-	var acc testutil.Accumulator
-
-	//one pool, all metrics
-	tags := map[string]string{
-		"pools": "HOME",
+func getPoolMetrics() []*metrics {
+	return []*metrics{
+		{
+			name:  "nread",
+			value: 1884160,
+		},
+		{
+			name:  "nwritten",
+			value: 6450688,
+		},
+		{
+			name:  "reads",
+			value: 22,
+		},
+		{
+			name:  "writes",
+			value: 978,
+		},
+		{
+			name:  "wtime",
+			value: 272187126,
+		},
+		{
+			name:  "wlentime",
+			value: 2850519036,
+		},
+		{
+			name:  "wupdate",
+			value: 2263669418655,
+		},
+		{
+			name:  "rtime",
+			value: 424226814,
+		},
+		{
+			name:  "rlentime",
+			value: 2850519036,
+		},
+		{
+			name:  "rupdate",
+			value: 2263669871823,
+		},
+		{
+			name:  "wcnt",
+			value: 0,
+		},
+		{
+			name:  "rcnt",
+			value: 0,
+		},
 	}
-
-	z := &Zfs{KstatPath: testKstatPath}
-	err = z.Gather(&acc)
-	require.NoError(t, err)
-
-	for _, metric := range intMetrics {
-		fmt.Println(metric.name)
-		assert.True(t, acc.HasIntValue(metric.name), metric.name)
-		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
-	}
-
-	//two pools, all metrics
-	err = os.MkdirAll(testKstatPath+"/STORAGE", 0755)
-	require.NoError(t, err)
-
-	err = ioutil.WriteFile(testKstatPath+"/STORAGE/io", []byte(""), 0644)
-	require.NoError(t, err)
-
-	tags = map[string]string{
-		"pools": "HOME::STORAGE",
-	}
-
-	z = &Zfs{KstatPath: testKstatPath}
-	err = z.Gather(&acc)
-	require.NoError(t, err)
-
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntValue(metric.name), metric.name)
-		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
-	}
-
-	//two pools, one metric
-	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
-	err = z.Gather(&acc)
-	require.NoError(t, err)
-
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntValue(metric.name), metric.name)
-		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
-	}
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
