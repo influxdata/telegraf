@@ -1,4 +1,4 @@
-package expvar
+package influxdbjson
 
 import (
 	"encoding/json"
@@ -10,54 +10,61 @@ import (
 	"github.com/influxdb/telegraf/plugins"
 )
 
-var sampleConfig = `
-  # Specify services via an array of tables
-  [[plugins.expvar.services]]
-    # Name for the service being polled
-    name = "influxdb"
-
-    # Multiple URLs from which to read expvars
-    urls = [
-      "http://localhost:8086/debug/vars"
-    ]
-`
-
-type Expvar struct {
-	Services []Service
-}
-
-type Service struct {
+type InfluxDBJSON struct {
 	Name string
 	URLs []string `toml:"urls"`
 }
 
-func (*Expvar) Description() string {
-	return "Read InfluxDB-style expvar metrics from one or more HTTP endpoints"
+func (*InfluxDBJSON) Description() string {
+	return "Read InfluxDB-formatted JSON metrics from one or more HTTP endpoints"
 }
 
-func (*Expvar) SampleConfig() string {
-	return sampleConfig
+func (*InfluxDBJSON) SampleConfig() string {
+	return `
+  # Reads InfluxDB-formatted JSON from given URLs. For example,
+	# monitoring a URL which responded with a JSON object formatted like this:
+	#
+  #   {
+  #     "(ignored_key)": {
+  #       "name": "connections",
+  #       "tags": {
+  #         "host": "foo"
+  #       },
+  #       "values": {
+  #         "avg_ms": 1.234,
+  #       }
+  #     }
+  #   }
+  #
+	# with configuration of { name = "server", urls = ["http://127.0.0.1:8086/x"] }
+  #
+	# Would result in this recorded metric:
+	#
+  #   influxdbjson_server_connections,influxdbjson_url='http://127.0.0.1:8086/x',host='foo' avg_ms=1.234
+  [[plugins.influxdbjson]]
+	# Name to use for measurement
+	name = "influxdb"
+
+	# Multiple URLs from which to read InfluxDB-formatted JSON
+	urls = [
+		"http://localhost:8086/debug/vars"
+	]
+`
 }
 
-func (e *Expvar) Gather(acc plugins.Accumulator) error {
+func (i *InfluxDBJSON) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 
-	totalURLs := 0
-	for _, service := range e.Services {
-		totalURLs += len(service.URLs)
-	}
-	errorChannel := make(chan error, totalURLs)
+	errorChannel := make(chan error, len(i.URLs))
 
-	for _, service := range e.Services {
-		for _, u := range service.URLs {
-			wg.Add(1)
-			go func(service Service, url string) {
-				defer wg.Done()
-				if err := e.gatherURL(acc, service, url); err != nil {
-					errorChannel <- err
-				}
-			}(service, u)
-		}
+	for _, u := range i.URLs {
+		wg.Add(1)
+		go func(url string) {
+			defer wg.Done()
+			if err := i.gatherURL(acc, url); err != nil {
+				errorChannel <- err
+			}
+		}(u)
 	}
 
 	wg.Wait()
@@ -84,14 +91,12 @@ type point struct {
 // Gathers data from a particular URL
 // Parameters:
 //     acc    : The telegraf Accumulator to use
-//     service: the service being queried
 //     url    : endpoint to send request to
 //
 // Returns:
 //     error: Any error that may have occurred
-func (e *Expvar) gatherURL(
+func (i *InfluxDBJSON) gatherURL(
 	acc plugins.Accumulator,
-	service Service,
 	url string,
 ) error {
 	resp, err := http.Get(url)
@@ -107,7 +112,7 @@ func (e *Expvar) gatherURL(
 	if t, err := dec.Token(); err != nil {
 		return err
 	} else if t != json.Delim('{') {
-		return errors.New("expvars must be a JSON object")
+		return errors.New("document root must be a JSON object")
 	}
 
 	// Loop through rest of object
@@ -117,7 +122,7 @@ func (e *Expvar) gatherURL(
 			break
 		}
 
-		// Read in a string key. We actually don't care about the top-level keys
+		// Read in a string key. We don't do anything with the top-level keys, so it's discarded.
 		_, err := dec.Token()
 		if err != nil {
 			return err
@@ -131,14 +136,16 @@ func (e *Expvar) gatherURL(
 			continue
 		}
 
+		// If the object was a point, but was not fully initialized, ignore it and move on.
 		if p.Name == "" || p.Tags == nil || p.Values == nil || len(p.Values) == 0 {
 			continue
 		}
 
-		p.Tags["expvar_url"] = url
+		// Add a tag to indicate the source of the data.
+		p.Tags["influxdbjson_url"] = url
 
 		acc.AddFields(
-			service.Name+"_"+p.Name,
+			i.Name+"_"+p.Name,
 			p.Values,
 			p.Tags,
 		)
@@ -148,7 +155,7 @@ func (e *Expvar) gatherURL(
 }
 
 func init() {
-	plugins.Add("expvar", func() plugins.Plugin {
-		return &Expvar{}
+	plugins.Add("influxdbjson", func() plugins.Plugin {
+		return &InfluxDBJSON{}
 	})
 }

@@ -1,10 +1,11 @@
-package expvar
+package influxdbjson_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/influxdb/telegraf/plugins/influxdbjson"
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +56,7 @@ func TestBasic(t *testing.T) {
 }
 `
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/expvar" {
+		if r.URL.Path == "/endpoint" {
 			_, _ = w.Write([]byte(js))
 		} else {
 			w.WriteHeader(http.StatusNotFound)
@@ -63,17 +64,13 @@ func TestBasic(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
-	expvar := &Expvar{
-		Services: []Service{
-			{
-				Name: "test",
-				URLs: []string{fakeServer.URL + "/expvar"},
-			},
-		},
+	plugin := &influxdbjson.InfluxDBJSON{
+		Name: "test",
+		URLs: []string{fakeServer.URL + "/endpoint"},
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, expvar.Gather(&acc))
+	require.NoError(t, plugin.Gather(&acc))
 
 	require.Len(t, acc.Points, 2)
 	require.NoError(t, acc.ValidateTaggedFieldsValue(
@@ -87,8 +84,8 @@ func TestBasic(t *testing.T) {
 			"s": "string",
 		},
 		map[string]string{
-			"id":         "ex1",
-			"expvar_url": fakeServer.URL + "/expvar",
+			"id":               "ex1",
+			"influxdbjson_url": fakeServer.URL + "/endpoint",
 		},
 	))
 	require.NoError(t, acc.ValidateTaggedFieldsValue(
@@ -97,8 +94,8 @@ func TestBasic(t *testing.T) {
 			"x": "x",
 		},
 		map[string]string{
-			"id":         "ex2",
-			"expvar_url": fakeServer.URL + "/expvar",
+			"id":               "ex2",
+			"influxdbjson_url": fakeServer.URL + "/endpoint",
 		},
 	))
 }
