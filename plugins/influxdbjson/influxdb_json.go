@@ -21,27 +21,27 @@ func (*InfluxDBJSON) Description() string {
 
 func (*InfluxDBJSON) SampleConfig() string {
 	return `
-  # Reads InfluxDB-formatted JSON from given URLs. For example,
+	# Reads InfluxDB-formatted JSON from given URLs. For example,
 	# monitoring a URL which responded with a JSON object formatted like this:
 	#
-  #   {
-  #     "(ignored_key)": {
-  #       "name": "connections",
-  #       "tags": {
-  #         "host": "foo"
-  #       },
-  #       "values": {
-  #         "avg_ms": 1.234,
-  #       }
-  #     }
-  #   }
-  #
+	#   {
+	#     "(ignored_key)": {
+	#       "name": "connections",
+	#       "tags": {
+	#         "host": "foo"
+	#       },
+	#       "values": {
+	#         "avg_ms": 1.234,
+	#       }
+	#     }
+	#   }
+	#
 	# with configuration of { name = "server", urls = ["http://127.0.0.1:8086/x"] }
-  #
+	#
 	# Would result in this recorded metric:
 	#
-  #   influxdbjson_server_connections,influxdbjson_url='http://127.0.0.1:8086/x',host='foo' avg_ms=1.234
-  [[plugins.influxdbjson]]
+	#   influxdbjson_server_connections,influxdbjson_url='http://127.0.0.1:8086/x',host='foo' avg_ms=1.234
+	[[plugins.influxdbjson]]
 	# Name to use for measurement
 	name = "influxdb"
 

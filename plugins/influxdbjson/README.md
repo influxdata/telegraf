@@ -6,11 +6,11 @@ With a configuration of:
 
 ```toml
 [[plugins.influxdbjson]]
-	name = "produce"
-	urls = [
-		"http://127.0.0.1:8086/debug/vars",
-		"http://192.168.2.1:8086/debug/vars"
-	]
+  name = "produce"
+  urls = [
+    "http://127.0.0.1:8086/debug/vars",
+    "http://192.168.2.1:8086/debug/vars"
+  ]
 ```
 
 And if 127.0.0.1 responds with this JSON:
