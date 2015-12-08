@@ -195,7 +195,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = ioutil.WriteFile(testKstatPath+"/vdev_cache_stats", []byte(vdev_cache_statsContents), 0644)
 	require.NoError(t, err)
 
-	intMetrics := getKstatMetrics()
+	intMetrics := getKstatMetricsAll()
 
 	var acc testutil.Accumulator
 
@@ -225,6 +225,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	}
 
 	z = &Zfs{KstatPath: testKstatPath}
+	acc = testutil.Accumulator{}
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
@@ -233,8 +234,11 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
 	}
 
+	intMetrics = getKstatMetricsArcOnly()
+
 	//two pools, one metric
 	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
+	acc = testutil.Accumulator{}
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
@@ -247,7 +251,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func getKstatMetrics() []*metrics {
+func getKstatMetricsArcOnly() []*metrics {
 	return []*metrics{
 		{
 			name:  "arcstats_hits",
@@ -593,6 +597,11 @@ func getKstatMetrics() []*metrics {
 			name:  "arcstats_arc_meta_max",
 			value: 18327165696,
 		},
+	}
+}
+
+func getKstatMetricsAll() []*metrics {
+	otherMetrics := []*metrics{
 		{
 			name:  "zfetchstats_hits",
 			value: 7812959060,
@@ -650,6 +659,8 @@ func getKstatMetrics() []*metrics {
 			value: 0,
 		},
 	}
+
+	return append(getKstatMetricsArcOnly(), otherMetrics...)
 }
 
 func getPoolMetrics() []*metrics {
