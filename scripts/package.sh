@@ -134,7 +134,7 @@ do_build() {
         rm -f $GOPATH_INSTALL/bin/$b
     done
 
-    godep restore
+    gdm restore
     go install -ldflags="-X main.Version $version" ./...
     if [ $? -ne 0 ]; then
         echo "Build failed, unable to create package -- aborting"

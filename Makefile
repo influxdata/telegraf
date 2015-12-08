@@ -33,11 +33,11 @@ build-linux-bins: prepare
 								-ldflags "-X main.Version=$(VERSION)" \
 								./cmd/telegraf/telegraf.go
 
-# Get dependencies and use godep to checkout changesets
+# Get dependencies and use gdm to checkout changesets
 prepare:
 	go get ./...
-	go get github.com/tools/godep
-	godep restore
+	go get github.com/sparrc/gdm
+	gdm restore
 
 # Run all docker containers necessary for unit tests
 docker-run:
