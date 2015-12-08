@@ -7,6 +7,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/disque"
 	_ "github.com/influxdb/telegraf/plugins/elasticsearch"
 	_ "github.com/influxdb/telegraf/plugins/exec"
+	_ "github.com/influxdb/telegraf/plugins/expvar"
 	_ "github.com/influxdb/telegraf/plugins/haproxy"
 	_ "github.com/influxdb/telegraf/plugins/httpjson"
 	_ "github.com/influxdb/telegraf/plugins/jolokia"
