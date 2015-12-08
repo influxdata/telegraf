@@ -1,9 +1,0 @@
-Certificate structure:
-
-Root CA
- |
- |-> Intermediate CA
-      |
-      |-> Server
-      |
-      |-> Client
