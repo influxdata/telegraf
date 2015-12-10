@@ -1,9 +1,15 @@
 package kinesis_output
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,7 +21,7 @@ func TestConnectAndWrite(t *testing.T) {
 	// Verify that we can connect kinesis endpoint. This test allows for a chain of credential
 	// so that various authentication methods can pass depending on the system that executes.
 	Config := &aws.Config{
-		Region: aws.String(k.Region),
+		Region: aws.String("us-west-1"),
 		Credentials: credentials.NewChainCredentials(
 			[]credentials.Provider{
 				&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
@@ -23,7 +29,13 @@ func TestConnectAndWrite(t *testing.T) {
 				&credentials.SharedCredentialsProvider{},
 			}),
 	}
-	err := kinesis.New(session.New(Config))
+	svc := kinesis.New(session.New(Config))
+
+	KinesisParams := &kinesis.ListStreamsInput{
+		Limit: aws.Int64(1)}
+	resp, err := svc.ListStreams(KinesisParams)
+
+	fmt.Println(resp)
 
 	require.NoError(t, err)
 }
