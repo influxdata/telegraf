@@ -6,8 +6,17 @@ in one Put request to Kinesis. This should save the number of API requests by a 
 ## About Kinesis
 
 This is not the place to document all of the various Kinesis terms however it
-maybe useful for users to review Amazons official docuementation which is available
+maybe useful for users to review Amazons official documentation which is available
 [here](http://docs.aws.amazon.com/kinesis/latest/dev/key-concepts.html).
+
+## Amazon Authentication
+
+This plugin uses a credential chain for Authentication with the Kinesis API endpoint. In the following order the plugin
+will attempt to authenticate.
+1. [IAMS Role](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
+2. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk)
+3. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk)
+
 
 ## Config
 
@@ -29,15 +38,11 @@ The region is the Amazon region that you wish to connect to. Examples include bu
 ### streamname
 
 The streamname is used by the plugin to ensure that data is sent to the correct Kinesis stream. It is important to
-note that the stream *MUST* be pre-configured for this plugin to function correctly.
+note that the stream *MUST* be pre-configured for this plugin to function correctly. If the stream does not exist the
+plugin will result in telegraf exiting with an exit code of 1.
 
 ### partitionkey
 
-This is used to group data within a stream. Currently this plugin only supports a single partitionkey which means
-that data will be entirely sent through a single Shard and Partition from a single host. If you have to scale out the
-kinesis throughput using a different partition key on different hosts or host groups might be a workable solution.
-
-
-## todo
-
-* Check if the stream exists so that we have a graceful exit.
+This is used to group data within a stream. Currently this plugin only supports a single partitionkey.
+Manually configuring different hosts, or groups of hosts with manually selected partitionkeys might be a workable
+solution to scale out.
