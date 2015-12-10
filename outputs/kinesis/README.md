@@ -40,4 +40,5 @@ kinesis throughput using a different partition key on different hosts or host gr
 
 ## todo
 
-Check if the stream exists so that we have a graceful exit.
+* Check if the stream exists so that we have a graceful exit.
+* Better client smarts to ensure that the plugin operates within the Amazon service limits.
