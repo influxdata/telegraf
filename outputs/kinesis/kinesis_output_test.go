@@ -25,6 +25,5 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 	err := kinesis.New(session.New(Config))
 
-
 	require.NoError(t, err)
 }

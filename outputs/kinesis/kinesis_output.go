@@ -2,8 +2,8 @@ package kinesis_output
 
 import (
 	"errors"
-	"log"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
