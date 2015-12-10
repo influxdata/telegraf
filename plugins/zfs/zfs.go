@@ -16,6 +16,11 @@ type Zfs struct {
 	PoolMetrics  bool
 }
 
+type poolInfo struct {
+	name       string
+	ioFilename string
+}
+
 var sampleConfig = `
   # ZFS kstat path
   # If not specified, then default is:
@@ -37,30 +42,34 @@ func (z *Zfs) Description() string {
 	return "Read metrics of ZFS from arcstats, zfetchstats and vdev_cache_stats"
 }
 
-func getPoolStats(kstatPath string, poolMetrics bool, acc plugins.Accumulator) (map[string]string, error) {
-	var pools string
+func getPools(kstatPath string) []poolInfo {
+	pools := make([]poolInfo, 0)
 	poolsDirs, _ := filepath.Glob(kstatPath + "/*/io")
+
 	for _, poolDir := range poolsDirs {
 		poolDirSplit := strings.Split(poolDir, "/")
 		pool := poolDirSplit[len(poolDirSplit)-2]
-		if len(pools) != 0 {
-			pools += "::"
-		}
-		pools += pool
-
-		if poolMetrics {
-			err := readPoolStats(poolDir, pool, acc)
-			if err != nil {
-				return nil, err
-			}
-		}
+		pools = append(pools, poolInfo{name: pool, ioFilename: poolDir})
 	}
 
-	return map[string]string{"pools": pools}, nil
+	return pools
 }
 
-func readPoolStats(poolIoPath string, poolName string, acc plugins.Accumulator) error {
-	lines, err := internal.ReadLines(poolIoPath)
+func getTags(pools []poolInfo) map[string]string {
+	var poolNames string
+
+	for _, pool := range pools {
+		if len(poolNames) != 0 {
+			poolNames += "::"
+		}
+		poolNames += pool.name
+	}
+
+	return map[string]string{"pools": poolNames}
+}
+
+func gatherPoolStats(pool poolInfo, acc plugins.Accumulator) error {
+	lines, err := internal.ReadLines(pool.ioFilename)
 	if err != nil {
 		return err
 	}
@@ -78,7 +87,7 @@ func readPoolStats(poolIoPath string, poolName string, acc plugins.Accumulator) 
 		return fmt.Errorf("Key and value count don't match Keys:%v Values:%v", keys, values)
 	}
 
-	tag := map[string]string{"pool": poolName}
+	tag := map[string]string{"pool": pool.name}
 
 	for i := 0; i < keyCount; i++ {
 		value, err := strconv.ParseInt(values[i], 10, 64)
@@ -103,9 +112,16 @@ func (z *Zfs) Gather(acc plugins.Accumulator) error {
 		kstatPath = "/proc/spl/kstat/zfs"
 	}
 
-	tags, err := getPoolStats(kstatPath, z.PoolMetrics, acc)
-	if err != nil {
-		return err
+	pools := getPools(kstatPath)
+	tags := getTags(pools)
+
+	if z.PoolMetrics {
+		for _, pool := range pools {
+			err := gatherPoolStats(pool, acc)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	for _, metric := range kstatMetrics {

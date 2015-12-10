@@ -1,3 +1,8 @@
+## v0.2.5 [unreleased]
+
+### Features
+- [#427](https://github.com/influxdb/telegraf/pull/427): zfs plugin: pool stats added. Thanks @allenpetersen!
+
 ## v0.2.4 [2015-12-08]
 
 ### Features
