@@ -2,6 +2,7 @@
 
 ### Features
 - [#427](https://github.com/influxdb/telegraf/pull/427): zfs plugin: pool stats added. Thanks @allenpetersen!
+- [#428](https://github.com/influxdb/telegraf/pull/428): Amazon Kinesis output. Thanks @jimmystewpot!
 
 ## v0.2.4 [2015-12-08]
 
