@@ -1,4 +1,4 @@
-package kinesis_output
+package kinesis
 
 import (
 	"errors"
@@ -64,7 +64,7 @@ func (k *KinesisOutput) Connect() error {
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
-		log.Printf("kinesis_output: Establishing a connection to Kinesis in %+v", k.Region)
+		log.Printf("kinesis: Establishing a connection to Kinesis in %+v", k.Region)
 	}
 	Config := &aws.Config{
 		Region: aws.String(k.Region),
@@ -84,17 +84,17 @@ func (k *KinesisOutput) Connect() error {
 	resp, err := svc.ListStreams(KinesisParams)
 
 	if err != nil {
-		log.Printf("kinesis_output: Error in ListSteams API call : %+v \n", err)
+		log.Printf("kinesis: Error in ListSteams API call : %+v \n", err)
 	}
 
 	if checkstream(resp.StreamNames, k.StreamName) {
 		if k.Debug {
-			log.Printf("kinesis_output: Stream Exists")
+			log.Printf("kinesis: Stream Exists")
 		}
 		k.svc = svc
 		return nil
 	} else {
-		log.Printf("kinesis_output : You have configured a StreamName %+v which does not exist. exiting.", k.StreamName)
+		log.Printf("kinesis : You have configured a StreamName %+v which does not exist. exiting.", k.StreamName)
 		os.Exit(1)
 	}
 	return err
@@ -126,14 +126,14 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 	if k.Debug {
 		resp, err := k.svc.PutRecords(payload)
 		if err != nil {
-			log.Printf("kinesis_output: Unable to write to Kinesis : %+v \n", err.Error())
+			log.Printf("kinesis: Unable to write to Kinesis : %+v \n", err.Error())
 		}
 		log.Printf("%+v \n", resp)
 
 	} else {
 		_, err := k.svc.PutRecords(payload)
 		if err != nil {
-			log.Printf("kinesis_output: Unable to write to Kinesis : %+v \n", err.Error())
+			log.Printf("kinesis: Unable to write to Kinesis : %+v \n", err.Error())
 		}
 	}
 	return time.Since(start)
@@ -173,7 +173,7 @@ func (k *KinesisOutput) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("kinesis_output", func() outputs.Output {
+	outputs.Add("kinesis", func() outputs.Output {
 		return &KinesisOutput{}
 	})
 }

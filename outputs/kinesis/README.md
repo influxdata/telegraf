@@ -46,3 +46,16 @@ plugin will result in telegraf exiting with an exit code of 1.
 This is used to group data within a stream. Currently this plugin only supports a single partitionkey.
 Manually configuring different hosts, or groups of hosts with manually selected partitionkeys might be a workable
 solution to scale out.
+
+### format
+
+The format configuration value has been designated to allow people to change the format of the Point as written to
+Kinesis. Right now there are two supported formats string and custom.
+
+#### string
+
+String is defined using the default Point.String() value and translated to []byte for the Kinesis stream.
+
+#### custom
+
+Custom is a string defined by a number of values in the FormatMetric() function.
