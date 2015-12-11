@@ -26,11 +26,11 @@ func TestBasic(t *testing.T) {
     }
   },
   "ignored": {
-   "willBeRecorded": false
+    "willBeRecorded": false
   },
   "ignoredAndNested": {
     "hash": {
-     "is": "nested"
+      "is": "nested"
     }
   },
   "array": [
@@ -40,11 +40,11 @@ func TestBasic(t *testing.T) {
   "_2": {
     "name": "bar",
     "tags": {
-   "id": "ex2"
-   },
-   "values": {
-     "x": "x"
-   }
+      "id": "ex2"
+    },
+    "values": {
+      "x": "x"
+    }
   },
   "pointWithoutFields_willNotBeIncluded": {
     "name": "asdf",
@@ -84,8 +84,8 @@ func TestBasic(t *testing.T) {
 			"s": "string",
 		},
 		map[string]string{
-			"id":               "ex1",
-			"influxdbjson_url": fakeServer.URL + "/endpoint",
+			"id":  "ex1",
+			"url": fakeServer.URL + "/endpoint",
 		},
 	))
 	require.NoError(t, acc.ValidateTaggedFieldsValue(
@@ -94,8 +94,8 @@ func TestBasic(t *testing.T) {
 			"x": "x",
 		},
 		map[string]string{
-			"id":               "ex2",
-			"influxdbjson_url": fakeServer.URL + "/endpoint",
+			"id":  "ex2",
+			"url": fakeServer.URL + "/endpoint",
 		},
 	))
 }

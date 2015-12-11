@@ -40,14 +40,14 @@ func (*InfluxDBJSON) SampleConfig() string {
 	#
 	# Would result in this recorded metric:
 	#
-	#   influxdbjson_server_connections,influxdbjson_url='http://127.0.0.1:8086/x',host='foo' avg_ms=1.234
+	#   influxdbjson_server_connections,url='http://127.0.0.1:8086/x',host='foo' avg_ms=1.234
 	[[plugins.influxdbjson]]
 	# Name to use for measurement
 	name = "influxdb"
 
 	# Multiple URLs from which to read InfluxDB-formatted JSON
 	urls = [
-		"http://localhost:8086/debug/vars"
+	  "http://localhost:8086/debug/vars"
 	]
 `
 }
@@ -142,7 +142,7 @@ func (i *InfluxDBJSON) gatherURL(
 		}
 
 		// Add a tag to indicate the source of the data.
-		p.Tags["influxdbjson_url"] = url
+		p.Tags["url"] = url
 
 		acc.AddFields(
 			i.Name+"_"+p.Name,
