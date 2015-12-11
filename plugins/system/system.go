@@ -37,11 +37,14 @@ func (_ *SystemStats) Gather(acc plugins.Accumulator) error {
 		return err
 	}
 
-	acc.Add("load1", loadavg.Load1, nil)
-	acc.Add("load5", loadavg.Load5, nil)
-	acc.Add("load15", loadavg.Load15, nil)
-	acc.Add("uptime", float64(hostinfo.Uptime), nil)
-	acc.Add("uptime_format", format_uptime(hostinfo.Uptime), nil)
+	fields := map[string]interface{}{
+		"load1":         loadavg.Load1,
+		"load5":         loadavg.Load5,
+		"load15":        loadavg.Load15,
+		"uptime":        float64(hostinfo.Uptime),
+		"uptime_format": format_uptime(hostinfo.Uptime),
+	}
+	acc.AddFields("system", fields, nil)
 
 	return nil
 }

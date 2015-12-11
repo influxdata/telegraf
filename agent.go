@@ -104,7 +104,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 			acc := NewAccumulator(plugin.Config, pointChan)
 			acc.SetDebug(a.Config.Agent.Debug)
-			acc.SetPrefix(plugin.Name + "_")
+			// acc.SetPrefix(plugin.Name + "_")
 			acc.SetDefaultTags(a.Config.Tags)
 
 			if err := plugin.Plugin.Gather(acc); err != nil {
@@ -141,7 +141,7 @@ func (a *Agent) gatherSeparate(
 
 		acc := NewAccumulator(plugin.Config, pointChan)
 		acc.SetDebug(a.Config.Agent.Debug)
-		acc.SetPrefix(plugin.Name + "_")
+		// acc.SetPrefix(plugin.Name + "_")
 		acc.SetDefaultTags(a.Config.Tags)
 
 		if err := plugin.Plugin.Gather(acc); err != nil {
@@ -187,7 +187,7 @@ func (a *Agent) Test() error {
 	for _, plugin := range a.Config.Plugins {
 		acc := NewAccumulator(plugin.Config, pointChan)
 		acc.SetDebug(true)
-		acc.SetPrefix(plugin.Name + "_")
+		// acc.SetPrefix(plugin.Name + "_")
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", plugin.Name)
 		if plugin.Config.Interval != 0 {
