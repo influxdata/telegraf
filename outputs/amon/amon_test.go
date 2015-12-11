@@ -9,36 +9,7 @@ import (
 	"github.com/influxdb/telegraf/testutil"
 
 	"github.com/influxdb/influxdb/client/v2"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-var (
-	fakeServerKey    = "123456"
-	fakeAmonInstance = "https://demo.amon.cx"
-)
-
-func TestUriOverride(t *testing.T) {
-	a := &Amon{
-		ServerKey:    fakeServerKey,
-		AmonInstance: fakeAmonInstance,
-	}
-
-	err := a.Connect()
-	require.NoError(t, err)
-	err = a.Write(testutil.MockBatchPoints().Points())
-	require.NoError(t, err)
-}
-
-func TestAuthenticatedUrl(t *testing.T) {
-	a := &Amon{
-		ServerKey:    fakeServerKey,
-		AmonInstance: fakeAmonInstance,
-	}
-
-	authUrl := a.authenticatedUrl()
-	assert.EqualValues(t, fmt.Sprintf("%s/api/system/%s", fakeAmonInstance, fakeServerKey), authUrl)
-}
 
 func TestBuildPoint(t *testing.T) {
 	var tagtests = []struct {
