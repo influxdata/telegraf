@@ -1,11 +1,10 @@
 package kinesis
 
 import (
-	"testing"
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
-
 
 func TestFormatMetric(t *testing.T) {
 	if testing.Short() {
