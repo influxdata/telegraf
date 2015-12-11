@@ -112,9 +112,13 @@ type Filter struct {
 
 // PluginConfig containing a name, interval, and filter
 type PluginConfig struct {
-	Name     string
-	Filter   Filter
-	Interval time.Duration
+	Name              string
+	NameOverride      string
+	MeasurementPrefix string
+	MeasurementSuffix string
+	Tags              map[string]string
+	Filter            Filter
+	Interval          time.Duration
 }
 
 // OutputConfig containing name and filter
@@ -142,12 +146,12 @@ func (ro *RunningOutput) FilterPoints(points []*client.Point) []*client.Point {
 
 // ShouldPass returns true if the metric should pass, false if should drop
 // based on the drop/pass filter parameters
-func (f Filter) ShouldPass(measurement string) bool {
+func (f Filter) ShouldPass(fieldkey string) bool {
 	if f.Pass != nil {
 		for _, pat := range f.Pass {
 			// TODO remove HasPrefix check, leaving it for now for legacy support.
 			// Cam, 2015-12-07
-			if strings.HasPrefix(measurement, pat) || internal.Glob(pat, measurement) {
+			if strings.HasPrefix(fieldkey, pat) || internal.Glob(pat, fieldkey) {
 				return true
 			}
 		}
@@ -158,7 +162,7 @@ func (f Filter) ShouldPass(measurement string) bool {
 		for _, pat := range f.Drop {
 			// TODO remove HasPrefix check, leaving it for now for legacy support.
 			// Cam, 2015-12-07
-			if strings.HasPrefix(measurement, pat) || internal.Glob(pat, measurement) {
+			if strings.HasPrefix(fieldkey, pat) || internal.Glob(pat, fieldkey) {
 				return false
 			}
 		}
@@ -628,7 +632,8 @@ func buildFilter(tbl *ast.Table) Filter {
 	return f
 }
 
-// buildPlugin parses plugin specific items from the ast.Table, builds the filter and returns a
+// buildPlugin parses plugin specific items from the ast.Table,
+// builds the filter and returns a
 // PluginConfig to be inserted into RunningPlugin
 func buildPlugin(name string, tbl *ast.Table) (*PluginConfig, error) {
 	cp := &PluginConfig{Name: name}
@@ -644,10 +649,47 @@ func buildPlugin(name string, tbl *ast.Table) (*PluginConfig, error) {
 			}
 		}
 	}
+
+	if node, ok := tbl.Fields["name_prefix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				cp.MeasurementPrefix = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_suffix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				cp.MeasurementSuffix = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_override"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				cp.NameOverride = str.Value
+			}
+		}
+	}
+
+	cp.Tags = make(map[string]string)
+	if node, ok := tbl.Fields["tags"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
+				log.Printf("Could not parse tags for plugin %s\n", name)
+			}
+		}
+	}
+
+	delete(tbl.Fields, "name_prefix")
+	delete(tbl.Fields, "name_suffix")
+	delete(tbl.Fields, "name_override")
 	delete(tbl.Fields, "interval")
+	delete(tbl.Fields, "tags")
 	cp.Filter = buildFilter(tbl)
 	return cp, nil
-
 }
 
 // buildOutput parses output specific items from the ast.Table, builds the filter and returns an
@@ -659,5 +701,4 @@ func buildOutput(name string, tbl *ast.Table) (*OutputConfig, error) {
 		Filter: buildFilter(tbl),
 	}
 	return oc, nil
-
 }

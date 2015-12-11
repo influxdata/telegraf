@@ -70,14 +70,17 @@ func (s *NetIOStats) Gather(acc plugins.Accumulator) error {
 			"interface": io.Name,
 		}
 
-		acc.Add("bytes_sent", io.BytesSent, tags)
-		acc.Add("bytes_recv", io.BytesRecv, tags)
-		acc.Add("packets_sent", io.PacketsSent, tags)
-		acc.Add("packets_recv", io.PacketsRecv, tags)
-		acc.Add("err_in", io.Errin, tags)
-		acc.Add("err_out", io.Errout, tags)
-		acc.Add("drop_in", io.Dropin, tags)
-		acc.Add("drop_out", io.Dropout, tags)
+		fields := map[string]interface{}{
+			"bytes_sent":   io.BytesSent,
+			"bytes_recv":   io.BytesRecv,
+			"packets_sent": io.PacketsSent,
+			"packets_recv": io.PacketsRecv,
+			"err_in":       io.Errin,
+			"err_out":      io.Errout,
+			"drop_in":      io.Dropin,
+			"drop_out":     io.Dropout,
+		}
+		acc.AddFields("net", fields, tags)
 	}
 
 	// Get system wide stats for different network protocols
