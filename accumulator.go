@@ -69,30 +69,72 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	// Validate uint64 and float64 fields
+	if !ac.pluginConfig.Filter.ShouldTagsPass(tags) {
+		return
+	}
+
+	// Override measurement name if set
+	if len(ac.pluginConfig.NameOverride) != 0 {
+		measurement = ac.pluginConfig.NameOverride
+	}
+	// Apply measurement prefix and suffix if set
+	if len(ac.pluginConfig.MeasurementPrefix) != 0 {
+		measurement = ac.pluginConfig.MeasurementPrefix + measurement
+	}
+	if len(ac.pluginConfig.MeasurementSuffix) != 0 {
+		measurement = measurement + ac.pluginConfig.MeasurementSuffix
+	}
+
+	if tags == nil {
+		tags = make(map[string]string)
+	}
+	// Apply plugin-wide tags if set
+	for k, v := range ac.pluginConfig.Tags {
+		if _, ok := tags[k]; !ok {
+			tags[k] = v
+		}
+	}
+	// Apply daemon-wide tags if set
+	for k, v := range ac.defaultTags {
+		if _, ok := tags[k]; !ok {
+			tags[k] = v
+		}
+	}
+
+	result := make(map[string]interface{})
 	for k, v := range fields {
+		// Filter out any filtered fields
+		if ac.pluginConfig != nil {
+			if !ac.pluginConfig.Filter.ShouldPass(k) {
+				continue
+			}
+		}
+		result[k] = v
+
+		// Validate uint64 and float64 fields
 		switch val := v.(type) {
 		case uint64:
 			// InfluxDB does not support writing uint64
 			if val < uint64(9223372036854775808) {
-				fields[k] = int64(val)
+				result[k] = int64(val)
 			} else {
-				fields[k] = int64(9223372036854775807)
+				result[k] = int64(9223372036854775807)
 			}
 		case float64:
 			// NaNs are invalid values in influxdb, skip measurement
 			if math.IsNaN(val) || math.IsInf(val, 0) {
 				if ac.debug {
-					log.Printf("Measurement [%s] has a NaN or Inf field, skipping",
-						measurement)
+					log.Printf("Measurement [%s] field [%s] has a NaN or Inf "+
+						"field, skipping",
+						measurement, k)
 				}
-				return
+				continue
 			}
 		}
 	}
-
-	if tags == nil {
-		tags = make(map[string]string)
+	fields = nil
+	if len(result) == 0 {
+		return
 	}
 
 	var timestamp time.Time
@@ -106,19 +148,7 @@ func (ac *accumulator) AddFields(
 		measurement = ac.prefix + measurement
 	}
 
-	if ac.pluginConfig != nil {
-		if !ac.pluginConfig.Filter.ShouldPass(measurement) || !ac.pluginConfig.Filter.ShouldTagsPass(tags) {
-			return
-		}
-	}
-
-	for k, v := range ac.defaultTags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
-	}
-
-	pt, err := client.NewPoint(measurement, tags, fields, timestamp)
+	pt, err := client.NewPoint(measurement, tags, result, timestamp)
 	if err != nil {
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
 		return

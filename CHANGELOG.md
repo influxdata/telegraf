@@ -1,3 +1,16 @@
+## v0.3.0 [unreleased]
+
+### Release Notes
+- **breaking change** the `io` plugin has been renamed `diskio`
+- **breaking change** Plugin measurements aggregated into a single measurement.
+
+### Features
+- Plugin measurements aggregated into a single measurement.
+- Added ability to specify per-plugin tags
+- Added ability to specify per-plugin measurement suffix and prefix
+
+### Bugfixes
+
 ## v0.2.5 [unreleased]
 
 ### Features
