@@ -104,16 +104,14 @@ func (k *KinesisOutput) Close() error {
 	return errors.New("Error")
 }
 
-func formatmetric(k *KinesisOutput, point *client.Point) (string, error) {
+func FormatMetric(k *KinesisOutput, point *client.Point) (string, error) {
 	if k.Format == "string" {
 		return point.String(), nil
 	} else {
-		m := fmt.Sprintf("%+v,%+v,%+v %+v",
+		m := fmt.Sprintf("%+v,%+v,%+v",
 			point.Name(),
 			point.Tags(),
-			point.String(),
-			point.Time(),
-		)
+			point.String())
 		return m, nil
 	}
 }
@@ -153,7 +151,7 @@ func (k *KinesisOutput) Write(points []*client.Point) error {
 	for _, p := range points {
 		atomic.AddUint32(&sz, 1)
 
-		metric, _ := formatmetric(k, p)
+		metric, _ := FormatMetric(k, p)
 		d := kinesis.PutRecordsRequestEntry{
 			Data:         []byte(metric),
 			PartitionKey: aws.String(k.PartitionKey),
