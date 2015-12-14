@@ -149,19 +149,19 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 			return err
 		}
 
+		fields := make(map[string]interface{})
 		for _, line := range lines {
-			fields := strings.Fields(line)
-
+			parts := strings.Fields(line)
 			for _, wanted := range wanted_fields {
 				var data uint64
-				if fields[0] == wanted.inProc {
+				if parts[0] == wanted.inProc {
 					wanted_field := wanted.field
 					// if not set, assume field[1]. Shouldn't be field[0], as
 					// that's a string
 					if wanted_field == 0 {
 						wanted_field = 1
 					}
-					data, err = strconv.ParseUint((fields[wanted_field]), 10, 64)
+					data, err = strconv.ParseUint((parts[wanted_field]), 10, 64)
 					if err != nil {
 						return err
 					}
@@ -169,11 +169,11 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 					if wanted.reportAs != "" {
 						report_name = wanted.reportAs
 					}
-					acc.Add(report_name, data, tags)
-
+					fields[report_name] = data
 				}
 			}
 		}
+		acc.AddFields("lustre2", fields)
 	}
 	return nil
 }
