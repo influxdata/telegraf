@@ -31,8 +31,9 @@ contains `status`, `timed_out`, `number_of_nodes`, `number_of_data_nodes`,
 `initializing_shards`, `unassigned_shards` fields
 - elasticsearch_cluster_health
 
-contains `status`, `number_of_shards`, `number_of_replicas`, `active_primary_shards`,
-`active_shards`, `relocating_shards`, `initializing_shards`, `unassigned_shards` fields
+contains `status`, `number_of_shards`, `number_of_replicas`,
+`active_primary_shards`, `active_shards`, `relocating_shards`,
+`initializing_shards`, `unassigned_shards` fields
 - elasticsearch_indices
 
 #### node measurements:

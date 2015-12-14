@@ -81,7 +81,9 @@ func (b *Bcache) gatherBcache(bdev string, acc plugins.Accumulator) error {
 	}
 	rawValue := strings.TrimSpace(string(file))
 	value := prettyToBytes(rawValue)
-	acc.Add("dirty_data", value, tags)
+
+	fields := make(map[string]interface{})
+	fields["dirty_data"] = value
 
 	for _, path := range metrics {
 		key := filepath.Base(path)
@@ -92,12 +94,13 @@ func (b *Bcache) gatherBcache(bdev string, acc plugins.Accumulator) error {
 		}
 		if key == "bypassed" {
 			value := prettyToBytes(rawValue)
-			acc.Add(key, value, tags)
+			fields[key] = value
 		} else {
 			value, _ := strconv.ParseUint(rawValue, 10, 64)
-			acc.Add(key, value, tags)
+			fields[key] = value
 		}
 	}
+	acc.AddFields("bcache", fields, tags)
 	return nil
 }
 
@@ -117,7 +120,7 @@ func (b *Bcache) Gather(acc plugins.Accumulator) error {
 	}
 	bdevs, _ := filepath.Glob(bcachePath + "/*/bdev*")
 	if len(bdevs) < 1 {
-		return errors.New("Can't found any bcache device")
+		return errors.New("Can't find any bcache device")
 	}
 	for _, bdev := range bdevs {
 		if restrictDevs {
