@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/plugins"
 )
 
@@ -154,7 +155,19 @@ func (h *HttpJson) gatherServer(
 		delete(jsonOut, tag)
 	}
 
-	processResponse(acc, service.Name, tags, jsonOut)
+	f := internal.JSONFlattener{}
+	err = f.FlattenJSON("", jsonOut)
+	if err != nil {
+		return err
+	}
+
+	var msrmnt_name string
+	if service.Name == "" {
+		msrmnt_name = "httpjson"
+	} else {
+		msrmnt_name = "httpjson_" + service.Name
+	}
+	acc.AddFields(msrmnt_name, f.Fields, nil)
 	return nil
 }
 
@@ -207,23 +220,6 @@ func (h *HttpJson) sendRequest(service Service, serverURL string) (string, error
 	}
 
 	return string(body), err
-}
-
-// Flattens the map generated from the JSON object and stores its float values using a
-// plugins.Accumulator. It ignores any non-float values.
-// Parameters:
-//     acc: the Accumulator to use
-//     prefix: What the name of the measurement name should be prefixed by.
-//     tags: telegraf tags to
-func processResponse(acc plugins.Accumulator, prefix string, tags map[string]string, v interface{}) {
-	switch t := v.(type) {
-	case map[string]interface{}:
-		for k, v := range t {
-			processResponse(acc, prefix+"_"+k, tags, v)
-		}
-	case float64:
-		acc.Add(prefix, v, tags)
-	}
 }
 
 func init() {
