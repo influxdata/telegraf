@@ -173,7 +173,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 				}
 			}
 		}
-		acc.AddFields("lustre2", fields)
+		acc.AddFields("lustre2", fields, tags)
 	}
 	return nil
 }
