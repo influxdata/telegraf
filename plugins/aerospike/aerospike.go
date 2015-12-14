@@ -247,26 +247,32 @@ func get(key []byte, host string) (map[string]string, error) {
 	return data, err
 }
 
-func readAerospikeStats(stats map[string]string, acc plugins.Accumulator, host, namespace string) {
+func readAerospikeStats(
+	stats map[string]string,
+	acc plugins.Accumulator,
+	host string,
+	namespace string,
+) {
+	fields := make(map[string]interface{})
+	tags := map[string]string{
+		"aerospike_host": host,
+		"namespace":      "_service",
+	}
+
+	if namespace != "" {
+		tags["namespace"] = namespace
+	}
 	for key, value := range stats {
-		tags := map[string]string{
-			"aerospike_host": host,
-			"namespace":      "_service",
-		}
-
-		if namespace != "" {
-			tags["namespace"] = namespace
-		}
-
 		// We are going to ignore all string based keys
 		val, err := strconv.ParseInt(value, 10, 64)
 		if err == nil {
 			if strings.Contains(key, "-") {
 				key = strings.Replace(key, "-", "_", -1)
 			}
-			acc.Add(key, val, tags)
+			fields[key] = val
 		}
 	}
+	acc.AddFields("aerospike", fields, tags)
 }
 
 func unmarshalMapInfo(infoMap map[string]string, key string) (map[string]string, error) {
