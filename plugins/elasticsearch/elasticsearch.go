@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/plugins"
 )
 
@@ -141,10 +142,14 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc plugins.Accumulator) err
 			"breakers":    n.Breakers,
 		}
 
+		now := time.Now()
 		for p, s := range stats {
-			if err := e.parseInterface(acc, p, tags, s); err != nil {
+			f := internal.JSONFlattener{}
+			err := f.FlattenJSON("", s)
+			if err != nil {
 				return err
 			}
+			acc.AddFields("elasticsearch_"+p, f.Fields, tags, now)
 		}
 	}
 	return nil
@@ -168,7 +173,7 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc plugins.Accumulator) 
 		"unassigned_shards":     clusterStats.UnassignedShards,
 	}
 	acc.AddFields(
-		"cluster_health",
+		"elasticsearch_cluster_health",
 		clusterFields,
 		map[string]string{"name": clusterStats.ClusterName},
 		measurementTime,
@@ -186,7 +191,7 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc plugins.Accumulator) 
 			"unassigned_shards":     health.UnassignedShards,
 		}
 		acc.AddFields(
-			"indices",
+			"elasticsearch_indices",
 			indexFields,
 			map[string]string{"index": name},
 			measurementTime,
@@ -205,29 +210,11 @@ func (e *Elasticsearch) gatherData(url string, v interface{}) error {
 		// NOTE: we are not going to read/discard r.Body under the assumption we'd prefer
 		// to let the underlying transport close the connection and re-establish a new one for
 		// future calls.
-		return fmt.Errorf("elasticsearch: API responded with status-code %d, expected %d", r.StatusCode, http.StatusOK)
+		return fmt.Errorf("elasticsearch: API responded with status-code %d, expected %d",
+			r.StatusCode, http.StatusOK)
 	}
 	if err = json.NewDecoder(r.Body).Decode(v); err != nil {
 		return err
-	}
-	return nil
-}
-
-func (e *Elasticsearch) parseInterface(acc plugins.Accumulator, prefix string, tags map[string]string, v interface{}) error {
-	switch t := v.(type) {
-	case map[string]interface{}:
-		for k, v := range t {
-			if err := e.parseInterface(acc, prefix+"_"+k, tags, v); err != nil {
-				return err
-			}
-		}
-	case float64:
-		acc.Add(prefix, t, tags)
-	case bool, string, []interface{}:
-		// ignored types
-		return nil
-	default:
-		return fmt.Errorf("elasticsearch: got unexpected type %T with value %v (%s)", t, t, prefix)
 	}
 	return nil
 }

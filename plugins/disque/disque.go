@@ -155,6 +155,8 @@ func (g *Disque) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 
 	var read int
 
+	fields := make(map[string]interface{})
+	tags := map[string]string{"host": addr.String()}
 	for read < sz {
 		line, err := r.ReadString('\n')
 		if err != nil {
@@ -176,12 +178,11 @@ func (g *Disque) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 			continue
 		}
 
-		tags := map[string]string{"host": addr.String()}
 		val := strings.TrimSpace(parts[1])
 
 		ival, err := strconv.ParseUint(val, 10, 64)
 		if err == nil {
-			acc.Add(metric, ival, tags)
+			fields[metric] = ival
 			continue
 		}
 
@@ -190,9 +191,9 @@ func (g *Disque) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 			return err
 		}
 
-		acc.Add(metric, fval, tags)
+		fields[metric] = fval
 	}
-
+	acc.AddFields("disque", fields, tags)
 	return nil
 }
 
