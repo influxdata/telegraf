@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gonuts/go-shellquote"
-	"github.com/influxdb/telegraf/plugins"
 	"math"
 	"os/exec"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gonuts/go-shellquote"
+
+	"github.com/influxdb/telegraf/internal"
+	"github.com/influxdb/telegraf/plugins"
 )
 
 const sampleConfig = `
@@ -136,23 +139,25 @@ func (e *Exec) gatherCommand(c *Command, acc plugins.Accumulator) error {
 		var jsonOut interface{}
 		err = json.Unmarshal(out, &jsonOut)
 		if err != nil {
-			return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s", c.Command, err)
+			return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s",
+				c.Command, err)
 		}
 
-		processResponse(acc, c.Name, map[string]string{}, jsonOut)
+		f := internal.JSONFlattener{}
+		err = f.FlattenJSON("", jsonOut)
+		if err != nil {
+			return err
+		}
+
+		var msrmnt_name string
+		if c.Name == "" {
+			msrmnt_name = "exec"
+		} else {
+			msrmnt_name = "exec_" + c.Name
+		}
+		acc.AddFields(msrmnt_name, f.Fields, nil)
 	}
 	return nil
-}
-
-func processResponse(acc plugins.Accumulator, prefix string, tags map[string]string, v interface{}) {
-	switch t := v.(type) {
-	case map[string]interface{}:
-		for k, v := range t {
-			processResponse(acc, prefix+"_"+k, tags, v)
-		}
-	case float64:
-		acc.Add(prefix, v, tags)
-	}
 }
 
 func init() {
