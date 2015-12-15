@@ -88,15 +88,15 @@ func gatherPoolStats(pool poolInfo, acc plugins.Accumulator) error {
 	}
 
 	tag := map[string]string{"pool": pool.name}
-
+	fields := make(map[string]interface{})
 	for i := 0; i < keyCount; i++ {
 		value, err := strconv.ParseInt(values[i], 10, 64)
 		if err != nil {
 			return err
 		}
-
-		acc.Add(keys[i], value, tag)
+		fields[keys[i]] = value
 	}
+	acc.AddFields("zfs_pool", fields, tag)
 
 	return nil
 }
@@ -124,6 +124,7 @@ func (z *Zfs) Gather(acc plugins.Accumulator) error {
 		}
 	}
 
+	fields := make(map[string]interface{})
 	for _, metric := range kstatMetrics {
 		lines, err := internal.ReadLines(kstatPath + "/" + metric)
 		if err != nil {
@@ -140,9 +141,10 @@ func (z *Zfs) Gather(acc plugins.Accumulator) error {
 			key := metric + "_" + rawData[0]
 			rawValue := rawData[len(rawData)-1]
 			value, _ := strconv.ParseInt(rawValue, 10, 64)
-			acc.Add(key, value, tags)
+			fields[key] = value
 		}
 	}
+	acc.AddFields("zfs", fields, tags)
 	return nil
 }
 
