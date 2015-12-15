@@ -138,6 +138,8 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 	if err != nil {
 		servtag = "localhost"
 	}
+	tags := map[string]string{"server": servtag}
+	fields := make(map[string]interface{})
 	for rows.Next() {
 		var name string
 		var val interface{}
@@ -149,12 +151,10 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 
 		var found bool
 
-		tags := map[string]string{"server": servtag}
-
 		for _, mapped := range mappings {
 			if strings.HasPrefix(name, mapped.onServer) {
 				i, _ := strconv.Atoi(string(val.([]byte)))
-				acc.Add(mapped.inExport+name[len(mapped.onServer):], i, tags)
+				fields[mapped.inExport+name[len(mapped.onServer):]] = i
 				found = true
 			}
 		}
@@ -170,16 +170,17 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 				return err
 			}
 
-			acc.Add("queries", i, tags)
+			fields["queries"] = i
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
 				return err
 			}
 
-			acc.Add("slow_queries", i, tags)
+			fields["slow_queries"] = i
 		}
 	}
+	acc.AddFields("mysql", fields, tags)
 
 	conn_rows, err := db.Query("SELECT user, sum(1) FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
 
@@ -193,11 +194,13 @@ func (m *Mysql) gatherServer(serv string, acc plugins.Accumulator) error {
 		}
 
 		tags := map[string]string{"server": servtag, "user": user}
+		fields := make(map[string]interface{})
 
 		if err != nil {
 			return err
 		}
-		acc.Add("connections", connections, tags)
+		fields["connections"] = connections
+		acc.AddFields("mysql_users", fields, tags)
 	}
 
 	return nil

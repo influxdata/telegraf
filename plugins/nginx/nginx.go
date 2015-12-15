@@ -127,14 +127,16 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 	}
 
 	tags := getTags(addr)
-
-	acc.Add("active", active, tags)
-	acc.Add("accepts", accepts, tags)
-	acc.Add("handled", handled, tags)
-	acc.Add("requests", requests, tags)
-	acc.Add("reading", reading, tags)
-	acc.Add("writing", writing, tags)
-	acc.Add("waiting", waiting, tags)
+	fields := map[string]interface{}{
+		"active":   active,
+		"accepts":  accepts,
+		"handled":  handled,
+		"requests": requests,
+		"reading":  reading,
+		"writing":  writing,
+		"waiting":  waiting,
+	}
+	acc.AddFields("nginx", fields, tags)
 
 	return nil
 }
