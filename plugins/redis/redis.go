@@ -164,6 +164,7 @@ func gatherInfoOutput(
 	var keyspace_hits, keyspace_misses uint64 = 0, 0
 
 	scanner := bufio.NewScanner(rdr)
+	fields := make(map[string]interface{})
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "ERR") {
@@ -199,7 +200,7 @@ func gatherInfoOutput(
 		}
 
 		if err == nil {
-			acc.Add(metric, ival, tags)
+			fields[metric] = ival
 			continue
 		}
 
@@ -208,13 +209,14 @@ func gatherInfoOutput(
 			return err
 		}
 
-		acc.Add(metric, fval, tags)
+		fields[metric] = fval
 	}
 	var keyspace_hitrate float64 = 0.0
 	if keyspace_hits != 0 || keyspace_misses != 0 {
 		keyspace_hitrate = float64(keyspace_hits) / float64(keyspace_hits+keyspace_misses)
 	}
-	acc.Add("keyspace_hitrate", keyspace_hitrate, tags)
+	fields["keyspace_hitrate"] = keyspace_hitrate
+	acc.AddFields("redis", fields, tags)
 	return nil
 }
 
@@ -229,15 +231,17 @@ func gatherKeyspaceLine(
 	tags map[string]string,
 ) {
 	if strings.Contains(line, "keys=") {
+		fields := make(map[string]interface{})
 		tags["database"] = name
 		dbparts := strings.Split(line, ",")
 		for _, dbp := range dbparts {
 			kv := strings.Split(dbp, "=")
 			ival, err := strconv.ParseUint(kv[1], 10, 64)
 			if err == nil {
-				acc.Add(kv[0], ival, tags)
+				fields[kv[0]] = ival
 			}
 		}
+		acc.AddFields("redis_keyspace", fields, tags)
 	}
 }
 

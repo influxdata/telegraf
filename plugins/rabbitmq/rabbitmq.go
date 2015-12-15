@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/influxdb/telegraf/plugins"
 )
@@ -199,20 +200,20 @@ func gatherOverview(r *RabbitMQ, serv *Server, acc plugins.Accumulator, errChan 
 	if serv.Name != "" {
 		tags["name"] = serv.Name
 	}
-
-	acc.Add("messages", overview.QueueTotals.Messages, tags)
-	acc.Add("messages_ready", overview.QueueTotals.MessagesReady, tags)
-	acc.Add("messages_unacked", overview.QueueTotals.MessagesUnacknowledged, tags)
-
-	acc.Add("channels", overview.ObjectTotals.Channels, tags)
-	acc.Add("connections", overview.ObjectTotals.Connections, tags)
-	acc.Add("consumers", overview.ObjectTotals.Consumers, tags)
-	acc.Add("exchanges", overview.ObjectTotals.Exchanges, tags)
-	acc.Add("queues", overview.ObjectTotals.Queues, tags)
-
-	acc.Add("messages_acked", overview.MessageStats.Ack, tags)
-	acc.Add("messages_delivered", overview.MessageStats.Deliver, tags)
-	acc.Add("messages_published", overview.MessageStats.Publish, tags)
+	fields := map[string]interface{}{
+		"messages":           overview.QueueTotals.Messages,
+		"messages_ready":     overview.QueueTotals.MessagesReady,
+		"messages_unacked":   overview.QueueTotals.MessagesUnacknowledged,
+		"channels":           overview.ObjectTotals.Channels,
+		"connections":        overview.ObjectTotals.Connections,
+		"consumers":          overview.ObjectTotals.Consumers,
+		"exchanges":          overview.ObjectTotals.Exchanges,
+		"queues":             overview.ObjectTotals.Queues,
+		"messages_acked":     overview.MessageStats.Ack,
+		"messages_delivered": overview.MessageStats.Deliver,
+		"messages_published": overview.MessageStats.Publish,
+	}
+	acc.AddFields("rabbitmq_overview", fields, tags)
 
 	errChan <- nil
 }
@@ -225,6 +226,7 @@ func gatherNodes(r *RabbitMQ, serv *Server, acc plugins.Accumulator, errChan cha
 		errChan <- err
 		return
 	}
+	now := time.Now()
 
 	for _, node := range nodes {
 		if !shouldGatherNode(node, serv) {
@@ -234,17 +236,20 @@ func gatherNodes(r *RabbitMQ, serv *Server, acc plugins.Accumulator, errChan cha
 		tags := map[string]string{"url": serv.URL}
 		tags["node"] = node.Name
 
-		acc.Add("disk_free", node.DiskFree, tags)
-		acc.Add("disk_free_limit", node.DiskFreeLimit, tags)
-		acc.Add("fd_total", node.FdTotal, tags)
-		acc.Add("fd_used", node.FdUsed, tags)
-		acc.Add("mem_limit", node.MemLimit, tags)
-		acc.Add("mem_used", node.MemUsed, tags)
-		acc.Add("proc_total", node.ProcTotal, tags)
-		acc.Add("proc_used", node.ProcUsed, tags)
-		acc.Add("run_queue", node.RunQueue, tags)
-		acc.Add("sockets_total", node.SocketsTotal, tags)
-		acc.Add("sockets_used", node.SocketsUsed, tags)
+		fields := map[string]interface{}{
+			"disk_free":       node.DiskFree,
+			"disk_free_limit": node.DiskFreeLimit,
+			"fd_total":        node.FdTotal,
+			"fd_used":         node.FdUsed,
+			"mem_limit":       node.MemLimit,
+			"mem_used":        node.MemUsed,
+			"proc_total":      node.ProcTotal,
+			"proc_used":       node.ProcUsed,
+			"run_queue":       node.RunQueue,
+			"sockets_total":   node.SocketsTotal,
+			"sockets_used":    node.SocketsUsed,
+		}
+		acc.AddFields("rabbitmq_node", fields, tags, now)
 	}
 
 	errChan <- nil
@@ -273,7 +278,7 @@ func gatherQueues(r *RabbitMQ, serv *Server, acc plugins.Accumulator, errChan ch
 		}
 
 		acc.AddFields(
-			"queue",
+			"rabbitmq_queue",
 			map[string]interface{}{
 				// common information
 				"consumers":            queue.Consumers,
