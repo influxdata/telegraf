@@ -3,6 +3,8 @@
 ### Release Notes
 - **breaking change** the `io` plugin has been renamed `diskio`
 - **breaking change** Plugin measurements aggregated into a single measurement.
+- `procstat` cpu measurements are now prepended with `cpu_time_` instead of
+only `cpu_`
 
 ### Features
 - Plugin measurements aggregated into a single measurement.
