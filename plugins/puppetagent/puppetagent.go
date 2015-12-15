@@ -104,15 +104,16 @@ func (pa *PuppetAgent) Gather(acc plugins.Accumulator) error {
 		return fmt.Errorf("%s", err)
 	}
 
-	structPrinter(&puppetState, acc)
+	tags := map[string]string{"location": pa.Location}
+	structPrinter(&puppetState, acc, tags)
 
 	return nil
 }
 
-func structPrinter(s *State, acc plugins.Accumulator) {
-
+func structPrinter(s *State, acc plugins.Accumulator, tags map[string]string) {
 	e := reflect.ValueOf(s).Elem()
 
+	fields := make(map[string]interface{})
 	for tLevelFNum := 0; tLevelFNum < e.NumField(); tLevelFNum++ {
 		name := e.Type().Field(tLevelFNum).Name
 		nameNumField := e.FieldByName(name).NumField()
@@ -123,10 +124,10 @@ func structPrinter(s *State, acc plugins.Accumulator) {
 
 			lname := strings.ToLower(name)
 			lsName := strings.ToLower(sName)
-			acc.Add(fmt.Sprintf("%s_%s", lname, lsName), sValue, nil)
+			fields[fmt.Sprintf("%s_%s", lname, lsName)] = sValue
 		}
 	}
-
+	acc.AddFields("puppetagent", fields, tags)
 }
 
 func init() {
