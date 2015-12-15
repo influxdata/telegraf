@@ -86,25 +86,30 @@ var engineStats = map[string]string{
 	"total_writes":         "TotalWrites",
 }
 
-func (e *Engine) AddEngineStats(keys []string, acc plugins.Accumulator, tags map[string]string) {
+func (e *Engine) AddEngineStats(
+	keys []string,
+	acc plugins.Accumulator,
+	tags map[string]string,
+) {
 	engine := reflect.ValueOf(e).Elem()
+	fields := make(map[string]interface{})
 	for _, key := range keys {
-		acc.Add(
-			key,
-			engine.FieldByName(engineStats[key]).Interface(),
-			tags,
-		)
+		fields[key] = engine.FieldByName(engineStats[key]).Interface()
 	}
+	acc.AddFields("rethinkdb_engine", fields, tags)
 }
 
 func (s *Storage) AddStats(acc plugins.Accumulator, tags map[string]string) {
-	acc.Add("cache_bytes_in_use", s.Cache.BytesInUse, tags)
-	acc.Add("disk_read_bytes_per_sec", s.Disk.ReadBytesPerSec, tags)
-	acc.Add("disk_read_bytes_total", s.Disk.ReadBytesTotal, tags)
-	acc.Add("disk_written_bytes_per_sec", s.Disk.WriteBytesPerSec, tags)
-	acc.Add("disk_written_bytes_total", s.Disk.WriteBytesTotal, tags)
-	acc.Add("disk_usage_data_bytes", s.Disk.SpaceUsage.Data, tags)
-	acc.Add("disk_usage_garbage_bytes", s.Disk.SpaceUsage.Garbage, tags)
-	acc.Add("disk_usage_metadata_bytes", s.Disk.SpaceUsage.Metadata, tags)
-	acc.Add("disk_usage_preallocated_bytes", s.Disk.SpaceUsage.Prealloc, tags)
+	fields := map[string]interface{}{
+		"cache_bytes_in_use":            s.Cache.BytesInUse,
+		"disk_read_bytes_per_sec":       s.Disk.ReadBytesPerSec,
+		"disk_read_bytes_total":         s.Disk.ReadBytesTotal,
+		"disk_written_bytes_per_sec":    s.Disk.WriteBytesPerSec,
+		"disk_written_bytes_total":      s.Disk.WriteBytesTotal,
+		"disk_usage_data_bytes":         s.Disk.SpaceUsage.Data,
+		"disk_usage_garbage_bytes":      s.Disk.SpaceUsage.Garbage,
+		"disk_usage_metadata_bytes":     s.Disk.SpaceUsage.Metadata,
+		"disk_usage_preallocated_bytes": s.Disk.SpaceUsage.Prealloc,
+	}
+	acc.AddFields("rethinkdb", fields, tags)
 }
