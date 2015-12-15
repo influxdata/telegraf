@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/internal"
@@ -110,6 +111,7 @@ func (i *InfluxDB) Connect() error {
 	}
 
 	i.conns = conns
+	rand.Seed(time.Now().UnixNano())
 	return nil
 }
 
