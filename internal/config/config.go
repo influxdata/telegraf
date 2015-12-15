@@ -531,6 +531,11 @@ func (c *Config) addPlugin(name string, table *ast.Table) error {
 	if len(c.PluginFilters) > 0 && !sliceContains(name, c.PluginFilters) {
 		return nil
 	}
+	// Legacy support renaming io plugin to diskio
+	if name == "io" {
+		name = "diskio"
+	}
+
 	creator, ok := plugins.Plugins[name]
 	if !ok {
 		return fmt.Errorf("Undefined but requested plugin: %s", name)
