@@ -100,21 +100,23 @@ func (ti *TwemproxyInstance) processStat(
 		}
 	}
 
+	fields := make(map[string]interface{})
 	metrics := []string{"total_connections", "curr_connections", "timestamp"}
 	for _, m := range metrics {
 		if value, ok := data[m]; ok {
 			if val, ok := value.(float64); ok {
-				acc.Add(m, val, tags)
+				fields[m] = val
 			}
 		}
 	}
+	acc.AddFields("twemproxy", fields, tags)
 
 	for _, pool := range ti.Pools {
 		if poolStat, ok := data[pool]; ok {
 			if data, ok := poolStat.(map[string]interface{}); ok {
 				poolTags := copyTags(tags)
 				poolTags["pool"] = pool
-				ti.processPool(acc, poolTags, pool+"_", data)
+				ti.processPool(acc, poolTags, data)
 			}
 		}
 	}
@@ -124,16 +126,16 @@ func (ti *TwemproxyInstance) processStat(
 func (ti *TwemproxyInstance) processPool(
 	acc plugins.Accumulator,
 	tags map[string]string,
-	prefix string,
 	data map[string]interface{},
 ) {
 	serverTags := make(map[string]map[string]string)
 
+	fields := make(map[string]interface{})
 	for key, value := range data {
 		switch key {
 		case "client_connections", "forward_error", "client_err", "server_ejects", "fragments", "client_eof":
 			if val, ok := value.(float64); ok {
-				acc.Add(prefix+key, val, tags)
+				fields[key] = val
 			}
 		default:
 			if data, ok := value.(map[string]interface{}); ok {
@@ -141,27 +143,29 @@ func (ti *TwemproxyInstance) processPool(
 					serverTags[key] = copyTags(tags)
 					serverTags[key]["server"] = key
 				}
-				ti.processServer(acc, serverTags[key], prefix, data)
+				ti.processServer(acc, serverTags[key], data)
 			}
 		}
 	}
+	acc.AddFields("twemproxy_pool", fields, tags)
 }
 
 // Process backend server(redis/memcached) stats
 func (ti *TwemproxyInstance) processServer(
 	acc plugins.Accumulator,
 	tags map[string]string,
-	prefix string,
 	data map[string]interface{},
 ) {
+	fields := make(map[string]interface{})
 	for key, value := range data {
 		switch key {
 		default:
 			if val, ok := value.(float64); ok {
-				acc.Add(prefix+key, val, tags)
+				fields[key] = val
 			}
 		}
 	}
+	acc.AddFields("twemproxy_pool", fields, tags)
 }
 
 // Tags is not expected to be mutated after passing to Add.
