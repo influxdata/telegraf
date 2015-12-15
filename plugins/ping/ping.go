@@ -82,10 +82,13 @@ func (p *Ping) Gather(acc plugins.Accumulator) error {
 			}
 			// Calculate packet loss percentage
 			loss := float64(trans-rec) / float64(trans) * 100.0
-			acc.Add("packets_transmitted", trans, tags)
-			acc.Add("packets_received", rec, tags)
-			acc.Add("percent_packet_loss", loss, tags)
-			acc.Add("average_response_ms", avg, tags)
+			fields := map[string]interface{}{
+				"packets_transmitted": trans,
+				"packets_received":    rec,
+				"percent_packet_loss": loss,
+				"average_response_ms": avg,
+			}
+			acc.AddFields("ping", fields, tags)
 		}(url, acc)
 	}
 
