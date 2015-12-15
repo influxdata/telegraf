@@ -190,6 +190,11 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				if err == nil {
 					acc.Add("smax", ival, tags)
 				}
+			case HF_STOT:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("stot", ival, tags)
+				}
 			case HF_BIN:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
@@ -210,6 +215,51 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				if err == nil {
 					acc.Add("dresp", ival, tags)
 				}
+			case HF_EREQ:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("ereq", ival, tags)
+				}
+			case HF_ECON:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("econ", ival, tags)
+				}
+			case HF_ERESP:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("eresp", ival, tags)
+				}
+			case HF_WREDIS:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("wredis", ival, tags)
+				}
+			case HF_ACT:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("active_servers", ival, tags)
+				}
+			case HF_BCK:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("backup_servers", ival, tags)
+				}
+			case HF_DOWNTIME:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("downtime", ival, tags)
+				}
+			case HF_THROTTLE:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("throttle", ival, tags)
+				}
+			case HF_LBTOT:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("lbtot", ival, tags)
+				}
 			case HF_RATE:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
@@ -220,10 +270,15 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				if err == nil {
 					acc.Add("rate_max", ival, tags)
 				}
-			case HF_STOT:
+			case HF_CHECK_STATUS:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
-					acc.Add("stot", ival, tags)
+					acc.Add("check_status", ival, tags)
+				}
+			case HF_CHECK_DURATION:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("check_duration", ival, tags)
 				}
 			case HF_HRSP_1xx:
 				ival, err := strconv.ParseUint(v, 10, 64)
@@ -250,31 +305,6 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				if err == nil {
 					acc.Add("http_response.5xx", ival, tags)
 				}
-			case HF_EREQ:
-				ival, err := strconv.ParseUint(v, 10, 64)
-				if err == nil {
-					acc.Add("ereq", ival, tags)
-				}
-			case HF_ERESP:
-				ival, err := strconv.ParseUint(v, 10, 64)
-				if err == nil {
-					acc.Add("eresp", ival, tags)
-				}
-			case HF_ECON:
-				ival, err := strconv.ParseUint(v, 10, 64)
-				if err == nil {
-					acc.Add("econ", ival, tags)
-				}
-			case HF_WRETR:
-				ival, err := strconv.ParseUint(v, 10, 64)
-				if err == nil {
-					acc.Add("wretr", ival, tags)
-				}
-			case HF_WREDIS:
-				ival, err := strconv.ParseUint(v, 10, 64)
-				if err == nil {
-					acc.Add("wredis", ival, tags)
-				}
 			case HF_REQ_RATE:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
@@ -290,15 +320,35 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				if err == nil {
 					acc.Add("req_tot", ival, tags)
 				}
-			case HF_THROTTLE:
+			case HF_CLI_ABRT:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
-					acc.Add("throttle", ival, tags)
+					acc.Add("cli_abort", ival, tags)
 				}
-			case HF_LBTOT:
+			case HF_SRV_ABRT:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
-					acc.Add("lbtot", ival, tags)
+					acc.Add("srv_abort", ival, tags)
+				}
+			case HF_QTIME:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("qtime", ival, tags)
+				}
+			case HF_CTIME:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("ctime", ival, tags)
+				}
+			case HF_RTIME:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("rtime", ival, tags)
+				}
+			case HF_TTIME:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("ttime", ival, tags)
 				}
 
 			}
