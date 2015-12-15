@@ -67,35 +67,37 @@ func (z *Zookeeper) gatherServer(address string, acc plugins.Accumulator) error 
 	defer c.Close()
 
 	fmt.Fprintf(c, "%s\n", "mntr")
-
 	rdr := bufio.NewReader(c)
-
 	scanner := bufio.NewScanner(rdr)
 
+	service := strings.Split(address, ":")
+	if len(service) != 2 {
+		return fmt.Errorf("Invalid service address: %s", address)
+	}
+	tags := map[string]string{"server": service[0], "port": service[1]}
+
+	fields := make(map[string]interface{})
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		re := regexp.MustCompile(`^zk_(\w+)\s+([\w\.\-]+)`)
 		parts := re.FindStringSubmatch(string(line))
 
-		service := strings.Split(address, ":")
-
-		if len(parts) != 3 || len(service) != 2 {
+		if len(parts) != 3 {
 			return fmt.Errorf("unexpected line in mntr response: %q", line)
 		}
-
-		tags := map[string]string{"server": service[0], "port": service[1]}
 
 		measurement := strings.TrimPrefix(parts[1], "zk_")
 		sValue := string(parts[2])
 
 		iVal, err := strconv.ParseInt(sValue, 10, 64)
 		if err == nil {
-			acc.Add(measurement, iVal, tags)
+			fields[measurement] = iVal
 		} else {
-			acc.Add(measurement, sValue, tags)
+			fields[measurement] = sValue
 		}
 	}
+	acc.AddFields("zookeeper", fields, tags)
 
 	return nil
 }
