@@ -5,6 +5,8 @@
 - **breaking change** Plugin measurements aggregated into a single measurement.
 - `procstat` cpu measurements are now prepended with `cpu_time_` instead of
 only `cpu_`
+- The prometheus plugin schema has not been changed (measurements have not been
+aggregated).
 
 ### Features
 - Plugin measurements aggregated into a single measurement.
