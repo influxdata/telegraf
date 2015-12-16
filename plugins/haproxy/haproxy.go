@@ -230,6 +230,11 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				if err == nil {
 					acc.Add("eresp", ival, tags)
 				}
+			case HF_WRETR:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					acc.Add("wretr", ival, tags)
+				}
 			case HF_WREDIS:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
@@ -269,11 +274,6 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) ([][]str
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
 					acc.Add("rate_max", ival, tags)
-				}
-			case HF_CHECK_STATUS:
-				ival, err := strconv.ParseUint(v, 10, 64)
-				if err == nil {
-					acc.Add("check_status", ival, tags)
 				}
 			case HF_CHECK_DURATION:
 				ival, err := strconv.ParseUint(v, 10, 64)
