@@ -1,11 +1,11 @@
-package influxdbjson_test
+package influxdb_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdb/telegraf/plugins/influxdbjson"
+	"github.com/influxdb/telegraf/plugins/influxdb"
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -64,7 +64,7 @@ func TestBasic(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
-	plugin := &influxdbjson.InfluxDBJSON{
+	plugin := &influxdb.InfluxDB{
 		Name: "test",
 		URLs: []string{fakeServer.URL + "/endpoint"},
 	}

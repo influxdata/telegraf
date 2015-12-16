@@ -1,8 +1,9 @@
-package influxdbjson
+package influxdb
 
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -10,59 +11,41 @@ import (
 	"github.com/influxdb/telegraf/plugins"
 )
 
-type InfluxDBJSON struct {
+type InfluxDB struct {
 	Name string
 	URLs []string `toml:"urls"`
 }
 
-func (*InfluxDBJSON) Description() string {
+func (*InfluxDB) Description() string {
 	return "Read InfluxDB-formatted JSON metrics from one or more HTTP endpoints"
 }
 
-func (*InfluxDBJSON) SampleConfig() string {
+func (*InfluxDB) SampleConfig() string {
 	return `
-	# Reads InfluxDB-formatted JSON from given URLs. For example,
-	# monitoring a URL which responded with a JSON object formatted like this:
-	#
-	#   {
-	#     "(ignored_key)": {
-	#       "name": "connections",
-	#       "tags": {
-	#         "host": "foo"
-	#       },
-	#       "values": {
-	#         "avg_ms": 1.234,
-	#       }
-	#     }
-	#   }
-	#
-	# with configuration of { name = "server", urls = ["http://127.0.0.1:8086/x"] }
-	#
-	# Would result in this recorded metric:
-	#
-	#   influxdbjson_server_connections,url='http://127.0.0.1:8086/x',host='foo' avg_ms=1.234
-	[[plugins.influxdbjson]]
-	# Name to use for measurement
-	name = "influxdb"
+  # Reads InfluxDB-formatted JSON from given URLs.
+  # Works with InfluxDB debug endpoints out of the box, but other services can use this format too.
+  # See the influxdb plugin's README for more details.
+  [[plugins.influxdb]]
+  # Name to use for measurement
+  name = "influxdb"
 
-	# Multiple URLs from which to read InfluxDB-formatted JSON
-	urls = [
-	  "http://localhost:8086/debug/vars"
-	]
+  # Multiple URLs from which to read InfluxDB-formatted JSON
+  urls = [
+    "http://localhost:8086/debug/vars"
+  ]
 `
 }
 
-func (i *InfluxDBJSON) Gather(acc plugins.Accumulator) error {
-	var wg sync.WaitGroup
-
+func (i *InfluxDB) Gather(acc plugins.Accumulator) error {
 	errorChannel := make(chan error, len(i.URLs))
 
+	var wg sync.WaitGroup
 	for _, u := range i.URLs {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
 			if err := i.gatherURL(acc, url); err != nil {
-				errorChannel <- err
+				errorChannel <- fmt.Errorf("[name=%s][url=%s]: %s", i.Name, url, err)
 			}
 		}(u)
 	}
@@ -70,15 +53,17 @@ func (i *InfluxDBJSON) Gather(acc plugins.Accumulator) error {
 	wg.Wait()
 	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
+	// If there weren't any errors, we can return nil now.
+	if len(errorChannel) == 0 {
+		return nil
+	}
+
+	// There were errors, so join them all together as one big error.
+	errorStrings := make([]string, 0, len(errorChannel))
 	for err := range errorChannel {
 		errorStrings = append(errorStrings, err.Error())
 	}
 
-	if len(errorStrings) == 0 {
-		return nil
-	}
 	return errors.New(strings.Join(errorStrings, "\n"))
 }
 
@@ -95,7 +80,7 @@ type point struct {
 //
 // Returns:
 //     error: Any error that may have occurred
-func (i *InfluxDBJSON) gatherURL(
+func (i *InfluxDB) gatherURL(
 	acc plugins.Accumulator,
 	url string,
 ) error {
@@ -105,7 +90,11 @@ func (i *InfluxDBJSON) gatherURL(
 	}
 	defer resp.Body.Close()
 
-	// Can't predict what all is going to be in the response, so decode the top keys one at a time.
+	// It would be nice to be able to decode into a map[string]point, but
+	// we'll get a decoder error like:
+	// `json: cannot unmarshal array into Go value of type influxdb.point`
+	// if any of the values aren't objects.
+	// To avoid that error, we decode by hand.
 	dec := json.NewDecoder(resp.Body)
 
 	// Parse beginning of object
@@ -155,7 +144,7 @@ func (i *InfluxDBJSON) gatherURL(
 }
 
 func init() {
-	plugins.Add("influxdbjson", func() plugins.Plugin {
-		return &InfluxDBJSON{}
+	plugins.Add("influxdb", func() plugins.Plugin {
+		return &InfluxDB{}
 	})
 }

@@ -9,7 +9,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/exec"
 	_ "github.com/influxdb/telegraf/plugins/haproxy"
 	_ "github.com/influxdb/telegraf/plugins/httpjson"
-	_ "github.com/influxdb/telegraf/plugins/influxdbjson"
+	_ "github.com/influxdb/telegraf/plugins/influxdb"
 	_ "github.com/influxdb/telegraf/plugins/jolokia"
 	_ "github.com/influxdb/telegraf/plugins/kafka_consumer"
 	_ "github.com/influxdb/telegraf/plugins/leofs"

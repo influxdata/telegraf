@@ -1,11 +1,11 @@
-# influxdbjson plugin
+# influxdb plugin
 
-The influxdbjson plugin collects InfluxDB-formatted data from JSON endpoints.
+The influxdb plugin collects InfluxDB-formatted data from JSON endpoints.
 
 With a configuration of:
 
 ```toml
-[[plugins.influxdbjson]]
+[[plugins.influxdb]]
   name = "produce"
   urls = [
     "http://127.0.0.1:8086/debug/vars",
@@ -58,10 +58,10 @@ And if 192.168.2.1 responds like so:
 Then the collected metrics will be:
 
 ```
-influxdbjson_produce_fruit,url='http://127.0.0.1:8086/debug/vars',kind='apple' inventory=371.0,sold=112.0
-influxdbjson_produce_fruit,url='http://127.0.0.1:8086/debug/vars',kind='banana' inventory=1000.0,sold=403.0
+influxdb_produce_fruit,url='http://127.0.0.1:8086/debug/vars',kind='apple' inventory=371.0,sold=112.0
+influxdb_produce_fruit,url='http://127.0.0.1:8086/debug/vars',kind='banana' inventory=1000.0,sold=403.0
 
-influxdbjson_produce_transactions,url='http://192.168.2.1:8086/debug/vars' total=100.0,balance=184.75
+influxdb_produce_transactions,url='http://192.168.2.1:8086/debug/vars' total=100.0,balance=184.75
 ```
 
 There are two important details to note about the collected metrics:
