@@ -200,19 +200,11 @@ const statsResponse = `
       },
       "os": {
         "timestamp": 1436460392944,
-        "uptime_in_millis": 25092,
         "load_average": [
           0.01,
           0.04,
           0.05
         ],
-        "cpu": {
-          "sys": 0,
-          "user": 0,
-          "idle": 99,
-          "usage": 0,
-          "stolen": 0
-        },
         "mem": {
           "free_in_bytes": 477761536,
           "used_in_bytes": 1621868544,
@@ -236,8 +228,6 @@ const statsResponse = `
           "total_in_millis": 15480
         },
         "mem": {
-          "resident_in_bytes": 246382592,
-          "share_in_bytes": 18747392,
           "total_virtual_in_bytes": 4747890688
         }
       },
@@ -439,20 +429,6 @@ const statsResponse = `
           "completed": 0
         }
       },
-      "network": {
-        "tcp": {
-          "active_opens": 13,
-          "passive_opens": 16,
-          "curr_estab": 29,
-          "in_segs": 113,
-          "out_segs": 97,
-          "retrans_segs": 0,
-          "estab_resets": 0,
-          "attempt_fails": 0,
-          "in_errs": 0,
-          "out_rsts": 0
-        }
-      },
       "fs": {
         "timestamp": 1436460392946,
         "total": {
@@ -464,7 +440,6 @@ const statsResponse = `
           {
             "path": "/usr/share/elasticsearch/data/elasticsearch/nodes/0",
             "mount": "/usr/share/elasticsearch/data",
-            "dev": "/dev/sda1",
             "type": "ext4",
             "total_in_bytes": 19507089408,
             "free_in_bytes": 16909316096,
@@ -590,12 +565,6 @@ var osExpected = map[string]float64{
 	"os_swap_used_in_bytes":       0,
 	"os_swap_free_in_bytes":       487997440,
 	"os_timestamp":                1436460392944,
-	"os_uptime_in_millis":         25092,
-	"os_cpu_sys":                  0,
-	"os_cpu_user":                 0,
-	"os_cpu_idle":                 99,
-	"os_cpu_usage":                0,
-	"os_cpu_stolen":               0,
 	"os_mem_free_percent":         74,
 	"os_mem_used_percent":         25,
 	"os_mem_actual_free_in_bytes": 1565470720,
@@ -605,8 +574,6 @@ var osExpected = map[string]float64{
 }
 
 var processExpected = map[string]float64{
-	"process_mem_resident_in_bytes":      246382592,
-	"process_mem_share_in_bytes":         18747392,
 	"process_mem_total_virtual_in_bytes": 4747890688,
 	"process_timestamp":                  1436460392945,
 	"process_open_file_descriptors":      160,
@@ -754,19 +721,6 @@ var threadPoolExpected = map[string]float64{
 	"thread_pool_flush_rejected":                1,
 	"thread_pool_flush_largest":                 5,
 	"thread_pool_flush_completed":               3,
-}
-
-var networkExpected = map[string]float64{
-	"network_tcp_in_errs":       0,
-	"network_tcp_passive_opens": 16,
-	"network_tcp_curr_estab":    29,
-	"network_tcp_in_segs":       113,
-	"network_tcp_out_segs":      97,
-	"network_tcp_retrans_segs":  0,
-	"network_tcp_attempt_fails": 0,
-	"network_tcp_active_opens":  13,
-	"network_tcp_estab_resets":  0,
-	"network_tcp_out_rsts":      0,
 }
 
 var fsExpected = map[string]float64{

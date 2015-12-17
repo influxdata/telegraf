@@ -58,7 +58,6 @@ func TestElasticsearch(t *testing.T) {
 		processExpected,
 		jvmExpected,
 		threadPoolExpected,
-		networkExpected,
 		fsExpected,
 		transportExpected,
 		httpExpected,
