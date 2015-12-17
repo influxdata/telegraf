@@ -22,7 +22,6 @@ type node struct {
 	Process    interface{}       `json:"process"`
 	JVM        interface{}       `json:"jvm"`
 	ThreadPool interface{}       `json:"thread_pool"`
-	Network    interface{}       `json:"network"`
 	FS         interface{}       `json:"fs"`
 	Transport  interface{}       `json:"transport"`
 	HTTP       interface{}       `json:"http"`
@@ -136,7 +135,6 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc plugins.Accumulator) err
 			"process":     n.Process,
 			"jvm":         n.JVM,
 			"thread_pool": n.ThreadPool,
-			"network":     n.Network,
 			"fs":          n.FS,
 			"transport":   n.Transport,
 			"http":        n.HTTP,
@@ -202,7 +200,11 @@ func (e *Elasticsearch) gatherData(url string, v interface{}) error {
 	if err != nil {
 		return err
 	}
+	defer r.Body.Close()
 	if r.StatusCode != http.StatusOK {
+		// NOTE: we are not going to read/discard r.Body under the assumption we'd prefer
+		// to let the underlying transport close the connection and re-establish a new one for
+		// future calls.
 		return fmt.Errorf("elasticsearch: API responded with status-code %d, expected %d", r.StatusCode, http.StatusOK)
 	}
 	if err = json.NewDecoder(r.Body).Decode(v); err != nil {

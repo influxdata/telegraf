@@ -4,6 +4,10 @@
 - [#427](https://github.com/influxdb/telegraf/pull/427): zfs plugin: pool stats added. Thanks @allenpetersen!
 - [#428](https://github.com/influxdb/telegraf/pull/428): Amazon Kinesis output. Thanks @jimmystewpot!
 
+### Bugfixes
+- [#430](https://github.com/influxdb/telegraf/issues/430): Network statistics removed in elasticsearch 2.1. Thanks @jipperinbham!
+- [#452](https://github.com/influxdb/telegraf/issues/452): Elasticsearch open file handles error. Thanks @jipperinbham!
+
 ## v0.2.4 [2015-12-08]
 
 ### Features
