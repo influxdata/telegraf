@@ -12,7 +12,6 @@ import (
 )
 
 type InfluxDB struct {
-	Name string
 	URLs []string `toml:"urls"`
 }
 
@@ -22,12 +21,9 @@ func (*InfluxDB) Description() string {
 
 func (*InfluxDB) SampleConfig() string {
 	return `
-  # Reads InfluxDB-formatted JSON from given URLs.
-  # Works with InfluxDB debug endpoints out of the box, but other services can use this format too.
+  # Works with InfluxDB debug endpoints out of the box,
+  # but other services can use this format too.
   # See the influxdb plugin's README for more details.
-  [[plugins.influxdb]]
-  # Name to use for measurement
-  name = "influxdb"
 
   # Multiple URLs from which to read InfluxDB-formatted JSON
   urls = [
@@ -45,7 +41,7 @@ func (i *InfluxDB) Gather(acc plugins.Accumulator) error {
 		go func(url string) {
 			defer wg.Done()
 			if err := i.gatherURL(acc, url); err != nil {
-				errorChannel <- fmt.Errorf("[name=%s][url=%s]: %s", i.Name, url, err)
+				errorChannel <- fmt.Errorf("[url=%s]: %s", url, err)
 			}
 		}(u)
 	}
@@ -134,7 +130,7 @@ func (i *InfluxDB) gatherURL(
 		p.Tags["url"] = url
 
 		acc.AddFields(
-			i.Name+"_"+p.Name,
+			p.Name,
 			p.Values,
 			p.Tags,
 		)

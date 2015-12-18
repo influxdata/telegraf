@@ -199,6 +199,7 @@ Telegraf currently has support for collecting metrics from:
 * exec (generic JSON-emitting executable plugin)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
+* influxdb
 * jolokia (remote JMX with JSON over HTTP)
 * leofs
 * lustre2
