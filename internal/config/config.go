@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 
-	"github.com/naoina/toml"
+	"github.com/influxdata/config"
 	"github.com/naoina/toml/ast"
 )
 
@@ -314,12 +314,7 @@ func (c *Config) LoadDirectory(path string) error {
 
 // LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	tbl, err := toml.Parse(data)
+	tbl, err := config.ParseFile(path)
 	if err != nil {
 		return err
 	}
@@ -332,12 +327,12 @@ func (c *Config) LoadConfig(path string) error {
 
 		switch name {
 		case "agent":
-			if err = toml.UnmarshalTable(subTable, c.Agent); err != nil {
+			if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
 				log.Printf("Could not parse [agent] config\n")
 				return err
 			}
 		case "tags":
-			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
+			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("Could not parse [tags] config\n")
 				return err
 			}
@@ -403,7 +398,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := toml.UnmarshalTable(table, output); err != nil {
+	if err := config.UnmarshalTable(table, output); err != nil {
 		return err
 	}
 
@@ -436,7 +431,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := toml.UnmarshalTable(table, input); err != nil {
+	if err := config.UnmarshalTable(table, input); err != nil {
 		return err
 	}
 
@@ -571,7 +566,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
-			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
+			if err := config.UnmarshalTable(subtbl, cp.Tags); err != nil {
 				log.Printf("Could not parse tags for input %s\n", name)
 			}
 		}
