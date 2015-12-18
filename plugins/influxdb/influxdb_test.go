@@ -65,7 +65,6 @@ func TestBasic(t *testing.T) {
 	defer fakeServer.Close()
 
 	plugin := &influxdb.InfluxDB{
-		Name: "test",
 		URLs: []string{fakeServer.URL + "/endpoint"},
 	}
 
@@ -74,7 +73,7 @@ func TestBasic(t *testing.T) {
 
 	require.Len(t, acc.Points, 2)
 	require.NoError(t, acc.ValidateTaggedFieldsValue(
-		"test_foo",
+		"foo",
 		map[string]interface{}{
 			// JSON will truncate floats to integer representations.
 			// Since there's no distinction in JSON, we can't assume it's an int.
@@ -89,7 +88,7 @@ func TestBasic(t *testing.T) {
 		},
 	))
 	require.NoError(t, acc.ValidateTaggedFieldsValue(
-		"test_bar",
+		"bar",
 		map[string]interface{}{
 			"x": "x",
 		},
