@@ -58,8 +58,8 @@ func (a *Amon) Write(points []*client.Point) error {
 		return nil
 	}
 	ts := TimeSeries{}
-	var tempSeries = make([]*Metric, len(points))
-	var acceptablePoints = 0
+	tempSeries := []*Metric{}
+	metricCounter := 0
 
 	for _, pt := range points {
 		mname := strings.Replace(pt.Name(), "_", ".", -1)
@@ -69,15 +69,15 @@ func (a *Amon) Write(points []*client.Point) error {
 					Metric: mname + "_" + strings.Replace(fieldName, "_", ".", -1),
 				}
 				metric.Points[0] = amonPt
-				tempSeries[acceptablePoints] = metric
-				acceptablePoints += 1
+				tempSeries = append(tempSeries, metric)
+				metricCounter++
 			}
 		} else {
 			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
 		}
 	}
 
-	ts.Series = make([]*Metric, acceptablePoints)
+	ts.Series = make([]*Metric, metricCounter)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {

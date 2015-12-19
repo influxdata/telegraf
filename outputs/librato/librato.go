@@ -74,17 +74,21 @@ func (l *Librato) Write(points []*client.Point) error {
 		return nil
 	}
 	metrics := Metrics{}
-	var tempGauges = make([]*Gauge, len(points))
-	var acceptablePoints = 0
+	tempGauges := []*Gauge{}
+	metricCounter := 0
+
 	for _, pt := range points {
-		if gauge, err := l.buildGauge(pt); err == nil {
-			tempGauges[acceptablePoints] = gauge
-			acceptablePoints += 1
+		if gauges, err := l.buildGauges(pt); err == nil {
+			for _, gauge := range gauges {
+				tempGauges = append(tempGauges, gauge)
+				metricCounter++
+			}
 		} else {
 			log.Printf("unable to build Gauge for %s, skipping\n", pt.Name())
 		}
 	}
-	metrics.Gauges = make([]*Gauge, acceptablePoints)
+
+	metrics.Gauges = make([]*Gauge, metricCounter)
 	copy(metrics.Gauges, tempGauges[0:])
 	metricsBytes, err := json.Marshal(metrics)
 	if err != nil {
@@ -118,22 +122,28 @@ func (l *Librato) Description() string {
 	return "Configuration for Librato API to send metrics to."
 }
 
-func (l *Librato) buildGauge(pt *client.Point) (*Gauge, error) {
-	gauge := &Gauge{
-		Name:        pt.Name(),
-		MeasureTime: pt.Time().Unix(),
-	}
-	if err := gauge.setValue(pt.Fields()["value"]); err != nil {
-		return gauge, fmt.Errorf("unable to extract value from Fields, %s\n", err.Error())
-	}
-	if l.SourceTag != "" {
-		if source, ok := pt.Tags()[l.SourceTag]; ok {
-			gauge.Source = source
-		} else {
-			return gauge, fmt.Errorf("undeterminable Source type from Field, %s\n", l.SourceTag)
+func (l *Librato) buildGauges(pt *client.Point) ([]*Gauge, error) {
+	gauges := []*Gauge{}
+	for fieldName, value := range pt.Fields() {
+		gauge := &Gauge{
+			Name:        pt.Name() + "_" + fieldName,
+			MeasureTime: pt.Time().Unix(),
+		}
+		if err := gauge.setValue(value); err != nil {
+			return gauges, fmt.Errorf("unable to extract value from Fields, %s\n",
+				err.Error())
+		}
+		if l.SourceTag != "" {
+			if source, ok := pt.Tags()[l.SourceTag]; ok {
+				gauge.Source = source
+			} else {
+				return gauges,
+					fmt.Errorf("undeterminable Source type from Field, %s\n",
+						l.SourceTag)
+			}
 		}
 	}
-	return gauge, nil
+	return gauges, nil
 }
 
 func (g *Gauge) setValue(v interface{}) error {
