@@ -44,7 +44,8 @@ func (s *Server) gatherData(acc plugins.Accumulator) error {
 			NewStatLine(*s.lastResult, *result, s.Url.Host, true, durationInSeconds),
 			s.getDefaultTags(),
 		)
-		data.AddDefaultStats(acc)
+		data.AddDefaultStats()
+		data.flush(acc)
 	}
 	return nil
 }
