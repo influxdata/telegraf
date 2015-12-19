@@ -60,18 +60,23 @@ func (a *Amon) Write(points []*client.Point) error {
 	ts := TimeSeries{}
 	var tempSeries = make([]*Metric, len(points))
 	var acceptablePoints = 0
+
 	for _, pt := range points {
-		metric := &Metric{
-			Metric: strings.Replace(pt.Name(), "_", ".", -1),
-		}
-		if p, err := buildPoint(pt); err == nil {
-			metric.Points[0] = p
-			tempSeries[acceptablePoints] = metric
-			acceptablePoints += 1
+		mname := strings.Replace(pt.Name(), "_", ".", -1)
+		if amonPts, err := buildPoints(pt); err == nil {
+			for fieldName, amonPt := range amonPts {
+				metric := &Metric{
+					Metric: mname + "_" + strings.Replace(fieldName, "_", ".", -1),
+				}
+				metric.Points[0] = amonPt
+				tempSeries[acceptablePoints] = metric
+				acceptablePoints += 1
+			}
 		} else {
 			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
 		}
 	}
+
 	ts.Series = make([]*Metric, acceptablePoints)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
@@ -110,13 +115,17 @@ func (a *Amon) authenticatedUrl() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
 
-func buildPoint(pt *client.Point) (Point, error) {
-	var p Point
-	if err := p.setValue(pt.Fields()["value"]); err != nil {
-		return p, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+func buildPoints(pt *client.Point) (map[string]Point, error) {
+	pts := make(map[string]Point)
+	for k, v := range pt.Fields() {
+		var p Point
+		if err := p.setValue(v); err != nil {
+			return pts, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+		}
+		p[0] = float64(pt.Time().Unix())
+		pts[k] = p
 	}
-	p[0] = float64(pt.Time().Unix())
-	return p, nil
+	return pts, nil
 }
 
 func (p *Point) setValue(v interface{}) error {
