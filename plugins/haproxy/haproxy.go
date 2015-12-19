@@ -162,14 +162,13 @@ func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) error {
 	now := time.Now()
 
 	for _, row := range result {
-
+		fields := make(map[string]interface{})
+		tags := map[string]string{
+			"server": host,
+			"proxy":  row[HF_PXNAME],
+			"sv":     row[HF_SVNAME],
+		}
 		for field, v := range row {
-			fields := make(map[string]interface{})
-			tags := map[string]string{
-				"server": host,
-				"proxy":  row[HF_PXNAME],
-				"sv":     row[HF_SVNAME],
-			}
 			switch field {
 			case HF_QCUR:
 				ival, err := strconv.ParseUint(v, 10, 64)
