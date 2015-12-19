@@ -42,7 +42,7 @@ var sampleConfig = `
   # to grab metrics for.
   #
 
-  address = "sslmode=disable"
+  address = "host=localhost user=postgres sslmode=disable"
 
   # A list of databases to pull metrics about. If not specified, metrics for all
   # databases are gathered.
@@ -161,12 +161,14 @@ func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator, serv *Server) 
 
 	tags := map[string]string{"server": serv.Address, "db": dbname.String()}
 
+	fields := make(map[string]interface{})
 	for col, val := range columnMap {
 		_, ignore := ignoredColumns[col]
 		if !ignore {
-			acc.Add(col, *val, tags)
+			fields[col] = *val
 		}
 	}
+	acc.AddFields("postgresql", fields, tags)
 
 	return nil
 }
