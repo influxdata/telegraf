@@ -98,7 +98,8 @@ func (m *MongoDB) gatherServer(server *Server, acc plugins.Accumulator) error {
 		}
 		dialInfo, err := mgo.ParseURL(dialAddrs[0])
 		if err != nil {
-			return fmt.Errorf("Unable to parse URL (%s), %s\n", dialAddrs[0], err.Error())
+			return fmt.Errorf("Unable to parse URL (%s), %s\n",
+				dialAddrs[0], err.Error())
 		}
 		dialInfo.Direct = true
 		dialInfo.Timeout = time.Duration(10) * time.Second

@@ -10,6 +10,7 @@ import (
 
 type MongodbData struct {
 	StatLine *StatLine
+	Fields   map[string]interface{}
 	Tags     map[string]string
 }
 
@@ -20,6 +21,7 @@ func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
 	return &MongodbData{
 		StatLine: statLine,
 		Tags:     tags,
+		Fields:   make(map[string]interface{}),
 	}
 }
 
@@ -63,38 +65,44 @@ var WiredTigerStats = map[string]string{
 	"percent_cache_used":  "CacheUsedPercent",
 }
 
-func (d *MongodbData) AddDefaultStats(acc plugins.Accumulator) {
+func (d *MongodbData) AddDefaultStats() {
 	statLine := reflect.ValueOf(d.StatLine).Elem()
-	d.addStat(acc, statLine, DefaultStats)
+	d.addStat(statLine, DefaultStats)
 	if d.StatLine.NodeType != "" {
-		d.addStat(acc, statLine, DefaultReplStats)
+		d.addStat(statLine, DefaultReplStats)
 	}
 	if d.StatLine.StorageEngine == "mmapv1" {
-		d.addStat(acc, statLine, MmapStats)
+		d.addStat(statLine, MmapStats)
 	} else if d.StatLine.StorageEngine == "wiredTiger" {
 		for key, value := range WiredTigerStats {
 			val := statLine.FieldByName(value).Interface()
 			percentVal := fmt.Sprintf("%.1f", val.(float64)*100)
 			floatVal, _ := strconv.ParseFloat(percentVal, 64)
-			d.add(acc, key, floatVal)
+			d.add(key, floatVal)
 		}
 	}
 }
 
-func (d *MongodbData) addStat(acc plugins.Accumulator, statLine reflect.Value, stats map[string]string) {
+func (d *MongodbData) addStat(
+	statLine reflect.Value,
+	stats map[string]string,
+) {
 	for key, value := range stats {
 		val := statLine.FieldByName(value).Interface()
-		d.add(acc, key, val)
+		d.add(key, val)
 	}
 }
 
-func (d *MongodbData) add(acc plugins.Accumulator, key string, val interface{}) {
+func (d *MongodbData) add(key string, val interface{}) {
+	d.Fields[key] = val
+}
+
+func (d *MongodbData) flush(acc plugins.Accumulator) {
 	acc.AddFields(
-		key,
-		map[string]interface{}{
-			"value": val,
-		},
+		"mongodb",
+		d.Fields,
 		d.Tags,
 		d.StatLine.Time,
 	)
+	d.Fields = make(map[string]interface{})
 }
