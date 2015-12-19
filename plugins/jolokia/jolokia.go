@@ -62,17 +62,6 @@ func (j *Jolokia) SampleConfig() string {
   [[plugins.jolokia.metrics]]
     name = "heap_memory_usage"
     jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
-
-
-  # This drops the 'committed' value from Eden space measurement
-  [[plugins.jolokia.metrics]]
-    name = "memory_eden"
-    jmx  = "/java.lang:type=MemoryPool,name=PS Eden Space/Usage"
-
-  # This passes only DaemonThreadCount and ThreadCount
-  [[plugins.jolokia.metrics]]
-    name = "heap_threads"
-    jmx  = "/java.lang:type=Threading"
 `
 }
 
