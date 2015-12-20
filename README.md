@@ -51,6 +51,32 @@ brew update
 brew install telegraf
 ```
 
+### Version 0.3.0 Beta
+
+Version 0.3.0 will introduce many new breaking changes to Telegraf. For starters,
+plugin measurements will be aggregated into fields. This means that there will no
+longer be a `cpu_usage_idle` measurement, there will be a `cpu` measurement with
+a `usage_idle` field.
+
+There will also be config file changes, meaning that your 0.2.x Telegraf config
+files will no longer work properly. It is recommended that you use the
+`-sample-config` flag to generate a new config file to see what the changes are.
+You can also read the
+[0.3.0 configuration guide](https://github.com/influxdb/telegraf/blob/0.3.0/CONFIGURATION.md)
+to see some of the new features and options available.
+
+You can read more about the justifications for the aggregated measurements
+[here](https://github.com/influxdb/telegraf/issues/152), and a more detailed
+breakdown of the work [here](https://github.com/influxdb/telegraf/pull/437).
+Once we're closer to a full release, there will be a detailed blog post
+explaining all the changes.
+
+* http://get.influxdb.org/telegraf/telegraf_0.3.0-beta1_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.3.0_beta1-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.3.0-beta1.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.3.0-beta1.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.3.0-beta1.tar.gz
+
 ### From Source:
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
