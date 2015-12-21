@@ -71,11 +71,11 @@ breakdown of the work [here](https://github.com/influxdb/telegraf/pull/437).
 Once we're closer to a full release, there will be a detailed blog post
 explaining all the changes.
 
-* http://get.influxdb.org/telegraf/telegraf_0.3.0-beta1_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.3.0_beta1-1.x86_64.rpm
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.3.0-beta1.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.3.0-beta1.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.3.0-beta1.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_0.3.0-beta2_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.3.0_beta2-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.3.0-beta2.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.3.0-beta2.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.3.0-beta2.tar.gz
 
 ### From Source:
 
