@@ -182,7 +182,6 @@ func (h *HttpJson) sendRequest(serverURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer req.Body.Close()
 
 	resp, err := h.client.MakeRequest(req)
 	if err != nil {
