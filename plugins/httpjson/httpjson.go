@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/plugins"
@@ -119,7 +120,8 @@ func (h *HttpJson) gatherServer(
 	acc plugins.Accumulator,
 	serverURL string,
 ) error {
-	resp, err := h.sendRequest(serverURL)
+	resp, responseTime, err := h.sendRequest(serverURL)
+
 	if err != nil {
 		return err
 	}
@@ -141,6 +143,9 @@ func (h *HttpJson) gatherServer(
 		delete(jsonOut, tag)
 	}
 
+	if responseTime >= 0 {
+		jsonOut["response_time"] = responseTime
+	}
 	f := internal.JSONFlattener{}
 	err = f.FlattenJSON("", jsonOut)
 	if err != nil {
@@ -153,7 +158,7 @@ func (h *HttpJson) gatherServer(
 	} else {
 		msrmnt_name = "httpjson_" + h.Name
 	}
-	acc.AddFields(msrmnt_name, f.Fields, nil)
+	acc.AddFields(msrmnt_name, f.Fields, tags)
 	return nil
 }
 
@@ -164,11 +169,11 @@ func (h *HttpJson) gatherServer(
 // Returns:
 //     string: body of the response
 //     error : Any error that may have occurred
-func (h *HttpJson) sendRequest(serverURL string) (string, error) {
+func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
-		return "", fmt.Errorf("Invalid server URL \"%s\"", serverURL)
+		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
 	}
 
 	params := url.Values{}
@@ -180,19 +185,21 @@ func (h *HttpJson) sendRequest(serverURL string) (string, error) {
 	// Create + send request
 	req, err := http.NewRequest(h.Method, requestURL.String(), nil)
 	if err != nil {
-		return "", err
+		return "", -1, err
 	}
 
+	start := time.Now()
 	resp, err := h.client.MakeRequest(req)
 	if err != nil {
-		return "", err
+		return "", -1, err
 	}
-	defer resp.Body.Close()
 
 	defer resp.Body.Close()
+	responseTime := time.Since(start).Seconds()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return string(body), err
+		return string(body), responseTime, err
 	}
 
 	// Process response
@@ -203,10 +210,10 @@ func (h *HttpJson) sendRequest(serverURL string) (string, error) {
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
 			http.StatusText(http.StatusOK))
-		return string(body), err
+		return string(body), responseTime, err
 	}
 
-	return string(body), err
+	return string(body), responseTime, err
 }
 
 func init() {

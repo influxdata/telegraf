@@ -51,7 +51,7 @@ func (f *JSONFlattener) FlattenJSON(
 		}
 	case float64:
 		f.Fields[fieldname] = t
-	case bool, string, []interface{}:
+	case nil, bool, string, []interface{}:
 		// ignored types
 		return nil
 	default:

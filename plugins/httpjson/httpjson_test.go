@@ -15,7 +15,7 @@ import (
 const validJSON = `
 	{
 		"parent": {
-			"child": 3,
+			"child": 3.0,
 			"ignored_child": "hi"
 		},
 		"ignored_null": null,
@@ -76,65 +76,64 @@ func (c mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 //
 // Returns:
 //     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
-func genMockHttpJson(response string, statusCode int) *HttpJson {
-	return &HttpJson{
+func genMockHttpJsons(response string, statusCode int) []*HttpJson {
+	httpjson1 := &HttpJson{
 		client: mockHTTPClient{responseBody: response, statusCode: statusCode},
-		Services: []Service{
-			Service{
-				Servers: []string{
-					"http://server1.example.com/metrics/",
-					"http://server2.example.com/metrics/",
-				},
-				Name:   "my_webapp",
-				Method: "GET",
-				Parameters: map[string]string{
-					"httpParam1": "12",
-					"httpParam2": "the second parameter",
-				},
-			},
-			Service{
-				Servers: []string{
-					"http://server3.example.com/metrics/",
-					"http://server4.example.com/metrics/",
-				},
-				Name:   "other_webapp",
-				Method: "POST",
-				Parameters: map[string]string{
-					"httpParam1": "12",
-					"httpParam2": "the second parameter",
-				},
-				TagKeys: []string{
-					"role",
-					"build",
-				},
-			},
+		Servers: []string{
+			"http://server1.example.com/metrics/",
+			"http://server2.example.com/metrics/",
+		},
+		Name:   "my_webapp",
+		Method: "GET",
+		Parameters: map[string]string{
+			"httpParam1": "12",
+			"httpParam2": "the second parameter",
 		},
 	}
+	httpjson2 := &HttpJson{
+		client: mockHTTPClient{responseBody: response, statusCode: statusCode},
+		Servers: []string{
+			"http://server3.example.com/metrics/",
+			"http://server4.example.com/metrics/",
+		},
+		Name:   "other_webapp",
+		Method: "POST",
+		Parameters: map[string]string{
+			"httpParam1": "12",
+			"httpParam2": "the second parameter",
+		},
+		TagKeys: []string{
+			"role",
+			"build",
+		},
+	}
+	httpjsons := []*HttpJson{httpjson1, httpjson2}
+	return httpjsons
 }
 
 // Test that the proper values are ignored or collected
 func TestHttpJson200(t *testing.T) {
-	httpjson := genMockHttpJson(validJSON, 200)
+	httpjsons := genMockHttpJsons(validJSON, 200)
+	for _, httpjson := range httpjsons {
+		var acc testutil.Accumulator
+		err := httpjson.Gather(&acc)
+		require.NoError(t, err)
 
-	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
-	require.NoError(t, err)
+		assert.Equal(t, 2, len(acc.Points))
 
-	assert.Equal(t, 8, len(acc.Points))
-
-	for _, service := range httpjson.Services {
-		for _, srv := range service.Servers {
+		for _, srv := range httpjson.Servers {
+			// Override response time
+			for _, p := range acc.Points {
+				p.Fields["response_time"] = 1.0
+			}
 			require.NoError(t,
-				acc.ValidateTaggedValue(
-					fmt.Sprintf("%s_parent_child", service.Name),
-					3.0,
-					map[string]string{"server": srv},
-				),
-			)
-			require.NoError(t,
-				acc.ValidateTaggedValue(
-					fmt.Sprintf("%s_integer", service.Name),
-					4.0,
+				acc.ValidateTaggedFieldsValue(
+					fmt.Sprintf("httpjson_%s", httpjson.Name),
+					map[string]interface{}{
+						"parent_child":  3.0,
+						"integer":       4.0,
+						"response_time": 1.0,
+					},
 					map[string]string{"server": srv},
 				),
 			)
@@ -144,80 +143,95 @@ func TestHttpJson200(t *testing.T) {
 
 // Test response to HTTP 500
 func TestHttpJson500(t *testing.T) {
-	httpjson := genMockHttpJson(validJSON, 500)
+	httpjsons := genMockHttpJsons(validJSON, 500)
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
+	for _, httpjson := range httpjsons {
+		err := httpjson.Gather(&acc)
 
-	assert.NotNil(t, err)
-	// 4 error lines for (2 urls) * (2 services)
-	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 4)
+		assert.NotNil(t, err)
+		// 4 error lines for (2 urls) * (2 services)
+		assert.Equal(t, len(strings.Split(err.Error(), "\n")), 2)
+	}
 	assert.Equal(t, 0, len(acc.Points))
 }
 
 // Test response to HTTP 405
 func TestHttpJsonBadMethod(t *testing.T) {
-	httpjson := genMockHttpJson(validJSON, 200)
-	httpjson.Services[0].Method = "NOT_A_REAL_METHOD"
+	httpjsons := genMockHttpJsons(validJSON, 200)
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
+	for _, httpjson := range httpjsons {
+		httpjson.Method = "NOT_A_REAL_METHOD"
+		err := httpjson.Gather(&acc)
 
-	assert.NotNil(t, err)
-	// 2 error lines for (2 urls) * (1 falied service)
-	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 2)
-
+		assert.NotNil(t, err)
+		// 2 error lines for (2 urls) * (1 falied service)
+		assert.Equal(t, len(strings.Split(err.Error(), "\n")), 2)
+	}
 	// (2 measurements) * (2 servers) * (1 successful service)
-	assert.Equal(t, 4, len(acc.Points))
+	assert.Equal(t, 0, len(acc.Points))
 }
 
 // Test response to malformed JSON
 func TestHttpJsonBadJson(t *testing.T) {
-	httpjson := genMockHttpJson(invalidJSON, 200)
+	httpjsons := genMockHttpJsons(invalidJSON, 200)
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
+	for _, httpjson := range httpjsons {
+		err := httpjson.Gather(&acc)
 
-	assert.NotNil(t, err)
-	// 4 error lines for (2 urls) * (2 services)
-	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 4)
+		assert.NotNil(t, err)
+		// 4 error lines for (2 urls) * (2 services)
+		assert.Equal(t, len(strings.Split(err.Error(), "\n")), 2)
+	}
 	assert.Equal(t, 0, len(acc.Points))
 }
 
 // Test response to empty string as response objectgT
 func TestHttpJsonEmptyResponse(t *testing.T) {
-	httpjson := genMockHttpJson(empty, 200)
+	httpjsons := genMockHttpJsons(empty, 200)
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
+	for _, httpjson := range httpjsons {
+		err := httpjson.Gather(&acc)
 
-	assert.NotNil(t, err)
-	// 4 error lines for (2 urls) * (2 services)
-	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 4)
+		assert.NotNil(t, err)
+		// 4 error lines for (2 urls) * (2 services)
+		assert.Equal(t, len(strings.Split(err.Error(), "\n")), 2)
+	}
 	assert.Equal(t, 0, len(acc.Points))
 }
 
 // Test that the proper values are ignored or collected
 func TestHttpJson200Tags(t *testing.T) {
-	httpjson := genMockHttpJson(validJSONTags, 200)
+	httpjsons := genMockHttpJsons(validJSONTags, 200)
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
-	require.NoError(t, err)
+	for _, httpjson := range httpjsons {
+		err := httpjson.Gather(&acc)
+		require.NoError(t, err)
 
-	assert.Equal(t, 4, len(acc.Points))
-
-	for _, service := range httpjson.Services {
-		if service.Name == "other_webapp" {
-			for _, srv := range service.Servers {
+		if httpjson.Name == "other_webapp" {
+			assert.Equal(t, 4, len(acc.Points))
+			for _, srv := range httpjson.Servers {
+				// Override response time
+				for _, p := range acc.Points {
+					p.Fields["response_time"] = 1.0
+				}
 				require.NoError(t,
-					acc.ValidateTaggedValue(
-						fmt.Sprintf("%s_value", service.Name),
-						15.0,
+					acc.ValidateTaggedFieldsValue(
+						fmt.Sprintf("httpjson_%s", httpjson.Name),
+						map[string]interface{}{
+							"value":         15.0,
+							"response_time": 1.0,
+						},
 						map[string]string{"server": srv, "role": "master", "build": "123"},
 					),
 				)
 			}
+		} else {
+			assert.Equal(t, 2, len(acc.Points))
 		}
 	}
 }
