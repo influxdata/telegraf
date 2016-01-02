@@ -55,8 +55,10 @@ func (r *Riemann) Write(points []*client.Point) error {
 
 	var events []*raidman.Event
 	for _, p := range points {
-		ev := buildEvent(p)
-		events = append(events, ev)
+		evs := buildEvents(p)
+		for _, ev := range evs {
+			events = append(events, ev)
+		}
 	}
 
 	var senderr = r.client.SendMulti(events)
@@ -68,24 +70,28 @@ func (r *Riemann) Write(points []*client.Point) error {
 	return nil
 }
 
-func buildEvent(p *client.Point) *raidman.Event {
-	host, ok := p.Tags()["host"]
-	if !ok {
-		hostname, err := os.Hostname()
-		if err != nil {
-			host = "unknown"
-		} else {
-			host = hostname
+func buildEvents(p *client.Point) []*raidman.Event {
+	events := []*raidman.Event{}
+	for fieldName, value := range p.Fields() {
+		host, ok := p.Tags()["host"]
+		if !ok {
+			hostname, err := os.Hostname()
+			if err != nil {
+				host = "unknown"
+			} else {
+				host = hostname
+			}
 		}
+
+		event := &raidman.Event{
+			Host:    host,
+			Service: p.Name() + "_" + fieldName,
+			Metric:  value,
+		}
+		events = append(events, event)
 	}
 
-	var event = &raidman.Event{
-		Host:    host,
-		Service: p.Name(),
-		Metric:  p.Fields()["value"],
-	}
-
-	return event
+	return events
 }
 
 func init() {

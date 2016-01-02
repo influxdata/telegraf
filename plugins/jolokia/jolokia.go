@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/influxdb/telegraf/plugins"
 )
@@ -23,8 +22,6 @@ type Server struct {
 type Metric struct {
 	Name string
 	Jmx  string
-	Pass []string
-	Drop []string
 }
 
 type JolokiaClient interface {
@@ -44,17 +41,12 @@ type Jolokia struct {
 	Context string
 	Servers []Server
 	Metrics []Metric
-	Tags    map[string]string
 }
 
 func (j *Jolokia) SampleConfig() string {
 	return `
   # This is the context root used to compose the jolokia url
   context = "/jolokia/read"
-
-  # Tags added to each measurements
-  [jolokia.tags]
-    group = "as"
 
   # List of servers exposing jolokia read service
   [[plugins.jolokia.servers]]
@@ -70,23 +62,6 @@ func (j *Jolokia) SampleConfig() string {
   [[plugins.jolokia.metrics]]
     name = "heap_memory_usage"
     jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
-
-
-  # This drops the 'committed' value from Eden space measurement
-  [[plugins.jolokia.metrics]]
-    name = "memory_eden"
-    jmx  = "/java.lang:type=MemoryPool,name=PS Eden Space/Usage"
-    drop = [ "committed" ]
-
-
-  # This passes only DaemonThreadCount and ThreadCount
-  [[plugins.jolokia.metrics]]
-    name = "heap_threads"
-    jmx  = "/java.lang:type=Threading"
-    pass = [
-      "DaemonThreadCount",
-      "ThreadCount"
-    ]
 `
 }
 
@@ -100,12 +75,9 @@ func (j *Jolokia) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer req.Body.Close()
 
 	resp, err := j.jClient.MakeRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -137,64 +109,21 @@ func (j *Jolokia) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
 	return jsonOut, nil
 }
 
-func (m *Metric) shouldPass(field string) bool {
-
-	if m.Pass != nil {
-
-		for _, pass := range m.Pass {
-			if strings.HasPrefix(field, pass) {
-				return true
-			}
-		}
-
-		return false
-	}
-
-	if m.Drop != nil {
-
-		for _, drop := range m.Drop {
-			if strings.HasPrefix(field, drop) {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	return true
-}
-
-func (m *Metric) filterFields(fields map[string]interface{}) map[string]interface{} {
-
-	for field, _ := range fields {
-		if !m.shouldPass(field) {
-			delete(fields, field)
-		}
-	}
-
-	return fields
-}
-
 func (j *Jolokia) Gather(acc plugins.Accumulator) error {
-
 	context := j.Context //"/jolokia/read"
 	servers := j.Servers
 	metrics := j.Metrics
-	tags := j.Tags
-
-	if tags == nil {
-		tags = map[string]string{}
-	}
+	tags := make(map[string]string)
 
 	for _, server := range servers {
+		tags["server"] = server.Name
+		tags["port"] = server.Port
+		tags["host"] = server.Host
+		fields := make(map[string]interface{})
 		for _, metric := range metrics {
 
 			measurement := metric.Name
 			jmxPath := metric.Jmx
-
-			tags["server"] = server.Name
-			tags["port"] = server.Port
-			tags["host"] = server.Host
 
 			// Prepare URL
 			requestUrl, err := url.Parse("http://" + server.Host + ":" +
@@ -209,16 +138,20 @@ func (j *Jolokia) Gather(acc plugins.Accumulator) error {
 			out, _ := j.getAttr(requestUrl)
 
 			if values, ok := out["value"]; ok {
-				switch values.(type) {
+				switch t := values.(type) {
 				case map[string]interface{}:
-					acc.AddFields(measurement, metric.filterFields(values.(map[string]interface{})), tags)
+					for k, v := range t {
+						fields[measurement+"_"+k] = v
+					}
 				case interface{}:
-					acc.Add(measurement, values.(interface{}), tags)
+					fields[measurement] = t
 				}
 			} else {
-				fmt.Printf("Missing key 'value' in '%s' output response\n", requestUrl.String())
+				fmt.Printf("Missing key 'value' in '%s' output response\n",
+					requestUrl.String())
 			}
 		}
+		acc.AddFields("jolokia", fields, tags)
 	}
 
 	return nil

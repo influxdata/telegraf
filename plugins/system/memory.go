@@ -22,18 +22,17 @@ func (s *MemStats) Gather(acc plugins.Accumulator) error {
 		return fmt.Errorf("error getting virtual memory info: %s", err)
 	}
 
-	vmtags := map[string]string(nil)
-
-	acc.Add("total", vm.Total, vmtags)
-	acc.Add("available", vm.Available, vmtags)
-	acc.Add("used", vm.Used, vmtags)
-	acc.Add("free", vm.Free, vmtags)
-	acc.Add("cached", vm.Cached, vmtags)
-	acc.Add("buffered", vm.Buffers, vmtags)
-	acc.Add("used_percent", 100*float64(vm.Used)/float64(vm.Total), vmtags)
-	acc.Add("available_percent",
-		100*float64(vm.Available)/float64(vm.Total),
-		vmtags)
+	fields := map[string]interface{}{
+		"total":             vm.Total,
+		"available":         vm.Available,
+		"used":              vm.Used,
+		"free":              vm.Free,
+		"cached":            vm.Cached,
+		"buffered":          vm.Buffers,
+		"used_percent":      100 * float64(vm.Used) / float64(vm.Total),
+		"available_percent": 100 * float64(vm.Available) / float64(vm.Total),
+	}
+	acc.AddFields("mem", fields, nil)
 
 	return nil
 }
@@ -54,14 +53,15 @@ func (s *SwapStats) Gather(acc plugins.Accumulator) error {
 		return fmt.Errorf("error getting swap memory info: %s", err)
 	}
 
-	swaptags := map[string]string(nil)
-
-	acc.Add("total", swap.Total, swaptags)
-	acc.Add("used", swap.Used, swaptags)
-	acc.Add("free", swap.Free, swaptags)
-	acc.Add("used_percent", swap.UsedPercent, swaptags)
-	acc.Add("in", swap.Sin, swaptags)
-	acc.Add("out", swap.Sout, swaptags)
+	fields := map[string]interface{}{
+		"total":        swap.Total,
+		"used":         swap.Used,
+		"free":         swap.Free,
+		"used_percent": swap.UsedPercent,
+		"in":           swap.Sin,
+		"out":          swap.Sout,
+	}
+	acc.AddFields("swap", fields, nil)
 
 	return nil
 }

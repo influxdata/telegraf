@@ -80,14 +80,14 @@ func (g *Prometheus) gatherURL(url string, acc plugins.Accumulator) error {
 			return fmt.Errorf("error getting processing samples for %s: %s", url, err)
 		}
 		for _, sample := range samples {
-			tags := map[string]string{}
+			tags := make(map[string]string)
 			for key, value := range sample.Metric {
 				if key == model.MetricNameLabel {
 					continue
 				}
 				tags[string(key)] = string(value)
 			}
-			acc.Add(string(sample.Metric[model.MetricNameLabel]),
+			acc.Add("prometheus_"+string(sample.Metric[model.MetricNameLabel]),
 				float64(sample.Value), tags)
 		}
 	}

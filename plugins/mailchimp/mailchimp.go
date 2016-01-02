@@ -75,35 +75,38 @@ func gatherReport(acc plugins.Accumulator, report Report, now time.Time) {
 	tags := make(map[string]string)
 	tags["id"] = report.ID
 	tags["campaign_title"] = report.CampaignTitle
-	acc.Add("emails_sent", report.EmailsSent, tags, now)
-	acc.Add("abuse_reports", report.AbuseReports, tags, now)
-	acc.Add("unsubscribed", report.Unsubscribed, tags, now)
-	acc.Add("hard_bounces", report.Bounces.HardBounces, tags, now)
-	acc.Add("soft_bounces", report.Bounces.SoftBounces, tags, now)
-	acc.Add("syntax_errors", report.Bounces.SyntaxErrors, tags, now)
-	acc.Add("forwards_count", report.Forwards.ForwardsCount, tags, now)
-	acc.Add("forwards_opens", report.Forwards.ForwardsOpens, tags, now)
-	acc.Add("opens_total", report.Opens.OpensTotal, tags, now)
-	acc.Add("unique_opens", report.Opens.UniqueOpens, tags, now)
-	acc.Add("open_rate", report.Opens.OpenRate, tags, now)
-	acc.Add("clicks_total", report.Clicks.ClicksTotal, tags, now)
-	acc.Add("unique_clicks", report.Clicks.UniqueClicks, tags, now)
-	acc.Add("unique_subscriber_clicks", report.Clicks.UniqueSubscriberClicks, tags, now)
-	acc.Add("click_rate", report.Clicks.ClickRate, tags, now)
-	acc.Add("facebook_recipient_likes", report.FacebookLikes.RecipientLikes, tags, now)
-	acc.Add("facebook_unique_likes", report.FacebookLikes.UniqueLikes, tags, now)
-	acc.Add("facebook_likes", report.FacebookLikes.FacebookLikes, tags, now)
-	acc.Add("industry_type", report.IndustryStats.Type, tags, now)
-	acc.Add("industry_open_rate", report.IndustryStats.OpenRate, tags, now)
-	acc.Add("industry_click_rate", report.IndustryStats.ClickRate, tags, now)
-	acc.Add("industry_bounce_rate", report.IndustryStats.BounceRate, tags, now)
-	acc.Add("industry_unopen_rate", report.IndustryStats.UnopenRate, tags, now)
-	acc.Add("industry_unsub_rate", report.IndustryStats.UnsubRate, tags, now)
-	acc.Add("industry_abuse_rate", report.IndustryStats.AbuseRate, tags, now)
-	acc.Add("list_stats_sub_rate", report.ListStats.SubRate, tags, now)
-	acc.Add("list_stats_unsub_rate", report.ListStats.UnsubRate, tags, now)
-	acc.Add("list_stats_open_rate", report.ListStats.OpenRate, tags, now)
-	acc.Add("list_stats_click_rate", report.ListStats.ClickRate, tags, now)
+	fields := map[string]interface{}{
+		"emails_sent":              report.EmailsSent,
+		"abuse_reports":            report.AbuseReports,
+		"unsubscribed":             report.Unsubscribed,
+		"hard_bounces":             report.Bounces.HardBounces,
+		"soft_bounces":             report.Bounces.SoftBounces,
+		"syntax_errors":            report.Bounces.SyntaxErrors,
+		"forwards_count":           report.Forwards.ForwardsCount,
+		"forwards_opens":           report.Forwards.ForwardsOpens,
+		"opens_total":              report.Opens.OpensTotal,
+		"unique_opens":             report.Opens.UniqueOpens,
+		"open_rate":                report.Opens.OpenRate,
+		"clicks_total":             report.Clicks.ClicksTotal,
+		"unique_clicks":            report.Clicks.UniqueClicks,
+		"unique_subscriber_clicks": report.Clicks.UniqueSubscriberClicks,
+		"click_rate":               report.Clicks.ClickRate,
+		"facebook_recipient_likes": report.FacebookLikes.RecipientLikes,
+		"facebook_unique_likes":    report.FacebookLikes.UniqueLikes,
+		"facebook_likes":           report.FacebookLikes.FacebookLikes,
+		"industry_type":            report.IndustryStats.Type,
+		"industry_open_rate":       report.IndustryStats.OpenRate,
+		"industry_click_rate":      report.IndustryStats.ClickRate,
+		"industry_bounce_rate":     report.IndustryStats.BounceRate,
+		"industry_unopen_rate":     report.IndustryStats.UnopenRate,
+		"industry_unsub_rate":      report.IndustryStats.UnsubRate,
+		"industry_abuse_rate":      report.IndustryStats.AbuseRate,
+		"list_stats_sub_rate":      report.ListStats.SubRate,
+		"list_stats_unsub_rate":    report.ListStats.UnsubRate,
+		"list_stats_open_rate":     report.ListStats.OpenRate,
+		"list_stats_click_rate":    report.ListStats.ClickRate,
+	}
+	acc.AddFields("mailchimp", fields, tags, now)
 }
 
 func init() {

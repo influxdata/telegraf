@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdb/telegraf/plugins"
 	"github.com/shirou/gopsutil/cpu"
@@ -31,7 +32,7 @@ var sampleConfig = `
   # Whether to report total system cpu stats or not
   totalcpu = true
   # Comment this line if you want the raw CPU time metrics
-  drop = ["cpu_time*"]
+  drop = ["time_*"]
 `
 
 func (_ *CPUStats) SampleConfig() string {
@@ -43,6 +44,7 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error getting CPU info: %s", err)
 	}
+	now := time.Now()
 
 	for i, cts := range times {
 		tags := map[string]string{
@@ -51,21 +53,24 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 
 		total := totalCpuTime(cts)
 
-		// Add total cpu numbers
-		add(acc, "time_user", cts.User, tags)
-		add(acc, "time_system", cts.System, tags)
-		add(acc, "time_idle", cts.Idle, tags)
-		add(acc, "time_nice", cts.Nice, tags)
-		add(acc, "time_iowait", cts.Iowait, tags)
-		add(acc, "time_irq", cts.Irq, tags)
-		add(acc, "time_softirq", cts.Softirq, tags)
-		add(acc, "time_steal", cts.Steal, tags)
-		add(acc, "time_guest", cts.Guest, tags)
-		add(acc, "time_guest_nice", cts.GuestNice, tags)
+		// Add cpu time metrics
+		fields := map[string]interface{}{
+			"time_user":       cts.User,
+			"time_system":     cts.System,
+			"time_idle":       cts.Idle,
+			"time_nice":       cts.Nice,
+			"time_iowait":     cts.Iowait,
+			"time_irq":        cts.Irq,
+			"time_softirq":    cts.Softirq,
+			"time_steal":      cts.Steal,
+			"time_guest":      cts.Guest,
+			"time_guest_nice": cts.GuestNice,
+		}
 
 		// Add in percentage
 		if len(s.lastStats) == 0 {
-			// If it's the 1st gather, can't get CPU stats yet
+			acc.AddFields("cpu", fields, tags, now)
+			// If it's the 1st gather, can't get CPU Usage stats yet
 			continue
 		}
 		lastCts := s.lastStats[i]
@@ -81,17 +86,17 @@ func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 			continue
 		}
 
-		add(acc, "usage_user", 100*(cts.User-lastCts.User)/totalDelta, tags)
-		add(acc, "usage_system", 100*(cts.System-lastCts.System)/totalDelta, tags)
-		add(acc, "usage_idle", 100*(cts.Idle-lastCts.Idle)/totalDelta, tags)
-		add(acc, "usage_nice", 100*(cts.Nice-lastCts.Nice)/totalDelta, tags)
-		add(acc, "usage_iowait", 100*(cts.Iowait-lastCts.Iowait)/totalDelta, tags)
-		add(acc, "usage_irq", 100*(cts.Irq-lastCts.Irq)/totalDelta, tags)
-		add(acc, "usage_softirq", 100*(cts.Softirq-lastCts.Softirq)/totalDelta, tags)
-		add(acc, "usage_steal", 100*(cts.Steal-lastCts.Steal)/totalDelta, tags)
-		add(acc, "usage_guest", 100*(cts.Guest-lastCts.Guest)/totalDelta, tags)
-		add(acc, "usage_guest_nice", 100*(cts.GuestNice-lastCts.GuestNice)/totalDelta, tags)
-
+		fields["usage_user"] = 100 * (cts.User - lastCts.User) / totalDelta
+		fields["usage_system"] = 100 * (cts.System - lastCts.System) / totalDelta
+		fields["usage_idle"] = 100 * (cts.Idle - lastCts.Idle) / totalDelta
+		fields["usage_nice"] = 100 * (cts.Nice - lastCts.Nice) / totalDelta
+		fields["usage_iowait"] = 100 * (cts.Iowait - lastCts.Iowait) / totalDelta
+		fields["usage_irq"] = 100 * (cts.Irq - lastCts.Irq) / totalDelta
+		fields["usage_softirq"] = 100 * (cts.Softirq - lastCts.Softirq) / totalDelta
+		fields["usage_steal"] = 100 * (cts.Steal - lastCts.Steal) / totalDelta
+		fields["usage_guest"] = 100 * (cts.Guest - lastCts.Guest) / totalDelta
+		fields["usage_guest_nice"] = 100 * (cts.GuestNice - lastCts.GuestNice) / totalDelta
+		acc.AddFields("cpu", fields, tags, now)
 	}
 
 	s.lastStats = times

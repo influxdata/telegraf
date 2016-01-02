@@ -41,6 +41,5 @@ func (s *Trig) Gather(acc plugins.Accumulator) error {
 }
 
 func init() {
-
 	plugins.Add("Trig", func() plugins.Plugin { return &Trig{x: 0.0} })
 }

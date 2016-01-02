@@ -7,22 +7,17 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/shirou/gopsutil/process"
 
 	"github.com/influxdb/telegraf/plugins"
 )
 
-type Specification struct {
+type Procstat struct {
 	PidFile string `toml:"pid_file"`
 	Exe     string
-	Prefix  string
 	Pattern string
-}
-
-type Procstat struct {
-	Specifications []*Specification
+	Prefix  string
 }
 
 func NewProcstat() *Procstat {
@@ -30,8 +25,6 @@ func NewProcstat() *Procstat {
 }
 
 var sampleConfig = `
-  [[plugins.procstat.specifications]]
-  prefix = "" # optional string to prefix measurements
   # Must specify one of: pid_file, exe, or pattern
   # PID file to monitor process
   pid_file = "/var/run/nginx.pid"
@@ -39,6 +32,9 @@ var sampleConfig = `
   # exe = "nginx"
   # pattern as argument for pgrep (ie, pgrep -f <pattern>)
   # pattern = "nginx"
+
+  # Field name prefix
+  prefix = ""
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -50,35 +46,26 @@ func (_ *Procstat) Description() string {
 }
 
 func (p *Procstat) Gather(acc plugins.Accumulator) error {
-	var wg sync.WaitGroup
-
-	for _, specification := range p.Specifications {
-		wg.Add(1)
-		go func(spec *Specification, acc plugins.Accumulator) {
-			defer wg.Done()
-			procs, err := spec.createProcesses()
-			if err != nil {
-				log.Printf("Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] %s",
-					spec.Exe, spec.PidFile, spec.Pattern, err.Error())
-			} else {
-				for _, proc := range procs {
-					p := NewSpecProcessor(spec.Prefix, acc, proc)
-					p.pushMetrics()
-				}
-			}
-		}(specification, acc)
+	procs, err := p.createProcesses()
+	if err != nil {
+		log.Printf("Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] %s",
+			p.Exe, p.PidFile, p.Pattern, err.Error())
+	} else {
+		for _, proc := range procs {
+			p := NewSpecProcessor(p.Prefix, acc, proc)
+			p.pushMetrics()
+		}
 	}
-	wg.Wait()
 
 	return nil
 }
 
-func (spec *Specification) createProcesses() ([]*process.Process, error) {
+func (p *Procstat) createProcesses() ([]*process.Process, error) {
 	var out []*process.Process
 	var errstring string
 	var outerr error
 
-	pids, err := spec.getAllPids()
+	pids, err := p.getAllPids()
 	if err != nil {
 		errstring += err.Error() + " "
 	}
@@ -99,16 +86,16 @@ func (spec *Specification) createProcesses() ([]*process.Process, error) {
 	return out, outerr
 }
 
-func (spec *Specification) getAllPids() ([]int32, error) {
+func (p *Procstat) getAllPids() ([]int32, error) {
 	var pids []int32
 	var err error
 
-	if spec.PidFile != "" {
-		pids, err = pidsFromFile(spec.PidFile)
-	} else if spec.Exe != "" {
-		pids, err = pidsFromExe(spec.Exe)
-	} else if spec.Pattern != "" {
-		pids, err = pidsFromPattern(spec.Pattern)
+	if p.PidFile != "" {
+		pids, err = pidsFromFile(p.PidFile)
+	} else if p.Exe != "" {
+		pids, err = pidsFromExe(p.Exe)
+	} else if p.Pattern != "" {
+		pids, err = pidsFromPattern(p.Pattern)
 	} else {
 		err = fmt.Errorf("Either exe, pid_file or pattern has to be specified")
 	}

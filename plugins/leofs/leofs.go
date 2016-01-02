@@ -197,6 +197,8 @@ func (l *LeoFS) gatherServer(endpoint string, serverType ServerType, acc plugins
 		"node": nodeNameTrimmed,
 	}
 	i := 0
+
+	fields := make(map[string]interface{})
 	for scanner.Scan() {
 		key := KeyMapping[serverType][i]
 		val, err := retrieveTokenAfterColon(scanner.Text())
@@ -207,9 +209,10 @@ func (l *LeoFS) gatherServer(endpoint string, serverType ServerType, acc plugins
 		if err != nil {
 			return fmt.Errorf("Unable to parse the value:%s, err:%s", val, err)
 		}
-		acc.Add(key, fVal, tags)
+		fields[key] = fVal
 		i++
 	}
+	acc.AddFields("leofs", fields, tags)
 	return nil
 }
 

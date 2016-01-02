@@ -12,6 +12,7 @@ import (
 type SpecProcessor struct {
 	Prefix string
 	tags   map[string]string
+	fields map[string]interface{}
 	acc    plugins.Accumulator
 	proc   *process.Process
 }
@@ -23,7 +24,12 @@ func (p *SpecProcessor) add(metric string, value interface{}) {
 	} else {
 		mname = p.Prefix + "_" + metric
 	}
-	p.acc.Add(mname, value, p.tags)
+	p.fields[mname] = value
+}
+
+func (p *SpecProcessor) flush() {
+	p.acc.AddFields("procstat", p.fields, p.tags)
+	p.fields = make(map[string]interface{})
 }
 
 func NewSpecProcessor(
@@ -39,6 +45,7 @@ func NewSpecProcessor(
 	return &SpecProcessor{
 		Prefix: prefix,
 		tags:   tags,
+		fields: make(map[string]interface{}),
 		acc:    acc,
 		proc:   p,
 	}
@@ -60,6 +67,7 @@ func (p *SpecProcessor) pushMetrics() {
 	if err := p.pushMemoryStats(); err != nil {
 		log.Printf("procstat, mem stats not available: %s", err.Error())
 	}
+	p.flush()
 }
 
 func (p *SpecProcessor) pushFDStats() error {
@@ -94,21 +102,22 @@ func (p *SpecProcessor) pushIOStats() error {
 }
 
 func (p *SpecProcessor) pushCPUStats() error {
-	cpu, err := p.proc.CPUTimes()
+	cpu_time, err := p.proc.CPUTimes()
 	if err != nil {
 		return err
 	}
-	p.add("cpu_user", cpu.User)
-	p.add("cpu_system", cpu.System)
-	p.add("cpu_idle", cpu.Idle)
-	p.add("cpu_nice", cpu.Nice)
-	p.add("cpu_iowait", cpu.Iowait)
-	p.add("cpu_irq", cpu.Irq)
-	p.add("cpu_soft_irq", cpu.Softirq)
-	p.add("cpu_soft_steal", cpu.Steal)
-	p.add("cpu_soft_stolen", cpu.Stolen)
-	p.add("cpu_soft_guest", cpu.Guest)
-	p.add("cpu_soft_guest_nice", cpu.GuestNice)
+	p.add("cpu_time_user", cpu_time.User)
+	p.add("cpu_time_system", cpu_time.System)
+	p.add("cpu_time_idle", cpu_time.Idle)
+	p.add("cpu_time_nice", cpu_time.Nice)
+	p.add("cpu_time_iowait", cpu_time.Iowait)
+	p.add("cpu_time_irq", cpu_time.Irq)
+	p.add("cpu_time_soft_irq", cpu_time.Softirq)
+	p.add("cpu_time_soft_steal", cpu_time.Steal)
+	p.add("cpu_time_soft_stolen", cpu_time.Stolen)
+	p.add("cpu_time_soft_guest", cpu_time.Guest)
+	p.add("cpu_time_soft_guest_nice", cpu_time.GuestNice)
+
 	return nil
 }
 
