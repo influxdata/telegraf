@@ -1,16 +1,12 @@
 package system
 
 import (
-	"fmt"
 	gonet "net"
 	"os"
-	"reflect"
 	"strings"
-	"testing"
 
 	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/plugins"
-	"github.com/influxdb/telegraf/testutil"
 
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/shirou/gopsutil/cpu"
@@ -18,8 +14,6 @@ import (
 	"github.com/shirou/gopsutil/docker"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/net"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type DockerContainerStat struct {
@@ -171,50 +165,4 @@ func (s *systemPS) DockerStat() ([]*DockerContainerStat, error) {
 	}
 
 	return stats, nil
-}
-
-// Asserts that a given accumulator contains a measurment of type float64 with
-// specific tags within a certain distance of a given expected value. Asserts a failure
-// if the measurement is of the wrong type, or if no matching measurements are found
-//
-// Paramaters:
-//     t *testing.T            : Testing object to use
-//     acc testutil.Accumulator: Accumulator to examine
-//     measurement string      : Name of the measurement to examine
-//     expectedValue float64   : Value to search for within the measurement
-//     delta float64           : Maximum acceptable distance of an accumulated value
-//                               from the expectedValue parameter. Useful when
-//                               floating-point arithmatic imprecision makes looking
-//                               for an exact match impractical
-//     tags map[string]string  : Tag set the found measurement must have. Set to nil to
-//                               ignore the tag set.
-func assertContainsTaggedFloat(
-	t *testing.T,
-	acc *testutil.Accumulator,
-	measurement string,
-	expectedValue float64,
-	delta float64,
-	tags map[string]string,
-) {
-	var actualValue float64
-	for _, pt := range acc.Points {
-		if pt.Measurement == measurement {
-			if (tags == nil) || reflect.DeepEqual(pt.Tags, tags) {
-				if value, ok := pt.Fields["value"].(float64); ok {
-					actualValue = value
-					if (value >= expectedValue-delta) && (value <= expectedValue+delta) {
-						// Found the point, return without failing
-						return
-					}
-				} else {
-					assert.Fail(t, fmt.Sprintf("Measurement \"%s\" does not have type float64",
-						measurement))
-				}
-
-			}
-		}
-	}
-	msg := fmt.Sprintf("Could not find measurement \"%s\" with requested tags within %f of %f, Actual: %f",
-		measurement, delta, expectedValue, actualValue)
-	assert.Fail(t, msg)
 }

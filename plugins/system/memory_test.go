@@ -5,7 +5,6 @@ import (
 
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/shirou/gopsutil/mem"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,30 +43,30 @@ func TestMemStats(t *testing.T) {
 	err = (&MemStats{&mps}).Gather(&acc)
 	require.NoError(t, err)
 
-	vmtags := map[string]string(nil)
-
-	assert.True(t, acc.CheckTaggedValue("total", uint64(12400), vmtags))
-	assert.True(t, acc.CheckTaggedValue("available", uint64(7600), vmtags))
-	assert.True(t, acc.CheckTaggedValue("used", uint64(5000), vmtags))
-	assert.True(t, acc.CheckTaggedValue("available_percent",
-		float64(7600)/float64(12400)*100,
-		vmtags))
-	assert.True(t, acc.CheckTaggedValue("used_percent",
-		float64(5000)/float64(12400)*100,
-		vmtags))
-	assert.True(t, acc.CheckTaggedValue("free", uint64(1235), vmtags))
+	memfields := map[string]interface{}{
+		"total":             uint64(12400),
+		"available":         uint64(7600),
+		"used":              uint64(5000),
+		"available_percent": float64(7600) / float64(12400) * 100,
+		"used_percent":      float64(5000) / float64(12400) * 100,
+		"free":              uint64(1235),
+		"cached":            uint64(0),
+		"buffered":          uint64(0),
+	}
+	acc.AssertContainsFields(t, "mem", memfields, nil)
 
 	acc.Points = nil
 
 	err = (&SwapStats{&mps}).Gather(&acc)
 	require.NoError(t, err)
 
-	swaptags := map[string]string(nil)
-
-	assert.NoError(t, acc.ValidateTaggedValue("total", uint64(8123), swaptags))
-	assert.NoError(t, acc.ValidateTaggedValue("used", uint64(1232), swaptags))
-	assert.NoError(t, acc.ValidateTaggedValue("used_percent", float64(12.2), swaptags))
-	assert.NoError(t, acc.ValidateTaggedValue("free", uint64(6412), swaptags))
-	assert.NoError(t, acc.ValidateTaggedValue("in", uint64(7), swaptags))
-	assert.NoError(t, acc.ValidateTaggedValue("out", uint64(830), swaptags))
+	swapfields := map[string]interface{}{
+		"total":        uint64(8123),
+		"used":         uint64(1232),
+		"used_percent": float64(12.2),
+		"free":         uint64(6412),
+		"in":           uint64(7),
+		"out":          uint64(830),
+	}
+	acc.AssertContainsFields(t, "swap", swapfields, nil)
 }
