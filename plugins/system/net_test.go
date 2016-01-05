@@ -6,7 +6,6 @@ import (
 
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/shirou/gopsutil/net"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,24 +64,43 @@ func TestNetStats(t *testing.T) {
 		"interface": "eth0",
 	}
 
-	assert.NoError(t, acc.ValidateTaggedValue("bytes_sent", uint64(1123), ntags))
-	assert.NoError(t, acc.ValidateTaggedValue("bytes_recv", uint64(8734422), ntags))
-	assert.NoError(t, acc.ValidateTaggedValue("packets_sent", uint64(781), ntags))
-	assert.NoError(t, acc.ValidateTaggedValue("packets_recv", uint64(23456), ntags))
-	assert.NoError(t, acc.ValidateTaggedValue("err_in", uint64(832), ntags))
-	assert.NoError(t, acc.ValidateTaggedValue("err_out", uint64(8), ntags))
-	assert.NoError(t, acc.ValidateTaggedValue("drop_in", uint64(7), ntags))
-	assert.NoError(t, acc.ValidateTaggedValue("drop_out", uint64(1), ntags))
-	assert.NoError(t, acc.ValidateValue("udp_noports", int64(892592)))
-	assert.NoError(t, acc.ValidateValue("udp_indatagrams", int64(4655)))
+	fields1 := map[string]interface{}{
+		"bytes_sent":   uint64(1123),
+		"bytes_recv":   uint64(8734422),
+		"packets_sent": uint64(781),
+		"packets_recv": uint64(23456),
+		"err_in":       uint64(832),
+		"err_out":      uint64(8),
+		"drop_in":      uint64(7),
+		"drop_out":     uint64(1),
+	}
+	acc.AssertContainsFields(t, "net", fields1, ntags)
+
+	fields2 := map[string]interface{}{
+		"udp_noports":     int64(892592),
+		"udp_indatagrams": int64(4655),
+	}
+	acc.AssertContainsFields(t, "net", fields2, nil)
 
 	acc.Points = nil
 
 	err = (&NetStats{&mps}).Gather(&acc)
 	require.NoError(t, err)
-	netstattags := map[string]string(nil)
 
-	assert.NoError(t, acc.ValidateTaggedValue("tcp_established", 2, netstattags))
-	assert.NoError(t, acc.ValidateTaggedValue("tcp_close", 1, netstattags))
-	assert.NoError(t, acc.ValidateTaggedValue("udp_socket", 1, netstattags))
+	fields3 := map[string]interface{}{
+		"tcp_established": 2,
+		"tcp_syn_sent":    0,
+		"tcp_syn_recv":    0,
+		"tcp_fin_wait1":   0,
+		"tcp_fin_wait2":   0,
+		"tcp_time_wait":   0,
+		"tcp_close":       1,
+		"tcp_close_wait":  0,
+		"tcp_last_ack":    0,
+		"tcp_listen":      0,
+		"tcp_closing":     0,
+		"tcp_none":        0,
+		"udp_socket":      1,
+	}
+	acc.AssertContainsFields(t, "netstat", fields3, nil)
 }
