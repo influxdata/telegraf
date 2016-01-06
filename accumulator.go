@@ -69,6 +69,10 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
+	if len(fields) == 0 || len(measurement) == 0 {
+		return
+	}
+
 	if !ac.pluginConfig.Filter.ShouldTagsPass(tags) {
 		return
 	}

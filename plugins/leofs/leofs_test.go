@@ -129,7 +129,6 @@ func buildFakeSNMPCmd(src string) {
 }
 
 func testMain(t *testing.T, code string, endpoint string, serverType ServerType) {
-
 	// Build the fake snmpwalk for test
 	src := makeFakeSNMPSrc(code)
 	defer os.Remove(src)
@@ -145,6 +144,7 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 	}
 
 	var acc testutil.Accumulator
+	acc.SetDebug(true)
 
 	err := l.Gather(&acc)
 	require.NoError(t, err)
@@ -152,7 +152,7 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 	floatMetrics := KeyMapping[serverType]
 
 	for _, metric := range floatMetrics {
-		assert.True(t, acc.HasFloatValue(metric), metric)
+		assert.True(t, acc.HasFloatField("leofs", metric), metric)
 	}
 }
 

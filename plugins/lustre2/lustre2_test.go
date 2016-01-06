@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,11 +57,6 @@ samedir_rename            259625 samples [reqs]
 crossdir_rename           369571 samples [reqs]
 `
 
-type metrics struct {
-	name  string
-	value uint64
-}
-
 func TestLustre2GeneratesMetrics(t *testing.T) {
 
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
@@ -103,41 +97,33 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 		"name": ost_name,
 	}
 
-	intMetrics := []*metrics{
-		{
-			name:  "write_bytes",
-			value: 15201500833981,
-		},
-		{
-			name:  "read_bytes",
-			value: 78026117632000,
-		},
-		{
-			name:  "write_calls",
-			value: 71893382,
-		},
-		{
-			name:  "read_calls",
-			value: 203238095,
-		},
-		{
-			name:  "cache_hit",
-			value: 7393729777,
-		},
-		{
-			name:  "cache_access",
-			value: 19047063027,
-		},
-		{
-			name:  "cache_miss",
-			value: 11653333250,
-		},
+	fields := map[string]interface{}{
+		"cache_access":    uint64(19047063027),
+		"cache_hit":       uint64(7393729777),
+		"cache_miss":      uint64(11653333250),
+		"close":           uint64(873243496),
+		"crossdir_rename": uint64(369571),
+		"getattr":         uint64(1503663097),
+		"getxattr":        uint64(6145349681),
+		"link":            uint64(445),
+		"mkdir":           uint64(705499),
+		"mknod":           uint64(349042),
+		"open":            uint64(1024577037),
+		"read_bytes":      uint64(78026117632000),
+		"read_calls":      uint64(203238095),
+		"rename":          uint64(629196),
+		"rmdir":           uint64(227434),
+		"samedir_rename":  uint64(259625),
+		"setattr":         uint64(1898364),
+		"setxattr":        uint64(83969),
+		"statfs":          uint64(2916320),
+		"sync":            uint64(434081),
+		"unlink":          uint64(3549417),
+		"write_bytes":     uint64(15201500833981),
+		"write_calls":     uint64(71893382),
 	}
 
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasUIntValue(metric.name), metric.name)
-		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
-	}
+	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)

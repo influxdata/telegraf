@@ -75,7 +75,6 @@ func (j *Jolokia) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer req.Body.Close()
 
 	resp, err := j.jClient.MakeRequest(req)
 	if err != nil {

@@ -85,7 +85,8 @@ func TestRunParserAndGather(t *testing.T) {
 	k.Gather(&acc)
 
 	assert.Equal(t, len(acc.Points), 1)
-	assert.True(t, acc.CheckValue("cpu_load_short", 23422.0))
+	acc.AssertContainsFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(23422)})
 }
 
 func saramaMsg(val string) *sarama.ConsumerMessage {

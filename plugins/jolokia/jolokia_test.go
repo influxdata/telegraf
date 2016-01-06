@@ -48,7 +48,7 @@ const empty = ""
 
 var Servers = []Server{Server{Name: "as1", Host: "127.0.0.1", Port: "8080"}}
 var HeapMetric = Metric{Name: "heap_memory_usage", Jmx: "/java.lang:type=Memory/HeapMemoryUsage"}
-var UsedHeapMetric = Metric{Name: "heap_memory_usage", Jmx: "/java.lang:type=Memory/HeapMemoryUsage", Pass: []string{"used"}}
+var UsedHeapMetric = Metric{Name: "heap_memory_usage", Jmx: "/java.lang:type=Memory/HeapMemoryUsage"}
 
 type jolokiaClientStub struct {
 	responseBody string
@@ -79,7 +79,6 @@ func genJolokiaClientStub(response string, statusCode int, servers []Server, met
 
 // Test that the proper values are ignored or collected
 func TestHttpJsonMultiValue(t *testing.T) {
-
 	jolokia := genJolokiaClientStub(validMultiValueJSON, 200, Servers, []Metric{HeapMetric})
 
 	var acc testutil.Accumulator
@@ -88,58 +87,28 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(acc.Points))
 
-	assert.True(t, acc.CheckFieldsValue("heap_memory_usage", map[string]interface{}{"init": 67108864.0,
-		"committed": 456130560.0,
-		"max":       477626368.0,
-		"used":      203288528.0}))
-}
-
-// Test that the proper values are ignored or collected
-func TestHttpJsonMultiValueWithPass(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(validMultiValueJSON, 200, Servers, []Metric{UsedHeapMetric})
-
-	var acc testutil.Accumulator
-	err := jolokia.Gather(&acc)
-
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(acc.Points))
-
-	assert.True(t, acc.CheckFieldsValue("heap_memory_usage", map[string]interface{}{"used": 203288528.0}))
-}
-
-// Test that the proper values are ignored or collected
-func TestHttpJsonMultiValueTags(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(validMultiValueJSON, 200, Servers, []Metric{UsedHeapMetric})
-
-	var acc testutil.Accumulator
-	err := jolokia.Gather(&acc)
-
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(acc.Points))
-	assert.NoError(t, acc.ValidateTaggedFieldsValue("heap_memory_usage", map[string]interface{}{"used": 203288528.0}, map[string]string{"host": "127.0.0.1", "port": "8080", "server": "as1"}))
-}
-
-// Test that the proper values are ignored or collected
-func TestHttpJsonSingleValueTags(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(validSingleValueJSON, 200, Servers, []Metric{UsedHeapMetric})
-
-	var acc testutil.Accumulator
-	err := jolokia.Gather(&acc)
-
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(acc.Points))
-	assert.NoError(t, acc.ValidateTaggedFieldsValue("heap_memory_usage", map[string]interface{}{"value": 209274376.0}, map[string]string{"host": "127.0.0.1", "port": "8080", "server": "as1"}))
+	fields := map[string]interface{}{
+		"heap_memory_usage_init":      67108864.0,
+		"heap_memory_usage_committed": 456130560.0,
+		"heap_memory_usage_max":       477626368.0,
+		"heap_memory_usage_used":      203288528.0,
+	}
+	tags := map[string]string{
+		"host":   "127.0.0.1",
+		"port":   "8080",
+		"server": "as1",
+	}
+	acc.AssertContainsTaggedFields(t, "jolokia", fields, tags)
 }
 
 // Test that the proper values are ignored or collected
 func TestHttpJsonOn404(t *testing.T) {
 
-	jolokia := genJolokiaClientStub(validMultiValueJSON, 404, Servers, []Metric{UsedHeapMetric})
+	jolokia := genJolokiaClientStub(validMultiValueJSON, 404, Servers,
+		[]Metric{UsedHeapMetric})
 
 	var acc testutil.Accumulator
+	acc.SetDebug(true)
 	err := jolokia.Gather(&acc)
 
 	assert.Nil(t, err)

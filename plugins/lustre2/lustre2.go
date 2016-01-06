@@ -22,6 +22,9 @@ import (
 type Lustre2 struct {
 	Ost_procfiles []string
 	Mds_procfiles []string
+
+	// allFields maps and OST name to the metric fields associated with that OST
+	allFields map[string]map[string]interface{}
 }
 
 var sampleConfig = `
@@ -140,8 +143,11 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 		 */
 		path := strings.Split(file, "/")
 		name := path[len(path)-2]
-		tags := map[string]string{
-			"name": name,
+		var fields map[string]interface{}
+		fields, ok := l.allFields[name]
+		if !ok {
+			fields = make(map[string]interface{})
+			l.allFields[name] = fields
 		}
 
 		lines, err := internal.ReadLines(file)
@@ -149,7 +155,6 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 			return err
 		}
 
-		fields := make(map[string]interface{})
 		for _, line := range lines {
 			parts := strings.Fields(line)
 			for _, wanted := range wanted_fields {
@@ -173,7 +178,6 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 				}
 			}
 		}
-		acc.AddFields("lustre2", fields, tags)
 	}
 	return nil
 }
@@ -190,15 +194,18 @@ func (l *Lustre2) Description() string {
 
 // Gather reads stats from all lustre targets
 func (l *Lustre2) Gather(acc plugins.Accumulator) error {
+	l.allFields = make(map[string]map[string]interface{})
 
 	if len(l.Ost_procfiles) == 0 {
 		// read/write bytes are in obdfilter/<ost_name>/stats
-		err := l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/stats", wanted_ost_fields, acc)
+		err := l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/stats",
+			wanted_ost_fields, acc)
 		if err != nil {
 			return err
 		}
 		// cache counters are in osd-ldiskfs/<ost_name>/stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/osd-ldiskfs/*/stats", wanted_ost_fields, acc)
+		err = l.GetLustreProcStats("/proc/fs/lustre/osd-ldiskfs/*/stats",
+			wanted_ost_fields, acc)
 		if err != nil {
 			return err
 		}
@@ -206,7 +213,8 @@ func (l *Lustre2) Gather(acc plugins.Accumulator) error {
 
 	if len(l.Mds_procfiles) == 0 {
 		// Metadata server stats
-		err := l.GetLustreProcStats("/proc/fs/lustre/mdt/*/md_stats", wanted_mds_fields, acc)
+		err := l.GetLustreProcStats("/proc/fs/lustre/mdt/*/md_stats",
+			wanted_mds_fields, acc)
 		if err != nil {
 			return err
 		}
@@ -223,6 +231,13 @@ func (l *Lustre2) Gather(acc plugins.Accumulator) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	for name, fields := range l.allFields {
+		tags := map[string]string{
+			"name": name,
+		}
+		acc.AddFields("lustre2", fields, tags)
 	}
 
 	return nil

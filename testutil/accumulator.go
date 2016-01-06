@@ -55,6 +55,10 @@ func (a *Accumulator) AddFields(
 		tags = map[string]string{}
 	}
 
+	if len(fields) == 0 {
+		return
+	}
+
 	var t time.Time
 	if len(timestamp) > 0 {
 		t = timestamp[0]
