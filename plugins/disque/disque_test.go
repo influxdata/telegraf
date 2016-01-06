@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,42 +54,26 @@ func TestDisqueGeneratesMetrics(t *testing.T) {
 	err = r.Gather(&acc)
 	require.NoError(t, err)
 
-	checkInt := []struct {
-		name  string
-		value uint64
-	}{
-		{"uptime", 1452705},
-		{"clients", 31},
-		{"blocked_clients", 13},
-		{"used_memory", 1840104},
-		{"used_memory_rss", 3227648},
-		{"used_memory_peak", 89603656},
-		{"total_connections_received", 5062777},
-		{"total_commands_processed", 12308396},
-		{"instantaneous_ops_per_sec", 18},
-		{"latest_fork_usec", 1644},
-		{"registered_jobs", 360},
-		{"registered_queues", 12},
+	fields := map[string]interface{}{
+		"uptime":                     uint64(1452705),
+		"clients":                    uint64(31),
+		"blocked_clients":            uint64(13),
+		"used_memory":                uint64(1840104),
+		"used_memory_rss":            uint64(3227648),
+		"used_memory_peak":           uint64(89603656),
+		"total_connections_received": uint64(5062777),
+		"total_commands_processed":   uint64(12308396),
+		"instantaneous_ops_per_sec":  uint64(18),
+		"latest_fork_usec":           uint64(1644),
+		"registered_jobs":            uint64(360),
+		"registered_queues":          uint64(12),
+		"mem_fragmentation_ratio":    float64(1.75),
+		"used_cpu_sys":               float64(19585.73),
+		"used_cpu_user":              float64(11255.96),
+		"used_cpu_sys_children":      float64(1.75),
+		"used_cpu_user_children":     float64(1.91),
 	}
-
-	for _, c := range checkInt {
-		assert.True(t, acc.CheckValue(c.name, c.value))
-	}
-
-	checkFloat := []struct {
-		name  string
-		value float64
-	}{
-		{"mem_fragmentation_ratio", 1.75},
-		{"used_cpu_sys", 19585.73},
-		{"used_cpu_user", 11255.96},
-		{"used_cpu_sys_children", 1.75},
-		{"used_cpu_user_children", 1.91},
-	}
-
-	for _, c := range checkFloat {
-		assert.True(t, acc.CheckValue(c.name, c.value))
-	}
+	acc.AssertContainsFields(t, "disque", fields)
 }
 
 func TestDisqueCanPullStatsFromMultipleServers(t *testing.T) {
@@ -137,42 +120,26 @@ func TestDisqueCanPullStatsFromMultipleServers(t *testing.T) {
 	err = r.Gather(&acc)
 	require.NoError(t, err)
 
-	checkInt := []struct {
-		name  string
-		value uint64
-	}{
-		{"uptime", 1452705},
-		{"clients", 31},
-		{"blocked_clients", 13},
-		{"used_memory", 1840104},
-		{"used_memory_rss", 3227648},
-		{"used_memory_peak", 89603656},
-		{"total_connections_received", 5062777},
-		{"total_commands_processed", 12308396},
-		{"instantaneous_ops_per_sec", 18},
-		{"latest_fork_usec", 1644},
-		{"registered_jobs", 360},
-		{"registered_queues", 12},
+	fields := map[string]interface{}{
+		"uptime":                     uint64(1452705),
+		"clients":                    uint64(31),
+		"blocked_clients":            uint64(13),
+		"used_memory":                uint64(1840104),
+		"used_memory_rss":            uint64(3227648),
+		"used_memory_peak":           uint64(89603656),
+		"total_connections_received": uint64(5062777),
+		"total_commands_processed":   uint64(12308396),
+		"instantaneous_ops_per_sec":  uint64(18),
+		"latest_fork_usec":           uint64(1644),
+		"registered_jobs":            uint64(360),
+		"registered_queues":          uint64(12),
+		"mem_fragmentation_ratio":    float64(1.75),
+		"used_cpu_sys":               float64(19585.73),
+		"used_cpu_user":              float64(11255.96),
+		"used_cpu_sys_children":      float64(1.75),
+		"used_cpu_user_children":     float64(1.91),
 	}
-
-	for _, c := range checkInt {
-		assert.True(t, acc.CheckValue(c.name, c.value))
-	}
-
-	checkFloat := []struct {
-		name  string
-		value float64
-	}{
-		{"mem_fragmentation_ratio", 1.75},
-		{"used_cpu_sys", 19585.73},
-		{"used_cpu_user", 11255.96},
-		{"used_cpu_sys_children", 1.75},
-		{"used_cpu_user_children", 1.91},
-	}
-
-	for _, c := range checkFloat {
-		assert.True(t, acc.CheckValue(c.name, c.value))
-	}
+	acc.AssertContainsFields(t, "disque", fields)
 }
 
 const testOutput = `# Server
