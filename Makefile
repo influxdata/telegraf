@@ -65,6 +65,17 @@ endif
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name zabbix-db \
+		-e "MARIADB_USER=zabbix" \
+		-e "MARIADB_PASS=my_password" \
+		-d zabbix/zabbix-db-mariadb
+	docker run --name zabbix-server \
+		-p "10051:10051" \
+		--link zabbix-db:zabbix.db \
+		-e "ZS_DBHost=zabbix.db" \
+		-e "ZS_DBUser=zabbix" \
+		-e "ZS_DBPassword=my_password" \
+		-d zabbix/zabbix-server-2.4
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -78,11 +89,22 @@ docker-run-circle:
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name zabbix-db \
+		-e "MARIADB_USER=zabbix" \
+		-e "MARIADB_PASS=my_password" \
+		-d zabbix/zabbix-db-mariadb
+	docker run --name zabbix-server \
+		-p "10051:10051" \
+		--link zabbix-db:zabbix.db \
+		-e "ZS_DBHost=zabbix.db" \
+		-e "ZS_DBUser=zabbix" \
+		-e "ZS_DBPassword=my_password" \
+		-d zabbix/zabbix-server-2.4
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann
-	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann
+	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann zabbix-server zabbix-db
+	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann zabbix-server zabbix-db
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: docker-kill docker-run
