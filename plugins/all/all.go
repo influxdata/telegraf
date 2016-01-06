@@ -19,6 +19,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/mongodb"
 	_ "github.com/influxdb/telegraf/plugins/mysql"
 	_ "github.com/influxdb/telegraf/plugins/nginx"
+	_ "github.com/influxdb/telegraf/plugins/nsq"
 	_ "github.com/influxdb/telegraf/plugins/phpfpm"
 	_ "github.com/influxdb/telegraf/plugins/ping"
 	_ "github.com/influxdb/telegraf/plugins/postgresql"
