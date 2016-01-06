@@ -74,13 +74,13 @@ func TestNetStats(t *testing.T) {
 		"drop_in":      uint64(7),
 		"drop_out":     uint64(1),
 	}
-	acc.AssertContainsFields(t, "net", fields1, ntags)
+	acc.AssertContainsTaggedFields(t, "net", fields1, ntags)
 
 	fields2 := map[string]interface{}{
 		"udp_noports":     int64(892592),
 		"udp_indatagrams": int64(4655),
 	}
-	acc.AssertContainsFields(t, "net", fields2, nil)
+	acc.AssertContainsTaggedFields(t, "net", fields2, make(map[string]string))
 
 	acc.Points = nil
 
@@ -102,5 +102,5 @@ func TestNetStats(t *testing.T) {
 		"tcp_none":        0,
 		"udp_socket":      1,
 	}
-	acc.AssertContainsFields(t, "netstat", fields3, nil)
+	acc.AssertContainsTaggedFields(t, "netstat", fields3, make(map[string]string))
 }

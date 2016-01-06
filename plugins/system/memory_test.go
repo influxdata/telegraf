@@ -53,7 +53,7 @@ func TestMemStats(t *testing.T) {
 		"cached":            uint64(0),
 		"buffered":          uint64(0),
 	}
-	acc.AssertContainsFields(t, "mem", memfields, nil)
+	acc.AssertContainsTaggedFields(t, "mem", memfields, make(map[string]string))
 
 	acc.Points = nil
 
@@ -68,5 +68,5 @@ func TestMemStats(t *testing.T) {
 		"in":           uint64(7),
 		"out":          uint64(830),
 	}
-	acc.AssertContainsFields(t, "swap", swapfields, nil)
+	acc.AssertContainsTaggedFields(t, "swap", swapfields, make(map[string]string))
 }

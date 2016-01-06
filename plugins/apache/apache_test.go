@@ -8,7 +8,6 @@ import (
 
 	"github.com/influxdb/telegraf/testutil"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,37 +43,31 @@ func TestHTTPApache(t *testing.T) {
 	err := a.Gather(&acc)
 	require.NoError(t, err)
 
-	testInt := []struct {
-		measurement string
-		value       float64
-	}{
-		{"TotalAccesses", 1.29811861e+08},
-		{"TotalkBytes", 5.213701865e+09},
-		{"CPULoad", 6.51929},
-		{"Uptime", 941553},
-		{"ReqPerSec", 137.87},
-		{"BytesPerSec", 5.67024e+06},
-		{"BytesPerReq", 41127.4},
-		{"BusyWorkers", 270},
-		{"IdleWorkers", 630},
-		{"ConnsTotal", 1451},
-		{"ConnsAsyncWriting", 32},
-		{"ConnsAsyncKeepAlive", 945},
-		{"ConnsAsyncClosing", 205},
-		{"scboard_waiting", 630},
-		{"scboard_starting", 0},
-		{"scboard_reading", 157},
-		{"scboard_sending", 113},
-		{"scboard_keepalive", 0},
-		{"scboard_dnslookup", 0},
-		{"scboard_closing", 0},
-		{"scboard_logging", 0},
-		{"scboard_finishing", 0},
-		{"scboard_idle_cleanup", 0},
-		{"scboard_open", 2850},
+	fields := map[string]interface{}{
+		"TotalAccesses":        float64(1.29811861e+08),
+		"TotalkBytes":          float64(5.213701865e+09),
+		"CPULoad":              float64(6.51929),
+		"Uptime":               float64(941553),
+		"ReqPerSec":            float64(137.87),
+		"BytesPerSec":          float64(5.67024e+06),
+		"BytesPerReq":          float64(41127.4),
+		"BusyWorkers":          float64(270),
+		"IdleWorkers":          float64(630),
+		"ConnsTotal":           float64(1451),
+		"ConnsAsyncWriting":    float64(32),
+		"ConnsAsyncKeepAlive":  float64(945),
+		"ConnsAsyncClosing":    float64(205),
+		"scboard_waiting":      float64(630),
+		"scboard_starting":     float64(0),
+		"scboard_reading":      float64(157),
+		"scboard_sending":      float64(113),
+		"scboard_keepalive":    float64(0),
+		"scboard_dnslookup":    float64(0),
+		"scboard_closing":      float64(0),
+		"scboard_logging":      float64(0),
+		"scboard_finishing":    float64(0),
+		"scboard_idle_cleanup": float64(0),
+		"scboard_open":         float64(2850),
 	}
-
-	for _, test := range testInt {
-		assert.True(t, acc.CheckValue(test.measurement, test.value))
-	}
+	acc.AssertContainsFields(t, "apache", fields)
 }

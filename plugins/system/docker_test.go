@@ -116,5 +116,5 @@ func TestDockerStats_GenerateStats(t *testing.T) {
 		"total_unevictable":      uint64(27),
 	}
 
-	acc.AssertContainsFields(t, "docker", fields, dockertags)
+	acc.AssertContainsTaggedFields(t, "docker", fields, dockertags)
 }
