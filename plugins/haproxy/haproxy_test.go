@@ -47,52 +47,39 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 		"sv":     "host0",
 	}
 
-	assert.NoError(t, acc.ValidateTaggedValue("stot", uint64(171014), tags))
-
-	checkInt := []struct {
-		name  string
-		value uint64
-	}{
-
-		{"qmax", 81},
-		{"scur", 288},
-		{"smax", 713},
-		{"bin", 5557055817},
-		{"bout", 24096715169},
-		{"dreq", 1102},
-		{"dresp", 80},
-		{"ereq", 95740},
-		{"econ", 0},
-		{"eresp", 0},
-		{"wretr", 17},
-		{"wredis", 19},
-		{"active_servers", 1},
-		{"backup_servers", 0},
-		{"downtime", 0},
-		{"throttle", 13},
-		{"lbtot", 114},
-		{"rate", 18},
-		{"rate_max", 102},
-		{"check_duration", 1},
-		{"http_response.1xx", 0},
-		{"http_response.2xx", 1314093},
-		{"http_response.3xx", 537036},
-		{"http_response.4xx", 123452},
-		{"http_response.5xx", 11966},
-		{"req_rate", 35},
-		{"req_rate_max", 140},
-		{"req_tot", 1987928},
-		{"cli_abort", 0},
-		{"srv_abort", 0},
-		{"qtime", 0},
-		{"ctime", 2},
-		{"rtime", 23},
-		{"ttime", 545},
+	fields := map[string]interface{}{
+		"active_servers":    uint64(1),
+		"backup_servers":    uint64(0),
+		"bin":               uint64(510913516),
+		"bout":              uint64(2193856571),
+		"check_duration":    uint64(10),
+		"cli_abort":         uint64(73),
+		"ctime":             uint64(2),
+		"downtime":          uint64(0),
+		"dresp":             uint64(0),
+		"econ":              uint64(0),
+		"eresp":             uint64(1),
+		"http_response.1xx": uint64(0),
+		"http_response.2xx": uint64(119534),
+		"http_response.3xx": uint64(48051),
+		"http_response.4xx": uint64(2345),
+		"http_response.5xx": uint64(1056),
+		"lbtot":             uint64(171013),
+		"qcur":              uint64(0),
+		"qmax":              uint64(0),
+		"qtime":             uint64(0),
+		"rate":              uint64(3),
+		"rate_max":          uint64(12),
+		"rtime":             uint64(312),
+		"scur":              uint64(1),
+		"smax":              uint64(32),
+		"srv_abort":         uint64(1),
+		"stot":              uint64(171014),
+		"ttime":             uint64(2341),
+		"wredis":            uint64(0),
+		"wretr":             uint64(1),
 	}
-
-	for _, c := range checkInt {
-		assert.Equal(t, true, acc.CheckValue(c.name, c.value))
-	}
+	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 
 	//Here, we should get error because we don't pass authentication data
 	r = &haproxy{
@@ -124,10 +111,39 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 		"sv":     "host0",
 	}
 
-	assert.NoError(t, acc.ValidateTaggedValue("stot", uint64(171014), tags))
-	assert.NoError(t, acc.ValidateTaggedValue("scur", uint64(1), tags))
-	assert.NoError(t, acc.ValidateTaggedValue("rate", uint64(3), tags))
-	assert.Equal(t, true, acc.CheckValue("bin", uint64(5557055817)))
+	fields := map[string]interface{}{
+		"active_servers":    uint64(1),
+		"backup_servers":    uint64(0),
+		"bin":               uint64(510913516),
+		"bout":              uint64(2193856571),
+		"check_duration":    uint64(10),
+		"cli_abort":         uint64(73),
+		"ctime":             uint64(2),
+		"downtime":          uint64(0),
+		"dresp":             uint64(0),
+		"econ":              uint64(0),
+		"eresp":             uint64(1),
+		"http_response.1xx": uint64(0),
+		"http_response.2xx": uint64(119534),
+		"http_response.3xx": uint64(48051),
+		"http_response.4xx": uint64(2345),
+		"http_response.5xx": uint64(1056),
+		"lbtot":             uint64(171013),
+		"qcur":              uint64(0),
+		"qmax":              uint64(0),
+		"qtime":             uint64(0),
+		"rate":              uint64(3),
+		"rate_max":          uint64(12),
+		"rtime":             uint64(312),
+		"scur":              uint64(1),
+		"smax":              uint64(32),
+		"srv_abort":         uint64(1),
+		"stot":              uint64(171014),
+		"ttime":             uint64(2341),
+		"wredis":            uint64(0),
+		"wretr":             uint64(1),
+	}
+	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 }
 
 //When not passing server config, we default to localhost

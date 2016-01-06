@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -25,7 +26,9 @@ func (p *Point) String() string {
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
 	sync.Mutex
+
 	Points []*Point
+	debug  bool
 }
 
 // Add adds a measurement point to the accumulator
@@ -59,6 +62,14 @@ func (a *Accumulator) AddFields(
 		t = time.Now()
 	}
 
+	if a.debug {
+		pretty, _ := json.MarshalIndent(fields, "", "  ")
+		prettyTags, _ := json.MarshalIndent(tags, "", "  ")
+		msg := fmt.Sprintf("Adding Measurement [%s]\nFields:%s\nTags:%s\n",
+			measurement, string(pretty), string(prettyTags))
+		fmt.Print(msg)
+	}
+
 	p := &Point{
 		Measurement: measurement,
 		Fields:      fields,
@@ -66,10 +77,7 @@ func (a *Accumulator) AddFields(
 		Time:        t,
 	}
 
-	a.Points = append(
-		a.Points,
-		p,
-	)
+	a.Points = append(a.Points, p)
 }
 
 func (a *Accumulator) SetDefaultTags(tags map[string]string) {
@@ -91,11 +99,12 @@ func (a *Accumulator) SetPrefix(prefix string) {
 
 func (a *Accumulator) Debug() bool {
 	// stub for implementing Accumulator interface.
-	return true
+	return a.debug
 }
 
 func (a *Accumulator) SetDebug(debug bool) {
 	// stub for implementing Accumulator interface.
+	a.debug = debug
 }
 
 // Get gets the specified measurement point from the accumulator
@@ -134,8 +143,10 @@ func (a *Accumulator) AssertContainsTaggedFields(
 
 		if p.Measurement == measurement {
 			if !reflect.DeepEqual(fields, p.Fields) {
-				msg := fmt.Sprintf("Actual:\n %v (%T) \nExpected:\n %v (%T)",
-					p.Fields, p.Fields, fields, fields)
+				pActual, _ := json.MarshalIndent(p.Fields, "", "  ")
+				pExp, _ := json.MarshalIndent(fields, "", "  ")
+				msg := fmt.Sprintf("Actual:\n%s\n(%T) \nExpected:\n%s\n(%T)",
+					string(pActual), p.Fields, string(pExp), fields)
 				assert.Fail(t, msg)
 			}
 			return
@@ -153,8 +164,10 @@ func (a *Accumulator) AssertContainsFields(
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
 			if !reflect.DeepEqual(fields, p.Fields) {
-				msg := fmt.Sprintf("Actual:\n %v (%T) \nExpected:\n %v (%T)",
-					p.Fields, p.Fields, fields, fields)
+				pActual, _ := json.MarshalIndent(p.Fields, "", "  ")
+				pExp, _ := json.MarshalIndent(fields, "", "  ")
+				msg := fmt.Sprintf("Actual:\n%s\n(%T) \nExpected:\n%s\n(%T)",
+					string(pActual), p.Fields, string(pExp), fields)
 				assert.Fail(t, msg)
 			}
 			return

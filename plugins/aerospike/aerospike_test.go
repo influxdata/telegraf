@@ -1,10 +1,12 @@
 package aerospike
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestAerospikeStatistics(t *testing.T) {
@@ -60,55 +62,57 @@ func TestReadAerospikeStatsNoNamespace(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "aerospike", fields, tags)
 }
 
-// func TestReadAerospikeStatsNamespace(t *testing.T) {
-// 	var acc testutil.Accumulator
-// 	stats := map[string]string{
-// 		"stat_write_errs": "12345",
-// 		"stat_read_reqs":  "12345",
-// 	}
-// 	readAerospikeStats(stats, &acc, "host1", "test")
+func TestReadAerospikeStatsNamespace(t *testing.T) {
+	var acc testutil.Accumulator
+	stats := map[string]string{
+		"stat_write_errs": "12345",
+		"stat_read_reqs":  "12345",
+	}
+	readAerospikeStats(stats, &acc, "host1", "test")
 
-// 	tags := map[string]string{
-// 		"aerospike_host": "host1",
-// 		"namespace":      "test",
-// 	}
-// 	for k := range stats {
-// 		assert.True(t, acc.ValidateTaggedValue(k, int64(12345), tags) == nil)
-// 	}
-// }
+	fields := map[string]interface{}{
+		"stat_write_errs": int64(12345),
+		"stat_read_reqs":  int64(12345),
+	}
+	tags := map[string]string{
+		"aerospike_host": "host1",
+		"namespace":      "test",
+	}
+	acc.AssertContainsTaggedFields(t, "aerospike", fields, tags)
+}
 
-// func TestAerospikeUnmarshalList(t *testing.T) {
-// 	i := map[string]string{
-// 		"test": "one;two;three",
-// 	}
+func TestAerospikeUnmarshalList(t *testing.T) {
+	i := map[string]string{
+		"test": "one;two;three",
+	}
 
-// 	expected := []string{"one", "two", "three"}
+	expected := []string{"one", "two", "three"}
 
-// 	list, err := unmarshalListInfo(i, "test2")
-// 	assert.True(t, err != nil)
+	list, err := unmarshalListInfo(i, "test2")
+	assert.True(t, err != nil)
 
-// 	list, err = unmarshalListInfo(i, "test")
-// 	assert.True(t, err == nil)
-// 	equal := true
-// 	for ix := range expected {
-// 		if list[ix] != expected[ix] {
-// 			equal = false
-// 			break
-// 		}
-// 	}
-// 	assert.True(t, equal)
-// }
+	list, err = unmarshalListInfo(i, "test")
+	assert.True(t, err == nil)
+	equal := true
+	for ix := range expected {
+		if list[ix] != expected[ix] {
+			equal = false
+			break
+		}
+	}
+	assert.True(t, equal)
+}
 
-// func TestAerospikeUnmarshalMap(t *testing.T) {
-// 	i := map[string]string{
-// 		"test": "key1=value1;key2=value2",
-// 	}
+func TestAerospikeUnmarshalMap(t *testing.T) {
+	i := map[string]string{
+		"test": "key1=value1;key2=value2",
+	}
 
-// 	expected := map[string]string{
-// 		"key1": "value1",
-// 		"key2": "value2",
-// 	}
-// 	m, err := unmarshalMapInfo(i, "test")
-// 	assert.True(t, err == nil)
-// 	assert.True(t, reflect.DeepEqual(m, expected))
-// }
+	expected := map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
+	m, err := unmarshalMapInfo(i, "test")
+	assert.True(t, err == nil)
+	assert.True(t, reflect.DeepEqual(m, expected))
+}

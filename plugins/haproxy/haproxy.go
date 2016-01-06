@@ -91,7 +91,7 @@ var sampleConfig = `
   # If no servers are specified, then default to 127.0.0.1:1936
   servers = ["http://myhaproxy.com:1936", "http://anotherhaproxy.com:1936"]
   # Or you can also use local socket(not work yet)
-  # servers = ["socket:/run/haproxy/admin.sock"]
+  # servers = ["socket://run/haproxy/admin.sock"]
 `
 
 func (r *haproxy) SampleConfig() string {

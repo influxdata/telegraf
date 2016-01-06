@@ -153,7 +153,7 @@ func (h *HttpJson) gatherServer(
 	} else {
 		msrmnt_name = "httpjson_" + h.Name
 	}
-	acc.AddFields(msrmnt_name, f.Fields, nil)
+	acc.AddFields(msrmnt_name, f.Fields, tags)
 	return nil
 }
 

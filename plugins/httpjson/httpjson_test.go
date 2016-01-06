@@ -1,7 +1,6 @@
 package httpjson
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -34,6 +33,11 @@ const validJSONTags = `
 		"role": "master",
 		"build": "123"
 	}`
+
+var expectedFields = map[string]interface{}{
+	"parent_child": float64(3),
+	"integer":      float64(4),
+}
 
 const invalidJSON = "I don't think this is JSON"
 
@@ -76,37 +80,36 @@ func (c mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 //
 // Returns:
 //     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
-func genMockHttpJson(response string, statusCode int) *HttpJson {
-	return &HttpJson{
-		client: mockHTTPClient{responseBody: response, statusCode: statusCode},
-		Services: []Service{
-			Service{
-				Servers: []string{
-					"http://server1.example.com/metrics/",
-					"http://server2.example.com/metrics/",
-				},
-				Name:   "my_webapp",
-				Method: "GET",
-				Parameters: map[string]string{
-					"httpParam1": "12",
-					"httpParam2": "the second parameter",
-				},
+func genMockHttpJson(response string, statusCode int) []*HttpJson {
+	return []*HttpJson{
+		&HttpJson{
+			client: mockHTTPClient{responseBody: response, statusCode: statusCode},
+			Servers: []string{
+				"http://server1.example.com/metrics/",
+				"http://server2.example.com/metrics/",
 			},
-			Service{
-				Servers: []string{
-					"http://server3.example.com/metrics/",
-					"http://server4.example.com/metrics/",
-				},
-				Name:   "other_webapp",
-				Method: "POST",
-				Parameters: map[string]string{
-					"httpParam1": "12",
-					"httpParam2": "the second parameter",
-				},
-				TagKeys: []string{
-					"role",
-					"build",
-				},
+			Name:   "my_webapp",
+			Method: "GET",
+			Parameters: map[string]string{
+				"httpParam1": "12",
+				"httpParam2": "the second parameter",
+			},
+		},
+		&HttpJson{
+			client: mockHTTPClient{responseBody: response, statusCode: statusCode},
+			Servers: []string{
+				"http://server3.example.com/metrics/",
+				"http://server4.example.com/metrics/",
+			},
+			Name:   "other_webapp",
+			Method: "POST",
+			Parameters: map[string]string{
+				"httpParam1": "12",
+				"httpParam2": "the second parameter",
+			},
+			TagKeys: []string{
+				"role",
+				"build",
 			},
 		},
 	}
@@ -116,28 +119,15 @@ func genMockHttpJson(response string, statusCode int) *HttpJson {
 func TestHttpJson200(t *testing.T) {
 	httpjson := genMockHttpJson(validJSON, 200)
 
-	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
-	require.NoError(t, err)
-
-	assert.Equal(t, 8, len(acc.Points))
-
-	for _, service := range httpjson.Services {
+	for _, service := range httpjson {
+		var acc testutil.Accumulator
+		err := service.Gather(&acc)
+		require.NoError(t, err)
+		assert.Equal(t, 4, acc.NFields())
 		for _, srv := range service.Servers {
-			require.NoError(t,
-				acc.ValidateTaggedValue(
-					fmt.Sprintf("%s_parent_child", service.Name),
-					3.0,
-					map[string]string{"server": srv},
-				),
-			)
-			require.NoError(t,
-				acc.ValidateTaggedValue(
-					fmt.Sprintf("%s_integer", service.Name),
-					4.0,
-					map[string]string{"server": srv},
-				),
-			)
+			tags := map[string]string{"server": srv}
+			mname := "httpjson_" + service.Name
+			acc.AssertContainsTaggedFields(t, mname, expectedFields, tags)
 		}
 	}
 }
@@ -147,28 +137,22 @@ func TestHttpJson500(t *testing.T) {
 	httpjson := genMockHttpJson(validJSON, 500)
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
+	err := httpjson[0].Gather(&acc)
 
 	assert.NotNil(t, err)
-	// 4 error lines for (2 urls) * (2 services)
-	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 4)
-	assert.Equal(t, 0, len(acc.Points))
+	assert.Equal(t, 0, acc.NFields())
 }
 
 // Test response to HTTP 405
 func TestHttpJsonBadMethod(t *testing.T) {
 	httpjson := genMockHttpJson(validJSON, 200)
-	httpjson.Services[0].Method = "NOT_A_REAL_METHOD"
+	httpjson[0].Method = "NOT_A_REAL_METHOD"
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
+	err := httpjson[0].Gather(&acc)
 
 	assert.NotNil(t, err)
-	// 2 error lines for (2 urls) * (1 falied service)
-	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 2)
-
-	// (2 measurements) * (2 servers) * (1 successful service)
-	assert.Equal(t, 4, len(acc.Points))
+	assert.Equal(t, 0, acc.NFields())
 }
 
 // Test response to malformed JSON
@@ -176,12 +160,10 @@ func TestHttpJsonBadJson(t *testing.T) {
 	httpjson := genMockHttpJson(invalidJSON, 200)
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
+	err := httpjson[0].Gather(&acc)
 
 	assert.NotNil(t, err)
-	// 4 error lines for (2 urls) * (2 services)
-	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 4)
-	assert.Equal(t, 0, len(acc.Points))
+	assert.Equal(t, 0, acc.NFields())
 }
 
 // Test response to empty string as response objectgT
@@ -189,34 +171,27 @@ func TestHttpJsonEmptyResponse(t *testing.T) {
 	httpjson := genMockHttpJson(empty, 200)
 
 	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
+	err := httpjson[0].Gather(&acc)
 
 	assert.NotNil(t, err)
-	// 4 error lines for (2 urls) * (2 services)
-	assert.Equal(t, len(strings.Split(err.Error(), "\n")), 4)
-	assert.Equal(t, 0, len(acc.Points))
+	assert.Equal(t, 0, acc.NFields())
 }
 
 // Test that the proper values are ignored or collected
 func TestHttpJson200Tags(t *testing.T) {
 	httpjson := genMockHttpJson(validJSONTags, 200)
 
-	var acc testutil.Accumulator
-	err := httpjson.Gather(&acc)
-	require.NoError(t, err)
-
-	assert.Equal(t, 4, len(acc.Points))
-
-	for _, service := range httpjson.Services {
+	for _, service := range httpjson {
 		if service.Name == "other_webapp" {
+			var acc testutil.Accumulator
+			err := service.Gather(&acc)
+			require.NoError(t, err)
+			assert.Equal(t, 2, acc.NFields())
 			for _, srv := range service.Servers {
-				require.NoError(t,
-					acc.ValidateTaggedValue(
-						fmt.Sprintf("%s_value", service.Name),
-						15.0,
-						map[string]string{"server": srv, "role": "master", "build": "123"},
-					),
-				)
+				tags := map[string]string{"server": srv, "role": "master", "build": "123"}
+				fields := map[string]interface{}{"value": float64(15)}
+				mname := "httpjson_" + service.Name
+				acc.AssertContainsTaggedFields(t, mname, fields, tags)
 			}
 		}
 	}
