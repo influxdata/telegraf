@@ -121,15 +121,12 @@ func (a *Accumulator) NFields() int {
 	return counter
 }
 
-func (a *Accumulator) AssertContainsFields(
+func (a *Accumulator) AssertContainsTaggedFields(
 	t *testing.T,
 	measurement string,
 	fields map[string]interface{},
 	tags map[string]string,
 ) {
-	if tags == nil {
-		tags = make(map[string]string)
-	}
 	for _, p := range a.Points {
 		if !reflect.DeepEqual(tags, p.Tags) {
 			continue
@@ -145,6 +142,25 @@ func (a *Accumulator) AssertContainsFields(
 		}
 	}
 	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	assert.Fail(t, msg)
+}
+
+func (a *Accumulator) AssertContainsFields(
+	t *testing.T,
+	measurement string,
+	fields map[string]interface{},
+) {
+	for _, p := range a.Points {
+		if p.Measurement == measurement {
+			if !reflect.DeepEqual(fields, p.Fields) {
+				msg := fmt.Sprintf("Actual:\n %v (%T) \nExpected:\n %v (%T)",
+					p.Fields, p.Fields, fields, fields)
+				assert.Fail(t, msg)
+			}
+			return
+		}
+	}
+	msg := fmt.Sprintf("unknown measurement %s", measurement)
 	assert.Fail(t, msg)
 }
 

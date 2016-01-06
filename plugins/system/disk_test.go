@@ -68,8 +68,8 @@ func TestDiskStats(t *testing.T) {
 		"inodes_free":  uint64(468),  //tags2)
 		"inodes_used":  uint64(2000), //tags2)
 	}
-	acc.AssertContainsFields(t, "disk", fields1, tags1)
-	acc.AssertContainsFields(t, "disk", fields2, tags2)
+	acc.AssertContainsTaggedFields(t, "disk", fields1, tags1)
+	acc.AssertContainsTaggedFields(t, "disk", fields2, tags2)
 
 	// We expect 6 more DiskPoints to show up with an explicit match on "/"
 	// and /home not matching the /dev in Mountpoints
