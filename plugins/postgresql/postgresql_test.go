@@ -96,6 +96,104 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	assert.Equal(t, "postgres", point.Tags["db"])
 }
 
+func TestPostgresqlCanonicalizesAndSanitizesURLServerName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("postgres://postgres:swordfish@%s?sslmode=disable",
+			testutil.GetLocalHost()),
+		Databases: []string{"postgres"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+
+	assert.Equal(t,
+		fmt.Sprintf("host=%s sslmode=disable user=postgres", testutil.GetLocalHost()),
+		point.Tags["server"])
+}
+
+func TestPostgresqlSanitizesKVServerName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("host=%s user=postgres password=swordfish sslmode=disable",
+			testutil.GetLocalHost()),
+		Databases: []string{"postgres"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+
+	assert.Equal(t,
+		fmt.Sprintf("host=%s user=postgres sslmode=disable", testutil.GetLocalHost()),
+		point.Tags["server"])
+}
+
+func TestPostgresqlMaintainsVerbatimKVServerNameWhenRequested(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("host=%s user=postgres password=swordfish sslmode=disable",
+			testutil.GetLocalHost()),
+		VerbatimAddress: true,
+		Databases:       []string{"postgres"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+
+	assert.Equal(t,
+		fmt.Sprintf("host=%s user=postgres password=swordfish sslmode=disable", testutil.GetLocalHost()),
+		point.Tags["server"])
+}
+
+func TestPostgresqlMaintainsVerbatimURLServerNameWhenRequested(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("postgres://postgres:swordfish@%s?sslmode=disable",
+			testutil.GetLocalHost()),
+		VerbatimAddress: true,
+		Databases:       []string{"postgres"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+
+	assert.Equal(t,
+		fmt.Sprintf("postgres://postgres:swordfish@%s?sslmode=disable", testutil.GetLocalHost()),
+		point.Tags["server"])
+}
+
 func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
