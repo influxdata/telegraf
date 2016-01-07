@@ -106,7 +106,7 @@ piddir=`dirname $pidfile`
 
 if [ ! -d "$piddir" ]; then
     mkdir -p $piddir
-    chown $GROUP:$USER $piddir
+    chown $USER:$GROUP $piddir
 fi
 
 # Configuration file
@@ -137,7 +137,7 @@ case $1 in
 
         log_success_msg "Starting the process" "$name"
         if which start-stop-daemon > /dev/null 2>&1; then
-            start-stop-daemon --chuid $GROUP:$USER --start --quiet --pidfile $pidfile --exec $daemon -- -pidfile $pidfile -config $config -configdirectory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
+            start-stop-daemon --chuid $USER:$GROUP --start --quiet --pidfile $pidfile --exec $daemon -- -pidfile $pidfile -config $config -configdirectory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
         else
             nohup $daemon -pidfile $pidfile -config $config -configdirectory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
         fi
