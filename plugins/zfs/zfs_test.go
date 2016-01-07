@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -121,16 +120,11 @@ hits                            4    0
 misses                          4    0
 `
 const pool_ioContents = `11 3 0x00 1 80 2225326830828 32953476980628
-nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt    
-1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0       
+nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt
+1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0
 `
 
 var testKstatPath = os.TempDir() + "/telegraf/proc/spl/kstat/zfs"
-
-type metrics struct {
-	name  string
-	value int64
-}
 
 func TestZfsPoolMetrics(t *testing.T) {
 	err := os.MkdirAll(testKstatPath, 0755)
@@ -149,28 +143,23 @@ func TestZfsPoolMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	//one pool, all metrics
-	tags := map[string]string{
-		"pool": "HOME",
-	}
-
 	z := &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	for _, metric := range poolMetrics {
-		assert.True(t, !acc.HasIntValue(metric.name), metric.name)
-		assert.True(t, !acc.CheckTaggedValue(metric.name, metric.value, tags))
-	}
+	require.False(t, acc.HasMeasurement("zfs_pool"))
+	acc.Points = nil
 
 	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, PoolMetrics: true}
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	for _, metric := range poolMetrics {
-		assert.True(t, acc.HasIntValue(metric.name), metric.name)
-		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
+	//one pool, all metrics
+	tags := map[string]string{
+		"pool": "HOME",
 	}
+
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
@@ -208,10 +197,8 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntValue(metric.name), metric.name)
-		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
-	}
+	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
+	acc.Points = nil
 
 	//two pools, all metrics
 	err = os.MkdirAll(testKstatPath+"/STORAGE", 0755)
@@ -229,10 +216,8 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntValue(metric.name), metric.name)
-		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
-	}
+	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
+	acc.Points = nil
 
 	intMetrics = getKstatMetricsArcOnly()
 
@@ -242,476 +227,140 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntValue(metric.name), metric.name)
-		assert.True(t, acc.CheckTaggedValue(metric.name, metric.value, tags))
-	}
+	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
 }
 
-func getKstatMetricsArcOnly() []*metrics {
-	return []*metrics{
-		{
-			name:  "arcstats_hits",
-			value: 5968846374,
-		},
-		{
-			name:  "arcstats_misses",
-			value: 1659178751,
-		},
-		{
-			name:  "arcstats_demand_data_hits",
-			value: 4860247322,
-		},
-		{
-			name:  "arcstats_demand_data_misses",
-			value: 501499535,
-		},
-		{
-			name:  "arcstats_demand_metadata_hits",
-			value: 708608325,
-		},
-		{
-			name:  "arcstats_demand_metadata_misses",
-			value: 156591375,
-		},
-		{
-			name:  "arcstats_prefetch_data_hits",
-			value: 367047144,
-		},
-		{
-			name:  "arcstats_prefetch_data_misses",
-			value: 974529898,
-		},
-		{
-			name:  "arcstats_prefetch_metadata_hits",
-			value: 32943583,
-		},
-		{
-			name:  "arcstats_prefetch_metadata_misses",
-			value: 26557943,
-		},
-		{
-			name:  "arcstats_mru_hits",
-			value: 301176811,
-		},
-		{
-			name:  "arcstats_mru_ghost_hits",
-			value: 47066067,
-		},
-		{
-			name:  "arcstats_mfu_hits",
-			value: 5520612438,
-		},
-		{
-			name:  "arcstats_mfu_ghost_hits",
-			value: 45784009,
-		},
-		{
-			name:  "arcstats_deleted",
-			value: 1718937704,
-		},
-		{
-			name:  "arcstats_recycle_miss",
-			value: 481222994,
-		},
-		{
-			name:  "arcstats_mutex_miss",
-			value: 20575623,
-		},
-		{
-			name:  "arcstats_evict_skip",
-			value: 14655903906543,
-		},
-		{
-			name:  "arcstats_evict_l2_cached",
-			value: 145310202998272,
-		},
-		{
-			name:  "arcstats_evict_l2_eligible",
-			value: 16345402777088,
-		},
-		{
-			name:  "arcstats_evict_l2_ineligible",
-			value: 7437226893312,
-		},
-		{
-			name:  "arcstats_hash_elements",
-			value: 36617980,
-		},
-		{
-			name:  "arcstats_hash_elements_max",
-			value: 36618318,
-		},
-		{
-			name:  "arcstats_hash_collisions",
-			value: 554145157,
-		},
-		{
-			name:  "arcstats_hash_chains",
-			value: 4187651,
-		},
-		{
-			name:  "arcstats_hash_chain_max",
-			value: 26,
-		},
-		{
-			name:  "arcstats_p",
-			value: 13963222064,
-		},
-		{
-			name:  "arcstats_c",
-			value: 16381258376,
-		},
-		{
-			name:  "arcstats_c_min",
-			value: 4194304,
-		},
-		{
-			name:  "arcstats_c_max",
-			value: 16884125696,
-		},
-		{
-			name:  "arcstats_size",
-			value: 16319887096,
-		},
-		{
-			name:  "arcstats_hdr_size",
-			value: 42567864,
-		},
-		{
-			name:  "arcstats_data_size",
-			value: 60066304,
-		},
-		{
-			name:  "arcstats_meta_size",
-			value: 1701534208,
-		},
-		{
-			name:  "arcstats_other_size",
-			value: 1661543168,
-		},
-		{
-			name:  "arcstats_anon_size",
-			value: 94720,
-		},
-		{
-			name:  "arcstats_anon_evict_data",
-			value: 0,
-		},
-		{
-			name:  "arcstats_anon_evict_metadata",
-			value: 0,
-		},
-		{
-			name:  "arcstats_mru_size",
-			value: 973099008,
-		},
-		{
-			name:  "arcstats_mru_evict_data",
-			value: 9175040,
-		},
-		{
-			name:  "arcstats_mru_evict_metadata",
-			value: 32768,
-		},
-		{
-			name:  "arcstats_mru_ghost_size",
-			value: 32768,
-		},
-		{
-			name:  "arcstats_mru_ghost_evict_data",
-			value: 0,
-		},
-		{
-			name:  "arcstats_mru_ghost_evict_metadata",
-			value: 32768,
-		},
-		{
-			name:  "arcstats_mfu_size",
-			value: 788406784,
-		},
-		{
-			name:  "arcstats_mfu_evict_data",
-			value: 50881024,
-		},
-		{
-			name:  "arcstats_mfu_evict_metadata",
-			value: 81920,
-		},
-		{
-			name:  "arcstats_mfu_ghost_size",
-			value: 0,
-		},
-		{
-			name:  "arcstats_mfu_ghost_evict_data",
-			value: 0,
-		},
-		{
-			name:  "arcstats_mfu_ghost_evict_metadata",
-			value: 0,
-		},
-		{
-			name:  "arcstats_l2_hits",
-			value: 573868618,
-		},
-		{
-			name:  "arcstats_l2_misses",
-			value: 1085309718,
-		},
-		{
-			name:  "arcstats_l2_feeds",
-			value: 12182087,
-		},
-		{
-			name:  "arcstats_l2_rw_clash",
-			value: 9610,
-		},
-		{
-			name:  "arcstats_l2_read_bytes",
-			value: 32695938336768,
-		},
-		{
-			name:  "arcstats_l2_write_bytes",
-			value: 2826774778880,
-		},
-		{
-			name:  "arcstats_l2_writes_sent",
-			value: 4267687,
-		},
-		{
-			name:  "arcstats_l2_writes_done",
-			value: 4267687,
-		},
-		{
-			name:  "arcstats_l2_writes_error",
-			value: 0,
-		},
-		{
-			name:  "arcstats_l2_writes_hdr_miss",
-			value: 164,
-		},
-		{
-			name:  "arcstats_l2_evict_lock_retry",
-			value: 5,
-		},
-		{
-			name:  "arcstats_l2_evict_reading",
-			value: 0,
-		},
-		{
-			name:  "arcstats_l2_free_on_write",
-			value: 1606914,
-		},
-		{
-			name:  "arcstats_l2_cdata_free_on_write",
-			value: 1775,
-		},
-		{
-			name:  "arcstats_l2_abort_lowmem",
-			value: 83462,
-		},
-		{
-			name:  "arcstats_l2_cksum_bad",
-			value: 393860640,
-		},
-		{
-			name:  "arcstats_l2_io_error",
-			value: 53881460,
-		},
-		{
-			name:  "arcstats_l2_size",
-			value: 2471466648576,
-		},
-		{
-			name:  "arcstats_l2_asize",
-			value: 2461690072064,
-		},
-		{
-			name:  "arcstats_l2_hdr_size",
-			value: 12854175552,
-		},
-		{
-			name:  "arcstats_l2_compress_successes",
-			value: 12184849,
-		},
-		{
-			name:  "arcstats_l2_compress_zeros",
-			value: 0,
-		},
-		{
-			name:  "arcstats_l2_compress_failures",
-			value: 0,
-		},
-		{
-			name:  "arcstats_memory_throttle_count",
-			value: 0,
-		},
-		{
-			name:  "arcstats_duplicate_buffers",
-			value: 0,
-		},
-		{
-			name:  "arcstats_duplicate_buffers_size",
-			value: 0,
-		},
-		{
-			name:  "arcstats_duplicate_reads",
-			value: 0,
-		},
-		{
-			name:  "arcstats_memory_direct_count",
-			value: 5159942,
-		},
-		{
-			name:  "arcstats_memory_indirect_count",
-			value: 3034640,
-		},
-		{
-			name:  "arcstats_arc_no_grow",
-			value: 0,
-		},
-		{
-			name:  "arcstats_arc_tempreserve",
-			value: 0,
-		},
-		{
-			name:  "arcstats_arc_loaned_bytes",
-			value: 0,
-		},
-		{
-			name:  "arcstats_arc_prune",
-			value: 114554259559,
-		},
-		{
-			name:  "arcstats_arc_meta_used",
-			value: 16259820792,
-		},
-		{
-			name:  "arcstats_arc_meta_limit",
-			value: 12663094272,
-		},
-		{
-			name:  "arcstats_arc_meta_max",
-			value: 18327165696,
-		},
+func getKstatMetricsArcOnly() map[string]interface{} {
+	return map[string]interface{}{
+		"arcstats_hits":                     int64(5968846374),
+		"arcstats_misses":                   int64(1659178751),
+		"arcstats_demand_data_hits":         int64(4860247322),
+		"arcstats_demand_data_misses":       int64(501499535),
+		"arcstats_demand_metadata_hits":     int64(708608325),
+		"arcstats_demand_metadata_misses":   int64(156591375),
+		"arcstats_prefetch_data_hits":       int64(367047144),
+		"arcstats_prefetch_data_misses":     int64(974529898),
+		"arcstats_prefetch_metadata_hits":   int64(32943583),
+		"arcstats_prefetch_metadata_misses": int64(26557943),
+		"arcstats_mru_hits":                 int64(301176811),
+		"arcstats_mru_ghost_hits":           int64(47066067),
+		"arcstats_mfu_hits":                 int64(5520612438),
+		"arcstats_mfu_ghost_hits":           int64(45784009),
+		"arcstats_deleted":                  int64(1718937704),
+		"arcstats_recycle_miss":             int64(481222994),
+		"arcstats_mutex_miss":               int64(20575623),
+		"arcstats_evict_skip":               int64(14655903906543),
+		"arcstats_evict_l2_cached":          int64(145310202998272),
+		"arcstats_evict_l2_eligible":        int64(16345402777088),
+		"arcstats_evict_l2_ineligible":      int64(7437226893312),
+		"arcstats_hash_elements":            int64(36617980),
+		"arcstats_hash_elements_max":        int64(36618318),
+		"arcstats_hash_collisions":          int64(554145157),
+		"arcstats_hash_chains":              int64(4187651),
+		"arcstats_hash_chain_max":           int64(26),
+		"arcstats_p":                        int64(13963222064),
+		"arcstats_c":                        int64(16381258376),
+		"arcstats_c_min":                    int64(4194304),
+		"arcstats_c_max":                    int64(16884125696),
+		"arcstats_size":                     int64(16319887096),
+		"arcstats_hdr_size":                 int64(42567864),
+		"arcstats_data_size":                int64(60066304),
+		"arcstats_meta_size":                int64(1701534208),
+		"arcstats_other_size":               int64(1661543168),
+		"arcstats_anon_size":                int64(94720),
+		"arcstats_anon_evict_data":          int64(0),
+		"arcstats_anon_evict_metadata":      int64(0),
+		"arcstats_mru_size":                 int64(973099008),
+		"arcstats_mru_evict_data":           int64(9175040),
+		"arcstats_mru_evict_metadata":       int64(32768),
+		"arcstats_mru_ghost_size":           int64(32768),
+		"arcstats_mru_ghost_evict_data":     int64(0),
+		"arcstats_mru_ghost_evict_metadata": int64(32768),
+		"arcstats_mfu_size":                 int64(788406784),
+		"arcstats_mfu_evict_data":           int64(50881024),
+		"arcstats_mfu_evict_metadata":       int64(81920),
+		"arcstats_mfu_ghost_size":           int64(0),
+		"arcstats_mfu_ghost_evict_data":     int64(0),
+		"arcstats_mfu_ghost_evict_metadata": int64(0),
+		"arcstats_l2_hits":                  int64(573868618),
+		"arcstats_l2_misses":                int64(1085309718),
+		"arcstats_l2_feeds":                 int64(12182087),
+		"arcstats_l2_rw_clash":              int64(9610),
+		"arcstats_l2_read_bytes":            int64(32695938336768),
+		"arcstats_l2_write_bytes":           int64(2826774778880),
+		"arcstats_l2_writes_sent":           int64(4267687),
+		"arcstats_l2_writes_done":           int64(4267687),
+		"arcstats_l2_writes_error":          int64(0),
+		"arcstats_l2_writes_hdr_miss":       int64(164),
+		"arcstats_l2_evict_lock_retry":      int64(5),
+		"arcstats_l2_evict_reading":         int64(0),
+		"arcstats_l2_free_on_write":         int64(1606914),
+		"arcstats_l2_cdata_free_on_write":   int64(1775),
+		"arcstats_l2_abort_lowmem":          int64(83462),
+		"arcstats_l2_cksum_bad":             int64(393860640),
+		"arcstats_l2_io_error":              int64(53881460),
+		"arcstats_l2_size":                  int64(2471466648576),
+		"arcstats_l2_asize":                 int64(2461690072064),
+		"arcstats_l2_hdr_size":              int64(12854175552),
+		"arcstats_l2_compress_successes":    int64(12184849),
+		"arcstats_l2_compress_zeros":        int64(0),
+		"arcstats_l2_compress_failures":     int64(0),
+		"arcstats_memory_throttle_count":    int64(0),
+		"arcstats_duplicate_buffers":        int64(0),
+		"arcstats_duplicate_buffers_size":   int64(0),
+		"arcstats_duplicate_reads":          int64(0),
+		"arcstats_memory_direct_count":      int64(5159942),
+		"arcstats_memory_indirect_count":    int64(3034640),
+		"arcstats_arc_no_grow":              int64(0),
+		"arcstats_arc_tempreserve":          int64(0),
+		"arcstats_arc_loaned_bytes":         int64(0),
+		"arcstats_arc_prune":                int64(114554259559),
+		"arcstats_arc_meta_used":            int64(16259820792),
+		"arcstats_arc_meta_limit":           int64(12663094272),
+		"arcstats_arc_meta_max":             int64(18327165696),
 	}
 }
 
-func getKstatMetricsAll() []*metrics {
-	otherMetrics := []*metrics{
-		{
-			name:  "zfetchstats_hits",
-			value: 7812959060,
-		},
-		{
-			name:  "zfetchstats_misses",
-			value: 4154484207,
-		},
-		{
-			name:  "zfetchstats_colinear_hits",
-			value: 1366368,
-		},
-		{
-			name:  "zfetchstats_colinear_misses",
-			value: 4153117839,
-		},
-		{
-			name:  "zfetchstats_stride_hits",
-			value: 7309776732,
-		},
-		{
-			name:  "zfetchstats_stride_misses",
-			value: 222766182,
-		},
-		{
-			name:  "zfetchstats_reclaim_successes",
-			value: 107788388,
-		},
-		{
-			name:  "zfetchstats_reclaim_failures",
-			value: 4045329451,
-		},
-		{
-			name:  "zfetchstats_streams_resets",
-			value: 20989756,
-		},
-		{
-			name:  "zfetchstats_streams_noresets",
-			value: 503182328,
-		},
-		{
-			name:  "zfetchstats_bogus_streams",
-			value: 0,
-		},
-		{
-			name:  "vdev_cache_stats_delegations",
-			value: 0,
-		},
-		{
-			name:  "vdev_cache_stats_hits",
-			value: 0,
-		},
-		{
-			name:  "vdev_cache_stats_misses",
-			value: 0,
-		},
+func getKstatMetricsAll() map[string]interface{} {
+	otherMetrics := map[string]interface{}{
+		"zfetchstats_hits":              int64(7812959060),
+		"zfetchstats_misses":            int64(4154484207),
+		"zfetchstats_colinear_hits":     int64(1366368),
+		"zfetchstats_colinear_misses":   int64(4153117839),
+		"zfetchstats_stride_hits":       int64(7309776732),
+		"zfetchstats_stride_misses":     int64(222766182),
+		"zfetchstats_reclaim_successes": int64(107788388),
+		"zfetchstats_reclaim_failures":  int64(4045329451),
+		"zfetchstats_streams_resets":    int64(20989756),
+		"zfetchstats_streams_noresets":  int64(503182328),
+		"zfetchstats_bogus_streams":     int64(0),
+		"vdev_cache_stats_delegations":  int64(0),
+		"vdev_cache_stats_hits":         int64(0),
+		"vdev_cache_stats_misses":       int64(0),
 	}
-
-	return append(getKstatMetricsArcOnly(), otherMetrics...)
+	arcMetrics := getKstatMetricsArcOnly()
+	for k, v := range otherMetrics {
+		arcMetrics[k] = v
+	}
+	return arcMetrics
 }
 
-func getPoolMetrics() []*metrics {
-	return []*metrics{
-		{
-			name:  "nread",
-			value: 1884160,
-		},
-		{
-			name:  "nwritten",
-			value: 6450688,
-		},
-		{
-			name:  "reads",
-			value: 22,
-		},
-		{
-			name:  "writes",
-			value: 978,
-		},
-		{
-			name:  "wtime",
-			value: 272187126,
-		},
-		{
-			name:  "wlentime",
-			value: 2850519036,
-		},
-		{
-			name:  "wupdate",
-			value: 2263669418655,
-		},
-		{
-			name:  "rtime",
-			value: 424226814,
-		},
-		{
-			name:  "rlentime",
-			value: 2850519036,
-		},
-		{
-			name:  "rupdate",
-			value: 2263669871823,
-		},
-		{
-			name:  "wcnt",
-			value: 0,
-		},
-		{
-			name:  "rcnt",
-			value: 0,
-		},
+func getPoolMetrics() map[string]interface{} {
+	return map[string]interface{}{
+		"nread":    int64(1884160),
+		"nwritten": int64(6450688),
+		"reads":    int64(22),
+		"writes":   int64(978),
+		"wtime":    int64(272187126),
+		"wlentime": int64(2850519036),
+		"wupdate":  int64(2263669418655),
+		"rtime":    int64(424226814),
+		"rlentime": int64(2850519036),
+		"rupdate":  int64(2263669871823),
+		"wcnt":     int64(0),
+		"rcnt":     int64(0),
 	}
 }

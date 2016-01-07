@@ -130,7 +130,7 @@ func (t *Twemproxy) processServer(
 			}
 		}
 	}
-	acc.AddFields("twemproxy_pool", fields, tags)
+	acc.AddFields("twemproxy_pool_server", fields, tags)
 }
 
 // Tags is not expected to be mutated after passing to Add.

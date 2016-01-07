@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -85,16 +84,13 @@ func TestGather(t *testing.T) {
 	defer mockServer.Close()
 
 	twemproxy := &Twemproxy{
-		Instances: []TwemproxyInstance{
-			TwemproxyInstance{
-				Addr:  sampleAddr,
-				Pools: []string{"demo"},
-			},
-		},
+		Addr:  sampleAddr,
+		Pools: []string{"demo"},
 	}
 
 	var acc testutil.Accumulator
-	err = twemproxy.Instances[0].Gather(&acc)
+	acc.SetDebug(true)
+	err = twemproxy.Gather(&acc)
 	require.NoError(t, err)
 
 	var sourceData map[string]interface{}
@@ -102,33 +98,74 @@ func TestGather(t *testing.T) {
 		panic(err)
 	}
 
-	metrics := []string{"total_connections", "curr_connections", "timestamp"}
+	fields := map[string]interface{}{
+		"total_connections": float64(276448),
+		"curr_connections":  float64(1322),
+		"timestamp":         float64(1.447312436e+09),
+	}
 	tags := map[string]string{
 		"twemproxy": sampleAddr,
 		"source":    sourceData["source"].(string),
 	}
-	for _, m := range metrics {
-		assert.NoError(t, acc.ValidateTaggedValue(m, sourceData[m].(float64), tags))
-	}
+	acc.AssertContainsTaggedFields(t, "twemproxy", fields, tags)
 
 	poolName := "demo"
-	poolMetrics := []string{
-		"client_connections", "forward_error", "client_err", "server_ejects",
-		"fragments", "client_eof",
+	poolFields := map[string]interface{}{
+		"client_connections": float64(1305),
+		"client_eof":         float64(126813),
+		"client_err":         float64(147942),
+		"forward_error":      float64(11684),
+		"fragments":          float64(0),
+		"server_ejects":      float64(0),
 	}
 	tags["pool"] = poolName
-	poolData := sourceData[poolName].(map[string]interface{})
-	for _, m := range poolMetrics {
-		measurement := poolName + "_" + m
-		assert.NoError(t, acc.ValidateTaggedValue(measurement, poolData[m].(float64), tags))
+	acc.AssertContainsTaggedFields(t, "twemproxy_pool", poolFields, tags)
+
+	poolServerTags1 := map[string]string{
+		"pool":      "demo",
+		"server":    "10.16.29.2:6379",
+		"source":    "server1.website.com",
+		"twemproxy": "127.0.0.1:22222",
 	}
-	poolServers := []string{"10.16.29.1:6379", "10.16.29.2:6379"}
-	for _, s := range poolServers {
-		tags["server"] = s
-		serverData := poolData[s].(map[string]interface{})
-		for k, v := range serverData {
-			measurement := poolName + "_" + k
-			assert.NoError(t, acc.ValidateTaggedValue(measurement, v, tags))
-		}
+	poolServerFields1 := map[string]interface{}{
+		"in_queue":           float64(0),
+		"in_queue_bytes":     float64(0),
+		"out_queue":          float64(0),
+		"out_queue_bytes":    float64(0),
+		"request_bytes":      float64(2.412114759e+09),
+		"requests":           float64(3.7870211e+07),
+		"response_bytes":     float64(5.228980582e+09),
+		"responses":          float64(3.7869551e+07),
+		"server_connections": float64(1),
+		"server_ejected_at":  float64(0),
+		"server_eof":         float64(0),
+		"server_err":         float64(0),
+		"server_timedout":    float64(25),
 	}
+	acc.AssertContainsTaggedFields(t, "twemproxy_pool_server",
+		poolServerFields1, poolServerTags1)
+
+	poolServerTags2 := map[string]string{
+		"pool":      "demo",
+		"server":    "10.16.29.1:6379",
+		"source":    "server1.website.com",
+		"twemproxy": "127.0.0.1:22222",
+	}
+	poolServerFields2 := map[string]interface{}{
+		"in_queue":           float64(0),
+		"in_queue_bytes":     float64(0),
+		"out_queue":          float64(0),
+		"out_queue_bytes":    float64(0),
+		"request_bytes":      float64(2.7758404e+09),
+		"requests":           float64(4.3604566e+07),
+		"response_bytes":     float64(7.663182096e+09),
+		"responses":          float64(4.36039e+07),
+		"server_connections": float64(1),
+		"server_ejected_at":  float64(0),
+		"server_eof":         float64(0),
+		"server_err":         float64(0),
+		"server_timedout":    float64(24),
+	}
+	acc.AssertContainsTaggedFields(t, "twemproxy_pool_server",
+		poolServerFields2, poolServerTags2)
 }
