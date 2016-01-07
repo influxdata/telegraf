@@ -72,29 +72,26 @@ func TestBasic(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 
 	require.Len(t, acc.Points, 2)
-	require.NoError(t, acc.ValidateTaggedFieldsValue(
-		"foo",
-		map[string]interface{}{
-			// JSON will truncate floats to integer representations.
-			// Since there's no distinction in JSON, we can't assume it's an int.
-			"i": -1.0,
-			"f": 0.5,
-			"b": true,
-			"s": "string",
-		},
-		map[string]string{
-			"id":  "ex1",
-			"url": fakeServer.URL + "/endpoint",
-		},
-	))
-	require.NoError(t, acc.ValidateTaggedFieldsValue(
-		"bar",
-		map[string]interface{}{
-			"x": "x",
-		},
-		map[string]string{
-			"id":  "ex2",
-			"url": fakeServer.URL + "/endpoint",
-		},
-	))
+	fields := map[string]interface{}{
+		// JSON will truncate floats to integer representations.
+		// Since there's no distinction in JSON, we can't assume it's an int.
+		"i": -1.0,
+		"f": 0.5,
+		"b": true,
+		"s": "string",
+	}
+	tags := map[string]string{
+		"id":  "ex1",
+		"url": fakeServer.URL + "/endpoint",
+	}
+	acc.AssertContainsTaggedFields(t, "foo", fields, tags)
+
+	fields = map[string]interface{}{
+		"x": "x",
+	}
+	tags = map[string]string{
+		"id":  "ex2",
+		"url": fakeServer.URL + "/endpoint",
+	}
+	acc.AssertContainsTaggedFields(t, "bar", fields, tags)
 }
