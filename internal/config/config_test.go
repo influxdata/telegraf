@@ -39,6 +39,7 @@ func TestConfig_LoadSinglePlugin(t *testing.T) {
 		},
 		Interval: 5 * time.Second,
 	}
+	mConfig.Tags = make(map[string]string)
 
 	assert.Equal(t, memcached, c.Plugins[0].Plugin,
 		"Testdata did not produce a correct memcached struct.")
@@ -81,19 +82,18 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		},
 		Interval: 5 * time.Second,
 	}
+	mConfig.Tags = make(map[string]string)
+
 	assert.Equal(t, memcached, c.Plugins[0].Plugin,
 		"Testdata did not produce a correct memcached struct.")
 	assert.Equal(t, mConfig, c.Plugins[0].Config,
 		"Testdata did not produce correct memcached metadata.")
 
 	ex := plugins.Plugins["exec"]().(*exec.Exec)
-	ex.Commands = []*exec.Command{
-		&exec.Command{
-			Command: "/usr/bin/myothercollector --foo=bar",
-			Name:    "myothercollector",
-		},
-	}
+	ex.Command = "/usr/bin/myothercollector --foo=bar"
+	ex.Name = "myothercollector"
 	eConfig := &PluginConfig{Name: "exec"}
+	eConfig.Tags = make(map[string]string)
 	assert.Equal(t, ex, c.Plugins[1].Plugin,
 		"Merged Testdata did not produce a correct exec struct.")
 	assert.Equal(t, eConfig, c.Plugins[1].Config,
@@ -106,16 +106,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		"Testdata did not produce correct memcached metadata.")
 
 	pstat := plugins.Plugins["procstat"]().(*procstat.Procstat)
-	pstat.Specifications = []*procstat.Specification{
-		&procstat.Specification{
-			PidFile: "/var/run/grafana-server.pid",
-		},
-		&procstat.Specification{
-			PidFile: "/var/run/influxdb/influxd.pid",
-		},
-	}
+	pstat.PidFile = "/var/run/grafana-server.pid"
 
 	pConfig := &PluginConfig{Name: "procstat"}
+	pConfig.Tags = make(map[string]string)
 
 	assert.Equal(t, pstat, c.Plugins[3].Plugin,
 		"Merged Testdata did not produce a correct procstat struct.")
