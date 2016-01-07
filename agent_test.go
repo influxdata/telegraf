@@ -16,31 +16,36 @@ import (
 func TestAgent_LoadPlugin(t *testing.T) {
 	c := config.NewConfig()
 	c.PluginFilters = []string{"mysql"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err := c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ := NewAgent(c)
 	assert.Equal(t, 1, len(a.Config.Plugins))
 
 	c = config.NewConfig()
 	c.PluginFilters = []string{"foo"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ = NewAgent(c)
 	assert.Equal(t, 0, len(a.Config.Plugins))
 
 	c = config.NewConfig()
 	c.PluginFilters = []string{"mysql", "foo"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ = NewAgent(c)
 	assert.Equal(t, 1, len(a.Config.Plugins))
 
 	c = config.NewConfig()
 	c.PluginFilters = []string{"mysql", "redis"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ = NewAgent(c)
 	assert.Equal(t, 2, len(a.Config.Plugins))
 
 	c = config.NewConfig()
 	c.PluginFilters = []string{"mysql", "foo", "redis", "bar"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ = NewAgent(c)
 	assert.Equal(t, 2, len(a.Config.Plugins))
 }
@@ -48,37 +53,51 @@ func TestAgent_LoadPlugin(t *testing.T) {
 func TestAgent_LoadOutput(t *testing.T) {
 	c := config.NewConfig()
 	c.OutputFilters = []string{"influxdb"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err := c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ := NewAgent(c)
 	assert.Equal(t, 2, len(a.Config.Outputs))
 
 	c = config.NewConfig()
+	c.OutputFilters = []string{"kafka"}
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
+	a, _ = NewAgent(c)
+	assert.Equal(t, 1, len(a.Config.Outputs))
+
+	c = config.NewConfig()
 	c.OutputFilters = []string{}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ = NewAgent(c)
 	assert.Equal(t, 3, len(a.Config.Outputs))
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"foo"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ = NewAgent(c)
 	assert.Equal(t, 0, len(a.Config.Outputs))
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"influxdb", "foo"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ = NewAgent(c)
 	assert.Equal(t, 2, len(a.Config.Outputs))
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"influxdb", "kafka"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(c.Outputs))
 	a, _ = NewAgent(c)
 	assert.Equal(t, 3, len(a.Config.Outputs))
 
 	c = config.NewConfig()
 	c.OutputFilters = []string{"influxdb", "foo", "kafka", "bar"}
-	c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	err = c.LoadConfig("./internal/config/testdata/telegraf-agent.toml")
+	assert.NoError(t, err)
 	a, _ = NewAgent(c)
 	assert.Equal(t, 3, len(a.Config.Outputs))
 }

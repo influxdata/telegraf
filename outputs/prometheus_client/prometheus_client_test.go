@@ -3,11 +3,11 @@ package prometheus_client
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/plugins/prometheus"
 	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var pTesting *PrometheusClient
@@ -48,7 +48,8 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 
 	require.NoError(t, p.Gather(&acc))
 	for _, e := range expected {
-		assert.NoError(t, acc.ValidateValue(e.name, e.value))
+		acc.AssertContainsFields(t, "prometheus_"+e.name,
+			map[string]interface{}{"value": e.value})
 	}
 }
 
@@ -88,7 +89,8 @@ func TestPrometheusWritePointTag(t *testing.T) {
 
 	require.NoError(t, p.Gather(&acc))
 	for _, e := range expected {
-		assert.True(t, acc.CheckTaggedValue(e.name, e.value, tags))
+		acc.AssertContainsFields(t, "prometheus_"+e.name,
+			map[string]interface{}{"value": e.value})
 	}
 }
 

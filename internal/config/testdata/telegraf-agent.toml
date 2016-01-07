@@ -21,19 +21,12 @@
 
 # Tags can also be specified via a normal map, but only one form at a time:
 [tags]
-  # dc = "us-east-1"
+  dc = "us-east-1"
 
 # Configuration for telegraf agent
 [agent]
   # Default data collection interval for all plugins
   interval = "10s"
-
-  # If utc = false, uses local time (utc is highly recommended)
-  utc = true
-
-  # Precision of writes, valid values are n, u, ms, s, m, and h
-  # note: using second precision greatly helps InfluxDB compression
-  precision = "s"
 
   # run telegraf in debug mode
   debug = false
@@ -58,17 +51,6 @@
   # The target database for metrics. This database must already exist
   database = "telegraf" # required.
 
-  # Connection timeout (for the connection with InfluxDB), formatted as a string.
-  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-  # If not provided, will default to 0 (no timeout)
-  # timeout = "5s"
-
-  # username = "telegraf"
-  # password = "metricsmetricsmetricsmetrics"
-
-  # Set the user agent for the POSTs (can be useful for log differentiation)
-  # user_agent = "telegraf"
-
 [[outputs.influxdb]]
   urls = ["udp://localhost:8089"]
   database = "udp-telegraf"
@@ -92,8 +74,8 @@
 
 # Read Apache status information (mod_status)
 [[plugins.apache]]
-# An array of Apache status URI to gather stats.
-urls = ["http://localhost/server-status?auto"]
+  # An array of Apache status URI to gather stats.
+  urls = ["http://localhost/server-status?auto"]
 
 # Read metrics about cpu usage
 [[plugins.cpu]]
@@ -128,8 +110,6 @@ urls = ["http://localhost/server-status?auto"]
 
 # Read flattened metrics from one or more commands that output JSON to stdout
 [[plugins.exec]]
-  # specify commands via an array of tables
-  [[exec.commands]]
   # the command to run
   command = "/usr/bin/mycollector --foo=bar"
 
@@ -148,28 +128,25 @@ urls = ["http://localhost/server-status?auto"]
 
 # Read flattened metrics from one or more JSON HTTP endpoints
 [[plugins.httpjson]]
-  # Specify services via an array of tables
-  [[httpjson.services]]
+  # a name for the service being polled
+  name = "webserver_stats"
 
-    # a name for the service being polled
-    name = "webserver_stats"
+  # URL of each server in the service's cluster
+  servers = [
+    "http://localhost:9999/stats/",
+    "http://localhost:9998/stats/",
+  ]
 
-    # URL of each server in the service's cluster
-    servers = [
-      "http://localhost:9999/stats/",
-      "http://localhost:9998/stats/",
-    ]
+  # HTTP method to use (case-sensitive)
+  method = "GET"
 
-    # HTTP method to use (case-sensitive)
-    method = "GET"
-
-    # HTTP parameters (all values must be strings)
-    [httpjson.services.parameters]
-      event_type = "cpu_spike"
-      threshold = "0.75"
+  # HTTP parameters (all values must be strings)
+  [httpjson.parameters]
+    event_type = "cpu_spike"
+    threshold = "0.75"
 
 # Read metrics about disk IO by device
-[[plugins.io]]
+[[plugins.diskio]]
   # no configuration
 
 # read metrics from a Kafka topic
@@ -261,9 +238,6 @@ urls = ["http://localhost/server-status?auto"]
 
 # Read metrics from one or many postgresql servers
 [[plugins.postgresql]]
-  # specify servers via an array of tables
-  [[postgresql.servers]]
-
   # specify address via a url matching:
   #   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
   # or a simple string:
@@ -297,7 +271,6 @@ urls = ["http://localhost/server-status?auto"]
 # Read metrics from one or many RabbitMQ servers via the management API
 [[plugins.rabbitmq]]
   # Specify servers via an array of tables
-  [[rabbitmq.servers]]
   # name = "rmq-server-1" # optional tag
   # url = "http://localhost:15672"
   # username = "guest"
