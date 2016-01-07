@@ -10,8 +10,6 @@ machine:
     - go version
 
 dependencies:
-  cache_directories:
-    - "~/telegraf-build/src"
   override:
     - docker info
 

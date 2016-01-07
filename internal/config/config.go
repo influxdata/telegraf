@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/influxdb/telegraf/internal"
-	"github.com/influxdb/telegraf/outputs"
-	"github.com/influxdb/telegraf/plugins"
+	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdb/telegraf/plugins/outputs"
 
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
@@ -25,11 +25,11 @@ import (
 // specified
 type Config struct {
 	Tags          map[string]string
-	PluginFilters []string
+	InputFilters  []string
 	OutputFilters []string
 
 	Agent   *AgentConfig
-	Plugins []*RunningPlugin
+	Inputs  []*RunningInput
 	Outputs []*RunningOutput
 }
 
@@ -45,9 +45,9 @@ func NewConfig() *Config {
 		},
 
 		Tags:          make(map[string]string),
-		Plugins:       make([]*RunningPlugin, 0),
+		Inputs:        make([]*RunningInput, 0),
 		Outputs:       make([]*RunningOutput, 0),
-		PluginFilters: make([]string, 0),
+		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
 	return c
@@ -93,10 +93,10 @@ type RunningOutput struct {
 	Config *OutputConfig
 }
 
-type RunningPlugin struct {
+type RunningInput struct {
 	Name   string
-	Plugin plugins.Plugin
-	Config *PluginConfig
+	Input  inputs.Input
+	Config *InputConfig
 }
 
 // Filter containing drop/pass and tagdrop/tagpass rules
@@ -110,8 +110,8 @@ type Filter struct {
 	IsActive bool
 }
 
-// PluginConfig containing a name, interval, and filter
-type PluginConfig struct {
+// InputConfig containing a name, interval, and filter
+type InputConfig struct {
 	Name              string
 	NameOverride      string
 	MeasurementPrefix string
@@ -204,16 +204,16 @@ func (f Filter) ShouldTagsPass(tags map[string]string) bool {
 	return true
 }
 
-// Plugins returns a list of strings of the configured plugins.
-func (c *Config) PluginNames() []string {
+// Inputs returns a list of strings of the configured inputs.
+func (c *Config) InputNames() []string {
 	var name []string
-	for _, plugin := range c.Plugins {
-		name = append(name, plugin.Name)
+	for _, input := range c.Inputs {
+		name = append(name, input.Name)
 	}
 	return name
 }
 
-// Outputs returns a list of strings of the configured plugins.
+// Outputs returns a list of strings of the configured inputs.
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
@@ -239,7 +239,7 @@ func (c *Config) ListTags() string {
 var header = `# Telegraf configuration
 
 # Telegraf is entirely plugin driven. All metrics are gathered from the
-# declared plugins.
+# declared inputs.
 
 # Even if a plugin has no configuration, it must be declared in here
 # to be active. Declaring a plugin means just specifying the name
@@ -263,7 +263,7 @@ var header = `# Telegraf configuration
 
 # Configuration for telegraf agent
 [agent]
-  # Default data collection interval for all plugins
+  # Default data collection interval for all inputs
   interval = "10s"
   # Rounds collection interval to 'interval'
   # ie, if interval="10s" then always collect on :00, :10, :20, etc.
@@ -293,16 +293,16 @@ var header = `# Telegraf configuration
 var pluginHeader = `
 
 ###############################################################################
-#                                  PLUGINS                                    #
+#                                  INPUTS                                     #
 ###############################################################################
 
-[plugins]
+[inputs]
 `
 
-var servicePluginHeader = `
+var serviceInputHeader = `
 
 ###############################################################################
-#                              SERVICE PLUGINS                                #
+#                              SERVICE INPUTS                                 #
 ###############################################################################
 `
 
@@ -326,35 +326,35 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 		printConfig(oname, output, "outputs")
 	}
 
-	// Filter plugins
+	// Filter inputs
 	var pnames []string
-	for pname := range plugins.Plugins {
+	for pname := range inputs.Inputs {
 		if len(pluginFilters) == 0 || sliceContains(pname, pluginFilters) {
 			pnames = append(pnames, pname)
 		}
 	}
 	sort.Strings(pnames)
 
-	// Print Plugins
+	// Print Inputs
 	fmt.Printf(pluginHeader)
-	servPlugins := make(map[string]plugins.ServicePlugin)
+	servInputs := make(map[string]inputs.ServiceInput)
 	for _, pname := range pnames {
-		creator := plugins.Plugins[pname]
-		plugin := creator()
+		creator := inputs.Inputs[pname]
+		input := creator()
 
-		switch p := plugin.(type) {
-		case plugins.ServicePlugin:
-			servPlugins[pname] = p
+		switch p := input.(type) {
+		case inputs.ServiceInput:
+			servInputs[pname] = p
 			continue
 		}
 
-		printConfig(pname, plugin, "plugins")
+		printConfig(pname, input, "inputs")
 	}
 
-	// Print Service Plugins
-	fmt.Printf(servicePluginHeader)
-	for name, plugin := range servPlugins {
-		printConfig(name, plugin, "plugins")
+	// Print Service Inputs
+	fmt.Printf(serviceInputHeader)
+	for name, input := range servInputs {
+		printConfig(name, input, "inputs")
 	}
 }
 
@@ -382,12 +382,12 @@ func sliceContains(name string, list []string) bool {
 	return false
 }
 
-// PrintPluginConfig prints the config usage of a single plugin.
-func PrintPluginConfig(name string) error {
-	if creator, ok := plugins.Plugins[name]; ok {
-		printConfig(name, creator(), "plugins")
+// PrintInputConfig prints the config usage of a single input.
+func PrintInputConfig(name string) error {
+	if creator, ok := inputs.Inputs[name]; ok {
+		printConfig(name, creator(), "inputs")
 	} else {
-		return errors.New(fmt.Sprintf("Plugin %s not found", name))
+		return errors.New(fmt.Sprintf("Input %s not found", name))
 	}
 	return nil
 }
@@ -453,33 +453,15 @@ func (c *Config) LoadConfig(path string) error {
 				return err
 			}
 		case "outputs":
-			for outputName, outputVal := range subTable.Fields {
-				switch outputSubTable := outputVal.(type) {
-				case *ast.Table:
-					if err = c.addOutput(outputName, outputSubTable); err != nil {
-						return err
-					}
-				case []*ast.Table:
-					for _, t := range outputSubTable {
-						if err = c.addOutput(outputName, t); err != nil {
-							return err
-						}
-					}
-				default:
-					return fmt.Errorf("Unsupported config format: %s",
-						outputName)
-				}
-			}
-		case "plugins":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
 				case *ast.Table:
-					if err = c.addPlugin(pluginName, pluginSubTable); err != nil {
+					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
 						return err
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addPlugin(pluginName, t); err != nil {
+						if err = c.addOutput(pluginName, t); err != nil {
 							return err
 						}
 					}
@@ -488,10 +470,28 @@ func (c *Config) LoadConfig(path string) error {
 						pluginName)
 				}
 			}
-		// Assume it's a plugin for legacy config file support if no other
+		case "inputs":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case *ast.Table:
+					if err = c.addInput(pluginName, pluginSubTable); err != nil {
+						return err
+					}
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addInput(pluginName, t); err != nil {
+							return err
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
+				}
+			}
+		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
-			if err = c.addPlugin(name, subTable); err != nil {
+			if err = c.addInput(name, subTable); err != nil {
 				return err
 			}
 		}
@@ -527,41 +527,41 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) addPlugin(name string, table *ast.Table) error {
-	if len(c.PluginFilters) > 0 && !sliceContains(name, c.PluginFilters) {
+func (c *Config) addInput(name string, table *ast.Table) error {
+	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
 	}
-	// Legacy support renaming io plugin to diskio
+	// Legacy support renaming io input to diskio
 	if name == "io" {
 		name = "diskio"
 	}
 
-	creator, ok := plugins.Plugins[name]
+	creator, ok := inputs.Inputs[name]
 	if !ok {
-		return fmt.Errorf("Undefined but requested plugin: %s", name)
+		return fmt.Errorf("Undefined but requested input: %s", name)
 	}
-	plugin := creator()
+	input := creator()
 
-	pluginConfig, err := buildPlugin(name, table)
+	pluginConfig, err := buildInput(name, table)
 	if err != nil {
 		return err
 	}
 
-	if err := toml.UnmarshalTable(table, plugin); err != nil {
+	if err := toml.UnmarshalTable(table, input); err != nil {
 		return err
 	}
 
-	rp := &RunningPlugin{
+	rp := &RunningInput{
 		Name:   name,
-		Plugin: plugin,
+		Input:  input,
 		Config: pluginConfig,
 	}
-	c.Plugins = append(c.Plugins, rp)
+	c.Inputs = append(c.Inputs, rp)
 	return nil
 }
 
 // buildFilter builds a Filter (tagpass/tagdrop/pass/drop) to
-// be inserted into the OutputConfig/PluginConfig to be used for prefix
+// be inserted into the OutputConfig/InputConfig to be used for prefix
 // filtering on tags and measurements
 func buildFilter(tbl *ast.Table) Filter {
 	f := Filter{}
@@ -637,11 +637,11 @@ func buildFilter(tbl *ast.Table) Filter {
 	return f
 }
 
-// buildPlugin parses plugin specific items from the ast.Table,
+// buildInput parses input specific items from the ast.Table,
 // builds the filter and returns a
-// PluginConfig to be inserted into RunningPlugin
-func buildPlugin(name string, tbl *ast.Table) (*PluginConfig, error) {
-	cp := &PluginConfig{Name: name}
+// InputConfig to be inserted into RunningInput
+func buildInput(name string, tbl *ast.Table) (*InputConfig, error) {
+	cp := &InputConfig{Name: name}
 	if node, ok := tbl.Fields["interval"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -683,7 +683,7 @@ func buildPlugin(name string, tbl *ast.Table) (*PluginConfig, error) {
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
-				log.Printf("Could not parse tags for plugin %s\n", name)
+				log.Printf("Could not parse tags for input %s\n", name)
 			}
 		}
 	}
@@ -698,7 +698,7 @@ func buildPlugin(name string, tbl *ast.Table) (*PluginConfig, error) {
 }
 
 // buildOutput parses output specific items from the ast.Table, builds the filter and returns an
-// OutputConfig to be inserted into RunningPlugin
+// OutputConfig to be inserted into RunningInput
 // Note: error exists in the return for future calls that might require error
 func buildOutput(name string, tbl *ast.Table) (*OutputConfig, error) {
 	oc := &OutputConfig{

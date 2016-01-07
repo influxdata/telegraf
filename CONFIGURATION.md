@@ -5,9 +5,9 @@
 A default Telegraf config file can be generated using the `-sample-config` flag,
 like this: `telegraf -sample-config`
 
-To generate a file with specific collectors and outputs, you can use the
-`-filter` and `-outputfilter` flags, like this:
-`telegraf -sample-config -filter cpu:mem:net:swap -outputfilter influxdb:kafka`
+To generate a file with specific inputs and outputs, you can use the
+`-input-filter` and `-output-filter` flags, like this:
+`telegraf -sample-config -input-filter cpu:mem:net:swap -output-filter influxdb:kafka`
 
 ## Plugin Configuration
 
@@ -59,7 +59,7 @@ fields which begin with `time_`.
 
 # PLUGINS
 [plugins]
-[[plugins.cpu]]
+[[inputs.cpu]]
   percpu = true
   totalcpu = false
   # filter all fields beginning with 'time_'
@@ -70,16 +70,16 @@ fields which begin with `time_`.
 
 ```toml
 [plugins]
-[[plugins.cpu]]
+[[inputs.cpu]]
   percpu = true
   totalcpu = false
   drop = ["cpu_time"]
   # Don't collect CPU data for cpu6 & cpu7
-  [plugins.cpu.tagdrop]
+  [inputs.cpu.tagdrop]
     cpu = [ "cpu6", "cpu7" ]
 
-[[plugins.disk]]
-  [plugins.disk.tagpass]
+[[inputs.disk]]
+  [inputs.disk.tagpass]
     # tagpass conditions are OR, not AND.
     # If the (filesystem is ext4 or xfs) OR (the path is /opt or /home)
     # then the metric passes
@@ -92,13 +92,13 @@ fields which begin with `time_`.
 
 ```toml
 # Drop all metrics for guest & steal CPU usage
-[[plugins.cpu]]
+[[inputs.cpu]]
   percpu = false
   totalcpu = true
   drop = ["usage_guest", "usage_steal"]
 
 # Only store inode related metrics for disks
-[[plugins.disk]]
+[[inputs.disk]]
   pass = ["inodes*"]
 ```
 
@@ -107,7 +107,7 @@ fields which begin with `time_`.
 This plugin will emit measurements with the name `cpu_total`
 
 ```toml
-[[plugins.cpu]]
+[[inputs.cpu]]
   name_suffix = "_total"
   percpu = false
   totalcpu = true
@@ -116,7 +116,7 @@ This plugin will emit measurements with the name `cpu_total`
 This will emit measurements with the name `foobar`
 
 ```toml
-[[plugins.cpu]]
+[[inputs.cpu]]
   name_override = "foobar"
   percpu = false
   totalcpu = true
@@ -128,10 +128,10 @@ This plugin will emit measurements with two additional tags: `tag1=foo` and
 `tag2=bar`
 
 ```toml
-[[plugins.cpu]]
+[[inputs.cpu]]
   percpu = false
   totalcpu = true
-  [plugins.cpu.tags]
+  [inputs.cpu.tags]
     tag1 = "foo"
     tag2 = "bar"
 ```
@@ -142,11 +142,11 @@ Additional plugins (or outputs) of the same type can be specified,
 just define more instances in the config file:
 
 ```toml
-[[plugins.cpu]]
+[[inputs.cpu]]
   percpu = false
   totalcpu = true
 
-[[plugins.cpu]]
+[[inputs.cpu]]
   percpu = true
   totalcpu = false
   drop = ["cpu_time*"]

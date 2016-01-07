@@ -11,7 +11,7 @@ APIs (like Mailchimp, AWS CloudWatch, or Google Analytics).
 We'll eagerly accept pull requests for new plugins and will manage the set of
 plugins that Telegraf supports. See the
 [contributing guide](CONTRIBUTING.md) for instructions on
-writing new plugins.
+writing new inputs.
 
 ## Installation:
 
@@ -92,7 +92,7 @@ if you don't have it already. You also must build with golang version 1.4+.
 ### How to use it:
 
 * Run `telegraf -sample-config > telegraf.conf` to create an initial configuration.
-* Or run `telegraf -sample-config -filter cpu:mem -outputfilter influxdb > telegraf.conf`.
+* Or run `telegraf -sample-config -input-filter cpu:mem -output-filter influxdb > telegraf.conf`.
 to create a config file with only CPU and memory plugins defined, and InfluxDB
 output defined.
 * Edit the configuration to match your needs.
@@ -100,7 +100,7 @@ output defined.
 sample to STDOUT. NOTE: you may want to run as the telegraf user if you are using
 the linux packages `sudo -u telegraf telegraf -config telegraf.conf -test`
 * Run `telegraf -config telegraf.conf` to gather and send metrics to configured outputs.
-* Run `telegraf -config telegraf.conf -filter system:swap`.
+* Run `telegraf -config telegraf.conf -input-filter system:swap`.
 to run telegraf with only the system & swap plugins defined in the config.
 
 ## Telegraf Options

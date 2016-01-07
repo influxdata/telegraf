@@ -29,12 +29,12 @@ type Accumulator interface {
 }
 
 func NewAccumulator(
-	pluginConfig *config.PluginConfig,
+	inputConfig *config.InputConfig,
 	points chan *client.Point,
 ) Accumulator {
 	acc := accumulator{}
 	acc.points = points
-	acc.pluginConfig = pluginConfig
+	acc.inputConfig = inputConfig
 	return &acc
 }
 
@@ -47,7 +47,7 @@ type accumulator struct {
 
 	debug bool
 
-	pluginConfig *config.PluginConfig
+	inputConfig *config.InputConfig
 
 	prefix string
 }
@@ -73,27 +73,27 @@ func (ac *accumulator) AddFields(
 		return
 	}
 
-	if !ac.pluginConfig.Filter.ShouldTagsPass(tags) {
+	if !ac.inputConfig.Filter.ShouldTagsPass(tags) {
 		return
 	}
 
 	// Override measurement name if set
-	if len(ac.pluginConfig.NameOverride) != 0 {
-		measurement = ac.pluginConfig.NameOverride
+	if len(ac.inputConfig.NameOverride) != 0 {
+		measurement = ac.inputConfig.NameOverride
 	}
 	// Apply measurement prefix and suffix if set
-	if len(ac.pluginConfig.MeasurementPrefix) != 0 {
-		measurement = ac.pluginConfig.MeasurementPrefix + measurement
+	if len(ac.inputConfig.MeasurementPrefix) != 0 {
+		measurement = ac.inputConfig.MeasurementPrefix + measurement
 	}
-	if len(ac.pluginConfig.MeasurementSuffix) != 0 {
-		measurement = measurement + ac.pluginConfig.MeasurementSuffix
+	if len(ac.inputConfig.MeasurementSuffix) != 0 {
+		measurement = measurement + ac.inputConfig.MeasurementSuffix
 	}
 
 	if tags == nil {
 		tags = make(map[string]string)
 	}
 	// Apply plugin-wide tags if set
-	for k, v := range ac.pluginConfig.Tags {
+	for k, v := range ac.inputConfig.Tags {
 		if _, ok := tags[k]; !ok {
 			tags[k] = v
 		}
@@ -108,8 +108,8 @@ func (ac *accumulator) AddFields(
 	result := make(map[string]interface{})
 	for k, v := range fields {
 		// Filter out any filtered fields
-		if ac.pluginConfig != nil {
-			if !ac.pluginConfig.Filter.ShouldPass(k) {
+		if ac.inputConfig != nil {
+			if !ac.inputConfig.Filter.ShouldPass(k) {
 				continue
 			}
 		}
