@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	// "github.com/stretchr/testify/require"
 )
 
 func TestTrig(t *testing.T) {
@@ -27,7 +25,6 @@ func TestTrig(t *testing.T) {
 		fields["sine"] = sine
 		fields["cosine"] = cosine
 
-		assert.True(t, acc.CheckFieldsValue("trig", fields))
-
+		acc.AssertContainsFields(t, "trig", fields)
 	}
 }

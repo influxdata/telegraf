@@ -647,7 +647,7 @@ func TestParse_Counters(t *testing.T) {
 func TestParse_Timings(t *testing.T) {
 	s := NewStatsd()
 	s.Percentiles = []int{90}
-	testacc := &testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 
 	// Test that counters work
 	valid_lines := []string{
@@ -665,7 +665,7 @@ func TestParse_Timings(t *testing.T) {
 		}
 	}
 
-	s.Gather(testacc)
+	s.Gather(acc)
 
 	tests := []struct {
 		name  string
@@ -698,10 +698,8 @@ func TestParse_Timings(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if !testacc.CheckValue(test.name, test.value) {
-			t.Errorf("Did not find measurement %s with value %v",
-				test.name, test.value)
-		}
+		acc.AssertContainsFields(t, test.name,
+			map[string]interface{}{"value": test.value})
 	}
 }
 
