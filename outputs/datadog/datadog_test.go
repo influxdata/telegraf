@@ -162,15 +162,16 @@ func TestBuildPoint(t *testing.T) {
 		},
 	}
 	for _, tt := range tagtests {
-		pt, err := buildPoint(tt.ptIn)
+		pt, err := buildPoints(tt.ptIn)
 		if err != nil && tt.err == nil {
 			t.Errorf("%s: unexpected error, %+v\n", tt.ptIn.Name(), err)
 		}
 		if tt.err != nil && err == nil {
 			t.Errorf("%s: expected an error (%s) but none returned", tt.ptIn.Name(), tt.err.Error())
 		}
-		if !reflect.DeepEqual(pt, tt.outPt) && tt.err == nil {
-			t.Errorf("%s: \nexpected %+v\ngot %+v\n", tt.ptIn.Name(), tt.outPt, pt)
+		if !reflect.DeepEqual(pt["value"], tt.outPt) && tt.err == nil {
+			t.Errorf("%s: \nexpected %+v\ngot %+v\n",
+				tt.ptIn.Name(), tt.outPt, pt["value"])
 		}
 	}
 }

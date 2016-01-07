@@ -142,15 +142,20 @@ func TestBuildGauge(t *testing.T) {
 
 	l := NewLibrato(fakeUrl)
 	for _, gt := range gaugeTests {
-		gauge, err := l.buildGauge(gt.ptIn)
+		gauges, err := l.buildGauges(gt.ptIn)
 		if err != nil && gt.err == nil {
 			t.Errorf("%s: unexpected error, %+v\n", gt.ptIn.Name(), err)
 		}
 		if gt.err != nil && err == nil {
-			t.Errorf("%s: expected an error (%s) but none returned", gt.ptIn.Name(), gt.err.Error())
+			t.Errorf("%s: expected an error (%s) but none returned",
+				gt.ptIn.Name(), gt.err.Error())
 		}
-		if !reflect.DeepEqual(gauge, gt.outGauge) && gt.err == nil {
-			t.Errorf("%s: \nexpected %+v\ngot %+v\n", gt.ptIn.Name(), gt.outGauge, gauge)
+		if len(gauges) == 0 {
+			continue
+		}
+		if gt.err == nil && !reflect.DeepEqual(gauges[0], gt.outGauge) {
+			t.Errorf("%s: \nexpected %+v\ngot %+v\n",
+				gt.ptIn.Name(), gt.outGauge, gauges[0])
 		}
 	}
 }
@@ -198,15 +203,18 @@ func TestBuildGaugeWithSource(t *testing.T) {
 	l := NewLibrato(fakeUrl)
 	l.SourceTag = "hostname"
 	for _, gt := range gaugeTests {
-		gauge, err := l.buildGauge(gt.ptIn)
+		gauges, err := l.buildGauges(gt.ptIn)
 		if err != nil && gt.err == nil {
 			t.Errorf("%s: unexpected error, %+v\n", gt.ptIn.Name(), err)
 		}
 		if gt.err != nil && err == nil {
 			t.Errorf("%s: expected an error (%s) but none returned", gt.ptIn.Name(), gt.err.Error())
 		}
-		if !reflect.DeepEqual(gauge, gt.outGauge) && gt.err == nil {
-			t.Errorf("%s: \nexpected %+v\ngot %+v\n", gt.ptIn.Name(), gt.outGauge, gauge)
+		if len(gauges) == 0 {
+			continue
+		}
+		if gt.err == nil && !reflect.DeepEqual(gauges[0], gt.outGauge) {
+			t.Errorf("%s: \nexpected %+v\ngot %+v\n", gt.ptIn.Name(), gt.outGauge, gauges[0])
 		}
 	}
 }
