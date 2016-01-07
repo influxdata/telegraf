@@ -1,5 +1,14 @@
 # Telegraf Configuration
 
+## Generating a config file
+
+A default Telegraf config file can be generated using the `-sample-config` flag,
+like this: `telegraf -sample-config`
+
+To generate a file with specific collectors and outputs, you can use the
+`-filter` and `-outputfilter` flags, like this:
+`telegraf -sample-config -filter cpu:mem:net:swap -outputfilter influxdb:kafka`
+
 ## Plugin Configuration
 
 There are some configuration options that are configurable per plugin:
@@ -9,6 +18,9 @@ There are some configuration options that are configurable per plugin:
 * **name_prefix**: Specifies a prefix to attach to the measurement name.
 * **name_suffix**: Specifies a suffix to attach to the measurement name.
 * **tags**: A map of tags to apply to a specific plugin's measurements.
+* **interval**: How often to gather this metric. Normal plugins use a single
+global interval, but if one particular plugin should be run less or more often,
+you can configure that here.
 
 ### Plugin Filters
 
@@ -21,11 +33,8 @@ and if it matches, the field is emitted.
 * **tagpass**: tag names and arrays of strings that are used to filter
 measurements by the current plugin. Each string in the array is tested as a glob
 match against the tag name, and if it matches the measurement is emitted.
-* **tagdrop**: The inverse of tagpass. If a tag matches, the measurement is not emitted.
-This is tested on measurements that have passed the tagpass test.
-* **interval**: How often to gather this metric. Normal plugins use a single
-global interval, but if one particular plugin should be run less or more often,
-you can configure that here.
+* **tagdrop**: The inverse of tagpass. If a tag matches, the measurement is not
+emitted. This is tested on measurements that have passed the tagpass test.
 
 ### Plugin Configuration Examples
 
