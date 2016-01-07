@@ -77,7 +77,8 @@ func (g *Prometheus) gatherURL(url string, acc plugins.Accumulator) error {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return fmt.Errorf("error getting processing samples for %s: %s", url, err)
+			return fmt.Errorf("error getting processing samples for %s: %s",
+				url, err)
 		}
 		for _, sample := range samples {
 			tags := make(map[string]string)

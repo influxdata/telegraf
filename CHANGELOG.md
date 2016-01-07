@@ -5,6 +5,8 @@
 - **breaking change** Plugin measurements aggregated into a single measurement.
 - **breaking change** `jolokia` plugin: must use global tag/drop/pass parameters
 for configuration.
+- **breaking change** `procstat` plugin has `*cpu*` fields renamed to
+`*cpu_time*`
 - `twemproxy` plugin: `prefix` option removed.
 - `procstat` cpu measurements are now prepended with `cpu_time_` instead of
 only `cpu_`

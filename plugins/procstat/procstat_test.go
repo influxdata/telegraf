@@ -20,11 +20,11 @@ func TestGather(t *testing.T) {
 	file.Write([]byte(strconv.Itoa(pid)))
 	file.Close()
 	defer os.Remove(file.Name())
-	specifications := []*Specification{&Specification{PidFile: file.Name(), Prefix: "foo"}}
 	p := Procstat{
-		Specifications: specifications,
+		PidFile: file.Name(),
+		Prefix:  "foo",
 	}
 	p.Gather(&acc)
-	assert.True(t, acc.HasFloatValue("foo_cpu_user"))
-	assert.True(t, acc.HasUIntValue("foo_memory_vms"))
+	assert.True(t, acc.HasFloatField("procstat", "foo_cpu_time_user"))
+	assert.True(t, acc.HasUIntField("procstat", "foo_memory_vms"))
 }

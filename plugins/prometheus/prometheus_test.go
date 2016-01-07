@@ -45,11 +45,11 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 		value float64
 		tags  map[string]string
 	}{
-		{"go_gc_duration_seconds_count", 7, map[string]string{}},
-		{"go_goroutines", 15, map[string]string{}},
+		{"prometheus_go_gc_duration_seconds_count", 7, map[string]string{}},
+		{"prometheus_go_goroutines", 15, map[string]string{}},
 	}
 
 	for _, e := range expected {
-		assert.NoError(t, acc.ValidateValue(e.name, e.value))
+		assert.True(t, acc.HasFloatField(e.name, "value"))
 	}
 }
