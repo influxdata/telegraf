@@ -11,8 +11,11 @@ directory.
 - **breaking change** `jolokia` plugin: must use global tag/drop/pass parameters
 for configuration.
 - **breaking change** `twemproxy` plugin: `prefix` option removed.
-- **breaking change** `procstat` cpu measurements are now prepended with `cpu_time_` instead of
-only `cpu_`
+- **breaking change** `procstat` cpu measurements are now prepended with `cpu_time_`
+instead of only `cpu_`
+- **breaking change** some command-line flags have been renamed to separate words.
+`-configdirectory` -> `-config-directory`, `-filter` -> `-input-filter`,
+`-outputfilter` -> `-output-filter`
 - The prometheus plugin schema has not been changed (measurements have not been
 aggregated).
 

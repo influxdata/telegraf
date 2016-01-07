@@ -1,23 +1,35 @@
-# Telegraf - A native agent for InfluxDB [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf)
+# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf)
 
 Telegraf is an agent written in Go for collecting metrics from the system it's
-running on, or from other services, and writing them into InfluxDB.
+running on, or from other services, and writing them into InfluxDB or other
+[outputs](https://github.com/influxdata/telegraf#supported-output-plugins).
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
 from well known services (like Hadoop, Postgres, or Redis) and third party
 APIs (like Mailchimp, AWS CloudWatch, or Google Analytics).
 
-We'll eagerly accept pull requests for new plugins and will manage the set of
-plugins that Telegraf supports. See the
-[contributing guide](CONTRIBUTING.md) for instructions on
-writing new inputs.
+New input and output plugins are designed to be easy to contribute,
+we'll eagerly accept pull
+requests and will manage the set of plugins that Telegraf supports.
+See the [contributing guide](CONTRIBUTING.md) for instructions on writing
+new plugins.
 
 ## Installation:
+
+NOTE: Telegraf 0.3.x is **not** backwards-compatible with previous versions of
+telegraf, both in the database layout and the configuration file. 0.2.x will
+continue to be supported, see below for download links.
+
+TODO: link to blog post about 0.3.x changes.
 
 ### Linux deb and rpm packages:
 
 Latest:
+* http://get.influxdb.org/telegraf/telegraf_0.3.0_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.3.0-1.x86_64.rpm
+
+0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
 * http://get.influxdb.org/telegraf/telegraf-0.2.4-1.x86_64.rpm
 
@@ -33,6 +45,11 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.3.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.3.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.3.0.tar.gz
+
+0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
 * http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.4.tar.gz
 * http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.4.tar.gz
@@ -51,32 +68,6 @@ brew update
 brew install telegraf
 ```
 
-### Version 0.3.0 Beta
-
-Version 0.3.0 will introduce many new breaking changes to Telegraf. For starters,
-plugin measurements will be aggregated into fields. This means that there will no
-longer be a `cpu_usage_idle` measurement, there will be a `cpu` measurement with
-a `usage_idle` field.
-
-There will also be config file changes, meaning that your 0.2.x Telegraf config
-files will no longer work properly. It is recommended that you use the
-`-sample-config` flag to generate a new config file to see what the changes are.
-You can also read the
-[0.3.0 configuration guide](https://github.com/influxdb/telegraf/blob/0.3.0/CONFIGURATION.md)
-to see some of the new features and options available.
-
-You can read more about the justifications for the aggregated measurements
-[here](https://github.com/influxdb/telegraf/issues/152), and a more detailed
-breakdown of the work [here](https://github.com/influxdb/telegraf/pull/437).
-Once we're closer to a full release, there will be a detailed blog post
-explaining all the changes.
-
-* http://get.influxdb.org/telegraf/telegraf_0.3.0-beta2_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.3.0_beta2-1.x86_64.rpm
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.3.0-beta2.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.3.0-beta2.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.3.0-beta2.tar.gz
-
 ### From Source:
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
@@ -91,37 +82,49 @@ if you don't have it already. You also must build with golang version 1.4+.
 
 ### How to use it:
 
-* Run `telegraf -sample-config > telegraf.conf` to create an initial configuration.
-* Or run `telegraf -sample-config -input-filter cpu:mem -output-filter influxdb > telegraf.conf`.
-to create a config file with only CPU and memory plugins defined, and InfluxDB
-output defined.
-* Edit the configuration to match your needs.
-* Run `telegraf -config telegraf.conf -test` to output one full measurement
-sample to STDOUT. NOTE: you may want to run as the telegraf user if you are using
-the linux packages `sudo -u telegraf telegraf -config telegraf.conf -test`
-* Run `telegraf -config telegraf.conf` to gather and send metrics to configured outputs.
-* Run `telegraf -config telegraf.conf -input-filter system:swap`.
-to run telegraf with only the system & swap plugins defined in the config.
+```console
+$ telegraf -help
+Telegraf, The plugin-driven server agent for reporting metrics into InfluxDB
 
-## Telegraf Options
+Usage:
 
-Telegraf has a few options you can configure under the `agent` section of the
-config.
+  telegraf <flags>
 
-* **hostname**: The hostname is passed as a tag. By default this will be
-the value returned by `hostname` on the machine running Telegraf.
-You can override that value here.
-* **interval**: How often to gather metrics. Uses a simple number +
-unit parser, e.g. "10s" for 10 seconds or "5m" for 5 minutes.
-* **debug**: Set to true to gather and send metrics to STDOUT as well as
-InfluxDB.
+The flags are:
+
+  -config <file>     configuration file to load
+  -test              gather metrics once, print them to stdout, and exit
+  -sample-config     print out full sample configuration to stdout
+  -config-directory  directory containing additional *.conf files
+  -input-filter      filter the input plugins to enable, separator is :
+  -output-filter     filter the output plugins to enable, separator is :
+  -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
+  -version           print the version to stdout
+
+Examples:
+
+  # generate a telegraf config file:
+  telegraf -sample-config > telegraf.conf
+
+  # generate config with only cpu input & influxdb output plugins defined
+  telegraf -sample-config -input-filter cpu -output-filter influxdb
+
+  # run a single telegraf collection, outputing metrics to stdout
+  telegraf -config telegraf.conf -test
+
+  # run telegraf with all plugins defined in config file
+  telegraf -config telegraf.conf
+
+  # run telegraf, enabling the cpu & memory input, and influxdb output plugins
+  telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
+```
 
 ## Configuration
 
 See the [configuration guide](CONFIGURATION.md) for a rundown of the more advanced
 configuration options.
 
-## Supported Plugins
+## Supported Input Plugins
 
 **You can view usage instructions for each plugin by running**
 `telegraf -usage <pluginname>`.
@@ -166,7 +169,7 @@ Telegraf currently has support for collecting metrics from:
     * diskio
     * swap
 
-## Supported Service Plugins
+## Supported Input Service Plugins
 
 Telegraf can collect metrics via the following services:
 
@@ -176,7 +179,7 @@ Telegraf can collect metrics via the following services:
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.
 
-## Supported Outputs
+## Supported Output Plugins
 
 * influxdb
 * nsq
