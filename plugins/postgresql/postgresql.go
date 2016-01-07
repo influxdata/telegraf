@@ -4,17 +4,21 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/influxdb/telegraf/plugins"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 type Postgresql struct {
 	Address        string
 	Databases      []string
 	OrderedColumns []string
+
+	VerbatimAddress  bool
+	sanitizedAddress string
 }
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
@@ -33,6 +37,16 @@ var sampleConfig = `
   # to grab metrics for.
   #
   address = "host=localhost user=postgres sslmode=disable"
+
+  # Starting in 0.3.0 the default behavior is to convert the above given address to the
+  # key value form and, for security, remove the password before using it to tag the
+  # collected data.
+  #
+  # If you are using the URL form and/or have existing tooling matching against a previous
+  # value, you might want to prevent this transformation / sanitization. Set the following
+  # to true to leave it as entered for the tag.
+
+  # verbatim_address = true
 
   # A list of databases to pull metrics about. If not specified, metrics for all
   # databases are gathered.
@@ -101,6 +115,27 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
+var passwordKVMatcher, _ = regexp.Compile("password=\\S+ ?")
+
+func (p *Postgresql) SanitizedAddress() (_ string, err error) {
+	var canonicalizedAddress string
+
+	if p.sanitizedAddress == "" {
+		if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
+			canonicalizedAddress, err = pq.ParseURL(p.Address)
+			if err != nil {
+				return p.sanitizedAddress, err
+			}
+		} else {
+			canonicalizedAddress = p.Address
+		}
+
+		p.sanitizedAddress = passwordKVMatcher.ReplaceAllString(canonicalizedAddress, "")
+	}
+
+	return p.sanitizedAddress, err
+}
+
 func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator) error {
 	var columnVars []interface{}
 	var dbname bytes.Buffer
@@ -130,7 +165,17 @@ func (p *Postgresql) accRow(row scanner, acc plugins.Accumulator) error {
 		dbname.WriteString(string(dbnameChars[i]))
 	}
 
-	tags := map[string]string{"server": p.Address, "db": dbname.String()}
+	var tagAddress string
+	if p.VerbatimAddress {
+		tagAddress = p.Address
+	} else {
+		tagAddress, err = p.SanitizedAddress()
+		if err != nil {
+			return err
+		}
+	}
+
+	tags := map[string]string{"server": tagAddress, "db": dbname.String()}
 
 	fields := make(map[string]interface{})
 	for col, val := range columnMap {

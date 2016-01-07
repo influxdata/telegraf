@@ -5,6 +5,9 @@
 - **breaking change** Plugin measurements aggregated into a single measurement.
 - **breaking change** `jolokia` plugin: must use global tag/drop/pass parameters
 for configuration.
+- **breaking change** `postgresql` plugin: by default, converts both forms of address
+from config to the key=value format for tag, and drops password. Both behaviors can be
+suppressed with the new `verbatim_address` config for that plugin.
 - **breaking change** `procstat` plugin has `*cpu*` fields renamed to
 `*cpu_time*`
 - `twemproxy` plugin: `prefix` option removed.
