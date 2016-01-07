@@ -50,12 +50,15 @@ func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 			"path":   du.Path,
 			"fstype": du.Fstype,
 		}
-		acc.Add("total", du.Total, tags)
-		acc.Add("free", du.Free, tags)
-		acc.Add("used", du.Total-du.Free, tags)
-		acc.Add("inodes_total", du.InodesTotal, tags)
-		acc.Add("inodes_free", du.InodesFree, tags)
-		acc.Add("inodes_used", du.InodesTotal-du.InodesFree, tags)
+		fields := map[string]interface{}{
+			"total":        du.Total,
+			"free":         du.Free,
+			"used":         du.Total - du.Free,
+			"inodes_total": du.InodesTotal,
+			"inodes_free":  du.InodesFree,
+			"inodes_used":  du.InodesTotal - du.InodesFree,
+		}
+		acc.AddFields("disk", fields, tags)
 	}
 
 	return nil
@@ -115,13 +118,16 @@ func (s *DiskIOStats) Gather(acc plugins.Accumulator) error {
 			}
 		}
 
-		acc.Add("reads", io.ReadCount, tags)
-		acc.Add("writes", io.WriteCount, tags)
-		acc.Add("read_bytes", io.ReadBytes, tags)
-		acc.Add("write_bytes", io.WriteBytes, tags)
-		acc.Add("read_time", io.ReadTime, tags)
-		acc.Add("write_time", io.WriteTime, tags)
-		acc.Add("io_time", io.IoTime, tags)
+		fields := map[string]interface{}{
+			"reads":       io.ReadCount,
+			"writes":      io.WriteCount,
+			"read_bytes":  io.ReadBytes,
+			"write_bytes": io.WriteBytes,
+			"read_time":   io.ReadTime,
+			"write_time":  io.WriteTime,
+			"io_time":     io.IoTime,
+		}
+		acc.AddFields("diskio", fields, tags)
 	}
 
 	return nil
@@ -132,7 +138,7 @@ func init() {
 		return &DiskStats{ps: &systemPS{}}
 	})
 
-	plugins.Add("io", func() plugins.Plugin {
+	plugins.Add("diskio", func() plugins.Plugin {
 		return &DiskIOStats{ps: &systemPS{}}
 	})
 }

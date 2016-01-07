@@ -42,19 +42,23 @@ func (s *NetStats) Gather(acc plugins.Accumulator) error {
 		}
 		counts[netcon.Status] = c + 1
 	}
-	acc.Add("tcp_established", counts["ESTABLISHED"], tags)
-	acc.Add("tcp_syn_sent", counts["SYN_SENT"], tags)
-	acc.Add("tcp_syn_recv", counts["SYN_RECV"], tags)
-	acc.Add("tcp_fin_wait1", counts["FIN_WAIT1"], tags)
-	acc.Add("tcp_fin_wait2", counts["FIN_WAIT2"], tags)
-	acc.Add("tcp_time_wait", counts["TIME_WAIT"], tags)
-	acc.Add("tcp_close", counts["CLOSE"], tags)
-	acc.Add("tcp_close_wait", counts["CLOSE_WAIT"], tags)
-	acc.Add("tcp_last_ack", counts["LAST_ACK"], tags)
-	acc.Add("tcp_listen", counts["LISTEN"], tags)
-	acc.Add("tcp_closing", counts["CLOSING"], tags)
-	acc.Add("tcp_none", counts["NONE"], tags)
-	acc.Add("udp_socket", counts["UDP"], tags)
+
+	fields := map[string]interface{}{
+		"tcp_established": counts["ESTABLISHED"],
+		"tcp_syn_sent":    counts["SYN_SENT"],
+		"tcp_syn_recv":    counts["SYN_RECV"],
+		"tcp_fin_wait1":   counts["FIN_WAIT1"],
+		"tcp_fin_wait2":   counts["FIN_WAIT2"],
+		"tcp_time_wait":   counts["TIME_WAIT"],
+		"tcp_close":       counts["CLOSE"],
+		"tcp_close_wait":  counts["CLOSE_WAIT"],
+		"tcp_last_ack":    counts["LAST_ACK"],
+		"tcp_listen":      counts["LISTEN"],
+		"tcp_closing":     counts["CLOSING"],
+		"tcp_none":        counts["NONE"],
+		"udp_socket":      counts["UDP"],
+	}
+	acc.AddFields("netstat", fields, tags)
 
 	return nil
 }

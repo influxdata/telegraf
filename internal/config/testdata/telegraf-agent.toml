@@ -105,7 +105,7 @@ urls = ["http://localhost/server-status?auto"]
   drop = ["cpu_time"]
 
 # Read metrics about disk usage by mount point
-[[plugins.disk]]
+[[plugins.diskio]]
   # no configuration
 
 # Read metrics from one or many disque servers

@@ -10,20 +10,17 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/influxdb/telegraf/internal"
 	"github.com/influxdb/telegraf/plugins"
 )
 
 type HttpJson struct {
-	Services []Service
-	client   HTTPClient
-}
-
-type Service struct {
 	Name       string
 	Servers    []string
 	Method     string
 	TagKeys    []string
 	Parameters map[string]string
+	client     HTTPClient
 }
 
 type HTTPClient interface {
@@ -47,31 +44,28 @@ func (c RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 }
 
 var sampleConfig = `
-  # Specify services via an array of tables
-  [[plugins.httpjson.services]]
+  # a name for the service being polled
+  name = "webserver_stats"
 
-    # a name for the service being polled
-    name = "webserver_stats"
+  # URL of each server in the service's cluster
+  servers = [
+    "http://localhost:9999/stats/",
+    "http://localhost:9998/stats/",
+  ]
 
-    # URL of each server in the service's cluster
-    servers = [
-      "http://localhost:9999/stats/",
-      "http://localhost:9998/stats/",
-    ]
+  # HTTP method to use (case-sensitive)
+  method = "GET"
 
-    # HTTP method to use (case-sensitive)
-    method = "GET"
+  # List of tag names to extract from top-level of JSON server response
+  # tag_keys = [
+  #   "my_tag_1",
+  #   "my_tag_2"
+  # ]
 
-    # List of tag names to extract from top-level of JSON server response
-    # tag_keys = [
-    #   "my_tag_1",
-    #   "my_tag_2"
-    # ]
-
-    # HTTP parameters (all values must be strings)
-    [plugins.httpjson.services.parameters]
-      event_type = "cpu_spike"
-      threshold = "0.75"
+  # HTTP parameters (all values must be strings)
+  [plugins.httpjson.parameters]
+    event_type = "cpu_spike"
+    threshold = "0.75"
 `
 
 func (h *HttpJson) SampleConfig() string {
@@ -86,22 +80,16 @@ func (h *HttpJson) Description() string {
 func (h *HttpJson) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 
-	totalServers := 0
-	for _, service := range h.Services {
-		totalServers += len(service.Servers)
-	}
-	errorChannel := make(chan error, totalServers)
+	errorChannel := make(chan error, len(h.Servers))
 
-	for _, service := range h.Services {
-		for _, server := range service.Servers {
-			wg.Add(1)
-			go func(service Service, server string) {
-				defer wg.Done()
-				if err := h.gatherServer(acc, service, server); err != nil {
-					errorChannel <- err
-				}
-			}(service, server)
-		}
+	for _, server := range h.Servers {
+		wg.Add(1)
+		go func(server string) {
+			defer wg.Done()
+			if err := h.gatherServer(acc, server); err != nil {
+				errorChannel <- err
+			}
+		}(server)
 	}
 
 	wg.Wait()
@@ -129,10 +117,9 @@ func (h *HttpJson) Gather(acc plugins.Accumulator) error {
 //     error: Any error that may have occurred
 func (h *HttpJson) gatherServer(
 	acc plugins.Accumulator,
-	service Service,
 	serverURL string,
 ) error {
-	resp, err := h.sendRequest(service, serverURL)
+	resp, err := h.sendRequest(serverURL)
 	if err != nil {
 		return err
 	}
@@ -146,7 +133,7 @@ func (h *HttpJson) gatherServer(
 		"server": serverURL,
 	}
 
-	for _, tag := range service.TagKeys {
+	for _, tag := range h.TagKeys {
 		switch v := jsonOut[tag].(type) {
 		case string:
 			tags[tag] = v
@@ -154,7 +141,19 @@ func (h *HttpJson) gatherServer(
 		delete(jsonOut, tag)
 	}
 
-	processResponse(acc, service.Name, tags, jsonOut)
+	f := internal.JSONFlattener{}
+	err = f.FlattenJSON("", jsonOut)
+	if err != nil {
+		return err
+	}
+
+	var msrmnt_name string
+	if h.Name == "" {
+		msrmnt_name = "httpjson"
+	} else {
+		msrmnt_name = "httpjson_" + h.Name
+	}
+	acc.AddFields(msrmnt_name, f.Fields, nil)
 	return nil
 }
 
@@ -165,7 +164,7 @@ func (h *HttpJson) gatherServer(
 // Returns:
 //     string: body of the response
 //     error : Any error that may have occurred
-func (h *HttpJson) sendRequest(service Service, serverURL string) (string, error) {
+func (h *HttpJson) sendRequest(serverURL string) (string, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
@@ -173,13 +172,13 @@ func (h *HttpJson) sendRequest(service Service, serverURL string) (string, error
 	}
 
 	params := url.Values{}
-	for k, v := range service.Parameters {
+	for k, v := range h.Parameters {
 		params.Add(k, v)
 	}
 	requestURL.RawQuery = params.Encode()
 
 	// Create + send request
-	req, err := http.NewRequest(service.Method, requestURL.String(), nil)
+	req, err := http.NewRequest(h.Method, requestURL.String(), nil)
 	if err != nil {
 		return "", err
 	}
@@ -188,6 +187,7 @@ func (h *HttpJson) sendRequest(service Service, serverURL string) (string, error
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
@@ -207,23 +207,6 @@ func (h *HttpJson) sendRequest(service Service, serverURL string) (string, error
 	}
 
 	return string(body), err
-}
-
-// Flattens the map generated from the JSON object and stores its float values using a
-// plugins.Accumulator. It ignores any non-float values.
-// Parameters:
-//     acc: the Accumulator to use
-//     prefix: What the name of the measurement name should be prefixed by.
-//     tags: telegraf tags to
-func processResponse(acc plugins.Accumulator, prefix string, tags map[string]string, v interface{}) {
-	switch t := v.(type) {
-	case map[string]interface{}:
-		for k, v := range t {
-			processResponse(acc, prefix+"_"+k, tags, v)
-		}
-	case float64:
-		acc.Add(prefix, v, tags)
-	}
 }
 
 func init() {

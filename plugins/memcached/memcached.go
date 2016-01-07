@@ -137,16 +137,18 @@ func (m *Memcached) gatherServer(
 	tags := map[string]string{"server": address}
 
 	// Process values
+	fields := make(map[string]interface{})
 	for _, key := range sendMetrics {
 		if value, ok := values[key]; ok {
 			// Mostly it is the number
 			if iValue, errParse := strconv.ParseInt(value, 10, 64); errParse != nil {
-				acc.Add(key, value, tags)
+				fields[key] = iValue
 			} else {
-				acc.Add(key, iValue, tags)
+				fields[key] = value
 			}
 		}
 	}
+	acc.AddFields("memcached", fields, tags)
 	return nil
 }
 

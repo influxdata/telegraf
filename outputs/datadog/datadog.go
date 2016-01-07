@@ -67,23 +67,26 @@ func (d *Datadog) Write(points []*client.Point) error {
 		return nil
 	}
 	ts := TimeSeries{}
-	var tempSeries = make([]*Metric, len(points))
-	var acceptablePoints = 0
+	tempSeries := []*Metric{}
+	metricCounter := 0
+
 	for _, pt := range points {
-		metric := &Metric{
-			Metric: strings.Replace(pt.Name(), "_", ".", -1),
-			Tags:   buildTags(pt.Tags()),
-			Host:   pt.Tags()["host"],
-		}
-		if p, err := buildPoint(pt); err == nil {
-			metric.Points[0] = p
-			tempSeries[acceptablePoints] = metric
-			acceptablePoints += 1
+		mname := strings.Replace(pt.Name(), "_", ".", -1)
+		if amonPts, err := buildPoints(pt); err == nil {
+			for fieldName, amonPt := range amonPts {
+				metric := &Metric{
+					Metric: mname + strings.Replace(fieldName, "_", ".", -1),
+				}
+				metric.Points[0] = amonPt
+				tempSeries = append(tempSeries, metric)
+				metricCounter++
+			}
 		} else {
 			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
 		}
 	}
-	ts.Series = make([]*Metric, acceptablePoints)
+
+	ts.Series = make([]*Metric, metricCounter)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
@@ -123,13 +126,17 @@ func (d *Datadog) authenticatedUrl() string {
 	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
 }
 
-func buildPoint(pt *client.Point) (Point, error) {
-	var p Point
-	if err := p.setValue(pt.Fields()["value"]); err != nil {
-		return p, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+func buildPoints(pt *client.Point) (map[string]Point, error) {
+	pts := make(map[string]Point)
+	for k, v := range pt.Fields() {
+		var p Point
+		if err := p.setValue(v); err != nil {
+			return pts, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+		}
+		p[0] = float64(pt.Time().Unix())
+		pts[k] = p
 	}
-	p[0] = float64(pt.Time().Unix())
-	return p, nil
+	return pts, nil
 }
 
 func buildTags(ptTags map[string]string) []string {

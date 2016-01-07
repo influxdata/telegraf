@@ -15,13 +15,9 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Servers: []*Server{
-			{
-				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
-					testutil.GetLocalHost()),
-				Databases: []string{"postgres"},
-			},
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
+		Databases: []string{"postgres"},
 	}
 
 	var acc testutil.Accumulator
@@ -30,7 +26,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	availableColumns := make(map[string]bool)
-	for _, col := range p.Servers[0].OrderedColumns {
+	for _, col := range p.OrderedColumns {
 		availableColumns[col] = true
 	}
 
@@ -61,7 +57,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	for _, metric := range intMetrics {
 		_, ok := availableColumns[metric]
 		if ok {
-			assert.True(t, acc.HasIntValue(metric))
+			assert.True(t, acc.HasIntField("postgresql", metric), metric)
 			metricsCounted++
 		}
 	}
@@ -69,7 +65,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	for _, metric := range floatMetrics {
 		_, ok := availableColumns[metric]
 		if ok {
-			assert.True(t, acc.HasFloatValue(metric))
+			assert.True(t, acc.HasFloatField("postgresql", metric), metric)
 			metricsCounted++
 		}
 	}
@@ -84,13 +80,9 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Servers: []*Server{
-			{
-				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
-					testutil.GetLocalHost()),
-				Databases: []string{"postgres"},
-			},
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
+		Databases: []string{"postgres"},
 	}
 
 	var acc testutil.Accumulator
@@ -98,10 +90,108 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	err := p.Gather(&acc)
 	require.NoError(t, err)
 
-	point, ok := acc.Get("xact_commit")
+	point, ok := acc.Get("postgresql")
 	require.True(t, ok)
 
 	assert.Equal(t, "postgres", point.Tags["db"])
+}
+
+func TestPostgresqlCanonicalizesAndSanitizesURLServerName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("postgres://postgres:swordfish@%s?sslmode=disable",
+			testutil.GetLocalHost()),
+		Databases: []string{"postgres"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+
+	assert.Equal(t,
+		fmt.Sprintf("host=%s sslmode=disable user=postgres", testutil.GetLocalHost()),
+		point.Tags["server"])
+}
+
+func TestPostgresqlSanitizesKVServerName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("host=%s user=postgres password=swordfish sslmode=disable",
+			testutil.GetLocalHost()),
+		Databases: []string{"postgres"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+
+	assert.Equal(t,
+		fmt.Sprintf("host=%s user=postgres sslmode=disable", testutil.GetLocalHost()),
+		point.Tags["server"])
+}
+
+func TestPostgresqlMaintainsVerbatimKVServerNameWhenRequested(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("host=%s user=postgres password=swordfish sslmode=disable",
+			testutil.GetLocalHost()),
+		VerbatimAddress: true,
+		Databases:       []string{"postgres"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+
+	assert.Equal(t,
+		fmt.Sprintf("host=%s user=postgres password=swordfish sslmode=disable", testutil.GetLocalHost()),
+		point.Tags["server"])
+}
+
+func TestPostgresqlMaintainsVerbatimURLServerNameWhenRequested(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("postgres://postgres:swordfish@%s?sslmode=disable",
+			testutil.GetLocalHost()),
+		VerbatimAddress: true,
+		Databases:       []string{"postgres"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+
+	assert.Equal(t,
+		fmt.Sprintf("postgres://postgres:swordfish@%s?sslmode=disable", testutil.GetLocalHost()),
+		point.Tags["server"])
 }
 
 func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
@@ -110,12 +200,8 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Servers: []*Server{
-			{
-				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
-					testutil.GetLocalHost()),
-			},
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
 	}
 
 	var acc testutil.Accumulator
@@ -126,7 +212,7 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	var found bool
 
 	for _, pnt := range acc.Points {
-		if pnt.Measurement == "xact_commit" {
+		if pnt.Measurement == "postgresql" {
 			if pnt.Tags["db"] == "postgres" {
 				found = true
 				break
@@ -143,12 +229,8 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Servers: []*Server{
-			{
-				Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
-					testutil.GetLocalHost()),
-			},
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
 	}
 
 	var acc testutil.Accumulator

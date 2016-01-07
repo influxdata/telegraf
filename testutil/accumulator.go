@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Point defines a single point measurement
@@ -106,71 +109,24 @@ func (a *Accumulator) Get(measurement string) (*Point, bool) {
 	return nil, false
 }
 
-// CheckValue calls CheckFieldsValue passing a single-value map as fields
-func (a *Accumulator) CheckValue(measurement string, val interface{}) bool {
-	return a.CheckFieldsValue(measurement, map[string]interface{}{"value": val})
-}
-
-// CheckValue checks that the accumulators point for the given measurement
-// is the same as the given value.
-func (a *Accumulator) CheckFieldsValue(measurement string, fields map[string]interface{}) bool {
-	for _, p := range a.Points {
-		if p.Measurement == measurement {
-			if reflect.DeepEqual(fields, p.Fields) {
-				return true
-			} else {
-				fmt.Printf("Measurement %s Failure, expected: %v, got %v\n",
-					measurement, fields, p.Fields)
-				return false
-			}
+// NFields returns the total number of fields in the accumulator, across all
+// measurements
+func (a *Accumulator) NFields() int {
+	counter := 0
+	for _, pt := range a.Points {
+		for _, _ = range pt.Fields {
+			counter++
 		}
 	}
-	fmt.Printf("Measurement %s, fields %s not found\n", measurement, fields)
-	return false
+	return counter
 }
 
-// CheckTaggedValue calls ValidateTaggedValue
-func (a *Accumulator) CheckTaggedValue(
-	measurement string,
-	val interface{},
-	tags map[string]string,
-) bool {
-	return a.ValidateTaggedValue(measurement, val, tags) == nil
-}
-
-// ValidateTaggedValue calls ValidateTaggedFieldsValue passing a single-value map as fields
-func (a *Accumulator) ValidateTaggedValue(
-	measurement string,
-	val interface{},
-	tags map[string]string,
-) error {
-	return a.ValidateTaggedFieldsValue(measurement, map[string]interface{}{"value": val}, tags)
-}
-
-// ValidateValue calls ValidateTaggedValue
-func (a *Accumulator) ValidateValue(measurement string, val interface{}) error {
-	return a.ValidateTaggedValue(measurement, val, nil)
-}
-
-// CheckTaggedFieldsValue calls ValidateTaggedFieldsValue
-func (a *Accumulator) CheckTaggedFieldsValue(
+func (a *Accumulator) AssertContainsTaggedFields(
+	t *testing.T,
 	measurement string,
 	fields map[string]interface{},
 	tags map[string]string,
-) bool {
-	return a.ValidateTaggedFieldsValue(measurement, fields, tags) == nil
-}
-
-// ValidateTaggedValue validates that the given measurement and value exist
-// in the accumulator and with the given tags.
-func (a *Accumulator) ValidateTaggedFieldsValue(
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-) error {
-	if tags == nil {
-		tags = map[string]string{}
-	}
+) {
 	for _, p := range a.Points {
 		if !reflect.DeepEqual(tags, p.Tags) {
 			continue
@@ -178,53 +134,46 @@ func (a *Accumulator) ValidateTaggedFieldsValue(
 
 		if p.Measurement == measurement {
 			if !reflect.DeepEqual(fields, p.Fields) {
-				return fmt.Errorf("%v != %v ", fields, p.Fields)
-			}
-			return nil
-		}
-	}
-
-	return fmt.Errorf("unknown measurement %s with tags %v", measurement, tags)
-}
-
-// ValidateFieldsValue calls ValidateTaggedFieldsValue
-func (a *Accumulator) ValidateFieldsValue(
-	measurement string,
-	fields map[string]interface{},
-) error {
-	return a.ValidateTaggedValue(measurement, fields, nil)
-}
-
-func (a *Accumulator) ValidateTaggedFields(
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-) error {
-	if tags == nil {
-		tags = map[string]string{}
-	}
-	for _, p := range a.Points {
-		if !reflect.DeepEqual(tags, p.Tags) {
-			continue
-		}
-
-		if p.Measurement == measurement {
-			if !reflect.DeepEqual(fields, p.Fields) {
-				return fmt.Errorf("%v (%T) != %v (%T)",
+				msg := fmt.Sprintf("Actual:\n %v (%T) \nExpected:\n %v (%T)",
 					p.Fields, p.Fields, fields, fields)
+				assert.Fail(t, msg)
 			}
-			return nil
+			return
 		}
 	}
-	return fmt.Errorf("unknown measurement %s with tags %v", measurement, tags)
+	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	assert.Fail(t, msg)
+}
+
+func (a *Accumulator) AssertContainsFields(
+	t *testing.T,
+	measurement string,
+	fields map[string]interface{},
+) {
+	for _, p := range a.Points {
+		if p.Measurement == measurement {
+			if !reflect.DeepEqual(fields, p.Fields) {
+				msg := fmt.Sprintf("Actual:\n %v (%T) \nExpected:\n %v (%T)",
+					p.Fields, p.Fields, fields, fields)
+				assert.Fail(t, msg)
+			}
+			return
+		}
+	}
+	msg := fmt.Sprintf("unknown measurement %s", measurement)
+	assert.Fail(t, msg)
 }
 
 // HasIntValue returns true if the measurement has an Int value
-func (a *Accumulator) HasIntValue(measurement string) bool {
+func (a *Accumulator) HasIntField(measurement string, field string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			_, ok := p.Fields["value"].(int64)
-			return ok
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(int64)
+					return ok
+				}
+			}
 		}
 	}
 
@@ -232,11 +181,15 @@ func (a *Accumulator) HasIntValue(measurement string) bool {
 }
 
 // HasUIntValue returns true if the measurement has a UInt value
-func (a *Accumulator) HasUIntValue(measurement string) bool {
+func (a *Accumulator) HasUIntField(measurement string, field string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			_, ok := p.Fields["value"].(uint64)
-			return ok
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(uint64)
+					return ok
+				}
+			}
 		}
 	}
 
@@ -244,11 +197,15 @@ func (a *Accumulator) HasUIntValue(measurement string) bool {
 }
 
 // HasFloatValue returns true if the given measurement has a float value
-func (a *Accumulator) HasFloatValue(measurement string) bool {
+func (a *Accumulator) HasFloatField(measurement string, field string) bool {
 	for _, p := range a.Points {
 		if p.Measurement == measurement {
-			_, ok := p.Fields["value"].(float64)
-			return ok
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(float64)
+					return ok
+				}
+			}
 		}
 	}
 

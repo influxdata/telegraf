@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,23 +52,15 @@ func TestElasticsearch(t *testing.T) {
 		"node_host":             "test",
 	}
 
-	testTables := []map[string]float64{
-		indicesExpected,
-		osExpected,
-		processExpected,
-		jvmExpected,
-		threadPoolExpected,
-		fsExpected,
-		transportExpected,
-		httpExpected,
-		breakersExpected,
-	}
-
-	for _, testTable := range testTables {
-		for k, v := range testTable {
-			assert.NoError(t, acc.ValidateTaggedValue(k, v, tags))
-		}
-	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", indicesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_os", osExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_process", processExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_jvm", jvmExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_thread_pool", threadPoolExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_fs", fsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_transport", transportExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_http", httpExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_breakers", breakersExpected, tags)
 }
 
 func TestGatherClusterStats(t *testing.T) {
@@ -80,29 +72,15 @@ func TestGatherClusterStats(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, es.Gather(&acc))
 
-	var clusterHealthTests = []struct {
-		measurement string
-		fields      map[string]interface{}
-		tags        map[string]string
-	}{
-		{
-			"cluster_health",
-			clusterHealthExpected,
-			map[string]string{"name": "elasticsearch_telegraf"},
-		},
-		{
-			"indices",
-			v1IndexExpected,
-			map[string]string{"index": "v1"},
-		},
-		{
-			"indices",
-			v2IndexExpected,
-			map[string]string{"index": "v2"},
-		},
-	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health",
+		clusterHealthExpected,
+		map[string]string{"name": "elasticsearch_telegraf"})
 
-	for _, exp := range clusterHealthTests {
-		assert.NoError(t, acc.ValidateTaggedFields(exp.measurement, exp.fields, exp.tags))
-	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
+		v1IndexExpected,
+		map[string]string{"index": "v1"})
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
+		v2IndexExpected,
+		map[string]string{"index": "v2"})
 }

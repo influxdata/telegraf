@@ -1,3 +1,25 @@
+## v0.3.0 [unreleased]
+
+### Release Notes
+- **breaking change** the `io` plugin has been renamed `diskio`
+- **breaking change** Plugin measurements aggregated into a single measurement.
+- **breaking change** `jolokia` plugin: must use global tag/drop/pass parameters
+for configuration.
+- `twemproxy` plugin: `prefix` option removed.
+- `procstat` cpu measurements are now prepended with `cpu_time_` instead of
+only `cpu_`
+- The prometheus plugin schema has not been changed (measurements have not been
+aggregated).
+
+### Features
+- Plugin measurements aggregated into a single measurement.
+- Added ability to specify per-plugin tags
+- Added ability to specify per-plugin measurement suffix and prefix.
+(`name_prefix` and `name_suffix`)
+- Added ability to override base plugin name. (`name_override`)
+
+### Bugfixes
+
 ## v0.2.5 [unreleased]
 
 ### Features

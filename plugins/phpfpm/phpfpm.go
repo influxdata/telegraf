@@ -198,9 +198,11 @@ func importMetric(r io.Reader, acc plugins.Accumulator, host string) (poolStat, 
 			"url":  host,
 			"pool": pool,
 		}
+		fields := make(map[string]interface{})
 		for k, v := range stats[pool] {
-			acc.Add(strings.Replace(k, " ", "_", -1), v, tags)
+			fields[strings.Replace(k, " ", "_", -1)] = v
 		}
+		acc.AddFields("phpfpm", fields, tags)
 	}
 
 	return stats, nil

@@ -72,32 +72,33 @@ func (n *Apache) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 	tags := getTags(addr)
 
 	sc := bufio.NewScanner(resp.Body)
+	fields := make(map[string]interface{})
 	for sc.Scan() {
 		line := sc.Text()
 		if strings.Contains(line, ":") {
-
 			parts := strings.SplitN(line, ":", 2)
 			key, part := strings.Replace(parts[0], " ", "", -1), strings.TrimSpace(parts[1])
 
 			switch key {
-
 			case "Scoreboard":
-				n.gatherScores(part, acc, tags)
+				for field, value := range n.gatherScores(part) {
+					fields[field] = value
+				}
 			default:
 				value, err := strconv.ParseFloat(part, 64)
 				if err != nil {
 					continue
 				}
-				acc.Add(key, value, tags)
+				fields[key] = value
 			}
 		}
 	}
+	acc.AddFields("apache", fields, tags)
 
 	return nil
 }
 
-func (n *Apache) gatherScores(data string, acc plugins.Accumulator, tags map[string]string) {
-
+func (n *Apache) gatherScores(data string) map[string]interface{} {
 	var waiting, open int = 0, 0
 	var S, R, W, K, D, C, L, G, I int = 0, 0, 0, 0, 0, 0, 0, 0, 0
 
@@ -129,17 +130,20 @@ func (n *Apache) gatherScores(data string, acc plugins.Accumulator, tags map[str
 		}
 	}
 
-	acc.Add("scboard_waiting", float64(waiting), tags)
-	acc.Add("scboard_starting", float64(S), tags)
-	acc.Add("scboard_reading", float64(R), tags)
-	acc.Add("scboard_sending", float64(W), tags)
-	acc.Add("scboard_keepalive", float64(K), tags)
-	acc.Add("scboard_dnslookup", float64(D), tags)
-	acc.Add("scboard_closing", float64(C), tags)
-	acc.Add("scboard_logging", float64(L), tags)
-	acc.Add("scboard_finishing", float64(G), tags)
-	acc.Add("scboard_idle_cleanup", float64(I), tags)
-	acc.Add("scboard_open", float64(open), tags)
+	fields := map[string]interface{}{
+		"scboard_waiting":      float64(waiting),
+		"scboard_starting":     float64(S),
+		"scboard_reading":      float64(R),
+		"scboard_sending":      float64(W),
+		"scboard_keepalive":    float64(K),
+		"scboard_dnslookup":    float64(D),
+		"scboard_closing":      float64(C),
+		"scboard_logging":      float64(L),
+		"scboard_finishing":    float64(G),
+		"scboard_idle_cleanup": float64(I),
+		"scboard_open":         float64(open),
+	}
+	return fields
 }
 
 // Get tag(s) for the apache plugin
