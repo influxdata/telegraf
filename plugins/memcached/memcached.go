@@ -141,7 +141,7 @@ func (m *Memcached) gatherServer(
 	for _, key := range sendMetrics {
 		if value, ok := values[key]; ok {
 			// Mostly it is the number
-			if iValue, errParse := strconv.ParseInt(value, 10, 64); errParse != nil {
+			if iValue, errParse := strconv.ParseInt(value, 10, 64); errParse == nil {
 				fields[key] = iValue
 			} else {
 				fields[key] = value

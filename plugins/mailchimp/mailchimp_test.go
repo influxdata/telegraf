@@ -9,7 +9,6 @@ import (
 
 	"github.com/influxdb/telegraf/testutil"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,67 +41,38 @@ func TestMailChimpGatherReports(t *testing.T) {
 	tags["id"] = "42694e9e57"
 	tags["campaign_title"] = "Freddie's Jokes Vol. 1"
 
-	testInts := []struct {
-		measurement string
-		value       int
-	}{
-		{"emails_sent", 200},
-		{"abuse_reports", 0},
-		{"unsubscribed", 2},
-		{"hard_bounces", 0},
-		{"soft_bounces", 2},
-		{"syntax_errors", 0},
-		{"forwards_count", 0},
-		{"forwards_opens", 0},
-		{"opens_total", 186},
-		{"unique_opens", 100},
-		{"clicks_total", 42},
-		{"unique_clicks", 400},
-		{"unique_subscriber_clicks", 42},
-		{"facebook_recipient_likes", 5},
-		{"facebook_unique_likes", 8},
-		{"facebook_likes", 42},
+	fields := map[string]interface{}{
+		"emails_sent":              int(200),
+		"abuse_reports":            int(0),
+		"unsubscribed":             int(2),
+		"hard_bounces":             int(0),
+		"soft_bounces":             int(2),
+		"syntax_errors":            int(0),
+		"forwards_count":           int(0),
+		"forwards_opens":           int(0),
+		"opens_total":              int(186),
+		"unique_opens":             int(100),
+		"clicks_total":             int(42),
+		"unique_clicks":            int(400),
+		"unique_subscriber_clicks": int(42),
+		"facebook_recipient_likes": int(5),
+		"facebook_unique_likes":    int(8),
+		"facebook_likes":           int(42),
+		"open_rate":                float64(42),
+		"click_rate":               float64(42),
+		"industry_open_rate":       float64(0.17076777144396),
+		"industry_click_rate":      float64(0.027431311866951),
+		"industry_bounce_rate":     float64(0.0063767751251474),
+		"industry_unopen_rate":     float64(0.82285545343089),
+		"industry_unsub_rate":      float64(0.001436957032815),
+		"industry_abuse_rate":      float64(0.00021111996110887),
+		"list_stats_sub_rate":      float64(10),
+		"list_stats_unsub_rate":    float64(20),
+		"list_stats_open_rate":     float64(42),
+		"list_stats_click_rate":    float64(42),
+		"industry_type":            "Social Networks and Online Communities",
 	}
-	for _, test := range testInts {
-		assert.True(t, acc.CheckTaggedValue(test.measurement, test.value, tags),
-			fmt.Sprintf("Measurement: %v, value: %v, tags: %v not found",
-				test.measurement, test.value, tags))
-	}
-
-	testFloats := []struct {
-		measurement string
-		value       float64
-	}{
-		{"open_rate", 42},
-		{"click_rate", 42},
-		{"industry_open_rate", 0.17076777144396},
-		{"industry_click_rate", 0.027431311866951},
-		{"industry_bounce_rate", 0.0063767751251474},
-		{"industry_unopen_rate", 0.82285545343089},
-		{"industry_unsub_rate", 0.001436957032815},
-		{"industry_abuse_rate", 0.00021111996110887},
-		{"list_stats_sub_rate", 10},
-		{"list_stats_unsub_rate", 20},
-		{"list_stats_open_rate", 42},
-		{"list_stats_click_rate", 42},
-	}
-	for _, test := range testFloats {
-		assert.True(t, acc.CheckTaggedValue(test.measurement, test.value, tags),
-			fmt.Sprintf("Measurement: %v, value: %v, tags: %v not found",
-				test.measurement, test.value, tags))
-	}
-
-	testStrings := []struct {
-		measurement string
-		value       string
-	}{
-		{"industry_type", "Social Networks and Online Communities"},
-	}
-	for _, test := range testStrings {
-		assert.True(t, acc.CheckTaggedValue(test.measurement, test.value, tags),
-			fmt.Sprintf("Measurement: %v, value: %v, tags: %v not found",
-				test.measurement, test.value, tags))
-	}
+	acc.AssertContainsTaggedFields(t, "mailchimp", fields, tags)
 }
 
 func TestMailChimpGatherReport(t *testing.T) {
@@ -135,67 +105,39 @@ func TestMailChimpGatherReport(t *testing.T) {
 	tags["id"] = "42694e9e57"
 	tags["campaign_title"] = "Freddie's Jokes Vol. 1"
 
-	testInts := []struct {
-		measurement string
-		value       int
-	}{
-		{"emails_sent", 200},
-		{"abuse_reports", 0},
-		{"unsubscribed", 2},
-		{"hard_bounces", 0},
-		{"soft_bounces", 2},
-		{"syntax_errors", 0},
-		{"forwards_count", 0},
-		{"forwards_opens", 0},
-		{"opens_total", 186},
-		{"unique_opens", 100},
-		{"clicks_total", 42},
-		{"unique_clicks", 400},
-		{"unique_subscriber_clicks", 42},
-		{"facebook_recipient_likes", 5},
-		{"facebook_unique_likes", 8},
-		{"facebook_likes", 42},
+	fields := map[string]interface{}{
+		"emails_sent":              int(200),
+		"abuse_reports":            int(0),
+		"unsubscribed":             int(2),
+		"hard_bounces":             int(0),
+		"soft_bounces":             int(2),
+		"syntax_errors":            int(0),
+		"forwards_count":           int(0),
+		"forwards_opens":           int(0),
+		"opens_total":              int(186),
+		"unique_opens":             int(100),
+		"clicks_total":             int(42),
+		"unique_clicks":            int(400),
+		"unique_subscriber_clicks": int(42),
+		"facebook_recipient_likes": int(5),
+		"facebook_unique_likes":    int(8),
+		"facebook_likes":           int(42),
+		"open_rate":                float64(42),
+		"click_rate":               float64(42),
+		"industry_open_rate":       float64(0.17076777144396),
+		"industry_click_rate":      float64(0.027431311866951),
+		"industry_bounce_rate":     float64(0.0063767751251474),
+		"industry_unopen_rate":     float64(0.82285545343089),
+		"industry_unsub_rate":      float64(0.001436957032815),
+		"industry_abuse_rate":      float64(0.00021111996110887),
+		"list_stats_sub_rate":      float64(10),
+		"list_stats_unsub_rate":    float64(20),
+		"list_stats_open_rate":     float64(42),
+		"list_stats_click_rate":    float64(42),
+		"industry_type":            "Social Networks and Online Communities",
 	}
-	for _, test := range testInts {
-		assert.True(t, acc.CheckTaggedValue(test.measurement, test.value, tags),
-			fmt.Sprintf("Measurement: %v, value: %v, tags: %v not found",
-				test.measurement, test.value, tags))
-	}
+	acc.AssertContainsTaggedFields(t, "mailchimp", fields, tags)
 
-	testFloats := []struct {
-		measurement string
-		value       float64
-	}{
-		{"open_rate", 42},
-		{"click_rate", 42},
-		{"industry_open_rate", 0.17076777144396},
-		{"industry_click_rate", 0.027431311866951},
-		{"industry_bounce_rate", 0.0063767751251474},
-		{"industry_unopen_rate", 0.82285545343089},
-		{"industry_unsub_rate", 0.001436957032815},
-		{"industry_abuse_rate", 0.00021111996110887},
-		{"list_stats_sub_rate", 10},
-		{"list_stats_unsub_rate", 20},
-		{"list_stats_open_rate", 42},
-		{"list_stats_click_rate", 42},
-	}
-	for _, test := range testFloats {
-		assert.True(t, acc.CheckTaggedValue(test.measurement, test.value, tags),
-			fmt.Sprintf("Measurement: %v, value: %v, tags: %v not found",
-				test.measurement, test.value, tags))
-	}
-
-	testStrings := []struct {
-		measurement string
-		value       string
-	}{
-		{"industry_type", "Social Networks and Online Communities"},
-	}
-	for _, test := range testStrings {
-		assert.True(t, acc.CheckTaggedValue(test.measurement, test.value, tags),
-			fmt.Sprintf("Measurement: %v, value: %v, tags: %v not found",
-				test.measurement, test.value, tags))
-	}
 }
 
 func TestMailChimpGatherError(t *testing.T) {

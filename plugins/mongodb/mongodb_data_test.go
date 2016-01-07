@@ -6,7 +6,6 @@ import (
 
 	"github.com/influxdb/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var tags = make(map[string]string)
@@ -37,10 +36,11 @@ func TestAddNonReplStats(t *testing.T) {
 	)
 	var acc testutil.Accumulator
 
-	d.AddDefaultStats(&acc)
+	d.AddDefaultStats()
+	d.flush(&acc)
 
 	for key, _ := range DefaultStats {
-		assert.True(t, acc.HasIntValue(key))
+		assert.True(t, acc.HasIntField("mongodb", key))
 	}
 }
 
@@ -57,10 +57,11 @@ func TestAddReplStats(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	d.AddDefaultStats(&acc)
+	d.AddDefaultStats()
+	d.flush(&acc)
 
 	for key, _ := range MmapStats {
-		assert.True(t, acc.HasIntValue(key))
+		assert.True(t, acc.HasIntField("mongodb", key))
 	}
 }
 
@@ -76,10 +77,11 @@ func TestAddWiredTigerStats(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	d.AddDefaultStats(&acc)
+	d.AddDefaultStats()
+	d.flush(&acc)
 
 	for key, _ := range WiredTigerStats {
-		assert.True(t, acc.HasFloatValue(key))
+		assert.True(t, acc.HasFloatField("mongodb", key))
 	}
 }
 
@@ -95,17 +97,37 @@ func TestStateTag(t *testing.T) {
 		tags,
 	)
 
-	stats := []string{"inserts_per_sec", "queries_per_sec"}
-
 	stateTags := make(map[string]string)
 	stateTags["state"] = "PRI"
 
 	var acc testutil.Accumulator
 
-	d.AddDefaultStats(&acc)
-
-	for _, key := range stats {
-		err := acc.ValidateTaggedValue(key, int64(0), stateTags)
-		require.NoError(t, err)
+	d.AddDefaultStats()
+	d.flush(&acc)
+	fields := map[string]interface{}{
+		"active_reads":          int64(0),
+		"active_writes":         int64(0),
+		"commands_per_sec":      int64(0),
+		"deletes_per_sec":       int64(0),
+		"flushes_per_sec":       int64(0),
+		"getmores_per_sec":      int64(0),
+		"inserts_per_sec":       int64(0),
+		"member_status":         "PRI",
+		"net_in_bytes":          int64(0),
+		"net_out_bytes":         int64(0),
+		"open_connections":      int64(0),
+		"queries_per_sec":       int64(0),
+		"queued_reads":          int64(0),
+		"queued_writes":         int64(0),
+		"repl_commands_per_sec": int64(0),
+		"repl_deletes_per_sec":  int64(0),
+		"repl_getmores_per_sec": int64(0),
+		"repl_inserts_per_sec":  int64(0),
+		"repl_queries_per_sec":  int64(0),
+		"repl_updates_per_sec":  int64(0),
+		"resident_megabytes":    int64(0),
+		"updates_per_sec":       int64(0),
+		"vsize_megabytes":       int64(0),
 	}
+	acc.AssertContainsTaggedFields(t, "mongodb", fields, stateTags)
 }
