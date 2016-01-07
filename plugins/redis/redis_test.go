@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/influxdb/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,61 +35,48 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	err := gatherInfoOutput(rdr, &acc, tags)
 	require.NoError(t, err)
 
-	checkInt := []struct {
-		name  string
-		value uint64
-	}{
-		{"uptime", 238},
-		{"clients", 1},
-		{"used_memory", 1003936},
-		{"used_memory_rss", 811008},
-		{"used_memory_peak", 1003936},
-		{"used_memory_lua", 33792},
-		{"rdb_changes_since_last_save", 0},
-		{"total_connections_received", 2},
-		{"total_commands_processed", 1},
-		{"instantaneous_ops_per_sec", 0},
-		{"sync_full", 0},
-		{"sync_partial_ok", 0},
-		{"sync_partial_err", 0},
-		{"expired_keys", 0},
-		{"evicted_keys", 0},
-		{"keyspace_hits", 1},
-		{"keyspace_misses", 1},
-		{"pubsub_channels", 0},
-		{"pubsub_patterns", 0},
-		{"latest_fork_usec", 0},
-		{"connected_slaves", 0},
-		{"master_repl_offset", 0},
-		{"repl_backlog_active", 0},
-		{"repl_backlog_size", 1048576},
-		{"repl_backlog_histlen", 0},
-		{"keys", 2},
-		{"expires", 0},
-		{"avg_ttl", 0},
+	fields := map[string]interface{}{
+		"uptime":                      uint64(238),
+		"clients":                     uint64(1),
+		"used_memory":                 uint64(1003936),
+		"used_memory_rss":             uint64(811008),
+		"used_memory_peak":            uint64(1003936),
+		"used_memory_lua":             uint64(33792),
+		"rdb_changes_since_last_save": uint64(0),
+		"total_connections_received":  uint64(2),
+		"total_commands_processed":    uint64(1),
+		"instantaneous_ops_per_sec":   uint64(0),
+		"sync_full":                   uint64(0),
+		"sync_partial_ok":             uint64(0),
+		"sync_partial_err":            uint64(0),
+		"expired_keys":                uint64(0),
+		"evicted_keys":                uint64(0),
+		"keyspace_hits":               uint64(1),
+		"keyspace_misses":             uint64(1),
+		"pubsub_channels":             uint64(0),
+		"pubsub_patterns":             uint64(0),
+		"latest_fork_usec":            uint64(0),
+		"connected_slaves":            uint64(0),
+		"master_repl_offset":          uint64(0),
+		"repl_backlog_active":         uint64(0),
+		"repl_backlog_size":           uint64(1048576),
+		"repl_backlog_histlen":        uint64(0),
+		"mem_fragmentation_ratio":     float64(0.81),
+		"instantaneous_input_kbps":    float64(876.16),
+		"instantaneous_output_kbps":   float64(3010.23),
+		"used_cpu_sys":                float64(0.14),
+		"used_cpu_user":               float64(0.05),
+		"used_cpu_sys_children":       float64(0.00),
+		"used_cpu_user_children":      float64(0.00),
+		"keyspace_hitrate":            float64(0.50),
 	}
-
-	for _, c := range checkInt {
-		assert.True(t, acc.CheckValue(c.name, c.value))
+	keyspaceFields := map[string]interface{}{
+		"avg_ttl": uint64(0),
+		"expires": uint64(0),
+		"keys":    uint64(2),
 	}
-
-	checkFloat := []struct {
-		name  string
-		value float64
-	}{
-		{"mem_fragmentation_ratio", 0.81},
-		{"instantaneous_input_kbps", 876.16},
-		{"instantaneous_output_kbps", 3010.23},
-		{"used_cpu_sys", 0.14},
-		{"used_cpu_user", 0.05},
-		{"used_cpu_sys_children", 0.00},
-		{"used_cpu_user_children", 0.00},
-		{"keyspace_hitrate", 0.50},
-	}
-
-	for _, c := range checkFloat {
-		assert.True(t, acc.CheckValue(c.name, c.value))
-	}
+	acc.AssertContainsTaggedFields(t, "redis", fields, tags)
+	acc.AssertContainsTaggedFields(t, "redis_keyspace", keyspaceFields, tags)
 }
 
 const testOutput = `# Server

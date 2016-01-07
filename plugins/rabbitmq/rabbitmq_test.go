@@ -394,11 +394,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	r := &RabbitMQ{
-		Servers: []*Server{
-			{
-				URL: ts.URL,
-			},
-		},
+		URL: ts.URL,
 	}
 
 	var acc testutil.Accumulator
@@ -423,7 +419,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntValue(metric))
+		assert.True(t, acc.HasIntField("rabbitmq_overview", metric))
 	}
 
 	nodeIntMetrics := []string{
@@ -441,8 +437,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, metric := range nodeIntMetrics {
-		assert.True(t, acc.HasIntValue(metric))
+		assert.True(t, acc.HasIntField("rabbitmq_node", metric))
 	}
 
-	assert.True(t, acc.HasMeasurement("queue"))
+	assert.True(t, acc.HasMeasurement("rabbitmq_queue"))
 }
