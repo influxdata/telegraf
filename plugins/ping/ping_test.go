@@ -120,18 +120,16 @@ func TestPingGather(t *testing.T) {
 
 	p.Gather(&acc)
 	tags := map[string]string{"url": "www.google.com"}
-	assert.NoError(t, acc.ValidateTaggedValue("packets_transmitted", 5, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("packets_received", 5, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("percent_packet_loss", 0.0, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("average_response_ms",
-		43.628, tags))
+	fields := map[string]interface{}{
+		"packets_transmitted": 5,
+		"packets_received":    5,
+		"percent_packet_loss": 0.0,
+		"average_response_ms": 43.628,
+	}
+	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
 	tags = map[string]string{"url": "www.reddit.com"}
-	assert.NoError(t, acc.ValidateTaggedValue("packets_transmitted", 5, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("packets_received", 5, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("percent_packet_loss", 0.0, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("average_response_ms",
-		43.628, tags))
+	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
 var lossyPingOutput = `
@@ -159,10 +157,13 @@ func TestLossyPingGather(t *testing.T) {
 
 	p.Gather(&acc)
 	tags := map[string]string{"url": "www.google.com"}
-	assert.NoError(t, acc.ValidateTaggedValue("packets_transmitted", 5, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("packets_received", 3, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("percent_packet_loss", 40.0, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("average_response_ms", 44.033, tags))
+	fields := map[string]interface{}{
+		"packets_transmitted": 5,
+		"packets_received":    3,
+		"percent_packet_loss": 40.0,
+		"average_response_ms": 44.033,
+	}
+	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
 var errorPingOutput = `
@@ -188,10 +189,13 @@ func TestBadPingGather(t *testing.T) {
 
 	p.Gather(&acc)
 	tags := map[string]string{"url": "www.amazon.com"}
-	assert.NoError(t, acc.ValidateTaggedValue("packets_transmitted", 2, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("packets_received", 0, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("percent_packet_loss", 100.0, tags))
-	assert.NoError(t, acc.ValidateTaggedValue("average_response_ms", 0.0, tags))
+	fields := map[string]interface{}{
+		"packets_transmitted": 2,
+		"packets_received":    0,
+		"percent_packet_loss": 100.0,
+		"average_response_ms": 0.0,
+	}
+	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
 func mockFatalHostPinger(args ...string) (string, error) {

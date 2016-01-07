@@ -54,17 +54,14 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	err := n.Gather(&acc)
 	require.NoError(t, err)
 
-	metrics := []struct {
-		name  string
-		value uint64
-	}{
-		{"active", 585},
-		{"accepts", 85340},
-		{"handled", 85340},
-		{"requests", 35085},
-		{"reading", 4},
-		{"writing", 135},
-		{"waiting", 446},
+	fields := map[string]interface{}{
+		"active":   uint64(585),
+		"accepts":  uint64(85340),
+		"handled":  uint64(85340),
+		"requests": uint64(35085),
+		"reading":  uint64(4),
+		"writing":  uint64(135),
+		"waiting":  uint64(446),
 	}
 	addr, err := url.Parse(ts.URL)
 	if err != nil {
@@ -84,8 +81,5 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	}
 
 	tags := map[string]string{"server": host, "port": port}
-
-	for _, m := range metrics {
-		assert.NoError(t, acc.ValidateTaggedValue(m.name, m.value, tags))
-	}
+	acc.AssertContainsTaggedFields(t, "nginx", fields, tags)
 }

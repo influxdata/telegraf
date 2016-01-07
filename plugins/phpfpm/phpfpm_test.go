@@ -32,27 +32,21 @@ func TestPhpFpmGeneratesMetrics(t *testing.T) {
 		"url":  ts.Listener.Addr().String(),
 		"pool": "www",
 	}
-	assert.NoError(t, acc.ValidateTaggedValue("accepted_conn", int64(3), tags))
 
-	checkInt := []struct {
-		name  string
-		value int64
-	}{
-		{"accepted_conn", 3},
-		{"listen_queue", 1},
-		{"max_listen_queue", 0},
-		{"listen_queue_len", 0},
-		{"idle_processes", 1},
-		{"active_processes", 1},
-		{"total_processes", 2},
-		{"max_active_processes", 1},
-		{"max_children_reached", 2},
-		{"slow_requests", 1},
+	fields := map[string]interface{}{
+		"accepted_conn":        int64(3),
+		"listen_queue":         int64(1),
+		"max_listen_queue":     int64(0),
+		"listen_queue_len":     int64(0),
+		"idle_processes":       int64(1),
+		"active_processes":     int64(1),
+		"total_processes":      int64(2),
+		"max_active_processes": int64(1),
+		"max_children_reached": int64(2),
+		"slow_requests":        int64(1),
 	}
 
-	for _, c := range checkInt {
-		assert.Equal(t, true, acc.CheckValue(c.name, c.value))
-	}
+	acc.AssertContainsTaggedFields(t, "phpfpm", fields, tags)
 }
 
 //When not passing server config, we default to localhost
