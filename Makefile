@@ -53,6 +53,7 @@ endif
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -66,11 +67,12 @@ docker-run-circle:
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann
-	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann
+	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann snmp
+	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann snmp
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: docker-kill docker-run
