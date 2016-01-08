@@ -1,6 +1,8 @@
 ## v0.3.0 [unreleased]
 
 ### Release Notes
+- Linux packages have been taken out of `opt`, the binary is now in `/usr/bin`
+and configuration files are in `/etc/telegraf`
 - **breaking change** `plugins` have been renamed to `inputs`. This was done because
 `plugins` is too generic, as there are now also "output plugins", and will likely
 be "aggregator plugins" and "filter plugins" in the future. Additionally,
@@ -18,6 +20,12 @@ instead of only `cpu_`
 `-outputfilter` -> `-output-filter`
 - The prometheus plugin schema has not been changed (measurements have not been
 aggregated).
+
+### Packaging change note:
+
+RHEL/CentOS users upgrading from 0.2 to 0.3 will probably have their
+configurations overwritten by the upgrade. There is a backup stored at
+/etc/telegraf/telegraf.conf.$(date +%s).backup.
 
 ### Features
 - Plugin measurements aggregated into a single measurement.

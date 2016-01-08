@@ -35,8 +35,8 @@ Latest:
 
 ##### Package instructions:
 
-* Telegraf binary is installed in `/opt/telegraf/telegraf`
-* Telegraf daemon configuration file is in `/etc/opt/telegraf/telegraf.conf`
+* Telegraf binary is installed in `/usr/bin/telegraf`
+* Telegraf daemon configuration file is in `/etc/telegraf/telegraf.conf`
 * On sysv systems, the telegraf daemon can be controlled via
 `service telegraf [action]`
 * On systemd systems (such as Ubuntu 15+), the telegraf daemon can be
@@ -126,9 +126,6 @@ configuration options.
 
 ## Supported Input Plugins
 
-**You can view usage instructions for each plugin by running**
-`telegraf -usage <pluginname>`.
-
 Telegraf currently has support for collecting metrics from:
 
 * aerospike
@@ -169,9 +166,7 @@ Telegraf currently has support for collecting metrics from:
     * diskio
     * swap
 
-## Supported Input Service Plugins
-
-Telegraf can collect metrics via the following services:
+Telegraf can also collect metrics via the following service plugins:
 
 * statsd
 * kafka_consumer
@@ -182,15 +177,16 @@ want to add support for another service or third-party API.
 ## Supported Output Plugins
 
 * influxdb
-* nsq
-* kafka
-* datadog
-* opentsdb
-* amqp (rabbitmq)
-* mqtt
-* librato
-* prometheus
 * amon
+* amqp
+* datadog
+* kafka
+* amazon kinesis
+* librato
+* mqtt
+* nsq
+* opentsdb
+* prometheus
 * riemann
 
 ## Contributing
