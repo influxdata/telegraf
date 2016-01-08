@@ -26,7 +26,6 @@ except ImportError:
 # PACKAGING VARIABLES
 INSTALL_ROOT_DIR = "/usr/bin"
 LOG_DIR = "/var/log/telegraf"
-DATA_DIR = "/var/lib/telegraf"
 SCRIPT_DIR = "/usr/lib/telegraf/scripts"
 CONFIG_DIR = "/etc/telegraf"
 LOGROTATE_DIR = "/etc/logrotate.d"
@@ -362,7 +361,7 @@ def create_package_fs(build_root):
     print "\t- Creating a filesystem hierarchy from directory: {}".format(build_root)
     # Using [1:] for the path names due to them being absolute
     # (will overwrite previous paths, per 'os.path.join' documentation)
-    dirs = [ INSTALL_ROOT_DIR[1:], LOG_DIR[1:], DATA_DIR[1:], SCRIPT_DIR[1:], CONFIG_DIR[1:], LOGROTATE_DIR[1:] ]
+    dirs = [ INSTALL_ROOT_DIR[1:], LOG_DIR[1:], SCRIPT_DIR[1:], CONFIG_DIR[1:], LOGROTATE_DIR[1:] ]
     for d in dirs:
         create_dir(os.path.join(build_root, d))
         os.chmod(os.path.join(build_root, d), 0755)
