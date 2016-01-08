@@ -70,10 +70,6 @@ fields which begin with `time_`.
   precision = "s"
 
 # INPUTS
-<<<<<<< HEAD
-=======
-[inputs]
->>>>>>> ac13af0... 0.3.0: update README and documentation
 [[inputs.cpu]]
   percpu = true
   totalcpu = false
@@ -84,10 +80,6 @@ fields which begin with `time_`.
 ### Input Config: tagpass and tagdrop
 
 ```toml
-<<<<<<< HEAD
-=======
-[inputs]
->>>>>>> ac13af0... 0.3.0: update README and documentation
 [[inputs.cpu]]
   percpu = true
   totalcpu = false
