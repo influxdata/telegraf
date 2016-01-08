@@ -51,7 +51,6 @@ if [ ! -f "$STDERR" ]; then
     mkdir -p `dirname $STDERR`
 fi
 
-
 OPEN_FILE_LIMIT=65536
 
 function pidofproc() {
@@ -98,7 +97,7 @@ function log_success_msg() {
 name=telegraf
 
 # Daemon name, where is the actual executable
-daemon=/opt/telegraf/telegraf
+daemon=/usr/bin/telegraf
 
 # pid file for the daemon
 pidfile=/var/run/telegraf/telegraf.pid
@@ -106,12 +105,12 @@ piddir=`dirname $pidfile`
 
 if [ ! -d "$piddir" ]; then
     mkdir -p $piddir
-    chown $GROUP:$USER $piddir
+    chown $USER:$GROUP $piddir
 fi
 
 # Configuration file
-config=/etc/opt/telegraf/telegraf.conf
-confdir=/etc/opt/telegraf/telegraf.d
+config=/etc/telegraf/telegraf.conf
+confdir=/etc/telegraf/telegraf.d
 
 # If the daemon is not there, then exit.
 [ -x $daemon ] || exit 5
@@ -137,7 +136,7 @@ case $1 in
 
         log_success_msg "Starting the process" "$name"
         if which start-stop-daemon > /dev/null 2>&1; then
-            start-stop-daemon --chuid $GROUP:$USER --start --quiet --pidfile $pidfile --exec $daemon -- -pidfile $pidfile -config $config -config-directory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
+            start-stop-daemon --chuid $USER:$GROUP --start --quiet --pidfile $pidfile --exec $daemon -- -pidfile $pidfile -config $config -config-directory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
         else
             nohup $daemon -pidfile $pidfile -config $config -config-directory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
         fi
