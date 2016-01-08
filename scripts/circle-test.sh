@@ -66,6 +66,6 @@ exit_if_fail "./telegraf -version | grep $VERSION"
 tmpdir=$(mktemp -d)
 ./telegraf -sample-config > $tmpdir/config.toml
 exit_if_fail ./telegraf -config $tmpdir/config.toml \
-    -test -filter cpu:mem
+    -test -input-filter cpu:mem
 
 exit $rc
