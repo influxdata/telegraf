@@ -39,8 +39,6 @@
 #                                  OUTPUTS                                    #
 ###############################################################################
 
-[outputs]
-
 # Configuration for influxdb server to send metrics to
 [[outputs.influxdb]]
   # The full HTTP endpoint URL for your InfluxDB instance
@@ -69,8 +67,6 @@
 ###############################################################################
 #                                  PLUGINS                                    #
 ###############################################################################
-
-[inputs]
 
 # Read Apache status information (mod_status)
 [[inputs.apache]]

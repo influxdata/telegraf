@@ -287,7 +287,6 @@ var header = `# Telegraf configuration
 #                                  OUTPUTS                                    #
 ###############################################################################
 
-[outputs]
 `
 
 var pluginHeader = `
@@ -296,7 +295,6 @@ var pluginHeader = `
 #                                  INPUTS                                     #
 ###############################################################################
 
-[inputs]
 `
 
 var serviceInputHeader = `
@@ -470,7 +468,7 @@ func (c *Config) LoadConfig(path string) error {
 						pluginName)
 				}
 			}
-		case "inputs":
+		case "inputs", "plugins":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
 				case *ast.Table:

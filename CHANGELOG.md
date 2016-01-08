@@ -7,7 +7,7 @@ be "aggregator plugins" and "filter plugins" in the future. Additionally,
 `inputs/` and `outputs/` directories have been placed in the root-level `plugins/`
 directory.
 - **breaking change** the `io` plugin has been renamed `diskio`
-- **breaking change** Plugin measurements aggregated into a single measurement.
+- **breaking change** plugin measurements aggregated into a single measurement.
 - **breaking change** `jolokia` plugin: must use global tag/drop/pass parameters
 for configuration.
 - **breaking change** `twemproxy` plugin: `prefix` option removed.
