@@ -4,6 +4,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/outputs/amon"
 	_ "github.com/influxdb/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdb/telegraf/plugins/outputs/datadog"
+	_ "github.com/influxdb/telegraf/plugins/outputs/graphite"
 	_ "github.com/influxdb/telegraf/plugins/outputs/influxdb"
 	_ "github.com/influxdb/telegraf/plugins/outputs/kafka"
 	_ "github.com/influxdb/telegraf/plugins/outputs/kinesis"
