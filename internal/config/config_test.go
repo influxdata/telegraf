@@ -4,21 +4,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdb/telegraf/plugins"
-	"github.com/influxdb/telegraf/plugins/exec"
-	"github.com/influxdb/telegraf/plugins/memcached"
-	"github.com/influxdb/telegraf/plugins/procstat"
+	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdb/telegraf/plugins/inputs/exec"
+	"github.com/influxdb/telegraf/plugins/inputs/memcached"
+	"github.com/influxdb/telegraf/plugins/inputs/procstat"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConfig_LoadSinglePlugin(t *testing.T) {
+func TestConfig_LoadSingleInput(t *testing.T) {
 	c := NewConfig()
 	c.LoadConfig("./testdata/single_plugin.toml")
 
-	memcached := plugins.Plugins["memcached"]().(*memcached.Memcached)
+	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	mConfig := &PluginConfig{
+	mConfig := &InputConfig{
 		Name: "memcached",
 		Filter: Filter{
 			Drop: []string{"other", "stuff"},
@@ -39,10 +39,11 @@ func TestConfig_LoadSinglePlugin(t *testing.T) {
 		},
 		Interval: 5 * time.Second,
 	}
+	mConfig.Tags = make(map[string]string)
 
-	assert.Equal(t, memcached, c.Plugins[0].Plugin,
+	assert.Equal(t, memcached, c.Inputs[0].Input,
 		"Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.Plugins[0].Config,
+	assert.Equal(t, mConfig, c.Inputs[0].Config,
 		"Testdata did not produce correct memcached metadata.")
 }
 
@@ -57,10 +58,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		t.Error(err)
 	}
 
-	memcached := plugins.Plugins["memcached"]().(*memcached.Memcached)
+	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	mConfig := &PluginConfig{
+	mConfig := &InputConfig{
 		Name: "memcached",
 		Filter: Filter{
 			Drop: []string{"other", "stuff"},
@@ -81,45 +82,40 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		},
 		Interval: 5 * time.Second,
 	}
-	assert.Equal(t, memcached, c.Plugins[0].Plugin,
+	mConfig.Tags = make(map[string]string)
+
+	assert.Equal(t, memcached, c.Inputs[0].Input,
 		"Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.Plugins[0].Config,
+	assert.Equal(t, mConfig, c.Inputs[0].Config,
 		"Testdata did not produce correct memcached metadata.")
 
-	ex := plugins.Plugins["exec"]().(*exec.Exec)
-	ex.Commands = []*exec.Command{
-		&exec.Command{
-			Command: "/usr/bin/myothercollector --foo=bar",
-			Name:    "myothercollector",
-		},
+	ex := inputs.Inputs["exec"]().(*exec.Exec)
+	ex.Command = "/usr/bin/myothercollector --foo=bar"
+	eConfig := &InputConfig{
+		Name:              "exec",
+		MeasurementSuffix: "_myothercollector",
 	}
-	eConfig := &PluginConfig{Name: "exec"}
-	assert.Equal(t, ex, c.Plugins[1].Plugin,
+	eConfig.Tags = make(map[string]string)
+	assert.Equal(t, ex, c.Inputs[1].Input,
 		"Merged Testdata did not produce a correct exec struct.")
-	assert.Equal(t, eConfig, c.Plugins[1].Config,
+	assert.Equal(t, eConfig, c.Inputs[1].Config,
 		"Merged Testdata did not produce correct exec metadata.")
 
 	memcached.Servers = []string{"192.168.1.1"}
-	assert.Equal(t, memcached, c.Plugins[2].Plugin,
+	assert.Equal(t, memcached, c.Inputs[2].Input,
 		"Testdata did not produce a correct memcached struct.")
-	assert.Equal(t, mConfig, c.Plugins[2].Config,
+	assert.Equal(t, mConfig, c.Inputs[2].Config,
 		"Testdata did not produce correct memcached metadata.")
 
-	pstat := plugins.Plugins["procstat"]().(*procstat.Procstat)
-	pstat.Specifications = []*procstat.Specification{
-		&procstat.Specification{
-			PidFile: "/var/run/grafana-server.pid",
-		},
-		&procstat.Specification{
-			PidFile: "/var/run/influxdb/influxd.pid",
-		},
-	}
+	pstat := inputs.Inputs["procstat"]().(*procstat.Procstat)
+	pstat.PidFile = "/var/run/grafana-server.pid"
 
-	pConfig := &PluginConfig{Name: "procstat"}
+	pConfig := &InputConfig{Name: "procstat"}
+	pConfig.Tags = make(map[string]string)
 
-	assert.Equal(t, pstat, c.Plugins[3].Plugin,
+	assert.Equal(t, pstat, c.Inputs[3].Input,
 		"Merged Testdata did not produce a correct procstat struct.")
-	assert.Equal(t, pConfig, c.Plugins[3].Config,
+	assert.Equal(t, pConfig, c.Inputs[3].Config,
 		"Merged Testdata did not produce correct procstat metadata.")
 }
 

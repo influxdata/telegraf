@@ -5,23 +5,23 @@ which can be found [on our website](http://influxdb.com/community/cla.html)
 
 ## Plugins
 
-This section is for developers who want to create new collection plugins.
+This section is for developers who want to create new collection inputs.
 Telegraf is entirely plugin driven. This interface allows for operators to
 pick and chose what is gathered as well as makes it easy for developers
 to create new ways of generating metrics.
 
 Plugin authorship is kept as simple as possible to promote people to develop
-and submit new plugins.
+and submit new inputs.
 
 ### Plugin Guidelines
 
-* A plugin must conform to the `plugins.Plugin` interface.
+* A plugin must conform to the `inputs.Input` interface.
 * Each generated metric automatically has the name of the plugin that generated
 it prepended. This is to keep plugins honest.
-* Plugins should call `plugins.Add` in their `init` function to register themselves.
+* Plugins should call `inputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
-`github.com/influxdb/telegraf/plugins/all/all.go` file.
+`github.com/influxdb/telegraf/plugins/inputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 plugin can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this plugin does.
@@ -78,7 +78,7 @@ type Process struct {
     PID int
 }
 
-func Gather(acc plugins.Accumulator) error {
+func Gather(acc inputs.Accumulator) error {
     for _, process := range system.Processes() {
         tags := map[string]string {
             "pid": fmt.Sprintf("%d", process.Pid),
@@ -97,7 +97,7 @@ package simple
 
 // simple.go
 
-import "github.com/influxdb/telegraf/plugins"
+import "github.com/influxdb/telegraf/plugins/inputs"
 
 type Simple struct {
     Ok bool
@@ -111,7 +111,7 @@ func (s *Simple) SampleConfig() string {
     return "ok = true # indicate if everything is fine"
 }
 
-func (s *Simple) Gather(acc plugins.Accumulator) error {
+func (s *Simple) Gather(acc inputs.Accumulator) error {
     if s.Ok {
         acc.Add("state", "pretty good", nil)
     } else {
@@ -122,14 +122,14 @@ func (s *Simple) Gather(acc plugins.Accumulator) error {
 }
 
 func init() {
-    plugins.Add("simple", func() plugins.Plugin { return &Simple{} })
+    inputs.Add("simple", func() inputs.Input { return &Simple{} })
 }
 ```
 
 ## Service Plugins
 
 This section is for developers who want to create new "service" collection
-plugins. A service plugin differs from a regular plugin in that it operates
+inputs. A service plugin differs from a regular plugin in that it operates
 a background service while Telegraf is running. One example would be the `statsd`
 plugin, which operates a statsd server.
 
@@ -143,7 +143,7 @@ and `Stop()` methods.
 ### Service Plugin Guidelines
 
 * Same as the `Plugin` guidelines, except that they must conform to the
-`plugins.ServicePlugin` interface.
+`inputs.ServiceInput` interface.
 
 ### Service Plugin interface
 
@@ -169,7 +169,7 @@ similar constructs.
 * Outputs should call `outputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
-`github.com/influxdb/telegraf/outputs/all/all.go` file.
+`github.com/influxdb/telegraf/plugins/outputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 output can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this output does.
@@ -193,7 +193,7 @@ package simpleoutput
 
 // simpleoutput.go
 
-import "github.com/influxdb/telegraf/outputs"
+import "github.com/influxdb/telegraf/plugins/outputs"
 
 type Simple struct {
     Ok bool
@@ -243,7 +243,7 @@ and `Stop()` methods.
 ### Service Output Guidelines
 
 * Same as the `Output` guidelines, except that they must conform to the
-`plugins.ServiceOutput` interface.
+`inputs.ServiceOutput` interface.
 
 ### Service Output interface
 
