@@ -14,7 +14,7 @@ import (
 const validJSON = `
 	{
 		"parent": {
-			"child": 3,
+			"child": 3.0,
 			"ignored_child": "hi"
 		},
 		"ignored_null": null,
@@ -123,10 +123,16 @@ func TestHttpJson200(t *testing.T) {
 		var acc testutil.Accumulator
 		err := service.Gather(&acc)
 		require.NoError(t, err)
-		assert.Equal(t, 4, acc.NFields())
+		assert.Equal(t, 6, acc.NFields())
+		// Set responsetime
+		for _, p := range acc.Points {
+			p.Fields["response_time"] = 1.0
+		}
+
 		for _, srv := range service.Servers {
 			tags := map[string]string{"server": srv}
 			mname := "httpjson_" + service.Name
+			expectedFields["response_time"] = 1.0
 			acc.AssertContainsTaggedFields(t, mname, expectedFields, tags)
 		}
 	}
@@ -185,11 +191,15 @@ func TestHttpJson200Tags(t *testing.T) {
 		if service.Name == "other_webapp" {
 			var acc testutil.Accumulator
 			err := service.Gather(&acc)
+			// Set responsetime
+			for _, p := range acc.Points {
+				p.Fields["response_time"] = 1.0
+			}
 			require.NoError(t, err)
-			assert.Equal(t, 2, acc.NFields())
+			assert.Equal(t, 4, acc.NFields())
 			for _, srv := range service.Servers {
 				tags := map[string]string{"server": srv, "role": "master", "build": "123"}
-				fields := map[string]interface{}{"value": float64(15)}
+				fields := map[string]interface{}{"value": float64(15), "response_time": float64(1)}
 				mname := "httpjson_" + service.Name
 				acc.AssertContainsTaggedFields(t, mname, fields, tags)
 			}

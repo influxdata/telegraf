@@ -17,17 +17,17 @@ new plugins.
 
 ## Installation:
 
-NOTE: Telegraf 0.3.x is **not** backwards-compatible with previous versions of
+NOTE: Telegraf 0.10.x is **not** backwards-compatible with previous versions of
 telegraf, both in the database layout and the configuration file. 0.2.x will
 continue to be supported, see below for download links.
 
-TODO: link to blog post about 0.3.x changes.
+TODO: link to blog post about 0.10.x changes.
 
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.3.0_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.3.0-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.10.0_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.10.0-1.x86_64.rpm
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
@@ -45,9 +45,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.3.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.3.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.3.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.10.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_386_0.10.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.10.0.tar.gz
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
