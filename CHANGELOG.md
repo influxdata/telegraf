@@ -1,4 +1,4 @@
-## v0.3.0 [unreleased]
+## v0.10.0 [unreleased]
 
 ### Release Notes
 - Linux packages have been taken out of `opt`, the binary is now in `/usr/bin`
@@ -23,7 +23,7 @@ aggregated).
 
 ### Packaging change note:
 
-RHEL/CentOS users upgrading from 0.2 to 0.3 will probably have their
+RHEL/CentOS users upgrading from 0.2.x to 0.10.0 will probably have their
 configurations overwritten by the upgrade. There is a backup stored at
 /etc/telegraf/telegraf.conf.$(date +%s).backup.
 
