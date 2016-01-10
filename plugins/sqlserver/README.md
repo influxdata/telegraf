@@ -14,12 +14,13 @@ CPUHistory			 : cpu usage from sys.dm_os_ring_buffers
 ```
 
 You must create a login on every instance you want to monitor, with following script:
-	```SQL 
-	USE master; 
-	GO
-	CREATE LOGIN [linuxuser] WITH PASSWORD = N'mystrongpassword';
-	GO
-	GRANT VIEW SERVER STATE TO [linuxuser]; 
-	GO
-	GRANT VIEW ANY DEFINITION TO [linuxuser]; 
-	GO
+```SQL 
+USE master; 
+GO
+CREATE LOGIN [telegraf] WITH PASSWORD = N'mystrongpassword';
+GO
+GRANT VIEW SERVER STATE TO [telegraf]; 
+GO
+GRANT VIEW ANY DEFINITION TO [telegraf]; 
+GO
+```
