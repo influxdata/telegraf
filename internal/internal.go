@@ -3,6 +3,7 @@ package internal
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -26,6 +27,39 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 }
 
 var NotImplementedError = errors.New("not implemented yet")
+
+type JSONFlattener struct {
+	Fields map[string]interface{}
+}
+
+// FlattenJSON flattens nested maps/interfaces into a fields map
+func (f *JSONFlattener) FlattenJSON(
+	fieldname string,
+	v interface{},
+) error {
+	if f.Fields == nil {
+		f.Fields = make(map[string]interface{})
+	}
+	fieldname = strings.Trim(fieldname, "_")
+	switch t := v.(type) {
+	case map[string]interface{}:
+		for k, v := range t {
+			err := f.FlattenJSON(fieldname+"_"+k+"_", v)
+			if err != nil {
+				return err
+			}
+		}
+	case float64:
+		f.Fields[fieldname] = t
+	case bool, string, []interface{}, nil:
+		// ignored types
+		return nil
+	default:
+		return fmt.Errorf("JSON Flattener: got unexpected type %T with value %v (%s)",
+			t, t, fieldname)
+	}
+	return nil
+}
 
 // ReadLines reads contents from a file and splits them by new lines.
 // A convenience wrapper to ReadLinesOffsetN(filename, 0, -1).

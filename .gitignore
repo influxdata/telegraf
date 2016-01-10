@@ -2,3 +2,5 @@ tivan
 .vagrant
 /telegraf
 .idea
+*~
+*#
