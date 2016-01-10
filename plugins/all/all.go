@@ -29,6 +29,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/redis"
 	_ "github.com/influxdb/telegraf/plugins/rethinkdb"
 	_ "github.com/influxdb/telegraf/plugins/statsd"
+	_ "github.com/influxdb/telegraf/plugins/sqlserver"
 	_ "github.com/influxdb/telegraf/plugins/system"
 	_ "github.com/influxdb/telegraf/plugins/trig"
 	_ "github.com/influxdb/telegraf/plugins/twemproxy"
