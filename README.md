@@ -26,7 +26,7 @@ TODO: link to blog post about 0.10.x changes.
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.10.0_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf_0.10.0-1_amd64.deb
 * http://get.influxdb.org/telegraf/telegraf-0.10.0-1.x86_64.rpm
 
 0.2.x:
@@ -45,9 +45,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.10.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.10.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.10.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_386.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_arm.tar.gz
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
