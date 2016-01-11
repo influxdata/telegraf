@@ -4,3 +4,5 @@ tivan
 .idea
 *~
 *#
+# vim temp files
+*.swp
