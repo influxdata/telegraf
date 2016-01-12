@@ -2,6 +2,7 @@
 
 ### Features
 - [#509](https://github.com/influxdb/telegraf/pull/509): Flatten JSON arrays with indices. Thanks @psilva261!
+- [#512](https://github.com/influxdata/telegraf/pull/512): Python 3 build script, add lsof dep to package. Thanks @Ormod!
 
 ### Bugfixes
 - [#506](https://github.com/influxdb/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
