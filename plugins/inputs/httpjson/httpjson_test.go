@@ -19,12 +19,12 @@ const validJSON = `
 		},
 		"ignored_null": null,
 		"integer": 4,
-		"ignored_list": [3, 4],
+		"list": [3, 4],
 		"ignored_parent": {
-			"another_ignored_list": [4],
 			"another_ignored_null": null,
 			"ignored_string": "hello, world!"
-		}
+		},
+		"another_list": [4]
 	}`
 
 const validJSONTags = `
@@ -35,8 +35,11 @@ const validJSONTags = `
 	}`
 
 var expectedFields = map[string]interface{}{
-	"parent_child": float64(3),
-	"integer":      float64(4),
+	"parent_child":   float64(3),
+	"list_0":         float64(3),
+	"list_1":         float64(4),
+	"another_list_0": float64(4),
+	"integer":        float64(4),
 }
 
 const invalidJSON = "I don't think this is JSON"
@@ -123,7 +126,7 @@ func TestHttpJson200(t *testing.T) {
 		var acc testutil.Accumulator
 		err := service.Gather(&acc)
 		require.NoError(t, err)
-		assert.Equal(t, 4, acc.NFields())
+		assert.Equal(t, 10, acc.NFields())
 		for _, srv := range service.Servers {
 			tags := map[string]string{"server": srv}
 			mname := "httpjson_" + service.Name
