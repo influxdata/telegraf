@@ -1,13 +1,14 @@
+// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package fcgi implements the FastCGI protocol.
+// Currently only the responder role is supported.
+// The protocol is defined at http://www.fastcgi.com/drupal/node/6?q=node/22
 package phpfpm
 
-// FastCGI client to request via socket
-
-// Copyright 2012 Junqing Tan <ivan@mysqlab.net> and The Go Authors
-// Use of this source code is governed by a BSD-style
-// Part of source code is from Go fcgi package
-
-// Fix bug: Can't recive more than 1 record untill FCGI_END_REQUEST 2012-09-15
-// By: wofeiwo
+// This file defines the raw protocol and some utilities used by the child and
+// the host.
 
 import (
 	"bufio"
@@ -15,75 +16,109 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"sync"
+
 	"net"
 	"strconv"
-	"sync"
+
+	"strings"
 )
 
-const FCGI_LISTENSOCK_FILENO uint8 = 0
-const FCGI_HEADER_LEN uint8 = 8
-const VERSION_1 uint8 = 1
-const FCGI_NULL_REQUEST_ID uint8 = 0
-const FCGI_KEEP_CONN uint8 = 1
+// recType is a record type, as defined by
+// http://www.fastcgi.com/devkit/doc/fcgi-spec.html#S8
+type recType uint8
 
 const (
-	FCGI_BEGIN_REQUEST uint8 = iota + 1
-	FCGI_ABORT_REQUEST
-	FCGI_END_REQUEST
-	FCGI_PARAMS
-	FCGI_STDIN
-	FCGI_STDOUT
-	FCGI_STDERR
-	FCGI_DATA
-	FCGI_GET_VALUES
-	FCGI_GET_VALUES_RESULT
-	FCGI_UNKNOWN_TYPE
-	FCGI_MAXTYPE = FCGI_UNKNOWN_TYPE
+	typeBeginRequest    recType = 1
+	typeAbortRequest    recType = 2
+	typeEndRequest      recType = 3
+	typeParams          recType = 4
+	typeStdin           recType = 5
+	typeStdout          recType = 6
+	typeStderr          recType = 7
+	typeData            recType = 8
+	typeGetValues       recType = 9
+	typeGetValuesResult recType = 10
+	typeUnknownType     recType = 11
 )
 
-const (
-	FCGI_RESPONDER uint8 = iota + 1
-	FCGI_AUTHORIZER
-	FCGI_FILTER
-)
+// keep the connection between web-server and responder open after request
+const flagKeepConn = 1
 
 const (
-	FCGI_REQUEST_COMPLETE uint8 = iota
-	FCGI_CANT_MPX_CONN
-	FCGI_OVERLOADED
-	FCGI_UNKNOWN_ROLE
-)
-
-const (
-	FCGI_MAX_CONNS  string = "MAX_CONNS"
-	FCGI_MAX_REQS   string = "MAX_REQS"
-	FCGI_MPXS_CONNS string = "MPXS_CONNS"
-)
-
-const (
-	maxWrite = 6553500 // maximum record body
+	maxWrite = 65535 // maximum record body
 	maxPad   = 255
 )
 
+const (
+	roleResponder = iota + 1 // only Responders are implemented.
+	roleAuthorizer
+	roleFilter
+)
+
+const (
+	statusRequestComplete = iota
+	statusCantMultiplex
+	statusOverloaded
+	statusUnknownRole
+)
+
+const headerLen = 8
+
 type header struct {
 	Version       uint8
-	Type          uint8
+	Type          recType
 	Id            uint16
 	ContentLength uint16
 	PaddingLength uint8
 	Reserved      uint8
 }
 
+type beginRequest struct {
+	role     uint16
+	flags    uint8
+	reserved [5]uint8
+}
+
+func (br *beginRequest) read(content []byte) error {
+	if len(content) != 8 {
+		return errors.New("fcgi: invalid begin request record")
+	}
+	br.role = binary.BigEndian.Uint16(content)
+	br.flags = content[2]
+	return nil
+}
+
 // for padding so we don't have to allocate all the time
 // not synchronized because we don't care what the contents are
 var pad [maxPad]byte
 
-func (h *header) init(recType uint8, reqId uint16, contentLength int) {
+func (h *header) init(recType recType, reqId uint16, contentLength int) {
 	h.Version = 1
 	h.Type = recType
 	h.Id = reqId
 	h.ContentLength = uint16(contentLength)
 	h.PaddingLength = uint8(-contentLength & 7)
+}
+
+// conn sends records over rwc
+type conn struct {
+	mutex sync.Mutex
+	rwc   io.ReadWriteCloser
+
+	// to avoid allocations
+	buf bytes.Buffer
+	h   header
+}
+
+func newConn(rwc io.ReadWriteCloser) *conn {
+	return &conn{rwc: rwc}
+}
+
+func (c *conn) Close() error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.rwc.Close()
 }
 
 type record struct {
@@ -109,69 +144,39 @@ func (r *record) content() []byte {
 	return r.buf[:r.h.ContentLength]
 }
 
-type FCGIClient struct {
-	mutex     sync.Mutex
-	rwc       io.ReadWriteCloser
-	h         header
-	buf       bytes.Buffer
-	keepAlive bool
-}
-
-func NewClient(h string, args ...interface{}) (fcgi *FCGIClient, err error) {
-	var conn net.Conn
-	if len(args) != 1 {
-		err = errors.New("fcgi: not enough params")
-		return
-	}
-	switch args[0].(type) {
-	case int:
-		addr := h + ":" + strconv.FormatInt(int64(args[0].(int)), 10)
-		conn, err = net.Dial("tcp", addr)
-	case string:
-		laddr := net.UnixAddr{Name: args[0].(string), Net: h}
-		conn, err = net.DialUnix(h, nil, &laddr)
-	default:
-		err = errors.New("fcgi: we only accept int (port) or string (socket) params.")
-	}
-	fcgi = &FCGIClient{
-		rwc:       conn,
-		keepAlive: false,
-	}
-	return
-}
-
-func (client *FCGIClient) writeRecord(recType uint8, reqId uint16, content []byte) (err error) {
-	client.mutex.Lock()
-	defer client.mutex.Unlock()
-	client.buf.Reset()
-	client.h.init(recType, reqId, len(content))
-	if err := binary.Write(&client.buf, binary.BigEndian, client.h); err != nil {
+// writeRecord writes and sends a single record.
+func (c *conn) writeRecord(recType recType, reqId uint16, b []byte) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.buf.Reset()
+	c.h.init(recType, reqId, len(b))
+	if err := binary.Write(&c.buf, binary.BigEndian, c.h); err != nil {
 		return err
 	}
-	if _, err := client.buf.Write(content); err != nil {
+	if _, err := c.buf.Write(b); err != nil {
 		return err
 	}
-	if _, err := client.buf.Write(pad[:client.h.PaddingLength]); err != nil {
+	if _, err := c.buf.Write(pad[:c.h.PaddingLength]); err != nil {
 		return err
 	}
-	_, err = client.rwc.Write(client.buf.Bytes())
+	_, err := c.rwc.Write(c.buf.Bytes())
 	return err
 }
 
-func (client *FCGIClient) writeBeginRequest(reqId uint16, role uint16, flags uint8) error {
+func (c *conn) writeBeginRequest(reqId uint16, role uint16, flags uint8) error {
 	b := [8]byte{byte(role >> 8), byte(role), flags}
-	return client.writeRecord(FCGI_BEGIN_REQUEST, reqId, b[:])
+	return c.writeRecord(typeBeginRequest, reqId, b[:])
 }
 
-func (client *FCGIClient) writeEndRequest(reqId uint16, appStatus int, protocolStatus uint8) error {
+func (c *conn) writeEndRequest(reqId uint16, appStatus int, protocolStatus uint8) error {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint32(b, uint32(appStatus))
 	b[4] = protocolStatus
-	return client.writeRecord(FCGI_END_REQUEST, reqId, b)
+	return c.writeRecord(typeEndRequest, reqId, b)
 }
 
-func (client *FCGIClient) writePairs(recType uint8, reqId uint16, pairs map[string]string) error {
-	w := newWriter(client, recType, reqId)
+func (c *conn) writePairs(recType recType, reqId uint16, pairs map[string]string) error {
+	w := newWriter(c, recType, reqId)
 	b := make([]byte, 8)
 	for k, v := range pairs {
 		n := encodeSize(b, uint32(len(k)))
@@ -238,7 +243,7 @@ func (w *bufWriter) Close() error {
 	return w.closer.Close()
 }
 
-func newWriter(c *FCGIClient, recType uint8, reqId uint16) *bufWriter {
+func newWriter(c *conn, recType recType, reqId uint16) *bufWriter {
 	s := &streamWriter{c: c, recType: recType, reqId: reqId}
 	w := bufio.NewWriterSize(s, maxWrite)
 	return &bufWriter{s, w}
@@ -247,8 +252,8 @@ func newWriter(c *FCGIClient, recType uint8, reqId uint16) *bufWriter {
 // streamWriter abstracts out the separation of a stream into discrete records.
 // It only writes maxWrite bytes at a time.
 type streamWriter struct {
-	c       *FCGIClient
-	recType uint8
+	c       *conn
+	recType recType
 	reqId   uint16
 }
 
@@ -273,22 +278,44 @@ func (w *streamWriter) Close() error {
 	return w.c.writeRecord(w.recType, w.reqId, nil)
 }
 
-func (client *FCGIClient) Request(env map[string]string, reqStr string) (retout []byte, reterr []byte, err error) {
+func NewClient(h string, args ...interface{}) (fcgi *conn, err error) {
+	var con net.Conn
+	if len(args) != 1 {
+		err = errors.New("fcgi: not enough params")
+		return
+	}
+	switch args[0].(type) {
+	case int:
+		addr := h + ":" + strconv.FormatInt(int64(args[0].(int)), 10)
+		con, err = net.Dial("tcp", addr)
+	case string:
+		laddr := net.UnixAddr{Name: args[0].(string), Net: h}
+		con, err = net.DialUnix(h, nil, &laddr)
+	default:
+		err = errors.New("fcgi: we only accept int (port) or string (socket) params.")
+	}
+	fcgi = &conn{
+		rwc: con,
+	}
+	return
+}
 
-	var reqId uint16 = 1
+func (client *conn) Request(env map[string]string, requestData string) (retout []byte, reterr []byte, err error) {
 	defer client.rwc.Close()
+	var reqId uint16 = 1
 
-	err = client.writeBeginRequest(reqId, uint16(FCGI_RESPONDER), 0)
+	err = client.writeBeginRequest(reqId, uint16(roleResponder), 0)
 	if err != nil {
 		return
 	}
-	err = client.writePairs(FCGI_PARAMS, reqId, env)
+
+	err = client.writePairs(typeParams, reqId, env)
 	if err != nil {
 		return
 	}
-	if len(reqStr) > 0 {
-		err = client.writeRecord(FCGI_STDIN, reqId, []byte(reqStr))
-		if err != nil {
+
+	if len(requestData) > 0 {
+		if err = client.writeRecord(typeStdin, reqId, []byte(requestData)); err != nil {
 			return
 		}
 	}
@@ -297,23 +324,25 @@ func (client *FCGIClient) Request(env map[string]string, reqStr string) (retout 
 	var err1 error
 
 	// recive untill EOF or FCGI_END_REQUEST
+READ_LOOP:
 	for {
 		err1 = rec.read(client.rwc)
-		if err1 != nil {
+		if err1 != nil && strings.Contains(err1.Error(), "use of closed network connection") {
 			if err1 != io.EOF {
 				err = err1
 			}
 			break
 		}
+
 		switch {
-		case rec.h.Type == FCGI_STDOUT:
+		case rec.h.Type == typeStdout:
 			retout = append(retout, rec.content()...)
-		case rec.h.Type == FCGI_STDERR:
+		case rec.h.Type == typeStderr:
 			reterr = append(reterr, rec.content()...)
-		case rec.h.Type == FCGI_END_REQUEST:
+		case rec.h.Type == typeEndRequest:
 			fallthrough
 		default:
-			break
+			break READ_LOOP
 		}
 	}
 
