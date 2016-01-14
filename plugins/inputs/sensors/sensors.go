@@ -71,7 +71,7 @@ func (s *Sensors) Gather(acc inputs.Accumulator) error {
 			fieldName := chipName + ":" + featureLabel
 
 			fields := map[string]interface{}{
-				featureLabel: feature.GetValue(),
+				fieldName: feature.GetValue(),
 			}
 
 			acc.AddFields("sensors", fields, tags)
