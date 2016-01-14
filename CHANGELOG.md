@@ -6,6 +6,7 @@
 
 ### Bugfixes
 - [#506](https://github.com/influxdb/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
+- [#508](https://github.com/influxdb/telegraf/pull/508): Fix prometheus cardinality issue with the `net` plugin
 
 ## v0.10.0 [2014-01-12]
 
