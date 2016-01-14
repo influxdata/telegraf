@@ -17,11 +17,12 @@ new plugins.
 
 ## Installation:
 
-NOTE: Telegraf 0.10.x is **not** backwards-compatible with previous versions of
-telegraf, both in the database layout and the configuration file. 0.2.x will
-continue to be supported, see below for download links.
+NOTE: Telegraf 0.10.x is **not** backwards-compatible with previous versions
+of telegraf, both in the database layout and the configuration file. 0.2.x
+will continue to be supported, see below for download links.
 
-TODO: link to blog post about 0.10.x changes.
+For more details on the differences between Telegraf 0.2.x and 0.10.x, see
+the [release blog post](https://influxdata.com/blog/announcing-telegraf-0-10-0/).
 
 ### Linux deb and rpm packages:
 
