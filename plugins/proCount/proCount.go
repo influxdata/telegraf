@@ -38,8 +38,12 @@ func (s *proCount) Gather(acc plugins.Accumulator) error{
 	fields["Processes"] = fieldData	
 	
 	tags := make(map[string]string)
+	
+	//Must subtract two from the processes running
+	//because running the external commands fpr ps and wc
+	//create two additional processes 
 
-	fmt.Println("Processes running:   ", string(holder))
+	fmt.Println("Processes running:   ", string(holder)-2)
 
 	acc.AddFields("processes", fields, tags) 
 	
