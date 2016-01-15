@@ -4,6 +4,7 @@
 - [#509](https://github.com/influxdb/telegraf/pull/509): Flatten JSON arrays with indices. Thanks @psilva261!
 - [#512](https://github.com/influxdata/telegraf/pull/512): Python 3 build script, add lsof dep to package. Thanks @Ormod!
 - [#475](https://github.com/influxdata/telegraf/pull/475): Add response time to httpjson plugin. Thanks @titilambert!
+- [#519](https://github.com/influxdata/telegraf/pull/519): Added a sensors input based on lm-sensors. Thanks @md14454!
 
 ### Bugfixes
 - [#506](https://github.com/influxdb/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
@@ -44,7 +45,6 @@ configurations overwritten by the upgrade. There is a backup stored at
 - Added ability to specify per-plugin measurement suffix and prefix.
 (`name_prefix` and `name_suffix`)
 - Added ability to override base plugin measurement name. (`name_override`)
-- Added a sensors input based on lm-sensors
 
 ### Bugfixes
 
