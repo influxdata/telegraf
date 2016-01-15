@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -49,9 +50,17 @@ func (f *JSONFlattener) FlattenJSON(
 				return err
 			}
 		}
+	case []interface{}:
+		for i, v := range t {
+			k := strconv.Itoa(i)
+			err := f.FlattenJSON(fieldname+"_"+k+"_", v)
+			if err != nil {
+				return nil
+			}
+		}
 	case float64:
 		f.Fields[fieldname] = t
-	case bool, string, []interface{}, nil:
+	case bool, string, nil:
 		// ignored types
 		return nil
 	default:

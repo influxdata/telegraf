@@ -1,4 +1,12 @@
-## v0.10.0 [unreleased]
+## v0.10.1 [unreleased]
+
+### Features
+- [#509](https://github.com/influxdb/telegraf/pull/509): Flatten JSON arrays with indices. Thanks @psilva261!
+
+### Bugfixes
+- [#506](https://github.com/influxdb/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
+
+## v0.10.0 [2014-01-12]
 
 ### Release Notes
 - Linux packages have been taken out of `opt`, the binary is now in `/usr/bin`

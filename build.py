@@ -204,9 +204,9 @@ def upload_packages(packages, nightly=False):
     print ""
     c = boto.connect_s3()
     # TODO(rossmcdonald) - Set to different S3 bucket for release vs nightly
-    bucket = c.get_bucket('telegraf-nightly')
+    bucket = c.get_bucket('get.influxdb.org')
     for p in packages:
-        name = os.path.basename(p)
+        name = os.path.join('telegraf', os.path.basename(p))
         if bucket.get_key(name) is None or nightly:
             print "\t - Uploading {}...".format(name),
             k = Key(bucket)
@@ -481,7 +481,7 @@ def print_usage():
     print "\t --commit=<commit> \n\t\t- Use specific commit for build (currently a NOOP)."
     print "\t --branch=<branch> \n\t\t- Build from a specific branch (currently a NOOP)."
     print "\t --rc=<rc number> \n\t\t- Whether or not the build is a release candidate (affects version information)."
-    print "\t --iteration=<iteration number> \n\t\t- The iteration to display on the package output (defaults to 0 for RC's, and 1 otherwise)."    
+    print "\t --iteration=<iteration number> \n\t\t- The iteration to display on the package output (defaults to 0 for RC's, and 1 otherwise)."
     print "\t --race \n\t\t- Whether the produced build should have race detection enabled."
     print "\t --package \n\t\t- Whether the produced builds should be packaged for the target platform(s)."
     print "\t --nightly \n\t\t- Whether the produced build is a nightly (affects version information)."
