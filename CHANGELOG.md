@@ -8,6 +8,7 @@
 - [#467](https://github.com/influxdata/telegraf/issues/467): Add option to disable statsd measurement name conversion.
 - [#534](https://github.com/influxdata/telegraf/pull/534): NSQ input plugin. Thanks @allingeek!
 - [#494](https://github.com/influxdata/telegraf/pull/494): Graphite output plugin. Thanks @titilambert!
+- AMQP SSL support. Thanks @ekini!
 
 ### Bugfixes
 - [#506](https://github.com/influxdb/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
