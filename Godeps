@@ -46,6 +46,7 @@ github.com/wvanbergen/kafka 1a8639a45164fcc245d5c7b4bd3ccfbd1a0ffbf3
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 golang.org/x/crypto 3760e016850398b85094c4c99e955b8c3dea5711
 golang.org/x/net 99ca920b6037ef77af8a11297150f7f0d8f4ef80
+golang.org/x/text cf4986612c83df6c55578ba198316d1684a9a287
 gopkg.in/dancannon/gorethink.v1 e2cef022d0495329dfb0635991de76efcab5cf50
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
 gopkg.in/mgo.v2 e30de8ac9ae3b30df7065f766c71f88bba7d4e49

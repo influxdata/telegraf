@@ -20,6 +20,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/inputs/mysql"
 	_ "github.com/influxdb/telegraf/plugins/inputs/nginx"
 	_ "github.com/influxdb/telegraf/plugins/inputs/nsq"
+	_ "github.com/influxdb/telegraf/plugins/inputs/passenger"
 	_ "github.com/influxdb/telegraf/plugins/inputs/phpfpm"
 	_ "github.com/influxdb/telegraf/plugins/inputs/ping"
 	_ "github.com/influxdb/telegraf/plugins/inputs/postgresql"
