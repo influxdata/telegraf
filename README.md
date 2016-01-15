@@ -154,6 +154,7 @@ Currently implemented sources:
 * nginx
 * nsq
 * phpfpm
+* phusion passenger
 * ping
 * postgresql
 * procstat
