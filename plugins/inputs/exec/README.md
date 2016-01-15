@@ -38,8 +38,6 @@ The collected metrics will be stored as field values under the same measurement 
  exec_mycollector a=0.5,b_c=0.1,b_d=5 1452815002357578567
 ```
 
-Other options include:
-
 Other options for modifying the measurement names are:
 ```
 name_override = "newname"
