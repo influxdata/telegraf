@@ -9,7 +9,6 @@ import (
 
 	"github.com/influxdb/telegraf/testutil"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,49 +34,121 @@ func TestNSQStats(t *testing.T) {
 	// actually validate the tests
 	tests := []struct {
 		m string
-		v int64
+		f map[string]interface{}
 		g map[string]string
 	}{
-		{`nsq_server_count`, int64(1), map[string]string{`server_host`: host, `server_version`: `0.3.6`}},
-		{`nsq_server_topic_count`, int64(2), map[string]string{`server_host`: host, `server_version`: `0.3.6`}},
-		{`nsq_topic_depth`, int64(12), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`}},
-		{`nsq_topic_backend_depth`, int64(13), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`}},
-		{`nsq_topic_message_count`, int64(14), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`}},
-		{`nsq_topic_channel_count`, int64(1), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`}},
-		{`nsq_channel_depth`, int64(0), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`}},
-		{`nsq_channel_backend_depth`, int64(1), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`}},
-		{`nsq_channel_inflight_count`, int64(2), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`}},
-		{`nsq_channel_deferred_count`, int64(3), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`}},
-		{`nsq_channel_message_count`, int64(4), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`}},
-		{`nsq_channel_requeue_count`, int64(5), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`}},
-		{`nsq_channel_timeout_count`, int64(6), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`}},
-		{`nsq_channel_client_count`, int64(1), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`}},
-		{`nsq_client_ready_count`, int64(200), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`, `client_name`: `373a715cd990`, `client_id`: `373a715cd990`, `client_hostname`: `373a715cd990`, `client_version`: `V2`, `client_address`: `172.17.0.11:35560`, `client_tls`: `false`, `client_snappy`: `false`, `client_deflate`: `false`, `client_user_agent`: `nsq_to_nsq/0.3.6 go-nsq/1.0.5`}},
-		{`nsq_client_inflight_count`, int64(7), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`, `client_name`: `373a715cd990`, `client_id`: `373a715cd990`, `client_hostname`: `373a715cd990`, `client_version`: `V2`, `client_address`: `172.17.0.11:35560`, `client_tls`: `false`, `client_snappy`: `false`, `client_deflate`: `false`, `client_user_agent`: `nsq_to_nsq/0.3.6 go-nsq/1.0.5`}},
-		{`nsq_client_message_count`, int64(8), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`, `client_name`: `373a715cd990`, `client_id`: `373a715cd990`, `client_hostname`: `373a715cd990`, `client_version`: `V2`, `client_address`: `172.17.0.11:35560`, `client_tls`: `false`, `client_snappy`: `false`, `client_deflate`: `false`, `client_user_agent`: `nsq_to_nsq/0.3.6 go-nsq/1.0.5`}},
-		{`nsq_client_finish_count`, int64(9), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`, `client_name`: `373a715cd990`, `client_id`: `373a715cd990`, `client_hostname`: `373a715cd990`, `client_version`: `V2`, `client_address`: `172.17.0.11:35560`, `client_tls`: `false`, `client_snappy`: `false`, `client_deflate`: `false`, `client_user_agent`: `nsq_to_nsq/0.3.6 go-nsq/1.0.5`}},
-		{`nsq_client_requeue_count`, int64(10), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t1`, `channel`: `c1`, `client_name`: `373a715cd990`, `client_id`: `373a715cd990`, `client_hostname`: `373a715cd990`, `client_version`: `V2`, `client_address`: `172.17.0.11:35560`, `client_tls`: `false`, `client_snappy`: `false`, `client_deflate`: `false`, `client_user_agent`: `nsq_to_nsq/0.3.6 go-nsq/1.0.5`}},
-		{`nsq_topic_depth`, int64(28), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`}},
-		{`nsq_topic_backend_depth`, int64(29), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`}},
-		{`nsq_topic_message_count`, int64(30), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`}},
-		{`nsq_topic_channel_count`, int64(1), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`}},
-		{`nsq_channel_depth`, int64(15), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`}},
-		{`nsq_channel_backend_depth`, int64(16), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`}},
-		{`nsq_channel_inflight_count`, int64(17), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`}},
-		{`nsq_channel_deferred_count`, int64(18), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`}},
-		{`nsq_channel_message_count`, int64(19), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`}},
-		{`nsq_channel_requeue_count`, int64(20), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`}},
-		{`nsq_channel_timeout_count`, int64(21), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`}},
-		{`nsq_channel_client_count`, int64(1), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`}},
-		{`nsq_client_ready_count`, int64(22), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`, `client_name`: `377569bd462b`, `client_id`: `377569bd462b`, `client_hostname`: `377569bd462b`, `client_version`: `V2`, `client_address`: `172.17.0.8:48145`, `client_user_agent`: `go-nsq/1.0.5`, `client_tls`: `true`, `client_snappy`: `true`, `client_deflate`: `true`}},
-		{`nsq_client_inflight_count`, int64(23), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`, `client_name`: `377569bd462b`, `client_id`: `377569bd462b`, `client_hostname`: `377569bd462b`, `client_version`: `V2`, `client_address`: `172.17.0.8:48145`, `client_user_agent`: `go-nsq/1.0.5`, `client_tls`: `true`, `client_snappy`: `true`, `client_deflate`: `true`}},
-		{`nsq_client_message_count`, int64(24), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`, `client_name`: `377569bd462b`, `client_id`: `377569bd462b`, `client_hostname`: `377569bd462b`, `client_version`: `V2`, `client_address`: `172.17.0.8:48145`, `client_user_agent`: `go-nsq/1.0.5`, `client_tls`: `true`, `client_snappy`: `true`, `client_deflate`: `true`}},
-		{`nsq_client_finish_count`, int64(25), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`, `client_name`: `377569bd462b`, `client_id`: `377569bd462b`, `client_hostname`: `377569bd462b`, `client_version`: `V2`, `client_address`: `172.17.0.8:48145`, `client_user_agent`: `go-nsq/1.0.5`, `client_tls`: `true`, `client_snappy`: `true`, `client_deflate`: `true`}},
-		{`nsq_client_requeue_count`, int64(26), map[string]string{`server_host`: host, `server_version`: `0.3.6`, `topic`: `t2`, `channel`: `c2`, `client_name`: `377569bd462b`, `client_id`: `377569bd462b`, `client_hostname`: `377569bd462b`, `client_version`: `V2`, `client_address`: `172.17.0.8:48145`, `client_user_agent`: `go-nsq/1.0.5`, `client_tls`: `true`, `client_snappy`: `true`, `client_deflate`: `true`}},
+		{
+			"nsq_server",
+			map[string]interface{}{
+				"server_count": int64(1),
+				"topic_count":  int64(2),
+			},
+			map[string]string{
+				"server_host":    host,
+				"server_version": "0.3.6",
+			},
+		},
+		{
+			"nsq_topic",
+			map[string]interface{}{
+				"depth":         int64(12),
+				"backend_depth": int64(13),
+				"message_count": int64(14),
+				"channel_count": int64(1),
+			},
+			map[string]string{
+				"server_host":    host,
+				"server_version": "0.3.6",
+				"topic":          "t1"},
+		},
+		{
+			"nsq_channel",
+			map[string]interface{}{
+				"depth":          int64(0),
+				"backend_depth":  int64(1),
+				"inflight_count": int64(2),
+				"deferred_count": int64(3),
+				"message_count":  int64(4),
+				"requeue_count":  int64(5),
+				"timeout_count":  int64(6),
+				"client_count":   int64(1),
+			},
+			map[string]string{
+				"server_host":    host,
+				"server_version": "0.3.6",
+				"topic":          "t1",
+				"channel":        "c1",
+			},
+		},
+		{
+			"nsq_client",
+			map[string]interface{}{
+				"ready_count":    int64(200),
+				"inflight_count": int64(7),
+				"message_count":  int64(8),
+				"finish_count":   int64(9),
+				"requeue_count":  int64(10),
+			},
+			map[string]string{"server_host": host, "server_version": "0.3.6",
+				"topic": "t1", "channel": "c1", "client_name": "373a715cd990",
+				"client_id": "373a715cd990", "client_hostname": "373a715cd990",
+				"client_version": "V2", "client_address": "172.17.0.11:35560",
+				"client_tls": "false", "client_snappy": "false",
+				"client_deflate":    "false",
+				"client_user_agent": "nsq_to_nsq/0.3.6 go-nsq/1.0.5"},
+		},
+		{
+			"nsq_topic",
+			map[string]interface{}{
+				"depth":         int64(28),
+				"backend_depth": int64(29),
+				"message_count": int64(30),
+				"channel_count": int64(1),
+			},
+			map[string]string{
+				"server_host":    host,
+				"server_version": "0.3.6",
+				"topic":          "t2"},
+		},
+		{
+			"nsq_channel",
+			map[string]interface{}{
+				"depth":          int64(15),
+				"backend_depth":  int64(16),
+				"inflight_count": int64(17),
+				"deferred_count": int64(18),
+				"message_count":  int64(19),
+				"requeue_count":  int64(20),
+				"timeout_count":  int64(21),
+				"client_count":   int64(1),
+			},
+			map[string]string{
+				"server_host":    host,
+				"server_version": "0.3.6",
+				"topic":          "t2",
+				"channel":        "c2",
+			},
+		},
+		{
+			"nsq_client",
+			map[string]interface{}{
+				"ready_count":    int64(22),
+				"inflight_count": int64(23),
+				"message_count":  int64(24),
+				"finish_count":   int64(25),
+				"requeue_count":  int64(26),
+			},
+			map[string]string{"server_host": host, "server_version": "0.3.6",
+				"topic": "t2", "channel": "c2", "client_name": "377569bd462b",
+				"client_id": "377569bd462b", "client_hostname": "377569bd462b",
+				"client_version": "V2", "client_address": "172.17.0.8:48145",
+				"client_user_agent": "go-nsq/1.0.5", "client_tls": "true",
+				"client_snappy": "true", "client_deflate": "true"},
+		},
 	}
 
 	for _, test := range tests {
-		assert.True(t, acc.CheckTaggedValue(test.m, test.v, test.g), "Failed expectation: (\"%v\", \"%v\", \"%v\")", test.m, test.v, fmt.Sprint(test.g))
+		acc.AssertContainsTaggedFields(t, test.m, test.f, test.g)
 	}
 }
 

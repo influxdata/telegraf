@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdb/telegraf/plugins"
+	"github.com/influxdb/telegraf/plugins/inputs"
 )
 
 // Might add Lookupd endpoints for cluster discovery
@@ -41,7 +41,7 @@ type NSQ struct {
 
 var sampleConfig = `
   # An array of NSQD HTTP API endpoints
-  endpoints = ["http://localhost:4151","http://otherhost:4151"]
+  endpoints = ["http://localhost:4151"]
 `
 
 const (
@@ -49,7 +49,7 @@ const (
 )
 
 func init() {
-	plugins.Add("nsq", func() plugins.Plugin {
+	inputs.Add("nsq", func() inputs.Input {
 		return &NSQ{}
 	})
 }
@@ -62,7 +62,7 @@ func (n *NSQ) Description() string {
 	return "Read NSQ topic and channel statistics."
 }
 
-func (n *NSQ) Gather(acc plugins.Accumulator) error {
+func (n *NSQ) Gather(acc inputs.Accumulator) error {
 	var wg sync.WaitGroup
 	var outerr error
 
@@ -85,7 +85,7 @@ var tr = &http.Transport{
 
 var client = &http.Client{Transport: tr}
 
-func (n *NSQ) gatherEndpoint(e string, acc plugins.Accumulator) error {
+func (n *NSQ) gatherEndpoint(e string, acc inputs.Accumulator) error {
 	u, err := buildURL(e)
 	if err != nil {
 		return err
@@ -111,13 +111,15 @@ func (n *NSQ) gatherEndpoint(e string, acc plugins.Accumulator) error {
 		`server_version`: s.Data.Version,
 	}
 
+	fields := make(map[string]interface{})
 	if s.Data.Health == `OK` {
-		acc.Add(`nsq_server_count`, int64(1), tags)
+		fields["server_count"] = int64(1)
 	} else {
-		acc.Add(`nsq_server_count`, int64(0), tags)
+		fields["server_count"] = int64(0)
 	}
+	fields["topic_count"] = int64(len(s.Data.Topics))
 
-	acc.Add(`nsq_server_topic_count`, int64(len(s.Data.Topics)), tags)
+	acc.AddFields("nsq_server", fields, tags)
 	for _, t := range s.Data.Topics {
 		topicStats(t, acc, u.Host, s.Data.Version)
 	}
@@ -134,68 +136,77 @@ func buildURL(e string) (*url.URL, error) {
 	return addr, nil
 }
 
-func topicStats(t TopicStats, acc plugins.Accumulator, host, version string) {
-
+func topicStats(t TopicStats, acc inputs.Accumulator, host, version string) {
 	// per topic overall (tag: name, paused, channel count)
 	tags := map[string]string{
-		`server_host`:    host,
-		`server_version`: version,
-		`topic`:          t.Name,
+		"server_host":    host,
+		"server_version": version,
+		"topic":          t.Name,
 	}
 
-	acc.Add(`nsq_topic_depth`, t.Depth, tags)
-	acc.Add(`nsq_topic_backend_depth`, t.BackendDepth, tags)
-	acc.Add(`nsq_topic_message_count`, t.MessageCount, tags)
+	fields := map[string]interface{}{
+		"depth":         t.Depth,
+		"backend_depth": t.BackendDepth,
+		"message_count": t.MessageCount,
+		"channel_count": int64(len(t.Channels)),
+	}
+	acc.AddFields("nsq_topic", fields, tags)
 
-	acc.Add(`nsq_topic_channel_count`, int64(len(t.Channels)), tags)
 	for _, c := range t.Channels {
 		channelStats(c, acc, host, version, t.Name)
 	}
 }
 
-func channelStats(c ChannelStats, acc plugins.Accumulator, host, version, topic string) {
+func channelStats(c ChannelStats, acc inputs.Accumulator, host, version, topic string) {
 	tags := map[string]string{
-		`server_host`:    host,
-		`server_version`: version,
-		`topic`:          topic,
-		`channel`:        c.Name,
+		"server_host":    host,
+		"server_version": version,
+		"topic":          topic,
+		"channel":        c.Name,
 	}
 
-	acc.Add("nsq_channel_depth", c.Depth, tags)
-	acc.Add("nsq_channel_backend_depth", c.BackendDepth, tags)
-	acc.Add("nsq_channel_inflight_count", c.InFlightCount, tags)
-	acc.Add("nsq_channel_deferred_count", c.DeferredCount, tags)
-	acc.Add("nsq_channel_message_count", c.MessageCount, tags)
-	acc.Add("nsq_channel_requeue_count", c.RequeueCount, tags)
-	acc.Add("nsq_channel_timeout_count", c.TimeoutCount, tags)
+	fields := map[string]interface{}{
+		"depth":          c.Depth,
+		"backend_depth":  c.BackendDepth,
+		"inflight_count": c.InFlightCount,
+		"deferred_count": c.DeferredCount,
+		"message_count":  c.MessageCount,
+		"requeue_count":  c.RequeueCount,
+		"timeout_count":  c.TimeoutCount,
+		"client_count":   int64(len(c.Clients)),
+	}
 
-	acc.Add("nsq_channel_client_count", int64(len(c.Clients)), tags)
+	acc.AddFields("nsq_channel", fields, tags)
 	for _, cl := range c.Clients {
 		clientStats(cl, acc, host, version, topic, c.Name)
 	}
 }
 
-func clientStats(c ClientStats, acc plugins.Accumulator, host, version, topic, channel string) {
+func clientStats(c ClientStats, acc inputs.Accumulator, host, version, topic, channel string) {
 	tags := map[string]string{
-		`server_host`:       host,
-		`server_version`:    version,
-		`topic`:             topic,
-		`channel`:           channel,
-		`client_name`:       c.Name,
-		`client_id`:         c.ID,
-		`client_hostname`:   c.Hostname,
-		`client_version`:    c.Version,
-		`client_address`:    c.RemoteAddress,
-		`client_user_agent`: c.UserAgent,
-		`client_tls`:        strconv.FormatBool(c.TLS),
-		`client_snappy`:     strconv.FormatBool(c.Snappy),
-		`client_deflate`:    strconv.FormatBool(c.Deflate),
+		"server_host":       host,
+		"server_version":    version,
+		"topic":             topic,
+		"channel":           channel,
+		"client_name":       c.Name,
+		"client_id":         c.ID,
+		"client_hostname":   c.Hostname,
+		"client_version":    c.Version,
+		"client_address":    c.RemoteAddress,
+		"client_user_agent": c.UserAgent,
+		"client_tls":        strconv.FormatBool(c.TLS),
+		"client_snappy":     strconv.FormatBool(c.Snappy),
+		"client_deflate":    strconv.FormatBool(c.Deflate),
 	}
-	acc.Add("nsq_client_ready_count", c.ReadyCount, tags)
-	acc.Add("nsq_client_inflight_count", c.InFlightCount, tags)
-	acc.Add("nsq_client_message_count", c.MessageCount, tags)
-	acc.Add("nsq_client_finish_count", c.FinishCount, tags)
-	acc.Add("nsq_client_requeue_count", c.RequeueCount, tags)
+
+	fields := map[string]interface{}{
+		"ready_count":    c.ReadyCount,
+		"inflight_count": c.InFlightCount,
+		"message_count":  c.MessageCount,
+		"finish_count":   c.FinishCount,
+		"requeue_count":  c.RequeueCount,
+	}
+	acc.AddFields("nsq_client", fields, tags)
 }
 
 type NSQStats struct {
