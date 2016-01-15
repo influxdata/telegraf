@@ -157,6 +157,7 @@ Telegraf currently has support for collecting metrics from:
 * twemproxy
 * zfs
 * zookeeper
+* sensors
 * system
     * cpu
     * mem
