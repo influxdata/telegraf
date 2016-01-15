@@ -58,7 +58,7 @@ func (a *Agent) Connect() error {
 		}
 		err := o.Output.Connect()
 		if err != nil {
-			log.Printf("Failed to connect to output %s, retrying in 15s\n", o.Name)
+			log.Printf("Failed to connect to output %s, retrying in 15s, error was '%s' \n", o.Name, err)
 			time.Sleep(15 * time.Second)
 			err = o.Output.Connect()
 			if err != nil {
