@@ -10,7 +10,7 @@ setup the exec plugin with:
 [[inputs.exec]]
   command = "/usr/bin/mycollector --output=json"
   name_suffix = "_mycollector"
-  interval = 10
+  interval = "10s"
 ```
 
 The name suffix is appended to exec as "exec_name_suffix" to identify the input stream.
@@ -27,14 +27,21 @@ Let's say that we have a command with the name_suffix "_mycollector", which give
 {
     "a": 0.5,
     "b": {
-        "c": "some text",
-        "d": 0.1,
-        "e": 5
+        "c": 0.1,
+        "d": 5
     }
 }
 ```
 
 The collected metrics will be stored as field values under the same measurement "exec_mycollector":
 ```
- exec_mycollector a=0.5,b_c="some text",b_d=0.1,b_e=5 1452815002357578567
+ exec_mycollector a=0.5,b_c=0.1,b_d=5 1452815002357578567
+```
+
+Other options include:
+
+Other options for modifying the measurement names are:
+```
+name_override = "newname"
+name_prefix = "prefix_"
 ```
