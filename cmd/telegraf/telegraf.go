@@ -16,6 +16,8 @@ import (
 
 var fDebug = flag.Bool("debug", false,
 	"show metrics as they're generated to stdout")
+var fQuiet = flag.Bool("quiet", false,
+	"run in quiet mode")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
@@ -57,6 +59,8 @@ The flags are:
   -input-filter      filter the input plugins to enable, separator is :
   -output-filter     filter the output plugins to enable, separator is :
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
+  -debug             print metrics as they're generated to stdout
+  -quiet             run in quiet mode
   -version           print the version to stdout
 
 Examples:
@@ -171,6 +175,10 @@ func main() {
 
 	if *fDebug {
 		ag.Config.Agent.Debug = true
+	}
+
+	if *fQuiet {
+		ag.Config.Agent.Quiet = true
 	}
 
 	if *fTest {

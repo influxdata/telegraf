@@ -85,7 +85,7 @@ if you don't have it already. You also must build with golang version 1.4+.
 
 ```console
 $ telegraf -help
-Telegraf, The plugin-driven server agent for reporting metrics into InfluxDB
+Telegraf, The plugin-driven server agent for collecting and reporting metrics.
 
 Usage:
 
@@ -100,6 +100,8 @@ The flags are:
   -input-filter      filter the input plugins to enable, separator is :
   -output-filter     filter the output plugins to enable, separator is :
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
+  -debug             print metrics as they're generated to stdout
+  -quiet             run in quiet mode
   -version           print the version to stdout
 
 Examples:
