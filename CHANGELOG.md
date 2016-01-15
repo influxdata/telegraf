@@ -44,6 +44,7 @@ configurations overwritten by the upgrade. There is a backup stored at
 - Added ability to specify per-plugin measurement suffix and prefix.
 (`name_prefix` and `name_suffix`)
 - Added ability to override base plugin measurement name. (`name_override`)
+- Added a sensors input based on lm-sensors
 
 ### Bugfixes
 

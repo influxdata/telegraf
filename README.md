@@ -162,6 +162,7 @@ Currently implemented sources:
 * twemproxy
 * zfs
 * zookeeper
+* sensors
 * system
     * cpu
     * mem
