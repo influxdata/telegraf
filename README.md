@@ -127,7 +127,9 @@ configuration options.
 
 ## Supported Input Plugins
 
-Telegraf currently has support for collecting metrics from:
+Telegraf currently has support for collecting metrics from many sources. For more information on each, please look at the directory of the same name in `plugins/inputs`.
+
+Currently implemented sources:
 
 * aerospike
 * apache
