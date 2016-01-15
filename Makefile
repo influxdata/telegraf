@@ -21,18 +21,6 @@ dev: prepare
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
-# Build linux 64-bit, 32-bit and arm architectures
-build-linux-bins: prepare
-	GOARCH=amd64 GOOS=linux go build -o telegraf_linux_amd64 \
-								-ldflags "-X main.Version=$(VERSION)" \
-								./cmd/telegraf/telegraf.go
-	GOARCH=386 GOOS=linux go build -o telegraf_linux_386 \
-								-ldflags "-X main.Version=$(VERSION)" \
-								./cmd/telegraf/telegraf.go
-	GOARCH=arm GOOS=linux go build -o telegraf_linux_arm \
-								-ldflags "-X main.Version=$(VERSION)" \
-								./cmd/telegraf/telegraf.go
-
 # Get dependencies and use gdm to checkout changesets
 prepare:
 	go get ./...

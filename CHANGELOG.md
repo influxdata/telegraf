@@ -1,3 +1,54 @@
+## v0.10.1 [unreleased]
+
+### Features
+- [#509](https://github.com/influxdb/telegraf/pull/509): Flatten JSON arrays with indices. Thanks @psilva261!
+- [#512](https://github.com/influxdata/telegraf/pull/512): Python 3 build script, add lsof dep to package. Thanks @Ormod!
+- [#475](https://github.com/influxdata/telegraf/pull/475): Add response time to httpjson plugin. Thanks @titilambert!
+- [#519](https://github.com/influxdata/telegraf/pull/519): Added a sensors input based on lm-sensors. Thanks @md14454!
+- [#467](https://github.com/influxdata/telegraf/issues/467): Add option to disable statsd measurement name conversion.
+
+### Bugfixes
+- [#506](https://github.com/influxdb/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
+- [#508](https://github.com/influxdb/telegraf/pull/508): Fix prometheus cardinality issue with the `net` plugin
+
+## v0.10.0 [2016-01-12]
+
+### Release Notes
+- Linux packages have been taken out of `opt`, the binary is now in `/usr/bin`
+and configuration files are in `/etc/telegraf`
+- **breaking change** `plugins` have been renamed to `inputs`. This was done because
+`plugins` is too generic, as there are now also "output plugins", and will likely
+be "aggregator plugins" and "filter plugins" in the future. Additionally,
+`inputs/` and `outputs/` directories have been placed in the root-level `plugins/`
+directory.
+- **breaking change** the `io` plugin has been renamed `diskio`
+- **breaking change** plugin measurements aggregated into a single measurement.
+- **breaking change** `jolokia` plugin: must use global tag/drop/pass parameters
+for configuration.
+- **breaking change** `twemproxy` plugin: `prefix` option removed.
+- **breaking change** `procstat` cpu measurements are now prepended with `cpu_time_`
+instead of only `cpu_`
+- **breaking change** some command-line flags have been renamed to separate words.
+`-configdirectory` -> `-config-directory`, `-filter` -> `-input-filter`,
+`-outputfilter` -> `-output-filter`
+- The prometheus plugin schema has not been changed (measurements have not been
+aggregated).
+
+### Packaging change note:
+
+RHEL/CentOS users upgrading from 0.2.x to 0.10.0 will probably have their
+configurations overwritten by the upgrade. There is a backup stored at
+/etc/telegraf/telegraf.conf.$(date +%s).backup.
+
+### Features
+- Plugin measurements aggregated into a single measurement.
+- Added ability to specify per-plugin tags
+- Added ability to specify per-plugin measurement suffix and prefix.
+(`name_prefix` and `name_suffix`)
+- Added ability to override base plugin measurement name. (`name_override`)
+
+### Bugfixes
+
 ## v0.2.5 [unreleased]
 
 ### Features
@@ -38,11 +89,11 @@ functional.
 same type can be specified, like this:
 
 ```
-[[plugins.cpu]]
+[[inputs.cpu]]
   percpu = false
   totalcpu = true
 
-[[plugins.cpu]]
+[[inputs.cpu]]
   percpu = true
   totalcpu = false
   drop = ["cpu_time"]
@@ -69,7 +120,7 @@ same type can be specified, like this:
 lists of servers/URLs. 0.2.2 is being released solely to fix that bug
 
 ### Bugfixes
-- [#377](https://github.com/influxdb/telegraf/pull/377): Fix for duplicate slices in plugins.
+- [#377](https://github.com/influxdb/telegraf/pull/377): Fix for duplicate slices in inputs.
 
 ## v0.2.1 [2015-11-16]
 
@@ -130,7 +181,7 @@ be controlled via the `round_interval` and `flush_jitter` config options.
 - [#241](https://github.com/influxdb/telegraf/pull/241): MQTT Output. Thanks @shirou!
 - Memory plugin: cached and buffered measurements re-added
 - Logging: additional logging for each collection interval, track the number
-of metrics collected and from how many plugins.
+of metrics collected and from how many inputs.
 - [#240](https://github.com/influxdb/telegraf/pull/240): procstat plugin, thanks @ranjib!
 - [#244](https://github.com/influxdb/telegraf/pull/244): netstat plugin, thanks @shirou!
 - [#262](https://github.com/influxdb/telegraf/pull/262): zookeeper plugin, thanks @jrxFive!
@@ -163,7 +214,7 @@ will still be backwards compatible if only `url` is specified.
 - The -test flag will now output two metric collections
 - Support for filtering telegraf outputs on the CLI -- Telegraf will now
 allow filtering of output sinks on the command-line using the `-outputfilter`
-flag, much like how the `-filter` flag works for plugins.
+flag, much like how the `-filter` flag works for inputs.
 - Support for filtering on config-file creation -- Telegraf now supports
 filtering to -sample-config command. You can now run
 `telegraf -sample-config -filter cpu -outputfilter influxdb` to get a config
