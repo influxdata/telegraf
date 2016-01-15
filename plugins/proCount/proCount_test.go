@@ -10,8 +10,6 @@ func TestProcs(t *testing.T) {
 	s := &proCount {
 		count: 200,
 	}
-	
-	var acc testutil.Accumulator
 
 /*
 	I don't know how I can test to check that the 
@@ -21,15 +19,17 @@ func TestProcs(t *testing.T) {
 	prove anything. I can't iterate through a set of
 	integer values and show that it won't have errors
 	accepting ints but that still doesn't prove that 
-	number of processes listed is correct.
-	
+	number of processes listed is correct. */
 
-	fieldData := ???
+	for i:= 0; i < to; i++ {
 
-	fields := make(map[string]interface{})
-	fields["Processes"] = fieldData
+		var acc testutil.Accumulator
+		
+	//This is where I don't know how to test it.  fieldData := 
 
-	assert.True(t, acc.CheckFieldsValue("processes", fields)) 
-*/
+		fields := make(map[string]interface{})
+		fields["Processes"] = fieldData
 
+		assert.True(t, acc.CheckFieldsValue("processes", fields)) 
+	}
 }
