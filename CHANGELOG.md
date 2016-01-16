@@ -1,4 +1,17 @@
-## v0.3.0 [unreleased]
+## v0.10.1 [unreleased]
+
+### Features
+- [#509](https://github.com/influxdb/telegraf/pull/509): Flatten JSON arrays with indices. Thanks @psilva261!
+- [#512](https://github.com/influxdata/telegraf/pull/512): Python 3 build script, add lsof dep to package. Thanks @Ormod!
+- [#475](https://github.com/influxdata/telegraf/pull/475): Add response time to httpjson plugin. Thanks @titilambert!
+- [#519](https://github.com/influxdata/telegraf/pull/519): Added a sensors input based on lm-sensors. Thanks @md14454!
+- [#467](https://github.com/influxdata/telegraf/issues/467): Add option to disable statsd measurement name conversion.
+
+### Bugfixes
+- [#506](https://github.com/influxdb/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
+- [#508](https://github.com/influxdb/telegraf/pull/508): Fix prometheus cardinality issue with the `net` plugin
+
+## v0.10.0 [2016-01-12]
 
 ### Release Notes
 - Linux packages have been taken out of `opt`, the binary is now in `/usr/bin`
@@ -23,7 +36,7 @@ aggregated).
 
 ### Packaging change note:
 
-RHEL/CentOS users upgrading from 0.2 to 0.3 will probably have their
+RHEL/CentOS users upgrading from 0.2.x to 0.10.0 will probably have their
 configurations overwritten by the upgrade. There is a backup stored at
 /etc/telegraf/telegraf.conf.$(date +%s).backup.
 

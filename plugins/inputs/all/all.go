@@ -28,6 +28,7 @@ import (
 	_ "github.com/influxdb/telegraf/plugins/inputs/rabbitmq"
 	_ "github.com/influxdb/telegraf/plugins/inputs/redis"
 	_ "github.com/influxdb/telegraf/plugins/inputs/rethinkdb"
+	_ "github.com/influxdb/telegraf/plugins/inputs/sensors"
 	_ "github.com/influxdb/telegraf/plugins/inputs/statsd"
 	_ "github.com/influxdb/telegraf/plugins/inputs/system"
 	_ "github.com/influxdb/telegraf/plugins/inputs/trig"
