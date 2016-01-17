@@ -21,12 +21,12 @@ type Graphite struct {
 }
 
 var sampleConfig = `
-  # TCP raw endpoint for your graphite instance.
-  servers = ["mygraphiteserver:2003"] # default "localhost:2003"
+  # TCP endpoint for your graphite instance.
+  servers = ["localhost:2003"]
   # Prefix metrics name
-  prefix = "" # default ""
-  # Connection timeout in second (for the connection with Carbon(Graphite))
-  timeout = 2 # default 2s
+  prefix = ""
+  # timeout in seconds for the write connection to graphite
+  timeout = 2
 `
 
 func (g *Graphite) Connect() error {
@@ -62,7 +62,7 @@ func (g *Graphite) SampleConfig() string {
 }
 
 func (g *Graphite) Description() string {
-	return "Configuration for Graphite server to send metrics to using TCP raw protocol"
+	return "Configuration for Graphite server to send metrics to"
 }
 
 // Choose a random server in the cluster to write to until a successful write
