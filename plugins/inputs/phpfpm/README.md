@@ -6,9 +6,13 @@ Get phpfpm stat using either HTTP status page or fpm socket.
 
 Meta:
 
-- tags: `url=<ip> pool=poolname`
+- tags: `pool=poolname`
 
 Measurement names:
+
+- phpfpm
+
+Measurement field:
 
 - accepted_conn
 - listen_queue
@@ -50,36 +54,12 @@ It produces:
 
 ```
 * Plugin: phpfpm, Collection 1
-> [url="10.0.0.12" pool="www"] phpfpm_idle_processes value=1
-> [url="10.0.0.12" pool="www"] phpfpm_total_processes value=2
-> [url="10.0.0.12" pool="www"] phpfpm_max_children_reached value=0
-> [url="10.0.0.12" pool="www"] phpfpm_max_listen_queue value=0
-> [url="10.0.0.12" pool="www"] phpfpm_listen_queue value=0
-> [url="10.0.0.12" pool="www"] phpfpm_listen_queue_len value=0
-> [url="10.0.0.12" pool="www"] phpfpm_active_processes value=1
-> [url="10.0.0.12" pool="www"] phpfpm_max_active_processes value=2
-> [url="10.0.0.12" pool="www"] phpfpm_slow_requests value=0
-> [url="10.0.0.12" pool="www"] phpfpm_accepted_conn value=305
-
-> [url="localhost" pool="www2"] phpfpm_max_children_reached value=0
-> [url="localhost" pool="www2"] phpfpm_slow_requests value=0
-> [url="localhost" pool="www2"] phpfpm_max_listen_queue value=0
-> [url="localhost" pool="www2"] phpfpm_active_processes value=1
-> [url="localhost" pool="www2"] phpfpm_listen_queue_len value=0
-> [url="localhost" pool="www2"] phpfpm_idle_processes value=1
-> [url="localhost" pool="www2"] phpfpm_total_processes value=2
-> [url="localhost" pool="www2"] phpfpm_max_active_processes value=2
-> [url="localhost" pool="www2"] phpfpm_accepted_conn value=306
-> [url="localhost" pool="www2"] phpfpm_listen_queue value=0
-
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_max_children_reached value=0
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_slow_requests value=1
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_max_listen_queue value=0
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_active_processes value=1
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_listen_queue_len value=0
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_idle_processes value=2
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_total_processes value=2
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_max_active_processes value=2
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_accepted_conn value=307
-> [url="10.0.0.12:9000" pool="www3"] phpfpm_listen_queue value=0
+> phpfpm,pool=www accepted_conn=13i,active_processes=2i,idle_processes=1i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083331187
+> phpfpm,pool=www2 accepted_conn=12i,active_processes=1i,idle_processes=2i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083691422
+> phpfpm,pool=www3 accepted_conn=11i,active_processes=1i,idle_processes=2i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083691658
 ```
+
+## Note
+
+When using `unixsocket`, you have to ensure that telegraf runs on same
+host, and socket path is accessible to telegraf user.

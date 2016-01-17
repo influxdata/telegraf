@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -39,22 +40,27 @@ type phpfpm struct {
 }
 
 var sampleConfig = `
-  # An array of addresses to gather stats about. Specify an ip or hostname
-  # with optional port and path.
-  #
-  # Plugin can be configured in three modes (both can be used):
-  #   - http: the URL must start with http:// or https://, ex:
-  #       "http://localhost/status"
-  #       "http://192.168.130.1/status?full"
-  #   - unixsocket: path to fpm socket, ex:
-  #       "/var/run/php5-fpm.sock"
-  #       "192.168.10.10:/var/run/php5-fpm-www2.sock"
-  #   - fcgi: the URL mush start with fcgi:// or cgi://, and port must present, ex:
-  #       "fcgi://10.0.0.12:9000/status"
-  #       "cgi://10.0.10.12:9001/status"
-  #
-  # If no servers are specified, then default to 127.0.0.1/server-status
-  urls = ["http://localhost/status"]
+		# An array of addresses to gather stats about. Specify an ip or hostname
+		# with optional port and path
+		#
+		# Plugin can be configured in three modes (either can be used):
+		#   - http: the URL must start with http:// or https://, ex:
+		#       "http://localhost/status"
+		#       "http://192.168.130.1/status?full"
+		#
+		#   - unixsocket: path to fpm socket, ex:
+		#       "/var/run/php5-fpm.sock"
+		#     or using a custom fpm status path
+		#       "/var/run/php5-fpm.sock:fpm-custom-status-path"
+		#
+		#   - fcgi: the URL mush start with fcgi:// or cgi://, and port must present, ex:
+		#       "fcgi://10.0.0.12:9000/status"
+		#       "cgi://10.0.10.12:9001/status"
+		#
+		# Example of multiple gathering from local socket and remove host
+		# urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
+		# If no servers are specified, then default to http://127.0.0.1/status
+		urls = ["http://localhost/status"]
 `
 
 func (r *phpfpm) SampleConfig() string {
@@ -62,7 +68,7 @@ func (r *phpfpm) SampleConfig() string {
 }
 
 func (r *phpfpm) Description() string {
-	return "Read metrics of phpfpm, via HTTP status page or socket(pending)"
+	return "Read metrics of phpfpm, via HTTP status page or socket"
 }
 
 // Reads stats from all configured servers accumulates stats.
@@ -89,71 +95,96 @@ func (g *phpfpm) Gather(acc inputs.Accumulator) error {
 	return outerr
 }
 
-// Request status page to get stat raw data
+// Request status page to get stat raw data and import it
 func (g *phpfpm) gatherServer(addr string, acc inputs.Accumulator) error {
 	if g.client == nil {
-
 		client := &http.Client{}
 		g.client = client
 	}
 
 	if strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") {
+		return g.gatherHttp(addr, acc)
+	}
+
+	var (
+		fcgi       *conn
+		socketPath string
+		statusPath string
+	)
+
+	if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
 		u, err := url.Parse(addr)
 		if err != nil {
 			return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
 		}
-
-		req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s", u.Scheme,
-			u.Host, u.Path), nil)
-		res, err := g.client.Do(req)
-		if err != nil {
-			return fmt.Errorf("Unable to connect to phpfpm status page '%s': %v",
-				addr, err)
-		}
-
-		if res.StatusCode != 200 {
-			return fmt.Errorf("Unable to get valid stat result from '%s': %v",
-				addr, err)
-		}
-
-		importMetric(res.Body, acc, u.Host)
+		socketAddr := strings.Split(u.Host, ":")
+		fcgiIp := socketAddr[0]
+		fcgiPort, _ := strconv.Atoi(socketAddr[1])
+		fcgi, _ = NewClient(fcgiIp, fcgiPort)
 	} else {
-		var (
-			fcgi     *FCGIClient
-			fcgiAddr string
-		)
-		if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
-			u, err := url.Parse(addr)
-			if err != nil {
-				return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
-			}
-			socketAddr := strings.Split(u.Host, ":")
-			fcgiIp := socketAddr[0]
-			fcgiPort, _ := strconv.Atoi(socketAddr[1])
-			fcgiAddr = u.Host
-			fcgi, _ = NewClient(fcgiIp, fcgiPort)
+		socketAddr := strings.Split(addr, ":")
+		if len(socketAddr) >= 2 {
+			socketPath = socketAddr[0]
+			statusPath = socketAddr[1]
 		} else {
-			socketAddr := strings.Split(addr, ":")
-			fcgiAddr = socketAddr[0]
-			fcgi, _ = NewClient("unix", socketAddr[1])
-		}
-		resOut, resErr, err := fcgi.Request(map[string]string{
-			"SCRIPT_NAME":     "/status",
-			"SCRIPT_FILENAME": "status",
-			"REQUEST_METHOD":  "GET",
-		}, "")
-
-		if len(resErr) == 0 && err == nil {
-			importMetric(bytes.NewReader(resOut), acc, fcgiAddr)
+			socketPath = socketAddr[0]
+			statusPath = "status"
 		}
 
+		if _, err := os.Stat(socketPath); os.IsNotExist(err) {
+			return fmt.Errorf("Socket doesn't exist  '%s': %s", socketPath, err)
+		}
+		fcgi, _ = NewClient("unix", socketPath)
+	}
+	return g.gatherFcgi(fcgi, statusPath, acc)
+}
+
+// Gather stat using fcgi protocol
+func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc inputs.Accumulator) error {
+	fpmOutput, fpmErr, err := fcgi.Request(map[string]string{
+		"SCRIPT_NAME":     "/" + statusPath,
+		"SCRIPT_FILENAME": statusPath,
+		"REQUEST_METHOD":  "GET",
+		"CONTENT_LENGTH":  "0",
+		"SERVER_PROTOCOL": "HTTP/1.0",
+		"SERVER_SOFTWARE": "go / fcgiclient ",
+		"REMOTE_ADDR":     "127.0.0.1",
+	}, "/"+statusPath)
+
+	if len(fpmErr) == 0 && err == nil {
+		importMetric(bytes.NewReader(fpmOutput), acc)
+		return nil
+	} else {
+		return fmt.Errorf("Unable parse phpfpm status. Error: %v %v", string(fpmErr), err)
+	}
+}
+
+// Gather stat using http protocol
+func (g *phpfpm) gatherHttp(addr string, acc inputs.Accumulator) error {
+	u, err := url.Parse(addr)
+	if err != nil {
+		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
 	}
 
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s", u.Scheme,
+		u.Host, u.Path), nil)
+	res, err := g.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Unable to connect to phpfpm status page '%s': %v",
+			addr, err)
+	}
+
+	if res.StatusCode != 200 {
+		return fmt.Errorf("Unable to get valid stat result from '%s': %v",
+			addr, err)
+	}
+
+	importMetric(res.Body, acc)
 	return nil
 }
 
-// Import HTTP stat data into Telegraf system
-func importMetric(r io.Reader, acc inputs.Accumulator, host string) (poolStat, error) {
+// Import stat data into Telegraf system
+func importMetric(r io.Reader, acc inputs.Accumulator) (poolStat, error) {
 	stats := make(poolStat)
 	var currentPool string
 
@@ -195,7 +226,6 @@ func importMetric(r io.Reader, acc inputs.Accumulator, host string) (poolStat, e
 	// Finally, we push the pool metric
 	for pool := range stats {
 		tags := map[string]string{
-			"url":  host,
 			"pool": pool,
 		}
 		fields := make(map[string]interface{})
