@@ -28,14 +28,14 @@ var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fInputFilters = flag.String("input-filter", "",
-	"filter the plugins to enable, separator is :")
+	"filter the inputs to enable, separator is :")
 var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 
 var fInputFiltersLegacy = flag.String("filter", "",
-	"filter the plugins to enable, separator is :")
+	"filter the inputs to enable, separator is :")
 var fOutputFiltersLegacy = flag.String("outputfilter", "",
 	"filter the outputs to enable, separator is :")
 var fConfigDirectoryLegacy = flag.String("configdirectory", "",
@@ -170,7 +170,7 @@ func main() {
 			log.Fatalf("Error: no outputs found, did you provide a valid config file?")
 		}
 		if len(c.Inputs) == 0 {
-			log.Fatalf("Error: no plugins found, did you provide a valid config file?")
+			log.Fatalf("Error: no inputs found, did you provide a valid config file?")
 		}
 
 		ag, err := telegraf.NewAgent(c)
@@ -217,7 +217,7 @@ func main() {
 
 		log.Printf("Starting Telegraf (version %s)\n", Version)
 		log.Printf("Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-		log.Printf("Loaded plugins: %s", strings.Join(c.InputNames(), " "))
+		log.Printf("Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 		log.Printf("Tags enabled: %s", c.ListTags())
 
 		if *fPidfile != "" {
