@@ -76,8 +76,11 @@ type AgentConfig struct {
 	UTC       bool `toml:"utc"`
 	Precision string
 
-	// Option for running in debug mode
-	Debug    bool
+	// Debug is the option for running in debug mode
+	Debug bool
+
+	// Quiet is the option for running in quiet mode
+	Quiet    bool
 	Hostname string
 }
 
@@ -279,6 +282,8 @@ var header = `# Telegraf configuration
 
   # Run telegraf in debug mode
   debug = false
+  # Run telegraf in quiet mode
+  quiet = false
   # Override default hostname, if empty use os.Hostname()
   hostname = ""
 

@@ -86,7 +86,9 @@ func (p *Ping) Gather(acc inputs.Accumulator) error {
 				"packets_transmitted": trans,
 				"packets_received":    rec,
 				"percent_packet_loss": loss,
-				"average_response_ms": avg,
+			}
+			if avg > 0 {
+				fields["average_response_ms"] = avg
 			}
 			acc.AddFields("ping", fields, tags)
 		}(url, acc)
