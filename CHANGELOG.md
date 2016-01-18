@@ -15,6 +15,7 @@
 - [#551](https://github.com/influxdata/telegraf/pull/551): Statsd UDP read packet size now defaults to 1500 bytes, and is configurable.
 - [#552](https://github.com/influxdata/telegraf/pull/552): Support for collection interval jittering.
 - [#484](https://github.com/influxdata/telegraf/issues/484): Include usage percent with procstat metrics.
+- [#553](https://github.com/influxdata/telegraf/pull/553): Amazon CloudWatch output. thanks @skwong2!
 
 ### Bugfixes
 - [#506](https://github.com/influxdata/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!

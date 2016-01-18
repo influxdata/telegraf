@@ -189,10 +189,11 @@ want to add support for another service or third-party API.
 * influxdb
 * amon
 * amqp
+* aws kinesis
+* aws cloudwatch
 * datadog
 * graphite
 * kafka
-* amazon kinesis
 * librato
 * mqtt
 * nsq

@@ -3,6 +3,7 @@ package all
 import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/amon"
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
+	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
