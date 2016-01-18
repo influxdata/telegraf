@@ -152,7 +152,9 @@ Currently implemented sources:
 * mongodb
 * mysql
 * nginx
+* nsq
 * phpfpm
+* phusion passenger
 * ping
 * postgresql
 * procstat
@@ -188,6 +190,7 @@ want to add support for another service or third-party API.
 * amon
 * amqp
 * datadog
+* graphite
 * kafka
 * amazon kinesis
 * librato
