@@ -1,10 +1,11 @@
 package telegraf
 
 import (
-	"crypto/rand"
+	cryptorand "crypto/rand"
 	"fmt"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
 	"sync"
 	"time"
@@ -92,6 +93,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 	start := time.Now()
 	counter := 0
+	jitter := a.Config.Agent.CollectionJitter.Duration.Nanoseconds()
 	for _, input := range a.Config.Inputs {
 		if input.Config.Interval != 0 {
 			continue
@@ -104,8 +106,18 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 			acc := NewAccumulator(input.Config, pointChan)
 			acc.SetDebug(a.Config.Agent.Debug)
-			// acc.SetPrefix(input.Name + "_")
 			acc.SetDefaultTags(a.Config.Tags)
+
+			if jitter != 0 {
+				nanoSleep := rand.Int63n(jitter)
+				d, err := time.ParseDuration(fmt.Sprintf("%dns", nanoSleep))
+				if err != nil {
+					log.Printf("Jittering collection interval failed for plugin %s",
+						input.Name)
+				} else {
+					time.Sleep(d)
+				}
+			}
 
 			if err := input.Input.Gather(acc); err != nil {
 				log.Printf("Error in input [%s]: %s", input.Name, err)
@@ -143,7 +155,6 @@ func (a *Agent) gatherSeparate(
 
 		acc := NewAccumulator(input.Config, pointChan)
 		acc.SetDebug(a.Config.Agent.Debug)
-		// acc.SetPrefix(input.Name + "_")
 		acc.SetDefaultTags(a.Config.Tags)
 
 		if err := input.Input.Gather(acc); err != nil {
@@ -315,7 +326,7 @@ func jitterInterval(ininterval, injitter time.Duration) time.Duration {
 	outinterval := ininterval
 	if injitter.Nanoseconds() != 0 {
 		maxjitter := big.NewInt(injitter.Nanoseconds())
-		if j, err := rand.Int(rand.Reader, maxjitter); err == nil {
+		if j, err := cryptorand.Int(cryptorand.Reader, maxjitter); err == nil {
 			jitter = j.Int64()
 		}
 		outinterval = time.Duration(jitter + ininterval.Nanoseconds())

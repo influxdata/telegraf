@@ -61,13 +61,22 @@ type AgentConfig struct {
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
+	// CollectionJitter is used to jitter the collection by a random amount.
+	// Each plugin will sleep for a random time within jitter before collecting.
+	// This can be used to avoid many plugins querying things like sysfs at the
+	// same time, which can have a measurable effect on the system.
+	CollectionJitter internal.Duration
+
 	// Interval at which to flush data
 	FlushInterval internal.Duration
 
 	// FlushRetries is the number of times to retry each data flush
 	FlushRetries int
 
-	// FlushJitter tells
+	// FlushJitter Jitters the flush interval by a random amount.
+	// This is primarily to avoid large write spikes for users running a large
+	// number of telegraf instances.
+	// ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
 	FlushJitter internal.Duration
 
 	// TODO(cam): Remove UTC and Precision parameters, they are no longer
@@ -271,6 +280,11 @@ var header = `# Telegraf configuration
   # Rounds collection interval to 'interval'
   # ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
+  # Collection jitter is used to jitter the collection by a random amount.
+  # Each plugin will sleep for a random time within jitter before collecting.
+  # This can be used to avoid many plugins querying things like sysfs at the
+  # same time, which can have a measurable effect on the system.
+  collection_jitter = "0s"
 
   # Default data flushing interval for all outputs. You should not set this below
   # interval. Maximum flush_interval will be flush_interval + flush_jitter
