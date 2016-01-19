@@ -12,11 +12,13 @@
 - [#539](https://github.com/influxdata/telegraf/pull/539): Reload config on SIGHUP. Thanks @titilambert!
 - [#522](https://github.com/influxdata/telegraf/pull/522): Phusion passenger input plugin. Thanks @kureikain!
 - [#541](https://github.com/influxdata/telegraf/pull/541): Kafka output TLS cert support. Thanks @Ormod!
+- [#551](https://github.com/influxdb/telegraf/pull/551): Statsd UDP read packet size now defaults to 1500 bytes, and is configurable.
 
 ### Bugfixes
 - [#506](https://github.com/influxdb/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
 - [#508](https://github.com/influxdb/telegraf/pull/508): Fix prometheus cardinality issue with the `net` plugin
 - [#499](https://github.com/influxdata/telegraf/issues/499) & [#502](https://github.com/influxdata/telegraf/issues/502): php fpm unix socket and other fixes, thanks @kureikain!
+- [#543](https://github.com/influxdb/telegraf/issues/543): Statsd Packet size sometimes truncated.
 
 ## v0.10.0 [2016-01-12]
 
