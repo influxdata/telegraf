@@ -1,7 +1,6 @@
 package cloudwatch
 
 import (
-	"errors"
 	"log"
 	"strings"
 	"time"
