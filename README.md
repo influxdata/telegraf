@@ -73,7 +73,7 @@ brew install telegraf
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
 which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.4+.
+if you don't have it already. You also must build with golang version 1.5+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
