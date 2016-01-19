@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/influxdb/influxdb/client/v2"
 	"github.com/influxdb/telegraf/plugins/outputs"
@@ -20,12 +20,12 @@ import (
 )
 
 type CloudWatchOutput struct {
-	Region		string  // AWS Region
-	Namespace	string  // CloudWatch Metrics Namespace
-	svc			*cloudwatch.CloudWatch
+	Region    string // AWS Region
+	Namespace string // CloudWatch Metrics Namespace
+	svc       *cloudwatch.CloudWatch
 }
 
-var sampleConfig =  `
+var sampleConfig = `
   # Amazon REGION
   region = 'us-east-1'
 
@@ -43,13 +43,13 @@ func (c *CloudWatchOutput) Description() string {
 
 func (c *CloudWatchOutput) Connect() error {
 	Config := &aws.Config{
-			Region: aws.String(c.Region),
-			Credentials: credentials.NewChainCredentials(
-				[]credentials.Provider{
-					&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-					&credentials.EnvProvider{},
-					&credentials.SharedCredentialsProvider{},
-				}),
+		Region: aws.String(c.Region),
+		Credentials: credentials.NewChainCredentials(
+			[]credentials.Provider{
+				&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
+				&credentials.EnvProvider{},
+				&credentials.SharedCredentialsProvider{},
+			}),
 	}
 
 	svc := cloudwatch.New(session.New(Config))
@@ -58,7 +58,7 @@ func (c *CloudWatchOutput) Connect() error {
 		Namespace: aws.String(c.Namespace),
 	}
 
-	_, err := svc.ListMetrics(params)  // Try a read-only call to test connection.
+	_, err := svc.ListMetrics(params) // Try a read-only call to test connection.
 
 	if err != nil {
 		log.Printf("cloudwatch: Error in ListMetrics API call : %+v \n", err.Error())
@@ -90,7 +90,7 @@ func (c *CloudWatchOutput) Write(points []*client.Point) error {
 func (c *CloudWatchOutput) WriteSinglePoint(point *client.Point) error {
 	datums := buildMetricDatum(point)
 
-	const maxDatumsPerCall = 20  // PutMetricData only supports up to 20 data points per call
+	const maxDatumsPerCall = 20 // PutMetricData only supports up to 20 data points per call
 
 	for idxRange := range gopart.Partition(len(datums), maxDatumsPerCall) {
 		err := c.WriteToCloudWatch(datums[idxRange.Low:idxRange.High])
@@ -106,7 +106,7 @@ func (c *CloudWatchOutput) WriteSinglePoint(point *client.Point) error {
 func (c *CloudWatchOutput) WriteToCloudWatch(datums []*cloudwatch.MetricDatum) error {
 	params := &cloudwatch.PutMetricDataInput{
 		MetricData: datums,
-		Namespace: aws.String(c.Namespace),
+		Namespace:  aws.String(c.Namespace),
 	}
 
 	_, err := c.svc.PutMetricData(params)
@@ -152,9 +152,9 @@ func buildMetricDatum(point *client.Point) []*cloudwatch.MetricDatum {
 
 		datums[i] = &cloudwatch.MetricDatum{
 			MetricName: aws.String(strings.Join([]string{point.Name(), k}, "_")),
-			Value: aws.Float64(value),
+			Value:      aws.Float64(value),
 			Dimensions: buildDimensions(point.Tags()),
-			Timestamp: aws.Time(point.Time()),
+			Timestamp:  aws.Time(point.Time()),
 		}
 
 		i += 1
@@ -171,7 +171,7 @@ func buildDimensions(ptTags map[string]string) []*cloudwatch.Dimension {
 
 	for k, v := range ptTags {
 		dimensions[i] = &cloudwatch.Dimension{
-			Name: aws.String(k),
+			Name:  aws.String(k),
 			Value: aws.String(v),
 		}
 

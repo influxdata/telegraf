@@ -4,7 +4,7 @@ This plugin will send points to Amazon CloudWatch.
 
 ## Amazon Authentication
 
-This plugin uses a credential chain for Authentication with the Kinesis API endpoint. In the following order the plugin
+This plugin uses a credential chain for Authentication with the CloudWatch API endpoint. In the following order the plugin
 will attempt to authenticate.
 1. [IAMS Role](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 2. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk)
