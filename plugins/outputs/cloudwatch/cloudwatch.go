@@ -19,7 +19,7 @@ import (
 	"github.com/meirf/gopart"
 )
 
-type CloudWatchOutput struct {
+type CloudWatch struct {
 	Region    string // AWS Region
 	Namespace string // CloudWatch Metrics Namespace
 	svc       *cloudwatch.CloudWatch
@@ -33,15 +33,15 @@ var sampleConfig = `
   namespace = 'InfluxData/Telegraf'
 `
 
-func (c *CloudWatchOutput) SampleConfig() string {
+func (c *CloudWatch) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *CloudWatchOutput) Description() string {
+func (c *CloudWatch) Description() string {
 	return "Configuration for AWS CloudWatch output."
 }
 
-func (c *CloudWatchOutput) Connect() error {
+func (c *CloudWatch) Connect() error {
 	Config := &aws.Config{
 		Region: aws.String(c.Region),
 		Credentials: credentials.NewChainCredentials(
@@ -69,11 +69,11 @@ func (c *CloudWatchOutput) Connect() error {
 	return err
 }
 
-func (c *CloudWatchOutput) Close() error {
-	return errors.New("Error")
+func (c *CloudWatch) Close() error {
+	return nil
 }
 
-func (c *CloudWatchOutput) Write(points []*client.Point) error {
+func (c *CloudWatch) Write(points []*client.Point) error {
 	for _, pt := range points {
 		err := c.WriteSinglePoint(pt)
 		if err != nil {
@@ -87,7 +87,7 @@ func (c *CloudWatchOutput) Write(points []*client.Point) error {
 // Write data for a single point. A point can have many fields and one field
 // is equal to one MetricDatum. There is a limit on how many MetricDatums a
 // request can have so we process one Point at a time.
-func (c *CloudWatchOutput) WriteSinglePoint(point *client.Point) error {
+func (c *CloudWatch) WriteSinglePoint(point *client.Point) error {
 	datums := buildMetricDatum(point)
 
 	const maxDatumsPerCall = 20 // PutMetricData only supports up to 20 data points per call
@@ -103,7 +103,7 @@ func (c *CloudWatchOutput) WriteSinglePoint(point *client.Point) error {
 	return nil
 }
 
-func (c *CloudWatchOutput) WriteToCloudWatch(datums []*cloudwatch.MetricDatum) error {
+func (c *CloudWatch) WriteToCloudWatch(datums []*cloudwatch.MetricDatum) error {
 	params := &cloudwatch.PutMetricDataInput{
 		MetricData: datums,
 		Namespace:  aws.String(c.Namespace),
@@ -183,6 +183,6 @@ func buildDimensions(ptTags map[string]string) []*cloudwatch.Dimension {
 
 func init() {
 	outputs.Add("cloudwatch", func() outputs.Output {
-		return &CloudWatchOutput{}
+		return &CloudWatch{}
 	})
 }
