@@ -58,7 +58,7 @@ func (a *Agent) Connect() error {
 		}
 		err := o.Output.Connect()
 		if err != nil {
-			log.Printf("Failed to connect to output %s, retrying in 15s\n", o.Name)
+			log.Printf("Failed to connect to output %s, retrying in 15s, error was '%s' \n", o.Name, err)
 			time.Sleep(15 * time.Second)
 			err = o.Output.Connect()
 			if err != nil {
@@ -121,8 +121,10 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 	wg.Wait()
 
 	elapsed := time.Since(start)
-	log.Printf("Gathered metrics, (%s interval), from %d inputs in %s\n",
-		a.Config.Agent.Interval.Duration, counter, elapsed)
+	if !a.Config.Agent.Quiet {
+		log.Printf("Gathered metrics, (%s interval), from %d inputs in %s\n",
+			a.Config.Agent.Interval.Duration, counter, elapsed)
+	}
 	return nil
 }
 
@@ -149,8 +151,10 @@ func (a *Agent) gatherSeparate(
 		}
 
 		elapsed := time.Since(start)
-		log.Printf("Gathered metrics, (separate %s interval), from %s in %s\n",
-			input.Config.Interval, input.Name, elapsed)
+		if !a.Config.Agent.Quiet {
+			log.Printf("Gathered metrics, (separate %s interval), from %s in %s\n",
+				input.Config.Interval, input.Name, elapsed)
+		}
 
 		if outerr != nil {
 			return outerr
@@ -235,8 +239,10 @@ func (a *Agent) writeOutput(
 		if err == nil {
 			// Write successful
 			elapsed := time.Since(start)
-			log.Printf("Flushed %d metrics to output %s in %s\n",
-				len(filtered), ro.Name, elapsed)
+			if !a.Config.Agent.Quiet {
+				log.Printf("Flushed %d metrics to output %s in %s\n",
+					len(filtered), ro.Name, elapsed)
+			}
 			return
 		}
 
@@ -327,12 +333,13 @@ func jitterInterval(ininterval, injitter time.Duration) time.Duration {
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 
-	a.Config.Agent.FlushInterval.Duration = jitterInterval(a.Config.Agent.FlushInterval.Duration,
+	a.Config.Agent.FlushInterval.Duration = jitterInterval(
+		a.Config.Agent.FlushInterval.Duration,
 		a.Config.Agent.FlushJitter.Duration)
 
-	log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
-		"Flush Interval:%s\n",
-		a.Config.Agent.Interval.Duration, a.Config.Agent.Debug,
+	log.Printf("Agent Config: Interval:%s, Debug:%#v, Quiet:%#v, Hostname:%#v, "+
+		"Flush Interval:%s \n",
+		a.Config.Agent.Interval.Duration, a.Config.Agent.Debug, a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
 	// channel shared between all input threads for accumulating points

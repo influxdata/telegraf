@@ -59,13 +59,17 @@ func TestExec(t *testing.T) {
 	var acc testutil.Accumulator
 	err := e.Gather(&acc)
 	require.NoError(t, err)
-	assert.Equal(t, acc.NFields(), 4, "non-numeric measurements should be ignored")
+	assert.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
 
 	fields := map[string]interface{}{
 		"num_processes": float64(82),
 		"cpu_used":      float64(8234),
 		"cpu_free":      float64(32),
 		"percent":       float64(0.81),
+		"users_0":       float64(0),
+		"users_1":       float64(1),
+		"users_2":       float64(2),
+		"users_3":       float64(3),
 	}
 	acc.AssertContainsFields(t, "exec", fields)
 }

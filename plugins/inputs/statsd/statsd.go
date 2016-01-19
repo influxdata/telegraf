@@ -35,6 +35,7 @@ type Statsd struct {
 	DeleteCounters bool
 	DeleteSets     bool
 	DeleteTimings  bool
+	ConvertNames   bool
 
 	sync.Mutex
 
@@ -62,6 +63,8 @@ func NewStatsd() *Statsd {
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
 	s.timings = make(map[string]cachedtimings)
+
+	s.ConvertNames = true
 
 	return &s
 }
@@ -120,6 +123,9 @@ const sampleConfig = `
   delete_timings = true
   # Percentiles to calculate for timing & histogram stats
   percentiles = [90]
+
+  # convert measurement names, "." to "_" and "-" to "__"
+  convert_names = true
 
   # templates = [
   #     "cpu.* measurement*"
@@ -389,8 +395,10 @@ func (s *Statsd) parseName(bucket string) (string, map[string]string) {
 	if err == nil {
 		name, tags, _, _ = p.ApplyTemplate(name)
 	}
-	name = strings.Replace(name, ".", "_", -1)
-	name = strings.Replace(name, "-", "__", -1)
+	if s.ConvertNames {
+		name = strings.Replace(name, ".", "_", -1)
+		name = strings.Replace(name, "-", "__", -1)
+	}
 
 	return name, tags
 }
@@ -491,6 +499,6 @@ func (s *Statsd) Stop() {
 
 func init() {
 	inputs.Add("statsd", func() inputs.Input {
-		return &Statsd{}
+		return &Statsd{ConvertNames: true}
 	})
 }

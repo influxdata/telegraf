@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/influxdb/telegraf"
 	"github.com/influxdb/telegraf/internal/config"
@@ -16,6 +17,8 @@ import (
 
 var fDebug = flag.Bool("debug", false,
 	"show metrics as they're generated to stdout")
+var fQuiet = flag.Bool("quiet", false,
+	"run in quiet mode")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
@@ -57,6 +60,8 @@ The flags are:
   -input-filter      filter the input plugins to enable, separator is :
   -output-filter     filter the output plugins to enable, separator is :
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
+  -debug             print metrics as they're generated to stdout
+  -quiet             run in quiet mode
   -version           print the version to stdout
 
 Examples:
@@ -78,139 +83,156 @@ Examples:
 `
 
 func main() {
-	flag.Usage = usageExit
-	flag.Parse()
+	reload := make(chan bool, 1)
+	reload <- true
+	for <-reload {
+		reload <- false
+		flag.Usage = usageExit
+		flag.Parse()
 
-	if flag.NFlag() == 0 {
-		usageExit()
-	}
+		if flag.NFlag() == 0 {
+			usageExit()
+		}
 
-	var inputFilters []string
-	if *fInputFiltersLegacy != "" {
-		inputFilter := strings.TrimSpace(*fInputFiltersLegacy)
-		inputFilters = strings.Split(":"+inputFilter+":", ":")
-	}
-	if *fInputFilters != "" {
-		inputFilter := strings.TrimSpace(*fInputFilters)
-		inputFilters = strings.Split(":"+inputFilter+":", ":")
-	}
+		var inputFilters []string
+		if *fInputFiltersLegacy != "" {
+			inputFilter := strings.TrimSpace(*fInputFiltersLegacy)
+			inputFilters = strings.Split(":"+inputFilter+":", ":")
+		}
+		if *fInputFilters != "" {
+			inputFilter := strings.TrimSpace(*fInputFilters)
+			inputFilters = strings.Split(":"+inputFilter+":", ":")
+		}
 
-	var outputFilters []string
-	if *fOutputFiltersLegacy != "" {
-		outputFilter := strings.TrimSpace(*fOutputFiltersLegacy)
-		outputFilters = strings.Split(":"+outputFilter+":", ":")
-	}
-	if *fOutputFilters != "" {
-		outputFilter := strings.TrimSpace(*fOutputFilters)
-		outputFilters = strings.Split(":"+outputFilter+":", ":")
-	}
+		var outputFilters []string
+		if *fOutputFiltersLegacy != "" {
+			outputFilter := strings.TrimSpace(*fOutputFiltersLegacy)
+			outputFilters = strings.Split(":"+outputFilter+":", ":")
+		}
+		if *fOutputFilters != "" {
+			outputFilter := strings.TrimSpace(*fOutputFilters)
+			outputFilters = strings.Split(":"+outputFilter+":", ":")
+		}
 
-	if *fVersion {
-		v := fmt.Sprintf("Telegraf - Version %s", Version)
-		fmt.Println(v)
-		return
-	}
+		if *fVersion {
+			v := fmt.Sprintf("Telegraf - Version %s", Version)
+			fmt.Println(v)
+			return
+		}
 
-	if *fSampleConfig {
-		config.PrintSampleConfig(inputFilters, outputFilters)
-		return
-	}
+		if *fSampleConfig {
+			config.PrintSampleConfig(inputFilters, outputFilters)
+			return
+		}
 
-	if *fUsage != "" {
-		if err := config.PrintInputConfig(*fUsage); err != nil {
-			if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
-				log.Fatalf("%s and %s", err, err2)
+		if *fUsage != "" {
+			if err := config.PrintInputConfig(*fUsage); err != nil {
+				if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
+					log.Fatalf("%s and %s", err, err2)
+				}
+			}
+			return
+		}
+
+		var (
+			c   *config.Config
+			err error
+		)
+
+		if *fConfig != "" {
+			c = config.NewConfig()
+			c.OutputFilters = outputFilters
+			c.InputFilters = inputFilters
+			err = c.LoadConfig(*fConfig)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			fmt.Println("Usage: Telegraf")
+			flag.PrintDefaults()
+			return
+		}
+
+		if *fConfigDirectoryLegacy != "" {
+			err = c.LoadDirectory(*fConfigDirectoryLegacy)
+			if err != nil {
+				log.Fatal(err)
 			}
 		}
-		return
-	}
 
-	var (
-		c   *config.Config
-		err error
-	)
+		if *fConfigDirectory != "" {
+			err = c.LoadDirectory(*fConfigDirectory)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		if len(c.Outputs) == 0 {
+			log.Fatalf("Error: no outputs found, did you provide a valid config file?")
+		}
+		if len(c.Inputs) == 0 {
+			log.Fatalf("Error: no plugins found, did you provide a valid config file?")
+		}
 
-	if *fConfig != "" {
-		c = config.NewConfig()
-		c.OutputFilters = outputFilters
-		c.InputFilters = inputFilters
-		err = c.LoadConfig(*fConfig)
+		ag, err := telegraf.NewAgent(c)
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else {
-		fmt.Println("Usage: Telegraf")
-		flag.PrintDefaults()
-		return
-	}
 
-	if *fConfigDirectoryLegacy != "" {
-		err = c.LoadDirectory(*fConfigDirectoryLegacy)
+		if *fDebug {
+			ag.Config.Agent.Debug = true
+		}
+
+		if *fQuiet {
+			ag.Config.Agent.Quiet = true
+		}
+
+		if *fTest {
+			err = ag.Test()
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
+
+		err = ag.Connect()
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
 
-	if *fConfigDirectory != "" {
-		err = c.LoadDirectory(*fConfigDirectory)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	if len(c.Outputs) == 0 {
-		log.Fatalf("Error: no outputs found, did you provide a valid config file?")
-	}
-	if len(c.Inputs) == 0 {
-		log.Fatalf("Error: no plugins found, did you provide a valid config file?")
-	}
+		shutdown := make(chan struct{})
+		signals := make(chan os.Signal)
+		signal.Notify(signals, os.Interrupt, syscall.SIGHUP)
+		go func() {
+			sig := <-signals
+			if sig == os.Interrupt {
+				close(shutdown)
+			}
+			if sig == syscall.SIGHUP {
+				log.Printf("Reloading Telegraf config\n")
+				<-reload
+				reload <- true
+				close(shutdown)
+			}
+		}()
 
-	ag, err := telegraf.NewAgent(c)
-	if err != nil {
-		log.Fatal(err)
-	}
+		log.Printf("Starting Telegraf (version %s)\n", Version)
+		log.Printf("Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+		log.Printf("Loaded plugins: %s", strings.Join(c.InputNames(), " "))
+		log.Printf("Tags enabled: %s", c.ListTags())
 
-	if *fDebug {
-		ag.Config.Agent.Debug = true
-	}
+		if *fPidfile != "" {
+			f, err := os.Create(*fPidfile)
+			if err != nil {
+				log.Fatalf("Unable to create pidfile: %s", err)
+			}
 
-	if *fTest {
-		err = ag.Test()
-		if err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
+			fmt.Fprintf(f, "%d\n", os.Getpid())
 
-	err = ag.Connect()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	shutdown := make(chan struct{})
-	signals := make(chan os.Signal)
-	signal.Notify(signals, os.Interrupt)
-	go func() {
-		<-signals
-		close(shutdown)
-	}()
-
-	log.Printf("Starting Telegraf (version %s)\n", Version)
-	log.Printf("Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-	log.Printf("Loaded plugins: %s", strings.Join(c.InputNames(), " "))
-	log.Printf("Tags enabled: %s", c.ListTags())
-
-	if *fPidfile != "" {
-		f, err := os.Create(*fPidfile)
-		if err != nil {
-			log.Fatalf("Unable to create pidfile: %s", err)
+			f.Close()
 		}
 
-		fmt.Fprintf(f, "%d\n", os.Getpid())
-
-		f.Close()
+		ag.Run(shutdown)
 	}
-
-	ag.Run(shutdown)
 }
 
 func usageExit() {
