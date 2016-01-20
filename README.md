@@ -168,6 +168,7 @@ Currently implemented sources:
 * zfs
 * zookeeper
 * sensors
+* snmp
 * system
     * cpu
     * mem
