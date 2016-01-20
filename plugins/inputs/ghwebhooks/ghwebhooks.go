@@ -70,19 +70,19 @@ func (gh *GHWebhooks) Gather(acc inputs.Accumulator) error {
 	return nil
 }
 
+func (gh *GHWebhooks) listen() error {
+	r := mux.NewRouter()
+	r.HandleFunc("/webhooks", gh.webhookHandler).Methods("POST")
+	http.ListenAndServe(fmt.Sprintf(":%s", gh.ServiceAddress), r)
+}
+
 func (gh *GHWebhooks) Start() error {
-	gh.Lock()
-	defer gh.Unlock()
-	for {
-		select {
-		case <-gh.done:
-			return nil
-		default:
-			r := mux.NewRouter()
-			r.HandleFunc("/webhooks", gh.webhookHandler).Methods("POST")
-			http.ListenAndServe(fmt.Sprintf(":%s", gh.ServiceAddress), r)
-		}
-	}
+	gh.done = make(chan struct{})
+	gh.in = make(chan mod.Event)
+	// Start the UDP listener
+	go gh.listen()
+	// Start the line parser
+	log.Printf("Started the ghwebhooks service on %s\n", s.ServiceAddress)
 }
 
 func (gh *GHWebhooks) Stop() {
@@ -95,6 +95,8 @@ func (gh *GHWebhooks) Stop() {
 
 // Handles the /webhooks route
 func (gh *GHWebhooks) webhookHandler(w http.ResponseWriter, r *http.Request) {
+	gh.Lock()
+	defer gh.Unlock()
 	eventType := r.Header["X-Github-Event"][0]
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
