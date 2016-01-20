@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
@@ -16,17 +15,6 @@ import (
 )
 
 func init() {
-	log.Info("Starting ghWebhook server...")
-	logFile, err := os.Create("server.log")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"time":  time.Now(),
-			"error": err,
-		}).Warn("Error in creating log file")
-	}
-	log.SetLevel(log.InfoLevel)
-	log.SetOutput(logFile)
-
 	inputs.Add("ghwebhooks", func() inputs.Input { return &GHWebhooks{} })
 }
 
@@ -71,18 +59,26 @@ func (gh *GHWebhooks) Gather(acc inputs.Accumulator) error {
 }
 
 func (gh *GHWebhooks) listen() error {
+	fmt.Println("in listen!")
 	r := mux.NewRouter()
-	r.HandleFunc("/webhooks", gh.webhookHandler).Methods("POST")
-	http.ListenAndServe(fmt.Sprintf(":%s", gh.ServiceAddress), r)
+	r.HandleFunc("/", gh.webhookHandler).Methods("POST")
+	err := http.ListenAndServe(fmt.Sprintf(":%s", gh.ServiceAddress), r)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Exiting listen")
+	return nil
 }
 
 func (gh *GHWebhooks) Start() error {
+	fmt.Println("In start function")
 	gh.done = make(chan struct{})
 	gh.in = make(chan mod.Event)
 	// Start the UDP listener
 	go gh.listen()
 	// Start the line parser
-	log.Printf("Started the ghwebhooks service on %s\n", s.ServiceAddress)
+	log.Printf("Started the ghwebhooks service on %s\n", gh.ServiceAddress)
+	return nil
 }
 
 func (gh *GHWebhooks) Stop() {
@@ -95,8 +91,7 @@ func (gh *GHWebhooks) Stop() {
 
 // Handles the /webhooks route
 func (gh *GHWebhooks) webhookHandler(w http.ResponseWriter, r *http.Request) {
-	gh.Lock()
-	defer gh.Unlock()
+	fmt.Println("In webhook handler")
 	eventType := r.Header["X-Github-Event"][0]
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {

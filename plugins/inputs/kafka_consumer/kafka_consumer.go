@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdb/influxdb/models"
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/influxdb/models"
+	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/Shopify/sarama"
 	"github.com/wvanbergen/kafka/consumergroup"
