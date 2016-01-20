@@ -15,7 +15,7 @@ func TestDiskStats(t *testing.T) {
 	var acc testutil.Accumulator
 	var err error
 
-	du := []*disk.DiskUsageStat{
+	duAll := []*disk.DiskUsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -33,8 +33,20 @@ func TestDiskStats(t *testing.T) {
 			InodesFree:  468,
 		},
 	}
+	duFiltered := []*disk.DiskUsageStat{
+		{
+			Path:        "/",
+			Fstype:      "ext4",
+			Total:       128,
+			Free:        23,
+			InodesTotal: 1234,
+			InodesFree:  234,
+		},
+	}
 
-	mps.On("DiskUsage").Return(du, nil)
+	mps.On("DiskUsage", []string(nil)).Return(duAll, nil)
+	mps.On("DiskUsage", []string{"/", "/dev"}).Return(duFiltered, nil)
+	mps.On("DiskUsage", []string{"/", "/home"}).Return(duAll, nil)
 
 	err = (&DiskStats{ps: &mps}).Gather(&acc)
 	require.NoError(t, err)
@@ -53,32 +65,32 @@ func TestDiskStats(t *testing.T) {
 	}
 
 	fields1 := map[string]interface{}{
-		"total":        uint64(128),  //tags1)
-		"used":         uint64(105),  //tags1)
-		"free":         uint64(23),   //tags1)
-		"inodes_total": uint64(1234), //tags1)
-		"inodes_free":  uint64(234),  //tags1)
-		"inodes_used":  uint64(1000), //tags1)
+		"total":        uint64(128),
+		"used":         uint64(105),
+		"free":         uint64(23),
+		"inodes_total": uint64(1234),
+		"inodes_free":  uint64(234),
+		"inodes_used":  uint64(1000),
 	}
 	fields2 := map[string]interface{}{
-		"total":        uint64(256),  //tags2)
-		"used":         uint64(210),  //tags2)
-		"free":         uint64(46),   //tags2)
-		"inodes_total": uint64(2468), //tags2)
-		"inodes_free":  uint64(468),  //tags2)
-		"inodes_used":  uint64(2000), //tags2)
+		"total":        uint64(256),
+		"used":         uint64(210),
+		"free":         uint64(46),
+		"inodes_total": uint64(2468),
+		"inodes_free":  uint64(468),
+		"inodes_used":  uint64(2000),
 	}
 	acc.AssertContainsTaggedFields(t, "disk", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "disk", fields2, tags2)
 
 	// We expect 6 more DiskPoints to show up with an explicit match on "/"
-	// and /home not matching the /dev in Mountpoints
-	err = (&DiskStats{ps: &mps, Mountpoints: []string{"/", "/dev"}}).Gather(&acc)
+	// and /home not matching the /dev in MountPoints
+	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
 	assert.Equal(t, expectedAllDiskPoints+6, acc.NFields())
 
-	// We should see all the diskpoints as Mountpoints includes both
+	// We should see all the diskpoints as MountPoints includes both
 	// / and /home
-	err = (&DiskStats{ps: &mps, Mountpoints: []string{"/", "/home"}}).Gather(&acc)
+	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
 	assert.Equal(t, 2*expectedAllDiskPoints+6, acc.NFields())
 }
 

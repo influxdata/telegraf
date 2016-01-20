@@ -33,8 +33,8 @@ func (m *MockPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error) {
 	return r0, r1
 }
 
-func (m *MockPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
-	ret := m.Called()
+func (m *MockPS) DiskUsage(mountPointFilter []string) ([]*disk.DiskUsageStat, error) {
+	ret := m.Called(mountPointFilter)
 
 	r0 := ret.Get(0).([]*disk.DiskUsageStat)
 	r1 := ret.Error(1)

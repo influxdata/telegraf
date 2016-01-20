@@ -27,7 +27,7 @@ type DockerContainerStat struct {
 
 type PS interface {
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error)
-	DiskUsage() ([]*disk.DiskUsageStat, error)
+	DiskUsage(mountPointFilter []string) ([]*disk.DiskUsageStat, error)
 	NetIO() ([]net.NetIOCountersStat, error)
 	NetProto() ([]net.NetProtoCountersStat, error)
 	DiskIO() (map[string]disk.DiskIOCountersStat, error)
@@ -67,15 +67,31 @@ func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.CPUTimesStat, error) {
 	return cpuTimes, nil
 }
 
-func (s *systemPS) DiskUsage() ([]*disk.DiskUsageStat, error) {
+func (s *systemPS) DiskUsage(
+	mountPointFilter []string,
+) ([]*disk.DiskUsageStat, error) {
 	parts, err := disk.DiskPartitions(true)
 	if err != nil {
 		return nil, err
 	}
 
+	// Make a "set" out of the filter slice
+	filterSet := make(map[string]bool)
+	for _, filter := range mountPointFilter {
+		filterSet[filter] = true
+	}
+
 	var usage []*disk.DiskUsageStat
 
 	for _, p := range parts {
+		if len(mountPointFilter) > 0 {
+			// If the mount point is not a member of the filter set,
+			// don't gather info on it.
+			_, ok := filterSet[p.Mountpoint]
+			if !ok {
+				continue
+			}
+		}
 		if _, err := os.Stat(p.Mountpoint); err == nil {
 			du, err := disk.DiskUsage(p.Mountpoint)
 			if err != nil {
