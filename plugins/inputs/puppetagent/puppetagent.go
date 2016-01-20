@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // PuppetAgent is a PuppetAgent plugin

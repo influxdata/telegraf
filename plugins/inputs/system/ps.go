@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/influxdb/telegraf/internal"
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 
 	dc "github.com/fsouza/go-dockerclient"
 	"github.com/shirou/gopsutil/cpu"

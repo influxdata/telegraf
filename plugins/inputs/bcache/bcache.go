@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Bcache struct {

@@ -3,7 +3,7 @@ package leofs
 import (
 	"bufio"
 	"fmt"
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"net/url"
 	"os/exec"
 	"strconv"

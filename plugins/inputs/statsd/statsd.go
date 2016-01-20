@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdb/influxdb/services/graphite"
+	"github.com/influxdata/influxdb/services/graphite"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const UDP_PACKET_SIZE int = 1500

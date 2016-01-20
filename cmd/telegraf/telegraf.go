@@ -9,10 +9,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/influxdb/telegraf"
-	"github.com/influxdb/telegraf/internal/config"
-	_ "github.com/influxdb/telegraf/plugins/inputs/all"
-	_ "github.com/influxdb/telegraf/plugins/outputs/all"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/config"
+	_ "github.com/influxdata/telegraf/plugins/inputs/all"
+	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 )
 
 var fDebug = flag.Bool("debug", false,

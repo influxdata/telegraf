@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Might add Lookupd endpoints for cluster discovery

@@ -1,7 +1,7 @@
 package kinesis
 
 import (
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

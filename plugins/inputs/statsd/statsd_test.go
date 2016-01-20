@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // Invalid lines should return an error
