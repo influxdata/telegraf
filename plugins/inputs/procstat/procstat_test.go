@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/shirou/gopsutil/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -23,6 +24,7 @@ func TestGather(t *testing.T) {
 	p := Procstat{
 		PidFile: file.Name(),
 		Prefix:  "foo",
+		pidmap:  make(map[int32]*process.Process),
 	}
 	p.Gather(&acc)
 	assert.True(t, acc.HasFloatField("procstat", "foo_cpu_time_user"))
