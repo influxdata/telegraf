@@ -40,6 +40,7 @@ github.com/prometheus/common 0a3005bb37bc411040083a55372e77c405f6464c
 github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
 github.com/shirou/gopsutil 8850f58d7035653e1ab90711481954c8ca1b9813
+github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/objx 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 github.com/stretchr/testify f390dcf405f7b83c997eac1b06768bb9f44dec18
