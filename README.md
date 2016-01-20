@@ -139,6 +139,7 @@ Currently implemented sources:
 * apache
 * bcache
 * disque
+* docker
 * elasticsearch
 * exec (generic JSON-emitting executable plugin)
 * haproxy

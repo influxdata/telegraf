@@ -1,5 +1,13 @@
 ## v0.10.1 [unreleased]
 
+### Release Notes:
+
+- The docker plugin has been significantly overhauled to add more metrics
+and allow for docker-machine (incl OSX) support.
+[See the readme](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/docker/README.md)
+for the latest measurements, fields, and tags. There is also now support for
+specifying a docker endpoint to get metrics from.
+
 ### Features
 - [#509](https://github.com/influxdata/telegraf/pull/509): Flatten JSON arrays with indices. Thanks @psilva261!
 - [#512](https://github.com/influxdata/telegraf/pull/512): Python 3 build script, add lsof dep to package. Thanks @Ormod!
@@ -16,6 +24,7 @@
 - [#552](https://github.com/influxdata/telegraf/pull/552): Support for collection interval jittering.
 - [#484](https://github.com/influxdata/telegraf/issues/484): Include usage percent with procstat metrics.
 - [#553](https://github.com/influxdata/telegraf/pull/553): Amazon CloudWatch output. thanks @skwong2!
+- [#563](https://github.com/influxdata/telegraf/pull/563): Docker plugin overhaul.
 
 ### Bugfixes
 - [#506](https://github.com/influxdata/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!

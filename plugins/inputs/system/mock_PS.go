@@ -87,15 +87,6 @@ func (m *MockPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	return r0, r1
 }
 
-func (m *MockPS) DockerStat() ([]*DockerContainerStat, error) {
-	ret := m.Called()
-
-	r0 := ret.Get(0).([]*DockerContainerStat)
-	r1 := ret.Error(1)
-
-	return r0, r1
-}
-
 func (m *MockPS) NetConnections() ([]net.NetConnectionStat, error) {
 	ret := m.Called()
 
