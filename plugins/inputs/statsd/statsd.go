@@ -337,10 +337,15 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			}
 			m.floatvalue = v
 		case "c", "s":
+			var v int64
 			v, err := strconv.ParseInt(pipesplit[0], 10, 64)
 			if err != nil {
-				log.Printf("Error: parsing value to int64: %s\n", line)
-				return errors.New("Error Parsing statsd line")
+				v2, err2 := strconv.ParseFloat(pipesplit[0], 64)
+				if err2 != nil {
+					log.Printf("Error: parsing value to int64: %s\n", line)
+					return errors.New("Error Parsing statsd line")
+				}
+				v = int64(v2)
 			}
 			// If a sample rate is given with a counter, divide value by the rate
 			if m.samplerate != 0 && m.mtype == "c" {
