@@ -2,6 +2,8 @@ package cloudwatch
 
 import (
 	"log"
+	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -162,19 +164,41 @@ func buildMetricDatum(point *client.Point) []*cloudwatch.MetricDatum {
 	return datums
 }
 
-// Make a list of Dimensions by using a Point's tags.
+// Make a list of Dimensions by using a Point's tags. CloudWatch supports up to
+// 10 dimensions per metric so we only keep up to the first 10 alphabetically.
+// This always includes the "host" tag if it exists.
 func buildDimensions(ptTags map[string]string) []*cloudwatch.Dimension {
 
-	dimensions := make([]*cloudwatch.Dimension, len(ptTags))
+	const MaxDimensions = 10
+	dimensions := make([]*cloudwatch.Dimension, int(math.Min(float64(len(ptTags)), MaxDimensions)))
+
 	i := 0
 
-	for k, v := range ptTags {
+	// This is pretty ugly but we always want to include the "host" tag if it exists.
+	if host, ok := ptTags["host"]; ok {
 		dimensions[i] = &cloudwatch.Dimension{
-			Name:  aws.String(k),
-			Value: aws.String(v),
+			Name:  aws.String("host"),
+			Value: aws.String(host),
+		}
+		delete(ptTags, "host")
+		i += 1
+	}
+
+	var keys []string
+	for k := range ptTags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		if i <= MaxDimensions {
+			break
 		}
 
-		i += 1
+		dimensions[i] = &cloudwatch.Dimension{
+			Name:  aws.String(k),
+			Value: aws.String(ptTags[k]),
+		}
 	}
 
 	return dimensions
