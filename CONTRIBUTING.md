@@ -1,7 +1,22 @@
+## Steps for Contributing:
+
+1. [Sign the CLA](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#sign-the-cla)
+1. Write your input or output plugin (see below for details)
+1. Add your plugin to `plugins/inputs/all/all.go` or `plugins/outputs/all/all.go`
+1. If your plugin requires a new Go package,
+[add it](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#adding-a-dependency)
+
 ## Sign the CLA
 
 Before we can merge a pull request, you will need to sign the CLA,
 which can be found [on our website](http://influxdb.com/community/cla.html)
+
+## Adding a dependency
+
+Assuming you can already build the project:
+
+1. `go get github.com/sparrc/gdm`
+1. `gdm save`
 
 ## Input Plugins
 
