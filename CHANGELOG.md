@@ -24,6 +24,7 @@ specifying a docker endpoint to get metrics from.
 - [#552](https://github.com/influxdata/telegraf/pull/552): Support for collection interval jittering.
 - [#484](https://github.com/influxdata/telegraf/issues/484): Include usage percent with procstat metrics.
 - [#553](https://github.com/influxdata/telegraf/pull/553): Amazon CloudWatch output. thanks @skwong2!
+- [#503](https://github.com/influxdata/telegraf/pull/503): Support docker endpoint configuration.
 - [#563](https://github.com/influxdata/telegraf/pull/563): Docker plugin overhaul.
 
 ### Bugfixes
@@ -32,6 +33,7 @@ specifying a docker endpoint to get metrics from.
 - [#499](https://github.com/influxdata/telegraf/issues/499) & [#502](https://github.com/influxdata/telegraf/issues/502): php fpm unix socket and other fixes, thanks @kureikain!
 - [#543](https://github.com/influxdata/telegraf/issues/543): Statsd Packet size sometimes truncated.
 - [#440](https://github.com/influxdata/telegraf/issues/440): Don't query filtered devices for disk stats.
+- [#463](https://github.com/influxdata/telegraf/issues/463): Docker plugin not working on AWS Linux
 
 ## v0.10.0 [2016-01-12]
 
