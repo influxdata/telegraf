@@ -129,9 +129,13 @@ func pidsFromFile(file string) ([]int32, error) {
 func pidsFromExe(exe string) ([]int32, error) {
 	var out []int32
 	var outerr error
-	pgrep, err := exec.Command("pgrep", exe).Output()
+	bin, err := exec.LookPath("pgrep")
 	if err != nil {
-		return out, fmt.Errorf("Failed to execute pgrep. Error: '%s'", err)
+		return out, fmt.Errorf("Couldn't find pgrep binary: %s", err)
+	}
+	pgrep, err := exec.Command(bin, exe).Output()
+	if err != nil {
+		return out, fmt.Errorf("Failed to execute %s. Error: '%s'", bin, err)
 	} else {
 		pids := strings.Fields(string(pgrep))
 		for _, pid := range pids {
@@ -149,9 +153,13 @@ func pidsFromExe(exe string) ([]int32, error) {
 func pidsFromPattern(pattern string) ([]int32, error) {
 	var out []int32
 	var outerr error
-	pgrep, err := exec.Command("pgrep", "-f", pattern).Output()
+	bin, err := exec.LookPath("pgrep")
 	if err != nil {
-		return out, fmt.Errorf("Failed to execute pgrep. Error: '%s'", err)
+		return out, fmt.Errorf("Couldn't find pgrep binary: %s", err)
+	}
+	pgrep, err := exec.Command(bin, "-f", pattern).Output()
+	if err != nil {
+		return out, fmt.Errorf("Failed to execute %s. Error: '%s'", bin, err)
 	} else {
 		pids := strings.Fields(string(pgrep))
 		for _, pid := range pids {

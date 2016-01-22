@@ -130,7 +130,7 @@ func (i *InfluxDB) gatherURL(
 		p.Tags["url"] = url
 
 		acc.AddFields(
-			p.Name,
+			"influxdb_"+p.Name,
 			p.Values,
 			p.Tags,
 		)

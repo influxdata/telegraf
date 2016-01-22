@@ -110,15 +110,12 @@ func (d *Docker) gatherContainer(
 		Timeout: time.Duration(time.Second * 5),
 	}
 
-	var err error
 	go func() {
-		err = d.client.Stats(statOpts)
+		d.client.Stats(statOpts)
 	}()
 
 	stat := <-statChan
-	if err != nil {
-		return err
-	}
+	close(done)
 
 	// Add labels to tags
 	for k, v := range container.Labels {
