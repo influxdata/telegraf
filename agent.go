@@ -1,19 +1,20 @@
 package telegraf
 
 import (
-	"crypto/rand"
+	cryptorand "crypto/rand"
 	"fmt"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/influxdb/telegraf/internal/config"
-	"github.com/influxdb/telegraf/outputs"
-	"github.com/influxdb/telegraf/plugins"
+	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/outputs"
 
-	"github.com/influxdb/influxdb/client/v2"
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 // Agent runs telegraf and collects data based on the given config
@@ -58,7 +59,7 @@ func (a *Agent) Connect() error {
 		}
 		err := o.Output.Connect()
 		if err != nil {
-			log.Printf("Failed to connect to output %s, retrying in 15s\n", o.Name)
+			log.Printf("Failed to connect to output %s, retrying in 15s, error was '%s' \n", o.Name, err)
 			time.Sleep(15 * time.Second)
 			err = o.Output.Connect()
 			if err != nil {
@@ -85,33 +86,44 @@ func (a *Agent) Close() error {
 	return err
 }
 
-// gatherParallel runs the plugins that are using the same reporting interval
+// gatherParallel runs the inputs that are using the same reporting interval
 // as the telegraf agent.
 func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 	var wg sync.WaitGroup
 
 	start := time.Now()
 	counter := 0
-	for _, plugin := range a.Config.Plugins {
-		if plugin.Config.Interval != 0 {
+	jitter := a.Config.Agent.CollectionJitter.Duration.Nanoseconds()
+	for _, input := range a.Config.Inputs {
+		if input.Config.Interval != 0 {
 			continue
 		}
 
 		wg.Add(1)
 		counter++
-		go func(plugin *config.RunningPlugin) {
+		go func(input *config.RunningInput) {
 			defer wg.Done()
 
-			acc := NewAccumulator(plugin.Config, pointChan)
+			acc := NewAccumulator(input.Config, pointChan)
 			acc.SetDebug(a.Config.Agent.Debug)
-			acc.SetPrefix(plugin.Name + "_")
 			acc.SetDefaultTags(a.Config.Tags)
 
-			if err := plugin.Plugin.Gather(acc); err != nil {
-				log.Printf("Error in plugin [%s]: %s", plugin.Name, err)
+			if jitter != 0 {
+				nanoSleep := rand.Int63n(jitter)
+				d, err := time.ParseDuration(fmt.Sprintf("%dns", nanoSleep))
+				if err != nil {
+					log.Printf("Jittering collection interval failed for plugin %s",
+						input.Name)
+				} else {
+					time.Sleep(d)
+				}
 			}
 
-		}(plugin)
+			if err := input.Input.Gather(acc); err != nil {
+				log.Printf("Error in input [%s]: %s", input.Name, err)
+			}
+
+		}(input)
 	}
 
 	if counter == 0 {
@@ -121,36 +133,39 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 	wg.Wait()
 
 	elapsed := time.Since(start)
-	log.Printf("Gathered metrics, (%s interval), from %d plugins in %s\n",
-		a.Config.Agent.Interval, counter, elapsed)
+	if !a.Config.Agent.Quiet {
+		log.Printf("Gathered metrics, (%s interval), from %d inputs in %s\n",
+			a.Config.Agent.Interval.Duration, counter, elapsed)
+	}
 	return nil
 }
 
-// gatherSeparate runs the plugins that have been configured with their own
+// gatherSeparate runs the inputs that have been configured with their own
 // reporting interval.
 func (a *Agent) gatherSeparate(
 	shutdown chan struct{},
-	plugin *config.RunningPlugin,
+	input *config.RunningInput,
 	pointChan chan *client.Point,
 ) error {
-	ticker := time.NewTicker(plugin.Config.Interval)
+	ticker := time.NewTicker(input.Config.Interval)
 
 	for {
 		var outerr error
 		start := time.Now()
 
-		acc := NewAccumulator(plugin.Config, pointChan)
+		acc := NewAccumulator(input.Config, pointChan)
 		acc.SetDebug(a.Config.Agent.Debug)
-		acc.SetPrefix(plugin.Name + "_")
 		acc.SetDefaultTags(a.Config.Tags)
 
-		if err := plugin.Plugin.Gather(acc); err != nil {
-			log.Printf("Error in plugin [%s]: %s", plugin.Name, err)
+		if err := input.Input.Gather(acc); err != nil {
+			log.Printf("Error in input [%s]: %s", input.Name, err)
 		}
 
 		elapsed := time.Since(start)
-		log.Printf("Gathered metrics, (separate %s interval), from %s in %s\n",
-			plugin.Config.Interval, plugin.Name, elapsed)
+		if !a.Config.Agent.Quiet {
+			log.Printf("Gathered metrics, (separate %s interval), from %s in %s\n",
+				input.Config.Interval, input.Name, elapsed)
+		}
 
 		if outerr != nil {
 			return outerr
@@ -165,7 +180,7 @@ func (a *Agent) gatherSeparate(
 	}
 }
 
-// Test verifies that we can 'Gather' from all plugins with their configured
+// Test verifies that we can 'Gather' from all inputs with their configured
 // Config struct
 func (a *Agent) Test() error {
 	shutdown := make(chan struct{})
@@ -184,27 +199,27 @@ func (a *Agent) Test() error {
 		}
 	}()
 
-	for _, plugin := range a.Config.Plugins {
-		acc := NewAccumulator(plugin.Config, pointChan)
+	for _, input := range a.Config.Inputs {
+		acc := NewAccumulator(input.Config, pointChan)
 		acc.SetDebug(true)
-		acc.SetPrefix(plugin.Name + "_")
+		// acc.SetPrefix(input.Name + "_")
 
-		fmt.Printf("* Plugin: %s, Collection 1\n", plugin.Name)
-		if plugin.Config.Interval != 0 {
-			fmt.Printf("* Internal: %s\n", plugin.Config.Interval)
+		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
+		if input.Config.Interval != 0 {
+			fmt.Printf("* Internal: %s\n", input.Config.Interval)
 		}
 
-		if err := plugin.Plugin.Gather(acc); err != nil {
+		if err := input.Input.Gather(acc); err != nil {
 			return err
 		}
 
-		// Special instructions for some plugins. cpu, for example, needs to be
+		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
-		switch plugin.Name {
-		case "cpu", "mongodb":
+		switch input.Name {
+		case "cpu", "mongodb", "procstat":
 			time.Sleep(500 * time.Millisecond)
-			fmt.Printf("* Plugin: %s, Collection 2\n", plugin.Name)
-			if err := plugin.Plugin.Gather(acc); err != nil {
+			fmt.Printf("* Plugin: %s, Collection 2\n", input.Name)
+			if err := input.Input.Gather(acc); err != nil {
 				return err
 			}
 		}
@@ -235,8 +250,10 @@ func (a *Agent) writeOutput(
 		if err == nil {
 			// Write successful
 			elapsed := time.Since(start)
-			log.Printf("Flushed %d metrics to output %s in %s\n",
-				len(filtered), ro.Name, elapsed)
+			if !a.Config.Agent.Quiet {
+				log.Printf("Flushed %d metrics to output %s in %s\n",
+					len(filtered), ro.Name, elapsed)
+			}
 			return
 		}
 
@@ -309,7 +326,7 @@ func jitterInterval(ininterval, injitter time.Duration) time.Duration {
 	outinterval := ininterval
 	if injitter.Nanoseconds() != 0 {
 		maxjitter := big.NewInt(injitter.Nanoseconds())
-		if j, err := rand.Int(rand.Reader, maxjitter); err == nil {
+		if j, err := cryptorand.Int(cryptorand.Reader, maxjitter); err == nil {
 			jitter = j.Int64()
 		}
 		outinterval = time.Duration(jitter + ininterval.Nanoseconds())
@@ -327,15 +344,16 @@ func jitterInterval(ininterval, injitter time.Duration) time.Duration {
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 
-	a.Config.Agent.FlushInterval.Duration = jitterInterval(a.Config.Agent.FlushInterval.Duration,
+	a.Config.Agent.FlushInterval.Duration = jitterInterval(
+		a.Config.Agent.FlushInterval.Duration,
 		a.Config.Agent.FlushJitter.Duration)
 
-	log.Printf("Agent Config: Interval:%s, Debug:%#v, Hostname:%#v, "+
-		"Flush Interval:%s\n",
-		a.Config.Agent.Interval, a.Config.Agent.Debug,
-		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval)
+	log.Printf("Agent Config: Interval:%s, Debug:%#v, Quiet:%#v, Hostname:%#v, "+
+		"Flush Interval:%s \n",
+		a.Config.Agent.Interval.Duration, a.Config.Agent.Debug, a.Config.Agent.Quiet,
+		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
-	// channel shared between all plugin threads for accumulating points
+	// channel shared between all input threads for accumulating points
 	pointChan := make(chan *client.Point, 1000)
 
 	// Round collection to nearest interval by sleeping
@@ -354,29 +372,29 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}
 	}()
 
-	for _, plugin := range a.Config.Plugins {
+	for _, input := range a.Config.Inputs {
 
 		// Start service of any ServicePlugins
-		switch p := plugin.Plugin.(type) {
-		case plugins.ServicePlugin:
+		switch p := input.Input.(type) {
+		case inputs.ServiceInput:
 			if err := p.Start(); err != nil {
-				log.Printf("Service for plugin %s failed to start, exiting\n%s\n",
-					plugin.Name, err.Error())
+				log.Printf("Service for input %s failed to start, exiting\n%s\n",
+					input.Name, err.Error())
 				return err
 			}
 			defer p.Stop()
 		}
 
-		// Special handling for plugins that have their own collection interval
+		// Special handling for inputs that have their own collection interval
 		// configured. Default intervals are handled below with gatherParallel
-		if plugin.Config.Interval != 0 {
+		if input.Config.Interval != 0 {
 			wg.Add(1)
-			go func(plugin *config.RunningPlugin) {
+			go func(input *config.RunningInput) {
 				defer wg.Done()
-				if err := a.gatherSeparate(shutdown, plugin, pointChan); err != nil {
+				if err := a.gatherSeparate(shutdown, input, pointChan); err != nil {
 					log.Printf(err.Error())
 				}
-			}(plugin)
+			}(input)
 		}
 	}
 

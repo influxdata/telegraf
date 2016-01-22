@@ -1,35 +1,48 @@
+## Steps for Contributing:
+
+1. [Sign the CLA](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#sign-the-cla)
+1. Write your input or output plugin (see below for details)
+1. Add your plugin to `plugins/inputs/all/all.go` or `plugins/outputs/all/all.go`
+1. If your plugin requires a new Go package,
+[add it](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#adding-a-dependency)
+
 ## Sign the CLA
 
 Before we can merge a pull request, you will need to sign the CLA,
 which can be found [on our website](http://influxdb.com/community/cla.html)
 
-## Plugins
+## Adding a dependency
 
-This section is for developers who want to create new collection plugins.
+Assuming you can already build the project:
+
+1. `go get github.com/sparrc/gdm`
+1. `gdm save`
+
+## Input Plugins
+
+This section is for developers who want to create new collection inputs.
 Telegraf is entirely plugin driven. This interface allows for operators to
 pick and chose what is gathered as well as makes it easy for developers
 to create new ways of generating metrics.
 
 Plugin authorship is kept as simple as possible to promote people to develop
-and submit new plugins.
+and submit new inputs.
 
-### Plugin Guidelines
+### Input Plugin Guidelines
 
-* A plugin must conform to the `plugins.Plugin` interface.
-* Each generated metric automatically has the name of the plugin that generated
-it prepended. This is to keep plugins honest.
-* Plugins should call `plugins.Add` in their `init` function to register themselves.
+* A plugin must conform to the `inputs.Input` interface.
+* Input Plugins should call `inputs.Add` in their `init` function to register themselves.
 See below for a quick example.
-* To be available within Telegraf itself, plugins must add themselves to the
-`github.com/influxdb/telegraf/plugins/all/all.go` file.
+* Input Plugins must be added to the
+`github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 plugin can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this plugin does.
 
-### Plugin interface
+### Input interface
 
 ```go
-type Plugin interface {
+type Input interface {
     SampleConfig() string
     Description() string
     Gather(Accumulator) error
@@ -52,52 +65,32 @@ type Accumulator interface {
 The way that a plugin emits metrics is by interacting with the Accumulator.
 
 The `Add` function takes 3 arguments:
-* **measurement**: A string description of the metric. For instance `bytes_read` or `faults`.
+* **measurement**: A string description of the metric. For instance `bytes_read` or `
+faults`.
 * **value**: A value for the metric. This accepts 5 different types of value:
   * **int**: The most common type. All int types are accepted but favor using `int64`
   Useful for counters, etc.
   * **float**: Favor `float64`, useful for gauges, percentages, etc.
-  * **bool**: `true` or `false`, useful to indicate the presence of a state. `light_on`, etc.
-  * **string**: Typically used to indicate a message, or some kind of freeform information.
-  * **time.Time**: Useful for indicating when a state last occurred, for instance `light_on_since`.
+  * **bool**: `true` or `false`, useful to indicate the presence of a state. `light_on`,
+  etc.
+  * **string**: Typically used to indicate a message, or some kind of freeform
+  information.
+  * **time.Time**: Useful for indicating when a state last occurred, for instance `
+  light_on_since`.
 * **tags**: This is a map of strings to strings to describe the where or who
 about the metric. For instance, the `net` plugin adds a tag named `"interface"`
 set to the name of the network interface, like `"eth0"`.
 
-The `AddFieldsWithTime` allows multiple values for a point to be passed. The values
-used are the same type profile as **value** above. The **timestamp** argument
-allows a point to be registered as having occurred at an arbitrary time.
-
 Let's say you've written a plugin that emits metrics about processes on the current host.
 
-```go
-
-type Process struct {
-    CPUTime float64
-    MemoryBytes int64
-    PID int
-}
-
-func Gather(acc plugins.Accumulator) error {
-    for _, process := range system.Processes() {
-        tags := map[string]string {
-            "pid": fmt.Sprintf("%d", process.Pid),
-        }
-
-        acc.Add("cpu", process.CPUTime, tags, time.Now())
-        acc.Add("memory", process.MemoryBytes, tags, time.Now())
-    }
-}
-```
-
-### Plugin Example
+### Input Plugin Example
 
 ```go
 package simple
 
 // simple.go
 
-import "github.com/influxdb/telegraf/plugins"
+import "github.com/influxdata/telegraf/plugins/inputs"
 
 type Simple struct {
     Ok bool
@@ -111,7 +104,7 @@ func (s *Simple) SampleConfig() string {
     return "ok = true # indicate if everything is fine"
 }
 
-func (s *Simple) Gather(acc plugins.Accumulator) error {
+func (s *Simple) Gather(acc inputs.Accumulator) error {
     if s.Ok {
         acc.Add("state", "pretty good", nil)
     } else {
@@ -122,19 +115,19 @@ func (s *Simple) Gather(acc plugins.Accumulator) error {
 }
 
 func init() {
-    plugins.Add("simple", func() plugins.Plugin { return &Simple{} })
+    inputs.Add("simple", func() inputs.Input { return &Simple{} })
 }
 ```
 
-## Service Plugins
+## Service Input Plugins
 
 This section is for developers who want to create new "service" collection
-plugins. A service plugin differs from a regular plugin in that it operates
+inputs. A service plugin differs from a regular plugin in that it operates
 a background service while Telegraf is running. One example would be the `statsd`
 plugin, which operates a statsd server.
 
-Service Plugins are substantially more complicated than a regular plugin, as they
-will require threads and locks to verify data integrity. Service Plugins should
+Service Input Plugins are substantially more complicated than a regular plugin, as they
+will require threads and locks to verify data integrity. Service Input Plugins should
 be avoided unless there is no way to create their behavior with a regular plugin.
 
 Their interface is quite similar to a regular plugin, with the addition of `Start()`
@@ -143,7 +136,7 @@ and `Stop()` methods.
 ### Service Plugin Guidelines
 
 * Same as the `Plugin` guidelines, except that they must conform to the
-`plugins.ServicePlugin` interface.
+`inputs.ServiceInput` interface.
 
 ### Service Plugin interface
 
@@ -157,19 +150,19 @@ type ServicePlugin interface {
 }
 ```
 
-## Outputs
+## Output Plugins
 
 This section is for developers who want to create a new output sink. Outputs
 are created in a similar manner as collection plugins, and their interface has
 similar constructs.
 
-### Output Guidelines
+### Output Plugin Guidelines
 
 * An output must conform to the `outputs.Output` interface.
 * Outputs should call `outputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
-`github.com/influxdb/telegraf/outputs/all/all.go` file.
+`github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 output can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this output does.
@@ -193,7 +186,7 @@ package simpleoutput
 
 // simpleoutput.go
 
-import "github.com/influxdb/telegraf/outputs"
+import "github.com/influxdata/telegraf/plugins/outputs"
 
 type Simple struct {
     Ok bool
@@ -230,7 +223,7 @@ func init() {
 
 ```
 
-## Service Outputs
+## Service Output Plugins
 
 This section is for developers who want to create new "service" output. A
 service output differs from a regular output in that it operates a background service
@@ -243,7 +236,7 @@ and `Stop()` methods.
 ### Service Output Guidelines
 
 * Same as the `Output` guidelines, except that they must conform to the
-`plugins.ServiceOutput` interface.
+`output.ServiceOutput` interface.
 
 ### Service Output interface
 
@@ -274,7 +267,7 @@ which would take some time to replicate.
 To overcome this situation we've decided to use docker containers to provide a
 fast and reproducible environment to test those services which require it.
 For other situations
-(i.e: https://github.com/influxdb/telegraf/blob/master/plugins/redis/redis_test.go )
+(i.e: https://github.com/influxdata/telegraf/blob/master/plugins/redis/redis_test.go)
 a simple mock will suffice.
 
 To execute Telegraf tests follow these simple steps:
