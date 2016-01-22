@@ -30,6 +30,7 @@ github.com/influxdb/influxdb 697f48b4e62e514e701ffec39978b864a3c666e6
 github.com/jmespath/go-jmespath c01cf91b011868172fdcd9f41838e80c9d716264
 github.com/klauspost/crc32 999f3125931f6557b991b2f8472172bdfa578d38
 github.com/lib/pq 8ad2b298cadd691a77015666a5372eae5dbfac8f
+github.com/lxn/win 9a7734ea4db26bc593d52f6a8a957afdad39c5c1
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
 github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b

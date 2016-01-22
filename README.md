@@ -177,6 +177,7 @@ Currently implemented sources:
 * zookeeper
 * sensors
 * snmp
+* win_perf_counters (windows performance counters)
 * system
     * cpu
     * mem

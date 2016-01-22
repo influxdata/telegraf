@@ -3,6 +3,7 @@
 ### Release Notes
 
 ### Features
+- [#575](https://github.com/influxdata/telegraf/pull/575): Support for collecting Windows Performance Counters. Thanks @TheFlyingCorpse!
 - [#564](https://github.com/influxdata/telegraf/issues/564): features for plugin writing simplification. Internal metric data type.
 - [#603](https://github.com/influxdata/telegraf/pull/603): Aggregate statsd timing measurements into fields. Thanks @marcinbunsch!
 - [#601](https://github.com/influxdata/telegraf/issues/601): Warn when overwriting cached metrics.
