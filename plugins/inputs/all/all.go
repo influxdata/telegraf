@@ -39,6 +39,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/system"
 	_ "github.com/influxdata/telegraf/plugins/inputs/trig"
 	_ "github.com/influxdata/telegraf/plugins/inputs/twemproxy"
+	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
 )
