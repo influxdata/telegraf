@@ -34,7 +34,7 @@ export GOPATH=$BUILD_DIR
 # Turning off GOGC speeds up build times
 export GOGC=off
 export PATH=$GOPATH/bin:$PATH
-exit_if_fail mkdir -p $GOPATH/src/github.com/influxdata
+exit_if_fail mkdir -p $GOPATH/src/github.com/influxdb
 
 # Dump some test config to the log.
 echo "Test configuration"
@@ -44,8 +44,8 @@ echo "\$GOPATH: $GOPATH"
 echo "\$CIRCLE_BRANCH: $CIRCLE_BRANCH"
 
 # Move the checked-out source to a better location
-exit_if_fail mv $HOME/telegraf $GOPATH/src/github.com/influxdata
-exit_if_fail cd $GOPATH/src/github.com/influxdata/telegraf
+exit_if_fail mv $HOME/telegraf $GOPATH/src/github.com/influxdb
+exit_if_fail cd $GOPATH/src/github.com/influxdb/telegraf
 
 # Verify that go fmt has been run
 check_go_fmt

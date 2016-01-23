@@ -8,8 +8,8 @@ import (
 
 	"github.com/gonuts/go-shellquote"
 
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdb/telegraf/internal"
+	"github.com/influxdb/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `

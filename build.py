@@ -39,7 +39,7 @@ PREINST_SCRIPT = "scripts/pre-install.sh"
 
 # META-PACKAGE VARIABLES
 PACKAGE_LICENSE = "MIT"
-PACKAGE_URL = "https://github.com/influxdata/telegraf"
+PACKAGE_URL = "https://github.com/influxdb/telegraf"
 MAINTAINER = "support@influxdb.com"
 VENDOR = "InfluxData"
 DESCRIPTION = "Plugin-driven server agent for reporting metrics into InfluxDB."

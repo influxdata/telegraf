@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdb/telegraf/testutil"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdb/influxdb/client/v2"
 )
 
 func TestBuildPoint(t *testing.T) {

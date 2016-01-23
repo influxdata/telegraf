@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/internal/config"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdb/telegraf/internal/config"
+	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdb/telegraf/plugins/outputs"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdb/influxdb/client/v2"
 )
 
 // Agent runs telegraf and collects data based on the given config

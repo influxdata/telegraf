@@ -2,7 +2,7 @@
 
 Telegraf is an agent written in Go for collecting metrics from the system it's
 running on, or from other services, and writing them into InfluxDB or other
-[outputs](https://github.com/influxdata/telegraf#supported-output-plugins).
+[outputs](https://github.com/influxdb/telegraf#supported-output-plugins).
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
@@ -77,8 +77,8 @@ if you don't have it already. You also must build with golang version 1.5+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
-3. Run `go get github.com/influxdata/telegraf`
-4. Run `cd $GOPATH/src/github.com/influxdata/telegraf`
+3. Run `go get github.com/influxdb/telegraf`
+4. Run `cd $GOPATH/src/github.com/influxdb/telegraf`
 5. Run `make`
 
 ### How to use it:

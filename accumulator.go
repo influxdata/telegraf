@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdb/telegraf/internal/config"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdb/influxdb/client/v2"
 )
 
 type Accumulator interface {

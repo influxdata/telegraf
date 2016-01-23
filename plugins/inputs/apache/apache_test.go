@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdb/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
 )

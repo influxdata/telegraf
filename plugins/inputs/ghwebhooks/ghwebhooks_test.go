@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	mod "github.com/influxdata/telegraf/plugins/inputs/ghwebhooks/models"
+	mod "github.com/influxdb/telegraf/plugins/inputs/ghwebhooks/models"
 )
 
 func TestCommitCommentEvent(t *testing.T) {

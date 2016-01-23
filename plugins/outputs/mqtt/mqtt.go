@@ -10,9 +10,9 @@ import (
 	"sync"
 
 	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdb/influxdb/client/v2"
+	"github.com/influxdb/telegraf/internal"
+	"github.com/influxdb/telegraf/plugins/outputs"
 )
 
 const MaxClientIdLen = 8

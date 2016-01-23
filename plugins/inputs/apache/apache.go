@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdb/telegraf/plugins/inputs"
 )
 
 type Apache struct {

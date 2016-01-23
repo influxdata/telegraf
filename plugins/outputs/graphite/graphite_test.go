@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdb/influxdb/client/v2"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

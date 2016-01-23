@@ -10,9 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdb/influxdb/client/v2"
+	"github.com/influxdb/telegraf/internal"
+	"github.com/influxdb/telegraf/plugins/outputs"
 )
 
 type Datadog struct {

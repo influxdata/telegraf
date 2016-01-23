@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
-	mod "github.com/influxdata/support-tools/ghWebhooks/models"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	mod "github.com/influxdb/support-tools/ghWebhooks/models"
+	"github.com/influxdb/telegraf/plugins/inputs"
 )
 
 func init() {

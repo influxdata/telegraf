@@ -157,4 +157,4 @@ mem.cached.localhost:256|g
 ```
 
 There are many more options available,
-[More details can be found here](https://github.com/influxdata/influxdb/tree/master/services/graphite#templates)
+[More details can be found here](https://github.com/influxdb/influxdb/tree/master/services/graphite#templates)

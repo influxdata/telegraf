@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdb/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )

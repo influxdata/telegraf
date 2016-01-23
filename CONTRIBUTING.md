@@ -19,7 +19,7 @@ and submit new inputs.
 * Input Plugins should call `inputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * Input Plugins must be added to the
-`github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
+`github.com/influxdb/telegraf/plugins/inputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 plugin can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this plugin does.
@@ -75,7 +75,7 @@ package simple
 
 // simple.go
 
-import "github.com/influxdata/telegraf/plugins/inputs"
+import "github.com/influxdb/telegraf/plugins/inputs"
 
 type Simple struct {
     Ok bool
@@ -147,7 +147,7 @@ similar constructs.
 * Outputs should call `outputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
-`github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
+`github.com/influxdb/telegraf/plugins/outputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 output can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this output does.
@@ -171,7 +171,7 @@ package simpleoutput
 
 // simpleoutput.go
 
-import "github.com/influxdata/telegraf/plugins/outputs"
+import "github.com/influxdb/telegraf/plugins/outputs"
 
 type Simple struct {
     Ok bool
@@ -252,7 +252,7 @@ which would take some time to replicate.
 To overcome this situation we've decided to use docker containers to provide a
 fast and reproducible environment to test those services which require it.
 For other situations
-(i.e: https://github.com/influxdata/telegraf/blob/master/plugins/redis/redis_test.go)
+(i.e: https://github.com/influxdb/telegraf/blob/master/plugins/redis/redis_test.go)
 a simple mock will suffice.
 
 To execute Telegraf tests follow these simple steps:
