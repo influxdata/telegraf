@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type InfluxDB struct {
@@ -130,7 +130,7 @@ func (i *InfluxDB) gatherURL(
 		p.Tags["url"] = url
 
 		acc.AddFields(
-			p.Name,
+			"influxdb_"+p.Name,
 			p.Values,
 			p.Tags,
 		)

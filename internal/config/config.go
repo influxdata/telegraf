@@ -10,14 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdb/telegraf/internal"
-	"github.com/influxdb/telegraf/plugins/inputs"
-	"github.com/influxdb/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/outputs"
 
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
-
-	"github.com/influxdb/influxdb/client/v2"
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -29,8 +28,8 @@ type Config struct {
 	OutputFilters []string
 
 	Agent   *AgentConfig
-	Inputs  []*RunningInput
-	Outputs []*RunningOutput
+	Inputs  []*models.RunningInput
+	Outputs []*models.RunningOutput
 }
 
 func NewConfig() *Config {
@@ -40,13 +39,12 @@ func NewConfig() *Config {
 			Interval:      internal.Duration{Duration: 10 * time.Second},
 			RoundInterval: true,
 			FlushInterval: internal.Duration{Duration: 10 * time.Second},
-			FlushRetries:  2,
 			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
 		},
 
 		Tags:          make(map[string]string),
-		Inputs:        make([]*RunningInput, 0),
-		Outputs:       make([]*RunningOutput, 0),
+		Inputs:        make([]*models.RunningInput, 0),
+		Outputs:       make([]*models.RunningOutput, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -70,14 +68,16 @@ type AgentConfig struct {
 	// Interval at which to flush data
 	FlushInterval internal.Duration
 
-	// FlushRetries is the number of times to retry each data flush
-	FlushRetries int
-
 	// FlushJitter Jitters the flush interval by a random amount.
 	// This is primarily to avoid large write spikes for users running a large
 	// number of telegraf instances.
 	// ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
 	FlushJitter internal.Duration
+
+	// MetricBufferLimit is the max number of metrics that each output plugin
+	// will cache. The buffer is cleared when a successful write occurs. When
+	// full, the oldest metrics will be overwritten.
+	MetricBufferLimit int
 
 	// TODO(cam): Remove UTC and Precision parameters, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
@@ -91,129 +91,6 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet    bool
 	Hostname string
-}
-
-// TagFilter is the name of a tag, and the values on which to filter
-type TagFilter struct {
-	Name   string
-	Filter []string
-}
-
-type RunningOutput struct {
-	Name   string
-	Output outputs.Output
-	Config *OutputConfig
-}
-
-type RunningInput struct {
-	Name   string
-	Input  inputs.Input
-	Config *InputConfig
-}
-
-// Filter containing drop/pass and tagdrop/tagpass rules
-type Filter struct {
-	Drop []string
-	Pass []string
-
-	TagDrop []TagFilter
-	TagPass []TagFilter
-
-	IsActive bool
-}
-
-// InputConfig containing a name, interval, and filter
-type InputConfig struct {
-	Name              string
-	NameOverride      string
-	MeasurementPrefix string
-	MeasurementSuffix string
-	Tags              map[string]string
-	Filter            Filter
-	Interval          time.Duration
-}
-
-// OutputConfig containing name and filter
-type OutputConfig struct {
-	Name   string
-	Filter Filter
-}
-
-// Filter returns filtered slice of client.Points based on whether filters
-// are active for this RunningOutput.
-func (ro *RunningOutput) FilterPoints(points []*client.Point) []*client.Point {
-	if !ro.Config.Filter.IsActive {
-		return points
-	}
-
-	var filteredPoints []*client.Point
-	for i := range points {
-		if !ro.Config.Filter.ShouldPass(points[i].Name()) || !ro.Config.Filter.ShouldTagsPass(points[i].Tags()) {
-			continue
-		}
-		filteredPoints = append(filteredPoints, points[i])
-	}
-	return filteredPoints
-}
-
-// ShouldPass returns true if the metric should pass, false if should drop
-// based on the drop/pass filter parameters
-func (f Filter) ShouldPass(fieldkey string) bool {
-	if f.Pass != nil {
-		for _, pat := range f.Pass {
-			// TODO remove HasPrefix check, leaving it for now for legacy support.
-			// Cam, 2015-12-07
-			if strings.HasPrefix(fieldkey, pat) || internal.Glob(pat, fieldkey) {
-				return true
-			}
-		}
-		return false
-	}
-
-	if f.Drop != nil {
-		for _, pat := range f.Drop {
-			// TODO remove HasPrefix check, leaving it for now for legacy support.
-			// Cam, 2015-12-07
-			if strings.HasPrefix(fieldkey, pat) || internal.Glob(pat, fieldkey) {
-				return false
-			}
-		}
-
-		return true
-	}
-	return true
-}
-
-// ShouldTagsPass returns true if the metric should pass, false if should drop
-// based on the tagdrop/tagpass filter parameters
-func (f Filter) ShouldTagsPass(tags map[string]string) bool {
-	if f.TagPass != nil {
-		for _, pat := range f.TagPass {
-			if tagval, ok := tags[pat.Name]; ok {
-				for _, filter := range pat.Filter {
-					if internal.Glob(filter, tagval) {
-						return true
-					}
-				}
-			}
-		}
-		return false
-	}
-
-	if f.TagDrop != nil {
-		for _, pat := range f.TagDrop {
-			if tagval, ok := tags[pat.Name]; ok {
-				for _, filter := range pat.Filter {
-					if internal.Glob(filter, tagval) {
-						return false
-					}
-				}
-			}
-		}
-		return true
-	}
-
-	return true
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -251,23 +128,13 @@ func (c *Config) ListTags() string {
 var header = `# Telegraf configuration
 
 # Telegraf is entirely plugin driven. All metrics are gathered from the
-# declared inputs.
+# declared inputs, and sent to the declared outputs.
 
-# Even if a plugin has no configuration, it must be declared in here
-# to be active. Declaring a plugin means just specifying the name
-# as a section with no variables. To deactivate a plugin, comment
-# out the name and any variables.
+# Plugins must be declared in here to be active.
+# To deactivate a plugin, comment out the name and any variables.
 
-# Use 'telegraf -config telegraf.toml -test' to see what metrics a config
+# Use 'telegraf -config telegraf.conf -test' to see what metrics a config
 # file would generate.
-
-# One rule that plugins conform to is wherever a connection string
-# can be passed, the values '' and 'localhost' are treated specially.
-# They indicate to the plugin to use their own builtin configuration to
-# connect to the local system.
-
-# NOTE: The configuration has a few required parameters. They are marked
-# with 'required'. Be sure to edit those to make this configuration work.
 
 # Tags can also be specified via a normal map, but only one form at a time:
 [tags]
@@ -280,6 +147,11 @@ var header = `# Telegraf configuration
   # Rounds collection interval to 'interval'
   # ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
+
+  # Telegraf will cache metric_buffer_limit metrics for each output, and will
+  # flush this buffer on a successful write.
+  metric_buffer_limit = 10000
+
   # Collection jitter is used to jitter the collection by a random amount.
   # Each plugin will sleep for a random time within jitter before collecting.
   # This can be used to avoid many plugins querying things like sysfs at the
@@ -535,11 +407,11 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := &RunningOutput{
-		Name:   name,
-		Output: output,
-		Config: outputConfig,
+	ro := models.NewRunningOutput(name, output, outputConfig)
+	if c.Agent.MetricBufferLimit > 0 {
+		ro.PointBufferLimit = c.Agent.MetricBufferLimit
 	}
+	ro.Quiet = c.Agent.Quiet
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }
@@ -568,7 +440,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	rp := &RunningInput{
+	rp := &models.RunningInput{
 		Name:   name,
 		Input:  input,
 		Config: pluginConfig,
@@ -578,10 +450,10 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 }
 
 // buildFilter builds a Filter (tagpass/tagdrop/pass/drop) to
-// be inserted into the OutputConfig/InputConfig to be used for prefix
+// be inserted into the models.OutputConfig/models.InputConfig to be used for prefix
 // filtering on tags and measurements
-func buildFilter(tbl *ast.Table) Filter {
-	f := Filter{}
+func buildFilter(tbl *ast.Table) models.Filter {
+	f := models.Filter{}
 
 	if node, ok := tbl.Fields["pass"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -613,7 +485,7 @@ func buildFilter(tbl *ast.Table) Filter {
 		if subtbl, ok := node.(*ast.Table); ok {
 			for name, val := range subtbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
-					tagfilter := &TagFilter{Name: name}
+					tagfilter := &models.TagFilter{Name: name}
 					if ary, ok := kv.Value.(*ast.Array); ok {
 						for _, elem := range ary.Value {
 							if str, ok := elem.(*ast.String); ok {
@@ -632,7 +504,7 @@ func buildFilter(tbl *ast.Table) Filter {
 		if subtbl, ok := node.(*ast.Table); ok {
 			for name, val := range subtbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
-					tagfilter := &TagFilter{Name: name}
+					tagfilter := &models.TagFilter{Name: name}
 					if ary, ok := kv.Value.(*ast.Array); ok {
 						for _, elem := range ary.Value {
 							if str, ok := elem.(*ast.String); ok {
@@ -656,9 +528,9 @@ func buildFilter(tbl *ast.Table) Filter {
 
 // buildInput parses input specific items from the ast.Table,
 // builds the filter and returns a
-// InputConfig to be inserted into RunningInput
-func buildInput(name string, tbl *ast.Table) (*InputConfig, error) {
-	cp := &InputConfig{Name: name}
+// models.InputConfig to be inserted into models.RunningInput
+func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
+	cp := &models.InputConfig{Name: name}
 	if node, ok := tbl.Fields["interval"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -715,10 +587,10 @@ func buildInput(name string, tbl *ast.Table) (*InputConfig, error) {
 }
 
 // buildOutput parses output specific items from the ast.Table, builds the filter and returns an
-// OutputConfig to be inserted into RunningInput
+// models.OutputConfig to be inserted into models.RunningInput
 // Note: error exists in the return for future calls that might require error
-func buildOutput(name string, tbl *ast.Table) (*OutputConfig, error) {
-	oc := &OutputConfig{
+func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
+	oc := &models.OutputConfig{
 		Name:   name,
 		Filter: buildFilter(tbl),
 	}

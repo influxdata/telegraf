@@ -2,11 +2,11 @@ package procstat
 
 import (
 	"fmt"
-	"log"
+	"time"
 
 	"github.com/shirou/gopsutil/process"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type SpecProcessor struct {
@@ -40,7 +40,7 @@ func NewSpecProcessor(
 	tags := make(map[string]string)
 	tags["pid"] = fmt.Sprintf("%v", p.Pid)
 	if name, err := p.Name(); err == nil {
-		tags["name"] = name
+		tags["process_name"] = name
 	}
 	return &SpecProcessor{
 		Prefix: prefix,
@@ -52,21 +52,11 @@ func NewSpecProcessor(
 }
 
 func (p *SpecProcessor) pushMetrics() {
-	if err := p.pushFDStats(); err != nil {
-		log.Printf("procstat, fd stats not available: %s", err.Error())
-	}
-	if err := p.pushCtxStats(); err != nil {
-		log.Printf("procstat, ctx stats not available: %s", err.Error())
-	}
-	if err := p.pushIOStats(); err != nil {
-		log.Printf("procstat, io stats not available: %s", err.Error())
-	}
-	if err := p.pushCPUStats(); err != nil {
-		log.Printf("procstat, cpu stats not available: %s", err.Error())
-	}
-	if err := p.pushMemoryStats(); err != nil {
-		log.Printf("procstat, mem stats not available: %s", err.Error())
-	}
+	p.pushFDStats()
+	p.pushCtxStats()
+	p.pushIOStats()
+	p.pushCPUStats()
+	p.pushMemoryStats()
 	p.flush()
 }
 
@@ -113,10 +103,18 @@ func (p *SpecProcessor) pushCPUStats() error {
 	p.add("cpu_time_iowait", cpu_time.Iowait)
 	p.add("cpu_time_irq", cpu_time.Irq)
 	p.add("cpu_time_soft_irq", cpu_time.Softirq)
-	p.add("cpu_time_soft_steal", cpu_time.Steal)
-	p.add("cpu_time_soft_stolen", cpu_time.Stolen)
-	p.add("cpu_time_soft_guest", cpu_time.Guest)
-	p.add("cpu_time_soft_guest_nice", cpu_time.GuestNice)
+	p.add("cpu_time_steal", cpu_time.Steal)
+	p.add("cpu_time_stolen", cpu_time.Stolen)
+	p.add("cpu_time_guest", cpu_time.Guest)
+	p.add("cpu_time_guest_nice", cpu_time.GuestNice)
+
+	cpu_perc, err := p.proc.CPUPercent(time.Duration(0))
+	if err != nil {
+		return err
+	} else if cpu_perc == 0 {
+		return nil
+	}
+	p.add("cpu_usage", cpu_perc)
 
 	return nil
 }

@@ -23,7 +23,6 @@ dev: prepare
 
 # Get dependencies and use gdm to checkout changesets
 prepare:
-	go get ./...
 	go get github.com/sparrc/gdm
 	gdm restore
 

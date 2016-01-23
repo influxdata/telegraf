@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
 
