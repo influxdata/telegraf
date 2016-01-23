@@ -1,7 +1,6 @@
 package kinesis
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -101,7 +100,7 @@ func (k *KinesisOutput) Connect() error {
 }
 
 func (k *KinesisOutput) Close() error {
-	return errors.New("Error")
+	return nil
 }
 
 func FormatMetric(k *KinesisOutput, point *client.Point) (string, error) {
