@@ -2,16 +2,17 @@ package models
 
 import (
 	"fmt"
+	"log"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/influxdata/influxdb/client/v2"
 )
 
-const Measurement = "ghWebhooks"
+const meas = "ghWebhooks"
 
 type Event interface {
 	NewPoint() *client.Point
+	JSON() string
 }
 
 type Repository struct {
@@ -106,11 +107,9 @@ func (s CommitCommentEvent) NewPoint() *client.Point {
 		"commit":  s.Comment.Commit,
 		"comment": s.Comment.Body,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -138,11 +137,9 @@ func (s CreateEvent) NewPoint() *client.Point {
 		"ref":     s.Ref,
 		"refType": s.RefType,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -170,11 +167,9 @@ func (s DeleteEvent) NewPoint() *client.Point {
 		"ref":     s.Ref,
 		"refType": s.RefType,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -203,11 +198,9 @@ func (s DeploymentEvent) NewPoint() *client.Point {
 		"environment": s.Deployment.Environment,
 		"description": s.Deployment.Description,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -239,11 +232,9 @@ func (s DeploymentStatusEvent) NewPoint() *client.Point {
 		"depState":       s.DeploymentStatus.State,
 		"depDescription": s.DeploymentStatus.Description,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -269,11 +260,9 @@ func (s ForkEvent) NewPoint() *client.Point {
 		"issues": s.Repository.Issues,
 		"fork":   s.Forkee.Repository,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -299,11 +288,9 @@ func (s GollumEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -333,11 +320,9 @@ func (s IssueCommentEvent) NewPoint() *client.Point {
 		"comments": s.Issue.Comments,
 		"body":     s.Comment.Body,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -367,11 +352,9 @@ func (s IssuesEvent) NewPoint() *client.Point {
 		"title":    s.Issue.Title,
 		"comments": s.Issue.Comments,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -398,11 +381,9 @@ func (s MemberEvent) NewPoint() *client.Point {
 		"newMember":       s.Member.User,
 		"newMemberStatus": s.Member.Admin,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -426,11 +407,9 @@ func (s MembershipEvent) NewPoint() *client.Point {
 		"newMember":       s.Member.User,
 		"newMemberStatus": s.Member.Admin,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -454,11 +433,9 @@ func (s PageBuildEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -482,11 +459,9 @@ func (s PublicEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -521,11 +496,9 @@ func (s PullRequestEvent) NewPoint() *client.Point {
 		"deletions":    s.PullRequest.Deletions,
 		"changedFiles": s.PullRequest.ChangedFiles,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -561,11 +534,9 @@ func (s PullRequestReviewCommentEvent) NewPoint() *client.Point {
 		"commentFile":  s.Comment.File,
 		"comment":      s.Comment.Comment,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -595,11 +566,9 @@ func (s PushEvent) NewPoint() *client.Point {
 		"Before": s.Before,
 		"After":  s.After,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -625,11 +594,9 @@ func (s ReleaseEvent) NewPoint() *client.Point {
 		"issues":  s.Repository.Issues,
 		"tagName": s.Release.TagName,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -653,11 +620,9 @@ func (s RepositoryEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -685,11 +650,9 @@ func (s StatusEvent) NewPoint() *client.Point {
 		"commit": s.Commit,
 		"state":  s.State,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -715,11 +678,9 @@ func (s TeamAddEvent) NewPoint() *client.Point {
 		"issues":   s.Repository.Issues,
 		"teamName": s.Team.Name,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }
@@ -743,11 +704,9 @@ func (s WatchEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	time := time.Now()
-	p, err := client.NewPoint(Measurement, t, f, time)
+	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
-		i := log.Fields{"event": event, "error": err}
-		log.WithFields(i).Fatal("Error creating new point...")
+		log.Fatalf("Failed to create %v event", event)
 	}
 	return p
 }

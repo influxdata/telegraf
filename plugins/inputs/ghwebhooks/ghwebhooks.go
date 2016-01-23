@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"sync"
-	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	mod "github.com/influxdata/support-tools/ghWebhooks/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -21,12 +20,14 @@ func init() {
 type GHWebhooks struct {
 	ServiceAddress  string
 	MeasurementName string
-
+	// Lock for the struct
 	sync.Mutex
+	// Events buffer to store events between Gather calls
+	events []mod.Event
+}
 
-	// Channel for all incoming events from github
-	in   chan mod.Event
-	done chan struct{}
+func NewGHWebhooks() *GHWebhooks {
+	return &GHWebhooks{}
 }
 
 func (gh *GHWebhooks) SampleConfig() string {
@@ -34,290 +35,261 @@ func (gh *GHWebhooks) SampleConfig() string {
   # Address and port to host Webhook listener on
   service_address = ":1618"
 	# Measurement name
-	measurement_name = "ghWebhooks"
+	measurement_name = "ghwebhooks"
 `
 }
 
 func (gh *GHWebhooks) Description() string {
-	return "Github Webhook Event collector"
+	return "A Github Webhook Event collector"
 }
 
 // Writes the points from <-gh.in to the Accumulator
 func (gh *GHWebhooks) Gather(acc inputs.Accumulator) error {
 	gh.Lock()
 	defer gh.Unlock()
-	for {
-		select {
-		case <-gh.done:
-			return nil
-		case e := <-gh.in:
-			p := e.NewPoint()
-			acc.Add(gh.MeasurementName, p.Fields(), p.Tags(), p.Time())
-		}
+	for _, event := range gh.events {
+		p := event.NewPoint()
+		acc.AddFields(gh.MeasurementName, p.Fields(), p.Tags(), p.Time())
 	}
+	gh.events = make([]mod.Event, 0)
 	return nil
 }
 
-func (gh *GHWebhooks) listen() error {
-	fmt.Println("in listen!")
+func (gh *GHWebhooks) Listen() {
 	r := mux.NewRouter()
-	r.HandleFunc("/", gh.webhookHandler).Methods("POST")
-	err := http.ListenAndServe(fmt.Sprintf(":%s", gh.ServiceAddress), r)
+	r.HandleFunc("/", gh.eventHandler).Methods("POST")
+	err := http.ListenAndServe(fmt.Sprintf("%s", gh.ServiceAddress), r)
 	if err != nil {
-		return err
+		log.Printf("Error starting server: %v", err)
 	}
-	fmt.Println("Exiting listen")
-	return nil
 }
 
 func (gh *GHWebhooks) Start() error {
-	fmt.Println("In start function")
-	gh.done = make(chan struct{})
-	gh.in = make(chan mod.Event)
-	// Start the UDP listener
-	go gh.listen()
-	// Start the line parser
+	go gh.Listen()
 	log.Printf("Started the ghwebhooks service on %s\n", gh.ServiceAddress)
 	return nil
 }
 
 func (gh *GHWebhooks) Stop() {
-	gh.Lock()
-	defer gh.Unlock()
 	log.Println("Stopping the ghWebhooks service")
-	close(gh.done)
-	close(gh.in)
 }
 
-// Handles the /webhooks route
-func (gh *GHWebhooks) webhookHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("In webhook handler")
+// Handles the / route
+func (gh *GHWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
 	eventType := r.Header["X-Github-Event"][0]
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": eventType, "error": err}
-		log.WithFields(fields).Fatal("Error reading Github payload")
+		w.WriteHeader(http.StatusBadRequest)
 	}
-
-	// Send event down chan to GHWebhooks
-	e := NewEvent(data, eventType)
-	gh.in <- e
-	fmt.Printf("%v\n", e.NewPoint())
+	e, err := NewEvent(data, eventType)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	gh.Lock()
+	gh.events = append(gh.events, e)
+	gh.Unlock()
 	w.WriteHeader(http.StatusOK)
 }
 
-func newCommitComment(data []byte) mod.Event {
+func newCommitComment(data []byte) (mod.Event, error) {
 	commitCommentStruct := mod.CommitCommentEvent{}
 	err := json.Unmarshal(data, &commitCommentStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "CommitCommentEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return commitCommentStruct
+	return commitCommentStruct, nil
 }
 
-func newCreate(data []byte) mod.Event {
+func newCreate(data []byte) (mod.Event, error) {
 	createStruct := mod.CreateEvent{}
 	err := json.Unmarshal(data, &createStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "CreateEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return createStruct
+	return createStruct, nil
 }
 
-func newDelete(data []byte) mod.Event {
+func newDelete(data []byte) (mod.Event, error) {
 	deleteStruct := mod.DeleteEvent{}
 	err := json.Unmarshal(data, &deleteStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "DeleteEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return deleteStruct
+	return deleteStruct, nil
 }
 
-func newDeployment(data []byte) mod.Event {
+func newDeployment(data []byte) (mod.Event, error) {
 	deploymentStruct := mod.DeploymentEvent{}
 	err := json.Unmarshal(data, &deploymentStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "DeploymentEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return deploymentStruct
+	return deploymentStruct, nil
 }
 
-func newDeploymentStatus(data []byte) mod.Event {
+func newDeploymentStatus(data []byte) (mod.Event, error) {
 	deploymentStatusStruct := mod.DeploymentStatusEvent{}
 	err := json.Unmarshal(data, &deploymentStatusStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "DeploymentStatusEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return deploymentStatusStruct
+	return deploymentStatusStruct, nil
 }
 
-func newFork(data []byte) mod.Event {
+func newFork(data []byte) (mod.Event, error) {
 	forkStruct := mod.ForkEvent{}
 	err := json.Unmarshal(data, &forkStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "ForkEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return forkStruct
+	return forkStruct, nil
 }
 
-func newGollum(data []byte) mod.Event {
+func newGollum(data []byte) (mod.Event, error) {
 	gollumStruct := mod.GollumEvent{}
 	err := json.Unmarshal(data, &gollumStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "GollumEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return gollumStruct
+	return gollumStruct, nil
 }
 
-func newIssueComment(data []byte) mod.Event {
+func newIssueComment(data []byte) (mod.Event, error) {
 	issueCommentStruct := mod.IssueCommentEvent{}
 	err := json.Unmarshal(data, &issueCommentStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "IssueCommentEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return issueCommentStruct
+	return issueCommentStruct, nil
 }
 
-func newIssues(data []byte) mod.Event {
+func newIssues(data []byte) (mod.Event, error) {
 	issuesStruct := mod.IssuesEvent{}
 	err := json.Unmarshal(data, &issuesStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "IssuesEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return issuesStruct
+	return issuesStruct, nil
 }
 
-func newMember(data []byte) mod.Event {
+func newMember(data []byte) (mod.Event, error) {
 	memberStruct := mod.MemberEvent{}
 	err := json.Unmarshal(data, &memberStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "MemberEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return memberStruct
+	return memberStruct, nil
 }
 
-func newMembership(data []byte) mod.Event {
+func newMembership(data []byte) (mod.Event, error) {
 	membershipStruct := mod.MembershipEvent{}
 	err := json.Unmarshal(data, &membershipStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "MembershipEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return membershipStruct
+	return membershipStruct, nil
 }
 
-func newPageBuild(data []byte) mod.Event {
+func newPageBuild(data []byte) (mod.Event, error) {
 	pageBuildEvent := mod.PageBuildEvent{}
 	err := json.Unmarshal(data, &pageBuildEvent)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "PageBuildEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return pageBuildEvent
+	return pageBuildEvent, nil
 }
 
-func newPublic(data []byte) mod.Event {
+func newPublic(data []byte) (mod.Event, error) {
 	publicEvent := mod.PublicEvent{}
 	err := json.Unmarshal(data, &publicEvent)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "PublicEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return publicEvent
+	return publicEvent, nil
 }
 
-func newPullRequest(data []byte) mod.Event {
+func newPullRequest(data []byte) (mod.Event, error) {
 	pullRequestStruct := mod.PullRequestEvent{}
 	err := json.Unmarshal(data, &pullRequestStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "PullRequestEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return pullRequestStruct
+	return pullRequestStruct, nil
 }
 
-func newPullRequestReviewComment(data []byte) mod.Event {
+func newPullRequestReviewComment(data []byte) (mod.Event, error) {
 	pullRequestReviewCommentStruct := mod.PullRequestReviewCommentEvent{}
 	err := json.Unmarshal(data, &pullRequestReviewCommentStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "PullRequestReviewCommentEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return pullRequestReviewCommentStruct
+	return pullRequestReviewCommentStruct, nil
 }
 
-func newPush(data []byte) mod.Event {
+func newPush(data []byte) (mod.Event, error) {
 	pushStruct := mod.PushEvent{}
 	err := json.Unmarshal(data, &pushStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "PushEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return pushStruct
+	return pushStruct, nil
 }
 
-func newRelease(data []byte) mod.Event {
+func newRelease(data []byte) (mod.Event, error) {
 	releaseStruct := mod.ReleaseEvent{}
 	err := json.Unmarshal(data, &releaseStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "ReleaseEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return releaseStruct
+	return releaseStruct, nil
 }
 
-func newRepository(data []byte) mod.Event {
+func newRepository(data []byte) (mod.Event, error) {
 	repositoryStruct := mod.RepositoryEvent{}
 	err := json.Unmarshal(data, &repositoryStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "RepositoryEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return repositoryStruct
+	return repositoryStruct, nil
 }
 
-func newStatus(data []byte) mod.Event {
+func newStatus(data []byte) (mod.Event, error) {
 	statusStruct := mod.StatusEvent{}
 	err := json.Unmarshal(data, &statusStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "StatusEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return statusStruct
+	return statusStruct, nil
 }
 
-func newTeamAdd(data []byte) mod.Event {
+func newTeamAdd(data []byte) (mod.Event, error) {
 	teamAddStruct := mod.TeamAddEvent{}
 	err := json.Unmarshal(data, &teamAddStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "TeamAddEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return teamAddStruct
+	return teamAddStruct, nil
 }
 
-func newWatch(data []byte) mod.Event {
+func newWatch(data []byte) (mod.Event, error) {
 	watchStruct := mod.WatchEvent{}
 	err := json.Unmarshal(data, &watchStruct)
 	if err != nil {
-		fields := log.Fields{"time": time.Now(), "event": "WatchEvent", "error": err}
-		log.WithFields(fields).Fatalf("Error in unmarshaling JSON")
+		return nil, err
 	}
-	return watchStruct
+	return watchStruct, nil
 }
 
-func NewEvent(r []byte, t string) mod.Event {
-	log.WithFields(log.Fields{"event": t, "time": time.Now()}).Info("Event Recieved")
+type newEventError struct {
+	s string
+}
+
+func (e *newEventError) Error() string {
+	return e.s
+}
+
+func NewEvent(r []byte, t string) (mod.Event, error) {
+	log.Printf("New %v event recieved", t)
 	switch t {
 	case "commit_comment":
 		return newCommitComment(r)
@@ -362,5 +334,5 @@ func NewEvent(r []byte, t string) mod.Event {
 	case "watch":
 		return newWatch(r)
 	}
-	return nil
+	return nil, &newEventError{"Not a recgonized event type"}
 }
