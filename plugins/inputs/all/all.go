@@ -20,6 +20,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/memcached"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mongodb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mysql"
+	_ "github.com/influxdata/telegraf/plugins/inputs/newrelic"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nsq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/passenger"
