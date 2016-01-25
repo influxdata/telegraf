@@ -2,7 +2,7 @@ package sqlserver
 
 import (
 	"database/sql"
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"sync"
 	"time"
 

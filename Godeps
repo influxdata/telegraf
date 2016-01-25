@@ -47,6 +47,7 @@ github.com/stretchr/objx 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 github.com/stretchr/testify f390dcf405f7b83c997eac1b06768bb9f44dec18
 github.com/wvanbergen/kafka 1a8639a45164fcc245d5c7b4bd3ccfbd1a0ffbf3
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
+github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
 golang.org/x/crypto 3760e016850398b85094c4c99e955b8c3dea5711
 golang.org/x/net 72aa00c6241a8013dc9b040abb45f57edbe73945
 golang.org/x/text cf4986612c83df6c55578ba198316d1684a9a287
