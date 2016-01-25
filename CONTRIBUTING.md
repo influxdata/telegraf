@@ -13,9 +13,10 @@ which can be found [on our website](http://influxdb.com/community/cla.html)
 
 ## Adding a dependency
 
-Assuming you can already build the project:
+Assuming you can already build the project, run these in the telegraf directory:
 
 1. `go get github.com/sparrc/gdm`
+1. `gdm restore`
 1. `gdm save`
 
 ## Input Plugins
