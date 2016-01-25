@@ -13,6 +13,9 @@ import (
 )
 
 const sampleConfig = `
+  # NOTE This plugin only reads numerical measurements, strings and booleans
+  # will be ignored.
+
   # the command to run
   command = "/usr/bin/mycollector --foo=bar"
 

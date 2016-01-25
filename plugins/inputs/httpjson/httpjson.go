@@ -45,6 +45,9 @@ func (c RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 }
 
 var sampleConfig = `
+  # NOTE This plugin only reads numerical measurements, strings and booleans
+  # will be ignored.
+
   # a name for the service being polled
   name = "webserver_stats"
 
