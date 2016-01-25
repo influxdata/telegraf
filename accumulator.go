@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/internal/models"
+	imodels "github.com/influxdata/telegraf/internal/models"
 
 	"github.com/influxdata/influxdb/client/v2"
 )
@@ -29,7 +29,7 @@ type Accumulator interface {
 }
 
 func NewAccumulator(
-	inputConfig *models.InputConfig,
+	inputConfig *imodels.InputConfig,
 	points chan *client.Point,
 ) Accumulator {
 	acc := accumulator{}
@@ -47,7 +47,7 @@ type accumulator struct {
 
 	debug bool
 
-	inputConfig *models.InputConfig
+	inputConfig *imodels.InputConfig
 
 	prefix string
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal/models"
+	imodels "github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/exec"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
@@ -19,19 +19,19 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	mConfig := &models.InputConfig{
+	mConfig := &imodels.InputConfig{
 		Name: "memcached",
-		Filter: models.Filter{
+		Filter: imodels.Filter{
 			Drop: []string{"other", "stuff"},
 			Pass: []string{"some", "strings"},
-			TagDrop: []models.TagFilter{
-				models.TagFilter{
+			TagDrop: []imodels.TagFilter{
+				imodels.TagFilter{
 					Name:   "badtag",
 					Filter: []string{"othertag"},
 				},
 			},
-			TagPass: []models.TagFilter{
-				models.TagFilter{
+			TagPass: []imodels.TagFilter{
+				imodels.TagFilter{
 					Name:   "goodtag",
 					Filter: []string{"mytag"},
 				},
@@ -62,19 +62,19 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	mConfig := &models.InputConfig{
+	mConfig := &imodels.InputConfig{
 		Name: "memcached",
-		Filter: models.Filter{
+		Filter: imodels.Filter{
 			Drop: []string{"other", "stuff"},
 			Pass: []string{"some", "strings"},
-			TagDrop: []models.TagFilter{
-				models.TagFilter{
+			TagDrop: []imodels.TagFilter{
+				imodels.TagFilter{
 					Name:   "badtag",
 					Filter: []string{"othertag"},
 				},
 			},
-			TagPass: []models.TagFilter{
-				models.TagFilter{
+			TagPass: []imodels.TagFilter{
+				imodels.TagFilter{
 					Name:   "goodtag",
 					Filter: []string{"mytag"},
 				},
@@ -92,7 +92,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	ex := inputs.Inputs["exec"]().(*exec.Exec)
 	ex.Command = "/usr/bin/myothercollector --foo=bar"
-	eConfig := &models.InputConfig{
+	eConfig := &imodels.InputConfig{
 		Name:              "exec",
 		MeasurementSuffix: "_myothercollector",
 	}
@@ -111,7 +111,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	pstat := inputs.Inputs["procstat"]().(*procstat.Procstat)
 	pstat.PidFile = "/var/run/grafana-server.pid"
 
-	pConfig := &models.InputConfig{Name: "procstat"}
+	pConfig := &imodels.InputConfig{Name: "procstat"}
 	pConfig.Tags = make(map[string]string)
 
 	assert.Equal(t, pstat, c.Inputs[3].Input,

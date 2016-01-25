@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal/config"
-	"github.com/influxdata/telegraf/internal/models"
+	imodels "github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 
@@ -102,7 +102,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 		wg.Add(1)
 		counter++
-		go func(input *models.RunningInput) {
+		go func(input *imodels.RunningInput) {
 			defer wg.Done()
 
 			acc := NewAccumulator(input.Config, pointChan)
@@ -145,7 +145,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 // reporting interval.
 func (a *Agent) gatherSeparate(
 	shutdown chan struct{},
-	input *models.RunningInput,
+	input *imodels.RunningInput,
 	pointChan chan *client.Point,
 ) error {
 	ticker := time.NewTicker(input.Config.Interval)
@@ -234,7 +234,7 @@ func (a *Agent) flush() {
 
 	wg.Add(len(a.Config.Outputs))
 	for _, o := range a.Config.Outputs {
-		go func(output *models.RunningOutput) {
+		go func(output *imodels.RunningOutput) {
 			defer wg.Done()
 			err := output.Write()
 			if err != nil {
@@ -341,7 +341,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		// configured. Default intervals are handled below with gatherParallel
 		if input.Config.Interval != 0 {
 			wg.Add(1)
-			go func(input *models.RunningInput) {
+			go func(input *imodels.RunningInput) {
 				defer wg.Done()
 				if err := a.gatherSeparate(shutdown, input, pointChan); err != nil {
 					log.Printf(err.Error())
