@@ -73,19 +73,19 @@ brew install telegraf
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
 which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.4+.
+if you don't have it already. You also must build with golang version 1.5+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
-3. Run `go get github.com/influxdb/telegraf`
-4. Run `cd $GOPATH/src/github.com/influxdb/telegraf`
+3. Run `go get github.com/influxdata/telegraf`
+4. Run `cd $GOPATH/src/github.com/influxdata/telegraf`
 5. Run `make`
 
 ### How to use it:
 
 ```console
 $ telegraf -help
-Telegraf, The plugin-driven server agent for reporting metrics into InfluxDB
+Telegraf, The plugin-driven server agent for collecting and reporting metrics.
 
 Usage:
 
@@ -100,6 +100,8 @@ The flags are:
   -input-filter      filter the input plugins to enable, separator is :
   -output-filter     filter the output plugins to enable, separator is :
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
+  -debug             print metrics as they're generated to stdout
+  -quiet             run in quiet mode
   -version           print the version to stdout
 
 Examples:
@@ -137,6 +139,7 @@ Currently implemented sources:
 * apache
 * bcache
 * disque
+* docker
 * elasticsearch
 * exec (generic JSON-emitting executable plugin)
 * haproxy
@@ -150,7 +153,9 @@ Currently implemented sources:
 * mongodb
 * mysql
 * nginx
+* nsq
 * phpfpm
+* phusion passenger
 * ping
 * postgresql
 * procstat
@@ -163,6 +168,7 @@ Currently implemented sources:
 * zfs
 * zookeeper
 * sensors
+* snmp
 * system
     * cpu
     * mem
@@ -185,9 +191,11 @@ want to add support for another service or third-party API.
 * influxdb
 * amon
 * amqp
+* aws kinesis
+* aws cloudwatch
 * datadog
+* graphite
 * kafka
-* amazon kinesis
 * librato
 * mqtt
 * nsq

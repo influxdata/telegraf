@@ -1,4 +1,4 @@
-// +build linux
+// +build linux,sensors
 
 package sensors
 
@@ -7,7 +7,7 @@ import (
 
 	"github.com/md14454/gosensors"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Sensors struct {

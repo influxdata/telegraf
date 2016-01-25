@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdb/influxdb/models"
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/influxdata/influxdb/models"
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"

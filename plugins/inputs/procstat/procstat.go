@@ -10,7 +10,7 @@ import (
 
 	"github.com/shirou/gopsutil/process"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Procstat struct {
@@ -18,10 +18,14 @@ type Procstat struct {
 	Exe     string
 	Pattern string
 	Prefix  string
+
+	pidmap map[int32]*process.Process
 }
 
 func NewProcstat() *Procstat {
-	return &Procstat{}
+	return &Procstat{
+		pidmap: make(map[int32]*process.Process),
+	}
 }
 
 var sampleConfig = `
@@ -46,12 +50,12 @@ func (_ *Procstat) Description() string {
 }
 
 func (p *Procstat) Gather(acc inputs.Accumulator) error {
-	procs, err := p.createProcesses()
+	err := p.createProcesses()
 	if err != nil {
 		log.Printf("Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, err.Error())
 	} else {
-		for _, proc := range procs {
+		for _, proc := range p.pidmap {
 			p := NewSpecProcessor(p.Prefix, acc, proc)
 			p.pushMetrics()
 		}
@@ -60,8 +64,7 @@ func (p *Procstat) Gather(acc inputs.Accumulator) error {
 	return nil
 }
 
-func (p *Procstat) createProcesses() ([]*process.Process, error) {
-	var out []*process.Process
+func (p *Procstat) createProcesses() error {
 	var errstring string
 	var outerr error
 
@@ -71,11 +74,14 @@ func (p *Procstat) createProcesses() ([]*process.Process, error) {
 	}
 
 	for _, pid := range pids {
-		p, err := process.NewProcess(int32(pid))
-		if err == nil {
-			out = append(out, p)
-		} else {
-			errstring += err.Error() + " "
+		_, ok := p.pidmap[pid]
+		if !ok {
+			proc, err := process.NewProcess(pid)
+			if err == nil {
+				p.pidmap[pid] = proc
+			} else {
+				errstring += err.Error() + " "
+			}
 		}
 	}
 
@@ -83,7 +89,7 @@ func (p *Procstat) createProcesses() ([]*process.Process, error) {
 		outerr = fmt.Errorf("%s", errstring)
 	}
 
-	return out, outerr
+	return outerr
 }
 
 func (p *Procstat) getAllPids() ([]int32, error) {
@@ -123,9 +129,13 @@ func pidsFromFile(file string) ([]int32, error) {
 func pidsFromExe(exe string) ([]int32, error) {
 	var out []int32
 	var outerr error
-	pgrep, err := exec.Command("pgrep", exe).Output()
+	bin, err := exec.LookPath("pgrep")
 	if err != nil {
-		return out, fmt.Errorf("Failed to execute pgrep. Error: '%s'", err)
+		return out, fmt.Errorf("Couldn't find pgrep binary: %s", err)
+	}
+	pgrep, err := exec.Command(bin, exe).Output()
+	if err != nil {
+		return out, fmt.Errorf("Failed to execute %s. Error: '%s'", bin, err)
 	} else {
 		pids := strings.Fields(string(pgrep))
 		for _, pid := range pids {
@@ -143,9 +153,13 @@ func pidsFromExe(exe string) ([]int32, error) {
 func pidsFromPattern(pattern string) ([]int32, error) {
 	var out []int32
 	var outerr error
-	pgrep, err := exec.Command("pgrep", "-f", pattern).Output()
+	bin, err := exec.LookPath("pgrep")
 	if err != nil {
-		return out, fmt.Errorf("Failed to execute pgrep. Error: '%s'", err)
+		return out, fmt.Errorf("Couldn't find pgrep binary: %s", err)
+	}
+	pgrep, err := exec.Command(bin, "-f", pattern).Output()
+	if err != nil {
+		return out, fmt.Errorf("Failed to execute %s. Error: '%s'", bin, err)
 	} else {
 		pids := strings.Fields(string(pgrep))
 		for _, pid := range pids {

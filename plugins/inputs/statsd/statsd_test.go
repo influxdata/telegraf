@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // Invalid lines should return an error
@@ -299,6 +299,64 @@ func TestParse_Tags(t *testing.T) {
 			if actual != v {
 				t.Errorf("Expected %s, got %s", v, actual)
 			}
+		}
+	}
+}
+
+// Test that statsd buckets are parsed to measurement names properly
+func TestParseName(t *testing.T) {
+	s := NewStatsd()
+
+	tests := []struct {
+		in_name  string
+		out_name string
+	}{
+		{
+			"foobar",
+			"foobar",
+		},
+		{
+			"foo.bar",
+			"foo_bar",
+		},
+		{
+			"foo.bar-baz",
+			"foo_bar__baz",
+		},
+	}
+
+	for _, test := range tests {
+		name, _ := s.parseName(test.in_name)
+		if name != test.out_name {
+			t.Errorf("Expected: %s, got %s", test.out_name, name)
+		}
+	}
+
+	// Test with ConvertNames = false
+	s.ConvertNames = false
+
+	tests = []struct {
+		in_name  string
+		out_name string
+	}{
+		{
+			"foobar",
+			"foobar",
+		},
+		{
+			"foo.bar",
+			"foo.bar",
+		},
+		{
+			"foo.bar-baz",
+			"foo.bar-baz",
+		},
+	}
+
+	for _, test := range tests {
+		name, _ := s.parseName(test.in_name)
+		if name != test.out_name {
+			t.Errorf("Expected: %s, got %s", test.out_name, name)
 		}
 	}
 }

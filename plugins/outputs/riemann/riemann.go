@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/amir/raidman"
-	"github.com/influxdb/influxdb/client/v2"
-	"github.com/influxdb/telegraf/plugins/outputs"
+	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type Riemann struct {

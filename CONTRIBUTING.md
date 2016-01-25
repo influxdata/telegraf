@@ -1,7 +1,23 @@
+## Steps for Contributing:
+
+1. [Sign the CLA](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#sign-the-cla)
+1. Write your input or output plugin (see below for details)
+1. Add your plugin to `plugins/inputs/all/all.go` or `plugins/outputs/all/all.go`
+1. If your plugin requires a new Go package,
+[add it](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#adding-a-dependency)
+
 ## Sign the CLA
 
 Before we can merge a pull request, you will need to sign the CLA,
 which can be found [on our website](http://influxdb.com/community/cla.html)
+
+## Adding a dependency
+
+Assuming you can already build the project, run these in the telegraf directory:
+
+1. `go get github.com/sparrc/gdm`
+1. `gdm restore`
+1. `gdm save`
 
 ## Input Plugins
 
@@ -19,7 +35,7 @@ and submit new inputs.
 * Input Plugins should call `inputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * Input Plugins must be added to the
-`github.com/influxdb/telegraf/plugins/inputs/all/all.go` file.
+`github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 plugin can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this plugin does.
@@ -75,7 +91,7 @@ package simple
 
 // simple.go
 
-import "github.com/influxdb/telegraf/plugins/inputs"
+import "github.com/influxdata/telegraf/plugins/inputs"
 
 type Simple struct {
     Ok bool
@@ -147,7 +163,7 @@ similar constructs.
 * Outputs should call `outputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
-`github.com/influxdb/telegraf/plugins/outputs/all/all.go` file.
+`github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
 output can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this output does.
@@ -171,7 +187,7 @@ package simpleoutput
 
 // simpleoutput.go
 
-import "github.com/influxdb/telegraf/plugins/outputs"
+import "github.com/influxdata/telegraf/plugins/outputs"
 
 type Simple struct {
     Ok bool
@@ -252,7 +268,7 @@ which would take some time to replicate.
 To overcome this situation we've decided to use docker containers to provide a
 fast and reproducible environment to test those services which require it.
 For other situations
-(i.e: https://github.com/influxdb/telegraf/blob/master/plugins/redis/redis_test.go)
+(i.e: https://github.com/influxdata/telegraf/blob/master/plugins/redis/redis_test.go)
 a simple mock will suffice.
 
 To execute Telegraf tests follow these simple steps:

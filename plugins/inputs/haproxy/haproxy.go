@@ -3,7 +3,7 @@ package haproxy
 import (
 	"encoding/csv"
 	"fmt"
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"net/http"
 	"net/url"

@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdb/telegraf/internal/config"
+	"github.com/influxdata/telegraf/internal/config"
 
 	// needing to load the plugins
-	_ "github.com/influxdb/telegraf/plugins/inputs/all"
+	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	// needing to load the outputs
-	_ "github.com/influxdb/telegraf/plugins/outputs/all"
+	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 )
 
 func TestAgent_LoadPlugin(t *testing.T) {
