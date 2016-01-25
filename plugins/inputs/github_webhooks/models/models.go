@@ -561,9 +561,9 @@ func (s PushEvent) NewPoint() *client.Point {
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
-		"Ref":    s.Ref,
-		"Before": s.Before,
-		"After":  s.After,
+		"ref":    s.Ref,
+		"before": s.Before,
+		"after":  s.After,
 	}
 	p, err := client.NewPoint(meas, t, f, time.Now())
 	if err != nil {
