@@ -407,6 +407,12 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"messages_ready",
 		"messages_unacked",
 
+		"message_bytes",
+		"message_bytes_ready",
+		"message_bytes_unacked",
+		"message_bytes_ram",
+		"message_bytes_persist",
+
 		"messages_acked",
 		"messages_delivered",
 		"messages_published",
