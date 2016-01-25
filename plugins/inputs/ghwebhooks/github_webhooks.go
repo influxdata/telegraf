@@ -1,4 +1,4 @@
-package ghwebhooks
+package github_webhooks
 
 import (
 	"encoding/json"
@@ -9,15 +9,15 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
-	mod "github.com/influxdb/support-tools/ghWebhooks/models"
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	mod "github.com/influxdata/telegraf/plugins/inputs/ghWebhooks/models"
 )
 
 func init() {
-	inputs.Add("ghwebhooks", func() inputs.Input { return &GHWebhooks{} })
+	inputs.Add("github_webhooks", func() inputs.Input { return &GithubWebhooks{} })
 }
 
-type GHWebhooks struct {
+type GithubWebhooks struct {
 	ServiceAddress  string
 	MeasurementName string
 	// Lock for the struct
@@ -26,25 +26,25 @@ type GHWebhooks struct {
 	events []mod.Event
 }
 
-func NewGHWebhooks() *GHWebhooks {
-	return &GHWebhooks{}
+func NewGithubWebhooks() *GithubWebhooks {
+	return &GithubWebhooks{}
 }
 
-func (gh *GHWebhooks) SampleConfig() string {
+func (gh *GithubWebhooks) SampleConfig() string {
 	return `
   # Address and port to host Webhook listener on
   service_address = ":1618"
-	# Measurement name
-	measurement_name = "ghwebhooks"
+  # Measurement name
+  measurement_name = "github_webhooks"
 `
 }
 
-func (gh *GHWebhooks) Description() string {
+func (gh *GithubWebhooks) Description() string {
 	return "A Github Webhook Event collector"
 }
 
 // Writes the points from <-gh.in to the Accumulator
-func (gh *GHWebhooks) Gather(acc inputs.Accumulator) error {
+func (gh *GithubWebhooks) Gather(acc inputs.Accumulator) error {
 	gh.Lock()
 	defer gh.Unlock()
 	for _, event := range gh.events {
@@ -55,7 +55,7 @@ func (gh *GHWebhooks) Gather(acc inputs.Accumulator) error {
 	return nil
 }
 
-func (gh *GHWebhooks) Listen() {
+func (gh *GithubWebhooks) Listen() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", gh.eventHandler).Methods("POST")
 	err := http.ListenAndServe(fmt.Sprintf("%s", gh.ServiceAddress), r)
@@ -64,18 +64,18 @@ func (gh *GHWebhooks) Listen() {
 	}
 }
 
-func (gh *GHWebhooks) Start() error {
+func (gh *GithubWebhooks) Start() error {
 	go gh.Listen()
-	log.Printf("Started the ghwebhooks service on %s\n", gh.ServiceAddress)
+	log.Printf("Started the github_webhooks service on %s\n", gh.ServiceAddress)
 	return nil
 }
 
-func (gh *GHWebhooks) Stop() {
+func (gh *GithubWebhooks) Stop() {
 	log.Println("Stopping the ghWebhooks service")
 }
 
 // Handles the / route
-func (gh *GHWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (gh *GithubWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
 	eventType := r.Header["X-Github-Event"][0]
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {

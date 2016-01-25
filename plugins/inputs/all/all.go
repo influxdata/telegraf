@@ -8,6 +8,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/docker"
 	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
+	_ "github.com/influxdata/telegraf/plugins/inputs/github_webhooks"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/httpjson"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
@@ -38,5 +39,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/twemproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
-	_ "github.com/influxdb/telegraf/plugins/inputs/ghwebhooks"
 )
