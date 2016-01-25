@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,7 +39,7 @@ func TestUriOverride(t *testing.T) {
 	l.ApiToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write(testutil.MockBatchPoints().Points())
+	err = l.Write(testutil.MockBatchPoints())
 	require.NoError(t, err)
 }
 
@@ -61,7 +61,7 @@ func TestBadStatusCode(t *testing.T) {
 	l.ApiToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write(testutil.MockBatchPoints().Points())
+	err = l.Write(testutil.MockBatchPoints())
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
@@ -71,7 +71,7 @@ func TestBadStatusCode(t *testing.T) {
 
 func TestBuildGauge(t *testing.T) {
 	var gaugeTests = []struct {
-		ptIn     *client.Point
+		ptIn     models.Metric
 		outGauge *Gauge
 		err      error
 	}{
@@ -161,20 +161,20 @@ func TestBuildGauge(t *testing.T) {
 }
 
 func TestBuildGaugeWithSource(t *testing.T) {
-	pt1, _ := client.NewPoint(
+	pt1, _ := models.NewMetric(
 		"test1",
 		map[string]string{"hostname": "192.168.0.1"},
 		map[string]interface{}{"value": 0.0},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	pt2, _ := client.NewPoint(
+	pt2, _ := models.NewMetric(
 		"test2",
 		map[string]string{"hostnam": "192.168.0.1"},
 		map[string]interface{}{"value": 1.0},
 		time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
 	)
 	var gaugeTests = []struct {
-		ptIn     *client.Point
+		ptIn     models.Metric
 		outGauge *Gauge
 		err      error
 	}{

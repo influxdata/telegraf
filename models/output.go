@@ -10,7 +10,7 @@ type Output interface {
 	// SampleConfig returns the default configuration of the Output
 	SampleConfig() string
 	// Write takes in group of points to be written to the Output
-	Write(metrics []*Metric) error
+	Write(metrics []Metric) error
 }
 
 type ServiceOutput interface {
@@ -23,7 +23,7 @@ type ServiceOutput interface {
 	// SampleConfig returns the default configuration of the Output
 	SampleConfig() string
 	// Write takes in group of points to be written to the Output
-	Write(metrics []*Metric) error
+	Write(metrics []Metric) error
 	// Start the "service" that will provide an Output
 	Start() error
 	// Stop the "service" that will provide an Output

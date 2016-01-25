@@ -8,8 +8,7 @@ import (
 	"time"
 
 	imodels "github.com/influxdata/telegraf/internal/models"
-
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 )
 
 type Accumulator interface {
@@ -30,7 +29,7 @@ type Accumulator interface {
 
 func NewAccumulator(
 	inputConfig *imodels.InputConfig,
-	points chan *client.Point,
+	points chan models.Metric,
 ) Accumulator {
 	acc := accumulator{}
 	acc.points = points
@@ -41,7 +40,7 @@ func NewAccumulator(
 type accumulator struct {
 	sync.Mutex
 
-	points chan *client.Point
+	points chan models.Metric
 
 	defaultTags map[string]string
 
@@ -152,15 +151,15 @@ func (ac *accumulator) AddFields(
 		measurement = ac.prefix + measurement
 	}
 
-	pt, err := client.NewPoint(measurement, tags, result, timestamp)
+	metric, err := models.NewMetric(measurement, tags, result, timestamp)
 	if err != nil {
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
 		return
 	}
 	if ac.debug {
-		fmt.Println("> " + pt.String())
+		fmt.Println("> " + metric.String())
 	}
-	ac.points <- pt
+	ac.points <- metric
 }
 
 func (ac *accumulator) SetDefaultTags(tags map[string]string) {

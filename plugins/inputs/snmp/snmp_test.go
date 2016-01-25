@@ -5,11 +5,13 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	//	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSNMPErrorGet1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name: "oid1",
 		Unit: "octets",
@@ -30,6 +32,9 @@ func TestSNMPErrorGet1(t *testing.T) {
 }
 
 func TestSNMPErrorGet2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name: "oid1",
 		Unit: "octets",
@@ -49,6 +54,9 @@ func TestSNMPErrorGet2(t *testing.T) {
 }
 
 func TestSNMPErrorBulk(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	bulk1 := Data{
 		Name: "oid1",
 		Unit: "octets",
@@ -69,13 +77,16 @@ func TestSNMPErrorBulk(t *testing.T) {
 }
 
 func TestSNMPGet1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name: "oid1",
 		Unit: "octets",
 		Oid:  ".1.3.6.1.2.1.2.2.1.16.1",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -104,12 +115,15 @@ func TestSNMPGet1(t *testing.T) {
 }
 
 func TestSNMPGet2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name: "oid1",
 		Oid:  "ifNumber",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -139,6 +153,9 @@ func TestSNMPGet2(t *testing.T) {
 }
 
 func TestSNMPGet3(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name:     "oid1",
 		Unit:     "octets",
@@ -146,7 +163,7 @@ func TestSNMPGet3(t *testing.T) {
 		Instance: "1",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -177,6 +194,9 @@ func TestSNMPGet3(t *testing.T) {
 }
 
 func TestSNMPEasyGet4(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name:     "oid1",
 		Unit:     "octets",
@@ -184,7 +204,7 @@ func TestSNMPEasyGet4(t *testing.T) {
 		Instance: "1",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -227,6 +247,9 @@ func TestSNMPEasyGet4(t *testing.T) {
 }
 
 func TestSNMPEasyGet5(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name:     "oid1",
 		Unit:     "octets",
@@ -234,7 +257,7 @@ func TestSNMPEasyGet5(t *testing.T) {
 		Instance: "1",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -277,8 +300,11 @@ func TestSNMPEasyGet5(t *testing.T) {
 }
 
 func TestSNMPEasyGet6(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -307,6 +333,9 @@ func TestSNMPEasyGet6(t *testing.T) {
 }
 
 func TestSNMPBulk1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	bulk1 := Data{
 		Name:          "oid1",
 		Unit:          "octets",
@@ -314,7 +343,7 @@ func TestSNMPBulk1(t *testing.T) {
 		MaxRepetition: 2,
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -385,6 +414,9 @@ func TestSNMPBulk1(t *testing.T) {
 // bash scripts/circle-test.sh died unexpectedly
 // Maybe the test is too long ??
 func dTestSNMPBulk2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	bulk1 := Data{
 		Name:          "oid1",
 		Unit:          "octets",
@@ -392,7 +424,7 @@ func dTestSNMPBulk2(t *testing.T) {
 		MaxRepetition: 2,
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,

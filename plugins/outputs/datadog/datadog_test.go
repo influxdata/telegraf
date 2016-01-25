@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +38,7 @@ func TestUriOverride(t *testing.T) {
 	d.Apikey = "123456"
 	err := d.Connect()
 	require.NoError(t, err)
-	err = d.Write(testutil.MockBatchPoints().Points())
+	err = d.Write(testutil.MockBatchPoints())
 	require.NoError(t, err)
 }
 
@@ -57,7 +57,7 @@ func TestBadStatusCode(t *testing.T) {
 	d.Apikey = "123456"
 	err := d.Connect()
 	require.NoError(t, err)
-	err = d.Write(testutil.MockBatchPoints().Points())
+	err = d.Write(testutil.MockBatchPoints())
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
@@ -100,7 +100,7 @@ func TestBuildTags(t *testing.T) {
 
 func TestBuildPoint(t *testing.T) {
 	var tagtests = []struct {
-		ptIn  *client.Point
+		ptIn  models.Metric
 		outPt Point
 		err   error
 	}{

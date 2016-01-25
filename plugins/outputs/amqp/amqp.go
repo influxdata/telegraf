@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/streadway/amqp"
 )
@@ -149,7 +149,7 @@ func (q *AMQP) Description() string {
 	return "Configuration for the AMQP server to send metrics to"
 }
 
-func (q *AMQP) Write(points []*client.Point) error {
+func (q *AMQP) Write(points []models.Metric) error {
 	q.Lock()
 	defer q.Unlock()
 	if len(points) == 0 {
@@ -190,7 +190,7 @@ func (q *AMQP) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("amqp", func() outputs.Output {
+	outputs.Add("amqp", func() models.Output {
 		return &AMQP{
 			Database:        DefaultDatabase,
 			Precision:       DefaultPrecision,

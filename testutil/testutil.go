@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 )
 
 var localhost = "localhost"
@@ -33,11 +33,11 @@ func GetLocalHost() string {
 
 // MockBatchPoints returns a mock BatchPoints object for using in unit tests
 // of telegraf output sinks.
-func MockBatchPoints() client.BatchPoints {
+func MockBatchPoints() []models.Metric {
 	// Create a new point batch
-	bp, _ := client.NewBatchPoints(client.BatchPointsConfig{})
-	bp.AddPoint(TestPoint(1.0))
-	return bp
+	ret := []models.Metric{}
+	ret = append(ret, TestPoint(1.0))
+	return ret
 }
 
 // TestPoint Returns a simple test point:
@@ -45,7 +45,7 @@ func MockBatchPoints() client.BatchPoints {
 //     tags -> "tag1":"value1"
 //     value -> value
 //     time -> time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-func TestPoint(value interface{}, name ...string) *client.Point {
+func TestPoint(value interface{}, name ...string) models.Metric {
 	if value == nil {
 		panic("Cannot use a nil value")
 	}
@@ -54,7 +54,7 @@ func TestPoint(value interface{}, name ...string) *client.Point {
 		measurement = name[0]
 	}
 	tags := map[string]string{"tag1": "value1"}
-	pt, _ := client.NewPoint(
+	pt, _ := models.NewMetric(
 		measurement,
 		tags,
 		map[string]interface{}{"value": value},

@@ -15,7 +15,7 @@ func TestFormatMetric(t *testing.T) {
 		Format: "string",
 	}
 
-	p := testutil.MockBatchPoints().Points()[0]
+	p := testutil.MockBatchPoints()[0]
 
 	valid_string := "test1,tag1=value1 value=1 1257894000000000000"
 	func_string, err := FormatMetric(k, p)

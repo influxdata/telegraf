@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Shopify/sarama"
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 )
@@ -112,7 +112,7 @@ func (k *Kafka) Description() string {
 	return "Configuration for the Kafka server to send metrics to"
 }
 
-func (k *Kafka) Write(points []*client.Point) error {
+func (k *Kafka) Write(points []models.Metric) error {
 	if len(points) == 0 {
 		return nil
 	}
@@ -140,7 +140,7 @@ func (k *Kafka) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("kafka", func() outputs.Output {
+	outputs.Add("kafka", func() models.Output {
 		return &Kafka{}
 	})
 }

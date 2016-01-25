@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -32,14 +32,14 @@ var sampleConfig = `
 `
 
 type TimeSeries struct {
-	Series []*Metric `json:"series"`
+	Series []*DogMetric `json:"series"`
 }
 
-type Metric struct {
-	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
-	Host   string   `json:"host"`
-	Tags   []string `json:"tags,omitempty"`
+type DogMetric struct {
+	DogMetric string   `json:"metric"`
+	Points    [1]Point `json:"points"`
+	Host      string   `json:"host"`
+	Tags      []string `json:"tags,omitempty"`
 }
 
 type Point [2]float64
@@ -62,31 +62,31 @@ func (d *Datadog) Connect() error {
 	return nil
 }
 
-func (d *Datadog) Write(points []*client.Point) error {
+func (d *Datadog) Write(points []models.Metric) error {
 	if len(points) == 0 {
 		return nil
 	}
 	ts := TimeSeries{}
-	tempSeries := []*Metric{}
+	tempSeries := []*DogMetric{}
 	metricCounter := 0
 
 	for _, pt := range points {
 		mname := strings.Replace(pt.Name(), "_", ".", -1)
 		if amonPts, err := buildPoints(pt); err == nil {
 			for fieldName, amonPt := range amonPts {
-				metric := &Metric{
-					Metric: mname + strings.Replace(fieldName, "_", ".", -1),
+				metric := &DogMetric{
+					DogMetric: mname + strings.Replace(fieldName, "_", ".", -1),
 				}
 				metric.Points[0] = amonPt
 				tempSeries = append(tempSeries, metric)
 				metricCounter++
 			}
 		} else {
-			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
+			log.Printf("unable to build DogMetric for %s, skipping\n", pt.Name())
 		}
 	}
 
-	ts.Series = make([]*Metric, metricCounter)
+	ts.Series = make([]*DogMetric, metricCounter)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
@@ -126,7 +126,7 @@ func (d *Datadog) authenticatedUrl() string {
 	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
 }
 
-func buildPoints(pt *client.Point) (map[string]Point, error) {
+func buildPoints(pt models.Metric) (map[string]Point, error) {
 	pts := make(map[string]Point)
 	for k, v := range pt.Fields() {
 		var p Point
@@ -173,7 +173,7 @@ func (d *Datadog) Close() error {
 }
 
 func init() {
-	outputs.Add("datadog", func() outputs.Output {
+	outputs.Add("datadog", func() models.Output {
 		return NewDatadog(datadog_api)
 	})
 }

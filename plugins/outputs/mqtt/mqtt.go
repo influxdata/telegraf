@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
-	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -78,7 +78,7 @@ func (m *MQTT) Description() string {
 	return "Configuration for MQTT server to send metrics to"
 }
 
-func (m *MQTT) Write(points []*client.Point) error {
+func (m *MQTT) Write(points []models.Metric) error {
 	m.Lock()
 	defer m.Unlock()
 	if len(points) == 0 {
@@ -184,7 +184,7 @@ func getCertPool(pemPath string) (*x509.CertPool, error) {
 }
 
 func init() {
-	outputs.Add("mqtt", func() outputs.Output {
+	outputs.Add("mqtt", func() models.Output {
 		return &MQTT{}
 	})
 }

@@ -28,6 +28,9 @@ type Metric interface {
 
 	// PrecisionString returns a line-protocol string of the metric, at precision
 	PrecisionString(precison string) string
+
+	// Point returns a influxdb client.Point object
+	Point() *client.Point
 }
 
 // metric is a wrapper of the influxdb client.Point struct
@@ -102,4 +105,8 @@ func (m *metric) String() string {
 
 func (m *metric) PrecisionString(precison string) string {
 	return m.pt.PrecisionString(precison)
+}
+
+func (m *metric) Point() *client.Point {
+	return m.pt
 }
