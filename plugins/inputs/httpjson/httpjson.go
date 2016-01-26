@@ -21,6 +21,7 @@ type HttpJson struct {
 	Method     string
 	TagKeys    []string
 	Parameters map[string]string
+	Headers    map[string]string
 	client     HTTPClient
 }
 
@@ -70,6 +71,12 @@ var sampleConfig = `
   [inputs.httpjson.parameters]
     event_type = "cpu_spike"
     threshold = "0.75"
+
+  # HTTP Header parameters (all values must be strings)
+  # [inputs.httpjson.headers]
+  #   X-Auth-Token = "my-xauth-token"
+  #   apiVersion = "v1"
+
 `
 
 func (h *HttpJson) SampleConfig() string {
@@ -189,6 +196,11 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 	req, err := http.NewRequest(h.Method, requestURL.String(), nil)
 	if err != nil {
 		return "", -1, err
+	}
+
+	// Add header parameters
+	for k, v := range h.Headers {
+		req.Header.Add(k, v)
 	}
 
 	start := time.Now()
