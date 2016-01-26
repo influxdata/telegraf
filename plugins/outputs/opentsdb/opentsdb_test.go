@@ -54,18 +54,18 @@ func TestWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to OpenTSDB
-	err = o.Write(testutil.MockBatchPoints().Points())
+	err = o.Write(testutil.MockBatchPoints())
 	require.NoError(t, err)
 
 	// Verify postive and negative test cases of writing data
 	bp := testutil.MockBatchPoints()
-	bp.AddPoint(testutil.TestPoint(float64(1.0), "justametric.float"))
-	bp.AddPoint(testutil.TestPoint(int64(123456789), "justametric.int"))
-	bp.AddPoint(testutil.TestPoint(uint64(123456789012345), "justametric.uint"))
-	bp.AddPoint(testutil.TestPoint("Lorem Ipsum", "justametric.string"))
-	bp.AddPoint(testutil.TestPoint(float64(42.0), "justametric.anotherfloat"))
+	bp = append(bp, testutil.TestPoint(float64(1.0), "justametric.float"))
+	bp = append(bp, testutil.TestPoint(int64(123456789), "justametric.int"))
+	bp = append(bp, testutil.TestPoint(uint64(123456789012345), "justametric.uint"))
+	bp = append(bp, testutil.TestPoint("Lorem Ipsum", "justametric.string"))
+	bp = append(bp, testutil.TestPoint(float64(42.0), "justametric.anotherfloat"))
 
-	err = o.Write(bp.Points())
+	err = o.Write(bp)
 	require.NoError(t, err)
 
 }

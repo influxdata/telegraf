@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -69,7 +69,7 @@ func (l *Librato) Connect() error {
 	return nil
 }
 
-func (l *Librato) Write(points []*client.Point) error {
+func (l *Librato) Write(points []models.Metric) error {
 	if len(points) == 0 {
 		return nil
 	}
@@ -122,7 +122,7 @@ func (l *Librato) Description() string {
 	return "Configuration for Librato API to send metrics to."
 }
 
-func (l *Librato) buildGauges(pt *client.Point) ([]*Gauge, error) {
+func (l *Librato) buildGauges(pt models.Metric) ([]*Gauge, error) {
 	gauges := []*Gauge{}
 	for fieldName, value := range pt.Fields() {
 		gauge := &Gauge{
@@ -169,7 +169,7 @@ func (l *Librato) Close() error {
 }
 
 func init() {
-	outputs.Add("librato", func() outputs.Output {
+	outputs.Add("librato", func() models.Output {
 		return NewLibrato(librato_api)
 	})
 }

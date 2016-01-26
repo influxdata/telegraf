@@ -11,11 +11,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal/config"
-	"github.com/influxdata/telegraf/internal/models"
+	imodels "github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/outputs"
-
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 // Agent runs telegraf and collects data based on the given config
@@ -47,7 +45,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 func (a *Agent) Connect() error {
 	for _, o := range a.Config.Outputs {
 		switch ot := o.Output.(type) {
-		case outputs.ServiceOutput:
+		case models.ServiceOutput:
 			if err := ot.Start(); err != nil {
 				log.Printf("Service for output %s failed to start, exiting\n%s\n",
 					o.Name, err.Error())
@@ -80,7 +78,7 @@ func (a *Agent) Close() error {
 	for _, o := range a.Config.Outputs {
 		err = o.Output.Close()
 		switch ot := o.Output.(type) {
-		case outputs.ServiceOutput:
+		case models.ServiceOutput:
 			ot.Stop()
 		}
 	}
@@ -89,7 +87,7 @@ func (a *Agent) Close() error {
 
 // gatherParallel runs the inputs that are using the same reporting interval
 // as the telegraf agent.
-func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
+func (a *Agent) gatherParallel(pointChan chan models.Metric) error {
 	var wg sync.WaitGroup
 
 	start := time.Now()
@@ -102,7 +100,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 		wg.Add(1)
 		counter++
-		go func(input *models.RunningInput) {
+		go func(input *imodels.RunningInput) {
 			defer wg.Done()
 
 			acc := NewAccumulator(input.Config, pointChan)
@@ -145,8 +143,8 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 // reporting interval.
 func (a *Agent) gatherSeparate(
 	shutdown chan struct{},
-	input *models.RunningInput,
-	pointChan chan *client.Point,
+	input *imodels.RunningInput,
+	pointChan chan models.Metric,
 ) error {
 	ticker := time.NewTicker(input.Config.Interval)
 
@@ -186,7 +184,7 @@ func (a *Agent) gatherSeparate(
 func (a *Agent) Test() error {
 	shutdown := make(chan struct{})
 	defer close(shutdown)
-	pointChan := make(chan *client.Point)
+	pointChan := make(chan models.Metric)
 
 	// dummy receiver for the point channel
 	go func() {
@@ -234,7 +232,7 @@ func (a *Agent) flush() {
 
 	wg.Add(len(a.Config.Outputs))
 	for _, o := range a.Config.Outputs {
-		go func(output *models.RunningOutput) {
+		go func(output *imodels.RunningOutput) {
 			defer wg.Done()
 			err := output.Write()
 			if err != nil {
@@ -248,7 +246,7 @@ func (a *Agent) flush() {
 }
 
 // flusher monitors the points input channel and flushes on the minimum interval
-func (a *Agent) flusher(shutdown chan struct{}, pointChan chan *client.Point) error {
+func (a *Agent) flusher(shutdown chan struct{}, pointChan chan models.Metric) error {
 	// Inelegant, but this sleep is to allow the Gather threads to run, so that
 	// the flusher will flush after metrics are collected.
 	time.Sleep(time.Millisecond * 200)
@@ -306,7 +304,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
 	// channel shared between all input threads for accumulating points
-	pointChan := make(chan *client.Point, 1000)
+	pointChan := make(chan models.Metric, 1000)
 
 	// Round collection to nearest interval by sleeping
 	if a.Config.Agent.RoundInterval {
@@ -341,7 +339,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		// configured. Default intervals are handled below with gatherParallel
 		if input.Config.Interval != 0 {
 			wg.Add(1)
-			go func(input *models.RunningInput) {
+			go func(input *imodels.RunningInput) {
 				defer wg.Done()
 				if err := a.gatherSeparate(shutdown, input, pointChan); err != nil {
 					log.Printf(err.Error())

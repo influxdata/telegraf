@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,14 +21,14 @@ func TestGraphiteError(t *testing.T) {
 		Prefix:  "my.prefix",
 	}
 	// Init points
-	pt1, _ := client.NewPoint(
+	pt1, _ := models.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"mymeasurement": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	// Prepare point list
-	var points []*client.Point
+	var points []models.Metric
 	points = append(points, pt1)
 	// Error
 	err1 := g.Connect()
@@ -45,26 +45,26 @@ func TestGraphiteOK(t *testing.T) {
 		Prefix: "my.prefix",
 	}
 	// Init points
-	pt1, _ := client.NewPoint(
+	pt1, _ := models.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"mymeasurement": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	pt2, _ := client.NewPoint(
+	pt2, _ := models.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	pt3, _ := client.NewPoint(
+	pt3, _ := models.NewMetric(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	// Prepare point list
-	var points []*client.Point
+	var points []models.Metric
 	points = append(points, pt1)
 	points = append(points, pt2)
 	points = append(points, pt3)

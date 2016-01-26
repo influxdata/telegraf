@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -33,12 +33,12 @@ var sampleConfig = `
 `
 
 type TimeSeries struct {
-	Series []*Metric `json:"series"`
+	Series []*AmonMetric `json:"series"`
 }
 
-type Metric struct {
-	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
+type AmonMetric struct {
+	AmonMetric string   `json:"metric"`
+	Points     [1]Point `json:"points"`
 }
 
 type Point [2]float64
@@ -53,31 +53,31 @@ func (a *Amon) Connect() error {
 	return nil
 }
 
-func (a *Amon) Write(points []*client.Point) error {
+func (a *Amon) Write(points []models.Metric) error {
 	if len(points) == 0 {
 		return nil
 	}
 	ts := TimeSeries{}
-	tempSeries := []*Metric{}
+	tempSeries := []*AmonMetric{}
 	metricCounter := 0
 
 	for _, pt := range points {
 		mname := strings.Replace(pt.Name(), "_", ".", -1)
 		if amonPts, err := buildPoints(pt); err == nil {
 			for fieldName, amonPt := range amonPts {
-				metric := &Metric{
-					Metric: mname + "_" + strings.Replace(fieldName, "_", ".", -1),
+				metric := &AmonMetric{
+					AmonMetric: mname + "_" + strings.Replace(fieldName, "_", ".", -1),
 				}
 				metric.Points[0] = amonPt
 				tempSeries = append(tempSeries, metric)
 				metricCounter++
 			}
 		} else {
-			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
+			log.Printf("unable to build AmonMetric for %s, skipping\n", pt.Name())
 		}
 	}
 
-	ts.Series = make([]*Metric, metricCounter)
+	ts.Series = make([]*AmonMetric, metricCounter)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
@@ -115,7 +115,7 @@ func (a *Amon) authenticatedUrl() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
 
-func buildPoints(pt *client.Point) (map[string]Point, error) {
+func buildPoints(pt models.Metric) (map[string]Point, error) {
 	pts := make(map[string]Point)
 	for k, v := range pt.Fields() {
 		var p Point
@@ -151,7 +151,7 @@ func (a *Amon) Close() error {
 }
 
 func init() {
-	outputs.Add("amon", func() outputs.Output {
+	outputs.Add("amon", func() models.Output {
 		return &Amon{}
 	})
 }

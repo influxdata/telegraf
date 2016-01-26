@@ -2,7 +2,7 @@ package nsq
 
 import (
 	"fmt"
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/nsqio/go-nsq"
 )
@@ -45,7 +45,7 @@ func (n *NSQ) Description() string {
 	return "Send telegraf measurements to NSQD"
 }
 
-func (n *NSQ) Write(points []*client.Point) error {
+func (n *NSQ) Write(points []models.Metric) error {
 	if len(points) == 0 {
 		return nil
 	}
@@ -65,7 +65,7 @@ func (n *NSQ) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("nsq", func() outputs.Output {
+	outputs.Add("nsq", func() models.Output {
 		return &NSQ{}
 	})
 }

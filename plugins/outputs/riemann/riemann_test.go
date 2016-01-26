@@ -22,6 +22,6 @@ func TestConnectAndWrite(t *testing.T) {
 	err := r.Connect()
 	require.NoError(t, err)
 
-	err = r.Write(testutil.MockBatchPoints().Points())
+	err = r.Write(testutil.MockBatchPoints())
 	require.NoError(t, err)
 }

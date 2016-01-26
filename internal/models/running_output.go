@@ -4,32 +4,30 @@ import (
 	"log"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/outputs"
-
-	"github.com/influxdata/influxdb/client/v2"
+	emodels "github.com/influxdata/telegraf/models"
 )
 
 const DEFAULT_POINT_BUFFER_LIMIT = 10000
 
 type RunningOutput struct {
 	Name             string
-	Output           outputs.Output
+	Output           emodels.Output
 	Config           *OutputConfig
 	Quiet            bool
 	PointBufferLimit int
 
-	points           []*client.Point
+	metrics          []emodels.Metric
 	overwriteCounter int
 }
 
 func NewRunningOutput(
 	name string,
-	output outputs.Output,
+	output emodels.Output,
 	conf *OutputConfig,
 ) *RunningOutput {
 	ro := &RunningOutput{
 		Name:             name,
-		points:           make([]*client.Point, 0),
+		metrics:          make([]emodels.Metric, 0),
 		Output:           output,
 		Config:           conf,
 		PointBufferLimit: DEFAULT_POINT_BUFFER_LIMIT,
@@ -37,34 +35,34 @@ func NewRunningOutput(
 	return ro
 }
 
-func (ro *RunningOutput) AddPoint(point *client.Point) {
+func (ro *RunningOutput) AddPoint(metric emodels.Metric) {
 	if ro.Config.Filter.IsActive {
-		if !ro.Config.Filter.ShouldPointPass(point) {
+		if !ro.Config.Filter.ShouldPointPass(metric) {
 			return
 		}
 	}
 
-	if len(ro.points) < ro.PointBufferLimit {
-		ro.points = append(ro.points, point)
+	if len(ro.metrics) < ro.PointBufferLimit {
+		ro.metrics = append(ro.metrics, metric)
 	} else {
-		if ro.overwriteCounter == len(ro.points) {
+		if ro.overwriteCounter == len(ro.metrics) {
 			ro.overwriteCounter = 0
 		}
-		ro.points[ro.overwriteCounter] = point
+		ro.metrics[ro.overwriteCounter] = metric
 		ro.overwriteCounter++
 	}
 }
 
 func (ro *RunningOutput) Write() error {
 	start := time.Now()
-	err := ro.Output.Write(ro.points)
+	err := ro.Output.Write(ro.metrics)
 	elapsed := time.Since(start)
 	if err == nil {
 		if !ro.Quiet {
 			log.Printf("Wrote %d metrics to output %s in %s\n",
-				len(ro.points), ro.Name, elapsed)
+				len(ro.metrics), ro.Name, elapsed)
 		}
-		ro.points = make([]*client.Point, 0)
+		ro.metrics = make([]emodels.Metric, 0)
 		ro.overwriteCounter = 0
 	}
 	return err

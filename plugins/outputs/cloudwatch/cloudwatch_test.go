@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
@@ -51,7 +51,7 @@ func TestBuildDimensions(t *testing.T) {
 func TestBuildMetricDatums(t *testing.T) {
 	assert := assert.New(t)
 
-	validPoints := []*client.Point{
+	validPoints := []models.Metric{
 		testutil.TestPoint(1),
 		testutil.TestPoint(int32(1)),
 		testutil.TestPoint(int64(1)),

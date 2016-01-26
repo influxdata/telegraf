@@ -3,8 +3,8 @@ package models
 import (
 	"strings"
 
-	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
+	emodels "github.com/influxdata/telegraf/models"
 )
 
 // TagFilter is the name of a tag, and the values on which to filter
@@ -24,8 +24,8 @@ type Filter struct {
 	IsActive bool
 }
 
-func (f Filter) ShouldPointPass(point *client.Point) bool {
-	if f.ShouldPass(point.Name()) && f.ShouldTagsPass(point.Tags()) {
+func (f Filter) ShouldPointPass(metric emodels.Metric) bool {
+	if f.ShouldPass(metric.Name()) && f.ShouldTagsPass(metric.Tags()) {
 		return true
 	}
 	return false

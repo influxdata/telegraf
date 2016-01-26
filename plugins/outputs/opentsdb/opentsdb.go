@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -58,7 +58,7 @@ func (o *OpenTSDB) Connect() error {
 	return nil
 }
 
-func (o *OpenTSDB) Write(points []*client.Point) error {
+func (o *OpenTSDB) Write(points []models.Metric) error {
 	if len(points) == 0 {
 		return nil
 	}
@@ -101,7 +101,7 @@ func buildTags(ptTags map[string]string) []string {
 	return tags
 }
 
-func buildMetrics(pt *client.Point, now time.Time, prefix string) []*MetricLine {
+func buildMetrics(pt models.Metric, now time.Time, prefix string) []*MetricLine {
 	ret := []*MetricLine{}
 	for fieldName, value := range pt.Fields() {
 		metric := &MetricLine{
@@ -162,7 +162,7 @@ func (o *OpenTSDB) Close() error {
 }
 
 func init() {
-	outputs.Add("opentsdb", func() outputs.Output {
+	outputs.Add("opentsdb", func() models.Output {
 		return &OpenTSDB{}
 	})
 }
