@@ -164,6 +164,7 @@ Currently implemented sources:
 * rabbitmq
 * redis
 * rethinkdb
+* sql server (microsoft)
 * twemproxy
 * zfs
 * zookeeper

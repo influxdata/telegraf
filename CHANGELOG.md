@@ -31,6 +31,7 @@ specifying a docker endpoint to get metrics from.
 - [#563](https://github.com/influxdata/telegraf/pull/563): Docker plugin overhaul.
 - [#285](https://github.com/influxdata/telegraf/issues/285): Fixed-size buffer of points.
 - [#546](https://github.com/influxdata/telegraf/pull/546): SNMP Input plugin. Thanks @titilambert!
+- [#589](https://github.com/influxdata/telegraf/pull/589): Microsoft SQL Server input plugin. Thanks @zensqlmonitor!
 
 ### Bugfixes
 - [#506](https://github.com/influxdata/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
