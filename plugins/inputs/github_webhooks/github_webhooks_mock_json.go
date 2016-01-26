@@ -1,4 +1,4 @@
-package models
+package github_webhooks
 
 func CommitCommentEventJSON() string {
 	return `{

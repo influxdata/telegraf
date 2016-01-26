@@ -1,4 +1,4 @@
-package models
+package github_webhooks
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 )
 
-const meas = "ghWebhooks"
+const meas = "github_webhooks"
 
 type Event interface {
 	NewPoint() *client.Point

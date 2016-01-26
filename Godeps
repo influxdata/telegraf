@@ -26,7 +26,6 @@ github.com/hashicorp/raft b95f335efee1992886864389183ebda0c0a5d0f6
 github.com/hashicorp/raft-boltdb d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee
 github.com/influxdata/influxdb 0e0f85a0c1fd1788ae4f9145531b02c539cfa5b5
 github.com/influxdb/influxdb c1d6c14c47dfb4d60878a979fbdd8b526281d3d6
-github.com/influxdb/telegraf d3a5cca1bc18f315dacbd9941f1e4556fde86538
 github.com/jmespath/go-jmespath c01cf91b011868172fdcd9f41838e80c9d716264
 github.com/klauspost/crc32 999f3125931f6557b991b2f8472172bdfa578d38
 github.com/lib/pq 8ad2b298cadd691a77015666a5372eae5dbfac8f

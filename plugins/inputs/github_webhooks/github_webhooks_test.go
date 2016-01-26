@@ -5,13 +5,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	mod "github.com/influxdata/telegraf/plugins/inputs/github_webhooks/models"
 )
 
 func TestCommitCommentEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.CommitCommentEventJSON()
+	jsonString := CommitCommentEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "commit_comment")
 	w := httptest.NewRecorder()
@@ -23,7 +21,7 @@ func TestCommitCommentEvent(t *testing.T) {
 
 func TestDeleteEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.DeleteEventJSON()
+	jsonString := DeleteEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "delete")
 	w := httptest.NewRecorder()
@@ -35,7 +33,7 @@ func TestDeleteEvent(t *testing.T) {
 
 func TestDeploymentEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.DeploymentEventJSON()
+	jsonString := DeploymentEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "deployment")
 	w := httptest.NewRecorder()
@@ -47,7 +45,7 @@ func TestDeploymentEvent(t *testing.T) {
 
 func TestDeploymentStatusEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.DeploymentStatusEventJSON()
+	jsonString := DeploymentStatusEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "deployment_status")
 	w := httptest.NewRecorder()
@@ -59,7 +57,7 @@ func TestDeploymentStatusEvent(t *testing.T) {
 
 func TestForkEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.ForkEventJSON()
+	jsonString := ForkEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "fork")
 	w := httptest.NewRecorder()
@@ -71,7 +69,7 @@ func TestForkEvent(t *testing.T) {
 
 func TestGollumEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.GollumEventJSON()
+	jsonString := GollumEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "gollum")
 	w := httptest.NewRecorder()
@@ -83,7 +81,7 @@ func TestGollumEvent(t *testing.T) {
 
 func TestIssueCommentEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.IssueCommentEventJSON()
+	jsonString := IssueCommentEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "issue_comment")
 	w := httptest.NewRecorder()
@@ -95,7 +93,7 @@ func TestIssueCommentEvent(t *testing.T) {
 
 func TestIssuesEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.IssuesEventJSON()
+	jsonString := IssuesEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "issues")
 	w := httptest.NewRecorder()
@@ -107,7 +105,7 @@ func TestIssuesEvent(t *testing.T) {
 
 func TestMemberEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.MemberEventJSON()
+	jsonString := MemberEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "member")
 	w := httptest.NewRecorder()
@@ -119,7 +117,7 @@ func TestMemberEvent(t *testing.T) {
 
 func TestMembershipEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.MembershipEventJSON()
+	jsonString := MembershipEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "membership")
 	w := httptest.NewRecorder()
@@ -131,7 +129,7 @@ func TestMembershipEvent(t *testing.T) {
 
 func TestPageBuildEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.PageBuildEventJSON()
+	jsonString := PageBuildEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "page_build")
 	w := httptest.NewRecorder()
@@ -143,7 +141,7 @@ func TestPageBuildEvent(t *testing.T) {
 
 func TestPublicEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.PublicEventJSON()
+	jsonString := PublicEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "public")
 	w := httptest.NewRecorder()
@@ -155,7 +153,7 @@ func TestPublicEvent(t *testing.T) {
 
 func TestPullRequestReviewCommentEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.PullRequestReviewCommentEventJSON()
+	jsonString := PullRequestReviewCommentEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "pull_request_review_comment")
 	w := httptest.NewRecorder()
@@ -167,7 +165,7 @@ func TestPullRequestReviewCommentEvent(t *testing.T) {
 
 func TestPushEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.PushEventJSON()
+	jsonString := PushEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "push")
 	w := httptest.NewRecorder()
@@ -179,7 +177,7 @@ func TestPushEvent(t *testing.T) {
 
 func TestReleaseEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.ReleaseEventJSON()
+	jsonString := ReleaseEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "release")
 	w := httptest.NewRecorder()
@@ -191,7 +189,7 @@ func TestReleaseEvent(t *testing.T) {
 
 func TestRepositoryEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.RepositoryEventJSON()
+	jsonString := RepositoryEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "repository")
 	w := httptest.NewRecorder()
@@ -204,7 +202,7 @@ func TestRepositoryEvent(t *testing.T) {
 func TestStatusEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
 
-	jsonString := mod.StatusEventJSON()
+	jsonString := StatusEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "status")
 	w := httptest.NewRecorder()
@@ -216,7 +214,7 @@ func TestStatusEvent(t *testing.T) {
 
 func TestTeamAddEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.TeamAddEventJSON()
+	jsonString := TeamAddEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "team_add")
 	w := httptest.NewRecorder()
@@ -228,7 +226,7 @@ func TestTeamAddEvent(t *testing.T) {
 
 func TestWatchEvent(t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := mod.WatchEventJSON()
+	jsonString := WatchEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", "watch")
 	w := httptest.NewRecorder()

@@ -10,7 +10,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	mod "github.com/influxdata/telegraf/plugins/inputs/github_webhooks/models"
 )
 
 func init() {
@@ -23,7 +22,7 @@ type GithubWebhooks struct {
 	// Lock for the struct
 	sync.Mutex
 	// Events buffer to store events between Gather calls
-	events []mod.Event
+	events []Event
 }
 
 func NewGithubWebhooks() *GithubWebhooks {
@@ -51,7 +50,7 @@ func (gh *GithubWebhooks) Gather(acc inputs.Accumulator) error {
 		p := event.NewPoint()
 		acc.AddFields(gh.MeasurementName, p.Fields(), p.Tags(), p.Time())
 	}
-	gh.events = make([]mod.Event, 0)
+	gh.events = make([]Event, 0)
 	return nil
 }
 
@@ -91,8 +90,8 @@ func (gh *GithubWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func newCommitComment(data []byte) (mod.Event, error) {
-	commitCommentStruct := mod.CommitCommentEvent{}
+func newCommitComment(data []byte) (Event, error) {
+	commitCommentStruct := CommitCommentEvent{}
 	err := json.Unmarshal(data, &commitCommentStruct)
 	if err != nil {
 		return nil, err
@@ -100,8 +99,8 @@ func newCommitComment(data []byte) (mod.Event, error) {
 	return commitCommentStruct, nil
 }
 
-func newCreate(data []byte) (mod.Event, error) {
-	createStruct := mod.CreateEvent{}
+func newCreate(data []byte) (Event, error) {
+	createStruct := CreateEvent{}
 	err := json.Unmarshal(data, &createStruct)
 	if err != nil {
 		return nil, err
@@ -109,8 +108,8 @@ func newCreate(data []byte) (mod.Event, error) {
 	return createStruct, nil
 }
 
-func newDelete(data []byte) (mod.Event, error) {
-	deleteStruct := mod.DeleteEvent{}
+func newDelete(data []byte) (Event, error) {
+	deleteStruct := DeleteEvent{}
 	err := json.Unmarshal(data, &deleteStruct)
 	if err != nil {
 		return nil, err
@@ -118,8 +117,8 @@ func newDelete(data []byte) (mod.Event, error) {
 	return deleteStruct, nil
 }
 
-func newDeployment(data []byte) (mod.Event, error) {
-	deploymentStruct := mod.DeploymentEvent{}
+func newDeployment(data []byte) (Event, error) {
+	deploymentStruct := DeploymentEvent{}
 	err := json.Unmarshal(data, &deploymentStruct)
 	if err != nil {
 		return nil, err
@@ -127,8 +126,8 @@ func newDeployment(data []byte) (mod.Event, error) {
 	return deploymentStruct, nil
 }
 
-func newDeploymentStatus(data []byte) (mod.Event, error) {
-	deploymentStatusStruct := mod.DeploymentStatusEvent{}
+func newDeploymentStatus(data []byte) (Event, error) {
+	deploymentStatusStruct := DeploymentStatusEvent{}
 	err := json.Unmarshal(data, &deploymentStatusStruct)
 	if err != nil {
 		return nil, err
@@ -136,8 +135,8 @@ func newDeploymentStatus(data []byte) (mod.Event, error) {
 	return deploymentStatusStruct, nil
 }
 
-func newFork(data []byte) (mod.Event, error) {
-	forkStruct := mod.ForkEvent{}
+func newFork(data []byte) (Event, error) {
+	forkStruct := ForkEvent{}
 	err := json.Unmarshal(data, &forkStruct)
 	if err != nil {
 		return nil, err
@@ -145,8 +144,8 @@ func newFork(data []byte) (mod.Event, error) {
 	return forkStruct, nil
 }
 
-func newGollum(data []byte) (mod.Event, error) {
-	gollumStruct := mod.GollumEvent{}
+func newGollum(data []byte) (Event, error) {
+	gollumStruct := GollumEvent{}
 	err := json.Unmarshal(data, &gollumStruct)
 	if err != nil {
 		return nil, err
@@ -154,8 +153,8 @@ func newGollum(data []byte) (mod.Event, error) {
 	return gollumStruct, nil
 }
 
-func newIssueComment(data []byte) (mod.Event, error) {
-	issueCommentStruct := mod.IssueCommentEvent{}
+func newIssueComment(data []byte) (Event, error) {
+	issueCommentStruct := IssueCommentEvent{}
 	err := json.Unmarshal(data, &issueCommentStruct)
 	if err != nil {
 		return nil, err
@@ -163,8 +162,8 @@ func newIssueComment(data []byte) (mod.Event, error) {
 	return issueCommentStruct, nil
 }
 
-func newIssues(data []byte) (mod.Event, error) {
-	issuesStruct := mod.IssuesEvent{}
+func newIssues(data []byte) (Event, error) {
+	issuesStruct := IssuesEvent{}
 	err := json.Unmarshal(data, &issuesStruct)
 	if err != nil {
 		return nil, err
@@ -172,8 +171,8 @@ func newIssues(data []byte) (mod.Event, error) {
 	return issuesStruct, nil
 }
 
-func newMember(data []byte) (mod.Event, error) {
-	memberStruct := mod.MemberEvent{}
+func newMember(data []byte) (Event, error) {
+	memberStruct := MemberEvent{}
 	err := json.Unmarshal(data, &memberStruct)
 	if err != nil {
 		return nil, err
@@ -181,8 +180,8 @@ func newMember(data []byte) (mod.Event, error) {
 	return memberStruct, nil
 }
 
-func newMembership(data []byte) (mod.Event, error) {
-	membershipStruct := mod.MembershipEvent{}
+func newMembership(data []byte) (Event, error) {
+	membershipStruct := MembershipEvent{}
 	err := json.Unmarshal(data, &membershipStruct)
 	if err != nil {
 		return nil, err
@@ -190,8 +189,8 @@ func newMembership(data []byte) (mod.Event, error) {
 	return membershipStruct, nil
 }
 
-func newPageBuild(data []byte) (mod.Event, error) {
-	pageBuildEvent := mod.PageBuildEvent{}
+func newPageBuild(data []byte) (Event, error) {
+	pageBuildEvent := PageBuildEvent{}
 	err := json.Unmarshal(data, &pageBuildEvent)
 	if err != nil {
 		return nil, err
@@ -199,8 +198,8 @@ func newPageBuild(data []byte) (mod.Event, error) {
 	return pageBuildEvent, nil
 }
 
-func newPublic(data []byte) (mod.Event, error) {
-	publicEvent := mod.PublicEvent{}
+func newPublic(data []byte) (Event, error) {
+	publicEvent := PublicEvent{}
 	err := json.Unmarshal(data, &publicEvent)
 	if err != nil {
 		return nil, err
@@ -208,8 +207,8 @@ func newPublic(data []byte) (mod.Event, error) {
 	return publicEvent, nil
 }
 
-func newPullRequest(data []byte) (mod.Event, error) {
-	pullRequestStruct := mod.PullRequestEvent{}
+func newPullRequest(data []byte) (Event, error) {
+	pullRequestStruct := PullRequestEvent{}
 	err := json.Unmarshal(data, &pullRequestStruct)
 	if err != nil {
 		return nil, err
@@ -217,8 +216,8 @@ func newPullRequest(data []byte) (mod.Event, error) {
 	return pullRequestStruct, nil
 }
 
-func newPullRequestReviewComment(data []byte) (mod.Event, error) {
-	pullRequestReviewCommentStruct := mod.PullRequestReviewCommentEvent{}
+func newPullRequestReviewComment(data []byte) (Event, error) {
+	pullRequestReviewCommentStruct := PullRequestReviewCommentEvent{}
 	err := json.Unmarshal(data, &pullRequestReviewCommentStruct)
 	if err != nil {
 		return nil, err
@@ -226,8 +225,8 @@ func newPullRequestReviewComment(data []byte) (mod.Event, error) {
 	return pullRequestReviewCommentStruct, nil
 }
 
-func newPush(data []byte) (mod.Event, error) {
-	pushStruct := mod.PushEvent{}
+func newPush(data []byte) (Event, error) {
+	pushStruct := PushEvent{}
 	err := json.Unmarshal(data, &pushStruct)
 	if err != nil {
 		return nil, err
@@ -235,8 +234,8 @@ func newPush(data []byte) (mod.Event, error) {
 	return pushStruct, nil
 }
 
-func newRelease(data []byte) (mod.Event, error) {
-	releaseStruct := mod.ReleaseEvent{}
+func newRelease(data []byte) (Event, error) {
+	releaseStruct := ReleaseEvent{}
 	err := json.Unmarshal(data, &releaseStruct)
 	if err != nil {
 		return nil, err
@@ -244,8 +243,8 @@ func newRelease(data []byte) (mod.Event, error) {
 	return releaseStruct, nil
 }
 
-func newRepository(data []byte) (mod.Event, error) {
-	repositoryStruct := mod.RepositoryEvent{}
+func newRepository(data []byte) (Event, error) {
+	repositoryStruct := RepositoryEvent{}
 	err := json.Unmarshal(data, &repositoryStruct)
 	if err != nil {
 		return nil, err
@@ -253,8 +252,8 @@ func newRepository(data []byte) (mod.Event, error) {
 	return repositoryStruct, nil
 }
 
-func newStatus(data []byte) (mod.Event, error) {
-	statusStruct := mod.StatusEvent{}
+func newStatus(data []byte) (Event, error) {
+	statusStruct := StatusEvent{}
 	err := json.Unmarshal(data, &statusStruct)
 	if err != nil {
 		return nil, err
@@ -262,8 +261,8 @@ func newStatus(data []byte) (mod.Event, error) {
 	return statusStruct, nil
 }
 
-func newTeamAdd(data []byte) (mod.Event, error) {
-	teamAddStruct := mod.TeamAddEvent{}
+func newTeamAdd(data []byte) (Event, error) {
+	teamAddStruct := TeamAddEvent{}
 	err := json.Unmarshal(data, &teamAddStruct)
 	if err != nil {
 		return nil, err
@@ -271,8 +270,8 @@ func newTeamAdd(data []byte) (mod.Event, error) {
 	return teamAddStruct, nil
 }
 
-func newWatch(data []byte) (mod.Event, error) {
-	watchStruct := mod.WatchEvent{}
+func newWatch(data []byte) (Event, error) {
+	watchStruct := WatchEvent{}
 	err := json.Unmarshal(data, &watchStruct)
 	if err != nil {
 		return nil, err
@@ -288,7 +287,7 @@ func (e *newEventError) Error() string {
 	return e.s
 }
 
-func NewEvent(r []byte, t string) (mod.Event, error) {
+func NewEvent(r []byte, t string) (Event, error) {
 	log.Printf("New %v event recieved", t)
 	switch t {
 	case "commit_comment":
