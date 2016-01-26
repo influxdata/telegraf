@@ -17,8 +17,7 @@ func init() {
 }
 
 type GithubWebhooks struct {
-	ServiceAddress  string
-	MeasurementName string
+	ServiceAddress string
 	// Lock for the struct
 	sync.Mutex
 	// Events buffer to store events between Gather calls
@@ -33,8 +32,6 @@ func (gh *GithubWebhooks) SampleConfig() string {
 	return `
   # Address and port to host Webhook listener on
   service_address = ":1618"
-  # Measurement name
-  measurement_name = "github_webhooks"
 `
 }
 
@@ -48,7 +45,7 @@ func (gh *GithubWebhooks) Gather(acc inputs.Accumulator) error {
 	defer gh.Unlock()
 	for _, event := range gh.events {
 		p := event.NewPoint()
-		acc.AddFields(gh.MeasurementName, p.Fields(), p.Tags(), p.Time())
+		acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
 	}
 	gh.events = make([]Event, 0)
 	return nil
