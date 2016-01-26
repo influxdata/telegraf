@@ -8,6 +8,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/docker"
 	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
+	_ "github.com/influxdata/telegraf/plugins/inputs/github_webhooks"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/httpjson"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
