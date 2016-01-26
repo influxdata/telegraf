@@ -33,6 +33,7 @@ specifying a docker endpoint to get metrics from.
 - [#546](https://github.com/influxdata/telegraf/pull/546): SNMP Input plugin. Thanks @titilambert!
 - [#589](https://github.com/influxdata/telegraf/pull/589): Microsoft SQL Server input plugin. Thanks @zensqlmonitor!
 - [#573](https://github.com/influxdata/telegraf/pull/573): Github webhooks consumer input. Thanks @jackzampolin!
+- [#471](https://github.com/influxdata/telegraf/pull/471): httpjson request headers. Thanks @asosso!
 
 ### Bugfixes
 - [#506](https://github.com/influxdata/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
