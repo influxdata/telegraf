@@ -98,9 +98,9 @@ on the availability of per-cpu stats on your system.
 ### Tags:
 
 - All stats have the following tags:
-    - cont_id (container ID)
-    - cont_image (container image)
-    - cont_name (container name)
+    - container_id (container ID)
+    - container_image (container image)
+    - container_name (container name)
 - docker_cpu specific:
     - cpu
 - docker_net specific:
