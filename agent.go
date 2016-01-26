@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -87,6 +88,18 @@ func (a *Agent) Close() error {
 	return err
 }
 
+func panicRecover(input *models.RunningInput) {
+	if err := recover(); err != nil {
+		trace := make([]byte, 2048)
+		runtime.Stack(trace, true)
+		log.Printf("FATAL: Input [%s] panicked: %s, Stack:\n%s\n",
+			input.Name, err, trace)
+		log.Println("PLEASE REPORT THIS PANIC ON GITHUB with " +
+			"stack trace, configuration, and OS information: " +
+			"https://github.com/influxdata/telegraf/issues/new")
+	}
+}
+
 // gatherParallel runs the inputs that are using the same reporting interval
 // as the telegraf agent.
 func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
@@ -103,6 +116,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 		wg.Add(1)
 		counter++
 		go func(input *models.RunningInput) {
+			defer panicRecover(input)
 			defer wg.Done()
 
 			acc := NewAccumulator(input.Config, pointChan)
@@ -148,6 +162,8 @@ func (a *Agent) gatherSeparate(
 	input *models.RunningInput,
 	pointChan chan *client.Point,
 ) error {
+	defer panicRecover(input)
+
 	ticker := time.NewTicker(input.Config.Interval)
 
 	for {

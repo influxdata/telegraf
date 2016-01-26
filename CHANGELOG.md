@@ -40,6 +40,7 @@ specifying a docker endpoint to get metrics from.
 - [#440](https://github.com/influxdata/telegraf/issues/440): Don't query filtered devices for disk stats.
 - [#463](https://github.com/influxdata/telegraf/issues/463): Docker plugin not working on AWS Linux
 - [#568](https://github.com/influxdata/telegraf/issues/568): Multiple output race condition.
+- [#585](https://github.com/influxdata/telegraf/pull/585): Log stack trace and continue on Telegraf panic. Thanks @wutaizeng!
 
 ## v0.10.0 [2016-01-12]
 
