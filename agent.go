@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -103,6 +104,15 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 		wg.Add(1)
 		counter++
 		go func(input *models.RunningInput) {
+			defer func() {
+				if err := recover(); err != nil {
+					trace := make([]byte, 2048)
+					count := runtime.Stack(trace, true)
+					log.Printf("Input [%s] recover from panic: %s\n", input.Name, err)
+					log.Printf("Input [%s] stack of %d bytes: %s\n", input.Name, count, trace)
+				}
+			}()
+
 			defer wg.Done()
 
 			acc := NewAccumulator(input.Config, pointChan)
@@ -148,6 +158,15 @@ func (a *Agent) gatherSeparate(
 	input *models.RunningInput,
 	pointChan chan *client.Point,
 ) error {
+	defer func() {
+		if err := recover(); err != nil {
+			trace := make([]byte, 2048)
+			count := runtime.Stack(trace, true)
+			log.Printf("Input [%s] recover from panic: %s\n", input.Name, err)
+			log.Printf("Input [%s] stack of %d bytes: %s\n", input.Name, count, trace)
+		}
+	}()
+
 	ticker := time.NewTicker(input.Config.Interval)
 
 	for {
