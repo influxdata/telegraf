@@ -20,6 +20,7 @@ they would like to output. Currently supports: "influx" and "graphite"
 - [#679](https://github.com/influxdata/telegraf/pull/679): File/stdout output plugin.
 - [#679](https://github.com/influxdata/telegraf/pull/679): Support for arbitrary output data formats.
 - [#695](https://github.com/influxdata/telegraf/pull/695): raindrops input plugin. Thanks @burdandrei!
+- [#650](https://github.com/influxdata/telegraf/pull/650): net_response input plugin. Thanks @titilambert!
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
