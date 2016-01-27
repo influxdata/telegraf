@@ -55,7 +55,7 @@ func TestSNMPErrorBulk(t *testing.T) {
 		Oid:  ".1.3.6.1.2.1.2.2.1.16",
 	}
 	h := Host{
-		Address: "127.0.0.1",
+		Address: testutil.GetLocalHost(),
 		Collect: []string{"oid1"},
 	}
 	s := Snmp{
@@ -75,7 +75,7 @@ func TestSNMPGet1(t *testing.T) {
 		Oid:  ".1.3.6.1.2.1.2.2.1.16.1",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -98,7 +98,7 @@ func TestSNMPGet1(t *testing.T) {
 		},
 		map[string]string{
 			"unit": "octets",
-			"host": "127.0.0.1",
+			"host": testutil.GetLocalHost(),
 		},
 	)
 }
@@ -109,7 +109,7 @@ func TestSNMPGet2(t *testing.T) {
 		Oid:  "ifNumber",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -133,7 +133,7 @@ func TestSNMPGet2(t *testing.T) {
 		},
 		map[string]string{
 			"instance": "0",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 }
@@ -146,7 +146,7 @@ func TestSNMPGet3(t *testing.T) {
 		Instance: "1",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -171,7 +171,7 @@ func TestSNMPGet3(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "1",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 }
@@ -184,7 +184,7 @@ func TestSNMPEasyGet4(t *testing.T) {
 		Instance: "1",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -210,7 +210,7 @@ func TestSNMPEasyGet4(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "1",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 
@@ -221,7 +221,7 @@ func TestSNMPEasyGet4(t *testing.T) {
 		},
 		map[string]string{
 			"instance": "0",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 }
@@ -234,7 +234,7 @@ func TestSNMPEasyGet5(t *testing.T) {
 		Instance: "1",
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -260,7 +260,7 @@ func TestSNMPEasyGet5(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "1",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 
@@ -271,14 +271,14 @@ func TestSNMPEasyGet5(t *testing.T) {
 		},
 		map[string]string{
 			"instance": "0",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 }
 
 func TestSNMPEasyGet6(t *testing.T) {
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -301,7 +301,7 @@ func TestSNMPEasyGet6(t *testing.T) {
 		},
 		map[string]string{
 			"instance": "0",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 }
@@ -314,7 +314,7 @@ func TestSNMPBulk1(t *testing.T) {
 		MaxRepetition: 2,
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -339,7 +339,7 @@ func TestSNMPBulk1(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "1",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 
@@ -351,7 +351,7 @@ func TestSNMPBulk1(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "2",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 
@@ -363,7 +363,7 @@ func TestSNMPBulk1(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "3",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 
@@ -375,7 +375,7 @@ func TestSNMPBulk1(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "36",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 }
@@ -392,7 +392,7 @@ func dTestSNMPBulk2(t *testing.T) {
 		MaxRepetition: 2,
 	}
 	h := Host{
-		Address:   "127.0.0.1:31161",
+		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
 		Version:   2,
 		Timeout:   2.0,
@@ -417,7 +417,7 @@ func dTestSNMPBulk2(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "1",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 
@@ -429,7 +429,7 @@ func dTestSNMPBulk2(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "2",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 
@@ -441,7 +441,7 @@ func dTestSNMPBulk2(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "3",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 
@@ -453,7 +453,7 @@ func dTestSNMPBulk2(t *testing.T) {
 		map[string]string{
 			"unit":     "octets",
 			"instance": "36",
-			"host":     "127.0.0.1",
+			"host":     testutil.GetLocalHost(),
 		},
 	)
 }

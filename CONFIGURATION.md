@@ -2,27 +2,46 @@
 
 ## Generating a Configuration File
 
-A default Telegraf config file can be generated using the `-sample-config` flag,
-like this: `telegraf -sample-config`
+A default Telegraf config file can be generated using the -sample-config flag:
+`telegraf -sample-config > telegraf.conf`
 
 To generate a file with specific inputs and outputs, you can use the
-`-input-filter` and `-output-filter` flags, like this:
+-input-filter and -output-filter flags:
 `telegraf -sample-config -input-filter cpu:mem:net:swap -output-filter influxdb:kafka`
 
-## Telegraf Agent Configuration
+## `[tags]` Configuration
+
+Global tags can be specific in the `[tags]` section of the config file in
+key="value" format. All metrics being gathered on this host will be tagged
+with the tags specified here.
+
+## `[agent]` Configuration
 
 Telegraf has a few options you can configure under the `agent` section of the
 config.
 
-* **hostname**: The hostname is passed as a tag. By default this will be
-the value returned by `hostname` on the machine running Telegraf.
-You can override that value here.
-* **interval**: How often to gather metrics. Uses a simple number +
-unit parser, e.g. "10s" for 10 seconds or "5m" for 5 minutes.
-* **debug**: Set to true to gather and send metrics to STDOUT as well as
-InfluxDB.
+* **interval**: Default data collection interval for all inputs
+* **round_interval**: Rounds collection interval to 'interval'
+ie, if interval="10s" then always collect on :00, :10, :20, etc.
+* **metric_buffer_limit**: Telegraf will cache metric_buffer_limit metrics
+for each output, and will flush this buffer on a successful write.
+* **collection_jitter**: Collection jitter is used to jitter
+the collection by a random amount.
+Each plugin will sleep for a random time within jitter before collecting.
+This can be used to avoid many plugins querying things like sysfs at the
+same time, which can have a measurable effect on the system.
+* **flush_interval**: Default data flushing interval for all outputs.
+You should not set this below
+interval. Maximum flush_interval will be flush_interval + flush_jitter
+* **flush_jitter**: Jitter the flush interval by a random amount.
+This is primarily to avoid
+large write spikes for users running a large number of telegraf instances.
+ie, a jitter of 5s and flush_interval 10s means flushes will happen every 10-15s.
+* **debug**: Run telegraf in debug mode.
+* **quiet**: Run telegraf in quiet mode.
+* **hostname**: Override default hostname, if empty use os.Hostname().
 
-## Input Configuration
+## `[inputs.xxx]` Configuration
 
 There are some configuration options that are configurable per input:
 
@@ -35,7 +54,7 @@ There are some configuration options that are configurable per input:
 global interval, but if one particular input should be run less or more often,
 you can configure that here.
 
-### Input Filters
+#### Input Filters
 
 There are also filters that can be configured per input:
 
@@ -49,7 +68,7 @@ match against the tag name, and if it matches the measurement is emitted.
 * **tagdrop**: The inverse of tagpass. If a tag matches, the measurement is not
 emitted. This is tested on measurements that have passed the tagpass test.
 
-### Input Configuration Examples
+#### Input Configuration Examples
 
 This is a full working config that will output CPU data to an InfluxDB instance
 at 192.168.59.103:8086, tagging measurements with dc="denver-1". It will output
@@ -77,7 +96,7 @@ fields which begin with `time_`.
   drop = ["time_*"]
 ```
 
-### Input Config: tagpass and tagdrop
+#### Input Config: tagpass and tagdrop
 
 ```toml
 [[inputs.cpu]]
@@ -98,7 +117,7 @@ fields which begin with `time_`.
     path = [ "/opt", "/home*" ]
 ```
 
-### Input Config: pass and drop
+#### Input Config: pass and drop
 
 ```toml
 # Drop all metrics for guest & steal CPU usage
@@ -112,7 +131,7 @@ fields which begin with `time_`.
   pass = ["inodes*"]
 ```
 
-### Input config: prefix, suffix, and override
+#### Input config: prefix, suffix, and override
 
 This plugin will emit measurements with the name `cpu_total`
 
@@ -132,7 +151,7 @@ This will emit measurements with the name `foobar`
   totalcpu = true
 ```
 
-### Input config: tags
+#### Input config: tags
 
 This plugin will emit measurements with two additional tags: `tag1=foo` and
 `tag2=bar`
@@ -146,7 +165,7 @@ This plugin will emit measurements with two additional tags: `tag1=foo` and
     tag2 = "bar"
 ```
 
-### Multiple inputs of the same type
+#### Multiple inputs of the same type
 
 Additional inputs (or outputs) of the same type can be specified,
 just define more instances in the config file. It is highly recommended that
@@ -165,7 +184,7 @@ to avoid measurement collisions:
   drop = ["cpu_time*"]
 ```
 
-## Output Configuration
+## `[outputs.xxx]` Configuration
 
 Telegraf also supports specifying multiple output sinks to send data to,
 configuring each output sink is different, but examples can be

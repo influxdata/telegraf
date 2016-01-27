@@ -136,9 +136,10 @@ var header = `# Telegraf configuration
 # Use 'telegraf -config telegraf.conf -test' to see what metrics a config
 # file would generate.
 
-# Tags can also be specified via a normal map, but only one form at a time:
+# Global tags can be specified here in key="value" format.
 [tags]
-  # dc = "us-east-1"
+  # dc = "us-east-1" # will tag all metrics with dc=us-east-1
+  # rack = "1a"
 
 # Configuration for telegraf agent
 [agent]

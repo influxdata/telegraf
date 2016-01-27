@@ -80,8 +80,8 @@ func (_ *DiskIOStats) Description() string {
 var diskIoSampleConfig = `
   # By default, telegraf will gather stats for all devices including
   # disk partitions.
-  # Setting devices will restrict the stats to the specified devcies.
-  # devices = ["sda","sdb"]
+  # Setting devices will restrict the stats to the specified devices.
+  # devices = ["sda", "sdb"]
   # Uncomment the following line if you do not need disk serial numbers.
   # skip_serial_number = true
 `
