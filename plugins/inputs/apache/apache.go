@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,7 +32,7 @@ func (n *Apache) Description() string {
 	return "Read Apache status information (mod_status)"
 }
 
-func (n *Apache) Gather(acc inputs.Accumulator) error {
+func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var outerr error
 
@@ -59,7 +60,7 @@ var tr = &http.Transport{
 
 var client = &http.Client{Transport: tr}
 
-func (n *Apache) gatherUrl(addr *url.URL, acc inputs.Accumulator) error {
+func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	resp, err := client.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
@@ -164,7 +165,7 @@ func getTags(addr *url.URL) map[string]string {
 }
 
 func init() {
-	inputs.Add("apache", func() inputs.Input {
+	inputs.Add("apache", func() telegraf.Input {
 		return &Apache{}
 	})
 }

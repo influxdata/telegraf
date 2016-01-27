@@ -3,6 +3,7 @@ package haproxy
 import (
 	"encoding/csv"
 	"fmt"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"net/http"
@@ -104,7 +105,7 @@ func (r *haproxy) Description() string {
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *haproxy) Gather(acc inputs.Accumulator) error {
+func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 	if len(g.Servers) == 0 {
 		return g.gatherServer("http://127.0.0.1:1936", acc)
 	}
@@ -126,7 +127,7 @@ func (g *haproxy) Gather(acc inputs.Accumulator) error {
 	return outerr
 }
 
-func (g *haproxy) gatherServer(addr string, acc inputs.Accumulator) error {
+func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if g.client == nil {
 
 		client := &http.Client{}
@@ -156,7 +157,7 @@ func (g *haproxy) gatherServer(addr string, acc inputs.Accumulator) error {
 	return importCsvResult(res.Body, acc, u.Host)
 }
 
-func importCsvResult(r io.Reader, acc inputs.Accumulator, host string) error {
+func importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
 	csv := csv.NewReader(r)
 	result, err := csv.ReadAll()
 	now := time.Now()
@@ -358,7 +359,7 @@ func importCsvResult(r io.Reader, acc inputs.Accumulator, host string) error {
 }
 
 func init() {
-	inputs.Add("haproxy", func() inputs.Input {
+	inputs.Add("haproxy", func() telegraf.Input {
 		return &haproxy{}
 	})
 }

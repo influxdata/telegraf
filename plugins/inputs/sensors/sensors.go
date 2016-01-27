@@ -7,6 +7,7 @@ import (
 
 	"github.com/md14454/gosensors"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -35,7 +36,7 @@ func (_ *Sensors) SampleConfig() string {
 	return sensorsSampleConfig
 }
 
-func (s *Sensors) Gather(acc inputs.Accumulator) error {
+func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 	gosensors.Init()
 	defer gosensors.Cleanup()
 
@@ -84,7 +85,7 @@ func (s *Sensors) Gather(acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("sensors", func() inputs.Input {
+	inputs.Add("sensors", func() telegraf.Input {
 		return &Sensors{}
 	})
 }

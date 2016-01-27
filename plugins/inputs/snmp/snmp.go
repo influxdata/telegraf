@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/soniah/gosnmp"
@@ -187,7 +188,7 @@ func findnodename(node Node, ids []string) (string, string) {
 	return node.name, ""
 }
 
-func (s *Snmp) Gather(acc inputs.Accumulator) error {
+func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 	// Create oid tree
 	if s.SnmptranslateFile != "" && len(initNode.subnodes) == 0 {
 		data, err := ioutil.ReadFile(s.SnmptranslateFile)
@@ -283,7 +284,7 @@ func (s *Snmp) Gather(acc inputs.Accumulator) error {
 	return nil
 }
 
-func (h *Host) SNMPGet(acc inputs.Accumulator) error {
+func (h *Host) SNMPGet(acc telegraf.Accumulator) error {
 	// Get snmp client
 	snmpClient, err := h.GetSNMPClient()
 	if err != nil {
@@ -324,7 +325,7 @@ func (h *Host) SNMPGet(acc inputs.Accumulator) error {
 	return nil
 }
 
-func (h *Host) SNMPBulk(acc inputs.Accumulator) error {
+func (h *Host) SNMPBulk(acc telegraf.Accumulator) error {
 	// Get snmp client
 	snmpClient, err := h.GetSNMPClient()
 	if err != nil {
@@ -411,7 +412,7 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 	return snmpClient, nil
 }
 
-func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, acc inputs.Accumulator) (string, error) {
+func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, acc telegraf.Accumulator) (string, error) {
 	var lastOid string
 	for _, variable := range result.Variables {
 		lastOid = variable.Name
@@ -467,7 +468,7 @@ func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, a
 }
 
 func init() {
-	inputs.Add("snmp", func() inputs.Input {
+	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{}
 	})
 }

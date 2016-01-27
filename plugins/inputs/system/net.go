@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,7 +32,7 @@ func (_ *NetIOStats) SampleConfig() string {
 	return netSampleConfig
 }
 
-func (s *NetIOStats) Gather(acc inputs.Accumulator) error {
+func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	netio, err := s.ps.NetIO()
 	if err != nil {
 		return fmt.Errorf("error getting net io info: %s", err)
@@ -103,7 +104,7 @@ func (s *NetIOStats) Gather(acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("net", func() inputs.Input {
+	inputs.Add("net", func() telegraf.Input {
 		return &NetIOStats{ps: &systemPS{}}
 	})
 }

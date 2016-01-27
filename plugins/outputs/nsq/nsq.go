@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 	"github.com/nsqio/go-nsq"
 )
 
@@ -65,7 +66,7 @@ func (n *NSQ) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("nsq", func() outputs.Output {
+	outputs.Add("nsq", func() telegraf.Output {
 		return &NSQ{}
 	})
 }

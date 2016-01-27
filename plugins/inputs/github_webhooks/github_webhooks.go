@@ -9,11 +9,12 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 func init() {
-	inputs.Add("github_webhooks", func() inputs.Input { return &GithubWebhooks{} })
+	inputs.Add("github_webhooks", func() telegraf.Input { return &GithubWebhooks{} })
 }
 
 type GithubWebhooks struct {
@@ -40,7 +41,7 @@ func (gh *GithubWebhooks) Description() string {
 }
 
 // Writes the points from <-gh.in to the Accumulator
-func (gh *GithubWebhooks) Gather(acc inputs.Accumulator) error {
+func (gh *GithubWebhooks) Gather(acc telegraf.Accumulator) error {
 	gh.Lock()
 	defer gh.Unlock()
 	for _, event := range gh.events {

@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 const MaxClientIdLen = 8
@@ -184,7 +185,7 @@ func getCertPool(pemPath string) (*x509.CertPool, error) {
 }
 
 func init() {
-	outputs.Add("mqtt", func() outputs.Output {
+	outputs.Add("mqtt", func() telegraf.Output {
 		return &MQTT{}
 	})
 }

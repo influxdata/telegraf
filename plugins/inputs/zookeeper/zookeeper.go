@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -40,7 +41,7 @@ func (z *Zookeeper) Description() string {
 }
 
 // Gather reads stats from all configured servers accumulates stats
-func (z *Zookeeper) Gather(acc inputs.Accumulator) error {
+func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 	if len(z.Servers) == 0 {
 		return nil
 	}
@@ -53,7 +54,7 @@ func (z *Zookeeper) Gather(acc inputs.Accumulator) error {
 	return nil
 }
 
-func (z *Zookeeper) gatherServer(address string, acc inputs.Accumulator) error {
+func (z *Zookeeper) gatherServer(address string, acc telegraf.Accumulator) error {
 	_, _, err := net.SplitHostPort(address)
 	if err != nil {
 		address = address + ":2181"
@@ -103,7 +104,7 @@ func (z *Zookeeper) gatherServer(address string, acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("zookeeper", func() inputs.Input {
+	inputs.Add("zookeeper", func() telegraf.Input {
 		return &Zookeeper{}
 	})
 }

@@ -1,14 +1,14 @@
-package models
+package internal_models
 
 import (
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf"
 )
 
 type RunningInput struct {
 	Name   string
-	Input  inputs.Input
+	Input  telegraf.Input
 	Config *InputConfig
 }
 

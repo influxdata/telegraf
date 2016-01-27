@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/influxdb/models"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/Shopify/sarama"
@@ -148,7 +149,7 @@ func (k *Kafka) Stop() {
 	}
 }
 
-func (k *Kafka) Gather(acc inputs.Accumulator) error {
+func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 	k.Lock()
 	defer k.Unlock()
 	npoints := len(k.pointChan)
@@ -160,7 +161,7 @@ func (k *Kafka) Gather(acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("kafka_consumer", func() inputs.Input {
+	inputs.Add("kafka_consumer", func() telegraf.Input {
 		return &Kafka{}
 	})
 }

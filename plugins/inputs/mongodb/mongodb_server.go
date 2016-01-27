@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -21,7 +21,7 @@ func (s *Server) getDefaultTags() map[string]string {
 	return tags
 }
 
-func (s *Server) gatherData(acc inputs.Accumulator) error {
+func (s *Server) gatherData(acc telegraf.Accumulator) error {
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 	result := &ServerStatus{}

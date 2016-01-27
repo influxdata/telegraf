@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 	"log"
 	"math/rand"
 	"net"
@@ -128,7 +129,7 @@ func (g *Graphite) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("graphite", func() outputs.Output {
+	outputs.Add("graphite", func() telegraf.Output {
 		return &Graphite{}
 	})
 }

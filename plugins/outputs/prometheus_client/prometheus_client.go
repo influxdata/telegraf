@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -119,7 +120,7 @@ func (p *PrometheusClient) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("prometheus_client", func() outputs.Output {
+	outputs.Add("prometheus_client", func() telegraf.Output {
 		return &PrometheusClient{}
 	})
 }

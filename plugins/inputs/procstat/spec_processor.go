@@ -6,14 +6,14 @@ import (
 
 	"github.com/shirou/gopsutil/process"
 
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf"
 )
 
 type SpecProcessor struct {
 	Prefix string
 	tags   map[string]string
 	fields map[string]interface{}
-	acc    inputs.Accumulator
+	acc    telegraf.Accumulator
 	proc   *process.Process
 }
 
@@ -34,7 +34,7 @@ func (p *SpecProcessor) flush() {
 
 func NewSpecProcessor(
 	prefix string,
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	p *process.Process,
 ) *SpecProcessor {
 	tags := make(map[string]string)

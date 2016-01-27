@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -96,7 +97,7 @@ type Node struct {
 	SocketsUsed   int64 `json:"sockets_used"`
 }
 
-type gatherFunc func(r *RabbitMQ, acc inputs.Accumulator, errChan chan error)
+type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error)
 
 var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
 
@@ -119,7 +120,7 @@ func (r *RabbitMQ) Description() string {
 	return "Read metrics from one or many RabbitMQ servers via the management API"
 }
 
-func (r *RabbitMQ) Gather(acc inputs.Accumulator) error {
+func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
 		r.Client = &http.Client{}
 	}
@@ -172,7 +173,7 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 	return nil
 }
 
-func gatherOverview(r *RabbitMQ, acc inputs.Accumulator, errChan chan error) {
+func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 	overview := &OverviewResponse{}
 
 	err := r.requestJSON("/api/overview", &overview)
@@ -208,7 +209,7 @@ func gatherOverview(r *RabbitMQ, acc inputs.Accumulator, errChan chan error) {
 	errChan <- nil
 }
 
-func gatherNodes(r *RabbitMQ, acc inputs.Accumulator, errChan chan error) {
+func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 	nodes := make([]Node, 0)
 	// Gather information about nodes
 	err := r.requestJSON("/api/nodes", &nodes)
@@ -245,7 +246,7 @@ func gatherNodes(r *RabbitMQ, acc inputs.Accumulator, errChan chan error) {
 	errChan <- nil
 }
 
-func gatherQueues(r *RabbitMQ, acc inputs.Accumulator, errChan chan error) {
+func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 	// Gather information about queues
 	queues := make([]Queue, 0)
 	err := r.requestJSON("/api/queues", &queues)
@@ -330,7 +331,7 @@ func (r *RabbitMQ) shouldGatherQueue(queue Queue) bool {
 }
 
 func init() {
-	inputs.Add("rabbitmq", func() inputs.Input {
+	inputs.Add("rabbitmq", func() telegraf.Input {
 		return &RabbitMQ{}
 	})
 }
