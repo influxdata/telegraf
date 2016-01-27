@@ -45,6 +45,16 @@ You can also specify additional request parameters for the service:
 
 ```
 
+You can also specify additional request header parameters for the service:
+
+```
+[[httpjson.services]]
+  ...
+
+ [httpjson.services.headers]
+    X-Auth-Token = "my-xauth-token"
+    apiVersion = "v1"
+```
 
 # Example:
 

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -193,7 +193,6 @@ func TestBadPingGather(t *testing.T) {
 		"packets_transmitted": 2,
 		"packets_received":    0,
 		"percent_packet_loss": 100.0,
-		"average_response_ms": 0.0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }

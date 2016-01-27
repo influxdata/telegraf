@@ -1,4 +1,51 @@
-## v0.3.0 [unreleased]
+## v0.10.1 [unreleased]
+
+### Release Notes:
+
+- Telegraf now keeps a fixed-length buffer of metrics per-output. This buffer
+defaults to 10,000 metrics, and is adjustable. The buffer is cleared when a
+successful write to that output occurs.
+- The docker plugin has been significantly overhauled to add more metrics
+and allow for docker-machine (incl OSX) support.
+[See the readme](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/docker/README.md)
+for the latest measurements, fields, and tags. There is also now support for
+specifying a docker endpoint to get metrics from.
+
+### Features
+- [#509](https://github.com/influxdata/telegraf/pull/509): Flatten JSON arrays with indices. Thanks @psilva261!
+- [#512](https://github.com/influxdata/telegraf/pull/512): Python 3 build script, add lsof dep to package. Thanks @Ormod!
+- [#475](https://github.com/influxdata/telegraf/pull/475): Add response time to httpjson plugin. Thanks @titilambert!
+- [#519](https://github.com/influxdata/telegraf/pull/519): Added a sensors input based on lm-sensors. Thanks @md14454!
+- [#467](https://github.com/influxdata/telegraf/issues/467): Add option to disable statsd measurement name conversion.
+- [#534](https://github.com/influxdata/telegraf/pull/534): NSQ input plugin. Thanks @allingeek!
+- [#494](https://github.com/influxdata/telegraf/pull/494): Graphite output plugin. Thanks @titilambert!
+- AMQP SSL support. Thanks @ekini!
+- [#539](https://github.com/influxdata/telegraf/pull/539): Reload config on SIGHUP. Thanks @titilambert!
+- [#522](https://github.com/influxdata/telegraf/pull/522): Phusion passenger input plugin. Thanks @kureikain!
+- [#541](https://github.com/influxdata/telegraf/pull/541): Kafka output TLS cert support. Thanks @Ormod!
+- [#551](https://github.com/influxdata/telegraf/pull/551): Statsd UDP read packet size now defaults to 1500 bytes, and is configurable.
+- [#552](https://github.com/influxdata/telegraf/pull/552): Support for collection interval jittering.
+- [#484](https://github.com/influxdata/telegraf/issues/484): Include usage percent with procstat metrics.
+- [#553](https://github.com/influxdata/telegraf/pull/553): Amazon CloudWatch output. thanks @skwong2!
+- [#503](https://github.com/influxdata/telegraf/pull/503): Support docker endpoint configuration.
+- [#563](https://github.com/influxdata/telegraf/pull/563): Docker plugin overhaul.
+- [#285](https://github.com/influxdata/telegraf/issues/285): Fixed-size buffer of points.
+- [#546](https://github.com/influxdata/telegraf/pull/546): SNMP Input plugin. Thanks @titilambert!
+- [#589](https://github.com/influxdata/telegraf/pull/589): Microsoft SQL Server input plugin. Thanks @zensqlmonitor!
+- [#573](https://github.com/influxdata/telegraf/pull/573): Github webhooks consumer input. Thanks @jackzampolin!
+- [#471](https://github.com/influxdata/telegraf/pull/471): httpjson request headers. Thanks @asosso!
+
+### Bugfixes
+- [#506](https://github.com/influxdata/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
+- [#508](https://github.com/influxdata/telegraf/pull/508): Fix prometheus cardinality issue with the `net` plugin
+- [#499](https://github.com/influxdata/telegraf/issues/499) & [#502](https://github.com/influxdata/telegraf/issues/502): php fpm unix socket and other fixes, thanks @kureikain!
+- [#543](https://github.com/influxdata/telegraf/issues/543): Statsd Packet size sometimes truncated.
+- [#440](https://github.com/influxdata/telegraf/issues/440): Don't query filtered devices for disk stats.
+- [#463](https://github.com/influxdata/telegraf/issues/463): Docker plugin not working on AWS Linux
+- [#568](https://github.com/influxdata/telegraf/issues/568): Multiple output race condition.
+- [#585](https://github.com/influxdata/telegraf/pull/585): Log stack trace and continue on Telegraf panic. Thanks @wutaizeng!
+
+## v0.10.0 [2016-01-12]
 
 ### Release Notes
 - Linux packages have been taken out of `opt`, the binary is now in `/usr/bin`
@@ -23,7 +70,7 @@ aggregated).
 
 ### Packaging change note:
 
-RHEL/CentOS users upgrading from 0.2 to 0.3 will probably have their
+RHEL/CentOS users upgrading from 0.2.x to 0.10.0 will probably have their
 configurations overwritten by the upgrade. There is a backup stored at
 /etc/telegraf/telegraf.conf.$(date +%s).backup.
 
@@ -39,29 +86,29 @@ configurations overwritten by the upgrade. There is a backup stored at
 ## v0.2.5 [unreleased]
 
 ### Features
-- [#427](https://github.com/influxdb/telegraf/pull/427): zfs plugin: pool stats added. Thanks @allenpetersen!
-- [#428](https://github.com/influxdb/telegraf/pull/428): Amazon Kinesis output. Thanks @jimmystewpot!
-- [#449](https://github.com/influxdb/telegraf/pull/449): influxdb plugin, thanks @mark-rushakoff
+- [#427](https://github.com/influxdata/telegraf/pull/427): zfs plugin: pool stats added. Thanks @allenpetersen!
+- [#428](https://github.com/influxdata/telegraf/pull/428): Amazon Kinesis output. Thanks @jimmystewpot!
+- [#449](https://github.com/influxdata/telegraf/pull/449): influxdb plugin, thanks @mark-rushakoff
 
 ### Bugfixes
-- [#430](https://github.com/influxdb/telegraf/issues/430): Network statistics removed in elasticsearch 2.1. Thanks @jipperinbham!
-- [#452](https://github.com/influxdb/telegraf/issues/452): Elasticsearch open file handles error. Thanks @jipperinbham!
+- [#430](https://github.com/influxdata/telegraf/issues/430): Network statistics removed in elasticsearch 2.1. Thanks @jipperinbham!
+- [#452](https://github.com/influxdata/telegraf/issues/452): Elasticsearch open file handles error. Thanks @jipperinbham!
 
 ## v0.2.4 [2015-12-08]
 
 ### Features
-- [#412](https://github.com/influxdb/telegraf/pull/412): Additional memcached stats. Thanks @mgresser!
-- [#410](https://github.com/influxdb/telegraf/pull/410): Additional redis metrics. Thanks @vlaadbrain!
-- [#414](https://github.com/influxdb/telegraf/issues/414): Jolokia plugin auth parameters
-- [#415](https://github.com/influxdb/telegraf/issues/415): memcached plugin: support unix sockets
-- [#418](https://github.com/influxdb/telegraf/pull/418): memcached plugin additional unit tests.
-- [#408](https://github.com/influxdb/telegraf/pull/408): MailChimp plugin.
-- [#382](https://github.com/influxdb/telegraf/pull/382): Add system wide network protocol stats to `net` plugin.
-- [#401](https://github.com/influxdb/telegraf/pull/401): Support pass/drop/tagpass/tagdrop for outputs. Thanks @oldmantaiter!
+- [#412](https://github.com/influxdata/telegraf/pull/412): Additional memcached stats. Thanks @mgresser!
+- [#410](https://github.com/influxdata/telegraf/pull/410): Additional redis metrics. Thanks @vlaadbrain!
+- [#414](https://github.com/influxdata/telegraf/issues/414): Jolokia plugin auth parameters
+- [#415](https://github.com/influxdata/telegraf/issues/415): memcached plugin: support unix sockets
+- [#418](https://github.com/influxdata/telegraf/pull/418): memcached plugin additional unit tests.
+- [#408](https://github.com/influxdata/telegraf/pull/408): MailChimp plugin.
+- [#382](https://github.com/influxdata/telegraf/pull/382): Add system wide network protocol stats to `net` plugin.
+- [#401](https://github.com/influxdata/telegraf/pull/401): Support pass/drop/tagpass/tagdrop for outputs. Thanks @oldmantaiter!
 
 ### Bugfixes
-- [#405](https://github.com/influxdb/telegraf/issues/405): Prometheus output cardinality issue
-- [#388](https://github.com/influxdb/telegraf/issues/388): Fix collection hangup when cpu times decrement.
+- [#405](https://github.com/influxdata/telegraf/issues/405): Prometheus output cardinality issue
+- [#388](https://github.com/influxdata/telegraf/issues/388): Fix collection hangup when cpu times decrement.
 
 ## v0.2.3 [2015-11-30]
 
@@ -90,15 +137,15 @@ same type can be specified, like this:
 - Aerospike plugin: tag changed from `host` -> `aerospike_host`
 
 ### Features
-- [#379](https://github.com/influxdb/telegraf/pull/379): Riemann output, thanks @allenj!
-- [#375](https://github.com/influxdb/telegraf/pull/375): kafka_consumer service plugin.
-- [#392](https://github.com/influxdb/telegraf/pull/392): Procstat plugin can now accept pgrep -f pattern, thanks @ecarreras!
-- [#383](https://github.com/influxdb/telegraf/pull/383): Specify plugins as a list.
-- [#354](https://github.com/influxdb/telegraf/pull/354): Add ability to specify multiple metrics in one statsd line. Thanks @MerlinDMC!
+- [#379](https://github.com/influxdata/telegraf/pull/379): Riemann output, thanks @allenj!
+- [#375](https://github.com/influxdata/telegraf/pull/375): kafka_consumer service plugin.
+- [#392](https://github.com/influxdata/telegraf/pull/392): Procstat plugin can now accept pgrep -f pattern, thanks @ecarreras!
+- [#383](https://github.com/influxdata/telegraf/pull/383): Specify plugins as a list.
+- [#354](https://github.com/influxdata/telegraf/pull/354): Add ability to specify multiple metrics in one statsd line. Thanks @MerlinDMC!
 
 ### Bugfixes
-- [#371](https://github.com/influxdb/telegraf/issues/371): Kafka consumer plugin not functioning.
-- [#389](https://github.com/influxdb/telegraf/issues/389): NaN value panic
+- [#371](https://github.com/influxdata/telegraf/issues/371): Kafka consumer plugin not functioning.
+- [#389](https://github.com/influxdata/telegraf/issues/389): NaN value panic
 
 ## v0.2.2 [2015-11-18]
 
@@ -107,7 +154,7 @@ same type can be specified, like this:
 lists of servers/URLs. 0.2.2 is being released solely to fix that bug
 
 ### Bugfixes
-- [#377](https://github.com/influxdb/telegraf/pull/377): Fix for duplicate slices in inputs.
+- [#377](https://github.com/influxdata/telegraf/pull/377): Fix for duplicate slices in inputs.
 
 ## v0.2.1 [2015-11-16]
 
@@ -124,22 +171,22 @@ changed to just run docker commands in the Makefile. See `make docker-run` and
 same type.
 
 ### Features
-- [#325](https://github.com/influxdb/telegraf/pull/325): NSQ output. Thanks @jrxFive!
-- [#318](https://github.com/influxdb/telegraf/pull/318): Prometheus output. Thanks @oldmantaiter!
-- [#338](https://github.com/influxdb/telegraf/pull/338): Restart Telegraf on package upgrade. Thanks @linsomniac!
-- [#337](https://github.com/influxdb/telegraf/pull/337): Jolokia plugin, thanks @saiello!
-- [#350](https://github.com/influxdb/telegraf/pull/350): Amon output.
-- [#365](https://github.com/influxdb/telegraf/pull/365): Twemproxy plugin by @codeb2cc
-- [#317](https://github.com/influxdb/telegraf/issues/317): ZFS plugin, thanks @cornerot!
-- [#364](https://github.com/influxdb/telegraf/pull/364): Support InfluxDB UDP output.
-- [#370](https://github.com/influxdb/telegraf/pull/370): Support specifying multiple outputs, as lists.
-- [#372](https://github.com/influxdb/telegraf/pull/372): Remove gosigar and update go-dockerclient for FreeBSD support. Thanks @MerlinDMC!
+- [#325](https://github.com/influxdata/telegraf/pull/325): NSQ output. Thanks @jrxFive!
+- [#318](https://github.com/influxdata/telegraf/pull/318): Prometheus output. Thanks @oldmantaiter!
+- [#338](https://github.com/influxdata/telegraf/pull/338): Restart Telegraf on package upgrade. Thanks @linsomniac!
+- [#337](https://github.com/influxdata/telegraf/pull/337): Jolokia plugin, thanks @saiello!
+- [#350](https://github.com/influxdata/telegraf/pull/350): Amon output.
+- [#365](https://github.com/influxdata/telegraf/pull/365): Twemproxy plugin by @codeb2cc
+- [#317](https://github.com/influxdata/telegraf/issues/317): ZFS plugin, thanks @cornerot!
+- [#364](https://github.com/influxdata/telegraf/pull/364): Support InfluxDB UDP output.
+- [#370](https://github.com/influxdata/telegraf/pull/370): Support specifying multiple outputs, as lists.
+- [#372](https://github.com/influxdata/telegraf/pull/372): Remove gosigar and update go-dockerclient for FreeBSD support. Thanks @MerlinDMC!
 
 ### Bugfixes
-- [#331](https://github.com/influxdb/telegraf/pull/331): Dont overwrite host tag in redis plugin.
-- [#336](https://github.com/influxdb/telegraf/pull/336): Mongodb plugin should take 2 measurements.
-- [#351](https://github.com/influxdb/telegraf/issues/317): Fix continual "CREATE DATABASE" in writes
-- [#360](https://github.com/influxdb/telegraf/pull/360): Apply prefix before ShouldPass check. Thanks @sotfo!
+- [#331](https://github.com/influxdata/telegraf/pull/331): Dont overwrite host tag in redis plugin.
+- [#336](https://github.com/influxdata/telegraf/pull/336): Mongodb plugin should take 2 measurements.
+- [#351](https://github.com/influxdata/telegraf/issues/317): Fix continual "CREATE DATABASE" in writes
+- [#360](https://github.com/influxdata/telegraf/pull/360): Apply prefix before ShouldPass check. Thanks @sotfo!
 
 ## v0.2.0 [2015-10-27]
 
@@ -160,38 +207,38 @@ be controlled via the `round_interval` and `flush_jitter` config options.
 - Telegraf will now retry metric flushes twice
 
 ### Features
-- [#205](https://github.com/influxdb/telegraf/issues/205): Include per-db redis keyspace info
-- [#226](https://github.com/influxdb/telegraf/pull/226): Add timestamps to points in Kafka/AMQP outputs. Thanks @ekini
-- [#90](https://github.com/influxdb/telegraf/issues/90): Add Docker labels to tags in docker plugin
-- [#223](https://github.com/influxdb/telegraf/pull/223): Add port tag to nginx plugin. Thanks @neezgee!
-- [#227](https://github.com/influxdb/telegraf/pull/227): Add command intervals to exec plugin. Thanks @jpalay!
-- [#241](https://github.com/influxdb/telegraf/pull/241): MQTT Output. Thanks @shirou!
+- [#205](https://github.com/influxdata/telegraf/issues/205): Include per-db redis keyspace info
+- [#226](https://github.com/influxdata/telegraf/pull/226): Add timestamps to points in Kafka/AMQP outputs. Thanks @ekini
+- [#90](https://github.com/influxdata/telegraf/issues/90): Add Docker labels to tags in docker plugin
+- [#223](https://github.com/influxdata/telegraf/pull/223): Add port tag to nginx plugin. Thanks @neezgee!
+- [#227](https://github.com/influxdata/telegraf/pull/227): Add command intervals to exec plugin. Thanks @jpalay!
+- [#241](https://github.com/influxdata/telegraf/pull/241): MQTT Output. Thanks @shirou!
 - Memory plugin: cached and buffered measurements re-added
 - Logging: additional logging for each collection interval, track the number
 of metrics collected and from how many inputs.
-- [#240](https://github.com/influxdb/telegraf/pull/240): procstat plugin, thanks @ranjib!
-- [#244](https://github.com/influxdb/telegraf/pull/244): netstat plugin, thanks @shirou!
-- [#262](https://github.com/influxdb/telegraf/pull/262): zookeeper plugin, thanks @jrxFive!
-- [#237](https://github.com/influxdb/telegraf/pull/237): statsd service plugin, thanks @sparrc
-- [#273](https://github.com/influxdb/telegraf/pull/273): puppet agent plugin, thats @jrxFive!
-- [#280](https://github.com/influxdb/telegraf/issues/280): Use InfluxDB client v2.
-- [#281](https://github.com/influxdb/telegraf/issues/281): Eliminate need to deep copy Batch Points.
-- [#286](https://github.com/influxdb/telegraf/issues/286): bcache plugin, thanks @cornerot!
-- [#287](https://github.com/influxdb/telegraf/issues/287): Batch AMQP output, thanks @ekini!
-- [#301](https://github.com/influxdb/telegraf/issues/301): Collect on even intervals
-- [#298](https://github.com/influxdb/telegraf/pull/298): Support retrying output writes
-- [#300](https://github.com/influxdb/telegraf/issues/300): aerospike plugin. Thanks @oldmantaiter!
-- [#322](https://github.com/influxdb/telegraf/issues/322): Librato output. Thanks @jipperinbham!
+- [#240](https://github.com/influxdata/telegraf/pull/240): procstat plugin, thanks @ranjib!
+- [#244](https://github.com/influxdata/telegraf/pull/244): netstat plugin, thanks @shirou!
+- [#262](https://github.com/influxdata/telegraf/pull/262): zookeeper plugin, thanks @jrxFive!
+- [#237](https://github.com/influxdata/telegraf/pull/237): statsd service plugin, thanks @sparrc
+- [#273](https://github.com/influxdata/telegraf/pull/273): puppet agent plugin, thats @jrxFive!
+- [#280](https://github.com/influxdata/telegraf/issues/280): Use InfluxDB client v2.
+- [#281](https://github.com/influxdata/telegraf/issues/281): Eliminate need to deep copy Batch Points.
+- [#286](https://github.com/influxdata/telegraf/issues/286): bcache plugin, thanks @cornerot!
+- [#287](https://github.com/influxdata/telegraf/issues/287): Batch AMQP output, thanks @ekini!
+- [#301](https://github.com/influxdata/telegraf/issues/301): Collect on even intervals
+- [#298](https://github.com/influxdata/telegraf/pull/298): Support retrying output writes
+- [#300](https://github.com/influxdata/telegraf/issues/300): aerospike plugin. Thanks @oldmantaiter!
+- [#322](https://github.com/influxdata/telegraf/issues/322): Librato output. Thanks @jipperinbham!
 
 ### Bugfixes
-- [#228](https://github.com/influxdb/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
-- [#232](https://github.com/influxdb/telegraf/pull/232): Fix bashism run during deb package installation. Thanks @yankcrime!
-- [#261](https://github.com/influxdb/telegraf/issues/260): RabbitMQ panics if wrong credentials given. Thanks @ekini!
-- [#245](https://github.com/influxdb/telegraf/issues/245): Document Exec plugin example. Thanks @ekini!
-- [#264](https://github.com/influxdb/telegraf/issues/264): logrotate config file fixes. Thanks @linsomniac!
-- [#290](https://github.com/influxdb/telegraf/issues/290): Fix some plugins sending their values as strings.
-- [#289](https://github.com/influxdb/telegraf/issues/289): Fix accumulator panic on nil tags.
-- [#302](https://github.com/influxdb/telegraf/issues/302): Fix `[tags]` getting applied, thanks @gotyaoi!
+- [#228](https://github.com/influxdata/telegraf/pull/228): New version of package will replace old one. Thanks @ekini!
+- [#232](https://github.com/influxdata/telegraf/pull/232): Fix bashism run during deb package installation. Thanks @yankcrime!
+- [#261](https://github.com/influxdata/telegraf/issues/260): RabbitMQ panics if wrong credentials given. Thanks @ekini!
+- [#245](https://github.com/influxdata/telegraf/issues/245): Document Exec plugin example. Thanks @ekini!
+- [#264](https://github.com/influxdata/telegraf/issues/264): logrotate config file fixes. Thanks @linsomniac!
+- [#290](https://github.com/influxdata/telegraf/issues/290): Fix some plugins sending their values as strings.
+- [#289](https://github.com/influxdata/telegraf/issues/289): Fix accumulator panic on nil tags.
+- [#302](https://github.com/influxdata/telegraf/issues/302): Fix `[tags]` getting applied, thanks @gotyaoi!
 
 ## v0.1.9 [2015-09-22]
 
@@ -217,27 +264,27 @@ have been renamed for consistency. Some measurements have also been removed from
 re-added in a "verbose" mode if there is demand for it.
 
 ### Features
-- [#143](https://github.com/influxdb/telegraf/issues/143): InfluxDB clustering support
-- [#181](https://github.com/influxdb/telegraf/issues/181): Makefile GOBIN support. Thanks @Vye!
-- [#203](https://github.com/influxdb/telegraf/pull/200): AMQP output. Thanks @ekini!
-- [#182](https://github.com/influxdb/telegraf/pull/182): OpenTSDB output. Thanks @rplessl!
-- [#187](https://github.com/influxdb/telegraf/pull/187): Retry output sink connections on startup.
-- [#220](https://github.com/influxdb/telegraf/pull/220): Add port tag to apache plugin. Thanks @neezgee!
-- [#217](https://github.com/influxdb/telegraf/pull/217): Add filtering for output sinks
+- [#143](https://github.com/influxdata/telegraf/issues/143): InfluxDB clustering support
+- [#181](https://github.com/influxdata/telegraf/issues/181): Makefile GOBIN support. Thanks @Vye!
+- [#203](https://github.com/influxdata/telegraf/pull/200): AMQP output. Thanks @ekini!
+- [#182](https://github.com/influxdata/telegraf/pull/182): OpenTSDB output. Thanks @rplessl!
+- [#187](https://github.com/influxdata/telegraf/pull/187): Retry output sink connections on startup.
+- [#220](https://github.com/influxdata/telegraf/pull/220): Add port tag to apache plugin. Thanks @neezgee!
+- [#217](https://github.com/influxdata/telegraf/pull/217): Add filtering for output sinks
 and filtering when specifying a config file.
 
 ### Bugfixes
-- [#170](https://github.com/influxdb/telegraf/issues/170): Systemd support
-- [#175](https://github.com/influxdb/telegraf/issues/175): Set write precision before gathering metrics
-- [#178](https://github.com/influxdb/telegraf/issues/178): redis plugin, multiple server thread hang bug
+- [#170](https://github.com/influxdata/telegraf/issues/170): Systemd support
+- [#175](https://github.com/influxdata/telegraf/issues/175): Set write precision before gathering metrics
+- [#178](https://github.com/influxdata/telegraf/issues/178): redis plugin, multiple server thread hang bug
 - Fix net plugin on darwin
-- [#84](https://github.com/influxdb/telegraf/issues/84): Fix docker plugin on CentOS. Thanks @neezgee!
-- [#189](https://github.com/influxdb/telegraf/pull/189): Fix mem_used_perc. Thanks @mced!
-- [#192](https://github.com/influxdb/telegraf/issues/192): Increase compatibility of postgresql plugin. Now supports versions 8.1+
-- [#203](https://github.com/influxdb/telegraf/issues/203): EL5 rpm support. Thanks @ekini!
-- [#206](https://github.com/influxdb/telegraf/issues/206): CPU steal/guest values wrong on linux.
-- [#212](https://github.com/influxdb/telegraf/issues/212): Add hashbang to postinstall script. Thanks @ekini!
-- [#212](https://github.com/influxdb/telegraf/issues/212): Fix makefile warning. Thanks @ekini!
+- [#84](https://github.com/influxdata/telegraf/issues/84): Fix docker plugin on CentOS. Thanks @neezgee!
+- [#189](https://github.com/influxdata/telegraf/pull/189): Fix mem_used_perc. Thanks @mced!
+- [#192](https://github.com/influxdata/telegraf/issues/192): Increase compatibility of postgresql plugin. Now supports versions 8.1+
+- [#203](https://github.com/influxdata/telegraf/issues/203): EL5 rpm support. Thanks @ekini!
+- [#206](https://github.com/influxdata/telegraf/issues/206): CPU steal/guest values wrong on linux.
+- [#212](https://github.com/influxdata/telegraf/issues/212): Add hashbang to postinstall script. Thanks @ekini!
+- [#212](https://github.com/influxdata/telegraf/issues/212): Fix makefile warning. Thanks @ekini!
 
 ## v0.1.8 [2015-09-04]
 
@@ -246,106 +293,106 @@ and filtering when specifying a config file.
 - Now using Go 1.5 to build telegraf
 
 ### Features
-- [#150](https://github.com/influxdb/telegraf/pull/150): Add Host Uptime metric to system plugin
-- [#158](https://github.com/influxdb/telegraf/pull/158): Apache Plugin. Thanks @KPACHbIuLLIAnO4
-- [#159](https://github.com/influxdb/telegraf/pull/159): Use second precision for InfluxDB writes
-- [#165](https://github.com/influxdb/telegraf/pull/165): Add additional metrics to mysql plugin. Thanks @nickscript0
-- [#162](https://github.com/influxdb/telegraf/pull/162): Write UTC by default, provide option
-- [#166](https://github.com/influxdb/telegraf/pull/166): Upload binaries to S3
-- [#169](https://github.com/influxdb/telegraf/pull/169): Ping plugin
+- [#150](https://github.com/influxdata/telegraf/pull/150): Add Host Uptime metric to system plugin
+- [#158](https://github.com/influxdata/telegraf/pull/158): Apache Plugin. Thanks @KPACHbIuLLIAnO4
+- [#159](https://github.com/influxdata/telegraf/pull/159): Use second precision for InfluxDB writes
+- [#165](https://github.com/influxdata/telegraf/pull/165): Add additional metrics to mysql plugin. Thanks @nickscript0
+- [#162](https://github.com/influxdata/telegraf/pull/162): Write UTC by default, provide option
+- [#166](https://github.com/influxdata/telegraf/pull/166): Upload binaries to S3
+- [#169](https://github.com/influxdata/telegraf/pull/169): Ping plugin
 
 ### Bugfixes
 
 ## v0.1.7 [2015-08-28]
 
 ### Features
-- [#38](https://github.com/influxdb/telegraf/pull/38): Kafka output producer.
-- [#133](https://github.com/influxdb/telegraf/pull/133): Add plugin.Gather error logging. Thanks @nickscript0!
-- [#136](https://github.com/influxdb/telegraf/issues/136): Add a -usage flag for printing usage of a single plugin.
-- [#137](https://github.com/influxdb/telegraf/issues/137): Memcached: fix when a value contains a space
-- [#138](https://github.com/influxdb/telegraf/issues/138): MySQL server address tag.
-- [#142](https://github.com/influxdb/telegraf/pull/142): Add Description and SampleConfig funcs to output interface
+- [#38](https://github.com/influxdata/telegraf/pull/38): Kafka output producer.
+- [#133](https://github.com/influxdata/telegraf/pull/133): Add plugin.Gather error logging. Thanks @nickscript0!
+- [#136](https://github.com/influxdata/telegraf/issues/136): Add a -usage flag for printing usage of a single plugin.
+- [#137](https://github.com/influxdata/telegraf/issues/137): Memcached: fix when a value contains a space
+- [#138](https://github.com/influxdata/telegraf/issues/138): MySQL server address tag.
+- [#142](https://github.com/influxdata/telegraf/pull/142): Add Description and SampleConfig funcs to output interface
 - Indent the toml config file for readability
 
 ### Bugfixes
-- [#128](https://github.com/influxdb/telegraf/issues/128): system_load measurement missing.
-- [#129](https://github.com/influxdb/telegraf/issues/129): Latest pkg url fix.
-- [#131](https://github.com/influxdb/telegraf/issues/131): Fix memory reporting on linux & darwin. Thanks @subhachandrachandra!
-- [#140](https://github.com/influxdb/telegraf/issues/140): Memory plugin prec->perc typo fix. Thanks @brunoqc!
+- [#128](https://github.com/influxdata/telegraf/issues/128): system_load measurement missing.
+- [#129](https://github.com/influxdata/telegraf/issues/129): Latest pkg url fix.
+- [#131](https://github.com/influxdata/telegraf/issues/131): Fix memory reporting on linux & darwin. Thanks @subhachandrachandra!
+- [#140](https://github.com/influxdata/telegraf/issues/140): Memory plugin prec->perc typo fix. Thanks @brunoqc!
 
 ## v0.1.6 [2015-08-20]
 
 ### Features
-- [#112](https://github.com/influxdb/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
-- [#116](https://github.com/influxdb/telegraf/pull/116): Use godep to vendor all dependencies
-- [#120](https://github.com/influxdb/telegraf/pull/120): Httpjson plugin. Thanks @jpalay & @alvaromorales!
+- [#112](https://github.com/influxdata/telegraf/pull/112): Datadog output. Thanks @jipperinbham!
+- [#116](https://github.com/influxdata/telegraf/pull/116): Use godep to vendor all dependencies
+- [#120](https://github.com/influxdata/telegraf/pull/120): Httpjson plugin. Thanks @jpalay & @alvaromorales!
 
 ### Bugfixes
-- [#113](https://github.com/influxdb/telegraf/issues/113): Update README with Telegraf/InfluxDB compatibility
-- [#118](https://github.com/influxdb/telegraf/pull/118): Fix for disk usage stats in Windows. Thanks @srfraser!
-- [#122](https://github.com/influxdb/telegraf/issues/122): Fix for DiskUsage segv fault. Thanks @srfraser!
-- [#126](https://github.com/influxdb/telegraf/issues/126): Nginx plugin not catching net.SplitHostPort error
+- [#113](https://github.com/influxdata/telegraf/issues/113): Update README with Telegraf/InfluxDB compatibility
+- [#118](https://github.com/influxdata/telegraf/pull/118): Fix for disk usage stats in Windows. Thanks @srfraser!
+- [#122](https://github.com/influxdata/telegraf/issues/122): Fix for DiskUsage segv fault. Thanks @srfraser!
+- [#126](https://github.com/influxdata/telegraf/issues/126): Nginx plugin not catching net.SplitHostPort error
 
 ## v0.1.5 [2015-08-13]
 
 ### Features
-- [#54](https://github.com/influxdb/telegraf/pull/54): MongoDB plugin. Thanks @jipperinbham!
-- [#55](https://github.com/influxdb/telegraf/pull/55): Elasticsearch plugin. Thanks @brocaar!
-- [#71](https://github.com/influxdb/telegraf/pull/71): HAProxy plugin. Thanks @kureikain!
-- [#72](https://github.com/influxdb/telegraf/pull/72): Adding TokuDB metrics to MySQL. Thanks vadimtk!
-- [#73](https://github.com/influxdb/telegraf/pull/73): RabbitMQ plugin. Thanks @ianunruh!
-- [#77](https://github.com/influxdb/telegraf/issues/77): Automatically create database.
-- [#79](https://github.com/influxdb/telegraf/pull/56): Nginx plugin. Thanks @codeb2cc!
-- [#86](https://github.com/influxdb/telegraf/pull/86): Lustre2 plugin. Thanks srfraser!
-- [#91](https://github.com/influxdb/telegraf/pull/91): Unit testing
-- [#92](https://github.com/influxdb/telegraf/pull/92): Exec plugin. Thanks @alvaromorales!
-- [#98](https://github.com/influxdb/telegraf/pull/98): LeoFS plugin. Thanks @mocchira!
-- [#103](https://github.com/influxdb/telegraf/pull/103): Filter by metric tags. Thanks @srfraser!
-- [#106](https://github.com/influxdb/telegraf/pull/106): Options to filter plugins on startup. Thanks @zepouet!
-- [#107](https://github.com/influxdb/telegraf/pull/107): Multiple outputs beyong influxdb. Thanks @jipperinbham!
-- [#108](https://github.com/influxdb/telegraf/issues/108): Support setting per-CPU and total-CPU gathering.
-- [#111](https://github.com/influxdb/telegraf/pull/111): Report CPU Usage in cpu plugin. Thanks @jpalay!
+- [#54](https://github.com/influxdata/telegraf/pull/54): MongoDB plugin. Thanks @jipperinbham!
+- [#55](https://github.com/influxdata/telegraf/pull/55): Elasticsearch plugin. Thanks @brocaar!
+- [#71](https://github.com/influxdata/telegraf/pull/71): HAProxy plugin. Thanks @kureikain!
+- [#72](https://github.com/influxdata/telegraf/pull/72): Adding TokuDB metrics to MySQL. Thanks vadimtk!
+- [#73](https://github.com/influxdata/telegraf/pull/73): RabbitMQ plugin. Thanks @ianunruh!
+- [#77](https://github.com/influxdata/telegraf/issues/77): Automatically create database.
+- [#79](https://github.com/influxdata/telegraf/pull/56): Nginx plugin. Thanks @codeb2cc!
+- [#86](https://github.com/influxdata/telegraf/pull/86): Lustre2 plugin. Thanks srfraser!
+- [#91](https://github.com/influxdata/telegraf/pull/91): Unit testing
+- [#92](https://github.com/influxdata/telegraf/pull/92): Exec plugin. Thanks @alvaromorales!
+- [#98](https://github.com/influxdata/telegraf/pull/98): LeoFS plugin. Thanks @mocchira!
+- [#103](https://github.com/influxdata/telegraf/pull/103): Filter by metric tags. Thanks @srfraser!
+- [#106](https://github.com/influxdata/telegraf/pull/106): Options to filter plugins on startup. Thanks @zepouet!
+- [#107](https://github.com/influxdata/telegraf/pull/107): Multiple outputs beyong influxdb. Thanks @jipperinbham!
+- [#108](https://github.com/influxdata/telegraf/issues/108): Support setting per-CPU and total-CPU gathering.
+- [#111](https://github.com/influxdata/telegraf/pull/111): Report CPU Usage in cpu plugin. Thanks @jpalay!
 
 ### Bugfixes
-- [#85](https://github.com/influxdb/telegraf/pull/85): Fix GetLocalHost testutil function for mac users
-- [#89](https://github.com/influxdb/telegraf/pull/89): go fmt fixes
-- [#94](https://github.com/influxdb/telegraf/pull/94): Fix for issue #93, explicitly call sarama.v1 -> sarama
-- [#101](https://github.com/influxdb/telegraf/issues/101): switch back from master branch if building locally
-- [#99](https://github.com/influxdb/telegraf/issues/99): update integer output to new InfluxDB line protocol format
+- [#85](https://github.com/influxdata/telegraf/pull/85): Fix GetLocalHost testutil function for mac users
+- [#89](https://github.com/influxdata/telegraf/pull/89): go fmt fixes
+- [#94](https://github.com/influxdata/telegraf/pull/94): Fix for issue #93, explicitly call sarama.v1 -> sarama
+- [#101](https://github.com/influxdata/telegraf/issues/101): switch back from master branch if building locally
+- [#99](https://github.com/influxdata/telegraf/issues/99): update integer output to new InfluxDB line protocol format
 
 ## v0.1.4 [2015-07-09]
 
 ### Features
-- [#56](https://github.com/influxdb/telegraf/pull/56): Update README for Kafka plugin. Thanks @EmilS!
+- [#56](https://github.com/influxdata/telegraf/pull/56): Update README for Kafka plugin. Thanks @EmilS!
 
 ### Bugfixes
-- [#50](https://github.com/influxdb/telegraf/pull/50): Fix init.sh script to use telegraf directory. Thanks @jseriff!
-- [#52](https://github.com/influxdb/telegraf/pull/52): Update CHANGELOG to reference updated directory. Thanks @benfb!
+- [#50](https://github.com/influxdata/telegraf/pull/50): Fix init.sh script to use telegraf directory. Thanks @jseriff!
+- [#52](https://github.com/influxdata/telegraf/pull/52): Update CHANGELOG to reference updated directory. Thanks @benfb!
 
 ## v0.1.3 [2015-07-05]
 
 ### Features
-- [#35](https://github.com/influxdb/telegraf/pull/35): Add Kafka plugin. Thanks @EmilS!
-- [#47](https://github.com/influxdb/telegraf/pull/47): Add RethinkDB plugin. Thanks @jipperinbham!
+- [#35](https://github.com/influxdata/telegraf/pull/35): Add Kafka plugin. Thanks @EmilS!
+- [#47](https://github.com/influxdata/telegraf/pull/47): Add RethinkDB plugin. Thanks @jipperinbham!
 
 ### Bugfixes
-- [#45](https://github.com/influxdb/telegraf/pull/45): Skip disk tags that don't have a value. Thanks @jhofeditz!
-- [#43](https://github.com/influxdb/telegraf/pull/43): Fix bug in MySQL plugin. Thanks @marcosnils!
+- [#45](https://github.com/influxdata/telegraf/pull/45): Skip disk tags that don't have a value. Thanks @jhofeditz!
+- [#43](https://github.com/influxdata/telegraf/pull/43): Fix bug in MySQL plugin. Thanks @marcosnils!
 
 ## v0.1.2 [2015-07-01]
 
 ### Features
-- [#12](https://github.com/influxdb/telegraf/pull/12): Add Linux/ARM to the list of built binaries. Thanks @voxxit!
-- [#14](https://github.com/influxdb/telegraf/pull/14): Clarify the S3 buckets that Telegraf is pushed to.
-- [#16](https://github.com/influxdb/telegraf/pull/16): Convert Redis to use URI, support Redis AUTH. Thanks @jipperinbham!
-- [#21](https://github.com/influxdb/telegraf/pull/21): Add memcached plugin. Thanks @Yukki!
+- [#12](https://github.com/influxdata/telegraf/pull/12): Add Linux/ARM to the list of built binaries. Thanks @voxxit!
+- [#14](https://github.com/influxdata/telegraf/pull/14): Clarify the S3 buckets that Telegraf is pushed to.
+- [#16](https://github.com/influxdata/telegraf/pull/16): Convert Redis to use URI, support Redis AUTH. Thanks @jipperinbham!
+- [#21](https://github.com/influxdata/telegraf/pull/21): Add memcached plugin. Thanks @Yukki!
 
 ### Bugfixes
-- [#13](https://github.com/influxdb/telegraf/pull/13): Fix the packaging script.
-- [#19](https://github.com/influxdb/telegraf/pull/19): Add host name to metric tags. Thanks @sherifzain!
-- [#20](https://github.com/influxdb/telegraf/pull/20): Fix race condition with accumulator mutex. Thanks @nkatsaros!
-- [#23](https://github.com/influxdb/telegraf/pull/23): Change name of folder for packages. Thanks @colinrymer!
-- [#32](https://github.com/influxdb/telegraf/pull/32): Fix spelling of memoory -> memory. Thanks @tylernisonoff!
+- [#13](https://github.com/influxdata/telegraf/pull/13): Fix the packaging script.
+- [#19](https://github.com/influxdata/telegraf/pull/19): Add host name to metric tags. Thanks @sherifzain!
+- [#20](https://github.com/influxdata/telegraf/pull/20): Fix race condition with accumulator mutex. Thanks @nkatsaros!
+- [#23](https://github.com/influxdata/telegraf/pull/23): Change name of folder for packages. Thanks @colinrymer!
+- [#32](https://github.com/influxdata/telegraf/pull/32): Fix spelling of memoory -> memory. Thanks @tylernisonoff!
 
 ## v0.1.1 [2015-06-19]
 

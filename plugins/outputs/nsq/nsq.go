@@ -2,8 +2,8 @@ package nsq
 
 import (
 	"fmt"
-	"github.com/influxdb/influxdb/client/v2"
-	"github.com/influxdb/telegraf/plugins/outputs"
+	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/nsqio/go-nsq"
 )
 

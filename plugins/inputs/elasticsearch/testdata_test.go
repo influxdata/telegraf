@@ -562,6 +562,9 @@ var indicesExpected = map[string]interface{}{
 }
 
 var osExpected = map[string]interface{}{
+	"load_average_0":           float64(0.01),
+	"load_average_1":           float64(0.04),
+	"load_average_2":           float64(0.05),
 	"swap_used_in_bytes":       float64(0),
 	"swap_free_in_bytes":       float64(487997440),
 	"timestamp":                float64(1436460392944),
@@ -724,10 +727,13 @@ var threadPoolExpected = map[string]interface{}{
 }
 
 var fsExpected = map[string]interface{}{
-	"timestamp":                float64(1436460392946),
-	"total_free_in_bytes":      float64(16909316096),
-	"total_available_in_bytes": float64(15894814720),
-	"total_total_in_bytes":     float64(19507089408),
+	"data_0_total_in_bytes":     float64(19507089408),
+	"data_0_free_in_bytes":      float64(16909316096),
+	"data_0_available_in_bytes": float64(15894814720),
+	"timestamp":                 float64(1436460392946),
+	"total_free_in_bytes":       float64(16909316096),
+	"total_available_in_bytes":  float64(15894814720),
+	"total_total_in_bytes":      float64(19507089408),
 }
 
 var transportExpected = map[string]interface{}{

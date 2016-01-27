@@ -17,17 +17,18 @@ new plugins.
 
 ## Installation:
 
-NOTE: Telegraf 0.3.x is **not** backwards-compatible with previous versions of
-telegraf, both in the database layout and the configuration file. 0.2.x will
-continue to be supported, see below for download links.
+NOTE: Telegraf 0.10.x is **not** backwards-compatible with previous versions
+of telegraf, both in the database layout and the configuration file. 0.2.x
+will continue to be supported, see below for download links.
 
-TODO: link to blog post about 0.3.x changes.
+For more details on the differences between Telegraf 0.2.x and 0.10.x, see
+the [release blog post](https://influxdata.com/blog/announcing-telegraf-0-10-0/).
 
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.3.0_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.3.0-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.10.0-1_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.10.0-1.x86_64.rpm
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
@@ -45,9 +46,9 @@ controlled via `systemctl [action] telegraf`
 ### Linux binaries:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.3.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.3.0.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.3.0.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_386.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_arm.tar.gz
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
@@ -72,19 +73,19 @@ brew install telegraf
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
 which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.4+.
+if you don't have it already. You also must build with golang version 1.5+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
-3. Run `go get github.com/influxdb/telegraf`
-4. Run `cd $GOPATH/src/github.com/influxdb/telegraf`
+3. Run `go get github.com/influxdata/telegraf`
+4. Run `cd $GOPATH/src/github.com/influxdata/telegraf`
 5. Run `make`
 
 ### How to use it:
 
 ```console
 $ telegraf -help
-Telegraf, The plugin-driven server agent for reporting metrics into InfluxDB
+Telegraf, The plugin-driven server agent for collecting and reporting metrics.
 
 Usage:
 
@@ -99,6 +100,8 @@ The flags are:
   -input-filter      filter the input plugins to enable, separator is :
   -output-filter     filter the output plugins to enable, separator is :
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
+  -debug             print metrics as they're generated to stdout
+  -quiet             run in quiet mode
   -version           print the version to stdout
 
 Examples:
@@ -126,12 +129,17 @@ configuration options.
 
 ## Supported Input Plugins
 
-Telegraf currently has support for collecting metrics from:
+Telegraf currently has support for collecting metrics from many sources. For
+more information on each, please look at the directory of the same name in
+`plugins/inputs`.
+
+Currently implemented sources:
 
 * aerospike
 * apache
 * bcache
 * disque
+* docker
 * elasticsearch
 * exec (generic JSON-emitting executable plugin)
 * haproxy
@@ -145,7 +153,9 @@ Telegraf currently has support for collecting metrics from:
 * mongodb
 * mysql
 * nginx
+* nsq
 * phpfpm
+* phusion passenger
 * ping
 * postgresql
 * procstat
@@ -154,9 +164,12 @@ Telegraf currently has support for collecting metrics from:
 * rabbitmq
 * redis
 * rethinkdb
+* sql server (microsoft)
 * twemproxy
 * zfs
 * zookeeper
+* sensors
+* snmp
 * system
     * cpu
     * mem
@@ -170,6 +183,7 @@ Telegraf can also collect metrics via the following service plugins:
 
 * statsd
 * kafka_consumer
+* github_webhooks
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.
@@ -179,9 +193,11 @@ want to add support for another service or third-party API.
 * influxdb
 * amon
 * amqp
+* aws kinesis
+* aws cloudwatch
 * datadog
+* graphite
 * kafka
-* amazon kinesis
 * librato
 * mqtt
 * nsq

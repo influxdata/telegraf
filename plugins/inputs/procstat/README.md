@@ -16,25 +16,19 @@ individual process specific measurements.
 Example:
 
 ```
-    [procstat]
+[[inputs.procstat]]
+  exe = "influxd"
+  prefix = "influxd"
 
-    [[procstat.specifications]]
-    exe = "influxd"
-    prefix = "influxd"
-
-    [[procstat.specifications]]
-    pid_file = "/var/run/lxc/dnsmasq.pid"
+[[inputs.procstat]]
+  pid_file = "/var/run/lxc/dnsmasq.pid"
 ```
 
 The above configuration would result in output like:
 
 ```
-[...]
-> [name="dnsmasq" pid="44979"] procstat_cpu_user value=0.14
-> [name="dnsmasq" pid="44979"] procstat_cpu_system value=0.07
-[...]
-> [name="influxd" pid="34337"] procstat_influxd_cpu_user value=25.43
-> [name="influxd" pid="34337"] procstat_influxd_cpu_system value=21.82
+> procstat,name="dnsmasq",pid="44979" cpu_user=0.14,cpu_system=0.07
+> procstat,name="influxd",pid="34337" influxd_cpu_user=25.43,influxd_cpu_system=21.82
 ```
 
 # Measurements

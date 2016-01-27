@@ -3,13 +3,16 @@ package system
 import (
 	"fmt"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type DiskStats struct {
 	ps PS
 
+	// Legacy support
 	Mountpoints []string
+
+	MountPoints []string
 }
 
 func (_ *DiskStats) Description() string {
@@ -19,7 +22,7 @@ func (_ *DiskStats) Description() string {
 var diskSampleConfig = `
   # By default, telegraf gather stats for all mountpoints.
   # Setting mountpoints will restrict the stats to the specified mountpoints.
-  # Mountpoints=["/"]
+  # mount_points = ["/"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
@@ -27,36 +30,35 @@ func (_ *DiskStats) SampleConfig() string {
 }
 
 func (s *DiskStats) Gather(acc inputs.Accumulator) error {
-	disks, err := s.ps.DiskUsage()
+	// Legacy support:
+	if len(s.Mountpoints) != 0 {
+		s.MountPoints = s.Mountpoints
+	}
+
+	disks, err := s.ps.DiskUsage(s.MountPoints)
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
 
-	var restrictMpoints bool
-	mPoints := make(map[string]bool)
-	if len(s.Mountpoints) != 0 {
-		restrictMpoints = true
-		for _, mp := range s.Mountpoints {
-			mPoints[mp] = true
-		}
-	}
-
 	for _, du := range disks {
-		_, member := mPoints[du.Path]
-		if restrictMpoints && !member {
-			continue
-		}
 		tags := map[string]string{
 			"path":   du.Path,
 			"fstype": du.Fstype,
 		}
+		var used_percent float64
+		if du.Used+du.Free > 0 {
+			used_percent = float64(du.Used) /
+				(float64(du.Used) + float64(du.Free)) * 100
+		}
+
 		fields := map[string]interface{}{
 			"total":        du.Total,
 			"free":         du.Free,
-			"used":         du.Total - du.Free,
+			"used":         du.Used,
+			"used_percent": used_percent,
 			"inodes_total": du.InodesTotal,
 			"inodes_free":  du.InodesFree,
-			"inodes_used":  du.InodesTotal - du.InodesFree,
+			"inodes_used":  du.InodesUsed,
 		}
 		acc.AddFields("disk", fields, tags)
 	}

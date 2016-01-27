@@ -8,11 +8,14 @@ import (
 
 	"github.com/gonuts/go-shellquote"
 
-	"github.com/influxdb/telegraf/internal"
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `
+  # NOTE This plugin only reads numerical measurements, strings and booleans
+  # will be ignored.
+
   # the command to run
   command = "/usr/bin/mycollector --foo=bar"
 

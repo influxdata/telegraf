@@ -4,7 +4,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/influxdb/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/net"
 	"github.com/stretchr/testify/require"
 )
@@ -80,7 +80,10 @@ func TestNetStats(t *testing.T) {
 		"udp_noports":     int64(892592),
 		"udp_indatagrams": int64(4655),
 	}
-	acc.AssertContainsTaggedFields(t, "net", fields2, make(map[string]string))
+	ntags = map[string]string{
+		"interface": "all",
+	}
+	acc.AssertContainsTaggedFields(t, "net", fields2, ntags)
 
 	acc.Points = nil
 

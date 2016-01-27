@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/influxdb/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type NetIOStats struct {
@@ -94,7 +94,10 @@ func (s *NetIOStats) Gather(acc inputs.Accumulator) error {
 			fields[name] = value
 		}
 	}
-	acc.AddFields("net", fields, nil)
+	tags := map[string]string{
+		"interface": "all",
+	}
+	acc.AddFields("net", fields, tags)
 
 	return nil
 }

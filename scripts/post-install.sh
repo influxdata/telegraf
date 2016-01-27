@@ -56,7 +56,7 @@ if [[ -f /etc/redhat-release ]]; then
 	install_init
 	install_chkconfig
     fi
-elif [[ -f /etc/lsb-release ]]; then
+elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
@@ -65,5 +65,12 @@ elif [[ -f /etc/lsb-release ]]; then
 	# Assuming sysv
 	install_init
 	install_update_rcd
+    fi
+elif [[ -f /etc/os-release ]]; then
+    source /etc/os-release
+    if [[ $ID = "amzn" ]]; then
+	# Amazon Linux logic
+	install_init
+	install_chkconfig
     fi
 fi
