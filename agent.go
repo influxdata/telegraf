@@ -7,10 +7,12 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 
@@ -86,6 +88,18 @@ func (a *Agent) Close() error {
 	return err
 }
 
+func panicRecover(input *models.RunningInput) {
+	if err := recover(); err != nil {
+		trace := make([]byte, 2048)
+		runtime.Stack(trace, true)
+		log.Printf("FATAL: Input [%s] panicked: %s, Stack:\n%s\n",
+			input.Name, err, trace)
+		log.Println("PLEASE REPORT THIS PANIC ON GITHUB with " +
+			"stack trace, configuration, and OS information: " +
+			"https://github.com/influxdata/telegraf/issues/new")
+	}
+}
+
 // gatherParallel runs the inputs that are using the same reporting interval
 // as the telegraf agent.
 func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
@@ -101,7 +115,8 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 		wg.Add(1)
 		counter++
-		go func(input *config.RunningInput) {
+		go func(input *models.RunningInput) {
+			defer panicRecover(input)
 			defer wg.Done()
 
 			acc := NewAccumulator(input.Config, pointChan)
@@ -144,9 +159,11 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 // reporting interval.
 func (a *Agent) gatherSeparate(
 	shutdown chan struct{},
-	input *config.RunningInput,
+	input *models.RunningInput,
 	pointChan chan *client.Point,
 ) error {
+	defer panicRecover(input)
+
 	ticker := time.NewTicker(input.Config.Interval)
 
 	for {
@@ -202,7 +219,6 @@ func (a *Agent) Test() error {
 	for _, input := range a.Config.Inputs {
 		acc := NewAccumulator(input.Config, pointChan)
 		acc.SetDebug(true)
-		// acc.SetPrefix(input.Name + "_")
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
 		if input.Config.Interval != 0 {
@@ -228,93 +244,45 @@ func (a *Agent) Test() error {
 	return nil
 }
 
-// writeOutput writes a list of points to a single output, with retries.
-// Optionally takes a `done` channel to indicate that it is done writing.
-func (a *Agent) writeOutput(
-	points []*client.Point,
-	ro *config.RunningOutput,
-	shutdown chan struct{},
-	wg *sync.WaitGroup,
-) {
-	defer wg.Done()
-	if len(points) == 0 {
-		return
-	}
-	retry := 0
-	retries := a.Config.Agent.FlushRetries
-	start := time.Now()
-
-	for {
-		filtered := ro.FilterPoints(points)
-		err := ro.Output.Write(filtered)
-		if err == nil {
-			// Write successful
-			elapsed := time.Since(start)
-			if !a.Config.Agent.Quiet {
-				log.Printf("Flushed %d metrics to output %s in %s\n",
-					len(filtered), ro.Name, elapsed)
-			}
-			return
-		}
-
-		select {
-		case <-shutdown:
-			return
-		default:
-			if retry >= retries {
-				// No more retries
-				msg := "FATAL: Write to output [%s] failed %d times, dropping" +
-					" %d metrics\n"
-				log.Printf(msg, ro.Name, retries+1, len(points))
-				return
-			} else if err != nil {
-				// Sleep for a retry
-				log.Printf("Error in output [%s]: %s, retrying in %s",
-					ro.Name, err.Error(), a.Config.Agent.FlushInterval.Duration)
-				time.Sleep(a.Config.Agent.FlushInterval.Duration)
-			}
-		}
-
-		retry++
-	}
-}
-
 // flush writes a list of points to all configured outputs
-func (a *Agent) flush(
-	points []*client.Point,
-	shutdown chan struct{},
-	wait bool,
-) {
+func (a *Agent) flush() {
 	var wg sync.WaitGroup
+
+	wg.Add(len(a.Config.Outputs))
 	for _, o := range a.Config.Outputs {
-		wg.Add(1)
-		go a.writeOutput(points, o, shutdown, &wg)
+		go func(output *models.RunningOutput) {
+			defer wg.Done()
+			err := output.Write()
+			if err != nil {
+				log.Printf("Error writing to output [%s]: %s\n",
+					output.Name, err.Error())
+			}
+		}(o)
 	}
-	if wait {
-		wg.Wait()
-	}
+
+	wg.Wait()
 }
 
 // flusher monitors the points input channel and flushes on the minimum interval
 func (a *Agent) flusher(shutdown chan struct{}, pointChan chan *client.Point) error {
 	// Inelegant, but this sleep is to allow the Gather threads to run, so that
 	// the flusher will flush after metrics are collected.
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 200)
 
 	ticker := time.NewTicker(a.Config.Agent.FlushInterval.Duration)
-	points := make([]*client.Point, 0)
 
 	for {
 		select {
 		case <-shutdown:
 			log.Println("Hang on, flushing any cached points before shutdown")
-			a.flush(points, shutdown, true)
+			a.flush()
 			return nil
 		case <-ticker.C:
-			a.flush(points, shutdown, false)
-			points = make([]*client.Point, 0)
+			a.flush()
 		case pt := <-pointChan:
-			points = append(points, pt)
+			for _, o := range a.Config.Outputs {
+				o.AddPoint(pt)
+			}
 		}
 	}
 }
@@ -389,7 +357,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		// configured. Default intervals are handled below with gatherParallel
 		if input.Config.Interval != 0 {
 			wg.Add(1)
-			go func(input *config.RunningInput) {
+			go func(input *models.RunningInput) {
 				defer wg.Done()
 				if err := a.gatherSeparate(shutdown, input, pointChan); err != nil {
 					log.Printf(err.Error())

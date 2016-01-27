@@ -164,10 +164,12 @@ Currently implemented sources:
 * rabbitmq
 * redis
 * rethinkdb
+* sql server (microsoft)
 * twemproxy
 * zfs
 * zookeeper
 * sensors
+* snmp
 * system
     * cpu
     * mem
@@ -181,6 +183,7 @@ Telegraf can also collect metrics via the following service plugins:
 
 * statsd
 * kafka_consumer
+* github_webhooks
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.

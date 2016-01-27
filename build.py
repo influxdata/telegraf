@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 #
 # This is the Telegraf build script.
 #
@@ -17,11 +17,7 @@ import tempfile
 import hashlib
 import re
 
-try:
-    import boto
-    from boto.s3.key import Key
-except ImportError:
-    pass
+debug = False
 
 # PACKAGING VARIABLES
 INSTALL_ROOT_DIR = "/usr/bin"
@@ -73,12 +69,10 @@ targets = {
 }
 
 supported_builds = {
-    # TODO(rossmcdonald): Add support for multiple GOARM values
-    'darwin': [ "amd64", "386" ],
-    # 'windows': [ "amd64", "386", "arm", "arm64" ],
-    'linux': [ "amd64", "386", "arm" ]
+    'darwin': [ "amd64", "i386" ],
+    'windows': [ "amd64", "i386", "arm" ],
+    'linux': [ "amd64", "i386", "arm" ]
 }
-supported_go = [ '1.5.1' ]
 supported_packages = {
     "darwin": [ "tar", "zip" ],
     "linux": [ "deb", "rpm", "tar", "zip" ],
@@ -87,6 +81,8 @@ supported_packages = {
 
 def run(command, allow_failure=False, shell=False):
     out = None
+    if debug:
+        print("[DEBUG] {}".format(command))
     try:
         if shell:
             out = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=shell)
@@ -122,8 +118,11 @@ def run(command, allow_failure=False, shell=False):
     else:
         return out
 
-def create_temp_dir():
-    return tempfile.mkdtemp(prefix="telegraf-build.")
+def create_temp_dir(prefix=None):
+    if prefix is None:
+        return tempfile.mkdtemp(prefix="telegraf-build.")
+    else:
+        return tempfile.mkdtemp(prefix=prefix)
 
 def get_current_version():
     command = "git describe --always --tags --abbrev=0"
@@ -185,31 +184,44 @@ def check_environ(build_dir = None):
 def check_prereqs():
     print("\nChecking for dependencies:")
     for req in prereqs:
-        print("\t- {} ->".format(req),)
         path = check_path_for(req)
-        if path:
-            print("{}".format(path))
-        else:
-            print("?")
+        if path is None:
+            path = '?'
+        print("\t- {} -> {}".format(req, path))
     for req in optional_prereqs:
-        print("\t- {} (optional) ->".format(req))
         path = check_path_for(req)
-        if path:
-            print("{}".format(path))
-        else:
-            print("?")
+        if path is None:
+            path = '?'
+        print("\t- {} (optional) -> {}".format(req, path))
     print("")
 
-def upload_packages(packages, nightly=False):
+def upload_packages(packages, bucket_name=None, nightly=False):
+    if debug:
+        print("[DEBUG] upload_packags: {}".format(packages))
+    try:
+        import boto
+        from boto.s3.key import Key
+    except ImportError:
+        print "!! Cannot upload packages without the 'boto' python library."
+        return 1
     print("Uploading packages to S3...")
     print("")
     c = boto.connect_s3()
-    # TODO(rossmcdonald) - Set to different S3 bucket for release vs nightly
-    bucket = c.get_bucket('get.influxdb.org')
+    if bucket_name is None:
+        bucket_name = 'get.influxdb.org/telegraf'
+    bucket = c.get_bucket(bucket_name.split('/')[0])
+    print("\t - Using bucket: {}".format(bucket_name))
     for p in packages:
-        name = os.path.join('telegraf', os.path.basename(p))
+        if '/' in bucket_name:
+            # Allow for nested paths within the bucket name (ex:
+            # bucket/telegraf). Assuming forward-slashes as path
+            # delimiter.
+            name = os.path.join('/'.join(bucket_name.split('/')[1:]),
+                                os.path.basename(p))
+        else:
+            name = os.path.basename(p)
         if bucket.get_key(name) is None or nightly:
-            print("\t - Uploading {}...".format(name))
+            print("\t - Uploading {} to {}...".format(name, bucket_name))
             k = Key(bucket)
             k.key = name
             if nightly:
@@ -217,7 +229,6 @@ def upload_packages(packages, nightly=False):
             else:
                 n = k.set_contents_from_filename(p, replace=False)
             k.make_public()
-            print("[ DONE ]")
         else:
             print("\t - Not uploading {}, already exists.".format(p))
     print("")
@@ -227,7 +238,6 @@ def run_tests(race, parallel, timeout, no_vet):
     print("Retrieving Go dependencies...")
     sys.stdout.flush()
     run(get_command)
-    print("done.")
     print("Running tests:")
     print("\tRace: ", race)
     if parallel is not None:
@@ -307,9 +317,15 @@ def build(version=None,
         # If a release candidate, update the version information accordingly
         version = "{}rc{}".format(version, rc)
 
+    # Set architecture to something that Go expects
+    if arch == 'i386':
+        arch = '386'
+    elif arch == 'x86_64':
+        arch = 'amd64'
+
     print("Starting build...")
     for b, c in targets.items():
-        print("\t- Building '{}'...".format(os.path.join(outdir, b)),)
+        print("\t- Building '{}'...".format(os.path.join(outdir, b)))
         build_command = ""
         build_command += "GOOS={} GOARCH={} ".format(platform, arch)
         if arch == "arm" and goarm_version:
@@ -323,16 +339,15 @@ def build(version=None,
         if "1.4" in go_version:
             build_command += "-ldflags=\"-X main.buildTime '{}' ".format(datetime.datetime.utcnow().isoformat())
             build_command += "-X main.Version {} ".format(version)
-            build_command += "-X main.Branch {} ".format(branch)
+            build_command += "-X main.Branch {} ".format(get_current_branch())
             build_command += "-X main.Commit {}\" ".format(get_current_commit())
         else:
             build_command += "-ldflags=\"-X main.buildTime='{}' ".format(datetime.datetime.utcnow().isoformat())
             build_command += "-X main.Version={} ".format(version)
-            build_command += "-X main.Branch={} ".format(branch)
+            build_command += "-X main.Branch={} ".format(get_current_branch())
             build_command += "-X main.Commit={}\" ".format(get_current_commit())
         build_command += c
         run(build_command, shell=True)
-        print("[ DONE ]")
     print("")
 
 def create_dir(path):
@@ -386,7 +401,6 @@ def go_get(update=False):
         get_command = "go get -d ./..."
     print("Retrieving Go dependencies...")
     run(get_command)
-    print("done.\n")
 
 def generate_md5_from_file(path):
     m = hashlib.md5()
@@ -401,6 +415,8 @@ def generate_md5_from_file(path):
 def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
     outfiles = []
     tmp_build_dir = create_temp_dir()
+    if debug:
+        print("[DEBUG] build_output = {}".format(build_output))
     try:
         print("-------------------------")
         print("")
@@ -429,18 +445,24 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
                 for package_type in supported_packages[p]:
                     print("\t- Packaging directory '{}' as '{}'...".format(build_root, package_type))
                     name = "telegraf"
+                    # Reset version, iteration, and current location on each run
+                    # since they may be modified below.
                     package_version = version
                     package_iteration = iteration
+                    current_location = build_output[p][a]
+                    
                     if package_type in ['zip', 'tar']:
                         if nightly:
                             name = '{}-nightly_{}_{}'.format(name, p, a)
                         else:
-                            name = '{}-{}_{}_{}'.format(name, version, p, a)
+                            name = '{}-{}-{}_{}_{}'.format(name, package_version, package_iteration, p, a)
                     if package_type == 'tar':
                         # Add `tar.gz` to path to reduce package size
                         current_location = os.path.join(current_location, name + '.tar.gz')
                     if rc is not None:
                         package_iteration = "0.rc{}".format(rc)
+                    if a == '386':
+                        a = 'i386'
                     fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
                         fpm_common_args,
                         name,
@@ -465,10 +487,11 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
                         if nightly and package_type in ['deb', 'rpm']:
                             outfile = rename_file(outfile, outfile.replace("{}-{}".format(version, iteration), "nightly"))
                         outfiles.append(os.path.join(os.getcwd(), outfile))
-                        print("[ DONE ]")
                         # Display MD5 hash for generated package
                         print("\t\tMD5 = {}".format(generate_md5_from_file(outfile)))
         print("")
+        if debug:
+            print("[DEBUG] package outfiles: {}".format(outfiles))
         return outfiles
     finally:
         # Cleanup
@@ -495,6 +518,9 @@ def print_usage():
     print("\t --parallel \n\t\t- Run Go tests in parallel up to the count specified.")
     print("\t --timeout \n\t\t- Timeout for Go tests. Defaults to 480s.")
     print("\t --clean \n\t\t- Clean the build output directory prior to creating build.")
+    print("\t --no-get \n\t\t- Do not run `go get` before building.")
+    print("\t --bucket=<S3 bucket>\n\t\t- Full path of the bucket to upload packages to (must also specify --upload).")
+    print("\t --debug \n\t\t- Displays debug output.")
     print("")
 
 def print_package_summary(packages):
@@ -521,6 +547,9 @@ def main():
     iteration = 1
     no_vet = False
     goarm_version = "6"
+    run_get = True
+    upload_bucket = None
+    global debug
 
     for arg in sys.argv[1:]:
         if '--outdir' in arg:
@@ -578,6 +607,14 @@ def main():
         elif '--goarm' in arg:
             # Signifies GOARM flag to pass to build command when compiling for ARM
             goarm_version = arg.split("=")[1]
+        elif '--bucket' in arg:
+            # The bucket to upload the packages to, relies on boto
+            upload_bucket = arg.split("=")[1]
+        elif '--no-get' in arg:
+            run_get = False
+        elif '--debug' in arg:
+            print "[DEBUG] Using debug output"
+            debug = True
         elif '--help' in arg:
             print_usage()
             return 0
@@ -614,15 +651,19 @@ def main():
         # If a release candidate or nightly, set iteration to 0 (instead of 1)
         iteration = 0
 
+    if target_arch == '386':
+        target_arch = 'i386'
+    elif target_arch == 'x86_64':
+        target_arch = 'amd64'
+        
     build_output = {}
-    # TODO(rossmcdonald): Prepare git repo for build (checking out correct branch/commit, etc.)
-    # prepare(branch=branch, commit=commit)
     if test:
         if not run_tests(race, parallel, timeout, no_vet):
             return 1
         return 0
 
-    go_get(update=update)
+    if run_get:
+        go_get(update=update)
 
     platforms = []
     single_build = True
@@ -663,11 +704,9 @@ def main():
             print("!! Cannot package without command 'fpm'. Stopping.")
             return 1
         packages = build_packages(build_output, version, nightly=nightly, rc=rc, iteration=iteration)
-        # TODO(rossmcdonald): Add nice output for print_package_summary()
-        # print_package_summary(packages)
         # Optionally upload to S3
         if upload:
-            upload_packages(packages, nightly=nightly)
+            upload_packages(packages, bucket_name=upload_bucket, nightly=nightly)
     return 0
 
 if __name__ == '__main__':

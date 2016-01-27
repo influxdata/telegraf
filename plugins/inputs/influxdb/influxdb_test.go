@@ -84,7 +84,7 @@ func TestBasic(t *testing.T) {
 		"id":  "ex1",
 		"url": fakeServer.URL + "/endpoint",
 	}
-	acc.AssertContainsTaggedFields(t, "foo", fields, tags)
+	acc.AssertContainsTaggedFields(t, "influxdb_foo", fields, tags)
 
 	fields = map[string]interface{}{
 		"x": "x",
@@ -93,5 +93,5 @@ func TestBasic(t *testing.T) {
 		"id":  "ex2",
 		"url": fakeServer.URL + "/endpoint",
 	}
-	acc.AssertContainsTaggedFields(t, "bar", fields, tags)
+	acc.AssertContainsTaggedFields(t, "influxdb_bar", fields, tags)
 }

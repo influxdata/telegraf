@@ -1,10 +1,16 @@
 ## Steps for Contributing:
 
-1. [Sign the CLA](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#sign-the-cla)
-1. Write your input or output plugin (see below for details)
+1. [Sign the CLA](http://influxdb.com/community/cla.html)
+1. Make changes or write plugin (see below for details)
 1. Add your plugin to `plugins/inputs/all/all.go` or `plugins/outputs/all/all.go`
 1. If your plugin requires a new Go package,
 [add it](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#adding-a-dependency)
+1. Write a README for your plugin, if it's an input plugin, it should be structured
+like the [input example here](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/EXAMPLE_README.md).
+Output plugins READMEs are less structured,
+but any information you can provide on how the data will look is appreciated.
+See the [OpenTSDB output](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
+for a good example.
 
 ## Sign the CLA
 
@@ -13,9 +19,10 @@ which can be found [on our website](http://influxdb.com/community/cla.html)
 
 ## Adding a dependency
 
-Assuming you can already build the project:
+Assuming you can already build the project, run these in the telegraf directory:
 
 1. `go get github.com/sparrc/gdm`
+1. `gdm restore`
 1. `gdm save`
 
 ## Input Plugins

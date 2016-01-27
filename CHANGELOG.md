@@ -2,6 +2,9 @@
 
 ### Release Notes:
 
+- Telegraf now keeps a fixed-length buffer of metrics per-output. This buffer
+defaults to 10,000 metrics, and is adjustable. The buffer is cleared when a
+successful write to that output occurs.
 - The docker plugin has been significantly overhauled to add more metrics
 and allow for docker-machine (incl OSX) support.
 [See the readme](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/docker/README.md)
@@ -26,6 +29,11 @@ specifying a docker endpoint to get metrics from.
 - [#553](https://github.com/influxdata/telegraf/pull/553): Amazon CloudWatch output. thanks @skwong2!
 - [#503](https://github.com/influxdata/telegraf/pull/503): Support docker endpoint configuration.
 - [#563](https://github.com/influxdata/telegraf/pull/563): Docker plugin overhaul.
+- [#285](https://github.com/influxdata/telegraf/issues/285): Fixed-size buffer of points.
+- [#546](https://github.com/influxdata/telegraf/pull/546): SNMP Input plugin. Thanks @titilambert!
+- [#589](https://github.com/influxdata/telegraf/pull/589): Microsoft SQL Server input plugin. Thanks @zensqlmonitor!
+- [#573](https://github.com/influxdata/telegraf/pull/573): Github webhooks consumer input. Thanks @jackzampolin!
+- [#471](https://github.com/influxdata/telegraf/pull/471): httpjson request headers. Thanks @asosso!
 
 ### Bugfixes
 - [#506](https://github.com/influxdata/telegraf/pull/506): Ping input doesn't return response time metric when timeout. Thanks @titilambert!
@@ -34,6 +42,8 @@ specifying a docker endpoint to get metrics from.
 - [#543](https://github.com/influxdata/telegraf/issues/543): Statsd Packet size sometimes truncated.
 - [#440](https://github.com/influxdata/telegraf/issues/440): Don't query filtered devices for disk stats.
 - [#463](https://github.com/influxdata/telegraf/issues/463): Docker plugin not working on AWS Linux
+- [#568](https://github.com/influxdata/telegraf/issues/568): Multiple output race condition.
+- [#585](https://github.com/influxdata/telegraf/pull/585): Log stack trace and continue on Telegraf panic. Thanks @wutaizeng!
 
 ## v0.10.0 [2016-01-12]
 

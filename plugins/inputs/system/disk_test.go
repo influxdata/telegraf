@@ -21,16 +21,20 @@ func TestDiskStats(t *testing.T) {
 			Fstype:      "ext4",
 			Total:       128,
 			Free:        23,
+			Used:        100,
 			InodesTotal: 1234,
 			InodesFree:  234,
+			InodesUsed:  1000,
 		},
 		{
 			Path:        "/home",
 			Fstype:      "ext4",
 			Total:       256,
 			Free:        46,
+			Used:        200,
 			InodesTotal: 2468,
 			InodesFree:  468,
+			InodesUsed:  2000,
 		},
 	}
 	duFiltered := []*disk.DiskUsageStat{
@@ -39,8 +43,10 @@ func TestDiskStats(t *testing.T) {
 			Fstype:      "ext4",
 			Total:       128,
 			Free:        23,
+			Used:        100,
 			InodesTotal: 1234,
 			InodesFree:  234,
+			InodesUsed:  1000,
 		},
 	}
 
@@ -52,7 +58,7 @@ func TestDiskStats(t *testing.T) {
 	require.NoError(t, err)
 
 	numDiskPoints := acc.NFields()
-	expectedAllDiskPoints := 12
+	expectedAllDiskPoints := 14
 	assert.Equal(t, expectedAllDiskPoints, numDiskPoints)
 
 	tags1 := map[string]string{
@@ -66,19 +72,21 @@ func TestDiskStats(t *testing.T) {
 
 	fields1 := map[string]interface{}{
 		"total":        uint64(128),
-		"used":         uint64(105),
+		"used":         uint64(100),
 		"free":         uint64(23),
 		"inodes_total": uint64(1234),
 		"inodes_free":  uint64(234),
 		"inodes_used":  uint64(1000),
+		"used_percent": float64(81.30081300813008),
 	}
 	fields2 := map[string]interface{}{
 		"total":        uint64(256),
-		"used":         uint64(210),
+		"used":         uint64(200),
 		"free":         uint64(46),
 		"inodes_total": uint64(2468),
 		"inodes_free":  uint64(468),
 		"inodes_used":  uint64(2000),
+		"used_percent": float64(81.30081300813008),
 	}
 	acc.AssertContainsTaggedFields(t, "disk", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "disk", fields2, tags2)
@@ -86,12 +94,12 @@ func TestDiskStats(t *testing.T) {
 	// We expect 6 more DiskPoints to show up with an explicit match on "/"
 	// and /home not matching the /dev in MountPoints
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
-	assert.Equal(t, expectedAllDiskPoints+6, acc.NFields())
+	assert.Equal(t, expectedAllDiskPoints+7, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// / and /home
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
-	assert.Equal(t, 2*expectedAllDiskPoints+6, acc.NFields())
+	assert.Equal(t, 2*expectedAllDiskPoints+7, acc.NFields())
 }
 
 // func TestDiskIOStats(t *testing.T) {

@@ -97,6 +97,10 @@ func genMockHttpJson(response string, statusCode int) []*HttpJson {
 				"httpParam1": "12",
 				"httpParam2": "the second parameter",
 			},
+			Headers: map[string]string{
+				"X-Auth-Token": "the-first-parameter",
+				"apiVersion":   "v1",
+			},
 		},
 		&HttpJson{
 			client: mockHTTPClient{responseBody: response, statusCode: statusCode},
@@ -109,6 +113,10 @@ func genMockHttpJson(response string, statusCode int) []*HttpJson {
 			Parameters: map[string]string{
 				"httpParam1": "12",
 				"httpParam2": "the second parameter",
+			},
+			Headers: map[string]string{
+				"X-Auth-Token": "the-first-parameter",
+				"apiVersion":   "v1",
 			},
 			TagKeys: []string{
 				"role",

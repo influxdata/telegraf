@@ -57,9 +57,14 @@ type ObjectTotals struct {
 }
 
 type QueueTotals struct {
-	Messages               int64
-	MessagesReady          int64 `json:"messages_ready"`
-	MessagesUnacknowledged int64 `json:"messages_unacknowledged"`
+	Messages                   int64
+	MessagesReady              int64 `json:"messages_ready"`
+	MessagesUnacknowledged     int64 `json:"messages_unacknowledged"`
+	MessageBytes               int64 `json:"message_bytes"`
+	MessageBytesReady          int64 `json:"message_bytes_ready"`
+	MessageBytesUnacknowledged int64 `json:"message_bytes_unacknowledged"`
+	MessageRam                 int64 `json:"message_bytes_ram"`
+	MessagePersistent          int64 `json:"message_bytes_persistent"`
 }
 
 type Queue struct {
@@ -270,6 +275,11 @@ func gatherQueues(r *RabbitMQ, acc inputs.Accumulator, errChan chan error) {
 				"consumer_utilisation": queue.ConsumerUtilisation,
 				"memory":               queue.Memory,
 				// messages information
+				"message_bytes":             queue.MessageBytes,
+				"message_bytes_ready":       queue.MessageBytesReady,
+				"message_bytes_unacked":     queue.MessageBytesUnacknowledged,
+				"message_bytes_ram":         queue.MessageRam,
+				"message_bytes_persist":     queue.MessagePersistent,
 				"messages":                  queue.Messages,
 				"messages_ready":            queue.MessagesReady,
 				"messages_unack":            queue.MessagesUnacknowledged,

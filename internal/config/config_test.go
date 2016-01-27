@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/exec"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
@@ -18,19 +19,19 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	mConfig := &InputConfig{
+	mConfig := &models.InputConfig{
 		Name: "memcached",
-		Filter: Filter{
+		Filter: models.Filter{
 			Drop: []string{"other", "stuff"},
 			Pass: []string{"some", "strings"},
-			TagDrop: []TagFilter{
-				TagFilter{
+			TagDrop: []models.TagFilter{
+				models.TagFilter{
 					Name:   "badtag",
 					Filter: []string{"othertag"},
 				},
 			},
-			TagPass: []TagFilter{
-				TagFilter{
+			TagPass: []models.TagFilter{
+				models.TagFilter{
 					Name:   "goodtag",
 					Filter: []string{"mytag"},
 				},
@@ -61,19 +62,19 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	mConfig := &InputConfig{
+	mConfig := &models.InputConfig{
 		Name: "memcached",
-		Filter: Filter{
+		Filter: models.Filter{
 			Drop: []string{"other", "stuff"},
 			Pass: []string{"some", "strings"},
-			TagDrop: []TagFilter{
-				TagFilter{
+			TagDrop: []models.TagFilter{
+				models.TagFilter{
 					Name:   "badtag",
 					Filter: []string{"othertag"},
 				},
 			},
-			TagPass: []TagFilter{
-				TagFilter{
+			TagPass: []models.TagFilter{
+				models.TagFilter{
 					Name:   "goodtag",
 					Filter: []string{"mytag"},
 				},
@@ -91,7 +92,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	ex := inputs.Inputs["exec"]().(*exec.Exec)
 	ex.Command = "/usr/bin/myothercollector --foo=bar"
-	eConfig := &InputConfig{
+	eConfig := &models.InputConfig{
 		Name:              "exec",
 		MeasurementSuffix: "_myothercollector",
 	}
@@ -110,183 +111,11 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	pstat := inputs.Inputs["procstat"]().(*procstat.Procstat)
 	pstat.PidFile = "/var/run/grafana-server.pid"
 
-	pConfig := &InputConfig{Name: "procstat"}
+	pConfig := &models.InputConfig{Name: "procstat"}
 	pConfig.Tags = make(map[string]string)
 
 	assert.Equal(t, pstat, c.Inputs[3].Input,
 		"Merged Testdata did not produce a correct procstat struct.")
 	assert.Equal(t, pConfig, c.Inputs[3].Config,
 		"Merged Testdata did not produce correct procstat metadata.")
-}
-
-func TestFilter_Empty(t *testing.T) {
-	f := Filter{}
-
-	measurements := []string{
-		"foo",
-		"bar",
-		"barfoo",
-		"foo_bar",
-		"foo.bar",
-		"foo-bar",
-		"supercalifradjulisticexpialidocious",
-	}
-
-	for _, measurement := range measurements {
-		if !f.ShouldPass(measurement) {
-			t.Errorf("Expected measurement %s to pass", measurement)
-		}
-	}
-}
-
-func TestFilter_Pass(t *testing.T) {
-	f := Filter{
-		Pass: []string{"foo*", "cpu_usage_idle"},
-	}
-
-	passes := []string{
-		"foo",
-		"foo_bar",
-		"foo.bar",
-		"foo-bar",
-		"cpu_usage_idle",
-	}
-
-	drops := []string{
-		"bar",
-		"barfoo",
-		"bar_foo",
-		"cpu_usage_busy",
-	}
-
-	for _, measurement := range passes {
-		if !f.ShouldPass(measurement) {
-			t.Errorf("Expected measurement %s to pass", measurement)
-		}
-	}
-
-	for _, measurement := range drops {
-		if f.ShouldPass(measurement) {
-			t.Errorf("Expected measurement %s to drop", measurement)
-		}
-	}
-}
-
-func TestFilter_Drop(t *testing.T) {
-	f := Filter{
-		Drop: []string{"foo*", "cpu_usage_idle"},
-	}
-
-	drops := []string{
-		"foo",
-		"foo_bar",
-		"foo.bar",
-		"foo-bar",
-		"cpu_usage_idle",
-	}
-
-	passes := []string{
-		"bar",
-		"barfoo",
-		"bar_foo",
-		"cpu_usage_busy",
-	}
-
-	for _, measurement := range passes {
-		if !f.ShouldPass(measurement) {
-			t.Errorf("Expected measurement %s to pass", measurement)
-		}
-	}
-
-	for _, measurement := range drops {
-		if f.ShouldPass(measurement) {
-			t.Errorf("Expected measurement %s to drop", measurement)
-		}
-	}
-}
-
-func TestFilter_TagPass(t *testing.T) {
-	filters := []TagFilter{
-		TagFilter{
-			Name:   "cpu",
-			Filter: []string{"cpu-*"},
-		},
-		TagFilter{
-			Name:   "mem",
-			Filter: []string{"mem_free"},
-		}}
-	f := Filter{
-		TagPass: filters,
-	}
-
-	passes := []map[string]string{
-		{"cpu": "cpu-total"},
-		{"cpu": "cpu-0"},
-		{"cpu": "cpu-1"},
-		{"cpu": "cpu-2"},
-		{"mem": "mem_free"},
-	}
-
-	drops := []map[string]string{
-		{"cpu": "cputotal"},
-		{"cpu": "cpu0"},
-		{"cpu": "cpu1"},
-		{"cpu": "cpu2"},
-		{"mem": "mem_used"},
-	}
-
-	for _, tags := range passes {
-		if !f.ShouldTagsPass(tags) {
-			t.Errorf("Expected tags %v to pass", tags)
-		}
-	}
-
-	for _, tags := range drops {
-		if f.ShouldTagsPass(tags) {
-			t.Errorf("Expected tags %v to drop", tags)
-		}
-	}
-}
-
-func TestFilter_TagDrop(t *testing.T) {
-	filters := []TagFilter{
-		TagFilter{
-			Name:   "cpu",
-			Filter: []string{"cpu-*"},
-		},
-		TagFilter{
-			Name:   "mem",
-			Filter: []string{"mem_free"},
-		}}
-	f := Filter{
-		TagDrop: filters,
-	}
-
-	drops := []map[string]string{
-		{"cpu": "cpu-total"},
-		{"cpu": "cpu-0"},
-		{"cpu": "cpu-1"},
-		{"cpu": "cpu-2"},
-		{"mem": "mem_free"},
-	}
-
-	passes := []map[string]string{
-		{"cpu": "cputotal"},
-		{"cpu": "cpu0"},
-		{"cpu": "cpu1"},
-		{"cpu": "cpu2"},
-		{"mem": "mem_used"},
-	}
-
-	for _, tags := range passes {
-		if !f.ShouldTagsPass(tags) {
-			t.Errorf("Expected tags %v to pass", tags)
-		}
-	}
-
-	for _, tags := range drops {
-		if f.ShouldTagsPass(tags) {
-			t.Errorf("Expected tags %v to drop", tags)
-		}
-	}
 }
