@@ -1,6 +1,14 @@
-## v0.10.1 [unreleased]
+## v0.10.2 [unreleased]
 
-### Release Notes:
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+## v0.10.1 [2016-01-27]
+
+### Release Notes
 
 - Telegraf now keeps a fixed-length buffer of metrics per-output. This buffer
 defaults to 10,000 metrics, and is adjustable. The buffer is cleared when a
