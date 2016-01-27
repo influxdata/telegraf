@@ -3,9 +3,8 @@ package graphite
 import (
 	"errors"
 	"fmt"
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"log"
 	"math/rand"
 	"net"
@@ -68,10 +67,10 @@ func (g *Graphite) Description() string {
 
 // Choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
-func (g *Graphite) Write(points []*client.Point) error {
+func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var bp []string
-	for _, point := range points {
+	for _, point := range metrics {
 		// Get name
 		name := point.Name()
 		// Convert UnixNano to Unix timestamps

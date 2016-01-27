@@ -10,10 +10,9 @@ import (
 	"sync"
 
 	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf"
 )
 
 const MaxClientIdLen = 8
@@ -79,18 +78,18 @@ func (m *MQTT) Description() string {
 	return "Configuration for MQTT server to send metrics to"
 }
 
-func (m *MQTT) Write(points []*client.Point) error {
+func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	m.Lock()
 	defer m.Unlock()
-	if len(points) == 0 {
+	if len(metrics) == 0 {
 		return nil
 	}
-	hostname, ok := points[0].Tags()["host"]
+	hostname, ok := metrics[0].Tags()["host"]
 	if !ok {
 		hostname = ""
 	}
 
-	for _, p := range points {
+	for _, p := range metrics {
 		var t []string
 		if m.TopicPrefix != "" {
 			t = append(t, m.TopicPrefix)

@@ -11,15 +11,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Point defines a single point measurement
-type Point struct {
+// Metric defines a single point measurement
+type Metric struct {
 	Measurement string
 	Tags        map[string]string
 	Fields      map[string]interface{}
 	Time        time.Time
 }
 
-func (p *Point) String() string {
+func (p *Metric) String() string {
 	return fmt.Sprintf("%s %v", p.Measurement, p.Fields)
 }
 
@@ -27,8 +27,8 @@ func (p *Point) String() string {
 type Accumulator struct {
 	sync.Mutex
 
-	Points []*Point
-	debug  bool
+	Metrics []*Metric
+	debug   bool
 }
 
 // Add adds a measurement point to the accumulator
@@ -74,14 +74,14 @@ func (a *Accumulator) AddFields(
 		fmt.Print(msg)
 	}
 
-	p := &Point{
+	p := &Metric{
 		Measurement: measurement,
 		Fields:      fields,
 		Tags:        tags,
 		Time:        t,
 	}
 
-	a.Points = append(a.Points, p)
+	a.Metrics = append(a.Metrics, p)
 }
 
 func (a *Accumulator) Debug() bool {
@@ -95,8 +95,8 @@ func (a *Accumulator) SetDebug(debug bool) {
 }
 
 // Get gets the specified measurement point from the accumulator
-func (a *Accumulator) Get(measurement string) (*Point, bool) {
-	for _, p := range a.Points {
+func (a *Accumulator) Get(measurement string) (*Metric, bool) {
+	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			return p, true
 		}
@@ -109,7 +109,7 @@ func (a *Accumulator) Get(measurement string) (*Point, bool) {
 // measurements
 func (a *Accumulator) NFields() int {
 	counter := 0
-	for _, pt := range a.Points {
+	for _, pt := range a.Metrics {
 		for _, _ = range pt.Fields {
 			counter++
 		}
@@ -123,7 +123,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 	fields map[string]interface{},
 	tags map[string]string,
 ) {
-	for _, p := range a.Points {
+	for _, p := range a.Metrics {
 		if !reflect.DeepEqual(tags, p.Tags) {
 			continue
 		}
@@ -148,7 +148,7 @@ func (a *Accumulator) AssertContainsFields(
 	measurement string,
 	fields map[string]interface{},
 ) {
-	for _, p := range a.Points {
+	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			if !reflect.DeepEqual(fields, p.Fields) {
 				pActual, _ := json.MarshalIndent(p.Fields, "", "  ")
@@ -166,7 +166,7 @@ func (a *Accumulator) AssertContainsFields(
 
 // HasIntValue returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
-	for _, p := range a.Points {
+	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			for fieldname, value := range p.Fields {
 				if fieldname == field {
@@ -182,7 +182,7 @@ func (a *Accumulator) HasIntField(measurement string, field string) bool {
 
 // HasUIntValue returns true if the measurement has a UInt value
 func (a *Accumulator) HasUIntField(measurement string, field string) bool {
-	for _, p := range a.Points {
+	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			for fieldname, value := range p.Fields {
 				if fieldname == field {
@@ -198,7 +198,7 @@ func (a *Accumulator) HasUIntField(measurement string, field string) bool {
 
 // HasFloatValue returns true if the given measurement has a float value
 func (a *Accumulator) HasFloatField(measurement string, field string) bool {
-	for _, p := range a.Points {
+	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			for fieldname, value := range p.Fields {
 				if fieldname == field {
@@ -215,7 +215,7 @@ func (a *Accumulator) HasFloatField(measurement string, field string) bool {
 // HasMeasurement returns true if the accumulator has a measurement with the
 // given name
 func (a *Accumulator) HasMeasurement(measurement string) bool {
-	for _, p := range a.Points {
+	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			return true
 		}

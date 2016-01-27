@@ -5,9 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -59,12 +58,12 @@ func (p *PrometheusClient) Description() string {
 	return "Configuration for the Prometheus client to spawn"
 }
 
-func (p *PrometheusClient) Write(points []*client.Point) error {
-	if len(points) == 0 {
+func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
 		return nil
 	}
 
-	for _, point := range points {
+	for _, point := range metrics {
 		var labels []string
 		key := point.Name()
 

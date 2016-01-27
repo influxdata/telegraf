@@ -22,6 +22,6 @@ func TestConnectAndWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the mqtt broker
-	err = m.Write(testutil.MockBatchPoints().Points())
+	err = m.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }

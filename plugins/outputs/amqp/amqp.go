@@ -10,9 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/streadway/amqp"
 )
 
@@ -150,17 +149,15 @@ func (q *AMQP) Description() string {
 	return "Configuration for the AMQP server to send metrics to"
 }
 
-func (q *AMQP) Write(points []*client.Point) error {
+func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	q.Lock()
 	defer q.Unlock()
-	if len(points) == 0 {
+	if len(metrics) == 0 {
 		return nil
 	}
 	var outbuf = make(map[string][][]byte)
 
-	for _, p := range points {
-		// Combine tags from Point and BatchPoints and grab the resulting
-		// line-protocol output string to write to AMQP
+	for _, p := range metrics {
 		var value, key string
 		value = p.String()
 

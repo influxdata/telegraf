@@ -7,10 +7,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf"
 )
 
 type Librato struct {
@@ -41,7 +40,7 @@ var sampleConfig = `
   # timeout = "5s"
 `
 
-type Metrics struct {
+type LMetrics struct {
 	Gauges []*Gauge `json:"gauges"`
 }
 
@@ -70,27 +69,27 @@ func (l *Librato) Connect() error {
 	return nil
 }
 
-func (l *Librato) Write(points []*client.Point) error {
-	if len(points) == 0 {
+func (l *Librato) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
 		return nil
 	}
-	metrics := Metrics{}
+	lmetrics := LMetrics{}
 	tempGauges := []*Gauge{}
 	metricCounter := 0
 
-	for _, pt := range points {
-		if gauges, err := l.buildGauges(pt); err == nil {
+	for _, m := range metrics {
+		if gauges, err := l.buildGauges(m); err == nil {
 			for _, gauge := range gauges {
 				tempGauges = append(tempGauges, gauge)
 				metricCounter++
 			}
 		} else {
-			log.Printf("unable to build Gauge for %s, skipping\n", pt.Name())
+			log.Printf("unable to build Gauge for %s, skipping\n", m.Name())
 		}
 	}
 
-	metrics.Gauges = make([]*Gauge, metricCounter)
-	copy(metrics.Gauges, tempGauges[0:])
+	lmetrics.Gauges = make([]*Gauge, metricCounter)
+	copy(lmetrics.Gauges, tempGauges[0:])
 	metricsBytes, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("unable to marshal Metrics, %s\n", err.Error())
@@ -123,19 +122,19 @@ func (l *Librato) Description() string {
 	return "Configuration for Librato API to send metrics to."
 }
 
-func (l *Librato) buildGauges(pt *client.Point) ([]*Gauge, error) {
+func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 	gauges := []*Gauge{}
-	for fieldName, value := range pt.Fields() {
+	for fieldName, value := range m.Fields() {
 		gauge := &Gauge{
-			Name:        pt.Name() + "_" + fieldName,
-			MeasureTime: pt.Time().Unix(),
+			Name:        m.Name() + "_" + fieldName,
+			MeasureTime: m.Time().Unix(),
 		}
 		if err := gauge.setValue(value); err != nil {
 			return gauges, fmt.Errorf("unable to extract value from Fields, %s\n",
 				err.Error())
 		}
 		if l.SourceTag != "" {
-			if source, ok := pt.Tags()[l.SourceTag]; ok {
+			if source, ok := m.Tags()[l.SourceTag]; ok {
 				gauge.Source = source
 			} else {
 				return gauges,

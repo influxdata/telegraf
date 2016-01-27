@@ -6,9 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Shopify/sarama"
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 )
 
@@ -113,14 +112,12 @@ func (k *Kafka) Description() string {
 	return "Configuration for the Kafka server to send metrics to"
 }
 
-func (k *Kafka) Write(points []*client.Point) error {
-	if len(points) == 0 {
+func (k *Kafka) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
 		return nil
 	}
 
-	for _, p := range points {
-		// Combine tags from Point and BatchPoints and grab the resulting
-		// line-protocol output string to write to Kafka
+	for _, p := range metrics {
 		value := p.String()
 
 		m := &sarama.ProducerMessage{

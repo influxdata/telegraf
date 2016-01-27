@@ -14,8 +14,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
-
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 // Agent runs telegraf and collects data based on the given config
@@ -101,7 +99,7 @@ func panicRecover(input *internal_models.RunningInput) {
 
 // gatherParallel runs the inputs that are using the same reporting interval
 // as the telegraf agent.
-func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
+func (a *Agent) gatherParallel(metricC chan telegraf.Metric) error {
 	var wg sync.WaitGroup
 
 	start := time.Now()
@@ -118,7 +116,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 			defer panicRecover(input)
 			defer wg.Done()
 
-			acc := NewAccumulator(input.Config, pointChan)
+			acc := NewAccumulator(input.Config, metricC)
 			acc.SetDebug(a.Config.Agent.Debug)
 			acc.setDefaultTags(a.Config.Tags)
 
@@ -159,7 +157,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 func (a *Agent) gatherSeparate(
 	shutdown chan struct{},
 	input *internal_models.RunningInput,
-	pointChan chan *client.Point,
+	metricC chan telegraf.Metric,
 ) error {
 	defer panicRecover(input)
 
@@ -169,7 +167,7 @@ func (a *Agent) gatherSeparate(
 		var outerr error
 		start := time.Now()
 
-		acc := NewAccumulator(input.Config, pointChan)
+		acc := NewAccumulator(input.Config, metricC)
 		acc.SetDebug(a.Config.Agent.Debug)
 		acc.setDefaultTags(a.Config.Tags)
 
@@ -201,13 +199,13 @@ func (a *Agent) gatherSeparate(
 func (a *Agent) Test() error {
 	shutdown := make(chan struct{})
 	defer close(shutdown)
-	pointChan := make(chan *client.Point)
+	metricC := make(chan telegraf.Metric)
 
 	// dummy receiver for the point channel
 	go func() {
 		for {
 			select {
-			case <-pointChan:
+			case <-metricC:
 				// do nothing
 			case <-shutdown:
 				return
@@ -216,7 +214,7 @@ func (a *Agent) Test() error {
 	}()
 
 	for _, input := range a.Config.Inputs {
-		acc := NewAccumulator(input.Config, pointChan)
+		acc := NewAccumulator(input.Config, metricC)
 		acc.SetDebug(true)
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
@@ -263,7 +261,7 @@ func (a *Agent) flush() {
 }
 
 // flusher monitors the points input channel and flushes on the minimum interval
-func (a *Agent) flusher(shutdown chan struct{}, pointChan chan *client.Point) error {
+func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) error {
 	// Inelegant, but this sleep is to allow the Gather threads to run, so that
 	// the flusher will flush after metrics are collected.
 	time.Sleep(time.Millisecond * 200)
@@ -278,9 +276,9 @@ func (a *Agent) flusher(shutdown chan struct{}, pointChan chan *client.Point) er
 			return nil
 		case <-ticker.C:
 			a.flush()
-		case pt := <-pointChan:
+		case m := <-metricC:
 			for _, o := range a.Config.Outputs {
-				o.AddPoint(pt)
+				o.AddPoint(m)
 			}
 		}
 	}
@@ -321,7 +319,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
 	// channel shared between all input threads for accumulating points
-	pointChan := make(chan *client.Point, 1000)
+	metricC := make(chan telegraf.Metric, 1000)
 
 	// Round collection to nearest interval by sleeping
 	if a.Config.Agent.RoundInterval {
@@ -333,7 +331,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := a.flusher(shutdown, pointChan); err != nil {
+		if err := a.flusher(shutdown, metricC); err != nil {
 			log.Printf("Flusher routine failed, exiting: %s\n", err.Error())
 			close(shutdown)
 		}
@@ -358,7 +356,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			wg.Add(1)
 			go func(input *internal_models.RunningInput) {
 				defer wg.Done()
-				if err := a.gatherSeparate(shutdown, input, pointChan); err != nil {
+				if err := a.gatherSeparate(shutdown, input, metricC); err != nil {
 					log.Printf(err.Error())
 				}
 			}(input)
@@ -368,7 +366,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	defer wg.Wait()
 
 	for {
-		if err := a.gatherParallel(pointChan); err != nil {
+		if err := a.gatherParallel(metricC); err != nil {
 			log.Printf(err.Error())
 		}
 

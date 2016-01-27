@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type OpenTSDB struct {
@@ -59,8 +58,8 @@ func (o *OpenTSDB) Connect() error {
 	return nil
 }
 
-func (o *OpenTSDB) Write(points []*client.Point) error {
-	if len(points) == 0 {
+func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
 		return nil
 	}
 	now := time.Now()
@@ -74,8 +73,8 @@ func (o *OpenTSDB) Write(points []*client.Point) error {
 	}
 	defer connection.Close()
 
-	for _, pt := range points {
-		for _, metric := range buildMetrics(pt, now, o.Prefix) {
+	for _, m := range metrics {
+		for _, metric := range buildMetrics(m, now, o.Prefix) {
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
 				metric.Metric, metric.Timestamp, metric.Value, metric.Tags)
 			if o.Debug {
@@ -91,10 +90,10 @@ func (o *OpenTSDB) Write(points []*client.Point) error {
 	return nil
 }
 
-func buildTags(ptTags map[string]string) []string {
-	tags := make([]string, len(ptTags))
+func buildTags(mTags map[string]string) []string {
+	tags := make([]string, len(mTags))
 	index := 0
-	for k, v := range ptTags {
+	for k, v := range mTags {
 		tags[index] = fmt.Sprintf("%s=%s", k, v)
 		index += 1
 	}
@@ -102,11 +101,11 @@ func buildTags(ptTags map[string]string) []string {
 	return tags
 }
 
-func buildMetrics(pt *client.Point, now time.Time, prefix string) []*MetricLine {
+func buildMetrics(m telegraf.Metric, now time.Time, prefix string) []*MetricLine {
 	ret := []*MetricLine{}
-	for fieldName, value := range pt.Fields() {
+	for fieldName, value := range m.Fields() {
 		metric := &MetricLine{
-			Metric:    fmt.Sprintf("%s%s_%s", prefix, pt.Name(), fieldName),
+			Metric:    fmt.Sprintf("%s%s_%s", prefix, m.Name(), fieldName),
 			Timestamp: now.Unix(),
 		}
 
@@ -116,7 +115,7 @@ func buildMetrics(pt *client.Point, now time.Time, prefix string) []*MetricLine 
 			continue
 		}
 		metric.Value = metricValue
-		tagsSlice := buildTags(pt.Tags())
+		tagsSlice := buildTags(m.Tags())
 		metric.Tags = fmt.Sprint(strings.Join(tagsSlice, " "))
 		ret = append(ret, metric)
 	}

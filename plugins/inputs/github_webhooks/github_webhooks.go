@@ -45,7 +45,7 @@ func (gh *GithubWebhooks) Gather(acc telegraf.Accumulator) error {
 	gh.Lock()
 	defer gh.Unlock()
 	for _, event := range gh.events {
-		p := event.NewPoint()
+		p := event.NewMetric()
 		acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
 	}
 	gh.events = make([]Event, 0)

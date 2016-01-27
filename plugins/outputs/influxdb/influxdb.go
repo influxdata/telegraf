@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf"
+
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 type InfluxDB struct {
@@ -131,14 +132,14 @@ func (i *InfluxDB) Description() string {
 
 // Choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
-func (i *InfluxDB) Write(points []*client.Point) error {
+func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	bp, _ := client.NewBatchPoints(client.BatchPointsConfig{
 		Database:  i.Database,
 		Precision: i.Precision,
 	})
 
-	for _, point := range points {
-		bp.AddPoint(point)
+	for _, metric := range metrics {
+		bp.AddPoint(metric.Point())
 	}
 
 	// This will get set to nil if a successful write occurs

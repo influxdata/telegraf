@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +19,7 @@ func TestBuildDimensions(t *testing.T) {
 
 	assert := assert.New(t)
 
-	testPoint := testutil.TestPoint(1)
+	testPoint := testutil.TestMetric(1)
 	dimensions := BuildDimensions(testPoint.Tags())
 
 	tagKeys := make([]string, len(testPoint.Tags()))
@@ -46,25 +46,25 @@ func TestBuildDimensions(t *testing.T) {
 	}
 }
 
-// Test that points with valid values have a MetricDatum created where as non valid do not.
+// Test that metrics with valid values have a MetricDatum created where as non valid do not.
 // Skips "time.Time" type as something is converting the value to string.
 func TestBuildMetricDatums(t *testing.T) {
 	assert := assert.New(t)
 
-	validPoints := []*client.Point{
-		testutil.TestPoint(1),
-		testutil.TestPoint(int32(1)),
-		testutil.TestPoint(int64(1)),
-		testutil.TestPoint(float64(1)),
-		testutil.TestPoint(true),
+	validMetrics := []telegraf.Metric{
+		testutil.TestMetric(1),
+		testutil.TestMetric(int32(1)),
+		testutil.TestMetric(int64(1)),
+		testutil.TestMetric(float64(1)),
+		testutil.TestMetric(true),
 	}
 
-	for _, point := range validPoints {
+	for _, point := range validMetrics {
 		datums := BuildMetricDatum(point)
 		assert.Equal(1, len(datums), "Valid type should create a Datum")
 	}
 
-	nonValidPoint := testutil.TestPoint("Foo")
+	nonValidPoint := testutil.TestMetric("Foo")
 
 	assert.Equal(0, len(BuildMetricDatum(nonValidPoint)), "Invalid type should not create a Datum")
 }

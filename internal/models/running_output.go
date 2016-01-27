@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 const DEFAULT_POINT_BUFFER_LIMIT = 10000
@@ -18,7 +16,7 @@ type RunningOutput struct {
 	Quiet            bool
 	PointBufferLimit int
 
-	points           []*client.Point
+	metrics          []telegraf.Metric
 	overwriteCounter int
 }
 
@@ -29,7 +27,7 @@ func NewRunningOutput(
 ) *RunningOutput {
 	ro := &RunningOutput{
 		Name:             name,
-		points:           make([]*client.Point, 0),
+		metrics:          make([]telegraf.Metric, 0),
 		Output:           output,
 		Config:           conf,
 		PointBufferLimit: DEFAULT_POINT_BUFFER_LIMIT,
@@ -37,34 +35,34 @@ func NewRunningOutput(
 	return ro
 }
 
-func (ro *RunningOutput) AddPoint(point *client.Point) {
+func (ro *RunningOutput) AddPoint(point telegraf.Metric) {
 	if ro.Config.Filter.IsActive {
-		if !ro.Config.Filter.ShouldPointPass(point) {
+		if !ro.Config.Filter.ShouldMetricPass(point) {
 			return
 		}
 	}
 
-	if len(ro.points) < ro.PointBufferLimit {
-		ro.points = append(ro.points, point)
+	if len(ro.metrics) < ro.PointBufferLimit {
+		ro.metrics = append(ro.metrics, point)
 	} else {
-		if ro.overwriteCounter == len(ro.points) {
+		if ro.overwriteCounter == len(ro.metrics) {
 			ro.overwriteCounter = 0
 		}
-		ro.points[ro.overwriteCounter] = point
+		ro.metrics[ro.overwriteCounter] = point
 		ro.overwriteCounter++
 	}
 }
 
 func (ro *RunningOutput) Write() error {
 	start := time.Now()
-	err := ro.Output.Write(ro.points)
+	err := ro.Output.Write(ro.metrics)
 	elapsed := time.Since(start)
 	if err == nil {
 		if !ro.Quiet {
 			log.Printf("Wrote %d metrics to output %s in %s\n",
-				len(ro.points), ro.Name, elapsed)
+				len(ro.metrics), ro.Name, elapsed)
 		}
-		ro.points = make([]*client.Point, 0)
+		ro.metrics = make([]telegraf.Metric, 0)
 		ro.overwriteCounter = 0
 	}
 	return err

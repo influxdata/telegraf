@@ -113,7 +113,7 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 
 	var found bool
 
-	for _, pnt := range acc.Points {
+	for _, pnt := range acc.Metrics {
 		if pnt.Measurement == "postgresql" {
 			if pnt.Tags["db"] == "postgres" {
 				found = true

@@ -136,7 +136,7 @@ func TestHttpJson200(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 12, acc.NFields())
 		// Set responsetime
-		for _, p := range acc.Points {
+		for _, p := range acc.Metrics {
 			p.Fields["response_time"] = 1.0
 		}
 
@@ -203,7 +203,7 @@ func TestHttpJson200Tags(t *testing.T) {
 			var acc testutil.Accumulator
 			err := service.Gather(&acc)
 			// Set responsetime
-			for _, p := range acc.Points {
+			for _, p := range acc.Metrics {
 				p.Fields["response_time"] = 1.0
 			}
 			require.NoError(t, err)

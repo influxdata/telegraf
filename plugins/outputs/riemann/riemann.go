@@ -6,9 +6,8 @@ import (
 	"os"
 
 	"github.com/amir/raidman"
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type Riemann struct {
@@ -49,13 +48,13 @@ func (r *Riemann) Description() string {
 	return "Configuration for the Riemann server to send metrics to"
 }
 
-func (r *Riemann) Write(points []*client.Point) error {
-	if len(points) == 0 {
+func (r *Riemann) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
 		return nil
 	}
 
 	var events []*raidman.Event
-	for _, p := range points {
+	for _, p := range metrics {
 		evs := buildEvents(p)
 		for _, ev := range evs {
 			events = append(events, ev)
@@ -71,7 +70,7 @@ func (r *Riemann) Write(points []*client.Point) error {
 	return nil
 }
 
-func buildEvents(p *client.Point) []*raidman.Event {
+func buildEvents(p telegraf.Metric) []*raidman.Event {
 	events := []*raidman.Event{}
 	for fieldName, value := range p.Fields() {
 		host, ok := p.Tags()["host"]

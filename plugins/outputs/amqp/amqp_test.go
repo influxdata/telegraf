@@ -23,6 +23,6 @@ func TestConnectAndWrite(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify that we can successfully write data to the amqp broker
-	err = q.Write(testutil.MockBatchPoints().Points())
+	err = q.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }

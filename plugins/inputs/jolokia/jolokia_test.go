@@ -85,7 +85,7 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	err := jolokia.Gather(&acc)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(acc.Points))
+	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_init":      67108864.0,
@@ -112,5 +112,5 @@ func TestHttpJsonOn404(t *testing.T) {
 	err := jolokia.Gather(&acc)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(acc.Points))
+	assert.Equal(t, 0, len(acc.Metrics))
 }

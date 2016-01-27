@@ -8,17 +8,17 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 )
 
 func TestBuildPoint(t *testing.T) {
 	var tagtests = []struct {
-		ptIn  *client.Point
+		ptIn  telegraf.Metric
 		outPt Point
 		err   error
 	}{
 		{
-			testutil.TestPoint(float64(0.0), "testpt"),
+			testutil.TestMetric(float64(0.0), "testpt"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -26,7 +26,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(float64(1.0), "testpt"),
+			testutil.TestMetric(float64(1.0), "testpt"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
@@ -34,7 +34,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(int(10), "testpt"),
+			testutil.TestMetric(int(10), "testpt"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				10.0,
@@ -42,7 +42,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(int32(112345), "testpt"),
+			testutil.TestMetric(int32(112345), "testpt"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				112345.0,
@@ -50,7 +50,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(int64(112345), "testpt"),
+			testutil.TestMetric(int64(112345), "testpt"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				112345.0,
@@ -58,7 +58,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(float32(11234.5), "testpt"),
+			testutil.TestMetric(float32(11234.5), "testpt"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,
@@ -66,7 +66,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint("11234.5", "testpt"),
+			testutil.TestMetric("11234.5", "testpt"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,
@@ -75,7 +75,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 	}
 	for _, tt := range tagtests {
-		pt, err := buildPoints(tt.ptIn)
+		pt, err := buildMetrics(tt.ptIn)
 		if err != nil && tt.err == nil {
 			t.Errorf("%s: unexpected error, %+v\n", tt.ptIn.Name(), err)
 		}

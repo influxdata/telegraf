@@ -1,6 +1,6 @@
 ## Amazon CloudWatch Output for Telegraf
 
-This plugin will send points to Amazon CloudWatch.
+This plugin will send metrics to Amazon CloudWatch.
 
 ## Amazon Authentication
 
