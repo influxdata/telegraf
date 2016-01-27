@@ -3,7 +3,7 @@ package internal_models
 import (
 	"strings"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -24,8 +24,8 @@ type Filter struct {
 	IsActive bool
 }
 
-func (f Filter) ShouldPointPass(point *client.Point) bool {
-	if f.ShouldPass(point.Name()) && f.ShouldTagsPass(point.Tags()) {
+func (f Filter) ShouldMetricPass(metric telegraf.Metric) bool {
+	if f.ShouldPass(metric.Name()) && f.ShouldTagsPass(metric.Tags()) {
 		return true
 	}
 	return false

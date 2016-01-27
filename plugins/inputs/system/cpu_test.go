@@ -123,7 +123,7 @@ func assertContainsTaggedFloat(
 	tags map[string]string,
 ) {
 	var actualValue float64
-	for _, pt := range acc.Points {
+	for _, pt := range acc.Metrics {
 		if pt.Measurement == measurement {
 			for fieldname, value := range pt.Fields {
 				if fieldname == field {

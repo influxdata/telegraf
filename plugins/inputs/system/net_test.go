@@ -85,7 +85,7 @@ func TestNetStats(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "net", fields2, ntags)
 
-	acc.Points = nil
+	acc.Metrics = nil
 
 	err = (&NetStats{&mps}).Gather(&acc)
 	require.NoError(t, err)

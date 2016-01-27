@@ -148,7 +148,7 @@ func TestZfsPoolMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	require.False(t, acc.HasMeasurement("zfs_pool"))
-	acc.Points = nil
+	acc.Metrics = nil
 
 	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}, PoolMetrics: true}
 	err = z.Gather(&acc)
@@ -198,7 +198,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
-	acc.Points = nil
+	acc.Metrics = nil
 
 	//two pools, all metrics
 	err = os.MkdirAll(testKstatPath+"/STORAGE", 0755)
@@ -217,7 +217,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
-	acc.Points = nil
+	acc.Metrics = nil
 
 	intMetrics = getKstatMetricsArcOnly()
 

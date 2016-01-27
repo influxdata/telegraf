@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,7 +39,7 @@ func TestUriOverride(t *testing.T) {
 	l.ApiToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write(testutil.MockBatchPoints().Points())
+	err = l.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }
 
@@ -61,7 +61,7 @@ func TestBadStatusCode(t *testing.T) {
 	l.ApiToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write(testutil.MockBatchPoints().Points())
+	err = l.Write(testutil.MockMetrics())
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
@@ -71,12 +71,12 @@ func TestBadStatusCode(t *testing.T) {
 
 func TestBuildGauge(t *testing.T) {
 	var gaugeTests = []struct {
-		ptIn     *client.Point
+		ptIn     telegraf.Metric
 		outGauge *Gauge
 		err      error
 	}{
 		{
-			testutil.TestPoint(0.0, "test1"),
+			testutil.TestMetric(0.0, "test1"),
 			&Gauge{
 				Name:        "test1",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -85,7 +85,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(1.0, "test2"),
+			testutil.TestMetric(1.0, "test2"),
 			&Gauge{
 				Name:        "test2",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -94,7 +94,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(10, "test3"),
+			testutil.TestMetric(10, "test3"),
 			&Gauge{
 				Name:        "test3",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -103,7 +103,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(int32(112345), "test4"),
+			testutil.TestMetric(int32(112345), "test4"),
 			&Gauge{
 				Name:        "test4",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -112,7 +112,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(int64(112345), "test5"),
+			testutil.TestMetric(int64(112345), "test5"),
 			&Gauge{
 				Name:        "test5",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -121,7 +121,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint(float32(11234.5), "test6"),
+			testutil.TestMetric(float32(11234.5), "test6"),
 			&Gauge{
 				Name:        "test6",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -130,7 +130,7 @@ func TestBuildGauge(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestPoint("11234.5", "test7"),
+			testutil.TestMetric("11234.5", "test7"),
 			&Gauge{
 				Name:        "test7",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
@@ -161,20 +161,20 @@ func TestBuildGauge(t *testing.T) {
 }
 
 func TestBuildGaugeWithSource(t *testing.T) {
-	pt1, _ := client.NewPoint(
+	pt1, _ := telegraf.NewMetric(
 		"test1",
 		map[string]string{"hostname": "192.168.0.1"},
 		map[string]interface{}{"value": 0.0},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	pt2, _ := client.NewPoint(
+	pt2, _ := telegraf.NewMetric(
 		"test2",
 		map[string]string{"hostnam": "192.168.0.1"},
 		map[string]interface{}{"value": 1.0},
 		time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
 	)
 	var gaugeTests = []struct {
-		ptIn     *client.Point
+		ptIn     telegraf.Metric
 		outGauge *Gauge
 		err      error
 	}{

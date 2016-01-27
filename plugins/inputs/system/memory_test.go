@@ -55,7 +55,7 @@ func TestMemStats(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "mem", memfields, make(map[string]string))
 
-	acc.Points = nil
+	acc.Metrics = nil
 
 	err = (&SwapStats{&mps}).Gather(&acc)
 	require.NoError(t, err)

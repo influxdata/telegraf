@@ -14,9 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type CloudWatch struct {
@@ -73,9 +72,9 @@ func (c *CloudWatch) Close() error {
 	return nil
 }
 
-func (c *CloudWatch) Write(points []*client.Point) error {
-	for _, pt := range points {
-		err := c.WriteSinglePoint(pt)
+func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
+	for _, m := range metrics {
+		err := c.WriteSinglePoint(m)
 		if err != nil {
 			return err
 		}
@@ -87,10 +86,10 @@ func (c *CloudWatch) Write(points []*client.Point) error {
 // Write data for a single point. A point can have many fields and one field
 // is equal to one MetricDatum. There is a limit on how many MetricDatums a
 // request can have so we process one Point at a time.
-func (c *CloudWatch) WriteSinglePoint(point *client.Point) error {
+func (c *CloudWatch) WriteSinglePoint(point telegraf.Metric) error {
 	datums := BuildMetricDatum(point)
 
-	const maxDatumsPerCall = 20 // PutMetricData only supports up to 20 data points per call
+	const maxDatumsPerCall = 20 // PutMetricData only supports up to 20 data metrics per call
 
 	for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
 		err := c.WriteToCloudWatch(partition)
@@ -144,7 +143,7 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 
 // Make a MetricDatum for each field in a Point. Only fields with values that can be
 // converted to float64 are supported. Non-supported fields are skipped.
-func BuildMetricDatum(point *client.Point) []*cloudwatch.MetricDatum {
+func BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
 	datums := make([]*cloudwatch.MetricDatum, len(point.Fields()))
 	i := 0
 
@@ -190,15 +189,15 @@ func BuildMetricDatum(point *client.Point) []*cloudwatch.MetricDatum {
 // Make a list of Dimensions by using a Point's tags. CloudWatch supports up to
 // 10 dimensions per metric so we only keep up to the first 10 alphabetically.
 // This always includes the "host" tag if it exists.
-func BuildDimensions(ptTags map[string]string) []*cloudwatch.Dimension {
+func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 
 	const MaxDimensions = 10
-	dimensions := make([]*cloudwatch.Dimension, int(math.Min(float64(len(ptTags)), MaxDimensions)))
+	dimensions := make([]*cloudwatch.Dimension, int(math.Min(float64(len(mTags)), MaxDimensions)))
 
 	i := 0
 
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
-	if host, ok := ptTags["host"]; ok {
+	if host, ok := mTags["host"]; ok {
 		dimensions[i] = &cloudwatch.Dimension{
 			Name:  aws.String("host"),
 			Value: aws.String(host),
@@ -207,7 +206,7 @@ func BuildDimensions(ptTags map[string]string) []*cloudwatch.Dimension {
 	}
 
 	var keys []string
-	for k := range ptTags {
+	for k := range mTags {
 		if k != "host" {
 			keys = append(keys, k)
 		}
@@ -221,7 +220,7 @@ func BuildDimensions(ptTags map[string]string) []*cloudwatch.Dimension {
 
 		dimensions[i] = &cloudwatch.Dimension{
 			Name:  aws.String(k),
-			Value: aws.String(ptTags[k]),
+			Value: aws.String(mTags[k]),
 		}
 
 		i += 1

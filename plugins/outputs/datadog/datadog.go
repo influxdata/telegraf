@@ -10,10 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf"
 )
 
 type Datadog struct {
@@ -38,9 +37,9 @@ type TimeSeries struct {
 
 type Metric struct {
 	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
+	Points [1]Point `json:"metrics"`
 	Host   string   `json:"host"`
-	Tags   []string `json:"tags,omitempty"`
+	Tags   []string `json:"tags,omitemmy"`
 }
 
 type Point [2]float64
@@ -63,27 +62,29 @@ func (d *Datadog) Connect() error {
 	return nil
 }
 
-func (d *Datadog) Write(points []*client.Point) error {
-	if len(points) == 0 {
+func (d *Datadog) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
 		return nil
 	}
 	ts := TimeSeries{}
 	tempSeries := []*Metric{}
 	metricCounter := 0
 
-	for _, pt := range points {
-		mname := strings.Replace(pt.Name(), "_", ".", -1)
-		if amonPts, err := buildPoints(pt); err == nil {
-			for fieldName, amonPt := range amonPts {
+	for _, m := range metrics {
+		mname := strings.Replace(m.Name(), "_", ".", -1)
+		if dogMs, err := buildMetrics(m); err == nil {
+			for fieldName, dogM := range dogMs {
 				metric := &Metric{
 					Metric: mname + strings.Replace(fieldName, "_", ".", -1),
+					Tags:   buildTags(m.Tags()),
+					Host:   m.Tags()["host"],
 				}
-				metric.Points[0] = amonPt
+				metric.Points[0] = dogM
 				tempSeries = append(tempSeries, metric)
 				metricCounter++
 			}
 		} else {
-			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
+			log.Printf("unable to build Metric for %s, skipping\n", m.Name())
 		}
 	}
 
@@ -127,23 +128,23 @@ func (d *Datadog) authenticatedUrl() string {
 	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
 }
 
-func buildPoints(pt *client.Point) (map[string]Point, error) {
-	pts := make(map[string]Point)
-	for k, v := range pt.Fields() {
+func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
+	ms := make(map[string]Point)
+	for k, v := range m.Fields() {
 		var p Point
 		if err := p.setValue(v); err != nil {
-			return pts, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+			return ms, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
 		}
-		p[0] = float64(pt.Time().Unix())
-		pts[k] = p
+		p[0] = float64(m.Time().Unix())
+		ms[k] = p
 	}
-	return pts, nil
+	return ms, nil
 }
 
-func buildTags(ptTags map[string]string) []string {
-	tags := make([]string, len(ptTags))
+func buildTags(mTags map[string]string) []string {
+	tags := make([]string, len(mTags))
 	index := 0
-	for k, v := range ptTags {
+	for k, v := range mTags {
 		tags[index] = fmt.Sprintf("%s:%s", k, v)
 		index += 1
 	}

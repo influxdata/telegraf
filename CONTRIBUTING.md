@@ -37,7 +37,7 @@ and submit new inputs.
 
 ### Input Plugin Guidelines
 
-* A plugin must conform to the `inputs.Input` interface.
+* A plugin must conform to the `telegraf.Input` interface.
 * Input Plugins should call `inputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * Input Plugins must be added to the
@@ -97,7 +97,10 @@ package simple
 
 // simple.go
 
-import "github.com/influxdata/telegraf/plugins/inputs"
+import (
+    "github.com/influxdata/telegraf"
+    "github.com/influxdata/telegraf/plugins/inputs"
+)
 
 type Simple struct {
     Ok bool
@@ -122,7 +125,7 @@ func (s *Simple) Gather(acc inputs.Accumulator) error {
 }
 
 func init() {
-    inputs.Add("simple", func() inputs.Input { return &Simple{} })
+    inputs.Add("simple", func() telegraf.Input { return &Simple{} })
 }
 ```
 
@@ -182,7 +185,7 @@ type Output interface {
     Close() error
     Description() string
     SampleConfig() string
-    Write(points []*client.Point) error
+    Write(metrics []telegraf.Metric) error
 }
 ```
 
@@ -193,7 +196,10 @@ package simpleoutput
 
 // simpleoutput.go
 
-import "github.com/influxdata/telegraf/plugins/outputs"
+import (
+    "github.com/influxdata/telegraf"
+    "github.com/influxdata/telegraf/plugins/outputs"
+)
 
 type Simple struct {
     Ok bool
@@ -217,7 +223,7 @@ func (s *Simple) Close() error {
     return nil
 }
 
-func (s *Simple) Write(points []*client.Point) error {
+func (s *Simple) Write(metrics []telegraf.Metric) error {
     for _, pt := range points {
         // write `pt` to the output sink here
     }
@@ -225,7 +231,7 @@ func (s *Simple) Write(points []*client.Point) error {
 }
 
 func init() {
-    outputs.Add("simpleoutput", func() outputs.Output { return &Simple{} })
+    outputs.Add("simpleoutput", func() telegraf.Output { return &Simple{} })
 }
 
 ```
@@ -253,7 +259,7 @@ type ServiceOutput interface {
     Close() error
     Description() string
     SampleConfig() string
-    Write(points []*client.Point) error
+    Write(metrics []telegraf.Metric) error
     Start() error
     Stop()
 }

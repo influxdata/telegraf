@@ -14,9 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type KinesisOutput struct {
@@ -104,7 +103,7 @@ func (k *KinesisOutput) Close() error {
 	return nil
 }
 
-func FormatMetric(k *KinesisOutput, point *client.Point) (string, error) {
+func FormatMetric(k *KinesisOutput, point telegraf.Metric) (string, error) {
 	if k.Format == "string" {
 		return point.String(), nil
 	} else {
@@ -139,16 +138,16 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 	return time.Since(start)
 }
 
-func (k *KinesisOutput) Write(points []*client.Point) error {
+func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 	var sz uint32 = 0
 
-	if len(points) == 0 {
+	if len(metrics) == 0 {
 		return nil
 	}
 
 	r := []*kinesis.PutRecordsRequestEntry{}
 
-	for _, p := range points {
+	for _, p := range metrics {
 		atomic.AddUint32(&sz, 1)
 
 		metric, _ := FormatMetric(k, p)

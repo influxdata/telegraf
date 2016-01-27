@@ -2,9 +2,8 @@ package nsq
 
 import (
 	"fmt"
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/nsqio/go-nsq"
 )
 
@@ -46,14 +45,12 @@ func (n *NSQ) Description() string {
 	return "Send telegraf measurements to NSQD"
 }
 
-func (n *NSQ) Write(points []*client.Point) error {
-	if len(points) == 0 {
+func (n *NSQ) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
 		return nil
 	}
 
-	for _, p := range points {
-		// Combine tags from Point and BatchPoints and grab the resulting
-		// line-protocol output string to write to NSQ
+	for _, p := range metrics {
 		value := p.String()
 
 		err := n.producer.Publish(n.Topic, []byte(value))

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,20 +20,20 @@ func TestGraphiteError(t *testing.T) {
 		Servers: []string{"127.0.0.1:2003", "127.0.0.1:12003"},
 		Prefix:  "my.prefix",
 	}
-	// Init points
-	pt1, _ := client.NewPoint(
+	// Init metrics
+	pt1, _ := telegraf.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"mymeasurement": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	// Prepare point list
-	var points []*client.Point
-	points = append(points, pt1)
+	var metrics []telegraf.Metric
+	metrics = append(metrics, pt1)
 	// Error
 	err1 := g.Connect()
 	require.NoError(t, err1)
-	err2 := g.Write(points)
+	err2 := g.Write(metrics)
 	require.Error(t, err2)
 	assert.Equal(t, "Could not write to any Graphite server in cluster\n", err2.Error())
 }
@@ -44,30 +44,30 @@ func TestGraphiteOK(t *testing.T) {
 	g := Graphite{
 		Prefix: "my.prefix",
 	}
-	// Init points
-	pt1, _ := client.NewPoint(
+	// Init metrics
+	pt1, _ := telegraf.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"mymeasurement": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	pt2, _ := client.NewPoint(
+	pt2, _ := telegraf.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	pt3, _ := client.NewPoint(
+	pt3, _ := telegraf.NewMetric(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	// Prepare point list
-	var points []*client.Point
-	points = append(points, pt1)
-	points = append(points, pt2)
-	points = append(points, pt3)
+	var metrics []telegraf.Metric
+	metrics = append(metrics, pt1)
+	metrics = append(metrics, pt2)
+	metrics = append(metrics, pt3)
 	// Start TCP server
 	wg.Add(1)
 	go TCPServer(t, &wg)
@@ -78,7 +78,7 @@ func TestGraphiteOK(t *testing.T) {
 	wg.Wait()
 	require.NoError(t, err1)
 	// Send Data
-	err2 := g.Write(points)
+	err2 := g.Write(metrics)
 	require.NoError(t, err2)
 	wg.Add(1)
 	// Waiting TCPserver

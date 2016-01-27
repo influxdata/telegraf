@@ -3,8 +3,10 @@
 ### Release Notes
 
 ### Features
+- [#564](https://github.com/influxdata/telegraf/issues/564): features for plugin writing simplification. Internal metric data type.
 
 ### Bugfixes
+- [#599](https://github.com/influxdata/telegraf/issues/599): datadog plugin tags not working.
 
 ## v0.10.1 [2016-01-27]
 

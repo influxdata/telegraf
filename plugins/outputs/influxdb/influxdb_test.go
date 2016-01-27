@@ -18,7 +18,7 @@ func TestUDPInflux(t *testing.T) {
 
 	err := i.Connect()
 	require.NoError(t, err)
-	err = i.Write(testutil.MockBatchPoints().Points())
+	err = i.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }
 
@@ -36,6 +36,6 @@ func TestHTTPInflux(t *testing.T) {
 
 	err := i.Connect()
 	require.NoError(t, err)
-	err = i.Write(testutil.MockBatchPoints().Points())
+	err = i.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }

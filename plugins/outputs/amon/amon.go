@@ -8,10 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf"
 )
 
 type Amon struct {
@@ -39,7 +38,7 @@ type TimeSeries struct {
 
 type Metric struct {
 	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
+	Points [1]Point `json:"metrics"`
 }
 
 type Point [2]float64
@@ -54,17 +53,17 @@ func (a *Amon) Connect() error {
 	return nil
 }
 
-func (a *Amon) Write(points []*client.Point) error {
-	if len(points) == 0 {
+func (a *Amon) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
 		return nil
 	}
 	ts := TimeSeries{}
 	tempSeries := []*Metric{}
 	metricCounter := 0
 
-	for _, pt := range points {
-		mname := strings.Replace(pt.Name(), "_", ".", -1)
-		if amonPts, err := buildPoints(pt); err == nil {
+	for _, m := range metrics {
+		mname := strings.Replace(m.Name(), "_", ".", -1)
+		if amonPts, err := buildMetrics(m); err == nil {
 			for fieldName, amonPt := range amonPts {
 				metric := &Metric{
 					Metric: mname + "_" + strings.Replace(fieldName, "_", ".", -1),
@@ -74,7 +73,7 @@ func (a *Amon) Write(points []*client.Point) error {
 				metricCounter++
 			}
 		} else {
-			log.Printf("unable to build Metric for %s, skipping\n", pt.Name())
+			log.Printf("unable to build Metric for %s, skipping\n", m.Name())
 		}
 	}
 
@@ -116,17 +115,17 @@ func (a *Amon) authenticatedUrl() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
 
-func buildPoints(pt *client.Point) (map[string]Point, error) {
-	pts := make(map[string]Point)
-	for k, v := range pt.Fields() {
+func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
+	ms := make(map[string]Point)
+	for k, v := range m.Fields() {
 		var p Point
 		if err := p.setValue(v); err != nil {
-			return pts, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+			return ms, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
 		}
-		p[0] = float64(pt.Time().Unix())
-		pts[k] = p
+		p[0] = float64(m.Time().Unix())
+		ms[k] = p
 	}
-	return pts, nil
+	return ms, nil
 }
 
 func (p *Point) setValue(v interface{}) error {

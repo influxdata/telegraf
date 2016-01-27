@@ -71,7 +71,7 @@ func TestBasic(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Points, 2)
+	require.Len(t, acc.Metrics, 2)
 	fields := map[string]interface{}{
 		// JSON will truncate floats to integer representations.
 		// Since there's no distinction in JSON, we can't assume it's an int.

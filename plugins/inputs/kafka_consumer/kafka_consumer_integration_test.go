@@ -51,13 +51,13 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	// Verify that we can now gather the sent message
 	var acc testutil.Accumulator
 	// Sanity check
-	assert.Equal(t, 0, len(acc.Points), "There should not be any points")
+	assert.Equal(t, 0, len(acc.Metrics), "There should not be any points")
 
 	// Gather points
 	err = k.Gather(&acc)
 	require.NoError(t, err)
-	if len(acc.Points) == 1 {
-		point := acc.Points[0]
+	if len(acc.Metrics) == 1 {
+		point := acc.Metrics[0]
 		assert.Equal(t, "cpu_load_short", point.Measurement)
 		assert.Equal(t, map[string]interface{}{"value": 23422.0}, point.Fields)
 		assert.Equal(t, map[string]string{
@@ -83,7 +83,7 @@ func waitForPoint(k *Kafka, t *testing.T) {
 			counter++
 			if counter > 1000 {
 				t.Fatal("Waited for 5s, point never arrived to consumer")
-			} else if len(k.pointChan) == 1 {
+			} else if len(k.metricC) == 1 {
 				return
 			}
 		}

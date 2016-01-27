@@ -5,13 +5,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/telegraf"
 )
 
 const meas = "github_webhooks"
 
 type Event interface {
-	NewPoint() *client.Point
+	NewMetric() telegraf.Metric
 }
 
 type Repository struct {
@@ -90,7 +90,7 @@ type CommitCommentEvent struct {
 	Sender     Sender        `json:"sender"`
 }
 
-func (s CommitCommentEvent) NewPoint() *client.Point {
+func (s CommitCommentEvent) NewMetric() telegraf.Metric {
 	event := "commit_comment"
 	t := map[string]string{
 		"event":      event,
@@ -106,11 +106,11 @@ func (s CommitCommentEvent) NewPoint() *client.Point {
 		"commit":  s.Comment.Commit,
 		"comment": s.Comment.Body,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type CreateEvent struct {
@@ -120,7 +120,7 @@ type CreateEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s CreateEvent) NewPoint() *client.Point {
+func (s CreateEvent) NewMetric() telegraf.Metric {
 	event := "create"
 	t := map[string]string{
 		"event":      event,
@@ -136,11 +136,11 @@ func (s CreateEvent) NewPoint() *client.Point {
 		"ref":     s.Ref,
 		"refType": s.RefType,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type DeleteEvent struct {
@@ -150,7 +150,7 @@ type DeleteEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s DeleteEvent) NewPoint() *client.Point {
+func (s DeleteEvent) NewMetric() telegraf.Metric {
 	event := "delete"
 	t := map[string]string{
 		"event":      event,
@@ -166,11 +166,11 @@ func (s DeleteEvent) NewPoint() *client.Point {
 		"ref":     s.Ref,
 		"refType": s.RefType,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type DeploymentEvent struct {
@@ -179,7 +179,7 @@ type DeploymentEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s DeploymentEvent) NewPoint() *client.Point {
+func (s DeploymentEvent) NewMetric() telegraf.Metric {
 	event := "deployment"
 	t := map[string]string{
 		"event":      event,
@@ -197,11 +197,11 @@ func (s DeploymentEvent) NewPoint() *client.Point {
 		"environment": s.Deployment.Environment,
 		"description": s.Deployment.Description,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type DeploymentStatusEvent struct {
@@ -211,7 +211,7 @@ type DeploymentStatusEvent struct {
 	Sender           Sender           `json:"sender"`
 }
 
-func (s DeploymentStatusEvent) NewPoint() *client.Point {
+func (s DeploymentStatusEvent) NewMetric() telegraf.Metric {
 	event := "delete"
 	t := map[string]string{
 		"event":      event,
@@ -231,11 +231,11 @@ func (s DeploymentStatusEvent) NewPoint() *client.Point {
 		"depState":       s.DeploymentStatus.State,
 		"depDescription": s.DeploymentStatus.Description,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type ForkEvent struct {
@@ -244,7 +244,7 @@ type ForkEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s ForkEvent) NewPoint() *client.Point {
+func (s ForkEvent) NewMetric() telegraf.Metric {
 	event := "fork"
 	t := map[string]string{
 		"event":      event,
@@ -259,11 +259,11 @@ func (s ForkEvent) NewPoint() *client.Point {
 		"issues": s.Repository.Issues,
 		"fork":   s.Forkee.Repository,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type GollumEvent struct {
@@ -273,7 +273,7 @@ type GollumEvent struct {
 }
 
 // REVIEW: Going to be lazy and not deal with the pages.
-func (s GollumEvent) NewPoint() *client.Point {
+func (s GollumEvent) NewMetric() telegraf.Metric {
 	event := "gollum"
 	t := map[string]string{
 		"event":      event,
@@ -287,11 +287,11 @@ func (s GollumEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type IssueCommentEvent struct {
@@ -301,7 +301,7 @@ type IssueCommentEvent struct {
 	Sender     Sender       `json:"sender"`
 }
 
-func (s IssueCommentEvent) NewPoint() *client.Point {
+func (s IssueCommentEvent) NewMetric() telegraf.Metric {
 	event := "issue_comment"
 	t := map[string]string{
 		"event":      event,
@@ -319,11 +319,11 @@ func (s IssueCommentEvent) NewPoint() *client.Point {
 		"comments": s.Issue.Comments,
 		"body":     s.Comment.Body,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type IssuesEvent struct {
@@ -333,7 +333,7 @@ type IssuesEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s IssuesEvent) NewPoint() *client.Point {
+func (s IssuesEvent) NewMetric() telegraf.Metric {
 	event := "issue"
 	t := map[string]string{
 		"event":      event,
@@ -351,11 +351,11 @@ func (s IssuesEvent) NewPoint() *client.Point {
 		"title":    s.Issue.Title,
 		"comments": s.Issue.Comments,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type MemberEvent struct {
@@ -364,7 +364,7 @@ type MemberEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s MemberEvent) NewPoint() *client.Point {
+func (s MemberEvent) NewMetric() telegraf.Metric {
 	event := "member"
 	t := map[string]string{
 		"event":      event,
@@ -380,11 +380,11 @@ func (s MemberEvent) NewPoint() *client.Point {
 		"newMember":       s.Member.User,
 		"newMemberStatus": s.Member.Admin,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type MembershipEvent struct {
@@ -394,7 +394,7 @@ type MembershipEvent struct {
 	Team   Team   `json:"team"`
 }
 
-func (s MembershipEvent) NewPoint() *client.Point {
+func (s MembershipEvent) NewMetric() telegraf.Metric {
 	event := "membership"
 	t := map[string]string{
 		"event":  event,
@@ -406,11 +406,11 @@ func (s MembershipEvent) NewPoint() *client.Point {
 		"newMember":       s.Member.User,
 		"newMemberStatus": s.Member.Admin,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type PageBuildEvent struct {
@@ -418,7 +418,7 @@ type PageBuildEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s PageBuildEvent) NewPoint() *client.Point {
+func (s PageBuildEvent) NewMetric() telegraf.Metric {
 	event := "page_build"
 	t := map[string]string{
 		"event":      event,
@@ -432,11 +432,11 @@ func (s PageBuildEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type PublicEvent struct {
@@ -444,7 +444,7 @@ type PublicEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s PublicEvent) NewPoint() *client.Point {
+func (s PublicEvent) NewMetric() telegraf.Metric {
 	event := "public"
 	t := map[string]string{
 		"event":      event,
@@ -458,11 +458,11 @@ func (s PublicEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type PullRequestEvent struct {
@@ -472,7 +472,7 @@ type PullRequestEvent struct {
 	Sender      Sender      `json:"sender"`
 }
 
-func (s PullRequestEvent) NewPoint() *client.Point {
+func (s PullRequestEvent) NewMetric() telegraf.Metric {
 	event := "pull_request"
 	t := map[string]string{
 		"event":      event,
@@ -495,11 +495,11 @@ func (s PullRequestEvent) NewPoint() *client.Point {
 		"deletions":    s.PullRequest.Deletions,
 		"changedFiles": s.PullRequest.ChangedFiles,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type PullRequestReviewCommentEvent struct {
@@ -509,7 +509,7 @@ type PullRequestReviewCommentEvent struct {
 	Sender      Sender                   `json:"sender"`
 }
 
-func (s PullRequestReviewCommentEvent) NewPoint() *client.Point {
+func (s PullRequestReviewCommentEvent) NewMetric() telegraf.Metric {
 	event := "pull_request_review_comment"
 	t := map[string]string{
 		"event":      event,
@@ -533,11 +533,11 @@ func (s PullRequestReviewCommentEvent) NewPoint() *client.Point {
 		"commentFile":  s.Comment.File,
 		"comment":      s.Comment.Comment,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type PushEvent struct {
@@ -548,7 +548,7 @@ type PushEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s PushEvent) NewPoint() *client.Point {
+func (s PushEvent) NewMetric() telegraf.Metric {
 	event := "push"
 	t := map[string]string{
 		"event":      event,
@@ -565,11 +565,11 @@ func (s PushEvent) NewPoint() *client.Point {
 		"before": s.Before,
 		"after":  s.After,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type ReleaseEvent struct {
@@ -578,7 +578,7 @@ type ReleaseEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s ReleaseEvent) NewPoint() *client.Point {
+func (s ReleaseEvent) NewMetric() telegraf.Metric {
 	event := "release"
 	t := map[string]string{
 		"event":      event,
@@ -593,11 +593,11 @@ func (s ReleaseEvent) NewPoint() *client.Point {
 		"issues":  s.Repository.Issues,
 		"tagName": s.Release.TagName,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type RepositoryEvent struct {
@@ -605,7 +605,7 @@ type RepositoryEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s RepositoryEvent) NewPoint() *client.Point {
+func (s RepositoryEvent) NewMetric() telegraf.Metric {
 	event := "repository"
 	t := map[string]string{
 		"event":      event,
@@ -619,11 +619,11 @@ func (s RepositoryEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type StatusEvent struct {
@@ -633,7 +633,7 @@ type StatusEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s StatusEvent) NewPoint() *client.Point {
+func (s StatusEvent) NewMetric() telegraf.Metric {
 	event := "status"
 	t := map[string]string{
 		"event":      event,
@@ -649,11 +649,11 @@ func (s StatusEvent) NewPoint() *client.Point {
 		"commit": s.Commit,
 		"state":  s.State,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type TeamAddEvent struct {
@@ -662,7 +662,7 @@ type TeamAddEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s TeamAddEvent) NewPoint() *client.Point {
+func (s TeamAddEvent) NewMetric() telegraf.Metric {
 	event := "team_add"
 	t := map[string]string{
 		"event":      event,
@@ -677,11 +677,11 @@ func (s TeamAddEvent) NewPoint() *client.Point {
 		"issues":   s.Repository.Issues,
 		"teamName": s.Team.Name,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }
 
 type WatchEvent struct {
@@ -689,7 +689,7 @@ type WatchEvent struct {
 	Sender     Sender     `json:"sender"`
 }
 
-func (s WatchEvent) NewPoint() *client.Point {
+func (s WatchEvent) NewMetric() telegraf.Metric {
 	event := "delete"
 	t := map[string]string{
 		"event":      event,
@@ -703,9 +703,9 @@ func (s WatchEvent) NewPoint() *client.Point {
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
 	}
-	p, err := client.NewPoint(meas, t, f, time.Now())
+	m, err := telegraf.NewMetric(meas, t, f, time.Now())
 	if err != nil {
 		log.Fatalf("Failed to create %v event", event)
 	}
-	return p
+	return m
 }

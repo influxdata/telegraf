@@ -57,9 +57,9 @@ func TestDiskStats(t *testing.T) {
 	err = (&DiskStats{ps: &mps}).Gather(&acc)
 	require.NoError(t, err)
 
-	numDiskPoints := acc.NFields()
-	expectedAllDiskPoints := 14
-	assert.Equal(t, expectedAllDiskPoints, numDiskPoints)
+	numDiskMetrics := acc.NFields()
+	expectedAllDiskMetrics := 14
+	assert.Equal(t, expectedAllDiskMetrics, numDiskMetrics)
 
 	tags1 := map[string]string{
 		"path":   "/",
@@ -91,15 +91,15 @@ func TestDiskStats(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "disk", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "disk", fields2, tags2)
 
-	// We expect 6 more DiskPoints to show up with an explicit match on "/"
+	// We expect 6 more DiskMetrics to show up with an explicit match on "/"
 	// and /home not matching the /dev in MountPoints
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
-	assert.Equal(t, expectedAllDiskPoints+7, acc.NFields())
+	assert.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// / and /home
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
-	assert.Equal(t, 2*expectedAllDiskPoints+7, acc.NFields())
+	assert.Equal(t, 2*expectedAllDiskMetrics+7, acc.NFields())
 }
 
 // func TestDiskIOStats(t *testing.T) {
@@ -138,9 +138,9 @@ func TestDiskStats(t *testing.T) {
 // 	err = (&DiskIOStats{ps: &mps}).Gather(&acc)
 // 	require.NoError(t, err)
 
-// 	numDiskIOPoints := acc.NFields()
-// 	expectedAllDiskIOPoints := 14
-// 	assert.Equal(t, expectedAllDiskIOPoints, numDiskIOPoints)
+// 	numDiskIOMetrics := acc.NFields()
+// 	expectedAllDiskIOMetrics := 14
+// 	assert.Equal(t, expectedAllDiskIOMetrics, numDiskIOMetrics)
 
 // 	dtags1 := map[string]string{
 // 		"name":   "sda1",
@@ -166,10 +166,10 @@ func TestDiskStats(t *testing.T) {
 // 	assert.True(t, acc.CheckTaggedValue("write_time", uint64(6087), dtags2))
 // 	assert.True(t, acc.CheckTaggedValue("io_time", uint64(246552), dtags2))
 
-// 	// We expect 7 more DiskIOPoints to show up with an explicit match on "sdb1"
+// 	// We expect 7 more DiskIOMetrics to show up with an explicit match on "sdb1"
 // 	// and serial should be missing from the tags with SkipSerialNumber set
 // 	err = (&DiskIOStats{ps: &mps, Devices: []string{"sdb1"}, SkipSerialNumber: true}).Gather(&acc)
-// 	assert.Equal(t, expectedAllDiskIOPoints+7, acc.NFields())
+// 	assert.Equal(t, expectedAllDiskIOMetrics+7, acc.NFields())
 
 // 	dtags3 := map[string]string{
 // 		"name": "sdb1",

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/influxdb/models"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/Shopify/sarama"
@@ -29,7 +29,7 @@ func NewTestKafka() (*Kafka, chan *sarama.ConsumerMessage) {
 		doNotCommitMsgs: true,
 		errs:            make(chan *sarama.ConsumerError, pointBuffer),
 		done:            make(chan struct{}),
-		pointChan:       make(chan models.Point, pointBuffer),
+		metricC:         make(chan telegraf.Metric, pointBuffer),
 	}
 	return &k, in
 }
@@ -43,7 +43,7 @@ func TestRunParser(t *testing.T) {
 	in <- saramaMsg(testMsg)
 	time.Sleep(time.Millisecond)
 
-	assert.Equal(t, len(k.pointChan), 1)
+	assert.Equal(t, len(k.metricC), 1)
 }
 
 // Test that the parser ignores invalid messages
@@ -55,7 +55,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	in <- saramaMsg(invalidMsg)
 	time.Sleep(time.Millisecond)
 
-	assert.Equal(t, len(k.pointChan), 0)
+	assert.Equal(t, len(k.metricC), 0)
 }
 
 // Test that points are dropped when we hit the buffer limit
@@ -69,7 +69,7 @@ func TestRunParserRespectsBuffer(t *testing.T) {
 	}
 	time.Sleep(time.Millisecond)
 
-	assert.Equal(t, len(k.pointChan), 5)
+	assert.Equal(t, len(k.metricC), 5)
 }
 
 // Test that the parser parses kafka messages into points
@@ -84,7 +84,7 @@ func TestRunParserAndGather(t *testing.T) {
 	acc := testutil.Accumulator{}
 	k.Gather(&acc)
 
-	assert.Equal(t, len(acc.Points), 1)
+	assert.Equal(t, len(acc.Metrics), 1)
 	acc.AssertContainsFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(23422)})
 }

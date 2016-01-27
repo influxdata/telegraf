@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
@@ -28,8 +27,8 @@ type Kafka struct {
 	// channel for all kafka consumer errors
 	errs <-chan *sarama.ConsumerError
 	// channel for all incoming parsed kafka points
-	pointChan chan models.Point
-	done      chan struct{}
+	metricC chan telegraf.Metric
+	done    chan struct{}
 
 	// doNotCommitMsgs tells the parser not to call CommitUpTo on the consumer
 	// this is mostly for test purposes, but there may be a use-case for it later.
@@ -94,7 +93,7 @@ func (k *Kafka) Start() error {
 	if k.PointBuffer == 0 {
 		k.PointBuffer = 100000
 	}
-	k.pointChan = make(chan models.Point, k.PointBuffer)
+	k.metricC = make(chan telegraf.Metric, k.PointBuffer)
 
 	// Start the kafka message reader
 	go k.parser()
@@ -113,18 +112,18 @@ func (k *Kafka) parser() {
 		case err := <-k.errs:
 			log.Printf("Kafka Consumer Error: %s\n", err.Error())
 		case msg := <-k.in:
-			points, err := models.ParsePoints(msg.Value)
+			metrics, err := telegraf.ParseMetrics(msg.Value)
 			if err != nil {
 				log.Printf("Could not parse kafka message: %s, error: %s",
 					string(msg.Value), err.Error())
 			}
 
-			for _, point := range points {
+			for _, metric := range metrics {
 				select {
-				case k.pointChan <- point:
+				case k.metricC <- metric:
 					continue
 				default:
-					log.Printf("Kafka Consumer buffer is full, dropping a point." +
+					log.Printf("Kafka Consumer buffer is full, dropping a metric." +
 						" You may want to increase the point_buffer setting")
 				}
 			}
@@ -152,9 +151,9 @@ func (k *Kafka) Stop() {
 func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 	k.Lock()
 	defer k.Unlock()
-	npoints := len(k.pointChan)
+	npoints := len(k.metricC)
 	for i := 0; i < npoints; i++ {
-		point := <-k.pointChan
+		point := <-k.metricC
 		acc.AddFields(point.Name(), point.Fields(), point.Tags(), point.Time())
 	}
 	return nil
