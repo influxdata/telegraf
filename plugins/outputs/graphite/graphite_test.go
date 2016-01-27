@@ -21,7 +21,7 @@ func TestGraphiteError(t *testing.T) {
 		Prefix:  "my.prefix",
 	}
 	// Init metrics
-	pt1, _ := telegraf.NewMetric(
+	m1, _ := telegraf.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"mymeasurement": float64(3.14)},
@@ -29,7 +29,7 @@ func TestGraphiteError(t *testing.T) {
 	)
 	// Prepare point list
 	var metrics []telegraf.Metric
-	metrics = append(metrics, pt1)
+	metrics = append(metrics, m1)
 	// Error
 	err1 := g.Connect()
 	require.NoError(t, err1)
@@ -45,19 +45,19 @@ func TestGraphiteOK(t *testing.T) {
 		Prefix: "my.prefix",
 	}
 	// Init metrics
-	pt1, _ := telegraf.NewMetric(
+	m1, _ := telegraf.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"mymeasurement": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	pt2, _ := telegraf.NewMetric(
+	m2, _ := telegraf.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	pt3, _ := telegraf.NewMetric(
+	m3, _ := telegraf.NewMetric(
 		"my_measurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -65,9 +65,9 @@ func TestGraphiteOK(t *testing.T) {
 	)
 	// Prepare point list
 	var metrics []telegraf.Metric
-	metrics = append(metrics, pt1)
-	metrics = append(metrics, pt2)
-	metrics = append(metrics, pt3)
+	metrics = append(metrics, m1)
+	metrics = append(metrics, m2)
+	metrics = append(metrics, m3)
 	// Start TCP server
 	wg.Add(1)
 	go TCPServer(t, &wg)
@@ -101,4 +101,33 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	assert.Equal(t, "my.prefix.192_168_0_1.my_measurement.value 3.14 1289430000", data3)
 	conn.Close()
 	wg.Done()
+}
+
+func TestGraphiteTags(t *testing.T) {
+	m1, _ := telegraf.NewMetric(
+		"mymeasurement",
+		map[string]string{"host": "192.168.0.1"},
+		map[string]interface{}{"value": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m2, _ := telegraf.NewMetric(
+		"mymeasurement",
+		map[string]string{"host": "192.168.0.1", "afoo": "first", "bfoo": "second"},
+		map[string]interface{}{"value": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m3, _ := telegraf.NewMetric(
+		"mymeasurement",
+		map[string]string{"afoo": "first", "bfoo": "second"},
+		map[string]interface{}{"value": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	tags1 := buildTags(m1)
+	tags2 := buildTags(m2)
+	tags3 := buildTags(m3)
+
+	assert.Equal(t, "192_168_0_1", tags1)
+	assert.Equal(t, "192_168_0_1.first.second", tags2)
+	assert.Equal(t, "first.second", tags3)
 }

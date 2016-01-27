@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"sort"
 	"strings"
 	"time"
 )
@@ -70,26 +71,27 @@ func (g *Graphite) Description() string {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var bp []string
-	for _, point := range metrics {
+	for _, metric := range metrics {
 		// Get name
-		name := point.Name()
+		name := metric.Name()
 		// Convert UnixNano to Unix timestamps
-		timestamp := point.UnixNano() / 1000000000
+		timestamp := metric.UnixNano() / 1000000000
+		tag_str := buildTags(metric)
 
-		for field_name, value := range point.Fields() {
+		for field_name, value := range metric.Fields() {
 			// Convert value
 			value_str := fmt.Sprintf("%#v", value)
-			// Write graphite point
+			// Write graphite metric
 			var graphitePoint string
 			if name == field_name {
 				graphitePoint = fmt.Sprintf("%s.%s %s %d\n",
-					strings.Replace(point.Tags()["host"], ".", "_", -1),
+					tag_str,
 					strings.Replace(name, ".", "_", -1),
 					value_str,
 					timestamp)
 			} else {
 				graphitePoint = fmt.Sprintf("%s.%s.%s %s %d\n",
-					strings.Replace(point.Tags()["host"], ".", "_", -1),
+					tag_str,
 					strings.Replace(name, ".", "_", -1),
 					strings.Replace(field_name, ".", "_", -1),
 					value_str,
@@ -99,7 +101,6 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 				graphitePoint = fmt.Sprintf("%s.%s", g.Prefix, graphitePoint)
 			}
 			bp = append(bp, graphitePoint)
-			//fmt.Printf(graphitePoint)
 		}
 	}
 	graphitePoints := strings.Join(bp, "")
@@ -125,6 +126,37 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		g.Connect()
 	}
 	return err
+}
+
+func buildTags(metric telegraf.Metric) string {
+	var keys []string
+	tags := metric.Tags()
+	for k := range tags {
+		if k == "host" {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var tag_str string
+	if host, ok := tags["host"]; ok {
+		if len(keys) > 0 {
+			tag_str = strings.Replace(host, ".", "_", -1) + "."
+		} else {
+			tag_str = strings.Replace(host, ".", "_", -1)
+		}
+	}
+
+	for i, k := range keys {
+		tag_value := strings.Replace(tags[k], ".", "_", -1)
+		if i == 0 {
+			tag_str += tag_value
+		} else {
+			tag_str += "." + tag_value
+		}
+	}
+	return tag_str
 }
 
 func init() {
