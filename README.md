@@ -27,8 +27,8 @@ the [release blog post](https://influxdata.com/blog/announcing-telegraf-0-10-0/)
 ### Linux deb and rpm packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.10.0-1_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.10.0-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.10.1-1_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.10.1-1.x86_64.rpm
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
@@ -43,24 +43,31 @@ Latest:
 * On systemd systems (such as Ubuntu 15+), the telegraf daemon can be
 controlled via `systemctl [action] telegraf`
 
-### Linux binaries:
+### Linux tarballs:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_amd64.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_386.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.10.0_linux_arm.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_386.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_arm.tar.gz
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
 * http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.4.tar.gz
 * http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.4.tar.gz
 
-##### Binary instructions:
+##### tarball instructions:
 
-These are standalone binaries that can be unpacked and executed on any linux
-system. They can be unpacked and renamed in a location such as
-`/usr/local/bin` for convenience. A config file will need to be generated,
-see "How to use it" below.
+To install the full directory structure with config file, run:
+
+```
+sudo tar -C / -xvf ./telegraf-v0.10.1-1_linux_amd64.tar.gz
+```
+
+To extract only the binary, run:
+
+```
+tar -zxvf telegraf-v0.10.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
+```
 
 ### OSX via Homebrew:
 
