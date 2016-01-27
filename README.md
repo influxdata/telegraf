@@ -47,7 +47,7 @@ controlled via `systemctl [action] telegraf`
 
 Latest:
 * http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_amd64.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_386.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_i386.tar.gz
 * http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_arm.tar.gz
 
 0.2.x:
