@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 type CloudWatch struct {
@@ -230,7 +231,7 @@ func BuildDimensions(ptTags map[string]string) []*cloudwatch.Dimension {
 }
 
 func init() {
-	outputs.Add("cloudwatch", func() outputs.Output {
+	outputs.Add("cloudwatch", func() telegraf.Output {
 		return &CloudWatch{}
 	})
 }

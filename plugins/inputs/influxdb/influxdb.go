@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -32,7 +33,7 @@ func (*InfluxDB) SampleConfig() string {
 `
 }
 
-func (i *InfluxDB) Gather(acc inputs.Accumulator) error {
+func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	errorChannel := make(chan error, len(i.URLs))
 
 	var wg sync.WaitGroup
@@ -77,7 +78,7 @@ type point struct {
 // Returns:
 //     error: Any error that may have occurred
 func (i *InfluxDB) gatherURL(
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	url string,
 ) error {
 	resp, err := http.Get(url)
@@ -140,7 +141,7 @@ func (i *InfluxDB) gatherURL(
 }
 
 func init() {
-	inputs.Add("influxdb", func() inputs.Input {
+	inputs.Add("influxdb", func() telegraf.Input {
 		return &InfluxDB{}
 	})
 }

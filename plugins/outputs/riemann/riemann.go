@@ -8,6 +8,7 @@ import (
 	"github.com/amir/raidman"
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 type Riemann struct {
@@ -95,7 +96,7 @@ func buildEvents(p *client.Point) []*raidman.Event {
 }
 
 func init() {
-	outputs.Add("riemann", func() outputs.Output {
+	outputs.Add("riemann", func() telegraf.Output {
 		return &Riemann{}
 	})
 }

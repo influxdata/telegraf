@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -108,7 +109,7 @@ func (j *Jolokia) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
 	return jsonOut, nil
 }
 
-func (j *Jolokia) Gather(acc inputs.Accumulator) error {
+func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 	context := j.Context //"/jolokia/read"
 	servers := j.Servers
 	metrics := j.Metrics
@@ -157,7 +158,7 @@ func (j *Jolokia) Gather(acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("jolokia", func() inputs.Input {
+	inputs.Add("jolokia", func() telegraf.Input {
 		return &Jolokia{jClient: &JolokiaClientImpl{client: &http.Client{}}}
 	})
 }

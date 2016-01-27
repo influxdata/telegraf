@@ -3,6 +3,7 @@ package prometheus
 import (
 	"errors"
 	"fmt"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/model"
@@ -32,7 +33,7 @@ var ErrProtocolError = errors.New("prometheus protocol error")
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *Prometheus) Gather(acc inputs.Accumulator) error {
+func (g *Prometheus) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	var outerr error
@@ -50,7 +51,7 @@ func (g *Prometheus) Gather(acc inputs.Accumulator) error {
 	return outerr
 }
 
-func (g *Prometheus) gatherURL(url string, acc inputs.Accumulator) error {
+func (g *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
@@ -97,7 +98,7 @@ func (g *Prometheus) gatherURL(url string, acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("prometheus", func() inputs.Input {
+	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{}
 	})
 }

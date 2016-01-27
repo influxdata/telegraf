@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -76,7 +77,7 @@ var ErrProtocolError = errors.New("redis protocol error")
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (r *Redis) Gather(acc inputs.Accumulator) error {
+func (r *Redis) Gather(acc telegraf.Accumulator) error {
 	if len(r.Servers) == 0 {
 		url := &url.URL{
 			Host: ":6379",
@@ -113,7 +114,7 @@ func (r *Redis) Gather(acc inputs.Accumulator) error {
 
 const defaultPort = "6379"
 
-func (r *Redis) gatherServer(addr *url.URL, acc inputs.Accumulator) error {
+func (r *Redis) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 	_, _, err := net.SplitHostPort(addr.Host)
 	if err != nil {
 		addr.Host = addr.Host + ":" + defaultPort
@@ -158,7 +159,7 @@ func (r *Redis) gatherServer(addr *url.URL, acc inputs.Accumulator) error {
 // gatherInfoOutput gathers
 func gatherInfoOutput(
 	rdr *bufio.Reader,
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	tags map[string]string,
 ) error {
 	var keyspace_hits, keyspace_misses uint64 = 0, 0
@@ -227,7 +228,7 @@ func gatherInfoOutput(
 func gatherKeyspaceLine(
 	name string,
 	line string,
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	tags map[string]string,
 ) {
 	if strings.Contains(line, "keys=") {
@@ -246,7 +247,7 @@ func gatherKeyspaceLine(
 }
 
 func init() {
-	inputs.Add("redis", func() inputs.Input {
+	inputs.Add("redis", func() telegraf.Input {
 		return &Redis{}
 	})
 }

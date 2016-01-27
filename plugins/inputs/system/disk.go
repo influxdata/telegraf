@@ -3,6 +3,7 @@ package system
 import (
 	"fmt"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -29,7 +30,7 @@ func (_ *DiskStats) SampleConfig() string {
 	return diskSampleConfig
 }
 
-func (s *DiskStats) Gather(acc inputs.Accumulator) error {
+func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	// Legacy support:
 	if len(s.Mountpoints) != 0 {
 		s.MountPoints = s.Mountpoints
@@ -90,7 +91,7 @@ func (_ *DiskIOStats) SampleConfig() string {
 	return diskIoSampleConfig
 }
 
-func (s *DiskIOStats) Gather(acc inputs.Accumulator) error {
+func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 	diskio, err := s.ps.DiskIO()
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %s", err)
@@ -136,11 +137,11 @@ func (s *DiskIOStats) Gather(acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("disk", func() inputs.Input {
+	inputs.Add("disk", func() telegraf.Input {
 		return &DiskStats{ps: &systemPS{}}
 	})
 
-	inputs.Add("diskio", func() inputs.Input {
+	inputs.Add("diskio", func() telegraf.Input {
 		return &DiskIOStats{ps: &systemPS{}}
 	})
 }

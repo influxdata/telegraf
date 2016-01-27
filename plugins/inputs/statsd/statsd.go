@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/influxdb/services/graphite"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -156,7 +157,7 @@ func (_ *Statsd) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *Statsd) Gather(acc inputs.Accumulator) error {
+func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -515,7 +516,7 @@ func (s *Statsd) Stop() {
 }
 
 func init() {
-	inputs.Add("statsd", func() inputs.Input {
+	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
 			ConvertNames:  true,
 			UDPPacketSize: UDP_PACKET_SIZE,

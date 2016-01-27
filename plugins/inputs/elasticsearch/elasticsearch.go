@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -95,13 +96,13 @@ func (e *Elasticsearch) Description() string {
 
 // Gather reads the stats from Elasticsearch and writes it to the
 // Accumulator.
-func (e *Elasticsearch) Gather(acc inputs.Accumulator) error {
+func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	errChan := make(chan error, len(e.Servers))
 	var wg sync.WaitGroup
 	wg.Add(len(e.Servers))
 
 	for _, serv := range e.Servers {
-		go func(s string, acc inputs.Accumulator) {
+		go func(s string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			var url string
 			if e.Local {
@@ -133,7 +134,7 @@ func (e *Elasticsearch) Gather(acc inputs.Accumulator) error {
 	return errors.New(strings.Join(errStrings, "\n"))
 }
 
-func (e *Elasticsearch) gatherNodeStats(url string, acc inputs.Accumulator) error {
+func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) error {
 	nodeStats := &struct {
 		ClusterName string           `json:"cluster_name"`
 		Nodes       map[string]*node `json:"nodes"`
@@ -178,7 +179,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc inputs.Accumulator) erro
 	return nil
 }
 
-func (e *Elasticsearch) gatherClusterStats(url string, acc inputs.Accumulator) error {
+func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator) error {
 	clusterStats := &clusterHealth{}
 	if err := e.gatherData(url, clusterStats); err != nil {
 		return err
@@ -243,7 +244,7 @@ func (e *Elasticsearch) gatherData(url string, v interface{}) error {
 }
 
 func init() {
-	inputs.Add("elasticsearch", func() inputs.Input {
+	inputs.Add("elasticsearch", func() telegraf.Input {
 		return NewElasticsearch()
 	})
 }

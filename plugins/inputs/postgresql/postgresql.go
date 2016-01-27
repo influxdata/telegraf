@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	_ "github.com/lib/pq"
@@ -53,7 +54,7 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 
 var localhost = "host=localhost sslmode=disable"
 
-func (p *Postgresql) Gather(acc inputs.Accumulator) error {
+func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var query string
 
 	if p.Address == "" || p.Address == "localhost" {
@@ -101,7 +102,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func (p *Postgresql) accRow(row scanner, acc inputs.Accumulator) error {
+func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	var columnVars []interface{}
 	var dbname bytes.Buffer
 
@@ -145,7 +146,7 @@ func (p *Postgresql) accRow(row scanner, acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("postgresql", func() inputs.Input {
+	inputs.Add("postgresql", func() telegraf.Input {
 		return &Postgresql{}
 	})
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -73,7 +74,7 @@ func (r *phpfpm) Description() string {
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *phpfpm) Gather(acc inputs.Accumulator) error {
+func (g *phpfpm) Gather(acc telegraf.Accumulator) error {
 	if len(g.Urls) == 0 {
 		return g.gatherServer("http://127.0.0.1/status", acc)
 	}
@@ -96,7 +97,7 @@ func (g *phpfpm) Gather(acc inputs.Accumulator) error {
 }
 
 // Request status page to get stat raw data and import it
-func (g *phpfpm) gatherServer(addr string, acc inputs.Accumulator) error {
+func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if g.client == nil {
 		client := &http.Client{}
 		g.client = client
@@ -140,7 +141,7 @@ func (g *phpfpm) gatherServer(addr string, acc inputs.Accumulator) error {
 }
 
 // Gather stat using fcgi protocol
-func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc inputs.Accumulator) error {
+func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumulator) error {
 	fpmOutput, fpmErr, err := fcgi.Request(map[string]string{
 		"SCRIPT_NAME":     "/" + statusPath,
 		"SCRIPT_FILENAME": statusPath,
@@ -160,7 +161,7 @@ func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc inputs.Accumulato
 }
 
 // Gather stat using http protocol
-func (g *phpfpm) gatherHttp(addr string, acc inputs.Accumulator) error {
+func (g *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 	u, err := url.Parse(addr)
 	if err != nil {
 		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
@@ -184,7 +185,7 @@ func (g *phpfpm) gatherHttp(addr string, acc inputs.Accumulator) error {
 }
 
 // Import stat data into Telegraf system
-func importMetric(r io.Reader, acc inputs.Accumulator) (poolStat, error) {
+func importMetric(r io.Reader, acc telegraf.Accumulator) (poolStat, error) {
 	stats := make(poolStat)
 	var currentPool string
 
@@ -239,7 +240,7 @@ func importMetric(r io.Reader, acc inputs.Accumulator) (poolStat, error) {
 }
 
 func init() {
-	inputs.Add("phpfpm", func() inputs.Input {
+	inputs.Add("phpfpm", func() telegraf.Input {
 		return &phpfpm{}
 	})
 }

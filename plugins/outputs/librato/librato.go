@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 type Librato struct {
@@ -169,7 +170,7 @@ func (l *Librato) Close() error {
 }
 
 func init() {
-	outputs.Add("librato", func() outputs.Output {
+	outputs.Add("librato", func() telegraf.Output {
 		return NewLibrato(librato_api)
 	})
 }

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/fsouza/go-dockerclient"
@@ -33,7 +34,7 @@ func (d *Docker) Description() string {
 
 func (d *Docker) SampleConfig() string { return sampleConfig }
 
-func (d *Docker) Gather(acc inputs.Accumulator) error {
+func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	if d.client == nil {
 		var c *docker.Client
 		var err error
@@ -80,7 +81,7 @@ func (d *Docker) Gather(acc inputs.Accumulator) error {
 
 func (d *Docker) gatherContainer(
 	container docker.APIContainers,
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 ) error {
 	// Parse container name
 	cname := "unknown"
@@ -129,7 +130,7 @@ func (d *Docker) gatherContainer(
 
 func gatherContainerStats(
 	stat *docker.Stats,
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	tags map[string]string,
 ) {
 	now := stat.Read
@@ -212,7 +213,7 @@ func gatherContainerStats(
 
 func gatherBlockIOMetrics(
 	stat *docker.Stats,
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	tags map[string]string,
 	now time.Time,
 ) {
@@ -303,7 +304,7 @@ func sliceContains(in string, sl []string) bool {
 }
 
 func init() {
-	inputs.Add("docker", func() inputs.Input {
+	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{}
 	})
 }

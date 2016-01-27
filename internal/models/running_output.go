@@ -1,10 +1,10 @@
-package models
+package internal_models
 
 import (
 	"log"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 
 	"github.com/influxdata/influxdb/client/v2"
 )
@@ -13,7 +13,7 @@ const DEFAULT_POINT_BUFFER_LIMIT = 10000
 
 type RunningOutput struct {
 	Name             string
-	Output           outputs.Output
+	Output           telegraf.Output
 	Config           *OutputConfig
 	Quiet            bool
 	PointBufferLimit int
@@ -24,7 +24,7 @@ type RunningOutput struct {
 
 func NewRunningOutput(
 	name string,
-	output outputs.Output,
+	output telegraf.Output,
 	conf *OutputConfig,
 ) *RunningOutput {
 	ro := &RunningOutput{

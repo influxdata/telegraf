@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,7 +32,7 @@ func (t *Twemproxy) Description() string {
 }
 
 // Gather data from all Twemproxy instances
-func (t *Twemproxy) Gather(acc inputs.Accumulator) error {
+func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 	conn, err := net.DialTimeout("tcp", t.Addr, 1*time.Second)
 	if err != nil {
 		return err
@@ -55,7 +56,7 @@ func (t *Twemproxy) Gather(acc inputs.Accumulator) error {
 
 // Process Twemproxy server stats
 func (t *Twemproxy) processStat(
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	tags map[string]string,
 	data map[string]interface{},
 ) {
@@ -89,7 +90,7 @@ func (t *Twemproxy) processStat(
 
 // Process pool data in Twemproxy stats
 func (t *Twemproxy) processPool(
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	tags map[string]string,
 	data map[string]interface{},
 ) {
@@ -117,7 +118,7 @@ func (t *Twemproxy) processPool(
 
 // Process backend server(redis/memcached) stats
 func (t *Twemproxy) processServer(
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	tags map[string]string,
 	data map[string]interface{},
 ) {
@@ -143,7 +144,7 @@ func copyTags(tags map[string]string) map[string]string {
 }
 
 func init() {
-	inputs.Add("twemproxy", func() inputs.Input {
+	inputs.Add("twemproxy", func() telegraf.Input {
 		return &Twemproxy{}
 	})
 }

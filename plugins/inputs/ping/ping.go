@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -56,7 +57,7 @@ func (_ *Ping) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Ping) Gather(acc inputs.Accumulator) error {
+func (p *Ping) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 	errorChannel := make(chan error, len(p.Urls)*2)
@@ -64,7 +65,7 @@ func (p *Ping) Gather(acc inputs.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		go func(url string, acc inputs.Accumulator) {
+		go func(url string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			args := p.args(url)
 			out, err := p.pingHost(args...)
@@ -176,7 +177,7 @@ func processPingOutput(out string) (int, int, float64, error) {
 }
 
 func init() {
-	inputs.Add("ping", func() inputs.Input {
+	inputs.Add("ping", func() telegraf.Input {
 		return &Ping{pingHost: hostPinger}
 	})
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 type Amon struct {
@@ -151,7 +152,7 @@ func (a *Amon) Close() error {
 }
 
 func init() {
-	outputs.Add("amon", func() outputs.Output {
+	outputs.Add("amon", func() telegraf.Output {
 		return &Amon{}
 	})
 }

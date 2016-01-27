@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 	"github.com/streadway/amqp"
 )
 
@@ -190,7 +191,7 @@ func (q *AMQP) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("amqp", func() outputs.Output {
+	outputs.Add("amqp", func() telegraf.Output {
 		return &AMQP{
 			Database:        DefaultDatabase,
 			Precision:       DefaultPrecision,

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"net"
 	"strconv"
@@ -119,7 +120,7 @@ func (a *Aerospike) Description() string {
 	return "Read stats from an aerospike server"
 }
 
-func (a *Aerospike) Gather(acc inputs.Accumulator) error {
+func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 	if len(a.Servers) == 0 {
 		return a.gatherServer("127.0.0.1:3000", acc)
 	}
@@ -140,7 +141,7 @@ func (a *Aerospike) Gather(acc inputs.Accumulator) error {
 	return outerr
 }
 
-func (a *Aerospike) gatherServer(host string, acc inputs.Accumulator) error {
+func (a *Aerospike) gatherServer(host string, acc telegraf.Accumulator) error {
 	aerospikeInfo, err := getMap(STATISTICS_COMMAND, host)
 	if err != nil {
 		return fmt.Errorf("Aerospike info failed: %s", err)
@@ -249,7 +250,7 @@ func get(key []byte, host string) (map[string]string, error) {
 
 func readAerospikeStats(
 	stats map[string]string,
-	acc inputs.Accumulator,
+	acc telegraf.Accumulator,
 	host string,
 	namespace string,
 ) {
@@ -336,7 +337,7 @@ func msgLenFromBytes(buf [6]byte) int64 {
 }
 
 func init() {
-	inputs.Add("aerospike", func() inputs.Input {
+	inputs.Add("aerospike", func() telegraf.Input {
 		return &Aerospike{}
 	})
 }

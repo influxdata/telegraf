@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -35,7 +36,7 @@ func (m *Mysql) Description() string {
 
 var localhost = ""
 
-func (m *Mysql) Gather(acc inputs.Accumulator) error {
+func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	if len(m.Servers) == 0 {
 		// if we can't get stats in this case, thats fine, don't report
 		// an error.
@@ -113,7 +114,7 @@ var mappings = []*mapping{
 	},
 }
 
-func (m *Mysql) gatherServer(serv string, acc inputs.Accumulator) error {
+func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 	// If user forgot the '/', add it
 	if strings.HasSuffix(serv, ")") {
 		serv = serv + "/"
@@ -207,7 +208,7 @@ func (m *Mysql) gatherServer(serv string, acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("mysql", func() inputs.Input {
+	inputs.Add("mysql", func() telegraf.Input {
 		return &Mysql{}
 	})
 }

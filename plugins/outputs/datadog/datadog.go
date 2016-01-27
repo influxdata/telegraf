@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 type Datadog struct {
@@ -173,7 +174,7 @@ func (d *Datadog) Close() error {
 }
 
 func init() {
-	outputs.Add("datadog", func() outputs.Output {
+	outputs.Add("datadog", func() telegraf.Output {
 		return NewDatadog(datadog_api)
 	})
 }

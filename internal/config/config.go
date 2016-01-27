@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -28,8 +29,8 @@ type Config struct {
 	OutputFilters []string
 
 	Agent   *AgentConfig
-	Inputs  []*models.RunningInput
-	Outputs []*models.RunningOutput
+	Inputs  []*internal_models.RunningInput
+	Outputs []*internal_models.RunningOutput
 }
 
 func NewConfig() *Config {
@@ -43,8 +44,8 @@ func NewConfig() *Config {
 		},
 
 		Tags:          make(map[string]string),
-		Inputs:        make([]*models.RunningInput, 0),
-		Outputs:       make([]*models.RunningOutput, 0),
+		Inputs:        make([]*internal_models.RunningInput, 0),
+		Outputs:       make([]*internal_models.RunningOutput, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -227,13 +228,13 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 
 	// Print Inputs
 	fmt.Printf(pluginHeader)
-	servInputs := make(map[string]inputs.ServiceInput)
+	servInputs := make(map[string]telegraf.ServiceInput)
 	for _, pname := range pnames {
 		creator := inputs.Inputs[pname]
 		input := creator()
 
 		switch p := input.(type) {
-		case inputs.ServiceInput:
+		case telegraf.ServiceInput:
 			servInputs[pname] = p
 			continue
 		}
@@ -403,7 +404,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := models.NewRunningOutput(name, output, outputConfig)
+	ro := internal_models.NewRunningOutput(name, output, outputConfig)
 	if c.Agent.MetricBufferLimit > 0 {
 		ro.PointBufferLimit = c.Agent.MetricBufferLimit
 	}
@@ -436,7 +437,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	rp := &models.RunningInput{
+	rp := &internal_models.RunningInput{
 		Name:   name,
 		Input:  input,
 		Config: pluginConfig,
@@ -446,10 +447,10 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 }
 
 // buildFilter builds a Filter (tagpass/tagdrop/pass/drop) to
-// be inserted into the models.OutputConfig/models.InputConfig to be used for prefix
+// be inserted into the internal_models.OutputConfig/internal_models.InputConfig to be used for prefix
 // filtering on tags and measurements
-func buildFilter(tbl *ast.Table) models.Filter {
-	f := models.Filter{}
+func buildFilter(tbl *ast.Table) internal_models.Filter {
+	f := internal_models.Filter{}
 
 	if node, ok := tbl.Fields["pass"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -481,7 +482,7 @@ func buildFilter(tbl *ast.Table) models.Filter {
 		if subtbl, ok := node.(*ast.Table); ok {
 			for name, val := range subtbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
-					tagfilter := &models.TagFilter{Name: name}
+					tagfilter := &internal_models.TagFilter{Name: name}
 					if ary, ok := kv.Value.(*ast.Array); ok {
 						for _, elem := range ary.Value {
 							if str, ok := elem.(*ast.String); ok {
@@ -500,7 +501,7 @@ func buildFilter(tbl *ast.Table) models.Filter {
 		if subtbl, ok := node.(*ast.Table); ok {
 			for name, val := range subtbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
-					tagfilter := &models.TagFilter{Name: name}
+					tagfilter := &internal_models.TagFilter{Name: name}
 					if ary, ok := kv.Value.(*ast.Array); ok {
 						for _, elem := range ary.Value {
 							if str, ok := elem.(*ast.String); ok {
@@ -524,9 +525,9 @@ func buildFilter(tbl *ast.Table) models.Filter {
 
 // buildInput parses input specific items from the ast.Table,
 // builds the filter and returns a
-// models.InputConfig to be inserted into models.RunningInput
-func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
-	cp := &models.InputConfig{Name: name}
+// internal_models.InputConfig to be inserted into internal_models.RunningInput
+func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, error) {
+	cp := &internal_models.InputConfig{Name: name}
 	if node, ok := tbl.Fields["interval"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -583,10 +584,10 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 }
 
 // buildOutput parses output specific items from the ast.Table, builds the filter and returns an
-// models.OutputConfig to be inserted into models.RunningInput
+// internal_models.OutputConfig to be inserted into internal_models.RunningInput
 // Note: error exists in the return for future calls that might require error
-func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
-	oc := &models.OutputConfig{
+func buildOutput(name string, tbl *ast.Table) (*internal_models.OutputConfig, error) {
+	oc := &internal_models.OutputConfig{
 		Name:   name,
 		Filter: buildFilter(tbl),
 	}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 type KinesisOutput struct {
@@ -172,7 +173,7 @@ func (k *KinesisOutput) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("kinesis", func() outputs.Output {
+	outputs.Add("kinesis", func() telegraf.Output {
 		return &KinesisOutput{}
 	})
 }

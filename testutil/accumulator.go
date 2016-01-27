@@ -84,23 +84,6 @@ func (a *Accumulator) AddFields(
 	a.Points = append(a.Points, p)
 }
 
-func (a *Accumulator) SetDefaultTags(tags map[string]string) {
-	// stub for implementing Accumulator interface.
-}
-
-func (a *Accumulator) AddDefaultTag(key, value string) {
-	// stub for implementing Accumulator interface.
-}
-
-func (a *Accumulator) Prefix() string {
-	// stub for implementing Accumulator interface.
-	return ""
-}
-
-func (a *Accumulator) SetPrefix(prefix string) {
-	// stub for implementing Accumulator interface.
-}
-
 func (a *Accumulator) Debug() bool {
 	// stub for implementing Accumulator interface.
 	return a.debug

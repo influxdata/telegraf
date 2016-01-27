@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 type OpenTSDB struct {
@@ -162,7 +163,7 @@ func (o *OpenTSDB) Close() error {
 }
 
 func init() {
-	outputs.Add("opentsdb", func() outputs.Output {
+	outputs.Add("opentsdb", func() telegraf.Output {
 		return &OpenTSDB{}
 	})
 }

@@ -3,6 +3,7 @@ package leofs
 import (
 	"bufio"
 	"fmt"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"net/url"
 	"os/exec"
@@ -146,7 +147,7 @@ func (l *LeoFS) Description() string {
 	return "Read metrics from a LeoFS Server via SNMP"
 }
 
-func (l *LeoFS) Gather(acc inputs.Accumulator) error {
+func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 	if len(l.Servers) == 0 {
 		l.gatherServer(defaultEndpoint, ServerTypeManagerMaster, acc)
 		return nil
@@ -176,7 +177,7 @@ func (l *LeoFS) Gather(acc inputs.Accumulator) error {
 	return outerr
 }
 
-func (l *LeoFS) gatherServer(endpoint string, serverType ServerType, acc inputs.Accumulator) error {
+func (l *LeoFS) gatherServer(endpoint string, serverType ServerType, acc telegraf.Accumulator) error {
 	cmd := exec.Command("snmpwalk", "-v2c", "-cpublic", endpoint, oid)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -225,7 +226,7 @@ func retrieveTokenAfterColon(line string) (string, error) {
 }
 
 func init() {
-	inputs.Add("leofs", func() inputs.Input {
+	inputs.Add("leofs", func() telegraf.Input {
 		return &LeoFS{}
 	})
 }

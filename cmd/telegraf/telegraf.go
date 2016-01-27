@@ -9,7 +9,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
@@ -173,7 +173,7 @@ func main() {
 			log.Fatalf("Error: no inputs found, did you provide a valid config file?")
 		}
 
-		ag, err := telegraf.NewAgent(c)
+		ag, err := agent.NewAgent(c)
 		if err != nil {
 			log.Fatal(err)
 		}

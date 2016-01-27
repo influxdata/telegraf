@@ -8,6 +8,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 	"io/ioutil"
 )
 
@@ -140,7 +141,7 @@ func (k *Kafka) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("kafka", func() outputs.Output {
+	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{}
 	})
 }

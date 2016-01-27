@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf"
 )
 
 type InfluxDB struct {
@@ -156,7 +157,7 @@ func (i *InfluxDB) Write(points []*client.Point) error {
 }
 
 func init() {
-	outputs.Add("influxdb", func() outputs.Output {
+	outputs.Add("influxdb", func() telegraf.Output {
 		return &InfluxDB{}
 	})
 }

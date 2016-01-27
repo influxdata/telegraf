@@ -1,4 +1,4 @@
-package telegraf
+package agent
 
 import (
 	cryptorand "crypto/rand"
@@ -11,10 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/outputs"
 
 	"github.com/influxdata/influxdb/client/v2"
 )
@@ -48,7 +47,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 func (a *Agent) Connect() error {
 	for _, o := range a.Config.Outputs {
 		switch ot := o.Output.(type) {
-		case outputs.ServiceOutput:
+		case telegraf.ServiceOutput:
 			if err := ot.Start(); err != nil {
 				log.Printf("Service for output %s failed to start, exiting\n%s\n",
 					o.Name, err.Error())
@@ -81,14 +80,14 @@ func (a *Agent) Close() error {
 	for _, o := range a.Config.Outputs {
 		err = o.Output.Close()
 		switch ot := o.Output.(type) {
-		case outputs.ServiceOutput:
+		case telegraf.ServiceOutput:
 			ot.Stop()
 		}
 	}
 	return err
 }
 
-func panicRecover(input *models.RunningInput) {
+func panicRecover(input *internal_models.RunningInput) {
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
@@ -115,13 +114,13 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 
 		wg.Add(1)
 		counter++
-		go func(input *models.RunningInput) {
+		go func(input *internal_models.RunningInput) {
 			defer panicRecover(input)
 			defer wg.Done()
 
 			acc := NewAccumulator(input.Config, pointChan)
 			acc.SetDebug(a.Config.Agent.Debug)
-			acc.SetDefaultTags(a.Config.Tags)
+			acc.setDefaultTags(a.Config.Tags)
 
 			if jitter != 0 {
 				nanoSleep := rand.Int63n(jitter)
@@ -159,7 +158,7 @@ func (a *Agent) gatherParallel(pointChan chan *client.Point) error {
 // reporting interval.
 func (a *Agent) gatherSeparate(
 	shutdown chan struct{},
-	input *models.RunningInput,
+	input *internal_models.RunningInput,
 	pointChan chan *client.Point,
 ) error {
 	defer panicRecover(input)
@@ -172,7 +171,7 @@ func (a *Agent) gatherSeparate(
 
 		acc := NewAccumulator(input.Config, pointChan)
 		acc.SetDebug(a.Config.Agent.Debug)
-		acc.SetDefaultTags(a.Config.Tags)
+		acc.setDefaultTags(a.Config.Tags)
 
 		if err := input.Input.Gather(acc); err != nil {
 			log.Printf("Error in input [%s]: %s", input.Name, err)
@@ -250,7 +249,7 @@ func (a *Agent) flush() {
 
 	wg.Add(len(a.Config.Outputs))
 	for _, o := range a.Config.Outputs {
-		go func(output *models.RunningOutput) {
+		go func(output *internal_models.RunningOutput) {
 			defer wg.Done()
 			err := output.Write()
 			if err != nil {
@@ -344,7 +343,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 
 		// Start service of any ServicePlugins
 		switch p := input.Input.(type) {
-		case inputs.ServiceInput:
+		case telegraf.ServiceInput:
 			if err := p.Start(); err != nil {
 				log.Printf("Service for input %s failed to start, exiting\n%s\n",
 					input.Name, err.Error())
@@ -357,7 +356,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		// configured. Default intervals are handled below with gatherParallel
 		if input.Config.Interval != 0 {
 			wg.Add(1)
-			go func(input *models.RunningInput) {
+			go func(input *internal_models.RunningInput) {
 				defer wg.Done()
 				if err := a.gatherSeparate(shutdown, input, pointChan); err != nil {
 					log.Printf(err.Error())

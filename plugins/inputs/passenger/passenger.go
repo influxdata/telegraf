@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/net/html/charset"
 )
@@ -145,7 +146,7 @@ func (r *passenger) Description() string {
 	return "Read metrics of passenger using passenger-status"
 }
 
-func (g *passenger) Gather(acc inputs.Accumulator) error {
+func (g *passenger) Gather(acc telegraf.Accumulator) error {
 	if g.Command == "" {
 		g.Command = "passenger-status -v --show=xml"
 	}
@@ -164,7 +165,7 @@ func (g *passenger) Gather(acc inputs.Accumulator) error {
 	return nil
 }
 
-func importMetric(stat []byte, acc inputs.Accumulator) error {
+func importMetric(stat []byte, acc telegraf.Accumulator) error {
 	var p info
 
 	decoder := xml.NewDecoder(bytes.NewReader(stat))
@@ -244,7 +245,7 @@ func importMetric(stat []byte, acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("passenger", func() inputs.Input {
+	inputs.Add("passenger", func() telegraf.Input {
 		return &passenger{}
 	})
 }

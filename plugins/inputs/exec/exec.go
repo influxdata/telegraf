@@ -8,6 +8,7 @@ import (
 
 	"github.com/gonuts/go-shellquote"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -64,7 +65,7 @@ func (e *Exec) Description() string {
 	return "Read flattened metrics from one or more commands that output JSON to stdout"
 }
 
-func (e *Exec) Gather(acc inputs.Accumulator) error {
+func (e *Exec) Gather(acc telegraf.Accumulator) error {
 	out, err := e.runner.Run(e)
 	if err != nil {
 		return err
@@ -88,7 +89,7 @@ func (e *Exec) Gather(acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("exec", func() inputs.Input {
+	inputs.Add("exec", func() telegraf.Input {
 		return NewExec()
 	})
 }
