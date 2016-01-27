@@ -129,23 +129,25 @@ func (nr *NewRelic) Gather(acc inputs.Accumulator) error {
 	}
 
 	if len(nr.Metrics) > 0 {
-		t := time.Now()
-		tFrom := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d-00:00\n",
-			t.Year(), t.Month(), t.Day(),
-			t.Hour(), t.Minute()-1, t.Second())
+		tNow := time.Now()
+		tFrom := tNow.Add(-1 * time.Minute)
 
-		tTo := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d-00:00\n",
-			t.Year(), t.Month(), t.Day(),
-			t.Hour(), t.Minute(), t.Second())
+		tFromStr := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d-00:00\n",
+			tFrom.Year(), tFrom.Month(), tFrom.Day(),
+			tFrom.Hour(), tFrom.Minute(), 00)
+
+		tToStr := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d-00:00\n",
+			tNow.Year(), tNow.Month(), tNow.Day(),
+			tNow.Hour(), tNow.Minute(), 00)
 
 		vals := url.Values{}
+
+		vals.Add("from", tFromStr)
+		vals.Add("to", tToStr)
 
 		for k := range nr.Metrics {
 			vals.Add("names[]", k)
 		}
-
-		vals.Add("from", tFrom)
-		vals.Add("to", tTo)
 
 		result := conn.GetMetricData(nr.APPID, vals)
 
