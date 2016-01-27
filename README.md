@@ -171,6 +171,7 @@ Currently implemented sources:
 * memcached
 * mongodb
 * mysql
+* net_response
 * nginx
 * nsq
 * phpfpm
