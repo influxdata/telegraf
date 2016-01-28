@@ -243,6 +243,113 @@ func TestParse_TemplateSpecificity(t *testing.T) {
 	}
 }
 
+// Test that most specific template is chosen
+func TestParse_TemplateFields(t *testing.T) {
+	s := NewStatsd()
+	s.Templates = []string{
+		"* measurement.measurement.field",
+	}
+
+	lines := []string{
+		"my.counter.f1:1|c",
+		"my.counter.f1:1|c",
+		"my.counter.f2:1|c",
+		"my.counter.f3:10|c",
+		"my.counter.f3:100|c",
+		"my.gauge.f1:10.1|g",
+		"my.gauge.f2:10.1|g",
+		"my.gauge.f1:0.9|g",
+		"my.set.f1:1|s",
+		"my.set.f1:2|s",
+		"my.set.f1:1|s",
+		"my.set.f2:100|s",
+	}
+
+	for _, line := range lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	counter_tests := []struct {
+		name  string
+		value int64
+		field string
+	}{
+		{
+			"my_counter",
+			2,
+			"f1",
+		},
+		{
+			"my_counter",
+			1,
+			"f2",
+		},
+		{
+			"my_counter",
+			110,
+			"f3",
+		},
+	}
+	// Validate counters
+	for _, test := range counter_tests {
+		err := test_validate_counter(test.name, test.value, s.counters, test.field)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	gauge_tests := []struct {
+		name  string
+		value float64
+		field string
+	}{
+		{
+			"my_gauge",
+			0.9,
+			"f1",
+		},
+		{
+			"my_gauge",
+			10.1,
+			"f2",
+		},
+	}
+	// Validate gauges
+	for _, test := range gauge_tests {
+		err := test_validate_gauge(test.name, test.value, s.gauges, test.field)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	set_tests := []struct {
+		name  string
+		value int64
+		field string
+	}{
+		{
+			"my_set",
+			2,
+			"f1",
+		},
+		{
+			"my_set",
+			1,
+			"f2",
+		},
+	}
+	// Validate sets
+	for _, test := range set_tests {
+		err := test_validate_set(test.name, test.value, s.sets, test.field)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+}
+
 // Test that fields are parsed correctly
 func TestParse_Fields(t *testing.T) {
 	if false {
@@ -286,7 +393,7 @@ func TestParse_Tags(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name, tags := s.parseName(test.bucket)
+		name, _, tags := s.parseName(test.bucket)
 		if name != test.name {
 			t.Errorf("Expected: %s, got %s", test.name, name)
 		}
@@ -326,7 +433,7 @@ func TestParseName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name, _ := s.parseName(test.in_name)
+		name, _, _ := s.parseName(test.in_name)
 		if name != test.out_name {
 			t.Errorf("Expected: %s, got %s", test.out_name, name)
 		}
@@ -354,7 +461,7 @@ func TestParseName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name, _ := s.parseName(test.in_name)
+		name, _, _ := s.parseName(test.in_name)
 		if name != test.out_name {
 			t.Errorf("Expected: %s, got %s", test.out_name, name)
 		}
@@ -863,7 +970,14 @@ func test_validate_set(
 	name string,
 	value int64,
 	cache map[string]cachedset,
+	field ...string,
 ) error {
+	var f string
+	if len(field) > 0 {
+		f = field[0]
+	} else {
+		f = "value"
+	}
 	var metric cachedset
 	var found bool
 	for _, v := range cache {
@@ -877,23 +991,30 @@ func test_validate_set(
 		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
 	}
 
-	if value != int64(len(metric.set)) {
+	if value != int64(len(metric.fields[f])) {
 		return errors.New(fmt.Sprintf("Measurement: %s, expected %d, actual %d\n",
-			name, value, len(metric.set)))
+			name, value, len(metric.fields[f])))
 	}
 	return nil
 }
 
 func test_validate_counter(
 	name string,
-	value int64,
+	valueExpected int64,
 	cache map[string]cachedcounter,
+	field ...string,
 ) error {
-	var metric cachedcounter
+	var f string
+	if len(field) > 0 {
+		f = field[0]
+	} else {
+		f = "value"
+	}
+	var valueActual int64
 	var found bool
 	for _, v := range cache {
 		if v.name == name {
-			metric = v
+			valueActual = v.fields[f].(int64)
 			found = true
 			break
 		}
@@ -902,23 +1023,30 @@ func test_validate_counter(
 		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
 	}
 
-	if value != metric.value {
+	if valueExpected != valueActual {
 		return errors.New(fmt.Sprintf("Measurement: %s, expected %d, actual %d\n",
-			name, value, metric.value))
+			name, valueExpected, valueActual))
 	}
 	return nil
 }
 
 func test_validate_gauge(
 	name string,
-	value float64,
+	valueExpected float64,
 	cache map[string]cachedgauge,
+	field ...string,
 ) error {
-	var metric cachedgauge
+	var f string
+	if len(field) > 0 {
+		f = field[0]
+	} else {
+		f = "value"
+	}
+	var valueActual float64
 	var found bool
 	for _, v := range cache {
 		if v.name == name {
-			metric = v
+			valueActual = v.fields[f].(float64)
 			found = true
 			break
 		}
@@ -927,9 +1055,9 @@ func test_validate_gauge(
 		return errors.New(fmt.Sprintf("Test Error: Metric name %s not found\n", name))
 	}
 
-	if value != metric.value {
+	if valueExpected != valueActual {
 		return errors.New(fmt.Sprintf("Measurement: %s, expected %f, actual %f\n",
-			name, value, metric.value))
+			name, valueExpected, valueActual))
 	}
 	return nil
 }
