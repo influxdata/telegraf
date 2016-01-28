@@ -725,13 +725,13 @@ func TestParse_Timings(t *testing.T) {
 
 	s.Gather(acc)
 
-	valid := map[string]interface{} {
+	valid := map[string]interface{}{
 		"90_percentile": float64(11),
-		"count": int64(5),
-		"lower": float64(1),
-		"mean": float64(3),
-		"stddev": float64(4),
-		"upper": float64(11),
+		"count":         int64(5),
+		"lower":         float64(1),
+		"mean":          float64(3),
+		"stddev":        float64(4),
+		"upper":         float64(11),
 	}
 
 	acc.AssertContainsFields(t, "test_timing", valid)
