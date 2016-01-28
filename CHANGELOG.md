@@ -5,6 +5,7 @@
 ### Features
 - [#564](https://github.com/influxdata/telegraf/issues/564): features for plugin writing simplification. Internal metric data type.
 - [#603](https://github.com/influxdata/telegraf/pull/603): Aggregate statsd timing measurements into fields. Thanks @marcinbunsch!
+- [#601](https://github.com/influxdata/telegraf/issues/601): Warn when overwriting cached metrics.
 
 ### Bugfixes
 - [#595](https://github.com/influxdata/telegraf/issues/595): graphite output should include tags to separate duplicate measurements.
