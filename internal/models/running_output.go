@@ -45,6 +45,9 @@ func (ro *RunningOutput) AddPoint(point telegraf.Metric) {
 	if len(ro.metrics) < ro.PointBufferLimit {
 		ro.metrics = append(ro.metrics, point)
 	} else {
+		log.Printf("WARNING: overwriting cached metrics, you may want to " +
+			"increase the metric_buffer_limit setting in your [agent] config " +
+			"if you do not wish to overwrite metrics.\n")
 		if ro.overwriteCounter == len(ro.metrics) {
 			ro.overwriteCounter = 0
 		}
