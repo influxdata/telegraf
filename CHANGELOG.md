@@ -7,7 +7,9 @@
 - [#603](https://github.com/influxdata/telegraf/pull/603): Aggregate statsd timing measurements into fields. Thanks @marcinbunsch!
 
 ### Bugfixes
+- [#595](https://github.com/influxdata/telegraf/issues/595): graphite output should include tags to separate duplicate measurements.
 - [#599](https://github.com/influxdata/telegraf/issues/599): datadog plugin tags not working.
+- [#600](https://github.com/influxdata/telegraf/issues/600): datadog measurement/field name parsing is wrong.
 
 ## v0.10.1 [2016-01-27]
 
