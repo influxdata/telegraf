@@ -710,7 +710,7 @@ func TestParse_Timings(t *testing.T) {
 	// Test that counters work
 	valid_lines := []string{
 		"test.timing:1|ms",
-		"test.timing:1|ms",
+		"test.timing:11|ms",
 		"test.timing:1|ms",
 		"test.timing:1|ms",
 		"test.timing:1|ms",
@@ -725,40 +725,17 @@ func TestParse_Timings(t *testing.T) {
 
 	s.Gather(acc)
 
-	tests := []struct {
-		name  string
-		value interface{}
-	}{
-		{
-			"test_timing_mean",
-			float64(1),
-		},
-		{
-			"test_timing_stddev",
-			float64(0),
-		},
-		{
-			"test_timing_upper",
-			float64(1),
-		},
-		{
-			"test_timing_lower",
-			float64(1),
-		},
-		{
-			"test_timing_count",
-			int64(5),
-		},
-		{
-			"test_timing_percentile_90",
-			float64(1),
-		},
+	valid := map[string]interface{}{
+		"90_percentile": float64(11),
+		"count":         int64(5),
+		"lower":         float64(1),
+		"mean":          float64(3),
+		"stddev":        float64(4),
+		"upper":         float64(11),
 	}
 
-	for _, test := range tests {
-		acc.AssertContainsFields(t, test.name,
-			map[string]interface{}{"value": test.value})
-	}
+	acc.AssertContainsFields(t, "test_timing", valid)
+
 }
 
 func TestParse_Timings_Delete(t *testing.T) {
