@@ -74,8 +74,16 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 		mname := strings.Replace(m.Name(), "_", ".", -1)
 		if dogMs, err := buildMetrics(m); err == nil {
 			for fieldName, dogM := range dogMs {
+				// name of the datadog measurement
+				var dname string
+				if fieldName == "value" {
+					// adding .value seems redundant here
+					dname = mname
+				} else {
+					dname = mname + "." + strings.Replace(fieldName, "_", ".", -1)
+				}
 				metric := &Metric{
-					Metric: mname + strings.Replace(fieldName, "_", ".", -1),
+					Metric: dname,
 					Tags:   buildTags(m.Tags()),
 					Host:   m.Tags()["host"],
 				}
