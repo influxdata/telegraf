@@ -162,15 +162,17 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	defer s.Unlock()
 
 	for _, metric := range s.timings {
-		acc.Add(metric.name+"_mean", metric.stats.Mean(), metric.tags)
-		acc.Add(metric.name+"_stddev", metric.stats.Stddev(), metric.tags)
-		acc.Add(metric.name+"_upper", metric.stats.Upper(), metric.tags)
-		acc.Add(metric.name+"_lower", metric.stats.Lower(), metric.tags)
-		acc.Add(metric.name+"_count", metric.stats.Count(), metric.tags)
+		fields := make(map[string]interface{})
+		fields["mean"] = metric.stats.Mean()
+		fields["stddev"] = metric.stats.Stddev()
+		fields["upper"] = metric.stats.Upper()
+		fields["lower"] = metric.stats.Lower()
+		fields["count"] = metric.stats.Count()
 		for _, percentile := range s.Percentiles {
-			name := fmt.Sprintf("%s_percentile_%v", metric.name, percentile)
-			acc.Add(name, metric.stats.Percentile(percentile), metric.tags)
+			name := fmt.Sprintf("%v_percentile", percentile)
+			fields[name] = metric.stats.Percentile(percentile)
 		}
+		acc.AddFields(metric.name, fields, metric.tags)
 	}
 	if s.DeleteTimings {
 		s.timings = make(map[string]cachedtimings)

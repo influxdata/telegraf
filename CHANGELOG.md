@@ -4,6 +4,7 @@
 
 ### Features
 - [#564](https://github.com/influxdata/telegraf/issues/564): features for plugin writing simplification. Internal metric data type.
+- [#603](https://github.com/influxdata/telegraf/pull/603): Aggregate statsd timing measurements into fields. Thanks @marcinbunsch!
 
 ### Bugfixes
 - [#599](https://github.com/influxdata/telegraf/issues/599): datadog plugin tags not working.
