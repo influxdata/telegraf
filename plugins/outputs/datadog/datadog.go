@@ -37,9 +37,9 @@ type TimeSeries struct {
 
 type Metric struct {
 	Metric string   `json:"metric"`
-	Points [1]Point `json:"metrics"`
+	Points [1]Point `json:"points"`
 	Host   string   `json:"host"`
-	Tags   []string `json:"tags,omitemmy"`
+	Tags   []string `json:"tags,omitempty"`
 }
 
 type Point [2]float64
