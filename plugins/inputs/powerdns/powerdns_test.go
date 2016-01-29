@@ -131,7 +131,7 @@ func TestPowerdnsParseMetrics(t *testing.T) {
 			continue
 		}
 		if value != test.value {
-			t.Errorf("Metric: %s, Expected: %s, actual: %s",
+			t.Errorf("Metric: %s, Expected: %d, actual: %d",
 				test.key, test.value, value)
 		}
 	}
