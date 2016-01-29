@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -112,11 +113,18 @@ func (d *Docker) gatherContainer(
 	}
 
 	go func() {
-		d.client.Stats(statOpts)
+		err := d.client.Stats(statOpts)
+		if err != nil {
+			log.Printf("Error getting docker stats: %s\n", err.Error())
+		}
 	}()
 
 	stat := <-statChan
 	close(done)
+
+	if stat == nil {
+		return nil
+	}
 
 	// Add labels to tags
 	for k, v := range container.Labels {
