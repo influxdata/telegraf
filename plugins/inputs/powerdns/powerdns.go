@@ -1,19 +1,19 @@
 package powerdns
 
 import (
-  "net"
-  "fmt"
-  "bufio"
-  "io"
-  "time"
-  "strings"
-  "strconv"
+	"bufio"
+	"fmt"
+	"io"
+	"net"
+	"strconv"
+	"strings"
+	"time"
 
-  "github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Powerdns struct {
-  UnixSockets []string
+	UnixSockets []string
 }
 
 var sampleConfig = `
@@ -27,95 +27,95 @@ var sampleConfig = `
 var defaultTimeout = 5 * time.Second
 
 func (p *Powerdns) SampleConfig() string {
-  return sampleConfig
+	return sampleConfig
 }
 
 func (p *Powerdns) Description() string {
-  return "Read metrics from one or many PowerDNS servers"
+	return "Read metrics from one or many PowerDNS servers"
 }
 
 func (p *Powerdns) Gather(acc inputs.Accumulator) error {
-  if len(p.UnixSockets) == 0 {
-    return p.gatherServer("/var/run/pdns.controlsocket", acc)
-  }
+	if len(p.UnixSockets) == 0 {
+		return p.gatherServer("/var/run/pdns.controlsocket", acc)
+	}
 
-  for _, serverSocket := range p.UnixSockets {
-    if err := p.gatherServer(serverSocket, acc); err != nil {
-      return err
-    }
-  }
+	for _, serverSocket := range p.UnixSockets {
+		if err := p.gatherServer(serverSocket, acc); err != nil {
+			return err
+		}
+	}
 
-  return nil
+	return nil
 }
 
 func (p *Powerdns) gatherServer(address string, acc inputs.Accumulator) error {
-  conn, err := net.DialTimeout("unix", address, defaultTimeout)
-  if err != nil {
-    return err
-  }
+	conn, err := net.DialTimeout("unix", address, defaultTimeout)
+	if err != nil {
+		return err
+	}
 
-  defer conn.Close()
+	defer conn.Close()
 
-  conn.SetDeadline(time.Now().Add(defaultTimeout))
+	conn.SetDeadline(time.Now().Add(defaultTimeout))
 
-  // Read and write buffer
-  rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+	// Read and write buffer
+	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
-  // Send command
-  if _, err := fmt.Fprint(conn, "show * \n"); err != nil {
-    return nil
-  }
-  if err := rw.Flush(); err != nil {
-    return err
-  }
+	// Send command
+	if _, err := fmt.Fprint(conn, "show * \n"); err != nil {
+		return nil
+	}
+	if err := rw.Flush(); err != nil {
+		return err
+	}
 
-  // Read data
-  buf := make([]byte, 0, 4096)
-  tmp := make([]byte, 1024)
-  for {
-    n, err := rw.Read(tmp)
-    if err != nil {
-      if err != io.EOF {
-        return err
-      }
+	// Read data
+	buf := make([]byte, 0, 4096)
+	tmp := make([]byte, 1024)
+	for {
+		n, err := rw.Read(tmp)
+		if err != nil {
+			if err != io.EOF {
+				return err
+			}
 
-      break
-    }
-    buf = append(buf, tmp[:n]...)
-  }
+			break
+		}
+		buf = append(buf, tmp[:n]...)
+	}
 
-  metrics := string(buf)
+	metrics := string(buf)
 
-  // Process data
-  fields, err := parseResponse(metrics)
-  if err != nil {
-    return err
-  }
+	// Process data
+	fields, err := parseResponse(metrics)
+	if err != nil {
+		return err
+	}
 
-  // Add server socket as a tag
+	// Add server socket as a tag
 	tags := map[string]string{"server": address}
 
-  acc.AddFields("powerdns", fields, tags)
+	acc.AddFields("powerdns", fields, tags)
 
-  return nil
+	return nil
 }
 
 func parseResponse(metrics string) (map[string]interface{}, error) {
-  values := make(map[string]interface{})
+	values := make(map[string]interface{})
 
-  s := strings.Split(metrics, ",")
+	s := strings.Split(metrics, ",")
 
-  for _, metric := range s[:len(s)-1] {
-    m := strings.Split(metric, "=")
+	for _, metric := range s[:len(s)-1] {
+		m := strings.Split(metric, "=")
 
-    i, err := strconv.ParseInt(m[1], 10, 64)
-    if err != nil {
-      return values, err
-    }
-    values[m[0]] = i
-  }
+		i, err := strconv.ParseInt(m[1], 10, 64)
+		if err != nil {
+			return values, err
+		}
+		values[m[0]] = i
+	}
 
-  return values, nil
+	return values, nil
 }
 
 func init() {
