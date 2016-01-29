@@ -9,6 +9,9 @@ endif
 # Standard Telegraf build
 default: prepare build
 
+# Windows build
+windows: prepare-windows build
+
 # Only run the build (no dependency grabbing)
 build:
 	go build -o telegraf -ldflags \
@@ -25,6 +28,11 @@ dev: prepare
 prepare:
 	go get github.com/sparrc/gdm
 	gdm restore
+
+# Use the windows godeps file to prepare dependencies
+prepare-windows:
+	go get github.com/sparrc/gdm
+	gdm restore -f Godeps_windows
 
 # Run all docker containers necessary for unit tests
 docker-run:
