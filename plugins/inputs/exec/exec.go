@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/gonuts/go-shellquote"
 
@@ -14,18 +15,20 @@ import (
 )
 
 const sampleConfig = `
-  # NOTE This plugin only reads numerical measurements, strings and booleans
-  # will be ignored.
-
   # the command to run
   command = "/usr/bin/mycollector --foo=bar"
+
+  # Data format to consume. This can be "json" or "influx" (line-protocol)
+  # NOTE json only reads numerical measurements, strings and booleans are ignored.
+  data_format = "json"
 
   # measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 `
 
 type Exec struct {
-	Command string
+	Command    string
+	DataFormat string
 
 	runner Runner
 }
@@ -71,20 +74,32 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	var jsonOut interface{}
-	err = json.Unmarshal(out, &jsonOut)
-	if err != nil {
-		return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s",
-			e.Command, err)
-	}
+	switch e.DataFormat {
+	case "", "json":
+		var jsonOut interface{}
+		err = json.Unmarshal(out, &jsonOut)
+		if err != nil {
+			return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s",
+				e.Command, err)
+		}
 
-	f := internal.JSONFlattener{}
-	err = f.FlattenJSON("", jsonOut)
-	if err != nil {
+		f := internal.JSONFlattener{}
+		err = f.FlattenJSON("", jsonOut)
+		if err != nil {
+			return err
+		}
+		acc.AddFields("exec", f.Fields, nil)
+	case "influx":
+		now := time.Now()
+		metrics, err := telegraf.ParseMetrics(out)
+		for _, metric := range metrics {
+			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), now)
+		}
 		return err
+	default:
+		return fmt.Errorf("Unsupported data format: %s. Must be either json "+
+			"or influx.", e.DataFormat)
 	}
-
-	acc.AddFields("exec", f.Fields, nil)
 	return nil
 }
 
