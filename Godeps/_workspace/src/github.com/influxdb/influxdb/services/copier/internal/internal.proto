@@ -1,9 +1,0 @@
-package internal;
-
-message Request {
-    required uint64 ShardID = 1;
-}
-
-message Response {
-    optional string Error = 1;
-}

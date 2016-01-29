@@ -1,36 +1,38 @@
 UNAME := $(shell sh -c 'uname')
 VERSION := $(shell sh -c 'git describe --always --tags')
-ifndef GOBIN
-	GOBIN = $(GOPATH)/bin
+ifdef GOBIN
+PATH := $(GOBIN):$(PATH)
+else
+PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
 
 # Standard Telegraf build
-build: prepare
-	$(GOBIN)/godep go build -o telegraf -ldflags \
+default: prepare build
+
+# Windows build
+windows: prepare-windows build
+
+# Only run the build (no dependency grabbing)
+build:
+	go build -o telegraf -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
 # Build with race detector
 dev: prepare
-	$(GOBIN)/godep go build -race -o telegraf -ldflags \
+	go build -race -o telegraf -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
-# Build linux 64-bit, 32-bit and arm architectures
-build-linux-bins: prepare
-	GOARCH=amd64 GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_amd64 \
-								-ldflags "-X main.Version=$(VERSION)" \
-								./cmd/telegraf/telegraf.go
-	GOARCH=386 GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_386 \
-								-ldflags "-X main.Version=$(VERSION)" \
-								./cmd/telegraf/telegraf.go
-	GOARCH=arm GOOS=linux $(GOBIN)/godep go build -o telegraf_linux_arm \
-								-ldflags "-X main.Version=$(VERSION)" \
-								./cmd/telegraf/telegraf.go
-
-# Get godep
+# Get dependencies and use gdm to checkout changesets
 prepare:
-	go get github.com/tools/godep
+	go get github.com/sparrc/gdm
+	gdm restore
+
+# Use the windows godeps file to prepare dependencies
+prepare-windows:
+	go get github.com/sparrc/gdm
+	gdm restore -f Godeps_windows
 
 # Run all docker containers necessary for unit tests
 docker-run:
@@ -58,6 +60,7 @@ endif
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -71,21 +74,22 @@ docker-run-circle:
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann
-	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann
+	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann snmp
+	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann snmp
 
 # Run full unit tests using docker containers (includes setup and teardown)
-test: docker-kill prepare docker-run
+test: docker-kill docker-run
 	# Sleeping for kafka leadership election, TSDB setup, etc.
 	sleep 60
 	# SUCCESS, running tests
-	godep go test -race ./...
+	go test -race ./...
 
 # Run "short" unit tests
-test-short: prepare
-	$(GOBIN)/godep go test -short ./...
+test-short:
+	go test -short ./...
 
 .PHONY: test

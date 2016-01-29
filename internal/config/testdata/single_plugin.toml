@@ -1,0 +1,9 @@
+[[inputs.memcached]]
+  servers = ["localhost"]
+  pass = ["some", "strings"]
+  drop = ["other", "stuff"]
+  interval = "5s"
+  [inputs.memcached.tagpass]
+    goodtag = ["mytag"]
+  [inputs.memcached.tagdrop]
+    badtag = ["othertag"]
