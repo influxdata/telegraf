@@ -14,10 +14,13 @@ import (
 func NewAccumulator(
 	inputConfig *internal_models.InputConfig,
 	metrics chan telegraf.Metric,
+	interval time.Duration,
 ) *accumulator {
 	acc := accumulator{}
 	acc.metrics = metrics
 	acc.inputConfig = inputConfig
+	// at what interval are these being accumulated
+	acc.interval = interval
 	return &acc
 }
 
@@ -33,6 +36,8 @@ type accumulator struct {
 	inputConfig *internal_models.InputConfig
 
 	prefix string
+
+	interval time.Duration
 }
 
 func (ac *accumulator) Add(
@@ -140,6 +145,7 @@ func (ac *accumulator) AddFields(
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
 		return
 	}
+	m.SetInterval(ac.interval)
 	if ac.debug {
 		fmt.Println("> " + m.String())
 	}
