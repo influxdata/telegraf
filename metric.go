@@ -1,6 +1,7 @@
 package telegraf
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
@@ -68,6 +69,8 @@ func NewMetric(
 // a non-nil error will be returned in addition to the metrics that parsed
 // successfully.
 func ParseMetrics(buf []byte) ([]Metric, error) {
+	// parse even if the buffer begins with a newline
+	buf = bytes.TrimPrefix(buf, []byte("\n"))
 	points, err := models.ParsePoints(buf)
 	metrics := make([]Metric, len(points))
 	for i, point := range points {

@@ -16,9 +16,12 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+	pTesting = &PrometheusClient{Listen: "localhost:9127"}
+	pTesting.Start()
+	defer pTesting.Stop()
 
 	p := &prometheus.Prometheus{
-		Urls: []string{"http://localhost:9126/metrics"},
+		Urls: []string{"http://localhost:9127/metrics"},
 	}
 	tags := make(map[string]string)
 	pt1, _ := telegraf.NewMetric(
@@ -51,33 +54,24 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		acc.AssertContainsFields(t, "prometheus_"+e.name,
 			map[string]interface{}{"value": e.value})
 	}
-}
 
-func TestPrometheusWritePointTag(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	p := &prometheus.Prometheus{
-		Urls: []string{"http://localhost:9126/metrics"},
-	}
-	tags := make(map[string]string)
+	tags = make(map[string]string)
 	tags["testtag"] = "testvalue"
-	pt1, _ := telegraf.NewMetric(
+	pt3, _ := telegraf.NewMetric(
 		"test_point_3",
 		tags,
 		map[string]interface{}{"value": 0.0})
-	pt2, _ := telegraf.NewMetric(
+	pt4, _ := telegraf.NewMetric(
 		"test_point_4",
 		tags,
 		map[string]interface{}{"value": 1.0})
-	var metrics = []telegraf.Metric{
-		pt1,
-		pt2,
+	metrics = []telegraf.Metric{
+		pt3,
+		pt4,
 	}
 	require.NoError(t, pTesting.Write(metrics))
 
-	expected := []struct {
+	expected2 := []struct {
 		name  string
 		value float64
 	}{
@@ -85,16 +79,9 @@ func TestPrometheusWritePointTag(t *testing.T) {
 		{"test_point_4", 1.0},
 	}
 
-	var acc testutil.Accumulator
-
 	require.NoError(t, p.Gather(&acc))
-	for _, e := range expected {
+	for _, e := range expected2 {
 		acc.AssertContainsFields(t, "prometheus_"+e.name,
 			map[string]interface{}{"value": e.value})
 	}
-}
-
-func init() {
-	pTesting = &PrometheusClient{Listen: "localhost:9126"}
-	pTesting.Start()
 }
