@@ -14,6 +14,7 @@
 - [#599](https://github.com/influxdata/telegraf/issues/599): datadog plugin tags not working.
 - [#600](https://github.com/influxdata/telegraf/issues/600): datadog measurement/field name parsing is wrong.
 - [#602](https://github.com/influxdata/telegraf/issues/602): Fix statsd field name templating.
+- [#612](https://github.com/influxdata/telegraf/pull/612): Docker input panic fix if stats received are nil.
 
 ## v0.10.1 [2016-01-27]
 
