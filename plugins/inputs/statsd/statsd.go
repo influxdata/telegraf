@@ -39,6 +39,7 @@ type Statsd struct {
 	DeleteSets     bool
 	DeleteTimings  bool
 	ConvertNames   bool
+	DatadogStyle   bool
 
 	// UDPPacketSize is the size of the read packets for the server listening
 	// for statsd UDP packets. This will default to 1500 bytes.
@@ -151,6 +152,11 @@ const sampleConfig = `
   # UDP packet size for the server to listen for. This will depend on the size
   # of the packets that the client is sending, which is usually 1500 bytes.
   udp_packet_size = 1500
+
+  # Accept datadog style packets
+  # (i.e. tags like x:1|c|#tag:value rather than x,tag=value:1|c)
+  # (this means you can only send a single metric at a time)
+  datadog_style = false
 `
 
 func (_ *Statsd) SampleConfig() string {
@@ -275,15 +281,22 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	// Validate splitting the line on ":"
-	bits := strings.Split(line, ":")
+	var bits []string
+	if (s.DatadogStyle) {
+		// if it's a datadog style metric, we can't cope with more than one metric
+		// because datadog uses ':' to split tags.
+		bits = strings.SplitN(line, ":", 2)
+	} else {
+		bits = strings.Split(line, ":")
+	}
+
 	if len(bits) < 2 {
 		log.Printf("Error: splitting ':', Unable to parse metric: %s\n", line)
 		return errors.New("Error Parsing statsd line")
 	}
 
-	// Extract bucket name from individual metric bits
-	bucketName, bits := bits[0], bits[1:]
+		// Extract bucket name from individual metric bits
+		bucketName, bits := bits[0], bits[1:]
 
 	// Add a metric for each bit available
 	for _, bit := range bits {
@@ -291,25 +304,45 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		m.bucket = bucketName
 
+		// Parse the name & tags from bucket
+		m.name, m.tags = s.parseName(m.bucket)
+
 		// Validate splitting the bit on "|"
 		pipesplit := strings.Split(bit, "|")
 		if len(pipesplit) < 2 {
 			log.Printf("Error: splitting '|', Unable to parse metric: %s\n", line)
 			return errors.New("Error Parsing statsd line")
-		} else if len(pipesplit) > 2 {
-			sr := pipesplit[2]
-			errmsg := "Error: parsing sample rate, %s, it must be in format like: " +
-				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
-			if strings.Contains(sr, "@") && len(sr) > 1 {
-				samplerate, err := strconv.ParseFloat(sr[1:], 64)
+		}
+
+		for _, extra := range pipesplit[2:] {
+			extratype, extravalue := extra[:1], extra[1:]
+			if extravalue == "" {
+				log.Printf("Error: Missing content for %s on line: %s", extratype, line)
+				continue
+			}
+
+			switch extratype {
+			case "#":
+				if (!s.DatadogStyle) {
+					log.Printf("Error: Datadog style tag ignored in line: %s", line)
+					break
+				}
+				for _, tag := range strings.Split(extravalue, ",") {
+					k, v := parseKeyValue(tag, ":")
+					if k != "" {
+						m.tags[k] = v
+					}
+				}
+			case "@":
+				errmsg := "Error: parsing sample rate, %s, it must be in format: " +
+					"like: @0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
+				samplerate, err := strconv.ParseFloat(extravalue, 64)
 				if err != nil {
 					log.Printf(errmsg, err.Error(), line)
 				} else {
 					// sample rate successfully parsed
 					m.samplerate = samplerate
 				}
-			} else {
-				log.Printf(errmsg, "", line)
 			}
 		}
 
@@ -357,8 +390,6 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			m.intvalue = v
 		}
 
-		// Parse the name & tags from bucket
-		m.name, m.tags = s.parseName(m.bucket)
 		switch m.mtype {
 		case "c":
 			m.tags["metric_type"] = "counter"
@@ -397,7 +428,7 @@ func (s *Statsd) parseName(bucket string) (string, map[string]string) {
 	// Parse out any tags in the bucket
 	if len(bucketparts) > 1 {
 		for _, btag := range bucketparts[1:] {
-			k, v := parseKeyValue(btag)
+			k, v := parseKeyValue(btag, "=")
 			if k != "" {
 				tags[k] = v
 			}
@@ -424,10 +455,10 @@ func (s *Statsd) parseName(bucket string) (string, map[string]string) {
 }
 
 // Parse the key,value out of a string that looks like "key=value"
-func parseKeyValue(keyvalue string) (string, string) {
+func parseKeyValue(keyvalue string, separator string) (string, string) {
 	var key, val string
 
-	split := strings.Split(keyvalue, "=")
+	split := strings.Split(keyvalue, separator)
 	// Must be exactly 2 to get anything meaningful out of them
 	if len(split) == 2 {
 		key = split[0]
