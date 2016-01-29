@@ -18,6 +18,11 @@ build:
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
+build-for-docker:
+	CGO_ENABLED=0 GOOS=linux go build -o telegraf -ldflags \
+					"-X main.Version=$(VERSION)" \
+					./cmd/telegraf/telegraf.go
+
 # Build with race detector
 dev: prepare
 	go build -race -o telegraf -ldflags \
