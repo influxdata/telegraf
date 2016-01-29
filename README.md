@@ -165,6 +165,7 @@ Currently implemented sources:
 * phusion passenger
 * ping
 * postgresql
+* powerdns
 * procstat
 * prometheus
 * puppetagent
