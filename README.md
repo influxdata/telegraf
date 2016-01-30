@@ -24,7 +24,7 @@ will continue to be supported, see below for download links.
 For more details on the differences between Telegraf 0.2.x and 0.10.x, see
 the [release blog post](https://influxdata.com/blog/announcing-telegraf-0-10-0/).
 
-### Linux deb and rpm packages:
+### Linux deb and rpm Packages:
 
 Latest:
 * http://get.influxdb.org/telegraf/telegraf_0.10.1-1_amd64.deb
@@ -34,7 +34,7 @@ Latest:
 * http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
 * http://get.influxdb.org/telegraf/telegraf-0.2.4-1.x86_64.rpm
 
-##### Package instructions:
+##### Package Instructions:
 
 * Telegraf binary is installed in `/usr/bin/telegraf`
 * Telegraf daemon configuration file is in `/etc/telegraf/telegraf.conf`
@@ -42,6 +42,12 @@ Latest:
 `service telegraf [action]`
 * On systemd systems (such as Ubuntu 15+), the telegraf daemon can be
 controlled via `systemctl [action] telegraf`
+
+### yum/apt Repositories:
+
+There is a yum/apt repo available for the whole InfluxData stack, see
+[here](https://docs.influxdata.com/influxdb/v0.9/introduction/installation/#installation)
+for instructions, replacing the `influxdb` package name with `telegraf`.
 
 ### Linux tarballs:
 
@@ -55,7 +61,7 @@ Latest:
 * http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.4.tar.gz
 * http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.4.tar.gz
 
-##### tarball instructions:
+##### tarball Instructions:
 
 To install the full directory structure with config file, run:
 

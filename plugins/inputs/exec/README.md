@@ -1,28 +1,39 @@
-# Exec Plugin
+# Exec Input Plugin
 
-The exec plugin can execute arbitrary commands which output JSON. Then it flattens JSON and finds
-all numeric values, treating them as floats.
+The exec plugin can execute arbitrary commands which output JSON or
+InfluxDB [line-protocol](https://docs.influxdata.com/influxdb/v0.9/write_protocols/line/).
 
-For example, if you have a json-returning command called mycollector, you could
-setup the exec plugin with:
+If using JSON, only numeric values are parsed and turned into floats. Booleans
+and strings will be ignored.
+
+### Configuration
 
 ```
+# Read flattened metrics from one or more commands that output JSON to stdout
 [[inputs.exec]]
-  command = "/usr/bin/mycollector --output=json"
+  # the command to run
+  command = "/usr/bin/mycollector --foo=bar"
+
+  # Data format to consume. This can be "json" or "influx" (line-protocol)
+  # NOTE json only reads numerical measurements, strings and booleans are ignored.
+  data_format = "json"
+
+  # measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
-  interval = "10s"
 ```
 
-The name suffix is appended to exec as "exec_name_suffix" to identify the input stream.
+Other options for modifying the measurement names are:
 
-The interval is used to determine how often a particular command should be run. Each
-time the exec plugin runs, it will only run a particular command if it has been at least
-`interval` seconds since the exec plugin last ran the command.
+```
+name_override = "measurement_name"
+name_prefix = "prefix_"
+```
 
+### Example 1
 
-# Sample
+Let's say that we have the above configuration, and mycollector outputs the
+following JSON:
 
-Let's say that we have a command with the name_suffix "_mycollector", which gives the following output:
 ```json
 {
     "a": 0.5,
@@ -33,13 +44,39 @@ Let's say that we have a command with the name_suffix "_mycollector", which give
 }
 ```
 
-The collected metrics will be stored as field values under the same measurement "exec_mycollector":
+The collected metrics will be stored as fields under the measurement
+"exec_mycollector":
+
 ```
- exec_mycollector a=0.5,b_c=0.1,b_d=5 1452815002357578567
+exec_mycollector a=0.5,b_c=0.1,b_d=5 1452815002357578567
 ```
 
-Other options for modifying the measurement names are:
+### Example 2
+
+Now let's say we have the following configuration:
+
 ```
-name_override = "newname"
-name_prefix = "prefix_"
+[[inputs.exec]]
+  # the command to run
+  command = "/usr/bin/line_protocol_collector"
+
+  # Data format to consume. This can be "json" or "influx" (line-protocol)
+  # NOTE json only reads numerical measurements, strings and booleans are ignored.
+  data_format = "influx"
 ```
+
+And line_protocol_collector outputs the following line protocol:
+
+```
+cpu,cpu=cpu0,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu1,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu2,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu3,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu4,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu5,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu6,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+```
+
+You will get data in InfluxDB exactly as it is defined above,
+tags are cpu=cpuN, host=foo, and datacenter=us-east with fields usage_idle
+and usage_busy. They will receive a timestamp at collection time.
