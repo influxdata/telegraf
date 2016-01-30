@@ -31,9 +31,9 @@ var sampleConfig string = `
     ObjectName = "Processor"
     Instances = ["*"]
     Counters = [
-      "% Idle Time", "% Interrupt Time",
-      "% Privileged Time", "% User Time",
-      "% Processor Time"
+      "%% Idle Time", "%% Interrupt Time",
+      "%% Privileged Time", "%% User Time",
+      "%% Processor Time"
     ]
     Measurement = "win_cpu"
     # Set to true to include _Total instance when querying for all (*).
@@ -46,8 +46,8 @@ var sampleConfig string = `
     ObjectName = "LogicalDisk"
     Instances = ["*"]
     Counters = [
-      "% Idle Time", "% Disk Time","% Disk Read Time",
-      "% Disk Write Time", "% User Time", "Current Disk Queue Length"
+      "%% Idle Time", "%% Disk Time","%% Disk Read Time",
+      "%% Disk Write Time", "%% User Time", "Current Disk Queue Length"
     ]
     Measurement = "win_disk"
 
