@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/rmanocha/go_newrelic_api"
 )
@@ -63,7 +64,7 @@ func (nr *NewRelic) SampleConfig() string {
 	return sampleConfig
 }
 
-func (nr *NewRelic) GatherServerAverages(acc inputs.Accumulator, nrapi *go_newrelic_api.Newrelic) error {
+func (nr *NewRelic) GatherServerAverages(acc telegraf.Accumulator, nrapi *go_newrelic_api.Newrelic) error {
 	dataserver := nrapi.GetServers()
 
 	for v := range dataserver.Servers {
@@ -88,7 +89,7 @@ func (nr *NewRelic) GatherServerAverages(acc inputs.Accumulator, nrapi *go_newre
 	return nil
 }
 
-func (nr *NewRelic) GatherApplicationAverages(acc inputs.Accumulator, nrapi *go_newrelic_api.Newrelic) error {
+func (nr *NewRelic) GatherApplicationAverages(acc telegraf.Accumulator, nrapi *go_newrelic_api.Newrelic) error {
 	dataapplication := nrapi.GetApplication(nr.APPID)
 
 	fieldsApplication := map[string]interface{}{
@@ -112,12 +113,12 @@ func (nr *NewRelic) GatherApplicationAverages(acc inputs.Accumulator, nrapi *go_
 	return nil
 }
 
-func (nr *NewRelic) GatherMetrics(acc inputs.Accumulator, nrapi *go_newrelic_api.Newrelic) error {
+func (nr *NewRelic) GatherMetrics(acc telegraf.Accumulator, nrapi *go_newrelic_api.Newrelic) error {
 	return nil
 }
 
 // Gather requested metrics
-func (nr *NewRelic) Gather(acc inputs.Accumulator) error {
+func (nr *NewRelic) Gather(acc telegraf.Accumulator) error {
 	conn := go_newrelic_api.NewNewrelic(nr.APIKey)
 
 	if nr.PollServerAverages {
@@ -176,5 +177,5 @@ func (nr *NewRelic) Gather(acc inputs.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("newrelic", func() inputs.Input { return &NewRelic{} })
+	inputs.Add("newrelic", func() telegraf.Input { return &NewRelic{} })
 }
