@@ -75,6 +75,10 @@ To extract only the binary, run:
 tar -zxvf telegraf-v0.10.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
 ```
 
+### Ansible Role:
+
+Ansible role: https://github.com/rossmcdonald/telegraf
+
 ### OSX via Homebrew:
 
 ```
@@ -94,7 +98,7 @@ if you don't have it already. You also must build with golang version 1.5+.
 4. Run `cd $GOPATH/src/github.com/influxdata/telegraf`
 5. Run `make`
 
-### How to use it:
+## How to use it:
 
 ```console
 $ telegraf -help
@@ -224,4 +228,4 @@ want to add support for another service or third-party API.
 
 Please see the
 [contributing guide](CONTRIBUTING.md)
-for details on contributing a plugin or output to Telegraf.
+for details on contributing a plugin to Telegraf.
