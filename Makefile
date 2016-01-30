@@ -10,11 +10,16 @@ endif
 default: prepare build
 
 # Windows build
-windows: prepare-windows build
+windows: prepare-windows build-windows
 
 # Only run the build (no dependency grabbing)
 build:
 	go build -o telegraf -ldflags \
+		"-X main.Version=$(VERSION)" \
+		./cmd/telegraf/telegraf.go
+
+build-windows:
+	go build -o telegraf.exe -ldflags \
 		"-X main.Version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
