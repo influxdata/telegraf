@@ -6,11 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"syscall"
 	"unsafe"
-
-	"os"
-	"os/signal"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -252,16 +248,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-
-	// When interrupt or terminate is called.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, syscall.SIGTERM)
-	go func() error {
-		<-c
-		m.Cleanup(&metrics)
-		return nil
-	}()
 
 	var bufSize uint32
 	var bufCount uint32
