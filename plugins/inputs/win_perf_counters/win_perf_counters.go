@@ -74,9 +74,10 @@ var testConfigParsed bool
 var testObject string
 
 type Win_PerfCounters struct {
-	PrintValid bool
-	TestName   string
-	Object     []perfobject
+	PrintValid      bool
+	TestName        string
+	PreVistaSupport bool
+	Object          []perfobject
 }
 
 type perfobject struct {
@@ -112,8 +113,11 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 	var handle win.PDH_HQUERY
 	var counterHandle win.PDH_HCOUNTER
 	ret := win.PdhOpenQuery(0, 0, &handle)
-	ret = win.PdhAddEnglishCounter(handle, query, 0, &counterHandle)
-
+	if m.PreVistaSupport {
+		ret = win.PdhAddCounter(handle, query, 0, &counterHandle)
+	} else {
+		ret = win.PdhAddEnglishCounter(handle, query, 0, &counterHandle)
+	}
 	_ = ret
 
 	temp := &item{query, objectName, counter, instance, measurement,
