@@ -116,7 +116,7 @@ func (a *Agent) gatherParallel(metricC chan telegraf.Metric) error {
 			defer panicRecover(input)
 			defer wg.Done()
 
-			acc := NewAccumulator(input.Config, metricC)
+			acc := NewAccumulator(input.Config, metricC, a.Config.Agent.Interval.Duration)
 			acc.SetDebug(a.Config.Agent.Debug)
 			acc.setDefaultTags(a.Config.Tags)
 
@@ -167,7 +167,7 @@ func (a *Agent) gatherSeparate(
 		var outerr error
 		start := time.Now()
 
-		acc := NewAccumulator(input.Config, metricC)
+		acc := NewAccumulator(input.Config, metricC, input.Config.Interval)
 		acc.SetDebug(a.Config.Agent.Debug)
 		acc.setDefaultTags(a.Config.Tags)
 
@@ -214,7 +214,7 @@ func (a *Agent) Test() error {
 	}()
 
 	for _, input := range a.Config.Inputs {
-		acc := NewAccumulator(input.Config, metricC)
+		acc := NewAccumulator(input.Config, metricC, input.Config.Interval)
 		acc.SetDebug(true)
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)

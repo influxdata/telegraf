@@ -21,6 +21,12 @@ type Metric interface {
 	// UnixNano returns the unix nano time of the metric
 	UnixNano() int64
 
+	// Interval returns the interval at which the metric was collected
+	Interval() time.Duration
+
+	// SetInterval sets the interval above.
+	SetInterval(interval time.Duration)
+
 	// Fields returns the fields for the metric
 	Fields() map[string]interface{}
 
@@ -36,7 +42,8 @@ type Metric interface {
 
 // metric is a wrapper of the influxdb client.Point struct
 type metric struct {
-	pt *client.Point
+	pt       *client.Point
+	interval time.Duration
 }
 
 // NewMetric returns a metric with the given timestamp. If a timestamp is not
@@ -80,6 +87,14 @@ func ParseMetrics(buf []byte) ([]Metric, error) {
 			point.Fields(), point.Time())
 	}
 	return metrics, err
+}
+
+func (m *metric) Interval() time.Duration {
+	return m.interval
+}
+
+func (m *metric) SetInterval(interval time.Duration) {
+	m.interval = interval
 }
 
 func (m *metric) Name() string {
