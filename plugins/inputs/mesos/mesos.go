@@ -211,12 +211,14 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 func (m *Mesos) gatherMetrics(a string, acc telegraf.Accumulator) error {
 	var jsonOut map[string]interface{}
 
-	if _, _, err := net.SplitHostPort(a); err != nil {
+	host, _, err := net.SplitHostPort(a)
+	if err != nil {
+		host = a
 		a = a + ":5050"
 	}
 
 	tags := map[string]string{
-		"server": a,
+		"server": host,
 	}
 
 	// TODO: Use Timeout
