@@ -273,6 +273,56 @@ func TestWinPerfcountersConfigGet6(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestWinPerfcountersConfigGet7(t *testing.T) {
+	metrics := itemList{}
+
+	var instances = make([]string, 1)
+	var counters = make([]string, 3)
+	var perfobjects = make([]perfobject, 1)
+
+	objectname := "Processor Information"
+	instances[0] = "_Total"
+	counters[0] = "% Processor Time"
+	counters[1] = "% Processor TimeERROR"
+	counters[2] = "% Idle Time"
+
+	var measurement string = "test"
+	var warnonmissing bool = false
+	var failonmissing bool = false
+	var includetotal bool = false
+
+	PerfObject := perfobject{
+		ObjectName:    objectname,
+		Instances:     instances,
+		Counters:      counters,
+		Measurement:   measurement,
+		WarnOnMissing: warnonmissing,
+		FailOnMissing: failonmissing,
+		IncludeTotal:  includetotal,
+	}
+
+	perfobjects[0] = PerfObject
+
+	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigGet7", Object: perfobjects}
+
+	err := m.ParseConfig(&metrics)
+	require.NoError(t, err)
+
+	if len(metrics.items) == 2 {
+		require.NoError(t, nil)
+	} else if len(metrics.items) < 2 {
+		var errorstring1 string = "Too few results returned from the query: " +
+			string(len(metrics.items))
+		err2 := errors.New(errorstring1)
+		require.NoError(t, err2)
+	} else if len(metrics.items) > 2 {
+		var errorstring1 string = "Too many results returned from the query: " +
+			string(len(metrics.items))
+		err2 := errors.New(errorstring1)
+		require.NoError(t, err2)
+	}
+}
+
 func TestWinPerfcountersConfigError1(t *testing.T) {
 	metrics := itemList{}
 
