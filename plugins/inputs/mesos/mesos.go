@@ -168,7 +168,7 @@ var sampleConfig = `
   # The port can be skipped if using the default (5050)
   # Default value is localhost:5050.
   servers = ["localhost:5050"]
-	blacklist = ["system"]
+  blacklist = ["system"]
 `
 
 // removeGroup(), remove blacklisted groups
