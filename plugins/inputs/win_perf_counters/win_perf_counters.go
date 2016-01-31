@@ -132,7 +132,7 @@ func (m *Win_PerfCounters) InvalidObject(exists uint32, query string, PerfObject
 		if PerfObject.FailOnMissing {
 			err := errors.New("Performance object does not exist")
 			return err
-		} else if PerfObject.WarnOnMissing {
+		} else {
 			fmt.Printf("Performance Object '%s' does not exist in query: %s\n", PerfObject.ObjectName, query)
 		}
 	} else if exists == 3221228473 { //win.PDH_CSTATUS_NO_COUNTER
@@ -140,14 +140,14 @@ func (m *Win_PerfCounters) InvalidObject(exists uint32, query string, PerfObject
 		if PerfObject.FailOnMissing {
 			err := errors.New("Counter in Performance object does not exist")
 			return err
-		} else if PerfObject.WarnOnMissing {
+		} else {
 			fmt.Printf("Counter '%s' does not exist in query: %s\n", counter, query)
 		}
 	} else if exists == 2147485649 { //win.PDH_CSTATUS_NO_INSTANCE
 		if PerfObject.FailOnMissing {
 			err := errors.New("Instance in Performance object does not exist")
 			return err
-		} else if PerfObject.WarnOnMissing {
+		} else {
 			fmt.Printf("Instance '%s' does not exist in query: %s\n", instance, query)
 
 		}
@@ -195,8 +195,10 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						m.AddItem(metrics, query, objectname, counter, instance,
 							PerfObject.Measurement, PerfObject.IncludeTotal)
 					} else {
-						err := m.InvalidObject(exists, query, PerfObject, instance, counter)
-						return err
+						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
+							err := m.InvalidObject(exists, query, PerfObject, instance, counter)
+							return err
+						}
 					}
 				}
 			}
