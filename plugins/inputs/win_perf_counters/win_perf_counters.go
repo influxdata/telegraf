@@ -84,13 +84,14 @@ type Win_PerfCounters struct {
 }
 
 type perfobject struct {
-	ObjectName    string
-	Counters      []string
-	Instances     []string
-	Measurement   string
-	WarnOnMissing bool
-	FailOnMissing bool
-	IncludeTotal  bool
+	ObjectName     string
+	Counters       []string
+	Instances      []string
+	GetMetricEvery int
+	Measurement    string
+	WarnOnMissing  bool
+	FailOnMissing  bool
+	IncludeTotal   bool
 }
 
 // Parsed configuration ends up here after it has been validated for valid
@@ -100,18 +101,23 @@ type itemList struct {
 }
 
 type item struct {
-	query         string
-	objectName    string
-	counter       string
-	instance      string
-	measurement   string
-	include_total bool
-	handle        win.PDH_HQUERY
-	counterHandle win.PDH_HCOUNTER
+	query          string
+	objectName     string
+	counter        string
+	instance       string
+	getmetricevery int
+	metriccounter  int
+	measurement    string
+	include_total  bool
+	handle         win.PDH_HQUERY
+	counterHandle  win.PDH_HCOUNTER
 }
 
-func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName string, counter string, instance string,
+func (m *Win_PerfCounters) AddItem(metrics *itemList, query string,
+	objectName string, counter string, instance string, getmetricevery int,
 	measurement string, include_total bool) {
+
+	var metriccounter int = 1
 
 	var handle win.PDH_HQUERY
 	var counterHandle win.PDH_HCOUNTER
@@ -120,8 +126,9 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 
 	_ = ret
 
-	temp := &item{query, objectName, counter, instance, measurement,
-		include_total, handle, counterHandle}
+	temp := &item{query, objectName, counter, instance, getmetricevery,
+		metriccounter, measurement, include_total, handle, counterHandle}
+
 	index := len(gItemList)
 	gItemList[index] = temp
 
@@ -190,6 +197,13 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						query = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
+					var getmetricevery int
+					if PerfObject.GetMetricEvery == 0 {
+						getmetricevery = 1
+					} else {
+						getmetricevery = PerfObject.GetMetricEvery
+					}
+
 					var exists uint32 = win.PdhValidatePath(query)
 
 					if exists == win.ERROR_SUCCESS {
@@ -197,7 +211,8 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 							fmt.Printf("Valid: %s\n", query)
 						}
 						m.AddItem(metrics, query, objectname, counter, instance,
-							PerfObject.Measurement, PerfObject.IncludeTotal)
+							getmetricevery, PerfObject.Measurement,
+							PerfObject.IncludeTotal)
 					} else {
 						err := m.InvalidObject(exists, query, PerfObject, instance, counter)
 						return err
@@ -271,59 +286,63 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range gItemList {
 		// collect
-		ret := win.PdhCollectQueryData(metric.handle)
-		if ret == win.ERROR_SUCCESS {
-			ret = win.PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
-				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
-			if ret == win.PDH_MORE_DATA {
-				filledBuf := make([]win.PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
-				ret = win.PdhGetFormattedCounterArrayDouble(metric.counterHandle,
-					&bufSize, &bufCount, &filledBuf[0])
-				for i := 0; i < int(bufCount); i++ {
-					c := filledBuf[i]
-					var s string = win.UTF16PtrToString(c.SzName)
+		if metric.getmetricevery == metric.metriccounter {
+			metric.metriccounter = 1
+			ret := win.PdhCollectQueryData(metric.handle)
+			if ret == win.ERROR_SUCCESS {
+				ret = win.PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
+					&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
+				if ret == win.PDH_MORE_DATA {
+					filledBuf := make([]win.PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
+					ret = win.PdhGetFormattedCounterArrayDouble(metric.counterHandle,
+						&bufSize, &bufCount, &filledBuf[0])
+					for i := 0; i < int(bufCount); i++ {
+						c := filledBuf[i]
+						var s string = win.UTF16PtrToString(c.SzName)
 
-					var add bool
+						var add bool
 
-					if metric.include_total {
-						// If IncludeTotal is set, include all.
-						add = true
-					} else if metric.instance == "*" && !strings.Contains(s, "_Total") {
-						// Catch if set to * and that it is not a '*_Total*' instance.
-						add = true
-					} else if metric.instance == s {
-						// Catch if we set it to total or some form of it
-						add = true
-					} else if metric.instance == "------" {
-						add = true
+						if metric.include_total {
+							// If IncludeTotal is set, include all.
+							add = true
+						} else if metric.instance == "*" && !strings.Contains(s, "_Total") {
+							// Catch if set to * and that it is not a '*_Total*' instance.
+							add = true
+						} else if metric.instance == s {
+							// Catch if we set it to total or some form of it
+							add = true
+						} else if metric.instance == "------" {
+							add = true
+						}
+
+						if add {
+							fields := make(map[string]interface{})
+							tags := make(map[string]string)
+							if s != "" {
+								tags["instance"] = s
+							}
+							tags["objectname"] = metric.objectName
+							fields[string(metric.counter)] = float32(c.FmtValue.DoubleValue)
+
+							var measurement string
+							if metric.measurement == "" {
+								measurement = "win_perf_counters"
+							} else {
+								measurement = metric.measurement
+							}
+							acc.AddFields(measurement, fields, tags)
+						}
 					}
 
-					if add {
-						fields := make(map[string]interface{})
-						tags := make(map[string]string)
-						if s != "" {
-							tags["instance"] = s
-						}
-						tags["objectname"] = metric.objectName
-						fields[string(metric.counter)] = float32(c.FmtValue.DoubleValue)
-
-						var measurement string
-						if metric.measurement == "" {
-							measurement = "win_perf_counters"
-						} else {
-							measurement = metric.measurement
-						}
-						acc.AddFields(measurement, fields, tags)
-					}
+					filledBuf = nil
+					// Need to at least set bufSize to zero, because if not, the function will not
+					// return PDH_MORE_DATA and will not set the bufSize.
+					bufCount = 0
+					bufSize = 0
 				}
-
-				filledBuf = nil
-				// Need to at least set bufSize to zero, because if not, the function will not
-				// return PDH_MORE_DATA and will not set the bufSize.
-				bufCount = 0
-				bufSize = 0
 			}
-
+		} else {
+			metric.metriccounter++
 		}
 	}
 

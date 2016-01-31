@@ -59,6 +59,13 @@ Example: `Counters = ["% Idle Time", "% Disk Read Time", "% Disk Write Time"]`
 This must be specified for every counter you want the results of,
 it is not possible to ask for all counters in the ObjectName.
 
+### GetMetricEvery
+*Optional*
+
+This parameter can be used where you only want to read an object on every X iteration, say every 10 iterations of whatever the interval is set for in Telegraf. If Telegraf fetches its data every 10s, it translates to only getting the data for this metric every 100s. Useful if the metric you are obtaining is expensive to get back.
+
+Example `GetMetricEvery = 10`
+
 ### Measurement
 *Optional*
 
