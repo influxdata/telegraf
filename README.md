@@ -159,6 +159,9 @@ Currently implemented sources:
 * docker
 * elasticsearch
 * exec (generic JSON-emitting executable plugin)
+* execline (generic Graphite-line-protocol-emitting executable plugin)
+* graphite (Graphite line protocol listen service)
+* tail (Plugin to tail the files to process graphite line protocol contents)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * influxdb
