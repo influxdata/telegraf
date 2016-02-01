@@ -1,3 +1,5 @@
+// +build !windows
+
 package ping
 
 import (
@@ -41,6 +43,9 @@ func (_ *Ping) Description() string {
 }
 
 var sampleConfig = `
+  # NOTE: this plugin forks the ping command. You may need to set capabilities
+  # via setcap cap_net_raw+p /bin/ping
+
   # urls to ping
   urls = ["www.google.com"] # required
   # number of pings to send (ping -c <COUNT>)
@@ -111,7 +116,11 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 }
 
 func hostPinger(args ...string) (string, error) {
-	c := exec.Command("ping", args...)
+	bin, err := exec.LookPath("ping")
+	if err != nil {
+		return "", err
+	}
+	c := exec.Command(bin, args...)
 	out, err := c.CombinedOutput()
 	return string(out), err
 }
