@@ -1,0 +1,15 @@
+[Unit]
+Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Documentation=https://github.com/influxdb/telegraf
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/default/telegraf
+ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -configdirectory /etc/telegraf/telegraf.d $TELEGRAF_OPTS
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+Alias=telegraf.service
+

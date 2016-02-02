@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+check_gopath() {
+    [ -z "$GOPATH" ] && echo "GOPATH is not set." && cleanup_exit 1
+    echo "GOPATH ($GOPATH) looks sane."
+}
+
+check_linux() {
+    uname | grep Linux > /dev/null || ( echo "This script runs only on Linux." && cleanup_exit 1 )
+}
+
+check_fpm() {
+    fpm --help > /dev/null 2>&1 || ( echo "Installing fpm" && sudo yum install -y --enablerepo=* gcc libffi-devel ruby-devel rubygems && sudo gem install fpm )
+}
+
+cleanup_exit() {
+    exit $1
+}
+
