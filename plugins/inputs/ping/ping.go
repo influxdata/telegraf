@@ -128,7 +128,7 @@ func hostPinger(args ...string) (string, error) {
 // args returns the arguments for the 'ping' executable
 func (p *Ping) args(url string) []string {
 	// Build the ping command args based on toml config
-	args := []string{"-c", strconv.Itoa(p.Count)}
+	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
 	if p.PingInterval > 0 {
 		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', 1, 64))
 	}

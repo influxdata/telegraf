@@ -68,4 +68,6 @@ tmpdir=$(mktemp -d)
 exit_if_fail ./telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
+mv ./telegraf $CIRCLE_ARTIFACTS
+
 exit $rc
