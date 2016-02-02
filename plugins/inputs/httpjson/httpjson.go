@@ -201,7 +201,11 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 
 	// Add header parameters
 	for k, v := range h.Headers {
-		req.Header.Add(k, v)
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		} else {
+			req.Header.Add(k, v)
+		}
 	}
 
 	start := time.Now()
