@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strings"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -196,14 +198,36 @@ func (m *Mesos) Description() string {
 }
 
 func (m *Mesos) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+	var errorChannel chan error
+
 	if len(m.Servers) == 0 {
-		return m.gatherMetrics("localhost:5050", acc)
+		m.Servers = []string{"localhost:5050"}
 	}
 
+	errorChannel = make(chan error, len(m.Servers)*2)
+
 	for _, v := range m.Servers {
-		if err := m.gatherMetrics(v, acc); err != nil {
-			return err
+		wg.Add(1)
+		go func() {
+			errorChannel <- m.gatherMetrics(v, acc)
+			wg.Done()
+			return
+		}()
+	}
+
+	wg.Wait()
+	close(errorChannel)
+	errorStrings := []string{}
+
+	for err := range errorChannel {
+		if err != nil {
+			errorStrings = append(errorStrings, err.Error())
 		}
+	}
+
+	if len(errorStrings) > 0 {
+		return errors.New(strings.Join(errorStrings, "\n"))
 	}
 	return nil
 }
