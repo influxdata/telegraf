@@ -87,11 +87,11 @@ func main() {
 	reload <- true
 	for <-reload {
 		reload <- false
-		flag.Usage = usageExit
+		flag.Usage = func() { usageExit(0) }
 		flag.Parse()
 
 		if flag.NFlag() == 0 {
-			usageExit()
+			usageExit(0)
 		}
 
 		var inputFilters []string
@@ -148,9 +148,8 @@ func main() {
 				log.Fatal(err)
 			}
 		} else {
-			fmt.Println("Usage: Telegraf")
-			flag.PrintDefaults()
-			return
+			fmt.Println("You must specify a config file. See telegraf --help")
+			os.Exit(1)
 		}
 
 		if *fConfigDirectoryLegacy != "" {
@@ -235,7 +234,7 @@ func main() {
 	}
 }
 
-func usageExit() {
+func usageExit(rc int) {
 	fmt.Println(usage)
-	os.Exit(0)
+	os.Exit(rc)
 }
