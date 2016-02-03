@@ -158,10 +158,9 @@ Currently implemented sources:
 * disque
 * docker
 * elasticsearch
-* exec (generic JSON-emitting executable plugin)
-* execline (generic Graphite-line-protocol-emitting executable plugin)
-* graphite (Graphite line protocol listen service)
-* tail (Plugin to tail the files to process graphite line protocol contents)
+* exec (generic line-protocol-emitting executable plugin, support JSON, influx and graphite)
+* socket (generic line protocol listen input service, support influx and graphite)
+* tail (Plugin to tail the files to process line protocol contents, support influx and graphite)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * influxdb
