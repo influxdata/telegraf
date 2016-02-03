@@ -1,12 +1,16 @@
-package tail
+package graphite
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"math"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"bufio"
 
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/telegraf"
@@ -91,6 +95,34 @@ func NewParser(templates []string, defaultTags models.Tags) (*Parser, error) {
 			DefaultTags: defaultTags,
 			Separator:   DefaultSeparator,
 		})
+}
+
+func (p *Parser) ParseMetrics(buf []byte) ([]telegraf.Metric, error) {
+	// parse even if the buffer begins with a newline
+	buf = bytes.TrimPrefix(buf, []byte("\n"))
+
+	metrics := make([]telegraf.Metric, 0)
+
+	buffer := bytes.NewBuffer(buf)
+	reader := bufio.NewReader(buffer)
+	for {
+		// Read up to the next newline.
+		buf, err := reader.ReadBytes('\n')
+		if err == io.EOF {
+			return metrics, nil
+		}
+		if err != nil && err != io.EOF {
+			return metrics, err
+		}
+
+		// Trim the buffer, even though there should be no padding
+		line := strings.TrimSpace(string(buf))
+		if metric, err := p.Parse(line); err == nil {
+			metrics = append(metrics, metric)
+		}
+	}
+
+	return metrics, nil
 }
 
 // Parse performs Graphite parsing of a single line.

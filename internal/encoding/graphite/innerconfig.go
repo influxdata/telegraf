@@ -1,4 +1,4 @@
-package tail
+package graphite
 
 import (
 	"fmt"
@@ -14,25 +14,14 @@ const (
 )
 
 // Config represents the configuration for Graphite endpoints.
-type Config struct {
-	Files     []string
+type InnerConfig struct {
 	Separator string
 	Tags      []string
 	Templates []string
 }
 
-// WithDefaults takes the given config and returns a new config with any required
-// default values set.
-func (c *Config) WithDefaults() *Config {
-	d := *c
-	if d.Separator == "" {
-		d.Separator = DefaultSeparator
-	}
-	return &d
-}
-
 // DefaultTags returns the config's tags.
-func (c *Config) DefaultTags() models.Tags {
+func (c *InnerConfig) DefaultTags() models.Tags {
 	tags := models.Tags{}
 	for _, t := range c.Tags {
 		parts := strings.Split(t, "=")
@@ -42,7 +31,7 @@ func (c *Config) DefaultTags() models.Tags {
 }
 
 // Validate validates the config's templates and tags.
-func (c *Config) Validate() error {
+func (c *InnerConfig) Validate() error {
 	if err := c.validateTemplates(); err != nil {
 		return err
 	}
@@ -54,7 +43,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *Config) validateTemplates() error {
+func (c *InnerConfig) validateTemplates() error {
 	// map to keep track of filters we see
 	filters := map[string]struct{}{}
 
@@ -121,7 +110,7 @@ func (c *Config) validateTemplates() error {
 	return nil
 }
 
-func (c *Config) validateTags() error {
+func (c *InnerConfig) validateTags() error {
 	for _, t := range c.Tags {
 		if err := c.validateTag(t); err != nil {
 			return err
@@ -130,7 +119,7 @@ func (c *Config) validateTags() error {
 	return nil
 }
 
-func (c *Config) validateTemplate(template string) error {
+func (c *InnerConfig) validateTemplate(template string) error {
 	hasMeasurement := false
 	for _, p := range strings.Split(template, ".") {
 		if p == "measurement" || p == "measurement*" {
@@ -145,7 +134,7 @@ func (c *Config) validateTemplate(template string) error {
 	return nil
 }
 
-func (c *Config) validateFilter(filter string) error {
+func (c *InnerConfig) validateFilter(filter string) error {
 	for _, p := range strings.Split(filter, ".") {
 		if p == "" {
 			return fmt.Errorf("filter contains blank section: %s", filter)
@@ -158,7 +147,7 @@ func (c *Config) validateFilter(filter string) error {
 	return nil
 }
 
-func (c *Config) validateTag(keyValue string) error {
+func (c *InnerConfig) validateTag(keyValue string) error {
 	parts := strings.Split(keyValue, "=")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid template tags: '%s'", keyValue)
