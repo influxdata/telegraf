@@ -24,6 +24,7 @@ github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/go-msgpack fa3f63826f7c23912c15263591e65d54d080b458
 github.com/hashicorp/raft 057b893fd996696719e98b6c44649ea14968c811
 github.com/hashicorp/raft-boltdb d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee
+github.com/hpcloud/tail 1a0242e795eeefe54261ff308dc685f7d29cc58c
 github.com/influxdata/config bae7cb98197d842374d3b8403905924094930f24
 github.com/influxdata/influxdb 697f48b4e62e514e701ffec39978b864a3c666e6
 github.com/influxdb/influxdb 697f48b4e62e514e701ffec39978b864a3c666e6
@@ -55,6 +56,7 @@ golang.org/x/net 04b9de9b512f58addf28c9853d50ebef61c3953e
 golang.org/x/text 6d3c22c4525a4da167968fa2479be5524d2e8bd0
 gopkg.in/dancannon/gorethink.v1 6f088135ff288deb9d5546f4c71919207f891a70
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
+gopkg.in/fsnotify.v1 8611c35ab31c1c28aa903d33cf8b6e44a399b09e
 gopkg.in/mgo.v2 03c9f3ee4c14c8e51ee521a6a7d0425658dd6f64
+gopkg.in/tomb.v1 dd632973f1e7218eb1089048e0798ec9ae7dceb8
 gopkg.in/yaml.v2 f7716cbe52baa25d2e9b0d0da546fcf909fc16b4
-github.com/hpcloud/tail 1a0242e795eeefe54261ff308dc685f7d29cc58c
