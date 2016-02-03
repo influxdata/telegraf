@@ -89,7 +89,7 @@ func (t *Tail) Start() error {
 	c := NewConfig(t.Files, t.Separator, t.Tags, t.Templates)
 	c.WithDefaults()
 	if err := c.Validate(); err != nil {
-		return fmt.Errorf("Tail input configuration is error! ", err.Error())
+		return fmt.Errorf("Tail input configuration is error: %s ", err.Error())
 	}
 	t.config = c
 
@@ -111,7 +111,7 @@ func (t *Tail) Start() error {
 	for i, fileName := range t.Files {
 		t.tailPointers[i], err = t.tailFile(fileName)
 		if err != nil {
-			fmt.Errorf("Can not open the file: %s to tail", fileName)
+			return fmt.Errorf("Can not open the file: %s to tail", fileName)
 		} else {
 			t.logger.Printf("Openning the file: %s to tail", fileName)
 		}
