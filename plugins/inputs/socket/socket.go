@@ -114,7 +114,7 @@ func (s *Socket) Start() error {
 
 	c.WithDefaults()
 	if err := c.Validate(); err != nil {
-		return fmt.Errorf("Socket input configuration is error! ", err.Error())
+		return fmt.Errorf("Socket input configuration is error: %s ", err.Error())
 	}
 	s.config = c
 
