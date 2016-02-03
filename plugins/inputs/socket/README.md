@@ -8,7 +8,7 @@ size limit, [see here for more details.](../udp/README.md#a-note-on-udpip-os-buf
 ## Configuration
 
 Each Socket input allows the binding address, and protocol to be set. 
-Currently socket service input only support two line protocol formats of metric: influx and graphite.
+Currently socket service input only support line protocol formats of metric: influx and graphite.
 Each input allows to use data_format to choose which format of contents will be sent to this socket service.
 
 ## Parsing Metrics
