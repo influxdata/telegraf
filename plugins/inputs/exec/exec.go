@@ -122,7 +122,7 @@ func (e *Exec) initConfig() error {
 	c := NewConfig(e.Commands, e.Tags, e.Templates, e.Separator)
 	c.WithDefaults()
 	if err := c.Validate(); err != nil {
-		return fmt.Errorf("exec configuration is error! ", err.Error())
+		return fmt.Errorf("exec configuration is error: %s ", err.Error())
 
 	}
 	e.config = c
@@ -133,7 +133,7 @@ func (e *Exec) initConfig() error {
 		Separator:   e.config.Separator})
 
 	if err != nil {
-		return fmt.Errorf("exec input parser config is error! ", err.Error())
+		return fmt.Errorf("exec input parser config is error: %s ", err.Error())
 	}
 
 	e.encodingParser = encoding.NewParser(graphiteParser)
