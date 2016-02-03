@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf"
@@ -13,6 +15,7 @@ import (
 type Riemann struct {
 	URL       string
 	Transport string
+	Separator string
 
 	client *raidman.Client
 }
@@ -22,6 +25,8 @@ var sampleConfig = `
   url = "localhost:5555"
   ### transport protocol to use either tcp or udp
   transport = "tcp"
+  ### separator to use between input name and field name in Riemann service name
+  separator = " "
 `
 
 func (r *Riemann) Connect() error {
@@ -55,7 +60,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 
 	var events []*raidman.Event
 	for _, p := range metrics {
-		evs := buildEvents(p)
+		evs := buildEvents(p, r.Separator)
 		for _, ev := range evs {
 			events = append(events, ev)
 		}
@@ -70,7 +75,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func buildEvents(p telegraf.Metric) []*raidman.Event {
+func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
 	events := []*raidman.Event{}
 	for fieldName, value := range p.Fields() {
 		host, ok := p.Tags()["host"]
@@ -85,13 +90,46 @@ func buildEvents(p telegraf.Metric) []*raidman.Event {
 
 		event := &raidman.Event{
 			Host:    host,
-			Service: p.Name() + "_" + fieldName,
-			Metric:  value,
+			Service: serviceName(s, p.Name(), p.Tags(), fieldName),
 		}
+
+		switch value.(type) {
+		case string:
+			event.State = value.(string)
+		default:
+			event.Metric = value
+		}
+
 		events = append(events, event)
 	}
 
 	return events
+}
+
+func serviceName(s string, n string, t map[string]string, f string) string {
+	serviceStrings := []string{}
+	serviceStrings = append(serviceStrings, n)
+
+	// we'll skip the 'host' tag
+	tagStrings := []string{}
+	tagNames := []string{}
+
+	for tagName := range t {
+		tagNames = append(tagNames, tagName)
+	}
+	sort.Strings(tagNames)
+
+	for _, tagName := range tagNames {
+		if tagName != "host" {
+			tagStrings = append(tagStrings, t[tagName])
+		}
+	}
+	var tagString string = strings.Join(tagStrings, s)
+	if tagString != "" {
+		serviceStrings = append(serviceStrings, tagString)
+	}
+	serviceStrings = append(serviceStrings, f)
+	return strings.Join(serviceStrings, s)
 }
 
 func init() {

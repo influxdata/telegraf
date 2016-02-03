@@ -14,6 +14,7 @@ parsing JSON data as it does now.
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
 - [#662](https://github.com/influxdata/telegraf/pull/667): Change `[tags]` to `[global_tags]` to fix multiple-plugin tags bug.
+- [#642](https://github.com/influxdata/telegraf/issues/642): Riemann output plugin issues.
 
 ## v0.10.2 [2016-02-04]
 
