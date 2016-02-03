@@ -213,8 +213,8 @@ var sampleConfig = `
   # The port can be skipped if using the default (5050)
   # Default value is localhost:5050.
   servers = ["localhost:5050"]
-	# Metrics groups to be collected.
-	# Default, all enabled.
+  # Metrics groups to be collected.
+  # Default, all enabled.
   metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueues","registrar"]
 `
 
