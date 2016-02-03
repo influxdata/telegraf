@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -15,12 +16,57 @@ import (
 )
 
 type Mesos struct {
-	Timeout   string
-	Servers   []string
-	Blacklist []string
+	Timeout    string
+	Servers    []string
+	MetricsCol []string `toml:"metrics_collection"`
 }
 
-func masterBlocks(g string) ([]string, error) {
+// SampleConfig returns a sample configuration block
+func (m *Mesos) SampleConfig() string {
+	return sampleConfig
+}
+
+// Description just returns a short description of the Mesos plugin
+func (m *Mesos) Description() string {
+	return "Telegraf plugin for gathering metrics from N Mesos masters"
+}
+
+func (m *Mesos) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+	var errorChannel chan error
+
+	if len(m.Servers) == 0 {
+		m.Servers = []string{"localhost:5050"}
+	}
+
+	errorChannel = make(chan error, len(m.Servers)*2)
+
+	for _, v := range m.Servers {
+		wg.Add(1)
+		go func() {
+			errorChannel <- m.gatherMetrics(v, acc)
+			wg.Done()
+			return
+		}()
+	}
+
+	wg.Wait()
+	close(errorChannel)
+	errorStrings := []string{}
+
+	for err := range errorChannel {
+		if err != nil {
+			errorStrings = append(errorStrings, err.Error())
+		}
+	}
+
+	if len(errorStrings) > 0 {
+		return errors.New(strings.Join(errorStrings, "\n"))
+	}
+	return nil
+}
+
+func masterBlocks(g string) []string {
 	var m map[string][]string
 
 	m = make(map[string][]string)
@@ -153,14 +199,11 @@ func masterBlocks(g string) ([]string, error) {
 	ret, ok := m[g]
 
 	if !ok {
-		return nil, errors.New("Unknown group:" + g)
+		log.Println("Unkown metrics group: ", g)
+		return []string{}
 	}
 
-	return ret, nil
-}
-
-type masterMestrics struct {
-	resources []string
+	return ret
 }
 
 var sampleConfig = `
@@ -170,68 +213,30 @@ var sampleConfig = `
   # The port can be skipped if using the default (5050)
   # Default value is localhost:5050.
   servers = ["localhost:5050"]
-  blacklist = ["system"]
+	# Metrics groups to be collected.
+	# Default, all enabled.
+  metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueues","registrar"]
 `
 
 // removeGroup(), remove blacklisted groups
-func (m *Mesos) removeGroup(j *map[string]interface{}) error {
-	for _, v := range m.Blacklist {
-		ms, err := masterBlocks(v)
-		if err != nil {
-			return err
-		}
-		for _, sv := range ms {
-			delete((*j), sv)
-		}
-	}
-	return nil
-}
+func (m *Mesos) removeGroup(j *map[string]interface{}) {
+	var ok bool
+	u := map[string]bool{}
 
-// SampleConfig returns a sample configuration block
-func (m *Mesos) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description just returns a short description of the Mesos plugin
-func (m *Mesos) Description() string {
-	return "Telegraf plugin for gathering metrics from N Mesos masters"
-}
-
-func (m *Mesos) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
-	var errorChannel chan error
-
-	if len(m.Servers) == 0 {
-		m.Servers = []string{"localhost:5050"}
-	}
-
-	errorChannel = make(chan error, len(m.Servers)*2)
-
-	for _, v := range m.Servers {
-		wg.Add(1)
-		go func() {
-			errorChannel <- m.gatherMetrics(v, acc)
-			wg.Done()
-			return
-		}()
-	}
-
-	wg.Wait()
-	close(errorChannel)
-	errorStrings := []string{}
-
-	for err := range errorChannel {
-		if err != nil {
-			errorStrings = append(errorStrings, err.Error())
+	for _, v := range m.MetricsCol {
+		for _, k := range masterBlocks(v) {
+			u[k] = true
 		}
 	}
 
-	if len(errorStrings) > 0 {
-		return errors.New(strings.Join(errorStrings, "\n"))
+	for k, _ := range u {
+		if _, ok = (*j)[k]; ok {
+			delete((*j), k)
+		}
 	}
-	return nil
 }
 
+// This should not belong to the object
 func (m *Mesos) gatherMetrics(a string, acc telegraf.Accumulator) error {
 	var jsonOut map[string]interface{}
 
@@ -262,9 +267,9 @@ func (m *Mesos) gatherMetrics(a string, acc telegraf.Accumulator) error {
 		return errors.New("Error decoding JSON response")
 	}
 
-	if len(m.Blacklist) > 0 {
-		m.removeGroup(&jsonOut)
-	}
+	//if len(m.Blacklist) > 0 {
+	//	m.removeGroup(&jsonOut)
+	//}
 
 	jf := internal.JSONFlattener{}
 

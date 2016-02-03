@@ -86,6 +86,9 @@ func TestMesosMaster(t *testing.T) {
 }
 
 func TestRemoveGroup(t *testing.T) {
+	//t.Skip("needs refactoring")
+	// FIXME: removeGroup() behavior is the opposite as it was,
+	// this test has to be refactored
 	j := []string{
 		"resources", "master",
 		"system", "slaves", "frameworks",
@@ -97,23 +100,18 @@ func TestRemoveGroup(t *testing.T) {
 
 	for _, v := range j {
 		m := Mesos{
-			Blacklist: []string{v},
+			MetricsCol: []string{v},
 		}
-		err := m.removeGroup(&mesosMetrics)
-		if err != nil {
-			t.Errorf("Error removing non-exiting key: %s.", v)
+		m.removeGroup(&mesosMetrics)
+		for _, x := range masterBlocks(v) {
+			if _, ok := mesosMetrics[x]; ok {
+				t.Errorf("Found key %s, it should be gone.", x)
+			}
 		}
 	}
 
 	if len(mesosMetrics) > 0 {
 		t.Error("Keys were left at slice sample")
 	}
-
-	m := Mesos{
-		Blacklist: []string{"fail"},
-	}
-
-	if err := m.removeGroup(&mesosMetrics); err == nil {
-		t.Errorf("Key %s should have returned error.", m.Blacklist[0])
-	}
+	//Test for wrong keys
 }
