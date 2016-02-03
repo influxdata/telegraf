@@ -2,13 +2,19 @@ package internal
 
 import (
 	"bufio"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
+
+const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 // Duration just wraps time.Duration
 type Duration struct {
@@ -103,6 +109,57 @@ func ReadLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
 	}
 
 	return ret, nil
+}
+
+// RandomString returns a random string of alpha-numeric characters
+func RandomString(n int) string {
+	var bytes = make([]byte, n)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	return string(bytes)
+}
+
+// GetTLSConfig gets a tls.Config object from the given certs, key, and CA files.
+// you must give the full path to the files.
+// If all files are blank and InsecureSkipVerify=false, returns a nil pointer.
+func GetTLSConfig(
+	SSLCert, SSLKey, SSLCA string,
+	InsecureSkipVerify bool,
+) (*tls.Config, error) {
+	t := &tls.Config{}
+	if SSLCert != "" && SSLKey != "" && SSLCA != "" {
+		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf(
+				"Could not load TLS client key/certificate: %s",
+				err))
+		}
+
+		caCert, err := ioutil.ReadFile(SSLCA)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
+				err))
+		}
+
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		t = &tls.Config{
+			Certificates:       []tls.Certificate{cert},
+			RootCAs:            caCertPool,
+			InsecureSkipVerify: InsecureSkipVerify,
+		}
+	} else {
+		if InsecureSkipVerify {
+			t.InsecureSkipVerify = true
+		} else {
+			return nil, nil
+		}
+	}
+	// will be nil by default if nothing is provided
+	return t, nil
 }
 
 // Glob will test a string pattern, potentially containing globs, against a

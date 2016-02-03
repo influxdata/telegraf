@@ -18,9 +18,9 @@ type Riemann struct {
 }
 
 var sampleConfig = `
-  # URL of server
+  ### URL of server
   url = "localhost:5555"
-  # transport protocol to use either tcp or udp
+  ### transport protocol to use either tcp or udp
   transport = "tcp"
 `
 

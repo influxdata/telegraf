@@ -17,7 +17,8 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	pTesting = &PrometheusClient{Listen: "localhost:9127"}
-	pTesting.Start()
+	err := pTesting.Start()
+	require.NoError(t, err)
 	defer pTesting.Stop()
 
 	p := &prometheus.Prometheus{

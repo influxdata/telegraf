@@ -1,6 +1,21 @@
-## v0.10.2 [unreleased]
+## v0.10.3 [unreleased]
 
 ### Release Notes
+
+### Features
+
+### Bugfixes
+
+## v0.10.2 [2016-02-04]
+
+### Release Notes
+- Statsd timing measurements are now aggregated into a single measurement with
+fields.
+- Graphite output now inserts tags into the bucket in alphabetical order.
+- Normalized TLS/SSL support for output plugins: MQTT, AMQP, Kafka
+- `verify_ssl` config option was removed from Kafka because it was actually
+doing the opposite of what it claimed to do (yikes). It's been replaced by
+`insecure_skip_verify`
 
 ### Features
 - [#575](https://github.com/influxdata/telegraf/pull/575): Support for collecting Windows Performance Counters. Thanks @TheFlyingCorpse!

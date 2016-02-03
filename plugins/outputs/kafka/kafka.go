@@ -2,13 +2,14 @@ package kafka
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/Shopify/sarama"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"io/ioutil"
+
+	"github.com/Shopify/sarama"
 )
 
 type Kafka struct {
@@ -18,71 +19,62 @@ type Kafka struct {
 	Topic string
 	// Routing Key Tag
 	RoutingTag string `toml:"routing_tag"`
+
+	// Legacy SSL config options
 	// TLS client certificate
 	Certificate string
 	// TLS client key
 	Key string
 	// TLS certificate authority
 	CA string
-	// Verfiy SSL certificate chain
-	VerifySsl bool
+
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+
+	// Skip SSL verification
+	InsecureSkipVerify bool
 
 	tlsConfig tls.Config
 	producer  sarama.SyncProducer
 }
 
 var sampleConfig = `
-  # URLs of kafka brokers
+  ### URLs of kafka brokers
   brokers = ["localhost:9092"]
-  # Kafka topic for producer messages
+  ### Kafka topic for producer messages
   topic = "telegraf"
-  # Telegraf tag to use as a routing key
-  #  ie, if this tag exists, it's value will be used as the routing key
+  ### Telegraf tag to use as a routing key
+  ###  ie, if this tag exists, it's value will be used as the routing key
   routing_tag = "host"
 
-  # Optional TLS configuration:
-  # Client certificate
-  certificate = ""
-  # Client key
-  key = ""
-  # Certificate authority file
-  ca = ""
-  # Verify SSL certificate chain
-  verify_ssl = false
+  ### Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ### Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
-
-func createTlsConfiguration(k *Kafka) (t *tls.Config, err error) {
-	if k.Certificate != "" && k.Key != "" && k.CA != "" {
-		cert, err := tls.LoadX509KeyPair(k.Certificate, k.Key)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Cout not load Kafka TLS client key/certificate: %s",
-				err))
-		}
-
-		caCert, err := ioutil.ReadFile(k.CA)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Cout not load Kafka TLS CA: %s",
-				err))
-		}
-
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-
-		t = &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			RootCAs:            caCertPool,
-			InsecureSkipVerify: k.VerifySsl,
-		}
-	}
-	// will be nil by default if nothing is provided
-	return t, nil
-}
 
 func (k *Kafka) Connect() error {
 	config := sarama.NewConfig()
-	config.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
-	config.Producer.Retry.Max = 10                   // Retry up to 10 times to produce the message
-	tlsConfig, err := createTlsConfiguration(k)
+	// Wait for all in-sync replicas to ack the message
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	// Retry up to 10 times to produce the message
+	config.Producer.Retry.Max = 10
+
+	// Legacy support ssl config
+	if k.Certificate != "" {
+		k.SSLCert = k.Certificate
+		k.SSLCA = k.CA
+		k.SSLKey = k.Key
+	}
+
+	tlsConfig, err := internal.GetTLSConfig(
+		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
 	if err != nil {
 		return err
 	}

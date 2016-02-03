@@ -23,20 +23,20 @@ type Librato struct {
 }
 
 var sampleConfig = `
-  # Librator API Docs
-  # http://dev.librato.com/v1/metrics-authentication
+  ### Librator API Docs
+  ### http://dev.librato.com/v1/metrics-authentication
 
-  # Librato API user
+  ### Librato API user
   api_user = "telegraf@influxdb.com" # required.
 
-  # Librato API token
+  ### Librato API token
   api_token = "my-secret-token" # required.
 
-  # Tag Field to populate source attribute (optional)
-  # This is typically the _hostname_ from which the metric was obtained.
+  ### Tag Field to populate source attribute (optional)
+  ### This is typically the _hostname_ from which the metric was obtained.
   source_tag = "hostname"
 
-  # Connection timeout.
+  ### Connection timeout.
   # timeout = "5s"
 `
 

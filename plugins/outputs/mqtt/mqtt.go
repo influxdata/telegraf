@@ -1,11 +1,7 @@
 package mqtt
 
 import (
-	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"sync"
 
@@ -15,7 +11,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const MaxClientIdLen = 8
 const MaxRetryCount = 3
 const ClientIdPrefix = "telegraf"
 
@@ -27,22 +22,39 @@ type MQTT struct {
 	Timeout     internal.Duration
 	TopicPrefix string
 
-	Client *paho.Client
-	Opts   *paho.ClientOptions
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+
+	client *paho.Client
+	opts   *paho.ClientOptions
+
 	sync.Mutex
 }
 
 var sampleConfig = `
   servers = ["localhost:1883"] # required.
 
-  # MQTT outputs send metrics to this topic format
-  #    "<topic_prefix>/host/<hostname>/<pluginname>/"
-  #   ex: prefix/host/web01.example.com/mem/available
-  # topic_prefix = "prefix"
+  ### MQTT outputs send metrics to this topic format
+  ###    "<topic_prefix>/<hostname>/<pluginname>/"
+  ###   ex: prefix/host/web01.example.com/mem
+  topic_prefix = "telegraf"
 
-  # username and password to connect MQTT server.
+  ### username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
+
+  ### Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ### Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (m *MQTT) Connect() error {
@@ -50,13 +62,13 @@ func (m *MQTT) Connect() error {
 	m.Lock()
 	defer m.Unlock()
 
-	m.Opts, err = m.CreateOpts()
+	m.opts, err = m.createOpts()
 	if err != nil {
 		return err
 	}
 
-	m.Client = paho.NewClient(m.Opts)
-	if token := m.Client.Connect(); token.Wait() && token.Error() != nil {
+	m.client = paho.NewClient(m.opts)
+	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
 
@@ -64,8 +76,8 @@ func (m *MQTT) Connect() error {
 }
 
 func (m *MQTT) Close() error {
-	if m.Client.IsConnected() {
-		m.Client.Disconnect(20)
+	if m.client.IsConnected() {
+		m.client.Disconnect(20)
 	}
 	return nil
 }
@@ -94,12 +106,11 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		if m.TopicPrefix != "" {
 			t = append(t, m.TopicPrefix)
 		}
-		tm := strings.Split(p.Name(), "_")
-		if len(tm) < 2 {
-			tm = []string{p.Name(), "stat"}
+		if hostname != "" {
+			t = append(t, hostname)
 		}
 
-		t = append(t, "host", hostname, tm[0], tm[1])
+		t = append(t, p.Name())
 		topic := strings.Join(t, "/")
 
 		value := p.String()
@@ -113,7 +124,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 }
 
 func (m *MQTT) publish(topic, body string) error {
-	token := m.Client.Publish(topic, 0, false, body)
+	token := m.client.Publish(topic, 0, false, body)
 	token.Wait()
 	if token.Error() != nil {
 		return token.Error()
@@ -121,25 +132,22 @@ func (m *MQTT) publish(topic, body string) error {
 	return nil
 }
 
-func (m *MQTT) CreateOpts() (*paho.ClientOptions, error) {
+func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
 
-	clientId := getRandomClientId()
-	opts.SetClientID(clientId)
+	opts.SetClientID("Telegraf-Output-" + internal.RandomString(5))
 
-	TLSConfig := &tls.Config{InsecureSkipVerify: false}
-	ca := "" // TODO
-	scheme := "tcp"
-	if ca != "" {
-		scheme = "ssl"
-		certPool, err := getCertPool(ca)
-		if err != nil {
-			return nil, err
-		}
-		TLSConfig.RootCAs = certPool
+	tlsCfg, err := internal.GetTLSConfig(
+		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
 	}
-	TLSConfig.InsecureSkipVerify = true // TODO
-	opts.SetTLSConfig(TLSConfig)
+
+	scheme := "tcp"
+	if tlsCfg != nil {
+		scheme = "ssl"
+		opts.SetTLSConfig(tlsCfg)
+	}
 
 	user := m.Username
 	if user == "" {
@@ -160,27 +168,6 @@ func (m *MQTT) CreateOpts() (*paho.ClientOptions, error) {
 	}
 	opts.SetAutoReconnect(true)
 	return opts, nil
-}
-
-func getRandomClientId() string {
-	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var bytes = make([]byte, MaxClientIdLen)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
-	}
-	return ClientIdPrefix + "-" + string(bytes)
-}
-
-func getCertPool(pemPath string) (*x509.CertPool, error) {
-	certs := x509.NewCertPool()
-
-	pemData, err := ioutil.ReadFile(pemPath)
-	if err != nil {
-		return nil, err
-	}
-	certs.AppendCertsFromPEM(pemData)
-	return certs, nil
 }
 
 func init() {

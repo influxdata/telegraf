@@ -14,9 +14,9 @@ type NSQ struct {
 }
 
 var sampleConfig = `
-  # Location of nsqd instance listening on TCP
+  ### Location of nsqd instance listening on TCP
   server = "localhost:4150"
-  # NSQ topic for producer messages
+  ### NSQ topic for producer messages
   topic = "telegraf"
 `
 
