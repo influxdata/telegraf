@@ -55,7 +55,7 @@ func newRunnerMock(out []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(e *Exec) ([]byte, error) {
+func (r runnerMock) Run(e *Exec, command string) ([]byte, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -64,8 +64,8 @@ func (r runnerMock) Run(e *Exec) ([]byte, error) {
 
 func TestExec(t *testing.T) {
 	e := &Exec{
-		runner:  newRunnerMock([]byte(validJson), nil),
-		Command: "testcommand arg1",
+		runner:   newRunnerMock([]byte(validJson), nil),
+		Commands: []string{"testcommand arg1"},
 	}
 
 	var acc testutil.Accumulator
@@ -88,8 +88,8 @@ func TestExec(t *testing.T) {
 
 func TestExecMalformed(t *testing.T) {
 	e := &Exec{
-		runner:  newRunnerMock([]byte(malformedJson), nil),
-		Command: "badcommand arg1",
+		runner:   newRunnerMock([]byte(malformedJson), nil),
+		Commands: []string{"badcommand arg1"},
 	}
 
 	var acc testutil.Accumulator
@@ -100,8 +100,8 @@ func TestExecMalformed(t *testing.T) {
 
 func TestCommandError(t *testing.T) {
 	e := &Exec{
-		runner:  newRunnerMock(nil, fmt.Errorf("exit status code 1")),
-		Command: "badcommand",
+		runner:   newRunnerMock(nil, fmt.Errorf("exit status code 1")),
+		Commands: []string{"badcommand"},
 	}
 
 	var acc testutil.Accumulator
@@ -113,7 +113,7 @@ func TestCommandError(t *testing.T) {
 func TestLineProtocolParse(t *testing.T) {
 	e := &Exec{
 		runner:     newRunnerMock([]byte(lineProtocol), nil),
-		Command:    "line-protocol",
+		Commands:   []string{"line-protocol"},
 		DataFormat: "influx",
 	}
 
@@ -135,7 +135,7 @@ func TestLineProtocolParse(t *testing.T) {
 func TestLineProtocolParseMultiple(t *testing.T) {
 	e := &Exec{
 		runner:     newRunnerMock([]byte(lineProtocolMulti), nil),
-		Command:    "line-protocol",
+		Commands:   []string{"line-protocol"},
 		DataFormat: "influx",
 	}
 
@@ -162,7 +162,7 @@ func TestLineProtocolParseMultiple(t *testing.T) {
 func TestInvalidDataFormat(t *testing.T) {
 	e := &Exec{
 		runner:     newRunnerMock([]byte(lineProtocol), nil),
-		Command:    "bad data format",
+		Commands:   []string{"bad data format"},
 		DataFormat: "FooBar",
 	}
 
