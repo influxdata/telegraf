@@ -24,7 +24,7 @@ func (p *Parser) Parse(dataFormat string, out []byte, acc telegraf.Accumulator) 
 	var metric telegraf.Metric
 
 	switch dataFormat {
-	case "","json":
+	case "", "json":
 		var jsonOut interface{}
 		err = json.Unmarshal(out, &jsonOut)
 		if err != nil {

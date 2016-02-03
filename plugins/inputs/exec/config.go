@@ -1,13 +1,12 @@
 package exec
 
 import (
-
 	"github.com/influxdata/telegraf/internal/encoding/graphite"
 )
 
 const (
-// DefaultSeparator is the default join character to use when joining multiple
-// measurment parts in a template.
+	// DefaultSeparator is the default join character to use when joining multiple
+	// measurment parts in a template.
 	DefaultSeparator = "."
 )
 
@@ -36,4 +35,3 @@ func (c *Config) WithDefaults() *Config {
 	}
 	return &d
 }
-
