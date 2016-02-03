@@ -14,14 +14,14 @@ const (
 )
 
 // Config represents the configuration for Graphite endpoints.
-type InnerConfig struct {
+type Config struct {
 	Separator string
 	Tags      []string
 	Templates []string
 }
 
 // DefaultTags returns the config's tags.
-func (c *InnerConfig) DefaultTags() models.Tags {
+func (c *Config) DefaultTags() models.Tags {
 	tags := models.Tags{}
 	for _, t := range c.Tags {
 		parts := strings.Split(t, "=")
@@ -31,7 +31,7 @@ func (c *InnerConfig) DefaultTags() models.Tags {
 }
 
 // Validate validates the config's templates and tags.
-func (c *InnerConfig) Validate() error {
+func (c *Config) Validate() error {
 	if err := c.validateTemplates(); err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (c *InnerConfig) Validate() error {
 	return nil
 }
 
-func (c *InnerConfig) validateTemplates() error {
+func (c *Config) validateTemplates() error {
 	// map to keep track of filters we see
 	filters := map[string]struct{}{}
 
@@ -110,7 +110,7 @@ func (c *InnerConfig) validateTemplates() error {
 	return nil
 }
 
-func (c *InnerConfig) validateTags() error {
+func (c *Config) validateTags() error {
 	for _, t := range c.Tags {
 		if err := c.validateTag(t); err != nil {
 			return err
@@ -119,7 +119,7 @@ func (c *InnerConfig) validateTags() error {
 	return nil
 }
 
-func (c *InnerConfig) validateTemplate(template string) error {
+func (c *Config) validateTemplate(template string) error {
 	hasMeasurement := false
 	for _, p := range strings.Split(template, ".") {
 		if p == "measurement" || p == "measurement*" {
@@ -134,7 +134,7 @@ func (c *InnerConfig) validateTemplate(template string) error {
 	return nil
 }
 
-func (c *InnerConfig) validateFilter(filter string) error {
+func (c *Config) validateFilter(filter string) error {
 	for _, p := range strings.Split(filter, ".") {
 		if p == "" {
 			return fmt.Errorf("filter contains blank section: %s", filter)
@@ -147,7 +147,7 @@ func (c *InnerConfig) validateFilter(filter string) error {
 	return nil
 }
 
-func (c *InnerConfig) validateTag(keyValue string) error {
+func (c *Config) validateTag(keyValue string) error {
 	parts := strings.Split(keyValue, "=")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid template tags: '%s'", keyValue)

@@ -16,6 +16,9 @@ import (
 
 const sampleConfig = `
   # Shell/commands array
+  # compatible with old version
+  # we can still use the old command configuration
+  # command = "/usr/bin/mycollector --foo=bar"
   commands = ["/tmp/test.sh","/tmp/test2.sh"]
 
   # Data format to consume. This can be "json", "influx" or "graphite" (line-protocol)
@@ -52,6 +55,7 @@ const sampleConfig = `
 
 type Exec struct {
 	Commands   []string
+	Command    string
 	DataFormat string
 
 	Separator string
@@ -84,8 +88,6 @@ func (c CommandRunner) Run(e *Exec, command string) ([]byte, error) {
 	}
 
 	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
-	//name := strings.Replace(filepath.Base(cmd.Path), "/", "_", -1)
-	//name = strings.Replace(name, ".", "_", -1)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -118,6 +120,10 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator) {
 func (e *Exec) initConfig() error {
 	e.Lock()
 	defer e.Unlock()
+
+	if e.Command != "" && len(e.Commands) < 1 {
+		e.Commands = []string{e.Command}
+	}
 
 	c := NewConfig(e.Commands, e.Tags, e.Templates, e.Separator)
 	c.WithDefaults()
