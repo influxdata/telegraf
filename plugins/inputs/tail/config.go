@@ -12,7 +12,7 @@ const (
 type Config struct {
 	Files []string
 
-	graphite.InnerConfig
+	graphite.Config
 }
 
 // WithDefaults takes the given config and returns a new config with any required

@@ -107,7 +107,7 @@
 # Read flattened metrics from one or more commands that output JSON to stdout
 [[inputs.exec]]
   # the command to run
-  commands = ["/usr/bin/mycollector --foo=bar"]
+  command = "/usr/bin/mycollector --foo=bar"
   name_suffix = "_mycollector"
 
 # Read metrics of haproxy, via socket or csv stats page

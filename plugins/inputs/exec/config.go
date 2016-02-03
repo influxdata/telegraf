@@ -13,7 +13,7 @@ const (
 // Config represents the configuration for Graphite endpoints.
 type Config struct {
 	Commands []string
-	graphite.InnerConfig
+	graphite.Config
 }
 
 // New Config instance.

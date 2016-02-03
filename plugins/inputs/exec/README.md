@@ -28,6 +28,9 @@ and strings will be ignored.
 # Read flattened metrics from one or more commands that output JSON to stdout
 [[inputs.exec]]
   # Shell/commands array
+  # compatible with old version
+  # we can still use the old command configuration
+  # command = "/usr/bin/mycollector --foo=bar"
   commands = ["/tmp/test.sh","/tmp/test2.sh"]
 
   # Data format to consume. This can be "json", "influx" or "graphite" (line-protocol)
