@@ -17,8 +17,10 @@ type Kafka struct {
 	Topics         []string
 	ZookeeperPeers []string
 	Consumer       *consumergroup.ConsumerGroup
-	PointBuffer    int
-	Offset         string
+	MetricBuffer   int
+	// TODO remove PointBuffer, legacy support
+	PointBuffer int
+	Offset      string
 
 	sync.Mutex
 
@@ -26,7 +28,7 @@ type Kafka struct {
 	in <-chan *sarama.ConsumerMessage
 	// channel for all kafka consumer errors
 	errs <-chan *sarama.ConsumerError
-	// channel for all incoming parsed kafka points
+	// channel for all incoming parsed kafka metrics
 	metricC chan telegraf.Metric
 	done    chan struct{}
 
@@ -42,8 +44,8 @@ var sampleConfig = `
   zookeeper_peers = ["localhost:2181"]
   # the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
-  # Maximum number of points to buffer between collection intervals
-  point_buffer = 100000
+  # Maximum number of metrics to buffer between collection intervals
+  metric_buffer = 100000
   # Offset (must be either "oldest" or "newest")
   offset = "oldest"
 `
@@ -90,10 +92,13 @@ func (k *Kafka) Start() error {
 	}
 
 	k.done = make(chan struct{})
-	if k.PointBuffer == 0 {
-		k.PointBuffer = 100000
+	if k.PointBuffer == 0 && k.MetricBuffer == 0 {
+		k.MetricBuffer = 100000
+	} else if k.PointBuffer > 0 {
+		// Legacy support of PointBuffer field TODO remove
+		k.MetricBuffer = k.PointBuffer
 	}
-	k.metricC = make(chan telegraf.Metric, k.PointBuffer)
+	k.metricC = make(chan telegraf.Metric, k.MetricBuffer)
 
 	// Start the kafka message reader
 	go k.parser()
@@ -112,7 +117,7 @@ func (k *Kafka) parser() {
 		case err := <-k.errs:
 			log.Printf("Kafka Consumer Error: %s\n", err.Error())
 		case msg := <-k.in:
-			metrics, err := telegraf.ParseMetrics(msg.Value)
+			metrics, err := telegraf.NewMetricParser().Parse(msg.Value)
 			if err != nil {
 				log.Printf("Could not parse kafka message: %s, error: %s",
 					string(msg.Value), err.Error())
@@ -124,7 +129,7 @@ func (k *Kafka) parser() {
 					continue
 				default:
 					log.Printf("Kafka Consumer buffer is full, dropping a metric." +
-						" You may want to increase the point_buffer setting")
+						" You may want to increase the metric_buffer setting")
 				}
 			}
 
@@ -151,10 +156,10 @@ func (k *Kafka) Stop() {
 func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 	k.Lock()
 	defer k.Unlock()
-	npoints := len(k.metricC)
-	for i := 0; i < npoints; i++ {
-		point := <-k.metricC
-		acc.AddFields(point.Name(), point.Fields(), point.Tags(), point.Time())
+	nmetrics := len(k.metricC)
+	for i := 0; i < nmetrics; i++ {
+		metric := <-k.metricC
+		acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
 	}
 	return nil
 }

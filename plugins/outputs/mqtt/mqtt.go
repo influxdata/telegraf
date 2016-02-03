@@ -11,9 +11,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const MaxRetryCount = 3
-const ClientIdPrefix = "telegraf"
-
 type MQTT struct {
 	Servers     []string `toml:"servers"`
 	Username    string
@@ -21,6 +18,7 @@ type MQTT struct {
 	Database    string
 	Timeout     internal.Duration
 	TopicPrefix string
+	QoS         int `toml:"qos"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -39,6 +37,8 @@ type MQTT struct {
 
 var sampleConfig = `
   servers = ["localhost:1883"] # required.
+  ### MQTT QoS, must be 0, 1, or 2
+  qos = 0
 
   ### MQTT outputs send metrics to this topic format
   ###    "<topic_prefix>/<hostname>/<pluginname>/"
@@ -61,6 +61,9 @@ func (m *MQTT) Connect() error {
 	var err error
 	m.Lock()
 	defer m.Unlock()
+	if m.QoS > 2 || m.QoS < 0 {
+		return fmt.Errorf("MQTT Output, invalid QoS value: %d", m.QoS)
+	}
 
 	m.opts, err = m.createOpts()
 	if err != nil {
@@ -124,7 +127,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 }
 
 func (m *MQTT) publish(topic, body string) error {
-	token := m.client.Publish(topic, 0, false, body)
+	token := m.client.Publish(topic, byte(m.QoS), false, body)
 	token.Wait()
 	if token.Error() != nil {
 		return token.Error()
