@@ -55,3 +55,36 @@ func (p *Parser) Parse(dataFormat string, out []byte, acc telegraf.Accumulator) 
 
 	return err
 }
+
+func (p *Parser) ParseSocketLines(dataFormat string, buf []byte) ([]telegraf.Metric, error) {
+	var err error
+	var metrics []telegraf.Metric
+
+	switch dataFormat {
+	case "", "graphite":
+		metrics, err = p.graphiteParser.ParseMetrics(buf)
+	case "influx":
+		metrics, err = telegraf.ParseMetrics(buf)
+	default:
+		err = fmt.Errorf("Unsupported data format: %s. Must be either influx or graphite ", dataFormat)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return metrics, nil
+}
+
+func (p *Parser) ParseSocketLine(dataFormat, line string) (telegraf.Metric, error) {
+	metrics, err := p.ParseSocketLines(dataFormat, []byte(line+"\n"))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(metrics) < 1 {
+		return nil, fmt.Errorf("Can not parse the line: %s, for data format: %s ", line, dataFormat)
+	}
+
+	return metrics[0], nil
+}
