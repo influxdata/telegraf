@@ -35,6 +35,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/rethinkdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sensors"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp"
+	_ "github.com/influxdata/telegraf/plugins/inputs/socket"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
 	_ "github.com/influxdata/telegraf/plugins/inputs/statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/system"
