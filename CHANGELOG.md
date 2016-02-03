@@ -9,6 +9,7 @@
 - [#601](https://github.com/influxdata/telegraf/issues/601): Warn when overwriting cached metrics.
 - [#614](https://github.com/influxdata/telegraf/pull/614): PowerDNS input plugin. Thanks @Kasen!
 - [#617](https://github.com/influxdata/telegraf/pull/617): exec plugin: parse influx line protocol in addition to JSON.
+- [#628](https://github.com/influxdata/telegraf/pull/628): Windows perf counters: pre-vista support
 
 ### Bugfixes
 - [#595](https://github.com/influxdata/telegraf/issues/595): graphite output should include tags to separate duplicate measurements.
@@ -16,6 +17,7 @@
 - [#600](https://github.com/influxdata/telegraf/issues/600): datadog measurement/field name parsing is wrong.
 - [#602](https://github.com/influxdata/telegraf/issues/602): Fix statsd field name templating.
 - [#612](https://github.com/influxdata/telegraf/pull/612): Docker input panic fix if stats received are nil.
+- [#634](https://github.com/influxdata/telegraf/pull/634): Properly set host headers in httpjson. Thanks @reginaldosousa!
 
 ## v0.10.1 [2016-01-27]
 
