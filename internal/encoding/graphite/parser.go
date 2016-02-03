@@ -122,7 +122,6 @@ func (p *Parser) ParseMetrics(buf []byte) ([]telegraf.Metric, error) {
 		}
 	}
 
-	return metrics, nil
 }
 
 // Parse performs Graphite parsing of a single line.
