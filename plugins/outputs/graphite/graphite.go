@@ -1,6 +1,7 @@
 package graphite
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
@@ -15,10 +16,11 @@ import (
 
 type Graphite struct {
 	// URL is only for backwards compatability
-	Servers []string
-	Prefix  string
-	Timeout int
-	conns   []net.Conn
+	Servers            []string
+	Prefix             string
+	Timeout            int
+	MetricsNameBuilder map[string][]string
+	conns              []net.Conn
 }
 
 var sampleConfig = `
@@ -28,6 +30,11 @@ var sampleConfig = `
   prefix = ""
   # timeout in seconds for the write connection to graphite
   timeout = 2
+  # # Build custom metric name from tags for each plugins  
+  # [graphite.metricsnamebuilder]
+  # # Igore unlisted tags and put metric name after disk name
+  # diskio = ["host","{{metric}}","name","{{field}}"]
+  # disk = ["host","{{metric}}","name","{{field}}"]
 `
 
 func (g *Graphite) Connect() error {
@@ -72,34 +79,16 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var bp []string
 	for _, metric := range metrics {
-		// Get name
-		name := metric.Name()
 		// Convert UnixNano to Unix timestamps
 		timestamp := metric.UnixNano() / 1000000000
-		tag_str := buildTags(metric)
-
 		for field_name, value := range metric.Fields() {
 			// Convert value
 			value_str := fmt.Sprintf("%#v", value)
 			// Write graphite metric
-			var graphitePoint string
-			if name == field_name {
-				graphitePoint = fmt.Sprintf("%s.%s %s %d\n",
-					tag_str,
-					strings.Replace(name, ".", "_", -1),
-					value_str,
-					timestamp)
-			} else {
-				graphitePoint = fmt.Sprintf("%s.%s.%s %s %d\n",
-					tag_str,
-					strings.Replace(name, ".", "_", -1),
-					strings.Replace(field_name, ".", "_", -1),
-					value_str,
-					timestamp)
-			}
-			if g.Prefix != "" {
-				graphitePoint = fmt.Sprintf("%s.%s", g.Prefix, graphitePoint)
-			}
+			graphitePoint := fmt.Sprintf("%s %s %d\n",
+				g.buildMetricName(metric, field_name),
+				value_str,
+				timestamp)
 			bp = append(bp, graphitePoint)
 		}
 	}
@@ -107,7 +96,6 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 	// This will get set to nil if a successful write occurs
 	err := errors.New("Could not write to any Graphite server in cluster\n")
-
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))
 	for _, n := range p {
@@ -127,36 +115,35 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	}
 	return err
 }
-
-func buildTags(metric telegraf.Metric) string {
-	var keys []string
+func (g *Graphite) buildMetricName(metric telegraf.Metric, fieldName string) string {
+	metricName := bytes.NewBufferString(g.Prefix)
+	metricName.WriteString(".")
 	tags := metric.Tags()
-	for k := range tags {
-		if k == "host" {
+	metricsTemplate, ok := g.MetricsNameBuilder[metric.Name()]
+	if !ok {
+		metricsTemplate = []string{"host"}
+		for k := range tags {
+			if k != "host" {
+				metricsTemplate = append(metricsTemplate, k)
+			}
+		}
+		sort.Strings(metricsTemplate[1:])
+		if metric.Name() != fieldName {
+			metricsTemplate = append(metricsTemplate, "{{metric}}")
+		}
+		metricsTemplate = append(metricsTemplate, "{{field}}")
+	}
+	tags["{{metric}}"] = metric.Name()
+	tags["{{field}}"] = fieldName
+	for _, tagName := range metricsTemplate {
+		tagValue, ok := tags[tagName]
+		if !ok || tagValue == "" {
 			continue
 		}
-		keys = append(keys, k)
+		metricName.WriteString(strings.Replace(tagValue, ".", "_", -1))
+		metricName.WriteString(".")
 	}
-	sort.Strings(keys)
-
-	var tag_str string
-	if host, ok := tags["host"]; ok {
-		if len(keys) > 0 {
-			tag_str = strings.Replace(host, ".", "_", -1) + "."
-		} else {
-			tag_str = strings.Replace(host, ".", "_", -1)
-		}
-	}
-
-	for i, k := range keys {
-		tag_value := strings.Replace(tags[k], ".", "_", -1)
-		if i == 0 {
-			tag_str += tag_value
-		} else {
-			tag_str += "." + tag_value
-		}
-	}
-	return tag_str
+	return strings.Trim(metricName.String(), ".")
 }
 
 func init() {
