@@ -103,7 +103,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func TestGraphiteTags(t *testing.T) {
+func TestGraphiteMetricName(t *testing.T) {
 	m1, _ := telegraf.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
@@ -122,12 +122,34 @@ func TestGraphiteTags(t *testing.T) {
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
+	m4, _ := telegraf.NewMetric(
+		"custom1",
+		map[string]string{"host": "192.168.0.1", "afoo": "first", "bfoo": "second"},
+		map[string]interface{}{"value": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m5, _ := telegraf.NewMetric(
+		"custom.2",
+		map[string]string{"host": "192.168.0.1", "afoo": "first", "bfoo": "second"},
+		map[string]interface{}{"value": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	g := Graphite{
+		Prefix: "my.prefix",
+		MetricsNameBuilder: map[string][]string{
+			"custom1":  []string{"host", "afoo", "bfoo"},
+			"custom.2": []string{"{{field}}", "bfoo", "{{metric}}"}},
+	}
+	metricName1 := g.buildMetricName(m1, "value")
+	metricName2 := g.buildMetricName(m2, "value")
+	metricName3 := g.buildMetricName(m3, "value")
+	metricName4 := g.buildMetricName(m4, "value")
+	metricName5 := g.buildMetricName(m5, "value")
 
-	tags1 := buildTags(m1)
-	tags2 := buildTags(m2)
-	tags3 := buildTags(m3)
+	assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement.value", metricName1)
+	assert.Equal(t, "my.prefix.192_168_0_1.first.second.mymeasurement.value", metricName2)
+	assert.Equal(t, "my.prefix.first.second.mymeasurement.value", metricName3)
+	assert.Equal(t, "my.prefix.192_168_0_1.first.second", metricName4)
+	assert.Equal(t, "my.prefix.value.second.custom_2", metricName5)
 
-	assert.Equal(t, "192_168_0_1", tags1)
-	assert.Equal(t, "192_168_0_1.first.second", tags2)
-	assert.Equal(t, "first.second", tags3)
 }
