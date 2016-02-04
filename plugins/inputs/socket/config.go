@@ -9,10 +9,6 @@ const (
 	// DefaultProtocol is the default IP protocol used by the Graphite input.
 	DefaultProtocol = "tcp"
 
-	// DefaultSeparator is the default join character to use when joining multiple
-	// measurment parts in a template.
-	DefaultSeparator = "."
-
 	// DefaultUDPReadBuffer is the default buffer size for the UDP listener.
 	// Sets the size of the operating system's receive buffer associated with
 	// the UDP traffic. Keep in mind that the OS must be able
@@ -36,34 +32,26 @@ type Config struct {
 	graphite.Config
 }
 
-// WithDefaults takes the given config and returns a new config with any required
-// default values set.
-func (c *Config) WithDefaults() *Config {
-	d := *c
-	if d.BindAddress == "" {
-		d.BindAddress = DefaultBindAddress
-	}
-	if d.Protocol == "" {
-		d.Protocol = DefaultProtocol
-	}
-	if d.Separator == "" {
-		d.Separator = DefaultSeparator
-	}
-	if d.UdpReadBuffer == 0 {
-		d.UdpReadBuffer = DefaultUdpReadBuffer
-	}
-	return &d
-}
-
 // New Config instance.
-func NewConfig(bindAddress, protocol string, udpReadBuffer int, separator string, tags []string, templates []string) *Config {
+func NewConfig(bindAddress, protocol string, udpReadBuffer int, separator string, templates []string) *Config {
 	c := &Config{}
+	if bindAddress == "" {
+		bindAddress = DefaultBindAddress
+	}
+	if protocol == "" {
+		protocol = DefaultProtocol
+	}
+	if udpReadBuffer < 0 {
+		udpReadBuffer = DefaultUdpReadBuffer
+	}
+	if separator == "" {
+		separator = graphite.DefaultSeparator
+	}
+
 	c.BindAddress = bindAddress
 	c.Protocol = protocol
 	c.UdpReadBuffer = udpReadBuffer
-
 	c.Separator = separator
-	c.Tags = tags
 	c.Templates = templates
 
 	return c

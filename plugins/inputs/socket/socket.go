@@ -40,7 +40,6 @@ type Socket struct {
 	DataFormat string
 
 	Separator string
-	Tags      []string
 	Templates []string
 
 	mu sync.Mutex
@@ -76,19 +75,15 @@ var sampleConfig = `
   ### If matching multiple measurement files, this string will be used to join the matched values.
   separator = "."
 
-  ### Default tags that will be added to all metrics.  These can be overridden at the template level
-  ### or by tags extracted from metric
-  tags = ["region=north-china", "zone=1c"]
-
   ### Each template line requires a template pattern.  It can have an optional
   ### filter before the template and separated by spaces.  It can also have optional extra
   ### tags following the template.  Multiple tags should be separated by commas and no spaces
   ### similar to the line protocol format.  The can be only one default template.
   ### Templates support below format:
-  ### filter + template
-  ### filter + template + extra tag
-  ### filter + template with field key
-  ### default template. Ignore the first graphite component "servers"
+  ### 1. filter + template
+  ### 2. filter + template + extra tag
+  ### 3. filter + template with field key
+  ### 4. default template
   templates = [
     "*.app env.service.resource.measurement",
     "stats.* .host.measurement* region=us-west,agent=sensu",
@@ -110,18 +105,16 @@ func (s *Socket) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	c := NewConfig(s.BindAddress, s.Protocol, s.UdpReadBuffer, s.Separator, s.Tags, s.Templates)
+	c := NewConfig(s.BindAddress, s.Protocol, s.UdpReadBuffer, s.Separator, s.Templates)
 
-	c.WithDefaults()
 	if err := c.Validate(); err != nil {
 		return fmt.Errorf("Socket input configuration is error: %s ", err.Error())
 	}
 	s.config = c
 
 	graphiteParser, err := graphite.NewParserWithOptions(graphite.Options{
-		Templates:   s.config.Templates,
-		DefaultTags: s.config.DefaultTags(),
-		Separator:   s.config.Separator})
+		Templates: s.config.Templates,
+		Separator: s.config.Separator})
 
 	if err != nil {
 		return fmt.Errorf("Socket input parser config is error: %s ", err.Error())

@@ -3,8 +3,6 @@ package graphite
 import (
 	"fmt"
 	"strings"
-
-	"github.com/influxdata/influxdb/models"
 )
 
 const (
@@ -16,27 +14,12 @@ const (
 // Config represents the configuration for Graphite endpoints.
 type Config struct {
 	Separator string
-	Tags      []string
 	Templates []string
-}
-
-// DefaultTags returns the config's tags.
-func (c *Config) DefaultTags() models.Tags {
-	tags := models.Tags{}
-	for _, t := range c.Tags {
-		parts := strings.Split(t, "=")
-		tags[parts[0]] = parts[1]
-	}
-	return tags
 }
 
 // Validate validates the config's templates and tags.
 func (c *Config) Validate() error {
 	if err := c.validateTemplates(); err != nil {
-		return err
-	}
-
-	if err := c.validateTags(); err != nil {
 		return err
 	}
 
@@ -105,15 +88,6 @@ func (c *Config) validateTemplates() error {
 					return err
 				}
 			}
-		}
-	}
-	return nil
-}
-
-func (c *Config) validateTags() error {
-	for _, t := range c.Tags {
-		if err := c.validateTag(t); err != nil {
-			return err
 		}
 	}
 	return nil

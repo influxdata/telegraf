@@ -35,14 +35,12 @@ func init() {
 // Parser encapsulates a Graphite Parser.
 type Parser struct {
 	matcher *matcher
-	tags    models.Tags
 }
 
 // Options are configurable values that can be provided to a Parser
 type Options struct {
-	Separator   string
-	Templates   []string
-	DefaultTags models.Tags
+	Separator string
+	Templates []string
 }
 
 // NewParserWithOptions returns a graphite parser using the given options
@@ -84,16 +82,15 @@ func NewParserWithOptions(options Options) (*Parser, error) {
 		}
 		matcher.Add(filter, tmpl)
 	}
-	return &Parser{matcher: matcher, tags: options.DefaultTags}, nil
+	return &Parser{matcher: matcher}, nil
 }
 
 // NewParser returns a GraphiteParser instance.
-func NewParser(templates []string, defaultTags models.Tags) (*Parser, error) {
+func NewParser(templates []string) (*Parser, error) {
 	return NewParserWithOptions(
 		Options{
-			Templates:   templates,
-			DefaultTags: defaultTags,
-			Separator:   DefaultSeparator,
+			Templates: templates,
+			Separator: DefaultSeparator,
 		})
 }
 
@@ -182,12 +179,6 @@ func (p *Parser) Parse(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	// Set the default tags on the point if they are not already set
-	for k, v := range p.tags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
-	}
 	return telegraf.NewMetric(measurement, tags, fieldValues, timestamp)
 }
 
@@ -202,12 +193,7 @@ func (p *Parser) ApplyTemplate(line string) (string, map[string]string, string, 
 	// decode the name and tags
 	template := p.matcher.Match(fields[0])
 	name, tags, field, err := template.Apply(fields[0])
-	// Set the default tags on the point if they are not already set
-	for k, v := range p.tags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
-	}
+
 	return name, tags, field, err
 }
 
