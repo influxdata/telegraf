@@ -21,6 +21,11 @@ type Mesos struct {
 	MetricsCol []string `toml:"metrics_collection"`
 }
 
+var defaultMetrics = []string{
+	"resources", "master", "system", "slaves", "frameworks",
+	"tasks", "messages", "evqueue", "messages", "registrar",
+}
+
 // SampleConfig returns a sample configuration block
 func (m *Mesos) SampleConfig() string {
 	return sampleConfig
@@ -64,6 +69,27 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 		return errors.New(strings.Join(errorStrings, "\n"))
 	}
 	return nil
+}
+
+func metricsDiff(w []string) []string {
+	b := []string{}
+	s := make(map[string]bool)
+
+	if len(w) == 0 {
+		return b
+	}
+
+	for _, v := range w {
+		s[v] = true
+	}
+
+	for _, d := range defaultMetrics {
+		if _, ok := s[d]; !ok {
+			b = append(b, d)
+		}
+	}
+
+	return b
 }
 
 func masterBlocks(g string) []string {
@@ -215,23 +241,20 @@ var sampleConfig = `
   servers = ["localhost:5050"]
   # Metrics groups to be collected.
   # Default, all enabled.
-  metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueues","registrar"]
+  metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
 `
 
 // removeGroup(), remove blacklisted groups
 func (m *Mesos) removeGroup(j *map[string]interface{}) {
 	var ok bool
-	u := map[string]bool{}
 
-	for _, v := range m.MetricsCol {
-		for _, k := range masterBlocks(v) {
-			u[k] = true
-		}
-	}
+	b := metricsDiff(m.MetricsCol)
 
-	for k, _ := range u {
-		if _, ok = (*j)[k]; ok {
-			delete((*j), k)
+	for _, k := range b {
+		for _, v := range masterBlocks(k) {
+			if _, ok = (*j)[v]; ok {
+				delete((*j), v)
+			}
 		}
 	}
 }

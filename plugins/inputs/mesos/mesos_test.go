@@ -89,29 +89,25 @@ func TestRemoveGroup(t *testing.T) {
 	//t.Skip("needs refactoring")
 	// FIXME: removeGroup() behavior is the opposite as it was,
 	// this test has to be refactored
-	j := []string{
-		"resources", "master",
-		"system", "slaves", "frameworks",
-		"tasks", "messages", "evqueue",
-		"messages", "registrar",
-	}
-
 	generateMetrics()
 
-	for _, v := range j {
-		m := Mesos{
-			MetricsCol: []string{v},
-		}
-		m.removeGroup(&mesosMetrics)
+	m := Mesos{
+		MetricsCol: []string{
+			"resources", "master", "registrar",
+		},
+	}
+	b := []string{
+		"system", "slaves", "frameworks",
+		"messages", "evqueue",
+	}
+
+	m.removeGroup(&mesosMetrics)
+
+	for _, v := range b {
 		for _, x := range masterBlocks(v) {
 			if _, ok := mesosMetrics[x]; ok {
 				t.Errorf("Found key %s, it should be gone.", x)
 			}
 		}
 	}
-
-	if len(mesosMetrics) > 0 {
-		t.Error("Keys were left at slice sample")
-	}
-	//Test for wrong keys
 }
