@@ -83,6 +83,7 @@ func TestGraphiteOK(t *testing.T) {
 	wg.Add(1)
 	// Waiting TCPserver
 	wg.Wait()
+	require.NoError(t, err2)
 	g.Close()
 }
 

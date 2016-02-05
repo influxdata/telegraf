@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/internal/etcd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 )
@@ -20,6 +21,11 @@ var fDebug = flag.Bool("debug", false,
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
+var fEtcd = flag.String("etcd", "", "etcd url where configuration is stored")
+var fEtcdSendConfigDir = flag.String("etcdwriteconfigdir", "", "store the following config dir to etcd")
+var fEtcdSendConfig = flag.String("etcdwriteconfig", "", "store the following config file to etcd")
+var fEtcdSendLabel = flag.String("etcdwritelabel", "", "store config file to etcd with this label")
+var fEtcdReadLabels = flag.String("etcdreadlabels", "", "read config from etcd using labels (comma-separated)")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -53,16 +59,20 @@ Usage:
 
 The flags are:
 
-  -config <file>     configuration file to load
-  -test              gather metrics once, print them to stdout, and exit
-  -sample-config     print out full sample configuration to stdout
-  -config-directory  directory containing additional *.conf files
-  -input-filter      filter the input plugins to enable, separator is :
-  -output-filter     filter the output plugins to enable, separator is :
-  -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
-  -debug             print metrics as they're generated to stdout
-  -quiet             run in quiet mode
-  -version           print the version to stdout
+  -config <file>      configuration file to load
+  -test               gather metrics once, print them to stdout, and exit
+  -sample-config      print out full sample configuration to stdout
+  -config-directory   directory containing additional *.conf files
+  -etcdwriteconfigdir store the following config dir to etcd
+  -etcdwriteconfig    store the following config file to etcd
+  -etcdwritelabel     store config file to etcd with this label
+  -etcdreadlabels     read config from etcd using labels (comma-separated)
+  -input-filter       filter the input plugins to enable, separator is :
+  -output-filter      filter the output plugins to enable, separator is :
+  -usage              print usage for a plugin, ie, 'telegraf -usage mysql'
+  -debug              print metrics as they're generated to stdout
+  -quiet              run in quiet mode
+  -version            print the version to stdout
 
 Examples:
 
@@ -83,63 +93,138 @@ Examples:
 `
 
 func main() {
+	// Read flags
+    flag.Usage = func() { usageExit(0) }
+	flag.Parse()
+	if flag.NFlag() == 0 {
+		usageExit(0)
+	}
+
+	// Prepare signals handling
 	reload := make(chan bool, 1)
 	reload <- true
-	for <-reload {
-		reload <- false
-		flag.Usage = func() { usageExit(0) }
-		flag.Parse()
+	shutdown := make(chan struct{})
+	signals := make(chan os.Signal)
+	signal.Notify(signals, os.Interrupt, syscall.SIGHUP)
 
-		if flag.NFlag() == 0 {
-			usageExit(0)
+	// Prepare etcd if needed
+	var e *etcd.EtcdClient
+	if *fEtcd != "" {
+		e = etcd.NewEtcdClient(*fEtcd, "/telegraf")
+		if *fEtcdSendConfig == "" && *fEtcdSendLabel == "" && *fEtcdSendConfigDir == "" {
+			go e.LaunchWatcher(shutdown, signals)
 		}
+	}
 
-		var inputFilters []string
-		if *fInputFiltersLegacy != "" {
-			inputFilter := strings.TrimSpace(*fInputFiltersLegacy)
-			inputFilters = strings.Split(":"+inputFilter+":", ":")
-		}
-		if *fInputFilters != "" {
-			inputFilter := strings.TrimSpace(*fInputFilters)
-			inputFilters = strings.Split(":"+inputFilter+":", ":")
-		}
-
-		var outputFilters []string
-		if *fOutputFiltersLegacy != "" {
-			outputFilter := strings.TrimSpace(*fOutputFiltersLegacy)
-			outputFilters = strings.Split(":"+outputFilter+":", ":")
-		}
-		if *fOutputFilters != "" {
-			outputFilter := strings.TrimSpace(*fOutputFilters)
-			outputFilters = strings.Split(":"+outputFilter+":", ":")
-		}
-
-		if *fVersion {
-			v := fmt.Sprintf("Telegraf - Version %s", Version)
-			fmt.Println(v)
-			return
-		}
-
-		if *fSampleConfig {
-			config.PrintSampleConfig(inputFilters, outputFilters)
-			return
-		}
-
-		if *fUsage != "" {
-			if err := config.PrintInputConfig(*fUsage); err != nil {
-				if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
-					log.Fatalf("%s and %s", err, err2)
-				}
+	// Handle signals
+	go func() {
+		for {
+			sig := <-signals
+			if sig == os.Interrupt {
+				close(shutdown)
+			} else if sig == syscall.SIGHUP {
+				log.Print("Reloading Telegraf config\n")
+				<-reload
+				reload <- true
+				close(shutdown)
 			}
-			return
 		}
+	}()
 
+	// Prepare inputs
+	var inputFilters []string
+	if *fInputFiltersLegacy != "" {
+		inputFilter := strings.TrimSpace(*fInputFiltersLegacy)
+		inputFilters = strings.Split(":"+inputFilter+":", ":")
+	}
+	if *fInputFilters != "" {
+		inputFilter := strings.TrimSpace(*fInputFilters)
+		inputFilters = strings.Split(":"+inputFilter+":", ":")
+	}
+
+	// Prepare outputs
+	var outputFilters []string
+	if *fOutputFiltersLegacy != "" {
+		outputFilter := strings.TrimSpace(*fOutputFiltersLegacy)
+		outputFilters = strings.Split(":"+outputFilter+":", ":")
+	}
+	if *fOutputFilters != "" {
+		outputFilter := strings.TrimSpace(*fOutputFilters)
+		outputFilters = strings.Split(":"+outputFilter+":", ":")
+	}
+
+	// Print version
+	if *fVersion {
+		v := fmt.Sprintf("Telegraf - Version %s", Version)
+		fmt.Println(v)
+		return
+	}
+
+	// Print sample config
+	if *fSampleConfig {
+		config.PrintSampleConfig(inputFilters, outputFilters)
+		return
+	}
+
+	// Print usage
+	if *fUsage != "" {
+		if err := config.PrintInputConfig(*fUsage); err != nil {
+			if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
+				log.Fatalf("%s and %s", err, err2)
+			}
+		}
+		return
+	}
+
+	for <-reload {
+		// Reset signal handler vars
+		shutdown = make(chan struct{})
+		reload <- false
+
+		// Prepare config
 		var (
 			c   *config.Config
 			err error
 		)
 
-		if *fConfig != "" {
+		if *fEtcd != "" {
+			c = config.NewConfig()
+			c.OutputFilters = outputFilters
+			c.InputFilters = inputFilters
+			if *fEtcdSendConfigDir != "" {
+				// TODO check config format before write it
+				// Write config dir to etcd
+				err = c.LoadDirectory(*fEtcdSendConfigDir)
+				if err != nil {
+					log.Fatal(err)
+				}
+				err = e.WriteConfigDir(*fEtcdSendConfigDir)
+				if err != nil {
+					log.Fatal(err)
+				}
+				return
+			} else if *fEtcdSendConfig != "" && *fEtcdSendLabel != "" {
+				// TODO check config format before write it
+				// Write config to etcd
+				err = c.LoadConfig(*fEtcdSendConfig)
+				if err != nil {
+					log.Fatal(err)
+				}
+				err = e.WriteLabelConfig(*fEtcdSendLabel, *fEtcdSendConfig)
+				if err != nil {
+					log.Fatal(err)
+				}
+				return
+			} else {
+				// Read config to etcd
+				log.Printf("Config read from etcd with labels %s\n", *fEtcdReadLabels)
+				c, err = e.ReadConfig(c, *fEtcdReadLabels)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		} else if *fConfig != "" {
+			// Read config from file
 			c = config.NewConfig()
 			c.OutputFilters = outputFilters
 			c.InputFilters = inputFilters
@@ -152,6 +237,7 @@ func main() {
 			os.Exit(1)
 		}
 
+		// Read config dir
 		if *fConfigDirectoryLegacy != "" {
 			err = c.LoadDirectory(*fConfigDirectoryLegacy)
 			if err != nil {
@@ -159,12 +245,14 @@ func main() {
 			}
 		}
 
+		// Read config dir
 		if *fConfigDirectory != "" {
 			err = c.LoadDirectory(*fConfigDirectory)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
+		// check config
 		if len(c.Outputs) == 0 {
 			log.Fatalf("Error: no outputs found, did you provide a valid config file?")
 		}
@@ -197,22 +285,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		shutdown := make(chan struct{})
-		signals := make(chan os.Signal)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP)
-		go func() {
-			sig := <-signals
-			if sig == os.Interrupt {
-				close(shutdown)
-			}
-			if sig == syscall.SIGHUP {
-				log.Printf("Reloading Telegraf config\n")
-				<-reload
-				reload <- true
-				close(shutdown)
-			}
-		}()
 
 		log.Printf("Starting Telegraf (version %s)\n", Version)
 		log.Printf("Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
