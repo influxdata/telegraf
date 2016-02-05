@@ -95,8 +95,11 @@ Now let's say we have the following configuration:
 
 ```
 [[inputs.exec]]
-  # the command to run
-  command = "/usr/bin/line_protocol_collector"
+  # Shell/commands array
+  # compatible with old version
+  # we can still use the old command configuration
+  # command = "/usr/bin/line_protocol_collector"
+  commands = ["/usr/bin/line_protocol_collector","/tmp/test2.sh"]
 
   # Data format to consume. This can be "json" or "influx" (line-protocol)
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
