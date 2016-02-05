@@ -3,7 +3,6 @@ package tail
 import (
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"strings"
 	"sync"
@@ -11,7 +10,6 @@ import (
 	"github.com/hpcloud/tail"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/encoding"
-	"github.com/influxdata/telegraf/internal/encoding/graphite"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	_ "github.com/influxdata/telegraf/internal/encoding/graphite"
@@ -138,13 +136,6 @@ func (t *Tail) handleLine(line string) {
 	// Parse it.
 	metric, err := t.encodingParser.ParseLine(line)
 	if err != nil {
-		switch err := err.(type) {
-		case *graphite.UnsupposedValueError:
-			// Graphite ignores NaN values with no error.
-			if math.IsNaN(err.Value) {
-				return
-			}
-		}
 		t.logger.Printf("unable to parse line: %s: %s", line, err)
 		return
 	}
