@@ -10,8 +10,11 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/encoding"
-	"github.com/influxdata/telegraf/internal/encoding/graphite"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	_ "github.com/influxdata/telegraf/internal/encoding/graphite"
+	_ "github.com/influxdata/telegraf/internal/encoding/influx"
+	_ "github.com/influxdata/telegraf/internal/encoding/json"
 )
 
 const sampleConfig = `
@@ -57,9 +60,7 @@ type Exec struct {
 	Separator string
 	Templates []string
 
-	encodingParser *encoding.Parser
-
-	config *Config
+	encodingParser encoding.Parser
 
 	initedConfig bool
 
@@ -107,8 +108,13 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator) {
 		return
 	}
 
-	if err = e.encodingParser.Parse(e.DataFormat, out, acc); err != nil {
+	metrics, err := e.encodingParser.Parse(out)
+	if err != nil {
 		e.errc <- err
+	} else {
+		for _, metric := range metrics {
+			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+		}
 	}
 }
 
@@ -120,22 +126,21 @@ func (e *Exec) initConfig() error {
 		e.Commands = []string{e.Command}
 	}
 
-	c := NewConfig(e.Commands, e.Templates, e.Separator)
-	if err := c.Validate(); err != nil {
-		return fmt.Errorf("exec configuration is error: %s ", err.Error())
-
+	if e.DataFormat == "" {
+		e.DataFormat = "json"
 	}
-	e.config = c
 
-	graphiteParser, err := graphite.NewParserWithOptions(graphite.Options{
-		Templates: e.config.Templates,
-		Separator: e.config.Separator})
+	var err error
+
+	configs := make(map[string]interface{})
+	configs["Separator"] = e.Separator
+	configs["Templates"] = e.Templates
+
+	e.encodingParser, err = encoding.NewParser(e.DataFormat, configs)
 
 	if err != nil {
-		return fmt.Errorf("exec input parser config is error: %s ", err.Error())
+		return fmt.Errorf("exec configuration is error: %s ", err.Error())
 	}
-
-	e.encodingParser = encoding.NewParser(graphiteParser)
 
 	return nil
 }

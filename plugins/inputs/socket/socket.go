@@ -16,9 +16,31 @@ import (
 	"github.com/influxdata/telegraf/internal/encoding"
 	"github.com/influxdata/telegraf/internal/encoding/graphite"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	_ "github.com/influxdata/telegraf/internal/encoding/graphite"
+	_ "github.com/influxdata/telegraf/internal/encoding/influx"
 )
 
 const (
+	// DefaultBindAddress is the default binding interface if none is specified.
+	DefaultBindAddress = ":2003"
+
+	// DefaultProtocol is the default IP protocol used by the Graphite input.
+	DefaultProtocol = "tcp"
+
+	// DefaultUDPReadBuffer is the default buffer size for the UDP listener.
+	// Sets the size of the operating system's receive buffer associated with
+	// the UDP traffic. Keep in mind that the OS must be able
+	// to handle the number set here or the UDP listener will error and exit.
+	//
+	// DefaultReadBuffer = 0 means to use the OS default, which is usually too
+	// small for high UDP performance.
+	//
+	// Increasing OS buffer limits:
+	//     Linux:      sudo sysctl -w net.core.rmem_max=<read-buffer>
+	//     BSD/Darwin: sudo sysctl -w kern.ipc.maxsockbuf=<read-buffer>
+	DefaultUdpReadBuffer = 0
+
 	udpBufferSize = 65536
 )
 
@@ -44,10 +66,9 @@ type Socket struct {
 
 	mu sync.Mutex
 
-	encodingParser *encoding.Parser
+	encodingParser encoding.Parser
 
 	logger *log.Logger
-	config *Config
 
 	tcpConnectionsMu sync.Mutex
 	tcpConnections   map[string]*tcpConnection
@@ -105,39 +126,43 @@ func (s *Socket) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	c := NewConfig(s.BindAddress, s.Protocol, s.UdpReadBuffer, s.Separator, s.Templates)
-
-	if err := c.Validate(); err != nil {
-		return fmt.Errorf("Socket input configuration is error: %s ", err.Error())
+	if s.BindAddress == "" {
+		s.BindAddress = DefaultBindAddress
 	}
-	s.config = c
+	if s.Protocol == "" {
+		s.Protocol = DefaultProtocol
+	}
+	if s.UdpReadBuffer < 0 {
+		s.UdpReadBuffer = DefaultUdpReadBuffer
+	}
 
-	graphiteParser, err := graphite.NewParserWithOptions(graphite.Options{
-		Templates: s.config.Templates,
-		Separator: s.config.Separator})
+	configs := make(map[string]interface{})
+	configs["Separator"] = s.Separator
+	configs["Templates"] = s.Templates
+
+	var err error
+	s.encodingParser, err = encoding.NewParser(s.DataFormat, configs)
 
 	if err != nil {
-		return fmt.Errorf("Socket input parser config is error: %s ", err.Error())
+		return fmt.Errorf("Socket input configuration is error: %s ", err.Error())
 	}
-
-	s.encodingParser = encoding.NewParser(graphiteParser)
 
 	s.tcpConnections = make(map[string]*tcpConnection)
 	s.done = make(chan struct{})
 	s.metricC = make(chan telegraf.Metric, 50000)
 
-	if strings.ToLower(s.config.Protocol) == "tcp" {
+	if strings.ToLower(s.Protocol) == "tcp" {
 		s.addr, err = s.openTCPServer()
-	} else if strings.ToLower(s.config.Protocol) == "udp" {
+	} else if strings.ToLower(s.Protocol) == "udp" {
 		s.addr, err = s.openUDPServer()
 	} else {
-		return fmt.Errorf("unrecognized Socket input protocol %s", s.config.Protocol)
+		return fmt.Errorf("unrecognized Socket input protocol %s", s.Protocol)
 	}
 	if err != nil {
 		return err
 	}
 
-	s.logger.Printf("Socket Plugin Listening on %s: %s", strings.ToUpper(s.config.Protocol), s.config.BindAddress)
+	s.logger.Printf("Socket Plugin Listening on %s: %s", strings.ToUpper(s.Protocol), s.BindAddress)
 	return nil
 }
 
@@ -170,7 +195,7 @@ func (s *Socket) Stop() {
 
 // openTCPServer opens the Socket input in TCP mode and starts processing data.
 func (s *Socket) openTCPServer() (net.Addr, error) {
-	ln, err := net.Listen("tcp", s.config.BindAddress)
+	ln, err := net.Listen("tcp", s.BindAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +260,7 @@ func (s *Socket) untrackConnection(c net.Conn) {
 
 // openUDPServer opens the Socket input in UDP mode and starts processing incoming data.
 func (s *Socket) openUDPServer() (net.Addr, error) {
-	addr, err := net.ResolveUDPAddr("udp", s.config.BindAddress)
+	addr, err := net.ResolveUDPAddr("udp", s.BindAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -245,11 +270,11 @@ func (s *Socket) openUDPServer() (net.Addr, error) {
 		return nil, err
 	}
 
-	if s.config.UdpReadBuffer != 0 {
-		err = s.udpConn.SetReadBuffer(s.config.UdpReadBuffer)
+	if s.UdpReadBuffer != 0 {
+		err = s.udpConn.SetReadBuffer(s.UdpReadBuffer)
 		if err != nil {
 			return nil, fmt.Errorf("unable to set UDP read buffer to %d: %s",
-				s.config.UdpReadBuffer, err)
+				s.UdpReadBuffer, err)
 		}
 	}
 
@@ -276,7 +301,7 @@ func (s *Socket) handleLines(buf []byte) {
 	}
 
 	// Parse it.
-	metrics, err := s.encodingParser.ParseSocketLines(s.DataFormat, buf)
+	metrics, err := s.encodingParser.Parse(buf)
 	if err != nil {
 		switch err := err.(type) {
 		case *graphite.UnsupposedValueError:
