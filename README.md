@@ -158,6 +158,7 @@ Currently implemented sources:
 * couchdb
 * disque
 * docker
+* dovecot
 * elasticsearch
 * exec (generic executable plugin, support JSON, influx and graphite)
 * haproxy
