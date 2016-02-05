@@ -13,6 +13,9 @@ import (
 	"github.com/influxdata/telegraf/internal/encoding"
 	"github.com/influxdata/telegraf/internal/encoding/graphite"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	_ "github.com/influxdata/telegraf/internal/encoding/graphite"
+	_ "github.com/influxdata/telegraf/internal/encoding/influx"
 )
 
 // Tail represents a tail service to
@@ -27,10 +30,10 @@ type Tail struct {
 
 	mu sync.Mutex
 
-	encodingParser *encoding.Parser
+	encodingParser encoding.Parser
 
-	logger       *log.Logger
-	config       *Config
+	logger *log.Logger
+
 	tailPointers []*tail.Tail
 
 	wg   sync.WaitGroup
@@ -81,21 +84,16 @@ func (t *Tail) Start() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	c := NewConfig(t.Files, t.Separator, t.Templates)
-	if err := c.Validate(); err != nil {
-		return fmt.Errorf("Tail input configuration is error: %s ", err.Error())
-	}
-	t.config = c
+	configs := make(map[string]interface{})
+	configs["Separator"] = t.Separator
+	configs["Templates"] = t.Templates
 
-	graphiteParser, err := graphite.NewParserWithOptions(graphite.Options{
-		Templates: t.config.Templates,
-		Separator: t.config.Separator})
+	var err error
+	t.encodingParser, err = encoding.NewParser(t.DataFormat, configs)
 
 	if err != nil {
-		return fmt.Errorf("Tail input parser config is error: %s ", err.Error())
+		return fmt.Errorf("Tail input configuration is error: %s ", err.Error())
 	}
-
-	t.encodingParser = encoding.NewParser(graphiteParser)
 
 	t.done = make(chan struct{})
 	t.metricC = make(chan telegraf.Metric, 50000)
@@ -138,7 +136,7 @@ func (t *Tail) handleLine(line string) {
 	}
 
 	// Parse it.
-	metric, err := t.encodingParser.ParseSocketLine(t.DataFormat, line)
+	metric, err := t.encodingParser.ParseLine(line)
 	if err != nil {
 		switch err := err.(type) {
 		case *graphite.UnsupposedValueError:

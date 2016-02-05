@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/encoding"
 )
 
 // Minimum and maximum supported dates for timestamps.
@@ -22,31 +23,31 @@ var (
 	MaxDate = time.Date(2038, 1, 19, 0, 0, 0, 0, time.UTC)
 )
 
-var defaultTemplate *template
-
-func init() {
-	var err error
-	defaultTemplate, err = NewTemplate("measurement*", nil, DefaultSeparator)
-	if err != nil {
-		panic(err)
-	}
-}
-
-// Parser encapsulates a Graphite Parser.
-type Parser struct {
-	matcher *matcher
-}
-
 // Options are configurable values that can be provided to a Parser
 type Options struct {
 	Separator string
 	Templates []string
 }
 
-// NewParserWithOptions returns a graphite parser using the given options
-func NewParserWithOptions(options Options) (*Parser, error) {
+// Parser encapsulates a Graphite Parser.
+type GraphiteParser struct {
+	matcher *matcher
+}
+
+func NewParser() *GraphiteParser {
+	return &GraphiteParser{}
+}
+
+func (p *GraphiteParser) InitConfig(configs map[string]interface{}) error {
+
+	var err error
+	options := Options{
+		Templates: configs["Templates"].([]string),
+		Separator: configs["Separator"].(string)}
 
 	matcher := newMatcher()
+	p.matcher = matcher
+	defaultTemplate, _ := NewTemplate("measurement*", nil, DefaultSeparator)
 	matcher.AddDefaultTemplate(defaultTemplate)
 
 	for _, pattern := range options.Templates {
@@ -76,25 +77,29 @@ func NewParserWithOptions(options Options) (*Parser, error) {
 			}
 		}
 
-		tmpl, err := NewTemplate(template, tags, options.Separator)
-		if err != nil {
-			return nil, err
+		tmpl, err1 := NewTemplate(template, tags, options.Separator)
+		if err1 != nil {
+			err = err1
+			break
 		}
 		matcher.Add(filter, tmpl)
 	}
-	return &Parser{matcher: matcher}, nil
+
+	if err != nil {
+		return fmt.Errorf("exec input parser config is error: %s ", err.Error())
+	} else {
+		return nil
+	}
+
 }
 
-// NewParser returns a GraphiteParser instance.
-func NewParser(templates []string) (*Parser, error) {
-	return NewParserWithOptions(
-		Options{
-			Templates: templates,
-			Separator: DefaultSeparator,
-		})
+func init() {
+	encoding.Add("graphite", func() encoding.Parser {
+		return NewParser()
+	})
 }
 
-func (p *Parser) ParseMetrics(buf []byte) ([]telegraf.Metric, error) {
+func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
 
@@ -114,7 +119,7 @@ func (p *Parser) ParseMetrics(buf []byte) ([]telegraf.Metric, error) {
 
 		// Trim the buffer, even though there should be no padding
 		line := strings.TrimSpace(string(buf))
-		if metric, err := p.Parse(line); err == nil {
+		if metric, err := p.ParseLine(line); err == nil {
 			metrics = append(metrics, metric)
 		}
 	}
@@ -122,7 +127,7 @@ func (p *Parser) ParseMetrics(buf []byte) ([]telegraf.Metric, error) {
 }
 
 // Parse performs Graphite parsing of a single line.
-func (p *Parser) Parse(line string) (telegraf.Metric, error) {
+func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 	// Break into 3 fields (name, value, timestamp).
 	fields := strings.Fields(line)
 	if len(fields) != 2 && len(fields) != 3 {
@@ -184,7 +189,7 @@ func (p *Parser) Parse(line string) (telegraf.Metric, error) {
 
 // ApplyTemplate extracts the template fields from the given line and
 // returns the measurement name and tags.
-func (p *Parser) ApplyTemplate(line string) (string, map[string]string, string, error) {
+func (p *GraphiteParser) ApplyTemplate(line string) (string, map[string]string, string, error) {
 	// Break line into fields (name, value, timestamp), only name is used
 	fields := strings.Fields(line)
 	if len(fields) == 0 {
