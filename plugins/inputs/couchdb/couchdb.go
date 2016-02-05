@@ -81,14 +81,14 @@ func (*CouchDB) SampleConfig() string {
 	`
 }
 
-func (this *CouchDB) Gather(accumulator telegraf.Accumulator) error {
-	errorChannel := make(chan error, len(this.HOSTs))
+func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
+	errorChannel := make(chan error, len(c.HOSTs))
 	var wg sync.WaitGroup
-	for _, u := range this.HOSTs {
+	for _, u := range c.HOSTs {
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			if err := this.fetchAndInsertData(accumulator, host); err != nil {
+			if err := c.fetchAndInsertData(accumulator, host); err != nil {
 				errorChannel <- fmt.Errorf("[host=%s]: %s", host, err)
 			}
 		}(u)
@@ -112,7 +112,7 @@ func (this *CouchDB) Gather(accumulator telegraf.Accumulator) error {
 
 }
 
-func (this *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host string) error {
+func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host string) error {
 
 	response, error := http.Get(host)
 	if error != nil {
@@ -127,43 +127,43 @@ func (this *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host s
 	fields := map[string]interface{}{}
 
 	// CouchDB meta stats:
-	this.MapCopy(fields, this.generateFields("couchdb_auth_cache_misses", stats.Couchdb.AuthCacheMisses))
-	this.MapCopy(fields, this.generateFields("couchdb_database_writes", stats.Couchdb.DatabaseWrites))
-	this.MapCopy(fields, this.generateFields("couchdb_open_databases", stats.Couchdb.OpenDatabases))
-	this.MapCopy(fields, this.generateFields("couchdb_auth_cache_hits", stats.Couchdb.AuthCacheHits))
-	this.MapCopy(fields, this.generateFields("couchdb_request_time", stats.Couchdb.RequestTime))
-	this.MapCopy(fields, this.generateFields("couchdb_database_reads", stats.Couchdb.DatabaseReads))
-	this.MapCopy(fields, this.generateFields("couchdb_open_os_files", stats.Couchdb.OpenOsFiles))
+	c.MapCopy(fields, c.generateFields("couchdb_auth_cache_misses", stats.Couchdb.AuthCacheMisses))
+	c.MapCopy(fields, c.generateFields("couchdb_database_writes", stats.Couchdb.DatabaseWrites))
+	c.MapCopy(fields, c.generateFields("couchdb_open_databases", stats.Couchdb.OpenDatabases))
+	c.MapCopy(fields, c.generateFields("couchdb_auth_cache_hits", stats.Couchdb.AuthCacheHits))
+	c.MapCopy(fields, c.generateFields("couchdb_request_time", stats.Couchdb.RequestTime))
+	c.MapCopy(fields, c.generateFields("couchdb_database_reads", stats.Couchdb.DatabaseReads))
+	c.MapCopy(fields, c.generateFields("couchdb_open_os_files", stats.Couchdb.OpenOsFiles))
 
 	// http request methods stats:
-	this.MapCopy(fields, this.generateFields("httpd_request_methods_put", stats.HttpdRequestMethods.Put))
-	this.MapCopy(fields, this.generateFields("httpd_request_methods_get", stats.HttpdRequestMethods.Get))
-	this.MapCopy(fields, this.generateFields("httpd_request_methods_copy", stats.HttpdRequestMethods.Copy))
-	this.MapCopy(fields, this.generateFields("httpd_request_methods_delete", stats.HttpdRequestMethods.Delete))
-	this.MapCopy(fields, this.generateFields("httpd_request_methods_post", stats.HttpdRequestMethods.Post))
-	this.MapCopy(fields, this.generateFields("httpd_request_methods_head", stats.HttpdRequestMethods.Head))
+	c.MapCopy(fields, c.generateFields("httpd_request_methods_put", stats.HttpdRequestMethods.Put))
+	c.MapCopy(fields, c.generateFields("httpd_request_methods_get", stats.HttpdRequestMethods.Get))
+	c.MapCopy(fields, c.generateFields("httpd_request_methods_copy", stats.HttpdRequestMethods.Copy))
+	c.MapCopy(fields, c.generateFields("httpd_request_methods_delete", stats.HttpdRequestMethods.Delete))
+	c.MapCopy(fields, c.generateFields("httpd_request_methods_post", stats.HttpdRequestMethods.Post))
+	c.MapCopy(fields, c.generateFields("httpd_request_methods_head", stats.HttpdRequestMethods.Head))
 
 	// status code stats:
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_200", stats.HttpdStatusCodes.Status200))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_201", stats.HttpdStatusCodes.Status201))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_202", stats.HttpdStatusCodes.Status202))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_301", stats.HttpdStatusCodes.Status301))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_304", stats.HttpdStatusCodes.Status304))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_400", stats.HttpdStatusCodes.Status400))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_401", stats.HttpdStatusCodes.Status401))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_403", stats.HttpdStatusCodes.Status403))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_404", stats.HttpdStatusCodes.Status404))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_405", stats.HttpdStatusCodes.Status405))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_409", stats.HttpdStatusCodes.Status409))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_412", stats.HttpdStatusCodes.Status412))
-	this.MapCopy(fields, this.generateFields("httpd_status_codes_500", stats.HttpdStatusCodes.Status500))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_200", stats.HttpdStatusCodes.Status200))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_201", stats.HttpdStatusCodes.Status201))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_202", stats.HttpdStatusCodes.Status202))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_301", stats.HttpdStatusCodes.Status301))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_304", stats.HttpdStatusCodes.Status304))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_400", stats.HttpdStatusCodes.Status400))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_401", stats.HttpdStatusCodes.Status401))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_403", stats.HttpdStatusCodes.Status403))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_404", stats.HttpdStatusCodes.Status404))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_405", stats.HttpdStatusCodes.Status405))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_409", stats.HttpdStatusCodes.Status409))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_412", stats.HttpdStatusCodes.Status412))
+	c.MapCopy(fields, c.generateFields("httpd_status_codes_500", stats.HttpdStatusCodes.Status500))
 
 	// httpd stats:
-	this.MapCopy(fields, this.generateFields("httpd_clients_requesting_changes", stats.Httpd.ClientsRequestingChanges))
-	this.MapCopy(fields, this.generateFields("httpd_temporary_view_reads", stats.Httpd.TemporaryViewReads))
-	this.MapCopy(fields, this.generateFields("httpd_requests", stats.Httpd.Requests))
-	this.MapCopy(fields, this.generateFields("httpd_bulk_requests", stats.Httpd.BulkRequests))
-	this.MapCopy(fields, this.generateFields("httpd_view_reads", stats.Httpd.ViewReads))
+	c.MapCopy(fields, c.generateFields("httpd_clients_requesting_changes", stats.Httpd.ClientsRequestingChanges))
+	c.MapCopy(fields, c.generateFields("httpd_temporary_view_reads", stats.Httpd.TemporaryViewReads))
+	c.MapCopy(fields, c.generateFields("httpd_requests", stats.Httpd.Requests))
+	c.MapCopy(fields, c.generateFields("httpd_bulk_requests", stats.Httpd.BulkRequests))
+	c.MapCopy(fields, c.generateFields("httpd_view_reads", stats.Httpd.ViewReads))
 
 	tags := map[string]string{
 		"server": host,
@@ -186,14 +186,14 @@ func (*CouchDB) safeCheck(value interface{}) interface{} {
 	return value
 }
 
-func (this *CouchDB) generateFields(prefix string, obj metaData) map[string]interface{} {
+func (c *CouchDB) generateFields(prefix string, obj metaData) map[string]interface{} {
 	fields := map[string]interface{}{
-		prefix + "_current": this.safeCheck(obj.Current),
-		prefix + "_sum":     this.safeCheck(obj.Sum),
-		prefix + "_mean":    this.safeCheck(obj.Mean),
-		prefix + "_stddev":  this.safeCheck(obj.Stddev),
-		prefix + "_min":     this.safeCheck(obj.Min),
-		prefix + "_max":     this.safeCheck(obj.Max),
+		prefix + "_current": c.safeCheck(obj.Current),
+		prefix + "_sum":     c.safeCheck(obj.Sum),
+		prefix + "_mean":    c.safeCheck(obj.Mean),
+		prefix + "_stddev":  c.safeCheck(obj.Stddev),
+		prefix + "_min":     c.safeCheck(obj.Min),
+		prefix + "_max":     c.safeCheck(obj.Max),
 	}
 	return fields
 }
