@@ -71,6 +71,7 @@ endif
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
 	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
+	docker run --name etcd -p "2379:2379" -d quay.io/coreos/etcd -name etcd0 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -85,11 +86,12 @@ docker-run-circle:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
 	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
+	docker run --name etcd -p "2379:2379" -d quay.io/coreos/etcd -name etcd0 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann snmp
-	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann snmp
+	-docker kill nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann snmp etcd
+	-docker rm nsq aerospike redis opentsdb rabbitmq postgres memcached mysql kafka mqtt riemann snmp etcd
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: vet docker-kill docker-run

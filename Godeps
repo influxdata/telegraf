@@ -8,6 +8,7 @@ github.com/couchbase/go-couchbase cb664315a324d87d19c879d9cc67fda6be8c2ac1
 github.com/couchbase/gomemcached a5ea6356f648fec6ab89add00edd09151455b4b2
 github.com/couchbase/goutils 5823a0cbaaa9008406021dc5daf80125ea30bba6
 github.com/dancannon/gorethink e7cac92ea2bc52638791a021f212145acfedb1fc
+github.com/coreos/etcd bdee27b19e8601ffd7bd4f0481abe9bbae04bd09
 github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
