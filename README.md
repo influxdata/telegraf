@@ -155,6 +155,7 @@ Currently implemented sources:
 * aerospike
 * apache
 * bcache
+* couchdb
 * disque
 * docker
 * elasticsearch

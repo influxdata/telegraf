@@ -3,6 +3,7 @@
 ### Release Notes
 
 ### Features
+- [#652](https://github.com/influxdata/telegraf/pull/652): CouchDB Input Plugin
 
 ### Bugfixes
 
