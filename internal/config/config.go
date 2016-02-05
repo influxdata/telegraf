@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 
 	"github.com/influxdata/config"
+    "github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
 )
 
@@ -39,6 +40,7 @@ func NewConfig() *Config {
 		Agent: &AgentConfig{
 			Interval:      internal.Duration{Duration: 10 * time.Second},
 			RoundInterval: true,
+			Labels:        make([]string, 0),
 			FlushInterval: internal.Duration{Duration: 10 * time.Second},
 			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
 		},
@@ -92,6 +94,9 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet    bool
 	Hostname string
+
+	// Etcd labels
+	Labels []string
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -316,7 +321,16 @@ func (c *Config) LoadDirectory(path string) error {
 
 // LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
-	tbl, err := config.ParseFile(path)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	err = c.LoadConfigFromText(data)
+	return err
+}
+
+func (c *Config) LoadConfigFromText(data []byte) error {
+	tbl, err := toml.Parse(data)
 	if err != nil {
 		return err
 	}

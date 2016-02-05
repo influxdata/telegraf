@@ -1,4 +1,5 @@
 git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git dbd8d5c40a582eb9adacde36b47932b3a3ad0034
+github.com/BurntSushi/toml 5c4df71dfe9ac89ef6287afc05e4c1b16ae65a1e
 github.com/Shopify/sarama d37c73f2b2bce85f7fa16b6a550d26c5372892ef
 github.com/Sirupsen/logrus f7f79f729e0fbe2fcc061db48a9ba0263f588252
 github.com/amir/raidman 6a8e089bbe32e6b907feae5ba688841974b3c339
@@ -8,6 +9,7 @@ github.com/beorn7/perks b965b613227fddccbfffe13eae360ed3fa822f8d
 github.com/boltdb/bolt ee4a0888a9abe7eefe5a0992ca4cb06864839873
 github.com/cenkalti/backoff 4dc77674aceaabba2c7e3da25d4c823edfb73f99
 github.com/dancannon/gorethink 6f088135ff288deb9d5546f4c71919207f891a70
+github.com/coreos/etcd bdee27b19e8601ffd7bd4f0481abe9bbae04bd09
 github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
