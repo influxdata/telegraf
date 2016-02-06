@@ -1,7 +1,6 @@
 package httpjson
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,8 +11,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type HttpJson struct {
@@ -137,39 +136,34 @@ func (h *HttpJson) gatherServer(
 		return err
 	}
 
-	var jsonOut map[string]interface{}
-	if err = json.Unmarshal([]byte(resp), &jsonOut); err != nil {
-		return errors.New("Error decoding JSON response")
-	}
-
-	tags := map[string]string{
-		"server": serverURL,
-	}
-
-	for _, tag := range h.TagKeys {
-		switch v := jsonOut[tag].(type) {
-		case string:
-			tags[tag] = v
-		}
-		delete(jsonOut, tag)
-	}
-
-	if responseTime >= 0 {
-		jsonOut["response_time"] = responseTime
-	}
-	f := internal.JSONFlattener{}
-	err = f.FlattenJSON("", jsonOut)
-	if err != nil {
-		return err
-	}
-
 	var msrmnt_name string
 	if h.Name == "" {
 		msrmnt_name = "httpjson"
 	} else {
 		msrmnt_name = "httpjson_" + h.Name
 	}
-	acc.AddFields(msrmnt_name, f.Fields, tags)
+	tags := map[string]string{
+		"server": serverURL,
+	}
+
+	parser, err := parsers.NewJSONParser(msrmnt_name, h.TagKeys, tags)
+	if err != nil {
+		return err
+	}
+
+	metrics, err := parser.Parse([]byte(resp))
+	if err != nil {
+		return err
+	}
+
+	for _, metric := range metrics {
+		fields := make(map[string]interface{})
+		for k, v := range metric.Fields() {
+			fields[k] = v
+		}
+		fields["response_time"] = responseTime
+		acc.AddFields(metric.Name(), fields, metric.Tags())
+	}
 	return nil
 }
 

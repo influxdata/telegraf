@@ -2,10 +2,8 @@ git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git dbd8d5c40a582eb9ad
 github.com/Shopify/sarama d37c73f2b2bce85f7fa16b6a550d26c5372892ef
 github.com/Sirupsen/logrus f7f79f729e0fbe2fcc061db48a9ba0263f588252
 github.com/amir/raidman 6a8e089bbe32e6b907feae5ba688841974b3c339
-github.com/armon/go-metrics 345426c77237ece5dab0e1605c3e4b35c3f54757
 github.com/aws/aws-sdk-go 87b1e60a50b09e4812dee560b33a238f67305804
 github.com/beorn7/perks b965b613227fddccbfffe13eae360ed3fa822f8d
-github.com/boltdb/bolt ee4a0888a9abe7eefe5a0992ca4cb06864839873
 github.com/cenkalti/backoff 4dc77674aceaabba2c7e3da25d4c823edfb73f99
 github.com/dancannon/gorethink 6f088135ff288deb9d5546f4c71919207f891a70
 github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
@@ -14,16 +12,12 @@ github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
 github.com/fsouza/go-dockerclient 7b651349f9479f5114913eefbfd3c4eeddd79ab4
 github.com/go-ini/ini afbd495e5aaea13597b5e14fe514ddeaa4d76fc3
 github.com/go-sql-driver/mysql 7c7f556282622f94213bc028b4d0a7b6151ba239
-github.com/gogo/protobuf e8904f58e872a473a5b91bc9bf3377d223555263
 github.com/golang/protobuf 6aaa8d47701fa6cf07e914ec01fde3d4a1fe79c3
 github.com/golang/snappy 723cc1e459b8eea2dea4583200fd60757d40097a
 github.com/gonuts/go-shellquote e842a11b24c6abfb3dd27af69a17f482e4b483c2
 github.com/gorilla/context 1c83b3eabd45b6d76072b66b746c20815fb2872d
 github.com/gorilla/mux 26a6070f849969ba72b72256e9f14cf519751690
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
-github.com/hashicorp/go-msgpack fa3f63826f7c23912c15263591e65d54d080b458
-github.com/hashicorp/raft 057b893fd996696719e98b6c44649ea14968c811
-github.com/hashicorp/raft-boltdb d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee
 github.com/influxdata/config bae7cb98197d842374d3b8403905924094930f24
 github.com/influxdata/influxdb 697f48b4e62e514e701ffec39978b864a3c666e6
 github.com/influxdb/influxdb 697f48b4e62e514e701ffec39978b864a3c666e6

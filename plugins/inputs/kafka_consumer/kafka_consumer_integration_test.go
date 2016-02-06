@@ -9,6 +9,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 func TestReadsMetricsFromKafka(t *testing.T) {
@@ -40,6 +42,8 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 		PointBuffer:    100000,
 		Offset:         "oldest",
 	}
+	p, _ := parsers.NewInfluxParser()
+	k.SetParser(p)
 	if err := k.Start(); err != nil {
 		t.Fatal(err.Error())
 	} else {

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 const statsPath = "/_nodes/stats"
@@ -168,7 +168,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 
 		now := time.Now()
 		for p, s := range stats {
-			f := internal.JSONFlattener{}
+			f := jsonparser.JSONFlattener{}
 			err := f.FlattenJSON("", s)
 			if err != nil {
 				return err

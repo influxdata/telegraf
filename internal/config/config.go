@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/influxdata/config"
 	"github.com/naoina/toml/ast"
@@ -428,6 +429,17 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 	input := creator()
 
+	// If the input has a SetParser function, then this means it can accept
+	// arbitrary types of input, so build the parser and set it.
+	switch t := input.(type) {
+	case parsers.ParserInput:
+		parser, err := buildParser(name, table)
+		if err != nil {
+			return err
+		}
+		t.SetParser(parser)
+	}
+
 	pluginConfig, err := buildInput(name, table)
 	if err != nil {
 		return err
@@ -581,6 +593,66 @@ func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, erro
 	delete(tbl.Fields, "tags")
 	cp.Filter = buildFilter(tbl)
 	return cp, nil
+}
+
+// buildParser grabs the necessary entries from the ast.Table for creating
+// a parsers.Parser object, and creates it, which can then be added onto
+// an Input object.
+func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
+	c := &parsers.Config{}
+
+	if node, ok := tbl.Fields["data_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DataFormat = str.Value
+			}
+		}
+	}
+
+	if c.DataFormat == "" {
+		c.DataFormat = "influx"
+	}
+
+	if node, ok := tbl.Fields["separator"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.Separator = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["templates"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.Templates = append(c.Templates, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["tag_keys"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.TagKeys = append(c.TagKeys, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	c.MetricName = name
+
+	delete(tbl.Fields, "data_format")
+	delete(tbl.Fields, "separator")
+	delete(tbl.Fields, "templates")
+	delete(tbl.Fields, "tag_keys")
+
+	return parsers.NewParser(c)
 }
 
 // buildOutput parses output specific items from the ast.Table, builds the filter and returns an

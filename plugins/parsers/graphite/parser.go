@@ -1,6 +1,7 @@
 package graphite
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -10,11 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"bufio"
-
-	"github.com/influxdata/influxdb/models"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/encoding"
 )
 
 // Minimum and maximum supported dates for timestamps.
@@ -23,35 +20,40 @@ var (
 	MaxDate = time.Date(2038, 1, 19, 0, 0, 0, 0, time.UTC)
 )
 
-// Options are configurable values that can be provided to a Parser
-type Options struct {
-	Separator string
-	Templates []string
-}
-
 // Parser encapsulates a Graphite Parser.
 type GraphiteParser struct {
+	Separator   string
+	Templates   []string
+	DefaultTags map[string]string
+
 	matcher *matcher
 }
 
-func NewParser() *GraphiteParser {
-	return &GraphiteParser{}
-}
-
-func (p *GraphiteParser) InitConfig(configs map[string]interface{}) error {
-
+func NewGraphiteParser(
+	separator string,
+	templates []string,
+	defaultTags map[string]string,
+) (*GraphiteParser, error) {
 	var err error
-	options := Options{
-		Templates: configs["Templates"].([]string),
-		Separator: configs["Separator"].(string)}
+
+	if separator == "" {
+		separator = DefaultSeparator
+	}
+	p := &GraphiteParser{
+		Separator: separator,
+		Templates: templates,
+	}
+
+	if defaultTags != nil {
+		p.DefaultTags = defaultTags
+	}
 
 	matcher := newMatcher()
 	p.matcher = matcher
-	defaultTemplate, _ := NewTemplate("measurement*", nil, DefaultSeparator)
+	defaultTemplate, _ := NewTemplate("measurement*", nil, p.Separator)
 	matcher.AddDefaultTemplate(defaultTemplate)
 
-	for _, pattern := range options.Templates {
-
+	for _, pattern := range p.Templates {
 		template := pattern
 		filter := ""
 		// Format is [filter] <template> [tag1=value1,tag2=value2]
@@ -68,7 +70,7 @@ func (p *GraphiteParser) InitConfig(configs map[string]interface{}) error {
 		}
 
 		// Parse out the default tags specific to this template
-		tags := models.Tags{}
+		tags := map[string]string{}
 		if strings.Contains(parts[len(parts)-1], "=") {
 			tagStrs := strings.Split(parts[len(parts)-1], ",")
 			for _, kv := range tagStrs {
@@ -77,7 +79,7 @@ func (p *GraphiteParser) InitConfig(configs map[string]interface{}) error {
 			}
 		}
 
-		tmpl, err1 := NewTemplate(template, tags, options.Separator)
+		tmpl, err1 := NewTemplate(template, tags, p.Separator)
 		if err1 != nil {
 			err = err1
 			break
@@ -86,22 +88,19 @@ func (p *GraphiteParser) InitConfig(configs map[string]interface{}) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("exec input parser config is error: %s ", err.Error())
+		return p, fmt.Errorf("exec input parser config is error: %s ", err.Error())
 	} else {
-		return nil
+		return p, nil
 	}
-
-}
-
-func init() {
-	encoding.Add("graphite", func() encoding.Parser {
-		return NewParser()
-	})
 }
 
 func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
+	// add newline to end if not exists:
+	if len(buf) > 0 && !bytes.HasSuffix(buf, []byte("\n")) {
+		buf = append(buf, []byte("\n")...)
+	}
 
 	metrics := make([]telegraf.Metric, 0)
 
@@ -123,7 +122,6 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			metrics = append(metrics, metric)
 		}
 	}
-
 }
 
 // Parse performs Graphite parsing of a single line.
@@ -183,6 +181,12 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 			}
 		}
 	}
+	// Set the default tags on the point if they are not already set
+	for k, v := range p.DefaultTags {
+		if _, ok := tags[k]; !ok {
+			tags[k] = v
+		}
+	}
 
 	return telegraf.NewMetric(measurement, tags, fieldValues, timestamp)
 }
@@ -199,20 +203,27 @@ func (p *GraphiteParser) ApplyTemplate(line string) (string, map[string]string, 
 	template := p.matcher.Match(fields[0])
 	name, tags, field, err := template.Apply(fields[0])
 
+	// Set the default tags on the point if they are not already set
+	for k, v := range p.DefaultTags {
+		if _, ok := tags[k]; !ok {
+			tags[k] = v
+		}
+	}
+
 	return name, tags, field, err
 }
 
 // template represents a pattern and tags to map a graphite metric string to a influxdb Point
 type template struct {
 	tags              []string
-	defaultTags       models.Tags
+	defaultTags       map[string]string
 	greedyMeasurement bool
 	separator         string
 }
 
 // NewTemplate returns a new template ensuring it has a measurement
 // specified.
-func NewTemplate(pattern string, defaultTags models.Tags, separator string) (*template, error) {
+func NewTemplate(pattern string, defaultTags map[string]string, separator string) (*template, error) {
 	tags := strings.Split(pattern, ".")
 	hasMeasurement := false
 	template := &template{tags: tags, defaultTags: defaultTags, separator: separator}
