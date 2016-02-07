@@ -18,6 +18,8 @@ func TestParse_InvalidLines(t *testing.T) {
 		"invalid.plus.minus.non.gauge:+10|c",
 		"invalid.plus.minus.non.gauge:+10|s",
 		"invalid.plus.minus.non.gauge:+10|ms",
+		"invalid.plus.minus.non.gauge:+10|mr",
+		"invalid.plus.minus.non.gauge:+10|m",
 		"invalid.plus.minus.non.gauge:+10|h",
 		"invalid.plus.minus.non.gauge:-10|c",
 		"invalid.value:foobar|c",
@@ -627,6 +629,8 @@ func TestParse_ValidLines(t *testing.T) {
 	valid_lines := []string{
 		"valid:45|c",
 		"valid:45|s",
+		"valid:45|m",
+		"valid:45|mr",
 		"valid:45|g",
 		"valid.timer:45|ms",
 		"valid.timer:45|h",

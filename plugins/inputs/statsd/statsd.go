@@ -324,7 +324,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Validate metric type
 		switch pipesplit[1] {
-		case "g", "c", "s", "ms", "h":
+		case "g", "c", "s", "ms", "mr", "m", "h":
 			m.mtype = pipesplit[1]
 		default:
 			log.Printf("Error: Statsd Metric type %s unsupported", pipesplit[1])
@@ -348,7 +348,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				return errors.New("Error Parsing statsd line")
 			}
 			m.floatvalue = v
-		case "c", "s":
+		case "c", "s", "m", "mr":
 			var v int64
 			v, err := strconv.ParseInt(pipesplit[0], 10, 64)
 			if err != nil {
@@ -382,6 +382,10 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			m.tags["metric_type"] = "set"
 		case "ms":
 			m.tags["metric_type"] = "timing"
+		case "mr":
+			m.tags["metric_type"] = "micrometer"
+		case "m":
+			m.tags["metric_type"] = "meter"
 		case "h":
 			m.tags["metric_type"] = "histogram"
 		}
@@ -483,7 +487,7 @@ func (s *Statsd) aggregate(m metric) {
 			cached.stats.AddValue(m.floatvalue)
 			s.timings[m.hash] = cached
 		}
-	case "c":
+	case "c", "m":
 		// check if the measurement exists
 		_, ok := s.counters[m.hash]
 		if !ok {
@@ -521,7 +525,7 @@ func (s *Statsd) aggregate(m metric) {
 		} else {
 			s.gauges[m.hash].fields[m.field] = m.floatvalue
 		}
-	case "s":
+	case "s", "mr":
 		// check if the measurement exists
 		_, ok := s.sets[m.hash]
 		if !ok {
