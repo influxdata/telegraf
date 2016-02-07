@@ -525,7 +525,7 @@ func (s *Statsd) aggregate(m metric) {
 		} else {
 			s.gauges[m.hash].fields[m.field] = m.floatvalue
 		}
-	case "s":
+	case "s", "m", "mr":
 		// check if the measurement exists
 		_, ok := s.sets[m.hash]
 		if !ok {
