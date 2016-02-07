@@ -6,6 +6,7 @@
 - [#652](https://github.com/influxdata/telegraf/pull/652): CouchDB Input Plugin
 
 ### Bugfixes
+- [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
 
 ## v0.10.2 [2016-02-04]
 
