@@ -487,7 +487,7 @@ func (s *Statsd) aggregate(m metric) {
 			cached.stats.AddValue(m.floatvalue)
 			s.timings[m.hash] = cached
 		}
-	case "c":
+	case "c", "m":
 		// check if the measurement exists
 		_, ok := s.counters[m.hash]
 		if !ok {
@@ -525,7 +525,7 @@ func (s *Statsd) aggregate(m metric) {
 		} else {
 			s.gauges[m.hash].fields[m.field] = m.floatvalue
 		}
-	case "s", "m", "mr":
+	case "s", "mr":
 		// check if the measurement exists
 		_, ok := s.sets[m.hash]
 		if !ok {
