@@ -20,7 +20,7 @@
 # with 'required'. Be sure to edit those to make this configuration work.
 
 # Tags can also be specified via a normal map, but only one form at a time:
-[tags]
+[global_tags]
   dc = "us-east-1"
 
 # Configuration for telegraf agent

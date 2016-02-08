@@ -138,7 +138,7 @@ var header = `# Telegraf configuration
 # file would generate.
 
 # Global tags can be specified here in key="value" format.
-[tags]
+[global_tags]
   # dc = "us-east-1" # will tag all metrics with dc=us-east-1
   # rack = "1a"
 
@@ -333,9 +333,9 @@ func (c *Config) LoadConfig(path string) error {
 				log.Printf("Could not parse [agent] config\n")
 				return err
 			}
-		case "tags":
+		case "global_tags", "tags":
 			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
-				log.Printf("Could not parse [tags] config\n")
+				log.Printf("Could not parse [global_tags] config\n")
 				return err
 			}
 		case "outputs":
