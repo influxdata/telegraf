@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -23,8 +24,7 @@ func (d *Dovecot) Description() string {
 }
 
 var sampleConfig = `
-  #  specify dovecot servers via a url matching:
-  #  address:port
+  #  specify dovecot servers via an address:port list
   #  e.g.
   #    localhost:24242
   #
@@ -39,7 +39,7 @@ func (d *Dovecot) SampleConfig() string { return sampleConfig }
 const defaultPort = "24242"
 
 // Reads stats from all configured servers.
-func (d *Dovecot) Gather(acc inputs.Accumulator) error {
+func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 
 	if len(d.Servers) == 0 {
 		d.Servers = append(d.Servers, "127.0.0.1:24242")
@@ -68,7 +68,7 @@ func (d *Dovecot) Gather(acc inputs.Accumulator) error {
 	return outerr
 }
 
-func (d *Dovecot) gatherServer(addr string, acc inputs.Accumulator, doms map[string]bool) error {
+func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, doms map[string]bool) error {
 	_, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		return fmt.Errorf("Error: %s on url %s\n", err, addr)
@@ -90,7 +90,7 @@ func (d *Dovecot) gatherServer(addr string, acc inputs.Accumulator, doms map[str
 	return gatherStats(&buf, acc, doms, host)
 }
 
-func gatherStats(buf *bytes.Buffer, acc inputs.Accumulator, doms map[string]bool, host string) error {
+func gatherStats(buf *bytes.Buffer, acc telegraf.Accumulator, doms map[string]bool, host string) error {
 
 	lines := strings.Split(buf.String(), "\n")
 	head := strings.Split(lines[0], "\t")
@@ -107,10 +107,10 @@ func gatherStats(buf *bytes.Buffer, acc inputs.Accumulator, doms map[string]bool
 		}
 		tags := map[string]string{"server": host, "domain": val[0]}
 		for n := range val {
-			fmt.Println(n, head[n], val[n])
 			switch head[n] {
 			case "domain":
-				fields[head[n]] = val[n]
+				continue
+				//				fields[head[n]] = val[n]
 			case "user_cpu", "sys_cpu", "clock_time":
 				fields[head[n]] = secParser(val[n])
 			case "reset_timestamp", "last_update":
@@ -150,7 +150,6 @@ func splitSec(tm string) (sec int64, msec int64) {
 func timeParser(tm string) time.Time {
 
 	sec, msec := splitSec(tm)
-	fmt.Println("time: ", sec, msec)
 	return time.Unix(sec, msec)
 }
 
@@ -161,7 +160,7 @@ func secParser(tm string) float64 {
 }
 
 func init() {
-	inputs.Add("dovecot", func() inputs.Input {
+	inputs.Add("dovecot", func() telegraf.Input {
 		return &Dovecot{}
 	})
 }

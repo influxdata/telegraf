@@ -11,9 +11,9 @@ domains. You can read Dovecot's documentation
 [[inputs.dovecot]]
   # Dovecot Endpoint
   #   To use TCP, set endpoint = "ip:port"
-  server = ["127.0.0.1:24242"]
+  servers = ["127.0.0.1:24242"]
   # Only collect metrics for these domains, collect all if empty
-  domains_names = []
+  domains = []
 
 ```
 
