@@ -17,9 +17,12 @@ domains. You can read Dovecot's documentation
 
 ```
 
+### Tags:
+	server: hostname
+	domain: domain name
+
 ### Fields:
 
-	domain                 string
 	reset_timestamp        time.Time
 	last_update            time.Time
 	num_logins             int64
