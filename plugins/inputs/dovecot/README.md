@@ -7,14 +7,17 @@ domains. You can read Dovecot's documentation
 ### Configuration:
 
 ```
-# Read metrics about docker containers
+# Read metrics about dovecot servers
 [[inputs.dovecot]]
-  # Dovecot Endpoint
-  #   To use TCP, set endpoint = "ip:port"
-  servers = ["127.0.0.1:24242"]
+  # Dovecot servers
+  #  specify dovecot servers via an address:port list
+  #  e.g.
+  #    localhost:24242
+  #
+  # If no servers are specified, then localhost is used as the host.
+  servers = ["localhost:24242"]
   # Only collect metrics for these domains, collect all if empty
   domains = []
-
 ```
 
 ### Tags:
