@@ -151,7 +151,7 @@ You should also add the following to your SampleConfig() return:
   ### Data format to consume. This can be "json", "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS.md
+  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
 
