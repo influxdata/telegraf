@@ -67,6 +67,10 @@ func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
 	return metrics[0], nil
 }
 
+func (p *JSONParser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}
+
 type JSONFlattener struct {
 	Fields map[string]interface{}
 }

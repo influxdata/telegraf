@@ -203,6 +203,7 @@ Currently implemented sources:
 Telegraf can also collect metrics via the following service plugins:
 
 * statsd
+* mqtt_consumer
 * kafka_consumer
 * nats_consumer
 * github_webhooks

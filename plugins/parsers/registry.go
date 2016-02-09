@@ -28,6 +28,11 @@ type Parser interface {
 	// ie, "cpu.usage.idle 90"
 	// and parses it into a telegraf metric.
 	ParseLine(line string) (telegraf.Metric, error)
+
+	// SetDefaultTags tells the parser to add all of the given tags
+	// to each parsed metric.
+	// NOTE: do _not_ modify the map after you've passed it here!!
+	SetDefaultTags(tags map[string]string)
 }
 
 // Config is a struct that covers the data types needed for all parser types,
