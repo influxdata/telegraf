@@ -12,8 +12,8 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 type Mesos struct {
@@ -299,7 +299,7 @@ func (m *Mesos) gatherMetrics(a string, acc telegraf.Accumulator) error {
 
 	m.removeGroup(&jsonOut)
 
-	jf := internal.JSONFlattener{}
+	jf := jsonparser.JSONFlattener{}
 
 	err = jf.FlattenJSON("", jsonOut)
 
