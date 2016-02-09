@@ -27,6 +27,18 @@ var defaultMetrics = []string{
 	"tasks", "messages", "evqueue", "messages", "registrar",
 }
 
+var sampleConfig = `
+  # Timeout, in ms.
+  timeout = 100
+  # A list of Mesos masters. e.g. master1:5050, master2:5080, etc.
+  # The port can be skipped if using the default (5050)
+  # Default value is localhost:5050.
+  servers = ["localhost:5050"]
+  # Metrics groups to be collected.
+  # Default, all enabled.
+  metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
+`
+
 // SampleConfig returns a sample configuration block
 func (m *Mesos) SampleConfig() string {
 	return sampleConfig
@@ -37,6 +49,7 @@ func (m *Mesos) Description() string {
 	return "Telegraf plugin for gathering metrics from N Mesos masters"
 }
 
+// Gather() metrics from given list of Mesos Masters
 func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var errorChannel chan error
@@ -60,6 +73,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	close(errorChannel)
 	errorStrings := []string{}
 
+	// Gather all errors for returning them at once
 	for err := range errorChannel {
 		if err != nil {
 			errorStrings = append(errorStrings, err.Error())
@@ -72,6 +86,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// metricsDiff() returns set names for removal
 func metricsDiff(w []string) []string {
 	b := []string{}
 	s := make(map[string]bool)
@@ -93,6 +108,7 @@ func metricsDiff(w []string) []string {
 	return b
 }
 
+// masterBlocks serves as kind of metrics registry groupping them in sets
 func masterBlocks(g string) []string {
 	var m map[string][]string
 
@@ -233,19 +249,7 @@ func masterBlocks(g string) []string {
 	return ret
 }
 
-var sampleConfig = `
-  # Timeout, in ms.
-  timeout = 100
-  # A list of Mesos masters. e.g. master1:5050, master2:5080, etc.
-  # The port can be skipped if using the default (5050)
-  # Default value is localhost:5050.
-  servers = ["localhost:5050"]
-  # Metrics groups to be collected.
-  # Default, all enabled.
-  metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
-`
-
-// removeGroup(), remove unwanted groups
+// removeGroup(), remove unwanted sets
 func (m *Mesos) removeGroup(j *map[string]interface{}) {
 	var ok bool
 
