@@ -63,20 +63,34 @@ func NewMetric(
 	}, nil
 }
 
+// MetricParser is an object for Parsing incoming metrics.
+type MetricParser struct {
+	// DefaultTags will be added to every parsed metric
+	DefaultTags map[string]string
+}
+
+func NewMetricParser() *MetricParser {
+	return &MetricParser{}
+}
+
 // ParseMetrics returns a slice of Metrics from a text representation of a
 // metric (in line-protocol format)
 // with each metric separated by newlines. If any metrics fail to parse,
 // a non-nil error will be returned in addition to the metrics that parsed
 // successfully.
-func ParseMetrics(buf []byte) ([]Metric, error) {
+func (mp *MetricParser) Parse(buf []byte) ([]Metric, error) {
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
 	points, err := models.ParsePoints(buf)
 	metrics := make([]Metric, len(points))
 	for i, point := range points {
+		tags := point.Tags()
+		for k, v := range mp.DefaultTags {
+			tags[k] = v
+		}
 		// Ignore error here because it's impossible that a model.Point
 		// wouldn't parse into client.Point properly
-		metrics[i], _ = NewMetric(point.Name(), point.Tags(),
+		metrics[i], _ = NewMetric(point.Name(), tags,
 			point.Fields(), point.Time())
 	}
 	return metrics, err

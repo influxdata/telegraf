@@ -91,7 +91,7 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields("exec", f.Fields, nil)
 	case "influx":
 		now := time.Now()
-		metrics, err := telegraf.ParseMetrics(out)
+		metrics, err := telegraf.NewMetricParser().Parse(out)
 		for _, metric := range metrics {
 			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), now)
 		}

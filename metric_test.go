@@ -28,7 +28,7 @@ cpu,host usage_idle=99
 `
 
 func TestParseValidMetrics(t *testing.T) {
-	metrics, err := ParseMetrics([]byte(validMs))
+	metrics, err := NewMetricParser().Parse([]byte(validMs))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	m := metrics[0]
@@ -50,13 +50,13 @@ func TestParseValidMetrics(t *testing.T) {
 }
 
 func TestParseInvalidMetrics(t *testing.T) {
-	metrics, err := ParseMetrics([]byte(invalidMs))
+	metrics, err := NewMetricParser().Parse([]byte(invalidMs))
 	assert.Error(t, err)
 	assert.Len(t, metrics, 0)
 }
 
 func TestParseValidAndInvalidMetrics(t *testing.T) {
-	metrics, err := ParseMetrics([]byte(validInvalidMs))
+	metrics, err := NewMetricParser().Parse([]byte(validInvalidMs))
 	assert.Error(t, err)
 	assert.Len(t, metrics, 3)
 }
