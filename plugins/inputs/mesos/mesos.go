@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -16,7 +17,7 @@ import (
 )
 
 type Mesos struct {
-	Timeout    string
+	Timeout    int
 	Servers    []string
 	MetricsCol []string `toml:"metrics_collection"`
 }
@@ -225,7 +226,7 @@ func masterBlocks(g string) []string {
 	ret, ok := m[g]
 
 	if !ok {
-		log.Println("Unkown metrics group: ", g)
+		log.Println("[mesos] Unkown metrics group: ", g)
 		return []string{}
 	}
 
@@ -234,7 +235,7 @@ func masterBlocks(g string) []string {
 
 var sampleConfig = `
   # Timeout, in ms.
-  timeout = 2000
+  timeout = 100
   # A list of Mesos masters. e.g. master1:5050, master2:5080, etc.
   # The port can be skipped if using the default (5050)
   # Default value is localhost:5050.
@@ -244,7 +245,7 @@ var sampleConfig = `
   metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
 `
 
-// removeGroup(), remove blacklisted groups
+// removeGroup(), remove unwanted groups
 func (m *Mesos) removeGroup(j *map[string]interface{}) {
 	var ok bool
 
@@ -273,8 +274,14 @@ func (m *Mesos) gatherMetrics(a string, acc telegraf.Accumulator) error {
 		"server": host,
 	}
 
-	// TODO: Use Timeout
-	resp, err := http.Get("http://" + a + "/metrics/snapshot")
+	if m.Timeout == 0 {
+		log.Println("[mesos] Missing timeout value, setting default value (100ms)")
+		m.Timeout = 100
+	}
+
+	ts := strconv.Itoa(m.Timeout) + "ms"
+
+	resp, err := http.Get("http://" + a + "/metrics/snapshot?timeout=" + ts)
 
 	if err != nil {
 		return err
@@ -290,9 +297,7 @@ func (m *Mesos) gatherMetrics(a string, acc telegraf.Accumulator) error {
 		return errors.New("Error decoding JSON response")
 	}
 
-	//if len(m.Blacklist) > 0 {
-	//	m.removeGroup(&jsonOut)
-	//}
+	m.removeGroup(&jsonOut)
 
 	jf := internal.JSONFlattener{}
 
