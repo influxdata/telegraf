@@ -14,8 +14,9 @@ import (
 )
 
 type Docker struct {
-	Endpoint       string
-	ContainerNames []string
+	Endpoint             string
+	ContainerNames       []string
+	CalculatePercentages bool
 
 	client *docker.Client
 }
@@ -27,6 +28,8 @@ var sampleConfig = `
   endpoint = "unix:///var/run/docker.sock"
   # Only collect metrics for these containers, collect all if empty
   container_names = []
+  # Add calculated percentages for mem and cpu, as per 'docker stats' command
+  calculate_percentages = false
 `
 
 func (d *Docker) Description() string {
@@ -67,6 +70,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	wg.Add(len(containers))
 	for _, container := range containers {
+
 		go func(c docker.APIContainers) {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
@@ -131,7 +135,7 @@ func (d *Docker) gatherContainer(
 		tags[k] = v
 	}
 
-	gatherContainerStats(stat, acc, tags)
+	gatherContainerStats(stat, acc, tags, d.CalculatePercentages)
 
 	return nil
 }
@@ -140,6 +144,7 @@ func gatherContainerStats(
 	stat *docker.Stats,
 	acc telegraf.Accumulator,
 	tags map[string]string,
+	calculate_percentages bool,
 ) {
 	now := stat.Read
 
@@ -178,6 +183,9 @@ func gatherContainerStats(
 		"inactive_file":             stat.MemoryStats.Stats.InactiveFile,
 		"total_pgpgin":              stat.MemoryStats.Stats.TotalPgpgin,
 	}
+	if calculate_percentages {
+		memfields["usage_percent"] = float64(stat.MemoryStats.Usage) / float64(stat.MemoryStats.Limit) * 100.0
+	}
 	acc.AddFields("docker_mem", memfields, tags, now)
 
 	cpufields := map[string]interface{}{
@@ -188,6 +196,9 @@ func gatherContainerStats(
 		"throttling_periods":           stat.CPUStats.ThrottlingData.Periods,
 		"throttling_throttled_periods": stat.CPUStats.ThrottlingData.ThrottledPeriods,
 		"throttling_throttled_time":    stat.CPUStats.ThrottlingData.ThrottledTime,
+	}
+	if calculate_percentages {
+		cpufields["usage_percent"] = calculateCPUPercent(stat)
 	}
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
@@ -217,6 +228,21 @@ func gatherContainerStats(
 	}
 
 	gatherBlockIOMetrics(stat, acc, tags, now)
+}
+
+func calculateCPUPercent(stat *docker.Stats) float64 {
+	var (
+		cpuPercent = 0.0
+		// calculate the change for the cpu usage of the container in between readings
+		cpuDelta = float64(stat.CPUStats.CPUUsage.TotalUsage) - float64(stat.PreCPUStats.CPUUsage.TotalUsage)
+		// calculate the change for the entire system between readings
+		systemDelta = float64(stat.CPUStats.SystemCPUUsage) - float64(stat.PreCPUStats.SystemCPUUsage)
+	)
+
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * float64(len(stat.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+	}
+	return cpuPercent
 }
 
 func gatherBlockIOMetrics(

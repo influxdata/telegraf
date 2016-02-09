@@ -22,7 +22,15 @@ for the stat structure can be found
   endpoint = "unix:///var/run/docker.sock"
   # Only collect metrics for these containers, collect all if empty
   container_names = []
+  calculate_percentages = false
 ```
+
+### Calculate Percentages
+
+Optionally percentages can be calculated for cpu and memory usage.  This uses
+the same calculation as the 'docker stats' command line tool.  Set this option
+to 'true' to enable this feature.
+
 
 ### Measurements & Fields:
 
