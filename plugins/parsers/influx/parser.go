@@ -55,3 +55,7 @@ func (p *InfluxParser) ParseLine(line string) (telegraf.Metric, error) {
 
 	return metrics[0], nil
 }
+
+func (p *InfluxParser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}

@@ -1,7 +1,8 @@
 ## v0.10.3 [unreleased]
 
 ### Release Notes
-- Users of the `exec` and `kafka_consumer` can now specify the incoming data
+- Users of the `exec` and `kafka_consumer` (and the new `nats_consumer`
+and `mqtt_consumer` plugins) can now specify the incoming data
 format that they would like to parse. Currently supports: "json", "influx", and
 "graphite"
 - More info on parsing arbitrary data formats can be found
@@ -12,6 +13,7 @@ format that they would like to parse. Currently supports: "json", "influx", and
 - [#655](https://github.com/influxdata/telegraf/pull/655): Support parsing arbitrary data formats. Currently limited to kafka_consumer and exec inputs.
 - [#671](https://github.com/influxdata/telegraf/pull/671): Dovecot input plugin. Thanks @mikif70!
 - [#680](https://github.com/influxdata/telegraf/pull/680): NATS consumer input plugin. Thanks @netixen!
+- [#676](https://github.com/influxdata/telegraf/pull/676): MQTT consumer input plugin.
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.

@@ -1,4 +1,4 @@
-git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git dbd8d5c40a582eb9adacde36b47932b3a3ad0034
+git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git 617c801af238c3af2d9e72c5d4a0f02edad03ce5
 github.com/Shopify/sarama d37c73f2b2bce85f7fa16b6a550d26c5372892ef
 github.com/Sirupsen/logrus f7f79f729e0fbe2fcc061db48a9ba0263f588252
 github.com/amir/raidman 6a8e089bbe32e6b907feae5ba688841974b3c339
@@ -30,7 +30,6 @@ github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/naoina/toml 751171607256bb66e64c9f0220c00662420c38e9
 github.com/nats-io/nats 6a83f1a633cfbfd90aa648ac99fb38c06a8b40df
 github.com/nsqio/go-nsq 2118015c120962edc5d03325c680daf3163a8b5f
-github.com/pborman/uuid dee7705ef7b324f27ceb85a121c61f2c2e8ce988
 github.com/pmezard/go-difflib 792786c7400a136282c1664665ae0a8db921c6c2
 github.com/prometheus/client_golang 67994f177195311c3ea3d4407ed0175e34a4256f
 github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
