@@ -159,7 +159,8 @@ Currently implemented sources:
 * disque
 * docker
 * elasticsearch
-* exec (generic JSON-emitting executable plugin)
+* exec (generic executable plugin, support JSON, influx and graphite)
+* socket (generic line protocol listen input service, support influx and graphite)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * influxdb
