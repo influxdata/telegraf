@@ -127,7 +127,9 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
-var header = `# Telegraf configuration
+var header = `###############################################################################
+#                           Telegraf Configuration                            #
+###############################################################################
 
 # Telegraf is entirely plugin driven. All metrics are gathered from the
 # declared inputs, and sent to the declared outputs.
@@ -145,35 +147,35 @@ var header = `# Telegraf configuration
 
 # Configuration for telegraf agent
 [agent]
-  # Default data collection interval for all inputs
+  ### Default data collection interval for all inputs
   interval = "10s"
-  # Rounds collection interval to 'interval'
-  # ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  ### Rounds collection interval to 'interval'
+  ### ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  # Telegraf will cache metric_buffer_limit metrics for each output, and will
-  # flush this buffer on a successful write.
+  ### Telegraf will cache metric_buffer_limit metrics for each output, and will
+  ### flush this buffer on a successful write.
   metric_buffer_limit = 10000
 
-  # Collection jitter is used to jitter the collection by a random amount.
-  # Each plugin will sleep for a random time within jitter before collecting.
-  # This can be used to avoid many plugins querying things like sysfs at the
-  # same time, which can have a measurable effect on the system.
+  ### Collection jitter is used to jitter the collection by a random amount.
+  ### Each plugin will sleep for a random time within jitter before collecting.
+  ### This can be used to avoid many plugins querying things like sysfs at the
+  ### same time, which can have a measurable effect on the system.
   collection_jitter = "0s"
 
-  # Default data flushing interval for all outputs. You should not set this below
-  # interval. Maximum flush_interval will be flush_interval + flush_jitter
+  ### Default flushing interval for all outputs. You shouldn't set this below
+  ### interval. Maximum flush_interval will be flush_interval + flush_jitter
   flush_interval = "10s"
-  # Jitter the flush interval by a random amount. This is primarily to avoid
-  # large write spikes for users running a large number of telegraf instances.
-  # ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  ### Jitter the flush interval by a random amount. This is primarily to avoid
+  ### large write spikes for users running a large number of telegraf instances.
+  ### ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
-  # Run telegraf in debug mode
+  ### Run telegraf in debug mode
   debug = false
-  # Run telegraf in quiet mode
+  ### Run telegraf in quiet mode
   quiet = false
-  # Override default hostname, if empty use os.Hostname()
+  ### Override default hostname, if empty use os.Hostname()
   hostname = ""
 
 

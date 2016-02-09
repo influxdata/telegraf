@@ -107,8 +107,8 @@ var sampleConfig = `
   # username = "guest"
   # password = "guest"
 
-  # A list of nodes to pull metrics about. If not specified, metrics for
-  # all nodes are gathered.
+  ### A list of nodes to pull metrics about. If not specified, metrics for
+  ### all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
 `
 

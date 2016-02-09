@@ -72,11 +72,11 @@ var initNode = Node{
 var NameToOid = make(map[string]string)
 
 var sampleConfig = `
-  # Use 'oids.txt' file to translate oids to names
-  # To generate 'oids.txt' you need to run:
-  #   snmptranslate -m all -Tz -On | sed -e 's/"//g' > /tmp/oids.txt
-  # Or if you have an other MIB folder with custom MIBs
-  #   snmptranslate -M /mycustommibfolder -Tz -On -m all | sed -e 's/"//g' > oids.txt
+  ### Use 'oids.txt' file to translate oids to names
+  ### To generate 'oids.txt' you need to run:
+  ###   snmptranslate -m all -Tz -On | sed -e 's/"//g' > /tmp/oids.txt
+  ### Or if you have an other MIB folder with custom MIBs
+  ###   snmptranslate -M /mycustommibfolder -Tz -On -m all | sed -e 's/"//g' > oids.txt
   snmptranslate_file = "/tmp/oids.txt"
   [[inputs.snmp.host]]
     address = "192.168.2.2:161"

@@ -46,37 +46,36 @@ func (c RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 }
 
 var sampleConfig = `
-  # NOTE This plugin only reads numerical measurements, strings and booleans
-  # will be ignored.
+  ### NOTE This plugin only reads numerical measurements, strings and booleans
+  ### will be ignored.
 
-  # a name for the service being polled
+  ### a name for the service being polled
   name = "webserver_stats"
 
-  # URL of each server in the service's cluster
+  ### URL of each server in the service's cluster
   servers = [
     "http://localhost:9999/stats/",
     "http://localhost:9998/stats/",
   ]
 
-  # HTTP method to use (case-sensitive)
+  ### HTTP method to use (case-sensitive)
   method = "GET"
 
-  # List of tag names to extract from top-level of JSON server response
+  ### List of tag names to extract from top-level of JSON server response
   # tag_keys = [
   #   "my_tag_1",
   #   "my_tag_2"
   # ]
 
-  # HTTP parameters (all values must be strings)
+  ### HTTP parameters (all values must be strings)
   [inputs.httpjson.parameters]
     event_type = "cpu_spike"
     threshold = "0.75"
 
-  # HTTP Header parameters (all values must be strings)
+  ### HTTP Header parameters (all values must be strings)
   # [inputs.httpjson.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
-
 `
 
 func (h *HttpJson) SampleConfig() string {

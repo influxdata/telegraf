@@ -41,7 +41,7 @@ type NSQ struct {
 }
 
 var sampleConfig = `
-  # An array of NSQD HTTP API endpoints
+  ### An array of NSQD HTTP API endpoints
   endpoints = ["http://localhost:4151"]
 `
 

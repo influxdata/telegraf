@@ -13,7 +13,7 @@ type Trig struct {
 }
 
 var TrigConfig = `
-  # Set the amplitude
+  ### Set the amplitude
   amplitude = 10.0
 `
 
@@ -42,5 +42,5 @@ func (s *Trig) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("Trig", func() telegraf.Input { return &Trig{x: 0.0} })
+	inputs.Add("trig", func() telegraf.Input { return &Trig{x: 0.0} })
 }

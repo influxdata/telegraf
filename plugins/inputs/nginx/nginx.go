@@ -20,7 +20,7 @@ type Nginx struct {
 }
 
 var sampleConfig = `
-  # An array of Nginx stub_status URI to gather stats.
+  ### An array of Nginx stub_status URI to gather stats.
   urls = ["http://localhost/status"]
 `
 

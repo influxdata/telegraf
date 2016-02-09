@@ -19,14 +19,14 @@ type Redis struct {
 }
 
 var sampleConfig = `
-  # specify servers via a url matching:
-  #  [protocol://][:password]@address[:port]
-  #  e.g.
-  #    tcp://localhost:6379
-  #    tcp://:password@192.168.99.100
-  #
-  # If no servers are specified, then localhost is used as the host.
-  # If no port is specified, 6379 is used
+  ### specify servers via a url matching:
+  ###  [protocol://][:password]@address[:port]
+  ###  e.g.
+  ###    tcp://localhost:6379
+  ###    tcp://:password@192.168.99.100
+  ###
+  ### If no servers are specified, then localhost is used as the host.
+  ### If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
 `
 

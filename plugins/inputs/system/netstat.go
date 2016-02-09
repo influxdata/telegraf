@@ -13,7 +13,7 @@ type NetStats struct {
 }
 
 func (_ *NetStats) Description() string {
-	return "Read metrics about TCP status such as established, time wait etc and UDP sockets counts."
+	return "Read TCP metrics such as established, time wait and sockets counts."
 }
 
 var tcpstatSampleConfig = ""

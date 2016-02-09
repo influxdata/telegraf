@@ -30,15 +30,15 @@ func NewProcstat() *Procstat {
 }
 
 var sampleConfig = `
-  # Must specify one of: pid_file, exe, or pattern
-  # PID file to monitor process
+  ### Must specify one of: pid_file, exe, or pattern
+  ### PID file to monitor process
   pid_file = "/var/run/nginx.pid"
-  # executable name (ie, pgrep <exe>)
+  ### executable name (ie, pgrep <exe>)
   # exe = "nginx"
-  # pattern as argument for pgrep (ie, pgrep -f <pattern>)
+  ### pattern as argument for pgrep (ie, pgrep -f <pattern>)
   # pattern = "nginx"
 
-  # Field name prefix
+  ### Field name prefix
   prefix = ""
 `
 
