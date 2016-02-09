@@ -40,6 +40,10 @@ func TestGraphiteError(t *testing.T) {
 
 func TestGraphiteOK(t *testing.T) {
 	var wg sync.WaitGroup
+	// Start TCP server
+	wg.Add(1)
+	go TCPServer(t, &wg)
+
 	// Init plugin
 	g := Graphite{
 		Prefix: "my.prefix",
@@ -63,19 +67,15 @@ func TestGraphiteOK(t *testing.T) {
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
+
 	// Prepare point list
-	var metrics []telegraf.Metric
-	metrics = append(metrics, m1)
-	metrics = append(metrics, m2)
-	metrics = append(metrics, m3)
-	// Start TCP server
-	wg.Add(1)
-	go TCPServer(t, &wg)
+	metrics := []telegraf.Metric{m1, m2, m3}
 	err1 := g.Connect()
 	require.NoError(t, err1)
 	// Send Data
 	err2 := g.Write(metrics)
 	require.NoError(t, err2)
+
 	// Waiting TCPserver
 	wg.Wait()
 	g.Close()
