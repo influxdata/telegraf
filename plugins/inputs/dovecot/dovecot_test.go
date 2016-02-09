@@ -11,6 +11,10 @@ import (
 
 func TestDovecot(t *testing.T) {
 
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	var acc testutil.Accumulator
 	tags := map[string]string{"server": "dovecot.test", "domain": "domain.test"}
 	buf := bytes.NewBufferString(sampleStats)
@@ -23,7 +27,6 @@ func TestDovecot(t *testing.T) {
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
-		"domain":                 "domain.test",
 		"reset_timestamp":        time.Unix(1453969886, 0),
 		"last_update":            time.Unix(1454603963, 39864),
 		"num_logins":             int64(7503897),
