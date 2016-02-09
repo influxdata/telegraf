@@ -92,6 +92,9 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet    bool
 	Hostname string
+
+	// ConfigPort is the location of the HTTP handlers for remotely changing config
+	ConfigPort string
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -174,6 +177,9 @@ var header = `# Telegraf configuration
   quiet = false
   # Override default hostname, if empty use os.Hostname()
   hostname = ""
+
+	# Set configuration management port
+	config-port = ""
 
 
 ###############################################################################

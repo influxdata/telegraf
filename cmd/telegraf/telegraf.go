@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
+	cfg "github.com/influxdata/config"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
@@ -144,6 +146,13 @@ func main() {
 			c.OutputFilters = outputFilters
 			c.InputFilters = inputFilters
 			err = c.LoadConfig(*fConfig)
+
+			if c.Agent.ConfigPort != "" {
+				cf, _ := cfg.NewConfig(*fConfig, struct{}{})
+				log.Printf("Starting configuration management service on port %s\n", c.Agent.ConfigPort)
+				go http.ListenAndServe(c.Agent.ConfigPort, cf.HTTP())
+			}
+
 			if err != nil {
 				log.Fatal(err)
 			}
