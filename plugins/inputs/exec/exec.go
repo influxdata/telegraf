@@ -101,6 +101,12 @@ func (e *Exec) SetParser(parser parsers.Parser) {
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
+	// Legacy single command support
+	if e.Command != "" {
+		e.Commands = append(e.Commands, e.Command)
+		e.Command = ""
+	}
+
 	e.errChan = make(chan error, len(e.Commands))
 
 	e.wg.Add(len(e.Commands))
