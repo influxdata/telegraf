@@ -1,9 +1,15 @@
 ## v0.10.3 [unreleased]
 
 ### Release Notes
+- **Breaking Change** all users of the exec plugin must specify
+`data_format = "json"` in the config file for the plugin to continue
+parsing JSON data as it does now.
+- More info on parsing arbitrary data formats can be found
+[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md)
 
 ### Features
 - [#652](https://github.com/influxdata/telegraf/pull/652): CouchDB Input Plugin
+- [#655](https://github.com/influxdata/telegraf/pull/655): Support parsing arbitrary data formats. Currently limited to kafka_consumer and exec inputs.
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
