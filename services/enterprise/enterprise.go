@@ -12,14 +12,16 @@ type Config struct {
 }
 
 type Service struct {
-	hosts  []*client.Host
-	logger *log.Logger
+	hosts    []*client.Host
+	logger   *log.Logger
+	hostname string
 }
 
-func NewEnterprise(c Config) *Service {
+func NewEnterprise(c Config, hostname string) *Service {
 	return &Service{
-		hosts:  c.Hosts,
-		logger: log.New(os.Stdout, "[enterprise]", log.Ldate|log.Ltime),
+		hosts:    c.Hosts,
+		hostname: hostname,
+		logger:   log.New(os.Stdout, "[enterprise]", log.Ldate|log.Ltime),
 	}
 }
 
@@ -35,7 +37,7 @@ func (s *Service) Open() {
 func (s *Service) registerProduct(cl *client.Client) {
 	p := client.Product{
 		ProductID: "telegraf",
-		Host:      "localhost",
+		Host:      s.hostname,
 	}
 
 	_, err := cl.Register(&p)
