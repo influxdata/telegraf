@@ -14,6 +14,7 @@ format that they would like to parse. Currently supports: "json", "influx", and
 - [#671](https://github.com/influxdata/telegraf/pull/671): Dovecot input plugin. Thanks @mikif70!
 - [#680](https://github.com/influxdata/telegraf/pull/680): NATS consumer input plugin. Thanks @netixen!
 - [#676](https://github.com/influxdata/telegraf/pull/676): MQTT consumer input plugin.
+- [#683](https://github.com/influxdata/telegraf/pull/683): PostGRES input plugin: add pg_stat_bgwriter. Thanks @menardorama!
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
