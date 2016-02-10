@@ -1,27 +1,33 @@
 package enterprise
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/influxdata/enterprise-client/v2"
+	"github.com/influxdata/enterprise-client/v2/admin"
 )
 
 type Config struct {
-	Hosts []*client.Host
+	AdminPort uint16
+	Hosts     []*client.Host
 }
 
 type Service struct {
-	hosts    []*client.Host
-	logger   *log.Logger
-	hostname string
+	hosts     []*client.Host
+	logger    *log.Logger
+	hostname  string
+	adminPort string
 }
 
 func NewEnterprise(c Config, hostname string) *Service {
 	return &Service{
-		hosts:    c.Hosts,
-		hostname: hostname,
-		logger:   log.New(os.Stdout, "[enterprise]", log.Ldate|log.Ltime),
+		hosts:     c.Hosts,
+		hostname:  hostname,
+		logger:    log.New(os.Stdout, "[enterprise]", log.Ldate|log.Ltime),
+		adminPort: fmt.Sprintf(":%d", c.AdminPort),
 	}
 }
 
@@ -32,6 +38,7 @@ func (s *Service) Open() {
 		return
 	}
 	go s.registerProduct(cl)
+	go s.startAdminInterface()
 }
 
 func (s *Service) registerProduct(cl *client.Client) {
@@ -44,4 +51,8 @@ func (s *Service) registerProduct(cl *client.Client) {
 	if err != nil {
 		s.logger.Println("Unable to register Telegraf with Enterprise")
 	}
+}
+
+func (s *Service) startAdminInterface() {
+	go http.ListenAndServe(s.adminPort, admin.App("foo", []byte("bar")))
 }

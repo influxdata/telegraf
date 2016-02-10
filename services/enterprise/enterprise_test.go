@@ -2,6 +2,7 @@ package enterprise_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -52,6 +53,38 @@ func Test_RegistersWithEnterprise(t *testing.T) {
 		case <-success:
 			if actualHostname != expected {
 				t.Errorf("Expected hostname to be %s but was %s", expected, actualHostname)
+			}
+			return
+		case <-timeout:
+			t.Fatal("Expected to receive call to Enterprise API, but received none")
+		}
+	}
+}
+
+func Test_StartsAdminInterface(t *testing.T) {
+	hostname := "localhost"
+	adminPort := 2300
+
+	success, srv := mockEnterprise(func(c *client.Product, err error) {})
+	defer srv.Close()
+
+	c := enterprise.Config{
+		Hosts: []*client.Host{
+			&client.Host{URL: srv.URL},
+		},
+		AdminPort: 2300,
+	}
+
+	e := enterprise.NewEnterprise(c, hostname)
+	e.Open()
+
+	timeout := time.After(1 * time.Millisecond)
+	for {
+		select {
+		case <-success:
+			_, err := http.Get(fmt.Sprintf("http://%s:%d", hostname, adminPort))
+			if err != nil {
+				t.Errorf("Unable to connect to admin interface: err: %s", err)
 			}
 			return
 		case <-timeout:
