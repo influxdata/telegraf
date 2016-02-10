@@ -44,7 +44,10 @@ func Test_RegistersWithEnterprise(t *testing.T) {
 			&client.Host{URL: srv.URL},
 		},
 	}
-	e := enterprise.NewEnterprise(c, expected)
+
+	shutdown := make(chan struct{})
+	defer close(shutdown)
+	e := enterprise.NewEnterprise(c, expected, shutdown)
 	e.Open()
 
 	timeout := time.After(1 * time.Millisecond)
@@ -75,7 +78,9 @@ func Test_StartsAdminInterface(t *testing.T) {
 		AdminPort: 2300,
 	}
 
-	e := enterprise.NewEnterprise(c, hostname)
+	shutdown := make(chan struct{})
+	defer close(shutdown)
+	e := enterprise.NewEnterprise(c, hostname, shutdown)
 	e.Open()
 
 	timeout := time.After(1 * time.Millisecond)
@@ -85,6 +90,47 @@ func Test_StartsAdminInterface(t *testing.T) {
 			_, err := http.Get(fmt.Sprintf("http://%s:%d", hostname, adminPort))
 			if err != nil {
 				t.Errorf("Unable to connect to admin interface: err: %s", err)
+			}
+			return
+		case <-timeout:
+			t.Fatal("Expected to receive call to Enterprise API, but received none")
+		}
+	}
+}
+
+func Test_ClosesAdminInterface(t *testing.T) {
+	hostname := "localhost"
+	adminPort := 2300
+
+	success, srv := mockEnterprise(func(c *client.Product, err error) {})
+	defer srv.Close()
+
+	c := enterprise.Config{
+		Hosts: []*client.Host{
+			&client.Host{URL: srv.URL},
+		},
+		AdminPort: 2300,
+	}
+
+	shutdown := make(chan struct{})
+	e := enterprise.NewEnterprise(c, hostname, shutdown)
+	e.Open()
+
+	timeout := time.After(1 * time.Millisecond)
+	for {
+		select {
+		case <-success:
+			// Ensure that the admin interface is running
+			_, err := http.Get(fmt.Sprintf("http://%s:%d", hostname, adminPort))
+			if err != nil {
+				t.Errorf("Unable to connect to admin interface: err: %s", err)
+			}
+			close(shutdown)
+
+			// ...and that it's not running after we shut it down
+			_, err = http.Get(fmt.Sprintf("http://%s:%d", hostname, adminPort))
+			if err == nil {
+				t.Errorf("Admin interface continued running after shutdown")
 			}
 			return
 		case <-timeout:
