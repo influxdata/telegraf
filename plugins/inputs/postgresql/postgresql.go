@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -16,6 +17,7 @@ type Postgresql struct {
 	Address        string
 	Databases      []string
 	OrderedColumns []string
+	AllColumns     []string
 }
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
@@ -86,6 +88,9 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	p.OrderedColumns, err = rows.Columns()
 	if err != nil {
 		return err
+	} else {
+		p.AllColumns = make([]string, len(p.OrderedColumns))
+		copy(p.AllColumns, p.OrderedColumns)
 	}
 
 	for rows.Next() {
@@ -94,8 +99,34 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
+	//return rows.Err()
+	query = `SELECT * FROM pg_stat_bgwriter`
 
-	return rows.Err()
+	bg_writer_row, err := db.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer bg_writer_row.Close()
+
+	// grab the column information from the result
+	p.OrderedColumns, err = bg_writer_row.Columns()
+	if err != nil {
+		return err
+	} else {
+		for _, v := range p.OrderedColumns {
+			p.AllColumns = append(p.AllColumns, v)
+		}
+	}
+
+	for bg_writer_row.Next() {
+		err = p.accRow(bg_writer_row, acc)
+		if err != nil {
+			return err
+		}
+	}
+	sort.Strings(p.AllColumns)
+	return bg_writer_row.Err()
 }
 
 type scanner interface {
@@ -124,11 +155,14 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-
-	// extract the database name from the column map
-	dbnameChars := (*columnMap["datname"]).([]uint8)
-	for i := 0; i < len(dbnameChars); i++ {
-		dbname.WriteString(string(dbnameChars[i]))
+	if columnMap["datname"] != nil {
+		// extract the database name from the column map
+		dbnameChars := (*columnMap["datname"]).([]uint8)
+		for i := 0; i < len(dbnameChars); i++ {
+			dbname.WriteString(string(dbnameChars[i]))
+		}
+	} else {
+		dbname.WriteString("postgres")
 	}
 
 	tags := map[string]string{"server": p.Address, "db": dbname.String()}
