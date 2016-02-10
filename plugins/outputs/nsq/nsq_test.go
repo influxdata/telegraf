@@ -3,6 +3,7 @@ package nsq
 import (
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -13,9 +14,11 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 
 	server := []string{testutil.GetLocalHost() + ":4150"}
+	s, _ := serializers.NewInfluxSerializer()
 	n := &NSQ{
-		Server: server[0],
-		Topic:  "telegraf",
+		Server:     server[0],
+		Topic:      "telegraf",
+		serializer: s,
 	}
 
 	// Verify that we can connect to the NSQ daemon

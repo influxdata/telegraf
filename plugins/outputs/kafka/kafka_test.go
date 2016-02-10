@@ -3,6 +3,7 @@ package kafka
 import (
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -13,9 +14,11 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 
 	brokers := []string{testutil.GetLocalHost() + ":9092"}
+	s, _ := serializers.NewInfluxSerializer()
 	k := &Kafka{
-		Brokers: brokers,
-		Topic:   "Test",
+		Brokers:    brokers,
+		Topic:      "Test",
+		serializer: s,
 	}
 
 	// Verify that we can connect to the Kafka broker
