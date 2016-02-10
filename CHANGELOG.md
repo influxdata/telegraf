@@ -1,9 +1,9 @@
 ## v0.10.3 [unreleased]
 
 ### Release Notes
-- **Breaking Change** all users of the exec plugin must specify
-`data_format = "json"` in the config file for the plugin to continue
-parsing JSON data as it does now.
+- Users of the `exec` and `kafka_consumer` can now specify the incoming data
+format that they would like to parse. Currently supports: "json", "influx", and
+"graphite"
 - More info on parsing arbitrary data formats can be found
 [here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md)
 

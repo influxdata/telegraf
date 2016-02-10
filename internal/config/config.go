@@ -611,7 +611,10 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if c.DataFormat == "" {
+	// Legacy support, exec plugin originally parsed JSON by default.
+	if name == "exec" && c.DataFormat == "" {
+		c.DataFormat = "json"
+	} else if c.DataFormat == "" {
 		c.DataFormat = "influx"
 	}
 
