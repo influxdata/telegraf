@@ -10,6 +10,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers"
+
 	"github.com/streadway/amqp"
 )
 
@@ -39,6 +41,8 @@ type AMQP struct {
 	channel *amqp.Channel
 	sync.Mutex
 	headers amqp.Table
+
+	serializer serializers.Serializer
 }
 
 const (
@@ -69,7 +73,17 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ### Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ### Data format to output. This can be "influx" or "graphite"
+  ### Each data format has it's own unique set of configuration options, read
+  ### more about them here:
+  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
 `
+
+func (a *AMQP) SetSerializer(serializer serializers.Serializer) {
+	a.serializer = serializer
+}
 
 func (q *AMQP) Connect() error {
 	q.Lock()
@@ -147,18 +161,24 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	}
 	var outbuf = make(map[string][][]byte)
 
-	for _, p := range metrics {
-		var value, key string
-		value = p.String()
-
+	for _, metric := range metrics {
+		var key string
 		if q.RoutingTag != "" {
-			if h, ok := p.Tags()[q.RoutingTag]; ok {
+			if h, ok := metric.Tags()[q.RoutingTag]; ok {
 				key = h
 			}
 		}
-		outbuf[key] = append(outbuf[key], []byte(value))
 
+		values, err := q.serializer.Serialize(metric)
+		if err != nil {
+			return err
+		}
+
+		for _, value := range values {
+			outbuf[key] = append(outbuf[key], []byte(value))
+		}
 	}
+
 	for key, buf := range outbuf {
 		err := q.channel.Publish(
 			q.Exchange, // exchange

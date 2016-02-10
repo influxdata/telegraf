@@ -9,7 +9,34 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+var sampleConfig = `
+  servers = ["localhost:1883"] # required.
+
+  ### MQTT outputs send metrics to this topic format
+  ###    "<topic_prefix>/<hostname>/<pluginname>/"
+  ###   ex: prefix/host/web01.example.com/mem
+  topic_prefix = "telegraf"
+
+  ### username and password to connect MQTT server.
+  # username = "telegraf"
+  # password = "metricsmetricsmetricsmetrics"
+
+  ### Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ### Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
+  ### Data format to output. This can be "influx" or "graphite"
+  ### Each data format has it's own unique set of configuration options, read
+  ### more about them here:
+  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
+`
 
 type MQTT struct {
 	Servers     []string `toml:"servers"`
@@ -32,30 +59,10 @@ type MQTT struct {
 	client *paho.Client
 	opts   *paho.ClientOptions
 
+	serializer serializers.Serializer
+
 	sync.Mutex
 }
-
-var sampleConfig = `
-  servers = ["localhost:1883"] # required.
-  ### MQTT QoS, must be 0, 1, or 2
-  qos = 0
-
-  ### MQTT outputs send metrics to this topic format
-  ###    "<topic_prefix>/<hostname>/<pluginname>/"
-  ###   ex: prefix/host/web01.example.com/mem
-  topic_prefix = "telegraf"
-
-  ### username and password to connect MQTT server.
-  # username = "telegraf"
-  # password = "metricsmetricsmetricsmetrics"
-
-  ### Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ### Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
-`
 
 func (m *MQTT) Connect() error {
 	var err error
@@ -76,6 +83,10 @@ func (m *MQTT) Connect() error {
 	}
 
 	return nil
+}
+
+func (m *MQTT) SetSerializer(serializer serializers.Serializer) {
+	m.serializer = serializer
 }
 
 func (m *MQTT) Close() error {
@@ -104,7 +115,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		hostname = ""
 	}
 
-	for _, p := range metrics {
+	for _, metric := range metrics {
 		var t []string
 		if m.TopicPrefix != "" {
 			t = append(t, m.TopicPrefix)
@@ -113,13 +124,20 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 			t = append(t, hostname)
 		}
 
-		t = append(t, p.Name())
+		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
 
-		value := p.String()
-		err := m.publish(topic, value)
+		values, err := m.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", err)
+			return fmt.Errorf("MQTT Could not serialize metric: %s",
+				metric.String())
+		}
+
+		for _, value := range values {
+			err = m.publish(topic, value)
+			if err != nil {
+				return fmt.Errorf("Could not write to MQTT server, %s", err)
+			}
 		}
 	}
 

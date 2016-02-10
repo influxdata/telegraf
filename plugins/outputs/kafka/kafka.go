@@ -2,12 +2,12 @@ package kafka
 
 import (
 	"crypto/tls"
-	"errors"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/Shopify/sarama"
 )
@@ -40,6 +40,8 @@ type Kafka struct {
 
 	tlsConfig tls.Config
 	producer  sarama.SyncProducer
+
+	serializer serializers.Serializer
 }
 
 var sampleConfig = `
@@ -57,7 +59,17 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ### Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ### Data format to output. This can be "influx" or "graphite"
+  ### Each data format has it's own unique set of configuration options, read
+  ### more about them here:
+  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
 `
+
+func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
+	k.serializer = serializer
+}
 
 func (k *Kafka) Connect() error {
 	config := sarama.NewConfig()
@@ -109,21 +121,27 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	for _, p := range metrics {
-		value := p.String()
-
-		m := &sarama.ProducerMessage{
-			Topic: k.Topic,
-			Value: sarama.StringEncoder(value),
-		}
-		if h, ok := p.Tags()[k.RoutingTag]; ok {
-			m.Key = sarama.StringEncoder(h)
-		}
-
-		_, _, err := k.producer.SendMessage(m)
+	for _, metric := range metrics {
+		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			return errors.New(fmt.Sprintf("FAILED to send kafka message: %s\n",
-				err))
+			return err
+		}
+
+		var pubErr error
+		for _, value := range values {
+			m := &sarama.ProducerMessage{
+				Topic: k.Topic,
+				Value: sarama.StringEncoder(value),
+			}
+			if h, ok := metric.Tags()[k.RoutingTag]; ok {
+				m.Key = sarama.StringEncoder(h)
+			}
+
+			_, _, pubErr = k.producer.SendMessage(m)
+		}
+
+		if pubErr != nil {
+			return fmt.Errorf("FAILED to send kafka message: %s\n", pubErr)
 		}
 	}
 	return nil
