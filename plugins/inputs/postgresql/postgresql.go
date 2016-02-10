@@ -95,6 +95,28 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	query = `SELECT * FROM pg_stat_bgwriter`
+	
+	rows, err := db.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	// grab the column information from the result
+	p.OrderedColumns, err = rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		err = p.accRow(rows, acc)
+		if err != nil {
+			return err
+		}
+	}
+
 	return rows.Err()
 }
 
