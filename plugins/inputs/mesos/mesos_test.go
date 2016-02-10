@@ -75,6 +75,7 @@ func TestMesosMaster(t *testing.T) {
 
 	m := Mesos{
 		Servers: []string{ts.Listener.Addr().String()},
+		Timeout: 10,
 	}
 
 	err := m.Gather(&acc)
@@ -105,6 +106,13 @@ func TestRemoveGroup(t *testing.T) {
 		for _, x := range masterBlocks(v) {
 			if _, ok := mesosMetrics[x]; ok {
 				t.Errorf("Found key %s, it should be gone.", x)
+			}
+		}
+	}
+	for _, v := range m.MetricsCol {
+		for _, x := range masterBlocks(v) {
+			if _, ok := mesosMetrics[x]; !ok {
+				t.Errorf("Didn't find key %s, it should present.", x)
 			}
 		}
 	}
