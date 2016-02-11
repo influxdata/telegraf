@@ -62,11 +62,11 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 
 	for _, v := range m.Masters {
 		wg.Add(1)
-		go func() {
-			errorChannel <- m.gatherMetrics(v, acc)
+		go func(c string) {
+			errorChannel <- m.gatherMetrics(c, acc)
 			wg.Done()
 			return
-		}()
+		}(v)
 	}
 
 	wg.Wait()
