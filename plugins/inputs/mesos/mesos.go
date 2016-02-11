@@ -19,7 +19,7 @@ import (
 type Mesos struct {
 	Timeout    int
 	Masters    []string
-	MasterCols []string `toml:"metrics_collection"`
+	MasterCols []string `toml:"master_collections"`
 }
 
 var defaultMetrics = []string{
