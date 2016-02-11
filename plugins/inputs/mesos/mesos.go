@@ -18,8 +18,8 @@ import (
 
 type Mesos struct {
 	Timeout    int
-	Servers    []string
-	MetricsCol []string `toml:"metrics_collection"`
+	Masters    []string
+	MasterCols []string `toml:"metrics_collection"`
 }
 
 var defaultMetrics = []string{
@@ -33,10 +33,10 @@ var sampleConfig = `
   # A list of Mesos masters. e.g. master1:5050, master2:5080, etc.
   # The port can be skipped if using the default (5050)
   # Default value is localhost:5050.
-  servers = ["localhost:5050"]
+  masters = ["localhost:5050"]
   # Metrics groups to be collected.
   # Default, all enabled.
-  metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
+  master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
 `
 
 // SampleConfig returns a sample configuration block
@@ -54,13 +54,13 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var errorChannel chan error
 
-	if len(m.Servers) == 0 {
-		m.Servers = []string{"localhost:5050"}
+	if len(m.Masters) == 0 {
+		m.Masters = []string{"localhost:5050"}
 	}
 
-	errorChannel = make(chan error, len(m.Servers)*2)
+	errorChannel = make(chan error, len(m.Masters)*2)
 
-	for _, v := range m.Servers {
+	for _, v := range m.Masters {
 		wg.Add(1)
 		go func() {
 			errorChannel <- m.gatherMetrics(v, acc)
@@ -253,7 +253,7 @@ func masterBlocks(g string) []string {
 func (m *Mesos) removeGroup(j *map[string]interface{}) {
 	var ok bool
 
-	b := metricsDiff(m.MetricsCol)
+	b := metricsDiff(m.MasterCols)
 
 	for _, k := range b {
 		for _, v := range masterBlocks(k) {

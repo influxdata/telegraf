@@ -74,7 +74,7 @@ func TestMesosMaster(t *testing.T) {
 	var acc testutil.Accumulator
 
 	m := Mesos{
-		Servers: []string{ts.Listener.Addr().String()},
+		Masters: []string{ts.Listener.Addr().String()},
 		Timeout: 10,
 	}
 
@@ -91,7 +91,7 @@ func TestRemoveGroup(t *testing.T) {
 	generateMetrics()
 
 	m := Mesos{
-		MetricsCol: []string{
+		MasterCols: []string{
 			"resources", "master", "registrar",
 		},
 	}
@@ -109,7 +109,7 @@ func TestRemoveGroup(t *testing.T) {
 			}
 		}
 	}
-	for _, v := range m.MetricsCol {
+	for _, v := range m.MasterCols {
 		for _, x := range masterBlocks(v) {
 			if _, ok := mesosMetrics[x]; !ok {
 				t.Errorf("Didn't find key %s, it should present.", x)
@@ -135,10 +135,10 @@ func TestSampleConfig(t *testing.T) {
   # A list of Mesos masters. e.g. master1:5050, master2:5080, etc.
   # The port can be skipped if using the default (5050)
   # Default value is localhost:5050.
-  servers = ["localhost:5050"]
+  masters = ["localhost:5050"]
   # Metrics groups to be collected.
   # Default, all enabled.
-  metrics_collection = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
+  master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
 `
 
 	got := new(Mesos).SampleConfig()
