@@ -45,6 +45,16 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		"temp_bytes",
 		"deadlocks",
 		"numbackends",
+		"buffers_alloc",
+		"buffers_backend",
+		"buffers_backend_fsync",
+		"buffers_checkpoint",
+		"buffers_clean",
+		"checkpoint_sync_time",
+		"checkpoint_write_time",
+		"checkpoints_req",
+		"checkpoints_timed",
+		"maxwritten_clean",
 	}
 
 	floatMetrics := []string{
