@@ -169,6 +169,7 @@ Currently implemented sources:
 * lustre2
 * mailchimp
 * memcached
+* mesos
 * mongodb
 * mysql
 * net_response
