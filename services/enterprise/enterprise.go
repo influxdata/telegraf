@@ -37,6 +37,10 @@ func NewEnterprise(c Config, hostname string, shutdown chan struct{}) *Service {
 }
 
 func (s *Service) Open() {
+	if len(s.hosts) == 0 {
+		return
+	}
+
 	cl, err := client.New(s.hosts)
 	if err != nil {
 		s.logger.Printf("Unable to contact one or more Enterprise hosts. err: %s", err.Error())
