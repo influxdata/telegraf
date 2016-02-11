@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -115,44 +114,5 @@ func TestRemoveGroup(t *testing.T) {
 				t.Errorf("Didn't find key %s, it should present.", x)
 			}
 		}
-	}
-}
-
-func TestMasterBlocks(t *testing.T) {
-	a := "wrong_key"
-	expect := []string{}
-	got := masterBlocks(a)
-
-	if !reflect.DeepEqual(got, expect) {
-		t.Errorf("Expected empty string slice, got: %v", got)
-	}
-}
-
-func TestSampleConfig(t *testing.T) {
-	expect := `
-  # Timeout, in ms.
-  timeout = 100
-  # A list of Mesos masters. e.g. master1:5050, master2:5080, etc.
-  # The port can be skipped if using the default (5050)
-  # Default value is localhost:5050.
-  masters = ["localhost:5050"]
-  # Metrics groups to be collected.
-  # Default, all enabled.
-  master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
-`
-
-	got := new(Mesos).SampleConfig()
-
-	if expect != got {
-		t.Errorf("Got %s", got)
-	}
-}
-
-func TestDescription(t *testing.T) {
-	expect := "Telegraf plugin for gathering metrics from N Mesos masters"
-	got := new(Mesos).Description()
-
-	if expect != got {
-		t.Errorf("Got %s", got)
 	}
 }
