@@ -18,7 +18,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"cont_name":  "redis",
 		"cont_image": "redis/image",
 	}
-	gatherContainerStats(stats, &acc, tags, false)
+	gatherContainerStats(stats, &acc, tags)
 
 	// test docker_net measurement
 	netfields := map[string]interface{}{
@@ -45,13 +45,58 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "docker_blkio", blkiofields, blkiotags)
 
 	// test docker_mem measurement
-	memfields := sample_mem_fields()
+	memfields := map[string]interface{}{
+		"max_usage":                 uint64(1001),
+		"usage":                     uint64(1111),
+		"fail_count":                uint64(1),
+		"limit":                     uint64(2000),
+		"total_pgmafault":           uint64(0),
+		"cache":                     uint64(0),
+		"mapped_file":               uint64(0),
+		"total_inactive_file":       uint64(0),
+		"pgpgout":                   uint64(0),
+		"rss":                       uint64(0),
+		"total_mapped_file":         uint64(0),
+		"writeback":                 uint64(0),
+		"unevictable":               uint64(0),
+		"pgpgin":                    uint64(0),
+		"total_unevictable":         uint64(0),
+		"pgmajfault":                uint64(0),
+		"total_rss":                 uint64(44),
+		"total_rss_huge":            uint64(444),
+		"total_writeback":           uint64(55),
+		"total_inactive_anon":       uint64(0),
+		"rss_huge":                  uint64(0),
+		"hierarchical_memory_limit": uint64(0),
+		"total_pgfault":             uint64(0),
+		"total_active_file":         uint64(0),
+		"active_anon":               uint64(0),
+		"total_active_anon":         uint64(0),
+		"total_pgpgout":             uint64(0),
+		"total_cache":               uint64(0),
+		"inactive_anon":             uint64(0),
+		"active_file":               uint64(1),
+		"pgfault":                   uint64(2),
+		"inactive_file":             uint64(3),
+		"total_pgpgin":              uint64(4),
+		"usage_percent":             float64(55.55),
+	}
+
 	acc.AssertContainsTaggedFields(t, "docker_mem", memfields, tags)
 
 	// test docker_cpu measurement
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
-	cpufields := sample_cpu_fields()
+	cpufields := map[string]interface{}{
+		"usage_total":                  uint64(500),
+		"usage_in_usermode":            uint64(100),
+		"usage_in_kernelmode":          uint64(200),
+		"usage_system":                 uint64(100),
+		"throttling_periods":           uint64(1),
+		"throttling_throttled_periods": uint64(0),
+		"throttling_throttled_time":    uint64(0),
+		"usage_percent":                float64(400.0),
+	}
 	acc.AssertContainsTaggedFields(t, "docker_cpu", cpufields, cputags)
 
 	cputags["cpu"] = "cpu0"
@@ -65,30 +110,6 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"usage_total": uint64(1002),
 	}
 	acc.AssertContainsTaggedFields(t, "docker_cpu", cpu1fields, cputags)
-}
-
-func TestDockerGatherContainerPercentages(t *testing.T) {
-	var acc testutil.Accumulator
-	stats := testStats()
-
-	tags := map[string]string{
-		"cont_id":    "foobarbaz",
-		"cont_name":  "redis",
-		"cont_image": "redis/image",
-	}
-	gatherContainerStats(stats, &acc, tags, true)
-
-	// test docker_mem measurement
-	memfields := sample_mem_fields()
-	memfields["usage_percent"] = 55.55
-	acc.AssertContainsTaggedFields(t, "docker_mem", memfields, tags)
-
-	// test docker_cpu measurement
-	cputags := copyTags(tags)
-	cputags["cpu"] = "cpu-total"
-	cpufields := sample_cpu_fields()
-	cpufields["usage_percent"] = 400.0
-	acc.AssertContainsTaggedFields(t, "docker_cpu", cpufields, cputags)
 }
 
 func testStats() *docker.Stats {
@@ -172,59 +193,4 @@ func testStats() *docker.Stats {
 		stats.BlkioStats.IOServicedRecursive, sr)
 
 	return stats
-}
-
-func sample_mem_fields() map[string]interface{} {
-
-	memfields := map[string]interface{}{
-		"max_usage":                 uint64(1001),
-		"usage":                     uint64(1111),
-		"fail_count":                uint64(1),
-		"limit":                     uint64(2000),
-		"total_pgmafault":           uint64(0),
-		"cache":                     uint64(0),
-		"mapped_file":               uint64(0),
-		"total_inactive_file":       uint64(0),
-		"pgpgout":                   uint64(0),
-		"rss":                       uint64(0),
-		"total_mapped_file":         uint64(0),
-		"writeback":                 uint64(0),
-		"unevictable":               uint64(0),
-		"pgpgin":                    uint64(0),
-		"total_unevictable":         uint64(0),
-		"pgmajfault":                uint64(0),
-		"total_rss":                 uint64(44),
-		"total_rss_huge":            uint64(444),
-		"total_writeback":           uint64(55),
-		"total_inactive_anon":       uint64(0),
-		"rss_huge":                  uint64(0),
-		"hierarchical_memory_limit": uint64(0),
-		"total_pgfault":             uint64(0),
-		"total_active_file":         uint64(0),
-		"active_anon":               uint64(0),
-		"total_active_anon":         uint64(0),
-		"total_pgpgout":             uint64(0),
-		"total_cache":               uint64(0),
-		"inactive_anon":             uint64(0),
-		"active_file":               uint64(1),
-		"pgfault":                   uint64(2),
-		"inactive_file":             uint64(3),
-		"total_pgpgin":              uint64(4),
-	}
-
-	return memfields
-}
-
-func sample_cpu_fields() map[string]interface{} {
-
-	cpufields := map[string]interface{}{
-		"usage_total":                  uint64(500),
-		"usage_in_usermode":            uint64(100),
-		"usage_in_kernelmode":          uint64(200),
-		"usage_system":                 uint64(100),
-		"throttling_periods":           uint64(1),
-		"throttling_throttled_periods": uint64(0),
-		"throttling_throttled_time":    uint64(0),
-	}
-	return cpufields
 }
