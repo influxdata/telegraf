@@ -47,7 +47,7 @@ func Test_RegistersWithEnterprise(t *testing.T) {
 
 	shutdown := make(chan struct{})
 	defer close(shutdown)
-	e := enterprise.NewEnterprise(c, expected, shutdown)
+	e := enterprise.NewEnterprise(c, expected, "test", shutdown)
 	e.Open()
 
 	timeout := time.After(1 * time.Millisecond)
@@ -80,7 +80,7 @@ func Test_StartsAdminInterface(t *testing.T) {
 
 	shutdown := make(chan struct{})
 	defer close(shutdown)
-	e := enterprise.NewEnterprise(c, hostname, shutdown)
+	e := enterprise.NewEnterprise(c, hostname, "test", shutdown)
 	e.Open()
 
 	timeout := time.After(1 * time.Millisecond)
@@ -113,7 +113,7 @@ func Test_ClosesAdminInterface(t *testing.T) {
 	}
 
 	shutdown := make(chan struct{})
-	e := enterprise.NewEnterprise(c, hostname, shutdown)
+	e := enterprise.NewEnterprise(c, hostname, "test", shutdown)
 	e.Open()
 
 	timeout := time.After(1 * time.Millisecond)

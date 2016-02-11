@@ -21,18 +21,20 @@ type Service struct {
 	hosts     []*client.Host
 	logger    *log.Logger
 	hostname  string
+	version   string
 	adminPort string
 
 	shutdown chan struct{}
 }
 
-func NewEnterprise(c Config, hostname string, shutdown chan struct{}) *Service {
+func NewEnterprise(c Config, hostname, version string, shutdown chan struct{}) *Service {
 	return &Service{
 		hosts:     c.Hosts,
 		hostname:  hostname,
 		logger:    log.New(os.Stdout, "[enterprise]", log.Ldate|log.Ltime),
 		adminPort: fmt.Sprintf(":%d", c.AdminPort),
 		shutdown:  shutdown,
+		version:   version,
 	}
 }
 
@@ -60,7 +62,7 @@ func (s *Service) registerProduct(cl *client.Client) (token string, secret strin
 		Host:      s.hostname,
 		ClusterID: "8675309",
 		Name:      "telegraf",
-		Version:   "0.10.1.dev",
+		Version:   s.version,
 		AdminURL:  "http://" + s.hostname + s.adminPort,
 	}
 

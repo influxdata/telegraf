@@ -19,7 +19,8 @@ import (
 
 // Agent runs telegraf and collects data based on the given config
 type Agent struct {
-	Config *config.Config
+	Config  *config.Config
+	Version string
 }
 
 // NewAgent returns an Agent struct based off the given Config
@@ -329,7 +330,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	}
 	ticker := time.NewTicker(a.Config.Agent.Interval.Duration)
 
-	ent := enterprise.NewEnterprise(a.Config.Agent.Enterprise, a.Config.Agent.Hostname, shutdown)
+	ent := enterprise.NewEnterprise(a.Config.Agent.Enterprise, a.Config.Agent.Hostname, a.Version, shutdown)
 	go ent.Open()
 
 	wg.Add(1)
