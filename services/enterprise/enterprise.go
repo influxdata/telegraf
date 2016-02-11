@@ -56,8 +56,12 @@ func (s *Service) Open() {
 
 func (s *Service) registerProduct(cl *client.Client) (token string, secret string, err error) {
 	p := client.Product{
-		ProductID: "telegraf",
+		ProductID: "4815162342",
 		Host:      s.hostname,
+		ClusterID: "8675309",
+		Name:      "telegraf",
+		Version:   "0.10.1.dev",
+		AdminURL:  "http://" + s.hostname + s.adminPort,
 	}
 
 	_, err = cl.Register(&p)

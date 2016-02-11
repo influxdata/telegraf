@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/services/enterprise"
 )
 
 // Agent runs telegraf and collects data based on the given config
@@ -327,6 +328,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		time.Sleep(time.Duration(i - (time.Now().UnixNano() % i)))
 	}
 	ticker := time.NewTicker(a.Config.Agent.Interval.Duration)
+
+	ent := enterprise.NewEnterprise(a.Config.Agent.Enterprise, a.Config.Agent.Hostname, shutdown)
+	go ent.Open()
 
 	wg.Add(1)
 	go func() {

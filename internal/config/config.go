@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/services/enterprise"
 
 	"github.com/influxdata/config"
 	"github.com/naoina/toml/ast"
@@ -94,6 +95,8 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet    bool
 	Hostname string
+
+	Enterprise enterprise.Config
 }
 
 // Inputs returns a list of strings of the configured inputs.
