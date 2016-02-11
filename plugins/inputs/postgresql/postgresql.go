@@ -95,27 +95,27 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	//return rows.Err()
-        query = `SELECT * FROM pg_stat_bgwriter`
+	query = `SELECT * FROM pg_stat_bgwriter`
 
-        bg_writer_row, err := db.Query(query)
-        if err != nil {
-                return err
-        }
+	bg_writer_row, err := db.Query(query)
+	if err != nil {
+		return err
+	}
 
-        defer bg_writer_row.Close()
+	defer bg_writer_row.Close()
 
-        // grab the column information from the result
-        p.OrderedColumns, err = bg_writer_row.Columns()
-        if err != nil {
-                return err
-        }
+	// grab the column information from the result
+	p.OrderedColumns, err = bg_writer_row.Columns()
+	if err != nil {
+		return err
+	}
 
-        for bg_writer_row.Next() {
-                err = p.accRow(bg_writer_row, acc)
-                if err != nil {
-                        return err
-                }
-        }
+	for bg_writer_row.Next() {
+		err = p.accRow(bg_writer_row, acc)
+		if err != nil {
+			return err
+		}
+	}
 	return bg_writer_row.Err()
 }
 
@@ -145,7 +145,7 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	if  columnMap["datname"] != nil {
+	if columnMap["datname"] != nil {
 		// extract the database name from the column map
 		dbnameChars := (*columnMap["datname"]).([]uint8)
 		for i := 0; i < len(dbnameChars); i++ {
