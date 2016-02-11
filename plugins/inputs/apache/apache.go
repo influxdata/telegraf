@@ -20,7 +20,7 @@ type Apache struct {
 }
 
 var sampleConfig = `
-  # An array of Apache status URI to gather stats.
+  ### An array of Apache status URI to gather stats.
   urls = ["http://localhost/server-status?auto"]
 `
 

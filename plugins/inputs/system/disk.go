@@ -21,8 +21,8 @@ func (_ *DiskStats) Description() string {
 }
 
 var diskSampleConfig = `
-  # By default, telegraf gather stats for all mountpoints.
-  # Setting mountpoints will restrict the stats to the specified mountpoints.
+  ### By default, telegraf gather stats for all mountpoints.
+  ### Setting mountpoints will restrict the stats to the specified mountpoints.
   # mount_points = ["/"]
 `
 

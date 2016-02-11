@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 const statsPath = "/_nodes/stats"
@@ -59,14 +59,14 @@ type indexHealth struct {
 }
 
 const sampleConfig = `
-  # specify a list of one or more Elasticsearch servers
+  ### specify a list of one or more Elasticsearch servers
   servers = ["http://localhost:9200"]
 
-  # set local to false when you want to read the indices stats from all nodes
-  # within the cluster
+  ### set local to false when you want to read the indices stats from all nodes
+  ### within the cluster
   local = true
 
-  # set cluster_health to true when you want to also obtain cluster level stats
+  ### set cluster_health to true when you want to also obtain cluster level stats
   cluster_health = false
 `
 
@@ -168,7 +168,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 
 		now := time.Now()
 		for p, s := range stats {
-			f := internal.JSONFlattener{}
+			f := jsonparser.JSONFlattener{}
 			err := f.FlattenJSON("", s)
 			if err != nil {
 				return err

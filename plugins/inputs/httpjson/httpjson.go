@@ -1,7 +1,6 @@
 package httpjson
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,8 +11,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type HttpJson struct {
@@ -47,37 +46,36 @@ func (c RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 }
 
 var sampleConfig = `
-  # NOTE This plugin only reads numerical measurements, strings and booleans
-  # will be ignored.
+  ### NOTE This plugin only reads numerical measurements, strings and booleans
+  ### will be ignored.
 
-  # a name for the service being polled
+  ### a name for the service being polled
   name = "webserver_stats"
 
-  # URL of each server in the service's cluster
+  ### URL of each server in the service's cluster
   servers = [
     "http://localhost:9999/stats/",
     "http://localhost:9998/stats/",
   ]
 
-  # HTTP method to use (case-sensitive)
+  ### HTTP method to use (case-sensitive)
   method = "GET"
 
-  # List of tag names to extract from top-level of JSON server response
+  ### List of tag names to extract from top-level of JSON server response
   # tag_keys = [
   #   "my_tag_1",
   #   "my_tag_2"
   # ]
 
-  # HTTP parameters (all values must be strings)
+  ### HTTP parameters (all values must be strings)
   [inputs.httpjson.parameters]
     event_type = "cpu_spike"
     threshold = "0.75"
 
-  # HTTP Header parameters (all values must be strings)
+  ### HTTP Header parameters (all values must be strings)
   # [inputs.httpjson.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
-
 `
 
 func (h *HttpJson) SampleConfig() string {
@@ -137,39 +135,34 @@ func (h *HttpJson) gatherServer(
 		return err
 	}
 
-	var jsonOut map[string]interface{}
-	if err = json.Unmarshal([]byte(resp), &jsonOut); err != nil {
-		return errors.New("Error decoding JSON response")
-	}
-
-	tags := map[string]string{
-		"server": serverURL,
-	}
-
-	for _, tag := range h.TagKeys {
-		switch v := jsonOut[tag].(type) {
-		case string:
-			tags[tag] = v
-		}
-		delete(jsonOut, tag)
-	}
-
-	if responseTime >= 0 {
-		jsonOut["response_time"] = responseTime
-	}
-	f := internal.JSONFlattener{}
-	err = f.FlattenJSON("", jsonOut)
-	if err != nil {
-		return err
-	}
-
 	var msrmnt_name string
 	if h.Name == "" {
 		msrmnt_name = "httpjson"
 	} else {
 		msrmnt_name = "httpjson_" + h.Name
 	}
-	acc.AddFields(msrmnt_name, f.Fields, tags)
+	tags := map[string]string{
+		"server": serverURL,
+	}
+
+	parser, err := parsers.NewJSONParser(msrmnt_name, h.TagKeys, tags)
+	if err != nil {
+		return err
+	}
+
+	metrics, err := parser.Parse([]byte(resp))
+	if err != nil {
+		return err
+	}
+
+	for _, metric := range metrics {
+		fields := make(map[string]interface{})
+		for k, v := range metric.Fields() {
+			fields[k] = v
+		}
+		fields["response_time"] = responseTime
+		acc.AddFields(metric.Name(), fields, metric.Tags())
+	}
 	return nil
 }
 

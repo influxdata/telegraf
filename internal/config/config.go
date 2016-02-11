@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/influxdata/config"
 	"github.com/naoina/toml/ast"
@@ -126,7 +127,9 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
-var header = `# Telegraf configuration
+var header = `###############################################################################
+#                           Telegraf Configuration                            #
+###############################################################################
 
 # Telegraf is entirely plugin driven. All metrics are gathered from the
 # declared inputs, and sent to the declared outputs.
@@ -138,41 +141,41 @@ var header = `# Telegraf configuration
 # file would generate.
 
 # Global tags can be specified here in key="value" format.
-[tags]
+[global_tags]
   # dc = "us-east-1" # will tag all metrics with dc=us-east-1
   # rack = "1a"
 
 # Configuration for telegraf agent
 [agent]
-  # Default data collection interval for all inputs
+  ### Default data collection interval for all inputs
   interval = "10s"
-  # Rounds collection interval to 'interval'
-  # ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  ### Rounds collection interval to 'interval'
+  ### ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  # Telegraf will cache metric_buffer_limit metrics for each output, and will
-  # flush this buffer on a successful write.
+  ### Telegraf will cache metric_buffer_limit metrics for each output, and will
+  ### flush this buffer on a successful write.
   metric_buffer_limit = 10000
 
-  # Collection jitter is used to jitter the collection by a random amount.
-  # Each plugin will sleep for a random time within jitter before collecting.
-  # This can be used to avoid many plugins querying things like sysfs at the
-  # same time, which can have a measurable effect on the system.
+  ### Collection jitter is used to jitter the collection by a random amount.
+  ### Each plugin will sleep for a random time within jitter before collecting.
+  ### This can be used to avoid many plugins querying things like sysfs at the
+  ### same time, which can have a measurable effect on the system.
   collection_jitter = "0s"
 
-  # Default data flushing interval for all outputs. You should not set this below
-  # interval. Maximum flush_interval will be flush_interval + flush_jitter
+  ### Default flushing interval for all outputs. You shouldn't set this below
+  ### interval. Maximum flush_interval will be flush_interval + flush_jitter
   flush_interval = "10s"
-  # Jitter the flush interval by a random amount. This is primarily to avoid
-  # large write spikes for users running a large number of telegraf instances.
-  # ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  ### Jitter the flush interval by a random amount. This is primarily to avoid
+  ### large write spikes for users running a large number of telegraf instances.
+  ### ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
-  # Run telegraf in debug mode
+  ### Run telegraf in debug mode
   debug = false
-  # Run telegraf in quiet mode
+  ### Run telegraf in quiet mode
   quiet = false
-  # Override default hostname, if empty use os.Hostname()
+  ### Override default hostname, if empty use os.Hostname()
   hostname = ""
 
 
@@ -333,9 +336,9 @@ func (c *Config) LoadConfig(path string) error {
 				log.Printf("Could not parse [agent] config\n")
 				return err
 			}
-		case "tags":
+		case "global_tags", "tags":
 			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
-				log.Printf("Could not parse [tags] config\n")
+				log.Printf("Could not parse [global_tags] config\n")
 				return err
 			}
 		case "outputs":
@@ -427,6 +430,17 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return fmt.Errorf("Undefined but requested input: %s", name)
 	}
 	input := creator()
+
+	// If the input has a SetParser function, then this means it can accept
+	// arbitrary types of input, so build the parser and set it.
+	switch t := input.(type) {
+	case parsers.ParserInput:
+		parser, err := buildParser(name, table)
+		if err != nil {
+			return err
+		}
+		t.SetParser(parser)
+	}
 
 	pluginConfig, err := buildInput(name, table)
 	if err != nil {
@@ -581,6 +595,69 @@ func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, erro
 	delete(tbl.Fields, "tags")
 	cp.Filter = buildFilter(tbl)
 	return cp, nil
+}
+
+// buildParser grabs the necessary entries from the ast.Table for creating
+// a parsers.Parser object, and creates it, which can then be added onto
+// an Input object.
+func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
+	c := &parsers.Config{}
+
+	if node, ok := tbl.Fields["data_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DataFormat = str.Value
+			}
+		}
+	}
+
+	// Legacy support, exec plugin originally parsed JSON by default.
+	if name == "exec" && c.DataFormat == "" {
+		c.DataFormat = "json"
+	} else if c.DataFormat == "" {
+		c.DataFormat = "influx"
+	}
+
+	if node, ok := tbl.Fields["separator"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.Separator = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["templates"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.Templates = append(c.Templates, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["tag_keys"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.TagKeys = append(c.TagKeys, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	c.MetricName = name
+
+	delete(tbl.Fields, "data_format")
+	delete(tbl.Fields, "separator")
+	delete(tbl.Fields, "templates")
+	delete(tbl.Fields, "tag_keys")
+
+	return parsers.NewParser(c)
 }
 
 // buildOutput parses output specific items from the ast.Table, builds the filter and returns an

@@ -2,62 +2,90 @@ package exec
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os/exec"
-	"time"
+	"sync"
 
 	"github.com/gonuts/go-shellquote"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const sampleConfig = `
-  # the command to run
-  command = "/usr/bin/mycollector --foo=bar"
+  ### Commands array
+  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
 
-  # Data format to consume. This can be "json" or "influx" (line-protocol)
-  # NOTE json only reads numerical measurements, strings and booleans are ignored.
-  data_format = "json"
-
-  # measurement name suffix (for separating different commands)
+  ### measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
+
+  ### Data format to consume. This can be "json", "influx" or "graphite"
+  ### Each data format has it's own unique set of configuration options, read
+  ### more about them here:
+  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  data_format = "influx"
 `
 
 type Exec struct {
-	Command    string
-	DataFormat string
+	Commands []string
+	Command  string
 
-	runner Runner
+	parser parsers.Parser
+
+	wg sync.WaitGroup
+
+	runner  Runner
+	errChan chan error
+}
+
+func NewExec() *Exec {
+	return &Exec{
+		runner: CommandRunner{},
+	}
 }
 
 type Runner interface {
-	Run(*Exec) ([]byte, error)
+	Run(*Exec, string) ([]byte, error)
 }
 
 type CommandRunner struct{}
 
-func (c CommandRunner) Run(e *Exec) ([]byte, error) {
-	split_cmd, err := shellquote.Split(e.Command)
+func (c CommandRunner) Run(e *Exec, command string) ([]byte, error) {
+	split_cmd, err := shellquote.Split(command)
 	if err != nil || len(split_cmd) == 0 {
 		return nil, fmt.Errorf("exec: unable to parse command, %s", err)
 	}
 
 	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
+
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("exec: %s for command '%s'", err, e.Command)
+		return nil, fmt.Errorf("exec: %s for command '%s'", err, command)
 	}
 
 	return out.Bytes(), nil
 }
 
-func NewExec() *Exec {
-	return &Exec{runner: CommandRunner{}}
+func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator) {
+	defer e.wg.Done()
+
+	out, err := e.runner.Run(e, command)
+	if err != nil {
+		e.errChan <- err
+		return
+	}
+
+	metrics, err := e.parser.Parse(out)
+	if err != nil {
+		e.errChan <- err
+	} else {
+		for _, metric := range metrics {
+			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+		}
+	}
 }
 
 func (e *Exec) SampleConfig() string {
@@ -65,42 +93,37 @@ func (e *Exec) SampleConfig() string {
 }
 
 func (e *Exec) Description() string {
-	return "Read flattened metrics from one or more commands that output JSON to stdout"
+	return "Read metrics from one or more commands that can output to stdout"
+}
+
+func (e *Exec) SetParser(parser parsers.Parser) {
+	e.parser = parser
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
-	out, err := e.runner.Run(e)
-	if err != nil {
-		return err
+	// Legacy single command support
+	if e.Command != "" {
+		e.Commands = append(e.Commands, e.Command)
+		e.Command = ""
 	}
 
-	switch e.DataFormat {
-	case "", "json":
-		var jsonOut interface{}
-		err = json.Unmarshal(out, &jsonOut)
-		if err != nil {
-			return fmt.Errorf("exec: unable to parse output of '%s' as JSON, %s",
-				e.Command, err)
-		}
+	e.errChan = make(chan error, len(e.Commands))
 
-		f := internal.JSONFlattener{}
-		err = f.FlattenJSON("", jsonOut)
-		if err != nil {
-			return err
-		}
-		acc.AddFields("exec", f.Fields, nil)
-	case "influx":
-		now := time.Now()
-		metrics, err := telegraf.ParseMetrics(out)
-		for _, metric := range metrics {
-			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), now)
-		}
-		return err
+	e.wg.Add(len(e.Commands))
+	for _, command := range e.Commands {
+		go e.ProcessCommand(command, acc)
+	}
+	e.wg.Wait()
+
+	select {
 	default:
-		return fmt.Errorf("Unsupported data format: %s. Must be either json "+
-			"or influx.", e.DataFormat)
+		close(e.errChan)
+		return nil
+	case err := <-e.errChan:
+		close(e.errChan)
+		return err
 	}
-	return nil
+
 }
 
 func init() {

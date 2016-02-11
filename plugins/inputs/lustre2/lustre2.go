@@ -29,10 +29,13 @@ type Lustre2 struct {
 }
 
 var sampleConfig = `
-  # An array of /proc globs to search for Lustre stats
-  # If not specified, the default will work on Lustre 2.5.x
-  #
-  # ost_procfiles = ["/proc/fs/lustre/obdfilter/*/stats", "/proc/fs/lustre/osd-ldiskfs/*/stats"]
+  ### An array of /proc globs to search for Lustre stats
+  ### If not specified, the default will work on Lustre 2.5.x
+  ###
+  # ost_procfiles = [
+  #   "/proc/fs/lustre/obdfilter/*/stats",
+  #   "/proc/fs/lustre/osd-ldiskfs/*/stats"
+  # ]
   # mds_procfiles = ["/proc/fs/lustre/mdt/*/md_stats"]
 `
 

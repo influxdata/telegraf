@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/parsers"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,7 +57,7 @@ func newRunnerMock(out []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(e *Exec) ([]byte, error) {
+func (r runnerMock) Run(e *Exec, command string) ([]byte, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -63,9 +65,11 @@ func (r runnerMock) Run(e *Exec) ([]byte, error) {
 }
 
 func TestExec(t *testing.T) {
+	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
 	e := &Exec{
-		runner:  newRunnerMock([]byte(validJson), nil),
-		Command: "testcommand arg1",
+		runner:   newRunnerMock([]byte(validJson), nil),
+		Commands: []string{"testcommand arg1"},
+		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
@@ -87,9 +91,11 @@ func TestExec(t *testing.T) {
 }
 
 func TestExecMalformed(t *testing.T) {
+	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
 	e := &Exec{
-		runner:  newRunnerMock([]byte(malformedJson), nil),
-		Command: "badcommand arg1",
+		runner:   newRunnerMock([]byte(malformedJson), nil),
+		Commands: []string{"badcommand arg1"},
+		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
@@ -99,9 +105,11 @@ func TestExecMalformed(t *testing.T) {
 }
 
 func TestCommandError(t *testing.T) {
+	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
 	e := &Exec{
-		runner:  newRunnerMock(nil, fmt.Errorf("exit status code 1")),
-		Command: "badcommand",
+		runner:   newRunnerMock(nil, fmt.Errorf("exit status code 1")),
+		Commands: []string{"badcommand"},
+		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
@@ -111,10 +119,11 @@ func TestCommandError(t *testing.T) {
 }
 
 func TestLineProtocolParse(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
 	e := &Exec{
-		runner:     newRunnerMock([]byte(lineProtocol), nil),
-		Command:    "line-protocol",
-		DataFormat: "influx",
+		runner:   newRunnerMock([]byte(lineProtocol), nil),
+		Commands: []string{"line-protocol"},
+		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
@@ -133,10 +142,11 @@ func TestLineProtocolParse(t *testing.T) {
 }
 
 func TestLineProtocolParseMultiple(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
 	e := &Exec{
-		runner:     newRunnerMock([]byte(lineProtocolMulti), nil),
-		Command:    "line-protocol",
-		DataFormat: "influx",
+		runner:   newRunnerMock([]byte(lineProtocolMulti), nil),
+		Commands: []string{"line-protocol"},
+		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
@@ -157,16 +167,4 @@ func TestLineProtocolParseMultiple(t *testing.T) {
 		tags["cpu"] = cpu
 		acc.AssertContainsTaggedFields(t, "cpu", fields, tags)
 	}
-}
-
-func TestInvalidDataFormat(t *testing.T) {
-	e := &Exec{
-		runner:     newRunnerMock([]byte(lineProtocol), nil),
-		Command:    "bad data format",
-		DataFormat: "FooBar",
-	}
-
-	var acc testutil.Accumulator
-	err := e.Gather(&acc)
-	require.Error(t, err)
 }

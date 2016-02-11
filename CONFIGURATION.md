@@ -9,9 +9,9 @@ To generate a file with specific inputs and outputs, you can use the
 -input-filter and -output-filter flags:
 `telegraf -sample-config -input-filter cpu:mem:net:swap -output-filter influxdb:kafka`
 
-## `[tags]` Configuration
+## `[global_tags]` Configuration
 
-Global tags can be specific in the `[tags]` section of the config file in
+Global tags can be specific in the `[global_tags]` section of the config file in
 key="value" format. All metrics being gathered on this host will be tagged
 with the tags specified here.
 
@@ -76,7 +76,7 @@ measurements at a 10s interval and will collect per-cpu data, dropping any
 fields which begin with `time_`.
 
 ```toml
-[tags]
+[global_tags]
   dc = "denver-1"
 
 [agent]

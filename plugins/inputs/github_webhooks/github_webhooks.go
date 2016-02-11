@@ -31,7 +31,7 @@ func NewGithubWebhooks() *GithubWebhooks {
 
 func (gh *GithubWebhooks) SampleConfig() string {
 	return `
-  # Address and port to host Webhook listener on
+  ### Address and port to host Webhook listener on
   service_address = ":1618"
 `
 }

@@ -129,6 +129,52 @@ func init() {
 }
 ```
 
+## Input Plugins Accepting Arbitrary Data Formats
+
+Some input plugins (such as
+[exec](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec))
+accept arbitrary input data formats. An overview of these data formats can
+be found
+[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md).
+
+In order to enable this, you must specify a `SetParser(parser parsers.Parser)`
+function on the plugin object (see the exec plugin for an example), as well as
+defining `parser` as a field of the object.
+
+You can then utilize the parser internally in your plugin, parsing data as you
+see fit. Telegraf's configuration layer will take care of instantiating and
+creating the `Parser` object.
+
+You should also add the following to your SampleConfig() return:
+
+```toml
+  ### Data format to consume. This can be "json", "influx" or "graphite"
+  ### Each data format has it's own unique set of configuration options, read
+  ### more about them here:
+  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  data_format = "influx"
+```
+
+Below is the `Parser` interface.
+
+```go
+// Parser is an interface defining functions that a parser plugin must satisfy.
+type Parser interface {
+    // Parse takes a byte buffer separated by newlines
+    // ie, `cpu.usage.idle 90\ncpu.usage.busy 10`
+    // and parses it into telegraf metrics
+    Parse(buf []byte) ([]telegraf.Metric, error)
+
+    // ParseLine takes a single string metric
+    // ie, "cpu.usage.idle 90"
+    // and parses it into a telegraf metric.
+    ParseLine(line string) (telegraf.Metric, error)
+}
+```
+
+And you can view the code
+[here.](https://github.com/influxdata/telegraf/blob/henrypfhu-master/plugins/parsers/registry.go)
+
 ## Service Input Plugins
 
 This section is for developers who want to create new "service" collection

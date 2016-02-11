@@ -41,26 +41,25 @@ type phpfpm struct {
 }
 
 var sampleConfig = `
-  # An array of addresses to gather stats about. Specify an ip or hostname
-  # with optional port and path
-  #
-  # Plugin can be configured in three modes (either can be used):
-  #   - http: the URL must start with http:// or https://, ie:
-  #       "http://localhost/status"
-  #       "http://192.168.130.1/status?full"
-  #
-  #   - unixsocket: path to fpm socket, ie:
-  #       "/var/run/php5-fpm.sock"
-  #      or using a custom fpm status path:
-  #       "/var/run/php5-fpm.sock:fpm-custom-status-path"
-  #
-  #   - fcgi: the URL must start with fcgi:// or cgi://, and port must be present, ie:
-  #       "fcgi://10.0.0.12:9000/status"
-  #       "cgi://10.0.10.12:9001/status"
-  #
-  # Example of multiple gathering from local socket and remove host
-  # urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
-  # If no servers are specified, then default to http://127.0.0.1/status
+  ### An array of addresses to gather stats about. Specify an ip or hostname
+  ### with optional port and path
+  ###
+  ### Plugin can be configured in three modes (either can be used):
+  ###   - http: the URL must start with http:// or https://, ie:
+  ###       "http://localhost/status"
+  ###       "http://192.168.130.1/status?full"
+  ###
+  ###   - unixsocket: path to fpm socket, ie:
+  ###       "/var/run/php5-fpm.sock"
+  ###      or using a custom fpm status path:
+  ###       "/var/run/php5-fpm.sock:fpm-custom-status-path"
+  ###
+  ###   - fcgi: the URL must start with fcgi:// or cgi://, and port must be present, ie:
+  ###       "fcgi://10.0.0.12:9000/status"
+  ###       "cgi://10.0.10.12:9001/status"
+  ###
+  ### Example of multiple gathering from local socket and remove host
+  ### urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
 `
 

@@ -5,6 +5,7 @@ package ping
 import (
 	"errors"
 	"reflect"
+	"runtime"
 	"sort"
 	"testing"
 
@@ -76,7 +77,7 @@ func TestArgs(t *testing.T) {
 	// Actual and Expected arg lists must be sorted for reflect.DeepEqual
 
 	actual := p.args("www.google.com")
-	expected := []string{"-c", "2", "www.google.com"}
+	expected := []string{"-c", "2", "-n", "-s", "16", "www.google.com"}
 	sort.Strings(actual)
 	sort.Strings(expected)
 	assert.True(t, reflect.DeepEqual(expected, actual),
@@ -84,7 +85,8 @@ func TestArgs(t *testing.T) {
 
 	p.Interface = "eth0"
 	actual = p.args("www.google.com")
-	expected = []string{"-c", "2", "-I", "eth0", "www.google.com"}
+	expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0",
+		"www.google.com"}
 	sort.Strings(actual)
 	sort.Strings(expected)
 	assert.True(t, reflect.DeepEqual(expected, actual),
@@ -92,7 +94,15 @@ func TestArgs(t *testing.T) {
 
 	p.Timeout = 12.0
 	actual = p.args("www.google.com")
-	expected = []string{"-c", "2", "-I", "eth0", "-t", "12.0", "www.google.com"}
+	switch runtime.GOOS {
+	case "darwin", "freebsd":
+		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-t",
+			"12.0", "www.google.com"}
+	default:
+		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
+			"12.0", "www.google.com"}
+	}
+
 	sort.Strings(actual)
 	sort.Strings(expected)
 	assert.True(t, reflect.DeepEqual(expected, actual),
@@ -100,8 +110,14 @@ func TestArgs(t *testing.T) {
 
 	p.PingInterval = 1.2
 	actual = p.args("www.google.com")
-	expected = []string{"-c", "2", "-I", "eth0", "-t", "12.0", "-i", "1.2",
-		"www.google.com"}
+	switch runtime.GOOS {
+	case "darwin", "freebsd":
+		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-t",
+			"12.0", "-i", "1.2", "www.google.com"}
+	default:
+		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
+			"12.0", "-i", "1.2", "www.google.com"}
+	}
 	sort.Strings(actual)
 	sort.Strings(expected)
 	assert.True(t, reflect.DeepEqual(expected, actual),

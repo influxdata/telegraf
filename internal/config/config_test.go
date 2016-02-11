@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/exec"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -91,6 +92,9 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		"Testdata did not produce correct memcached metadata.")
 
 	ex := inputs.Inputs["exec"]().(*exec.Exec)
+	p, err := parsers.NewJSONParser("exec", nil, nil)
+	assert.NoError(t, err)
+	ex.SetParser(p)
 	ex.Command = "/usr/bin/myothercollector --foo=bar"
 	eConfig := &internal_models.InputConfig{
 		Name:              "exec",

@@ -15,14 +15,14 @@ type Mysql struct {
 }
 
 var sampleConfig = `
-  # specify servers via a url matching:
-  #  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
-  #  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
-  #  e.g.
-  #    root:passwd@tcp(127.0.0.1:3306)/?tls=false
-  #    root@tcp(127.0.0.1:3306)/?tls=false
-  #
-  # If no servers are specified, then localhost is used as the host.
+  ### specify servers via a url matching:
+  ###  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  ###  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
+  ###  e.g.
+  ###    root:passwd@tcp(127.0.0.1:3306)/?tls=false
+  ###    root@tcp(127.0.0.1:3306)/?tls=false
+  ###
+  ### If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
 `
 

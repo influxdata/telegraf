@@ -46,10 +46,10 @@ type Jolokia struct {
 
 func (j *Jolokia) SampleConfig() string {
 	return `
-  # This is the context root used to compose the jolokia url
+  ### This is the context root used to compose the jolokia url
   context = "/jolokia/read"
 
-  # List of servers exposing jolokia read service
+  ### List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]
     name = "stable"
     host = "192.168.103.2"
@@ -57,9 +57,10 @@ func (j *Jolokia) SampleConfig() string {
     # username = "myuser"
     # password = "mypassword"
 
-  # List of metrics collected on above servers
-  # Each metric consists in a name, a jmx path and either a pass or drop slice attributes
-  # This collect all heap memory usage metrics
+  ### List of metrics collected on above servers
+  ### Each metric consists in a name, a jmx path and either
+  ### a pass or drop slice attribute.
+  ### This collect all heap memory usage metrics.
   [[inputs.jolokia.metrics]]
     name = "heap_memory_usage"
     jmx  = "/java.lang:type=Memory/HeapMemoryUsage"

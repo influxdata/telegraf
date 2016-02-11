@@ -22,11 +22,11 @@ func (*InfluxDB) Description() string {
 
 func (*InfluxDB) SampleConfig() string {
 	return `
-  # Works with InfluxDB debug endpoints out of the box,
-  # but other services can use this format too.
-  # See the influxdb plugin's README for more details.
+  ### Works with InfluxDB debug endpoints out of the box,
+  ### but other services can use this format too.
+  ### See the influxdb plugin's README for more details.
 
-  # Multiple URLs from which to read InfluxDB-formatted JSON
+  ### Multiple URLs from which to read InfluxDB-formatted JSON
   urls = [
     "http://localhost:8086/debug/vars"
   ]

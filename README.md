@@ -155,10 +155,12 @@ Currently implemented sources:
 * aerospike
 * apache
 * bcache
+* couchdb
 * disque
 * docker
+* dovecot
 * elasticsearch
-* exec (generic JSON-emitting executable plugin)
+* exec (generic executable plugin, support JSON, influx and graphite)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * influxdb
