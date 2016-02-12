@@ -8,9 +8,10 @@ format that they would like to parse. Currently supports: "json", "influx", and
 [here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md)
 
 ### Features
-- [#652](https://github.com/influxdata/telegraf/pull/652): CouchDB Input Plugin
+- [#652](https://github.com/influxdata/telegraf/pull/652): CouchDB Input Plugin. Thanks @codehate!
 - [#655](https://github.com/influxdata/telegraf/pull/655): Support parsing arbitrary data formats. Currently limited to kafka_consumer and exec inputs.
-- [#671](https://github.com/influxdata/telegraf/pull/671): Dovecot input plugin.
+- [#671](https://github.com/influxdata/telegraf/pull/671): Dovecot input plugin. Thanks @mikif70!
+- [#680](https://github.com/influxdata/telegraf/pull/680): NATS consumer input plugin. Thanks @netixen!
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.

@@ -19,8 +19,8 @@ from a NATS cluster in parallel.
   subjects = ["telegraf"]
   ### name a queue group
   queue_group = "telegraf_consumers"
-  ### Maximum number of points to buffer between collection intervals
-  point_buffer = 100000
+  ### Maximum number of metrics to buffer between collection intervals
+  metric_buffer = 100000
   
   ### Data format to consume. This can be "json", "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read

@@ -204,6 +204,7 @@ Telegraf can also collect metrics via the following service plugins:
 
 * statsd
 * kafka_consumer
+* nats_consumer
 * github_webhooks
 
 We'll be adding support for many more over the coming months. Read on if you
