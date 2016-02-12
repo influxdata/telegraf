@@ -178,9 +178,8 @@ var header = `# Telegraf configuration
   # Override default hostname, if empty use os.Hostname()
   hostname = ""
 
-	# Set configuration management port
-	config-port = ""
-
+  # Set configuration management port
+  config_port = ""
 
 ###############################################################################
 #                                  OUTPUTS                                    #
