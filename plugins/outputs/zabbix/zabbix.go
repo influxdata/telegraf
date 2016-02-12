@@ -15,36 +15,36 @@ import (
 
 // ZabbixMetric class.
 type ZabbixMetric struct {
-	Host  string
-	Key   string
-	Value string
+	Host      string
+	Key       string
+	Value     string
 	Timestamp int64
 }
 
 // ZabbixMetric class constructor.
 func NewZabbixMetric(host, key, value string) *ZabbixMetric {
 	m := &ZabbixMetric{
-		Host: host,
-		Key: key,
-		Value: value,
-		Timestamp: time.Now().Unix()
+		Host:      host,
+		Key:       key,
+		Value:     value,
+		Timestamp: time.Now().Unix(),
 	}
 	return m
 }
 
 // ZabbixPacket class.
 type ZabbixPacket struct {
-	Request string
-	Data    []*ZabbixMetric
-	Timestamp   int64
+	Request   string
+	Data      []*ZabbixMetric
+	Timestamp int64
 }
 
 // ZabbixPacket class cunstructor.
 func NewZabbixPacket(data []*ZabbixMetric) *ZabbixPacket {
 	p := &ZabbixPacket{
-		Request: `sender data`,
-		Data: data,
-		Timestamp: time.Now().Unix()
+		Request:   `sender data`,
+		Data:      data,
+		Timestamp: time.Now().Unix(),
 	}
 	return p
 }
