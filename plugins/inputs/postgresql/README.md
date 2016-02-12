@@ -28,5 +28,4 @@ stats_reset*     x      x
 _* value ignored and therefore not recorded._
 
 
-
 More information about the meaning of these metrics can be found in the [PostgreSQL Documentation](http://www.postgresql.org/docs/9.2/static/monitoring-stats.html#PG-STAT-DATABASE-VIEW)
