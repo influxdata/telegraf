@@ -39,7 +39,7 @@ I'll go over below.
 ## Influx:
 
 There are no additional configuration options for InfluxDB line-protocol. The
-metrics are parsed directly into Telegraf metrics.
+metrics are serialized directly into InfluxDB line-protocol.
 
 #### Influx Configuration:
 
@@ -53,8 +53,6 @@ metrics are parsed directly into Telegraf metrics.
   ### more about them here:
   ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
-
-  ### Additional configuration options go here
 ```
 
 ## Graphite:
@@ -69,10 +67,10 @@ The format is:
 Which means the following influx metric -> graphite conversion would happen:
 
 ```
-cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.08869456589632,usage_user=0.886945658963148 1455320660004257758
+cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
 =>
-tars.cpu-total.us-east-1.cpu.usage_user 0.5620784411691232 1455320690
-tars.cpu-total.us-east-1.cpu.usage_idle 98.5885585810642 1455320690
+tars.cpu-total.us-east-1.cpu.usage_user 0.89 1455320690
+tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
 ```
 
 `prefix` is a configuration option when using the graphite output data format.
