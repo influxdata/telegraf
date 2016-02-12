@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"sort"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -16,6 +17,7 @@ type Postgresql struct {
 	Address        string
 	Databases      []string
 	OrderedColumns []string
+	AllColumns	[]string
 }
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
@@ -86,6 +88,9 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	p.OrderedColumns, err = rows.Columns()
 	if err != nil {
 		return err
+	} else {
+		p.AllColumns = make([]string, len(p.OrderedColumns))
+		copy(p.AllColumns, p.OrderedColumns)
 	}
 
 	for rows.Next() {
@@ -108,6 +113,10 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	p.OrderedColumns, err = bg_writer_row.Columns()
 	if err != nil {
 		return err
+	} else {
+		for _, v := range p.OrderedColumns {
+			p.AllColumns = append(p.AllColumns, v)
+		}
 	}
 
 	for bg_writer_row.Next() {
@@ -116,6 +125,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
+	sort.Strings(p.AllColumns)
 	return bg_writer_row.Err()
 }
 
