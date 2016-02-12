@@ -5,6 +5,8 @@
 and `mqtt_consumer` plugins) can now specify the incoming data
 format that they would like to parse. Currently supports: "json", "influx", and
 "graphite"
+- Users of message broker and file output plugins can now choose what data format
+they would like to output. Currently supports: "influx" and "graphite"
 - More info on parsing arbitrary data formats can be found
 [here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md)
 
@@ -15,6 +17,8 @@ format that they would like to parse. Currently supports: "json", "influx", and
 - [#680](https://github.com/influxdata/telegraf/pull/680): NATS consumer input plugin. Thanks @netixen!
 - [#676](https://github.com/influxdata/telegraf/pull/676): MQTT consumer input plugin.
 - [#683](https://github.com/influxdata/telegraf/pull/683): PostGRES input plugin: add pg_stat_bgwriter. Thanks @menardorama!
+- [#679](https://github.com/influxdata/telegraf/pull/679): File/stdout output plugin.
+- [#679](https://github.com/influxdata/telegraf/pull/679): Support for arbitrary output data formats.
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
