@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"strings"
 	"sort"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -17,7 +17,7 @@ type Postgresql struct {
 	Address        string
 	Databases      []string
 	OrderedColumns []string
-	AllColumns	[]string
+	AllColumns     []string
 }
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}

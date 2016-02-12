@@ -23,7 +23,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 	err := p.Gather(&acc)
 	require.NoError(t, err)
-	
+
 	availableColumns := make(map[string]bool)
 	for _, col := range p.AllColumns {
 		availableColumns[col] = true
@@ -43,15 +43,15 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		"temp_bytes",
 		"deadlocks",
 		"numbackends",
-                "buffers_alloc",
-                "buffers_backend",
-                "buffers_backend_fsync",
-                "buffers_checkpoint",
-                "buffers_clean",
-                "checkpoints_req",
-                "checkpoints_timed",
-                "maxwritten_clean",
-        }
+		"buffers_alloc",
+		"buffers_backend",
+		"buffers_backend_fsync",
+		"buffers_checkpoint",
+		"buffers_clean",
+		"checkpoints_req",
+		"checkpoints_timed",
+		"maxwritten_clean",
+	}
 
 	floatMetrics := []string{
 		"blk_read_time",
