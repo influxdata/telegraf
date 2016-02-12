@@ -15,35 +15,36 @@ import (
 
 // ZabbixMetric class.
 type ZabbixMetric struct {
-	Host  string `json:"host"`
-	Key   string `json:"key"`
-	Value string `json:"value"`
-	Clock int64  `json:"clock"`
+	Host  string
+	Key   string
+	Value string
+	Timestamp int64
 }
 
 // ZabbixMetric class constructor.
-func NewZabbixMetric(host, key, value string, clock ...int64) *ZabbixMetric {
-	m := &ZabbixMetric{Host: host, Key: key, Value: value}
-	// use current time, if `clock` is not specified
-	if m.Clock = time.Now().Unix(); len(clock) > 0 {
-		m.Clock = int64(clock[0])
+func NewZabbixMetric(host, key, value string) *ZabbixMetric {
+	m := &ZabbixMetric{
+		Host: host,
+		Key: key,
+		Value: value,
+		Timestamp: time.Now().Unix()
 	}
 	return m
 }
 
 // ZabbixPacket class.
 type ZabbixPacket struct {
-	Request string    `json:"request"`
-	Data    []*ZabbixMetric `json:"data"`
-	Clock   int64     `json:"clock"`
+	Request string
+	Data    []*ZabbixMetric
+	Timestamp   int64
 }
 
 // ZabbixPacket class cunstructor.
-func NewZabbixPacket(data []*ZabbixMetric, clock ...int64) *ZabbixPacket {
-	p := &ZabbixPacket{Request: `sender data`, Data: data}
-	// use current time, if `clock` is not specified
-	if p.Clock = time.Now().Unix(); len(clock) > 0 {
-		p.Clock = int64(clock[0])
+func NewZabbixPacket(data []*ZabbixMetric) *ZabbixPacket {
+	p := &ZabbixPacket{
+		Request: `sender data`,
+		Data: data,
+		Timestamp: time.Now().Unix()
 	}
 	return p
 }
@@ -65,12 +66,12 @@ type Zabbix struct {
 }
 
 var sampleConfig = `
-	# Address of zabbix host
-	host = "zabbix.example.com"
-	# Port of the Zabbix server
-	port = 10051
-	# Which tag will be used for measurement hostname
-	hosttag = "host"
+  # Address of zabbix host
+  host = "zabbix.example.com"
+  # Port of the Zabbix server
+  port = 10051
+  # Which tag will be used for measurement hostname
+  hosttag = "host"
 `
 
 func (z *Zabbix) Connect() error {
@@ -157,6 +158,8 @@ func buildValue(v interface{}) (string, error) {
 		retv = UIntToString(uint64(p))
 	case float64:
 		retv = FloatToString(float64(p))
+	case string:
+		retv = p
 	default:
 		return retv, fmt.Errorf("unexpected type %T with value %v for Zabbix", v, v)
 	}
