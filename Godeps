@@ -2,7 +2,7 @@ git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git 617c801af238c3af2d
 github.com/Shopify/sarama d37c73f2b2bce85f7fa16b6a550d26c5372892ef
 github.com/Sirupsen/logrus f7f79f729e0fbe2fcc061db48a9ba0263f588252
 github.com/amir/raidman 6a8e089bbe32e6b907feae5ba688841974b3c339
-github.com/aws/aws-sdk-go 8041be5461786460d86b4358305fbdf32d37cfb2
+github.com/aws/aws-sdk-go 87b1e60a50b09e4812dee560b33a238f67305804
 github.com/beorn7/perks b965b613227fddccbfffe13eae360ed3fa822f8d
 github.com/cenkalti/backoff 4dc77674aceaabba2c7e3da25d4c823edfb73f99
 github.com/dancannon/gorethink 6f088135ff288deb9d5546f4c71919207f891a70
@@ -10,7 +10,7 @@ github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
 github.com/fsouza/go-dockerclient 7b651349f9479f5114913eefbfd3c4eeddd79ab4
-github.com/go-ini/ini 193d1ecb466bf97aae8b454a5cfc192941c64809
+github.com/go-ini/ini afbd495e5aaea13597b5e14fe514ddeaa4d76fc3
 github.com/go-sql-driver/mysql 7c7f556282622f94213bc028b4d0a7b6151ba239
 github.com/golang/protobuf 6aaa8d47701fa6cf07e914ec01fde3d4a1fe79c3
 github.com/golang/snappy 723cc1e459b8eea2dea4583200fd60757d40097a
@@ -47,13 +47,13 @@ github.com/shirou/gopsutil e77438504d45b9985c99a75730fe65220ceea00e
 github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/objx 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
-github.com/stretchr/testify 9f9027faeb0dad515336ed2f28317f9f8f527ab4
+github.com/stretchr/testify f390dcf405f7b83c997eac1b06768bb9f44dec18
 github.com/wvanbergen/kafka 1a8639a45164fcc245d5c7b4bd3ccfbd1a0ffbf3
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
 golang.org/x/crypto 1f22c0103821b9390939b6776727195525381532
-golang.org/x/net 8968c61983e8f51a91b8c0ef25bf739278c89634
-golang.org/x/text 09761194ac5034a97b2bfad4f5b896b0ac350b3e
+golang.org/x/net 04b9de9b512f58addf28c9853d50ebef61c3953e
+golang.org/x/text 6d3c22c4525a4da167968fa2479be5524d2e8bd0
 gopkg.in/dancannon/gorethink.v1 6f088135ff288deb9d5546f4c71919207f891a70
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
 gopkg.in/mgo.v2 03c9f3ee4c14c8e51ee521a6a7d0425658dd6f64
