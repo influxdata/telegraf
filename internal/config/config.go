@@ -182,6 +182,19 @@ var header = `##################################################################
   ### Override default hostname, if empty use os.Hostname()
   hostname = ""
 
+  ### Enterprise Configuration
+  # [agent.enterprise]
+  
+  ### Controls port where enterprise administration interface will start
+  # config_port = 5050
+
+    # [[agent.enterprise.hosts]]
+    # url = "http://localhost:3000"
+
+    ### If reporting to more than one enterprise host, this indicates
+    ### which will be the primary enterprise host. Only one should be
+    ### the primary.
+    # primary = true
 
 ###############################################################################
 #                                  OUTPUTS                                    #
