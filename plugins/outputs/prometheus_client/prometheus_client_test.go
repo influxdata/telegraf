@@ -2,6 +2,7 @@ package prometheus_client
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -18,6 +19,7 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 	}
 	pTesting = &PrometheusClient{Listen: "localhost:9127"}
 	err := pTesting.Start()
+	time.Sleep(time.Millisecond * 200)
 	require.NoError(t, err)
 	defer pTesting.Stop()
 
