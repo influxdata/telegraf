@@ -28,6 +28,15 @@ type InfluxDB struct {
 	Timeout    internal.Duration
 	UDPPayload int `toml:"udp_payload"`
 
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+
 	conns []client.Client
 }
 
@@ -52,6 +61,13 @@ var sampleConfig = `
   # user_agent = "telegraf"
   ### Set UDP payload size, defaults to InfluxDB UDP Client default (512 bytes)
   # udp_payload = 512
+
+  ### Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ### Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (i *InfluxDB) Connect() error {
@@ -64,6 +80,12 @@ func (i *InfluxDB) Connect() error {
 	// This could eventually be removed in favor of specifying the urls as a list
 	if i.URL != "" {
 		urls = append(urls, i.URL)
+	}
+
+	tlsCfg, err := internal.GetTLSConfig(
+		i.SSLCert, i.SSLKey, i.SSLCA, i.InsecureSkipVerify)
+	if err != nil {
+		return err
 	}
 
 	var conns []client.Client
@@ -94,6 +116,7 @@ func (i *InfluxDB) Connect() error {
 				Password:  i.Password,
 				UserAgent: i.UserAgent,
 				Timeout:   i.Timeout.Duration,
+				TLSConfig: tlsCfg,
 			})
 			if err != nil {
 				return err

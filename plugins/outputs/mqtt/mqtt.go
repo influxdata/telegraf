@@ -5,11 +5,12 @@ import (
 	"strings"
 	"sync"
 
-	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+
+	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 )
 
 var sampleConfig = `
