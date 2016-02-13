@@ -1,6 +1,7 @@
 package httpjson
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -58,7 +59,7 @@ var sampleConfig = `
     "http://localhost:9998/stats/",
   ]
 
-  ### HTTP method to use (case-sensitive)
+  ### HTTP method to use: GET or POST (case-sensitive)
   method = "GET"
 
   ### List of tag names to extract from top-level of JSON server response
@@ -166,7 +167,8 @@ func (h *HttpJson) gatherServer(
 	return nil
 }
 
-// Sends an HTTP request to the server using the HttpJson object's HTTPClient
+// Sends an HTTP request to the server using the HttpJson object's HTTPClient.
+// This request can be either a GET or a POST.
 // Parameters:
 //     serverURL: endpoint to send request to
 //
@@ -181,13 +183,24 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 	}
 
 	params := url.Values{}
-	for k, v := range h.Parameters {
-		params.Add(k, v)
+	data := url.Values{}
+
+	switch {
+	case h.Method == "GET":
+		requestURL.RawQuery = params.Encode()
+		for k, v := range h.Parameters {
+			params.Add(k, v)
+		}
+
+	case h.Method == "POST":
+		requestURL.RawQuery = ""
+		for k, v := range h.Parameters {
+			data.Add(k, v)
+		}
 	}
-	requestURL.RawQuery = params.Encode()
 
 	// Create + send request
-	req, err := http.NewRequest(h.Method, requestURL.String(), nil)
+	req, err := http.NewRequest(h.Method, requestURL.String(), bytes.NewBufferString(data.Encode()))
 	if err != nil {
 		return "", -1, err
 	}
