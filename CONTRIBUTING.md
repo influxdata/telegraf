@@ -12,6 +12,13 @@ but any information you can provide on how the data will look is appreciated.
 See the [OpenTSDB output](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
 for a good example.
 
+## GoDoc
+
+Public interfaces for inputs, outputs, metrics, and the accumulator can be found
+on the GoDoc
+
+[![GoDoc](https://godoc.org/github.com/influxdata/telegraf?status.svg)](https://godoc.org/github.com/influxdata/telegraf)
+
 ## Sign the CLA
 
 Before we can merge a pull request, you will need to sign the CLA,
@@ -29,7 +36,7 @@ Assuming you can already build the project, run these in the telegraf directory:
 
 This section is for developers who want to create new collection inputs.
 Telegraf is entirely plugin driven. This interface allows for operators to
-pick and chose what is gathered as well as makes it easy for developers
+pick and chose what is gathered and makes it easy for developers
 to create new ways of generating metrics.
 
 Plugin authorship is kept as simple as possible to promote people to develop
@@ -46,49 +53,8 @@ See below for a quick example.
 plugin can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this plugin does.
 
-### Input interface
-
-```go
-type Input interface {
-    SampleConfig() string
-    Description() string
-    Gather(Accumulator) error
-}
-
-type Accumulator interface {
-    Add(measurement string,
-        value interface{},
-        tags map[string]string,
-        timestamp ...time.Time)
-    AddFields(measurement string,
-        fields map[string]interface{},
-        tags map[string]string,
-        timestamp ...time.Time)
-}
-```
-
-### Accumulator
-
-The way that a plugin emits metrics is by interacting with the Accumulator.
-
-The `Add` function takes 3 arguments:
-* **measurement**: A string description of the metric. For instance `bytes_read` or `
-faults`.
-* **value**: A value for the metric. This accepts 5 different types of value:
-  * **int**: The most common type. All int types are accepted but favor using `int64`
-  Useful for counters, etc.
-  * **float**: Favor `float64`, useful for gauges, percentages, etc.
-  * **bool**: `true` or `false`, useful to indicate the presence of a state. `light_on`,
-  etc.
-  * **string**: Typically used to indicate a message, or some kind of freeform
-  information.
-  * **time.Time**: Useful for indicating when a state last occurred, for instance `
-  light_on_since`.
-* **tags**: This is a map of strings to strings to describe the where or who
-about the metric. For instance, the `net` plugin adds a tag named `"interface"`
-set to the name of the network interface, like `"eth0"`.
-
-Let's say you've written a plugin that emits metrics about processes on the current host.
+Let's say you've written a plugin that emits metrics about processes on the
+current host.
 
 ### Input Plugin Example
 
@@ -194,18 +160,6 @@ and `Stop()` methods.
 * Same as the `Plugin` guidelines, except that they must conform to the
 `inputs.ServiceInput` interface.
 
-### Service Plugin interface
-
-```go
-type ServicePlugin interface {
-    SampleConfig() string
-    Description() string
-    Gather(Accumulator) error
-    Start() error
-    Stop()
-}
-```
-
 ## Output Plugins
 
 This section is for developers who want to create a new output sink. Outputs
@@ -222,18 +176,6 @@ See below for a quick example.
 * The `SampleConfig` function should return valid toml that describes how the
 output can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this output does.
-
-### Output interface
-
-```go
-type Output interface {
-    Connect() error
-    Close() error
-    Description() string
-    SampleConfig() string
-    Write(metrics []telegraf.Metric) error
-}
-```
 
 ### Output Example
 
@@ -282,6 +224,33 @@ func init() {
 
 ```
 
+## Output Plugins Writing Arbitrary Data Formats
+
+Some output plugins (such as
+[file](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file))
+can write arbitrary output data formats. An overview of these data formats can
+be found
+[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md).
+
+In order to enable this, you must specify a
+`SetSerializer(serializer serializers.Serializer)`
+function on the plugin object (see the file plugin for an example), as well as
+defining `serializer` as a field of the object.
+
+You can then utilize the serializer internally in your plugin, serializing data
+before it's written. Telegraf's configuration layer will take care of
+instantiating and creating the `Serializer` object.
+
+You should also add the following to your SampleConfig() return:
+
+```toml
+  ### Data format to output. This can be "influx" or "graphite"
+  ### Each data format has it's own unique set of configuration options, read
+  ### more about them here:
+  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
+```
+
 ## Service Output Plugins
 
 This section is for developers who want to create new "service" output. A
@@ -296,20 +265,6 @@ and `Stop()` methods.
 
 * Same as the `Output` guidelines, except that they must conform to the
 `output.ServiceOutput` interface.
-
-### Service Output interface
-
-```go
-type ServiceOutput interface {
-    Connect() error
-    Close() error
-    Description() string
-    SampleConfig() string
-    Write(metrics []telegraf.Metric) error
-    Start() error
-    Stop()
-}
-```
 
 ## Unit Tests
 

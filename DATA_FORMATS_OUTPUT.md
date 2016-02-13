@@ -10,19 +10,24 @@ are a combination of four basic parts:
 1. Timestamp
 
 In InfluxDB line protocol, these 4 parts are easily defined in textual form:
-`measurement_name[,tag1=val1,...] field1=val1[,field2=val2,...] [timestamp]`
+
+```
+measurement_name[,tag1=val1,...]  field1=val1[,field2=val2,...]  [timestamp]
+```
 
 For Telegraf outputs that write textual data (such as `kafka`, `mqtt`, and `file`),
 InfluxDB line protocol was originally the only available output format. But now
-we are normalizing telegraf metric "serializers" into a plugin-like format across
-all output plugins that can support it. You will be able to identify a plugin
-that supports different data formats by the presence of a `data_format`
-config option, for example, in the file plugin:
+we are normalizing telegraf metric "serializers" into a
+[plugin-like interface](https://github.com/influxdata/telegraf/tree/master/plugins/serializers)
+across all output plugins that can support it.
+You will be able to identify a plugin that supports different data formats
+by the presence of a `data_format`
+config option, for example, in the `file` output plugin:
 
 ```toml
 [[outputs.file]]
   ### Files to write to, "stdout" is a specially handled file.
-  files = ["stdout", "/tmp/metrics.out"]
+  files = ["stdout"]
 
   ### Data format to output. This can be "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
