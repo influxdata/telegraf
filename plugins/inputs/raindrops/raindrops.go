@@ -22,7 +22,7 @@ type Raindrops struct {
 
 var sampleConfig = `
   ### An array of raindrops middleware URI to gather stats.
-  urls = ["http://localhost/_raindrops"]
+  urls = ["http://localhost:8080/_raindrops"]
 `
 
 func (r *Raindrops) SampleConfig() string {
@@ -119,7 +119,7 @@ func (r *Raindrops) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 			iterate = false
 			break
 		}
-		if strings.Compare(active_line_str, "\n") == 0{
+		if strings.Compare(active_line_str, "\n") == 0 {
 			break
 		}
 		queued_line_str, queued_err = buf.ReadString('\n')
@@ -153,8 +153,7 @@ func (r *Raindrops) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 				"socket": listen_name,
 			}
 		}
-		fmt.Println("raindropssock", lis, tags)
-		acc.AddFields("raindropssock", lis, tags)
+		acc.AddFields("raindrops_listen", lis, tags)
 	}
 	return nil
 }
