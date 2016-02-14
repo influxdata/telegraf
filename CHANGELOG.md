@@ -19,6 +19,7 @@ they would like to output. Currently supports: "influx" and "graphite"
 - [#683](https://github.com/influxdata/telegraf/pull/683): PostGRES input plugin: add pg_stat_bgwriter. Thanks @menardorama!
 - [#679](https://github.com/influxdata/telegraf/pull/679): File/stdout output plugin.
 - [#679](https://github.com/influxdata/telegraf/pull/679): Support for arbitrary output data formats.
+- [#695](https://github.com/influxdata/telegraf/pull/695): raindrops input plugin. Thanks @burdandrei!
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.

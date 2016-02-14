@@ -326,7 +326,7 @@ which would take some time to replicate.
 To overcome this situation we've decided to use docker containers to provide a
 fast and reproducible environment to test those services which require it.
 For other situations
-(i.e: https://github.com/influxdata/telegraf/blob/master/plugins/redis/redis_test.go)
+(i.e: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/redis/redis_test.go)
 a simple mock will suffice.
 
 To execute Telegraf tests follow these simple steps:
