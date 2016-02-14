@@ -66,7 +66,7 @@ Latest:
 To install the full directory structure with config file, run:
 
 ```
-sudo tar -C / -xvf ./telegraf-0.10.2-1_linux_amd64.tar.gz
+sudo tar -C / -zxvf ./telegraf-0.10.2-1_linux_amd64.tar.gz
 ```
 
 To extract only the binary, run:
