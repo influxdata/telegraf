@@ -72,8 +72,8 @@ func TestRaindropsGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
-		"calling":   uint64(100),
-		"writing":  uint64(200),
+		"calling": uint64(100),
+		"writing": uint64(200),
 	}
 	addr, err := url.Parse(ts.URL)
 	if err != nil {
@@ -97,12 +97,11 @@ func TestRaindropsGeneratesMetrics(t *testing.T) {
 
 	tags = map[string]string{
 		"port": "8081",
-		"ip": "0.0.0.0",
+		"ip":   "0.0.0.0",
 	}
-	fields = map[string]interface {} {
+	fields = map[string]interface{}{
 		"active": uint64(3),
 		"queued": uint64(4),
 	}
-	fmt.Println("raindropssock_test", fields, tags)
-	acc.AssertContainsTaggedFields(t, "raindropssock", fields, tags)
+	acc.AssertContainsTaggedFields(t, "raindrops_listen", fields, tags)
 }
