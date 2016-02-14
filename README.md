@@ -182,6 +182,7 @@ Currently implemented sources:
 * prometheus
 * puppetagent
 * rabbitmq
+* raindrops
 * redis
 * rethinkdb
 * sql server (microsoft)
