@@ -1,4 +1,4 @@
-# DNS Input Plugin
+# DNS Query Input Plugin
 
 The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wikipedia.org/wiki/Dig_\(command\))
 
@@ -6,7 +6,7 @@ The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wi
 
 ```
 # Sample Config:
-[[inputs.dns]]
+[[inputs.dns_query]]
   ### Domains or subdomains to query
   domains = ["mjasion.pl"] # required
 
@@ -26,12 +26,12 @@ The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wi
 For querying more than one record type make:
  
 ```
-[[inputs.dns]]
+[[inputs.dns_query]]
   domains = ["mjasion.pl"]
   servers = ["8.8.8.8", "8.8.4.4"]
   recordType = "A"
 
-[[inputs.dns]]
+[[inputs.dns_query]]
   domains = ["mjasion.pl"]
   servers = ["8.8.8.8", "8.8.4.4"]
   recordType = "MX"
@@ -46,6 +46,6 @@ For querying more than one record type make:
 ### Example output:
 
 ```
-./telegraf -config telegraf.conf -test -input-filter dns -test
-> dns,domain=mjasion.pl,recordType=A,server=8.8.8.8 value=25.236181 1455452083165126877
+./telegraf -config telegraf.conf -test -input-filter dns_query -test
+> dns,domain=mjasion.pl,record_type=A,server=8.8.8.8 query_time_ms=36.327025 1455548824989943491
 ```

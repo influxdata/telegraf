@@ -20,7 +20,7 @@ func TestGathering(t *testing.T) {
 
 	dnsConfig.Gather(&acc)
 	metric, _ := acc.Get("dns")
-	queryTime, _ := metric.Fields["value"].(float64)
+	queryTime, _ := metric.Fields["query_time_ms"].(float64)
 
 	assert.NotEqual(t, 0, queryTime)
 }
@@ -35,7 +35,7 @@ func TestGatheringMxRecord(t *testing.T) {
 
 	dnsConfig.Gather(&acc)
 	metric, _ := acc.Get("dns")
-	queryTime, _ := metric.Fields["value"].(float64)
+	queryTime, _ := metric.Fields["query_time_ms"].(float64)
 
 	assert.NotEqual(t, 0, queryTime)
 }
@@ -47,17 +47,17 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 	}
 	var acc testutil.Accumulator
 	tags := map[string]string{
-		"server":     "8.8.8.8",
-		"domain":     "mjasion.pl",
-		"recordType": "A",
+		"server":      "8.8.8.8",
+		"domain":      "mjasion.pl",
+		"record_type": "A",
 	}
 	fields := map[string]interface{}{}
 
 	dnsConfig.Gather(&acc)
 	metric, _ := acc.Get("dns")
-	queryTime, _ := metric.Fields["value"].(float64)
+	queryTime, _ := metric.Fields["query_time_ms"].(float64)
 
-	fields["value"] = queryTime
+	fields["query_time_ms"] = queryTime
 	acc.AssertContainsTaggedFields(t, "dns", fields, tags)
 }
 
@@ -104,6 +104,14 @@ func TestRecordTypeParser(t *testing.T) {
 	dnsConfig.RecordType = "A"
 	recordType, err = dnsConfig.parseRecordType()
 	assert.Equal(t, dns.TypeA, recordType)
+
+	dnsConfig.RecordType = "AAAA"
+	recordType, err = dnsConfig.parseRecordType()
+	assert.Equal(t, dns.TypeAAAA, recordType)
+
+	dnsConfig.RecordType = "ANY"
+	recordType, err = dnsConfig.parseRecordType()
+	assert.Equal(t, dns.TypeANY, recordType)
 
 	dnsConfig.RecordType = "CNAME"
 	recordType, err = dnsConfig.parseRecordType()
