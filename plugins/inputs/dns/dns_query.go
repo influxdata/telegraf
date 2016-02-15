@@ -19,7 +19,7 @@ type Dns struct {
 	Servers []string
 
 	// Record type
-	RecordType string
+	RecordType string `toml:"record_type"`
 
 	// DNS server port number
 	Port int
@@ -35,8 +35,8 @@ var sampleConfig = `
   ### servers to query
   servers = ["8.8.8.8"] # required
 
-  ### Query record type. Posible values: A, CNAME, MX, TXT, NS. Default is "A"
-  recordType = "A" # optional
+  ### Query record type. Posible values: A, AAAA, CNAME, MX, TXT, NS, ANY. Default is "A"
+  record_type = "A" # optional
 
   ### Dns server port. 53 is default
   port = 53 # optional
@@ -61,12 +61,13 @@ func (d *Dns) Gather(acc telegraf.Accumulator) error {
 				return err
 			}
 			tags := map[string]string{
-				"server":     server,
-				"domain":     domain,
-				"recordType": d.RecordType,
+				"server":      server,
+				"domain":      domain,
+				"record_type": d.RecordType,
 			}
 
-			acc.Add("dns", dnsQueryTime, tags)
+			fields := map[string]interface{}{"query_time_ms": dnsQueryTime}
+			acc.AddFields("dns", fields, tags)
 		}
 	}
 
@@ -99,18 +100,14 @@ func (d *Dns) getDnsQueryTime(domain string, server string) (float64, error) {
 	m.SetQuestion(dns.Fqdn(domain), recordType)
 	m.RecursionDesired = true
 
-	start_time := time.Now()
-	r, _, err := c.Exchange(m, net.JoinHostPort(server, strconv.Itoa(d.Port)))
-	queryDuration := time.Since(start_time)
-
+	r, rtt, err := c.Exchange(m, net.JoinHostPort(server, strconv.Itoa(d.Port)))
 	if err != nil {
 		return dnsQueryTime, err
 	}
 	if r.Rcode != dns.RcodeSuccess {
 		return dnsQueryTime, errors.New(fmt.Sprintf("Invalid answer name %s after %s query for %s\n", domain, d.RecordType, domain))
 	}
-
-	dnsQueryTime = float64(queryDuration.Nanoseconds()) / 1e6
+	dnsQueryTime = float64(rtt.Nanoseconds()) / 1e6
 	return dnsQueryTime, nil
 }
 
@@ -121,6 +118,10 @@ func (d *Dns) parseRecordType() (uint16, error) {
 	switch d.RecordType {
 	case "A":
 		recordType = dns.TypeA
+	case "AAAA":
+		recordType = dns.TypeAAAA
+	case "ANY":
+		recordType = dns.TypeANY
 	case "CNAME":
 		recordType = dns.TypeCNAME
 	case "MX":
@@ -137,7 +138,7 @@ func (d *Dns) parseRecordType() (uint16, error) {
 }
 
 func init() {
-	inputs.Add("dns", func() telegraf.Input {
+	inputs.Add("dns_query", func() telegraf.Input {
 		return &Dns{}
 	})
 }
