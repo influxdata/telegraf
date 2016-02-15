@@ -7,8 +7,10 @@ format that they would like to parse. Currently supports: "json", "influx", and
 "graphite"
 - Users of message broker and file output plugins can now choose what data format
 they would like to output. Currently supports: "influx" and "graphite"
-- More info on parsing arbitrary data formats can be found
+- More info on parsing _incoming_ data formats can be found
 [here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md)
+- More info on serializing _outgoing_ data formats can be found
+[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md)
 
 ### Features
 - [#652](https://github.com/influxdata/telegraf/pull/652): CouchDB Input Plugin. Thanks @codehate!
