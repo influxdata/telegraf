@@ -24,7 +24,7 @@ type ServiceInput interface {
 	Gather(Accumulator) error
 
 	// Start starts the ServiceInput's service, whatever that may be
-	Start() error
+	Start(Accumulator) error
 
 	// Stop stops the services and closes any necessary channels and connections
 	Stop()
