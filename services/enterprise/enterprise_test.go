@@ -50,7 +50,7 @@ func Test_RegistersWithEnterprise(t *testing.T) {
 	e := enterprise.NewEnterprise(c, expected, "test", shutdown)
 	e.Open()
 
-	timeout := time.After(1 * time.Millisecond)
+	timeout := time.After(1 * time.Second)
 	for {
 		select {
 		case <-success:
@@ -83,7 +83,7 @@ func Test_StartsAdminInterface(t *testing.T) {
 	e := enterprise.NewEnterprise(c, hostname, "test", shutdown)
 	e.Open()
 
-	timeout := time.After(1 * time.Millisecond)
+	timeout := time.After(1 * time.Second)
 	for {
 		select {
 		case <-success:
@@ -116,7 +116,7 @@ func Test_ClosesAdminInterface(t *testing.T) {
 	e := enterprise.NewEnterprise(c, hostname, "test", shutdown)
 	e.Open()
 
-	timeout := time.After(1 * time.Millisecond)
+	timeout := time.After(1 * time.Second)
 	for {
 		select {
 		case <-success:
