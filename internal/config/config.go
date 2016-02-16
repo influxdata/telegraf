@@ -68,7 +68,7 @@ type AgentConfig struct {
 	// same time, which can have a measurable effect on the system.
 	CollectionJitter internal.Duration
 
-	// Interval at which to flush data
+	// FlushInterval is the Interval at which to flush data
 	FlushInterval internal.Duration
 
 	// FlushJitter Jitters the flush interval by a random amount.
@@ -81,6 +81,11 @@ type AgentConfig struct {
 	// will cache. The buffer is cleared when a successful write occurs. When
 	// full, the oldest metrics will be overwritten.
 	MetricBufferLimit int
+
+	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
+	// it fills up, regardless of FlushInterval. Setting this option to true
+	// does _not_ deactivate FlushInterval.
+	FlushBufferWhenFull bool
 
 	// TODO(cam): Remove UTC and Precision parameters, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
@@ -157,6 +162,8 @@ var header = `##################################################################
   ### Telegraf will cache metric_buffer_limit metrics for each output, and will
   ### flush this buffer on a successful write.
   metric_buffer_limit = 10000
+  ### Flush the buffer whenever full, regardless of flush_interval.
+  flush_buffer_when_full = true
 
   ### Collection jitter is used to jitter the collection by a random amount.
   ### Each plugin will sleep for a random time within jitter before collecting.
@@ -421,8 +428,9 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 
 	ro := internal_models.NewRunningOutput(name, output, outputConfig)
 	if c.Agent.MetricBufferLimit > 0 {
-		ro.PointBufferLimit = c.Agent.MetricBufferLimit
+		ro.MetricBufferLimit = c.Agent.MetricBufferLimit
 	}
+	ro.FlushBufferWhenFull = c.Agent.FlushBufferWhenFull
 	ro.Quiet = c.Agent.Quiet
 	c.Outputs = append(c.Outputs, ro)
 	return nil
