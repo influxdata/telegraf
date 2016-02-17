@@ -3,6 +3,7 @@ package enterprise_test
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,6 +12,8 @@ import (
 	"github.com/influxdata/enterprise-client/v2"
 	"github.com/influxdata/telegraf/services/enterprise"
 )
+
+var rando = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func mockEnterprise(srvFunc func(*client.Product, error)) (chan struct{}, *httptest.Server) {
 	success := make(chan struct{})
@@ -50,7 +53,7 @@ func Test_RegistersWithEnterprise(t *testing.T) {
 	e := enterprise.NewEnterprise(c, expected, "test", shutdown)
 	e.Open()
 
-	timeout := time.After(1 * time.Second)
+	timeout := time.After(1 * time.Minute)
 	for {
 		select {
 		case <-success:
@@ -65,8 +68,12 @@ func Test_RegistersWithEnterprise(t *testing.T) {
 }
 
 func Test_StartsAdminInterface(t *testing.T) {
-	hostname := "localhost"
-	adminPort := 2300
+	hostname := "127.0.0.1"
+	adminPort := uint16(rando.Int31())
+
+	if adminPort < 1024 {
+		adminPort += 1024
+	}
 
 	success, srv := mockEnterprise(func(c *client.Product, err error) {})
 	defer srv.Close()
@@ -75,7 +82,7 @@ func Test_StartsAdminInterface(t *testing.T) {
 		Hosts: []*client.Host{
 			&client.Host{URL: srv.URL},
 		},
-		AdminPort: 2300,
+		AdminPort: adminPort,
 	}
 
 	shutdown := make(chan struct{})
@@ -83,10 +90,12 @@ func Test_StartsAdminInterface(t *testing.T) {
 	e := enterprise.NewEnterprise(c, hostname, "test", shutdown)
 	e.Open()
 
-	timeout := time.After(1 * time.Second)
+	timeout := time.After(10 * time.Minute)
 	for {
 		select {
 		case <-success:
+			//runtime.Gosched()
+			time.Sleep(50 * time.Millisecond)
 			_, err := http.Get(fmt.Sprintf("http://%s:%d", hostname, adminPort))
 			if err != nil {
 				t.Errorf("Unable to connect to admin interface: err: %s", err)
@@ -99,8 +108,12 @@ func Test_StartsAdminInterface(t *testing.T) {
 }
 
 func Test_ClosesAdminInterface(t *testing.T) {
-	hostname := "localhost"
-	adminPort := 2300
+	hostname := "127.0.0.1"
+	adminPort := uint16(rando.Int31())
+
+	if adminPort < 1024 {
+		adminPort += 1024
+	}
 
 	success, srv := mockEnterprise(func(c *client.Product, err error) {})
 	defer srv.Close()
@@ -109,18 +122,20 @@ func Test_ClosesAdminInterface(t *testing.T) {
 		Hosts: []*client.Host{
 			&client.Host{URL: srv.URL},
 		},
-		AdminPort: 2300,
+		AdminPort: adminPort,
 	}
 
 	shutdown := make(chan struct{})
 	e := enterprise.NewEnterprise(c, hostname, "test", shutdown)
 	e.Open()
 
-	timeout := time.After(1 * time.Second)
+	timeout := time.After(10 * time.Minute)
 	for {
 		select {
 		case <-success:
 			// Ensure that the admin interface is running
+			//runtime.Gosched()
+			time.Sleep(50 * time.Millisecond)
 			_, err := http.Get(fmt.Sprintf("http://%s:%d", hostname, adminPort))
 			if err != nil {
 				t.Errorf("Unable to connect to admin interface: err: %s", err)
