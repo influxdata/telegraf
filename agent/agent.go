@@ -322,6 +322,22 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	// channel shared between all input threads for accumulating metrics
 	metricC := make(chan telegraf.Metric, 10000)
 
+	for _, input := range a.Config.Inputs {
+		// Start service of any ServicePlugins
+		switch p := input.Input.(type) {
+		case telegraf.ServiceInput:
+			acc := NewAccumulator(input.Config, metricC)
+			acc.SetDebug(a.Config.Agent.Debug)
+			acc.setDefaultTags(a.Config.Tags)
+			if err := p.Start(acc); err != nil {
+				log.Printf("Service for input %s failed to start, exiting\n%s\n",
+					input.Name, err.Error())
+				return err
+			}
+			defer p.Stop()
+		}
+	}
+
 	// Round collection to nearest interval by sleeping
 	if a.Config.Agent.RoundInterval {
 		i := int64(a.Config.Agent.Interval.Duration)
@@ -339,21 +355,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	}()
 
 	for _, input := range a.Config.Inputs {
-
-		// Start service of any ServicePlugins
-		switch p := input.Input.(type) {
-		case telegraf.ServiceInput:
-			acc := NewAccumulator(input.Config, metricC)
-			acc.SetDebug(a.Config.Agent.Debug)
-			acc.setDefaultTags(a.Config.Tags)
-			if err := p.Start(acc); err != nil {
-				log.Printf("Service for input %s failed to start, exiting\n%s\n",
-					input.Name, err.Error())
-				return err
-			}
-			defer p.Stop()
-		}
-
 		// Special handling for inputs that have their own collection interval
 		// configured. Default intervals are handled below with gatherParallel
 		if input.Config.Interval != 0 {
