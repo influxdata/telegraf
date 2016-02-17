@@ -43,6 +43,8 @@ func TestGraphiteOK(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	go TCPServer(t, &wg)
+	// Give the fake graphite TCP server some time to start:
+	time.Sleep(time.Millisecond * 100)
 
 	// Init plugin
 	g := Graphite{
@@ -94,33 +96,4 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	data3, _ := tp.ReadLine()
 	assert.Equal(t, "my.prefix.192_168_0_1.my_measurement.value 3.14 1289430000", data3)
 	conn.Close()
-}
-
-func TestGraphiteTags(t *testing.T) {
-	m1, _ := telegraf.NewMetric(
-		"mymeasurement",
-		map[string]string{"host": "192.168.0.1"},
-		map[string]interface{}{"value": float64(3.14)},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-	m2, _ := telegraf.NewMetric(
-		"mymeasurement",
-		map[string]string{"host": "192.168.0.1", "afoo": "first", "bfoo": "second"},
-		map[string]interface{}{"value": float64(3.14)},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-	m3, _ := telegraf.NewMetric(
-		"mymeasurement",
-		map[string]string{"afoo": "first", "bfoo": "second"},
-		map[string]interface{}{"value": float64(3.14)},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-
-	tags1 := buildTags(m1)
-	tags2 := buildTags(m2)
-	tags3 := buildTags(m3)
-
-	assert.Equal(t, "192_168_0_1", tags1)
-	assert.Equal(t, "192_168_0_1.first.second", tags2)
-	assert.Equal(t, "first.second", tags3)
 }

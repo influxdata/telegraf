@@ -3,14 +3,15 @@ package graphite
 import (
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"log"
 	"math/rand"
 	"net"
-	"sort"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type Graphite struct {
@@ -71,42 +72,22 @@ func (g *Graphite) Description() string {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var bp []string
-	for _, metric := range metrics {
-		// Get name
-		name := metric.Name()
-		// Convert UnixNano to Unix timestamps
-		timestamp := metric.UnixNano() / 1000000000
-		tag_str := buildTags(metric)
-
-		for field_name, value := range metric.Fields() {
-			// Convert value
-			value_str := fmt.Sprintf("%#v", value)
-			// Write graphite metric
-			var graphitePoint string
-			if name == field_name {
-				graphitePoint = fmt.Sprintf("%s.%s %s %d\n",
-					tag_str,
-					strings.Replace(name, ".", "_", -1),
-					value_str,
-					timestamp)
-			} else {
-				graphitePoint = fmt.Sprintf("%s.%s.%s %s %d\n",
-					tag_str,
-					strings.Replace(name, ".", "_", -1),
-					strings.Replace(field_name, ".", "_", -1),
-					value_str,
-					timestamp)
-			}
-			if g.Prefix != "" {
-				graphitePoint = fmt.Sprintf("%s.%s", g.Prefix, graphitePoint)
-			}
-			bp = append(bp, graphitePoint)
-		}
+	s, err := serializers.NewGraphiteSerializer(g.Prefix)
+	if err != nil {
+		return err
 	}
-	graphitePoints := strings.Join(bp, "")
+
+	for _, metric := range metrics {
+		gMetrics, err := s.Serialize(metric)
+		if err != nil {
+			log.Printf("Error serializing some metrics to graphite: %s", err.Error())
+		}
+		bp = append(bp, gMetrics...)
+	}
+	graphitePoints := strings.Join(bp, "\n") + "\n"
 
 	// This will get set to nil if a successful write occurs
-	err := errors.New("Could not write to any Graphite server in cluster\n")
+	err = errors.New("Could not write to any Graphite server in cluster\n")
 
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))
@@ -126,37 +107,6 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		g.Connect()
 	}
 	return err
-}
-
-func buildTags(metric telegraf.Metric) string {
-	var keys []string
-	tags := metric.Tags()
-	for k := range tags {
-		if k == "host" {
-			continue
-		}
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	var tag_str string
-	if host, ok := tags["host"]; ok {
-		if len(keys) > 0 {
-			tag_str = strings.Replace(host, ".", "_", -1) + "."
-		} else {
-			tag_str = strings.Replace(host, ".", "_", -1)
-		}
-	}
-
-	for i, k := range keys {
-		tag_value := strings.Replace(tags[k], ".", "_", -1)
-		if i == 0 {
-			tag_str += tag_value
-		} else {
-			tag_str += "." + tag_value
-		}
-	}
-	return tag_str
 }
 
 func init() {

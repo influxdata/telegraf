@@ -15,7 +15,7 @@ type InfluxParser struct {
 	DefaultTags map[string]string
 }
 
-// ParseMetrics returns a slice of Metrics from a text representation of a
+// Parse returns a slice of Metrics from a text representation of a
 // metric (in line-protocol format)
 // with each metric separated by newlines. If any metrics fail to parse,
 // a non-nil error will be returned in addition to the metrics that parsed
@@ -54,4 +54,8 @@ func (p *InfluxParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	return metrics[0], nil
+}
+
+func (p *InfluxParser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
 }

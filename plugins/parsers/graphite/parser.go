@@ -29,6 +29,10 @@ type GraphiteParser struct {
 	matcher *matcher
 }
 
+func (p *GraphiteParser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}
+
 func NewGraphiteParser(
 	separator string,
 	templates []string,
@@ -104,13 +108,14 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	metrics := make([]telegraf.Metric, 0)
 
+	var errStr string
 	buffer := bytes.NewBuffer(buf)
 	reader := bufio.NewReader(buffer)
 	for {
 		// Read up to the next newline.
 		buf, err := reader.ReadBytes('\n')
 		if err == io.EOF {
-			return metrics, nil
+			break
 		}
 		if err != nil && err != io.EOF {
 			return metrics, err
@@ -118,10 +123,19 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 		// Trim the buffer, even though there should be no padding
 		line := strings.TrimSpace(string(buf))
-		if metric, err := p.ParseLine(line); err == nil {
+		metric, err := p.ParseLine(line)
+
+		if err == nil {
 			metrics = append(metrics, metric)
+		} else {
+			errStr += err.Error() + "\n"
 		}
 	}
+
+	if errStr != "" {
+		return metrics, fmt.Errorf(errStr)
+	}
+	return metrics, nil
 }
 
 // Parse performs Graphite parsing of a single line.

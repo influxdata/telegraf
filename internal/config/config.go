@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/influxdata/config"
 	"github.com/naoina/toml/ast"
@@ -398,6 +399,17 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	}
 	output := creator()
 
+	// If the output has a SetSerializer function, then this means it can write
+	// arbitrary types of output, so build the serializer and set it.
+	switch t := output.(type) {
+	case serializers.SerializerOutput:
+		serializer, err := buildSerializer(name, table)
+		if err != nil {
+			return err
+		}
+		t.SetSerializer(serializer)
+	}
+
 	outputConfig, err := buildOutput(name, table)
 	if err != nil {
 		return err
@@ -658,6 +670,37 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "tag_keys")
 
 	return parsers.NewParser(c)
+}
+
+// buildSerializer grabs the necessary entries from the ast.Table for creating
+// a serializers.Serializer object, and creates it, which can then be added onto
+// an Output object.
+func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error) {
+	c := &serializers.Config{}
+
+	if node, ok := tbl.Fields["data_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DataFormat = str.Value
+			}
+		}
+	}
+
+	if c.DataFormat == "" {
+		c.DataFormat = "influx"
+	}
+
+	if node, ok := tbl.Fields["prefix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.Prefix = str.Value
+			}
+		}
+	}
+
+	delete(tbl.Fields, "data_format")
+	delete(tbl.Fields, "prefix")
+	return serializers.NewSerializer(c)
 }
 
 // buildOutput parses output specific items from the ast.Table, builds the filter and returns an

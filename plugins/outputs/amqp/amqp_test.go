@@ -3,6 +3,7 @@ package amqp
 import (
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -13,9 +14,11 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 
 	var url = "amqp://" + testutil.GetLocalHost() + ":5672/"
+	s, _ := serializers.NewInfluxSerializer()
 	q := &AMQP{
-		URL:      url,
-		Exchange: "telegraf_test",
+		URL:        url,
+		Exchange:   "telegraf_test",
+		serializer: s,
 	}
 
 	// Verify that we can connect to the AMQP broker

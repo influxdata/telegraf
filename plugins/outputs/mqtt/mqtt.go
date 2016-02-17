@@ -5,37 +5,13 @@ import (
 	"strings"
 	"sync"
 
-	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers"
+
+	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 )
-
-const MaxRetryCount = 3
-const ClientIdPrefix = "telegraf"
-
-type MQTT struct {
-	Servers     []string `toml:"servers"`
-	Username    string
-	Password    string
-	Database    string
-	Timeout     internal.Duration
-	TopicPrefix string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
-
-	client *paho.Client
-	opts   *paho.ClientOptions
-
-	sync.Mutex
-}
 
 var sampleConfig = `
   servers = ["localhost:1883"] # required.
@@ -55,12 +31,47 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ### Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ### Data format to output. This can be "influx" or "graphite"
+  ### Each data format has it's own unique set of configuration options, read
+  ### more about them here:
+  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
 `
+
+type MQTT struct {
+	Servers     []string `toml:"servers"`
+	Username    string
+	Password    string
+	Database    string
+	Timeout     internal.Duration
+	TopicPrefix string
+	QoS         int `toml:"qos"`
+
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+
+	client *paho.Client
+	opts   *paho.ClientOptions
+
+	serializer serializers.Serializer
+
+	sync.Mutex
+}
 
 func (m *MQTT) Connect() error {
 	var err error
 	m.Lock()
 	defer m.Unlock()
+	if m.QoS > 2 || m.QoS < 0 {
+		return fmt.Errorf("MQTT Output, invalid QoS value: %d", m.QoS)
+	}
 
 	m.opts, err = m.createOpts()
 	if err != nil {
@@ -73,6 +84,10 @@ func (m *MQTT) Connect() error {
 	}
 
 	return nil
+}
+
+func (m *MQTT) SetSerializer(serializer serializers.Serializer) {
+	m.serializer = serializer
 }
 
 func (m *MQTT) Close() error {
@@ -101,7 +116,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		hostname = ""
 	}
 
-	for _, p := range metrics {
+	for _, metric := range metrics {
 		var t []string
 		if m.TopicPrefix != "" {
 			t = append(t, m.TopicPrefix)
@@ -110,13 +125,20 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 			t = append(t, hostname)
 		}
 
-		t = append(t, p.Name())
+		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
 
-		value := p.String()
-		err := m.publish(topic, value)
+		values, err := m.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", err)
+			return fmt.Errorf("MQTT Could not serialize metric: %s",
+				metric.String())
+		}
+
+		for _, value := range values {
+			err = m.publish(topic, value)
+			if err != nil {
+				return fmt.Errorf("Could not write to MQTT server, %s", err)
+			}
 		}
 	}
 
@@ -124,7 +146,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 }
 
 func (m *MQTT) publish(topic, body string) error {
-	token := m.client.Publish(topic, 0, false, body)
+	token := m.client.Publish(topic, byte(m.QoS), false, body)
 	token.Wait()
 	if token.Error() != nil {
 		return token.Error()

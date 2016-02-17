@@ -49,7 +49,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"max_usage":                 uint64(1001),
 		"usage":                     uint64(1111),
 		"fail_count":                uint64(1),
-		"limit":                     uint64(20),
+		"limit":                     uint64(2000),
 		"total_pgmafault":           uint64(0),
 		"cache":                     uint64(0),
 		"mapped_file":               uint64(0),
@@ -79,7 +79,9 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"pgfault":                   uint64(2),
 		"inactive_file":             uint64(3),
 		"total_pgpgin":              uint64(4),
+		"usage_percent":             float64(55.55),
 	}
+
 	acc.AssertContainsTaggedFields(t, "docker_mem", memfields, tags)
 
 	// test docker_cpu measurement
@@ -93,6 +95,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"throttling_periods":           uint64(1),
 		"throttling_throttled_periods": uint64(0),
 		"throttling_throttled_time":    uint64(0),
+		"usage_percent":                float64(400.0),
 	}
 	acc.AssertContainsTaggedFields(t, "docker_cpu", cpufields, cputags)
 
@@ -121,6 +124,9 @@ func testStats() *docker.Stats {
 	stats.CPUStats.CPUUsage.UsageInKernelmode = 200
 	stats.CPUStats.SystemCPUUsage = 100
 	stats.CPUStats.ThrottlingData.Periods = 1
+
+	stats.PreCPUStats.CPUUsage.TotalUsage = 400
+	stats.PreCPUStats.SystemCPUUsage = 50
 
 	stats.MemoryStats.Stats.TotalPgmafault = 0
 	stats.MemoryStats.Stats.Cache = 0
@@ -155,7 +161,7 @@ func testStats() *docker.Stats {
 	stats.MemoryStats.MaxUsage = 1001
 	stats.MemoryStats.Usage = 1111
 	stats.MemoryStats.Failcnt = 1
-	stats.MemoryStats.Limit = 20
+	stats.MemoryStats.Limit = 2000
 
 	stats.Networks["eth0"] = docker.NetworkStats{
 		RxDropped: 1,

@@ -67,6 +67,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	wg.Add(len(containers))
 	for _, container := range containers {
+
 		go func(c docker.APIContainers) {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
@@ -177,6 +178,7 @@ func gatherContainerStats(
 		"pgfault":                   stat.MemoryStats.Stats.Pgfault,
 		"inactive_file":             stat.MemoryStats.Stats.InactiveFile,
 		"total_pgpgin":              stat.MemoryStats.Stats.TotalPgpgin,
+		"usage_percent":             calculateMemPercent(stat),
 	}
 	acc.AddFields("docker_mem", memfields, tags, now)
 
@@ -188,6 +190,7 @@ func gatherContainerStats(
 		"throttling_periods":           stat.CPUStats.ThrottlingData.Periods,
 		"throttling_throttled_periods": stat.CPUStats.ThrottlingData.ThrottledPeriods,
 		"throttling_throttled_time":    stat.CPUStats.ThrottlingData.ThrottledTime,
+		"usage_percent":                calculateCPUPercent(stat),
 	}
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
@@ -217,6 +220,26 @@ func gatherContainerStats(
 	}
 
 	gatherBlockIOMetrics(stat, acc, tags, now)
+}
+
+func calculateMemPercent(stat *docker.Stats) float64 {
+	var memPercent = 0.0
+	if stat.MemoryStats.Limit > 0 {
+		memPercent = float64(stat.MemoryStats.Usage) / float64(stat.MemoryStats.Limit) * 100.0
+	}
+	return memPercent
+}
+
+func calculateCPUPercent(stat *docker.Stats) float64 {
+	var cpuPercent = 0.0
+	// calculate the change for the cpu and system usage of the container in between readings
+	cpuDelta := float64(stat.CPUStats.CPUUsage.TotalUsage) - float64(stat.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stat.CPUStats.SystemCPUUsage) - float64(stat.PreCPUStats.SystemCPUUsage)
+
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * float64(len(stat.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+	}
+	return cpuPercent
 }
 
 func gatherBlockIOMetrics(

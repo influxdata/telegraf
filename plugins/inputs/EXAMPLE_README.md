@@ -4,7 +4,7 @@ The example plugin gathers metrics about example things
 
 ### Configuration:
 
-```
+```toml
 # Description
 [[inputs.example]]
   # SampleConfig
