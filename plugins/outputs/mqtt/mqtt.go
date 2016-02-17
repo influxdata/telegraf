@@ -18,7 +18,7 @@ var sampleConfig = `
 
   ### MQTT outputs send metrics to this topic format
   ###    "<topic_prefix>/<hostname>/<pluginname>/"
-  ###   ex: prefix/host/web01.example.com/mem
+  ###   ex: prefix/web01.example.com/mem
   topic_prefix = "telegraf"
 
   ### username and password to connect MQTT server.

@@ -59,10 +59,11 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 	ro.Lock()
 	defer ro.Unlock()
 
-	if len(ro.metrics) < ro.MetricBufferLimit {
+	if len(ro.metrics) < ro.MetricBufferLimit-1 {
 		ro.metrics = append(ro.metrics, metric)
 	} else {
 		if ro.FlushBufferWhenFull {
+			ro.metrics = append(ro.metrics, metric)
 			tmpmetrics := make([]telegraf.Metric, len(ro.metrics))
 			copy(tmpmetrics, ro.metrics)
 			ro.metrics = make([]telegraf.Metric, 0)
