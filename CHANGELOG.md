@@ -11,6 +11,10 @@ they would like to output. Currently supports: "influx" and "graphite"
 [here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md)
 - More info on serializing _outgoing_ data formats can be found
 [here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md)
+- Telegraf now has an option `flush_buffer_when_full` that will flush the
+metric buffer whenever it fills up for each output, rather than dropping
+points and only flushing on a set time interval. This will default to `true`
+and is in the `[agent]` config section.
 
 ### Features
 - [#652](https://github.com/influxdata/telegraf/pull/652): CouchDB Input Plugin. Thanks @codehate!
@@ -23,6 +27,7 @@ they would like to output. Currently supports: "influx" and "graphite"
 - [#679](https://github.com/influxdata/telegraf/pull/679): Support for arbitrary output data formats.
 - [#695](https://github.com/influxdata/telegraf/pull/695): raindrops input plugin. Thanks @burdandrei!
 - [#650](https://github.com/influxdata/telegraf/pull/650): net_response input plugin. Thanks @titilambert!
+- [#699](https://github.com/influxdata/telegraf/pull/699): Flush based on buffer size rather than time.
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
