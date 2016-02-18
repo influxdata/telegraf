@@ -21,11 +21,11 @@ type Docker struct {
 }
 
 var sampleConfig = `
-  ### Docker Endpoint
-  ###   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  ###   To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  ## Docker Endpoint
+  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
+  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
-  ### Only collect metrics for these containers, collect all if empty
+  ## Only collect metrics for these containers, collect all if empty
   container_names = []
 `
 

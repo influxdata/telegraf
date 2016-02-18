@@ -27,17 +27,17 @@ func (_ *NetResponse) Description() string {
 }
 
 var sampleConfig = `
-  ### Protocol, must be "tcp" or "udp"
+  ## Protocol, must be "tcp" or "udp"
   protocol = "tcp"
-  ### Server address (default localhost)
+  ## Server address (default localhost)
   address = "github.com:80"
-  ### Set timeout (default 1.0 seconds)
+  ## Set timeout (default 1.0 seconds)
   timeout = 1.0
-  ### Set read timeout (default 1.0 seconds)
+  ## Set read timeout (default 1.0 seconds)
   read_timeout = 1.0
-  ### Optional string sent to the server
+  ## Optional string sent to the server
   # send = "ssh"
-  ### Optional expected string in answer
+  ## Optional expected string in answer
   # expect = "ssh"
 `
 

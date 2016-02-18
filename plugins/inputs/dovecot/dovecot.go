@@ -24,13 +24,13 @@ func (d *Dovecot) Description() string {
 }
 
 var sampleConfig = `
-  ### specify dovecot servers via an address:port list
-  ###  e.g.
-  ###    localhost:24242
-  ###
-  ### If no servers are specified, then localhost is used as the host.
+  ## specify dovecot servers via an address:port list
+  ##  e.g.
+  ##    localhost:24242
+  ##
+  ## If no servers are specified, then localhost is used as the host.
   servers = ["localhost:24242"]
-  ### Only collect metrics for these domains, collect all if empty
+  ## Only collect metrics for these domains, collect all if empty
   domains = []
 `
 

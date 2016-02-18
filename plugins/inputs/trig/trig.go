@@ -13,7 +13,7 @@ type Trig struct {
 }
 
 var TrigConfig = `
-  ### Set the amplitude
+  ## Set the amplitude
   amplitude = 10.0
 `
 

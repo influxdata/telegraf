@@ -16,11 +16,11 @@ type RethinkDB struct {
 }
 
 var sampleConfig = `
-  ### An array of URI to gather stats about. Specify an ip or hostname
-  ### with optional port add password. ie,
-  ###   rethinkdb://user:auth_key@10.10.3.30:28105,
-  ###   rethinkdb://10.10.3.33:18832,
-  ###   10.0.0.1:10000, etc.
+  ## An array of URI to gather stats about. Specify an ip or hostname
+  ## with optional port add password. ie,
+  ##   rethinkdb://user:auth_key@10.10.3.30:28105,
+  ##   rethinkdb://10.10.3.33:18832,
+  ##   10.0.0.1:10000, etc.
   servers = ["127.0.0.1:28015"]
 `
 

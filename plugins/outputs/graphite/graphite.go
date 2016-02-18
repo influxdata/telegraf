@@ -23,11 +23,11 @@ type Graphite struct {
 }
 
 var sampleConfig = `
-  ### TCP endpoint for your graphite instance.
+  ## TCP endpoint for your graphite instance.
   servers = ["localhost:2003"]
-  ### Prefix metrics name
+  ## Prefix metrics name
   prefix = ""
-  ### timeout in seconds for the write connection to graphite
+  ## timeout in seconds for the write connection to graphite
   timeout = 2
 `
 

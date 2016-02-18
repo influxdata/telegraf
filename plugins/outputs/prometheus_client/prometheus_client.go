@@ -16,7 +16,7 @@ type PrometheusClient struct {
 }
 
 var sampleConfig = `
-  ### Address to listen on
+  ## Address to listen on
   # listen = ":9126"
 `
 
