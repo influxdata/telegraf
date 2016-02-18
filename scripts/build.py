@@ -42,7 +42,7 @@ DESCRIPTION = "Plugin-driven server agent for reporting metrics into InfluxDB."
 
 # SCRIPT START
 prereqs = [ 'git', 'go' ]
-optional_prereqs = [ 'gvm', 'fpm', 'rpmbuild' ]
+optional_prereqs = [ 'fpm', 'rpmbuild' ]
 
 fpm_common_args = "-f -s dir --log error \
  --vendor {} \
@@ -77,6 +77,14 @@ supported_packages = {
     "darwin": [ "tar", "zip" ],
     "linux": [ "deb", "rpm", "tar", "zip" ],
     "windows": [ "tar", "zip" ],
+}
+supported_tags = {
+    # "linux": {
+    #     "amd64": ["sensors"]
+    # }
+}
+prereq_cmds = {
+    # "linux": "sudo apt-get install lm-sensors libsensors4-dev"
 }
 
 def run(command, allow_failure=False, shell=False):
@@ -233,52 +241,6 @@ def upload_packages(packages, bucket_name=None, nightly=False):
             print("\t - Not uploading {}, already exists.".format(p))
     print("")
 
-def run_tests(race, parallel, timeout, no_vet):
-    get_command = "go get -d -t ./..."
-    print("Retrieving Go dependencies...")
-    sys.stdout.flush()
-    run(get_command)
-    print("Running tests:")
-    print("\tRace: ", race)
-    if parallel is not None:
-        print("\tParallel:", parallel)
-    if timeout is not None:
-        print("\tTimeout:", timeout)
-    sys.stdout.flush()
-    p = subprocess.Popen(["go", "fmt", "./..."], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p.communicate()
-    if len(out) > 0 or len(err) > 0:
-        print("Code not formatted. Please use 'go fmt ./...' to fix formatting errors.")
-        print(out)
-        print(err)
-        return False
-    if not no_vet:
-        p = subprocess.Popen(["go", "tool", "vet", "-composites=false", "./"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = p.communicate()
-        if len(out) > 0 or len(err) > 0:
-            print("Go vet failed. Please run 'go vet ./...' and fix any errors.")
-            print(out)
-            print(err)
-            return False
-    else:
-        print("Skipping go vet ...")
-        sys.stdout.flush()
-    test_command = "go test -v"
-    if race:
-        test_command += " -race"
-    if parallel is not None:
-        test_command += " -parallel {}".format(parallel)
-    if timeout is not None:
-        test_command += " -timeout {}".format(timeout)
-    test_command += " ./..."
-    code = os.system(test_command)
-    if code != 0:
-        print("Tests Failed")
-        return False
-    else:
-        print("Tests Passed")
-        return True
-
 def build(version=None,
           branch=None,
           commit=None,
@@ -335,6 +297,11 @@ def build(version=None,
         build_command += "go build -o {} ".format(os.path.join(outdir, b))
         if race:
             build_command += "-race "
+        if platform in supported_tags:
+            if arch in supported_tags[platform]:
+                build_tags = supported_tags[platform][arch]
+                for build_tag in build_tags:
+                    build_command += "-tags "+build_tag+" "
         go_version = get_go_version()
         if "1.4" in go_version:
             build_command += "-ldflags=\"-X main.buildTime '{}' ".format(datetime.datetime.utcnow().isoformat())
@@ -393,14 +360,10 @@ def package_scripts(build_root):
     shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"))
     os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"), 0o644)
 
-def go_get(update=False):
-    get_command = None
-    if update:
-        get_command = "go get -u -f -d ./..."
-    else:
-        get_command = "go get -d ./..."
+def go_get():
     print("Retrieving Go dependencies...")
-    run(get_command)
+    run("go get github.com/sparrc/gdm")
+    run("gdm restore")
 
 def generate_md5_from_file(path):
     m = hashlib.md5()
@@ -450,7 +413,7 @@ def build_packages(build_output, version, pkg_arch, nightly=False, rc=None, iter
                     package_version = version
                     package_iteration = iteration
                     current_location = build_output[p][a]
-                    
+
                     if package_type in ['zip', 'tar']:
                         if nightly:
                             name = '{}-nightly_{}_{}'.format(name, p, a)
@@ -519,12 +482,9 @@ def print_usage():
     print("\t --race \n\t\t- Whether the produced build should have race detection enabled.")
     print("\t --package \n\t\t- Whether the produced builds should be packaged for the target platform(s).")
     print("\t --nightly \n\t\t- Whether the produced build is a nightly (affects version information).")
-    print("\t --update \n\t\t- Whether dependencies should be updated prior to building.")
-    print("\t --test \n\t\t- Run Go tests. Will not produce a build.")
     print("\t --parallel \n\t\t- Run Go tests in parallel up to the count specified.")
     print("\t --timeout \n\t\t- Timeout for Go tests. Defaults to 480s.")
     print("\t --clean \n\t\t- Clean the build output directory prior to creating build.")
-    print("\t --no-get \n\t\t- Do not run `go get` before building.")
     print("\t --bucket=<S3 bucket>\n\t\t- Full path of the bucket to upload packages to (must also specify --upload).")
     print("\t --debug \n\t\t- Displays debug output.")
     print("")
@@ -592,15 +552,9 @@ def main():
         elif '--nightly' in arg:
             # Signifies that this is a nightly build.
             nightly = True
-        elif '--update' in arg:
-            # Signifies that dependencies should be updated.
-            update = True
         elif '--upload' in arg:
             # Signifies that the resulting packages should be uploaded to S3
             upload = True
-        elif '--test' in arg:
-            # Run tests and exit
-            test = True
         elif '--parallel' in arg:
             # Set parallel for tests.
             parallel = int(arg.split("=")[1])
@@ -620,8 +574,6 @@ def main():
         elif '--bucket' in arg:
             # The bucket to upload the packages to, relies on boto
             upload_bucket = arg.split("=")[1]
-        elif '--no-get' in arg:
-            run_get = False
         elif '--debug' in arg:
             print "[DEBUG] Using debug output"
             debug = True
@@ -665,15 +617,10 @@ def main():
         target_arch = 'i386'
     elif target_arch == 'x86_64':
         target_arch = 'amd64'
-        
-    build_output = {}
-    if test:
-        if not run_tests(race, parallel, timeout, no_vet):
-            return 1
-        return 0
 
-    if run_get:
-        go_get(update=update)
+    build_output = {}
+
+    go_get()
 
     platforms = []
     single_build = True
@@ -684,6 +631,8 @@ def main():
         platforms = [target_platform]
 
     for platform in platforms:
+        if platform in prereq_cmds:
+            run(prereq_cmds[platform])
         build_output.update( { platform : {} } )
         archs = []
         if target_arch == "all":
