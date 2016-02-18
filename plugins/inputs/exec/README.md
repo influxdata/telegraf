@@ -37,19 +37,19 @@ and strings will be ignored.
   # measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ### Below configuration will be used for data_format = "graphite", can be ignored for other data_format
-  ### If matching multiple measurement files, this string will be used to join the matched values.
+  ## Below configuration will be used for data_format = "graphite", can be ignored for other data_format
+  ## If matching multiple measurement files, this string will be used to join the matched values.
   #separator = "."
 
-  ### Each template line requires a template pattern.  It can have an optional
-  ### filter before the template and separated by spaces.  It can also have optional extra
-  ### tags following the template.  Multiple tags should be separated by commas and no spaces
-  ### similar to the line protocol format.  The can be only one default template.
-  ### Templates support below format:
-  ### 1. filter + template
-  ### 2. filter + template + extra tag
-  ### 3. filter + template with field key
-  ### 4. default template
+  ## Each template line requires a template pattern.  It can have an optional
+  ## filter before the template and separated by spaces.  It can also have optional extra
+  ## tags following the template.  Multiple tags should be separated by commas and no spaces
+  ## similar to the line protocol format.  The can be only one default template.
+  ## Templates support below format:
+  ## 1. filter + template
+  ## 2. filter + template + extra tag
+  ## 3. filter + template with field key
+  ## 4. default template
   #templates = [
   #  "*.app env.service.resource.measurement",
   #  "stats.* .host.measurement* region=us-west,agent=sensu",
@@ -141,19 +141,19 @@ We can also change the data_format to "graphite" to use the metrics collecting s
   # measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ### Below configuration will be used for data_format = "graphite", can be ignored for other data_format
-  ### If matching multiple measurement files, this string will be used to join the matched values.
+  ## Below configuration will be used for data_format = "graphite", can be ignored for other data_format
+  ## If matching multiple measurement files, this string will be used to join the matched values.
   separator = "."
 
-  ### Each template line requires a template pattern.  It can have an optional
-  ### filter before the template and separated by spaces.  It can also have optional extra
-  ### tags following the template.  Multiple tags should be separated by commas and no spaces
-  ### similar to the line protocol format.  The can be only one default template.
-  ### Templates support below format:
-  ### 1. filter + template
-  ### 2. filter + template + extra tag
-  ### 3. filter + template with field key
-  ### 4. default template
+  ## Each template line requires a template pattern.  It can have an optional
+  ## filter before the template and separated by spaces.  It can also have optional extra
+  ## tags following the template.  Multiple tags should be separated by commas and no spaces
+  ## similar to the line protocol format.  The can be only one default template.
+  ## Templates support below format:
+  ## 1. filter + template
+  ## 2. filter + template + extra tag
+  ## 3. filter + template with field key
+  ## 4. default template
   templates = [
     "*.app env.service.resource.measurement",
     "stats.* .host.measurement* region=us-west,agent=sensu",

@@ -23,15 +23,15 @@ type poolInfo struct {
 }
 
 var sampleConfig = `
-  ### ZFS kstat path
-  ### If not specified, then default is:
+  ## ZFS kstat path
+  ## If not specified, then default is:
   kstatPath = "/proc/spl/kstat/zfs"
 
-  ### By default, telegraf gather all zfs stats
-  ### If not specified, then default is:
+  ## By default, telegraf gather all zfs stats
+  ## If not specified, then default is:
   kstatMetrics = ["arcstats", "zfetchstats", "vdev_cache_stats"]
 
-  ### By default, don't gather zpool stats
+  ## By default, don't gather zpool stats
   poolMetrics = false
 `
 

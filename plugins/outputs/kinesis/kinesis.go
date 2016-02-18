@@ -28,16 +28,16 @@ type KinesisOutput struct {
 }
 
 var sampleConfig = `
-  ### Amazon REGION of kinesis endpoint.
+  ## Amazon REGION of kinesis endpoint.
   region = "ap-southeast-2"
-  ### Kinesis StreamName must exist prior to starting telegraf.
+  ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
-  ### PartitionKey as used for sharding data.
+  ## PartitionKey as used for sharding data.
   partitionkey = "PartitionKey"
-  ### format of the Data payload in the kinesis PutRecord, supported
-  ### String and Custom.
+  ## format of the Data payload in the kinesis PutRecord, supported
+  ## String and Custom.
   format = "string"
-  ### debug will show upstream aws messages.
+  ## debug will show upstream aws messages.
   debug = false
 `
 

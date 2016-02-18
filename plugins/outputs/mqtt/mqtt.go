@@ -16,26 +16,26 @@ import (
 var sampleConfig = `
   servers = ["localhost:1883"] # required.
 
-  ### MQTT outputs send metrics to this topic format
-  ###    "<topic_prefix>/<hostname>/<pluginname>/"
-  ###   ex: prefix/web01.example.com/mem
+  ## MQTT outputs send metrics to this topic format
+  ##    "<topic_prefix>/<hostname>/<pluginname>/"
+  ##   ex: prefix/web01.example.com/mem
   topic_prefix = "telegraf"
 
-  ### username and password to connect MQTT server.
+  ## username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
-  ### Optional SSL Config
+  ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
   # ssl_key = "/etc/telegraf/key.pem"
-  ### Use SSL but skip chain & host verification
+  ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ### Data format to output. This can be "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  ## Data format to output. This can be "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 `
 

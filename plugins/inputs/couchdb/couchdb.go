@@ -75,8 +75,8 @@ func (*CouchDB) Description() string {
 
 func (*CouchDB) SampleConfig() string {
 	return `
-  ### Works with CouchDB stats endpoints out of the box
-  ### Multiple HOSTs from which to read CouchDB stats:
+  ## Works with CouchDB stats endpoints out of the box
+  ## Multiple HOSTs from which to read CouchDB stats:
   hosts = ["http://localhost:8086/_stats"]
 `
 }

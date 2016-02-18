@@ -18,8 +18,8 @@ type Powerdns struct {
 }
 
 var sampleConfig = `
-  ### An array of sockets to gather stats about.
-  ### Specify a path to unix socket.
+  ## An array of sockets to gather stats about.
+  ## Specify a path to unix socket.
   unix_sockets = ["/var/run/pdns.controlsocket"]
 `
 

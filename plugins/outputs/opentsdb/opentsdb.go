@@ -22,17 +22,17 @@ type OpenTSDB struct {
 }
 
 var sampleConfig = `
-  ### prefix for metrics keys
+  ## prefix for metrics keys
   prefix = "my.specific.prefix."
 
   ## Telnet Mode ##
-  ### DNS name of the OpenTSDB server in telnet mode
+  ## DNS name of the OpenTSDB server in telnet mode
   host = "opentsdb.example.com"
 
-  ### Port of the OpenTSDB server in telnet mode
+  ## Port of the OpenTSDB server in telnet mode
   port = 4242
 
-  ### Debug true - Prints OpenTSDB communication
+  ## Debug true - Prints OpenTSDB communication
   debug = false
 `
 

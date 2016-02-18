@@ -59,14 +59,14 @@ type indexHealth struct {
 }
 
 const sampleConfig = `
-  ### specify a list of one or more Elasticsearch servers
+  ## specify a list of one or more Elasticsearch servers
   servers = ["http://localhost:9200"]
 
-  ### set local to false when you want to read the indices stats from all nodes
-  ### within the cluster
+  ## set local to false when you want to read the indices stats from all nodes
+  ## within the cluster
   local = true
 
-  ### set cluster_health to true when you want to also obtain cluster level stats
+  ## set cluster_health to true when you want to also obtain cluster level stats
   cluster_health = false
 `
 

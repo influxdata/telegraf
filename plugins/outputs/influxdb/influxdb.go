@@ -41,32 +41,32 @@ type InfluxDB struct {
 }
 
 var sampleConfig = `
-  ### The full HTTP or UDP endpoint URL for your InfluxDB instance.
-  ### Multiple urls can be specified as part of the same cluster,
-  ### this means that only ONE of the urls will be written to each interval.
+  ## The full HTTP or UDP endpoint URL for your InfluxDB instance.
+  ## Multiple urls can be specified as part of the same cluster,
+  ## this means that only ONE of the urls will be written to each interval.
   # urls = ["udp://localhost:8089"] # UDP endpoint example
   urls = ["http://localhost:8086"] # required
-  ### The target database for metrics (telegraf will create it if not exists)
+  ## The target database for metrics (telegraf will create it if not exists)
   database = "telegraf" # required
-  ### Precision of writes, valid values are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-  ### note: using "s" precision greatly improves InfluxDB compression
+  ## Precision of writes, valid values are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+  ## note: using "s" precision greatly improves InfluxDB compression
   precision = "s"
 
-  ### Connection timeout (for the connection with InfluxDB), formatted as a string.
-  ### If not provided, will default to 0 (no timeout)
+  ## Connection timeout (for the connection with InfluxDB), formatted as a string.
+  ## If not provided, will default to 0 (no timeout)
   # timeout = "5s"
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
-  ### Set the user agent for HTTP POSTs (can be useful for log differentiation)
+  ## Set the user agent for HTTP POSTs (can be useful for log differentiation)
   # user_agent = "telegraf"
-  ### Set UDP payload size, defaults to InfluxDB UDP Client default (512 bytes)
+  ## Set UDP payload size, defaults to InfluxDB UDP Client default (512 bytes)
   # udp_payload = 512
 
-  ### Optional SSL Config
+  ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
   # ssl_key = "/etc/telegraf/key.pem"
-  ### Use SSL but skip chain & host verification
+  ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 `
 

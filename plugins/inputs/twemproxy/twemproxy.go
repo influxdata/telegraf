@@ -17,9 +17,9 @@ type Twemproxy struct {
 }
 
 var sampleConfig = `
-  ### Twemproxy stats address and port (no scheme)
+  ## Twemproxy stats address and port (no scheme)
   addr = "localhost:22222"
-  ### Monitor pool name
+  ## Monitor pool name
   pools = ["redis_pool", "mc_pool"]
 `
 
