@@ -34,7 +34,7 @@ example, in the exec plugin:
   ### Data format to consume. This can be "json", "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
   ### Additional configuration options go here
@@ -61,7 +61,7 @@ metrics are parsed directly into Telegraf metrics.
   ### Data format to consume. This can be "json", "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
 
@@ -106,7 +106,7 @@ For example, if you had this configuration:
   ### Data format to consume. This can be "json", "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
   ### List of tag names to extract from top-level of JSON server response
@@ -250,7 +250,7 @@ There are many more options available,
   ### Data format to consume. This can be "json", "influx" or "graphite" (line-protocol)
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "graphite"
 
   ### This string will be used to join the matched values.

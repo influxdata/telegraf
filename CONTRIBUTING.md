@@ -101,7 +101,7 @@ Some input plugins (such as
 [exec](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec))
 accept arbitrary input data formats. An overview of these data formats can
 be found
-[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md).
+[here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
 
 In order to enable this, you must specify a `SetParser(parser parsers.Parser)`
 function on the plugin object (see the exec plugin for an example), as well as
@@ -117,7 +117,7 @@ You should also add the following to your SampleConfig() return:
   ### Data format to consume. This can be "json", "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
 
@@ -230,7 +230,7 @@ Some output plugins (such as
 [file](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file))
 can write arbitrary output data formats. An overview of these data formats can
 be found
-[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md).
+[here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md).
 
 In order to enable this, you must specify a
 `SetSerializer(serializer serializers.Serializer)`
@@ -247,7 +247,7 @@ You should also add the following to your SampleConfig() return:
   ### Data format to output. This can be "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 ```
 

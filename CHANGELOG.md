@@ -8,9 +8,9 @@ format that they would like to parse. Currently supports: "json", "influx", and
 - Users of message broker and file output plugins can now choose what data format
 they would like to output. Currently supports: "influx" and "graphite"
 - More info on parsing _incoming_ data formats can be found
-[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md)
+[here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md)
 - More info on serializing _outgoing_ data formats can be found
-[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md)
+[here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
 - Telegraf now has an option `flush_buffer_when_full` that will flush the
 metric buffer whenever it fills up for each output, rather than dropping
 points and only flushing on a set time interval. This will default to `true`

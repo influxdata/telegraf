@@ -141,7 +141,7 @@ Examples:
 
 ## Configuration
 
-See the [configuration guide](CONFIGURATION.md) for a rundown of the more advanced
+See the [configuration guide](docs/CONFIGURATION.md) for a rundown of the more advanced
 configuration options.
 
 ## Supported Input Plugins
