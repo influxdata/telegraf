@@ -133,9 +133,7 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
-var header = `###############################################################################
-#                           Telegraf Configuration                            #
-###############################################################################
+var header = `# Telegraf Configuration
 
 # Telegraf is entirely plugin driven. All metrics are gathered from the
 # declared inputs, and sent to the declared outputs.
