@@ -28,6 +28,7 @@ and is in the `[agent]` config section.
 - [#695](https://github.com/influxdata/telegraf/pull/695): raindrops input plugin. Thanks @burdandrei!
 - [#650](https://github.com/influxdata/telegraf/pull/650): net_response input plugin. Thanks @titilambert!
 - [#699](https://github.com/influxdata/telegraf/pull/699): Flush based on buffer size rather than time.
+- [#682](https://github.com/influxdata/telegraf/pull/682): Mesos input plugin. Thanks @tripledes!
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
