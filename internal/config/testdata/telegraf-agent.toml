@@ -188,12 +188,9 @@
 [[inputs.mesos]]
   # Timeout, in ms.
   timeout = 100
-  # A list of Mesos masters. e.g. master1:5050, master2:5080, etc.
-  # The port can be skipped if using the default (5050)
-  # Default value is localhost:5050.
+  # A list of Mesos masters, default value is localhost:5050.
   masters = ["localhost:5050"]
-  # Metrics groups to be collected.
-  # Default, all enabled.
+  # Metrics groups to be collected, by default, all enabled.
   master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
 
 # Read metrics from one or many MongoDB servers
