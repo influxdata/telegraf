@@ -140,7 +140,7 @@ const sampleConfig = `
   convert_names = true
 
   ### Statsd data translation templates, more info can be read here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md#graphite
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
   # templates = [
   #     "cpu.* measurement*"
   # ]

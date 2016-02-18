@@ -32,7 +32,7 @@ config option, for example, in the `file` output plugin:
   ### Data format to output. This can be "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
   ### Additional configuration options go here
@@ -56,7 +56,7 @@ metrics are serialized directly into InfluxDB line-protocol.
   ### Data format to output. This can be "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 ```
 
@@ -90,7 +90,7 @@ tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
   ### Data format to output. This can be "influx" or "graphite"
   ### Each data format has it's own unique set of configuration options, read
   ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  ### https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
   prefix = "telegraf"
