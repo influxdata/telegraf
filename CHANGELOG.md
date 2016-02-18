@@ -35,6 +35,7 @@ and is in the `[agent]` config section.
 - [#662](https://github.com/influxdata/telegraf/pull/667): Change `[tags]` to `[global_tags]` to fix multiple-plugin tags bug.
 - [#642](https://github.com/influxdata/telegraf/issues/642): Riemann output plugin issues.
 - [#394](https://github.com/influxdata/telegraf/issues/394): Support HTTP POST. Thanks @gabelev!
+- [#715](https://github.com/influxdata/telegraf/pull/715): Fix influxdb precision config panic. Thanks @netixen!
 
 ## v0.10.2 [2016-02-04]
 
