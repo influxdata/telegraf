@@ -52,9 +52,9 @@ var sampleConfig = `
   ## note: using "s" precision greatly improves InfluxDB compression
   precision = "s"
 
-  ## Connection timeout (for the connection with InfluxDB), formatted as a string.
-  ## If not provided, will default to 0 (no timeout)
-  # timeout = "5s"
+  ## Write timeout (for the InfluxDB client), formatted as a string.
+  ## If not provided, will default to 5s. 0s means no timeout (not recommended).
+  timeout = "5s"
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
   ## Set the user agent for HTTP POSTs (can be useful for log differentiation)
@@ -185,6 +185,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("influxdb", func() telegraf.Output {
-		return &InfluxDB{}
+		return &InfluxDB{
+			Timeout: internal.Duration{Duration: time.Second * 5},
+		}
 	})
 }
