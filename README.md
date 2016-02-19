@@ -187,6 +187,7 @@ Currently implemented sources:
 * raindrops
 * redis
 * rethinkdb
+* riak
 * sql server (microsoft)
 * twemproxy
 * zfs
