@@ -19,6 +19,7 @@ type Procstat struct {
 	Exe     string
 	Pattern string
 	Prefix  string
+	User    string
 
 	pidmap map[int32]*process.Process
 }
@@ -37,6 +38,8 @@ var sampleConfig = `
   # exe = "nginx"
   ## pattern as argument for pgrep (ie, pgrep -f <pattern>)
   # pattern = "nginx"
+  ## user as argument for pgrep (ie, pgrep -u <user>)
+  # user = "nginx"
 
   ## Field name prefix
   prefix = ""
@@ -53,8 +56,8 @@ func (_ *Procstat) Description() string {
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	err := p.createProcesses()
 	if err != nil {
-		log.Printf("Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] %s",
-			p.Exe, p.PidFile, p.Pattern, err.Error())
+	log.Printf("Error: procstat getting process, exe: [%s]	pidfile: [%s] pattern: [%s] user: [%s] %s",
+			p.Exe, p.PidFile, p.Pattern, p.User, err.Error())
 	} else {
 		for _, proc := range p.pidmap {
 			p := NewSpecProcessor(p.Prefix, acc, proc)
@@ -103,6 +106,8 @@ func (p *Procstat) getAllPids() ([]int32, error) {
 		pids, err = pidsFromExe(p.Exe)
 	} else if p.Pattern != "" {
 		pids, err = pidsFromPattern(p.Pattern)
+	} else if p.User != "" {
+		pids, err = pidsFromUser(p.User)
 	} else {
 		err = fmt.Errorf("Either exe, pid_file or pattern has to be specified")
 	}
@@ -159,6 +164,30 @@ func pidsFromPattern(pattern string) ([]int32, error) {
 		return out, fmt.Errorf("Couldn't find pgrep binary: %s", err)
 	}
 	pgrep, err := exec.Command(bin, "-f", pattern).Output()
+	if err != nil {
+		return out, fmt.Errorf("Failed to execute %s. Error: '%s'", bin, err)
+	} else {
+		pids := strings.Fields(string(pgrep))
+		for _, pid := range pids {
+			ipid, err := strconv.Atoi(pid)
+			if err == nil {
+				out = append(out, int32(ipid))
+			} else {
+				outerr = err
+			}
+		}
+	}
+	return out, outerr
+}
+
+func pidsFromUser(user string) ([]int32, error) {
+	var out []int32
+	var outerr error
+	bin, err := exec.LookPath("pgrep")
+	if err != nil {
+		return out, fmt.Errorf("Couldn't find pgrep binary: %s", err)
+	}
+	pgrep, err := exec.Command(bin, "-u", user).Output()
 	if err != nil {
 		return out, fmt.Errorf("Failed to execute %s. Error: '%s'", bin, err)
 	} else {
