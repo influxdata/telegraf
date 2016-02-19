@@ -36,6 +36,11 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 
 func (f *File) Connect() error {
 	writers := []io.Writer{}
+
+	if len(f.Files) == 0 {
+		f.Files = []string{"stdout"}
+	}
+
 	for _, file := range f.Files {
 		if file == "stdout" {
 			writers = append(writers, os.Stdout)
