@@ -69,6 +69,9 @@ func TestSNMPErrorBulk(t *testing.T) {
 }
 
 func TestSNMPGet1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name: "oid1",
 		Unit: "octets",
@@ -104,6 +107,9 @@ func TestSNMPGet1(t *testing.T) {
 }
 
 func TestSNMPGet2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name: "oid1",
 		Oid:  "ifNumber",
@@ -139,6 +145,9 @@ func TestSNMPGet2(t *testing.T) {
 }
 
 func TestSNMPGet3(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name:     "oid1",
 		Unit:     "octets",
@@ -177,6 +186,9 @@ func TestSNMPGet3(t *testing.T) {
 }
 
 func TestSNMPEasyGet4(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name:     "oid1",
 		Unit:     "octets",
@@ -227,6 +239,9 @@ func TestSNMPEasyGet4(t *testing.T) {
 }
 
 func TestSNMPEasyGet5(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	get1 := Data{
 		Name:     "oid1",
 		Unit:     "octets",
@@ -277,6 +292,9 @@ func TestSNMPEasyGet5(t *testing.T) {
 }
 
 func TestSNMPEasyGet6(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	h := Host{
 		Address:   testutil.GetLocalHost() + ":31161",
 		Community: "telegraf",
@@ -307,6 +325,9 @@ func TestSNMPEasyGet6(t *testing.T) {
 }
 
 func TestSNMPBulk1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	bulk1 := Data{
 		Name:          "oid1",
 		Unit:          "octets",
