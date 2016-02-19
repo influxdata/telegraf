@@ -1,4 +1,4 @@
-## v0.10.3 [unreleased]
+## v0.10.3 [2016-02-18]
 
 ### Release Notes
 - Users of the `exec` and `kafka_consumer` (and the new `nats_consumer`
