@@ -1,4 +1,4 @@
-## v0.10.3 [unreleased]
+## v0.10.3 [2016-02-18]
 
 ### Release Notes
 - Users of the `exec` and `kafka_consumer` (and the new `nats_consumer`
@@ -8,9 +8,13 @@ format that they would like to parse. Currently supports: "json", "influx", and
 - Users of message broker and file output plugins can now choose what data format
 they would like to output. Currently supports: "influx" and "graphite"
 - More info on parsing _incoming_ data formats can be found
-[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md)
+[here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md)
 - More info on serializing _outgoing_ data formats can be found
-[here](https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md)
+[here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
+- Telegraf now has an option `flush_buffer_when_full` that will flush the
+metric buffer whenever it fills up for each output, rather than dropping
+points and only flushing on a set time interval. This will default to `true`
+and is in the `[agent]` config section.
 
 ### Features
 - [#652](https://github.com/influxdata/telegraf/pull/652): CouchDB Input Plugin. Thanks @codehate!
@@ -23,11 +27,15 @@ they would like to output. Currently supports: "influx" and "graphite"
 - [#679](https://github.com/influxdata/telegraf/pull/679): Support for arbitrary output data formats.
 - [#695](https://github.com/influxdata/telegraf/pull/695): raindrops input plugin. Thanks @burdandrei!
 - [#650](https://github.com/influxdata/telegraf/pull/650): net_response input plugin. Thanks @titilambert!
+- [#699](https://github.com/influxdata/telegraf/pull/699): Flush based on buffer size rather than time.
+- [#682](https://github.com/influxdata/telegraf/pull/682): Mesos input plugin. Thanks @tripledes!
 
 ### Bugfixes
 - [#443](https://github.com/influxdata/telegraf/issues/443): Fix Ping command timeout parameter on Linux.
 - [#662](https://github.com/influxdata/telegraf/pull/667): Change `[tags]` to `[global_tags]` to fix multiple-plugin tags bug.
 - [#642](https://github.com/influxdata/telegraf/issues/642): Riemann output plugin issues.
+- [#394](https://github.com/influxdata/telegraf/issues/394): Support HTTP POST. Thanks @gabelev!
+- [#715](https://github.com/influxdata/telegraf/pull/715): Fix influxdb precision config panic. Thanks @netixen!
 
 ## v0.10.2 [2016-02-04]
 

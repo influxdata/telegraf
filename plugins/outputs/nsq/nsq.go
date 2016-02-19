@@ -19,15 +19,15 @@ type NSQ struct {
 }
 
 var sampleConfig = `
-  ### Location of nsqd instance listening on TCP
+  ## Location of nsqd instance listening on TCP
   server = "localhost:4150"
-  ### NSQ topic for producer messages
+  ## NSQ topic for producer messages
   topic = "telegraf"
 
-  ### Data format to output. This can be "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  ## Data format to output. This can be "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 `
 

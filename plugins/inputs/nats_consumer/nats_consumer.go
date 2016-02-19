@@ -28,8 +28,10 @@ type natsConsumer struct {
 	Servers    []string
 	Secure     bool
 
+	// Legacy metric buffer support
 	MetricBuffer int
-	parser       parsers.Parser
+
+	parser parsers.Parser
 
 	sync.Mutex
 	Conn *nats.Conn
@@ -39,27 +41,24 @@ type natsConsumer struct {
 	in chan *nats.Msg
 	// channel for all NATS read errors
 	errs chan error
-	// channel for all incoming parsed metrics
-	metricC chan telegraf.Metric
-	done    chan struct{}
+	done chan struct{}
+	acc  telegraf.Accumulator
 }
 
 var sampleConfig = `
-  ### urls of NATS servers
+  ## urls of NATS servers
   servers = ["nats://localhost:4222"]
-  ### Use Transport Layer Security
+  ## Use Transport Layer Security
   secure = false
-  ### subject(s) to consume
+  ## subject(s) to consume
   subjects = ["telegraf"]
-  ### name a queue group
+  ## name a queue group
   queue_group = "telegraf_consumers"
-  ### Maximum number of metrics to buffer between collection intervals
-  metric_buffer = 100000
-  
-  ### Data format to consume. This can be "json", "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+
+  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 `
 
@@ -84,9 +83,11 @@ func (n *natsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 }
 
 // Start the nats consumer. Caller must call *natsConsumer.Stop() to clean up.
-func (n *natsConsumer) Start() error {
+func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 	n.Lock()
 	defer n.Unlock()
+
+	n.acc = acc
 
 	var connectErr error
 
@@ -115,11 +116,6 @@ func (n *natsConsumer) Start() error {
 	}
 
 	n.done = make(chan struct{})
-	if n.MetricBuffer == 0 {
-		n.MetricBuffer = 100000
-	}
-
-	n.metricC = make(chan telegraf.Metric, n.MetricBuffer)
 
 	// Start the message reader
 	go n.receiver()
@@ -146,13 +142,7 @@ func (n *natsConsumer) receiver() {
 			}
 
 			for _, metric := range metrics {
-				select {
-				case n.metricC <- metric:
-					continue
-				default:
-					log.Printf("NATS Consumer buffer is full, dropping a metric." +
-						" You may want to increase the metric_buffer setting")
-				}
+				n.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
 			}
 
 		}
@@ -163,7 +153,6 @@ func (n *natsConsumer) clean() {
 	n.Lock()
 	defer n.Unlock()
 	close(n.in)
-	close(n.metricC)
 	close(n.errs)
 
 	for _, sub := range n.Subs {
@@ -185,13 +174,6 @@ func (n *natsConsumer) Stop() {
 }
 
 func (n *natsConsumer) Gather(acc telegraf.Accumulator) error {
-	n.Lock()
-	defer n.Unlock()
-	nmetrics := len(n.metricC)
-	for i := 0; i < nmetrics; i++ {
-		metric := <-n.metricC
-		acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
-	}
 	return nil
 }
 

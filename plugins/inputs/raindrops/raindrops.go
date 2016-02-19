@@ -21,7 +21,7 @@ type Raindrops struct {
 }
 
 var sampleConfig = `
-  ### An array of raindrops middleware URI to gather stats.
+  ## An array of raindrops middleware URI to gather stats.
   urls = ["http://localhost:8080/_raindrops"]
 `
 

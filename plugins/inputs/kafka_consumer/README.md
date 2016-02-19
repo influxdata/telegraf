@@ -11,21 +11,21 @@ from the same topic in parallel.
 ```toml
 # Read metrics from Kafka topic(s)
 [[inputs.kafka_consumer]]
-  ### topic(s) to consume
+  ## topic(s) to consume
   topics = ["telegraf"]
-  ### an array of Zookeeper connection strings
+  ## an array of Zookeeper connection strings
   zookeeper_peers = ["localhost:2181"]
-  ### the name of the consumer group
+  ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
-  ### Maximum number of metrics to buffer between collection intervals
+  ## Maximum number of metrics to buffer between collection intervals
   metric_buffer = 100000
-  ### Offset (must be either "oldest" or "newest")
+  ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
-  ### Data format to consume. This can be "json", "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
 

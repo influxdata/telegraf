@@ -58,7 +58,8 @@ func (a *Agent) Connect() error {
 		}
 		err := o.Output.Connect()
 		if err != nil {
-			log.Printf("Failed to connect to output %s, retrying in 15s, error was '%s' \n", o.Name, err)
+			log.Printf("Failed to connect to output %s, retrying in 15s, "+
+				"error was '%s' \n", o.Name, err)
 			time.Sleep(15 * time.Second)
 			err = o.Output.Connect()
 			if err != nil {
@@ -241,7 +242,7 @@ func (a *Agent) Test() error {
 	return nil
 }
 
-// flush writes a list of points to all configured outputs
+// flush writes a list of metrics to all configured outputs
 func (a *Agent) flush() {
 	var wg sync.WaitGroup
 
@@ -260,7 +261,7 @@ func (a *Agent) flush() {
 	wg.Wait()
 }
 
-// flusher monitors the points input channel and flushes on the minimum interval
+// flusher monitors the metrics input channel and flushes on the minimum interval
 func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) error {
 	// Inelegant, but this sleep is to allow the Gather threads to run, so that
 	// the flusher will flush after metrics are collected.
@@ -271,14 +272,14 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 	for {
 		select {
 		case <-shutdown:
-			log.Println("Hang on, flushing any cached points before shutdown")
+			log.Println("Hang on, flushing any cached metrics before shutdown")
 			a.flush()
 			return nil
 		case <-ticker.C:
 			a.flush()
 		case m := <-metricC:
 			for _, o := range a.Config.Outputs {
-				o.AddPoint(m)
+				o.AddMetric(m)
 			}
 		}
 	}
@@ -318,8 +319,24 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		a.Config.Agent.Interval.Duration, a.Config.Agent.Debug, a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
-	// channel shared between all input threads for accumulating points
-	metricC := make(chan telegraf.Metric, 1000)
+	// channel shared between all input threads for accumulating metrics
+	metricC := make(chan telegraf.Metric, 10000)
+
+	for _, input := range a.Config.Inputs {
+		// Start service of any ServicePlugins
+		switch p := input.Input.(type) {
+		case telegraf.ServiceInput:
+			acc := NewAccumulator(input.Config, metricC)
+			acc.SetDebug(a.Config.Agent.Debug)
+			acc.setDefaultTags(a.Config.Tags)
+			if err := p.Start(acc); err != nil {
+				log.Printf("Service for input %s failed to start, exiting\n%s\n",
+					input.Name, err.Error())
+				return err
+			}
+			defer p.Stop()
+		}
+	}
 
 	// Round collection to nearest interval by sleeping
 	if a.Config.Agent.RoundInterval {
@@ -338,18 +355,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	}()
 
 	for _, input := range a.Config.Inputs {
-
-		// Start service of any ServicePlugins
-		switch p := input.Input.(type) {
-		case telegraf.ServiceInput:
-			if err := p.Start(); err != nil {
-				log.Printf("Service for input %s failed to start, exiting\n%s\n",
-					input.Name, err.Error())
-				return err
-			}
-			defer p.Stop()
-		}
-
 		// Special handling for inputs that have their own collection interval
 		// configured. Default intervals are handled below with gatherParallel
 		if input.Config.Interval != 0 {

@@ -14,16 +14,16 @@ import (
 )
 
 const sampleConfig = `
-  ### Commands array
+  ## Commands array
   commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
 
-  ### measurement name suffix (for separating different commands)
+  ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ### Data format to consume. This can be "json", "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 `
 

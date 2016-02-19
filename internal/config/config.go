@@ -68,7 +68,7 @@ type AgentConfig struct {
 	// same time, which can have a measurable effect on the system.
 	CollectionJitter internal.Duration
 
-	// Interval at which to flush data
+	// FlushInterval is the Interval at which to flush data
 	FlushInterval internal.Duration
 
 	// FlushJitter Jitters the flush interval by a random amount.
@@ -81,6 +81,11 @@ type AgentConfig struct {
 	// will cache. The buffer is cleared when a successful write occurs. When
 	// full, the oldest metrics will be overwritten.
 	MetricBufferLimit int
+
+	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
+	// it fills up, regardless of FlushInterval. Setting this option to true
+	// does _not_ deactivate FlushInterval.
+	FlushBufferWhenFull bool
 
 	// TODO(cam): Remove UTC and Precision parameters, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
@@ -128,9 +133,7 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
-var header = `###############################################################################
-#                           Telegraf Configuration                            #
-###############################################################################
+var header = `# Telegraf Configuration
 
 # Telegraf is entirely plugin driven. All metrics are gathered from the
 # declared inputs, and sent to the declared outputs.
@@ -148,35 +151,37 @@ var header = `##################################################################
 
 # Configuration for telegraf agent
 [agent]
-  ### Default data collection interval for all inputs
+  ## Default data collection interval for all inputs
   interval = "10s"
-  ### Rounds collection interval to 'interval'
-  ### ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  ## Rounds collection interval to 'interval'
+  ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  ### Telegraf will cache metric_buffer_limit metrics for each output, and will
-  ### flush this buffer on a successful write.
+  ## Telegraf will cache metric_buffer_limit metrics for each output, and will
+  ## flush this buffer on a successful write.
   metric_buffer_limit = 10000
+  ## Flush the buffer whenever full, regardless of flush_interval.
+  flush_buffer_when_full = true
 
-  ### Collection jitter is used to jitter the collection by a random amount.
-  ### Each plugin will sleep for a random time within jitter before collecting.
-  ### This can be used to avoid many plugins querying things like sysfs at the
-  ### same time, which can have a measurable effect on the system.
+  ## Collection jitter is used to jitter the collection by a random amount.
+  ## Each plugin will sleep for a random time within jitter before collecting.
+  ## This can be used to avoid many plugins querying things like sysfs at the
+  ## same time, which can have a measurable effect on the system.
   collection_jitter = "0s"
 
-  ### Default flushing interval for all outputs. You shouldn't set this below
-  ### interval. Maximum flush_interval will be flush_interval + flush_jitter
+  ## Default flushing interval for all outputs. You shouldn't set this below
+  ## interval. Maximum flush_interval will be flush_interval + flush_jitter
   flush_interval = "10s"
-  ### Jitter the flush interval by a random amount. This is primarily to avoid
-  ### large write spikes for users running a large number of telegraf instances.
-  ### ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  ## Jitter the flush interval by a random amount. This is primarily to avoid
+  ## large write spikes for users running a large number of telegraf instances.
+  ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
-  ### Run telegraf in debug mode
+  ## Run telegraf in debug mode
   debug = false
-  ### Run telegraf in quiet mode
+  ## Run telegraf in quiet mode
   quiet = false
-  ### Override default hostname, if empty use os.Hostname()
+  ## Override default hostname, if empty use os.Hostname()
   hostname = ""
 
 
@@ -421,8 +426,9 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 
 	ro := internal_models.NewRunningOutput(name, output, outputConfig)
 	if c.Agent.MetricBufferLimit > 0 {
-		ro.PointBufferLimit = c.Agent.MetricBufferLimit
+		ro.MetricBufferLimit = c.Agent.MetricBufferLimit
 	}
+	ro.FlushBufferWhenFull = c.Agent.FlushBufferWhenFull
 	ro.Quiet = c.Agent.Quiet
 	c.Outputs = append(c.Outputs, ro)
 	return nil

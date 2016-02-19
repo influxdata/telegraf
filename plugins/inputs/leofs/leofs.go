@@ -132,8 +132,8 @@ var serverTypeMapping = map[string]ServerType{
 }
 
 var sampleConfig = `
-  ### An array of URI to gather stats about LeoFS.
-  ### Specify an ip or hostname with port. ie 127.0.0.1:4020
+  ## An array of URI to gather stats about LeoFS.
+  ## Specify an ip or hostname with port. ie 127.0.0.1:4020
   servers = ["127.0.0.1:4021"]
 `
 

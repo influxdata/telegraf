@@ -18,7 +18,7 @@ type PuppetAgent struct {
 }
 
 var sampleConfig = `
-  ### Location of puppet last run summary file
+  ## Location of puppet last run summary file
   location = "/var/lib/puppet/state/last_run_summary.yaml"
 `
 

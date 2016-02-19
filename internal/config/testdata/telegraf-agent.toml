@@ -184,6 +184,15 @@
   # If no servers are specified, then localhost is used as the host.
   servers = ["localhost"]
 
+# Telegraf plugin for gathering metrics from N Mesos masters
+[[inputs.mesos]]
+  # Timeout, in ms.
+  timeout = 100
+  # A list of Mesos masters, default value is localhost:5050.
+  masters = ["localhost:5050"]
+  # Metrics groups to be collected, by default, all enabled.
+  master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
+
 # Read metrics from one or many MongoDB servers
 [[inputs.mongodb]]
   # An array of URI to gather stats about. Specify an ip or hostname

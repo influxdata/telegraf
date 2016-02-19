@@ -15,14 +15,16 @@ import (
 )
 
 type MQTTConsumer struct {
-	Servers      []string
-	Topics       []string
-	Username     string
-	Password     string
-	MetricBuffer int
-	QoS          int `toml:"qos"`
+	Servers  []string
+	Topics   []string
+	Username string
+	Password string
+	QoS      int `toml:"qos"`
 
 	parser parsers.Parser
+
+	// Legacy metric buffer support
+	MetricBuffer int
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -35,45 +37,41 @@ type MQTTConsumer struct {
 
 	sync.Mutex
 	client *mqtt.Client
-	// channel for all incoming parsed mqtt metrics
-	metricC chan telegraf.Metric
-	// channel for the topics of all incoming metrics (for tagging metrics)
-	topicC chan string
 	// channel of all incoming raw mqtt messages
 	in   chan mqtt.Message
 	done chan struct{}
+
+	// keep the accumulator internally:
+	acc telegraf.Accumulator
 }
 
 var sampleConfig = `
   servers = ["localhost:1883"]
-  ### MQTT QoS, must be 0, 1, or 2
+  ## MQTT QoS, must be 0, 1, or 2
   qos = 0
 
-  ### Topics to subscribe to
+  ## Topics to subscribe to
   topics = [
     "telegraf/host01/cpu",
     "telegraf/+/mem",
     "sensors/#",
   ]
 
-  ### Maximum number of metrics to buffer between collection intervals
-  metric_buffer = 100000
-
-  ### username and password to connect MQTT server.
+  ## username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
-  ### Optional SSL Config
+  ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
   # ssl_key = "/etc/telegraf/key.pem"
-  ### Use SSL but skip chain & host verification
+  ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ### Data format to consume. This can be "json", "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 `
 
@@ -89,9 +87,11 @@ func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
 	m.parser = parser
 }
 
-func (m *MQTTConsumer) Start() error {
+func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.Lock()
 	defer m.Unlock()
+
+	m.acc = acc
 	if m.QoS > 2 || m.QoS < 0 {
 		return fmt.Errorf("MQTT Consumer, invalid QoS value: %d", m.QoS)
 	}
@@ -106,13 +106,8 @@ func (m *MQTTConsumer) Start() error {
 		return token.Error()
 	}
 
-	m.in = make(chan mqtt.Message, m.MetricBuffer)
+	m.in = make(chan mqtt.Message, 1000)
 	m.done = make(chan struct{})
-	if m.MetricBuffer == 0 {
-		m.MetricBuffer = 100000
-	}
-	m.metricC = make(chan telegraf.Metric, m.MetricBuffer)
-	m.topicC = make(chan string, m.MetricBuffer)
 
 	topics := make(map[string]byte)
 	for _, topic := range m.Topics {
@@ -145,13 +140,9 @@ func (m *MQTTConsumer) receiver() {
 			}
 
 			for _, metric := range metrics {
-				select {
-				case m.metricC <- metric:
-					m.topicC <- topic
-				default:
-					log.Printf("MQTT Consumer buffer is full, dropping a metric." +
-						" You may want to increase the metric_buffer setting")
-				}
+				tags := metric.Tags()
+				tags["topic"] = topic
+				m.acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 			}
 		}
 	}
@@ -169,16 +160,6 @@ func (m *MQTTConsumer) Stop() {
 }
 
 func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
-	m.Lock()
-	defer m.Unlock()
-	nmetrics := len(m.metricC)
-	for i := 0; i < nmetrics; i++ {
-		metric := <-m.metricC
-		topic := <-m.topicC
-		tags := metric.Tags()
-		tags["topic"] = topic
-		acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
-	}
 	return nil
 }
 

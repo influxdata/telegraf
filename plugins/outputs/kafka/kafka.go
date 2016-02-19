@@ -45,25 +45,25 @@ type Kafka struct {
 }
 
 var sampleConfig = `
-  ### URLs of kafka brokers
+  ## URLs of kafka brokers
   brokers = ["localhost:9092"]
-  ### Kafka topic for producer messages
+  ## Kafka topic for producer messages
   topic = "telegraf"
-  ### Telegraf tag to use as a routing key
-  ###  ie, if this tag exists, it's value will be used as the routing key
+  ## Telegraf tag to use as a routing key
+  ##  ie, if this tag exists, it's value will be used as the routing key
   routing_tag = "host"
 
-  ### Optional SSL Config
+  ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
   # ssl_key = "/etc/telegraf/key.pem"
-  ### Use SSL but skip chain & host verification
+  ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ### Data format to output. This can be "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  ## Data format to output. This can be "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 `
 

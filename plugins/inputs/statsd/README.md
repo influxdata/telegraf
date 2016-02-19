@@ -1,6 +1,47 @@
 # Telegraf Service Plugin: statsd
 
-#### Description
+### Configuration
+
+```toml
+# Statsd Server
+[[inputs.statsd]]
+  ## Address and port to host UDP listener on
+  service_address = ":8125"
+  ## Delete gauges every interval (default=false)
+  delete_gauges = false
+  ## Delete counters every interval (default=false)
+  delete_counters = false
+  ## Delete sets every interval (default=false)
+  delete_sets = false
+  ## Delete timings & histograms every interval (default=true)
+  delete_timings = true
+  ## Percentiles to calculate for timing & histogram stats
+  percentiles = [90]
+
+  ## convert measurement names, "." to "_" and "-" to "__"
+  convert_names = true
+
+  ## Statsd data translation templates, more info can be read here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
+  # templates = [
+  #     "cpu.* measurement*"
+  # ]
+
+  ## Number of UDP messages allowed to queue up, once filled,
+  ## the statsd server will start dropping packets
+  allowed_pending_messages = 10000
+
+  ## Number of timing/histogram values to track per-measurement in the
+  ## calculation of percentiles. Raising this limit increases the accuracy
+  ## of percentiles but also increases the memory usage and cpu time.
+  percentile_limit = 1000
+
+  ## UDP packet size for the server to listen for. This will depend on the size
+  ## of the packets that the client is sending, which is usually 1500 bytes.
+  udp_packet_size = 1500
+```
+
+### Description
 
 The statsd plugin is a special type of plugin which runs a backgrounded statsd
 listener service while telegraf is running.
@@ -42,7 +83,7 @@ The string `foo:1|c:200|ms` is internally split into two individual metrics
 `foo:1|c` and `foo:200|ms` which are added to the aggregator separately.
 
 
-#### Influx Statsd
+### Influx Statsd
 
 In order to take advantage of InfluxDB's tagging system, we have made a couple
 additions to the standard statsd protocol. First, you can specify
@@ -59,7 +100,7 @@ COMING SOON: there will be a way to specify multiple fields.
 current.users,service=payroll,server=host01:west=10,east=10,central=2,south=10|g
 ``` -->
 
-#### Measurements:
+### Measurements:
 
 Meta:
 - tags: `metric_type=<gauge|set|counter|timing|histogram>`
@@ -99,7 +140,7 @@ metric type:
         period are below x. The most common value that people use for `P` is the
         `90`, this is a great number to try to optimize.
 
-#### Plugin arguments
+### Plugin arguments
 
 - **service_address** string: Address to listen for statsd UDP packets on
 - **delete_gauges** boolean: Delete gauges on every collection interval
@@ -115,7 +156,7 @@ the accuracy of percentiles but also increases the memory usage and cpu time.
 - **templates** []string: Templates for transforming statsd buckets into influx
 measurements and tags.
 
-#### Statsd bucket -> InfluxDB line-protocol Templates
+### Statsd bucket -> InfluxDB line-protocol Templates
 
 The plugin supports specifying templates for transforming statsd buckets into
 InfluxDB measurement names and tags. The templates have a _measurement_ keyword,

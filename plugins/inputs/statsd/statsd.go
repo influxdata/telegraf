@@ -123,39 +123,39 @@ func (_ *Statsd) Description() string {
 }
 
 const sampleConfig = `
-  ### Address and port to host UDP listener on
+  ## Address and port to host UDP listener on
   service_address = ":8125"
-  ### Delete gauges every interval (default=false)
+  ## Delete gauges every interval (default=false)
   delete_gauges = false
-  ### Delete counters every interval (default=false)
+  ## Delete counters every interval (default=false)
   delete_counters = false
-  ### Delete sets every interval (default=false)
+  ## Delete sets every interval (default=false)
   delete_sets = false
-  ### Delete timings & histograms every interval (default=true)
+  ## Delete timings & histograms every interval (default=true)
   delete_timings = true
-  ### Percentiles to calculate for timing & histogram stats
+  ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
-  ### convert measurement names, "." to "_" and "-" to "__"
+  ## convert measurement names, "." to "_" and "-" to "__"
   convert_names = true
 
-  ### Statsd data translation templates, more info can be read here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md#graphite
+  ## Statsd data translation templates, more info can be read here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
   # templates = [
   #     "cpu.* measurement*"
   # ]
 
-  ### Number of UDP messages allowed to queue up, once filled,
-  ### the statsd server will start dropping packets
+  ## Number of UDP messages allowed to queue up, once filled,
+  ## the statsd server will start dropping packets
   allowed_pending_messages = 10000
 
-  ### Number of timing/histogram values to track per-measurement in the
-  ### calculation of percentiles. Raising this limit increases the accuracy
-  ### of percentiles but also increases the memory usage and cpu time.
+  ## Number of timing/histogram values to track per-measurement in the
+  ## calculation of percentiles. Raising this limit increases the accuracy
+  ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
 
-  ### UDP packet size for the server to listen for. This will depend on the size
-  ### of the packets that the client is sending, which is usually 1500 bytes.
+  ## UDP packet size for the server to listen for. This will depend on the size
+  ## of the packets that the client is sending, which is usually 1500 bytes.
   udp_packet_size = 1500
 `
 
@@ -213,7 +213,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Statsd) Start() error {
+func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Make data structures
 	s.done = make(chan struct{})
 	s.in = make(chan []byte, s.AllowedPendingMessages)

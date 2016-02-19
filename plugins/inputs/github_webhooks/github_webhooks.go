@@ -31,7 +31,7 @@ func NewGithubWebhooks() *GithubWebhooks {
 
 func (gh *GithubWebhooks) SampleConfig() string {
 	return `
-  ### Address and port to host Webhook listener on
+  ## Address and port to host Webhook listener on
   service_address = ":1618"
 `
 }
@@ -61,7 +61,7 @@ func (gh *GithubWebhooks) Listen() {
 	}
 }
 
-func (gh *GithubWebhooks) Start() error {
+func (gh *GithubWebhooks) Start(_ telegraf.Accumulator) error {
 	go gh.Listen()
 	log.Printf("Started the github_webhooks service on %s\n", gh.ServiceAddress)
 	return nil

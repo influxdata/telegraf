@@ -25,10 +25,10 @@ type CloudWatch struct {
 }
 
 var sampleConfig = `
-  ### Amazon REGION
+  ## Amazon REGION
   region = 'us-east-1'
 
-  ### Namespace for the CloudWatch MetricDatums
+  ## Namespace for the CloudWatch MetricDatums
   namespace = 'InfluxData/Telegraf'
 `
 

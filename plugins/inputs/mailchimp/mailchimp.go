@@ -17,13 +17,13 @@ type MailChimp struct {
 }
 
 var sampleConfig = `
-  ### MailChimp API key
-  ### get from https://admin.mailchimp.com/account/api/
+  ## MailChimp API key
+  ## get from https://admin.mailchimp.com/account/api/
   api_key = "" # required
-  ### Reports for campaigns sent more than days_old ago will not be collected.
-  ### 0 means collect all.
+  ## Reports for campaigns sent more than days_old ago will not be collected.
+  ## 0 means collect all.
   days_old = 0
-  ### Campaign ID to get, if empty gets all campaigns, this option overrides days_old
+  ## Campaign ID to get, if empty gets all campaigns, this option overrides days_old
   # campaign_id = ""
 `
 

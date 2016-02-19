@@ -25,19 +25,19 @@ example, in the exec plugin:
 
 ```toml
 [[inputs.exec]]
-  ### Commands array
+  ## Commands array
   commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
 
-  ### measurement name suffix (for separating different commands)
+  ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ### Data format to consume. This can be "json", "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
-  ### Additional configuration options go here
+  ## Additional configuration options go here
 ```
 
 Each data_format has an additional set of configuration options available, which
@@ -52,16 +52,16 @@ metrics are parsed directly into Telegraf metrics.
 
 ```toml
 [[inputs.exec]]
-  ### Commands array
+  ## Commands array
   commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
 
-  ### measurement name suffix (for separating different commands)
+  ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ### Data format to consume. This can be "json", "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
 
@@ -97,19 +97,19 @@ For example, if you had this configuration:
 
 ```toml
 [[inputs.exec]]
-  ### Commands array
+  ## Commands array
   commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
 
-  ### measurement name suffix (for separating different commands)
+  ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ### Data format to consume. This can be "json", "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
-  ### List of tag names to extract from top-level of JSON server response
+  ## List of tag names to extract from top-level of JSON server response
   tag_keys = [
     "my_tag_1",
     "my_tag_2"
@@ -241,30 +241,30 @@ There are many more options available,
 
 ```toml
 [[inputs.exec]]
-  ### Commands array
+  ## Commands array
   commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
 
-  ### measurement name suffix (for separating different commands)
+  ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ### Data format to consume. This can be "json", "influx" or "graphite" (line-protocol)
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_INPUT.md
+  ## Data format to consume. This can be "json", "influx" or "graphite" (line-protocol)
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "graphite"
 
-  ### This string will be used to join the matched values.
+  ## This string will be used to join the matched values.
   separator = "_"
 
-  ### Each template line requires a template pattern. It can have an optional
-  ### filter before the template and separated by spaces. It can also have optional extra
-  ### tags following the template. Multiple tags should be separated by commas and no spaces
-  ### similar to the line protocol format. There can be only one default template.
-  ### Templates support below format:
-  ### 1. filter + template
-  ### 2. filter + template + extra tag
-  ### 3. filter + template with field key
-  ### 4. default template
+  ## Each template line requires a template pattern. It can have an optional
+  ## filter before the template and separated by spaces. It can also have optional extra
+  ## tags following the template. Multiple tags should be separated by commas and no spaces
+  ## similar to the line protocol format. There can be only one default template.
+  ## Templates support below format:
+  ## 1. filter + template
+  ## 2. filter + template + extra tag
+  ## 3. filter + template with field key
+  ## 4. default template
   templates = [
     "*.app env.service.resource.measurement",
     "stats.* .host.measurement* region=us-west,agent=sensu",

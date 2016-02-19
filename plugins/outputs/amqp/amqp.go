@@ -52,32 +52,32 @@ const (
 )
 
 var sampleConfig = `
-  ### AMQP url
+  ## AMQP url
   url = "amqp://localhost:5672/influxdb"
-  ### AMQP exchange
+  ## AMQP exchange
   exchange = "telegraf"
-  ### Telegraf tag to use as a routing key
-  ###  ie, if this tag exists, it's value will be used as the routing key
+  ## Telegraf tag to use as a routing key
+  ##  ie, if this tag exists, it's value will be used as the routing key
   routing_tag = "host"
 
-  ### InfluxDB retention policy
+  ## InfluxDB retention policy
   # retention_policy = "default"
-  ### InfluxDB database
+  ## InfluxDB database
   # database = "telegraf"
-  ### InfluxDB precision
+  ## InfluxDB precision
   # precision = "s"
 
-  ### Optional SSL Config
+  ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
   # ssl_key = "/etc/telegraf/key.pem"
-  ### Use SSL but skip chain & host verification
+  ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ### Data format to output. This can be "influx" or "graphite"
-  ### Each data format has it's own unique set of configuration options, read
-  ### more about them here:
-  ### https://github.com/influxdata/telegraf/blob/master/DATA_FORMATS_OUTPUT.md
+  ## Data format to output. This can be "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 `
 
