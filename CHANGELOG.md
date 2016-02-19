@@ -1,3 +1,10 @@
+## v0.10.4 [unreleased]
+
+### Features
+- [#727](https://github.com/influxdata/telegraf/pull/727): riak input, thanks @jcoene!
+
+### Bugfixes
+
 ## v0.10.3 [2016-02-18]
 
 ### Release Notes
