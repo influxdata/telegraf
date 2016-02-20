@@ -483,12 +483,12 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 func buildFilter(tbl *ast.Table) internal_models.Filter {
 	f := internal_models.Filter{}
 
-	if node, ok := tbl.Fields["pass"]; ok {
+	if node, ok := tbl.Fields["namepass"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						f.Pass = append(f.Pass, str.Value)
+						f.NamePass = append(f.NamePass, str.Value)
 						f.IsActive = true
 					}
 				}
@@ -496,13 +496,45 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 		}
 	}
 
-	if node, ok := tbl.Fields["drop"]; ok {
+	if node, ok := tbl.Fields["namedrop"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						f.Drop = append(f.Drop, str.Value)
+						f.NameDrop = append(f.NameDrop, str.Value)
 						f.IsActive = true
+					}
+				}
+			}
+		}
+	}
+
+	fields := []string{"pass", "fieldpass"}
+	for _, field := range fields {
+		if node, ok := tbl.Fields[field]; ok {
+			if kv, ok := node.(*ast.KeyValue); ok {
+				if ary, ok := kv.Value.(*ast.Array); ok {
+					for _, elem := range ary.Value {
+						if str, ok := elem.(*ast.String); ok {
+							f.FieldPass = append(f.FieldPass, str.Value)
+							f.IsActive = true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	fields = []string{"drop", "fielddrop"}
+	for _, field := range fields {
+		if node, ok := tbl.Fields[field]; ok {
+			if kv, ok := node.(*ast.KeyValue); ok {
+				if ary, ok := kv.Value.(*ast.Array); ok {
+					for _, elem := range ary.Value {
+						if str, ok := elem.(*ast.String); ok {
+							f.FieldDrop = append(f.FieldDrop, str.Value)
+							f.IsActive = true
+						}
 					}
 				}
 			}
@@ -547,6 +579,10 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 		}
 	}
 
+	delete(tbl.Fields, "namedrop")
+	delete(tbl.Fields, "namepass")
+	delete(tbl.Fields, "fielddrop")
+	delete(tbl.Fields, "fieldpass")
 	delete(tbl.Fields, "drop")
 	delete(tbl.Fields, "pass")
 	delete(tbl.Fields, "tagdrop")

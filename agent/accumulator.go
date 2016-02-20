@@ -43,6 +43,11 @@ func (ac *accumulator) Add(
 ) {
 	fields := make(map[string]interface{})
 	fields["value"] = value
+
+	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
+		return
+	}
+
 	ac.AddFields(measurement, fields, tags, t...)
 }
 
@@ -53,6 +58,10 @@ func (ac *accumulator) AddFields(
 	t ...time.Time,
 ) {
 	if len(fields) == 0 || len(measurement) == 0 {
+		return
+	}
+
+	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
 		return
 	}
 
@@ -92,7 +101,7 @@ func (ac *accumulator) AddFields(
 	for k, v := range fields {
 		// Filter out any filtered fields
 		if ac.inputConfig != nil {
-			if !ac.inputConfig.Filter.ShouldPass(k) {
+			if !ac.inputConfig.Filter.ShouldFieldsPass(k) {
 				continue
 			}
 		}

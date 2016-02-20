@@ -18,15 +18,15 @@ func TestFilter_Empty(t *testing.T) {
 	}
 
 	for _, measurement := range measurements {
-		if !f.ShouldPass(measurement) {
+		if !f.ShouldFieldsPass(measurement) {
 			t.Errorf("Expected measurement %s to pass", measurement)
 		}
 	}
 }
 
-func TestFilter_Pass(t *testing.T) {
+func TestFilter_NamePass(t *testing.T) {
 	f := Filter{
-		Pass: []string{"foo*", "cpu_usage_idle"},
+		NamePass: []string{"foo*", "cpu_usage_idle"},
 	}
 
 	passes := []string{
@@ -45,21 +45,21 @@ func TestFilter_Pass(t *testing.T) {
 	}
 
 	for _, measurement := range passes {
-		if !f.ShouldPass(measurement) {
+		if !f.ShouldNamePass(measurement) {
 			t.Errorf("Expected measurement %s to pass", measurement)
 		}
 	}
 
 	for _, measurement := range drops {
-		if f.ShouldPass(measurement) {
+		if f.ShouldNamePass(measurement) {
 			t.Errorf("Expected measurement %s to drop", measurement)
 		}
 	}
 }
 
-func TestFilter_Drop(t *testing.T) {
+func TestFilter_NameDrop(t *testing.T) {
 	f := Filter{
-		Drop: []string{"foo*", "cpu_usage_idle"},
+		NameDrop: []string{"foo*", "cpu_usage_idle"},
 	}
 
 	drops := []string{
@@ -78,13 +78,79 @@ func TestFilter_Drop(t *testing.T) {
 	}
 
 	for _, measurement := range passes {
-		if !f.ShouldPass(measurement) {
+		if !f.ShouldNamePass(measurement) {
 			t.Errorf("Expected measurement %s to pass", measurement)
 		}
 	}
 
 	for _, measurement := range drops {
-		if f.ShouldPass(measurement) {
+		if f.ShouldNamePass(measurement) {
+			t.Errorf("Expected measurement %s to drop", measurement)
+		}
+	}
+}
+
+func TestFilter_FieldPass(t *testing.T) {
+	f := Filter{
+		FieldPass: []string{"foo*", "cpu_usage_idle"},
+	}
+
+	passes := []string{
+		"foo",
+		"foo_bar",
+		"foo.bar",
+		"foo-bar",
+		"cpu_usage_idle",
+	}
+
+	drops := []string{
+		"bar",
+		"barfoo",
+		"bar_foo",
+		"cpu_usage_busy",
+	}
+
+	for _, measurement := range passes {
+		if !f.ShouldFieldsPass(measurement) {
+			t.Errorf("Expected measurement %s to pass", measurement)
+		}
+	}
+
+	for _, measurement := range drops {
+		if f.ShouldFieldsPass(measurement) {
+			t.Errorf("Expected measurement %s to drop", measurement)
+		}
+	}
+}
+
+func TestFilter_FieldDrop(t *testing.T) {
+	f := Filter{
+		FieldDrop: []string{"foo*", "cpu_usage_idle"},
+	}
+
+	drops := []string{
+		"foo",
+		"foo_bar",
+		"foo.bar",
+		"foo-bar",
+		"cpu_usage_idle",
+	}
+
+	passes := []string{
+		"bar",
+		"barfoo",
+		"bar_foo",
+		"cpu_usage_busy",
+	}
+
+	for _, measurement := range passes {
+		if !f.ShouldFieldsPass(measurement) {
+			t.Errorf("Expected measurement %s to pass", measurement)
+		}
+	}
+
+	for _, measurement := range drops {
+		if f.ShouldFieldsPass(measurement) {
 			t.Errorf("Expected measurement %s to drop", measurement)
 		}
 	}
