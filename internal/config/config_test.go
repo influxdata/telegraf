@@ -23,8 +23,10 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	mConfig := &internal_models.InputConfig{
 		Name: "memcached",
 		Filter: internal_models.Filter{
-			Drop: []string{"other", "stuff"},
-			Pass: []string{"some", "strings"},
+			NameDrop:  []string{"metricname2"},
+			NamePass:  []string{"metricname1"},
+			FieldDrop: []string{"other", "stuff"},
+			FieldPass: []string{"some", "strings"},
 			TagDrop: []internal_models.TagFilter{
 				internal_models.TagFilter{
 					Name:   "badtag",
@@ -66,8 +68,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	mConfig := &internal_models.InputConfig{
 		Name: "memcached",
 		Filter: internal_models.Filter{
-			Drop: []string{"other", "stuff"},
-			Pass: []string{"some", "strings"},
+			NameDrop:  []string{"metricname2"},
+			NamePass:  []string{"metricname1"},
+			FieldDrop: []string{"other", "stuff"},
+			FieldPass: []string{"some", "strings"},
 			TagDrop: []internal_models.TagFilter{
 				internal_models.TagFilter{
 					Name:   "badtag",
