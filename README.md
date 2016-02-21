@@ -157,8 +157,7 @@ Currently implemented sources:
 * bcache
 * couchdb
 * disque
-* dns
-    * query time
+* dns query time
 * docker
 * dovecot
 * elasticsearch

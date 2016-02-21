@@ -105,4 +105,4 @@ test-short: vet
 vet:
 	go vet ./...
 
-.PHONY: test
+.PHONY: test test-short vet build default
