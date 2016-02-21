@@ -189,12 +189,12 @@ Currently implemented sources:
 * redis
 * rethinkdb
 * riak
+* sensors (only available if built from source)
+* snmp
 * sql server (microsoft)
 * twemproxy
 * zfs
 * zookeeper
-* sensors
-* snmp
 * win_perf_counters (windows performance counters)
 * system
     * cpu
