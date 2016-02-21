@@ -72,6 +72,8 @@ mv $GOPATH/bin/telegraf $CIRCLE_ARTIFACTS
 
 eval "git describe --exact-match HEAD"
 if [ $? -eq 0 ]; then
+    # Turn GOGC back on for making packages
+    export GOGC=100
     tag=$(git describe --exact-match HEAD)
     echo $tag
     exit_if_fail ./scripts/build.py --package --version=$tag --platform=linux --arch=all --upload
