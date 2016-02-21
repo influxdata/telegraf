@@ -7,45 +7,45 @@ The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wi
 ```
 # Sample Config:
 [[inputs.dns_query]]
-  ### Domains or subdomains to query
-  domains = ["mjasion.pl"] # required
-
-  ### servers to query
+  ## servers to query
   servers = ["8.8.8.8"] # required
 
-  ### Query record type. Posible values: A, CNAME, MX, TXT, NS. Default is "A"
-  recordType = "A" # optional
+  ## Domains or subdomains to query. "." (root) is default
+  domains = ["."] # optional
 
-  ### Dns server port. 53 is default
+  ## Query record type. Posible values: A, AAAA, ANY, CNAME, MX,  NS, PTR, SOA, SPF, SRV, TXT. Default is "NS"
+  record_type = "A" # optional
+
+  ## Dns server port. 53 is default
   port = 53 # optional
 
-  ### Query timeout in seconds. Default is 2 seconds
+  ## Query timeout in seconds. Default is 2 seconds
   timeout = 2 # optional
 ```
 
 For querying more than one record type make:
- 
+
 ```
 [[inputs.dns_query]]
   domains = ["mjasion.pl"]
   servers = ["8.8.8.8", "8.8.4.4"]
-  recordType = "A"
+  record_type = "A"
 
 [[inputs.dns_query]]
   domains = ["mjasion.pl"]
   servers = ["8.8.8.8", "8.8.4.4"]
-  recordType = "MX"
+  record_type = "MX"
 ```
 
 ### Tags:
 
-- server 
+- server
 - domain
-- recordType
+- record_type
 
 ### Example output:
 
 ```
 ./telegraf -config telegraf.conf -test -input-filter dns_query -test
-> dns,domain=mjasion.pl,record_type=A,server=8.8.8.8 query_time_ms=36.327025 1455548824989943491
+> dns_query,domain=mjasion.pl,record_type=A,server=8.8.8.8 query_time_ms=67.189842 1456082743585760680
 ```

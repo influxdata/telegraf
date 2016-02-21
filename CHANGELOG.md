@@ -2,6 +2,7 @@
 
 ### Features
 - [#727](https://github.com/influxdata/telegraf/pull/727): riak input, thanks @jcoene!
+- [#694](https://github.com/influxdata/telegraf/pull/694): DNS Query input, thanks @mjasion!
 
 ### Bugfixes
 
