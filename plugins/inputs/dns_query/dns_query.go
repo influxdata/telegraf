@@ -1,4 +1,4 @@
-package dns
+package dns_query
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type Dns struct {
+type DnsQuery struct {
 	// Domains or subdomains to query
 	Domains []string
 
@@ -29,14 +29,14 @@ type Dns struct {
 }
 
 var sampleConfig = `
-  ### Domains or subdomains to query
-  domains = ["mjasion.pl"] # required
-
   ### servers to query
   servers = ["8.8.8.8"] # required
 
-  ### Query record type. Posible values: A, AAAA, CNAME, MX, TXT, NS, ANY. Default is "A"
-  record_type = "A" # optional
+  ### Domains or subdomains to query. "."(root) is default
+  domains = ["mjasion.pl"] #optional
+
+  ### Query record type. Posible values: A, AAAA, CNAME, MX,  NS, PTR, TXT, SOA, SPF, SRV. Default is "NS"
+  recordType = "A" # optional
 
   ### Dns server port. 53 is default
   port = 53 # optional
@@ -45,14 +45,14 @@ var sampleConfig = `
   timeout = 2 # optional
 `
 
-func (d *Dns) SampleConfig() string {
+func (d *DnsQuery) SampleConfig() string {
 	return sampleConfig
 }
 
-func (d *Dns) Description() string {
+func (d *DnsQuery) Description() string {
 	return "Query given DNS server and gives statistics"
 }
-func (d *Dns) Gather(acc telegraf.Accumulator) error {
+func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 	d.setDefaultValues()
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
@@ -67,26 +67,33 @@ func (d *Dns) Gather(acc telegraf.Accumulator) error {
 			}
 
 			fields := map[string]interface{}{"query_time_ms": dnsQueryTime}
-			acc.AddFields("dns", fields, tags)
+			acc.AddFields("dns_query", fields, tags)
 		}
 	}
 
 	return nil
 }
 
-func (d *Dns) setDefaultValues() {
+func (d *DnsQuery) setDefaultValues() {
 	if len(d.RecordType) == 0 {
-		d.RecordType = "A"
+		d.RecordType = "NS"
 	}
+
+	if len(d.Domains) == 0 {
+		d.Domains = []string{"."}
+		d.RecordType = "NS"
+	}
+
 	if d.Port == 0 {
 		d.Port = 53
 	}
+
 	if d.Timeout == 0 {
 		d.Timeout = 2
 	}
 }
 
-func (d *Dns) getDnsQueryTime(domain string, server string) (float64, error) {
+func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, error) {
 	dnsQueryTime := float64(0)
 
 	c := new(dns.Client)
@@ -111,7 +118,7 @@ func (d *Dns) getDnsQueryTime(domain string, server string) (float64, error) {
 	return dnsQueryTime, nil
 }
 
-func (d *Dns) parseRecordType() (uint16, error) {
+func (d *DnsQuery) parseRecordType() (uint16, error) {
 	var recordType uint16
 	var error error
 
@@ -128,6 +135,14 @@ func (d *Dns) parseRecordType() (uint16, error) {
 		recordType = dns.TypeMX
 	case "NS":
 		recordType = dns.TypeNS
+	case "PTR":
+		recordType = dns.TypePTR
+	case "SOA":
+		recordType = dns.TypeSOA
+	case "SPF":
+		recordType = dns.TypeSPF
+	case "SRV":
+		recordType = dns.TypeSRV
 	case "TXT":
 		recordType = dns.TypeTXT
 	default:
@@ -139,6 +154,6 @@ func (d *Dns) parseRecordType() (uint16, error) {
 
 func init() {
 	inputs.Add("dns_query", func() telegraf.Input {
-		return &Dns{}
+		return &DnsQuery{}
 	})
 }
