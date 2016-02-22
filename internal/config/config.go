@@ -429,7 +429,6 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		ro.MetricBufferLimit = c.Agent.MetricBufferLimit
 	}
 	ro.FlushBufferWhenFull = c.Agent.FlushBufferWhenFull
-	ro.Quiet = c.Agent.Quiet
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }
