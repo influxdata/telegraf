@@ -50,9 +50,9 @@ func TestDiskStats(t *testing.T) {
 		},
 	}
 
-	mps.On("DiskUsage", []string(nil)).Return(duAll, nil)
-	mps.On("DiskUsage", []string{"/", "/dev"}).Return(duFiltered, nil)
-	mps.On("DiskUsage", []string{"/", "/home"}).Return(duAll, nil)
+	mps.On("DiskUsage", []string(nil), []string(nil)).Return(duAll, nil)
+	mps.On("DiskUsage", []string{"/", "/dev"}, []string(nil)).Return(duFiltered, nil)
+	mps.On("DiskUsage", []string{"/", "/home"}, []string(nil)).Return(duAll, nil)
 
 	err = (&DiskStats{ps: &mps}).Gather(&acc)
 	require.NoError(t, err)
