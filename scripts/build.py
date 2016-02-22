@@ -70,7 +70,7 @@ targets = {
 
 supported_builds = {
     'darwin': [ "amd64", "i386" ],
-    'windows': [ "amd64", "i386", "arm" ],
+    'windows': [ "amd64", "i386" ],
     'linux': [ "amd64", "i386", "arm" ]
 }
 supported_packages = {
@@ -287,6 +287,8 @@ def build(version=None,
 
     print("Starting build...")
     for b, c in targets.items():
+        if platform == 'windows':
+            b = b + '.exe'
         print("\t- Building '{}'...".format(os.path.join(outdir, b)))
         build_command = ""
         build_command += "GOOS={} GOARCH={} ".format(platform, arch)
