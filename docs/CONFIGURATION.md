@@ -209,7 +209,7 @@ configuring each output sink is different, but examples can be
 found by running `telegraf -sample-config`.
 
 Outputs also support the same configurable options as inputs
-(pass, drop, tagpass, tagdrop)
+(namepass, namedrop, tagpass, tagdrop)
 
 ```toml
 [[outputs.influxdb]]
@@ -217,14 +217,14 @@ Outputs also support the same configurable options as inputs
   database = "telegraf"
   precision = "s"
   # Drop all measurements that start with "aerospike"
-  drop = ["aerospike*"]
+  namedrop = ["aerospike*"]
 
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
   database = "telegraf-aerospike-data"
   precision = "s"
   # Only accept aerospike data:
-  pass = ["aerospike*"]
+  namepass = ["aerospike*"]
 
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]

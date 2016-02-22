@@ -477,7 +477,8 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	return nil
 }
 
-// buildFilter builds a Filter (tagpass/tagdrop/pass/drop) to
+// buildFilter builds a Filter
+// (tagpass/tagdrop/namepass/namedrop/fieldpass/fielddrop) to
 // be inserted into the internal_models.OutputConfig/internal_models.InputConfig to be used for prefix
 // filtering on tags and measurements
 func buildFilter(tbl *ast.Table) internal_models.Filter {
@@ -751,6 +752,13 @@ func buildOutput(name string, tbl *ast.Table) (*internal_models.OutputConfig, er
 	oc := &internal_models.OutputConfig{
 		Name:   name,
 		Filter: buildFilter(tbl),
+	}
+	// Outputs don't support FieldDrop/FieldPass, so set to NameDrop/NamePass
+	if len(oc.Filter.FieldDrop) > 0 {
+		oc.Filter.NameDrop = oc.Filter.FieldDrop
+	}
+	if len(oc.Filter.FieldPass) > 0 {
+		oc.Filter.NamePass = oc.Filter.FieldPass
 	}
 	return oc, nil
 }
