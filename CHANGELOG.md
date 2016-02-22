@@ -5,6 +5,7 @@
 - [#694](https://github.com/influxdata/telegraf/pull/694): DNS Query input, thanks @mjasion!
 - [#724](https://github.com/influxdata/telegraf/pull/724): username matching for procstat input, thanks @zorel!
 - [#736](https://github.com/influxdata/telegraf/pull/736): Ignore dummy filesystems from disk plugin. Thanks @PierreF!
+- [#737](https://github.com/influxdata/telegraf/pull/737): Support multiple fields for statsd input. Thanks @mattheath!
 
 ### Bugfixes
 - [#701](https://github.com/influxdata/telegraf/pull/701): output write count shouldnt print in quiet mode.

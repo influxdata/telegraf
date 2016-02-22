@@ -17,7 +17,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const UDP_PACKET_SIZE int = 1500
+const (
+	UDP_PACKET_SIZE int = 1500
+
+	defaultFieldName = "value"
+)
 
 var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
 	"You may want to increase allowed_pending_messages in the config\n"
@@ -113,9 +117,9 @@ type cachedcounter struct {
 }
 
 type cachedtimings struct {
-	name  string
-	stats RunningStats
-	tags  map[string]string
+	name   string
+	fields map[string]RunningStats
+	tags   map[string]string
 }
 
 func (_ *Statsd) Description() string {
@@ -169,16 +173,26 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	for _, metric := range s.timings {
+		// Defining a template to parse field names for timers allows us to split
+		// out multiple fields per timer. In this case we prefix each stat with the
+		// field name and store these all in a single measurement.
 		fields := make(map[string]interface{})
-		fields["mean"] = metric.stats.Mean()
-		fields["stddev"] = metric.stats.Stddev()
-		fields["upper"] = metric.stats.Upper()
-		fields["lower"] = metric.stats.Lower()
-		fields["count"] = metric.stats.Count()
-		for _, percentile := range s.Percentiles {
-			name := fmt.Sprintf("%v_percentile", percentile)
-			fields[name] = metric.stats.Percentile(percentile)
+		for fieldName, stats := range metric.fields {
+			var prefix string
+			if fieldName != defaultFieldName {
+				prefix = fieldName + "_"
+			}
+			fields[prefix+"mean"] = stats.Mean()
+			fields[prefix+"stddev"] = stats.Stddev()
+			fields[prefix+"upper"] = stats.Upper()
+			fields[prefix+"lower"] = stats.Lower()
+			fields[prefix+"count"] = stats.Count()
+			for _, percentile := range s.Percentiles {
+				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
+				fields[name] = stats.Percentile(percentile)
+			}
 		}
+
 		acc.AddFields(metric.name, fields, metric.tags, now)
 	}
 	if s.DeleteTimings {
@@ -370,11 +384,6 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Parse the name & tags from bucket
 		m.name, m.field, m.tags = s.parseName(m.bucket)
-		// fields are not supported for timings, so if specified combine into
-		// the name
-		if (m.mtype == "ms" || m.mtype == "h") && m.field != "value" {
-			m.name += "_" + m.field
-		}
 		switch m.mtype {
 		case "c":
 			m.tags["metric_type"] = "counter"
@@ -433,7 +442,7 @@ func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
 		name = strings.Replace(name, "-", "__", -1)
 	}
 	if field == "" {
-		field = "value"
+		field = defaultFieldName
 	}
 
 	return name, field, tags
@@ -461,26 +470,32 @@ func parseKeyValue(keyvalue string) (string, string) {
 func (s *Statsd) aggregate(m metric) {
 	switch m.mtype {
 	case "ms", "h":
+		// Check if the measurement exists
 		cached, ok := s.timings[m.hash]
 		if !ok {
 			cached = cachedtimings{
-				name: m.name,
-				tags: m.tags,
-				stats: RunningStats{
-					PercLimit: s.PercentileLimit,
-				},
+				name:   m.name,
+				fields: make(map[string]RunningStats),
+				tags:   m.tags,
 			}
 		}
-
+		// Check if the field exists. If we've not enabled multiple fields per timer
+		// this will be the default field name, eg. "value"
+		field, ok := cached.fields[m.field]
+		if !ok {
+			field = RunningStats{
+				PercLimit: s.PercentileLimit,
+			}
+		}
 		if m.samplerate > 0 {
 			for i := 0; i < int(1.0/m.samplerate); i++ {
-				cached.stats.AddValue(m.floatvalue)
+				field.AddValue(m.floatvalue)
 			}
-			s.timings[m.hash] = cached
 		} else {
-			cached.stats.AddValue(m.floatvalue)
-			s.timings[m.hash] = cached
+			field.AddValue(m.floatvalue)
 		}
+		cached.fields[m.field] = field
+		s.timings[m.hash] = cached
 	case "c":
 		// check if the measurement exists
 		_, ok := s.counters[m.hash]
