@@ -76,7 +76,7 @@ supported_builds = {
 supported_packages = {
     "darwin": [ "tar", "zip" ],
     "linux": [ "deb", "rpm", "tar", "zip" ],
-    "windows": [ "tar", "zip" ],
+    "windows": [ "zip" ],
 }
 supported_tags = {
     # "linux": {
@@ -351,21 +351,26 @@ def create_package_fs(build_root):
         create_dir(os.path.join(build_root, d))
         os.chmod(os.path.join(build_root, d), 0o755)
 
-def package_scripts(build_root):
+def package_scripts(build_root, windows=False):
     print("\t- Copying scripts and sample configuration to build directory")
-    shutil.copyfile(INIT_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]))
-    os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]), 0o644)
-    shutil.copyfile(SYSTEMD_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]))
-    os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]), 0o644)
-    shutil.copyfile(LOGROTATE_SCRIPT, os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"))
-    os.chmod(os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"), 0o644)
-    shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"))
-    os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"), 0o644)
+    if windows:
+        shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, "telegraf.conf"))
+        os.chmod(os.path.join(build_root, "telegraf.conf"), 0o644)
+    else:
+        shutil.copyfile(INIT_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]))
+        os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]), 0o644)
+        shutil.copyfile(SYSTEMD_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]))
+        os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]), 0o644)
+        shutil.copyfile(LOGROTATE_SCRIPT, os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"))
+        os.chmod(os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"), 0o644)
+        shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"))
+        os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"), 0o644)
 
 def go_get():
     print("Retrieving Go dependencies...")
     run("go get github.com/sparrc/gdm")
     run("gdm restore")
+    run("gdm restore -f Godeps_windows")
 
 def generate_md5_from_file(path):
     m = hashlib.md5()
@@ -395,15 +400,18 @@ def build_packages(build_output, version, pkg_arch, nightly=False, rc=None, iter
                 build_root = os.path.join(tmp_build_dir, p, a)
                 # Create directory tree to mimic file system of package
                 create_dir(build_root)
-                create_package_fs(build_root)
-                # Copy in packaging and miscellaneous scripts
-                package_scripts(build_root)
+                if p == 'windows':
+                    package_scripts(build_root, windows=True)
+                else:
+                    create_package_fs(build_root)
+                    # Copy in packaging and miscellaneous scripts
+                    package_scripts(build_root)
                 # Copy newly-built binaries to packaging directory
                 for b in targets:
                     if p == 'windows':
                         b = b + '.exe'
                     fr = os.path.join(current_location, b)
-                    to = os.path.join(build_root, INSTALL_ROOT_DIR[1:], b)
+                    to = os.path.join(build_root, b)
                     print("\t- [{}][{}] - Moving from '{}' to '{}'".format(p, a, fr, to))
                     copy_file(fr, to)
                 # Package the directory structure
@@ -445,6 +453,7 @@ def build_packages(build_output, version, pkg_arch, nightly=False, rc=None, iter
                     if package_type == "rpm":
                         fpm_command += "--depends coreutils "
                         fpm_command += "--depends lsof"
+                    print(fpm_command)
                     out = run(fpm_command, shell=True)
                     matches = re.search(':path=>"(.*)"', out)
                     outfile = None
