@@ -30,6 +30,10 @@ Latest:
 * http://get.influxdb.org/telegraf/telegraf_0.10.3-1_amd64.deb
 * http://get.influxdb.org/telegraf/telegraf-0.10.3-1.x86_64.rpm
 
+Latest (arm):
+* http://get.influxdb.org/telegraf/telegraf_0.10.3-1_arm.deb
+* http://get.influxdb.org/telegraf/telegraf-0.10.3-1.arm.rpm
+
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
 * http://get.influxdb.org/telegraf/telegraf-0.2.4-1.x86_64.rpm
