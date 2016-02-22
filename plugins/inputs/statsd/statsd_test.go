@@ -561,12 +561,12 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 		// A 0 with invalid samplerate will add a single 0,
 		// plus the last bit of value 1
 		// which adds up to 12 individual datapoints to be cached
-		if cachedtiming.stats.n != 12 {
-			t.Errorf("Expected 11 additions, got %d", cachedtiming.stats.n)
+		if cachedtiming.fields[defaultFieldName].n != 12 {
+			t.Errorf("Expected 11 additions, got %d", cachedtiming.fields[defaultFieldName].n)
 		}
 
-		if cachedtiming.stats.upper != 1 {
-			t.Errorf("Expected max input to be 1, got %f", cachedtiming.stats.upper)
+		if cachedtiming.fields[defaultFieldName].upper != 1 {
+			t.Errorf("Expected max input to be 1, got %f", cachedtiming.fields[defaultFieldName].upper)
 		}
 	}
 
@@ -842,7 +842,105 @@ func TestParse_Timings(t *testing.T) {
 	}
 
 	acc.AssertContainsFields(t, "test_timing", valid)
+}
 
+// Tests low-level functionality of timings when multiple fields is enabled
+// and a measurement template has been defined which can parse field names
+func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
+	s := NewStatsd()
+	s.Templates = []string{"measurement.field"}
+	s.Percentiles = []int{90}
+	acc := &testutil.Accumulator{}
+
+	validLines := []string{
+		"test_timing.success:1|ms",
+		"test_timing.success:11|ms",
+		"test_timing.success:1|ms",
+		"test_timing.success:1|ms",
+		"test_timing.success:1|ms",
+		"test_timing.error:2|ms",
+		"test_timing.error:22|ms",
+		"test_timing.error:2|ms",
+		"test_timing.error:2|ms",
+		"test_timing.error:2|ms",
+	}
+
+	for _, line := range validLines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+	s.Gather(acc)
+
+	valid := map[string]interface{}{
+		"success_90_percentile": float64(11),
+		"success_count":         int64(5),
+		"success_lower":         float64(1),
+		"success_mean":          float64(3),
+		"success_stddev":        float64(4),
+		"success_upper":         float64(11),
+
+		"error_90_percentile": float64(22),
+		"error_count":         int64(5),
+		"error_lower":         float64(2),
+		"error_mean":          float64(6),
+		"error_stddev":        float64(8),
+		"error_upper":         float64(22),
+	}
+
+	acc.AssertContainsFields(t, "test_timing", valid)
+}
+
+// Tests low-level functionality of timings when multiple fields is enabled
+// but a measurement template hasn't been defined so we can't parse field names
+// In this case the behaviour should be the same as normal behaviour
+func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
+	s := NewStatsd()
+	s.Templates = []string{}
+	s.Percentiles = []int{90}
+	acc := &testutil.Accumulator{}
+
+	validLines := []string{
+		"test_timing.success:1|ms",
+		"test_timing.success:11|ms",
+		"test_timing.success:1|ms",
+		"test_timing.success:1|ms",
+		"test_timing.success:1|ms",
+		"test_timing.error:2|ms",
+		"test_timing.error:22|ms",
+		"test_timing.error:2|ms",
+		"test_timing.error:2|ms",
+		"test_timing.error:2|ms",
+	}
+
+	for _, line := range validLines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+	s.Gather(acc)
+
+	expectedSuccess := map[string]interface{}{
+		"90_percentile": float64(11),
+		"count":         int64(5),
+		"lower":         float64(1),
+		"mean":          float64(3),
+		"stddev":        float64(4),
+		"upper":         float64(11),
+	}
+	expectedError := map[string]interface{}{
+		"90_percentile": float64(22),
+		"count":         int64(5),
+		"lower":         float64(2),
+		"mean":          float64(6),
+		"stddev":        float64(8),
+		"upper":         float64(22),
+	}
+
+	acc.AssertContainsFields(t, "test_timing_success", expectedSuccess)
+	acc.AssertContainsFields(t, "test_timing_error", expectedError)
 }
 
 func TestParse_Timings_Delete(t *testing.T) {
