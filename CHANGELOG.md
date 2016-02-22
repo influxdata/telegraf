@@ -4,6 +4,7 @@
 - [#727](https://github.com/influxdata/telegraf/pull/727): riak input, thanks @jcoene!
 - [#694](https://github.com/influxdata/telegraf/pull/694): DNS Query input, thanks @mjasion!
 - [#724](https://github.com/influxdata/telegraf/pull/724): username matching for procstat input, thanks @zorel!
+- [#736](https://github.com/influxdata/telegraf/pull/736): Ignore dummy filesystems from disk plugin. Thanks @PierreF!
 
 ### Bugfixes
 - [#701](https://github.com/influxdata/telegraf/pull/701): output write count shouldnt print in quiet mode.
