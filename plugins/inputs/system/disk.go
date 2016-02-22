@@ -14,6 +14,7 @@ type DiskStats struct {
 	Mountpoints []string
 
 	MountPoints []string
+	IgnoreFS    []string `toml:"ignore_fs"`
 }
 
 func (_ *DiskStats) Description() string {
@@ -24,6 +25,10 @@ var diskSampleConfig = `
   ## By default, telegraf gather stats for all mountpoints.
   ## Setting mountpoints will restrict the stats to the specified mountpoints.
   # mount_points = ["/"]
+
+  # Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
+  # present on /run, /var/run, /dev/shm or /dev).
+  ignore_fs = ["tmpfs", "devtmpfs"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
@@ -36,12 +41,16 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 		s.MountPoints = s.Mountpoints
 	}
 
-	disks, err := s.ps.DiskUsage(s.MountPoints)
+	disks, err := s.ps.DiskUsage(s.MountPoints, s.IgnoreFS)
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
 
 	for _, du := range disks {
+		if du.Total == 0 {
+			// Skip dummy filesystem (procfs, cgroupfs, ...)
+			continue
+		}
 		tags := map[string]string{
 			"path":   du.Path,
 			"fstype": du.Fstype,
