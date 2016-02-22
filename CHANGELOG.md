@@ -5,6 +5,7 @@
 - [#694](https://github.com/influxdata/telegraf/pull/694): DNS Query input, thanks @mjasion!
 
 ### Bugfixes
+- [#701](https://github.com/influxdata/telegraf/pull/701): output write count shouldnt print in quiet mode.
 
 ## v0.10.3 [2016-02-18]
 
