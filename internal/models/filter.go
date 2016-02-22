@@ -28,7 +28,7 @@ type Filter struct {
 }
 
 func (f Filter) ShouldMetricPass(metric telegraf.Metric) bool {
-	if f.ShouldFieldsPass(metric.Name()) && f.ShouldTagsPass(metric.Tags()) {
+	if f.ShouldNamePass(metric.Name()) && f.ShouldTagsPass(metric.Tags()) {
 		return true
 	}
 	return false
