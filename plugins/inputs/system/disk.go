@@ -26,8 +26,8 @@ var diskSampleConfig = `
   ## Setting mountpoints will restrict the stats to the specified mountpoints.
   # mount_points = ["/"]
 
-  # Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
-  # present on /run, /var/run, /dev/shm or /dev).
+  ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
+  ## present on /run, /var/run, /dev/shm or /dev).
   ignore_fs = ["tmpfs", "devtmpfs"]
 `
 
@@ -88,11 +88,11 @@ func (_ *DiskIOStats) Description() string {
 }
 
 var diskIoSampleConfig = `
-  # By default, telegraf will gather stats for all devices including
-  # disk partitions.
-  # Setting devices will restrict the stats to the specified devices.
+  ## By default, telegraf will gather stats for all devices including
+  ## disk partitions.
+  ## Setting devices will restrict the stats to the specified devices.
   # devices = ["sda", "sdb"]
-  # Uncomment the following line if you do not need disk serial numbers.
+  ## Uncomment the following line if you do not need disk serial numbers.
   # skip_serial_number = true
 `
 
