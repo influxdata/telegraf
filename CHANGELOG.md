@@ -1,5 +1,11 @@
 ## v0.10.4 [unreleased]
 
+### Release Notes
+- The pass/drop parameters have been renamed to fielddrop/fieldpass parameters,
+to more accurately indicate their purpose.
+- There are also now namedrop/namepass parameters for passing/dropping based
+on the metric _name_.
+
 ### Features
 - [#727](https://github.com/influxdata/telegraf/pull/727): riak input, thanks @jcoene!
 - [#694](https://github.com/influxdata/telegraf/pull/694): DNS Query input, thanks @mjasion!
