@@ -13,6 +13,7 @@ function install_init {
 function install_systemd {
     cp -f $SCRIPT_DIR/telegraf.service /lib/systemd/system/telegraf.service
     systemctl enable telegraf
+    systemctl daemon-reload || true
 }
 
 function install_update_rcd {
@@ -63,10 +64,12 @@ elif [[ -f /etc/debian_version ]]; then
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
 	install_systemd
+	deb-systemd-invoke restart telegraf.service
     else
 	# Assuming sysv
 	install_init
 	install_update_rcd
+	invoke-rc.d telegraf restart
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
