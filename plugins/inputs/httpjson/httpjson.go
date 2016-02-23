@@ -23,7 +23,8 @@ type HttpJson struct {
 	TagKeys    []string
 	Parameters map[string]string
 	Headers    map[string]string
-	client     HTTPClient
+
+	client HTTPClient
 }
 
 type HTTPClient interface {

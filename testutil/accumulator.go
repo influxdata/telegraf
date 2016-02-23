@@ -133,13 +133,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 		}
 
 		if p.Measurement == measurement {
-			if !reflect.DeepEqual(fields, p.Fields) {
-				pActual, _ := json.MarshalIndent(p.Fields, "", "  ")
-				pExp, _ := json.MarshalIndent(fields, "", "  ")
-				msg := fmt.Sprintf("Actual:\n%s\n(%T) \nExpected:\n%s\n(%T)",
-					string(pActual), p.Fields, string(pExp), fields)
-				assert.Fail(t, msg)
-			}
+			assert.Equal(t, fields, p.Fields)
 			return
 		}
 	}
@@ -156,13 +150,7 @@ func (a *Accumulator) AssertContainsFields(
 	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
-			if !reflect.DeepEqual(fields, p.Fields) {
-				pActual, _ := json.MarshalIndent(p.Fields, "", "  ")
-				pExp, _ := json.MarshalIndent(fields, "", "  ")
-				msg := fmt.Sprintf("Actual:\n%s\n(%T) \nExpected:\n%s\n(%T)",
-					string(pActual), p.Fields, string(pExp), fields)
-				assert.Fail(t, msg)
-			}
+			assert.Equal(t, fields, p.Fields)
 			return
 		}
 	}
