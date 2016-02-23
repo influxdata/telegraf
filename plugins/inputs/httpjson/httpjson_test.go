@@ -222,17 +222,25 @@ func TestHttpJson200(t *testing.T) {
 
 // Test litecoin sample output
 func TestHttpJsonLiteCoin(t *testing.T) {
+	params := map[string]string{
+		"api_key": "mykey",
+	}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		assert.NoError(t, err)
+		key := r.Form.Get("api_key")
+		assert.Equal(t, "mykey", key)
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, validJSON2)
 	}))
 	defer ts.Close()
 
 	a := HttpJson{
-		Servers: []string{ts.URL},
-		Name:    "",
-		Method:  "GET",
-		client:  RealHTTPClient{client: &http.Client{}},
+		Servers:    []string{ts.URL},
+		Name:       "",
+		Method:     "GET",
+		Parameters: params,
+		client:     RealHTTPClient{client: &http.Client{}},
 	}
 
 	var acc testutil.Accumulator
