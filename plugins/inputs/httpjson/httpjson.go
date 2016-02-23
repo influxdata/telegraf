@@ -188,10 +188,10 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 
 	switch {
 	case h.Method == "GET":
-		requestURL.RawQuery = params.Encode()
 		for k, v := range h.Parameters {
 			params.Add(k, v)
 		}
+		requestURL.RawQuery = params.Encode()
 
 	case h.Method == "POST":
 		requestURL.RawQuery = ""
