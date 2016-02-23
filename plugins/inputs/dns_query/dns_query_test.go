@@ -9,7 +9,7 @@ import (
 )
 
 var servers = []string{"8.8.8.8"}
-var domains = []string{"mjasion.pl"}
+var domains = []string{"google.com"}
 
 func TestGathering(t *testing.T) {
 	var dnsConfig = DnsQuery{
@@ -18,8 +18,10 @@ func TestGathering(t *testing.T) {
 	}
 	var acc testutil.Accumulator
 
-	dnsConfig.Gather(&acc)
-	metric, _ := acc.Get("dns_query")
+	err := dnsConfig.Gather(&acc)
+	assert.NoError(t, err)
+	metric, ok := acc.Get("dns_query")
+	assert.True(t, ok)
 	queryTime, _ := metric.Fields["query_time_ms"].(float64)
 
 	assert.NotEqual(t, 0, queryTime)
@@ -33,8 +35,10 @@ func TestGatheringMxRecord(t *testing.T) {
 	var acc testutil.Accumulator
 	dnsConfig.RecordType = "MX"
 
-	dnsConfig.Gather(&acc)
-	metric, _ := acc.Get("dns_query")
+	err := dnsConfig.Gather(&acc)
+	assert.NoError(t, err)
+	metric, ok := acc.Get("dns_query")
+	assert.True(t, ok)
 	queryTime, _ := metric.Fields["query_time_ms"].(float64)
 
 	assert.NotEqual(t, 0, queryTime)
@@ -54,8 +58,10 @@ func TestGatheringRootDomain(t *testing.T) {
 	}
 	fields := map[string]interface{}{}
 
-	dnsConfig.Gather(&acc)
-	metric, _ := acc.Get("dns_query")
+	err := dnsConfig.Gather(&acc)
+	assert.NoError(t, err)
+	metric, ok := acc.Get("dns_query")
+	assert.True(t, ok)
 	queryTime, _ := metric.Fields["query_time_ms"].(float64)
 
 	fields["query_time_ms"] = queryTime
@@ -70,13 +76,15 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 	var acc testutil.Accumulator
 	tags := map[string]string{
 		"server":      "8.8.8.8",
-		"domain":      "mjasion.pl",
+		"domain":      "google.com",
 		"record_type": "NS",
 	}
 	fields := map[string]interface{}{}
 
-	dnsConfig.Gather(&acc)
-	metric, _ := acc.Get("dns_query")
+	err := dnsConfig.Gather(&acc)
+	assert.NoError(t, err)
+	metric, ok := acc.Get("dns_query")
+	assert.True(t, ok)
 	queryTime, _ := metric.Fields["query_time_ms"].(float64)
 
 	fields["query_time_ms"] = queryTime

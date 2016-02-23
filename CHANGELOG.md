@@ -8,6 +8,7 @@
 
 ### Bugfixes
 - [#701](https://github.com/influxdata/telegraf/pull/701): output write count shouldnt print in quiet mode.
+- [#746](https://github.com/influxdata/telegraf/pull/746): httpjson plugin: Fix HTTP GET parameters.
 
 ## v0.10.3 [2016-02-18]
 
