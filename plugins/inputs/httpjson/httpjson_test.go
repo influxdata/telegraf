@@ -220,15 +220,82 @@ func TestHttpJson200(t *testing.T) {
 	}
 }
 
-// Test litecoin sample output
-func TestHttpJsonLiteCoin(t *testing.T) {
+// Test that GET Parameters from the url string are applied properly
+func TestHttpJsonGET_URL(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key := r.FormValue("api_key")
+		assert.Equal(t, "mykey", key)
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, validJSON2)
+	}))
+	defer ts.Close()
+
+	a := HttpJson{
+		Servers: []string{ts.URL + "?api_key=mykey"},
+		Name:    "",
+		Method:  "GET",
+		client:  RealHTTPClient{client: &http.Client{}},
+	}
+
+	var acc testutil.Accumulator
+	err := a.Gather(&acc)
+	require.NoError(t, err)
+
+	// remove response_time from gathered fields because it's non-deterministic
+	delete(acc.Metrics[0].Fields, "response_time")
+
+	fields := map[string]interface{}{
+		"market_btc_usd":                  float64(422.852),
+		"market_ltc_btc":                  float64(0.00798),
+		"market_ltc_cny":                  float64(21.3883),
+		"market_ltc_eur":                  float64(3.113),
+		"market_ltc_gbp":                  float64(2.32807),
+		"market_ltc_rub":                  float64(241.796),
+		"market_ltc_usd":                  float64(3.37801),
+		"network_block_number":            float64(944895),
+		"network_difficulty":              float64(51825.72835216),
+		"network_hash_rate":               float64(1.426117703e+09),
+		"network_next_difficulty":         float64(51916.15249019),
+		"network_retarget_time":           float64(95053),
+		"network_time_per_block":          float64(156),
+		"pool_active_users":               float64(843),
+		"pool_hash_rate":                  float64(1.141e+08),
+		"pool_pps_rate":                   float64(7.655e-09),
+		"pool_pps_ratio":                  float64(1.04),
+		"user_blocks_found":               float64(0),
+		"user_expected_24h_rewards":       float64(0),
+		"user_hash_rate":                  float64(0),
+		"user_paid_rewards":               float64(0),
+		"user_past_24h_rewards":           float64(0),
+		"user_total_rewards":              float64(0.000595109232),
+		"user_unpaid_rewards":             float64(0.000595109232),
+		"workers_brminer.1_hash_rate":     float64(0),
+		"workers_brminer.1_hash_rate_24h": float64(0),
+		"workers_brminer.1_reset_time":    float64(1.45540995e+09),
+		"workers_brminer.1_rewards":       float64(4.5506464e-05),
+		"workers_brminer.1_rewards_24h":   float64(0),
+		"workers_brminer.2_hash_rate":     float64(0),
+		"workers_brminer.2_hash_rate_24h": float64(0),
+		"workers_brminer.2_reset_time":    float64(1.455936726e+09),
+		"workers_brminer.2_rewards":       float64(0),
+		"workers_brminer.2_rewards_24h":   float64(0),
+		"workers_brminer.3_hash_rate":     float64(0),
+		"workers_brminer.3_hash_rate_24h": float64(0),
+		"workers_brminer.3_reset_time":    float64(1.455936733e+09),
+		"workers_brminer.3_rewards":       float64(0),
+		"workers_brminer.3_rewards_24h":   float64(0),
+	}
+
+	acc.AssertContainsFields(t, "httpjson", fields)
+}
+
+// Test that GET Parameters are applied properly
+func TestHttpJsonGET(t *testing.T) {
 	params := map[string]string{
 		"api_key": "mykey",
 	}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseForm()
-		assert.NoError(t, err)
-		key := r.Form.Get("api_key")
+		key := r.FormValue("api_key")
 		assert.Equal(t, "mykey", key)
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, validJSON2)
@@ -239,6 +306,80 @@ func TestHttpJsonLiteCoin(t *testing.T) {
 		Servers:    []string{ts.URL},
 		Name:       "",
 		Method:     "GET",
+		Parameters: params,
+		client:     RealHTTPClient{client: &http.Client{}},
+	}
+
+	var acc testutil.Accumulator
+	err := a.Gather(&acc)
+	require.NoError(t, err)
+
+	// remove response_time from gathered fields because it's non-deterministic
+	delete(acc.Metrics[0].Fields, "response_time")
+
+	fields := map[string]interface{}{
+		"market_btc_usd":                  float64(422.852),
+		"market_ltc_btc":                  float64(0.00798),
+		"market_ltc_cny":                  float64(21.3883),
+		"market_ltc_eur":                  float64(3.113),
+		"market_ltc_gbp":                  float64(2.32807),
+		"market_ltc_rub":                  float64(241.796),
+		"market_ltc_usd":                  float64(3.37801),
+		"network_block_number":            float64(944895),
+		"network_difficulty":              float64(51825.72835216),
+		"network_hash_rate":               float64(1.426117703e+09),
+		"network_next_difficulty":         float64(51916.15249019),
+		"network_retarget_time":           float64(95053),
+		"network_time_per_block":          float64(156),
+		"pool_active_users":               float64(843),
+		"pool_hash_rate":                  float64(1.141e+08),
+		"pool_pps_rate":                   float64(7.655e-09),
+		"pool_pps_ratio":                  float64(1.04),
+		"user_blocks_found":               float64(0),
+		"user_expected_24h_rewards":       float64(0),
+		"user_hash_rate":                  float64(0),
+		"user_paid_rewards":               float64(0),
+		"user_past_24h_rewards":           float64(0),
+		"user_total_rewards":              float64(0.000595109232),
+		"user_unpaid_rewards":             float64(0.000595109232),
+		"workers_brminer.1_hash_rate":     float64(0),
+		"workers_brminer.1_hash_rate_24h": float64(0),
+		"workers_brminer.1_reset_time":    float64(1.45540995e+09),
+		"workers_brminer.1_rewards":       float64(4.5506464e-05),
+		"workers_brminer.1_rewards_24h":   float64(0),
+		"workers_brminer.2_hash_rate":     float64(0),
+		"workers_brminer.2_hash_rate_24h": float64(0),
+		"workers_brminer.2_reset_time":    float64(1.455936726e+09),
+		"workers_brminer.2_rewards":       float64(0),
+		"workers_brminer.2_rewards_24h":   float64(0),
+		"workers_brminer.3_hash_rate":     float64(0),
+		"workers_brminer.3_hash_rate_24h": float64(0),
+		"workers_brminer.3_reset_time":    float64(1.455936733e+09),
+		"workers_brminer.3_rewards":       float64(0),
+		"workers_brminer.3_rewards_24h":   float64(0),
+	}
+
+	acc.AssertContainsFields(t, "httpjson", fields)
+}
+
+// Test that POST Parameters are applied properly
+func TestHttpJsonPOST(t *testing.T) {
+	params := map[string]string{
+		"api_key": "mykey",
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := ioutil.ReadAll(r.Body)
+		assert.NoError(t, err)
+		assert.Equal(t, "api_key=mykey", string(body))
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, validJSON2)
+	}))
+	defer ts.Close()
+
+	a := HttpJson{
+		Servers:    []string{ts.URL},
+		Name:       "",
+		Method:     "POST",
 		Parameters: params,
 		client:     RealHTTPClient{client: &http.Client{}},
 	}
