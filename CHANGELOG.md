@@ -1,10 +1,19 @@
-## v0.10.4 [unreleased]
+## v0.10.5 [unreleased]
+
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+## v0.10.4 [2016-02-24]
 
 ### Release Notes
 - The pass/drop parameters have been renamed to fielddrop/fieldpass parameters,
 to more accurately indicate their purpose.
 - There are also now namedrop/namepass parameters for passing/dropping based
 on the metric _name_.
+- Experimental windows builds now available.
 
 ### Features
 - [#727](https://github.com/influxdata/telegraf/pull/727): riak input, thanks @jcoene!
