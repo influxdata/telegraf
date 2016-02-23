@@ -31,6 +31,8 @@ DEFAULT_CONFIG = "etc/telegraf.conf"
 DEFAULT_WINDOWS_CONFIG = "etc/telegraf_windows.conf"
 POSTINST_SCRIPT = "scripts/post-install.sh"
 PREINST_SCRIPT = "scripts/pre-install.sh"
+POSTREMOVE_SCRIPT = "scripts/post-remove.sh"
+PREREMOVE_SCRIPT = "scripts/pre-remove.sh"
 
 # Default AWS S3 bucket for uploads
 DEFAULT_BUCKET = "get.influxdb.org/telegraf"
@@ -61,6 +63,8 @@ fpm_common_args = "-f -s dir --log error \
  --config-files {} \
  --after-install {} \
  --before-install {} \
+ --after-remove {} \
+ --before-remove {} \
  --description \"{}\"".format(
     VENDOR,
     PACKAGE_URL,
@@ -70,6 +74,8 @@ fpm_common_args = "-f -s dir --log error \
     LOGROTATE_DIR + '/telegraf',
     POSTINST_SCRIPT,
     PREINST_SCRIPT,
+    POSTREMOVE_SCRIPT,
+    PREREMOVE_SCRIPT,
     DESCRIPTION)
 
 targets = {
