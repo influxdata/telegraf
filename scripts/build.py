@@ -411,8 +411,10 @@ def build_packages(build_output, version, pkg_arch, nightly=False, rc=None, iter
                 for b in targets:
                     if p == 'windows':
                         b = b + '.exe'
+                        to = os.path.join(build_root, b)
+                    else:
+                        to = os.path.join(build_root, INSTALL_ROOT_DIR[1:], b)
                     fr = os.path.join(current_location, b)
-                    to = os.path.join(build_root, b)
                     print("\t- [{}][{}] - Moving from '{}' to '{}'".format(p, a, fr, to))
                     copy_file(fr, to)
                 # Package the directory structure
