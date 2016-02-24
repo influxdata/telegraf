@@ -185,25 +185,22 @@ var header = `# Telegraf Configuration
   hostname = ""
 
 
-###############################################################################
-#                                  OUTPUTS                                    #
-###############################################################################
+#
+# OUTPUTS:
+#
 
 `
 
 var pluginHeader = `
-
-###############################################################################
-#                                  INPUTS                                     #
-###############################################################################
-
+#
+# INPUTS:
+#
 `
 
 var serviceInputHeader = `
-
-###############################################################################
-#                              SERVICE INPUTS                                 #
-###############################################################################
+#
+# SERVICE INPUTS:
+#
 `
 
 // PrintSampleConfig prints the sample config
@@ -429,7 +426,6 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		ro.MetricBufferLimit = c.Agent.MetricBufferLimit
 	}
 	ro.FlushBufferWhenFull = c.Agent.FlushBufferWhenFull
-	ro.Quiet = c.Agent.Quiet
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }
@@ -478,18 +474,19 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	return nil
 }
 
-// buildFilter builds a Filter (tagpass/tagdrop/pass/drop) to
+// buildFilter builds a Filter
+// (tagpass/tagdrop/namepass/namedrop/fieldpass/fielddrop) to
 // be inserted into the internal_models.OutputConfig/internal_models.InputConfig to be used for prefix
 // filtering on tags and measurements
 func buildFilter(tbl *ast.Table) internal_models.Filter {
 	f := internal_models.Filter{}
 
-	if node, ok := tbl.Fields["pass"]; ok {
+	if node, ok := tbl.Fields["namepass"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						f.Pass = append(f.Pass, str.Value)
+						f.NamePass = append(f.NamePass, str.Value)
 						f.IsActive = true
 					}
 				}
@@ -497,13 +494,45 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 		}
 	}
 
-	if node, ok := tbl.Fields["drop"]; ok {
+	if node, ok := tbl.Fields["namedrop"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						f.Drop = append(f.Drop, str.Value)
+						f.NameDrop = append(f.NameDrop, str.Value)
 						f.IsActive = true
+					}
+				}
+			}
+		}
+	}
+
+	fields := []string{"pass", "fieldpass"}
+	for _, field := range fields {
+		if node, ok := tbl.Fields[field]; ok {
+			if kv, ok := node.(*ast.KeyValue); ok {
+				if ary, ok := kv.Value.(*ast.Array); ok {
+					for _, elem := range ary.Value {
+						if str, ok := elem.(*ast.String); ok {
+							f.FieldPass = append(f.FieldPass, str.Value)
+							f.IsActive = true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	fields = []string{"drop", "fielddrop"}
+	for _, field := range fields {
+		if node, ok := tbl.Fields[field]; ok {
+			if kv, ok := node.(*ast.KeyValue); ok {
+				if ary, ok := kv.Value.(*ast.Array); ok {
+					for _, elem := range ary.Value {
+						if str, ok := elem.(*ast.String); ok {
+							f.FieldDrop = append(f.FieldDrop, str.Value)
+							f.IsActive = true
+						}
 					}
 				}
 			}
@@ -548,6 +577,10 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 		}
 	}
 
+	delete(tbl.Fields, "namedrop")
+	delete(tbl.Fields, "namepass")
+	delete(tbl.Fields, "fielddrop")
+	delete(tbl.Fields, "fieldpass")
 	delete(tbl.Fields, "drop")
 	delete(tbl.Fields, "pass")
 	delete(tbl.Fields, "tagdrop")
@@ -716,6 +749,13 @@ func buildOutput(name string, tbl *ast.Table) (*internal_models.OutputConfig, er
 	oc := &internal_models.OutputConfig{
 		Name:   name,
 		Filter: buildFilter(tbl),
+	}
+	// Outputs don't support FieldDrop/FieldPass, so set to NameDrop/NamePass
+	if len(oc.Filter.FieldDrop) > 0 {
+		oc.Filter.NameDrop = oc.Filter.FieldDrop
+	}
+	if len(oc.Filter.FieldPass) > 0 {
+		oc.Filter.NamePass = oc.Filter.FieldPass
 	}
 	return oc, nil
 }

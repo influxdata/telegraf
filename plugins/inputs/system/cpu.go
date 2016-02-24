@@ -33,7 +33,7 @@ var sampleConfig = `
   ## Whether to report total system cpu stats or not
   totalcpu = true
   ## Comment this line if you want the raw CPU time metrics
-  drop = ["time_*"]
+  fielddrop = ["time_*"]
 `
 
 func (_ *CPUStats) SampleConfig() string {
@@ -113,6 +113,10 @@ func totalCpuTime(t cpu.CPUTimesStat) float64 {
 
 func init() {
 	inputs.Add("cpu", func() telegraf.Input {
-		return &CPUStats{ps: &systemPS{}}
+		return &CPUStats{
+			PerCPU:   true,
+			TotalCPU: true,
+			ps:       &systemPS{},
+		}
 	})
 }

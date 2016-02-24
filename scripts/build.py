@@ -30,6 +30,7 @@ INIT_SCRIPT = "scripts/init.sh"
 SYSTEMD_SCRIPT = "scripts/telegraf.service"
 LOGROTATE_SCRIPT = "etc/logrotate.d/telegraf"
 DEFAULT_CONFIG = "etc/telegraf.conf"
+DEFAULT_WINDOWS_CONFIG = "etc/telegraf_windows.conf"
 POSTINST_SCRIPT = "scripts/post-install.sh"
 PREINST_SCRIPT = "scripts/pre-install.sh"
 
@@ -70,13 +71,13 @@ targets = {
 
 supported_builds = {
     'darwin': [ "amd64", "i386" ],
-    'windows': [ "amd64", "i386", "arm" ],
+    'windows': [ "amd64", "i386" ],
     'linux': [ "amd64", "i386", "arm" ]
 }
 supported_packages = {
     "darwin": [ "tar", "zip" ],
     "linux": [ "deb", "rpm", "tar", "zip" ],
-    "windows": [ "tar", "zip" ],
+    "windows": [ "zip" ],
 }
 supported_tags = {
     # "linux": {
@@ -287,6 +288,8 @@ def build(version=None,
 
     print("Starting build...")
     for b, c in targets.items():
+        if platform == 'windows':
+            b = b + '.exe'
         print("\t- Building '{}'...".format(os.path.join(outdir, b)))
         build_command = ""
         build_command += "GOOS={} GOARCH={} ".format(platform, arch)
@@ -349,20 +352,25 @@ def create_package_fs(build_root):
         create_dir(os.path.join(build_root, d))
         os.chmod(os.path.join(build_root, d), 0o755)
 
-def package_scripts(build_root):
+def package_scripts(build_root, windows=False):
     print("\t- Copying scripts and sample configuration to build directory")
-    shutil.copyfile(INIT_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]))
-    os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]), 0o644)
-    shutil.copyfile(SYSTEMD_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]))
-    os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]), 0o644)
-    shutil.copyfile(LOGROTATE_SCRIPT, os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"))
-    os.chmod(os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"), 0o644)
-    shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"))
-    os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"), 0o644)
+    if windows:
+        shutil.copyfile(DEFAULT_WINDOWS_CONFIG, os.path.join(build_root, "telegraf.conf"))
+        os.chmod(os.path.join(build_root, "telegraf.conf"), 0o644)
+    else:
+        shutil.copyfile(INIT_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]))
+        os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]), 0o644)
+        shutil.copyfile(SYSTEMD_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]))
+        os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]), 0o644)
+        shutil.copyfile(LOGROTATE_SCRIPT, os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"))
+        os.chmod(os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"), 0o644)
+        shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"))
+        os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"), 0o644)
 
 def go_get():
     print("Retrieving Go dependencies...")
     run("go get github.com/sparrc/gdm")
+    run("gdm restore -f Godeps_windows")
     run("gdm restore")
 
 def generate_md5_from_file(path):
@@ -393,15 +401,18 @@ def build_packages(build_output, version, pkg_arch, nightly=False, rc=None, iter
                 build_root = os.path.join(tmp_build_dir, p, a)
                 # Create directory tree to mimic file system of package
                 create_dir(build_root)
-                create_package_fs(build_root)
-                # Copy in packaging and miscellaneous scripts
-                package_scripts(build_root)
+                if p == 'windows':
+                    package_scripts(build_root, windows=True)
+                else:
+                    create_package_fs(build_root)
+                    # Copy in packaging and miscellaneous scripts
+                    package_scripts(build_root)
                 # Copy newly-built binaries to packaging directory
                 for b in targets:
                     if p == 'windows':
                         b = b + '.exe'
                     fr = os.path.join(current_location, b)
-                    to = os.path.join(build_root, INSTALL_ROOT_DIR[1:], b)
+                    to = os.path.join(build_root, b)
                     print("\t- [{}][{}] - Moving from '{}' to '{}'".format(p, a, fr, to))
                     copy_file(fr, to)
                 # Package the directory structure
@@ -429,34 +440,44 @@ def build_packages(build_output, version, pkg_arch, nightly=False, rc=None, iter
                         a = pkg_arch
                     if a == '386':
                         a = 'i386'
-                    fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
-                        fpm_common_args,
-                        name,
-                        a,
-                        package_type,
-                        package_version,
-                        package_iteration,
-                        build_root,
-                        current_location)
-                    if pkg_arch is not None:
-                        a = saved_a
-                    if package_type == "rpm":
-                        fpm_command += "--depends coreutils "
-                        fpm_command += "--depends lsof"
-                    out = run(fpm_command, shell=True)
-                    matches = re.search(':path=>"(.*)"', out)
-                    outfile = None
-                    if matches is not None:
-                        outfile = matches.groups()[0]
-                    if outfile is None:
-                        print("[ COULD NOT DETERMINE OUTPUT ]")
-                    else:
-                        # Strip nightly version (the unix epoch) from filename
-                        if nightly and package_type in ['deb', 'rpm']:
-                            outfile = rename_file(outfile, outfile.replace("{}-{}".format(version, iteration), "nightly"))
-                        outfiles.append(os.path.join(os.getcwd(), outfile))
-                        # Display MD5 hash for generated package
+                    if package_type == 'zip':
+                        zip_command = "cd {} && zip {}.zip ./*".format(
+                            build_root,
+                            name)
+                        run(zip_command, shell=True)
+                        run("mv {}.zip {}".format(os.path.join(build_root, name), current_location), shell=True)
+                        outfile = os.path.join(current_location, name+".zip")
+                        outfiles.append(outfile)
                         print("\t\tMD5 = {}".format(generate_md5_from_file(outfile)))
+                    else:
+                        fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
+                            fpm_common_args,
+                            name,
+                            a,
+                            package_type,
+                            package_version,
+                            package_iteration,
+                            build_root,
+                            current_location)
+                        if pkg_arch is not None:
+                            a = saved_a
+                        if package_type == "rpm":
+                            fpm_command += "--depends coreutils "
+                            fpm_command += "--depends lsof"
+                        out = run(fpm_command, shell=True)
+                        matches = re.search(':path=>"(.*)"', out)
+                        outfile = None
+                        if matches is not None:
+                            outfile = matches.groups()[0]
+                        if outfile is None:
+                            print("[ COULD NOT DETERMINE OUTPUT ]")
+                        else:
+                            # Strip nightly version (the unix epoch) from filename
+                            if nightly and package_type in ['deb', 'rpm']:
+                                outfile = rename_file(outfile, outfile.replace("{}-{}".format(version, iteration), "nightly"))
+                            outfiles.append(os.path.join(os.getcwd(), outfile))
+                            # Display MD5 hash for generated package
+                            print("\t\tMD5 = {}".format(generate_md5_from_file(outfile)))
         print("")
         if debug:
             print("[DEBUG] package outfiles: {}".format(outfiles))

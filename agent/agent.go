@@ -44,6 +44,8 @@ func NewAgent(config *config.Config) (*Agent, error) {
 // Connect connects to all configured outputs
 func (a *Agent) Connect() error {
 	for _, o := range a.Config.Outputs {
+		o.Quiet = a.Config.Agent.Quiet
+
 		switch ot := o.Output.(type) {
 		case telegraf.ServiceOutput:
 			if err := ot.Start(); err != nil {

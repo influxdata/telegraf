@@ -1,7 +1,6 @@
 package httpjson
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -23,7 +22,8 @@ type HttpJson struct {
 	TagKeys    []string
 	Parameters map[string]string
 	Headers    map[string]string
-	client     HTTPClient
+
+	client HTTPClient
 }
 
 type HTTPClient interface {
@@ -182,15 +182,14 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
 	}
 
-	params := url.Values{}
 	data := url.Values{}
-
 	switch {
 	case h.Method == "GET":
-		requestURL.RawQuery = params.Encode()
+		params := requestURL.Query()
 		for k, v := range h.Parameters {
 			params.Add(k, v)
 		}
+		requestURL.RawQuery = params.Encode()
 
 	case h.Method == "POST":
 		requestURL.RawQuery = ""
@@ -200,7 +199,8 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 	}
 
 	// Create + send request
-	req, err := http.NewRequest(h.Method, requestURL.String(), bytes.NewBufferString(data.Encode()))
+	req, err := http.NewRequest(h.Method, requestURL.String(),
+		strings.NewReader(data.Encode()))
 	if err != nil {
 		return "", -1, err
 	}

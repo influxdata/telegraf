@@ -1,3 +1,31 @@
+## v0.10.5 [unreleased]
+
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+## v0.10.4 [2016-02-24]
+
+### Release Notes
+- The pass/drop parameters have been renamed to fielddrop/fieldpass parameters,
+to more accurately indicate their purpose.
+- There are also now namedrop/namepass parameters for passing/dropping based
+on the metric _name_.
+- Experimental windows builds now available.
+
+### Features
+- [#727](https://github.com/influxdata/telegraf/pull/727): riak input, thanks @jcoene!
+- [#694](https://github.com/influxdata/telegraf/pull/694): DNS Query input, thanks @mjasion!
+- [#724](https://github.com/influxdata/telegraf/pull/724): username matching for procstat input, thanks @zorel!
+- [#736](https://github.com/influxdata/telegraf/pull/736): Ignore dummy filesystems from disk plugin. Thanks @PierreF!
+- [#737](https://github.com/influxdata/telegraf/pull/737): Support multiple fields for statsd input. Thanks @mattheath!
+
+### Bugfixes
+- [#701](https://github.com/influxdata/telegraf/pull/701): output write count shouldnt print in quiet mode.
+- [#746](https://github.com/influxdata/telegraf/pull/746): httpjson plugin: Fix HTTP GET parameters.
+
 ## v0.10.3 [2016-02-18]
 
 ### Release Notes

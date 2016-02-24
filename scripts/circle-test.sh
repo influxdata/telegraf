@@ -70,4 +70,12 @@ exit_if_fail telegraf -config $tmpdir/config.toml \
 
 mv $GOPATH/bin/telegraf $CIRCLE_ARTIFACTS
 
-exit $rc
+eval "git describe --exact-match HEAD"
+if [ $? -eq 0 ]; then
+    unset GOGC
+    tag=$(git describe --exact-match HEAD)
+    echo $tag
+    exit_if_fail ./scripts/build.py --package --version=$tag --platform=linux --arch=all --upload
+    exit_if_fail ./scripts/build.py --package --version=$tag --platform=windows --arch=all --upload
+    mv build $CIRCLE_ARTIFACTS
+fi
