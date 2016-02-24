@@ -6,6 +6,15 @@
 
 ### Bugfixes
 
+## v0.10.4.1
+
+### Release Notes
+- Bug in the build script broke deb and rpm packages.
+
+### Bugfixes
+- [#750](https://github.com/influxdata/telegraf/issues/750): deb package broken
+- [#752](https://github.com/influxdata/telegraf/issues/752): rpm package broken
+
 ## v0.10.4 [2016-02-24]
 
 ### Release Notes
