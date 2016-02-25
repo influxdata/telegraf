@@ -24,6 +24,7 @@ type Mysql struct {
 	GatherBinaryLogs                    bool
 	GatherTableIOWaits                  bool
 	GatherIndexIOWaits                  bool
+	GatherTableSchema                   bool
 }
 
 var sampleConfig = `
@@ -44,6 +45,7 @@ var sampleConfig = `
   GatherBinaryLogs                    = false
   GatherTableIOWaits                  = false
   GatherIndexIOWaits                  = false
+  GatherTableSchema                   = false
 `
 
 var defaultTimeout = time.Second * time.Duration(5)
@@ -448,14 +450,11 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	err = m.gatherTableSchema(db, serv, acc)
-	if err != nil {
-		return err
-	}
-
-	err = m.gatherTableSchema(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherTableSchema {
+		err = m.gatherTableSchema(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -484,7 +483,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			fields[key] = floatVal
 		}
 	}
-	acc.Add("mysql_variables", fields, tags)
+	acc.AddFields("mysql_variables", fields, tags)
 	return nil
 }
 
