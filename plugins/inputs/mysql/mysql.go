@@ -367,6 +367,12 @@ const (
             FROM information_schema.schemata
         WHERE SCHEMA_NAME NOT IN ('mysql', 'performance_schema', 'information_schema')
     `
+	perfSchemaTablesQuery = `
+		SELECT
+			table_name
+			FROM information_schema.tables
+		WHERE table_schema = 'performance_schema' AND table_name = ?
+	`
 )
 
 func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
@@ -847,6 +853,18 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 // the total number and time for SQL and external lock wait events
 // for each table and operation
 func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	// check if table exists,
+	// if performance_schema is not enabled, tables do not exist
+	// then there is no need to scan them
+	var tableName string
+	err := db.QueryRow(perfSchemaTablesQuery, "table_lock_waits_summary_by_table").Scan(&tableName)
+	switch {
+	case err == sql.ErrNoRows:
+		return nil
+	case err != nil:
+		return err
+	}
+
 	rows, err := db.Query(perfTableLockWaitsQuery)
 	if err != nil {
 		return err
