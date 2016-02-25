@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os/exec"
 	"sync"
+	"syscall"
 
 	"github.com/gonuts/go-shellquote"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
 
 const sampleConfig = `
@@ -20,7 +22,7 @@ const sampleConfig = `
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume. This can be "json", "influx", "graphite" or "nagios
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -46,12 +48,32 @@ func NewExec() *Exec {
 }
 
 type Runner interface {
-	Run(*Exec, string) ([]byte, error)
+	Run(*Exec, string, telegraf.Accumulator) ([]byte, error)
 }
 
 type CommandRunner struct{}
 
-func (c CommandRunner) Run(e *Exec, command string) ([]byte, error) {
+func AddNagiosState(exitCode error, acc telegraf.Accumulator) error {
+	nagiosState := 0
+	if exitCode != nil {
+		exiterr, ok := exitCode.(*exec.ExitError)
+		if ok {
+			status, ok := exiterr.Sys().(syscall.WaitStatus)
+			if ok {
+				nagiosState = status.ExitStatus()
+			} else {
+				return fmt.Errorf("exec: unable to get nagios plugin exit code")
+			}
+		} else {
+			return fmt.Errorf("exec: unable to get nagios plugin exit code")
+		}
+	}
+	fields := map[string]interface{}{"state": nagiosState}
+	acc.AddFields("nagios_state", fields, nil)
+	return nil
+}
+
+func (c CommandRunner) Run(e *Exec, command string, acc telegraf.Accumulator) ([]byte, error) {
 	split_cmd, err := shellquote.Split(command)
 	if err != nil || len(split_cmd) == 0 {
 		return nil, fmt.Errorf("exec: unable to parse command, %s", err)
@@ -63,7 +85,17 @@ func (c CommandRunner) Run(e *Exec, command string) ([]byte, error) {
 	cmd.Stdout = &out
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("exec: %s for command '%s'", err, command)
+		switch e.parser.(type) {
+		case *nagios.NagiosParser:
+			AddNagiosState(err, acc)
+		default:
+			return nil, fmt.Errorf("exec: %s for command '%s'", err, command)
+		}
+	} else {
+		switch e.parser.(type) {
+		case *nagios.NagiosParser:
+			AddNagiosState(nil, acc)
+		}
 	}
 
 	return out.Bytes(), nil
@@ -72,7 +104,7 @@ func (c CommandRunner) Run(e *Exec, command string) ([]byte, error) {
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator) {
 	defer e.wg.Done()
 
-	out, err := e.runner.Run(e, command)
+	out, err := e.runner.Run(e, command, acc)
 	if err != nil {
 		e.errChan <- err
 		return

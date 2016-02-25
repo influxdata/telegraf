@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -57,7 +58,7 @@ func newRunnerMock(out []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(e *Exec, command string) ([]byte, error) {
+func (r runnerMock) Run(e *Exec, command string, acc telegraf.Accumulator) ([]byte, error) {
 	if r.err != nil {
 		return nil, r.err
 	}

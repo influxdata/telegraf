@@ -326,3 +326,27 @@ There are many more options available,
     "measurement*"
   ]
 ```
+
+## Nagios:
+
+There are no additional configuration options for Nagios line-protocol. The
+metrics are parsed directly into Telegraf metrics.
+
+Note: Nagios Input Data Formats is only supported in `exec` input plugin.
+
+#### Nagios Configuration:
+
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/usr/lib/nagios/plugins/check_load", "-w 5,6,7 -c 7,8,9"]
+
+  ## measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
+
+  ## Data format to consume. This can be "json", "influx", "graphite" or "nagios"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "nagios"
+```
