@@ -190,7 +190,7 @@ Currently implemented sources:
 * docker
 * dovecot
 * elasticsearch
-* exec (generic executable plugin, support JSON, influx and graphite)
+* exec (generic executable plugin, support JSON, influx, graphite and nagios)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * influxdb
