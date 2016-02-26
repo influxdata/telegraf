@@ -74,6 +74,7 @@ on the availability of per-cpu stats on your system.
     - usage_in_usermode
     - usage_system
     - usage_total
+    - usage_percent
 - docker_net
     - rx_dropped
     - rx_bytes
