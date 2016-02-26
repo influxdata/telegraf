@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/serializers/graphite"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,6 +26,14 @@ func fakeLibrato() *Librato {
 	l.ApiUser = fakeUser
 	l.ApiToken = fakeToken
 	return l
+}
+
+func BuildTags(t *testing.T) {
+	testMetric := testutil.TestMetric(0.0, "test1")
+	graphiteSerializer := graphite.GraphiteSerializer{}
+	tags, err := graphiteSerializer.Serialize(testMetric)
+	fmt.Printf("Tags: %v", tags)
+	require.NoError(t, err)
 }
 
 func TestUriOverride(t *testing.T) {
@@ -78,7 +86,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(0.0, "test1"),
 			&Gauge{
-				Name:        "test1",
+				Name:        "value1.test1.value",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       0.0,
 			},
@@ -87,7 +95,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(1.0, "test2"),
 			&Gauge{
-				Name:        "test2",
+				Name:        "value1.test2.value",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       1.0,
 			},
@@ -96,7 +104,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(10, "test3"),
 			&Gauge{
-				Name:        "test3",
+				Name:        "value1.test3.value",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       10.0,
 			},
@@ -105,7 +113,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(int32(112345), "test4"),
 			&Gauge{
-				Name:        "test4",
+				Name:        "value1.test4.value",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       112345.0,
 			},
@@ -114,7 +122,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(int64(112345), "test5"),
 			&Gauge{
-				Name:        "test5",
+				Name:        "value1.test5.value",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       112345.0,
 			},
@@ -123,7 +131,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(float32(11234.5), "test6"),
 			&Gauge{
-				Name:        "test6",
+				Name:        "value1.test6.value",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       11234.5,
 			},
@@ -132,7 +140,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric("11234.5", "test7"),
 			&Gauge{
-				Name:        "test7",
+				Name:        "value1.test7.value",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       11234.5,
 			},
@@ -163,13 +171,13 @@ func TestBuildGauge(t *testing.T) {
 func TestBuildGaugeWithSource(t *testing.T) {
 	pt1, _ := telegraf.NewMetric(
 		"test1",
-		map[string]string{"hostname": "192.168.0.1"},
+		map[string]string{"hostname": "192.168.0.1", "tag1": "value1"},
 		map[string]interface{}{"value": 0.0},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	pt2, _ := telegraf.NewMetric(
 		"test2",
-		map[string]string{"hostnam": "192.168.0.1"},
+		map[string]string{"hostnam": "192.168.0.1", "tag1": "value1"},
 		map[string]interface{}{"value": 1.0},
 		time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -182,7 +190,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		{
 			pt1,
 			&Gauge{
-				Name:        "test1",
+				Name:        "192_168_0_1.value1.test1.value",
 				MeasureTime: time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       0.0,
 				Source:      "192.168.0.1",
@@ -192,7 +200,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		{
 			pt2,
 			&Gauge{
-				Name:        "test2",
+				Name:        "192_168_0_1.value1.test1.value",
 				MeasureTime: time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       1.0,
 			},
