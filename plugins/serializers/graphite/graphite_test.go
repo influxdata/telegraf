@@ -119,3 +119,62 @@ func TestSerializeMetricPrefix(t *testing.T) {
 	sort.Strings(expS)
 	assert.Equal(t, expS, mS)
 }
+
+func TestSerializeBucketNameNoHost(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": float64(91.5),
+	}
+	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{}
+	mS := s.SerializeBucketName(m, "usage_idle")
+
+	expS := fmt.Sprintf("cpu0.us-west-2.cpu.usage_idle")
+	assert.Equal(t, expS, mS)
+}
+
+func TestSerializeBucketNameHost(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": float64(91.5),
+	}
+	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{}
+	mS := s.SerializeBucketName(m, "usage_idle")
+
+	expS := fmt.Sprintf("localhost.cpu0.us-west-2.cpu.usage_idle")
+	assert.Equal(t, expS, mS)
+}
+
+func TestSerializeBucketNamePrefix(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": float64(91.5),
+	}
+	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{Prefix: "prefix"}
+	mS := s.SerializeBucketName(m, "usage_idle")
+
+	expS := fmt.Sprintf("prefix.localhost.cpu0.us-west-2.cpu.usage_idle")
+	assert.Equal(t, expS, mS)
+}
