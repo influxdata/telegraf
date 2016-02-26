@@ -129,6 +129,7 @@ func (i *InfluxDB) Connect() error {
 
 			if e != nil {
 				log.Println("Database creation failed: " + e.Error())
+				continue
 			}
 
 			conns = append(conns, c)
@@ -156,6 +157,12 @@ func (i *InfluxDB) Description() string {
 // Choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
+	if len(i.conns) == 0 {
+		err := i.Connect()
+		if err != nil {
+			return err
+		}
+	}
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
 		Database:  i.Database,
 		Precision: i.Precision,
