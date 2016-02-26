@@ -5,6 +5,7 @@
 ### Features
 
 ### Bugfixes
+- [#748](https://github.com/influxdata/telegraf/issues/748): Fix sensor plugin split on ":"
 
 ## v0.10.4.1
 
