@@ -14,37 +14,47 @@ type GraphiteSerializer struct {
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
 	out := []string{}
-	// Get name
-	name := metric.Name()
+
 	// Convert UnixNano to Unix timestamps
 	timestamp := metric.UnixNano() / 1000000000
-	tag_str := buildTags(metric)
 
 	for field_name, value := range metric.Fields() {
 		// Convert value
 		value_str := fmt.Sprintf("%#v", value)
 		// Write graphite metric
 		var graphitePoint string
-		if name == field_name {
-			graphitePoint = fmt.Sprintf("%s.%s %s %d",
-				tag_str,
-				strings.Replace(name, ".", "_", -1),
-				value_str,
-				timestamp)
-		} else {
-			graphitePoint = fmt.Sprintf("%s.%s.%s %s %d",
-				tag_str,
-				strings.Replace(name, ".", "_", -1),
-				strings.Replace(field_name, ".", "_", -1),
-				value_str,
-				timestamp)
-		}
-		if s.Prefix != "" {
-			graphitePoint = fmt.Sprintf("%s.%s", s.Prefix, graphitePoint)
-		}
+		graphitePoint = fmt.Sprintf("%s %s %d",
+			s.SerializeBucketName(metric, field_name),
+			value_str,
+			timestamp)
 		out = append(out, graphitePoint)
 	}
 	return out, nil
+}
+
+func (s *GraphiteSerializer) SerializeBucketName(metric telegraf.Metric, field_name string) string {
+	// Get the metric name
+	name := metric.Name()
+
+	// Convert UnixNano to Unix timestamps
+	tag_str := buildTags(metric)
+
+	// Write graphite metric
+	var serializedBucketName string
+	if name == field_name {
+		serializedBucketName = fmt.Sprintf("%s.%s",
+			tag_str,
+			strings.Replace(name, ".", "_", -1))
+	} else {
+		serializedBucketName = fmt.Sprintf("%s.%s.%s",
+			tag_str,
+			strings.Replace(name, ".", "_", -1),
+			strings.Replace(field_name, ".", "_", -1))
+	}
+	if s.Prefix != "" {
+		serializedBucketName = fmt.Sprintf("%s.%s", s.Prefix, serializedBucketName)
+	}
+	return serializedBucketName
 }
 
 func buildTags(metric telegraf.Metric) string {
