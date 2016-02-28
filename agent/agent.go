@@ -121,7 +121,7 @@ func (a *Agent) gatherParallel(metricC chan telegraf.Metric) error {
 
 			acc := NewAccumulator(input.Config, metricC)
 			acc.SetDebug(a.Config.Agent.Debug)
-			acc.setDefaultTags(a.Config.Tags)
+			acc.SetDefaultTags(a.Config.Tags)
 
 			if jitter != 0 {
 				nanoSleep := rand.Int63n(jitter)
@@ -172,7 +172,7 @@ func (a *Agent) gatherSeparate(
 
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetDebug(a.Config.Agent.Debug)
-		acc.setDefaultTags(a.Config.Tags)
+		acc.SetDefaultTags(a.Config.Tags)
 
 		if err := input.Input.Gather(acc); err != nil {
 			log.Printf("Error in input [%s]: %s", input.Name, err)
@@ -287,9 +287,9 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 	}
 }
 
-// jitterInterval applies the the interval jitter to the flush interval using
+// JitterInterval applies the the interval jitter to the flush interval using
 // crypto/rand number generator
-func jitterInterval(ininterval, injitter time.Duration) time.Duration {
+func JitterInterval(ininterval, injitter time.Duration) time.Duration {
 	var jitter int64
 	outinterval := ininterval
 	if injitter.Nanoseconds() != 0 {
@@ -312,7 +312,7 @@ func jitterInterval(ininterval, injitter time.Duration) time.Duration {
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 
-	a.Config.Agent.FlushInterval.Duration = jitterInterval(
+	a.Config.Agent.FlushInterval.Duration = JitterInterval(
 		a.Config.Agent.FlushInterval.Duration,
 		a.Config.Agent.FlushJitter.Duration)
 
@@ -330,7 +330,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		case telegraf.ServiceInput:
 			acc := NewAccumulator(input.Config, metricC)
 			acc.SetDebug(a.Config.Agent.Debug)
-			acc.setDefaultTags(a.Config.Tags)
+			acc.SetDefaultTags(a.Config.Tags)
 			if err := p.Start(acc); err != nil {
 				log.Printf("Service for input %s failed to start, exiting\n%s\n",
 					input.Name, err.Error())

@@ -31,6 +31,7 @@ type Config struct {
 	OutputFilters []string
 
 	Agent   *AgentConfig
+	Poller  *PollerConfig
 	Inputs  []*internal_models.RunningInput
 	Outputs []*internal_models.RunningOutput
 }
@@ -41,6 +42,11 @@ func NewConfig() *Config {
 		Agent: &AgentConfig{
 			Interval:      internal.Duration{Duration: 10 * time.Second},
 			RoundInterval: true,
+			FlushInterval: internal.Duration{Duration: 10 * time.Second},
+			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
+		},
+		// Poller defaults:
+		Poller: &PollerConfig{
 			FlushInterval: internal.Duration{Duration: 10 * time.Second},
 			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
 		},
@@ -92,6 +98,40 @@ type AgentConfig struct {
 	// compatability
 	UTC       bool `toml:"utc"`
 	Precision string
+
+	// Debug is the option for running in debug mode
+	Debug bool
+
+	// Quiet is the option for running in quiet mode
+	Quiet    bool
+	Hostname string
+}
+
+type PollerConfig struct {
+	// Rabbitmq url amqp://guest:guest@localhost:5672/
+	AMQPUrl string `toml:"AMQPurl"`
+
+	// Rabbitmq labels
+	AMQPlabels []string `toml:"AMQPlabels"`
+
+	// FlushInterval is the Interval at which to flush data
+	FlushInterval internal.Duration
+
+	// FlushJitter Jitters the flush interval by a random amount.
+	// This is primarily to avoid large write spikes for users running a large
+	// number of telegraf instances.
+	// ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+	FlushJitter internal.Duration
+
+	// MetricBufferLimit is the max number of metrics that each output plugin
+	// will cache. The buffer is cleared when a successful write occurs. When
+	// full, the oldest metrics will be overwritten.
+	MetricBufferLimit int
+
+	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
+	// it fills up, regardless of FlushInterval. Setting this option to true
+	// does _not_ deactivate FlushInterval.
+	FlushBufferWhenFull bool
 
 	// Debug is the option for running in debug mode
 	Debug bool
@@ -339,6 +379,11 @@ func (c *Config) LoadConfig(path string) error {
 				log.Printf("Could not parse [agent] config\n")
 				return err
 			}
+		case "poller":
+			if err = config.UnmarshalTable(subTable, c.Poller); err != nil {
+				log.Printf("Could not parse [poller] config\n")
+				return err
+			}
 		case "global_tags", "tags":
 			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("Could not parse [global_tags] config\n")
@@ -449,14 +494,14 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// arbitrary types of input, so build the parser and set it.
 	switch t := input.(type) {
 	case parsers.ParserInput:
-		parser, err := buildParser(name, table)
+		parser, err := BuildParser(name, table)
 		if err != nil {
 			return err
 		}
 		t.SetParser(parser)
 	}
 
-	pluginConfig, err := buildInput(name, table)
+	pluginConfig, err := BuildInput(name, table)
 	if err != nil {
 		return err
 	}
@@ -588,10 +633,10 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 	return f
 }
 
-// buildInput parses input specific items from the ast.Table,
+// BuildInput parses input specific items from the ast.Table,
 // builds the filter and returns a
 // internal_models.InputConfig to be inserted into internal_models.RunningInput
-func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, error) {
+func BuildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, error) {
 	cp := &internal_models.InputConfig{Name: name}
 	if node, ok := tbl.Fields["interval"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -648,10 +693,10 @@ func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, erro
 	return cp, nil
 }
 
-// buildParser grabs the necessary entries from the ast.Table for creating
+// BuildParser grabs the necessary entries from the ast.Table for creating
 // a parsers.Parser object, and creates it, which can then be added onto
 // an Input object.
-func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
+func BuildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	c := &parsers.Config{}
 
 	if node, ok := tbl.Fields["data_format"]; ok {

@@ -165,7 +165,7 @@ func (ac *accumulator) SetDebug(debug bool) {
 	ac.debug = debug
 }
 
-func (ac *accumulator) setDefaultTags(tags map[string]string) {
+func (ac *accumulator) SetDefaultTags(tags map[string]string) {
 	ac.defaultTags = tags
 }
 

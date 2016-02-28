@@ -15,6 +15,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	"github.com/influxdata/telegraf/poller"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -191,34 +192,63 @@ func main() {
 		if len(c.Outputs) == 0 {
 			log.Fatalf("Error: no outputs found, did you provide a valid config file?")
 		}
-		if len(c.Inputs) == 0 {
-			log.Fatalf("Error: no inputs found, did you provide a valid config file?")
+
+		if len(c.Inputs) == 0 && c.Poller.AMQPUrl == "" {
+			log.Fatalf("Error: no inputs found and poller node disabled, did you provide a valid config file?")
 		}
 
-		ag, err := agent.NewAgent(c)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if *fDebug {
-			ag.Config.Agent.Debug = true
-		}
-
-		if *fQuiet {
-			ag.Config.Agent.Quiet = true
-		}
-
-		if *fTest {
-			err = ag.Test()
+		// TODO: Do we want agent and poller mode enabled in the same time ?
+		var ag *agent.Agent
+		var po *poller.Poller
+		if c.Poller.AMQPUrl == "" {
+			// Agent
+			if c.Agent == nil {
+				log.Fatal("err")
+			}
+			ag, err = agent.NewAgent(c)
 			if err != nil {
 				log.Fatal(err)
 			}
-			return
-		}
 
-		err = ag.Connect()
-		if err != nil {
-			log.Fatal(err)
+			if *fDebug {
+				ag.Config.Agent.Debug = true
+			}
+
+			if *fQuiet {
+				ag.Config.Agent.Quiet = true
+			}
+
+			if *fTest {
+				err = ag.Test()
+				if err != nil {
+					log.Fatal(err)
+				}
+				return
+			}
+
+			err = ag.Connect()
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			// Poller
+			po, err = poller.NewPoller(c)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if *fDebug {
+				po.Config.Poller.Debug = true
+			}
+
+			if *fQuiet {
+				po.Config.Poller.Quiet = true
+			}
+
+			err = po.Connect()
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		shutdown := make(chan struct{})
@@ -253,7 +283,11 @@ func main() {
 			f.Close()
 		}
 
-		ag.Run(shutdown)
+		if c.Poller.AMQPUrl == "" {
+			ag.Run(shutdown)
+		} else {
+			po.Run(shutdown)
+		}
 	}
 }
 

@@ -103,7 +103,7 @@ func TestAgent_LoadOutput(t *testing.T) {
 }
 
 func TestAgent_ZeroJitter(t *testing.T) {
-	flushinterval := jitterInterval(time.Duration(10*time.Second),
+	flushinterval := JitterInterval(time.Duration(10*time.Second),
 		time.Duration(0*time.Second))
 
 	actual := flushinterval.Nanoseconds()
@@ -119,7 +119,7 @@ func TestAgent_ZeroInterval(t *testing.T) {
 	max := time.Duration(5 * time.Second).Nanoseconds()
 
 	for i := 0; i < 1000; i++ {
-		flushinterval := jitterInterval(time.Duration(0*time.Second),
+		flushinterval := JitterInterval(time.Duration(0*time.Second),
 			time.Duration(5*time.Second))
 		actual := flushinterval.Nanoseconds()
 
@@ -135,7 +135,7 @@ func TestAgent_ZeroInterval(t *testing.T) {
 }
 
 func TestAgent_ZeroBoth(t *testing.T) {
-	flushinterval := jitterInterval(time.Duration(0*time.Second),
+	flushinterval := JitterInterval(time.Duration(0*time.Second),
 		time.Duration(0*time.Second))
 
 	actual := flushinterval
@@ -150,7 +150,7 @@ func TestAgent_JitterMax(t *testing.T) {
 	max := time.Duration(32 * time.Second).Nanoseconds()
 
 	for i := 0; i < 1000; i++ {
-		flushinterval := jitterInterval(time.Duration(30*time.Second),
+		flushinterval := JitterInterval(time.Duration(30*time.Second),
 			time.Duration(2*time.Second))
 		actual := flushinterval.Nanoseconds()
 		if actual > max {
@@ -164,7 +164,7 @@ func TestAgent_JitterMin(t *testing.T) {
 	min := time.Duration(30 * time.Second).Nanoseconds()
 
 	for i := 0; i < 1000; i++ {
-		flushinterval := jitterInterval(time.Duration(30*time.Second),
+		flushinterval := JitterInterval(time.Duration(30*time.Second),
 			time.Duration(2*time.Second))
 		actual := flushinterval.Nanoseconds()
 		if actual < min {
