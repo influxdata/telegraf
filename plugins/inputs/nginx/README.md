@@ -1,7 +1,5 @@
 # Telegraf Plugin: Nginx
 
-The example plugin gathers metrics about example things
-
 ### Configuration:
 
 ```
@@ -13,9 +11,7 @@ The example plugin gathers metrics about example things
 
 ### Measurements & Fields:
 
-- measurement
-    - port 
-    - server
+- Measurement
     - accepts
     - active
     - handled
