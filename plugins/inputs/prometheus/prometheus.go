@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type Prometheus struct {
@@ -51,8 +52,17 @@ func (g *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
+var tr = &http.Transport{
+	ResponseHeaderTimeout: time.Duration(3 * time.Second),
+}
+
+var client = &http.Client{
+	Transport: tr,
+	Timeout:   time.Duration(4 * time.Second),
+}
+
 func (g *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}

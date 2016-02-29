@@ -67,6 +67,9 @@ func (z *Zookeeper) gatherServer(address string, acc telegraf.Accumulator) error
 	}
 	defer c.Close()
 
+	// Extend connection
+	c.SetDeadline(time.Now().Add(defaultTimeout))
+
 	fmt.Fprintf(c, "%s\n", "mntr")
 	rdr := bufio.NewReader(c)
 	scanner := bufio.NewScanner(rdr)

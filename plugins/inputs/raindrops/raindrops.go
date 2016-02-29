@@ -177,8 +177,11 @@ func (r *Raindrops) getTags(addr *url.URL) map[string]string {
 
 func init() {
 	inputs.Add("raindrops", func() telegraf.Input {
-		return &Raindrops{http_client: &http.Client{Transport: &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-		}}}
+		return &Raindrops{http_client: &http.Client{
+			Transport: &http.Transport{
+				ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			},
+			Timeout: time.Duration(4 * time.Second),
+		}}
 	})
 }
