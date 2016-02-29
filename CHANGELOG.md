@@ -4,6 +4,7 @@
 
 ### Features
 - [#692](https://github.com/influxdata/telegraf/pull/770): Support InfluxDB retention policies
+- [#771](https://github.com/influxdata/telegraf/pull/771): Default timeouts for input plugns. Thanks @PierreF!
 
 ### Bugfixes
 - [#748](https://github.com/influxdata/telegraf/issues/748): Fix sensor plugin split on ":"
