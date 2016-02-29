@@ -2,8 +2,10 @@ package mysql
 
 import (
 	"database/sql"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/influxdata/telegraf"
@@ -25,6 +27,8 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
 `
+
+var defaultTimeout = time.Second * time.Duration(5)
 
 func (m *Mysql) SampleConfig() string {
 	return sampleConfig
@@ -122,6 +126,10 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		serv = ""
 	}
 
+	serv, err := dsnAddTimeout(serv)
+	if err != nil {
+		return err
+	}
 	db, err := sql.Open("mysql", serv)
 	if err != nil {
 		return err
@@ -205,6 +213,21 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func dsnAddTimeout(dsn string) (string, error) {
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", err
+	}
+	v := u.Query()
+
+	// Only override timeout if not already defined
+	if _, ok := v["timeout"]; ok == false {
+		v.Add("timeout", defaultTimeout.String())
+		u.RawQuery = v.Encode()
+	}
+	return u.String(), nil
 }
 
 func init() {

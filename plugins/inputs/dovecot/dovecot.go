@@ -34,6 +34,8 @@ var sampleConfig = `
   domains = []
 `
 
+var defaultTimeout = time.Second * time.Duration(5)
+
 func (d *Dovecot) SampleConfig() string { return sampleConfig }
 
 const defaultPort = "24242"
@@ -74,11 +76,14 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, doms map[s
 		return fmt.Errorf("Error: %s on url %s\n", err, addr)
 	}
 
-	c, err := net.Dial("tcp", addr)
+	c, err := net.DialTimeout("tcp", addr, defaultTimeout)
 	if err != nil {
 		return fmt.Errorf("Unable to connect to dovecot server '%s': %s", addr, err)
 	}
 	defer c.Close()
+
+	// Extend connection
+	c.SetDeadline(time.Now().Add(defaultTimeout))
 
 	c.Write([]byte("EXPORT\tdomain\n\n"))
 	var buf bytes.Buffer

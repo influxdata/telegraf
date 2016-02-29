@@ -244,6 +244,11 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 
 func init() {
 	inputs.Add("httpjson", func() telegraf.Input {
-		return &HttpJson{client: RealHTTPClient{client: &http.Client{}}}
+		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		client := &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(4 * time.Second),
+		}
+		return &HttpJson{client: RealHTTPClient{client: client}}
 	})
 }
