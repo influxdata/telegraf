@@ -174,6 +174,7 @@ func main() {
 		}
 
 		ag, err := agent.NewAgent(c)
+		ag.Version = Version
 		if err != nil {
 			log.Fatal(err)
 		}

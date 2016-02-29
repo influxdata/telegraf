@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/services/enterprise"
 
 	"github.com/influxdata/config"
 	"github.com/naoina/toml/ast"
@@ -99,6 +100,8 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet    bool
 	Hostname string
+
+	Enterprise enterprise.Config
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -184,6 +187,19 @@ var header = `# Telegraf Configuration
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
 
+  ### Enterprise Configuration
+  # [agent.enterprise]
+  
+  ### Controls port where enterprise administration interface will start
+  # config_port = 5050
+
+    # [[agent.enterprise.hosts]]
+    # url = "http://localhost:3000"
+
+    ### If reporting to more than one enterprise host, this indicates
+    ### which will be the primary enterprise host. Only one should be
+    ### the primary.
+    # primary = true
 
 #
 # OUTPUTS:
