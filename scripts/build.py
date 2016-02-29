@@ -72,12 +72,14 @@ targets = {
 supported_builds = {
     'darwin': [ "amd64", "i386" ],
     'windows': [ "amd64", "i386" ],
-    'linux': [ "amd64", "i386", "arm" ]
+    'linux': [ "amd64", "i386", "arm" ],
+    'freebsd': [ "amd64" ]
 }
 supported_packages = {
     "darwin": [ "tar", "zip" ],
     "linux": [ "deb", "rpm", "tar", "zip" ],
     "windows": [ "zip" ],
+    'freebsd': [ "tar" ]
 }
 supported_tags = {
     # "linux": {
