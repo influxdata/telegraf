@@ -216,6 +216,12 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 }
 
 func dsnAddTimeout(dsn string) (string, error) {
+
+	// DSN "?timeout=5s" is not valid, but "/?timeout=5s" is valid ("" and "/"
+	// are the same DSN)
+	if dsn == "" {
+		dsn = "/"
+	}
 	u, err := url.Parse(dsn)
 	if err != nil {
 		return "", err
