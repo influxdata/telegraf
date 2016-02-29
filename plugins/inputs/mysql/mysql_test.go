@@ -113,7 +113,7 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		output, _ := parseDSN(test.input)
+		output, _ := dsnAddTimeout(test.input)
 		if output != test.output {
 			t.Errorf("Expected %s, got %s\n", test.output, output)
 		}
