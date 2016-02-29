@@ -34,6 +34,9 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 	return res, nil
 }
 
+func (t *transportMock) CancelRequest(_ *http.Request) {
+}
+
 func TestElasticsearch(t *testing.T) {
 	es := NewElasticsearch()
 	es.Servers = []string{"http://example.com:9200"}

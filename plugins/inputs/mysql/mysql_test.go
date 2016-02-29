@@ -92,7 +92,7 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 	}{
 		{
 			"",
-			"/?timeout=5",
+			"/?timeout=5s",
 		},
 		{
 			"tcp(192.168.1.1:3306)/",
