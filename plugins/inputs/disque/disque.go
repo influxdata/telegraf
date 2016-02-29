@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -29,6 +30,8 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   servers = ["localhost"]
 `
+
+var defaultTimeout = 5 * time.Second
 
 func (r *Disque) SampleConfig() string {
 	return sampleConfig
@@ -107,7 +110,7 @@ func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 			addr.Host = addr.Host + ":" + defaultPort
 		}
 
-		c, err := net.Dial("tcp", addr.Host)
+		c, err := net.DialTimeout("tcp", addr.Host, defaultTimeout)
 		if err != nil {
 			return fmt.Errorf("Unable to connect to disque server '%s': %s", addr.Host, err)
 		}
@@ -131,6 +134,9 @@ func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 
 		g.c = c
 	}
+
+	// Extend connection
+	g.c.SetDeadline(time.Now().Add(defaultTimeout))
 
 	g.c.Write([]byte("info\r\n"))
 

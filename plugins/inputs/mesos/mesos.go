@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -261,6 +262,15 @@ func (m *Mesos) removeGroup(j *map[string]interface{}) {
 	}
 }
 
+var tr = &http.Transport{
+	ResponseHeaderTimeout: time.Duration(3 * time.Second),
+}
+
+var client = &http.Client{
+	Transport: tr,
+	Timeout:   time.Duration(4 * time.Second),
+}
+
 // This should not belong to the object
 func (m *Mesos) gatherMetrics(a string, acc telegraf.Accumulator) error {
 	var jsonOut map[string]interface{}
@@ -282,7 +292,7 @@ func (m *Mesos) gatherMetrics(a string, acc telegraf.Accumulator) error {
 
 	ts := strconv.Itoa(m.Timeout) + "ms"
 
-	resp, err := http.Get("http://" + a + "/metrics/snapshot?timeout=" + ts)
+	resp, err := client.Get("http://" + a + "/metrics/snapshot?timeout=" + ts)
 
 	if err != nil {
 		return err

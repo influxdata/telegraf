@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -20,7 +21,12 @@ type Riak struct {
 
 // NewRiak return a new instance of Riak with a default http client
 func NewRiak() *Riak {
-	return &Riak{client: http.DefaultClient}
+	tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   time.Duration(4 * time.Second),
+	}
+	return &Riak{client: client}
 }
 
 // Type riakStats represents the data that is received from Riak

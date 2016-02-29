@@ -129,8 +129,11 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 
 func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if g.client == nil {
-
-		client := &http.Client{}
+		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		client := &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(4 * time.Second),
+		}
 		g.client = client
 	}
 
