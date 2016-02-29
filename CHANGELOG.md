@@ -3,6 +3,7 @@
 ### Release Notes
 
 ### Features
+- [#692](https://github.com/influxdata/telegraf/pull/770): Support InfluxDB retention policies
 
 ### Bugfixes
 - [#748](https://github.com/influxdata/telegraf/issues/748): Fix sensor plugin split on ":"
