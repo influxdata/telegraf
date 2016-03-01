@@ -54,7 +54,7 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 
 	require.NoError(t, p.Gather(&acc))
 	for _, e := range expected {
-		acc.AssertContainsFields(t, "prometheus_"+e.name,
+		acc.AssertContainsFields(t, e.name,
 			map[string]interface{}{"value": e.value})
 	}
 
@@ -84,7 +84,7 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 
 	require.NoError(t, p.Gather(&acc))
 	for _, e := range expected2 {
-		acc.AssertContainsFields(t, "prometheus_"+e.name,
+		acc.AssertContainsFields(t, e.name,
 			map[string]interface{}{"value": e.value})
 	}
 }

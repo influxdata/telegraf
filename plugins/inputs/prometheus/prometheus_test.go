@@ -40,16 +40,6 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	err := p.Gather(&acc)
 	require.NoError(t, err)
 
-	expected := []struct {
-		name  string
-		value float64
-		tags  map[string]string
-	}{
-		{"prometheus_go_gc_duration_seconds_count", 7, map[string]string{}},
-		{"prometheus_go_goroutines", 15, map[string]string{}},
-	}
-
-	for _, e := range expected {
-		assert.True(t, acc.HasFloatField(e.name, "value"))
-	}
+	assert.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
+	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 }
