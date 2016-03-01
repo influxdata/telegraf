@@ -5,11 +5,12 @@
 ### Features
 - [#692](https://github.com/influxdata/telegraf/pull/770): Support InfluxDB retention policies
 - [#771](https://github.com/influxdata/telegraf/pull/771): Default timeouts for input plugns. Thanks @PierreF!
+- [#758](https://github.com/influxdata/telegraf/pull/758): UDP Listener input plugin, thanks @whatyouhide!
 
 ### Bugfixes
 - [#748](https://github.com/influxdata/telegraf/issues/748): Fix sensor plugin split on ":"
 - [#722](https://github.com/influxdata/telegraf/pull/722): Librato output plugin fixes. Thanks @chrusty!
-- [#745](https://github.com/influxdata/telegraf/issues/745): Fix Telegraf toml parse panic on large config files.
+- [#745](https://github.com/influxdata/telegraf/issues/745): Fix Telegraf toml parse panic on large config files. Thanks @titilambert!
 
 ## v0.10.4.1
 
