@@ -16,6 +16,7 @@
 - github.com/hashicorp/go-msgpack [BSD LICENSE](https://github.com/hashicorp/go-msgpack/blob/master/LICENSE)
 - github.com/hashicorp/raft [MPL LICENSE](https://github.com/hashicorp/raft/blob/master/LICENSE)
 - github.com/hashicorp/raft-boltdb [MPL LICENSE](https://github.com/hashicorp/raft-boltdb/blob/master/LICENSE)
+- github.com/hpcloud/tail [MIT LICENSE](https://github.com/hpcloud/tail/blob/master/LICENSE.txt)
 - github.com/lib/pq [MIT LICENSE](https://github.com/lib/pq/blob/master/LICENSE.md)
 - github.com/matttproud/golang_protobuf_extensions [APACHE LICENSE](https://github.com/matttproud/golang_protobuf_extensions/blob/master/LICENSE)
 - github.com/naoina/go-stringutil [MIT LICENSE](https://github.com/naoina/go-stringutil/blob/master/LICENSE)

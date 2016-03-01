@@ -701,12 +701,127 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["time_label"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.TimeLabel = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["time_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.TimeFormat = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["str_field_labels"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.StrFieldLabels = append(c.StrFieldLabels, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["int_field_labels"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.IntFieldLabels = append(c.IntFieldLabels, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["float_field_labels"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.FloatFieldLabels = append(c.FloatFieldLabels, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["bool_field_labels"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.BoolFieldLabels = append(c.BoolFieldLabels, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["tag_labels"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.TagLabels = append(c.TagLabels, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["duplicate_points_modifier_method"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DuplicatePointsModifierMethod = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["duplicate_points_increment_duration"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				c.DuplicatePointsIncrementDuration = dur
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["duplicate_points_modifier_uniq_tag"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DuplicatePointsModifierUniqTag = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
+	delete(tbl.Fields, "time_label")
+	delete(tbl.Fields, "time_format")
+	delete(tbl.Fields, "str_field_labels")
+	delete(tbl.Fields, "int_field_labels")
+	delete(tbl.Fields, "float_field_labels")
+	delete(tbl.Fields, "bool_field_labels")
+	delete(tbl.Fields, "tag_labels")
+	delete(tbl.Fields, "duplicate_points_modifier_method")
+	delete(tbl.Fields, "duplicate_points_increment_duration")
+	delete(tbl.Fields, "duplicate_points_modifier_uniq_tag")
 
 	return parsers.NewParser(c)
 }
