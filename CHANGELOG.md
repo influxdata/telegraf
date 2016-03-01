@@ -1,6 +1,7 @@
 ## v0.11.2 [unreleased]
 
 ### Features
+- [#707](https://github.com/influxdata/telegraf/pull/707): Improved prometheus plugin. Thanks @titilambert!
 
 ### Bugfixes
 
