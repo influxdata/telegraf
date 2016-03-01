@@ -32,7 +32,7 @@ var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
 
 const sampleConfig = `
   ## Address and port to host UDP listener on
-  service_address = ":8125"
+  service_address = ":8092"
 
   ## Number of UDP messages allowed to queue up. Once filled, the
   ## UDP listener will start dropping packets.
@@ -40,7 +40,7 @@ const sampleConfig = `
 
   ## UDP packet size for the server to listen for. This will depend
   ## on the size of the packets that the client is sending, which is
-  ## usually 1500 bytes.
+  ## usually 1500 bytes, but can be as large as 65,535 bytes.
   udp_packet_size = 1500
 
   ## Data format to consume. This can be "json", "influx" or "graphite"
