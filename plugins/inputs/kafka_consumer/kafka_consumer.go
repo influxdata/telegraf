@@ -14,11 +14,11 @@ import (
 )
 
 type Kafka struct {
-	ConsumerGroup  string
-	Topics         []string
-	ZookeeperPeers []string
+	ConsumerGroup   string
+	Topics          []string
+	ZookeeperPeers  []string
 	ZookeeperChroot string
-	Consumer       *consumergroup.ConsumerGroup
+	Consumer        *consumergroup.ConsumerGroup
 
 	// Legacy metric buffer support
 	MetricBuffer int
