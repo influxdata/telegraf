@@ -147,6 +147,13 @@ func (c mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 	return &resp, nil
 }
 
+func (c mockHTTPClient) SetHTTPClient(_ *http.Client) {
+}
+
+func (c mockHTTPClient) HTTPClient() *http.Client {
+	return nil
+}
+
 // Generates a pointer to an HttpJson object that uses a mock HTTP client.
 // Parameters:
 //     response  : Body of the response that the mock HTTP client should return
