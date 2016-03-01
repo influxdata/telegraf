@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/influxdata/config"
-	"github.com/naoina/toml/ast"
+	"github.com/influxdata/toml/ast"
 )
 
 // Config specifies the URL/user/password for the database that telegraf
