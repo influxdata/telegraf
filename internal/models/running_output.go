@@ -10,7 +10,7 @@ import (
 
 const (
 	// Default number of metrics kept between flushes.
-	DEFAULT_METRIC_BUFFER_LIMIT = 10000
+	DEFAULT_METRIC_BUFFER_LIMIT = 1000
 
 	// Limit how many full metric buffers are kept due to failed writes.
 	FULL_METRIC_BUFFERS_LIMIT = 100
