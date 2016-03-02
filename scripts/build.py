@@ -526,7 +526,7 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
                                                                            arch,
                                                                            fr,
                                                                            to))
-                        copy_file(fr, to)
+                    copy_file(fr, to)
 
                 for package_type in supported_packages[platform]:
                     # Package the directory structure for each package type for the platform
