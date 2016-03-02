@@ -25,6 +25,8 @@ type Mysql struct {
 	GatherTableIOWaits                  bool
 	GatherIndexIOWaits                  bool
 	GatherTableSchema                   bool
+	GatherFileEventsStats               bool
+	GatherPerfEventsStatements          bool
 }
 
 var sampleConfig = `
@@ -46,6 +48,8 @@ var sampleConfig = `
   GatherTableIOWaits                  = false
   GatherIndexIOWaits                  = false
   GatherTableSchema                   = false
+  GatherFileEventsStats               = false
+  GatherPerfEventsStatements          = false
 `
 
 var defaultTimeout = time.Second * time.Duration(5)
@@ -372,6 +376,7 @@ const (
 			table_name
 			FROM information_schema.tables
 		WHERE table_schema = 'performance_schema' AND table_name = ?
+
 	`
 )
 
@@ -446,14 +451,18 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	err = m.gatherPerfFileEventsStatuses(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherFileEventsStats {
+		err = m.gatherPerfFileEventsStatuses(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = m.gatherPerfEventsStatements(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherPerfEventsStatements {
+		err = m.gatherPerfEventsStatements(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 
 	if m.GatherTableSchema {
