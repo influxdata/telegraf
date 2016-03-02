@@ -44,6 +44,9 @@ type Host struct {
 	getOids  []Data
 	bulkOids []Data
 	tables   []HostTable
+	// array of processed oids
+	// to skip oid duplication
+	processedOids []string
 }
 
 type Table struct {
@@ -714,8 +717,15 @@ func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, a
 	var lastOid string
 	for _, variable := range result.Variables {
 		lastOid = variable.Name
-		// Remove unwanted oid
+	nextresult:
+		// Get only oid wanted
 		for oid_key, oid := range oids {
+			// Skip oids already processed
+			for _, processedOid := range h.processedOids {
+				if variable.Name == processedOid {
+					break nextresult
+				}
+			}
 			if strings.HasPrefix(variable.Name, oid_key) {
 				switch variable.Type {
 				// handle Metrics
@@ -767,6 +777,7 @@ func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, a
 					fields := make(map[string]interface{})
 					fields[string(field_name)] = variable.Value
 
+					h.processedOids = append(h.processedOids, variable.Name)
 					acc.AddFields(field_name, fields, tags)
 				case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
 					// Oid not found
