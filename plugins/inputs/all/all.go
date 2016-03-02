@@ -47,6 +47,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
 	_ "github.com/influxdata/telegraf/plugins/inputs/statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/system"
+	_ "github.com/influxdata/telegraf/plugins/inputs/tcp_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/trig"
 	_ "github.com/influxdata/telegraf/plugins/inputs/twemproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/udp_listener"
