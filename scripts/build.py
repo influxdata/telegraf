@@ -84,7 +84,7 @@ supported_builds = {
 }
 
 supported_packages = {
-    "darwin": [ "tar" ],
+    "darwin": [ "tar", "zip" ],
     "linux": [ "deb", "rpm", "tar" ],
     "windows": [ "zip" ],
     "freebsd": [ "tar" ]
@@ -538,6 +538,9 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
                     package_iteration = iteration
                     package_build_root = build_root
                     current_location = build_output[platform][arch]
+                    if rc is not None:
+                        # Set iteration to 0 since it's a release candidate
+                        package_iteration = "0.rc{}".format(rc)
 
                     if package_type in ['zip', 'tar']:
                         # For tars and zips, start the packaging one folder above
@@ -554,44 +557,49 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
                                                            platform,
                                                            arch)
 
-                    if package_type == 'tar':
-                        # Add `tar.gz` to path to compress package output
-                        current_location = os.path.join(current_location, name + '.tar.gz')
-                    elif package_type == 'zip':
-                        current_location = os.path.join(current_location, name + '.zip')
-
-                    if rc is not None:
-                        # Set iteration to 0 since it's a release candidate
-                        package_iteration = "0.rc{}".format(rc)
-
-                    fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
-                        fpm_common_args,
-                        name,
-                        arch,
-                        package_type,
-                        package_version,
-                        package_iteration,
-                        package_build_root,
-                        current_location)
-                    if debug:
-                        fpm_command += "--verbose "
-                    if package_type == "rpm":
-                        fpm_command += "--depends coreutils "
-                        fpm_command += "--depends lsof "
-                    out = run(fpm_command, shell=True)
-                    matches = re.search(':path=>"(.*)"', out)
-                    outfile = None
-                    if matches is not None:
-                        outfile = matches.groups()[0]
-                    if outfile is None:
-                        print("!! Could not determine output from packaging command.")
+                        current_location = os.path.join(os.getcwd(), current_location)
+                        if package_type == 'tar':
+                            tar_command = "cd {} && tar -cvzf {}.tar.gz ./*".format(build_root, name)
+                            run(tar_command, shell=True)
+                            run("mv {}.tar.gz {}".format(os.path.join(build_root, name), current_location), shell=True)
+                            outfile = os.path.join(current_location, name + ".tar.gz")
+                            outfiles.append(outfile)
+                            print("MD5({}) = {}".format(outfile, generate_md5_from_file(outfile)))
+                        elif package_type == 'zip':
+                            zip_command = "cd {} && zip -r {}.zip ./*".format(build_root, name)
+                            run(zip_command, shell=True)
+                            run("mv {}.zip {}".format(os.path.join(build_root, name), current_location), shell=True)
+                            outfile = os.path.join(current_location, name + ".zip")
+                            outfiles.append(outfile)
+                            print("MD5({}) = {}".format(outfile, generate_md5_from_file(outfile)))
                     else:
-                        # Strip nightly version (the unix epoch) from filename
-                        if nightly and package_type in [ 'deb', 'rpm' ]:
-                            outfile = rename_file(outfile, outfile.replace("{}-{}".format(version, iteration), "nightly"))
-                        outfiles.append(os.path.join(os.getcwd(), outfile))
-                        # Display MD5 hash for generated package
-                        print("MD5({}) = {}".format(outfile, generate_md5_from_file(outfile)))
+                        fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(fpm_common_args,
+                                                                                                                     name,
+                                                                                                                     arch,
+                                                                                                                     package_type,
+                                                                                                                     package_version,
+                                                                                                                     package_iteration,
+                                                                                                                     package_build_root,
+                                                                                                                     current_location)
+                        if debug:
+                            fpm_command += "--verbose "
+                        if package_type == "rpm":
+                            fpm_command += "--depends coreutils "
+                            fpm_command += "--depends lsof "
+                        out = run(fpm_command, shell=True)
+                        matches = re.search(':path=>"(.*)"', out)
+                        outfile = None
+                        if matches is not None:
+                            outfile = matches.groups()[0]
+                        if outfile is None:
+                            print("!! Could not determine output from packaging command.")
+                        else:
+                            # Strip nightly version (the unix epoch) from filename
+                            if nightly:
+                                outfile = rename_file(outfile, outfile.replace("{}-{}".format(version, iteration), "nightly"))
+                            outfiles.append(os.path.join(os.getcwd(), outfile))
+                            # Display MD5 hash for generated package
+                            print("MD5({}) = {}".format(outfile, generate_md5_from_file(outfile)))
         print("")
         if debug:
             print("[DEBUG] package outfiles: {}".format(outfiles))
