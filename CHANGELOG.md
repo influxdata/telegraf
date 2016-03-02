@@ -16,6 +16,8 @@
 - [#781](https://github.com/influxdata/telegraf/pull/781): Fix mqtt_consumer username not being set. Thanks @chaton78!
 - [#786](https://github.com/influxdata/telegraf/pull/786): Fix mqtt output username not being set. Thanks @msangoi!
 - [#773](https://github.com/influxdata/telegraf/issues/773): Fix duplicate measurements in snmp plugin. Thanks @titilambert!
+- [#708](https://github.com/influxdata/telegraf/issues/708): packaging: build ARM package
+- [#713](https://github.com/influxdata/telegraf/issues/713): packaging: insecure permissions error on log directory
 
 ## v0.10.4.1
 

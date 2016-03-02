@@ -142,6 +142,10 @@ def go_get(branch, update=False, no_stash=False):
     run("{}/bin/gdm restore".format(os.environ.get("GOPATH")))
     return True
 
+def run_tests(race, parallel, timeout, no_vet):
+    # Currently a NOOP for Telegraf
+    return True
+
 ################
 #### All Telegraf-specific content above this line
 ################
@@ -324,50 +328,6 @@ def upload_packages(packages, bucket_name=None, nightly=False):
     print("")
     return 0
 
-def run_tests(race, parallel, timeout, no_vet):
-    print("Downloading vet tool...")
-    sys.stdout.flush()
-    run("go get golang.org/x/tools/cmd/vet")
-    print("Running tests:")
-    print("\tRace: {}".format(race))
-    if parallel is not None:
-        print("\tParallel: {}".format(parallel))
-    if timeout is not None:
-        print("\tTimeout: {}".format(timeout))
-    sys.stdout.flush()
-    p = subprocess.Popen(["go", "fmt", "./..."], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p.communicate()
-    if len(out) > 0 or len(err) > 0:
-        print("Code not formatted. Please use 'go fmt ./...' to fix formatting errors.")
-        print(out)
-        print(err)
-        return False
-    if not no_vet:
-        p = subprocess.Popen(go_vet_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = p.communicate()
-        if len(out) > 0 or len(err) > 0:
-            print("Go vet failed. Please run 'go vet ./...' and fix any errors.")
-            print(out)
-            print(err)
-            return False
-    else:
-        print("Skipping go vet ...")
-        sys.stdout.flush()
-    test_command = "go test -v"
-    if race:
-        test_command += " -race"
-    if parallel is not None:
-        test_command += " -parallel {}".format(parallel)
-    if timeout is not None:
-        test_command += " -timeout {}".format(timeout)
-    test_command += " ./..."
-    code = os.system(test_command)
-    if code != 0:
-        print("Tests Failed")
-        return False
-    else:
-        print("Tests Passed")
-        return True
 
 def build(version=None,
           branch=None,
