@@ -181,7 +181,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	}
 
 	user := m.Username
-	if user == "" {
+	if user != "" {
 		opts.SetUsername(user)
 	}
 	password := m.Password
