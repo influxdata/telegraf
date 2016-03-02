@@ -159,7 +159,7 @@ var header = `# Telegraf Configuration
 
   ## Telegraf will cache metric_buffer_limit metrics for each output, and will
   ## flush this buffer on a successful write.
-  metric_buffer_limit = 10000
+  metric_buffer_limit = 1000
   ## Flush the buffer whenever full, regardless of flush_interval.
   flush_buffer_when_full = true
 
