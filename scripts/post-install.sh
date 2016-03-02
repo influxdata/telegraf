@@ -28,7 +28,9 @@ if [[ $? -ne 0 ]]; then
     useradd --system -U -M telegraf -s /bin/false -d /etc/telegraf
 fi
 
+test -d $LOG_DIR || mkdir -p $LOG_DIR
 chown -R -L telegraf:telegraf $LOG_DIR
+chmod 755 $LOG_DIR
 
 # Remove legacy symlink, if it exists
 if [[ -L /etc/init.d/telegraf ]]; then
