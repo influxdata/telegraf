@@ -94,6 +94,20 @@ func TestTemplateApply(t *testing.T) {
 			measurement: "cpu.load",
 			tags:        map[string]string{"zone": "us-west"},
 		},
+		{
+			test:        "conjoined fields",
+			input:       "prod.us-west.server01.cpu.util.idle.percent",
+			template:    "env.zone.host.measurement.measurement.field*",
+			measurement: "cpu.util",
+			tags:        map[string]string{"env": "prod", "zone": "us-west", "host": "server01"},
+		},
+		{
+			test:        "multiple fields",
+			input:       "prod.us-west.server01.cpu.util.idle.percent.free",
+			template:    "env.zone.host.measurement.measurement.field.field.reading",
+			measurement: "cpu.util",
+			tags:        map[string]string{"env": "prod", "zone": "us-west", "host": "server01", "reading": "free"},
+		},
 	}
 
 	for _, test := range tests {
@@ -186,6 +200,12 @@ func TestParse(t *testing.T) {
 			input:    `cpu 50.554 14199724z57825`,
 			template: "measurement",
 			err:      `field "cpu" time: strconv.ParseFloat: parsing "14199724z57825": invalid syntax`,
+		},
+		{
+			test:     "measurement* and field* (invalid)",
+			input:    `prod.us-west.server01.cpu.util.idle.percent 99.99 1419972457825`,
+			template: "env.zone.host.measurement*.field*",
+			err:      `either 'field*' or 'measurement*' can be used in each template (but not both together): "env.zone.host.measurement*.field*"`,
 		},
 	}
 
@@ -574,15 +594,48 @@ func TestApplyTemplateField(t *testing.T) {
 	}
 }
 
-func TestApplyTemplateFieldError(t *testing.T) {
+func TestApplyTemplateMultipleFieldsTogether(t *testing.T) {
 	p, err := NewGraphiteParser("_",
-		[]string{"current.* measurement.field.field"}, nil)
+		[]string{"current.* measurement.measurement.field.field"}, nil)
 	assert.NoError(t, err)
 
-	_, _, _, err = p.ApplyTemplate("current.users.logged_in")
-	if err == nil {
-		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s", err,
-			"'field' can only be used once in each template: current.users.logged_in")
+	measurement, _, field, err := p.ApplyTemplate("current.users.logged_in.ssh")
+
+	assert.Equal(t, "current_users", measurement)
+
+	if field != "logged_in_ssh" {
+		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s",
+			field, "logged_in_ssh")
+	}
+}
+
+func TestApplyTemplateMultipleFieldsApart(t *testing.T) {
+	p, err := NewGraphiteParser("_",
+		[]string{"current.* measurement.measurement.field.method.field"}, nil)
+	assert.NoError(t, err)
+
+	measurement, _, field, err := p.ApplyTemplate("current.users.logged_in.ssh.total")
+
+	assert.Equal(t, "current_users", measurement)
+
+	if field != "logged_in_total" {
+		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s",
+			field, "logged_in_total")
+	}
+}
+
+func TestApplyTemplateGreedyField(t *testing.T) {
+	p, err := NewGraphiteParser("_",
+		[]string{"current.* measurement.measurement.field*"}, nil)
+	assert.NoError(t, err)
+
+	measurement, _, field, err := p.ApplyTemplate("current.users.logged_in")
+
+	assert.Equal(t, "current_users", measurement)
+
+	if field != "logged_in" {
+		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s",
+			field, "logged_in")
 	}
 }
 

@@ -231,6 +231,7 @@ func (p *GraphiteParser) ApplyTemplate(line string) (string, map[string]string, 
 type template struct {
 	tags              []string
 	defaultTags       map[string]string
+	greedyField       bool
 	greedyMeasurement bool
 	separator         string
 }
@@ -248,6 +249,8 @@ func NewTemplate(pattern string, defaultTags map[string]string, separator string
 		}
 		if tag == "measurement*" {
 			template.greedyMeasurement = true
+		} else if tag == "field*" {
+			template.greedyField = true
 		}
 	}
 
@@ -265,12 +268,24 @@ func (t *template) Apply(line string) (string, map[string]string, string, error)
 	var (
 		measurement []string
 		tags        = make(map[string]string)
-		field       string
+		field       []string
 	)
 
 	// Set any default tags
 	for k, v := range t.defaultTags {
 		tags[k] = v
+	}
+
+	// See if an invalid combination has been specified in the template:
+	for _, tag := range t.tags {
+		if tag == "measurement*" {
+			t.greedyMeasurement = true
+		} else if tag == "field*" {
+			t.greedyField = true
+		}
+	}
+	if t.greedyField && t.greedyMeasurement {
+		return "", nil, "", fmt.Errorf("either 'field*' or 'measurement*' can be used in each template (but not both together): %q", strings.Join(t.tags, t.separator))
 	}
 
 	for i, tag := range t.tags {
@@ -281,10 +296,10 @@ func (t *template) Apply(line string) (string, map[string]string, string, error)
 		if tag == "measurement" {
 			measurement = append(measurement, fields[i])
 		} else if tag == "field" {
-			if len(field) != 0 {
-				return "", nil, "", fmt.Errorf("'field' can only be used once in each template: %q", line)
-			}
-			field = fields[i]
+			field = append(field, fields[i])
+		} else if tag == "field*" {
+			field = append(field, fields[i:]...)
+			break
 		} else if tag == "measurement*" {
 			measurement = append(measurement, fields[i:]...)
 			break
@@ -293,7 +308,7 @@ func (t *template) Apply(line string) (string, map[string]string, string, error)
 		}
 	}
 
-	return strings.Join(measurement, t.separator), tags, field, nil
+	return strings.Join(measurement, t.separator), tags, strings.Join(field, t.separator), nil
 }
 
 // matcher determines which template should be applied to a given metric

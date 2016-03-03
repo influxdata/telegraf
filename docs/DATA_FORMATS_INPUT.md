@@ -220,16 +220,31 @@ So the following template:
 
 ```toml
 templates = [
-    "measurement.measurement.field.region"
+    "measurement.measurement.field.field.region"
 ]
 ```
 
 would result in the following Graphite -> Telegraf transformation.
 
 ```
-cpu.usage.idle.us-west 100
-=> cpu_usage,region=us-west idle=100
+cpu.usage.idle.percent.us-west 100
+=> cpu_usage,region=us-west idle_percent=100
 ```
+
+The field key can also be derived from the second "half" of the input metric-name by specifying ```field*```:
+```toml
+templates = [
+    "measurement.measurement.region.field*"
+]
+```
+
+would result in the following Graphite -> Telegraf transformation.
+
+```
+cpu.usage.us-west.idle.percentage 100
+=> cpu_usage,region=us-west idle_percentage=100
+```
+(This cannot be used in conjunction with "measurement*"!)
 
 #### Filter Templates:
 
