@@ -80,7 +80,7 @@ func (s *Simple) SampleConfig() string {
     return "ok = true # indicate if everything is fine"
 }
 
-func (s *Simple) Gather(acc inputs.Accumulator) error {
+func (s *Simple) Gather(acc telegraf.Accumulator) error {
     if s.Ok {
         acc.Add("state", "pretty good", nil)
     } else {
