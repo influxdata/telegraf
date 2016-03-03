@@ -172,7 +172,7 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	}
 
 	user := m.Username
-	if user == "" {
+	if user != "" {
 		opts.SetUsername(user)
 	}
 	password := m.Password
