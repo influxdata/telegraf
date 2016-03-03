@@ -10,6 +10,7 @@ github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
 github.com/fsouza/go-dockerclient 7b651349f9479f5114913eefbfd3c4eeddd79ab4
+github.com/garyburd/redigo 4ed1111375cbeb698249ffe48dd463e9b0a63a7a
 github.com/go-ini/ini afbd495e5aaea13597b5e14fe514ddeaa4d76fc3
 github.com/go-sql-driver/mysql 7c7f556282622f94213bc028b4d0a7b6151ba239
 github.com/golang/protobuf 6aaa8d47701fa6cf07e914ec01fde3d4a1fe79c3
@@ -24,6 +25,7 @@ github.com/jmespath/go-jmespath c01cf91b011868172fdcd9f41838e80c9d716264
 github.com/klauspost/crc32 999f3125931f6557b991b2f8472172bdfa578d38
 github.com/lib/pq 8ad2b298cadd691a77015666a5372eae5dbfac8f
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
+github.com/miekg/dns e0d84d97e59bcb6561eae269c4e94d25b66822cb
 github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/naoina/toml 751171607256bb66e64c9f0220c00662420c38e9
@@ -50,4 +52,3 @@ gopkg.in/dancannon/gorethink.v1 6f088135ff288deb9d5546f4c71919207f891a70
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
 gopkg.in/mgo.v2 03c9f3ee4c14c8e51ee521a6a7d0425658dd6f64
 gopkg.in/yaml.v2 f7716cbe52baa25d2e9b0d0da546fcf909fc16b4
-github.com/miekg/dns e0d84d97e59bcb6561eae269c4e94d25b66822cb

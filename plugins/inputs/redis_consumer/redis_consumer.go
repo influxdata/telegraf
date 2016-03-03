@@ -3,11 +3,11 @@ package redis_consumer
 import (
 	"fmt"
 	"log"
-	"net"
 	"strings"
 	"sync"
 	//"time"
 
+	"github.com/garyburd/redigo/redis"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -18,7 +18,7 @@ type RedisConsumer struct {
 	Channels []string
 	parser   parsers.Parser
 
-	con net.Conn
+	pubsub redis.PubSubConn
 	sync.Mutex
 	acc telegraf.Accumulator
 }
@@ -66,36 +66,28 @@ func (r *RedisConsumer) Gather(_ telegraf.Accumulator) error {
 func (r *RedisConsumer) Start(acc telegraf.Accumulator) error {
 	r.acc = acc
 
-	for _, channel := range r.Channels {
-		log.Printf("Channel %s", channel)
-	}
-
-
-   	// hasMeta reports whether path contains any of the magic characters
-   	// recognized by Match.
-   	func hasMeta(path string) bool {
-   		// TODO(niemeyer): Should other magic characters be added here?
-   		return strings.IndexAny(path, "*?[") >= 0
-   	}
-
-
-	con, err := net.Dial("tcp", "localhost:6379")
-	r.con = con
+	con, err := redis.Dial("tcp", "localhost:6379")
 
 	if err != nil {
 		return fmt.Errorf("Could connect to Redis: %s", err)
 	}
-	log.Printf("Connected to Redis.")
 
-	_, err = r.con.Write([]byte("SUBSCRIBE telegraf\r\n"))
-	if err != nil {
-		fmt.Errorf("Could not SUBSCRIBE to channels: %s", err)
-		return err
+	r.pubsub = redis.PubSubConn{con}
+
+	for _, channel := range r.Channels {
+		// Use PSUBSCRIBE when channels contains glob pattern.
+		if strings.IndexAny(channel, "*?[") >= 0 {
+			err = r.pubsub.PSubscribe(channel)
+		} else {
+			err = r.pubsub.Subscribe(channel)
+		}
+
+		if err != nil {
+			return fmt.Errorf("Could not (p)subscribe to channel '%s': %s.", channel, err)
+		}
 	}
-	log.Printf("Subscribed to channels.")
 
-	// Redis sends confirmation message, ignore this.
-	r.con.Read(make([]byte, 512))
+	log.Printf("Connected to Redis.")
 
 	go r.listen()
 
@@ -103,29 +95,24 @@ func (r *RedisConsumer) Start(acc telegraf.Accumulator) error {
 }
 
 func (r *RedisConsumer) listen() error {
-
 	for {
-		buf := make([]byte, 512)
-		n, err := r.con.Read(buf)
-		if err != nil {
-			return fmt.Errorf("Something went wrong while reading channel: %s", err)
+		switch v := r.pubsub.Receive().(type) {
+		case redis.Message:
+			r.processMessage(v)
+			fmt.Printf("%s: message: %s\n", v.Channel, v.Data)
+		case error:
+			return v
 		}
-
-		msg := string(buf[:n])
-		arr := strings.Split(msg, "\r\n")
-
-		//r.acc.Add("redis_consumer", 1, make(map[string]string), time.Now())
-		log.Printf("Length of list %s", len(arr))
-
-		log.Printf("Received %s", msg)
-		log.Printf("Received %s", arr)
 	}
+}
 
+func (r *RedisConsumer) processMessage(msg redis.Message) error {
 	return nil
+
 }
 
 func (r *RedisConsumer) Stop() {
-	r.con.Close()
+	r.pubsub.Close()
 }
 
 func init() {
