@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
-
+	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 )
@@ -34,6 +34,7 @@ var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
+var fUsageList = flag.Bool("usage-list", false, "print all the plugins inputs")
 
 var fInputFiltersLegacy = flag.String("filter", "",
 	"filter the inputs to enable, separator is :")
@@ -61,6 +62,7 @@ The flags are:
   -input-filter      filter the input plugins to enable, separator is :
   -output-filter     filter the output plugins to enable, separator is :
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
+  -usage-list	     print all the plugins input
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
   -version           print the version to stdout
@@ -133,6 +135,13 @@ func main() {
 				}
 			}
 			return
+		}
+
+		if *fUsageList {
+			fmt.Println("The plugin inputs avaiable:")
+			for k, _ := range inputs.Inputs {
+				fmt.Printf("  %s\n", k)
+			}
 		}
 
 		var (
