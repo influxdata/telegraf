@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"sync"
-	"time"
+	//"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type RedisConsumer struct {
-	Servers []string
-
+	Servers  []string
 	Channels []string
+	parser   parsers.Parser
 
 	con net.Conn
 	sync.Mutex
@@ -35,6 +37,12 @@ var sampleConfig = `
   ##  List of channels to listen to. Selecting channels using pattern-matching
   ## is allowed.
   channels = []
+
+  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "influx"
 `
 
 const defaultPort = "6379"
@@ -47,12 +55,29 @@ func (r *RedisConsumer) Description() string {
 	return "Read metrics from Redis channels."
 }
 
+func (r *RedisConsumer) SetParser(parser parsers.Parser) {
+	r.parser = parser
+}
+
 func (r *RedisConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
 func (r *RedisConsumer) Start(acc telegraf.Accumulator) error {
 	r.acc = acc
+
+	for _, channel := range r.Channels {
+		log.Printf("Channel %s", channel)
+	}
+
+
+   	// hasMeta reports whether path contains any of the magic characters
+   	// recognized by Match.
+   	func hasMeta(path string) bool {
+   		// TODO(niemeyer): Should other magic characters be added here?
+   		return strings.IndexAny(path, "*?[") >= 0
+   	}
+
 
 	con, err := net.Dial("tcp", "localhost:6379")
 	r.con = con
@@ -81,15 +106,19 @@ func (r *RedisConsumer) listen() error {
 
 	for {
 		buf := make([]byte, 512)
-		_, err := r.con.Read(buf)
-
+		n, err := r.con.Read(buf)
 		if err != nil {
 			return fmt.Errorf("Something went wrong while reading channel: %s", err)
 		}
 
-		r.acc.Add("redis_consumer", 1, make(map[string]string), time.Now())
+		msg := string(buf[:n])
+		arr := strings.Split(msg, "\r\n")
 
-		log.Printf("Received %s", buf)
+		//r.acc.Add("redis_consumer", 1, make(map[string]string), time.Now())
+		log.Printf("Length of list %s", len(arr))
+
+		log.Printf("Received %s", msg)
+		log.Printf("Received %s", arr)
 	}
 
 	return nil
