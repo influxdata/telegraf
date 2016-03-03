@@ -107,8 +107,18 @@ func (r *RedisConsumer) listen() error {
 }
 
 func (r *RedisConsumer) processMessage(msg redis.Message) error {
-	return nil
+	metrics, err := r.parser.Parse(msg.Data)
 
+	if err != nil {
+		log.Printf("Could not parse message as metric: %s.", err)
+		return err
+
+	}
+
+	for _, metric := range metrics {
+		r.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+	}
+	return nil
 }
 
 func (r *RedisConsumer) Stop() {
