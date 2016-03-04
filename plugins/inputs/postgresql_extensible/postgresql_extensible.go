@@ -1,0 +1,234 @@
+package postgresql_extensible
+
+import (
+	"bytes"
+	"database/sql"
+	"fmt"
+	"strings"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+
+	_ "github.com/lib/pq"
+)
+
+type Postgresql struct {
+	Address        string
+	Databases      []string
+	OrderedColumns []string
+	AllColumns     []string
+	AdditionalTags []string
+	Query          []struct {
+		Sqlquery   string
+		Version    int
+		Withdbname string
+		Tagvalue   string
+	}
+}
+
+var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
+
+var sampleConfig = `
+  # specify address via a url matching:
+  #   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
+  # or a simple string:
+  #   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  #
+  # All connection parameters are optional.  #
+  # Without the dbname parameter, the driver will default to a database
+  # with the same name as the user. This dbname is just for instantiating a
+  # connection with the server and doesn't restrict the databases we are trying
+  # to grab metrics for.
+  #
+  address = "host=localhost user=postgres sslmode=disable"
+  # A list of databases to pull metrics about. If not specified, metrics for all
+  # databases are gathered.
+  # databases = ["app_production", "testing"]
+  #
+  # Define the toml config where the sql queries are stored
+  # New queries can be added, if the withdbname is set to true and there is no databases defined
+  # in the 'databases field', the sql query is ended by a 'is not null' in order to make the query
+  # succeed.
+  # the tagvalue field is used to define custom tags (separated by comas)
+  #
+  [[inputs.postgresql_extensible.query]]
+    sqlquery="SELECT * FROM pg_stat_database where datname"
+    version=901
+    withdbname="true"
+    tagvalue=""
+  [[inputs.postgresql_extensible.query]]
+    sqlquery="SELECT * FROM pg_stat_bgwriter"
+    version=901
+    withdbname="false"
+    tagvalue=""
+`
+
+func (p *Postgresql) SampleConfig() string {
+	return sampleConfig
+}
+
+func (p *Postgresql) Description() string {
+	return "Read metrics from one or many postgresql servers"
+}
+
+func (p *Postgresql) IgnoredColumns() map[string]bool {
+	return ignoredColumns
+}
+
+var localhost = "host=localhost sslmode=disable"
+
+func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
+
+	var sql_query string
+	var query_version int
+	var query_with_dbname string
+	var query_addon string
+	var db_version int
+	var query string
+	var tag_value string
+
+	if p.Address == "" || p.Address == "localhost" {
+		p.Address = localhost
+	}
+
+	db, err := sql.Open("postgres", p.Address)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	// Retreiving the database version
+
+	query = `select substring(setting from 1 for 3) as version from pg_settings where name='server_version_num'`
+	err = db.QueryRow(query).Scan(&db_version)
+	if err != nil {
+		return err
+	}
+
+	// We loop in order to process each query
+	// Query is not run if Database version does not match the query version.
+
+	for i := range p.Query {
+		sql_query = p.Query[i].Sqlquery
+		query_version = p.Query[i].Version
+		query_with_dbname = p.Query[i].Withdbname
+		tag_value = p.Query[i].Tagvalue
+
+		if query_with_dbname == "true" {
+			if len(p.Databases) != 0 {
+				query_addon = fmt.Sprintf(` IN ('%s')`,
+					strings.Join(p.Databases, "','"))
+			} else {
+				query_addon = " is not null"
+			}
+		} else {
+			query_addon = ""
+		}
+		sql_query += query_addon
+
+		if query_version <= db_version {
+			rows, err := db.Query(sql_query)
+			if err != nil {
+				return err
+			}
+
+			defer rows.Close()
+
+			// grab the column information from the result
+			p.OrderedColumns, err = rows.Columns()
+			if err != nil {
+				return err
+			} else {
+				for _, v := range p.OrderedColumns {
+					p.AllColumns = append(p.AllColumns, v)
+				}
+			}
+			p.AdditionalTags = nil
+			if tag_value != "" {
+				tag_list := strings.Split(tag_value, ",")
+				for t := range tag_list {
+					p.AdditionalTags = append(p.AdditionalTags, tag_list[t])
+				}
+			}
+
+			for rows.Next() {
+				err = p.accRow(rows, acc)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+type scanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
+	var columnVars []interface{}
+	var dbname bytes.Buffer
+
+	// this is where we'll store the column name with its *interface{}
+	columnMap := make(map[string]*interface{})
+
+	for _, column := range p.OrderedColumns {
+		columnMap[column] = new(interface{})
+	}
+
+	// populate the array of interface{} with the pointers in the right order
+	for i := 0; i < len(columnMap); i++ {
+		columnVars = append(columnVars, columnMap[p.OrderedColumns[i]])
+	}
+
+	// deconstruct array of variables and send to Scan
+	err := row.Scan(columnVars...)
+
+	if err != nil {
+		return err
+	}
+	if columnMap["datname"] != nil {
+		// extract the database name from the column map
+		dbnameChars := (*columnMap["datname"]).([]uint8)
+		for i := 0; i < len(dbnameChars); i++ {
+			dbname.WriteString(string(dbnameChars[i]))
+		}
+	} else {
+		dbname.WriteString("postgres")
+	}
+
+	// Process the additional tags
+
+	tags := map[string]string{}
+	tags["server"] = p.Address
+	tags["db"] = dbname.String()
+
+	fields := make(map[string]interface{})
+	for col, val := range columnMap {
+		_, ignore := ignoredColumns[col]
+		//if !ignore && *val != "" {
+		if !ignore {
+			for tag := range p.AdditionalTags {
+				if col == p.AdditionalTags[tag] {
+					value_type_p := fmt.Sprintf(`%T`, *val)
+					if value_type_p == "[]uint8" {
+						tags[col] = fmt.Sprintf(`%s`, *val)
+					} else if value_type_p == "int64" {
+						tags[col] = fmt.Sprintf(`%v`, *val)
+					}
+				}
+			}
+			fields[col] = *val
+		}
+	}
+	acc.AddFields("postgresql", fields, tags)
+	return nil
+}
+
+func init() {
+	inputs.Add("postgresql_extensible", func() telegraf.Input {
+		return &Postgresql{}
+	})
+}
