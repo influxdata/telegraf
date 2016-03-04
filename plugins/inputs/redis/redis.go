@@ -19,7 +19,6 @@ type Redis struct {
 }
 
 var sampleConfig = `
-[[inputs.redis]]
   ## specify servers via a url matching:
   ##  [protocol://][:password]@address[:port]
   ##  e.g.
