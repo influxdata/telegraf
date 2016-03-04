@@ -73,42 +73,43 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		if _, ok := p.metrics[key]; !ok {
-			p.metrics[key] = prometheus.NewUntypedVec(
-				prometheus.UntypedOpts{
-					Name: key,
-					Help: fmt.Sprintf("Telegraf collected point '%s'", key),
-				},
-				labels,
-			)
-			prometheus.MustRegister(p.metrics[key])
-		}
-
 		l := prometheus.Labels{}
 		for tk, tv := range point.Tags() {
 			l[tk] = tv
 		}
 
-		for _, val := range point.Fields() {
+		for n, val := range point.Fields() {
+			mname := fmt.Sprintf("%s_%s", key, n)
+			if _, ok := p.metrics[mname]; !ok {
+				p.metrics[mname] = prometheus.NewUntypedVec(
+					prometheus.UntypedOpts{
+						Name: mname,
+						Help: fmt.Sprintf("Telegraf collected point '%s'", mname),
+					},
+					labels,
+				)
+				prometheus.MustRegister(p.metrics[mname])
+			}
+
 			switch val := val.(type) {
 			default:
 				log.Printf("Prometheus output, unsupported type. key: %s, type: %T\n",
-					key, val)
+					mname, val)
 			case int64:
-				m, err := p.metrics[key].GetMetricWith(l)
+				m, err := p.metrics[mname].GetMetricWith(l)
 				if err != nil {
 					log.Printf("ERROR Getting metric in Prometheus output, "+
 						"key: %s, labels: %v,\nerr: %s\n",
-						key, l, err.Error())
+						mname, l, err.Error())
 					continue
 				}
 				m.Set(float64(val))
 			case float64:
-				m, err := p.metrics[key].GetMetricWith(l)
+				m, err := p.metrics[mname].GetMetricWith(l)
 				if err != nil {
 					log.Printf("ERROR Getting metric in Prometheus output, "+
 						"key: %s, labels: %v,\nerr: %s\n",
-						key, l, err.Error())
+						mname, l, err.Error())
 					continue
 				}
 				m.Set(val)
