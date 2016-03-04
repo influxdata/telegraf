@@ -2,10 +2,9 @@ package redis_consumer
 
 import (
 	"fmt"
-	"log"
+	"net/url"
 	"strings"
 	"sync"
-	//"time"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/influxdata/telegraf"
@@ -16,9 +15,10 @@ import (
 type RedisConsumer struct {
 	Servers  []string
 	Channels []string
-	parser   parsers.Parser
 
-	pubsub redis.PubSubConn
+	parser parsers.Parser
+
+	pubsubs []redis.PubSubConn
 	sync.Mutex
 	acc telegraf.Accumulator
 }
@@ -36,7 +36,7 @@ var sampleConfig = `
 
   ##  List of channels to listen to. Selecting channels using pattern-matching
   ## is allowed.
-  channels = []
+  channels = ["telegraf"]
 
   ## Data format to consume. This can be "json", "influx" or "graphite"
   ## Each data format has it's own unique set of configuration options, read
@@ -44,8 +44,6 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 `
-
-const defaultPort = "6379"
 
 func (r *RedisConsumer) SampleConfig() string {
 	return sampleConfig
@@ -66,40 +64,78 @@ func (r *RedisConsumer) Gather(_ telegraf.Accumulator) error {
 func (r *RedisConsumer) Start(acc telegraf.Accumulator) error {
 	r.acc = acc
 
-	con, err := redis.Dial("tcp", "localhost:6379")
-
-	if err != nil {
-		return fmt.Errorf("Could connect to Redis: %s", err)
+	// Add default Redis server when no servers are configured.
+	if len(r.Servers) == 0 {
+		r.Servers = append(r.Servers, "tcp://localhost:6379")
 	}
 
-	r.pubsub = redis.PubSubConn{con}
+	// Create connections to every configured server.
+	for _, server := range r.Servers {
 
-	for _, channel := range r.Channels {
-		// Use PSUBSCRIBE when channels contains glob pattern.
-		if strings.IndexAny(channel, "*?[") >= 0 {
-			err = r.pubsub.PSubscribe(channel)
-		} else {
-			err = r.pubsub.Subscribe(channel)
-		}
+		pubsub, err := r.createPubSub(server)
 
 		if err != nil {
-			return fmt.Errorf("Could not (p)subscribe to channel '%s': %s.", channel, err)
+			return fmt.Errorf("Unable to connect to Redis server '%s': %s", server, err)
 		}
+
+		r.pubsubs = append(r.pubsubs, pubsub)
 	}
 
-	log.Printf("Connected to Redis.")
+	// Subscribe to channels on every server and start listening for messages.
+	for _, pubsub := range r.pubsubs {
+		for _, channel := range r.Channels {
+			// Use PSUBSCRIBE when channels contains glob pattern.
 
-	go r.listen()
+			var err error
+			if strings.IndexAny(channel, "*?[") >= 0 {
+				err = pubsub.PSubscribe(channel)
+			} else {
+				err = pubsub.Subscribe(channel)
+			}
+
+			if err != nil {
+				return fmt.Errorf("Could not (p)subscribe to channel '%s': %s.", channel, err)
+			}
+		}
+
+		go r.listen(pubsub)
+
+	}
 
 	return nil
 }
 
-func (r *RedisConsumer) listen() error {
+// Create
+func (r *RedisConsumer) createPubSub(server string) (redis.PubSubConn, error) {
+	var pubsub redis.PubSubConn
+	u, err := url.Parse(server)
+
+	if err != nil {
+		return pubsub, fmt.Errorf("Unable to parse to address '%s': %s", server, err)
+	}
+
+	if u.Scheme == "" {
+		// fallback to simple string based address (i.e. "10.0.0.1:10000")
+		u.Scheme = "tcp"
+		u.Host = server
+		u.Path = ""
+	}
+
+	con, err := redis.Dial(u.Scheme, u.Host)
+
+	if err != nil {
+		return pubsub, fmt.Errorf("Could connect to Redis: %s", err)
+	}
+
+	return redis.PubSubConn{con}, nil
+
+}
+
+func (r *RedisConsumer) listen(pubsub redis.PubSubConn) error {
 	for {
-		switch v := r.pubsub.Receive().(type) {
+		switch v := pubsub.Receive().(type) {
 		case redis.Message:
 			r.processMessage(v)
-			fmt.Printf("%s: message: %s\n", v.Channel, v.Data)
 		case error:
 			return v
 		}
@@ -110,7 +146,6 @@ func (r *RedisConsumer) processMessage(msg redis.Message) error {
 	metrics, err := r.parser.Parse(msg.Data)
 
 	if err != nil {
-		log.Printf("Could not parse message as metric: %s.", err)
 		return err
 
 	}
@@ -122,7 +157,10 @@ func (r *RedisConsumer) processMessage(msg redis.Message) error {
 }
 
 func (r *RedisConsumer) Stop() {
-	r.pubsub.Close()
+	for _, pubsub := range r.pubsubs {
+		pubsub.Close()
+	}
+
 }
 
 func init() {
