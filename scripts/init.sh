@@ -159,6 +159,22 @@ case $1 in
         fi
         ;;
 
+    reload)
+        # Reload the daemon.
+        if [ -e $pidfile ]; then
+            pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
+            if [ "$status" = 0 ]; then
+                if killproc -p $pidfile SIGHUP; then
+                    log_success_msg "$name process was reloaded"
+                else
+                    log_failure_msg "$name failed to reload service"
+                fi
+            fi
+        else
+            log_failure_msg "$name process is not running"
+        fi
+        ;;
+
     restart)
         # Restart the daemon.
         $0 stop && sleep 2 && $0 start
