@@ -35,6 +35,10 @@ The above configuration would result in output like:
 # Measurements
 Note: prefix can be set by the user, per process.
 
+
+Threads related measurement names:
+- procstat_[prefix_]num_threads value=5
+
 File descriptor related measurement names:
 - procstat_[prefix_]num_fds value=4
 
