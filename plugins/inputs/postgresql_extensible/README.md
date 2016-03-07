@@ -9,7 +9,7 @@ For now only two queries are specified and it's up to you to add more; some per 
 * A boolean to define if the query have to be run against some specific variables (defined in the databaes variable of the plugin section)
 * The list of the column that have to be defined has tags
 
-
+```
   # specify address via a url matching:
   #   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
   # or a simple string:
@@ -50,6 +50,6 @@ For now only two queries are specified and it's up to you to add more; some per 
     version=901
     withdbname=false
     tagvalue=""
-
+```
 
 The system can be easily extended using homemade metrics collection tools or using postgreql extensions (pg_stat_statement, pg_proctab, powa...)
