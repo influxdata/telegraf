@@ -18,12 +18,17 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
 			testutil.GetLocalHost()),
 		Databases: []string{"postgres"},
+		Query: query{ 
+                               {Sqlquery: "select * from pg_stat_database",
+				Version: 901,
+				Withdbname: false,
+				Tagvalue: ""},
+                },
 	}
-
 	var acc testutil.Accumulator
 	err := p.Gather(&acc)
 	require.NoError(t, err)
-	fmt.Printf(p.Databases)
+
 	availableColumns := make(map[string]bool)
 	for _, col := range p.AllColumns {
 		availableColumns[col] = true
@@ -43,14 +48,6 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		"temp_bytes",
 		"deadlocks",
 		"numbackends",
-		"buffers_alloc",
-		"buffers_backend",
-		"buffers_backend_fsync",
-		"buffers_checkpoint",
-		"buffers_clean",
-		"checkpoints_req",
-		"checkpoints_timed",
-		"maxwritten_clean",
 	}
 
 	floatMetrics := []string{
@@ -77,58 +74,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	}
 
 	assert.True(t, metricsCounted > 0)
-	//assert.Equal(t, len(availableColumns)-len(p.IgnoredColumns()), metricsCounted)
-}
-
-func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	p := &Postgresql{
-		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
-			testutil.GetLocalHost()),
-		Databases: []string{"postgres"},
-	}
-
-	var acc testutil.Accumulator
-
-	err := p.Gather(&acc)
-	require.NoError(t, err)
-
-	point, ok := acc.Get("postgresql")
-	require.True(t, ok)
-
-	assert.Equal(t, "postgres", point.Tags["db"])
-}
-
-func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	p := &Postgresql{
-		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
-			testutil.GetLocalHost()),
-	}
-
-	var acc testutil.Accumulator
-
-	err := p.Gather(&acc)
-	require.NoError(t, err)
-
-	var found bool
-
-	for _, pnt := range acc.Metrics {
-		if pnt.Measurement == "postgresql" {
-			if pnt.Tags["db"] == "postgres" {
-				found = true
-				break
-			}
-		}
-	}
-
-	assert.True(t, found)
+	assert.Equal(t, len(availableColumns)-len(p.IgnoredColumns()), metricsCounted)
 }
 
 func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {

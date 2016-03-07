@@ -18,13 +18,20 @@ type Postgresql struct {
 	OrderedColumns []string
 	AllColumns     []string
 	AdditionalTags []string
-	Query          []struct {
+	Query []struct {
 		Sqlquery   string
 		Version    int
-		Withdbname string
+		Withdbname bool
 		Tagvalue   string
 	}
 }
+
+type query []struct {
+     Sqlquery   string
+     Version    int
+     Withdbname bool
+     Tagvalue   string
+} 
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
 
@@ -51,15 +58,21 @@ var sampleConfig = `
   # succeed.
   # the tagvalue field is used to define custom tags (separated by comas)
   #
+  # Structure :
+  # [[inputs.postgresql_extensible.query]]
+  #   sqlquery string
+  #   version string
+  #   withdbname boolean
+  #   tagvalue string (coma separated)
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database where datname"
     version=901
-    withdbname="true"
+    withdbname=true
     tagvalue=""
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_bgwriter"
     version=901
-    withdbname="false"
+    withdbname=false
     tagvalue=""
 `
 
@@ -80,8 +93,6 @@ var localhost = "host=localhost sslmode=disable"
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 	var sql_query string
-	var query_version int
-	var query_with_dbname string
 	var query_addon string
 	var db_version int
 	var query string
@@ -105,17 +116,14 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
-		query_version = p.Query[i].Version
-		query_with_dbname = p.Query[i].Withdbname
 		tag_value = p.Query[i].Tagvalue
-
-		if query_with_dbname == "true" {
+		
+		if p.Query[i].Withdbname {
 			if len(p.Databases) != 0 {
 				query_addon = fmt.Sprintf(` IN ('%s')`,
 					strings.Join(p.Databases, "','"))
@@ -127,7 +135,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		}
 		sql_query += query_addon
 
-		if query_version <= db_version {
+		if p.Query[i].Version <= db_version {
 			rows, err := db.Query(sql_query)
 			if err != nil {
 				return err
