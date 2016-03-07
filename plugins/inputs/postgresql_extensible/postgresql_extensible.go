@@ -56,6 +56,10 @@ var sampleConfig = `
   # New queries can be added, if the withdbname is set to true and there is no databases defined
   # in the 'databases field', the sql query is ended by a 'is not null' in order to make the query
   # succeed.
+  # Example :
+  # The sqlquery : "SELECT * FROM pg_stat_database where datname" become "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
+  # because the databases variable was set to ['postgres', 'pgbench' ] and the withdbname was true.
+  # Be careful that if the withdbname is set to false you d'ont have to define the where clause (aka with the dbname)
   # the tagvalue field is used to define custom tags (separated by comas)
   #
   # Structure :
