@@ -62,7 +62,7 @@ The flags are:
   -sample-config     print out full sample configuration to stdout
   -config-directory  directory containing additional *.conf files
   -input-filter      filter the input plugins to enable, separator is :
-  -input-list	     print all the plugins inputs
+  -input-list        print all the plugins inputs
   -output-filter     filter the output plugins to enable, separator is :
   -output-list       print all the available outputs 
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
