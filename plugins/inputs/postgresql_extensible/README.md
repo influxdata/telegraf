@@ -30,6 +30,8 @@ For now only two queries are specified and it's up to you to add more; some per 
   # New queries can be added, if the withdbname is set to true and there is no databases defined
   # in the 'databases field', the sql query is ended by a 'is not null' in order to make the query
   # succeed.
+  # Be careful that the sqlquery must contain the where clause with a part of the filtering, the plugin will
+  # add a 'IN (dbname list)' clause if the withdbname is set to true
   # the tagvalue field is used to define custom tags (separated by comas)
   #
   # Structure :
@@ -51,5 +53,3 @@ For now only two queries are specified and it's up to you to add more; some per 
 
 
 The system can be easily extended using homemade metrics collection tools or using postgreql extensions (pg_stat_statement, pg_proctab, powa...)
-
-

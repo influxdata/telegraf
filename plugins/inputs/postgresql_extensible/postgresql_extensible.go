@@ -67,7 +67,7 @@ var sampleConfig = `
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database where datname"
     version=901
-    withdbname=true
+    withdbname=false
     tagvalue=""
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_bgwriter"
