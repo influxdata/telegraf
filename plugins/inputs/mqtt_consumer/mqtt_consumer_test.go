@@ -7,6 +7,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
+	"github.com/stretchr/testify/assert"
+
 	"git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 )
 
@@ -26,6 +28,52 @@ func newTestMQTTConsumer() (*MQTTConsumer, chan mqtt.Message) {
 		done:    make(chan struct{}),
 	}
 	return n, in
+}
+
+// Test that default client has random ID
+func TestRandomClientID(t *testing.T) {
+	m1 := &MQTTConsumer{
+		Servers: []string{"localhost:1883"}}
+	opts, err := m1.createOpts()
+	assert.NoError(t, err)
+
+	m2 := &MQTTConsumer{
+		Servers: []string{"localhost:1883"}}
+	opts2, err2 := m2.createOpts()
+	assert.NoError(t, err2)
+
+	assert.NotEqual(t, opts.ClientID, opts2.ClientID)
+}
+
+// Test that default client has random ID
+func TestClientID(t *testing.T) {
+	m1 := &MQTTConsumer{
+		Servers:  []string{"localhost:1883"},
+		ClientID: "telegraf-test",
+	}
+	opts, err := m1.createOpts()
+	assert.NoError(t, err)
+
+	m2 := &MQTTConsumer{
+		Servers:  []string{"localhost:1883"},
+		ClientID: "telegraf-test",
+	}
+	opts2, err2 := m2.createOpts()
+	assert.NoError(t, err2)
+
+	assert.Equal(t, "telegraf-test", opts2.ClientID)
+	assert.Equal(t, "telegraf-test", opts.ClientID)
+}
+
+// Test that Start() fails if client ID is not set but persistent is
+func TestPersistentClientIDFail(t *testing.T) {
+	m1 := &MQTTConsumer{
+		Servers:           []string{"localhost:1883"},
+		PersistentSession: true,
+	}
+	acc := testutil.Accumulator{}
+	err := m1.Start(&acc)
+	assert.Error(t, err)
 }
 
 // Test that the parser parses NATS messages into metrics

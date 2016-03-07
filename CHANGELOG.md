@@ -11,6 +11,7 @@
 - [#754](https://github.com/influxdata/telegraf/pull/754): docker plugin: adding `docker info` metrics to output. Thanks @titilambert!
 - [#788](https://github.com/influxdata/telegraf/pull/788): -input-list and -output-list command-line options. Thanks @ebookbug!
 - [#778](https://github.com/influxdata/telegraf/pull/778): Adding a TCP input listener.
+- [#797](https://github.com/influxdata/telegraf/issues/797): Provide option for persistent MQTT consumer client sessions.
 
 ### Bugfixes
 - [#748](https://github.com/influxdata/telegraf/issues/748): Fix sensor plugin split on ":"
