@@ -105,7 +105,6 @@ func (ac *accumulator) AddFields(
 				continue
 			}
 		}
-		result[k] = v
 
 		// Validate uint64 and float64 fields
 		switch val := v.(type) {
@@ -116,6 +115,7 @@ func (ac *accumulator) AddFields(
 			} else {
 				result[k] = int64(9223372036854775807)
 			}
+			continue
 		case float64:
 			// NaNs are invalid values in influxdb, skip measurement
 			if math.IsNaN(val) || math.IsInf(val, 0) {
@@ -127,6 +127,8 @@ func (ac *accumulator) AddFields(
 				continue
 			}
 		}
+
+		result[k] = v
 	}
 	fields = nil
 	if len(result) == 0 {
@@ -168,5 +170,8 @@ func (ac *accumulator) setDefaultTags(tags map[string]string) {
 }
 
 func (ac *accumulator) addDefaultTag(key, value string) {
+	if ac.defaultTags == nil {
+		ac.defaultTags = make(map[string]string)
+	}
 	ac.defaultTags[key] = value
 }
