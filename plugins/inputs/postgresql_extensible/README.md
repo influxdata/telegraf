@@ -32,6 +32,10 @@ For now only two queries are specified and it's up to you to add more; some per 
   # succeed.
   # Be careful that the sqlquery must contain the where clause with a part of the filtering, the plugin will
   # add a 'IN (dbname list)' clause if the withdbname is set to true
+  # Example :
+  # The sqlquery : "SELECT * FROM pg_stat_database where datname" become "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
+  # because the databases variable was set to ['postgres', 'pgbench' ] and the withdbname was true.
+  # Be careful that if the withdbname is set to false you d'ont have to define the where clause (aka with the dbname)
   # the tagvalue field is used to define custom tags (separated by comas)
   #
   # Structure :
