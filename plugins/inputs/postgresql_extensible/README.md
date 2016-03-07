@@ -1,71 +1,55 @@
 # PostgreSQL plugin
 
-This postgresql plugin provides metrics for your postgres database. It has been designed to parse a sql query json file with some parameters.
+This postgresql plugin provides metrics for your postgres database. It has been designed to parse ithe sql queries in the plugin section of your telegraf.conf.
 
-For now the plugin only support one postgresql instance, the plan is to be able to extend easily your postgres monitoring.
+For now only two queries are specified and it's up to you to add more; some per query parameters have been added :
+
+* The SQl query itself
+* The minimum version supported (here in numeric display visible in pg_settings)
+* A boolean to define if the query have to be run against some specific variables (defined in the databaes variable of the plugin section)
+* The list of the column that have to be defined has tags
 
 
+  # specify address via a url matching:
+  #   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
+  # or a simple string:
+  #   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  #
+  # All connection parameters are optional.  #
+  # Without the dbname parameter, the driver will default to a database
+  # with the same name as the user. This dbname is just for instantiating a
+  # connection with the server and doesn't restrict the databases we are trying
+  # to grab metrics for.
+  #
+  address = "host=localhost user=postgres sslmode=disable"
+  # A list of databases to pull metrics about. If not specified, metrics for all
+  # databases are gathered.
+  # databases = ["app_production", "testing"]
+  #
+  # Define the toml config where the sql queries are stored
+  # New queries can be added, if the withdbname is set to true and there is no databases defined
+  # in the 'databases field', the sql query is ended by a 'is not null' in order to make the query
+  # succeed.
+  # the tagvalue field is used to define custom tags (separated by comas)
+  #
+  # Structure :
+  # [[inputs.postgresql_extensible.query]]
+  #   sqlquery string
+  #   version string
+  #   withdbname boolean
+  #   tagvalue string (coma separated)
+  [[inputs.postgresql_extensible.query]]
+    sqlquery="SELECT * FROM pg_stat_database where datname"
+    version=901
+    withdbname=false
+    tagvalue=""
+  [[inputs.postgresql_extensible.query]]
+    sqlquery="SELECT * FROM pg_stat_bgwriter"
+    version=901
+    withdbname=false
+    tagvalue=""
 
-View to create :
--- View: public.sessions
 
-DROP VIEW public.sessions;
+The system can be easily extended using homemade metrics collection tools or using postgreql extensions (pg_stat_statement, pg_proctab, powa...)
 
-CREATE OR REPLACE VIEW public.sessions AS
- WITH proctab AS (
-         SELECT pg_proctab.pid,
-                CASE
-                    WHEN pg_proctab.state::text = 'R'::bpchar THEN 'running'::text
-                    WHEN pg_proctab.state::text = 'D'::bpchar THEN 'sleep-io'::text
-                    WHEN pg_proctab.state::text = 'S'::bpchar THEN 'sleep-waiting'::text
-                    WHEN pg_proctab.state::text = 'Z'::bpchar THEN 'zombie'::text
-                    WHEN pg_proctab.state::text = 'T'::bpchar THEN 'stopped'::text
-                    ELSE NULL::text
-                END AS proc_state,
-            pg_proctab.ppid,
-            pg_proctab.utime,
-            pg_proctab.stime,
-            pg_proctab.vsize,
-            pg_proctab.rss,
-            pg_proctab.processor,
-            pg_proctab.rchar,
-            pg_proctab.wchar,
-            pg_proctab.syscr,
-            pg_proctab.syscw,
-            pg_proctab.reads,
-            pg_proctab.writes,
-            pg_proctab.cwrites
-           FROM pg_proctab() pg_proctab
-        ), stat_activity AS (
-         SELECT pg_stat_activity.datname,
-            pg_stat_activity.pid,
-            pg_stat_activity.usename,
-                CASE
-                    WHEN pg_stat_activity.query IS NULL THEN 'no query'::text
-                    ELSE regexp_replace(pg_stat_activity.query, '[\n\r]+'::text, ' '::text, 'g'::text)
-                END AS query
-           FROM pg_stat_activity
-        )
- SELECT ('"'::text || stat.datname::text) || '"'::text AS db,
-    ('"'::text || stat.usename::text) || '"'::text as username,
-    stat.pid AS pid,
-    ('"'::text || proc.proc_state ::text) || '"'::text AS state,
-    ('"'::text || stat.query::text) || '"'::text AS query,
-    proc.utime AS session_usertime,
-    proc.stime AS session_systemtime,
-    proc.vsize AS session_virtual_memory_size,
-    proc.rss AS session_resident_memory_size,
-    proc.processor AS session_processor_number,
-    proc.rchar AS session_bytes_read,
-    proc.wchar AS session_bytes_written,
-    proc.syscr AS session_read_io,
-    proc.syscw AS session_write_io,
-    proc.reads AS session_physical_reads,
-    proc.writes AS session_physical_writes,
-    proc.cwrites AS session_cancel_writes
-   FROM proctab proc,
-    stat_activity stat
-  WHERE proc.pid = stat.pid;
 
-ALTER TABLE public.sessions
-  OWNER TO postgres;
