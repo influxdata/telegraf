@@ -18,12 +18,12 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
 			testutil.GetLocalHost()),
 		Databases: []string{"postgres"},
-		Query: query{ 
-                               {Sqlquery: "select * from pg_stat_database",
-				Version: 901,
+		Query: query{
+			{Sqlquery: "select * from pg_stat_database",
+				Version:    901,
 				Withdbname: false,
-				Tagvalue: ""},
-                },
+				Tagvalue:   ""},
+		},
 	}
 	var acc testutil.Accumulator
 	err := p.Gather(&acc)

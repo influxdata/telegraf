@@ -18,7 +18,7 @@ type Postgresql struct {
 	OrderedColumns []string
 	AllColumns     []string
 	AdditionalTags []string
-	Query []struct {
+	Query          []struct {
 		Sqlquery   string
 		Version    int
 		Withdbname bool
@@ -27,11 +27,11 @@ type Postgresql struct {
 }
 
 type query []struct {
-     Sqlquery   string
-     Version    int
-     Withdbname bool
-     Tagvalue   string
-} 
+	Sqlquery   string
+	Version    int
+	Withdbname bool
+	Tagvalue   string
+}
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
 
@@ -122,7 +122,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
 		tag_value = p.Query[i].Tagvalue
-		
+
 		if p.Query[i].Withdbname {
 			if len(p.Databases) != 0 {
 				query_addon = fmt.Sprintf(` IN ('%s')`,
