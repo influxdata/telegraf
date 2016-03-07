@@ -31,11 +31,12 @@ var fSampleConfig = flag.Bool("sample-config", false,
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
-var fInpuList = flag.Bool("input-list", false, "print all the plugins inputs")
+var fInputList = flag.Bool("input-list", false,
+	"print available output plugins.")
 var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
 var fOutputList = flag.Bool("output-list", false,
-	"print all the available outputs")
+	"print available output plugins.")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 var fInputFiltersLegacy = flag.String("filter", "",
@@ -64,7 +65,7 @@ The flags are:
   -input-filter      filter the input plugins to enable, separator is :
   -input-list        print all the plugins inputs
   -output-filter     filter the output plugins to enable, separator is :
-  -output-list       print all the available outputs 
+  -output-list       print all the available outputs
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
@@ -121,10 +122,19 @@ func main() {
 		}
 
 		if *fOutputList {
-			fmt.Println("The outputs available:")
+			fmt.Println("Available Output Plugins:")
 			for k, _ := range outputs.Outputs {
 				fmt.Printf("  %s\n", k)
 			}
+			return
+		}
+
+		if *fInputList {
+			fmt.Println("Available Input Plugins:")
+			for k, _ := range inputs.Inputs {
+				fmt.Printf("  %s\n", k)
+			}
+			return
 		}
 
 		if *fVersion {
@@ -145,13 +155,6 @@ func main() {
 				}
 			}
 			return
-		}
-
-		if *fInpuList {
-			fmt.Println("The plugin inputs available:")
-			for k, _ := range inputs.Inputs {
-				fmt.Printf("  %s\n", k)
-			}
 		}
 
 		var (
