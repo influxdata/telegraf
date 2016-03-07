@@ -52,4 +52,4 @@ For now only two queries are specified and it's up to you to add more; some per 
     tagvalue=""
 ```
 
-The system can be easily extended using homemade metrics collection tools or using postgreql extensions (pg_stat_statement, pg_proctab, powa...)
+The system can be easily extended using homemade metrics collection tools or using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab), [powa](http://dalibo.github.io/powa/)...)
