@@ -11,8 +11,9 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
-
+	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 )
 
@@ -30,11 +31,13 @@ var fSampleConfig = flag.Bool("sample-config", false,
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
+var fInpuList = flag.Bool("input-list", false, "print all the plugins inputs")
 var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
+var fOutputList = flag.Bool("output-list", false,
+	"print all the available outputs")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
-
 var fInputFiltersLegacy = flag.String("filter", "",
 	"filter the inputs to enable, separator is :")
 var fOutputFiltersLegacy = flag.String("outputfilter", "",
@@ -59,7 +62,9 @@ The flags are:
   -sample-config     print out full sample configuration to stdout
   -config-directory  directory containing additional *.conf files
   -input-filter      filter the input plugins to enable, separator is :
+  -input-list        print all the plugins inputs
   -output-filter     filter the output plugins to enable, separator is :
+  -output-list       print all the available outputs 
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
@@ -115,6 +120,13 @@ func main() {
 			outputFilters = strings.Split(":"+outputFilter+":", ":")
 		}
 
+		if *fOutputList {
+			fmt.Println("The outputs available:")
+			for k, _ := range outputs.Outputs {
+				fmt.Printf("  %s\n", k)
+			}
+		}
+
 		if *fVersion {
 			v := fmt.Sprintf("Telegraf - Version %s", Version)
 			fmt.Println(v)
@@ -133,6 +145,13 @@ func main() {
 				}
 			}
 			return
+		}
+
+		if *fInpuList {
+			fmt.Println("The plugin inputs available:")
+			for k, _ := range inputs.Inputs {
+				fmt.Printf("  %s\n", k)
+			}
 		}
 
 		var (
