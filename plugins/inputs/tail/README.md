@@ -32,12 +32,6 @@ It works like the BSD `tail` command and can keep reading when more logs are add
   ##
   filename = "/var/log/nginx/access.ltsv.log"
 
-  ## Seek to this location before tailing
-  seek_offset = 0
-
-  ## Seek from whence. See https://golang.org/pkg/os/#File.Seek
-  seek_whence = 0
-
   ## Reopen recreated files (tail -F)
   re_open = true
 
@@ -49,9 +43,6 @@ It works like the BSD `tail` command and can keep reading when more logs are add
 
   ## Set this to true if the file is a named pipe (mkfifo)
   pipe = false
-
-  ## Continue looking for new lines (tail -f)
-  follow = true
 
   ## If non-zero, split longer lines into multiple lines
   max_line_size = 0

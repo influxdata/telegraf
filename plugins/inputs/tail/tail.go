@@ -34,12 +34,6 @@ const sampleConfig = `
   ##
   filename = "/var/log/nginx/access.ltsv.log"
 
-  ## Seek to this location before tailing
-  seek_offset = 0
-
-  ## Seek from whence. See https://golang.org/pkg/os/#File.Seek
-  seek_whence = 0
-
   ## Reopen recreated files (tail -F)
   re_open = true
 
@@ -51,9 +45,6 @@ const sampleConfig = `
 
   ## Set this to true if the file is a named pipe (mkfifo)
   pipe = false
-
-  ## Continue looking for new lines (tail -f)
-  follow = true
 
   ## If non-zero, split longer lines into multiple lines
   max_line_size = 0
@@ -134,17 +125,13 @@ type Tail struct {
 	Filename string
 
 	// File-specfic
-	SeekOffset int64 // Seek to this location before tailing
-	SeekWhence int   // Seek from whence. See https://golang.org/pkg/os/#File.Seek
-	ReOpen     bool  // Reopen recreated files (tail -F)
-	MustExist  bool  // Fail early if the file does not exist
-	Poll       bool  // Poll for file changes instead of using inotify
-	Pipe       bool  // Is a named pipe (mkfifo)
-	// TODO: Add configs for RateLimiter
+	ReOpen    bool // Reopen recreated files (tail -F)
+	MustExist bool // Fail early if the file does not exist
+	Poll      bool // Poll for file changes instead of using inotify
+	Pipe      bool // Is a named pipe (mkfifo)
 
 	// Generic IO
-	Follow      bool // Continue looking for new lines (tail -f)
-	MaxLineSize int  // If non-zero, split longer lines into multiple lines
+	MaxLineSize int // If non-zero, split longer lines into multiple lines
 
 	DisableLogging bool // If false, logs are printed to stderr
 
@@ -177,15 +164,11 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	t.done = make(chan struct{})
 
 	config := tailfile.Config{
-		Location: &tailfile.SeekInfo{
-			Offset: t.SeekOffset,
-			Whence: t.SeekWhence,
-		},
 		ReOpen:      t.ReOpen,
 		MustExist:   t.MustExist,
 		Poll:        t.Poll,
 		Pipe:        t.Pipe,
-		Follow:      t.Follow,
+		Follow:      true,
 		MaxLineSize: t.MaxLineSize,
 	}
 	if t.DisableLogging {
