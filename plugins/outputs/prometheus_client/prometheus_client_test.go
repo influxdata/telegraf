@@ -46,8 +46,8 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		value float64
 		tags  map[string]string
 	}{
-		{"test_point_1_value", 0.0, tags},
-		{"test_point_2_value", 1.0, tags},
+		{"test_point_1", 0.0, tags},
+		{"test_point_2", 1.0, tags},
 	}
 
 	var acc testutil.Accumulator
@@ -78,8 +78,8 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		name  string
 		value float64
 	}{
-		{"test_point_3_value", 0.0},
-		{"test_point_4_value", 1.0},
+		{"test_point_3", 0.0},
+		{"test_point_4", 1.0},
 	}
 
 	require.NoError(t, p.Gather(&acc))
