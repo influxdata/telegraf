@@ -43,7 +43,6 @@ func TestLtsvLogGeneratesMetrics(t *testing.T) {
 	reader := &Tail{
 		Filename:       tmpfile.Name(),
 		ReOpen:         true,
-		Follow:         true,
 		DisableLogging: true,
 		parser:         parser,
 	}
