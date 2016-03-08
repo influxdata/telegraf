@@ -214,11 +214,13 @@ Currently implemented sources:
     * disk
     * diskio
     * swap
+    * processes
 
 Telegraf can also collect metrics via the following service plugins:
 
 * statsd
-* udp listener
+* udp_listener
+* tcp_listener
 * mqtt_consumer
 * kafka_consumer
 * nats_consumer
