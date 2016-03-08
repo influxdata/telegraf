@@ -79,7 +79,12 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		}
 
 		for n, val := range point.Fields() {
-			mname := fmt.Sprintf("%s_%s", key, n)
+			var mname string
+			if n == "value" {
+				mname = key
+			} else {
+				mname = fmt.Sprintf("%s_%s", key, n)
+			}
 			if _, ok := p.metrics[mname]; !ok {
 				p.metrics[mname] = prometheus.NewUntypedVec(
 					prometheus.UntypedOpts{
