@@ -65,7 +65,7 @@ func (p *Processes) Gather(acc telegraf.Accumulator) error {
 func getEmptyFields() map[string]interface{} {
 	fields := map[string]interface{}{
 		"blocked":  int64(0),
-		"zombie":   int64(0),
+		"zombies":  int64(0),
 		"stopped":  int64(0),
 		"running":  int64(0),
 		"sleeping": int64(0),
@@ -105,7 +105,7 @@ func (p *Processes) gatherFromPS(fields map[string]interface{}) error {
 			// Also known as uninterruptible sleep or disk sleep
 			fields["blocked"] = fields["blocked"].(int64) + int64(1)
 		case 'Z':
-			fields["zombie"] = fields["zombie"].(int64) + int64(1)
+			fields["zombies"] = fields["zombies"].(int64) + int64(1)
 		case 'T':
 			fields["stopped"] = fields["stopped"].(int64) + int64(1)
 		case 'R':

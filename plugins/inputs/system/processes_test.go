@@ -40,10 +40,11 @@ func TestFromPS(t *testing.T) {
 	require.NoError(t, err)
 
 	fields := getEmptyFields()
-	fields["blocked"] = int64(1)
+	fields["blocked"] = int64(4)
+	fields["zombies"] = int64(1)
 	fields["running"] = int64(4)
 	fields["sleeping"] = int64(34)
-	fields["total"] = int64(39)
+	fields["total"] = int64(43)
 
 	acc.AssertContainsTaggedFields(t, "processes", fields, map[string]string{})
 }
@@ -139,6 +140,10 @@ S
 S+
 S+
 Ss
+L
+U
+Z
+D
 S+
 `
 
