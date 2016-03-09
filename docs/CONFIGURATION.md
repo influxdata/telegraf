@@ -97,7 +97,7 @@ fields which begin with `time_`.
   percpu = true
   totalcpu = false
   # filter all fields beginning with 'time_'
-  drop = ["time_*"]
+  fielddrop = ["time_*"]
 ```
 
 #### Input Config: tagpass and tagdrop
@@ -106,7 +106,7 @@ fields which begin with `time_`.
 [[inputs.cpu]]
   percpu = true
   totalcpu = false
-  drop = ["cpu_time"]
+  fielddrop = ["cpu_time"]
   # Don't collect CPU data for cpu6 & cpu7
   [inputs.cpu.tagdrop]
     cpu = [ "cpu6", "cpu7" ]
@@ -199,7 +199,7 @@ to avoid measurement collisions:
   percpu = true
   totalcpu = false
   name_override = "percpu_usage"
-  drop = ["cpu_time*"]
+  fielddrop = ["cpu_time*"]
 ```
 
 ## `[outputs.xxx]` Configuration
