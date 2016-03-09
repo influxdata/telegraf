@@ -34,8 +34,12 @@ var sampleConfig = `
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
 
-  ##  List of channels to listen to. Selecting channels using pattern-matching
-  ## is allowed.
+  ##  List of channels to listen to. Selecting channels using Redis'
+  ##  pattern-matching is allowed, e.g.:
+  ##	channels = ["telegraf:*", "app_[1-3]"]
+  ##
+  ##  See http://redis.io/topics/pubsub#pattern-matching-subscriptions for
+  ##  more info.
   channels = ["telegraf"]
 
   ## Data format to consume. This can be "json", "influx" or "graphite"
