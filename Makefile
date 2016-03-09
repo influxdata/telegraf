@@ -22,8 +22,8 @@ build-windows:
 		./cmd/telegraf/telegraf.go
 
 build-for-docker:
-	CGO_ENABLED=0 GOOS=linux go -o telegraf -ldflags \
-					"-X main.Version=$(VERSION)" \
+	CGO_ENABLED=0 GOOS=linux go build -installsuffix cgo -o telegraf -ldflags \
+					"-s -X main.Version=$(VERSION)" \
 					./cmd/telegraf/telegraf.go
 
 # Build with race detector
