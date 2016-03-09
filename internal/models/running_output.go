@@ -82,9 +82,11 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 				}
 			}
 		} else {
-			log.Printf("WARNING: overwriting cached metrics, you may want to " +
-				"increase the metric_buffer_limit setting in your [agent] " +
-				"config if you do not wish to overwrite metrics.\n")
+			if ro.overwriteI == 0 {
+				log.Printf("WARNING: overwriting cached metrics, you may want to " +
+					"increase the metric_buffer_limit setting in your [agent] " +
+					"config if you do not wish to overwrite metrics.\n")
+			}
 			if ro.overwriteI == len(ro.metrics) {
 				ro.overwriteI = 0
 			}
