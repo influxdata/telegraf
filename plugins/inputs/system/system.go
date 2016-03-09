@@ -31,11 +31,17 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	users, err := host.Users()
+	if err != nil {
+		return err
+	}
+
 	fields := map[string]interface{}{
 		"load1":         loadavg.Load1,
 		"load5":         loadavg.Load5,
 		"load15":        loadavg.Load15,
 		"uptime":        hostinfo.Uptime,
+		"n_users":       len(users),
 		"uptime_format": format_uptime(hostinfo.Uptime),
 	}
 	acc.AddFields("system", fields, nil)
