@@ -26,6 +26,12 @@ build-for-docker:
 					"-X main.Version=$(VERSION)" \
 					./cmd/telegraf/telegraf.go
 
+build-docker: build-for-docker
+	./telegraf -sample-config  -input-filter cpu:mem -output-filter influxdb \
+		| sed -e "s/localhost:8086/influxdb:8086/g" > telegraf.conf
+	docker build -t influxdata/telegraf:$(VERSION) .
+	rm telegraf.conf
+
 # Build with race detector
 dev: prepare
 	go build -race -ldflags "-X main.Version=$(VERSION)" ./...
