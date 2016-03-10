@@ -27,6 +27,7 @@
 - [#708](https://github.com/influxdata/telegraf/issues/708): packaging: build ARM package
 - [#713](https://github.com/influxdata/telegraf/issues/713): packaging: insecure permissions error on log directory
 - [#816](https://github.com/influxdata/telegraf/issues/816): Fix phpfpm panic if fcgi endpoint unreachable.
+- [#828](https://github.com/influxdata/telegraf/issues/828): fix net_response plugin overwriting host tag.
 
 ## v0.10.4.1
 
