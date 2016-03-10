@@ -215,6 +215,7 @@ Currently implemented sources:
     * diskio
     * swap
     * processes
+    * kernel (/proc/stat)
 
 Telegraf can also collect metrics via the following service plugins:
 

@@ -1,4 +1,4 @@
-## v0.10.5 [unreleased]
+## v0.11.0 [unreleased]
 
 ### Release Notes
 
@@ -16,6 +16,7 @@
 - [#776](https://github.com/influxdata/telegraf/pull/776): Add Zookeeper chroot option to kafka_consumer. Thanks @prune998!
 - [#811](https://github.com/influxdata/telegraf/pull/811): Add processes plugin for classifying total procs on system. Thanks @titilambert!
 - [#235](https://github.com/influxdata/telegraf/issues/235): Add number of users to the `system` input plugin.
+- [#826](https://github.com/influxdata/telegraf/pull/826): "kernel" linux plugin for /proc/stat metrics (context switches, interrupts, etc.)
 
 ### Bugfixes
 - [#748](https://github.com/influxdata/telegraf/issues/748): Fix sensor plugin split on ":"
