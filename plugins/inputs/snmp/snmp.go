@@ -464,13 +464,14 @@ func (h *Host) SNMPMap(acc telegraf.Accumulator) error {
 			// To get mapping between instance id
 			// and instance name
 			oid_asked := table.mappingTable
+			oid_next := oid_asked
 			need_more_requests := true
 			// Set max repetition
 			maxRepetition := uint8(32)
 			// Launch requests
 			for need_more_requests {
 				// Launch request
-				result, err3 := snmpClient.GetBulk([]string{oid_asked}, 0, maxRepetition)
+				result, err3 := snmpClient.GetBulk([]string{oid_next}, 0, maxRepetition)
 				if err3 != nil {
 					return err3
 				}
@@ -572,6 +573,7 @@ func (h *Host) SNMPMap(acc telegraf.Accumulator) error {
 				// Determine if we need more requests
 				if strings.HasPrefix(lastOid, oid_asked) {
 					need_more_requests = true
+					oid_next = lastOid
 				} else {
 					need_more_requests = false
 				}

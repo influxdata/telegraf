@@ -112,6 +112,7 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		statusPath string
 	)
 
+	var err error
 	if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
 		u, err := url.Parse(addr)
 		if err != nil {
@@ -120,7 +121,7 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		socketAddr := strings.Split(u.Host, ":")
 		fcgiIp := socketAddr[0]
 		fcgiPort, _ := strconv.Atoi(socketAddr[1])
-		fcgi, _ = NewClient(fcgiIp, fcgiPort)
+		fcgi, err = newFcgiClient(fcgiIp, fcgiPort)
 	} else {
 		socketAddr := strings.Split(addr, ":")
 		if len(socketAddr) >= 2 {
@@ -134,8 +135,13 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		if _, err := os.Stat(socketPath); os.IsNotExist(err) {
 			return fmt.Errorf("Socket doesn't exist  '%s': %s", socketPath, err)
 		}
-		fcgi, _ = NewClient("unix", socketPath)
+		fcgi, err = newFcgiClient("unix", socketPath)
 	}
+
+	if err != nil {
+		return err
+	}
+
 	return g.gatherFcgi(fcgi, statusPath, acc)
 }
 

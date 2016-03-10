@@ -52,12 +52,22 @@ func NewSpecProcessor(
 }
 
 func (p *SpecProcessor) pushMetrics() {
+	p.pushNThreadsStats()
 	p.pushFDStats()
 	p.pushCtxStats()
 	p.pushIOStats()
 	p.pushCPUStats()
 	p.pushMemoryStats()
 	p.flush()
+}
+
+func (p *SpecProcessor) pushNThreadsStats() error {
+	numThreads, err := p.proc.NumThreads()
+	if err != nil {
+		return fmt.Errorf("NumThreads error: %s\n", err)
+	}
+	p.add("num_threads", numThreads)
+	return nil
 }
 
 func (p *SpecProcessor) pushFDStats() error {

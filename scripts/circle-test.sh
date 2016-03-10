@@ -68,7 +68,7 @@ telegraf -sample-config > $tmpdir/config.toml
 exit_if_fail telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
-mv $GOPATH/bin/telegraf $CIRCLE_ARTIFACTS
+cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
 
 eval "git describe --exact-match HEAD"
 if [ $? -eq 0 ]; then

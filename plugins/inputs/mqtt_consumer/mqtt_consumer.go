@@ -26,6 +26,9 @@ type MQTTConsumer struct {
 	// Legacy metric buffer support
 	MetricBuffer int
 
+	PersistentSession bool
+	ClientID          string `toml:"client_id"`
+
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
 	// Path to host cert file
@@ -56,6 +59,13 @@ var sampleConfig = `
     "telegraf/+/mem",
     "sensors/#",
   ]
+
+  # if true, messages that can't be delivered while the subscriber is offline
+  # will be delivered when it comes back (such as on service restart).
+  # NOTE: if true, client_id MUST be set
+  persistent_session = false
+  # If empty, a random client ID will be generated.
+  client_id = ""
 
   ## username and password to connect MQTT server.
   # username = "telegraf"
@@ -90,6 +100,11 @@ func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.Lock()
 	defer m.Unlock()
+
+	if m.PersistentSession && m.ClientID == "" {
+		return fmt.Errorf("ERROR MQTT Consumer: When using persistent_session" +
+			" = true, you MUST also set client_id")
+	}
 
 	m.acc = acc
 	if m.QoS > 2 || m.QoS < 0 {
@@ -166,7 +181,11 @@ func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
 func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 
-	opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))
+	if m.ClientID == "" {
+		opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))
+	} else {
+		opts.SetClientID(m.ClientID)
+	}
 
 	tlsCfg, err := internal.GetTLSConfig(
 		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
@@ -199,6 +218,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	}
 	opts.SetAutoReconnect(true)
 	opts.SetKeepAlive(time.Second * 60)
+	opts.SetCleanSession(!m.PersistentSession)
 	return opts, nil
 }
 
