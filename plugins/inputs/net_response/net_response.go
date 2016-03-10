@@ -169,7 +169,7 @@ func (c *NetResponse) Gather(acc telegraf.Accumulator) error {
 		return errors.New("Bad port")
 	}
 	// Prepare data
-	tags := map[string]string{"host": host, "port": port}
+	tags := map[string]string{"server": host, "port": port}
 	var fields map[string]interface{}
 	// Gather data
 	if c.Protocol == "tcp" {
