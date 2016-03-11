@@ -71,7 +71,7 @@ var sampleConfig = `
   #   withdbname boolean
   #   tagvalue string (coma separated)
   [[inputs.postgresql_extensible.query]]
-    sqlquery="SELECT * FROM pg_stat_database where datname"
+    sqlquery="SELECT * FROM pg_stat_database"
     version=901
     withdbname=false
     tagvalue=""
