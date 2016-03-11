@@ -1,4 +1,4 @@
-## v0.10.5 [unreleased]
+## v0.11.0 [unreleased]
 
 ### Release Notes
 
@@ -16,6 +16,7 @@
 - [#776](https://github.com/influxdata/telegraf/pull/776): Add Zookeeper chroot option to kafka_consumer. Thanks @prune998!
 - [#811](https://github.com/influxdata/telegraf/pull/811): Add processes plugin for classifying total procs on system. Thanks @titilambert!
 - [#235](https://github.com/influxdata/telegraf/issues/235): Add number of users to the `system` input plugin.
+- [#826](https://github.com/influxdata/telegraf/pull/826): "kernel" linux plugin for /proc/stat metrics (context switches, interrupts, etc.)
 
 ### Bugfixes
 - [#748](https://github.com/influxdata/telegraf/issues/748): Fix sensor plugin split on ":"
@@ -27,6 +28,7 @@
 - [#708](https://github.com/influxdata/telegraf/issues/708): packaging: build ARM package
 - [#713](https://github.com/influxdata/telegraf/issues/713): packaging: insecure permissions error on log directory
 - [#816](https://github.com/influxdata/telegraf/issues/816): Fix phpfpm panic if fcgi endpoint unreachable.
+- [#828](https://github.com/influxdata/telegraf/issues/828): fix net_response plugin overwriting host tag.
 
 ## v0.10.4.1
 

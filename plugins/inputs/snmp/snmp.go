@@ -23,6 +23,13 @@ type Snmp struct {
 	Table             []Table
 	Subtable          []Subtable
 	SnmptranslateFile string
+
+	nameToOid   map[string]string
+	initNode    Node
+	subTableMap map[string]Subtable
+
+	// TODO change as unexportable
+	//OidInstanceMapping map[string]map[string]string
 }
 
 type Host struct {
@@ -110,16 +117,7 @@ type Node struct {
 	subnodes map[string]Node
 }
 
-var initNode = Node{
-	id:       "1",
-	name:     "",
-	subnodes: make(map[string]Node),
-}
-
-var SubTableMap = make(map[string]Subtable)
-
-var NameToOid = make(map[string]string)
-
+// TODO move this var to snmp struct
 var OidInstanceMapping = make(map[string]map[string]string)
 
 var sampleConfig = `
@@ -286,14 +284,24 @@ func findnodename(node Node, ids []string) (string, string) {
 }
 
 func (s *Snmp) Gather(acc telegraf.Accumulator) error {
+	// TODO put this in cache on first run
 	// Create subtables mapping
-	if len(SubTableMap) == 0 {
+	if len(s.subTableMap) == 0 {
+		s.subTableMap = make(map[string]Subtable)
 		for _, sb := range s.Subtable {
-			SubTableMap[sb.Name] = sb
+			s.subTableMap[sb.Name] = sb
 		}
 	}
+	// TODO put this in cache on first run
 	// Create oid tree
-	if s.SnmptranslateFile != "" && len(initNode.subnodes) == 0 {
+	if s.SnmptranslateFile != "" && len(s.initNode.subnodes) == 0 {
+		s.nameToOid = make(map[string]string)
+		s.initNode = Node{
+			id:       "1",
+			name:     "",
+			subnodes: make(map[string]Node),
+		}
+
 		data, err := ioutil.ReadFile(s.SnmptranslateFile)
 		if err != nil {
 			log.Printf("Reading SNMPtranslate file error: %s", err)
@@ -305,8 +313,8 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 				if oids[2] != "" {
 					oid_name := oids[1]
 					oid := oids[2]
-					fillnode(initNode, oid_name, strings.Split(string(oid), "."))
-					NameToOid[oid_name] = oid
+					fillnode(s.initNode, oid_name, strings.Split(string(oid), "."))
+					s.nameToOid[oid_name] = oid
 				}
 			}
 		}
@@ -330,7 +338,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// Get Easy GET oids
 		for _, oidstring := range host.GetOids {
 			oid := Data{}
-			if val, ok := NameToOid[oidstring]; ok {
+			if val, ok := s.nameToOid[oidstring]; ok {
 				// TODO should we add the 0 instance ?
 				oid.Name = oidstring
 				oid.Oid = val
@@ -351,7 +359,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			// Get GET oids
 			for _, oid := range s.Get {
 				if oid.Name == oid_name {
-					if val, ok := NameToOid[oid.Oid]; ok {
+					if val, ok := s.nameToOid[oid.Oid]; ok {
 						// TODO should we add the 0 instance ?
 						if oid.Instance != "" {
 							oid.rawOid = "." + val + "." + oid.Instance
@@ -367,7 +375,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			// Get GETBULK oids
 			for _, oid := range s.Bulk {
 				if oid.Name == oid_name {
-					if val, ok := NameToOid[oid.Oid]; ok {
+					if val, ok := s.nameToOid[oid.Oid]; ok {
 						oid.rawOid = "." + val
 					} else {
 						oid.rawOid = oid.Oid
@@ -389,26 +397,27 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 		// Launch Mapping
+		// TODO put this in cache on first run
 		// TODO save mapping and computed oids
 		// to do it only the first time
-		// only if len(OidInstanceMapping) == 0
+		// only if len(s.OidInstanceMapping) == 0
 		if len(OidInstanceMapping) >= 0 {
-			if err := host.SNMPMap(acc); err != nil {
+			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
 				return err
 			}
 		}
 		// Launch Get requests
-		if err := host.SNMPGet(acc); err != nil {
+		if err := host.SNMPGet(acc, s.initNode); err != nil {
 			return err
 		}
-		if err := host.SNMPBulk(acc); err != nil {
+		if err := host.SNMPBulk(acc, s.initNode); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (h *Host) SNMPMap(acc telegraf.Accumulator) error {
+func (h *Host) SNMPMap(acc telegraf.Accumulator, nameToOid map[string]string, subTableMap map[string]Subtable) error {
 	// Get snmp client
 	snmpClient, err := h.GetSNMPClient()
 	if err != nil {
@@ -426,7 +435,7 @@ func (h *Host) SNMPMap(acc telegraf.Accumulator) error {
 				// This is just a bulk request
 				oid := Data{}
 				oid.Oid = table.oid
-				if val, ok := NameToOid[oid.Oid]; ok {
+				if val, ok := nameToOid[oid.Oid]; ok {
 					oid.rawOid = "." + val
 				} else {
 					oid.rawOid = oid.Oid
@@ -441,7 +450,7 @@ func (h *Host) SNMPMap(acc telegraf.Accumulator) error {
 					// ... we create a new Data (oid) object
 					oid := Data{}
 					// Looking for more information about this subtable
-					ssb, exists := SubTableMap[sb]
+					ssb, exists := subTableMap[sb]
 					if exists {
 						// We found a subtable section in config files
 						oid.Oid = ssb.Oid
@@ -528,7 +537,7 @@ func (h *Host) SNMPMap(acc telegraf.Accumulator) error {
 								// Add table oid in bulk oid list
 								oid := Data{}
 								oid.Oid = table.oid
-								if val, ok := NameToOid[oid.Oid]; ok {
+								if val, ok := nameToOid[oid.Oid]; ok {
 									oid.rawOid = "." + val
 								} else {
 									oid.rawOid = oid.Oid
@@ -545,7 +554,7 @@ func (h *Host) SNMPMap(acc telegraf.Accumulator) error {
 									// ... we create a new Data (oid) object
 									oid := Data{}
 									// Looking for more information about this subtable
-									ssb, exists := SubTableMap[sb]
+									ssb, exists := subTableMap[sb]
 									if exists {
 										// We found a subtable section in config files
 										oid.Oid = ssb.Oid + key
@@ -587,7 +596,7 @@ func (h *Host) SNMPMap(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *Host) SNMPGet(acc telegraf.Accumulator) error {
+func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
 	// Get snmp client
 	snmpClient, err := h.GetSNMPClient()
 	if err != nil {
@@ -620,7 +629,7 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator) error {
 			return err3
 		}
 		// Handle response
-		_, err = h.HandleResponse(oidsList, result, acc)
+		_, err = h.HandleResponse(oidsList, result, acc, initNode)
 		if err != nil {
 			return err
 		}
@@ -628,7 +637,7 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *Host) SNMPBulk(acc telegraf.Accumulator) error {
+func (h *Host) SNMPBulk(acc telegraf.Accumulator, initNode Node) error {
 	// Get snmp client
 	snmpClient, err := h.GetSNMPClient()
 	if err != nil {
@@ -663,7 +672,7 @@ func (h *Host) SNMPBulk(acc telegraf.Accumulator) error {
 				return err3
 			}
 			// Handle response
-			last_oid, err := h.HandleResponse(oidsList, result, acc)
+			last_oid, err := h.HandleResponse(oidsList, result, acc, initNode)
 			if err != nil {
 				return err
 			}
@@ -715,7 +724,7 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 	return snmpClient, nil
 }
 
-func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, acc telegraf.Accumulator) (string, error) {
+func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, acc telegraf.Accumulator, initNode Node) (string, error) {
 	var lastOid string
 	for _, variable := range result.Variables {
 		lastOid = variable.Name
