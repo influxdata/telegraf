@@ -4,20 +4,22 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 type Postgresql struct {
-	Address        string
-	Databases      []string
-	OrderedColumns []string
-	AllColumns     []string
+	Address          string
+	Databases        []string
+	OrderedColumns   []string
+	AllColumns       []string
+	sanitizedAddress string
 }
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
@@ -133,6 +135,23 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
+var passwordKVMatcher, _ = regexp.Compile("password=\\S+ ?")
+
+func (p *Postgresql) SanitizedAddress() (_ string, err error) {
+	var canonicalizedAddress string
+	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
+		canonicalizedAddress, err = pq.ParseURL(p.Address)
+		if err != nil {
+			return p.sanitizedAddress, err
+		}
+	} else {
+		canonicalizedAddress = p.Address
+	}
+	p.sanitizedAddress = passwordKVMatcher.ReplaceAllString(canonicalizedAddress, "")
+
+	return p.sanitizedAddress, err
+}
+
 func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	var columnVars []interface{}
 	var dbname bytes.Buffer
@@ -165,7 +184,13 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 		dbname.WriteString("postgres")
 	}
 
-	tags := map[string]string{"server": p.Address, "db": dbname.String()}
+	var tagAddress string
+	tagAddress, err = p.SanitizedAddress()
+	if err != nil {
+		return err
+	}
+
+	tags := map[string]string{"server": tagAddress, "db": dbname.String()}
 
 	fields := make(map[string]interface{})
 	for col, val := range columnMap {
