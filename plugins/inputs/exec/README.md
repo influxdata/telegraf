@@ -1,6 +1,6 @@
 # Exec Input Plugin
 
-The exec plugin can execute arbitrary commands which output:
+The exec input plugin can execute arbitrary commands which output:
 
 * JSON
 * InfluxDB [line-protocol](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/)
