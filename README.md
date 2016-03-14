@@ -27,12 +27,12 @@ the [release blog post](https://influxdata.com/blog/announcing-telegraf-0-10-0/)
 ### Linux deb and rpm Packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.10.4.1-1_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.11.0-1_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1.x86_64.rpm
 
 Latest (arm):
-* http://get.influxdb.org/telegraf/telegraf_0.10.4.1-1_arm.deb
-* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1.arm.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.11.0-1_arm.deb
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1.arm.rpm
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
@@ -56,9 +56,9 @@ for instructions, replacing the `influxdb` package name with `telegraf`.
 ### Linux tarballs:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1_linux_amd64.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1_linux_i386.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1_linux_arm.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_linux_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_linux_i386.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_linux_arm.tar.gz
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
@@ -70,13 +70,13 @@ Latest:
 To install the full directory structure with config file, run:
 
 ```
-sudo tar -C / -zxvf ./telegraf-0.10.4.1-1_linux_amd64.tar.gz
+sudo tar -C / -zxvf ./telegraf-0.11.0-1_linux_amd64.tar.gz
 ```
 
 To extract only the binary, run:
 
 ```
-tar -zxvf telegraf-0.10.4.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
+tar -zxvf telegraf-0.11.0-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
 ```
 
 ### Ansible Role:
@@ -93,8 +93,8 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1_windows_amd64.zip
-* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1_windows_i386.zip
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_windows_amd64.zip
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_windows_i386.zip
 
 ### From Source:
 
