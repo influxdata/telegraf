@@ -73,14 +73,17 @@ func (gh *GithubWebhooks) Stop() {
 
 // Handles the / route
 func (gh *GithubWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	eventType := r.Header["X-Github-Event"][0]
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	e, err := NewEvent(data, eventType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	gh.Lock()
 	gh.events = append(gh.events, e)
