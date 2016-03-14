@@ -165,7 +165,9 @@ metric_path value timestamp\n
 ```
 
 __metric_path__ is the metric namespace that you want to populate.
+
 __value__ is the value that you want to assign to the metric at this time.
+
 __timestamp__ is the unix epoch time.
 
 And test.sh/test2.sh will output:
