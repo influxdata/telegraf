@@ -157,6 +157,15 @@ We can also change the data_format to "graphite" to use the metrics collecting s
     "measurement*"
   ]
 ```
+Graphite messages are in this format:
+
+```
+metric_path value timestamp\n
+```
+
+__metric_path__ is the metric namespace that you want to populate.
+__value__ is the value that you want to assign to the metric at this time.
+__timestamp__ is the unix epoch time.
 
 And test.sh/test2.sh will output:
 
@@ -171,16 +180,5 @@ sensu.metric.net.server0.eth0.rx_dropped 0 1444234982
 ```
 
 The templates configuration will be used to parse the graphite metrics to support influxdb/opentsdb tagging store engines.
-
-Graphite understands messages with this format:
-
-```
-metric_path value timestamp\n
-```
-
-__metric_path__ is the metric namespace that you want to populate.
-__value__ is the value that you want to assign to the metric at this time.
-__timestamp__ is the unix epoch time.
-
 
 More detail information about templates, please refer to [The graphite Input] (https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md)
