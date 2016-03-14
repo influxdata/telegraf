@@ -29,6 +29,7 @@
 - [#713](https://github.com/influxdata/telegraf/issues/713): packaging: insecure permissions error on log directory
 - [#816](https://github.com/influxdata/telegraf/issues/816): Fix phpfpm panic if fcgi endpoint unreachable.
 - [#828](https://github.com/influxdata/telegraf/issues/828): fix net_response plugin overwriting host tag.
+- [#821](https://github.com/influxdata/telegraf/issues/821): Remove postgres password from server tag. Thanks @menardorama!
 
 ## v0.10.4.1
 
