@@ -11,6 +11,9 @@ The exec plugin can execute arbitrary commands which output:
 
 ### Configuration
 
+In this example a script called ```/tmp/test.sh``` and a script called ```/tmp/test2.sh``` 
+are configured for ```[[inputs.exec]]``` in JSON format.
+
 ```
 # Read flattened metrics from one or more commands that output JSON to stdout
 [[inputs.exec]]
@@ -70,11 +73,14 @@ The collected metrics will be stored as fields under the measurement
 ```
 exec_mycollector a=0.5,b_c=0.1,b_d=5 1452815002357578567
 ```
+If using JSON, only numeric values are parsed and turned into floats. Booleans
+and strings will be ignored.
 
 ### Example 2 - Influx Line-Protocol
 
 In this example an application called ```/usr/bin/line_protocol_collector```
-and a script called ```/tmp/test2.sh``` are configured for ```[[inputs.exec]]```
+and a script called ```/tmp/test2.sh``` are configured for ```[[inputs.exec]]``` 
+in influx line-protocol format.
 
 #### Configuration
 
@@ -115,6 +121,7 @@ We can also change the data_format to "graphite" to use the metrics collecting s
 
 * Nagios [Mertics Plugins] (https://exchange.nagios.org/directory/Plugins)
 * Sensu [Mertics Plugins] (https://github.com/sensu-plugins)
+
 
 #### Configuration
 ```
@@ -165,25 +172,15 @@ sensu.metric.net.server0.eth0.rx_dropped 0 1444234982
 
 The templates configuration will be used to parse the graphite metrics to support influxdb/opentsdb tagging store engines.
 
-More detail information about templates, please refer to [The graphite Input] (https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md)
+Graphite understands messages with this format:
 
-
-
-
-
-> Graphite understands messages with this format:
-
-> ```
+```
 metric_path value timestamp\n
 ```
 
-> __metric_path__ is the metric namespace that you want to populate.
-
-> __value__ is the value that you want to assign to the metric at this time.
-
-> __timestamp__ is the unix epoch time.
+__metric_path__ is the metric namespace that you want to populate.
+__value__ is the value that you want to assign to the metric at this time.
+__timestamp__ is the unix epoch time.
 
 
-If using JSON, only numeric values are parsed and turned into floats. Booleans
-and strings will be ignored.
-
+More detail information about templates, please refer to [The graphite Input] (https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md)
