@@ -30,8 +30,6 @@ The example plugin gathers metrics about example things
 
 ### Example Output:
 
-Give an example `-test` output here
-
 ```
 $ ./telegraf -config telegraf.conf -input-filter example -test
 measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
