@@ -195,7 +195,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	// If all of the writes failed, create a new connection array so that
 	// i.Connect() will be called on the next gather.
 	if err != nil {
-		i.conns = make([]client.Client)
+		i.conns = make([]client.Client, 0)
 	}
 	return err
 }
