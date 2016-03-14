@@ -122,6 +122,7 @@ We can also change the data_format to "graphite" to use the metrics collecting s
 * Nagios [Mertics Plugins] (https://exchange.nagios.org/directory/Plugins)
 * Sensu [Mertics Plugins] (https://github.com/sensu-plugins)
 
+In this example a script called /tmp/test.sh and a script called /tmp/test2.sh are configured for [[inputs.exec]] in graphite format.
 
 #### Configuration
 ```
