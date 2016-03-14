@@ -2,7 +2,7 @@
 
 The exec input plugin can execute arbitrary commands which output:
 
-* JSON
+* JSON [javascript object notation](http://www.json.org/)
 * InfluxDB [line-protocol](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/) 
 * Graphite [graphite-protocol](http://graphite.readthedocs.org/en/latest/feeding-carbon.html)
 
