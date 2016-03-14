@@ -9,7 +9,7 @@ The exec input plugin can execute arbitrary commands which output:
 
 ### Example 1 - JSON
 
-### Configuration
+#### Configuration
 
 In this example a script called ```/tmp/test.sh``` and a script called ```/tmp/test2.sh``` 
 are configured for ```[[inputs.exec]]``` in JSON format.
