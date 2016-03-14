@@ -31,8 +31,8 @@ Latest:
 * http://get.influxdb.org/telegraf/telegraf-0.11.0-1.x86_64.rpm
 
 Latest (arm):
-* http://get.influxdb.org/telegraf/telegraf_0.11.0-1_arm.deb
-* http://get.influxdb.org/telegraf/telegraf-0.11.0-1.arm.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.11.0-1_armhf.deb
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1.armhf.rpm
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
@@ -58,7 +58,7 @@ for instructions, replacing the `influxdb` package name with `telegraf`.
 Latest:
 * http://get.influxdb.org/telegraf/telegraf-0.11.0-1_linux_amd64.tar.gz
 * http://get.influxdb.org/telegraf/telegraf-0.11.0-1_linux_i386.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_linux_arm.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_linux_armhf.tar.gz
 
 0.2.x:
 * http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
@@ -93,8 +93,8 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_windows_amd64.zip
-* http://get.influxdb.org/telegraf/telegraf-0.11.0-1_windows_i386.zip
+* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1_windows_amd64.zip
+* http://get.influxdb.org/telegraf/telegraf-0.10.4.1-1_windows_i386.zip
 
 ### From Source:
 
@@ -186,6 +186,7 @@ Currently implemented sources:
 * net_response
 * nginx
 * nsq
+* ntpq
 * phpfpm
 * phusion passenger
 * ping
