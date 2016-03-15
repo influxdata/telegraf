@@ -468,19 +468,28 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
                                           arch,
                                           '{}-{}-{}'.format(PACKAGE_NAME, version, iteration))
                 create_dir(build_root)
-                create_package_fs(build_root)
 
                 # Copy packaging scripts to build directory
-                package_scripts(build_root)
+                if platform == 'windows':
+                    package_scripts(build_root, windows=True)
+                else:
+                    create_package_fs(build_root)
+                    package_scripts(build_root)
 
                 for binary in targets:
-                    # Copy newly-built binaries to packaging directory
                     if platform == 'windows':
+                        # For windows, we just want to copy the binary into the root directory
                         binary = binary + '.exe'
-                    # Where the binary currently is located
-                    fr = os.path.join(current_location, binary)
-                    # Where the binary should go in the package filesystem
-                    to = os.path.join(build_root, INSTALL_ROOT_DIR[1:], binary)
+                        # Where the binary should go in the package filesystem
+                        to = os.path.join(build_root, binary)
+                        # Where the binary currently is located
+                        fr = os.path.join(current_location, binary)
+                    else:
+                        # Where the binary currently is located
+                        fr = os.path.join(current_location, binary)
+                        # Where the binary should go in the package filesystem
+                        to = os.path.join(build_root, INSTALL_ROOT_DIR[1:], binary)
+                        
                     if debug:
                         print("[{}][{}] - Moving from '{}' to '{}'".format(platform,
                                                                            arch,
@@ -566,6 +575,7 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
         return outfiles
     finally:
         # Cleanup
+        print("Cleaning up build dir: {}".format(tmp_build_dir))
         shutil.rmtree(tmp_build_dir)
 
 def print_usage():
