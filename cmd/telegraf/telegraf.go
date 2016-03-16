@@ -96,8 +96,9 @@ func main() {
 		reload <- false
 		flag.Usage = func() { usageExit(0) }
 		flag.Parse()
+		args := flag.Args()
 
-		if flag.NFlag() == 0 {
+		if flag.NFlag() == 0 && len(args) == 0 {
 			usageExit(0)
 		}
 
@@ -119,6 +120,18 @@ func main() {
 		if *fOutputFilters != "" {
 			outputFilter := strings.TrimSpace(*fOutputFilters)
 			outputFilters = strings.Split(":"+outputFilter+":", ":")
+		}
+
+		if len(args) > 0 {
+			switch args[0] {
+			case "version":
+				v := fmt.Sprintf("Telegraf - Version %s", Version)
+				fmt.Println(v)
+				return
+			case "config":
+				config.PrintSampleConfig(inputFilters, outputFilters)
+				return
+			}
 		}
 
 		if *fOutputList {
