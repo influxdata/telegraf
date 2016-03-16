@@ -1,0 +1,59 @@
+# Telegraf configuration
+
+# Telegraf is entirely plugin driven. All metrics are gathered from the
+# declared inputs.
+
+# Even if a plugin has no configuration, it must be declared in here
+# to be active. Declaring a plugin means just specifying the name
+# as a section with no variables. To deactivate a plugin, comment
+# out the name and any variables.
+
+# Use 'telegraf -config telegraf.toml -test' to see what metrics a config
+# file would generate.
+
+# One rule that plugins conform to is wherever a connection string
+# can be passed, the values '' and 'localhost' are treated specially.
+# They indicate to the plugin to use their own builtin configuration to
+# connect to the local system.
+
+# NOTE: The configuration has a few required parameters. They are marked
+# with 'required'. Be sure to edit those to make this configuration work.
+
+# Tags can also be specified via a normal map, but only one form at a time:
+[global_tags]
+  dc = "us-east-1"
+
+[poller]
+  AMQPurl = "amqp://guest:guest@127.0.0.1:5674/"
+  AMQPlabels = ["label1"]
+
+  # run telegraf in debug mode
+  debug = false
+
+  # Override default hostname, if empty use os.Hostname()
+  hostname = ""
+
+  ## Default flushing interval for all outputs. You shouldn't set this below
+  ## interval. Maximum flush_interval will be flush_interval + flush_jitter
+  flush_interval = "3s"
+  ## Jitter the flush interval by a random amount. This is primarily to avoid
+  ## large write spikes for users running a large number of telegraf instances.
+  ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  flush_jitter = "0s"
+
+
+###############################################################################
+#                                  OUTPUTS                                    #
+###############################################################################
+
+[[outputs.file]]
+  ## Files to write to, "stdout" is a specially handled file.
+  files = ["/tmp/metrics.out"]
+
+
+  ## Data format to output. This can be "influx" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
+
