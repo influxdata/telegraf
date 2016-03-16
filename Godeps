@@ -5,6 +5,9 @@ github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
 github.com/aws/aws-sdk-go 13a12060f716145019378a10e2806c174356b857
 github.com/beorn7/perks 3ac7bf7a47d159a033b107610db8a1b6575507a4
 github.com/cenkalti/backoff 4dc77674aceaabba2c7e3da25d4c823edfb73f99
+github.com/couchbase/go-couchbase cb664315a324d87d19c879d9cc67fda6be8c2ac1
+github.com/couchbase/gomemcached a5ea6356f648fec6ab89add00edd09151455b4b2
+github.com/couchbase/goutils 5823a0cbaaa9008406021dc5daf80125ea30bba6
 github.com/dancannon/gorethink e7cac92ea2bc52638791a021f212145acfedb1fc
 github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
