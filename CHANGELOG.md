@@ -1,4 +1,13 @@
-## v0.11.1 [unreleased]
+## v0.11.2 [unreleased]
+
+### Features
+
+### Bugfixes
+
+## v0.11.1 [2016-03-17]
+
+### Release Notes
+- Primarily this release was cut to fix [#859](https://github.com/influxdata/telegraf/issues/859)
 
 ### Features
 - [#747](https://github.com/influxdata/telegraf/pull/747): Start telegraf on install & remove on uninstall. Thanks @pierref!
