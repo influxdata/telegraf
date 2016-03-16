@@ -1,6 +1,7 @@
 ## v0.11.2 [unreleased]
 
 ### Features
+- [#863](https://github.com/influxdata/telegraf/pull/863): AMQP output: allow external auth. Thanks @ekini!
 - [#707](https://github.com/influxdata/telegraf/pull/707): Improved prometheus plugin. Thanks @titilambert!
 
 ### Bugfixes

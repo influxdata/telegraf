@@ -109,6 +109,7 @@ func GetTLSConfig(
 			RootCAs:            caCertPool,
 			InsecureSkipVerify: InsecureSkipVerify,
 		}
+		t.BuildNameToCertificate()
 	} else {
 		if InsecureSkipVerify {
 			t.InsecureSkipVerify = true
