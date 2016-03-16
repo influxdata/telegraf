@@ -74,7 +74,8 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator) error {
 		fields["memory_total"] = node.MemoryTotal
 		acc.AddFields("couchbase_node", fields, tags)
 	}
-	for bucketName, bucket := range pool.BucketMap {
+	for bucketName, _ := range pool.BucketMap {
+		bucket := pool.BucketMap[bucketName]
 		tags := map[string]string{"cluster": addr, "bucket": bucketName}
 		acc.AddFields("couchbase_bucket", bucket.BasicStats, tags)
 	}
