@@ -1,3 +1,11 @@
+## v0.11.1 [unreleased]
+
+### Features
+
+### Bugfixes
+- [#852](https://github.com/influxdata/telegraf/issues/852): Windows zip package fix
+- [#859](https://github.com/influxdata/telegraf/issues/859): httpjson plugin panic
+
 ## v0.11.0 [2016-03-15]
 
 ### Release Notes

@@ -55,15 +55,15 @@ type RealHTTPClient struct {
 	client *http.Client
 }
 
-func (c RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c *RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 	return c.client.Do(req)
 }
 
-func (c RealHTTPClient) SetHTTPClient(client *http.Client) {
+func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
 	c.client = client
 }
 
-func (c RealHTTPClient) HTTPClient() *http.Client {
+func (c *RealHTTPClient) HTTPClient() *http.Client {
 	return c.client
 }
 
@@ -289,6 +289,8 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 
 func init() {
 	inputs.Add("httpjson", func() telegraf.Input {
-		return &HttpJson{client: RealHTTPClient{}}
+		return &HttpJson{
+			client: &RealHTTPClient{},
+		}
 	})
 }
