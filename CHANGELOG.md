@@ -1,6 +1,8 @@
 ## v0.11.1 [unreleased]
 
 ### Features
+- [#747](https://github.com/influxdata/telegraf/pull/747): Start telegraf on install & remove on uninstall. Thanks @pierref!
+- [#794](https://github.com/influxdata/telegraf/pull/794): Add service reload ability. Thanks @entertainyou!
 
 ### Bugfixes
 - [#852](https://github.com/influxdata/telegraf/issues/852): Windows zip package fix
