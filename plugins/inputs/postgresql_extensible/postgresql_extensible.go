@@ -241,14 +241,16 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	tags := map[string]string{}
 	tags["server"] = tagAddress
 	tags["db"] = dbname.String()
-
+	var isATag int
 	fields := make(map[string]interface{})
 	for col, val := range columnMap {
 		_, ignore := ignoredColumns[col]
 		//if !ignore && *val != "" {
 		if !ignore {
+			isATag = 0
 			for tag := range p.AdditionalTags {
 				if col == p.AdditionalTags[tag] {
+					isATag = 1
 					value_type_p := fmt.Sprintf(`%T`, *val)
 					if value_type_p == "[]uint8" {
 						tags[col] = fmt.Sprintf(`%s`, *val)
@@ -257,7 +259,9 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 					}
 				}
 			}
-			fields[col] = *val
+			if isATag == 0 {
+				fields[col] = *val
+			}
 		}
 	}
 	acc.AddFields("postgresql", fields, tags)
