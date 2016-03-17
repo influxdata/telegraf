@@ -65,6 +65,8 @@ type Statsd struct {
 
 	// bucket -> influx templates
 	Templates []string
+
+	listener *net.UDPConn
 }
 
 func NewStatsd() *Statsd {
@@ -246,13 +248,14 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 
 // udpListen starts listening for udp packets on the configured port.
 func (s *Statsd) udpListen() error {
+	var err error
 	address, _ := net.ResolveUDPAddr("udp", s.ServiceAddress)
-	listener, err := net.ListenUDP("udp", address)
+	s.listener, err = net.ListenUDP("udp", address)
 	if err != nil {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
-	defer listener.Close()
-	log.Println("Statsd listener listening on: ", listener.LocalAddr().String())
+	defer s.listener.Close()
+	log.Println("Statsd listener listening on: ", s.listener.LocalAddr().String())
 
 	for {
 		select {
@@ -260,9 +263,10 @@ func (s *Statsd) udpListen() error {
 			return nil
 		default:
 			buf := make([]byte, s.UDPPacketSize)
-			n, _, err := listener.ReadFromUDP(buf)
+			n, _, err := s.listener.ReadFromUDP(buf)
 			if err != nil {
-				log.Printf("ERROR: %s\n", err.Error())
+				log.Printf("ERROR READ: %s\n", err.Error())
+				continue
 			}
 
 			select {
@@ -557,6 +561,7 @@ func (s *Statsd) Stop() {
 	s.Lock()
 	defer s.Unlock()
 	log.Println("Stopping the statsd service")
+	s.listener.Close()
 	close(s.done)
 	close(s.in)
 }
