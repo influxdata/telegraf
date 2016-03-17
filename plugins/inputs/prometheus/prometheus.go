@@ -1,11 +1,13 @@
 package prometheus
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -13,18 +15,28 @@ import (
 
 type Prometheus struct {
 	Urls []string
+
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+	// Bearer Token authorization file path
+	BearerToken string `toml:"bearer_token"`
 }
 
 var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
+
+	### Use SSL but skip chain & host verification
+	# insecure_skip_verify = false
+	### Use bearer token for authorization
+	# bearer_token = /path/to/bearer/token
 `
 
-func (r *Prometheus) SampleConfig() string {
+func (p *Prometheus) SampleConfig() string {
 	return sampleConfig
 }
 
-func (r *Prometheus) Description() string {
+func (p *Prometheus) Description() string {
 	return "Read metrics from one or many prometheus clients"
 }
 
@@ -32,16 +44,16 @@ var ErrProtocolError = errors.New("prometheus protocol error")
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *Prometheus) Gather(acc telegraf.Accumulator) error {
+func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	var outerr error
 
-	for _, serv := range g.Urls {
+	for _, serv := range p.Urls {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherURL(serv, acc)
+			outerr = p.gatherURL(serv, acc)
 		}(serv)
 	}
 
@@ -59,9 +71,34 @@ var client = &http.Client{
 	Timeout:   time.Duration(4 * time.Second),
 }
 
-func (g *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
+func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	collectDate := time.Now()
-	resp, err := client.Get(url)
+	var req, err = http.NewRequest("GET", url, nil)
+	req.Header = make(http.Header)
+	var token []byte
+	var resp *http.Response
+
+	var rt http.RoundTripper = &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: p.InsecureSkipVerify,
+		},
+		ResponseHeaderTimeout: time.Duration(3 * time.Second),
+	}
+
+	if p.BearerToken != "" {
+		token, err = ioutil.ReadFile(p.BearerToken)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Authorization", "Bearer "+string(token))
+	}
+
+	resp, err = rt.RoundTrip(req)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
