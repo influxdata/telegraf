@@ -75,9 +75,17 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator) error {
 		acc.AddFields("couchbase_node", fields, tags)
 	}
 	for bucketName, _ := range pool.BucketMap {
-		bucket := pool.BucketMap[bucketName]
 		tags := map[string]string{"cluster": addr, "bucket": bucketName}
-		acc.AddFields("couchbase_bucket", bucket.BasicStats, tags)
+		bs := pool.BucketMap[bucketName].BasicStats
+		fields := make(map[string]interface{})
+		fields["quota_percent_used"] = bs["quotaPercentUsed"]
+		fields["ops_per_sec"] = bs["opsPerSec"]
+		fields["disk_fetches"] = bs["diskFetches"]
+		fields["item_count"] = bs["itemCount"]
+		fields["disk_used"] = bs["diskUsed"]
+		fields["data_used"] = bs["dataUsed"]
+		fields["mem_used"] = bs["memUsed"]
+		acc.AddFields("couchbase_bucket", fields, tags)
 	}
 	return nil
 }
