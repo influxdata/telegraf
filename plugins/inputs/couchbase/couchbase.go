@@ -62,6 +62,9 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	// `default` is the only possible pool name. It's a
+	// placeholder for a possible future Couchbase feature. See
+	// http://stackoverflow.com/a/16990911/17498.
 	pool, err := client.GetPool("default")
 	if err != nil {
 		return err
