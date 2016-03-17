@@ -32,6 +32,7 @@ func TestRunParser(t *testing.T) {
 	defer close(listener.done)
 
 	listener.parser, _ = parsers.NewInfluxParser()
+	listener.wg.Add(1)
 	go listener.udpParser()
 
 	in <- testmsg
@@ -58,6 +59,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	defer close(listener.done)
 
 	listener.parser, _ = parsers.NewInfluxParser()
+	listener.wg.Add(1)
 	go listener.udpParser()
 
 	in <- testmsg
@@ -78,6 +80,7 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	defer close(listener.done)
 
 	listener.parser, _ = parsers.NewGraphiteParser("_", []string{}, nil)
+	listener.wg.Add(1)
 	go listener.udpParser()
 
 	in <- testmsg
@@ -98,6 +101,7 @@ func TestRunParserJSONMsg(t *testing.T) {
 	defer close(listener.done)
 
 	listener.parser, _ = parsers.NewJSONParser("udp_json_test", []string{}, nil)
+	listener.wg.Add(1)
 	go listener.udpParser()
 
 	in <- testmsg
