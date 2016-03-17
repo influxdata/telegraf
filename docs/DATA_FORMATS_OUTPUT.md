@@ -53,7 +53,7 @@ metrics are serialized directly into InfluxDB line-protocol.
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
-  ## Data format to output. This can be "influx" or "graphite"
+  ## Data format to output. This can be "influx", "json" or "graphite"
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
@@ -87,11 +87,45 @@ tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
-  ## Data format to output. This can be "influx" or "graphite"
+  ## Data format to output. This can be "influx", "json" or "graphite"
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
   prefix = "telegraf"
+```
+
+## Json:
+
+The Json data format serialized Telegraf metrics in json format. The format is:
+
+```json
+{
+   "fields":{
+      "field_1":30,
+      "field_2":4,
+      "field_N":59,
+      "n_images":660
+   },
+   "name":"docker",
+   "tags":{
+      "host":"raynor"
+   },
+   "timestamp":1458229140
+}
+```
+
+#### Json Configuration:
+
+```toml
+[[outputs.file]]
+  ## Files to write to, "stdout" is a specially handled file.
+  files = ["stdout", "/tmp/metrics.out"]
+
+  ## Data format to output. This can be "influx", "json" or "graphite"
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "json"
 ```
