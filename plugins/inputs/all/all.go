@@ -16,6 +16,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/httpjson"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
+	_ "github.com/influxdata/telegraf/plugins/inputs/ipmi"
 	_ "github.com/influxdata/telegraf/plugins/inputs/jolokia"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kafka_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/leofs"
