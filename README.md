@@ -79,6 +79,25 @@ To extract only the binary, run:
 tar -zxvf telegraf-0.11.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
 ```
 
+### FreeBSD tarball:
+
+Latest:
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_freebsd_amd64.tar.gz
+
+##### tarball Instructions:
+
+To install the full directory structure with config file, run:
+
+```
+sudo tar -C / -zxvf ./telegraf-0.11.1-1_freebsd_amd64.tar.gz
+```
+
+To extract only the binary, run:
+
+```
+tar -zxvf telegraf-0.11.1-1_freebsd_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
+```
+
 ### Ansible Role:
 
 Ansible role: https://github.com/rossmcdonald/telegraf
