@@ -66,7 +66,7 @@ type Statsd struct {
 	// bucket -> influx templates
 	Templates []string
 
-        listener *net.UDPConn
+	listener *net.UDPConn
 }
 
 func NewStatsd() *Statsd {
@@ -248,7 +248,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 
 // udpListen starts listening for udp packets on the configured port.
 func (s *Statsd) udpListen() error {
-        var err error
+	var err error
 	address, _ := net.ResolveUDPAddr("udp", s.ServiceAddress)
 	s.listener, err = net.ListenUDP("udp", address)
 	if err != nil {
@@ -266,7 +266,7 @@ func (s *Statsd) udpListen() error {
 			n, _, err := s.listener.ReadFromUDP(buf)
 			if err != nil {
 				log.Printf("ERROR READ: %s\n", err.Error())
-                                continue
+				continue
 			}
 
 			select {
@@ -561,7 +561,7 @@ func (s *Statsd) Stop() {
 	s.Lock()
 	defer s.Unlock()
 	log.Println("Stopping the statsd service")
-        s.listener.Close()
+	s.listener.Close()
 	close(s.done)
 	close(s.in)
 }
