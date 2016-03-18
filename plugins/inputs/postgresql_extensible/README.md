@@ -112,13 +112,15 @@ using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/
   tagvalue="db"
 ```
 
-- postgresql.conf :
+# Postgresql Side
+postgresql.conf :
 ```
 shared_preload_libraries = 'pg_stat_statements,pg_stat_kcache'
 ```
 
- - In the database (can be a specific monitoring db)
-   
+Please follow the requirements to setup those extensions.
+
+In the database (can be a specific monitoring db)
 ```
 create extension pg_stat_statements;
 create extension pg_stat_kcache;
@@ -129,8 +131,8 @@ create extension pg_proctab;
  - pg_stat_kcache is available on the postgresql.org yum repo
  - pg_proctab is available at : https://github.com/markwkm/pg_proctab
 
- - Views
-  - Blocking sessions
+ ##Views
+ - Blocking sessions
 ```
 CREATE OR REPLACE VIEW public.blocking_procs AS
  SELECT a.datname AS db,
