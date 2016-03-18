@@ -34,13 +34,6 @@ func (m *Ipmi) Description() string {
 }
 
 func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
-	if len(m.Servers) == 0 {
-		// if we can't get stats in this case, thats fine, don't report
-		// an error.
-		m.gatherServer(localhost, acc)
-		return nil
-	}
-
 	for _, serv := range m.Servers {
 		err := m.gatherServer(serv, acc)
 		if err != nil {
