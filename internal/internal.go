@@ -86,15 +86,15 @@ func GetTLSConfig(
 	SSLCert, SSLKey, SSLCA string,
 	InsecureSkipVerify bool,
 ) (*tls.Config, error) {
-	t := &tls.Config{}
-	if SSLCert != "" && SSLKey != "" && SSLCA != "" {
-		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf(
-				"Could not load TLS client key/certificate: %s",
-				err))
-		}
+	if SSLCert == "" && SSLKey == "" && SSLCA == "" && !InsecureSkipVerify {
+		return nil, nil
+	}
 
+	t := &tls.Config{
+		InsecureSkipVerify: InsecureSkipVerify,
+	}
+
+	if SSLCA != "" {
 		caCert, err := ioutil.ReadFile(SSLCA)
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
@@ -103,20 +103,21 @@ func GetTLSConfig(
 
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
-
-		t = &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			RootCAs:            caCertPool,
-			InsecureSkipVerify: InsecureSkipVerify,
-		}
-		t.BuildNameToCertificate()
-	} else {
-		if InsecureSkipVerify {
-			t.InsecureSkipVerify = true
-		} else {
-			return nil, nil
-		}
+		t.RootCAs = caCertPool
 	}
+
+	if SSLCert != "" && SSLKey != "" {
+		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf(
+				"Could not load TLS client key/certificate: %s",
+				err))
+		}
+
+		t.Certificates = []tls.Certificate{cert}
+		t.BuildNameToCertificate()
+	}
+
 	// will be nil by default if nothing is provided
 	return t, nil
 }

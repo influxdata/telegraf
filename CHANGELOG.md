@@ -9,6 +9,7 @@
 - [#849](https://github.com/influxdata/telegraf/issues/849): Adding ability to parse single values as an input data type.
 
 ### Bugfixes
+[#890](https://github.com/influxdata/telegraf/issues/890): Create TLS config even if only ssl_ca is provided.
 
 ## v0.11.1 [2016-03-17]
 
