@@ -159,7 +159,10 @@ func (l *Librato) buildGaugeName(m telegraf.Metric, fieldName string) string {
 	serializedMetric := graphiteSerializer.SerializeBucketName(m, fieldName)
 
 	// Deal with slash characters:
-	return strings.Replace(serializedMetric, "/", "-", -1)
+	replacedString := strings.Replace(serializedMetric, "/", "-", -1)
+	// Deal with @ characters:
+	replacedString = strings.Replace(replacedString, "@", "-", -1)
+	return replacedString
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
