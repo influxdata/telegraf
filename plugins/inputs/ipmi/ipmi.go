@@ -2,7 +2,6 @@
 package ipmi
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -79,16 +78,6 @@ func (m *Ipmi) gatherServer(serv string, acc telegraf.Accumulator) error {
 	}
 
 	return nil
-}
-
-func Atofloat4(val float64) float64 {
-	str := fmt.Sprintf("%.4f", val)
-	return Atofloat(str)
-}
-
-func Atofloat2(val float64) float64 {
-	str := fmt.Sprintf("%.2f", val)
-	return Atofloat(str)
 }
 
 func Atofloat(val string) float64 {
