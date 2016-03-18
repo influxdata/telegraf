@@ -36,7 +36,7 @@ func (r *Couchbase) Description() string {
 // Returns one of the errors encountered while gathering stats (if any).
 func (r *Couchbase) Gather(acc telegraf.Accumulator) error {
 	if len(r.Servers) == 0 {
-		r.gatherServer("http://localhost:8091/", acc)
+		r.gatherServer("http://localhost:8091/", acc, nil)
 		return nil
 	}
 
@@ -48,7 +48,7 @@ func (r *Couchbase) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = r.gatherServer(serv, acc)
+			outerr = r.gatherServer(serv, acc, nil)
 		}(serv)
 	}
 
@@ -57,17 +57,21 @@ func (r *Couchbase) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator) error {
-	client, err := couchbase.Connect(addr)
-	if err != nil {
-		return err
-	}
-	// `default` is the only possible pool name. It's a
-	// placeholder for a possible future Couchbase feature. See
-	// http://stackoverflow.com/a/16990911/17498.
-	pool, err := client.GetPool("default")
-	if err != nil {
-		return err
+func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *couchbase.Pool) error {
+	if pool == nil {
+		client, err := couchbase.Connect(addr)
+		if err != nil {
+			return err
+		}
+
+		// `default` is the only possible pool name. It's a
+		// placeholder for a possible future Couchbase feature. See
+		// http://stackoverflow.com/a/16990911/17498.
+		p, err := client.GetPool("default")
+		if err != nil {
+			return err
+		}
+		pool = &p
 	}
 	for i := 0; i < len(pool.Nodes); i++ {
 		node := pool.Nodes[i]
