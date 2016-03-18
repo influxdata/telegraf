@@ -26,6 +26,8 @@ const (
 var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
+var prevInstance *Statsd
+
 type Statsd struct {
 	// Address & Port to serve from
 	ServiceAddress string
@@ -234,10 +236,18 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Make data structures
 	s.done = make(chan struct{})
 	s.in = make(chan []byte, s.AllowedPendingMessages)
-	s.gauges = make(map[string]cachedgauge)
-	s.counters = make(map[string]cachedcounter)
-	s.sets = make(map[string]cachedset)
-	s.timings = make(map[string]cachedtimings)
+
+	if (prevInstance == nil) {
+		s.gauges = make(map[string]cachedgauge)
+		s.counters = make(map[string]cachedcounter)
+		s.sets = make(map[string]cachedset)
+		s.timings = make(map[string]cachedtimings)
+	} else {
+		s.gauges = prevInstance.gauges
+		s.counters = prevInstance.counters
+		s.sets = prevInstance.sets
+		s.timings = prevInstance.timings
+	}
 
 	s.wg.Add(2)
 	// Start the UDP listener
@@ -245,6 +255,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Start the line parser
 	go s.parser()
 	log.Printf("Started the statsd service on %s\n", s.ServiceAddress)
+	prevInstance = s
 	return nil
 }
 
