@@ -26,8 +26,8 @@ Meta:
 - tags: `cluster`, `hostname`
 
 Measurement names:
-- memory_free
-- memory_total
+- memory_free (example: 23181365248.0)
+- memory_total (example: 64424656896.0)
 
 ### Per-bucket measurements
 
@@ -36,11 +36,11 @@ Meta:
 - tags: `cluster`, `bucket`
 
 Measurement names:
-- quotaPercentUsed (unit: percent)
-- opsPerSec (unit: count)
-- diskFetches (unit: count)
-- itemCount (unit: count)
-- diskUsed (unit: bytes)
-- dataUsed (unit: bytes)
-- memUsed (unit: bytes)
+- quotaPercentUsed (unit: percent, example: 68.85424936294555)
+- opsPerSec (unit: count, example: 5686.789686789687)
+- diskFetches (unit: count, example: 0.0)
+- itemCount (unit: count, example: 943239752.0)
+- diskUsed (unit: bytes, example: 409178772321.0)
+- dataUsed (unit: bytes, example: 212179309111.0)
+- memUsed (unit: bytes, example: 202156957464.0)
 
