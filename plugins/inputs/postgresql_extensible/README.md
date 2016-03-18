@@ -65,9 +65,7 @@ query parameters have been added :
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-using postgreql extensions (
-[pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab),
-[powa](http://dalibo.github.io/powa/)...)
+using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab),[powa](http://dalibo.github.io/powa/)...)
 
 # Sample Queries :
 - telegraf.conf postgresql_extensible queries (assuming that you have configured
@@ -114,13 +112,13 @@ using postgreql extensions (
   tagvalue="db"
 ```
 
-- And on the posgtgres side :
-
-* postgresql.conf
+- postgresql.conf :
 ```
 shared_preload_libraries = 'pg_stat_statements,pg_stat_kcache'
 ```
-* In the database (can be a specific monitoring db)
+
+ - In the database (can be a specific monitoring db)
+   
 ```
 create extension pg_stat_statements;
 create extension pg_stat_kcache;
@@ -128,11 +126,11 @@ create extension pg_proctab;
 ```
 (assuming that the extension is installed on the OS Layer)
 
-* pg_stat_kcache is available on the postgresql.org yum repo
-* pg_proctab is available at : https://github.com/markwkm/pg_proctab
+ - pg_stat_kcache is available on the postgresql.org yum repo
+ - pg_proctab is available at : https://github.com/markwkm/pg_proctab
 
-* Views
-** Blocking sessions
+ - Views
+  - Blocking sessions
 ```
 CREATE OR REPLACE VIEW public.blocking_procs AS
  SELECT a.datname AS db,
@@ -156,7 +154,7 @@ CREATE OR REPLACE VIEW public.blocking_procs AS
   WHERE kl.granted AND NOT bl.granted
   ORDER BY a.query_start;
 ```
-** Sessions Statistics
+  - Sessions Statistics
 ```
 CREATE OR REPLACE VIEW public.sessions AS
  WITH proctab AS (
