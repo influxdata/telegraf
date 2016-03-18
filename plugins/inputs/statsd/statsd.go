@@ -237,7 +237,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	s.done = make(chan struct{})
 	s.in = make(chan []byte, s.AllowedPendingMessages)
 
-	if (prevInstance == nil) {
+	if prevInstance == nil {
 		s.gauges = make(map[string]cachedgauge)
 		s.counters = make(map[string]cachedcounter)
 		s.sets = make(map[string]cachedset)
