@@ -117,7 +117,7 @@ using postgreql extensions (
 - And on the posgtgres side :
 
 * postgresql.conf
-````
+```
 shared_preload_libraries = 'pg_stat_statements,pg_stat_kcache'
 ```
 * In the database (can be a specific monitoring db)
