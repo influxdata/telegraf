@@ -65,7 +65,7 @@ query parameters have been added :
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-# using postgreql extensions (
+using postgreql extensions (
 [pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab),
 [powa](http://dalibo.github.io/powa/)...)
 
