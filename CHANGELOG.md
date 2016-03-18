@@ -10,6 +10,7 @@
 
 ### Bugfixes
 [#890](https://github.com/influxdata/telegraf/issues/890): Create TLS config even if only ssl_ca is provided.
+[#884](https://github.com/influxdata/telegraf/issues/884): Do not call write method if there are 0 metrics to write.
 
 ## v0.11.1 [2016-03-17]
 
