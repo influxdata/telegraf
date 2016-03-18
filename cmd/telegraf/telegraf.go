@@ -32,7 +32,7 @@ var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
 var fInputList = flag.Bool("input-list", false,
-	"print available output plugins.")
+	"print available input plugins.")
 var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
 var fOutputList = flag.Bool("output-list", false,
