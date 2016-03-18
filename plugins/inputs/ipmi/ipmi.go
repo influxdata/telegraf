@@ -23,7 +23,6 @@ var sampleConfig = `
   ##
   servers = ["USERID:PASSW0RD@lan(192.168.1.1)"]
 `
-var localhost = ""
 
 func (m *Ipmi) SampleConfig() string {
 	return sampleConfig
