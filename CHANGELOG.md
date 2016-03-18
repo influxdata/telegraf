@@ -6,6 +6,7 @@
 - [#878](https://github.com/influxdata/telegraf/pull/878): Added json serializer. Thanks @ch3lo!
 - [#880](https://github.com/influxdata/telegraf/pull/880): Add the ability to specify the bearer token to the prometheus plugin. Thanks @jchauncey!
 - [#882](https://github.com/influxdata/telegraf/pull/882): Fixed SQL Server Plugin issues
+- [#849](https://github.com/influxdata/telegraf/issues/849): Adding ability to parse single values as an input data type.
 
 ### Bugfixes
 
