@@ -210,6 +210,7 @@ Currently implemented sources:
 * phusion passenger
 * ping
 * postgresql
+* postgresql_extensible
 * powerdns
 * procstat
 * prometheus
