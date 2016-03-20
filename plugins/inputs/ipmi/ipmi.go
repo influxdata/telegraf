@@ -12,6 +12,7 @@ import (
 
 type Ipmi struct {
 	Servers []string
+	runner  Runner
 }
 
 var sampleConfig = `
@@ -23,6 +24,12 @@ var sampleConfig = `
   servers = ["USERID:PASSW0RD@lan(192.168.1.1)"]
 `
 
+func NewIpmi() *Ipmi {
+	return &Ipmi{
+		runner: CommandRunner{},
+	}
+}
+
 func (m *Ipmi) SampleConfig() string {
 	return sampleConfig
 }
@@ -32,6 +39,9 @@ func (m *Ipmi) Description() string {
 }
 
 func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
+	if m.runner == nil {
+		m.runner = CommandRunner{}
+	}
 	for _, serv := range m.Servers {
 		err := m.gatherServer(serv, acc)
 		if err != nil {
@@ -45,8 +55,7 @@ func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 func (m *Ipmi) gatherServer(serv string, acc telegraf.Accumulator) error {
 	conn := NewConnection(serv)
 
-	tool := &IpmiCommand{conn}
-	res, err := tool.Run("sdr")
+	res, err := m.runner.Run(conn, "sdr")
 	if err != nil {
 		return err
 	}
@@ -78,6 +87,10 @@ func (m *Ipmi) gatherServer(serv string, acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+type Runner interface {
+	Run(conn *Connection, args ...string) (string, error)
 }
 
 func Atofloat(val string) float64 {

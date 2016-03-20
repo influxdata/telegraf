@@ -5,37 +5,14 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
-	"strconv"
 	"strings"
 )
 
-type IpmiCommand struct {
-	*Connection
-}
+type CommandRunner struct{}
 
-func (t *IpmiCommand) options() []string {
-	intf := t.Interface
-	if intf == "" {
-		intf = "lanplus"
-	}
-
-	options := []string{
-		"-H", t.Hostname,
-		"-U", t.Username,
-		"-P", t.Password,
-		"-I", intf,
-	}
-
-	if t.Port != 0 {
-		options = append(options, "-p", strconv.Itoa(t.Port))
-	}
-
-	return options
-}
-
-func (t *IpmiCommand) cmd(args ...string) *exec.Cmd {
-	path := t.Path
-	opts := append(t.options(), args...)
+func (t CommandRunner) cmd(conn *Connection, args ...string) *exec.Cmd {
+	path := conn.Path
+	opts := append(conn.options(), args...)
 
 	if path == "" {
 		path = "ipmitool"
@@ -45,8 +22,8 @@ func (t *IpmiCommand) cmd(args ...string) *exec.Cmd {
 
 }
 
-func (t *IpmiCommand) Run(args ...string) (string, error) {
-	cmd := t.cmd(args...)
+func (t CommandRunner) Run(conn *Connection, args ...string) (string, error) {
+	cmd := t.cmd(conn, args...)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout

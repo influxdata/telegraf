@@ -4,6 +4,7 @@ package ipmi
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -42,6 +43,26 @@ func NewConnection(server string) *Connection {
 	}
 
 	return conn
+}
+
+func (t *Connection) options() []string {
+	intf := t.Interface
+	if intf == "" {
+		intf = "lan"
+	}
+
+	options := []string{
+		"-H", t.Hostname,
+		"-U", t.Username,
+		"-P", t.Password,
+		"-I", intf,
+	}
+
+	if t.Port != 0 {
+		options = append(options, "-p", strconv.Itoa(t.Port))
+	}
+
+	return options
 }
 
 // RemoteIP returns the remote (bmc) IP address of the Connection
