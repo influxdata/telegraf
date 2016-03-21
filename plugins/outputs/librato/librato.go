@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -156,13 +155,7 @@ func (l *Librato) Description() string {
 func (l *Librato) buildGaugeName(m telegraf.Metric, fieldName string) string {
 	// Use the GraphiteSerializer
 	graphiteSerializer := graphite.GraphiteSerializer{}
-	serializedMetric := graphiteSerializer.SerializeBucketName(m, fieldName)
-
-	// Deal with slash characters:
-	replacedString := strings.Replace(serializedMetric, "/", "-", -1)
-	// Deal with @ characters:
-	replacedString = strings.Replace(replacedString, "@", "-", -1)
-	return replacedString
+	return graphiteSerializer.SerializeBucketName(m, fieldName)
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
