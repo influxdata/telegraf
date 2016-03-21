@@ -16,8 +16,10 @@ ipmitool -I lanplus -H 192.168.1.1 -U USERID -P PASSW0RD sdr
     * Fields:
       - status
       - value
-## Configuration
 	
+## Configuration
+
+```toml
 [[inputs.ipmi]]
   ## specify servers via a url matching:
   ##  [username[:password]@][protocol[(address)]]
@@ -25,6 +27,7 @@ ipmitool -I lanplus -H 192.168.1.1 -U USERID -P PASSW0RD sdr
   ##    root:passwd@lan(127.0.0.1)
   ##
   servers = ["USERID:PASSW0RD@lan(10.20.2.203)"]
+```
 
 ## Output
 
