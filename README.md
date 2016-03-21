@@ -184,6 +184,7 @@ Currently implemented sources:
 * aerospike
 * apache
 * bcache
+* couchbase
 * couchdb
 * disque
 * dns query time
