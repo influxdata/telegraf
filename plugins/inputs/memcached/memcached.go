@@ -94,14 +94,15 @@ func (m *Memcached) gatherServer(
 	acc telegraf.Accumulator,
 ) error {
 	var conn net.Conn
+	var err error
 	if unix {
-		conn, err := net.DialTimeout("unix", address, defaultTimeout)
+		conn, err = net.DialTimeout("unix", address, defaultTimeout)
 		if err != nil {
 			return err
 		}
 		defer conn.Close()
 	} else {
-		_, _, err := net.SplitHostPort(address)
+		_, _, err = net.SplitHostPort(address)
 		if err != nil {
 			address = address + ":11211"
 		}
@@ -111,6 +112,10 @@ func (m *Memcached) gatherServer(
 			return err
 		}
 		defer conn.Close()
+	}
+
+	if conn == nil {
+		return fmt.Errorf("Failed to create net connection")
 	}
 
 	// Extend connection
