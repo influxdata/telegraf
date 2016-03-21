@@ -27,16 +27,18 @@ func NewAgent(config *config.Config) (*Agent, error) {
 		Config: config,
 	}
 
-	if a.Config.Agent.Hostname == "" {
-		hostname, err := os.Hostname()
-		if err != nil {
-			return nil, err
+	if !a.Config.Agent.OmitHostname {
+		if a.Config.Agent.Hostname == "" {
+			hostname, err := os.Hostname()
+			if err != nil {
+				return nil, err
+			}
+
+			a.Config.Agent.Hostname = hostname
 		}
 
-		a.Config.Agent.Hostname = hostname
+		config.Tags["host"] = a.Config.Agent.Hostname
 	}
-
-	config.Tags["host"] = a.Config.Agent.Hostname
 
 	return a, nil
 }
