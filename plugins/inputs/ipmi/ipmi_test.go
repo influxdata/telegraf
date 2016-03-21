@@ -178,7 +178,7 @@ func TestIpmi(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, acc.NFields(), 2, "non-numeric measurements should be ignored")
+	assert.Equal(t, acc.NFields(), 266, "non-numeric measurements should be ignored")
 }
 
 func TestIpmiConnection(t *testing.T) {
