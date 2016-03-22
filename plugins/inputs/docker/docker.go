@@ -2,6 +2,7 @@ package system
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -14,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/fsouza/go-dockerclient"
-	"errors"
 )
 
 type Docker struct {
@@ -58,7 +58,7 @@ var sampleConfig = `
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
-  ## To collect metrics from TLS-enabled daemon
+  ## To collect metrics from a TLS-enabled daemon
   # tls_enabled = true
   # tls_ca = "~/certificates_path/ca.pem"
   # tls_cert = "~/certificates_path/cert.pem"
