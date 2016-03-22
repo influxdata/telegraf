@@ -6,7 +6,7 @@ see ipmitool(https://sourceforge.net/projects/ipmitool/files/ipmitool/)
 
 The plugin will use the following command to collect remote host sensor stats:
 
-ipmitool -I lanplus -H 192.168.1.1 -U USERID -P PASSW0RD sdr
+ipmitool -I lan -H 192.168.1.1 -U USERID -P PASSW0RD sdr
 
 ## Measurements
 
