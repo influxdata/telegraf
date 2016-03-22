@@ -165,6 +165,9 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 			Name:        l.buildGaugeName(m, fieldName),
 			MeasureTime: m.Time().Unix(),
 		}
+		if !gauge.verifyValue(value) {
+			continue
+		}
 		if err := gauge.setValue(value); err != nil {
 			return gauges, fmt.Errorf("unable to extract value from Fields, %s\n",
 				err.Error())
@@ -184,6 +187,14 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 		fmt.Printf("[DEBUG] Built gauges: %v\n", gauges)
 	}
 	return gauges, nil
+}
+
+func (g *Gauge) verifyValue(v interface{}) bool {
+	switch v.(type) {
+	case string:
+		return false
+	}
+	return true
 }
 
 func (g *Gauge) setValue(v interface{}) error {
