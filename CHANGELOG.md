@@ -18,6 +18,7 @@
 - [#884](https://github.com/influxdata/telegraf/issues/884): Do not call write method if there are 0 metrics to write.
 - [#898](https://github.com/influxdata/telegraf/issues/898): Put database name in quotes, fixes special characters in the database name.
 - [#656](https://github.com/influxdata/telegraf/issues/656): No longer run `lsof` on linux to get netstat data, fixes permissions issue.
+- [#907](https://github.com/influxdata/telegraf/issues/907): Fix prometheus invalid label/measurement name key.
 
 ## v0.11.1 [2016-03-17]
 

@@ -90,8 +90,6 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 }
 
 func (u *UdpListener) Stop() {
-	u.Lock()
-	defer u.Unlock()
 	close(u.done)
 	u.listener.Close()
 	u.wg.Wait()
