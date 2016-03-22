@@ -152,14 +152,6 @@ func TestBuildPoint(t *testing.T) {
 			},
 			nil,
 		},
-		{
-			testutil.TestMetric("11234.5", "test7"),
-			Point{
-				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
-				11234.5,
-			},
-			fmt.Errorf("unable to extract value from Fields, undeterminable type"),
-		},
 	}
 	for _, tt := range tagtests {
 		pt, err := buildMetrics(tt.ptIn)
@@ -172,6 +164,28 @@ func TestBuildPoint(t *testing.T) {
 		if !reflect.DeepEqual(pt["value"], tt.outPt) && tt.err == nil {
 			t.Errorf("%s: \nexpected %+v\ngot %+v\n",
 				tt.ptIn.Name(), tt.outPt, pt["value"])
+		}
+	}
+}
+
+func TestVerifyValue(t *testing.T) {
+	var tagtests = []struct {
+		ptIn        telegraf.Metric
+		validMetric bool
+	}{
+		{
+			testutil.TestMetric(float32(11234.5), "test1"),
+			true,
+		},
+		{
+			testutil.TestMetric("11234.5", "test2"),
+			false,
+		},
+	}
+	for _, tt := range tagtests {
+		ok := verifyValue(tt.ptIn.Fields()["value"])
+		if tt.validMetric != ok {
+			t.Errorf("%s: verification failed\n", tt.ptIn.Name())
 		}
 	}
 }

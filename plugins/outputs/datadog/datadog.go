@@ -139,6 +139,9 @@ func (d *Datadog) authenticatedUrl() string {
 func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 	ms := make(map[string]Point)
 	for k, v := range m.Fields() {
+		if !verifyValue(v) {
+			continue
+		}
 		var p Point
 		if err := p.setValue(v); err != nil {
 			return ms, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
@@ -158,6 +161,14 @@ func buildTags(mTags map[string]string) []string {
 	}
 	sort.Strings(tags)
 	return tags
+}
+
+func verifyValue(v interface{}) bool {
+	switch v.(type) {
+	case string:
+		return false
+	}
+	return true
 }
 
 func (p *Point) setValue(v interface{}) error {
