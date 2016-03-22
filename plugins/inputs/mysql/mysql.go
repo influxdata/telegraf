@@ -15,21 +15,21 @@ import (
 )
 
 type Mysql struct {
-	Servers                             []string
-	PerfEventsStatementsDigestTextLimit uint32
-	PerfEventsStatementsLimit           uint32
-	PerfEventsStatementsTimeLimit       uint32
-	TableSchemaDatabases                []string
-	GatherProcessList                   bool
-	GatherInfoSchemaAutoInc             bool
-	GatherSlaveStatus                   bool
-	GatherBinaryLogs                    bool
-	GatherTableIOWaits                  bool
-	GatherIndexIOWaits                  bool
-	GatherTableSchema                   bool
-	GatherFileEventsStats               bool
-	GatherPerfEventsStatements          bool
-	IntervalSlow                        string
+	Servers                             []string `toml:"servers"`
+	PerfEventsStatementsDigestTextLimit uint32   `toml:"perf_events_statements_digest_text_limit"`
+	PerfEventsStatementsLimit           uint32   `toml:"perf_events_statements_limit"`
+	PerfEventsStatementsTimeLimit       uint32   `toml:"perf_events_statemetns_time_limit"`
+	TableSchemaDatabases                []string `toml:"table_schema_databases"`
+	GatherProcessList                   bool     `toml:"gather_process_list"`
+	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
+	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
+	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
+	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
+	GatherIndexIOWaits                  bool     `toml:"gather_index_io_waits"`
+	GatherTableSchema                   bool     `toml:"gather_table_schema"`
+	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
+	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
+	IntervalSlow                        string   `toml:"interval_slow"`
 }
 
 var sampleConfig = `
@@ -42,21 +42,21 @@ var sampleConfig = `
   #
   # If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
-  PerfEventsStatementsDigestTextLimit = 120
-  PerfEventsStatementsLimit           = 250
-  PerfEventsStatementsTimeLimit       = 86400
-  TableSchemaDatabases                = []
-  GatherProcessList                   = false
-  GatherInfoSchemaAutoInc             = false
-  GatherSlaveStatus                   = false
-  GatherBinaryLogs                    = false
-  GatherTableIOWaits                  = false
-  GatherIndexIOWaits                  = false
-  GatherTableSchema                   = false
-  GatherFileEventsStats               = false
-  GatherPerfEventsStatements          = false
+  perf_events_statements_digest_text_limit	= 120
+  perf_events_statements_limit           	= 250
+  perf_events_statements_time_limit       	= 86400
+  table_schema_databases                	= []
+  gather_process_list                   	= true
+  gather_info_schema_auto_inc             	= true
+  gather_slave_status                   	= true
+  gather_binary_logs                    	= false
+  gather_table_io_waits                  	= false
+  gather_index_io_waits                  	= false
+  gather_table_schema                   	= false
+  gather_file_events_stats               	= false
+  gather_perf_events_statements          	= false
   # Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
-  IntervalSlow					      = "30m"
+  interval_slow					  = "30m"
 `
 
 var defaultTimeout = time.Second * time.Duration(5)
