@@ -92,15 +92,15 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 				c, err = docker.NewClient(d.Endpoint)
 			} else {
 				if d.TLSCert == "" {
-					return errors.New("tls_cert must be configured when tls_enable is set to true");
+					return errors.New("tls_cert must be configured when tls_enable is set to true")
 				}
 
 				if d.TLSKey == "" {
-					return errors.New("tls_key must be configured when tls_enable is set to true");
+					return errors.New("tls_key must be configured when tls_enable is set to true")
 				}
 
 				if d.TLSCA == "" {
-					return errors.New("tls_ca must be configured when tls_enable is set to true");
+					return errors.New("tls_ca must be configured when tls_enable is set to true")
 				}
 
 				c, err = docker.NewTLSClient(d.Endpoint, d.TLSCert, d.TLSKey, d.TLSCA)
