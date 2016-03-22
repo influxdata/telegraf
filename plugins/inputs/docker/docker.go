@@ -2,6 +2,7 @@ package system
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -19,6 +20,15 @@ import (
 type Docker struct {
 	Endpoint       string
 	ContainerNames []string
+
+	// Enables TLS
+	TLSEnabled bool `toml:"tls_enabled"`
+	// Path to CA file
+	TLSCA string `toml:"tls_ca"`
+	// Path to cert file
+	TLSCert string `toml:"tls_cert"`
+	// Path to cert key file
+	TLSKey string `toml:"tls_key"`
 
 	client DockerClient
 }
@@ -48,6 +58,11 @@ var sampleConfig = `
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
+  ## To collect metrics from a TLS-enabled daemon
+  # tls_enabled = true
+  # tls_ca = "~/certificates_path/ca.pem"
+  # tls_cert = "~/certificates_path/cert.pem"
+  # tls_key = "~/certificates_path/key.pem"
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
 `
@@ -73,7 +88,24 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 				return err
 			}
 		} else {
-			c, err = docker.NewClient(d.Endpoint)
+			if !d.TLSEnabled {
+				c, err = docker.NewClient(d.Endpoint)
+			} else {
+				if d.TLSCert == "" {
+					return errors.New("tls_cert must be configured when tls_enable is set to true");
+				}
+
+				if d.TLSKey == "" {
+					return errors.New("tls_key must be configured when tls_enable is set to true");
+				}
+
+				if d.TLSCA == "" {
+					return errors.New("tls_ca must be configured when tls_enable is set to true");
+				}
+
+				c, err = docker.NewTLSClient(d.Endpoint, d.TLSCert, d.TLSKey, d.TLSCA)
+			}
+
 			if err != nil {
 				return err
 			}
