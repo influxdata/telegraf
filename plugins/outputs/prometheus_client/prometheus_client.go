@@ -4,10 +4,24 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	sanitizedChars = strings.NewReplacer("/", "_", "@", "_", " ", "_", "-", "_", ".", "_")
+
+	// Prometheus metric names must match this regex
+	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+	metricName = regexp.MustCompile("^[a-zA-Z_:][a-zA-Z0-9_:]*$")
+
+	// Prometheus labels must match this regex
+	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+	labelName = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
 )
 
 type PrometheusClient struct {
@@ -64,27 +78,36 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, point := range metrics {
-		var labels []string
 		key := point.Name()
+		key = sanitizedChars.Replace(key)
 
-		for k, _ := range point.Tags() {
-			if len(k) > 0 {
-				labels = append(labels, k)
-			}
-		}
-
+		var labels []string
 		l := prometheus.Labels{}
-		for tk, tv := range point.Tags() {
-			l[tk] = tv
+		for k, v := range point.Tags() {
+			k = sanitizedChars.Replace(k)
+			if len(k) == 0 {
+				continue
+			}
+			if !labelName.MatchString(k) {
+				continue
+			}
+			labels = append(labels, k)
+			l[k] = v
 		}
 
 		for n, val := range point.Fields() {
+			n = sanitizedChars.Replace(n)
 			var mname string
 			if n == "value" {
 				mname = key
 			} else {
 				mname = fmt.Sprintf("%s_%s", key, n)
 			}
+
+			if !metricName.MatchString(mname) {
+				continue
+			}
+
 			if _, ok := p.metrics[mname]; !ok {
 				p.metrics[mname] = prometheus.NewUntypedVec(
 					prometheus.UntypedOpts{
@@ -93,7 +116,10 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 					},
 					labels,
 				)
-				prometheus.MustRegister(p.metrics[mname])
+				if err := prometheus.Register(p.metrics[mname]); err != nil {
+					log.Printf("prometheus_client: Metric failed to register with prometheus, %s", err)
+					continue
+				}
 			}
 
 			switch val := val.(type) {

@@ -212,22 +212,22 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	}
 
 	z = &Zfs{KstatPath: testKstatPath}
-	acc = testutil.Accumulator{}
-	err = z.Gather(&acc)
+	acc2 := testutil.Accumulator{}
+	err = z.Gather(&acc2)
 	require.NoError(t, err)
 
-	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
-	acc.Metrics = nil
+	acc2.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
+	acc2.Metrics = nil
 
 	intMetrics = getKstatMetricsArcOnly()
 
 	//two pools, one metric
 	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
-	acc = testutil.Accumulator{}
-	err = z.Gather(&acc)
+	acc3 := testutil.Accumulator{}
+	err = z.Gather(&acc3)
 	require.NoError(t, err)
 
-	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
+	acc3.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
