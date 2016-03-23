@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -25,13 +26,15 @@ var (
 )
 
 type PrometheusClient struct {
-	Listen  string
-	metrics map[string]*prometheus.UntypedVec
+	Listen       string
+	SmartStrings bool
+	metrics      map[string]*prometheus.UntypedVec
 }
 
 var sampleConfig = `
   ## Address to listen on
   # listen = ":9126"
+  # smart_strings = true
 `
 
 func (p *PrometheusClient) Start() error {
@@ -126,6 +129,40 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			default:
 				log.Printf("Prometheus output, unsupported type. key: %s, type: %T\n",
 					mname, val)
+			case string:
+				if !p.SmartStrings {
+					log.Printf("Prometheus output, unsupported type. key: %s, label: %s, type: %T\n",
+						mname, l, val)
+				}
+				// Get metric value
+				m, err := p.metrics[mname].GetMetricWith(l)
+				if err != nil {
+					log.Printf("ERROR Getting metric in Prometheus output, "+
+						"key: %s, labels: %v,\nerr: %s\n",
+						mname, l, err.Error())
+					continue
+				}
+
+				// If has dot in val - parse as float, else int
+				if strings.Contains(val, ".") {
+					// Float
+					tval, err := strconv.ParseFloat(val, 64)
+					if err != nil {
+						log.Printf("Prometheus output, can't convert string to float. key: %s, label: %s, val: %s\n",
+							mname, l, val)
+						continue
+					}
+					m.Set(tval)
+				} else {
+					// Int
+					tval, err := strconv.ParseInt(val, 10, 64)
+					if err != nil {
+						log.Printf("Prometheus output, can't convert string to int. key: %s, label: %s, val: %s\n",
+							mname, l, val)
+						continue
+					}
+					m.Set(float64(tval))
+				}
 			case int64:
 				m, err := p.metrics[mname].GetMetricWith(l)
 				if err != nil {
