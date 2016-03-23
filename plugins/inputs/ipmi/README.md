@@ -12,7 +12,7 @@ ipmitool -I lan -H 192.168.1.1 -U USERID -P PASSW0RD sdr
 
 - ipmi_sensor:
 
-    * Tags: `host`,`inst`
+    * Tags: `server`,`host`
     * Fields:
       - status
       - value

@@ -65,7 +65,7 @@ func (m *Ipmi) gatherServer(serv string, acc telegraf.Accumulator) error {
 	for i := 0; i < len(lines); i++ {
 		vals := strings.Split(lines[i], "|")
 		if len(vals) == 3 {
-			tags := map[string]string{"host": conn.Hostname, "inst": trim(vals[0])}
+			tags := map[string]string{"server": conn.Hostname, "name": trim(vals[0])}
 			fields := make(map[string]interface{})
 			if strings.EqualFold("ok", trim(vals[2])) {
 				fields["status"] = 1
