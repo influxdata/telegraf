@@ -1,5 +1,4 @@
-// connection
-package ipmi
+package ipmi_sensor
 
 import (
 	"fmt"

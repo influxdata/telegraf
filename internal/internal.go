@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -120,6 +121,23 @@ func GetTLSConfig(
 
 	// will be nil by default if nothing is provided
 	return t, nil
+}
+
+// SnakeCase converts the given string to snake case following the Golang format:
+// acronyms are converted to lower-case and preceded by an underscore.
+func SnakeCase(in string) string {
+	runes := []rune(in)
+	length := len(runes)
+
+	var out []rune
+	for i := 0; i < length; i++ {
+		if i > 0 && unicode.IsUpper(runes[i]) && ((i+1 < length && unicode.IsLower(runes[i+1])) || unicode.IsLower(runes[i-1])) {
+			out = append(out, '_')
+		}
+		out = append(out, unicode.ToLower(runes[i]))
+	}
+
+	return string(out)
 }
 
 // Glob will test a string pattern, potentially containing globs, against a

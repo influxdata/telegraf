@@ -1,5 +1,4 @@
-// ipmi_test
-package ipmi
+package ipmi_sensor
 
 import (
 	"testing"
@@ -179,6 +178,93 @@ func TestIpmi(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, acc.NFields(), 266, "non-numeric measurements should be ignored")
+
+	var tests = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		{
+			map[string]interface{}{
+				"value":  float64(20),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "ambient_temp",
+				"server": "192.168.1.1",
+				"unit":   "degrees_c",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(80),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "altitude",
+				"server": "192.168.1.1",
+				"unit":   "feet",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(210),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "avg_power",
+				"server": "192.168.1.1",
+				"unit":   "watts",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(4.9),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "planar_5v",
+				"server": "192.168.1.1",
+				"unit":   "volts",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(3.05),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "planar_vbat",
+				"server": "192.168.1.1",
+				"unit":   "volts",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(2610),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "fan_1a_tach",
+				"server": "192.168.1.1",
+				"unit":   "rpm",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(1775),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "fan_1b_tach",
+				"server": "192.168.1.1",
+				"unit":   "rpm",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		acc.AssertContainsTaggedFields(t, "ipmi_sensor", test.fields, test.tags)
+	}
 }
 
 func TestIpmiConnection(t *testing.T) {

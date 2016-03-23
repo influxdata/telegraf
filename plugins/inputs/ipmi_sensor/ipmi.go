@@ -1,5 +1,4 @@
-// ipmi
-package ipmi
+package ipmi_sensor
 
 import (
 	"strconv"
@@ -60,30 +59,41 @@ func (m *Ipmi) gatherServer(serv string, acc telegraf.Accumulator) error {
 		return err
 	}
 
+	// each line will look something like
+	// Planar VBAT      | 3.05 Volts        | ok
 	lines := strings.Split(res, "\n")
-
 	for i := 0; i < len(lines); i++ {
 		vals := strings.Split(lines[i], "|")
-		if len(vals) == 3 {
-			tags := map[string]string{"server": conn.Hostname, "name": trim(vals[0])}
-			fields := make(map[string]interface{})
-			if strings.EqualFold("ok", trim(vals[2])) {
-				fields["status"] = 1
-			} else {
-				fields["status"] = 0
-			}
-
-			val1 := trim(vals[1])
-
-			if strings.Index(val1, " ") > 0 {
-				val := strings.Split(val1, " ")[0]
-				fields["value"] = Atofloat(val)
-			} else {
-				fields["value"] = 0.0
-			}
-
-			acc.AddFields("ipmi_sensor", fields, tags, time.Now())
+		if len(vals) != 3 {
+			continue
 		}
+
+		tags := map[string]string{
+			"server": conn.Hostname,
+			"name":   transform(vals[0]),
+		}
+
+		fields := make(map[string]interface{})
+		if strings.EqualFold("ok", trim(vals[2])) {
+			fields["status"] = 1
+		} else {
+			fields["status"] = 0
+		}
+
+		val1 := trim(vals[1])
+
+		if strings.Index(val1, " ") > 0 {
+			// split middle column into value and unit
+			valunit := strings.SplitN(val1, " ", 2)
+			fields["value"] = Atofloat(valunit[0])
+			if len(valunit) > 1 {
+				tags["unit"] = transform(valunit[1])
+			}
+		} else {
+			fields["value"] = 0.0
+		}
+
+		acc.AddFields("ipmi_sensor", fields, tags, time.Now())
 	}
 
 	return nil
@@ -96,9 +106,9 @@ type Runner interface {
 func Atofloat(val string) float64 {
 	f, err := strconv.ParseFloat(val, 64)
 	if err != nil {
-		return float64(0)
+		return 0.0
 	} else {
-		return float64(f)
+		return f
 	}
 }
 
@@ -106,8 +116,14 @@ func trim(s string) string {
 	return strings.TrimSpace(s)
 }
 
+func transform(s string) string {
+	s = trim(s)
+	s = strings.ToLower(s)
+	return strings.Replace(s, " ", "_", -1)
+}
+
 func init() {
-	inputs.Add("ipmi", func() telegraf.Input {
+	inputs.Add("ipmi_sensor", func() telegraf.Input {
 		return &Ipmi{}
 	})
 }

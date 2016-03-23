@@ -1,5 +1,4 @@
-// command
-package ipmi
+package ipmi_sensor
 
 import (
 	"bytes"
