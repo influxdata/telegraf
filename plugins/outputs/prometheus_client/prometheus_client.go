@@ -96,6 +96,15 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		}
 
 		for n, val := range point.Fields() {
+			// Ignore string and bool fields.
+			switch val.(type) {
+			case string:
+				continue
+			case bool:
+				continue
+			}
+
+			// sanitize the measurement name
 			n = sanitizedChars.Replace(n)
 			var mname string
 			if n == "value" {
@@ -104,15 +113,17 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				mname = fmt.Sprintf("%s_%s", key, n)
 			}
 
+			// verify that it is a valid measurement name
 			if !metricName.MatchString(mname) {
 				continue
 			}
 
+			// Create a new metric if it hasn't been created yet.
 			if _, ok := p.metrics[mname]; !ok {
 				p.metrics[mname] = prometheus.NewUntypedVec(
 					prometheus.UntypedOpts{
 						Name: mname,
-						Help: fmt.Sprintf("Telegraf collected point '%s'", mname),
+						Help: "Telegraf collected metric",
 					},
 					labels,
 				)
@@ -123,9 +134,6 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			}
 
 			switch val := val.(type) {
-			default:
-				log.Printf("Prometheus output, unsupported type. key: %s, type: %T\n",
-					mname, val)
 			case int64:
 				m, err := p.metrics[mname].GetMetricWith(l)
 				if err != nil {
@@ -144,6 +152,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 					continue
 				}
 				m.Set(val)
+			default:
+				continue
 			}
 		}
 	}
