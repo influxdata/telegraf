@@ -21,6 +21,8 @@ const (
 	UDP_PACKET_SIZE int = 1500
 
 	defaultFieldName = "value"
+
+	defaultSeparator = "_"
 )
 
 var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
@@ -47,6 +49,8 @@ type Statsd struct {
 	DeleteTimings  bool
 	ConvertNames   bool
 
+	// MetricSeparator is the separator between parts of the metric name.
+	MetricSeparator string
 	// This flag enables parsing of tags in the dogstatsd extention to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool
@@ -74,23 +78,6 @@ type Statsd struct {
 	Templates []string
 
 	listener *net.UDPConn
-}
-
-func NewStatsd() *Statsd {
-	s := Statsd{}
-
-	// Make data structures
-	s.done = make(chan struct{})
-	s.in = make(chan []byte, s.AllowedPendingMessages)
-	s.gauges = make(map[string]cachedgauge)
-	s.counters = make(map[string]cachedcounter)
-	s.sets = make(map[string]cachedset)
-	s.timings = make(map[string]cachedtimings)
-
-	s.ConvertNames = true
-	s.UDPPacketSize = UDP_PACKET_SIZE
-
-	return &s
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
@@ -149,8 +136,8 @@ const sampleConfig = `
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
-  ## convert measurement names, "." to "_" and "-" to "__"
-  convert_names = true
+  ## separator to use between elements of a statsd metric
+  metric_separator = "_"
 
   ## Parses tags in the datadog statsd format
   ## http://docs.datadoghq.com/guides/dogstatsd/
@@ -255,6 +242,15 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 		s.counters = prevInstance.counters
 		s.sets = prevInstance.sets
 		s.timings = prevInstance.timings
+	}
+
+	if s.ConvertNames {
+		log.Printf("WARNING statsd: convert_names config option is deprecated," +
+			" please use metric_separator instead")
+	}
+
+	if s.MetricSeparator == "" {
+		s.MetricSeparator = defaultSeparator
 	}
 
 	s.wg.Add(2)
@@ -500,7 +496,7 @@ func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
 
 	var field string
 	name := bucketparts[0]
-	p, err := graphite.NewGraphiteParser(".", s.Templates, nil)
+	p, err := graphite.NewGraphiteParser(s.MetricSeparator, s.Templates, nil)
 	if err == nil {
 		p.DefaultTags = tags
 		name, tags, field, _ = p.ApplyTemplate(name)
