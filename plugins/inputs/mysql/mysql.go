@@ -733,7 +733,6 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 		servtag = "localhost"
 	}
 	tags := map[string]string{"server": servtag}
-	fields := make(map[string]interface{})
 	var (
 		size     uint64 = 0
 		count    uint64 = 0
@@ -749,8 +748,10 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 		size += fileSize
 		count++
 	}
-	fields["binary_size_bytes"] = size
-	fields["binary_files_count"] = count
+	fields := map[string]interface{}{
+		"binary_size_bytes":  size,
+		"binary_files_count": count,
+	}
 	acc.AddFields("mysql", fields, tags)
 	return nil
 }
@@ -839,12 +840,11 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			}
 			fields["syncs"] = i
 		}
-		// Send any remaining fields
-		if len(fields) > 0 {
-			acc.AddFields("mysql", fields, tags)
-		}
 	}
-
+	// Send any remaining fields
+	if len(fields) > 0 {
+		acc.AddFields("mysql", fields, tags)
+	}
 	// gather connection metrics from processlist for each user
 	if m.GatherProcessList {
 		conn_rows, err := db.Query("SELECT user, sum(1) FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
@@ -931,8 +931,8 @@ func (m *Mysql) gatherPerfTableIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 	defer rows.Close()
 	var (
 		objSchema, objName, servtag                       string
-		countFetch, countInsert, countUpdate, countDelete uint64
-		timeFetch, timeInsert, timeUpdate, timeDelete     uint64
+		countFetch, countInsert, countUpdate, countDelete float64
+		timeFetch, timeInsert, timeUpdate, timeDelete     float64
 	)
 
 	servtag, err = parseDSN(serv)
@@ -955,16 +955,17 @@ func (m *Mysql) gatherPerfTableIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 			"schema": objSchema,
 			"name":   objName,
 		}
-		fields := make(map[string]interface{})
-		fields["table_io_waits_total_fetch"] = float64(countFetch)
-		fields["table_io_waits_total_insert"] = float64(countInsert)
-		fields["table_io_waits_total_update"] = float64(countUpdate)
-		fields["table_io_waits_total_delete"] = float64(countDelete)
 
-		fields["table_io_waits_seconds_total_fetch"] = float64(timeFetch) / picoSeconds
-		fields["table_io_waits_seconds_total_insert"] = float64(timeInsert) / picoSeconds
-		fields["table_io_waits_seconds_total_update"] = float64(timeUpdate) / picoSeconds
-		fields["table_io_waits_seconds_total_delete"] = float64(timeDelete) / picoSeconds
+		fields := map[string]interface{}{
+			"table_io_waits_total_fetch":          countFetch,
+			"table_io_waits_total_insert":         countInsert,
+			"table_io_waits_total_update":         countUpdate,
+			"table_io_waits_total_delete":         countDelete,
+			"table_io_waits_seconds_total_fetch":  timeFetch / picoSeconds,
+			"table_io_waits_seconds_total_insert": timeInsert / picoSeconds,
+			"table_io_waits_seconds_total_update": timeUpdate / picoSeconds,
+			"table_io_waits_seconds_total_delete": timeDelete / picoSeconds,
+		}
 
 		acc.AddFields("mysql_perf_schema", fields, tags)
 	}
@@ -1364,11 +1365,11 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 
 	var (
 		schemaName, digest, digest_text      string
-		count, queryTime, errors, warnings   uint64
-		rowsAffected, rowsSent, rowsExamined uint64
-		tmpTables, tmpDiskTables             uint64
-		sortMergePasses, sortRows            uint64
-		noIndexUsed                          uint64
+		count, queryTime, errors, warnings   float64
+		rowsAffected, rowsSent, rowsExamined float64
+		tmpTables, tmpDiskTables             float64
+		sortMergePasses, sortRows            float64
+		noIndexUsed                          float64
 	)
 
 	servtag, err := parseDSN(serv)
@@ -1395,20 +1396,20 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 		tags["digest"] = digest
 		tags["digest_text"] = digest_text
 
-		fields := make(map[string]interface{})
-
-		fields["events_statements_total"] = float64(count)
-		fields["events_statements_seconds_total"] = float64(queryTime) / picoSeconds
-		fields["events_statements_errors_total"] = float64(errors)
-		fields["events_statements_warnings_total"] = float64(warnings)
-		fields["events_statements_rows_affected_total"] = float64(rowsAffected)
-		fields["events_statements_rows_sent_total"] = float64(rowsSent)
-		fields["events_statements_rows_examined_total"] = float64(rowsExamined)
-		fields["events_statements_tmp_tables_total"] = float64(tmpTables)
-		fields["events_statements_tmp_disk_tables_total"] = float64(tmpDiskTables)
-		fields["events_statements_sort_merge_passes_total"] = float64(sortMergePasses)
-		fields["events_statements_sort_rows_total"] = float64(sortRows)
-		fields["events_statements_no_index_used_total"] = float64(noIndexUsed)
+		fields := map[string]interface{}{
+			"events_statements_total":                   count,
+			"events_statements_seconds_total":           queryTime / picoSeconds,
+			"events_statements_errors_total":            errors,
+			"events_statements_warnings_total":          warnings,
+			"events_statements_rows_affected_total":     rowsAffected,
+			"events_statements_rows_sent_total":         rowsSent,
+			"events_statements_rows_examined_total":     rowsExamined,
+			"events_statements_tmp_tables_total":        tmpTables,
+			"events_statements_tmp_disk_tables_total":   tmpDiskTables,
+			"events_statements_sort_merge_passes_total": sortMergePasses,
+			"events_statements_sort_rows_total":         sortRows,
+			"events_statements_no_index_used_total":     noIndexUsed,
+		}
 
 		acc.AddFields("mysql_perf_schema", fields, tags)
 	}
