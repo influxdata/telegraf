@@ -21,6 +21,9 @@
   ## convert measurement names, "." to "_" and "-" to "__"
   convert_names = true
 
+  ## parses tags in the datadog statsd format
+  parse_data_dog_tags = false
+
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
   # templates = [
