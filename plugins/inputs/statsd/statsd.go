@@ -47,6 +47,10 @@ type Statsd struct {
 	DeleteTimings  bool
 	ConvertNames   bool
 
+	// This flag enables parsing of tags in the dogstatsd extention to the
+	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
+	ParseDataDogTags bool
+
 	// UDPPacketSize is the size of the read packets for the server listening
 	// for statsd UDP packets. This will default to 1500 bytes.
 	UDPPacketSize int `toml:"udp_packet_size"`
@@ -147,6 +151,9 @@ const sampleConfig = `
 
   ## convert measurement names, "." to "_" and "-" to "__"
   convert_names = true
+
+  ## parses tags in the datadog statsd format
+  parse_data_dog_tags = false
 
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
@@ -318,6 +325,43 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	s.Lock()
 	defer s.Unlock()
 
+	lineTags := make(map[string]string)
+	if s.ParseDataDogTags {
+		recombinedSegments := make([]string, 0)
+		// datadog tags look like this:
+		// users.online:1|c|@0.5|#country:china,environment:production
+		// users.online:1|c|#sometagwithnovalue
+		// we will split on the pipe and remove any elements that are datadog
+		// tags, parse them, and rebuild the line sans the datadog tags
+		pipesplit := strings.Split(line, "|")
+		for _, segment := range pipesplit {
+			if len(segment) > 0 && segment[0] == '#' {
+				// we have ourselves a tag; they are comma serated
+				tagstr := segment[1:]
+				tags := strings.Split(tagstr, ",")
+				for _, tag := range tags {
+					ts := strings.Split(tag, ":")
+					var k, v string
+					switch len(ts) {
+					case 1:
+						// just a tag
+						k = ts[0]
+						v = ""
+					case 2:
+						k = ts[0]
+						v = ts[1]
+					}
+					if k != "" {
+						lineTags[k] = v
+					}
+				}
+			} else {
+				recombinedSegments = append(recombinedSegments, segment)
+			}
+		}
+		line = strings.Join(recombinedSegments, "|")
+	}
+
 	// Validate splitting the line on ":"
 	bits := strings.Split(line, ":")
 	if len(bits) < 2 {
@@ -413,6 +457,12 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			m.tags["metric_type"] = "timing"
 		case "h":
 			m.tags["metric_type"] = "histogram"
+		}
+
+		if len(lineTags) > 0 {
+			for k, v := range lineTags {
+				m.tags[k] = v
+			}
 		}
 
 		// Make a unique key for the measurement name/tags
