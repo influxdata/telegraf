@@ -152,7 +152,8 @@ const sampleConfig = `
   ## convert measurement names, "." to "_" and "-" to "__"
   convert_names = true
 
-  ## parses tags in the datadog statsd format
+  ## Parses tags in the datadog statsd format
+  ## http://docs.datadoghq.com/guides/dogstatsd/
   parse_data_dog_tags = false
 
   ## Statsd data translation templates, more info can be read here:
@@ -336,7 +337,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		pipesplit := strings.Split(line, "|")
 		for _, segment := range pipesplit {
 			if len(segment) > 0 && segment[0] == '#' {
-				// we have ourselves a tag; they are comma serated
+				// we have ourselves a tag; they are comma separated
 				tagstr := segment[1:]
 				tags := strings.Split(tagstr, ",")
 				for _, tag := range tags {

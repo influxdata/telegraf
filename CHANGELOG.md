@@ -1,6 +1,7 @@
 ## v0.11.2 [unreleased]
 
 ### Features
+- [#927](https://github.com/influxdata/telegraf/pull/927): Adds parsing of tags to the statsd input when using DataDog's dogstatsd extension
 - [#863](https://github.com/influxdata/telegraf/pull/863): AMQP output: allow external auth. Thanks @ekini!
 - [#707](https://github.com/influxdata/telegraf/pull/707): Improved prometheus plugin. Thanks @titilambert!
 - [#878](https://github.com/influxdata/telegraf/pull/878): Added json serializer. Thanks @ch3lo!
