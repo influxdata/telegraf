@@ -410,6 +410,84 @@ func TestParse_Tags(t *testing.T) {
 	}
 }
 
+// Test that DataDog tags are parsed
+func TestParse_DataDogTags(t *testing.T) {
+	s := NewStatsd()
+	s.ParseDataDogTags = true
+
+	lines := []string{
+		"my_counter:1|c|#host:localhost,environment:prod",
+		"my_gauge:10.1|g|#live",
+		"my_set:1|s|#host:localhost",
+		"my_timer:3|ms|@0.1|#live,host:localhost",
+	}
+
+	testTags := map[string]map[string]string{
+		"my_counter": map[string]string{
+			"host":        "localhost",
+			"environment": "prod",
+		},
+
+		"my_gauge": map[string]string{
+			"live": "",
+		},
+
+		"my_set": map[string]string{
+			"host": "localhost",
+		},
+
+		"my_timer": map[string]string{
+			"live": "",
+			"host": "localhost",
+		},
+	}
+
+	for _, line := range lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	sourceTags := map[string]map[string]string{
+		"my_gauge":   tagsForItem(s.gauges),
+		"my_counter": tagsForItem(s.counters),
+		"my_set":     tagsForItem(s.sets),
+		"my_timer":   tagsForItem(s.timings),
+	}
+
+	for statName, tags := range testTags {
+		for k, v := range tags {
+			otherValue := sourceTags[statName][k]
+			if sourceTags[statName][k] != v {
+				t.Errorf("Error with %s, tag %s: %s != %s", statName, k, v, otherValue)
+			}
+		}
+	}
+}
+
+func tagsForItem(m interface{}) map[string]string {
+	switch m.(type) {
+	case map[string]cachedcounter:
+		for _, v := range m.(map[string]cachedcounter) {
+			return v.tags
+		}
+	case map[string]cachedgauge:
+		for _, v := range m.(map[string]cachedgauge) {
+			return v.tags
+		}
+	case map[string]cachedset:
+		for _, v := range m.(map[string]cachedset) {
+			return v.tags
+		}
+	case map[string]cachedtimings:
+		for _, v := range m.(map[string]cachedtimings) {
+			return v.tags
+		}
+	}
+	return nil
+}
+
 // Test that statsd buckets are parsed to measurement names properly
 func TestParseName(t *testing.T) {
 	s := NewStatsd()
