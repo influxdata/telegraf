@@ -16,9 +16,9 @@ import (
 
 type Mysql struct {
 	Servers                             []string `toml:"servers"`
-	PerfEventsStatementsDigestTextLimit uint32   `toml:"perf_events_statements_digest_text_limit"`
-	PerfEventsStatementsLimit           uint32   `toml:"perf_events_statements_limit"`
-	PerfEventsStatementsTimeLimit       uint32   `toml:"perf_events_statemetns_time_limit"`
+	PerfEventsStatementsDigestTextLimit int64    `toml:"perf_events_statements_digest_text_limit"`
+	PerfEventsStatementsLimit           int64    `toml:"perf_events_statements_limit"`
+	PerfEventsStatementsTimeLimit       int64    `toml:"perf_events_statemetns_time_limit"`
 	TableSchemaDatabases                []string `toml:"table_schema_databases"`
 	GatherProcessList                   bool     `toml:"gather_process_list"`
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
@@ -983,8 +983,8 @@ func (m *Mysql) gatherPerfIndexIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 
 	var (
 		objSchema, objName, indexName, servtag            string
-		countFetch, countInsert, countUpdate, countDelete uint64
-		timeFetch, timeInsert, timeUpdate, timeDelete     uint64
+		countFetch, countInsert, countUpdate, countDelete float64
+		timeFetch, timeInsert, timeUpdate, timeDelete     float64
 	)
 
 	servtag, err = parseDSN(serv)
@@ -1008,19 +1008,20 @@ func (m *Mysql) gatherPerfIndexIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 			"name":   objName,
 			"index":  indexName,
 		}
-		fields := make(map[string]interface{})
-		fields["index_io_waits_total_fetch"] = float64(countFetch)
-		fields["index_io_waits_seconds_total_fetch"] = float64(timeFetch) / picoSeconds
+		fields := map[string]interface{}{
+			"index_io_waits_total_fetch":         countFetch,
+			"index_io_waits_seconds_total_fetch": timeFetch / picoSeconds,
+		}
 
 		// update write columns only when index is NONE
 		if indexName == "NONE" {
-			fields["index_io_waits_total_insert"] = float64(countInsert)
-			fields["index_io_waits_total_update"] = float64(countUpdate)
-			fields["index_io_waits_total_delete"] = float64(countDelete)
+			fields["index_io_waits_total_insert"] = countInsert
+			fields["index_io_waits_total_update"] = countUpdate
+			fields["index_io_waits_total_delete"] = countDelete
 
-			fields["index_io_waits_seconds_total_insert"] = float64(timeInsert) / picoSeconds
-			fields["index_io_waits_seconds_total_update"] = float64(timeUpdate) / picoSeconds
-			fields["index_io_waits_seconds_total_delete"] = float64(timeDelete) / picoSeconds
+			fields["index_io_waits_seconds_total_insert"] = timeInsert / picoSeconds
+			fields["index_io_waits_seconds_total_update"] = timeUpdate / picoSeconds
+			fields["index_io_waits_seconds_total_delete"] = timeDelete / picoSeconds
 		}
 
 		acc.AddFields("mysql_perf_schema", fields, tags)
@@ -1096,28 +1097,28 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 	var (
 		objectSchema               string
 		objectName                 string
-		countReadNormal            uint64
-		countReadWithSharedLocks   uint64
-		countReadHighPriority      uint64
-		countReadNoInsert          uint64
-		countReadExternal          uint64
-		countWriteAllowWrite       uint64
-		countWriteConcurrentInsert uint64
-		countWriteDelayed          uint64
-		countWriteLowPriority      uint64
-		countWriteNormal           uint64
-		countWriteExternal         uint64
-		timeReadNormal             uint64
-		timeReadWithSharedLocks    uint64
-		timeReadHighPriority       uint64
-		timeReadNoInsert           uint64
-		timeReadExternal           uint64
-		timeWriteAllowWrite        uint64
-		timeWriteConcurrentInsert  uint64
-		timeWriteDelayed           uint64
-		timeWriteLowPriority       uint64
-		timeWriteNormal            uint64
-		timeWriteExternal          uint64
+		countReadNormal            float64
+		countReadWithSharedLocks   float64
+		countReadHighPriority      float64
+		countReadNoInsert          float64
+		countReadExternal          float64
+		countWriteAllowWrite       float64
+		countWriteConcurrentInsert float64
+		countWriteDelayed          float64
+		countWriteLowPriority      float64
+		countWriteNormal           float64
+		countWriteExternal         float64
+		timeReadNormal             float64
+		timeReadWithSharedLocks    float64
+		timeReadHighPriority       float64
+		timeReadNoInsert           float64
+		timeReadExternal           float64
+		timeWriteAllowWrite        float64
+		timeWriteConcurrentInsert  float64
+		timeWriteDelayed           float64
+		timeWriteLowPriority       float64
+		timeWriteNormal            float64
+		timeWriteExternal          float64
 	)
 
 	for rows.Next() {
@@ -1159,97 +1160,97 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 		fields := make(map[string]interface{})
 
 		tags["operation"] = "read_normal"
-		fields["sql_lock_waits_total"] = float64(countReadNormal)
+		fields["sql_lock_waits_total"] = countReadNormal
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "read_with_shared_locks"
-		fields["sql_lock_waits_total"] = float64(countReadWithSharedLocks)
+		fields["sql_lock_waits_total"] = countReadWithSharedLocks
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "read_high_priority"
-		fields["sql_lock_waits_total"] = float64(countReadHighPriority)
+		fields["sql_lock_waits_total"] = countReadHighPriority
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "read_no_insert"
-		fields["sql_lock_waits_total"] = float64(countReadNoInsert)
+		fields["sql_lock_waits_total"] = countReadNoInsert
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_normal"
-		fields["sql_lock_waits_total"] = float64(countWriteNormal)
+		fields["sql_lock_waits_total"] = countWriteNormal
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_allow_write"
-		fields["sql_lock_waits_total"] = float64(countWriteAllowWrite)
+		fields["sql_lock_waits_total"] = countWriteAllowWrite
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_concurrent_insert"
-		fields["sql_lock_waits_total"] = float64(countWriteConcurrentInsert)
+		fields["sql_lock_waits_total"] = countWriteConcurrentInsert
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_delayed"
-		fields["sql_lock_waits_total"] = float64(countWriteDelayed)
+		fields["sql_lock_waits_total"] = countWriteDelayed
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_low_priority"
-		fields["sql_lock_waits_total"] = float64(countWriteLowPriority)
+		fields["sql_lock_waits_total"] = countWriteLowPriority
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		delete(fields, "sql_lock_waits_total")
 
 		tags["operation"] = "read"
-		fields["external_lock_waits_total"] = float64(countReadExternal)
+		fields["external_lock_waits_total"] = countReadExternal
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write"
-		fields["external_lock_waits_total"] = float64(countWriteExternal)
+		fields["external_lock_waits_total"] = countWriteExternal
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		delete(fields, "external_lock_waits_total")
 
 		tags["operation"] = "read_normal"
-		fields["sql_lock_waits_seconds_total"] = float64(timeReadNormal / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeReadNormal / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "read_with_shared_locks"
-		fields["sql_lock_waits_seconds_total"] = float64(timeReadWithSharedLocks / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeReadWithSharedLocks / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "read_high_priority"
-		fields["sql_lock_waits_seconds_total"] = float64(timeReadHighPriority / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeReadHighPriority / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "read_no_insert"
-		fields["sql_lock_waits_seconds_total"] = float64(timeReadNoInsert / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeReadNoInsert / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_normal"
-		fields["sql_lock_waits_seconds_total"] = float64(timeWriteNormal / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeWriteNormal / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_allow_write"
-		fields["sql_lock_waits_seconds_total"] = float64(timeWriteAllowWrite / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeWriteAllowWrite / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_concurrent_insert"
-		fields["sql_lock_waits_seconds_total"] = float64(timeWriteConcurrentInsert / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeWriteConcurrentInsert / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_delayed"
-		fields["sql_lock_waits_seconds_total"] = float64(timeWriteDelayed / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeWriteDelayed / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write_low_priority"
-		fields["sql_lock_waits_seconds_total"] = float64(timeWriteLowPriority / picoSeconds)
+		fields["sql_lock_waits_seconds_total"] = timeWriteLowPriority / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		delete(fields, "sql_lock_waits_seconds_total")
 
 		tags["operation"] = "read"
-		fields["external_lock_waits_seconds_total"] = float64(timeReadExternal / picoSeconds)
+		fields["external_lock_waits_seconds_total"] = timeReadExternal / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["operation"] = "write"
-		fields["external_lock_waits_seconds_total"] = float64(timeWriteExternal / picoSeconds)
+		fields["external_lock_waits_seconds_total"] = timeWriteExternal / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 	}
 	return nil
@@ -1265,7 +1266,7 @@ func (m *Mysql) gatherPerfEventWaits(db *sql.DB, serv string, acc telegraf.Accum
 
 	var (
 		event               string
-		starCount, timeWait uint64
+		starCount, timeWait float64
 	)
 
 	servtag, err := parseDSN(serv)
@@ -1280,9 +1281,10 @@ func (m *Mysql) gatherPerfEventWaits(db *sql.DB, serv string, acc telegraf.Accum
 			return err
 		}
 		tags["event_name"] = event
-		fields := make(map[string]interface{})
-		fields["events_waits_total"] = float64(starCount)
-		fields["events_waits_seconds_total"] = float64(timeWait) / picoSeconds
+		fields := map[string]interface{}{
+			"events_waits_total":         starCount,
+			"events_waits_seconds_total": timeWait / picoSeconds,
+		}
 
 		acc.AddFields("mysql_perf_schema", fields, tags)
 	}
@@ -1300,9 +1302,9 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 
 	var (
 		eventName                                 string
-		countRead, countWrite, countMisc          uint64
-		sumTimerRead, sumTimerWrite, sumTimerMisc uint64
-		sumNumBytesRead, sumNumBytesWrite         uint64
+		countRead, countWrite, countMisc          float64
+		sumTimerRead, sumTimerWrite, sumTimerMisc float64
+		sumNumBytesRead, sumNumBytesWrite         float64
 	)
 
 	servtag, err := parseDSN(serv)
@@ -1327,20 +1329,20 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 		fields := make(map[string]interface{})
 
 		tags["mode"] = "misc"
-		fields["file_events_total"] = float64(countWrite)
-		fields["file_events_seconds_total"] = float64(sumTimerMisc) / picoSeconds
+		fields["file_events_total"] = countWrite
+		fields["file_events_seconds_total"] = sumTimerMisc / picoSeconds
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["mode"] = "read"
-		fields["file_events_total"] = float64(countRead)
-		fields["file_events_seconds_total"] = float64(sumTimerRead) / picoSeconds
-		fields["file_events_bytes_totals"] = float64(sumNumBytesRead)
+		fields["file_events_total"] = countRead
+		fields["file_events_seconds_total"] = sumTimerRead / picoSeconds
+		fields["file_events_bytes_totals"] = sumNumBytesRead
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 		tags["mode"] = "write"
-		fields["file_events_total"] = float64(countWrite)
-		fields["file_events_seconds_total"] = float64(sumTimerWrite) / picoSeconds
-		fields["file_events_bytes_totals"] = float64(sumNumBytesWrite)
+		fields["file_events_total"] = countWrite
+		fields["file_events_seconds_total"] = sumTimerWrite / picoSeconds
+		fields["file_events_bytes_totals"] = sumNumBytesWrite
 		acc.AddFields("mysql_perf_schema", fields, tags)
 
 	}
@@ -1459,12 +1461,12 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			tableName     string
 			tableType     string
 			engine        string
-			version       uint64
+			version       float64
 			rowFormat     string
-			tableRows     uint64
-			dataLength    uint64
-			indexLength   uint64
-			dataFree      uint64
+			tableRows     float64
+			dataLength    float64
+			indexLength   float64
+			dataFree      float64
 			createOptions string
 		)
 		for rows.Next() {
@@ -1489,23 +1491,23 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			tags["table"] = tableName
 			versionTags := tags
 
-			acc.Add(newNamespace("info_schema", "table_rows"), float64(tableRows), tags)
+			acc.Add(newNamespace("info_schema", "table_rows"), tableRows, tags)
 
 			tags["component"] = "data_length"
-			acc.Add(newNamespace("info_schema", "table_size", "data_length"), float64(dataLength), tags)
+			acc.Add(newNamespace("info_schema", "table_size", "data_length"), dataLength, tags)
 
 			tags["component"] = "index_length"
-			acc.Add(newNamespace("info_schema", "table_size", "index_length"), float64(indexLength), tags)
+			acc.Add(newNamespace("info_schema", "table_size", "index_length"), indexLength, tags)
 
 			tags["component"] = "data_free"
-			acc.Add(newNamespace("info_schema", "table_size", "data_free"), float64(dataFree), tags)
+			acc.Add(newNamespace("info_schema", "table_size", "data_free"), dataFree, tags)
 
 			versionTags["type"] = tableType
 			versionTags["engine"] = engine
 			versionTags["row_format"] = rowFormat
 			versionTags["create_options"] = createOptions
 
-			acc.Add(newNamespace("info_schema", "table_version"), float64(version), versionTags)
+			acc.Add(newNamespace("info_schema", "table_version"), version, versionTags)
 		}
 	}
 	return nil
