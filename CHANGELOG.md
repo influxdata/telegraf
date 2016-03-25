@@ -24,6 +24,7 @@
 - [#907](https://github.com/influxdata/telegraf/issues/907): Fix prometheus invalid label/measurement name key.
 - [#841](https://github.com/influxdata/telegraf/issues/841): Fix memcached unix socket panic.
 - [#873](https://github.com/influxdata/telegraf/issues/873): Fix SNMP plugin sometimes not returning metrics. Thanks @titiliambert!
+- [#934](https://github.com/influxdata/telegraf/pull/934): phpfpm: Fix fcgi uri path. Thanks @rudenkovk!
 
 ## v0.11.1 [2016-03-17]
 
