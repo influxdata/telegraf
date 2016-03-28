@@ -141,12 +141,12 @@ fields which begin with `time_`.
 # Drop all metrics about containers for kubelet
 [[inputs.prometheus]]
   urls = ["http://kube-node-1:4194/metrics"]
-  namedrop = ["container_"]
+  namedrop = ["container_*"]
 
 # Only store rest client related metrics for kubelet
 [[inputs.prometheus]]
   urls = ["http://kube-node-1:4194/metrics"]
-  namepass = ["rest_client_"]
+  namepass = ["rest_client_*"]
 ```
 
 #### Input config: prefix, suffix, and override
