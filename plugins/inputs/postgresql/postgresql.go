@@ -20,6 +20,7 @@ type Postgresql struct {
 	OrderedColumns   []string
 	AllColumns       []string
 	sanitizedAddress string
+	AddressTag       bool
 }
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
@@ -42,6 +43,9 @@ var sampleConfig = `
   ## A list of databases to pull metrics about. If not specified, metrics for all
   ## databases are gathered.
   # databases = ["app_production", "testing"]
+  ## Toggle adding a server:canonicalizedAddress tag to the measurment. If not 
+  ## specified, it's enabled by default.
+  # addressTag = true|false
 `
 
 func (p *Postgresql) SampleConfig() string {
@@ -184,13 +188,16 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 		dbname.WriteString("postgres")
 	}
 
-	var tagAddress string
-	tagAddress, err = p.SanitizedAddress()
-	if err != nil {
-		return err
-	}
+	tags := map[string]string{"db": dbname.String()}
 
-	tags := map[string]string{"server": tagAddress, "db": dbname.String()}
+	if p.AddressTag {
+		var tagAddress string
+		tagAddress, err = p.SanitizedAddress()
+		if err != nil {
+			return err
+		}
+		tags["server"] = tagAddress
+	}
 
 	fields := make(map[string]interface{})
 	for col, val := range columnMap {
@@ -206,6 +213,6 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("postgresql", func() telegraf.Input {
-		return &Postgresql{}
+		return &Postgresql{AddressTag: true}
 	})
 }

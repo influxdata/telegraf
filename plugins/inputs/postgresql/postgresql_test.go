@@ -102,6 +102,49 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	assert.Equal(t, "postgres", point.Tags["db"])
 }
 
+func TestPostgresqlTagsMetricsWithServerTag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	address := fmt.Sprintf("host=%s user=postgres sslmode=disable",
+		testutil.GetLocalHost())
+	p := &Postgresql{
+		Address:    address,
+		AddressTag: true,
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+	fmt.Println(point.Tags)
+	assert.Equal(t, address, point.Tags["server"])
+}
+
+func TestPostgresqlTagsMetricsWithoutServerTag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
+		AddressTag: false,
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	point, ok := acc.Get("postgresql")
+	require.True(t, ok)
+	assert.Equal(t, "", point.Tags["server"])
+}
+
 func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
