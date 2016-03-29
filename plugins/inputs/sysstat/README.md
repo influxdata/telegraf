@@ -66,7 +66,7 @@ the created binary data file with the `sadf` utility.
 ```
 
 ### Measurements & Fields:
-#### group=true
+#### If group=true
 - cpu
     - pct_idle (float)
     - pct_iowait (float)
@@ -86,7 +86,7 @@ the created binary data file with the `sadf` utility.
 
 And much more, depending on the options you configure.
 
-#### group=false
+#### If group=false
 - cpu_pct_idle
     - value (float)
 - cpu_pct_iowait
