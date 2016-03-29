@@ -175,6 +175,13 @@ func (s *Sysstat) collect() error {
 	if len(s.Activities) == 0 {
 		s.Activities = dfltActivities
 	}
+	if len(s.Sadf) == 0 {
+		sadf, err := exec.LookPath("sadf")
+		if err != nil {
+			return errors.New("sadf not in $PATH, configure path to sadf")
+		}
+		s.Sadf = sadf
+	}
 	options := []string{}
 	for _, act := range s.Activities {
 		options = append(options, "-S", act)
@@ -194,13 +201,6 @@ func (s *Sysstat) collect() error {
 //    Sadf -p -- -p <option> tmpFile
 // and parses the output to add it to the telegraf.Accumulator acc.
 func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) error {
-	if len(s.Sadf) == 0 {
-		sadf, err := exec.LookPath("sadf")
-		if err != nil {
-			return errors.New("sadf not in $PATH, configure path to sadf")
-		}
-		s.Sadf = sadf
-	}
 	cmd := execCommand(s.Sadf, s.sadfOptions(option)...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
