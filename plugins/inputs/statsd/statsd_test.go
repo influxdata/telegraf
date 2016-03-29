@@ -8,9 +8,26 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func NewTestStatsd() *Statsd {
+	s := Statsd{}
+
+	// Make data structures
+	s.done = make(chan struct{})
+	s.in = make(chan []byte, s.AllowedPendingMessages)
+	s.gauges = make(map[string]cachedgauge)
+	s.counters = make(map[string]cachedcounter)
+	s.sets = make(map[string]cachedset)
+	s.timings = make(map[string]cachedtimings)
+
+	s.MetricSeparator = "_"
+	s.UDPPacketSize = UDP_PACKET_SIZE
+
+	return &s
+}
+
 // Invalid lines should return an error
 func TestParse_InvalidLines(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	invalid_lines := []string{
 		"i.dont.have.a.pipe:45g",
 		"i.dont.have.a.colon45|c",
@@ -34,7 +51,7 @@ func TestParse_InvalidLines(t *testing.T) {
 
 // Invalid sample rates should be ignored and not applied
 func TestParse_InvalidSampleRate(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	invalid_lines := []string{
 		"invalid.sample.rate:45|c|0.1",
 		"invalid.sample.rate.2:45|c|@foo",
@@ -84,9 +101,9 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 	}
 }
 
-// Names should be parsed like . -> _ and - -> __
+// Names should be parsed like . -> _
 func TestParse_DefaultNameParsing(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	valid_lines := []string{
 		"valid:1|c",
 		"valid.foo-bar:11|c",
@@ -108,7 +125,7 @@ func TestParse_DefaultNameParsing(t *testing.T) {
 			1,
 		},
 		{
-			"valid_foo__bar",
+			"valid_foo-bar",
 			11,
 		},
 	}
@@ -123,7 +140,7 @@ func TestParse_DefaultNameParsing(t *testing.T) {
 
 // Test that template name transformation works
 func TestParse_Template(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.Templates = []string{
 		"measurement.measurement.host.service",
 	}
@@ -165,7 +182,7 @@ func TestParse_Template(t *testing.T) {
 
 // Test that template filters properly
 func TestParse_TemplateFilter(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.Templates = []string{
 		"cpu.idle.* measurement.measurement.host",
 	}
@@ -207,7 +224,7 @@ func TestParse_TemplateFilter(t *testing.T) {
 
 // Test that most specific template is chosen
 func TestParse_TemplateSpecificity(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.Templates = []string{
 		"cpu.* measurement.foo.host",
 		"cpu.idle.* measurement.measurement.host",
@@ -245,7 +262,7 @@ func TestParse_TemplateSpecificity(t *testing.T) {
 
 // Test that most specific template is chosen
 func TestParse_TemplateFields(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.Templates = []string{
 		"* measurement.measurement.field",
 	}
@@ -359,7 +376,7 @@ func TestParse_Fields(t *testing.T) {
 
 // Test that tags within the bucket are parsed correctly
 func TestParse_Tags(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 
 	tests := []struct {
 		bucket string
@@ -410,9 +427,87 @@ func TestParse_Tags(t *testing.T) {
 	}
 }
 
+// Test that DataDog tags are parsed
+func TestParse_DataDogTags(t *testing.T) {
+	s := NewTestStatsd()
+	s.ParseDataDogTags = true
+
+	lines := []string{
+		"my_counter:1|c|#host:localhost,environment:prod",
+		"my_gauge:10.1|g|#live",
+		"my_set:1|s|#host:localhost",
+		"my_timer:3|ms|@0.1|#live,host:localhost",
+	}
+
+	testTags := map[string]map[string]string{
+		"my_counter": map[string]string{
+			"host":        "localhost",
+			"environment": "prod",
+		},
+
+		"my_gauge": map[string]string{
+			"live": "",
+		},
+
+		"my_set": map[string]string{
+			"host": "localhost",
+		},
+
+		"my_timer": map[string]string{
+			"live": "",
+			"host": "localhost",
+		},
+	}
+
+	for _, line := range lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	sourceTags := map[string]map[string]string{
+		"my_gauge":   tagsForItem(s.gauges),
+		"my_counter": tagsForItem(s.counters),
+		"my_set":     tagsForItem(s.sets),
+		"my_timer":   tagsForItem(s.timings),
+	}
+
+	for statName, tags := range testTags {
+		for k, v := range tags {
+			otherValue := sourceTags[statName][k]
+			if sourceTags[statName][k] != v {
+				t.Errorf("Error with %s, tag %s: %s != %s", statName, k, v, otherValue)
+			}
+		}
+	}
+}
+
+func tagsForItem(m interface{}) map[string]string {
+	switch m.(type) {
+	case map[string]cachedcounter:
+		for _, v := range m.(map[string]cachedcounter) {
+			return v.tags
+		}
+	case map[string]cachedgauge:
+		for _, v := range m.(map[string]cachedgauge) {
+			return v.tags
+		}
+	case map[string]cachedset:
+		for _, v := range m.(map[string]cachedset) {
+			return v.tags
+		}
+	case map[string]cachedtimings:
+		for _, v := range m.(map[string]cachedtimings) {
+			return v.tags
+		}
+	}
+	return nil
+}
+
 // Test that statsd buckets are parsed to measurement names properly
 func TestParseName(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 
 	tests := []struct {
 		in_name  string
@@ -428,7 +523,7 @@ func TestParseName(t *testing.T) {
 		},
 		{
 			"foo.bar-baz",
-			"foo_bar__baz",
+			"foo_bar-baz",
 		},
 	}
 
@@ -439,8 +534,8 @@ func TestParseName(t *testing.T) {
 		}
 	}
 
-	// Test with ConvertNames = false
-	s.ConvertNames = false
+	// Test with separator == "."
+	s.MetricSeparator = "."
 
 	tests = []struct {
 		in_name  string
@@ -471,7 +566,7 @@ func TestParseName(t *testing.T) {
 // Test that measurements with the same name, but different tags, are treated
 // as different outputs
 func TestParse_MeasurementsWithSameName(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 
 	// Test that counters work
 	valid_lines := []string{
@@ -529,8 +624,8 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 		"valid.multiple.mixed:1|c:1|ms:2|s:1|g",
 	}
 
-	s_single := NewStatsd()
-	s_multiple := NewStatsd()
+	s_single := NewTestStatsd()
+	s_multiple := NewTestStatsd()
 
 	for _, line := range single_lines {
 		err := s_single.parseStatsdLine(line)
@@ -623,7 +718,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 
 // Valid lines should be parsed and their values should be cached
 func TestParse_ValidLines(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	valid_lines := []string{
 		"valid:45|c",
 		"valid:45|s",
@@ -642,7 +737,7 @@ func TestParse_ValidLines(t *testing.T) {
 
 // Tests low-level functionality of gauges
 func TestParse_Gauges(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 
 	// Test that gauge +- values work
 	valid_lines := []string{
@@ -708,7 +803,7 @@ func TestParse_Gauges(t *testing.T) {
 
 // Tests low-level functionality of sets
 func TestParse_Sets(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 
 	// Test that sets work
 	valid_lines := []string{
@@ -756,7 +851,7 @@ func TestParse_Sets(t *testing.T) {
 
 // Tests low-level functionality of counters
 func TestParse_Counters(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 
 	// Test that counters work
 	valid_lines := []string{
@@ -810,7 +905,7 @@ func TestParse_Counters(t *testing.T) {
 
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.Percentiles = []int{90}
 	acc := &testutil.Accumulator{}
 
@@ -847,7 +942,7 @@ func TestParse_Timings(t *testing.T) {
 // Tests low-level functionality of timings when multiple fields is enabled
 // and a measurement template has been defined which can parse field names
 func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.Templates = []string{"measurement.field"}
 	s.Percentiles = []int{90}
 	acc := &testutil.Accumulator{}
@@ -896,7 +991,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 // but a measurement template hasn't been defined so we can't parse field names
 // In this case the behaviour should be the same as normal behaviour
 func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.Templates = []string{}
 	s.Percentiles = []int{90}
 	acc := &testutil.Accumulator{}
@@ -944,7 +1039,7 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 }
 
 func TestParse_Timings_Delete(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.DeleteTimings = true
 	fakeacc := &testutil.Accumulator{}
 	var err error
@@ -968,7 +1063,7 @@ func TestParse_Timings_Delete(t *testing.T) {
 
 // Tests the delete_gauges option
 func TestParse_Gauges_Delete(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.DeleteGauges = true
 	fakeacc := &testutil.Accumulator{}
 	var err error
@@ -994,7 +1089,7 @@ func TestParse_Gauges_Delete(t *testing.T) {
 
 // Tests the delete_sets option
 func TestParse_Sets_Delete(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.DeleteSets = true
 	fakeacc := &testutil.Accumulator{}
 	var err error
@@ -1020,7 +1115,7 @@ func TestParse_Sets_Delete(t *testing.T) {
 
 // Tests the delete_counters option
 func TestParse_Counters_Delete(t *testing.T) {
-	s := NewStatsd()
+	s := NewTestStatsd()
 	s.DeleteCounters = true
 	fakeacc := &testutil.Accumulator{}
 	var err error

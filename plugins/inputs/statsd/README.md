@@ -21,6 +21,10 @@
   ## convert measurement names, "." to "_" and "-" to "__"
   convert_names = true
 
+  ## Parses tags in DataDog's dogstatsd format
+  ## http://docs.datadoghq.com/guides/dogstatsd/
+  parse_data_dog_tags = false
+
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
   # templates = [
@@ -155,6 +159,7 @@ per-measurement in the calculation of percentiles. Raising this limit increases
 the accuracy of percentiles but also increases the memory usage and cpu time.
 - **templates** []string: Templates for transforming statsd buckets into influx
 measurements and tags.
+- **parse_data_dog_tags** boolean: Enable parsing of tags in DataDog's dogstatsd format (http://docs.datadoghq.com/guides/dogstatsd/)
 
 ### Statsd bucket -> InfluxDB line-protocol Templates
 
@@ -198,4 +203,4 @@ mem.cached.localhost:256|g
 ```
 
 There are many more options available,
-[More details can be found here](https://github.com/influxdata/influxdb/tree/master/services/graphite#templates)
+[More details can be found here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)

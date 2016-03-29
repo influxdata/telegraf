@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -156,10 +155,7 @@ func (l *Librato) Description() string {
 func (l *Librato) buildGaugeName(m telegraf.Metric, fieldName string) string {
 	// Use the GraphiteSerializer
 	graphiteSerializer := graphite.GraphiteSerializer{}
-	serializedMetric := graphiteSerializer.SerializeBucketName(m, fieldName)
-
-	// Deal with slash characters:
-	return strings.Replace(serializedMetric, "/", "-", -1)
+	return graphiteSerializer.SerializeBucketName(m, fieldName)
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
@@ -168,6 +164,9 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 		gauge := &Gauge{
 			Name:        l.buildGaugeName(m, fieldName),
 			MeasureTime: m.Time().Unix(),
+		}
+		if !gauge.verifyValue(value) {
+			continue
 		}
 		if err := gauge.setValue(value); err != nil {
 			return gauges, fmt.Errorf("unable to extract value from Fields, %s\n",
@@ -188,6 +187,14 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 		fmt.Printf("[DEBUG] Built gauges: %v\n", gauges)
 	}
 	return gauges, nil
+}
+
+func (g *Gauge) verifyValue(v interface{}) bool {
+	switch v.(type) {
+	case string:
+		return false
+	}
+	return true
 }
 
 func (g *Gauge) setValue(v interface{}) error {

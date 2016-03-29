@@ -97,8 +97,9 @@ type AgentConfig struct {
 	Debug bool
 
 	// Quiet is the option for running in quiet mode
-	Quiet    bool
-	Hostname string
+	Quiet        bool
+	Hostname     string
+	OmitHostname bool
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -183,6 +184,8 @@ var header = `# Telegraf Configuration
   quiet = false
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
+  ## If set to true, do no set the "host" tag in the telegraf agent.
+  omit_hostname = false
 
 
 #
@@ -701,12 +704,21 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["data_type"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DataType = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
+	delete(tbl.Fields, "data_type")
 
 	return parsers.NewParser(c)
 }

@@ -492,12 +492,12 @@ Note: the plugin will add instance name as tag *instance*
     # oid attribute is useless
 
   # SNMP SUBTABLES
-  [[plugins.snmp.subtable]]
+  [[inputs.snmp.subtable]]
     name = "bytes_recv"
     oid = ".1.3.6.1.2.1.31.1.1.1.6"
     unit = "octets"
 
-  [[plugins.snmp.subtable]]
+  [[inputs.snmp.subtable]]
     name = "bytes_send"
     oid = ".1.3.6.1.2.1.31.1.1.1.10"
     unit = "octets"
@@ -505,10 +505,10 @@ Note: the plugin will add instance name as tag *instance*
 
 #### Configuration notes
 
-- In **plugins.snmp.table** section, the `oid` attribute is useless if
+- In **inputs.snmp.table** section, the `oid` attribute is useless if
   the `sub_tables` attributes is defined
 
-- In **plugins.snmp.subtable** section, you can put a name from `snmptranslate_file`
+- In **inputs.snmp.subtable** section, you can put a name from `snmptranslate_file`
   as `oid` attribute instead of a valid OID
 
 ### Measurements & Fields:

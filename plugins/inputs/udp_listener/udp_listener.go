@@ -3,6 +3,7 @@ package udp_listener
 import (
 	"log"
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -14,7 +15,9 @@ type UdpListener struct {
 	ServiceAddress         string
 	UDPPacketSize          int `toml:"udp_packet_size"`
 	AllowedPendingMessages int
+
 	sync.Mutex
+	wg sync.WaitGroup
 
 	in   chan []byte
 	done chan struct{}
@@ -23,6 +26,8 @@ type UdpListener struct {
 
 	// Keep the accumulator in this struct
 	acc telegraf.Accumulator
+
+	listener *net.UDPConn
 }
 
 const UDP_PACKET_SIZE int = 1500
@@ -76,6 +81,7 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 	u.in = make(chan []byte, u.AllowedPendingMessages)
 	u.done = make(chan struct{})
 
+	u.wg.Add(2)
 	go u.udpListen()
 	go u.udpParser()
 
@@ -84,21 +90,22 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 }
 
 func (u *UdpListener) Stop() {
-	u.Lock()
-	defer u.Unlock()
 	close(u.done)
+	u.listener.Close()
+	u.wg.Wait()
 	close(u.in)
 	log.Println("Stopped UDP listener service on ", u.ServiceAddress)
 }
 
 func (u *UdpListener) udpListen() error {
+	defer u.wg.Done()
+	var err error
 	address, _ := net.ResolveUDPAddr("udp", u.ServiceAddress)
-	listener, err := net.ListenUDP("udp", address)
+	u.listener, err = net.ListenUDP("udp", address)
 	if err != nil {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
-	defer listener.Close()
-	log.Println("UDP server listening on: ", listener.LocalAddr().String())
+	log.Println("UDP server listening on: ", u.listener.LocalAddr().String())
 
 	for {
 		select {
@@ -106,9 +113,10 @@ func (u *UdpListener) udpListen() error {
 			return nil
 		default:
 			buf := make([]byte, u.UDPPacketSize)
-			n, _, err := listener.ReadFromUDP(buf)
-			if err != nil {
+			n, _, err := u.listener.ReadFromUDP(buf)
+			if err != nil && !strings.Contains(err.Error(), "closed network") {
 				log.Printf("ERROR: %s\n", err.Error())
+				continue
 			}
 
 			select {
@@ -121,6 +129,7 @@ func (u *UdpListener) udpListen() error {
 }
 
 func (u *UdpListener) udpParser() error {
+	defer u.wg.Done()
 	for {
 		select {
 		case <-u.done:

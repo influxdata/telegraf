@@ -139,12 +139,8 @@ func TestBuildGauge(t *testing.T) {
 		},
 		{
 			testutil.TestMetric("11234.5", "test7"),
-			&Gauge{
-				Name:        "value1.test7.value",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
-				Value:       11234.5,
-			},
-			fmt.Errorf("unable to extract value from Fields, undeterminable type"),
+			nil,
+			nil,
 		},
 	}
 
@@ -157,6 +153,9 @@ func TestBuildGauge(t *testing.T) {
 		if gt.err != nil && err == nil {
 			t.Errorf("%s: expected an error (%s) but none returned",
 				gt.ptIn.Name(), gt.err.Error())
+		}
+		if len(gauges) != 0 && gt.outGauge == nil {
+			t.Errorf("%s: unexpected gauge, %+v\n", gt.ptIn.Name(), gt.outGauge)
 		}
 		if len(gauges) == 0 {
 			continue

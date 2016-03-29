@@ -8,6 +8,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/value"
 )
 
 // ParserInput is an interface for input plugins that are able to parse
@@ -38,7 +40,7 @@ type Parser interface {
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
-	// Dataformat can be one of: json, influx, graphite
+	// Dataformat can be one of: json, influx, graphite, value, nagios
 	DataFormat string
 
 	// Separator only applied to Graphite data.
@@ -48,8 +50,11 @@ type Config struct {
 
 	// TagKeys only apply to JSON data
 	TagKeys []string
-	// MetricName only applies to JSON data. This will be the name of the measurement.
+	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
+
+	// DataType only applies to value, this will be the type to parse value to
+	DataType string
 
 	// DefaultTags are the default tags that will be added to all parsed metrics.
 	DefaultTags map[string]string
@@ -63,8 +68,13 @@ func NewParser(config *Config) (Parser, error) {
 	case "json":
 		parser, err = NewJSONParser(config.MetricName,
 			config.TagKeys, config.DefaultTags)
+	case "value":
+		parser, err = NewValueParser(config.MetricName,
+			config.DataType, config.DefaultTags)
 	case "influx":
 		parser, err = NewInfluxParser()
+	case "nagios":
+		parser, err = NewNagiosParser()
 	case "graphite":
 		parser, err = NewGraphiteParser(config.Separator,
 			config.Templates, config.DefaultTags)
@@ -87,6 +97,10 @@ func NewJSONParser(
 	return parser, nil
 }
 
+func NewNagiosParser() (Parser, error) {
+	return &nagios.NagiosParser{}, nil
+}
+
 func NewInfluxParser() (Parser, error) {
 	return &influx.InfluxParser{}, nil
 }
@@ -97,4 +111,16 @@ func NewGraphiteParser(
 	defaultTags map[string]string,
 ) (Parser, error) {
 	return graphite.NewGraphiteParser(separator, templates, defaultTags)
+}
+
+func NewValueParser(
+	metricName string,
+	dataType string,
+	defaultTags map[string]string,
+) (Parser, error) {
+	return &value.ValueParser{
+		MetricName:  metricName,
+		DataType:    dataType,
+		DefaultTags: defaultTags,
+	}, nil
 }

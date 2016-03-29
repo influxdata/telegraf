@@ -121,6 +121,9 @@ func (ro *RunningOutput) Write() error {
 }
 
 func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
+		return nil
+	}
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)
