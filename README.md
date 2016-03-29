@@ -170,6 +170,7 @@ Currently implemented sources:
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * influxdb
+* ipmi_sensor
 * jolokia
 * leofs
 * lustre2
