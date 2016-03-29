@@ -283,30 +283,75 @@ EXEC sp_executesql @DynamicPivotQuery;
 const sqlMemoryClerk string = `SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
-DECLARE @w TABLE (ClerkCategory nvarchar(64) NOT NULL, UsedPercent decimal(9,2), UsedBytes bigint)
-INSERT  @w (ClerkCategory, UsedPercent, UsedBytes)
-SELECT ClerkCategory
-, UsedPercent = SUM(UsedPercent)
-, UsedBytes = SUM(UsedBytes)
-FROM
-(
-SELECT ClerkCategory = CASE MC.[type]
-	WHEN 'MEMORYCLERK_SQLBUFFERPOOL' THEN 'Buffer pool'
-	WHEN 'CACHESTORE_SQLCP' THEN 'Cache (sql plans)'
-	WHEN 'CACHESTORE_OBJCP' THEN 'Cache (objects)'
-	ELSE 'Other' END
-, SUM(pages_kb * 1024) AS UsedBytes
-, Cast(100 * Sum(pages_kb)*1.0/(Select Sum(pages_kb) From sys.dm_os_memory_clerks) as Decimal(7, 4)) UsedPercent
-FROM sys.dm_os_memory_clerks MC
-WHERE pages_kb > 0
-GROUP BY CASE MC.[type]
-	WHEN 'MEMORYCLERK_SQLBUFFERPOOL' THEN 'Buffer pool'
-	WHEN 'CACHESTORE_SQLCP' THEN 'Cache (sql plans)'
-	WHEN 'CACHESTORE_OBJCP' THEN 'Cache (objects)'
-	ELSE 'Other' END
-) as T
-GROUP BY ClerkCategory
+DECLARE @sqlVers numeric(4,2)
+SELECT @sqlVers = LEFT(CAST(SERVERPROPERTY('productversion') as varchar), 4)
 
+IF OBJECT_ID('tempdb..#clerk') IS NOT NULL
+	DROP TABLE #clerk;
+
+CREATE TABLE #clerk (
+    ClerkCategory nvarchar(64) NOT NULL, 
+    UsedPercent decimal(9,2), 
+    UsedBytes bigint
+);
+
+DECLARE @DynamicClerkQuery AS NVARCHAR(MAX)
+
+IF @sqlVers < 11
+BEGIN
+    SET @DynamicClerkQuery = N'
+    INSERT #clerk (ClerkCategory, UsedPercent, UsedBytes)
+    SELECT ClerkCategory
+    , UsedPercent = SUM(UsedPercent)
+    , UsedBytes = SUM(UsedBytes)
+    FROM
+    (
+    SELECT ClerkCategory = CASE MC.[type]
+        WHEN ''MEMORYCLERK_SQLBUFFERPOOL'' THEN ''Buffer pool''
+        WHEN ''CACHESTORE_SQLCP'' THEN ''Cache (sql plans)''
+        WHEN ''CACHESTORE_OBJCP'' THEN ''Cache (objects)''
+        ELSE ''Other'' END
+    , SUM((single_pages_kb + multi_pages_kb) * 1024) AS UsedBytes
+    , Cast(100 * Sum((single_pages_kb + multi_pages_kb))*1.0/(Select Sum((single_pages_kb + multi_pages_kb)) From sys.dm_os_memory_clerks) as Decimal(7, 4)) UsedPercent
+    FROM sys.dm_os_memory_clerks MC
+    WHERE (single_pages_kb + multi_pages_kb) > 0
+    GROUP BY CASE MC.[type]
+        WHEN ''MEMORYCLERK_SQLBUFFERPOOL'' THEN ''Buffer pool''
+        WHEN ''CACHESTORE_SQLCP'' THEN ''Cache (sql plans)''
+        WHEN ''CACHESTORE_OBJCP'' THEN ''Cache (objects)''
+        ELSE ''Other'' END
+    ) as T
+    GROUP BY ClerkCategory;
+    '
+END
+ELSE
+BEGIN
+    SET @DynamicClerkQuery = N'
+    INSERT #clerk (ClerkCategory, UsedPercent, UsedBytes)
+    SELECT ClerkCategory
+    , UsedPercent = SUM(UsedPercent)
+    , UsedBytes = SUM(UsedBytes)
+    FROM
+    (
+    SELECT ClerkCategory = CASE MC.[type]
+        WHEN ''MEMORYCLERK_SQLBUFFERPOOL'' THEN ''Buffer pool''
+        WHEN ''CACHESTORE_SQLCP'' THEN ''Cache (sql plans)''
+        WHEN ''CACHESTORE_OBJCP'' THEN ''Cache (objects)''
+        ELSE ''Other'' END
+    , SUM(pages_kb * 1024) AS UsedBytes
+    , Cast(100 * Sum(pages_kb)*1.0/(Select Sum(pages_kb) From sys.dm_os_memory_clerks) as Decimal(7, 4)) UsedPercent
+    FROM sys.dm_os_memory_clerks MC
+    WHERE pages_kb > 0
+    GROUP BY CASE MC.[type]
+        WHEN ''MEMORYCLERK_SQLBUFFERPOOL'' THEN ''Buffer pool''
+        WHEN ''CACHESTORE_SQLCP'' THEN ''Cache (sql plans)''
+        WHEN ''CACHESTORE_OBJCP'' THEN ''Cache (objects)''
+        ELSE ''Other'' END
+    ) as T
+    GROUP BY ClerkCategory;
+    '
+END
+EXEC sp_executesql @DynamicClerkQuery;
 SELECT
 -- measurement
 measurement
@@ -325,7 +370,7 @@ SELECT measurement = 'Memory breakdown (%)'
 , [Cache (objects)] = ISNULL(ROUND([Cache (objects)], 1), 0)
 , [Cache (sql plans)] = ISNULL(ROUND([Cache (sql plans)], 1), 0)
 , [Other] = ISNULL(ROUND([Other], 1), 0)
-FROM (SELECT ClerkCategory, UsedPercent FROM @w) as G1
+FROM (SELECT ClerkCategory, UsedPercent FROM #clerk) as G1
 PIVOT
 (
 	SUM(UsedPercent)
@@ -339,7 +384,7 @@ SELECT measurement = 'Memory breakdown (bytes)'
 , [Cache (objects)] = ISNULL(ROUND([Cache (objects)], 1), 0)
 , [Cache (sql plans)] = ISNULL(ROUND([Cache (sql plans)], 1), 0)
 , [Other] = ISNULL(ROUND([Other], 1), 0)
-FROM (SELECT ClerkCategory, UsedBytes FROM @w) as G2
+FROM (SELECT ClerkCategory, UsedBytes FROM #clerk) as G2
 PIVOT
 (
 	SUM(UsedBytes)
@@ -698,7 +743,7 @@ IF OBJECT_ID('tempdb..#Databases') IS NOT NULL
 CREATE  TABLE #Databases
 (
 	Measurement nvarchar(64) NOT NULL,
-	DatabaseName nvarchar(64) NOT NULL,
+	DatabaseName nvarchar(128) NOT NULL,
 	Value tinyint NOT NULL
 	Primary Key(DatabaseName, Measurement)
 );

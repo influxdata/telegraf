@@ -127,7 +127,7 @@ func (i *InfluxDB) Connect() error {
 
 			// Create Database if it doesn't exist
 			_, e := c.Query(client.Query{
-				Command: fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", i.Database),
+				Command: fmt.Sprintf("CREATE DATABASE IF NOT EXISTS \"%s\"", i.Database),
 			})
 
 			if e != nil {

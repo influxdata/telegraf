@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -308,11 +307,10 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			return err
 		} else {
 			for _, line := range strings.Split(string(data), "\n") {
-				oidsRegEx := regexp.MustCompile(`([^\t]*)\t*([^\t]*)`)
-				oids := oidsRegEx.FindStringSubmatch(string(line))
-				if oids[2] != "" {
-					oid_name := oids[1]
-					oid := oids[2]
+				oids := strings.Fields(string(line))
+				if len(oids) == 2 && oids[1] != "" {
+					oid_name := oids[0]
+					oid := oids[1]
 					fillnode(s.initNode, oid_name, strings.Split(string(oid), "."))
 					s.nameToOid[oid_name] = oid
 				}

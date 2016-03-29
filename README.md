@@ -17,13 +17,6 @@ new plugins.
 
 ## Installation:
 
-NOTE: Telegraf 0.10.x is **not** backwards-compatible with previous versions
-of telegraf, both in the database layout and the configuration file. 0.2.x
-will continue to be supported, see below for download links.
-
-For more details on the differences between Telegraf 0.2.x and 0.10.x, see
-the [release blog post](https://influxdata.com/blog/announcing-telegraf-0-10-0/).
-
 ### Linux deb and rpm Packages:
 
 Latest:
@@ -33,10 +26,6 @@ Latest:
 Latest (arm):
 * http://get.influxdb.org/telegraf/telegraf_0.11.1-1_armhf.deb
 * http://get.influxdb.org/telegraf/telegraf-0.11.1-1.armhf.rpm
-
-0.2.x:
-* http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.2.4-1.x86_64.rpm
 
 ##### Package Instructions:
 
@@ -50,8 +39,9 @@ controlled via `systemctl [action] telegraf`
 ### yum/apt Repositories:
 
 There is a yum/apt repo available for the whole InfluxData stack, see
-[here](https://docs.influxdata.com/influxdb/v0.9/introduction/installation/#installation)
-for instructions, replacing the `influxdb` package name with `telegraf`.
+[here](https://docs.influxdata.com/influxdb/v0.10/introduction/installation/#installation)
+for instructions on setting up the repo. Once it is configured, you will be able
+to use this repo to install & update telegraf.
 
 ### Linux tarballs:
 
@@ -59,11 +49,6 @@ Latest:
 * http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_amd64.tar.gz
 * http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_i386.tar.gz
 * http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_armhf.tar.gz
-
-0.2.x:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.4.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.4.tar.gz
 
 ##### tarball Instructions:
 
@@ -86,17 +71,7 @@ Latest:
 
 ##### tarball Instructions:
 
-To install the full directory structure with config file, run:
-
-```
-sudo tar -C / -zxvf ./telegraf-0.11.1-1_freebsd_amd64.tar.gz
-```
-
-To extract only the binary, run:
-
-```
-tar -zxvf telegraf-0.11.1-1_freebsd_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
-```
+See linux instructions above.
 
 ### Ansible Role:
 
@@ -184,13 +159,14 @@ Currently implemented sources:
 * aerospike
 * apache
 * bcache
+* couchbase
 * couchdb
 * disque
 * dns query time
 * docker
 * dovecot
 * elasticsearch
-* exec (generic executable plugin, support JSON, influx and graphite)
+* exec (generic executable plugin, support JSON, influx, graphite and nagios)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * influxdb
@@ -210,6 +186,7 @@ Currently implemented sources:
 * phusion passenger
 * ping
 * postgresql
+* postgresql_extensible
 * powerdns
 * procstat
 * prometheus
