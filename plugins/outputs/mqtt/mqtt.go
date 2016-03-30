@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
-	paho "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
+	paho "github.com/eclipse/paho.mqtt.golang"
 )
 
 var sampleConfig = `
@@ -57,7 +57,7 @@ type MQTT struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
-	client *paho.Client
+	client paho.Client
 	opts   *paho.ClientOptions
 
 	serializer serializers.Serializer
