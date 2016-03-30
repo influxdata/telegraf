@@ -64,7 +64,7 @@ elif [[ -f /etc/debian_version ]]; then
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
 	install_systemd
-	deb-systemd-invoke restart telegraf.service
+	systemctl restart telegraf
     else
 	# Assuming sysv
 	install_init
