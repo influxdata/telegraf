@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
-	"git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
+	"github.com/eclipse/paho.mqtt.golang"
 )
 
 type MQTTConsumer struct {
@@ -39,7 +39,7 @@ type MQTTConsumer struct {
 	InsecureSkipVerify bool
 
 	sync.Mutex
-	client *mqtt.Client
+	client mqtt.Client
 	// channel of all incoming raw mqtt messages
 	in   chan mqtt.Message
 	done chan struct{}
@@ -163,7 +163,7 @@ func (m *MQTTConsumer) receiver() {
 	}
 }
 
-func (m *MQTTConsumer) recvMessage(_ *mqtt.Client, msg mqtt.Message) {
+func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.in <- msg
 }
 
