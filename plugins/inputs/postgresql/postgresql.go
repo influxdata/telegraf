@@ -20,7 +20,7 @@ type Postgresql struct {
 	OrderedColumns   []string
 	AllColumns       []string
 	sanitizedAddress string
-	AddressTag       bool
+	AddressTag       bool `toml:"address_tag"`
 }
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
@@ -45,7 +45,7 @@ var sampleConfig = `
   # databases = ["app_production", "testing"]
   ## Toggle adding a server:canonicalizedAddress tag to the measurment. If not 
   ## specified, it's enabled by default.
-  # addressTag = true|false
+  # address_tag = true|false
 `
 
 func (p *Postgresql) SampleConfig() string {
