@@ -3,11 +3,10 @@ package http_response
 import (
 	"bufio"
 	"errors"
-	"fmt"
+	"io"
 	"net/http"
 	"net/textproto"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 // HTTPResponse struct
 type HTTPResponse struct {
 	Address         string
+	Body            string
 	Method          string
 	ResponseTimeout int
 	Headers         string
@@ -34,7 +34,7 @@ var sampleConfig = `
   address = "http://github.com"
   ## Set response_timeout (default 10 seconds)
   response_timeout = 10
-  ## HTTP Method
+  ## HTTP Request Method
   method = "GET"
   ## HTTP Request Headers
   headers = '''
@@ -42,6 +42,10 @@ var sampleConfig = `
   '''
 	## Whether to follow redirects from the server (defaults to false)
 	follow_redirects = true
+	## Optional HTTP Request Body
+	body = '''
+	{'fake':'data'}
+	'''
 `
 
 // SampleConfig returns the plugin SampleConfig
@@ -49,6 +53,7 @@ func (h *HTTPResponse) SampleConfig() string {
 	return sampleConfig
 }
 
+// ErrRedirectAttempted indicates that a redirect occurred
 var ErrRedirectAttempted = errors.New("redirect")
 
 // HTTPGather gathers all fields and returns any errors it encounters
@@ -61,13 +66,16 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	}
 
 	if h.FollowRedirects == false {
-		fmt.Println(h.FollowRedirects)
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return ErrRedirectAttempted
 		}
 	}
 
-	request, err := http.NewRequest(h.Method, h.Address, nil)
+	var body io.Reader
+	if h.Body != "" {
+		body = strings.NewReader(h.Body)
+	}
+	request, err := http.NewRequest(h.Method, h.Address, body)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +89,6 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	request.Header = http.Header(mimeHeader)
 	// Start Timer
 	start := time.Now()
-	request.Write(os.Stdout)
 	resp, err := client.Do(request)
 	if err != nil {
 		if h.FollowRedirects {
@@ -89,7 +96,6 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 		}
 		if urlError, ok := err.(*url.Error); ok &&
 			urlError.Err == ErrRedirectAttempted {
-			fmt.Println(err)
 			err = nil
 		} else {
 			return nil, err
