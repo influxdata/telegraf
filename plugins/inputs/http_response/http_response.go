@@ -23,9 +23,9 @@ func (_ *HttpResponse) Description() string {
 
 var sampleConfig = `
   ## Server address (default http://localhost)
-  address = "http://github.com:80"
+  address = "https://github.com"
   ## Set response_timeout (default 1 seconds)
-  response_timeout = 1
+  response_timeout = 10
   ## HTTP Method
   method = "GET"
 `

@@ -8,9 +8,9 @@ This input plugin will test HTTP/HTTPS connections.
 # List of UDP/TCP connections you want to check
 [[inputs.http_response]]
   # Server address (default http://localhost)
-  address = "http://github.com:80"
-  # Set http response timeout (default 1.0)
-  response_timeout = 1.0
+  address = "https://github.com"
+  # Set http response timeout (default 10)
+  response_timeout = 10
   # HTTP Method (default "GET")
   method = "GET"
 ```
