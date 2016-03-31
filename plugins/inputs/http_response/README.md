@@ -11,7 +11,7 @@ This input plugin will test HTTP/HTTPS connections.
   address = "http://github.com"
   ## Set response_timeout (default 10 seconds)
   response_timeout = 10
-  ## HTTP Method
+  ## HTTP Request Method
   method = "GET"
   ## HTTP Request Headers
   headers = '''
@@ -19,6 +19,10 @@ This input plugin will test HTTP/HTTPS connections.
   '''
   ## Whether to follow redirects from the server (defaults to false)
   follow_redirects = true
+  ## Optional HTTP Request Body
+  body = '''
+  {'fake':'data'}
+  '''
 ```
 
 ### Measurements & Fields:
