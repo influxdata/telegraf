@@ -7,12 +7,18 @@ This input plugin will test HTTP/HTTPS connections.
 ```
 # List of UDP/TCP connections you want to check
 [[inputs.http_response]]
-  # Server address (default http://localhost)
-  address = "https://github.com"
-  # Set http response timeout (default 10)
+  ## Server address (default http://localhost)
+  address = "http://github.com"
+  ## Set response_timeout (default 10 seconds)
   response_timeout = 10
-  # HTTP Method (default "GET")
+  ## HTTP Method
   method = "GET"
+  ## HTTP Request Headers
+  headers = '''
+  Host: github.com
+  '''
+  ## Whether to follow redirects from the server (defaults to false)
+  follow_redirects = true
 ```
 
 ### Measurements & Fields:
@@ -25,12 +31,11 @@ This input plugin will test HTTP/HTTPS connections.
 
 - All measurements have the following tags:
     - server
-    - port
-    - protocol
+    - method
 
 ### Example Output:
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter http_response -test
-http_response,server=http://192.168.2.2:2000,method=GET response_time=0.18070360500000002,http_response_code=200 1454785464182527094
+http_response,method=GET,server=http://www.github.com http_response_code=200i,response_time=6.223266528 1459419354977857955
 ```
