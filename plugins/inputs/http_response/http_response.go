@@ -3,9 +3,11 @@ package http_response
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -19,6 +21,7 @@ type HTTPResponse struct {
 	Method          string
 	ResponseTimeout int
 	Headers         string
+	FollowRedirects bool
 }
 
 // Description returns the plugin Description
@@ -28,8 +31,8 @@ func (h *HTTPResponse) Description() string {
 
 var sampleConfig = `
   ## Server address (default http://localhost)
-  address = "https://github.com"
-  ## Set response_timeout (default 1 seconds)
+  address = "http://github.com"
+  ## Set response_timeout (default 10 seconds)
   response_timeout = 10
   ## HTTP Method
   method = "GET"
@@ -37,12 +40,16 @@ var sampleConfig = `
   headers = '''
   Host: github.com
   '''
+	## Whether to follow redirects from the server (defaults to false)
+	follow_redirects = true
 `
 
 // SampleConfig returns the plugin SampleConfig
 func (h *HTTPResponse) SampleConfig() string {
 	return sampleConfig
 }
+
+var ErrRedirectAttempted = errors.New("redirect")
 
 // HTTPGather gathers all fields and returns any errors it encounters
 func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
@@ -52,6 +59,14 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	client := &http.Client{
 		Timeout: time.Second * time.Duration(h.ResponseTimeout),
 	}
+
+	if h.FollowRedirects == false {
+		fmt.Println(h.FollowRedirects)
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return ErrRedirectAttempted
+		}
+	}
+
 	request, err := http.NewRequest(h.Method, h.Address, nil)
 	if err != nil {
 		return nil, err
@@ -66,9 +81,19 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	request.Header = http.Header(mimeHeader)
 	// Start Timer
 	start := time.Now()
+	request.Write(os.Stdout)
 	resp, err := client.Do(request)
 	if err != nil {
-		return nil, err
+		if h.FollowRedirects {
+			return nil, err
+		}
+		if urlError, ok := err.(*url.Error); ok &&
+			urlError.Err == ErrRedirectAttempted {
+			fmt.Println(err)
+			err = nil
+		} else {
+			return nil, err
+		}
 	}
 	fields["response_time"] = time.Since(start).Seconds()
 	fields["http_response_code"] = resp.StatusCode
@@ -79,7 +104,7 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	// Set default values
 	if h.ResponseTimeout < 1 {
-		h.ResponseTimeout = 1
+		h.ResponseTimeout = 10
 	}
 	// Check send and expected string
 	if h.Method == "" {
