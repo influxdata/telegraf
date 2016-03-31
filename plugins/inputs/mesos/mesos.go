@@ -34,7 +34,16 @@ var sampleConfig = `
   # A list of Mesos masters, default value is localhost:5050.
   masters = ["localhost:5050"]
   # Metrics groups to be collected, by default, all enabled.
-  master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
+  master_collections = [
+    "resources",
+    "master",
+    "system",
+    "slaves",
+    "frameworks",
+    "messages",
+    "evqueue",
+    "registrar",
+  ]
 `
 
 // SampleConfig returns a sample configuration block

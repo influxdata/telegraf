@@ -35,7 +35,8 @@ var sampleConfig = `
   ## Domains or subdomains to query. "."(root) is default
   domains = ["."] # optional
 
-  ## Query record type. Posible values: A, AAAA, CNAME, MX,  NS, PTR, TXT, SOA, SPF, SRV. Default is "NS"
+  ## Query record type. Default is "A"
+  ## Posible values: A, AAAA, CNAME, MX, NS, PTR, TXT, SOA, SPF, SRV.
   record_type = "A" # optional
 
   ## Dns server port. 53 is default

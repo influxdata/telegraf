@@ -38,38 +38,41 @@ type query []struct {
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
 
 var sampleConfig = `
-  # specify address via a url matching:
-  #   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
-  # or a simple string:
-  #   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ## specify address via a url matching:
+  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
+  ##       ?sslmode=[disable|verify-ca|verify-full]
+  ## or a simple string:
+  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
   #
-  # All connection parameters are optional.  #
-  # Without the dbname parameter, the driver will default to a database
-  # with the same name as the user. This dbname is just for instantiating a
-  # connection with the server and doesn't restrict the databases we are trying
-  # to grab metrics for.
+  ## All connection parameters are optional.  #
+  ## Without the dbname parameter, the driver will default to a database
+  ## with the same name as the user. This dbname is just for instantiating a
+  ## connection with the server and doesn't restrict the databases we are trying
+  ## to grab metrics for.
   #
   address = "host=localhost user=postgres sslmode=disable"
-  # A list of databases to pull metrics about. If not specified, metrics for all
-  # databases are gathered.
-  # databases = ["app_production", "testing"]
+  ## A list of databases to pull metrics about. If not specified, metrics for all
+  ## databases are gathered.
+  ## databases = ["app_production", "testing"]
   #
-  # Define the toml config where the sql queries are stored
-  # New queries can be added, if the withdbname is set to true and there is no databases defined
-  # in the 'databases field', the sql query is ended by a 'is not null' in order to make the query
-  # succeed.
-  # Example :
-  # The sqlquery : "SELECT * FROM pg_stat_database where datname" become "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
-  # because the databases variable was set to ['postgres', 'pgbench' ] and the withdbname was true.
-  # Be careful that if the withdbname is set to false you d'ont have to define the where clause (aka with the dbname)
-  # the tagvalue field is used to define custom tags (separated by comas)
+  ## Define the toml config where the sql queries are stored
+  ## New queries can be added, if the withdbname is set to true and there is no
+  ## databases defined in the 'databases field', the sql query is ended by a
+  ## 'is not null' in order to make the query succeed.
+  ## Example :
+  ## The sqlquery : "SELECT * FROM pg_stat_database where datname" become
+  ## "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
+  ## because the databases variable was set to ['postgres', 'pgbench' ] and the
+  ## withdbname was true. Be careful that if the withdbname is set to false you
+  ## don't have to define the where clause (aka with the dbname) the tagvalue
+  ## field is used to define custom tags (separated by comas)
   #
-  # Structure :
-  # [[inputs.postgresql_extensible.query]]
-  #   sqlquery string
-  #   version string
-  #   withdbname boolean
-  #   tagvalue string (coma separated)
+  ## Structure :
+  ## [[inputs.postgresql_extensible.query]]
+  ##   sqlquery string
+  ##   version string
+  ##   withdbname boolean
+  ##   tagvalue string (coma separated)
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database"
     version=901

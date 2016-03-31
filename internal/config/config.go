@@ -22,6 +22,15 @@ import (
 	"github.com/influxdata/toml/ast"
 )
 
+var (
+	// Default input plugins
+	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
+		"processes", "disk", "diskio"}
+
+	// Default output plugins
+	outputDefaults = []string{"influxdb"}
+)
+
 // Config specifies the URL/user/password for the database that telegraf
 // will be logging to, as well as all the plugins that the user has
 // specified
@@ -135,20 +144,22 @@ func (c *Config) ListTags() string {
 }
 
 var header = `# Telegraf Configuration
-
+#
 # Telegraf is entirely plugin driven. All metrics are gathered from the
 # declared inputs, and sent to the declared outputs.
-
+#
 # Plugins must be declared in here to be active.
 # To deactivate a plugin, comment out the name and any variables.
-
+#
 # Use 'telegraf -config telegraf.conf -test' to see what metrics a config
 # file would generate.
+
 
 # Global tags can be specified here in key="value" format.
 [global_tags]
   # dc = "us-east-1" # will tag all metrics with dc=us-east-1
   # rack = "1a"
+
 
 # Configuration for telegraf agent
 [agent]
@@ -188,55 +199,72 @@ var header = `# Telegraf Configuration
   omit_hostname = false
 
 
-#
-# OUTPUTS:
-#
-
+###############################################################################
+#                            OUTPUT PLUGINS                                   #
+###############################################################################
 `
 
-var pluginHeader = `
-#
-# INPUTS:
-#
+var inputHeader = `
+
+###############################################################################
+#                            INPUT PLUGINS                                    #
+###############################################################################
 `
 
 var serviceInputHeader = `
-#
-# SERVICE INPUTS:
-#
+
+###############################################################################
+#                            SERVICE INPUT PLUGINS                            #
+###############################################################################
 `
 
 // PrintSampleConfig prints the sample config
-func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
+func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 	fmt.Printf(header)
 
-	// Filter outputs
-	var onames []string
-	for oname := range outputs.Outputs {
-		if len(outputFilters) == 0 || sliceContains(oname, outputFilters) {
-			onames = append(onames, oname)
+	if len(outputFilters) != 0 {
+		printFilteredOutputs(outputFilters, false)
+	} else {
+		printFilteredOutputs(outputDefaults, false)
+		// Print non-default outputs, commented
+		var pnames []string
+		for pname := range outputs.Outputs {
+			if !sliceContains(pname, outputDefaults) {
+				pnames = append(pnames, pname)
+			}
 		}
-	}
-	sort.Strings(onames)
-
-	// Print Outputs
-	for _, oname := range onames {
-		creator := outputs.Outputs[oname]
-		output := creator()
-		printConfig(oname, output, "outputs")
+		sort.Strings(pnames)
+		printFilteredOutputs(pnames, true)
 	}
 
+	fmt.Printf(inputHeader)
+	if len(inputFilters) != 0 {
+		printFilteredInputs(inputFilters, false)
+	} else {
+		printFilteredInputs(inputDefaults, false)
+		// Print non-default inputs, commented
+		var pnames []string
+		for pname := range inputs.Inputs {
+			if !sliceContains(pname, inputDefaults) {
+				pnames = append(pnames, pname)
+			}
+		}
+		sort.Strings(pnames)
+		printFilteredInputs(pnames, true)
+	}
+}
+
+func printFilteredInputs(inputFilters []string, commented bool) {
 	// Filter inputs
 	var pnames []string
 	for pname := range inputs.Inputs {
-		if len(pluginFilters) == 0 || sliceContains(pname, pluginFilters) {
+		if sliceContains(pname, inputFilters) {
 			pnames = append(pnames, pname)
 		}
 	}
 	sort.Strings(pnames)
 
 	// Print Inputs
-	fmt.Printf(pluginHeader)
 	servInputs := make(map[string]telegraf.ServiceInput)
 	for _, pname := range pnames {
 		creator := inputs.Inputs[pname]
@@ -248,13 +276,34 @@ func PrintSampleConfig(pluginFilters []string, outputFilters []string) {
 			continue
 		}
 
-		printConfig(pname, input, "inputs")
+		printConfig(pname, input, "inputs", commented)
 	}
 
 	// Print Service Inputs
+	if len(servInputs) == 0 {
+		return
+	}
 	fmt.Printf(serviceInputHeader)
 	for name, input := range servInputs {
-		printConfig(name, input, "inputs")
+		printConfig(name, input, "inputs", commented)
+	}
+}
+
+func printFilteredOutputs(outputFilters []string, commented bool) {
+	// Filter outputs
+	var onames []string
+	for oname := range outputs.Outputs {
+		if sliceContains(oname, outputFilters) {
+			onames = append(onames, oname)
+		}
+	}
+	sort.Strings(onames)
+
+	// Print Outputs
+	for _, oname := range onames {
+		creator := outputs.Outputs[oname]
+		output := creator()
+		printConfig(oname, output, "outputs", commented)
 	}
 }
 
@@ -263,13 +312,26 @@ type printer interface {
 	SampleConfig() string
 }
 
-func printConfig(name string, p printer, op string) {
-	fmt.Printf("\n# %s\n[[%s.%s]]", p.Description(), op, name)
+func printConfig(name string, p printer, op string, commented bool) {
+	comment := ""
+	if commented {
+		comment = "# "
+	}
+	fmt.Printf("\n%s# %s\n%s[[%s.%s]]", comment, p.Description(), comment,
+		op, name)
+
 	config := p.SampleConfig()
 	if config == "" {
-		fmt.Printf("\n  # no configuration\n")
+		fmt.Printf("\n%s  # no configuration\n\n", comment)
 	} else {
-		fmt.Printf(config)
+		lines := strings.Split(config, "\n")
+		for i, line := range lines {
+			if i == 0 || i == len(lines)-1 {
+				fmt.Print("\n")
+				continue
+			}
+			fmt.Print(comment + line + "\n")
+		}
 	}
 }
 
@@ -285,7 +347,7 @@ func sliceContains(name string, list []string) bool {
 // PrintInputConfig prints the config usage of a single input.
 func PrintInputConfig(name string) error {
 	if creator, ok := inputs.Inputs[name]; ok {
-		printConfig(name, creator(), "inputs")
+		printConfig(name, creator(), "inputs", false)
 	} else {
 		return errors.New(fmt.Sprintf("Input %s not found", name))
 	}
@@ -295,7 +357,7 @@ func PrintInputConfig(name string) error {
 // PrintOutputConfig prints the config usage of a single output.
 func PrintOutputConfig(name string) error {
 	if creator, ok := outputs.Outputs[name]; ok {
-		printConfig(name, creator(), "outputs")
+		printConfig(name, creator(), "outputs", false)
 	} else {
 		return errors.New(fmt.Sprintf("Output %s not found", name))
 	}
@@ -327,42 +389,42 @@ func (c *Config) LoadDirectory(path string) error {
 func (c *Config) LoadConfig(path string) error {
 	tbl, err := config.ParseFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
 
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return errors.New("invalid configuration")
+			return fmt.Errorf("%s: invalid configuration", path)
 		}
 
 		switch name {
 		case "agent":
 			if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
 				log.Printf("Could not parse [agent] config\n")
-				return err
+				return fmt.Errorf("Error parsing %s, %s", path, err)
 			}
 		case "global_tags", "tags":
 			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("Could not parse [global_tags] config\n")
-				return err
+				return fmt.Errorf("Error parsing %s, %s", path, err)
 			}
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
 				case *ast.Table:
 					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
-						return err
+						return fmt.Errorf("Error parsing %s, %s", path, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addOutput(pluginName, t); err != nil {
-							return err
+							return fmt.Errorf("Error parsing %s, %s", path, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s",
-						pluginName)
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
 				}
 			}
 		case "inputs", "plugins":
@@ -370,24 +432,24 @@ func (c *Config) LoadConfig(path string) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case *ast.Table:
 					if err = c.addInput(pluginName, pluginSubTable); err != nil {
-						return err
+						return fmt.Errorf("Error parsing %s, %s", path, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addInput(pluginName, t); err != nil {
-							return err
+							return fmt.Errorf("Error parsing %s, %s", path, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s",
-						pluginName)
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
 				}
 			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
 			if err = c.addInput(name, subTable); err != nil {
-				return err
+				return fmt.Errorf("Error parsing %s, %s", path, err)
 			}
 		}
 	}
