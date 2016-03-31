@@ -178,7 +178,6 @@ var sampleConfig = `
     max_repetition = 127
     oid = "ifOutOctets"
 
-
   [[inputs.snmp.host]]
     address = "192.168.2.13:161"
     #address = "127.0.0.1:161"
@@ -219,10 +218,8 @@ var sampleConfig = `
     # if empty get all instances
     mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
     # if empty get all subtables
-    # sub_tables could be not "real subtables"  
+    # sub_tables could be not "real subtables"
     sub_tables=[".1.3.6.1.2.1.2.2.1.13", "bytes_recv", "bytes_send"]
-
-
 `
 
 // SampleConfig returns sample configuration message

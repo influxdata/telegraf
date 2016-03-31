@@ -59,16 +59,27 @@ var sampleConfig = `
   ##  ie, if this tag exists, it's value will be used as the routing key
   routing_tag = "host"
 
-  ## CompressionCodec represents the various compression codecs recognized by Kafka in messages.
+  ## CompressionCodec represents the various compression codecs recognized by
+  ## Kafka in messages.
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
   compression_codec = 0
 
-  ##  RequiredAcks is used in Produce Requests to tell the broker how many replica acknowledgements it must see before responding
-  ##  0 : the producer never waits for an acknowledgement from the broker. This option provides the lowest latency but the weakest durability guarantees (some data will be lost when a server fails).
-  ##  1 : the producer gets an acknowledgement after the leader replica has received the data. This option provides better durability as the client waits until the server acknowledges the request as successful (only messages that were written to the now-dead leader but not yet replicated will be lost).
-  ##  -1 : the producer gets an acknowledgement after all in-sync replicas have received the data. This option provides the best durability, we guarantee that no messages will be lost as long as at least one in sync replica remains.
+  ##  RequiredAcks is used in Produce Requests to tell the broker how many
+  ##  replica acknowledgements it must see before responding
+  ##   0 : the producer never waits for an acknowledgement from the broker.
+  ##       This option provides the lowest latency but the weakest durability
+  ##       guarantees (some data will be lost when a server fails).
+  ##   1 : the producer gets an acknowledgement after the leader replica has
+  ##       received the data. This option provides better durability as the
+  ##       client waits until the server acknowledges the request as successful
+  ##       (only messages that were written to the now-dead leader but not yet
+  ##       replicated will be lost).
+  ##   -1: the producer gets an acknowledgement after all in-sync replicas have
+  ##       received the data. This option provides the best durability, we
+  ##       guarantee that no messages will be lost as long as at least one in
+  ##       sync replica remains.
   required_acks = -1
 
   ##  The total number of times to retry sending a message
@@ -81,7 +92,7 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Data format to output. This can be "influx" or "graphite"
+  ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
