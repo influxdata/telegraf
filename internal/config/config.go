@@ -1,11 +1,14 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -19,6 +22,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/influxdata/config"
+	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
 
@@ -29,6 +33,9 @@ var (
 
 	// Default output plugins
 	outputDefaults = []string{"influxdb"}
+
+	// envVarRe is a regex to find environment variables in the config file
+	envVarRe = regexp.MustCompile(`\$\w+`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -153,12 +160,18 @@ var header = `# Telegraf Configuration
 #
 # Use 'telegraf -config telegraf.conf -test' to see what metrics a config
 # file would generate.
+#
+# Environment variables can be used anywhere in this config file, simply prepend
+# them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
+# for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
 
 
 # Global tags can be specified here in key="value" format.
 [global_tags]
   # dc = "us-east-1" # will tag all metrics with dc=us-east-1
   # rack = "1a"
+  ## Environment variables can be used as tags, and throughout the config file
+  # user = "$USER"
 
 
 # Configuration for telegraf agent
@@ -264,8 +277,12 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	}
 	sort.Strings(pnames)
 
-	// Print Inputs
+	// cache service inputs to print them at the end
 	servInputs := make(map[string]telegraf.ServiceInput)
+	// for alphabetical looping:
+	servInputNames := []string{}
+
+	// Print Inputs
 	for _, pname := range pnames {
 		creator := inputs.Inputs[pname]
 		input := creator()
@@ -273,6 +290,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 		switch p := input.(type) {
 		case telegraf.ServiceInput:
 			servInputs[pname] = p
+			servInputNames = append(servInputNames, pname)
 			continue
 		}
 
@@ -283,9 +301,10 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	if len(servInputs) == 0 {
 		return
 	}
+	sort.Strings(servInputNames)
 	fmt.Printf(serviceInputHeader)
-	for name, input := range servInputs {
-		printConfig(name, input, "inputs", commented)
+	for _, name := range servInputNames {
+		printConfig(name, servInputs[name], "inputs", commented)
 	}
 }
 
@@ -387,7 +406,7 @@ func (c *Config) LoadDirectory(path string) error {
 
 // LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
-	tbl, err := config.ParseFile(path)
+	tbl, err := parseFile(path)
 	if err != nil {
 		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
@@ -454,6 +473,26 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 	return nil
+}
+
+// parseFile loads a TOML configuration from a provided path and
+// returns the AST produced from the TOML parser. When loading the file, it
+// will find environment variables and replace them.
+func parseFile(fpath string) (*ast.Table, error) {
+	contents, err := ioutil.ReadFile(fpath)
+	if err != nil {
+		return nil, err
+	}
+
+	env_vars := envVarRe.FindAll(contents, -1)
+	for _, env_var := range env_vars {
+		env_val := os.Getenv(strings.TrimPrefix(string(env_var), "$"))
+		if env_val != "" {
+			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
+		}
+	}
+
+	return toml.Parse(contents)
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
