@@ -18,6 +18,7 @@
     - reading
     - requests
     - waiting
+    - writing
 
 ### Tags:
 
