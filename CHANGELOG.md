@@ -9,6 +9,7 @@ no longer insert field names when the field is simply named `value`. This is
 because the `value` field is redundant in the graphite/librato context.
 
 ### Features
+- [#952](https://github.com/influxdata/telegraf/pull/952): Cassandra input plugin. Thanks @subhachandrachandra!
 - [#976](https://github.com/influxdata/telegraf/pull/976): Reduce allocations in the UDP and statsd inputs.
 - [#979](https://github.com/influxdata/telegraf/pull/979): Reduce allocations in the TCP listener.
 - [#992](https://github.com/influxdata/telegraf/pull/992): Refactor allocations in TCP/UDP listeners.
