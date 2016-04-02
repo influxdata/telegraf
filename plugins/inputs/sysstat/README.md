@@ -11,11 +11,6 @@ the created binary data file with the `sadf` utility.
 ```toml
 # Sysstat metrics collector
 [[inputs.sysstat]]
-  ## Collect interval in seconds. This value has to be equal
-  ## to the telegraf collect interval.
-  collect_interval = 30 # required
-  #
-  #
   ## Path to the sadc command.
   sadc_path = "/usr/lib/sa/sadc" # required
   #
@@ -127,7 +122,6 @@ And more if you define some `device_tags`.
 With the configuration below:
 ```toml
 [[inputs.sysstat]]
-  collect_interval = 30
   sadc_path = "/usr/lib/sa/sadc" # required
   activities = ["DISK", "SNMP", "INT"]
   group = true
@@ -196,7 +190,6 @@ $ telegraf -config telegraf.conf -input-filter sysstat -test
 If you change the group value to false like below:
 ```toml
 [[inputs.sysstat]]
-  collect_interval = 30
   sadc_path = "/usr/lib/sa/sadc" # required
   activities = ["DISK", "SNMP", "INT"]
   group = false
