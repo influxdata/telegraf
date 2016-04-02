@@ -1,6 +1,8 @@
 ## v0.12.0 [unreleased]
 
 ### Features
+- [#951](https://github.com/influxdata/telegraf/pull/951): Parse environment variables in the config file.
+- [#948](https://github.com/influxdata/telegraf/pull/948): Cleanup config file and make default package version include all plugins (but commented).
 - [#927](https://github.com/influxdata/telegraf/pull/927): Adds parsing of tags to the statsd input when using DataDog's dogstatsd extension
 - [#863](https://github.com/influxdata/telegraf/pull/863): AMQP output: allow external auth. Thanks @ekini!
 - [#707](https://github.com/influxdata/telegraf/pull/707): Improved prometheus plugin. Thanks @titilambert!
@@ -15,6 +17,7 @@
 - [#848](https://github.com/influxdata/telegraf/issues/848): Provide option to omit host tag from telegraf agent.
 - [#928](https://github.com/influxdata/telegraf/pull/928): Deprecating the statsd "convert_names" options, expose separator config.
 - [#919](https://github.com/influxdata/telegraf/pull/919): ipmi_sensor input plugin. Thanks @ebookbug!
+- [#945](https://github.com/influxdata/telegraf/pull/945): KAFKA output: codec, acks, and retry configuration. Thanks @framiere!
 
 ### Bugfixes
 - [#890](https://github.com/influxdata/telegraf/issues/890): Create TLS config even if only ssl_ca is provided.
@@ -24,6 +27,7 @@
 - [#907](https://github.com/influxdata/telegraf/issues/907): Fix prometheus invalid label/measurement name key.
 - [#841](https://github.com/influxdata/telegraf/issues/841): Fix memcached unix socket panic.
 - [#873](https://github.com/influxdata/telegraf/issues/873): Fix SNMP plugin sometimes not returning metrics. Thanks @titiliambert!
+- [#934](https://github.com/influxdata/telegraf/pull/934): phpfpm: Fix fcgi uri path. Thanks @rudenkovk!
 
 ## v0.11.1 [2016-03-17]
 

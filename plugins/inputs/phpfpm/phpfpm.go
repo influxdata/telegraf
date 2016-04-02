@@ -122,6 +122,11 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		fcgiIp := socketAddr[0]
 		fcgiPort, _ := strconv.Atoi(socketAddr[1])
 		fcgi, err = newFcgiClient(fcgiIp, fcgiPort)
+		if len(u.Path) > 1 {
+			statusPath = strings.Trim(u.Path, "/")
+		} else {
+			statusPath = "status"
+		}
 	} else {
 		socketAddr := strings.Split(addr, ":")
 		if len(socketAddr) >= 2 {

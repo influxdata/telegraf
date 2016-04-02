@@ -26,10 +26,10 @@ var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
 
-	### Use SSL but skip chain & host verification
-	# insecure_skip_verify = false
-	### Use bearer token for authorization
-	# bearer_token = /path/to/bearer/token
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+  ## Use bearer token for authorization
+  # bearer_token = /path/to/bearer/token
 `
 
 func (p *Prometheus) SampleConfig() string {
