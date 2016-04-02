@@ -15,6 +15,7 @@ check_gopath
 check_fpm
 
 ARCH=x86_64
+GOBIN=$GOPATH/bin
 TMP_BIN_DIR=./rpm_bin
 TMP_CONFIG_DIR=./rpm_config
 CONFIG_FILES_DIR=./ConfigFiles
@@ -62,7 +63,7 @@ echo "Seting up temporary bin directory"
 mkdir $TMP_BIN_DIR > /dev/null 2>&1 || rm -rf $TMP_BIN_DIR/*
 for binary in "telegraf"
 do
-    cp ../$binary $TMP_BIN_DIR
+    cp $GOBIN/$binary $TMP_BIN_DIR
 done
 
 fpm -s dir -t rpm $BINARY_FPM_ARGS --description "$DESCRIPTION" -n "telegraf" telegraf || cleanup_exit 1
