@@ -8,12 +8,13 @@ import (
 	"os/exec"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
 var s = Sysstat{
-	Interval:   10,
+	interval:   10,
 	Sadc:       "/usr/lib/sa/sadc",
 	Group:      false,
 	Activities: []string{"DISK", "SNMP"},
@@ -302,4 +303,31 @@ dell-xps	5	2016-03-25 16:18:10 UTC	sdb	%util	0.30
 	}
 	// some code here to check arguments perhaps?
 	os.Exit(0)
+}
+
+// TestGatherInterval checks that interval is correctly set.
+func TestGatherInterval(t *testing.T) {
+	// overwriting exec commands with mock commands
+	execCommand = fakeExecCommand
+	defer func() { execCommand = exec.Command }()
+	var acc testutil.Accumulator
+
+	s.interval = 0
+	wantedInterval := 3
+
+	err := s.Gather(&acc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(time.Duration(wantedInterval) * time.Second)
+
+	err = s.Gather(&acc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.interval != wantedInterval {
+		t.Errorf("wrong interval: got %d, want %d", s.interval, wantedInterval)
+	}
 }
