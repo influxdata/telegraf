@@ -21,18 +21,14 @@ import (
 )
 
 var (
+	firstTimestamp time.Time
 	execCommand    = exec.Command // execCommand is used to mock commands in tests.
 	dfltActivities = []string{"DISK"}
 )
 
-const parseInterval = 1 // parseInterval is the interval (in seconds) where the parsing takes place.
+const parseInterval = 1 // parseInterval is the interval (in seconds) where the parsing of the binary file takes place.
 
 type Sysstat struct {
-	// Interval that defines how long data is collected by Sadc cmd.
-	//
-	// This value has to be the same as the thelegraf collection interval.
-	Interval int `toml:"collect_interval"`
-
 	// Sadc represents the path to the sadc collector utility.
 	Sadc string `toml:"sadc_path"`
 
@@ -66,6 +62,7 @@ type Sysstat struct {
 	// DeviceTags adds the possibility to add additional tags for devices.
 	DeviceTags map[string][]map[string]string `toml:"device_tags"`
 	tmpFile    string
+	interval   int
 }
 
 func (*Sysstat) Description() string {
@@ -73,11 +70,6 @@ func (*Sysstat) Description() string {
 }
 
 var sampleConfig = `
-  ## Collect interval in seconds. This value has to be equal
-  ## to the telegraf collect interval.
-  collect_interval = 5 # required
-  #
-  #
   ## Path to the sadc command.
   sadc_path = "/usr/lib/sa/sadc" # required
   #
@@ -101,7 +93,7 @@ var sampleConfig = `
   # group = false
   #
   #
-  ## Options for the sasf command. The values on the left represent the sadf options and
+  ## Options for the sadf command. The values on the left represent the sadf options and
   ## the values on the right their description (wich are used for grouping and prefixing metrics).
   [inputs.sysstat.options]
 	-C = "cpu"
@@ -109,7 +101,6 @@ var sampleConfig = `
 	-b = "io"
 	-d = "disk"             # requires DISK activity
 	-H = "hugepages"
-	"-I ALL" = "interrupts" # requires INT activity
 	"-n ALL" = "network"
 	"-P ALL" = "per_cpu"
 	-q = "queue"
@@ -120,6 +111,7 @@ var sampleConfig = `
 	-v = "inode"
 	-W = "swap"
 	-w = "task"
+  #	"-I ALL" = "interrupts" # requires INT activity
   #
   #
   ## Device tags can be used to add additional tags for devices. For example the configuration below
@@ -133,7 +125,14 @@ func (*Sysstat) SampleConfig() string {
 }
 
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
-	ts := time.Now().Add(time.Duration(s.Interval) * time.Second)
+	if s.interval == 0 {
+		if firstTimestamp.IsZero() {
+			firstTimestamp = time.Now()
+		} else {
+			s.interval = int(time.Since(firstTimestamp).Seconds())
+		}
+	}
+	ts := time.Now().Add(time.Duration(s.interval) * time.Second)
 	if err := s.collect(); err != nil {
 		return err
 	}
@@ -187,7 +186,12 @@ func (s *Sysstat) collect() error {
 		options = append(options, "-S", act)
 	}
 	s.tmpFile = path.Join("/tmp", fmt.Sprintf("sysstat-%d", time.Now().Unix()))
-	collectInterval := s.Interval - parseInterval // collectInterval has to be smaller than the telegraf data collection interval
+	collectInterval := s.interval - parseInterval // collectInterval has to be smaller than the telegraf data collection interval
+
+	if collectInterval < 0 { // If true, interval is not defined yet and Gather is run for the first time.
+		collectInterval = 1 // In that case we only collect for 1 second.
+	}
+
 	options = append(options, strconv.Itoa(collectInterval), "2", s.tmpFile)
 	cmd := execCommand(s.Sadc, options...)
 	out, err := cmd.CombinedOutput()
