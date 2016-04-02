@@ -1,4 +1,5 @@
-// +build +linux !race
+// +build !race
+// +build linux
 
 package sysstat
 
