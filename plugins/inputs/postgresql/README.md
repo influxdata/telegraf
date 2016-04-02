@@ -1,6 +1,6 @@
 # PostgreSQL plugin
 
-This postgresql plugin provides metrics for your postgres database. It currently works with postgres versions 8.1+. It uses data from the built in _pg_stat_database_ view. The metrics recorded depend on your version of postgres. See table:
+This postgresql plugin provides metrics for your postgres database. It currently works with postgres versions 8.1+. It uses data from the built in _pg_stat_database_ and pg_stat_bgwriter views. The metrics recorded depend on your version of postgres. See table:
 ```
 pg version      9.2+   9.1   8.3-9.0   8.1-8.2   7.4-8.0(unsupported)
 ---             ---    ---   -------   -------   -------
@@ -26,5 +26,6 @@ stats_reset*     x      x
 ```
 
 _* value ignored and therefore not recorded._
+
 
 More information about the meaning of these metrics can be found in the [PostgreSQL Documentation](http://www.postgresql.org/docs/9.2/static/monitoring-stats.html#PG-STAT-DATABASE-VIEW)

@@ -41,7 +41,7 @@ type NSQ struct {
 }
 
 var sampleConfig = `
-  # An array of NSQD HTTP API endpoints
+  ## An array of NSQD HTTP API endpoints
   endpoints = ["http://localhost:4151"]
 `
 
@@ -84,7 +84,10 @@ var tr = &http.Transport{
 	ResponseHeaderTimeout: time.Duration(3 * time.Second),
 }
 
-var client = &http.Client{Transport: tr}
+var client = &http.Client{
+	Transport: tr,
+	Timeout:   time.Duration(4 * time.Second),
+}
 
 func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 	u, err := buildURL(e)

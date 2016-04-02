@@ -107,8 +107,8 @@ var sampleConfig = `
   # username = "guest"
   # password = "guest"
 
-  # A list of nodes to pull metrics about. If not specified, metrics for
-  # all nodes are gathered.
+  ## A list of nodes to pull metrics about. If not specified, metrics for
+  ## all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
 `
 
@@ -122,7 +122,11 @@ func (r *RabbitMQ) Description() string {
 
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
-		r.Client = &http.Client{}
+		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		r.Client = &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(4 * time.Second),
+		}
 	}
 
 	var errChan = make(chan error, len(gatherFunctions))

@@ -2,8 +2,10 @@ package mysql
 
 import (
 	"database/sql"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/influxdata/telegraf"
@@ -15,16 +17,18 @@ type Mysql struct {
 }
 
 var sampleConfig = `
-  # specify servers via a url matching:
-  #  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
-  #  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
-  #  e.g.
-  #    root:passwd@tcp(127.0.0.1:3306)/?tls=false
-  #    root@tcp(127.0.0.1:3306)/?tls=false
-  #
-  # If no servers are specified, then localhost is used as the host.
+  ## specify servers via a url matching:
+  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
+  ##  e.g.
+  ##    root:passwd@tcp(127.0.0.1:3306)/?tls=false
+  ##    root@tcp(127.0.0.1:3306)/?tls=false
+  ##
+  ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
 `
+
+var defaultTimeout = time.Second * time.Duration(5)
 
 func (m *Mysql) SampleConfig() string {
 	return sampleConfig
@@ -122,6 +126,10 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		serv = ""
 	}
 
+	serv, err := dsnAddTimeout(serv)
+	if err != nil {
+		return err
+	}
 	db, err := sql.Open("mysql", serv)
 	if err != nil {
 		return err
@@ -205,6 +213,27 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func dsnAddTimeout(dsn string) (string, error) {
+
+	// DSN "?timeout=5s" is not valid, but "/?timeout=5s" is valid ("" and "/"
+	// are the same DSN)
+	if dsn == "" {
+		dsn = "/"
+	}
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", err
+	}
+	v := u.Query()
+
+	// Only override timeout if not already defined
+	if _, ok := v["timeout"]; ok == false {
+		v.Add("timeout", defaultTimeout.String())
+		u.RawQuery = v.Encode()
+	}
+	return u.String(), nil
 }
 
 func init() {

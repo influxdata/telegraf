@@ -17,24 +17,17 @@ new plugins.
 
 ## Installation:
 
-NOTE: Telegraf 0.10.x is **not** backwards-compatible with previous versions
-of telegraf, both in the database layout and the configuration file. 0.2.x
-will continue to be supported, see below for download links.
-
-For more details on the differences between Telegraf 0.2.x and 0.10.x, see
-the [release blog post](https://influxdata.com/blog/announcing-telegraf-0-10-0/).
-
-### Linux deb and rpm packages:
+### Linux deb and rpm Packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.10.1-1_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.10.1-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.11.1-1_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1.x86_64.rpm
 
-0.2.x:
-* http://get.influxdb.org/telegraf/telegraf_0.2.4_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.2.4-1.x86_64.rpm
+Latest (arm):
+* http://get.influxdb.org/telegraf/telegraf_0.11.1-1_armhf.deb
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1.armhf.rpm
 
-##### Package instructions:
+##### Package Instructions:
 
 * Telegraf binary is installed in `/usr/bin/telegraf`
 * Telegraf daemon configuration file is in `/etc/telegraf/telegraf.conf`
@@ -43,31 +36,46 @@ Latest:
 * On systemd systems (such as Ubuntu 15+), the telegraf daemon can be
 controlled via `systemctl [action] telegraf`
 
+### yum/apt Repositories:
+
+There is a yum/apt repo available for the whole InfluxData stack, see
+[here](https://docs.influxdata.com/influxdb/v0.10/introduction/installation/#installation)
+for instructions on setting up the repo. Once it is configured, you will be able
+to use this repo to install & update telegraf.
+
 ### Linux tarballs:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_amd64.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_i386.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.10.1-1_linux_arm.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_i386.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_armhf.tar.gz
 
-0.2.x:
-* http://get.influxdb.org/telegraf/telegraf_linux_amd64_0.2.4.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_386_0.2.4.tar.gz
-* http://get.influxdb.org/telegraf/telegraf_linux_arm_0.2.4.tar.gz
-
-##### tarball instructions:
+##### tarball Instructions:
 
 To install the full directory structure with config file, run:
 
 ```
-sudo tar -C / -xvf ./telegraf-v0.10.1-1_linux_amd64.tar.gz
+sudo tar -C / -zxvf ./telegraf-0.11.1-1_linux_amd64.tar.gz
 ```
 
 To extract only the binary, run:
 
 ```
-tar -zxvf telegraf-v0.10.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
+tar -zxvf telegraf-0.11.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
 ```
+
+### FreeBSD tarball:
+
+Latest:
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_freebsd_amd64.tar.gz
+
+##### tarball Instructions:
+
+See linux instructions above.
+
+### Ansible Role:
+
+Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### OSX via Homebrew:
 
@@ -75,6 +83,12 @@ tar -zxvf telegraf-v0.10.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/t
 brew update
 brew install telegraf
 ```
+
+### Windows Binaries (EXPERIMENTAL)
+
+Latest:
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_windows_amd64.zip
+* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_windows_i386.zip
 
 ### From Source:
 
@@ -88,7 +102,7 @@ if you don't have it already. You also must build with golang version 1.5+.
 4. Run `cd $GOPATH/src/github.com/influxdata/telegraf`
 5. Run `make`
 
-### How to use it:
+## How to use it:
 
 ```console
 $ telegraf -help
@@ -131,7 +145,7 @@ Examples:
 
 ## Configuration
 
-See the [configuration guide](CONFIGURATION.md) for a rundown of the more advanced
+See the [configuration guide](docs/CONFIGURATION.md) for a rundown of the more advanced
 configuration options.
 
 ## Supported Input Plugins
@@ -145,39 +159,50 @@ Currently implemented sources:
 * aerospike
 * apache
 * bcache
+* couchbase
+* couchdb
 * disque
+* dns query time
 * docker
+* dovecot
 * elasticsearch
-* exec (generic JSON-emitting executable plugin)
+* exec (generic executable plugin, support JSON, influx, graphite and nagios)
 * haproxy
 * httpjson (generic JSON-emitting http service plugin)
 * influxdb
+* ipmi_sensor
 * jolokia
 * leofs
 * lustre2
 * mailchimp
 * memcached
+* mesos
 * mongodb
 * mysql
+* net_response
 * nginx
 * nsq
+* ntpq
 * phpfpm
 * phusion passenger
 * ping
 * postgresql
+* postgresql_extensible
 * powerdns
 * procstat
 * prometheus
 * puppetagent
 * rabbitmq
+* raindrops
 * redis
 * rethinkdb
+* riak
+* sensors (only available if built from source)
+* snmp
 * sql server (microsoft)
 * twemproxy
 * zfs
 * zookeeper
-* sensors
-* snmp
 * win_perf_counters (windows performance counters)
 * system
     * cpu
@@ -187,11 +212,17 @@ Currently implemented sources:
     * disk
     * diskio
     * swap
+    * processes
+    * kernel (/proc/stat)
 
 Telegraf can also collect metrics via the following service plugins:
 
 * statsd
+* udp_listener
+* tcp_listener
+* mqtt_consumer
 * kafka_consumer
+* nats_consumer
 * github_webhooks
 
 We'll be adding support for many more over the coming months. Read on if you
@@ -218,4 +249,4 @@ want to add support for another service or third-party API.
 
 Please see the
 [contributing guide](CONTRIBUTING.md)
-for details on contributing a plugin or output to Telegraf.
+for details on contributing a plugin to Telegraf.

@@ -31,7 +31,7 @@ func NewGithubWebhooks() *GithubWebhooks {
 
 func (gh *GithubWebhooks) SampleConfig() string {
 	return `
-  # Address and port to host Webhook listener on
+  ## Address and port to host Webhook listener on
   service_address = ":1618"
 `
 }
@@ -61,7 +61,7 @@ func (gh *GithubWebhooks) Listen() {
 	}
 }
 
-func (gh *GithubWebhooks) Start() error {
+func (gh *GithubWebhooks) Start(_ telegraf.Accumulator) error {
 	go gh.Listen()
 	log.Printf("Started the github_webhooks service on %s\n", gh.ServiceAddress)
 	return nil
@@ -73,14 +73,17 @@ func (gh *GithubWebhooks) Stop() {
 
 // Handles the / route
 func (gh *GithubWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	eventType := r.Header["X-Github-Event"][0]
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	e, err := NewEvent(data, eventType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	gh.Lock()
 	gh.events = append(gh.events, e)

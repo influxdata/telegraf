@@ -2,13 +2,19 @@ package internal
 
 import (
 	"bufio"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
+
+const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 // Duration just wraps time.Duration
 type Duration struct {
@@ -28,47 +34,6 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 }
 
 var NotImplementedError = errors.New("not implemented yet")
-
-type JSONFlattener struct {
-	Fields map[string]interface{}
-}
-
-// FlattenJSON flattens nested maps/interfaces into a fields map
-func (f *JSONFlattener) FlattenJSON(
-	fieldname string,
-	v interface{},
-) error {
-	if f.Fields == nil {
-		f.Fields = make(map[string]interface{})
-	}
-	fieldname = strings.Trim(fieldname, "_")
-	switch t := v.(type) {
-	case map[string]interface{}:
-		for k, v := range t {
-			err := f.FlattenJSON(fieldname+"_"+k+"_", v)
-			if err != nil {
-				return err
-			}
-		}
-	case []interface{}:
-		for i, v := range t {
-			k := strconv.Itoa(i)
-			err := f.FlattenJSON(fieldname+"_"+k+"_", v)
-			if err != nil {
-				return nil
-			}
-		}
-	case float64:
-		f.Fields[fieldname] = t
-	case bool, string, nil:
-		// ignored types
-		return nil
-	default:
-		return fmt.Errorf("JSON Flattener: got unexpected type %T with value %v (%s)",
-			t, t, fieldname)
-	}
-	return nil
-}
 
 // ReadLines reads contents from a file and splits them by new lines.
 // A convenience wrapper to ReadLinesOffsetN(filename, 0, -1).
@@ -103,6 +68,76 @@ func ReadLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
 	}
 
 	return ret, nil
+}
+
+// RandomString returns a random string of alpha-numeric characters
+func RandomString(n int) string {
+	var bytes = make([]byte, n)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	return string(bytes)
+}
+
+// GetTLSConfig gets a tls.Config object from the given certs, key, and CA files.
+// you must give the full path to the files.
+// If all files are blank and InsecureSkipVerify=false, returns a nil pointer.
+func GetTLSConfig(
+	SSLCert, SSLKey, SSLCA string,
+	InsecureSkipVerify bool,
+) (*tls.Config, error) {
+	if SSLCert == "" && SSLKey == "" && SSLCA == "" && !InsecureSkipVerify {
+		return nil, nil
+	}
+
+	t := &tls.Config{
+		InsecureSkipVerify: InsecureSkipVerify,
+	}
+
+	if SSLCA != "" {
+		caCert, err := ioutil.ReadFile(SSLCA)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
+				err))
+		}
+
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		t.RootCAs = caCertPool
+	}
+
+	if SSLCert != "" && SSLKey != "" {
+		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf(
+				"Could not load TLS client key/certificate: %s",
+				err))
+		}
+
+		t.Certificates = []tls.Certificate{cert}
+		t.BuildNameToCertificate()
+	}
+
+	// will be nil by default if nothing is provided
+	return t, nil
+}
+
+// SnakeCase converts the given string to snake case following the Golang format:
+// acronyms are converted to lower-case and preceded by an underscore.
+func SnakeCase(in string) string {
+	runes := []rune(in)
+	length := len(runes)
+
+	var out []rune
+	for i := 0; i < length; i++ {
+		if i > 0 && unicode.IsUpper(runes[i]) && ((i+1 < length && unicode.IsLower(runes[i+1])) || unicode.IsLower(runes[i-1])) {
+			out = append(out, '_')
+		}
+		out = append(out, unicode.ToLower(runes[i]))
+	}
+
+	return string(out)
 }
 
 // Glob will test a string pattern, potentially containing globs, against a

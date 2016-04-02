@@ -86,13 +86,13 @@ type haproxy struct {
 }
 
 var sampleConfig = `
-  # An array of address to gather stats about. Specify an ip on hostname
-  # with optional port. ie localhost, 10.10.3.33:1936, etc.
-  #
-  # If no servers are specified, then default to 127.0.0.1:1936
+  ## An array of address to gather stats about. Specify an ip on hostname
+  ## with optional port. ie localhost, 10.10.3.33:1936, etc.
+
+  ## If no servers are specified, then default to 127.0.0.1:1936
   servers = ["http://myhaproxy.com:1936", "http://anotherhaproxy.com:1936"]
-  # Or you can also use local socket(not work yet)
-  # servers = ["socket://run/haproxy/admin.sock"]
+  ## Or you can also use local socket(not work yet)
+  ## servers = ["socket://run/haproxy/admin.sock"]
 `
 
 func (r *haproxy) SampleConfig() string {
@@ -129,8 +129,11 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 
 func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if g.client == nil {
-
-		client := &http.Client{}
+		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		client := &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(4 * time.Second),
+		}
 		g.client = client
 	}
 

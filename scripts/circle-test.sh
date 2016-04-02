@@ -61,11 +61,22 @@ exit_if_fail go test -race ./...
 
 # Simple Integration Tests
 #   check that version was properly set
-exit_if_fail "./telegraf -version | grep $VERSION"
+exit_if_fail "telegraf -version | grep $VERSION"
 #   check that one test cpu & mem output work
 tmpdir=$(mktemp -d)
-./telegraf -sample-config > $tmpdir/config.toml
-exit_if_fail ./telegraf -config $tmpdir/config.toml \
+telegraf -sample-config > $tmpdir/config.toml
+exit_if_fail telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
-exit $rc
+cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
+
+eval "git describe --exact-match HEAD"
+if [ $? -eq 0 ]; then
+    unset GOGC
+    tag=$(git describe --exact-match HEAD)
+    echo $tag
+    exit_if_fail ./scripts/build.py --package --version=$tag --platform=linux --arch=all --upload
+    exit_if_fail ./scripts/build.py --package --version=$tag --platform=windows --arch=all --upload
+    exit_if_fail ./scripts/build.py --package --version=$tag --platform=freebsd --arch=all --upload
+    mv build $CIRCLE_ARTIFACTS
+fi

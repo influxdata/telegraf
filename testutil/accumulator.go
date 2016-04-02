@@ -108,6 +108,8 @@ func (a *Accumulator) Get(measurement string) (*Metric, bool) {
 // NFields returns the total number of fields in the accumulator, across all
 // measurements
 func (a *Accumulator) NFields() int {
+	a.Lock()
+	defer a.Unlock()
 	counter := 0
 	for _, pt := range a.Metrics {
 		for _, _ = range pt.Fields {
@@ -123,19 +125,15 @@ func (a *Accumulator) AssertContainsTaggedFields(
 	fields map[string]interface{},
 	tags map[string]string,
 ) {
+	a.Lock()
+	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if !reflect.DeepEqual(tags, p.Tags) {
 			continue
 		}
 
 		if p.Measurement == measurement {
-			if !reflect.DeepEqual(fields, p.Fields) {
-				pActual, _ := json.MarshalIndent(p.Fields, "", "  ")
-				pExp, _ := json.MarshalIndent(fields, "", "  ")
-				msg := fmt.Sprintf("Actual:\n%s\n(%T) \nExpected:\n%s\n(%T)",
-					string(pActual), p.Fields, string(pExp), fields)
-				assert.Fail(t, msg)
-			}
+			assert.Equal(t, fields, p.Fields)
 			return
 		}
 	}
@@ -148,15 +146,11 @@ func (a *Accumulator) AssertContainsFields(
 	measurement string,
 	fields map[string]interface{},
 ) {
+	a.Lock()
+	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
-			if !reflect.DeepEqual(fields, p.Fields) {
-				pActual, _ := json.MarshalIndent(p.Fields, "", "  ")
-				pExp, _ := json.MarshalIndent(fields, "", "  ")
-				msg := fmt.Sprintf("Actual:\n%s\n(%T) \nExpected:\n%s\n(%T)",
-					string(pActual), p.Fields, string(pExp), fields)
-				assert.Fail(t, msg)
-			}
+			assert.Equal(t, fields, p.Fields)
 			return
 		}
 	}
@@ -166,6 +160,8 @@ func (a *Accumulator) AssertContainsFields(
 
 // HasIntValue returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			for fieldname, value := range p.Fields {
@@ -182,6 +178,8 @@ func (a *Accumulator) HasIntField(measurement string, field string) bool {
 
 // HasUIntValue returns true if the measurement has a UInt value
 func (a *Accumulator) HasUIntField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			for fieldname, value := range p.Fields {
@@ -198,6 +196,8 @@ func (a *Accumulator) HasUIntField(measurement string, field string) bool {
 
 // HasFloatValue returns true if the given measurement has a float value
 func (a *Accumulator) HasFloatField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			for fieldname, value := range p.Fields {
@@ -215,6 +215,8 @@ func (a *Accumulator) HasFloatField(measurement string, field string) bool {
 // HasMeasurement returns true if the accumulator has a measurement with the
 // given name
 func (a *Accumulator) HasMeasurement(measurement string) bool {
+	a.Lock()
+	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			return true

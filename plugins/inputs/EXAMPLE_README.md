@@ -4,7 +4,7 @@ The example plugin gathers metrics about example things
 
 ### Configuration:
 
-```
+```toml
 # Description
 [[inputs.example]]
   # SampleConfig
@@ -29,8 +29,6 @@ The example plugin gathers metrics about example things
     - tag3
 
 ### Example Output:
-
-Give an example `-test` output here
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter example -test

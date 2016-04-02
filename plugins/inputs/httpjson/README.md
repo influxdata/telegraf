@@ -6,7 +6,7 @@ For example, if you have a service called _mycollector_, which has HTTP endpoint
 plugin like this:
 
 ```
-[[httpjson.services]]
+[[inputs.httpjson]]
   name = "mycollector"
 
   servers = [
@@ -24,7 +24,7 @@ plugin like this:
 You can also specify which keys from server response should be considered tags:
 
 ```
-[[httpjson.services]]
+[[inputs.httpjson]]
   ...
 
   tag_keys = [
@@ -36,10 +36,10 @@ You can also specify which keys from server response should be considered tags:
 You can also specify additional request parameters for the service:
 
 ```
-[[httpjson.services]]
+[[inputs.httpjson]]
   ...
 
- [httpjson.services.parameters]
+ [inputs.httpjson.parameters]
     event_type = "cpu_spike"
     threshold = "0.75"
 
@@ -48,10 +48,10 @@ You can also specify additional request parameters for the service:
 You can also specify additional request header parameters for the service:
 
 ```
-[[httpjson.services]]
+[[inputs.httpjson]]
   ...
 
- [httpjson.services.headers]
+ [inputs.httpjson.headers]
     X-Auth-Token = "my-xauth-token"
     apiVersion = "v1"
 ```
@@ -61,18 +61,14 @@ You can also specify additional request header parameters for the service:
 Let's say that we have a service named "mycollector" configured like this:
 
 ```
-[httpjson]
-  [[httpjson.services]]
-    name = "mycollector"
-
-    servers = [
-      "http://my.service.com/_stats"
-    ]
-
-    # HTTP method to use (case-sensitive)
-    method = "GET"
-
-    tag_keys = ["service"]
+[[inputs.httpjson]]
+  name = "mycollector"
+  servers = [
+    "http://my.service.com/_stats"
+  ]
+  # HTTP method to use (case-sensitive)
+  method = "GET"
+  tag_keys = ["service"]
 ```
 
 which responds with the following JSON:
@@ -102,26 +98,21 @@ There is also the option to collect JSON from multiple services, here is an
 example doing that.
 
 ```
-[httpjson]
-  [[httpjson.services]]
-    name = "mycollector1"
+[[inputs.httpjson]]
+  name = "mycollector1"
+  servers = [
+    "http://my.service1.com/_stats"
+  ]
+  # HTTP method to use (case-sensitive)
+  method = "GET"
 
-    servers = [
-      "http://my.service1.com/_stats"
-    ]
-
-    # HTTP method to use (case-sensitive)
-    method = "GET"
-
-  [[httpjson.services]]
-    name = "mycollector2"
-
-    servers = [
-      "http://service.net/json/stats"
-    ]
-
-    # HTTP method to use (case-sensitive)
-    method = "POST"
+[[inputs.httpjson]]
+  name = "mycollector2"
+  servers = [
+    "http://service.net/json/stats"
+  ]
+  # HTTP method to use (case-sensitive)
+  method = "POST"
 ```
 
 The services respond with the following JSON:

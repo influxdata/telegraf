@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
@@ -11,7 +10,17 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	// needing to load the outputs
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func TestAgent_OmitHostname(t *testing.T) {
+	c := config.NewConfig()
+	c.Agent.OmitHostname = true
+	_, err := NewAgent(c)
+	assert.NoError(t, err)
+	assert.NotContains(t, c.Tags, "host")
+}
 
 func TestAgent_LoadPlugin(t *testing.T) {
 	c := config.NewConfig()

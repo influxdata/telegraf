@@ -20,15 +20,15 @@ func (_ *Sensors) Description() string {
 }
 
 var sensorsSampleConfig = `
-  # By default, telegraf gathers stats from all sensors detected by the
-  # lm-sensors module.
-  #
-  # Only collect stats from the selected sensors. Sensors are listed as
-  # <chip name>:<feature name>. This information can be found by running the
-  # sensors command, e.g. sensors -u
-  #
-  # A * as the feature name will return all features of the chip
-  #
+  ## By default, telegraf gathers stats from all sensors detected by the
+  ## lm-sensors module.
+  ##
+  ## Only collect stats from the selected sensors. Sensors are listed as
+  ## <chip name>:<feature name>. This information can be found by running the
+  ## sensors command, e.g. sensors -u
+  ##
+  ## A * as the feature name will return all features of the chip
+  ##
   # sensors = ["coretemp-isa-0000:Core 0", "coretemp-isa-0001:*"]
 `
 
@@ -49,7 +49,7 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 				var found bool
 
 				for _, sensor := range s.Sensors {
-					parts := strings.SplitN(":", sensor, 2)
+					parts := strings.SplitN(sensor, ":", 2)
 
 					if parts[0] == chipName {
 						if parts[1] == "*" || parts[1] == featureLabel {

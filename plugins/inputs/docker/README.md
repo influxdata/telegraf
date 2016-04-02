@@ -74,6 +74,7 @@ on the availability of per-cpu stats on your system.
     - usage_in_usermode
     - usage_system
     - usage_total
+    - usage_percent
 - docker_net
     - rx_dropped
     - rx_bytes
@@ -94,18 +95,50 @@ on the availability of per-cpu stats on your system.
     - io_serviced_recursive_sync
     - io_serviced_recursive_total
     - io_serviced_recursive_write
+- docker_
+    - n_used_file_descriptors
+    - n_cpus
+    - n_containers
+    - n_images
+    - n_goroutines
+    - n_listener_events
+    - memory_total
+    - pool_blocksize
+- docker_data
+    - available
+    - total
+    - used
+- docker_metadata
+    - available
+    - total
+    - used
+
 
 ### Tags:
 
-- All stats have the following tags:
+- docker (memory_total)
+    - unit=bytes
+- docker (pool_blocksize)
+    - unit=bytes
+- docker_data
+    - unit=bytes
+- docker_metadata
+    - unit=bytes
+
+- docker_cpu specific:
     - cont_id (container ID)
     - cont_image (container image)
     - cont_name (container name)
-- docker_cpu specific:
     - cpu
 - docker_net specific:
+    - cont_id (container ID)
+    - cont_image (container image)
+    - cont_name (container name)
     - network
 - docker_blkio specific:
+    - cont_id (container ID)
+    - cont_image (container image)
+    - cont_name (container name)
     - device
 
 ### Example Output:
@@ -113,6 +146,16 @@ on the availability of per-cpu stats on your system.
 ```
 % ./telegraf -config ~/ws/telegraf.conf -input-filter docker -test
 * Plugin: docker, Collection 1
+> docker n_cpus=8i 1456926671065383978
+> docker n_used_file_descriptors=15i 1456926671065383978
+> docker n_containers=7i 1456926671065383978
+> docker n_images=152i 1456926671065383978
+> docker n_goroutines=36i 1456926671065383978
+> docker n_listener_events=0i 1456926671065383978
+> docker,unit=bytes memory_total=18935443456i 1456926671065383978
+> docker,unit=bytes pool_blocksize=65540i 1456926671065383978
+> docker_data,unit=bytes available=24340000000i,total=107400000000i,used=14820000000i 1456926671065383978
+> docker_metadata,unit=bytes available=2126999999i,total=2146999999i,used=20420000i 145692667106538
 > docker_mem,cont_id=5705ba8ed8fb47527410653d60a8bb2f3af5e62372297c419022a3cc6d45d848,\
 cont_image=spotify/kafka,cont_name=kafka \
 active_anon=52568064i,active_file=6926336i,cache=12038144i,fail_count=0i,\

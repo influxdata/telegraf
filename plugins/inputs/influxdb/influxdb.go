@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -22,11 +23,11 @@ func (*InfluxDB) Description() string {
 
 func (*InfluxDB) SampleConfig() string {
 	return `
-  # Works with InfluxDB debug endpoints out of the box,
-  # but other services can use this format too.
-  # See the influxdb plugin's README for more details.
+  ## Works with InfluxDB debug endpoints out of the box,
+  ## but other services can use this format too.
+  ## See the influxdb plugin's README for more details.
 
-  # Multiple URLs from which to read InfluxDB-formatted JSON
+  ## Multiple URLs from which to read InfluxDB-formatted JSON
   urls = [
     "http://localhost:8086/debug/vars"
   ]
@@ -70,6 +71,15 @@ type point struct {
 	Values map[string]interface{} `json:"values"`
 }
 
+var tr = &http.Transport{
+	ResponseHeaderTimeout: time.Duration(3 * time.Second),
+}
+
+var client = &http.Client{
+	Transport: tr,
+	Timeout:   time.Duration(4 * time.Second),
+}
+
 // Gathers data from a particular URL
 // Parameters:
 //     acc    : The telegraf Accumulator to use
@@ -81,7 +91,7 @@ func (i *InfluxDB) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
 ) error {
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}

@@ -20,7 +20,7 @@ type Nginx struct {
 }
 
 var sampleConfig = `
-  # An array of Nginx stub_status URI to gather stats.
+  ## An array of Nginx stub_status URI to gather stats.
   urls = ["http://localhost/status"]
 `
 
@@ -58,7 +58,10 @@ var tr = &http.Transport{
 	ResponseHeaderTimeout: time.Duration(3 * time.Second),
 }
 
-var client = &http.Client{Transport: tr}
+var client = &http.Client{
+	Transport: tr,
+	Timeout:   time.Duration(4 * time.Second),
+}
 
 func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	resp, err := client.Get(addr.String())

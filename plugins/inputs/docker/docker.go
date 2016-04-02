@@ -1,8 +1,11 @@
 package system
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,15 +20,35 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 
-	client *docker.Client
+	client DockerClient
 }
 
+type DockerClient interface {
+	// Docker Client wrapper
+	// Useful for test
+	Info() (*docker.Env, error)
+	ListContainers(opts docker.ListContainersOptions) ([]docker.APIContainers, error)
+	Stats(opts docker.StatsOptions) error
+}
+
+const (
+	KB = 1000
+	MB = 1000 * KB
+	GB = 1000 * MB
+	TB = 1000 * GB
+	PB = 1000 * TB
+)
+
+var (
+	sizeRegex = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
+)
+
 var sampleConfig = `
-  # Docker Endpoint
-  #   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  #   To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  ## Docker Endpoint
+  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
+  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
-  # Only collect metrics for these containers, collect all if empty
+  ## Only collect metrics for these containers, collect all if empty
   container_names = []
 `
 
@@ -58,15 +81,24 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		d.client = c
 	}
 
+	// Get daemon info
+	err := d.gatherInfo(acc)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// List containers
 	opts := docker.ListContainersOptions{}
 	containers, err := d.client.ListContainers(opts)
 	if err != nil {
 		return err
 	}
 
+	// Get container data
 	var wg sync.WaitGroup
 	wg.Add(len(containers))
 	for _, container := range containers {
+
 		go func(c docker.APIContainers) {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
@@ -77,6 +109,76 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 	wg.Wait()
 
+	return nil
+}
+
+func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
+	// Init vars
+	var driverStatus [][]string
+	dataFields := make(map[string]interface{})
+	metadataFields := make(map[string]interface{})
+	now := time.Now()
+	// Get info from docker daemon
+	info, err := d.client.Info()
+	if err != nil {
+		return err
+	}
+
+	fields := map[string]interface{}{
+		"n_cpus":                  info.GetInt64("NCPU"),
+		"n_used_file_descriptors": info.GetInt64("NFd"),
+		"n_containers":            info.GetInt64("Containers"),
+		"n_images":                info.GetInt64("Images"),
+		"n_goroutines":            info.GetInt64("NGoroutines"),
+		"n_listener_events":       info.GetInt64("NEventsListener"),
+	}
+	// Add metrics
+	acc.AddFields("docker",
+		fields,
+		nil,
+		now)
+	acc.AddFields("docker",
+		map[string]interface{}{"memory_total": info.GetInt64("MemTotal")},
+		map[string]string{"unit": "bytes"},
+		now)
+	// Get storage metrics
+	driverStatusRaw := []byte(info.Get("DriverStatus"))
+	json.Unmarshal(driverStatusRaw, &driverStatus)
+	for _, rawData := range driverStatus {
+		// Try to convert string to int (bytes)
+		value, err := parseSize(rawData[1])
+		if err != nil {
+			continue
+		}
+		name := strings.ToLower(strings.Replace(rawData[0], " ", "_", -1))
+		if name == "pool_blocksize" {
+			// pool blocksize
+			acc.AddFields("docker",
+				map[string]interface{}{"pool_blocksize": value},
+				map[string]string{"unit": "bytes"},
+				now)
+		} else if strings.HasPrefix(name, "data_space_") {
+			// data space
+			field_name := strings.TrimPrefix(name, "data_space_")
+			dataFields[field_name] = value
+		} else if strings.HasPrefix(name, "metadata_space_") {
+			// metadata space
+			field_name := strings.TrimPrefix(name, "metadata_space_")
+			metadataFields[field_name] = value
+		}
+	}
+	if len(dataFields) > 0 {
+		acc.AddFields("docker_data",
+			dataFields,
+			map[string]string{"unit": "bytes"},
+			now)
+	}
+	if len(metadataFields) > 0 {
+		acc.AddFields("docker_metadata",
+			metadataFields,
+			map[string]string{"unit": "bytes"},
+			now)
+	}
 	return nil
 }
 
@@ -177,6 +279,7 @@ func gatherContainerStats(
 		"pgfault":                   stat.MemoryStats.Stats.Pgfault,
 		"inactive_file":             stat.MemoryStats.Stats.InactiveFile,
 		"total_pgpgin":              stat.MemoryStats.Stats.TotalPgpgin,
+		"usage_percent":             calculateMemPercent(stat),
 	}
 	acc.AddFields("docker_mem", memfields, tags, now)
 
@@ -188,6 +291,7 @@ func gatherContainerStats(
 		"throttling_periods":           stat.CPUStats.ThrottlingData.Periods,
 		"throttling_throttled_periods": stat.CPUStats.ThrottlingData.ThrottledPeriods,
 		"throttling_throttled_time":    stat.CPUStats.ThrottlingData.ThrottledTime,
+		"usage_percent":                calculateCPUPercent(stat),
 	}
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
@@ -217,6 +321,26 @@ func gatherContainerStats(
 	}
 
 	gatherBlockIOMetrics(stat, acc, tags, now)
+}
+
+func calculateMemPercent(stat *docker.Stats) float64 {
+	var memPercent = 0.0
+	if stat.MemoryStats.Limit > 0 {
+		memPercent = float64(stat.MemoryStats.Usage) / float64(stat.MemoryStats.Limit) * 100.0
+	}
+	return memPercent
+}
+
+func calculateCPUPercent(stat *docker.Stats) float64 {
+	var cpuPercent = 0.0
+	// calculate the change for the cpu and system usage of the container in between readings
+	cpuDelta := float64(stat.CPUStats.CPUUsage.TotalUsage) - float64(stat.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stat.CPUStats.SystemCPUUsage) - float64(stat.PreCPUStats.SystemCPUUsage)
+
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * float64(len(stat.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+	}
+	return cpuPercent
 }
 
 func gatherBlockIOMetrics(
@@ -309,6 +433,27 @@ func sliceContains(in string, sl []string) bool {
 		}
 	}
 	return false
+}
+
+// Parses the human-readable size string into the amount it represents.
+func parseSize(sizeStr string) (int64, error) {
+	matches := sizeRegex.FindStringSubmatch(sizeStr)
+	if len(matches) != 4 {
+		return -1, fmt.Errorf("invalid size: '%s'", sizeStr)
+	}
+
+	size, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return -1, err
+	}
+
+	uMap := map[string]int64{"k": KB, "m": MB, "g": GB, "t": TB, "p": PB}
+	unitPrefix := strings.ToLower(matches[3])
+	if mul, ok := uMap[unitPrefix]; ok {
+		size *= float64(mul)
+	}
+
+	return int64(size), nil
 }
 
 func init() {

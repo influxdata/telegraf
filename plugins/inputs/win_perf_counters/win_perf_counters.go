@@ -6,11 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"syscall"
 	"unsafe"
-
-	"os"
-	"os/signal"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -18,12 +14,12 @@ import (
 )
 
 var sampleConfig string = `
-  # By default this plugin returns basic CPU and Disk statistics.
-  # See the README file for more examples.
-  # Uncomment examples below or write your own as you see fit. If the system
-  # being polled for data does not have the Object at startup of the Telegraf
-  # agent, it will not be gathered.
-  # Settings:
+  ## By default this plugin returns basic CPU and Disk statistics.
+  ## See the README file for more examples.
+  ## Uncomment examples below or write your own as you see fit. If the system
+  ## being polled for data does not have the Object at startup of the Telegraf
+  ## agent, it will not be gathered.
+  ## Settings:
   # PrintValid = false # Print All matching performance counters
 
   [[inputs.win_perf_counters.object]]
@@ -31,9 +27,9 @@ var sampleConfig string = `
     ObjectName = "Processor"
     Instances = ["*"]
     Counters = [
-      "% Idle Time", "% Interrupt Time",
-      "% Privileged Time", "% User Time",
-      "% Processor Time"
+      "%% Idle Time", "%% Interrupt Time",
+      "%% Privileged Time", "%% User Time",
+      "%% Processor Time"
     ]
     Measurement = "win_cpu"
     # Set to true to include _Total instance when querying for all (*).
@@ -46,8 +42,8 @@ var sampleConfig string = `
     ObjectName = "LogicalDisk"
     Instances = ["*"]
     Counters = [
-      "% Idle Time", "% Disk Time","% Disk Read Time",
-      "% Disk Write Time", "% User Time", "Current Disk Queue Length"
+      "%% Idle Time", "%% Disk Time","%% Disk Read Time",
+      "%% Disk Write Time", "%% User Time", "Current Disk Queue Length"
     ]
     Measurement = "win_disk"
 
@@ -78,9 +74,10 @@ var testConfigParsed bool
 var testObject string
 
 type Win_PerfCounters struct {
-	PrintValid bool
-	TestName   string
-	Object     []perfobject
+	PrintValid      bool
+	TestName        string
+	PreVistaSupport bool
+	Object          []perfobject
 }
 
 type perfobject struct {
@@ -116,8 +113,11 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 	var handle win.PDH_HQUERY
 	var counterHandle win.PDH_HCOUNTER
 	ret := win.PdhOpenQuery(0, 0, &handle)
-	ret = win.PdhAddEnglishCounter(handle, query, 0, &counterHandle)
-
+	if m.PreVistaSupport {
+		ret = win.PdhAddCounter(handle, query, 0, &counterHandle)
+	} else {
+		ret = win.PdhAddEnglishCounter(handle, query, 0, &counterHandle)
+	}
 	_ = ret
 
 	temp := &item{query, objectName, counter, instance, measurement,
@@ -136,7 +136,7 @@ func (m *Win_PerfCounters) InvalidObject(exists uint32, query string, PerfObject
 		if PerfObject.FailOnMissing {
 			err := errors.New("Performance object does not exist")
 			return err
-		} else if PerfObject.WarnOnMissing {
+		} else {
 			fmt.Printf("Performance Object '%s' does not exist in query: %s\n", PerfObject.ObjectName, query)
 		}
 	} else if exists == 3221228473 { //win.PDH_CSTATUS_NO_COUNTER
@@ -144,14 +144,14 @@ func (m *Win_PerfCounters) InvalidObject(exists uint32, query string, PerfObject
 		if PerfObject.FailOnMissing {
 			err := errors.New("Counter in Performance object does not exist")
 			return err
-		} else if PerfObject.WarnOnMissing {
+		} else {
 			fmt.Printf("Counter '%s' does not exist in query: %s\n", counter, query)
 		}
 	} else if exists == 2147485649 { //win.PDH_CSTATUS_NO_INSTANCE
 		if PerfObject.FailOnMissing {
 			err := errors.New("Instance in Performance object does not exist")
 			return err
-		} else if PerfObject.WarnOnMissing {
+		} else {
 			fmt.Printf("Instance '%s' does not exist in query: %s\n", instance, query)
 
 		}
@@ -199,8 +199,10 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						m.AddItem(metrics, query, objectname, counter, instance,
 							PerfObject.Measurement, PerfObject.IncludeTotal)
 					} else {
-						err := m.InvalidObject(exists, query, PerfObject, instance, counter)
-						return err
+						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
+							err := m.InvalidObject(exists, query, PerfObject, instance, counter)
+							return err
+						}
 					}
 				}
 			}
@@ -252,16 +254,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-
-	// When interrupt or terminate is called.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, syscall.SIGTERM)
-	go func() error {
-		<-c
-		m.Cleanup(&metrics)
-		return nil
-	}()
 
 	var bufSize uint32
 	var bufCount uint32

@@ -84,3 +84,34 @@ func TestMysqlParseDSN(t *testing.T) {
 		}
 	}
 }
+
+func TestMysqlDNSAddTimeout(t *testing.T) {
+	tests := []struct {
+		input  string
+		output string
+	}{
+		{
+			"",
+			"/?timeout=5s",
+		},
+		{
+			"tcp(192.168.1.1:3306)/",
+			"tcp(192.168.1.1:3306)/?timeout=5s",
+		},
+		{
+			"root:passwd@tcp(192.168.1.1:3306)/?tls=false",
+			"root:passwd@tcp(192.168.1.1:3306)/?timeout=5s&tls=false",
+		},
+		{
+			"root:passwd@tcp(192.168.1.1:3306)/?tls=false&timeout=10s",
+			"root:passwd@tcp(192.168.1.1:3306)/?tls=false&timeout=10s",
+		},
+	}
+
+	for _, test := range tests {
+		output, _ := dsnAddTimeout(test.input)
+		if output != test.output {
+			t.Errorf("Expected %s, got %s\n", test.output, output)
+		}
+	}
+}

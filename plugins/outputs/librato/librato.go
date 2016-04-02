@@ -4,39 +4,46 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
 type Librato struct {
-	ApiUser   string
-	ApiToken  string
-	SourceTag string
-	Timeout   internal.Duration
+	ApiUser      string
+	ApiToken     string
+	Debug        bool
+	NameFromTags bool
+	SourceTag    string
+	Timeout      internal.Duration
 
 	apiUrl string
 	client *http.Client
 }
 
 var sampleConfig = `
-  # Librator API Docs
-  # http://dev.librato.com/v1/metrics-authentication
+  ## Librator API Docs
+  ## http://dev.librato.com/v1/metrics-authentication
 
-  # Librato API user
+  ## Librato API user
   api_user = "telegraf@influxdb.com" # required.
 
-  # Librato API token
+  ## Librato API token
   api_token = "my-secret-token" # required.
 
-  # Tag Field to populate source attribute (optional)
-  # This is typically the _hostname_ from which the metric was obtained.
-  source_tag = "hostname"
+  ### Debug
+  # debug = false
 
-  # Connection timeout.
+  ### Tag Field to populate source attribute (optional)
+  ### This is typically the _hostname_ from which the metric was obtained.
+  source_tag = "host"
+
+  ## Connection timeout.
   # timeout = "5s"
 `
 
@@ -82,17 +89,27 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 			for _, gauge := range gauges {
 				tempGauges = append(tempGauges, gauge)
 				metricCounter++
+				if l.Debug {
+					log.Printf("[DEBUG] Got a gauge: %v\n", gauge)
+				}
 			}
 		} else {
 			log.Printf("unable to build Gauge for %s, skipping\n", m.Name())
+			if l.Debug {
+				log.Printf("[DEBUG] Couldn't build gauge: %v\n", err)
+			}
 		}
 	}
 
 	lmetrics.Gauges = make([]*Gauge, metricCounter)
 	copy(lmetrics.Gauges, tempGauges[0:])
-	metricsBytes, err := json.Marshal(metrics)
+	metricsBytes, err := json.Marshal(lmetrics)
 	if err != nil {
 		return fmt.Errorf("unable to marshal Metrics, %s\n", err.Error())
+	} else {
+		if l.Debug {
+			log.Printf("[DEBUG] Librato request: %v\n", string(metricsBytes))
+		}
 	}
 	req, err := http.NewRequest("POST", l.apiUrl, bytes.NewBuffer(metricsBytes))
 	if err != nil {
@@ -103,8 +120,21 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 
 	resp, err := l.client.Do(req)
 	if err != nil {
+		if l.Debug {
+			log.Printf("[DEBUG] Error POSTing metrics: %v\n", err.Error())
+		}
 		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
+	} else {
+		if l.Debug {
+			htmlData, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("[DEBUG] Couldn't get response! (%v)\n", err)
+			} else {
+				log.Printf("[DEBUG] Librato response: %v\n", string(htmlData))
+			}
+		}
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
@@ -122,12 +152,21 @@ func (l *Librato) Description() string {
 	return "Configuration for Librato API to send metrics to."
 }
 
+func (l *Librato) buildGaugeName(m telegraf.Metric, fieldName string) string {
+	// Use the GraphiteSerializer
+	graphiteSerializer := graphite.GraphiteSerializer{}
+	return graphiteSerializer.SerializeBucketName(m, fieldName)
+}
+
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 	gauges := []*Gauge{}
 	for fieldName, value := range m.Fields() {
 		gauge := &Gauge{
-			Name:        m.Name() + "_" + fieldName,
+			Name:        l.buildGaugeName(m, fieldName),
 			MeasureTime: m.Time().Unix(),
+		}
+		if !gauge.verifyValue(value) {
+			continue
 		}
 		if err := gauge.setValue(value); err != nil {
 			return gauges, fmt.Errorf("unable to extract value from Fields, %s\n",
@@ -142,8 +181,20 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 						l.SourceTag)
 			}
 		}
+		gauges = append(gauges, gauge)
+	}
+	if l.Debug {
+		fmt.Printf("[DEBUG] Built gauges: %v\n", gauges)
 	}
 	return gauges, nil
+}
+
+func (g *Gauge) verifyValue(v interface{}) bool {
+	switch v.(type) {
+	case string:
+		return false
+	}
+	return true
 }
 
 func (g *Gauge) setValue(v interface{}) error {

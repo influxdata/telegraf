@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,6 +34,18 @@ const malformedJson = `
     "status": "green",
 `
 
+const lineProtocol = "cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1"
+
+const lineProtocolMulti = `
+cpu,cpu=cpu0,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu1,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu2,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu3,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu4,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu5,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+cpu,cpu=cpu6,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
+`
+
 type runnerMock struct {
 	out []byte
 	err error
@@ -43,7 +58,7 @@ func newRunnerMock(out []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(e *Exec) ([]byte, error) {
+func (r runnerMock) Run(e *Exec, command string, acc telegraf.Accumulator) ([]byte, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -51,9 +66,11 @@ func (r runnerMock) Run(e *Exec) ([]byte, error) {
 }
 
 func TestExec(t *testing.T) {
+	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
 	e := &Exec{
-		runner:  newRunnerMock([]byte(validJson), nil),
-		Command: "testcommand arg1",
+		runner:   newRunnerMock([]byte(validJson), nil),
+		Commands: []string{"testcommand arg1"},
+		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
@@ -75,9 +92,11 @@ func TestExec(t *testing.T) {
 }
 
 func TestExecMalformed(t *testing.T) {
+	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
 	e := &Exec{
-		runner:  newRunnerMock([]byte(malformedJson), nil),
-		Command: "badcommand arg1",
+		runner:   newRunnerMock([]byte(malformedJson), nil),
+		Commands: []string{"badcommand arg1"},
+		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
@@ -87,13 +106,66 @@ func TestExecMalformed(t *testing.T) {
 }
 
 func TestCommandError(t *testing.T) {
+	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
 	e := &Exec{
-		runner:  newRunnerMock(nil, fmt.Errorf("exit status code 1")),
-		Command: "badcommand",
+		runner:   newRunnerMock(nil, fmt.Errorf("exit status code 1")),
+		Commands: []string{"badcommand"},
+		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
 	err := e.Gather(&acc)
 	require.Error(t, err)
 	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
+}
+
+func TestLineProtocolParse(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
+	e := &Exec{
+		runner:   newRunnerMock([]byte(lineProtocol), nil),
+		Commands: []string{"line-protocol"},
+		parser:   parser,
+	}
+
+	var acc testutil.Accumulator
+	err := e.Gather(&acc)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"usage_idle": float64(99),
+		"usage_busy": float64(1),
+	}
+	tags := map[string]string{
+		"host":       "foo",
+		"datacenter": "us-east",
+	}
+	acc.AssertContainsTaggedFields(t, "cpu", fields, tags)
+}
+
+func TestLineProtocolParseMultiple(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
+	e := &Exec{
+		runner:   newRunnerMock([]byte(lineProtocolMulti), nil),
+		Commands: []string{"line-protocol"},
+		parser:   parser,
+	}
+
+	var acc testutil.Accumulator
+	err := e.Gather(&acc)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"usage_idle": float64(99),
+		"usage_busy": float64(1),
+	}
+	tags := map[string]string{
+		"host":       "foo",
+		"datacenter": "us-east",
+	}
+	cpuTags := []string{"cpu0", "cpu1", "cpu2", "cpu3", "cpu4", "cpu5", "cpu6"}
+
+	for _, cpu := range cpuTags {
+		tags["cpu"] = cpu
+		acc.AssertContainsTaggedFields(t, "cpu", fields, tags)
+	}
 }

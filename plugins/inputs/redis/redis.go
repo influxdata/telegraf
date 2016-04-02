@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -19,16 +20,18 @@ type Redis struct {
 }
 
 var sampleConfig = `
-  # specify servers via a url matching:
-  #  [protocol://][:password]@address[:port]
-  #  e.g.
-  #    tcp://localhost:6379
-  #    tcp://:password@192.168.99.100
-  #
-  # If no servers are specified, then localhost is used as the host.
-  # If no port is specified, 6379 is used
+  ## specify servers via a url matching:
+  ##  [protocol://][:password]@address[:port]
+  ##  e.g.
+  ##    tcp://localhost:6379
+  ##    tcp://:password@192.168.99.100
+  ##
+  ## If no servers are specified, then localhost is used as the host.
+  ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
 `
+
+var defaultTimeout = 5 * time.Second
 
 func (r *Redis) SampleConfig() string {
 	return sampleConfig
@@ -120,11 +123,14 @@ func (r *Redis) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 		addr.Host = addr.Host + ":" + defaultPort
 	}
 
-	c, err := net.Dial("tcp", addr.Host)
+	c, err := net.DialTimeout("tcp", addr.Host, defaultTimeout)
 	if err != nil {
 		return fmt.Errorf("Unable to connect to redis server '%s': %s", addr.Host, err)
 	}
 	defer c.Close()
+
+	// Extend connection
+	c.SetDeadline(time.Now().Add(defaultTimeout))
 
 	if addr.User != nil {
 		pwd, set := addr.User.Password()

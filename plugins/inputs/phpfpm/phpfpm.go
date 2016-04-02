@@ -41,26 +41,25 @@ type phpfpm struct {
 }
 
 var sampleConfig = `
-  # An array of addresses to gather stats about. Specify an ip or hostname
-  # with optional port and path
-  #
-  # Plugin can be configured in three modes (either can be used):
-  #   - http: the URL must start with http:// or https://, ie:
-  #       "http://localhost/status"
-  #       "http://192.168.130.1/status?full"
-  #
-  #   - unixsocket: path to fpm socket, ie:
-  #       "/var/run/php5-fpm.sock"
-  #      or using a custom fpm status path:
-  #       "/var/run/php5-fpm.sock:fpm-custom-status-path"
-  #
-  #   - fcgi: the URL must start with fcgi:// or cgi://, and port must be present, ie:
-  #       "fcgi://10.0.0.12:9000/status"
-  #       "cgi://10.0.10.12:9001/status"
-  #
-  # Example of multiple gathering from local socket and remove host
-  # urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
-  # If no servers are specified, then default to http://127.0.0.1/status
+  ## An array of addresses to gather stats about. Specify an ip or hostname
+  ## with optional port and path
+  ##
+  ## Plugin can be configured in three modes (either can be used):
+  ##   - http: the URL must start with http:// or https://, ie:
+  ##       "http://localhost/status"
+  ##       "http://192.168.130.1/status?full"
+  ##
+  ##   - unixsocket: path to fpm socket, ie:
+  ##       "/var/run/php5-fpm.sock"
+  ##      or using a custom fpm status path:
+  ##       "/var/run/php5-fpm.sock:fpm-custom-status-path"
+  ##
+  ##   - fcgi: the URL must start with fcgi:// or cgi://, and port must be present, ie:
+  ##       "fcgi://10.0.0.12:9000/status"
+  ##       "cgi://10.0.10.12:9001/status"
+  ##
+  ## Example of multiple gathering from local socket and remove host
+  ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
 `
 
@@ -113,6 +112,7 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		statusPath string
 	)
 
+	var err error
 	if strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://") {
 		u, err := url.Parse(addr)
 		if err != nil {
@@ -121,7 +121,12 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		socketAddr := strings.Split(u.Host, ":")
 		fcgiIp := socketAddr[0]
 		fcgiPort, _ := strconv.Atoi(socketAddr[1])
-		fcgi, _ = NewClient(fcgiIp, fcgiPort)
+		fcgi, err = newFcgiClient(fcgiIp, fcgiPort)
+		if len(u.Path) > 1 {
+			statusPath = strings.Trim(u.Path, "/")
+		} else {
+			statusPath = "status"
+		}
 	} else {
 		socketAddr := strings.Split(addr, ":")
 		if len(socketAddr) >= 2 {
@@ -135,8 +140,13 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		if _, err := os.Stat(socketPath); os.IsNotExist(err) {
 			return fmt.Errorf("Socket doesn't exist  '%s': %s", socketPath, err)
 		}
-		fcgi, _ = NewClient("unix", socketPath)
+		fcgi, err = newFcgiClient("unix", socketPath)
 	}
+
+	if err != nil {
+		return err
+	}
+
 	return g.gatherFcgi(fcgi, statusPath, acc)
 }
 

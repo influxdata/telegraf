@@ -18,6 +18,30 @@ as counters used when performance monitoring
  This file is likely to be updated in the future with more examples for
  useful configurations for separate scenarios.
 
+### Plugin wide
+
+Plugin wide entries are underneath `[[inputs.win_perf_counters]]`.
+
+#### PrintValid
+
+Bool, if set to `true` will print out all matching performance objects.
+
+Example:
+`PrintValid=true`
+
+#### PreVistaSupport
+
+Bool, if set to `true` will use the localized PerfCounter interface that is present before Vista for backwards compatability.
+
+It is recommended NOT to use this on OSes starting with Vista and newer because it requires more configuration to use this than the newer interface present since Vista.
+
+Example for Windows Server 2003, this would be set to true:
+`PreVistaSupport=true`
+
+### Object
+
+See Entry below.
+
 ### Entry
 A new configuration entry consists of the TOML header to start with,
 `[[inputs.win_perf_counters.object]]`.
@@ -26,14 +50,14 @@ beneath the main win_perf_counters entry, `[[inputs.win_perf_counters]]`.
 
 Following this is 3 required key/value pairs and the three optional parameters and their usage.
 
-### ObjectName
+#### ObjectName
 **Required**
 
 ObjectName is the Object to query for, like Processor, DirectoryServices, LogicalDisk or similar.
 
 Example: `ObjectName = "LogicalDisk"`
 
-### Instances
+#### Instances
 **Required**
 
 Instances (this is an array) is the instances of a counter you would like returned,
@@ -49,7 +73,7 @@ Some Objects does not have instances to select from at all,
 here only one option is valid if you want data back,
 and that is to specify `Instances = ["------"]`.
 
-### Counters
+#### Counters
 **Required**
 
 Counters (this is an array) is the counters of the ObjectName
@@ -59,7 +83,7 @@ Example: `Counters = ["% Idle Time", "% Disk Read Time", "% Disk Write Time"]`
 This must be specified for every counter you want the results of,
 it is not possible to ask for all counters in the ObjectName.
 
-### Measurement
+#### Measurement
 *Optional*
 
 This key is optional, if it is not set it will be win_perf_counters.
@@ -70,7 +94,7 @@ separate from Processor results.
 
 Example: `Measurement = "win_disk"
 
-### IncludeTotal
+#### IncludeTotal
 *Optional*
 
 This key is optional, it is a simple bool.
@@ -80,7 +104,7 @@ and you would also like all instances containg _Total returned,
 like "_Total", "0,_Total" and so on where applicable
 (Processor Information is one example).
 
-### WarnOnMissing
+#### WarnOnMissing
 *Optional*
 
 This key is optional, it is a simple bool.
@@ -89,7 +113,7 @@ This only has an effect on the first execution of the plugin,
 it will print out any ObjectName/Instance/Counter combinations
 asked for that does not match. Useful when debugging new configurations.
 
-### FailOnMissing
+#### FailOnMissing
 *Internal*
 
 This key should not be used, it is for testing purposes only.

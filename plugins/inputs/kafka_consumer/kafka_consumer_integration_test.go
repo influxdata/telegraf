@@ -9,6 +9,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 func TestReadsMetricsFromKafka(t *testing.T) {
@@ -40,18 +42,21 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 		PointBuffer:    100000,
 		Offset:         "oldest",
 	}
-	if err := k.Start(); err != nil {
+	p, _ := parsers.NewInfluxParser()
+	k.SetParser(p)
+
+	// Verify that we can now gather the sent message
+	var acc testutil.Accumulator
+
+	// Sanity check
+	assert.Equal(t, 0, len(acc.Metrics), "There should not be any points")
+	if err := k.Start(&acc); err != nil {
 		t.Fatal(err.Error())
 	} else {
 		defer k.Stop()
 	}
 
-	waitForPoint(k, t)
-
-	// Verify that we can now gather the sent message
-	var acc testutil.Accumulator
-	// Sanity check
-	assert.Equal(t, 0, len(acc.Metrics), "There should not be any points")
+	waitForPoint(&acc, t)
 
 	// Gather points
 	err = k.Gather(&acc)
@@ -73,7 +78,7 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 
 // Waits for the metric that was sent to the kafka broker to arrive at the kafka
 // consumer
-func waitForPoint(k *Kafka, t *testing.T) {
+func waitForPoint(acc *testutil.Accumulator, t *testing.T) {
 	// Give the kafka container up to 2 seconds to get the point to the consumer
 	ticker := time.NewTicker(5 * time.Millisecond)
 	counter := 0
@@ -83,7 +88,7 @@ func waitForPoint(k *Kafka, t *testing.T) {
 			counter++
 			if counter > 1000 {
 				t.Fatal("Waited for 5s, point never arrived to consumer")
-			} else if len(k.metricC) == 1 {
+			} else if acc.NFields() == 1 {
 				return
 			}
 		}

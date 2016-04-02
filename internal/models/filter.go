@@ -15,8 +15,11 @@ type TagFilter struct {
 
 // Filter containing drop/pass and tagdrop/tagpass rules
 type Filter struct {
-	Drop []string
-	Pass []string
+	NameDrop []string
+	NamePass []string
+
+	FieldDrop []string
+	FieldPass []string
 
 	TagDrop []TagFilter
 	TagPass []TagFilter
@@ -25,17 +28,17 @@ type Filter struct {
 }
 
 func (f Filter) ShouldMetricPass(metric telegraf.Metric) bool {
-	if f.ShouldPass(metric.Name()) && f.ShouldTagsPass(metric.Tags()) {
+	if f.ShouldNamePass(metric.Name()) && f.ShouldTagsPass(metric.Tags()) {
 		return true
 	}
 	return false
 }
 
-// ShouldPass returns true if the metric should pass, false if should drop
+// ShouldFieldsPass returns true if the metric should pass, false if should drop
 // based on the drop/pass filter parameters
-func (f Filter) ShouldPass(key string) bool {
-	if f.Pass != nil {
-		for _, pat := range f.Pass {
+func (f Filter) ShouldNamePass(key string) bool {
+	if f.NamePass != nil {
+		for _, pat := range f.NamePass {
 			// TODO remove HasPrefix check, leaving it for now for legacy support.
 			// Cam, 2015-12-07
 			if strings.HasPrefix(key, pat) || internal.Glob(pat, key) {
@@ -45,8 +48,36 @@ func (f Filter) ShouldPass(key string) bool {
 		return false
 	}
 
-	if f.Drop != nil {
-		for _, pat := range f.Drop {
+	if f.NameDrop != nil {
+		for _, pat := range f.NameDrop {
+			// TODO remove HasPrefix check, leaving it for now for legacy support.
+			// Cam, 2015-12-07
+			if strings.HasPrefix(key, pat) || internal.Glob(pat, key) {
+				return false
+			}
+		}
+
+		return true
+	}
+	return true
+}
+
+// ShouldFieldsPass returns true if the metric should pass, false if should drop
+// based on the drop/pass filter parameters
+func (f Filter) ShouldFieldsPass(key string) bool {
+	if f.FieldPass != nil {
+		for _, pat := range f.FieldPass {
+			// TODO remove HasPrefix check, leaving it for now for legacy support.
+			// Cam, 2015-12-07
+			if strings.HasPrefix(key, pat) || internal.Glob(pat, key) {
+				return true
+			}
+		}
+		return false
+	}
+
+	if f.FieldDrop != nil {
+		for _, pat := range f.FieldDrop {
 			// TODO remove HasPrefix check, leaving it for now for legacy support.
 			// Cam, 2015-12-07
 			if strings.HasPrefix(key, pat) || internal.Glob(pat, key) {

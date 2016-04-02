@@ -1,8 +1,11 @@
+// +build !windows
+
 package ping
 
 import (
 	"errors"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,15 +44,18 @@ func (_ *Ping) Description() string {
 }
 
 var sampleConfig = `
-  # urls to ping
+  ## NOTE: this plugin forks the ping command. You may need to set capabilities
+  ## via setcap cap_net_raw+p /bin/ping
+
+  ## urls to ping
   urls = ["www.google.com"] # required
-  # number of pings to send (ping -c <COUNT>)
+  ## number of pings to send (ping -c <COUNT>)
   count = 1 # required
-  # interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
+  ## interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
   ping_interval = 0.0
-  # ping timeout, in s. 0 == no timeout (ping -t <TIMEOUT>)
+  ## ping timeout, in s. 0 == no timeout (ping -t <TIMEOUT>)
   timeout = 0.0
-  # interface to send ping from (ping -I <INTERFACE>)
+  ## interface to send ping from (ping -I <INTERFACE>)
   interface = ""
 `
 
@@ -111,7 +117,11 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 }
 
 func hostPinger(args ...string) (string, error) {
-	c := exec.Command("ping", args...)
+	bin, err := exec.LookPath("ping")
+	if err != nil {
+		return "", err
+	}
+	c := exec.Command(bin, args...)
 	out, err := c.CombinedOutput()
 	return string(out), err
 }
@@ -119,12 +129,20 @@ func hostPinger(args ...string) (string, error) {
 // args returns the arguments for the 'ping' executable
 func (p *Ping) args(url string) []string {
 	// Build the ping command args based on toml config
-	args := []string{"-c", strconv.Itoa(p.Count)}
+	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
 	if p.PingInterval > 0 {
 		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', 1, 64))
 	}
 	if p.Timeout > 0 {
-		args = append(args, "-t", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+		switch runtime.GOOS {
+		case "darwin", "freebsd":
+			args = append(args, "-t", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+		case "linux":
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+		default:
+			// Not sure the best option here, just assume GNU ping?
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+		}
 	}
 	if p.Interface != "" {
 		args = append(args, "-I", p.Interface)

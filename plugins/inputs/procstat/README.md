@@ -7,7 +7,8 @@ individual process using their /proc data.
 
 The plugin will tag processes by their PID and their process name.
 
-Processes can be specified either by pid file or by executable name. Procstat
+Processes can be specified either by pid file, by executable name, by command
+line pattern matching, or by username (in this order or priority. Procstat
 plugin will use `pgrep` when executable name is provided to obtain the pid.
 Proctstas plugin will transmit IO, memory, cpu, file descriptor related
 measurements for every process specified. A prefix can be set to isolate
@@ -33,6 +34,10 @@ The above configuration would result in output like:
 
 # Measurements
 Note: prefix can be set by the user, per process.
+
+
+Threads related measurement names:
+- procstat_[prefix_]num_threads value=5
 
 File descriptor related measurement names:
 - procstat_[prefix_]num_fds value=4

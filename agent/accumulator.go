@@ -43,6 +43,11 @@ func (ac *accumulator) Add(
 ) {
 	fields := make(map[string]interface{})
 	fields["value"] = value
+
+	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
+		return
+	}
+
 	ac.AddFields(measurement, fields, tags, t...)
 }
 
@@ -53,6 +58,10 @@ func (ac *accumulator) AddFields(
 	t ...time.Time,
 ) {
 	if len(fields) == 0 || len(measurement) == 0 {
+		return
+	}
+
+	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
 		return
 	}
 
@@ -92,11 +101,10 @@ func (ac *accumulator) AddFields(
 	for k, v := range fields {
 		// Filter out any filtered fields
 		if ac.inputConfig != nil {
-			if !ac.inputConfig.Filter.ShouldPass(k) {
+			if !ac.inputConfig.Filter.ShouldFieldsPass(k) {
 				continue
 			}
 		}
-		result[k] = v
 
 		// Validate uint64 and float64 fields
 		switch val := v.(type) {
@@ -107,6 +115,7 @@ func (ac *accumulator) AddFields(
 			} else {
 				result[k] = int64(9223372036854775807)
 			}
+			continue
 		case float64:
 			// NaNs are invalid values in influxdb, skip measurement
 			if math.IsNaN(val) || math.IsInf(val, 0) {
@@ -118,6 +127,8 @@ func (ac *accumulator) AddFields(
 				continue
 			}
 		}
+
+		result[k] = v
 	}
 	fields = nil
 	if len(result) == 0 {
@@ -159,5 +170,8 @@ func (ac *accumulator) setDefaultTags(tags map[string]string) {
 }
 
 func (ac *accumulator) addDefaultTag(key, value string) {
+	if ac.defaultTags == nil {
+		ac.defaultTags = make(map[string]string)
+	}
 	ac.defaultTags[key] = value
 }
