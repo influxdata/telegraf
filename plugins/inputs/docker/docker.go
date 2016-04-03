@@ -395,14 +395,12 @@ func gatherBlockIOMetrics(
 
 	for _, metric := range blkioStats.IoTimeRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
-		field := fmt.Sprintf("io_time_recursive_%s", strings.ToLower(metric.Op))
-		deviceStatMap[device][field] = metric.Value
+		deviceStatMap[device]["io_time_recursive"] = metric.Value
 	}
 
 	for _, metric := range blkioStats.SectorsRecursive {
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
-		field := fmt.Sprintf("sectors_recursive_%s", strings.ToLower(metric.Op))
-		deviceStatMap[device][field] = metric.Value
+		deviceStatMap[device]["sectors_recursive"] = metric.Value
 	}
 
 	for device, fields := range deviceStatMap {
