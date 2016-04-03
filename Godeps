@@ -9,10 +9,12 @@ github.com/couchbase/gomemcached a5ea6356f648fec6ab89add00edd09151455b4b2
 github.com/couchbase/goutils 5823a0cbaaa9008406021dc5daf80125ea30bba6
 github.com/dancannon/gorethink e7cac92ea2bc52638791a021f212145acfedb1fc
 github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+github.com/docker/engine-api 8924d6900370b4c7e7984be5adc61f50a80d7537
+github.com/docker/go-connections f549a9393d05688dff0992ef3efd8bbe6c628aeb
+github.com/docker/go-units 5d2041e26a699eaca682e2ea41c8f891e1060444
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
 github.com/eclipse/paho.mqtt.golang 4ab3e867810d1ec5f35157c59e965054dbf43a0d
-github.com/fsouza/go-dockerclient a49c8269a6899cae30da1f8a4b82e0ce945f9967
 github.com/go-sql-driver/mysql 1fca743146605a172a266e1654e01e5cd5669bee
 github.com/golang/protobuf 552c7b9542c194800fd493123b3798ef0a832032
 github.com/golang/snappy 427fb6fc07997f43afa32f35e850833760e489a7
