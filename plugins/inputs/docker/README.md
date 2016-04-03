@@ -7,7 +7,7 @@ docker containers. You can read Docker's documentation for their remote API
 The docker plugin uses the excellent
 [docker engine-api](https://github.com/docker/engine-api) library to
 gather stats. Documentation for the library can be found
-[here](https://godoc.org/github.com/fsouza/go-dockerclient) and documentation
+[here](https://godoc.org/github.com/docker/engine-api) and documentation
 for the stat structure can be found
 [here](https://godoc.org/github.com/docker/engine-api/types#Stats)
 
