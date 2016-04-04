@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.11.1-1_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.11.1-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.12.0-1_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.12.0-1.x86_64.rpm
 
 Latest (arm):
-* http://get.influxdb.org/telegraf/telegraf_0.11.1-1_armhf.deb
-* http://get.influxdb.org/telegraf/telegraf-0.11.1-1.armhf.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.12.0-1_armhf.deb
+* http://get.influxdb.org/telegraf/telegraf-0.12.0-1.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,28 +46,28 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_amd64.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_i386.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_linux_armhf.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_linux_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_linux_i386.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_linux_armhf.tar.gz
 
 ##### tarball Instructions:
 
 To install the full directory structure with config file, run:
 
 ```
-sudo tar -C / -zxvf ./telegraf-0.11.1-1_linux_amd64.tar.gz
+sudo tar -C / -zxvf ./telegraf-0.12.0-1_linux_amd64.tar.gz
 ```
 
 To extract only the binary, run:
 
 ```
-tar -zxvf telegraf-0.11.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
+tar -zxvf telegraf-0.12.0-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
 ```
 
 ### FreeBSD tarball:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_freebsd_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_freebsd_amd64.tar.gz
 
 ##### tarball Instructions:
 
@@ -87,8 +87,8 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_windows_amd64.zip
-* http://get.influxdb.org/telegraf/telegraf-0.11.1-1_windows_i386.zip
+* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_windows_amd64.zip
+* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_windows_i386.zip
 
 ### From Source:
 
@@ -156,55 +156,55 @@ more information on each, please look at the directory of the same name in
 
 Currently implemented sources:
 
-* [aerospike](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/aerospike) 
-* [apache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/apache) 
-* [bcache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/bcache) 
-* [couchbase](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchbase) 
-* [couchdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchdb) 
-* [disque](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disque) 
-* [dns query time](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/dns_query) 
-* [docker](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/docker) 
-* [dovecot](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/dovecot) 
-* [elasticsearch](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/elasticsearch) 
+* [aerospike](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/aerospike)
+* [apache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/apache)
+* [bcache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/bcache)
+* [couchbase](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchbase)
+* [couchdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchdb)
+* [disque](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disque)
+* [dns query time](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/dns_query)
+* [docker](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/docker)
+* [dovecot](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/dovecot)
+* [elasticsearch](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/elasticsearch)
 * [exec](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec ) (generic executable plugin, support JSON, influx, graphite and nagios)
-* [haproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/haproxy) 
+* [haproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/haproxy)
 * [httpjson ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/httpjson ) (generic JSON-emitting http service plugin)
-* [influxdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/influxdb) 
-* [ipmi_sensor](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ipmi_sensor) 
-* [jolokia](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia) 
-* [leofs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/leofs) 
-* [lustre2](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/lustre2) 
-* [mailchimp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mailchimp) 
-* [memcached](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/memcached) 
-* [mesos](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mesos) 
-* [mongodb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mongodb) 
-* [mysql](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mysql) 
-* [net_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/net_response) 
-* [nginx](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nginx) 
-* [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq) 
-* [ntpq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ntpq) 
-* [phpfpm](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/phpfpm) 
-* [phusion passenger](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/passenger) 
-* [ping](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ping) 
-* [postgresql](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/postgresql) 
-* [postgresql_extensible](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/postgresql_extensible) 
-* [powerdns](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/powerdns) 
-* [procstat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/procstat) 
-* [prometheus](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/prometheus) 
-* [puppetagent](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/puppetagent) 
-* [rabbitmq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rabbitmq) 
-* [raindrops](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/raindrops) 
-* [redis](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/redis) 
-* [rethinkdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rethinkdb) 
-* [riak](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/riak) 
+* [influxdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/influxdb)
+* [ipmi_sensor](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ipmi_sensor)
+* [jolokia](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia)
+* [leofs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/leofs)
+* [lustre2](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/lustre2)
+* [mailchimp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mailchimp)
+* [memcached](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/memcached)
+* [mesos](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mesos)
+* [mongodb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mongodb)
+* [mysql](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mysql)
+* [net_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/net_response)
+* [nginx](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nginx)
+* [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq)
+* [ntpq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ntpq)
+* [phpfpm](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/phpfpm)
+* [phusion passenger](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/passenger)
+* [ping](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ping)
+* [postgresql](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/postgresql)
+* [postgresql_extensible](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/postgresql_extensible)
+* [powerdns](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/powerdns)
+* [procstat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/procstat)
+* [prometheus](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/prometheus)
+* [puppetagent](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/puppetagent)
+* [rabbitmq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rabbitmq)
+* [raindrops](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/raindrops)
+* [redis](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/redis)
+* [rethinkdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rethinkdb)
+* [riak](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/riak)
 * [sensors ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sensors) (only available if built from source)
-* [snmp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp) 
+* [snmp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
 * [sql server](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sqlserver) (microsoft)
-* [twemproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/twemproxy) 
-* [zfs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zfs) 
-* [zookeeper](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zookeeper) 
+* [twemproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/twemproxy)
+* [zfs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zfs)
+* [zookeeper](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zookeeper)
 * [win_perf_counters ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/win_perf_counters) (windows performance counters)
-* [system](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system) 
+* [system](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
     * cpu
     * mem
     * net
