@@ -103,7 +103,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 				dialAddrs[0], err.Error())
 		}
 		dialInfo.Direct = true
-		dialInfo.Timeout = time.Duration(10) * time.Second
+		dialInfo.Timeout = 5 * time.Second
 
 		if m.Ssl.Enabled {
 			tlsConfig := &tls.Config{}
