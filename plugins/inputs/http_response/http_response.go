@@ -40,12 +40,12 @@ var sampleConfig = `
   headers = '''
   Host: github.com
   '''
-	## Whether to follow redirects from the server (defaults to false)
-	follow_redirects = true
-	## Optional HTTP Request Body
-	body = '''
-	{'fake':'data'}
-	'''
+  ## Whether to follow redirects from the server (defaults to false)
+  follow_redirects = true
+  ## Optional HTTP Request Body
+  body = '''
+  {'fake':'data'}
+  '''
 `
 
 // SampleConfig returns the plugin SampleConfig
@@ -56,20 +56,40 @@ func (h *HTTPResponse) SampleConfig() string {
 // ErrRedirectAttempted indicates that a redirect occurred
 var ErrRedirectAttempted = errors.New("redirect")
 
+// CreateHttpClient creates an http client which will timeout at the specified
+// timeout period and can follow redirects if specified
+func CreateHttpClient(followRedirects bool, ResponseTimeout time.Duration) *http.Client {
+	client := &http.Client{
+		Timeout: time.Second * ResponseTimeout,
+	}
+
+	if followRedirects == false {
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return ErrRedirectAttempted
+		}
+	}
+	return client
+}
+
+// ParseHeaders takes a string of newline seperated http headers and returns a
+// http.Header object. An error is returned if the headers cannot be parsed.
+func ParseHeaders(headers string) (http.Header, error) {
+	headers = strings.TrimSpace(headers) + "\n\n"
+	reader := bufio.NewReader(strings.NewReader(headers))
+	tp := textproto.NewReader(reader)
+	mimeHeader, err := tp.ReadMIMEHeader()
+	if err != nil {
+		return nil, err
+	}
+	return http.Header(mimeHeader), nil
+}
+
 // HTTPGather gathers all fields and returns any errors it encounters
 func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	// Prepare fields
 	fields := make(map[string]interface{})
 
-	client := &http.Client{
-		Timeout: time.Second * time.Duration(h.ResponseTimeout),
-	}
-
-	if h.FollowRedirects == false {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return ErrRedirectAttempted
-		}
-	}
+	client := CreateHttpClient(h.FollowRedirects, time.Duration(h.ResponseTimeout))
 
 	var body io.Reader
 	if h.Body != "" {
@@ -79,14 +99,10 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	h.Headers = strings.TrimSpace(h.Headers) + "\n\n"
-	reader := bufio.NewReader(strings.NewReader(h.Headers))
-	tp := textproto.NewReader(reader)
-	mimeHeader, err := tp.ReadMIMEHeader()
+	request.Header, err = ParseHeaders(h.Headers)
 	if err != nil {
 		return nil, err
 	}
-	request.Header = http.Header(mimeHeader)
 	// Start Timer
 	start := time.Now()
 	resp, err := client.Do(request)
