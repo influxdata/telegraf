@@ -43,6 +43,8 @@ var sampleConfig = `
 
   ## Field name prefix
   prefix = ""
+  ## comment this out if you want raw cpu_time stats
+  fielddrop = ["cpu_time_*"]
 `
 
 func (_ *Procstat) SampleConfig() string {
