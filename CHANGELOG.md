@@ -1,4 +1,4 @@
-## v0.12.0 [unreleased]
+## v0.12.0 [2016-04-05]
 
 ### Features
 - [#951](https://github.com/influxdata/telegraf/pull/951): Parse environment variables in the config file.
