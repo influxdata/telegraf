@@ -149,8 +149,6 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 		map[string]string{"unit": "bytes"},
 		now)
 	// Get storage metrics
-	//driverStatusRaw := []byte(info.DriverStatus)
-	//json.Unmarshal(driverStatusRaw, &driverStatus)
 	for _, rawData := range info.DriverStatus {
 		// Try to convert string to int (bytes)
 		value, err := parseSize(rawData[1])
