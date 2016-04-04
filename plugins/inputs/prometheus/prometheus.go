@@ -80,10 +80,10 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 
 	var rt http.RoundTripper = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout:   10 * time.Second,
+			Timeout:   8 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
+		TLSHandshakeTimeout: 8 * time.Second,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: p.InsecureSkipVerify,
 		},
