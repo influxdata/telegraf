@@ -2,6 +2,7 @@
 
 ### Features
 - [#976](https://github.com/influxdata/telegraf/pull/976): Reduce allocations in the UDP and statsd inputs.
+- [#979](https://github.com/influxdata/telegraf/pull/979): Reduce allocations in the TCP listener.
 
 ### Bugfixes
 - [#968](https://github.com/influxdata/telegraf/issues/968): Processes plugin gets unknown state when spaces are in (command name)
