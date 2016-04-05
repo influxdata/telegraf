@@ -18,7 +18,9 @@ import (
 )
 
 const (
-	UDP_PACKET_SIZE int = 1500
+	// UDP packet limit, see
+	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
+	UDP_PACKET_SIZE int = 65507
 
 	defaultFieldName = "value"
 
@@ -157,10 +159,6 @@ const sampleConfig = `
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
-
-  ## UDP packet size for the server to listen for. This will depend on the size
-  ## of the packets that the client is sending, which is usually 1500 bytes.
-  udp_packet_size = 1500
 `
 
 func (_ *Statsd) SampleConfig() string {
@@ -274,12 +272,12 @@ func (s *Statsd) udpListen() error {
 	}
 	log.Println("Statsd listener listening on: ", s.listener.LocalAddr().String())
 
+	buf := make([]byte, s.UDPPacketSize)
 	for {
 		select {
 		case <-s.done:
 			return nil
 		default:
-			buf := make([]byte, s.UDPPacketSize)
 			n, _, err := s.listener.ReadFromUDP(buf)
 			if err != nil && !strings.Contains(err.Error(), "closed network") {
 				log.Printf("ERROR READ: %s\n", err.Error())
@@ -300,11 +298,12 @@ func (s *Statsd) udpListen() error {
 // single statsd metric into a struct.
 func (s *Statsd) parser() error {
 	defer s.wg.Done()
+	var packet []byte
 	for {
 		select {
 		case <-s.done:
 			return nil
-		case packet := <-s.in:
+		case packet = <-s.in:
 			lines := strings.Split(string(packet), "\n")
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
@@ -631,8 +630,8 @@ func (s *Statsd) Stop() {
 func init() {
 	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
-			ConvertNames:  true,
-			UDPPacketSize: UDP_PACKET_SIZE,
+			MetricSeparator: "_",
+			UDPPacketSize:   UDP_PACKET_SIZE,
 		}
 	})
 }
