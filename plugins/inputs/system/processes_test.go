@@ -82,6 +82,28 @@ func TestFromProcFiles(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "processes", fields, map[string]string{})
 }
 
+func TestFromProcFilesWithSpaceInCmd(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("This test only runs on linux")
+	}
+	tester := tester{}
+	processes := &Processes{
+		readProcFile: tester.testProcFile2,
+		forceProc:    true,
+	}
+
+	var acc testutil.Accumulator
+	err := processes.Gather(&acc)
+	require.NoError(t, err)
+
+	fields := getEmptyFields()
+	fields["sleeping"] = tester.calls
+	fields["total_threads"] = tester.calls * 2
+	fields["total"] = tester.calls
+
+	acc.AssertContainsTaggedFields(t, "processes", fields, map[string]string{})
+}
+
 func testExecPS() ([]byte, error) {
 	return []byte(testPSOut), nil
 }
@@ -94,6 +116,11 @@ type tester struct {
 func (t *tester) testProcFile(_ string) ([]byte, error) {
 	t.calls++
 	return []byte(fmt.Sprintf(testProcStat, "S", "2")), nil
+}
+
+func (t *tester) testProcFile2(_ string) ([]byte, error) {
+	t.calls++
+	return []byte(fmt.Sprintf(testProcStat2, "S", "2")), nil
 }
 
 func testExecPSError() ([]byte, error) {
@@ -148,4 +175,7 @@ S+
 `
 
 const testProcStat = `10 (rcuob/0) %s 2 0 0 0 -1 2129984 0 0 0 0 0 0 0 0 20 0 %s 0 11 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+`
+
+const testProcStat2 = `10 (rcuob 0) %s 2 0 0 0 -1 2129984 0 0 0 0 0 0 0 0 20 0 %s 0 11 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 `
