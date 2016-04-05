@@ -20,6 +20,11 @@ for the stat structure can be found
   #   To use TCP, set endpoint = "tcp://[ip]:[port]"
   #   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
+  # To collect metrics from a TLS-enabled daemon
+  # tls_enabled = true
+  # tls_ca = "~/certificates_path/ca.pem"
+  # tls_cert = "~/certificates_path/cert.pem"
+  # tls_key = "~/certificates_path/key.pem"
   # Only collect metrics for these containers, collect all if empty
   container_names = []
 ```
