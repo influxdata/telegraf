@@ -128,7 +128,6 @@ In this example a script called /tmp/test.sh and a script called /tmp/test2.sh a
   commands = ["/tmp/test.sh","/tmp/test2.sh"]
 
   # Data format to consume.
- (line-protocol)
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
   data_format = "graphite"
 
