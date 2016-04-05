@@ -303,7 +303,6 @@ There are many more options available,
   name_suffix = "_mycollector"
 
   ## Data format to consume.
- (line-protocol)
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md

@@ -16,7 +16,6 @@ are configured for ```[[inputs.exec]]``` in JSON format.
   commands = ["/tmp/test.sh", "/tmp/test2.sh"]
 
   # Data format to consume.
- (line-protocol)
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
   data_format = "json"
 
