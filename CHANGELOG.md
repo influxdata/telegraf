@@ -1,3 +1,10 @@
+## v0.12.1 [unreleased]
+
+### Features
+
+### Bugfixes
+- [#968](https://github.com/influxdata/telegraf/issues/968): Processes plugin gets unknown state when spaces are in (command name)
+
 ## v0.12.0 [2016-04-05]
 
 ### Features
