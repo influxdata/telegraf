@@ -60,6 +60,60 @@ func TestParseValidValues(t *testing.T) {
 	assert.Equal(t, map[string]string{}, metrics[0].Tags())
 }
 
+func TestParseAutoValues(t *testing.T) {
+	parser := ValueParser{
+		MetricName: "value_test",
+		DataType:   "auto",
+	}
+	metrics, err := parser.Parse([]byte("55"))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "value_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"value": int64(55),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+
+	parser = ValueParser{
+		MetricName: "value_test",
+		DataType:   "auto",
+	}
+	metrics, err = parser.Parse([]byte("64.1"))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "value_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"value": float64(64.1),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+
+	parser = ValueParser{
+		MetricName: "value_test",
+		DataType:   "auto",
+	}
+	metrics, err = parser.Parse([]byte("foobar"))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "value_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"value": "foobar",
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+
+	parser = ValueParser{
+		MetricName: "value_test",
+		DataType:   "auto",
+	}
+	metrics, err = parser.Parse([]byte("true"))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "value_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"value": true,
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+}
+
 func TestParseMultipleValues(t *testing.T) {
 	parser := ValueParser{
 		MetricName: "value_test",

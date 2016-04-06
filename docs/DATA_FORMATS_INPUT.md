@@ -150,8 +150,14 @@ as the parsed metric.
 
 #### Value Configuration:
 
-You **must** tell Telegraf what type of metric to collect by using the
-`data_type` configuration option.
+You **should** tell Telegraf what type of metric to collect by using the
+`data_type` configuration option. The options are:
+
+1. integer
+1. float
+1. string
+1. boolean
+1. auto (this will try parsing into the above types, in order)
 
 **Note:** It is also recommended that you set `name_override` to a measurement
 name that makes sense for your metric, otherwise it will just be set to the
@@ -170,7 +176,7 @@ name of the plugin.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "value"
-  data_type = "integer" # required
+  data_type = "integer"
 ```
 
 # Graphite:
