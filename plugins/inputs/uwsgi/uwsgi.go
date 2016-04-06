@@ -2,24 +2,19 @@ package uwsgi
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"net/http"
+	"net"
+	"net/url"
 	"strconv"
 	"time"
 )
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
-}
+var timeout = 5 * time.Second
 
 type Uwsgi struct {
-	URLs []string `toml:"urls"`
+	Servers []string `toml:"server"`
 }
 
 func (u *Uwsgi) Description() string {
@@ -28,39 +23,48 @@ func (u *Uwsgi) Description() string {
 
 func (u *Uwsgi) SampleConfig() string {
 	return `
-    ### List with urls of uWSGI Stats servers
-    urls = []
+    ## List with urls of uWSGI Stats servers. Url must match pattern:
+    ## scheme://address[:port]
+    ##
+    ## For example:
+    ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
+    servers = []
 `
 }
 
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
-	for _, url := range u.URLs {
-		err := u.gatherURL(acc, url)
+	for _, s := range u.Servers {
+		n, err := url.Parse(s)
 		if err != nil {
-			return err
+			return fmt.Errorf("Could not parse uWSGI Stats Server url '%s': %s", s, err)
 		}
+
+		u.gatherServer(acc, n)
 
 	}
 	return nil
 }
 
-func (u *Uwsgi) gatherURL(acc telegraf.Accumulator, url string) error {
-	resp, err := client.Get(url)
+func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
+	var err error
+	var conn net.Conn
+
+	if url.Scheme == "unix" {
+		conn, err = net.DialTimeout(url.Scheme, url.Path, timeout)
+	} else {
+		conn, err = net.DialTimeout(url.Scheme, url.Host, timeout)
+	}
 
 	if err != nil {
-		return err
+		return fmt.Errorf("Could not connect to uWSGI Stats Server '%s': %s", url.String(), err)
 	}
-	defer resp.Body.Close()
+	defer conn.Close()
 
 	var s StatsServer
-	s.Url = url
+	s.Url = url.String()
 
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(conn)
 	dec.Decode(&s)
-
-	if err != nil {
-		return err
-	}
 
 	u.gatherStatServer(acc, &s)
 	u.gatherWorkers(acc, &s)

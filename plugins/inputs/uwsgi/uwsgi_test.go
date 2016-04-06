@@ -118,7 +118,7 @@ func TestBasic(t *testing.T) {
 	defer fakeServer.Close()
 
 	plugin := &uwsgi.Uwsgi{
-		URLs: []string{fakeServer.URL + "/"},
+		Servers: []string{fakeServer.URL + "/"},
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
