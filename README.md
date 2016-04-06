@@ -156,6 +156,7 @@ more information on each, please look at the directory of the same name in
 
 Currently implemented sources:
 
+* [aws cloudwatch](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cloudwatch)
 * [aerospike](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/aerospike)
 * [apache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/apache)
 * [bcache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/bcache)
