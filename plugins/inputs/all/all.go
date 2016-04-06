@@ -72,6 +72,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/udp_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/varnish"
 	_ "github.com/influxdata/telegraf/plugins/inputs/webhooks"
+	_ "github.com/influxdata/telegraf/plugins/inputs/uwsgi"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
