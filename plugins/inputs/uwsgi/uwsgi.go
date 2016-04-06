@@ -62,9 +62,32 @@ func (u *Uwsgi) gatherURL(acc telegraf.Accumulator, url string) error {
 		return err
 	}
 
+	u.gatherStatServer(acc, &s)
 	u.gatherWorkers(acc, &s)
 
 	return nil
+}
+
+func (u *Uwsgi) gatherStatServer(acc telegraf.Accumulator, s *StatsServer) error {
+	fields := map[string]interface{}{
+		"listen_queue":        s.ListenQueue,
+		"listen_queue_errors": s.ListenQueueErrors,
+		"signal_queue":        s.SignalQueue,
+		"load":                s.Load,
+	}
+
+	tags := map[string]string{
+		"url":     s.Url,
+		"pid":     strconv.Itoa(s.Pid),
+		"uid":     strconv.Itoa(s.Uid),
+		"gid":     strconv.Itoa(s.Gid),
+		"version": s.Version,
+		"cwd":     s.Cwd,
+	}
+	acc.AddFields("uwsgi_overview", fields, tags)
+
+	return nil
+
 }
 
 func (u *Uwsgi) gatherWorkers(acc telegraf.Accumulator, s *StatsServer) error {
@@ -77,13 +100,13 @@ func (u *Uwsgi) gatherWorkers(acc telegraf.Accumulator, s *StatsServer) error {
 			"signals":        w.Signals,
 			"signal_queue":   w.SignalQueue,
 			"status":         w.Status,
-			"rss":            w.RSS,
-			"vsz":            w.VSZ,
+			"rss":            w.Rss,
+			"vsz":            w.Vsz,
 			"running_time":   w.RunningTime,
 			"last_spawn":     w.LastSpawn,
 			"respawn_count":  w.RespawnCount,
-			"tx":             w.TX,
-			"avg_rt":         w.AvgRT,
+			"tx":             w.Tx,
+			"avg_rt":         w.AvgRt,
 		}
 		tags := map[string]string{
 			"id":  strconv.Itoa(w.Id),
