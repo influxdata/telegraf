@@ -144,11 +144,18 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 			continue
 		}
 
+		// Parse out data after (<cmd name>)
+		i := bytes.LastIndex(data, []byte(")"))
+		if i == -1 {
+			continue
+		}
+		data = data[i+2:]
+
 		stats := bytes.Fields(data)
 		if len(stats) < 3 {
 			return fmt.Errorf("Something is terribly wrong with %s", statFile)
 		}
-		switch stats[2][0] {
+		switch stats[0][0] {
 		case 'R':
 			fields["running"] = fields["running"].(int64) + int64(1)
 		case 'S':
@@ -163,11 +170,11 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 			fields["paging"] = fields["paging"].(int64) + int64(1)
 		default:
 			log.Printf("processes: Unknown state [ %s ] in file %s",
-				string(stats[2][0]), statFile)
+				string(stats[0][0]), statFile)
 		}
 		fields["total"] = fields["total"].(int64) + int64(1)
 
-		threads, err := strconv.Atoi(string(stats[19]))
+		threads, err := strconv.Atoi(string(stats[17]))
 		if err != nil {
 			log.Printf("processes: Error parsing thread count: %s", err)
 			continue

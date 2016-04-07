@@ -2,10 +2,11 @@
 
 Telegraf is able to parse the following input data formats into metrics:
 
-1. InfluxDB Line Protocol
-1. JSON
-1. Graphite
-1. Value, ie 45 or "booyah"
+1. [InfluxDB Line Protocol](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx)
+1. [JSON](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#json)
+1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
+1. [Value](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#value), ie: 45 or "booyah"
+1. [Nagios](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#nagios) (exec input only)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -38,7 +39,7 @@ example, in the exec plugin:
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -50,7 +51,7 @@ example, in the exec plugin:
 Each data_format has an additional set of configuration options available, which
 I'll go over below.
 
-## Influx:
+# Influx:
 
 There are no additional configuration options for InfluxDB line-protocol. The
 metrics are parsed directly into Telegraf metrics.
@@ -65,14 +66,14 @@ metrics are parsed directly into Telegraf metrics.
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
 
-## JSON:
+# JSON:
 
 The JSON data format flattens JSON into metric _fields_. For example, this JSON:
 
@@ -110,7 +111,7 @@ For example, if you had this configuration:
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -141,21 +142,20 @@ Your Telegraf metrics would get tagged with "my_tag_1"
 exec_mycollector,my_tag_1=foo a=5,b_c=6
 ```
 
-## Value:
+# Value:
 
 The "value" data format translates single values into Telegraf metrics. This
-is done by assigning a measurement name (which can be overridden using the
-`name_override` config option), and setting a single field ("value") as the
-parsed metric.
+is done by assigning a measurement name and setting a single field ("value")
+as the parsed metric.
 
 #### Value Configuration:
 
-You can tell Telegraf what type of metric to collect by using the `data_type`
-configuration option.
+You **must** tell Telegraf what type of metric to collect by using the
+`data_type` configuration option.
 
-It is also recommended that you set `name_override` to a measurement name that
-makes sense for your metric, otherwise it will just be set to the name of the
-plugin.
+**Note:** It is also recommended that you set `name_override` to a measurement
+name that makes sense for your metric, otherwise it will just be set to the
+name of the plugin.
 
 ```toml
 [[inputs.exec]]
@@ -165,15 +165,15 @@ plugin.
   ## override the default metric name of "exec"
   name_override = "entropy_available"
 
-  ## Data format to consume. This can be "json", "value", influx" or "graphite"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "value"
-  data_type = "integer"
+  data_type = "integer" # required
 ```
 
-## Graphite:
+# Graphite:
 
 The Graphite data format translates graphite _dot_ buckets directly into
 telegraf measurement names, with a single value field, and without any tags. For
@@ -301,7 +301,7 @@ There are many more options available,
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ## Data format to consume. This can be "json", "influx" or "graphite" (line-protocol)
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -327,7 +327,7 @@ There are many more options available,
   ]
 ```
 
-## Nagios:
+# Nagios:
 
 There are no additional configuration options for Nagios line-protocol. The
 metrics are parsed directly into Telegraf metrics.
@@ -344,7 +344,7 @@ Note: Nagios Input Data Formats is only supported in `exec` input plugin.
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
-  ## Data format to consume. This can be "json", "influx", "graphite" or "nagios"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md

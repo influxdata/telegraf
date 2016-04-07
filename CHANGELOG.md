@@ -1,4 +1,19 @@
-## v0.12.0 [unreleased]
+## v0.12.1 [unreleased]
+
+### Features
+- [#976](https://github.com/influxdata/telegraf/pull/976): Reduce allocations in the UDP and statsd inputs.
+- [#979](https://github.com/influxdata/telegraf/pull/979): Reduce allocations in the TCP listener.
+- [#935](https://github.com/influxdata/telegraf/pull/935): AWS Cloudwatch input plugin. Thanks @joshhardy & @ljosa!
+- [#943](https://github.com/influxdata/telegraf/pull/943): http_response input plugin. Thanks @Lswith!
+- [#939](https://github.com/influxdata/telegraf/pull/939): sysstat input plugin. Thanks @zbindenren!
+
+### Bugfixes
+- [#968](https://github.com/influxdata/telegraf/issues/968): Processes plugin gets unknown state when spaces are in (command name)
+- [#969](https://github.com/influxdata/telegraf/pull/969): ipmi_sensors: allow : in password. Thanks @awaw!
+- [#972](https://github.com/influxdata/telegraf/pull/972): dovecot: remove extra newline in dovecot command. Thanks @mrannanj!
+- [#645](https://github.com/influxdata/telegraf/issues/645): docker plugin i/o error on closed pipe. Thanks @tripledes!
+
+## v0.12.0 [2016-04-05]
 
 ### Features
 - [#951](https://github.com/influxdata/telegraf/pull/951): Parse environment variables in the config file.
@@ -28,6 +43,8 @@
 - [#841](https://github.com/influxdata/telegraf/issues/841): Fix memcached unix socket panic.
 - [#873](https://github.com/influxdata/telegraf/issues/873): Fix SNMP plugin sometimes not returning metrics. Thanks @titiliambert!
 - [#934](https://github.com/influxdata/telegraf/pull/934): phpfpm: Fix fcgi uri path. Thanks @rudenkovk!
+- [#805](https://github.com/influxdata/telegraf/issues/805): Kafka consumer stops gathering after i/o timeout.
+- [#959](https://github.com/influxdata/telegraf/pull/959): reduce mongodb & prometheus collection timeouts. Thanks @PierreF!
 
 ## v0.11.1 [2016-03-17]
 

@@ -39,7 +39,7 @@ type TcpListener struct {
 	acc    telegraf.Accumulator
 }
 
-var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
+var dropwarn = "ERROR: Message queue full. Discarding metric. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
 const sampleConfig = `
@@ -202,11 +202,10 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 			if !scanner.Scan() {
 				return
 			}
-			buf := scanner.Bytes()
 			select {
-			case t.in <- buf:
+			case t.in <- scanner.Bytes():
 			default:
-				log.Printf(dropwarn, string(buf))
+				log.Printf(dropwarn)
 			}
 		}
 	}
@@ -215,11 +214,12 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 // tcpParser parses the incoming tcp byte packets
 func (t *TcpListener) tcpParser() error {
 	defer t.wg.Done()
+	var packet []byte
 	for {
 		select {
 		case <-t.done:
 			return nil
-		case packet := <-t.in:
+		case packet = <-t.in:
 			if len(packet) == 0 {
 				continue
 			}

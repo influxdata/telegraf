@@ -85,7 +85,7 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, doms map[s
 	// Extend connection
 	c.SetDeadline(time.Now().Add(defaultTimeout))
 
-	c.Write([]byte("EXPORT\tdomain\n\n"))
+	c.Write([]byte("EXPORT\tdomain\n"))
 	var buf bytes.Buffer
 	io.Copy(&buf, c)
 	//	buf := bufio.NewReader(c)

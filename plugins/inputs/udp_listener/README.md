@@ -23,7 +23,8 @@ This is a sample configuration for the plugin.
   ## usually 1500 bytes.
   udp_packet_size = 1500
 
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume. 
+
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
