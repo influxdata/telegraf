@@ -317,6 +317,8 @@ func escape(dirty string) string {
 
 func init() {
 	inputs.Add("sysstat", func() telegraf.Input {
-		return &Sysstat{}
+		return &Sysstat{
+			Group: true,
+		}
 	})
 }
