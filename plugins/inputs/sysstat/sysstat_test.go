@@ -15,6 +15,7 @@ import (
 var s = Sysstat{
 	interval:   10,
 	Sadc:       "/usr/lib/sa/sadc",
+	Sadf:       "/usr/bin/sadf",
 	Group:      false,
 	Activities: []string{"DISK", "SNMP"},
 	Options: map[string]string{
