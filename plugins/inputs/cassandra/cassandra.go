@@ -13,16 +13,12 @@ import (
 	"strings"
 )
 
-type Server struct {
+/*type Server struct {
 	Host     string
 	Username string
 	Password string
 	Port     string
-}
-
-type Metric struct {
-	Jmx string
-}
+}*/
 
 type JolokiaClient interface {
 	MakeRequest(req *http.Request) (*http.Response, error)
@@ -39,19 +35,19 @@ func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error
 type Cassandra struct {
 	jClient JolokiaClient
 	Context string
-	Servers []Server
-	Metrics []Metric
+	Servers []string
+	Metrics []string
 }
 
 type javaMetric struct {
-	server Server
-	metric Metric
+	host   string
+	metric string
 	acc    telegraf.Accumulator
 }
 
 type cassandraMetric struct {
-	server Server
-	metric Metric
+	host   string
+	metric string
 	acc    telegraf.Accumulator
 }
 
@@ -59,21 +55,20 @@ type jmxMetric interface {
 	addTagsFields(out map[string]interface{})
 }
 
-func addServerTags(server Server, tags map[string]string) {
-	if server.Host != "" && server.Host != "localhost" &&
-		server.Host != "127.0.0.1" {
-		tags["host"] = server.Host
+func addServerTags(host string, tags map[string]string) {
+	if host != "" && host != "localhost" && host != "127.0.0.1" {
+		tags["host"] = host
 	}
 }
 
-func newJavaMetric(server Server, metric Metric,
+func newJavaMetric(host string, metric string,
 	acc telegraf.Accumulator) *javaMetric {
-	return &javaMetric{server: server, metric: metric, acc: acc}
+	return &javaMetric{host: host, metric: metric, acc: acc}
 }
 
-func newCassandraMetric(server Server, metric Metric,
+func newCassandraMetric(host string, metric string,
 	acc telegraf.Accumulator) *cassandraMetric {
-	return &cassandraMetric{server: server, metric: metric, acc: acc}
+	return &cassandraMetric{host: host, metric: metric, acc: acc}
 }
 
 func addValuesAsFields(values map[string]interface{}, fields map[string]interface{},
@@ -125,7 +120,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 
 	tokens := parseJmxMetricRequest(mbean)
 	addTokensToTags(tokens, tags)
-	addServerTags(j.server, tags)
+	addServerTags(j.host, tags)
 
 	if _, ok := tags["mname"]; !ok {
 		//Queries for a single value will not return a "name" tag in the response.
@@ -142,7 +137,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 		j.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
 	} else {
 		fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-			j.metric.Jmx, out)
+			j.metric, out)
 	}
 }
 
@@ -153,7 +148,7 @@ func addCassandraMetric(mbean string, c cassandraMetric,
 	fields := make(map[string]interface{})
 	tokens := parseJmxMetricRequest(mbean)
 	addTokensToTags(tokens, tags)
-	addServerTags(c.server, tags)
+	addServerTags(c.host, tags)
 	addValuesAsFields(values, fields, tags["mname"])
 	c.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
 
@@ -174,7 +169,7 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 			}
 		} else {
 			fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric.Jmx, out)
+				c.metric, out)
 			return
 		}
 	} else {
@@ -183,7 +178,7 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 				c, values.(map[string]interface{}))
 		} else {
 			fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric.Jmx, out)
+				c.metric, out)
 			return
 		}
 	}
@@ -193,28 +188,16 @@ func (j *Cassandra) SampleConfig() string {
 	return `
   # This is the context root used to compose the jolokia url
   context = "/jolokia/read"
-
-  # List of cassandra servers exposing jolokia read service
-  [[cassandra.servers]]
-    # host can be skipped for localhost. host tag will be set to hostname()
-    host = "192.168.103.2"
-    port = "8180"
-    # username = "myuser"
-    # password = "mypassword"
-
-  # List of metrics collected on above servers
-  # Each metric consists of a jmx path. Pass or drop slice attributes will be
-  # supported in the future.
-  # This will collect all heap memory usage metrics from the jvm
-  [[cassandra..metrics]]
-    jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
-
-  # This will collect ReadLatency metrics for all keyspaces and tables.
-  # "type=Table" in the query works with Cassandra3.0. Older versions might need
-  # to use "type=ColumnFamily"
-  [[cassandra..metrics]]
-    jmx  = "/org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=ReadL
-atency"
+  ## List of cassandra servers exposing jolokia read service
+  servers = ["myuser:mypassword@10.10.10.1:8778","10.10.10.2:8778",":8778"]
+  ## List of metrics collected on above servers
+  ## Each metric consists of a jmx path.
+  ## This will collect all heap memory usage metrics from the jvm and 
+  ## ReadLatency metrics for all keyspaces and tables.
+  ## "type=Table" in the query works with Cassandra3.0. Older versions might
+  ## need to use "type=ColumnFamily"
+  metrics  = ["/java.lang:type=Memory/HeapMemoryUsage",
+              "/org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=ReadLatency"]
 `
 }
 
@@ -261,6 +244,30 @@ func (j *Cassandra) getAttr(requestUrl *url.URL) (map[string]interface{}, error)
 	return jsonOut, nil
 }
 
+func parseServerTokens(server string) map[string]string {
+	serverTokens := make(map[string]string)
+
+	hostAndUser := strings.Split(server, "@")
+	hostPort := ""
+	userPasswd := ""
+	if len(hostAndUser) == 2 {
+		hostPort = hostAndUser[1]
+		userPasswd = hostAndUser[0]
+	} else {
+		hostPort = hostAndUser[0]
+	}
+	hostTokens := strings.Split(hostPort, ":")
+	serverTokens["host"] = hostTokens[0]
+	serverTokens["port"] = hostTokens[1]
+
+	if userPasswd != "" {
+		userTokens := strings.Split(userPasswd, ":")
+		serverTokens["user"] = userTokens[0]
+		serverTokens["passwd"] = userTokens[1]
+	}
+	return serverTokens
+}
+
 func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 	context := c.Context
 	servers := c.Servers
@@ -270,24 +277,26 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 		for _, metric := range metrics {
 			var m jmxMetric
 
-			if strings.HasPrefix(metric.Jmx, "/java.lang:") {
-				m = newJavaMetric(server, metric, acc)
-			} else if strings.HasPrefix(metric.Jmx,
+			serverTokens := parseServerTokens(server)
+
+			if strings.HasPrefix(metric, "/java.lang:") {
+				m = newJavaMetric(serverTokens["host"], metric, acc)
+			} else if strings.HasPrefix(metric,
 				"/org.apache.cassandra.metrics:") {
-				m = newCassandraMetric(server, metric, acc)
+				m = newCassandraMetric(serverTokens["host"], metric, acc)
 			}
-			jmxPath := metric.Jmx
 
 			// Prepare URL
-			requestUrl, err := url.Parse("http://" + server.Host + ":" +
-				server.Port + context + jmxPath)
-			fmt.Printf("host %s url %s\n", server.Host, requestUrl)
+			requestUrl, err := url.Parse("http://" + serverTokens["host"] + ":" +
+				serverTokens["port"] + context + metric)
 			if err != nil {
 				return err
 			}
-			if server.Username != "" || server.Password != "" {
-				requestUrl.User = url.UserPassword(server.Username, server.Password)
+			if serverTokens["user"] != "" && serverTokens["passwd"] != "" {
+				requestUrl.User = url.UserPassword(serverTokens["user"],
+					serverTokens["passwd"])
 			}
+			fmt.Printf("host %s url %s\n", serverTokens["host"], requestUrl)
 
 			out, err := c.getAttr(requestUrl)
 			if out["status"] != 200.0 {
