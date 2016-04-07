@@ -71,6 +71,9 @@ func (*Sysstat) Description() string {
 
 var sampleConfig = `
   ## Path to the sadc command.
+  #
+  ## On Debian and Arch Linux the default path is /usr/lib/sa/sadc whereas
+  ## on RHEL and CentOS the default path is /usr/lib64/sa/sadc
   sadc_path = "/usr/lib/sa/sadc" # required
   #
   #
