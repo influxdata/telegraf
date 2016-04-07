@@ -34,15 +34,15 @@ var sampleConfig = `
   response_timeout = 5
   ## HTTP Request Method
   method = "GET"
-  ## HTTP Request Headers (all values must be strings)
-  [inputs.http_response.headers]
-  #    Host = "github.com"
   ## Whether to follow redirects from the server (defaults to false)
   follow_redirects = true
+  ## HTTP Request Headers (all values must be strings)
+  # [inputs.http_response.headers]
+  #   Host = "github.com"
   ## Optional HTTP Request Body
-  body = '''
-  {'fake':'data'}
-  '''
+  # body = '''
+  # {'fake':'data'}
+  # '''
 `
 
 // SampleConfig returns the plugin SampleConfig
