@@ -10,20 +10,25 @@ domains. You can read Dovecot's documentation
 ```
 # Read metrics about dovecot servers
 [[inputs.dovecot]]
-  # Dovecot servers
-  #  specify dovecot servers via an address:port list
-  #  e.g.
-  #    localhost:24242
-  #
-  # If no servers are specified, then localhost is used as the host.
+  ## specify dovecot servers via an address:port list
+  ##  e.g.
+  ##    localhost:24242
+  ##
+  ## If no servers are specified, then localhost is used as the host.
   servers = ["localhost:24242"]
-  # Only collect metrics for these domains, collect all if empty
-  domains = []
+  ## Type is one of "user", "domain", "ip", or "global"
+  type = "global"
+  ## Wildcard matches like "*.com". An empty string "" is same as "*"
+  ## If type = "ip" filters should be <IP/network>
+  filters = [""]
 ```
 
 
 ### Tags:
 	server: hostname
+	type: query type
+	ip: ip addr
+	user: username
 	domain: domain name
 
 
