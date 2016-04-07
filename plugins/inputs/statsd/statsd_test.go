@@ -20,7 +20,6 @@ func NewTestStatsd() *Statsd {
 	s.timings = make(map[string]cachedtimings)
 
 	s.MetricSeparator = "_"
-	s.UDPPacketSize = UDP_PACKET_SIZE
 
 	return &s
 }
