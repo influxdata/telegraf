@@ -9,14 +9,13 @@ This input plugin will test HTTP/HTTPS connections.
 [[inputs.http_response]]
   ## Server address (default http://localhost)
   address = "http://github.com"
-  ## Set response_timeout (default 10 seconds)
-  response_timeout = 10
+  ## Set response_timeout (default 5 seconds)
+  response_timeout = 5
   ## HTTP Request Method
   method = "GET"
   ## HTTP Request Headers
-  headers = '''
-  Host: github.com
-  '''
+  [inputs.http_response.headers]
+      Host = github.com
   ## Whether to follow redirects from the server (defaults to false)
   follow_redirects = true
   ## Optional HTTP Request Body

@@ -1,11 +1,9 @@
 package http_response
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"net/http"
-	"net/textproto"
 	"net/url"
 	"strings"
 	"time"
@@ -20,7 +18,7 @@ type HTTPResponse struct {
 	Body            string
 	Method          string
 	ResponseTimeout int
-	Headers         string
+	Headers         map[string]string
 	FollowRedirects bool
 }
 
@@ -32,14 +30,13 @@ func (h *HTTPResponse) Description() string {
 var sampleConfig = `
   ## Server address (default http://localhost)
   address = "http://github.com"
-  ## Set response_timeout (default 10 seconds)
-  response_timeout = 10
+  ## Set response_timeout (default 5 seconds)
+  response_timeout = 5
   ## HTTP Request Method
   method = "GET"
-  ## HTTP Request Headers
-  headers = '''
-  Host: github.com
-  '''
+  ## HTTP Request Headers (all values must be strings)
+  [inputs.http_response.headers]
+  #    Host = "github.com"
   ## Whether to follow redirects from the server (defaults to false)
   follow_redirects = true
   ## Optional HTTP Request Body
@@ -71,17 +68,14 @@ func CreateHttpClient(followRedirects bool, ResponseTimeout time.Duration) *http
 	return client
 }
 
-// ParseHeaders takes a string of newline seperated http headers and returns a
-// http.Header object. An error is returned if the headers cannot be parsed.
-func ParseHeaders(headers string) (http.Header, error) {
-	headers = strings.TrimSpace(headers) + "\n\n"
-	reader := bufio.NewReader(strings.NewReader(headers))
-	tp := textproto.NewReader(reader)
-	mimeHeader, err := tp.ReadMIMEHeader()
-	if err != nil {
-		return nil, err
+// CreateHeaders takes a map of header strings and puts them
+// into a http.Header Object
+func CreateHeaders(headers map[string]string) http.Header {
+	httpHeaders := make(http.Header)
+	for key := range headers {
+		httpHeaders.Add(key, headers[key])
 	}
-	return http.Header(mimeHeader), nil
+	return httpHeaders
 }
 
 // HTTPGather gathers all fields and returns any errors it encounters
@@ -99,10 +93,8 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	request.Header, err = ParseHeaders(h.Headers)
-	if err != nil {
-		return nil, err
-	}
+	request.Header = CreateHeaders(h.Headers)
+
 	// Start Timer
 	start := time.Now()
 	resp, err := client.Do(request)
@@ -126,7 +118,7 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	// Set default values
 	if h.ResponseTimeout < 1 {
-		h.ResponseTimeout = 10
+		h.ResponseTimeout = 5
 	}
 	// Check send and expected string
 	if h.Method == "" {
