@@ -10,7 +10,7 @@ import (
 
 const (
 	// Default number of metrics kept between flushes.
-	DEFAULT_METRIC_BUFFER_LIMIT = 10000
+	DEFAULT_METRIC_BUFFER_LIMIT = 1000
 
 	// Limit how many full metric buffers are kept due to failed writes.
 	FULL_METRIC_BUFFERS_LIMIT = 100
@@ -82,9 +82,11 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 				}
 			}
 		} else {
-			log.Printf("WARNING: overwriting cached metrics, you may want to " +
-				"increase the metric_buffer_limit setting in your [agent] " +
-				"config if you do not wish to overwrite metrics.\n")
+			if ro.overwriteI == 0 {
+				log.Printf("WARNING: overwriting cached metrics, you may want to " +
+					"increase the metric_buffer_limit setting in your [agent] " +
+					"config if you do not wish to overwrite metrics.\n")
+			}
 			if ro.overwriteI == len(ro.metrics) {
 				ro.overwriteI = 0
 			}
@@ -119,6 +121,9 @@ func (ro *RunningOutput) Write() error {
 }
 
 func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
+		return nil
+	}
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)

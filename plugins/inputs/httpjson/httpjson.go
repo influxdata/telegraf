@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -22,6 +23,15 @@ type HttpJson struct {
 	TagKeys    []string
 	Parameters map[string]string
 	Headers    map[string]string
+
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 
 	client HTTPClient
 }
@@ -36,14 +46,25 @@ type HTTPClient interface {
 	// http.Response:  HTTP respons object
 	// error        :  Any error that may have occurred
 	MakeRequest(req *http.Request) (*http.Response, error)
+
+	SetHTTPClient(client *http.Client)
+	HTTPClient() *http.Client
 }
 
 type RealHTTPClient struct {
 	client *http.Client
 }
 
-func (c RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c *RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 	return c.client.Do(req)
+}
+
+func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
+	c.client = client
+}
+
+func (c *RealHTTPClient) HTTPClient() *http.Client {
+	return c.client
 }
 
 var sampleConfig = `
@@ -77,6 +98,13 @@ var sampleConfig = `
   # [inputs.httpjson.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (h *HttpJson) SampleConfig() string {
@@ -90,6 +118,23 @@ func (h *HttpJson) Description() string {
 // Gathers data for all servers.
 func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
+
+	if h.client.HTTPClient() == nil {
+		tlsCfg, err := internal.GetTLSConfig(
+			h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
+		tr := &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			TLSClientConfig:       tlsCfg,
+		}
+		client := &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(4 * time.Second),
+		}
+		h.client.SetHTTPClient(client)
+	}
 
 	errorChannel := make(chan error, len(h.Servers))
 
@@ -244,6 +289,8 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 
 func init() {
 	inputs.Add("httpjson", func() telegraf.Input {
-		return &HttpJson{client: RealHTTPClient{client: &http.Client{}}}
+		return &HttpJson{
+			client: &RealHTTPClient{},
+		}
 	})
 }

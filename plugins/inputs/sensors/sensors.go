@@ -49,7 +49,7 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 				var found bool
 
 				for _, sensor := range s.Sensors {
-					parts := strings.SplitN(":", sensor, 2)
+					parts := strings.SplitN(sensor, ":", 2)
 
 					if parts[0] == chipName {
 						if parts[1] == "*" || parts[1] == featureLabel {

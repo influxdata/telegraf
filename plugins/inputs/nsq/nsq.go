@@ -84,7 +84,10 @@ var tr = &http.Transport{
 	ResponseHeaderTimeout: time.Duration(3 * time.Second),
 }
 
-var client = &http.Client{Transport: tr}
+var client = &http.Client{
+	Transport: tr,
+	Timeout:   time.Duration(4 * time.Second),
+}
 
 func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 	u, err := buildURL(e)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -40,8 +41,14 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewInfluxSerializer()
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix)
+	case "json":
+		serializer, err = NewJsonSerializer()
 	}
 	return serializer, err
+}
+
+func NewJsonSerializer() (Serializer, error) {
+	return &json.JsonSerializer{}, nil
 }
 
 func NewInfluxSerializer() (Serializer, error) {

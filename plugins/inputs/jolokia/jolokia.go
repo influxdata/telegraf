@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -160,6 +161,11 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("jolokia", func() telegraf.Input {
-		return &Jolokia{jClient: &JolokiaClientImpl{client: &http.Client{}}}
+		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		client := &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(4 * time.Second),
+		}
+		return &Jolokia{jClient: &JolokiaClientImpl{client: client}}
 	})
 }

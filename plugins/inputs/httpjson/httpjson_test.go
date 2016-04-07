@@ -125,7 +125,7 @@ type mockHTTPClient struct {
 // Mock implementation of MakeRequest. Usually returns an http.Response with
 // hard-coded responseBody and statusCode. However, if the request uses a
 // nonstandard method, it uses status code 405 (method not allowed)
-func (c mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c *mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 	resp := http.Response{}
 	resp.StatusCode = c.statusCode
 
@@ -147,6 +147,13 @@ func (c mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 	return &resp, nil
 }
 
+func (c *mockHTTPClient) SetHTTPClient(_ *http.Client) {
+}
+
+func (c *mockHTTPClient) HTTPClient() *http.Client {
+	return nil
+}
+
 // Generates a pointer to an HttpJson object that uses a mock HTTP client.
 // Parameters:
 //     response  : Body of the response that the mock HTTP client should return
@@ -157,7 +164,7 @@ func (c mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 func genMockHttpJson(response string, statusCode int) []*HttpJson {
 	return []*HttpJson{
 		&HttpJson{
-			client: mockHTTPClient{responseBody: response, statusCode: statusCode},
+			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://server1.example.com/metrics/",
 				"http://server2.example.com/metrics/",
@@ -174,7 +181,7 @@ func genMockHttpJson(response string, statusCode int) []*HttpJson {
 			},
 		},
 		&HttpJson{
-			client: mockHTTPClient{responseBody: response, statusCode: statusCode},
+			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://server3.example.com/metrics/",
 				"http://server4.example.com/metrics/",
@@ -234,7 +241,7 @@ func TestHttpJsonGET_URL(t *testing.T) {
 		Servers: []string{ts.URL + "?api_key=mykey"},
 		Name:    "",
 		Method:  "GET",
-		client:  RealHTTPClient{client: &http.Client{}},
+		client:  &RealHTTPClient{client: &http.Client{}},
 	}
 
 	var acc testutil.Accumulator
@@ -307,7 +314,7 @@ func TestHttpJsonGET(t *testing.T) {
 		Name:       "",
 		Method:     "GET",
 		Parameters: params,
-		client:     RealHTTPClient{client: &http.Client{}},
+		client:     &RealHTTPClient{client: &http.Client{}},
 	}
 
 	var acc testutil.Accumulator
@@ -381,7 +388,7 @@ func TestHttpJsonPOST(t *testing.T) {
 		Name:       "",
 		Method:     "POST",
 		Parameters: params,
-		client:     RealHTTPClient{client: &http.Client{}},
+		client:     &RealHTTPClient{client: &http.Client{}},
 	}
 
 	var acc testutil.Accumulator

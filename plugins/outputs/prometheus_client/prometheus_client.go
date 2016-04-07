@@ -4,10 +4,24 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	sanitizedChars = strings.NewReplacer("/", "_", "@", "_", " ", "_", "-", "_", ".", "_")
+
+	// Prometheus metric names must match this regex
+	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+	metricName = regexp.MustCompile("^[a-zA-Z_:][a-zA-Z0-9_:]*$")
+
+	// Prometheus labels must match this regex
+	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+	labelName = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
 )
 
 type PrometheusClient struct {
@@ -64,54 +78,82 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, point := range metrics {
-		var labels []string
 		key := point.Name()
+		key = sanitizedChars.Replace(key)
 
-		for k, _ := range point.Tags() {
-			if len(k) > 0 {
-				labels = append(labels, k)
-			}
-		}
-
-		if _, ok := p.metrics[key]; !ok {
-			p.metrics[key] = prometheus.NewUntypedVec(
-				prometheus.UntypedOpts{
-					Name: key,
-					Help: fmt.Sprintf("Telegraf collected point '%s'", key),
-				},
-				labels,
-			)
-			prometheus.MustRegister(p.metrics[key])
-		}
-
+		var labels []string
 		l := prometheus.Labels{}
-		for tk, tv := range point.Tags() {
-			l[tk] = tv
+		for k, v := range point.Tags() {
+			k = sanitizedChars.Replace(k)
+			if len(k) == 0 {
+				continue
+			}
+			if !labelName.MatchString(k) {
+				continue
+			}
+			labels = append(labels, k)
+			l[k] = v
 		}
 
-		for _, val := range point.Fields() {
+		for n, val := range point.Fields() {
+			// Ignore string and bool fields.
+			switch val.(type) {
+			case string:
+				continue
+			case bool:
+				continue
+			}
+
+			// sanitize the measurement name
+			n = sanitizedChars.Replace(n)
+			var mname string
+			if n == "value" {
+				mname = key
+			} else {
+				mname = fmt.Sprintf("%s_%s", key, n)
+			}
+
+			// verify that it is a valid measurement name
+			if !metricName.MatchString(mname) {
+				continue
+			}
+
+			// Create a new metric if it hasn't been created yet.
+			if _, ok := p.metrics[mname]; !ok {
+				p.metrics[mname] = prometheus.NewUntypedVec(
+					prometheus.UntypedOpts{
+						Name: mname,
+						Help: "Telegraf collected metric",
+					},
+					labels,
+				)
+				if err := prometheus.Register(p.metrics[mname]); err != nil {
+					log.Printf("prometheus_client: Metric failed to register with prometheus, %s", err)
+					continue
+				}
+			}
+
 			switch val := val.(type) {
-			default:
-				log.Printf("Prometheus output, unsupported type. key: %s, type: %T\n",
-					key, val)
 			case int64:
-				m, err := p.metrics[key].GetMetricWith(l)
+				m, err := p.metrics[mname].GetMetricWith(l)
 				if err != nil {
 					log.Printf("ERROR Getting metric in Prometheus output, "+
 						"key: %s, labels: %v,\nerr: %s\n",
-						key, l, err.Error())
+						mname, l, err.Error())
 					continue
 				}
 				m.Set(float64(val))
 			case float64:
-				m, err := p.metrics[key].GetMetricWith(l)
+				m, err := p.metrics[mname].GetMetricWith(l)
 				if err != nil {
 					log.Printf("ERROR Getting metric in Prometheus output, "+
 						"key: %s, labels: %v,\nerr: %s\n",
-						key, l, err.Error())
+						mname, l, err.Error())
 					continue
 				}
 				m.Set(val)
+			default:
+				continue
 			}
 		}
 	}

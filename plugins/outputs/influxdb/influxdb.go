@@ -18,15 +18,16 @@ import (
 
 type InfluxDB struct {
 	// URL is only for backwards compatability
-	URL        string
-	URLs       []string `toml:"urls"`
-	Username   string
-	Password   string
-	Database   string
-	UserAgent  string
-	Precision  string
-	Timeout    internal.Duration
-	UDPPayload int `toml:"udp_payload"`
+	URL             string
+	URLs            []string `toml:"urls"`
+	Username        string
+	Password        string
+	Database        string
+	UserAgent       string
+	Precision       string
+	RetentionPolicy string
+	Timeout         internal.Duration
+	UDPPayload      int `toml:"udp_payload"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -46,10 +47,12 @@ var sampleConfig = `
   ## this means that only ONE of the urls will be written to each interval.
   # urls = ["udp://localhost:8089"] # UDP endpoint example
   urls = ["http://localhost:8086"] # required
-  ## The target database for metrics (telegraf will create it if not exists)
+  ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
+  ## Retention policy to write to.
+  retention_policy = "default"
   ## Precision of writes, valid values are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-  ## note: using "s" precision greatly improves InfluxDB compression
+  ## note: using "s" precision greatly improves InfluxDB compression.
   precision = "s"
 
   ## Write timeout (for the InfluxDB client), formatted as a string.
@@ -124,11 +127,12 @@ func (i *InfluxDB) Connect() error {
 
 			// Create Database if it doesn't exist
 			_, e := c.Query(client.Query{
-				Command: fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", i.Database),
+				Command: fmt.Sprintf("CREATE DATABASE IF NOT EXISTS \"%s\"", i.Database),
 			})
 
 			if e != nil {
 				log.Println("Database creation failed: " + e.Error())
+				continue
 			}
 
 			conns = append(conns, c)
@@ -156,9 +160,16 @@ func (i *InfluxDB) Description() string {
 // Choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
+	if len(i.conns) == 0 {
+		err := i.Connect()
+		if err != nil {
+			return err
+		}
+	}
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  i.Database,
-		Precision: i.Precision,
+		Database:        i.Database,
+		Precision:       i.Precision,
+		RetentionPolicy: i.RetentionPolicy,
 	})
 	if err != nil {
 		return err
@@ -179,6 +190,12 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			err = nil
 			break
 		}
+	}
+
+	// If all of the writes failed, create a new connection array so that
+	// i.Connect() will be called on the next gather.
+	if err != nil {
+		i.conns = make([]client.Client, 0)
 	}
 	return err
 }

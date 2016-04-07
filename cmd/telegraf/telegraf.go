@@ -11,8 +11,9 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
-
+	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 )
 
@@ -30,11 +31,14 @@ var fSampleConfig = flag.Bool("sample-config", false,
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
+var fInputList = flag.Bool("input-list", false,
+	"print available input plugins.")
 var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
+var fOutputList = flag.Bool("output-list", false,
+	"print available output plugins.")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
-
 var fInputFiltersLegacy = flag.String("filter", "",
 	"filter the inputs to enable, separator is :")
 var fOutputFiltersLegacy = flag.String("outputfilter", "",
@@ -59,7 +63,9 @@ The flags are:
   -sample-config     print out full sample configuration to stdout
   -config-directory  directory containing additional *.conf files
   -input-filter      filter the input plugins to enable, separator is :
+  -input-list        print all the plugins inputs
   -output-filter     filter the output plugins to enable, separator is :
+  -output-list       print all the available outputs
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
@@ -90,8 +96,9 @@ func main() {
 		reload <- false
 		flag.Usage = func() { usageExit(0) }
 		flag.Parse()
+		args := flag.Args()
 
-		if flag.NFlag() == 0 {
+		if flag.NFlag() == 0 && len(args) == 0 {
 			usageExit(0)
 		}
 
@@ -113,6 +120,34 @@ func main() {
 		if *fOutputFilters != "" {
 			outputFilter := strings.TrimSpace(*fOutputFilters)
 			outputFilters = strings.Split(":"+outputFilter+":", ":")
+		}
+
+		if len(args) > 0 {
+			switch args[0] {
+			case "version":
+				v := fmt.Sprintf("Telegraf - Version %s", Version)
+				fmt.Println(v)
+				return
+			case "config":
+				config.PrintSampleConfig(inputFilters, outputFilters)
+				return
+			}
+		}
+
+		if *fOutputList {
+			fmt.Println("Available Output Plugins:")
+			for k, _ := range outputs.Outputs {
+				fmt.Printf("  %s\n", k)
+			}
+			return
+		}
+
+		if *fInputList {
+			fmt.Println("Available Input Plugins:")
+			for k, _ := range inputs.Inputs {
+				fmt.Printf("  %s\n", k)
+			}
+			return
 		}
 
 		if *fVersion {

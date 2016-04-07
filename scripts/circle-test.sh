@@ -68,7 +68,7 @@ telegraf -sample-config > $tmpdir/config.toml
 exit_if_fail telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
-mv $GOPATH/bin/telegraf $CIRCLE_ARTIFACTS
+cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
 
 eval "git describe --exact-match HEAD"
 if [ $? -eq 0 ]; then
@@ -77,5 +77,6 @@ if [ $? -eq 0 ]; then
     echo $tag
     exit_if_fail ./scripts/build.py --package --version=$tag --platform=linux --arch=all --upload
     exit_if_fail ./scripts/build.py --package --version=$tag --platform=windows --arch=all --upload
+    exit_if_fail ./scripts/build.py --package --version=$tag --platform=freebsd --arch=all --upload
     mv build $CIRCLE_ARTIFACTS
 fi

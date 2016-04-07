@@ -13,6 +13,7 @@ function install_init {
 function install_systemd {
     cp -f $SCRIPT_DIR/telegraf.service /lib/systemd/system/telegraf.service
     systemctl enable telegraf
+    systemctl daemon-reload || true
 }
 
 function install_update_rcd {
@@ -28,7 +29,9 @@ if [[ $? -ne 0 ]]; then
     useradd --system -U -M telegraf -s /bin/false -d /etc/telegraf
 fi
 
+test -d $LOG_DIR || mkdir -p $LOG_DIR
 chown -R -L telegraf:telegraf $LOG_DIR
+chmod 755 $LOG_DIR
 
 # Remove legacy symlink, if it exists
 if [[ -L /etc/init.d/telegraf ]]; then
@@ -61,10 +64,12 @@ elif [[ -f /etc/debian_version ]]; then
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
 	install_systemd
+	systemctl restart telegraf
     else
 	# Assuming sysv
 	install_init
 	install_update_rcd
+	invoke-rc.d telegraf restart
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release

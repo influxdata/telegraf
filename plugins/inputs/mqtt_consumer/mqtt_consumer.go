@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
-	"git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
+	"github.com/eclipse/paho.mqtt.golang"
 )
 
 type MQTTConsumer struct {
@@ -26,6 +26,9 @@ type MQTTConsumer struct {
 	// Legacy metric buffer support
 	MetricBuffer int
 
+	PersistentSession bool
+	ClientID          string `toml:"client_id"`
+
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
 	// Path to host cert file
@@ -36,7 +39,7 @@ type MQTTConsumer struct {
 	InsecureSkipVerify bool
 
 	sync.Mutex
-	client *mqtt.Client
+	client mqtt.Client
 	// channel of all incoming raw mqtt messages
 	in   chan mqtt.Message
 	done chan struct{}
@@ -57,6 +60,13 @@ var sampleConfig = `
     "sensors/#",
   ]
 
+  # if true, messages that can't be delivered while the subscriber is offline
+  # will be delivered when it comes back (such as on service restart).
+  # NOTE: if true, client_id MUST be set
+  persistent_session = false
+  # If empty, a random client ID will be generated.
+  client_id = ""
+
   ## username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
@@ -68,7 +78,7 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -90,6 +100,11 @@ func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.Lock()
 	defer m.Unlock()
+
+	if m.PersistentSession && m.ClientID == "" {
+		return fmt.Errorf("ERROR MQTT Consumer: When using persistent_session" +
+			" = true, you MUST also set client_id")
+	}
 
 	m.acc = acc
 	if m.QoS > 2 || m.QoS < 0 {
@@ -148,7 +163,7 @@ func (m *MQTTConsumer) receiver() {
 	}
 }
 
-func (m *MQTTConsumer) recvMessage(_ *mqtt.Client, msg mqtt.Message) {
+func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.in <- msg
 }
 
@@ -166,7 +181,11 @@ func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
 func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 
-	opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))
+	if m.ClientID == "" {
+		opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))
+	} else {
+		opts.SetClientID(m.ClientID)
+	}
 
 	tlsCfg, err := internal.GetTLSConfig(
 		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
@@ -181,7 +200,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	}
 
 	user := m.Username
-	if user == "" {
+	if user != "" {
 		opts.SetUsername(user)
 	}
 	password := m.Password
@@ -199,6 +218,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	}
 	opts.SetAutoReconnect(true)
 	opts.SetKeepAlive(time.Second * 60)
+	opts.SetCleanSession(!m.PersistentSession)
 	return opts, nil
 }
 

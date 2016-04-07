@@ -81,7 +81,12 @@ type Elasticsearch struct {
 
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
-	return &Elasticsearch{client: http.DefaultClient}
+	tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   time.Duration(4 * time.Second),
+	}
+	return &Elasticsearch{client: client}
 }
 
 // SampleConfig returns sample configuration for this plugin.
