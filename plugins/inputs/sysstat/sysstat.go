@@ -174,9 +174,6 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 //     Sadc -S <Activity1> -S <Activity2> ... <collectInterval> 2 tmpFile
 // The above command collects system metrics during <collectInterval> and saves it in binary form to tmpFile.
 func (s *Sysstat) collect() error {
-	if len(s.Activities) == 0 {
-		s.Activities = dfltActivities
-	}
 	if len(s.Sadf) == 0 {
 		sadf, err := exec.LookPath("sadf")
 		if err != nil {
@@ -318,7 +315,8 @@ func escape(dirty string) string {
 func init() {
 	inputs.Add("sysstat", func() telegraf.Input {
 		return &Sysstat{
-			Group: true,
+			Group:      true,
+			Activities: dfltActivities,
 		}
 	})
 }
