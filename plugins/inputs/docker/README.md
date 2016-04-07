@@ -5,11 +5,11 @@ docker containers. You can read Docker's documentation for their remote API
 [here](https://docs.docker.com/engine/reference/api/docker_remote_api_v1.20/#get-container-stats-based-on-resource-usage)
 
 The docker plugin uses the excellent
-[fsouza go-dockerclient](https://github.com/fsouza/go-dockerclient) library to
+[docker engine-api](https://github.com/docker/engine-api) library to
 gather stats. Documentation for the library can be found
-[here](https://godoc.org/github.com/fsouza/go-dockerclient) and documentation
+[here](https://godoc.org/github.com/docker/engine-api) and documentation
 for the stat structure can be found
-[here](https://godoc.org/github.com/fsouza/go-dockerclient#Stats)
+[here](https://godoc.org/github.com/docker/engine-api/types#Stats)
 
 ### Configuration:
 

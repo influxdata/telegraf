@@ -43,7 +43,7 @@ func testSetup(m *testing.M) {
 		log.Fatalf("Unable to parse URL (%s), %s\n", dialAddrs[0], err.Error())
 	}
 	dialInfo.Direct = true
-	dialInfo.Timeout = time.Duration(10) * time.Second
+	dialInfo.Timeout = 5 * time.Second
 	sess, err := mgo.DialWithInfo(dialInfo)
 	if err != nil {
 		log.Fatalf("Unable to connect to MongoDB, %s\n", err.Error())

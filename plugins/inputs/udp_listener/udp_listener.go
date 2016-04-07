@@ -30,7 +30,9 @@ type UdpListener struct {
 	listener *net.UDPConn
 }
 
-const UDP_PACKET_SIZE int = 1500
+// UDP packet limit, see
+// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
+const UDP_PACKET_SIZE int = 65507
 
 var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
 	"You may want to increase allowed_pending_messages in the config\n"
@@ -42,11 +44,6 @@ const sampleConfig = `
   ## Number of UDP messages allowed to queue up. Once filled, the
   ## UDP listener will start dropping packets.
   allowed_pending_messages = 10000
-
-  ## UDP packet size for the server to listen for. This will depend
-  ## on the size of the packets that the client is sending, which is
-  ## usually 1500 bytes, but can be as large as 65,535 bytes.
-  udp_packet_size = 1500
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
@@ -107,12 +104,12 @@ func (u *UdpListener) udpListen() error {
 	}
 	log.Println("UDP server listening on: ", u.listener.LocalAddr().String())
 
+	buf := make([]byte, u.UDPPacketSize)
 	for {
 		select {
 		case <-u.done:
 			return nil
 		default:
-			buf := make([]byte, u.UDPPacketSize)
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil && !strings.Contains(err.Error(), "closed network") {
 				log.Printf("ERROR: %s\n", err.Error())
@@ -130,11 +127,13 @@ func (u *UdpListener) udpListen() error {
 
 func (u *UdpListener) udpParser() error {
 	defer u.wg.Done()
+
+	var packet []byte
 	for {
 		select {
 		case <-u.done:
 			return nil
-		case packet := <-u.in:
+		case packet = <-u.in:
 			metrics, err := u.parser.Parse(packet)
 			if err == nil {
 				u.storeMetrics(metrics)
