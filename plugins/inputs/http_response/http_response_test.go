@@ -11,22 +11,18 @@ import (
 	"time"
 )
 
-func TestParseHeaders(t *testing.T) {
-	fakeHeaders := `
-Accept: text/plain
-Content-Type: application/json
-Cache-Control: no-cache
-`
-	headers, err := ParseHeaders(fakeHeaders)
-	require.NoError(t, err)
+func TestCreateHeaders(t *testing.T) {
+	fakeHeaders := map[string]string{
+		"Accept":        "text/plain",
+		"Content-Type":  "application/json",
+		"Cache-Control": "no-cache",
+	}
+	headers := CreateHeaders(fakeHeaders)
 	testHeaders := make(http.Header)
 	testHeaders.Add("Accept", "text/plain")
 	testHeaders.Add("Content-Type", "application/json")
 	testHeaders.Add("Cache-Control", "no-cache")
 	assert.Equal(t, testHeaders, headers)
-
-	headers, err = ParseHeaders("Accept text/plain")
-	require.Error(t, err)
 }
 
 func setUpTestMux() http.Handler {
@@ -77,9 +73,9 @@ func TestFields(t *testing.T) {
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: 20,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	fields, err := h.HTTPGather()
@@ -102,9 +98,9 @@ func TestRedirects(t *testing.T) {
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: 20,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	fields, err := h.HTTPGather()
@@ -119,9 +115,9 @@ Content-Type: application/json
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: 20,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	fields, err = h.HTTPGather()
@@ -138,9 +134,9 @@ func TestMethod(t *testing.T) {
 		Body:            "{ 'test': 'data'}",
 		Method:          "POST",
 		ResponseTimeout: 20,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	fields, err := h.HTTPGather()
@@ -155,9 +151,9 @@ Content-Type: application/json
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: 20,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	fields, err = h.HTTPGather()
@@ -173,9 +169,9 @@ Content-Type: application/json
 		Body:            "{ 'test': 'data'}",
 		Method:          "head",
 		ResponseTimeout: 20,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	fields, err = h.HTTPGather()
@@ -196,9 +192,9 @@ func TestBody(t *testing.T) {
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: 20,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	fields, err := h.HTTPGather()
@@ -212,9 +208,9 @@ Content-Type: application/json
 		Address:         ts.URL + "/musthaveabody",
 		Method:          "GET",
 		ResponseTimeout: 20,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	fields, err = h.HTTPGather()
@@ -235,9 +231,9 @@ func TestTimeout(t *testing.T) {
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: 1,
-		Headers: `
-Content-Type: application/json
-`,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 		FollowRedirects: true,
 	}
 	_, err := h.HTTPGather()
