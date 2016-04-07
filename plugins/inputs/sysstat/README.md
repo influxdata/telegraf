@@ -12,6 +12,9 @@ the created binary data file with the `sadf` utility.
 # Sysstat metrics collector
 [[inputs.sysstat]]
   ## Path to the sadc command.
+  #
+  ## On Debian and Arch Linux the default path is /usr/lib/sa/sadc whereas
+  ## on RHEL and CentOS the default path is /usr/lib64/sa/sadc
   sadc_path = "/usr/lib/sa/sadc" # required
   #
   #
@@ -31,31 +34,34 @@ the created binary data file with the `sadf` utility.
   ## and represents itself a measurement.
   ##
   ## If Group is true, corresponding metrics are grouped to a single measurement.
-  # group = false
+  # group = true
   #
   #
   ## Options for the sadf command. The values on the left represent the sadf options and
   ## the values on the right their description (wich are used for grouping and prefixing metrics).
+  ##
+  ## Run 'sar -h' or 'man sar' to find out the supported options for your sysstat version.
   [inputs.sysstat.options]
 	-C = "cpu"
 	-B = "paging"
 	-b = "io"
 	-d = "disk"             # requires DISK activity
-	-H = "hugepages"
-	"-I ALL" = "interrupts" # requires INT activity
 	"-n ALL" = "network"
 	"-P ALL" = "per_cpu"
 	-q = "queue"
 	-R = "mem"
-	"-r ALL" = "mem_util"
+	-r = "mem_util"
 	-S = "swap_util"
 	-u = "cpu_util"
 	-v = "inode"
 	-W = "swap"
 	-w = "task"
+  #	-H = "hugepages"        # only available for newer linux distributions
+  #	"-I ALL" = "interrupts" # requires INT activity
+  #
   #
   ## Device tags can be used to add additional tags for devices. For example the configuration below
-  ## adds a tag vg=rootvg for all metrics with sda devices.
+  ## adds a tag vg with value rootvg for all metrics with sda devices.
   # [[inputs.sysstat.device_tags.sda]]
   #  vg = "rootvg"
 ```
