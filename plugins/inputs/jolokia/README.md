@@ -22,6 +22,16 @@
   [[inputs.jolokia.metrics]]
     name = "heap_memory_usage"
     jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
+    
+  ## This collect thread counts metrics.
+  [[inputs.jolokia.metrics]]
+    name = "thread_count"
+    jmx  = "/java.lang:type=Threading/TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
+ 
+  ## This collect number of class loaded/unloaded counts metrics.
+  [[inputs.jolokia.metrics]]
+    name = "class_count"
+    jmx  = "/java.lang:type=ClassLoading/LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
 ```
 
 #### Description
