@@ -2,15 +2,8 @@
 
 #### Plugin arguments:
 - **context** string: Context root used for jolokia url
-- **servers** []Server: List of servers
-  + **host** string: Server's ip address or hostname
-  + **port** string: Server's listening port
-  + **username** string: Server's username for authentication (optional)
-  + **password** string: Server's password for authentication (optional)
-- **metrics** []Metric
-  + **jmx** string: Jmx path that identifies mbeans attributes
-  + **pass** []string: Attributes to retain when collecting values (TODO)
-  + **drop** []string: Attributes to drop when collecting values (TODO)
+- **servers** []string: List of servers with the format "<user:passwd@><host>:port"
+- **metrics** []string: List of Jmx paths that identify mbeans attributes
 
 #### Description
 
@@ -24,14 +17,10 @@ Cassandra plugin produces one or more measurements for each metric configured, a
 Given a configuration like:
 
 ```ini
-[cassandra]
-
-[[cassandra.servers]]
-  host = "127.0.0.1"
-  port = "878"
-
-[[cassandra.metrics]]
-  jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
+[inputs.cassandra]
+  context = "/jolokia/read"
+  servers = [":8778"]
+  metrics = ["/java.lang:type=Memory/HeapMemoryUsage"]
 ```
 
 The collected metrics will be:

@@ -106,11 +106,14 @@ const invalidJSON = "I don't think this is JSON"
 
 const empty = ""
 
-var Servers = []Server{Server{Host: "10.10.10.10", Port: "8778"}}
-var HeapMetric = Metric{Jmx: "/java.lang:type=Memory/HeapMemoryUsage"}
-var ReadLatencyMetric = Metric{"/org.apache.cassandra.metrics:type=Table,keyspace=test_keyspace1,scope=test_table,name=ReadLatency"}
-var NestedReadLatencyMetric = Metric{"/org.apache.cassandra.metrics:type=Table,keyspace=test_keyspace1,scope=*,name=ReadLatency"}
-var GarbageCollectorMetric = Metric{"/java.lang:type=GarbageCollector,name=ConcurrentMarkSweep/CollectionCount"}
+var Servers = []string{"10.10.10.10:8778"}
+var AuthServers = []string{"user:passwd@10.10.10.10:8778"}
+var MultipleServers = []string{"10.10.10.10:8778", "10.10.10.11:8778"}
+var HeapMetric = "/java.lang:type=Memory/HeapMemoryUsage"
+var ReadLatencyMetric = "/org.apache.cassandra.metrics:type=Table,keyspace=test_keyspace1,scope=test_table,name=ReadLatency"
+var NestedReadLatencyMetric = "/org.apache.cassandra.metrics:type=Table,keyspace=test_keyspace1,scope=*,name=ReadLatency"
+var GarbageCollectorMetric1 = "/java.lang:type=GarbageCollector,name=ConcurrentMarkSweep/CollectionCount"
+var GarbageCollectorMetric2 = "/java.lang:type=GarbageCollector,name=ConcurrentMarkSweep/CollectionTime"
 var Context = "/jolokia/read"
 
 type jolokiaClientStub struct {
@@ -132,7 +135,7 @@ func (c jolokiaClientStub) MakeRequest(req *http.Request) (*http.Response, error
 //
 // Returns:
 //     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
-func genJolokiaClientStub(response string, statusCode int, servers []Server, metrics []Metric) *Cassandra {
+func genJolokiaClientStub(response string, statusCode int, servers []string, metrics []string) *Cassandra {
 	return &Cassandra{
 		jClient: jolokiaClientStub{responseBody: response, statusCode: statusCode},
 		Context: Context,
@@ -143,14 +146,15 @@ func genJolokiaClientStub(response string, statusCode int, servers []Server, met
 
 // Test that the proper values are ignored or collected for class=Java
 func TestHttpJsonJavaMultiValue(t *testing.T) {
-	cassandra := genJolokiaClientStub(validJavaMultiValueJSON, 200, Servers, []Metric{HeapMetric})
+	cassandra := genJolokiaClientStub(validJavaMultiValueJSON, 200,
+		MultipleServers, []string{HeapMetric})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
 	err := cassandra.Gather(&acc)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(acc.Metrics))
+	assert.Equal(t, 2, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"HeapMemoryUsage_init":      67108864.0,
@@ -158,22 +162,28 @@ func TestHttpJsonJavaMultiValue(t *testing.T) {
 		"HeapMemoryUsage_max":       477626368.0,
 		"HeapMemoryUsage_used":      203288528.0,
 	}
-	tags := map[string]string{
+	tags1 := map[string]string{
 		"host":  "10.10.10.10",
 		"mname": "HeapMemoryUsage",
 	}
-	acc.AssertContainsTaggedFields(t, "javaMemory", fields, tags)
+
+	tags2 := map[string]string{
+		"host":  "10.10.10.11",
+		"mname": "HeapMemoryUsage",
+	}
+	acc.AssertContainsTaggedFields(t, "javaMemory", fields, tags1)
+	acc.AssertContainsTaggedFields(t, "javaMemory", fields, tags2)
 }
 
 func TestHttpJsonJavaMultiType(t *testing.T) {
-	cassandra := genJolokiaClientStub(validJavaMultiTypeJSON, 200, Servers, []Metric{GarbageCollectorMetric})
+	cassandra := genJolokiaClientStub(validJavaMultiTypeJSON, 200, AuthServers, []string{GarbageCollectorMetric1, GarbageCollectorMetric2})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
 	err := cassandra.Gather(&acc)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(acc.Metrics))
+	assert.Equal(t, 2, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"CollectionCount": 1.0,
@@ -190,7 +200,7 @@ func TestHttpJsonJavaMultiType(t *testing.T) {
 func TestHttpJsonOn404(t *testing.T) {
 
 	jolokia := genJolokiaClientStub(validJavaMultiValueJSON, 404, Servers,
-		[]Metric{HeapMetric})
+		[]string{HeapMetric})
 
 	var acc testutil.Accumulator
 	err := jolokia.Gather(&acc)
@@ -201,7 +211,7 @@ func TestHttpJsonOn404(t *testing.T) {
 
 // Test that the proper values are ignored or collected for class=Cassandra
 func TestHttpJsonCassandraMultiValue(t *testing.T) {
-	cassandra := genJolokiaClientStub(validCassandraMultiValueJSON, 200, Servers, []Metric{ReadLatencyMetric})
+	cassandra := genJolokiaClientStub(validCassandraMultiValueJSON, 200, Servers, []string{ReadLatencyMetric})
 
 	var acc testutil.Accumulator
 	err := cassandra.Gather(&acc)
@@ -232,7 +242,7 @@ func TestHttpJsonCassandraMultiValue(t *testing.T) {
 // Test that the proper values are ignored or collected for class=Cassandra with
 // nested values
 func TestHttpJsonCassandraNestedMultiValue(t *testing.T) {
-	cassandra := genJolokiaClientStub(validCassandraNestedMultiValueJSON, 200, Servers, []Metric{NestedReadLatencyMetric})
+	cassandra := genJolokiaClientStub(validCassandraNestedMultiValueJSON, 200, Servers, []string{NestedReadLatencyMetric})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
