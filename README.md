@@ -169,7 +169,8 @@ Currently implemented sources:
 * [elasticsearch](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/elasticsearch)
 * [exec](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec ) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [haproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/haproxy)
-* [httpjson ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/httpjson ) (generic JSON-emitting http service plugin)
+* [http_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_response)
+* [httpjson](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [influxdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/influxdb)
 * [ipmi_sensor](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ipmi_sensor)
 * [jolokia](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia)
@@ -205,6 +206,7 @@ Currently implemented sources:
 * [zfs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zfs)
 * [zookeeper](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zookeeper)
 * [win_perf_counters ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/win_perf_counters) (windows performance counters)
+* [sysstat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sysstat)
 * [system](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
     * cpu
     * mem
