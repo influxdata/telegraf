@@ -5,6 +5,7 @@
 - [#979](https://github.com/influxdata/telegraf/pull/979): Reduce allocations in the TCP listener.
 - [#935](https://github.com/influxdata/telegraf/pull/935): AWS Cloudwatch input plugin. Thanks @joshhardy & @ljosa!
 - [#943](https://github.com/influxdata/telegraf/pull/943): http_response input plugin. Thanks @Lswith!
+- [#939](https://github.com/influxdata/telegraf/pull/939): sysstat input plugin. Thanks @zbindenren!
 
 ### Bugfixes
 - [#968](https://github.com/influxdata/telegraf/issues/968): Processes plugin gets unknown state when spaces are in (command name)
