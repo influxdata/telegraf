@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"testing"
 	"time"
+	"strconv"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDovecot(t *testing.T) {
@@ -16,14 +18,11 @@ func TestDovecot(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	tags := map[string]string{"server": "dovecot.test", "domain": "domain.test"}
+	tags := map[string]string{"server": "dovecot.test",
+		"domain": "domain.bad"}
 	buf := bytes.NewBufferString(sampleStats)
 
-	var doms = map[string]bool{
-		"domain.test": true,
-	}
-
-	err := gatherStats(buf, &acc, doms, "dovecot.test")
+	err := gatherStats(buf, &acc, "dovecot.test", "domain")
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
@@ -54,6 +53,12 @@ func TestDovecot(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "dovecot", fields, tags)
 
+}
+
+func TestFloatConversion(t *testing.T) {
+	f, err := strconv.ParseFloat("4326001931528183.495762", 64)
+	require.NoError(t, err)
+	assert.Equal(t, 4326001931528183.495762, f)
 }
 
 const sampleStats = `domain	reset_timestamp	last_update	num_logins	num_cmds	num_connected_sessions	user_cpu	sys_cpu	clock_time	min_faults	maj_faults	vol_cs	invol_cs	disk_input	disk_output	read_count	read_bytes	write_count	write_bytes	mail_lookup_path	mail_lookup_attr	mail_read_count	mail_read_bytes	mail_cache_hits
