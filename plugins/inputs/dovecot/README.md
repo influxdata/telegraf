@@ -10,20 +10,25 @@ domains. You can read Dovecot's documentation
 ```
 # Read metrics about dovecot servers
 [[inputs.dovecot]]
-  # Dovecot servers
-  #  specify dovecot servers via an address:port list
-  #  e.g.
-  #    localhost:24242
-  #
-  # If no servers are specified, then localhost is used as the host.
+  ## specify dovecot servers via an address:port list
+  ##  e.g.
+  ##    localhost:24242
+  ##
+  ## If no servers are specified, then localhost is used as the host.
   servers = ["localhost:24242"]
-  # Only collect metrics for these domains, collect all if empty
-  domains = []
+  ## Type is one of "user", "domain", "ip", or "global"
+  type = "global"
+  ## Wildcard matches like "*.com". An empty string "" is same as "*"
+  ## If type = "ip" filters should be <IP/network>
+  filters = [""]
 ```
 
 
 ### Tags:
 	server: hostname
+	type: query type
+	ip: ip addr
+	user: username
 	domain: domain name
 
 
@@ -33,7 +38,7 @@ domains. You can read Dovecot's documentation
 	last_update            time.Time
 	num_logins             int64
 	num_cmds               int64
-	num_connected_sessions int64
+	num_connected_sessions int64				## not in <user> type
 	user_cpu               float32
 	sys_cpu                float32
 	clock_time             float64
@@ -57,11 +62,13 @@ domains. You can read Dovecot's documentation
 ### Example Output:
 
 ```
-telegraf -config telegraf.cfg -input-filter dovecot -test
+telegraf -config t.cfg -input-filter dovecot -test
 * Plugin: dovecot, Collection 1
-> dovecot,domain=xxxxx.it,server=dovecot--1.mail.sys clock_time=12105746411632.5,disk_input=115285225472i,disk_output=4885067755520i,invol_cs=169701886i,last_update="2016-02-09 08:49:47.000014113 +0100 CET",mail_cache_hits=441828i,mail_lookup_attr=0i,mail_lookup_path=25323i,mail_read_bytes=241188145i,mail_read_count=11719i,maj_faults=3168i,min_faults=321438988i,num_cmds=51635i,num_connected_sessions=2i,num_logins=17149i,read_bytes=7939026951110i,read_count=3716991752i,reset_timestamp="2016-01-28 09:34:36 +0100 CET",sys_cpu=222595.288,user_cpu=267468.08,vol_cs=3288715920i,write_bytes=4483648967059i,write_count=1640646952i 1455004219924838345
-> dovecot,domain=yyyyy.com,server=dovecot-1.mail.sys clock_time=6650794455331782,disk_input=61957695569920i,disk_output=2638244004487168i,invol_cs=2004805041i,last_update="2016-02-09 08:49:49.000251296 +0100 CET",mail_cache_hits=2499112513i,mail_lookup_attr=506730i,mail_lookup_path=39128227i,mail_read_bytes=1076496874501i,mail_read_count=32615262i,maj_faults=1643304i,min_faults=4216116325i,num_cmds=85785559i,num_connected_sessions=1177i,num_logins=11658255i,read_bytes=4289150974554145i,read_count=1112000703i,reset_timestamp="2016-01-28 09:31:26 +0100 CET",sys_cpu=121125923.032,user_cpu=145561336.428,vol_cs=205451885i,write_bytes=2420130526835796i,write_count=2991367252i 1455004219925152529
-> dovecot,domain=xxxxx.it,server=dovecot-2.mail.sys clock_time=10710826586999.143,disk_input=79792410624i,disk_output=4496066158592i,invol_cs=150426876i,last_update="2016-02-09 08:48:19.000209134 +0100 CET",mail_cache_hits=5480869i,mail_lookup_attr=0i,mail_lookup_path=122563i,mail_read_bytes=340746273i,mail_read_count=44275i,maj_faults=1722i,min_faults=288071875i,num_cmds=50098i,num_connected_sessions=0i,num_logins=16389i,read_bytes=7259551999517i,read_count=3396625369i,reset_timestamp="2016-01-28 09:31:29 +0100 CET",sys_cpu=200762.792,user_cpu=242477.664,vol_cs=2996657358i,write_bytes=4133381575263i,write_count=1497242759i 1455004219924888283
-> dovecot,domain=yyyyy.com,server=dovecot-2.mail.sys clock_time=6522131245483702,disk_input=48259150004224i,disk_output=2754333359087616i,invol_cs=2294595260i,last_update="2016-02-09 08:49:49.000251919 +0100 CET",mail_cache_hits=2139113611i,mail_lookup_attr=520276i,mail_lookup_path=37940318i,mail_read_bytes=1088002215022i,mail_read_count=31350271i,maj_faults=994420i,min_faults=1486260543i,num_cmds=40414997i,num_connected_sessions=978i,num_logins=11259672i,read_bytes=4445546612487315i,read_count=1763534543i,reset_timestamp="2016-01-28 09:31:24 +0100 CET",sys_cpu=123655962.668,user_cpu=149259327.032,vol_cs=4215130546i,write_bytes=2531186030222761i,write_count=2186579650i 1455004219925398372
+> dovecot,ip=192.168.0.1,server=dovecot-1.domain.test,type=ip clock_time=0,disk_input=0i,disk_output=0i,invol_cs=0i,last_update="2016-04-08 10:59:47.000208479 +0200 CEST",mail_cache_hits=0i,mail_lookup_attr=0i,mail_lookup_path=0i,mail_read_bytes=0i,mail_read_count=0i,maj_faults=0i,min_faults=0i,num_cmds=12i,num_connected_sessions=0i,num_logins=6i,read_bytes=0i,read_count=0i,reset_timestamp="2016-04-08 10:33:34 +0200 CEST",sys_cpu=0,user_cpu=0,vol_cs=0i,write_bytes=0i,write_count=0i 1460106251633824223
+* Plugin: dovecot, Collection 1
+> dovecot,server=dovecot-1.domain.test,type=user,user=user-1@domain.test clock_time=0.00006,disk_input=405504i,disk_output=77824i,invol_cs=67i,last_update="2016-04-08 11:02:55.000111634 +0200 CEST",mail_cache_hits=26i,mail_lookup_attr=0i,mail_lookup_path=6i,mail_read_bytes=86233i,mail_read_count=5i,maj_faults=0i,min_faults=975i,num_cmds=41i,num_logins=3i,read_bytes=368833i,read_count=394i,reset_timestamp="2016-04-08 11:01:32 +0200 CEST",sys_cpu=0.008,user_cpu=0.004,vol_cs=323i,write_bytes=105086i,write_count=176i 1460106256637049167
+* Plugin: dovecot, Collection 1
+> dovecot,domain=domain.test,server=dovecot-1.domain.test,type=domain clock_time=100896189179847.7,disk_input=6467588263936i,disk_output=17933680439296i,invol_cs=1194808498i,last_update="2016-04-08 11:04:08.000377367 +0200 CEST",mail_cache_hits=46455781i,mail_lookup_attr=0i,mail_lookup_path=571490i,mail_read_bytes=79287033067i,mail_read_count=491243i,maj_faults=16992i,min_faults=1278442541i,num_cmds=606005i,num_connected_sessions=6597i,num_logins=166381i,read_bytes=30231409780721i,read_count=1624912080i,reset_timestamp="2016-04-08 10:28:45 +0200 CEST",sys_cpu=156440.372,user_cpu=216676.476,vol_cs=2749291157i,write_bytes=17097106707594i,write_count=944448998i 1460106261639672622
+* Plugin: dovecot, Collection 1
+> dovecot,server=dovecot-1.domain.test,type=global clock_time=101196971074203.94,disk_input=6493168218112i,disk_output=17978638815232i,invol_cs=1198855447i,last_update="2016-04-08 11:04:13.000379245 +0200 CEST",mail_cache_hits=68192209i,mail_lookup_attr=0i,mail_lookup_path=653861i,mail_read_bytes=86705151847i,mail_read_count=566125i,maj_faults=17208i,min_faults=1286179702i,num_cmds=917469i,num_connected_sessions=8896i,num_logins=174827i,read_bytes=30327690466186i,read_count=1772396430i,reset_timestamp="2016-04-08 10:28:45 +0200 CEST",sys_cpu=157965.692,user_cpu=219337.48,vol_cs=2827615787i,write_bytes=17150837661940i,write_count=992653220i 1460106266642153907
 ```
-
