@@ -54,7 +54,7 @@ func TestGraphiteOK(t *testing.T) {
 	m1, _ := telegraf.NewMetric(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
-		map[string]interface{}{"mymeasurement": float64(3.14)},
+		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	m2, _ := telegraf.NewMetric(
@@ -90,10 +90,10 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	reader := bufio.NewReader(conn)
 	tp := textproto.NewReader(reader)
 	data1, _ := tp.ReadLine()
-	assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data1)
+	assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
 	data2, _ := tp.ReadLine()
-	assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement.value 3.14 1289430000", data2)
+	assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
 	data3, _ := tp.ReadLine()
-	assert.Equal(t, "my.prefix.192_168_0_1.my_measurement.value 3.14 1289430000", data3)
+	assert.Equal(t, "my.prefix.192_168_0_1.my_measurement 3.14 1289430000", data3)
 	conn.Close()
 }

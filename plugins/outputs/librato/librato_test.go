@@ -86,7 +86,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(0.0, "test1"),
 			&Gauge{
-				Name:        "value1.test1.value",
+				Name:        "value1.test1",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       0.0,
 			},
@@ -95,7 +95,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(1.0, "test2"),
 			&Gauge{
-				Name:        "value1.test2.value",
+				Name:        "value1.test2",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       1.0,
 			},
@@ -104,7 +104,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(10, "test3"),
 			&Gauge{
-				Name:        "value1.test3.value",
+				Name:        "value1.test3",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       10.0,
 			},
@@ -113,7 +113,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(int32(112345), "test4"),
 			&Gauge{
-				Name:        "value1.test4.value",
+				Name:        "value1.test4",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       112345.0,
 			},
@@ -122,7 +122,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(int64(112345), "test5"),
 			&Gauge{
-				Name:        "value1.test5.value",
+				Name:        "value1.test5",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       112345.0,
 			},
@@ -131,7 +131,7 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(float32(11234.5), "test6"),
 			&Gauge{
-				Name:        "value1.test6.value",
+				Name:        "value1.test6",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       11234.5,
 			},
@@ -189,7 +189,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		{
 			pt1,
 			&Gauge{
-				Name:        "192_168_0_1.value1.test1.value",
+				Name:        "192_168_0_1.value1.test1",
 				MeasureTime: time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       0.0,
 				Source:      "192.168.0.1",
@@ -199,7 +199,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		{
 			pt2,
 			&Gauge{
-				Name:        "192_168_0_1.value1.test1.value",
+				Name:        "192_168_0_1.value1.test1",
 				MeasureTime: time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       1.0,
 			},
