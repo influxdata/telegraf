@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	//	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -64,6 +65,10 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 
 	var outerr error
 
+	if len(d.Filters) <= 0 {
+		d.Filters = append(d.Filters, "")
+	}
+
 	for _, serv := range d.Servers {
 		for _, filter := range d.Filters {
 			wg.Add(1)
@@ -80,6 +85,7 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype string, filter string) error {
+
 	_, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		return fmt.Errorf("Error: %s on url %s\n", err, addr)
@@ -120,12 +126,11 @@ func gatherStats(buf *bytes.Buffer, acc telegraf.Accumulator, host string, qtype
 			continue
 		}
 		val := strings.Split(vals[i], "\t")
+
 		fields := make(map[string]interface{})
 		tags := map[string]string{"server": host, "type": qtype}
-		switch qtype {
-		case "global":
-			continue
-		default:
+
+		if qtype != "global" {
 			tags[qtype] = val[0]
 		}
 
