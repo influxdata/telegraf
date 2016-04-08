@@ -38,7 +38,7 @@ domains. You can read Dovecot's documentation
 	last_update            time.Time
 	num_logins             int64
 	num_cmds               int64
-	num_connected_sessions int64
+	num_connected_sessions int64				## not in <user> type
 	user_cpu               float32
 	sys_cpu                float32
 	clock_time             float64
