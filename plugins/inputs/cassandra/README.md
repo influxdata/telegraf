@@ -98,13 +98,13 @@ Here is a list of metrics that might be useful to monitor your cassandra cluster
 ####measurement = cassandraTable
 Using wildcards for "keyspace" and "scope" can create a lot of series as metrics will be reported for every table and keyspace including internal system tables. Specify a keyspace name and/or a table name to limit them.
 
-- /org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=LiveDiskSpaceUsed
-- /org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=TotalDiskSpaceUsed
-- /org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=ReadLatency
-- /org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=CoordinatorReadLatency 
-- /org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=WriteLatency 
-- /org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=ReadTotalLatency 
-- /org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=WriteTotalLatency              
+- /org.apache.cassandra.metrics:type=Table,keyspace=\*,scope=\*,name=LiveDiskSpaceUsed
+- /org.apache.cassandra.metrics:type=Table,keyspace=\*,scope=\*,name=TotalDiskSpaceUsed
+- /org.apache.cassandra.metrics:type=Table,keyspace=\*,scope=\*,name=ReadLatency
+- /org.apache.cassandra.metrics:type=Table,keyspace=\*,scope=\*,name=CoordinatorReadLatency 
+- /org.apache.cassandra.metrics:type=Table,keyspace=\*,scope=\*,name=WriteLatency 
+- /org.apache.cassandra.metrics:type=Table,keyspace=\*,scope=\*,name=ReadTotalLatency 
+- /org.apache.cassandra.metrics:type=Table,keyspace=\*,scope=\*,name=WriteTotalLatency              
 
 
 ####measurement = cassandraThreadPools
