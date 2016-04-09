@@ -196,8 +196,10 @@ func (j *Cassandra) SampleConfig() string {
   ## ReadLatency metrics for all keyspaces and tables.
   ## "type=Table" in the query works with Cassandra3.0. Older versions might
   ## need to use "type=ColumnFamily"
-  metrics  = ["/java.lang:type=Memory/HeapMemoryUsage",
-              "/org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=ReadLatency"]
+  metrics  = [
+    "/java.lang:type=Memory/HeapMemoryUsage",
+    "/org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=ReadLatency"
+  ]
 `
 }
 
