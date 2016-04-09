@@ -160,6 +160,7 @@ Currently implemented sources:
 * [aerospike](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/aerospike)
 * [apache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/apache)
 * [bcache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/bcache)
+* [cassandra](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cassandra)
 * [couchbase](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchbase)
 * [couchdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchdb)
 * [disque](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disque)

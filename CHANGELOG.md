@@ -1,6 +1,7 @@
 ## v0.12.1 [unreleased]
 
 ### Features
+- [#952](https://github.com/influxdata/telegraf/pull/952): Cassandra input plugin. Thanks @subhachandrachandra!
 - [#976](https://github.com/influxdata/telegraf/pull/976): Reduce allocations in the UDP and statsd inputs.
 - [#979](https://github.com/influxdata/telegraf/pull/979): Reduce allocations in the TCP listener.
 - [#935](https://github.com/influxdata/telegraf/pull/935): AWS Cloudwatch input plugin. Thanks @joshhardy & @ljosa!
