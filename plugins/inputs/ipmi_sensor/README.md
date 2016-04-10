@@ -20,7 +20,7 @@ ipmitool -I lan -H 192.168.1.1 -U USERID -P PASSW0RD sdr
 ## Configuration
 
 ```toml
-[[inputs.ipmi]]
+[[inputs.ipmi_sensor]]
   ## specify servers via a url matching:
   ##  [username[:password]@][protocol[(address)]]
   ##  e.g.
