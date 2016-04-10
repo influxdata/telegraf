@@ -1157,123 +1157,52 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			"schema": objectSchema,
 			"table":  objectName,
 		}
-		sqlLWFields := make(map[string]interface{})
 
-		rnTags := copyTags(tags)
-		rnTags["operation"] = "read_normal"
-		sqlLWFields["sql_lock_waits_total"] = countReadNormal
-		acc.AddFields("mysql_perf_schema", sqlLWFields, rnTags)
+		sqlLWTags := copyTags(tags)
+		sqlLWTags["perf_query"] = "sql_lock_waits_total"
+		sqlLWFields := map[string]interface{}{
+			"read_normal":             countReadNormal,
+			"read_with_shared_locks":  countReadWithSharedLocks,
+			"read_high_priority":      countReadHighPriority,
+			"read_no_insert":          countReadNoInsert,
+			"write_normal":            countWriteNormal,
+			"write_allow_write":       countWriteAllowWrite,
+			"write_concurrent_insert": countWriteConcurrentInsert,
+			"write_delayed":           countWriteDelayed,
+			"write_low_priority":      countWriteLowPriority,
+		}
+		acc.AddFields("mysql_perf_schema", sqlLWFields, sqlLWTags)
 
-		rwslTags := copyTags(tags)
-		rwslTags["operation"] = "read_with_shared_locks"
-		sqlLWFields["sql_lock_waits_total"] = countReadWithSharedLocks
-		acc.AddFields("mysql_perf_schema", sqlLWFields, rwslTags)
+		externalLWTags := copyTags(tags)
+		externalLWTags["perf_query"] = "external_lock_waits_total"
+		externalLWFields := map[string]interface{}{
+			"read":  countReadExternal,
+			"write": countWriteExternal,
+		}
+		acc.AddFields("mysql_perf_schema", externalLWFields, externalLWTags)
 
-		rhptTags := copyTags(tags)
-		rhptTags["operation"] = "read_high_priority"
-		sqlLWFields["sql_lock_waits_total"] = countReadHighPriority
-		acc.AddFields("mysql_perf_schema", sqlLWFields, rhptTags)
+		sqlLWSecTotalTags := copyTags(tags)
+		sqlLWSecTotalTags["perf_query"] = "sql_lock_waits_seconds_total"
+		sqlLWSecTotalFields := map[string]interface{}{
+			"read_normal":             timeReadNormal / picoSeconds,
+			"read_with_shared_locks":  timeReadWithSharedLocks / picoSeconds,
+			"read_high_priority":      timeReadHighPriority / picoSeconds,
+			"read_no_insert":          timeReadNoInsert / picoSeconds,
+			"write_normal":            timeWriteNormal / picoSeconds,
+			"write_allow_write":       timeWriteAllowWrite / picoSeconds,
+			"write_concurrent_insert": timeWriteConcurrentInsert / picoSeconds,
+			"write_delayed":           timeWriteDelayed / picoSeconds,
+			"write_low_priority":      timeWriteLowPriority / picoSeconds,
+		}
+		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, sqlLWSecTotalTags)
 
-		rniTags := copyTags(tags)
-		rniTags["operation"] = "read_no_insert"
-		sqlLWFields["sql_lock_waits_total"] = countReadNoInsert
-		acc.AddFields("mysql_perf_schema", sqlLWFields, tags)
-
-		wnTags := copyTags(tags)
-		wnTags["operation"] = "write_normal"
-		sqlLWFields["sql_lock_waits_total"] = countWriteNormal
-		acc.AddFields("mysql_perf_schema", sqlLWFields, wnTags)
-
-		wawTags := copyTags(tags)
-		wawTags["operation"] = "write_allow_write"
-		sqlLWFields["sql_lock_waits_total"] = countWriteAllowWrite
-		acc.AddFields("mysql_perf_schema", sqlLWFields, wawTags)
-
-		wciTags := copyTags(tags)
-		wciTags["operation"] = "write_concurrent_insert"
-		sqlLWFields["sql_lock_waits_total"] = countWriteConcurrentInsert
-		acc.AddFields("mysql_perf_schema", sqlLWFields, wciTags)
-
-		wdTags := copyTags(tags)
-		wdTags["operation"] = "write_delayed"
-		sqlLWFields["sql_lock_waits_total"] = countWriteDelayed
-		acc.AddFields("mysql_perf_schema", sqlLWFields, wdTags)
-
-		wlpTags := copyTags(tags)
-		wlpTags["operation"] = "write_low_priority"
-		sqlLWFields["sql_lock_waits_total"] = countWriteLowPriority
-		acc.AddFields("mysql_perf_schema", sqlLWFields, wlpTags)
-
-		externalLWFields := make(map[string]interface{})
-
-		rTags := copyTags(tags)
-		rTags["operation"] = "read"
-		externalLWFields["external_lock_waits_total"] = countReadExternal
-		acc.AddFields("mysql_perf_schema", externalLWFields, rTags)
-
-		wTags := copyTags(tags)
-		wTags["operation"] = "write"
-		externalLWFields["external_lock_waits_total"] = countWriteExternal
-		acc.AddFields("mysql_perf_schema", externalLWFields, wTags)
-
-		sqlLWSecTotalFields := make(map[string]interface{})
-
-		rnstTags := copyTags(tags)
-		rnstTags["operation"] = "read_normal"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeReadNormal / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, rnstTags)
-
-		rwslstTags := copyTags(tags)
-		rwslstTags["operation"] = "read_with_shared_locks"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeReadWithSharedLocks / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, rwslstTags)
-
-		rhpTags := copyTags(tags)
-		rhpTags["operation"] = "read_high_priority"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeReadHighPriority / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, rhpTags)
-
-		rnistTags := copyTags(tags)
-		rnistTags["operation"] = "read_no_insert"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeReadNoInsert / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, rnistTags)
-
-		wnstTags := copyTags(tags)
-		wnstTags["operation"] = "write_normal"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeWriteNormal / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, wnstTags)
-
-		wawstTags := copyTags(tags)
-		wawstTags["operation"] = "write_allow_write"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeWriteAllowWrite / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, wawstTags)
-
-		wcistTags := copyTags(tags)
-		wcistTags["operation"] = "write_concurrent_insert"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeWriteConcurrentInsert / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, wcistTags)
-
-		wdstTags := copyTags(tags)
-		wdstTags["operation"] = "write_delayed"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeWriteDelayed / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, wdstTags)
-
-		wlpstTags := copyTags(tags)
-		wlpstTags["operation"] = "write_low_priority"
-		sqlLWSecTotalFields["sql_lock_waits_seconds_total"] = timeWriteLowPriority / picoSeconds
-		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, wlpstTags)
-
-		externalLWSecTotalFields := make(map[string]interface{})
-
-		rstTags := copyTags(tags)
-		rstTags["operation"] = "read"
-		externalLWSecTotalFields["external_lock_waits_seconds_total"] = timeReadExternal / picoSeconds
-		acc.AddFields("mysql_perf_schema", externalLWSecTotalFields, rstTags)
-
-		wstTags := copyTags(tags)
-		wstTags["operation"] = "write"
-		externalLWSecTotalFields["external_lock_waits_seconds_total"] = timeWriteExternal / picoSeconds
-		acc.AddFields("mysql_perf_schema", externalLWSecTotalFields, wstTags)
+		externalLWSecTotalTags := copyTags(tags)
+		externalLWSecTotalTags["perf_query"] = "external_lock_waits_seconds_total"
+		externalLWSecTotalFields := map[string]interface{}{
+			"read":  timeReadExternal / picoSeconds,
+			"write": timeWriteExternal / picoSeconds,
+		}
+		acc.AddFields("mysql_perf_schema", externalLWSecTotalFields, externalLWSecTotalTags)
 	}
 	return nil
 }
