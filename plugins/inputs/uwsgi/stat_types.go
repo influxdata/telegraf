@@ -20,8 +20,8 @@ type StatsServer struct {
 
 type Worker struct {
 	// Tags
-	Id  int `json:"id"`
-	Pid int `json:"pid"`
+	WorkerId int `json:"id"`
+	Pid      int `json:"pid"`
 
 	// Fields
 	Accepting     int    `json:"accepting"`
@@ -38,4 +38,19 @@ type Worker struct {
 	RespawnCount  int    `json:"respawn_count"`
 	Tx            int    `json:"tx"`
 	AvgRt         int    `json:"avg_rt"`
+
+	Apps []*App `json:"apps"`
+}
+
+type App struct {
+	// Tags
+	AppId      int    `json:"id"`
+	MountPoint string `json:"mountpoint"`
+	Chdir      string `json:"chdir"`
+
+	// Fields
+	Modifier1   int `json:"modifier1"`
+	Requests    int `json:"requests"`
+	StartupTime int `json:"startup_time"`
+	Exceptions  int `json:"exceptions"`
 }
