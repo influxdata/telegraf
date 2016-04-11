@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -19,16 +20,37 @@ type File struct {
 	serializer serializers.Serializer
 }
 
-var sampleConfig = `
-  ## Files to write to, "stdout" is a specially handled file.
-  files = ["stdout", "/tmp/metrics.out"]
+type DevNull struct {
+	File
+	Files []string
+}
 
+func (s *DevNull) SampleConfig() string {
+	return ""
+}
+
+func (f *DevNull) Description() string {
+	return "Send telegraf metrics to nowhere at all"
+}
+
+type Stdout struct {
+	File
+	Files []string
+}
+
+func (s *Stdout) SampleConfig() string {
+	return `
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 `
+}
+
+func (f *Stdout) Description() string {
+	return "Send telegraf metrics to stdout"
+}
 
 func (f *File) SetSerializer(serializer serializers.Serializer) {
 	f.serializer = serializer
@@ -37,14 +59,12 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 func (f *File) Connect() error {
 	writers := []io.Writer{}
 
-	if len(f.Files) == 0 {
-		f.Files = []string{"stdout"}
-	}
-
 	for _, file := range f.Files {
 		if file == "stdout" {
 			writers = append(writers, os.Stdout)
 			f.closers = append(f.closers, os.Stdout)
+		} else if file == "discard" {
+			writers = append(writers, ioutil.Discard)
 		} else {
 			var of *os.File
 			var err error
@@ -79,7 +99,16 @@ func (f *File) Close() error {
 }
 
 func (f *File) SampleConfig() string {
-	return sampleConfig
+	return `
+  ## Files to write to.
+  files = ["/tmp/metrics.out"]
+
+  ## Data format to output.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
+`
 }
 
 func (f *File) Description() string {
@@ -110,5 +139,15 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("file", func() telegraf.Output {
 		return &File{}
+	})
+	outputs.Add("stdout", func() telegraf.Output {
+		return &Stdout{
+			Files: []string{"stdout"},
+		}
+	})
+	outputs.Add("discard", func() telegraf.Output {
+		return &DevNull{
+			Files: []string{"discard"},
+		}
 	})
 }

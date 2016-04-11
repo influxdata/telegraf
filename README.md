@@ -239,6 +239,8 @@ want to add support for another service or third-party API.
 * [aws kinesis](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kinesis)
 * [aws cloudwatch](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/cloudwatch)
 * [datadog](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/datadog)
+* [discard](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file)
+* [file](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file)
 * [graphite](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/graphite)
 * [kafka](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kafka)
 * [librato](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/librato)
@@ -247,6 +249,7 @@ want to add support for another service or third-party API.
 * [opentsdb](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
 * [prometheus](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/prometheus_client)
 * [riemann](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/riemann)
+* [stdout](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file)
 
 ## Contributing
 
