@@ -69,6 +69,7 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 	u.gatherStatServer(acc, &s)
 	u.gatherWorkers(acc, &s)
 	u.gatherApps(acc, &s)
+	u.gatherCores(acc, &s)
 
 	return nil
 }
@@ -142,6 +143,30 @@ func (u *Uwsgi) gatherApps(acc telegraf.Accumulator, s *StatsServer) error {
 			}
 			acc.AddFields("uwsgi_apps", fields, tags)
 		}
+	}
+
+	return nil
+}
+
+func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) error {
+	for _, w := range s.Workers {
+		for _, c := range w.Cores {
+			fields := map[string]interface{}{
+				"requests":           c.Requests,
+				"static_requests":    c.StaticRequests,
+				"routed_requests":    c.RoutedRequests,
+				"offloaded_requests": c.OffloadedRequests,
+				"write_errors":       c.WriteErrors,
+				"read_errors":        c.ReadErrors,
+				"in_request":         c.InRequest,
+			}
+			tags := map[string]string{
+				"core_id":   strconv.Itoa(c.CoreId),
+				"worker_id": strconv.Itoa(w.WorkerId),
+			}
+			acc.AddFields("uwsgi_cores", fields, tags)
+		}
+
 	}
 
 	return nil

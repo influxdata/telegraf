@@ -39,7 +39,8 @@ type Worker struct {
 	Tx            int    `json:"tx"`
 	AvgRt         int    `json:"avg_rt"`
 
-	Apps []*App `json:"apps"`
+	Apps  []*App  `json:"apps"`
+	Cores []*Core `json:"cores"`
 }
 
 type App struct {
@@ -53,4 +54,18 @@ type App struct {
 	Requests    int `json:"requests"`
 	StartupTime int `json:"startup_time"`
 	Exceptions  int `json:"exceptions"`
+}
+
+type Core struct {
+	// Tags
+	CoreId int `json:"id"`
+
+	// Fields
+	Requests          int `json:"requests"`
+	StaticRequests    int `json:"static_requests"`
+	RoutedRequests    int `json:"routed_requests"`
+	OffloadedRequests int `json:"offloaded_requests"`
+	WriteErrors       int `json:"write_errors"`
+	ReadErrors        int `json:"read_errors"`
+	InRequest         int `json:"in_request"`
 }
