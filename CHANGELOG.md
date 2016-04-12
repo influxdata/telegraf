@@ -9,7 +9,7 @@ no longer insert field names when the field is simply named `value`. This is
 because the `value` field is redundant in the graphite/librato context.
 
 ### Features
-- [#952](https://github.com/influxdata/telegraf/pull/952): Cassandra input plugin. Thanks @subhachandrachandra!
+- [#1009](https://github.com/influxdata/telegraf/pull/1009): Cassandra input plugin. Thanks @subhachandrachandra!
 - [#976](https://github.com/influxdata/telegraf/pull/976): Reduce allocations in the UDP and statsd inputs.
 - [#979](https://github.com/influxdata/telegraf/pull/979): Reduce allocations in the TCP listener.
 - [#992](https://github.com/influxdata/telegraf/pull/992): Refactor allocations in TCP/UDP listeners.
@@ -18,6 +18,7 @@ because the `value` field is redundant in the graphite/librato context.
 - [#939](https://github.com/influxdata/telegraf/pull/939): sysstat input plugin. Thanks @zbindenren!
 - [#998](https://github.com/influxdata/telegraf/pull/998): **breaking change** enabled global, user and ip queries in dovecot plugin. Thanks @mikif70!
 - [#1001](https://github.com/influxdata/telegraf/pull/1001): Graphite serializer templates.
+- [#1008](https://github.com/influxdata/telegraf/pull/1008): Adding memstats metrics to the influxdb plugin.
 
 ### Bugfixes
 - [#968](https://github.com/influxdata/telegraf/issues/968): Processes plugin gets unknown state when spaces are in (command name)

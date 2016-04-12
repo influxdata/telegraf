@@ -1,6 +1,41 @@
 # influxdb plugin
 
-The influxdb plugin collects InfluxDB-formatted data from JSON endpoints.
+The InfluxDB plugin will collect metrics on the given InfluxDB servers.
+
+This plugin can also gather metrics from endpoints that expose
+InfluxDB-formatted endpoints. See below for more information.
+
+### Configuration:
+
+```toml
+# Read InfluxDB-formatted JSON metrics from one or more HTTP endpoints
+[[inputs.influxdb]]
+  ## Works with InfluxDB debug endpoints out of the box,
+  ## but other services can use this format too.
+  ## See the influxdb plugin's README for more details.
+
+  ## Multiple URLs from which to read InfluxDB-formatted JSON
+  urls = [
+    "http://localhost:8086/debug/vars"
+  ]
+```
+
+### Measurements & Fields
+
+- influxdb_database
+- influxdb_httpd
+- influxdb_measurement
+- influxdb_memstats
+- influxdb_shard
+- influxdb_subscriber
+- influxdb_tsm1_cache
+- influxdb_tsm1_wal
+- influxdb_write
+
+### InfluxDB-formatted endpoints
+
+The influxdb plugin can collect InfluxDB-formatted data from JSON endpoints.
+Whether associated with an Influx database or not.
 
 With a configuration of:
 
@@ -65,8 +100,11 @@ influxdb_transactions,url='http://192.168.2.1:8086/debug/vars' total=100.0,balan
 
 There are two important details to note about the collected metrics:
 
-1. Even though the values in JSON are being displayed as integers, the metrics are reported as floats.
+1. Even though the values in JSON are being displayed as integers,
+the metrics are reported as floats.
 JSON encoders usually don't print the fractional part for round floats.
-Because you cannot change the type of an existing field in InfluxDB, we assume all numbers are floats.
+Because you cannot change the type of an existing field in InfluxDB,
+we assume all numbers are floats.
 
-2. The top-level keys' names (in the example above, `"k1"`, `"k2"`, and `"k3"`) are not considered when recording the metrics.
+2. The top-level keys' names (in the example above, `"k1"`, `"k2"`, and `"k3"`)
+are not considered when recording the metrics.
