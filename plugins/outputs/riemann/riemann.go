@@ -1,7 +1,6 @@
 package riemann
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -33,6 +32,7 @@ func (r *Riemann) Connect() error {
 	c, err := raidman.Dial(r.Transport, r.URL)
 
 	if err != nil {
+		r.client = nil
 		return err
 	}
 
@@ -41,7 +41,11 @@ func (r *Riemann) Connect() error {
 }
 
 func (r *Riemann) Close() error {
+	if r.client == nil {
+		return nil
+	}
 	r.client.Close()
+	r.client = nil
 	return nil
 }
 
@@ -58,6 +62,13 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	if r.client == nil {
+		err := r.Connect()
+		if err != nil {
+			return fmt.Errorf("FAILED to (re)connect to Riemann. Error: %s\n", err)
+		}
+	}
+
 	var events []*raidman.Event
 	for _, p := range metrics {
 		evs := buildEvents(p, r.Separator)
@@ -68,8 +79,16 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 
 	var senderr = r.client.SendMulti(events)
 	if senderr != nil {
-		return errors.New(fmt.Sprintf("FAILED to send riemann message: %s\n",
-			senderr))
+		r.Close() // always retuns nil
+		connerr := r.Connect()
+		if connerr != nil {
+			return fmt.Errorf("FAILED to (re)connect to Riemann. Error: %s\n", connerr)
+		}
+		senderr = r.client.SendMulti(events)
+		if senderr != nil {
+			return fmt.Errorf("FAILED to send riemann message (will try to reconnect). Error: %s\n",
+				senderr)
+		}
 	}
 
 	return nil
