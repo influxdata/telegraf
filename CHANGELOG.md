@@ -1,6 +1,19 @@
 ## v0.13 [unreleased]
 
 ### Release Notes
+- **Breaking Change**: docker plugin tags. The cont_id tag no longer exists, it
+will now be a field, and be called container_id. Additionally, cont_image and
+cont_name are being renamed to container_image and container_name.
+- **Breaking Change**: docker plugin measurements. The `docker_cpu`, `docker_mem`,
+and `docker_net` measurements are being renamed to `docker_container_cpu`,
+`docker_container_mem`, and `docker_container_net`. Why? Because these metrics are
+specifically tracking per-container stats. The problem with per-container stats,
+in some use-cases, is that if containers are short-lived AND names are not
+kept consistent, then the series cardinality will balloon very quickly.
+So adding "container" to each metric will:
+(1) make it more clear that these metrics are per-container, and
+(2) allow users to easily drop per-container metrics if cardinality is an
+issue (`namedrop = ["docker_container_*"]`)
 - `tagexclude` and `tagexclude` are now available, which can be used to remove
 tags from measurements on inputs and outputs. See
 [the configuration doc](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md)
@@ -12,6 +25,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 
 ### Features
 - [#1017](https://github.com/influxdata/telegraf/pull/1017): taginclude and tagexclude arguments.
+- [#1015](https://github.com/influxdata/telegraf/pull/1015): Docker plugin schema refactor.
 
 ### Bugfixes
 - [#921](https://github.com/influxdata/telegraf/pull/921): mqtt_consumer stops gathering metrics. Thanks @chaton78!
