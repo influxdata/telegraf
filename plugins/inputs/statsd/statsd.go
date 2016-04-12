@@ -20,7 +20,7 @@ import (
 const (
 	// UDP packet limit, see
 	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
-	UDP_PACKET_SIZE int = 65507
+	UDP_MAX_PACKET_SIZE int = 64 * 1024
 
 	defaultFieldName = "value"
 
@@ -57,8 +57,10 @@ type Statsd struct {
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool
 
-	// UDPPacketSize is the size of the read packets for the server listening
-	// for statsd UDP packets. This will default to 1500 bytes.
+	// UDPPacketSize is deprecated, it's only here for legacy support
+	// we now always create 1 max size buffer and then copy only what we need
+	// into the in channel
+	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize int `toml:"udp_packet_size"`
 
 	sync.Mutex
@@ -272,7 +274,7 @@ func (s *Statsd) udpListen() error {
 	}
 	log.Println("Statsd listener listening on: ", s.listener.LocalAddr().String())
 
-	buf := make([]byte, s.UDPPacketSize)
+	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
 		select {
 		case <-s.done:
@@ -283,9 +285,11 @@ func (s *Statsd) udpListen() error {
 				log.Printf("ERROR READ: %s\n", err.Error())
 				continue
 			}
+			bufCopy := make([]byte, n)
+			copy(bufCopy, buf[:n])
 
 			select {
-			case s.in <- buf[:n]:
+			case s.in <- bufCopy:
 			default:
 				log.Printf(dropwarn, string(buf[:n]))
 			}
@@ -631,7 +635,6 @@ func init() {
 	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
 			MetricSeparator: "_",
-			UDPPacketSize:   UDP_PACKET_SIZE,
 		}
 	})
 }

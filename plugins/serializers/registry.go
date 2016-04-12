@@ -30,6 +30,10 @@ type Config struct {
 
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string
+
+	// Template for converting telegraf metrics into Graphite
+	// only supports Graphite
+	Template string
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -40,7 +44,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializer()
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix)
+		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
 		serializer, err = NewJsonSerializer()
 	}
@@ -55,8 +59,9 @@ func NewInfluxSerializer() (Serializer, error) {
 	return &influx.InfluxSerializer{}, nil
 }
 
-func NewGraphiteSerializer(prefix string) (Serializer, error) {
+func NewGraphiteSerializer(prefix, template string) (Serializer, error) {
 	return &graphite.GraphiteSerializer{
-		Prefix: prefix,
+		Prefix:   prefix,
+		Template: template,
 	}, nil
 }

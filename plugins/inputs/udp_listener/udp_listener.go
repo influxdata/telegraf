@@ -12,7 +12,11 @@ import (
 )
 
 type UdpListener struct {
-	ServiceAddress         string
+	ServiceAddress string
+	// UDPPacketSize is deprecated, it's only here for legacy support
+	// we now always create 1 max size buffer and then copy only what we need
+	// into the in channel
+	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize          int `toml:"udp_packet_size"`
 	AllowedPendingMessages int
 
@@ -32,7 +36,7 @@ type UdpListener struct {
 
 // UDP packet limit, see
 // https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
-const UDP_PACKET_SIZE int = 65507
+const UDP_MAX_PACKET_SIZE int = 64 * 1024
 
 var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
 	"You may want to increase allowed_pending_messages in the config\n"
@@ -104,7 +108,7 @@ func (u *UdpListener) udpListen() error {
 	}
 	log.Println("UDP server listening on: ", u.listener.LocalAddr().String())
 
-	buf := make([]byte, u.UDPPacketSize)
+	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
 		select {
 		case <-u.done:
@@ -115,11 +119,13 @@ func (u *UdpListener) udpListen() error {
 				log.Printf("ERROR: %s\n", err.Error())
 				continue
 			}
+			bufCopy := make([]byte, n)
+			copy(bufCopy, buf[:n])
 
 			select {
-			case u.in <- buf[:n]:
+			case u.in <- bufCopy:
 			default:
-				log.Printf(dropwarn, string(buf[:n]))
+				log.Printf(dropwarn, string(bufCopy))
 			}
 		}
 	}
@@ -155,8 +161,6 @@ func (u *UdpListener) storeMetrics(metrics []telegraf.Metric) error {
 
 func init() {
 	inputs.Add("udp_listener", func() telegraf.Input {
-		return &UdpListener{
-			UDPPacketSize: UDP_PACKET_SIZE,
-		}
+		return &UdpListener{}
 	})
 }

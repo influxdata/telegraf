@@ -39,7 +39,7 @@ type TcpListener struct {
 	acc    telegraf.Accumulator
 }
 
-var dropwarn = "ERROR: Message queue full. Discarding metric. " +
+var dropwarn = "ERROR: Message queue full. Discarding metric [%s], " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
 const sampleConfig = `
@@ -193,6 +193,7 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 		t.forget(id)
 	}()
 
+	var n int
 	scanner := bufio.NewScanner(conn)
 	for {
 		select {
@@ -202,10 +203,17 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 			if !scanner.Scan() {
 				return
 			}
+			n = len(scanner.Bytes())
+			if n == 0 {
+				continue
+			}
+			bufCopy := make([]byte, n)
+			copy(bufCopy, scanner.Bytes())
+
 			select {
-			case t.in <- scanner.Bytes():
+			case t.in <- bufCopy:
 			default:
-				log.Printf(dropwarn)
+				log.Printf(dropwarn, scanner.Text())
 			}
 		}
 	}

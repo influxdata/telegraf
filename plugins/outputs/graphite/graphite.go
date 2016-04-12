@@ -16,10 +16,11 @@ import (
 
 type Graphite struct {
 	// URL is only for backwards compatability
-	Servers []string
-	Prefix  string
-	Timeout int
-	conns   []net.Conn
+	Servers  []string
+	Prefix   string
+	Template string
+	Timeout  int
+	conns    []net.Conn
 }
 
 var sampleConfig = `
@@ -27,6 +28,9 @@ var sampleConfig = `
   servers = ["localhost:2003"]
   ## Prefix metrics name
   prefix = ""
+  ## Graphite output template
+  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  template = "host.tags.measurement.field"
   ## timeout in seconds for the write connection to graphite
   timeout = 2
 `
@@ -72,7 +76,7 @@ func (g *Graphite) Description() string {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var bp []string
-	s, err := serializers.NewGraphiteSerializer(g.Prefix)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template)
 	if err != nil {
 		return err
 	}
