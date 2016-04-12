@@ -9,6 +9,12 @@ To generate a file with specific inputs and outputs, you can use the
 -input-filter and -output-filter flags:
 `telegraf -sample-config -input-filter cpu:mem:net:swap -output-filter influxdb:kafka`
 
+## Environment Variables
+
+Environment variables can be used anywhere in the config file, simply prepend
+them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
+for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
+
 ## `[global_tags]` Configuration
 
 Global tags can be specific in the `[global_tags]` section of the config file in
@@ -141,12 +147,12 @@ fields which begin with `time_`.
 # Drop all metrics about containers for kubelet
 [[inputs.prometheus]]
   urls = ["http://kube-node-1:4194/metrics"]
-  namedrop = ["container_"]
+  namedrop = ["container_*"]
 
 # Only store rest client related metrics for kubelet
 [[inputs.prometheus]]
   urls = ["http://kube-node-1:4194/metrics"]
-  namepass = ["rest_client_"]
+  namepass = ["rest_client_*"]
 ```
 
 #### Input config: prefix, suffix, and override

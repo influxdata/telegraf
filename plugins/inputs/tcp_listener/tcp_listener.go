@@ -39,7 +39,7 @@ type TcpListener struct {
 	acc    telegraf.Accumulator
 }
 
-var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
+var dropwarn = "ERROR: Message queue full. Discarding metric [%s], " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
 const sampleConfig = `
@@ -53,7 +53,7 @@ const sampleConfig = `
   ## Maximum number of concurrent TCP connections to allow
   max_tcp_connections = 250
 
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -193,6 +193,7 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 		t.forget(id)
 	}()
 
+	var n int
 	scanner := bufio.NewScanner(conn)
 	for {
 		select {
@@ -202,11 +203,17 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 			if !scanner.Scan() {
 				return
 			}
-			buf := scanner.Bytes()
+			n = len(scanner.Bytes())
+			if n == 0 {
+				continue
+			}
+			bufCopy := make([]byte, n)
+			copy(bufCopy, scanner.Bytes())
+
 			select {
-			case t.in <- buf:
+			case t.in <- bufCopy:
 			default:
-				log.Printf(dropwarn, string(buf))
+				log.Printf(dropwarn, scanner.Text())
 			}
 		}
 	}
@@ -215,11 +222,12 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 // tcpParser parses the incoming tcp byte packets
 func (t *TcpListener) tcpParser() error {
 	defer t.wg.Done()
+	var packet []byte
 	for {
 		select {
 		case <-t.done:
 			return nil
-		case packet := <-t.in:
+		case packet = <-t.in:
 			if len(packet) == 0 {
 				continue
 			}

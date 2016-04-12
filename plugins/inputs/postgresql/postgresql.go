@@ -27,7 +27,8 @@ var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_rese
 
 var sampleConfig = `
   ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
+  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
+  ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
   ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
   ##

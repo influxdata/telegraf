@@ -18,7 +18,9 @@ import (
 )
 
 const (
-	UDP_PACKET_SIZE int = 1500
+	// UDP packet limit, see
+	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
+	UDP_MAX_PACKET_SIZE int = 64 * 1024
 
 	defaultFieldName = "value"
 
@@ -55,8 +57,10 @@ type Statsd struct {
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool
 
-	// UDPPacketSize is the size of the read packets for the server listening
-	// for statsd UDP packets. This will default to 1500 bytes.
+	// UDPPacketSize is deprecated, it's only here for legacy support
+	// we now always create 1 max size buffer and then copy only what we need
+	// into the in channel
+	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize int `toml:"udp_packet_size"`
 
 	sync.Mutex
@@ -157,10 +161,6 @@ const sampleConfig = `
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
-
-  ## UDP packet size for the server to listen for. This will depend on the size
-  ## of the packets that the client is sending, which is usually 1500 bytes.
-  udp_packet_size = 1500
 `
 
 func (_ *Statsd) SampleConfig() string {
@@ -274,20 +274,22 @@ func (s *Statsd) udpListen() error {
 	}
 	log.Println("Statsd listener listening on: ", s.listener.LocalAddr().String())
 
+	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
 		select {
 		case <-s.done:
 			return nil
 		default:
-			buf := make([]byte, s.UDPPacketSize)
 			n, _, err := s.listener.ReadFromUDP(buf)
 			if err != nil && !strings.Contains(err.Error(), "closed network") {
 				log.Printf("ERROR READ: %s\n", err.Error())
 				continue
 			}
+			bufCopy := make([]byte, n)
+			copy(bufCopy, buf[:n])
 
 			select {
-			case s.in <- buf[:n]:
+			case s.in <- bufCopy:
 			default:
 				log.Printf(dropwarn, string(buf[:n]))
 			}
@@ -300,11 +302,12 @@ func (s *Statsd) udpListen() error {
 // single statsd metric into a struct.
 func (s *Statsd) parser() error {
 	defer s.wg.Done()
+	var packet []byte
 	for {
 		select {
 		case <-s.done:
 			return nil
-		case packet := <-s.in:
+		case packet = <-s.in:
 			lines := strings.Split(string(packet), "\n")
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
@@ -631,8 +634,7 @@ func (s *Statsd) Stop() {
 func init() {
 	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
-			ConvertNames:  true,
-			UDPPacketSize: UDP_PACKET_SIZE,
+			MetricSeparator: "_",
 		}
 	})
 }

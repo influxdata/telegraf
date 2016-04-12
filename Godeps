@@ -1,4 +1,3 @@
-git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git 617c801af238c3af2d9e72c5d4a0f02edad03ce5
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
 github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
@@ -10,9 +9,12 @@ github.com/couchbase/gomemcached a5ea6356f648fec6ab89add00edd09151455b4b2
 github.com/couchbase/goutils 5823a0cbaaa9008406021dc5daf80125ea30bba6
 github.com/dancannon/gorethink e7cac92ea2bc52638791a021f212145acfedb1fc
 github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+github.com/docker/engine-api 8924d6900370b4c7e7984be5adc61f50a80d7537
+github.com/docker/go-connections f549a9393d05688dff0992ef3efd8bbe6c628aeb
+github.com/docker/go-units 5d2041e26a699eaca682e2ea41c8f891e1060444
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
-github.com/fsouza/go-dockerclient a49c8269a6899cae30da1f8a4b82e0ce945f9967
+github.com/eclipse/paho.mqtt.golang 0f7a459f04f13a41b7ed752d47944528d4bf9a86
 github.com/go-sql-driver/mysql 1fca743146605a172a266e1654e01e5cd5669bee
 github.com/golang/protobuf 552c7b9542c194800fd493123b3798ef0a832032
 github.com/golang/snappy 427fb6fc07997f43afa32f35e850833760e489a7
@@ -32,6 +34,7 @@ github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/nats b13fc9d12b0b123ebc374e6b808c6228ae4234a3
 github.com/nats-io/nuid 4f84f5f3b2786224e336af2e13dba0a0a80b76fa
 github.com/nsqio/go-nsq 0b80d6f05e15ca1930e0c5e1d540ed627e299980
+github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
 github.com/prometheus/client_golang 18acf9993a863f4c4b40612e19cdd243e7c86831
 github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
@@ -41,7 +44,7 @@ github.com/shirou/gopsutil 1f32ce1bb380845be7f5d174ac641a2c592c0c42
 github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
-github.com/wvanbergen/kafka 1a8639a45164fcc245d5c7b4bd3ccfbd1a0ffbf3
+github.com/wvanbergen/kafka 46f9a1cf3f670edec492029fadded9c2d9e18866
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
 golang.org/x/crypto 5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3

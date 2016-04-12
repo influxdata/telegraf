@@ -1,5 +1,11 @@
 # Telegraf Output Data Formats
 
+Telegraf is able to serialize metrics into the following output data formats:
+
+1. [InfluxDB Line Protocol](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#influx)
+1. [JSON](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#json)
+1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite)
+
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
 are a combination of four basic parts:
@@ -29,7 +35,7 @@ config option, for example, in the `file` output plugin:
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout"]
 
-  ## Data format to output. This can be "influx" or "graphite"
+  ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
@@ -41,33 +47,45 @@ config option, for example, in the `file` output plugin:
 Each data_format has an additional set of configuration options available, which
 I'll go over below.
 
-## Influx:
+# Influx:
 
 There are no additional configuration options for InfluxDB line-protocol. The
 metrics are serialized directly into InfluxDB line-protocol.
 
-#### Influx Configuration:
+### Influx Configuration:
 
 ```toml
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
-  ## Data format to output. This can be "influx", "json" or "graphite"
+  ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 ```
 
-## Graphite:
+# Graphite:
 
-The Graphite data format translates Telegraf metrics into _dot_ buckets.
-The format is:
+The Graphite data format translates Telegraf metrics into _dot_ buckets. A
+template can be specified for the output of Telegraf metrics into Graphite
+buckets. The default template is:
 
 ```
-[prefix].[host tag].[all tags (alphabetical)].[measurement name].[field name] value timestamp
+template = "host.tags.measurement.field"
 ```
+
+In the above template, we have four parts:
+
+1. _host_ is a tag key. This can be any tag key that is in the Telegraf
+metric(s). If the key doesn't exist, it will be ignored. If it does exist, the
+tag value will be filled in.
+1. _tags_ is a special keyword that outputs all remaining tag values, separated
+by dots and in alphabetical order (by tag key). These will be filled after all
+tag keys are filled.
+1. _measurement_ is a special keyword that outputs the measurement name.
+1. _field_ is a special keyword that outputs the field name.
 
 Which means the following influx metric -> graphite conversion would happen:
 
@@ -78,27 +96,28 @@ tars.cpu-total.us-east-1.cpu.usage_user 0.89 1455320690
 tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
 ```
 
-`prefix` is a configuration option when using the graphite output data format.
-
-#### Graphite Configuration:
+### Graphite Configuration:
 
 ```toml
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
-  ## Data format to output. This can be "influx", "json" or "graphite"
+  ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
+  data_format = "graphite"
 
+  # prefix each graphite bucket
   prefix = "telegraf"
+  # graphite template
+  template = "host.tags.measurement.field"
 ```
 
-## Json:
+# JSON:
 
-The Json data format serialized Telegraf metrics in json format. The format is:
+The JSON data format serialized Telegraf metrics in json format. The format is:
 
 ```json
 {
@@ -116,14 +135,14 @@ The Json data format serialized Telegraf metrics in json format. The format is:
 }
 ```
 
-#### Json Configuration:
+### JSON Configuration:
 
 ```toml
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
-  ## Data format to output. This can be "influx", "json" or "graphite"
+  ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md

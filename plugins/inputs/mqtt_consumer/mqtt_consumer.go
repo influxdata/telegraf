@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
-	"git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
+	"github.com/eclipse/paho.mqtt.golang"
 )
 
 type MQTTConsumer struct {
@@ -39,7 +39,7 @@ type MQTTConsumer struct {
 	InsecureSkipVerify bool
 
 	sync.Mutex
-	client *mqtt.Client
+	client mqtt.Client
 	// channel of all incoming raw mqtt messages
 	in   chan mqtt.Message
 	done chan struct{}
@@ -78,7 +78,7 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -163,7 +163,7 @@ func (m *MQTTConsumer) receiver() {
 	}
 }
 
-func (m *MQTTConsumer) recvMessage(_ *mqtt.Client, msg mqtt.Message) {
+func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.in <- msg
 }
 

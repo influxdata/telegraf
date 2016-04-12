@@ -26,10 +26,10 @@ var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
 
-	### Use SSL but skip chain & host verification
-	# insecure_skip_verify = false
-	### Use bearer token for authorization
-	# bearer_token = /path/to/bearer/token
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+  ## Use bearer token for authorization
+  # bearer_token = /path/to/bearer/token
 `
 
 func (p *Prometheus) SampleConfig() string {
@@ -80,10 +80,10 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 
 	var rt http.RoundTripper = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout:   10 * time.Second,
+			Timeout:   5 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
+		TLSHandshakeTimeout: 5 * time.Second,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: p.InsecureSkipVerify,
 		},

@@ -21,6 +21,7 @@ type Librato struct {
 	NameFromTags bool
 	SourceTag    string
 	Timeout      internal.Duration
+	Template     string
 
 	apiUrl string
 	client *http.Client
@@ -29,22 +30,20 @@ type Librato struct {
 var sampleConfig = `
   ## Librator API Docs
   ## http://dev.librato.com/v1/metrics-authentication
-
   ## Librato API user
   api_user = "telegraf@influxdb.com" # required.
-
   ## Librato API token
   api_token = "my-secret-token" # required.
-
-  ### Debug
+  ## Debug
   # debug = false
-
-  ### Tag Field to populate source attribute (optional)
-  ### This is typically the _hostname_ from which the metric was obtained.
+  ## Tag Field to populate source attribute (optional)
+  ## This is typically the _hostname_ from which the metric was obtained.
   source_tag = "host"
-
   ## Connection timeout.
   # timeout = "5s"
+  ## Output Name Template (same as graphite buckets)
+  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
+  template = "host.tags.measurement.field"
 `
 
 type LMetrics struct {
@@ -152,17 +151,13 @@ func (l *Librato) Description() string {
 	return "Configuration for Librato API to send metrics to."
 }
 
-func (l *Librato) buildGaugeName(m telegraf.Metric, fieldName string) string {
-	// Use the GraphiteSerializer
-	graphiteSerializer := graphite.GraphiteSerializer{}
-	return graphiteSerializer.SerializeBucketName(m, fieldName)
-}
-
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 	gauges := []*Gauge{}
+	serializer := graphite.GraphiteSerializer{Template: l.Template}
+	bucket := serializer.SerializeBucketName(m.Name(), m.Tags())
 	for fieldName, value := range m.Fields() {
 		gauge := &Gauge{
-			Name:        l.buildGaugeName(m, fieldName),
+			Name:        graphite.InsertField(bucket, fieldName),
 			MeasureTime: m.Time().Unix(),
 		}
 		if !gauge.verifyValue(value) {

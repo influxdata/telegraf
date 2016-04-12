@@ -12,7 +12,11 @@ import (
 )
 
 type UdpListener struct {
-	ServiceAddress         string
+	ServiceAddress string
+	// UDPPacketSize is deprecated, it's only here for legacy support
+	// we now always create 1 max size buffer and then copy only what we need
+	// into the in channel
+	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize          int `toml:"udp_packet_size"`
 	AllowedPendingMessages int
 
@@ -30,7 +34,9 @@ type UdpListener struct {
 	listener *net.UDPConn
 }
 
-const UDP_PACKET_SIZE int = 1500
+// UDP packet limit, see
+// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
+const UDP_MAX_PACKET_SIZE int = 64 * 1024
 
 var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
 	"You may want to increase allowed_pending_messages in the config\n"
@@ -43,12 +49,7 @@ const sampleConfig = `
   ## UDP listener will start dropping packets.
   allowed_pending_messages = 10000
 
-  ## UDP packet size for the server to listen for. This will depend
-  ## on the size of the packets that the client is sending, which is
-  ## usually 1500 bytes, but can be as large as 65,535 bytes.
-  udp_packet_size = 1500
-
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -107,22 +108,24 @@ func (u *UdpListener) udpListen() error {
 	}
 	log.Println("UDP server listening on: ", u.listener.LocalAddr().String())
 
+	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
 		select {
 		case <-u.done:
 			return nil
 		default:
-			buf := make([]byte, u.UDPPacketSize)
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil && !strings.Contains(err.Error(), "closed network") {
 				log.Printf("ERROR: %s\n", err.Error())
 				continue
 			}
+			bufCopy := make([]byte, n)
+			copy(bufCopy, buf[:n])
 
 			select {
-			case u.in <- buf[:n]:
+			case u.in <- bufCopy:
 			default:
-				log.Printf(dropwarn, string(buf[:n]))
+				log.Printf(dropwarn, string(bufCopy))
 			}
 		}
 	}
@@ -130,11 +133,13 @@ func (u *UdpListener) udpListen() error {
 
 func (u *UdpListener) udpParser() error {
 	defer u.wg.Done()
+
+	var packet []byte
 	for {
 		select {
 		case <-u.done:
 			return nil
-		case packet := <-u.in:
+		case packet = <-u.in:
 			metrics, err := u.parser.Parse(packet)
 			if err == nil {
 				u.storeMetrics(metrics)
@@ -156,8 +161,6 @@ func (u *UdpListener) storeMetrics(metrics []telegraf.Metric) error {
 
 func init() {
 	inputs.Add("udp_listener", func() telegraf.Input {
-		return &UdpListener{
-			UDPPacketSize: UDP_PACKET_SIZE,
-		}
+		return &UdpListener{}
 	})
 }

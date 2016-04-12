@@ -114,7 +114,7 @@ creating the `Parser` object.
 You should also add the following to your SampleConfig() return:
 
 ```toml
-  ## Data format to consume. This can be "json", "influx" or "graphite"
+  ## Data format to consume. 
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -244,7 +244,7 @@ instantiating and creating the `Serializer` object.
 You should also add the following to your SampleConfig() return:
 
 ```toml
-  ## Data format to output. This can be "influx" or "graphite"
+  ## Data format to output. 
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md

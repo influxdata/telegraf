@@ -2,18 +2,11 @@
 
 Please also see: [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md)
 
-The exec input plugin can execute arbitrary commands which output:
-
-* JSON [javascript object notation](http://www.json.org/)
-* InfluxDB [line-protocol](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/) 
-* Graphite [graphite-protocol](http://graphite.readthedocs.org/en/latest/feeding-carbon.html)
-
-
 ### Example 1 - JSON
 
 #### Configuration
 
-In this example a script called ```/tmp/test.sh``` and a script called ```/tmp/test2.sh``` 
+In this example a script called ```/tmp/test.sh``` and a script called ```/tmp/test2.sh```
 are configured for ```[[inputs.exec]]``` in JSON format.
 
 ```
@@ -22,7 +15,7 @@ are configured for ```[[inputs.exec]]``` in JSON format.
   # Shell/commands array
   commands = ["/tmp/test.sh", "/tmp/test2.sh"]
 
-  # Data format to consume. This can be "json", "influx" or "graphite" (line-protocol)
+  # Data format to consume.
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
   data_format = "json"
 
@@ -81,7 +74,7 @@ and strings will be ignored.
 ### Example 2 - Influx Line-Protocol
 
 In this example an application called ```/usr/bin/line_protocol_collector```
-and a script called ```/tmp/test2.sh``` are configured for ```[[inputs.exec]]``` 
+and a script called ```/tmp/test2.sh``` are configured for ```[[inputs.exec]]```
 in influx line-protocol format.
 
 #### Configuration
@@ -94,7 +87,7 @@ in influx line-protocol format.
   # command = "/usr/bin/line_protocol_collector"
   commands = ["/usr/bin/line_protocol_collector","/tmp/test2.sh"]
 
-  # Data format to consume. This can be "json" or "influx" (line-protocol)
+  # Data format to consume.
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
   data_format = "influx"
 ```
@@ -113,7 +106,7 @@ cpu,cpu=cpu6,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 
 You will get data in InfluxDB exactly as it is defined above,
 tags are cpu=cpuN, host=foo, and datacenter=us-east with fields usage_idle
-and usage_busy. They will receive a timestamp at collection time. 
+and usage_busy. They will receive a timestamp at collection time.
 Each line must end in \n, just as the Influx line protocol does.
 
 
@@ -121,8 +114,8 @@ Each line must end in \n, just as the Influx line protocol does.
 
 We can also change the data_format to "graphite" to use the metrics collecting scripts such as (compatible with graphite):
 
-* Nagios [Mertics Plugins] (https://exchange.nagios.org/directory/Plugins)
-* Sensu [Mertics Plugins] (https://github.com/sensu-plugins)
+* Nagios [Metrics Plugins](https://exchange.nagios.org/directory/Plugins)
+* Sensu [Metrics Plugins](https://github.com/sensu-plugins)
 
 In this example a script called /tmp/test.sh and a script called /tmp/test2.sh are configured for [[inputs.exec]] in graphite format.
 
@@ -133,7 +126,7 @@ In this example a script called /tmp/test.sh and a script called /tmp/test2.sh a
   # Shell/commands array
   commands = ["/tmp/test.sh","/tmp/test2.sh"]
 
-  # Data format to consume. This can be "json", "influx" or "graphite" (line-protocol)
+  # Data format to consume.
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
   data_format = "graphite"
 
@@ -186,5 +179,5 @@ sensu.metric.net.server0.eth0.rx_dropped 0 1444234982
 
 The templates configuration will be used to parse the graphite metrics to support influxdb/opentsdb tagging store engines.
 
-More detail information about templates, please refer to [The graphite Input] (https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md)
- 
+More detail information about templates, please refer to [The graphite Input](https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md)
+

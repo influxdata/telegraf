@@ -495,7 +495,7 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
                         fr = os.path.join(current_location, binary)
                         # Where the binary should go in the package filesystem
                         to = os.path.join(build_root, INSTALL_ROOT_DIR[1:], binary)
-                        
+
                     if debug:
                         print("[{}][{}] - Moving from '{}' to '{}'".format(platform,
                                                                            arch,
@@ -560,7 +560,6 @@ def build_packages(build_output, version, nightly=False, rc=None, iteration=1):
                             fpm_command += "--verbose "
                         if package_type == "rpm":
                             fpm_command += "--depends coreutils "
-                            fpm_command += "--depends lsof "
                         out = run(fpm_command, shell=True)
                         matches = re.search(':path=>"(.*)"', out)
                         outfile = None

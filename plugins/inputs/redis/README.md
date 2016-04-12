@@ -62,7 +62,7 @@
 
 Using this configuration:
 ```
-[[inputs.nginx]]
+[[inputs.redis]]
   ## specify servers via a url matching:
   ##  [protocol://][:password]@address[:port]
   ##  e.g.
