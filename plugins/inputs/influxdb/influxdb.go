@@ -71,6 +71,35 @@ type point struct {
 	Values map[string]interface{} `json:"values"`
 }
 
+type memstats struct {
+	Alloc         int64   `json:"Alloc"`
+	TotalAlloc    int64   `json:"TotalAlloc"`
+	Sys           int64   `json:"Sys"`
+	Lookups       int64   `json:"Lookups"`
+	Mallocs       int64   `json:"Mallocs"`
+	Frees         int64   `json:"Frees"`
+	HeapAlloc     int64   `json:"HeapAlloc"`
+	HeapSys       int64   `json:"HeapSys"`
+	HeapIdle      int64   `json:"HeapIdle"`
+	HeapInuse     int64   `json:"HeapInuse"`
+	HeapReleased  int64   `json:"HeapReleased"`
+	HeapObjects   int64   `json:"HeapObjects"`
+	StackInuse    int64   `json:"StackInuse"`
+	StackSys      int64   `json:"StackSys"`
+	MSpanInuse    int64   `json:"MSpanInuse"`
+	MSpanSys      int64   `json:"MSpanSys"`
+	MCacheInuse   int64   `json:"MCacheInuse"`
+	MCacheSys     int64   `json:"MCacheSys"`
+	BuckHashSys   int64   `json:"BuckHashSys"`
+	GCSys         int64   `json:"GCSys"`
+	OtherSys      int64   `json:"OtherSys"`
+	NextGC        int64   `json:"NextGC"`
+	LastGC        int64   `json:"LastGC"`
+	PauseTotalNs  int64   `json:"PauseTotalNs"`
+	NumGC         int64   `json:"NumGC"`
+	GCCPUFraction float64 `json:"GCCPUFraction"`
+}
+
 var tr = &http.Transport{
 	ResponseHeaderTimeout: time.Duration(3 * time.Second),
 }
@@ -118,10 +147,50 @@ func (i *InfluxDB) gatherURL(
 			break
 		}
 
-		// Read in a string key. We don't do anything with the top-level keys, so it's discarded.
-		_, err := dec.Token()
+		// Read in a string key. We don't do anything with the top-level keys,
+		// so it's discarded.
+		key, err := dec.Token()
 		if err != nil {
 			return err
+		}
+
+		if key.(string) == "memstats" {
+			var m memstats
+			if err := dec.Decode(&m); err != nil {
+				continue
+			}
+			acc.AddFields("influxdb_memstats",
+				map[string]interface{}{
+					"alloc":           m.Alloc,
+					"total_alloc":     m.TotalAlloc,
+					"sys":             m.Sys,
+					"lookups":         m.Lookups,
+					"mallocs":         m.Mallocs,
+					"frees":           m.Frees,
+					"heap_alloc":      m.HeapAlloc,
+					"heap_sys":        m.HeapSys,
+					"heap_idle":       m.HeapIdle,
+					"heap_inuse":      m.HeapInuse,
+					"heap_released":   m.HeapReleased,
+					"heap_objects":    m.HeapObjects,
+					"stack_inuse":     m.StackInuse,
+					"stack_sys":       m.StackSys,
+					"mspan_inuse":     m.MSpanInuse,
+					"mspan_sys":       m.MSpanSys,
+					"mcache_inuse":    m.MCacheInuse,
+					"mcache_sys":      m.MCacheSys,
+					"buck_hash_sys":   m.BuckHashSys,
+					"gc_sys":          m.GCSys,
+					"other_sys":       m.OtherSys,
+					"next_gc":         m.NextGC,
+					"last_gc":         m.LastGC,
+					"pause_total_ns":  m.PauseTotalNs,
+					"num_gc":          m.NumGC,
+					"gcc_pu_fraction": m.GCCPUFraction,
+				},
+				map[string]string{
+					"url": url,
+				})
 		}
 
 		// Attempt to parse a whole object into a point.
@@ -132,7 +201,8 @@ func (i *InfluxDB) gatherURL(
 			continue
 		}
 
-		// If the object was a point, but was not fully initialized, ignore it and move on.
+		// If the object was a point, but was not fully initialized,
+		// ignore it and move on.
 		if p.Name == "" || p.Tags == nil || p.Values == nil || len(p.Values) == 0 {
 			continue
 		}
