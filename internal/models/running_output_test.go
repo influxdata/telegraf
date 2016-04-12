@@ -29,6 +29,146 @@ var next5 = []telegraf.Metric{
 	testutil.TestMetric(101, "metric10"),
 }
 
+// Test that NameDrop filters ger properly applied.
+func TestRunningOutput_DropFilter(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: true,
+			NameDrop: []string{"metric1", "metric2"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf)
+
+	for _, metric := range first5 {
+		ro.AddMetric(metric)
+	}
+	for _, metric := range next5 {
+		ro.AddMetric(metric)
+	}
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 8)
+}
+
+// Test that NameDrop filters without a match do nothing.
+func TestRunningOutput_PassFilter(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: true,
+			NameDrop: []string{"metric1000", "foo*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf)
+
+	for _, metric := range first5 {
+		ro.AddMetric(metric)
+	}
+	for _, metric := range next5 {
+		ro.AddMetric(metric)
+	}
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 10)
+}
+
+// Test that tags are properly included
+func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive:   true,
+			TagInclude: []string{"nothing*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf)
+
+	ro.AddMetric(first5[0])
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Empty(t, m.Metrics()[0].Tags())
+}
+
+// Test that tags are properly excluded
+func TestRunningOutput_TagExcludeMatch(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive:   true,
+			TagExclude: []string{"tag*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf)
+
+	ro.AddMetric(first5[0])
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Len(t, m.Metrics()[0].Tags(), 0)
+}
+
+// Test that tags are properly Excluded
+func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive:   true,
+			TagExclude: []string{"nothing*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf)
+
+	ro.AddMetric(first5[0])
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Len(t, m.Metrics()[0].Tags(), 1)
+}
+
+// Test that tags are properly included
+func TestRunningOutput_TagIncludeMatch(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive:   true,
+			TagInclude: []string{"tag*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf)
+
+	ro.AddMetric(first5[0])
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Len(t, m.Metrics()[0].Tags(), 1)
+}
+
 // Test that we can write metrics with simple default setup.
 func TestRunningOutputDefault(t *testing.T) {
 	conf := &OutputConfig{

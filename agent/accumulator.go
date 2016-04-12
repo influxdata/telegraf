@@ -96,6 +96,7 @@ func (ac *accumulator) AddFields(
 			tags[k] = v
 		}
 	}
+	ac.inputConfig.Filter.FilterTags(tags)
 
 	result := make(map[string]interface{})
 	for k, v := range fields {

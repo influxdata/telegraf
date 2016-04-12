@@ -59,6 +59,19 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 	ro.Lock()
 	defer ro.Unlock()
 
+	// Filter any tagexclude/taginclude parameters before adding metric
+	if len(ro.Config.Filter.TagExclude) != 0 || len(ro.Config.Filter.TagInclude) != 0 {
+		// In order to filter out tags, we need to create a new metric, since
+		// metrics are immutable once created.
+		tags := metric.Tags()
+		fields := metric.Fields()
+		t := metric.Time()
+		name := metric.Name()
+		ro.Config.Filter.FilterTags(tags)
+		// error is not possible if creating from another metric, so ignore.
+		metric, _ = telegraf.NewMetric(name, tags, fields, t)
+	}
+
 	if len(ro.metrics) < ro.MetricBufferLimit {
 		ro.metrics = append(ro.metrics, metric)
 	} else {

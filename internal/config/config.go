@@ -580,9 +580,9 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 // buildFilter builds a Filter
 // (tagpass/tagdrop/namepass/namedrop/fieldpass/fielddrop) to
-// be inserted into the internal_models.OutputConfig/internal_models.InputConfig to be used for prefix
-// filtering on tags and measurements
-func buildFilter(tbl *ast.Table) internal_models.Filter {
+// be inserted into the internal_models.OutputConfig/internal_models.InputConfig
+// to be used for glob filtering on tags and measurements
+func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 	f := internal_models.Filter{}
 
 	if node, ok := tbl.Fields["namepass"]; ok {
@@ -681,6 +681,33 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 		}
 	}
 
+	if node, ok := tbl.Fields["tagexclude"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						f.TagExclude = append(f.TagExclude, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["taginclude"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						f.TagInclude = append(f.TagInclude, str.Value)
+					}
+				}
+			}
+		}
+	}
+	if err := f.CompileFilter(); err != nil {
+		return f, err
+	}
+
 	delete(tbl.Fields, "namedrop")
 	delete(tbl.Fields, "namepass")
 	delete(tbl.Fields, "fielddrop")
@@ -689,7 +716,9 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 	delete(tbl.Fields, "pass")
 	delete(tbl.Fields, "tagdrop")
 	delete(tbl.Fields, "tagpass")
-	return f
+	delete(tbl.Fields, "tagexclude")
+	delete(tbl.Fields, "taginclude")
+	return f, nil
 }
 
 // buildInput parses input specific items from the ast.Table,
@@ -748,7 +777,11 @@ func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, erro
 	delete(tbl.Fields, "name_override")
 	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
-	cp.Filter = buildFilter(tbl)
+	var err error
+	cp.Filter, err = buildFilter(tbl)
+	if err != nil {
+		return cp, err
+	}
 	return cp, nil
 }
 
@@ -864,13 +897,18 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	return serializers.NewSerializer(c)
 }
 
-// buildOutput parses output specific items from the ast.Table, builds the filter and returns an
+// buildOutput parses output specific items from the ast.Table,
+// builds the filter and returns an
 // internal_models.OutputConfig to be inserted into internal_models.RunningInput
 // Note: error exists in the return for future calls that might require error
 func buildOutput(name string, tbl *ast.Table) (*internal_models.OutputConfig, error) {
+	filter, err := buildFilter(tbl)
+	if err != nil {
+		return nil, err
+	}
 	oc := &internal_models.OutputConfig{
 		Name:   name,
-		Filter: buildFilter(tbl),
+		Filter: filter,
 	}
 	// Outputs don't support FieldDrop/FieldPass, so set to NameDrop/NamePass
 	if len(oc.Filter.FieldDrop) > 0 {

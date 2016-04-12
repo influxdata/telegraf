@@ -1,5 +1,20 @@
 ## v0.13 [unreleased]
 
+### Release Notes
+- `tagexclude` and `tagexclude` are now available, which can be used to remove
+tags from measurements on inputs and outputs. See 
+[the configuration doc](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md)
+for more details.
+- **Measurement filtering:** All measurement filters now match based on glob
+only. Previously there was an undocumented behavior where filters would match
+based on _prefix_ in addition to globs. This means that a filter like
+`fielddrop = ["time_"]` will need to be changed to `fielddrop = ["time_*"]`
+
+### Features
+- [#1017](https://github.com/influxdata/telegraf/pull/1017): taginclude and tagexclude arguments.
+
+### Bugfixes
+
 ## v0.12.1 [2016-04-14]
 
 ### Release Notes

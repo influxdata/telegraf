@@ -2,6 +2,11 @@ package internal_models
 
 import (
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFilter_Empty(t *testing.T) {
@@ -28,6 +33,7 @@ func TestFilter_NamePass(t *testing.T) {
 	f := Filter{
 		NamePass: []string{"foo*", "cpu_usage_idle"},
 	}
+	require.NoError(t, f.CompileFilter())
 
 	passes := []string{
 		"foo",
@@ -61,6 +67,7 @@ func TestFilter_NameDrop(t *testing.T) {
 	f := Filter{
 		NameDrop: []string{"foo*", "cpu_usage_idle"},
 	}
+	require.NoError(t, f.CompileFilter())
 
 	drops := []string{
 		"foo",
@@ -94,6 +101,7 @@ func TestFilter_FieldPass(t *testing.T) {
 	f := Filter{
 		FieldPass: []string{"foo*", "cpu_usage_idle"},
 	}
+	require.NoError(t, f.CompileFilter())
 
 	passes := []string{
 		"foo",
@@ -127,6 +135,7 @@ func TestFilter_FieldDrop(t *testing.T) {
 	f := Filter{
 		FieldDrop: []string{"foo*", "cpu_usage_idle"},
 	}
+	require.NoError(t, f.CompileFilter())
 
 	drops := []string{
 		"foo",
@@ -169,6 +178,7 @@ func TestFilter_TagPass(t *testing.T) {
 	f := Filter{
 		TagPass: filters,
 	}
+	require.NoError(t, f.CompileFilter())
 
 	passes := []map[string]string{
 		{"cpu": "cpu-total"},
@@ -212,6 +222,7 @@ func TestFilter_TagDrop(t *testing.T) {
 	f := Filter{
 		TagDrop: filters,
 	}
+	require.NoError(t, f.CompileFilter())
 
 	drops := []map[string]string{
 		{"cpu": "cpu-total"},
@@ -240,4 +251,116 @@ func TestFilter_TagDrop(t *testing.T) {
 			t.Errorf("Expected tags %v to drop", tags)
 		}
 	}
+}
+
+func TestFilter_CompileFilterError(t *testing.T) {
+	f := Filter{
+		NameDrop: []string{"", ""},
+	}
+	assert.Error(t, f.CompileFilter())
+	f = Filter{
+		NamePass: []string{"", ""},
+	}
+	assert.Error(t, f.CompileFilter())
+	f = Filter{
+		FieldDrop: []string{"", ""},
+	}
+	assert.Error(t, f.CompileFilter())
+	f = Filter{
+		FieldPass: []string{"", ""},
+	}
+	assert.Error(t, f.CompileFilter())
+	f = Filter{
+		TagExclude: []string{"", ""},
+	}
+	assert.Error(t, f.CompileFilter())
+	f = Filter{
+		TagInclude: []string{"", ""},
+	}
+	assert.Error(t, f.CompileFilter())
+	filters := []TagFilter{
+		TagFilter{
+			Name:   "cpu",
+			Filter: []string{"{foobar}"},
+		}}
+	f = Filter{
+		TagDrop: filters,
+	}
+	require.Error(t, f.CompileFilter())
+	filters = []TagFilter{
+		TagFilter{
+			Name:   "cpu",
+			Filter: []string{"{foobar}"},
+		}}
+	f = Filter{
+		TagPass: filters,
+	}
+	require.Error(t, f.CompileFilter())
+}
+
+func TestFilter_ShouldMetricsPass(t *testing.T) {
+	m := testutil.TestMetric(1, "testmetric")
+	f := Filter{
+		NameDrop: []string{"foobar"},
+	}
+	require.NoError(t, f.CompileFilter())
+	require.True(t, f.ShouldMetricPass(m))
+
+	m = testutil.TestMetric(1, "foobar")
+	require.False(t, f.ShouldMetricPass(m))
+}
+
+func TestFilter_FilterTagsNoMatches(t *testing.T) {
+	pretags := map[string]string{
+		"host":  "localhost",
+		"mytag": "foobar",
+	}
+	f := Filter{
+		TagExclude: []string{"nomatch"},
+	}
+	require.NoError(t, f.CompileFilter())
+
+	f.FilterTags(pretags)
+	assert.Equal(t, map[string]string{
+		"host":  "localhost",
+		"mytag": "foobar",
+	}, pretags)
+
+	f = Filter{
+		TagInclude: []string{"nomatch"},
+	}
+	require.NoError(t, f.CompileFilter())
+
+	f.FilterTags(pretags)
+	assert.Equal(t, map[string]string{}, pretags)
+}
+
+func TestFilter_FilterTagsMatches(t *testing.T) {
+	pretags := map[string]string{
+		"host":  "localhost",
+		"mytag": "foobar",
+	}
+	f := Filter{
+		TagExclude: []string{"ho*"},
+	}
+	require.NoError(t, f.CompileFilter())
+
+	f.FilterTags(pretags)
+	assert.Equal(t, map[string]string{
+		"mytag": "foobar",
+	}, pretags)
+
+	pretags = map[string]string{
+		"host":  "localhost",
+		"mytag": "foobar",
+	}
+	f = Filter{
+		TagInclude: []string{"my*"},
+	}
+	require.NoError(t, f.CompileFilter())
+
+	f.FilterTags(pretags)
+	assert.Equal(t, map[string]string{
+		"mytag": "foobar",
+	}, pretags)
 }

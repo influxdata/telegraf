@@ -16,6 +16,7 @@ github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
 github.com/eclipse/paho.mqtt.golang 0f7a459f04f13a41b7ed752d47944528d4bf9a86
 github.com/go-sql-driver/mysql 1fca743146605a172a266e1654e01e5cd5669bee
+github.com/gobwas/glob d877f6352135181470c40c73ebb81aefa22115fa
 github.com/golang/protobuf 552c7b9542c194800fd493123b3798ef0a832032
 github.com/golang/snappy 427fb6fc07997f43afa32f35e850833760e489a7
 github.com/gonuts/go-shellquote e842a11b24c6abfb3dd27af69a17f482e4b483c2
