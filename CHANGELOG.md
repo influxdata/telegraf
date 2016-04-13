@@ -27,6 +27,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 ### Features
 - [#1017](https://github.com/influxdata/telegraf/pull/1017): taginclude and tagexclude arguments.
 - [#1015](https://github.com/influxdata/telegraf/pull/1015): Docker plugin schema refactor.
+- [#889](https://github.com/influxdata/telegraf/pull/889): Improved MySQL plugin. Thanks @maksadbek!
 
 ### Bugfixes
 - [#921](https://github.com/influxdata/telegraf/pull/921): mqtt_consumer stops gathering metrics. Thanks @chaton78!
