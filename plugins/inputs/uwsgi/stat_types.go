@@ -27,6 +27,7 @@ type Worker struct {
 	Accepting     int    `json:"accepting"`
 	Requests      int    `json:"requests"`
 	DeltaRequests int    `json:"delta_requests"`
+	Exceptions    int    `json:"exceptions"`
 	HarakiriCount int    `json:"harakiri_count"`
 	Signals       int    `json:"signals"`
 	SignalQueue   int    `json:"signal_queue"`
