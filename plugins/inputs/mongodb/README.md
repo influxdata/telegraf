@@ -21,10 +21,25 @@ Error in input [mongodb]: not authorized on admin to execute command { serverSta
 
 #### Description
 
-The Jolokia plugin collects JVM metrics exposed as MBean's attributes through jolokia REST endpoint. All metrics
-are collected for each server configured.
-
-See: https://jolokia.org/
-
-# Measurements:
-Jolokia plugin produces one measure for each metric configured, adding Server's `name`, `host` and `port` as tags.
+The telegraf plugin collects mongodb stats exposed by serverStatus and few more and create a single measurement containing values e.g.
+ * active_reads
+ * active_writes
+ * commands_per_sec
+ * deletes_per_sec
+ * flushes_per_sec
+ * getmores_per_sec
+ * inserts_per_sec
+ * net_in_bytes
+ * net_out_bytes
+ * open_connections
+ * percent_cache_dirty
+ * percent_cache_used
+ * queries_per_sec
+ * queued_reads
+ * queued_writes
+ * resident_megabytes
+ * updates_per_sec
+ * vsize_megabytes
+ 
+ 
+ 
