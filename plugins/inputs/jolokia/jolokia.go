@@ -1,6 +1,7 @@
 package jolokia
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"bytes"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -23,10 +23,10 @@ type Server struct {
 }
 
 type Metric struct {
-	Name string
-	Mbean string
+	Name      string
+	Mbean     string
 	Attribute string
-	Path string
+	Path      string
 }
 
 type JolokiaClient interface {
@@ -44,28 +44,28 @@ func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error
 type Jolokia struct {
 	jClient JolokiaClient
 	Context string
-	Mode string
+	Mode    string
 	Servers []Server
 	Metrics []Metric
-	Proxy Server
+	Proxy   Server
 }
 
-func (j *Jolokia) SampleConfig() string {
-	return `
-  # This is the context root used to compose the jolokia url
+const sampleConfig = `
+  ## This is the context root used to compose the jolokia url
   context = "/jolokia"
 
-  # This specifies the mode used
+  ## This specifies the mode used
   # mode = "proxy"
   #
-  # When in proxy mode this section is used to specify further proxy address configurations.
-  # Remember to change servers addresses
+  ## When in proxy mode this section is used to specify further
+  ## proxy address configurations.
+  ## Remember to change host address to fit your environment.
   # [inputs.jolokia.proxy]
-  # host = "127.0.0.1"
-  # port = "8080"
+  #   host = "127.0.0.1"
+  #   port = "8080"
 
 
-  # List of servers exposing jolokia read service
+  ## List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]
     name = "as-server-01"
     host = "127.0.0.1"
@@ -86,14 +86,17 @@ func (j *Jolokia) SampleConfig() string {
   [[inputs.jolokia.metrics]]
     name = "thread_count"
     mbean  = "java.lang:type=Threading"
-		attribute = "TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
+    attribute = "TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
 
   ## This collect number of class loaded/unloaded counts metrics.
   [[inputs.jolokia.metrics]]
     name = "class_count"
     mbean  = "java.lang:type=ClassLoading"
-		attribute = "LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
+    attribute = "LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
 `
+
+func (j *Jolokia) SampleConfig() string {
+	return sampleConfig
 }
 
 func (j *Jolokia) Description() string {
@@ -133,7 +136,8 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 
 	if status, ok := jsonOut["status"]; ok {
 		if status != float64(200) {
-			return nil, fmt.Errorf("Not expected status value in response body: %3.f", status)
+			return nil, fmt.Errorf("Not expected status value in response body: %3.f",
+				status)
 		}
 	} else {
 		return nil, fmt.Errorf("Missing status in response body")
@@ -142,148 +146,122 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 	return jsonOut, nil
 }
 
-func (j *Jolokia) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
-	// Create + send request
-	req, err := http.NewRequest("GET", requestUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return j.doRequest(req)
-}
-
-
-func (j *Jolokia) collectMeasurement(measurement string, out map[string]interface{}, fields map[string]interface{}) {
-
-	if values, ok := out["value"]; ok {
-		switch t := values.(type) {
-		case map[string]interface{}:
-			for k, v := range t {
-				fields[measurement+"_"+k] = v
-			}
-		case interface{}:
-			fields[measurement] = t
-		}
-	} else {
-		fmt.Printf("Missing key 'value' in output response\n")
-	}
-
-}
-
-
-func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
+func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, error) {
+	var jolokiaUrl *url.URL
 	context := j.Context // Usually "/jolokia"
-	servers := j.Servers
-	metrics := j.Metrics
-	tags := make(map[string]string)
-	mode := j.Mode
 
-	if( mode == "agent" || mode == ""){
+	// Create bodyContent
+	bodyContent := map[string]interface{}{
+		"type":  "read",
+		"mbean": metric.Mbean,
+	}
 
-		for _, server := range servers {
-			tags["server"] = server.Name
-			tags["port"] = server.Port
-			tags["host"] = server.Host
-			fields := make(map[string]interface{})
-			for _, metric := range metrics {
+	if metric.Attribute != "" {
+		bodyContent["attribute"] = metric.Attribute
+		if metric.Path != "" {
+			bodyContent["path"] = metric.Path
+		}
+	}
 
-				measurement := metric.Name
-				jmxPath := "/" + metric.Mbean
-				if metric.Attribute != "" {
-					jmxPath = jmxPath + "/" + metric.Attribute
+	// Add target, only in proxy mode
+	if j.Mode == "proxy" {
+		serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi",
+			server.Host, server.Port)
 
-					if metric.Path != "" {
-						jmxPath = jmxPath + "/" + metric.Path
-					}
-				}
-
-			// Prepare URL
-				requestUrl, err := url.Parse("http://" + server.Host + ":" +
-				server.Port + context + "/read" + jmxPath)
-				if err != nil {
-					return err
-				}
-				if server.Username != "" || server.Password != "" {
-					requestUrl.User = url.UserPassword(server.Username, server.Password)
-				}
-				out, _ := j.getAttr(requestUrl)
-				j.collectMeasurement(measurement, out, fields)
-			}
-			acc.AddFields("jolokia", fields, tags)
+		target := map[string]string{
+			"url": serviceUrl,
 		}
 
-	} else if ( mode == "proxy") {
+		if server.Username != "" {
+			target["user"] = server.Username
+		}
+
+		if server.Password != "" {
+			target["password"] = server.Password
+		}
+
+		bodyContent["target"] = target
 
 		proxy := j.Proxy
 
 		// Prepare ProxyURL
-		proxyURL, err := url.Parse("http://" + proxy.Host + ":" +
-		proxy.Port + context)
+		proxyUrl, err := url.Parse("http://" + proxy.Host + ":" + proxy.Port + context)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if proxy.Username != "" || proxy.Password != "" {
-			proxyURL.User = url.UserPassword(proxy.Username, proxy.Password)
+			proxyUrl.User = url.UserPassword(proxy.Username, proxy.Password)
 		}
 
-		for _, server := range servers {
-			tags["server"] = server.Name
-			tags["port"] = server.Port
-			tags["host"] = server.Host
-			fields := make(map[string]interface{})
-			for _, metric := range metrics {
+		jolokiaUrl = proxyUrl
 
-				measurement := metric.Name
-				// Prepare URL
-				serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi", server.Host, server.Port)
+	} else {
+		serverUrl, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
+		if err != nil {
+			return nil, err
+		}
+		if server.Username != "" || server.Password != "" {
+			serverUrl.User = url.UserPassword(server.Username, server.Password)
+		}
 
-				target := map[string]string{
-					"url": serviceUrl,
-				}
+		jolokiaUrl = serverUrl
+	}
 
-				if server.Username != "" {
-					target["user"] = server.Username
-				}
+	requestBody, err := json.Marshal(bodyContent)
 
-				if server.Password != "" {
-					target["password"] = server.Password
-				}
+	req, err := http.NewRequest("POST", jolokiaUrl.String(), bytes.NewBuffer(requestBody))
 
-				// Create + send request
-				bodyContent := map[string]interface{}{
-					"type": "read",
-					"mbean": metric.Mbean,
-					"target": target,
-				}
+	if err != nil {
+		return nil, err
+	}
 
-				if metric.Attribute != "" {
-					bodyContent["attribute"] = metric.Attribute
-					if metric.Path != "" {
-						bodyContent["path"] = metric.Path
-					}
-				}
+	req.Header.Add("Content-type", "application/json")
 
-				requestBody, err := json.Marshal(bodyContent)
+	return req, nil
+}
 
-				req, err := http.NewRequest("POST", proxyURL.String(), bytes.NewBuffer(requestBody))
+func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
+	servers := j.Servers
+	metrics := j.Metrics
+	tags := make(map[string]string)
 
-				if err != nil {
-					return err
-				}
+	for _, server := range servers {
+		tags["server_name"] = server.Name
+		tags["server_port"] = server.Port
+		tags["server_host"] = server.Host
+		fields := make(map[string]interface{})
 
-				req.Header.Add("Content-type", "application/json")
+		for _, metric := range metrics {
+			measurement := metric.Name
 
-				out, err := j.doRequest(req)
-				
-				if err != nil {
-					fmt.Printf("Error handling response: %s\n", err)
-				}else {
-					j.collectMeasurement(measurement, out, fields)
-				}
+			req, err := j.prepareRequest(server, metric)
+			if err != nil {
+				return err
 			}
-			acc.AddFields("jolokia", fields, tags)
+
+			out, err := j.doRequest(req)
+
+			if err != nil {
+				fmt.Printf("Error handling response: %s\n", err)
+			} else {
+
+				if values, ok := out["value"]; ok {
+					switch t := values.(type) {
+					case map[string]interface{}:
+						for k, v := range t {
+							fields[measurement+"_"+k] = v
+						}
+					case interface{}:
+						fields[measurement] = t
+					}
+				} else {
+					fmt.Printf("Missing key 'value' in output response\n")
+				}
+
+			}
 		}
 
+		acc.AddFields("jolokia", fields, tags)
 	}
 
 	return nil

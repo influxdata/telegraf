@@ -54,4 +54,4 @@ are collected for each server configured.
 See: https://jolokia.org/
 
 # Measurements:
-Jolokia plugin produces one measure for each metric configured, adding Server's `name`, `host` and `port` as tags.
+Jolokia plugin produces one measure for each metric configured, adding Server's `server_name`, `server_host` and `server_port` as tags.
