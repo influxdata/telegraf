@@ -98,6 +98,7 @@ func (u *Uwsgi) gatherWorkers(acc telegraf.Accumulator, s *StatsServer) error {
 			"requests":       w.Requests,
 			"accepting":      w.Accepting,
 			"delta_request":  w.DeltaRequests,
+			"exceptions":     w.Exceptions,
 			"harakiri_count": w.HarakiriCount,
 			"signals":        w.Signals,
 			"signal_queue":   w.SignalQueue,
