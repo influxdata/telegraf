@@ -2,7 +2,7 @@
 
 ### Release Notes
 - `tagexclude` and `tagexclude` are now available, which can be used to remove
-tags from measurements on inputs and outputs. See 
+tags from measurements on inputs and outputs. See
 [the configuration doc](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md)
 for more details.
 - **Measurement filtering:** All measurement filters now match based on glob
@@ -14,6 +14,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1017](https://github.com/influxdata/telegraf/pull/1017): taginclude and tagexclude arguments.
 
 ### Bugfixes
+- [#921](https://github.com/influxdata/telegraf/pull/921): mqtt_consumer stops gathering metrics. Thanks @chaton78!
 
 ## v0.12.1 [2016-04-14]
 
