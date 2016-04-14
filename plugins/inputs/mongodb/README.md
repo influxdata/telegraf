@@ -1,37 +1,22 @@
-# Telegraf plugin: Jolokia
+# Telegraf plugin: MongoDB
 
 #### Configuration
 
 ```toml
-[[inputs.jolokia]]
-  ## This is the context root used to compose the jolokia url
-  context = "/jolokia/read"
+[[inputs.mongodb]]
+  servers = ["127.0.0.1:27017"]
+```
 
-  ## List of servers exposing jolokia read service
-  [[inputs.jolokia.servers]]
-    name = "stable"
-    host = "192.168.103.2"
-    port = "8180"
-    # username = "myuser"
-    # password = "mypassword"
+For authenticated mongodb istances use connection mongdb connection URI
 
-  ## List of metrics collected on above servers
-  ## Each metric consists in a name, a jmx path and either
-  ## a pass or drop slice attribute.
-  ## This collect all heap memory usage metrics.
-  [[inputs.jolokia.metrics]]
-    name = "heap_memory_usage"
-    jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
-    
-  ## This collect thread counts metrics.
-  [[inputs.jolokia.metrics]]
-    name = "thread_count"
-    jmx  = "/java.lang:type=Threading/TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
- 
-  ## This collect number of class loaded/unloaded counts metrics.
-  [[inputs.jolokia.metrics]]
-    name = "class_count"
-    jmx  = "/java.lang:type=ClassLoading/LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
+```toml
+[[inputs.mongodb]]
+  servers = ["mongodb://myuser:mypassword@myinstance.telegraf.com:27601/mydatabasename?authMechanism=PLAIN&authSource=$external"]
+```
+This connection uri may be different based on your environement and mongodb setup. If the user doesn't have the required priviliges to execute serverStatus command the you will get this error on telegraf
+
+```toml
+Error in input [mongodb]: not authorized on admin to execute command { serverStatus: 1, recordStats: 0 }
 ```
 
 #### Description
