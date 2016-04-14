@@ -1,4 +1,6 @@
-## v0.12.1 [unreleased]
+## v0.13 [unreleased]
+
+## v0.12.1 [2016-04-14]
 
 ### Release Notes
 - Breaking change in the dovecot input plugin. See Features section below.
