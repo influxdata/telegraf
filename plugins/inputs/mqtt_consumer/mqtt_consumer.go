@@ -133,6 +133,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 func (m *MQTTConsumer) onConnect(c mqtt.Client) {
+	log.Printf("MQTT Client Connected")
 	if !m.PersistentSession || !m.started {
 		topics := make(map[string]byte)
 		for _, topic := range m.Topics {
@@ -150,7 +151,7 @@ func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 }
 
 func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
-	log.Printf("MQTT Connection lost\nerror: %s\nClient should retry to reconnect", err.Error())
+	log.Printf("MQTT Connection lost\nerror: %s\nMQTT Client will try to reconnect", err.Error())
 	return
 }
 
