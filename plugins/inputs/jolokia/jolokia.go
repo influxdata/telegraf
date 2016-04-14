@@ -1,6 +1,7 @@
 package jolokia
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"bytes"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -23,10 +23,10 @@ type Server struct {
 }
 
 type Metric struct {
-	Name string
-	Mbean string
+	Name      string
+	Mbean     string
 	Attribute string
-	Path string
+	Path      string
 }
 
 type JolokiaClient interface {
@@ -44,10 +44,10 @@ func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error
 type Jolokia struct {
 	jClient JolokiaClient
 	Context string
-	Mode string
+	Mode    string
 	Servers []Server
 	Metrics []Metric
-	Proxy Server
+	Proxy   Server
 }
 
 func (j *Jolokia) SampleConfig() string {
@@ -86,13 +86,13 @@ func (j *Jolokia) SampleConfig() string {
   [[inputs.jolokia.metrics]]
     name = "thread_count"
     mbean  = "java.lang:type=Threading"
-		attribute = "TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
+    attribute = "TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
 
   ## This collect number of class loaded/unloaded counts metrics.
   [[inputs.jolokia.metrics]]
     name = "class_count"
     mbean  = "java.lang:type=ClassLoading"
-		attribute = "LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
+    attribute = "LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
 `
 }
 
@@ -142,14 +142,13 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 	return jsonOut, nil
 }
 
-
 func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, error) {
 	var jolokiaUrl *url.URL
 	context := j.Context // Usually "/jolokia"
 
 	// Create bodyContent
 	bodyContent := map[string]interface{}{
-		"type": "read",
+		"type":  "read",
 		"mbean": metric.Mbean,
 	}
 
@@ -161,7 +160,7 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 	}
 
 	// Add target, only in proxy mode
-	if ( j.Mode == "proxy") {
+	if j.Mode == "proxy" {
 
 		serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi", server.Host, server.Port)
 
@@ -217,7 +216,6 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 	return req, nil
 }
 
-
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 	servers := j.Servers
 	metrics := j.Metrics
@@ -233,7 +231,7 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 			measurement := metric.Name
 
 			req, err := j.prepareRequest(server, metric)
-			if err != nil{
+			if err != nil {
 				return err
 			}
 
@@ -241,7 +239,7 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 
 			if err != nil {
 				fmt.Printf("Error handling response: %s\n", err)
-			}else {
+			} else {
 
 				if values, ok := out["value"]; ok {
 					switch t := values.(type) {
