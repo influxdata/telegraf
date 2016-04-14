@@ -142,148 +142,124 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 	return jsonOut, nil
 }
 
-func (j *Jolokia) getAttr(requestUrl *url.URL) (map[string]interface{}, error) {
-	// Create + send request
-	req, err := http.NewRequest("GET", requestUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
 
-	return j.doRequest(req)
-}
-
-
-func (j *Jolokia) collectMeasurement(measurement string, out map[string]interface{}, fields map[string]interface{}) {
-
-	if values, ok := out["value"]; ok {
-		switch t := values.(type) {
-		case map[string]interface{}:
-			for k, v := range t {
-				fields[measurement+"_"+k] = v
-			}
-		case interface{}:
-			fields[measurement] = t
-		}
-	} else {
-		fmt.Printf("Missing key 'value' in output response\n")
-	}
-
-}
-
-
-func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
+func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, error) {
+	var jolokiaUrl *url.URL
 	context := j.Context // Usually "/jolokia"
-	servers := j.Servers
-	metrics := j.Metrics
-	tags := make(map[string]string)
-	mode := j.Mode
 
-	if( mode == "agent" || mode == ""){
+	// Create bodyContent
+	bodyContent := map[string]interface{}{
+		"type": "read",
+		"mbean": metric.Mbean,
+	}
 
-		for _, server := range servers {
-			tags["server"] = server.Name
-			tags["port"] = server.Port
-			tags["host"] = server.Host
-			fields := make(map[string]interface{})
-			for _, metric := range metrics {
+	if metric.Attribute != "" {
+		bodyContent["attribute"] = metric.Attribute
+		if metric.Path != "" {
+			bodyContent["path"] = metric.Path
+		}
+	}
 
-				measurement := metric.Name
-				jmxPath := "/" + metric.Mbean
-				if metric.Attribute != "" {
-					jmxPath = jmxPath + "/" + metric.Attribute
+	// Add target, only in proxy mode
+	if ( j.Mode == "proxy") {
 
-					if metric.Path != "" {
-						jmxPath = jmxPath + "/" + metric.Path
-					}
-				}
+		serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi", server.Host, server.Port)
 
-			// Prepare URL
-				requestUrl, err := url.Parse("http://" + server.Host + ":" +
-				server.Port + context + "/read" + jmxPath)
-				if err != nil {
-					return err
-				}
-				if server.Username != "" || server.Password != "" {
-					requestUrl.User = url.UserPassword(server.Username, server.Password)
-				}
-				out, _ := j.getAttr(requestUrl)
-				j.collectMeasurement(measurement, out, fields)
-			}
-			acc.AddFields("jolokia", fields, tags)
+		target := map[string]string{
+			"url": serviceUrl,
 		}
 
-	} else if ( mode == "proxy") {
+		if server.Username != "" {
+			target["user"] = server.Username
+		}
+
+		if server.Password != "" {
+			target["password"] = server.Password
+		}
+
+		bodyContent["target"] = target
 
 		proxy := j.Proxy
 
 		// Prepare ProxyURL
-		proxyURL, err := url.Parse("http://" + proxy.Host + ":" +
-		proxy.Port + context)
+		proxyUrl, err := url.Parse("http://" + proxy.Host + ":" + proxy.Port + context)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if proxy.Username != "" || proxy.Password != "" {
-			proxyURL.User = url.UserPassword(proxy.Username, proxy.Password)
+			proxyUrl.User = url.UserPassword(proxy.Username, proxy.Password)
 		}
 
-		for _, server := range servers {
-			tags["server"] = server.Name
-			tags["port"] = server.Port
-			tags["host"] = server.Host
-			fields := make(map[string]interface{})
-			for _, metric := range metrics {
+		jolokiaUrl = proxyUrl
+	} else {
 
-				measurement := metric.Name
-				// Prepare URL
-				serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi", server.Host, server.Port)
+		serverUrl, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
+		if err != nil {
+			return nil, err
+		}
+		if server.Username != "" || server.Password != "" {
+			serverUrl.User = url.UserPassword(server.Username, server.Password)
+		}
 
-				target := map[string]string{
-					"url": serviceUrl,
-				}
+		jolokiaUrl = serverUrl
+	}
 
-				if server.Username != "" {
-					target["user"] = server.Username
-				}
+	requestBody, err := json.Marshal(bodyContent)
 
-				if server.Password != "" {
-					target["password"] = server.Password
-				}
+	req, err := http.NewRequest("POST", jolokiaUrl.String(), bytes.NewBuffer(requestBody))
 
-				// Create + send request
-				bodyContent := map[string]interface{}{
-					"type": "read",
-					"mbean": metric.Mbean,
-					"target": target,
-				}
+	if err != nil {
+		return nil, err
+	}
 
-				if metric.Attribute != "" {
-					bodyContent["attribute"] = metric.Attribute
-					if metric.Path != "" {
-						bodyContent["path"] = metric.Path
-					}
-				}
+	req.Header.Add("Content-type", "application/json")
 
-				requestBody, err := json.Marshal(bodyContent)
+	return req, nil
+}
 
-				req, err := http.NewRequest("POST", proxyURL.String(), bytes.NewBuffer(requestBody))
 
-				if err != nil {
-					return err
-				}
+func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
+	servers := j.Servers
+	metrics := j.Metrics
+	tags := make(map[string]string)
 
-				req.Header.Add("Content-type", "application/json")
+	for _, server := range servers {
+		tags["server"] = server.Name
+		tags["port"] = server.Port
+		tags["host"] = server.Host
+		fields := make(map[string]interface{})
 
-				out, err := j.doRequest(req)
-				
-				if err != nil {
-					fmt.Printf("Error handling response: %s\n", err)
-				}else {
-					j.collectMeasurement(measurement, out, fields)
-				}
+		for _, metric := range metrics {
+			measurement := metric.Name
+
+			req, err := j.prepareRequest(server, metric)
+			if err != nil{
+				return err
 			}
-			acc.AddFields("jolokia", fields, tags)
+
+			out, err := j.doRequest(req)
+
+			if err != nil {
+				fmt.Printf("Error handling response: %s\n", err)
+			}else {
+
+				if values, ok := out["value"]; ok {
+					switch t := values.(type) {
+					case map[string]interface{}:
+						for k, v := range t {
+							fields[measurement+"_"+k] = v
+						}
+					case interface{}:
+						fields[measurement] = t
+					}
+				} else {
+					fmt.Printf("Missing key 'value' in output response\n")
+				}
+
+			}
 		}
 
+		acc.AddFields("jolokia", fields, tags)
 	}
 
 	return nil
