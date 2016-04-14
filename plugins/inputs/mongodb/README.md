@@ -13,7 +13,7 @@ For authenticated mongodb istances use connection mongdb connection URI
 [[inputs.mongodb]]
   servers = ["mongodb://myuser:mypassword@myinstance.telegraf.com:27601/mydatabasename?authMechanism=PLAIN&authSource=$external"]
 ```
-This connection uri may be different based on your environement and mongodb setup. If the user doesn't have the required priviliges to execute serverStatus command the you will get this error on telegraf
+This connection uri may be different based on your environement and mongodb setup. If the user doesn't have the required privilege to execute serverStatus command the you will get this error on telegraf
 
 ```toml
 Error in input [mongodb]: not authorized on admin to execute command { serverStatus: 1, recordStats: 0 }
