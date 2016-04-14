@@ -68,6 +68,8 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 
 	u.gatherStatServer(acc, &s)
 	u.gatherWorkers(acc, &s)
+	u.gatherApps(acc, &s)
+	u.gatherCores(acc, &s)
 
 	return nil
 }
@@ -100,6 +102,7 @@ func (u *Uwsgi) gatherWorkers(acc telegraf.Accumulator, s *StatsServer) error {
 			"requests":       w.Requests,
 			"accepting":      w.Accepting,
 			"delta_request":  w.DeltaRequests,
+			"exceptions":     w.Exceptions,
 			"harakiri_count": w.HarakiriCount,
 			"signals":        w.Signals,
 			"signal_queue":   w.SignalQueue,
@@ -113,12 +116,58 @@ func (u *Uwsgi) gatherWorkers(acc telegraf.Accumulator, s *StatsServer) error {
 			"avg_rt":         w.AvgRt,
 		}
 		tags := map[string]string{
-			"id":  strconv.Itoa(w.Id),
-			"url": s.Url,
-			"pid": strconv.Itoa(w.Pid),
+			"worker_id": strconv.Itoa(w.WorkerId),
+			"url":       s.Url,
+			"pid":       strconv.Itoa(w.Pid),
 		}
 
 		acc.AddFields("uwsgi_workers", fields, tags)
+	}
+
+	return nil
+}
+
+func (u *Uwsgi) gatherApps(acc telegraf.Accumulator, s *StatsServer) error {
+	for _, w := range s.Workers {
+		for _, a := range w.Apps {
+			fields := map[string]interface{}{
+				"modifier1":    a.Modifier1,
+				"requests":     a.Requests,
+				"startup_time": a.StartupTime,
+				"exceptions":   a.Exceptions,
+			}
+			tags := map[string]string{
+				"app_id":     strconv.Itoa(a.AppId),
+				"worker_id":  strconv.Itoa(w.WorkerId),
+				"mountpoint": a.MountPoint,
+				"chdir":      a.Chdir,
+			}
+			acc.AddFields("uwsgi_apps", fields, tags)
+		}
+	}
+
+	return nil
+}
+
+func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) error {
+	for _, w := range s.Workers {
+		for _, c := range w.Cores {
+			fields := map[string]interface{}{
+				"requests":           c.Requests,
+				"static_requests":    c.StaticRequests,
+				"routed_requests":    c.RoutedRequests,
+				"offloaded_requests": c.OffloadedRequests,
+				"write_errors":       c.WriteErrors,
+				"read_errors":        c.ReadErrors,
+				"in_request":         c.InRequest,
+			}
+			tags := map[string]string{
+				"core_id":   strconv.Itoa(c.CoreId),
+				"worker_id": strconv.Itoa(w.WorkerId),
+			}
+			acc.AddFields("uwsgi_cores", fields, tags)
+		}
+
 	}
 
 	return nil
