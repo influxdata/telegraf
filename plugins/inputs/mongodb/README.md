@@ -11,7 +11,7 @@ For authenticated mongodb istances use connection mongdb connection URI
 
 ```toml
 [[inputs.mongodb]]
-  servers = ["mongodb://myuser:mypassword@myinstance.telegraf.com:27601/mydatabasename?authMechanism=PLAIN&authSource=$external"]
+  servers = ["mongodb://username:password@10.XX.XX.XX:27101/mydatabase?authSource=admin"]
 ```
 This connection uri may be different based on your environement and mongodb setup. If the user doesn't have the required privilege to execute serverStatus command the you will get this error on telegraf
 
