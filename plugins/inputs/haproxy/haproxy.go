@@ -146,7 +146,7 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if u.RawQuery == "" {
 		uri = fmt.Sprintf("%s://%s%s;csv", u.Scheme, u.Host, u.Path)
 	} else {
-		uri = fmt.Sprintf("%s://%s%s?%s;csv", u.Scheme, u.Host, u.Path,u.RawQuery)
+		uri = fmt.Sprintf("%s://%s%s?%s;csv", u.Scheme, u.Host, u.Path, u.RawQuery)
 	}
 	req, err := http.NewRequest("GET", uri, nil)
 	if u.User != nil {
