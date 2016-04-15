@@ -75,8 +75,9 @@ if [ $? -eq 0 ]; then
     unset GOGC
     tag=$(git describe --exact-match HEAD)
     echo $tag
-    exit_if_fail ./scripts/build.py --package --version=$tag --platform=linux --arch=all --upload
-    exit_if_fail ./scripts/build.py --package --version=$tag --platform=windows --arch=all --upload
-    exit_if_fail ./scripts/build.py --package --version=$tag --platform=freebsd --arch=all --upload
+    exit_if_fail ./scripts/build.py --release --package --version=$tag --platform=all --arch=all --upload --bucket=dl.influxdata.com/telegraf/releases
     mv build $CIRCLE_ARTIFACTS
+else
+    # Upload Linux build artifact to S3
+    ./scripts/build.py --package --upload
 fi
