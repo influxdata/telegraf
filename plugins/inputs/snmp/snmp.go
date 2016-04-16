@@ -733,7 +733,11 @@ func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, a
 					break nextresult
 				}
 			}
-			if strings.HasPrefix(variable.Name, oid_key) {
+			// If variable.Name is the same as oid_key
+			// OR
+			// the result is SNMP table which "." comes right after oid_key.
+			// ex: oid_key: .1.3.6.1.2.1.2.2.1.16, variable.Name: .1.3.6.1.2.1.2.2.1.16.1
+			if variable.Name == oid_key || strings.HasPrefix(variable.Name, oid_key+".") {
 				switch variable.Type {
 				// handle Metrics
 				case gosnmp.Boolean, gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32,

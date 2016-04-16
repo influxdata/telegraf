@@ -37,6 +37,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1013](https://github.com/influxdata/telegraf/pull/1013): Close dead riemann output connections. Thanks @echupriyanov!
 - [#1012](https://github.com/influxdata/telegraf/pull/1012): Set default tags in test accumulator.
 - [#1058](https://github.com/influxdata/telegraf/issues/1058): Fix possible leaky TCP connections in influxdb output.
+- [#1044](https://github.com/influxdata/telegraf/pull/1044): Fix SNMP OID possible collisions. Thanks @relip
 
 ## v0.12.1 [2016-04-14]
 
