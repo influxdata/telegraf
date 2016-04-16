@@ -732,7 +732,7 @@ func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, a
 					break nextresult
 				}
 			}
-			if strings.HasPrefix(variable.Name, oid_key) {
+			if variable.Name == oid_key {
 				switch variable.Type {
 				// handle Metrics
 				case gosnmp.Boolean, gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32,
