@@ -5,8 +5,9 @@
 will now be a field, and be called container_id. Additionally, cont_image and
 cont_name are being renamed to container_image and container_name.
 - **Breaking Change**: docker plugin measurements. The `docker_cpu`, `docker_mem`,
-and `docker_net` measurements are being renamed to `docker_container_cpu`,
-`docker_container_mem`, and `docker_container_net`. Why? Because these metrics are
+`docker_blkio` and `docker_net` measurements are being renamed to
+`docker_container_cpu`, `docker_container_mem`, `docker_container_blkio` and
+`docker_container_net`. Why? Because these metrics are
 specifically tracking per-container stats. The problem with per-container stats,
 in some use-cases, is that if containers are short-lived AND names are not
 kept consistent, then the series cardinality will balloon very quickly.
