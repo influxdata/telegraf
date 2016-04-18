@@ -411,7 +411,7 @@ func gatherBlockIOMetrics(
 	for device, fields := range deviceStatMap {
 		iotags := copyTags(tags)
 		iotags["device"] = device
-		acc.AddFields("docker_blkio", fields, iotags, now)
+		acc.AddFields("docker_container_blkio", fields, iotags, now)
 	}
 }
 
