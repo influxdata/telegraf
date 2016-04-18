@@ -222,9 +222,9 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
 
 	for _, server := range servers {
-		tags["server"] = server.Name
-		tags["port"] = server.Port
-		tags["host"] = server.Host
+		tags["server_name"] = server.Name
+		tags["server_port"] = server.Port
+		tags["server_host"] = server.Host
 		fields := make(map[string]interface{})
 
 		for _, metric := range metrics {

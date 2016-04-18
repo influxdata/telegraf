@@ -96,9 +96,9 @@ func TestHttpJsonMultiValue(t *testing.T) {
 		"heap_memory_usage_used":      203288528.0,
 	}
 	tags := map[string]string{
-		"host":   "127.0.0.1",
-		"port":   "8080",
-		"server": "as1",
+		"server_host": "127.0.0.1",
+		"server_port": "8080",
+		"server_name": "as1",
 	}
 	acc.AssertContainsTaggedFields(t, "jolokia", fields, tags)
 }
