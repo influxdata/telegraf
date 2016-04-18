@@ -31,6 +31,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 
 ### Bugfixes
 - [#921](https://github.com/influxdata/telegraf/pull/921): mqtt_consumer stops gathering metrics. Thanks @chaton78!
+- [#1013](https://github.com/influxdata/telegraf/pull/1013): Close dead riemann output connections. Thanks @echupriyanov!
 
 ## v0.12.1 [2016-04-14]
 
