@@ -398,15 +398,16 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// only if len(s.OidInstanceMapping) == 0
 		if len(OidInstanceMapping) >= 0 {
 			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
-				return err
+				log.Printf("SNMP Mapping error for host '%s': %s", host.Address, err)
+				continue
 			}
 		}
 		// Launch Get requests
 		if err := host.SNMPGet(acc, s.initNode); err != nil {
-			return err
+			log.Printf("SNMP Error for host '%s': %s", host.Address, err)
 		}
 		if err := host.SNMPBulk(acc, s.initNode); err != nil {
-			return err
+			log.Printf("SNMP Error for host '%s': %s", host.Address, err)
 		}
 	}
 	return nil
