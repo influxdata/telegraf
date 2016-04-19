@@ -50,6 +50,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1024](https://github.com/influxdata/telegraf/issues/1024): Don't replace `.` with `_` in datadog output.
 - [#1058](https://github.com/influxdata/telegraf/issues/1058): Fix possible leaky TCP connections in influxdb output.
 - [#1044](https://github.com/influxdata/telegraf/pull/1044): Fix SNMP OID possible collisions. Thanks @relip
+- [#1022](https://github.com/influxdata/telegraf/issues/1022): Dont error deb/rpm install on systemd errors.
 
 ## v0.12.1 [2016-04-14]
 
