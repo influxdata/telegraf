@@ -54,6 +54,7 @@ type ServerStatus struct {
 	ShardCursorType    map[string]interface{} `bson:"shardCursorType"`
 	StorageEngine      map[string]string      `bson:"storageEngine"`
 	WiredTiger         *WiredTiger            `bson:"wiredTiger"`
+	Metrics            *MetricsStats          `bson:"metrics"`
 }
 
 // WiredTiger stores information related to the WiredTiger storage engine.
@@ -194,6 +195,17 @@ type OpcountStats struct {
 	Command int64 `bson:"command"`
 }
 
+// MetricsStats stores information related to metrics
+type MetricsStats struct {
+	TTL *TTLStats `bson:"ttl"`
+}
+
+// TTLStats stores information related to documents with a ttl index.
+type TTLStats struct {
+	DeletedDocuments int64 `bson:"deletedDocuments"`
+	Passes           int64 `bson:"passes"`
+}
+
 // ReadWriteLockTimes stores time spent holding read/write locks.
 type ReadWriteLockTimes struct {
 	Read       int64 `bson:"R"`
@@ -332,6 +344,9 @@ type StatLine struct {
 	// Opcounter fields
 	Insert, Query, Update, Delete, GetMore, Command int64
 
+	// TTL fields
+	Passes, DeletedDocuments int64
+
 	// Collection locks (3.0 mmap only)
 	CollectionLocks *CollectionLockStatus
 
@@ -421,6 +436,11 @@ func NewStatLine(oldStat, newStat ServerStatus, key string, all bool, sampleSecs
 		returnVal.Delete = diff(newStat.Opcounters.Delete, oldStat.Opcounters.Delete, sampleSecs)
 		returnVal.GetMore = diff(newStat.Opcounters.GetMore, oldStat.Opcounters.GetMore, sampleSecs)
 		returnVal.Command = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
+	}
+
+	if newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
+		returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
+		returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
 	}
 
 	if newStat.OpcountersRepl != nil && oldStat.OpcountersRepl != nil {
