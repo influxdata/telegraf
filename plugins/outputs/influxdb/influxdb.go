@@ -125,13 +125,9 @@ func (i *InfluxDB) Connect() error {
 				return err
 			}
 
-			// Create Database if it doesn't exist
-			_, e := c.Query(client.Query{
-				Command: fmt.Sprintf("CREATE DATABASE IF NOT EXISTS \"%s\"", i.Database),
-			})
-
-			if e != nil {
-				log.Println("Database creation failed: " + e.Error())
+			err = createDatabase(c, i.Database)
+			if err != nil {
+				log.Println("Database creation failed: " + err.Error())
 				continue
 			}
 
@@ -144,8 +140,24 @@ func (i *InfluxDB) Connect() error {
 	return nil
 }
 
+func createDatabase(c client.Client, database string) error {
+	// Create Database if it doesn't exist
+	_, err := c.Query(client.Query{
+		Command: fmt.Sprintf("CREATE DATABASE IF NOT EXISTS \"%s\"", database),
+	})
+	return err
+}
+
 func (i *InfluxDB) Close() error {
-	// InfluxDB client does not provide a Close() function
+	var errS string
+	for j, _ := range i.conns {
+		if err := i.conns[j].Close(); err != nil {
+			errS += err.Error()
+		}
+	}
+	if errS != "" {
+		return fmt.Errorf("output influxdb close failed: %s", errS)
+	}
 	return nil
 }
 
@@ -185,18 +197,21 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	p := rand.Perm(len(i.conns))
 	for _, n := range p {
 		if e := i.conns[n].Write(bp); e != nil {
-			log.Println("ERROR: " + e.Error())
+			// Log write failure
+			log.Printf("ERROR: %s", e)
+			// If the database was not found, try to recreate it
+			if strings.Contains(e.Error(), "database not found") {
+				if errc := createDatabase(i.conns[n], i.Database); errc != nil {
+					log.Printf("ERROR: Database %s not found and failed to recreate\n",
+						i.Database)
+				}
+			}
 		} else {
 			err = nil
 			break
 		}
 	}
 
-	// If all of the writes failed, create a new connection array so that
-	// i.Connect() will be called on the next gather.
-	if err != nil {
-		i.conns = make([]client.Client, 0)
-	}
 	return err
 }
 

@@ -1,6 +1,7 @@
 ## v0.13 [unreleased]
 
 ### Release Notes
+
 - **Breaking Change**: docker plugin tags. The cont_id tag no longer exists, it
 will now be a field, and be called container_id. Additionally, cont_image and
 cont_name are being renamed to container_image and container_name.
@@ -15,7 +16,7 @@ So adding "container" to each metric will:
 (1) make it more clear that these metrics are per-container, and
 (2) allow users to easily drop per-container metrics if cardinality is an
 issue (`namedrop = ["docker_container_*"]`)
-- `tagexclude` and `tagexclude` are now available, which can be used to remove
+- `tagexclude` and `taginclude` are now available, which can be used to remove
 tags from measurements on inputs and outputs. See
 [the configuration doc](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md)
 for more details.
@@ -25,14 +26,17 @@ based on _prefix_ in addition to globs. This means that a filter like
 `fielddrop = ["time_"]` will need to be changed to `fielddrop = ["time_*"]`
 
 ### Features
+
 - [#1017](https://github.com/influxdata/telegraf/pull/1017): taginclude and tagexclude arguments.
 - [#1015](https://github.com/influxdata/telegraf/pull/1015): Docker plugin schema refactor.
 - [#889](https://github.com/influxdata/telegraf/pull/889): Improved MySQL plugin. Thanks @maksadbek!
 
 ### Bugfixes
+
 - [#921](https://github.com/influxdata/telegraf/pull/921): mqtt_consumer stops gathering metrics. Thanks @chaton78!
 - [#1013](https://github.com/influxdata/telegraf/pull/1013): Close dead riemann output connections. Thanks @echupriyanov!
 - [#1012](https://github.com/influxdata/telegraf/pull/1012): Set default tags in test accumulator.
+- [#1058](https://github.com/influxdata/telegraf/issues/1058): Fix possible leaky TCP connections in influxdb output.
 
 ## v0.12.1 [2016-04-14]
 

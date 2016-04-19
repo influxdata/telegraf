@@ -24,7 +24,7 @@ github.com/gorilla/context 1ea25387ff6f684839d82767c1733ff4d4d15d0a
 github.com/gorilla/mux c9e326e2bdec29039a3761c07bece13133863e1e
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
-github.com/influxdata/influxdb e3fef5593c21644f2b43af55d6e17e70910b0e48
+github.com/influxdata/influxdb 21db76b3374c733f37ed16ad93f3484020034351
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
 github.com/lib/pq e182dc4027e2ded4b19396d638610f2653295f36
