@@ -54,6 +54,7 @@ var DefaultReplStats = map[string]string{
 	"repl_getmores_per_sec": "GetMoreR",
 	"repl_commands_per_sec": "CommandR",
 	"member_status":         "NodeType",
+	"repl_lag":              "ReplLag",
 }
 
 var MmapStats = map[string]string{
