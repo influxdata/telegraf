@@ -30,6 +30,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1017](https://github.com/influxdata/telegraf/pull/1017): taginclude and tagexclude arguments.
 - [#1015](https://github.com/influxdata/telegraf/pull/1015): Docker plugin schema refactor.
 - [#889](https://github.com/influxdata/telegraf/pull/889): Improved MySQL plugin. Thanks @maksadbek!
+- [#1060](https://github.com/influxdata/telegraf/pull/1060): TTL metrics added to MongoDB input plugin
 
 ### Bugfixes
 
