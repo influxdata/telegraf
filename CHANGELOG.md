@@ -24,6 +24,10 @@ for more details.
 only. Previously there was an undocumented behavior where filters would match
 based on _prefix_ in addition to globs. This means that a filter like
 `fielddrop = ["time_"]` will need to be changed to `fielddrop = ["time_*"]`
+- The following plugins have changed their tags to _not_ overwrite the host tag:
+  - cassandra: `host -> cassandra_host`
+  - disque: `host -> disque_host`
+  - rethinkdb: `host -> rethinkdb_host`
 
 ### Features
 
@@ -31,6 +35,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1015](https://github.com/influxdata/telegraf/pull/1015): Docker plugin schema refactor.
 - [#889](https://github.com/influxdata/telegraf/pull/889): Improved MySQL plugin. Thanks @maksadbek!
 - [#1060](https://github.com/influxdata/telegraf/pull/1060): TTL metrics added to MongoDB input plugin
+- [#1056](https://github.com/influxdata/telegraf/pull/1056): Don't allow inputs to overwrite host tags.
 
 ### Bugfixes
 

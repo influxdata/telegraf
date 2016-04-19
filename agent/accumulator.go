@@ -84,17 +84,13 @@ func (ac *accumulator) AddFields(
 	if tags == nil {
 		tags = make(map[string]string)
 	}
-	// Apply plugin-wide tags if set
-	for k, v := range ac.inputConfig.Tags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
-	}
 	// Apply daemon-wide tags if set
 	for k, v := range ac.defaultTags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
+		tags[k] = v
+	}
+	// Apply plugin-wide tags if set
+	for k, v := range ac.inputConfig.Tags {
+		tags[k] = v
 	}
 	ac.inputConfig.Filter.FilterTags(tags)
 
