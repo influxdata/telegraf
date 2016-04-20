@@ -50,3 +50,4 @@ and create a single measurement containing values e.g.
  * vsize_megabytes
  * ttl_deletes_per_sec
  * ttl_passes_per_sec
+ * repl_lag
