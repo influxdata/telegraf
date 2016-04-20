@@ -36,9 +36,8 @@ func NewSpecProcessor(
 	prefix string,
 	acc telegraf.Accumulator,
 	p *process.Process,
+	tags map[string]string,
 ) *SpecProcessor {
-	tags := make(map[string]string)
-	tags["pid"] = fmt.Sprintf("%v", p.Pid)
 	if name, err := p.Name(); err == nil {
 		tags["process_name"] = name
 	}
