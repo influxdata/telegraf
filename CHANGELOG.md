@@ -24,6 +24,7 @@ for more details.
 only. Previously there was an undocumented behavior where filters would match
 based on _prefix_ in addition to globs. This means that a filter like
 `fielddrop = ["time_"]` will need to be changed to `fielddrop = ["time_*"]`
+- **datadog**: measurement and field names will no longer have `_` replaced by `.`
 - The following plugins have changed their tags to _not_ overwrite the host tag:
   - cassandra: `host -> cassandra_host`
   - disque: `host -> disque_host`
@@ -42,6 +43,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#921](https://github.com/influxdata/telegraf/pull/921): mqtt_consumer stops gathering metrics. Thanks @chaton78!
 - [#1013](https://github.com/influxdata/telegraf/pull/1013): Close dead riemann output connections. Thanks @echupriyanov!
 - [#1012](https://github.com/influxdata/telegraf/pull/1012): Set default tags in test accumulator.
+- [#1024](https://github.com/influxdata/telegraf/issues/1024): Don't replace `.` with `_` in datadog output.
 - [#1058](https://github.com/influxdata/telegraf/issues/1058): Fix possible leaky TCP connections in influxdb output.
 - [#1044](https://github.com/influxdata/telegraf/pull/1044): Fix SNMP OID possible collisions. Thanks @relip
 
