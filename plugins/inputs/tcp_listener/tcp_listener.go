@@ -150,8 +150,7 @@ func (t *TcpListener) tcpListen() error {
 			if err != nil {
 				return err
 			}
-
-			log.Printf("Received TCP Connection from %s", conn.RemoteAddr())
+			// log.Printf("Received TCP Connection from %s", conn.RemoteAddr())
 
 			select {
 			case <-t.accept:
@@ -187,7 +186,7 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 	defer func() {
 		t.wg.Done()
 		conn.Close()
-		log.Printf("Closed TCP Connection from %s", conn.RemoteAddr())
+		// log.Printf("Closed TCP Connection from %s", conn.RemoteAddr())
 		// Add one connection potential back to channel when this one closes
 		t.accept <- true
 		t.forget(id)
