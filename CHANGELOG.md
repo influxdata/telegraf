@@ -7,8 +7,10 @@ https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#g
 - Possible breaking change for the librato and graphite outputs. Telegraf will
 no longer insert field names when the field is simply named `value`. This is
 because the `value` field is redundant in the graphite/librato context.
+- Breaking change in jolokia plugin. See https://github.com/influxdata/telegraf/blob/master/plugins/inputs/jolokia/README.md
 
 ### Features
+- [#1031](https://github.com/influxdata/telegraf/pull/1031): Jolokia plugin proxy mode. Thanks @saiello!
 - [#1009](https://github.com/influxdata/telegraf/pull/1009): Cassandra input plugin. Thanks @subhachandrachandra!
 - [#976](https://github.com/influxdata/telegraf/pull/976): Reduce allocations in the UDP and statsd inputs.
 - [#979](https://github.com/influxdata/telegraf/pull/979): Reduce allocations in the TCP listener.
@@ -21,6 +23,7 @@ because the `value` field is redundant in the graphite/librato context.
 - [#1008](https://github.com/influxdata/telegraf/pull/1008): Adding memstats metrics to the influxdb plugin.
 
 ### Bugfixes
+- [#1050](https://github.com/influxdata/telegraf/issues/1050): jolokia plugin - do not overwrite host tag. Thanks @saiello!
 - [#968](https://github.com/influxdata/telegraf/issues/968): Processes plugin gets unknown state when spaces are in (command name)
 - [#969](https://github.com/influxdata/telegraf/pull/969): ipmi_sensors: allow : in password. Thanks @awaw!
 - [#972](https://github.com/influxdata/telegraf/pull/972): dovecot: remove extra newline in dovecot command. Thanks @mrannanj!
