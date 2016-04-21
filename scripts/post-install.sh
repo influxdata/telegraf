@@ -10,6 +10,10 @@ function install_init {
     chmod +x /etc/init.d/telegraf
 }
 
+function install_upstart {
+    cp -f $SCRIPT_DIR/telegraf.upstart /etc/init/telegraf.conf
+}
+
 function install_systemd {
     cp -f $SCRIPT_DIR/telegraf.service $1
     systemctl enable telegraf || true
@@ -18,6 +22,11 @@ function install_systemd {
 
 function install_update_rcd {
     update-rc.d telegraf defaults
+}
+
+function disable_update_rcd {
+    update-rc.d -f telegraf remove
+    rm -f /etc/init.d/telegraf
 }
 
 function install_chkconfig {
@@ -75,6 +84,13 @@ elif [[ -f /etc/debian_version ]]; then
     if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
         install_systemd /lib/systemd/system/telegraf.service
         deb-systemd-invoke restart telegraf.service || echo "WARNING: systemd not running."
+    elif which initctl &>/dev/null; then
+        # Make sure previous version with init.d script is removed
+        invoke-rc.d telegraf stop
+        disable_update_rcd
+
+        install_upstart
+        invoke-rc.d telegraf restart
     else
         # Assuming SysVinit
         install_init

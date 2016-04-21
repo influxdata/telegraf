@@ -26,6 +26,7 @@ CONFIG_DIR_D = "/etc/telegraf/telegraf.d"
 LOGROTATE_DIR = "/etc/logrotate.d"
 
 INIT_SCRIPT = "scripts/init.sh"
+UPSTART_SCRIPT = "scripts/telegraf.upstart"
 SYSTEMD_SCRIPT = "scripts/telegraf.service"
 LOGROTATE_SCRIPT = "etc/logrotate.d/telegraf"
 DEFAULT_CONFIG = "etc/telegraf.conf"
@@ -138,6 +139,8 @@ def package_scripts(build_root, config_only=False, windows=False):
         logging.info("Copying scripts and configuration to build directory")
         shutil.copyfile(INIT_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]))
         os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]), 0o644)
+        shutil.copyfile(UPSTART_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], UPSTART_SCRIPT.split('/')[1]))
+        os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], UPSTART_SCRIPT.split('/')[1]), 0o644)
         shutil.copyfile(SYSTEMD_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]))
         os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]), 0o644)
         shutil.copyfile(LOGROTATE_SCRIPT, os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"))
