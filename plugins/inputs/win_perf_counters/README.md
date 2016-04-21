@@ -156,6 +156,15 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     Instances = ["------"] # Use 6 x - to remove the Instance bit from the query.
     Measurement = "win_mem"
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
+
+  [[inputs.win_perf_counters.object]]
+    # more counters for the Network Interface Object can be found at
+    # https://msdn.microsoft.com/en-us/library/ms803962.aspx
+    ObjectName = "Network Interface"
+    Counters = ["Bytes Received/sec","Bytes Sent/sec","Packets Received/sec","Packets Sent/sec"]
+    Instances = ["*"] # Use 6 x - to remove the Instance bit from the query.
+    Measurement = "win_net"
+    #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
 ```
 
 ### Active Directory Domain Controller
