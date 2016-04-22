@@ -6,9 +6,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -62,7 +59,7 @@ func (c *CloudWatch) SampleConfig() string {
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
   delay = '1m'
 
-  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid 
+  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = '1m'
 
@@ -74,7 +71,7 @@ func (c *CloudWatch) SampleConfig() string {
   ## Refreshes Namespace available metrics every 1h
   #[[inputs.cloudwatch.metrics]]
   #  names = ['Latency', 'RequestCount']
-  #	
+  #
   #  ## Dimension filters for Metric (optional)
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = 'LoadBalancerName'
@@ -154,12 +151,6 @@ func init() {
 func (c *CloudWatch) initializeCloudWatch() error {
 	config := &aws.Config{
 		Region: aws.String(c.Region),
-		Credentials: credentials.NewChainCredentials(
-			[]credentials.Provider{
-				&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-				&credentials.EnvProvider{},
-				&credentials.SharedCredentialsProvider{},
-			}),
 	}
 
 	c.client = cloudwatch.New(session.New(config))

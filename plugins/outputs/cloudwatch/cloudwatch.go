@@ -8,9 +8,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
@@ -43,12 +40,6 @@ func (c *CloudWatch) Description() string {
 func (c *CloudWatch) Connect() error {
 	Config := &aws.Config{
 		Region: aws.String(c.Region),
-		Credentials: credentials.NewChainCredentials(
-			[]credentials.Provider{
-				&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-				&credentials.EnvProvider{},
-				&credentials.SharedCredentialsProvider{},
-			}),
 	}
 
 	svc := cloudwatch.New(session.New(Config))
