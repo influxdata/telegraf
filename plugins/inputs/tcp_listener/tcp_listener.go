@@ -221,7 +221,10 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 // tcpParser parses the incoming tcp byte packets
 func (t *TcpListener) tcpParser() error {
 	defer t.wg.Done()
+
 	var packet []byte
+	var metrics []telegraf.Metric
+	var err error
 	for {
 		select {
 		case <-t.done:
@@ -230,7 +233,7 @@ func (t *TcpListener) tcpParser() error {
 			if len(packet) == 0 {
 				continue
 			}
-			metrics, err := t.parser.Parse(packet)
+			metrics, err = t.parser.Parse(packet)
 			if err == nil {
 				t.storeMetrics(metrics)
 			} else {
