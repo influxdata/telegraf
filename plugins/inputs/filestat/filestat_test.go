@@ -164,23 +164,6 @@ func TestGatherSuperAsterisk(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "filestat", fields3, tags3)
 }
 
-func TestFindRootDir(t *testing.T) {
-	tests := []struct {
-		input  string
-		output string
-	}{
-		{"/var/log/telegraf.conf", "/var/log/"},
-		{"/home/**", "/home/"},
-		{"/home/*/**", "/home/"},
-		{"/lib/share/*/*/**.txt", "/lib/share/"},
-	}
-
-	for _, test := range tests {
-		actual := findRootDir(test.input)
-		assert.Equal(t, test.output, actual)
-	}
-}
-
 func TestGetMd5(t *testing.T) {
 	dir := getTestdataDir()
 	md5, err := getMd5(dir + "test.conf")
