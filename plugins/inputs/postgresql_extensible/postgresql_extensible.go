@@ -184,7 +184,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-var passwordKVMatcher, _ = regexp.Compile("password=\\S+ ?")
+var KVMatcher, _ = regexp.Compile("(password|sslcert|sslkey|sslmode|sslrootcert)=\\S+ ?")
 
 func (p *Postgresql) SanitizedAddress() (_ string, err error) {
 	var canonicalizedAddress string
@@ -196,7 +196,7 @@ func (p *Postgresql) SanitizedAddress() (_ string, err error) {
 	} else {
 		canonicalizedAddress = p.Address
 	}
-	p.sanitizedAddress = passwordKVMatcher.ReplaceAllString(canonicalizedAddress, "")
+	p.sanitizedAddress = KVMatcher.ReplaceAllString(canonicalizedAddress, "")
 
 	return p.sanitizedAddress, err
 }
