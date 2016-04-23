@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -18,6 +19,8 @@ import (
 type (
 	CloudWatch struct {
 		Region      string            `toml:"region"`
+		AccessKey   string            `toml:"access_key"`
+		SecretKey   string            `toml:"secret_key"`
 		Period      internal.Duration `toml:"period"`
 		Delay       internal.Duration `toml:"delay"`
 		Namespace   string            `toml:"namespace"`
@@ -52,6 +55,15 @@ func (c *CloudWatch) SampleConfig() string {
 	return `
   ## Amazon Region
   region = 'us-east-1'
+
+  ## Amazon Credentials
+  ## Credentials are loaded in the following order
+  ## 1) explicit credentials from 'access_key' and 'secret_key'
+  ## 2) environment variables
+  ## 3) shared credentials file
+  ## 4) EC2 Instance Profile
+  #access_key = ""
+  #secret_key = ""
 
   ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
   period = '1m'
@@ -151,6 +163,9 @@ func init() {
 func (c *CloudWatch) initializeCloudWatch() error {
 	config := &aws.Config{
 		Region: aws.String(c.Region),
+	}
+	if c.AccessKey != "" || c.SecretKey != "" {
+		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, "")
 	}
 
 	c.client = cloudwatch.New(session.New(config))

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 
@@ -17,6 +18,8 @@ import (
 
 type KinesisOutput struct {
 	Region       string `toml:"region"`
+	AccessKey    string `toml:"access_key"`
+	SecretKey    string `toml:"secret_key"`
 	StreamName   string `toml:"streamname"`
 	PartitionKey string `toml:"partitionkey"`
 	Format       string `toml:"format"`
@@ -27,6 +30,16 @@ type KinesisOutput struct {
 var sampleConfig = `
   ## Amazon REGION of kinesis endpoint.
   region = "ap-southeast-2"
+
+  ## Amazon Credentials
+  ## Credentials are loaded in the following order
+  ## 1) explicit credentials from 'access_key' and 'secret_key'
+  ## 2) environment variables
+  ## 3) shared credentials file
+  ## 4) EC2 Instance Profile
+  #access_key = ""
+  #secret_key = ""
+
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
   ## PartitionKey as used for sharding data.
@@ -64,6 +77,9 @@ func (k *KinesisOutput) Connect() error {
 	}
 	Config := &aws.Config{
 		Region: aws.String(k.Region),
+	}
+	if k.AccessKey != "" || k.SecretKey != "" {
+		Config.Credentials = credentials.NewStaticCredentials(k.AccessKey, k.SecretKey, "")
 	}
 	svc := kinesis.New(session.New(Config))
 
