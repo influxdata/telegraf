@@ -52,6 +52,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1044](https://github.com/influxdata/telegraf/pull/1044): Fix SNMP OID possible collisions. Thanks @relip
 - [#1022](https://github.com/influxdata/telegraf/issues/1022): Dont error deb/rpm install on systemd errors.
 - [#1078](https://github.com/influxdata/telegraf/issues/1078): Use default AWS credential chain.
+- [#1070](https://github.com/influxdata/telegraf/issues/1070): SQL Server input. Fix datatype conversion.
 
 ## v0.12.1 [2016-04-14]
 
