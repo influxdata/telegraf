@@ -9,25 +9,32 @@ import (
 )
 
 const (
-	// Default number of metrics kept between flushes.
-	DEFAULT_METRIC_BUFFER_LIMIT = 1000
 
-	// Limit how many full metric buffers are kept due to failed writes.
-	FULL_METRIC_BUFFERS_LIMIT = 100
+	// Default size of metrics batch size.
+	DEFAULT_METRIC_BATCH_SIZE = 1000
+
+	// Default number of metrics kept. It should be a multiple of batch size.
+	DEFAULT_METRIC_BUFFER_LIMIT = 10000
 )
 
+// tmpmetrics point to batch of metrics ready to be wrote to output.
+// readI point to the oldest batch of metrics (the first to sent to output). It
+// may point to nil value if tmpmetrics is empty.
+// writeI point to the next slot to buffer a batch of metrics is output fail to
+// write.
 type RunningOutput struct {
 	Name                string
 	Output              telegraf.Output
 	Config              *OutputConfig
 	Quiet               bool
 	MetricBufferLimit   int
+	MetricBatchSize     int
 	FlushBufferWhenFull bool
 
 	metrics    []telegraf.Metric
-	tmpmetrics map[int][]telegraf.Metric
-	overwriteI int
-	mapI       int
+	tmpmetrics []([]telegraf.Metric)
+	writeI     int
+	readI      int
 
 	sync.Mutex
 }
@@ -40,10 +47,10 @@ func NewRunningOutput(
 	ro := &RunningOutput{
 		Name:              name,
 		metrics:           make([]telegraf.Metric, 0),
-		tmpmetrics:        make(map[int][]telegraf.Metric),
 		Output:            output,
 		Config:            conf,
 		MetricBufferLimit: DEFAULT_METRIC_BUFFER_LIMIT,
+		MetricBatchSize:   DEFAULT_METRIC_BATCH_SIZE,
 	}
 	return ro
 }
@@ -59,6 +66,17 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 	ro.Lock()
 	defer ro.Unlock()
 
+	if ro.tmpmetrics == nil {
+		size := ro.MetricBufferLimit / ro.MetricBatchSize
+		// ro.metrics already contains one batch
+		size = size - 1
+
+		if size < 1 {
+			size = 1
+		}
+		ro.tmpmetrics = make([]([]telegraf.Metric), size)
+	}
+
 	// Filter any tagexclude/taginclude parameters before adding metric
 	if len(ro.Config.Filter.TagExclude) != 0 || len(ro.Config.Filter.TagInclude) != 0 {
 		// In order to filter out tags, we need to create a new metric, since
@@ -72,40 +90,32 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		metric, _ = telegraf.NewMetric(name, tags, fields, t)
 	}
 
-	if len(ro.metrics) < ro.MetricBufferLimit {
+	if len(ro.metrics) < ro.MetricBatchSize {
 		ro.metrics = append(ro.metrics, metric)
 	} else {
+		flushSuccess := true
 		if ro.FlushBufferWhenFull {
-			ro.metrics = append(ro.metrics, metric)
-			tmpmetrics := make([]telegraf.Metric, len(ro.metrics))
-			copy(tmpmetrics, ro.metrics)
-			ro.metrics = make([]telegraf.Metric, 0)
-			err := ro.write(tmpmetrics)
+			err := ro.write(ro.metrics)
 			if err != nil {
 				log.Printf("ERROR writing full metric buffer to output %s, %s",
 					ro.Name, err)
-				if len(ro.tmpmetrics) == FULL_METRIC_BUFFERS_LIMIT {
-					ro.mapI = 0
-					// overwrite one
-					ro.tmpmetrics[ro.mapI] = tmpmetrics
-					ro.mapI++
-				} else {
-					ro.tmpmetrics[ro.mapI] = tmpmetrics
-					ro.mapI++
-				}
+				flushSuccess = false
 			}
 		} else {
-			if ro.overwriteI == 0 {
+			flushSuccess = false
+		}
+		if !flushSuccess {
+			if ro.tmpmetrics[ro.writeI] != nil && ro.writeI == ro.readI {
 				log.Printf("WARNING: overwriting cached metrics, you may want to " +
 					"increase the metric_buffer_limit setting in your [agent] " +
 					"config if you do not wish to overwrite metrics.\n")
+				ro.readI = (ro.readI + 1) % cap(ro.tmpmetrics)
 			}
-			if ro.overwriteI == len(ro.metrics) {
-				ro.overwriteI = 0
-			}
-			ro.metrics[ro.overwriteI] = metric
-			ro.overwriteI++
+			ro.tmpmetrics[ro.writeI] = ro.metrics
+			ro.writeI = (ro.writeI + 1) % cap(ro.tmpmetrics)
 		}
+		ro.metrics = make([]telegraf.Metric, 0)
+		ro.metrics = append(ro.metrics, metric)
 	}
 }
 
@@ -113,21 +123,23 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 func (ro *RunningOutput) Write() error {
 	ro.Lock()
 	defer ro.Unlock()
+
+	// Write any cached metric buffers before, as those metrics are the
+	// oldest
+	for ro.tmpmetrics[ro.readI] != nil {
+		if err := ro.write(ro.tmpmetrics[ro.readI]); err != nil {
+			return err
+		} else {
+			ro.tmpmetrics[ro.readI] = nil
+			ro.readI = (ro.readI + 1) % cap(ro.tmpmetrics)
+		}
+	}
+
 	err := ro.write(ro.metrics)
 	if err != nil {
 		return err
 	} else {
 		ro.metrics = make([]telegraf.Metric, 0)
-		ro.overwriteI = 0
-	}
-
-	// Write any cached metric buffers that failed previously
-	for i, tmpmetrics := range ro.tmpmetrics {
-		if err := ro.write(tmpmetrics); err != nil {
-			return err
-		} else {
-			delete(ro.tmpmetrics, i)
-		}
 	}
 
 	return nil
