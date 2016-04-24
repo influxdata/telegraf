@@ -38,8 +38,12 @@ config.
 * **interval**: Default data collection interval for all inputs
 * **round_interval**: Rounds collection interval to 'interval'
 ie, if interval="10s" then always collect on :00, :10, :20, etc.
+* **metric_batch_size**: Telegraf will send metrics to output in batch of at
+most metric_batch_size metrics.
 * **metric_buffer_limit**: Telegraf will cache metric_buffer_limit metrics
 for each output, and will flush this buffer on a successful write.
+This should be a multiple of metric_batch_size and could not be less
+than 2 times metric_batch_size.
 * **collection_jitter**: Collection jitter is used to jitter
 the collection by a random amount.
 Each plugin will sleep for a random time within jitter before collecting.

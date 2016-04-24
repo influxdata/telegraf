@@ -193,7 +193,7 @@ func TestRunningOutputDefault(t *testing.T) {
 	assert.Len(t, m.Metrics(), 10)
 }
 
-// Test that the first metric gets overwritten if there is a buffer overflow.
+// Test that the first metrics batch gets overwritten if there is a buffer overflow.
 func TestRunningOutputOverwrite(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
@@ -203,6 +203,7 @@ func TestRunningOutputOverwrite(t *testing.T) {
 
 	m := &mockOutput{}
 	ro := NewRunningOutput("test", m, conf)
+	ro.MetricBatchSize = 1
 	ro.MetricBufferLimit = 4
 
 	for _, metric := range first5 {
@@ -236,6 +237,7 @@ func TestRunningOutputMultiOverwrite(t *testing.T) {
 
 	m := &mockOutput{}
 	ro := NewRunningOutput("test", m, conf)
+	ro.MetricBatchSize = 1
 	ro.MetricBufferLimit = 3
 
 	for _, metric := range first5 {
@@ -274,7 +276,8 @@ func TestRunningOutputFlushWhenFull(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput("test", m, conf)
 	ro.FlushBufferWhenFull = true
-	ro.MetricBufferLimit = 5
+	ro.MetricBatchSize = 5
+	ro.MetricBufferLimit = 10
 
 	// Fill buffer to limit
 	for _, metric := range first5 {
@@ -286,7 +289,7 @@ func TestRunningOutputFlushWhenFull(t *testing.T) {
 	// add one more metric
 	ro.AddMetric(next5[0])
 	// now it flushed
-	assert.Len(t, m.Metrics(), 6)
+	assert.Len(t, m.Metrics(), 5)
 
 	// add one more metric and write it manually
 	ro.AddMetric(next5[1])
@@ -307,7 +310,8 @@ func TestRunningOutputMultiFlushWhenFull(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput("test", m, conf)
 	ro.FlushBufferWhenFull = true
-	ro.MetricBufferLimit = 4
+	ro.MetricBatchSize = 4
+	ro.MetricBufferLimit = 12
 
 	// Fill buffer past limit twive
 	for _, metric := range first5 {
@@ -317,7 +321,7 @@ func TestRunningOutputMultiFlushWhenFull(t *testing.T) {
 		ro.AddMetric(metric)
 	}
 	// flushed twice
-	assert.Len(t, m.Metrics(), 10)
+	assert.Len(t, m.Metrics(), 8)
 }
 
 func TestRunningOutputWriteFail(t *testing.T) {
@@ -331,7 +335,8 @@ func TestRunningOutputWriteFail(t *testing.T) {
 	m.failWrite = true
 	ro := NewRunningOutput("test", m, conf)
 	ro.FlushBufferWhenFull = true
-	ro.MetricBufferLimit = 4
+	ro.MetricBatchSize = 4
+	ro.MetricBufferLimit = 12
 
 	// Fill buffer past limit twice
 	for _, metric := range first5 {
