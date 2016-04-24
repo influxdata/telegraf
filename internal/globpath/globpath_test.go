@@ -11,11 +11,20 @@ import (
 
 func TestCompileAndMatch(t *testing.T) {
 	dir := getTestdataDir()
+	// test super asterisk
 	g1, err := Compile(dir + "/**")
 	require.NoError(t, err)
+	// test single asterisk
 	g2, err := Compile(dir + "/*.log")
 	require.NoError(t, err)
+	// test no meta characters (file exists)
 	g3, err := Compile(dir + "/log1.log")
+	require.NoError(t, err)
+	// test file that doesn't exist
+	g4, err := Compile(dir + "/i_dont_exist.log")
+	require.NoError(t, err)
+	// test super asterisk that doesn't exist
+	g5, err := Compile(dir + "/dir_doesnt_exist/**")
 	require.NoError(t, err)
 
 	matches := g1.Match()
@@ -24,6 +33,10 @@ func TestCompileAndMatch(t *testing.T) {
 	assert.Len(t, matches, 2)
 	matches = g3.Match()
 	assert.Len(t, matches, 1)
+	matches = g4.Match()
+	assert.Len(t, matches, 0)
+	matches = g5.Match()
+	assert.Len(t, matches, 0)
 }
 
 func TestFindRootDir(t *testing.T) {

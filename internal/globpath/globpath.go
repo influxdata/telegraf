@@ -39,20 +39,25 @@ func Compile(path string) (*GlobPath, error) {
 	return &out, nil
 }
 
-func (g *GlobPath) Match() []string {
+func (g *GlobPath) Match() map[string]os.FileInfo {
 	if !g.hasMeta {
-		return []string{g.path}
+		out := make(map[string]os.FileInfo)
+		info, err := os.Stat(g.path)
+		if !os.IsNotExist(err) {
+			out[g.path] = info
+		}
+		return out
 	}
 	return walkFilePath(g.root, g.g)
 }
 
 // walk the filepath from the given root and return a list of files that match
 // the given glob.
-func walkFilePath(root string, g glob.Glob) []string {
-	matchedFiles := []string{}
-	walkfn := func(path string, _ os.FileInfo, _ error) error {
+func walkFilePath(root string, g glob.Glob) map[string]os.FileInfo {
+	matchedFiles := make(map[string]os.FileInfo)
+	walkfn := func(path string, info os.FileInfo, _ error) error {
 		if g.Match(path) {
-			matchedFiles = append(matchedFiles, path)
+			matchedFiles[path] = info
 		}
 		return nil
 	}

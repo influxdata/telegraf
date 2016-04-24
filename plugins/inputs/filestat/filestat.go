@@ -55,31 +55,29 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			f.globs[filepath] = g
 		}
 
-		for _, file := range g.Match() {
+		files := g.Match()
+		if len(files) == 0 {
+			acc.AddFields("filestat",
+				map[string]interface{}{
+					"exists": int64(0),
+				},
+				map[string]string{
+					"file": filepath,
+				})
+			continue
+		}
+
+		for fileName, fileInfo := range files {
 			tags := map[string]string{
-				"file": file,
+				"file": fileName,
 			}
 			fields := map[string]interface{}{
-				"exists": int64(0),
+				"exists":     int64(1),
+				"size_bytes": fileInfo.Size(),
 			}
-			// Get file stats
-			fileInfo, err := os.Stat(file)
-			if os.IsNotExist(err) {
-				// file doesn't exist, so move on to the next
-				acc.AddFields("filestat", fields, tags)
-				continue
-			}
-			if err != nil {
-				errS += err.Error() + " "
-				continue
-			}
-
-			// file exists and no errors encountered
-			fields["exists"] = int64(1)
-			fields["size_bytes"] = fileInfo.Size()
 
 			if f.Md5 {
-				md5, err := getMd5(file)
+				md5, err := getMd5(fileName)
 				if err != nil {
 					errS += err.Error() + " "
 				} else {
