@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
@@ -259,9 +260,11 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	var isATag int
 	fields := make(map[string]interface{})
 	for col, val := range columnMap {
+		if acc.Debug() {
+			log.Printf("postgresql_extensible: column: %s = %T: %s\n", col, *val, *val)
+		}
 		_, ignore := ignoredColumns[col]
-		//if !ignore && *val != "" {
-		if !ignore {
+		if !ignore && *val != nil {
 			isATag = 0
 			for tag := range p.AdditionalTags {
 				if col == p.AdditionalTags[tag] {
