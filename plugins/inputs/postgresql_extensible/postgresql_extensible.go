@@ -16,6 +16,7 @@ import (
 
 type Postgresql struct {
 	Address          string
+	Outputaddress    string
 	Databases        []string
 	OrderedColumns   []string
 	AllColumns       []string
@@ -57,6 +58,11 @@ var sampleConfig = `
   ## A list of databases to pull metrics about. If not specified, metrics for all
   ## databases are gathered.
   ## databases = ["app_production", "testing"]
+  #
+  # outputaddress = "db01"
+  ## A custom name for the database that will be used as the "server" tag in the
+  ## measurement output. If not specified, a default one generated from
+  ## the connection address is used.
   #
   ## Define the toml config where the sql queries are stored
   ## New queries can be added, if the withdbname is set to true and there is no
@@ -200,6 +206,9 @@ type scanner interface {
 var KVMatcher, _ = regexp.Compile("(password|sslcert|sslkey|sslmode|sslrootcert)=\\S+ ?")
 
 func (p *Postgresql) SanitizedAddress() (_ string, err error) {
+	if p.Outputaddress != "" {
+		return p.Outputaddress, nil
+	}
 	var canonicalizedAddress string
 	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
 		canonicalizedAddress, err = pq.ParseURL(p.Address)
