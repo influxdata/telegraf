@@ -188,15 +188,13 @@ var header = `# Telegraf Configuration
   ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  ## Telegraf will send metrics to output in batch of at
+  ## Telegraf will send metrics to outputs in batches of at
   ## most metric_batch_size metrics.
   metric_batch_size = 1000
-  ## Telegraf will cache metric_buffer_limit metrics for each output, and will
-  ## flush this buffer on a successful write. This should be a multiple of
-  ## metric_batch_size and could not be less than 2 times metric_batch_size
+  ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
+  ## output, and will flush this buffer on a successful write. Oldest metrics
+  ## are dropped first when this buffer fills.
   metric_buffer_limit = 10000
-  ## Flush the buffer whenever full, regardless of flush_interval.
-  flush_buffer_when_full = true
 
   ## Collection jitter is used to jitter the collection by a random amount.
   ## Each plugin will sleep for a random time within jitter before collecting.
@@ -535,14 +533,8 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := internal_models.NewRunningOutput(name, output, outputConfig)
-	if c.Agent.MetricBatchSize > 0 {
-		ro.MetricBatchSize = c.Agent.MetricBatchSize
-	}
-	if c.Agent.MetricBufferLimit > 0 {
-		ro.MetricBufferLimit = c.Agent.MetricBufferLimit
-	}
-	ro.FlushBufferWhenFull = c.Agent.FlushBufferWhenFull
+	ro := internal_models.NewRunningOutput(name, output, outputConfig,
+		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }

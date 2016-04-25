@@ -2,9 +2,18 @@
 
 ### Release Notes
 
+- New [agent] configuration option: `metric_batch_size`. This option tells
+telegraf the maximum batch size to allow to accumulate before sending a flush
+to the configured outputs. `metric_buffer_limit` now refers to the absolute
+maximum number of metrics that will accumulate before metrics are dropped.
+
+- There is no longer an option to
+`flush_buffer_when_full`, this is now the default and only behavior of telegraf.
+
 - **Breaking Change**: docker plugin tags. The cont_id tag no longer exists, it
 will now be a field, and be called container_id. Additionally, cont_image and
 cont_name are being renamed to container_image and container_name.
+
 - **Breaking Change**: docker plugin measurements. The `docker_cpu`, `docker_mem`,
 `docker_blkio` and `docker_net` measurements are being renamed to
 `docker_container_cpu`, `docker_container_mem`, `docker_container_blkio` and
@@ -16,15 +25,19 @@ So adding "container" to each metric will:
 (1) make it more clear that these metrics are per-container, and
 (2) allow users to easily drop per-container metrics if cardinality is an
 issue (`namedrop = ["docker_container_*"]`)
+
 - `tagexclude` and `taginclude` are now available, which can be used to remove
 tags from measurements on inputs and outputs. See
 [the configuration doc](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md)
 for more details.
+
 - **Measurement filtering:** All measurement filters now match based on glob
 only. Previously there was an undocumented behavior where filters would match
 based on _prefix_ in addition to globs. This means that a filter like
 `fielddrop = ["time_"]` will need to be changed to `fielddrop = ["time_*"]`
+
 - **datadog**: measurement and field names will no longer have `_` replaced by `.`
+
 - The following plugins have changed their tags to _not_ overwrite the host tag:
   - cassandra: `host -> cassandra_host`
   - disque: `host -> disque_host`
@@ -42,6 +55,8 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1072](https://github.com/influxdata/telegraf/pull/1072): New Input Plugin: filestat.
 - [#1066](https://github.com/influxdata/telegraf/pull/1066): Replication lag metrics for MongoDB input plugin
 - [#1086](https://github.com/influxdata/telegraf/pull/1086): Ability to specify AWS keys in config file. Thanks @johnrengleman!
+- [#1096](https://github.com/influxdata/telegraf/pull/1096): Performance refactor of running output buffers.
+- [#967](https://github.com/influxdata/telegraf/issues/967): Buffer logging improvements.
 
 ### Bugfixes
 
@@ -55,6 +70,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1078](https://github.com/influxdata/telegraf/issues/1078): Use default AWS credential chain.
 - [#1070](https://github.com/influxdata/telegraf/issues/1070): SQL Server input. Fix datatype conversion.
 - [#1089](https://github.com/influxdata/telegraf/issues/1089): Fix leaky TCP connections in phpfpm plugin.
+- [#914](https://github.com/influxdata/telegraf/issues/914): Telegraf can drop metrics on full buffers.
 
 ## v0.12.1 [2016-04-14]
 
