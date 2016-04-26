@@ -136,7 +136,7 @@ func (p *Procstat) pidsFromFile() ([]int32, error) {
 			out = append(out, int32(pid))
 			p.tagmap[int32(pid)] = map[string]string{
 				"pidfile": p.PidFile,
-				"pid":     string(pidString),
+				"pid":     strings.TrimSpace(string(pidString)),
 			}
 		}
 	}
