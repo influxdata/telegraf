@@ -184,6 +184,7 @@ func (g *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 		return fmt.Errorf("Unable to connect to phpfpm status page '%s': %v",
 			addr, err)
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
 		return fmt.Errorf("Unable to get valid stat result from '%s': %v",

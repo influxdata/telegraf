@@ -53,6 +53,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1022](https://github.com/influxdata/telegraf/issues/1022): Dont error deb/rpm install on systemd errors.
 - [#1078](https://github.com/influxdata/telegraf/issues/1078): Use default AWS credential chain.
 - [#1070](https://github.com/influxdata/telegraf/issues/1070): SQL Server input. Fix datatype conversion.
+- [#1089](https://github.com/influxdata/telegraf/issues/1089): Fix leaky TCP connections in phpfpm plugin.
 
 ## v0.12.1 [2016-04-14]
 
