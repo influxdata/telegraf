@@ -124,6 +124,17 @@ func (ro *RunningOutput) Write() error {
 	ro.Lock()
 	defer ro.Unlock()
 
+	if ro.tmpmetrics == nil {
+		size := ro.MetricBufferLimit / ro.MetricBatchSize
+		// ro.metrics already contains one batch
+		size = size - 1
+
+		if size < 1 {
+			size = 1
+		}
+		ro.tmpmetrics = make([]([]telegraf.Metric), size)
+	}
+
 	// Write any cached metric buffers before, as those metrics are the
 	// oldest
 	for ro.tmpmetrics[ro.readI] != nil {
