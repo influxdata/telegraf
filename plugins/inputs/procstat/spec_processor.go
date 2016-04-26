@@ -35,57 +35,61 @@ func NewSpecProcessor(
 }
 
 func (p *SpecProcessor) pushMetrics() {
+	var prefix string
+	if p.Prefix != "" {
+		prefix = p.Prefix + "_"
+	}
 	fields := map[string]interface{}{}
 
 	numThreads, err := p.proc.NumThreads()
 	if err == nil {
-		fields["num_threads"] = numThreads
+		fields[prefix+"num_threads"] = numThreads
 	}
 
 	fds, err := p.proc.NumFDs()
 	if err == nil {
-		fields["num_fds"] = fds
+		fields[prefix+"num_fds"] = fds
 	}
 
 	ctx, err := p.proc.NumCtxSwitches()
 	if err == nil {
-		fields["voluntary_context_switches"] = ctx.Voluntary
-		fields["involuntary_context_switches"] = ctx.Involuntary
+		fields[prefix+"voluntary_context_switches"] = ctx.Voluntary
+		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
 	}
 
 	io, err := p.proc.IOCounters()
 	if err == nil {
-		fields["read_count"] = io.ReadCount
-		fields["write_count"] = io.WriteCount
-		fields["read_bytes"] = io.ReadBytes
-		fields["write_bytes"] = io.WriteCount
+		fields[prefix+"read_count"] = io.ReadCount
+		fields[prefix+"write_count"] = io.WriteCount
+		fields[prefix+"read_bytes"] = io.ReadBytes
+		fields[prefix+"write_bytes"] = io.WriteCount
 	}
 
 	cpu_time, err := p.proc.CPUTimes()
 	if err == nil {
-		fields["cpu_time_user"] = cpu_time.User
-		fields["cpu_time_system"] = cpu_time.System
-		fields["cpu_time_idle"] = cpu_time.Idle
-		fields["cpu_time_nice"] = cpu_time.Nice
-		fields["cpu_time_iowait"] = cpu_time.Iowait
-		fields["cpu_time_irq"] = cpu_time.Irq
-		fields["cpu_time_soft_irq"] = cpu_time.Softirq
-		fields["cpu_time_steal"] = cpu_time.Steal
-		fields["cpu_time_stolen"] = cpu_time.Stolen
-		fields["cpu_time_guest"] = cpu_time.Guest
-		fields["cpu_time_guest_nice"] = cpu_time.GuestNice
+		fields[prefix+"cpu_time_user"] = cpu_time.User
+		fields[prefix+"cpu_time_system"] = cpu_time.System
+		fields[prefix+"cpu_time_idle"] = cpu_time.Idle
+		fields[prefix+"cpu_time_nice"] = cpu_time.Nice
+		fields[prefix+"cpu_time_iowait"] = cpu_time.Iowait
+		fields[prefix+"cpu_time_irq"] = cpu_time.Irq
+		fields[prefix+"cpu_time_soft_irq"] = cpu_time.Softirq
+		fields[prefix+"cpu_time_steal"] = cpu_time.Steal
+		fields[prefix+"cpu_time_stolen"] = cpu_time.Stolen
+		fields[prefix+"cpu_time_guest"] = cpu_time.Guest
+		fields[prefix+"cpu_time_guest_nice"] = cpu_time.GuestNice
 	}
 
 	cpu_perc, err := p.proc.CPUPercent(time.Duration(0))
 	if err == nil && cpu_perc != 0 {
-		fields["cpu_usage"] = cpu_perc
+		fields[prefix+"cpu_usage"] = cpu_perc
 	}
 
 	mem, err := p.proc.MemoryInfo()
 	if err == nil {
-		fields["memory_rss"] = mem.RSS
-		fields["memory_vms"] = mem.VMS
-		fields["memory_swap"] = mem.Swap
+		fields[prefix+"memory_rss"] = mem.RSS
+		fields[prefix+"memory_vms"] = mem.VMS
+		fields[prefix+"memory_swap"] = mem.Swap
 	}
 
 	p.acc.AddFields("procstat", fields, p.tags)
