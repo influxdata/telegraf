@@ -25,6 +25,12 @@ type Tail struct {
 	sync.Mutex
 }
 
+func NewTail() *Tail {
+	return &Tail{
+		FromBeginning: false,
+	}
+}
+
 const sampleConfig = `
   ## files to tail.
   ## These accept standard unix glob matching rules, but with the addition of
@@ -145,8 +151,6 @@ func (t *Tail) SetParser(parser parsers.Parser) {
 
 func init() {
 	inputs.Add("tail", func() telegraf.Input {
-		return &Tail{
-			FromBeginning: false,
-		}
+		return NewTail()
 	})
 }
