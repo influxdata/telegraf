@@ -160,7 +160,7 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 		"unlink":          uint64(3549417),
 		"write_bytes":     uint64(15201500833981),
 		"write_calls":     uint64(71893382),
-		       }
+	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
 
@@ -200,46 +200,46 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{
-		"name": ost_name,
+		"name":  ost_name,
 		"jobid": job_name,
 	}
 
 	fields := map[string]interface{}{
-		"jobstats_read_calls":        uint64(1),
-		"jobstats_read_min_size":     uint64(4096),
-		"jobstats_read_max_size":     uint64(4096),
-		"jobstats_read_bytes":        uint64(4096),
-		"jobstats_write_calls":       uint64(25),
-		"jobstats_write_min_size":    uint64(1048576),
-		"jobstats_write_max_size":    uint64(1048576),
-		"jobstats_write_bytes":       uint64(26214400),
-		"jobstats_ost_getattr":       uint64(0),
-		"jobstats_ost_setattr":       uint64(0),
-		"jobstats_punch":             uint64(1),
-		"jobstats_ost_sync":          uint64(0),
-		"jobstats_destroy":           uint64(0),
-		"jobstats_create":            uint64(0),
-		"jobstats_ost_statfs":        uint64(0),
-		"jobstats_get_info":          uint64(0),
-		"jobstats_set_info":          uint64(0),
-		"jobstats_quotactl":          uint64(0),
-		"jobstats_open":              uint64(5),
-		"jobstats_close":             uint64(4),
-		"jobstats_mknod":             uint64(6),
-		"jobstats_link":              uint64(8),
-		"jobstats_unlink":            uint64(90),
-		"jobstats_mkdir":             uint64(521),
-		"jobstats_rmdir":             uint64(520),
-		"jobstats_rename":            uint64(9),
-		"jobstats_getattr":           uint64(11),
-		"jobstats_setattr":           uint64(1),
-		"jobstats_getxattr":          uint64(3),
-		"jobstats_setxattr":          uint64(4),
-		"jobstats_statfs":            uint64(1205),
-		"jobstats_sync":              uint64(2),
-		"jobstats_samedir_rename":    uint64(705),
-		"jobstats_crossdir_rename":   uint64(200),
-		       }
+		"jobstats_read_calls":      uint64(1),
+		"jobstats_read_min_size":   uint64(4096),
+		"jobstats_read_max_size":   uint64(4096),
+		"jobstats_read_bytes":      uint64(4096),
+		"jobstats_write_calls":     uint64(25),
+		"jobstats_write_min_size":  uint64(1048576),
+		"jobstats_write_max_size":  uint64(1048576),
+		"jobstats_write_bytes":     uint64(26214400),
+		"jobstats_ost_getattr":     uint64(0),
+		"jobstats_ost_setattr":     uint64(0),
+		"jobstats_punch":           uint64(1),
+		"jobstats_ost_sync":        uint64(0),
+		"jobstats_destroy":         uint64(0),
+		"jobstats_create":          uint64(0),
+		"jobstats_ost_statfs":      uint64(0),
+		"jobstats_get_info":        uint64(0),
+		"jobstats_set_info":        uint64(0),
+		"jobstats_quotactl":        uint64(0),
+		"jobstats_open":            uint64(5),
+		"jobstats_close":           uint64(4),
+		"jobstats_mknod":           uint64(6),
+		"jobstats_link":            uint64(8),
+		"jobstats_unlink":          uint64(90),
+		"jobstats_mkdir":           uint64(521),
+		"jobstats_rmdir":           uint64(520),
+		"jobstats_rename":          uint64(9),
+		"jobstats_getattr":         uint64(11),
+		"jobstats_setattr":         uint64(1),
+		"jobstats_getxattr":        uint64(3),
+		"jobstats_setxattr":        uint64(4),
+		"jobstats_statfs":          uint64(1205),
+		"jobstats_sync":            uint64(2),
+		"jobstats_samedir_rename":  uint64(705),
+		"jobstats_crossdir_rename": uint64(200),
+	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
 

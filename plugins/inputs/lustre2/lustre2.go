@@ -168,52 +168,52 @@ var wanted_ost_jobstats_fields = []*mapping{
 		reportAs: "jobstats_write_bytes",
 	},
 	{
-		inProc: "getattr",
+		inProc:   "getattr",
 		field:    3,
 		reportAs: "jobstats_ost_getattr",
 	},
 	{
-		inProc: "setattr",
+		inProc:   "setattr",
 		field:    3,
 		reportAs: "jobstats_ost_setattr",
 	},
 	{
-		inProc: "punch",
+		inProc:   "punch",
 		field:    3,
 		reportAs: "jobstats_punch",
 	},
 	{
-		inProc: "sync",
+		inProc:   "sync",
 		field:    3,
 		reportAs: "jobstats_ost_sync",
 	},
 	{
-		inProc: "destroy",
+		inProc:   "destroy",
 		field:    3,
 		reportAs: "jobstats_destroy",
 	},
 	{
-		inProc: "create",
+		inProc:   "create",
 		field:    3,
 		reportAs: "jobstats_create",
 	},
 	{
-		inProc: "statfs",
+		inProc:   "statfs",
 		field:    3,
 		reportAs: "jobstats_ost_statfs",
 	},
 	{
-		inProc: "get_info",
+		inProc:   "get_info",
 		field:    3,
 		reportAs: "jobstats_get_info",
 	},
 	{
-		inProc: "set_info",
+		inProc:   "set_info",
 		field:    3,
 		reportAs: "jobstats_set_info",
 	},
 	{
-		inProc: "quotactl",
+		inProc:   "quotactl",
 		field:    3,
 		reportAs: "jobstats_quotactl",
 	},
@@ -272,82 +272,82 @@ var wanted_mds_fields = []*mapping{
 
 var wanted_mdt_jobstats_fields = []*mapping{
 	{
-		inProc: "open",
+		inProc:   "open",
 		field:    3,
 		reportAs: "jobstats_open",
 	},
 	{
-		inProc: "close",
+		inProc:   "close",
 		field:    3,
 		reportAs: "jobstats_close",
 	},
 	{
-		inProc: "mknod",
+		inProc:   "mknod",
 		field:    3,
 		reportAs: "jobstats_mknod",
 	},
 	{
-		inProc: "link",
+		inProc:   "link",
 		field:    3,
 		reportAs: "jobstats_link",
 	},
 	{
-		inProc: "unlink",
+		inProc:   "unlink",
 		field:    3,
 		reportAs: "jobstats_unlink",
 	},
 	{
-		inProc: "mkdir",
+		inProc:   "mkdir",
 		field:    3,
 		reportAs: "jobstats_mkdir",
 	},
 	{
-		inProc: "rmdir",
+		inProc:   "rmdir",
 		field:    3,
 		reportAs: "jobstats_rmdir",
 	},
 	{
-		inProc: "rename",
+		inProc:   "rename",
 		field:    3,
 		reportAs: "jobstats_rename",
 	},
 	{
-		inProc: "getattr",
+		inProc:   "getattr",
 		field:    3,
 		reportAs: "jobstats_getattr",
 	},
 	{
-		inProc: "setattr",
+		inProc:   "setattr",
 		field:    3,
 		reportAs: "jobstats_setattr",
 	},
 	{
-		inProc: "getxattr",
+		inProc:   "getxattr",
 		field:    3,
 		reportAs: "jobstats_getxattr",
 	},
 	{
-		inProc: "setxattr",
+		inProc:   "setxattr",
 		field:    3,
 		reportAs: "jobstats_setxattr",
 	},
 	{
-		inProc: "statfs",
+		inProc:   "statfs",
 		field:    3,
 		reportAs: "jobstats_statfs",
 	},
 	{
-		inProc: "sync",
+		inProc:   "sync",
 		field:    3,
 		reportAs: "jobstats_sync",
 	},
 	{
-		inProc: "samedir_rename",
+		inProc:   "samedir_rename",
 		field:    3,
 		reportAs: "jobstats_samedir_rename",
 	},
 	{
-		inProc: "crossdir_rename",
+		inProc:   "crossdir_rename",
 		field:    3,
 		reportAs: "jobstats_crossdir_rename",
 	},
@@ -388,7 +388,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 
 			for _, wanted := range wanted_fields {
 				var data uint64
-				if strings.TrimSuffix(parts[0],":") == wanted.inProc {
+				if strings.TrimSuffix(parts[0], ":") == wanted.inProc {
 					wanted_field := wanted.field
 					// if not set, assume field[1]. Shouldn't be field[0], as
 					// that's a string
