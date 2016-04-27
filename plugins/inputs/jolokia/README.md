@@ -5,13 +5,22 @@
 ```toml
 [[inputs.jolokia]]
   ## This is the context root used to compose the jolokia url
-  context = "/jolokia/read"
+  context = "/jolokia"
 
-  ## List of servers exposing jolokia read service
+  # This specifies the mode used
+  # mode = "proxy"
+  #
+  # When in proxy mode this section is used to specify further proxy address configurations.
+  # Remember to change servers addresses
+  # [inputs.jolokia.proxy]
+  # host = "127.0.0.1"
+  # port = "8080"
+
+  # List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]
-    name = "stable"
-    host = "192.168.103.2"
-    port = "8180"
+    name = "as-server-01"
+    host = "127.0.0.1"
+    port = "8080"
     # username = "myuser"
     # password = "mypassword"
 
@@ -21,17 +30,20 @@
   ## This collect all heap memory usage metrics.
   [[inputs.jolokia.metrics]]
     name = "heap_memory_usage"
-    jmx  = "/java.lang:type=Memory/HeapMemoryUsage"
-    
+    mbean  = "java.lang:type=Memory"
+    attribute = "HeapMemoryUsage"
+
   ## This collect thread counts metrics.
   [[inputs.jolokia.metrics]]
     name = "thread_count"
-    jmx  = "/java.lang:type=Threading/TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
- 
+    mbean  = "java.lang:type=Threading"
+		attribute = "TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
+
   ## This collect number of class loaded/unloaded counts metrics.
   [[inputs.jolokia.metrics]]
     name = "class_count"
-    jmx  = "/java.lang:type=ClassLoading/LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
+    mbean  = "java.lang:type=ClassLoading"
+		attribute = "LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
 ```
 
 #### Description
@@ -42,4 +54,4 @@ are collected for each server configured.
 See: https://jolokia.org/
 
 # Measurements:
-Jolokia plugin produces one measure for each metric configured, adding Server's `name`, `host` and `port` as tags.
+Jolokia plugin produces one measure for each metric configured, adding Server's `server_name`, `server_host` and `server_port` as tags.
