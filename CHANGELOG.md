@@ -57,6 +57,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1086](https://github.com/influxdata/telegraf/pull/1086): Ability to specify AWS keys in config file. Thanks @johnrengleman!
 - [#1096](https://github.com/influxdata/telegraf/pull/1096): Performance refactor of running output buffers.
 - [#967](https://github.com/influxdata/telegraf/issues/967): Buffer logging improvements.
+- [#1107](https://github.com/influxdata/telegraf/issues/1107): Support lustre2 job stats. Thanks @hanleyja!
 
 ### Bugfixes
 
