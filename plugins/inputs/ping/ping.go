@@ -43,18 +43,18 @@ func (_ *Ping) Description() string {
 	return "Ping given url(s) and return statistics"
 }
 
-var sampleConfig = `
+const sampleConfig = `
   ## NOTE: this plugin forks the ping command. You may need to set capabilities
   ## via setcap cap_net_raw+p /bin/ping
-
+  #
   ## urls to ping
   urls = ["www.google.com"] # required
-  ## number of pings to send (ping -c <COUNT>)
+  ## number of pings to send per collection (ping -c <COUNT>)
   count = 1 # required
   ## interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
   ping_interval = 0.0
-  ## ping timeout, in s. 0 == no timeout (ping -t <TIMEOUT>)
-  timeout = 0.0
+  ## ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
+  timeout = 1.0
   ## interface to send ping from (ping -I <INTERFACE>)
   interface = ""
 `
@@ -71,16 +71,16 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		go func(url string, acc telegraf.Accumulator) {
+		go func(u string) {
 			defer wg.Done()
-			args := p.args(url)
+			args := p.args(u)
 			out, err := p.pingHost(args...)
 			if err != nil {
 				// Combine go err + stderr output
 				errorChannel <- errors.New(
 					strings.TrimSpace(out) + ", " + err.Error())
 			}
-			tags := map[string]string{"url": url}
+			tags := map[string]string{"url": u}
 			trans, rec, avg, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
@@ -98,7 +98,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				fields["average_response_ms"] = avg
 			}
 			acc.AddFields("ping", fields, tags)
-		}(url, acc)
+		}(url)
 	}
 
 	wg.Wait()
