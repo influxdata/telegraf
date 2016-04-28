@@ -3,10 +3,10 @@ package serializers
 import (
 	"github.com/influxdata/telegraf"
 
-	"github.com/influxdata/telegraf/plugins/serializers/gelf"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/vanillahsu/telegraf/plugins/serializers/gelf"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
