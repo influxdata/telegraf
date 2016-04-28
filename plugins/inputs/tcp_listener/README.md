@@ -22,8 +22,7 @@ This is a sample configuration for the plugin.
   ## Maximum number of concurrent TCP connections to allow
   max_tcp_connections = 250
 
-  ## Data format to consume. 
-
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
