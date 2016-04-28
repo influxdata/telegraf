@@ -32,7 +32,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 		valueS := fmt.Sprintf("%#v", value)
 		point := fmt.Sprintf("%s %s %d",
 			// insert "field" section of template
-			InsertField(bucket, sanitizedChars.Replace(fieldName)),
+			InsertField(bucket, fieldName),
 			valueS,
 			timestamp)
 		out = append(out, point)
