@@ -50,6 +50,10 @@ based on _prefix_ in addition to globs. This means that a filter like
   
 - **Breaking Change**: The `win_perf_counters` input has been changed to sanitize field names, replacing `/Sec` and `/sec` with `_persec`, as well as spaces with underscores. This is needed because Graphite doesn't like slashes and spaces, and was failing to accept metrics that had them. The `/[sS]ec` -> `_persec` is just to make things clearer and uniform.
 
+- The `disk` input plugin can now be configured with the `HOST_MOUNT_PREFIX` environment variable.
+This value is prepended to any mountpaths discovered before retrieving stats.
+It is not included on the report path. This is necessary for reporting host disk stats when running from within a container.
+
 ### Features
 
 - [#1031](https://github.com/influxdata/telegraf/pull/1031): Jolokia plugin proxy mode. Thanks @saiello!
