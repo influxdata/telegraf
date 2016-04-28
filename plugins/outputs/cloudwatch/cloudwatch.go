@@ -9,8 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
@@ -19,14 +17,25 @@ import (
 )
 
 type CloudWatch struct {
-	Region    string // AWS Region
-	Namespace string // CloudWatch Metrics Namespace
+	Region    string `toml:"region"`     // AWS Region
+	AccessKey string `toml:"access_key"` // Explicit AWS Access Key ID
+	SecretKey string `toml:"secret_key"` // Explicit AWS Secret Access Key
+	Namespace string `toml:"namespace"`  // CloudWatch Metrics Namespace
 	svc       *cloudwatch.CloudWatch
 }
 
 var sampleConfig = `
   ## Amazon REGION
   region = 'us-east-1'
+
+  ## Amazon Credentials
+  ## Credentials are loaded in the following order
+  ## 1) explicit credentials from 'access_key' and 'secret_key'
+  ## 2) environment variables
+  ## 3) shared credentials file
+  ## 4) EC2 Instance Profile
+  #access_key = ""
+  #secret_key = ""
 
   ## Namespace for the CloudWatch MetricDatums
   namespace = 'InfluxData/Telegraf'
@@ -43,12 +52,9 @@ func (c *CloudWatch) Description() string {
 func (c *CloudWatch) Connect() error {
 	Config := &aws.Config{
 		Region: aws.String(c.Region),
-		Credentials: credentials.NewChainCredentials(
-			[]credentials.Provider{
-				&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-				&credentials.EnvProvider{},
-				&credentials.SharedCredentialsProvider{},
-			}),
+	}
+	if c.AccessKey != "" || c.SecretKey != "" {
+		Config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, "")
 	}
 
 	svc := cloudwatch.New(session.New(Config))

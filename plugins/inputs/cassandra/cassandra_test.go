@@ -58,7 +58,7 @@ const validCassandraNestedMultiValueJSON = `
     "status": 200,
     "timestamp": 1458089184,
     "value": {
-		"org.apache.cassandra.metrics:keyspace=test_keyspace1,name=ReadLatency,scope=test_table1,type=Table": 
+		"org.apache.cassandra.metrics:keyspace=test_keyspace1,name=ReadLatency,scope=test_table1,type=Table":
 		{  	"999thPercentile": 1.0,
 			"Count": 100,
 			"DurationUnit": "microseconds",
@@ -66,7 +66,7 @@ const validCassandraNestedMultiValueJSON = `
 			"RateUnit": "events/second",
 			"StdDev": null
 		},
-		"org.apache.cassandra.metrics:keyspace=test_keyspace2,name=ReadLatency,scope=test_table2,type=Table": 
+		"org.apache.cassandra.metrics:keyspace=test_keyspace2,name=ReadLatency,scope=test_table2,type=Table":
 		{  	"999thPercentile": 2.0,
 			"Count": 200,
 			"DurationUnit": "microseconds",
@@ -163,13 +163,13 @@ func TestHttpJsonJavaMultiValue(t *testing.T) {
 		"HeapMemoryUsage_used":      203288528.0,
 	}
 	tags1 := map[string]string{
-		"host":  "10.10.10.10",
-		"mname": "HeapMemoryUsage",
+		"cassandra_host": "10.10.10.10",
+		"mname":          "HeapMemoryUsage",
 	}
 
 	tags2 := map[string]string{
-		"host":  "10.10.10.11",
-		"mname": "HeapMemoryUsage",
+		"cassandra_host": "10.10.10.11",
+		"mname":          "HeapMemoryUsage",
 	}
 	acc.AssertContainsTaggedFields(t, "javaMemory", fields, tags1)
 	acc.AssertContainsTaggedFields(t, "javaMemory", fields, tags2)
@@ -190,8 +190,8 @@ func TestHttpJsonJavaMultiType(t *testing.T) {
 	}
 
 	tags := map[string]string{
-		"host":  "10.10.10.10",
-		"mname": "ConcurrentMarkSweep",
+		"cassandra_host": "10.10.10.10",
+		"mname":          "ConcurrentMarkSweep",
 	}
 	acc.AssertContainsTaggedFields(t, "javaGarbageCollector", fields, tags)
 }
@@ -231,10 +231,10 @@ func TestHttpJsonCassandraMultiValue(t *testing.T) {
 	}
 
 	tags := map[string]string{
-		"host":     "10.10.10.10",
-		"mname":    "ReadLatency",
-		"keyspace": "test_keyspace1",
-		"scope":    "test_table",
+		"cassandra_host": "10.10.10.10",
+		"mname":          "ReadLatency",
+		"keyspace":       "test_keyspace1",
+		"scope":          "test_table",
 	}
 	acc.AssertContainsTaggedFields(t, "cassandraTable", fields, tags)
 }
@@ -268,17 +268,17 @@ func TestHttpJsonCassandraNestedMultiValue(t *testing.T) {
 	}
 
 	tags1 := map[string]string{
-		"host":     "10.10.10.10",
-		"mname":    "ReadLatency",
-		"keyspace": "test_keyspace1",
-		"scope":    "test_table1",
+		"cassandra_host": "10.10.10.10",
+		"mname":          "ReadLatency",
+		"keyspace":       "test_keyspace1",
+		"scope":          "test_table1",
 	}
 
 	tags2 := map[string]string{
-		"host":     "10.10.10.10",
-		"mname":    "ReadLatency",
-		"keyspace": "test_keyspace2",
-		"scope":    "test_table2",
+		"cassandra_host": "10.10.10.10",
+		"mname":          "ReadLatency",
+		"keyspace":       "test_keyspace2",
+		"scope":          "test_table2",
 	}
 
 	acc.AssertContainsTaggedFields(t, "cassandraTable", fields1, tags1)

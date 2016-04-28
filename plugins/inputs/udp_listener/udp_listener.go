@@ -135,12 +135,14 @@ func (u *UdpListener) udpParser() error {
 	defer u.wg.Done()
 
 	var packet []byte
+	var metrics []telegraf.Metric
+	var err error
 	for {
 		select {
 		case <-u.done:
 			return nil
 		case packet = <-u.in:
-			metrics, err := u.parser.Parse(packet)
+			metrics, err = u.parser.Parse(packet)
 			if err == nil {
 				u.storeMetrics(metrics)
 			} else {

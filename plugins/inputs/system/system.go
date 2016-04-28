@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"runtime"
 
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/load"
@@ -43,6 +44,7 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		"uptime":        hostinfo.Uptime,
 		"n_users":       len(users),
 		"uptime_format": format_uptime(hostinfo.Uptime),
+		"n_cpus":        runtime.NumCPU(),
 	}
 	acc.AddFields("system", fields, nil)
 

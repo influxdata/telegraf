@@ -5,7 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	//	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,7 +45,8 @@ func TestSNMPErrorGet2(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := s.Gather(&acc)
-	require.Error(t, err)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(acc.Metrics))
 }
 
 func TestSNMPErrorBulk(t *testing.T) {
@@ -65,7 +66,8 @@ func TestSNMPErrorBulk(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := s.Gather(&acc)
-	require.Error(t, err)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(acc.Metrics))
 }
 
 func TestSNMPGet1(t *testing.T) {

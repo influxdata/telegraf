@@ -1052,7 +1052,7 @@ SELECT
     When 1073874176 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as Money) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg
     When 272696320 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as Money) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg/sec
     When 1073939712 Then cc.cntr_value - pc.cntr_value -- Base
-    Else cc.cntr_value End as int)
+    Else cc.cntr_value End as bigint)
 --, currentvalue= CAST(cc.cntr_value as bigint)
 FROM #CCounters cc
 INNER JOIN #PCounters pc On cc.object_name = pc.object_name

@@ -221,6 +221,7 @@ func (a *Agent) Test() error {
 	for _, input := range a.Config.Inputs {
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetDebug(true)
+		acc.setDefaultTags(a.Config.Tags)
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
 		if input.Config.Interval != 0 {

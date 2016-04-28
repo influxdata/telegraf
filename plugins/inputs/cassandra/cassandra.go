@@ -7,18 +7,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
-	//"reflect"
 	"strings"
 )
-
-/*type Server struct {
-	Host     string
-	Username string
-	Password string
-	Port     string
-}*/
 
 type JolokiaClient interface {
 	MakeRequest(req *http.Request) (*http.Response, error)
@@ -53,12 +46,6 @@ type cassandraMetric struct {
 
 type jmxMetric interface {
 	addTagsFields(out map[string]interface{})
-}
-
-func addServerTags(host string, tags map[string]string) {
-	if host != "" && host != "localhost" && host != "127.0.0.1" {
-		tags["host"] = host
-	}
 }
 
 func newJavaMetric(host string, metric string,
@@ -120,7 +107,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 
 	tokens := parseJmxMetricRequest(mbean)
 	addTokensToTags(tokens, tags)
-	addServerTags(j.host, tags)
+	tags["cassandra_host"] = j.host
 
 	if _, ok := tags["mname"]; !ok {
 		//Queries for a single value will not return a "name" tag in the response.
@@ -148,7 +135,7 @@ func addCassandraMetric(mbean string, c cassandraMetric,
 	fields := make(map[string]interface{})
 	tokens := parseJmxMetricRequest(mbean)
 	addTokensToTags(tokens, tags)
-	addServerTags(c.host, tags)
+	tags["cassandra_host"] = c.host
 	addValuesAsFields(values, fields, tags["mname"])
 	c.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
 
@@ -192,7 +179,7 @@ func (j *Cassandra) SampleConfig() string {
   servers = ["myuser:mypassword@10.10.10.1:8778","10.10.10.2:8778",":8778"]
   ## List of metrics collected on above servers
   ## Each metric consists of a jmx path.
-  ## This will collect all heap memory usage metrics from the jvm and 
+  ## This will collect all heap memory usage metrics from the jvm and
   ## ReadLatency metrics for all keyspaces and tables.
   ## "type=Table" in the query works with Cassandra3.0. Older versions might
   ## need to use "type=ColumnFamily"
@@ -277,15 +264,19 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 
 	for _, server := range servers {
 		for _, metric := range metrics {
-			var m jmxMetric
-
 			serverTokens := parseServerTokens(server)
 
+			var m jmxMetric
 			if strings.HasPrefix(metric, "/java.lang:") {
 				m = newJavaMetric(serverTokens["host"], metric, acc)
 			} else if strings.HasPrefix(metric,
 				"/org.apache.cassandra.metrics:") {
 				m = newCassandraMetric(serverTokens["host"], metric, acc)
+			} else {
+				// unsupported metric type
+				log.Printf("Unsupported Cassandra metric [%s], skipping",
+					metric)
+				continue
 			}
 
 			// Prepare URL

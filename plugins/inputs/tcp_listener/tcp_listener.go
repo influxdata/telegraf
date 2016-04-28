@@ -150,8 +150,7 @@ func (t *TcpListener) tcpListen() error {
 			if err != nil {
 				return err
 			}
-
-			log.Printf("Received TCP Connection from %s", conn.RemoteAddr())
+			// log.Printf("Received TCP Connection from %s", conn.RemoteAddr())
 
 			select {
 			case <-t.accept:
@@ -187,7 +186,7 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 	defer func() {
 		t.wg.Done()
 		conn.Close()
-		log.Printf("Closed TCP Connection from %s", conn.RemoteAddr())
+		// log.Printf("Closed TCP Connection from %s", conn.RemoteAddr())
 		// Add one connection potential back to channel when this one closes
 		t.accept <- true
 		t.forget(id)
@@ -222,7 +221,10 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 // tcpParser parses the incoming tcp byte packets
 func (t *TcpListener) tcpParser() error {
 	defer t.wg.Done()
+
 	var packet []byte
+	var metrics []telegraf.Metric
+	var err error
 	for {
 		select {
 		case <-t.done:
@@ -231,7 +233,7 @@ func (t *TcpListener) tcpParser() error {
 			if len(packet) == 0 {
 				continue
 			}
-			metrics, err := t.parser.Parse(packet)
+			metrics, err = t.parser.Parse(packet)
 			if err == nil {
 				t.storeMetrics(metrics)
 			} else {

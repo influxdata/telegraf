@@ -29,10 +29,10 @@ for the stat structure can be found
 Every effort was made to preserve the names based on the JSON response from the
 docker API.
 
-Note that the docker_cpu metric may appear multiple times per collection, based
-on the availability of per-cpu stats on your system.
+Note that the docker_container_cpu metric may appear multiple times per collection,
+based on the availability of per-cpu stats on your system.
 
-- docker_mem
+- docker_container_mem
     - total_pgmafault
     - cache
     - mapped_file
@@ -66,7 +66,8 @@ on the availability of per-cpu stats on your system.
     - usage
     - failcnt
     - limit
-- docker_cpu
+    - container_id
+- docker_container_cpu
     - throttling_periods
     - throttling_throttled_periods
     - throttling_throttled_time
@@ -75,7 +76,8 @@ on the availability of per-cpu stats on your system.
     - usage_system
     - usage_total
     - usage_percent
-- docker_net
+    - container_id
+- docker_container_net
     - rx_dropped
     - rx_bytes
     - rx_errors
@@ -84,7 +86,8 @@ on the availability of per-cpu stats on your system.
     - rx_packets
     - tx_errors
     - tx_bytes
-- docker_blkio
+    - container_id
+- docker_container_blkio
     - io_service_bytes_recursive_async
     - io_service_bytes_recursive_read
     - io_service_bytes_recursive_sync
@@ -125,20 +128,20 @@ on the availability of per-cpu stats on your system.
 - docker_metadata
     - unit=bytes
 
-- docker_cpu specific:
-    - cont_id (container ID)
-    - cont_image (container image)
-    - cont_name (container name)
+- docker_container_mem specific:
+    - container_image
+    - container_name
+- docker_container_cpu specific:
+    - container_image
+    - container_name
     - cpu
-- docker_net specific:
-    - cont_id (container ID)
-    - cont_image (container image)
-    - cont_name (container name)
+- docker_container_net specific:
+    - container_image
+    - container_name
     - network
-- docker_blkio specific:
-    - cont_id (container ID)
-    - cont_image (container image)
-    - cont_name (container name)
+- docker_container_blkio specific:
+    - container_image
+    - container_name
     - device
 
 ### Example Output:
@@ -156,8 +159,8 @@ on the availability of per-cpu stats on your system.
 > docker,unit=bytes pool_blocksize=65540i 1456926671065383978
 > docker_data,unit=bytes available=24340000000i,total=107400000000i,used=14820000000i 1456926671065383978
 > docker_metadata,unit=bytes available=2126999999i,total=2146999999i,used=20420000i 145692667106538
-> docker_mem,cont_id=5705ba8ed8fb47527410653d60a8bb2f3af5e62372297c419022a3cc6d45d848,\
-cont_image=spotify/kafka,cont_name=kafka \
+> docker_container_mem,
+container_image=spotify/kafka,container_name=kafka \
 active_anon=52568064i,active_file=6926336i,cache=12038144i,fail_count=0i,\
 hierarchical_memory_limit=9223372036854771712i,inactive_anon=52707328i,\
 inactive_file=5111808i,limit=1044578304i,mapped_file=10301440i,\
@@ -168,21 +171,21 @@ total_inactive_file=5111808i,total_mapped_file=10301440i,total_pgfault=63762i,\
 total_pgmafault=0i,total_pgpgin=73355i,total_pgpgout=45736i,\
 total_rss=105275392i,total_rss_huge=4194304i,total_unevictable=0i,\
 total_writeback=0i,unevictable=0i,usage=117440512i,writeback=0i 1453409536840126713
-> docker_cpu,cont_id=5705ba8ed8fb47527410653d60a8bb2f3af5e62372297c419022a3cc6d45d848,\
-cont_image=spotify/kafka,cont_name=kafka,cpu=cpu-total \
+> docker_container_cpu,
+container_image=spotify/kafka,container_name=kafka,cpu=cpu-total \
 throttling_periods=0i,throttling_throttled_periods=0i,\
 throttling_throttled_time=0i,usage_in_kernelmode=440000000i,\
 usage_in_usermode=2290000000i,usage_system=84795360000000i,\
 usage_total=6628208865i 1453409536840126713
-> docker_cpu,cont_id=5705ba8ed8fb47527410653d60a8bb2f3af5e62372297c419022a3cc6d45d848,\
-cont_image=spotify/kafka,cont_name=kafka,cpu=cpu0 \
+> docker_container_cpu,
+container_image=spotify/kafka,container_name=kafka,cpu=cpu0 \
 usage_total=6628208865i 1453409536840126713
-> docker_net,cont_id=5705ba8ed8fb47527410653d60a8bb2f3af5e62372297c419022a3cc6d45d848,\
-cont_image=spotify/kafka,cont_name=kafka,network=eth0 \
+> docker_container_net,\
+container_image=spotify/kafka,container_name=kafka,network=eth0 \
 rx_bytes=7468i,rx_dropped=0i,rx_errors=0i,rx_packets=94i,tx_bytes=946i,\
 tx_dropped=0i,tx_errors=0i,tx_packets=13i 1453409536840126713
-> docker_blkio,cont_id=5705ba8ed8fb47527410653d60a8bb2f3af5e62372297c419022a3cc6d45d848,\
-cont_image=spotify/kafka,cont_name=kafka,device=8:0 \
+> docker_container_blkio,
+container_image=spotify/kafka,container_name=kafka,device=8:0 \
 io_service_bytes_recursive_async=80216064i,io_service_bytes_recursive_read=79925248i,\
 io_service_bytes_recursive_sync=77824i,io_service_bytes_recursive_total=80293888i,\
 io_service_bytes_recursive_write=368640i,io_serviced_recursive_async=6562i,\

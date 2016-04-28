@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"database/sql"
 	"fmt"
 	"testing"
 
@@ -112,6 +113,50 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 		output, _ := dsnAddTimeout(test.input)
 		if output != test.output {
 			t.Errorf("Expected %s, got %s\n", test.output, output)
+		}
+	}
+}
+
+func TestParseValue(t *testing.T) {
+	testCases := []struct {
+		rawByte   sql.RawBytes
+		value     float64
+		boolValue bool
+	}{
+		{sql.RawBytes("Yes"), 1, true},
+		{sql.RawBytes("No"), 0, false},
+		{sql.RawBytes("ON"), 1, true},
+		{sql.RawBytes("OFF"), 0, false},
+		{sql.RawBytes("ABC"), 0, false},
+	}
+	for _, cases := range testCases {
+		if value, ok := parseValue(cases.rawByte); value != cases.value && ok != cases.boolValue {
+			t.Errorf("want %d with %t, got %d with %t", int(cases.value), cases.boolValue, int(value), ok)
+		}
+	}
+}
+
+func TestNewNamespace(t *testing.T) {
+	testCases := []struct {
+		words     []string
+		namespace string
+	}{
+		{
+			[]string{"thread", "info_scheme", "query update"},
+			"thread_info_scheme_query_update",
+		},
+		{
+			[]string{"thread", "info_scheme", "query_update"},
+			"thread_info_scheme_query_update",
+		},
+		{
+			[]string{"thread", "info", "scheme", "query", "update"},
+			"thread_info_scheme_query_update",
+		},
+	}
+	for _, cases := range testCases {
+		if got := newNamespace(cases.words...); got != cases.namespace {
+			t.Errorf("want %s, got %s", cases.namespace, got)
 		}
 	}
 }

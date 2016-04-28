@@ -7,8 +7,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -21,6 +19,8 @@ import (
 type (
 	CloudWatch struct {
 		Region      string            `toml:"region"`
+		AccessKey   string            `toml:"access_key"`
+		SecretKey   string            `toml:"secret_key"`
 		Period      internal.Duration `toml:"period"`
 		Delay       internal.Duration `toml:"delay"`
 		Namespace   string            `toml:"namespace"`
@@ -56,13 +56,22 @@ func (c *CloudWatch) SampleConfig() string {
   ## Amazon Region
   region = 'us-east-1'
 
+  ## Amazon Credentials
+  ## Credentials are loaded in the following order
+  ## 1) explicit credentials from 'access_key' and 'secret_key'
+  ## 2) environment variables
+  ## 3) shared credentials file
+  ## 4) EC2 Instance Profile
+  #access_key = ""
+  #secret_key = ""
+
   ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
   period = '1m'
 
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
   delay = '1m'
 
-  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid 
+  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = '1m'
 
@@ -74,7 +83,7 @@ func (c *CloudWatch) SampleConfig() string {
   ## Refreshes Namespace available metrics every 1h
   #[[inputs.cloudwatch.metrics]]
   #  names = ['Latency', 'RequestCount']
-  #	
+  #
   #  ## Dimension filters for Metric (optional)
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = 'LoadBalancerName'
@@ -154,12 +163,9 @@ func init() {
 func (c *CloudWatch) initializeCloudWatch() error {
 	config := &aws.Config{
 		Region: aws.String(c.Region),
-		Credentials: credentials.NewChainCredentials(
-			[]credentials.Provider{
-				&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-				&credentials.EnvProvider{},
-				&credentials.SharedCredentialsProvider{},
-			}),
+	}
+	if c.AccessKey != "" || c.SecretKey != "" {
+		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, "")
 	}
 
 	c.client = cloudwatch.New(session.New(config))

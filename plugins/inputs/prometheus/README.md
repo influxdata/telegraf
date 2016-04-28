@@ -22,7 +22,7 @@ to filter and some tags
   # An array of urls to scrape metrics from.
   urls = ["http://my-kube-apiserver:8080/metrics"]
   # Get only metrics with "apiserver_" string is in metric name
-  namepass = ["apiserver_"]
+  namepass = ["apiserver_*"]
   # Add a metric name prefix
   name_prefix = "k8s_"
   # Add tags to be able to make beautiful dashboards

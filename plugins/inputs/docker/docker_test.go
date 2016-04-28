@@ -21,26 +21,26 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	stats := testStats()
 
 	tags := map[string]string{
-		"cont_id":    "foobarbaz",
-		"cont_name":  "redis",
-		"cont_image": "redis/image",
+		"container_name":  "redis",
+		"container_image": "redis/image",
 	}
-	gatherContainerStats(stats, &acc, tags)
+	gatherContainerStats(stats, &acc, tags, "123456789")
 
-	// test docker_net measurement
+	// test docker_container_net measurement
 	netfields := map[string]interface{}{
-		"rx_dropped": uint64(1),
-		"rx_bytes":   uint64(2),
-		"rx_errors":  uint64(3),
-		"tx_packets": uint64(4),
-		"tx_dropped": uint64(1),
-		"rx_packets": uint64(2),
-		"tx_errors":  uint64(3),
-		"tx_bytes":   uint64(4),
+		"rx_dropped":   uint64(1),
+		"rx_bytes":     uint64(2),
+		"rx_errors":    uint64(3),
+		"tx_packets":   uint64(4),
+		"tx_dropped":   uint64(1),
+		"rx_packets":   uint64(2),
+		"tx_errors":    uint64(3),
+		"tx_bytes":     uint64(4),
+		"container_id": "123456789",
 	}
 	nettags := copyTags(tags)
 	nettags["network"] = "eth0"
-	acc.AssertContainsTaggedFields(t, "docker_net", netfields, nettags)
+	acc.AssertContainsTaggedFields(t, "docker_container_net", netfields, nettags)
 
 	// test docker_blkio measurement
 	blkiotags := copyTags(tags)
@@ -49,9 +49,9 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"io_service_bytes_recursive_read": uint64(100),
 		"io_serviced_recursive_write":     uint64(101),
 	}
-	acc.AssertContainsTaggedFields(t, "docker_blkio", blkiofields, blkiotags)
+	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
 
-	// test docker_mem measurement
+	// test docker_container_mem measurement
 	memfields := map[string]interface{}{
 		"max_usage":                 uint64(1001),
 		"usage":                     uint64(1111),
@@ -87,11 +87,12 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"inactive_file":             uint64(3),
 		"total_pgpgin":              uint64(4),
 		"usage_percent":             float64(55.55),
+		"container_id":              "123456789",
 	}
 
-	acc.AssertContainsTaggedFields(t, "docker_mem", memfields, tags)
+	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
 
-	// test docker_cpu measurement
+	// test docker_container_cpu measurement
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
 	cpufields := map[string]interface{}{
@@ -103,20 +104,21 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"throttling_throttled_periods": uint64(0),
 		"throttling_throttled_time":    uint64(0),
 		"usage_percent":                float64(400.0),
+		"container_id":                 "123456789",
 	}
-	acc.AssertContainsTaggedFields(t, "docker_cpu", cpufields, cputags)
+	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpufields, cputags)
 
 	cputags["cpu"] = "cpu0"
 	cpu0fields := map[string]interface{}{
 		"usage_total": uint64(1),
 	}
-	acc.AssertContainsTaggedFields(t, "docker_cpu", cpu0fields, cputags)
+	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu0fields, cputags)
 
 	cputags["cpu"] = "cpu1"
 	cpu1fields := map[string]interface{}{
 		"usage_total": uint64(1002),
 	}
-	acc.AssertContainsTaggedFields(t, "docker_cpu", cpu1fields, cputags)
+	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu1fields, cputags)
 }
 
 func testStats() *types.StatsJSON {
@@ -367,19 +369,18 @@ func TestDockerGatherInfo(t *testing.T) {
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
-		"docker_cpu",
+		"docker_container_cpu",
 		map[string]interface{}{
 			"usage_total": uint64(1231652),
 		},
 		map[string]string{
-			"cont_id":    "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
-			"cont_name":  "etcd2",
-			"cont_image": "quay.io/coreos/etcd:v2.2.2",
-			"cpu":        "cpu3",
+			"container_name":  "etcd2",
+			"container_image": "quay.io/coreos/etcd:v2.2.2",
+			"cpu":             "cpu3",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
-		"docker_mem",
+		"docker_container_mem",
 		map[string]interface{}{
 			"total_pgpgout":             uint64(0),
 			"usage_percent":             float64(0),
@@ -415,11 +416,11 @@ func TestDockerGatherInfo(t *testing.T) {
 			"pgfault":                   uint64(0),
 			"usage":                     uint64(0),
 			"limit":                     uint64(18935443456),
+			"container_id":              "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		},
 		map[string]string{
-			"cont_id":    "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
-			"cont_name":  "etcd2",
-			"cont_image": "quay.io/coreos/etcd:v2.2.2",
+			"container_name":  "etcd2",
+			"container_image": "quay.io/coreos/etcd:v2.2.2",
 		},
 	)
 

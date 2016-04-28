@@ -1,4 +1,87 @@
-## v0.12.1 [unreleased]
+## v0.13 [unreleased]
+
+### Release Notes
+
+- **Breaking change** in jolokia plugin. See
+https://github.com/influxdata/telegraf/blob/master/plugins/inputs/jolokia/README.md
+for updated configuration. The plugin will now support proxy mode and will make
+POST requests.
+
+- New [agent] configuration option: `metric_batch_size`. This option tells
+telegraf the maximum batch size to allow to accumulate before sending a flush
+to the configured outputs. `metric_buffer_limit` now refers to the absolute
+maximum number of metrics that will accumulate before metrics are dropped.
+
+- There is no longer an option to
+`flush_buffer_when_full`, this is now the default and only behavior of telegraf.
+
+- **Breaking Change**: docker plugin tags. The cont_id tag no longer exists, it
+will now be a field, and be called container_id. Additionally, cont_image and
+cont_name are being renamed to container_image and container_name.
+
+- **Breaking Change**: docker plugin measurements. The `docker_cpu`, `docker_mem`,
+`docker_blkio` and `docker_net` measurements are being renamed to
+`docker_container_cpu`, `docker_container_mem`, `docker_container_blkio` and
+`docker_container_net`. Why? Because these metrics are
+specifically tracking per-container stats. The problem with per-container stats,
+in some use-cases, is that if containers are short-lived AND names are not
+kept consistent, then the series cardinality will balloon very quickly.
+So adding "container" to each metric will:
+(1) make it more clear that these metrics are per-container, and
+(2) allow users to easily drop per-container metrics if cardinality is an
+issue (`namedrop = ["docker_container_*"]`)
+
+- `tagexclude` and `taginclude` are now available, which can be used to remove
+tags from measurements on inputs and outputs. See
+[the configuration doc](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md)
+for more details.
+
+- **Measurement filtering:** All measurement filters now match based on glob
+only. Previously there was an undocumented behavior where filters would match
+based on _prefix_ in addition to globs. This means that a filter like
+`fielddrop = ["time_"]` will need to be changed to `fielddrop = ["time_*"]`
+
+- **datadog**: measurement and field names will no longer have `_` replaced by `.`
+
+- The following plugins have changed their tags to _not_ overwrite the host tag:
+  - cassandra: `host -> cassandra_host`
+  - disque: `host -> disque_host`
+  - rethinkdb: `host -> rethinkdb_host`
+
+### Features
+
+- [#1031](https://github.com/influxdata/telegraf/pull/1031): Jolokia plugin proxy mode. Thanks @saiello!
+- [#1017](https://github.com/influxdata/telegraf/pull/1017): taginclude and tagexclude arguments.
+- [#1015](https://github.com/influxdata/telegraf/pull/1015): Docker plugin schema refactor.
+- [#889](https://github.com/influxdata/telegraf/pull/889): Improved MySQL plugin. Thanks @maksadbek!
+- [#1060](https://github.com/influxdata/telegraf/pull/1060): TTL metrics added to MongoDB input plugin
+- [#1056](https://github.com/influxdata/telegraf/pull/1056): Don't allow inputs to overwrite host tags.
+- [#1035](https://github.com/influxdata/telegraf/issues/1035): Add `user`, `exe`, `pidfile` tags to procstat plugin.
+- [#1041](https://github.com/influxdata/telegraf/issues/1041): Add `n_cpus` field to the system plugin.
+- [#1072](https://github.com/influxdata/telegraf/pull/1072): New Input Plugin: filestat.
+- [#1066](https://github.com/influxdata/telegraf/pull/1066): Replication lag metrics for MongoDB input plugin
+- [#1086](https://github.com/influxdata/telegraf/pull/1086): Ability to specify AWS keys in config file. Thanks @johnrengleman!
+- [#1096](https://github.com/influxdata/telegraf/pull/1096): Performance refactor of running output buffers.
+- [#967](https://github.com/influxdata/telegraf/issues/967): Buffer logging improvements.
+- [#1107](https://github.com/influxdata/telegraf/issues/1107): Support lustre2 job stats. Thanks @hanleyja!
+- [#1110](https://github.com/influxdata/telegraf/pull/1110): Sanitize * to - in graphite serializer. Thanks @goodeggs!
+
+### Bugfixes
+
+- [#1050](https://github.com/influxdata/telegraf/issues/1050): jolokia plugin - do not overwrite host tag. Thanks @saiello!
+- [#921](https://github.com/influxdata/telegraf/pull/921): mqtt_consumer stops gathering metrics. Thanks @chaton78!
+- [#1013](https://github.com/influxdata/telegraf/pull/1013): Close dead riemann output connections. Thanks @echupriyanov!
+- [#1012](https://github.com/influxdata/telegraf/pull/1012): Set default tags in test accumulator.
+- [#1024](https://github.com/influxdata/telegraf/issues/1024): Don't replace `.` with `_` in datadog output.
+- [#1058](https://github.com/influxdata/telegraf/issues/1058): Fix possible leaky TCP connections in influxdb output.
+- [#1044](https://github.com/influxdata/telegraf/pull/1044): Fix SNMP OID possible collisions. Thanks @relip
+- [#1022](https://github.com/influxdata/telegraf/issues/1022): Dont error deb/rpm install on systemd errors.
+- [#1078](https://github.com/influxdata/telegraf/issues/1078): Use default AWS credential chain.
+- [#1070](https://github.com/influxdata/telegraf/issues/1070): SQL Server input. Fix datatype conversion.
+- [#1089](https://github.com/influxdata/telegraf/issues/1089): Fix leaky TCP connections in phpfpm plugin.
+- [#914](https://github.com/influxdata/telegraf/issues/914): Telegraf can drop metrics on full buffers.
+
+## v0.12.1 [2016-04-14]
 
 ### Release Notes
 - Breaking change in the dovecot input plugin. See Features section below.

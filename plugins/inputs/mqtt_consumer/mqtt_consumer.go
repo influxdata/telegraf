@@ -3,6 +3,7 @@ package mqtt_consumer
 import (
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +47,8 @@ type MQTTConsumer struct {
 
 	// keep the accumulator internally:
 	acc telegraf.Accumulator
+
+	started bool
 }
 
 var sampleConfig = `
@@ -100,6 +103,7 @@ func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.Lock()
 	defer m.Unlock()
+	m.started = false
 
 	if m.PersistentSession && m.ClientID == "" {
 		return fmt.Errorf("ERROR MQTT Consumer: When using persistent_session" +
@@ -124,19 +128,31 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.in = make(chan mqtt.Message, 1000)
 	m.done = make(chan struct{})
 
-	topics := make(map[string]byte)
-	for _, topic := range m.Topics {
-		topics[topic] = byte(m.QoS)
-	}
-	subscribeToken := m.client.SubscribeMultiple(topics, m.recvMessage)
-	subscribeToken.Wait()
-	if subscribeToken.Error() != nil {
-		return subscribeToken.Error()
-	}
-
 	go m.receiver()
 
 	return nil
+}
+func (m *MQTTConsumer) onConnect(c mqtt.Client) {
+	log.Printf("MQTT Client Connected")
+	if !m.PersistentSession || !m.started {
+		topics := make(map[string]byte)
+		for _, topic := range m.Topics {
+			topics[topic] = byte(m.QoS)
+		}
+		subscribeToken := c.SubscribeMultiple(topics, m.recvMessage)
+		subscribeToken.Wait()
+		if subscribeToken.Error() != nil {
+			log.Printf("MQTT SUBSCRIBE ERROR\ntopics: %s\nerror: %s",
+				strings.Join(m.Topics[:], ","), subscribeToken.Error())
+		}
+		m.started = true
+	}
+	return
+}
+
+func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
+	log.Printf("MQTT Connection lost\nerror: %s\nMQTT Client will try to reconnect", err.Error())
+	return
 }
 
 // receiver() reads all incoming messages from the consumer, and parses them into
@@ -172,6 +188,7 @@ func (m *MQTTConsumer) Stop() {
 	defer m.Unlock()
 	close(m.done)
 	m.client.Disconnect(200)
+	m.started = false
 }
 
 func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
@@ -219,6 +236,8 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts.SetAutoReconnect(true)
 	opts.SetKeepAlive(time.Second * 60)
 	opts.SetCleanSession(!m.PersistentSession)
+	opts.SetOnConnectHandler(m.onConnect)
+	opts.SetConnectionLostHandler(m.onConnectionLost)
 	return opts, nil
 }
 
