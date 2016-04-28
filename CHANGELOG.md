@@ -47,7 +47,7 @@ based on _prefix_ in addition to globs. This means that a filter like
   - cassandra: `host -> cassandra_host`
   - disque: `host -> disque_host`
   - rethinkdb: `host -> rethinkdb_host`
-  
+
 - **Breaking Change**: The `win_perf_counters` input has been changed to sanitize field names, replacing `/Sec` and `/sec` with `_persec`, as well as spaces with underscores. This is needed because Graphite doesn't like slashes and spaces, and was failing to accept metrics that had them. The `/[sS]ec` -> `_persec` is just to make things clearer and uniform.
 
 ### Features
@@ -83,6 +83,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1070](https://github.com/influxdata/telegraf/issues/1070): SQL Server input. Fix datatype conversion.
 - [#1089](https://github.com/influxdata/telegraf/issues/1089): Fix leaky TCP connections in phpfpm plugin.
 - [#914](https://github.com/influxdata/telegraf/issues/914): Telegraf can drop metrics on full buffers.
+- [#1098](https://github.com/influxdata/telegraf/issues/1098): Sanitize invalid OpenTSDB characters.
 
 ## v0.12.1 [2016-04-14]
 
