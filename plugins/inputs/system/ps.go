@@ -81,8 +81,10 @@ func (s *systemPS) DiskUsage(
 				continue
 			}
 		}
-		if _, err := os.Stat(p.Mountpoint); err == nil {
-			du, err := disk.DiskUsage(p.Mountpoint)
+		mountpoint := os.Getenv("HOST_MOUNT_PREFIX") + p.Mountpoint
+		if _, err := os.Stat(mountpoint); err == nil {
+			du, err := disk.DiskUsage(mountpoint)
+			du.Path = p.Mountpoint
 			if err != nil {
 				return nil, err
 			}

@@ -48,6 +48,10 @@ based on _prefix_ in addition to globs. This means that a filter like
   - disque: `host -> disque_host`
   - rethinkdb: `host -> rethinkdb_host`
 
+- The `disk` input plugin can now be configured with the `HOST_MOUNT_PREFIX` environment variable.
+This value is prepended to any mountpaths discovered before retrieving stats.
+It is not included on the report path. This is necessary for reporting host disk stats when running from within a container.
+
 ### Features
 
 - [#1031](https://github.com/influxdata/telegraf/pull/1031): Jolokia plugin proxy mode. Thanks @saiello!
