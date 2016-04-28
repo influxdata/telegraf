@@ -71,6 +71,13 @@ The flags are:
   -quiet             run in quiet mode
   -version           print the version to stdout
 
+In addition to the -config flag, telegraf will also load the config file from
+an environment variable or default location. Precedence is:
+  1. -config flag
+  2. $TELEGRAF_CONFIG_PATH environment variable
+  3. $HOME/.telegraf/telegraf.conf
+  4. /etc/telegraf/telegraf.conf
+
 Examples:
 
   # generate a telegraf config file:
@@ -98,12 +105,10 @@ func main() {
 		flag.Parse()
 		args := flag.Args()
 
-		if flag.NFlag() == 0 && len(args) == 0 {
-			usageExit(0)
-		}
-
 		var inputFilters []string
 		if *fInputFiltersLegacy != "" {
+			fmt.Printf("WARNING '--filter' flag is deprecated, please use" +
+				" '--input-filter'")
 			inputFilter := strings.TrimSpace(*fInputFiltersLegacy)
 			inputFilters = strings.Split(":"+inputFilter+":", ":")
 		}
@@ -114,6 +119,8 @@ func main() {
 
 		var outputFilters []string
 		if *fOutputFiltersLegacy != "" {
+			fmt.Printf("WARNING '--outputfilter' flag is deprecated, please use" +
+				" '--output-filter'")
 			outputFilter := strings.TrimSpace(*fOutputFiltersLegacy)
 			outputFilters = strings.Split(":"+outputFilter+":", ":")
 		}
@@ -170,25 +177,19 @@ func main() {
 			return
 		}
 
-		var (
-			c   *config.Config
-			err error
-		)
-
-		if *fConfig != "" {
-			c = config.NewConfig()
-			c.OutputFilters = outputFilters
-			c.InputFilters = inputFilters
-			err = c.LoadConfig(*fConfig)
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			fmt.Println("You must specify a config file. See telegraf --help")
+		// If no other options are specified, load the config file and run.
+		c := config.NewConfig()
+		c.OutputFilters = outputFilters
+		c.InputFilters = inputFilters
+		err := c.LoadConfig(*fConfig)
+		if err != nil {
+			fmt.Println(err)
 			os.Exit(1)
 		}
 
 		if *fConfigDirectoryLegacy != "" {
+			fmt.Printf("WARNING '--configdirectory' flag is deprecated, please use" +
+				" '--config-directory'")
 			err = c.LoadDirectory(*fConfigDirectoryLegacy)
 			if err != nil {
 				log.Fatal(err)

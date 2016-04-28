@@ -66,8 +66,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1096](https://github.com/influxdata/telegraf/pull/1096): Performance refactor of running output buffers.
 - [#967](https://github.com/influxdata/telegraf/issues/967): Buffer logging improvements.
 - [#1107](https://github.com/influxdata/telegraf/issues/1107): Support lustre2 job stats. Thanks @hanleyja!
-- [#1110](https://github.com/influxdata/telegraf/pull/1110): Sanitize * to - in graphite serializer. Thanks @goodeggs!
-- [#1118] (https://github.com/influxdata/telegraf/pull/1118): Sanitize Counter names for `win_perf_counters` input.
+- [#1122](https://github.com/influxdata/telegraf/pull/1122): Support setting config path through env variable and default paths.
 
 ### Bugfixes
 
@@ -84,6 +83,8 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1089](https://github.com/influxdata/telegraf/issues/1089): Fix leaky TCP connections in phpfpm plugin.
 - [#914](https://github.com/influxdata/telegraf/issues/914): Telegraf can drop metrics on full buffers.
 - [#1098](https://github.com/influxdata/telegraf/issues/1098): Sanitize invalid OpenTSDB characters.
+- [#1110](https://github.com/influxdata/telegraf/pull/1110): Sanitize * to - in graphite serializer. Thanks @goodeggs!
+- [#1118](https://github.com/influxdata/telegraf/pull/1118): Sanitize Counter names for `win_perf_counters` input.
 
 ## v0.12.1 [2016-04-14]
 
