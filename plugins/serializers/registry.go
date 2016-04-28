@@ -3,10 +3,10 @@ package serializers
 import (
 	"github.com/influxdata/telegraf"
 
+	"github.com/influxdata/telegraf/plugins/serializers/gelf"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
-	"github.com/vanillahsu/telegraf/plugins/serializers/gelf"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -42,14 +42,14 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
-	case "gelf":
-		serializer, err = NewGelfSerializer()
 	case "influx":
 		serializer, err = NewInfluxSerializer()
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
 		serializer, err = NewJsonSerializer()
+	case "gelf":
+		serializer, err = NewGelfSerializer()
 	}
 	return serializer, err
 }

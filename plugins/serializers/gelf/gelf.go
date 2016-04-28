@@ -2,6 +2,7 @@ package gelf
 
 import (
 	ejson "encoding/json"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 )
@@ -15,9 +16,15 @@ func (s *GelfSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
 	m := make(map[string]interface{})
 	m["version"] = "1.1"
 	m["host"] = metric.Tags()["host"]
-	m["timestamp"] = metric.UnixNano()
-	//m["fields"] = metric.Fields()
+	m["timestamp"] = metric.UnixNano() / 1000000000
 	m["name"] = metric.Name()
+
+	for key, value := range metric.Fields() {
+		nkey := fmt.Sprintf("_%s", key)
+		m[nkey] = value
+	}
+
+	//m["fields"] = metric.Fields()
 	serialized, err := ejson.Marshal(m)
 	if err != nil {
 		return []string{}, err
