@@ -51,3 +51,4 @@ and create a single measurement containing values e.g.
  * ttl_deletes_per_sec
  * ttl_passes_per_sec
  * repl_lag
+ * jumbo_chunks (only if mongos or mongo config)

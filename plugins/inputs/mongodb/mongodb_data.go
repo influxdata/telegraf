@@ -57,6 +57,10 @@ var DefaultReplStats = map[string]string{
 	"repl_lag":              "ReplLag",
 }
 
+var DefaultClusterStats = map[string]string{
+	"jumbo_chunks": "JumboChunksCount",
+}
+
 var MmapStats = map[string]string{
 	"mapped_megabytes":     "Mapped",
 	"non-mapped_megabytes": "NonMapped",
@@ -74,6 +78,7 @@ func (d *MongodbData) AddDefaultStats() {
 	if d.StatLine.NodeType != "" {
 		d.addStat(statLine, DefaultReplStats)
 	}
+	d.addStat(statLine, DefaultClusterStats)
 	if d.StatLine.StorageEngine == "mmapv1" {
 		d.addStat(statLine, MmapStats)
 	} else if d.StatLine.StorageEngine == "wiredTiger" {
