@@ -25,6 +25,7 @@ time before a new metric is included by the plugin.
 - [#1272](https://github.com/influxdata/telegraf/pull/1272): graphite parser: add ability to specify multiple tag keys, for consistency with influxdb parser.
 - [#1265](https://github.com/influxdata/telegraf/pull/1265): Make dns lookups for chrony configurable. Thanks @zbindenren!
 - [#1275](https://github.com/influxdata/telegraf/pull/1275): Allow wildcard filtering of varnish stats.
+- [#1142](https://github.com/influxdata/telegraf/pull/1142): Support for glob patterns in exec plugin commands configuration.
 
 ### Bugfixes
 
