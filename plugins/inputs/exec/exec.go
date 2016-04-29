@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -18,8 +19,11 @@ import (
 )
 
 const sampleConfig = `
-  ## Commands array
-  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+  ## Full path to executable with parameters,
+  ## or a glob pattern to run all matching files.
+  ## the glob pattern will be run at every interval, so new files will
+  ## automatically be picked up.
+  commands = ["/tmp/test.sh", "/usr/bin/collector --foo=bar", "/tmp/collect_*.sh"]
 
   ## Timeout for each command to complete.
   timeout = "5s"
@@ -150,10 +154,19 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		e.Command = ""
 	}
 
-	e.errChan = make(chan error, len(e.Commands))
+	commands := make([]string, len(e.Commands))
+	for _, pattern := range e.Commands {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			return err
+		}
+		commands = append(commands, matches...)
+	}
 
-	e.wg.Add(len(e.Commands))
-	for _, command := range e.Commands {
+	e.errChan = make(chan error, len(commands))
+
+	e.wg.Add(len(commands))
+	for _, command := range commands {
 		go e.ProcessCommand(command, acc)
 	}
 	e.wg.Wait()
