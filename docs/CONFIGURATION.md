@@ -275,3 +275,194 @@ found by running `telegraf -sample-config`.
   [outputs.influxdb.tagpass]
     cpu = ["cpu0"]
 ```
+
+## Etcd Configuration
+
+### Command line parameters
+
+Telegraf option related to Etcd:
+```
+  -etcd               etcd urls where configuration is stored (comma separated)
+  -etcdfolder         etcd folder where configuration is stored and read
+  -etcdwriteconfigdir store the following config dir to etcd
+  -etcdwriteconfig    store the following config file to etcd
+  -etcderaseconfig    erase all telegraf config in etcd
+  -etcdwritelabel     store config file to etcd with this label
+  -etcdreadlabels     read config from etcd using labels (comma-separated)
+```
+
+### Features
+
+* Main config file can be loaded in Etcd
+* Each agent try automatically to find its own key in Etcd (/telegraf/hosts/HOSTNAME)
+* Labels can be configured in config files, so labels could be from Etcd
+* Etcd config watcher: that reload Telegraf when a change is detected in Etcd.
+* You can write all configuration of ALL your Telegraf agent in a folder then send it to Etcd.
+
+### Put simple configuration in Etcd
+
+
+#### Create main configuration file
+
+Create a `myconf.conf` file, which will be stored in Etcd, with the following content:
+
+```
+[tags]
+  dc = "us-east-1"
+
+[agent]
+  interval = "10s"
+  round_interval = true
+  flush_interval = "10s"
+  flush_jitter = "0s"
+  debug = false
+  hostname = ""
+
+
+[[outputs.influxdb]]
+  urls = ["http://localhost:8086"]
+  database = "telegraf"
+  precision = "s"
+
+
+[[inputs.cpu]]
+  percpu = true
+  totalcpu = true
+  drop = ["cpu_time*"]
+```
+
+#### Send the configuration to Etcd
+
+Send this file to Etcd using the label **mylabel**
+
+```
+$ telegraf  -etcd http://127.0.0.1:2379 -etcdwritelabel mylabel -etcdwriteconfig myconf.conf
+2016/03/08 19:50:27 Config written with key /telegraf/labels/mylabel
+```
+
+NOTE: By default, configuration is stored in the folder `/telegraf` in Etcd.
+      You can change it using `-etcdfolder` flag
+
+
+#### Check if your configuration in Etcd
+
+You can check if data is really written in Etcd with
+
+```
+$ etcdctl get /telegraf/labels/mylabel
+[tags]
+  dc = "us-east-1"
+
+[agent]
+  interval = "10s"
+  round_interval = true
+  flush_interval = "10s"
+  flush_jitter = "0s"
+  debug = false
+  hostname = ""
+
+
+[[outputs.influxdb]]
+  urls = ["http://localhost:8086"]
+  database = "telegraf"
+  precision = "s"
+
+
+[[inputs.cpu]]
+  percpu = true
+  totalcpu = true
+  drop = ["cpu_time*"]
+```
+
+#### 
+
+Now any telegraf agent can load this config use the label **mylabel**
+
+```
+$ telegraf  -etcd http://127.0.0.1:2379 -etcdreadlabels mylabel
+Config read with label mylabel
+2016/03/08 19:54:52 WARNING: [etcd] 100: Key not found (/telegraf/main) [245]
+2016/03/08 19:54:52 WARNING: [etcd] 100: Key not found (/telegraf/hosts) [245]
+2016/03/08 19:54:52 Database creation failed: Get http://localhost:8086/query?db=&q=CREATE+DATABASE+IF+NOT+EXISTS+telegraf: dial tcp [::1]:8086: getsockopt: connection refused
+2016/03/08 19:54:52 Starting Telegraf (version 0.10.4.1-49-g07a3a07)
+2016/03/08 19:54:52 Loaded outputs: influxdb
+2016/03/08 19:54:52 Loaded inputs: cpu
+2016/03/08 19:54:52 Tags enabled: dc=us-east-1 host=hostname
+2016/03/08 19:54:52 Agent Config: Interval:10s, Debug:false, Quiet:false, Hostname:"hostname", Flush Interval:10s
+```
+
+NOTE: By default, configuration is read in the folder `/telegraf` in Etcd.
+      You can change it using `-etcdfolder` flag
+
+
+#### Read configuration from Etcd
+
+1. `/telegraf/main` key
+2. `/telegraf/hosts/HOSTNAME` key
+3. `/telegraf/labels/LABEL1` key
+4. `/telegraf/labels/LABEL2` key
+
+(First means less importance)
+
+### Put configuration folder in Etcd
+
+#### Create configuration folder structure
+
+You can set your configuration in a folder like this:
+
+```
+testdata/test1
+├── hosts
+│   ├── myserver1.conf
+│   └── myserver2.conf
+├── labels
+│   ├── influx.conf
+│   ├── network2.conf
+│   └── network.conf
+└── main.conf
+```
+
+The following table how files and folder are stored in Etcd:
+
+| Files                   | Etcd                | Details
+|-------------------------|---------------------|-----------------------------------------------------------------------|
+|                         | `/telegraf        ` |                                                                       |
+| `/main.conf`            | `├── main         ` | Equivalent to main config file load with `-config` option             |
+|                         | `├── hosts/       ` |                                                                       |
+| `/host/myserver1.conf`  | `│   ├── myserver1` | Configuration specific for Telegraf agent with hostname **myserver1** |
+| `/host/myserver2.conf`  | `│   └── myserver2` | Configuration specific for Telegraf agent with hostname **myserver2** |
+|                         | `└── labels/      ` |                                                                       |
+| `/labels/influx.conf`   | `    ├── influx   ` | Configuration loaded by hosts with etcd label **influx**              |
+| `/labels/network2.conf` | `    ├── network2 ` | Configuration loaded by hosts with etcd label **network2**            |
+| `/labels/network.conf`  | `    └── network  ` | Configuration loaded by hosts with etcd label **network**             |
+
+
+(An example is available [here](../internal/etcd/testdata/test1))
+
+#### Send configuration to Etcd
+
+Then you can send your configuration folder to Etcd:
+
+```
+$ telegraf -etcd http://127.0.0.1:2379 -etcdwriteconfigdir internal/etcd/testdata/test1/
+2016/03/08 20:14:28 Config written with key /telegraf/hosts/myserver1
+2016/03/08 20:14:28 Config written with key /telegraf/labels/influx
+2016/03/08 20:14:28 Config written with key /telegraf/labels/network
+2016/03/08 20:14:28 Config written with key /telegraf/labels/network2
+2016/03/08 20:14:28 Config written with key /telegraf/main
+```
+#### Read configuration from Etcd
+
+Then you can start all your telegraf agents like this
+
+```
+$ telegraf  -etcd http://127.0.0.1:2379 -etcdreadlabels=influx,network
+2016/03/08 20:17:25 Config read from etcd with labels influx,network
+2016/03/08 20:17:25 Database creation failed: Get http://localhost:8086/query?db=&q=CREATE+DATABASE+IF+NOT+EXISTS+telegraf: dial tcp [::1]:8086: getsockopt: connection refused
+2016/03/08 20:17:25 Starting Telegraf (version 0.10.4.1-49-g07a3a07)
+2016/03/08 20:17:25 Loaded outputs: influxdb
+2016/03/08 20:17:25 Loaded inputs: net
+2016/03/08 20:17:25 Tags enabled: dc=us-east-1 host=myserver1
+2016/03/08 20:17:25 Agent Config: Interval:2s, Debug:false, Quiet:false, Hostname:"myserver1", Flush Interval:10s 
+2016/03/08 20:17:26 Gathered metrics, (2s interval), from 1 inputs in 1.382394ms
+```

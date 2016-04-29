@@ -57,6 +57,7 @@ func NewConfig() *Config {
 		Agent: &AgentConfig{
 			Interval:      internal.Duration{Duration: 10 * time.Second},
 			RoundInterval: true,
+			Labels:        make([]string, 0),
 			FlushInterval: internal.Duration{Duration: 10 * time.Second},
 			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
 		},
@@ -122,6 +123,8 @@ type AgentConfig struct {
 	Quiet        bool
 	Hostname     string
 	OmitHostname bool
+	// Etcd labels
+	Labels []string
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -418,40 +421,48 @@ func (c *Config) LoadConfig(path string) error {
 	if err != nil {
 		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
+	err = c.LoadConfigFromTable(tbl)
+	if err != nil {
+		return fmt.Errorf(err.Error(), path)
+	}
+	return nil
+}
 
+func (c *Config) LoadConfigFromTable(tbl *ast.Table) error {
+	var err error
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return fmt.Errorf("%s: invalid configuration", path)
+			return fmt.Errorf("%%s: invalid configuration")
 		}
 
 		switch name {
 		case "agent":
 			if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
 				log.Printf("Could not parse [agent] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
+				return fmt.Errorf("Error parsing %%s, %s", err)
 			}
 		case "global_tags", "tags":
 			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("Could not parse [global_tags] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
+				return fmt.Errorf("Error parsing %%s, %s", err)
 			}
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
 				case *ast.Table:
 					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
-						return fmt.Errorf("Error parsing %s, %s", path, err)
+						return fmt.Errorf("Error parsing %%s, %s", err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addOutput(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %%s, %s", err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s, file %%s",
+						pluginName)
 				}
 			}
 		case "inputs", "plugins":
@@ -459,24 +470,24 @@ func (c *Config) LoadConfig(path string) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case *ast.Table:
 					if err = c.addInput(pluginName, pluginSubTable); err != nil {
-						return fmt.Errorf("Error parsing %s, %s", path, err)
+						return fmt.Errorf("Error parsing %%s, %s", err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addInput(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %%s, %s", err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s, file %%s",
+						pluginName)
 				}
 			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
 			if err = c.addInput(name, subTable); err != nil {
-				return fmt.Errorf("Error parsing %s, %s", path, err)
+				return fmt.Errorf("Error parsing %%s, %s", err)
 			}
 		}
 	}
