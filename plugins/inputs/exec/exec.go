@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -17,7 +18,7 @@ import (
 
 const sampleConfig = `
   ## Commands array
-  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar", "/tmp/collect_*.sh"]
 
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
@@ -139,10 +140,19 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		e.Command = ""
 	}
 
-	e.errChan = make(chan error, len(e.Commands))
+	commands := make([]string, len(e.Commands))
+	for _, pattern := range e.Commands {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			return err
+		}
+		commands = append(commands, matches...)
+	}
 
-	e.wg.Add(len(e.Commands))
-	for _, command := range e.Commands {
+	e.errChan = make(chan error, len(commands))
+
+	e.wg.Add(len(commands))
+	for _, command := range commands {
 		go e.ProcessCommand(command, acc)
 	}
 	e.wg.Wait()
