@@ -117,7 +117,6 @@ The unit of fields varies by the tags.
     * write_normal(float, number/milliseconds)
     * write_allow_write(float, number/milliseconds)
     * write_concurrent_insert(float, number/milliseconds)
-    * write_delayed(float, number/milliseconds)
     * write_low_priority(float, number/milliseconds)
     * read(float, number/milliseconds)
     * write(float, number/milliseconds)

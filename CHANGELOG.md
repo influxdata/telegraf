@@ -91,6 +91,7 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1090](https://github.com/influxdata/telegraf/issues/1090): [agent] and [global_tags] config sometimes not getting applied.
 - [#1133](https://github.com/influxdata/telegraf/issues/1133): Use a timeout for docker list & stat cmds.
 - [#1052](https://github.com/influxdata/telegraf/issues/1052): Docker panic fix when decode fails.
+- [#1136](https://github.com/influxdata/telegraf/pull/1136): "DELAYED" Inserts were deprecated in MySQL 5.6.6. Thanks @PierreF
 
 ## v0.12.1 [2016-04-14]
 
