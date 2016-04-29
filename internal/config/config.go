@@ -446,6 +446,33 @@ func (c *Config) LoadConfig(path string) error {
 		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
 
+	// Parse tags tables first:
+	for _, tableName := range []string{"tags", "global_tags"} {
+		if val, ok := tbl.Fields[tableName]; ok {
+			subTable, ok := val.(*ast.Table)
+			if !ok {
+				return fmt.Errorf("%s: invalid configuration", path)
+			}
+			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
+				log.Printf("Could not parse [global_tags] config\n")
+				return fmt.Errorf("Error parsing %s, %s", path, err)
+			}
+		}
+	}
+
+	// Parse agent table:
+	if val, ok := tbl.Fields["agent"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("%s: invalid configuration", path)
+		}
+		if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
+			log.Printf("Could not parse [agent] config\n")
+			return fmt.Errorf("Error parsing %s, %s", path, err)
+		}
+	}
+
+	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
@@ -453,16 +480,7 @@ func (c *Config) LoadConfig(path string) error {
 		}
 
 		switch name {
-		case "agent":
-			if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
-				log.Printf("Could not parse [agent] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
-			}
-		case "global_tags", "tags":
-			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
-				log.Printf("Could not parse [global_tags] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
-			}
+		case "agent", "global_tags", "tags":
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
