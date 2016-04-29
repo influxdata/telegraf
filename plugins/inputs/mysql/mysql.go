@@ -454,7 +454,6 @@ const (
             COUNT_READ_EXTERNAL,
             COUNT_WRITE_ALLOW_WRITE,
             COUNT_WRITE_CONCURRENT_INSERT,
-            COUNT_WRITE_DELAYED,
             COUNT_WRITE_LOW_PRIORITY,
             COUNT_WRITE_NORMAL,
             COUNT_WRITE_EXTERNAL,
@@ -465,7 +464,6 @@ const (
             SUM_TIMER_READ_EXTERNAL,
             SUM_TIMER_WRITE_ALLOW_WRITE,
             SUM_TIMER_WRITE_CONCURRENT_INSERT,
-            SUM_TIMER_WRITE_DELAYED,
             SUM_TIMER_WRITE_LOW_PRIORITY,
             SUM_TIMER_WRITE_NORMAL,
             SUM_TIMER_WRITE_EXTERNAL
@@ -1126,7 +1124,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 		countReadExternal          float64
 		countWriteAllowWrite       float64
 		countWriteConcurrentInsert float64
-		countWriteDelayed          float64
 		countWriteLowPriority      float64
 		countWriteNormal           float64
 		countWriteExternal         float64
@@ -1137,7 +1134,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 		timeReadExternal           float64
 		timeWriteAllowWrite        float64
 		timeWriteConcurrentInsert  float64
-		timeWriteDelayed           float64
 		timeWriteLowPriority       float64
 		timeWriteNormal            float64
 		timeWriteExternal          float64
@@ -1154,7 +1150,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			&countReadExternal,
 			&countWriteAllowWrite,
 			&countWriteConcurrentInsert,
-			&countWriteDelayed,
 			&countWriteLowPriority,
 			&countWriteNormal,
 			&countWriteExternal,
@@ -1165,7 +1160,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			&timeReadExternal,
 			&timeWriteAllowWrite,
 			&timeWriteConcurrentInsert,
-			&timeWriteDelayed,
 			&timeWriteLowPriority,
 			&timeWriteNormal,
 			&timeWriteExternal,
@@ -1190,7 +1184,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			"write_normal":            countWriteNormal,
 			"write_allow_write":       countWriteAllowWrite,
 			"write_concurrent_insert": countWriteConcurrentInsert,
-			"write_delayed":           countWriteDelayed,
 			"write_low_priority":      countWriteLowPriority,
 		}
 		acc.AddFields("mysql_perf_schema", sqlLWFields, sqlLWTags)
@@ -1213,7 +1206,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			"write_normal":            timeWriteNormal / picoSeconds,
 			"write_allow_write":       timeWriteAllowWrite / picoSeconds,
 			"write_concurrent_insert": timeWriteConcurrentInsert / picoSeconds,
-			"write_delayed":           timeWriteDelayed / picoSeconds,
 			"write_low_priority":      timeWriteLowPriority / picoSeconds,
 		}
 		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, sqlLWSecTotalTags)
