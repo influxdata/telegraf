@@ -17,6 +17,7 @@ func (s *GelfSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
 	m["version"] = "1.1"
 	m["host"] = metric.Tags()["host"]
 	m["timestamp"] = metric.UnixNano() / 1000000000
+	m["short_message"] = "x"
 	m["name"] = metric.Name()
 
 	for key, value := range metric.Fields() {
@@ -24,7 +25,6 @@ func (s *GelfSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
 		m[nkey] = value
 	}
 
-	//m["fields"] = metric.Fields()
 	serialized, err := ejson.Marshal(m)
 	if err != nil {
 		return []string{}, err
