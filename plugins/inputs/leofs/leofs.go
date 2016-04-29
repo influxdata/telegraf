@@ -3,13 +3,16 @@ package leofs
 import (
 	"bufio"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const oid = ".1.3.6.1.4.1.35450"
@@ -175,14 +178,18 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-func (l *LeoFS) gatherServer(endpoint string, serverType ServerType, acc telegraf.Accumulator) error {
+func (l *LeoFS) gatherServer(
+	endpoint string,
+	serverType ServerType,
+	acc telegraf.Accumulator,
+) error {
 	cmd := exec.Command("snmpwalk", "-v2c", "-cpublic", endpoint, oid)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
 	cmd.Start()
-	defer cmd.Wait()
+	defer internal.WaitTimeout(cmd, time.Second*5)
 	scanner := bufio.NewScanner(stdout)
 	if !scanner.Scan() {
 		return fmt.Errorf("Unable to retrieve the node name")
