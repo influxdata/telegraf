@@ -181,6 +181,9 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("kafka", func() telegraf.Output {
-		return &Kafka{}
+		return &Kafka{
+			MaxRetry:     3,
+			RequiredAcks: -1,
+		}
 	})
 }
