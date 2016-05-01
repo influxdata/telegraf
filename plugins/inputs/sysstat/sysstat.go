@@ -199,9 +199,9 @@ func (s *Sysstat) collect() error {
 
 	options = append(options, strconv.Itoa(collectInterval), "2", s.tmpFile)
 	cmd := execCommand(s.Sadc, options...)
-	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
+	out, err := internal.CombinedOutputTimeout(cmd, time.Second*time.Duration(collectInterval+parseInterval))
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s", strings.Join(cmd.Args, " "), string(out))
+		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	return nil
 }
