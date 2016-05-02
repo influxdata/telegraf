@@ -568,7 +568,7 @@ def package(build_output, version, nightly=False, rc=None, iteration=1, static=F
                     # For windows and static builds, just copy
                     # binaries to root of package (no other scripts or
                     # directories)
-                    package_scripts(build_root, config_only=True)
+                    package_scripts(build_root, windows=True)
                 else:
                     create_package_fs(build_root)
                     package_scripts(build_root)
