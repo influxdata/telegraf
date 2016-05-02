@@ -140,7 +140,7 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	u, err := url.Parse(addr)
 	if err != nil {
 		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
-	}	
+	}
 	//Checking for default Haproxy Status page
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, u.RawQuery), nil)
 	if u.User != nil {
