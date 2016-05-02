@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -150,10 +151,19 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		e.Command = ""
 	}
 
-	e.errChan = make(chan error, len(e.Commands))
+	commands := make([]string, len(e.Commands))
+	for _, pattern := range e.Commands {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			return err
+		}
+		commands = append(commands, matches...)
+	}
 
-	e.wg.Add(len(e.Commands))
-	for _, command := range e.Commands {
+	e.errChan = make(chan error, len(commands))
+
+	e.wg.Add(len(commands))
+	for _, command := range commands {
 		go e.ProcessCommand(command, acc)
 	}
 	e.wg.Wait()
