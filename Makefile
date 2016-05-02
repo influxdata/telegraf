@@ -14,21 +14,21 @@ windows: prepare-windows build-windows
 
 # Only run the build (no dependency grabbing)
 build:
-	go install -ldflags "-X main.Version=$(VERSION)" ./...
+	go install -ldflags "-X main.version=$(VERSION)" ./...
 
 build-windows:
 	go build -o telegraf.exe -ldflags \
-		"-X main.Version=$(VERSION)" \
+		"-X main.version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
 build-for-docker:
 	CGO_ENABLED=0 GOOS=linux go build -installsuffix cgo -o telegraf -ldflags \
-					"-s -X main.Version=$(VERSION)" \
+					"-s -X main.version=$(VERSION)" \
 					./cmd/telegraf/telegraf.go
 
 # Build with race detector
 dev: prepare
-	go build -race -ldflags "-X main.Version=$(VERSION)" ./...
+	go build -race -ldflags "-X main.version=$(VERSION)" ./...
 
 # run package script
 package:
