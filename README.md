@@ -245,6 +245,7 @@ want to add support for another service or third-party API.
 * [datadog](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/datadog)
 * [file](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file)
 * [graphite](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/graphite)
+* [instrumental](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/instrumental)
 * [kafka](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kafka)
 * [librato](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/librato)
 * [mqtt](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/mqtt)

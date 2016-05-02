@@ -8,6 +8,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	_ "github.com/influxdata/telegraf/plugins/outputs/instrumental"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kinesis"
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
