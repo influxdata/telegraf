@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
@@ -15,24 +16,27 @@ import (
 
 type Postgresql struct {
 	Address          string
+	Outputaddress    string
 	Databases        []string
 	OrderedColumns   []string
 	AllColumns       []string
 	AdditionalTags   []string
 	sanitizedAddress string
 	Query            []struct {
-		Sqlquery   string
-		Version    int
-		Withdbname bool
-		Tagvalue   string
+		Sqlquery    string
+		Version     int
+		Withdbname  bool
+		Tagvalue    string
+		Measurement string
 	}
 }
 
 type query []struct {
-	Sqlquery   string
-	Version    int
-	Withdbname bool
-	Tagvalue   string
+	Sqlquery    string
+	Version     int
+	Withdbname  bool
+	Tagvalue    string
+	Measurement string
 }
 
 var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
@@ -55,6 +59,11 @@ var sampleConfig = `
   ## databases are gathered.
   ## databases = ["app_production", "testing"]
   #
+  # outputaddress = "db01"
+  ## A custom name for the database that will be used as the "server" tag in the
+  ## measurement output. If not specified, a default one generated from
+  ## the connection address is used.
+  #
   ## Define the toml config where the sql queries are stored
   ## New queries can be added, if the withdbname is set to true and there is no
   ## databases defined in the 'databases field', the sql query is ended by a
@@ -65,24 +74,28 @@ var sampleConfig = `
   ## because the databases variable was set to ['postgres', 'pgbench' ] and the
   ## withdbname was true. Be careful that if the withdbname is set to false you
   ## don't have to define the where clause (aka with the dbname) the tagvalue
-  ## field is used to define custom tags (separated by comas)
+  ## field is used to define custom tags (separated by commas)
+  ## The optional "measurement" value can be used to override the default
+  ## output measurement name ("postgresql").
   #
   ## Structure :
   ## [[inputs.postgresql_extensible.query]]
   ##   sqlquery string
   ##   version string
   ##   withdbname boolean
-  ##   tagvalue string (coma separated)
+  ##   tagvalue string (comma separated)
+  ##   measurement string
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database"
     version=901
     withdbname=false
     tagvalue=""
+    measurement=""
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_bgwriter"
     version=901
     withdbname=false
-    tagvalue=""
+    tagvalue="postgresql.stats"
 `
 
 func (p *Postgresql) SampleConfig() string {
@@ -106,6 +119,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var db_version int
 	var query string
 	var tag_value string
+	var meas_name string
 
 	if p.Address == "" || p.Address == "localhost" {
 		p.Address = localhost
@@ -131,6 +145,11 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
 		tag_value = p.Query[i].Tagvalue
+		if p.Query[i].Measurement != "" {
+			meas_name = p.Query[i].Measurement
+		} else {
+			meas_name = "postgresql"
+		}
 
 		if p.Query[i].Withdbname {
 			if len(p.Databases) != 0 {
@@ -170,7 +189,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			}
 
 			for rows.Next() {
-				err = p.accRow(rows, acc)
+				err = p.accRow(meas_name, rows, acc)
 				if err != nil {
 					return err
 				}
@@ -184,9 +203,12 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-var passwordKVMatcher, _ = regexp.Compile("password=\\S+ ?")
+var KVMatcher, _ = regexp.Compile("(password|sslcert|sslkey|sslmode|sslrootcert)=\\S+ ?")
 
 func (p *Postgresql) SanitizedAddress() (_ string, err error) {
+	if p.Outputaddress != "" {
+		return p.Outputaddress, nil
+	}
 	var canonicalizedAddress string
 	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
 		canonicalizedAddress, err = pq.ParseURL(p.Address)
@@ -196,12 +218,12 @@ func (p *Postgresql) SanitizedAddress() (_ string, err error) {
 	} else {
 		canonicalizedAddress = p.Address
 	}
-	p.sanitizedAddress = passwordKVMatcher.ReplaceAllString(canonicalizedAddress, "")
+	p.sanitizedAddress = KVMatcher.ReplaceAllString(canonicalizedAddress, "")
 
 	return p.sanitizedAddress, err
 }
 
-func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
+func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumulator) error {
 	var columnVars []interface{}
 	var dbname bytes.Buffer
 
@@ -247,9 +269,11 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	var isATag int
 	fields := make(map[string]interface{})
 	for col, val := range columnMap {
+		if acc.Debug() {
+			log.Printf("postgresql_extensible: column: %s = %T: %s\n", col, *val, *val)
+		}
 		_, ignore := ignoredColumns[col]
-		//if !ignore && *val != "" {
-		if !ignore {
+		if !ignore && *val != nil {
 			isATag = 0
 			for tag := range p.AdditionalTags {
 				if col == p.AdditionalTags[tag] {
@@ -267,7 +291,7 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 			}
 		}
 	}
-	acc.AddFields("postgresql", fields, tags)
+	acc.AddFields(meas_name, fields, tags)
 	return nil
 }
 

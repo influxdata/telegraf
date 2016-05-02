@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -71,21 +70,22 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	metricCounter := 0
 
 	for _, m := range metrics {
-		mname := strings.Replace(m.Name(), "_", ".", -1)
 		if dogMs, err := buildMetrics(m); err == nil {
 			for fieldName, dogM := range dogMs {
 				// name of the datadog measurement
 				var dname string
 				if fieldName == "value" {
 					// adding .value seems redundant here
-					dname = mname
+					dname = m.Name()
 				} else {
-					dname = mname + "." + strings.Replace(fieldName, "_", ".", -1)
+					dname = m.Name() + "." + fieldName
 				}
+				var host string
+				host, _ = m.Tags()["host"]
 				metric := &Metric{
 					Metric: dname,
 					Tags:   buildTags(m.Tags()),
-					Host:   m.Tags()["host"],
+					Host:   host,
 				}
 				metric.Points[0] = dogM
 				tempSeries = append(tempSeries, metric)

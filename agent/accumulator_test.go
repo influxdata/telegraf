@@ -300,3 +300,35 @@ func TestAddBools(t *testing.T) {
 		fmt.Sprintf("acctest,acc=test,default=tag value=false %d", now.UnixNano()),
 		actual)
 }
+
+// Test that tag filters get applied to metrics.
+func TestAccFilterTags(t *testing.T) {
+	a := accumulator{}
+	now := time.Now()
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	filter := internal_models.Filter{
+		TagExclude: []string{"acc"},
+	}
+	assert.NoError(t, filter.CompileFilter())
+	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig.Filter = filter
+
+	a.Add("acctest", float64(101), map[string]string{})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest value=101 %d", now.UnixNano()),
+		actual)
+}

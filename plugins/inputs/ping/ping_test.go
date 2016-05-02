@@ -124,7 +124,7 @@ func TestArgs(t *testing.T) {
 		"Expected: %s Actual: %s", expected, actual)
 }
 
-func mockHostPinger(args ...string) (string, error) {
+func mockHostPinger(timeout float64, args ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -161,7 +161,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(args ...string) (string, error) {
+func mockLossyHostPinger(timeout float64, args ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -192,7 +192,7 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(args ...string) (string, error) {
+func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
 	return errorPingOutput, errors.New("No packets received")
 }
 
@@ -215,7 +215,7 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(args ...string) (string, error) {
+func mockFatalHostPinger(timeout float64, args ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 

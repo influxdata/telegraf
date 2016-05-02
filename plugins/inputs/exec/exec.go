@@ -6,10 +6,12 @@ import (
 	"os/exec"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/gonuts/go-shellquote"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -18,6 +20,9 @@ import (
 const sampleConfig = `
   ## Commands array
   commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+
+  ## Timeout for each command to complete.
+  timeout = "5s"
 
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
@@ -32,6 +37,7 @@ const sampleConfig = `
 type Exec struct {
 	Commands []string
 	Command  string
+	Timeout  internal.Duration
 
 	parser parsers.Parser
 
@@ -43,7 +49,8 @@ type Exec struct {
 
 func NewExec() *Exec {
 	return &Exec{
-		runner: CommandRunner{},
+		runner:  CommandRunner{},
+		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
 }
 
@@ -73,7 +80,11 @@ func AddNagiosState(exitCode error, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (c CommandRunner) Run(e *Exec, command string, acc telegraf.Accumulator) ([]byte, error) {
+func (c CommandRunner) Run(
+	e *Exec,
+	command string,
+	acc telegraf.Accumulator,
+) ([]byte, error) {
 	split_cmd, err := shellquote.Split(command)
 	if err != nil || len(split_cmd) == 0 {
 		return nil, fmt.Errorf("exec: unable to parse command, %s", err)
@@ -84,7 +95,7 @@ func (c CommandRunner) Run(e *Exec, command string, acc telegraf.Accumulator) ([
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
-	if err := cmd.Run(); err != nil {
+	if err := internal.RunTimeout(cmd, e.Timeout.Duration); err != nil {
 		switch e.parser.(type) {
 		case *nagios.NagiosParser:
 			AddNagiosState(err, acc)

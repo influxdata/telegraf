@@ -26,27 +26,29 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"192.168.1.1"}
 
-	mConfig := &internal_models.InputConfig{
-		Name: "memcached",
-		Filter: internal_models.Filter{
-			NameDrop:  []string{"metricname2"},
-			NamePass:  []string{"metricname1"},
-			FieldDrop: []string{"other", "stuff"},
-			FieldPass: []string{"some", "strings"},
-			TagDrop: []internal_models.TagFilter{
-				internal_models.TagFilter{
-					Name:   "badtag",
-					Filter: []string{"othertag"},
-				},
+	filter := internal_models.Filter{
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
+		TagDrop: []internal_models.TagFilter{
+			internal_models.TagFilter{
+				Name:   "badtag",
+				Filter: []string{"othertag"},
 			},
-			TagPass: []internal_models.TagFilter{
-				internal_models.TagFilter{
-					Name:   "goodtag",
-					Filter: []string{"mytag"},
-				},
-			},
-			IsActive: true,
 		},
+		TagPass: []internal_models.TagFilter{
+			internal_models.TagFilter{
+				Name:   "goodtag",
+				Filter: []string{"mytag"},
+			},
+		},
+		IsActive: true,
+	}
+	assert.NoError(t, filter.CompileFilter())
+	mConfig := &internal_models.InputConfig{
+		Name:     "memcached",
+		Filter:   filter,
 		Interval: 10 * time.Second,
 	}
 	mConfig.Tags = make(map[string]string)
@@ -64,27 +66,29 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	mConfig := &internal_models.InputConfig{
-		Name: "memcached",
-		Filter: internal_models.Filter{
-			NameDrop:  []string{"metricname2"},
-			NamePass:  []string{"metricname1"},
-			FieldDrop: []string{"other", "stuff"},
-			FieldPass: []string{"some", "strings"},
-			TagDrop: []internal_models.TagFilter{
-				internal_models.TagFilter{
-					Name:   "badtag",
-					Filter: []string{"othertag"},
-				},
+	filter := internal_models.Filter{
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
+		TagDrop: []internal_models.TagFilter{
+			internal_models.TagFilter{
+				Name:   "badtag",
+				Filter: []string{"othertag"},
 			},
-			TagPass: []internal_models.TagFilter{
-				internal_models.TagFilter{
-					Name:   "goodtag",
-					Filter: []string{"mytag"},
-				},
-			},
-			IsActive: true,
 		},
+		TagPass: []internal_models.TagFilter{
+			internal_models.TagFilter{
+				Name:   "goodtag",
+				Filter: []string{"mytag"},
+			},
+		},
+		IsActive: true,
+	}
+	assert.NoError(t, filter.CompileFilter())
+	mConfig := &internal_models.InputConfig{
+		Name:     "memcached",
+		Filter:   filter,
 		Interval: 5 * time.Second,
 	}
 	mConfig.Tags = make(map[string]string)
@@ -109,27 +113,29 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	mConfig := &internal_models.InputConfig{
-		Name: "memcached",
-		Filter: internal_models.Filter{
-			NameDrop:  []string{"metricname2"},
-			NamePass:  []string{"metricname1"},
-			FieldDrop: []string{"other", "stuff"},
-			FieldPass: []string{"some", "strings"},
-			TagDrop: []internal_models.TagFilter{
-				internal_models.TagFilter{
-					Name:   "badtag",
-					Filter: []string{"othertag"},
-				},
+	filter := internal_models.Filter{
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
+		TagDrop: []internal_models.TagFilter{
+			internal_models.TagFilter{
+				Name:   "badtag",
+				Filter: []string{"othertag"},
 			},
-			TagPass: []internal_models.TagFilter{
-				internal_models.TagFilter{
-					Name:   "goodtag",
-					Filter: []string{"mytag"},
-				},
-			},
-			IsActive: true,
 		},
+		TagPass: []internal_models.TagFilter{
+			internal_models.TagFilter{
+				Name:   "goodtag",
+				Filter: []string{"mytag"},
+			},
+		},
+		IsActive: true,
+	}
+	assert.NoError(t, filter.CompileFilter())
+	mConfig := &internal_models.InputConfig{
+		Name:     "memcached",
+		Filter:   filter,
 		Interval: 5 * time.Second,
 	}
 	mConfig.Tags = make(map[string]string)

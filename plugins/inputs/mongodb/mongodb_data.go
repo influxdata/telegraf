@@ -26,22 +26,24 @@ func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
 }
 
 var DefaultStats = map[string]string{
-	"inserts_per_sec":    "Insert",
-	"queries_per_sec":    "Query",
-	"updates_per_sec":    "Update",
-	"deletes_per_sec":    "Delete",
-	"getmores_per_sec":   "GetMore",
-	"commands_per_sec":   "Command",
-	"flushes_per_sec":    "Flushes",
-	"vsize_megabytes":    "Virtual",
-	"resident_megabytes": "Resident",
-	"queued_reads":       "QueuedReaders",
-	"queued_writes":      "QueuedWriters",
-	"active_reads":       "ActiveReaders",
-	"active_writes":      "ActiveWriters",
-	"net_in_bytes":       "NetIn",
-	"net_out_bytes":      "NetOut",
-	"open_connections":   "NumConnections",
+	"inserts_per_sec":     "Insert",
+	"queries_per_sec":     "Query",
+	"updates_per_sec":     "Update",
+	"deletes_per_sec":     "Delete",
+	"getmores_per_sec":    "GetMore",
+	"commands_per_sec":    "Command",
+	"flushes_per_sec":     "Flushes",
+	"vsize_megabytes":     "Virtual",
+	"resident_megabytes":  "Resident",
+	"queued_reads":        "QueuedReaders",
+	"queued_writes":       "QueuedWriters",
+	"active_reads":        "ActiveReaders",
+	"active_writes":       "ActiveWriters",
+	"net_in_bytes":        "NetIn",
+	"net_out_bytes":       "NetOut",
+	"open_connections":    "NumConnections",
+	"ttl_deletes_per_sec": "DeletedDocuments",
+	"ttl_passes_per_sec":  "Passes",
 }
 
 var DefaultReplStats = map[string]string{
@@ -52,6 +54,11 @@ var DefaultReplStats = map[string]string{
 	"repl_getmores_per_sec": "GetMoreR",
 	"repl_commands_per_sec": "CommandR",
 	"member_status":         "NodeType",
+	"repl_lag":              "ReplLag",
+}
+
+var DefaultClusterStats = map[string]string{
+	"jumbo_chunks": "JumboChunksCount",
 }
 
 var MmapStats = map[string]string{
@@ -71,6 +78,7 @@ func (d *MongodbData) AddDefaultStats() {
 	if d.StatLine.NodeType != "" {
 		d.addStat(statLine, DefaultReplStats)
 	}
+	d.addStat(statLine, DefaultClusterStats)
 	if d.StatLine.StorageEngine == "mmapv1" {
 		d.addStat(statLine, MmapStats)
 	} else if d.StatLine.StorageEngine == "wiredTiger" {

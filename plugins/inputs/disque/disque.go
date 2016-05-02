@@ -162,7 +162,7 @@ func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 	var read int
 
 	fields := make(map[string]interface{})
-	tags := map[string]string{"host": addr.String()}
+	tags := map[string]string{"disque_host": addr.String()}
 	for read < sz {
 		line, err := r.ReadString('\n')
 		if err != nil {

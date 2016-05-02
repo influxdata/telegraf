@@ -97,8 +97,8 @@ func (s *Server) getServerStatus() error {
 
 func (s *Server) getDefaultTags() map[string]string {
 	tags := make(map[string]string)
-	tags["host"] = s.Url.Host
-	tags["hostname"] = s.serverStatus.Network.Hostname
+	tags["rethinkdb_host"] = s.Url.Host
+	tags["rethinkdb_hostname"] = s.serverStatus.Network.Hostname
 	return tags
 }
 

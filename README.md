@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.12.0-1_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.12.0-1.x86_64.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.12.1-1_amd64.deb
+* http://get.influxdb.org/telegraf/telegraf-0.12.1-1.x86_64.rpm
 
 Latest (arm):
-* http://get.influxdb.org/telegraf/telegraf_0.12.0-1_armhf.deb
-* http://get.influxdb.org/telegraf/telegraf-0.12.0-1.armhf.rpm
+* http://get.influxdb.org/telegraf/telegraf_0.12.1-1_armhf.deb
+* http://get.influxdb.org/telegraf/telegraf-0.12.1-1.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,28 +46,28 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_linux_amd64.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_linux_i386.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_linux_armhf.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_linux_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_linux_i386.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_linux_armhf.tar.gz
 
 ##### tarball Instructions:
 
 To install the full directory structure with config file, run:
 
 ```
-sudo tar -C / -zxvf ./telegraf-0.12.0-1_linux_amd64.tar.gz
+sudo tar -C / -zxvf ./telegraf-0.12.1-1_linux_amd64.tar.gz
 ```
 
 To extract only the binary, run:
 
 ```
-tar -zxvf telegraf-0.12.0-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
+tar -zxvf telegraf-0.12.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
 ```
 
 ### FreeBSD tarball:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_freebsd_amd64.tar.gz
+* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_freebsd_amd64.tar.gz
 
 ##### tarball Instructions:
 
@@ -87,8 +87,8 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_windows_amd64.zip
-* http://get.influxdb.org/telegraf/telegraf-0.12.0-1_windows_i386.zip
+* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_windows_amd64.zip
+* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_windows_i386.zip
 
 ### From Source:
 
@@ -168,7 +168,8 @@ Currently implemented sources:
 * [docker](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/docker)
 * [dovecot](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/dovecot)
 * [elasticsearch](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/elasticsearch)
-* [exec](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec ) (generic executable plugin, support JSON, influx, graphite and nagios)
+* [exec](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
+* [filestat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/filestat)
 * [haproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/haproxy)
 * [http_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_response)
 * [httpjson](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/httpjson) (generic JSON-emitting http service plugin)

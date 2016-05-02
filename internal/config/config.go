@@ -93,9 +93,15 @@ type AgentConfig struct {
 	// ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
 	FlushJitter internal.Duration
 
+	// MetricBatchSize is the maximum number of metrics that is wrote to an
+	// output plugin in one call.
+	MetricBatchSize int
+
 	// MetricBufferLimit is the max number of metrics that each output plugin
 	// will cache. The buffer is cleared when a successful write occurs. When
-	// full, the oldest metrics will be overwritten.
+	// full, the oldest metrics will be overwritten. This number should be a
+	// multiple of MetricBatchSize. Due to current implementation, this could
+	// not be less than 2 times MetricBatchSize.
 	MetricBufferLimit int
 
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
@@ -182,11 +188,13 @@ var header = `# Telegraf Configuration
   ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  ## Telegraf will cache metric_buffer_limit metrics for each output, and will
-  ## flush this buffer on a successful write.
-  metric_buffer_limit = 1000
-  ## Flush the buffer whenever full, regardless of flush_interval.
-  flush_buffer_when_full = true
+  ## Telegraf will send metrics to outputs in batches of at
+  ## most metric_batch_size metrics.
+  metric_batch_size = 1000
+  ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
+  ## output, and will flush this buffer on a successful write. Oldest metrics
+  ## are dropped first when this buffer fills.
+  metric_buffer_limit = 10000
 
   ## Collection jitter is used to jitter the collection by a random amount.
   ## Each plugin will sleep for a random time within jitter before collecting.
@@ -404,13 +412,67 @@ func (c *Config) LoadDirectory(path string) error {
 	return nil
 }
 
+// Try to find a default config file at these locations (in order):
+//   1. $TELEGRAF_CONFIG_PATH
+//   2. $HOME/.telegraf/telegraf.conf
+//   3. /etc/telegraf/telegraf.conf
+//
+func getDefaultConfigPath() (string, error) {
+	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
+	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
+	etcfile := "/etc/telegraf/telegraf.conf"
+	for _, path := range []string{envfile, homefile, etcfile} {
+		if _, err := os.Stat(path); err == nil {
+			log.Printf("Using config file: %s", path)
+			return path, nil
+		}
+	}
+
+	// if we got here, we didn't find a file in a default location
+	return "", fmt.Errorf("No config file specified, and could not find one"+
+		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
+}
+
 // LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
+	var err error
+	if path == "" {
+		if path, err = getDefaultConfigPath(); err != nil {
+			return err
+		}
+	}
 	tbl, err := parseFile(path)
 	if err != nil {
 		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
 
+	// Parse tags tables first:
+	for _, tableName := range []string{"tags", "global_tags"} {
+		if val, ok := tbl.Fields[tableName]; ok {
+			subTable, ok := val.(*ast.Table)
+			if !ok {
+				return fmt.Errorf("%s: invalid configuration", path)
+			}
+			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
+				log.Printf("Could not parse [global_tags] config\n")
+				return fmt.Errorf("Error parsing %s, %s", path, err)
+			}
+		}
+	}
+
+	// Parse agent table:
+	if val, ok := tbl.Fields["agent"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("%s: invalid configuration", path)
+		}
+		if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
+			log.Printf("Could not parse [agent] config\n")
+			return fmt.Errorf("Error parsing %s, %s", path, err)
+		}
+	}
+
+	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
@@ -418,16 +480,7 @@ func (c *Config) LoadConfig(path string) error {
 		}
 
 		switch name {
-		case "agent":
-			if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
-				log.Printf("Could not parse [agent] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
-			}
-		case "global_tags", "tags":
-			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
-				log.Printf("Could not parse [global_tags] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
-			}
+		case "agent", "global_tags", "tags":
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
@@ -525,11 +578,8 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := internal_models.NewRunningOutput(name, output, outputConfig)
-	if c.Agent.MetricBufferLimit > 0 {
-		ro.MetricBufferLimit = c.Agent.MetricBufferLimit
-	}
-	ro.FlushBufferWhenFull = c.Agent.FlushBufferWhenFull
+	ro := internal_models.NewRunningOutput(name, output, outputConfig,
+		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }
@@ -580,9 +630,9 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 // buildFilter builds a Filter
 // (tagpass/tagdrop/namepass/namedrop/fieldpass/fielddrop) to
-// be inserted into the internal_models.OutputConfig/internal_models.InputConfig to be used for prefix
-// filtering on tags and measurements
-func buildFilter(tbl *ast.Table) internal_models.Filter {
+// be inserted into the internal_models.OutputConfig/internal_models.InputConfig
+// to be used for glob filtering on tags and measurements
+func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 	f := internal_models.Filter{}
 
 	if node, ok := tbl.Fields["namepass"]; ok {
@@ -681,6 +731,33 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 		}
 	}
 
+	if node, ok := tbl.Fields["tagexclude"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						f.TagExclude = append(f.TagExclude, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["taginclude"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						f.TagInclude = append(f.TagInclude, str.Value)
+					}
+				}
+			}
+		}
+	}
+	if err := f.CompileFilter(); err != nil {
+		return f, err
+	}
+
 	delete(tbl.Fields, "namedrop")
 	delete(tbl.Fields, "namepass")
 	delete(tbl.Fields, "fielddrop")
@@ -689,7 +766,9 @@ func buildFilter(tbl *ast.Table) internal_models.Filter {
 	delete(tbl.Fields, "pass")
 	delete(tbl.Fields, "tagdrop")
 	delete(tbl.Fields, "tagpass")
-	return f
+	delete(tbl.Fields, "tagexclude")
+	delete(tbl.Fields, "taginclude")
+	return f, nil
 }
 
 // buildInput parses input specific items from the ast.Table,
@@ -748,7 +827,11 @@ func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, erro
 	delete(tbl.Fields, "name_override")
 	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
-	cp.Filter = buildFilter(tbl)
+	var err error
+	cp.Filter, err = buildFilter(tbl)
+	if err != nil {
+		return cp, err
+	}
 	return cp, nil
 }
 
@@ -864,13 +947,18 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	return serializers.NewSerializer(c)
 }
 
-// buildOutput parses output specific items from the ast.Table, builds the filter and returns an
+// buildOutput parses output specific items from the ast.Table,
+// builds the filter and returns an
 // internal_models.OutputConfig to be inserted into internal_models.RunningInput
 // Note: error exists in the return for future calls that might require error
 func buildOutput(name string, tbl *ast.Table) (*internal_models.OutputConfig, error) {
+	filter, err := buildFilter(tbl)
+	if err != nil {
+		return nil, err
+	}
 	oc := &internal_models.OutputConfig{
 		Name:   name,
-		Filter: buildFilter(tbl),
+		Filter: filter,
 	}
 	// Outputs don't support FieldDrop/FieldPass, so set to NameDrop/NamePass
 	if len(oc.Filter.FieldDrop) > 0 {

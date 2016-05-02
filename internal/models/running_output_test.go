@@ -2,7 +2,6 @@ package internal_models
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 	"testing"
 
@@ -29,16 +28,100 @@ var next5 = []telegraf.Metric{
 	testutil.TestMetric(101, "metric10"),
 }
 
-// Test that we can write metrics with simple default setup.
-func TestRunningOutputDefault(t *testing.T) {
+// Benchmark adding metrics.
+func BenchmarkRunningOutputAddWrite(b *testing.B) {
 	conf := &OutputConfig{
 		Filter: Filter{
 			IsActive: false,
 		},
 	}
 
+	m := &perfOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro.Quiet = true
+
+	for n := 0; n < b.N; n++ {
+		ro.AddMetric(first5[0])
+		ro.Write()
+	}
+}
+
+// Benchmark adding metrics.
+func BenchmarkRunningOutputAddWriteEvery100(b *testing.B) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: false,
+		},
+	}
+
+	m := &perfOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro.Quiet = true
+
+	for n := 0; n < b.N; n++ {
+		ro.AddMetric(first5[0])
+		if n%100 == 0 {
+			ro.Write()
+		}
+	}
+}
+
+// Benchmark adding metrics.
+func BenchmarkRunningOutputAddFailWrites(b *testing.B) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: false,
+		},
+	}
+
+	m := &perfOutput{}
+	m.failWrite = true
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+	ro.Quiet = true
+
+	for n := 0; n < b.N; n++ {
+		ro.AddMetric(first5[0])
+	}
+}
+
+// Test that NameDrop filters ger properly applied.
+func TestRunningOutput_DropFilter(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: true,
+			NameDrop: []string{"metric1", "metric2"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf)
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	for _, metric := range first5 {
+		ro.AddMetric(metric)
+	}
+	for _, metric := range next5 {
+		ro.AddMetric(metric)
+	}
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 8)
+}
+
+// Test that NameDrop filters without a match do nothing.
+func TestRunningOutput_PassFilter(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: true,
+			NameDrop: []string{"metric1000", "foo*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
 
 	for _, metric := range first5 {
 		ro.AddMetric(metric)
@@ -53,41 +136,96 @@ func TestRunningOutputDefault(t *testing.T) {
 	assert.Len(t, m.Metrics(), 10)
 }
 
-// Test that the first metric gets overwritten if there is a buffer overflow.
-func TestRunningOutputOverwrite(t *testing.T) {
+// Test that tags are properly included
+func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-			IsActive: false,
+			IsActive:   true,
+			TagInclude: []string{"nothing*"},
 		},
 	}
+	assert.NoError(t, conf.Filter.CompileFilter())
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf)
-	ro.MetricBufferLimit = 4
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
 
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
-	}
-	require.Len(t, m.Metrics(), 0)
+	ro.AddMetric(first5[0])
+	assert.Len(t, m.Metrics(), 0)
 
 	err := ro.Write()
-	require.NoError(t, err)
-	require.Len(t, m.Metrics(), 4)
-
-	var expected, actual []string
-	for i, exp := range first5[1:] {
-		expected = append(expected, exp.String())
-		actual = append(actual, m.Metrics()[i].String())
-	}
-
-	sort.Strings(expected)
-	sort.Strings(actual)
-
-	assert.Equal(t, expected, actual)
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Empty(t, m.Metrics()[0].Tags())
 }
 
-// Test that multiple buffer overflows are handled properly.
-func TestRunningOutputMultiOverwrite(t *testing.T) {
+// Test that tags are properly excluded
+func TestRunningOutput_TagExcludeMatch(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive:   true,
+			TagExclude: []string{"tag*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(first5[0])
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Len(t, m.Metrics()[0].Tags(), 0)
+}
+
+// Test that tags are properly Excluded
+func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive:   true,
+			TagExclude: []string{"nothing*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(first5[0])
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Len(t, m.Metrics()[0].Tags(), 1)
+}
+
+// Test that tags are properly included
+func TestRunningOutput_TagIncludeMatch(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive:   true,
+			TagInclude: []string{"tag*"},
+		},
+	}
+	assert.NoError(t, conf.Filter.CompileFilter())
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(first5[0])
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Len(t, m.Metrics()[0].Tags(), 1)
+}
+
+// Test that we can write metrics with simple default setup.
+func TestRunningOutputDefault(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
 			IsActive: false,
@@ -95,8 +233,7 @@ func TestRunningOutputMultiOverwrite(t *testing.T) {
 	}
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf)
-	ro.MetricBufferLimit = 3
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
 
 	for _, metric := range first5 {
 		ro.AddMetric(metric)
@@ -104,22 +241,11 @@ func TestRunningOutputMultiOverwrite(t *testing.T) {
 	for _, metric := range next5 {
 		ro.AddMetric(metric)
 	}
-	require.Len(t, m.Metrics(), 0)
+	assert.Len(t, m.Metrics(), 0)
 
 	err := ro.Write()
-	require.NoError(t, err)
-	require.Len(t, m.Metrics(), 3)
-
-	var expected, actual []string
-	for i, exp := range next5[2:] {
-		expected = append(expected, exp.String())
-		actual = append(actual, m.Metrics()[i].String())
-	}
-
-	sort.Strings(expected)
-	sort.Strings(actual)
-
-	assert.Equal(t, expected, actual)
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 10)
 }
 
 // Test that running output doesn't flush until it's full when
@@ -132,11 +258,9 @@ func TestRunningOutputFlushWhenFull(t *testing.T) {
 	}
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf)
-	ro.FlushBufferWhenFull = true
-	ro.MetricBufferLimit = 5
+	ro := NewRunningOutput("test", m, conf, 6, 10)
 
-	// Fill buffer to limit
+	// Fill buffer to 1 under limit
 	for _, metric := range first5 {
 		ro.AddMetric(metric)
 	}
@@ -165,9 +289,7 @@ func TestRunningOutputMultiFlushWhenFull(t *testing.T) {
 	}
 
 	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf)
-	ro.FlushBufferWhenFull = true
-	ro.MetricBufferLimit = 4
+	ro := NewRunningOutput("test", m, conf, 4, 12)
 
 	// Fill buffer past limit twive
 	for _, metric := range first5 {
@@ -177,7 +299,7 @@ func TestRunningOutputMultiFlushWhenFull(t *testing.T) {
 		ro.AddMetric(metric)
 	}
 	// flushed twice
-	assert.Len(t, m.Metrics(), 10)
+	assert.Len(t, m.Metrics(), 8)
 }
 
 func TestRunningOutputWriteFail(t *testing.T) {
@@ -189,11 +311,9 @@ func TestRunningOutputWriteFail(t *testing.T) {
 
 	m := &mockOutput{}
 	m.failWrite = true
-	ro := NewRunningOutput("test", m, conf)
-	ro.FlushBufferWhenFull = true
-	ro.MetricBufferLimit = 4
+	ro := NewRunningOutput("test", m, conf, 4, 12)
 
-	// Fill buffer past limit twice
+	// Fill buffer to limit twice
 	for _, metric := range first5 {
 		ro.AddMetric(metric)
 	}
@@ -214,6 +334,161 @@ func TestRunningOutputWriteFail(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, m.Metrics(), 10)
+}
+
+// Verify that the order of points is preserved during a write failure.
+func TestRunningOutputWriteFailOrder(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: false,
+		},
+	}
+
+	m := &mockOutput{}
+	m.failWrite = true
+	ro := NewRunningOutput("test", m, conf, 100, 1000)
+
+	// add 5 metrics
+	for _, metric := range first5 {
+		ro.AddMetric(metric)
+	}
+	// no successful flush yet
+	assert.Len(t, m.Metrics(), 0)
+
+	// Write fails
+	err := ro.Write()
+	require.Error(t, err)
+	// no successful flush yet
+	assert.Len(t, m.Metrics(), 0)
+
+	m.failWrite = false
+	// add 5 more metrics
+	for _, metric := range next5 {
+		ro.AddMetric(metric)
+	}
+	err = ro.Write()
+	require.NoError(t, err)
+
+	// Verify that 10 metrics were written
+	assert.Len(t, m.Metrics(), 10)
+	// Verify that they are in order
+	expected := append(first5, next5...)
+	assert.Equal(t, expected, m.Metrics())
+}
+
+// Verify that the order of points is preserved during many write failures.
+func TestRunningOutputWriteFailOrder2(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: false,
+		},
+	}
+
+	m := &mockOutput{}
+	m.failWrite = true
+	ro := NewRunningOutput("test", m, conf, 5, 100)
+
+	// add 5 metrics
+	for _, metric := range first5 {
+		ro.AddMetric(metric)
+	}
+	// Write fails
+	err := ro.Write()
+	require.Error(t, err)
+	// no successful flush yet
+	assert.Len(t, m.Metrics(), 0)
+
+	// add 5 metrics
+	for _, metric := range next5 {
+		ro.AddMetric(metric)
+	}
+	// Write fails
+	err = ro.Write()
+	require.Error(t, err)
+	// no successful flush yet
+	assert.Len(t, m.Metrics(), 0)
+
+	// add 5 metrics
+	for _, metric := range first5 {
+		ro.AddMetric(metric)
+	}
+	// Write fails
+	err = ro.Write()
+	require.Error(t, err)
+	// no successful flush yet
+	assert.Len(t, m.Metrics(), 0)
+
+	// add 5 metrics
+	for _, metric := range next5 {
+		ro.AddMetric(metric)
+	}
+	// Write fails
+	err = ro.Write()
+	require.Error(t, err)
+	// no successful flush yet
+	assert.Len(t, m.Metrics(), 0)
+
+	m.failWrite = false
+	err = ro.Write()
+	require.NoError(t, err)
+
+	// Verify that 10 metrics were written
+	assert.Len(t, m.Metrics(), 20)
+	// Verify that they are in order
+	expected := append(first5, next5...)
+	expected = append(expected, first5...)
+	expected = append(expected, next5...)
+	assert.Equal(t, expected, m.Metrics())
+}
+
+// Verify that the order of points is preserved when there is a remainder
+// of points for the batch.
+//
+// ie, with a batch size of 5:
+//
+//     1 2 3 4 5 6 <-- order, failed points
+//     6 1 2 3 4 5 <-- order, after 1st write failure (1 2 3 4 5 was batch)
+//     1 2 3 4 5 6 <-- order, after 2nd write failure, (6 was batch)
+//
+func TestRunningOutputWriteFailOrder3(t *testing.T) {
+	conf := &OutputConfig{
+		Filter: Filter{
+			IsActive: false,
+		},
+	}
+
+	m := &mockOutput{}
+	m.failWrite = true
+	ro := NewRunningOutput("test", m, conf, 5, 1000)
+
+	// add 5 metrics
+	for _, metric := range first5 {
+		ro.AddMetric(metric)
+	}
+	// no successful flush yet
+	assert.Len(t, m.Metrics(), 0)
+
+	// Write fails
+	err := ro.Write()
+	require.Error(t, err)
+	// no successful flush yet
+	assert.Len(t, m.Metrics(), 0)
+
+	// add and attempt to write a single metric:
+	ro.AddMetric(next5[0])
+	err = ro.Write()
+	require.Error(t, err)
+
+	// unset fail and write metrics
+	m.failWrite = false
+	err = ro.Write()
+	require.NoError(t, err)
+
+	// Verify that 6 metrics were written
+	assert.Len(t, m.Metrics(), 6)
+	// Verify that they are in order
+	expected := append(first5, next5[0])
+	assert.Equal(t, expected, m.Metrics())
 }
 
 type mockOutput struct {
@@ -262,4 +537,32 @@ func (m *mockOutput) Metrics() []telegraf.Metric {
 	m.Lock()
 	defer m.Unlock()
 	return m.metrics
+}
+
+type perfOutput struct {
+	// if true, mock a write failure
+	failWrite bool
+}
+
+func (m *perfOutput) Connect() error {
+	return nil
+}
+
+func (m *perfOutput) Close() error {
+	return nil
+}
+
+func (m *perfOutput) Description() string {
+	return ""
+}
+
+func (m *perfOutput) SampleConfig() string {
+	return ""
+}
+
+func (m *perfOutput) Write(metrics []telegraf.Metric) error {
+	if m.failWrite {
+		return fmt.Errorf("Failed Write!")
+	}
+	return nil
 }

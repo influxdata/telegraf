@@ -18,13 +18,7 @@ This is a sample configuration for the plugin.
   ## UDP listener will start dropping packets.
   allowed_pending_messages = 10000
 
-  ## UDP packet size for the server to listen for. This will depend
-  ## on the size of the packets that the client is sending, which is
-  ## usually 1500 bytes.
-  udp_packet_size = 1500
-
-  ## Data format to consume. 
-
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md

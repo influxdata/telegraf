@@ -1,47 +1,12 @@
 package internal
 
-import "testing"
+import (
+	"os/exec"
+	"testing"
+	"time"
 
-func testGlobMatch(t *testing.T, pattern, subj string) {
-	if !Glob(pattern, subj) {
-		t.Errorf("%s should match %s", pattern, subj)
-	}
-}
-
-func testGlobNoMatch(t *testing.T, pattern, subj string) {
-	if Glob(pattern, subj) {
-		t.Errorf("%s should not match %s", pattern, subj)
-	}
-}
-
-func TestEmptyPattern(t *testing.T) {
-	testGlobMatch(t, "", "")
-	testGlobNoMatch(t, "", "test")
-}
-
-func TestPatternWithoutGlobs(t *testing.T) {
-	testGlobMatch(t, "test", "test")
-}
-
-func TestGlob(t *testing.T) {
-	for _, pattern := range []string{
-		"*test",           // Leading glob
-		"this*",           // Trailing glob
-		"*is*a*",          // Lots of globs
-		"**test**",        // Double glob characters
-		"**is**a***test*", // Varying number of globs
-	} {
-		testGlobMatch(t, pattern, "this_is_a_test")
-	}
-
-	for _, pattern := range []string{
-		"test*", // Implicit substring match should fail
-		"*is",   // Partial match should fail
-		"*no*",  // Globs without a match between them should fail
-	} {
-		testGlobNoMatch(t, pattern, "this_is_a_test")
-	}
-}
+	"github.com/stretchr/testify/assert"
+)
 
 type SnakeTest struct {
 	input  string
@@ -70,4 +35,74 @@ func TestSnakeCase(t *testing.T) {
 			t.Errorf(`SnakeCase("%s"), wanted "%s", got \%s"`, test.input, test.output, SnakeCase(test.input))
 		}
 	}
+}
+
+var (
+	sleepbin, _ = exec.LookPath("sleep")
+	echobin, _  = exec.LookPath("echo")
+)
+
+func TestRunTimeout(t *testing.T) {
+	if sleepbin == "" {
+		t.Skip("'sleep' binary not available on OS, skipping.")
+	}
+	cmd := exec.Command(sleepbin, "10")
+	start := time.Now()
+	err := RunTimeout(cmd, time.Millisecond*20)
+	elapsed := time.Since(start)
+
+	assert.Equal(t, TimeoutErr, err)
+	// Verify that command gets killed in 20ms, with some breathing room
+	assert.True(t, elapsed < time.Millisecond*75)
+}
+
+func TestCombinedOutputTimeout(t *testing.T) {
+	if sleepbin == "" {
+		t.Skip("'sleep' binary not available on OS, skipping.")
+	}
+	cmd := exec.Command(sleepbin, "10")
+	start := time.Now()
+	_, err := CombinedOutputTimeout(cmd, time.Millisecond*20)
+	elapsed := time.Since(start)
+
+	assert.Equal(t, TimeoutErr, err)
+	// Verify that command gets killed in 20ms, with some breathing room
+	assert.True(t, elapsed < time.Millisecond*75)
+}
+
+func TestCombinedOutput(t *testing.T) {
+	if echobin == "" {
+		t.Skip("'echo' binary not available on OS, skipping.")
+	}
+	cmd := exec.Command(echobin, "foo")
+	out, err := CombinedOutputTimeout(cmd, time.Second)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "foo\n", string(out))
+}
+
+// test that CombinedOutputTimeout and exec.Cmd.CombinedOutput return
+// the same output from a failed command.
+func TestCombinedOutputError(t *testing.T) {
+	if sleepbin == "" {
+		t.Skip("'sleep' binary not available on OS, skipping.")
+	}
+	cmd := exec.Command(sleepbin, "foo")
+	expected, err := cmd.CombinedOutput()
+
+	cmd2 := exec.Command(sleepbin, "foo")
+	actual, err := CombinedOutputTimeout(cmd2, time.Second)
+
+	assert.Error(t, err)
+	assert.Equal(t, expected, actual)
+}
+
+func TestRunError(t *testing.T) {
+	if sleepbin == "" {
+		t.Skip("'sleep' binary not available on OS, skipping.")
+	}
+	cmd := exec.Command(sleepbin, "foo")
+	err := RunTimeout(cmd, time.Second)
+
+	assert.Error(t, err)
 }

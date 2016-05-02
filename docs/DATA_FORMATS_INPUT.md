@@ -75,14 +75,19 @@ metrics are parsed directly into Telegraf metrics.
 
 # JSON:
 
-The JSON data format flattens JSON into metric _fields_. For example, this JSON:
+The JSON data format flattens JSON into metric _fields_.
+NOTE: Only numerical values are converted to fields, and they are converted
+into a float. strings are ignored unless specified as a tag_key (see below).
+
+So for example, this JSON:
 
 ```json
 {
     "a": 5,
     "b": {
         "c": 6
-    }
+    },
+    "ignored": "I'm a string"
 }
 ```
 

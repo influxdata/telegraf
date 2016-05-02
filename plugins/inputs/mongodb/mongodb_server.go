@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"log"
 	"net/url"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 type Server struct {
 	Url        *url.URL
 	Session    *mgo.Session
-	lastResult *ServerStatus
+	lastResult *MongoStatus
 }
 
 func (s *Server) getDefaultTags() map[string]string {
@@ -24,11 +25,29 @@ func (s *Server) getDefaultTags() map[string]string {
 func (s *Server) gatherData(acc telegraf.Accumulator) error {
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
-	result := &ServerStatus{}
-	err := s.Session.DB("admin").Run(bson.D{{"serverStatus", 1}, {"recordStats", 0}}, result)
+	result_server := &ServerStatus{}
+	err := s.Session.DB("admin").Run(bson.D{{"serverStatus", 1}, {"recordStats", 0}}, result_server)
 	if err != nil {
 		return err
 	}
+	result_repl := &ReplSetStatus{}
+	err = s.Session.DB("admin").Run(bson.D{{"replSetGetStatus", 1}}, result_repl)
+	if err != nil {
+		log.Println("Not gathering replica set status, member not in replica set")
+	}
+
+	jumbo_chunks, _ := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
+
+	result_cluster := &ClusterStatus{
+		JumboChunksCount: int64(jumbo_chunks),
+	}
+
+	result := &MongoStatus{
+		ServerStatus:  result_server,
+		ReplSetStatus: result_repl,
+		ClusterStatus: result_cluster,
+	}
+
 	defer func() {
 		s.lastResult = result
 	}()
