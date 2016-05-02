@@ -156,7 +156,12 @@ as the parsed metric.
 #### Value Configuration:
 
 You **must** tell Telegraf what type of metric to collect by using the
-`data_type` configuration option.
+`data_type` configuration option. Available options are:
+
+1. integer
+2. float or long
+3. string
+4. boolean
 
 **Note:** It is also recommended that you set `name_override` to a measurement
 name that makes sense for your metric, otherwise it will just be set to the
