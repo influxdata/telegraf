@@ -6,31 +6,21 @@ Please also see: [Telegraf Input Data Formats](https://github.com/influxdata/tel
 
 #### Configuration
 
-In this example a script called ```/tmp/test.sh```, a script called ```/tmp/test2.sh```, and
-all scripts matching glob pattern ```/tmp/collect_*.sh``` are configured for ```[[inputs.exec]]```
-in JSON format. Glob patterns are matched on every run, so adding new scripts that match the pattern
-will cause them to be picked up immediately.
+In this example a script called ```/tmp/test.sh``` and a script called ```/tmp/test2.sh```
+are configured for ```[[inputs.exec]]``` in JSON format.
 
 ```
 # Read flattened metrics from one or more commands that output JSON to stdout
 [[inputs.exec]]
-  ## Full path to executable with parameters,
-  ## or a glob pattern to run all matching files.
-  ## the glob pattern will be run at every interval, so new files will
-  ## automatically be picked up.
-  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar", "/tmp/collect_*.sh"]
+  # Shell/commands array
+  commands = ["/tmp/test.sh", "/tmp/test2.sh"]
 
-  ## Timeout for each command to complete.
-  timeout = "5s"
-
-  ## measurement name suffix (for separating different commands)
-  name_suffix = "_mycollector"
-
-  ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  # Data format to consume.
+  # NOTE json only reads numerical measurements, strings and booleans are ignored.
   data_format = "json"
+
+  # measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
 
   ## Below configuration will be used for data_format = "graphite", can be ignored for other data_format
   ## If matching multiple measurement files, this string will be used to join the matched values.
@@ -190,3 +180,4 @@ sensu.metric.net.server0.eth0.rx_dropped 0 1444234982
 The templates configuration will be used to parse the graphite metrics to support influxdb/opentsdb tagging store engines.
 
 More detail information about templates, please refer to [The graphite Input](https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md)
+

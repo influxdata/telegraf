@@ -68,9 +68,6 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1107](https://github.com/influxdata/telegraf/issues/1107): Support lustre2 job stats. Thanks @hanleyja!
 - [#1122](https://github.com/influxdata/telegraf/pull/1122): Support setting config path through env variable and default paths.
 - [#1128](https://github.com/influxdata/telegraf/pull/1128): MongoDB jumbo chunks metric for MongoDB input plugin
-- [#1110](https://github.com/influxdata/telegraf/pull/1110): Sanitize * to - in graphite serializer. Thanks @goodeggs!
-- [#1118](https://github.com/influxdata/telegraf/pull/1118): Sanitize Counter names for `win_perf_counters` input.
-- [#1127](https://github.com/influxdata/telegraf/pull/1127): Support for glob patterns in exec plugin commands configuration.
 
 ### Bugfixes
 
