@@ -3,6 +3,7 @@ package nstat
 import (
 	"bytes"
 	"io/ioutil"
+	"os"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
@@ -15,6 +16,22 @@ var (
 	colonByte   = []byte(":")
 )
 
+// default file paths
+const (
+	NET_NETSTAT = "/net/netstat"
+	NET_SNMP    = "/net/snmp"
+	NET_SNMP6   = "/net/snmp6"
+	NET_PROC    = "/proc"
+)
+
+// env variable names
+const (
+	ENV_NETSTAT = "PROC_NET_NETSTAT"
+	ENV_SNMP    = "PROC_NET_SNMP"
+	ENV_SNMP6   = "PROC_NET_SNMP6"
+	ENV_ROOT    = "PROC_ROOT"
+)
+
 type Nstat struct {
 	ProcNetNetstat string `toml:"proc_net_netstat"`
 	ProcNetSNMP    string `toml:"proc_net_snmp"`
@@ -23,12 +40,13 @@ type Nstat struct {
 }
 
 var sampleConfig = `
-	# file paths
-	proc_net_netstat 	= 	"/proc/net/netstat"
-	proc_net_snmp 		= 	"/proc/net/snmp"
-	proc_net_snmp6 		= 	"/proc/net/snmp6"
-	# dump metrics with 0 values too
-	dump_zeros			= 	true
+  # file paths
+  # e.g: /proc/net/netstat, /proc/net/snmp, /proc/net/snmp6
+  proc_net_netstat 		= 	""
+  proc_net_snmp 		= 	""
+  proc_net_snmp6 		= 	""
+  # dump metrics with 0 values too
+  dump_zeros			= 	true
 `
 
 func (ns *Nstat) Description() string {
@@ -40,6 +58,9 @@ func (ns *Nstat) SampleConfig() string {
 }
 
 func (ns *Nstat) Gather(acc telegraf.Accumulator) error {
+	// load paths, get from env if config values are empty
+	ns.loadPaths()
+
 	netstat, err := ioutil.ReadFile(ns.ProcNetNetstat)
 	if err != nil {
 		return err
@@ -109,6 +130,20 @@ func (ns *Nstat) gatherSNMP6(data []byte, acc telegraf.Accumulator) error {
 	return nil
 }
 
+// loadPaths can be used to read paths firstly from config
+// if it is empty then try read from env variables
+func (ns *Nstat) loadPaths() {
+	if ns.ProcNetNetstat == "" {
+		ns.ProcNetNetstat = proc(ENV_NETSTAT, NET_NETSTAT)
+	}
+	if ns.ProcNetSNMP == "" {
+		ns.ProcNetSNMP = proc(ENV_SNMP, NET_SNMP)
+	}
+	if ns.ProcNetSNMP6 == "" {
+		ns.ProcNetSNMP = proc(ENV_SNMP6, NET_SNMP6)
+	}
+}
+
 // loadGoodTable can be used to parse string heap that
 // headers and values are arranged in right order
 func loadGoodTable(table []byte, dumpZeros bool) (map[string]interface{}, error) {
@@ -174,6 +209,20 @@ func loadUglyTable(table []byte, dumpZeros bool) (map[string]interface{}, error)
 		}
 	}
 	return entries, nil
+}
+
+// proc can be used to read file paths from env
+func proc(env, path string) string {
+	// try to read full file path
+	if p := os.Getenv(env); p != "" {
+		return p
+	}
+	// try to read root path, or use default root path
+	root := os.Getenv(ENV_ROOT)
+	if root == "" {
+		root = NET_PROC
+	}
+	return root + path
 }
 
 func init() {
