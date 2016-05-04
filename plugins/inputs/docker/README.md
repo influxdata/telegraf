@@ -98,6 +98,7 @@ based on the availability of per-cpu stats on your system.
     - io_serviced_recursive_sync
     - io_serviced_recursive_total
     - io_serviced_recursive_write
+    - container_id
 - docker_
     - n_used_file_descriptors
     - n_cpus

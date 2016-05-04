@@ -328,7 +328,7 @@ func gatherContainerStats(
 		acc.AddFields("docker_container_net", netfields, nettags, now)
 	}
 
-	gatherBlockIOMetrics(stat, acc, tags, now)
+	gatherBlockIOMetrics(stat, acc, tags, now, id)
 }
 
 func calculateMemPercent(stat *types.StatsJSON) float64 {
@@ -356,6 +356,7 @@ func gatherBlockIOMetrics(
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	now time.Time,
+	id string,
 ) {
 	blkioStats := stat.BlkioStats
 	// Make a map of devices to their block io stats
@@ -420,6 +421,7 @@ func gatherBlockIOMetrics(
 	for device, fields := range deviceStatMap {
 		iotags := copyTags(tags)
 		iotags["device"] = device
+		fields["container_id"] = id
 		acc.AddFields("docker_container_blkio", fields, iotags, now)
 	}
 }
