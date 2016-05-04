@@ -48,6 +48,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	blkiofields := map[string]interface{}{
 		"io_service_bytes_recursive_read": uint64(100),
 		"io_serviced_recursive_write":     uint64(101),
+		"container_id":                    "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
 
