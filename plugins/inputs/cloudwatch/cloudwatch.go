@@ -6,21 +6,18 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	influxaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type (
 	CloudWatch struct {
-		Region      string            `toml:"region"`
-		AccessKey   string            `toml:"access_key"`
-		SecretKey   string            `toml:"secret_key"`
+		influxaws.AwsCredentials
 		Period      internal.Duration `toml:"period"`
 		Delay       internal.Duration `toml:"delay"`
 		Namespace   string            `toml:"namespace"`
@@ -58,10 +55,12 @@ func (c *CloudWatch) SampleConfig() string {
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) explicit credentials from 'access_key' and 'secret_key'
-  ## 2) environment variables
-  ## 3) shared credentials file
-  ## 4) EC2 Instance Profile
+  ## 1) Assumed credentials via STS if role_arn is specified
+  ## 2) explicit credentials from 'access_key' and 'secret_key'
+  ## 3) shared profile from 'profile'
+  ## 4) environment variables
+  ## 5) shared credentials file
+  ## 6) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
 
@@ -161,14 +160,9 @@ func init() {
  * Initialize CloudWatch client
  */
 func (c *CloudWatch) initializeCloudWatch() error {
-	config := &aws.Config{
-		Region: aws.String(c.Region),
-	}
-	if c.AccessKey != "" || c.SecretKey != "" {
-		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, "")
-	}
+	configProvider := c.Credentials()
 
-	c.client = cloudwatch.New(session.New(config))
+	c.client = cloudwatch.New(configProvider)
 	return nil
 }
 
