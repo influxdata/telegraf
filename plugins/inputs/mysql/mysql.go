@@ -25,7 +25,9 @@ type Mysql struct {
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
+	GatherTableLockWaits                bool     `toml:"gather_table_lock_waits"`
 	GatherIndexIOWaits                  bool     `toml:"gather_index_io_waits"`
+	GatherEventWaits                    bool     `toml:"gather_event_waits"`
 	GatherTableSchema                   bool     `toml:"gather_table_schema"`
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
@@ -68,8 +70,14 @@ var sampleConfig = `
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_TABLE
   gather_table_io_waits                     = false
   #
+  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
+  gather_table_lock_waits                   = false
+  #
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_INDEX_USAGE
   gather_index_io_waits                     = false
+  #
+  ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
+  gather_event_waits                        = false
   #
   ## gather metrics from PERFORMANCE_SCHEMA.FILE_SUMMARY_BY_EVENT_NAME
   gather_file_events_stats                  = false
@@ -612,14 +620,18 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		}
 	}
 
-	err = m.gatherPerfTableLockWaits(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherTableLockWaits {
+		err = m.gatherPerfTableLockWaits(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = m.gatherPerfEventWaits(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherEventWaits {
+		err = m.gatherPerfEventWaits(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 
 	if m.GatherFileEventsStats {
