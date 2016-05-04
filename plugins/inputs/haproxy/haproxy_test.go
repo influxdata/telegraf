@@ -1,14 +1,14 @@
 package haproxy
 
 import (
-	"fmt"
-	"strings"
-	"testing"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
