@@ -21,6 +21,9 @@ type OpenTSDB struct {
 	Debug bool
 }
 
+var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
+	`%`, "-", "#", "-", "$", "-")
+
 var sampleConfig = `
   ## prefix for metrics keys
   prefix = "my.specific.prefix."
@@ -94,8 +97,8 @@ func buildTags(mTags map[string]string) []string {
 	tags := make([]string, len(mTags))
 	index := 0
 	for k, v := range mTags {
-		tags[index] = fmt.Sprintf("%s=%s", k, v)
-		index += 1
+		tags[index] = sanitizedChars.Replace(fmt.Sprintf("%s=%s", k, v))
+		index++
 	}
 	sort.Strings(tags)
 	return tags
@@ -105,7 +108,8 @@ func buildMetrics(m telegraf.Metric, now time.Time, prefix string) []*MetricLine
 	ret := []*MetricLine{}
 	for fieldName, value := range m.Fields() {
 		metric := &MetricLine{
-			Metric:    fmt.Sprintf("%s%s_%s", prefix, m.Name(), fieldName),
+			Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
+				prefix, m.Name(), fieldName)),
 			Timestamp: now.Unix(),
 		}
 

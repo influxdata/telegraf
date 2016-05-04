@@ -34,9 +34,13 @@ var sampleConfig = `
   ##
   # ost_procfiles = [
   #   "/proc/fs/lustre/obdfilter/*/stats",
-  #   "/proc/fs/lustre/osd-ldiskfs/*/stats"
+  #   "/proc/fs/lustre/osd-ldiskfs/*/stats",
+  #   "/proc/fs/lustre/obdfilter/*/job_stats",
   # ]
-  # mds_procfiles = ["/proc/fs/lustre/mdt/*/md_stats"]
+  # mds_procfiles = [
+  #   "/proc/fs/lustre/mdt/*/md_stats",
+  #   "/proc/fs/lustre/mdt/*/job_stats",
+  # ]
 `
 
 /* The wanted fields would be a []string if not for the
@@ -79,6 +83,139 @@ var wanted_ost_fields = []*mapping{
 	},
 	{
 		inProc: "cache_access",
+	},
+}
+
+var wanted_ost_jobstats_fields = []*mapping{
+	{ // The read line has several fields, so we need to differentiate what they are
+		inProc:   "read",
+		field:    3,
+		reportAs: "jobstats_read_calls",
+	},
+	{
+		inProc:   "read",
+		field:    7,
+		reportAs: "jobstats_read_min_size",
+	},
+	{
+		inProc:   "read",
+		field:    9,
+		reportAs: "jobstats_read_max_size",
+	},
+	{
+		inProc:   "read",
+		field:    11,
+		reportAs: "jobstats_read_bytes",
+	},
+	{ // Different inProc for newer versions
+		inProc:   "read_bytes",
+		field:    3,
+		reportAs: "jobstats_read_calls",
+	},
+	{
+		inProc:   "read_bytes",
+		field:    7,
+		reportAs: "jobstats_read_min_size",
+	},
+	{
+		inProc:   "read_bytes",
+		field:    9,
+		reportAs: "jobstats_read_max_size",
+	},
+	{
+		inProc:   "read_bytes",
+		field:    11,
+		reportAs: "jobstats_read_bytes",
+	},
+	{ // We need to do the same for the write fields
+		inProc:   "write",
+		field:    3,
+		reportAs: "jobstats_write_calls",
+	},
+	{
+		inProc:   "write",
+		field:    7,
+		reportAs: "jobstats_write_min_size",
+	},
+	{
+		inProc:   "write",
+		field:    9,
+		reportAs: "jobstats_write_max_size",
+	},
+	{
+		inProc:   "write",
+		field:    11,
+		reportAs: "jobstats_write_bytes",
+	},
+	{ // Different inProc for newer versions
+		inProc:   "write_bytes",
+		field:    3,
+		reportAs: "jobstats_write_calls",
+	},
+	{
+		inProc:   "write_bytes",
+		field:    7,
+		reportAs: "jobstats_write_min_size",
+	},
+	{
+		inProc:   "write_bytes",
+		field:    9,
+		reportAs: "jobstats_write_max_size",
+	},
+	{
+		inProc:   "write_bytes",
+		field:    11,
+		reportAs: "jobstats_write_bytes",
+	},
+	{
+		inProc:   "getattr",
+		field:    3,
+		reportAs: "jobstats_ost_getattr",
+	},
+	{
+		inProc:   "setattr",
+		field:    3,
+		reportAs: "jobstats_ost_setattr",
+	},
+	{
+		inProc:   "punch",
+		field:    3,
+		reportAs: "jobstats_punch",
+	},
+	{
+		inProc:   "sync",
+		field:    3,
+		reportAs: "jobstats_ost_sync",
+	},
+	{
+		inProc:   "destroy",
+		field:    3,
+		reportAs: "jobstats_destroy",
+	},
+	{
+		inProc:   "create",
+		field:    3,
+		reportAs: "jobstats_create",
+	},
+	{
+		inProc:   "statfs",
+		field:    3,
+		reportAs: "jobstats_ost_statfs",
+	},
+	{
+		inProc:   "get_info",
+		field:    3,
+		reportAs: "jobstats_get_info",
+	},
+	{
+		inProc:   "set_info",
+		field:    3,
+		reportAs: "jobstats_set_info",
+	},
+	{
+		inProc:   "quotactl",
+		field:    3,
+		reportAs: "jobstats_quotactl",
 	},
 }
 
@@ -133,6 +270,89 @@ var wanted_mds_fields = []*mapping{
 	},
 }
 
+var wanted_mdt_jobstats_fields = []*mapping{
+	{
+		inProc:   "open",
+		field:    3,
+		reportAs: "jobstats_open",
+	},
+	{
+		inProc:   "close",
+		field:    3,
+		reportAs: "jobstats_close",
+	},
+	{
+		inProc:   "mknod",
+		field:    3,
+		reportAs: "jobstats_mknod",
+	},
+	{
+		inProc:   "link",
+		field:    3,
+		reportAs: "jobstats_link",
+	},
+	{
+		inProc:   "unlink",
+		field:    3,
+		reportAs: "jobstats_unlink",
+	},
+	{
+		inProc:   "mkdir",
+		field:    3,
+		reportAs: "jobstats_mkdir",
+	},
+	{
+		inProc:   "rmdir",
+		field:    3,
+		reportAs: "jobstats_rmdir",
+	},
+	{
+		inProc:   "rename",
+		field:    3,
+		reportAs: "jobstats_rename",
+	},
+	{
+		inProc:   "getattr",
+		field:    3,
+		reportAs: "jobstats_getattr",
+	},
+	{
+		inProc:   "setattr",
+		field:    3,
+		reportAs: "jobstats_setattr",
+	},
+	{
+		inProc:   "getxattr",
+		field:    3,
+		reportAs: "jobstats_getxattr",
+	},
+	{
+		inProc:   "setxattr",
+		field:    3,
+		reportAs: "jobstats_setxattr",
+	},
+	{
+		inProc:   "statfs",
+		field:    3,
+		reportAs: "jobstats_statfs",
+	},
+	{
+		inProc:   "sync",
+		field:    3,
+		reportAs: "jobstats_sync",
+	},
+	{
+		inProc:   "samedir_rename",
+		field:    3,
+		reportAs: "jobstats_samedir_rename",
+	},
+	{
+		inProc:   "crossdir_rename",
+		field:    3,
+		reportAs: "jobstats_crossdir_rename",
+	},
+}
+
 func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, acc telegraf.Accumulator) error {
 	files, err := filepath.Glob(fileglob)
 	if err != nil {
@@ -143,7 +363,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 		/* Turn /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
 		 * into just the object store target name
 		 * Assumpion: the target name is always second to last,
-		 * which is true in Lustre 2.1->2.5
+		 * which is true in Lustre 2.1->2.8
 		 */
 		path := strings.Split(file, "/")
 		name := path[len(path)-2]
@@ -161,16 +381,21 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, 
 
 		for _, line := range lines {
 			parts := strings.Fields(line)
+			if strings.HasPrefix(line, "- job_id:") {
+				// Set the job_id explicitly if present
+				fields["jobid"] = parts[2]
+			}
+
 			for _, wanted := range wanted_fields {
 				var data uint64
-				if parts[0] == wanted.inProc {
+				if strings.TrimSuffix(parts[0], ":") == wanted.inProc {
 					wanted_field := wanted.field
 					// if not set, assume field[1]. Shouldn't be field[0], as
 					// that's a string
 					if wanted_field == 0 {
 						wanted_field = 1
 					}
-					data, err = strconv.ParseUint((parts[wanted_field]), 10, 64)
+					data, err = strconv.ParseUint(strings.TrimSuffix((parts[wanted_field]), ","), 10, 64)
 					if err != nil {
 						return err
 					}
@@ -213,6 +438,12 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
+		// per job statistics are in obdfilter/<ost_name>/job_stats
+		err = l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/job_stats",
+			wanted_ost_jobstats_fields, acc)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(l.Mds_procfiles) == 0 {
@@ -222,16 +453,31 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
+
+		// Metadata target job stats
+		err = l.GetLustreProcStats("/proc/fs/lustre/mdt/*/job_stats",
+			wanted_mdt_jobstats_fields, acc)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, procfile := range l.Ost_procfiles {
-		err := l.GetLustreProcStats(procfile, wanted_ost_fields, acc)
+		ost_fields := wanted_ost_fields
+		if strings.HasSuffix(procfile, "job_stats") {
+			ost_fields = wanted_ost_jobstats_fields
+		}
+		err := l.GetLustreProcStats(procfile, ost_fields, acc)
 		if err != nil {
 			return err
 		}
 	}
 	for _, procfile := range l.Mds_procfiles {
-		err := l.GetLustreProcStats(procfile, wanted_mds_fields, acc)
+		mdt_fields := wanted_mds_fields
+		if strings.HasSuffix(procfile, "job_stats") {
+			mdt_fields = wanted_mdt_jobstats_fields
+		}
+		err := l.GetLustreProcStats(procfile, mdt_fields, acc)
 		if err != nil {
 			return err
 		}
@@ -240,6 +486,12 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	for name, fields := range l.allFields {
 		tags := map[string]string{
 			"name": name,
+		}
+		if _, ok := fields["jobid"]; ok {
+			if jobid, ok := fields["jobid"].(string); ok {
+				tags["jobid"] = jobid
+			}
+			delete(fields, "jobid")
 		}
 		acc.AddFields("lustre2", fields, tags)
 	}

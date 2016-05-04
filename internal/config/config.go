@@ -188,15 +188,13 @@ var header = `# Telegraf Configuration
   ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  ## Telegraf will send metrics to output in batch of at
+  ## Telegraf will send metrics to outputs in batches of at
   ## most metric_batch_size metrics.
   metric_batch_size = 1000
-  ## Telegraf will cache metric_buffer_limit metrics for each output, and will
-  ## flush this buffer on a successful write. This should be a multiple of
-  ## metric_batch_size and could not be less than 2 times metric_batch_size
+  ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
+  ## output, and will flush this buffer on a successful write. Oldest metrics
+  ## are dropped first when this buffer fills.
   metric_buffer_limit = 10000
-  ## Flush the buffer whenever full, regardless of flush_interval.
-  flush_buffer_when_full = true
 
   ## Collection jitter is used to jitter the collection by a random amount.
   ## Each plugin will sleep for a random time within jitter before collecting.
@@ -414,13 +412,67 @@ func (c *Config) LoadDirectory(path string) error {
 	return nil
 }
 
+// Try to find a default config file at these locations (in order):
+//   1. $TELEGRAF_CONFIG_PATH
+//   2. $HOME/.telegraf/telegraf.conf
+//   3. /etc/telegraf/telegraf.conf
+//
+func getDefaultConfigPath() (string, error) {
+	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
+	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
+	etcfile := "/etc/telegraf/telegraf.conf"
+	for _, path := range []string{envfile, homefile, etcfile} {
+		if _, err := os.Stat(path); err == nil {
+			log.Printf("Using config file: %s", path)
+			return path, nil
+		}
+	}
+
+	// if we got here, we didn't find a file in a default location
+	return "", fmt.Errorf("No config file specified, and could not find one"+
+		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
+}
+
 // LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
+	var err error
+	if path == "" {
+		if path, err = getDefaultConfigPath(); err != nil {
+			return err
+		}
+	}
 	tbl, err := parseFile(path)
 	if err != nil {
 		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
 
+	// Parse tags tables first:
+	for _, tableName := range []string{"tags", "global_tags"} {
+		if val, ok := tbl.Fields[tableName]; ok {
+			subTable, ok := val.(*ast.Table)
+			if !ok {
+				return fmt.Errorf("%s: invalid configuration", path)
+			}
+			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
+				log.Printf("Could not parse [global_tags] config\n")
+				return fmt.Errorf("Error parsing %s, %s", path, err)
+			}
+		}
+	}
+
+	// Parse agent table:
+	if val, ok := tbl.Fields["agent"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("%s: invalid configuration", path)
+		}
+		if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
+			log.Printf("Could not parse [agent] config\n")
+			return fmt.Errorf("Error parsing %s, %s", path, err)
+		}
+	}
+
+	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
@@ -428,16 +480,7 @@ func (c *Config) LoadConfig(path string) error {
 		}
 
 		switch name {
-		case "agent":
-			if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
-				log.Printf("Could not parse [agent] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
-			}
-		case "global_tags", "tags":
-			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
-				log.Printf("Could not parse [global_tags] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
-			}
+		case "agent", "global_tags", "tags":
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
@@ -535,14 +578,8 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := internal_models.NewRunningOutput(name, output, outputConfig)
-	if c.Agent.MetricBatchSize > 0 {
-		ro.MetricBatchSize = c.Agent.MetricBatchSize
-	}
-	if c.Agent.MetricBufferLimit > 0 {
-		ro.MetricBufferLimit = c.Agent.MetricBufferLimit
-	}
-	ro.FlushBufferWhenFull = c.Agent.FlushBufferWhenFull
+	ro := internal_models.NewRunningOutput(name, output, outputConfig,
+		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
 }

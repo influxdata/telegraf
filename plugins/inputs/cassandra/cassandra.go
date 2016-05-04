@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -263,15 +264,19 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 
 	for _, server := range servers {
 		for _, metric := range metrics {
-			var m jmxMetric
-
 			serverTokens := parseServerTokens(server)
 
+			var m jmxMetric
 			if strings.HasPrefix(metric, "/java.lang:") {
 				m = newJavaMetric(serverTokens["host"], metric, acc)
 			} else if strings.HasPrefix(metric,
 				"/org.apache.cassandra.metrics:") {
 				m = newCassandraMetric(serverTokens["host"], metric, acc)
+			} else {
+				// unsupported metric type
+				log.Printf("Unsupported Cassandra metric [%s], skipping",
+					metric)
+				continue
 			}
 
 			// Prepare URL
