@@ -22,6 +22,7 @@ type (
 		Delay       internal.Duration `toml:"delay"`
 		Namespace   string            `toml:"namespace"`
 		Metrics     []*Metric         `toml:"metrics"`
+		CacheTTL    string            `toml:"cache_ttl"`
 		client      cloudwatchClient
 		metricCache *MetricCache
 	}
@@ -73,6 +74,10 @@ func (c *CloudWatch) SampleConfig() string {
   ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = '1m'
+
+  ## Configure the TTL for the internal cache of metrics.
+  ## Defaults to 1 hr if not specified
+  #cache_ttl = '10m'
 
   ## Metric Statistic Namespace (required)
   namespace = 'AWS/ELB'
@@ -152,7 +157,9 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
-		return &CloudWatch{}
+		return &CloudWatch{
+			CacheTTL: "1hr",
+		}
 	})
 }
 
@@ -197,7 +204,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() (metrics []*cloudwatch.Metric, err 
 		more = token != nil
 	}
 
-	cacheTTL, _ := time.ParseDuration("1hr")
+	cacheTTL, _ := time.ParseDuration(c.CacheTTL)
 	c.metricCache = &MetricCache{
 		Metrics: metrics,
 		Fetched: time.Now(),
