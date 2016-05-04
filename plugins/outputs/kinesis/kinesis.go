@@ -8,18 +8,15 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 
 	"github.com/influxdata/telegraf"
+	influxaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type KinesisOutput struct {
-	Region       string `toml:"region"`
-	AccessKey    string `toml:"access_key"`
-	SecretKey    string `toml:"secret_key"`
+	influxaws.AwsCredentials
 	StreamName   string `toml:"streamname"`
 	PartitionKey string `toml:"partitionkey"`
 	Format       string `toml:"format"`
@@ -33,10 +30,12 @@ var sampleConfig = `
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) explicit credentials from 'access_key' and 'secret_key'
-  ## 2) environment variables
-  ## 3) shared credentials file
-  ## 4) EC2 Instance Profile
+  ## 1) Assumed credentials via STS if role_arn is specified
+  ## 2) explicit credentials from 'access_key' and 'secret_key'
+  ## 3) shared profile from 'profile'
+  ## 4) environment variables
+  ## 5) shared credentials file
+  ## 6) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
 
@@ -75,13 +74,9 @@ func (k *KinesisOutput) Connect() error {
 	if k.Debug {
 		log.Printf("kinesis: Establishing a connection to Kinesis in %+v", k.Region)
 	}
-	Config := &aws.Config{
-		Region: aws.String(k.Region),
-	}
-	if k.AccessKey != "" || k.SecretKey != "" {
-		Config.Credentials = credentials.NewStaticCredentials(k.AccessKey, k.SecretKey, "")
-	}
-	svc := kinesis.New(session.New(Config))
+
+	configProvider := k.Credentials()
+	svc := kinesis.New(configProvider)
 
 	KinesisParams := &kinesis.ListStreamsInput{
 		Limit: aws.Int64(100),
