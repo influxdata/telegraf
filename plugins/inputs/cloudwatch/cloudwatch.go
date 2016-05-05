@@ -22,7 +22,7 @@ type (
 		Delay       internal.Duration `toml:"delay"`
 		Namespace   string            `toml:"namespace"`
 		Metrics     []*Metric         `toml:"metrics"`
-		CacheTTL    string            `toml:"cache_ttl"`
+		CacheTTL    internal.Duration `toml:"cache_ttl"`
 		client      cloudwatchClient
 		metricCache *MetricCache
 	}
@@ -135,7 +135,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 					for _, metric := range allMetrics {
 						if isSelected(metric, m.Dimensions) {
 							metrics = append(metrics, &cloudwatch.Metric{
-								Namespace: aws.String(c.Namespace),
+								Namespace:  aws.String(c.Namespace),
 								MetricName: aws.String(name),
 								Dimensions: metric.Dimensions,
 							})
@@ -177,8 +177,9 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
+		ttl, _ := time.ParseDuration("1hr")
 		return &CloudWatch{
-			CacheTTL: "1hr",
+			CacheTTL: internal.Duration{Duration: ttl},
 		}
 	})
 }
@@ -224,11 +225,10 @@ func (c *CloudWatch) fetchNamespaceMetrics() (metrics []*cloudwatch.Metric, err 
 		more = token != nil
 	}
 
-	cacheTTL, _ := time.ParseDuration(c.CacheTTL)
 	c.metricCache = &MetricCache{
 		Metrics: metrics,
 		Fetched: time.Now(),
-		TTL:     cacheTTL,
+		TTL:     c.CacheTTL.Duration,
 	}
 
 	return
