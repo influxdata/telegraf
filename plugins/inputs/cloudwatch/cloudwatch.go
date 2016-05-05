@@ -110,20 +110,40 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	if c.Metrics != nil {
 		metrics = []*cloudwatch.Metric{}
 		for _, m := range c.Metrics {
-			dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
-			for k, d := range m.Dimensions {
-				dimensions[k] = &cloudwatch.Dimension{
-					Name:  aws.String(d.Name),
-					Value: aws.String(d.Value),
+			if !hasWilcard(m.Dimensions) {
+				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
+				for k, d := range m.Dimensions {
+					fmt.Printf("Dimension [%s]:[%s]\n", d.Name, d.Value)
+					dimensions[k] = &cloudwatch.Dimension{
+						Name:  aws.String(d.Name),
+						Value: aws.String(d.Value),
+					}
+				}
+				for _, name := range m.MetricNames {
+					metrics = append(metrics, &cloudwatch.Metric{
+						Namespace:  aws.String(c.Namespace),
+						MetricName: aws.String(name),
+						Dimensions: dimensions,
+					})
+				}
+			} else {
+				allMetrics, err := c.fetchNamespaceMetrics()
+				if err != nil {
+					return err
+				}
+				for _, name := range m.MetricNames {
+					for _, metric := range allMetrics {
+						if isSelected(metric, m.Dimensions) {
+							metrics = append(metrics, &cloudwatch.Metric{
+								Namespace: aws.String(c.Namespace),
+								MetricName: aws.String(name),
+								Dimensions: metric.Dimensions,
+							})
+						}
+					}
 				}
 			}
-			for _, name := range m.MetricNames {
-				metrics = append(metrics, &cloudwatch.Metric{
-					Namespace:  aws.String(c.Namespace),
-					MetricName: aws.String(name),
-					Dimensions: dimensions,
-				})
-			}
+
 		}
 	} else {
 		var err error
@@ -309,4 +329,34 @@ func (c *CloudWatch) getStatisticsInput(metric *cloudwatch.Metric, now time.Time
  */
 func (c *MetricCache) IsValid() bool {
 	return c.Metrics != nil && time.Since(c.Fetched) < c.TTL
+}
+
+func hasWilcard(dimensions []*Dimension) bool {
+	wildcard := false
+	for _, d := range dimensions {
+		if d.Value == "" || d.Value == "*" {
+			wildcard = true
+		}
+	}
+	return wildcard
+}
+
+func isSelected(metric *cloudwatch.Metric, dimensions []*Dimension) bool {
+	if len(metric.Dimensions) != len(dimensions) {
+		return false
+	}
+	for _, d := range dimensions {
+		selected := false
+		for _, d2 := range metric.Dimensions {
+			if d.Name == *d2.Name {
+				if d.Value == "" || d.Value == "*" || d.Value == *d2.Value {
+					selected = true
+				}
+			}
+		}
+		if !selected {
+			return false
+		}
+	}
+	return true
 }

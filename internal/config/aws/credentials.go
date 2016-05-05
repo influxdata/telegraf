@@ -3,9 +3,9 @@ package aws
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/awslabs/aws-sdk-go/aws/credentials"
-	"github.com/kelseyhightower/confd/vendor/github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/kelseyhightower/confd/vendor/github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type AwsCredentials struct {
