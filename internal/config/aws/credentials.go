@@ -9,13 +9,13 @@ import (
 )
 
 type AwsCredentials struct {
-	Region    string `toml:"region"`                 // AWS Region
-	AccessKey string `toml:"access_key"`             // Explicit AWS Access Key ID
-	SecretKey string `toml:"secret_key"`             // Explicit AWS Secret Access Key
-	RoleArn   string `toml:"role_arn"`               // Role ARN to assume
-	Profile   string `toml:"profile"`                // the shared profile to use
-	SharedCredentialFile  string `toml:"shared_credential_file"` // location of shared credential file
-	Token     string `toml:"token"`                  // STS session token
+	Region               string `toml:"region"`                 // AWS Region
+	AccessKey            string `toml:"access_key"`             // Explicit AWS Access Key ID
+	SecretKey            string `toml:"secret_key"`             // Explicit AWS Secret Access Key
+	RoleArn              string `toml:"role_arn"`               // Role ARN to assume
+	Profile              string `toml:"profile"`                // the shared profile to use
+	SharedCredentialFile string `toml:"shared_credential_file"` // location of shared credential file
+	Token                string `toml:"token"`                  // STS session token
 }
 
 func (c *AwsCredentials) Credentials() client.ConfigProvider {
