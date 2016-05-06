@@ -132,13 +132,16 @@ def create_package_fs(build_root):
         os.makedirs(os.path.join(build_root, d))
         os.chmod(os.path.join(build_root, d), 0o755)
 
-def package_scripts(build_root, windows=False):
+def package_scripts(build_root, config_only=False, windows=False):
     """Copy the necessary scripts and configuration files to the package
     filesystem.
     """
-    if windows:
-        logging.info("Copying configuration to build directory.")
-        shutil.copyfile(DEFAULT_WINDOWS_CONFIG, os.path.join(build_root, "telegraf.conf"))
+    if config_only or windows:
+        logging.info("Copying configuration to build directory")
+        if windows:
+            shutil.copyfile(DEFAULT_WINDOWS_CONFIG, os.path.join(build_root, "telegraf.conf"))
+        else:
+            shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, "telegraf.conf"))
         os.chmod(os.path.join(build_root, "telegraf.conf"), 0o644)
     else:
         logging.info("Copying scripts and configuration to build directory")
@@ -554,10 +557,12 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                 os.makedirs(build_root)
 
                 # Copy packaging scripts to build directory
-                if platform == "windows" or static or "static_" in arch:
+                if platform == "windows":
                     # For windows and static builds, just copy
                     # binaries to root of package (no other scripts or
                     # directories)
+                    package_scripts(build_root, config_only=True, windows=True)
+                elif static or "static_" in arch:
                     package_scripts(build_root, config_only=True)
                 else:
                     create_package_fs(build_root)
