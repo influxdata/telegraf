@@ -11,13 +11,20 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	influxaws "github.com/influxdata/telegraf/internal/config/aws"
+	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type (
 	CloudWatch struct {
-		influxaws.AwsCredentials
+		Region    string `toml:"region"`
+		AccessKey string `toml:"access_key"`
+		SecretKey string `toml:"secret_key"`
+		RoleARN   string `toml:"role_arn"`
+		Profile   string `toml:"profile"`
+		Filename  string `toml:"shared_credential_file"`
+		Token     string `toml:"token"`
+
 		Period      internal.Duration `toml:"period"`
 		Delay       internal.Duration `toml:"delay"`
 		Namespace   string            `toml:"namespace"`
@@ -64,6 +71,10 @@ func (c *CloudWatch) SampleConfig() string {
   ## 6) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #profile = ""
+  #shared_credential_file = ""
 
   ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
   period = '1m'
@@ -188,7 +199,16 @@ func init() {
  * Initialize CloudWatch client
  */
 func (c *CloudWatch) initializeCloudWatch() error {
-	configProvider := c.Credentials()
+	credentialConfig := &internalaws.CredentialConfig{
+		Region:    c.Region,
+		AccessKey: c.AccessKey,
+		SecretKey: c.SecretKey,
+		RoleARN:   c.RoleARN,
+		Profile:   c.Profile,
+		Filename:  c.Filename,
+		Token:     c.Token,
+	}
+	configProvider := credentialConfig.Credentials()
 
 	c.client = cloudwatch.New(configProvider)
 	return nil
@@ -332,13 +352,12 @@ func (c *MetricCache) IsValid() bool {
 }
 
 func hasWilcard(dimensions []*Dimension) bool {
-	wildcard := false
 	for _, d := range dimensions {
 		if d.Value == "" || d.Value == "*" {
-			wildcard = true
+			return true
 		}
 	}
-	return wildcard
+	return false
 }
 
 func isSelected(metric *cloudwatch.Metric, dimensions []*Dimension) bool {

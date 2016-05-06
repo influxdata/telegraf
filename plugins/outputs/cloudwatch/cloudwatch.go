@@ -11,12 +11,19 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/influxdata/telegraf"
-	influxaws "github.com/influxdata/telegraf/internal/config/aws"
+	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type CloudWatch struct {
-	influxaws.AwsCredentials
+	Region    string `toml:"region"`
+	AccessKey string `toml:"access_key"`
+	SecretKey string `toml:"secret_key"`
+	RoleARN   string `toml:"role_arn"`
+	Profile   string `toml:"profile"`
+	Filename  string `toml:"shared_credential_file"`
+	Token     string `toml:"token"`
+
 	Namespace string `toml:"namespace"` // CloudWatch Metrics Namespace
 	svc       *cloudwatch.CloudWatch
 }
@@ -35,6 +42,10 @@ var sampleConfig = `
   ## 6) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #profile = ""
+  #shared_credential_file = ""
 
   ## Namespace for the CloudWatch MetricDatums
   namespace = 'InfluxData/Telegraf'
@@ -49,7 +60,16 @@ func (c *CloudWatch) Description() string {
 }
 
 func (c *CloudWatch) Connect() error {
-	configProvider := c.Credentials()
+	credentialConfig := &internalaws.CredentialConfig{
+		Region:    c.Region,
+		AccessKey: c.AccessKey,
+		SecretKey: c.SecretKey,
+		RoleARN:   c.RoleARN,
+		Profile:   c.Profile,
+		Filename:  c.Filename,
+		Token:     c.Token,
+	}
+	configProvider := credentialConfig.Credentials()
 
 	svc := cloudwatch.New(configProvider)
 

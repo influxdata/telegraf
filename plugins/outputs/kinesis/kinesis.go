@@ -11,12 +11,19 @@ import (
 	"github.com/aws/aws-sdk-go/service/kinesis"
 
 	"github.com/influxdata/telegraf"
-	influxaws "github.com/influxdata/telegraf/internal/config/aws"
+	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type KinesisOutput struct {
-	influxaws.AwsCredentials
+	Region    string `toml:"region"`
+	AccessKey string `toml:"access_key"`
+	SecretKey string `toml:"secret_key"`
+	RoleARN   string `toml:"role_arn"`
+	Profile   string `toml:"profile"`
+	Filename  string `toml:"shared_credential_file"`
+	Token     string `toml:"token"`
+
 	StreamName   string `toml:"streamname"`
 	PartitionKey string `toml:"partitionkey"`
 	Format       string `toml:"format"`
@@ -38,6 +45,10 @@ var sampleConfig = `
   ## 6) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #profile = ""
+  #shared_credential_file = ""
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
@@ -75,7 +86,16 @@ func (k *KinesisOutput) Connect() error {
 		log.Printf("kinesis: Establishing a connection to Kinesis in %+v", k.Region)
 	}
 
-	configProvider := k.Credentials()
+	credentialConfig := &internalaws.CredentialConfig{
+		Region:    k.Region,
+		AccessKey: k.AccessKey,
+		SecretKey: k.SecretKey,
+		RoleARN:   k.RoleARN,
+		Profile:   k.Profile,
+		Filename:  k.Filename,
+		Token:     k.Token,
+	}
+	configProvider := credentialConfig.Credentials()
 	svc := kinesis.New(configProvider)
 
 	KinesisParams := &kinesis.ListStreamsInput{
