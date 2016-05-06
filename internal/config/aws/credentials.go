@@ -8,42 +8,42 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
-type AwsCredentials struct {
-	Region               string `toml:"region"`                 // AWS Region
-	AccessKey            string `toml:"access_key"`             // Explicit AWS Access Key ID
-	SecretKey            string `toml:"secret_key"`             // Explicit AWS Secret Access Key
-	RoleArn              string `toml:"role_arn"`               // Role ARN to assume
-	Profile              string `toml:"profile"`                // the shared profile to use
-	SharedCredentialFile string `toml:"shared_credential_file"` // location of shared credential file
-	Token                string `toml:"token"`                  // STS session token
+type CredentialConfig struct {
+	Region    string
+	AccessKey string
+	SecretKey string
+	RoleARN   string
+	Profile   string
+	Filename  string
+	Token     string
 }
 
-func (c *AwsCredentials) Credentials() client.ConfigProvider {
-	if c.RoleArn != "" {
+func (c *CredentialConfig) Credentials() client.ConfigProvider {
+	if c.RoleARN != "" {
 		return c.assumeCredentials()
 	} else {
 		return c.rootCredentials()
 	}
 }
 
-func (c *AwsCredentials) rootCredentials() client.ConfigProvider {
+func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 	config := &aws.Config{
 		Region: aws.String(c.Region),
 	}
 	if c.AccessKey != "" || c.SecretKey != "" {
 		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, c.Token)
-	} else if c.Profile != "" || c.SharedCredentialFile != "" {
-		config.Credentials = credentials.NewSharedCredentials(c.SharedCredentialFile, c.Profile)
+	} else if c.Profile != "" || c.Filename != "" {
+		config.Credentials = credentials.NewSharedCredentials(c.Filename, c.Profile)
 	}
 
 	return session.New(config)
 }
 
-func (c *AwsCredentials) assumeCredentials() client.ConfigProvider {
+func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 	rootCredentials := c.rootCredentials()
 	config := &aws.Config{
 		Region: aws.String(c.Region),
 	}
-	config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleArn)
+	config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleARN)
 	return session.New(config)
 }
