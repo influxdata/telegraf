@@ -6,9 +6,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -47,7 +49,7 @@ const (
 	HF_THROTTLE       = 29 //29. throttle [...S]: current throttle percentage for the server, when slowstart is active, or no value if not in slowstart.
 	HF_LBTOT          = 30 //30. lbtot [..BS]: total number of times a server was selected, either for new sessions, or when re-dispatching. The server counter is the number of times that server was selected.
 	HF_TRACKED        = 31 //31. tracked [...S]: id of proxy/server if tracking is enabled.
-	HF_TYPE           = 32 //32. type [LFBS]: (0                                                                                                                                                                                                  = frontend, 1 = backend, 2 = server, 3 = socket/listener)
+	HF_TYPE           = 32 //32. type [LFBS]: (0 = frontend, 1 = backend, 2 = server, 3 = socket/listener)
 	HF_RATE           = 33 //33. rate [.FBS]: number of sessions per second over last elapsed second
 	HF_RATE_LIM       = 34 //34. rate_lim [.F..]: configured limit on new sessions per second
 	HF_RATE_MAX       = 35 //35. rate_max [.FBS]: max number of new sessions per second
@@ -91,8 +93,8 @@ var sampleConfig = `
 
   ## If no servers are specified, then default to 127.0.0.1:1936
   servers = ["http://myhaproxy.com:1936", "http://anotherhaproxy.com:1936"]
-  ## Or you can also use local socket(not work yet)
-  ## servers = ["socket://run/haproxy/admin.sock"]
+  ## Or you can also use local socket
+  ## servers = ["socket:/run/haproxy/admin.sock"]
 `
 
 func (r *haproxy) SampleConfig() string {
@@ -127,7 +129,36 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
+func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
+	var socketPath string
+	socketAddr := strings.Split(addr, ":")
+
+	if len(socketAddr) >= 2 {
+		socketPath = socketAddr[1]
+	} else {
+		socketPath = socketAddr[0]
+	}
+
+	c, err := net.Dial("unix", socketPath)
+
+	if err != nil {
+		return fmt.Errorf("Could not connect to socket '%s': %s", addr, err)
+	}
+
+	_, errw := c.Write([]byte("show stat\n"))
+
+	if errw != nil {
+		return fmt.Errorf("Could not write to socket '%s': %s", addr, errw)
+	}
+
+	return importCsvResult(c, acc, socketPath)
+}
+
 func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
+	if !strings.HasPrefix(addr, "http") {
+		return g.gatherServerSocket(addr, acc)
+	}
+
 	if g.client == nil {
 		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
 		client := &http.Client{

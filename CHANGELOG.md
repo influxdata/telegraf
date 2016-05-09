@@ -71,6 +71,7 @@ It is not included on the report path. This is necessary for reporting host disk
 - [#1107](https://github.com/influxdata/telegraf/issues/1107): Support lustre2 job stats. Thanks @hanleyja!
 - [#1122](https://github.com/influxdata/telegraf/pull/1122): Support setting config path through env variable and default paths.
 - [#1128](https://github.com/influxdata/telegraf/pull/1128): MongoDB jumbo chunks metric for MongoDB input plugin
+- [#1146](https://github.com/influxdata/telegraf/pull/1146): HAProxy socket support. Thanks weshmashian!
 
 ### Bugfixes
 
