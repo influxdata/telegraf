@@ -112,8 +112,13 @@ func importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
 		"iid": true,
 		"sid": true,
 		"lastchg": true,
+		"type": true,	
+		"check_code": true,
 	}
-	
+
+
+	now := time.Now()
+
 	for i := range result {
 		if i == 0 {
 			keys = result[i]
