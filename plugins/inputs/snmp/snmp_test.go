@@ -102,8 +102,8 @@ func TestSNMPGet1(t *testing.T) {
 			"oid1": uint(543846),
 		},
 		map[string]string{
-			"unit": "octets",
-			"host": testutil.GetLocalHost(),
+			"unit":      "octets",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 }
@@ -140,8 +140,8 @@ func TestSNMPGet2(t *testing.T) {
 			"ifNumber": int(4),
 		},
 		map[string]string{
-			"instance": "0",
-			"host":     testutil.GetLocalHost(),
+			"instance":  "0",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 }
@@ -180,9 +180,9 @@ func TestSNMPGet3(t *testing.T) {
 			"ifSpeed": uint(10000000),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "1",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "1",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 }
@@ -222,9 +222,9 @@ func TestSNMPEasyGet4(t *testing.T) {
 			"ifSpeed": uint(10000000),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "1",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "1",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 
@@ -234,8 +234,8 @@ func TestSNMPEasyGet4(t *testing.T) {
 			"ifNumber": int(4),
 		},
 		map[string]string{
-			"instance": "0",
-			"host":     testutil.GetLocalHost(),
+			"instance":  "0",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 }
@@ -275,9 +275,9 @@ func TestSNMPEasyGet5(t *testing.T) {
 			"ifSpeed": uint(10000000),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "1",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "1",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 
@@ -287,8 +287,8 @@ func TestSNMPEasyGet5(t *testing.T) {
 			"ifNumber": int(4),
 		},
 		map[string]string{
-			"instance": "0",
-			"host":     testutil.GetLocalHost(),
+			"instance":  "0",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 }
@@ -320,8 +320,8 @@ func TestSNMPEasyGet6(t *testing.T) {
 			"ifNumber": int(4),
 		},
 		map[string]string{
-			"instance": "0",
-			"host":     testutil.GetLocalHost(),
+			"instance":  "0",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 }
@@ -360,9 +360,9 @@ func TestSNMPBulk1(t *testing.T) {
 			"ifOutOctets": uint(543846),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "1",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "1",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 
@@ -372,9 +372,9 @@ func TestSNMPBulk1(t *testing.T) {
 			"ifOutOctets": uint(26475179),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "2",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "2",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 
@@ -384,9 +384,9 @@ func TestSNMPBulk1(t *testing.T) {
 			"ifOutOctets": uint(108963968),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "3",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "3",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 
@@ -396,9 +396,9 @@ func TestSNMPBulk1(t *testing.T) {
 			"ifOutOctets": uint(12991453),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "36",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "36",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 }
@@ -438,9 +438,9 @@ func dTestSNMPBulk2(t *testing.T) {
 			"ifOutOctets": uint(543846),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "1",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "1",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 
@@ -450,9 +450,9 @@ func dTestSNMPBulk2(t *testing.T) {
 			"ifOutOctets": uint(26475179),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "2",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "2",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 
@@ -462,9 +462,9 @@ func dTestSNMPBulk2(t *testing.T) {
 			"ifOutOctets": uint(108963968),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "3",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "3",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 
@@ -474,9 +474,9 @@ func dTestSNMPBulk2(t *testing.T) {
 			"ifOutOctets": uint(12991453),
 		},
 		map[string]string{
-			"unit":     "octets",
-			"instance": "36",
-			"host":     testutil.GetLocalHost(),
+			"unit":      "octets",
+			"instance":  "36",
+			"snmp_host": testutil.GetLocalHost(),
 		},
 	)
 }

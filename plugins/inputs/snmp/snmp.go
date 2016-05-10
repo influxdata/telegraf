@@ -792,7 +792,7 @@ func (h *Host) HandleResponse(
 						// Because the result oid is equal to inputs.snmp.get section
 						field_name = oid.Name
 					}
-					tags["host"], _, _ = net.SplitHostPort(h.Address)
+					tags["snmp_host"], _, _ = net.SplitHostPort(h.Address)
 					fields := make(map[string]interface{})
 					fields[string(field_name)] = variable.Value
 
