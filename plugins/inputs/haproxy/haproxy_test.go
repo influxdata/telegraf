@@ -93,7 +93,7 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 		"hrsp_4xx":       uint64(2345),
 		"hrsp_5xx":       uint64(1056),
 		"hrsp_other":     uint64(0),
-		"lastsess":	  uint64(0),
+		"lastsess":       uint64(0),
 		"lbtot":          uint64(171013),
 		"qcur":           uint64(0),
 		"qmax":           uint64(0),
