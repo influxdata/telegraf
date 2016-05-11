@@ -3,6 +3,7 @@ package procstat
 import (
 	"time"
 
+	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/process"
 
 	"github.com/influxdata/telegraf"
@@ -31,6 +32,16 @@ func NewSpecProcessor(
 		fields: make(map[string]interface{}),
 		acc:    acc,
 		proc:   p,
+	}
+}
+
+var cores int32
+
+func init() {
+	if info, err := cpu.Info(); err == nil {
+		for _, in := range info {
+			cores += in.Cores
+		}
 	}
 }
 
@@ -65,7 +76,7 @@ func (p *SpecProcessor) pushMetrics() {
 		fields[prefix+"write_bytes"] = io.WriteCount
 	}
 
-	cpu_time, err := p.proc.CPUTimes()
+	cpu_time, err := p.proc.Times()
 	if err == nil {
 		fields[prefix+"cpu_time_user"] = cpu_time.User
 		fields[prefix+"cpu_time_system"] = cpu_time.System
@@ -80,9 +91,12 @@ func (p *SpecProcessor) pushMetrics() {
 		fields[prefix+"cpu_time_guest_nice"] = cpu_time.GuestNice
 	}
 
-	cpu_perc, err := p.proc.CPUPercent(time.Duration(0))
+	cpu_perc, err := p.proc.Percent(time.Duration(0))
 	if err == nil && cpu_perc != 0 {
 		fields[prefix+"cpu_usage"] = cpu_perc
+		if cores > 0 {
+			fields[prefix+"cpu_percent"] = cpu_perc / float64(cores)
+		}
 	}
 
 	mem, err := p.proc.MemoryInfo()
