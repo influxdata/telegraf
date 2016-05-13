@@ -91,7 +91,7 @@ func TestAppdynamicsOK(t *testing.T) {
 		"foo",
 		map[string]string{"metric_type": "bar"},
 		map[string]interface{}{"values": float64(7.89)},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		tm,
 	)
 	metrics = []telegraf.Metric{m}
 	assert.NoError(t, a.Write(metrics))
