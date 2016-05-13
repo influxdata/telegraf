@@ -1,13 +1,13 @@
-package influxdb
+package appdynamics
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 var sampleConfig = `
@@ -23,9 +23,9 @@ var sampleConfig = `
 
 type Appdynamics struct {
 	// Controller values for retrieving tier-id from the controller
-	ControllerTierURL     string
-	ControllerUserName    string
-	ControllerPassword    string
+	ControllerTierURL  string
+	ControllerUserName string
+	ControllerPassword string
 
 	// Machine agent URL format string
 	AgentURL string
@@ -35,7 +35,7 @@ type Appdynamics struct {
 }
 
 // Close - There is nothing to close here, but need to comply with output interface
-func (a *Appdynamics) Close() error{
+func (a *Appdynamics) Close() error {
 	return nil
 }
 
@@ -85,7 +85,7 @@ func (a *Appdynamics) getTierId() (int64, error) {
 		return 0, err
 	}
 	if len(tiers) != 1 {
-		fmt.Println("Invalid reply: ", tiers)
+		return 0, fmt.Errorf("Invalid reply: %v", tiers)
 	}
 
 	return tiers[0].Id, nil
@@ -105,10 +105,9 @@ func (a *Appdynamics) Write(metrics []telegraf.Metric) error {
 			default:
 				appdType = "sum"
 			}
-			url := a.AgentURL + metric.Name() + fmt.Sprintf("&value=%v&type=%s", metric.Fields()["value"], appdType)
-			fmt.Printf("Calling %s ...\n", url)
-			_, err := http.Get(url)
-			if err != nil {
+			url := fmt.Sprintf("%s%s&value=%v&type=%s", a.AgentURL, metric.Name(), metric.Fields()["value"], appdType)
+			log.Printf("Calling %s ...\n", url)
+			if _, err := http.Post(url, "", nil); err != nil {
 				log.Println("ERROR: " + err.Error())
 			}
 		}

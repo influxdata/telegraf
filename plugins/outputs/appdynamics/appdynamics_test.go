@@ -1,4 +1,4 @@
-package influxdb
+package appdynamics
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestAppdynamicsError - attemp to initialize Appdynamics with invalid controller user name value
+// TestAppdynamicsError - attempt to initialize Appdynamics with invalid controller user name value
 func TestAppdynamicsError(t *testing.T) {
 	a := Appdynamics{
 		ControllerTierURL:     "https://foo.saas.appdynamics.com/controller/rest/applications/bar/tiers/baz?output=JSON",
@@ -18,6 +18,7 @@ func TestAppdynamicsError(t *testing.T) {
 		ControllerPassword:    "pass123",
 		AgentURL:              "http://localhost:8293/machineagent/metrics?name=Server|Component:%d|Custom+Metrics|",
 	}
+
 	assert.Error(t, a.Connect())
 }
 
@@ -41,18 +42,20 @@ func TestAppdynamicsOK(t *testing.T) {
 		ControllerPassword:    "pass123",
 		AgentURL:              "http://localhost:8293/machineagent/metrics?name=Server|Component:%d|Custom+Metrics|",
 	}
+
 	// this error is expected since we are not connecting to actual controller
 	assert.Error(t, a.Connect())
 	// reset agent url value with '123' tier id
 	a.AgentURL = fmt.Sprintf(a.AgentURL, 123)
 	assert.Equal(t, a.AgentURL, "http://localhost:8293/machineagent/metrics?name=Server|Component:123|Custom+Metrics|")
 
+	tm := time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC)
 	// counter type - appd-type: sum
 	m, _ := telegraf.NewMetric(
 		"foo",
-		map[string]string{"metrcic_type": "counter"},
+		map[string]string{"metric_type": "counter"},
 		map[string]interface{}{"value": float64(1.23)},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		tm,
 	)
 	metrics := []telegraf.Metric{m}
 	assert.NoError(t, a.Write(metrics))
@@ -64,7 +67,7 @@ func TestAppdynamicsOK(t *testing.T) {
 		"foo",
 		map[string]string{"metric_type": "gauge"},
 		map[string]interface{}{"value": float64(4.56)},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		tm,
 	)
 	metrics = []telegraf.Metric{m}
 	assert.NoError(t, a.Write(metrics))
@@ -74,9 +77,9 @@ func TestAppdynamicsOK(t *testing.T) {
 	// other type - defaults to appd-type: sum
 	m, _ = telegraf.NewMetric(
 		"foo",
-		map[string]string{"metric_type": "bar"},
+		map[string]string{"metric_type": "other"},
 		map[string]interface{}{"value": float64(7.89)},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		tm,
 	)
 	metrics = []telegraf.Metric{m}
 	assert.NoError(t, a.Write(metrics))

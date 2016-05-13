@@ -6,7 +6,7 @@ via raw TCP.
 ## Configuration:
 
 ```toml
-  ## controller information tor connect and retrieve tier-id value
+  ## controller information to connect and retrieve tier-id value
   controllerTierURL = "https://foo.saas.appdynamics.com/controller/rest/applications/bar/tiers/baz?output=JSON"
   controllerUserName = "apiuser"
   controllerPassword = "apipass"
