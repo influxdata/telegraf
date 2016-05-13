@@ -307,7 +307,11 @@ func gatherContainerStats(
 	for i, percpu := range stat.CPUStats.CPUUsage.PercpuUsage {
 		percputags := copyTags(tags)
 		percputags["cpu"] = fmt.Sprintf("cpu%d", i)
-		acc.AddFields("docker_container_cpu", map[string]interface{}{"usage_total": percpu}, percputags, now)
+		fields := map[string]interface{}{
+			"usage_total":  percpu,
+			"container_id": id,
+		}
+		acc.AddFields("docker_container_cpu", fields, percputags, now)
 	}
 
 	for network, netstats := range stat.Networks {
