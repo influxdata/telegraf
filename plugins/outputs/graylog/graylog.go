@@ -1,19 +1,20 @@
 package graylog
 
 import (
+	"fmt"
+	"github.com/Graylog2/go-gelf/gelf"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/vanillahsu/graylog-golang"
-
-	"log"
+	"io"
 )
 
 type Graylog struct {
 	Servers []string
 
 	serializer serializers.Serializer
-	conns      []*gelf.Gelf
+
+	writer io.Writer
 }
 
 var sampleConfig = `
@@ -22,6 +23,8 @@ var sampleConfig = `
 `
 
 func (g *Graylog) Connect() error {
+	writers := []io.Writer{}
+
 	serializer, err := serializers.NewGelfSerializer()
 	if err != nil {
 		return err
@@ -32,18 +35,16 @@ func (g *Graylog) Connect() error {
 	if len(g.Servers) == 0 {
 		g.Servers = append(g.Servers, "localhost:12201")
 	}
-	// Get Connections
-	var conns []*gelf.Gelf
 
 	for _, server := range g.Servers {
-		conn := gelf.New(gelf.Config{
-			GraylogEndpoint: server,
-		})
-
-		conns = append(conns, conn)
+		w, err := gelf.NewWriter(server)
+		if err != nil {
+			return err
+		}
+		writers = append(writers, w)
 	}
 
-	g.conns = conns
+	g.writer = io.MultiWriter(writers...)
 	return nil
 }
 
@@ -71,7 +72,10 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, value := range values {
-			g.conns[0].Log(value)
+			_, err := g.writer.Write([]byte(value))
+			if err != nil {
+				return fmt.Errorf("FAILED to write message: %s, %s", value, err)
+			}
 		}
 	}
 	return nil
