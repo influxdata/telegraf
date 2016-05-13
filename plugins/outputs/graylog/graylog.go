@@ -10,11 +10,10 @@ import (
 )
 
 type Graylog struct {
-	Servers []string
-
+	Servers    []string
 	serializer serializers.Serializer
-
-	writer io.Writer
+	closers    []io.Closer
+	writer     io.Writer
 }
 
 var sampleConfig = `
@@ -42,6 +41,7 @@ func (g *Graylog) Connect() error {
 			return err
 		}
 		writers = append(writers, w)
+		g.closers = append(g.closers, w)
 	}
 
 	g.writer = io.MultiWriter(writers...)
@@ -49,6 +49,15 @@ func (g *Graylog) Connect() error {
 }
 
 func (g *Graylog) Close() error {
+	var errS string
+	for _, c := range g.closers {
+		if err := c.Close(); err != nil {
+			errS += err.Error() + "\n"
+		}
+	}
+	if errS != "" {
+		return fmt.Errorf(errS)
+	}
 	return nil
 }
 
