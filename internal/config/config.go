@@ -552,7 +552,7 @@ func parseFile(fpath string) (*ast.Table, error) {
 	env_vars := envExecRe.FindAll(contents, -1)
 	for _, env_var := range env_vars {
 		str := strings.TrimPrefix(string(env_var), "$(")
-		str = strings.TrimSuffix(str, ")")
+		args := strings.Fields(strings.TrimSuffix(str, ")"))
 		v, err := exec.Command(args[0], args[1:]...).Output()
 		if err != nil {
 			return nil, err
