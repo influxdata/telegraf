@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -36,6 +37,9 @@ var (
 
 	// envVarRe is a regex to find environment variables in the config file
 	envVarRe = regexp.MustCompile(`\$\w+`)
+
+	// envExecRe is a regex to find executable configs in the config file
+	envExecRe = regexp.MustCompile(`\$\(.*\)`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -541,6 +545,21 @@ func parseFile(fpath string) (*ast.Table, error) {
 	for _, env_var := range env_vars {
 		env_val := os.Getenv(strings.TrimPrefix(string(env_var), "$"))
 		if env_val != "" {
+			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
+		}
+	}
+
+	env_vars := envExecRe.FindAll(contents, -1)
+	for _, env_var := range env_vars {
+		str := strings.TrimPrefix(string(env_var), "$(")
+		str = strings.TrimSuffix(str, ")")
+		v, err := exec.Command(args[0], args[1:]...).Output()
+		if err != nil {
+			return nil, err
+		}
+		env_val := strings.TrimSpace(string(v))
+
+		if len(env_val) > 0 {
 			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
 		}
 	}
