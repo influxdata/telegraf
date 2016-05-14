@@ -553,6 +553,9 @@ func parseFile(fpath string) (*ast.Table, error) {
 	for _, env_var := range env_vars {
 		str := strings.TrimPrefix(string(env_var), "$(")
 		args := strings.Fields(strings.TrimSuffix(str, ")"))
+		if len(args) == 0 {
+			return nil, fmt.Errorf("Empty command string")
+		}
 		v, err := exec.Command(args[0], args[1:]...).Output()
 		if err != nil {
 			return nil, err
