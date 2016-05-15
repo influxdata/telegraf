@@ -6,6 +6,8 @@
 
 ### Bugfixes
 
+- [#1195](https://github.com/influxdata/telegraf/pull/1195): Docker panic on timeout. Thanks @zstyblik!
+
 ## v0.13 [2016-05-11]
 
 ### Release Notes

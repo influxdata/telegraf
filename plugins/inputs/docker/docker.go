@@ -221,7 +221,7 @@ func (d *Docker) gatherContainer(
 	defer cancel()
 	r, err := d.client.ContainerStats(ctx, container.ID, false)
 	if err != nil {
-		log.Printf("Error getting docker stats: %s\n", err.Error())
+		return fmt.Errorf("Error getting docker stats: %s", err.Error())
 	}
 	defer r.Close()
 	dec := json.NewDecoder(r)
