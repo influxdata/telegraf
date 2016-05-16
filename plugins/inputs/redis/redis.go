@@ -74,7 +74,7 @@ var Tracking = map[string]string{
 	"used_cpu_user":               "used_cpu_user",
 	"used_cpu_sys_children":       "used_cpu_sys_children",
 	"used_cpu_user_children":      "used_cpu_user_children",
-	"role":                        "role",
+	"role": "role",
 }
 
 var ErrProtocolError = errors.New("redis protocol error")
