@@ -46,9 +46,13 @@ var fOutputFiltersLegacy = flag.String("outputfilter", "",
 var fConfigDirectoryLegacy = flag.String("configdirectory", "",
 	"directory containing additional *.conf files")
 
-// Telegraf version
-//	-ldflags "-X main.Version=`git describe --always --tags`"
-var Version string
+// Telegraf version, populated linker.
+//   ie, -ldflags "-X main.version=`git describe --always --tags`"
+var (
+	version string
+	commit  string
+	branch  string
+)
 
 const usage = `Telegraf, The plugin-driven server agent for collecting and reporting metrics.
 
@@ -132,7 +136,7 @@ func main() {
 		if len(args) > 0 {
 			switch args[0] {
 			case "version":
-				v := fmt.Sprintf("Telegraf - Version %s", Version)
+				v := fmt.Sprintf("Telegraf - version %s", version)
 				fmt.Println(v)
 				return
 			case "config":
@@ -158,7 +162,7 @@ func main() {
 		}
 
 		if *fVersion {
-			v := fmt.Sprintf("Telegraf - Version %s", Version)
+			v := fmt.Sprintf("Telegraf - version %s", version)
 			fmt.Println(v)
 			return
 		}
@@ -251,7 +255,7 @@ func main() {
 			}
 		}()
 
-		log.Printf("Starting Telegraf (version %s)\n", Version)
+		log.Printf("Starting Telegraf (version %s)\n", version)
 		log.Printf("Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 		log.Printf("Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 		log.Printf("Tags enabled: %s", c.ListTags())
