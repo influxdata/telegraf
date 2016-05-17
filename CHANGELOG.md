@@ -9,6 +9,7 @@
 ### Bugfixes
 
 - [#1195](https://github.com/influxdata/telegraf/pull/1195): Docker panic on timeout. Thanks @zstyblik!
+- [#1211](https://github.com/influxdata/telegraf/pull/1211): mongodb input. Fix possible panic. Thanks @kols!
 
 ## v0.13 [2016-05-11]
 
