@@ -1,27 +1,28 @@
-## Nstat input plugin 
+## Nstat input plugin
 
-Plugin collects network metrics from ```/proc/net/netstat```, ```/proc/net/snmp``` and ```/proc/net/snmp6``` files
+Plugin collects network metrics from `/proc/net/netstat`, `/proc/net/snmp` and `/proc/net/snmp6` files
 
 ### Configuration
+
 The plugin firstly tries to read file paths from config values
 if it is empty, then it reads from env variables.
-* ```PROC_NET_NETSTAT```
-* ```PROC_NET_SNMP```
-* ```PROC_NET_SNMP6```
+* `PROC_NET_NETSTAT`
+* `PROC_NET_SNMP`
+* `PROC_NET_SNMP6`
 
 If these variables are also not set,
-then it tries to read the proc root from env - ```PROC_ROOT```,
-and sets ```/proc``` as a root path if ```PROC_ROOT``` is also empty.
+then it tries to read the proc root from env - `PROC_ROOT`,
+and sets `/proc` as a root path if `PROC_ROOT` is also empty.
 
 Then appends default file paths:
-* ```/net/netstat```
-* ```/net/snmp```
-* ```/net/snmp6```
+* `/net/netstat`
+* `/net/snmp`
+* `/net/snmp6`
 
 So if nothing is given, no paths in config and in env vars, the plugin takes the default paths.
-* ```/proc/net/netstat```
-* ```/proc/net/snmp```
-* ```/proc/net/snmp6```
+* `/proc/net/netstat`
+* `/proc/net/snmp`
+* `/proc/net/snmp6`
 
 The sample config file
 ```toml

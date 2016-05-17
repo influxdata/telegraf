@@ -40,17 +40,18 @@ type Nstat struct {
 }
 
 var sampleConfig = `
-  # file paths
-  # e.g: /proc/net/netstat, /proc/net/snmp, /proc/net/snmp6
-  proc_net_netstat 		= 	""
-  proc_net_snmp 		= 	""
-  proc_net_snmp6 		= 	""
-  # dump metrics with 0 values too
-  dump_zeros			= 	true
+  ## file paths for proc files. If empty default paths will be used:
+  ##    /proc/net/netstat, /proc/net/snmp, /proc/net/snmp6
+  ## These can also be overridden with env variables, see README.
+  proc_net_netstat = ""
+  proc_net_snmp    = ""
+  proc_net_snmp6   = ""
+  ## dump metrics with 0 values too
+  dump_zeros       = true
 `
 
 func (ns *Nstat) Description() string {
-	return "Collect network metrics from '/proc/net/netstat', '/proc/net/snmp' & '/proc/net/snmp6' files"
+	return "Collect kernel snmp counters and network interface statistics"
 }
 
 func (ns *Nstat) SampleConfig() string {

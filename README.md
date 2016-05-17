@@ -186,6 +186,7 @@ Currently implemented sources:
 * [net_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/net_response)
 * [nginx](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nginx)
 * [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq)
+* [nstat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nstat)
 * [ntpq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ntpq)
 * [phpfpm](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/phpfpm)
 * [phusion passenger](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/passenger)
