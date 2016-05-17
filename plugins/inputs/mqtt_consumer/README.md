@@ -21,8 +21,12 @@ The plugin expects messages in the
     "sensors/#",
   ]
 
-  ## Maximum number of metrics to buffer between collection intervals
-  metric_buffer = 100000
+  # if true, messages that can't be delivered while the subscriber is offline
+  # will be delivered when it comes back (such as on service restart).
+  # NOTE: if true, client_id MUST be set
+  persistent_session = false
+  # If empty, a random client ID will be generated.
+  client_id = ""
 
   ## username and password to connect MQTT server.
   # username = "telegraf"
