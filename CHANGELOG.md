@@ -1,3 +1,11 @@
+## v0.13.1 [unreleased]
+
+### Features
+
+- [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
+
+### Bugfixes
+
 ## v0.13 [2016-05-11]
 
 ### Release Notes
