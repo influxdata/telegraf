@@ -1,4 +1,4 @@
-# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf)
+# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 
 Telegraf is an agent written in Go for collecting metrics from the system it's
 running on, or from other services, and writing them into InfluxDB or other
@@ -186,6 +186,7 @@ Currently implemented sources:
 * [net_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/net_response)
 * [nginx](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nginx)
 * [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq)
+* [nstat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nstat)
 * [ntpq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ntpq)
 * [phpfpm](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/phpfpm)
 * [phusion passenger](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/passenger)
@@ -223,6 +224,7 @@ Currently implemented sources:
 Telegraf can also collect metrics via the following service plugins:
 
 * [statsd](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/statsd)
+* [tail](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail)
 * [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [tcp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tcp_listener)
 * [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
@@ -243,6 +245,7 @@ want to add support for another service or third-party API.
 * [datadog](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/datadog)
 * [file](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file)
 * [graphite](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/graphite)
+* [instrumental](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/instrumental)
 * [kafka](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kafka)
 * [librato](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/librato)
 * [mqtt](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/mqtt)

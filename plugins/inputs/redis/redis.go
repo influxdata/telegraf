@@ -74,6 +74,7 @@ var Tracking = map[string]string{
 	"used_cpu_user":               "used_cpu_user",
 	"used_cpu_sys_children":       "used_cpu_sys_children",
 	"used_cpu_user_children":      "used_cpu_user_children",
+	"role": "role",
 }
 
 var ErrProtocolError = errors.New("redis protocol error")
@@ -204,6 +205,11 @@ func gatherInfoOutput(
 
 		if name == "keyspace_misses" {
 			keyspace_misses = ival
+		}
+
+		if name == "role" {
+			tags["role"] = val
+			continue
 		}
 
 		if err == nil {

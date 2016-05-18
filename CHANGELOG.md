@@ -1,3 +1,14 @@
+## v0.13.1 [unreleased]
+
+### Features
+
+- [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
+- [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
+
+### Bugfixes
+
+- [#1195](https://github.com/influxdata/telegraf/pull/1195): Docker panic on timeout. Thanks @zstyblik!
+
 ## v0.13 [2016-05-11]
 
 ### Release Notes
