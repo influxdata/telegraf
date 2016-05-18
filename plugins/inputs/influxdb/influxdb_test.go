@@ -27,7 +27,7 @@ func TestBasic(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Metrics, 2)
+	require.Len(t, acc.Metrics, 3)
 	fields := map[string]interface{}{
 		// JSON will truncate floats to integer representations.
 		// Since there's no distinction in JSON, we can't assume it's an int.
@@ -50,6 +50,11 @@ func TestBasic(t *testing.T) {
 		"url": fakeServer.URL + "/endpoint",
 	}
 	acc.AssertContainsTaggedFields(t, "influxdb_bar", fields, tags)
+
+	acc.AssertContainsTaggedFields(t, "influxdb",
+		map[string]interface{}{
+			"n_shards": 0,
+		}, map[string]string{})
 }
 
 func TestInfluxDB(t *testing.T) {
@@ -69,7 +74,7 @@ func TestInfluxDB(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	require.Len(t, acc.Metrics, 33)
+	require.Len(t, acc.Metrics, 34)
 
 	fields := map[string]interface{}{
 		"heap_inuse":      int64(18046976),
@@ -104,6 +109,11 @@ func TestInfluxDB(t *testing.T) {
 		"url": fakeInfluxServer.URL + "/endpoint",
 	}
 	acc.AssertContainsTaggedFields(t, "influxdb_memstats", fields, tags)
+
+	acc.AssertContainsTaggedFields(t, "influxdb",
+		map[string]interface{}{
+			"n_shards": 2,
+		}, map[string]string{})
 }
 
 func TestErrorHandling(t *testing.T) {
