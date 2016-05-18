@@ -1,6 +1,6 @@
 # Telegraf plugin: zfs
 
-Get ZFS stat from /proc/spl/kstat/zfs
+Get ZFS stat from /proc/spl/kstat/zfs on Linux and from TODO on FreeBSD.
 
 # Measurements
 
