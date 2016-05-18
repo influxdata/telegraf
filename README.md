@@ -224,6 +224,7 @@ Currently implemented sources:
 Telegraf can also collect metrics via the following service plugins:
 
 * [statsd](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/statsd)
+* [tail](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail)
 * [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [tcp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tcp_listener)
 * [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
