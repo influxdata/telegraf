@@ -161,6 +161,7 @@ Currently implemented sources:
 * [apache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/apache)
 * [bcache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/bcache)
 * [cassandra](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cassandra)
+* [ceph](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ceph)
 * [couchbase](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchbase)
 * [couchdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchdb)
 * [disque](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disque)
