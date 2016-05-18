@@ -334,5 +334,5 @@ func NewEvent(r []byte, t string) (Event, error) {
 	case "watch":
 		return newWatch(r)
 	}
-	return nil, &newEventError{"Not a recgonized event type"}
+	return nil, &newEventError{"Not a recognized event type"}
 }
