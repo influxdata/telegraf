@@ -22,6 +22,23 @@ _each_ plugin will be logged in Debug mode.
 functionality can be duplicated using the `file` output plugin and printing
 to "stdout".
 
+### Release Notes
+
+- All AWS plugins now utilize a standard mechanism for evaluating credentials.
+This allows all AWS plugins to support environment variables, shared credential
+files & profiles, and role assumptions. See the specific plugin README for
+details.
+
+- The AWS CloudWatch input plugin can now declare a wildcard value for a metric
+dimension. This causes the plugin to read all metrics that contain the specified
+dimension key regardless of value. This is used to export collections of metrics
+without having to know the dimension values ahead of time.
+
+- The AWS CloudWatch input plugin can now be configured with the `cache_ttl`
+attribute. This configures the TTL of the internal metric cache. This is useful
+in conjunction with wildcard dimension values as it will control the amount of
+time before a new metric is included by the plugin.
+
 ### Features
 
 - [#1173](https://github.com/influxdata/telegraf/pull/1173): varnish input plugin. Thanks @sfox-xmatters!
@@ -32,6 +49,7 @@ to "stdout".
 - [#1238](https://github.com/influxdata/telegraf/pull/1238): chrony input plugin. Thanks @zbindenren!
 - [#479](https://github.com/influxdata/telegraf/issues/479): per-plugin execution time added to debug output.
 - [#1249](https://github.com/influxdata/telegraf/issues/1249): influxdb output: added write_consistency argument.
+- [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
 
 ### Bugfixes
 
