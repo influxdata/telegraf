@@ -15,11 +15,12 @@ import (
 )
 
 type Procstat struct {
-	PidFile string `toml:"pid_file"`
-	Exe     string
-	Pattern string
-	Prefix  string
-	User    string
+	PidFile     string `toml:"pid_file"`
+	Exe         string
+	Pattern     string
+	Prefix      string
+	ProcessName string
+	User        string
 
 	// pidmap maps a pid to a process object, so we don't recreate every gather
 	pidmap map[int32]*process.Process
@@ -45,6 +46,9 @@ var sampleConfig = `
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
 
+  ## override for process_name
+  ## This is optional; default is sourced from /proc/<pid>/status
+  # process_name = "bar"
   ## Field name prefix
   prefix = ""
   ## comment this out if you want raw cpu_time stats
@@ -66,7 +70,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error())
 	} else {
 		for pid, proc := range p.pidmap {
-			p := NewSpecProcessor(p.Prefix, acc, proc, p.tagmap[pid])
+			p := NewSpecProcessor(p.ProcessName, p.Prefix, acc, proc, p.tagmap[pid])
 			p.pushMetrics()
 		}
 	}

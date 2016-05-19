@@ -17,13 +17,19 @@ type SpecProcessor struct {
 }
 
 func NewSpecProcessor(
+	processName string,
 	prefix string,
 	acc telegraf.Accumulator,
 	p *process.Process,
 	tags map[string]string,
 ) *SpecProcessor {
-	if name, err := p.Name(); err == nil {
-		tags["process_name"] = name
+	if processName != "" {
+		tags["process_name"] = processName
+	} else {
+		name, err := p.Name()
+		if err == nil {
+			tags["process_name"] = name
+		}
 	}
 	return &SpecProcessor{
 		Prefix: prefix,
