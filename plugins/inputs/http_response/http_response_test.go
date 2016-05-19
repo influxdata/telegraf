@@ -11,20 +11,6 @@ import (
 	"time"
 )
 
-func TestCreateHeaders(t *testing.T) {
-	fakeHeaders := map[string]string{
-		"Accept":        "text/plain",
-		"Content-Type":  "application/json",
-		"Cache-Control": "no-cache",
-	}
-	headers := CreateHeaders(fakeHeaders)
-	testHeaders := make(http.Header)
-	testHeaders.Add("Accept", "text/plain")
-	testHeaders.Add("Content-Type", "application/json")
-	testHeaders.Add("Cache-Control", "no-cache")
-	assert.Equal(t, testHeaders, headers)
-}
-
 func setUpTestMux() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/redirect", func(w http.ResponseWriter, req *http.Request) {
@@ -63,6 +49,33 @@ func setUpTestMux() http.Handler {
 	return mux
 }
 
+func TestHeaders(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cHeader := r.Header.Get("Content-Type")
+		assert.Equal(t, "Hello", r.Host)
+		assert.Equal(t, "application/json", cHeader)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Address:         ts.URL,
+		Method:          "GET",
+		ResponseTimeout: 2,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+			"Host":         "Hello",
+		},
+	}
+	fields, err := h.HTTPGather()
+	require.NoError(t, err)
+	assert.NotEmpty(t, fields)
+	if assert.NotNil(t, fields["http_response_code"]) {
+		assert.Equal(t, http.StatusOK, fields["http_response_code"])
+	}
+	assert.NotNil(t, fields["response_time"])
+}
+
 func TestFields(t *testing.T) {
 	mux := setUpTestMux()
 	ts := httptest.NewServer(mux)
@@ -85,7 +98,6 @@ func TestFields(t *testing.T) {
 		assert.Equal(t, http.StatusOK, fields["http_response_code"])
 	}
 	assert.NotNil(t, fields["response_time"])
-
 }
 
 func TestRedirects(t *testing.T) {
