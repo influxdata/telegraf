@@ -1,14 +1,152 @@
 package graylog
 
 import (
+	"bytes"
+	"compress/zlib"
+	"crypto/rand"
+	"encoding/binary"
 	ejson "encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/vanillahsu/graylog-golang"
 	"io"
+	"math"
+	"net"
 	"os"
 )
+
+const (
+	defaultGraylogEndpoint = "127.0.0.1:12201"
+	defaultConnection      = "wan"
+	defaultMaxChunkSizeWan = 1420
+	defaultMaxChunkSizeLan = 8154
+)
+
+type GelfConfig struct {
+	GraylogEndpoint string
+	Connection      string
+	MaxChunkSizeWan int
+	MaxChunkSizeLan int
+}
+
+type Gelf struct {
+	GelfConfig
+}
+
+func NewGelfWriter(config GelfConfig) *Gelf {
+	if config.GraylogEndpoint == "" {
+		config.GraylogEndpoint = defaultGraylogEndpoint
+	}
+
+	if config.Connection == "" {
+		config.Connection = defaultConnection
+	}
+
+	if config.MaxChunkSizeWan == 0 {
+		config.MaxChunkSizeWan = defaultMaxChunkSizeWan
+	}
+
+	if config.MaxChunkSizeLan == 0 {
+		config.MaxChunkSizeLan = defaultMaxChunkSizeLan
+	}
+
+	g := &Gelf{GelfConfig: config}
+
+	return g
+}
+
+func (g *Gelf) Write(message []byte) (n int, err error) {
+	compressed := g.compress(message)
+
+	chunksize := g.GelfConfig.MaxChunkSizeWan
+	length := compressed.Len()
+
+	if length > chunksize {
+
+		chunkCountInt := int(math.Ceil(float64(length) / float64(chunksize)))
+
+		id := make([]byte, 8)
+		rand.Read(id)
+
+		for i, index := 0, 0; i < length; i, index = i+chunksize, index+1 {
+			packet := g.createChunkedMessage(index, chunkCountInt, id, &compressed)
+			_, err = g.send(packet.Bytes())
+			if err != nil {
+				return 0, err
+			}
+		}
+	} else {
+		_, err = g.send(compressed.Bytes())
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	n = len(message)
+
+	return
+}
+
+func (g *Gelf) createChunkedMessage(index int, chunkCountInt int, id []byte, compressed *bytes.Buffer) bytes.Buffer {
+	var packet bytes.Buffer
+
+	chunksize := g.getChunksize()
+
+	packet.Write(g.intToBytes(30))
+	packet.Write(g.intToBytes(15))
+	packet.Write(id)
+
+	packet.Write(g.intToBytes(index))
+	packet.Write(g.intToBytes(chunkCountInt))
+
+	packet.Write(compressed.Next(chunksize))
+
+	return packet
+}
+
+func (g *Gelf) getChunksize() int {
+	if g.GelfConfig.Connection == "wan" {
+		return g.GelfConfig.MaxChunkSizeWan
+	}
+
+	if g.GelfConfig.Connection == "lan" {
+		return g.GelfConfig.MaxChunkSizeLan
+	}
+
+	return g.GelfConfig.MaxChunkSizeWan
+}
+
+func (g *Gelf) intToBytes(i int) []byte {
+	buf := new(bytes.Buffer)
+
+	binary.Write(buf, binary.LittleEndian, int8(i))
+	return buf.Bytes()
+}
+
+func (g *Gelf) compress(b []byte) bytes.Buffer {
+	var buf bytes.Buffer
+	comp := zlib.NewWriter(&buf)
+
+	comp.Write(b)
+	comp.Close()
+
+	return buf
+}
+
+func (g *Gelf) send(b []byte) (n int, err error) {
+	udpAddr, err := net.ResolveUDPAddr("udp", g.GelfConfig.GraylogEndpoint)
+	if err != nil {
+		return
+	}
+
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return
+	}
+
+	n, err = conn.Write(b)
+	return
+}
 
 type Graylog struct {
 	Servers []string
@@ -28,7 +166,7 @@ func (g *Graylog) Connect() error {
 	}
 
 	for _, server := range g.Servers {
-		w := gelf.New(gelf.Config{GraylogEndpoint: server})
+		w := NewGelfWriter(GelfConfig{GraylogEndpoint: server})
 		writers = append(writers, w)
 	}
 
