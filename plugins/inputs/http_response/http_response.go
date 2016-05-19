@@ -68,16 +68,6 @@ func CreateHttpClient(followRedirects bool, ResponseTimeout time.Duration) *http
 	return client
 }
 
-// CreateHeaders takes a map of header strings and puts them
-// into a http.Header Object
-func CreateHeaders(headers map[string]string) http.Header {
-	httpHeaders := make(http.Header)
-	for key := range headers {
-		httpHeaders.Add(key, headers[key])
-	}
-	return httpHeaders
-}
-
 // HTTPGather gathers all fields and returns any errors it encounters
 func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	// Prepare fields
@@ -93,7 +83,13 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	request.Header = CreateHeaders(h.Headers)
+
+	for key, val := range h.Headers {
+		request.Header.Add(key, val)
+		if key == "Host" {
+			request.Host = val
+		}
+	}
 
 	// Start Timer
 	start := time.Now()

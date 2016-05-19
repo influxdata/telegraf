@@ -4,10 +4,14 @@
 
 - [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
 - [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
+- [#1172](https://github.com/influxdata/telegraf/pull/1172): Ceph storage stats. Thanks @robinpercy!
 
 ### Bugfixes
 
 - [#1195](https://github.com/influxdata/telegraf/pull/1195): Docker panic on timeout. Thanks @zstyblik!
+- [#1211](https://github.com/influxdata/telegraf/pull/1211): mongodb input. Fix possible panic. Thanks @kols!
+- [#1228](https://github.com/influxdata/telegraf/pull/1228): Fix service plugin host tag overwrite.
+- [#1198](https://github.com/influxdata/telegraf/pull/1198): http_response: override request Host header properly
 
 ## v0.13 [2016-05-11]
 

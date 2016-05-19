@@ -69,10 +69,10 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 		wg.Add(1)
-		go func() {
+		go func(srv *Server) {
 			defer wg.Done()
-			outerr = m.gatherServer(m.getMongoServer(u), acc)
-		}()
+			outerr = m.gatherServer(srv, acc)
+		}(m.getMongoServer(u))
 	}
 
 	wg.Wait()
