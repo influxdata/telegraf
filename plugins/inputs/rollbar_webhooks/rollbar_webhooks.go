@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
-  "time"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
@@ -42,15 +42,15 @@ func (rb *RollbarWebhooks) Description() string {
 }
 
 func (rb *RollbarWebhooks) Gather(acc telegraf.Accumulator) error {
-  rb.Lock()
+	rb.Lock()
 	defer rb.Unlock()
 	for _, event := range rb.events {
-    fields := map[string]interface{}{
-      "value": 1,
-    }
-    tags := map[string]string{
-      "event": event.Name,
-    }
+		fields := map[string]interface{}{
+			"value": 1,
+		}
+		tags := map[string]string{
+			"event": event.Name,
+		}
 
 		acc.AddFields("rollbar_webhooks", fields, tags, time.Now())
 	}
@@ -78,7 +78,7 @@ func (rb *RollbarWebhooks) Stop() {
 }
 
 type Event struct {
-  Name string `json:"event_name"`
+	Name string `json:"event_name"`
 }
 
 // Handles the / route
@@ -90,8 +90,8 @@ func (rb *RollbarWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-  var e Event
-  err = json.Unmarshal(data, &e)
+	var e Event
+	err = json.Unmarshal(data, &e)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
