@@ -3,7 +3,6 @@ package serializers
 import (
 	"github.com/influxdata/telegraf"
 
-	"github.com/influxdata/telegraf/plugins/serializers/gelf"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -48,14 +47,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
 		serializer, err = NewJsonSerializer()
-	case "gelf":
-		serializer, err = NewGelfSerializer()
 	}
 	return serializer, err
-}
-
-func NewGelfSerializer() (Serializer, error) {
-	return &gelf.GelfSerializer{}, nil
 }
 
 func NewJsonSerializer() (Serializer, error) {

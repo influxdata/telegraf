@@ -1,4 +1,3 @@
-github.com/Graylog2/go-gelf/gelf 76d60fc890684cff2fb65c631ed711d4af080592
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
 github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
@@ -47,6 +46,7 @@ github.com/shirou/gopsutil 37d89088411de59a4ef9fc340afa0e89dfcb4ea9
 github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
+github.com/vanillahsu/graylog-golang 6e62d8af813f90cf888cf976abf7ea4854fe9e37
 github.com/wvanbergen/kafka 46f9a1cf3f670edec492029fadded9c2d9e18866
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363

@@ -49,6 +49,7 @@ github.com/shirou/w32 ada3ba68f000aa1b58580e45c9d308fe0b7fc5c5
 github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
+github.com/vanillahsu/graylog-golang 6e62d8af813f90cf888cf976abf7ea4854fe9e37
 github.com/wvanbergen/kafka 46f9a1cf3f670edec492029fadded9c2d9e18866
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
