@@ -91,193 +91,96 @@ func (gh *GithubWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func newCommitComment(data []byte) (Event, error) {
-	commitCommentStruct := CommitCommentEvent{}
-	err := json.Unmarshal(data, &commitCommentStruct)
+func generateEvent(data []byte, event Event) (Event, error) {
+	err := json.Unmarshal(data, event)
 	if err != nil {
 		return nil, err
 	}
-	return commitCommentStruct, nil
+	return event, nil
+}
+
+func newCommitComment(data []byte) (Event, error) {
+	return generateEvent(data, &CommitCommentEvent{})
 }
 
 func newCreate(data []byte) (Event, error) {
-	createStruct := CreateEvent{}
-	err := json.Unmarshal(data, &createStruct)
-	if err != nil {
-		return nil, err
-	}
-	return createStruct, nil
+	return generateEvent(data, &CreateEvent{})
 }
 
 func newDelete(data []byte) (Event, error) {
-	deleteStruct := DeleteEvent{}
-	err := json.Unmarshal(data, &deleteStruct)
-	if err != nil {
-		return nil, err
-	}
-	return deleteStruct, nil
+	return generateEvent(data, &DeleteEvent{})
 }
 
 func newDeployment(data []byte) (Event, error) {
-	deploymentStruct := DeploymentEvent{}
-	err := json.Unmarshal(data, &deploymentStruct)
-	if err != nil {
-		return nil, err
-	}
-	return deploymentStruct, nil
+	return generateEvent(data, &DeploymentEvent{})
 }
 
 func newDeploymentStatus(data []byte) (Event, error) {
-	deploymentStatusStruct := DeploymentStatusEvent{}
-	err := json.Unmarshal(data, &deploymentStatusStruct)
-	if err != nil {
-		return nil, err
-	}
-	return deploymentStatusStruct, nil
+	return generateEvent(data, &DeploymentStatusEvent{})
 }
 
 func newFork(data []byte) (Event, error) {
-	forkStruct := ForkEvent{}
-	err := json.Unmarshal(data, &forkStruct)
-	if err != nil {
-		return nil, err
-	}
-	return forkStruct, nil
+	return generateEvent(data, &ForkEvent{})
 }
 
 func newGollum(data []byte) (Event, error) {
-	gollumStruct := GollumEvent{}
-	err := json.Unmarshal(data, &gollumStruct)
-	if err != nil {
-		return nil, err
-	}
-	return gollumStruct, nil
+	return generateEvent(data, &GollumEvent{})
 }
 
 func newIssueComment(data []byte) (Event, error) {
-	issueCommentStruct := IssueCommentEvent{}
-	err := json.Unmarshal(data, &issueCommentStruct)
-	if err != nil {
-		return nil, err
-	}
-	return issueCommentStruct, nil
+	return generateEvent(data, &IssueCommentEvent{})
 }
 
 func newIssues(data []byte) (Event, error) {
-	issuesStruct := IssuesEvent{}
-	err := json.Unmarshal(data, &issuesStruct)
-	if err != nil {
-		return nil, err
-	}
-	return issuesStruct, nil
+	return generateEvent(data, &IssuesEvent{})
 }
 
 func newMember(data []byte) (Event, error) {
-	memberStruct := MemberEvent{}
-	err := json.Unmarshal(data, &memberStruct)
-	if err != nil {
-		return nil, err
-	}
-	return memberStruct, nil
+	return generateEvent(data, &MemberEvent{})
 }
 
 func newMembership(data []byte) (Event, error) {
-	membershipStruct := MembershipEvent{}
-	err := json.Unmarshal(data, &membershipStruct)
-	if err != nil {
-		return nil, err
-	}
-	return membershipStruct, nil
+	return generateEvent(data, &MembershipEvent{})
 }
 
 func newPageBuild(data []byte) (Event, error) {
-	pageBuildEvent := PageBuildEvent{}
-	err := json.Unmarshal(data, &pageBuildEvent)
-	if err != nil {
-		return nil, err
-	}
-	return pageBuildEvent, nil
+	return generateEvent(data, &PageBuildEvent{})
 }
 
 func newPublic(data []byte) (Event, error) {
-	publicEvent := PublicEvent{}
-	err := json.Unmarshal(data, &publicEvent)
-	if err != nil {
-		return nil, err
-	}
-	return publicEvent, nil
+	return generateEvent(data, &PublicEvent{})
 }
 
 func newPullRequest(data []byte) (Event, error) {
-	pullRequestStruct := PullRequestEvent{}
-	err := json.Unmarshal(data, &pullRequestStruct)
-	if err != nil {
-		return nil, err
-	}
-	return pullRequestStruct, nil
+	return generateEvent(data, &PullRequestEvent{})
 }
 
 func newPullRequestReviewComment(data []byte) (Event, error) {
-	pullRequestReviewCommentStruct := PullRequestReviewCommentEvent{}
-	err := json.Unmarshal(data, &pullRequestReviewCommentStruct)
-	if err != nil {
-		return nil, err
-	}
-	return pullRequestReviewCommentStruct, nil
+	return generateEvent(data, &PullRequestReviewCommentEvent{})
 }
 
 func newPush(data []byte) (Event, error) {
-	pushStruct := PushEvent{}
-	err := json.Unmarshal(data, &pushStruct)
-	if err != nil {
-		return nil, err
-	}
-	return pushStruct, nil
+	return generateEvent(data, &PushEvent{})
 }
 
 func newRelease(data []byte) (Event, error) {
-	releaseStruct := ReleaseEvent{}
-	err := json.Unmarshal(data, &releaseStruct)
-	if err != nil {
-		return nil, err
-	}
-	return releaseStruct, nil
+	return generateEvent(data, &ReleaseEvent{})
 }
 
 func newRepository(data []byte) (Event, error) {
-	repositoryStruct := RepositoryEvent{}
-	err := json.Unmarshal(data, &repositoryStruct)
-	if err != nil {
-		return nil, err
-	}
-	return repositoryStruct, nil
+	return generateEvent(data, &RepositoryEvent{})
 }
 
 func newStatus(data []byte) (Event, error) {
-	statusStruct := StatusEvent{}
-	err := json.Unmarshal(data, &statusStruct)
-	if err != nil {
-		return nil, err
-	}
-	return statusStruct, nil
+	return generateEvent(data, &StatusEvent{})
 }
 
 func newTeamAdd(data []byte) (Event, error) {
-	teamAddStruct := TeamAddEvent{}
-	err := json.Unmarshal(data, &teamAddStruct)
-	if err != nil {
-		return nil, err
-	}
-	return teamAddStruct, nil
+	return generateEvent(data, &TeamAddEvent{})
 }
 
 func newWatch(data []byte) (Event, error) {
-	watchStruct := WatchEvent{}
-	err := json.Unmarshal(data, &watchStruct)
-	if err != nil {
-		return nil, err
-	}
-	return watchStruct, nil
+	return generateEvent(data, &WatchEvent{})
 }
 
 type newEventError struct {
