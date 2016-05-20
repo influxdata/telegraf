@@ -99,90 +99,6 @@ func generateEvent(data []byte, event Event) (Event, error) {
 	return event, nil
 }
 
-func newCommitComment(data []byte) (Event, error) {
-	return generateEvent(data, &CommitCommentEvent{})
-}
-
-func newCreate(data []byte) (Event, error) {
-	return generateEvent(data, &CreateEvent{})
-}
-
-func newDelete(data []byte) (Event, error) {
-	return generateEvent(data, &DeleteEvent{})
-}
-
-func newDeployment(data []byte) (Event, error) {
-	return generateEvent(data, &DeploymentEvent{})
-}
-
-func newDeploymentStatus(data []byte) (Event, error) {
-	return generateEvent(data, &DeploymentStatusEvent{})
-}
-
-func newFork(data []byte) (Event, error) {
-	return generateEvent(data, &ForkEvent{})
-}
-
-func newGollum(data []byte) (Event, error) {
-	return generateEvent(data, &GollumEvent{})
-}
-
-func newIssueComment(data []byte) (Event, error) {
-	return generateEvent(data, &IssueCommentEvent{})
-}
-
-func newIssues(data []byte) (Event, error) {
-	return generateEvent(data, &IssuesEvent{})
-}
-
-func newMember(data []byte) (Event, error) {
-	return generateEvent(data, &MemberEvent{})
-}
-
-func newMembership(data []byte) (Event, error) {
-	return generateEvent(data, &MembershipEvent{})
-}
-
-func newPageBuild(data []byte) (Event, error) {
-	return generateEvent(data, &PageBuildEvent{})
-}
-
-func newPublic(data []byte) (Event, error) {
-	return generateEvent(data, &PublicEvent{})
-}
-
-func newPullRequest(data []byte) (Event, error) {
-	return generateEvent(data, &PullRequestEvent{})
-}
-
-func newPullRequestReviewComment(data []byte) (Event, error) {
-	return generateEvent(data, &PullRequestReviewCommentEvent{})
-}
-
-func newPush(data []byte) (Event, error) {
-	return generateEvent(data, &PushEvent{})
-}
-
-func newRelease(data []byte) (Event, error) {
-	return generateEvent(data, &ReleaseEvent{})
-}
-
-func newRepository(data []byte) (Event, error) {
-	return generateEvent(data, &RepositoryEvent{})
-}
-
-func newStatus(data []byte) (Event, error) {
-	return generateEvent(data, &StatusEvent{})
-}
-
-func newTeamAdd(data []byte) (Event, error) {
-	return generateEvent(data, &TeamAddEvent{})
-}
-
-func newWatch(data []byte) (Event, error) {
-	return generateEvent(data, &WatchEvent{})
-}
-
 type newEventError struct {
 	s string
 }
@@ -191,51 +107,51 @@ func (e *newEventError) Error() string {
 	return e.s
 }
 
-func NewEvent(r []byte, t string) (Event, error) {
-	log.Printf("New %v event received", t)
-	switch t {
+func NewEvent(data []byte, name string) (Event, error) {
+	log.Printf("New %v event received", name)
+	switch name {
 	case "commit_comment":
-		return newCommitComment(r)
+		return generateEvent(data, &CommitCommentEvent{})
 	case "create":
-		return newCreate(r)
+		return generateEvent(data, &CreateEvent{})
 	case "delete":
-		return newDelete(r)
+		return generateEvent(data, &DeleteEvent{})
 	case "deployment":
-		return newDeployment(r)
+		return generateEvent(data, &DeploymentEvent{})
 	case "deployment_status":
-		return newDeploymentStatus(r)
+		return generateEvent(data, &DeploymentStatusEvent{})
 	case "fork":
-		return newFork(r)
+		return generateEvent(data, &ForkEvent{})
 	case "gollum":
-		return newGollum(r)
+		return generateEvent(data, &GollumEvent{})
 	case "issue_comment":
-		return newIssueComment(r)
+		return generateEvent(data, &IssueCommentEvent{})
 	case "issues":
-		return newIssues(r)
+		return generateEvent(data, &IssuesEvent{})
 	case "member":
-		return newMember(r)
+		return generateEvent(data, &MemberEvent{})
 	case "membership":
-		return newMembership(r)
+		return generateEvent(data, &MembershipEvent{})
 	case "page_build":
-		return newPageBuild(r)
+		return generateEvent(data, &PageBuildEvent{})
 	case "public":
-		return newPublic(r)
+		return generateEvent(data, &PublicEvent{})
 	case "pull_request":
-		return newPullRequest(r)
+		return generateEvent(data, &PullRequestEvent{})
 	case "pull_request_review_comment":
-		return newPullRequestReviewComment(r)
+		return generateEvent(data, &PullRequestReviewCommentEvent{})
 	case "push":
-		return newPush(r)
+		return generateEvent(data, &PushEvent{})
 	case "release":
-		return newRelease(r)
+		return generateEvent(data, &ReleaseEvent{})
 	case "repository":
-		return newRepository(r)
+		return generateEvent(data, &RepositoryEvent{})
 	case "status":
-		return newStatus(r)
+		return generateEvent(data, &StatusEvent{})
 	case "team_add":
-		return newTeamAdd(r)
+		return generateEvent(data, &TeamAddEvent{})
 	case "watch":
-		return newWatch(r)
+		return generateEvent(data, &WatchEvent{})
 	}
 	return nil, &newEventError{"Not a recognized event type"}
 }
