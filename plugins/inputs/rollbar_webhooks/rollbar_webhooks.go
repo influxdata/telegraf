@@ -45,14 +45,7 @@ func (rb *RollbarWebhooks) Gather(acc telegraf.Accumulator) error {
 	rb.Lock()
 	defer rb.Unlock()
 	for _, event := range rb.events {
-		fields := map[string]interface{}{
-			"value": 1,
-		}
-		tags := map[string]string{
-			"event": event.Name,
-		}
-
-		acc.AddFields("rollbar_webhooks", fields, tags, time.Now())
+		acc.AddFields("rollbar_webhooks", event.Fields(), event.Tags(), time.Now())
 	}
 	rb.events = make([]Event, 0)
 	return nil
@@ -77,11 +70,6 @@ func (rb *RollbarWebhooks) Stop() {
 	log.Println("Stopping the rbWebhooks service")
 }
 
-type Event struct {
-	Name string `json:"event_name"`
-}
-
-// Handles the / route
 func (rb *RollbarWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data, err := ioutil.ReadAll(r.Body)
@@ -90,15 +78,15 @@ func (rb *RollbarWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var e Event
-	err = json.Unmarshal(data, &e)
+	newItem := &NewItem{}
+	err = json.Unmarshal(data, newItem)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	rb.Lock()
-	rb.events = append(rb.events, e)
+	rb.events = append(rb.events, newItem)
 	rb.Unlock()
 
 	w.WriteHeader(http.StatusOK)

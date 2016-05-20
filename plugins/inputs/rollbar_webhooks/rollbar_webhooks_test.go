@@ -33,8 +33,16 @@ func TestGather(t *testing.T) {
 	postWebhooks(rb, NewItemJSON())
 	rb.Gather(&acc)
 
-	fields := map[string]interface{}{"value": 1}
-	tags := map[string]string{"event": "new_item"}
+	fields := map[string]interface{}{
+		"id": 272716944,
+	}
+
+	tags := map[string]string{
+		"event":       "new_item",
+		"environment": "production",
+		"project_id":  "90",
+		"language":    "python",
+	}
 
 	acc.AssertContainsTaggedFields(t, "rollbar_webhooks", fields, tags)
 }
