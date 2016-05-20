@@ -2,6 +2,7 @@ package rollbar_webhooks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -78,16 +79,41 @@ func (rb *RollbarWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	newItem := &NewItem{}
-	err = json.Unmarshal(data, newItem)
+	dummyEvent := &DummyEvent{}
+	err = json.Unmarshal(data, dummyEvent)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
+	event, err := NewEvent(dummyEvent, data)
+	if err != nil {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	rb.Lock()
-	rb.events = append(rb.events, newItem)
+	rb.events = append(rb.events, event)
 	rb.Unlock()
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func generateEvent(event Event, data []byte) (Event, error) {
+	err := json.Unmarshal(data, event)
+	if err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func NewEvent(dummyEvent *DummyEvent, data []byte) (Event, error) {
+	switch dummyEvent.EventName {
+	case "new_item":
+		return generateEvent(&NewItem{}, data)
+	case "deploy":
+		return generateEvent(&Deploy{}, data)
+	default:
+		return nil, errors.New("Not implemented type: " + dummyEvent.EventName)
+	}
 }

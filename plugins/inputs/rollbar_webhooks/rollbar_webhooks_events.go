@@ -7,6 +7,10 @@ type Event interface {
 	Fields() map[string]interface{}
 }
 
+type DummyEvent struct {
+	EventName string `json:"event_name"`
+}
+
 type NewItemDataItemLastOccurence struct {
 	Language string `json:"language"`
 }
@@ -39,5 +43,34 @@ func (ni *NewItem) Tags() map[string]string {
 func (ni *NewItem) Fields() map[string]interface{} {
 	return map[string]interface{}{
 		"id": ni.Data.Item.Id,
+	}
+}
+
+type DeployDataDeploy struct {
+	Id          int    `json:"id"`
+	Environment string `json:"environment"`
+	ProjectId   int    `json:"project_id"`
+}
+
+type DeployData struct {
+	Deploy DeployDataDeploy `json:"deploy"`
+}
+
+type Deploy struct {
+	EventName string     `json:"event_name"`
+	Data      DeployData `json:"data"`
+}
+
+func (ni *Deploy) Tags() map[string]string {
+	return map[string]string{
+		"event":       ni.EventName,
+		"environment": ni.Data.Deploy.Environment,
+		"project_id":  strconv.Itoa(ni.Data.Deploy.ProjectId),
+	}
+}
+
+func (ni *Deploy) Fields() map[string]interface{} {
+	return map[string]interface{}{
+		"id": ni.Data.Deploy.Id,
 	}
 }

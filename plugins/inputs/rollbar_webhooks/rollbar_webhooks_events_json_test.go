@@ -67,3 +67,30 @@ func NewItemJSON() string {
 	  }
 	}`
 }
+
+func DeployJSON() string {
+	return `
+    {
+      "event_name": "deploy",
+      "data": {
+        "deploy": {
+          "comment": "deploying webs",
+          "user_id": 1,
+          "finish_time": 1382656039,
+          "start_time": 1382656038,
+          "id": 187585,
+          "environment": "production",
+          "project_id": 90,
+          "local_username": "brian",
+          "revision": "e4b9b7db860b2e5ac799f8c06b9498b71ab270bb"
+        }
+      }
+    }`
+}
+
+func UnknowJSON() string {
+	return `
+    {
+      "event_name": "roger"
+    }`
+}
