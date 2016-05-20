@@ -289,7 +289,7 @@ func (e *newEventError) Error() string {
 }
 
 func NewEvent(r []byte, t string) (Event, error) {
-	log.Printf("New %v event recieved", t)
+	log.Printf("New %v event received", t)
 	switch t {
 	case "commit_comment":
 		return newCommitComment(r)
