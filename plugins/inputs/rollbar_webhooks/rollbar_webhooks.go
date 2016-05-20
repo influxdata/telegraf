@@ -34,7 +34,7 @@ func NewRollbarWebhooks() *RollbarWebhooks {
 func (rb *RollbarWebhooks) SampleConfig() string {
 	return `
   ## Address and port to host Webhook listener on
-  service_address = ":1618"
+  service_address = ":1619"
 `
 }
 
