@@ -206,6 +206,7 @@ Currently implemented sources:
     * swap
     * processes
     * kernel (/proc/stat)
+    * kernel (/proc/vmstat)
 
 Telegraf can also collect metrics via the following service plugins:
 
