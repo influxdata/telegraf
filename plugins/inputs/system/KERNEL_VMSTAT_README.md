@@ -1,12 +1,11 @@
 # Kernel VMStat Input Plugin
 
-This plugin is only available on Linux.
+The kernel_vmstat plugin gathers virtual memory statistics 
+by reading /proc/vmstat. For a full list of available fields see the 
+/proc/vmstat section of the [proc man page](http://man7.org/linux/man-pages/man5/proc.5.html).
+For a better idea of what each field represents, see the 
+[vmstat man page](http://linux.die.net/man/8/vmstat).
 
-The kernel_vmstat plugin gathers info about the kernel that doesn't fit into other
-plugins. In general, it is the statistics available in `/proc/vmstat` that are
-not covered by other plugins.
-
-The metrics are documented in `man proc` under the `/proc/vmstat` section.
 
 ```
 /proc/vmstat
