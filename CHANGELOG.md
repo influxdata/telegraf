@@ -11,6 +11,7 @@
 
 - [#1195](https://github.com/influxdata/telegraf/pull/1195): Docker panic on timeout. Thanks @zstyblik!
 - [#1211](https://github.com/influxdata/telegraf/pull/1211): mongodb input. Fix possible panic. Thanks @kols!
+- [#1215](https://github.com/influxdata/telegraf/pull/1215): Fix for possible gopsutil-dependent plugin hangs.
 - [#1228](https://github.com/influxdata/telegraf/pull/1228): Fix service plugin host tag overwrite.
 - [#1198](https://github.com/influxdata/telegraf/pull/1198): http_response: override request Host header properly
 
