@@ -1,3 +1,5 @@
+// +build linux
+
 package conntrack
 
 import (
@@ -25,7 +27,8 @@ func TestNoFilesFound(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := c.Gather(acc)
 
-	assert.EqualError(t, err, "Conntrack input failed to collect metrics. Is the conntrack kernel module loaded?")
+	assert.EqualError(t, err, "Conntrack input failed to collect metrics. "+
+		"Is the conntrack kernel module loaded?")
 }
 
 func TestDefaultsUsed(t *testing.T) {
@@ -47,7 +50,8 @@ func TestDefaultsUsed(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	c.Gather(acc)
-	acc.AssertContainsFields(t, inputName, map[string]interface{}{fname: float64(count)})
+	acc.AssertContainsFields(t, inputName, map[string]interface{}{
+		fname: float64(count)})
 }
 
 func TestConfigsUsed(t *testing.T) {

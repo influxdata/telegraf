@@ -1,19 +1,40 @@
 # Conntrack Plugin
 
-Collects conntrack stats from the configured directories and files.
+Collects stats from Netfilter's conntrack-tools.
+
+The conntrack-tools provide a mechanism for tracking various aspects of
+network connections as they are processed by netfilter. At runtime, 
+conntrack exposes many of those connection statistics within /proc/sys/net.
+Depending on your kernel version, these files can be found in either
+/proc/sys/net/ipv4/netfilter or /proc/sys/net/netfilter and will be
+prefixed with either ip_ or nf_.  This plugin reads the files specified 
+in its configuration and publishes each one as a field, with the prefix
+normalized to ip_.  
+
+In order to simplify configuration in a heterogeneous environment, a superset
+of directory and filenames can be specified.  Any locations that don't exist
+will be ignored.
+
+For more information on conntrack-tools, see the 
+[Netfilter Documentation](http://conntrack-tools.netfilter.org/).
+
 
 ### Configuration:
 
 ```toml
  # Collects conntrack stats from the configured directories and files.
  [[inputs.conntrack]]
-   ## The following defaults would work with multiple versions of contrack. Note the nf_ and ip_
-   ## filename prefixes are mutually exclusive across conntrack versions, as are the directory locations.
+   ## The following defaults would work with multiple versions of conntrack.
+   ## Note the nf_ and ip_ filename prefixes are mutually exclusive across
+   ## kernel versions, as are the directory locations.
 
-   ## Superset of filenames to look for within the conntrack dirs. Missing files will be ignored.
-   files = ["ip_conntrack_count","ip_conntrack_max","nf_conntrack_count","nf_conntrack_max"]
+   ## Superset of filenames to look for within the conntrack dirs.
+   ## Missing files will be ignored.
+   files = ["ip_conntrack_count","ip_conntrack_max",
+            "nf_conntrack_count","nf_conntrack_max"]
 
-   ## Directories to search within for the conntrack files above. Missing directrories will be ignored.
+   ## Directories to search within for the conntrack files above.
+   ## Missing directrories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 ```
 

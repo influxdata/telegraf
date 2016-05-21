@@ -1,3 +1,5 @@
+// +build linux
+
 package conntrack
 
 import (
@@ -50,15 +52,17 @@ func (c *Conntrack) Description() string {
 }
 
 var sampleConfig = `
- # Collects conntrack stats from the configured directories and files.
- [[inputs.conntrack]]
-   ## The following defaults would work with multiple versions of contrack. Note the nf_ and ip_
-   ## filename prefixes are mutually exclusive across conntrack versions, as are the directory locations.
+   ## The following defaults would work with multiple versions of conntrack.
+   ## Note the nf_ and ip_ filename prefixes are mutually exclusive across
+   ## kernel versions, as are the directory locations.
 
-   ## Superset of filenames to look for within the conntrack dirs. Missing files will be ignored.
-   files = ["ip_conntrack_count","ip_conntrack_max","nf_conntrack_count","nf_conntrack_max"]
+   ## Superset of filenames to look for within the conntrack dirs.
+   ## Missing files will be ignored.
+   files = ["ip_conntrack_count","ip_conntrack_max",
+            "nf_conntrack_count","nf_conntrack_max"]
 
-   ## Directories to search within for the conntrack files above. Missing directrories will be ignored.
+   ## Directories to search within for the conntrack files above.
+   ## Missing directrories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 `
 
@@ -74,7 +78,8 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 
 	for _, dir := range c.Dirs {
 		for _, file := range c.Files {
-			// NOTE: no system will have both nf_ and ip_ prefixes, so we're safe to branch on suffix only.
+			// NOTE: no system will have both nf_ and ip_ prefixes,
+			// so we're safe to branch on suffix only.
 			parts := strings.SplitN(file, "_", 2)
 			if len(parts) < 2 {
 				continue
@@ -94,13 +99,15 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 			v := strings.TrimSpace(string(contents))
 			fields[metricKey], err = strconv.ParseFloat(v, 64)
 			if err != nil {
-				log.Printf("failed to parse metric, expected number but found '%s': %v", v, err)
+				log.Printf("failed to parse metric, expected number but "+
+					" found '%s': %v", v, err)
 			}
 		}
 	}
 
 	if len(fields) == 0 {
-		return fmt.Errorf("Conntrack input failed to collect metrics. Is the conntrack kernel module loaded?")
+		return fmt.Errorf("Conntrack input failed to collect metrics. " +
+			"Is the conntrack kernel module loaded?")
 	}
 
 	acc.AddFields(inputName, fields, nil)
