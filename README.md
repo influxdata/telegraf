@@ -207,6 +207,7 @@ Currently implemented sources:
 * [snmp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
 * [sql server](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sqlserver) (microsoft)
 * [twemproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/twemproxy)
+* [varnish](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/varnish)
 * [zfs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zfs)
 * [zookeeper](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zookeeper)
 * [win_perf_counters ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/win_perf_counters) (windows performance counters)

@@ -1,3 +1,5 @@
+// +build !windows
+
 package varnish
 
 import (
@@ -119,11 +121,11 @@ var smOutput = `
 MAIN.uptime                895         1.00 Child process uptime
 MAIN.cache_hit                     95         0.00 Cache hits
 MAIN.cache_miss                    5          0.00 Cache misses
-MGT.uptime                                 896         1.00 Management process uptime
-MGT.child_start                              1         0.00 Child process started
-MEMPOOL.vbc.live                             0          .   In use
-MEMPOOL.vbc.pool                            10          .   In Pool
-MEMPOOL.vbc.sz_wanted                       88          .   Size requested
+MGT.uptime                         896         1.00 Management process uptime
+MGT.child_start                    1         0.00 Child process started
+MEMPOOL.vbc.live                   0          .   In use
+MEMPOOL.vbc.pool                   10          .   In Pool
+MEMPOOL.vbc.sz_wanted              88          .   Size requested
 `
 
 var parsedSmOutput = map[string]map[string]interface{}{

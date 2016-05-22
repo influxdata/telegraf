@@ -1,6 +1,6 @@
-package varnish
+// +build !windows
 
-// varnish.go
+package varnish
 
 import (
 	"bufio"
@@ -12,7 +12,9 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"time"
 )
 
 const (
@@ -33,9 +35,9 @@ var varnishSampleConfig = `
   binary = "/usr/bin/varnishstat"
 
   ## By default, telegraf gather stats for 3 metric points.
-  ## Setting stats will override the defaults (["%s"]).
+  ## Setting stats will override the defaults shown below.
   ## stats may also be set to ["all"], which will collect all stats
-  stats = ["%[1]s"]
+  stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
 `
 
 func (s *Varnish) Description() string {
@@ -87,7 +89,7 @@ var varnishStat = func(cmdName string) (*bytes.Buffer, error) {
 	cmd := exec.Command(cmdName, cmdArgs...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := cmd.Run()
+	err := internal.RunTimeout(cmd, time.Millisecond*200)
 	if err != nil {
 		return &out, fmt.Errorf("error running varnishstat: %s", err)
 	}
