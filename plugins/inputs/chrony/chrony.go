@@ -3,6 +3,7 @@
 package chrony
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -31,6 +32,9 @@ func (*Chrony) SampleConfig() string {
 }
 
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
+	if len(c.path) == 0 {
+		return errors.New("chronyc not found: verify that chrony is installed and that chronyc is in your PATH")
+	}
 	cmd := execCommand(c.path, "tracking")
 	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
 	if err != nil {
@@ -103,9 +107,7 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 }
 
 func init() {
-	c := Chrony{
-		path: "/usr/bin/chronyc",
-	}
+	c := Chrony{}
 	path, _ := exec.LookPath("chronyc")
 	if len(path) > 0 {
 		c.path = path
