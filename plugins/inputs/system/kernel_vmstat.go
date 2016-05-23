@@ -22,7 +22,7 @@ func (k *KernelVmstat) Description() string {
 }
 
 func (k *KernelVmstat) SampleConfig() string {
-	return `[[inputs.kernel_vmstat]]`
+	return ""
 }
 
 func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
