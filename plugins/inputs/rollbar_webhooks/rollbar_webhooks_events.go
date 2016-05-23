@@ -13,6 +13,7 @@ type DummyEvent struct {
 
 type NewItemDataItemLastOccurence struct {
 	Language string `json:"language"`
+	Level    string `json:"level"`
 }
 
 type NewItemDataItem struct {
@@ -37,6 +38,7 @@ func (ni *NewItem) Tags() map[string]string {
 		"environment": ni.Data.Item.Environment,
 		"project_id":  strconv.Itoa(ni.Data.Item.ProjectId),
 		"language":    ni.Data.Item.LastOccurence.Language,
+		"level":       ni.Data.Item.LastOccurence.Level,
 	}
 }
 

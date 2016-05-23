@@ -37,6 +37,7 @@ func TestNewItem(t *testing.T) {
 		"environment": "production",
 		"project_id":  "90",
 		"language":    "python",
+		"level":       "error",
 	}
 
 	acc.AssertContainsTaggedFields(t, "rollbar_webhooks", fields, tags)
