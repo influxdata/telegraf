@@ -315,6 +315,12 @@ func jitterInterval(ininterval, injitter time.Duration) time.Duration {
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 
+	flusherShutdown := make(chan struct{})
+	defer func() {
+		close(flusherShutdown)
+		wg.Wait()
+	}()
+
 	a.Config.Agent.FlushInterval.Duration = jitterInterval(
 		a.Config.Agent.FlushInterval.Duration,
 		a.Config.Agent.FlushJitter.Duration)
@@ -353,7 +359,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := a.flusher(shutdown, metricC); err != nil {
+		if err := a.flusher(flusherShutdown, metricC); err != nil {
 			log.Printf("Flusher routine failed, exiting: %s\n", err.Error())
 			close(shutdown)
 		}
@@ -372,8 +378,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			}(input)
 		}
 	}
-
-	defer wg.Wait()
 
 	for {
 		if err := a.gatherParallel(metricC); err != nil {
