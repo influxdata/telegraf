@@ -11,6 +11,7 @@ to "stdout".
 ### Features
 
 - [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
+- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
 - [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
 - [#1172](https://github.com/influxdata/telegraf/pull/1172): Ceph storage stats. Thanks @robinpercy!
 - [#1233](https://github.com/influxdata/telegraf/pull/1233): Updated golint gopsutil dependency.
