@@ -1,17 +1,29 @@
 ## v0.13.1 [unreleased]
 
+### Release Notes
+
+- Input plugin Gathers will no longer be logged by default, but a Gather for
+_each_ plugin will be logged in Debug mode.
+- Debug mode will no longer print every point added to the accumulator. This
+functionality can be duplicated using the `file` output plugin and printing
+to "stdout".
+
 ### Features
 
 - [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
 - [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
 - [#1172](https://github.com/influxdata/telegraf/pull/1172): Ceph storage stats. Thanks @robinpercy!
+- [#1233](https://github.com/influxdata/telegraf/pull/1233): Updated golint gopsutil dependency.
+- [#479](https://github.com/influxdata/telegraf/issues/479): per-plugin execution time added to debug output.
 
 ### Bugfixes
 
 - [#1195](https://github.com/influxdata/telegraf/pull/1195): Docker panic on timeout. Thanks @zstyblik!
 - [#1211](https://github.com/influxdata/telegraf/pull/1211): mongodb input. Fix possible panic. Thanks @kols!
+- [#1215](https://github.com/influxdata/telegraf/pull/1215): Fix for possible gopsutil-dependent plugin hangs.
 - [#1228](https://github.com/influxdata/telegraf/pull/1228): Fix service plugin host tag overwrite.
 - [#1198](https://github.com/influxdata/telegraf/pull/1198): http_response: override request Host header properly
+- [#1230](https://github.com/influxdata/telegraf/issues/1230): Fix Telegraf process hangup due to a single plugin hanging.
 
 ## v0.13 [2016-05-11]
 
