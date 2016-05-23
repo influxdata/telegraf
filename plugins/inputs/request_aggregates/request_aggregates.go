@@ -47,33 +47,32 @@ func NewRequestAggregates() *RequestAggregates {
 }
 
 const sampleConfig = `
-  # File to monitor.
-  file = "/var/server/access.csv"
-  # Position of the timestamp of the request in every line
-  timestamp_position = 0
-  # Format of the timestamp (any layout accepted by Go Time.Parse or s/ms/us/ns for epoch time)
-  timestamp_format = "ms"
-  # Position of the time value to calculate in the log file (starting from 0)
-  time_position = 1
-  # Window to consider for time percentiles
-  time_window_size = "60s"
-  # Windows to keep in memory before flushing in order to avoid requests coming in after a window is shut.
-  # If the CSV file is sorted by timestamp, this can be set to 1
-  time_windows = 5
-  # List of percentiles to calculate
-  time_percentiles = [90.0, 95.0, 99.0, 99.99]
-  # Position of the result column (success or failure)
-  result_position = 3
-  # Regular expression used to determine if the result is successful or not (if empty only request_aggregates_all
-  # time series) will be generated
-  result_success_regex = ".*true.*"
-  # Time window to calculate throughput counters
-  throughput_window_size = "1s"
-  # Number of windows to keep in memory for throughput calculation
-  throughput_windows = 300
-  # List of tags and their values to add to every data point
-  [inputs.aggregates.tags]
-    name = "myserver"
+      # File to monitor (must be in CSV format).
+    file = "/var/server/access.csv"
+    # Position of the timestamp of the request in every line.
+    timestamp_position = 0
+    # Format of the timestamp (any layout accepted by Go Time.Parse or s/ms/us/ns for epoch time).
+    timestamp_format = "ms"
+    # Position, starting from 0, of the elapsed time value to calculate in the log file.
+    time_position = 1
+    # Window to consider for elapsed time percentiles.
+    time_window_size = "60s"
+    # Windows to keep in memory before flushing.
+    time_windows = 5
+    # List of percentiles to calculate (must be float numbers)
+    time_percentiles = [90.0, 95.0, 99.0, 99.99]
+    # Position of the result column to determine if a request is successful or not.
+    result_position = 7
+    # Regular expression used to determine if the result is successful or not (if empty only request_aggregates_total
+    # measurement) will be generated
+    result_success_regex = ".*true.*"
+    # Time window to calculate throughput counters
+    throughput_window_size = "1s"
+    # Number of windows to keep in memory for throughput calculation
+    throughput_windows = 300
+    # List of tags and their values to add to every data point
+    [inputs.request_aggregates.tags]
+    server_name = "myserver"
 `
 
 func (ra *RequestAggregates) SampleConfig() string {
