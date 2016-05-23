@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -19,7 +21,11 @@ import (
 
 const sampleConfig = `
   ## Commands array
-  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+  commands = [
+    "/tmp/test.sh",
+    "/usr/bin/mycollector --foo=bar",
+    "/tmp/collect_*.sh"
+  ]
 
   ## Timeout for each command to complete.
   timeout = "5s"
@@ -150,10 +156,36 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		e.Command = ""
 	}
 
-	e.errChan = make(chan error, len(e.Commands))
+	commands := make([]string, 0, len(e.Commands))
+	for _, pattern := range e.Commands {
+		cmdAndArgs := strings.SplitN(pattern, " ", 2)
+		if len(cmdAndArgs) == 0 {
+			continue
+		}
 
-	e.wg.Add(len(e.Commands))
-	for _, command := range e.Commands {
+		matches, err := filepath.Glob(cmdAndArgs[0])
+		if err != nil {
+			return err
+		}
+
+		if len(matches) == 0 {
+			// There were no matches with the glob pattern, so let's assume
+			// that the command is in PATH and just run it as it is
+			commands = append(commands, pattern)
+		} else {
+			// There were matches, so we'll append each match together with
+			// the arguments to the commands slice
+			for _, match := range matches {
+				commands = append(
+					commands, strings.Join([]string{match, cmdAndArgs[1]}, " "))
+			}
+		}
+	}
+
+	e.errChan = make(chan error, len(commands))
+
+	e.wg.Add(len(commands))
+	for _, command := range commands {
 		go e.ProcessCommand(command, acc)
 	}
 	e.wg.Wait()

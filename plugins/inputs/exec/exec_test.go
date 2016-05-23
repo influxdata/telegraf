@@ -169,3 +169,51 @@ func TestLineProtocolParseMultiple(t *testing.T) {
 		acc.AssertContainsTaggedFields(t, "cpu", fields, tags)
 	}
 }
+
+func TestExecCommandWithGlob(t *testing.T) {
+	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	e := NewExec()
+	e.Commands = []string{"/bin/ech* metric_value"}
+	e.SetParser(parser)
+
+	var acc testutil.Accumulator
+	err := e.Gather(&acc)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"value": "metric_value",
+	}
+	acc.AssertContainsFields(t, "metric", fields)
+}
+
+func TestExecCommandWithoutGlob(t *testing.T) {
+	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	e := NewExec()
+	e.Commands = []string{"/bin/echo metric_value"}
+	e.SetParser(parser)
+
+	var acc testutil.Accumulator
+	err := e.Gather(&acc)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"value": "metric_value",
+	}
+	acc.AssertContainsFields(t, "metric", fields)
+}
+
+func TestExecCommandWithoutGlobAndPath(t *testing.T) {
+	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	e := NewExec()
+	e.Commands = []string{"echo metric_value"}
+	e.SetParser(parser)
+
+	var acc testutil.Accumulator
+	err := e.Gather(&acc)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"value": "metric_value",
+	}
+	acc.AssertContainsFields(t, "metric", fields)
+}

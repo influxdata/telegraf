@@ -15,6 +15,7 @@ to "stdout".
 - [#1172](https://github.com/influxdata/telegraf/pull/1172): Ceph storage stats. Thanks @robinpercy!
 - [#1233](https://github.com/influxdata/telegraf/pull/1233): Updated golint gopsutil dependency.
 - [#479](https://github.com/influxdata/telegraf/issues/479): per-plugin execution time added to debug output.
+- [#1127](https://github.com/influxdata/telegraf/pull/1142): Support for glob patterns in exec plugin commands configuration.
 
 ### Bugfixes
 
