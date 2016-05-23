@@ -31,6 +31,7 @@ See [webhook doc](https://rollbar.com/docs/webhooks/)
 * 'environment' = `event.data.item.environment` string
 * 'project_id = `event.data.item.project_id` int
 * 'language' = `event.data.item.last_occurence.language` string
+* 'level' = `event.data.item.last_occurence.level` string
 
 **Fields:**
 * 'id' = `event.data.item.id` int
