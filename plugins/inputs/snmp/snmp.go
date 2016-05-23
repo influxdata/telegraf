@@ -749,7 +749,7 @@ func (h *Host) HandleResponse(
 				switch variable.Type {
 				// handle Metrics
 				case gosnmp.Boolean, gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32,
-					gosnmp.TimeTicks, gosnmp.Counter64, gosnmp.Uinteger32:
+					gosnmp.TimeTicks, gosnmp.Counter64, gosnmp.Uinteger32, gosnmp.OctetString:
 					// Prepare tags
 					tags := make(map[string]string)
 					if oid.Unit != "" {
