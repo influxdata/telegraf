@@ -137,15 +137,14 @@ func (a *Agent) gatherer(
 		}
 
 		gatherWithTimeout(shutdown, input, acc, interval)
-
 		elapsed := time.Since(start)
-		if a.Config.Agent.Debug {
-			log.Printf("Input [%s] gathered metrics, (%s interval) in %s\n",
-				input.Name, interval, elapsed)
-		}
 
 		if outerr != nil {
 			return outerr
+		}
+		if a.Config.Agent.Debug {
+			log.Printf("Input [%s] gathered metrics, (%s interval) in %s\n",
+				input.Name, interval, elapsed)
 		}
 
 		select {

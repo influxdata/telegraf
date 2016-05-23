@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -17,7 +18,7 @@ type HTTPResponse struct {
 	Address         string
 	Body            string
 	Method          string
-	ResponseTimeout int
+	ResponseTimeout internal.Duration
 	Headers         map[string]string
 	FollowRedirects bool
 }
@@ -31,7 +32,7 @@ var sampleConfig = `
   ## Server address (default http://localhost)
   address = "http://github.com"
   ## Set response_timeout (default 5 seconds)
-  response_timeout = 5
+  response_timeout = "5s"
   ## HTTP Request Method
   method = "GET"
   ## Whether to follow redirects from the server (defaults to false)
@@ -57,7 +58,7 @@ var ErrRedirectAttempted = errors.New("redirect")
 // timeout period and can follow redirects if specified
 func CreateHttpClient(followRedirects bool, ResponseTimeout time.Duration) *http.Client {
 	client := &http.Client{
-		Timeout: time.Second * ResponseTimeout,
+		Timeout: ResponseTimeout,
 	}
 
 	if followRedirects == false {
@@ -73,7 +74,7 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	// Prepare fields
 	fields := make(map[string]interface{})
 
-	client := CreateHttpClient(h.FollowRedirects, time.Duration(h.ResponseTimeout))
+	client := CreateHttpClient(h.FollowRedirects, h.ResponseTimeout.Duration)
 
 	var body io.Reader
 	if h.Body != "" {
@@ -113,8 +114,8 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 // Gather gets all metric fields and tags and returns any errors it encounters
 func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	// Set default values
-	if h.ResponseTimeout < 1 {
-		h.ResponseTimeout = 5
+	if h.ResponseTimeout.Duration < time.Second {
+		h.ResponseTimeout.Duration = time.Second * 5
 	}
 	// Check send and expected string
 	if h.Method == "" {

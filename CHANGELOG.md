@@ -2,6 +2,8 @@
 
 ### Release Notes
 
+- net_response and http_response plugins timeouts will now accept duration
+strings, ie, "2s" or "500ms".
 - Input plugin Gathers will no longer be logged by default, but a Gather for
 _each_ plugin will be logged in Debug mode.
 - Debug mode will no longer print every point added to the accumulator. This
@@ -24,6 +26,7 @@ to "stdout".
 - [#1228](https://github.com/influxdata/telegraf/pull/1228): Fix service plugin host tag overwrite.
 - [#1198](https://github.com/influxdata/telegraf/pull/1198): http_response: override request Host header properly
 - [#1230](https://github.com/influxdata/telegraf/issues/1230): Fix Telegraf process hangup due to a single plugin hanging.
+- [#1214](https://github.com/influxdata/telegraf/issues/1214): Use TCP timeout argument in net_response plugin.
 
 ## v0.13 [2016-05-11]
 
