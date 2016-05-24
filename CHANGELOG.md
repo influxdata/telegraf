@@ -1,5 +1,13 @@
 ## v1.0 [unreleased]
 
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+- [#1252](https://github.com/influxdata/telegraf/pull/1252): Fix systemd service. Thanks @zbindenren!
+
 ## v0.13.1 [2016-05-24]
 
 ### Release Notes
