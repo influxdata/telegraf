@@ -9,6 +9,7 @@
 ### Bugfixes
 
 - [#1252](https://github.com/influxdata/telegraf/pull/1252): Fix systemd service. Thanks @zbindenren!
+- [#1221](https://github.com/influxdata/telegraf/pull/1221): Fix influxdb n_shards counter.
 
 ## v0.13.1 [2016-05-24]
 

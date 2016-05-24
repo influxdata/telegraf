@@ -204,14 +204,14 @@ func (i *InfluxDB) gatherURL(
 			continue
 		}
 
-		if p.Name == "shard" {
-			shardCounter++
-		}
-
 		// If the object was a point, but was not fully initialized,
 		// ignore it and move on.
 		if p.Name == "" || p.Tags == nil || p.Values == nil || len(p.Values) == 0 {
 			continue
+		}
+
+		if p.Name == "shard" {
+			shardCounter++
 		}
 
 		// Add a tag to indicate the source of the data.
