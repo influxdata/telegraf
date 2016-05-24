@@ -216,6 +216,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
 * [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
 * [github_webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/github_webhooks)
+* [rollbar_webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rollbar_webhooks)
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.

@@ -53,6 +53,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/redis"
 	_ "github.com/influxdata/telegraf/plugins/inputs/rethinkdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/riak"
+	_ "github.com/influxdata/telegraf/plugins/inputs/rollbar_webhooks"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sensors"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
