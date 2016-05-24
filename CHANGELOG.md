@@ -16,6 +16,7 @@ to "stdout".
 - [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
 - [#1172](https://github.com/influxdata/telegraf/pull/1172): Ceph storage stats. Thanks @robinpercy!
 - [#1233](https://github.com/influxdata/telegraf/pull/1233): Updated golint gopsutil dependency.
+- [#1238](https://github.com/influxdata/telegraf/pull/1238): chrony input plugin. Thanks @zbindenren!
 - [#479](https://github.com/influxdata/telegraf/issues/479): per-plugin execution time added to debug output.
 
 ### Bugfixes
