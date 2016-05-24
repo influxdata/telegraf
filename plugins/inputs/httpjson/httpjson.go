@@ -244,15 +244,13 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 		}
 	}
 
-	// Create + send request
-  body := data.Encode()
-  body_attr := data.Get('__body')
-  if body_attr != "" {
-    list := strings.Split(data.Encode(), '=')
-    body = list[1]
-  }
+	body_attr := data.Get("__body")
+	http_body := data.Encode()
+	if body_attr != "" {
+		http_body = body_attr
+	}
 	req, err := http.NewRequest(h.Method, requestURL.String(),
-		strings.NewReader(body))
+		strings.NewReader(http_body))
 	if err != nil {
 		return "", -1, err
 	}
