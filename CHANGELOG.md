@@ -18,6 +18,7 @@ to "stdout".
 - [#1233](https://github.com/influxdata/telegraf/pull/1233): Updated golint gopsutil dependency.
 - [#1238](https://github.com/influxdata/telegraf/pull/1238): chrony input plugin. Thanks @zbindenren!
 - [#479](https://github.com/influxdata/telegraf/issues/479): per-plugin execution time added to debug output.
+- [#1249](https://github.com/influxdata/telegraf/issues/1249): influxdb output: added write_consistency argument.
 
 ### Bugfixes
 
