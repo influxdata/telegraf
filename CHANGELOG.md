@@ -41,6 +41,22 @@ time before a new metric is included by the plugin.
 
 ### Features
 
+- [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
+
+## v0.13.1 [2016-05-24]
+
+### Release Notes
+
+- net_response and http_response plugins timeouts will now accept duration
+strings, ie, "2s" or "500ms".
+- Input plugin Gathers will no longer be logged by default, but a Gather for
+_each_ plugin will be logged in Debug mode.
+- Debug mode will no longer print every point added to the accumulator. This
+functionality can be duplicated using the `file` output plugin and printing
+to "stdout".
+
+### Features
+
 - [#1173](https://github.com/influxdata/telegraf/pull/1173): varnish input plugin. Thanks @sfox-xmatters!
 - [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
 - [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
@@ -49,7 +65,6 @@ time before a new metric is included by the plugin.
 - [#1238](https://github.com/influxdata/telegraf/pull/1238): chrony input plugin. Thanks @zbindenren!
 - [#479](https://github.com/influxdata/telegraf/issues/479): per-plugin execution time added to debug output.
 - [#1249](https://github.com/influxdata/telegraf/issues/1249): influxdb output: added write_consistency argument.
-- [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
 
 ### Bugfixes
 
