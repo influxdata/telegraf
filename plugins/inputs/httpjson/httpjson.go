@@ -90,6 +90,7 @@ var sampleConfig = `
   # ]
 
   ## HTTP parameters (all values must be strings)
+  ## POST body can be sent by setting __body special attribute. 
   [inputs.httpjson.parameters]
     event_type = "cpu_spike"
     threshold = "0.75"
