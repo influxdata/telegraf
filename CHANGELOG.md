@@ -1,4 +1,6 @@
-## v0.13.1 [unreleased]
+## v1.0 [unreleased]
+
+## v0.13.1 [2016-05-24]
 
 ### Release Notes
 
