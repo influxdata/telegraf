@@ -2,28 +2,6 @@
 
 ### Release Notes
 
-### Features
-
-- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
-
-### Bugfixes
-
-- [#1252](https://github.com/influxdata/telegraf/pull/1252): Fix systemd service. Thanks @zbindenren!
-
-## v0.13.1 [2016-05-24]
-
-### Release Notes
-
-- net_response and http_response plugins timeouts will now accept duration
-strings, ie, "2s" or "500ms".
-- Input plugin Gathers will no longer be logged by default, but a Gather for
-_each_ plugin will be logged in Debug mode.
-- Debug mode will no longer print every point added to the accumulator. This
-functionality can be duplicated using the `file` output plugin and printing
-to "stdout".
-
-### Release Notes
-
 - All AWS plugins now utilize a standard mechanism for evaluating credentials.
 This allows all AWS plugins to support environment variables, shared credential
 files & profiles, and role assumptions. See the specific plugin README for
@@ -41,7 +19,12 @@ time before a new metric is included by the plugin.
 
 ### Features
 
+- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
 - [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
+
+### Bugfixes
+
+- [#1252](https://github.com/influxdata/telegraf/pull/1252): Fix systemd service. Thanks @zbindenren!
 
 ## v0.13.1 [2016-05-24]
 
