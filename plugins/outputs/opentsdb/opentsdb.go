@@ -22,7 +22,7 @@ type OpenTSDB struct {
 }
 
 var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
-	`%`, "-", "#", "-", "$", "-")
+	`%`, "-", "#", "-", "$", "-", ":", "_")
 
 var sampleConfig = `
   ## prefix for metrics keys
