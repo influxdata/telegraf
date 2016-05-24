@@ -7,231 +7,89 @@ import (
 	"testing"
 )
 
-func TestCommitCommentEvent(t *testing.T) {
+func GithubWebhookRequest(event string, jsonString string, t *testing.T) {
 	gh := NewGithubWebhooks()
-	jsonString := CommitCommentEventJSON()
 	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "commit_comment")
+	req.Header.Add("X-Github-Event", event)
 	w := httptest.NewRecorder()
 	gh.eventHandler(w, req)
 	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
+		t.Errorf("POST "+event+" returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
 	}
+}
+
+func TestCommitCommentEvent(t *testing.T) {
+	GithubWebhookRequest("commit_comment", CommitCommentEventJSON(), t)
 }
 
 func TestDeleteEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := DeleteEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "delete")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("delete", DeleteEventJSON(), t)
 }
 
 func TestDeploymentEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := DeploymentEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "deployment")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("deployment", DeploymentEventJSON(), t)
 }
 
 func TestDeploymentStatusEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := DeploymentStatusEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "deployment_status")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("deployment_status", DeploymentStatusEventJSON(), t)
 }
 
 func TestForkEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := ForkEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "fork")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("fork", ForkEventJSON(), t)
 }
 
 func TestGollumEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := GollumEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "gollum")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("gollum", GollumEventJSON(), t)
 }
 
 func TestIssueCommentEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := IssueCommentEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "issue_comment")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("issue_comment", IssueCommentEventJSON(), t)
 }
 
 func TestIssuesEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := IssuesEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "issues")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("issues", IssuesEventJSON(), t)
 }
 
 func TestMemberEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := MemberEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "member")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("member", MemberEventJSON(), t)
 }
 
 func TestMembershipEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := MembershipEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "membership")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("membership", MembershipEventJSON(), t)
 }
 
 func TestPageBuildEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := PageBuildEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "page_build")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("page_build", PageBuildEventJSON(), t)
 }
 
 func TestPublicEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := PublicEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "public")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("public", PublicEventJSON(), t)
 }
 
 func TestPullRequestReviewCommentEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := PullRequestReviewCommentEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "pull_request_review_comment")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("pull_request_review_comment", PullRequestReviewCommentEventJSON(), t)
 }
 
 func TestPushEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := PushEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "push")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("push", PushEventJSON(), t)
 }
 
 func TestReleaseEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := ReleaseEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "release")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("release", ReleaseEventJSON(), t)
 }
 
 func TestRepositoryEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := RepositoryEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "repository")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("repository", RepositoryEventJSON(), t)
 }
 
 func TestStatusEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-
-	jsonString := StatusEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "status")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("status", StatusEventJSON(), t)
 }
 
 func TestTeamAddEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := TeamAddEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "team_add")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("team_add", TeamAddEventJSON(), t)
 }
 
 func TestWatchEvent(t *testing.T) {
-	gh := NewGithubWebhooks()
-	jsonString := WatchEventJSON()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
-	req.Header.Add("X-Github-Event", "watch")
-	w := httptest.NewRecorder()
-	gh.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST commit_comment returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	GithubWebhookRequest("watch", WatchEventJSON(), t)
 }

@@ -221,7 +221,7 @@ func (d *Docker) gatherContainer(
 	defer cancel()
 	r, err := d.client.ContainerStats(ctx, container.ID, false)
 	if err != nil {
-		log.Printf("Error getting docker stats: %s\n", err.Error())
+		return fmt.Errorf("Error getting docker stats: %s", err.Error())
 	}
 	defer r.Close()
 	dec := json.NewDecoder(r)
@@ -470,6 +470,8 @@ func parseSize(sizeStr string) (int64, error) {
 
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
-		return &Docker{}
+		return &Docker{
+			Timeout: internal.Duration{Duration: time.Second * 5},
+		}
 	})
 }

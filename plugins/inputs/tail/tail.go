@@ -95,6 +95,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 				continue
 			}
 			// create a goroutine for each "tailer"
+			t.wg.Add(1)
 			go t.receiver(tailer)
 			t.tailers = append(t.tailers, tailer)
 		}
@@ -109,7 +110,6 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 // this is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
 func (t *Tail) receiver(tailer *tail.Tail) {
-	t.wg.Add(1)
 	defer t.wg.Done()
 
 	var m telegraf.Metric

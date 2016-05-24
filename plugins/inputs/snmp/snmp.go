@@ -749,7 +749,7 @@ func (h *Host) HandleResponse(
 				switch variable.Type {
 				// handle Metrics
 				case gosnmp.Boolean, gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32,
-					gosnmp.TimeTicks, gosnmp.Counter64, gosnmp.Uinteger32:
+					gosnmp.TimeTicks, gosnmp.Counter64, gosnmp.Uinteger32, gosnmp.OctetString:
 					// Prepare tags
 					tags := make(map[string]string)
 					if oid.Unit != "" {
@@ -792,7 +792,7 @@ func (h *Host) HandleResponse(
 						// Because the result oid is equal to inputs.snmp.get section
 						field_name = oid.Name
 					}
-					tags["host"], _, _ = net.SplitHostPort(h.Address)
+					tags["snmp_host"], _, _ = net.SplitHostPort(h.Address)
 					fields := make(map[string]interface{})
 					fields[string(field_name)] = variable.Value
 

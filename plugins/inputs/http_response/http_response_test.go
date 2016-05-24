@@ -2,28 +2,17 @@ package http_response
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
-)
 
-func TestCreateHeaders(t *testing.T) {
-	fakeHeaders := map[string]string{
-		"Accept":        "text/plain",
-		"Content-Type":  "application/json",
-		"Cache-Control": "no-cache",
-	}
-	headers := CreateHeaders(fakeHeaders)
-	testHeaders := make(http.Header)
-	testHeaders.Add("Accept", "text/plain")
-	testHeaders.Add("Content-Type", "application/json")
-	testHeaders.Add("Cache-Control", "no-cache")
-	assert.Equal(t, testHeaders, headers)
-}
+	"github.com/influxdata/telegraf/internal"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
 func setUpTestMux() http.Handler {
 	mux := http.NewServeMux()
@@ -63,6 +52,33 @@ func setUpTestMux() http.Handler {
 	return mux
 }
 
+func TestHeaders(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cHeader := r.Header.Get("Content-Type")
+		assert.Equal(t, "Hello", r.Host)
+		assert.Equal(t, "application/json", cHeader)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Address:         ts.URL,
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 2},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+			"Host":         "Hello",
+		},
+	}
+	fields, err := h.HTTPGather()
+	require.NoError(t, err)
+	assert.NotEmpty(t, fields)
+	if assert.NotNil(t, fields["http_response_code"]) {
+		assert.Equal(t, http.StatusOK, fields["http_response_code"])
+	}
+	assert.NotNil(t, fields["response_time"])
+}
+
 func TestFields(t *testing.T) {
 	mux := setUpTestMux()
 	ts := httptest.NewServer(mux)
@@ -72,7 +88,7 @@ func TestFields(t *testing.T) {
 		Address:         ts.URL + "/good",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: 20,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -85,7 +101,6 @@ func TestFields(t *testing.T) {
 		assert.Equal(t, http.StatusOK, fields["http_response_code"])
 	}
 	assert.NotNil(t, fields["response_time"])
-
 }
 
 func TestRedirects(t *testing.T) {
@@ -97,7 +112,7 @@ func TestRedirects(t *testing.T) {
 		Address:         ts.URL + "/redirect",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: 20,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -114,7 +129,7 @@ func TestRedirects(t *testing.T) {
 		Address:         ts.URL + "/badredirect",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: 20,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -133,7 +148,7 @@ func TestMethod(t *testing.T) {
 		Address:         ts.URL + "/mustbepostmethod",
 		Body:            "{ 'test': 'data'}",
 		Method:          "POST",
-		ResponseTimeout: 20,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -150,7 +165,7 @@ func TestMethod(t *testing.T) {
 		Address:         ts.URL + "/mustbepostmethod",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: 20,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -168,7 +183,7 @@ func TestMethod(t *testing.T) {
 		Address:         ts.URL + "/mustbepostmethod",
 		Body:            "{ 'test': 'data'}",
 		Method:          "head",
-		ResponseTimeout: 20,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -191,7 +206,7 @@ func TestBody(t *testing.T) {
 		Address:         ts.URL + "/musthaveabody",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: 20,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -207,7 +222,7 @@ func TestBody(t *testing.T) {
 	h = &HTTPResponse{
 		Address:         ts.URL + "/musthaveabody",
 		Method:          "GET",
-		ResponseTimeout: 20,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -230,7 +245,7 @@ func TestTimeout(t *testing.T) {
 		Address:         ts.URL + "/twosecondnap",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: 1,
+		ResponseTimeout: internal.Duration{Duration: time.Second * 1},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},

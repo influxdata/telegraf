@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -22,13 +21,13 @@ func NewAccumulator(
 }
 
 type accumulator struct {
-	sync.Mutex
-
 	metrics chan telegraf.Metric
 
 	defaultTags map[string]string
 
 	debug bool
+	// print every point added to the accumulator
+	trace bool
 
 	inputConfig *internal_models.InputConfig
 
@@ -84,13 +83,17 @@ func (ac *accumulator) AddFields(
 	if tags == nil {
 		tags = make(map[string]string)
 	}
-	// Apply daemon-wide tags if set
-	for k, v := range ac.defaultTags {
-		tags[k] = v
-	}
 	// Apply plugin-wide tags if set
 	for k, v := range ac.inputConfig.Tags {
-		tags[k] = v
+		if _, ok := tags[k]; !ok {
+			tags[k] = v
+		}
+	}
+	// Apply daemon-wide tags if set
+	for k, v := range ac.defaultTags {
+		if _, ok := tags[k]; !ok {
+			tags[k] = v
+		}
 	}
 	ac.inputConfig.Filter.FilterTags(tags)
 
@@ -148,7 +151,7 @@ func (ac *accumulator) AddFields(
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
 		return
 	}
-	if ac.debug {
+	if ac.trace {
 		fmt.Println("> " + m.String())
 	}
 	ac.metrics <- m
@@ -160,6 +163,14 @@ func (ac *accumulator) Debug() bool {
 
 func (ac *accumulator) SetDebug(debug bool) {
 	ac.debug = debug
+}
+
+func (ac *accumulator) Trace() bool {
+	return ac.trace
+}
+
+func (ac *accumulator) SetTrace(trace bool) {
+	ac.trace = trace
 }
 
 func (ac *accumulator) setDefaultTags(tags map[string]string) {

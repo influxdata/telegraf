@@ -6,41 +6,30 @@ It can also check response text.
 ### Configuration:
 
 ```
-# List of UDP/TCP connections you want to check
-[[inputs.net_response]]
-  protocol = "tcp"
-  # Server address (default IP localhost)
-  address = "github.com:80"
-  # Set timeout (default 1.0)
-  timeout = 1.0
-  # Set read timeout (default 1.0)
-  read_timeout = 1.0
-  # String sent to the server
-  send = "ssh"
-  # Expected string in answer
-  expect = "ssh"
-
 [[inputs.net_response]]
   protocol = "tcp"
   address = ":80"
 
+# TCP or UDP 'ping' given url and collect response time in seconds
 [[inputs.net_response]]
-  protocol = "udp"
-  # Server address (default IP localhost)
+  ## Protocol, must be "tcp" or "udp"
+  protocol = "tcp"
+  ## Server address (default localhost)
   address = "github.com:80"
-  # Set timeout (default 1.0)
-  timeout = 1.0
-  # Set read timeout (default 1.0)
-  read_timeout = 1.0
-  # String sent to the server
+  ## Set timeout
+  timeout = "1s"
+
+  ## Optional string sent to the server
   send = "ssh"
-  # Expected string in answer
+  ## Optional expected string in answer
   expect = "ssh"
+  ## Set read timeout (only used if expecting a response)
+  read_timeout = "1s"
 
 [[inputs.net_response]]
   protocol = "udp"
   address = "localhost:161"
-  timeout = 2.0
+  timeout = "2s"
 ```
 
 ### Measurements & Fields:

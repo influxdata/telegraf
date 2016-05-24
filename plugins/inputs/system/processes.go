@@ -70,6 +70,7 @@ func getEmptyFields() map[string]interface{} {
 		"running":  int64(0),
 		"sleeping": int64(0),
 		"total":    int64(0),
+		"unknown":  int64(0),
 	}
 	switch runtime.GOOS {
 	case "freebsd":
@@ -114,6 +115,8 @@ func (p *Processes) gatherFromPS(fields map[string]interface{}) error {
 			fields["sleeping"] = fields["sleeping"].(int64) + int64(1)
 		case 'I':
 			fields["idle"] = fields["idle"].(int64) + int64(1)
+		case '?':
+			fields["unknown"] = fields["unknown"].(int64) + int64(1)
 		default:
 			log.Printf("processes: Unknown state [ %s ] from ps",
 				string(status[0]))
