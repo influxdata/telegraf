@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -170,11 +171,13 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	// limit concurrency or we can easily exhaust user connection limit
-	semaphore := make(chan byte, 64)
-
+	// see cloudwatch API request limits:
+	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
+	lmtr := limiter.NewRateLimiter(10, time.Second)
+	defer lmtr.Stop()
 	for _, m := range metrics {
-		semaphore <- 0x1
-		go c.gatherMetric(acc, m, now, semaphore, errChan)
+		<-lmtr.C
+		go c.gatherMetric(acc, m, now, errChan)
 	}
 
 	for i := 1; i <= metricCount; i++ {
@@ -257,12 +260,16 @@ func (c *CloudWatch) fetchNamespaceMetrics() (metrics []*cloudwatch.Metric, err 
 /*
  * Gather given Metric and emit any error
  */
-func (c *CloudWatch) gatherMetric(acc telegraf.Accumulator, metric *cloudwatch.Metric, now time.Time, semaphore chan byte, errChan chan error) {
+func (c *CloudWatch) gatherMetric(
+	acc telegraf.Accumulator,
+	metric *cloudwatch.Metric,
+	now time.Time,
+	errChan chan error,
+) {
 	params := c.getStatisticsInput(metric, now)
 	resp, err := c.client.GetMetricStatistics(params)
 	if err != nil {
 		errChan <- err
-		<-semaphore
 		return
 	}
 
@@ -299,7 +306,6 @@ func (c *CloudWatch) gatherMetric(acc telegraf.Accumulator, metric *cloudwatch.M
 	}
 
 	errChan <- nil
-	<-semaphore
 }
 
 /*
