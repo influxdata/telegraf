@@ -2,9 +2,25 @@
 
 ### Release Notes
 
+- All AWS plugins now utilize a standard mechanism for evaluating credentials.
+This allows all AWS plugins to support environment variables, shared credential
+files & profiles, and role assumptions. See the specific plugin README for
+details.
+
+- The AWS CloudWatch input plugin can now declare a wildcard value for a metric
+dimension. This causes the plugin to read all metrics that contain the specified
+dimension key regardless of value. This is used to export collections of metrics
+without having to know the dimension values ahead of time.
+
+- The AWS CloudWatch input plugin can now be configured with the `cache_ttl`
+attribute. This configures the TTL of the internal metric cache. This is useful
+in conjunction with wildcard dimension values as it will control the amount of
+time before a new metric is included by the plugin.
+
 ### Features
 
 - [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
+- [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
 
 ### Bugfixes
 
