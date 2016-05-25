@@ -9,6 +9,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/chrony"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/inputs/conntrack"
+	_ "github.com/influxdata/telegraf/plugins/inputs/consul"
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchbase"
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disque"
