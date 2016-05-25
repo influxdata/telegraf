@@ -21,6 +21,7 @@ time before a new metric is included by the plugin.
 
 - [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
 - [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
+- [#1263](https://github.com/influxdata/telegraf/issues/1263): Added container_labels to docker plugin
 
 ### Bugfixes
 
