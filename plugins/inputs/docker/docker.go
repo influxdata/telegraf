@@ -57,8 +57,7 @@ var sampleConfig = `
   endpoint = "unix:///var/run/docker.sock"
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
-  ## Only collect these container labels from docker daemon, collect all if empty but note that
-  ## this will break prometheus output if containers have inconsistent label sets.
+  ## Only collect these container labels from docker daemon, collect all if empty
   container_labels = []
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
