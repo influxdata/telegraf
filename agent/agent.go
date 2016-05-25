@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/internal/webserver"
 )
 
 // Agent runs telegraf and collects data based on the given config
@@ -304,6 +305,13 @@ func jitterInterval(ininterval, injitter time.Duration) time.Duration {
 	return outinterval
 }
 
+func createAccumulatorForInput(a *Agent, input *internal_models.RunningInput, metricC chan telegraf.Metric) *accumulator {
+	acc := NewAccumulator(input.Config, metricC)
+	acc.SetDebug(a.Config.Agent.Debug)
+	acc.setDefaultTags(a.Config.Tags)
+	return acc
+}
+
 // Run runs the agent daemon, gathering every Interval
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
@@ -319,22 +327,30 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 
 	// channel shared between all input threads for accumulating metrics
 	metricC := make(chan telegraf.Metric, 10000)
+	webserver := webserver.NewWebserver()
+	webserver.ServiceAddress = ":1619"
 
 	for _, input := range a.Config.Inputs {
 		// Start service of any ServicePlugins
 		switch p := input.Input.(type) {
 		case telegraf.ServiceInput:
-			acc := NewAccumulator(input.Config, metricC)
-			acc.SetDebug(a.Config.Agent.Debug)
-			acc.setDefaultTags(a.Config.Tags)
+			acc := createAccumulatorForInput(a, input, metricC)
 			if err := p.Start(acc); err != nil {
 				log.Printf("Service for input %s failed to start, exiting\n%s\n",
 					input.Name, err.Error())
 				return err
 			}
 			defer p.Stop()
+		case telegraf.WebhookInput:
+			acc := createAccumulatorForInput(a, input, metricC)
+			if err := p.Register(webserver.Router(), acc); err != nil {
+				log.Printf("Webhook for input %s failed to start, exiting\n%s\n",
+					input.Name, err.Error())
+				return err
+			}
 		}
 	}
+	webserver.Start()
 
 	// Round collection to nearest interval by sleeping
 	if a.Config.Agent.RoundInterval {
