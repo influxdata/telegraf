@@ -1,11 +1,15 @@
-package httpjson
+package graylog
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,13 +20,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-type HttpJson struct {
-	Name       string
-	Servers    []string
-	Method     string
-	TagKeys    []string
-	Parameters map[string]string
-	Headers    map[string]string
+type GrayLog struct {
+	Name    string
+	Servers []string
+	TagKeys []string
+	Metrics []string
+	Headers map[string]string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -49,6 +52,10 @@ type HTTPClient interface {
 
 	SetHTTPClient(client *http.Client)
 	HTTPClient() *http.Client
+}
+
+type Messagebody struct {
+	Metrics []string `json:"metrics"`
 }
 
 type RealHTTPClient struct {
@@ -80,23 +87,19 @@ var sampleConfig = `
     "http://localhost:9998/stats/",
   ]
 
-  ## HTTP method to use: GET or POST (case-sensitive)
-  method = "GET"
 
   ## List of tag names to extract from top-level of JSON server response
   # tag_keys = [
   #   "my_tag_1",
   #   "my_tag_2"
   # ]
-
-  ## HTTP parameters (all values must be strings)
-  ## POST body can be sent by setting __body special attribute. 
-  [inputs.httpjson.parameters]
-    event_type = "cpu_spike"
-    threshold = "0.75"
+  metrics = [
+    "jvm.cl.loaded",
+    "jvm.memory.pools.Metaspace.committed"
+  ]
 
   ## HTTP Header parameters (all values must be strings)
-  # [inputs.httpjson.headers]
+  # [inputs.graylog.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
 
@@ -108,16 +111,16 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
-func (h *HttpJson) SampleConfig() string {
+func (h *GrayLog) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *HttpJson) Description() string {
+func (h *GrayLog) Description() string {
 	return "Read flattened metrics from one or more JSON HTTP endpoints"
 }
 
 // Gathers data for all servers.
-func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
+func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
@@ -172,11 +175,13 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 //
 // Returns:
 //     error: Any error that may have occurred
-func (h *HttpJson) gatherServer(
+func (h *GrayLog) gatherServer(
 	acc telegraf.Accumulator,
 	serverURL string,
 ) error {
 	resp, responseTime, err := h.sendRequest(serverURL)
+	var dat map[string]interface{}
+	var name_list []string
 
 	if err != nil {
 		return err
@@ -184,9 +189,9 @@ func (h *HttpJson) gatherServer(
 
 	var msrmnt_name string
 	if h.Name == "" {
-		msrmnt_name = "httpjson"
+		msrmnt_name = "graylog"
 	} else {
-		msrmnt_name = "httpjson_" + h.Name
+		msrmnt_name = "graylog_" + h.Name
 	}
 	tags := map[string]string{
 		"server": serverURL,
@@ -196,7 +201,17 @@ func (h *HttpJson) gatherServer(
 	if err != nil {
 		return err
 	}
-
+	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
+		return err
+	}
+	if rec, ok := dat["metrics"].([]interface{}); ok {
+		for _, metric := range rec {
+			if m, ok := metric.(map[string]interface{}); ok {
+				str, _ := m["full_name"].(string)
+				name_list = append(name_list, str)
+			}
+		}
+	}
 	metrics, err := parser.Parse([]byte(resp))
 	if err != nil {
 		return err
@@ -205,7 +220,12 @@ func (h *HttpJson) gatherServer(
 	for _, metric := range metrics {
 		fields := make(map[string]interface{})
 		for k, v := range metric.Fields() {
-			fields[k] = v
+			re, _ := regexp.Compile(`metrics_([0-9]+)`)
+			match := re.FindAllStringSubmatch(k, -1)
+			if match != nil {
+				i, _ := strconv.Atoi(match[0][1])
+				fields[name_list[i]] = v
+			}
 		}
 		fields["response_time"] = responseTime
 		acc.AddFields(metric.Name(), fields, metric.Tags())
@@ -213,44 +233,25 @@ func (h *HttpJson) gatherServer(
 	return nil
 }
 
-// Sends an HTTP request to the server using the HttpJson object's HTTPClient.
-// This request can be either a GET or a POST.
+// Sends an HTTP request to the server using the GrayLog object's HTTPClient.
 // Parameters:
 //     serverURL: endpoint to send request to
 //
 // Returns:
 //     string: body of the response
 //     error : Any error that may have occurred
-func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
+func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
 		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
 	}
-
-	data := url.Values{}
-	switch {
-	case h.Method == "GET":
-		params := requestURL.Query()
-		for k, v := range h.Parameters {
-			params.Add(k, v)
-		}
-		requestURL.RawQuery = params.Encode()
-
-	case h.Method == "POST":
-		requestURL.RawQuery = ""
-		for k, v := range h.Parameters {
-			data.Add(k, v)
-		}
+	m := &Messagebody{Metrics: h.Metrics}
+	http_body, err := json.Marshal(m)
+	if err != nil {
+		return "", -1, fmt.Errorf("Invalid list of Metrics %s", h.Metrics)
 	}
-
-	body_attr := data.Get("__body")
-	http_body := data.Encode()
-	if body_attr != "" {
-		http_body = body_attr
-	}
-	req, err := http.NewRequest(h.Method, requestURL.String(),
-		strings.NewReader(http_body))
+	req, err := http.NewRequest("POST", requestURL.String(), bytes.NewBuffer(http_body))
 	if err != nil {
 		return "", -1, err
 	}
@@ -288,13 +289,12 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 			http.StatusText(http.StatusOK))
 		return string(body), responseTime, err
 	}
-
 	return string(body), responseTime, err
 }
 
 func init() {
-	inputs.Add("httpjson", func() telegraf.Input {
-		return &HttpJson{
+	inputs.Add("graylog", func() telegraf.Input {
+		return &GrayLog{
 			client: &RealHTTPClient{},
 		}
 	})

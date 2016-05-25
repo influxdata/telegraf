@@ -24,6 +24,7 @@ to "stdout".
 
 ### Features
 
+- [#1260](https://github.com/influxdata/telegraf/pull/1260): Adding Graylog component and support for POST body in httpjson plugin 
 - [#1173](https://github.com/influxdata/telegraf/pull/1173): varnish input plugin. Thanks @sfox-xmatters!
 - [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
 - [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
