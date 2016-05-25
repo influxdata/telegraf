@@ -10,11 +10,11 @@ import (
 
 type Webserver struct {
 	ServiceAddress string
-	router *mux.Router
+	router         *mux.Router
 }
 
 func NewWebserver() *Webserver {
-	return &Webserver{router:mux.NewRouter()}
+	return &Webserver{router: mux.NewRouter()}
 }
 
 func (wb *Webserver) Router() *mux.Router {
