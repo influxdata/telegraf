@@ -22,9 +22,10 @@ import (
 
 // Docker object
 type Docker struct {
-	Endpoint       string
-	ContainerNames []string
-	Timeout        internal.Duration
+	Endpoint        string
+	ContainerNames  []string
+	ContainerLabels []string
+	Timeout         internal.Duration
 
 	client DockerClient
 }
@@ -56,6 +57,8 @@ var sampleConfig = `
   endpoint = "unix:///var/run/docker.sock"
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
+  ## Only collect these container labels from docker daemon, collect all if empty
+  container_labels = []
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 `
@@ -232,9 +235,21 @@ func (d *Docker) gatherContainer(
 		return fmt.Errorf("Error decoding: %s", err.Error())
 	}
 
-	// Add labels to tags
-	for k, label := range container.Labels {
-		tags[k] = label
+	// Check if there are container labels specified
+	if len(d.ContainerLabels) == 0 {
+		// Add all labels to tags
+		for k, label := range container.Labels {
+			tags[k] = label
+		}
+	} else {
+		// Omit labels not in d.ContainerLabels and add placeholders for missing labels
+		for _, l := range d.ContainerLabels {
+			if label, ok := container.Labels[l]; ok {
+				tags[l] = label
+			} else {
+				tags[l] = "-"
+			}
+		}
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID)
