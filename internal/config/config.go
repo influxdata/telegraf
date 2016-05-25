@@ -122,6 +122,9 @@ type AgentConfig struct {
 	Quiet        bool
 	Hostname     string
 	OmitHostname bool
+
+	//
+	WebhookServiceAddress  string
 }
 
 // Inputs returns a list of strings of the configured inputs.
