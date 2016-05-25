@@ -53,7 +53,7 @@ func (rb *RollbarWebhooks) Gather(acc telegraf.Accumulator) error {
 
 func (rb *RollbarWebhooks) Register(r *mux.Router, _ telegraf.Accumulator) error {
 	r.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
-	log.Printf("Register the rollbar_webhooks router on %s\n", rb.Path)
+	log.Printf("Registering rollbar_webhooks on %s\n", rb.Path)
 	return nil
 }
 
