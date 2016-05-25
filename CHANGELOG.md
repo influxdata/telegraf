@@ -27,6 +27,7 @@ time before a new metric is included by the plugin.
 - [#1252](https://github.com/influxdata/telegraf/pull/1252): Fix systemd service. Thanks @zbindenren!
 - [#1221](https://github.com/influxdata/telegraf/pull/1221): Fix influxdb n_shards counter.
 - [#1258](https://github.com/influxdata/telegraf/pull/1258): Fix potential kernel plugin integer parse error.
+- [#1268](https://github.com/influxdata/telegraf/pull/1268): Fix potential influxdb input type assertion panic.
 
 ## v0.13.1 [2016-05-24]
 
