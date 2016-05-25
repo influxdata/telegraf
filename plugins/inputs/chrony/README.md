@@ -40,7 +40,7 @@ is computed for the new frequency, with weights depending on these accuracies. I
 measurements from the reference source follow a consistent trend, the residual will be
 driven to zero over time.
 - Skew - This is the estimated error bound on the frequency.
-- Root delay -This is the total of the network path delays to the stratum-1 computer
+- Root delay - This is the total of the network path delays to the stratum-1 computer
 from which the computer is ultimately synchronised. In certain extreme situations, this
 value can be negative. (This can arise in a symmetric peer arrangement where the computers’
 frequencies are not tracking each other and the network delay is very short relative to the
@@ -56,7 +56,8 @@ Delete second or Not synchronised.
 ```toml
 # Get standard chrony metrics, requires chronyc executable.
 [[inputs.chrony]]
-  # no configuration
+  ## If true, chronyc tries to perform a DNS lookup for the time server.
+  # dns_lookup = false
 ```
 
 ### Measurements & Fields:
