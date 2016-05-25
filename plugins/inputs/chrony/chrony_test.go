@@ -42,6 +42,15 @@ func TestGather(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
+
+	// test with dns lookup
+	c.DNSLookup = true
+	err = c.Gather(&acc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
+
 }
 
 // fackeExecCommand is a helper function that mock
@@ -63,8 +72,9 @@ func TestHelperProcess(t *testing.T) {
 		return
 	}
 
-	mockData := `Reference ID    : 192.168.1.22 (ntp.example.com)
-Stratum         : 3
+	lookup := "Reference ID    : 192.168.1.22 (ntp.example.com)\n"
+	noLookup := "Reference ID    : 192.168.1.22 (192.168.1.22)\n"
+	mockData := `Stratum         : 3
 Ref time (UTC)  : Thu May 12 14:27:07 2016
 System time     : 0.000020390 seconds fast of NTP time
 Last offset     : +0.000012651 seconds
@@ -84,8 +94,12 @@ Leap status     : Normal
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
 	cmd, args := args[3], args[4:]
 
-	if cmd == "chronyc" && args[0] == "tracking" {
-		fmt.Fprint(os.Stdout, mockData)
+	if cmd == "chronyc" {
+		if args[0] == "tracking" {
+			fmt.Fprint(os.Stdout, lookup+mockData)
+		} else {
+			fmt.Fprint(os.Stdout, noLookup+mockData)
+		}
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
