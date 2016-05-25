@@ -2,7 +2,6 @@ package github_webhooks
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,7 +17,7 @@ func init() {
 }
 
 type GithubWebhooks struct {
-	ServiceAddress string
+	Path string
 	// Lock for the struct
 	sync.Mutex
 	// Events buffer to store events between Gather calls
@@ -32,7 +31,7 @@ func NewGithubWebhooks() *GithubWebhooks {
 func (gh *GithubWebhooks) SampleConfig() string {
 	return `
   ## Address and port to host Webhook listener on
-  service_address = ":1618"
+  path = "/github"
 `
 }
 
@@ -52,23 +51,10 @@ func (gh *GithubWebhooks) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (gh *GithubWebhooks) Listen() {
-	r := mux.NewRouter()
-	r.HandleFunc("/", gh.eventHandler).Methods("POST")
-	err := http.ListenAndServe(fmt.Sprintf("%s", gh.ServiceAddress), r)
-	if err != nil {
-		log.Printf("Error starting server: %v", err)
-	}
-}
-
-func (gh *GithubWebhooks) Start(_ telegraf.Accumulator) error {
-	go gh.Listen()
-	log.Printf("Started the github_webhooks service on %s\n", gh.ServiceAddress)
+func (gh *GithubWebhooks) Register(r *mux.Router, _ telegraf.Accumulator) error {
+	r.HandleFunc(gh.Path, gh.eventHandler).Methods("POST")
+	log.Printf("Registering github_webhooks on %s\n", gh.Path)
 	return nil
-}
-
-func (gh *GithubWebhooks) Stop() {
-	log.Println("Stopping the ghWebhooks service")
 }
 
 // Handles the / route
