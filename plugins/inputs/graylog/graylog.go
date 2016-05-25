@@ -1,18 +1,18 @@
 package graylog
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
-	"bytes"
-	"regexp"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"encoding/json"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -21,11 +21,11 @@ import (
 )
 
 type GrayLog struct {
-	Name       string
-	Servers    []string
-	TagKeys    []string
-	Metrics	   []string
-	Headers    map[string]string
+	Name    string
+	Servers []string
+	TagKeys []string
+	Metrics []string
+	Headers map[string]string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -55,7 +55,7 @@ type HTTPClient interface {
 }
 
 type Messagebody struct {
-    Metrics  []string `json:"metrics"`
+	Metrics []string `json:"metrics"`
 }
 
 type RealHTTPClient struct {
@@ -202,7 +202,7 @@ func (h *GrayLog) gatherServer(
 		return err
 	}
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
-    return err
+		return err
 	}
 	if rec, ok := dat["metrics"].([]interface{}); ok {
 		for _, metric := range rec {
@@ -222,10 +222,10 @@ func (h *GrayLog) gatherServer(
 		for k, v := range metric.Fields() {
 			re, _ := regexp.Compile(`metrics_([0-9]+)`)
 			match := re.FindAllStringSubmatch(k, -1)
-			if(match != nil) {
+			if match != nil {
 				i, _ := strconv.Atoi(match[0][1])
 				fields[name_list[i]] = v
-			} 
+			}
 		}
 		fields["response_time"] = responseTime
 		acc.AddFields(metric.Name(), fields, metric.Tags())

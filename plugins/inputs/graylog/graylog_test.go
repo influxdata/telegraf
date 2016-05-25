@@ -1,10 +1,10 @@
 package graylog
 
 import (
-//	"fmt"
+	//	"fmt"
 	"io/ioutil"
 	"net/http"
-//	"net/http/httptest"
+	//	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -36,10 +36,9 @@ const validJSON = `
     ]
   }`
 
-
 var expectedFields = map[string]interface{}{
-	"jvm.memory.pools.Metaspace.committed":         float64(108040192),
-	"jvm.cl.loaded":         float64(18910),
+	"jvm.memory.pools.Metaspace.committed": float64(108040192),
+	"jvm.cl.loaded":                        float64(18910),
 }
 
 const invalidJSON = "I don't think this is JSON"
@@ -97,29 +96,29 @@ func genMockGrayLog(response string, statusCode int) []*GrayLog {
 			Servers: []string{
 				"http://localhost:12900/system/metrics/multiple",
 			},
-			Name:   "my_webapp",
+			Name: "my_webapp",
 			Metrics: []string{
-         "jvm.cl.loaded",
+				"jvm.cl.loaded",
 			},
 			Headers: map[string]string{
-        "Content-Type" : "application/json",
-        "Accept" : "application/json",
-        "Authorization" : "Basic DESfdsfffoffo",
+				"Content-Type":  "application/json",
+				"Accept":        "application/json",
+				"Authorization": "Basic DESfdsfffoffo",
 			},
 		},
 		&GrayLog{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
-      Servers: []string{
+			Servers: []string{
 				"http://server2:12900/system/metrics/multiple",
 			},
-			Name:   "other_webapp",
-      Metrics: []string{
-         "jvm.memory.pools.Metaspace.committed",
+			Name: "other_webapp",
+			Metrics: []string{
+				"jvm.memory.pools.Metaspace.committed",
 			},
 			Headers: map[string]string{
-        "Content-Type" : "application/json",
-        "Accept" : "application/json",
-        "Authorization" : "Basic DESfdsfffoffo",
+				"Content-Type":  "application/json",
+				"Accept":        "application/json",
+				"Authorization": "Basic DESfdsfffoffo",
 			},
 			TagKeys: []string{
 				"role",
@@ -151,7 +150,6 @@ func TestNormalResponse(t *testing.T) {
 		}
 	}
 }
-
 
 // Test response to HTTP 500
 func TestHttpJson500(t *testing.T) {
