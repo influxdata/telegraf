@@ -84,7 +84,7 @@ func TestFieldConfig(t *testing.T) {
 	}()
 	varnishStat = fakeVarnishStat(fullOutput)
 
-	expect := map[string]uint64{
+	expect := map[string]int{
 		"all":                                   293,
 		"":                                      0, // default
 		"MAIN.uptime":                           1,
@@ -130,18 +130,18 @@ MEMPOOL.vbc.sz_wanted              88          .   Size requested
 
 var parsedSmOutput = map[string]map[string]interface{}{
 	"MAIN": map[string]interface{}{
-		"uptime":     895,
-		"cache_hit":  95,
-		"cache_miss": 5,
+		"uptime":     uint64(895),
+		"cache_hit":  uint64(95),
+		"cache_miss": uint64(5),
 	},
 	"MGT": map[string]interface{}{
-		"uptime":      896,
-		"child_start": 1,
+		"uptime":      uint64(896),
+		"child_start": uint64(1),
 	},
 	"MEMPOOL": map[string]interface{}{
-		"vbc.live":      0,
-		"vbc.pool":      10,
-		"vbc.sz_wanted": 88,
+		"vbc.live":      uint64(0),
+		"vbc.pool":      uint64(10),
+		"vbc.sz_wanted": uint64(88),
 	},
 }
 
