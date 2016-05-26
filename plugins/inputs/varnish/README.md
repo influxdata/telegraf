@@ -10,7 +10,7 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
    ## The default location of the varnishstat binary can be overridden with:
    binary = "/usr/bin/varnishstat"
 
-   ## By default, telegraf gathers stats for 3 metric pouint64s.
+   ## By default, telegraf gathers stats for 3 metric points.
    ## Setting stats will override the defaults shown below.
    ## stats may also be set to ["all"], which will collect all stats
    stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
