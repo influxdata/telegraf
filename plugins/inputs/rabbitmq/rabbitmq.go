@@ -102,7 +102,7 @@ type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error)
 var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
 
 var sampleConfig = `
-  url = "http://localhost:15672" # required
+  # url = "http://localhost:15672"
   # name = "rmq-server-1" # optional tag
   # username = "guest"
   # password = "guest"
@@ -146,6 +146,9 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 }
 
 func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
+	if r.URL == "" {
+		r.URL = DefaultURL
+	}
 	u = fmt.Sprintf("%s%s", r.URL, u)
 
 	req, err := http.NewRequest("GET", u, nil)
