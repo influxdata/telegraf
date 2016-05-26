@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gonuts/go-shellquote"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
@@ -109,7 +110,13 @@ func init() {
 }
 
 var perfDump = func(binary string, socket *socket) (string, error) {
+	split_cmd, err := shellquote.Split(binary)
+	if err != nil || len(split_cmd) == 0 {
+		return "", fmt.Errorf("exec: unable to parse command, %s", err)
+	}
+
 	cmdArgs := []string{"--admin-daemon", socket.socket}
+
 	if socket.sockType == typeOsd {
 		cmdArgs = append(cmdArgs, "perf", "dump")
 	} else if socket.sockType == typeMon {
@@ -118,10 +125,12 @@ var perfDump = func(binary string, socket *socket) (string, error) {
 		return "", fmt.Errorf("ignoring unknown socket type: %s", socket.sockType)
 	}
 
-	cmd := exec.Command(binary, cmdArgs...)
+	split_cmd = append(split_cmd, cmdArgs...)
+
+	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return "", fmt.Errorf("error running ceph dump: %s", err)
 	}

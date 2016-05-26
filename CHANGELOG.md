@@ -31,6 +31,7 @@ time before a new metric is included by the plugin.
 - [#1221](https://github.com/influxdata/telegraf/pull/1221): Fix influxdb n_shards counter.
 - [#1258](https://github.com/influxdata/telegraf/pull/1258): Fix potential kernel plugin integer parse error.
 - [#1268](https://github.com/influxdata/telegraf/pull/1268): Fix potential influxdb input type assertion panic.
+- [#1276](https://github.com/influxdata/telegraf/pull/1276): Sudo support for ceph/varnish plugin. Thanks @ljagiello!
 
 ## v0.13.1 [2016-05-24]
 

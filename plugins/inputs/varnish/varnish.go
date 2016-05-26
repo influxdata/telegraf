@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gonuts/go-shellquote"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -84,12 +86,17 @@ func (s *Varnish) statsFilter() func(string) bool {
 
 // Shell out to varnish_stat and return the output
 var varnishStat = func(cmdName string) (*bytes.Buffer, error) {
+	split_cmd, err := shellquote.Split(cmdName)
+	if err != nil || len(split_cmd) == 0 {
+		return nil, fmt.Errorf("exec: unable to parse command, %s", err)
+	}
 	cmdArgs := []string{"-1"}
+	split_cmd = append(split_cmd, cmdArgs...)
 
-	cmd := exec.Command(cmdName, cmdArgs...)
+	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Millisecond*200)
+	err = internal.RunTimeout(cmd, time.Millisecond*200)
 	if err != nil {
 		return &out, fmt.Errorf("error running varnishstat: %s", err)
 	}
@@ -138,7 +145,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 			sectionMap[section] = make(map[string]interface{})
 		}
 
-		sectionMap[section][field], err = strconv.Atoi(value)
+		sectionMap[section][field], err = strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Expected a numeric value for %s = %v\n",
 				stat, value)
