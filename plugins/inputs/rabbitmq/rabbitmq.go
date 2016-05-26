@@ -149,9 +149,9 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 	if r.URL == "" {
 		r.URL = DefaultURL
 	}
-	u = fmt.Sprintf("%s%s", url, u)
+	u = fmt.Sprintf("%s%s", r.URL, u)
 
-	req, err := http.NewRequest("GET", r.URL, nil)
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return err
 	}
