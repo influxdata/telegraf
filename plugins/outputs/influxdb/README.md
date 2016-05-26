@@ -24,3 +24,4 @@ to write to. Each URL should start with either `http://` or `udp://`
 * `ssl_cert`: SSL CERT
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
+* `write_consistency`: Write consistency for clusters only, can be: "any", "one", "quorom", "all"
