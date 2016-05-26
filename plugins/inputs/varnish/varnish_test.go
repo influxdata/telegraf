@@ -121,6 +121,7 @@ var smOutput = `
 MAIN.uptime                895         1.00 Child process uptime
 MAIN.cache_hit                     95         0.00 Cache hits
 MAIN.cache_miss                    5          0.00 Cache misses
+MAIN.n_objectcore     18446744073709          .   objectcore structs made
 MGT.uptime                         896         1.00 Management process uptime
 MGT.child_start                    1         0.00 Child process started
 MEMPOOL.vbc.live                   0          .   In use
@@ -130,9 +131,10 @@ MEMPOOL.vbc.sz_wanted              88          .   Size requested
 
 var parsedSmOutput = map[string]map[string]interface{}{
 	"MAIN": map[string]interface{}{
-		"uptime":     uint64(895),
-		"cache_hit":  uint64(95),
-		"cache_miss": uint64(5),
+		"uptime":       uint64(895),
+		"cache_hit":    uint64(95),
+		"cache_miss":   uint64(5),
+		"n_objectcore": uint64(18446744073709),
 	},
 	"MGT": map[string]interface{}{
 		"uptime":      uint64(896),
@@ -193,7 +195,7 @@ MAIN.sess_queued                   0         0.00 Sessions queued for thread
 MAIN.sess_dropped                  0         0.00 Sessions dropped for thread
 MAIN.n_object                      0          .   object structs made
 MAIN.n_vampireobject               0          .   unresurrected objects
-MAIN.n_objectcore                  0          .   objectcore structs made
+MAIN.n_objectcore     18446744073709          .   objectcore structs made
 MAIN.n_objecthead                  0          .   objecthead structs made
 MAIN.n_waitinglist                 0          .   waitinglist structs made
 MAIN.n_backend                     1          .   Number of backends
