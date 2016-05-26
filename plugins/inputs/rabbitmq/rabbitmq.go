@@ -146,13 +146,12 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 }
 
 func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
-	url := r.URL
-	if url == "" {
-		url = DefaultURL
+	if r.URL == "" {
+		r.URL = DefaultURL
 	}
 	u = fmt.Sprintf("%s%s", url, u)
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest("GET", r.URL, nil)
 	if err != nil {
 		return err
 	}
