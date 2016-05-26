@@ -109,7 +109,7 @@ func (r *haproxy) Description() string {
 // Returns one of the errors encountered while gather stats (if any).
 func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 	if len(g.Servers) == 0 {
-		return g.gatherServer("http://127.0.0.1:1936", acc)
+		return g.gatherServer("http://127.0.0.1:1936/;csv", acc)
 	}
 
 	var wg sync.WaitGroup
@@ -172,8 +172,8 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
 	}
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s/;csv", u.Scheme, u.Host, u.Path), nil)
+	//Checking for default Haproxy Status page
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, u.RawQuery), nil)
 	if u.User != nil {
 		p, _ := u.User.Password()
 		req.SetBasicAuth(u.User.Username(), p)
