@@ -8,7 +8,7 @@ EnvironmentFile=-/etc/default/telegraf
 User=telegraf
 Environment='STDOUT=/var/log/telegraf/telegraf.log'
 Environment='STDERR=/var/log/telegraf/telegraf.log'
-ExecStart=/bin/sh -c "/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d ${TELEGRAF_OPTS} >>${STDOUT} 2>>${STDERR}"
+ExecStart=/bin/sh -c "exec /usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d ${TELEGRAF_OPTS} >>${STDOUT} 2>>${STDERR}"
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 KillMode=control-group
