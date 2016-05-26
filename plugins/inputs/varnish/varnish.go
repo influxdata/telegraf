@@ -10,33 +10,37 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/gobwas/glob"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"time"
 )
 
-const (
-	kwAll = "all"
-)
+type runner func(cmdName string) (*bytes.Buffer, error)
 
 // Varnish is used to store configuration values
 type Varnish struct {
 	Stats  []string
 	Binary string
+
+	filter glob.Glob
+	run    runner
 }
 
 var defaultStats = []string{"MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"}
 var defaultBinary = "/usr/bin/varnishstat"
 
-var varnishSampleConfig = `
+var sampleConfig = `
   ## The default location of the varnishstat binary can be overridden with:
   binary = "/usr/bin/varnishstat"
 
   ## By default, telegraf gather stats for 3 metric points.
   ## Setting stats will override the defaults shown below.
-  ## stats may also be set to ["all"], which will collect all stats
+  ## Glob matching can be used, ie, stats = ["MAIN.*"]
+  ## stats may also be set to ["*"], which will collect all stats
   stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
 `
 
@@ -46,44 +50,11 @@ func (s *Varnish) Description() string {
 
 // SampleConfig displays configuration instructions
 func (s *Varnish) SampleConfig() string {
-	return fmt.Sprintf(varnishSampleConfig, strings.Join(defaultStats, "\",\""))
-}
-
-func (s *Varnish) setDefaults() {
-	if len(s.Stats) == 0 {
-		s.Stats = defaultStats
-	}
-
-	if s.Binary == "" {
-		s.Binary = defaultBinary
-	}
-}
-
-// Builds a filter function that will indicate whether a given stat should
-// be reported
-func (s *Varnish) statsFilter() func(string) bool {
-	s.setDefaults()
-
-	// Build a set for constant-time lookup of whether stats should be included
-	filter := make(map[string]struct{})
-	for _, s := range s.Stats {
-		filter[s] = struct{}{}
-	}
-
-	// Create a function that respects the kwAll by always returning true
-	// if it is set
-	return func(stat string) bool {
-		if s.Stats[0] == kwAll {
-			return true
-		}
-
-		_, found := filter[stat]
-		return found
-	}
+	return sampleConfig
 }
 
 // Shell out to varnish_stat and return the output
-var varnishStat = func(cmdName string) (*bytes.Buffer, error) {
+func varnishRunner(cmdName string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"-1"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
@@ -104,13 +75,27 @@ var varnishStat = func(cmdName string) (*bytes.Buffer, error) {
 // 'section' tag and all stats that share that prefix will be reported as fields
 // with that tag
 func (s *Varnish) Gather(acc telegraf.Accumulator) error {
-	s.setDefaults()
-	out, err := varnishStat(s.Binary)
+	if s.filter == nil {
+		var err error
+		if len(s.Stats) == 0 {
+			s.filter, err = internal.CompileFilter(defaultStats)
+		} else {
+			// legacy support, change "all" -> "*":
+			if s.Stats[0] == "all" {
+				s.Stats[0] = "*"
+			}
+			s.filter, err = internal.CompileFilter(s.Stats)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	out, err := s.run(s.Binary)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
 
-	statsFilter := s.statsFilter()
 	sectionMap := make(map[string]map[string]interface{})
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
@@ -125,7 +110,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 		stat := cols[0]
 		value := cols[1]
 
-		if !statsFilter(stat) {
+		if s.filter != nil && !s.filter.Match(stat) {
 			continue
 		}
 
@@ -138,7 +123,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 			sectionMap[section] = make(map[string]interface{})
 		}
 
-		sectionMap[section][field], err = strconv.Atoi(value)
+		sectionMap[section][field], err = strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Expected a numeric value for %s = %v\n",
 				stat, value)
@@ -160,5 +145,9 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("varnish", func() telegraf.Input { return &Varnish{} })
+	inputs.Add("varnish", func() telegraf.Input {
+		return &Varnish{
+			run: varnishRunner,
+		}
+	})
 }
