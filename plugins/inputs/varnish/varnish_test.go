@@ -84,7 +84,7 @@ func TestFieldConfig(t *testing.T) {
 	}()
 	varnishStat = fakeVarnishStat(fullOutput)
 
-	expect := map[string]int{
+	expect := map[string]uint64{
 		"all":                                   293,
 		"":                                      0, // default
 		"MAIN.uptime":                           1,
