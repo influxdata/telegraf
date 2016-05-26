@@ -78,9 +78,9 @@ type ReplSetStatus struct {
 
 // ReplSetMember stores information related to a replica set member
 type ReplSetMember struct {
-	Name   string               `bson:"name"`
-	State  int64                `bson:"state"`
-	Optime *bson.MongoTimestamp `bson:"optime"`
+	Name       string               `bson:"name"`
+	State      int64                `bson:"state"`
+	OptimeDate *bson.MongoTimestamp `bson:"optimeDate"`
 }
 
 // WiredTiger stores information related to the WiredTiger storage engine.
@@ -663,9 +663,9 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 		}
 
-		if me.Optime != nil && master.Optime != nil && me.State == 2 {
+		if me.OptimeDate != nil && master.OptimeDate != nil && me.State == 2 {
 			// MongoTimestamp type is int64 where the first 32bits are the unix timestamp
-			lag := int64(*master.Optime>>32 - *me.Optime>>32)
+			lag := int64(*master.OptimeDate>>32 - *me.OptimeDate>>32)
 			if lag < 0 {
 				returnVal.ReplLag = 0
 			} else {
