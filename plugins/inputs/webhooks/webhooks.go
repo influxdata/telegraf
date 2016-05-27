@@ -35,6 +35,14 @@ func (wb *Webhooks) SampleConfig() string {
 	return `
   ## Address and port to host Webhook listener on
   service_address = ":1619"
+
+  [[inputs.webhooks.webhook]]
+    name = "github"
+    path = "/github"
+
+  [[inputs.webhooks.webhook]]
+    name = "rollbar"
+    path = "/rollbar"
 `
 }
 
