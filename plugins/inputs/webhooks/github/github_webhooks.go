@@ -1,74 +1,33 @@
-package github_webhooks
+package github
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/webhooks_models"
 )
 
 func init() {
-	inputs.Add("github_webhooks", func() telegraf.Input { return &GithubWebhooks{} })
+	webhooks_models.Add("github", func(path string) webhooks_models.Webhook { return NewGithubWebhooks(path) })
 }
 
 type GithubWebhooks struct {
-	ServiceAddress string
-	// Lock for the struct
-	sync.Mutex
-	// Events buffer to store events between Gather calls
-	events []Event
+	Path string
+	acc  telegraf.Accumulator
 }
 
-func NewGithubWebhooks() *GithubWebhooks {
-	return &GithubWebhooks{}
+func NewGithubWebhooks(path string) *GithubWebhooks {
+	return &GithubWebhooks{Path: path}
 }
 
-func (gh *GithubWebhooks) SampleConfig() string {
-	return `
-  ## Address and port to host Webhook listener on
-  service_address = ":1618"
-`
-}
-
-func (gh *GithubWebhooks) Description() string {
-	return "A Github Webhook Event collector"
-}
-
-// Writes the points from <-gh.in to the Accumulator
-func (gh *GithubWebhooks) Gather(acc telegraf.Accumulator) error {
-	gh.Lock()
-	defer gh.Unlock()
-	for _, event := range gh.events {
-		p := event.NewMetric()
-		acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
-	}
-	gh.events = make([]Event, 0)
-	return nil
-}
-
-func (gh *GithubWebhooks) Listen() {
-	r := mux.NewRouter()
-	r.HandleFunc("/", gh.eventHandler).Methods("POST")
-	err := http.ListenAndServe(fmt.Sprintf("%s", gh.ServiceAddress), r)
-	if err != nil {
-		log.Printf("Error starting server: %v", err)
-	}
-}
-
-func (gh *GithubWebhooks) Start(_ telegraf.Accumulator) error {
-	go gh.Listen()
-	log.Printf("Started the github_webhooks service on %s\n", gh.ServiceAddress)
-	return nil
-}
-
-func (gh *GithubWebhooks) Stop() {
-	log.Println("Stopping the ghWebhooks service")
+func (gh *GithubWebhooks) Register(router *mux.Router, acc telegraf.Accumulator) {
+	router.HandleFunc(gh.Path, gh.eventHandler).Methods("POST")
+	log.Printf("Started the webhooks_github on %s\n", gh.Path)
+	gh.acc = acc
 }
 
 // Handles the / route
@@ -85,9 +44,10 @@ func (gh *GithubWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	gh.Lock()
-	gh.events = append(gh.events, e)
-	gh.Unlock()
+
+	p := e.NewMetric()
+	gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
+
 	w.WriteHeader(http.StatusOK)
 }
 

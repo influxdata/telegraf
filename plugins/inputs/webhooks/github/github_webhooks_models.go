@@ -1,4 +1,4 @@
-package github_webhooks
+package github
 
 import (
 	"fmt"

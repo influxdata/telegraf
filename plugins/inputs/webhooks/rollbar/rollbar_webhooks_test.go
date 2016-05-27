@@ -1,4 +1,4 @@
-package rollbar_webhooks
+package rollbar
 
 import (
 	"net/http"
@@ -21,12 +21,12 @@ func postWebhooks(rb *RollbarWebhooks, eventBody string) *httptest.ResponseRecor
 
 func TestNewItem(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := NewRollbarWebhooks()
+	rb := NewRollbarWebhooks("/rollbar")
+	rb.acc = &acc
 	resp := postWebhooks(rb, NewItemJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
-	rb.Gather(&acc)
 
 	fields := map[string]interface{}{
 		"id": 272716944,
@@ -45,12 +45,12 @@ func TestNewItem(t *testing.T) {
 
 func TestDeploy(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := NewRollbarWebhooks()
+	rb := NewRollbarWebhooks("/rollbar")
+	rb.acc = &acc
 	resp := postWebhooks(rb, DeployJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST deploy returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
-	rb.Gather(&acc)
 
 	fields := map[string]interface{}{
 		"id": 187585,
@@ -66,7 +66,7 @@ func TestDeploy(t *testing.T) {
 }
 
 func TestUnknowItem(t *testing.T) {
-	rb := NewRollbarWebhooks()
+	rb := NewRollbarWebhooks("/rollbar")
 	resp := postWebhooks(rb, UnknowJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST unknow returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
