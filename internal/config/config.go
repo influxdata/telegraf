@@ -55,10 +55,10 @@ func NewConfig() *Config {
 	c := &Config{
 		// Agent defaults:
 		Agent: &AgentConfig{
-			Interval:      internal.Duration{Duration: 10 * time.Second},
-			RoundInterval: true,
-			FlushInterval: internal.Duration{Duration: 10 * time.Second},
-			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
+			Interval:              internal.Duration{Duration: 10 * time.Second},
+			RoundInterval:         true,
+			FlushInterval:         internal.Duration{Duration: 10 * time.Second},
+			FlushJitter:           internal.Duration{Duration: 5 * time.Second},
 			WebhookServiceAddress: ":1925",
 		},
 
