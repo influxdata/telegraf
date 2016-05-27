@@ -329,8 +329,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	metricC := make(chan telegraf.Metric, 10000)
 	webserver := webserver.NewWebserver(a.Config.Agent.WebhookServiceAddress)
 
+	// Handle special input plugin: Start any ServiceInput and
+	// Register any WebhookInput
 	for _, input := range a.Config.Inputs {
-		// Start service of any ServicePlugins
 		switch p := input.Input.(type) {
 		case telegraf.ServiceInput:
 			acc := createAccumulatorForInput(a, input, metricC)
@@ -347,9 +348,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 					input.Name, err.Error())
 				return err
 			}
+			webserver.StartOnce()
 		}
 	}
-	webserver.Start()
 
 	// Round collection to nearest interval by sleeping
 	if a.Config.Agent.RoundInterval {

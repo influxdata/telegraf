@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 )
@@ -11,21 +12,23 @@ import (
 type Webserver struct {
 	ServiceAddress string
 	Router         *mux.Router
+	onceStart      sync.Once
 }
 
 func NewWebserver(serviceAddress string) *Webserver {
 	return &Webserver{Router: mux.NewRouter(), ServiceAddress: serviceAddress}
 }
 
-func (wb *Webserver) Listen() {
+func (wb *Webserver) listen() {
+	log.Printf("Started the webhook server on %s\n", wb.ServiceAddress)
 	err := http.ListenAndServe(fmt.Sprintf("%s", wb.ServiceAddress), wb.Router)
 	if err != nil {
-		log.Printf("Error starting server: %v", err)
+		log.Printf("Error starting webhook server: %v", err)
 	}
 }
 
-func (wb *Webserver) Start() error {
-	go wb.Listen()
-	log.Printf("Started the webhook server on %s\n", wb.ServiceAddress)
-	return nil
+func (wb *Webserver) StartOnce() {
+	wb.onceStart.Do(func() {
+		go wb.listen()
+	})
 }
