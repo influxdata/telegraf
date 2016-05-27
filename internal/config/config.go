@@ -246,6 +246,13 @@ var serviceInputHeader = `
 ###############################################################################
 `
 
+var webhookInputHeader = `
+
+###############################################################################
+#                            WEBHOOK INPUT PLUGINS                            #
+###############################################################################
+`
+
 // PrintSampleConfig prints the sample config
 func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 	fmt.Printf(header)
@@ -292,10 +299,15 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	}
 	sort.Strings(pnames)
 
-	// cache service inputs to print them at the end
-	servInputs := make(map[string]telegraf.ServiceInput)
+	// cache service inputs to print them after inputs
+	servInputs := make(map[string]telegraf.Input)
 	// for alphabetical looping:
 	servInputNames := []string{}
+
+	// cache service inputs to print them after at the end
+	webhookInputs := make(map[string]telegraf.Input)
+	// for alphabetical looping:
+	webhookInputNames := []string{}
 
 	// Print Inputs
 	for _, pname := range pnames {
@@ -307,19 +319,31 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 			servInputs[pname] = p
 			servInputNames = append(servInputNames, pname)
 			continue
+		case telegraf.WebhookInput:
+			webhookInputs[pname] = p
+			webhookInputNames = append(webhookInputNames, pname)
+			continue
 		}
 
 		printConfig(pname, input, "inputs", commented)
 	}
 
-	// Print Service Inputs
-	if len(servInputs) == 0 {
+	// Print service input
+	printOtherInputs(serviceInputHeader, servInputs, servInputNames, commented)
+
+	// Print webhook input
+	printOtherInputs(webhookInputHeader, webhookInputs, webhookInputNames, commented)
+}
+
+func printOtherInputs(header string, inputs map[string]telegraf.Input, names []string, commented bool) {
+	if len(names) == 0 {
 		return
 	}
-	sort.Strings(servInputNames)
-	fmt.Printf(serviceInputHeader)
-	for _, name := range servInputNames {
-		printConfig(name, servInputs[name], "inputs", commented)
+
+	sort.Strings(names)
+	fmt.Printf(header)
+	for _, name := range names {
+		printConfig(name, inputs[name], "inputs", commented)
 	}
 }
 
