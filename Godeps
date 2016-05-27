@@ -1,3 +1,4 @@
+github.com/PagerDuty/go-pagerduty ca949dd0e92d79fc6becff835329c1998f273e2e
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
 github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
@@ -15,11 +16,13 @@ github.com/docker/go-units 5d2041e26a699eaca682e2ea41c8f891e1060444
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
 github.com/eclipse/paho.mqtt.golang 0f7a459f04f13a41b7ed752d47944528d4bf9a86
+github.com/go-ini/ini 6ec4abd8f8d587536da56f730858f0e27aeb4126
 github.com/go-sql-driver/mysql 1fca743146605a172a266e1654e01e5cd5669bee
 github.com/gobwas/glob 49571a1557cd20e6a2410adc6421f85b66c730b5
 github.com/golang/protobuf 552c7b9542c194800fd493123b3798ef0a832032
 github.com/golang/snappy 427fb6fc07997f43afa32f35e850833760e489a7
 github.com/gonuts/go-shellquote e842a11b24c6abfb3dd27af69a17f482e4b483c2
+github.com/google/go-querystring 2a60fc2ba6c19de80291203597d752e9ba58e4c0
 github.com/gorilla/context 1ea25387ff6f684839d82767c1733ff4d4d15d0a
 github.com/gorilla/mux c9e326e2bdec29039a3761c07bece13133863e1e
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
@@ -27,6 +30,7 @@ github.com/hpcloud/tail b2940955ab8b26e19d43a43c4da0475dd81bdb56
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
 github.com/influxdata/influxdb e094138084855d444195b252314dfee9eae34cab
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
+github.com/jmespath/go-jmespath c01cf91b011868172fdcd9f41838e80c9d716264
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
 github.com/lib/pq e182dc4027e2ded4b19396d638610f2653295f36
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
@@ -37,6 +41,7 @@ github.com/nats-io/nats b13fc9d12b0b123ebc374e6b808c6228ae4234a3
 github.com/nats-io/nuid 4f84f5f3b2786224e336af2e13dba0a0a80b76fa
 github.com/nsqio/go-nsq 0b80d6f05e15ca1930e0c5e1d540ed627e299980
 github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
+github.com/pmezard/go-difflib e8554b8641db39598be7f6342874b958f12ae1d4
 github.com/prometheus/client_golang 18acf9993a863f4c4b40612e19cdd243e7c86831
 github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
@@ -45,14 +50,18 @@ github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
 github.com/shirou/gopsutil 83c6e72cbdef6e8ada934549abf700ff0ba96776
 github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
+github.com/stretchr/objx 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
 github.com/wvanbergen/kafka 46f9a1cf3f670edec492029fadded9c2d9e18866
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
 golang.org/x/crypto 5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3
 golang.org/x/net 6acef71eb69611914f7a30939ea9f6e194c78172
+golang.org/x/sys 50c6bc5e4292a1d4e65c6e9be5f53be28bcbe28e
 golang.org/x/text a71fd10341b064c10f4a81ceac72bcf70f26ea34
 gopkg.in/dancannon/gorethink.v1 7d1af5be49cb5ecc7b177bf387d232050299d6ef
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
+gopkg.in/fsnotify.v1 30411dbcefb7a1da7e84f75530ad3abe4011b4f8
 gopkg.in/mgo.v2 d90005c5262a3463800497ea5a89aed5fe22c886
+gopkg.in/tomb.v1 dd632973f1e7218eb1089048e0798ec9ae7dceb8
 gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4
