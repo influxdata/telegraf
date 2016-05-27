@@ -14,26 +14,25 @@ import (
 )
 
 func init() {
-	webhooks_models.Add("rollbar", func(path string) webhooks_models.Webhook { return NewRollbarWebhooks(path) })
+	webhooks_models.Add("rollbar", func(path string) webhooks_models.Webhook { return NewRollbarWebhook(path) })
 }
 
-// FIXME: rename
-type RollbarWebhooks struct {
+type RollbarWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
 }
 
-func NewRollbarWebhooks(path string) *RollbarWebhooks {
-	return &RollbarWebhooks{Path: path}
+func NewRollbarWebhook(path string) *RollbarWebhook {
+	return &RollbarWebhook{Path: path}
 }
 
-func (rb *RollbarWebhooks) Register(router *mux.Router, acc telegraf.Accumulator) {
+func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
 	log.Printf("Started the webhooks_rollbar on %s\n", rb.Path)
 	rb.acc = acc
 }
 
-func (rb *RollbarWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (rb *RollbarWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {

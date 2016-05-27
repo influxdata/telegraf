@@ -12,26 +12,25 @@ import (
 )
 
 func init() {
-	webhooks_models.Add("github", func(path string) webhooks_models.Webhook { return NewGithubWebhooks(path) })
+	webhooks_models.Add("github", func(path string) webhooks_models.Webhook { return NewGithubWebhook(path) })
 }
 
-type GithubWebhooks struct {
+type GithubWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
 }
 
-func NewGithubWebhooks(path string) *GithubWebhooks {
-	return &GithubWebhooks{Path: path}
+func NewGithubWebhook(path string) *GithubWebhook {
+	return &GithubWebhook{Path: path}
 }
 
-func (gh *GithubWebhooks) Register(router *mux.Router, acc telegraf.Accumulator) {
+func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(gh.Path, gh.eventHandler).Methods("POST")
 	log.Printf("Started the webhooks_github on %s\n", gh.Path)
 	gh.acc = acc
 }
 
-// Handles the / route
-func (gh *GithubWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	eventType := r.Header["X-Github-Event"][0]
 	data, err := ioutil.ReadAll(r.Body)
