@@ -114,7 +114,7 @@ creating the `Parser` object.
 You should also add the following to your SampleConfig() return:
 
 ```toml
-  ## Data format to consume. 
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -159,6 +159,17 @@ and `Stop()` methods.
 
 * Same as the `Plugin` guidelines, except that they must conform to the
 `inputs.ServiceInput` interface.
+
+## Webhook Input Plugins
+
+A webhook plugins `Register()` itself to the internal webserver under a specific path.
+It will then be called in background upon according http requests. The `github_webhooks` plugins
+illustrate this behaviour.
+
+### Webhook Plugin Guidelines
+
+* Same as the `Plugin` guidelines, except that they must conform to the
+`inputs.WebhookInput` interface.
 
 ## Output Plugins
 
@@ -244,7 +255,7 @@ instantiating and creating the `Serializer` object.
 You should also add the following to your SampleConfig() return:
 
 ```toml
-  ## Data format to output. 
+  ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md

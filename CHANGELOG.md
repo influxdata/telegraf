@@ -2,6 +2,11 @@
 
 ### Release Notes
 
+- **Breaking changes**: New input plugins type: WebhookInput. You have to update
+the configuration for *github_webhooks* and *rollbar_webhooks* plugins. All
+webhook inputs now register to an internal webserver listener which dispatch
+requests.
+
 - All AWS plugins now utilize a standard mechanism for evaluating credentials.
 This allows all AWS plugins to support environment variables, shared credential
 files & profiles, and role assumptions. See the specific plugin README for

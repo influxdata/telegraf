@@ -3,7 +3,6 @@ package rollbar_webhooks
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,7 +19,7 @@ func init() {
 }
 
 type RollbarWebhooks struct {
-	ServiceAddress string
+	Path string
 	// Lock for the struct
 	sync.Mutex
 	// Events buffer to store events between Gather calls
@@ -33,8 +32,8 @@ func NewRollbarWebhooks() *RollbarWebhooks {
 
 func (rb *RollbarWebhooks) SampleConfig() string {
 	return `
-  ## Address and port to host Webhook listener on
-  service_address = ":1619"
+  ## Path of the global server
+  path = "/rollbar"
 `
 }
 
@@ -52,23 +51,10 @@ func (rb *RollbarWebhooks) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (rb *RollbarWebhooks) Listen() {
-	r := mux.NewRouter()
-	r.HandleFunc("/", rb.eventHandler).Methods("POST")
-	err := http.ListenAndServe(fmt.Sprintf("%s", rb.ServiceAddress), r)
-	if err != nil {
-		log.Printf("Error starting server: %v", err)
-	}
-}
-
-func (rb *RollbarWebhooks) Start(_ telegraf.Accumulator) error {
-	go rb.Listen()
-	log.Printf("Started the rollbar_webhooks service on %s\n", rb.ServiceAddress)
+func (rb *RollbarWebhooks) Register(r *mux.Router, _ telegraf.Accumulator) error {
+	r.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
+	log.Printf("Registering rollbar_webhooks on %s\n", rb.Path)
 	return nil
-}
-
-func (rb *RollbarWebhooks) Stop() {
-	log.Println("Stopping the rbWebhooks service")
 }
 
 func (rb *RollbarWebhooks) eventHandler(w http.ResponseWriter, r *http.Request) {
