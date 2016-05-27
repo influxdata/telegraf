@@ -327,8 +327,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 
 	// channel shared between all input threads for accumulating metrics
 	metricC := make(chan telegraf.Metric, 10000)
-	webserver := webserver.NewWebserver()
-	webserver.ServiceAddress = a.Config.Agent.WebhookServiceAddress
+	webserver := webserver.NewWebserver(a.Config.Agent.WebhookServiceAddress)
 
 	for _, input := range a.Config.Inputs {
 		// Start service of any ServicePlugins

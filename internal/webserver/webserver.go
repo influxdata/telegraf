@@ -13,8 +13,8 @@ type Webserver struct {
 	router         *mux.Router
 }
 
-func NewWebserver() *Webserver {
-	return &Webserver{router: mux.NewRouter()}
+func NewWebserver(serviceAddress string) *Webserver {
+	return &Webserver{Router: mux.NewRouter(), ServiceAddress: serviceAddress}
 }
 
 func (wb *Webserver) Router() *mux.Router {
