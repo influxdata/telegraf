@@ -59,6 +59,7 @@ func NewConfig() *Config {
 			RoundInterval: true,
 			FlushInterval: internal.Duration{Duration: 10 * time.Second},
 			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
+			WebhookServiceAddress: ":1925",
 		},
 
 		Tags:          make(map[string]string),
@@ -123,7 +124,7 @@ type AgentConfig struct {
 	Hostname     string
 	OmitHostname bool
 
-	//
+	// Address for listening webhooks
 	WebhookServiceAddress string
 }
 
@@ -221,6 +222,9 @@ var header = `# Telegraf Configuration
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
+
+  ## Address to listen for webhook
+  webhook_service_address = ":1925"
 
 
 ###############################################################################
