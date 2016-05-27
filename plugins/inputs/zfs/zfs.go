@@ -7,7 +7,7 @@ type Zfs struct {
 }
 
 var sampleConfig = `
-  ## ZFS kstat path
+  ## ZFS kstat path. Ignored on FreeBSD
   ## If not specified, then default is:
   kstatPath = "/proc/spl/kstat/zfs"
 

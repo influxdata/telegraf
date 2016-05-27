@@ -88,12 +88,6 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 		kstatMetrics = []string{"arcstats", "zfetchstats", "vdev_cache_stats"}
 	}
 
-	// TODO handle this better.
-	kstatPath := z.KstatPath
-	if len(kstatPath) > 0 {
-		return fmt.Errorf("Configuration 'kstatPath' is not supported on FreeBSD.")
-	}
-
 	tags := map[string]string{}
 	poolNames, err := gatherPoolStats(z.PoolMetrics, acc)
 	if err != nil {
