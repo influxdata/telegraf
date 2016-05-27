@@ -30,7 +30,7 @@ func NewGithubWebhooks() *GithubWebhooks {
 
 func (gh *GithubWebhooks) SampleConfig() string {
 	return `
-  ## Address and port to host Webhook listener on
+  ## Path of the global server
   path = "/github"
 `
 }
