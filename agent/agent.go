@@ -342,7 +342,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			defer p.Stop()
 		case telegraf.WebhookInput:
 			acc := createAccumulatorForInput(a, input, metricC)
-			if err := p.Register(webserver.Router(), acc); err != nil {
+			if err := p.Register(webserver.Router, acc); err != nil {
 				log.Printf("Webhook for input %s failed to start, exiting\n%s\n",
 					input.Name, err.Error())
 				return err
