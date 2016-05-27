@@ -133,7 +133,7 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	if errStr != "" {
-		return metrics, fmt.Errorf(errStr)
+		return metrics, fmt.Errorf(strings.TrimSpace(errStr))
 	}
 	return metrics, nil
 }
@@ -267,13 +267,13 @@ func (t *template) Apply(line string) (string, map[string]string, string, error)
 	fields := strings.Split(line, ".")
 	var (
 		measurement []string
-		tags        = make(map[string]string)
+		tags        = make(map[string][]string)
 		field       []string
 	)
 
 	// Set any default tags
 	for k, v := range t.defaultTags {
-		tags[k] = v
+		tags[k] = append(tags[k], v)
 	}
 
 	// See if an invalid combination has been specified in the template:
@@ -285,30 +285,43 @@ func (t *template) Apply(line string) (string, map[string]string, string, error)
 		}
 	}
 	if t.greedyField && t.greedyMeasurement {
-		return "", nil, "", fmt.Errorf("either 'field*' or 'measurement*' can be used in each template (but not both together): %q", strings.Join(t.tags, t.separator))
+		return "", nil, "",
+			fmt.Errorf("either 'field*' or 'measurement*' can be used in each "+
+				"template (but not both together): %q",
+				strings.Join(t.tags, t.separator))
 	}
 
 	for i, tag := range t.tags {
 		if i >= len(fields) {
 			continue
 		}
+		if tag == "" {
+			continue
+		}
 
-		if tag == "measurement" {
+		switch tag {
+		case "measurement":
 			measurement = append(measurement, fields[i])
-		} else if tag == "field" {
+		case "field":
 			field = append(field, fields[i])
-		} else if tag == "field*" {
+		case "field*":
 			field = append(field, fields[i:]...)
 			break
-		} else if tag == "measurement*" {
+		case "measurement*":
 			measurement = append(measurement, fields[i:]...)
 			break
-		} else if tag != "" {
-			tags[tag] = fields[i]
+		default:
+			tags[tag] = append(tags[tag], fields[i])
 		}
 	}
 
-	return strings.Join(measurement, t.separator), tags, strings.Join(field, t.separator), nil
+	// Convert to map of strings.
+	outtags := make(map[string]string)
+	for k, values := range tags {
+		outtags[k] = strings.Join(values, t.separator)
+	}
+
+	return strings.Join(measurement, t.separator), outtags, strings.Join(field, t.separator), nil
 }
 
 // matcher determines which template should be applied to a given metric

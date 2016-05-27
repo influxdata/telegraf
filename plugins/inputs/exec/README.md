@@ -6,14 +6,17 @@ Please also see: [Telegraf Input Data Formats](https://github.com/influxdata/tel
 
 #### Configuration
 
-In this example a script called ```/tmp/test.sh``` and a script called ```/tmp/test2.sh```
-are configured for ```[[inputs.exec]]``` in JSON format.
+In this example a script called ```/tmp/test.sh```, a script called ```/tmp/test2.sh```, and
+all scripts matching glob pattern ```/tmp/collect_*.sh``` are configured for ```[[inputs.exec]]```
+in JSON format. Glob patterns are matched on every run, so adding new scripts that match the pattern
+will cause them to be picked up immediately.
 
 ```
 # Read flattened metrics from one or more commands that output JSON to stdout
 [[inputs.exec]]
   # Shell/commands array
-  commands = ["/tmp/test.sh", "/tmp/test2.sh"]
+  # Full command line to executable with parameters, or a glob pattern to run all matching files.
+  commands = ["/tmp/test.sh", "/tmp/test2.sh", "/tmp/collect_*.sh"]
 
   # Data format to consume.
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
@@ -180,4 +183,3 @@ sensu.metric.net.server0.eth0.rx_dropped 0 1444234982
 The templates configuration will be used to parse the graphite metrics to support influxdb/opentsdb tagging store engines.
 
 More detail information about templates, please refer to [The graphite Input](https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md)
-

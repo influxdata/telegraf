@@ -141,6 +141,9 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 		statFile := path.Join("/proc", file.Name(), "stat")
 		data, err := p.readProcFile(statFile)
 		if err != nil {
+			if !file.IsDir() {
+				continue
+			}
 			return err
 		}
 		if data == nil {

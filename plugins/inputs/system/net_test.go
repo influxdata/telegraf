@@ -15,7 +15,7 @@ func TestNetStats(t *testing.T) {
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
-	netio := net.NetIOCountersStat{
+	netio := net.IOCountersStat{
 		Name:        "eth0",
 		BytesSent:   1123,
 		BytesRecv:   8734422,
@@ -27,10 +27,10 @@ func TestNetStats(t *testing.T) {
 		Dropout:     1,
 	}
 
-	mps.On("NetIO").Return([]net.NetIOCountersStat{netio}, nil)
+	mps.On("NetIO").Return([]net.IOCountersStat{netio}, nil)
 
-	netprotos := []net.NetProtoCountersStat{
-		net.NetProtoCountersStat{
+	netprotos := []net.ProtoCountersStat{
+		net.ProtoCountersStat{
 			Protocol: "Udp",
 			Stats: map[string]int64{
 				"InDatagrams": 4655,
@@ -40,17 +40,17 @@ func TestNetStats(t *testing.T) {
 	}
 	mps.On("NetProto").Return(netprotos, nil)
 
-	netstats := []net.NetConnectionStat{
-		net.NetConnectionStat{
+	netstats := []net.ConnectionStat{
+		net.ConnectionStat{
 			Type: syscall.SOCK_DGRAM,
 		},
-		net.NetConnectionStat{
+		net.ConnectionStat{
 			Status: "ESTABLISHED",
 		},
-		net.NetConnectionStat{
+		net.ConnectionStat{
 			Status: "ESTABLISHED",
 		},
-		net.NetConnectionStat{
+		net.ConnectionStat{
 			Status: "CLOSE",
 		},
 	}

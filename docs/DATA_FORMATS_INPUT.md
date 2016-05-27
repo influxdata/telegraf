@@ -186,49 +186,59 @@ name of the plugin.
 # Graphite:
 
 The Graphite data format translates graphite _dot_ buckets directly into
-telegraf measurement names, with a single value field, and without any tags. For
-more advanced options, Telegraf supports specifying "templates" to translate
+telegraf measurement names, with a single value field, and without any tags.
+By default, the separator is left as ".", but this can be changed using the
+"separator" argument. For more advanced options,
+Telegraf supports specifying "templates" to translate
 graphite buckets into Telegraf metrics.
 
-#### Separator:
-
-You can specify a separator to use for the parsed metrics.
-By default, it will leave the metrics with a "." separator.
-Setting `separator = "_"` will translate:
+Templates are of the form:
 
 ```
-cpu.usage.idle 99
-=> cpu_usage_idle value=99
+"host.mytag.mytag.measurement.measurement.field*"
 ```
 
-#### Measurement/Tag Templates:
+Where the following keywords exist:
+
+1. `measurement`: specifies that this section of the graphite bucket corresponds
+to the measurement name. This can be specified multiple times.
+2. `field`: specifies that this section of the graphite bucket corresponds
+to the field name. This can be specified multiple times.
+3. `measurement*`: specifies that all remaining elements of the graphite bucket
+correspond to the measurement name.
+4. `field*`: specifies that all remaining elements of the graphite bucket
+correspond to the field name.
+
+Any part of the template that is not a keyword is treated as a tag key. This
+can also be specified multiple times.
+
+NOTE: `field*` cannot be used in conjunction with `measurement*`!
+
+#### Measurement & Tag Templates:
 
 The most basic template is to specify a single transformation to apply to all
-incoming metrics. _measurement_ is a special keyword that tells Telegraf which
-parts of the graphite bucket to combine into the measurement name. It can have a
-trailing `*` to indicate that the remainder of the metric should be used.
-Other words are considered tag keys. So the following template:
+incoming metrics. So the following template:
 
 ```toml
 templates = [
-    "region.measurement*"
+    "region.region.measurement*"
 ]
 ```
 
 would result in the following Graphite -> Telegraf transformation.
 
 ```
-us-west.cpu.load 100
-=> cpu.load,region=us-west value=100
+us.west.cpu.load 100
+=> cpu.load,region=us.west value=100
 ```
 
 #### Field Templates:
 
-There is also a _field_ keyword, which can only be specified once.
 The field keyword tells Telegraf to give the metric that field name.
 So the following template:
 
 ```toml
+separator = "_"
 templates = [
     "measurement.measurement.field.field.region"
 ]
@@ -237,24 +247,26 @@ templates = [
 would result in the following Graphite -> Telegraf transformation.
 
 ```
-cpu.usage.idle.percent.us-west 100
-=> cpu_usage,region=us-west idle_percent=100
+cpu.usage.idle.percent.eu-east 100
+=> cpu_usage,region=eu-east idle_percent=100
 ```
 
-The field key can also be derived from the second "half" of the input metric-name by specifying ```field*```:
+The field key can also be derived from all remaining elements of the graphite
+bucket by specifying `field*`:
+
 ```toml
+separator = "_"
 templates = [
     "measurement.measurement.region.field*"
 ]
 ```
 
-would result in the following Graphite -> Telegraf transformation.
+which would result in the following Graphite -> Telegraf transformation.
 
 ```
-cpu.usage.us-west.idle.percentage 100
-=> cpu_usage,region=us-west idle_percentage=100
+cpu.usage.eu-east.idle.percentage 100
+=> cpu_usage,region=eu-east idle_percentage=100
 ```
-(This cannot be used in conjunction with "measurement*"!)
 
 #### Filter Templates:
 
@@ -271,8 +283,8 @@ templates = [
 which would result in the following transformation:
 
 ```
-cpu.load.us-west 100
-=> cpu_load,region=us-west value=100
+cpu.load.eu-east 100
+=> cpu_load,region=eu-east value=100
 
 mem.cached.localhost 256
 => mem_cached,host=localhost value=256
@@ -294,8 +306,8 @@ templates = [
 would result in the following Graphite -> Telegraf transformation.
 
 ```
-cpu.usage.idle.us-west 100
-=> cpu_usage,region=us-west,datacenter=1a idle=100
+cpu.usage.idle.eu-east 100
+=> cpu_usage,region=eu-east,datacenter=1a idle=100
 ```
 
 There are many more options available,
@@ -326,12 +338,12 @@ There are many more options available,
   ## similar to the line protocol format. There can be only one default template.
   ## Templates support below format:
   ## 1. filter + template
-  ## 2. filter + template + extra tag
+  ## 2. filter + template + extra tag(s)
   ## 3. filter + template with field key
   ## 4. default template
   templates = [
     "*.app env.service.resource.measurement",
-    "stats.* .host.measurement* region=us-west,agent=sensu",
+    "stats.* .host.measurement* region=eu-east,agent=sensu",
     "stats2.* .host.measurement.field",
     "measurement*"
   ]

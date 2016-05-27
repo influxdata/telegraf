@@ -15,7 +15,7 @@ func TestDiskStats(t *testing.T) {
 	var acc testutil.Accumulator
 	var err error
 
-	duAll := []*disk.DiskUsageStat{
+	duAll := []*disk.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -37,7 +37,7 @@ func TestDiskStats(t *testing.T) {
 			InodesUsed:  2000,
 		},
 	}
-	duFiltered := []*disk.DiskUsageStat{
+	duFiltered := []*disk.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -108,7 +108,7 @@ func TestDiskStats(t *testing.T) {
 // 	var acc testutil.Accumulator
 // 	var err error
 
-// 	diskio1 := disk.DiskIOCountersStat{
+// 	diskio1 := disk.IOCountersStat{
 // 		ReadCount:    888,
 // 		WriteCount:   5341,
 // 		ReadBytes:    100000,
@@ -119,7 +119,7 @@ func TestDiskStats(t *testing.T) {
 // 		IoTime:       123552,
 // 		SerialNumber: "ab-123-ad",
 // 	}
-// 	diskio2 := disk.DiskIOCountersStat{
+// 	diskio2 := disk.IOCountersStat{
 // 		ReadCount:    444,
 // 		WriteCount:   2341,
 // 		ReadBytes:    200000,
@@ -132,7 +132,7 @@ func TestDiskStats(t *testing.T) {
 // 	}
 
 // 	mps.On("DiskIO").Return(
-// 		map[string]disk.DiskIOCountersStat{"sda1": diskio1, "sdb1": diskio2},
+// 		map[string]disk.IOCountersStat{"sda1": diskio1, "sdb1": diskio2},
 // 		nil)
 
 // 	err = (&DiskIOStats{ps: &mps}).Gather(&acc)

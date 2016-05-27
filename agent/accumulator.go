@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -22,13 +21,13 @@ func NewAccumulator(
 }
 
 type accumulator struct {
-	sync.Mutex
-
 	metrics chan telegraf.Metric
 
 	defaultTags map[string]string
 
 	debug bool
+	// print every point added to the accumulator
+	trace bool
 
 	inputConfig *internal_models.InputConfig
 
@@ -152,7 +151,7 @@ func (ac *accumulator) AddFields(
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
 		return
 	}
-	if ac.debug {
+	if ac.trace {
 		fmt.Println("> " + m.String())
 	}
 	ac.metrics <- m
@@ -164,6 +163,14 @@ func (ac *accumulator) Debug() bool {
 
 func (ac *accumulator) SetDebug(debug bool) {
 	ac.debug = debug
+}
+
+func (ac *accumulator) Trace() bool {
+	return ac.trace
+}
+
+func (ac *accumulator) SetTrace(trace bool) {
+	ac.trace = trace
 }
 
 func (ac *accumulator) setDefaultTags(tags map[string]string) {

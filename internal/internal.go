@@ -12,9 +12,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/gobwas/glob"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -32,12 +35,25 @@ type Duration struct {
 
 // UnmarshalTOML parses the duration from the TOML config file
 func (d *Duration) UnmarshalTOML(b []byte) error {
-	dur, err := time.ParseDuration(string(b[1 : len(b)-1]))
-	if err != nil {
-		return err
+	var err error
+	// Parse string duration, ie, "1s"
+	d.Duration, err = time.ParseDuration(string(b[1 : len(b)-1]))
+	if err == nil {
+		return nil
 	}
 
-	d.Duration = dur
+	// First try parsing as integer seconds
+	sI, err := strconv.ParseInt(string(b), 10, 64)
+	if err == nil {
+		d.Duration = time.Second * time.Duration(sI)
+		return nil
+	}
+	// Second try parsing as float seconds
+	sF, err := strconv.ParseFloat(string(b), 64)
+	if err == nil {
+		d.Duration = time.Second * time.Duration(sF)
+		return nil
+	}
 
 	return nil
 }
@@ -190,4 +206,25 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 		<-done
 		return TimeoutErr
 	}
+}
+
+// CompileFilter takes a list of glob "filters", ie:
+//   ["MAIN.*", "CPU.*", "NET"]
+// and compiles them into a glob object. This glob object can
+// then be used to match keys to the filter.
+func CompileFilter(filters []string) (glob.Glob, error) {
+	var out glob.Glob
+
+	// return if there is nothing to compile
+	if len(filters) == 0 {
+		return out, nil
+	}
+
+	var err error
+	if len(filters) == 1 {
+		out, err = glob.Compile(filters[0])
+	} else {
+		out, err = glob.Compile("{" + strings.Join(filters, ",") + "}")
+	}
+	return out, err
 }

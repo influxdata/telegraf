@@ -140,7 +140,7 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 		if firstTimestamp.IsZero() {
 			firstTimestamp = time.Now()
 		} else {
-			s.interval = int(time.Since(firstTimestamp).Seconds())
+			s.interval = int(time.Since(firstTimestamp).Seconds() + 0.5)
 		}
 	}
 	ts := time.Now().Add(time.Duration(s.interval) * time.Second)

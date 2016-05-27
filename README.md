@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.0_amd64.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.0.x86_64.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.1_amd64.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1.x86_64.rpm
 
 Latest (arm):
-* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.0_armhf.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.0.armhf.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.1_armhf.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,32 +46,14 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.0_linux_amd64.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.0_linux_i386.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.0_linux_armhf.tar.gz
-
-##### tarball Instructions:
-
-To install the full directory structure with config file, run:
-
-```
-sudo tar -C / -zxvf ./telegraf-0.13.0_linux_amd64.tar.gz
-```
-
-To extract only the binary, run:
-
-```
-tar -zxvf telegraf-0.13.0_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
-```
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_i386.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_armhf.tar.gz
 
 ### FreeBSD tarball:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.0_freebsd_amd64.tar.gz
-
-##### tarball Instructions:
-
-See linux instructions above.
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
@@ -87,8 +69,8 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.0_windows_amd64.zip
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.0_windows_i386.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_windows_amd64.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_windows_i386.zip
 
 ### From Source:
 
@@ -162,6 +144,7 @@ Currently implemented sources:
 * [bcache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/bcache)
 * [cassandra](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cassandra)
 * [ceph](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ceph)
+* [chrony](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/chrony)
 * [couchbase](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchbase)
 * [couchdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchdb)
 * [disque](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disque)
@@ -207,6 +190,7 @@ Currently implemented sources:
 * [snmp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
 * [sql server](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sqlserver) (microsoft)
 * [twemproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/twemproxy)
+* [varnish](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/varnish)
 * [zfs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zfs)
 * [zookeeper](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zookeeper)
 * [win_perf_counters ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/win_perf_counters) (windows performance counters)
@@ -232,6 +216,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
 * [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
 * [github_webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/github_webhooks)
+* [rollbar_webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rollbar_webhooks)
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.

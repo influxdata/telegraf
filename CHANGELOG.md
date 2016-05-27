@@ -1,17 +1,74 @@
-## v0.13.1 [unreleased]
+## v1.0 [unreleased]
+
+### Release Notes
+
+- All AWS plugins now utilize a standard mechanism for evaluating credentials.
+This allows all AWS plugins to support environment variables, shared credential
+files & profiles, and role assumptions. See the specific plugin README for
+details.
+
+- The AWS CloudWatch input plugin can now declare a wildcard value for a metric
+dimension. This causes the plugin to read all metrics that contain the specified
+dimension key regardless of value. This is used to export collections of metrics
+without having to know the dimension values ahead of time.
+
+- The AWS CloudWatch input plugin can now be configured with the `cache_ttl`
+attribute. This configures the TTL of the internal metric cache. This is useful
+in conjunction with wildcard dimension values as it will control the amount of
+time before a new metric is included by the plugin.
 
 ### Features
 
+- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
+- [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
+- [#1264](https://github.com/influxdata/telegraf/pull/1264): Add SSL config options to http_response plugin.
+- [#1272](https://github.com/influxdata/telegraf/pull/1272): graphite parser: add ability to specify multiple tag keys, for consistency with influxdb parser.
+- [#1265](https://github.com/influxdata/telegraf/pull/1265): Make dns lookups for chrony configurable. Thanks @zbindenren!
+- [#1275](https://github.com/influxdata/telegraf/pull/1275): Allow wildcard filtering of varnish stats.
+- [#1142](https://github.com/influxdata/telegraf/pull/1142): Support for glob patterns in exec plugin commands configuration.
+- [#1278](https://github.com/influxdata/telegraf/pull/1278): RabbitMQ input: made url parameter optional by using DefaultURL (http://localhost:15672) if not specified
+
+### Bugfixes
+
+- [#1252](https://github.com/influxdata/telegraf/pull/1252) & [#1279](https://github.com/influxdata/telegraf/pull/1279): Fix systemd service. Thanks @zbindenren & @PierreF!
+- [#1221](https://github.com/influxdata/telegraf/pull/1221): Fix influxdb n_shards counter.
+- [#1258](https://github.com/influxdata/telegraf/pull/1258): Fix potential kernel plugin integer parse error.
+- [#1268](https://github.com/influxdata/telegraf/pull/1268): Fix potential influxdb input type assertion panic.
+- [#1283](https://github.com/influxdata/telegraf/pull/1283): Still send processes metrics if a process exited during metric collection.
+
+## v0.13.1 [2016-05-24]
+
+### Release Notes
+
+- net_response and http_response plugins timeouts will now accept duration
+strings, ie, "2s" or "500ms".
+- Input plugin Gathers will no longer be logged by default, but a Gather for
+_each_ plugin will be logged in Debug mode.
+- Debug mode will no longer print every point added to the accumulator. This
+functionality can be duplicated using the `file` output plugin and printing
+to "stdout".
+
+### Features
+
+- [#1173](https://github.com/influxdata/telegraf/pull/1173): varnish input plugin. Thanks @sfox-xmatters!
 - [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
 - [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
 - [#1172](https://github.com/influxdata/telegraf/pull/1172): Ceph storage stats. Thanks @robinpercy!
+- [#1233](https://github.com/influxdata/telegraf/pull/1233): Updated golint gopsutil dependency.
+- [#1238](https://github.com/influxdata/telegraf/pull/1238): chrony input plugin. Thanks @zbindenren!
+- [#479](https://github.com/influxdata/telegraf/issues/479): per-plugin execution time added to debug output.
+- [#1249](https://github.com/influxdata/telegraf/issues/1249): influxdb output: added write_consistency argument.
 
 ### Bugfixes
 
 - [#1195](https://github.com/influxdata/telegraf/pull/1195): Docker panic on timeout. Thanks @zstyblik!
 - [#1211](https://github.com/influxdata/telegraf/pull/1211): mongodb input. Fix possible panic. Thanks @kols!
+- [#1215](https://github.com/influxdata/telegraf/pull/1215): Fix for possible gopsutil-dependent plugin hangs.
 - [#1228](https://github.com/influxdata/telegraf/pull/1228): Fix service plugin host tag overwrite.
 - [#1198](https://github.com/influxdata/telegraf/pull/1198): http_response: override request Host header properly
+- [#1230](https://github.com/influxdata/telegraf/issues/1230): Fix Telegraf process hangup due to a single plugin hanging.
+- [#1214](https://github.com/influxdata/telegraf/issues/1214): Use TCP timeout argument in net_response plugin.
+- [#1243](https://github.com/influxdata/telegraf/pull/1243): Logfile not created on systemd.
 
 ## v0.13 [2016-05-11]
 
