@@ -1,4 +1,4 @@
-package rollbar_webhooks
+package rollbar
 
 import "strconv"
 

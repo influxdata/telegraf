@@ -1,6 +1,35 @@
 ## v1.0
 
+### Release Notes
+
+**Breaking Change**: users of github_webhooks must change to the new
+`[[inputs.webhooks]]` plugin.
+
+This means that the default github_webhooks config:
+
+```
+# A Github Webhook Event collector
+[[inputs.github_webhooks]]
+  ## Address and port to host Webhook listener on
+  service_address = ":1618"
+```
+
+should now look like:
+
+```
+# A Webhooks Event collector
+[[inputs.webhooks]]
+  ## Address and port to host Webhook listener on
+  service_address = ":1618"
+
+  [inputs.webhooks.github]
+    path = "/"
+```
+
 ### Features
+
+- [#1289](https://github.com/influxdata/telegraf/pull/1289): webhooks input plugin. Thanks @francois2metz and @cduez!
+- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar webhook plugin.
 
 ### Bugfixes
 
@@ -50,11 +79,11 @@ in conjunction with wildcard dimension values as it will control the amount of
 time before a new metric is included by the plugin.
 
 ### Features
+
 - [#1262](https://github.com/influxdata/telegraf/pull/1261): Add graylog input pluging.
 - [#1294](https://github.com/influxdata/telegraf/pull/1294): consul input plugin. Thanks @harnash
 - [#1164](https://github.com/influxdata/telegraf/pull/1164): conntrack input plugin. Thanks @robinpercy!
 - [#1165](https://github.com/influxdata/telegraf/pull/1165): vmstat input plugin. Thanks @jshim-xm!
-- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
 - [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
 - [#1264](https://github.com/influxdata/telegraf/pull/1264): Add SSL config options to http_response plugin.
 - [#1272](https://github.com/influxdata/telegraf/pull/1272): graphite parser: add ability to specify multiple tag keys, for consistency with influxdb parser.
