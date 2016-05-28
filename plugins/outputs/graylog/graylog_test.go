@@ -27,6 +27,9 @@ func TestWrite(t *testing.T) {
 	metrics = append(metrics, testutil.TestMetric(int64(1234567890)))
 
 	i.Write(metrics)
+
+	wg.Wait()
+	i.Close()
 }
 
 type GelfObject map[string]interface{}
@@ -44,11 +47,9 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup) {
 
 	bufW := bytes.NewBuffer(nil)
 	io.Copy(bufW, r)
+	r.Close()
 
 	var obj GelfObject
-	json.Unmarshal(bufW.Bytes()[12:], &obj)
-	assert.Equal(t, bufW.Bytes()[0], 0x1e)
-	assert.Equal(t, bufW.Bytes()[0], 0x0f)
-	assert.Equal(t, obj["value"], 1)
-	r.Close()
+	json.Unmarshal(bufW.Bytes(), &obj)
+	assert.Equal(t, obj["_value"], float64(1))
 }
