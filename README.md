@@ -145,6 +145,7 @@ Currently implemented sources:
 * [cassandra](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cassandra)
 * [ceph](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ceph)
 * [chrony](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/chrony)
+* [conntrack](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/conntrack)
 * [couchbase](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchbase)
 * [couchdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchdb)
 * [disque](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disque)
