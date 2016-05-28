@@ -1,4 +1,3 @@
-github.com/Graylog2/go-gelf/gelf 76d60fc890684cff2fb65c631ed711d4af080592
 github.com/Microsoft/go-winio 9f57cbbcbcb41dea496528872a4f0e37a4f7ae98
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
