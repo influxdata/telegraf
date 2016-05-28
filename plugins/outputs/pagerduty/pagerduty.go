@@ -20,16 +20,16 @@ type PD struct {
 }
 
 var sampleConfig = `
-  ## PagerDuty service key
-  service_key = <SERVICE KEY>
-	## Metric name that will be checked
-  metric = "cpu"
-	## Description of the check
-  description = "Check CPU"
-	## Name of the metric field which will be used to check
-  field = "time_iowait"
-	## Expression is used to evaluate the alert
-  expression = "> 50.0"
+## PagerDuty service key
+service_key = <SERVICE KEY>
+## Metric name that will be checked
+metric = "cpu"
+## Description of the check
+description = "Check CPU"
+## Name of the metric field which will be used to check
+field = "time_iowait"
+## Expression is used to evaluate the alert
+expression = "> 50.0"
 `
 
 func (p *PD) Connect() error {
