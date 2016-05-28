@@ -1,9 +1,14 @@
 package zfs
 
+type Sysctl func(metric string) ([]string, error)
+type Zpool func() ([]string, error)
+
 type Zfs struct {
 	KstatPath    string
 	KstatMetrics []string
 	PoolMetrics  bool
+	sysctl       Sysctl
+	zpool        Zpool
 }
 
 var sampleConfig = `
@@ -24,5 +29,5 @@ func (z *Zfs) SampleConfig() string {
 }
 
 func (z *Zfs) Description() string {
-	return "Read metrics of ZFS from arcstats, zfetchstats and vdev_cache_stats"
+	return "Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, and pools"
 }

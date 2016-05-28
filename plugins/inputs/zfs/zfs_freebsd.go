@@ -13,15 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// $ zpool list -Hp
-// freenas-boot    30601641984     2022177280      28579464704     -       -       6       1.00x   ONLINE  -
-// red1    8933531975680   1126164848640   7807367127040   -       8%      12      1.83x   ONLINE  /mnt
-// temp1   2989297238016   1626309320704   1362987917312   -       38%     54      1.28x   ONLINE  /mnt
-// temp2   2989297238016   626958278656    2362338959360   -       12%     20      1.00x   ONLINE  /mnt
+func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 
-func gatherPoolStats(poolStats bool, acc telegraf.Accumulator) (string, error) {
-
-	lines, err := run("zpool", []string{"list", "-Hp"}...)
+	lines, err := z.zpool()
 	if err != nil {
 		return "", err
 	}
@@ -33,7 +27,7 @@ func gatherPoolStats(poolStats bool, acc telegraf.Accumulator) (string, error) {
 		pools = append(pools, col[0])
 	}
 
-	if poolStats {
+	if z.PoolMetrics {
 		for _, line := range lines {
 			col := strings.Split(line, "\t")
 			tags := map[string]string{"pool": col[0], "health": col[8]}
@@ -47,9 +41,9 @@ func gatherPoolStats(poolStats bool, acc telegraf.Accumulator) (string, error) {
 
 			alloc, err := strconv.ParseInt(col[2], 10, 64)
 			if err != nil {
-				return "", fmt.Errorf("Error parsing alloc: %s", err)
+				return "", fmt.Errorf("Error parsing allocation: %s", err)
 			}
-			fields["alloc"] = alloc
+			fields["allocated"] = alloc
 
 			free, err := strconv.ParseInt(col[3], 10, 64)
 			if err != nil {
@@ -58,22 +52,22 @@ func gatherPoolStats(poolStats bool, acc telegraf.Accumulator) (string, error) {
 			fields["free"] = free
 
 			frag, err := strconv.ParseInt(strings.TrimSuffix(col[5], "%"), 10, 0)
-			if err == nil {
-				// This might be - for RO devs
-				fields["frag"] = frag
+			if err != nil { // This might be - for RO devs 
+				frag = 0
 			}
+			fields["fragmentation"] = frag
 
 			capval, err := strconv.ParseInt(col[6], 10, 0)
 			if err != nil {
-				return "", fmt.Errorf("Error parsing cap: %s", err)
+				return "", fmt.Errorf("Error parsing capacity: %s", err)
 			}
-			fields["cap"] = capval
+			fields["capacity"] = capval
 
 			dedup, err := strconv.ParseFloat(strings.TrimSuffix(col[7], "x"), 32)
 			if err != nil {
-				return "", fmt.Errorf("Error parsing dedup: %s", err)
+				return "", fmt.Errorf("Error parsing dedupratio: %s", err)
 			}
-			fields["dedup"] = dedup
+			fields["dedupratio"] = dedup
 
 			acc.AddFields("zfs_pool", fields, tags)
 		}
@@ -89,18 +83,15 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	}
 
 	tags := map[string]string{}
-	poolNames, err := gatherPoolStats(z.PoolMetrics, acc)
+	poolNames, err := z.gatherPoolStats(acc)
 	if err != nil {
 		return err
 	}
 	tags["pools"] = poolNames
 
-	// kstat.zfs.misc.vdev_cache_stats
-	// kstat.zfs.misc.arcstats
-	// kstat.zfs.misc.zfetchstats
 	fields := make(map[string]interface{})
 	for _, metric := range kstatMetrics {
-		stdout, err := run("sysctl", []string{"-q", fmt.Sprintf("kstat.zfs.misc.%s", metric)}...)
+		stdout, err := z.sysctl(metric)
 		if err != nil {
 			return err
 		}
@@ -126,13 +117,24 @@ func run(command string, args ...string) ([]string, error) {
 	stderr := strings.TrimSpace(errbuf.String())
 
 	if _, ok := err.(*exec.ExitError); ok {
-		return nil, fmt.Errorf("%s error: %s", cmd, stderr)
+		return nil, fmt.Errorf("%s error: %s", command, stderr)
 	}
 	return strings.Split(stdout, "\n"), nil
 }
 
+func zpool() ([]string, error) {
+	return run("zpool", []string{"list", "-Hp"}...)
+}
+
+func sysctl(metric string) ([]string, error) {
+	return run("sysctl", []string{"-q", fmt.Sprintf("kstat.zfs.misc.%s", metric)}...)
+}
+
 func init() {
 	inputs.Add("zfs", func() telegraf.Input {
-		return &Zfs{}
+		return &Zfs{
+			sysctl: sysctl,
+			zpool:  zpool,
+		}
 	})
 }
