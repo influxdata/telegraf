@@ -52,7 +52,7 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 			fields["free"] = free
 
 			frag, err := strconv.ParseInt(strings.TrimSuffix(col[5], "%"), 10, 0)
-			if err != nil { // This might be - for RO devs 
+			if err != nil { // This might be - for RO devs
 				frag = 0
 			}
 			fields["fragmentation"] = frag

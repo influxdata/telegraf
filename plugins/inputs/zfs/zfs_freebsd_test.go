@@ -51,35 +51,35 @@ func mock_sysctl(metric string) ([]string, error) {
 func TestZfsPoolMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
-        z := &Zfs{
+	z := &Zfs{
 		KstatMetrics: []string{"vdev_cache_stats"},
-		sysctl:	      mock_sysctl,
+		sysctl:       mock_sysctl,
 		zpool:        mock_zpool,
 	}
-        err := z.Gather(&acc)
-        require.NoError(t, err)
+	err := z.Gather(&acc)
+	require.NoError(t, err)
 
-        require.False(t, acc.HasMeasurement("zfs_pool"))
-        acc.Metrics = nil
+	require.False(t, acc.HasMeasurement("zfs_pool"))
+	acc.Metrics = nil
 
-        z = &Zfs{
+	z = &Zfs{
 		KstatMetrics: []string{"vdev_cache_stats"},
-		PoolMetrics: true,
-		sysctl: mock_sysctl,
-		zpool: mock_zpool,
+		PoolMetrics:  true,
+		sysctl:       mock_sysctl,
+		zpool:        mock_zpool,
 	}
-        err = z.Gather(&acc)
-        require.NoError(t, err)
+	err = z.Gather(&acc)
+	require.NoError(t, err)
 
 	//one pool, all metrics
-        tags := map[string]string{
-                "pool": "freenas-boot",
+	tags := map[string]string{
+		"pool":   "freenas-boot",
 		"health": "ONLINE",
-        }
+	}
 
 	poolMetrics := getFreeNasBootPoolMetrics()
 
-        acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 }
 
 func TestZfsGeneratesMetrics(t *testing.T) {
@@ -118,31 +118,31 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 }
 
 func getFreeNasBootPoolMetrics() map[string]interface{} {
-        return map[string]interface{}{
+	return map[string]interface{}{
 		"allocated":     int64(2022177280),
 		"capacity":      int64(6),
 		"dedupratio":    float64(1),
 		"free":          int64(28579464704),
 		"size":          int64(30601641984),
 		"fragmentation": int64(0),
-        }
+	}
 }
 
 func getKstatMetricsVdevOnly() map[string]interface{} {
 	return map[string]interface{}{
-	"vdev_cache_stats_misses": int64(87789),
-	"vdev_cache_stats_hits": int64(465583),
-	"vdev_cache_stats_delegations": int64(6952),
+		"vdev_cache_stats_misses":      int64(87789),
+		"vdev_cache_stats_hits":        int64(465583),
+		"vdev_cache_stats_delegations": int64(6952),
 	}
 }
 
 func getKstatMetricsVdevAndZfetch() map[string]interface{} {
 	return map[string]interface{}{
-	"vdev_cache_stats_misses": int64(87789),
-	"vdev_cache_stats_hits": int64(465583),
-	"vdev_cache_stats_delegations": int64(6952),
-	"zfetchstats_max_streams": int64(0),
-	"zfetchstats_misses": int64(0),
-	"zfetchstats_hits": int64(0),
+		"vdev_cache_stats_misses":      int64(87789),
+		"vdev_cache_stats_hits":        int64(465583),
+		"vdev_cache_stats_delegations": int64(6952),
+		"zfetchstats_max_streams":      int64(0),
+		"zfetchstats_misses":           int64(0),
+		"zfetchstats_hits":             int64(0),
 	}
 }
