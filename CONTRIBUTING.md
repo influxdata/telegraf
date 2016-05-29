@@ -212,8 +212,8 @@ func (s *Simple) Close() error {
 }
 
 func (s *Simple) Write(metrics []telegraf.Metric) error {
-    for _, pt := range points {
-        // write `pt` to the output sink here
+    for _, metric := range metrics {
+        // write `metric` to the output sink here
     }
     return nil
 }

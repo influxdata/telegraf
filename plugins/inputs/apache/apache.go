@@ -21,6 +21,7 @@ type Apache struct {
 
 var sampleConfig = `
   ## An array of Apache status URI to gather stats.
+  ## Default is "http://localhost/server-status?auto".
   urls = ["http://localhost/server-status?auto"]
 `
 
@@ -33,6 +34,10 @@ func (n *Apache) Description() string {
 }
 
 func (n *Apache) Gather(acc telegraf.Accumulator) error {
+	if len(n.Urls) == 0 {
+		n.Urls = []string{"http://localhost/server-status?auto"}
+	}
+
 	var wg sync.WaitGroup
 	var outerr error
 
