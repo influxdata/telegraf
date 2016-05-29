@@ -1,6 +1,6 @@
 # ZFS plugin
 
-This ZFS plgin provides metrics from your ZFS filesystems. It supports ZFS on
+This ZFS plugin provides metrics from your ZFS filesystems. It supports ZFS on
 Linux and FreeBSD. It gets ZFS stat from `/proc/spl/kstat/zfs` on Linux and
 from `sysctl` and `zpool` on FreeBSD.
 
@@ -25,7 +25,7 @@ from `sysctl` and `zpool` on FreeBSD.
 By default this plugin collects metrics about **Arc**, **Zfetch**, and
 **Vdev cache**. All these metrics are either counters or measure sizes
 in bytes. These metrics will be in the `zfs` measurement with the field
-names listed bellow.§
+names listed bellow.
 
 If `poolMetrics` is enabled then additional metrics will be gathered for
 each pool.
@@ -234,11 +234,11 @@ A short description for some of the metrics.
 
 `arcstats_demand_data_misses` Amount of cache misses for demand data, this is what matters (is bad) for your application/share.
 
-`arcstats_demand_metadata_hits` Ammount of cache hits for demand metadata, this matters (is good) for getting filesystem data (ls,find,…)
+`arcstats_demand_metadata_hits` Amount of cache hits for demand metadata, this matters (is good) for getting filesystem data (ls,find,…)
 
-`arcstats_demand_metadata_misses` Ammount of cache misses for demand metadata, this matters (is bad) for getting filesystem data (ls,find,…)
+`arcstats_demand_metadata_misses` Amount of cache misses for demand metadata, this matters (is bad) for getting filesystem data (ls,find,…)
 
-`arcstats_prefetch_data_hits` The zfs prefetcher tried to prefetch somethin, but it was allready cached (boring)
+`arcstats_prefetch_data_hits` The zfs prefetcher tried to prefetch something, but it was already cached (boring)
 
 `arcstats_prefetch_data_misses` The zfs prefetcher prefetched something which was not in the cache (good job, could become a demand hit in the future)
 
@@ -250,7 +250,7 @@ A short description for some of the metrics.
 
 `arcstats_mru_ghost_hits` Cache hit in the “most recently used ghost list” we had this item in the cache, but evicted it, maybe we should increase the mru cache size.
 
-`arcstats_mfu_hits` Cache hit in the “most freqently used cache” we move this to the begining of the mfu cache.
+`arcstats_mfu_hits` Cache hit in the “most frequently used cache” we move this to the beginning of the mfu cache.
 
 `arcstats_mfu_ghost_hits` Cache hit in the “most frequently used ghost list” we had this item in the cache, but evicted it, maybe we should increase the mfu cache size.
 
@@ -264,8 +264,8 @@ A short description for some of the metrics.
 
 `arcstats_evict_l2_ineligible` We evicted something which cannot be stored in the l2.
  Reasons could be:
- - We have multiple pools, we evicted something from a pool whithot an l2 device.
- - The zfs property secondarycache.
+ - We have multiple pools, we evicted something from a pool whithout an l2 device.
+ - The zfs property secondary cache.
 
 `arcstats_c` Arc target size, this is the size the system thinks the arc should have.
 
@@ -277,15 +277,15 @@ A short description for some of the metrics.
 
 `arcstats_l2_size` Size of the l2 cache.
 
-`arcstats_l2_hdr_size` Size of the metadata in the arc (ram) used to manage (lookup if someting is in the l2) the l2 cache.
+`arcstats_l2_hdr_size` Size of the metadata in the arc (ram) used to manage (lookup if something is in the l2) the l2 cache.
 
 #### Zfetch Stats
 
-`zfetchstats_hits` Counts the number of cache hits, to items wich are in the cache because of the prefetcher.
+`zfetchstats_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher.
 
-`zfetchstats_colinear_hits` Counts the number of cache hits, to items wich are in the cache because of the prefetcher (prefetched linear reads)
+`zfetchstats_colinear_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher (prefetched linear reads)
 
-`zfetchstats_stride_hits` Counts the number of cache hits, to items wich are in the cache because of the prefetcher (prefetched stride reads)
+`zfetchstats_stride_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher (prefetched stride reads)
 
 #### Vdev Cache Stats
 
