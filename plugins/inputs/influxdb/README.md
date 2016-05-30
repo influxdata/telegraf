@@ -15,6 +15,7 @@ InfluxDB-formatted endpoints. See below for more information.
   ## See the influxdb plugin's README for more details.
 
   ## Multiple URLs from which to read InfluxDB-formatted JSON
+  ## Default is "http://localhost:8086/debug/vars".
   urls = [
     "http://localhost:8086/debug/vars"
   ]
