@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"os"
 	"os/exec"
 	"strconv"
@@ -227,4 +228,28 @@ func CompileFilter(filters []string) (glob.Glob, error) {
 		out, err = glob.Compile("{" + strings.Join(filters, ",") + "}")
 	}
 	return out, err
+}
+
+// RandomSleep will sleep for a random amount of time up to max.
+// If the shutdown channel is closed, it will return before it has finished
+// sleeping.
+func RandomSleep(max time.Duration, shutdown chan struct{}) {
+	if max == 0 {
+		return
+	}
+	maxSleep := big.NewInt(max.Nanoseconds())
+
+	var sleepns int64
+	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
+		sleepns = j.Int64()
+	}
+
+	t := time.NewTimer(time.Nanosecond * time.Duration(sleepns))
+	select {
+	case <-t.C:
+		return
+	case <-shutdown:
+		t.Stop()
+		return
+	}
 }

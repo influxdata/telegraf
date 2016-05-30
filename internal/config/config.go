@@ -58,7 +58,6 @@ func NewConfig() *Config {
 			Interval:      internal.Duration{Duration: 10 * time.Second},
 			RoundInterval: true,
 			FlushInterval: internal.Duration{Duration: 10 * time.Second},
-			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
 		},
 
 		Tags:          make(map[string]string),

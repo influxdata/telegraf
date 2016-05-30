@@ -2,6 +2,10 @@
 
 ### Release Notes
 
+- `flush_jitter` behavior has been changed. The random jitter will now be
+evaluated at every flush interval, rather than once at startup. This makes it
+consistent with the behavior of `collection_jitter`.
+
 - All AWS plugins now utilize a standard mechanism for evaluating credentials.
 This allows all AWS plugins to support environment variables, shared credential
 files & profiles, and role assumptions. See the specific plugin README for
@@ -31,6 +35,7 @@ time before a new metric is included by the plugin.
 - [#1278](https://github.com/influxdata/telegraf/pull/1278): RabbitMQ input: made url parameter optional by using DefaultURL (http://localhost:15672) if not specified
 - [#1197](https://github.com/influxdata/telegraf/pull/1197): Limit AWS GetMetricStatistics requests to 10 per second.
 - [#1278](https://github.com/influxdata/telegraf/pull/1278) & [#1288](https://github.com/influxdata/telegraf/pull/1288) & [#1295](https://github.com/influxdata/telegraf/pull/1295): RabbitMQ/Apache/InfluxDB inputs: made url(s) parameter optional by using reasonable input defaults if not specified
+- [#1296](https://github.com/influxdata/telegraf/issues/1296): Refactor of flush_jitter argument.
 
 ### Bugfixes
 
