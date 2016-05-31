@@ -24,7 +24,6 @@ func TestWrite(t *testing.T) {
 	i.Connect()
 
 	metrics := testutil.MockMetrics()
-	metrics = append(metrics, testutil.TestMetric(int64(1234567890)))
 
 	i.Write(metrics)
 
