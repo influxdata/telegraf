@@ -3,3 +3,12 @@
 This plugin writes to a Graylog instance using the "gelf" format.
 
 It requires a `servers` name.
+
+### Configuration:
+
+```toml
+# Send telegraf metrics to graylog(s)
+[[outputs.graylog]]
+  ## Udp endpoint for your graylog instance.
+  servers = ["127.0.0.1:12201", "192.168.1.1:12201"]
+```
