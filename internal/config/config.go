@@ -356,7 +356,7 @@ func printConfig(name string, p printer, op string, commented bool) {
 				fmt.Print("\n")
 				continue
 			}
-			fmt.Print(comment + line + "\n")
+			fmt.Print(strings.TrimRight(comment+line, " ") + "\n")
 		}
 	}
 }
