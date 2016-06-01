@@ -85,27 +85,32 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 }
 
 var sampleConfig = `
-  ## API End Point, currently supported API:
-  ## - multiple  (Ex http://[graylog-server-ip]:12900/system/metrics/multiple)
-  ## - namespace (Ex http://[graylog-server-ip]:12900/system/metrics/namespace/{namespace})
-  ## Note if namespace end point specified metrics array will be ignored for that call.
-  ## End point can contain namespace and multiple type calls
-  ## Please check http://[graylog-server-ip]:12900/api-browser for full list end points
+  ## API endpoint, currently supported API:
+  ##
+  ##   - multiple  (Ex http://<host>:12900/system/metrics/multiple)
+  ##   - namespace (Ex http://<host>:12900/system/metrics/namespace/{namespace})
+  ##
+  ## For namespace endpoint, the metrics array will be ignored for that call.
+  ## Endpoint can contain namespace and multiple type calls.
+  ##
+  ## Please check http://[graylog-server-ip]:12900/api-browser for full list
+  ## of endpoints
   servers = [
     "http://[graylog-server-ip]:12900/system/metrics/multiple",
   ]
-  
-  ## metrics list
-  ## List of metrics can be found on Graylog webservice documentation 
-  ## Or by hitting the the web service api http://[graylog-host]:12900/system/metrics  
+
+  ## Metrics list
+  ## List of metrics can be found on Graylog webservice documentation.
+  ## Or by hitting the the web service api at:
+  ##   http://[graylog-host]:12900/system/metrics
   metrics = [
     "jvm.cl.loaded",
     "jvm.memory.pools.Metaspace.committed"
   ]
 
-  ## User name and password  
-  username = "put-username-here"
-  password = "put-password-here"
+  ## Username and password
+  username = ""
+  password = ""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"

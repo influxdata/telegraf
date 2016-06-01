@@ -1,6 +1,6 @@
 # GrayLog plugin
 
-The Graylog plugin can collect data from remote Graylog service URLs. 
+The Graylog plugin can collect data from remote Graylog service URLs.
 
 Plugin currently support two type of end points:-
 
@@ -12,28 +12,37 @@ End Point can be a mixe of one  multiple end point  and several namespaces end p
 
 Note: if namespace end point specified metrics array will be ignored for that call.
 
-Sample configration
-```
-[[inputs.graylog]]
-  ## API End Point, currently supported API:
-  ## - multiple  (Ex http://[graylog-server-ip]:12900/system/metrics/multiple)
-  ## - namespace (Ex http://[graylog-server-ip]:12900/system/metrics/namespace/{namespace})
-  ## Note if namespace end point specified metrics array will be ignored for that call.
-  ## End point can contain namespace and multiple type calls
-  ## Please check http://[graylog-server-ip]:12900/api-browser for full list end points
+### Configuration:
 
+```toml
+# Read flattened metrics from one or more GrayLog HTTP endpoints
+[[inputs.graylog]]
+  ## API endpoint, currently supported API:
+  ##
+  ##   - multiple  (Ex http://<host>:12900/system/metrics/multiple)
+  ##   - namespace (Ex http://<host>:12900/system/metrics/namespace/{namespace})
+  ##
+  ## For namespace endpoint, the metrics array will be ignored for that call.
+  ## Endpoint can contain namespace and multiple type calls.
+  ##
+  ## Please check http://[graylog-server-ip]:12900/api-browser for full list
+  ## of endpoints
   servers = [
-    "http://10.224.162.16:12900/system/metrics/multiple"
+    "http://[graylog-server-ip]:12900/system/metrics/multiple",
   ]
 
-  #Metrics define metric which will be pulled from GrayLog and reported to the defined Output 
+  ## Metrics list
+  ## List of metrics can be found on Graylog webservice documentation.
+  ## Or by hitting the the web service api at:
+  ##   http://[graylog-host]:12900/system/metrics
   metrics = [
     "jvm.cl.loaded",
     "jvm.memory.pools.Metaspace.committed"
   ]
-  ## User name and password  
-  username = "put-username-here"
-  password = "put-password-here"
+
+  ## Username and password
+  username = ""
+  password = ""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -43,4 +52,4 @@ Sample configration
   # insecure_skip_verify = false
 ```
 
-Please refer to GrayLog metrics api browser for full metric end points http://10.224.162.16:12900/api-browser
+Please refer to GrayLog metrics api browser for full metric end points http://host:12900/api-browser
