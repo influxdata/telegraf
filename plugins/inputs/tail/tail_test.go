@@ -32,7 +32,8 @@ func TestTailFromBeginning(t *testing.T) {
 	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
 	require.NoError(t, err)
 	require.NoError(t, tt.Gather(&acc))
-	time.Sleep(time.Millisecond * 50)
+	// arbitrary sleep to wait for message to show up
+	time.Sleep(time.Millisecond * 250)
 
 	acc.AssertContainsTaggedFields(t, "cpu",
 		map[string]interface{}{
