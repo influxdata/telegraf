@@ -23,6 +23,7 @@ github.com/gonuts/go-shellquote e842a11b24c6abfb3dd27af69a17f482e4b483c2
 github.com/gorilla/context 1ea25387ff6f684839d82767c1733ff4d4d15d0a
 github.com/gorilla/mux c9e326e2bdec29039a3761c07bece13133863e1e
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
+github.com/hashicorp/consul 5aa90455ce78d4d41578bafc86305e6e6b28d7d2
 github.com/hpcloud/tail b2940955ab8b26e19d43a43c4da0475dd81bdb56
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
 github.com/influxdata/influxdb e094138084855d444195b252314dfee9eae34cab
