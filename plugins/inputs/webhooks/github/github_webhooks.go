@@ -8,20 +8,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/webhooks_models"
 )
-
-func init() {
-	webhooks_models.Add("github", func(path string) webhooks_models.Webhook { return NewGithubWebhook(path) })
-}
 
 type GithubWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
-}
-
-func NewGithubWebhook(path string) *GithubWebhook {
-	return &GithubWebhook{Path: path}
 }
 
 func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {

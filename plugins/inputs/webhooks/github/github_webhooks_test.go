@@ -11,8 +11,7 @@ import (
 
 func GithubWebhookRequest(event string, jsonString string, t *testing.T) {
 	var acc testutil.Accumulator
-	gh := NewGithubWebhook("/github")
-	gh.acc = &acc
+	gh := &GithubWebhook{Path: "/github", acc: &acc}
 	req, _ := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", event)
 	w := httptest.NewRecorder()

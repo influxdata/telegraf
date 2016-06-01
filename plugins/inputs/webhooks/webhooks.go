@@ -4,13 +4,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	_ "github.com/influxdata/telegraf/plugins/inputs/webhooks/webhooks_all"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/webhooks_models"
+
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
+
+type Webhook interface {
+	Register(router *mux.Router, acc telegraf.Accumulator)
+}
 
 func init() {
 	inputs.Add("webhooks", func() telegraf.Input { return NewWebhooks() })
@@ -19,12 +25,8 @@ func init() {
 type Webhooks struct {
 	ServiceAddress string
 
-	Webhook []WebhookConfig
-}
-
-type WebhookConfig struct {
-	Name string
-	Path string
+	Github  *github.GithubWebhook
+	Rollbar *rollbar.RollbarWebhook
 }
 
 func NewWebhooks() *Webhooks {
@@ -36,14 +38,12 @@ func (wb *Webhooks) SampleConfig() string {
   ## Address and port to host Webhook listener on
   service_address = ":1619"
 
-  [[inputs.webhooks.webhook]]
-    name = "github"
+  [inputs.webhooks.github]
     path = "/github"
 
-  [[inputs.webhooks.webhook]]
-    name = "rollbar"
-    path = "/rollbar"
-`
+  [inputs.webhooks.rollbar]
+	path = "/rollbar"
+ `
 }
 
 func (wb *Webhooks) Description() string {
@@ -56,18 +56,30 @@ func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
 
 func (wb *Webhooks) Listen(acc telegraf.Accumulator) {
 	r := mux.NewRouter()
-	for _, webhook := range wb.Webhook {
-		if plugin, ok := webhooks_models.Webhooks[webhook.Name]; ok {
-			sub := plugin(webhook.Path)
-			sub.Register(r, acc)
-		} else {
-			log.Printf("Webhook %s is unknow\n", webhook.Name)
-		}
+
+	for _, webhook := range wb.AvailableWebhooks() {
+		webhook.Register(r, acc)
 	}
+
 	err := http.ListenAndServe(fmt.Sprintf("%s", wb.ServiceAddress), r)
 	if err != nil {
 		log.Printf("Error starting server: %v", err)
 	}
+}
+
+// Looks for fields which implement Webhook interface
+func (wb *Webhooks) AvailableWebhooks() []Webhook {
+	webhooks := make([]Webhook, 0)
+	s := reflect.ValueOf(wb).Elem()
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+
+		if wbPlugin, ok := f.Interface().(Webhook); ok {
+			webhooks = append(webhooks, wbPlugin)
+		}
+	}
+
+	return webhooks
 }
 
 func (wb *Webhooks) Start(acc telegraf.Accumulator) error {

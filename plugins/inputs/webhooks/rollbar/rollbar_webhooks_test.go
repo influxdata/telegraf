@@ -21,8 +21,7 @@ func postWebhooks(rb *RollbarWebhook, eventBody string) *httptest.ResponseRecord
 
 func TestNewItem(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := NewRollbarWebhook("/rollbar")
-	rb.acc = &acc
+	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
 	resp := postWebhooks(rb, NewItemJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
@@ -45,8 +44,7 @@ func TestNewItem(t *testing.T) {
 
 func TestDeploy(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := NewRollbarWebhook("/rollbar")
-	rb.acc = &acc
+	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
 	resp := postWebhooks(rb, DeployJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST deploy returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
@@ -66,7 +64,7 @@ func TestDeploy(t *testing.T) {
 }
 
 func TestUnknowItem(t *testing.T) {
-	rb := NewRollbarWebhook("/rollbar")
+	rb := &RollbarWebhook{Path: "/rollbar"}
 	resp := postWebhooks(rb, UnknowJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST unknow returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)

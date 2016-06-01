@@ -10,20 +10,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/webhooks_models"
 )
-
-func init() {
-	webhooks_models.Add("rollbar", func(path string) webhooks_models.Webhook { return NewRollbarWebhook(path) })
-}
 
 type RollbarWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
-}
-
-func NewRollbarWebhook(path string) *RollbarWebhook {
-	return &RollbarWebhook{Path: path}
 }
 
 func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
