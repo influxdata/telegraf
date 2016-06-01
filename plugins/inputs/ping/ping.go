@@ -76,7 +76,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		go func(u string) {
 			defer wg.Done()
 			args := p.args(u)
-			totalTimeout := p.Count * p.Timeout + (p.Count - 1) * p.PingInterval
+			totalTimeout := p.Count*p.Timeout + (p.Count-1)*p.PingInterval
 			out, err := p.pingHost(totalTimeout, args...)
 			if err != nil {
 				// Combine go err + stderr output
