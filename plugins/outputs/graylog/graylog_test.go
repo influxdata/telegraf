@@ -15,8 +15,11 @@ import (
 
 func TestWrite(t *testing.T) {
 	var wg sync.WaitGroup
+	var wg2 sync.WaitGroup
 	wg.Add(1)
-	go UDPServer(t, &wg)
+	wg2.Add(1)
+	go UDPServer(t, &wg, &wg2)
+	wg2.Wait()
 
 	i := Graylog{
 		Servers: []string{"127.0.0.1:12201"},
@@ -33,12 +36,13 @@ func TestWrite(t *testing.T) {
 
 type GelfObject map[string]interface{}
 
-func UDPServer(t *testing.T, wg *sync.WaitGroup) {
+func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
 	serverAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:12201")
 	udpServer, _ := net.ListenUDP("udp", serverAddr)
 	defer wg.Done()
 
 	bufR := make([]byte, 1024)
+	wg2.Done()
 	n, _, _ := udpServer.ReadFromUDP(bufR)
 
 	b := bytes.NewReader(bufR[0:n])
