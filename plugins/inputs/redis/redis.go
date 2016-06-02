@@ -241,10 +241,14 @@ func gatherKeyspaceLine(
 	name string,
 	line string,
 	acc telegraf.Accumulator,
-	tags map[string]string,
+	global_tags map[string]string,
 ) {
 	if strings.Contains(line, "keys=") {
 		fields := make(map[string]interface{})
+		tags := make(map[string]string)
+		for k, v := range global_tags {
+			tags[k] = v
+		}
 		tags["database"] = name
 		dbparts := strings.Split(line, ",")
 		for _, dbp := range dbparts {
