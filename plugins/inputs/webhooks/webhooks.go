@@ -42,7 +42,7 @@ func (wb *Webhooks) SampleConfig() string {
     path = "/github"
 
   [inputs.webhooks.rollbar]
-	path = "/rollbar"
+    path = "/rollbar"
  `
 }
 
