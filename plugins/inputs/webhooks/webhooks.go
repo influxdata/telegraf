@@ -74,6 +74,10 @@ func (wb *Webhooks) AvailableWebhooks() []Webhook {
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
 
+		if !f.CanInterface() {
+			continue
+		}
+
 		if wbPlugin, ok := f.Interface().(Webhook); ok {
 			if !reflect.ValueOf(wbPlugin).IsNil() {
 				webhooks = append(webhooks, wbPlugin)
