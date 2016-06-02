@@ -46,6 +46,7 @@ time before a new metric is included by the plugin.
 - [#1268](https://github.com/influxdata/telegraf/pull/1268): Fix potential influxdb input type assertion panic.
 - [#1283](https://github.com/influxdata/telegraf/pull/1283): Still send processes metrics if a process exited during metric collection.
 - [#1297](https://github.com/influxdata/telegraf/issues/1297): disk plugin panic when usage grab fails.
+- [#1315](https://github.com/influxdata/telegraf/pull/1315): removed leaked "database" tag on redis metrics. Thanks @PierreF!
 
 ## v0.13.1 [2016-05-24]
 

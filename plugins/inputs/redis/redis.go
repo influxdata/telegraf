@@ -229,6 +229,9 @@ func gatherInfoOutput(
 		keyspace_hitrate = float64(keyspace_hits) / float64(keyspace_hits+keyspace_misses)
 	}
 	fields["keyspace_hitrate"] = keyspace_hitrate
+
+	// gatherKeyspaceLine may have added "database" to tags.
+	delete(tags, "database")
 	acc.AddFields("redis", fields, tags)
 	return nil
 }
