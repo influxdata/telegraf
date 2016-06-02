@@ -1,6 +1,6 @@
 # Webhooks
 
-This is a Telegraf service plugin that start an http server and start multiple webhook listeners.
+This is a Telegraf service plugin that start an http server and register multiple webhook listeners.
 
 ```sh
 $ telegraf -sample-config -input-filter webhooks -output-filter influxdb > config.conf.new
@@ -18,6 +18,10 @@ $ sudo service telegraf start
 - [Github](github/)
 - [Rollbar](rollbar/)
 
-## Adding new webhook services
+## Adding new webhooks plugin
 
-TODO
+1. Add your webhook plugin inside the `webhooks` folder
+1. Your plugin must implement the `Webhook` interface
+1. Import your plugin in the `webhooks.go` file and add it to the `Webhooks` struct
+
+Both [Github](github/) and [Rollbar](rollbar/) are good example to follow.
