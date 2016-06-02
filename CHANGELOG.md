@@ -22,7 +22,8 @@ in conjunction with wildcard dimension values as it will control the amount of
 time before a new metric is included by the plugin.
 
 - The github webhooks have been integrated into the new webhooks plugin. You
-have to configure the new `webhooks` plugins.
+have to configure the new `webhooks` plugins and update your Organization's
+Webhooks on the Github website accordingly.
 
 ### Features
 - [#1294](https://github.com/influxdata/telegraf/pull/1294): consul input plugin. Thanks @harnash
