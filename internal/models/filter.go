@@ -3,80 +3,78 @@ package internal_models
 import (
 	"fmt"
 
-	"github.com/gobwas/glob"
-
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/filter"
 )
 
 // TagFilter is the name of a tag, and the values on which to filter
 type TagFilter struct {
 	Name   string
 	Filter []string
-	filter glob.Glob
+	filter filter.Filter
 }
 
 // Filter containing drop/pass and tagdrop/tagpass rules
 type Filter struct {
 	NameDrop []string
-	nameDrop glob.Glob
+	nameDrop filter.Filter
 	NamePass []string
-	namePass glob.Glob
+	namePass filter.Filter
 
 	FieldDrop []string
-	fieldDrop glob.Glob
+	fieldDrop filter.Filter
 	FieldPass []string
-	fieldPass glob.Glob
+	fieldPass filter.Filter
 
 	TagDrop []TagFilter
 	TagPass []TagFilter
 
 	TagExclude []string
-	tagExclude glob.Glob
+	tagExclude filter.Filter
 	TagInclude []string
-	tagInclude glob.Glob
+	tagInclude filter.Filter
 
 	IsActive bool
 }
 
-// Compile all Filter lists into glob.Glob objects.
+// Compile all Filter lists into filter.Filter objects.
 func (f *Filter) CompileFilter() error {
 	var err error
-	f.nameDrop, err = internal.CompileFilter(f.NameDrop)
+	f.nameDrop, err = filter.CompileFilter(f.NameDrop)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'namedrop', %s", err)
 	}
-	f.namePass, err = internal.CompileFilter(f.NamePass)
+	f.namePass, err = filter.CompileFilter(f.NamePass)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'namepass', %s", err)
 	}
 
-	f.fieldDrop, err = internal.CompileFilter(f.FieldDrop)
+	f.fieldDrop, err = filter.CompileFilter(f.FieldDrop)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'fielddrop', %s", err)
 	}
-	f.fieldPass, err = internal.CompileFilter(f.FieldPass)
+	f.fieldPass, err = filter.CompileFilter(f.FieldPass)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'fieldpass', %s", err)
 	}
 
-	f.tagExclude, err = internal.CompileFilter(f.TagExclude)
+	f.tagExclude, err = filter.CompileFilter(f.TagExclude)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'tagexclude', %s", err)
 	}
-	f.tagInclude, err = internal.CompileFilter(f.TagInclude)
+	f.tagInclude, err = filter.CompileFilter(f.TagInclude)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'taginclude', %s", err)
 	}
 
 	for i, _ := range f.TagDrop {
-		f.TagDrop[i].filter, err = internal.CompileFilter(f.TagDrop[i].Filter)
+		f.TagDrop[i].filter, err = filter.CompileFilter(f.TagDrop[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagdrop', %s", err)
 		}
 	}
 	for i, _ := range f.TagPass {
-		f.TagPass[i].filter, err = internal.CompileFilter(f.TagPass[i].Filter)
+		f.TagPass[i].filter, err = filter.CompileFilter(f.TagPass[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagpass', %s", err)
 		}

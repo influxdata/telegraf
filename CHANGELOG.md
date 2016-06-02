@@ -5,6 +5,7 @@
 - [#1340](https://github.com/influxdata/telegraf/issues/1340): statsd: do not log every dropped metric.
 - [#1368](https://github.com/influxdata/telegraf/pull/1368): Add precision rounding to all metrics on collection.
 - [#1390](https://github.com/influxdata/telegraf/pull/1390): Add support for Tengine
+- [#1320](https://github.com/influxdata/telegraf/pull/1320): Logparser input plugin for parsing grok-style log patterns.
 
 ### Bugfixes
 
