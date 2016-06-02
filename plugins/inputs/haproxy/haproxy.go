@@ -3,10 +3,7 @@ package haproxy
 import (
 	"encoding/csv"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,6 +11,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //CSV format: https://cbonte.github.io/haproxy-dconv/configuration-1.5.html#9.1
@@ -114,18 +115,17 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
+	errChan := errchan.New(len(g.Servers))
+	wg.Add(len(g.Servers))
 	for _, server := range g.Servers {
-		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			if err := g.gatherServer(serv, acc); err != nil {
-				log.Printf("HAProxy error gathering server: %s, %s", serv, err)
-			}
+			errChan.C <- g.gatherServer(serv, acc)
 		}(server)
 	}
 
 	wg.Wait()
-	return nil
+	return errChan.Error()
 }
 
 func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
