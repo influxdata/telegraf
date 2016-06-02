@@ -18,7 +18,7 @@ It is supposed to be used to monitor actual memory usage in a cross platform fas
 designed for informational purposes only.
 - **free**: memory not being used at all (zeroed) that is readily available; note
 that this doesn't reflect the actual memory available (use 'available' instead).
-- **used_percent**: the percentage usage calculated as `(total - used) / total * 100`
+- **used_percent**: the percentage usage calculated as `used / total * 100`
 
 ## Measurements:
 #### Raw Memory measurements:
