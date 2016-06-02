@@ -21,9 +21,14 @@ attribute. This configures the TTL of the internal metric cache. This is useful
 in conjunction with wildcard dimension values as it will control the amount of
 time before a new metric is included by the plugin.
 
-- The github webhooks have been integrated into the new webhooks plugin. You
-have to configure the new `webhooks` plugins and update your Organization's
-Webhooks on the Github website accordingly.
+- The github webhooks have been integrated into the new webhooks plugin.
+  To continue, update your config with:
+
+      [[inputs.webhooks]]
+        service_address = ":1618"
+
+        [inputs.webhooks.github]
+          path = "/"
 
 ### Features
 - [#1294](https://github.com/influxdata/telegraf/pull/1294): consul input plugin. Thanks @harnash
