@@ -6,6 +6,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -113,20 +114,18 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-
-	var outerr error
-
-	for _, serv := range g.Servers {
+	for _, server := range g.Servers {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherServer(serv, acc)
-		}(serv)
+			if err := g.gatherServer(serv, acc); err != nil {
+				log.Printf("HAProxy error gathering server: %s, %s", serv, err)
+			}
+		}(server)
 	}
 
 	wg.Wait()
-
-	return outerr
+	return nil
 }
 
 func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
