@@ -59,6 +59,11 @@ Latest:
 
 Ansible role: https://github.com/rossmcdonald/telegraf
 
+### Puppet Module:
+
+A Puppet module for installing and configuring Telegraf is available here:
+https://github.com/datacentred/puppet-telegraf
+
 ### OSX via Homebrew:
 
 ```
