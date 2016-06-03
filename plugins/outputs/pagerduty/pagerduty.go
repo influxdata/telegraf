@@ -30,20 +30,25 @@ type PD struct {
 	Metric     string            `toml:"metric"`
 	Field      string            `toml:"field"`
 	Expression string            `toml:"expression"`
-	Tags       map[string]string `toml:"tags"`
+	TagFilter  map[string]string `toml:"tag_filter"`
 }
 
 var sampleConfig = `
-## PagerDuty service key
-service_key = <SERVICE KEY>
-## Metric name that will be checked
-metric = "cpu"
-## Description of the check
-description = "Check CPU"
-## Name of the metric field which will be used to check
-field = "time_iowait"
-## Expression is used to evaluate the alert
-expression = "> 50.0"
+  ## PagerDuty service key
+  service_key = <SERVICE KEY>
+  ## Metric name that will be checked
+  metric = "cpu"
+  ## Description of the check
+  description = "Check CPU"
+  ## Name of the metric field which will be used to check
+  field = "time_iowait"
+	## Tag filter, when present only metrics with the specified tag value
+	## will be considered for further processing
+	tag_filter:
+    role: web-server
+		region: us-west1
+  ## Expression is used to evaluate the alert
+  expression = "> 50.0"
 `
 
 func createEvent(e Event) (*http.Response, error) {
@@ -76,7 +81,7 @@ func (p *PD) Match(metric telegraf.Metric) bool {
 		log.Printf("Metric name is not matched. Expected: '%s' Found: '%s'", p.Metric, metric.Name())
 		return false
 	}
-	for k, v := range p.Tags {
+	for k, v := range p.TagFilter {
 		t, ok := metric.Tags()[k]
 		if !ok {
 			log.Printf("Tag value absent. Tag name: '%s'", k)
@@ -122,7 +127,6 @@ func (p *PD) Write(metrics []telegraf.Metric) error {
 	}
 	for _, metric := range metrics {
 		if !p.Match(metric) {
-			log.Println("Metric is not matched by threshold, skipping")
 			continue
 		}
 		m := make(map[string]interface{})
@@ -135,7 +139,6 @@ func (p *PD) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			return err
 		}
-		log.Println("Created PagerDuty event for metric: ", metric.Name())
 	}
 	return nil
 }
