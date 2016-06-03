@@ -1,14 +1,28 @@
 package pagerduty
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	pd "github.com/PagerDuty/go-pagerduty"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"go/token"
 	"go/types"
 	"log"
+	"net/http"
 )
+
+const EventEndPoint = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+
+type Event struct {
+	Type        string        `json:"event_type"`
+	ServiceKey  string        `json:"service_key"`
+	Description string        `json:"description,omitempty"`
+	Client      string        `json:"client,omitempty"`
+	ClientURL   string        `json:"client_url,omitempty"`
+	Details     interface{}   `json:"details,omitempty"`
+	Contexts    []interface{} `json:"contexts,omitempty"`
+}
 
 type PD struct {
 	ServiceKey string            `toml:"service_key"`
@@ -31,6 +45,23 @@ field = "time_iowait"
 ## Expression is used to evaluate the alert
 expression = "> 50.0"
 `
+
+func createEvent(e Event) (*http.Response, error) {
+	data, err := json.Marshal(e)
+	if err != nil {
+		return nil, err
+	}
+	req, _ := http.NewRequest("POST", EventEndPoint, bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return resp, fmt.Errorf("HTTP Status Code: %d", resp.StatusCode)
+	}
+	return resp, nil
+}
 
 func (p *PD) Connect() error {
 	return nil
@@ -83,7 +114,7 @@ func (p *PD) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	event := pd.Event{
+	event := Event{
 		Type:        "trigger",
 		ServiceKey:  p.ServiceKey,
 		Description: p.Desc,
@@ -100,7 +131,7 @@ func (p *PD) Write(metrics []telegraf.Metric) error {
 		m["name"] = metric.Name()
 		m["timestamp"] = metric.UnixNano() / 1000000000
 		event.Details = m
-		_, err := pd.CreateEvent(event)
+		_, err := createEvent(event)
 		if err != nil {
 			return err
 		}
