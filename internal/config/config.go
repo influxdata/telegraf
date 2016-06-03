@@ -58,7 +58,6 @@ func NewConfig() *Config {
 			Interval:      internal.Duration{Duration: 10 * time.Second},
 			RoundInterval: true,
 			FlushInterval: internal.Duration{Duration: 10 * time.Second},
-			FlushJitter:   internal.Duration{Duration: 5 * time.Second},
 		},
 
 		Tags:          make(map[string]string),
@@ -357,7 +356,7 @@ func printConfig(name string, p printer, op string, commented bool) {
 				fmt.Print("\n")
 				continue
 			}
-			fmt.Print(comment + line + "\n")
+			fmt.Print(strings.TrimRight(comment+line, " ") + "\n")
 		}
 	}
 }

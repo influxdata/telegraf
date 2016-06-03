@@ -85,7 +85,7 @@ targets = {
 supported_builds = {
     "darwin": [ "amd64" ],
     "windows": [ "amd64" ],
-    "linux": [ "amd64", "i386", "armhf", "armel", "arm64" ],
+    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64" ],
     "freebsd": [ "amd64" ]
 }
 
@@ -553,7 +553,7 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                 build_root = os.path.join(tmp_build_dir,
                                           platform,
                                           arch,
-                                          '{}-{}-{}'.format(PACKAGE_NAME, version, iteration))
+                                          PACKAGE_NAME)
                 os.makedirs(build_root)
 
                 # Copy packaging scripts to build directory

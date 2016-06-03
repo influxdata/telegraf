@@ -145,6 +145,8 @@ Currently implemented sources:
 * [cassandra](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cassandra)
 * [ceph](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ceph)
 * [chrony](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/chrony)
+* [consul](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/consul)
+* [conntrack](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/conntrack)
 * [couchbase](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchbase)
 * [couchdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchdb)
 * [disque](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disque)
@@ -205,6 +207,7 @@ Currently implemented sources:
     * swap
     * processes
     * kernel (/proc/stat)
+    * kernel (/proc/vmstat)
 
 Telegraf can also collect metrics via the following service plugins:
 
@@ -231,6 +234,7 @@ want to add support for another service or third-party API.
 * [datadog](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/datadog)
 * [file](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file)
 * [graphite](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/graphite)
+* [graylog](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/graylog)
 * [instrumental](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/instrumental)
 * [kafka](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kafka)
 * [librato](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/librato)

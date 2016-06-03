@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -182,23 +183,15 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	e.errChan = make(chan error, len(commands))
+	errChan := errchan.New(len(commands))
+	e.errChan = errChan.C
 
 	e.wg.Add(len(commands))
 	for _, command := range commands {
 		go e.ProcessCommand(command, acc)
 	}
 	e.wg.Wait()
-
-	select {
-	default:
-		close(e.errChan)
-		return nil
-	case err := <-e.errChan:
-		close(e.errChan)
-		return err
-	}
-
+	return errChan.Error()
 }
 
 func init() {
