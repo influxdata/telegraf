@@ -138,7 +138,7 @@ func TestParseValidPrometheus(t *testing.T) {
 		"0.5":   552048.506,
 		"0.9":   5.876804288e+06,
 		"0.99":  5.876804288e+06,
-		"count": 0.0,
+		"count": 9.0,
 		"sum":   1.8909097205e+07,
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
@@ -151,7 +151,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"500000": 2000.0,
 		"count":  2025.0,
-		"sum":    0.0,
+		"sum":    1.02726334e+08,
 		"250000": 1997.0,
 		"2e+06":  2012.0,
 		"4e+06":  2017.0,
