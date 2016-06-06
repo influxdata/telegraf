@@ -1,4 +1,4 @@
-## v1.0 [unreleased]
+## v1.0 beta 1 [2016-06-07]
 
 ### Release Notes
 
