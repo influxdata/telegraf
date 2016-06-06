@@ -1,36 +1,19 @@
 package pagerduty
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"go/token"
-	"go/types"
-	"log"
-	"net/http"
 )
 
-const EventEndPoint = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
-
-type Event struct {
-	Type        string        `json:"event_type"`
-	ServiceKey  string        `json:"service_key"`
-	Description string        `json:"description,omitempty"`
-	Client      string        `json:"client,omitempty"`
-	ClientURL   string        `json:"client_url,omitempty"`
-	Details     interface{}   `json:"details,omitempty"`
-	Contexts    []interface{} `json:"contexts,omitempty"`
-}
-
 type PD struct {
-	ServiceKey string            `toml:"service_key"`
-	Desc       string            `toml:"description"`
-	Metric     string            `toml:"metric"`
-	Field      string            `toml:"field"`
-	Expression string            `toml:"expression"`
-	TagFilter  map[string]string `toml:"tag_filter"`
+	ServiceKey  string            `toml:"service_key"`
+	Desc        string            `toml:"description"`
+	Metric      string            `toml:"metric"`
+	Field       string            `toml:"field"`
+	Expression  string            `toml:"expression"`
+	TagFilter   map[string]string `toml:"tag_filter"`
+	incidentKey string            `toml:"-"`
 }
 
 var sampleConfig = `
@@ -42,31 +25,14 @@ var sampleConfig = `
   description = "Check CPU"
   ## Name of the metric field which will be used to check
   field = "time_iowait"
-	## Tag filter, when present only metrics with the specified tag value
-	## will be considered for further processing
-	tag_filter:
-    role: web-server
-		region: us-west1
+  ## Tag filter, when present only metrics with the specified tag value
+  ## will be considered for further processing
+  [[outputs.pagerduty.tag_filter]]
+    role = "web-server"
+    region = "us-west1"
   ## Expression is used to evaluate the alert
   expression = "> 50.0"
 `
-
-func createEvent(e Event) (*http.Response, error) {
-	data, err := json.Marshal(e)
-	if err != nil {
-		return nil, err
-	}
-	req, _ := http.NewRequest("POST", EventEndPoint, bytes.NewBuffer(data))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return resp, fmt.Errorf("HTTP Status Code: %d", resp.StatusCode)
-	}
-	return resp, nil
-}
 
 func (p *PD) Connect() error {
 	return nil
@@ -76,73 +42,88 @@ func (p *PD) Close() error {
 	return nil
 }
 
-func (p *PD) Match(metric telegraf.Metric) bool {
-	if p.Metric != metric.Name() {
-		log.Printf("Metric name is not matched. Expected: '%s' Found: '%s'", p.Metric, metric.Name())
-		return false
-	}
-	for k, v := range p.TagFilter {
-		t, ok := metric.Tags()[k]
-		if !ok {
-			log.Printf("Tag value absent. Tag name: '%s'", k)
-			return false
-		}
-		if t != v {
-			log.Printf("Tag '%s' value not matched. Expected: '%s' Found: '%s'", k, v, t)
-			return false
-		}
-	}
-	field, ok := metric.Fields()[p.Field]
-	if !ok {
-		log.Printf("Filed '%s' absent", p.Field)
-		return false
-	}
-	expr := fmt.Sprintf("%v %s", field, p.Expression)
-	fs := token.NewFileSet()
-	tv, err := types.Eval(fs, nil, token.NoPos, expr)
-	if err != nil {
-		log.Printf("Error in parsing expression. Message:%s", err)
-		return false
-	}
-	return tv.Value.String() == "true"
-}
-
 func (p *PD) SampleConfig() string {
 	return sampleConfig
 }
 
 func (p *PD) Description() string {
-	return "Output metrics as PagerDuty event"
+	return "Send PagerDuty alert based on metric values"
+}
+
+func (p *PD) isMatch(metric telegraf.Metric) bool {
+	if p.Metric != metric.Name() {
+		return false
+	}
+	for k, v := range p.TagFilter {
+		t, ok := metric.Tags()[k]
+		if !ok || (t != v) {
+			return false
+		}
+	}
+	return true
+}
+
+func init() {
+	outputs.Add("pagerduty", func() telegraf.Output {
+		return &PD{}
+	})
 }
 
 func (p *PD) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
-	event := Event{
-		Type:        "trigger",
-		ServiceKey:  p.ServiceKey,
-		Description: p.Desc,
-		Client:      "telegraf",
-	}
 	for _, metric := range metrics {
-		if !p.Match(metric) {
-			continue
-		}
-		m := make(map[string]interface{})
-		m["tags"] = metric.Tags()
-		m["fields"] = metric.Fields()
-		m["name"] = metric.Name()
-		m["timestamp"] = metric.UnixNano() / 1000000000
-		event.Details = m
-		_, err := createEvent(event)
-		if err != nil {
-			return err
+		if p.isMatch(metric) {
+			p.processForEvent(metric)
 		}
 	}
 	return nil
 }
 
-func init() {
-	outputs.Add("pagerduty", func() telegraf.Output { return &PD{} })
+func (p *PD) processForEvent(metric telegraf.Metric) error {
+	value, ok := metric.Fields()[p.Field]
+	if !ok {
+		return fmt.Errorf("Filed '%s' absent", p.Field)
+	}
+	expr := fmt.Sprintf("%v %s", value, p.Expression)
+	trigger, err := evalBoolExpr(expr)
+	if err != nil {
+		return err
+	}
+
+	event := Event{
+		ServiceKey: p.ServiceKey,
+		Client:     "telegraf",
+	}
+	m := make(map[string]interface{})
+	m["tags"] = metric.Tags()
+	m["fields"] = metric.Fields()
+	m["name"] = metric.Name()
+	m["timestamp"] = metric.UnixNano() / 1000000000
+	event.Details = m
+	event.Description = p.Desc
+	// either retrigger of create a new event
+	if trigger {
+		event.Type = "trigger"
+		if p.incidentKey != "" {
+			// already triggered incident, retriggering it
+			// PagerDuty dedups alerts when we reuse the incidentkey
+			event.IncidentKey = p.incidentKey
+		}
+		resp, err := createEvent(event)
+		if err != nil {
+			return err
+		}
+		p.incidentKey = resp.IncidentKey
+		return nil
+	}
+	if p.incidentKey != "" {
+		event.IncidentKey = p.incidentKey
+		event.Type = "resolve"
+		_, err := createEvent(event)
+		if err != nil {
+			return err
+		}
+		// incident is resolved hence reset incident key
+		p.incidentKey = ""
+	}
+	return nil
 }
