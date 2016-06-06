@@ -895,8 +895,19 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	c.MetricName = name
+	c.RegexExpr = make(map[string][]string)
+	if val, ok := tbl.Fields["regex_expr"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			log.Printf("Could not parse [regex_expr] config\n")
+		}
+		if err := config.UnmarshalTable(subTable, c.RegexExpr); err != nil {
+			log.Printf("Could not parse [regex_expr] config\n")
+		}
+	}
 
+	c.MetricName = name
+	delete(tbl.Fields, "regex_expr")
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
