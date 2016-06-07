@@ -1,4 +1,4 @@
-## v1.0 [unreleased]
+## v1.0 beta 1 [2016-06-07]
 
 ### Release Notes
 
@@ -22,6 +22,7 @@ in conjunction with wildcard dimension values as it will control the amount of
 time before a new metric is included by the plugin.
 
 ### Features
+- [#1262](https://github.com/influxdata/telegraf/pull/1261): Add graylog input pluging.
 - [#1294](https://github.com/influxdata/telegraf/pull/1294): consul input plugin. Thanks @harnash
 - [#1164](https://github.com/influxdata/telegraf/pull/1164): conntrack input plugin. Thanks @robinpercy!
 - [#1165](https://github.com/influxdata/telegraf/pull/1165): vmstat input plugin. Thanks @jshim-xm!
@@ -46,6 +47,9 @@ time before a new metric is included by the plugin.
 - [#1268](https://github.com/influxdata/telegraf/pull/1268): Fix potential influxdb input type assertion panic.
 - [#1283](https://github.com/influxdata/telegraf/pull/1283): Still send processes metrics if a process exited during metric collection.
 - [#1297](https://github.com/influxdata/telegraf/issues/1297): disk plugin panic when usage grab fails.
+- [#1316](https://github.com/influxdata/telegraf/pull/1316): Removed leaked "database" tag on redis metrics. Thanks @PierreF!
+- [#1323](https://github.com/influxdata/telegraf/issues/1323): Processes plugin: fix potential error with /proc/net/stat directory.
+- [#1322](https://github.com/influxdata/telegraf/issues/1322): Fix rare RHEL 5.2 panic in gopsutil diskio gathering function.
 
 ## v0.13.1 [2016-05-24]
 

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -129,20 +131,18 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	var errChan = make(chan error, len(gatherFunctions))
-
+	var wg sync.WaitGroup
+	wg.Add(len(gatherFunctions))
+	errChan := errchan.New(len(gatherFunctions))
 	for _, f := range gatherFunctions {
-		go f(r, acc, errChan)
+		go func(gf gatherFunc) {
+			defer wg.Done()
+			gf(r, acc, errChan.C)
+		}(f)
 	}
+	wg.Wait()
 
-	for i := 1; i <= len(gatherFunctions); i++ {
-		err := <-errChan
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return errChan.Error()
 }
 
 func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
