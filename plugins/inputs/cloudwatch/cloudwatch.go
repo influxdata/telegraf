@@ -3,6 +3,7 @@ package cloudwatch
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -166,7 +168,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	metricCount := len(metrics)
-	var errChan = make(chan error, metricCount)
+	errChan := errchan.New(metricCount)
 
 	now := time.Now()
 
@@ -175,18 +177,18 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
 	lmtr := limiter.NewRateLimiter(10, time.Second)
 	defer lmtr.Stop()
+	var wg sync.WaitGroup
+	wg.Add(len(metrics))
 	for _, m := range metrics {
 		<-lmtr.C
-		go c.gatherMetric(acc, m, now, errChan)
+		go func(inm *cloudwatch.Metric) {
+			defer wg.Done()
+			c.gatherMetric(acc, inm, now, errChan.C)
+		}(m)
 	}
+	wg.Wait()
 
-	for i := 1; i <= metricCount; i++ {
-		err := <-errChan
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return errChan.Error()
 }
 
 func init() {
