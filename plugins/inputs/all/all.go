@@ -6,6 +6,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cassandra"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ceph"
+	_ "github.com/influxdata/telegraf/plugins/inputs/cgroup"
 	_ "github.com/influxdata/telegraf/plugins/inputs/chrony"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/inputs/conntrack"
