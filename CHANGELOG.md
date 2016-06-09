@@ -16,6 +16,8 @@
 - [#1390](https://github.com/influxdata/telegraf/pull/1390): Add support for Tengine
 - [#1320](https://github.com/influxdata/telegraf/pull/1320): Logparser input plugin for parsing grok-style log patterns.
 - [#1397](https://github.com/influxdata/telegraf/issues/1397): ElasticSearch: now supports connecting to ElasticSearch via SSL
+- [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
+
 
 ### Bugfixes
 
