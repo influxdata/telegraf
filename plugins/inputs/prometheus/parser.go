@@ -74,13 +74,13 @@ func (p *PrometheusParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				if mf.GetType() == dto.MetricType_SUMMARY {
 					// summary metric
 					fields = makeQuantiles(m)
-					fields["count"] = float64(m.GetHistogram().GetSampleCount())
+					fields["count"] = float64(m.GetSummary().GetSampleCount())
 					fields["sum"] = float64(m.GetSummary().GetSampleSum())
 				} else if mf.GetType() == dto.MetricType_HISTOGRAM {
 					// historgram metric
 					fields = makeBuckets(m)
 					fields["count"] = float64(m.GetHistogram().GetSampleCount())
-					fields["sum"] = float64(m.GetSummary().GetSampleSum())
+					fields["sum"] = float64(m.GetHistogram().GetSampleSum())
 
 				} else {
 					// standard metric
