@@ -177,8 +177,12 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 			// There were matches, so we'll append each match together with
 			// the arguments to the commands slice
 			for _, match := range matches {
-				commands = append(
-					commands, strings.Join([]string{match, cmdAndArgs[1]}, " "))
+				if len(cmdAndArgs) == 1 {
+					commands = append(commands, match)
+				} else {
+					commands = append(commands,
+						strings.Join([]string{match, cmdAndArgs[1]}, " "))
+				}
 			}
 		}
 	}
