@@ -2,6 +2,8 @@
 
 ### Features
 
+- [#1340](https://github.com/influxdata/telegraf/issues/1340): statsd: do not log every dropped metric.
+
 ### Bugfixes
 
 - [#1330](https://github.com/influxdata/telegraf/issues/1330): Fix exec plugin panic when using single binary.
