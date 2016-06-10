@@ -4,8 +4,9 @@
 
 ### Bugfixes
 
-- [#1330](https://github.com/influxdata/telegraf/issues/1330): Fix exec plugin panic when using single binary
-- [#1336](https://github.com/influxdata/telegraf/issues/1336): Fixed incorrect prometheus metrics source selection
+- [#1330](https://github.com/influxdata/telegraf/issues/1330): Fix exec plugin panic when using single binary.
+- [#1336](https://github.com/influxdata/telegraf/issues/1336): Fixed incorrect prometheus metrics source selection.
+- [#1112](https://github.com/influxdata/telegraf/issues/1112): Set default Zookeeper chroot to empty string.
 
 ## v1.0 beta 1 [2016-06-07]
 
