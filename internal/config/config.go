@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/plugins/filters"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -46,9 +47,11 @@ type Config struct {
 	InputFilters  []string
 	OutputFilters []string
 
-	Agent   *AgentConfig
-	Inputs  []*internal_models.RunningInput
-	Outputs []*internal_models.RunningOutput
+	Agent        *AgentConfig
+	Inputs       []*internal_models.RunningInput
+	Outputs      []*internal_models.RunningOutput
+	Filters      map[string]telegraf.Filter
+	FiltersOrder []string
 }
 
 func NewConfig() *Config {
@@ -63,6 +66,8 @@ func NewConfig() *Config {
 		Tags:          make(map[string]string),
 		Inputs:        make([]*internal_models.RunningInput, 0),
 		Outputs:       make([]*internal_models.RunningOutput, 0),
+		Filters:       make(map[string]telegraf.Filter),
+		FiltersOrder:  make([]string, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -76,6 +81,14 @@ type AgentConfig struct {
 	// RoundInterval rounds collection interval to 'interval'.
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
+
+	// By default, precision will be set to the same timestamp order as the
+	// collection interval, with the maximum being 1s.
+	//   ie, when interval = "10s", precision will be "1s"
+	//       when interval = "250ms", precision will be "1ms"
+	// Precision will NOT be used for service inputs. It is up to each individual
+	// service input to set the timestamp at the appropriate precision.
+	Precision internal.Duration
 
 	// CollectionJitter is used to jitter the collection by a random amount.
 	// Each plugin will sleep for a random time within jitter before collecting.
@@ -108,11 +121,10 @@ type AgentConfig struct {
 	// does _not_ deactivate FlushInterval.
 	FlushBufferWhenFull bool
 
-	// TODO(cam): Remove UTC and Precision parameters, they are no longer
+	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatability
-	UTC       bool `toml:"utc"`
-	Precision string
+	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
 	Debug bool
@@ -209,6 +221,11 @@ var header = `# Telegraf Configuration
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
+  ## By default, precision will be set to the same timestamp order as the
+  ## collection interval, with the maximum being 1s.
+  ## Precision will NOT be used for service inputs, such as logparser and statsd.
+  ## Valid values are "Nns", "Nus" (or "Nµs"), "Nms", "Ns".
+  precision = ""
   ## Run telegraf in debug mode
   debug = false
   ## Run telegraf in quiet mode
@@ -239,7 +256,7 @@ var serviceInputHeader = `
 `
 
 // PrintSampleConfig prints the sample config
-func PrintSampleConfig(inputFilters []string, outputFilters []string) {
+func PrintSampleConfig(inputFilters []string, filterFilters []string, outputFilters []string) {
 	fmt.Printf(header)
 
 	if len(outputFilters) != 0 {
@@ -255,6 +272,17 @@ func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 		}
 		sort.Strings(pnames)
 		printFilteredOutputs(pnames, true)
+	}
+
+	if len(filterFilters) != 0 {
+		printFilteredFilters(filterFilters, false)
+	} else {
+		var pnames []string
+		for pname := range filters.Filters {
+			pnames = append(pnames, pname)
+		}
+		sort.Strings(pnames)
+		printFilteredFilters(pnames, true)
 	}
 
 	fmt.Printf(inputHeader)
@@ -315,6 +343,20 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	}
 }
 
+func printFilteredFilters(printOnly []string, commented bool) {
+	var names []string
+	for item := range filters.Filters {
+		if sliceContains(item, printOnly) {
+			names = append(names, item)
+		}
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		creator := filters.Filters[name]
+		filter := creator()
+		printConfig(name, filter, "filters", commented)
+	}
+}
 func printFilteredOutputs(outputFilters []string, commented bool) {
 	// Filter outputs
 	var onames []string
@@ -516,6 +558,25 @@ func (c *Config) LoadConfig(path string) error {
 						pluginName, path)
 				}
 			}
+		case "filter":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case *ast.Table:
+					if err = c.addFilter(pluginName, pluginSubTable); err != nil {
+						return fmt.Errorf("Error parsing %s, %s", path, err)
+					}
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addFilter(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", path, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
+				}
+			}
+
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
@@ -527,6 +588,13 @@ func (c *Config) LoadConfig(path string) error {
 	return nil
 }
 
+// trimBOM trims the Byte-Order-Marks from the beginning of the file.
+// this is for Windows compatability only.
+// see https://github.com/influxdata/telegraf/issues/1378
+func trimBOM(f []byte) []byte {
+	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
+}
+
 // parseFile loads a TOML configuration from a provided path and
 // returns the AST produced from the TOML parser. When loading the file, it
 // will find environment variables and replace them.
@@ -535,6 +603,8 @@ func parseFile(fpath string) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
+	// ugh windows why
+	contents = trimBOM(contents)
 
 	env_vars := envVarRe.FindAll(contents, -1)
 	for _, env_var := range env_vars {
@@ -580,6 +650,25 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	ro := internal_models.NewRunningOutput(name, output, outputConfig,
 		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
+	return nil
+}
+
+func (c *Config) addFilter(name string, table *ast.Table) error {
+	creator, ok := filters.Filters[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested filter: %s", name)
+	}
+	filter := creator()
+
+	if err := config.UnmarshalTable(table, filter); err != nil {
+		return err
+	}
+
+	if _, ok = c.Filters[name]; ok {
+		return fmt.Errorf("Filter already defined %s", name)
+	}
+	c.Filters[name] = filter
+	c.FiltersOrder = append(c.FiltersOrder, name)
 	return nil
 }
 

@@ -242,28 +242,43 @@ func (a *Agent) flush() {
 			}
 		}(o)
 	}
-
 	wg.Wait()
 }
 
 // flusher monitors the metrics input channel and flushes on the minimum interval
 func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) error {
+	var metricStream chan telegraf.Metric
+	stopFilter := make(chan struct{}, len(a.Config.Filters))
 	// Inelegant, but this sleep is to allow the Gather threads to run, so that
 	// the flusher will flush after metrics are collected.
 	time.Sleep(time.Millisecond * 200)
-
 	ticker := time.NewTicker(a.Config.Agent.FlushInterval.Duration)
+	metricStream = metricC
+	if len(a.Config.Filters) != 0 {
+		for _, name := range a.Config.FiltersOrder {
+			filter := a.Config.Filters[name]
+			log.Printf("Filter %s is enabled", name)
+			metricStream = filter.Pipe(metricStream)
+			go func(f telegraf.Filter) {
+				f.Start(stopFilter)
+			}(filter)
+		}
+	}
 
 	for {
 		select {
 		case <-shutdown:
+			//sending shutdown signal for all filters
+			for range a.Config.Filters {
+				stopFilter <- struct{}{}
+			}
 			log.Println("Hang on, flushing any cached metrics before shutdown")
 			a.flush()
 			return nil
 		case <-ticker.C:
 			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
-		case m := <-metricC:
+		case m := <-metricStream:
 			for _, o := range a.Config.Outputs {
 				o.AddMetric(m)
 			}

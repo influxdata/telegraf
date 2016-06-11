@@ -11,6 +11,8 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/plugins/filters"
+	_ "github.com/influxdata/telegraf/plugins/filters/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -31,12 +33,16 @@ var fSampleConfig = flag.Bool("sample-config", false,
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
+var fFilterFilters = flag.String("filter-filter", "",
+	"filter to be enabled, separator is :")
 var fInputList = flag.Bool("input-list", false,
 	"print available input plugins.")
 var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
 var fOutputList = flag.Bool("output-list", false,
 	"print available output plugins.")
+var fFilterList = flag.Bool("filter-list", false,
+	"print available filter plugins.")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 var fInputFiltersLegacy = flag.String("filter", "",
@@ -70,6 +76,8 @@ The flags are:
   -input-list        print all the plugins inputs
   -output-filter     filter the output plugins to enable, separator is :
   -output-list       print all the available outputs
+  -filter-filter     filter the filter plugins to enable, separator is :
+  -filter-list       print all the available filters
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
@@ -121,6 +129,11 @@ func main() {
 			inputFilters = strings.Split(":"+inputFilter+":", ":")
 		}
 
+		var filterFilters []string
+		if *fFilterFilters != "" {
+			filterFilters = strings.Split(":"+strings.TrimSpace(*fFilterFilters)+":", ":")
+		}
+
 		var outputFilters []string
 		if *fOutputFiltersLegacy != "" {
 			fmt.Printf("WARNING '--outputfilter' flag is deprecated, please use" +
@@ -140,7 +153,7 @@ func main() {
 				fmt.Println(v)
 				return
 			case "config":
-				config.PrintSampleConfig(inputFilters, outputFilters)
+				config.PrintSampleConfig(inputFilters, filterFilters, outputFilters)
 				return
 			}
 		}
@@ -148,6 +161,14 @@ func main() {
 		if *fOutputList {
 			fmt.Println("Available Output Plugins:")
 			for k, _ := range outputs.Outputs {
+				fmt.Printf("  %s\n", k)
+			}
+			return
+		}
+
+		if *fFilterList {
+			fmt.Println("Available Filter Plugins:")
+			for k, _ := range filters.Filters {
 				fmt.Printf("  %s\n", k)
 			}
 			return
@@ -168,7 +189,7 @@ func main() {
 		}
 
 		if *fSampleConfig {
-			config.PrintSampleConfig(inputFilters, outputFilters)
+			config.PrintSampleConfig(inputFilters, filterFilters, outputFilters)
 			return
 		}
 
