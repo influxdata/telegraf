@@ -53,7 +53,7 @@ This plugin gathers the statistic data from MySQL server
   ## gather metrics from SHOW BINARY LOGS command output
   gather_binary_logs                        = false
   #
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_TABLE
+  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
   gather_table_io_waits                     = false
   #
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
