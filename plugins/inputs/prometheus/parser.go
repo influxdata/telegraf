@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"mime"
+	"time"
 
 	"github.com/influxdata/telegraf"
 
@@ -88,7 +89,13 @@ func (p *PrometheusParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				}
 				// converting to telegraf metric
 				if len(fields) > 0 {
-					metric, err := telegraf.NewMetric(metricName, tags, fields)
+					var t time.Time
+					if m.TimestampMs != nil && *m.TimestampMs > 0 {
+						t = time.Unix(0, *m.TimestampMs*1000000)
+					} else {
+						t = time.Now()
+					}
+					metric, err := telegraf.NewMetric(metricName, tags, fields, t)
 					if err == nil {
 						metrics = append(metrics, metric)
 					}

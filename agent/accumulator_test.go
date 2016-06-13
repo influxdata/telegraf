@@ -38,6 +38,128 @@ func TestAdd(t *testing.T) {
 		actual)
 }
 
+func TestAddNoPrecisionWithInterval(t *testing.T) {
+	a := accumulator{}
+	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &internal_models.InputConfig{}
+
+	a.SetPrecision(0, time.Second)
+	a.Add("acctest", float64(101), map[string]string{})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest,acc=test value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		actual)
+}
+
+func TestAddNoIntervalWithPrecision(t *testing.T) {
+	a := accumulator{}
+	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &internal_models.InputConfig{}
+
+	a.SetPrecision(time.Second, time.Millisecond)
+	a.Add("acctest", float64(101), map[string]string{})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest,acc=test value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		actual)
+}
+
+func TestAddDisablePrecision(t *testing.T) {
+	a := accumulator{}
+	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &internal_models.InputConfig{}
+
+	a.SetPrecision(time.Second, time.Millisecond)
+	a.DisablePrecision()
+	a.Add("acctest", float64(101), map[string]string{})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest,acc=test value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082912748)),
+		actual)
+}
+
+func TestDifferentPrecisions(t *testing.T) {
+	a := accumulator{}
+	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &internal_models.InputConfig{}
+
+	a.SetPrecision(0, time.Second)
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		actual)
+
+	a.SetPrecision(0, time.Millisecond)
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800083000000)),
+		actual)
+
+	a.SetPrecision(0, time.Microsecond)
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082913000)),
+		actual)
+
+	a.SetPrecision(0, time.Nanosecond)
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082912748)),
+		actual)
+}
+
 func TestAddDefaultTags(t *testing.T) {
 	a := accumulator{}
 	a.addDefaultTag("default", "tag")

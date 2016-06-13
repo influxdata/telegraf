@@ -118,6 +118,8 @@ func (a *Agent) gatherer(
 
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetDebug(a.Config.Agent.Debug)
+		acc.SetPrecision(a.Config.Agent.Precision.Duration,
+			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
 
 		internal.RandomSleep(a.Config.Agent.CollectionJitter.Duration, shutdown)
@@ -201,6 +203,8 @@ func (a *Agent) Test() error {
 	for _, input := range a.Config.Inputs {
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetTrace(true)
+		acc.SetPrecision(a.Config.Agent.Precision.Duration,
+			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
@@ -289,6 +293,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		case telegraf.ServiceInput:
 			acc := NewAccumulator(input.Config, metricC)
 			acc.SetDebug(a.Config.Agent.Debug)
+			// Service input plugins should set their own precision of their
+			// metrics.
+			acc.DisablePrecision()
 			acc.setDefaultTags(a.Config.Tags)
 			if err := p.Start(acc); err != nil {
 				log.Printf("Service for input %s failed to start, exiting\n%s\n",

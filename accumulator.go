@@ -18,4 +18,8 @@ type Accumulator interface {
 
 	Debug() bool
 	SetDebug(enabled bool)
+
+	SetPrecision(precision, interval time.Duration)
+
+	DisablePrecision()
 }
