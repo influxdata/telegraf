@@ -11,6 +11,8 @@ Erase the other section and everything on and above this line.
 
 ## Bug report
 
+### Relevant telegraf.conf:
+
 ### System info:
 
 [Include Telegraf version, operating system name, and other relevant details]
