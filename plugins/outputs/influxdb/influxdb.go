@@ -53,8 +53,8 @@ var sampleConfig = `
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
-  ## Retention policy to write to.
-  retention_policy = "default"
+  ## Retention policy to write to. Empty string writes to the default rp.
+  retention_policy = ""
   ## Write consistency (clusters only), can be: "any", "one", "quorom", "all"
   write_consistency = "any"
 

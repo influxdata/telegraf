@@ -11,6 +11,7 @@
 - [#1336](https://github.com/influxdata/telegraf/issues/1336): Fixed incorrect prometheus metrics source selection.
 - [#1112](https://github.com/influxdata/telegraf/issues/1112): Set default Zookeeper chroot to empty string.
 - [#1335](https://github.com/influxdata/telegraf/issues/1335): Fix overall ping timeout to be calculated based on per-ping timeout.
+- [#1374](https://github.com/influxdata/telegraf/pull/1374): Change "default" retention policy to "".
 
 ## v1.0 beta 1 [2016-06-07]
 
