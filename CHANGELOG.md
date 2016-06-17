@@ -21,6 +21,7 @@
 - [#1335](https://github.com/influxdata/telegraf/issues/1335): Fix overall ping timeout to be calculated based on per-ping timeout.
 - [#1374](https://github.com/influxdata/telegraf/pull/1374): Change "default" retention policy to "".
 - [#1377](https://github.com/influxdata/telegraf/issues/1377): Graphite output mangling '%' character.
+- [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
 
 ## v1.0 beta 1 [2016-06-07]
 
