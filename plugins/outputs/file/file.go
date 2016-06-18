@@ -56,7 +56,6 @@ func (f *File) Connect() error {
 			var of *os.File
 			var err error
 			generatedFile := generateFileName(file)
-			fmt.Printf("writing to output file [%s]", generatedFile)
 			if _, err := os.Stat(generatedFile); os.IsNotExist(err) {
 				// create directory f it doesn't exist
 				lastSlash := strings.LastIndex(generatedFile, "/")
@@ -72,7 +71,6 @@ func (f *File) Connect() error {
 			}
 
 			if err != nil {
-				fmt.Errorf("Failed to initialise file [%s] [%s]", generatedFile, err)
 				return err
 			}
 			writers = append(writers, of)
