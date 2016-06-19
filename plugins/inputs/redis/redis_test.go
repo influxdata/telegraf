@@ -35,7 +35,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	err := gatherInfoOutput(rdr, &acc, tags)
 	require.NoError(t, err)
 
-	tags = map[string]string{"host": "redis.net", "role": "master"}
+	tags = map[string]string{"host": "redis.net", "replication_role": "master"}
 	fields := map[string]interface{}{
 		"uptime":                      uint64(238),
 		"clients":                     uint64(1),
@@ -71,7 +71,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"used_cpu_user_children":      float64(0.00),
 		"keyspace_hitrate":            float64(0.50),
 	}
-	keyspaceTags := map[string]string{"host": "redis.net", "role": "master", "database": "db0"}
+	keyspaceTags := map[string]string{"host": "redis.net", "replication_role": "master", "database": "db0"}
 	keyspaceFields := map[string]interface{}{
 		"avg_ttl": uint64(0),
 		"expires": uint64(0),

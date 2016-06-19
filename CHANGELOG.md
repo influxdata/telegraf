@@ -33,6 +33,7 @@ should now look like:
 - [#1402](https://github.com/influxdata/telegraf/pull/1402): docker-machine/boot2docker no longer required for unit tests.
 - [#1350](https://github.com/influxdata/telegraf/pull/1350): cgroup input plugin.
 - [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
+- [#1387](https://github.com/influxdata/telegraf/pull/1387): **Breaking Change** - Redis `role` tag renamed to `replication_role` to avoid global_tags override
 
 ### Bugfixes
 
