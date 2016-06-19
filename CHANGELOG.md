@@ -65,6 +65,8 @@ should now look like:
 - [#1434](https://github.com/influxdata/telegraf/pull/1434): Add measurement name arg to logparser plugin.
 - [#1479](https://github.com/influxdata/telegraf/pull/1479): logparser: change resp_code from a field to a tag.
 - [#1411](https://github.com/influxdata/telegraf/pull/1411): Implement support for fetching hddtemp data
+- [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
+- [#1389](https://github.com/influxdata/telegraf/pull/1389): Add a new and improved SNMP plugin (snmp2).
 
 ### Bugfixes
 
