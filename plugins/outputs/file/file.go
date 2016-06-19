@@ -15,8 +15,6 @@ import (
 type File struct {
 	Files []string
 
-	Timestamp bool
-
 	writer  io.Writer
 	closers []io.Closer
 
@@ -25,10 +23,9 @@ type File struct {
 
 var sampleConfig = `
   ## Files to write to, "stdout" is a specially handled file.
+  ## Will also accept fromats such as /tmp/{020106}/metrics{020106.150406}.out
   files = ["stdout", "/tmp/metrics.out"]
 
-  ## Prefix each output line with timestamp
-  timestamp = true
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
@@ -107,12 +104,6 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	prefix := ""
-	if f.Timestamp {
-		t := time.Now().UTC()
-		prefix = t.Format(time.RFC3339) + " "
-	}
-
 	for _, metric := range metrics {
 		values, err := f.serializer.Serialize(metric)
 		if err != nil {
@@ -120,7 +111,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, value := range values {
-			_, err = f.writer.Write([]byte(prefix + value + "\n"))
+			_, err = f.writer.Write([]byte(value + "\n"))
 			if err != nil {
 				return fmt.Errorf("FAILED to write message: %s, %s", value, err)
 			}
