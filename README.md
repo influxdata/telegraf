@@ -190,6 +190,7 @@ Currently implemented sources:
 * [riak](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/riak)
 * [sensors ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sensors) (only available if built from source)
 * [snmp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
+* [snmp2](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp2)
 * [sql server](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sqlserver) (microsoft)
 * [twemproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/twemproxy)
 * [varnish](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/varnish)
