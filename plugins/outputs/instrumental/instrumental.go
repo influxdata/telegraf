@@ -29,7 +29,7 @@ type Instrumental struct {
 
 const (
 	DefaultHost     = "collector.instrumentalapp.com"
-	HelloMessage    = "hello version go/telegraf/1.0\n"
+	HelloMessage    = "hello version go/telegraf/1.1\n"
 	AuthFormat      = "authenticate %s\n"
 )
 
