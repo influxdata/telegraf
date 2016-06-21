@@ -133,8 +133,8 @@ func GetTLSConfig(
 		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf(
-				"Could not load TLS client key/certificate: %s",
-				err))
+				"Could not load TLS client key/certificate from %s:%s: %s",
+				SSLKey, SSLCert, err))
 		}
 
 		t.Certificates = []tls.Certificate{cert}
