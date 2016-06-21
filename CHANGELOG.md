@@ -61,6 +61,7 @@ should now look like:
 - [#1374](https://github.com/influxdata/telegraf/pull/1374): Change "default" retention policy to "".
 - [#1377](https://github.com/influxdata/telegraf/issues/1377): Graphite output mangling '%' character.
 - [#1396](https://github.com/influxdata/telegraf/pull/1396): Prometheus input plugin now supports x509 certs authentication
+- [#1](https://github.com/Instrumental/telegraf/pull/1): Instrumental output has better reconnect behavior
 
 ## v1.0 beta 1 [2016-06-07]
 
