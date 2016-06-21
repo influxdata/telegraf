@@ -1,4 +1,10 @@
-## v1.0 beta 2 [unreleased]
+## v1.0
+
+### Features
+
+### Bugfixes
+
+## v1.0 beta 2 [2016-06-21]
 
 ### Features
 
