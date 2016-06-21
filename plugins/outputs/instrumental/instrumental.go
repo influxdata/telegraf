@@ -28,8 +28,9 @@ type Instrumental struct {
 }
 
 const (
-	DefaultHost = "collector.instrumentalapp.com"
-	AuthFormat  = "hello version go/telegraf/1.0\nauthenticate %s\n"
+	DefaultHost     = "collector.instrumentalapp.com"
+	HelloMessage    = "hello version go/telegraf/1.0\n"
+	AuthFormat      = "authenticate %s\n"
 )
 
 var (
@@ -52,6 +53,13 @@ var sampleConfig = `
 
 func (i *Instrumental) Connect() error {
 	connection, err := net.DialTimeout("tcp", i.Host+":8000", i.Timeout.Duration)
+
+	if err != nil {
+		i.conn = nil
+		return err
+	}
+
+	err = i.hello(connection)
 	if err != nil {
 		i.conn = nil
 		return err
@@ -151,6 +159,11 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
+	// force the connection closed after sending data
+	// to deal with various disconnection scenarios and eschew holding
+	// open idle connections en masse
+	i.Close()
+
 	return nil
 }
 
@@ -162,19 +175,39 @@ func (i *Instrumental) SampleConfig() string {
 	return sampleConfig
 }
 
+func (i *Instrumental) hello(conn net.Conn) error {
+	_, err := fmt.Fprintf(conn, HelloMessage)
+	if err != nil {
+		return err
+	}
+
+	response := make([]byte, 512)
+	if _, err = conn.Read(response); err != nil {
+		fmt.Println("hello err", err)
+		return err
+	}
+
+	if string(response)[:3] != "ok\n" {
+		return fmt.Errorf("Hello failed: %s", response)
+	}
+
+	return nil
+}
+
 func (i *Instrumental) authenticate(conn net.Conn) error {
 	_, err := fmt.Fprintf(conn, AuthFormat, i.ApiToken)
 	if err != nil {
 		return err
 	}
 
-	// The response here will either be two "ok"s or an error message.
+	// The response here will either be an "ok" or an error message.
 	responses := make([]byte, 512)
 	if _, err = conn.Read(responses); err != nil {
+		fmt.Println("err was not nil: ", err)
 		return err
 	}
 
-	if string(responses)[:6] != "ok\nok\n" {
+	if string(responses)[:3] != "ok\n" {
 		return fmt.Errorf("Authentication failed: %s", responses)
 	}
 
