@@ -66,6 +66,8 @@ func TestRiak(t *testing.T) {
 		"node_put_fsm_time_99":         int64(84422),
 		"node_put_fsm_time_mean":       int64(10832),
 		"node_put_fsm_time_median":     int64(4085),
+		"read_repairs":                 int64(2),
+		"read_repairs_total":           int64(7918375),
 		"node_puts":                    int64(1155),
 		"node_puts_total":              int64(444895769),
 		"pbc_active":                   int64(360),
