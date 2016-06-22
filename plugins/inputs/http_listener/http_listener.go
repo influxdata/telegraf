@@ -31,7 +31,7 @@ type HttpListener struct {
 
 const sampleConfig = `
   ## Address and port to host HTTP listener on
-  service_address = ":8086"
+  service_address = ":8186"
 
   ## timeouts in seconds
   read_timeout = "10"
@@ -103,23 +103,37 @@ func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, err := ioutil.ReadAll(req.Body)
 
 	if err == nil {
-		log.Printf("Received request: [%s]\n", string(body))
+		var path = req.URL.Path[1:]
 
-		var metrics []telegraf.Metric
-		if len(body) == 0 {
-			log.Printf("No metrics to parse\n")
-		} else {
-			metrics, err = t.parser.Parse(body)
-			if err == nil {
-				t.storeMetrics(metrics)
-				log.Printf("Persisted %d metrics\n", len(metrics))
+		if path == "write" {
+			log.Printf("Received write request: [%s]\n", string(body))
+
+			var metrics []telegraf.Metric
+			if len(body) == 0 {
+				log.Printf("No metrics to parse\n")
 			} else {
-				log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
-				res.WriteHeader(500)
-				res.Write([]byte("ERROR parsing metrics"))
+				metrics, err = t.parser.Parse(body)
+				if err == nil {
+					t.storeMetrics(metrics)
+					log.Printf("Persisted %d metrics\n", len(metrics))
+				} else {
+					log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
+					res.WriteHeader(500)
+					res.Write([]byte("ERROR parsing metrics"))
+				}
+				res.WriteHeader(204)
+				res.Write([]byte(""))
 			}
-			res.WriteHeader(204)
-			res.Write([]byte(""))
+		} else if path == "query" {
+			// Deliver a dummy response to the query endpoint, as some InfluxDB clients test endpoint availability with a query
+			log.Printf("Received query request: [%s]\n", string(body))
+			res.WriteHeader(200)
+			res.Write([]byte("{\"results\":[]}"))
+		} else {
+			// Don't know how to respond to calls to other endpoints
+			log.Printf("Received unknown %s request: [%s]\n", path, string(body))
+			res.WriteHeader(404)
+			res.Write([]byte("Not Found"))
 		}
 	} else {
 		log.Printf("Problem reading request: [%s], Error: %s\n", string(body), err)

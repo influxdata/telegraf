@@ -5,7 +5,7 @@ The plugin expects messages in the InfluxDB line-protocol ONLY, other Telegraf i
 The intent of the plugin is to allow Telegraf to serve as a proxy/router for the /write endpoint of the InfluxDB HTTP API.
 
 See: [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx).
-Example:  curl -i -XPOST 'http://localhost:8086/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
+Example:  curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 
 ### Configuration:
 
@@ -15,7 +15,7 @@ This is a sample configuration for the plugin.
 # # Influx HTTP write listener
 [[inputs.http_listener]]
   ## Address and port to host HTTP listener on
-  service_address = ":8086"
+  service_address = ":8186"
 
   ## timeouts in seconds
   read_timeout = "10"
