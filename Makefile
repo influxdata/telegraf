@@ -1,4 +1,3 @@
-UNAME := $(shell sh -c 'uname')
 VERSION := $(shell sh -c 'git describe --always --tags')
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
@@ -46,20 +45,11 @@ prepare-windows:
 
 # Run all docker containers necessary for unit tests
 docker-run:
-ifeq ($(UNAME), Darwin)
-	docker run --name kafka \
-		-e ADVERTISED_HOST=$(shell sh -c 'boot2docker ip || docker-machine ip default') \
-		-e ADVERTISED_PORT=9092 \
-		-p "2181:2181" -p "9092:9092" \
-		-d spotify/kafka
-endif
-ifeq ($(UNAME), Linux)
 	docker run --name kafka \
 		-e ADVERTISED_HOST=localhost \
 		-e ADVERTISED_PORT=9092 \
 		-p "2181:2181" -p "9092:9092" \
 		-d spotify/kafka
-endif
 	docker run --name mysql -p "3306:3306" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql
 	docker run --name memcached -p "11211:11211" -d memcached
 	docker run --name postgres -p "5432:5432" -d postgres
