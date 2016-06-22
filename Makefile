@@ -57,6 +57,13 @@ docker-run:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
 	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
+	docker run --name pgbouncer \
+		-p "6432:6432" \
+		-e PGB_USERLISTS="postgres:postgres" \
+		-e PGB_ADMIN_USERS="postgres" \
+		-e PGB_STATS_USERS="postgres" \
+		--link postgres:pg \
+		-d jsvisa/pgbouncer
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -70,11 +77,17 @@ docker-run-circle:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
 	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
+	docker run --name pgbouncer \
+		-p "6432:6432" \
+		-e PGB_USERLISTS="postgres:postgres" \
+		-e PGB_ADMIN_USERS="postgres" \
+		-e PGB_STATS_USERS="postgres" \
+		-d jsvisa/pgbouncer
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann snmp
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann snmp
+	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann snmp pgbouncer
+	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann snmp pgbouncer
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: vet docker-kill docker-run
