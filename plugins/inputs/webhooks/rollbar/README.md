@@ -1,15 +1,6 @@
-# rollbar_webhooks
+# rollbar webhooks
 
-This is a Telegraf service plugin that listens for events kicked off by Rollbar Webhooks service and persists data from them into configured outputs. To set up the listener first generate the proper configuration:
-```sh
-$ telegraf -sample-config -input-filter rollbar_webhooks -output-filter influxdb > config.conf.new
-```
-Change the config file to point to the InfluxDB server you are using and adjust the settings to match your environment. Once that is complete:
-```sh
-$ cp config.conf.new /etc/telegraf/telegraf.conf
-$ sudo service telegraf start
-```
-Once the server is running you should configure your Rollbar's Webhooks to point at the `rollbar_webhooks` service. To do this go to `rollbar.com/` and click `Settings > Notifications > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619`, and click on `Enable Webhook Integration`.
+You should configure your Rollbar's Webhooks to point at the `webhooks` service. To do this go to `rollbar.com/` and click `Settings > Notifications > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/rollbar`, and click on `Enable Webhook Integration`.
 
 ## Events
 

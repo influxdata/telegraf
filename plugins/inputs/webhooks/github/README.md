@@ -1,15 +1,6 @@
-# github_webhooks
+# github webhooks
 
-This is a Telegraf service plugin that listens for events kicked off by Github's Webhooks service and persists data from them into configured outputs. To set up the listener first generate the proper configuration:
-```sh
-$ telegraf -sample-config -input-filter github_webhooks -output-filter influxdb > config.conf.new
-```
-Change the config file to point to the InfluxDB server you are using and adjust the settings to match your environment. Once that is complete:
-```sh
-$ cp config.conf.new /etc/telegraf/telegraf.conf
-$ sudo service telegraf start
-```
-Once the server is running you should configure your Organization's Webhooks to point at the `github_webhooks` service. To do this go to `github.com/{my_organization}` and click `Settings > Webhooks > Add webhook`. In the resulting menu set `Payload URL` to `http://<my_ip>:1618`, `Content type` to `application/json` and under the section `Which events would you like to trigger this webhook?` select 'Send me <b>everything</b>'. By default all of the events will write to the `github_webhooks` measurement, this is configurable by setting the `measurement_name` in the config file.
+You should configure your Organization's Webhooks to point at the `webhooks` service. To do this go to `github.com/{my_organization}` and click `Settings > Webhooks > Add webhook`. In the resulting menu set `Payload URL` to `http://<my_ip>:1619/github`, `Content type` to `application/json` and under the section `Which events would you like to trigger this webhook?` select 'Send me <b>everything</b>'. By default all of the events will write to the `github_webhooks` measurement, this is configurable by setting the `measurement_name` in the config file.
 
 ## Events
 
