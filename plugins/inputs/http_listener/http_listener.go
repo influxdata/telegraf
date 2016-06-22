@@ -127,6 +127,8 @@ func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		} else if path == "query" {
 			// Deliver a dummy response to the query endpoint, as some InfluxDB clients test endpoint availability with a query
 			log.Printf("Received query request: [%s]\n", string(body))
+			res.Header().Set("Content-Type", "application/json")
+			res.Header().Set("X-Influxdb-Version", "1.0")
 			res.WriteHeader(200)
 			res.Write([]byte("{\"results\":[]}"))
 		} else {
