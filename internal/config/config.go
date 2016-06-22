@@ -539,6 +539,13 @@ func (c *Config) LoadConfig(path string) error {
 	return nil
 }
 
+// trimBOM trims the Byte-Order-Marks from the beginning of the file.
+// this is for Windows compatability only.
+// see https://github.com/influxdata/telegraf/issues/1378
+func trimBOM(fileBytes []byte) []byte {
+	return bytes.Trim(fileBytes, "\xef\xbb\xbf")
+}
+
 // parseFile loads a TOML configuration from a provided path and
 // returns the AST produced from the TOML parser. When loading the file, it
 // will find environment variables and replace them.
@@ -547,6 +554,8 @@ func parseFile(fpath string) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
+	// ugh windows why
+	contents = trimBOM(contents)
 
 	env_vars := envVarRe.FindAll(contents, -1)
 	for _, env_var := range env_vars {

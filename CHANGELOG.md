@@ -37,6 +37,7 @@ should now look like:
 - [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
 - [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
 - [#1405](https://github.com/influxdata/telegraf/issues/1405): Fix memory/connection leak in prometheus input plugin.
+- [#1378](https://github.com/influxdata/telegraf/issues/1378): Trim BOM from config file for Windows support.
 
 ## v1.0 beta 2 [2016-06-21]
 
