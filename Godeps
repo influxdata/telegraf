@@ -25,6 +25,7 @@ github.com/gorilla/mux c9e326e2bdec29039a3761c07bece13133863e1e
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 5aa90455ce78d4d41578bafc86305e6e6b28d7d2
 github.com/hpcloud/tail b2940955ab8b26e19d43a43c4da0475dd81bdb56
+github.com/hydrogen18/stoppableListener dadc9ccc400c712e5a316107a5c462863919e579
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
 github.com/influxdata/influxdb e094138084855d444195b252314dfee9eae34cab
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
@@ -37,7 +38,6 @@ github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/nats b13fc9d12b0b123ebc374e6b808c6228ae4234a3
 github.com/nats-io/nuid 4f84f5f3b2786224e336af2e13dba0a0a80b76fa
 github.com/nsqio/go-nsq 0b80d6f05e15ca1930e0c5e1d540ed627e299980
-github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
 github.com/prometheus/client_golang 18acf9993a863f4c4b40612e19cdd243e7c86831
 github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37

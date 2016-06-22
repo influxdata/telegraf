@@ -13,12 +13,13 @@ import (
 	"io/ioutil"
 
 	"github.com/hydrogen18/stoppableListener"
+	"strconv"
 )
 
 type HttpListener struct {
 	ServiceAddress  string
-	readTimeout	int
-	writeTimeout	int
+	ReadTimeout	string
+	WriteTimeout	string
 
 	sync.Mutex
 
@@ -84,44 +85,47 @@ func (t *HttpListener) Stop() {
 // httpListen listens for HTTP requests.
 func (t *HttpListener) httpListen() error {
 
+	readTimeout, err := strconv.ParseInt(t.ReadTimeout, 10, 32)
+	writeTimeout, err := strconv.ParseInt(t.WriteTimeout, 10, 32)
+
 	var server = http.Server{
-		Handler:        t.writeHandler,
-		ReadTimeout:    t.readTimeout * time.Second,
-		WriteTimeout:   t.writeTimeout * time.Second,
+		Handler:        t,
+		ReadTimeout:    time.Duration(readTimeout) * time.Second,
+		WriteTimeout:   time.Duration(writeTimeout) * time.Second,
 	}
 
-	var err = server.Serve(t.listener)
+	err = server.Serve(t.listener)
 
 	return err
 }
 
-func (t *HttpListener) writeHandler(res http.ResponseWriter, req *http.Request) error {
+func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, err := ioutil.ReadAll(req.Body)
 
 	if err == nil {
+		log.Printf("Received request: [%s]\n", string(body))
+
 		var metrics []telegraf.Metric
-		for {
-			if len(body) == 0 {
-				continue
-			}
+		if len(body) == 0 {
+			log.Printf("No metrics to parse\n")
+		} else {
 			metrics, err = t.parser.Parse(body)
 			if err == nil {
 				t.storeMetrics(metrics)
+				log.Printf("Persisted %d metrics\n", len(metrics))
 			} else {
 				log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
 				res.WriteHeader(500)
 				res.Write([]byte("ERROR parsing metrics"))
 			}
+			res.WriteHeader(204)
+			res.Write([]byte(""))
 		}
-		res.WriteHeader(204)
-		res.Write([]byte(""))
 	} else {
 		log.Printf("Problem reading request: [%s], Error: %s\n", string(body), err)
 		res.WriteHeader(500)
 		res.Write([]byte("ERROR reading request"))
 	}
-
-	return err
 }
 
 func (t *HttpListener) storeMetrics(metrics []telegraf.Metric) error {
