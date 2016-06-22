@@ -88,6 +88,7 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 			InsecureSkipVerify: p.InsecureSkipVerify,
 		},
 		ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		DisableKeepAlives:     true,
 	}
 
 	if p.BearerToken != "" {
