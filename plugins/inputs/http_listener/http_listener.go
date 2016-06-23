@@ -1,19 +1,18 @@
 package http_listener
 
 import (
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/http_listener/stoppableListener"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"io/ioutil"
-
-	"github.com/hydrogen18/stoppableListener"
-	"strconv"
 )
 
 type HttpListener struct {

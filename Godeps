@@ -25,7 +25,6 @@ github.com/gorilla/mux c9e326e2bdec29039a3761c07bece13133863e1e
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 5aa90455ce78d4d41578bafc86305e6e6b28d7d2
 github.com/hpcloud/tail b2940955ab8b26e19d43a43c4da0475dd81bdb56
-github.com/hydrogen18/stoppableListener dadc9ccc400c712e5a316107a5c462863919e579
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
 github.com/influxdata/influxdb e094138084855d444195b252314dfee9eae34cab
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
