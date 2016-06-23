@@ -41,7 +41,6 @@ All measurements have the following tags:
 
 ```
 # [[inputs.cgroup]]
-  # flush_scope = 10              # optional (the fields will be divided into parts of 10 items)
   # paths = [
   #   "/cgroup/memory",           # root cgroup
   #   "/cgroup/memory/child1",    # container cgroup

@@ -18,9 +18,8 @@ import (
 const metricName = "cgroup"
 
 type CGroup struct {
-	Paths      []string `toml:"paths"`
-	Files      []string `toml:"fields"`
-	FlushScope int      `toml:"flush_scope"`
+	Paths []string `toml:"paths"`
+	Files []string `toml:"fields"`
 }
 
 var sampleConfig = `
@@ -83,29 +82,9 @@ func (g *CGroup) gatherDir(dir string, acc telegraf.Accumulator) error {
 
 	tags := map[string]string{"path": dir}
 
-	if g.FlushScope <= 0 {
-		acc.AddFields(metricName, fields, tags)
-		return nil
-	}
-	writeWithBatches(acc, fields, tags, g.FlushScope)
+	acc.AddFields(metricName, fields, tags)
 
 	return nil
-}
-
-func writeWithBatches(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, scope int) {
-	for len(fields) > 0 {
-		batch := make(map[string]interface{})
-
-		for k, v := range fields {
-			batch[k] = v
-			delete(fields, k)
-			if len(batch) == scope || len(fields) == 0 {
-				break
-			}
-		}
-
-		acc.AddFields(metricName, batch, tags)
-	}
 }
 
 // ======================================================================
