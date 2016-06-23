@@ -18,9 +18,15 @@ type MandrillWebhook struct {
 }
 
 func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
+	router.HandleFunc(md.Path, md.returnOK).Methods("HEAD")
 	router.HandleFunc(md.Path, md.eventHandler).Methods("POST")
+
 	log.Printf("Started the webhooks_mandrill on %s\n", md.Path)
 	md.acc = acc
+}
+
+func (md *MandrillWebhook) returnOK(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
