@@ -1,12 +1,12 @@
 package mandrill
 
 import (
-	"net/url"
+	"github.com/influxdata/telegraf/testutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
-	"github.com/influxdata/telegraf/testutil"
 )
 
 func postWebhooks(md *MandrillWebhook, eventBody string) *httptest.ResponseRecorder {
@@ -40,13 +40,13 @@ func TestHead(t *testing.T) {
 func TestSendEvent(t *testing.T) {
 	var acc testutil.Accumulator
 	md := &MandrillWebhook{Path: "/mandrill", acc: &acc}
-	resp := postWebhooks(md, "["+ SendEventJSON() +"]")
+	resp := postWebhooks(md, "["+SendEventJSON()+"]")
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST send returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
 	fields := map[string]interface{}{
-		"id":"id1",
+		"id": "id1",
 	}
 
 	tags := map[string]string{
@@ -56,17 +56,16 @@ func TestSendEvent(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "mandrill_webhooks", fields, tags)
 }
 
-
 func TestMultipleEvents(t *testing.T) {
 	var acc testutil.Accumulator
 	md := &MandrillWebhook{Path: "/mandrill", acc: &acc}
-	resp := postWebhooks(md, "["+ SendEventJSON() +","+ HardBounceEventJSON() +"]")
+	resp := postWebhooks(md, "["+SendEventJSON()+","+HardBounceEventJSON()+"]")
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST send returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
 	fields := map[string]interface{}{
-		"id":"id1",
+		"id": "id1",
 	}
 
 	tags := map[string]string{
@@ -76,7 +75,7 @@ func TestMultipleEvents(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "mandrill_webhooks", fields, tags)
 
 	fields = map[string]interface{}{
-		"id":"id2",
+		"id": "id2",
 	}
 
 	tags = map[string]string{

@@ -26,9 +26,9 @@ func init() {
 type Webhooks struct {
 	ServiceAddress string
 
-	Github  *github.GithubWebhook
+	Github   *github.GithubWebhook
 	Mandrill *mandrill.MandrillWebhook
-	Rollbar *rollbar.RollbarWebhook
+	Rollbar  *rollbar.RollbarWebhook
 }
 
 func NewWebhooks() *Webhooks {
