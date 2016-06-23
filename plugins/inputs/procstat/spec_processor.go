@@ -2,6 +2,8 @@ package procstat
 
 import (
 	"time"
+	"regexp"
+	"strconv"
 
 	"github.com/shirou/gopsutil/process"
 
@@ -19,6 +21,8 @@ type SpecProcessor struct {
 func NewSpecProcessor(
 	processName string,
 	prefix string,
+	cmdlineRegex string,
+	parentCmdlineRegex string,
 	acc telegraf.Accumulator,
 	p *process.Process,
 	tags map[string]string,
@@ -31,6 +35,33 @@ func NewSpecProcessor(
 			tags["process_name"] = name
 		}
 	}
+
+	if cmdlineRegex != "" {
+		val := CmdlineSubstrings(p, &cmdlineRegex)
+		for i, value := range val {
+			tags["cmdline." + strconv.Itoa(i)] = value
+		}
+	}
+
+	ppid, err := p.Ppid()
+	if err == nil {
+		tags["ppid"] = strconv.Itoa(int(ppid))
+
+		pp, err := process.NewProcess(ppid)
+		if err == nil {
+			parentName, err := pp.Name()
+			if err == nil {
+				tags["parent_name"] = parentName
+			}
+			if parentCmdlineRegex != "" {
+				val := CmdlineSubstrings(pp, &parentCmdlineRegex)
+				for i, value := range val {
+					tags["pcmdline." + strconv.Itoa(i)] = value
+				}
+			}
+		}
+	}
+
 	return &SpecProcessor{
 		Prefix: prefix,
 		tags:   tags,
@@ -38,6 +69,20 @@ func NewSpecProcessor(
 		acc:    acc,
 		proc:   p,
 	}
+}
+
+func CmdlineSubstrings(p *process.Process, regex *string) []string {
+	cmdline, err := p.Cmdline()
+	if err == nil {
+		re, err := regexp.Compile(*regex)
+		if err == nil {
+			cmdlineSubmatch := re.FindStringSubmatch(cmdline)
+			if cmdlineSubmatch != nil {
+				return cmdlineSubmatch[1:]
+			}
+		}
+	}
+	return nil
 }
 
 func (p *SpecProcessor) pushMetrics() {
