@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -24,14 +25,18 @@ func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator
 
 func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	data, err := ioutil.ReadAll(r.Body)
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
+	data, err := url.ParseQuery(string(body))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	var events []MandrillEvent
-	err = json.Unmarshal(data, &events)
+	err = json.Unmarshal([]byte(data.Get("mandrill_events")), &events)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

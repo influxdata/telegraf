@@ -1,16 +1,18 @@
 package mandrill
 
 import (
+	"net/url"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func postWebhooks(md *MandrillWebhook, eventBody string) *httptest.ResponseRecorder {
-	req, _ := http.NewRequest("POST", "/mandrill", strings.NewReader(eventBody))
+	body := url.Values{}
+	body.Set("mandrill_events", eventBody)
+	req, _ := http.NewRequest("POST", "/mandrill", strings.NewReader(body.Encode()))
 	w := httptest.NewRecorder()
 	w.Code = 500
 
@@ -24,7 +26,7 @@ func TestSendEvent(t *testing.T) {
 	md := &MandrillWebhook{Path: "/mandrill", acc: &acc}
 	resp := postWebhooks(md, "["+ SendEventJSON() +"]")
 	if resp.Code != http.StatusOK {
-		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
+		t.Errorf("POST send returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
 	fields := map[string]interface{}{
@@ -44,7 +46,7 @@ func TestMultipleEvents(t *testing.T) {
 	md := &MandrillWebhook{Path: "/mandrill", acc: &acc}
 	resp := postWebhooks(md, "["+ SendEventJSON() +","+ HardBounceEventJSON() +"]")
 	if resp.Code != http.StatusOK {
-		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
+		t.Errorf("POST send returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
 	fields := map[string]interface{}{
