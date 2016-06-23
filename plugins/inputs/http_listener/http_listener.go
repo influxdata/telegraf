@@ -109,27 +109,27 @@ func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 			metrics, err = t.parser.Parse(body)
 			if err == nil {
 				t.storeMetrics(metrics)
+				res.WriteHeader(http.StatusNoContent)
+				res.Write([]byte(""))
 			} else {
 				log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
-				res.WriteHeader(500)
+				res.WriteHeader(http.StatusInternalServerError)
 				res.Write([]byte("ERROR parsing metrics"))
 			}
-			res.WriteHeader(204)
-			res.Write([]byte(""))
 		} else if path == "query" {
 			// Deliver a dummy response to the query endpoint, as some InfluxDB clients test endpoint availability with a query
 			res.Header().Set("Content-Type", "application/json")
 			res.Header().Set("X-Influxdb-Version", "1.0")
-			res.WriteHeader(200)
+			res.WriteHeader(http.StatusOK)
 			res.Write([]byte("{\"results\":[]}"))
 		} else {
 			// Don't know how to respond to calls to other endpoints
-			res.WriteHeader(404)
+			res.WriteHeader(http.StatusNotFound)
 			res.Write([]byte("Not Found"))
 		}
 	} else {
 		log.Printf("Problem reading request: [%s], Error: %s\n", string(body), err)
-		res.WriteHeader(500)
+		res.WriteHeader(http.StatusInternalServerError)
 		res.Write([]byte("ERROR reading request"))
 	}
 }
