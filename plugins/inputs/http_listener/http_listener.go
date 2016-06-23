@@ -17,9 +17,9 @@ import (
 )
 
 type HttpListener struct {
-	ServiceAddress  string
-	ReadTimeout	string
-	WriteTimeout	string
+	ServiceAddress string
+	ReadTimeout    string
+	WriteTimeout   string
 
 	sync.Mutex
 
@@ -89,9 +89,9 @@ func (t *HttpListener) httpListen() error {
 	writeTimeout, err := strconv.ParseInt(t.WriteTimeout, 10, 32)
 
 	var server = http.Server{
-		Handler:        t,
-		ReadTimeout:    time.Duration(readTimeout) * time.Second,
-		WriteTimeout:   time.Duration(writeTimeout) * time.Second,
+		Handler:      t,
+		ReadTimeout:  time.Duration(readTimeout) * time.Second,
+		WriteTimeout: time.Duration(writeTimeout) * time.Second,
 	}
 
 	err = server.Serve(t.listener)

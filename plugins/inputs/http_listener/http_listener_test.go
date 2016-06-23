@@ -7,9 +7,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
+	"bytes"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"bytes"
 )
 
 const (
@@ -26,11 +26,11 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 	emptyMsg = ""
 )
 
-func newTestHttpListener() (*HttpListener) {
+func newTestHttpListener() *HttpListener {
 	listener := &HttpListener{
 		ServiceAddress: ":8186",
-		ReadTimeout: "10",
-		WriteTimeout: "10",
+		ReadTimeout:    "10",
+		WriteTimeout:   "10",
 	}
 	return listener
 }
@@ -125,4 +125,3 @@ func TestQueryHTTP(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 200, resp.StatusCode)
 }
-
