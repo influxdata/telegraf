@@ -1,9 +1,9 @@
 package procstat
 
 import (
-	"time"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/shirou/gopsutil/process"
 
@@ -39,7 +39,7 @@ func NewSpecProcessor(
 	if cmdlineRegex != "" {
 		val := CmdlineSubstrings(p, &cmdlineRegex)
 		for i, value := range val {
-			tags["cmdline." + strconv.Itoa(i)] = value
+			tags["cmdline."+strconv.Itoa(i)] = value
 		}
 	}
 
@@ -56,7 +56,7 @@ func NewSpecProcessor(
 			if parentCmdlineRegex != "" {
 				val := CmdlineSubstrings(pp, &parentCmdlineRegex)
 				for i, value := range val {
-					tags["pcmdline." + strconv.Itoa(i)] = value
+					tags["pcmdline."+strconv.Itoa(i)] = value
 				}
 			}
 		}
