@@ -46,7 +46,7 @@ All measurements have the following tags:
   #   "/cgroup/memory/child1",    # container cgroup
   #   "/cgroup/memory/child2/*",  # all children cgroups under child2, but not child2 itself
   # ]
-  # fields = ["memory.*usage*", "memory.limit_in_bytes"]
+  # files = ["memory.*usage*", "memory.limit_in_bytes"]
 
 # [[inputs.cgroup]]
   # paths = [
@@ -54,5 +54,5 @@ All measurements have the following tags:
   #   "/cgroup/cpu/*",            # all container cgroups
   #   "/cgroup/cpu/*/*",          # all children cgroups under each container cgroup
   # ]
-  # fields = ["cpuacct.usage", "cpu.cfs_period_us", "cpu.cfs_quota_us"]
+  # files = ["cpuacct.usage", "cpu.cfs_period_us", "cpu.cfs_quota_us"]
 ```
