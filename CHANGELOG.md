@@ -30,6 +30,7 @@ should now look like:
 
 - [#1289](https://github.com/influxdata/telegraf/pull/1289): webhooks input plugin. Thanks @francois2metz and @cduez!
 - [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar webhook plugin.
+- [#1408](https://github.com/influxdata/telegraf/pull/1408): mandrill webhook plugin.
 - [#1402](https://github.com/influxdata/telegraf/pull/1402): docker-machine/boot2docker no longer required for unit tests.
 - [#1350](https://github.com/influxdata/telegraf/pull/1350): cgroup input plugin.
 - [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
