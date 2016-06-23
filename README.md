@@ -156,6 +156,7 @@ Currently implemented sources:
 * [exec](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [filestat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/filestat)
 * [haproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/haproxy)
+* [hddtemp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/hddtemp)
 * [http_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_response)
 * [httpjson](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [influxdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/influxdb)
