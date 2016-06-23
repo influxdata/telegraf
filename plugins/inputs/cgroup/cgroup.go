@@ -19,16 +19,19 @@ const metricName = "cgroup"
 
 type CGroup struct {
 	Paths []string `toml:"paths"`
-	Files []string `toml:"fields"`
+	Files []string `toml:"files"`
 }
 
 var sampleConfig = `
+    ## Directories in which to look for files, globs are supported.
 	# paths = [
 	#   "/cgroup/memory",
 	#   "/cgroup/memory/child1",
 	#   "/cgroup/memory/child2/*",
 	# ]
-	# fields = ["memory.*usage*", "memory.limit_in_bytes"]
+	## cgroup stat fields, as file names, globs are supported.
+	## these file names are appended to each path from above.
+	# files = ["memory.*usage*", "memory.limit_in_bytes"]
 `
 
 func (g *CGroup) SampleConfig() string {
