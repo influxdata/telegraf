@@ -25,7 +25,7 @@ func SendEventJSON() string {
 	      "_id": "exampleaaaaaaaaaaaaaaaaaaaaaaaaa",
 	      "_version": "exampleaaaaaaaaaaaaaaa"
 	    },
-	    "_id": "exampleaaaaaaaaaaaaaaaaaaaaaaaaa",
+	    "_id": "id1",
 	    "ts": 1384954004
 	}`
 }
@@ -52,7 +52,7 @@ func HardBounceEventJSON() string {
 	      "bgtools_code": 10,
 	      "diag": "smtp;550 5.1.1 The email account that you tried to reach does not exist. Please try double-checking the recipient's email address for typos or unnecessary spaces."
 	    },
-	    "_id": "exampleaaaaaaaaaaaaaaaaaaaaaaaaa2",
+	    "_id": "id2",
 	    "ts": 1384954004
 	}`
 }

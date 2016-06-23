@@ -28,7 +28,7 @@ func TestSendEvent(t *testing.T) {
 	}
 
 	fields := map[string]interface{}{
-		"id":"1",
+		"id":"id1",
 	}
 
 	tags := map[string]string{
@@ -48,7 +48,7 @@ func TestMultipleEvents(t *testing.T) {
 	}
 
 	fields := map[string]interface{}{
-		"id":"1",
+		"id":"id1",
 	}
 
 	tags := map[string]string{
@@ -58,7 +58,7 @@ func TestMultipleEvents(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "mandrill_webhooks", fields, tags)
 
 	fields = map[string]interface{}{
-		"id":"1",
+		"id":"id2",
 	}
 
 	tags = map[string]string{
