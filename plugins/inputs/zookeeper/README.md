@@ -32,7 +32,7 @@ echo mntr | nc localhost 2181
 
 Meta:
 - units: int64
-- tags: `server=<hostname> port=<port>`
+- tags: `server=<hostname> port=<port> state=<leader|follower>`
 
 Measurement names:
 - zookeeper_avg_latency
@@ -55,8 +55,12 @@ Measurement names:
 
 Meta:
 - units: string
-- tags: `server=<hostname> port=<port>`
+- tags: `server=<hostname> port=<port> state=<leader|follower>`
 
 Measurement names:
 - zookeeper_version
-- zookeeper_server_state
+
+### Tags:
+
+- All measurements have the following tags:
+	- 
