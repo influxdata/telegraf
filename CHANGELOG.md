@@ -32,11 +32,16 @@ should now look like:
 - [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar webhook plugin.
 - [#1402](https://github.com/influxdata/telegraf/pull/1402): docker-machine/boot2docker no longer required for unit tests.
 - [#1407](https://github.com/influxdata/telegraf/pull/1407): HTTP service listener input plugin.
+- [#1350](https://github.com/influxdata/telegraf/pull/1350): cgroup input plugin.
+- [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
 
 ### Bugfixes
 
 - [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
 - [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
+- [#1405](https://github.com/influxdata/telegraf/issues/1405): Fix memory/connection leak in prometheus input plugin.
+- [#1378](https://github.com/influxdata/telegraf/issues/1378): Trim BOM from config file for Windows support.
+- [#1339](https://github.com/influxdata/telegraf/issues/1339): Prometheus client output panic on service reload.
 
 ## v1.0 beta 2 [2016-06-21]
 
@@ -56,6 +61,7 @@ should now look like:
 - [#1335](https://github.com/influxdata/telegraf/issues/1335): Fix overall ping timeout to be calculated based on per-ping timeout.
 - [#1374](https://github.com/influxdata/telegraf/pull/1374): Change "default" retention policy to "".
 - [#1377](https://github.com/influxdata/telegraf/issues/1377): Graphite output mangling '%' character.
+- [#1396](https://github.com/influxdata/telegraf/pull/1396): Prometheus input plugin now supports x509 certs authentication
 
 ## v1.0 beta 1 [2016-06-07]
 
