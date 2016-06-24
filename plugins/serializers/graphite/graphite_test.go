@@ -48,9 +48,9 @@ func TestGraphiteTags(t *testing.T) {
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-	tags1 := buildTags(m1.Tags())
-	tags2 := buildTags(m2.Tags())
-	tags3 := buildTags(m3.Tags())
+	tags1 := BuildTags(m1.Tags())
+	tags2 := BuildTags(m2.Tags())
+	tags3 := BuildTags(m3.Tags())
 
 	assert.Equal(t, "192_168_0_1", tags1)
 	assert.Equal(t, "first.second.192_168_0_1", tags2)

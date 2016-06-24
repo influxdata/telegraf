@@ -90,7 +90,7 @@ func SerializeBucketName(
 	// insert remaining tags into output name
 	for i, templatePart := range out {
 		if templatePart == "TAGS" {
-			out[i] = buildTags(tagsCopy)
+			out[i] = BuildTags(tagsCopy)
 			break
 		}
 	}
@@ -105,7 +105,8 @@ func SerializeBucketName(
 	return sanitizedChars.Replace(prefix + "." + strings.Join(out, "."))
 }
 
-// InsertField takes the bucket string from SerializeBucketName and replaces the
+// InsertField takes the bucket string from SerializeBucketName and replaces
+// the
 // FIELDNAME portion. If fieldName == "value", it will simply delete the
 // FIELDNAME portion.
 func InsertField(bucket, fieldName string) string {
@@ -116,7 +117,9 @@ func InsertField(bucket, fieldName string) string {
 	return strings.Replace(bucket, "FIELDNAME", fieldName, 1)
 }
 
-func buildTags(tags map[string]string) string {
+// BuildTags function is used to create a dot seprated name with all value of
+// tags
+func BuildTags(tags map[string]string) string {
 	var keys []string
 	for k := range tags {
 		keys = append(keys, k)
@@ -125,11 +128,13 @@ func buildTags(tags map[string]string) string {
 
 	var tag_str string
 	for i, k := range keys {
-		tag_value := strings.Replace(tags[k], ".", "_", -1)
-		if i == 0 {
-			tag_str += tag_value
-		} else {
-			tag_str += "." + tag_value
+		if len(tags[k]) > 0 {
+			tag_value := strings.Replace(tags[k], ".", "_", -1)
+			if i == 0 {
+				tag_str += tag_value
+			} else {
+				tag_str += "." + tag_value
+			}
 		}
 	}
 	return tag_str

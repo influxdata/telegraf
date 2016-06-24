@@ -1,7 +1,6 @@
 package librato
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -16,15 +15,15 @@ import (
 )
 
 var (
-	fakeUrl   = "http://test.librato.com"
+	fakeURL   = "http://test.librato.com"
 	fakeUser  = "telegraf@influxdb.com"
 	fakeToken = "123456"
 )
 
 func fakeLibrato() *Librato {
-	l := NewLibrato(fakeUrl)
-	l.ApiUser = fakeUser
-	l.ApiToken = fakeToken
+	l := NewLibrato(fakeURL)
+	l.APIUser = fakeUser
+	l.APIToken = fakeToken
 	return l
 }
 
@@ -43,8 +42,8 @@ func TestUriOverride(t *testing.T) {
 	defer ts.Close()
 
 	l := NewLibrato(ts.URL)
-	l.ApiUser = "telegraf@influxdb.com"
-	l.ApiToken = "123456"
+	l.APIUser = "telegraf@influxdb.com"
+	l.APIToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
 	err = l.Write(testutil.MockMetrics())
@@ -52,28 +51,22 @@ func TestUriOverride(t *testing.T) {
 }
 
 func TestBadStatusCode(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(`{
-      "errors": {
-        "system": [
-          "The API is currently down for maintenance. It'll be back shortly."
-        ]
-      }
-    }`)
-	}))
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
 	defer ts.Close()
 
 	l := NewLibrato(ts.URL)
-	l.ApiUser = "telegraf@influxdb.com"
-	l.ApiToken = "123456"
+	l.APIUser = "telegraf@influxdb.com"
+	l.APIToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
 	err = l.Write(testutil.MockMetrics())
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
-		require.EqualError(t, fmt.Errorf("received bad status code, 503\n"), err.Error())
+		require.EqualError(t, fmt.Errorf("received bad status code, 503\n "), err.Error())
 	}
 }
 
@@ -86,54 +79,60 @@ func TestBuildGauge(t *testing.T) {
 		{
 			testutil.TestMetric(0.0, "test1"),
 			&Gauge{
-				Name:        "value1.test1",
+				Name:        "test1",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       0.0,
+				Source:      "value1",
 			},
 			nil,
 		},
 		{
 			testutil.TestMetric(1.0, "test2"),
 			&Gauge{
-				Name:        "value1.test2",
+				Name:        "test2",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       1.0,
+				Source:      "value1",
 			},
 			nil,
 		},
 		{
 			testutil.TestMetric(10, "test3"),
 			&Gauge{
-				Name:        "value1.test3",
+				Name:        "test3",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       10.0,
+				Source:      "value1",
 			},
 			nil,
 		},
 		{
 			testutil.TestMetric(int32(112345), "test4"),
 			&Gauge{
-				Name:        "value1.test4",
+				Name:        "test4",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       112345.0,
+				Source:      "value1",
 			},
 			nil,
 		},
 		{
 			testutil.TestMetric(int64(112345), "test5"),
 			&Gauge{
-				Name:        "value1.test5",
+				Name:        "test5",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       112345.0,
+				Source:      "value1",
 			},
 			nil,
 		},
 		{
 			testutil.TestMetric(float32(11234.5), "test6"),
 			&Gauge{
-				Name:        "value1.test6",
+				Name:        "test6",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       11234.5,
+				Source:      "value1",
 			},
 			nil,
 		},
@@ -144,7 +143,7 @@ func TestBuildGauge(t *testing.T) {
 		},
 	}
 
-	l := NewLibrato(fakeUrl)
+	l := NewLibrato(fakeURL)
 	for _, gt := range gaugeTests {
 		gauges, err := l.buildGauges(gt.ptIn)
 		if err != nil && gt.err == nil {
@@ -207,7 +206,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		},
 	}
 
-	l := NewLibrato(fakeUrl)
+	l := NewLibrato(fakeURL)
 	l.SourceTag = "hostname"
 	for _, gt := range gaugeTests {
 		gauges, err := l.buildGauges(gt.ptIn)
