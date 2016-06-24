@@ -542,8 +542,8 @@ func (c *Config) LoadConfig(path string) error {
 // trimBOM trims the Byte-Order-Marks from the beginning of the file.
 // this is for Windows compatability only.
 // see https://github.com/influxdata/telegraf/issues/1378
-func trimBOM(fileBytes []byte) []byte {
-	return bytes.Trim(fileBytes, "\xef\xbb\xbf")
+func trimBOM(f []byte) []byte {
+	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }
 
 // parseFile loads a TOML configuration from a provided path and
