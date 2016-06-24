@@ -80,6 +80,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1296](https://github.com/influxdata/telegraf/issues/1296): Refactor of flush_jitter argument.
 - [#1213](https://github.com/influxdata/telegraf/issues/1213): Add inactive & active memory to mem plugin.
 - [#1543](https://github.com/influxdata/telegraf/pull/1543): Official Windows service.
+- [#1414](https://github.com/influxdata/telegraf/pull/1414): Forking sensors command to remove C package dependency.
 
 ### Bugfixes
 
