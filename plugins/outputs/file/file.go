@@ -23,7 +23,7 @@ type File struct {
 
 var sampleConfig = `
   ## Files to write to, "stdout" is a specially handled file.
-  ## Will also accept fromats such as /tmp/{020106}/metrics{020106.150406}.out
+  ## Will also accept formats such as /tmp/{020106}/metrics{020106.150406}.out
   files = ["stdout", "/tmp/metrics.out"]
 
 
