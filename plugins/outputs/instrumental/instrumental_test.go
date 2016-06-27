@@ -79,10 +79,9 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 
 	hello, _ := tp.ReadLine()
 	assert.Equal(t, "hello version go/telegraf/1.1", hello)
-	conn.Write([]byte("ok\n"))
 	auth, _ := tp.ReadLine()
 	assert.Equal(t, "authenticate abc123token", auth)
-	conn.Write([]byte("ok\n"))
+	conn.Write([]byte("ok\nok\n"))
 
 	data1, _ := tp.ReadLine()
 	assert.Equal(t, "gauge my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
@@ -96,11 +95,9 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 
 	hello, _ = tp.ReadLine()
 	assert.Equal(t, "hello version go/telegraf/1.1", hello)
-	conn.Write([]byte("ok\n"))
-
 	auth, _ = tp.ReadLine()
 	assert.Equal(t, "authenticate abc123token", auth)
-	conn.Write([]byte("ok\n"))
+	conn.Write([]byte("ok\nok\n"))
 
 	data3, _ := tp.ReadLine()
 	assert.Equal(t, "increment my.prefix.192_168_0_1.my_histogram 3.14 1289430000", data3)
