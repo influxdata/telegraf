@@ -35,7 +35,7 @@ const (
 
 var (
 	ValueIncludesBadChar = regexp.MustCompile("[^[:digit:].]")
-	MetricNameReplacer = regexp.MustCompile("[^-[:alnum:]_.]")
+	MetricNameReplacer = regexp.MustCompile("[^-[:alnum:]_.]+")
 )
 
 var sampleConfig = `
