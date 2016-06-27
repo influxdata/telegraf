@@ -49,21 +49,28 @@ func TestWrite(t *testing.T) {
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	// We will drop metrics that simply won't be accepted by Instrumental
+	// We will modify metric names that won't be accepted by Instrumental
 	m4, _ := telegraf.NewMetric(
+		"bad_metric_name",
+		map[string]string{"host": "192.168.0.1:8888::123", "metric_type": "counter"},
+		map[string]interface{}{"value": 1},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	// We will drop metric values that won't be accepted by Instrumental
+	m5, _ := telegraf.NewMetric(
 		"bad_values",
 		map[string]string{"host": "192.168.0.1", "metric_type": "counter"},
 		map[string]interface{}{"value": "\" 3:30\""},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m5, _ := telegraf.NewMetric(
+	m6, _ := telegraf.NewMetric(
 		"my_counter",
 		map[string]string{"host": "192.168.0.1", "metric_type": "counter"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-	metrics = []telegraf.Metric{m3, m4, m5}
+	metrics = []telegraf.Metric{m3, m4, m5, m6}
 	i.Write(metrics)
 
 	wg.Wait()
@@ -101,8 +108,15 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 
 	data3, _ := tp.ReadLine()
 	assert.Equal(t, "increment my.prefix.192_168_0_1.my_histogram 3.14 1289430000", data3)
+
 	data4, _ := tp.ReadLine()
-	assert.Equal(t, "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000", data4)
+	assert.Equal(t, "increment my.prefix.192_168_0_1_8888_123.bad_metric_name 1 1289430000", data4)
+
+	data5, _ := tp.ReadLine()
+	assert.Equal(t, "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000", data5)
+
+	data6, _ := tp.ReadLine()
+	assert.Equal(t, "", data6)
 
 	conn.Close()
 }
