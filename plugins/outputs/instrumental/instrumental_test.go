@@ -111,5 +111,8 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	data4, _ := tp.ReadLine()
 	assert.Equal(t, "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000", data4)
 
+	data5, _ := tp.ReadLine()
+	assert.Equal(t, "", data5)
+
 	conn.Close()
 }
