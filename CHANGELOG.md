@@ -13,6 +13,7 @@
 - [#1685](https://github.com/influxdata/telegraf/issues/1685): Add additional redis metrics.
 - [#1539](https://github.com/influxdata/telegraf/pull/1539): Added capability to send metrics through Http API for OpenTSDB.
 - [#1471](https://github.com/influxdata/telegraf/pull/1471): iptables input plugin.
+- [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
 
 ### Bugfixes
 
