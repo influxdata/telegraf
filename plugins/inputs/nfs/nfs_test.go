@@ -174,7 +174,7 @@ func TestNFSProcessStat(t *testing.T) {
     var acc testutil.Accumulator
 
     nfs := NFS{}
-    nfs.iostat = true
+    nfs.Iostat = true
     scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
 
     nfs.processText(scanner, &acc)
@@ -204,7 +204,7 @@ func TestNFSProcessFull(t *testing.T) {
     var acc testutil.Accumulator
 
     nfs := NFS{}
-    nfs.fullstat = true
+    nfs.Fullstat = true
     scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
 
     nfs.processText(scanner, &acc)
