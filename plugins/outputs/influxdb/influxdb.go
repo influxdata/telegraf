@@ -127,13 +127,6 @@ func (i *InfluxDB) Connect() error {
 			if err != nil {
 				return err
 			}
-
-			err = createDatabase(c, i.Database)
-			if err != nil {
-				log.Println("Database creation failed: " + err.Error())
-				continue
-			}
-
 			conns = append(conns, c)
 		}
 	}
@@ -141,14 +134,6 @@ func (i *InfluxDB) Connect() error {
 	i.conns = conns
 	rand.Seed(time.Now().UnixNano())
 	return nil
-}
-
-func createDatabase(c client.Client, database string) error {
-	// Create Database if it doesn't exist
-	_, err := c.Query(client.Query{
-		Command: fmt.Sprintf("CREATE DATABASE IF NOT EXISTS \"%s\"", database),
-	})
-	return err
 }
 
 func (i *InfluxDB) Close() error {
@@ -202,13 +187,6 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		if e := i.conns[n].Write(bp); e != nil {
 			// Log write failure
 			log.Printf("ERROR: %s", e)
-			// If the database was not found, try to recreate it
-			if strings.Contains(e.Error(), "database not found") {
-				if errc := createDatabase(i.conns[n], i.Database); errc != nil {
-					log.Printf("ERROR: Database %s not found and failed to recreate\n",
-						i.Database)
-				}
-			}
 		} else {
 			err = nil
 			break
