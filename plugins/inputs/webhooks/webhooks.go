@@ -42,6 +42,9 @@ func (wb *Webhooks) SampleConfig() string {
   ## Address and port to host Webhook listener on
   service_address = ":1619"
 
+  [inputs.webhooks.filestack]
+    path = "/filestack"
+
   [inputs.webhooks.github]
     path = "/github"
 
