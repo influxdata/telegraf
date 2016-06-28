@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
@@ -26,9 +27,10 @@ func init() {
 type Webhooks struct {
 	ServiceAddress string
 
-	Github   *github.GithubWebhook
-	Mandrill *mandrill.MandrillWebhook
-	Rollbar  *rollbar.RollbarWebhook
+	Github    *github.GithubWebhook
+	Filestack *filestack.FilestackWebhook
+	Mandrill  *mandrill.MandrillWebhook
+	Rollbar   *rollbar.RollbarWebhook
 }
 
 func NewWebhooks() *Webhooks {
