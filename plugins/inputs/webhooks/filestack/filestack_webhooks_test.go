@@ -44,3 +44,22 @@ func TestParseError(t *testing.T) {
 		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusBadRequest)
 	}
 }
+
+func TestUploadEvent(t *testing.T) {
+	var acc testutil.Accumulator
+	fs := &FilestackWebhook{Path: "/filestack", acc: &acc}
+	resp := postWebhooks(fs, UploadJSON())
+	if resp.Code != http.StatusOK {
+		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
+	}
+
+	fields := map[string]interface{}{
+		"id": "100946",
+	}
+
+	tags := map[string]string{
+		"action": "fp.upload",
+	}
+
+	acc.AssertContainsTaggedFields(t, "filestack_webhooks", fields, tags)
+}

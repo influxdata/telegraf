@@ -31,7 +31,7 @@ func (fs *FilestackWebhook) eventHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	event := &DialogEvent{}
+	event := &FilestackEvent{}
 	err = json.Unmarshal(body, event)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)

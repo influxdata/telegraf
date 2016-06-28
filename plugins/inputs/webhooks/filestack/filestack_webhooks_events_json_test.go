@@ -39,3 +39,18 @@ func DialogOpenJSON() string {
 	  }
 	}`
 }
+
+func UploadJSON() string {
+	return `{
+	   "action":"fp.upload",
+	   "timestamp":1443444905,
+	   "id":100946,
+	   "text":{
+	      "url":"https://www.filestackapi.com/api/file/WAunDTTqQfCNWwUUyf6n",
+	      "client":"Facebook",
+	      "type":"image/jpeg",
+	      "filename":"1579337399020824.jpg",
+	      "size":139154
+	   }
+	}`
+}
