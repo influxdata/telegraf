@@ -6,7 +6,9 @@ You should configure your Filestack's Webhooks to point at the `webhooks` servic
 
 See the [webhook doc](https://www.filestack.com/docs/webhooks).
 
-All events for logs the original timestamp, the event name and the id.
+*Limitations*: It stores all events except video conversions events.
+
+All events for logs the original timestamp, the action and the id.
 
 **Tags:**
 * 'action' = `event.action` string
