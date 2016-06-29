@@ -62,10 +62,23 @@ func (m *OpenConfigTelemetry) SetParser(parser parsers.Parser) {
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
+	log.Print("Started OpenConfig Telemetry plugin\n")
+	return nil
+}
+
+func (m *OpenConfigTelemetry) Stop() {
+	m.Lock()
+	defer m.Unlock()
+	m.grpcClientConn.Close()
+}
+
+func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 	m.Lock()
 	defer m.Unlock()
 
 	m.acc = acc
+
+	acc.SetDebug(true)
 
 	var err error
 	m.grpcClientConn, err = grpc.Dial(m.Server, grpc.WithInsecure())
@@ -79,7 +92,8 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 	for _, sensor := range m.Sensors {
 		wg.Add(1)
-		go func(sensor string) {
+		go func(sensor string, acc telegraf.Accumulator) {
+			defer wg.Done()
 			spathSplit := strings.SplitN(sensor, " ", 2)
 			var sensorName string
 			var sensorPath string
@@ -141,23 +155,13 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 					}
 				}
 
-				m.acc.AddFields(sensorName, fields, tags, time.Now())
+				acc.AddFields(sensorName, fields, tags, time.Now())
 			}
-			wg.Done()
-		}(sensor)
+		}(sensor, acc)
+
 	}
 	wg.Wait()
 
-	return nil
-}
-
-func (m *OpenConfigTelemetry) Stop() {
-	m.Lock()
-	defer m.Unlock()
-	m.grpcClientConn.Close()
-}
-
-func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
