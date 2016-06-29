@@ -26,6 +26,9 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 	timestamp := metric.UnixNano() / 1000000000
 
 	bucket := s.SerializeBucketName(metric.Name(), metric.Tags())
+	if bucket == "" {
+		return out, nil
+	}
 
 	for fieldName, value := range metric.Fields() {
 		// Convert value to string
@@ -87,6 +90,10 @@ func (s *GraphiteSerializer) SerializeBucketName(
 			out[i] = buildTags(tagsCopy)
 			break
 		}
+	}
+
+	if len(out) == 0 {
+		return ""
 	}
 
 	if s.Prefix == "" {

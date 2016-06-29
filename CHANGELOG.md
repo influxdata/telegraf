@@ -36,6 +36,7 @@ should now look like:
 
 ### Bugfixes
 
+- [#1426](https://github.com/influxdata/telegraf/pull/1426): nil metrics panic fix.
 - [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
 - [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
 - [#1405](https://github.com/influxdata/telegraf/issues/1405): Fix memory/connection leak in prometheus input plugin.
