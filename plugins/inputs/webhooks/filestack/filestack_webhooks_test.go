@@ -63,3 +63,12 @@ func TestUploadEvent(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "filestack_webhooks", fields, tags)
 }
+
+func TestVideoConversionEvent(t *testing.T) {
+	var acc testutil.Accumulator
+	fs := &FilestackWebhook{Path: "/filestack", acc: &acc}
+	resp := postWebhooks(fs, VideoConversionJSON())
+	if resp.Code != http.StatusBadRequest {
+		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusBadRequest)
+	}
+}
