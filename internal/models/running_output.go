@@ -138,7 +138,7 @@ func (ro *RunningOutput) Write() error {
 }
 
 func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
+	if metrics == nil || len(metrics) == 0 {
 		return nil
 	}
 	start := time.Now()
