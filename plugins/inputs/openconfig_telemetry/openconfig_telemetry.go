@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"regexp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -80,6 +81,10 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 
 	acc.SetDebug(true)
 
+	// Extract device name / IP
+	s := strings.Split(m.Server, ":")
+  grpc_server, grpc_port := s[0], s[1]
+
 	var err error
 	m.grpcClientConn, err = grpc.Dial(m.Server, grpc.WithInsecure())
 	if err != nil {
@@ -87,6 +92,7 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 	}
 
 	c := Telemetry.NewOpenConfigTelemetryClient(m.grpcClientConn)
+	log.Printf("Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
 
 	wg := new(sync.WaitGroup)
 
@@ -125,6 +131,45 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 				if err != nil {
 					log.Fatalln("Error: ", err)
 				}
+
+				// variables initialization
+				var prefix string
+
+				// Search for Prefix if exist
+				for _, v := range r.Kv {
+					if v.Key == "__prefix__" {
+						prefix = v.GetStrValue()
+					}
+				}
+
+				// Extract information from prefix if Exist
+				// TODO make this block a function
+				if prefix != "" {
+
+					// WIll search for attribute and will extract
+					// example : /junos/interface[name=xe-0/0/0]/test
+					// - the name of the element   		(interface)
+					// - the name of the attribute 		(name)
+					// - the value of the attribute		(xe-0/0/0)
+					re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-]*)\\=([^\\[]*)\\]")
+					subs := re.FindAllStringSubmatch(prefix, -1)
+
+					if len(subs) > 0 {
+						for _, sub := range subs {
+
+							// if the  attribute name is "name"
+							// Extract the name of the element as "key" and the value of the attribute as value
+							// /junos/interface[name=xe-0/0/0]/test
+							if sub[2] == "name" {
+								sub[3]= strings.Replace(sub[3], "'", "", -1)
+								tags[sub[1]] = sub[3]
+							}
+						}
+					}
+				}
+
+				// Insert additional tags
+				tags["device"] = grpc_server
 
 				for _, v := range r.Kv {
 					switch v.Value.(type) {
