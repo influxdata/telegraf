@@ -56,6 +56,7 @@ type Parser struct {
 	Patterns           []string
 	CustomPatterns     string
 	CustomPatternFiles []string
+	Measurement string
 
 	// typeMap is a map of patterns -> capture name -> modifier,
 	//   ie, {
@@ -112,6 +113,10 @@ func (p *Parser) Compile() error {
 
 		scanner := bufio.NewScanner(bufio.NewReader(file))
 		p.addCustomPatterns(scanner)
+	}
+
+	if p.Measurement == "" {
+		p.Measurement = "logparser_grok"
 	}
 
 	return p.compileCustomPatterns()
@@ -215,7 +220,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	return telegraf.NewMetric("logparser_grok", tags, fields, p.tsModder.tsMod(timestamp))
+	return telegraf.NewMetric(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
 }
 
 func (p *Parser) addCustomPatterns(scanner *bufio.Scanner) {
