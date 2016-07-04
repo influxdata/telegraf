@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	zeroByte        = []byte("0")
 	newlineByte     = []byte("\n")
 	colonByte       = []byte(":")
 	kbPrecisionByte = []byte("kB")
@@ -30,6 +29,13 @@ const (
 	HUGE_PAGES_FREE  = "HugePages_Free"
 )
 
+var hugepagesSampleConfig = `
+  ## Path to a NUMA nodes
+  # numa_node_path = "/sys/devices/system/node"
+  ## Path to a meminfo file
+  # meminfo_path = "/proc/meminfo"
+`
+
 // Mem is the
 type Hugepages struct {
 	NUMANodePath string `toml:"numa_node_path"`
@@ -37,11 +43,11 @@ type Hugepages struct {
 }
 
 func (mem *Hugepages) Description() string {
-	return "Collects hugepages statistics from kernel and per NUMA node"
+	return "Collects hugepages metrics from kernel and per NUMA node"
 }
 
 func (mem *Hugepages) SampleConfig() string {
-	return "Hugepages stats per NUMA node"
+	return hugepagesSampleConfig
 }
 
 func (mem *Hugepages) Gather(acc telegraf.Accumulator) error {
