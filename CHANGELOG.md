@@ -15,6 +15,7 @@ It is highly recommended that all users migrate to the new riemann output plugin
 - [#2179](https://github.com/influxdata/telegraf/pull/2179): Added more InnoDB metric to MySQL plugin.
 - [#2251](https://github.com/influxdata/telegraf/pull/2251): InfluxDB output: use own client for improved through-put and less allocations.
 - [#1900](https://github.com/influxdata/telegraf/pull/1900): Riemann plugin rewrite.
+- [#1453](https://github.com/influxdata/telegraf/pull/1453): diskio: add support for name templates and udev tags.
 
 ### Bugfixes
 
