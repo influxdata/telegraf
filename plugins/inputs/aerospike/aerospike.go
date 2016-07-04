@@ -186,7 +186,6 @@ func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 
 	latencyInfo, err := a.get(LATENCY_COMMAND, host)
 	if err != nil {
-		fmt.Println("gathering latency failed ", err)
 		return fmt.Errorf("Latency info failed %s", err.Error())
 	}
 
@@ -273,10 +272,9 @@ func (a *Aerospike) get(key []byte, host string) (map[string]string, error) {
 	defer conn.Close()
 
 	if a.EnableAuth {
-		fmt.Println("Going to authenticate")
 		err = a.authenticate(conn)
 		if err != nil {
-			fmt.Println("Authentication failed with error ", err)
+			//fmt.Println("Authentication failed with error ", err)
 			return data, err
 		}
 	}
@@ -332,7 +330,6 @@ func (a *Aerospike) authenticate(conn *net.TCPConn) error {
 
 	pw, err := bcrypt.Hash(a.Password, "$2a$10$7EqJtq98hPqEX7fNZaFWoO")
 	if err != nil {
-		fmt.Println("Failed to hash password", err)
 		return err
 	}
 
@@ -377,8 +374,6 @@ func (a *Aerospike) authenticate(conn *net.TCPConn) error {
 		return fmt.Errorf("Failed to read from connection to '%s': ", err)
 	}
 
-	fmt.Println("Got: ", buffer)
-
 	errorCode := int(buffer[1])
 
 	if (errorCode == ERR_NOT_SUPPORTED || errorCode == ERR_NOT_ENABLED) && a.AutoAuthDisable {
@@ -394,8 +389,6 @@ func (a *Aerospike) authenticate(conn *net.TCPConn) error {
 	} else if errorCode != 0 {
 		return fmt.Errorf("Authentication request failed with errorcode %d", errorCode)
 	}
-
-	fmt.Println("Authenticated with return code ", errorCode)
 
 	return nil
 }
@@ -457,7 +450,7 @@ func readAerospikeLatency(
 			metric := metrName + "_" + unitTimes[i] //strings.Replace(unitTimes[i], ">", "_gt_", 1)
 			value, err := strconv.ParseFloat(vals[i], 64)
 			if err != nil {
-				fmt.Println("Failed to parse float when parsing latency ")
+				//fmt.Println("Failed to parse float when parsing latency ")
 				continue
 			}
 			fields[metric] = value
