@@ -160,7 +160,7 @@ var sampleConfig = `
   ## server has configured and get stats for them.
   server = "localhost:3000"
   enableAuth = false			
-  authAuthDisable = false
+  autoAuthDisable = false
   username = ""
   password = ""
  `
