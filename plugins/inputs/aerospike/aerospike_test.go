@@ -1,6 +1,8 @@
 package aerospike
 
 import (
+	"bytes"
+	"encoding/binary"
 	"reflect"
 	"testing"
 
@@ -15,7 +17,7 @@ func TestAerospikeStatistics(t *testing.T) {
 	}
 
 	a := &Aerospike{
-		Servers: []string{testutil.GetLocalHost() + ":3000"},
+		Server: testutil.GetLocalHost() + ":3000",
 	}
 
 	var acc testutil.Accumulator
@@ -49,7 +51,14 @@ func TestReadAerospikeStatsNoNamespace(t *testing.T) {
 		"stat-write-errs": "12345",
 		"stat_read_reqs":  "12345",
 	}
-	readAerospikeStats(stats, &acc, "host1", "")
+
+	fields_ := make(map[string]interface{})
+	readAerospikeStats(stats, fields_, "host1", "")
+	tags_ := map[string]string{
+		"aerospike_host": "host1",
+		"namespace":      "_service",
+	}
+	acc.AddFields("aerospike", fields_, tags_)
 
 	fields := map[string]interface{}{
 		"stat_write_errs": int64(12345),
@@ -68,7 +77,15 @@ func TestReadAerospikeStatsNamespace(t *testing.T) {
 		"stat_write_errs": "12345",
 		"stat_read_reqs":  "12345",
 	}
-	readAerospikeStats(stats, &acc, "host1", "test")
+
+	fields_ := make(map[string]interface{})
+	readAerospikeStats(stats, fields_, "host1", "test")
+	tags_ := map[string]string{
+		"aerospike_host": "host1",
+		"namespace":      "test",
+	}
+
+	acc.AddFields("aerospike", fields_, tags_)
 
 	fields := map[string]interface{}{
 		"stat_write_errs": int64(12345),
@@ -115,4 +132,26 @@ func TestAerospikeUnmarshalMap(t *testing.T) {
 	m, err := unmarshalMapInfo(i, "test")
 	assert.True(t, err == nil)
 	assert.True(t, reflect.DeepEqual(m, expected))
+}
+
+func TestFieldSerialization(t *testing.T) {
+	typeId := byte(12)
+	data := []byte("test string")
+
+	f := newField(typeId, data)
+
+	buf := bytes.Buffer{}
+	f.WriteToBuf(&buf)
+
+	var sz int32
+	var rType byte
+
+	binary.Read(&buf, binary.BigEndian, &sz)
+	binary.Read(&buf, binary.BigEndian, &rType)
+
+	assert.True(t, int(sz) == len(data)+1)
+	assert.True(t, rType == typeId)
+
+	assert.True(t, bytes.Equal(data, buf.Bytes()))
+
 }

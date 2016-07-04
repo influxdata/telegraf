@@ -1,7 +1,13 @@
 ## Telegraf Plugin: Aerospike
 
 #### Plugin arguments:
-- **servers** string array: List of aerospike servers to query (def: 127.0.0.1:3000)
+- **server** string : Server endpoint in hostname:port format
+- **enableAuth** bool : Use authentication when collecting stats
+- **autoAuthDisable** bool : If auth is enabled and auth is not supported, disable authentication.
+- **username** : Username
+- **password** : Password 
+
+
 
 #### Description
 
@@ -263,3 +269,10 @@ Meta:
 Measurement names:
 - free_pct_disk
 - free_pct_memory
+
+
+#### Aerospike Latency Histogram:
+Measurement names:
+- latency>1ms
+- latency>8ms
+- latency>64ms
