@@ -3,6 +3,7 @@ package aerospike
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -17,7 +18,7 @@ func TestAerospikeStatistics(t *testing.T) {
 	}
 
 	a := &Aerospike{
-		Server: testutil.GetLocalHost() + ":3000",
+		Servers: []string{testutil.GetLocalHost() + ":3000"},
 	}
 
 	var acc testutil.Accumulator
@@ -153,5 +154,30 @@ func TestFieldSerialization(t *testing.T) {
 	assert.True(t, rType == typeId)
 
 	assert.True(t, bytes.Equal(data, buf.Bytes()))
+
+}
+
+func TestEndpointInfoParsing(t *testing.T) {
+	sinfo := "user:password@localhost:3212"
+
+	ep, err := parseHostInfo(sinfo)
+
+	fmt.Println(ep.username, " ", ep.password, " ", ep.endpoint)
+
+	assert.True(t, err == nil)
+	assert.True(t, ep.username == "user")
+	assert.True(t, ep.password == "password")
+	assert.True(t, ep.endpoint == "localhost:3212")
+	assert.True(t, ep.authEnabled)
+
+	sinfo = "eatyourpotato:4321"
+
+	ep, err = parseHostInfo(sinfo)
+
+	fmt.Println(ep.username, " ", ep.password, " ", ep.endpoint)
+
+	assert.True(t, err == nil)
+	assert.True(t, ep.endpoint == "eatyourpotato:4321")
+	assert.False(t, ep.authEnabled)
 
 }
