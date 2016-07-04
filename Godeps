@@ -28,6 +28,7 @@ github.com/hpcloud/tail b2940955ab8b26e19d43a43c4da0475dd81bdb56
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
 github.com/influxdata/influxdb e094138084855d444195b252314dfee9eae34cab
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
+github.com/jameskeane/bcrypt c3cd44c1e20fec46baad45b108a45be93394dc8d
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
 github.com/lib/pq e182dc4027e2ded4b19396d638610f2653295f36
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
