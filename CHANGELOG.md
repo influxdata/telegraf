@@ -9,6 +9,7 @@
 - [#1572](https://github.com/influxdata/telegraf/pull/1572): mesos improvements.
 - [#1513](https://github.com/influxdata/telegraf/issues/1513): Add Ceph Cluster Performance Statistics
 - [#1650](https://github.com/influxdata/telegraf/issues/1650): Ability to configure response_timeout in httpjson input.
+- [#1471](https://github.com/influxdata/telegraf/pull/1471): iptables input plugin.
 
 ### Bugfixes
 
