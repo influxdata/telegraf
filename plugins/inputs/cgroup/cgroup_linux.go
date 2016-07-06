@@ -34,6 +34,7 @@ func (g *CGroup) Gather(acc telegraf.Accumulator) error {
 
 func (g *CGroup) gatherDir(dir string, acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
+	tags := make(map[string]string)
 
 	list := make(chan pathInfo)
 	go g.generateFiles(dir, list)
@@ -56,8 +57,7 @@ func (g *CGroup) gatherDir(dir string, acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-
-	tags := map[string]string{"path": dir}
+	fields["path"] = dir
 
 	acc.AddFields(metricName, fields, tags)
 
