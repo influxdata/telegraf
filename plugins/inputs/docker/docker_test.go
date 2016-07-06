@@ -48,6 +48,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	blkiofields := map[string]interface{}{
 		"io_service_bytes_recursive_read": uint64(100),
 		"io_serviced_recursive_write":     uint64(101),
+		"container_id":                    "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
 
@@ -110,13 +111,15 @@ func TestDockerGatherContainerStats(t *testing.T) {
 
 	cputags["cpu"] = "cpu0"
 	cpu0fields := map[string]interface{}{
-		"usage_total": uint64(1),
+		"usage_total":  uint64(1),
+		"container_id": "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu0fields, cputags)
 
 	cputags["cpu"] = "cpu1"
 	cpu1fields := map[string]interface{}{
-		"usage_total": uint64(1002),
+		"usage_total":  uint64(1002),
+		"container_id": "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu1fields, cputags)
 }
@@ -371,7 +374,8 @@ func TestDockerGatherInfo(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"docker_container_cpu",
 		map[string]interface{}{
-			"usage_total": uint64(1231652),
+			"usage_total":  uint64(1231652),
+			"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		},
 		map[string]string{
 			"container_name":  "etcd2",

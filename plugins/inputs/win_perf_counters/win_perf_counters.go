@@ -107,6 +107,8 @@ type item struct {
 	counterHandle win.PDH_HCOUNTER
 }
 
+var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec", " ", "_")
+
 func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName string, counter string, instance string,
 	measurement string, include_total bool) {
 
@@ -297,7 +299,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 							tags["instance"] = s
 						}
 						tags["objectname"] = metric.objectName
-						fields[string(metric.counter)] = float32(c.FmtValue.DoubleValue)
+						fields[sanitizedChars.Replace(string(metric.counter))] = float32(c.FmtValue.DoubleValue)
 
 						var measurement string
 						if metric.measurement == "" {

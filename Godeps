@@ -25,7 +25,7 @@ github.com/gorilla/mux c9e326e2bdec29039a3761c07bece13133863e1e
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hpcloud/tail b2940955ab8b26e19d43a43c4da0475dd81bdb56
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
-github.com/influxdata/influxdb 21db76b3374c733f37ed16ad93f3484020034351
+github.com/influxdata/influxdb e094138084855d444195b252314dfee9eae34cab
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
 github.com/lib/pq e182dc4027e2ded4b19396d638610f2653295f36
@@ -42,7 +42,7 @@ github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
 github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
-github.com/shirou/gopsutil 1f32ce1bb380845be7f5d174ac641a2c592c0c42
+github.com/shirou/gopsutil 83c6e72cbdef6e8ada934549abf700ff0ba96776
 github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c

@@ -18,16 +18,17 @@ import (
 
 type InfluxDB struct {
 	// URL is only for backwards compatability
-	URL             string
-	URLs            []string `toml:"urls"`
-	Username        string
-	Password        string
-	Database        string
-	UserAgent       string
-	Precision       string
-	RetentionPolicy string
-	Timeout         internal.Duration
-	UDPPayload      int `toml:"udp_payload"`
+	URL              string
+	URLs             []string `toml:"urls"`
+	Username         string
+	Password         string
+	Database         string
+	UserAgent        string
+	Precision        string
+	RetentionPolicy  string
+	WriteConsistency string
+	Timeout          internal.Duration
+	UDPPayload       int `toml:"udp_payload"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -49,11 +50,14 @@ var sampleConfig = `
   urls = ["http://localhost:8086"] # required
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
-  ## Retention policy to write to.
-  retention_policy = "default"
   ## Precision of writes, valid values are "ns", "us" (or "µs"), "ms", "s", "m", "h".
   ## note: using "s" precision greatly improves InfluxDB compression.
   precision = "s"
+
+  ## Retention policy to write to.
+  retention_policy = "default"
+  ## Write consistency (clusters only), can be: "any", "one", "quorom", "all"
+  write_consistency = "any"
 
   ## Write timeout (for the InfluxDB client), formatted as a string.
   ## If not provided, will default to 5s. 0s means no timeout (not recommended).
@@ -179,9 +183,10 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		}
 	}
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:        i.Database,
-		Precision:       i.Precision,
-		RetentionPolicy: i.RetentionPolicy,
+		Database:         i.Database,
+		Precision:        i.Precision,
+		RetentionPolicy:  i.RetentionPolicy,
+		WriteConsistency: i.WriteConsistency,
 	})
 	if err != nil {
 		return err

@@ -15,8 +15,8 @@ To generate a file with specific inputs and outputs, you can use the
 telegraf -sample-config -input-filter cpu:mem:net:swap -output-filter influxdb:kafka
 ```
 
-You can see the latest config file with all available plugins
-[here](https://github.com/influxdata/telegraf/blob/master/etc/telegraf.conf)
+You can see the latest config file with all available plugins here:
+[telegraf.conf](https://github.com/influxdata/telegraf/blob/master/etc/telegraf.conf)
 
 ## Environment Variables
 
@@ -79,7 +79,7 @@ match against the tag name, and if it matches the measurement is emitted.
 * **tagdrop**: The inverse of tagpass. If a tag matches, the measurement is not
 emitted. This is tested on measurements that have passed the tagpass test.
 * **tagexclude**: tagexclude can be used to exclude a tag from measurement(s).
-As opposed to tagdrop, which will drop an entire measurement based on it's 
+As opposed to tagdrop, which will drop an entire measurement based on it's
 tags, tagexclude simply strips the given tag keys from the measurement. This
 can be used on inputs & outputs, but it is _recommended_ to be used on inputs,
 as it is more efficient to filter out tags at the ingestion point.

@@ -26,7 +26,7 @@ function install_chkconfig {
 
 id telegraf &>/dev/null
 if [[ $? -ne 0 ]]; then
-    useradd --system -U -M telegraf -s /bin/false -d /etc/telegraf
+    useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf
 fi
 
 test -d $LOG_DIR || mkdir -p $LOG_DIR

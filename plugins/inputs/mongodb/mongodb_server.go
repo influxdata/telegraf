@@ -36,9 +36,16 @@ func (s *Server) gatherData(acc telegraf.Accumulator) error {
 		log.Println("Not gathering replica set status, member not in replica set")
 	}
 
+	jumbo_chunks, _ := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
+
+	result_cluster := &ClusterStatus{
+		JumboChunksCount: int64(jumbo_chunks),
+	}
+
 	result := &MongoStatus{
 		ServerStatus:  result_server,
 		ReplSetStatus: result_repl,
+		ClusterStatus: result_cluster,
 	}
 
 	defer func() {

@@ -133,6 +133,7 @@ func TestStateTag(t *testing.T) {
 		"vsize_megabytes":       int64(0),
 		"ttl_deletes_per_sec":   int64(0),
 		"ttl_passes_per_sec":    int64(0),
+		"jumbo_chunks":          int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, "mongodb", fields, stateTags)
 }

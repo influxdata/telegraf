@@ -70,7 +70,17 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	lineCounter := 0
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
+		line := scanner.Text()
+
+		tags := make(map[string]string)
+		// if there is an ntpq state prefix, remove it and make it it's own tag
+		// see https://github.com/influxdata/telegraf/issues/1161
+		if strings.ContainsAny(string(line[0]), "*#o+x.-") {
+			tags["state_prefix"] = string(line[0])
+			line = strings.TrimLeft(line, "*#o+x.-")
+		}
+
+		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
 		}
@@ -97,7 +107,6 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		} else {
-			tags := make(map[string]string)
 			mFields := make(map[string]interface{})
 
 			// Get tags from output
@@ -111,6 +120,9 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			// Get integer metrics from output
 			for key, index := range intI {
 				if index == -1 {
+					continue
+				}
+				if fields[index] == "-" {
 					continue
 				}
 
@@ -158,6 +170,9 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			// get float metrics from output
 			for key, index := range floatI {
 				if index == -1 {
+					continue
+				}
+				if fields[index] == "-" {
 					continue
 				}
 

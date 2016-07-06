@@ -18,10 +18,10 @@
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
-  ## convert measurement names, "." to "_" and "-" to "__"
-  convert_names = true
+  ## separator to use between elements of a statsd metric
+  metric_separator = "_"
 
-  ## Parses tags in DataDog's dogstatsd format
+  ## Parses tags in the datadog statsd format
   ## http://docs.datadoghq.com/guides/dogstatsd/
   parse_data_dog_tags = false
 
@@ -39,10 +39,6 @@
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
-
-  ## UDP packet size for the server to listen for. This will depend on the size
-  ## of the packets that the client is sending, which is usually 1500 bytes.
-  udp_packet_size = 1500
 ```
 
 ### Description

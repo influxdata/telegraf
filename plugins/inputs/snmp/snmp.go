@@ -26,9 +26,6 @@ type Snmp struct {
 	nameToOid   map[string]string
 	initNode    Node
 	subTableMap map[string]Subtable
-
-	// TODO change as unexportable
-	//OidInstanceMapping map[string]map[string]string
 }
 
 type Host struct {
@@ -53,6 +50,8 @@ type Host struct {
 	// array of processed oids
 	// to skip oid duplication
 	processedOids []string
+
+	OidInstanceMapping map[string]map[string]string
 }
 
 type Table struct {
@@ -115,9 +114,6 @@ type Node struct {
 	name     string
 	subnodes map[string]Node
 }
-
-// TODO move this var to snmp struct
-var OidInstanceMapping = make(map[string]map[string]string)
 
 var sampleConfig = `
   ## Use 'oids.txt' file to translate oids to names
@@ -396,7 +392,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// TODO save mapping and computed oids
 		// to do it only the first time
 		// only if len(s.OidInstanceMapping) == 0
-		if len(OidInstanceMapping) >= 0 {
+		if len(host.OidInstanceMapping) >= 0 {
 			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
 				log.Printf("SNMP Mapping error for host '%s': %s", host.Address, err)
 				continue
@@ -413,7 +409,14 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *Host) SNMPMap(acc telegraf.Accumulator, nameToOid map[string]string, subTableMap map[string]Subtable) error {
+func (h *Host) SNMPMap(
+	acc telegraf.Accumulator,
+	nameToOid map[string]string,
+	subTableMap map[string]Subtable,
+) error {
+	if h.OidInstanceMapping == nil {
+		h.OidInstanceMapping = make(map[string]map[string]string)
+	}
 	// Get snmp client
 	snmpClient, err := h.GetSNMPClient()
 	if err != nil {
@@ -523,11 +526,11 @@ func (h *Host) SNMPMap(acc telegraf.Accumulator, nameToOid map[string]string, su
 
 								// Building mapping table
 								mapping := map[string]string{strings.Trim(key, "."): string(variable.Value.([]byte))}
-								_, exists := OidInstanceMapping[table.oid]
+								_, exists := h.OidInstanceMapping[table.oid]
 								if exists {
-									OidInstanceMapping[table.oid][strings.Trim(key, ".")] = string(variable.Value.([]byte))
+									h.OidInstanceMapping[table.oid][strings.Trim(key, ".")] = string(variable.Value.([]byte))
 								} else {
-									OidInstanceMapping[table.oid] = mapping
+									h.OidInstanceMapping[table.oid] = mapping
 								}
 
 								// Add table oid in bulk oid list
@@ -720,7 +723,12 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 	return snmpClient, nil
 }
 
-func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, acc telegraf.Accumulator, initNode Node) (string, error) {
+func (h *Host) HandleResponse(
+	oids map[string]Data,
+	result *gosnmp.SnmpPacket,
+	acc telegraf.Accumulator,
+	initNode Node,
+) (string, error) {
 	var lastOid string
 	for _, variable := range result.Variables {
 		lastOid = variable.Name
@@ -741,7 +749,7 @@ func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, a
 				switch variable.Type {
 				// handle Metrics
 				case gosnmp.Boolean, gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32,
-					gosnmp.TimeTicks, gosnmp.Counter64, gosnmp.Uinteger32:
+					gosnmp.TimeTicks, gosnmp.Counter64, gosnmp.Uinteger32, gosnmp.OctetString:
 					// Prepare tags
 					tags := make(map[string]string)
 					if oid.Unit != "" {
@@ -755,7 +763,7 @@ func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, a
 						strings.Split(string(variable.Name[1:]), "."))
 					// Set instance tag
 					// From mapping table
-					mapping, inMappingNoSubTable := OidInstanceMapping[oid_key]
+					mapping, inMappingNoSubTable := h.OidInstanceMapping[oid_key]
 					if inMappingNoSubTable {
 						// filter if the instance in not in
 						// OidInstanceMapping mapping map
@@ -784,7 +792,7 @@ func (h *Host) HandleResponse(oids map[string]Data, result *gosnmp.SnmpPacket, a
 						// Because the result oid is equal to inputs.snmp.get section
 						field_name = oid.Name
 					}
-					tags["host"], _, _ = net.SplitHostPort(h.Address)
+					tags["snmp_host"], _, _ = net.SplitHostPort(h.Address)
 					fields := make(map[string]interface{})
 					fields[string(field_name)] = variable.Value
 
