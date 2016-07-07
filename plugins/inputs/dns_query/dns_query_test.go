@@ -15,6 +15,9 @@ var servers = []string{"8.8.8.8"}
 var domains = []string{"google.com"}
 
 func TestGathering(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network-dependent test in short mode.")
+	}
 	var dnsConfig = DnsQuery{
 		Servers: servers,
 		Domains: domains,
@@ -31,6 +34,9 @@ func TestGathering(t *testing.T) {
 }
 
 func TestGatheringMxRecord(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network-dependent test in short mode.")
+	}
 	var dnsConfig = DnsQuery{
 		Servers: servers,
 		Domains: domains,
@@ -48,6 +54,9 @@ func TestGatheringMxRecord(t *testing.T) {
 }
 
 func TestGatheringRootDomain(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network-dependent test in short mode.")
+	}
 	var dnsConfig = DnsQuery{
 		Servers:    servers,
 		Domains:    []string{"."},
@@ -72,6 +81,9 @@ func TestGatheringRootDomain(t *testing.T) {
 }
 
 func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network-dependent test in short mode.")
+	}
 	var dnsConfig = DnsQuery{
 		Servers: servers,
 		Domains: domains,
@@ -95,6 +107,9 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 }
 
 func TestGatheringTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network-dependent test in short mode.")
+	}
 	var dnsConfig = DnsQuery{
 		Servers: servers,
 		Domains: domains,

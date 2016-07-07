@@ -9,15 +9,17 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
-type HostPinger func(args ...string) (string, error)
+type HostPinger func(timeout float64, args ...string) (string, error)
 
 type Ping struct {
 	// Interval at which to ping (ping -i <INTERVAL>)
@@ -74,7 +76,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		go func(u string) {
 			defer wg.Done()
 			args := p.args(u)
-			out, err := p.pingHost(args...)
+			out, err := p.pingHost(p.Timeout, args...)
 			if err != nil {
 				// Combine go err + stderr output
 				errorChannel <- errors.New(
@@ -116,13 +118,14 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return errors.New(strings.Join(errorStrings, "\n"))
 }
 
-func hostPinger(args ...string) (string, error) {
+func hostPinger(timeout float64, args ...string) (string, error) {
 	bin, err := exec.LookPath("ping")
 	if err != nil {
 		return "", err
 	}
 	c := exec.Command(bin, args...)
-	out, err := c.CombinedOutput()
+	out, err := internal.CombinedOutputTimeout(c,
+		time.Second*time.Duration(timeout+1))
 	return string(out), err
 }
 

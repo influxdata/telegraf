@@ -1,16 +1,41 @@
 package haproxy
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"net/http/httptest"
 )
+
+type statServer struct{}
+
+func (s statServer) serverSocket(l net.Listener) {
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			return
+		}
+
+		go func(c net.Conn) {
+			buf := make([]byte, 1024)
+			n, _ := c.Read(buf)
+
+			data := buf[:n]
+			if string(data) == "show stat\n" {
+				c.Write([]byte(csvOutputSample))
+				c.Close()
+			}
+		}(conn)
+	}
+}
 
 func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 	//We create a fake server to return test data
@@ -108,6 +133,69 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 	tags := map[string]string{
 		"proxy":  "be_app",
 		"server": ts.Listener.Addr().String(),
+		"sv":     "host0",
+	}
+
+	fields := map[string]interface{}{
+		"active_servers":    uint64(1),
+		"backup_servers":    uint64(0),
+		"bin":               uint64(510913516),
+		"bout":              uint64(2193856571),
+		"check_duration":    uint64(10),
+		"cli_abort":         uint64(73),
+		"ctime":             uint64(2),
+		"downtime":          uint64(0),
+		"dresp":             uint64(0),
+		"econ":              uint64(0),
+		"eresp":             uint64(1),
+		"http_response.1xx": uint64(0),
+		"http_response.2xx": uint64(119534),
+		"http_response.3xx": uint64(48051),
+		"http_response.4xx": uint64(2345),
+		"http_response.5xx": uint64(1056),
+		"lbtot":             uint64(171013),
+		"qcur":              uint64(0),
+		"qmax":              uint64(0),
+		"qtime":             uint64(0),
+		"rate":              uint64(3),
+		"rate_max":          uint64(12),
+		"rtime":             uint64(312),
+		"scur":              uint64(1),
+		"smax":              uint64(32),
+		"srv_abort":         uint64(1),
+		"stot":              uint64(171014),
+		"ttime":             uint64(2341),
+		"wredis":            uint64(0),
+		"wretr":             uint64(1),
+	}
+	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+}
+
+func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
+	var randomNumber int64
+	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
+	sock, err := net.Listen("unix", fmt.Sprintf("/tmp/test-haproxy%d.sock", randomNumber))
+	if err != nil {
+		t.Fatal("Cannot initialize socket ")
+	}
+
+	defer sock.Close()
+
+	s := statServer{}
+	go s.serverSocket(sock)
+
+	r := &haproxy{
+		Servers: []string{sock.Addr().String()},
+	}
+
+	var acc testutil.Accumulator
+
+	err = r.Gather(&acc)
+	require.NoError(t, err)
+
+	tags := map[string]string{
+		"proxy":  "be_app",
+		"server": sock.Addr().String(),
 		"sv":     "host0",
 	}
 

@@ -16,6 +16,7 @@ import (
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -23,6 +24,7 @@ import (
 type Docker struct {
 	Endpoint       string
 	ContainerNames []string
+	Timeout        internal.Duration
 
 	client DockerClient
 }
@@ -54,6 +56,8 @@ var sampleConfig = `
   endpoint = "unix:///var/run/docker.sock"
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
+  ## Timeout for docker list, info, and stats commands
+  timeout = "5s"
 `
 
 // Description returns input description
@@ -97,7 +101,9 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 
 	// List containers
 	opts := types.ContainerListOptions{}
-	containers, err := d.client.ContainerList(context.Background(), opts)
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	defer cancel()
+	containers, err := d.client.ContainerList(ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -106,7 +112,6 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	wg.Add(len(containers))
 	for _, container := range containers {
-
 		go func(c types.Container) {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
@@ -127,7 +132,9 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	metadataFields := make(map[string]interface{})
 	now := time.Now()
 	// Get info from docker daemon
-	info, err := d.client.Info(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	defer cancel()
+	info, err := d.client.Info(ctx)
 	if err != nil {
 		return err
 	}
@@ -210,9 +217,11 @@ func (d *Docker) gatherContainer(
 		}
 	}
 
-	r, err := d.client.ContainerStats(context.Background(), container.ID, false)
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	defer cancel()
+	r, err := d.client.ContainerStats(ctx, container.ID, false)
 	if err != nil {
-		log.Printf("Error getting docker stats: %s\n", err.Error())
+		return fmt.Errorf("Error getting docker stats: %s", err.Error())
 	}
 	defer r.Close()
 	dec := json.NewDecoder(r)
@@ -298,7 +307,11 @@ func gatherContainerStats(
 	for i, percpu := range stat.CPUStats.CPUUsage.PercpuUsage {
 		percputags := copyTags(tags)
 		percputags["cpu"] = fmt.Sprintf("cpu%d", i)
-		acc.AddFields("docker_container_cpu", map[string]interface{}{"usage_total": percpu}, percputags, now)
+		fields := map[string]interface{}{
+			"usage_total":  percpu,
+			"container_id": id,
+		}
+		acc.AddFields("docker_container_cpu", fields, percputags, now)
 	}
 
 	for network, netstats := range stat.Networks {
@@ -319,7 +332,7 @@ func gatherContainerStats(
 		acc.AddFields("docker_container_net", netfields, nettags, now)
 	}
 
-	gatherBlockIOMetrics(stat, acc, tags, now)
+	gatherBlockIOMetrics(stat, acc, tags, now, id)
 }
 
 func calculateMemPercent(stat *types.StatsJSON) float64 {
@@ -347,6 +360,7 @@ func gatherBlockIOMetrics(
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	now time.Time,
+	id string,
 ) {
 	blkioStats := stat.BlkioStats
 	// Make a map of devices to their block io stats
@@ -411,6 +425,7 @@ func gatherBlockIOMetrics(
 	for device, fields := range deviceStatMap {
 		iotags := copyTags(tags)
 		iotags["device"] = device
+		fields["container_id"] = id
 		acc.AddFields("docker_container_blkio", fields, iotags, now)
 	}
 }
@@ -455,6 +470,8 @@ func parseSize(sizeStr string) (int64, error) {
 
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
-		return &Docker{}
+		return &Docker{
+			Timeout: internal.Duration{Duration: time.Second * 5},
+		}
 	})
 }

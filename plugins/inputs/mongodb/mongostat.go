@@ -34,6 +34,7 @@ type MongoStatus struct {
 	SampleTime    time.Time
 	ServerStatus  *ServerStatus
 	ReplSetStatus *ReplSetStatus
+	ClusterStatus *ClusterStatus
 }
 
 type ServerStatus struct {
@@ -62,6 +63,11 @@ type ServerStatus struct {
 	StorageEngine      map[string]string      `bson:"storageEngine"`
 	WiredTiger         *WiredTiger            `bson:"wiredTiger"`
 	Metrics            *MetricsStats          `bson:"metrics"`
+}
+
+// ClusterStatus stores information related to the whole cluster
+type ClusterStatus struct {
+	JumboChunksCount int64
 }
 
 // ReplSetStatus stores information from replSetGetStatus
@@ -387,6 +393,9 @@ type StatLine struct {
 	NumConnections                                        int64
 	ReplSetName                                           string
 	NodeType                                              string
+
+	// Cluster fields
+	JumboChunksCount int64
 }
 
 func parseLocks(stat ServerStatus) map[string]LockUsage {
@@ -664,6 +673,9 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 		}
 	}
+
+	newClusterStat := *newMongo.ClusterStatus
+	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
 
 	return returnVal
 }

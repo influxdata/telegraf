@@ -29,9 +29,8 @@ VENDOR=Influxdata
 
 set -e
 
-# Get version from latest tag
-revision=`git rev-list --tags --max-count=1`
-version=$(git describe --tags $revision | sed 's/^v//' )
+# Get version from tag closest to HEAD
+version=$(git describe --tags --abbrev=0 | sed 's/^v//' )
 
 # Build and install the latest code
 echo "Building and Installing telegraf"

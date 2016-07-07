@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -98,31 +99,34 @@ var sampleConfig = `
   # group = true
   #
   #
-  ## Options for the sadf command. The values on the left represent the sadf options and
-  ## the values on the right their description (wich are used for grouping and prefixing metrics).
+  ## Options for the sadf command. The values on the left represent the sadf
+  ## options and the values on the right their description (wich are used for
+  ## grouping and prefixing metrics).
   ##
-  ## Run 'sar -h' or 'man sar' to find out the supported options for your sysstat version.
+  ## Run 'sar -h' or 'man sar' to find out the supported options for your
+  ## sysstat version.
   [inputs.sysstat.options]
-	-C = "cpu"
-	-B = "paging"
-	-b = "io"
-	-d = "disk"             # requires DISK activity
-	"-n ALL" = "network"
-	"-P ALL" = "per_cpu"
-	-q = "queue"
-	-R = "mem"
-	-r = "mem_util"
-	-S = "swap_util"
-	-u = "cpu_util"
-	-v = "inode"
-	-W = "swap"
-	-w = "task"
-  #	-H = "hugepages"        # only available for newer linux distributions
-  #	"-I ALL" = "interrupts" # requires INT activity
+    -C = "cpu"
+    -B = "paging"
+    -b = "io"
+    -d = "disk"             # requires DISK activity
+    "-n ALL" = "network"
+    "-P ALL" = "per_cpu"
+    -q = "queue"
+    -R = "mem"
+    -r = "mem_util"
+    -S = "swap_util"
+    -u = "cpu_util"
+    -v = "inode"
+    -W = "swap"
+    -w = "task"
+  #  -H = "hugepages"        # only available for newer linux distributions
+  #  "-I ALL" = "interrupts" # requires INT activity
   #
   #
-  ## Device tags can be used to add additional tags for devices. For example the configuration below
-  ## adds a tag vg with value rootvg for all metrics with sda devices.
+  ## Device tags can be used to add additional tags for devices.
+  ## For example the configuration below adds a tag vg with value rootvg for
+  ## all metrics with sda devices.
   # [[inputs.sysstat.device_tags.sda]]
   #  vg = "rootvg"
 `
@@ -136,7 +140,7 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 		if firstTimestamp.IsZero() {
 			firstTimestamp = time.Now()
 		} else {
-			s.interval = int(time.Since(firstTimestamp).Seconds())
+			s.interval = int(time.Since(firstTimestamp).Seconds() + 0.5)
 		}
 	}
 	ts := time.Now().Add(time.Duration(s.interval) * time.Second)
@@ -174,26 +178,30 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 	return errors.New(strings.Join(errorStrings, "\n"))
 }
 
-// collect collects sysstat data with the collector utility sadc. It runs the following command:
+// collect collects sysstat data with the collector utility sadc.
+// It runs the following command:
 //     Sadc -S <Activity1> -S <Activity2> ... <collectInterval> 2 tmpFile
-// The above command collects system metrics during <collectInterval> and saves it in binary form to tmpFile.
+// The above command collects system metrics during <collectInterval> and
+// saves it in binary form to tmpFile.
 func (s *Sysstat) collect() error {
 	options := []string{}
 	for _, act := range s.Activities {
 		options = append(options, "-S", act)
 	}
 	s.tmpFile = path.Join("/tmp", fmt.Sprintf("sysstat-%d", time.Now().Unix()))
-	collectInterval := s.interval - parseInterval // collectInterval has to be smaller than the telegraf data collection interval
+	// collectInterval has to be smaller than the telegraf data collection interval
+	collectInterval := s.interval - parseInterval
 
-	if collectInterval < 0 { // If true, interval is not defined yet and Gather is run for the first time.
+	// If true, interval is not defined yet and Gather is run for the first time.
+	if collectInterval < 0 {
 		collectInterval = 1 // In that case we only collect for 1 second.
 	}
 
 	options = append(options, strconv.Itoa(collectInterval), "2", s.tmpFile)
 	cmd := execCommand(s.Sadc, options...)
-	out, err := cmd.CombinedOutput()
+	out, err := internal.CombinedOutputTimeout(cmd, time.Second*time.Duration(collectInterval+parseInterval))
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s", strings.Join(cmd.Args, " "), string(out))
+		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	return nil
 }
@@ -279,8 +287,9 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 			acc.AddFields(measurement, v.fields, v.tags, ts)
 		}
 	}
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("command %s failed with %s", strings.Join(cmd.Args, " "), err)
+	if err := internal.WaitTimeout(cmd, time.Second*5); err != nil {
+		return fmt.Errorf("command %s failed with %s",
+			strings.Join(cmd.Args, " "), err)
 	}
 	return nil
 }

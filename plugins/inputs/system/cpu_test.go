@@ -15,7 +15,7 @@ func TestCPUStats(t *testing.T) {
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
-	cts := cpu.CPUTimesStat{
+	cts := cpu.TimesStat{
 		CPU:       "cpu0",
 		User:      3.1,
 		System:    8.2,
@@ -29,7 +29,7 @@ func TestCPUStats(t *testing.T) {
 		GuestNice: 0.324,
 	}
 
-	cts2 := cpu.CPUTimesStat{
+	cts2 := cpu.TimesStat{
 		CPU:       "cpu0",
 		User:      11.4,     // increased by 8.3
 		System:    10.9,     // increased by 2.7
@@ -43,7 +43,7 @@ func TestCPUStats(t *testing.T) {
 		GuestNice: 2.524,    // increased by 2.2
 	}
 
-	mps.On("CPUTimes").Return([]cpu.CPUTimesStat{cts}, nil)
+	mps.On("CPUTimes").Return([]cpu.TimesStat{cts}, nil)
 
 	cs := NewCPUStats(&mps)
 
@@ -68,7 +68,7 @@ func TestCPUStats(t *testing.T) {
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_guest_nice", 0.324, 0, cputags)
 
 	mps2 := MockPS{}
-	mps2.On("CPUTimes").Return([]cpu.CPUTimesStat{cts2}, nil)
+	mps2.On("CPUTimes").Return([]cpu.TimesStat{cts2}, nil)
 	cs.ps = &mps2
 
 	// Should have added cpu percentages too

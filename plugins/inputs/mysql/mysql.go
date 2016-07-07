@@ -25,7 +25,9 @@ type Mysql struct {
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
+	GatherTableLockWaits                bool     `toml:"gather_table_lock_waits"`
 	GatherIndexIOWaits                  bool     `toml:"gather_index_io_waits"`
+	GatherEventWaits                    bool     `toml:"gather_event_waits"`
 	GatherTableSchema                   bool     `toml:"gather_table_schema"`
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
@@ -37,8 +39,8 @@ var sampleConfig = `
   ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   ##  e.g.
-  ##    root:passwd@tcp(127.0.0.1:3306)/?tls=false
-  ##    root@tcp(127.0.0.1:3306)/?tls=false
+  ##    db_user:passwd@tcp(127.0.0.1:3306)/?tls=false
+  ##    db_user@tcp(127.0.0.1:3306)/?tls=false
   #
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
@@ -68,8 +70,14 @@ var sampleConfig = `
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_TABLE
   gather_table_io_waits                     = false
   #
+  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
+  gather_table_lock_waits                   = false
+  #
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_INDEX_USAGE
   gather_index_io_waits                     = false
+  #
+  ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
+  gather_event_waits                        = false
   #
   ## gather metrics from PERFORMANCE_SCHEMA.FILE_SUMMARY_BY_EVENT_NAME
   gather_file_events_stats                  = false
@@ -454,7 +462,6 @@ const (
             COUNT_READ_EXTERNAL,
             COUNT_WRITE_ALLOW_WRITE,
             COUNT_WRITE_CONCURRENT_INSERT,
-            COUNT_WRITE_DELAYED,
             COUNT_WRITE_LOW_PRIORITY,
             COUNT_WRITE_NORMAL,
             COUNT_WRITE_EXTERNAL,
@@ -465,7 +472,6 @@ const (
             SUM_TIMER_READ_EXTERNAL,
             SUM_TIMER_WRITE_ALLOW_WRITE,
             SUM_TIMER_WRITE_CONCURRENT_INSERT,
-            SUM_TIMER_WRITE_DELAYED,
             SUM_TIMER_WRITE_LOW_PRIORITY,
             SUM_TIMER_WRITE_NORMAL,
             SUM_TIMER_WRITE_EXTERNAL
@@ -614,14 +620,18 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		}
 	}
 
-	err = m.gatherPerfTableLockWaits(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherTableLockWaits {
+		err = m.gatherPerfTableLockWaits(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = m.gatherPerfEventWaits(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherEventWaits {
+		err = m.gatherPerfEventWaits(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 
 	if m.GatherFileEventsStats {
@@ -1126,7 +1136,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 		countReadExternal          float64
 		countWriteAllowWrite       float64
 		countWriteConcurrentInsert float64
-		countWriteDelayed          float64
 		countWriteLowPriority      float64
 		countWriteNormal           float64
 		countWriteExternal         float64
@@ -1137,7 +1146,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 		timeReadExternal           float64
 		timeWriteAllowWrite        float64
 		timeWriteConcurrentInsert  float64
-		timeWriteDelayed           float64
 		timeWriteLowPriority       float64
 		timeWriteNormal            float64
 		timeWriteExternal          float64
@@ -1154,7 +1162,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			&countReadExternal,
 			&countWriteAllowWrite,
 			&countWriteConcurrentInsert,
-			&countWriteDelayed,
 			&countWriteLowPriority,
 			&countWriteNormal,
 			&countWriteExternal,
@@ -1165,7 +1172,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			&timeReadExternal,
 			&timeWriteAllowWrite,
 			&timeWriteConcurrentInsert,
-			&timeWriteDelayed,
 			&timeWriteLowPriority,
 			&timeWriteNormal,
 			&timeWriteExternal,
@@ -1190,7 +1196,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			"write_normal":            countWriteNormal,
 			"write_allow_write":       countWriteAllowWrite,
 			"write_concurrent_insert": countWriteConcurrentInsert,
-			"write_delayed":           countWriteDelayed,
 			"write_low_priority":      countWriteLowPriority,
 		}
 		acc.AddFields("mysql_perf_schema", sqlLWFields, sqlLWTags)
@@ -1213,7 +1218,6 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 			"write_normal":            timeWriteNormal / picoSeconds,
 			"write_allow_write":       timeWriteAllowWrite / picoSeconds,
 			"write_concurrent_insert": timeWriteConcurrentInsert / picoSeconds,
-			"write_delayed":           timeWriteDelayed / picoSeconds,
 			"write_low_priority":      timeWriteLowPriority / picoSeconds,
 		}
 		acc.AddFields("mysql_perf_schema", sqlLWSecTotalFields, sqlLWSecTotalTags)

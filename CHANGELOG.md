@@ -1,4 +1,40 @@
-## v0.13 [unreleased]
+## v1.0 [unreleased]
+
+## v0.13.1 [2016-05-24]
+
+### Release Notes
+
+- net_response and http_response plugins timeouts will now accept duration
+strings, ie, "2s" or "500ms".
+- Input plugin Gathers will no longer be logged by default, but a Gather for
+_each_ plugin will be logged in Debug mode.
+- Debug mode will no longer print every point added to the accumulator. This
+functionality can be duplicated using the `file` output plugin and printing
+to "stdout".
+
+### Features
+
+- [#1173](https://github.com/influxdata/telegraf/pull/1173): varnish input plugin. Thanks @sfox-xmatters!
+- [#1138](https://github.com/influxdata/telegraf/pull/1138): nstat input plugin. Thanks @Maksadbek!
+- [#1139](https://github.com/influxdata/telegraf/pull/1139): instrumental output plugin. Thanks @jasonroelofs!
+- [#1172](https://github.com/influxdata/telegraf/pull/1172): Ceph storage stats. Thanks @robinpercy!
+- [#1233](https://github.com/influxdata/telegraf/pull/1233): Updated golint gopsutil dependency.
+- [#1238](https://github.com/influxdata/telegraf/pull/1238): chrony input plugin. Thanks @zbindenren!
+- [#479](https://github.com/influxdata/telegraf/issues/479): per-plugin execution time added to debug output.
+- [#1249](https://github.com/influxdata/telegraf/issues/1249): influxdb output: added write_consistency argument.
+
+### Bugfixes
+
+- [#1195](https://github.com/influxdata/telegraf/pull/1195): Docker panic on timeout. Thanks @zstyblik!
+- [#1211](https://github.com/influxdata/telegraf/pull/1211): mongodb input. Fix possible panic. Thanks @kols!
+- [#1215](https://github.com/influxdata/telegraf/pull/1215): Fix for possible gopsutil-dependent plugin hangs.
+- [#1228](https://github.com/influxdata/telegraf/pull/1228): Fix service plugin host tag overwrite.
+- [#1198](https://github.com/influxdata/telegraf/pull/1198): http_response: override request Host header properly
+- [#1230](https://github.com/influxdata/telegraf/issues/1230): Fix Telegraf process hangup due to a single plugin hanging.
+- [#1214](https://github.com/influxdata/telegraf/issues/1214): Use TCP timeout argument in net_response plugin.
+- [#1243](https://github.com/influxdata/telegraf/pull/1243): Logfile not created on systemd.
+
+## v0.13 [2016-05-11]
 
 ### Release Notes
 
@@ -48,6 +84,19 @@ based on _prefix_ in addition to globs. This means that a filter like
   - disque: `host -> disque_host`
   - rethinkdb: `host -> rethinkdb_host`
 
+- **Breaking Change**: The `win_perf_counters` input has been changed to
+sanitize field names, replacing `/Sec` and `/sec` with `_persec`, as well as
+spaces with underscores. This is needed because Graphite doesn't like slashes
+and spaces, and was failing to accept metrics that had them.
+The `/[sS]ec` -> `_persec` is just to make things clearer and uniform.
+
+- **Breaking Change**: snmp plugin. The `host` tag of the snmp plugin has been
+changed to the `snmp_host` tag.
+
+- The `disk` input plugin can now be configured with the `HOST_MOUNT_PREFIX` environment variable.
+This value is prepended to any mountpaths discovered before retrieving stats.
+It is not included on the report path. This is necessary for reporting host disk stats when running from within a container.
+
 ### Features
 
 - [#1031](https://github.com/influxdata/telegraf/pull/1031): Jolokia plugin proxy mode. Thanks @saiello!
@@ -64,7 +113,9 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1096](https://github.com/influxdata/telegraf/pull/1096): Performance refactor of running output buffers.
 - [#967](https://github.com/influxdata/telegraf/issues/967): Buffer logging improvements.
 - [#1107](https://github.com/influxdata/telegraf/issues/1107): Support lustre2 job stats. Thanks @hanleyja!
-- [#1110](https://github.com/influxdata/telegraf/pull/1110): Sanitize * to - in graphite serializer. Thanks @goodeggs!
+- [#1122](https://github.com/influxdata/telegraf/pull/1122): Support setting config path through env variable and default paths.
+- [#1128](https://github.com/influxdata/telegraf/pull/1128): MongoDB jumbo chunks metric for MongoDB input plugin
+- [#1146](https://github.com/influxdata/telegraf/pull/1146): HAProxy socket support. Thanks weshmashian!
 
 ### Bugfixes
 
@@ -80,6 +131,15 @@ based on _prefix_ in addition to globs. This means that a filter like
 - [#1070](https://github.com/influxdata/telegraf/issues/1070): SQL Server input. Fix datatype conversion.
 - [#1089](https://github.com/influxdata/telegraf/issues/1089): Fix leaky TCP connections in phpfpm plugin.
 - [#914](https://github.com/influxdata/telegraf/issues/914): Telegraf can drop metrics on full buffers.
+- [#1098](https://github.com/influxdata/telegraf/issues/1098): Sanitize invalid OpenTSDB characters.
+- [#1110](https://github.com/influxdata/telegraf/pull/1110): Sanitize * to - in graphite serializer. Thanks @goodeggs!
+- [#1118](https://github.com/influxdata/telegraf/pull/1118): Sanitize Counter names for `win_perf_counters` input.
+- [#1125](https://github.com/influxdata/telegraf/pull/1125): Wrap all exec command runners with a timeout, so hung os processes don't halt Telegraf.
+- [#1113](https://github.com/influxdata/telegraf/pull/1113): Set MaxRetry and RequiredAcks defaults in Kafka output.
+- [#1090](https://github.com/influxdata/telegraf/issues/1090): [agent] and [global_tags] config sometimes not getting applied.
+- [#1133](https://github.com/influxdata/telegraf/issues/1133): Use a timeout for docker list & stat cmds.
+- [#1052](https://github.com/influxdata/telegraf/issues/1052): Docker panic fix when decode fails.
+- [#1136](https://github.com/influxdata/telegraf/pull/1136): "DELAYED" Inserts were deprecated in MySQL 5.6.6. Thanks @PierreF
 
 ## v0.12.1 [2016-04-14]
 

@@ -120,6 +120,9 @@ func (i *InfluxDB) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
 ) error {
+	shardCounter := 0
+	now := time.Now()
+
 	resp, err := client.Get(url)
 	if err != nil {
 		return err
@@ -201,6 +204,10 @@ func (i *InfluxDB) gatherURL(
 			continue
 		}
 
+		if p.Name == "shard" {
+			shardCounter++
+		}
+
 		// If the object was a point, but was not fully initialized,
 		// ignore it and move on.
 		if p.Name == "" || p.Tags == nil || p.Values == nil || len(p.Values) == 0 {
@@ -214,8 +221,17 @@ func (i *InfluxDB) gatherURL(
 			"influxdb_"+p.Name,
 			p.Values,
 			p.Tags,
+			now,
 		)
 	}
+
+	acc.AddFields("influxdb",
+		map[string]interface{}{
+			"n_shards": shardCounter,
+		},
+		nil,
+		now,
+	)
 
 	return nil
 }

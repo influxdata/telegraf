@@ -25,8 +25,8 @@ This plugin gathers the statistic data from MySQL server
   ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   ##  e.g.
-  ##    root:passwd@tcp(127.0.0.1:3306)/?tls=false
-  ##    root@tcp(127.0.0.1:3306)/?tls=false
+  ##    db_user:passwd@tcp(127.0.0.1:3306)/?tls=false
+  ##    db_user@tcp(127.0.0.1:3306)/?tls=false
   #
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
@@ -56,8 +56,14 @@ This plugin gathers the statistic data from MySQL server
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_TABLE
   gather_table_io_waits                     = false
   #
+  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
+  gather_table_lock_waits                   = false
+  #
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_INDEX_USAGE
   gather_index_io_waits                     = false
+  #
+  ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
+  gather_event_waits                        = false
   #
   ## gather metrics from PERFORMANCE_SCHEMA.FILE_SUMMARY_BY_EVENT_NAME
   gather_file_events_stats                  = false
@@ -117,7 +123,6 @@ The unit of fields varies by the tags.
     * write_normal(float, number/milliseconds)
     * write_allow_write(float, number/milliseconds)
     * write_concurrent_insert(float, number/milliseconds)
-    * write_delayed(float, number/milliseconds)
     * write_low_priority(float, number/milliseconds)
     * read(float, number/milliseconds)
     * write(float, number/milliseconds)

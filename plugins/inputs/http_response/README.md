@@ -5,23 +5,23 @@ This input plugin will test HTTP/HTTPS connections.
 ### Configuration:
 
 ```
-# List of UDP/TCP connections you want to check
+# HTTP/HTTPS request given an address a method and a timeout
 [[inputs.http_response]]
   ## Server address (default http://localhost)
   address = "http://github.com"
   ## Set response_timeout (default 5 seconds)
-  response_timeout = 5
+  response_timeout = "5s"
   ## HTTP Request Method
   method = "GET"
-  ## HTTP Request Headers
-  [inputs.http_response.headers]
-      Host = github.com
   ## Whether to follow redirects from the server (defaults to false)
   follow_redirects = true
+  ## HTTP Request Headers (all values must be strings)
+  # [inputs.http_response.headers]
+  #   Host = "github.com"
   ## Optional HTTP Request Body
-  body = '''
-  {'fake':'data'}
-  '''
+  # body = '''
+  # {'fake':'data'}
+  # '''
 ```
 
 ### Measurements & Fields:

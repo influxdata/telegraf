@@ -1,4 +1,4 @@
-# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf)
+# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 
 Telegraf is an agent written in Go for collecting metrics from the system it's
 running on, or from other services, and writing them into InfluxDB or other
@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf_0.12.1-1_amd64.deb
-* http://get.influxdb.org/telegraf/telegraf-0.12.1-1.x86_64.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.1_amd64.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1.x86_64.rpm
 
 Latest (arm):
-* http://get.influxdb.org/telegraf/telegraf_0.12.1-1_armhf.deb
-* http://get.influxdb.org/telegraf/telegraf-0.12.1-1.armhf.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.1_armhf.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,32 +46,14 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_linux_amd64.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_linux_i386.tar.gz
-* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_linux_armhf.tar.gz
-
-##### tarball Instructions:
-
-To install the full directory structure with config file, run:
-
-```
-sudo tar -C / -zxvf ./telegraf-0.12.1-1_linux_amd64.tar.gz
-```
-
-To extract only the binary, run:
-
-```
-tar -zxvf telegraf-0.12.1-1_linux_amd64.tar.gz --strip-components=3 ./usr/bin/telegraf
-```
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_i386.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_armhf.tar.gz
 
 ### FreeBSD tarball:
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_freebsd_amd64.tar.gz
-
-##### tarball Instructions:
-
-See linux instructions above.
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
@@ -87,8 +69,8 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_windows_amd64.zip
-* http://get.influxdb.org/telegraf/telegraf-0.12.1-1_windows_i386.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_windows_amd64.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_windows_i386.zip
 
 ### From Source:
 
@@ -161,6 +143,8 @@ Currently implemented sources:
 * [apache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/apache)
 * [bcache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/bcache)
 * [cassandra](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cassandra)
+* [ceph](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ceph)
+* [chrony](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/chrony)
 * [couchbase](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchbase)
 * [couchdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/couchdb)
 * [disque](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disque)
@@ -186,6 +170,7 @@ Currently implemented sources:
 * [net_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/net_response)
 * [nginx](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nginx)
 * [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq)
+* [nstat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nstat)
 * [ntpq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ntpq)
 * [phpfpm](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/phpfpm)
 * [phusion passenger](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/passenger)
@@ -205,6 +190,7 @@ Currently implemented sources:
 * [snmp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
 * [sql server](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sqlserver) (microsoft)
 * [twemproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/twemproxy)
+* [varnish](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/varnish)
 * [zfs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zfs)
 * [zookeeper](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/zookeeper)
 * [win_perf_counters ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/win_perf_counters) (windows performance counters)
@@ -223,6 +209,7 @@ Currently implemented sources:
 Telegraf can also collect metrics via the following service plugins:
 
 * [statsd](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/statsd)
+* [tail](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail)
 * [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [tcp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tcp_listener)
 * [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
@@ -243,6 +230,7 @@ want to add support for another service or third-party API.
 * [datadog](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/datadog)
 * [file](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file)
 * [graphite](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/graphite)
+* [instrumental](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/instrumental)
 * [kafka](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kafka)
 * [librato](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/librato)
 * [mqtt](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/mqtt)

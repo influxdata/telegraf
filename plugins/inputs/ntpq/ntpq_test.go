@@ -32,10 +32,11 @@ func TestSingleNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote":  "*uschi5-ntp-002.",
-		"refid":   "10.177.80.46",
-		"stratum": "2",
-		"type":    "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
@@ -60,10 +61,11 @@ func TestBadIntNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote":  "*uschi5-ntp-002.",
-		"refid":   "10.177.80.46",
-		"stratum": "2",
-		"type":    "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
@@ -88,10 +90,11 @@ func TestBadFloatNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote":  "*uschi5-ntp-002.",
-		"refid":   "10.177.80.46",
-		"stratum": "2",
-		"type":    "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
@@ -117,10 +120,11 @@ func TestDaysNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote":  "*uschi5-ntp-002.",
-		"refid":   "10.177.80.46",
-		"stratum": "2",
-		"type":    "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
@@ -146,10 +150,11 @@ func TestHoursNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote":  "*uschi5-ntp-002.",
-		"refid":   "10.177.80.46",
-		"stratum": "2",
-		"type":    "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
@@ -175,10 +180,11 @@ func TestMinutesNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote":  "*uschi5-ntp-002.",
-		"refid":   "10.177.80.46",
-		"stratum": "2",
-		"type":    "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
@@ -203,10 +209,11 @@ func TestBadWhenNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote":  "*uschi5-ntp-002.",
-		"refid":   "10.177.80.46",
-		"stratum": "2",
-		"type":    "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
@@ -278,9 +285,10 @@ func TestBadHeaderNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote": "*uschi5-ntp-002.",
-		"refid":  "10.177.80.46",
-		"type":   "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
@@ -306,9 +314,10 @@ func TestMissingDelayColumnNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"remote": "*uschi5-ntp-002.",
-		"refid":  "10.177.80.46",
-		"type":   "u",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"type":         "u",
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
