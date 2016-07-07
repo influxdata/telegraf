@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
+
 type Prometheus struct {
 	Urls []string
 
@@ -86,7 +88,7 @@ var client = &http.Client{
 func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	collectDate := time.Now()
 	var req, err = http.NewRequest("GET", url, nil)
-	req.Header = make(http.Header)
+	req.Header.Add("Accept", acceptHeader)
 	var token []byte
 	var resp *http.Response
 
@@ -129,20 +131,9 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 		return fmt.Errorf("error reading body: %s", err)
 	}
 
-	// Headers
-	headers := make(map[string]string)
-	for key, value := range headers {
-		headers[key] = value
-	}
-
-	// Prepare Prometheus parser config
-	promparser := PrometheusParser{
-		PromFormat: headers,
-	}
-
-	metrics, err := promparser.Parse(body)
+	metrics, err := Parse(body, resp.Header)
 	if err != nil {
-		return fmt.Errorf("error getting processing samples for %s: %s",
+		return fmt.Errorf("error reading metrics for %s: %s",
 			url, err)
 	}
 	// Add (or not) collected metrics
