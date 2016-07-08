@@ -9,6 +9,7 @@ via raw TCP.
 # Configuration for Graphite server to send metrics to
 [[outputs.graphite]]
   ## TCP endpoint for your graphite instance.
+  ## If multiple endpoints are configured the output will be load balanced.
   servers = ["localhost:2003"]
   ## Prefix metrics name
   prefix = ""
