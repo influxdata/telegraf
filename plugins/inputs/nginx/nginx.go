@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"crypto/tls"
 	"strconv"
 	"strings"
 	"sync"
@@ -61,6 +62,9 @@ var tr = &http.Transport{
 var client = &http.Client{
 	Transport: tr,
 	Timeout:   time.Duration(4 * time.Second),
+	// ignore the cert part as its not going to match top level domain if https behind many hosts 
+	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+
 }
 
 func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
