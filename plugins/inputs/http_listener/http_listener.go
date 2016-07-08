@@ -61,13 +61,19 @@ func (t *HttpListener) Start(acc telegraf.Accumulator) error {
 	t.acc = acc
 
 	var rawListener, err = net.Listen("tcp", t.ServiceAddress)
+	if err != nil {
+		return err
+	}
 	t.listener, err = stoppableListener.New(rawListener)
+	if err != nil {
+		return err
+	}
 
 	go t.httpListen()
 
 	log.Printf("Started HTTP listener service on %s\n", t.ServiceAddress)
 
-	return err
+	return nil
 }
 
 // Stop cleans up all resources
@@ -85,7 +91,13 @@ func (t *HttpListener) Stop() {
 func (t *HttpListener) httpListen() error {
 
 	readTimeout, err := strconv.ParseInt(t.ReadTimeout, 10, 32)
+	if err != nil {
+		return err
+	}
 	writeTimeout, err := strconv.ParseInt(t.WriteTimeout, 10, 32)
+	if err != nil {
+		return err
+	}
 
 	var server = http.Server{
 		Handler:      t,
@@ -93,44 +105,42 @@ func (t *HttpListener) httpListen() error {
 		WriteTimeout: time.Duration(writeTimeout) * time.Second,
 	}
 
-	err = server.Serve(t.listener)
-
-	return err
+	return server.Serve(t.listener)
 }
 
 func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	body, err := ioutil.ReadAll(req.Body)
 
-	if err == nil {
-		var path = req.URL.Path[1:]
-
-		if path == "write" {
-			var metrics []telegraf.Metric
-			metrics, err = t.parser.Parse(body)
-			if err == nil {
-				t.storeMetrics(metrics)
-				res.WriteHeader(http.StatusNoContent)
-				res.Write([]byte(""))
-			} else {
-				log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
-				res.WriteHeader(http.StatusInternalServerError)
-				res.Write([]byte("ERROR parsing metrics"))
-			}
-		} else if path == "query" {
-			// Deliver a dummy response to the query endpoint, as some InfluxDB clients test endpoint availability with a query
-			res.Header().Set("Content-Type", "application/json")
-			res.Header().Set("X-Influxdb-Version", "1.0")
-			res.WriteHeader(http.StatusOK)
-			res.Write([]byte("{\"results\":[]}"))
-		} else {
-			// Don't know how to respond to calls to other endpoints
-			res.WriteHeader(http.StatusNotFound)
-			res.Write([]byte("Not Found"))
-		}
-	} else {
+	if err != nil {
 		log.Printf("Problem reading request: [%s], Error: %s\n", string(body), err)
 		res.WriteHeader(http.StatusInternalServerError)
 		res.Write([]byte("ERROR reading request"))
+	}
+
+	var path = req.URL.Path[1:]
+
+	if path == "write" {
+		var metrics []telegraf.Metric
+		metrics, err = t.parser.Parse(body)
+		if err == nil {
+			t.storeMetrics(metrics)
+			res.WriteHeader(http.StatusNoContent)
+			res.Write([]byte(""))
+		} else {
+			log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
+			res.WriteHeader(http.StatusInternalServerError)
+			res.Write([]byte("ERROR parsing metrics"))
+		}
+	} else if path == "query" {
+		// Deliver a dummy response to the query endpoint, as some InfluxDB clients test endpoint availability with a query
+		res.Header().Set("Content-Type", "application/json")
+		res.Header().Set("X-Influxdb-Version", "1.0")
+		res.WriteHeader(http.StatusOK)
+		res.Write([]byte("{\"results\":[]}"))
+	} else {
+		// Don't know how to respond to calls to other endpoints
+		res.WriteHeader(http.StatusNotFound)
+		res.Write([]byte("Not Found"))
 	}
 }
 
