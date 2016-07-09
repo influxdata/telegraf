@@ -1,15 +1,18 @@
-package github_webhooks
+package github
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func GithubWebhookRequest(event string, jsonString string, t *testing.T) {
-	gh := NewGithubWebhooks()
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(jsonString))
+	var acc testutil.Accumulator
+	gh := &GithubWebhook{Path: "/github", acc: &acc}
+	req, _ := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", event)
 	w := httptest.NewRecorder()
 	gh.eventHandler(w, req)

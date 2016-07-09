@@ -1,9 +1,57 @@
-## v1.0 beta 2 [unreleased]
+## v1.0
+
+### Release Notes
+
+**Breaking Change**: users of github_webhooks must change to the new
+`[[inputs.webhooks]]` plugin.
+
+This means that the default github_webhooks config:
+
+```
+# A Github Webhook Event collector
+[[inputs.github_webhooks]]
+  ## Address and port to host Webhook listener on
+  service_address = ":1618"
+```
+
+should now look like:
+
+```
+# A Webhooks Event collector
+[[inputs.webhooks]]
+  ## Address and port to host Webhook listener on
+  service_address = ":1618"
+
+  [inputs.webhooks.github]
+    path = "/"
+```
+
+### Features
+
+- [#1289](https://github.com/influxdata/telegraf/pull/1289): webhooks input plugin. Thanks @francois2metz and @cduez!
+- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar webhook plugin.
+- [#1402](https://github.com/influxdata/telegraf/pull/1402): docker-machine/boot2docker no longer required for unit tests.
+- [#1350](https://github.com/influxdata/telegraf/pull/1350): cgroup input plugin.
+- [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
+
+### Bugfixes
+
+- [#1426](https://github.com/influxdata/telegraf/pull/1426): nil metrics panic fix.
+- [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
+- [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
+- [#1405](https://github.com/influxdata/telegraf/issues/1405): Fix memory/connection leak in prometheus input plugin.
+- [#1378](https://github.com/influxdata/telegraf/issues/1378): Trim BOM from config file for Windows support.
+- [#1339](https://github.com/influxdata/telegraf/issues/1339): Prometheus client output panic on service reload.
+
+## v1.0 beta 2 [2016-06-21]
 
 ### Features
 
 - [#1340](https://github.com/influxdata/telegraf/issues/1340): statsd: do not log every dropped metric.
 - [#1368](https://github.com/influxdata/telegraf/pull/1368): Add precision rounding to all metrics on collection.
+- [#1390](https://github.com/influxdata/telegraf/pull/1390): Add support for Tengine
+- [#1320](https://github.com/influxdata/telegraf/pull/1320): Logparser input plugin for parsing grok-style log patterns.
+- [#1397](https://github.com/influxdata/telegraf/issues/1397): ElasticSearch: now supports connecting to ElasticSearch via SSL
 
 ### Bugfixes
 
@@ -12,6 +60,8 @@
 - [#1112](https://github.com/influxdata/telegraf/issues/1112): Set default Zookeeper chroot to empty string.
 - [#1335](https://github.com/influxdata/telegraf/issues/1335): Fix overall ping timeout to be calculated based on per-ping timeout.
 - [#1374](https://github.com/influxdata/telegraf/pull/1374): Change "default" retention policy to "".
+- [#1377](https://github.com/influxdata/telegraf/issues/1377): Graphite output mangling '%' character.
+- [#1396](https://github.com/influxdata/telegraf/pull/1396): Prometheus input plugin now supports x509 certs authentication
 
 ## v1.0 beta 1 [2016-06-07]
 
@@ -37,11 +87,11 @@ in conjunction with wildcard dimension values as it will control the amount of
 time before a new metric is included by the plugin.
 
 ### Features
+
 - [#1262](https://github.com/influxdata/telegraf/pull/1261): Add graylog input pluging.
 - [#1294](https://github.com/influxdata/telegraf/pull/1294): consul input plugin. Thanks @harnash
 - [#1164](https://github.com/influxdata/telegraf/pull/1164): conntrack input plugin. Thanks @robinpercy!
 - [#1165](https://github.com/influxdata/telegraf/pull/1165): vmstat input plugin. Thanks @jshim-xm!
-- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
 - [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
 - [#1264](https://github.com/influxdata/telegraf/pull/1264): Add SSL config options to http_response plugin.
 - [#1272](https://github.com/influxdata/telegraf/pull/1272): graphite parser: add ability to specify multiple tag keys, for consistency with influxdb parser.

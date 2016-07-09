@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0-beta1_amd64.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_beta1.x86_64.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0-beta2_amd64.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_beta2.x86_64.rpm
 
 Latest (arm):
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0-beta1_armhf.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_beta1.armhf.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0-beta2_armhf.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_beta2.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,14 +46,14 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta1_linux_amd64.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta1_linux_i386.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta1_linux_armhf.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta2_linux_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta2_linux_i386.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta2_linux_armhf.tar.gz
 
 ### FreeBSD tarball:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta1_freebsd_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta2_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
@@ -69,7 +69,7 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta1_windows_amd64.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta2_windows_amd64.zip
 
 ### From Source:
 
@@ -217,6 +217,10 @@ Telegraf can also collect metrics via the following service plugins:
 * [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
 * [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
 * [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
+* [webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks)
+  * [github](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/github)
+  * [rollbar](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/rollbar)
+* [nsq_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq_consumer)
 * [github_webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/github_webhooks)
 * [rollbar_webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rollbar_webhooks)
 
