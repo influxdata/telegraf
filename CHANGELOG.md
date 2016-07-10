@@ -35,7 +35,7 @@ should now look like:
 - [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
 
 ### Bugfixes
-
+- Update Nginx plugin to ignore the cert for status 
 - [#1426](https://github.com/influxdata/telegraf/pull/1426): nil metrics panic fix.
 - [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
 - [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
