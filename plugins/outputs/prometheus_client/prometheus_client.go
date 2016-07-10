@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	sanitizedChars = strings.NewReplacer("/", "_", "@", "_", " ", "_", "-", "_", ".", "_")
+	sanitizedChars = strings.NewReplacer("/", "_", "@", "_", " ", "_", "-", "_", ".", "_", "|", "_", "\\", "")
 
 	// Prometheus metric names must match this regex
 	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
