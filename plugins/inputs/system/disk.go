@@ -92,8 +92,8 @@ var diskIoSampleConfig = `
   ## disk partitions.
   ## Setting devices will restrict the stats to the specified devices.
   # devices = ["sda", "sdb"]
-  ## Uncomment the following line if you do not need disk serial numbers.
-  # skip_serial_number = true
+  ## Uncomment the following line if you need disk serial numbers.
+  # skip_serial_number = false
 `
 
 func (_ *DiskIOStats) SampleConfig() string {
@@ -151,6 +151,6 @@ func init() {
 	})
 
 	inputs.Add("diskio", func() telegraf.Input {
-		return &DiskIOStats{ps: &systemPS{}}
+		return &DiskIOStats{ps: &systemPS{}, SkipSerialNumber: true}
 	})
 }
