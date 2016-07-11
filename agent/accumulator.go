@@ -17,6 +17,7 @@ func NewAccumulator(
 	acc := accumulator{}
 	acc.metrics = metrics
 	acc.inputConfig = inputConfig
+	acc.precision = time.Nanosecond
 	return &acc
 }
 
@@ -32,6 +33,8 @@ type accumulator struct {
 	inputConfig *internal_models.InputConfig
 
 	prefix string
+
+	precision time.Duration
 }
 
 func (ac *accumulator) Add(
@@ -141,6 +144,7 @@ func (ac *accumulator) AddFields(
 	} else {
 		timestamp = time.Now()
 	}
+	timestamp = timestamp.Round(ac.precision)
 
 	if ac.prefix != "" {
 		measurement = ac.prefix + measurement
@@ -171,6 +175,31 @@ func (ac *accumulator) Trace() bool {
 
 func (ac *accumulator) SetTrace(trace bool) {
 	ac.trace = trace
+}
+
+// SetPrecision takes two time.Duration objects. If the first is non-zero,
+// it sets that as the precision. Otherwise, it takes the second argument
+// as the order of time that the metrics should be rounded to, with the
+// maximum being 1s.
+func (ac *accumulator) SetPrecision(precision, interval time.Duration) {
+	if precision > 0 {
+		ac.precision = precision
+		return
+	}
+	switch {
+	case interval >= time.Second:
+		ac.precision = time.Second
+	case interval >= time.Millisecond:
+		ac.precision = time.Millisecond
+	case interval >= time.Microsecond:
+		ac.precision = time.Microsecond
+	default:
+		ac.precision = time.Nanosecond
+	}
+}
+
+func (ac *accumulator) DisablePrecision() {
+	ac.precision = time.Nanosecond
 }
 
 func (ac *accumulator) setDefaultTags(tags map[string]string) {

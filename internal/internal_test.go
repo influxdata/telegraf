@@ -107,33 +107,27 @@ func TestRunError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCompileFilter(t *testing.T) {
-	f, err := CompileFilter([]string{})
-	assert.NoError(t, err)
-	assert.Nil(t, f)
+func TestRandomSleep(t *testing.T) {
+	// test that zero max returns immediately
+	s := time.Now()
+	RandomSleep(time.Duration(0), make(chan struct{}))
+	elapsed := time.Since(s)
+	assert.True(t, elapsed < time.Millisecond)
 
-	f, err = CompileFilter([]string{"cpu"})
-	assert.NoError(t, err)
-	assert.True(t, f.Match("cpu"))
-	assert.False(t, f.Match("cpu0"))
-	assert.False(t, f.Match("mem"))
+	// test that max sleep is respected
+	s = time.Now()
+	RandomSleep(time.Millisecond*50, make(chan struct{}))
+	elapsed = time.Since(s)
+	assert.True(t, elapsed < time.Millisecond*50)
 
-	f, err = CompileFilter([]string{"cpu*"})
-	assert.NoError(t, err)
-	assert.True(t, f.Match("cpu"))
-	assert.True(t, f.Match("cpu0"))
-	assert.False(t, f.Match("mem"))
-
-	f, err = CompileFilter([]string{"cpu", "mem"})
-	assert.NoError(t, err)
-	assert.True(t, f.Match("cpu"))
-	assert.False(t, f.Match("cpu0"))
-	assert.True(t, f.Match("mem"))
-
-	f, err = CompileFilter([]string{"cpu", "mem", "net*"})
-	assert.NoError(t, err)
-	assert.True(t, f.Match("cpu"))
-	assert.False(t, f.Match("cpu0"))
-	assert.True(t, f.Match("mem"))
-	assert.True(t, f.Match("network"))
+	// test that shutdown is respected
+	s = time.Now()
+	shutdown := make(chan struct{})
+	go func() {
+		time.Sleep(time.Millisecond * 100)
+		close(shutdown)
+	}()
+	RandomSleep(time.Second, shutdown)
+	elapsed = time.Since(s)
+	assert.True(t, elapsed < time.Millisecond*150)
 }

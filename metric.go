@@ -45,14 +45,9 @@ func NewMetric(
 	name string,
 	tags map[string]string,
 	fields map[string]interface{},
-	t ...time.Time,
+	t time.Time,
 ) (Metric, error) {
-	var T time.Time
-	if len(t) > 0 {
-		T = t[0]
-	}
-
-	pt, err := client.NewPoint(name, tags, fields, T)
+	pt, err := client.NewPoint(name, tags, fields, t)
 	if err != nil {
 		return nil, err
 	}

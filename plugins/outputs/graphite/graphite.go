@@ -96,7 +96,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))
 	for _, n := range p {
-		if _, e := fmt.Fprintf(g.conns[n], graphitePoints); e != nil {
+		if _, e := fmt.Fprint(g.conns[n], graphitePoints); e != nil {
 			// Error
 			log.Println("ERROR: " + err.Error())
 			// Let's try the next one

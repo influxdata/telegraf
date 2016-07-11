@@ -84,6 +84,14 @@ func (a *Accumulator) AddFields(
 	a.Metrics = append(a.Metrics, p)
 }
 
+func (a *Accumulator) SetPrecision(precision, interval time.Duration) {
+	return
+}
+
+func (a *Accumulator) DisablePrecision() {
+	return
+}
+
 func (a *Accumulator) Debug() bool {
 	// stub for implementing Accumulator interface.
 	return a.debug

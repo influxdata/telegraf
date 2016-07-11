@@ -28,6 +28,7 @@ func (*InfluxDB) SampleConfig() string {
   ## See the influxdb plugin's README for more details.
 
   ## Multiple URLs from which to read InfluxDB-formatted JSON
+  ## Default is "http://localhost:8086/debug/vars".
   urls = [
     "http://localhost:8086/debug/vars"
   ]
@@ -35,6 +36,9 @@ func (*InfluxDB) SampleConfig() string {
 }
 
 func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
+	if len(i.URLs) == 0 {
+		i.URLs = []string{"http://localhost:8086/debug/vars"}
+	}
 	errorChannel := make(chan error, len(i.URLs))
 
 	var wg sync.WaitGroup

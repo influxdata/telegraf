@@ -97,11 +97,12 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	data := strings.SplitN(strings.TrimSpace(line), " ", 3)
+	data := strings.Fields(line)
 	accepts, err := strconv.ParseUint(data[0], 10, 64)
 	if err != nil {
 		return err
 	}
+
 	handled, err := strconv.ParseUint(data[1], 10, 64)
 	if err != nil {
 		return err
@@ -116,7 +117,7 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	data = strings.SplitN(strings.TrimSpace(line), " ", 6)
+	data = strings.Fields(line)
 	reading, err := strconv.ParseUint(data[1], 10, 64)
 	if err != nil {
 		return err

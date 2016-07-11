@@ -25,6 +25,8 @@ type UdpListener struct {
 
 	in   chan []byte
 	done chan struct{}
+	// drops tracks the number of dropped metrics.
+	drops int
 
 	parser parsers.Parser
 
@@ -38,7 +40,8 @@ type UdpListener struct {
 // https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 const UDP_MAX_PACKET_SIZE int = 64 * 1024
 
-var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
+var dropwarn = "ERROR: udp_listener message queue full. " +
+	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
 const sampleConfig = `
@@ -125,7 +128,10 @@ func (u *UdpListener) udpListen() error {
 			select {
 			case u.in <- bufCopy:
 			default:
-				log.Printf(dropwarn, string(bufCopy))
+				u.drops++
+				if u.drops == 1 || u.drops%u.AllowedPendingMessages == 0 {
+					log.Printf(dropwarn, u.drops)
+				}
 			}
 		}
 	}

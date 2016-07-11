@@ -114,7 +114,7 @@ creating the `Parser` object.
 You should also add the following to your SampleConfig() return:
 
 ```toml
-  ## Data format to consume. 
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -244,7 +244,7 @@ instantiating and creating the `Serializer` object.
 You should also add the following to your SampleConfig() return:
 
 ```toml
-  ## Data format to output. 
+  ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
@@ -289,10 +289,6 @@ To execute Telegraf tests follow these simple steps:
 - Install docker following [these](https://docs.docker.com/installation/)
 instructions
 - execute `make test`
-
-**OSX users**: you will need to install `boot2docker` or `docker-machine`.
-The Makefile will assume that you have a `docker-machine` box called `default` to
-get the IP address.
 
 ### Unit test troubleshooting
 

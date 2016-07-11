@@ -29,6 +29,8 @@ type TcpListener struct {
 	// is an available bool in accept, then we are below the maximum and can
 	// accept the connection
 	accept chan bool
+	// drops tracks the number of dropped metrics.
+	drops int
 
 	// track the listener here so we can close it in Stop()
 	listener *net.TCPListener
@@ -39,7 +41,8 @@ type TcpListener struct {
 	acc    telegraf.Accumulator
 }
 
-var dropwarn = "ERROR: Message queue full. Discarding metric [%s], " +
+var dropwarn = "ERROR: tcp_listener message queue full. " +
+	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
 const sampleConfig = `
@@ -212,7 +215,10 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 			select {
 			case t.in <- bufCopy:
 			default:
-				log.Printf(dropwarn, scanner.Text())
+				t.drops++
+				if t.drops == 1 || t.drops%t.AllowedPendingMessages == 0 {
+					log.Printf(dropwarn, t.drops)
+				}
 			}
 		}
 	}

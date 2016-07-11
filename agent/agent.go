@@ -1,17 +1,15 @@
 package agent
 
 import (
-	cryptorand "crypto/rand"
 	"fmt"
 	"log"
-	"math/big"
-	"math/rand"
 	"os"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
 )
@@ -115,27 +113,18 @@ func (a *Agent) gatherer(
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	jitter := a.Config.Agent.CollectionJitter.Duration.Nanoseconds()
-
 	for {
 		var outerr error
-		start := time.Now()
 
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetDebug(a.Config.Agent.Debug)
+		acc.SetPrecision(a.Config.Agent.Precision.Duration,
+			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
 
-		if jitter != 0 {
-			nanoSleep := rand.Int63n(jitter)
-			d, err := time.ParseDuration(fmt.Sprintf("%dns", nanoSleep))
-			if err != nil {
-				log.Printf("Jittering collection interval failed for plugin %s",
-					input.Name)
-			} else {
-				time.Sleep(d)
-			}
-		}
+		internal.RandomSleep(a.Config.Agent.CollectionJitter.Duration, shutdown)
 
+		start := time.Now()
 		gatherWithTimeout(shutdown, input, acc, interval)
 		elapsed := time.Since(start)
 
@@ -214,6 +203,8 @@ func (a *Agent) Test() error {
 	for _, input := range a.Config.Inputs {
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetTrace(true)
+		acc.SetPrecision(a.Config.Agent.Precision.Duration,
+			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
@@ -274,6 +265,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			a.flush()
 			return nil
 		case <-ticker.C:
+			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
 		case m := <-metricC:
 			for _, o := range a.Config.Outputs {
@@ -283,34 +275,9 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 	}
 }
 
-// jitterInterval applies the the interval jitter to the flush interval using
-// crypto/rand number generator
-func jitterInterval(ininterval, injitter time.Duration) time.Duration {
-	var jitter int64
-	outinterval := ininterval
-	if injitter.Nanoseconds() != 0 {
-		maxjitter := big.NewInt(injitter.Nanoseconds())
-		if j, err := cryptorand.Int(cryptorand.Reader, maxjitter); err == nil {
-			jitter = j.Int64()
-		}
-		outinterval = time.Duration(jitter + ininterval.Nanoseconds())
-	}
-
-	if outinterval.Nanoseconds() < time.Duration(500*time.Millisecond).Nanoseconds() {
-		log.Printf("Flush interval %s too low, setting to 500ms\n", outinterval)
-		outinterval = time.Duration(500 * time.Millisecond)
-	}
-
-	return outinterval
-}
-
 // Run runs the agent daemon, gathering every Interval
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
-
-	a.Config.Agent.FlushInterval.Duration = jitterInterval(
-		a.Config.Agent.FlushInterval.Duration,
-		a.Config.Agent.FlushJitter.Duration)
 
 	log.Printf("Agent Config: Interval:%s, Debug:%#v, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s \n",
@@ -326,6 +293,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		case telegraf.ServiceInput:
 			acc := NewAccumulator(input.Config, metricC)
 			acc.SetDebug(a.Config.Agent.Debug)
+			// Service input plugins should set their own precision of their
+			// metrics.
+			acc.DisablePrecision()
 			acc.setDefaultTags(a.Config.Tags)
 			if err := p.Start(acc); err != nil {
 				log.Printf("Service for input %s failed to start, exiting\n%s\n",
