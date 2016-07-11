@@ -50,6 +50,7 @@ should now look like:
 - [#1432](https://github.com/influxdata/telegraf/issues/1432): Panic fix for multiple graphite outputs under very high load.
 - [#1412](https://github.com/influxdata/telegraf/pull/1412): Instrumental output has better reconnect behavior
 - [#1460](https://github.com/influxdata/telegraf/issues/1460): Remove PID from procstat plugin to fix cardinality issues.
+- [#1463](https://github.com/influxdata/telegraf/issues/1463): Shared WaitGroup in Exec plugin
 
 ## v1.0 beta 2 [2016-06-21]
 
