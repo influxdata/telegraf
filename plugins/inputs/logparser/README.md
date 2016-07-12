@@ -32,6 +32,8 @@ regex patterns.
     '''
 ```
 
+> **Note:** The InfluxDB log pattern in the default configuration only works for Influx versions 1.0.0-beta1 or higher.
+
 ## Grok Parser
 
 The grok parser uses a slightly modified version of logstash "grok" patterns,
