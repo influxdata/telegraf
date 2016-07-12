@@ -91,17 +91,15 @@ cp $CONFIG_FILES_DIR/telegraf.logrotate $TMP_CONFIG_DIR/etc/logrotate.d/telegraf
 mkdir -p $TMP_CONFIG_DIR/lib/systemd/system
 cp $CONFIG_FILES_DIR/telegraf.service $TMP_CONFIG_DIR/lib/systemd/system/telegraf.service
 mkdir -p $TMP_CONFIG_DIR/etc/telegraf
-
-# Linux-Config
-cp $CONFIG_FILES_DIR/telegraf-linux.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
-
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Linux" etc lib || cleanup_exit 1
-
 mkdir -p $TMP_CONFIG_DIR/etc/telegraf/telegraf.d
 
+# Linux-Config
 rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
-# Redis-Config
+cp $CONFIG_FILES_DIR/telegraf-linux.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Linux" etc lib || cleanup_exit 1
 
+# Redis-Config
+rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-redis.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Redis" etc lib || cleanup_exit 1
 
@@ -109,7 +107,6 @@ fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Red
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
-
 
 mv ./*.rpm RPMS
 
