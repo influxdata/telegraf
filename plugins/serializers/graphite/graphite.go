@@ -55,8 +55,9 @@ func (s *GraphiteSerializer) SerializeBucketName(
 	measurement string,
 	tags map[string]string,
 ) string {
-	if s.Template == "" {
-		s.Template = DEFAULT_TEMPLATE
+	template := s.Template
+	if template == "" {
+		template = DEFAULT_TEMPLATE
 	}
 	tagsCopy := make(map[string]string)
 	for k, v := range tags {
@@ -64,7 +65,7 @@ func (s *GraphiteSerializer) SerializeBucketName(
 	}
 
 	var out []string
-	templateParts := strings.Split(s.Template, ".")
+	templateParts := strings.Split(template, ".")
 	for _, templatePart := range templateParts {
 		switch templatePart {
 		case "measurement":
