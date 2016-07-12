@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -29,8 +30,8 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 func newTestHttpListener() *HttpListener {
 	listener := &HttpListener{
 		ServiceAddress: ":8186",
-		ReadTimeout:    "10",
-		WriteTimeout:   "10",
+		ReadTimeout:    internal.Duration{Duration: time.Second * 10},
+		WriteTimeout:   internal.Duration{Duration: time.Second * 10},
 	}
 	return listener
 }

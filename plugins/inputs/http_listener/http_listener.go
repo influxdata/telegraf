@@ -5,11 +5,11 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/http_listener/stoppableListener"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -17,8 +17,8 @@ import (
 
 type HttpListener struct {
 	ServiceAddress string
-	ReadTimeout    string
-	WriteTimeout   string
+	ReadTimeout    internal.Duration
+	WriteTimeout   internal.Duration
 
 	sync.Mutex
 
@@ -32,9 +32,9 @@ const sampleConfig = `
   ## Address and port to host HTTP listener on
   service_address = ":8186"
 
-  ## timeouts in seconds
-  read_timeout = "10"
-  write_timeout = "10"
+  ## timeouts
+  read_timeout = "10s"
+  write_timeout = "10s"
 `
 
 func (t *HttpListener) SampleConfig() string {
@@ -90,19 +90,17 @@ func (t *HttpListener) Stop() {
 // httpListen listens for HTTP requests.
 func (t *HttpListener) httpListen() error {
 
-	readTimeout, err := strconv.ParseInt(t.ReadTimeout, 10, 32)
-	if err != nil {
-		return err
+	if t.ReadTimeout.Duration < time.Second {
+		t.ReadTimeout.Duration = time.Second * 10
 	}
-	writeTimeout, err := strconv.ParseInt(t.WriteTimeout, 10, 32)
-	if err != nil {
-		return err
+	if t.WriteTimeout.Duration < time.Second {
+		t.WriteTimeout.Duration = time.Second * 10
 	}
 
 	var server = http.Server{
 		Handler:      t,
-		ReadTimeout:  time.Duration(readTimeout) * time.Second,
-		WriteTimeout: time.Duration(writeTimeout) * time.Second,
+		ReadTimeout:  t.ReadTimeout.Duration,
+		WriteTimeout: t.WriteTimeout.Duration,
 	}
 
 	return server.Serve(t.listener)
@@ -113,8 +111,8 @@ func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		log.Printf("Problem reading request: [%s], Error: %s\n", string(body), err)
-		res.WriteHeader(http.StatusInternalServerError)
-		res.Write([]byte("ERROR reading request"))
+		http.Error(res, "ERROR reading request", http.StatusInternalServerError)
+		return
 	}
 
 	var path = req.URL.Path[1:]
@@ -125,11 +123,9 @@ func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		if err == nil {
 			t.storeMetrics(metrics)
 			res.WriteHeader(http.StatusNoContent)
-			res.Write([]byte(""))
 		} else {
 			log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
-			res.WriteHeader(http.StatusInternalServerError)
-			res.Write([]byte("ERROR parsing metrics"))
+			http.Error(res, "ERROR parsing metrics", http.StatusInternalServerError)
 		}
 	} else if path == "query" {
 		// Deliver a dummy response to the query endpoint, as some InfluxDB clients test endpoint availability with a query
@@ -139,8 +135,7 @@ func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		res.Write([]byte("{\"results\":[]}"))
 	} else {
 		// Don't know how to respond to calls to other endpoints
-		res.WriteHeader(http.StatusNotFound)
-		res.Write([]byte("Not Found"))
+		http.NotFound(res, req)
 	}
 }
 

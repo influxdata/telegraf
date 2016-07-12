@@ -17,7 +17,7 @@ This is a sample configuration for the plugin.
   ## Address and port to host HTTP listener on
   service_address = ":8186"
 
-  ## timeouts in seconds
-  read_timeout = "10"
-  write_timeout = "10"
+  ## timeouts
+  read_timeout = "10s"
+  write_timeout = "10s"
 ```
