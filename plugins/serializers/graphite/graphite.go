@@ -10,22 +10,23 @@ import (
 
 const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
-var fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
+var (
+	fieldDeleter   = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
+	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".")
+)
 
 type GraphiteSerializer struct {
 	Prefix   string
 	Template string
 }
 
-var sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".")
-
-func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
+func (s GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
 	out := []string{}
 
 	// Convert UnixNano to Unix timestamps
 	timestamp := metric.UnixNano() / 1000000000
 
-	bucket := s.SerializeBucketName(metric.Name(), metric.Tags())
+	bucket := SerializeBucketName(metric.Name(), metric.Tags(), s.Template, s.Prefix)
 	if bucket == "" {
 		return out, nil
 	}
@@ -51,11 +52,12 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 // FIELDNAME. It is up to the user to replace this. This is so that
 // SerializeBucketName can be called just once per measurement, rather than
 // once per field. See GraphiteSerializer.InsertField() function.
-func (s *GraphiteSerializer) SerializeBucketName(
+func SerializeBucketName(
 	measurement string,
 	tags map[string]string,
+	template string,
+	prefix string,
 ) string {
-	template := s.Template
 	if template == "" {
 		template = DEFAULT_TEMPLATE
 	}
@@ -97,10 +99,10 @@ func (s *GraphiteSerializer) SerializeBucketName(
 		return ""
 	}
 
-	if s.Prefix == "" {
+	if prefix == "" {
 		return sanitizedChars.Replace(strings.Join(out, "."))
 	}
-	return sanitizedChars.Replace(s.Prefix + "." + strings.Join(out, "."))
+	return sanitizedChars.Replace(prefix + "." + strings.Join(out, "."))
 }
 
 // InsertField takes the bucket string from SerializeBucketName and replaces the
