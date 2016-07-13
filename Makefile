@@ -25,10 +25,6 @@ build-for-docker:
 					"-s -X main.version=$(VERSION)" \
 					./cmd/telegraf/telegraf.go
 
-# Build with race detector
-dev: prepare
-	go build -race -ldflags "-X main.version=$(VERSION)" ./...
-
 # run package script
 package:
 	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all --upload

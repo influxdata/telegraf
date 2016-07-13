@@ -20,7 +20,7 @@ type GraphiteSerializer struct {
 	Template string
 }
 
-func (s GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
+func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
 	out := []string{}
 
 	// Convert UnixNano to Unix timestamps

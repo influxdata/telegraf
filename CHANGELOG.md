@@ -45,6 +45,7 @@ should now look like:
 - [#1339](https://github.com/influxdata/telegraf/issues/1339): Prometheus client output panic on service reload.
 - [#1461](https://github.com/influxdata/telegraf/pull/1461): Prometheus parser, protobuf format header fix.
 - [#1334](https://github.com/influxdata/telegraf/issues/1334): Prometheus output, metric refresh and caching fixes.
+- [#1432](https://github.com/influxdata/telegraf/issues/1432): Panic fix for multiple graphite outputs under very high load.
 
 ## v1.0 beta 2 [2016-06-21]
 
