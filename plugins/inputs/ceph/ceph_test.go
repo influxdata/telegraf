@@ -65,11 +65,16 @@ func TestFindSockets(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 	c := &Ceph{
-		CephBinary: "foo",
-		SocketDir:  tmpdir,
+		CephBinary:             "foo",
+		OsdPrefix:              "ceph-osd",
+		MonPrefix:              "ceph-mon",
+		SocketDir:              tmpdir,
+		SocketSuffix:           "asok",
+		CephUser:               "client.admin",
+		CephConfig:             "/etc/ceph/ceph.conf",
+		GatherAdminSocketStats: true,
+		GatherClusterStats:     false,
 	}
-
-	c.setDefaults()
 
 	for _, st := range sockTestParams {
 		createTestFiles(tmpdir, st)
