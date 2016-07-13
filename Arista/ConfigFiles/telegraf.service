@@ -5,7 +5,7 @@ After=network.target
 
 [Service]
 EnvironmentFile=-/etc/default/telegraf
-ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -configdirectory /etc/telegraf/telegraf.d $TELEGRAF_OPTS
+ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d $TELEGRAF_OPTS
 KillMode=process
 Restart=on-failure
 
