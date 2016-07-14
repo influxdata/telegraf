@@ -37,6 +37,10 @@ chmod 755 $LOG_DIR
 if [[ -L /etc/init.d/telegraf ]]; then
     rm -f /etc/init.d/telegraf
 fi
+# Remove legacy symlink, if it exists
+if [[ -L /etc/systemd/system/telegraf.service ]]; then
+    rm -f /etc/systemd/system/telegraf.service
+fi
 
 # Add defaults file, if it doesn't exist
 if [[ ! -f /etc/default/telegraf ]]; then
