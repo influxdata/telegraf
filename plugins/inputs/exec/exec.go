@@ -48,8 +48,6 @@ type Exec struct {
 
 	parser parsers.Parser
 
-	wg sync.WaitGroup
-
 	runner  Runner
 	errChan chan error
 }
@@ -119,8 +117,8 @@ func (c CommandRunner) Run(
 	return out.Bytes(), nil
 }
 
-func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator) {
-	defer e.wg.Done()
+func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	out, err := e.runner.Run(e, command, acc)
 	if err != nil {
@@ -151,6 +149,7 @@ func (e *Exec) SetParser(parser parsers.Parser) {
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
 	// Legacy single command support
 	if e.Command != "" {
 		e.Commands = append(e.Commands, e.Command)
@@ -190,11 +189,11 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 	errChan := errchan.New(len(commands))
 	e.errChan = errChan.C
 
-	e.wg.Add(len(commands))
+	wg.Add(len(commands))
 	for _, command := range commands {
-		go e.ProcessCommand(command, acc)
+		go e.ProcessCommand(command, acc, &wg)
 	}
-	e.wg.Wait()
+	wg.Wait()
 	return errChan.Error()
 }
 
