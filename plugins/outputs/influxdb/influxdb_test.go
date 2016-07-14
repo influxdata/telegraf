@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 
@@ -38,4 +39,19 @@ func TestHTTPInflux(t *testing.T) {
 	require.NoError(t, err)
 	err = i.Write(testutil.MockMetrics())
 	require.NoError(t, err)
+}
+
+func TestInfluxDS(t *testing.T) {
+	downsampler := &DS{
+		TimeRange: time.Minute,
+	}
+	i := InfluxDB{
+		URLs: []string{"udp://localhost:8089"},
+		DS:   downsampler,
+	}
+
+	err := i.Connect()
+	require.NoError(t, err)
+
+	i.DS.Add(testutil.MockMetrics())
 }

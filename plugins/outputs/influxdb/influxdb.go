@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -28,6 +29,7 @@ type InfluxDB struct {
 	WriteConsistency string
 	Timeout          internal.Duration
 	UDPPayload       int `toml:"udp_payload"`
+	DS               *DS
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -190,6 +192,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
+	i.DS.Add(metrics)
+
 	for _, metric := range metrics {
 		bp.AddPoint(metric.Point())
 	}
@@ -218,10 +222,50 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	return err
 }
 
+// Downsampling
+type Downsampling struct {
+	sync.RWMutex
+	Metrics   []telegraf.Metric
+	Since     time.Time
+	TimeRange time.Duration
+}
+
+type Aggregation struct {
+	Fieldname string
+}
+
+func (d *Downsampling) Add(metrics []telegraf.Metric) error {
+	d.Lock()
+	d.Metrics = append(d.Metrics, metrics...)
+	after := metrics[len(metrics)-1].Time()
+	if d.Since.Sub(after) >= d.TimeRange {
+		d.Aggregate()
+	}
+	d.Unlock()
+	return nil
+}
+
+func (d *Downsampling) Run() {
+	for {
+	}
+}
+
+// Aggregate calculates the mean value of fields by given time
+func (d *Downsampling) Aggregate(fields ...string) []telegraf.Metric {
+	for _, metric := range d.Metrics {
+		fmt.Printf("%+v\n", metric.Fields())
+		fmt.Printf("%+v\n", metric.Point())
+		fmt.Printf("%+v\n", metric.Time())
+	}
+	return nil
+}
+
 func init() {
+	influxdb := &InfluxDB{
+		Timeout: internal.Duration{Duration: time.Second * 5},
+		DS:      new(DS),
+	}
 	outputs.Add("influxdb", func() telegraf.Output {
-		return &InfluxDB{
-			Timeout: internal.Duration{Duration: time.Second * 5},
-		}
+		return influxdb
 	})
 }
