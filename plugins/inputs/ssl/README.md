@@ -8,7 +8,7 @@ This input plugin will return how many days left for a SSL cert to expire.
 # SSL request given a server, a Port, a timeout and a skipverify flag
 [[inputs.check_ssl]]
   ## Server (default github.com)
-  server = "github.com"
+  servers = ["github.com"]
   ## Set response_timeout (default 5 seconds)
   response_timeout = 5
   ## Port (Default 443)
