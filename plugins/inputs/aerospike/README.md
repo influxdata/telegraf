@@ -1,7 +1,7 @@
 ## Telegraf Plugin: Aerospike
 
 #### Plugin arguments:
-- **servers** string array: List of aerospike servers to query (def: 127.0.0.1:3000)
+- **servers** string array: List of aerospike servers to query (def: 127.0.0.1:3000). For authenticated servers use "user:password@host:port"
 
 #### Description
 
@@ -263,3 +263,8 @@ Meta:
 Measurement names:
 - free_pct_disk
 - free_pct_memory
+
+Latency Histogram:
+- latency>1ms
+- latency>8ms
+- latency>64ms
