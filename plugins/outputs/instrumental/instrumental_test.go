@@ -24,7 +24,6 @@ func TestWrite(t *testing.T) {
 		ApiToken: "abc123token",
 		Prefix:   "my.prefix",
 	}
-	i.Connect()
 
 	// Default to gauge
 	m1, _ := telegraf.NewMetric(
@@ -40,10 +39,8 @@ func TestWrite(t *testing.T) {
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-	// Simulate a connection close and reconnect.
 	metrics := []telegraf.Metric{m1, m2}
 	i.Write(metrics)
-	i.Close()
 
 	// Counter and Histogram are increments
 	m3, _ := telegraf.NewMetric(
@@ -70,7 +67,6 @@ func TestWrite(t *testing.T) {
 	i.Write(metrics)
 
 	wg.Wait()
-	i.Close()
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup) {
@@ -82,10 +78,9 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	tp := textproto.NewReader(reader)
 
 	hello, _ := tp.ReadLine()
-	assert.Equal(t, "hello version go/telegraf/1.0", hello)
+	assert.Equal(t, "hello version go/telegraf/1.1", hello)
 	auth, _ := tp.ReadLine()
 	assert.Equal(t, "authenticate abc123token", auth)
-
 	conn.Write([]byte("ok\nok\n"))
 
 	data1, _ := tp.ReadLine()
@@ -99,10 +94,9 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	tp = textproto.NewReader(reader)
 
 	hello, _ = tp.ReadLine()
-	assert.Equal(t, "hello version go/telegraf/1.0", hello)
+	assert.Equal(t, "hello version go/telegraf/1.1", hello)
 	auth, _ = tp.ReadLine()
 	assert.Equal(t, "authenticate abc123token", auth)
-
 	conn.Write([]byte("ok\nok\n"))
 
 	data3, _ := tp.ReadLine()

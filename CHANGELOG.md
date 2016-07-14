@@ -1,4 +1,4 @@
-## v1.0
+## v1.0 [unreleased]
 
 ### Release Notes
 
@@ -34,15 +34,23 @@ should now look like:
 - [#1350](https://github.com/influxdata/telegraf/pull/1350): cgroup input plugin.
 - [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
 - [#1369](https://github.com/influxdata/telegraf/pull/1480): add ability to read redis from a socket.
+- [#1387](https://github.com/influxdata/telegraf/pull/1387): **Breaking Change** - Redis `role` tag renamed to `replication_role` to avoid global_tags override
+- [#1437](https://github.com/influxdata/telegraf/pull/1437): Fetching Galera status metrics in MySQL
 
 ### Bugfixes
 
+- [#1472](https://github.com/influxdata/telegraf/pull/1472): diskio input plugin: set 'skip_serial_number = true' by default to avoid high cardinality.
 - [#1426](https://github.com/influxdata/telegraf/pull/1426): nil metrics panic fix.
 - [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
 - [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
 - [#1405](https://github.com/influxdata/telegraf/issues/1405): Fix memory/connection leak in prometheus input plugin.
 - [#1378](https://github.com/influxdata/telegraf/issues/1378): Trim BOM from config file for Windows support.
 - [#1339](https://github.com/influxdata/telegraf/issues/1339): Prometheus client output panic on service reload.
+- [#1461](https://github.com/influxdata/telegraf/pull/1461): Prometheus parser, protobuf format header fix.
+- [#1334](https://github.com/influxdata/telegraf/issues/1334): Prometheus output, metric refresh and caching fixes.
+- [#1432](https://github.com/influxdata/telegraf/issues/1432): Panic fix for multiple graphite outputs under very high load.
+- [#1412](https://github.com/influxdata/telegraf/pull/1412): Instrumental output has better reconnect behavior
+- [#1460](https://github.com/influxdata/telegraf/issues/1460): Remove PID from procstat plugin to fix cardinality issues.
 
 ## v1.0 beta 2 [2016-06-21]
 

@@ -67,6 +67,7 @@ var Tracking = map[string]string{
 	"latest_fork_usec":            "latest_fork_usec",
 	"connected_slaves":            "connected_slaves",
 	"master_repl_offset":          "master_repl_offset",
+	"master_last_io_seconds_ago":  "master_last_io_seconds_ago",
 	"repl_backlog_active":         "repl_backlog_active",
 	"repl_backlog_size":           "repl_backlog_size",
 	"repl_backlog_histlen":        "repl_backlog_histlen",
@@ -75,7 +76,7 @@ var Tracking = map[string]string{
 	"used_cpu_user":               "used_cpu_user",
 	"used_cpu_sys_children":       "used_cpu_sys_children",
 	"used_cpu_user_children":      "used_cpu_user_children",
-	"role": "role",
+	"role": "replication_role",
 }
 
 var ErrProtocolError = errors.New("redis protocol error")
@@ -228,7 +229,7 @@ func gatherInfoOutput(
 		}
 
 		if name == "role" {
-			tags["role"] = val
+			tags["replication_role"] = val
 			continue
 		}
 
