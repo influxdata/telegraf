@@ -22,19 +22,6 @@ func TestAerospikeStatistics(t *testing.T) {
 
 	err := a.Gather(&acc)
 	require.NoError(t, err)
-
-	// Only use a few of the metrics
-	asMetrics := []string{
-		"transactions",
-		"stat_write_errs",
-		"stat_read_reqs",
-		"stat_write_reqs",
-	}
-
-	for _, metric := range asMetrics {
-		assert.True(t, acc.HasIntField("aerospike", metric), metric)
-	}
-
 }
 
 func TestAerospikeMsgLenFromToBytes(t *testing.T) {
