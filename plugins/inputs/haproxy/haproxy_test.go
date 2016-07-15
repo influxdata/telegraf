@@ -243,7 +243,7 @@ func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
 
 	err := r.Gather(&acc)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "127.0.0.1:1936/;csv")
+	assert.Contains(t, err.Error(), "127.0.0.1:1936/haproxy?stats/;csv")
 }
 
 const csvOutputSample = `
