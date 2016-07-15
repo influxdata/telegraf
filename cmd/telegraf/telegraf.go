@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -15,6 +16,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	"github.com/kardianos/service"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -68,6 +70,7 @@ The flags are:
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
   -version           print the version to stdout
+  -service           Control the service, ie, 'telegraf -service install (windows only)'
 
 In addition to the -config flag, telegraf will also load the config file from
 an environment variable or default location. Precedence is:
@@ -94,7 +97,22 @@ Examples:
   telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
 `
 
-func main() {
+var logger service.Logger
+
+var stop chan struct{}
+
+var srvc service.Service
+var svcConfig *service.Config
+
+type program struct{}
+
+func reloadLoop(stop chan struct{}, s service.Service) {
+	defer func() {
+		if service.Interactive() {
+			os.Exit(0)
+		}
+		return
+	}()
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {
@@ -156,6 +174,17 @@ func main() {
 			return
 		}
 
+		if *fService != "" && runtime.GOOS == "windows" {
+			if *fConfig != "" {
+				(*svcConfig).Arguments = []string{"-config", *fConfig}
+			}
+			err := service.Control(s, *fService)
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
+
 		// If no other options are specified, load the config file and run.
 		c := config.NewConfig()
 		c.OutputFilters = outputFilters
@@ -209,7 +238,8 @@ func main() {
 		signals := make(chan os.Signal)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP)
 		go func() {
-			sig := <-signals
+			select {
+			case sig := <-signals:
 			if sig == os.Interrupt {
 				close(shutdown)
 			}
@@ -217,6 +247,9 @@ func main() {
 				log.Printf("Reloading Telegraf config\n")
 				<-reload
 				reload <- true
+					close(shutdown)
+				}
+			case <-stop:
 				close(shutdown)
 			}
 		}()
@@ -244,4 +277,47 @@ func main() {
 func usageExit(rc int) {
 	fmt.Println(usage)
 	os.Exit(rc)
+}
+
+func (p *program) Start(s service.Service) error {
+	srvc = s
+	go p.run()
+	return nil
+}
+func (p *program) run() {
+	stop = make(chan struct{})
+	reloadLoop(stop, srvc)
+}
+func (p *program) Stop(s service.Service) error {
+	close(stop)
+	return nil
+}
+
+func main() {
+	if runtime.GOOS == "windows" {
+		svcConfig = &service.Config{
+			Name:        "telegraf",
+			DisplayName: "Telegraf Data Collector Service",
+			Description: "Collects data using a series of plugins and publishes it to" +
+				"another series of plugins.",
+			Arguments: []string{"-config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
+		}
+
+		prg := &program{}
+		s, err := service.New(prg, svcConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logger, err = s.Logger(nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = s.Run()
+		if err != nil {
+			logger.Error(err)
+		}
+	} else {
+		stop = make(chan struct{})
+		reloadLoop(stop, nil)
+	}
 }
