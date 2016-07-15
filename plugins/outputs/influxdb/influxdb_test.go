@@ -41,6 +41,7 @@ func TestHTTPInflux(t *testing.T) {
 	require.NoError(t, err)
 }
 
+/*
 func TestInfluxDS(t *testing.T) {
 	downsampler := &DS{
 		TimeRange: time.Minute,
@@ -55,3 +56,4 @@ func TestInfluxDS(t *testing.T) {
 
 	i.DS.Add(testutil.MockMetrics())
 }
+*/
