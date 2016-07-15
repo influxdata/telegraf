@@ -1,5 +1,6 @@
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
+github.com/aerospike/aerospike-client-go 45863b7fd8640dc12f7fdd397104d97e1986f25a
 github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
 github.com/aws/aws-sdk-go 13a12060f716145019378a10e2806c174356b857
 github.com/beorn7/perks 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -50,6 +51,7 @@ github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
 github.com/vjeantet/grok 83bfdfdfd1a8146795b28e547a8e3c8b28a466c2
 github.com/wvanbergen/kafka 46f9a1cf3f670edec492029fadded9c2d9e18866
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
+github.com/yuin/gopher-lua bf3808abd44b1e55143a2d7f08571aaa80db1808
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
 golang.org/x/crypto 5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3
 golang.org/x/net 6acef71eb69611914f7a30939ea9f6e194c78172

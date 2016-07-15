@@ -2,6 +2,12 @@
 
 ### Release Notes
 
+**Breaking Change**: Aerospike main server node measurements have been renamed
+aerospike_node. Aerospike namespace measurements have been renamed to
+aerospike_namespace. They will also now be tagged with the node_name
+that they correspond to. This has been done to differentiate measurements
+that pertain to node vs. namespace statistics.
+
 **Breaking Change**: users of github_webhooks must change to the new
 `[[inputs.webhooks]]` plugin.
 
@@ -35,6 +41,7 @@ should now look like:
 - [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
 - [#1387](https://github.com/influxdata/telegraf/pull/1387): **Breaking Change** - Redis `role` tag renamed to `replication_role` to avoid global_tags override
 - [#1437](https://github.com/influxdata/telegraf/pull/1437): Fetching Galera status metrics in MySQL
+- [#1500](https://github.com/influxdata/telegraf/pull/1500): Aerospike plugin refactored to use official client lib.
 
 ### Bugfixes
 
