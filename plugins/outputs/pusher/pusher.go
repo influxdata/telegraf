@@ -12,6 +12,8 @@ type Pusher struct {
     AppKey string `toml:"app_key"`
     AppSecret string `toml:"app_secret"`
 
+    ChannelName string `toml:"channel_name"`
+
     client *pusher.Client
 
     serializer serializers.Serializer
@@ -22,6 +24,7 @@ var sampleConfig = `
   #app_id = ""
   #app_key = ""
   #app_secret = ""
+  #channel_name = ""
 
   data_format = "json"
 `
@@ -52,7 +55,7 @@ func (p *Pusher) Write(metrics []telegraf.Metric) error {
 func (p *Pusher) WriteSinglePoint(point telegraf.Metric) error {
     //data := map[string]string{"message": "testing"}
     values, err := p.serializer.Serialize(point)
-    p.client.Trigger("test_channel", "test_event", values)
+    p.client.Trigger(p.ChannelName, point.Name(), values)
 
     if err != nil {
         return err
