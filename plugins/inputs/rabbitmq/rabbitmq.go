@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,12 +19,13 @@ const DefaultPassword = "guest"
 const DefaultURL = "http://localhost:15672"
 
 type RabbitMQ struct {
-	URL      string
-	Name     string
-	Username string
-	Password string
-	Nodes    []string
-	Queues   []string
+	URL                string
+	Name               string
+	Username           string
+	Password           string
+	InsecureSkipVerify bool
+	Nodes              []string
+	Queues             []string
 
 	Client *http.Client
 }
@@ -108,6 +110,8 @@ var sampleConfig = `
   # name = "rmq-server-1" # optional tag
   # username = "guest"
   # password = "guest"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## A list of nodes to pull metrics about. If not specified, metrics for
   ## all nodes are gathered.
@@ -124,7 +128,10 @@ func (r *RabbitMQ) Description() string {
 
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
-		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		tr := &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: r.InsecureSkipVerify},
+		}
 		r.Client = &http.Client{
 			Transport: tr,
 			Timeout:   time.Duration(4 * time.Second),
