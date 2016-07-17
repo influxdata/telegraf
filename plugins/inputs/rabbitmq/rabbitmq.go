@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/mattyjones/telegraf/internal"
 )
 
 // DefaultUsername will set a default value that corrasponds to the default
