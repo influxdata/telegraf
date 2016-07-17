@@ -14,10 +14,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DefaultUsername will set a default value that corrasponds to the default
+// value used by Rabbitmq
 const DefaultUsername = "guest"
+
+// DefaultPassword will set a default value that corrasponds to the default
+// value used by Rabbitmq
 const DefaultPassword = "guest"
+
+// DefaultURL will set a default value that corrasponds to the default value
+// used by Rabbitmq
 const DefaultURL = "http://localhost:15672"
 
+// RabbitMQ defines the configuration necessary for gathering metrics,
+// see the sample config for further details
 type RabbitMQ struct {
 	URL                string
 	Name               string
@@ -30,16 +40,19 @@ type RabbitMQ struct {
 	Client *http.Client
 }
 
+// OverviewResponse ...
 type OverviewResponse struct {
 	MessageStats *MessageStats `json:"message_stats"`
 	ObjectTotals *ObjectTotals `json:"object_totals"`
 	QueueTotals  *QueueTotals  `json:"queue_totals"`
 }
 
+// Details ...
 type Details struct {
 	Rate float64
 }
 
+// MessageStats ...
 type MessageStats struct {
 	Ack               int64
 	AckDetails        Details `json:"ack_details"`
@@ -53,6 +66,7 @@ type MessageStats struct {
 	RedeliverDetails  Details `json:"redeliver_details"`
 }
 
+// ObjectTotals ...
 type ObjectTotals struct {
 	Channels    int64
 	Connections int64
@@ -61,6 +75,7 @@ type ObjectTotals struct {
 	Queues      int64
 }
 
+// QueueTotals ...
 type QueueTotals struct {
 	Messages                   int64
 	MessagesReady              int64 `json:"messages_ready"`
@@ -72,6 +87,7 @@ type QueueTotals struct {
 	MessagePersistent          int64 `json:"message_bytes_persistent"`
 }
 
+// Queue ...
 type Queue struct {
 	QueueTotals         // just to not repeat the same code
 	MessageStats        `json:"message_stats"`
@@ -85,6 +101,7 @@ type Queue struct {
 	AutoDelete          bool `json:"auto_delete"`
 }
 
+// Node ...
 type Node struct {
 	Name string
 
@@ -101,6 +118,7 @@ type Node struct {
 	SocketsUsed   int64 `json:"sockets_used"`
 }
 
+// gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error)
 
 var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
@@ -110,7 +128,6 @@ var sampleConfig = `
   # name = "rmq-server-1" # optional tag
   # username = "guest"
   # password = "guest"
-  ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
   ## A list of nodes to pull metrics about. If not specified, metrics for
@@ -118,14 +135,17 @@ var sampleConfig = `
   # nodes = ["rabbit@node1", "rabbit@node2"]
 `
 
+// SampleConfig ...
 func (r *RabbitMQ) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description ...
 func (r *RabbitMQ) Description() string {
 	return "Read metrics from one or many RabbitMQ servers via the management API"
 }
 
+// Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
 		tr := &http.Transport{
