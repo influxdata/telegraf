@@ -1,7 +1,6 @@
 package rabbitmq
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/mattyjones/telegraf/internal"
 )
 
 // DefaultUsername will set a default value that corrasponds to the default
@@ -29,13 +29,22 @@ const DefaultURL = "http://localhost:15672"
 // RabbitMQ defines the configuration necessary for gathering metrics,
 // see the sample config for further details
 type RabbitMQ struct {
-	URL                string
-	Name               string
-	Username           string
-	Password           string
+	URL      string
+	Name     string
+	Username string
+	Password string
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
-	Nodes              []string
-	Queues             []string
+
+	// InsecureSkipVerify bool
+	Nodes  []string
+	Queues []string
 
 	Client *http.Client
 }
@@ -83,7 +92,7 @@ type QueueTotals struct {
 	MessageBytes               int64 `json:"message_bytes"`
 	MessageBytesReady          int64 `json:"message_bytes_ready"`
 	MessageBytesUnacknowledged int64 `json:"message_bytes_unacknowledged"`
-	MessageRam                 int64 `json:"message_bytes_ram"`
+	MessageRAM                 int64 `json:"message_bytes_ram"`
 	MessagePersistent          int64 `json:"message_bytes_persistent"`
 }
 
@@ -128,6 +137,12 @@ var sampleConfig = `
   # name = "rmq-server-1" # optional tag
   # username = "guest"
   # password = "guest"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
   ## A list of nodes to pull metrics about. If not specified, metrics for
@@ -148,9 +163,14 @@ func (r *RabbitMQ) Description() string {
 // Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
+		tlsCfg, err := internal.GetTLSConfig(
+			r.SSLCert, r.SSLKey, r.SSLCA, r.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
 		tr := &http.Transport{
 			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: r.InsecureSkipVerify},
+			TLSClientConfig:       tlsCfg,
 		}
 		r.Client = &http.Client{
 			Transport: tr,
@@ -313,7 +333,7 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 				"message_bytes":             queue.MessageBytes,
 				"message_bytes_ready":       queue.MessageBytesReady,
 				"message_bytes_unacked":     queue.MessageBytesUnacknowledged,
-				"message_bytes_ram":         queue.MessageRam,
+				"message_bytes_ram":         queue.MessageRAM,
 				"message_bytes_persist":     queue.MessagePersistent,
 				"messages":                  queue.Messages,
 				"messages_ready":            queue.MessagesReady,
