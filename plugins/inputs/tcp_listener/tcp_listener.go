@@ -31,6 +31,8 @@ type TcpListener struct {
 	accept chan bool
 	// drops tracks the number of dropped metrics.
 	drops int
+	// malformed tracks the number of malformed packets
+	malformed int
 
 	// track the listener here so we can close it in Stop()
 	listener *net.TCPListener
@@ -44,6 +46,9 @@ type TcpListener struct {
 var dropwarn = "ERROR: tcp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
+
+var malformedwarn = "WARNING: tcp_listener has received %d malformed packets" +
+	" thus far."
 
 const sampleConfig = `
   ## Address and port to host TCP listener on
@@ -243,8 +248,10 @@ func (t *TcpListener) tcpParser() error {
 			if err == nil {
 				t.storeMetrics(metrics)
 			} else {
-				log.Printf("Malformed packet: [%s], Error: %s\n",
-					string(packet), err)
+				t.malformed++
+				if t.malformed == 1 || t.malformed%1000 == 0 {
+					log.Printf(malformedwarn, t.malformed)
+				}
 			}
 		}
 	}

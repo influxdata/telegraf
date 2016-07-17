@@ -27,6 +27,8 @@ type UdpListener struct {
 	done chan struct{}
 	// drops tracks the number of dropped metrics.
 	drops int
+	// malformed tracks the number of malformed packets
+	malformed int
 
 	parser parsers.Parser
 
@@ -43,6 +45,9 @@ const UDP_MAX_PACKET_SIZE int = 64 * 1024
 var dropwarn = "ERROR: udp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
+
+var malformedwarn = "WARNING: udp_listener has received %d malformed packets" +
+	" thus far."
 
 const sampleConfig = `
   ## Address and port to host UDP listener on
@@ -152,7 +157,10 @@ func (u *UdpListener) udpParser() error {
 			if err == nil {
 				u.storeMetrics(metrics)
 			} else {
-				log.Printf("Malformed packet: [%s], Error: %s\n", packet, err)
+				u.malformed++
+				if u.malformed == 1 || u.malformed%1000 == 0 {
+					log.Printf(malformedwarn, u.malformed)
+				}
 			}
 		}
 	}
