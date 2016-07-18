@@ -306,6 +306,10 @@ var mappings = []*mapping{
 		onServer: "Threadpool_",
 		inExport: "threadpool_",
 	},
+	{
+		onServer: "wsrep_",
+		inExport: "wsrep_",
+	},
 }
 
 var (

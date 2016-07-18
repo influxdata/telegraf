@@ -70,7 +70,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error())
 	} else {
 		for pid, proc := range p.pidmap {
-			p := NewSpecProcessor(p.ProcessName, p.Prefix, acc, proc, p.tagmap[pid])
+			p := NewSpecProcessor(p.ProcessName, p.Prefix, pid, acc, proc, p.tagmap[pid])
 			p.pushMetrics()
 		}
 	}
@@ -140,7 +140,6 @@ func (p *Procstat) pidsFromFile() ([]int32, error) {
 			out = append(out, int32(pid))
 			p.tagmap[int32(pid)] = map[string]string{
 				"pidfile": p.PidFile,
-				"pid":     strings.TrimSpace(string(pidString)),
 			}
 		}
 	}
@@ -165,7 +164,6 @@ func (p *Procstat) pidsFromExe() ([]int32, error) {
 				out = append(out, int32(ipid))
 				p.tagmap[int32(ipid)] = map[string]string{
 					"exe": p.Exe,
-					"pid": pid,
 				}
 			} else {
 				outerr = err
@@ -193,7 +191,6 @@ func (p *Procstat) pidsFromPattern() ([]int32, error) {
 				out = append(out, int32(ipid))
 				p.tagmap[int32(ipid)] = map[string]string{
 					"pattern": p.Pattern,
-					"pid":     pid,
 				}
 			} else {
 				outerr = err
@@ -221,7 +218,6 @@ func (p *Procstat) pidsFromUser() ([]int32, error) {
 				out = append(out, int32(ipid))
 				p.tagmap[int32(ipid)] = map[string]string{
 					"user": p.User,
-					"pid":  pid,
 				}
 			} else {
 				outerr = err
