@@ -9,6 +9,7 @@ import (
 	"github.com/hpcloud/tail"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
@@ -58,6 +59,8 @@ const sampleConfig = `
     ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
     ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
     patterns = ["%{INFLUXDB_HTTPD_LOG}"]
+    ## Name of the outputted measurement name.
+    measurement = "influxdb_log"
     ## Full path(s) to custom pattern files.
     custom_pattern_files = []
     ## Custom patterns can also be defined here. Put one pattern per line.
@@ -108,10 +111,14 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	}
 
 	// compile log parser patterns:
+	errChan := errchan.New(len(l.parsers))
 	for _, parser := range l.parsers {
 		if err := parser.Compile(); err != nil {
-			return err
+			errChan.C <- err
 		}
+	}
+	if err := errChan.Error(); err != nil {
+		return err
 	}
 
 	var seek tail.SeekInfo
@@ -123,24 +130,25 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.wg.Add(1)
 	go l.parser()
 
-	var errS string
 	// Create a "tailer" for each file
 	for _, filepath := range l.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
 			log.Printf("ERROR Glob %s failed to compile, %s", filepath, err)
+			continue
 		}
-		for file, _ := range g.Match() {
+		files := g.Match()
+		errChan = errchan.New(len(files))
+		for file, _ := range files {
 			tailer, err := tail.TailFile(file,
 				tail.Config{
-					ReOpen:   true,
-					Follow:   true,
-					Location: &seek,
+					ReOpen:    true,
+					Follow:    true,
+					Location:  &seek,
+					MustExist: true,
 				})
-			if err != nil {
-				errS += err.Error() + " "
-				continue
-			}
+			errChan.C <- err
+
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
 			go l.receiver(tailer)
@@ -148,10 +156,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	if errS != "" {
-		return fmt.Errorf(errS)
-	}
-	return nil
+	return errChan.Error()
 }
 
 // receiver is launched as a goroutine to continuously watch a tailed logfile
@@ -199,8 +204,6 @@ func (l *LogParserPlugin) parser() {
 				if m != nil {
 					l.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 				}
-			} else {
-				log.Printf("Malformed log line in [%s], Error: %s\n", line, err)
 			}
 		}
 	}
