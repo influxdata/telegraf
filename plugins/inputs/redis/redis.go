@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -96,9 +97,7 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-
-	var outerr error
-
+	errChan := errchan.New(len(r.Servers))
 	for _, serv := range r.Servers {
 		if !strings.HasPrefix(serv, "tcp://") || !strings.HasPrefix(serv, "unix://") {
 			serv = "tcp://" + serv
@@ -123,13 +122,12 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = r.gatherServer(u, acc)
+			errChan.C <- r.gatherServer(u, acc)
 		}(serv)
 	}
 
 	wg.Wait()
-
-	return outerr
+	return errChan.Error()
 }
 
 func (r *Redis) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
