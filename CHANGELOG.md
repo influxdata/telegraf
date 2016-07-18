@@ -63,6 +63,8 @@ should now look like:
 - [#1460](https://github.com/influxdata/telegraf/issues/1460): Remove PID from procstat plugin to fix cardinality issues.
 - [#1427](https://github.com/influxdata/telegraf/issues/1427): Cassandra input: version 2.x "column family" fix.
 - [#1463](https://github.com/influxdata/telegraf/issues/1463): Shared WaitGroup in Exec plugin
+- [#1436](https://github.com/influxdata/telegraf/issues/1436): logparser: honor modifiers in "pattern" config.
+- [#1418](https://github.com/influxdata/telegraf/issues/1418): logparser: error and exit on file permissions/missing errors.
 
 ## v1.0 beta 2 [2016-06-21]
 

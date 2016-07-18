@@ -53,7 +53,12 @@ var (
 )
 
 type Parser struct {
-	Patterns           []string
+	Patterns []string
+	// namedPatterns is a list of internally-assigned names to the patterns
+	// specified by the user in Patterns.
+	// They will look like:
+	//   GROK_INTERNAL_PATTERN_0, GROK_INTERNAL_PATTERN_1, etc.
+	namedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
 	Measurement        string
@@ -98,13 +103,24 @@ func (p *Parser) Compile() error {
 		return err
 	}
 
-	p.CustomPatterns = DEFAULT_PATTERNS + p.CustomPatterns
+	// Give Patterns fake names so that they can be treated as named
+	// "custom patterns"
+	p.namedPatterns = make([]string, len(p.Patterns))
+	for i, pattern := range p.Patterns {
+		name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
+		p.CustomPatterns += "\n" + name + " " + pattern + "\n"
+		p.namedPatterns[i] = "%{" + name + "}"
+	}
 
+	// Combine user-supplied CustomPatterns with DEFAULT_PATTERNS and parse
+	// them together as the same type of pattern.
+	p.CustomPatterns = DEFAULT_PATTERNS + p.CustomPatterns
 	if len(p.CustomPatterns) != 0 {
 		scanner := bufio.NewScanner(strings.NewReader(p.CustomPatterns))
 		p.addCustomPatterns(scanner)
 	}
 
+	// Parse any custom pattern files supplied.
 	for _, filename := range p.CustomPatternFiles {
 		file, err := os.Open(filename)
 		if err != nil {
@@ -127,7 +143,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	var values map[string]string
 	// the matching pattern string
 	var patternName string
-	for _, pattern := range p.Patterns {
+	for _, pattern := range p.namedPatterns {
 		if values, err = p.g.Parse(pattern, line); err != nil {
 			return nil, err
 		}

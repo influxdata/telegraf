@@ -207,7 +207,7 @@ func TestBuiltinCombinedLogFormat(t *testing.T) {
 
 func TestCompileStringAndParse(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		Patterns: []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
 			DURATION %{NUMBER}[nuµm]?s
 			RESPONSE_CODE %{NUMBER:response_code:tag}
@@ -228,6 +228,41 @@ func TestCompileStringAndParse(t *testing.T) {
 		},
 		metricA.Fields())
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
+}
+
+func TestCompileErrorsOnInvalidPattern(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		CustomPatterns: `
+			DURATION %{NUMBER}[nuµm]?s
+			RESPONSE_CODE %{NUMBER:response_code:tag}
+			RESPONSE_TIME %{DURATION:response_time:duration}
+			TEST_LOG_A %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
+		`,
+	}
+	assert.Error(t, p.Compile())
+
+	metricA, _ := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
+	require.Nil(t, metricA)
+}
+
+func TestParsePatternsWithoutCustom(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{POSINT:ts:ts-epochnano} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}"},
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`1466004605359052000 response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+	assert.Equal(t, time.Unix(0, 1466004605359052000), metricA.Time())
 }
 
 func TestParseEpochNano(t *testing.T) {
@@ -413,7 +448,7 @@ func TestParseErrors(t *testing.T) {
 			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int} %{}
 		`,
 	}
-	assert.NoError(t, p.Compile())
+	assert.Error(t, p.Compile())
 	_, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
 	assert.Error(t, err)
 
