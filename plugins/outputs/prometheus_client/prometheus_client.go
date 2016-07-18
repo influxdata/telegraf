@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -14,7 +13,7 @@ import (
 )
 
 var (
-	sanitizedChars = strings.NewReplacer("/", "_", "@", "_", " ", "_", "-", "_", ".", "_")
+	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
 	// Prometheus metric names must match this regex
 	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
@@ -111,12 +110,12 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 	for _, point := range metrics {
 		key := point.Name()
-		key = sanitizedChars.Replace(key)
+		key = invalidNameCharRE.ReplaceAllString(key, "_")
 
 		var labels []string
 		l := prometheus.Labels{}
 		for k, v := range point.Tags() {
-			k = sanitizedChars.Replace(k)
+			k = invalidNameCharRE.ReplaceAllString(k, "_")
 			if len(k) == 0 {
 				continue
 			}
@@ -137,7 +136,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			}
 
 			// sanitize the measurement name
-			n = sanitizedChars.Replace(n)
+			n = invalidNameCharRE.ReplaceAllString(n, "_")
 			var mname string
 			if n == "value" {
 				mname = key
