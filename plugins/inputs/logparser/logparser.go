@@ -58,6 +58,8 @@ const sampleConfig = `
     ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
     ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
     patterns = ["%{INFLUXDB_HTTPD_LOG}"]
+    ## Name of the outputted measurement name.
+    measurement = "influxdb_log"
     ## Full path(s) to custom pattern files.
     custom_pattern_files = []
     ## Custom patterns can also be defined here. Put one pattern per line.

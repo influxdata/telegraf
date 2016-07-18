@@ -83,6 +83,32 @@ func Benchmark_ParseLine_CustomPattern(b *testing.B) {
 	benchM = m
 }
 
+func TestMeasurementName(t *testing.T) {
+	p := &Parser{
+		Measurement: "my_web_log",
+		Patterns:    []string{"%{COMMON_LOG_FORMAT}"},
+	}
+	assert.NoError(t, p.Compile())
+
+	// Parse an influxdb POST request
+	m, err := p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	require.NotNil(t, m)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"resp_bytes":   int64(2326),
+			"auth":         "frank",
+			"client_ip":    "127.0.0.1",
+			"resp_code":    int64(200),
+			"http_version": float64(1.0),
+			"ident":        "user-identifier",
+			"request":      "/apache_pb.gif",
+		},
+		m.Fields())
+	assert.Equal(t, map[string]string{"verb": "GET"}, m.Tags())
+	assert.Equal(t, "my_web_log", m.Name())
+}
+
 func TestBuiltinInfluxdbHttpd(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{INFLUXDB_HTTPD_LOG}"},

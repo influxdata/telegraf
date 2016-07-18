@@ -43,6 +43,7 @@ should now look like:
 - [#1387](https://github.com/influxdata/telegraf/pull/1387): **Breaking Change** - Redis `role` tag renamed to `replication_role` to avoid global_tags override
 - [#1437](https://github.com/influxdata/telegraf/pull/1437): Fetching Galera status metrics in MySQL
 - [#1500](https://github.com/influxdata/telegraf/pull/1500): Aerospike plugin refactored to use official client lib.
+- [#1434](https://github.com/influxdata/telegraf/pull/1434): Add measurement name arg to logparser plugin.
 
 ### Bugfixes
 

@@ -56,7 +56,7 @@ type Parser struct {
 	Patterns           []string
 	CustomPatterns     string
 	CustomPatternFiles []string
-	Measurement string
+	Measurement        string
 
 	// typeMap is a map of patterns -> capture name -> modifier,
 	//   ie, {
