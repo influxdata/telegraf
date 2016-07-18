@@ -15,6 +15,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	"github.com/kardianos/service"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -45,6 +46,8 @@ var fOutputFiltersLegacy = flag.String("outputfilter", "",
 	"filter the outputs to enable, separator is :")
 var fConfigDirectoryLegacy = flag.String("configdirectory", "",
 	"directory containing additional *.conf files")
+var fService = flag.String("service", "",
+	"operate on the service")
 
 // Telegraf version, populated linker.
 //   ie, -ldflags "-X main.version=`git describe --always --tags`"
@@ -74,6 +77,7 @@ The flags are:
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
   -version           print the version to stdout
+  -service           Control the service, ie, 'telegraf -service install'
 
 In addition to the -config flag, telegraf will also load the config file from
 an environment variable or default location. Precedence is:
@@ -100,7 +104,13 @@ Examples:
   telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
 `
 
-func main() {
+func reloadLoop(stop chan struct{}, s service.Service) {
+	defer func() {
+		if service.Interactive() {
+			os.Exit(0)
+		}
+		return
+	}()
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {
@@ -181,6 +191,14 @@ func main() {
 			return
 		}
 
+		if *fService != "" {
+			err := service.Control(s, *fService)
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
+
 		// If no other options are specified, load the config file and run.
 		c := config.NewConfig()
 		c.OutputFilters = outputFilters
@@ -243,14 +261,18 @@ func main() {
 		signals := make(chan os.Signal)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP)
 		go func() {
-			sig := <-signals
-			if sig == os.Interrupt {
-				close(shutdown)
-			}
-			if sig == syscall.SIGHUP {
-				log.Printf("Reloading Telegraf config\n")
-				<-reload
-				reload <- true
+			select {
+			case sig := <-signals:
+				if sig == os.Interrupt {
+					close(shutdown)
+				}
+				if sig == syscall.SIGHUP {
+					log.Printf("Reloading Telegraf config\n")
+					<-reload
+					reload <- true
+					close(shutdown)
+				}
+			case <-stop:
 				close(shutdown)
 			}
 		}()
