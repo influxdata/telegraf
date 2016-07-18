@@ -1,5 +1,7 @@
 ## v1.0 [unreleased]
 
+## v1.0 beta 3 [2016-07-18]
+
 ### Release Notes
 
 **Breaking Change**: Aerospike main server node measurements have been renamed
