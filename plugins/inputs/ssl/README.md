@@ -1,26 +1,25 @@
 # Example Input Plugin
 
-This input plugin will return how many days left for a SSL cert to expire.
+This input plugin will return how much time (in seconds) left for a SSL cert to expire.
+A string will be returned as field to show the error message for those servers in the 
+list that have failed for some reason. If site is ok, "error" field will be empty
 
 ### Configuration:
 
 ```
 # SSL request given a server, a Port, a timeout and a skipverify flag
 [[inputs.check_ssl]]
-  ## Server (default github.com)
-  servers = ["github.com"]
+  ## Servers ( Default [] )
+  servers = ["github.com:443"]
   ## Set response_timeout (default 5 seconds)
-  response_timeout = 5
-  ## Port (Default 443)
-  port = "443"
-  ## SSL Skip Verification of certificates
-  skip_verify = false
+  response_timeout = 5s
 ```
 
 ### Measurements & Fields:
 
-- expire_time
-    - days_to_expire (int) # Days left for the SSL cert to expire
+- ssl_cert
+    - time_to_expire (int) # seconds left for the SSL cert to expire
+    - error (string) # error message if something fail (Nil if OK)
 
 ### Tags:
 
@@ -31,5 +30,5 @@ This input plugin will return how many days left for a SSL cert to expire.
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter check_ssl -test
-> expire_time,server=github.com days_to_expire=248i 1468251532250867718
+> ssl_cert,server=www.google.com:443 error=,time_to_expire=6185474.476944118 1468864305580596685
 ```
