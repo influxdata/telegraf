@@ -25,6 +25,7 @@ var sampleConfig = `
   ##  e.g.
   ##    tcp://localhost:6379
   ##    tcp://:password@192.168.99.100
+  ##    unix:///var/run/redis.sock
   ##
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
@@ -80,12 +81,15 @@ var Tracking = map[string]string{
 
 var ErrProtocolError = errors.New("redis protocol error")
 
+const defaultPort = "6379"
+
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (r *Redis) Gather(acc telegraf.Accumulator) error {
 	if len(r.Servers) == 0 {
 		url := &url.URL{
-			Host: ":6379",
+			Scheme: "tcp",
+			Host:   ":6379",
 		}
 		r.gatherServer(url, acc)
 		return nil
@@ -96,6 +100,10 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 	var outerr error
 
 	for _, serv := range r.Servers {
+		if !strings.HasPrefix(serv, "tcp://") || !strings.HasPrefix(serv, "unix://") {
+			serv = "tcp://" + serv
+		}
+
 		u, err := url.Parse(serv)
 		if err != nil {
 			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
@@ -105,6 +113,13 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 			u.Host = serv
 			u.Path = ""
 		}
+		if u.Scheme == "tcp" {
+			_, _, err := net.SplitHostPort(u.Host)
+			if err != nil {
+				u.Host = u.Host + ":" + defaultPort
+			}
+		}
+
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
@@ -117,17 +132,17 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-const defaultPort = "6379"
-
 func (r *Redis) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
-	_, _, err := net.SplitHostPort(addr.Host)
-	if err != nil {
-		addr.Host = addr.Host + ":" + defaultPort
-	}
+	var address string
 
-	c, err := net.DialTimeout("tcp", addr.Host, defaultTimeout)
+	if addr.Scheme == "unix" {
+		address = addr.Path
+	} else {
+		address = addr.Host
+	}
+	c, err := net.DialTimeout(addr.Scheme, address, defaultTimeout)
 	if err != nil {
-		return fmt.Errorf("Unable to connect to redis server '%s': %s", addr.Host, err)
+		return fmt.Errorf("Unable to connect to redis server '%s': %s", address, err)
 	}
 	defer c.Close()
 
@@ -155,12 +170,17 @@ func (r *Redis) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 	c.Write([]byte("EOF\r\n"))
 	rdr := bufio.NewReader(c)
 
-	// Setup tags for all redis metrics
-	host, port := "unknown", "unknown"
-	// If there's an error, ignore and use 'unknown' tags
-	host, port, _ = net.SplitHostPort(addr.Host)
-	tags := map[string]string{"server": host, "port": port}
+	var tags map[string]string
 
+	if addr.Scheme == "unix" {
+		tags = map[string]string{"socket": addr.Path}
+	} else {
+		// Setup tags for all redis metrics
+		host, port := "unknown", "unknown"
+		// If there's an error, ignore and use 'unknown' tags
+		host, port, _ = net.SplitHostPort(addr.Host)
+		tags = map[string]string{"server": host, "port": port}
+	}
 	return gatherInfoOutput(rdr, acc, tags)
 }
 
