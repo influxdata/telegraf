@@ -99,13 +99,12 @@ func TestMeasurementName(t *testing.T) {
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "127.0.0.1",
-			"resp_code":    int64(200),
 			"http_version": float64(1.0),
 			"ident":        "user-identifier",
 			"request":      "/apache_pb.gif",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "GET"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 	assert.Equal(t, "my_web_log", m.Name())
 }
 
@@ -124,7 +123,6 @@ func TestBuiltinInfluxdbHttpd(t *testing.T) {
 			"resp_bytes":       int64(0),
 			"auth":             "-",
 			"client_ip":        "::1",
-			"resp_code":        int64(204),
 			"http_version":     float64(1.1),
 			"ident":            "-",
 			"referrer":         "-",
@@ -133,7 +131,7 @@ func TestBuiltinInfluxdbHttpd(t *testing.T) {
 			"agent":            "InfluxDBClient",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "POST"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "POST", "resp_code": "204"}, m.Tags())
 
 	// Parse an influxdb GET request
 	m, err = p.ParseLine(`[httpd] ::1 - - [14/Jun/2016:12:10:02 +0100] "GET /query?db=telegraf&q=SELECT+bytes%2Cresponse_time_us+FROM+logparser_grok+WHERE+http_method+%3D+%27GET%27+AND+response_time_us+%3E+0+AND+time+%3E+now%28%29+-+1h HTTP/1.1" 200 578 "http://localhost:8083/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36" 8a3806f1-3220-11e6-8006-000000000000 988`)
@@ -144,7 +142,6 @@ func TestBuiltinInfluxdbHttpd(t *testing.T) {
 			"resp_bytes":       int64(578),
 			"auth":             "-",
 			"client_ip":        "::1",
-			"resp_code":        int64(200),
 			"http_version":     float64(1.1),
 			"ident":            "-",
 			"referrer":         "http://localhost:8083/",
@@ -153,7 +150,7 @@ func TestBuiltinInfluxdbHttpd(t *testing.T) {
 			"agent":            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "GET"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 }
 
 // common log format
@@ -173,13 +170,12 @@ func TestBuiltinCommonLogFormat(t *testing.T) {
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "127.0.0.1",
-			"resp_code":    int64(200),
 			"http_version": float64(1.0),
 			"ident":        "user-identifier",
 			"request":      "/apache_pb.gif",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "GET"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 }
 
 // combined log format
@@ -199,7 +195,6 @@ func TestBuiltinCombinedLogFormat(t *testing.T) {
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "127.0.0.1",
-			"resp_code":    int64(200),
 			"http_version": float64(1.0),
 			"ident":        "user-identifier",
 			"request":      "/apache_pb.gif",
@@ -207,7 +202,7 @@ func TestBuiltinCombinedLogFormat(t *testing.T) {
 			"agent":        "Mozilla",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "GET"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 }
 
 func TestCompileStringAndParse(t *testing.T) {

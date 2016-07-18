@@ -45,6 +45,7 @@ should now look like:
 - [#1437](https://github.com/influxdata/telegraf/pull/1437): Fetching Galera status metrics in MySQL
 - [#1500](https://github.com/influxdata/telegraf/pull/1500): Aerospike plugin refactored to use official client lib.
 - [#1434](https://github.com/influxdata/telegraf/pull/1434): Add measurement name arg to logparser plugin.
+- [#1479](https://github.com/influxdata/telegraf/pull/1479): logparser: change resp_code from a field to a tag.
 
 ### Bugfixes
 
