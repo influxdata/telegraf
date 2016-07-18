@@ -59,6 +59,7 @@ should now look like:
 - [#1412](https://github.com/influxdata/telegraf/pull/1412): Instrumental output has better reconnect behavior
 - [#1460](https://github.com/influxdata/telegraf/issues/1460): Remove PID from procstat plugin to fix cardinality issues.
 - [#1427](https://github.com/influxdata/telegraf/issues/1427): Cassandra input: version 2.x "column family" fix.
+- [#1499](https://github.com/influxdata/telegraf/pull/1499): Make the user able to specify full path for HAproxy stats
 
 ## v1.0 beta 2 [2016-06-21]
 
