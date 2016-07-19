@@ -15,9 +15,10 @@ import (
 )
 
 type MongoDB struct {
-	Servers []string
-	Ssl     Ssl
-	mongos  map[string]*Server
+	Servers          []string
+	Ssl              Ssl
+	mongos           map[string]*Server
+	GatherPerdbStats bool
 }
 
 type Ssl struct {
@@ -32,6 +33,7 @@ var sampleConfig = `
   ##   mongodb://10.10.3.33:18832,
   ##   10.0.0.1:10000, etc.
   servers = ["127.0.0.1:27017"]
+  gather_perdb_stats = false
 `
 
 func (m *MongoDB) SampleConfig() string {
@@ -135,7 +137,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		}
 		server.Session = sess
 	}
-	return server.gatherData(acc)
+	return server.gatherData(acc, m.GatherPerdbStats)
 }
 
 func init() {
