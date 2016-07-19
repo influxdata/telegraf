@@ -2,6 +2,8 @@
 
 ### Features
 
+- [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
+
 ### Bugfixes
 
 - [#1519](https://github.com/influxdata/telegraf/pull/1519): Fix error race conditions and partial failures.

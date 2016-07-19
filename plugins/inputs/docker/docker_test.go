@@ -378,9 +378,10 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		},
 		map[string]string{
-			"container_name":  "etcd2",
-			"container_image": "quay.io/coreos/etcd:v2.2.2",
-			"cpu":             "cpu3",
+			"container_name":    "etcd2",
+			"container_image":   "quay.io/coreos/etcd",
+			"cpu":               "cpu3",
+			"container_version": "v2.2.2",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -423,8 +424,9 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_id":              "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		},
 		map[string]string{
-			"container_name":  "etcd2",
-			"container_image": "quay.io/coreos/etcd:v2.2.2",
+			"container_name":    "etcd2",
+			"container_image":   "quay.io/coreos/etcd",
+			"container_version": "v2.2.2",
 		},
 	)
 
