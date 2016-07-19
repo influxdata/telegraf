@@ -86,7 +86,7 @@ func (c *CheckExpire) Gather(acc telegraf.Accumulator) error {
 			} else {
 				timeToExpire = certs[0].NotAfter.Sub(timeNow)
 			}
-			fields := map[string]interface{}{"time_to_expire": timeToExpire.Seconds(), "error": errMessage}
+			fields := map[string]interface{}{"time_to_expire": int64(timeToExpire.Seconds()), "error": errMessage}
 			// Add metrics
 			acc.AddFields("ssl_cert", fields, tags)
 		}
