@@ -1,5 +1,11 @@
 ## v1.0 [unreleased]
 
+### Features
+
+### Bugfixes
+
+- [#1519](https://github.com/influxdata/telegraf/pull/1519): Fix error race conditions and partial failures.
+
 ## v1.0 beta 3 [2016-07-18]
 
 ### Release Notes
