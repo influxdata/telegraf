@@ -36,6 +36,7 @@ should now look like:
 
 ### Features
 
+- [#1503](https://github.com/influxdata/telegraf/pull/1503): Add tls support for certs to RabbitMQ input plugin
 - [#1289](https://github.com/influxdata/telegraf/pull/1289): webhooks input plugin. Thanks @francois2metz and @cduez!
 - [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar webhook plugin.
 - [#1408](https://github.com/influxdata/telegraf/pull/1408): mandrill webhook plugin.
