@@ -72,18 +72,17 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 	nodes := c.GetNodes()
 	for _, n := range nodes {
 		tags := map[string]string{
-			"node_name":      n.GetName(),
 			"aerospike_host": hostport,
 		}
-		fields := make(map[string]interface{})
+		fields := map[string]interface{}{
+			"node_name": n.GetName(),
+		}
 		stats, err := as.RequestNodeStats(n)
 		if err != nil {
 			return err
 		}
 		for k, v := range stats {
-			if iv, err := strconv.ParseInt(v, 10, 64); err == nil {
-				fields[strings.Replace(k, "-", "_", -1)] = iv
-			}
+			fields[strings.Replace(k, "-", "_", -1)] = parseValue(v)
 		}
 		acc.AddFields("aerospike_node", fields, tags, time.Now())
 
@@ -94,9 +93,13 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 		namespaces := strings.Split(info["namespaces"], ";")
 
 		for _, namespace := range namespaces {
-			nTags := copyTags(tags)
+			nTags := map[string]string{
+				"aerospike_host": hostport,
+			}
 			nTags["namespace"] = namespace
-			nFields := make(map[string]interface{})
+			nFields := map[string]interface{}{
+				"node_name": n.GetName(),
+			}
 			info, err := as.RequestNodeInfo(n, "namespace/"+namespace)
 			if err != nil {
 				continue
@@ -107,14 +110,22 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 				if len(parts) < 2 {
 					continue
 				}
-				if iv, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
-					nFields[strings.Replace(parts[0], "-", "_", -1)] = iv
-				}
+				nFields[strings.Replace(parts[0], "-", "_", -1)] = parseValue(parts[1])
 			}
 			acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
 		}
 	}
 	return nil
+}
+
+func parseValue(v string) interface{} {
+	if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
+		return parsed
+	} else if parsed, err := strconv.ParseBool(v); err == nil {
+		return parsed
+	} else {
+		return v
+	}
 }
 
 func copyTags(m map[string]string) map[string]string {
