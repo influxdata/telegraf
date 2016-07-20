@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -331,6 +332,10 @@ func main() {
 		DisplayName: "Telegraf Data Collector Service",
 		Description: "Collects data using a series of plugins and publishes it to" +
 			"another series of plugins.",
+	}
+
+	if runtime.GOOS == "windows" {
+		svcConfig.Arguments = []string{"-config", "C:\\telegraf\\telegraf.conf"}
 	}
 
 	prg := &program{}
