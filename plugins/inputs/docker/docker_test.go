@@ -24,7 +24,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_name":  "redis",
 		"container_image": "redis/image",
 	}
-	gatherContainerStats(stats, &acc, tags, "123456789")
+	gatherContainerStats(stats, &acc, tags, "123456789", true, true)
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
@@ -42,12 +42,36 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	nettags["network"] = "eth0"
 	acc.AssertContainsTaggedFields(t, "docker_container_net", netfields, nettags)
 
+	netfields = map[string]interface{}{
+		"rx_dropped":   uint64(6),
+		"rx_bytes":     uint64(8),
+		"rx_errors":    uint64(10),
+		"tx_packets":   uint64(12),
+		"tx_dropped":   uint64(6),
+		"rx_packets":   uint64(8),
+		"tx_errors":    uint64(10),
+		"tx_bytes":     uint64(12),
+		"container_id": "123456789",
+	}
+	nettags = copyTags(tags)
+	nettags["network"] = "total"
+	acc.AssertContainsTaggedFields(t, "docker_container_net", netfields, nettags)
+
 	// test docker_blkio measurement
 	blkiotags := copyTags(tags)
 	blkiotags["device"] = "6:0"
 	blkiofields := map[string]interface{}{
 		"io_service_bytes_recursive_read": uint64(100),
 		"io_serviced_recursive_write":     uint64(101),
+		"container_id":                    "123456789",
+	}
+	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
+
+	blkiotags = copyTags(tags)
+	blkiotags["device"] = "total"
+	blkiofields = map[string]interface{}{
+		"io_service_bytes_recursive_read": uint64(100),
+		"io_serviced_recursive_write":     uint64(302),
 		"container_id":                    "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
@@ -186,6 +210,17 @@ func testStats() *types.StatsJSON {
 		TxBytes:   4,
 	}
 
+	stats.Networks["eth1"] = types.NetworkStats{
+		RxDropped: 5,
+		RxBytes:   6,
+		RxErrors:  7,
+		TxPackets: 8,
+		TxDropped: 5,
+		RxPackets: 6,
+		TxErrors:  7,
+		TxBytes:   8,
+	}
+
 	sbr := types.BlkioStatEntry{
 		Major: 6,
 		Minor: 0,
@@ -198,11 +233,19 @@ func testStats() *types.StatsJSON {
 		Op:    "write",
 		Value: 101,
 	}
+	sr2 := types.BlkioStatEntry{
+		Major: 6,
+		Minor: 1,
+		Op:    "write",
+		Value: 201,
+	}
 
 	stats.BlkioStats.IoServiceBytesRecursive = append(
 		stats.BlkioStats.IoServiceBytesRecursive, sbr)
 	stats.BlkioStats.IoServicedRecursive = append(
 		stats.BlkioStats.IoServicedRecursive, sr)
+	stats.BlkioStats.IoServicedRecursive = append(
+		stats.BlkioStats.IoServicedRecursive, sr2)
 
 	return stats
 }
