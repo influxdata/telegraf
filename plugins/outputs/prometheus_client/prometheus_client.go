@@ -12,17 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
-
-	// Prometheus metric names must match this regex
-	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-	metricName = regexp.MustCompile("^[a-zA-Z_:][a-zA-Z0-9_:]*$")
-
-	// Prometheus labels must match this regex
-	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-	labelName = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
-)
+var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
 type PrometheusClient struct {
 	Listen string
@@ -119,9 +109,6 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			if len(k) == 0 {
 				continue
 			}
-			if !labelName.MatchString(k) {
-				continue
-			}
 			labels = append(labels, k)
 			l[k] = v
 		}
@@ -142,11 +129,6 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				mname = key
 			} else {
 				mname = fmt.Sprintf("%s_%s", key, n)
-			}
-
-			// verify that it is a valid measurement name
-			if !metricName.MatchString(mname) {
-				continue
 			}
 
 			desc := prometheus.NewDesc(mname, "Telegraf collected metric", nil, l)
