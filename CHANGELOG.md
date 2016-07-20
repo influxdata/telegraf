@@ -9,6 +9,7 @@
 - [#1519](https://github.com/influxdata/telegraf/pull/1519): Fix error race conditions and partial failures.
 - [#1477](https://github.com/influxdata/telegraf/issues/1477): nstat: fix inaccurate config panic.
 - [#1481](https://github.com/influxdata/telegraf/issues/1481): jolokia: fix handling multiple multi-dimensional attributes.
+- [#1430](https://github.com/influxdata/telegraf/issues/1430): Fix prometheus character sanitizing. Sanitize more win_perf_counters characters.
 
 ## v1.0 beta 3 [2016-07-18]
 
