@@ -57,13 +57,6 @@ func (t TagSet) ToLineFormat() string {
 	return strings.TrimLeft(line, " ")
 }
 
-type MetricLine struct {
-	Metric    string
-	Timestamp int64
-	Value     string
-	Tags      TagSet
-}
-
 func (o *OpenTSDB) Connect() error {
 	// Test Connection to OpenTSDB Server
 	uri := fmt.Sprintf("%s:%d", o.Host, o.Port)
