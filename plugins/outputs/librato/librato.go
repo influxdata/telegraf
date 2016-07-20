@@ -20,7 +20,7 @@ type Librato struct {
 	APIUser    string
 	APIToken   string
 	Debug      bool
-	SourceTag  string
+	SourceTag  string // Deprecated, keeping for backward-compatibility
 	Timeout    internal.Duration
 	Template   string
 	Resolution int
@@ -30,7 +30,7 @@ type Librato struct {
 }
 
 // https://www.librato.com/docs/kb/faq/best_practices/naming_convention_metrics_sources.html#naming-limitations-for-sources-and-metrics
-var reReplace = regexp.MustCompile("[^.a-zA-Z0-9_-]")
+var reUnacceptedChar = regexp.MustCompile("[^.a-zA-Z0-9_-]")
 
 var sampleConfig = `
   ## Librator API Docs
@@ -41,14 +41,11 @@ var sampleConfig = `
   api_token = "my-secret-token" # required.
   ## Debug
   # debug = false
-  ## Tag Field to populate source attribute (optional)
-  ## This is typically the _hostname_ from which the metric was obtained.
-  source_tag = "host"
   ## Connection timeout.
   # timeout = "5s"
   ## Output Name Template (same as graphite buckets)
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  template = "host.tags.measurement.field"
+  template = "host.tags"
 
   ## Resolution
   # resolution = "15s"
@@ -90,12 +87,20 @@ func (l *Librato) Connect() error {
 }
 
 func (l *Librato) Write(metrics []telegraf.Metric) error {
+
 	if len(metrics) == 0 {
 		return nil
 	}
 	if l.Resolution == 0 {
 		l.Resolution = 15
 	}
+	if l.Template == "" {
+		l.Template = "tags"
+	}
+	if l.SourceTag != "" {
+		l.Template = l.SourceTag
+	}
+
 	tempGauges := []*Gauge{}
 
 	for _, m := range metrics {
@@ -180,45 +185,34 @@ func (l *Librato) Description() string {
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
+
 	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {
 		return gauges, fmt.Errorf("Measure time must not be zero\n <%s> \n", m.String())
 	}
-	serializer := graphite.GraphiteSerializer{Template: l.Template}
-	bucket := serializer.SerializeBucketName(m.Name(), m.Tags())
+	metricSource := graphite.InsertField(
+		graphite.SerializeBucketName("", m.Tags(), l.Template, ""),
+		"value")
+	if metricSource == "" {
+		return gauges,
+			fmt.Errorf("undeterminable Source type from Field, %s\n",
+				l.Template)
+	}
 	for fieldName, value := range m.Fields() {
-		if !verifyValue(value) {
-			continue
-		}
-		metricSource := ""
-		metricName := fieldName
-		if fieldName == "value" {
-			metricName = m.Name()
-		}
-		// create source from tags
-		if l.SourceTag != "" {
-			metricName = graphite.InsertField(bucket, fieldName)
-			if source, ok := m.Tags()[l.SourceTag]; ok {
-				metricSource = source
-			} else {
-				return gauges,
-					fmt.Errorf("undeterminable Source type from Field, %s\n",
-						l.SourceTag)
-			}
-		} else {
-			if fieldName != m.Name() {
-				if fieldName != "value" {
-					metricName = fmt.Sprintf("%s.%s", m.Name(), fieldName)
-				}
-			}
-			metricSource = graphite.BuildTags(m.Tags())
+
+		metricName := m.Name()
+		if fieldName != "value" {
+			metricName = fmt.Sprintf("%s.%s", m.Name(), fieldName)
 		}
 
 		gauge := &Gauge{
-			Source:      reReplace.ReplaceAllString(metricSource, "-"),
-			Name:        reReplace.ReplaceAllString(metricName, "-"),
+			Source:      reUnacceptedChar.ReplaceAllString(metricSource, "-"),
+			Name:        reUnacceptedChar.ReplaceAllString(metricName, "-"),
 			Resolution:  int64(l.Resolution),
 			MeasureTime: m.Time().Unix(),
+		}
+		if !verifyValue(value) {
+			continue
 		}
 		if err := gauge.setValue(value); err != nil {
 			return gauges, fmt.Errorf("unable to extract value from Fields, %s\n",
