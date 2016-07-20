@@ -1,5 +1,15 @@
 ## v1.0 [unreleased]
 
+### Features
+
+- [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
+
+### Bugfixes
+
+- [#1519](https://github.com/influxdata/telegraf/pull/1519): Fix error race conditions and partial failures.
+- [#1477](https://github.com/influxdata/telegraf/issues/1477): nstat: fix inaccurate config panic.
+- [#1481](https://github.com/influxdata/telegraf/issues/1481): jolokia: fix handling multiple multi-dimensional attributes.
+
 ## v1.0 beta 3 [2016-07-18]
 
 ### Release Notes
@@ -36,6 +46,7 @@ should now look like:
 
 ### Features
 
+- [#1503](https://github.com/influxdata/telegraf/pull/1503): Add tls support for certs to RabbitMQ input plugin
 - [#1289](https://github.com/influxdata/telegraf/pull/1289): webhooks input plugin. Thanks @francois2metz and @cduez!
 - [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar webhook plugin.
 - [#1408](https://github.com/influxdata/telegraf/pull/1408): mandrill webhook plugin.
@@ -48,6 +59,7 @@ should now look like:
 - [#1500](https://github.com/influxdata/telegraf/pull/1500): Aerospike plugin refactored to use official client lib.
 - [#1434](https://github.com/influxdata/telegraf/pull/1434): Add measurement name arg to logparser plugin.
 - [#1479](https://github.com/influxdata/telegraf/pull/1479): logparser: change resp_code from a field to a tag.
+- [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
 
 ### Bugfixes
 
@@ -67,6 +79,8 @@ should now look like:
 - [#1463](https://github.com/influxdata/telegraf/issues/1463): Shared WaitGroup in Exec plugin
 - [#1436](https://github.com/influxdata/telegraf/issues/1436): logparser: honor modifiers in "pattern" config.
 - [#1418](https://github.com/influxdata/telegraf/issues/1418): logparser: error and exit on file permissions/missing errors.
+- [#1499](https://github.com/influxdata/telegraf/pull/1499): Make the user able to specify full path for HAproxy stats
+- [#1521](https://github.com/influxdata/telegraf/pull/1521): Fix Redis url, an extra "tcp://" was added.
 
 ## v1.0 beta 2 [2016-06-21]
 

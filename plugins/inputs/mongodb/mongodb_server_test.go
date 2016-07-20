@@ -29,12 +29,12 @@ func TestGetDefaultTags(t *testing.T) {
 func TestAddDefaultStats(t *testing.T) {
 	var acc testutil.Accumulator
 
-	err := server.gatherData(&acc)
+	err := server.gatherData(&acc, false)
 	require.NoError(t, err)
 
 	time.Sleep(time.Duration(1) * time.Second)
 	// need to call this twice so it can perform the diff
-	err = server.gatherData(&acc)
+	err = server.gatherData(&acc, false)
 	require.NoError(t, err)
 
 	for key, _ := range DefaultStats {
