@@ -19,4 +19,5 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/opentsdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
+	_ "github.com/influxdata/telegraf/plugins/outputs/tcp_forwarder"
 )
