@@ -1,6 +1,6 @@
 # Mesos Input Plugin
 
-This input plugin gathers metrics from Mesos (*currently only Mesos masters*).
+This input plugin gathers metrics from Mesos.
 For more information, please check the [Mesos Observability Metrics](http://mesos.apache.org/documentation/latest/monitoring/) page.
 
 ### Configuration:
@@ -10,11 +10,38 @@ For more information, please check the [Mesos Observability Metrics](http://meso
 [[inputs.mesos]]
   # Timeout, in ms.
   timeout = 100
-  # A list of Mesos masters, default value is localhost:5050.
+  # A list of Mesos masters, default value is [].
   masters = ["localhost:5050"]
-  # Metrics groups to be collected, by default, all enabled.
-  master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
+  # Master metrics groups to be collected, by default, all enabled.
+  master_collections = [
+    "resources",
+    "master",
+    "system",
+    "agents",
+    "frameworks",
+    "tasks",
+    "messages",
+    "evqueue",
+    "registrar",
+  ]
+  # A list of Mesos slaves, default is []
+  # slaves []
+  # Slave metrics groups to be collected, by default, all enabled.
+  # slave_collections = [
+  #	"resources",
+  #	"agent",
+  #	"system",
+  #	"executors",
+  #	"tasks",
+  #	"messages",
+  # ]
+  # Include mesos tasks statistics, default is false
+  # slave_tasks = true
 ```
+
+By dafault this plugin is not configured to gather metrics from mesos. Since mesos cluster can be deployed in numerous ways it does not provide ane default
+values in that matter. User needs to specify master/slave nodes this plugin will gather metrics from. Additionally by enabling `slave_tasks` will allow
+agthering metrics from takss runing on specified slaves (this options is disabled by default).
 
 ### Measurements & Fields:
 
@@ -33,6 +60,12 @@ Mesos master metric groups
     - master/disk_revocable_percent
     - master/disk_revocable_total
     - master/disk_revocable_used
+    - master/gpus_percent
+    - master/gpus_used
+    - master/gpus_total
+    - master/gpus_revocable_percent
+    - master/gpus_revocable_total
+    - master/gpus_revocable_used
     - master/mem_percent
     - master/mem_used
     - master/mem_total
@@ -136,17 +169,111 @@ Mesos master metric groups
     - registrar/state_store_ms/p999
     - registrar/state_store_ms/p9999
 
+Mesos slave metric groups
+- resources
+    - slave/cpus_percent
+    - slave/cpus_used
+    - slave/cpus_total
+    - slave/cpus_revocable_percent
+    - slave/cpus_revocable_total
+    - slave/cpus_revocable_used
+    - slave/disk_percent
+    - slave/disk_used
+    - slave/disk_total
+    - slave/disk_revocable_percent
+    - slave/disk_revocable_total
+    - slave/disk_revocable_used
+    - slave/gpus_percent
+    - slave/gpus_used
+    - slave/gpus_total,
+    - slave/gpus_revocable_percent
+    - slave/gpus_revocable_total
+    - slave/gpus_revocable_used
+    - slave/mem_percent
+    - slave/mem_used
+    - slave/mem_total
+    - slave/mem_revocable_percent
+    - slave/mem_revocable_total
+    - slave/mem_revocable_used
+
+- agent
+    - slave/registered
+    - slave/uptime_secs
+
+- system
+    - system/cpus_total
+    - system/load_15min
+    - system/load_5min
+    - system/load_1min
+    - system/mem_free_bytes
+    - system/mem_total_bytes
+
+- executors
+    - containerizer/mesos/container_destroy_errors
+    - slave/container_launch_errors
+    - slave/executors_preempted
+    - slave/frameworks_active
+    - slave/executor_directory_max_allowed_age_secs
+    - slave/executors_registering
+    - slave/executors_running
+    - slave/executors_terminated
+    - slave/executors_terminating
+    - slave/recovery_errors
+
+- tasks
+    - slave/tasks_failed
+    - slave/tasks_finished
+    - slave/tasks_killed
+    - slave/tasks_lost
+    - slave/tasks_running
+    - slave/tasks_staging
+    - slave/tasks_starting
+
+- messages
+    - slave/invalid_framework_messages
+    - slave/invalid_status_updates
+    - slave/valid_framework_messages
+    - slave/valid_status_updates
+
+Mesos tasks metric groups
+
+- executor_id
+- executor_name
+- framework_id
+- source
+- statistics (all metrics below will have `statistics_` prefix included in their names
+    - cpus_limit
+    - cpus_system_time_secs
+    - cpus_user_time_secs
+    - mem_anon_bytes
+    - mem_cache_bytes
+    - mem_critical_pressure_counter
+    - mem_file_bytes
+    - mem_limit_bytes
+    - mem_low_pressure_counter
+    - mem_mapped_file_bytes
+    - mem_medium_pressure_counter
+    - mem_rss_bytes
+    - mem_swap_bytes
+    - mem_total_bytes
+    - mem_total_memsw_bytes
+    - mem_unevictable_bytes
+    - timestamp
+
 ### Tags:
 
-- All measurements have the following tags:
+- All master/slave measurements have the following tags:
+    - server
+    - role (master/slave)
+
+- Tasks  measurements have the following tags:
     - server
 
 ### Example Output:
-
 ```
 $ telegraf -config ~/mesos.conf -input-filter mesos -test
 * Plugin: mesos, Collection 1
-mesos,server=172.17.8.101 allocator/event_queue_dispatches=0,master/cpus_percent=0,
+mesos,host=172.17.8.102,server=172.17.8.101 allocator/event_queue_dispatches=0,master/cpus_percent=0,
 master/cpus_revocable_percent=0,master/cpus_revocable_total=0,
 master/cpus_revocable_used=0,master/cpus_total=2,
 master/cpus_used=0,master/disk_percent=0,master/disk_revocable_percent=0,
@@ -162,4 +289,17 @@ master/mem_revocable_percent=0,master/mem_revocable_total=0,
 master/mem_revocable_used=0,master/mem_total=1002,
 master/mem_used=0,master/messages_authenticate=0,
 master/messages_deactivate_framework=0 ...
+```
+
+Meoso tasks metrics (if enabled):
+```
+mesos-tasks,host=172.17.8.102,server=172.17.8.101,task_id=hello-world.e4b5b497-2ccd-11e6-a659-0242fb222ce2
+statistics_cpus_limit=0.2,statistics_cpus_system_time_secs=142.49,statistics_cpus_user_time_secs=388.14,
+statistics_mem_anon_bytes=359129088,statistics_mem_cache_bytes=3964928,
+statistics_mem_critical_pressure_counter=0,statistics_mem_file_bytes=3964928,
+statistics_mem_limit_bytes=767557632,statistics_mem_low_pressure_counter=0,
+statistics_mem_mapped_file_bytes=114688,statistics_mem_medium_pressure_counter=0,
+statistics_mem_rss_bytes=359129088,statistics_mem_swap_bytes=0,statistics_mem_total_bytes=363094016,
+statistics_mem_total_memsw_bytes=363094016,statistics_mem_unevictable_bytes=0,
+statistics_timestamp=1465486052.70525 1465486053052811792...
 ```
