@@ -3,17 +3,16 @@ package ping
 
 import (
 	"errors"
-	"os/exec"
-	"regexp"
-	"strings"
-	"strconv"
-	"time"
-	"sync"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"os/exec"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
-
 
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
@@ -23,13 +22,13 @@ type HostPinger func(timeout float64, args ...string) (string, error)
 type Ping struct {
 	// Number of pings to send (ping -c <COUNT>)
 	Count int
-	
+
 	// Ping timeout, in seconds. 0 means no timeout (ping -W <TIMEOUT>)
 	Timeout float64
 
 	// URLs to ping
 	Urls []string
-	
+
 	// host ping function
 	pingHost HostPinger
 }
@@ -61,7 +60,7 @@ func hostPinger(timeout float64, args ...string) (string, error) {
 	c := exec.Command(bin, args...)
 	out, err := internal.CombinedOutputTimeout(c,
 		time.Second*time.Duration(timeout+1))
-	return string( out ), err
+	return string(out), err
 }
 
 // processPingOutput takes in a string output from the ping command
@@ -71,11 +70,11 @@ func processPingOutput(out string) (int, int, int, int, int, error) {
 	// So find a line contain 3 numbers except reply lines
 	var stats, aproxs []string = nil, nil
 	err := errors.New("Fatal error processing ping output")
-	stat := regexp.MustCompile( "=\\W*(\\d+)\\D*=\\W*(\\d+)\\D*=\\W*(\\d+)" )
-	aprox := regexp.MustCompile( "=\\W*(\\d+)\\D*ms\\D*=\\W*(\\d+)\\D*ms\\D*=\\W*(\\d+)\\D*ms" )
+	stat := regexp.MustCompile("=\\W*(\\d+)\\D*=\\W*(\\d+)\\D*=\\W*(\\d+)")
+	aprox := regexp.MustCompile("=\\W*(\\d+)\\D*ms\\D*=\\W*(\\d+)\\D*ms\\D*=\\W*(\\d+)\\D*ms")
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
-		if !strings.Contains(line, "TTL"){
+		if !strings.Contains(line, "TTL") {
 			if stats == nil {
 				stats = stat.FindStringSubmatch(line)
 			}
@@ -85,45 +84,45 @@ func processPingOutput(out string) (int, int, int, int, int, error) {
 		}
 	}
 	if stats == nil {
-		return 0,0,0,0,0,err
+		return 0, 0, 0, 0, 0, err
 	}
 	trans, err := strconv.Atoi(stats[1])
 	if err != nil {
-		return 0,0,0,0,0,err
+		return 0, 0, 0, 0, 0, err
 	}
 	rec, err := strconv.Atoi(stats[2])
 	if err != nil {
-		return 0,0,0,0,0,err
+		return 0, 0, 0, 0, 0, err
 	}
 	if aproxs == nil {
-		return trans,rec, 0,0,0,err
+		return trans, rec, 0, 0, 0, err
 	}
 	min, err := strconv.Atoi(aproxs[1])
 	if err != nil {
-		return trans,rec, 0,0,0,err
+		return trans, rec, 0, 0, 0, err
 	}
 	max, err := strconv.Atoi(aproxs[2])
 	if err != nil {
-		return trans,rec, 0,0,0,err
+		return trans, rec, 0, 0, 0, err
 	}
 	avg, err := strconv.Atoi(aproxs[3])
 	if err != nil {
-		return 0,0,0,0,0,err
+		return 0, 0, 0, 0, 0, err
 	}
-		
-	return trans,rec, avg,min,max,err
+
+	return trans, rec, avg, min, max, err
 }
 
 // args returns the arguments for the 'ping' executable
 func (p *Ping) args(url string) []string {
-	args := []string{"-n", strconv.Itoa( p.Count ) }
-	
+	args := []string{"-n", strconv.Itoa(p.Count)}
+
 	if p.Timeout > 0 {
-		args = append( args, "-w", strconv.FormatFloat( p.Timeout*1000, 'f', 0, 64) )
+		args = append(args, "-w", strconv.FormatFloat(p.Timeout*1000, 'f', 0, 64))
 	}
-	
+
 	args = append(args, url)
-	
+
 	return args
 }
 
@@ -136,7 +135,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		go func(u string) {
 			defer wg.Done()
 			args := p.args(u)
-			totalTimeout := float64(p.Count)*3
+			totalTimeout := float64(p.Count) * 3
 			out, err := p.pingHost(totalTimeout, args...)
 			if err != nil {
 				// Combine go err + stderr output
@@ -169,7 +168,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			acc.AddFields("ping", fields, tags)
 		}(url)
 	}
-	
+
 	wg.Wait()
 	close(errorChannel)
 

@@ -3,9 +3,9 @@ package ping
 
 import (
 	"errors"
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 // Windows ping format ( should support multilanguage ?)
@@ -22,6 +22,7 @@ Statystyka badania ping dla 8.8.8.8:
 Szacunkowy czas bladzenia pakietww w millisekundach:
     Minimum = 46 ms, Maksimum = 57 ms, Czas sredni = 50 ms
 `
+
 // Windows ping format ( should support multilanguage ?)
 var winENPingOutput = `
 Pinging 8.8.8.8 with 32 bytes of data:
@@ -36,7 +37,7 @@ Approximate round trip times in milli-seconds:
     Minimum = 50ms, Maximum = 52ms, Average = 50ms
 `
 
-func TestHost( t* testing.T ) {
+func TestHost(t *testing.T) {
 	trans, rec, avg, min, max, err := processPingOutput(winPLPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, trans, "4 packets were transmitted")
@@ -44,7 +45,7 @@ func TestHost( t* testing.T ) {
 	assert.Equal(t, 50, avg, "Average 50")
 	assert.Equal(t, 46, min, "Min 46")
 	assert.Equal(t, 57, max, "max 57")
-	
+
 	trans, rec, avg, min, max, err = processPingOutput(winENPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, trans, "4 packets were transmitted")
