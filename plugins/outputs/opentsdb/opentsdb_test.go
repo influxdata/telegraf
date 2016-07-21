@@ -7,34 +7,60 @@ import (
 	// "github.com/stretchr/testify/require"
 )
 
-func TestBuildTagsTelnet(t *testing.T) {
+func TestCleanTags(t *testing.T) {
 	var tagtests = []struct {
 		ptIn    map[string]string
-		outTags []string
+		outTags TagSet
 	}{
 		{
 			map[string]string{"one": "two", "three": "four"},
-			[]string{"one=two", "three=four"},
+			TagSet{"one": "two", "three": "four"},
 		},
 		{
 			map[string]string{"aaa": "bbb"},
-			[]string{"aaa=bbb"},
-		},
-		{
-			map[string]string{"one": "two", "aaa": "bbb"},
-			[]string{"aaa=bbb", "one=two"},
+			TagSet{"aaa": "bbb"},
 		},
 		{
 			map[string]string{"Sp%ci@l Chars": "g$t repl#ced"},
-			[]string{"Sp-ci-l_Chars=g-t_repl-ced"},
+			TagSet{"Sp-ci-l_Chars": "g-t_repl-ced"},
 		},
 		{
 			map[string]string{},
-			[]string{},
+			TagSet{},
 		},
 	}
 	for _, tt := range tagtests {
-		tags := buildTags(tt.ptIn)
+		tags := cleanTags(tt.ptIn)
+		if !reflect.DeepEqual(tags, tt.outTags) {
+			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outTags, tags)
+		}
+	}
+}
+
+func TestBuildTagsTelnet(t *testing.T) {
+	var tagtests = []struct {
+		ptIn    TagSet
+		outTags string
+	}{
+		{
+			TagSet{"one": "two", "three": "four"},
+			"one=two three=four",
+		},
+		{
+			TagSet{"aaa": "bbb"},
+			"aaa=bbb",
+		},
+		{
+			TagSet{"one": "two", "aaa": "bbb"},
+			"aaa=bbb one=two",
+		},
+		{
+			TagSet{},
+			"",
+		},
+	}
+	for _, tt := range tagtests {
+		tags := tt.ptIn.ToLineFormat()
 		if !reflect.DeepEqual(tags, tt.outTags) {
 			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outTags, tags)
 		}

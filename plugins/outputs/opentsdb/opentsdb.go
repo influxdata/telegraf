@@ -3,6 +3,7 @@ package opentsdb
 import (
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -49,12 +50,14 @@ var sampleConfig = `
 type TagSet map[string]string
 
 func (t TagSet) ToLineFormat() string {
-	var line string
+	tags := make([]string, len(t))
+	index := 0
 	for k, v := range t {
-		line += fmt.Sprintf(" %s=%s", k, v)
+		tags[index] = fmt.Sprintf("%s=%s", k, v)
+		index++
 	}
-
-	return strings.TrimLeft(line, " ")
+	sort.Strings(tags)
+	return strings.Join(tags, " ")
 }
 
 func (o *OpenTSDB) Connect() error {
