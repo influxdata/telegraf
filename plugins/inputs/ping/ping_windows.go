@@ -117,6 +117,15 @@ func processPingOutput(out string) (int, int, int, int, int, error) {
 	return trans, rec, avg, min, max, err
 }
 
+func (p *Ping) timeout() float64 {
+	if p.Timeout > 0 {
+		return p.Timeout
+	}
+
+	// According to MSDN, default ping timeout for windows is 4 second
+	return 4
+}
+
 // args returns the arguments for the 'ping' executable
 func (p *Ping) args(url string) []string {
 	args := []string{"-n", strconv.Itoa(p.Count)}
@@ -139,7 +148,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		go func(u string) {
 			defer wg.Done()
 			args := p.args(u)
-			totalTimeout := float64(p.Count) * 3
+			totalTimeout := p.timeout() * float64(p.Count)
 			out, err := p.pingHost(totalTimeout, args...)
 			if err != nil {
 				// Combine go err + stderr output
