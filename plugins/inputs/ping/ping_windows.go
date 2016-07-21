@@ -70,8 +70,8 @@ func processPingOutput(out string) (int, int, int, int, int, error) {
 	// So find a line contain 3 numbers except reply lines
 	var stats, aproxs []string = nil, nil
 	err := errors.New("Fatal error processing ping output")
-	stat := regexp.MustCompile("=\\W*(\\d+)\\D*=\\W*(\\d+)\\D*=\\W*(\\d+)")
-	aprox := regexp.MustCompile("=\\W*(\\d+)\\D*ms\\D*=\\W*(\\d+)\\D*ms\\D*=\\W*(\\d+)\\D*ms")
+	stat := regexp.MustCompile(`=\W*(\d+)\D*=\W*(\d+)\D*=\W*(\d+)`)
+	aprox := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
 		if !strings.Contains(line, "TTL") {
@@ -83,7 +83,9 @@ func processPingOutput(out string) (int, int, int, int, int, error) {
 			}
 		}
 	}
-	if stats == nil {
+
+	// stats data should contain 4 members: entireExpression + ( Send, Receive, Lost )
+	if len(stats) != 4 {
 		return 0, 0, 0, 0, 0, err
 	}
 	trans, err := strconv.Atoi(stats[1])
@@ -94,7 +96,9 @@ func processPingOutput(out string) (int, int, int, int, int, error) {
 	if err != nil {
 		return 0, 0, 0, 0, 0, err
 	}
-	if aproxs == nil {
+
+	// aproxs data should contain 4 members: entireExpression + ( min, max, avg )
+	if len(aproxs) != 4 {
 		return trans, rec, 0, 0, 0, err
 	}
 	min, err := strconv.Atoi(aproxs[1])
