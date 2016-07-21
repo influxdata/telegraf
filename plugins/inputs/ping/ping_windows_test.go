@@ -163,38 +163,34 @@ func TestLossyPingGather(t *testing.T) {
 
 // Fatal ping output (invalid argument)
 var fatalPingOutput = `
-Zla opcja -d.
+Bad option -d.
 
 
-Sposob uzycia: ping [-t] [-a] [-n liczba] [-l rozmiar] [-f] [-i TTL] [-v TOS]
-               [-r liczba] [-s liczba] [[-j lista_hostow] | [-k lista_hostow]]
-               [-w limit_czasu] [-R] [-S adres_zrodlowy] [-4] [-6]
-               nazwa_obiektu_docelowego
-Opcje:
-    -t               Odpytuje okreslonego hosta do czasu zatrzymania.
-                     Aby przejrzec statystyki i kontynuowac,
-                     nacisnij klawisze Ctrl+Break.
-                     Aby zakonczyc, nacisnij klawisze Ctrl+C.
-   -a                Tlumaczy adresy na nazwy hostow.
-   -n liczba         Liczba wysylanych ządan echa.
-   -l rozmiar        Rozmiar buforu wysylania.
-   -f                Ustawia w pakiecie flagę "Nie fragmentuj" (tylko IPv4).
-   -i TTL            Czas wygasnięcia.
-   -v TOS            Typ uslugi (tylko IPv4). To ustawienie zostalo
-                     zaniechane i nie ma wplywu na wartosc pola typu uslugi
-                     w naglowku IP.
-   -r liczba         Rejestruje trasę dla podanej liczby przeskokow (tylko IPv4).
-   -s liczba         Sygnatura czasowa dla podanej liczby przeskokow (tylko IPv4).
-   -j lista_hostow   Swobodna trasa zrodlowa wg listy lista_hostow
-                     (tylko IPv4).
-   -k lista_hostow   scisle okreslona trasa zrodlowa wg listy lista_hostow
-                     (tylko IPv4).
-   -w limit_czasu    Limit czasu oczekiwania na odpowiedz (w  milisekundach).
-   -R                Powoduje uzycie naglowka routingu w celu dodatkowego
-                     testowania trasy wstecznej (tylko IPv6).
-   -S adres_zrodlowy Adres zrodlowy do uzycia.
-   -4                Wymusza uzywanie IPv4.
-   -6                Wymusza uzywanie IPv6.
+Usage: ping [-t] [-a] [-n count] [-l size] [-f] [-i TTL] [-v TOS]
+            [-r count] [-s count] [[-j host-list] | [-k host-list]]
+            [-w timeout] [-R] [-S srcaddr] [-4] [-6] target_name
+
+Options:
+    -t             Ping the specified host until stopped.
+                   To see statistics and continue - type Control-Break;
+                   To stop - type Control-C.
+    -a             Resolve addresses to hostnames.
+    -n count       Number of echo requests to send.
+    -l size        Send buffer size.
+    -f             Set Don't Fragment flag in packet (IPv4-only).
+    -i TTL         Time To Live.
+    -v TOS         Type Of Service (IPv4-only. This setting has been deprecated
+                   and has no effect on the type of service field in the IP Header).
+    -r count       Record route for count hops (IPv4-only).
+    -s count       Timestamp for count hops (IPv4-only).
+    -j host-list   Loose source route along host-list (IPv4-only).
+    -k host-list   Strict source route along host-list (IPv4-only).
+    -w timeout     Timeout in milliseconds to wait for each reply.
+    -R             Use routing header to test reverse route also (IPv6-only).
+    -S srcaddr     Source address to use.
+    -4             Force using IPv4.
+    -6             Force using IPv6.
+
 `
 
 func mockFatalHostPinger(timeout float64, args ...string) (string, error) {
