@@ -118,12 +118,13 @@ func processPingOutput(out string) (int, int, int, int, int, error) {
 }
 
 func (p *Ping) timeout() float64 {
-	if p.Timeout > 0 {
-		return p.Timeout
-	}
-
 	// According to MSDN, default ping timeout for windows is 4 second
-	return 4
+	// Add also one second interval
+
+	if p.Timeout > 0 {
+		return p.Timeout + 1
+	}
+	return 4 + 1
 }
 
 // args returns the arguments for the 'ping' executable
@@ -142,6 +143,7 @@ func (p *Ping) args(url string) []string {
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	errorChannel := make(chan error, len(p.Urls)*2)
+	var pendingError error = nil
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
@@ -150,15 +152,19 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			args := p.args(u)
 			totalTimeout := p.timeout() * float64(p.Count)
 			out, err := p.pingHost(totalTimeout, args...)
+			// ping host return exitcode != 0 also when there was no response from host
+			// but command was execute succesfully
 			if err != nil {
 				// Combine go err + stderr output
-				errorChannel <- errors.New(
-					strings.TrimSpace(out) + ", " + err.Error())
+				pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
 			}
 			tags := map[string]string{"url": u}
 			trans, rec, avg, min, max, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
+				if pendingError != nil {
+					errorChannel <- pendingError
+				}
 				errorChannel <- err
 				return
 			}
