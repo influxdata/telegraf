@@ -1,2 +1,2 @@
 STDERR=/var/log/telegraf/telegraf.log
-STDOUT=/dev/null
+STDOUT=/var/log/telegraf/telegraf.log

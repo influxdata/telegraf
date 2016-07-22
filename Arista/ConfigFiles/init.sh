@@ -35,7 +35,7 @@ if [ -r $DEFAULT ]; then
 fi
 
 if [ -z "$STDOUT" ]; then
-    STDOUT=/dev/null
+    STDOUT=/var/log/telegraf/telegraf.log
 fi
 if [ ! -f "$STDOUT" ]; then
     mkdir -p `dirname $STDOUT`
@@ -133,9 +133,9 @@ case $1 in
 
         log_success_msg "Starting the process" "$name"
         if which start-stop-daemon > /dev/null 2>&1; then
-            start-stop-daemon --start --quiet --pidfile $pidfile --exec $daemon -- -pidfile $pidfile -config $config -configdirectory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
+            start-stop-daemon --start --quiet --pidfile $pidfile --exec $daemon -- -pidfile $pidfile -config $config -config-directory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
         else
-            nohup $daemon -pidfile $pidfile -config $config -configdirectory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
+            nohup $daemon -pidfile $pidfile -config $config -config-directory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
         fi
         log_success_msg "$name process was started"
         ;;
@@ -178,7 +178,7 @@ case $1 in
         ;;
 
     version)
-        $daemon version
+        $daemon -version
         ;;
 
     *)
