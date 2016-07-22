@@ -3,6 +3,7 @@ package opentsdb
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,8 +18,7 @@ type OpenTSDB struct {
 	Host string
 	Port int
 
-	UseHttp   bool
-	BatchSize int
+	HttpBatchSize int
 
 	Debug bool
 }
@@ -30,19 +30,17 @@ var sampleConfig = `
   ## prefix for metrics keys
   prefix = "my.specific.prefix."
 
-  ## Telnet Mode ##
   ## DNS name of the OpenTSDB server
+  ## Using "opentsdb.example.com" or "tcp://opentsdb.example.com" will use the
+  ## telnet API. "http://opentsdb.example.com" will use the Http API.
   host = "opentsdb.example.com"
 
-  ## Port of the OpenTSDB server in telnet mode
+  ## Port of the OpenTSDB server
   port = 4242
 
-  ## Use Http PUT API
-  useHttp = false
-
   ## Number of data points to send to OpenTSDB in Http requests.
-  ## Not used when useHttp is false.
-  batchSize = 50
+  ## Not used with telnet API.
+  httpBatchSize = 50
 
   ## Debug true - Prints OpenTSDB communication
   debug = false
@@ -63,7 +61,12 @@ func (t TagSet) ToLineFormat() string {
 
 func (o *OpenTSDB) Connect() error {
 	// Test Connection to OpenTSDB Server
-	uri := fmt.Sprintf("%s:%d", o.Host, o.Port)
+	u, err := url.Parse(o.Host)
+	if err != nil {
+		return fmt.Errorf("Error in parsing host url: %s", err.Error())
+	}
+
+	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
 		return fmt.Errorf("OpenTSDB: TCP address cannot be resolved")
@@ -81,18 +84,26 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	if o.UseHttp {
-		return o.WriteHttp(metrics)
+	u, err := url.Parse(o.Host)
+	if err != nil {
+		return fmt.Errorf("Error in parsing host url: %s", err.Error())
+	}
+
+
+	if u.Scheme == "" || u.Scheme == "tcp" {
+		return o.WriteTelnet(metrics, u)
+	} else if u.Scheme == "http" {
+		return o.WriteHttp(metrics, u)
 	} else {
-		return o.WriteTelnet(metrics)
+		return fmt.Errorf("Unknown scheme in host parameter.")
 	}
 }
 
-func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric) error {
+func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 	http := openTSDBHttp{
-		Host:      o.Host,
+		Host:      u.Host,
 		Port:      o.Port,
-		BatchSize: o.BatchSize,
+		BatchSize: o.HttpBatchSize,
 		Debug:     o.Debug,
 	}
 
@@ -128,9 +139,9 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric) error {
+func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 	// Send Data with telnet / socket communication
-	uri := fmt.Sprintf("%s:%d", o.Host, o.Port)
+	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {

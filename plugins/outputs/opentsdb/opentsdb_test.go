@@ -94,7 +94,7 @@ func BenchmarkHttpSend(b *testing.B) {
 		panic(err)
 	}
 
-	host, p, _ := net.SplitHostPort(u.Host)
+	_, p, _ := net.SplitHostPort(u.Host)
 
 	port, err := strconv.Atoi(p)
 	if err != nil {
@@ -102,11 +102,10 @@ func BenchmarkHttpSend(b *testing.B) {
 	}
 
 	o := &OpenTSDB{
-		Host:      host,
+		Host:      ts.URL,
 		Port:      port,
 		Prefix:    "",
-		UseHttp:   true,
-		BatchSize: BatchSize,
+		HttpBatchSize: BatchSize,
 	}
 
 	b.ResetTimer()
