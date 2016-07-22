@@ -32,8 +32,6 @@ type accumulator struct {
 
 	inputConfig *internal_models.InputConfig
 
-	prefix string
-
 	precision time.Duration
 }
 
@@ -145,10 +143,6 @@ func (ac *accumulator) AddFields(
 		timestamp = time.Now()
 	}
 	timestamp = timestamp.Round(ac.precision)
-
-	if ac.prefix != "" {
-		measurement = ac.prefix + measurement
-	}
 
 	m, err := telegraf.NewMetric(measurement, tags, result, timestamp)
 	if err != nil {
