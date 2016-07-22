@@ -89,7 +89,6 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 		return fmt.Errorf("Error in parsing host url: %s", err.Error())
 	}
 
-
 	if u.Scheme == "" || u.Scheme == "tcp" {
 		return o.WriteTelnet(metrics, u)
 	} else if u.Scheme == "http" {

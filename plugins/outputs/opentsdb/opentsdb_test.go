@@ -102,9 +102,9 @@ func BenchmarkHttpSend(b *testing.B) {
 	}
 
 	o := &OpenTSDB{
-		Host:      ts.URL,
-		Port:      port,
-		Prefix:    "",
+		Host:          ts.URL,
+		Port:          port,
+		Prefix:        "",
 		HttpBatchSize: BatchSize,
 	}
 
