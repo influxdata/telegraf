@@ -17,7 +17,7 @@ type OpenTSDB struct {
 	Host string
 	Port int
 
-	UseHttp bool
+	UseHttp   bool
 	BatchSize int
 
 	Debug bool
@@ -47,6 +47,7 @@ var sampleConfig = `
   ## Debug true - Prints OpenTSDB communication
   debug = false
 `
+
 type TagSet map[string]string
 
 func (t TagSet) ToLineFormat() string {
@@ -89,10 +90,10 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 
 func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric) error {
 	http := openTSDBHttp{
-		Host: o.Host,
-		Port: o.Port,
+		Host:      o.Host,
+		Port:      o.Port,
 		BatchSize: o.BatchSize,
-		Debug: o.Debug,
+		Debug:     o.Debug,
 	}
 
 	for _, m := range metrics {
@@ -106,21 +107,21 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric) error {
 				continue
 			}
 
-            metric := &HttpMetric{
-                Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
-                        o.Prefix, m.Name(), fieldName)),
-				Tags: tags,
+			metric := &HttpMetric{
+				Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
+					o.Prefix, m.Name(), fieldName)),
+				Tags:      tags,
 				Timestamp: now,
-				Value: metricValue,
-            }
+				Value:     metricValue,
+			}
 
-			if err:= http.sendDataPoint(metric); err != nil {
+			if err := http.sendDataPoint(metric); err != nil {
 				return err
 			}
 		}
 	}
 
-	if err:= http.flush(); err != nil {
+	if err := http.flush(); err != nil {
 		return err
 	}
 
@@ -149,7 +150,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric) error {
 			}
 
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-				sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",o.Prefix, m.Name(), fieldName)),
+				sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
 				now, metricValue, tags)
 
 			if o.Debug {

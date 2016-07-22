@@ -1,130 +1,129 @@
 package opentsdb
 
 import (
-    "fmt"
-    "encoding/json"
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"bytes"
-	"compress/gzip"
-	"log"
 )
 
 type HttpMetric struct {
-	Metric    string `json:"metric"`
-	Timestamp int64 `json:"timestamp"`
-	Value     string `json:"value"`
+	Metric    string            `json:"metric"`
+	Timestamp int64             `json:"timestamp"`
+	Value     string            `json:"value"`
 	Tags      map[string]string `json:"tags"`
 }
 
-
 type openTSDBHttp struct {
-	Host string
-	Port int
-    BatchSize int
-	Debug bool
+	Host      string
+	Port      int
+	BatchSize int
+	Debug     bool
 
-    metricCounter int
-    body requestBody
+	metricCounter int
+	body          requestBody
 }
 
 type requestBody struct {
-    b bytes.Buffer
-    g *gzip.Writer
+	b bytes.Buffer
+	g *gzip.Writer
 
-    dbgB bytes.Buffer
+	dbgB bytes.Buffer
 
-    w io.Writer
-    enc *json.Encoder
+	w   io.Writer
+	enc *json.Encoder
 
-    empty bool
+	empty bool
 }
 
 func (r *requestBody) reset(debug bool) {
-    r.b.Reset()
-    r.dbgB.Reset()
+	r.b.Reset()
+	r.dbgB.Reset()
 
-    if r.g == nil {
-        r.g = gzip.NewWriter(&r.b)
-    } else {
-        r.g.Reset(&r.b)
-    }
+	if r.g == nil {
+		r.g = gzip.NewWriter(&r.b)
+	} else {
+		r.g.Reset(&r.b)
+	}
 
-    if debug {
-        r.w = io.MultiWriter(r.g, &r.dbgB)
-    } else {
-        r.w = r.g
-    }
+	if debug {
+		r.w = io.MultiWriter(r.g, &r.dbgB)
+	} else {
+		r.w = r.g
+	}
 
-    r.enc = json.NewEncoder(r.w)
+	r.enc = json.NewEncoder(r.w)
 
-    io.WriteString(r.w, "[")
+	io.WriteString(r.w, "[")
 
-    r.empty = true
+	r.empty = true
 }
 
 func (r *requestBody) addMetric(metric *HttpMetric) error {
-    if !r.empty {
-        io.WriteString(r.w, ",")
-    }
+	if !r.empty {
+		io.WriteString(r.w, ",")
+	}
 
-    if err := r.enc.Encode(metric); err != nil {
-        return fmt.Errorf("Metric serialization error %s", err.Error())
-    }
+	if err := r.enc.Encode(metric); err != nil {
+		return fmt.Errorf("Metric serialization error %s", err.Error())
+	}
 
-    r.empty = false
+	r.empty = false
 
-    return nil
+	return nil
 }
 
 func (r *requestBody) close() error {
-    io.WriteString(r.w, "]")
+	io.WriteString(r.w, "]")
 
-    if err := r.g.Close(); err != nil {
-        return fmt.Errorf("Error when closing gzip writer: %s", err.Error())
-    }
+	if err := r.g.Close(); err != nil {
+		return fmt.Errorf("Error when closing gzip writer: %s", err.Error())
+	}
 
-    return nil
+	return nil
 }
 
 func (o *openTSDBHttp) sendDataPoint(metric *HttpMetric) error {
-    if o.metricCounter == 0 {
-        o.body.reset(o.Debug)
-    }
+	if o.metricCounter == 0 {
+		o.body.reset(o.Debug)
+	}
 
-    if err := o.body.addMetric(metric); err != nil {
-        return err
-    }
+	if err := o.body.addMetric(metric); err != nil {
+		return err
+	}
 
-    o.metricCounter++
-    if o.metricCounter == o.BatchSize {
-        if err := o.flush(); err != nil {
-            return err
-        }
+	o.metricCounter++
+	if o.metricCounter == o.BatchSize {
+		if err := o.flush(); err != nil {
+			return err
+		}
 
-        o.metricCounter = 0
-    }
+		o.metricCounter = 0
+	}
 
-    return nil
+	return nil
 }
 
 func (o *openTSDBHttp) flush() error {
-    if o.metricCounter == 0 {
-        return nil
-    }
+	if o.metricCounter == 0 {
+		return nil
+	}
 
-    o.body.close()
+	o.body.close()
 
-    u := url.URL {
+	u := url.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s:%d", o.Host, o.Port),
 		Path:   "/api/put",
 	}
 
-	if (o.Debug) {
+	if o.Debug {
 		u.RawQuery = "details"
 	}
 
@@ -135,7 +134,7 @@ func (o *openTSDBHttp) flush() error {
 	req.Header.Set("Content-Type", "applicaton/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
-	if (o.Debug) {
+	if o.Debug {
 		dump, err := httputil.DumpRequestOut(req, false)
 		if err != nil {
 			return fmt.Errorf("Error when dumping request: %s", err.Error())
@@ -145,23 +144,23 @@ func (o *openTSDBHttp) flush() error {
 		fmt.Printf("Body:\n%s\n\n", o.body.dbgB.String())
 	}
 
-    resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Error when sending metrics: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
-    if o.Debug {
+	if o.Debug {
 		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
 			return fmt.Errorf("Error when dumping response: %s", err.Error())
-	    }
+		}
 
 		fmt.Printf("Received response\n%s\n\n", dump)
 	} else {
-        // Important so http client reuse connection for next request if need be.
-        io.Copy(ioutil.Discard, resp.Body)
-    }
+		// Important so http client reuse connection for next request if need be.
+		io.Copy(ioutil.Discard, resp.Body)
+	}
 
 	if resp.StatusCode/100 != 2 {
 		if resp.StatusCode/100 == 4 {
