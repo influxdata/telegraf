@@ -45,9 +45,10 @@ var sampleConfig = `
   # timeout = "5s"
   ## Output Name Template (same as graphite buckets)
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  template = "host.tags"
+  template = "host"
 
   ## Resolution
+  ## resolution, in seconds, If the original measurements were reported at a higher resolution than specified in the request, the response contains averaged measurements.
   # resolution = "15s"
 `
 
@@ -71,6 +72,7 @@ const libratoAPI = "https://metrics-api.librato.com/v1/metrics"
 func NewLibrato(apiURL string) *Librato {
 	return &Librato{
 		APIUrl: apiURL,
+		Template: "host",
 	}
 }
 
@@ -95,7 +97,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		l.Resolution = 15
 	}
 	if l.Template == "" {
-		l.Template = "tags"
+		l.Template = "host"
 	}
 	if l.SourceTag != "" {
 		l.Template = l.SourceTag
