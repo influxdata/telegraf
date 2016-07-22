@@ -333,6 +333,55 @@ func TestParseEpochErrors(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestParseGenericTimestamp(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`\[%{HTTPDATE:ts:ts}\] response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}`},
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[09/Jun/2016:03:37:03 +0000] response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+	assert.Equal(t, time.Unix(1465443423, 0).UTC(), metricA.Time().UTC())
+
+	metricB, err := p.ParseLine(`[09/Jun/2016:03:37:04 +0000] response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricB)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricB.Fields())
+	assert.Equal(t, map[string]string{}, metricB.Tags())
+	assert.Equal(t, time.Unix(1465443424, 0).UTC(), metricB.Time().UTC())
+}
+
+func TestParseGenericTimestampNotFound(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`\[%{NOTSPACE:ts:ts}\] response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}`},
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[foobar] response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+}
+
 func TestCompileFileAndParse(t *testing.T) {
 	p := &Parser{
 		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},

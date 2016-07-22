@@ -69,6 +69,7 @@ Timestamp modifiers can be used to convert captures to the timestamp of the
   - tag      (converts the field into a tag)
   - drop     (drops the field completely)
 - Timestamp modifiers:
+  - ts               (This will auto-learn the timestamp format)
   - ts-ansic         ("Mon Jan _2 15:04:05 2006")
   - ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
   - ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
