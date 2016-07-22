@@ -55,6 +55,7 @@ func TestDownsampling_mean(t *testing.T) {
 		},
 		time.Now(),
 	)
+	require.NoError(t, err)
 
 	metricB, err := telegraf.NewMetric(
 		"sven",
@@ -78,5 +79,44 @@ func TestDownsampling_mean(t *testing.T) {
 
 	require.Equal(t, int64(100), aggr.Fields()["strength"])
 	require.Equal(t, int64(100), aggr.Fields()["intelligence"])
+	require.Equal(t, int64(0), aggr.Fields()["power"])
+}
+
+func TestDownsamling_sum(t *testing.T) {
+	ds := &Downsampling{}
+	metricA, err := telegraf.NewMetric(
+		"earthshaker",
+		map[string]string{},
+		map[string]interface{}{
+			"damage":       "high",
+			"agility":      12,
+			"strength":     120,
+			"intelligence": 60,
+		},
+		time.Now(),
+	)
+	require.NoError(t, err)
+
+	metricB, err := telegraf.NewMetric(
+		"sven",
+		map[string]string{},
+		map[string]interface{}{
+			"strength":     80,
+			"intelligence": 140,
+		},
+		time.Now(),
+	)
+	require.NoError(t, err)
+
+	err = ds.Add(metricA)
+	require.NoError(t, err)
+
+	err = ds.Add(metricB)
+	require.NoError(t, err)
+
+	aggr, err := ds.Sum("strength", "intelligence", "power")
+	require.NoError(t, err)
+	require.Equal(t, int64(200), aggr.Fields()["strength"])
+	require.Equal(t, int64(200), aggr.Fields()["intelligence"])
 	require.Equal(t, int64(0), aggr.Fields()["power"])
 }
