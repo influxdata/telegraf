@@ -3,8 +3,16 @@ package opentsdb
 import (
 	"reflect"
 	"testing"
-	// "github.com/influxdata/telegraf/testutil"
-	// "github.com/stretchr/testify/require"
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
+	//"github.com/stretchr/testify/require"
 )
 
 func TestCleanTags(t *testing.T) {
@@ -65,6 +73,47 @@ func TestBuildTagsTelnet(t *testing.T) {
 			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outTags, tags)
 		}
 	}
+}
+
+func BenchmarkHttpSend(b *testing.B) {
+	const BatchSize = 50
+	const MetricsCount = 4*BatchSize
+	metrics := make([]telegraf.Metric, MetricsCount)
+	for i:=0; i<MetricsCount; i++ {
+		metrics[i] = testutil.TestMetric(1.0)
+	}
+
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Content-Type", "application/json")
+        fmt.Fprintln(w, "{}")
+    }))
+    defer ts.Close()
+
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		panic(err)
+	}
+
+	host, p, _ := net.SplitHostPort(u.Host)
+
+	port, err := strconv.Atoi(p)
+	if err != nil {
+		panic(err)
+	}
+
+	o := &OpenTSDB{
+	 		Host:   host,
+	 		Port:   port,
+	 		Prefix: "",
+			UseHttp: true,
+			BatchSize: BatchSize,
+	 }
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		o.Write(metrics)
+    }
 }
 
 // func TestWrite(t *testing.T) {

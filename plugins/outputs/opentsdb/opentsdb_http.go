@@ -3,9 +3,8 @@ package opentsdb
 import (
     "fmt"
     "encoding/json"
-	//"os"
 	"io"
-	//"io/ioutil"
+	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -91,15 +90,9 @@ func (r *requestBody) close() error {
     return nil
 }
 
-func (o *openTSDBHttp) startNewRequest() error {
-    o.body.reset(o.Debug)
-
-    return nil
-}
-
 func (o *openTSDBHttp) sendDataPoint(metric *HttpMetric) error {
     if o.metricCounter == 0 {
-        o.startNewRequest()
+        o.body.reset(o.Debug)
     }
 
     if err := o.body.addMetric(metric); err != nil {
@@ -139,7 +132,7 @@ func (o *openTSDBHttp) flush() error {
 	if err != nil {
 		return fmt.Errorf("Error when building request: %s", err.Error())
 	}
-	req.Header.Add("Content-Type", "applicaton/json")
+	req.Header.Set("Content-Type", "applicaton/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
 	if (o.Debug) {
@@ -158,14 +151,17 @@ func (o *openTSDBHttp) flush() error {
 	}
 	defer resp.Body.Close()
 
-	if o.Debug {
+    if o.Debug {
 		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
 			return fmt.Errorf("Error when dumping response: %s", err.Error())
-		}
+	    }
 
 		fmt.Printf("Received response\n%s\n\n", dump)
-	}
+	} else {
+        // Important so http client reuse connection for next request if need be.
+        io.Copy(ioutil.Discard, resp.Body)
+    }
 
 	if resp.StatusCode/100 != 2 {
 		if resp.StatusCode/100 == 4 {
