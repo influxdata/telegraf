@@ -71,7 +71,7 @@ const libratoAPI = "https://metrics-api.librato.com/v1/metrics"
 // NewLibrato is the main constructor for librato output plugins
 func NewLibrato(apiURL string) *Librato {
 	return &Librato{
-		APIUrl: apiURL,
+		APIUrl:   apiURL,
 		Template: "host",
 	}
 }
