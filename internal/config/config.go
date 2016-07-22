@@ -139,7 +139,7 @@ func (c *Config) InputNames() []string {
 	return name
 }
 
-// Outputs returns a list of strings of the configured inputs.
+// Outputs returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
