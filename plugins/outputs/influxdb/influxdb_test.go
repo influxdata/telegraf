@@ -5,9 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
@@ -44,79 +42,78 @@ func TestHTTPInflux(t *testing.T) {
 
 func TestDownsampling_mean(t *testing.T) {
 	ds := &Downsampling{}
-	metricA, err := telegraf.NewMetric(
-		"earthshaker",
-		map[string]string{},
-		map[string]interface{}{
-			"damage":       "high",
-			"agility":      12,
-			"strength":     120,
-			"intelligence": 60,
+
+	err := ds.Add(testutil.TestMetric(120))
+	require.NoError(t, err)
+
+	err = ds.Add(testutil.TestMetric(80))
+	require.NoError(t, err)
+
+	aggregations := []Aggregation{
+		Aggregation{
+			FieldName: "value",
+			FuncName:  "mean",
+			Alias:     "mean_value",
 		},
-		time.Now(),
-	)
+	}
+
+	aggr, err := ds.Mean(aggregations...)
 	require.NoError(t, err)
 
-	metricB, err := telegraf.NewMetric(
-		"sven",
-		map[string]string{},
-		map[string]interface{}{
-			"strength":     80,
-			"intelligence": 140,
-		},
-		time.Now(),
-	)
-	require.NoError(t, err)
-
-	err = ds.Add(metricA)
-	require.NoError(t, err)
-
-	err = ds.Add(metricB)
-	require.NoError(t, err)
-
-	aggr, err := ds.Mean("strength", "intelligence", "power")
-	require.NoError(t, err)
-
-	require.Equal(t, int64(100), aggr.Fields()["strength"])
-	require.Equal(t, int64(100), aggr.Fields()["intelligence"])
-	require.Equal(t, int64(0), aggr.Fields()["power"])
+	require.Equal(t, int64(100), aggr.Fields()["mean_value"])
 }
 
 func TestDownsamling_sum(t *testing.T) {
 	ds := &Downsampling{}
-	metricA, err := telegraf.NewMetric(
-		"earthshaker",
-		map[string]string{},
-		map[string]interface{}{
-			"damage":       "high",
-			"agility":      12,
-			"strength":     120,
-			"intelligence": 60,
+
+	err := ds.Add(testutil.TestMetric(120))
+	require.NoError(t, err)
+
+	err = ds.Add(testutil.TestMetric(80))
+	require.NoError(t, err)
+
+	aggregations := []Aggregation{
+		Aggregation{
+			FieldName: "value",
+			FuncName:  "mean",
+			Alias:     "sum_value",
 		},
-		time.Now(),
-	)
+	}
+	aggr, err := ds.Sum(aggregations...)
 	require.NoError(t, err)
 
-	metricB, err := telegraf.NewMetric(
-		"sven",
-		map[string]string{},
-		map[string]interface{}{
-			"strength":     80,
-			"intelligence": 140,
+	require.Equal(t, int64(200), aggr.Fields()["sum_value"])
+}
+
+func TestDownsampling_aggregate(t *testing.T) {
+	ds := &Downsampling{}
+
+	err := ds.Add(testutil.TestMetric(120))
+	require.NoError(t, err)
+
+	err = ds.Add(testutil.TestMetric(80))
+	require.NoError(t, err)
+
+	aggregations := []Aggregation{
+		Aggregation{
+			FieldName: "value",
+			FuncName:  "mean",
+			Alias:     "mean_value",
 		},
-		time.Now(),
-	)
+		Aggregation{
+			FieldName: "value",
+			FuncName:  "sum",
+			Alias:     "sum_value",
+		},
+	}
+
+	ds.Aggregations = make(map[string][]Aggregation)
+	ds.AddAggregations(aggregations...)
+
+	aggr, err := ds.Aggregate()
 	require.NoError(t, err)
 
-	err = ds.Add(metricA)
-	require.NoError(t, err)
+	require.Equal(t, int64(100), aggr.Fields()["mean_value"])
+	require.Equal(t, int64(200), aggr.Fields()["sum_value"])
 
-	err = ds.Add(metricB)
-	require.NoError(t, err)
-
-	aggr, err := ds.Sum("strength", "intelligence", "power")
-	require.NoError(t, err)
-	require.Equal(t, int64(200), aggr.Fields()["strength"])
-	require.Equal(t, int64(200), aggr.Fields()["intelligence"])
-	require.Equal(t, int64(0), aggr.Fields()["power"])
 }

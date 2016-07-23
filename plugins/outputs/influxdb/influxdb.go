@@ -238,14 +238,30 @@ func init() {
 // Downsampling
 type Downsampling struct {
 	sync.RWMutex
-	Name       string
-	Metrics    []telegraf.Metric
-	TimeRange  time.Duration
-	Aggrations Aggregation
+	Name         string
+	Metrics      []telegraf.Metric
+	TimeRange    time.Duration
+	Aggregations map[string][]Aggregation
 }
 
 // Aggregation maps the field names to aggregation function for them
-type Aggregation map[string]string
+type Aggregation struct {
+	FieldName string
+	FuncName  string
+	Alias     string
+}
+
+func (d *Downsampling) AddAggregations(aggrs ...Aggregation) {
+	for _, aggr := range aggrs {
+		switch aggr.FuncName {
+		case "mean":
+			d.Aggregations["mean"] = append(d.Aggregations["mean"], aggr)
+		case "sum":
+			d.Aggregations["sum"] = append(d.Aggregations["sum"], aggr)
+		default:
+		}
+	}
+}
 
 // Add appends metrics to the metrics that will be aggregated
 func (d *Downsampling) Add(metrics ...telegraf.Metric) error {
@@ -261,48 +277,86 @@ func (d *Downsampling) Run() {
 	for {
 		select {
 		case <-time.After(d.TimeRange):
-			aggrData := d.Aggregate()
+			aggrData, err := d.Aggregate()
+			if err != nil {
+				continue
+			}
 			fmt.Printf("%+v\n", aggrData)
 		}
 	}
 }
 
 // Aggregate calculates the mean value of fields by given time
-func (d *Downsampling) Aggregate() []telegraf.Metric {
+func (d *Downsampling) Aggregate() (telegraf.Metric, error) {
+	metrics := map[string]interface{}{}
+	var (
+		aggrMetric, sum, mean telegraf.Metric
+		err                   error
+	)
+	for name, aggr := range d.Aggregations {
+		switch name {
+		case "sum":
+			sum, err = d.Sum(aggr...)
+			if err != nil {
+				return aggrMetric, err
+			}
+		case "mean":
+			mean, err = d.Mean(aggr...)
+			if err != nil {
+				return aggrMetric, err
+			}
+		default:
+		}
+	}
 
-	return nil
+	for k, v := range sum.Fields() {
+		metrics[k] = v
+	}
+
+	for k, v := range mean.Fields() {
+		metrics[k] = v
+	}
+
+	aggrMetric, err = telegraf.NewMetric(
+		d.Name,
+		map[string]string{},
+		metrics,
+		time.Now(),
+	)
+	return aggrMetric, err
 }
 
-// Sum calcuate the sum values of given fields
-func (d *Downsampling) Sum(fields ...string) (telegraf.Metric, error) {
+// Sum calculate the sum values of given fields
+func (d *Downsampling) Sum(fields ...Aggregation) (telegraf.Metric, error) {
 	var (
 		sumMetric telegraf.Metric
 		sums      = make(map[string]interface{})
 	)
 
 	for _, field := range fields {
-		sums[field] = 0
+		sums[field.Alias] = 0
 	}
 
 	d.RLock()
 	for _, metric := range d.Metrics {
-		for _, fieldName := range fields {
-			value, ok := metric.Fields()[fieldName]
+		for _, field := range fields {
+			value, ok := metric.Fields()[field.FieldName]
 			if !ok {
 				continue
 			}
-			oldVal := sums[fieldName]
+			oldVal := sums[field.Alias]
 			switch value := value.(type) {
 			case int:
-				sums[fieldName] = oldVal.(int) + value
+				sums[field.Alias] = oldVal.(int) + value
 			case int32:
-				sums[fieldName] = oldVal.(int32) + value
+				sums[field.Alias] = oldVal.(int32) + value
 			case int64:
-				sums[fieldName] = oldVal.(int) + int(value)
+				// TODO fix this
+				sums[field.Alias] = oldVal.(int) + int(value)
 			case float32:
-				sums[fieldName] = oldVal.(float32) + value
+				sums[field.Alias] = oldVal.(float32) + value
 			case float64:
-				sums[fieldName] = oldVal.(float64) + value
+				sums[field.Alias] = oldVal.(float64) + value
 			default:
 				continue
 			}
@@ -320,7 +374,7 @@ func (d *Downsampling) Sum(fields ...string) (telegraf.Metric, error) {
 }
 
 // Mean calculates the mean values of given fields
-func (d *Downsampling) Mean(fields ...string) (telegraf.Metric, error) {
+func (d *Downsampling) Mean(fields ...Aggregation) (telegraf.Metric, error) {
 	var (
 		aggrMetric telegraf.Metric
 		sums       = make(map[string]interface{})
@@ -329,28 +383,29 @@ func (d *Downsampling) Mean(fields ...string) (telegraf.Metric, error) {
 
 	// initialize sums map
 	for _, field := range fields {
-		sums[field] = 0
+		sums[field.Alias] = 0
 	}
 
 	d.RLock()
 	for _, metric := range d.Metrics {
-		for _, fieldName := range fields {
-			value, ok := metric.Fields()[fieldName]
+		for _, field := range fields {
+			value, ok := metric.Fields()[field.FieldName]
 			if !ok {
 				continue
 			}
-			oldVal := sums[fieldName]
+			oldVal := sums[field.Alias]
 			switch value := value.(type) {
 			case int:
-				sums[fieldName] = oldVal.(int) + value
+				sums[field.Alias] = oldVal.(int) + value
 			case int32:
-				sums[fieldName] = oldVal.(int32) + value
+				sums[field.Alias] = oldVal.(int32) + value
 			case int64:
-				sums[fieldName] = oldVal.(int) + int(value)
+				// TODO: fix this
+				sums[field.Alias] = oldVal.(int) + int(value)
 			case float32:
-				sums[fieldName] = oldVal.(float32) + value
+				sums[field.Alias] = oldVal.(float32) + value
 			case float64:
-				sums[fieldName] = oldVal.(float64) + value
+				sums[field.Alias] = oldVal.(float64) + value
 			default:
 				continue
 			}
