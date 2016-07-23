@@ -58,6 +58,12 @@ type Config struct {
 
 	// DefaultTags are the default tags that will be added to all parsed metrics.
 	DefaultTags map[string]string
+
+	// TimestampSelector only applies to JSON
+	TimestampSelector string
+
+	// TimestampFormatter only applies to JSON
+	TimestampFormatter string
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -67,7 +73,8 @@ func NewParser(config *Config) (Parser, error) {
 	switch config.DataFormat {
 	case "json":
 		parser, err = NewJSONParser(config.MetricName,
-			config.TagKeys, config.DefaultTags)
+			config.TagKeys, config.DefaultTags,
+			config.TimestampSelector, config.TimestampFormatter)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -88,11 +95,23 @@ func NewJSONParser(
 	metricName string,
 	tagKeys []string,
 	defaultTags map[string]string,
+	timestampParameters ...string,
 ) (Parser, error) {
+	timestampSelector, timestampFormatter := "", ""
+	switch len(timestampParameters) {
+	case 2:
+		timestampFormatter = timestampParameters[1]
+		fallthrough
+	case 1:
+		timestampSelector = timestampParameters[0]
+	}
+
 	parser := &json.JSONParser{
-		MetricName:  metricName,
-		TagKeys:     tagKeys,
-		DefaultTags: defaultTags,
+		MetricName:         metricName,
+		TagKeys:            tagKeys,
+		DefaultTags:        defaultTags,
+		TimestampSelector:  timestampSelector,
+		TimestampFormatter: timestampFormatter,
 	}
 	return parser, nil
 }

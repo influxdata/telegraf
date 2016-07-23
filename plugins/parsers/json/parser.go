@@ -11,9 +11,11 @@ import (
 )
 
 type JSONParser struct {
-	MetricName  string
-	TagKeys     []string
-	DefaultTags map[string]string
+	MetricName         string
+	TagKeys            []string
+	DefaultTags        map[string]string
+	TimestampSelector  string
+	TimestampFormatter string
 }
 
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -31,6 +33,25 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		tags[k] = v
 	}
 
+	timestampStr := ""
+	timestampData := jsonOut[p.TimestampSelector]
+	if timestampData != nil {
+		timestampStr = timestampData.(string)
+	}
+
+	if p.TimestampFormatter == "" {
+		p.TimestampFormatter = time.RFC3339Nano
+	}
+
+	timestamp := time.Now().UTC()
+	if timestampStr != "" {
+		timestampTmp, err := time.Parse(p.TimestampFormatter, timestampStr)
+		if err != nil {
+			return nil, err
+		}
+		timestamp = timestampTmp
+	}
+
 	for _, tag := range p.TagKeys {
 		switch v := jsonOut[tag].(type) {
 		case string:
@@ -45,7 +66,7 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	metric, err := telegraf.NewMetric(p.MetricName, tags, f.Fields, time.Now().UTC())
+	metric, err := telegraf.NewMetric(p.MetricName, tags, f.Fields, timestamp)
 
 	if err != nil {
 		return nil, err
