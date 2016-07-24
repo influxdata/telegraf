@@ -63,7 +63,7 @@ func TestDownsampling_mean(t *testing.T) {
 	require.Equal(t, int64(100), aggr.Fields()["mean_value"])
 }
 
-func TestDownsamling_sum(t *testing.T) {
+func TestDownsampling_sum(t *testing.T) {
 	ds := &Downsampling{}
 
 	err := ds.Add(testutil.TestMetric(120))

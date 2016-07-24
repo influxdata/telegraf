@@ -333,10 +333,6 @@ func (d *Downsampling) Sum(fields ...Aggregation) (telegraf.Metric, error) {
 		sums      = make(map[string]interface{})
 	)
 
-	for _, field := range fields {
-		sums[field.Alias] = 0
-	}
-
 	d.RLock()
 	for _, metric := range d.Metrics {
 		for _, field := range fields {
@@ -344,19 +340,24 @@ func (d *Downsampling) Sum(fields ...Aggregation) (telegraf.Metric, error) {
 			if !ok {
 				continue
 			}
-			oldVal := sums[field.Alias]
+
+			oldVal, ok := sums[field.Alias]
+			if !ok {
+				sums[field.Alias] = value
+				continue
+			}
+
 			switch value := value.(type) {
 			case int:
-				sums[field.Alias] = oldVal.(int) + value
-			case int32:
-				sums[field.Alias] = oldVal.(int32) + value
-			case int64:
-				// TODO fix this
 				sums[field.Alias] = oldVal.(int) + int(value)
+			case int32:
+				sums[field.Alias] = oldVal.(int32) + int32(value)
+			case int64:
+				sums[field.Alias] = oldVal.(int64) + int64(value)
 			case float32:
-				sums[field.Alias] = oldVal.(float32) + value
+				sums[field.Alias] = oldVal.(float32) + float32(value)
 			case float64:
-				sums[field.Alias] = oldVal.(float64) + value
+				sums[field.Alias] = oldVal.(float64) + float64(value)
 			default:
 				continue
 			}
@@ -381,11 +382,6 @@ func (d *Downsampling) Mean(fields ...Aggregation) (telegraf.Metric, error) {
 		size       = len(d.Metrics)
 	)
 
-	// initialize sums map
-	for _, field := range fields {
-		sums[field.Alias] = 0
-	}
-
 	d.RLock()
 	for _, metric := range d.Metrics {
 		for _, field := range fields {
@@ -393,19 +389,24 @@ func (d *Downsampling) Mean(fields ...Aggregation) (telegraf.Metric, error) {
 			if !ok {
 				continue
 			}
-			oldVal := sums[field.Alias]
+
+			oldVal, ok := sums[field.Alias]
+			if !ok {
+				sums[field.Alias] = value
+				continue
+			}
+
 			switch value := value.(type) {
 			case int:
-				sums[field.Alias] = oldVal.(int) + value
-			case int32:
-				sums[field.Alias] = oldVal.(int32) + value
-			case int64:
-				// TODO: fix this
 				sums[field.Alias] = oldVal.(int) + int(value)
+			case int32:
+				sums[field.Alias] = oldVal.(int32) + int32(value)
+			case int64:
+				sums[field.Alias] = oldVal.(int64) + int64(value)
 			case float32:
-				sums[field.Alias] = oldVal.(float32) + value
+				sums[field.Alias] = oldVal.(float32) + float32(value)
 			case float64:
-				sums[field.Alias] = oldVal.(float64) + value
+				sums[field.Alias] = oldVal.(float64) + float64(value)
 			default:
 				continue
 			}
