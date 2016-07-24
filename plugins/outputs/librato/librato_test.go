@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +36,7 @@ func TestUriOverride(t *testing.T) {
 	l.APIToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write(testutil.MockMetrics())
+	err = l.Write([]telegraf.Metric{newHostMetric(int32(0), "name", "host")})
 	require.NoError(t, err)
 }
 
@@ -53,7 +52,7 @@ func TestBadStatusCode(t *testing.T) {
 	l.APIToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write(testutil.MockMetrics())
+	err = l.Write([]telegraf.Metric{newHostMetric(int32(0), "name", "host")})
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
