@@ -68,67 +68,67 @@ func TestBuildGauge(t *testing.T) {
 		err      error
 	}{
 		{
-			testutil.TestMetric(0.0, "test1"),
+			newHostMetric(0.0, "test1", "host1"),
 			&Gauge{
 				Name:        "test1",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       0.0,
-				Source:      "value1",
+				Source:      "host1",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(1.0, "test2"),
+			newHostMetric(1.0, "test2", "host2"),
 			&Gauge{
 				Name:        "test2",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       1.0,
-				Source:      "value1",
+				Source:      "host2",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(10, "test3"),
+			newHostMetric(10, "test3", "host3"),
 			&Gauge{
 				Name:        "test3",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       10.0,
-				Source:      "value1",
+				Source:      "host3",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(int32(112345), "test4"),
+			newHostMetric(int32(112345), "test4", "host4"),
 			&Gauge{
 				Name:        "test4",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       112345.0,
-				Source:      "value1",
+				Source:      "host4",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(int64(112345), "test5"),
+			newHostMetric(int64(112345), "test5", "host5"),
 			&Gauge{
 				Name:        "test5",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       112345.0,
-				Source:      "value1",
+				Source:      "host5",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(float32(11234.5), "test6"),
+			newHostMetric(float32(11234.5), "test6", "host6"),
 			&Gauge{
 				Name:        "test6",
 				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
 				Value:       11234.5,
-				Source:      "value1",
+				Source:      "host6",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric("11234.5", "test7"),
+			newHostMetric("11234.5", "test7", "host7"),
 			nil,
 			nil,
 		},
@@ -155,6 +155,16 @@ func TestBuildGauge(t *testing.T) {
 				gt.ptIn.Name(), gt.outGauge, gauges[0])
 		}
 	}
+}
+
+func newHostMetric(value interface{}, name, host string) (metric telegraf.Metric) {
+	metric, _ = telegraf.NewMetric(
+		name,
+		map[string]string{"host": host},
+		map[string]interface{}{"value": value},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	return
 }
 
 func TestBuildGaugeWithSource(t *testing.T) {
