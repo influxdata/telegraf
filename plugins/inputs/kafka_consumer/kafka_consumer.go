@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
@@ -105,29 +106,11 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 
 	config := consumergroup.NewConfig()
 
-	tlsConf := TLSConfig{
-		Certificate:    k.SSLCert,
-		CertificateKey: k.SSLKey,
-		Insecure:       k.InsecureSkipVerify,
-	}
-
-	tlsConfig, err := LoadTLSConfig(&tlsConf)
+	tlsConfig, err := internal.GetTLSConfig(
+		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
 	if err != nil {
 		return err
 	}
-
-	// tls, err := outputs.LoadTLSConfig(config.TLS)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	k.Net.TLS.Enable = tls != nil
-	// 	k.Net.TLS.Config = tls
-	//
-	// tlsConfig, err := internal.GetTLSConfig(
-	// 	k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
-	// if err != nil {
-	// 	return err
-	// }
 
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
