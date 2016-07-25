@@ -200,7 +200,7 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 			return
 		}
 
-		if *fService != "" {
+		if *fService != "" && runtime.GOOS == "windows" {
 			err := service.Control(s, *fService)
 			if err != nil {
 				log.Fatal(err)
@@ -326,28 +326,31 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
-	svcConfig := &service.Config{
-		Name:        "telegraf",
-		DisplayName: "Telegraf Data Collector Service",
-		Description: "Collects data using a series of plugins and publishes it to" +
-			"another series of plugins.",
-	}
-
 	if runtime.GOOS == "windows" {
-		svcConfig.Arguments = []string{"-config", "C:\\telegraf\\telegraf.conf"}
-	}
+		svcConfig := &service.Config{
+			Name:        "telegraf",
+			DisplayName: "Telegraf Data Collector Service",
+			Description: "Collects data using a series of plugins and publishes it to" +
+				"another series of plugins.",
+		}
 
-	prg := &program{}
-	s, err := service.New(prg, svcConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-	logger, err = s.Logger(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = s.Run()
-	if err != nil {
-		logger.Error(err)
+		svcConfig.Arguments = []string{"-config", "C:\\telegraf\\telegraf.conf"}
+
+		prg := &program{}
+		s, err := service.New(prg, svcConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logger, err = s.Logger(nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = s.Run()
+		if err != nil {
+			logger.Error(err)
+		}
+	} else {
+		stop = make(chan struct{})
+		reloadLoop(stop, nil)
 	}
 }
