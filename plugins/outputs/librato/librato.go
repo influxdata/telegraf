@@ -47,9 +47,10 @@ var sampleConfig = `
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
   template = "host"
 
-  ## Resolution
-  ## resolution, in seconds, If the original measurements were reported at a higher resolution than specified in the request, the response contains averaged measurements.
-  # resolution = "15s"
+  ## Resolution, in seconds, If the original measurements were reported at a
+  ##	higher resolution than specified in the request,
+  ##	the response contains averaged measurements.
+  # resolution = 15
 `
 
 // LMetrics is the default struct for Librato's API fromat
@@ -80,7 +81,8 @@ func NewLibrato(apiURL string) *Librato {
 // can connect to the endpoint
 func (l *Librato) Connect() error {
 	if l.APIUser == "" || l.APIToken == "" {
-		return fmt.Errorf("api_user and api_token are required fields for librato output")
+		return fmt.Errorf(
+			"api_user and api_token are required fields for librato output")
 	}
 	l.client = &http.Client{
 		Timeout: l.Timeout.Duration,
@@ -142,9 +144,14 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 			log.Printf("[DEBUG] Librato request: %v\n", string(metricsBytes))
 		}
 
-		req, err := http.NewRequest("POST", l.APIUrl, bytes.NewBuffer(metricsBytes))
+		req, err := http.NewRequest(
+			"POST",
+			l.APIUrl,
+			bytes.NewBuffer(metricsBytes))
 		if err != nil {
-			return fmt.Errorf("unable to create http.Request, %s\n", err.Error())
+			return fmt.Errorf(
+				"unable to create http.Request, %s\n",
+				err.Error())
 		}
 		req.Header.Add("Content-Type", "application/json")
 		req.SetBasicAuth(l.APIUser, l.APIToken)
@@ -164,7 +171,10 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 				log.Printf("[DEBUG] Couldn't get response! (%v)\n", err)
 			}
 			if resp.StatusCode != 200 {
-				return fmt.Errorf("received bad status code, %d\n %s", resp.StatusCode, string(htmlData))
+				return fmt.Errorf(
+					"received bad status code, %d\n %s",
+					resp.StatusCode,
+					string(htmlData))
 			}
 			if l.Debug {
 				log.Printf("[DEBUG] Librato response: %v\n", string(htmlData))
@@ -190,7 +200,9 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 
 	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {
-		return gauges, fmt.Errorf("Measure time must not be zero\n <%s> \n", m.String())
+		return gauges, fmt.Errorf(
+			"Measure time must not be zero\n <%s> \n",
+			m.String())
 	}
 	metricSource := graphite.InsertField(
 		graphite.SerializeBucketName("", m.Tags(), l.Template, ""),
@@ -217,7 +229,8 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 			continue
 		}
 		if err := gauge.setValue(value); err != nil {
-			return gauges, fmt.Errorf("unable to extract value from Fields, %s\n",
+			return gauges, fmt.Errorf(
+				"unable to extract value from Fields, %s\n",
 				err.Error())
 		}
 		gauges = append(gauges, gauge)

@@ -26,9 +26,11 @@ func fakeLibrato() *Librato {
 }
 
 func TestUriOverride(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
+	ts := httptest.NewServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
 	defer ts.Close()
 
 	l := NewLibrato(ts.URL)
@@ -56,11 +58,15 @@ func TestBadStatusCode(t *testing.T) {
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
-		require.EqualError(t, fmt.Errorf("received bad status code, 503\n "), err.Error())
+		require.EqualError(
+			t,
+			fmt.Errorf("received bad status code, 503\n "), err.Error())
 	}
 }
 
 func TestBuildGauge(t *testing.T) {
+
+	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()
 	var gaugeTests = []struct {
 		ptIn     telegraf.Metric
 		outGauge *Gauge
@@ -70,7 +76,7 @@ func TestBuildGauge(t *testing.T) {
 			newHostMetric(0.0, "test1", "host1"),
 			&Gauge{
 				Name:        "test1",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime,
 				Value:       0.0,
 				Source:      "host1",
 			},
@@ -80,7 +86,7 @@ func TestBuildGauge(t *testing.T) {
 			newHostMetric(1.0, "test2", "host2"),
 			&Gauge{
 				Name:        "test2",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime,
 				Value:       1.0,
 				Source:      "host2",
 			},
@@ -90,7 +96,7 @@ func TestBuildGauge(t *testing.T) {
 			newHostMetric(10, "test3", "host3"),
 			&Gauge{
 				Name:        "test3",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime,
 				Value:       10.0,
 				Source:      "host3",
 			},
@@ -100,7 +106,7 @@ func TestBuildGauge(t *testing.T) {
 			newHostMetric(int32(112345), "test4", "host4"),
 			&Gauge{
 				Name:        "test4",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime,
 				Value:       112345.0,
 				Source:      "host4",
 			},
@@ -110,7 +116,7 @@ func TestBuildGauge(t *testing.T) {
 			newHostMetric(int64(112345), "test5", "host5"),
 			&Gauge{
 				Name:        "test5",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime,
 				Value:       112345.0,
 				Source:      "host5",
 			},
@@ -120,7 +126,7 @@ func TestBuildGauge(t *testing.T) {
 			newHostMetric(float32(11234.5), "test6", "host6"),
 			&Gauge{
 				Name:        "test6",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime,
 				Value:       11234.5,
 				Source:      "host6",
 			},
@@ -167,29 +173,36 @@ func newHostMetric(value interface{}, name, host string) (metric telegraf.Metric
 }
 
 func TestBuildGaugeWithSource(t *testing.T) {
+	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 	pt1, _ := telegraf.NewMetric(
 		"test1",
 		map[string]string{"hostname": "192.168.0.1", "tag1": "value1"},
 		map[string]interface{}{"value": 0.0},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		mtime,
 	)
 	pt2, _ := telegraf.NewMetric(
 		"test2",
 		map[string]string{"hostnam": "192.168.0.1", "tag1": "value1"},
 		map[string]interface{}{"value": 1.0},
-		time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
+		mtime,
 	)
 	pt3, _ := telegraf.NewMetric(
 		"test3",
-		map[string]string{"hostname": "192.168.0.1", "tag2": "value2", "tag1": "value1"},
+		map[string]string{
+			"hostname": "192.168.0.1",
+			"tag2": "value2",
+			"tag1": "value1"},
 		map[string]interface{}{"value": 1.0},
-		time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
+		mtime,
 	)
 	pt4, _ := telegraf.NewMetric(
 		"test4",
-		map[string]string{"hostname": "192.168.0.1", "tag2": "value2", "tag1": "value1"},
+		map[string]string{
+			"hostname": "192.168.0.1",
+			"tag2": "value2",
+			"tag1": "value1"},
 		map[string]interface{}{"value": 1.0},
-		time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
+		mtime,
 	)
 	var gaugeTests = []struct {
 		ptIn     telegraf.Metric
@@ -203,7 +216,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 			"hostname",
 			&Gauge{
 				Name:        "test1",
-				MeasureTime: time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime.Unix(),
 				Value:       0.0,
 				Source:      "192_168_0_1",
 			},
@@ -214,7 +227,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 			"hostname",
 			&Gauge{
 				Name:        "test2",
-				MeasureTime: time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime.Unix(),
 				Value:       1.0,
 			},
 			fmt.Errorf("undeterminable Source type from Field, hostname"),
@@ -224,7 +237,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 			"tags",
 			&Gauge{
 				Name:        "test3",
-				MeasureTime: time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime.Unix(),
 				Value:       1.0,
 				Source:      "192_168_0_1.value1.value2",
 			},
@@ -235,7 +248,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 			"hostname.tag2",
 			&Gauge{
 				Name:        "test4",
-				MeasureTime: time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				MeasureTime: mtime.Unix(),
 				Value:       1.0,
 				Source:      "192_168_0_1.value2",
 			},
@@ -251,13 +264,19 @@ func TestBuildGaugeWithSource(t *testing.T) {
 			t.Errorf("%s: unexpected error, %+v\n", gt.ptIn.Name(), err)
 		}
 		if gt.err != nil && err == nil {
-			t.Errorf("%s: expected an error (%s) but none returned", gt.ptIn.Name(), gt.err.Error())
+			t.Errorf(
+				"%s: expected an error (%s) but none returned",
+				gt.ptIn.Name(),
+				gt.err.Error())
 		}
 		if len(gauges) == 0 {
 			continue
 		}
 		if gt.err == nil && !reflect.DeepEqual(gauges[0], gt.outGauge) {
-			t.Errorf("%s: \nexpected %+v\ngot %+v\n", gt.ptIn.Name(), gt.outGauge, gauges[0])
+			t.Errorf(
+				"%s: \nexpected %+v\ngot %+v\n",
+				gt.ptIn.Name(),
+				gt.outGauge, gauges[0])
 		}
 	}
 }
