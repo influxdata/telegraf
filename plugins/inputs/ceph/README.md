@@ -1,18 +1,18 @@
 # Ceph Storage Input Plugin
 
-Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.  
+Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
 
 The plugin works by scanning the configured SocketDir for OSD and MON socket files.  When it finds
-a MON socket, it runs **ceph --admin-daemon $file perfcounters_dump**. For OSDs it runs **ceph --admin-daemon $file perf dump** 
+a MON socket, it runs **ceph --admin-daemon $file perfcounters_dump**. For OSDs it runs **ceph --admin-daemon $file perf dump**
 
 The resulting JSON is parsed and grouped into collections, based on top-level key.  Top-level keys are
 used as collection tags, and all sub-keys are flattened. For example:
 
 ```
- { 
-   "paxos": { 
+ {
+   "paxos": {
      "refresh": 9363435,
-     "refresh_latency": { 
+     "refresh_latency": {
        "avgcount": 9363435,
        "sum": 5378.794002000
      }
@@ -50,7 +50,7 @@ Would be parsed into the following metrics, all of which would be tagged with co
 
 ### Measurements & Fields:
 
-All fields are collected under the **ceph** measurement and stored as float64s. For a full list of fields, see the sample perf dumps in ceph_test.go. 
+All fields are collected under the **ceph** measurement and stored as float64s. For a full list of fields, see the sample perf dumps in ceph_test.go.
 
 
 ### Tags:
@@ -95,7 +95,7 @@ All measurements will have the following tags:
     - throttle-objecter_ops
     - throttle-osd_client_bytes
     - throttle-osd_client_messages
- 
+
 
 ### Example Output:
 

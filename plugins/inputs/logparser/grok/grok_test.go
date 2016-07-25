@@ -83,6 +83,31 @@ func Benchmark_ParseLine_CustomPattern(b *testing.B) {
 	benchM = m
 }
 
+func TestMeasurementName(t *testing.T) {
+	p := &Parser{
+		Measurement: "my_web_log",
+		Patterns:    []string{"%{COMMON_LOG_FORMAT}"},
+	}
+	assert.NoError(t, p.Compile())
+
+	// Parse an influxdb POST request
+	m, err := p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	require.NotNil(t, m)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"resp_bytes":   int64(2326),
+			"auth":         "frank",
+			"client_ip":    "127.0.0.1",
+			"http_version": float64(1.0),
+			"ident":        "user-identifier",
+			"request":      "/apache_pb.gif",
+		},
+		m.Fields())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
+	assert.Equal(t, "my_web_log", m.Name())
+}
+
 func TestBuiltinInfluxdbHttpd(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{INFLUXDB_HTTPD_LOG}"},
@@ -98,7 +123,6 @@ func TestBuiltinInfluxdbHttpd(t *testing.T) {
 			"resp_bytes":       int64(0),
 			"auth":             "-",
 			"client_ip":        "::1",
-			"resp_code":        int64(204),
 			"http_version":     float64(1.1),
 			"ident":            "-",
 			"referrer":         "-",
@@ -107,7 +131,7 @@ func TestBuiltinInfluxdbHttpd(t *testing.T) {
 			"agent":            "InfluxDBClient",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "POST"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "POST", "resp_code": "204"}, m.Tags())
 
 	// Parse an influxdb GET request
 	m, err = p.ParseLine(`[httpd] ::1 - - [14/Jun/2016:12:10:02 +0100] "GET /query?db=telegraf&q=SELECT+bytes%2Cresponse_time_us+FROM+logparser_grok+WHERE+http_method+%3D+%27GET%27+AND+response_time_us+%3E+0+AND+time+%3E+now%28%29+-+1h HTTP/1.1" 200 578 "http://localhost:8083/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36" 8a3806f1-3220-11e6-8006-000000000000 988`)
@@ -118,7 +142,6 @@ func TestBuiltinInfluxdbHttpd(t *testing.T) {
 			"resp_bytes":       int64(578),
 			"auth":             "-",
 			"client_ip":        "::1",
-			"resp_code":        int64(200),
 			"http_version":     float64(1.1),
 			"ident":            "-",
 			"referrer":         "http://localhost:8083/",
@@ -127,7 +150,7 @@ func TestBuiltinInfluxdbHttpd(t *testing.T) {
 			"agent":            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "GET"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 }
 
 // common log format
@@ -147,13 +170,12 @@ func TestBuiltinCommonLogFormat(t *testing.T) {
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "127.0.0.1",
-			"resp_code":    int64(200),
 			"http_version": float64(1.0),
 			"ident":        "user-identifier",
 			"request":      "/apache_pb.gif",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "GET"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 }
 
 // combined log format
@@ -173,7 +195,6 @@ func TestBuiltinCombinedLogFormat(t *testing.T) {
 			"resp_bytes":   int64(2326),
 			"auth":         "frank",
 			"client_ip":    "127.0.0.1",
-			"resp_code":    int64(200),
 			"http_version": float64(1.0),
 			"ident":        "user-identifier",
 			"request":      "/apache_pb.gif",
@@ -181,12 +202,12 @@ func TestBuiltinCombinedLogFormat(t *testing.T) {
 			"agent":        "Mozilla",
 		},
 		m.Fields())
-	assert.Equal(t, map[string]string{"verb": "GET"}, m.Tags())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 }
 
 func TestCompileStringAndParse(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		Patterns: []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
 			DURATION %{NUMBER}[nuµm]?s
 			RESPONSE_CODE %{NUMBER:response_code:tag}
@@ -207,6 +228,41 @@ func TestCompileStringAndParse(t *testing.T) {
 		},
 		metricA.Fields())
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
+}
+
+func TestCompileErrorsOnInvalidPattern(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		CustomPatterns: `
+			DURATION %{NUMBER}[nuµm]?s
+			RESPONSE_CODE %{NUMBER:response_code:tag}
+			RESPONSE_TIME %{DURATION:response_time:duration}
+			TEST_LOG_A %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
+		`,
+	}
+	assert.Error(t, p.Compile())
+
+	metricA, _ := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
+	require.Nil(t, metricA)
+}
+
+func TestParsePatternsWithoutCustom(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{POSINT:ts:ts-epochnano} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}"},
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`1466004605359052000 response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+	assert.Equal(t, time.Unix(0, 1466004605359052000), metricA.Time())
 }
 
 func TestParseEpochNano(t *testing.T) {
@@ -392,7 +448,7 @@ func TestParseErrors(t *testing.T) {
 			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int} %{}
 		`,
 	}
-	assert.NoError(t, p.Compile())
+	assert.Error(t, p.Compile())
 	_, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
 	assert.Error(t, err)
 

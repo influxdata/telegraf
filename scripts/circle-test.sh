@@ -69,6 +69,8 @@ exit_if_fail telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
 cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
+go build -o telegraf-race -race -ldflags "-X main.version=${VERSION}-RACE" cmd/telegraf/telegraf.go
+cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
 
 eval "git describe --exact-match HEAD"
 if [ $? -eq 0 ]; then

@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -101,10 +102,8 @@ cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 `
 
 func TestParseValidPrometheus(t *testing.T) {
-	parser := PrometheusParser{}
-
 	// Gauge value
-	metrics, err := parser.Parse([]byte(validUniqueGauge))
+	metrics, err := Parse([]byte(validUniqueGauge), http.Header{})
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "cadvisor_version_info", metrics[0].Name())
@@ -118,8 +117,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	}, metrics[0].Tags())
 
 	// Counter value
-	//parser.SetDefaultTags(map[string]string{"mytag": "mytagvalue"})
-	metrics, err = parser.Parse([]byte(validUniqueCounter))
+	metrics, err = Parse([]byte(validUniqueCounter), http.Header{})
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "get_token_fail_count", metrics[0].Name())
@@ -129,8 +127,8 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t, map[string]string{}, metrics[0].Tags())
 
 	// Summary data
-	//parser.SetDefaultTags(map[string]string{})
-	metrics, err = parser.Parse([]byte(validUniqueSummary))
+	//SetDefaultTags(map[string]string{})
+	metrics, err = Parse([]byte(validUniqueSummary), http.Header{})
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "http_request_duration_microseconds", metrics[0].Name())
@@ -144,7 +142,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
 
 	// histogram data
-	metrics, err = parser.Parse([]byte(validUniqueHistogram))
+	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{})
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "apiserver_request_latencies", metrics[0].Name())
@@ -163,13 +161,5 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t,
 		map[string]string{"verb": "POST", "resource": "bindings"},
 		metrics[0].Tags())
-
-}
-
-func TestParseLineInvalidPrometheus(t *testing.T) {
-	parser := PrometheusParser{}
-	metric, err := parser.ParseLine(validUniqueLine)
-	assert.NotNil(t, err)
-	assert.Nil(t, metric)
 
 }

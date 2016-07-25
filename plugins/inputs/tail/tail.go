@@ -86,9 +86,10 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		for file, _ := range g.Match() {
 			tailer, err := tail.TailFile(file,
 				tail.Config{
-					ReOpen:   true,
-					Follow:   true,
-					Location: &seek,
+					ReOpen:    true,
+					Follow:    true,
+					Location:  &seek,
+					MustExist: true,
 				})
 			if err != nil {
 				errS += err.Error() + " "

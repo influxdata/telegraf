@@ -1,265 +1,55 @@
-## Telegraf Plugin: Aerospike
+# Aerospike Input Plugin
 
-#### Plugin arguments:
-- **servers** string array: List of aerospike servers to query (def: 127.0.0.1:3000)
-
-#### Description
-
-The aerospike plugin queries aerospike server(s) and get node statistics. It also collects stats for
+The aerospike plugin queries aerospike server(s) and get node statistics & stats for
 all the configured namespaces.
 
 For what the measurements mean, please consult the [Aerospike Metrics Reference Docs](http://www.aerospike.com/docs/reference/metrics).
 
 The metric names, to make it less complicated in querying, have replaced all `-` with `_` as Aerospike metrics come in both forms (no idea why).
 
-# Measurements:
-#### Aerospike Statistics [values]:
+All metrics are attempted to be cast to integers, then booleans, then strings.
 
-Meta:
-- units: Integer
+### Measurements:
 
-Measurement names:
-- batch_index_queue
-- batch_index_unused_buffers
-- batch_queue
-- batch_tree_count
-- client_connections
-- data_used_bytes_memory
-- index_used_bytes_memory
-- info_queue
-- migrate_progress_recv
-- migrate_progress_send
-- migrate_rx_objs
-- migrate_tx_objs
-- objects
-- ongoing_write_reqs
-- partition_absent
-- partition_actual
-- partition_desync
-- partition_object_count
-- partition_ref_count
-- partition_replica
-- proxy_in_progress
-- query_agg_avg_rec_count
-- query_avg_rec_count
-- query_lookup_avg_rec_count
-- queue
-- record_locks
-- record_refs
-- sindex_used_bytes_memory
-- sindex_gc_garbage_cleaned
-- system_free_mem_pct
-- total_bytes_disk
-- total_bytes_memory
-- tree_count
-- scans_active
-- uptime
-- used_bytes_disk
-- used_bytes_memory
-- cluster_size
-- waiting_transactions
+The aerospike metrics are under two measurement names:
 
-#### Aerospike Statistics [cumulative]:
+***aerospike_node***: These are the aerospike **node** measurements, which are
+available from the aerospike `statistics` command.
 
-Meta:
-- units: Integer
+      ie,
+      ```
+        telnet localhost 3003
+        statistics
+        ...
+      ```
 
-Measurement names:
-- batch_errors
-- batch_index_complete
-- batch_index_errors
-- batch_index_initiate
-- batch_index_timeout
-- batch_initiate
-- batch_timeout
-- err_duplicate_proxy_request
-- err_out_of_space
-- err_replica_non_null_node
-- err_replica_null_node
-- err_rw_cant_put_unique
-- err_rw_pending_limit
-- err_rw_request_not_found
-- err_storage_queue_full
-- err_sync_copy_null_master
-- err_sync_copy_null_node
-- err_tsvc_requests
-- err_write_fail_bin_exists
-- err_write_fail_generation
-- err_write_fail_generation_xdr
-- err_write_fail_incompatible_type
-- err_write_fail_key_exists
-- err_write_fail_key_mismatch
-- err_write_fail_not_found
-- err_write_fail_noxdr
-- err_write_fail_parameter
-- err_write_fail_prole_delete
-- err_write_fail_prole_generation
-- err_write_fail_prole_unknown
-- err_write_fail_unknown
-- fabric_msgs_rcvd
-- fabric_msgs_sent
-- heartbeat_received_foreign
-- heartbeat_received_self
-- migrate_msgs_recv
-- migrate_msgs_sent
-- migrate_num_incoming_accepted
-- migrate_num_incoming_refused
-- proxy_action
-- proxy_initiate
-- proxy_retry
-- proxy_retry_new_dest
-- proxy_retry_q_full
-- proxy_retry_same_dest
-- proxy_unproxy
-- query_abort
-- query_agg
-- query_agg_abort
-- query_agg_err
-- query_agg_success
-- query_bad_records
-- query_fail
-- query_long_queue_full
-- query_long_running
-- query_lookup_abort
-- query_lookup_err
-- query_lookups
-- query_lookup_success
-- query_reqs
-- query_short_queue_full
-- query_short_running
-- query_success
-- query_tracked
-- read_dup_prole
-- reaped_fds
-- rw_err_ack_badnode
-- rw_err_ack_internal
-- rw_err_ack_nomatch
-- rw_err_dup_cluster_key
-- rw_err_dup_internal
-- rw_err_dup_send
-- rw_err_write_cluster_key
-- rw_err_write_internal
-- rw_err_write_send
-- sindex_ucgarbage_found
-- sindex_gc_locktimedout
-- sindex_gc_inactivity_dur
-- sindex_gc_activity_dur
-- sindex_gc_list_creation_time
-- sindex_gc_list_deletion_time
-- sindex_gc_objects_validated
-- sindex_gc_garbage_found
-- stat_cluster_key_err_ack_dup_trans_reenqueue
-- stat_cluster_key_err_ack_rw_trans_reenqueue
-- stat_cluster_key_prole_retry
-- stat_cluster_key_regular_processed
-- stat_cluster_key_trans_to_proxy_retry
-- stat_deleted_set_object
-- stat_delete_success
-- stat_duplicate_operation
-- stat_evicted_objects
-- stat_evicted_objects_time
-- stat_evicted_set_objects
-- stat_expired_objects
-- stat_nsup_deletes_not_shipped
-- stat_proxy_errs
-- stat_proxy_reqs
-- stat_proxy_reqs_xdr
-- stat_proxy_success
-- stat_read_errs_notfound
-- stat_read_errs_other
-- stat_read_reqs
-- stat_read_reqs_xdr
-- stat_read_success
-- stat_rw_timeout
-- stat_slow_trans_queue_batch_pop
-- stat_slow_trans_queue_pop
-- stat_slow_trans_queue_push
-- stat_write_errs
-- stat_write_errs_notfound
-- stat_write_errs_other
-- stat_write_reqs
-- stat_write_reqs_xdr
-- stat_write_success
-- stat_xdr_pipe_miss
-- stat_xdr_pipe_writes
-- stat_zero_bin_records
-- storage_defrag_corrupt_record
-- storage_defrag_wait
-- transactions
-- basic_scans_succeeded
-- basic_scans_failed
-- aggr_scans_succeeded
-- aggr_scans_failed
-- udf_bg_scans_succeeded
-- udf_bg_scans_failed
-- udf_delete_err_others
-- udf_delete_reqs
-- udf_delete_success
-- udf_lua_errs
-- udf_query_rec_reqs
-- udf_read_errs_other
-- udf_read_reqs
-- udf_read_success
-- udf_replica_writes
-- udf_scan_rec_reqs
-- udf_write_err_others
-- udf_write_reqs
-- udf_write_success
-- write_master
-- write_prole
+***aerospike_namespace***: These are aerospike namespace measurements, which
+are available from the aerospike `namespace/<namespace_name>` command.
 
-#### Aerospike Statistics [percentage]:
+      ie,
+      ```
+        telnet localhost 3003
+        namespaces
+        <namespace_1>;<namespace_2>;etc.
+        namespace/<namespace_name>
+        ...
+      ```
 
-Meta:
-- units: percent (out of 100)
+### Tags:
 
-Measurement names:
-- free_pct_disk
-- free_pct_memory
+All measurements have tags:
 
-# Measurements:
-#### Aerospike Namespace Statistics [values]:
+- aerospike_host
 
-Meta:
-- units: Integer
-- tags: `namespace=<namespace>`
+Namespace metrics have tags:
 
-Measurement names:
-- available_bin_names
-- available_pct
-- current_time
-- data_used_bytes_memory
-- index_used_bytes_memory
-- master_objects
-- max_evicted_ttl
-- max_void_time
-- non_expirable_objects
-- objects
-- prole_objects
-- sindex_used_bytes_memory
-- total_bytes_disk
-- total_bytes_memory
-- used_bytes_disk
-- used_bytes_memory
+- namespace_name
 
-#### Aerospike Namespace Statistics [cumulative]:
+### Example Output:
 
-Meta:
-- units: Integer
-- tags: `namespace=<namespace>`
-
-Measurement names:
-- evicted_objects
-- expired_objects
-- set_deleted_objects
-- set_evicted_objects
-
-#### Aerospike Namespace Statistics [percentage]:
-
-Meta:
-- units: percent (out of 100)
-- tags: `namespace=<namespace>`
-
-Measurement names:
-- free_pct_disk
-- free_pct_memory
+```
+% telegraf --config ~/db/ws/telegraf.conf --input-filter aerospike --test
+* Plugin: aerospike, Collection 1
+> aerospike_node,aerospike_host=localhost:3000,host=tars batch_error=0i,batch_index_complete=0i,batch_index_created_buffers=0i,batch_index_destroyed_buffers=0i,batch_index_error=0i,batch_index_huge_buffers=0i,batch_index_initiate=0i,batch_index_queue="0:0,0:0,0:0,0:0",batch_index_timeout=0i,batch_index_unused_buffers=0i,batch_initiate=0i,batch_queue=0i,batch_timeout=0i,client_connections=6i,cluster_integrity=true,cluster_key="8AF422E05281249E",cluster_size=1i,delete_queue=0i,demarshal_error=0i,early_tsvc_batch_sub_error=0i,early_tsvc_client_error=0i,early_tsvc_udf_sub_error=0i,fabric_connections=16i,fabric_msgs_rcvd=0i,fabric_msgs_sent=0i,heartbeat_connections=0i,heartbeat_received_foreign=0i,heartbeat_received_self=0i,info_complete=47i,info_queue=0i,migrate_allowed=true,migrate_partitions_remaining=0i,migrate_progress_recv=0i,migrate_progress_send=0i,node_name="BB9020011AC4202",objects=0i,paxos_principal="BB9020011AC4202",proxy_in_progress=0i,proxy_retry=0i,query_long_running=0i,query_short_running=0i,reaped_fds=0i,record_refs=0i,rw_in_progress=0i,scans_active=0i,sindex_gc_activity_dur=0i,sindex_gc_garbage_cleaned=0i,sindex_gc_garbage_found=0i,sindex_gc_inactivity_dur=0i,sindex_gc_list_creation_time=0i,sindex_gc_list_deletion_time=0i,sindex_gc_locktimedout=0i,sindex_gc_objects_validated=0i,sindex_ucgarbage_found=0i,sub_objects=0i,system_free_mem_pct=92i,system_swapping=false,tsvc_queue=0i,uptime=1457i 1468923222000000000
+> aerospike_namespace,aerospike_host=localhost:3000,host=tars,namespace=test allow_nonxdr_writes=true,allow_xdr_writes=true,available_bin_names=32768i,batch_sub_proxy_complete=0i,batch_sub_proxy_error=0i,batch_sub_proxy_timeout=0i,batch_sub_read_error=0i,batch_sub_read_not_found=0i,batch_sub_read_success=0i,batch_sub_read_timeout=0i,batch_sub_tsvc_error=0i,batch_sub_tsvc_timeout=0i,client_delete_error=0i,client_delete_not_found=0i,client_delete_success=0i,client_delete_timeout=0i,client_lang_delete_success=0i,client_lang_error=0i,client_lang_read_success=0i,client_lang_write_success=0i,client_proxy_complete=0i,client_proxy_error=0i,client_proxy_timeout=0i,client_read_error=0i,client_read_not_found=0i,client_read_success=0i,client_read_timeout=0i,client_tsvc_error=0i,client_tsvc_timeout=0i,client_udf_complete=0i,client_udf_error=0i,client_udf_timeout=0i,client_write_error=0i,client_write_success=0i,client_write_timeout=0i,cold_start_evict_ttl=4294967295i,conflict_resolution_policy="generation",current_time=206619222i,data_in_index=false,default_ttl=432000i,device_available_pct=99i,device_free_pct=100i,device_total_bytes=4294967296i,device_used_bytes=0i,disallow_null_setname=false,enable_benchmarks_batch_sub=false,enable_benchmarks_read=false,enable_benchmarks_storage=false,enable_benchmarks_udf=false,enable_benchmarks_udf_sub=false,enable_benchmarks_write=false,enable_hist_proxy=false,enable_xdr=false,evict_hist_buckets=10000i,evict_tenths_pct=5i,evict_ttl=0i,evicted_objects=0i,expired_objects=0i,fail_generation=0i,fail_key_busy=0i,fail_record_too_big=0i,fail_xdr_forbidden=0i,geo2dsphere_within.earth_radius_meters=6371000i,geo2dsphere_within.level_mod=1i,geo2dsphere_within.max_cells=12i,geo2dsphere_within.max_level=30i,geo2dsphere_within.min_level=1i,geo2dsphere_within.strict=true,geo_region_query_cells=0i,geo_region_query_falsepos=0i,geo_region_query_points=0i,geo_region_query_reqs=0i,high_water_disk_pct=50i,high_water_memory_pct=60i,hwm_breached=false,ldt_enabled=false,ldt_gc_rate=0i,ldt_page_size=8192i,master_objects=0i,master_sub_objects=0i,max_ttl=315360000i,max_void_time=0i,memory_free_pct=100i,memory_size=1073741824i,memory_used_bytes=0i,memory_used_data_bytes=0i,memory_used_index_bytes=0i,memory_used_sindex_bytes=0i,migrate_order=5i,migrate_record_receives=0i,migrate_record_retransmits=0i,migrate_records_skipped=0i,migrate_records_transmitted=0i,migrate_rx_instances=0i,migrate_rx_partitions_active=0i,migrate_rx_partitions_initial=0i,migrate_rx_partitions_remaining=0i,migrate_sleep=1i,migrate_tx_instances=0i,migrate_tx_partitions_active=0i,migrate_tx_partitions_imbalance=0i,migrate_tx_partitions_initial=0i,migrate_tx_partitions_remaining=0i,node_name="BB9020011AC4202",non_expirable_objects=0i,ns_forward_xdr_writes=false,nsup_cycle_duration=0i,nsup_cycle_sleep_pct=0i,objects=0i,prole_objects=0i,prole_sub_objects=0i,query_agg=0i,query_agg_abort=0i,query_agg_avg_rec_count=0i,query_agg_error=0i,query_agg_success=0i,query_fail=0i,query_long_queue_full=0i,query_long_reqs=0i,query_lookup_abort=0i,query_lookup_avg_rec_count=0i,query_lookup_error=0i,query_lookup_success=0i,query_lookups=0i,query_reqs=0i,query_short_queue_full=0i,query_short_reqs=0i,query_udf_bg_failure=0i,query_udf_bg_success=0i,read_consistency_level_override="off",repl_factor=1i,scan_aggr_abort=0i,scan_aggr_complete=0i,scan_aggr_error=0i,scan_basic_abort=0i,scan_basic_complete=0i,scan_basic_error=0i,scan_udf_bg_abort=0i,scan_udf_bg_complete=0i,scan_udf_bg_error=0i,set_deleted_objects=0i,sets_enable_xdr=true,sindex.data_max_memory="ULONG_MAX",sindex.num_partitions=32i,single_bin=false,stop_writes=false,stop_writes_pct=90i,storage_engine="device",storage_engine.cold_start_empty=false,storage_engine.data_in_memory=true,storage_engine.defrag_lwm_pct=50i,storage_engine.defrag_queue_min=0i,storage_engine.defrag_sleep=1000i,storage_engine.defrag_startup_minimum=10i,storage_engine.disable_odirect=false,storage_engine.enable_osync=false,storage_engine.file="/opt/aerospike/data/test.dat",storage_engine.filesize=4294967296i,storage_engine.flush_max_ms=1000i,storage_engine.fsync_max_sec=0i,storage_engine.max_write_cache=67108864i,storage_engine.min_avail_pct=5i,storage_engine.post_write_queue=0i,storage_engine.scheduler_mode="null",storage_engine.write_block_size=1048576i,storage_engine.write_threads=1i,sub_objects=0i,udf_sub_lang_delete_success=0i,udf_sub_lang_error=0i,udf_sub_lang_read_success=0i,udf_sub_lang_write_success=0i,udf_sub_tsvc_error=0i,udf_sub_tsvc_timeout=0i,udf_sub_udf_complete=0i,udf_sub_udf_error=0i,udf_sub_udf_timeout=0i,write_commit_level_override="off",xdr_write_error=0i,xdr_write_success=0i,xdr_write_timeout=0i,{test}_query_hist_track_back=300i,{test}_query_hist_track_slice=10i,{test}_query_hist_track_thresholds="1,8,64",{test}_read_hist_track_back=300i,{test}_read_hist_track_slice=10i,{test}_read_hist_track_thresholds="1,8,64",{test}_udf_hist_track_back=300i,{test}_udf_hist_track_slice=10i,{test}_udf_hist_track_thresholds="1,8,64",{test}_write_hist_track_back=300i,{test}_write_hist_track_slice=10i,{test}_write_hist_track_thresholds="1,8,64" 1468923222000000000
+```

@@ -10,6 +10,7 @@
   ##   mongodb://10.10.3.33:18832,
   ##   10.0.0.1:10000, etc.
   servers = ["127.0.0.1:27017"]
+  gather_perdb_stats = false
 ```
 
 For authenticated mongodb istances use connection mongdb connection URI
@@ -52,3 +53,15 @@ and create a single measurement containing values e.g.
  * ttl_passes_per_sec
  * repl_lag
  * jumbo_chunks (only if mongos or mongo config)
+
+If gather_db_stats is set to true, it will also collect per database stats exposed by db.stats()
+creating another measurement called mongodb_db_stats and containing values:
+ * collections
+ * objects
+ * avg_obj_size
+ * data_size
+ * storage_size
+ * num_extents
+ * indexes
+ * index_size
+ * ok
