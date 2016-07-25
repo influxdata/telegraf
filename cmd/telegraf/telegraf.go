@@ -113,7 +113,6 @@ var srvc service.Service
 
 type program struct{}
 
-
 func reloadLoop(stop chan struct{}, s service.Service) {
 	defer func() {
 		if service.Interactive() {
