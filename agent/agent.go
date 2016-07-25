@@ -215,6 +215,9 @@ func (a *Agent) Test() error {
 		if err := input.Input.Gather(acc); err != nil {
 			return err
 		}
+		if acc.errCount > 0 {
+			return fmt.Errorf("Errors encountered during processing")
+		}
 
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
