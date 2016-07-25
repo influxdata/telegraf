@@ -16,6 +16,8 @@ type Accumulator interface {
 		tags map[string]string,
 		t ...time.Time)
 
+	AddError(err error)
+
 	Debug() bool
 	SetDebug(enabled bool)
 

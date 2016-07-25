@@ -99,7 +99,7 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	errChan := errchan.New(len(r.Servers))
 	for _, serv := range r.Servers {
-		if !strings.HasPrefix(serv, "tcp://") || !strings.HasPrefix(serv, "unix://") {
+		if !strings.HasPrefix(serv, "tcp://") && !strings.HasPrefix(serv, "unix://") {
 			serv = "tcp://" + serv
 		}
 
