@@ -190,8 +190,8 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		"test3",
 		map[string]string{
 			"hostname": "192.168.0.1",
-			"tag2": "value2",
-			"tag1": "value1"},
+			"tag2":     "value2",
+			"tag1":     "value1"},
 		map[string]interface{}{"value": 1.0},
 		mtime,
 	)
@@ -199,8 +199,8 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		"test4",
 		map[string]string{
 			"hostname": "192.168.0.1",
-			"tag2": "value2",
-			"tag1": "value1"},
+			"tag2":     "value2",
+			"tag1":     "value1"},
 		map[string]interface{}{"value": 1.0},
 		mtime,
 	)
