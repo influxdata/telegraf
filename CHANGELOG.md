@@ -4,6 +4,7 @@
 
 - [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
 - [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
+- [#860](https://github.com/influxdata/telegraf/issues/860): Make Telegraf run as a Windows service
 
 ### Bugfixes
 
