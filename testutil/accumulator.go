@@ -28,6 +28,7 @@ type Accumulator struct {
 	sync.Mutex
 
 	Metrics []*Metric
+	Errors  []error
 	debug   bool
 }
 
@@ -82,6 +83,16 @@ func (a *Accumulator) AddFields(
 	}
 
 	a.Metrics = append(a.Metrics, p)
+}
+
+// AddError appends the given error to Accumulator.Errors.
+func (a *Accumulator) AddError(err error) {
+	if err == nil {
+		return
+	}
+	a.Lock()
+	a.Errors = append(a.Errors, err)
+	a.Unlock()
 }
 
 func (a *Accumulator) SetPrecision(precision, interval time.Duration) {

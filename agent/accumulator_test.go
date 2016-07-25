@@ -1,8 +1,11 @@
 package agent
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"testing"
 	"time"
 
@@ -10,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal/models"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAdd(t *testing.T) {
@@ -453,4 +457,28 @@ func TestAccFilterTags(t *testing.T) {
 	assert.Equal(t,
 		fmt.Sprintf("acctest value=101 %d", now.UnixNano()),
 		actual)
+}
+
+func TestAccAddError(t *testing.T) {
+	errBuf := bytes.NewBuffer(nil)
+	log.SetOutput(errBuf)
+	defer log.SetOutput(os.Stderr)
+
+	a := accumulator{}
+	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig.Name = "mock_plugin"
+
+	a.AddError(fmt.Errorf("foo"))
+	a.AddError(fmt.Errorf("bar"))
+	a.AddError(fmt.Errorf("baz"))
+
+	errs := bytes.Split(errBuf.Bytes(), []byte{'\n'})
+	assert.EqualValues(t, 3, a.errCount)
+	require.Len(t, errs, 4) // 4 because of trailing newline
+	assert.Contains(t, string(errs[0]), "mock_plugin")
+	assert.Contains(t, string(errs[0]), "foo")
+	assert.Contains(t, string(errs[1]), "mock_plugin")
+	assert.Contains(t, string(errs[1]), "bar")
+	assert.Contains(t, string(errs[2]), "mock_plugin")
+	assert.Contains(t, string(errs[2]), "baz")
 }
