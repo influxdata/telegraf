@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
-	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -115,11 +115,9 @@ func TestDownsampling_aggregate(t *testing.T) {
 }
 
 func TestDownsampling_run(t *testing.T) {
-	testCase := struct {
-		sum   int
-		count int
-		sync.Mutex
-	}{}
+	var (
+		sum, count int32
+	)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var createDatabaseQuery = "CREATE DATABASE IF NOT EXISTS \"\""
@@ -151,11 +149,9 @@ func TestDownsampling_run(t *testing.T) {
 			return
 		}
 
-		testCase.Lock()
-		want := testCase.sum / testCase.count
-		testCase.sum = 0
-		testCase.count = 0
-		defer testCase.Unlock()
+		want := atomic.LoadInt32(&sum) / atomic.LoadInt32(&count)
+		atomic.StoreInt32(&sum, 0)
+		atomic.StoreInt32(&count, 0)
 
 		require.EqualValues(t, want, mean)
 
@@ -188,9 +184,9 @@ func TestDownsampling_run(t *testing.T) {
 	for {
 		select {
 		case <-tick:
-			testCase.count += 1
-			val := rand.Intn(120)
-			testCase.sum += val
+			atomic.AddInt32(&count, 1)
+			val := rand.Int31n(120)
+			atomic.AddInt32(&sum, val)
 			err := influxdb.Write([]telegraf.Metric{testutil.TestMetric(val)})
 			require.NoError(t, err)
 		case <-after:

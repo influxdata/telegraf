@@ -425,10 +425,10 @@ func (d *Downsampling) Mean(fields ...Aggregation) (telegraf.Metric, error) {
 	var (
 		aggrMetric telegraf.Metric
 		sums       = make(map[string]interface{})
-		size       = len(d.Metrics)
 	)
 
 	d.RLock()
+	var size = len(d.Metrics)
 	for _, metric := range d.Metrics {
 		for _, field := range fields {
 			value, ok := metric.Fields()[field.FieldName]
