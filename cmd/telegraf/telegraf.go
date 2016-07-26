@@ -110,7 +110,7 @@ var logger service.Logger
 var stop chan struct{}
 
 var srvc service.Service
-var svcConfig service.Config
+var svcConfig *service.Config
 
 type program struct{}
 
