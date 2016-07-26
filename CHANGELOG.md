@@ -4,6 +4,7 @@
 
 - [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
 - [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
+- [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
 
 ### Bugfixes
 
@@ -62,7 +63,6 @@ should now look like:
 - [#1500](https://github.com/influxdata/telegraf/pull/1500): Aerospike plugin refactored to use official client lib.
 - [#1434](https://github.com/influxdata/telegraf/pull/1434): Add measurement name arg to logparser plugin.
 - [#1479](https://github.com/influxdata/telegraf/pull/1479): logparser: change resp_code from a field to a tag.
-- [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
 - [#1411](https://github.com/influxdata/telegraf/pull/1411): Implement support for fetching hddtemp data
 
 ### Bugfixes
