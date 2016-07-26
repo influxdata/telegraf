@@ -139,7 +139,6 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 }
 
 func (k *Kafka) collector() {
-	log.Println("collector")
 	for {
 		select {
 		case <-k.done:

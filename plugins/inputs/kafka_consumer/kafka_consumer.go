@@ -1,13 +1,11 @@
 package kafka_consumer
 
 import (
-	"crypto/tls"
 	"log"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
@@ -28,19 +26,6 @@ type Kafka struct {
 	PointBuffer int
 
 	Offset string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-
-	// Skip SSL verification
-	InsecureSkipVerify bool
-
-	tlsConfig tls.Config
-
 	parser parsers.Parser
 
 	sync.Mutex
@@ -71,13 +56,6 @@ var sampleConfig = `
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
-
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
@@ -105,18 +83,6 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	k.acc = acc
 
 	config := consumergroup.NewConfig()
-
-	tlsConfig, err := internal.GetTLSConfig(
-		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
-	if err != nil {
-		return err
-	}
-
-	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
-		config.Net.TLS.Enable = true
-	}
-
 	config.Zookeeper.Chroot = k.ZookeeperChroot
 	switch strings.ToLower(k.Offset) {
 	case "oldest", "":
