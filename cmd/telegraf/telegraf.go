@@ -78,7 +78,7 @@ The flags are:
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
   -version           print the version to stdout
-  -service           Control the service, ie, 'telegraf -service install'
+  -service           Control the service, ie, 'telegraf -service install (windows only)'
 
 In addition to the -config flag, telegraf will also load the config file from
 an environment variable or default location. Precedence is:
@@ -110,6 +110,7 @@ var logger service.Logger
 var stop chan struct{}
 
 var srvc service.Service
+var svcConfig service.Config
 
 type program struct{}
 
@@ -201,6 +202,9 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		}
 
 		if *fService != "" && runtime.GOOS == "windows" {
+			if *fConfig != "" {
+				(*svcConfig).Arguments = []string{"-config", *fConfig}
+			}
 			err := service.Control(s, *fService)
 			if err != nil {
 				log.Fatal(err)
@@ -327,14 +331,13 @@ func (p *program) Stop(s service.Service) error {
 
 func main() {
 	if runtime.GOOS == "windows" {
-		svcConfig := &service.Config{
+		svcConfig = &service.Config{
 			Name:        "telegraf",
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
+			Arguments: []string{"-config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
 		}
-
-		svcConfig.Arguments = []string{"-config", "C:\\telegraf\\telegraf.conf"}
 
 		prg := &program{}
 		s, err := service.New(prg, svcConfig)

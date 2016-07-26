@@ -4,15 +4,23 @@ Telegraf natively supports running as a Windows Service. Outlined below is are
 the general steps to set it up.
 
 1. Obtain the telegraf windows distribution
-2. Create the directory C:\telegraf (if you install in a different location you
-   will need to edit `cmd/telegraf/telegraf.go` and change the config file
-   location and recompile to use your location)
-3. Place the executable and the config file into C:\telegraf
-4. Run `C:\telegraf\telegraf.exe --service install` as an administrator
+2. Create the directory `C:\Program Files\Telegraf` (if you install in a different
+   location simply specify the `-config` parameter with the desired location)
+3. Place the executable and the config file into `C:\Program Files\Telegraf`
+4. To install the service into the Windows Service Manager, run (as an
+   administrator):
+   ```ps
+   C:\Program Files\Telegraf\telegraf.exe --service install
+   ```
 5. Edit the configuration file to meet your needs
-6. Run `C:\telegraf\telegraf.exe --config C:\telegraf\telegraf.conf --test` to
-   check that it works
-7. Run `net start telegraf` to start collecting data
+6. To check that it works, run:
+   ```ps
+   C:\Program Files\Telegraf\telegraf.exe --config C:\Program Files\Telegraf\telegraf.conf --test
+   ```
+7. To start collecting data, run:
+   ```ps
+   net start telegraf
+   ```
 
 ## Other supported operations
 
