@@ -17,12 +17,12 @@ import (
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser    string
-	APIToken   string
-	Debug      bool
-	SourceTag  string // Deprecated, keeping for backward-compatibility
-	Timeout    internal.Duration
-	Template   string
+	APIUser   string
+	APIToken  string
+	Debug     bool
+	SourceTag string // Deprecated, keeping for backward-compatibility
+	Timeout   internal.Duration
+	Template  string
 
 	APIUrl string
 	client *http.Client
