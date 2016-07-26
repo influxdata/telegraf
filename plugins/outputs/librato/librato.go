@@ -23,7 +23,6 @@ type Librato struct {
 	SourceTag  string // Deprecated, keeping for backward-compatibility
 	Timeout    internal.Duration
 	Template   string
-	Resolution int
 
 	APIUrl string
 	client *http.Client
@@ -43,14 +42,11 @@ var sampleConfig = `
   # debug = false
   ## Connection timeout.
   # timeout = "5s"
-  ## Output Name Template (same as graphite buckets)
+  ## Output source Template (same as graphite buckets)
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
+  ## This template is used in librato's source (not metric's name)
   template = "host"
 
-  ## Resolution, in seconds, If the original measurements were reported at a
-  ##	higher resolution than specified in the request,
-  ##	the response contains averaged measurements.
-  # resolution = 15
 `
 
 // LMetrics is the default struct for Librato's API fromat
@@ -61,7 +57,6 @@ type LMetrics struct {
 // Gauge is the gauge format for Librato's API fromat
 type Gauge struct {
 	Name        string  `json:"name"`
-	Resolution  int64   `json:"resolution"`
 	Value       float64 `json:"value"`
 	Source      string  `json:"source"`
 	MeasureTime int64   `json:"measure_time"`
@@ -94,9 +89,6 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 
 	if len(metrics) == 0 {
 		return nil
-	}
-	if l.Resolution == 0 {
-		l.Resolution = 15
 	}
 	if l.Template == "" {
 		l.Template = "host"
@@ -222,7 +214,6 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 		gauge := &Gauge{
 			Source:      reUnacceptedChar.ReplaceAllString(metricSource, "-"),
 			Name:        reUnacceptedChar.ReplaceAllString(metricName, "-"),
-			Resolution:  int64(l.Resolution),
 			MeasureTime: m.Time().Unix(),
 		}
 		if !verifyValue(value) {
