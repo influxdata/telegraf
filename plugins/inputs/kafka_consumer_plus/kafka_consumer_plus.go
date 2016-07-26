@@ -86,7 +86,7 @@ func (k *Kafka) SampleConfig() string {
 }
 
 func (k *Kafka) Description() string {
-	return "Read metrics from Kafka topic(s)"
+	return "Read metrics from Kafka topic(s), supporting Kafka 0.9+"
 }
 
 func (k *Kafka) SetParser(parser parsers.Parser) {
