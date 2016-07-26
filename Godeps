@@ -38,7 +38,6 @@ github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/nats b13fc9d12b0b123ebc374e6b808c6228ae4234a3
 github.com/nats-io/nuid 4f84f5f3b2786224e336af2e13dba0a0a80b76fa
-github.com/neonmori/telegraf 0af0fa7c2e4063bcc11b975c514950a71a4d65a4
 github.com/nsqio/go-nsq 0b80d6f05e15ca1930e0c5e1d540ed627e299980
 github.com/prometheus/client_golang 18acf9993a863f4c4b40612e19cdd243e7c86831
 github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
