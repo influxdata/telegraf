@@ -1,9 +1,10 @@
-package kafka_consumer_tls
+package kafka_consumer_plus
 
 import (
 	"crypto/tls"
-	"log"
 	"sync"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
@@ -138,6 +139,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 }
 
 func (k *Kafka) collector() {
+	log.Println("collector")
 	for {
 		select {
 		case <-k.done:
@@ -146,6 +148,7 @@ func (k *Kafka) collector() {
 			log.Printf("Kafka Consumer Error: %s\n", err.Error())
 		case msg := <-k.in:
 			metrics, err := k.parser.Parse(msg.Value)
+
 			if err != nil {
 				log.Printf("KAFKA PARSE ERROR\nmessage: %s\nerror: %s", string(msg.Value), err.Error())
 			}
@@ -175,7 +178,7 @@ func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("kafka_consumer_tls", func() telegraf.Input {
+	inputs.Add("kafka_consumer_plus", func() telegraf.Input {
 		return &Kafka{}
 	})
 }
