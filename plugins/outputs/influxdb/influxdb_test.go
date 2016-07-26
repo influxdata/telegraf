@@ -2,10 +2,16 @@ package influxdb
 
 import (
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/influxdata/influxdb/models"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
@@ -13,7 +19,8 @@ import (
 
 func TestUDPInflux(t *testing.T) {
 	i := InfluxDB{
-		URLs: []string{"udp://localhost:8089"},
+		URLs:        []string{"udp://localhost:8089"},
+		Downsampler: &Downsampling{},
 	}
 
 	err := i.Connect()
@@ -31,7 +38,8 @@ func TestHTTPInflux(t *testing.T) {
 	defer ts.Close()
 
 	i := InfluxDB{
-		URLs: []string{ts.URL},
+		URLs:        []string{ts.URL},
+		Downsampler: &Downsampling{},
 	}
 
 	err := i.Connect()
@@ -41,13 +49,9 @@ func TestHTTPInflux(t *testing.T) {
 }
 
 func TestDownsampling_mean(t *testing.T) {
-	ds := &Downsampling{}
-
-	err := ds.Add(testutil.TestMetric(120))
-	require.NoError(t, err)
-
-	err = ds.Add(testutil.TestMetric(80))
-	require.NoError(t, err)
+	ds := NewDownsampling("downsampling", time.Minute)
+	ds.Add(testutil.TestMetric(120))
+	ds.Add(testutil.TestMetric(80))
 
 	aggregations := []Aggregation{
 		Aggregation{
@@ -64,13 +68,9 @@ func TestDownsampling_mean(t *testing.T) {
 }
 
 func TestDownsampling_sum(t *testing.T) {
-	ds := &Downsampling{}
-
-	err := ds.Add(testutil.TestMetric(120))
-	require.NoError(t, err)
-
-	err = ds.Add(testutil.TestMetric(80))
-	require.NoError(t, err)
+	ds := NewDownsampling("downsampling", time.Minute)
+	ds.Add(testutil.TestMetric(120))
+	ds.Add(testutil.TestMetric(80))
 
 	aggregations := []Aggregation{
 		Aggregation{
@@ -86,13 +86,10 @@ func TestDownsampling_sum(t *testing.T) {
 }
 
 func TestDownsampling_aggregate(t *testing.T) {
-	ds := &Downsampling{}
+	ds := NewDownsampling("downsampling", time.Minute)
 
-	err := ds.Add(testutil.TestMetric(120))
-	require.NoError(t, err)
-
-	err = ds.Add(testutil.TestMetric(80))
-	require.NoError(t, err)
+	ds.Add(testutil.TestMetric(120))
+	ds.Add(testutil.TestMetric(80))
 
 	aggregations := []Aggregation{
 		Aggregation{
@@ -107,7 +104,6 @@ func TestDownsampling_aggregate(t *testing.T) {
 		},
 	}
 
-	ds.Aggregations = make(map[string][]Aggregation)
 	ds.AddAggregations(aggregations...)
 
 	aggr, err := ds.Aggregate()
@@ -116,4 +112,89 @@ func TestDownsampling_aggregate(t *testing.T) {
 	require.Equal(t, int64(100), aggr.Fields()["mean_value"])
 	require.Equal(t, int64(200), aggr.Fields()["sum_value"])
 
+}
+
+func TestDownsampling_run(t *testing.T) {
+	testCase := struct {
+		sum   int
+		count int
+		sync.Mutex
+	}{}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var createDatabaseQuery = "CREATE DATABASE IF NOT EXISTS \"\""
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintln(w, `{"results":[{}]}`)
+
+		err := r.ParseForm()
+		require.NoError(t, err)
+
+		q := r.Form.Get("q")
+		if q == createDatabaseQuery {
+			return
+		}
+
+		body, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		points, err := models.ParsePoints(body)
+		require.NoError(t, err)
+
+		if len(points) == 0 {
+			return
+		}
+
+		mean, ok := points[0].Fields()["mean_value"]
+		if !ok {
+			return
+		}
+
+		testCase.Lock()
+		want := testCase.sum / testCase.count
+		testCase.sum = 0
+		testCase.count = 0
+		defer testCase.Unlock()
+
+		require.EqualValues(t, want, mean)
+
+	}))
+	defer ts.Close()
+
+	downsampler := &Downsampling{
+		TimeRange: time.Duration(time.Second * 10),
+		Name:      "downsampling",
+	}
+
+	downsampler.Aggregations = make(map[string][]Aggregation)
+	downsampler.AddAggregations(Aggregation{
+		FieldName: "value",
+		FuncName:  "mean",
+		Alias:     "mean_value",
+	})
+
+	influxdb := &InfluxDB{
+		Downsampler: downsampler,
+		URLs:        []string{ts.URL},
+	}
+	go influxdb.Run()
+
+	rand.Seed(time.Now().Unix())
+
+	tick := time.Tick(3 * time.Second)
+	after := time.After(12 * time.Second)
+
+	for {
+		select {
+		case <-tick:
+			testCase.count += 1
+			val := rand.Intn(120)
+			testCase.sum += val
+			err := influxdb.Write([]telegraf.Metric{testutil.TestMetric(val)})
+			require.NoError(t, err)
+		case <-after:
+			return
+		}
+	}
 }

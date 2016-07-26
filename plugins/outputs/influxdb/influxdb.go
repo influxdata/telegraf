@@ -174,36 +174,9 @@ func (i *InfluxDB) Description() string {
 	return "Configuration for influxdb server to send metrics to"
 }
 
-// Choose a random server in the cluster to write to until a successful write
-// occurs, logging each unsuccessful. If all servers fail, return error.
-func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
-	if len(i.conns) == 0 {
-		err := i.Connect()
-		if err != nil {
-			return err
-		}
-	}
-	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:         i.Database,
-		RetentionPolicy:  i.RetentionPolicy,
-		WriteConsistency: i.WriteConsistency,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = i.Downsampler.Add(metrics...)
-	if err != nil {
-		return err
-	}
-
-	for _, metric := range metrics {
-		bp.AddPoint(metric.Point())
-	}
-
+func (i *InfluxDB) flush(bp client.BatchPoints) error {
 	// This will get set to nil if a successful write occurs
-	err = errors.New("Could not write to any InfluxDB server in cluster")
-
+	err := errors.New("Could not write to any InfluxDB server in cluster")
 	p := rand.Perm(len(i.conns))
 	for _, n := range p {
 		if e := i.conns[n].Write(bp); e != nil {
@@ -221,15 +194,87 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			break
 		}
 	}
-
 	return err
+}
+
+// Choose a random server in the cluster to write to until a successful write
+// occurs, logging each unsuccessful. If all servers fail, return error.
+func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
+	if len(i.conns) == 0 {
+		err := i.Connect()
+		if err != nil {
+			return err
+		}
+	}
+	bp, err := i.batchPointsFromMetrics(metrics...)
+	if err != nil {
+		return err
+	}
+
+	i.Downsampler.Add(metrics...)
+	err = i.flush(bp)
+	return err
+}
+
+func (i *InfluxDB) batchPointsFromMetrics(metrics ...telegraf.Metric) (client.BatchPoints, error) {
+	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
+		Database:         i.Database,
+		RetentionPolicy:  i.RetentionPolicy,
+		WriteConsistency: i.WriteConsistency,
+	})
+	if err != nil {
+		return bp, err
+	}
+
+	for _, metric := range metrics {
+		bp.AddPoint(metric.Point())
+	}
+
+	return bp, nil
+}
+
+func (i *InfluxDB) Run() {
+	tick := time.Tick(i.Downsampler.TimeRange)
+	for {
+		select {
+		case <-tick:
+			aggrData, err := i.Downsampler.Aggregate()
+			if err != nil {
+				continue
+			}
+
+			i.Downsampler.Lock()
+			i.Downsampler.Metrics = nil
+			i.Downsampler.Unlock()
+
+			if len(i.conns) == 0 {
+				err := i.Connect()
+				if err != nil {
+					return
+				}
+			}
+
+			bp, err := i.batchPointsFromMetrics(aggrData)
+			if err != nil {
+				return
+			}
+
+			err = i.flush(bp)
+			if err != nil {
+				return
+			}
+		}
+	}
 }
 
 func init() {
 	influxdb := &InfluxDB{
-		Timeout:     internal.Duration{Duration: time.Second * 5},
-		Downsampler: new(Downsampling),
+		Timeout: internal.Duration{Duration: time.Second * 5},
+		Downsampler: &Downsampling{
+			TimeRange: time.Duration(time.Minute * 2),
+		},
 	}
+	go influxdb.Run()
 	outputs.Add("influxdb", func() telegraf.Output {
 		return influxdb
 	})
@@ -244,6 +289,14 @@ type Downsampling struct {
 	Aggregations map[string][]Aggregation
 }
 
+func NewDownsampling(name string, timeRange time.Duration) *Downsampling {
+	return &Downsampling{
+		Name:         name,
+		TimeRange:    timeRange,
+		Aggregations: make(map[string][]Aggregation),
+	}
+}
+
 // Aggregation maps the field names to aggregation function for them
 type Aggregation struct {
 	FieldName string
@@ -252,6 +305,10 @@ type Aggregation struct {
 }
 
 func (d *Downsampling) AddAggregations(aggrs ...Aggregation) {
+	if d.Aggregations == nil {
+		d.Aggregations = make(map[string][]Aggregation)
+	}
+
 	for _, aggr := range aggrs {
 		switch aggr.FuncName {
 		case "mean":
@@ -264,26 +321,11 @@ func (d *Downsampling) AddAggregations(aggrs ...Aggregation) {
 }
 
 // Add appends metrics to the metrics that will be aggregated
-func (d *Downsampling) Add(metrics ...telegraf.Metric) error {
+func (d *Downsampling) Add(metrics ...telegraf.Metric) {
 	d.Lock()
 	d.Metrics = append(d.Metrics, metrics...)
 	d.Unlock()
-	return nil
-}
-
-// Run starts the downsampler
-// it runs periodically
-func (d *Downsampling) Run() {
-	for {
-		select {
-		case <-time.After(d.TimeRange):
-			aggrData, err := d.Aggregate()
-			if err != nil {
-				continue
-			}
-			fmt.Printf("%+v\n", aggrData)
-		}
-	}
+	return
 }
 
 // Aggregate calculates the mean value of fields by given time
@@ -309,12 +351,16 @@ func (d *Downsampling) Aggregate() (telegraf.Metric, error) {
 		}
 	}
 
-	for k, v := range sum.Fields() {
-		metrics[k] = v
+	if sum != nil && sum.Fields() != nil {
+		for k, v := range sum.Fields() {
+			metrics[k] = v
+		}
 	}
 
-	for k, v := range mean.Fields() {
-		metrics[k] = v
+	if mean != nil && mean.Fields() != nil {
+		for k, v := range mean.Fields() {
+			metrics[k] = v
+		}
 	}
 
 	aggrMetric, err = telegraf.NewMetric(
