@@ -106,6 +106,8 @@ The JSON data format supports specifying "tag keys". If specified, keys
 will be searched for in the root-level of the JSON blob. If the key(s) exist,
 they will be applied as tags to the Telegraf metrics.
 
+JSON data format can specify the timestamp by "timestamp_selector" and then parse it using "timestamp_formatter"; this could be useful when dealing with metrics not generated locally.
+
 For example, if you had this configuration:
 
 ```toml
@@ -127,6 +129,11 @@ For example, if you had this configuration:
     "my_tag_1",
     "my_tag_2"
   ]
+
+  timestamp_selector = "@timestamp"
+  ## for more information about timestamp formatter, please refer to:
+  ## https://golang.org/src/time/format.go
+  timestamp_formatter = "2006-01-02T15:04:05Z07:00"
 ```
 
 with this JSON output from a command:
@@ -137,14 +144,15 @@ with this JSON output from a command:
     "b": {
         "c": 6
     },
-    "my_tag_1": "foo"
+    "my_tag_1": "foo",
+    "@timestamp": "2016-07-27T16:46:00.554Z"
 }
 ```
 
-Your Telegraf metrics would get tagged with "my_tag_1"
+Your Telegraf metrics would get tagged with "my_tag_1" and timestamp
 
 ```
-exec_mycollector,my_tag_1=foo a=5,b_c=6
+exec_mycollector,my_tag_1=foo a=5,b_c=6 1469637960554000000
 ```
 
 # Value:

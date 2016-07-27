@@ -72,7 +72,7 @@ type Kafka struct {
 
 var sampleConfig = `
   ## is new consumer?
-  new_consumer = true
+  new_consumer = false
   ## topic(s) to consume
   topics = ["telegraf"]
   ## an array of Zookeeper connection strings
