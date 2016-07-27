@@ -3,8 +3,8 @@ package udp_listener
 import (
 	"log"
 	"net"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -99,9 +99,11 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 }
 
 func (u *UdpListener) Stop() {
+	u.Lock()
+	defer u.Unlock()
 	close(u.done)
-	u.listener.Close()
 	u.wg.Wait()
+	u.listener.Close()
 	close(u.in)
 	log.Println("Stopped UDP listener service on ", u.ServiceAddress)
 }
@@ -122,9 +124,13 @@ func (u *UdpListener) udpListen() error {
 		case <-u.done:
 			return nil
 		default:
+			u.listener.SetReadDeadline(time.Now().Add(time.Second))
 			n, _, err := u.listener.ReadFromUDP(buf)
-			if err != nil && !strings.Contains(err.Error(), "closed network") {
-				log.Printf("ERROR: %s\n", err.Error())
+			if err != nil {
+				if err, ok := err.(net.Error); ok && err.Timeout() {
+				} else {
+					log.Printf("ERROR: %s\n", err.Error())
+				}
 				continue
 			}
 			bufCopy := make([]byte, n)
@@ -151,11 +157,15 @@ func (u *UdpListener) udpParser() error {
 	for {
 		select {
 		case <-u.done:
-			return nil
+			if len(u.in) == 0 {
+				return nil
+			}
 		case packet = <-u.in:
 			metrics, err = u.parser.Parse(packet)
 			if err == nil {
-				u.storeMetrics(metrics)
+				for _, m := range metrics {
+					u.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+				}
 			} else {
 				u.malformed++
 				if u.malformed == 1 || u.malformed%1000 == 0 {
@@ -164,15 +174,6 @@ func (u *UdpListener) udpParser() error {
 			}
 		}
 	}
-}
-
-func (u *UdpListener) storeMetrics(metrics []telegraf.Metric) error {
-	u.Lock()
-	defer u.Unlock()
-	for _, m := range metrics {
-		u.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-	}
-	return nil
 }
 
 func init() {
