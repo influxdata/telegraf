@@ -7,7 +7,11 @@ After=network.target
 EnvironmentFile=-/etc/default/telegraf
 ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d $TELEGRAF_OPTS
 KillMode=process
-Restart=on-failure
+# Journald restart in systemd < v219 causes SIGPIPE which is considered clean exit
+#   so cannot use Restart=on-failure
+# With systemd >= v215 we can also use RestartForceExitStatus=SIGPIPE
+#   and Restart=on-failure
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
