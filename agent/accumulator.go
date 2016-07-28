@@ -12,7 +12,7 @@ import (
 )
 
 func NewAccumulator(
-	inputConfig *internal_models.InputConfig,
+	inputConfig *models.InputConfig,
 	metrics chan telegraf.Metric,
 ) *accumulator {
 	acc := accumulator{}
@@ -31,7 +31,7 @@ type accumulator struct {
 	// print every point added to the accumulator
 	trace bool
 
-	inputConfig *internal_models.InputConfig
+	inputConfig *models.InputConfig
 
 	precision time.Duration
 
