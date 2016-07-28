@@ -5,6 +5,7 @@
 - [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
 - [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
 - [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
+- [#1552](https://github.com/influxdata/telegraf/pull/1542): Support Kafka 0.9+ new consumer in kafka_consumer plugin and timestamp selector in JSON parser.
 
 ### Bugfixes
 

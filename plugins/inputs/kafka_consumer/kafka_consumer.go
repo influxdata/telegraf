@@ -1,39 +1,65 @@
 package kafka_consumer
 
 import (
+	"crypto/tls"
 	"log"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/Shopify/sarama"
+	"github.com/bsm/sarama-cluster"
 	"github.com/wvanbergen/kafka/consumergroup"
 )
 
 type Kafka struct {
-	ConsumerGroup   string
-	Topics          []string
+	// new kafka consumer
+	NewConsumer bool
+	// common for both versions
+	ConsumerGroup string
+	Topics        []string
+	Offset        string
+
+	// for 0.8
 	ZookeeperPeers  []string
 	ZookeeperChroot string
 	Consumer        *consumergroup.ConsumerGroup
+
+	// for 0.9+
+	BrokerList []string
+	Consumer9  *cluster.Consumer
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+
+	// Skip SSL verification
+	InsecureSkipVerify bool
+
+	tlsConfig tls.Config
 
 	// Legacy metric buffer support
 	MetricBuffer int
 	// TODO remove PointBuffer, legacy support
 	PointBuffer int
 
-	Offset string
 	parser parsers.Parser
 
 	sync.Mutex
 
 	// channel for all incoming kafka messages
 	in <-chan *sarama.ConsumerMessage
+
 	// channel for all kafka consumer errors
-	errs <-chan *sarama.ConsumerError
+	errs  <-chan *sarama.ConsumerError
+	errs9 <-chan error
+
 	done chan struct{}
 
 	// keep the accumulator internally:
@@ -45,6 +71,8 @@ type Kafka struct {
 }
 
 var sampleConfig = `
+  ## is new consumer?
+  new_consumer = false
   ## topic(s) to consume
   topics = ["telegraf"]
   ## an array of Zookeeper connection strings
@@ -82,41 +110,88 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 
 	k.acc = acc
 
-	config := consumergroup.NewConfig()
-	config.Zookeeper.Chroot = k.ZookeeperChroot
-	switch strings.ToLower(k.Offset) {
-	case "oldest", "":
-		config.Offsets.Initial = sarama.OffsetOldest
-	case "newest":
-		config.Offsets.Initial = sarama.OffsetNewest
-	default:
-		log.Printf("WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
-			k.Offset)
-		config.Offsets.Initial = sarama.OffsetOldest
-	}
+	log.Println(k.NewConsumer)
 
-	if k.Consumer == nil || k.Consumer.Closed() {
-		k.Consumer, consumerErr = consumergroup.JoinConsumerGroup(
-			k.ConsumerGroup,
-			k.Topics,
-			k.ZookeeperPeers,
-			config,
-		)
-		if consumerErr != nil {
-			return consumerErr
+	if !k.NewConsumer {
+		config := consumergroup.NewConfig()
+
+		config.Zookeeper.Chroot = k.ZookeeperChroot
+		switch strings.ToLower(k.Offset) {
+		case "oldest", "":
+			config.Offsets.Initial = sarama.OffsetOldest
+		case "newest":
+			config.Offsets.Initial = sarama.OffsetNewest
+		default:
+			log.Printf("WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
+				k.Offset)
+			config.Offsets.Initial = sarama.OffsetOldest
 		}
 
+		if k.Consumer == nil || k.Consumer.Closed() {
+			k.Consumer, consumerErr = consumergroup.JoinConsumerGroup(
+				k.ConsumerGroup,
+				k.Topics,
+				k.ZookeeperPeers,
+				config,
+			)
+			if consumerErr != nil {
+				return consumerErr
+			}
+
+			// Setup message and error channels
+			k.in = k.Consumer.Messages()
+			k.errs = k.Consumer.Errors()
+		}
+		k.done = make(chan struct{})
+		// Start the kafka message reader
+		go k.receiver()
+		log.Printf("Started the kafka consumer service, peers: %v, topics: %v\n",
+			k.ZookeeperPeers, k.Topics)
+	} else {
+		config := cluster.NewConfig()
+
+		tlsConfig, err := internal.GetTLSConfig(k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
+
+		if tlsConfig != nil {
+			config.Net.TLS.Config = tlsConfig
+			config.Net.TLS.Enable = true
+		}
+
+		switch strings.ToLower(k.Offset) {
+		case "oldest", "":
+			config.Consumer.Offsets.Initial = sarama.OffsetOldest
+		case "newest":
+			config.Consumer.Offsets.Initial = sarama.OffsetNewest
+		default:
+			log.Printf("WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
+				k.Offset)
+			config.Consumer.Offsets.Initial = sarama.OffsetOldest
+		}
+
+		// TODO: make this configurable
+		config.Consumer.Return.Errors = true
+
+		if err := config.Validate(); err != nil {
+			return err
+		}
+
+		k.Consumer9, err = cluster.NewConsumer(k.BrokerList, k.ConsumerGroup, k.Topics, config)
+		if err != nil {
+			return err
+		}
 		// Setup message and error channels
-		k.in = k.Consumer.Messages()
-		k.errs = k.Consumer.Errors()
+		k.in = k.Consumer9.Messages()
+		k.errs9 = k.Consumer9.Errors()
+		k.done = make(chan struct{})
+		// Start the kafka message reader for 0.9
+		go k.collector()
+		log.Printf("Started the kafka consumer service with new consumer, brokers: %v, topics: %v\n",
+			k.BrokerList, k.Topics)
 	}
 
-	k.done = make(chan struct{})
-
-	// Start the kafka message reader
-	go k.receiver()
-	log.Printf("Started the kafka consumer service, peers: %v, topics: %v\n",
-		k.ZookeeperPeers, k.Topics)
 	return nil
 }
 
@@ -151,12 +226,45 @@ func (k *Kafka) receiver() {
 	}
 }
 
+// this is for kafka new consumer
+func (k *Kafka) collector() {
+	for {
+		select {
+		case <-k.done:
+			return
+		case err := <-k.errs9:
+			log.Printf("Kafka Consumer Error: %s\n", err.Error())
+		case msg := <-k.in:
+			metrics, err := k.parser.Parse(msg.Value)
+
+			if err != nil {
+				log.Printf("KAFKA PARSE ERROR\nmessage: %s\nerror: %s",
+					string(msg.Value), err.Error())
+			}
+
+			for _, metric := range metrics {
+				k.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+			}
+
+			if !k.doNotCommitMsgs {
+				k.Consumer9.MarkOffset(msg, "")
+			}
+		}
+	}
+}
+
 func (k *Kafka) Stop() {
 	k.Lock()
 	defer k.Unlock()
 	close(k.done)
-	if err := k.Consumer.Close(); err != nil {
-		log.Printf("Error closing kafka consumer: %s\n", err.Error())
+	if !k.NewConsumer {
+		if err := k.Consumer.Close(); err != nil {
+			log.Printf("Error closing kafka consumer: %s\n", err.Error())
+		}
+	} else {
+		if err := k.Consumer9.Close(); err != nil {
+			log.Printf("Error closing kafka consumer: %s\n", err.Error())
+		}
 	}
 }
 
