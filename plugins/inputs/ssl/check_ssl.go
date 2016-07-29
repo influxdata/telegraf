@@ -4,11 +4,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"net"
 	"time"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type CheckExpire struct {
@@ -39,7 +39,10 @@ func (c *CheckExpire) SampleConfig() string {
 // Connect to server and retrieve chain certificates
 func (c *CheckExpire) checkHost(server string) ([]*x509.Certificate, error) {
 
-	tout, _ := time.ParseDuration(c.Timeout)
+	tout, err := time.ParseDuration(c.Timeout)
+	if err != nil {
+		return nil, err
+	}
 	//Connect network
 	ipConn, err := net.DialTimeout("tcp", server, tout)
 	if err != nil {
@@ -71,28 +74,25 @@ func (c *CheckExpire) checkHost(server string) ([]*x509.Certificate, error) {
 
 // Gather gets all metric fields and tags and returns any errors it encounters
 func (c *CheckExpire) Gather(acc telegraf.Accumulator) error {
-	if len(c.Servers) != 0 {
-		for _, server := range c.Servers {
-			// Prepare data
-			tags := map[string]string{"server": server}
-			// Gather data
-			var errMessage error
-			var timeToExpire time.Duration
-			timeNow := time.Now()
-			certs, err := c.checkHost(server)
-			if err != nil {
-				errMessage = err
-				timeToExpire = 0
-			} else {
-				errMessage = errors.New("Warning: Certificate is not being verified")
-				timeToExpire = certs[0].NotAfter.Sub(timeNow)
-			}
-			fields := map[string]interface{}{"time_to_expire": timeToExpire.Seconds(), "error": errMessage}
-			// Add metrics
-			acc.AddFields("ssl_cert", fields, tags)
+	errChan := errchan.New(len(c.Servers))
+	for _, server := range c.Servers {
+		// Prepare data
+		tags := map[string]string{"server": server}
+		// Gather data
+		var timeToExpire time.Duration
+		timeNow := time.Now()
+		certs, err := c.checkHost(server)
+		errChan.C <- err
+		if err != nil {
+			timeToExpire = 0
+		} else {
+			timeToExpire = certs[0].NotAfter.Sub(timeNow)
 		}
+		fields := map[string]interface{}{"time_to_expire": timeToExpire.Seconds()}
+		// Add metrics
+		acc.AddFields("ssl_cert", fields, tags)
 	}
-	return nil
+	return errChan.Error()
 }
 
 func init() {
