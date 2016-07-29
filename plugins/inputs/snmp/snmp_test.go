@@ -93,7 +93,7 @@ func TestSampleConfig(t *testing.T) {
 		Fields: []Field{
 			{Name: "hostname", Oid: ".1.2.3.0.1.1"},
 			{Name: "uptime", Oid: ".1.2.3.0.1.200"},
-			{Name: "load", Oid: ".1.2.3.0.1.201"},
+			{Name: "", Oid: ".1.2.3.0.1.201"},
 		},
 		Tables: []Table{
 			{

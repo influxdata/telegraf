@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/soniah/gosnmp"
@@ -16,7 +18,7 @@ import (
 
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
-  agents = [ "127.0.0.1:161" ]
+  agents = ["127.0.0.1:161"]
   version = 2 # Values: 1, 2, or 3
 
   ## SNMPv1 & SNMPv2 parameters
@@ -36,6 +38,8 @@ const sampleConfig = `
 
   ## measurement name
   name = "system"
+  ## SNMP fields are gotten by using an "snmpget" request. If a name is not
+  ## specified, we attempt to use snmptranslate on the OID to get the MIB name.
   [[inputs.snmp.field]]
     name = "hostname"
     oid = ".1.2.3.0.1.1"
@@ -43,13 +47,14 @@ const sampleConfig = `
     name = "uptime"
     oid = ".1.2.3.0.1.200"
   [[inputs.snmp.field]]
-    name = "load"
     oid = ".1.2.3.0.1.201"
 
   [[inputs.snmp.table]]
-    # measurement name
+    ## measurement name
     name = "remote_servers"
-    inherit_tags = [ "hostname" ]
+    inherit_tags = ["hostname"]
+    ## SNMP table fields must be specified individually. If the table field has
+    ## multiple rows, they will all be gotten.
     [[inputs.snmp.table.field]]
       name = "server"
       oid = ".1.2.3.0.0.0"
@@ -102,6 +107,8 @@ type Snmp struct {
 	Fields []Field `toml:"field"`
 
 	connectionCache map[string]snmpConnection
+
+	inited bool
 }
 
 // Table holds the configuration for a SNMP table.
@@ -189,15 +196,6 @@ func Errorf(err error, msg string, format ...interface{}) error {
 	}
 }
 
-func init() {
-	inputs.Add("snmp", func() telegraf.Input {
-		return &Snmp{
-			Retries:        5,
-			MaxRepetitions: 50,
-		}
-	})
-}
-
 // SampleConfig returns the default configuration of the input.
 func (s *Snmp) SampleConfig() string {
 	return sampleConfig
@@ -212,6 +210,10 @@ func (s *Snmp) Description() string {
 // Any error encountered does not halt the process. The errors are accumulated
 // and returned at the end.
 func (s *Snmp) Gather(acc telegraf.Accumulator) error {
+	if !s.inited {
+		s.initOidNames()
+	}
+	s.inited = true
 	var errs Errors
 	for _, agent := range s.Agents {
 		gs, err := s.getConnection(agent)
@@ -244,7 +246,52 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 	return errs
 }
 
-func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table, topTags map[string]string, walk bool) error {
+// initOidNames loops through each [[inputs.snmp.field]] defined.
+// If the field doesn't have a 'name' defined, it will attempt to use
+// snmptranslate to get a name for the OID. If snmptranslate doesn't return a
+// name, or snmptranslate is not available, then use the OID as the name.
+func (s *Snmp) initOidNames() {
+	bin, _ := exec.LookPath("snmptranslate")
+
+	// Lookup names for each OID defined as a "field"
+	for i, field := range s.Fields {
+		if field.Name != "" {
+			continue
+		}
+		s.Fields[i].Name = lookupOidName(bin, field.Oid)
+	}
+
+	// Lookup names for each OID defined as a "table.field"
+	for i, table := range s.Tables {
+		for j, field := range table.Fields {
+			if field.Name != "" {
+				continue
+			}
+			s.Tables[i].Fields[j].Name = lookupOidName(bin, field.Oid)
+		}
+	}
+}
+
+func lookupOidName(bin, oid string) string {
+	name := oid
+	if bin != "" {
+		out, err := internal.CombinedOutputTimeout(
+			exec.Command(bin, "-Os", oid),
+			time.Millisecond*250)
+		if err == nil && len(out) > 0 {
+			name = strings.TrimSpace(string(out))
+		}
+	}
+	return name
+}
+
+func (s *Snmp) gatherTable(
+	acc telegraf.Accumulator,
+	gs snmpConnection,
+	t Table,
+	topTags map[string]string,
+	walk bool,
+) error {
 	rt, err := t.Build(gs, walk)
 	if err != nil {
 		return err
@@ -296,7 +343,6 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 
 		// ifv contains a mapping of table OID index to field value
 		ifv := map[string]interface{}{}
-
 		if !walk {
 			// This is used when fetching non-table fields. Fields configured a the top
 			// scope of the plugin.
@@ -621,4 +667,13 @@ func fieldConvert(conv string, v interface{}) interface{} {
 	}
 
 	return v
+}
+
+func init() {
+	inputs.Add("snmp", func() telegraf.Input {
+		return &Snmp{
+			Retries:        5,
+			MaxRepetitions: 50,
+		}
+	})
 }
