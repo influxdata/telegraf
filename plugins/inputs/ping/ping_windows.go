@@ -65,16 +65,19 @@ func hostPinger(timeout float64, args ...string) (string, error) {
 
 // processPingOutput takes in a string output from the ping command
 // based on linux implementation but using regex ( multilanguage support ) ( shouldn't affect the performance of the program )
-// It returns (<transmitted packets>, <received packets>, <average response>, <min response>, <max response>)
-func processPingOutput(out string) (int, int, int, int, int, error) {
+// It returns (<transmitted packets>, <received reply>, <received packet>, <average response>, <min response>, <max response>)
+func processPingOutput(out string) (int, int, int, int, int, int, error) {
 	// So find a line contain 3 numbers except reply lines
 	var stats, aproxs []string = nil, nil
 	err := errors.New("Fatal error processing ping output")
 	stat := regexp.MustCompile(`=\W*(\d+)\D*=\W*(\d+)\D*=\W*(\d+)`)
 	aprox := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
 	lines := strings.Split(out, "\n")
+	var receivedReply int = 0
 	for _, line := range lines {
-		if !strings.Contains(line, "TTL") {
+		if strings.Contains(line, "TTL") {
+			receivedReply++
+		} else {
 			if stats == nil {
 				stats = stat.FindStringSubmatch(line)
 			}
@@ -86,35 +89,35 @@ func processPingOutput(out string) (int, int, int, int, int, error) {
 
 	// stats data should contain 4 members: entireExpression + ( Send, Receive, Lost )
 	if len(stats) != 4 {
-		return 0, 0, 0, 0, 0, err
+		return 0, 0, 0, 0, 0, 0, err
 	}
 	trans, err := strconv.Atoi(stats[1])
 	if err != nil {
-		return 0, 0, 0, 0, 0, err
+		return 0, 0, 0, 0, 0, 0, err
 	}
-	rec, err := strconv.Atoi(stats[2])
+	receivedPacket, err := strconv.Atoi(stats[2])
 	if err != nil {
-		return 0, 0, 0, 0, 0, err
+		return 0, 0, 0, 0, 0, 0, err
 	}
 
 	// aproxs data should contain 4 members: entireExpression + ( min, max, avg )
 	if len(aproxs) != 4 {
-		return trans, rec, 0, 0, 0, err
+		return trans, receivedReply, receivedPacket, 0, 0, 0, err
 	}
 	min, err := strconv.Atoi(aproxs[1])
 	if err != nil {
-		return trans, rec, 0, 0, 0, err
+		return trans, receivedReply, receivedPacket, 0, 0, 0, err
 	}
 	max, err := strconv.Atoi(aproxs[2])
 	if err != nil {
-		return trans, rec, 0, 0, 0, err
+		return trans, receivedReply, receivedPacket, 0, 0, 0, err
 	}
 	avg, err := strconv.Atoi(aproxs[3])
 	if err != nil {
-		return 0, 0, 0, 0, 0, err
+		return 0, 0, 0, 0, 0, 0, err
 	}
 
-	return trans, rec, avg, min, max, err
+	return trans, receivedReply, receivedPacket, avg, min, max, err
 }
 
 func (p *Ping) timeout() float64 {
@@ -159,7 +162,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
 			}
 			tags := map[string]string{"url": u}
-			trans, rec, avg, min, max, err := processPingOutput(out)
+			trans, recReply, receivePacket, avg, min, max, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
 				if pendingError != nil {
@@ -169,11 +172,14 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 			// Calculate packet loss percentage
-			loss := float64(trans-rec) / float64(trans) * 100.0
+			lossReply := float64(trans-recReply) / float64(trans) * 100.0
+			lossPackets := float64(trans-receivePacket) / float64(trans) * 100.0
 			fields := map[string]interface{}{
 				"packets_transmitted": trans,
-				"packets_received":    rec,
-				"percent_packet_loss": loss,
+				"reply_received":      recReply,
+				"packets_received":    receivePacket,
+				"percent_packet_loss": lossPackets,
+				"percent_reply_loss":  lossReply,
 			}
 			if avg > 0 {
 				fields["average_response_ms"] = avg
