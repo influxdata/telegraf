@@ -215,6 +215,8 @@ func TestFatalPingGather(t *testing.T) {
 	}
 
 	p.Gather(&acc)
+	assert.True(t, acc.HasFloatField("ping", "errors"),
+		"Fatal ping should have packet measurements")
 	assert.False(t, acc.HasIntField("ping", "packets_transmitted"),
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasIntField("ping", "packets_received"),
@@ -267,6 +269,8 @@ func TestUnreachablePingGather(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
+	assert.False(t, acc.HasFloatField("ping", "errors"),
+		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasIntField("ping", "average_response_ms"),
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasIntField("ping", "maximum_response_ms"),

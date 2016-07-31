@@ -169,6 +169,12 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					errorChannel <- pendingError
 				}
 				errorChannel <- err
+				fields := map[string]interface{}{
+					"errors": 100.0,
+				}
+
+				acc.AddFields("ping", fields, tags)
+
 				return
 			}
 			// Calculate packet loss percentage

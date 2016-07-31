@@ -20,6 +20,7 @@ This input plugin will measures the round-trip
 - packets_received ( from ping output )
 - percent_reply_loss ( compute from packets_transmitted and reply_received )
 - percent_packets_loss ( compute from packets_transmitted and packets_received )
+- errors ( when host can not be found or wrong prameters is passed to application )
 - response time
     - average_response_ms ( compute from minimum_response_ms and maximum_response_ms )
     - minimum_response_ms ( from ping output )
