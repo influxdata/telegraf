@@ -72,10 +72,11 @@ func processPingOutput(out string) (int, int, int, int, int, int, error) {
 	err := errors.New("Fatal error processing ping output")
 	stat := regexp.MustCompile(`=\W*(\d+)\D*=\W*(\d+)\D*=\W*(\d+)`)
 	aprox := regexp.MustCompile(`=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms\D*=\W*(\d+)\D*ms`)
+	tttLine := regexp.MustCompile(`TTL=\d+`)
 	lines := strings.Split(out, "\n")
 	var receivedReply int = 0
 	for _, line := range lines {
-		if strings.Contains(line, "TTL") {
+		if tttLine.MatchString(line) {
 			receivedReply++
 		} else {
 			if stats == nil {

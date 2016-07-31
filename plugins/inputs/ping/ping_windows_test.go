@@ -248,6 +248,8 @@ func mockUnreachableHostPinger(timeout float64, args ...string) (string, error) 
 	return UnreachablePingOutput, errors.New("So very bad")
 }
 
+//Reply from 185.28.251.217: TTL expired in transit.
+
 // in case 'Destination net unreachable' ping app return receive packet which is not what we need
 // it's not contain valid metric so treat it as lost one
 func TestUnreachablePingGather(t *testing.T) {
@@ -255,6 +257,52 @@ func TestUnreachablePingGather(t *testing.T) {
 	p := Ping{
 		Urls:     []string{"www.google.com"},
 		pingHost: mockUnreachableHostPinger,
+	}
+
+	p.Gather(&acc)
+
+	tags := map[string]string{"url": "www.google.com"}
+	fields := map[string]interface{}{
+		"packets_transmitted": 4,
+		"packets_received":    1,
+		"reply_received":      0,
+		"percent_packet_loss": 75.0,
+		"percent_reply_loss":  100.0,
+	}
+	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
+
+	assert.False(t, acc.HasFloatField("ping", "errors"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasIntField("ping", "average_response_ms"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasIntField("ping", "maximum_response_ms"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasIntField("ping", "minimum_response_ms"),
+		"Fatal ping should not have packet measurements")
+}
+
+var TTLExpiredPingOutput = `
+Pinging www.google.pl [8.8.8.8] with 32 bytes of data:
+Request timed out.
+Request timed out.
+Reply from 185.28.251.217: TTL expired in transit.
+Request timed out.
+
+Ping statistics for 8.8.8.8:
+    Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
+`
+
+func mockTTLExpiredPinger(timeout float64, args ...string) (string, error) {
+	return TTLExpiredPingOutput, errors.New("So very bad")
+}
+
+// in case 'Destination net unreachable' ping app return receive packet which is not what we need
+// it's not contain valid metric so treat it as lost one
+func TestTTLExpiredPingGather(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:     []string{"www.google.com"},
+		pingHost: mockTTLExpiredPinger,
 	}
 
 	p.Gather(&acc)
