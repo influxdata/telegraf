@@ -123,3 +123,57 @@ func TestBasic(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 }
+
+func TestInvalidJason(t *testing.T) {
+	js := `
+{
+    "version":"2.0.12",
+    "listen_queue":0,
+    "listen_queue_errors":0,
+    "signal_queue":0,
+    "load":0,
+    "pid:28372
+    "uid":10
+}
+`
+
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			_, _ = w.Write([]byte(js))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	defer fakeServer.Close()
+
+	plugin := &uwsgi.Uwsgi{
+		Servers: []string{fakeServer.URL + "/"},
+	}
+	var acc testutil.Accumulator
+	require.Error(t, plugin.Gather(&acc))
+}
+
+func TestHttpError(t *testing.T) {
+	plugin := &uwsgi.Uwsgi{
+		Servers: []string{"http://novalidurladress/"},
+	}
+	var acc testutil.Accumulator
+	require.Error(t, plugin.Gather(&acc))
+}
+
+func TestTcpError(t *testing.T) {
+	plugin := &uwsgi.Uwsgi{
+		Servers: []string{"tcp://novalidtcpadress/"},
+	}
+	var acc testutil.Accumulator
+	require.Error(t, plugin.Gather(&acc))
+}
+
+func TestUnixSocketError(t *testing.T) {
+	plugin := &uwsgi.Uwsgi{
+		Servers: []string{"unix:///novalidunixsocket"},
+	}
+	var acc testutil.Accumulator
+	require.Error(t, plugin.Gather(&acc))
+}

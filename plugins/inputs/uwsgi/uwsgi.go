@@ -1,3 +1,5 @@
+// Package uwsgi implements a telegraf plugin for
+// collecting uwsgi stats from the uwsgi stats server.
 package uwsgi
 
 import (
@@ -15,14 +17,53 @@ import (
 
 var timeout = 5 * time.Second
 
+// uWSGI Server struct
 type Uwsgi struct {
 	Servers []string `toml:"server"`
 }
 
+// Errors is a list of errors accumulated during an interval.
+type Errors []error
+
+func (errs Errors) Error() string {
+	s := ""
+	for _, err := range errs {
+		if s == "" {
+			s = err.Error()
+		} else {
+			s = s + ". " + err.Error()
+		}
+	}
+	return s
+}
+
+// NestedError wraps an error returned from deeper in the code.
+type NestedError struct {
+	// Err is the error from where the NestedError was constructed.
+	Err error
+	// NestedError is the error that was passed back from the called function.
+	NestedErr error
+}
+
+// Error returns a concatenated string of all the nested errors.
+func (ne NestedError) Error() string {
+	return ne.Err.Error() + ": " + ne.NestedErr.Error()
+}
+
+// Errorf is a convenience function for constructing a NestedError.
+func Errorf(err error, msg string, format ...interface{}) error {
+	return NestedError{
+		NestedErr: err,
+		Err:       fmt.Errorf(msg, format...),
+	}
+}
+
+// Description returns the plugin description
 func (u *Uwsgi) Description() string {
 	return "Read uWSGI metrics."
 }
 
+// SampleConfig returns the sample configuration
 func (u *Uwsgi) SampleConfig() string {
 	return `
     ## List with urls of uWSGI Stats servers. Url must match pattern:
@@ -34,17 +75,20 @@ func (u *Uwsgi) SampleConfig() string {
 `
 }
 
+// Gather collect data from uWSGI Server
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
+	var errs Errors
 	for _, s := range u.Servers {
 		n, err := url.Parse(s)
 		if err != nil {
 			return fmt.Errorf("Could not parse uWSGI Stats Server url '%s': %s", s, err)
 		}
-
-		u.gatherServer(acc, n)
+		if err := u.gatherServer(acc, n); err != nil {
+			errs = append(errs, Errorf(err, "server %s", s))
+		}
 
 	}
-	return nil
+	return errs
 }
 
 func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
@@ -59,7 +103,7 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 	case "http":
 		resp, err := http.Get(url.String())
 		if err != nil {
-			return fmt.Errorf("Could not connect to uWSGI Stats Server '%s': %s", url.String(), err)
+			return Errorf(err, "Could not connect to uWSGI Stats Server '%s'", url.String())
 		}
 		r = resp.Body
 	default:
@@ -67,7 +111,7 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("Could not connect to uWSGI Stats Server '%s': %s", url.String(), err)
+		return Errorf(err, "Could not connect to uWSGI Stats Server '%s'", url.String())
 	}
 	defer r.Close()
 
@@ -75,11 +119,13 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 	s.Url = url.String()
 
 	dec := json.NewDecoder(r)
-	dec.Decode(&s)
+	if err := dec.Decode(&s); err != nil {
+		return Errorf(err, "Could not decode json payload from server '%s'", url.String())
+	}
 
 	u.gatherStatServer(acc, &s)
 
-	return nil
+	return err
 }
 
 func (u *Uwsgi) gatherStatServer(acc telegraf.Accumulator, s *StatsServer) {
