@@ -1,6 +1,7 @@
 package particle
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,10 +9,10 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func ParticleWebhookRequest(urlEncodedString string, t *testing.T) {
+func ParticleWebhookRequest(event string, urlEncodedString string, t *testing.T) {
 	var acc testutil.Accumulator
 	pwh := &ParticleWebhook{Path: "/particle", acc: &acc}
-	req, _ := http.NewRequest("POST", "/particle", urlEncodedString)
+	req, _ := http.NewRequest("POST", "/particle", bytes.NewBufferString(urlEncodedString))
 	w := httptest.NewRecorder()
 	pwh.eventHandler(w, req)
 	if w.Code != http.StatusOK {
@@ -19,6 +20,6 @@ func ParticleWebhookRequest(urlEncodedString string, t *testing.T) {
 	}
 }
 
-func TestNewEvent(t *testing.T) {
-	ParticleWebhookRequest(NewEventURLEncoded())
+func TestParticleEvent(t *testing.T) {
+	ParticleWebhookRequest("particle_event", NewEventURLEncoded(), t)
 }
