@@ -42,6 +42,7 @@ github.com/prometheus/client_golang 18acf9993a863f4c4b40612e19cdd243e7c86831
 github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
 github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
+github.com/pusher/pusher-http-go 2bba5f217f6f0f4f0c0a9bb11b945b206b32bec5
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
 github.com/shirou/gopsutil 586bb697f3ec9f8ec08ffefe18f521a64534037c
 github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
