@@ -86,7 +86,7 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 		log.Fatalf("Failed to connect: %v", err)
 	}
 
-	c := Telemetry.NewOpenConfigTelemetryClient(m.grpcClientConn)
+	c := telemetry.NewOpenConfigTelemetryClient(m.grpcClientConn)
 
 	wg := new(sync.WaitGroup)
 
@@ -105,7 +105,7 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 				sensorPath = sensor
 			}
 			stream, err := c.TelemetrySubscribe(context.Background(),
-				&Telemetry.SubscriptionRequest{PathList: []*Telemetry.Path{&Telemetry.Path{Path: sensorPath, SampleFrequency: m.SampleFrequency}}})
+				&telemetry.SubscriptionRequest{PathList: []*telemetry.Path{&telemetry.Path{Path: sensorPath, SampleFrequency: m.SampleFrequency}}})
 			if err != nil {
 				log.Fatalf("Could not subscribe: %v", err)
 			}
@@ -128,25 +128,25 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 
 				for _, v := range r.Kv {
 					switch v.Value.(type) {
-					case *Telemetry.KeyValue_StrValue:
+					case *telemetry.KeyValue_StrValue:
 						tags[v.Key] = v.GetStrValue()
 						break
-					case *Telemetry.KeyValue_DoubleValue:
+					case *telemetry.KeyValue_DoubleValue:
 						fields[v.Key] = v.GetDoubleValue()
 						break
-					case *Telemetry.KeyValue_IntValue:
+					case *telemetry.KeyValue_IntValue:
 						fields[v.Key] = v.GetIntValue()
 						break
-					case *Telemetry.KeyValue_UintValue:
+					case *telemetry.KeyValue_UintValue:
 						fields[v.Key] = v.GetUintValue()
 						break
-					case *Telemetry.KeyValue_SintValue:
+					case *telemetry.KeyValue_SintValue:
 						fields[v.Key] = v.GetSintValue()
 						break
-					case *Telemetry.KeyValue_BoolValue:
+					case *telemetry.KeyValue_BoolValue:
 						fields[v.Key] = v.GetBoolValue()
 						break
-					case *Telemetry.KeyValue_BytesValue:
+					case *telemetry.KeyValue_BytesValue:
 						fields[v.Key] = v.GetBytesValue()
 						break
 					default:

@@ -35,7 +35,7 @@
 
 syntax = "proto3";
 
-package Telemetry;
+package telemetry;
 
 // Interface exported by Agent
 service OpenConfigTelemetry {
