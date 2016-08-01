@@ -1,16 +1,16 @@
 package particle
 
 import (
-  "net/http"
-  "net/http/httptest"
-  "testing"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
-  "github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func ParticleWebhookRequest(urlEncodedString string, t *testing.T) {
 	var acc testutil.Accumulator
-	pwh:= &ParticleWebhook{Path: "/particle", acc: &acc}
+	pwh := &ParticleWebhook{Path: "/particle", acc: &acc}
 	req, _ := http.NewRequest("POST", "/particle", urlEncodedString)
 	w := httptest.NewRecorder()
 	pwh.eventHandler(w, req)
@@ -20,5 +20,5 @@ func ParticleWebhookRequest(urlEncodedString string, t *testing.T) {
 }
 
 func TestNewEvent(t *testing.T) {
-    ParticleWebhookRequest(NewEventURLEncoded())
+	ParticleWebhookRequest(NewEventURLEncoded())
 }

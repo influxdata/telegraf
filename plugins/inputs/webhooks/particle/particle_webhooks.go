@@ -25,7 +25,7 @@ func (pwh *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulato
 func (pwh *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	if 	err := r.ParseForm(); err != nil {
+	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
