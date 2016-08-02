@@ -11,7 +11,7 @@ import (
 const dockerid = "somerandomuser"
 const hexBytes = "0123456789abcdef"
 const imagename = "testimage"
-const registry = "https://registry.hub.docker.com"
+const registry = "https://registry.hub.docker.com/u/"
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -27,39 +27,38 @@ func RandStringBytes(n int) string {
 
 func NewEventJSONEncoded() string {
 	return fmt.Sprintf(`{
-"callback_url": %s,
+"callback_url": "%s",
 "push_data": {
     "images": [
-        %s,
-        %s,
+        "%s",
+        "%s"
     ],
-    "pushed_at" %v,
-    "pusher": %s
+    "pushed_at": %v,
+    "pusher": "%s"
 },
 "repository": {
-    "comment_count": "0",
+    "comment_count": 0,
     "date_created": %v,
-    "description: "",
+    "description": "",
     "dockerfile": "",
     "is_official": false,
     "is_private": true,
     "is_trusted": true,
     "name": "testhook",
-    "namespace": "dazwilkin",
-    "owner": %s,
-    "repo_name": "dazwilkin/testwebhook",
-    "repo_url": %s,
+    "namespace": "telegraf",
+    "owner": "%s",
+    "repo_name": "%s",
+    "repo_url": "%s",
     "star_count": 0,
     "status": "Active" 
 }
 }`,
-		registry,
+		fmt.Sprintf("%s/%s/%s/%s/", registry, dockerid, imagename, RandStringBytes(64)),
 		RandStringBytes(64),
 		RandStringBytes(64),
 		time.Now().Unix(),
 		dockerid,
 		time.Now().Unix(),
 		dockerid,
-		fmt.Sprintf("%s/%s", dockerid, imagename),
-		fmt.Sprintf("%s/u/%s/%s", registry, dockerid, imagename))
+		fmt.Sprintf("%s/%s", dockerid, imagename))
 }
