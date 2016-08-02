@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.1_amd64.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1.x86_64.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.2_amd64.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.2.x86_64.rpm
 
 Latest (arm):
-* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.1_armhf.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1.armhf.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_0.13.2_armhf.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.2.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,14 +46,14 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_amd64.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_i386.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_armhf.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.2_linux_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.2_linux_i386.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.2_linux_armhf.tar.gz
 
 ### FreeBSD tarball:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_freebsd_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.2_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
@@ -69,8 +69,8 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_windows_amd64.zip
-* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_windows_i386.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.2_windows_amd64.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-0.13.2_windows_i386.zip
 
 ### From Source:
 
