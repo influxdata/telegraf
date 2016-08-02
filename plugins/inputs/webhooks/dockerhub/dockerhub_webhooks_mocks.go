@@ -45,7 +45,7 @@ func NewEventJSONEncoded() string {
     "is_private": true,
     "is_trusted": true,
     "name": "testhook",
-    "namespace": "telegraf",
+    "namespace": "%s",
     "owner": "%s",
     "repo_name": "%s",
     "repo_url": "%s",
@@ -60,5 +60,7 @@ func NewEventJSONEncoded() string {
 		dockerid,
 		time.Now().Unix(),
 		dockerid,
-		fmt.Sprintf("%s/%s", dockerid, imagename))
+		dockerid,
+		fmt.Sprintf("%s/%s", dockerid, imagename),
+		fmt.Sprintf("%s/%s/%s/", registry, dockerid, imagename))
 }
