@@ -10,9 +10,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/dockerhub"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/particle"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
 
@@ -27,10 +27,10 @@ func init() {
 type Webhooks struct {
 	ServiceAddress string
 
-	Github   *github.GithubWebhook
-	Mandrill *mandrill.MandrillWebhook
-	Particle *particle.ParticleWebhook
-	Rollbar  *rollbar.RollbarWebhook
+	Dockerhub *dockerhub.DockerhubWebhook
+	Github    *github.GithubWebhook
+	Mandrill  *mandrill.MandrillWebhook
+	Rollbar   *rollbar.RollbarWebhook
 }
 
 func NewWebhooks() *Webhooks {
@@ -42,14 +42,14 @@ func (wb *Webhooks) SampleConfig() string {
   ## Address and port to host Webhook listener on
   service_address = ":1619"
 
+  [inputs.webhooks.dockerhub]
+    path = "/dockerhub"
+
   [inputs.webhooks.github]
     path = "/github"
 
   [inputs.webhooks.mandrill]
     path = "/mandrill"
-
-  [inputs.webhooks.particle]
-    path = "/particle"
 
   [inputs.webhooks.rollbar]
     path = "/rollbar"
