@@ -300,12 +300,12 @@ master/messages_deactivate_framework=0 ...
 Meoso tasks metrics (if enabled):
 ```
 mesos-tasks,host=172.17.8.102,server=172.17.8.101,framework_id=e3060235-c4ed-4765-9d36-784e3beca07f-0000,task_id=hello-world.e4b5b497-2ccd-11e6-a659-0242fb222ce2
-cpus_limit=0.2,statistics_cpus_system_time_secs=142.49,statistics_cpus_user_time_secs=388.14,
-mem_anon_bytes=359129088,statistics_mem_cache_bytes=3964928,
-mem_critical_pressure_counter=0,statistics_mem_file_bytes=3964928,
-mem_limit_bytes=767557632,statistics_mem_low_pressure_counter=0,
-mem_mapped_file_bytes=114688,statistics_mem_medium_pressure_counter=0,
-mem_rss_bytes=359129088,statistics_mem_swap_bytes=0,statistics_mem_total_bytes=363094016,
-mem_total_memsw_bytes=363094016,statistics_mem_unevictable_bytes=0,
+cpus_limit=0.2,cpus_system_time_secs=142.49,cpus_user_time_secs=388.14,
+mem_anon_bytes=359129088,mem_cache_bytes=3964928,
+mem_critical_pressure_counter=0,mem_file_bytes=3964928,
+mem_limit_bytes=767557632,mem_low_pressure_counter=0,
+mem_mapped_file_bytes=114688,mem_medium_pressure_counter=0,
+mem_rss_bytes=359129088,mem_swap_bytes=0,mem_total_bytes=363094016,
+mem_total_memsw_bytes=363094016,mem_unevictable_bytes=0,
 timestamp=1465486052.70525 1465486053052811792...
 ```
