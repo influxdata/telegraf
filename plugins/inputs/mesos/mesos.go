@@ -116,7 +116,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	for _, v := range m.Slaves {
 		wg.Add(1)
 		go func(c string) {
-			errorChannel <- m.gatherMainMetrics(c, ":5051", MASTER, acc)
+			errorChannel <- m.gatherMainMetrics(c, ":5051", SLAVE, acc)
 			wg.Done()
 			return
 		}(v)
@@ -420,8 +420,15 @@ var client = &http.Client{
 	Timeout:   time.Duration(4 * time.Second),
 }
 
+// TaskStats struct for JSON API output /monitor/statistics
+type TaskStats struct {
+	ExecutorID  string                 `json:"executor_id"`
+	FrameWorkID string                 `json:"framework_id"`
+	Statistics  map[string]interface{} `json:"statistics"`
+}
+
 func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc telegraf.Accumulator) error {
-	var metrics []map[string]interface{}
+	var metrics []TaskStats
 
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
@@ -452,10 +459,11 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 	}
 
 	for _, task := range metrics {
-		tags["task_id"] = task["executor_id"].(string)
+		tags["task_id"] = task.ExecutorID
+		tags["framework_id"] = task.FrameWorkID
 
 		jf := jsonparser.JSONFlattener{}
-		err = jf.FlattenJSON("", task)
+		err = jf.FlattenJSON("", task.Statistics)
 
 		if err != nil {
 			return err
@@ -508,6 +516,14 @@ func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc t
 
 	if err != nil {
 		return err
+	}
+
+	if role == MASTER {
+		if jf.Fields["master/cpus_total"] != 0.0 {
+			tags["state"] = "leader"
+		} else {
+			tags["state"] = "follower"
+		}
 	}
 
 	acc.AddFields("mesos", jf.Fields, tags)
