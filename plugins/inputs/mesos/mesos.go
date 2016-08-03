@@ -423,7 +423,7 @@ var client = &http.Client{
 // TaskStats struct for JSON API output /monitor/statistics
 type TaskStats struct {
 	ExecutorID  string                 `json:"executor_id"`
-	FrameWorkID string                 `json:"framework_id"`
+	FrameworkID string                 `json:"framework_id"`
 	Statistics  map[string]interface{} `json:"statistics"`
 }
 
@@ -460,7 +460,7 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 
 	for _, task := range metrics {
 		tags["task_id"] = task.ExecutorID
-		tags["framework_id"] = task.FrameWorkID
+		tags["framework_id"] = task.FrameworkID
 
 		jf := jsonparser.JSONFlattener{}
 		err = jf.FlattenJSON("", task.Statistics)
@@ -519,7 +519,7 @@ func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc t
 	}
 
 	if role == MASTER {
-		if jf.Fields["master/cpus_total"] != 0.0 {
+		if jf.Fields["master/elected"] != 0.0 {
 			tags["state"] = "leader"
 		} else {
 			tags["state"] = "follower"
