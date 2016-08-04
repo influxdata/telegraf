@@ -468,8 +468,9 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 		if err != nil {
 			return err
 		}
+		timestamp := time.Unix(int64(jf.Fields["timestamp"].(float64)),0)
 
-		acc.AddFields("mesos-tasks", jf.Fields, tags)
+		acc.AddFields("mesos-tasks", jf.Fields, tags, timestamp)
 	}
 
 	return nil
