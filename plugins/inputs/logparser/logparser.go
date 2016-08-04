@@ -45,7 +45,7 @@ const sampleConfig = `
   ##   /var/log/**.log     -> recursively find all .log files in /var/log
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
   ##   /var/log/apache.log -> only tail the apache log file
-  files = ["/var/log/influxdb/influxdb.log"]
+  files = ["/var/log/apache/access.log"]
   ## Read file from beginning.
   from_beginning = false
 
@@ -58,9 +58,9 @@ const sampleConfig = `
     ## Other common built-in patterns are:
     ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
     ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
-    patterns = ["%{INFLUXDB_HTTPD_LOG}"]
+    patterns = ["%{COMBINED_LOG_FORMAT}"]
     ## Name of the outputted measurement name.
-    measurement = "influxdb_log"
+    measurement = "apache_access_log"
     ## Full path(s) to custom pattern files.
     custom_pattern_files = []
     ## Custom patterns can also be defined here. Put one pattern per line.

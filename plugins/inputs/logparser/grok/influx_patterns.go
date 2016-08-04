@@ -55,14 +55,12 @@ EXAMPLE_LOG \[%{HTTPDATE:ts:ts-httpd}\] %{NUMBER:myfloat:float} %{RESPONSE_CODE}
 # Wider-ranging username matching vs. logstash built-in %{USER}
 NGUSERNAME [a-zA-Z\.\@\-\+_%]+
 NGUSER %{NGUSERNAME}
+# Wider-ranging client IP matching
+CLIENT (?:%{IPORHOST}|%{HOSTPORT}|::1)
 
 ##
 ## COMMON LOG PATTERNS
 ##
-
-# InfluxDB log patterns
-CLIENT (?:%{IPORHOST}|%{HOSTPORT}|::1)
-INFLUXDB_HTTPD_LOG \[httpd\] %{COMBINED_LOG_FORMAT} %{UUID:uuid:drop} %{NUMBER:response_time_us:int}
 
 # apache & nginx logs, this is also known as the "common log format"
 #   see https://en.wikipedia.org/wiki/Common_Log_Format
