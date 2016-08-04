@@ -158,7 +158,6 @@ func (t *TcpListener) tcpListen() error {
 			if err != nil {
 				return err
 			}
-			// log.Printf("Received TCP Connection from %s", conn.RemoteAddr())
 
 			select {
 			case <-t.accept:
@@ -194,7 +193,6 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 	defer func() {
 		t.wg.Done()
 		conn.Close()
-		// log.Printf("Closed TCP Connection from %s", conn.RemoteAddr())
 		// Add one connection potential back to channel when this one closes
 		t.accept <- true
 		t.forget(id)
@@ -239,14 +237,19 @@ func (t *TcpListener) tcpParser() error {
 	for {
 		select {
 		case <-t.done:
-			return nil
+			// drain input packets before finishing:
+			if len(t.in) == 0 {
+				return nil
+			}
 		case packet = <-t.in:
 			if len(packet) == 0 {
 				continue
 			}
 			metrics, err = t.parser.Parse(packet)
 			if err == nil {
-				t.storeMetrics(metrics)
+				for _, m := range metrics {
+					t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+				}
 			} else {
 				t.malformed++
 				if t.malformed == 1 || t.malformed%1000 == 0 {
@@ -255,15 +258,6 @@ func (t *TcpListener) tcpParser() error {
 			}
 		}
 	}
-}
-
-func (t *TcpListener) storeMetrics(metrics []telegraf.Metric) error {
-	t.Lock()
-	defer t.Unlock()
-	for _, m := range metrics {
-		t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-	}
-	return nil
 }
 
 // forget a TCP connection
