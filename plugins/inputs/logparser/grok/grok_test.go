@@ -38,32 +38,6 @@ func Benchmark_ParseLine_CombinedLogFormat(b *testing.B) {
 	benchM = m
 }
 
-func Benchmark_ParseLine_InfluxLog(b *testing.B) {
-	p := &Parser{
-		Patterns: []string{"%{INFLUXDB_HTTPD_LOG}"},
-	}
-	p.Compile()
-
-	var m telegraf.Metric
-	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`[httpd] 192.168.1.1 - - [14/Jun/2016:11:33:29 +0100] "POST /write?consistency=any&db=telegraf&precision=ns&rp= HTTP/1.1" 204 0 "-" "InfluxDBClient" 6f61bc44-321b-11e6-8050-000000000000 2513`)
-	}
-	benchM = m
-}
-
-func Benchmark_ParseLine_InfluxLog_NoMatch(b *testing.B) {
-	p := &Parser{
-		Patterns: []string{"%{INFLUXDB_HTTPD_LOG}"},
-	}
-	p.Compile()
-
-	var m telegraf.Metric
-	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`[retention] 2016/06/14 14:38:24 retention policy shard deletion check commencing`)
-	}
-	benchM = m
-}
-
 func Benchmark_ParseLine_CustomPattern(b *testing.B) {
 	p := &Parser{
 		Patterns: []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
@@ -108,9 +82,9 @@ func TestMeasurementName(t *testing.T) {
 	assert.Equal(t, "my_web_log", m.Name())
 }
 
-func TestBuiltinInfluxdbHttpd(t *testing.T) {
+func TestCustomInfluxdbHttpd(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{INFLUXDB_HTTPD_LOG}"},
+		Patterns: []string{`\[httpd\] %{COMBINED_LOG_FORMAT} %{UUID:uuid:drop} %{NUMBER:response_time_us:int}`},
 	}
 	assert.NoError(t, p.Compile())
 
