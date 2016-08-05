@@ -27,7 +27,8 @@ const (
 	defaultSeparator = "_"
 )
 
-var dropwarn = "ERROR: Message queue full. Discarding line [%s] " +
+var dropwarn = "ERROR: statsd message queue full. " +
+	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
 var prevInstance *Statsd
@@ -65,6 +66,8 @@ type Statsd struct {
 
 	sync.Mutex
 	wg sync.WaitGroup
+	// drops tracks the number of dropped metrics.
+	drops int
 
 	// Channel for all incoming statsd packets
 	in   chan []byte
@@ -291,7 +294,10 @@ func (s *Statsd) udpListen() error {
 			select {
 			case s.in <- bufCopy:
 			default:
-				log.Printf(dropwarn, string(buf[:n]))
+				s.drops++
+				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
+					log.Printf(dropwarn, s.drops)
+				}
 			}
 		}
 	}

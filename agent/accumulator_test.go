@@ -1,8 +1,11 @@
 package agent
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"testing"
 	"time"
 
@@ -10,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal/models"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAdd(t *testing.T) {
@@ -35,6 +39,128 @@ func TestAdd(t *testing.T) {
 	actual = testm.String()
 	assert.Equal(t,
 		fmt.Sprintf("acctest,acc=test value=101 %d", now.UnixNano()),
+		actual)
+}
+
+func TestAddNoPrecisionWithInterval(t *testing.T) {
+	a := accumulator{}
+	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &internal_models.InputConfig{}
+
+	a.SetPrecision(0, time.Second)
+	a.Add("acctest", float64(101), map[string]string{})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest,acc=test value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		actual)
+}
+
+func TestAddNoIntervalWithPrecision(t *testing.T) {
+	a := accumulator{}
+	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &internal_models.InputConfig{}
+
+	a.SetPrecision(time.Second, time.Millisecond)
+	a.Add("acctest", float64(101), map[string]string{})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest,acc=test value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		actual)
+}
+
+func TestAddDisablePrecision(t *testing.T) {
+	a := accumulator{}
+	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &internal_models.InputConfig{}
+
+	a.SetPrecision(time.Second, time.Millisecond)
+	a.DisablePrecision()
+	a.Add("acctest", float64(101), map[string]string{})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest,acc=test value=101")
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082912748)),
+		actual)
+}
+
+func TestDifferentPrecisions(t *testing.T) {
+	a := accumulator{}
+	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &internal_models.InputConfig{}
+
+	a.SetPrecision(0, time.Second)
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		actual)
+
+	a.SetPrecision(0, time.Millisecond)
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800083000000)),
+		actual)
+
+	a.SetPrecision(0, time.Microsecond)
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082913000)),
+		actual)
+
+	a.SetPrecision(0, time.Nanosecond)
+	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082912748)),
 		actual)
 }
 
@@ -331,4 +457,28 @@ func TestAccFilterTags(t *testing.T) {
 	assert.Equal(t,
 		fmt.Sprintf("acctest value=101 %d", now.UnixNano()),
 		actual)
+}
+
+func TestAccAddError(t *testing.T) {
+	errBuf := bytes.NewBuffer(nil)
+	log.SetOutput(errBuf)
+	defer log.SetOutput(os.Stderr)
+
+	a := accumulator{}
+	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig.Name = "mock_plugin"
+
+	a.AddError(fmt.Errorf("foo"))
+	a.AddError(fmt.Errorf("bar"))
+	a.AddError(fmt.Errorf("baz"))
+
+	errs := bytes.Split(errBuf.Bytes(), []byte{'\n'})
+	assert.EqualValues(t, 3, a.errCount)
+	require.Len(t, errs, 4) // 4 because of trailing newline
+	assert.Contains(t, string(errs[0]), "mock_plugin")
+	assert.Contains(t, string(errs[0]), "foo")
+	assert.Contains(t, string(errs[1]), "mock_plugin")
+	assert.Contains(t, string(errs[1]), "bar")
+	assert.Contains(t, string(errs[2]), "mock_plugin")
+	assert.Contains(t, string(errs[2]), "baz")
 }

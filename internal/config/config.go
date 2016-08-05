@@ -77,6 +77,14 @@ type AgentConfig struct {
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
+	// By default, precision will be set to the same timestamp order as the
+	// collection interval, with the maximum being 1s.
+	//   ie, when interval = "10s", precision will be "1s"
+	//       when interval = "250ms", precision will be "1ms"
+	// Precision will NOT be used for service inputs. It is up to each individual
+	// service input to set the timestamp at the appropriate precision.
+	Precision internal.Duration
+
 	// CollectionJitter is used to jitter the collection by a random amount.
 	// Each plugin will sleep for a random time within jitter before collecting.
 	// This can be used to avoid many plugins querying things like sysfs at the
@@ -108,11 +116,10 @@ type AgentConfig struct {
 	// does _not_ deactivate FlushInterval.
 	FlushBufferWhenFull bool
 
-	// TODO(cam): Remove UTC and Precision parameters, they are no longer
+	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatability
-	UTC       bool `toml:"utc"`
-	Precision string
+	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
 	Debug bool
@@ -132,7 +139,7 @@ func (c *Config) InputNames() []string {
 	return name
 }
 
-// Outputs returns a list of strings of the configured inputs.
+// Outputs returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
@@ -209,6 +216,11 @@ var header = `# Telegraf Configuration
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
+  ## By default, precision will be set to the same timestamp order as the
+  ## collection interval, with the maximum being 1s.
+  ## Precision will NOT be used for service inputs, such as logparser and statsd.
+  ## Valid values are "Nns", "Nus" (or "Nµs"), "Nms", "Ns".
+  precision = ""
   ## Run telegraf in debug mode
   debug = false
   ## Run telegraf in quiet mode
@@ -527,6 +539,13 @@ func (c *Config) LoadConfig(path string) error {
 	return nil
 }
 
+// trimBOM trims the Byte-Order-Marks from the beginning of the file.
+// this is for Windows compatability only.
+// see https://github.com/influxdata/telegraf/issues/1378
+func trimBOM(f []byte) []byte {
+	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
+}
+
 // parseFile loads a TOML configuration from a provided path and
 // returns the AST produced from the TOML parser. When loading the file, it
 // will find environment variables and replace them.
@@ -535,6 +554,8 @@ func parseFile(fpath string) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
+	// ugh windows why
+	contents = trimBOM(contents)
 
 	env_vars := envVarRe.FindAll(contents, -1)
 	for _, env_var := range env_vars {

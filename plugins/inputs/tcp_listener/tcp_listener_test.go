@@ -37,6 +37,62 @@ func newTestTcpListener() (*TcpListener, chan []byte) {
 	return listener, in
 }
 
+// benchmark how long it takes to accept & process 100,000 metrics:
+func BenchmarkTCP(b *testing.B) {
+	listener := TcpListener{
+		ServiceAddress:         ":8198",
+		AllowedPendingMessages: 100000,
+		MaxTCPConnections:      250,
+	}
+	listener.parser, _ = parsers.NewInfluxParser()
+	acc := &testutil.Accumulator{Discard: true}
+
+	// send multiple messages to socket
+	for n := 0; n < b.N; n++ {
+		err := listener.Start(acc)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(time.Millisecond * 25)
+		conn, err := net.Dial("tcp", "127.0.0.1:8198")
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < 100000; i++ {
+			fmt.Fprintf(conn, testMsg)
+		}
+		// wait for 100,000 metrics to get added to accumulator
+		time.Sleep(time.Millisecond)
+		listener.Stop()
+	}
+}
+
+func TestHighTrafficTCP(t *testing.T) {
+	listener := TcpListener{
+		ServiceAddress:         ":8199",
+		AllowedPendingMessages: 100000,
+		MaxTCPConnections:      250,
+	}
+	listener.parser, _ = parsers.NewInfluxParser()
+	acc := &testutil.Accumulator{}
+
+	// send multiple messages to socket
+	err := listener.Start(acc)
+	require.NoError(t, err)
+
+	time.Sleep(time.Millisecond * 25)
+	conn, err := net.Dial("tcp", "127.0.0.1:8199")
+	require.NoError(t, err)
+	for i := 0; i < 100000; i++ {
+		fmt.Fprintf(conn, testMsg)
+	}
+	time.Sleep(time.Millisecond)
+	listener.Stop()
+
+	assert.Equal(t, 100000, len(acc.Metrics))
+}
+
 func TestConnectTCP(t *testing.T) {
 	listener := TcpListener{
 		ServiceAddress:         ":8194",

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -34,7 +35,7 @@ func (n *Nginx) Description() string {
 
 func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	var outerr error
+	errChan := errchan.New(len(n.Urls))
 
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
@@ -45,13 +46,12 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			outerr = n.gatherUrl(addr, acc)
+			errChan.C <- n.gatherUrl(addr, acc)
 		}(addr)
 	}
 
 	wg.Wait()
-
-	return outerr
+	return errChan.Error()
 }
 
 var tr = &http.Transport{
@@ -97,11 +97,12 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	data := strings.SplitN(strings.TrimSpace(line), " ", 3)
+	data := strings.Fields(line)
 	accepts, err := strconv.ParseUint(data[0], 10, 64)
 	if err != nil {
 		return err
 	}
+
 	handled, err := strconv.ParseUint(data[1], 10, 64)
 	if err != nil {
 		return err
@@ -116,7 +117,7 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	data = strings.SplitN(strings.TrimSpace(line), " ", 6)
+	data = strings.Fields(line)
 	reading, err := strconv.ParseUint(data[1], 10, 64)
 	if err != nil {
 		return err

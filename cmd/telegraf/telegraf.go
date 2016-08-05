@@ -39,12 +39,6 @@ var fOutputList = flag.Bool("output-list", false,
 	"print available output plugins.")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
-var fInputFiltersLegacy = flag.String("filter", "",
-	"filter the inputs to enable, separator is :")
-var fOutputFiltersLegacy = flag.String("outputfilter", "",
-	"filter the outputs to enable, separator is :")
-var fConfigDirectoryLegacy = flag.String("configdirectory", "",
-	"directory containing additional *.conf files")
 
 // Telegraf version, populated linker.
 //   ie, -ldflags "-X main.version=`git describe --always --tags`"
@@ -110,24 +104,11 @@ func main() {
 		args := flag.Args()
 
 		var inputFilters []string
-		if *fInputFiltersLegacy != "" {
-			fmt.Printf("WARNING '--filter' flag is deprecated, please use" +
-				" '--input-filter'")
-			inputFilter := strings.TrimSpace(*fInputFiltersLegacy)
-			inputFilters = strings.Split(":"+inputFilter+":", ":")
-		}
 		if *fInputFilters != "" {
 			inputFilter := strings.TrimSpace(*fInputFilters)
 			inputFilters = strings.Split(":"+inputFilter+":", ":")
 		}
-
 		var outputFilters []string
-		if *fOutputFiltersLegacy != "" {
-			fmt.Printf("WARNING '--outputfilter' flag is deprecated, please use" +
-				" '--output-filter'")
-			outputFilter := strings.TrimSpace(*fOutputFiltersLegacy)
-			outputFilters = strings.Split(":"+outputFilter+":", ":")
-		}
 		if *fOutputFilters != "" {
 			outputFilter := strings.TrimSpace(*fOutputFilters)
 			outputFilters = strings.Split(":"+outputFilter+":", ":")
@@ -145,34 +126,28 @@ func main() {
 			}
 		}
 
-		if *fOutputList {
+		// switch for flags which just do something and exit immediately
+		switch {
+		case *fOutputList:
 			fmt.Println("Available Output Plugins:")
 			for k, _ := range outputs.Outputs {
 				fmt.Printf("  %s\n", k)
 			}
 			return
-		}
-
-		if *fInputList {
+		case *fInputList:
 			fmt.Println("Available Input Plugins:")
 			for k, _ := range inputs.Inputs {
 				fmt.Printf("  %s\n", k)
 			}
 			return
-		}
-
-		if *fVersion {
+		case *fVersion:
 			v := fmt.Sprintf("Telegraf - version %s", version)
 			fmt.Println(v)
 			return
-		}
-
-		if *fSampleConfig {
+		case *fSampleConfig:
 			config.PrintSampleConfig(inputFilters, outputFilters)
 			return
-		}
-
-		if *fUsage != "" {
+		case *fUsage != "":
 			if err := config.PrintInputConfig(*fUsage); err != nil {
 				if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
 					log.Fatalf("%s and %s", err, err2)
@@ -189,15 +164,6 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
-		}
-
-		if *fConfigDirectoryLegacy != "" {
-			fmt.Printf("WARNING '--configdirectory' flag is deprecated, please use" +
-				" '--config-directory'")
-			err = c.LoadDirectory(*fConfigDirectoryLegacy)
-			if err != nil {
-				log.Fatal(err)
-			}
 		}
 
 		if *fConfigDirectory != "" {
