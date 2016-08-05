@@ -71,7 +71,7 @@ func (p *SpecProcessor) pushMetrics() {
 		fields[prefix+"read_count"] = io.ReadCount
 		fields[prefix+"write_count"] = io.WriteCount
 		fields[prefix+"read_bytes"] = io.ReadBytes
-		fields[prefix+"write_bytes"] = io.WriteCount
+		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
 	cpu_time, err := p.proc.Times()
