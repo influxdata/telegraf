@@ -3,8 +3,8 @@ package udp_listener
 import (
 	"log"
 	"net"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -27,6 +27,8 @@ type UdpListener struct {
 	done chan struct{}
 	// drops tracks the number of dropped metrics.
 	drops int
+	// malformed tracks the number of malformed packets
+	malformed int
 
 	parser parsers.Parser
 
@@ -43,6 +45,9 @@ const UDP_MAX_PACKET_SIZE int = 64 * 1024
 var dropwarn = "ERROR: udp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
+
+var malformedwarn = "WARNING: udp_listener has received %d malformed packets" +
+	" thus far."
 
 const sampleConfig = `
   ## Address and port to host UDP listener on
@@ -94,9 +99,11 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 }
 
 func (u *UdpListener) Stop() {
+	u.Lock()
+	defer u.Unlock()
 	close(u.done)
-	u.listener.Close()
 	u.wg.Wait()
+	u.listener.Close()
 	close(u.in)
 	log.Println("Stopped UDP listener service on ", u.ServiceAddress)
 }
@@ -117,9 +124,13 @@ func (u *UdpListener) udpListen() error {
 		case <-u.done:
 			return nil
 		default:
+			u.listener.SetReadDeadline(time.Now().Add(time.Second))
 			n, _, err := u.listener.ReadFromUDP(buf)
-			if err != nil && !strings.Contains(err.Error(), "closed network") {
-				log.Printf("ERROR: %s\n", err.Error())
+			if err != nil {
+				if err, ok := err.(net.Error); ok && err.Timeout() {
+				} else {
+					log.Printf("ERROR: %s\n", err.Error())
+				}
 				continue
 			}
 			bufCopy := make([]byte, n)
@@ -146,25 +157,23 @@ func (u *UdpListener) udpParser() error {
 	for {
 		select {
 		case <-u.done:
-			return nil
+			if len(u.in) == 0 {
+				return nil
+			}
 		case packet = <-u.in:
 			metrics, err = u.parser.Parse(packet)
 			if err == nil {
-				u.storeMetrics(metrics)
+				for _, m := range metrics {
+					u.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+				}
 			} else {
-				log.Printf("Malformed packet: [%s], Error: %s\n", packet, err)
+				u.malformed++
+				if u.malformed == 1 || u.malformed%1000 == 0 {
+					log.Printf(malformedwarn, u.malformed)
+				}
 			}
 		}
 	}
-}
-
-func (u *UdpListener) storeMetrics(metrics []telegraf.Metric) error {
-	u.Lock()
-	defer u.Unlock()
-	for _, m := range metrics {
-		u.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-	}
-	return nil
 }
 
 func init() {

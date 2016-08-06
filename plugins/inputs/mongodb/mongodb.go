@@ -10,14 +10,16 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
 
 type MongoDB struct {
-	Servers []string
-	Ssl     Ssl
-	mongos  map[string]*Server
+	Servers          []string
+	Ssl              Ssl
+	mongos           map[string]*Server
+	GatherPerdbStats bool
 }
 
 type Ssl struct {
@@ -32,6 +34,7 @@ var sampleConfig = `
   ##   mongodb://10.10.3.33:18832,
   ##   10.0.0.1:10000, etc.
   servers = ["127.0.0.1:27017"]
+  gather_perdb_stats = false
 `
 
 func (m *MongoDB) SampleConfig() string {
@@ -53,9 +56,7 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-
-	var outerr error
-
+	errChan := errchan.New(len(m.Servers))
 	for _, serv := range m.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
@@ -71,13 +72,12 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
-			outerr = m.gatherServer(srv, acc)
+			errChan.C <- m.gatherServer(srv, acc)
 		}(m.getMongoServer(u))
 	}
 
 	wg.Wait()
-
-	return outerr
+	return errChan.Error()
 }
 
 func (m *MongoDB) getMongoServer(url *url.URL) *Server {
@@ -135,7 +135,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		}
 		server.Session = sess
 	}
-	return server.gatherData(acc)
+	return server.gatherData(acc, m.GatherPerdbStats)
 }
 
 func init() {

@@ -139,7 +139,7 @@ func (c *Config) InputNames() []string {
 	return name
 }
 
-// Outputs returns a list of strings of the configured inputs.
+// Outputs returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
@@ -219,7 +219,7 @@ var header = `# Telegraf Configuration
   ## By default, precision will be set to the same timestamp order as the
   ## collection interval, with the maximum being 1s.
   ## Precision will NOT be used for service inputs, such as logparser and statsd.
-  ## Valid values are "Nns", "Nus" (or "Nµs"), "Nms", "Ns".
+  ## Valid values are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
   ## Run telegraf in debug mode
   debug = false

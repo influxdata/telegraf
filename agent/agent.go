@@ -215,6 +215,9 @@ func (a *Agent) Test() error {
 		if err := input.Input.Gather(acc); err != nil {
 			return err
 		}
+		if acc.errCount > 0 {
+			return fmt.Errorf("Errors encountered during processing")
+		}
 
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
@@ -268,11 +271,31 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
 		case m := <-metricC:
-			for _, o := range a.Config.Outputs {
-				o.AddMetric(m)
+			for i, o := range a.Config.Outputs {
+				if i == len(a.Config.Outputs)-1 {
+					o.AddMetric(m)
+				} else {
+					o.AddMetric(copyMetric(m))
+				}
 			}
 		}
 	}
+}
+
+func copyMetric(m telegraf.Metric) telegraf.Metric {
+	t := time.Time(m.Time())
+
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
+	for k, v := range m.Tags() {
+		tags[k] = v
+	}
+	for k, v := range m.Fields() {
+		fields[k] = v
+	}
+
+	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
+	return out
 }
 
 // Run runs the agent daemon, gathering every Interval

@@ -43,9 +43,9 @@ var sampleConfig = `
   ## file paths for proc files. If empty default paths will be used:
   ##    /proc/net/netstat, /proc/net/snmp, /proc/net/snmp6
   ## These can also be overridden with env variables, see README.
-  proc_net_netstat = ""
-  proc_net_snmp    = ""
-  proc_net_snmp6   = ""
+  proc_net_netstat = "/proc/net/netstat"
+  proc_net_snmp = "/proc/net/snmp"
+  proc_net_snmp6 = "/proc/net/snmp6"
   ## dump metrics with 0 values too
   dump_zeros       = true
 `
@@ -141,7 +141,7 @@ func (ns *Nstat) loadPaths() {
 		ns.ProcNetSNMP = proc(ENV_SNMP, NET_SNMP)
 	}
 	if ns.ProcNetSNMP6 == "" {
-		ns.ProcNetSNMP = proc(ENV_SNMP6, NET_SNMP6)
+		ns.ProcNetSNMP6 = proc(ENV_SNMP6, NET_SNMP6)
 	}
 }
 
