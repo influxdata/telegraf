@@ -29,7 +29,7 @@ var sampleConfig = `
   #app_secret = ""
   #channel_name = ""
   secure = true
-  host = "app.pusher.com"
+  host = "api.pusherapp.com"
 
   data_format = "json"
 `
