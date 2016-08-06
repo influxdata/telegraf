@@ -17,7 +17,7 @@ The plugin will read Telegraf metric names and use those as the corresponding Pu
   #app_secret = ""
   #channel_name = ""
   secure = true
-  host = "app.pusher.com"
+  host = "api.pusherapp.com"
 
   data_format = "json"
 ```
