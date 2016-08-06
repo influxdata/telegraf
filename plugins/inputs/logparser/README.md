@@ -14,25 +14,28 @@ regex patterns.
   ##   /var/log/**.log     -> recursively find all .log files in /var/log
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
   ##   /var/log/apache.log -> only tail the apache log file
-  files = ["/var/log/influxdb/influxdb.log"]
+  files = ["/var/log/apache/access.log"]
   ## Read file from beginning.
   from_beginning = false
 
   ## Parse logstash-style "grok" patterns:
-  ##   Telegraf builtin parsing patterns: https://goo.gl/dkay10
+  ##   Telegraf built-in parsing patterns: https://goo.gl/dkay10
   [inputs.logparser.grok]
     ## This is a list of patterns to check the given log file(s) for.
     ## Note that adding patterns here increases processing time. The most
-    ## efficient configuration is to have one file & pattern per logparser.
-    patterns = ["%{INFLUXDB_HTTPD_LOG}"]
+    ## efficient configuration is to have one pattern per logparser.
+    ## Other common built-in patterns are:
+    ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
+    ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
+    patterns = ["%{COMBINED_LOG_FORMAT}"]
+    ## Name of the outputted measurement name.
+    measurement = "apache_access_log"
     ## Full path(s) to custom pattern files.
     custom_pattern_files = []
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
     '''
 ```
-
-> **Note:** The InfluxDB log pattern in the default configuration only works for Influx versions 1.0.0-beta1 or higher.
 
 ## Grok Parser
 
@@ -69,6 +72,7 @@ Timestamp modifiers can be used to convert captures to the timestamp of the
   - tag      (converts the field into a tag)
   - drop     (drops the field completely)
 - Timestamp modifiers:
+  - ts               (This will auto-learn the timestamp format)
   - ts-ansic         ("Mon Jan _2 15:04:05 2006")
   - ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
   - ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
