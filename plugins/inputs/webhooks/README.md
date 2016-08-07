@@ -15,6 +15,7 @@ $ sudo service telegraf start
 
 ## Available webhooks
 
+- [Dockerhub](dockerhub/)
 - [Github](github/)
 - [Mandrill](mandrill/)
 - [Rollbar](rollbar/)
