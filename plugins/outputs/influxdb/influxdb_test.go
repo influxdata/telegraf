@@ -49,7 +49,7 @@ func TestHTTPInflux(t *testing.T) {
 }
 
 func TestDownsampling_mean(t *testing.T) {
-	ds := NewDownsampling("downsampling", time.Minute)
+	ds := NewDownsampler()
 	ds.Add(testutil.TestMetric(120))
 	ds.Add(testutil.TestMetric(80))
 
@@ -61,14 +61,14 @@ func TestDownsampling_mean(t *testing.T) {
 		},
 	}
 
-	aggr, err := ds.Mean(aggregations...)
+	aggr, err := ds.Mean("downsampled", aggregations...)
 	require.NoError(t, err)
 
 	require.Equal(t, int64(100), aggr.Fields()["mean_value"])
 }
 
 func TestDownsampling_sum(t *testing.T) {
-	ds := NewDownsampling("downsampling", time.Minute)
+	ds := NewDownsampler()
 	ds.Add(testutil.TestMetric(120))
 	ds.Add(testutil.TestMetric(80))
 
@@ -79,14 +79,14 @@ func TestDownsampling_sum(t *testing.T) {
 			Alias:     "sum_value",
 		},
 	}
-	aggr, err := ds.Sum(aggregations...)
+	aggr, err := ds.Sum("downsampled", aggregations...)
 	require.NoError(t, err)
 
 	require.Equal(t, int64(200), aggr.Fields()["sum_value"])
 }
 
 func TestDownsampling_aggregate(t *testing.T) {
-	ds := NewDownsampling("downsampling", time.Minute)
+	ds := NewDownsampler()
 
 	ds.Add(testutil.TestMetric(120))
 	ds.Add(testutil.TestMetric(80))
@@ -106,7 +106,7 @@ func TestDownsampling_aggregate(t *testing.T) {
 
 	ds.AddAggregations(aggregations...)
 
-	aggr, err := ds.Aggregate()
+	aggr, err := ds.Aggregate("downsampled")
 	require.NoError(t, err)
 
 	require.Equal(t, int64(100), aggr.Fields()["mean_value"])
@@ -158,10 +158,7 @@ func TestDownsampling_run(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	downsampler := &Downsampling{
-		TimeRange: time.Duration(time.Second * 10),
-		Name:      "downsampling",
-	}
+	downsampler := &Downsampling{}
 
 	downsampler.Aggregations = make(map[string][]Aggregation)
 	downsampler.AddAggregations(Aggregation{
@@ -171,8 +168,10 @@ func TestDownsampling_run(t *testing.T) {
 	})
 
 	influxdb := &InfluxDB{
-		Downsampler: downsampler,
-		URLs:        []string{ts.URL},
+		Downsampler:          downsampler,
+		DownsamplingName:     "downsampled",
+		DownsamplingInterval: 1,
+		URLs:                 []string{ts.URL},
 	}
 	go influxdb.Run()
 
