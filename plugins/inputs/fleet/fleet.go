@@ -2,7 +2,7 @@
 * @Author: Jim Weber
 * @Date:   2016-05-18 22:07:31
 * @Last Modified by:   Jim Weber
-* @Last Modified time: 2016-08-07 20:20:26
+* @Last Modified time: 2016-08-08 14:09:03
  */
 
 package fleet
@@ -145,6 +145,11 @@ func getContainerCount(fleetUnits FleetStates) map[string]int {
 	containerCount := make(map[string]int)
 	for _, fleetUnit := range fleetUnits.States {
 		shortNameParts := strings.Split(fleetUnit.Name, "@")
+		if len(shortNameParts) == 0 {
+			// global units do not use the '@' symbol because they do not have instance ids
+			// instead just split off the .server porition
+			shortNameParts = strings.Split(fleetUnit.Name, ".")
+		}
 		shortName := shortNameParts[0]
 		if fleetUnit.SystemdSubState == "running" {
 			containerCount[shortName]++
