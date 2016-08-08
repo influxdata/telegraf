@@ -130,7 +130,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 		return
 	}
 
-	if (e.Removecr) {
+	if e.Removecr {
 		for i := 0; i < len(out); i++ {
 			if 0x0D == out[i] {
 				out = append(out[:i], out[i+1:]...)
