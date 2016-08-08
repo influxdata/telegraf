@@ -2,6 +2,10 @@
 
 ### Release Notes
 
+- Telegraf now supports being installed as an official windows service,
+which can be installed via
+`> C:\Program Files\Telegraf\telegraf.exe --service install`
+
 **Breaking Change**: Aerospike main server node measurements have been renamed
 aerospike_node. Aerospike namespace measurements have been renamed to
 aerospike_namespace. They will also now be tagged with the node_name
@@ -75,6 +79,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1278](https://github.com/influxdata/telegraf/pull/1278) & [#1288](https://github.com/influxdata/telegraf/pull/1288) & [#1295](https://github.com/influxdata/telegraf/pull/1295): RabbitMQ/Apache/InfluxDB inputs: made url(s) parameter optional by using reasonable input defaults if not specified
 - [#1296](https://github.com/influxdata/telegraf/issues/1296): Refactor of flush_jitter argument.
 - [#1213](https://github.com/influxdata/telegraf/issues/1213): Add inactive & active memory to mem plugin.
+- [#1543](https://github.com/influxdata/telegraf/pull/1543): Official Windows service.
 
 ### Bugfixes
 
