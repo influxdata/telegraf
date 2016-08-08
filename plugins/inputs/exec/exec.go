@@ -39,12 +39,16 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Strip out all carraige returns (CR, 0x0D)
+  removecr = "true"
 `
 
 type Exec struct {
 	Commands []string
 	Command  string
 	Timeout  internal.Duration
+	Removecr bool
 
 	parser parsers.Parser
 
@@ -124,6 +128,14 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	if err != nil {
 		e.errChan <- err
 		return
+	}
+
+	if (e.Removecr) {
+		for i := 0; i < len(out); i++ {
+			if 0x0D == out[i] {
+				out = append(out[:i], out[i+1:]...)
+			}
+		}
 	}
 
 	metrics, err := e.parser.Parse(out)
