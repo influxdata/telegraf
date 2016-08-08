@@ -287,7 +287,11 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 				}
 			}
 			if isATag == 0 {
-				fields[col] = *val
+				if v, ok := (*val).([]byte); ok {
+					fields[col] = string(v)
+				} else {
+					fields[col] = *val
+				}
 			}
 		}
 	}
