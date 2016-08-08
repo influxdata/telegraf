@@ -88,7 +88,7 @@ func (a *Agent) Close() error {
 	return err
 }
 
-func panicRecover(input *internal_models.RunningInput) {
+func panicRecover(input *models.RunningInput) {
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
@@ -104,7 +104,7 @@ func panicRecover(input *internal_models.RunningInput) {
 // reporting interval.
 func (a *Agent) gatherer(
 	shutdown chan struct{},
-	input *internal_models.RunningInput,
+	input *models.RunningInput,
 	interval time.Duration,
 	metricC chan telegraf.Metric,
 ) error {
@@ -152,7 +152,7 @@ func (a *Agent) gatherer(
 //   over.
 func gatherWithTimeout(
 	shutdown chan struct{},
-	input *internal_models.RunningInput,
+	input *models.RunningInput,
 	acc *accumulator,
 	timeout time.Duration,
 ) {
@@ -240,7 +240,7 @@ func (a *Agent) flush() {
 
 	wg.Add(len(a.Config.Outputs))
 	for _, o := range a.Config.Outputs {
-		go func(output *internal_models.RunningOutput) {
+		go func(output *models.RunningOutput) {
 			defer wg.Done()
 			err := output.Write()
 			if err != nil {
@@ -351,7 +351,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
 		}
-		go func(in *internal_models.RunningInput, interv time.Duration) {
+		go func(in *models.RunningInput, interv time.Duration) {
 			defer wg.Done()
 			if err := a.gatherer(shutdown, in, interv, metricC); err != nil {
 				log.Printf(err.Error())

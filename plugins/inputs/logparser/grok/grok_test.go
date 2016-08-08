@@ -38,32 +38,6 @@ func Benchmark_ParseLine_CombinedLogFormat(b *testing.B) {
 	benchM = m
 }
 
-func Benchmark_ParseLine_InfluxLog(b *testing.B) {
-	p := &Parser{
-		Patterns: []string{"%{INFLUXDB_HTTPD_LOG}"},
-	}
-	p.Compile()
-
-	var m telegraf.Metric
-	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`[httpd] 192.168.1.1 - - [14/Jun/2016:11:33:29 +0100] "POST /write?consistency=any&db=telegraf&precision=ns&rp= HTTP/1.1" 204 0 "-" "InfluxDBClient" 6f61bc44-321b-11e6-8050-000000000000 2513`)
-	}
-	benchM = m
-}
-
-func Benchmark_ParseLine_InfluxLog_NoMatch(b *testing.B) {
-	p := &Parser{
-		Patterns: []string{"%{INFLUXDB_HTTPD_LOG}"},
-	}
-	p.Compile()
-
-	var m telegraf.Metric
-	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`[retention] 2016/06/14 14:38:24 retention policy shard deletion check commencing`)
-	}
-	benchM = m
-}
-
 func Benchmark_ParseLine_CustomPattern(b *testing.B) {
 	p := &Parser{
 		Patterns: []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
@@ -108,9 +82,9 @@ func TestMeasurementName(t *testing.T) {
 	assert.Equal(t, "my_web_log", m.Name())
 }
 
-func TestBuiltinInfluxdbHttpd(t *testing.T) {
+func TestCustomInfluxdbHttpd(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{INFLUXDB_HTTPD_LOG}"},
+		Patterns: []string{`\[httpd\] %{COMBINED_LOG_FORMAT} %{UUID:uuid:drop} %{NUMBER:response_time_us:int}`},
 	}
 	assert.NoError(t, p.Compile())
 
@@ -331,6 +305,55 @@ func TestParseEpochErrors(t *testing.T) {
 
 	_, err = p.ParseLine(`foobar response_time=20821 mymetric=10890.645`)
 	assert.NoError(t, err)
+}
+
+func TestParseGenericTimestamp(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`\[%{HTTPDATE:ts:ts}\] response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}`},
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[09/Jun/2016:03:37:03 +0000] response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+	assert.Equal(t, time.Unix(1465443423, 0).UTC(), metricA.Time().UTC())
+
+	metricB, err := p.ParseLine(`[09/Jun/2016:03:37:04 +0000] response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricB)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricB.Fields())
+	assert.Equal(t, map[string]string{}, metricB.Tags())
+	assert.Equal(t, time.Unix(1465443424, 0).UTC(), metricB.Time().UTC())
+}
+
+func TestParseGenericTimestampNotFound(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`\[%{NOTSPACE:ts:ts}\] response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}`},
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[foobar] response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
 }
 
 func TestCompileFileAndParse(t *testing.T) {

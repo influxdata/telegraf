@@ -21,7 +21,7 @@ func TestAdd(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.Add("acctest", float64(101), map[string]string{})
 	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
@@ -47,7 +47,7 @@ func TestAddNoPrecisionWithInterval(t *testing.T) {
 	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.SetPrecision(0, time.Second)
 	a.Add("acctest", float64(101), map[string]string{})
@@ -74,7 +74,7 @@ func TestAddNoIntervalWithPrecision(t *testing.T) {
 	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.SetPrecision(time.Second, time.Millisecond)
 	a.Add("acctest", float64(101), map[string]string{})
@@ -101,7 +101,7 @@ func TestAddDisablePrecision(t *testing.T) {
 	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.SetPrecision(time.Second, time.Millisecond)
 	a.DisablePrecision()
@@ -129,7 +129,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.SetPrecision(0, time.Second)
 	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
@@ -170,7 +170,7 @@ func TestAddDefaultTags(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.Add("acctest", float64(101), map[string]string{})
 	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
@@ -196,7 +196,7 @@ func TestAddFields(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	fields := map[string]interface{}{
 		"usage": float64(99),
@@ -229,7 +229,7 @@ func TestAddInfFields(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	fields := map[string]interface{}{
 		"usage":  inf,
@@ -257,7 +257,7 @@ func TestAddNaNFields(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	fields := map[string]interface{}{
 		"usage": nan,
@@ -281,7 +281,7 @@ func TestAddUint64Fields(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	fields := map[string]interface{}{
 		"usage": uint64(99),
@@ -310,7 +310,7 @@ func TestAddUint64Overflow(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	fields := map[string]interface{}{
 		"usage": uint64(9223372036854775808),
@@ -340,7 +340,7 @@ func TestAddInts(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.Add("acctest", int(101), map[string]string{})
 	a.Add("acctest", int32(101), map[string]string{"acc": "test"})
@@ -367,7 +367,7 @@ func TestAddFloats(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.Add("acctest", float32(101), map[string]string{"acc": "test"})
 	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
@@ -389,7 +389,7 @@ func TestAddStrings(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.Add("acctest", "test", map[string]string{"acc": "test"})
 	a.Add("acctest", "foo", map[string]string{"acc": "test"}, now)
@@ -411,7 +411,7 @@ func TestAddBools(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 
 	a.Add("acctest", true, map[string]string{"acc": "test"})
 	a.Add("acctest", false, map[string]string{"acc": "test"}, now)
@@ -433,11 +433,11 @@ func TestAccFilterTags(t *testing.T) {
 	now := time.Now()
 	a.metrics = make(chan telegraf.Metric, 10)
 	defer close(a.metrics)
-	filter := internal_models.Filter{
+	filter := models.Filter{
 		TagExclude: []string{"acc"},
 	}
 	assert.NoError(t, filter.CompileFilter())
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 	a.inputConfig.Filter = filter
 
 	a.Add("acctest", float64(101), map[string]string{})
@@ -465,7 +465,7 @@ func TestAccAddError(t *testing.T) {
 	defer log.SetOutput(os.Stderr)
 
 	a := accumulator{}
-	a.inputConfig = &internal_models.InputConfig{}
+	a.inputConfig = &models.InputConfig{}
 	a.inputConfig.Name = "mock_plugin"
 
 	a.AddError(fmt.Errorf("foo"))
