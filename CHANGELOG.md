@@ -1,22 +1,10 @@
 ## v1.0 [unreleased]
 
-### Features
-
-- [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
-- [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
-- [#860](https://github.com/influxdata/telegraf/issues/860): Make Telegraf run as a Windows service
-
-### Bugfixes
-
-- [#1519](https://github.com/influxdata/telegraf/pull/1519): Fix error race conditions and partial failures.
-- [#1477](https://github.com/influxdata/telegraf/issues/1477): nstat: fix inaccurate config panic.
-- [#1481](https://github.com/influxdata/telegraf/issues/1481): jolokia: fix handling multiple multi-dimensional attributes.
-- [#1430](https://github.com/influxdata/telegraf/issues/1430): Fix prometheus character sanitizing. Sanitize more win_perf_counters characters.
-- [#1534](https://github.com/influxdata/telegraf/pull/1534): Add diskio io_time to FreeBSD & report timing metrics as ms (as linux does).
-
-## v1.0 beta 3 [2016-07-18]
-
 ### Release Notes
+
+- Telegraf now supports being installed as an official windows service,
+which can be installed via
+`> C:\Program Files\Telegraf\telegraf.exe --service install`
 
 **Breaking Change**: Aerospike main server node measurements have been renamed
 aerospike_node. Aerospike namespace measurements have been renamed to
@@ -91,6 +79,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1278](https://github.com/influxdata/telegraf/pull/1278) & [#1288](https://github.com/influxdata/telegraf/pull/1288) & [#1295](https://github.com/influxdata/telegraf/pull/1295): RabbitMQ/Apache/InfluxDB inputs: made url(s) parameter optional by using reasonable input defaults if not specified
 - [#1296](https://github.com/influxdata/telegraf/issues/1296): Refactor of flush_jitter argument.
 - [#1213](https://github.com/influxdata/telegraf/issues/1213): Add inactive & active memory to mem plugin.
+- [#1543](https://github.com/influxdata/telegraf/pull/1543): Official Windows service.
 
 ### Bugfixes
 

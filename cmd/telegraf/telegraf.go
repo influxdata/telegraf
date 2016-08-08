@@ -41,6 +41,8 @@ var fOutputList = flag.Bool("output-list", false,
 	"print available output plugins.")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
+var fService = flag.String("service", "",
+	"operate on the service")
 
 // Telegraf version, populated linker.
 //   ie, -ldflags "-X main.version=`git describe --always --tags`"
@@ -172,9 +174,7 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 				}
 			}
 			return
-		}
-
-		if *fService != "" && runtime.GOOS == "windows" {
+		case *fService != "" && runtime.GOOS == "windows":
 			if *fConfig != "" {
 				(*svcConfig).Arguments = []string{"-config", *fConfig}
 			}
@@ -240,13 +240,13 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		go func() {
 			select {
 			case sig := <-signals:
-			if sig == os.Interrupt {
-				close(shutdown)
-			}
-			if sig == syscall.SIGHUP {
-				log.Printf("Reloading Telegraf config\n")
-				<-reload
-				reload <- true
+				if sig == os.Interrupt {
+					close(shutdown)
+				}
+				if sig == syscall.SIGHUP {
+					log.Printf("Reloading Telegraf config\n")
+					<-reload
+					reload <- true
 					close(shutdown)
 				}
 			case <-stop:
