@@ -28,7 +28,8 @@ type Docker struct {
 	PerDevice      bool `toml:"perdevice"`
 	Total          bool `toml:"total"`
 
-	client DockerClient
+	client      DockerClient
+	server_name string
 }
 
 // DockerClient interface, useful for testing
@@ -147,6 +148,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	d.server_name = info.Name
 
 	fields := map[string]interface{}{
 		"n_cpus":                  info.NCPU,
@@ -159,11 +161,11 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	// Add metrics
 	acc.AddFields("docker",
 		fields,
-		nil,
+		map[string]string{"server_name": d.server_name},
 		now)
 	acc.AddFields("docker",
 		map[string]interface{}{"memory_total": info.MemTotal},
-		map[string]string{"unit": "bytes"},
+		map[string]string{"unit": "bytes", "server_name": d.server_name},
 		now)
 	// Get storage metrics
 	for _, rawData := range info.DriverStatus {
@@ -177,7 +179,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 			// pool blocksize
 			acc.AddFields("docker",
 				map[string]interface{}{"pool_blocksize": value},
-				map[string]string{"unit": "bytes"},
+				map[string]string{"unit": "bytes", "server_name": d.server_name},
 				now)
 		} else if strings.HasPrefix(name, "data_space_") {
 			// data space
@@ -192,13 +194,13 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	if len(dataFields) > 0 {
 		acc.AddFields("docker_data",
 			dataFields,
-			map[string]string{"unit": "bytes"},
+			map[string]string{"unit": "bytes", "server_name": d.server_name},
 			now)
 	}
 	if len(metadataFields) > 0 {
 		acc.AddFields("docker_metadata",
 			metadataFields,
-			map[string]string{"unit": "bytes"},
+			map[string]string{"unit": "bytes", "server_name": d.server_name},
 			now)
 	}
 	return nil
@@ -225,6 +227,7 @@ func (d *Docker) gatherContainer(
 		imageVersion = imageParts[1]
 	}
 	tags := map[string]string{
+		"server_name":       d.server_name,
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,
