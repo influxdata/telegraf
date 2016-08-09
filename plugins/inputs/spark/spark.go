@@ -123,7 +123,7 @@ func addTokensToTags(tokens map[string]string, tags map[string]string) {
 	}
 }
 
-func addJavaMetric(class string, c javaMetric,
+func addJavaMetric(class string, c *javaMetric,
 	values map[string]interface{}) {
 
 	tags := make(map[string]string)
@@ -149,7 +149,7 @@ func addJavaMetric(class string, c javaMetric,
 
 }
 
-func (j javaMetric) addTagsFields(out map[string]interface{}) {
+func (j *javaMetric) addTagsFields(out map[string]interface{}) {
 	request := out["request"].(map[string]interface{})
 	var mbean = request["mbean"].(string)
 	var mbeansplit = strings.Split(mbean, "=")
@@ -169,7 +169,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 	}
 }
 
-func addSparkMetric(mbean string, c sparkMetric,
+func addSparkMetric(mbean string, c *sparkMetric,
 	values map[string]interface{}) {
 
 	tags := make(map[string]string)
@@ -184,7 +184,7 @@ func addSparkMetric(mbean string, c sparkMetric,
 
 }
 
-func (c sparkMetric) addTagsFields(out map[string]interface{}) {
+func (c *sparkMetric) addTagsFields(out map[string]interface{}) {
 	if valuesMap, ok := out["value"]; ok {
 		for k, v := range valuesMap.(map[string]interface{}) {
 			addSparkMetric(k, c, v.(map[string]interface{}))
@@ -197,7 +197,7 @@ func (c sparkMetric) addTagsFields(out map[string]interface{}) {
 
 }
 
-func addYarnMetric(c yarnMetric, value map[string]interface{}, metrictype string) {
+func addYarnMetric(c *yarnMetric, value map[string]interface{}, metrictype string) {
 
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
@@ -208,7 +208,7 @@ func addYarnMetric(c yarnMetric, value map[string]interface{}, metrictype string
 	c.acc.AddFields(metrictype, fields, tags)
 }
 
-func (c yarnMetric) addTagsFields(out map[string]interface{}) {
+func (c *yarnMetric) addTagsFields(out map[string]interface{}) {
 
 	if valuesMap, ok := out["clusterMetrics"]; ok {
 		addYarnMetric(c, valuesMap.(map[string]interface{}), "spark_clusterMetrics")
