@@ -7,8 +7,8 @@
 #### Description
 
 The Spark plugin collects metrics in 2 ways, both being optional:
-**1.** Spark-JVM metrics exposed as MBean's attributes through jolokia REST endpoint. Metrics are collected for each server configured. See:https://jolokia.org/            
-**2.** Spark application metrics if managed by Yarn Resource manager. The plugin collects through the Yarn API. If some spark job has been submitted then only it will fetch else it will not produce any spark application result.
+- Spark-JVM metrics exposed as MBean's attributes through jolokia REST endpoint. Metrics are collected for each server configured. See:https://jolokia.org/            
+- Spark application metrics if managed by Yarn Resource manager. The plugin collects through the Yarn API. If some spark job has been submitted then only it will fetch else it will not produce any spark application result.
 
 # Measurements:
 Spark plugin produces one or more measurements according to the SparkServer or YarnServer provided.
