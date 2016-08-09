@@ -88,6 +88,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp_legacy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/socket_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/solr"
+	_ "github.com/influxdata/telegraf/plugins/inputs/spark"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
 	_ "github.com/influxdata/telegraf/plugins/inputs/statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sysstat"
@@ -107,5 +108,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zipkin"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
-        _ "github.com/influxdata/telegraf/plugins/inputs/spark"
 )
