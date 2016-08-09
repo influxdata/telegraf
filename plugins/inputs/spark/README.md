@@ -1,8 +1,8 @@
 # Telegraf plugin: Spark
 
 #### Plugin arguments:
-- **SparkServer** []string: List of spark nodes with the format ["host:port"] (optional)
-- **YarnServer** string: Address of Yarn resource manager (optional)
+- **spark_servers** []string: List of spark nodes with the format ["host:port"] (optional)
+- **yarn_server** string: Address of Yarn resource manager (optional)
 
 #### Description
 
@@ -17,8 +17,8 @@ Given a configuration like:
 
 ```toml
 [[inputs.spark]]
-  SparkServer = ["127.0.0.1:8778"]
-  YarnServer = "127.0.0.1:8088"
+  spark_servers = ["127.0.0.1:8778"]
+  yarn_server = "127.0.0.1:8088"
 ```
 
 The maximum collected measurements will be:
