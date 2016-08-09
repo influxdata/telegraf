@@ -272,6 +272,9 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
 			if ret == win.PDH_MORE_DATA {
 				filledBuf := make([]win.PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
+				if len(filledBuf) == 0 {
+					continue
+				}
 				ret = win.PdhGetFormattedCounterArrayDouble(metric.counterHandle,
 					&bufSize, &bufCount, &filledBuf[0])
 				for i := 0; i < int(bufCount); i++ {
