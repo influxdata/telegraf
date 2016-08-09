@@ -40,9 +40,9 @@ func (c YarnClientImpl) MakeRequest(req *http.Request) (*http.Response, error) {
 }
 
 type Spark struct {
-	jClient     JolokiaClient
-	SparkServer []string
-	YarnServer  string
+	jClient       JolokiaClient
+	spark_servers []string
+	yarn_server   string
 }
 
 type javaMetric struct {
@@ -150,7 +150,6 @@ func addJavaMetric(class string, c javaMetric,
 }
 
 func (j javaMetric) addTagsFields(out map[string]interface{}) {
-	fmt.Println(out["request"])
 	request := out["request"].(map[string]interface{})
 	var mbean = request["mbean"].(string)
 	var mbeansplit = strings.Split(mbean, "=")
@@ -237,9 +236,9 @@ func (c yarnMetric) addTagsFields(out map[string]interface{}) {
 func (j *Spark) SampleConfig() string {
 	return `
   ## Spark server exposing jolokia read service
-  SparkServer = ["127.0.0.1:8778"] #optional
+  spark_servers = ["127.0.0.1:8778"] #optional
   ## Server running Yarn Resource Manager
-  YarnServer = "127.0.0.1:8088" #optional
+  yarn_server = "127.0.0.1:8088" #optional
 `
 }
 
@@ -344,7 +343,7 @@ func parseServerTokens(server string) map[string]string {
 
 func (c *Spark) GatherJolokia(acc telegraf.Accumulator, wg *sync.WaitGroup) error {
 	context := "/jolokia/read"
-	servers := c.SparkServer
+	servers := c.spark_servers
 	metrics := [...]string{"/metrics:*", "/java.lang:type=Memory/HeapMemoryUsage", "/java.lang:type=Threading"}
 	if len(servers) == 0 {
 		wg.Done()
@@ -370,7 +369,6 @@ func (c *Spark) GatherJolokia(acc telegraf.Accumulator, wg *sync.WaitGroup) erro
 			if err != nil {
 				return err
 			}
-			fmt.Println("Request url is   ", requestUrl)
 
 			out, err := c.getAttr(requestUrl)
 			if len(out) == 0 {
@@ -392,8 +390,6 @@ func (c *Yarn) GatherYarn(acc telegraf.Accumulator, wg *sync.WaitGroup) error {
 		wg.Done()
 		return nil
 	}
-
-	fmt.Println("Going to collect data of server ", server)
 
 	serverTokens := parseServerTokens(server)
 	for _, context := range contexts {
@@ -419,14 +415,14 @@ func (c *Spark) Gather(acc telegraf.Accumulator) error {
 	log.Println("Config is ", c)
 	yarn := Yarn{
 		yClient:       &YarnClientImpl{client: &http.Client{}},
-		serverAddress: c.YarnServer,
+		serverAddress: c.yarn_server,
 	}
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go yarn.GatherYarn(acc, &wg)
 	spark := Spark{
-		jClient:     &JolokiaClientImpl{client: &http.Client{}},
-		SparkServer: c.SparkServer,
+		jClient:       &JolokiaClientImpl{client: &http.Client{}},
+		spark_servers: c.spark_servers,
 	}
 	wg.Add(1)
 	go spark.GatherJolokia(acc, &wg)
