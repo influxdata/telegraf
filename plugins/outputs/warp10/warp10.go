@@ -24,10 +24,10 @@ type Warp10 struct {
 
 var sampleConfig = `
   # prefix for metrics class Name
-  prefix = "telegraf."
-  ## POST HTTP Mode ##
+  prefix = "Prefix"
+  ## POST HTTP(or HTTPS) ##
   # Url name of the Warp 10 server
-  warp_url = "localhost:4242/"
+  warp_url = "WarpUrl"
   # Token to access your app on warp 10
   token = "Token"
 `
@@ -47,7 +47,7 @@ func (o *Warp10) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	var timeNow = time.Now()
+	var now = time.Now()
 	collectString := make([]string, 0)
 	index := 0
 	for _, mm := range metrics {
@@ -56,20 +56,20 @@ func (o *Warp10) Write(metrics []telegraf.Metric) error {
 
 			metric := &MetricLine{
 				Metric:    fmt.Sprintf("%s%s", o.Prefix, mm.Name()+"."+k),
-				Timestamp: timeNow.Unix() * 1000000,
+				Timestamp: now.Unix() * 1000000,
 			}
 
-			metricValue, buildError := buildValue(v)
-			if buildError != nil {
-				fmt.Printf("Warp: %s\n", buildError.Error())
+			metricValue, err := buildValue(v)
+			if err != nil {
+				log.Printf("Warp: %s\n", err.Error())
 				continue
 			}
 			metric.Value = metricValue
 
 			tagsSlice := buildTags(mm.Tags())
-			metric.Tags = fmt.Sprint(strings.Join(tagsSlice, ","))
+			metric.Tags = strings.Join(tagsSlice, ",")
 
-			messageLine := fmt.Sprintf("%v// %s{%s} %v \n", metric.Timestamp, metric.Metric, metric.Tags, metric.Value)
+			messageLine := fmt.Sprintf("%d// %s{%s} %s\n", metric.Timestamp, metric.Metric, metric.Tags, metric.Value)
 
 			collectString = append(collectString, messageLine)
 			index += 1
