@@ -523,7 +523,7 @@ func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc t
 		if jf.Fields["master/elected"] != 0.0 {
 			tags["state"] = "leader"
 		} else {
-			tags["state"] = "follower"
+			tags["state"] = "standby"
 		}
 	}
 
