@@ -188,7 +188,7 @@ Currently implemented sources:
 * [redis](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/redis)
 * [rethinkdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rethinkdb)
 * [riak](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/riak)
-* [sensors ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sensors) (only available if built from source)
+* [sensors ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sensors)
 * [snmp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
 * [sql server](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sqlserver) (microsoft)
 * [twemproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/twemproxy)
