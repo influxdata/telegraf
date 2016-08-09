@@ -37,6 +37,7 @@ prepare:
 # Use the windows godeps file to prepare dependencies
 prepare-windows:
 	go get github.com/sparrc/gdm
+	gdm restore
 	gdm restore -f Godeps_windows
 
 # Run all docker containers necessary for unit tests

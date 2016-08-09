@@ -13,7 +13,7 @@ func TestSparkMeasurements(t *testing.T) {
 	}
 
 	a := &Spark{
-		YarnServer: testutil.GetLocalHost() + ":8088",
+		yarn_server: testutil.GetLocalHost() + ":8088",
 	}
 
 	var acc testutil.Accumulator
