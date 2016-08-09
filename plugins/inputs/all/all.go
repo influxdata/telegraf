@@ -61,6 +61,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/riak"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sensors"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp"
+	_ "github.com/influxdata/telegraf/plugins/inputs/spark"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
 	_ "github.com/influxdata/telegraf/plugins/inputs/statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sysstat"
@@ -75,5 +76,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
-        _ "github.com/influxdata/telegraf/plugins/inputs/spark"
 )
