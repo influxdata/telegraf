@@ -28,8 +28,10 @@ type Instrumental struct {
 }
 
 const (
-	DefaultHost = "collector.instrumentalapp.com"
-	AuthFormat  = "hello version go/telegraf/1.0\nauthenticate %s\n"
+	DefaultHost     = "collector.instrumentalapp.com"
+	HelloMessage    = "hello version go/telegraf/1.1\n"
+	AuthFormat      = "authenticate %s\n"
+	HandshakeFormat = HelloMessage + AuthFormat
 )
 
 var (
@@ -52,6 +54,7 @@ var sampleConfig = `
 
 func (i *Instrumental) Connect() error {
 	connection, err := net.DialTimeout("tcp", i.Host+":8000", i.Timeout.Duration)
+
 	if err != nil {
 		i.conn = nil
 		return err
@@ -151,6 +154,11 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
+	// force the connection closed after sending data
+	// to deal with various disconnection scenarios and eschew holding
+	// open idle connections en masse
+	i.Close()
+
 	return nil
 }
 
@@ -163,7 +171,7 @@ func (i *Instrumental) SampleConfig() string {
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {
-	_, err := fmt.Fprintf(conn, AuthFormat, i.ApiToken)
+	_, err := fmt.Fprintf(conn, HandshakeFormat, i.ApiToken)
 	if err != nil {
 		return err
 	}

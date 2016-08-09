@@ -25,10 +25,6 @@ build-for-docker:
 					"-s -X main.version=$(VERSION)" \
 					./cmd/telegraf/telegraf.go
 
-# Build with race detector
-dev: prepare
-	go build -race -ldflags "-X main.version=$(VERSION)" ./...
-
 # run package script
 package:
 	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all --upload
@@ -41,6 +37,7 @@ prepare:
 # Use the windows godeps file to prepare dependencies
 prepare-windows:
 	go get github.com/sparrc/gdm
+	gdm restore
 	gdm restore -f Godeps_windows
 
 # Run all docker containers necessary for unit tests
@@ -55,7 +52,7 @@ docker-run:
 	docker run --name postgres -p "5432:5432" -d postgres
 	docker run --name rabbitmq -p "15672:15672" -p "5672:5672" -d rabbitmq:3-management
 	docker run --name redis -p "6379:6379" -d redis
-	docker run --name aerospike -p "3000:3000" -d aerospike
+	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
@@ -68,7 +65,7 @@ docker-run-circle:
 		-e ADVERTISED_PORT=9092 \
 		-p "2181:2181" -p "9092:9092" \
 		-d spotify/kafka
-	docker run --name aerospike -p "3000:3000" -d aerospike
+	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann

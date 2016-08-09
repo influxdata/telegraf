@@ -33,8 +33,9 @@ KEY1 VAL1\n
 
 ### Tags:
 
-All measurements have the following tags:
-  - path
+Measurements don't have any specific tags unless you define them at the telegraf level (defaults). We
+used to have the path listed as a tag, but to keep cardinality in check it's easier to move this 
+value to a field. Thanks @sebito91!
 
 
 ### Configuration:

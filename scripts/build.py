@@ -83,27 +83,15 @@ targets = {
 }
 
 supported_builds = {
-    "darwin": [ "amd64" ],
     "windows": [ "amd64" ],
     "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64" ],
     "freebsd": [ "amd64" ]
 }
 
 supported_packages = {
-    "darwin": [ "tar" ],
     "linux": [ "deb", "rpm", "tar" ],
     "windows": [ "zip" ],
     "freebsd": [ "tar" ]
-}
-
-supported_tags = {
-    # "linux": {
-    #     "amd64": ["sensors"]
-    # }
-}
-
-prereq_cmds = {
-    # "linux": "sudo apt-get install lm-sensors libsensors4-dev"
 }
 
 ################

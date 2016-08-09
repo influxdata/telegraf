@@ -107,7 +107,8 @@ type item struct {
 	counterHandle win.PDH_HCOUNTER
 }
 
-var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec", " ", "_")
+var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
+	" ", "_", "%", "Percent", `\`, "")
 
 func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName string, counter string, instance string,
 	measurement string, include_total bool) {
@@ -271,6 +272,9 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
 			if ret == win.PDH_MORE_DATA {
 				filledBuf := make([]win.PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
+				if len(filledBuf) == 0 {
+					continue
+				}
 				ret = win.PdhGetFormattedCounterArrayDouble(metric.counterHandle,
 					&bufSize, &bufCount, &filledBuf[0])
 				for i := 0; i < int(bufCount); i++ {
@@ -299,13 +303,12 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 							tags["instance"] = s
 						}
 						tags["objectname"] = metric.objectName
-						fields[sanitizedChars.Replace(string(metric.counter))] = float32(c.FmtValue.DoubleValue)
+						fields[sanitizedChars.Replace(metric.counter)] =
+							float32(c.FmtValue.DoubleValue)
 
-						var measurement string
-						if metric.measurement == "" {
+						measurement := sanitizedChars.Replace(metric.measurement)
+						if measurement == "" {
 							measurement = "win_perf_counters"
-						} else {
-							measurement = metric.measurement
 						}
 						acc.AddFields(measurement, fields, tags)
 					}

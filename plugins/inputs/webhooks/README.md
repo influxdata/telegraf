@@ -16,6 +16,7 @@ $ sudo service telegraf start
 ## Available webhooks
 
 - [Github](github/)
+- [Mandrill](mandrill/)
 - [Rollbar](rollbar/)
 
 ## Adding new webhooks plugin

@@ -37,7 +37,7 @@ func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, logparser.Start(&acc))
+	assert.Error(t, logparser.Start(&acc))
 
 	time.Sleep(time.Millisecond * 500)
 	logparser.Stop()
@@ -80,6 +80,8 @@ func TestGrokParseLogFiles(t *testing.T) {
 		map[string]string{})
 }
 
+// Test that test_a.log line gets parsed even though we don't have the correct
+// pattern available for test_b.log
 func TestGrokParseLogFilesOneBad(t *testing.T) {
 	thisdir := getCurrentDir()
 	p := &grok.Parser{
@@ -90,11 +92,12 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 
 	logparser := &LogParserPlugin{
 		FromBeginning: true,
-		Files:         []string{thisdir + "grok/testdata/*.log"},
+		Files:         []string{thisdir + "grok/testdata/test_a.log"},
 		GrokParser:    p,
 	}
 
 	acc := testutil.Accumulator{}
+	acc.SetDebug(true)
 	assert.NoError(t, logparser.Start(&acc))
 
 	time.Sleep(time.Millisecond * 500)

@@ -88,7 +88,7 @@ func (a *Agent) Close() error {
 	return err
 }
 
-func panicRecover(input *internal_models.RunningInput) {
+func panicRecover(input *models.RunningInput) {
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
@@ -104,7 +104,7 @@ func panicRecover(input *internal_models.RunningInput) {
 // reporting interval.
 func (a *Agent) gatherer(
 	shutdown chan struct{},
-	input *internal_models.RunningInput,
+	input *models.RunningInput,
 	interval time.Duration,
 	metricC chan telegraf.Metric,
 ) error {
@@ -152,7 +152,7 @@ func (a *Agent) gatherer(
 //   over.
 func gatherWithTimeout(
 	shutdown chan struct{},
-	input *internal_models.RunningInput,
+	input *models.RunningInput,
 	acc *accumulator,
 	timeout time.Duration,
 ) {
@@ -215,6 +215,9 @@ func (a *Agent) Test() error {
 		if err := input.Input.Gather(acc); err != nil {
 			return err
 		}
+		if acc.errCount > 0 {
+			return fmt.Errorf("Errors encountered during processing")
+		}
 
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
@@ -237,7 +240,7 @@ func (a *Agent) flush() {
 
 	wg.Add(len(a.Config.Outputs))
 	for _, o := range a.Config.Outputs {
-		go func(output *internal_models.RunningOutput) {
+		go func(output *models.RunningOutput) {
 			defer wg.Done()
 			err := output.Write()
 			if err != nil {
@@ -268,11 +271,31 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
 		case m := <-metricC:
-			for _, o := range a.Config.Outputs {
-				o.AddMetric(m)
+			for i, o := range a.Config.Outputs {
+				if i == len(a.Config.Outputs)-1 {
+					o.AddMetric(m)
+				} else {
+					o.AddMetric(copyMetric(m))
+				}
 			}
 		}
 	}
+}
+
+func copyMetric(m telegraf.Metric) telegraf.Metric {
+	t := time.Time(m.Time())
+
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
+	for k, v := range m.Tags() {
+		tags[k] = v
+	}
+	for k, v := range m.Fields() {
+		fields[k] = v
+	}
+
+	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
+	return out
 }
 
 // Run runs the agent daemon, gathering every Interval
@@ -328,7 +351,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
 		}
-		go func(in *internal_models.RunningInput, interv time.Duration) {
+		go func(in *models.RunningInput, interv time.Duration) {
 			defer wg.Done()
 			if err := a.gatherer(shutdown, in, interv, metricC); err != nil {
 				log.Printf(err.Error())

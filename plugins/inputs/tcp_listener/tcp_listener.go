@@ -31,6 +31,8 @@ type TcpListener struct {
 	accept chan bool
 	// drops tracks the number of dropped metrics.
 	drops int
+	// malformed tracks the number of malformed packets
+	malformed int
 
 	// track the listener here so we can close it in Stop()
 	listener *net.TCPListener
@@ -44,6 +46,9 @@ type TcpListener struct {
 var dropwarn = "ERROR: tcp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
+
+var malformedwarn = "WARNING: tcp_listener has received %d malformed packets" +
+	" thus far."
 
 const sampleConfig = `
   ## Address and port to host TCP listener on
@@ -153,7 +158,6 @@ func (t *TcpListener) tcpListen() error {
 			if err != nil {
 				return err
 			}
-			// log.Printf("Received TCP Connection from %s", conn.RemoteAddr())
 
 			select {
 			case <-t.accept:
@@ -189,7 +193,6 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 	defer func() {
 		t.wg.Done()
 		conn.Close()
-		// log.Printf("Closed TCP Connection from %s", conn.RemoteAddr())
 		// Add one connection potential back to channel when this one closes
 		t.accept <- true
 		t.forget(id)
@@ -234,29 +237,27 @@ func (t *TcpListener) tcpParser() error {
 	for {
 		select {
 		case <-t.done:
-			return nil
+			// drain input packets before finishing:
+			if len(t.in) == 0 {
+				return nil
+			}
 		case packet = <-t.in:
 			if len(packet) == 0 {
 				continue
 			}
 			metrics, err = t.parser.Parse(packet)
 			if err == nil {
-				t.storeMetrics(metrics)
+				for _, m := range metrics {
+					t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+				}
 			} else {
-				log.Printf("Malformed packet: [%s], Error: %s\n",
-					string(packet), err)
+				t.malformed++
+				if t.malformed == 1 || t.malformed%1000 == 0 {
+					log.Printf(malformedwarn, t.malformed)
+				}
 			}
 		}
 	}
-}
-
-func (t *TcpListener) storeMetrics(metrics []telegraf.Metric) error {
-	t.Lock()
-	defer t.Unlock()
-	for _, m := range metrics {
-		t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-	}
-	return nil
 }
 
 // forget a TCP connection

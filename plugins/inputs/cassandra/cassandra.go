@@ -148,7 +148,7 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 	tokens := parseJmxMetricRequest(r.(map[string]interface{})["mbean"].(string))
 	// Requests with wildcards for keyspace or table names will return nested
 	// maps in the json response
-	if tokens["type"] == "Table" && (tokens["keyspace"] == "*" ||
+	if (tokens["type"] == "Table" || tokens["type"] == "ColumnFamily") && (tokens["keyspace"] == "*" ||
 		tokens["scope"] == "*") {
 		if valuesMap, ok := out["value"]; ok {
 			for k, v := range valuesMap.(map[string]interface{}) {

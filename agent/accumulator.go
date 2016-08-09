@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -11,7 +12,7 @@ import (
 )
 
 func NewAccumulator(
-	inputConfig *internal_models.InputConfig,
+	inputConfig *models.InputConfig,
 	metrics chan telegraf.Metric,
 ) *accumulator {
 	acc := accumulator{}
@@ -30,11 +31,11 @@ type accumulator struct {
 	// print every point added to the accumulator
 	trace bool
 
-	inputConfig *internal_models.InputConfig
-
-	prefix string
+	inputConfig *models.InputConfig
 
 	precision time.Duration
+
+	errCount uint64
 }
 
 func (ac *accumulator) Add(
@@ -146,10 +147,6 @@ func (ac *accumulator) AddFields(
 	}
 	timestamp = timestamp.Round(ac.precision)
 
-	if ac.prefix != "" {
-		measurement = ac.prefix + measurement
-	}
-
 	m, err := telegraf.NewMetric(measurement, tags, result, timestamp)
 	if err != nil {
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
@@ -159,6 +156,17 @@ func (ac *accumulator) AddFields(
 		fmt.Println("> " + m.String())
 	}
 	ac.metrics <- m
+}
+
+// AddError passes a runtime error to the accumulator.
+// The error will be tagged with the plugin name and written to the log.
+func (ac *accumulator) AddError(err error) {
+	if err == nil {
+		return
+	}
+	atomic.AddUint64(&ac.errCount, 1)
+	//TODO suppress/throttle consecutive duplicate errors?
+	log.Printf("ERROR in input [%s]: %s", ac.inputConfig.Name, err)
 }
 
 func (ac *accumulator) Debug() bool {

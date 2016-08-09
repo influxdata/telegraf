@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -14,18 +15,21 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
+// Librato structure for configuration and client
 type Librato struct {
-	ApiUser      string
-	ApiToken     string
-	Debug        bool
-	NameFromTags bool
-	SourceTag    string
-	Timeout      internal.Duration
-	Template     string
+	APIUser   string
+	APIToken  string
+	Debug     bool
+	SourceTag string // Deprecated, keeping for backward-compatibility
+	Timeout   internal.Duration
+	Template  string
 
-	apiUrl string
+	APIUrl string
 	client *http.Client
 }
+
+// https://www.librato.com/docs/kb/faq/best_practices/naming_convention_metrics_sources.html#naming-limitations-for-sources-and-metrics
+var reUnacceptedChar = regexp.MustCompile("[^.a-zA-Z0-9_-]")
 
 var sampleConfig = `
   ## Librator API Docs
@@ -36,20 +40,21 @@ var sampleConfig = `
   api_token = "my-secret-token" # required.
   ## Debug
   # debug = false
-  ## Tag Field to populate source attribute (optional)
-  ## This is typically the _hostname_ from which the metric was obtained.
-  source_tag = "host"
   ## Connection timeout.
   # timeout = "5s"
-  ## Output Name Template (same as graphite buckets)
+  ## Output source Template (same as graphite buckets)
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  template = "host.tags.measurement.field"
+  ## This template is used in librato's source (not metric's name)
+  template = "host"
+
 `
 
+// LMetrics is the default struct for Librato's API fromat
 type LMetrics struct {
 	Gauges []*Gauge `json:"gauges"`
 }
 
+// Gauge is the gauge format for Librato's API fromat
 type Gauge struct {
 	Name        string  `json:"name"`
 	Value       float64 `json:"value"`
@@ -57,17 +62,22 @@ type Gauge struct {
 	MeasureTime int64   `json:"measure_time"`
 }
 
-const librato_api = "https://metrics-api.librato.com/v1/metrics"
+const libratoAPI = "https://metrics-api.librato.com/v1/metrics"
 
-func NewLibrato(apiUrl string) *Librato {
+// NewLibrato is the main constructor for librato output plugins
+func NewLibrato(apiURL string) *Librato {
 	return &Librato{
-		apiUrl: apiUrl,
+		APIUrl:   apiURL,
+		Template: "host",
 	}
 }
 
+// Connect is the default output plugin connection function who make sure it
+// can connect to the endpoint
 func (l *Librato) Connect() error {
-	if l.ApiUser == "" || l.ApiToken == "" {
-		return fmt.Errorf("api_user and api_token are required fields for librato output")
+	if l.APIUser == "" || l.APIToken == "" {
+		return fmt.Errorf(
+			"api_user and api_token are required fields for librato output")
 	}
 	l.client = &http.Client{
 		Timeout: l.Timeout.Duration,
@@ -76,18 +86,23 @@ func (l *Librato) Connect() error {
 }
 
 func (l *Librato) Write(metrics []telegraf.Metric) error {
+
 	if len(metrics) == 0 {
 		return nil
 	}
-	lmetrics := LMetrics{}
+	if l.Template == "" {
+		l.Template = "host"
+	}
+	if l.SourceTag != "" {
+		l.Template = l.SourceTag
+	}
+
 	tempGauges := []*Gauge{}
-	metricCounter := 0
 
 	for _, m := range metrics {
 		if gauges, err := l.buildGauges(m); err == nil {
 			for _, gauge := range gauges {
 				tempGauges = append(tempGauges, gauge)
-				metricCounter++
 				if l.Debug {
 					log.Printf("[DEBUG] Got a gauge: %v\n", gauge)
 				}
@@ -100,81 +115,114 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	lmetrics.Gauges = make([]*Gauge, metricCounter)
-	copy(lmetrics.Gauges, tempGauges[0:])
-	metricsBytes, err := json.Marshal(lmetrics)
-	if err != nil {
-		return fmt.Errorf("unable to marshal Metrics, %s\n", err.Error())
-	} else {
+	metricCounter := len(tempGauges)
+	// make sur we send a batch of maximum 300
+	sizeBatch := 300
+	for start := 0; start < metricCounter; start += sizeBatch {
+		lmetrics := LMetrics{}
+		end := start + sizeBatch
+		if end > metricCounter {
+			end = metricCounter
+			sizeBatch = end - start
+		}
+		lmetrics.Gauges = make([]*Gauge, sizeBatch)
+		copy(lmetrics.Gauges, tempGauges[start:end])
+		metricsBytes, err := json.Marshal(lmetrics)
+		if err != nil {
+			return fmt.Errorf("unable to marshal Metrics, %s\n", err.Error())
+		}
+
 		if l.Debug {
 			log.Printf("[DEBUG] Librato request: %v\n", string(metricsBytes))
 		}
-	}
-	req, err := http.NewRequest("POST", l.apiUrl, bytes.NewBuffer(metricsBytes))
-	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s\n", err.Error())
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(l.ApiUser, l.ApiToken)
 
-	resp, err := l.client.Do(req)
-	if err != nil {
-		if l.Debug {
-			log.Printf("[DEBUG] Error POSTing metrics: %v\n", err.Error())
+		req, err := http.NewRequest(
+			"POST",
+			l.APIUrl,
+			bytes.NewBuffer(metricsBytes))
+		if err != nil {
+			return fmt.Errorf(
+				"unable to create http.Request, %s\n",
+				err.Error())
 		}
-		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
-	} else {
-		if l.Debug {
+		req.Header.Add("Content-Type", "application/json")
+		req.SetBasicAuth(l.APIUser, l.APIToken)
+
+		resp, err := l.client.Do(req)
+		if err != nil {
+			if l.Debug {
+				log.Printf("[DEBUG] Error POSTing metrics: %v\n", err.Error())
+			}
+			return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 || l.Debug {
 			htmlData, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				log.Printf("[DEBUG] Couldn't get response! (%v)\n", err)
-			} else {
+			}
+			if resp.StatusCode != 200 {
+				return fmt.Errorf(
+					"received bad status code, %d\n %s",
+					resp.StatusCode,
+					string(htmlData))
+			}
+			if l.Debug {
 				log.Printf("[DEBUG] Librato response: %v\n", string(htmlData))
 			}
 		}
 	}
 
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("received bad status code, %d\n", resp.StatusCode)
-	}
-
 	return nil
 }
 
+// SampleConfig is function who return the default configuration for this
+// output
 func (l *Librato) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description is function who return the Description of this output
 func (l *Librato) Description() string {
 	return "Configuration for Librato API to send metrics to."
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
+
 	gauges := []*Gauge{}
-	serializer := graphite.GraphiteSerializer{Template: l.Template}
-	bucket := serializer.SerializeBucketName(m.Name(), m.Tags())
+	if m.Time().Unix() == 0 {
+		return gauges, fmt.Errorf(
+			"Measure time must not be zero\n <%s> \n",
+			m.String())
+	}
+	metricSource := graphite.InsertField(
+		graphite.SerializeBucketName("", m.Tags(), l.Template, ""),
+		"value")
+	if metricSource == "" {
+		return gauges,
+			fmt.Errorf("undeterminable Source type from Field, %s\n",
+				l.Template)
+	}
 	for fieldName, value := range m.Fields() {
+
+		metricName := m.Name()
+		if fieldName != "value" {
+			metricName = fmt.Sprintf("%s.%s", m.Name(), fieldName)
+		}
+
 		gauge := &Gauge{
-			Name:        graphite.InsertField(bucket, fieldName),
+			Source:      reUnacceptedChar.ReplaceAllString(metricSource, "-"),
+			Name:        reUnacceptedChar.ReplaceAllString(metricName, "-"),
 			MeasureTime: m.Time().Unix(),
 		}
-		if !gauge.verifyValue(value) {
+		if !verifyValue(value) {
 			continue
 		}
 		if err := gauge.setValue(value); err != nil {
-			return gauges, fmt.Errorf("unable to extract value from Fields, %s\n",
+			return gauges, fmt.Errorf(
+				"unable to extract value from Fields, %s\n",
 				err.Error())
-		}
-		if l.SourceTag != "" {
-			if source, ok := m.Tags()[l.SourceTag]; ok {
-				gauge.Source = source
-			} else {
-				return gauges,
-					fmt.Errorf("undeterminable Source type from Field, %s\n",
-						l.SourceTag)
-			}
 		}
 		gauges = append(gauges, gauge)
 	}
@@ -184,7 +232,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 	return gauges, nil
 }
 
-func (g *Gauge) verifyValue(v interface{}) bool {
+func verifyValue(v interface{}) bool {
 	switch v.(type) {
 	case string:
 		return false
@@ -210,12 +258,13 @@ func (g *Gauge) setValue(v interface{}) error {
 	return nil
 }
 
+//Close is used to close the connection to librato Output
 func (l *Librato) Close() error {
 	return nil
 }
 
 func init() {
 	outputs.Add("librato", func() telegraf.Output {
-		return NewLibrato(librato_api)
+		return NewLibrato(libratoAPI)
 	})
 }
