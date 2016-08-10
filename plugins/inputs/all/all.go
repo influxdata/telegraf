@@ -46,6 +46,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/nstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ntpq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/passenger"
+	_ "github.com/influxdata/telegraf/plugins/inputs/pgbouncer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/phpfpm"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ping"
 	_ "github.com/influxdata/telegraf/plugins/inputs/postgresql"

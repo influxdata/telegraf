@@ -59,6 +59,17 @@ consistent with the behavior of `collection_jitter`.
 - [#1434](https://github.com/influxdata/telegraf/pull/1434): Add measurement name arg to logparser plugin.
 - [#1479](https://github.com/influxdata/telegraf/pull/1479): logparser: change resp_code from a field to a tag.
 - [#1411](https://github.com/influxdata/telegraf/pull/1411): Implement support for fetching hddtemp data
+- [#1400](https://github.com/influxdata/telegraf/pull/1400): Add supoort for Pgbouncer
+
+### Bugfixes
+
+- [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
+- [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
+
+## v1.0 beta 2 [2016-06-21]
+
+### Features
+
 - [#1340](https://github.com/influxdata/telegraf/issues/1340): statsd: do not log every dropped metric.
 - [#1368](https://github.com/influxdata/telegraf/pull/1368): Add precision rounding to all metrics on collection.
 - [#1390](https://github.com/influxdata/telegraf/pull/1390): Add support for Tengine
