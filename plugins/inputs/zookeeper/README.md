@@ -27,6 +27,19 @@ echo mntr | nc localhost 2181
               zk_max_file_descriptor_count 1024   - only available on Unix platforms
 ```
 
+## Configuration
+
+```
+# Reads 'mntr' stats from one or many zookeeper servers
+[[inputs.zookeeper]]
+  ## An array of address to gather stats about. Specify an ip or hostname
+  ## with port. ie localhost:2181, 10.0.0.1:2181, etc.
+
+  ## If no servers are specified, then localhost is used as the host.
+  ## If no port is specified, 2181 is used
+  servers = [":2181"]
+```
+
 ## InfluxDB Measurement:
 
 ```
