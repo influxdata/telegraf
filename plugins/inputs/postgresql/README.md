@@ -4,8 +4,8 @@ This postgresql plugin provides metrics for your postgres database. It currently
 ```
 pg version      9.2+   9.1   8.3-9.0   8.1-8.2   7.4-8.0(unsupported)
 ---             ---    ---   -------   -------   -------
-datid*           x      x       x         x
-datname*         x      x       x         x
+datid            x      x       x         x
+datname          x      x       x         x
 numbackends      x      x       x         x         x
 xact_commit      x      x       x         x         x
 xact_rollback    x      x       x         x         x
