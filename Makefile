@@ -16,7 +16,7 @@ build:
 	go install -ldflags "-X main.version=$(VERSION)" ./...
 
 build-windows:
-	go build -o telegraf.exe -ldflags \
+	GOOS=windows GOARCH=386 go build -o telegraf.exe -ldflags \
 		"-X main.version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
