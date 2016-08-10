@@ -17,7 +17,7 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
 
   ## Retention policy to write to. Empty string writes to the default rp.
   retention_policy = ""
-  ## Write consistency (clusters only), can be: "any", "one", "quorom", "all"
+  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
   write_consistency = "any"
 
   ## Write timeout (for the InfluxDB client), formatted as a string.
@@ -48,7 +48,7 @@ to write to. Each URL should start with either `http://` or `udp://`
 
 ### Optional parameters:
 
-* `write_consistency`: Write consistency (clusters only), can be: "any", "one", "quorom", "all".
+* `write_consistency`: Write consistency (clusters only), can be: "any", "one", "quorum", "all".
 * `retention_policy`:  Retention policy to write to.
 * `timeout`: Write timeout (for the InfluxDB client), formatted as a string. If not provided, will default to 5s. 0s means no timeout (not recommended).
 * `username`: Username for influxdb
