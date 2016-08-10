@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"net"
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -11,7 +13,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/stdlib"
 )
 
 type Postgresql struct {
@@ -22,7 +25,7 @@ type Postgresql struct {
 	sanitizedAddress string
 }
 
-var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
+var ignoredColumns = map[string]bool{"stats_reset": true}
 
 var sampleConfig = `
   ## specify address via a url matching:
@@ -66,7 +69,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		p.Address = localhost
 	}
 
-	db, err := sql.Open("postgres", p.Address)
+	db, err := connect(p.Address)
 	if err != nil {
 		return err
 	}
@@ -141,7 +144,7 @@ var passwordKVMatcher, _ = regexp.Compile("password=\\S+ ?")
 func (p *Postgresql) SanitizedAddress() (_ string, err error) {
 	var canonicalizedAddress string
 	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
-		canonicalizedAddress, err = pq.ParseURL(p.Address)
+		canonicalizedAddress, err = parseURL(p.Address)
 		if err != nil {
 			return p.sanitizedAddress, err
 		}
@@ -177,10 +180,7 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	}
 	if columnMap["datname"] != nil {
 		// extract the database name from the column map
-		dbnameChars := (*columnMap["datname"]).([]uint8)
-		for i := 0; i < len(dbnameChars); i++ {
-			dbname.WriteString(string(dbnameChars[i]))
-		}
+		dbname.WriteString((*columnMap["datname"]).(string))
 	} else {
 		dbname.WriteString("postgres")
 	}
@@ -209,4 +209,90 @@ func init() {
 	inputs.Add("postgresql", func() telegraf.Input {
 		return &Postgresql{}
 	})
+}
+
+// pulled from lib/pq
+// ParseURL no longer needs to be used by clients of this library since supplying a URL as a
+// connection string to sql.Open() is now supported:
+//
+//	sql.Open("postgres", "postgres://bob:secret@1.2.3.4:5432/mydb?sslmode=verify-full")
+//
+// It remains exported here for backwards-compatibility.
+//
+// ParseURL converts a url to a connection string for driver.Open.
+// Example:
+//
+//	"postgres://bob:secret@1.2.3.4:5432/mydb?sslmode=verify-full"
+//
+// converts to:
+//
+//	"user=bob password=secret host=1.2.3.4 port=5432 dbname=mydb sslmode=verify-full"
+//
+// A minimal example:
+//
+//	"postgres://"
+//
+// This will be blank, causing driver.Open to use all of the defaults
+func parseURL(uri string) (string, error) {
+	u, err := url.Parse(uri)
+	if err != nil {
+		return "", err
+	}
+
+	if u.Scheme != "postgres" && u.Scheme != "postgresql" {
+		return "", fmt.Errorf("invalid connection protocol: %s", u.Scheme)
+	}
+
+	var kvs []string
+	escaper := strings.NewReplacer(` `, `\ `, `'`, `\'`, `\`, `\\`)
+	accrue := func(k, v string) {
+		if v != "" {
+			kvs = append(kvs, k+"="+escaper.Replace(v))
+		}
+	}
+
+	if u.User != nil {
+		v := u.User.Username()
+		accrue("user", v)
+
+		v, _ = u.User.Password()
+		accrue("password", v)
+	}
+
+	if host, port, err := net.SplitHostPort(u.Host); err != nil {
+		accrue("host", u.Host)
+	} else {
+		accrue("host", host)
+		accrue("port", port)
+	}
+
+	if u.Path != "" {
+		accrue("dbname", u.Path[1:])
+	}
+
+	q := u.Query()
+	for k := range q {
+		accrue(k, q.Get(k))
+	}
+
+	sort.Strings(kvs) // Makes testing easier (not a performance concern)
+	return strings.Join(kvs, " "), nil
+}
+
+func connect(address string) (*sql.DB, error) {
+	if strings.HasPrefix(address, "postgres://") || strings.HasPrefix(address, "postgresql://") {
+		return sql.Open("pgx", address)
+	}
+
+	config, err := pgx.ParseDSN(address)
+	if err != nil {
+		return nil, err
+	}
+
+	pool, err := pgx.NewConnPool(pgx.ConnPoolConfig{ConnConfig: config})
+	if err != nil {
+		return nil, err
+	}
+
+	return stdlib.OpenFromConnPool(pool)
 }
