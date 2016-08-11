@@ -39,7 +39,7 @@ For more information, please check the [Mesos Observability Metrics](http://meso
   # slave_tasks = true
 ```
 
-By dafault this plugin is not configured to gather metrics from mesos. Since a mesos cluster can be deployed in numerous ways it does not provide any default
+By default this plugin is not configured to gather metrics from mesos. Since a mesos cluster can be deployed in numerous ways it does not provide any default
 values. User needs to specify master/slave nodes this plugin will gather metrics from. Additionally, enabling `slave_tasks` will allow
 gathering metrics from tasks running on specified slaves (this option is disabled by default).
 
