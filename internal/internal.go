@@ -13,7 +13,6 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -173,29 +172,7 @@ func CombinedOutputTimeout(c *exec.Cmd, timeout time.Duration) ([]byte, error) {
 	if err := c.Start(); err != nil {
 		return nil, err
 	}
-
 	err := WaitTimeout(c, timeout)
-
-	if runtime.GOOS == "windows" {
-		var buf bytes.Buffer
-		for {
-			byt, er := b.ReadBytes(0x0D)
-			end := len(byt)
-			if nil == er {
-				end -= 1
-			}
-			if nil != byt {
-				buf.Write(byt[:end])
-			} else {
-				break
-			}
-			if nil != er {
-				break
-			}
-		}
-		b = buf
-	}
-
 	return b.Bytes(), err
 }
 
