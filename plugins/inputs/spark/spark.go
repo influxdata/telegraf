@@ -98,7 +98,7 @@ func parseJmxMetricRequest(mbean string) map[string]string {
 	tokens := make(map[string]string)
 	classAndPairs := strings.Split(mbean, ":")
 	if classAndPairs[0] == "metrics" {
-		tokens["class"] = "spark_jolokiaMetrics"
+		tokens["class"] = "spark_jolokia_metrics"
 	} else if classAndPairs[0] == "java.lang" {
 		tokens["class"] = "java"
 	} else {
@@ -131,7 +131,7 @@ func addJavaMetric(class string, c *javaMetric,
 	tags["spark_host"] = c.host
 	tags["spark_class"] = class
 
-	if class == "spark_Threading" {
+	if class == "spark_threading" {
 		list := []string{"PeakThreadCount", "CurrentThreadCpuTime", "DaemonThreadCount", "TotalStartedThreadCount", "CurrentThreadUserTime", "ThreadCount"}
 		for _, value := range list {
 			if values[value] != nil {
@@ -157,9 +157,9 @@ func (j *javaMetric) addTagsFields(out map[string]interface{}) {
 
 	if valuesMap, ok := out["value"]; ok {
 		if class == "Memory" {
-			addJavaMetric("spark_HeapMemoryUsage", j, valuesMap.(map[string]interface{}))
+			addJavaMetric("spark_heap_memory_usage", j, valuesMap.(map[string]interface{}))
 		} else if class == "Threading" {
-			addJavaMetric("spark_Threading", j, valuesMap.(map[string]interface{}))
+			addJavaMetric("spark_threading", j, valuesMap.(map[string]interface{}))
 		} else {
 			fmt.Printf("Missing key in '%s' output response\n%v\n",
 				j.metric, out)
@@ -211,9 +211,9 @@ func addYarnMetric(c *yarnMetric, value map[string]interface{}, metrictype strin
 func (c *yarnMetric) addTagsFields(out map[string]interface{}) {
 
 	if valuesMap, ok := out["clusterMetrics"]; ok {
-		addYarnMetric(c, valuesMap.(map[string]interface{}), "spark_clusterMetrics")
+		addYarnMetric(c, valuesMap.(map[string]interface{}), "spark_cluster_metrics")
 	} else if valuesMap, ok := out["clusterInfo"]; ok {
-		addYarnMetric(c, valuesMap.(map[string]interface{}), "spark_clusterInfo")
+		addYarnMetric(c, valuesMap.(map[string]interface{}), "spark_cluster_info")
 	} else if valuesMap, ok := out["apps"]; ok {
 		for _, value := range valuesMap.(map[string]interface{}) {
 			for _, vv := range value.([]interface{}) {
@@ -236,9 +236,9 @@ func (c *yarnMetric) addTagsFields(out map[string]interface{}) {
 func (j *Spark) SampleConfig() string {
 	return `
   ## Spark server exposing jolokia read service
-  spark_servers = ["127.0.0.1:8778"] #optional
+  #spark_servers = ["127.0.0.1:8778"] #optional
   ## Server running Yarn Resource Manager
-  yarn_server = "127.0.0.1:8088" #optional
+  #yarn_server = "127.0.0.1:8088" #optional
 `
 }
 
