@@ -41,6 +41,35 @@ func TestSingleNTPQ(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
 
+func TestMissingJitterField(t *testing.T) {
+	tt := tester{
+		ret: []byte(missingJitterField),
+		err: nil,
+	}
+	n := &NTPQ{
+		runQ: tt.runqTest,
+	}
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, n.Gather(&acc))
+
+	fields := map[string]interface{}{
+		"when":   int64(101),
+		"poll":   int64(256),
+		"reach":  int64(37),
+		"delay":  float64(51.016),
+		"offset": float64(233.010),
+	}
+	tags := map[string]string{
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
+}
+
 func TestBadIntNTPQ(t *testing.T) {
 	tt := tester{
 		ret: []byte(badIntParseNTPQ),
@@ -379,6 +408,11 @@ func resetVars() {
 var singleNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter
 ==============================================================================
 *uschi5-ntp-002. 10.177.80.46     2 u  101  256   37   51.016  233.010  17.462
+`
+
+var missingJitterField = `     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+*uschi5-ntp-002. 10.177.80.46     2 u  101  256   37   51.016  233.010
 `
 
 var badHeaderNTPQ = `remote      refid   foobar t when poll reach   delay   offset  jitter
