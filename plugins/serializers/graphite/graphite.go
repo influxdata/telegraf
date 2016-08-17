@@ -12,7 +12,7 @@ const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
 var (
 	fieldDeleter   = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
-	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".")
+	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".", `\`, "")
 )
 
 type GraphiteSerializer struct {
@@ -36,8 +36,8 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 		valueS := fmt.Sprintf("%#v", value)
 		point := fmt.Sprintf("%s %s %d",
 			// insert "field" section of template
-			InsertField(bucket, fieldName),
-			valueS,
+			sanitizedChars.Replace(InsertField(bucket, fieldName)),
+			sanitizedChars.Replace(valueS),
 			timestamp)
 		out = append(out, point)
 	}
@@ -100,9 +100,9 @@ func SerializeBucketName(
 	}
 
 	if prefix == "" {
-		return sanitizedChars.Replace(strings.Join(out, "."))
+		return strings.Join(out, ".")
 	}
-	return sanitizedChars.Replace(prefix + "." + strings.Join(out, "."))
+	return prefix + "." + strings.Join(out, ".")
 }
 
 // InsertField takes the bucket string from SerializeBucketName and replaces the
