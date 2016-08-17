@@ -153,8 +153,7 @@ func (l *Librato) Description() string {
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 	gauges := []*Gauge{}
-	serializer := graphite.GraphiteSerializer{Template: l.Template}
-	bucket := serializer.SerializeBucketName(m.Name(), m.Tags())
+	bucket := graphite.SerializeBucketName(m.Name(), m.Tags(), l.Template, "")
 	for fieldName, value := range m.Fields() {
 		gauge := &Gauge{
 			Name:        graphite.InsertField(bucket, fieldName),

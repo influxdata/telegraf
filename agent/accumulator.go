@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -17,6 +18,7 @@ func NewAccumulator(
 	acc := accumulator{}
 	acc.metrics = metrics
 	acc.inputConfig = inputConfig
+	acc.precision = time.Nanosecond
 	return &acc
 }
 
@@ -31,7 +33,9 @@ type accumulator struct {
 
 	inputConfig *internal_models.InputConfig
 
-	prefix string
+	precision time.Duration
+
+	errCount uint64
 }
 
 func (ac *accumulator) Add(
@@ -141,10 +145,7 @@ func (ac *accumulator) AddFields(
 	} else {
 		timestamp = time.Now()
 	}
-
-	if ac.prefix != "" {
-		measurement = ac.prefix + measurement
-	}
+	timestamp = timestamp.Round(ac.precision)
 
 	m, err := telegraf.NewMetric(measurement, tags, result, timestamp)
 	if err != nil {
@@ -155,6 +156,17 @@ func (ac *accumulator) AddFields(
 		fmt.Println("> " + m.String())
 	}
 	ac.metrics <- m
+}
+
+// AddError passes a runtime error to the accumulator.
+// The error will be tagged with the plugin name and written to the log.
+func (ac *accumulator) AddError(err error) {
+	if err == nil {
+		return
+	}
+	atomic.AddUint64(&ac.errCount, 1)
+	//TODO suppress/throttle consecutive duplicate errors?
+	log.Printf("ERROR in input [%s]: %s", ac.inputConfig.Name, err)
 }
 
 func (ac *accumulator) Debug() bool {
@@ -171,6 +183,31 @@ func (ac *accumulator) Trace() bool {
 
 func (ac *accumulator) SetTrace(trace bool) {
 	ac.trace = trace
+}
+
+// SetPrecision takes two time.Duration objects. If the first is non-zero,
+// it sets that as the precision. Otherwise, it takes the second argument
+// as the order of time that the metrics should be rounded to, with the
+// maximum being 1s.
+func (ac *accumulator) SetPrecision(precision, interval time.Duration) {
+	if precision > 0 {
+		ac.precision = precision
+		return
+	}
+	switch {
+	case interval >= time.Second:
+		ac.precision = time.Second
+	case interval >= time.Millisecond:
+		ac.precision = time.Millisecond
+	case interval >= time.Microsecond:
+		ac.precision = time.Microsecond
+	default:
+		ac.precision = time.Nanosecond
+	}
+}
+
+func (ac *accumulator) DisablePrecision() {
+	ac.precision = time.Nanosecond
 }
 
 func (ac *accumulator) setDefaultTags(tags map[string]string) {

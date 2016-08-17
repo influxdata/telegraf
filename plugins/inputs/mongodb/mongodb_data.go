@@ -12,6 +12,12 @@ type MongodbData struct {
 	StatLine *StatLine
 	Fields   map[string]interface{}
 	Tags     map[string]string
+	DbData   []DbData
+}
+
+type DbData struct {
+	Name   string
+	Fields map[string]interface{}
 }
 
 func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
@@ -22,6 +28,7 @@ func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
 		StatLine: statLine,
 		Tags:     tags,
 		Fields:   make(map[string]interface{}),
+		DbData:   []DbData{},
 	}
 }
 
@@ -72,6 +79,34 @@ var WiredTigerStats = map[string]string{
 	"percent_cache_used":  "CacheUsedPercent",
 }
 
+var DbDataStats = map[string]string{
+	"collections":  "Collections",
+	"objects":      "Objects",
+	"avg_obj_size": "AvgObjSize",
+	"data_size":    "DataSize",
+	"storage_size": "StorageSize",
+	"num_extents":  "NumExtents",
+	"indexes":      "Indexes",
+	"index_size":   "IndexSize",
+	"ok":           "Ok",
+}
+
+func (d *MongodbData) AddDbStats() {
+	for _, dbstat := range d.StatLine.DbStatsLines {
+		dbStatLine := reflect.ValueOf(&dbstat).Elem()
+		newDbData := &DbData{
+			Name:   dbstat.Name,
+			Fields: make(map[string]interface{}),
+		}
+		newDbData.Fields["type"] = "db_stat"
+		for key, value := range DbDataStats {
+			val := dbStatLine.FieldByName(value).Interface()
+			newDbData.Fields[key] = val
+		}
+		d.DbData = append(d.DbData, *newDbData)
+	}
+}
+
 func (d *MongodbData) AddDefaultStats() {
 	statLine := reflect.ValueOf(d.StatLine).Elem()
 	d.addStat(statLine, DefaultStats)
@@ -113,4 +148,15 @@ func (d *MongodbData) flush(acc telegraf.Accumulator) {
 		d.StatLine.Time,
 	)
 	d.Fields = make(map[string]interface{})
+
+	for _, db := range d.DbData {
+		d.Tags["db_name"] = db.Name
+		acc.AddFields(
+			"mongodb_db_stats",
+			db.Fields,
+			d.Tags,
+			d.StatLine.Time,
+		)
+		db.Fields = make(map[string]interface{})
+	}
 }

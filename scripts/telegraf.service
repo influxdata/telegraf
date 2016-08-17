@@ -15,4 +15,3 @@ KillMode=control-group
 
 [Install]
 WantedBy=multi-user.target
-Alias=telegraf.service

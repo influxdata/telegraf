@@ -25,6 +25,8 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 	Timeout        internal.Duration
+	PerDevice      bool `toml:"perdevice"`
+	Total          bool `toml:"total"`
 
 	client DockerClient
 }
@@ -58,6 +60,13 @@ var sampleConfig = `
   container_names = []
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
+
+  ## Whether to report for each container per-device blkio (8:0, 8:1...) and
+  ## network (eth0, eth1, ...) stats or not
+  perdevice = true
+  ## Whether to report for each container total blkio and network stats or not
+  total = false
+
 `
 
 // Description returns input description
@@ -207,9 +216,18 @@ func (d *Docker) gatherContainer(
 		cname = strings.TrimPrefix(container.Names[0], "/")
 	}
 
+	// the image name sometimes has a version part.
+	//   ie, rabbitmq:3-management
+	imageParts := strings.Split(container.Image, ":")
+	imageName := imageParts[0]
+	imageVersion := "unknown"
+	if len(imageParts) > 1 {
+		imageVersion = imageParts[1]
+	}
 	tags := map[string]string{
-		"container_name":  cname,
-		"container_image": container.Image,
+		"container_name":    cname,
+		"container_image":   imageName,
+		"container_version": imageVersion,
 	}
 	if len(d.ContainerNames) > 0 {
 		if !sliceContains(cname, d.ContainerNames) {
@@ -237,7 +255,7 @@ func (d *Docker) gatherContainer(
 		tags[k] = label
 	}
 
-	gatherContainerStats(v, acc, tags, container.ID)
+	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
 
 	return nil
 }
@@ -247,6 +265,8 @@ func gatherContainerStats(
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	id string,
+	perDevice bool,
+	total bool,
 ) {
 	now := stat.Read
 
@@ -314,6 +334,7 @@ func gatherContainerStats(
 		acc.AddFields("docker_container_cpu", fields, percputags, now)
 	}
 
+	totalNetworkStatMap := make(map[string]interface{})
 	for network, netstats := range stat.Networks {
 		netfields := map[string]interface{}{
 			"rx_dropped":   netstats.RxDropped,
@@ -327,12 +348,35 @@ func gatherContainerStats(
 			"container_id": id,
 		}
 		// Create a new network tag dictionary for the "network" tag
-		nettags := copyTags(tags)
-		nettags["network"] = network
-		acc.AddFields("docker_container_net", netfields, nettags, now)
+		if perDevice {
+			nettags := copyTags(tags)
+			nettags["network"] = network
+			acc.AddFields("docker_container_net", netfields, nettags, now)
+		}
+		if total {
+			for field, value := range netfields {
+				if field == "container_id" {
+					continue
+				}
+				_, ok := totalNetworkStatMap[field]
+				if ok {
+					totalNetworkStatMap[field] = totalNetworkStatMap[field].(uint64) + value.(uint64)
+				} else {
+					totalNetworkStatMap[field] = value
+				}
+			}
+		}
 	}
 
-	gatherBlockIOMetrics(stat, acc, tags, now, id)
+	// totalNetworkStatMap could be empty if container is running with --net=host.
+	if total && len(totalNetworkStatMap) != 0 {
+		nettags := copyTags(tags)
+		nettags["network"] = "total"
+		totalNetworkStatMap["container_id"] = id
+		acc.AddFields("docker_container_net", totalNetworkStatMap, nettags, now)
+	}
+
+	gatherBlockIOMetrics(stat, acc, tags, now, id, perDevice, total)
 }
 
 func calculateMemPercent(stat *types.StatsJSON) float64 {
@@ -361,6 +405,8 @@ func gatherBlockIOMetrics(
 	tags map[string]string,
 	now time.Time,
 	id string,
+	perDevice bool,
+	total bool,
 ) {
 	blkioStats := stat.BlkioStats
 	// Make a map of devices to their block io stats
@@ -422,11 +468,33 @@ func gatherBlockIOMetrics(
 		deviceStatMap[device]["sectors_recursive"] = metric.Value
 	}
 
+	totalStatMap := make(map[string]interface{})
 	for device, fields := range deviceStatMap {
-		iotags := copyTags(tags)
-		iotags["device"] = device
 		fields["container_id"] = id
-		acc.AddFields("docker_container_blkio", fields, iotags, now)
+		if perDevice {
+			iotags := copyTags(tags)
+			iotags["device"] = device
+			acc.AddFields("docker_container_blkio", fields, iotags, now)
+		}
+		if total {
+			for field, value := range fields {
+				if field == "container_id" {
+					continue
+				}
+				_, ok := totalStatMap[field]
+				if ok {
+					totalStatMap[field] = totalStatMap[field].(uint64) + value.(uint64)
+				} else {
+					totalStatMap[field] = value
+				}
+			}
+		}
+	}
+	if total {
+		totalStatMap["container_id"] = id
+		iotags := copyTags(tags)
+		iotags["device"] = "total"
+		acc.AddFields("docker_container_blkio", totalStatMap, iotags, now)
 	}
 }
 
@@ -471,7 +539,8 @@ func parseSize(sizeStr string) (int64, error) {
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			PerDevice: true,
+			Timeout:   internal.Duration{Duration: time.Second * 5},
 		}
 	})
 }

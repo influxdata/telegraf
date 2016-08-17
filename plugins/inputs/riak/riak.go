@@ -75,6 +75,8 @@ type riakStats struct {
 	VnodeIndexWritesTotal    int64  `json:"vnode_index_writes_total"`
 	VnodePuts                int64  `json:"vnode_puts"`
 	VnodePutsTotal           int64  `json:"vnode_puts_total"`
+	ReadRepairs              int64  `json:"read_repairs"`
+	ReadRepairsTotal         int64  `json:"read_repairs_total"`
 }
 
 // A sample configuration to only gather stats from localhost, default port.
@@ -187,6 +189,8 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 		"vnode_index_writes_total":     stats.VnodeIndexWritesTotal,
 		"vnode_puts":                   stats.VnodePuts,
 		"vnode_puts_total":             stats.VnodePutsTotal,
+		"read_repairs":                 stats.ReadRepairs,
+		"read_repairs_total":           stats.ReadRepairsTotal,
 	}
 
 	// Accumulate the tags and values

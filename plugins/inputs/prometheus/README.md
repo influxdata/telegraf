@@ -30,6 +30,26 @@ to filter and some tags
     kubeservice = "kube-apiserver"
 ```
 
+```toml
+# Authorize with a bearer token skipping cert verification
+[[inputs.prometheus]]
+  # An array of urls to scrape metrics from.
+  urls = ["http://my-kube-apiserver:8080/metrics"]
+  bearer_token = '/path/to/bearer/token'
+  insecure_skip_verify = true
+```
+
+```toml
+# Authorize using x509 certs
+[[inputs.prometheus]]
+  # An array of urls to scrape metrics from.
+  urls = ["https://my-kube-apiserver:8080/metrics"]
+
+  ssl_ca = '/path/to/cafile'
+  ssl_cert = '/path/to/certfile'
+  ssl_key = '/path/to/keyfile'
+```
+
 ### Measurements & Fields & Tags:
 
 Measurements and fields could be any thing.

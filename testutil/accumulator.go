@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,8 +28,11 @@ func (p *Metric) String() string {
 type Accumulator struct {
 	sync.Mutex
 
-	Metrics []*Metric
-	debug   bool
+	Metrics  []*Metric
+	nMetrics uint64
+	Discard  bool
+	Errors   []error
+	debug    bool
 }
 
 // Add adds a measurement point to the accumulator
@@ -42,6 +46,10 @@ func (a *Accumulator) Add(
 	a.AddFields(measurement, fields, tags, t...)
 }
 
+func (a *Accumulator) NMetrics() uint64 {
+	return atomic.LoadUint64(&a.nMetrics)
+}
+
 // AddFields adds a measurement point with a specified timestamp.
 func (a *Accumulator) AddFields(
 	measurement string,
@@ -49,6 +57,10 @@ func (a *Accumulator) AddFields(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
+	atomic.AddUint64(&a.nMetrics, 1)
+	if a.Discard {
+		return
+	}
 	a.Lock()
 	defer a.Unlock()
 	if tags == nil {
@@ -82,6 +94,24 @@ func (a *Accumulator) AddFields(
 	}
 
 	a.Metrics = append(a.Metrics, p)
+}
+
+// AddError appends the given error to Accumulator.Errors.
+func (a *Accumulator) AddError(err error) {
+	if err == nil {
+		return
+	}
+	a.Lock()
+	a.Errors = append(a.Errors, err)
+	a.Unlock()
+}
+
+func (a *Accumulator) SetPrecision(precision, interval time.Duration) {
+	return
+}
+
+func (a *Accumulator) DisablePrecision() {
+	return
 }
 
 func (a *Accumulator) Debug() bool {

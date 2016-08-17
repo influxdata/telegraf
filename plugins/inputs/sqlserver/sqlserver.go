@@ -400,6 +400,8 @@ IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
 	DROP TABLE #baseline;
 SELECT
     DB_NAME(mf.database_id) AS database_name ,
+    mf.size as database_size_8k_pages,
+    mf.max_size as database_max_size_8k_pages,
     size_on_disk_bytes ,
 	type_desc as datafile_type,
     GETDATE() AS baselineDate
@@ -435,6 +437,50 @@ FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(size_on_disk_bytes) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
+
+UNION ALL
+
+SELECT measurement = ''Rows size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
+, ' + @ColumnName + '  FROM
+(
+SELECT database_name, database_size_8k_pages
+FROM #baseline
+WHERE datafile_type = ''ROWS''
+) as V
+PIVOT(SUM(database_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
+
+UNION ALL
+
+SELECT measurement = ''Log size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
+, ' + @ColumnName + '  FROM
+(
+SELECT database_name, database_size_8k_pages
+FROM #baseline
+WHERE datafile_type = ''LOG''
+) as V
+PIVOT(SUM(database_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
+
+UNION ALL
+
+SELECT measurement = ''Rows max size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
+, ' + @ColumnName + '  FROM
+(
+SELECT database_name, database_max_size_8k_pages
+FROM #baseline
+WHERE datafile_type = ''ROWS''
+) as V
+PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
+
+UNION ALL
+
+SELECT measurement = ''Logs max size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
+, ' + @ColumnName + '  FROM
+(
+SELECT database_name, database_max_size_8k_pages
+FROM #baseline
+WHERE datafile_type = ''LOG''
+) as V
+PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
 '
 --PRINT @DynamicPivotQuery
 EXEC sp_executesql @DynamicPivotQuery;

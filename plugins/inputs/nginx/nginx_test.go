@@ -13,11 +13,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const sampleResponse = `
+const nginxSampleResponse = `
 Active connections: 585
 server accepts handled requests
  85340 85340 35085
 Reading: 4 Writing: 135 Waiting: 446
+`
+const tengineSampleResponse = `
+Active connections: 403
+server accepts handled requests request_time
+ 853 8533 3502 1546565864
+Reading: 8 Writing: 125 Waiting: 946
 `
 
 // Verify that nginx tags are properly parsed based on the server
@@ -36,7 +42,9 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		var rsp string
 
 		if r.URL.Path == "/stub_status" {
-			rsp = sampleResponse
+			rsp = nginxSampleResponse
+		} else if r.URL.Path == "/tengine_status" {
+			rsp = tengineSampleResponse
 		} else {
 			panic("Cannot handle request")
 		}
@@ -49,12 +57,20 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		Urls: []string{fmt.Sprintf("%s/stub_status", ts.URL)},
 	}
 
-	var acc testutil.Accumulator
+	nt := &Nginx{
+		Urls: []string{fmt.Sprintf("%s/tengine_status", ts.URL)},
+	}
 
-	err := n.Gather(&acc)
-	require.NoError(t, err)
+	var acc_nginx testutil.Accumulator
+	var acc_tengine testutil.Accumulator
 
-	fields := map[string]interface{}{
+	err_nginx := n.Gather(&acc_nginx)
+	err_tengine := nt.Gather(&acc_tengine)
+
+	require.NoError(t, err_nginx)
+	require.NoError(t, err_tengine)
+
+	fields_nginx := map[string]interface{}{
 		"active":   uint64(585),
 		"accepts":  uint64(85340),
 		"handled":  uint64(85340),
@@ -63,6 +79,17 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		"writing":  uint64(135),
 		"waiting":  uint64(446),
 	}
+
+	fields_tengine := map[string]interface{}{
+		"active":   uint64(403),
+		"accepts":  uint64(853),
+		"handled":  uint64(8533),
+		"requests": uint64(3502),
+		"reading":  uint64(8),
+		"writing":  uint64(125),
+		"waiting":  uint64(946),
+	}
+
 	addr, err := url.Parse(ts.URL)
 	if err != nil {
 		panic(err)
@@ -81,5 +108,6 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	}
 
 	tags := map[string]string{"server": host, "port": port}
-	acc.AssertContainsTaggedFields(t, "nginx", fields, tags)
+	acc_nginx.AssertContainsTaggedFields(t, "nginx", fields_nginx, tags)
+	acc_tengine.AssertContainsTaggedFields(t, "nginx", fields_tengine, tags)
 }

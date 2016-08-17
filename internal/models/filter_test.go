@@ -253,51 +253,6 @@ func TestFilter_TagDrop(t *testing.T) {
 	}
 }
 
-func TestFilter_CompileFilterError(t *testing.T) {
-	f := Filter{
-		NameDrop: []string{"", ""},
-	}
-	assert.Error(t, f.CompileFilter())
-	f = Filter{
-		NamePass: []string{"", ""},
-	}
-	assert.Error(t, f.CompileFilter())
-	f = Filter{
-		FieldDrop: []string{"", ""},
-	}
-	assert.Error(t, f.CompileFilter())
-	f = Filter{
-		FieldPass: []string{"", ""},
-	}
-	assert.Error(t, f.CompileFilter())
-	f = Filter{
-		TagExclude: []string{"", ""},
-	}
-	assert.Error(t, f.CompileFilter())
-	f = Filter{
-		TagInclude: []string{"", ""},
-	}
-	assert.Error(t, f.CompileFilter())
-	filters := []TagFilter{
-		TagFilter{
-			Name:   "cpu",
-			Filter: []string{"{foobar}"},
-		}}
-	f = Filter{
-		TagDrop: filters,
-	}
-	require.Error(t, f.CompileFilter())
-	filters = []TagFilter{
-		TagFilter{
-			Name:   "cpu",
-			Filter: []string{"{foobar}"},
-		}}
-	f = Filter{
-		TagPass: filters,
-	}
-	require.Error(t, f.CompileFilter())
-}
-
 func TestFilter_ShouldMetricsPass(t *testing.T) {
 	m := testutil.TestMetric(1, "testmetric")
 	f := Filter{

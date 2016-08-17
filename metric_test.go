@@ -51,23 +51,6 @@ func TestNewMetricString(t *testing.T) {
 	assert.Equal(t, lineProtoPrecision, m.PrecisionString("s"))
 }
 
-func TestNewMetricStringNoTime(t *testing.T) {
-	tags := map[string]string{
-		"host": "localhost",
-	}
-	fields := map[string]interface{}{
-		"usage_idle": float64(99),
-	}
-	m, err := NewMetric("cpu", tags, fields)
-	assert.NoError(t, err)
-
-	lineProto := fmt.Sprintf("cpu,host=localhost usage_idle=99")
-	assert.Equal(t, lineProto, m.String())
-
-	lineProtoPrecision := fmt.Sprintf("cpu,host=localhost usage_idle=99")
-	assert.Equal(t, lineProtoPrecision, m.PrecisionString("s"))
-}
-
 func TestNewMetricFailNaN(t *testing.T) {
 	now := time.Now()
 

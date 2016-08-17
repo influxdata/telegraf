@@ -22,7 +22,7 @@ from the same topic in parallel.
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
-  ## Data format to consume. 
+  ## Data format to consume.
 
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
@@ -32,11 +32,5 @@ from the same topic in parallel.
 
 ## Testing
 
-Running integration tests requires running Zookeeper & Kafka. The following
-commands assume you're on OS X & using [boot2docker](http://boot2docker.io/) or docker-machine through [Docker Toolbox](https://www.docker.com/docker-toolbox).
-
-To start Kafka & Zookeeper:
-
-```
-docker run -d -p 2181:2181 -p 9092:9092 --env ADVERTISED_HOST=`boot2docker ip || docker-machine ip <your_machine_name>` --env ADVERTISED_PORT=9092 spotify/kafka
-```
+Running integration tests requires running Zookeeper & Kafka. See Makefile
+for kafka container command.

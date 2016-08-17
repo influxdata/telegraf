@@ -118,6 +118,8 @@ func (a *Agent) gatherer(
 
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetDebug(a.Config.Agent.Debug)
+		acc.SetPrecision(a.Config.Agent.Precision.Duration,
+			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
 
 		internal.RandomSleep(a.Config.Agent.CollectionJitter.Duration, shutdown)
@@ -201,6 +203,8 @@ func (a *Agent) Test() error {
 	for _, input := range a.Config.Inputs {
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetTrace(true)
+		acc.SetPrecision(a.Config.Agent.Precision.Duration,
+			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
@@ -210,6 +214,9 @@ func (a *Agent) Test() error {
 
 		if err := input.Input.Gather(acc); err != nil {
 			return err
+		}
+		if acc.errCount > 0 {
+			return fmt.Errorf("Errors encountered during processing")
 		}
 
 		// Special instructions for some inputs. cpu, for example, needs to be
@@ -264,11 +271,31 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
 		case m := <-metricC:
-			for _, o := range a.Config.Outputs {
-				o.AddMetric(m)
+			for i, o := range a.Config.Outputs {
+				if i == len(a.Config.Outputs)-1 {
+					o.AddMetric(m)
+				} else {
+					o.AddMetric(copyMetric(m))
+				}
 			}
 		}
 	}
+}
+
+func copyMetric(m telegraf.Metric) telegraf.Metric {
+	t := time.Time(m.Time())
+
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
+	for k, v := range m.Tags() {
+		tags[k] = v
+	}
+	for k, v := range m.Fields() {
+		fields[k] = v
+	}
+
+	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
+	return out
 }
 
 // Run runs the agent daemon, gathering every Interval
@@ -289,6 +316,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		case telegraf.ServiceInput:
 			acc := NewAccumulator(input.Config, metricC)
 			acc.SetDebug(a.Config.Agent.Debug)
+			// Service input plugins should set their own precision of their
+			// metrics.
+			acc.DisablePrecision()
 			acc.setDefaultTags(a.Config.Tags)
 			if err := p.Start(acc); err != nil {
 				log.Printf("Service for input %s failed to start, exiting\n%s\n",
