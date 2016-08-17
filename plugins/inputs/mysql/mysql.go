@@ -22,6 +22,8 @@ type Mysql struct {
 	PerfEventsStatementsLimit           int64    `toml:"perf_events_statements_limit"`
 	PerfEventsStatementsTimeLimit       int64    `toml:"perf_events_statemetns_time_limit"`
 	TableSchemaDatabases                []string `toml:"table_schema_databases"`
+	GatherGlobalStatuses                bool     `toml:"gather_global_statuses"`
+	GatherGlobalVariables               bool     `toml:"gather_global_variables"`
 	GatherProcessList                   bool     `toml:"gather_process_list"`
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
@@ -53,6 +55,12 @@ var sampleConfig = `
   #
   ## if the list is empty, then metrics are gathered from all databasee tables
   table_schema_databases                    = []
+  #
+  ## gather global statuses
+  gather_global_statuses                    = true
+  #
+  ## gather global variables
+  gather_global_variables                   = true
   #
   ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list
   gather_table_schema                       = false
@@ -564,13 +572,15 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	defer db.Close()
 
-	err = m.gatherGlobalStatuses(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherGlobalStatuses {
+		err = m.gatherGlobalStatuses(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Global Variables may be gathered less often
-	if len(m.IntervalSlow) > 0 {
+	if m.GatherGlobalVariables && len(m.IntervalSlow) > 0 {
 		if uint32(time.Since(lastT).Seconds()) > scanIntervalSlow {
 			err = m.gatherGlobalVariables(db, serv, acc)
 			if err != nil {
