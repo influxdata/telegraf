@@ -16,7 +16,8 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	}
 
 	m := &Mysql{
-		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
+		Servers:              []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
+		GatherGlobalStatuses: true,
 	}
 
 	var acc testutil.Accumulator
