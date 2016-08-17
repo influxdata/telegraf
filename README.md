@@ -174,7 +174,6 @@ Currently implemented sources:
 * [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq)
 * [nstat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nstat)
 * [ntpq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ntpq)
-* [pgbouncer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/pgbouncer)
 * [phpfpm](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/phpfpm)
 * [phusion passenger](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/passenger)
 * [ping](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ping)
