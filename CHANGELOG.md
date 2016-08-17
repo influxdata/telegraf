@@ -139,7 +139,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1600](https://github.com/influxdata/telegraf/issues/1600): Fix quoting with text values in postgresql_extensible plugin.
 - [#1425](https://github.com/influxdata/telegraf/issues/1425): Fix win_perf_counter "index out of range" panic.
 - [#1634](https://github.com/influxdata/telegraf/issues/1634): Fix ntpq panic when field is missing.
-- [#1641](https://github.com/influxdata/telegraf/pull/1641): input/mysql: Allow to configure whether to gather global variables and statuses
+- [#1642](https://github.com/influxdata/telegraf/pull/1642): input/mysql: Allow to configure whether to gather global variables and statuses
 
 ## v0.13.1 [2016-05-24]
 
