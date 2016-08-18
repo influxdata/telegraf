@@ -68,15 +68,6 @@ consistent with the behavior of `collection_jitter`.
 - [#1479](https://github.com/influxdata/telegraf/pull/1479): logparser: change resp_code from a field to a tag.
 - [#1411](https://github.com/influxdata/telegraf/pull/1411): Implement support for fetching hddtemp data
 
-### Bugfixes
-
-- [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
-- [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
-- [#1405](https://github.com/influxdata/telegraf/issues/1405): Fix memory/connection leak in prometheus input plugin.
-- [#1378](https://github.com/influxdata/telegraf/issues/1378): Trim BOM from config file for Windows support.
-- [#1339](https://github.com/influxdata/telegraf/issues/1339): Prometheus client output panic on service reload.
-- [#1412](https://github.com/influxdata/telegraf/pull/1412): Instrumental output has better reconnect behavior
-
 ## v1.0 beta 2 [2016-06-21]
 
 ### Features
