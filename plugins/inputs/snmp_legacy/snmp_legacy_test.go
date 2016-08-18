@@ -1,4 +1,4 @@
-package snmp
+package snmp_legacy
 
 import (
 	"testing"

@@ -16,7 +16,7 @@ build:
 	go install -ldflags "-X main.version=$(VERSION)" ./...
 
 build-windows:
-	go build -o telegraf.exe -ldflags \
+	GOOS=windows GOARCH=amd64 go build -o telegraf.exe -ldflags \
 		"-X main.version=$(VERSION)" \
 		./cmd/telegraf/telegraf.go
 
@@ -37,6 +37,7 @@ prepare:
 # Use the windows godeps file to prepare dependencies
 prepare-windows:
 	go get github.com/sparrc/gdm
+	gdm restore
 	gdm restore -f Godeps_windows
 
 # Run all docker containers necessary for unit tests

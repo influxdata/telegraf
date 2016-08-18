@@ -1,4 +1,4 @@
-package snmp
+package snmp_legacy
 
 import (
 	"io/ioutil"
@@ -225,7 +225,7 @@ func (s *Snmp) SampleConfig() string {
 
 // Description returns description of Zookeeper plugin
 func (s *Snmp) Description() string {
-	return `Reads oids value from one or many snmp agents`
+	return `DEPRECATED! PLEASE USE inputs.snmp INSTEAD.`
 }
 
 func fillnode(parentNode Node, oid_name string, ids []string) {
@@ -812,7 +812,7 @@ func (h *Host) HandleResponse(
 }
 
 func init() {
-	inputs.Add("snmp", func() telegraf.Input {
+	inputs.Add("snmp_legacy", func() telegraf.Input {
 		return &Snmp{}
 	})
 }
