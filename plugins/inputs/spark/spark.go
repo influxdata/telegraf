@@ -235,7 +235,7 @@ func (c *yarnMetric) addTagsFields(out map[string]interface{}) {
 
 func (j *Spark) SampleConfig() string {
 	return `
-  ## Spark server exposing jolokia read service
+  ## Spark servers exposing jolokia read service
   #spark_servers = ["127.0.0.1:8778"] #optional
   ## Server running Yarn Resource Manager
   #yarn_server = "127.0.0.1:8088" #optional
