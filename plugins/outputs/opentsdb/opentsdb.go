@@ -46,17 +46,15 @@ var sampleConfig = `
   debug = false
 `
 
-type TagSet map[string]string
-
-func (t TagSet) ToLineFormat() string {
-	tags := make([]string, len(t))
+func ToLineFormat(tags map[string]string) string {
+	tagsArray := make([]string, len(tags))
 	index := 0
-	for k, v := range t {
-		tags[index] = fmt.Sprintf("%s=%s", k, v)
+	for k, v := range tags {
+		tagsArray[index] = fmt.Sprintf("%s=%s", k, v)
 		index++
 	}
-	sort.Strings(tags)
-	return strings.Join(tags, " ")
+	sort.Strings(tagsArray)
+	return strings.Join(tagsArray, " ")
 }
 
 func (o *OpenTSDB) Connect() error {
@@ -150,7 +148,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 
 	for _, m := range metrics {
 		now := m.UnixNano() / 1000000000
-		tags := cleanTags(m.Tags()).ToLineFormat()
+		tags := ToLineFormat(cleanTags(m.Tags()))
 
 		for fieldName, value := range m.Fields() {
 			metricValue, buildError := buildValue(value)
@@ -176,7 +174,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 	return nil
 }
 
-func cleanTags(tags map[string]string) TagSet {
+func cleanTags(tags map[string]string) map[string]string {
 	tagSet := make(map[string]string, len(tags))
 	for k, v := range tags {
 		tagSet[sanitizedChars.Replace(k)] = sanitizedChars.Replace(v)
