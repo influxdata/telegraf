@@ -18,23 +18,23 @@ import (
 func TestCleanTags(t *testing.T) {
 	var tagtests = []struct {
 		ptIn    map[string]string
-		outTags TagSet
+		outTags map[string]string
 	}{
 		{
 			map[string]string{"one": "two", "three": "four"},
-			TagSet{"one": "two", "three": "four"},
+			map[string]string{"one": "two", "three": "four"},
 		},
 		{
 			map[string]string{"aaa": "bbb"},
-			TagSet{"aaa": "bbb"},
+			map[string]string{"aaa": "bbb"},
 		},
 		{
 			map[string]string{"Sp%ci@l Chars": "g$t repl#ced"},
-			TagSet{"Sp-ci-l_Chars": "g-t_repl-ced"},
+			map[string]string{"Sp-ci-l_Chars": "g-t_repl-ced"},
 		},
 		{
 			map[string]string{},
-			TagSet{},
+			map[string]string{},
 		},
 	}
 	for _, tt := range tagtests {
@@ -47,28 +47,28 @@ func TestCleanTags(t *testing.T) {
 
 func TestBuildTagsTelnet(t *testing.T) {
 	var tagtests = []struct {
-		ptIn    TagSet
+		ptIn    map[string]string
 		outTags string
 	}{
 		{
-			TagSet{"one": "two", "three": "four"},
+			map[string]string{"one": "two", "three": "four"},
 			"one=two three=four",
 		},
 		{
-			TagSet{"aaa": "bbb"},
+			map[string]string{"aaa": "bbb"},
 			"aaa=bbb",
 		},
 		{
-			TagSet{"one": "two", "aaa": "bbb"},
+			map[string]string{"one": "two", "aaa": "bbb"},
 			"aaa=bbb one=two",
 		},
 		{
-			TagSet{},
+			map[string]string{},
 			"",
 		},
 	}
 	for _, tt := range tagtests {
-		tags := tt.ptIn.ToLineFormat()
+		tags := ToLineFormat(tt.ptIn)
 		if !reflect.DeepEqual(tags, tt.outTags) {
 			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outTags, tags)
 		}
