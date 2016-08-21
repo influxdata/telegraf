@@ -6,14 +6,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+type Tag struct {
+	Name  string `toml:"name"`
+	Value string `toml:"value"`
+}
+
 type PD struct {
-	ServiceKey  string            `toml:"service_key"`
-	Desc        string            `toml:"description"`
-	Metric      string            `toml:"metric"`
-	Field       string            `toml:"field"`
-	Expression  string            `toml:"expression"`
-	TagFilter   map[string]string `toml:"tag_filter"`
-	incidentKey string            `toml:"-"`
+	ServiceKey  string `toml:"service_key"`
+	Desc        string `toml:"description"`
+	Metric      string `toml:"metric"`
+	Field       string `toml:"field"`
+	Expression  string `toml:"expression"`
+	TagFilter   []Tag  `toml:"tags"`
+	incidentKey string `toml:"-"`
 }
 
 var sampleConfig = `
@@ -29,7 +34,6 @@ var sampleConfig = `
   ## will be considered for further processing
   [[outputs.pagerduty.tag_filter]]
     role = "web-server"
-    region = "us-west1"
   ## Expression is used to evaluate the alert
   expression = "> 50.0"
 `
@@ -54,9 +58,9 @@ func (p *PD) isMatch(metric telegraf.Metric) bool {
 	if p.Metric != metric.Name() {
 		return false
 	}
-	for k, v := range p.TagFilter {
-		t, ok := metric.Tags()[k]
-		if !ok || (t != v) {
+	for _, tag := range p.TagFilter {
+		v, ok := metric.Tags()[tag.Name]
+		if !ok || (v != tag.Value) {
 			return false
 		}
 	}
