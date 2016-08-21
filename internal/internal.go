@@ -17,8 +17,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-
-	"github.com/gobwas/glob"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -135,8 +133,8 @@ func GetTLSConfig(
 		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf(
-				"Could not load TLS client key/certificate: %s",
-				err))
+				"Could not load TLS client key/certificate from %s:%s: %s",
+				SSLKey, SSLCert, err))
 		}
 
 		t.Certificates = []tls.Certificate{cert}
@@ -207,27 +205,6 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 		<-done
 		return TimeoutErr
 	}
-}
-
-// CompileFilter takes a list of glob "filters", ie:
-//   ["MAIN.*", "CPU.*", "NET"]
-// and compiles them into a glob object. This glob object can
-// then be used to match keys to the filter.
-func CompileFilter(filters []string) (glob.Glob, error) {
-	var out glob.Glob
-
-	// return if there is nothing to compile
-	if len(filters) == 0 {
-		return out, nil
-	}
-
-	var err error
-	if len(filters) == 1 {
-		out, err = glob.Compile(filters[0])
-	} else {
-		out, err = glob.Compile("{" + strings.Join(filters, ",") + "}")
-	}
-	return out, err
 }
 
 // RandomSleep will sleep for a random amount of time up to max.
