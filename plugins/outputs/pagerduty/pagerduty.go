@@ -82,17 +82,20 @@ func (p *PD) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (p *PD) processForEvent(metric telegraf.Metric) error {
+func (p *PD) isTripped(metric telegraf.Metric) (bool, error) {
 	value, ok := metric.Fields()[p.Field]
 	if !ok {
-		return fmt.Errorf("Filed '%s' absent", p.Field)
+		return false, fmt.Errorf("Filed '%s' absent", p.Field)
 	}
 	expr := fmt.Sprintf("%v %s", value, p.Expression)
-	trigger, err := evalBoolExpr(expr)
+	return evalBoolExpr(expr)
+}
+
+func (p *PD) processForEvent(metric telegraf.Metric) error {
+	trigger, err := p.isTripped(metric)
 	if err != nil {
 		return err
 	}
-
 	event := Event{
 		ServiceKey: p.ServiceKey,
 		Client:     "telegraf",

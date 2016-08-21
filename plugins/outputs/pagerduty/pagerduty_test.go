@@ -5,22 +5,31 @@ import (
 	"testing"
 )
 
-func TestMetricMatch(t *testing.T) {
-	metric := testutil.TestMetric(1.0, "foo")
+func TestPDAlert(t *testing.T) {
+	metric := testutil.TestMetric(2.0, "foo")
+	var err error
+	var tripped bool
 	p := PD{
 		Metric:     "foo",
 		Field:      "value",
-		Expression: "> 0",
+		Expression: "> 5",
 	}
-	if !p.Match(metric) {
-		t.Error("Metric did not match for greater than expression")
+	if !p.isMatch(metric) {
+		t.Error("Metric should match when name is same")
 	}
-	p.Expression = "== 1"
-	if !p.Match(metric) {
-		t.Error("Metric did not match for equality expression")
+	tripped, err = p.isTripped(metric)
+	if err != nil {
+		t.Error(err)
 	}
-	p.Expression = "< 0"
-	if p.Match(metric) {
-		t.Error("Metric did not match for less than expression")
+	if tripped {
+		t.Error("Metric should not trigger alert when its expression evaluates to false")
+	}
+	p.Expression = "> 1"
+	tripped, err = p.isTripped(metric)
+	if err != nil {
+		t.Error(err)
+	}
+	if !tripped {
+		t.Error("Metric should trigger alert when expression evaluates to true")
 	}
 }
