@@ -21,6 +21,7 @@ TMP_CONFIG_DIR=./rpm_config
 CONFIG_FILES_DIR=./ConfigFiles
 CONFIG_FILES_VER=1.6
 CONFIG_FILES_ITER=1
+BIN_RPM_ITER=2
 
 LICENSE=MIT
 URL=github.com/aristanetworks/telegraf
@@ -30,6 +31,8 @@ VENDOR=Influxdata
 set -e
 
 # Get version from tag closest to HEAD
+# this is based on the upstream telegraf version
+# BIN_RPM_ITER accounts for any updates to telegraf that we do in our repo
 version=$(git describe --tags --abbrev=0 | sed 's/^v//' )
 
 # Build and install the latest code
@@ -55,6 +58,7 @@ BINARY_FPM_ARGS="\
 --prefix /usr/bin \
 -a $ARCH \
 -v $version \
+--iteration $BIN_RPM_ITER \
 $COMMON_FPM_ARGS"
 
 # Make a copy of the generated binaries into a tmp directory bin
