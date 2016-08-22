@@ -225,10 +225,6 @@ func (h *HttpJson) gatherServer(
 //     string: body of the response
 //     error : Any error that may have occurred
 func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
-	// Set default values
-	if h.ResponseTimeout.Duration < time.Second {
-		h.ResponseTimeout.Duration = time.Second * 5
-	}
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
@@ -299,6 +295,9 @@ func init() {
 	inputs.Add("httpjson", func() telegraf.Input {
 		return &HttpJson{
 			client: &RealHTTPClient{},
+			ResponseTimeout: internal.Duration{
+				Duration: 5 * time.Second,
+			},
 		}
 	})
 }
