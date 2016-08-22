@@ -2,6 +2,14 @@
 
 ### Release Notes
 
+**Breaking Change** The SNMP plugin is being deprecated in it's current form.
+There is a [new SNMP plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
+which fixes many of the issues and confusions
+of it's predecessor. For users wanting to continue to use the deprecated SNMP
+plugin, you will need to change your config file from `[[inputs.snmp]]` to
+`[[inputs.snmp_legacy]]`. The configuration of the new SNMP plugin is _not_
+backwards-compatible.
+
 - Telegraf now supports being installed as an official windows service,
 which can be installed via
 `> C:\Program Files\Telegraf\telegraf.exe --service install`
@@ -59,7 +67,6 @@ consistent with the behavior of `collection_jitter`.
 - [#1434](https://github.com/influxdata/telegraf/pull/1434): Add measurement name arg to logparser plugin.
 - [#1479](https://github.com/influxdata/telegraf/pull/1479): logparser: change resp_code from a field to a tag.
 - [#1411](https://github.com/influxdata/telegraf/pull/1411): Implement support for fetching hddtemp data
-- [#1400](https://github.com/influxdata/telegraf/pull/1400): Add supoort for Pgbouncer
 - [#1340](https://github.com/influxdata/telegraf/issues/1340): statsd: do not log every dropped metric.
 - [#1368](https://github.com/influxdata/telegraf/pull/1368): Add precision rounding to all metrics on collection.
 - [#1390](https://github.com/influxdata/telegraf/pull/1390): Add support for Tengine
@@ -83,6 +90,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1650](https://github.com/influxdata/telegraf/issues/1650): Ability to configure response_timeout in httpjson input.
 - [#1543](https://github.com/influxdata/telegraf/pull/1543): Official Windows service.
 - [#1414](https://github.com/influxdata/telegraf/pull/1414): Forking sensors command to remove C package dependency.
+- [#1389](https://github.com/influxdata/telegraf/pull/1389): Add a new SNMP plugin.
 
 ### Bugfixes
 
@@ -131,6 +139,8 @@ consistent with the behavior of `collection_jitter`.
 - [#1586](https://github.com/influxdata/telegraf/pull/1586): Remove IF NOT EXISTS from influxdb output database creation.
 - [#1600](https://github.com/influxdata/telegraf/issues/1600): Fix quoting with text values in postgresql_extensible plugin.
 - [#1425](https://github.com/influxdata/telegraf/issues/1425): Fix win_perf_counter "index out of range" panic.
+- [#1634](https://github.com/influxdata/telegraf/issues/1634): Fix ntpq panic when field is missing.
+- [#1637](https://github.com/influxdata/telegraf/issues/1637): Sanitize graphite output field names.
 
 ## v0.13.1 [2016-05-24]
 
