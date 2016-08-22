@@ -73,6 +73,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/varnish"
 	_ "github.com/influxdata/telegraf/plugins/inputs/webhooks"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
+	_ "github.com/influxdata/telegraf/plugins/inputs/wpc"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
 )
