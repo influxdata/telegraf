@@ -25,6 +25,9 @@ func TestMemStats(t *testing.T) {
 		// Cached:      4312,
 		// Wired:       134,
 		// Shared:      2142,
+		Dirty:        1234,
+		Writeback:    11223344,
+		WritebackTmp: 998877,
 	}
 
 	mps.On("VMStat").Return(vms, nil)
@@ -52,6 +55,9 @@ func TestMemStats(t *testing.T) {
 		"free":              uint64(1235),
 		"cached":            uint64(0),
 		"buffered":          uint64(0),
+		"dirty":             uint64(1234),
+		"writeback":         uint64(11223344),
+		"writebackTmp":      uint64(998877),
 	}
 	acc.AssertContainsTaggedFields(t, "mem", memfields, make(map[string]string))
 
