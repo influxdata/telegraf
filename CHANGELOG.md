@@ -93,6 +93,7 @@ consistent with the behavior of `collection_jitter`.
 
 ### Bugfixes
 
+- [#1606](https://github.com/influxdata/telegraf/pull/1606): Remove carraige returns from exec plugin output on Windows
 - [#1619](https://github.com/influxdata/telegraf/issues/1619): Fix `make windows` build target
 - [#1519](https://github.com/influxdata/telegraf/pull/1519): Fix error race conditions and partial failures.
 - [#1477](https://github.com/influxdata/telegraf/issues/1477): nstat: fix inaccurate config panic.
