@@ -1,6 +1,6 @@
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
-github.com/aerospike/aerospike-client-go 45863b7fd8640dc12f7fdd397104d97e1986f25a
+github.com/aerospike/aerospike-client-go 7f3a312c3b2a60ac083ec6da296091c52c795c63
 github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
 github.com/aws/aws-sdk-go 13a12060f716145019378a10e2806c174356b857
 github.com/beorn7/perks 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -48,7 +48,6 @@ github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
 github.com/shirou/gopsutil 4d0c402af66c78735c5ccf820dc2ca7de5e4ff08
 github.com/soniah/gosnmp eb32571c2410868d85849ad67d1e51d01273eb84
-github.com/sparrc/aerospike-client-go d4bb42d2c2d39dae68e054116f4538af189e05d5
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
 github.com/vjeantet/grok 83bfdfdfd1a8146795b28e547a8e3c8b28a466c2
