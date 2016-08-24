@@ -55,6 +55,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/procstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	_ "github.com/influxdata/telegraf/plugins/inputs/puppetagent"
+	_ "github.com/influxdata/telegraf/plugins/inputs/rabbit_mq_parser"
 	_ "github.com/influxdata/telegraf/plugins/inputs/rabbitmq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/raindrops"
 	_ "github.com/influxdata/telegraf/plugins/inputs/redis"
