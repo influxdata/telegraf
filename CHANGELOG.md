@@ -1,3 +1,12 @@
+## v1.1 [unreleased]
+
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+
 ## v1.0 [unreleased]
 
 ### Release Notes
@@ -9,10 +18,6 @@ of it's predecessor. For users wanting to continue to use the deprecated SNMP
 plugin, you will need to change your config file from `[[inputs.snmp]]` to
 `[[inputs.snmp_legacy]]`. The configuration of the new SNMP plugin is _not_
 backwards-compatible.
-
-- Telegraf now supports being installed as an official windows service,
-which can be installed via
-`> C:\Program Files\Telegraf\telegraf.exe --service install`
 
 **Breaking Change**: Aerospike main server node measurements have been renamed
 aerospike_node. Aerospike namespace measurements have been renamed to
@@ -43,6 +48,10 @@ should now look like:
   [inputs.webhooks.github]
     path = "/"
 ```
+
+- Telegraf now supports being installed as an official windows service,
+which can be installed via
+`> C:\Program Files\Telegraf\telegraf.exe --service install`
 
 - `flush_jitter` behavior has been changed. The random jitter will now be
 evaluated at every flush interval, rather than once at startup. This makes it
