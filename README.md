@@ -244,6 +244,7 @@ want to add support for another service or third-party API.
 * [mqtt](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/mqtt)
 * [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/nsq)
 * [opentsdb](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
+* [PagerDuty](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/pagerduty)
 * [prometheus](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/prometheus_client)
 * [riemann](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/riemann)
 
