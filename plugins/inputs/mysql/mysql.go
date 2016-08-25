@@ -23,6 +23,7 @@ type Mysql struct {
 	PerfEventsStatementsTimeLimit       int64    `toml:"perf_events_statemetns_time_limit"`
 	TableSchemaDatabases                []string `toml:"table_schema_databases"`
 	GatherProcessList                   bool     `toml:"gather_process_list"`
+        GatherUserStatistics                bool     `toml:"gather_user_statistics"`
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
@@ -59,6 +60,9 @@ var sampleConfig = `
   #
   ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
   gather_process_list                       = true
+  #
+  ## gather thread state counts from INFORMATION_SCHEMA.USER_STATISTICS
+  gather_user_statistics                    = true
   #
   ## gather auto_increment columns and max values from information schema
   gather_info_schema_auto_inc               = true
@@ -432,6 +436,10 @@ const (
         WHERE ID != connection_id()
         GROUP BY command,state
         ORDER BY null`
+    infoSchemaUserStatisticsQuery = `
+        SELECT *,count(*)
+        FROM information_schema.user_statistics
+	GROUP BY user`
 	infoSchemaAutoIncQuery = `
         SELECT table_schema, table_name, column_name, auto_increment,
           CAST(pow(2, case data_type
@@ -547,7 +555,6 @@ const (
 			table_name
 			FROM information_schema.tables
 		WHERE table_schema = 'performance_schema' AND table_name = ?
-
 	`
 )
 
@@ -594,6 +601,13 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	if m.GatherProcessList {
 		err = m.GatherProcessListStatuses(db, serv, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+        if m.GatherUserStatistics {
+		err = m.GatherUserStatisticsStatuses(db, serv, acc)
 		if err != nil {
 			return err
 		}
@@ -690,6 +704,10 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 		}
 		key = strings.ToLower(key)
 		// parse value, if it is numeric then save, otherwise ignore
+		if strings.Contains(key, "version") {
+			fields[key] = string(val)
+			tags[key] = string(val)
+		}
 		if floatVal, ok := parseValue(val); ok {
 			fields[key] = floatVal
 		}
@@ -878,7 +896,12 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 				return err
 			}
 			fields["syncs"] = i
-		}
+		case "Uptime":
+			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
+			if err != nil {
+				return err
+			}
+			fields["uptime"] = i}
 	}
 	// Send any remaining fields
 	if len(fields) > 0 {
@@ -905,6 +928,81 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			}
 			fields["connections"] = connections
 			acc.AddFields("mysql_users", fields, tags)
+		}
+	}
+
+	return nil
+// }
+
+// gather connection metrics from user_statistics for each user
+	if m.GatherUserStatistics {
+		conn_rows, err := db.Query("select user, total_connections, concurrent_connections, connected_time, busy_time, cpu_time, bytes_received, bytes_sent, binlog_bytes_written, rows_fetched, rows_updated, table_rows_read, select_commands, update_commands, other_commands, commit_transactions, rollback_transactions, denied_connections, lost_connections, access_denied, empty_queries, total_ssl_connections FROM INFORMATION_SCHEMA.USER_STATISTICS GROUP BY user")
+
+		for conn_rows.Next() {
+			var user string
+			var total_connections int64
+			var concurrent_connections int64
+			var connected_time int64
+			var busy_time int64
+			var cpu_time int64
+			var bytes_received int64
+			var bytes_sent int64
+			var binlog_bytes_written int64
+			var rows_fetched int64
+			var rows_updated int64
+			var table_rows_read int64
+			var select_commands int64
+			var update_commands int64
+			var other_commands int64
+			var commit_transactions int64
+			var rollback_transactions int64
+			var denied_connections int64
+			var lost_connections int64
+			var access_denied int64
+			var empty_queries int64
+			var total_ssl_connections int64
+
+
+			err = conn_rows.Scan(&user, &total_connections, &concurrent_connections,
+                               &connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+                               &rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
+                               &commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+                               &empty_queries, &total_ssl_connections,
+                        )
+
+			if err != nil {
+				return err
+			}
+
+			tags := map[string]string{"server": servtag, "user": user}
+			fields := make(map[string]interface{})
+
+			if err != nil {
+				return err
+			}
+			fields["total_connections"] = total_connections
+			fields["concurrent_connections"] = concurrent_connections
+			fields["connected_time"] = connected_time
+			fields["busy_time"] = busy_time
+			fields["cpu_time"] = cpu_time
+			fields["bytes_received"] = bytes_received
+			fields["bytes_sent"] = bytes_sent
+			fields["binlog_bytes_written"] = binlog_bytes_written
+			fields["rows_fetched"] = rows_fetched
+			fields["rows_updated"] = rows_updated
+			fields["table_rows_read"] = table_rows_read
+			fields["select_commands"] = select_commands
+			fields["update_commands"] = update_commands
+			fields["other_commands"] = other_commands
+			fields["commit_transactions"] = commit_transactions
+			fields["rollback_transactions"] = rollback_transactions
+			fields["denied_connections"] = denied_connections
+			fields["lost_connections"] = lost_connections
+			fields["access_denied"] = access_denied
+			fields["empty_queries"] = empty_queries
+			fields["total_ssl_connections"] = total_ssl_connections
+
+			acc.AddFields("mysql_user_stats", fields, tags)
 		}
 	}
 
@@ -958,6 +1056,89 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	acc.AddFields("mysql_info_schema", fields, tags)
 	return nil
 }
+
+// GatherUserStatistics can be used to collect metrics on each running command
+// and its state with its running count
+func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	// run query
+	rows, err := db.Query(infoSchemaUserStatisticsQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var (
+		user string
+		total_connections int64
+		concurrent_connections int64
+		connected_time int64
+		busy_time int64
+		cpu_time int64
+		bytes_received int64
+		bytes_sent int64
+		binlog_bytes_written int64
+		rows_fetched int64
+		rows_updated int64
+		table_rows_read int64
+		select_commands int64
+		update_commands int64
+		other_commands int64
+		commit_transactions int64
+		rollback_transactions int64
+		denied_connections int64
+		lost_connections int64
+		access_denied int64
+		empty_queries int64
+		total_ssl_connections int64
+		count   uint32
+	)
+
+	var servtag string
+	servtag, err = parseDSN(serv)
+	if err != nil {
+		servtag = "localhost"
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&user, &total_connections, &concurrent_connections,
+                           &connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+                           &rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
+                           &commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+                           &empty_queries, &total_ssl_connections, &count,
+                )
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag, "user": user}
+		fields := map[string]interface{} {
+
+			"total_connections": total_connections,
+			"concurrent_connections": concurrent_connections,
+			"connected_time": connected_time,
+			"busy_time": busy_time,
+			"cpu_time": cpu_time,
+			"bytes_received": bytes_received,
+			"bytes_sent": bytes_sent,
+			"binlog_bytes_written": binlog_bytes_written,
+			"rows_fetched": rows_fetched,
+			"rows_updated": rows_updated,
+			"table_rows_read": table_rows_read,
+			"select_commands": select_commands,
+			"update_commands": update_commands,
+			"other_commands": other_commands,
+			"commit_transactions": commit_transactions,
+			"rollback_transactions": rollback_transactions,
+			"denied_connections": denied_connections,
+			"lost_connections": lost_connections,
+			"access_denied": access_denied,
+			"empty_queries": empty_queries,
+			"total_ssl_connections": total_ssl_connections,
+		}
+		acc.AddFields("mysql_user_stats", fields, tags)
+	}
+	return nil
+}
+
 
 // gatherPerfTableIOWaits can be used to get total count and time
 // of I/O wait event for each table and process
@@ -1376,7 +1557,6 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 			&rowsAffected, &rowsSent, &rowsExamined,
 			&tmpTables, &tmpDiskTables,
 			&sortMergePasses, &sortRows,
-			&noIndexUsed,
 		)
 
 		if err != nil {
