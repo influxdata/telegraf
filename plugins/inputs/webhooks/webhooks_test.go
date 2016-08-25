@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/dockerhub"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
@@ -13,6 +14,12 @@ func TestAvailableWebhooks(t *testing.T) {
 	expected := make([]Webhook, 0)
 	if !reflect.DeepEqual(wb.AvailableWebhooks(), expected) {
 		t.Errorf("expected to %v.\nGot %v", expected, wb.AvailableWebhooks())
+	}
+
+	wb.Dockerhub = &dockerhub.DockerhubWebhook{Path: "/dockerhub"}
+	expected = append(expected, wb.Dockerhub)
+	if !reflect.DeepEqual(wb.AvailableWebhooks(), expected) {
+		t.Errorf("expected to be %v.\nGot %v", expected, wb.AvailableWebhooks())
 	}
 
 	wb.Github = &github.GithubWebhook{Path: "/github"}
