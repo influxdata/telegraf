@@ -1557,6 +1557,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 			&rowsAffected, &rowsSent, &rowsExamined,
 			&tmpTables, &tmpDiskTables,
 			&sortMergePasses, &sortRows,
+			&noIndexUsed,
 		)
 
 		if err != nil {
