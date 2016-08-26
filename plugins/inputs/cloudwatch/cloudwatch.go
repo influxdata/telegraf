@@ -33,7 +33,7 @@ type (
 		Namespace   string            `toml:"namespace"`
 		Metrics     []*Metric         `toml:"metrics"`
 		CacheTTL    internal.Duration `toml:"cache_ttl"`
-		RateLimit   string            `toml:"ratelimit"`
+		RateLimit   int               `toml:"ratelimit"`
 		client      cloudwatchClient
 		metricCache *MetricCache
 	}
