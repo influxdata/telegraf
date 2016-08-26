@@ -28,11 +28,12 @@ type (
 		Filename  string `toml:"shared_credential_file"`
 		Token     string `toml:"token"`
 
-		Period      internal.Duration `toml:"period"`
-		Delay       internal.Duration `toml:"delay"`
-		Namespace   string            `toml:"namespace"`
-		Metrics     []*Metric         `toml:"metrics"`
-		CacheTTL    internal.Duration `toml:"cache_ttl"`
+		Period      internal.Duration  `toml:"period"`
+		Delay       internal.Duration  `toml:"delay"`
+		Namespace   string             `toml:"namespace"`
+		Metrics     []*Metric          `toml:"metrics"`
+		CacheTTL    internal.Duration  `toml:"cache_ttl"`
+		RateLimit   internal.RateLimit `toml:"ratelimit"`
 		client      cloudwatchClient
 		metricCache *MetricCache
 	}
@@ -175,7 +176,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	// limit concurrency or we can easily exhaust user connection limit
 	// see cloudwatch API request limits:
 	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
-	lmtr := limiter.NewRateLimiter(10, time.Second)
+	lmtr := limiter.NewRateLimiter(c.RateLimit, time.Second)
 	defer lmtr.Stop()
 	var wg sync.WaitGroup
 	wg.Add(len(metrics))
