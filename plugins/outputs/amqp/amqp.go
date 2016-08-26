@@ -29,7 +29,7 @@ type AMQP struct {
 	Database string
 	// InfluxDB retention policy
 	RetentionPolicy string
-	// InfluxDB precision
+	// InfluxDB precision (DEPRECATED)
 	Precision string
 
 	// Path to CA file
@@ -61,7 +61,6 @@ const (
 	DefaultAuthMethod      = "PLAIN"
 	DefaultRetentionPolicy = "default"
 	DefaultDatabase        = "telegraf"
-	DefaultPrecision       = "s"
 )
 
 var sampleConfig = `
@@ -79,8 +78,6 @@ var sampleConfig = `
   # retention_policy = "default"
   ## InfluxDB database
   # database = "telegraf"
-  ## InfluxDB precision
-  # precision = "s"
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -105,7 +102,6 @@ func (q *AMQP) Connect() error {
 	defer q.Unlock()
 
 	q.headers = amqp.Table{
-		"precision":        q.Precision,
 		"database":         q.Database,
 		"retention_policy": q.RetentionPolicy,
 	}
@@ -225,7 +221,6 @@ func init() {
 		return &AMQP{
 			AuthMethod:      DefaultAuthMethod,
 			Database:        DefaultDatabase,
-			Precision:       DefaultPrecision,
 			RetentionPolicy: DefaultRetentionPolicy,
 		}
 	})
