@@ -97,6 +97,11 @@ func (c *CloudWatch) SampleConfig() string {
   ## Metric Statistic Namespace (required)
   namespace = 'AWS/ELB'
 
+  ## Maximum requests per second. Note that the global default AWS rate limit is
+  ## 10 reqs/sec, so if you define multiple namespaces, these should add up to a
+  ## maximum of 10.
+  ratelimit = 10
+
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
   ## Refreshes Namespace available metrics every 1h
