@@ -28,12 +28,12 @@ type (
 		Filename  string `toml:"shared_credential_file"`
 		Token     string `toml:"token"`
 
-		Period      internal.Duration  `toml:"period"`
-		Delay       internal.Duration  `toml:"delay"`
-		Namespace   string             `toml:"namespace"`
-		Metrics     []*Metric          `toml:"metrics"`
-		CacheTTL    internal.Duration  `toml:"cache_ttl"`
-		RateLimit   internal.RateLimit `toml:"ratelimit"`
+		Period      internal.Duration `toml:"period"`
+		Delay       internal.Duration `toml:"delay"`
+		Namespace   string            `toml:"namespace"`
+		Metrics     []*Metric         `toml:"metrics"`
+		CacheTTL    internal.Duration `toml:"cache_ttl"`
+		RateLimit   string            `toml:"ratelimit"`
 		client      cloudwatchClient
 		metricCache *MetricCache
 	}
