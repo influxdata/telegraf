@@ -39,13 +39,13 @@ func TestDNS_Activity_Gather(t *testing.T) {
 
 	metric, success := acc.Get("dns_activity_type")
 
-	assert.True(t, success) // Do we have the metric
+	assert.True(t, success)                           // Do we have the metric
 	assert.True(t, metric.Fields["count"].(int) >= 1) // Did we count at least one DNS answer
 	assert.True(t, metric.Fields["bytes"].(int) >= 4) // Did we count at least 4 bytes (A response size)
 
 	metric, success = acc.Get("dns_activity_error")
 
-	assert.True(t, success) // Do we have the metric
+	assert.True(t, success)                           // Do we have the metric
 	assert.True(t, metric.Fields["count"].(int) >= 1) // Did we count at least one response
 
 	dnsactivity.Stop()

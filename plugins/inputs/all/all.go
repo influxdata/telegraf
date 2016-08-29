@@ -14,6 +14,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchbase"
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disque"
+	_ "github.com/influxdata/telegraf/plugins/inputs/dns_activity"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dns_query"
 	_ "github.com/influxdata/telegraf/plugins/inputs/docker"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dovecot"
@@ -76,5 +77,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
-	_ "github.com/influxdata/telegraf/plugins/inputs/dns_activity"
 )
