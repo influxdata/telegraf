@@ -99,7 +99,7 @@ func (c *CloudWatch) SampleConfig() string {
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 10 reqs/sec, so if you define multiple namespaces, these should add up to a
-  ## maximum of 10.
+  ## maximum of 10. Optional - default value is 10.
   ratelimit = 10
 
   ## Metrics to Pull (optional)
@@ -120,6 +120,8 @@ func (c *CloudWatch) Description() string {
 }
 
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
+	c.setDefaultValues()
+
 	if c.client == nil {
 		c.initializeCloudWatch()
 	}
@@ -195,6 +197,12 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	wg.Wait()
 
 	return errChan.Error()
+}
+
+func (c *CloudWatch) setDefaultValues() {
+	if c.RateLimit == 0 {
+		c.RateLimit = 10
+	}
 }
 
 func init() {

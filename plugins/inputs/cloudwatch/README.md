@@ -36,7 +36,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 10 reqs/sec, so if you define multiple namespaces, these should add up to a
-  ## maximum of 10.
+  ## maximum of 10. Optional - default value is 10.
   ratelimit = 10
 
   ## Metrics to Pull (optional)
