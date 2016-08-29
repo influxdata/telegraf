@@ -62,6 +62,9 @@ const sampleConfig = `
   ## specify a list of one or more Elasticsearch servers
   servers = ["http://localhost:9200"]
 
+  ## Timeout for HTTP requests to the elastic search server(s)
+  http_timeout = "5s"
+
   ## set local to false when you want to read the indices stats from all nodes
   ## within the cluster
   local = true
@@ -82,6 +85,7 @@ const sampleConfig = `
 type Elasticsearch struct {
 	Local              bool
 	Servers            []string
+	HttpTimeout        internal.Duration
 	ClusterHealth      bool
 	SSLCA              string `toml:"ssl_ca"`   // Path to CA file
 	SSLCert            string `toml:"ssl_cert"` // Path to host cert file
@@ -92,7 +96,9 @@ type Elasticsearch struct {
 
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
-	return &Elasticsearch{}
+	return &Elasticsearch{
+		HttpTimeout: internal.Duration{Duration: time.Second * 5},
+	}
 }
 
 // SampleConfig returns sample configuration for this plugin.
@@ -150,12 +156,12 @@ func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
 		return nil, err
 	}
 	tr := &http.Transport{
-		ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		ResponseHeaderTimeout: e.HttpTimeout.Duration,
 		TLSClientConfig:       tlsCfg,
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout:   e.HttpTimeout.Duration,
 	}
 
 	return client, nil

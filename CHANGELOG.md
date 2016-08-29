@@ -4,6 +4,8 @@
 
 ### Features
 
+- [#1674](https://github.com/influxdata/telegraf/issues/1674): elasticsearch input: configurable timeout.
+
 ### Bugfixes
 
 
