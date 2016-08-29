@@ -121,6 +121,8 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 func parseValue(v string) interface{} {
 	if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
 		return parsed
+	} else if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+		return -int64(parsed)
 	} else if parsed, err := strconv.ParseBool(v); err == nil {
 		return parsed
 	} else {
