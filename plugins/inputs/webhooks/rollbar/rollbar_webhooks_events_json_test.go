@@ -68,6 +68,70 @@ func NewItemJSON() string {
 	}`
 }
 
+func OccurrenceJSON() string {
+	return `
+	{
+	  "event_name": "occurrence",
+	  "data": {
+		"item": {
+		  "public_item_id": null,
+		  "integrations_data": {},
+		  "level_lock": 0,
+		  "last_activated_timestamp": 1471624512,
+		  "assigned_user_id": null,
+		  "hash": "188fc37fa6e641a4d4a3d0198938a1937d31ddbe",
+		  "id": 402860571,
+		  "environment": "production",
+		  "title": "Exception: test exception",
+		  "last_occurrence_id": 16298872829,
+		  "last_occurrence_timestamp": 1472226345,
+		  "platform": 0,
+		  "first_occurrence_timestamp": 1471624512,
+		  "project_id": 78234,
+		  "resolved_in_version": null,
+		  "status": 1,
+		  "unique_occurrences": null,
+		  "title_lock": 0,
+		  "framework": 6,
+		  "total_occurrences": 8,
+		  "level": 40,
+		  "counter": 2,
+		  "last_modified_by": 8247,
+		  "first_occurrence_id": 16103102935,
+		  "activating_occurrence_id": 16103102935
+                },
+		"occurrence": {
+		  "body": {
+		    "trace": {
+		    "frames": [{"method": "<main>", "lineno": 27, "filename": "/Users/rebeccastandig/Desktop/Dev/php-rollbar-app/index.php"}], "exception": {
+		    "message": "test 2",
+		    "class": "Exception"}
+		    }
+		  },
+		  "uuid": "84d4eccd-b24d-47ae-a42b-1a2f9a82fb82",
+		  "language": "php",
+		  "level": "error",
+		  "timestamp": 1472226345,
+		  "php_context": "cli",
+		  "environment": "production",
+		  "framework": "php",
+		  "person": null,
+		  "server": {
+		    "host": "Rebeccas-MacBook-Pro.local",
+		    "argv": ["index.php"]
+		  },
+		  "notifier": {
+		    "version": "0.18.2",
+		    "name": "rollbar-php"
+		  },
+		  "metadata": {
+		    "customer_timestamp": 1472226359
+		  }
+		}
+	  }
+	}`
+}
+
 func DeployJSON() string {
 	return `
     {
