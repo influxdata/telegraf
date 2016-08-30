@@ -1,11 +1,10 @@
 package nfsclient
 
 import (
-	"testing"
-    "bufio"
-    "strings"
+	"bufio"
 	"github.com/influxdata/telegraf/testutil"
-
+	"strings"
+	"testing"
 )
 
 const mountstatstext = `device rootfs mounted on / with fstype rootfs
@@ -131,137 +130,137 @@ device 2.2.2.2:/nfsdata/ mounted on /mnt with fstype nfs4 statvers=1.1
 `
 
 func TestNFSCLIENTParsev3(t *testing.T) {
-    var acc testutil.Accumulator
+	var acc testutil.Accumulator
 
-    nfsclient := NFSCLIENT{}
-    data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
-    nfsclient.parseData("1.2.3.4:/storage/NFSCLIENT /storage/NFS", "3", data, &acc)
+	nfsclient := NFSCLIENT{}
+	data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
+	nfsclient.parseData("1.2.3.4:/storage/NFSCLIENT /storage/NFS", "3", data, &acc)
 
-    fields_ops := map[string]interface{}{
-        "READLINK_ops": float64(500),
-        "READLINK_trans": float64(501),
-        "READLINK_timeouts": float64(502),
-        "READLINK_bytes_sent": float64(503),
-        "READLINK_bytes_recv": float64(504),
-        "READLINK_queue_time": float64(505),
-        "READLINK_response_time": float64(506),
-        "READLINK_total_time": float64(507),
-    }
-    acc.AssertContainsFields(t, "nfs_ops", fields_ops)
+	fields_ops := map[string]interface{}{
+		"READLINK_ops":           float64(500),
+		"READLINK_trans":         float64(501),
+		"READLINK_timeouts":      float64(502),
+		"READLINK_bytes_sent":    float64(503),
+		"READLINK_bytes_recv":    float64(504),
+		"READLINK_queue_time":    float64(505),
+		"READLINK_response_time": float64(506),
+		"READLINK_total_time":    float64(507),
+	}
+	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
 }
 
 func TestNFSCLIENTParsev4(t *testing.T) {
-    var acc testutil.Accumulator
+	var acc testutil.Accumulator
 
-    nfsclient := NFSCLIENT{}
-    data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
-    nfs.parseData("2.2.2.2:/nfsdata/ /mnt", "4", data, &acc)
+	nfsclient := NFSCLIENT{}
+	data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
+	nfs.parseData("2.2.2.2:/nfsdata/ /mnt", "4", data, &acc)
 
-    fields_ops := map[string]interface{}{
-        "DESTROY_SESSION_ops": float64(500),
-        "DESTROY_SESSION_trans": float64(501),
-        "DESTROY_SESSION_timeouts": float64(502),
-        "DESTROY_SESSION_bytes_sent": float64(503),
-        "DESTROY_SESSION_bytes_recv": float64(504),
-        "DESTROY_SESSION_queue_time": float64(505),
-        "DESTROY_SESSION_response_time": float64(506),
-        "DESTROY_SESSION_total_time": float64(507),
-    }
-    acc.AssertContainsFields(t, "nfs_ops", fields_ops)
+	fields_ops := map[string]interface{}{
+		"DESTROY_SESSION_ops":           float64(500),
+		"DESTROY_SESSION_trans":         float64(501),
+		"DESTROY_SESSION_timeouts":      float64(502),
+		"DESTROY_SESSION_bytes_sent":    float64(503),
+		"DESTROY_SESSION_bytes_recv":    float64(504),
+		"DESTROY_SESSION_queue_time":    float64(505),
+		"DESTROY_SESSION_response_time": float64(506),
+		"DESTROY_SESSION_total_time":    float64(507),
+	}
+	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
 }
 
 func TestNFSCLIENTProcessStat(t *testing.T) {
-    var acc testutil.Accumulator
+	var acc testutil.Accumulator
 
-    nfsclient := NFSCLIENT{}
-    nfsclient.Iostat = true
-    scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
+	nfsclient := NFSCLIENT{}
+	nfsclient.Iostat = true
+	scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
 
-    nfsclient.processText(scanner, &acc)
+	nfsclient.processText(scanner, &acc)
 
-    fields_readstat := map[string]interface{}{
-        "read_ops": float64(600),
-        "read_retrans": float64(1),
-        "read_bytes": float64(1207),
-        "read_rtt": float64(606),
-        "read_exe": float64(607),
-    }
-    fields_writestat := map[string]interface{}{
-        "write_ops": float64(700),
-        "write_retrans": float64(1),
-        "write_bytes": float64(1407),
-        "write_rtt": float64(706),
-        "write_exe": float64(707),
-    }
-    tags := map[string]string {
-        "mountpoint": "1.2.3.4:/storage/NFSCLIENT /storage/NFS",
-    }
-    acc.AssertContainsTaggedFields(t, "nfsstat_read", fields_readstat, tags)
-    acc.AssertContainsTaggedFields(t, "nfsstat_write", fields_writestat, tags)
+	fields_readstat := map[string]interface{}{
+		"read_ops":     float64(600),
+		"read_retrans": float64(1),
+		"read_bytes":   float64(1207),
+		"read_rtt":     float64(606),
+		"read_exe":     float64(607),
+	}
+	fields_writestat := map[string]interface{}{
+		"write_ops":     float64(700),
+		"write_retrans": float64(1),
+		"write_bytes":   float64(1407),
+		"write_rtt":     float64(706),
+		"write_exe":     float64(707),
+	}
+	tags := map[string]string{
+		"mountpoint": "1.2.3.4:/storage/NFSCLIENT /storage/NFS",
+	}
+	acc.AssertContainsTaggedFields(t, "nfsstat_read", fields_readstat, tags)
+	acc.AssertContainsTaggedFields(t, "nfsstat_write", fields_writestat, tags)
 }
 
 func TestNFSCLIENTProcessFull(t *testing.T) {
-    var acc testutil.Accumulator
+	var acc testutil.Accumulator
 
-    nfsclient := NFSCLIENT{}
-    nfsclient.Fullstat = true
-    scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
+	nfsclient := NFSCLIENT{}
+	nfsclient.Fullstat = true
+	scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
 
-    nfsclient.processText(scanner, &acc)
+	nfsclient.processText(scanner, &acc)
 
-    fields_events := map[string]interface{}{
-        "inoderevalidates": float64(301736),
-        "dentryrevalidates": float64(22838),
-        "datainvalidates": float64(410979),
-        "attrinvalidates": float64(26188427),
-        "vfsopen": float64(27525),
-        "vfslookup": float64(9140),
-        "vfspermission": float64(114420),
-        "vfsupdatepage": float64(30785253),
-        "vfsreadpage": float64(5308856),
-        "vfsreadpages": float64(5364858),
-        "vfswritepage": float64(30784819),
-        "vfswritepages": float64(79832668),
-        "vfsreaddir": float64(170),
-        "vfssetattr": float64(64),
-        "vfsflush": float64(18194),
-        "vfsfsync": float64(29294718),
-        "vfslock": float64(0),
-        "vfsrelease": float64(18279),
-        "congestionwait": float64(0),
-        "setattrtrunc": float64(2),
-        "extendwrite": float64(785551),
-        "sillyrenames": float64(0),
-        "shortreads": float64(0),
-        "shortwrites": float64(0),
-        "delay": float64(0),
-        "pnfsreads": float64(0),
-        "pnfswrites": float64(0),
-    }
-    fields_bytes := map[string]interface{}{
-        "normalreadbytes": float64(204440464584),
-        "normalwritebytes": float64(110857586443),
-        "directreadbytes": float64(783170354688),
-        "directwritebytes": float64(296174954496),
-        "serverreadbytes": float64(1134399088816),
-        "serverwritebytes": float64(407107155723),
-        "readpages": float64(85749323),
-        "writepages": float64(30784819),
-    }
-    fields_xprttcp := map[string]interface{}{
-//        "port": float64(733),
-        "bind_count": float64(1),
-        "connect_count": float64(1),
-        "connect_time": float64(0),
-        "idle_time": float64(0),
-        "rpcsends": float64(96172963),
-        "rpcreceives": float64(96172963),
-        "badxids": float64(0),
-        "inflightsends": float64(620878754),
-        "backlogutil": float64(0),
-    }
+	fields_events := map[string]interface{}{
+		"inoderevalidates":  float64(301736),
+		"dentryrevalidates": float64(22838),
+		"datainvalidates":   float64(410979),
+		"attrinvalidates":   float64(26188427),
+		"vfsopen":           float64(27525),
+		"vfslookup":         float64(9140),
+		"vfspermission":     float64(114420),
+		"vfsupdatepage":     float64(30785253),
+		"vfsreadpage":       float64(5308856),
+		"vfsreadpages":      float64(5364858),
+		"vfswritepage":      float64(30784819),
+		"vfswritepages":     float64(79832668),
+		"vfsreaddir":        float64(170),
+		"vfssetattr":        float64(64),
+		"vfsflush":          float64(18194),
+		"vfsfsync":          float64(29294718),
+		"vfslock":           float64(0),
+		"vfsrelease":        float64(18279),
+		"congestionwait":    float64(0),
+		"setattrtrunc":      float64(2),
+		"extendwrite":       float64(785551),
+		"sillyrenames":      float64(0),
+		"shortreads":        float64(0),
+		"shortwrites":       float64(0),
+		"delay":             float64(0),
+		"pnfsreads":         float64(0),
+		"pnfswrites":        float64(0),
+	}
+	fields_bytes := map[string]interface{}{
+		"normalreadbytes":  float64(204440464584),
+		"normalwritebytes": float64(110857586443),
+		"directreadbytes":  float64(783170354688),
+		"directwritebytes": float64(296174954496),
+		"serverreadbytes":  float64(1134399088816),
+		"serverwritebytes": float64(407107155723),
+		"readpages":        float64(85749323),
+		"writepages":       float64(30784819),
+	}
+	fields_xprttcp := map[string]interface{}{
+		//        "port": float64(733),
+		"bind_count":    float64(1),
+		"connect_count": float64(1),
+		"connect_time":  float64(0),
+		"idle_time":     float64(0),
+		"rpcsends":      float64(96172963),
+		"rpcreceives":   float64(96172963),
+		"badxids":       float64(0),
+		"inflightsends": float64(620878754),
+		"backlogutil":   float64(0),
+	}
 
-    acc.AssertContainsFields(t, "nfs_events", fields_events)
-    acc.AssertContainsFields(t, "nfs_bytes", fields_bytes)
-    acc.AssertContainsFields(t, "nfs_xprttcp", fields_xprttcp)
+	acc.AssertContainsFields(t, "nfs_events", fields_events)
+	acc.AssertContainsFields(t, "nfs_bytes", fields_bytes)
+	acc.AssertContainsFields(t, "nfs_xprttcp", fields_xprttcp)
 }
