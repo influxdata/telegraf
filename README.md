@@ -161,6 +161,7 @@ Currently implemented sources:
 * [httpjson](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [influxdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/influxdb)
 * [ipmi_sensor](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ipmi_sensor)
+* [iptables](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/iptables)
 * [jolokia](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia)
 * [leofs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/leofs)
 * [lustre2](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/lustre2)
