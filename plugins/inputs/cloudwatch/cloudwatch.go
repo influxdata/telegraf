@@ -120,8 +120,6 @@ func (c *CloudWatch) Description() string {
 }
 
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
-	c.setDefaultValues()
-
 	if c.client == nil {
 		c.initializeCloudWatch()
 	}
@@ -199,17 +197,12 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	return errChan.Error()
 }
 
-func (c *CloudWatch) setDefaultValues() {
-	if c.RateLimit == 0 {
-		c.RateLimit = 10
-	}
-}
-
 func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
 		ttl, _ := time.ParseDuration("1hr")
 		return &CloudWatch{
-			CacheTTL: internal.Duration{Duration: ttl},
+			CacheTTL:  internal.Duration{Duration: ttl},
+			RateLimit: 10,
 		}
 	})
 }
