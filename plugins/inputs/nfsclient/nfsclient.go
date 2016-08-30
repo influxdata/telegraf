@@ -1,4 +1,4 @@
-package nfs
+package nfsclient
 
 import (
     "bufio"
@@ -12,26 +12,22 @@ import (
     "github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type NFS struct {
-    Iostat bool
+type NFSCLIENT struct {
     Fullstat bool
 }
 
 var sampleConfig = `
-  # iostat = true
-  # Read iostat metrics
-  iostat = true
   # fullstat = true
-  # Read all metrics
-  fullstat = true
+  # Read more low-level metrics
+  fullstat = false
 `
 
-func (n *NFS) SampleConfig() string {
+func (n *NFSCLIENT) SampleConfig() string {
     return sampleConfig
 }
 
-func (n *NFS) Description() string {
-    return "Read NFS metrics from /proc/self/mountstats"
+func (n *NFSCLIENT) Description() string {
+    return "Read per-mount NFS metrics from /proc/self/mountstats"
 }
 
 var eventsFields = []string{
@@ -214,8 +210,8 @@ func In(list []string, val string) bool {
     return false
 }
 
-func (n *NFS) parseStat(mountpoint string, version string, line []string, acc telegraf.Accumulator) error {
-    tags := map[string]string{"mountpoint": mountpoint}
+func (n *NFSCLIENT) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
+    tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
     nline := convert(line)
     first := strings.Replace(line[0], ":", "", 1)
 
@@ -243,8 +239,8 @@ func (n *NFS) parseStat(mountpoint string, version string, line []string, acc te
     return nil
 }
 
-func (n *NFS) parseData(mountpoint string, version string, line []string, acc telegraf.Accumulator) error {
-    tags := map[string]string{"mountpoint": mountpoint}
+func (n *NFSCLIENT) parseData(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
+    tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
     nline := convert(line)
     first := strings.Replace(line[0], ":", "", 1)
 
@@ -295,29 +291,29 @@ func (n *NFS) parseData(mountpoint string, version string, line []string, acc te
     return nil
 }
 
-func (n *NFS) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) error {
+func (n *NFSCLIENT) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) error {
     var device string
     var version string
+    var export string
     for scanner.Scan() {
         line := strings.Fields(scanner.Text())
-        if In(line, "fstype") && In(line, "nfs") {
-            device = fmt.Sprintf("%s %s", line[1], line[4])
-        } else if In(line, "(nfs)") {
+        if In(line, "fstype") && In(line, "nfs") || In(line, "nfs4") {
+            device = line[4]
+            export = line[1]
+        } else if In(line, "(nfs)") || In(line, "(nfs4)") {
             version = strings.Split(line[5], "/")[1]
         }
         if (len(line) > 0) {
-            if n.Iostat == true {
-                n.parseStat(device, version, line, acc)
-            }
+	    n.parseStat(device, export, version, line, acc)
             if n.Fullstat == true {
-                n.parseData(device, version, line, acc)
+                n.parseData(device, export, version, line, acc)
             }
         }
     }
     return nil
 }
 
-func (n *NFS) Gather(acc telegraf.Accumulator) error {
+func (n *NFSCLIENT) Gather(acc telegraf.Accumulator) error {
     var outerr error
 
     file, err := os.Open("/proc/self/mountstats")
@@ -337,7 +333,7 @@ func (n *NFS) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-    inputs.Add("nfs", func() telegraf.Input {
-        return &NFS{}
+    inputs.Add("nfsclient", func() telegraf.Input {
+        return &NFSCLIENT{}
     })
 }
