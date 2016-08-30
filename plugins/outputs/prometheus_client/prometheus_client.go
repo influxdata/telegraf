@@ -102,6 +102,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		key := point.Name()
 		key = invalidNameCharRE.ReplaceAllString(key, "_")
 
+		// convert tags into prometheus labels
 		var labels []string
 		l := prometheus.Labels{}
 		for k, v := range point.Tags() {
@@ -111,6 +112,17 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			}
 			labels = append(labels, k)
 			l[k] = v
+		}
+
+		// Get a type if it's available, defaulting to Untyped
+		var mType prometheus.ValueType
+		switch point.Type() {
+		case telegraf.Counter:
+			mType = prometheus.CounterValue
+		case telegraf.Gauge:
+			mType = prometheus.GaugeValue
+		default:
+			mType = prometheus.UntypedValue
 		}
 
 		for n, val := range point.Fields() {
@@ -134,11 +146,13 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			desc := prometheus.NewDesc(mname, "Telegraf collected metric", nil, l)
 			var metric prometheus.Metric
 			var err error
+
+			// switch for field type
 			switch val := val.(type) {
 			case int64:
-				metric, err = prometheus.NewConstMetric(desc, prometheus.UntypedValue, float64(val))
+				metric, err = prometheus.NewConstMetric(desc, mType, float64(val))
 			case float64:
-				metric, err = prometheus.NewConstMetric(desc, prometheus.UntypedValue, val)
+				metric, err = prometheus.NewConstMetric(desc, mType, val)
 			default:
 				continue
 			}
