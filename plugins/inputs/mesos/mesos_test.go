@@ -9,7 +9,6 @@ import (
 	"os"
 	"testing"
 
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -217,10 +216,10 @@ func generateMetrics() {
 	}
 
 	slaveTaskMetrics = map[string]interface{}{
-		"executor_id":   fmt.Sprintf("task_%s", randUUID()),
+		"executor_id":   fmt.Sprintf("task_name.%s", randUUID()),
 		"executor_name": "Some task description",
 		"framework_id":  randUUID(),
-		"source":        fmt.Sprintf("task_source_%s", randUUID()),
+		"source":        fmt.Sprintf("task_source.%s", randUUID()),
 		"statistics": map[string]interface{}{
 			"cpus_limit":                    rand.Float64(),
 			"cpus_system_time_secs":         rand.Float64(),
@@ -338,17 +337,17 @@ func TestMesosSlave(t *testing.T) {
 
 	acc.AssertContainsFields(t, "mesos", slaveMetrics)
 
-	jf := jsonparser.JSONFlattener{}
-	err = jf.FlattenJSON("", slaveTaskMetrics)
-
-	if err != nil {
-		t.Errorf(err.Error())
+	expectedFields := make(map[string]interface{}, len(slaveTaskMetrics["statistics"].(map[string]interface{}))+1)
+	for k, v := range slaveTaskMetrics["statistics"].(map[string]interface{}) {
+		expectedFields[k] = v
 	}
+	expectedFields["executor_id"] = slaveTaskMetrics["executor_id"]
 
-	acc.AssertContainsFields(
+	acc.AssertContainsTaggedFields(
 		t,
 		"mesos_tasks",
-		slaveTaskMetrics["statistics"].(map[string]interface{}))
+		expectedFields,
+		map[string]string{"server": "127.0.0.1", "framework_id": slaveTaskMetrics["framework_id"].(string)})
 }
 
 func TestSlaveFilter(t *testing.T) {
