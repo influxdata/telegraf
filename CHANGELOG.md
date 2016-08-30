@@ -104,6 +104,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1543](https://github.com/influxdata/telegraf/pull/1543): Official Windows service.
 - [#1414](https://github.com/influxdata/telegraf/pull/1414): Forking sensors command to remove C package dependency.
 - [#1389](https://github.com/influxdata/telegraf/pull/1389): Add a new SNMP plugin.
+- [#1513](https://github.com/influxdata/telegraf/issues/1513): Add Ceph Cluster Performance Statistics
 
 ### Bugfixes
 
