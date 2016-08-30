@@ -8,6 +8,7 @@
 - [#1607](https://github.com/influxdata/telegraf/pull/1607): Massage metric names in Instrumental output plugin
 - [#1572](https://github.com/influxdata/telegraf/pull/1572): mesos improvements.
 - [#1513](https://github.com/influxdata/telegraf/issues/1513): Add Ceph Cluster Performance Statistics
+- [#1650](https://github.com/influxdata/telegraf/issues/1650): Ability to configure response_timeout in httpjson input.
 
 ### Bugfixes
 
@@ -101,7 +102,6 @@ consistent with the behavior of `collection_jitter`.
 - [#1278](https://github.com/influxdata/telegraf/pull/1278) & [#1288](https://github.com/influxdata/telegraf/pull/1288) & [#1295](https://github.com/influxdata/telegraf/pull/1295): RabbitMQ/Apache/InfluxDB inputs: made url(s) parameter optional by using reasonable input defaults if not specified
 - [#1296](https://github.com/influxdata/telegraf/issues/1296): Refactor of flush_jitter argument.
 - [#1213](https://github.com/influxdata/telegraf/issues/1213): Add inactive & active memory to mem plugin.
-- [#1650](https://github.com/influxdata/telegraf/issues/1650): Ability to configure response_timeout in httpjson input.
 - [#1543](https://github.com/influxdata/telegraf/pull/1543): Official Windows service.
 - [#1414](https://github.com/influxdata/telegraf/pull/1414): Forking sensors command to remove C package dependency.
 - [#1389](https://github.com/influxdata/telegraf/pull/1389): Add a new SNMP plugin.
