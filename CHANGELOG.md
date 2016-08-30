@@ -6,6 +6,7 @@
 
 - [#1674](https://github.com/influxdata/telegraf/issues/1674): elasticsearch input: configurable timeout.
 - [#1607](https://github.com/influxdata/telegraf/pull/1607): Massage metric names in Instrumental output plugin
+- [#1572](https://github.com/influxdata/telegraf/pull/1572): mesos improvements.
 
 ### Bugfixes
 
