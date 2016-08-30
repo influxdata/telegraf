@@ -459,7 +459,6 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 	}
 
 	for _, task := range metrics {
-		tags["task_id"] = task.ExecutorID
 		tags["framework_id"] = task.FrameworkID
 
 		jf := jsonparser.JSONFlattener{}
@@ -468,7 +467,9 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 		if err != nil {
 			return err
 		}
+
 		timestamp := time.Unix(int64(jf.Fields["timestamp"].(float64)), 0)
+		jf.Fields["executor_id"] = task.ExecutorID
 
 		acc.AddFields("mesos_tasks", jf.Fields, tags, timestamp)
 	}
