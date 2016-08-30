@@ -252,6 +252,7 @@ want to add support for another service or third-party API.
 * [opentsdb](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
 * [prometheus](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/prometheus_client)
 * [riemann](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/riemann)
+* [signalfx](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/signalfx)
 
 ## Contributing
 
