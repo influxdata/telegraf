@@ -33,7 +33,7 @@ device cgroup mounted on /cgroup/blkio with fstype cgroup
 device sunrpc mounted on /var/lib/nfs/rpc_pipefs with fstype rpc_pipefs
 device /etc/auto.misc mounted on /misc with fstype autofs
 device -hosts mounted on /net with fstype autofs
-device 1.2.3.4:/storage/NFSCLIENT mounted on /storage/NFS with fstype nfs statvers=1.1
+device 1.2.3.4:/storage/NFS mounted on /NFS with fstype nfs statvers=1.1
     opts:   rw,vers=3,rsize=32768,wsize=32768,namlen=255,acregmin=60,acregmax=60,acdirmin=60,acdirmax=60,hard,nolock,noacl,nordirplus,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=1.2.3.4,mountvers=3,mountport=49193,mountproto=tcp,local_lock=all
     age:    1136770
     caps:   caps=0x3fe6,wtmult=512,dtsize=8192,bsize=0,namlen=255
@@ -134,7 +134,7 @@ func TestNFSCLIENTParsev3(t *testing.T) {
 
 	nfsclient := NFSCLIENT{}
 	data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
-	nfsclient.parseData("1.2.3.4:/storage/NFSCLIENT /storage/NFS", "3", data, &acc)
+	nfsclient.parseData("1.2.3.4:/storage/NFS", "/NFS", "3", data, &acc)
 
 	fields_ops := map[string]interface{}{
 		"READLINK_ops":           float64(500),
@@ -154,7 +154,7 @@ func TestNFSCLIENTParsev4(t *testing.T) {
 
 	nfsclient := NFSCLIENT{}
 	data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
-	nfs.parseData("2.2.2.2:/nfsdata/ /mnt", "4", data, &acc)
+	nfsclient.parseData("2.2.2.2:/nfsdata/", "/mnt", "4", data, &acc)
 
 	fields_ops := map[string]interface{}{
 		"DESTROY_SESSION_ops":           float64(500),
@@ -173,7 +173,6 @@ func TestNFSCLIENTProcessStat(t *testing.T) {
 	var acc testutil.Accumulator
 
 	nfsclient := NFSCLIENT{}
-	nfsclient.Iostat = true
 	scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
 
 	nfsclient.processText(scanner, &acc)
@@ -193,7 +192,8 @@ func TestNFSCLIENTProcessStat(t *testing.T) {
 		"write_exe":     float64(707),
 	}
 	tags := map[string]string{
-		"mountpoint": "1.2.3.4:/storage/NFSCLIENT /storage/NFS",
+		"serverexport": "1.2.3.4:/storage/NFS",
+		"mountpoint": "/NFS",
 	}
 	acc.AssertContainsTaggedFields(t, "nfsstat_read", fields_readstat, tags)
 	acc.AssertContainsTaggedFields(t, "nfsstat_write", fields_writestat, tags)
