@@ -1478,19 +1478,23 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			tags["schema"] = tableSchema
 			tags["table"] = tableName
 
-			acc.Add(newNamespace("info_schema", "table_rows"), tableRows, tags)
+			acc.AddFields(newNamespace("info_schema", "table_rows"),
+				map[string]interface{}{"value": tableRows}, tags)
 
 			dlTags := copyTags(tags)
 			dlTags["component"] = "data_length"
-			acc.Add(newNamespace("info_schema", "table_size", "data_length"), dataLength, dlTags)
+			acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
+				map[string]interface{}{"value": dataLength}, dlTags)
 
 			ilTags := copyTags(tags)
 			ilTags["component"] = "index_length"
-			acc.Add(newNamespace("info_schema", "table_size", "index_length"), indexLength, ilTags)
+			acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
+				map[string]interface{}{"value": indexLength}, ilTags)
 
 			dfTags := copyTags(tags)
 			dfTags["component"] = "data_free"
-			acc.Add(newNamespace("info_schema", "table_size", "data_free"), dataFree, dfTags)
+			acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
+				map[string]interface{}{"value": dataFree}, dfTags)
 
 			versionTags := copyTags(tags)
 			versionTags["type"] = tableType
@@ -1498,7 +1502,8 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			versionTags["row_format"] = rowFormat
 			versionTags["create_options"] = createOptions
 
-			acc.Add(newNamespace("info_schema", "table_version"), version, versionTags)
+			acc.AddFields(newNamespace("info_schema", "table_version"),
+				map[string]interface{}{"value": version}, versionTags)
 		}
 	}
 	return nil

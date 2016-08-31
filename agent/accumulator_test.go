@@ -23,9 +23,15 @@ func TestAdd(t *testing.T) {
 	defer close(a.metrics)
 	a.inputConfig = &models.InputConfig{}
 
-	a.Add("acctest", float64(101), map[string]string{})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -50,9 +56,15 @@ func TestAddNoPrecisionWithInterval(t *testing.T) {
 	a.inputConfig = &models.InputConfig{}
 
 	a.SetPrecision(0, time.Second)
-	a.Add("acctest", float64(101), map[string]string{})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -77,9 +89,15 @@ func TestAddNoIntervalWithPrecision(t *testing.T) {
 	a.inputConfig = &models.InputConfig{}
 
 	a.SetPrecision(time.Second, time.Millisecond)
-	a.Add("acctest", float64(101), map[string]string{})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -105,9 +123,15 @@ func TestAddDisablePrecision(t *testing.T) {
 
 	a.SetPrecision(time.Second, time.Millisecond)
 	a.DisablePrecision()
-	a.Add("acctest", float64(101), map[string]string{})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -132,7 +156,9 @@ func TestDifferentPrecisions(t *testing.T) {
 	a.inputConfig = &models.InputConfig{}
 
 	a.SetPrecision(0, time.Second)
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 	testm := <-a.metrics
 	actual := testm.String()
 	assert.Equal(t,
@@ -140,7 +166,9 @@ func TestDifferentPrecisions(t *testing.T) {
 		actual)
 
 	a.SetPrecision(0, time.Millisecond)
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
@@ -148,7 +176,9 @@ func TestDifferentPrecisions(t *testing.T) {
 		actual)
 
 	a.SetPrecision(0, time.Microsecond)
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
@@ -156,7 +186,9 @@ func TestDifferentPrecisions(t *testing.T) {
 		actual)
 
 	a.SetPrecision(0, time.Nanosecond)
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
@@ -172,9 +204,15 @@ func TestAddDefaultTags(t *testing.T) {
 	defer close(a.metrics)
 	a.inputConfig = &models.InputConfig{}
 
-	a.Add("acctest", float64(101), map[string]string{})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -342,9 +380,15 @@ func TestAddInts(t *testing.T) {
 	defer close(a.metrics)
 	a.inputConfig = &models.InputConfig{}
 
-	a.Add("acctest", int(101), map[string]string{})
-	a.Add("acctest", int32(101), map[string]string{"acc": "test"})
-	a.Add("acctest", int64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": int(101)},
+		map[string]string{})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": int32(101)},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": int64(101)},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -369,8 +413,12 @@ func TestAddFloats(t *testing.T) {
 	defer close(a.metrics)
 	a.inputConfig = &models.InputConfig{}
 
-	a.Add("acctest", float32(101), map[string]string{"acc": "test"})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float32(101)},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -391,8 +439,12 @@ func TestAddStrings(t *testing.T) {
 	defer close(a.metrics)
 	a.inputConfig = &models.InputConfig{}
 
-	a.Add("acctest", "test", map[string]string{"acc": "test"})
-	a.Add("acctest", "foo", map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": "test"},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": "foo"},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -413,8 +465,10 @@ func TestAddBools(t *testing.T) {
 	defer close(a.metrics)
 	a.inputConfig = &models.InputConfig{}
 
-	a.Add("acctest", true, map[string]string{"acc": "test"})
-	a.Add("acctest", false, map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": true}, map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": false}, map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()
@@ -440,9 +494,15 @@ func TestAccFilterTags(t *testing.T) {
 	a.inputConfig = &models.InputConfig{}
 	a.inputConfig.Filter = filter
 
-	a.Add("acctest", float64(101), map[string]string{})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"})
-	a.Add("acctest", float64(101), map[string]string{"acc": "test"}, now)
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"})
+	a.AddFields("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
 
 	testm := <-a.metrics
 	actual := testm.String()

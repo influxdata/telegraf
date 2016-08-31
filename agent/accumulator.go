@@ -38,22 +38,6 @@ type accumulator struct {
 	errCount uint64
 }
 
-func (ac *accumulator) Add(
-	measurement string,
-	value interface{},
-	tags map[string]string,
-	t ...time.Time,
-) {
-	fields := make(map[string]interface{})
-	fields["value"] = value
-
-	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return
-	}
-
-	ac.AddFields(measurement, fields, tags, t...)
-}
-
 func (ac *accumulator) AddFields(
 	measurement string,
 	fields map[string]interface{},

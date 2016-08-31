@@ -26,7 +26,7 @@ type PS interface {
 func add(acc telegraf.Accumulator,
 	name string, val float64, tags map[string]string) {
 	if val >= 0 {
-		acc.Add(name, val, tags)
+		acc.AddFields(name, map[string]interface{}{"value": val}, tags)
 	}
 }
 
