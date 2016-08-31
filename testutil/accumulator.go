@@ -85,6 +85,24 @@ func (a *Accumulator) AddFields(
 	a.Metrics = append(a.Metrics, p)
 }
 
+func (a *Accumulator) AddCounter(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
+func (a *Accumulator) AddGauge(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
 // AddError appends the given error to Accumulator.Errors.
 func (a *Accumulator) AddError(err error) {
 	if err == nil {

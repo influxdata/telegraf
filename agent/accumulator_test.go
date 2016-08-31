@@ -48,6 +48,76 @@ func TestAdd(t *testing.T) {
 		actual)
 }
 
+func TestAddGauge(t *testing.T) {
+	a := accumulator{}
+	now := time.Now()
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &models.InputConfig{}
+
+	a.AddGauge("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{})
+	a.AddGauge("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"})
+	a.AddGauge("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+	assert.Equal(t, testm.Type(), telegraf.Gauge)
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest,acc=test value=101")
+	assert.Equal(t, testm.Type(), telegraf.Gauge)
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", now.UnixNano()),
+		actual)
+	assert.Equal(t, testm.Type(), telegraf.Gauge)
+}
+
+func TestAddCounter(t *testing.T) {
+	a := accumulator{}
+	now := time.Now()
+	a.metrics = make(chan telegraf.Metric, 10)
+	defer close(a.metrics)
+	a.inputConfig = &models.InputConfig{}
+
+	a.AddCounter("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{})
+	a.AddCounter("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"})
+	a.AddCounter("acctest",
+		map[string]interface{}{"value": float64(101)},
+		map[string]string{"acc": "test"}, now)
+
+	testm := <-a.metrics
+	actual := testm.String()
+	assert.Contains(t, actual, "acctest value=101")
+	assert.Equal(t, testm.Type(), telegraf.Counter)
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Contains(t, actual, "acctest,acc=test value=101")
+	assert.Equal(t, testm.Type(), telegraf.Counter)
+
+	testm = <-a.metrics
+	actual = testm.String()
+	assert.Equal(t,
+		fmt.Sprintf("acctest,acc=test value=101 %d", now.UnixNano()),
+		actual)
+	assert.Equal(t, testm.Type(), telegraf.Counter)
+}
+
 func TestAddNoPrecisionWithInterval(t *testing.T) {
 	a := accumulator{}
 	now := time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC)

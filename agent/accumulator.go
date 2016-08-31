@@ -44,16 +44,52 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
+	if m := ac.makeMetric(measurement, fields, tags, telegraf.Untyped, t...); m != nil {
+		ac.metrics <- m
+	}
+}
+
+func (ac *accumulator) AddGauge(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.makeMetric(measurement, fields, tags, telegraf.Gauge, t...); m != nil {
+		ac.metrics <- m
+	}
+}
+
+func (ac *accumulator) AddCounter(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.makeMetric(measurement, fields, tags, telegraf.Counter, t...); m != nil {
+		ac.metrics <- m
+	}
+}
+
+// makeMetric either returns a metric, or returns nil if the metric doesn't
+// need to be created (because of filtering, an error, etc.)
+func (ac *accumulator) makeMetric(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	mType telegraf.ValueType,
+	t ...time.Time,
+) telegraf.Metric {
 	if len(fields) == 0 || len(measurement) == 0 {
-		return
+		return nil
 	}
 
 	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return
+		return nil
 	}
 
 	if !ac.inputConfig.Filter.ShouldTagsPass(tags) {
-		return
+		return nil
 	}
 
 	// Override measurement name if set
@@ -120,7 +156,7 @@ func (ac *accumulator) AddFields(
 	}
 	fields = nil
 	if len(result) == 0 {
-		return
+		return nil
 	}
 
 	var timestamp time.Time
@@ -131,15 +167,26 @@ func (ac *accumulator) AddFields(
 	}
 	timestamp = timestamp.Round(ac.precision)
 
-	m, err := telegraf.NewMetric(measurement, tags, result, timestamp)
+	var m telegraf.Metric
+	var err error
+	switch mType {
+	case telegraf.Counter:
+		m, err = telegraf.NewCounterMetric(measurement, tags, result, timestamp)
+	case telegraf.Gauge:
+		m, err = telegraf.NewGaugeMetric(measurement, tags, result, timestamp)
+	default:
+		m, err = telegraf.NewMetric(measurement, tags, result, timestamp)
+	}
 	if err != nil {
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
-		return
+		return nil
 	}
+
 	if ac.trace {
 		fmt.Println("> " + m.String())
 	}
-	ac.metrics <- m
+
+	return m
 }
 
 // AddError passes a runtime error to the accumulator.
