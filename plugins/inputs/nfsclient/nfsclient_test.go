@@ -193,7 +193,7 @@ func TestNFSCLIENTProcessStat(t *testing.T) {
 	}
 	tags := map[string]string{
 		"serverexport": "1.2.3.4:/storage/NFS",
-		"mountpoint": "/NFS",
+		"mountpoint":   "/NFS",
 	}
 	acc.AssertContainsTaggedFields(t, "nfsstat_read", fields_readstat, tags)
 	acc.AssertContainsTaggedFields(t, "nfsstat_write", fields_writestat, tags)
