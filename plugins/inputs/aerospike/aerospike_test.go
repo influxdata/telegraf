@@ -10,7 +10,7 @@ import (
 
 func TestAerospikeStatistics(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		t.Skip("Skipping aerospike integration tests.")
 	}
 
 	a := &Aerospike{
@@ -29,7 +29,7 @@ func TestAerospikeStatistics(t *testing.T) {
 
 func TestAerospikeStatisticsPartialErr(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		t.Skip("Skipping aerospike integration tests.")
 	}
 
 	a := &Aerospike{

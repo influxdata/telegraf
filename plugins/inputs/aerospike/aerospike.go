@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	as "github.com/sparrc/aerospike-client-go"
+	as "github.com/aerospike/aerospike-client-go"
 )
 
 type Aerospike struct {

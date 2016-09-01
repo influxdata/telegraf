@@ -1,3 +1,23 @@
+## v1.1 [unreleased]
+
+### Release Notes
+
+### Features
+
+- [#1606](https://github.com/influxdata/telegraf/pull/1606): Remove carraige returns from exec plugin output on Windows
+- [#1674](https://github.com/influxdata/telegraf/issues/1674): elasticsearch input: configurable timeout.
+- [#1607](https://github.com/influxdata/telegraf/pull/1607): Massage metric names in Instrumental output plugin
+- [#1572](https://github.com/influxdata/telegraf/pull/1572): mesos improvements.
+- [#1513](https://github.com/influxdata/telegraf/issues/1513): Add Ceph Cluster Performance Statistics
+- [#1650](https://github.com/influxdata/telegraf/issues/1650): Ability to configure response_timeout in httpjson input.
+- [#1685](https://github.com/influxdata/telegraf/issues/1685): Add additional redis metrics.
+- [#1539](https://github.com/influxdata/telegraf/pull/1539): Added capability to send metrics through Http API for OpenTSDB.
+- [#1471](https://github.com/influxdata/telegraf/pull/1471): iptables input plugin.
+- [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
+
+### Bugfixes
+
+
 ## v1.0 [unreleased]
 
 ### Release Notes
@@ -9,10 +29,6 @@ of it's predecessor. For users wanting to continue to use the deprecated SNMP
 plugin, you will need to change your config file from `[[inputs.snmp]]` to
 `[[inputs.snmp_legacy]]`. The configuration of the new SNMP plugin is _not_
 backwards-compatible.
-
-- Telegraf now supports being installed as an official windows service,
-which can be installed via
-`> C:\Program Files\Telegraf\telegraf.exe --service install`
 
 **Breaking Change**: Aerospike main server node measurements have been renamed
 aerospike_node. Aerospike namespace measurements have been renamed to
@@ -43,6 +59,10 @@ should now look like:
   [inputs.webhooks.github]
     path = "/"
 ```
+
+- Telegraf now supports being installed as an official windows service,
+which can be installed via
+`> C:\Program Files\Telegraf\telegraf.exe --service install`
 
 - `flush_jitter` behavior has been changed. The random jitter will now be
 evaluated at every flush interval, rather than once at startup. This makes it
@@ -90,6 +110,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1213](https://github.com/influxdata/telegraf/issues/1213): Add inactive & active memory to mem plugin.
 - [#1543](https://github.com/influxdata/telegraf/pull/1543): Official Windows service.
 - [#1414](https://github.com/influxdata/telegraf/pull/1414): Forking sensors command to remove C package dependency.
+- [#1389](https://github.com/influxdata/telegraf/pull/1389): Add a new SNMP plugin.
 
 ### Bugfixes
 

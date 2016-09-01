@@ -35,7 +35,8 @@ const (
 )
 
 var (
-	StatIncludesBadChar = regexp.MustCompile("[^[:alnum:][:blank:]-_.]")
+	ValueIncludesBadChar = regexp.MustCompile("[^[:digit:].]")
+	MetricNameReplacer   = regexp.MustCompile("[^-[:alnum:]_.]+")
 )
 
 var sampleConfig = `
@@ -131,8 +132,17 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, stat := range stats {
-			if !StatIncludesBadChar.MatchString(stat) {
-				points = append(points, fmt.Sprintf("%s %s", metricType, stat))
+			// decompose "metric.name value time"
+			splitStat := strings.SplitN(stat, " ", 3)
+			metric := splitStat[0]
+			value := splitStat[1]
+			time := splitStat[2]
+
+			// replace invalid components of metric name with underscore
+			clean_metric := MetricNameReplacer.ReplaceAllString(metric, "_")
+
+			if !ValueIncludesBadChar.MatchString(value) {
+				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, clean_metric, value, time))
 			} else if i.Debug {
 				log.Printf("Unable to send bad stat: %s", stat)
 			}
