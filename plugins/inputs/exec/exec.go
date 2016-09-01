@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -114,7 +115,34 @@ func (c CommandRunner) Run(
 		}
 	}
 
+	out = removeCarriageReturns(out)
 	return out.Bytes(), nil
+}
+
+// removeCarriageReturns removes all carriage returns from the input if the
+// OS is Windows. It does not return any errors.
+func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
+	if runtime.GOOS == "windows" {
+		var buf bytes.Buffer
+		for {
+			byt, er := b.ReadBytes(0x0D)
+			end := len(byt)
+			if nil == er {
+				end -= 1
+			}
+			if nil != byt {
+				buf.Write(byt[:end])
+			} else {
+				break
+			}
+			if nil != er {
+				break
+			}
+		}
+		b = buf
+	}
+	return b
+
 }
 
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {

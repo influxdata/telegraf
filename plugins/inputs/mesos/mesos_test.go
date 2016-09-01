@@ -345,7 +345,10 @@ func TestMesosSlave(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	acc.AssertContainsFields(t, "mesos-tasks", jf.Fields)
+	acc.AssertContainsFields(
+		t,
+		"mesos_tasks",
+		slaveTaskMetrics["statistics"].(map[string]interface{}))
 }
 
 func TestSlaveFilter(t *testing.T) {

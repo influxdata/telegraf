@@ -58,6 +58,7 @@ func TestGather(t *testing.T) {
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
+		RateLimit: 10,
 	}
 
 	var acc testutil.Accumulator
