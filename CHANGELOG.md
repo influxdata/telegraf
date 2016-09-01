@@ -160,6 +160,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1425](https://github.com/influxdata/telegraf/issues/1425): Fix win_perf_counter "index out of range" panic.
 - [#1634](https://github.com/influxdata/telegraf/issues/1634): Fix ntpq panic when field is missing.
 - [#1637](https://github.com/influxdata/telegraf/issues/1637): Sanitize graphite output field names.
+- [#1695](https://github.com/influxdata/telegraf/pull/1695): Fix MySQL plugin not sending 0 value fields.
 
 ## v0.13.1 [2016-05-24]
 
