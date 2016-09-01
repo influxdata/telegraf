@@ -16,6 +16,7 @@
 - [#1471](https://github.com/influxdata/telegraf/pull/1471): iptables input plugin.
 - [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
 - [#1599](https://github.com/influxdata/telegraf/pull/1599): Add server hostname for each docker measurements.
+- [#1697](https://github.com/influxdata/telegraf/pull/1697): Add NATS output plugin.
 
 ### Bugfixes
 
