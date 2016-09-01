@@ -56,6 +56,7 @@ docker-run:
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name nats -p "4222:4222" -d nats
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -68,11 +69,12 @@ docker-run-circle:
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name nats -p "4222:4222" -d nats
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann
+	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats
+	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: vet docker-kill docker-run
