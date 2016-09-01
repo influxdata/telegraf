@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -116,10 +117,36 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 		return g.gatherServer("http://127.0.0.1:1936/haproxy?stats", acc)
 	}
 
+	endpoints := make([]string, 0, len(g.Servers))
+
+	for _, endpoint := range g.Servers {
+
+		if strings.HasPrefix(endpoint, "http") {
+			endpoints = append(endpoints, endpoint)
+			continue
+		}
+
+		socketPath := getSocketAddr(endpoint)
+
+		matches, err := filepath.Glob(socketPath)
+
+		if err != nil {
+			return err
+		}
+
+		if len(matches) == 0 {
+			endpoints = append(endpoints, socketPath)
+		} else {
+			for _, match := range matches {
+				endpoints = append(endpoints, match)
+			}
+		}
+	}
+
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(g.Servers))
-	wg.Add(len(g.Servers))
-	for _, server := range g.Servers {
+	errChan := errchan.New(len(endpoints))
+	wg.Add(len(endpoints))
+	for _, server := range endpoints {
 		go func(serv string) {
 			defer wg.Done()
 			errChan.C <- g.gatherServer(serv, acc)
