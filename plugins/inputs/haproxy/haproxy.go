@@ -131,14 +131,7 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 }
 
 func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
-	var socketPath string
-	socketAddr := strings.Split(addr, ":")
-
-	if len(socketAddr) >= 2 {
-		socketPath = socketAddr[1]
-	} else {
-		socketPath = socketAddr[0]
-	}
+	socketPath := getSocketAddr(addr)
 
 	c, err := net.Dial("unix", socketPath)
 
@@ -194,6 +187,16 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	}
 
 	return importCsvResult(res.Body, acc, u.Host)
+}
+
+func getSocketAddr(sock string) string {
+	socketAddr := strings.Split(sock, ":")
+
+	if len(socketAddr) >= 2 {
+		return socketAddr[1]
+	} else {
+		return socketAddr[0]
+	}
 }
 
 func importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
