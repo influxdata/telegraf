@@ -7,10 +7,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -118,26 +120,27 @@ func (m *Mysql) InitMysql() {
 
 func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	if len(m.Servers) == 0 {
-		// if we can't get stats in this case, thats fine, don't report
-		// an error.
-		m.gatherServer(localhost, acc)
-		return nil
+		// default to localhost if nothing specified.
+		return m.gatherServer(localhost, acc)
 	}
-
 	// Initialise additional query intervals
 	if !initDone {
 		m.InitMysql()
 	}
+	var wg sync.WaitGroup
+	errChan := errchan.New(len(m.Servers))
 
 	// Loop through each server and collect metrics
-	for _, serv := range m.Servers {
-		err := m.gatherServer(serv, acc)
-		if err != nil {
-			return err
-		}
+	for _, server := range m.Servers {
+		wg.Add(1)
+		go func(s string) {
+			defer wg.Done()
+			errChan.C <- m.gatherServer(s, acc)
+		}(server)
 	}
 
-	return nil
+	wg.Wait()
+	return errChan.Error()
 }
 
 type mapping struct {
@@ -305,6 +308,10 @@ var mappings = []*mapping{
 	{
 		onServer: "Threadpool_",
 		inExport: "threadpool_",
+	},
+	{
+		onServer: "wsrep_",
+		inExport: "wsrep_",
 	},
 }
 
@@ -1369,6 +1376,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 			&rowsAffected, &rowsSent, &rowsExamined,
 			&tmpTables, &tmpDiskTables,
 			&sortMergePasses, &sortRows,
+			&noIndexUsed,
 		)
 
 		if err != nil {

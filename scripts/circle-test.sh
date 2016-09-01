@@ -56,7 +56,8 @@ exit_if_fail make
 # Run the tests
 exit_if_fail go vet ./...
 exit_if_fail make docker-run-circle
-sleep 10
+# Sleep for OpenTSDB leadership election, aerospike cluster, etc.
+exit_if_fail sleep 60
 exit_if_fail go test -race ./...
 
 # Simple Integration Tests
@@ -69,6 +70,8 @@ exit_if_fail telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
 cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
+go build -o telegraf-race -race -ldflags "-X main.version=${VERSION}-RACE" cmd/telegraf/telegraf.go
+cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
 
 eval "git describe --exact-match HEAD"
 if [ $? -eq 0 ]; then

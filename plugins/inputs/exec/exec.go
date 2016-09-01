@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -47,8 +48,6 @@ type Exec struct {
 	Timeout  internal.Duration
 
 	parser parsers.Parser
-
-	wg sync.WaitGroup
 
 	runner  Runner
 	errChan chan error
@@ -116,11 +115,38 @@ func (c CommandRunner) Run(
 		}
 	}
 
+	out = removeCarriageReturns(out)
 	return out.Bytes(), nil
 }
 
-func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator) {
-	defer e.wg.Done()
+// removeCarriageReturns removes all carriage returns from the input if the
+// OS is Windows. It does not return any errors.
+func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
+	if runtime.GOOS == "windows" {
+		var buf bytes.Buffer
+		for {
+			byt, er := b.ReadBytes(0x0D)
+			end := len(byt)
+			if nil == er {
+				end -= 1
+			}
+			if nil != byt {
+				buf.Write(byt[:end])
+			} else {
+				break
+			}
+			if nil != er {
+				break
+			}
+		}
+		b = buf
+	}
+	return b
+
+}
+
+func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	out, err := e.runner.Run(e, command, acc)
 	if err != nil {
@@ -151,6 +177,7 @@ func (e *Exec) SetParser(parser parsers.Parser) {
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
 	// Legacy single command support
 	if e.Command != "" {
 		e.Commands = append(e.Commands, e.Command)
@@ -190,11 +217,11 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 	errChan := errchan.New(len(commands))
 	e.errChan = errChan.C
 
-	e.wg.Add(len(commands))
+	wg.Add(len(commands))
 	for _, command := range commands {
-		go e.ProcessCommand(command, acc)
+		go e.ProcessCommand(command, acc, &wg)
 	}
-	e.wg.Wait()
+	wg.Wait()
 	return errChan.Error()
 }
 

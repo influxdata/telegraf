@@ -1,818 +1,791 @@
 package snmp
 
 import (
-	"io/ioutil"
-	"log"
+	"bytes"
+	"fmt"
+	"math"
 	"net"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/soniah/gosnmp"
 )
 
-// Snmp is a snmp plugin
-type Snmp struct {
-	Host              []Host
-	Get               []Data
-	Bulk              []Data
-	Table             []Table
-	Subtable          []Subtable
-	SnmptranslateFile string
+const description = `Retrieves SNMP values from remote agents`
+const sampleConfig = `
+  agents = [ "127.0.0.1:161" ]
+  timeout = "5s"
+  version = 2
 
-	nameToOid   map[string]string
-	initNode    Node
-	subTableMap map[string]Subtable
-}
+  # SNMPv1 & SNMPv2 parameters
+  community = "public"
 
-type Host struct {
-	Address   string
-	Community string
-	// SNMP version. Default 2
-	Version int
-	// SNMP timeout, in seconds. 0 means no timeout
-	Timeout float64
-	// SNMP retries
-	Retries int
-	// Data to collect (list of Data names)
-	Collect []string
-	// easy get oids
-	GetOids []string
-	// Table
-	Table []HostTable
-	// Oids
-	getOids  []Data
-	bulkOids []Data
-	tables   []HostTable
-	// array of processed oids
-	// to skip oid duplication
-	processedOids []string
+  # SNMPv2 & SNMPv3 parameters
+  max_repetitions = 50
 
-	OidInstanceMapping map[string]map[string]string
-}
+  # SNMPv3 parameters
+  #sec_name = "myuser"
+  #auth_protocol = "md5"         # Values: "MD5", "SHA", ""
+  #auth_password = "password123"
+  #sec_level = "authNoPriv"      # Values: "noAuthNoPriv", "authNoPriv", "authPriv"
+  #context_name = ""
+  #priv_protocol = ""            # Values: "DES", "AES", ""
+  #priv_password = ""
 
-type Table struct {
-	// name = "iftable"
-	Name string
-	// oid = ".1.3.6.1.2.1.31.1.1.1"
-	Oid string
-	//if empty get all instances
-	//mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
-	MappingTable string
-	// if empty get all subtables
-	// sub_tables could be not "real subtables"
-	//sub_tables=[".1.3.6.1.2.1.2.2.1.13", "bytes_recv", "bytes_send"]
-	SubTables []string
-}
+  # measurement name
+  name = "system"
+  [[inputs.snmp.field]]
+    name = "hostname"
+    oid = ".1.0.0.1.1"
+  [[inputs.snmp.field]]
+    name = "uptime"
+    oid = ".1.0.0.1.2"
+  [[inputs.snmp.field]]
+    name = "load"
+    oid = ".1.0.0.1.3"
+  [[inputs.snmp.field]]
+    oid = "HOST-RESOURCES-MIB::hrMemorySize"
 
-type HostTable struct {
-	// name = "iftable"
-	Name string
-	// Includes only these instances
-	// include_instances = ["eth0", "eth1"]
-	IncludeInstances []string
-	// Excludes only these instances
-	// exclude_instances = ["eth20", "eth21"]
-	ExcludeInstances []string
-	// From Table struct
-	oid          string
-	mappingTable string
-	subTables    []string
-}
-
-// TODO find better names
-type Subtable struct {
-	//name = "bytes_send"
-	Name string
-	//oid = ".1.3.6.1.2.1.31.1.1.1.10"
-	Oid string
-	//unit = "octets"
-	Unit string
-}
-
-type Data struct {
-	Name string
-	// OID (could be numbers or name)
-	Oid string
-	// Unit
-	Unit string
-	//  SNMP getbulk max repetition
-	MaxRepetition uint8 `toml:"max_repetition"`
-	// SNMP Instance (default 0)
-	// (only used with  GET request and if
-	//  OID is a name from snmptranslate file)
-	Instance string
-	// OID (only number) (used for computation)
-	rawOid string
-}
-
-type Node struct {
-	id       string
-	name     string
-	subnodes map[string]Node
-}
-
-var sampleConfig = `
-  ## Use 'oids.txt' file to translate oids to names
-  ## To generate 'oids.txt' you need to run:
-  ##   snmptranslate -m all -Tz -On | sed -e 's/"//g' > /tmp/oids.txt
-  ## Or if you have an other MIB folder with custom MIBs
-  ##   snmptranslate -M /mycustommibfolder -Tz -On -m all | sed -e 's/"//g' > oids.txt
-  snmptranslate_file = "/tmp/oids.txt"
-  [[inputs.snmp.host]]
-    address = "192.168.2.2:161"
-    # SNMP community
-    community = "public" # default public
-    # SNMP version (1, 2 or 3)
-    # Version 3 not supported yet
-    version = 2 # default 2
-    # SNMP response timeout
-    timeout = 2.0 # default 2.0
-    # SNMP request retries
-    retries = 2 # default 2
-    # Which get/bulk do you want to collect for this host
-    collect = ["mybulk", "sysservices", "sysdescr"]
-    # Simple list of OIDs to get, in addition to "collect"
-    get_oids = []
-
-  [[inputs.snmp.host]]
-    address = "192.168.2.3:161"
-    community = "public"
-    version = 2
-    timeout = 2.0
-    retries = 2
-    collect = ["mybulk"]
-    get_oids = [
-        "ifNumber",
-        ".1.3.6.1.2.1.1.3.0",
-    ]
-
-  [[inputs.snmp.get]]
-    name = "ifnumber"
-    oid = "ifNumber"
-
-  [[inputs.snmp.get]]
-    name = "interface_speed"
-    oid = "ifSpeed"
-    instance = "0"
-
-  [[inputs.snmp.get]]
-    name = "sysuptime"
-    oid = ".1.3.6.1.2.1.1.3.0"
-    unit = "second"
-
-  [[inputs.snmp.bulk]]
-    name = "mybulk"
-    max_repetition = 127
-    oid = ".1.3.6.1.2.1.1"
-
-  [[inputs.snmp.bulk]]
-    name = "ifoutoctets"
-    max_repetition = 127
-    oid = "ifOutOctets"
-
-  [[inputs.snmp.host]]
-    address = "192.168.2.13:161"
-    #address = "127.0.0.1:161"
-    community = "public"
-    version = 2
-    timeout = 2.0
-    retries = 2
-    #collect = ["mybulk", "sysservices", "sysdescr", "systype"]
-    collect = ["sysuptime" ]
-    [[inputs.snmp.host.table]]
-      name = "iftable3"
-      include_instances = ["enp5s0", "eth1"]
-
-  # SNMP TABLEs
-  # table without mapping neither subtables
   [[inputs.snmp.table]]
-    name = "iftable1"
-    oid = ".1.3.6.1.2.1.31.1.1.1"
+    # measurement name
+    name = "remote_servers"
+    inherit_tags = [ "hostname" ]
+    [[inputs.snmp.table.field]]
+      name = "server"
+      oid = ".1.0.0.0.1.0"
+      is_tag = true
+    [[inputs.snmp.table.field]]
+      name = "connections"
+      oid = ".1.0.0.0.1.1"
+    [[inputs.snmp.table.field]]
+      name = "latency"
+      oid = ".1.0.0.0.1.2"
 
-  # table without mapping but with subtables
   [[inputs.snmp.table]]
-    name = "iftable2"
-    oid = ".1.3.6.1.2.1.31.1.1.1"
-    sub_tables = [".1.3.6.1.2.1.2.2.1.13"]
-
-  # table with mapping but without subtables
-  [[inputs.snmp.table]]
-    name = "iftable3"
-    oid = ".1.3.6.1.2.1.31.1.1.1"
-    # if empty. get all instances
-    mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
-    # if empty, get all subtables
-
-  # table with both mapping and subtables
-  [[inputs.snmp.table]]
-    name = "iftable4"
-    oid = ".1.3.6.1.2.1.31.1.1.1"
-    # if empty get all instances
-    mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
-    # if empty get all subtables
-    # sub_tables could be not "real subtables"
-    sub_tables=[".1.3.6.1.2.1.2.2.1.13", "bytes_recv", "bytes_send"]
+    # auto populate table's fields using the MIB
+    oid = "HOST-RESOURCES-MIB::hrNetworkTable"
 `
 
-// SampleConfig returns sample configuration message
-func (s *Snmp) SampleConfig() string {
-	return sampleConfig
+// execCommand is so tests can mock out exec.Command usage.
+var execCommand = exec.Command
+
+// execCmd executes the specified command, returning the STDOUT content.
+// If command exits with error status, the output is captured into the returned error.
+func execCmd(arg0 string, args ...string) ([]byte, error) {
+	out, err := execCommand(arg0, args...).Output()
+	if err != nil {
+		if err, ok := err.(*exec.ExitError); ok {
+			return nil, NestedError{
+				Err:       err,
+				NestedErr: fmt.Errorf("%s", bytes.TrimRight(err.Stderr, "\n")),
+			}
+		}
+		return nil, err
+	}
+	return out, nil
 }
 
-// Description returns description of Zookeeper plugin
-func (s *Snmp) Description() string {
-	return `Reads oids value from one or many snmp agents`
+// Snmp holds the configuration for the plugin.
+type Snmp struct {
+	// The SNMP agent to query. Format is ADDR[:PORT] (e.g. 1.2.3.4:161).
+	Agents []string
+	// Timeout to wait for a response.
+	Timeout internal.Duration
+	Retries int
+	// Values: 1, 2, 3
+	Version uint8
+
+	// Parameters for Version 1 & 2
+	Community string
+
+	// Parameters for Version 2 & 3
+	MaxRepetitions uint
+
+	// Parameters for Version 3
+	ContextName string
+	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
+	SecLevel string
+	SecName  string
+	// Values: "MD5", "SHA", "". Default: ""
+	AuthProtocol string
+	AuthPassword string
+	// Values: "DES", "AES", "". Default: ""
+	PrivProtocol string
+	PrivPassword string
+	EngineID     string
+	EngineBoots  uint32
+	EngineTime   uint32
+
+	Tables []Table `toml:"table"`
+
+	// Name & Fields are the elements of a Table.
+	// Telegraf chokes if we try to embed a Table. So instead we have to embed the
+	// fields of a Table, and construct a Table during runtime.
+	Name   string
+	Fields []Field `toml:"field"`
+
+	connectionCache map[string]snmpConnection
+	initialized     bool
 }
 
-func fillnode(parentNode Node, oid_name string, ids []string) {
-	// ids = ["1", "3", "6", ...]
-	id, ids := ids[0], ids[1:]
-	node, ok := parentNode.subnodes[id]
-	if ok == false {
-		node = Node{
-			id:       id,
-			name:     "",
-			subnodes: make(map[string]Node),
-		}
-		if len(ids) == 0 {
-			node.name = oid_name
-		}
-		parentNode.subnodes[id] = node
+func (s *Snmp) init() error {
+	if s.initialized {
+		return nil
 	}
-	if len(ids) > 0 {
-		fillnode(node, oid_name, ids)
-	}
-}
 
-func findnodename(node Node, ids []string) (string, string) {
-	// ids = ["1", "3", "6", ...]
-	if len(ids) == 1 {
-		return node.name, ids[0]
-	}
-	id, ids := ids[0], ids[1:]
-	// Get node
-	subnode, ok := node.subnodes[id]
-	if ok {
-		return findnodename(subnode, ids)
-	}
-	// We got a node
-	// Get node name
-	if node.name != "" && len(ids) == 0 && id == "0" {
-		// node with instance 0
-		return node.name, "0"
-	} else if node.name != "" && len(ids) == 0 && id != "0" {
-		// node with an instance
-		return node.name, string(id)
-	} else if node.name != "" && len(ids) > 0 {
-		// node with subinstances
-		return node.name, strings.Join(ids, ".")
-	}
-	// return an empty node name
-	return node.name, ""
-}
-
-func (s *Snmp) Gather(acc telegraf.Accumulator) error {
-	// TODO put this in cache on first run
-	// Create subtables mapping
-	if len(s.subTableMap) == 0 {
-		s.subTableMap = make(map[string]Subtable)
-		for _, sb := range s.Subtable {
-			s.subTableMap[sb.Name] = sb
-		}
-	}
-	// TODO put this in cache on first run
-	// Create oid tree
-	if s.SnmptranslateFile != "" && len(s.initNode.subnodes) == 0 {
-		s.nameToOid = make(map[string]string)
-		s.initNode = Node{
-			id:       "1",
-			name:     "",
-			subnodes: make(map[string]Node),
-		}
-
-		data, err := ioutil.ReadFile(s.SnmptranslateFile)
-		if err != nil {
-			log.Printf("Reading SNMPtranslate file error: %s", err)
+	for i := range s.Tables {
+		if err := s.Tables[i].init(); err != nil {
 			return err
-		} else {
-			for _, line := range strings.Split(string(data), "\n") {
-				oids := strings.Fields(string(line))
-				if len(oids) == 2 && oids[1] != "" {
-					oid_name := oids[0]
-					oid := oids[1]
-					fillnode(s.initNode, oid_name, strings.Split(string(oid), "."))
-					s.nameToOid[oid_name] = oid
-				}
-			}
 		}
 	}
-	// Fetching data
-	for _, host := range s.Host {
-		// Set default args
-		if len(host.Address) == 0 {
-			host.Address = "127.0.0.1:161"
+
+	for i := range s.Fields {
+		if err := s.Fields[i].init(); err != nil {
+			return err
 		}
-		if host.Community == "" {
-			host.Community = "public"
-		}
-		if host.Timeout <= 0 {
-			host.Timeout = 2.0
-		}
-		if host.Retries <= 0 {
-			host.Retries = 2
-		}
-		// Prepare host
-		// Get Easy GET oids
-		for _, oidstring := range host.GetOids {
-			oid := Data{}
-			if val, ok := s.nameToOid[oidstring]; ok {
-				// TODO should we add the 0 instance ?
-				oid.Name = oidstring
-				oid.Oid = val
-				oid.rawOid = "." + val + ".0"
-			} else {
-				oid.Name = oidstring
-				oid.Oid = oidstring
-				if string(oidstring[:1]) != "." {
-					oid.rawOid = "." + oidstring
-				} else {
-					oid.rawOid = oidstring
-				}
+	}
+
+	s.initialized = true
+	return nil
+}
+
+// Table holds the configuration for a SNMP table.
+type Table struct {
+	// Name will be the name of the measurement.
+	Name string
+
+	// Which tags to inherit from the top-level config.
+	InheritTags []string
+
+	// Fields is the tags and values to look up.
+	Fields []Field `toml:"field"`
+
+	// OID for automatic field population.
+	// If provided, init() will populate Fields with all the table columns of the
+	// given OID.
+	Oid string
+
+	initialized bool
+}
+
+// init() populates Fields if a table OID is provided.
+func (t *Table) init() error {
+	if t.initialized {
+		return nil
+	}
+	if t.Oid == "" {
+		t.initialized = true
+		return nil
+	}
+
+	mibPrefix := ""
+	if err := snmpTranslate(&mibPrefix, &t.Oid, &t.Name); err != nil {
+		return err
+	}
+
+	// first attempt to get the table's tags
+	tagOids := map[string]struct{}{}
+	// We have to guess that the "entry" oid is `t.Oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
+	if out, err := execCmd("snmptranslate", "-m", "all", "-Td", t.Oid+".1"); err == nil {
+		lines := bytes.Split(out, []byte{'\n'})
+		// get the MIB name if we didn't get it above
+		if mibPrefix == "" {
+			if i := bytes.Index(lines[0], []byte("::")); i != -1 {
+				mibPrefix = string(lines[0][:i+2])
 			}
-			host.getOids = append(host.getOids, oid)
 		}
 
-		for _, oid_name := range host.Collect {
-			// Get GET oids
-			for _, oid := range s.Get {
-				if oid.Name == oid_name {
-					if val, ok := s.nameToOid[oid.Oid]; ok {
-						// TODO should we add the 0 instance ?
-						if oid.Instance != "" {
-							oid.rawOid = "." + val + "." + oid.Instance
-						} else {
-							oid.rawOid = "." + val + ".0"
-						}
-					} else {
-						oid.rawOid = oid.Oid
-					}
-					host.getOids = append(host.getOids, oid)
-				}
-			}
-			// Get GETBULK oids
-			for _, oid := range s.Bulk {
-				if oid.Name == oid_name {
-					if val, ok := s.nameToOid[oid.Oid]; ok {
-						oid.rawOid = "." + val
-					} else {
-						oid.rawOid = oid.Oid
-					}
-					host.bulkOids = append(host.bulkOids, oid)
-				}
-			}
-		}
-		// Table
-		for _, hostTable := range host.Table {
-			for _, snmpTable := range s.Table {
-				if hostTable.Name == snmpTable.Name {
-					table := hostTable
-					table.oid = snmpTable.Oid
-					table.mappingTable = snmpTable.MappingTable
-					table.subTables = snmpTable.SubTables
-					host.tables = append(host.tables, table)
-				}
-			}
-		}
-		// Launch Mapping
-		// TODO put this in cache on first run
-		// TODO save mapping and computed oids
-		// to do it only the first time
-		// only if len(s.OidInstanceMapping) == 0
-		if len(host.OidInstanceMapping) >= 0 {
-			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
-				log.Printf("SNMP Mapping error for host '%s': %s", host.Address, err)
+		for _, line := range lines {
+			if !bytes.HasPrefix(line, []byte("  INDEX")) {
 				continue
 			}
-		}
-		// Launch Get requests
-		if err := host.SNMPGet(acc, s.initNode); err != nil {
-			log.Printf("SNMP Error for host '%s': %s", host.Address, err)
-		}
-		if err := host.SNMPBulk(acc, s.initNode); err != nil {
-			log.Printf("SNMP Error for host '%s': %s", host.Address, err)
-		}
-	}
-	return nil
-}
 
-func (h *Host) SNMPMap(
-	acc telegraf.Accumulator,
-	nameToOid map[string]string,
-	subTableMap map[string]Subtable,
-) error {
-	if h.OidInstanceMapping == nil {
-		h.OidInstanceMapping = make(map[string]map[string]string)
-	}
-	// Get snmp client
-	snmpClient, err := h.GetSNMPClient()
-	if err != nil {
-		return err
-	}
-	// Deconnection
-	defer snmpClient.Conn.Close()
-	// Prepare OIDs
-	for _, table := range h.tables {
-		// We don't have mapping
-		if table.mappingTable == "" {
-			if len(table.subTables) == 0 {
-				// If We don't have mapping table
-				// neither subtables list
-				// This is just a bulk request
-				oid := Data{}
-				oid.Oid = table.oid
-				if val, ok := nameToOid[oid.Oid]; ok {
-					oid.rawOid = "." + val
-				} else {
-					oid.rawOid = oid.Oid
-				}
-				h.bulkOids = append(h.bulkOids, oid)
-			} else {
-				// If We don't have mapping table
-				// but we have subtables
-				// This is a bunch of bulk requests
-				// For each subtable ...
-				for _, sb := range table.subTables {
-					// ... we create a new Data (oid) object
-					oid := Data{}
-					// Looking for more information about this subtable
-					ssb, exists := subTableMap[sb]
-					if exists {
-						// We found a subtable section in config files
-						oid.Oid = ssb.Oid
-						oid.rawOid = ssb.Oid
-						oid.Unit = ssb.Unit
-					} else {
-						// We did NOT find a subtable section in config files
-						oid.Oid = sb
-						oid.rawOid = sb
-					}
-					// TODO check oid validity
-
-					// Add the new oid to getOids list
-					h.bulkOids = append(h.bulkOids, oid)
-				}
+			i := bytes.Index(line, []byte("{ "))
+			if i == -1 { // parse error
+				continue
 			}
-		} else {
-			// We have a mapping table
-			// We need to query this table
-			// To get mapping between instance id
-			// and instance name
-			oid_asked := table.mappingTable
-			oid_next := oid_asked
-			need_more_requests := true
-			// Set max repetition
-			maxRepetition := uint8(32)
-			// Launch requests
-			for need_more_requests {
-				// Launch request
-				result, err3 := snmpClient.GetBulk([]string{oid_next}, 0, maxRepetition)
-				if err3 != nil {
-					return err3
-				}
-
-				lastOid := ""
-				for _, variable := range result.Variables {
-					lastOid = variable.Name
-					if strings.HasPrefix(variable.Name, oid_asked) {
-						switch variable.Type {
-						// handle instance names
-						case gosnmp.OctetString:
-							// Check if instance is in includes instances
-							getInstances := true
-							if len(table.IncludeInstances) > 0 {
-								getInstances = false
-								for _, instance := range table.IncludeInstances {
-									if instance == string(variable.Value.([]byte)) {
-										getInstances = true
-									}
-								}
-							}
-							// Check if instance is in excludes instances
-							if len(table.ExcludeInstances) > 0 {
-								getInstances = true
-								for _, instance := range table.ExcludeInstances {
-									if instance == string(variable.Value.([]byte)) {
-										getInstances = false
-									}
-								}
-							}
-							// We don't want this instance
-							if !getInstances {
-								continue
-							}
-
-							// remove oid table from the complete oid
-							// in order to get the current instance id
-							key := strings.Replace(variable.Name, oid_asked, "", 1)
-
-							if len(table.subTables) == 0 {
-								// We have a mapping table
-								// but no subtables
-								// This is just a bulk request
-
-								// Building mapping table
-								mapping := map[string]string{strings.Trim(key, "."): string(variable.Value.([]byte))}
-								_, exists := h.OidInstanceMapping[table.oid]
-								if exists {
-									h.OidInstanceMapping[table.oid][strings.Trim(key, ".")] = string(variable.Value.([]byte))
-								} else {
-									h.OidInstanceMapping[table.oid] = mapping
-								}
-
-								// Add table oid in bulk oid list
-								oid := Data{}
-								oid.Oid = table.oid
-								if val, ok := nameToOid[oid.Oid]; ok {
-									oid.rawOid = "." + val
-								} else {
-									oid.rawOid = oid.Oid
-								}
-								h.bulkOids = append(h.bulkOids, oid)
-							} else {
-								// We have a mapping table
-								// and some subtables
-								// This is a bunch of get requests
-								// This is the best case :)
-
-								// For each subtable ...
-								for _, sb := range table.subTables {
-									// ... we create a new Data (oid) object
-									oid := Data{}
-									// Looking for more information about this subtable
-									ssb, exists := subTableMap[sb]
-									if exists {
-										// We found a subtable section in config files
-										oid.Oid = ssb.Oid + key
-										oid.rawOid = ssb.Oid + key
-										oid.Unit = ssb.Unit
-										oid.Instance = string(variable.Value.([]byte))
-									} else {
-										// We did NOT find a subtable section in config files
-										oid.Oid = sb + key
-										oid.rawOid = sb + key
-										oid.Instance = string(variable.Value.([]byte))
-									}
-									// TODO check oid validity
-
-									// Add the new oid to getOids list
-									h.getOids = append(h.getOids, oid)
-								}
-							}
-						default:
-						}
-					} else {
-						break
-					}
-				}
-				// Determine if we need more requests
-				if strings.HasPrefix(lastOid, oid_asked) {
-					need_more_requests = true
-					oid_next = lastOid
-				} else {
-					need_more_requests = false
-				}
+			line = line[i+2:]
+			i = bytes.Index(line, []byte(" }"))
+			if i == -1 { // parse error
+				continue
+			}
+			line = line[:i]
+			for _, col := range bytes.Split(line, []byte(", ")) {
+				tagOids[mibPrefix+string(col)] = struct{}{}
 			}
 		}
 	}
-	// Mapping finished
 
-	// Create newoids based on mapping
-
-	return nil
-}
-
-func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
-	// Get snmp client
-	snmpClient, err := h.GetSNMPClient()
+	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
+	out, err := execCmd("snmptable", "-m", "all", "-Ch", "-Cl", "-c", "public", "127.0.0.1", t.Oid)
 	if err != nil {
-		return err
+		return Errorf(err, "getting table columns for %s", t.Oid)
 	}
-	// Deconnection
-	defer snmpClient.Conn.Close()
-	// Prepare OIDs
-	oidsList := make(map[string]Data)
-	for _, oid := range h.getOids {
-		oidsList[oid.rawOid] = oid
+	cols := bytes.SplitN(out, []byte{'\n'}, 2)[0]
+	if len(cols) == 0 {
+		return fmt.Errorf("unable to get columns for table %s", t.Oid)
 	}
-	oidsNameList := make([]string, 0, len(oidsList))
-	for _, oid := range oidsList {
-		oidsNameList = append(oidsNameList, oid.rawOid)
+	for _, col := range bytes.Split(cols, []byte{' '}) {
+		if len(col) == 0 {
+			continue
+		}
+		col := string(col)
+		_, isTag := tagOids[mibPrefix+col]
+		t.Fields = append(t.Fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
 	}
 
-	// gosnmp.MAX_OIDS == 60
-	// TODO use gosnmp.MAX_OIDS instead of hard coded value
-	max_oids := 60
-	// limit 60 (MAX_OIDS) oids by requests
-	for i := 0; i < len(oidsList); i = i + max_oids {
-		// Launch request
-		max_index := i + max_oids
-		if i+max_oids > len(oidsList) {
-			max_index = len(oidsList)
-		}
-		result, err3 := snmpClient.Get(oidsNameList[i:max_index]) // Get() accepts up to g.MAX_OIDS
-		if err3 != nil {
-			return err3
-		}
-		// Handle response
-		_, err = h.HandleResponse(oidsList, result, acc, initNode)
-		if err != nil {
+	// initialize all the nested fields
+	for i := range t.Fields {
+		if err := t.Fields[i].init(); err != nil {
 			return err
 		}
 	}
+
+	t.initialized = true
 	return nil
 }
 
-func (h *Host) SNMPBulk(acc telegraf.Accumulator, initNode Node) error {
-	// Get snmp client
-	snmpClient, err := h.GetSNMPClient()
-	if err != nil {
+// Field holds the configuration for a Field to look up.
+type Field struct {
+	// Name will be the name of the field.
+	Name string
+	// OID is prefix for this field. The plugin will perform a walk through all
+	// OIDs with this as their parent. For each value found, the plugin will strip
+	// off the OID prefix, and use the remainder as the index. For multiple fields
+	// to show up in the same row, they must share the same index.
+	Oid string
+	// IsTag controls whether this OID is output as a tag or a value.
+	IsTag bool
+	// Conversion controls any type conversion that is done on the value.
+	//  "float"/"float(0)" will convert the value into a float.
+	//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
+	//  "int" will conver the value into an integer.
+	Conversion string
+
+	initialized bool
+}
+
+// init() converts OID names to numbers, and sets the .Name attribute if unset.
+func (f *Field) init() error {
+	if f.initialized {
+		return nil
+	}
+
+	if err := snmpTranslate(nil, &f.Oid, &f.Name); err != nil {
 		return err
 	}
-	// Deconnection
-	defer snmpClient.Conn.Close()
-	// Prepare OIDs
-	oidsList := make(map[string]Data)
-	for _, oid := range h.bulkOids {
-		oidsList[oid.rawOid] = oid
-	}
-	oidsNameList := make([]string, 0, len(oidsList))
-	for _, oid := range oidsList {
-		oidsNameList = append(oidsNameList, oid.rawOid)
-	}
-	// TODO Trying to make requests with more than one OID
-	// to reduce the number of requests
-	for _, oid := range oidsNameList {
-		oid_asked := oid
-		need_more_requests := true
-		// Set max repetition
-		maxRepetition := oidsList[oid].MaxRepetition
-		if maxRepetition <= 0 {
-			maxRepetition = 32
-		}
-		// Launch requests
-		for need_more_requests {
-			// Launch request
-			result, err3 := snmpClient.GetBulk([]string{oid}, 0, maxRepetition)
-			if err3 != nil {
-				return err3
-			}
-			// Handle response
-			last_oid, err := h.HandleResponse(oidsList, result, acc, initNode)
-			if err != nil {
-				return err
-			}
-			// Determine if we need more requests
-			if strings.HasPrefix(last_oid, oid_asked) {
-				need_more_requests = true
-				oid = last_oid
-			} else {
-				need_more_requests = false
-			}
-		}
-	}
+
+	//TODO use textual convention conversion from the MIB
+
+	f.initialized = true
 	return nil
 }
 
-func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
-	// Prepare Version
-	var version gosnmp.SnmpVersion
-	if h.Version == 1 {
-		version = gosnmp.Version1
-	} else if h.Version == 3 {
-		version = gosnmp.Version3
-	} else {
-		version = gosnmp.Version2c
-	}
-	// Prepare host and port
-	host, port_str, err := net.SplitHostPort(h.Address)
-	if err != nil {
-		port_str = string("161")
-	}
-	// convert port_str to port in uint16
-	port_64, err := strconv.ParseUint(port_str, 10, 16)
-	port := uint16(port_64)
-	// Get SNMP client
-	snmpClient := &gosnmp.GoSNMP{
-		Target:    host,
-		Port:      port,
-		Community: h.Community,
-		Version:   version,
-		Timeout:   time.Duration(h.Timeout) * time.Second,
-		Retries:   h.Retries,
-	}
-	// Connection
-	err2 := snmpClient.Connect()
-	if err2 != nil {
-		return nil, err2
-	}
-	// Return snmpClient
-	return snmpClient, nil
+// RTable is the resulting table built from a Table.
+type RTable struct {
+	// Name is the name of the field, copied from Table.Name.
+	Name string
+	// Time is the time the table was built.
+	Time time.Time
+	// Rows are the rows that were found, one row for each table OID index found.
+	Rows []RTableRow
 }
 
-func (h *Host) HandleResponse(
-	oids map[string]Data,
-	result *gosnmp.SnmpPacket,
-	acc telegraf.Accumulator,
-	initNode Node,
-) (string, error) {
-	var lastOid string
-	for _, variable := range result.Variables {
-		lastOid = variable.Name
-	nextresult:
-		// Get only oid wanted
-		for oid_key, oid := range oids {
-			// Skip oids already processed
-			for _, processedOid := range h.processedOids {
-				if variable.Name == processedOid {
-					break nextresult
-				}
-			}
-			// If variable.Name is the same as oid_key
-			// OR
-			// the result is SNMP table which "." comes right after oid_key.
-			// ex: oid_key: .1.3.6.1.2.1.2.2.1.16, variable.Name: .1.3.6.1.2.1.2.2.1.16.1
-			if variable.Name == oid_key || strings.HasPrefix(variable.Name, oid_key+".") {
-				switch variable.Type {
-				// handle Metrics
-				case gosnmp.Boolean, gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32,
-					gosnmp.TimeTicks, gosnmp.Counter64, gosnmp.Uinteger32, gosnmp.OctetString:
-					// Prepare tags
-					tags := make(map[string]string)
-					if oid.Unit != "" {
-						tags["unit"] = oid.Unit
-					}
-					// Get name and instance
-					var oid_name string
-					var instance string
-					// Get oidname and instance from translate file
-					oid_name, instance = findnodename(initNode,
-						strings.Split(string(variable.Name[1:]), "."))
-					// Set instance tag
-					// From mapping table
-					mapping, inMappingNoSubTable := h.OidInstanceMapping[oid_key]
-					if inMappingNoSubTable {
-						// filter if the instance in not in
-						// OidInstanceMapping mapping map
-						if instance_name, exists := mapping[instance]; exists {
-							tags["instance"] = instance_name
-						} else {
-							continue
-						}
-					} else if oid.Instance != "" {
-						// From config files
-						tags["instance"] = oid.Instance
-					} else if instance != "" {
-						// Using last id of the current oid, ie:
-						// with .1.3.6.1.2.1.31.1.1.1.10.3
-						// instance is 3
-						tags["instance"] = instance
-					}
+// RTableRow is the resulting row containing all the OID values which shared
+// the same index.
+type RTableRow struct {
+	// Tags are all the Field values which had IsTag=true.
+	Tags map[string]string
+	// Fields are all the Field values which had IsTag=false.
+	Fields map[string]interface{}
+}
 
-					// Set name
-					var field_name string
-					if oid_name != "" {
-						// Set fieldname as oid name from translate file
-						field_name = oid_name
-					} else {
-						// Set fieldname as oid name from inputs.snmp.get section
-						// Because the result oid is equal to inputs.snmp.get section
-						field_name = oid.Name
-					}
-					tags["snmp_host"], _, _ = net.SplitHostPort(h.Address)
-					fields := make(map[string]interface{})
-					fields[string(field_name)] = variable.Value
+// NestedError wraps an error returned from deeper in the code.
+type NestedError struct {
+	// Err is the error from where the NestedError was constructed.
+	Err error
+	// NestedError is the error that was passed back from the called function.
+	NestedErr error
+}
 
-					h.processedOids = append(h.processedOids, variable.Name)
-					acc.AddFields(field_name, fields, tags)
-				case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
-					// Oid not found
-					log.Printf("[snmp input] Oid not found: %s", oid_key)
-				default:
-					// delete other data
-				}
-				break
-			}
-		}
+// Error returns a concatenated string of all the nested errors.
+func (ne NestedError) Error() string {
+	return ne.Err.Error() + ": " + ne.NestedErr.Error()
+}
+
+// Errorf is a convenience function for constructing a NestedError.
+func Errorf(err error, msg string, format ...interface{}) error {
+	return NestedError{
+		NestedErr: err,
+		Err:       fmt.Errorf(msg, format...),
 	}
-	return lastOid, nil
 }
 
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
-		return &Snmp{}
+		return &Snmp{
+			Retries:        5,
+			MaxRepetitions: 50,
+			Timeout:        internal.Duration{Duration: 5 * time.Second},
+			Version:        2,
+			Community:      "public",
+		}
 	})
+}
+
+// SampleConfig returns the default configuration of the input.
+func (s *Snmp) SampleConfig() string {
+	return sampleConfig
+}
+
+// Description returns a one-sentence description on the input.
+func (s *Snmp) Description() string {
+	return description
+}
+
+// Gather retrieves all the configured fields and tables.
+// Any error encountered does not halt the process. The errors are accumulated
+// and returned at the end.
+func (s *Snmp) Gather(acc telegraf.Accumulator) error {
+	if err := s.init(); err != nil {
+		return err
+	}
+
+	for _, agent := range s.Agents {
+		gs, err := s.getConnection(agent)
+		if err != nil {
+			acc.AddError(Errorf(err, "agent %s", agent))
+			continue
+		}
+
+		// First is the top-level fields. We treat the fields as table prefixes with an empty index.
+		t := Table{
+			Name:   s.Name,
+			Fields: s.Fields,
+		}
+		topTags := map[string]string{}
+		if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
+			acc.AddError(Errorf(err, "agent %s", agent))
+		}
+
+		// Now is the real tables.
+		for _, t := range s.Tables {
+			if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
+				acc.AddError(Errorf(err, "agent %s", agent))
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table, topTags map[string]string, walk bool) error {
+	rt, err := t.Build(gs, walk)
+	if err != nil {
+		return err
+	}
+
+	for _, tr := range rt.Rows {
+		if !walk {
+			// top-level table. Add tags to topTags.
+			for k, v := range tr.Tags {
+				topTags[k] = v
+			}
+		} else {
+			// real table. Inherit any specified tags.
+			for _, k := range t.InheritTags {
+				if v, ok := topTags[k]; ok {
+					tr.Tags[k] = v
+				}
+			}
+		}
+		if _, ok := tr.Tags["agent_host"]; !ok {
+			tr.Tags["agent_host"] = gs.Host()
+		}
+		acc.AddFields(rt.Name, tr.Fields, tr.Tags, rt.Time)
+	}
+
+	return nil
+}
+
+// Build retrieves all the fields specified in the table and constructs the RTable.
+func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
+	rows := map[string]RTableRow{}
+
+	tagCount := 0
+	for _, f := range t.Fields {
+		if f.IsTag {
+			tagCount++
+		}
+
+		if len(f.Oid) == 0 {
+			return nil, fmt.Errorf("cannot have empty OID")
+		}
+		var oid string
+		if f.Oid[0] == '.' {
+			oid = f.Oid
+		} else {
+			// make sure OID has "." because the BulkWalkAll results do, and the prefix needs to match
+			oid = "." + f.Oid
+		}
+
+		// ifv contains a mapping of table OID index to field value
+		ifv := map[string]interface{}{}
+
+		if !walk {
+			// This is used when fetching non-table fields. Fields configured a the top
+			// scope of the plugin.
+			// We fetch the fields directly, and add them to ifv as if the index were an
+			// empty string. This results in all the non-table fields sharing the same
+			// index, and being added on the same row.
+			if pkt, err := gs.Get([]string{oid}); err != nil {
+				return nil, Errorf(err, "performing get")
+			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject {
+				ent := pkt.Variables[0]
+				ifv[ent.Name[len(oid):]] = fieldConvert(f.Conversion, ent.Value)
+			}
+		} else {
+			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
+				if len(ent.Name) <= len(oid) || ent.Name[:len(oid)+1] != oid+"." {
+					return NestedError{} // break the walk
+				}
+				ifv[ent.Name[len(oid):]] = fieldConvert(f.Conversion, ent.Value)
+				return nil
+			})
+			if err != nil {
+				if _, ok := err.(NestedError); !ok {
+					return nil, Errorf(err, "performing bulk walk")
+				}
+			}
+		}
+
+		for i, v := range ifv {
+			rtr, ok := rows[i]
+			if !ok {
+				rtr = RTableRow{}
+				rtr.Tags = map[string]string{}
+				rtr.Fields = map[string]interface{}{}
+				rows[i] = rtr
+			}
+			if f.IsTag {
+				if vs, ok := v.(string); ok {
+					rtr.Tags[f.Name] = vs
+				} else {
+					rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+				}
+			} else {
+				rtr.Fields[f.Name] = v
+			}
+		}
+	}
+
+	rt := RTable{
+		Name: t.Name,
+		Time: time.Now(), //TODO record time at start
+		Rows: make([]RTableRow, 0, len(rows)),
+	}
+	for _, r := range rows {
+		if len(r.Tags) < tagCount {
+			// don't add rows which are missing tags, as without tags you can't filter
+			continue
+		}
+		rt.Rows = append(rt.Rows, r)
+	}
+	return &rt, nil
+}
+
+// snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.
+// We interact through an interface so we can mock it out in tests.
+type snmpConnection interface {
+	Host() string
+	//BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
+	Walk(string, gosnmp.WalkFunc) error
+	Get(oids []string) (*gosnmp.SnmpPacket, error)
+}
+
+// gosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
+type gosnmpWrapper struct {
+	*gosnmp.GoSNMP
+}
+
+// Host returns the value of GoSNMP.Target.
+func (gsw gosnmpWrapper) Host() string {
+	return gsw.Target
+}
+
+// Walk wraps GoSNMP.Walk() or GoSNMP.BulkWalk(), depending on whether the
+// connection is using SNMPv1 or newer.
+// Also, if any error is encountered, it will just once reconnect and try again.
+func (gsw gosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
+	var err error
+	// On error, retry once.
+	// Unfortunately we can't distinguish between an error returned by gosnmp, and one returned by the walk function.
+	for i := 0; i < 2; i++ {
+		if gsw.Version == gosnmp.Version1 {
+			err = gsw.GoSNMP.Walk(oid, fn)
+		} else {
+			err = gsw.GoSNMP.BulkWalk(oid, fn)
+		}
+		if err == nil {
+			return nil
+		}
+		if err := gsw.GoSNMP.Connect(); err != nil {
+			return Errorf(err, "reconnecting")
+		}
+	}
+	return err
+}
+
+// Get wraps GoSNMP.GET().
+// If any error is encountered, it will just once reconnect and try again.
+func (gsw gosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
+	var err error
+	var pkt *gosnmp.SnmpPacket
+	for i := 0; i < 2; i++ {
+		pkt, err = gsw.GoSNMP.Get(oids)
+		if err == nil {
+			return pkt, nil
+		}
+		if err := gsw.GoSNMP.Connect(); err != nil {
+			return nil, Errorf(err, "reconnecting")
+		}
+	}
+	return nil, err
+}
+
+// getConnection creates a snmpConnection (*gosnmp.GoSNMP) object and caches the
+// result using `agent` as the cache key.
+func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
+	if s.connectionCache == nil {
+		s.connectionCache = map[string]snmpConnection{}
+	}
+	if gs, ok := s.connectionCache[agent]; ok {
+		return gs, nil
+	}
+
+	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
+
+	host, portStr, err := net.SplitHostPort(agent)
+	if err != nil {
+		if err, ok := err.(*net.AddrError); !ok || err.Err != "missing port in address" {
+			return nil, Errorf(err, "parsing host")
+		}
+		host = agent
+		portStr = "161"
+	}
+	gs.Target = host
+
+	port, err := strconv.ParseUint(portStr, 10, 16)
+	if err != nil {
+		return nil, Errorf(err, "parsing port")
+	}
+	gs.Port = uint16(port)
+
+	gs.Timeout = s.Timeout.Duration
+
+	gs.Retries = s.Retries
+
+	switch s.Version {
+	case 3:
+		gs.Version = gosnmp.Version3
+	case 2, 0:
+		gs.Version = gosnmp.Version2c
+	case 1:
+		gs.Version = gosnmp.Version1
+	default:
+		return nil, fmt.Errorf("invalid version")
+	}
+
+	if s.Version < 3 {
+		if s.Community == "" {
+			gs.Community = "public"
+		} else {
+			gs.Community = s.Community
+		}
+	}
+
+	gs.MaxRepetitions = int(s.MaxRepetitions)
+
+	if s.Version == 3 {
+		gs.ContextName = s.ContextName
+
+		sp := &gosnmp.UsmSecurityParameters{}
+		gs.SecurityParameters = sp
+		gs.SecurityModel = gosnmp.UserSecurityModel
+
+		switch strings.ToLower(s.SecLevel) {
+		case "noauthnopriv", "":
+			gs.MsgFlags = gosnmp.NoAuthNoPriv
+		case "authnopriv":
+			gs.MsgFlags = gosnmp.AuthNoPriv
+		case "authpriv":
+			gs.MsgFlags = gosnmp.AuthPriv
+		default:
+			return nil, fmt.Errorf("invalid secLevel")
+		}
+
+		sp.UserName = s.SecName
+
+		switch strings.ToLower(s.AuthProtocol) {
+		case "md5":
+			sp.AuthenticationProtocol = gosnmp.MD5
+		case "sha":
+			sp.AuthenticationProtocol = gosnmp.SHA
+		case "":
+			sp.AuthenticationProtocol = gosnmp.NoAuth
+		default:
+			return nil, fmt.Errorf("invalid authProtocol")
+		}
+
+		sp.AuthenticationPassphrase = s.AuthPassword
+
+		switch strings.ToLower(s.PrivProtocol) {
+		case "des":
+			sp.PrivacyProtocol = gosnmp.DES
+		case "aes":
+			sp.PrivacyProtocol = gosnmp.AES
+		case "":
+			sp.PrivacyProtocol = gosnmp.NoPriv
+		default:
+			return nil, fmt.Errorf("invalid privProtocol")
+		}
+
+		sp.PrivacyPassphrase = s.PrivPassword
+
+		sp.AuthoritativeEngineID = s.EngineID
+
+		sp.AuthoritativeEngineBoots = s.EngineBoots
+
+		sp.AuthoritativeEngineTime = s.EngineTime
+	}
+
+	if err := gs.Connect(); err != nil {
+		return nil, Errorf(err, "setting up connection")
+	}
+
+	s.connectionCache[agent] = gs
+	return gs, nil
+}
+
+// fieldConvert converts from any type according to the conv specification
+//  "float"/"float(0)" will convert the value into a float.
+//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
+//  "int" will convert the value into an integer.
+//  "" will convert a byte slice into a string.
+// Any other conv will return the input value unchanged.
+func fieldConvert(conv string, v interface{}) interface{} {
+	if conv == "" {
+		if bs, ok := v.([]byte); ok {
+			return string(bs)
+		}
+		return v
+	}
+
+	var d int
+	if _, err := fmt.Sscanf(conv, "float(%d)", &d); err == nil || conv == "float" {
+		switch vt := v.(type) {
+		case float32:
+			v = float64(vt) / math.Pow10(d)
+		case float64:
+			v = float64(vt) / math.Pow10(d)
+		case int:
+			v = float64(vt) / math.Pow10(d)
+		case int8:
+			v = float64(vt) / math.Pow10(d)
+		case int16:
+			v = float64(vt) / math.Pow10(d)
+		case int32:
+			v = float64(vt) / math.Pow10(d)
+		case int64:
+			v = float64(vt) / math.Pow10(d)
+		case uint:
+			v = float64(vt) / math.Pow10(d)
+		case uint8:
+			v = float64(vt) / math.Pow10(d)
+		case uint16:
+			v = float64(vt) / math.Pow10(d)
+		case uint32:
+			v = float64(vt) / math.Pow10(d)
+		case uint64:
+			v = float64(vt) / math.Pow10(d)
+		case []byte:
+			vf, _ := strconv.ParseFloat(string(vt), 64)
+			v = vf / math.Pow10(d)
+		case string:
+			vf, _ := strconv.ParseFloat(vt, 64)
+			v = vf / math.Pow10(d)
+		}
+	}
+	if conv == "int" {
+		switch vt := v.(type) {
+		case float32:
+			v = int64(vt)
+		case float64:
+			v = int64(vt)
+		case int:
+			v = int64(vt)
+		case int8:
+			v = int64(vt)
+		case int16:
+			v = int64(vt)
+		case int32:
+			v = int64(vt)
+		case int64:
+			v = int64(vt)
+		case uint:
+			v = int64(vt)
+		case uint8:
+			v = int64(vt)
+		case uint16:
+			v = int64(vt)
+		case uint32:
+			v = int64(vt)
+		case uint64:
+			v = int64(vt)
+		case []byte:
+			v, _ = strconv.Atoi(string(vt))
+		case string:
+			v, _ = strconv.Atoi(vt)
+		}
+	}
+
+	return v
+}
+
+// snmpTranslate resolves the given OID.
+// The contents of the oid parameter will be replaced with the numeric oid value.
+// If name is empty, the textual OID value is stored in it. If the textual OID cannot be translated, the numeric OID is stored instead.
+// If mibPrefix is non-nil, the MIB in which the OID was found is stored, with a suffix of "::".
+func snmpTranslate(mibPrefix *string, oid *string, name *string) error {
+	if strings.ContainsAny(*oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+		out, err := execCmd("snmptranslate", "-m", "all", "-On", *oid)
+		if err != nil {
+			return Errorf(err, "translating %s", *oid)
+		}
+		*oid = string(bytes.TrimSuffix(out, []byte{'\n'}))
+	}
+
+	if *name == "" {
+		out, err := execCmd("snmptranslate", "-m", "all", *oid)
+		if err != nil {
+			//TODO debug message
+			*name = *oid
+		} else {
+			if i := bytes.Index(out, []byte("::")); i != -1 {
+				if mibPrefix != nil {
+					*mibPrefix = string(out[:i+2])
+				}
+				out = out[i+2:]
+			}
+			*name = string(bytes.TrimSuffix(out, []byte{'\n'}))
+		}
+	}
+
+	return nil
 }

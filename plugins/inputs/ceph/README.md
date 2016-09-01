@@ -1,18 +1,20 @@
 # Ceph Storage Input Plugin
 
-Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.  
+Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
 
-The plugin works by scanning the configured SocketDir for OSD and MON socket files.  When it finds
-a MON socket, it runs **ceph --admin-daemon $file perfcounters_dump**. For OSDs it runs **ceph --admin-daemon $file perf dump** 
+*Admin Socket Stats*
+
+This gatherer works by scanning the configured SocketDir for OSD and MON socket files.  When it finds
+a MON socket, it runs **ceph --admin-daemon $file perfcounters_dump**. For OSDs it runs **ceph --admin-daemon $file perf dump**
 
 The resulting JSON is parsed and grouped into collections, based on top-level key.  Top-level keys are
 used as collection tags, and all sub-keys are flattened. For example:
 
 ```
- { 
-   "paxos": { 
+ {
+   "paxos": {
      "refresh": 9363435,
-     "refresh_latency": { 
+     "refresh_latency": {
        "avgcount": 9363435,
        "sum": 5378.794002000
      }
@@ -27,11 +29,26 @@ Would be parsed into the following metrics, all of which would be tagged with co
  - refresh_latency.sum: 5378.794002000
 
 
+*Cluster Stats*
+
+This gatherer works by invoking ceph commands against the cluster thus only requires the ceph client, valid
+ceph configuration and an access key to function (the ceph_config and ceph_user configuration variables work
+in conjunction to specify these prerequisites). It may be run on any server you wish which has access to
+the cluster.  The currently supported commands are:
+
+* ceph status
+* ceph df
+* ceph osd pool stats
+
 ### Configuration:
 
 ```
 # Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
 [[inputs.ceph]]
+  ## This is the recommended interval to poll.  Too frequent and you will lose
+  ## data points due to timeouts during rebalancing and recovery
+  interval = '1m'
+
   ## All configuration values are optional, defaults are shown below
 
   ## location of ceph binary
@@ -46,14 +63,85 @@ Would be parsed into the following metrics, all of which would be tagged with co
 
   ## suffix used to identify socket files
   socket_suffix = "asok"
+
+  ## Ceph user to authenticate as, ceph will search for the corresponding keyring
+  ## e.g. client.admin.keyring in /etc/ceph, or the explicit path defined in the
+  ## client section of ceph.conf for example:
+  ##
+  ##     [client.telegraf]
+  ##         keyring = /etc/ceph/client.telegraf.keyring
+  ##
+  ## Consult the ceph documentation for more detail on keyring generation.
+  ceph_user = "client.admin"
+
+  ## Ceph configuration to use to locate the cluster
+  ceph_config = "/etc/ceph/ceph.conf"
+
+  ## Whether to gather statistics via the admin socket
+  gather_admin_socket_stats = true
+
+  ## Whether to gather statistics via ceph commands, requires ceph_user and ceph_config
+  ## to be specified
+  gather_cluster_stats = true
 ```
 
 ### Measurements & Fields:
 
-All fields are collected under the **ceph** measurement and stored as float64s. For a full list of fields, see the sample perf dumps in ceph_test.go. 
+*Admin Socket Stats*
 
+All fields are collected under the **ceph** measurement and stored as float64s. For a full list of fields, see the sample perf dumps in ceph_test.go.
+
+*Cluster Stats*
+
+* ceph\_osdmap
+  * epoch (float)
+  * full (boolean)
+  * nearfull (boolean)
+  * num\_in\_osds (float)
+  * num\_osds (float)
+  * num\_remremapped\_pgs (float)
+  * num\_up\_osds (float)
+
+* ceph\_pgmap
+  * bytes\_avail (float)
+  * bytes\_total (float)
+  * bytes\_used (float)
+  * data\_bytes (float)
+  * num\_pgs (float)
+  * op\_per\_sec (float)
+  * read\_bytes\_sec (float)
+  * version (float)
+  * write\_bytes\_sec (float)
+  * recovering\_bytes\_per\_sec (float)
+  * recovering\_keys\_per\_sec (float)
+  * recovering\_objects\_per\_sec (float)
+
+* ceph\_pgmap\_state
+  * state name e.g. active+clean (float)
+
+* ceph\_usage
+  * bytes\_used (float)
+  * kb\_used (float)
+  * max\_avail (float)
+  * objects (float)
+
+* ceph\_pool\_usage
+  * bytes\_used (float)
+  * kb\_used (float)
+  * max\_avail (float)
+  * objects (float)
+
+* ceph\_pool\_stats
+  * op\_per\_sec (float)
+  * read\_bytes\_sec (float)
+  * write\_bytes\_sec (float)
+  * recovering\_object\_per\_sec (float)
+  * recovering\_bytes\_per\_sec (float)
+  * recovering\_keys\_per\_sec (float)
 
 ### Tags:
+
+*Admin Socket Stats*
 
 All measurements will have the following tags:
 
@@ -95,9 +183,21 @@ All measurements will have the following tags:
     - throttle-objecter_ops
     - throttle-osd_client_bytes
     - throttle-osd_client_messages
- 
+
+*Cluster Stats*
+
+* ceph\_pg\_state has the following tags:
+  * state (state for which the value applies e.g. active+clean, active+remapped+backfill)
+* ceph\_pool\_usage has the following tags:
+  * id
+  * name
+* ceph\_pool\_stats has the following tags:
+  * id
+  * name
 
 ### Example Output:
+
+*Admin Socket Stats*
 
 <pre>
 telegraf -test -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d  -input-filter ceph
@@ -106,4 +206,17 @@ telegraf -test -config /etc/telegraf/telegraf.conf -config-directory /etc/telegr
 > ceph,collection=throttle-mon_client_bytes,id=node-2,type=mon get=1413017,get_or_fail_fail=0,get_or_fail_success=0,get_sum=71211705,max=104857600,put=1413013,put_sum=71211459,take=0,take_sum=0,val=246,wait.avgcount=0,wait.sum=0 1462821234814737219
 > ceph,collection=throttle-mon_daemon_bytes,id=node-2,type=mon get=4058121,get_or_fail_fail=0,get_or_fail_success=0,get_sum=6027348117,max=419430400,put=4058121,put_sum=6027348117,take=0,take_sum=0,val=0,wait.avgcount=0,wait.sum=0 1462821234814815661
 > ceph,collection=throttle-msgr_dispatch_throttler-mon,id=node-2,type=mon get=54276277,get_or_fail_fail=0,get_or_fail_success=0,get_sum=370232877040,max=104857600,put=54276277,put_sum=370232877040,take=0,take_sum=0,val=0,wait.avgcount=0,wait.sum=0 1462821234814872064
+</pre>
+
+*Cluster Stats*
+
+<pre>
+> ceph_osdmap,host=ceph-mon-0 epoch=170772,full=false,nearfull=false,num_in_osds=340,num_osds=340,num_remapped_pgs=0,num_up_osds=340 1468841037000000000
+> ceph_pgmap,host=ceph-mon-0 bytes_avail=634895531270144,bytes_total=812117151809536,bytes_used=177221620539392,data_bytes=56979991615058,num_pgs=22952,op_per_sec=15869,read_bytes_sec=43956026,version=39387592,write_bytes_sec=165344818 1468841037000000000
+> ceph_pgmap_state,host=ceph-mon-0 active+clean=22952 1468928660000000000
+> ceph_usage,host=ceph-mon-0 total_avail_bytes=634895514791936,total_bytes=812117151809536,total_used_bytes=177221637017600 1468841037000000000
+> ceph_pool_usage,host=ceph-mon-0,id=150,name=cinder.volumes bytes_used=12648553794802,kb_used=12352103316,max_avail=154342562489244,objects=3026295 1468841037000000000
+> ceph_pool_usage,host=ceph-mon-0,id=182,name=cinder.volumes.flash bytes_used=8541308223964,kb_used=8341121313,max_avail=39388593563936,objects=2075066 1468841037000000000
+> ceph_pool_stats,host=ceph-mon-0,id=150,name=cinder.volumes op_per_sec=1706,read_bytes_sec=28671674,write_bytes_sec=29994541 1468841037000000000
+> ceph_pool_stats,host=ceph-mon-0,id=182,name=cinder.volumes.flash op_per_sec=9748,read_bytes_sec=9605524,write_bytes_sec=45593310 1468841037000000000
 </pre>
