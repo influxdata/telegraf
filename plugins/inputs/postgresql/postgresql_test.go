@@ -171,11 +171,11 @@ func TestPostgresqlDatabaseWhitelistTest(t *testing.T) {
 	var foundTemplate1 = false
 
 	for _, pnt := range acc.Metrics {
-    if pnt.Measurement == "postgresql" {
+		if pnt.Measurement == "postgresql" {
 			if pnt.Tags["db"] == "template0" {
 				foundTemplate0 = true
 			}
-    }
+		}
 		if pnt.Measurement == "postgresql" {
 			if pnt.Tags["db"] == "template1" {
 				foundTemplate1 = true
@@ -207,11 +207,11 @@ func TestPostgresqlDatabaseBlacklistTest(t *testing.T) {
 	var foundTemplate1 = false
 
 	for _, pnt := range acc.Metrics {
-    if pnt.Measurement == "postgresql" {
+		if pnt.Measurement == "postgresql" {
 			if pnt.Tags["db"] == "template0" {
 				foundTemplate0 = true
 			}
-    }
+		}
 		if pnt.Measurement == "postgresql" {
 			if pnt.Tags["db"] == "template1" {
 				foundTemplate1 = true
