@@ -12,7 +12,7 @@ const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
 var (
 	fieldDeleter   = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
-	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".", `\`, "")
+	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".", `\`, "", ")", "_", "(", "_")
 )
 
 type GraphiteSerializer struct {
