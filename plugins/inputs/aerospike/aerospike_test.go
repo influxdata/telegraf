@@ -52,15 +52,16 @@ func TestAerospikeStatisticsPartialErr(t *testing.T) {
 func TestAerospikeParseValue(t *testing.T) {
 	// uint64 with value bigger than int64 max
 	val, err := parseValue("18446744041841121751")
-	assert.NotNil(t, err)
+	assert.Nil(t, val)
+	assert.Error(t, err)
 
 	// int values
 	val, err = parseValue("42")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, val, int64(42), "must be parsed as int")
 
 	// string values
 	val, err = parseValue("BB977942A2CA502")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, val, `BB977942A2CA502`, "must be left as string")
 }
