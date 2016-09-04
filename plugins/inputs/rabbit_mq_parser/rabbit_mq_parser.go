@@ -568,6 +568,9 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 		field := fmt.Sprintf("%v.%v.%v.%v", s[1], s[2], sp[3], sp[4])
 		fields[field] = value
 	}
+    	//Adding Datacenter as first 4 letter of hostname 
+	tags["dc"] = tag["host"][:4]
+
 	// Return the start of a point
 	return meas, tags, fields
 }
