@@ -1,7 +1,6 @@
 package librato
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,141 +9,137 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	fakeUrl   = "http://test.librato.com"
+	fakeURL   = "http://test.librato.com"
 	fakeUser  = "telegraf@influxdb.com"
 	fakeToken = "123456"
 )
 
 func fakeLibrato() *Librato {
-	l := NewLibrato(fakeUrl)
-	l.ApiUser = fakeUser
-	l.ApiToken = fakeToken
+	l := NewLibrato(fakeURL)
+	l.APIUser = fakeUser
+	l.APIToken = fakeToken
 	return l
 }
 
-func BuildTags(t *testing.T) {
-	testMetric := testutil.TestMetric(0.0, "test1")
-	graphiteSerializer := graphite.GraphiteSerializer{}
-	tags, err := graphiteSerializer.Serialize(testMetric)
-	fmt.Printf("Tags: %v", tags)
-	require.NoError(t, err)
-}
-
 func TestUriOverride(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
+	ts := httptest.NewServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
 	defer ts.Close()
 
 	l := NewLibrato(ts.URL)
-	l.ApiUser = "telegraf@influxdb.com"
-	l.ApiToken = "123456"
+	l.APIUser = "telegraf@influxdb.com"
+	l.APIToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write(testutil.MockMetrics())
+	err = l.Write([]telegraf.Metric{newHostMetric(int32(0), "name", "host")})
 	require.NoError(t, err)
 }
 
 func TestBadStatusCode(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(`{
-      "errors": {
-        "system": [
-          "The API is currently down for maintenance. It'll be back shortly."
-        ]
-      }
-    }`)
-	}))
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
 	defer ts.Close()
 
 	l := NewLibrato(ts.URL)
-	l.ApiUser = "telegraf@influxdb.com"
-	l.ApiToken = "123456"
+	l.APIUser = "telegraf@influxdb.com"
+	l.APIToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write(testutil.MockMetrics())
+	err = l.Write([]telegraf.Metric{newHostMetric(int32(0), "name", "host")})
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
-		require.EqualError(t, fmt.Errorf("received bad status code, 503\n"), err.Error())
+		require.EqualError(
+			t,
+			fmt.Errorf("received bad status code, 503\n "), err.Error())
 	}
 }
 
 func TestBuildGauge(t *testing.T) {
+
+	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()
 	var gaugeTests = []struct {
 		ptIn     telegraf.Metric
 		outGauge *Gauge
 		err      error
 	}{
 		{
-			testutil.TestMetric(0.0, "test1"),
+			newHostMetric(0.0, "test1", "host1"),
 			&Gauge{
-				Name:        "value1.test1",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				Name:        "test1",
+				MeasureTime: mtime,
 				Value:       0.0,
+				Source:      "host1",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(1.0, "test2"),
+			newHostMetric(1.0, "test2", "host2"),
 			&Gauge{
-				Name:        "value1.test2",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				Name:        "test2",
+				MeasureTime: mtime,
 				Value:       1.0,
+				Source:      "host2",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(10, "test3"),
+			newHostMetric(10, "test3", "host3"),
 			&Gauge{
-				Name:        "value1.test3",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				Name:        "test3",
+				MeasureTime: mtime,
 				Value:       10.0,
+				Source:      "host3",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(int32(112345), "test4"),
+			newHostMetric(int32(112345), "test4", "host4"),
 			&Gauge{
-				Name:        "value1.test4",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				Name:        "test4",
+				MeasureTime: mtime,
 				Value:       112345.0,
+				Source:      "host4",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(int64(112345), "test5"),
+			newHostMetric(int64(112345), "test5", "host5"),
 			&Gauge{
-				Name:        "value1.test5",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				Name:        "test5",
+				MeasureTime: mtime,
 				Value:       112345.0,
+				Source:      "host5",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(float32(11234.5), "test6"),
+			newHostMetric(float32(11234.5), "test6", "host6"),
 			&Gauge{
-				Name:        "value1.test6",
-				MeasureTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				Name:        "test6",
+				MeasureTime: mtime,
 				Value:       11234.5,
+				Source:      "host6",
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric("11234.5", "test7"),
+			newHostMetric("11234.5", "test7", "host7"),
 			nil,
 			nil,
 		},
 	}
 
-	l := NewLibrato(fakeUrl)
+	l := NewLibrato(fakeURL)
 	for _, gt := range gaugeTests {
 		gauges, err := l.buildGauges(gt.ptIn)
 		if err != nil && gt.err == nil {
@@ -167,61 +162,121 @@ func TestBuildGauge(t *testing.T) {
 	}
 }
 
+func newHostMetric(value interface{}, name, host string) (metric telegraf.Metric) {
+	metric, _ = telegraf.NewMetric(
+		name,
+		map[string]string{"host": host},
+		map[string]interface{}{"value": value},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	return
+}
+
 func TestBuildGaugeWithSource(t *testing.T) {
+	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 	pt1, _ := telegraf.NewMetric(
 		"test1",
 		map[string]string{"hostname": "192.168.0.1", "tag1": "value1"},
 		map[string]interface{}{"value": 0.0},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		mtime,
 	)
 	pt2, _ := telegraf.NewMetric(
 		"test2",
 		map[string]string{"hostnam": "192.168.0.1", "tag1": "value1"},
 		map[string]interface{}{"value": 1.0},
-		time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC),
+		mtime,
+	)
+	pt3, _ := telegraf.NewMetric(
+		"test3",
+		map[string]string{
+			"hostname": "192.168.0.1",
+			"tag2":     "value2",
+			"tag1":     "value1"},
+		map[string]interface{}{"value": 1.0},
+		mtime,
+	)
+	pt4, _ := telegraf.NewMetric(
+		"test4",
+		map[string]string{
+			"hostname": "192.168.0.1",
+			"tag2":     "value2",
+			"tag1":     "value1"},
+		map[string]interface{}{"value": 1.0},
+		mtime,
 	)
 	var gaugeTests = []struct {
 		ptIn     telegraf.Metric
+		template string
 		outGauge *Gauge
 		err      error
 	}{
 
 		{
 			pt1,
+			"hostname",
 			&Gauge{
-				Name:        "192_168_0_1.value1.test1",
-				MeasureTime: time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				Name:        "test1",
+				MeasureTime: mtime.Unix(),
 				Value:       0.0,
-				Source:      "192.168.0.1",
+				Source:      "192_168_0_1",
 			},
 			nil,
 		},
 		{
 			pt2,
+			"hostname",
 			&Gauge{
-				Name:        "192_168_0_1.value1.test1",
-				MeasureTime: time.Date(2010, time.December, 10, 23, 0, 0, 0, time.UTC).Unix(),
+				Name:        "test2",
+				MeasureTime: mtime.Unix(),
 				Value:       1.0,
 			},
 			fmt.Errorf("undeterminable Source type from Field, hostname"),
 		},
+		{
+			pt3,
+			"tags",
+			&Gauge{
+				Name:        "test3",
+				MeasureTime: mtime.Unix(),
+				Value:       1.0,
+				Source:      "192_168_0_1.value1.value2",
+			},
+			nil,
+		},
+		{
+			pt4,
+			"hostname.tag2",
+			&Gauge{
+				Name:        "test4",
+				MeasureTime: mtime.Unix(),
+				Value:       1.0,
+				Source:      "192_168_0_1.value2",
+			},
+			nil,
+		},
 	}
 
-	l := NewLibrato(fakeUrl)
-	l.SourceTag = "hostname"
+	l := NewLibrato(fakeURL)
 	for _, gt := range gaugeTests {
+		l.Template = gt.template
 		gauges, err := l.buildGauges(gt.ptIn)
 		if err != nil && gt.err == nil {
 			t.Errorf("%s: unexpected error, %+v\n", gt.ptIn.Name(), err)
 		}
 		if gt.err != nil && err == nil {
-			t.Errorf("%s: expected an error (%s) but none returned", gt.ptIn.Name(), gt.err.Error())
+			t.Errorf(
+				"%s: expected an error (%s) but none returned",
+				gt.ptIn.Name(),
+				gt.err.Error())
 		}
 		if len(gauges) == 0 {
 			continue
 		}
 		if gt.err == nil && !reflect.DeepEqual(gauges[0], gt.outGauge) {
-			t.Errorf("%s: \nexpected %+v\ngot %+v\n", gt.ptIn.Name(), gt.outGauge, gauges[0])
+			t.Errorf(
+				"%s: \nexpected %+v\ngot %+v\n",
+				gt.ptIn.Name(),
+				gt.outGauge, gauges[0])
 		}
 	}
 }

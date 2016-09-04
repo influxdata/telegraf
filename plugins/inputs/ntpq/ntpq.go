@@ -119,7 +119,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 			// Get integer metrics from output
 			for key, index := range intI {
-				if index == -1 {
+				if index == -1 || index >= len(fields) {
 					continue
 				}
 				if fields[index] == "-" {
@@ -169,7 +169,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 			// get float metrics from output
 			for key, index := range floatI {
-				if index == -1 {
+				if index == -1 || index >= len(fields) {
 					continue
 				}
 				if fields[index] == "-" {

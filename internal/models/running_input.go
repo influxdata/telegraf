@@ -1,4 +1,4 @@
-package internal_models
+package models
 
 import (
 	"time"

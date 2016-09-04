@@ -266,29 +266,33 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	tags := map[string]string{}
 	tags["server"] = tagAddress
 	tags["db"] = dbname.String()
-	var isATag int
 	fields := make(map[string]interface{})
+COLUMN:
 	for col, val := range columnMap {
 		if acc.Debug() {
 			log.Printf("postgresql_extensible: column: %s = %T: %s\n", col, *val, *val)
 		}
 		_, ignore := ignoredColumns[col]
-		if !ignore && *val != nil {
-			isATag = 0
-			for tag := range p.AdditionalTags {
-				if col == p.AdditionalTags[tag] {
-					isATag = 1
-					value_type_p := fmt.Sprintf(`%T`, *val)
-					if value_type_p == "[]uint8" {
-						tags[col] = fmt.Sprintf(`%s`, *val)
-					} else if value_type_p == "int64" {
-						tags[col] = fmt.Sprintf(`%v`, *val)
-					}
-				}
+		if ignore || *val == nil {
+			continue
+		}
+		for _, tag := range p.AdditionalTags {
+			if col != tag {
+				continue
 			}
-			if isATag == 0 {
-				fields[col] = *val
+			switch v := (*val).(type) {
+			case []byte:
+				tags[col] = string(v)
+			case int64:
+				tags[col] = fmt.Sprintf("%d", v)
 			}
+			continue COLUMN
+		}
+
+		if v, ok := (*val).([]byte); ok {
+			fields[col] = string(v)
+		} else {
+			fields[col] = *val
 		}
 	}
 	acc.AddFields(meas_name, fields, tags)

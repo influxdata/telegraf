@@ -33,6 +33,7 @@ type (
 		Namespace   string            `toml:"namespace"`
 		Metrics     []*Metric         `toml:"metrics"`
 		CacheTTL    internal.Duration `toml:"cache_ttl"`
+		RateLimit   int               `toml:"ratelimit"`
 		client      cloudwatchClient
 		metricCache *MetricCache
 	}
@@ -95,6 +96,11 @@ func (c *CloudWatch) SampleConfig() string {
 
   ## Metric Statistic Namespace (required)
   namespace = 'AWS/ELB'
+
+  ## Maximum requests per second. Note that the global default AWS rate limit is
+  ## 10 reqs/sec, so if you define multiple namespaces, these should add up to a
+  ## maximum of 10. Optional - default value is 10.
+  ratelimit = 10
 
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
@@ -175,7 +181,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	// limit concurrency or we can easily exhaust user connection limit
 	// see cloudwatch API request limits:
 	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
-	lmtr := limiter.NewRateLimiter(10, time.Second)
+	lmtr := limiter.NewRateLimiter(c.RateLimit, time.Second)
 	defer lmtr.Stop()
 	var wg sync.WaitGroup
 	wg.Add(len(metrics))
@@ -195,7 +201,8 @@ func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
 		ttl, _ := time.ParseDuration("1hr")
 		return &CloudWatch{
-			CacheTTL: internal.Duration{Duration: ttl},
+			CacheTTL:  internal.Duration{Duration: ttl},
+			RateLimit: 10,
 		}
 	})
 }
