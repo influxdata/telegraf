@@ -55,12 +55,12 @@ func (rmq *RabbitMQParser) Description() string {
 // SampleConfig satisfies the telegraf.ServiceInput interface
 func (rmq *RabbitMQParser) SampleConfig() string {
 	return `
-  ## Address and port for the rabbitmq server to pull from 
-  rabbitmq_address = "amqp://guest:guest@localhost:5672/"
-  queue_name = "task_queue"
-  prefetch = 1000
-  dropped_log = "/Users/johnzampolin/.rabbitmq/drops.log"
-`
+    ## Address and port for the rabbitmq server to pull from
+    rabbitmq_address = "amqp://guest:guest@localhost:5672/"
+    queue_name = "task_queue"
+    prefetch = 1000
+    dropped_log = "/Users/johnzampolin/.rabbitmq/drops.log"
+    `
 }
 
 // Gather satisfies the telegraf.ServiceInput interface
@@ -187,6 +187,7 @@ func (rmq *RabbitMQParser) SanitizeMsg(msg amqp.Delivery) *client.Point {
 	}
 	for key, val := range data {
 		value := fmt.Sprintf("%v", val)
+		//fmt.Print("=>|Key ", key , "Val", val )
 		switch {
 		case key == "host":
 			ir.Host = value
@@ -251,6 +252,8 @@ func (ir *IRMessage) point() *client.Point {
 	meas, tags, fields := structureKey(ir.Key, ir.Value)
 	tags["host"] = ir.Host
 	tags["server"] = ir.Server
+	//Adding Datacenter as first 4 letter of hostname
+	tags["dc"] = ir.Host[:4]
 	pt, err := client.NewPoint(meas, tags, fields, ir.Clock)
 	if err != nil {
 		panic(fmt.Errorf("%v: creating float point", err))
@@ -305,7 +308,7 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 		case 2:
 			fields[ps[1]] = value
 
-		// meas.field*
+			// meas.field*
 		case 3:
 			switch {
 			case ps[1] == "lbv":
@@ -314,7 +317,7 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 			default:
 				fields[fmt.Sprintf("%v.%v", ps[1], ps[2])] = value
 			}
-		// meas.field.field.context
+			// meas.field.field.context
 		case 4:
 			switch {
 			case strings.Contains(ps[3], "-"):
@@ -328,12 +331,12 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 				fields[jw2p(ps[1], ps[2], ps[3])] = value
 
 			}
-		// netscaler.lbv.(rps|srv).(rack)
+			// netscaler.lbv.(rps|srv).(rack)
 		case 6:
 			meas = jwp(ps[0], ps[1])
 			tags["rack"] = jw2p(ps[3], ps[4], ps[5])
 			fields[ps[2]] = value
-		// Default - Deal with "CPU-", "Memory-", "Incoming-", "Outgoing-"
+			// Default - Deal with "CPU-", "Memory-", "Incoming-", "Outgoing-"
 		default:
 			switch {
 			// "CPU-"
@@ -342,7 +345,7 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 				meas = "CPU"
 				tags["host"] = s[1]
 				fields["value"] = value
-			// "Memory-"
+				// "Memory-"
 			case strings.Contains(key, "Memory-"):
 				s := strings.Split(key, "Memory-")
 				meas = "Memory"
@@ -354,20 +357,20 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 				meas = "Incoming"
 				tags["host"] = s[1]
 				fields["value"] = value
-			// "Outgoing-"
+				// "Outgoing-"
 			case strings.Contains(key, "Outgoing-"):
 				s := strings.Split(key, "Outgoing-")
 				meas = "Outgoing"
 				tags["host"] = s[1]
 				fields["value"] = value
-			// Default!
+				// Default!
 			default:
 				meas = key
 				fields["value"] = value
 			}
 		}
-	// Brackets so len(split) == 2
-	// longest case
+		// Brackets so len(split) == 2
+		// longest case
 	case 2:
 
 		// Switch on the results of the period split
@@ -388,32 +391,32 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 			// Bracket contains something like 1/40 -> ignore
 			case slash:
 				fields["value"] = value
-			// bracket is field name with some changes
+				// bracket is field name with some changes
 			case comma:
 				// switch "," and " " to "."
 				bracket = rp(rp(bracket, ",", "."), " ", ".")
 				fields[bracket] = value
-			// bracket contains a port number
+				// bracket contains a port number
 			case dash:
 				ds := strings.Split(bracket, "-")
 				tags[ds[0]] = ds[1]
 				fields["value"] = value
-			// Bracket contains a Vlan number
+				// Bracket contains a Vlan number
 			case vlan:
 				s := strings.Split(bracket, "Vlan")
 				tags["Vlan"] = s[1]
 				fields["value"] = value
-			// Bracket contains an interface name
+				// Bracket contains an interface name
 			case inter:
 				tags["interface"] = bracket
 				fields["value"] = value
-			// Default
+				// Default
 			default:
 				meas = key
 				fields["value"] = value
 			}
 
-		// period split contains more information as well as brackets
+			// period split contains more information as well as brackets
 		case 2:
 			meas = ps[0]
 			bracket := trim(bs[1])
@@ -428,18 +431,18 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 				}
 				fields[ps[1]] = value
 
-			// medium brakets
+				// medium brakets
 			case len(bracket) < 25:
 				// remove all {,}," from bracket
 				bracket = rp(rp(rp(bracket, "\"", ""), "{", ""), "}", "")
 				fields[bracket] = value
 
-			// long brackets are system.run[curl ....]
+				// long brackets are system.run[curl ....]
 			case len(bracket) > 25 && len(bracket) < 150:
 				fields[ps[1]] = bracket
 				tags["status_code"] = fmt.Sprint(value)
 
-			// Default
+				// Default
 			default:
 				meas = ps[0]
 				f := strings.Split(bracket, "FailureStatus")
@@ -447,7 +450,7 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 				fields["powersupply.failurestatus"] = value
 			}
 
-		// len(period_split) == 3 and contains more information
+			// len(period_split) == 3 and contains more information
 		case 3:
 			meas = ps[0]
 			bracket := trim(bs[1])
@@ -459,12 +462,12 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 				tags["context"] = bracket
 				fields[ps[2]] = value
 
-			// bracket contains context
+				// bracket contains context
 			case strings.Contains(bracket, "-"):
 				fields[jwp(ps[1], ps[2])] = value
 				tags["context"] = bracket
 
-			// bracket contains file system info
+				// bracket contains file system info
 			case strings.Contains(bracket, "/"):
 				t := strings.Split(bracket, ",")
 				tags["path"] = t[0]
@@ -474,7 +477,7 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 					fields[jwp(ps[1], ps[2])] = value
 				}
 
-			// TODO: find a non default case that fits all "net","system","vm" mess down here
+				// TODO: find a non default case that fits all "net","system","vm" mess down here
 			default:
 				bracketCommaSplit := strings.Split(bracket, ",")
 
@@ -485,7 +488,7 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 				case bracketCommaSplit[0] == "":
 					fields[jwp(ps[1], bracketCommaSplit[1])] = value
 
-				// net meas
+					// net meas
 				case meas == "net":
 					tags["interface"] = bracketCommaSplit[0]
 					if len(bracketCommaSplit) > 1 {
@@ -494,11 +497,11 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 						fields[jwp(ps[1], ps[2])] = value
 					}
 
-				// vm measurement
+					// vm measurement
 				case meas == "vm":
 					fields[jw2p(ps[1], ps[2], bracketCommaSplit[0])] = value
 
-				// system measurment
+					// system measurment
 				case meas == "system":
 					// for per-cpu metrics we need to pull out cpu as tag
 					if ps[1] == "cpu" {
@@ -510,7 +513,7 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 						tags["system"] = bracketCommaSplit[0]
 					}
 
-				// web measurement
+					// web measurement
 				case meas == "web":
 					if ps[2] == "time" {
 						fields["value"] = value
@@ -518,18 +521,18 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 						fields[jwp(ps[1], ps[2])] = value
 					}
 					tags["system"] = "ZabbixGUI"
-				// app measurement
+					// app measurement
 				case meas == "app":
 					fields[jwp(ps[1], ps[2])] = value
 					tags["provider"] = bracket
-				// Default
+					// Default
 				default:
 					meas = key
 					fields["value"] = value
 				}
 			}
 
-		// len(period_split) == 5 and contains most of the metadata
+			// len(period_split) == 5 and contains most of the metadata
 		case 5:
 			meas = ps[0]
 			bracket := trim(bs[1])
@@ -542,24 +545,24 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 				tags["drive"] = bracket
 				fields[jwp(ps[3], ps[4])] = value
 
-			// app measurement
+				// app measurement
 			case meas == "app":
 				tags["name"] = jwp(ps[1], ps[2])
 				fields[jwp(ps[3], ps[4])] = value
 
-			// default
+				// default
 			default:
 				meas = key
 				fields["value"] = value
 			}
 
-		// Default case for len(period_split) == 5
+			// Default case for len(period_split) == 5
 		default:
 			meas = key
 			fields["value"] = value
 		}
 
-	// Multiple brackets -> grpavg["app-searchautocomplete","system.cpu.util[,user]",last,0]
+		// Multiple brackets -> grpavg["app-searchautocomplete","system.cpu.util[,user]",last,0]
 	default:
 		sp := strings.Split(strings.Split(key, "grpavg[")[1], ",")
 		tags["app"] = trimS(sp[0])
@@ -568,9 +571,6 @@ func structureKey(key string, value interface{}) (string, map[string]string, map
 		field := fmt.Sprintf("%v.%v.%v.%v", s[1], s[2], sp[3], sp[4])
 		fields[field] = value
 	}
-    	//Adding Datacenter as first 4 letter of hostname 
-	tags["dc"] = tag["host"][:4]
-
 	// Return the start of a point
 	return meas, tags, fields
 }
