@@ -24,8 +24,9 @@ type CloudWatch struct {
 	Filename  string `toml:"shared_credential_file"`
 	Token     string `toml:"token"`
 
-	Namespace string `toml:"namespace"` // CloudWatch Metrics Namespace
-	svc       *cloudwatch.CloudWatch
+	Namespace      string `toml:"namespace"`       // CloudWatch Metrics Namespace
+	RemoveHostname bool   `toml:"remove_hostname"` // Disable hostname in Dimension
+	svc            *cloudwatch.CloudWatch
 }
 
 var sampleConfig = `
@@ -107,6 +108,11 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 // is equal to one MetricDatum. There is a limit on how many MetricDatums a
 // request can have so we process one Point at a time.
 func (c *CloudWatch) WriteSinglePoint(point telegraf.Metric) error {
+
+	if c.RemoveHostname != true {
+		point.Tags()["host"] = ""
+	}
+
 	datums := BuildMetricDatum(point)
 
 	const maxDatumsPerCall = 20 // PutMetricData only supports up to 20 data metrics per call
