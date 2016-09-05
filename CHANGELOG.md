@@ -4,6 +4,7 @@
 
 ### Features
 
+- [#1694](https://github.com/influxdata/telegraf/pull/1694): Adding Gauge and Counter metric types.
 - [#1606](https://github.com/influxdata/telegraf/pull/1606): Remove carraige returns from exec plugin output on Windows
 - [#1674](https://github.com/influxdata/telegraf/issues/1674): elasticsearch input: configurable timeout.
 - [#1607](https://github.com/influxdata/telegraf/pull/1607): Massage metric names in Instrumental output plugin
