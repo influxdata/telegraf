@@ -32,7 +32,6 @@ github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
 github.com/kardianos/osext 29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc
 github.com/kardianos/service 5e335590050d6d00f3aa270217d288dda1c94d0a
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
-github.com/lib/pq e182dc4027e2ded4b19396d638610f2653295f36
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
 github.com/miekg/dns cce6c130cdb92c752850880fd285bea1d64439dd
 github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
@@ -62,3 +61,4 @@ gopkg.in/dancannon/gorethink.v1 7d1af5be49cb5ecc7b177bf387d232050299d6ef
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
 gopkg.in/mgo.v2 d90005c5262a3463800497ea5a89aed5fe22c886
 gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4
+github.com/jackc/pgx bb73d8427902891bbad7b949b9c60b32949d935f
