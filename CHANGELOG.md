@@ -71,6 +71,7 @@ consistent with the behavior of `collection_jitter`.
 
 ### Features
 
+- [#1292](https://github.com/influxdata/telegraf/pull/1292): PagerDuty event output plugin
 - [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
 - [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
 - [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
