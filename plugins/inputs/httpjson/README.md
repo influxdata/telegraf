@@ -2,8 +2,7 @@
 
 The httpjson plugin can collect data from remote URLs which respond with JSON. Then it flattens JSON and finds all numeric values, treating them as floats.
 
-For example, if you have a service called _mycollector_, which has HTTP endpoint for gathering stats at http://my.service.com/_stats, you would configure the HTTP JSON
-plugin like this:
+For example, if you have a service called _mycollector_, which has HTTP endpoint for gathering stats at http://my.service.com/_stats, you would configure the HTTP JSON plugin like this:
 
 ```
 [[inputs.httpjson]]
@@ -15,11 +14,16 @@ plugin like this:
 
   # HTTP method to use (case-sensitive)
   method = "GET"
+
+  # Set response_timeout (default 5 seconds)
+  response_timeout = "5s"
 ```
 
 `name` is used as a prefix for the measurements.
 
 `method` specifies HTTP method to use for requests.
+
+`response_timeout` specifies timeout to wait to get the response
 
 You can also specify which keys from server response should be considered tags:
 
@@ -94,8 +98,7 @@ httpjson_mycollector_b_e,service='service01',server='http://my.service.com/_stat
 
 # Example 2, Multiple Services:
 
-There is also the option to collect JSON from multiple services, here is an
-example doing that.
+There is also the option to collect JSON from multiple services, here is an example doing that.
 
 ```
 [[inputs.httpjson]]
