@@ -48,3 +48,20 @@ func TestAerospikeStatisticsPartialErr(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
 	assert.True(t, acc.HasIntField("aerospike_node", "batch_error"))
 }
+
+func TestAerospikeParseValue(t *testing.T) {
+	// uint64 with value bigger than int64 max
+	val, err := parseValue("18446744041841121751")
+	assert.Nil(t, val)
+	assert.Error(t, err)
+
+	// int values
+	val, err = parseValue("42")
+	assert.NoError(t, err)
+	assert.Equal(t, val, int64(42), "must be parsed as int")
+
+	// string values
+	val, err = parseValue("BB977942A2CA502")
+	assert.NoError(t, err)
+	assert.Equal(t, val, `BB977942A2CA502`, "must be left as string")
+}
