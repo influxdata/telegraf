@@ -83,13 +83,8 @@ func (ac *accumulator) makeMetric(
 	if len(fields) == 0 || len(measurement) == 0 {
 		return nil
 	}
-
-	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return nil
-	}
-
-	if !ac.inputConfig.Filter.ShouldTagsPass(tags) {
-		return nil
+	if tags == nil {
+		tags = make(map[string]string)
 	}
 
 	// Override measurement name if set
@@ -104,9 +99,6 @@ func (ac *accumulator) makeMetric(
 		measurement = measurement + ac.inputConfig.MeasurementSuffix
 	}
 
-	if tags == nil {
-		tags = make(map[string]string)
-	}
 	// Apply plugin-wide tags if set
 	for k, v := range ac.inputConfig.Tags {
 		if _, ok := tags[k]; !ok {
@@ -119,25 +111,21 @@ func (ac *accumulator) makeMetric(
 			tags[k] = v
 		}
 	}
-	ac.inputConfig.Filter.FilterTags(tags)
 
-	result := make(map[string]interface{})
+	// Apply the metric filter(s)
+	if ok := ac.inputConfig.Filter.Apply(measurement, fields, tags); !ok {
+		return nil
+	}
+
 	for k, v := range fields {
-		// Filter out any filtered fields
-		if ac.inputConfig != nil {
-			if !ac.inputConfig.Filter.ShouldFieldsPass(k) {
-				continue
-			}
-		}
-
 		// Validate uint64 and float64 fields
 		switch val := v.(type) {
 		case uint64:
 			// InfluxDB does not support writing uint64
 			if val < uint64(9223372036854775808) {
-				result[k] = int64(val)
+				fields[k] = int64(val)
 			} else {
-				result[k] = int64(9223372036854775807)
+				fields[k] = int64(9223372036854775807)
 			}
 			continue
 		case float64:
@@ -148,15 +136,12 @@ func (ac *accumulator) makeMetric(
 						"field, skipping",
 						measurement, k)
 				}
+				delete(fields, k)
 				continue
 			}
 		}
 
-		result[k] = v
-	}
-	fields = nil
-	if len(result) == 0 {
-		return nil
+		fields[k] = v
 	}
 
 	var timestamp time.Time
@@ -171,11 +156,11 @@ func (ac *accumulator) makeMetric(
 	var err error
 	switch mType {
 	case telegraf.Counter:
-		m, err = telegraf.NewCounterMetric(measurement, tags, result, timestamp)
+		m, err = telegraf.NewCounterMetric(measurement, tags, fields, timestamp)
 	case telegraf.Gauge:
-		m, err = telegraf.NewGaugeMetric(measurement, tags, result, timestamp)
+		m, err = telegraf.NewGaugeMetric(measurement, tags, fields, timestamp)
 	default:
-		m, err = telegraf.NewMetric(measurement, tags, result, timestamp)
+		m, err = telegraf.NewMetric(measurement, tags, fields, timestamp)
 	}
 	if err != nil {
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())

@@ -77,13 +77,13 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 	if s.filter == nil {
 		var err error
 		if len(s.Stats) == 0 {
-			s.filter, err = filter.CompileFilter(defaultStats)
+			s.filter, err = filter.Compile(defaultStats)
 		} else {
 			// legacy support, change "all" -> "*":
 			if s.Stats[0] == "all" {
 				s.Stats[0] = "*"
 			}
-			s.filter, err = filter.CompileFilter(s.Stats)
+			s.filter, err = filter.Compile(s.Stats)
 		}
 		if err != nil {
 			return err

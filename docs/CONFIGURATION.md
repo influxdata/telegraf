@@ -86,6 +86,10 @@ as it is more efficient to filter out tags at the ingestion point.
 * **taginclude**: taginclude is the inverse of tagexclude. It will only include
 the tag keys in the final measurement.
 
+**NOTE** `tagpass` and `tagdrop` parameters must be defined at the _end_ of
+the plugin definition, otherwise subsequent plugin config options will be
+interpreted as part of the tagpass/tagdrop map.
+
 ## Input Configuration
 
 Some configuration options are configurable per input:
@@ -128,6 +132,10 @@ fields which begin with `time_`.
 ```
 
 #### Input Config: tagpass and tagdrop
+
+**NOTE** `tagpass` and `tagdrop` parameters must be defined at the _end_ of
+the plugin definition, otherwise subsequent plugin config options will be
+interpreted as part of the tagpass/tagdrop map.
 
 ```toml
 [[inputs.cpu]]

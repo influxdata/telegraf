@@ -560,7 +560,7 @@ func TestAccFilterTags(t *testing.T) {
 	filter := models.Filter{
 		TagExclude: []string{"acc"},
 	}
-	assert.NoError(t, filter.CompileFilter())
+	assert.NoError(t, filter.Compile())
 	a.inputConfig = &models.InputConfig{}
 	a.inputConfig.Filter = filter
 
