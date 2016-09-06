@@ -52,6 +52,7 @@ type Jolokia struct {
 
 const sampleConfig = `
   ## This is the context root used to compose the jolokia url
+  ## NOTE that your jolokia security policy must allow for POST requests.
   context = "/jolokia"
 
   ## This specifies the mode used
@@ -104,7 +105,6 @@ func (j *Jolokia) Description() string {
 }
 
 func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
-
 	resp, err := j.jClient.MakeRequest(req)
 	if err != nil {
 		return nil, err
