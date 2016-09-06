@@ -18,6 +18,7 @@
 - [#1599](https://github.com/influxdata/telegraf/pull/1599): Add server hostname for each docker measurements.
 - [#1697](https://github.com/influxdata/telegraf/pull/1697): Add NATS output plugin.
 - [#1407](https://github.com/influxdata/telegraf/pull/1407): HTTP service listener input plugin.
+- [#1699](https://github.com/influxdata/telegraf/pull/1699): Add database blacklist option for Postgresql
 
 ### Bugfixes
 
