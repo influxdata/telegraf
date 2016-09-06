@@ -20,6 +20,7 @@
 
 ### Bugfixes
 
+- [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
 
 ## v1.0 [unreleased]
 

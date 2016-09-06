@@ -43,7 +43,7 @@ func TestRunParser(t *testing.T) {
 	k.parser, _ = parsers.NewInfluxParser()
 	go k.receiver()
 	in <- saramaMsg(testMsg)
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	assert.Equal(t, acc.NFields(), 1)
 }
@@ -58,7 +58,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	k.parser, _ = parsers.NewInfluxParser()
 	go k.receiver()
 	in <- saramaMsg(invalidMsg)
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	assert.Equal(t, acc.NFields(), 0)
 }
@@ -73,7 +73,7 @@ func TestRunParserAndGather(t *testing.T) {
 	k.parser, _ = parsers.NewInfluxParser()
 	go k.receiver()
 	in <- saramaMsg(testMsg)
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	k.Gather(&acc)
 
@@ -92,7 +92,7 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	k.parser, _ = parsers.NewGraphiteParser("_", []string{}, nil)
 	go k.receiver()
 	in <- saramaMsg(testMsgGraphite)
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	k.Gather(&acc)
 
@@ -111,7 +111,7 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	k.parser, _ = parsers.NewJSONParser("kafka_json_test", []string{}, nil)
 	go k.receiver()
 	in <- saramaMsg(testMsgJSON)
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Millisecond * 5)
 
 	k.Gather(&acc)
 
