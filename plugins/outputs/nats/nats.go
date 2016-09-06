@@ -1,14 +1,12 @@
 package nats
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 
 	nats_client "github.com/nats-io/nats"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -58,6 +56,7 @@ func (n *NATS) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (n *NATS) Connect() error {
+	var err error
 	// set NATS connection options
 	opts := nats_client.DefaultOptions
 	opts.Servers = n.Servers
@@ -67,27 +66,18 @@ func (n *NATS) Connect() error {
 	}
 
 	// is TLS enabled?
-	var tlsConfig tls.Config
-	tlsConfig.InsecureSkipVerify = n.InsecureSkipVerify
-	if n.CAFile != "" {
-		rootPEM, err := ioutil.ReadFile(n.CAFile)
-		if err != nil || rootPEM == nil {
-			return fmt.Errorf("FAILED to connect to NATS (can't read root certificate): %s", err)
-		}
-		pool := x509.NewCertPool()
-		ok := pool.AppendCertsFromPEM([]byte(rootPEM))
-		if !ok {
-			return fmt.Errorf("FAILED to connect to NATS (can't parse root certificate): %s", err)
-		}
-		tlsConfig.RootCAs = pool
-
+	tlsConfig, err := internal.GetTLSConfig(
+		"", "", n.CAFile, n.InsecureSkipVerify)
+	if err != nil {
+		return err
+	}
+	if tlsConfig != nil {
 		// set NATS connection TLS options
 		opts.Secure = true
-		opts.TLSConfig = &tlsConfig
+		opts.TLSConfig = tlsConfig
 	}
 
 	// try and connect
-	var err error
 	n.conn, err = opts.Connect()
 
 	return err
