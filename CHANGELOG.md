@@ -14,6 +14,7 @@
 - [#1539](https://github.com/influxdata/telegraf/pull/1539): Added capability to send metrics through Http API for OpenTSDB.
 - [#1471](https://github.com/influxdata/telegraf/pull/1471): iptables input plugin.
 - [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
+- [#1697](https://github.com/influxdata/telegraf/pull/1697): Add NATS output plugin.
 
 ### Bugfixes
 
