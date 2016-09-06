@@ -37,8 +37,8 @@ github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3
 github.com/miekg/dns cce6c130cdb92c752850880fd285bea1d64439dd
 github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
-github.com/nats-io/nats b13fc9d12b0b123ebc374e6b808c6228ae4234a3
-github.com/nats-io/nuid 4f84f5f3b2786224e336af2e13dba0a0a80b76fa
+github.com/nats-io/nats ea8b4fd12ebb823073c0004b9f09ac8748f4f165
+github.com/nats-io/nuid a5152d67cf63cbfb5d992a395458722a45194715
 github.com/nsqio/go-nsq 0b80d6f05e15ca1930e0c5e1d540ed627e299980
 github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
 github.com/prometheus/client_golang 18acf9993a863f4c4b40612e19cdd243e7c86831

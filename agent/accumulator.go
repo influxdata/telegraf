@@ -38,38 +38,53 @@ type accumulator struct {
 	errCount uint64
 }
 
-func (ac *accumulator) Add(
-	measurement string,
-	value interface{},
-	tags map[string]string,
-	t ...time.Time,
-) {
-	fields := make(map[string]interface{})
-	fields["value"] = value
-
-	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return
-	}
-
-	ac.AddFields(measurement, fields, tags, t...)
-}
-
 func (ac *accumulator) AddFields(
 	measurement string,
 	fields map[string]interface{},
 	tags map[string]string,
 	t ...time.Time,
 ) {
+	if m := ac.makeMetric(measurement, fields, tags, telegraf.Untyped, t...); m != nil {
+		ac.metrics <- m
+	}
+}
+
+func (ac *accumulator) AddGauge(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.makeMetric(measurement, fields, tags, telegraf.Gauge, t...); m != nil {
+		ac.metrics <- m
+	}
+}
+
+func (ac *accumulator) AddCounter(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.makeMetric(measurement, fields, tags, telegraf.Counter, t...); m != nil {
+		ac.metrics <- m
+	}
+}
+
+// makeMetric either returns a metric, or returns nil if the metric doesn't
+// need to be created (because of filtering, an error, etc.)
+func (ac *accumulator) makeMetric(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	mType telegraf.ValueType,
+	t ...time.Time,
+) telegraf.Metric {
 	if len(fields) == 0 || len(measurement) == 0 {
-		return
+		return nil
 	}
-
-	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return
-	}
-
-	if !ac.inputConfig.Filter.ShouldTagsPass(tags) {
-		return
+	if tags == nil {
+		tags = make(map[string]string)
 	}
 
 	// Override measurement name if set
@@ -84,9 +99,6 @@ func (ac *accumulator) AddFields(
 		measurement = measurement + ac.inputConfig.MeasurementSuffix
 	}
 
-	if tags == nil {
-		tags = make(map[string]string)
-	}
 	// Apply plugin-wide tags if set
 	for k, v := range ac.inputConfig.Tags {
 		if _, ok := tags[k]; !ok {
@@ -99,25 +111,21 @@ func (ac *accumulator) AddFields(
 			tags[k] = v
 		}
 	}
-	ac.inputConfig.Filter.FilterTags(tags)
 
-	result := make(map[string]interface{})
+	// Apply the metric filter(s)
+	if ok := ac.inputConfig.Filter.Apply(measurement, fields, tags); !ok {
+		return nil
+	}
+
 	for k, v := range fields {
-		// Filter out any filtered fields
-		if ac.inputConfig != nil {
-			if !ac.inputConfig.Filter.ShouldFieldsPass(k) {
-				continue
-			}
-		}
-
 		// Validate uint64 and float64 fields
 		switch val := v.(type) {
 		case uint64:
 			// InfluxDB does not support writing uint64
 			if val < uint64(9223372036854775808) {
-				result[k] = int64(val)
+				fields[k] = int64(val)
 			} else {
-				result[k] = int64(9223372036854775807)
+				fields[k] = int64(9223372036854775807)
 			}
 			continue
 		case float64:
@@ -128,15 +136,12 @@ func (ac *accumulator) AddFields(
 						"field, skipping",
 						measurement, k)
 				}
+				delete(fields, k)
 				continue
 			}
 		}
 
-		result[k] = v
-	}
-	fields = nil
-	if len(result) == 0 {
-		return
+		fields[k] = v
 	}
 
 	var timestamp time.Time
@@ -147,15 +152,26 @@ func (ac *accumulator) AddFields(
 	}
 	timestamp = timestamp.Round(ac.precision)
 
-	m, err := telegraf.NewMetric(measurement, tags, result, timestamp)
+	var m telegraf.Metric
+	var err error
+	switch mType {
+	case telegraf.Counter:
+		m, err = telegraf.NewCounterMetric(measurement, tags, fields, timestamp)
+	case telegraf.Gauge:
+		m, err = telegraf.NewGaugeMetric(measurement, tags, fields, timestamp)
+	default:
+		m, err = telegraf.NewMetric(measurement, tags, fields, timestamp)
+	}
 	if err != nil {
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
-		return
+		return nil
 	}
+
 	if ac.trace {
 		fmt.Println("> " + m.String())
 	}
-	ac.metrics <- m
+
+	return m
 }
 
 // AddError passes a runtime error to the accumulator.

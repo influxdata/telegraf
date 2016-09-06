@@ -4,6 +4,7 @@
 
 ### Features
 
+- [#1694](https://github.com/influxdata/telegraf/pull/1694): Adding Gauge and Counter metric types.
 - [#1606](https://github.com/influxdata/telegraf/pull/1606): Remove carraige returns from exec plugin output on Windows
 - [#1674](https://github.com/influxdata/telegraf/issues/1674): elasticsearch input: configurable timeout.
 - [#1607](https://github.com/influxdata/telegraf/pull/1607): Massage metric names in Instrumental output plugin
@@ -14,9 +15,13 @@
 - [#1539](https://github.com/influxdata/telegraf/pull/1539): Added capability to send metrics through Http API for OpenTSDB.
 - [#1471](https://github.com/influxdata/telegraf/pull/1471): iptables input plugin.
 - [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
+- [#1599](https://github.com/influxdata/telegraf/pull/1599): Add server hostname for each docker measurements.
+- [#1697](https://github.com/influxdata/telegraf/pull/1697): Add NATS output plugin.
+- [#1407](https://github.com/influxdata/telegraf/pull/1407): HTTP service listener input plugin.
 
 ### Bugfixes
 
+- [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
 
 ## v1.0 [unreleased]
 
@@ -160,6 +165,7 @@ consistent with the behavior of `collection_jitter`.
 - [#1425](https://github.com/influxdata/telegraf/issues/1425): Fix win_perf_counter "index out of range" panic.
 - [#1634](https://github.com/influxdata/telegraf/issues/1634): Fix ntpq panic when field is missing.
 - [#1637](https://github.com/influxdata/telegraf/issues/1637): Sanitize graphite output field names.
+- [#1695](https://github.com/influxdata/telegraf/pull/1695): Fix MySQL plugin not sending 0 value fields.
 
 ## v0.13.1 [2016-05-24]
 

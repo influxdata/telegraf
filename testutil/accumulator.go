@@ -35,17 +35,6 @@ type Accumulator struct {
 	debug    bool
 }
 
-// Add adds a measurement point to the accumulator
-func (a *Accumulator) Add(
-	measurement string,
-	value interface{},
-	tags map[string]string,
-	t ...time.Time,
-) {
-	fields := map[string]interface{}{"value": value}
-	a.AddFields(measurement, fields, tags, t...)
-}
-
 func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
 }
@@ -94,6 +83,24 @@ func (a *Accumulator) AddFields(
 	}
 
 	a.Metrics = append(a.Metrics, p)
+}
+
+func (a *Accumulator) AddCounter(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
+func (a *Accumulator) AddGauge(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
 }
 
 // AddError appends the given error to Accumulator.Errors.
