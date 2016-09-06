@@ -1,10 +1,10 @@
 package http_listener
 
 import (
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -30,15 +30,14 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 func newTestHttpListener() *HttpListener {
 	listener := &HttpListener{
 		ServiceAddress: ":8186",
-		ReadTimeout:    internal.Duration{Duration: time.Second * 10},
-		WriteTimeout:   internal.Duration{Duration: time.Second * 10},
 	}
 	return listener
 }
 
 func TestWriteHTTP(t *testing.T) {
 	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
+	parser, _ := parsers.NewInfluxParser()
+	listener.SetParser(parser)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -47,7 +46,7 @@ func TestWriteHTTP(t *testing.T) {
 	time.Sleep(time.Millisecond * 25)
 
 	// post single message to listener
-	var resp, err = http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 
@@ -73,6 +72,55 @@ func TestWriteHTTP(t *testing.T) {
 	}
 }
 
+// writes 25,000 metrics to the listener with 10 different writers
+func TestWriteHTTPHighTraffic(t *testing.T) {
+	listener := &HttpListener{ServiceAddress: ":8286"}
+	parser, _ := parsers.NewInfluxParser()
+	listener.SetParser(parser)
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	// post many messages to listener
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			for i := 0; i < 500; i++ {
+				resp, err := http.Post("http://localhost:8286/write?db=mydb", "", bytes.NewBuffer([]byte(testMsgs)))
+				require.NoError(t, err)
+				require.EqualValues(t, 204, resp.StatusCode)
+			}
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+	time.Sleep(time.Millisecond * 50)
+	listener.Gather(acc)
+
+	require.Equal(t, int64(25000), int64(acc.NMetrics()))
+}
+
+func TestReceive404ForInvalidEndpoint(t *testing.T) {
+	listener := newTestHttpListener()
+	listener.parser, _ = parsers.NewInfluxParser()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	// post single message to listener
+	resp, err := http.Post("http://localhost:8186/foobar", "", bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	require.EqualValues(t, 404, resp.StatusCode)
+}
+
 func TestWriteHTTPInvalid(t *testing.T) {
 	time.Sleep(time.Millisecond * 250)
 
@@ -86,7 +134,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	time.Sleep(time.Millisecond * 25)
 
 	// post single message to listener
-	var resp, err = http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(badMsg)))
+	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(badMsg)))
 	require.NoError(t, err)
 	require.EqualValues(t, 500, resp.StatusCode)
 }
@@ -104,12 +152,12 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	time.Sleep(time.Millisecond * 25)
 
 	// post single message to listener
-	var resp, err = http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
-func TestQueryHTTP(t *testing.T) {
+func TestQueryAndPingHTTP(t *testing.T) {
 	time.Sleep(time.Millisecond * 250)
 
 	listener := newTestHttpListener()
@@ -122,7 +170,12 @@ func TestQueryHTTP(t *testing.T) {
 	time.Sleep(time.Millisecond * 25)
 
 	// post query to listener
-	var resp, err = http.Post("http://localhost:8186/query?db=&q=CREATE+DATABASE+IF+NOT+EXISTS+%22mydb%22", "", nil)
+	resp, err := http.Post("http://localhost:8186/query?db=&q=CREATE+DATABASE+IF+NOT+EXISTS+%22mydb%22", "", nil)
 	require.NoError(t, err)
 	require.EqualValues(t, 200, resp.StatusCode)
+
+	// post ping to listener
+	resp, err = http.Post("http://localhost:8186/ping", "", nil)
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
 }

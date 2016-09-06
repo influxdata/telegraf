@@ -21,6 +21,7 @@ type HttpListener struct {
 	WriteTimeout   internal.Duration
 
 	sync.Mutex
+	wg sync.WaitGroup
 
 	listener *stoppableListener.StoppableListener
 
@@ -84,12 +85,13 @@ func (t *HttpListener) Stop() {
 	t.listener.Stop()
 	t.listener.Close()
 
+	t.wg.Wait()
+
 	log.Println("Stopped HTTP listener service on ", t.ServiceAddress)
 }
 
 // httpListen listens for HTTP requests.
 func (t *HttpListener) httpListen() error {
-
 	if t.ReadTimeout.Duration < time.Second {
 		t.ReadTimeout.Duration = time.Second * 10
 	}
@@ -107,46 +109,42 @@ func (t *HttpListener) httpListen() error {
 }
 
 func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	t.wg.Add(1)
+	defer t.wg.Done()
 	body, err := ioutil.ReadAll(req.Body)
-
 	if err != nil {
 		log.Printf("Problem reading request: [%s], Error: %s\n", string(body), err)
 		http.Error(res, "ERROR reading request", http.StatusInternalServerError)
 		return
 	}
 
-	var path = req.URL.Path[1:]
-
-	if path == "write" {
+	switch req.URL.Path {
+	case "/write":
 		var metrics []telegraf.Metric
 		metrics, err = t.parser.Parse(body)
 		if err == nil {
-			t.storeMetrics(metrics)
+			for _, m := range metrics {
+				t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			}
 			res.WriteHeader(http.StatusNoContent)
 		} else {
 			log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
 			http.Error(res, "ERROR parsing metrics", http.StatusInternalServerError)
 		}
-	} else if path == "query" {
-		// Deliver a dummy response to the query endpoint, as some InfluxDB clients test endpoint availability with a query
+	case "/query":
+		// Deliver a dummy response to the query endpoint, as some InfluxDB
+		// clients test endpoint availability with a query
 		res.Header().Set("Content-Type", "application/json")
 		res.Header().Set("X-Influxdb-Version", "1.0")
 		res.WriteHeader(http.StatusOK)
 		res.Write([]byte("{\"results\":[]}"))
-	} else {
+	case "/ping":
+		// respond to ping requests
+		res.WriteHeader(http.StatusNoContent)
+	default:
 		// Don't know how to respond to calls to other endpoints
 		http.NotFound(res, req)
 	}
-}
-
-func (t *HttpListener) storeMetrics(metrics []telegraf.Metric) error {
-	t.Lock()
-	defer t.Unlock()
-
-	for _, m := range metrics {
-		t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-	}
-	return nil
 }
 
 func init() {
