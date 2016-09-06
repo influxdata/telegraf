@@ -400,7 +400,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"n_images":                int(199),
 			"n_goroutines":            int(39),
 		},
-		map[string]string{"server_name": "absol"},
+		map[string]string{"engine_host": "absol"},
 	)
 
 	acc.AssertContainsTaggedFields(t,
@@ -412,7 +412,7 @@ func TestDockerGatherInfo(t *testing.T) {
 		},
 		map[string]string{
 			"unit":        "bytes",
-			"server_name": "absol",
+			"engine_host": "absol",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -426,7 +426,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_image":   "quay.io/coreos/etcd",
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
-			"server_name":       "absol",
+			"engine_host":       "absol",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -469,7 +469,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_id":              "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		},
 		map[string]string{
-			"server_name":       "absol",
+			"engine_host":       "absol",
 			"container_name":    "etcd2",
 			"container_image":   "quay.io/coreos/etcd",
 			"container_version": "v2.2.2",
