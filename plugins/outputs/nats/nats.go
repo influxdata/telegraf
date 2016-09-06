@@ -21,9 +21,12 @@ type NATS struct {
 	Subject string
 
 	// Path to CA file
-	CAFile string `toml:"tls_ca"`
-
-	// Skip SSL verification
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
 	conn       *nats_client.Conn
@@ -38,10 +41,12 @@ var sampleConfig = `
   # password = ""
   ## NATS subject for producer messages
   subject = "telegraf"
-  ## Optional TLS Config
-  ## CA certificate used to self-sign NATS server(s) TLS certificate(s)
-  # tls_ca = "/etc/telegraf/ca.pem"
-  ## Use TLS but skip chain & host verification
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to output.
@@ -65,9 +70,8 @@ func (n *NATS) Connect() error {
 		opts.Password = n.Password
 	}
 
-	// is TLS enabled?
 	tlsConfig, err := internal.GetTLSConfig(
-		"", "", n.CAFile, n.InsecureSkipVerify)
+		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
 	if err != nil {
 		return err
 	}
