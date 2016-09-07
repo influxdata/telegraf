@@ -72,38 +72,7 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 		"sv":     "host0",
 	}
 
-	fields := map[string]interface{}{
-		"active_servers":    uint64(1),
-		"backup_servers":    uint64(0),
-		"bin":               uint64(510913516),
-		"bout":              uint64(2193856571),
-		"check_duration":    uint64(10),
-		"cli_abort":         uint64(73),
-		"ctime":             uint64(2),
-		"downtime":          uint64(0),
-		"dresp":             uint64(0),
-		"econ":              uint64(0),
-		"eresp":             uint64(1),
-		"http_response.1xx": uint64(0),
-		"http_response.2xx": uint64(119534),
-		"http_response.3xx": uint64(48051),
-		"http_response.4xx": uint64(2345),
-		"http_response.5xx": uint64(1056),
-		"lbtot":             uint64(171013),
-		"qcur":              uint64(0),
-		"qmax":              uint64(0),
-		"qtime":             uint64(0),
-		"rate":              uint64(3),
-		"rate_max":          uint64(12),
-		"rtime":             uint64(312),
-		"scur":              uint64(1),
-		"smax":              uint64(32),
-		"srv_abort":         uint64(1),
-		"stot":              uint64(171014),
-		"ttime":             uint64(2341),
-		"wredis":            uint64(0),
-		"wretr":             uint64(1),
-	}
+	fields := HaproxyGetFieldValues()
 	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 
 	//Here, we should get error because we don't pass authentication data
@@ -136,38 +105,7 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 		"sv":     "host0",
 	}
 
-	fields := map[string]interface{}{
-		"active_servers":    uint64(1),
-		"backup_servers":    uint64(0),
-		"bin":               uint64(510913516),
-		"bout":              uint64(2193856571),
-		"check_duration":    uint64(10),
-		"cli_abort":         uint64(73),
-		"ctime":             uint64(2),
-		"downtime":          uint64(0),
-		"dresp":             uint64(0),
-		"econ":              uint64(0),
-		"eresp":             uint64(1),
-		"http_response.1xx": uint64(0),
-		"http_response.2xx": uint64(119534),
-		"http_response.3xx": uint64(48051),
-		"http_response.4xx": uint64(2345),
-		"http_response.5xx": uint64(1056),
-		"lbtot":             uint64(171013),
-		"qcur":              uint64(0),
-		"qmax":              uint64(0),
-		"qtime":             uint64(0),
-		"rate":              uint64(3),
-		"rate_max":          uint64(12),
-		"rtime":             uint64(312),
-		"scur":              uint64(1),
-		"smax":              uint64(32),
-		"srv_abort":         uint64(1),
-		"stot":              uint64(171014),
-		"ttime":             uint64(2341),
-		"wredis":            uint64(0),
-		"wretr":             uint64(1),
-	}
+	fields := HaproxyGetFieldValues()
 	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 }
 
@@ -199,6 +137,25 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 		"sv":     "host0",
 	}
 
+	fields := HaproxyGetFieldValues()
+
+	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+	assert.Equal(t, len(socks), 5, "Failed to glob all sockets")
+}
+
+//When not passing server config, we default to localhost
+//We just want to make sure we did request stat from localhost
+func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
+	r := &haproxy{}
+
+	var acc testutil.Accumulator
+
+	err := r.Gather(&acc)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "127.0.0.1:1936/haproxy?stats/;csv")
+}
+
+func HaproxyGetFieldValues() map[string]interface{} {
 	fields := map[string]interface{}{
 		"active_servers":    uint64(1),
 		"backup_servers":    uint64(0),
@@ -231,19 +188,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 		"wredis":            uint64(0),
 		"wretr":             uint64(1),
 	}
-	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
-}
-
-//When not passing server config, we default to localhost
-//We just want to make sure we did request stat from localhost
-func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
-	r := &haproxy{}
-
-	var acc testutil.Accumulator
-
-	err := r.Gather(&acc)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "127.0.0.1:1936/haproxy?stats/;csv")
+	return fields
 }
 
 const csvOutputSample = `
