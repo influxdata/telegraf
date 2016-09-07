@@ -1,18 +1,19 @@
 ## Steps for Contributing:
 
 1. [Sign the CLA](http://influxdb.com/community/cla.html)
-1. Make changes or write plugin (see below for details)
-1. Add your plugin to `plugins/inputs/all/all.go` or `plugins/outputs/all/all.go`
-1. If your plugin requires a new Go package,
-[add it](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#adding-a-dependency)
-1. Write a README for your plugin, if it's an input plugin, it should be structured
-like the [input example here](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/EXAMPLE_README.md).
-Output plugins READMEs are less structured,
-but any information you can provide on how the data will look is appreciated.
-See the [OpenTSDB output](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
-for a good example.
-1. **Optional:** Help users of your plugin by including example queries for populating dashboards. Include these sample queries in the `README.md` for the plugin.
-1. **Optional:** Write a [tickscript](https://docs.influxdata.com/kapacitor/v1.0/tick/syntax/) for your plugin and add it to [Kapacitor](https://github.com/influxdata/kapacitor/tree/master/examples/telegraf). Or mention @jackzampolin in a PR comment with some common queries that you would want to alert on and he will write one for you.
+1. If you are adding a new plugin:
+    1. All new plugins must go into the `experimental` directory: `plugins/experimental/inputs/` or `plugins/experimental/outputs/`
+    1. Add your plugin to `plugins/experimental/inputs/all/all.go` or `plugins/experimental/outputs/all/all.go`
+    1. If your plugin requires a new Go package, [add it](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#adding-a-dependency)
+    1. Write a README for your plugin, if it's an input plugin, it should be structured
+       like the [input example here](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/EXAMPLE_README.md).
+       Output plugins READMEs are less structured,
+       but any information you can provide on how the data will look is appreciated.
+       See the [OpenTSDB output](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
+       for a good example. All plugin READMEs must include links to relevant
+       documentation.
+    1. **Optional:** Help users of your plugin by including example queries for populating dashboards. Include these sample queries in the `README.md` for the plugin.
+    1. **Optional:** Write a [tickscript](https://docs.influxdata.com/kapacitor/v1.0/tick/syntax/) for your plugin and add it to [Kapacitor](https://github.com/influxdata/kapacitor/tree/master/examples/telegraf). Or mention @jackzampolin in a PR comment with some common queries that you would want to alert on and he will write one for you.
 
 ## GoDoc
 

@@ -8,6 +8,30 @@ metrics is sent in each http request by setting batchSize in config.
 
 See http://opentsdb.net/docs/build/html/api_http/put.html for details.
 
+## Configuration
+
+```toml
+# Configuration for OpenTSDB server to send metrics to
+[[outputs.opentsdb]]
+  ## prefix for metrics keys
+  prefix = "my.specific.prefix."
+
+  ## DNS name of the OpenTSDB server
+  ## Using "opentsdb.example.com" or "tcp://opentsdb.example.com" will use the
+  ## telnet API. "http://opentsdb.example.com" will use the Http API.
+  host = "opentsdb.example.com"
+
+  ## Port of the OpenTSDB server
+  port = 4242
+
+  ## Number of data points to send to OpenTSDB in Http requests.
+  ## Not used with telnet API.
+  httpBatchSize = 50
+
+  ## Debug true - Prints OpenTSDB communication
+  debug = false
+```
+
 ## Transfer "Protocol" in the telnet mode
 
 The expected input from OpenTSDB is specified in the following way:

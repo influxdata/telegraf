@@ -2,6 +2,8 @@
 
 The example plugin gathers metrics about example things
 
+You can read more information about this thing [here](https://google.com).
+
 ### Configuration:
 
 ```toml
@@ -27,7 +29,7 @@ The example plugin gathers metrics about example things
     - tag2
 - measurement2 has the following tags:
     - tag3
-    
+
 ### Sample Queries:
 
 These are some useful queries (to generate dashboards or other) to run against data from this plugin:
