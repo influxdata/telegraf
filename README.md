@@ -213,20 +213,21 @@ Currently implemented sources:
 
 Telegraf can also collect metrics via the following service plugins:
 
+* [http_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_listener)
+* [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
+* [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
+* [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
+* [nsq_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq_consumer)
+* [logparser](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/logparser)
 * [statsd](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/statsd)
 * [tail](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail)
-* [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [tcp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tcp_listener)
-* [http_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_listener)
-* [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
-* [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
-* [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
+* [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks)
   * [filestack](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/filestack)
   * [github](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/github)
   * [mandrill](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/mandrill)
   * [rollbar](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/rollbar)
-* [nsq_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq_consumer)
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.
