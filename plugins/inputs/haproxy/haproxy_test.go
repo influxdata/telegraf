@@ -111,36 +111,52 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 
 func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	var randomNumber int64
-	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
-	sock, err := net.Listen("unix", fmt.Sprintf("/tmp/test-haproxy%d.sock", randomNumber))
-	if err != nil {
-		t.Fatal("Cannot initialize socket ")
+	var sockets [5]net.Listener
+	_globmask := "/tmp/test-haproxy*.sock"
+	_badmask := "/tmp/test-fail-haproxy*.sock"
+
+	for i := 0; i < 5; i++ {
+		binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
+		sockname := fmt.Sprintf("/tmp/test-haproxy%d.sock", randomNumber)
+
+		sock, err := net.Listen("unix", sockname)
+		if err != nil {
+			t.Fatal("Cannot initialize socket ")
+		}
+
+		sockets[i] = sock
+		defer sock.Close()
+
+		s := statServer{}
+		go s.serverSocket(sock)
 	}
 
-	defer sock.Close()
-
-	s := statServer{}
-	go s.serverSocket(sock)
-
 	r := &haproxy{
-		Servers: []string{sock.Addr().String()},
+		Servers: []string{_globmask},
 	}
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err := r.Gather(&acc)
 	require.NoError(t, err)
-
-	tags := map[string]string{
-		"proxy":  "be_app",
-		"server": sock.Addr().String(),
-		"sv":     "host0",
-	}
 
 	fields := HaproxyGetFieldValues()
 
-	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
-	assert.Equal(t, len(socks), 5, "Failed to glob all sockets")
+	for _, sock := range sockets {
+		tags := map[string]string{
+			"proxy":  "be_app",
+			"server": sock.Addr().String(),
+			"sv":     "host0",
+		}
+
+		acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+	}
+
+	// This mask should not match any socket
+	r.Servers = []string{_badmask}
+
+	err = r.Gather(&acc)
+	require.Error(t, err)
 }
 
 //When not passing server config, we default to localhost
