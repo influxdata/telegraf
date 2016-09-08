@@ -1,7 +1,9 @@
 package signalfx
 
 import (
+	"fmt"
 	"log"
+	"regexp"
 
 	"golang.org/x/net/context"
 
@@ -19,6 +21,8 @@ type SignalFx struct {
 
 	sink *sfxclient.HTTPDatapointSink
 }
+
+var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
 var sampleConfig = `
   ## Your organization's SignalFx API access token.
@@ -59,21 +63,45 @@ func (s *SignalFx) Close() error {
 func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 	var datapoints []*datapoint.Datapoint
 	for _, metric := range metrics {
+		// Sanitize metric name.
+		metricName := metric.Name()
+		metricName = invalidNameCharRE.ReplaceAllString(metricName, "_")
+
+		// Get a type if it's available, defaulting to Gauge.
+		var sfMetricType datapoint.MetricType
+		switch metric.Type() {
+		case telegraf.Counter:
+			sfMetricType = datapoint.Counter
+		case telegraf.Gauge:
+			sfMetricType = datapoint.Gauge
+		default:
+			sfMetricType = datapoint.Gauge
+		}
+
 		// One SignalFx metric per field.
 		for fieldName, fieldValue := range metric.Fields() {
-			var value datapoint.Value
+			var sfValue datapoint.Value
 			switch fieldValue.(type) {
 			case float64:
-				value = datapoint.NewFloatValue(fieldValue.(float64))
+				sfValue = datapoint.NewFloatValue(fieldValue.(float64))
 			case int64:
-				value = datapoint.NewIntValue(fieldValue.(int64))
+				sfValue = datapoint.NewIntValue(fieldValue.(int64))
 			default:
 				log.Printf("Unhandled type %T for field %s\n", fieldValue, fieldName)
 				continue
 			}
 
-			metricName := metric.Name() + "." + fieldName
-			datapoint := datapoint.New(metricName, metric.Tags(), value, datapoint.Gauge, metric.Time())
+			// Sanitize field name.
+			fieldName = invalidNameCharRE.ReplaceAllString(fieldName, "_")
+
+			var sfMetricName string
+			if fieldName == "value" {
+				sfMetricName = metricName
+			} else {
+				sfMetricName = fmt.Sprintf("%s.%s", metricName, fieldName)
+			}
+
+			datapoint := datapoint.New(sfMetricName, metric.Tags(), sfValue, sfMetricType, metric.Time())
 			datapoints = append(datapoints, datapoint)
 		}
 	}
