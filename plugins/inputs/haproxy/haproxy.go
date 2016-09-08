@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-//CSV format: https://cbonte.github.io/haproxy-dconv/configuration-1.5.html#9.1
+//CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
 const (
 	HF_PXNAME         = 0  // 0. pxname [LFBS]: proxy name
 	HF_SVNAME         = 1  // 1. svname [LFBS]: service name (FRONTEND for frontend, BACKEND for backend, any name for server/listener)
