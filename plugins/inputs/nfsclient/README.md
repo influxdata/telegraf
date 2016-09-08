@@ -11,20 +11,21 @@ If fullstat is set, it will collect a lot of per-operation statistics.
 #### Measurements & Fields
 
 - nfsstat_read
-    - read_bytes (integer, bytes)
-    - read_exe (integer, bytes)
-    - read_ops (integer, bytes)
-    - read_retrans (integer, miliseconds)
-    - read_rtt (integer, miliseconds)
+    - read_bytes (integer, bytes) - The number of bytes exchanged doing READ operations.
+    - read_ops (integer, count) - The number of RPC READ operations executed. 
+    - read_retrans (integer, count) - The number of times an RPC READ operation had to be retried.
+    - read_exe (integer, miliseconds) - The number of miliseconds it took to process the RPC READ operations.
+    - read_rtt (integer, miliseconds) - The round-trip time for RPC READ operations.
 
 - nfsstat_write
-    - write_bytes (integer, bytes)
-    - write_ops (integer, bytes)
-    - write_retrans (integer, bytes)
-    - write_exe (integer, miliseconds)
-    - write_rtt (integer, miliseconds)
+    - write_bytes (integer, bytes) - The number of bytes exchanged doing WRITE operations.
+    - write_ops (integer, count) - The number of RPC WRITE operations executed.
+    - write_retrans (integer, count) - The number of times an RPC WRITE operation had to be retried.
+    - write_exe (integer, miliseconds) - The number of miliseconds it took to process the RPC WRITE operations.
+    - write_rtt (integer, miliseconds) - The rount-trip time for RPC WRITE operations.
 
-In addition enabling fullstat will make many more metrics available.
+In addition enabling fullstat will make many more metrics available, but description of those is beyond the scope here.
+See references for more details.
 
 #### Tags
 
@@ -35,5 +36,4 @@ In addition enabling fullstat will make many more metrics available.
 #### References
 [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
 [net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
-
 [What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
