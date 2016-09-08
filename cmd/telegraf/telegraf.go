@@ -12,12 +12,13 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
-
+	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"github.com/kardianos/service"
 )
 
@@ -110,6 +111,8 @@ Examples:
   # run telegraf, enabling the cpu & memory input, and influxdb output plugins
   telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
 `
+
+var logger service.Logger
 
 var stop chan struct{}
 
@@ -303,6 +306,10 @@ func main() {
 
 		prg := &program{}
 		s, err := service.New(prg, svcConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logger, err = s.Logger(nil)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -11,15 +11,18 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/influxdata/config"
@@ -47,9 +50,11 @@ type Config struct {
 	InputFilters  []string
 	OutputFilters []string
 
-	Agent   *AgentConfig
-	Inputs  []*models.RunningInput
-	Outputs []*models.RunningOutput
+	Agent       *AgentConfig
+	Inputs      []*models.RunningInput
+	Outputs     []*models.RunningOutput
+	Processors  []*models.RunningProcessor
+	Aggregators []*models.RunningAggregator
 }
 
 func NewConfig() *Config {
@@ -64,6 +69,7 @@ func NewConfig() *Config {
 		Tags:          make(map[string]string),
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
+		Processors:    make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -138,7 +144,7 @@ type AgentConfig struct {
 func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
-		name = append(name, input.Name)
+		name = append(name, input.Name())
 	}
 	return name
 }
@@ -248,6 +254,20 @@ var header = `# Telegraf Configuration
 ###############################################################################
 `
 
+var processorHeader = `
+
+###############################################################################
+#                            PROCESSOR PLUGINS                                #
+###############################################################################
+`
+
+var aggregatorHeader = `
+
+###############################################################################
+#                            AGGREGATOR PLUGINS                               #
+###############################################################################
+`
+
 var inputHeader = `
 
 ###############################################################################
@@ -266,6 +286,7 @@ var serviceInputHeader = `
 func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 	fmt.Printf(header)
 
+	// print output plugins
 	if len(outputFilters) != 0 {
 		printFilteredOutputs(outputFilters, false)
 	} else {
@@ -281,6 +302,25 @@ func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 		printFilteredOutputs(pnames, true)
 	}
 
+	// print processor plugins
+	fmt.Printf(processorHeader)
+	pnames := []string{}
+	for pname := range processors.Processors {
+		pnames = append(pnames, pname)
+	}
+	sort.Strings(pnames)
+	printFilteredProcessors(pnames, true)
+
+	// pring aggregator plugins
+	fmt.Printf(aggregatorHeader)
+	pnames = []string{}
+	for pname := range aggregators.Aggregators {
+		pnames = append(pnames, pname)
+	}
+	sort.Strings(pnames)
+	printFilteredAggregators(pnames, true)
+
+	// print input plugins
 	fmt.Printf(inputHeader)
 	if len(inputFilters) != 0 {
 		printFilteredInputs(inputFilters, false)
@@ -295,6 +335,42 @@ func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 		}
 		sort.Strings(pnames)
 		printFilteredInputs(pnames, true)
+	}
+}
+
+func printFilteredProcessors(processorFilters []string, commented bool) {
+	// Filter processors
+	var pnames []string
+	for pname := range processors.Processors {
+		if sliceContains(pname, processorFilters) {
+			pnames = append(pnames, pname)
+		}
+	}
+	sort.Strings(pnames)
+
+	// Print Outputs
+	for _, pname := range pnames {
+		creator := processors.Processors[pname]
+		output := creator()
+		printConfig(pname, output, "processors", commented)
+	}
+}
+
+func printFilteredAggregators(aggregatorFilters []string, commented bool) {
+	// Filter outputs
+	var anames []string
+	for aname := range aggregators.Aggregators {
+		if sliceContains(aname, aggregatorFilters) {
+			anames = append(anames, aname)
+		}
+	}
+	sort.Strings(anames)
+
+	// Print Outputs
+	for _, aname := range anames {
+		creator := aggregators.Aggregators[aname]
+		output := creator()
+		printConfig(aname, output, "aggregators", commented)
 	}
 }
 
@@ -507,6 +583,7 @@ func (c *Config) LoadConfig(path string) error {
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
+				// legacy [outputs.influxdb] support
 				case *ast.Table:
 					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
 						return fmt.Errorf("Error parsing %s, %s", path, err)
@@ -525,6 +602,7 @@ func (c *Config) LoadConfig(path string) error {
 		case "inputs", "plugins":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
+				// legacy [inputs.cpu] support
 				case *ast.Table:
 					if err = c.addInput(pluginName, pluginSubTable); err != nil {
 						return fmt.Errorf("Error parsing %s, %s", path, err)
@@ -532,6 +610,34 @@ func (c *Config) LoadConfig(path string) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addInput(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", path, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
+				}
+			}
+		case "processors":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addProcessor(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", path, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
+				}
+			}
+		case "aggregators":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addAggregator(pluginName, t); err != nil {
 							return fmt.Errorf("Error parsing %s, %s", path, err)
 						}
 					}
@@ -578,6 +684,57 @@ func parseFile(fpath string) (*ast.Table, error) {
 	}
 
 	return toml.Parse(contents)
+}
+
+func (c *Config) addAggregator(name string, table *ast.Table) error {
+	creator, ok := aggregators.Aggregators[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested aggregator: %s", name)
+	}
+	aggregator := creator()
+
+	aggregatorConfig, err := buildAggregator(name, table)
+	if err != nil {
+		return err
+	}
+
+	if err := config.UnmarshalTable(table, aggregator); err != nil {
+		return err
+	}
+
+	rf := &models.RunningAggregator{
+		Aggregator: aggregator,
+		Config:     aggregatorConfig,
+	}
+
+	c.Aggregators = append(c.Aggregators, rf)
+	return nil
+}
+
+func (c *Config) addProcessor(name string, table *ast.Table) error {
+	creator, ok := processors.Processors[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested processor: %s", name)
+	}
+	processor := creator()
+
+	processorConfig, err := buildProcessor(name, table)
+	if err != nil {
+		return err
+	}
+
+	if err := config.UnmarshalTable(table, processor); err != nil {
+		return err
+	}
+
+	rf := &models.RunningProcessor{
+		Name:      name,
+		Processor: processor,
+		Config:    processorConfig,
+	}
+
+	c.Processors = append(c.Processors, rf)
+	return nil
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -652,12 +809,98 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 
 	rp := &models.RunningInput{
-		Name:   name,
 		Input:  input,
 		Config: pluginConfig,
 	}
 	c.Inputs = append(c.Inputs, rp)
 	return nil
+}
+
+// buildAggregator TODO doc
+func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
+	conf := &models.AggregatorConfig{Name: name}
+	unsupportedFields := []string{"tagexclude", "taginclude"}
+	for _, field := range unsupportedFields {
+		if _, ok := tbl.Fields[field]; ok {
+			// TODO raise error because field is not supported
+		}
+	}
+
+	if node, ok := tbl.Fields["drop_original"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				conf.DropOriginal, err = strconv.ParseBool(b.Value)
+				if err != nil {
+					log.Printf("Error parsing boolean value for %s: %s\n", name, err)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_prefix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.MeasurementPrefix = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_suffix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.MeasurementSuffix = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_override"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.NameOverride = str.Value
+			}
+		}
+	}
+
+	conf.Tags = make(map[string]string)
+	if node, ok := tbl.Fields["tags"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			if err := config.UnmarshalTable(subtbl, conf.Tags); err != nil {
+				log.Printf("Could not parse tags for input %s\n", name)
+			}
+		}
+	}
+
+	delete(tbl.Fields, "drop_original")
+	delete(tbl.Fields, "name_prefix")
+	delete(tbl.Fields, "name_suffix")
+	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "tags")
+	var err error
+	conf.Filter, err = buildFilter(tbl)
+	if err != nil {
+		return conf, err
+	}
+	return conf, nil
+}
+
+// buildProcessor TODO doc
+func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+	conf := &models.ProcessorConfig{Name: name}
+	unsupportedFields := []string{"pass", "fieldpass", "drop", "fielddrop",
+		"tagexclude", "taginclude"}
+	for _, field := range unsupportedFields {
+		if _, ok := tbl.Fields[field]; ok {
+			// TODO raise error because field is not supported
+		}
+	}
+
+	var err error
+	conf.Filter, err = buildFilter(tbl)
+	if err != nil {
+		return conf, err
+	}
+	return conf, nil
 }
 
 // buildFilter builds a Filter
