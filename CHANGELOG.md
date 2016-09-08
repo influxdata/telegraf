@@ -31,7 +31,7 @@
 **Breaking Change** The SNMP plugin is being deprecated in it's current form.
 There is a [new SNMP plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
 which fixes many of the issues and confusions
-of it's predecessor. For users wanting to continue to use the deprecated SNMP
+of its predecessor. For users wanting to continue to use the deprecated SNMP
 plugin, you will need to change your config file from `[[inputs.snmp]]` to
 `[[inputs.snmp_legacy]]`. The configuration of the new SNMP plugin is _not_
 backwards-compatible.
