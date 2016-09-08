@@ -7,7 +7,7 @@
 ```toml
 # SampleConfig
 [[inputs.haproxy]]
-  servers = ["http://1.2.3.4/haproxy?stats", '/var/run/haproxy*.sock']
+  servers = ["http://1.2.3.4/haproxy?stats", "/var/run/haproxy*.sock"]
 ```
 
 Server addresses need to explicitly start with 'http' if you wish to use HAproxy status page. Otherwise, address will be assumed to be an UNIX socket and protocol (if present) will be discarded.
