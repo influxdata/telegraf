@@ -26,12 +26,26 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 	result_server := &ServerStatus{}
-	err := s.Session.DB("admin").Run(bson.D{{"serverStatus", 1}, {"recordStats", 0}}, result_server)
+	err := s.Session.DB("admin").Run(bson.D{
+		{
+			Name:  "serverStatus",
+			Value: 1,
+		},
+		{
+			Name:  "recordStats",
+			Value: 0,
+		},
+	}, result_server)
 	if err != nil {
 		return err
 	}
 	result_repl := &ReplSetStatus{}
-	err = s.Session.DB("admin").Run(bson.D{{"replSetGetStatus", 1}}, result_repl)
+	err = s.Session.DB("admin").Run(bson.D{
+		{
+			Name:  "replSetGetStatus",
+			Value: 1,
+		},
+	}, result_repl)
 	if err != nil {
 		log.Println("Not gathering replica set status, member not in replica set (" + err.Error() + ")")
 	}
@@ -52,7 +66,12 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		}
 		for _, db_name := range names {
 			db_stat_line := &DbStatsData{}
-			err = s.Session.DB(db_name).Run(bson.D{{"dbStats", 1}}, db_stat_line)
+			err = s.Session.DB(db_name).Run(bson.D{
+				{
+					Name:  "dbStats",
+					Value: 1,
+				},
+			}, db_stat_line)
 			if err != nil {
 				log.Println("Error getting db stats from " + db_name + "(" + err.Error() + ")")
 			}
