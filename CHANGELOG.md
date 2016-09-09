@@ -23,6 +23,7 @@
 ### Bugfixes
 
 - [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
+- [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags
 
 ## v1.0 [2016-09-08]
 
