@@ -5,8 +5,12 @@ else
 PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
 
+THIS_FILE := $(lastword $(MAKEFILE_LIST))
+
 # Standard Telegraf build
-default: prepare build
+default:
+	@$(MAKE) -f $(THIS_FILE) prepare
+	@$(MAKE) -f $(THIS_FILE) build
 
 # Windows build
 windows: prepare-windows build-windows
