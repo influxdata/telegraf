@@ -1,4 +1,32 @@
 ## v1.0 [unreleased]
+## v1.1 [unreleased]
+
+### Release Notes
+
+### Features
+
+- [#1694](https://github.com/influxdata/telegraf/pull/1694): Adding Gauge and Counter metric types.
+- [#1606](https://github.com/influxdata/telegraf/pull/1606): Remove carraige returns from exec plugin output on Windows
+- [#1674](https://github.com/influxdata/telegraf/issues/1674): elasticsearch input: configurable timeout.
+- [#1607](https://github.com/influxdata/telegraf/pull/1607): Massage metric names in Instrumental output plugin
+- [#1572](https://github.com/influxdata/telegraf/pull/1572): mesos improvements.
+- [#1513](https://github.com/influxdata/telegraf/issues/1513): Add Ceph Cluster Performance Statistics
+- [#1650](https://github.com/influxdata/telegraf/issues/1650): Ability to configure response_timeout in httpjson input.
+- [#1685](https://github.com/influxdata/telegraf/issues/1685): Add additional redis metrics.
+- [#1539](https://github.com/influxdata/telegraf/pull/1539): Added capability to send metrics through Http API for OpenTSDB.
+- [#1471](https://github.com/influxdata/telegraf/pull/1471): iptables input plugin.
+- [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
+- [#1599](https://github.com/influxdata/telegraf/pull/1599): Add server hostname for each docker measurements.
+- [#1697](https://github.com/influxdata/telegraf/pull/1697): Add NATS output plugin.
+- [#1407](https://github.com/influxdata/telegraf/pull/1407): HTTP service listener input plugin.
+- [#1699](https://github.com/influxdata/telegraf/pull/1699): Add database blacklist option for Postgresql
+
+### Bugfixes
+
+- [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
+- [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags
+
+## v1.0 [2016-09-08]
 
 ### Release Notes
 

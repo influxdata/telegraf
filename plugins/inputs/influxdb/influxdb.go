@@ -210,9 +210,13 @@ func (i *InfluxDB) gatherURL(
 			continue
 		}
 
+		if p.Tags == nil {
+			p.Tags = make(map[string]string)
+		}
+
 		// If the object was a point, but was not fully initialized,
 		// ignore it and move on.
-		if p.Name == "" || p.Tags == nil || p.Values == nil || len(p.Values) == 0 {
+		if p.Name == "" || p.Values == nil || len(p.Values) == 0 {
 			continue
 		}
 
