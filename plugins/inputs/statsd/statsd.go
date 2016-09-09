@@ -416,7 +416,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		}
 
 		// Parse the value
-		if strings.ContainsAny(pipesplit[0], "-+") {
+		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
 			if m.mtype != "g" {
 				log.Printf("Error: +- values are only supported for gauges: %s\n", line)
 				return errors.New("Error Parsing statsd line")

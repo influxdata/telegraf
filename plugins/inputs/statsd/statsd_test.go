@@ -24,6 +24,267 @@ func NewTestStatsd() *Statsd {
 	return &s
 }
 
+// Valid lines should be parsed and their values should be cached
+func TestParse_ValidLines(t *testing.T) {
+	s := NewTestStatsd()
+	valid_lines := []string{
+		"valid:45|c",
+		"valid:45|s",
+		"valid:45|g",
+		"valid.timer:45|ms",
+		"valid.timer:45|h",
+	}
+
+	for _, line := range valid_lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+}
+
+// Tests low-level functionality of gauges
+func TestParse_Gauges(t *testing.T) {
+	s := NewTestStatsd()
+
+	// Test that gauge +- values work
+	valid_lines := []string{
+		"plus.minus:100|g",
+		"plus.minus:-10|g",
+		"plus.minus:+30|g",
+		"plus.plus:100|g",
+		"plus.plus:+100|g",
+		"plus.plus:+100|g",
+		"minus.minus:100|g",
+		"minus.minus:-100|g",
+		"minus.minus:-100|g",
+		"lone.plus:+100|g",
+		"lone.minus:-100|g",
+		"overwrite:100|g",
+		"overwrite:300|g",
+		"scientific.notation:4.696E+5|g",
+		"scientific.notation.minus:4.7E-5|g",
+	}
+
+	for _, line := range valid_lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	validations := []struct {
+		name  string
+		value float64
+	}{
+		{
+			"scientific_notation",
+			469600,
+		},
+		{
+			"scientific_notation_minus",
+			0.000047,
+		},
+		{
+			"plus_minus",
+			120,
+		},
+		{
+			"plus_plus",
+			300,
+		},
+		{
+			"minus_minus",
+			-100,
+		},
+		{
+			"lone_plus",
+			100,
+		},
+		{
+			"lone_minus",
+			-100,
+		},
+		{
+			"overwrite",
+			300,
+		},
+	}
+
+	for _, test := range validations {
+		err := test_validate_gauge(test.name, test.value, s.gauges)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+}
+
+// Tests low-level functionality of sets
+func TestParse_Sets(t *testing.T) {
+	s := NewTestStatsd()
+
+	// Test that sets work
+	valid_lines := []string{
+		"unique.user.ids:100|s",
+		"unique.user.ids:100|s",
+		"unique.user.ids:100|s",
+		"unique.user.ids:100|s",
+		"unique.user.ids:100|s",
+		"unique.user.ids:101|s",
+		"unique.user.ids:102|s",
+		"unique.user.ids:102|s",
+		"unique.user.ids:123456789|s",
+		"oneuser.id:100|s",
+		"oneuser.id:100|s",
+		"scientific.notation.sets:4.696E+5|s",
+		"scientific.notation.sets:4.696E+5|s",
+		"scientific.notation.sets:4.697E+5|s",
+	}
+
+	for _, line := range valid_lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"scientific_notation_sets",
+			2,
+		},
+		{
+			"unique_user_ids",
+			4,
+		},
+		{
+			"oneuser_id",
+			1,
+		},
+	}
+
+	for _, test := range validations {
+		err := test_validate_set(test.name, test.value, s.sets)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+}
+
+// Tests low-level functionality of counters
+func TestParse_Counters(t *testing.T) {
+	s := NewTestStatsd()
+
+	// Test that counters work
+	valid_lines := []string{
+		"small.inc:1|c",
+		"big.inc:100|c",
+		"big.inc:1|c",
+		"big.inc:100000|c",
+		"big.inc:1000000|c",
+		"small.inc:1|c",
+		"zero.init:0|c",
+		"sample.rate:1|c|@0.1",
+		"sample.rate:1|c",
+		"scientific.notation:4.696E+5|c",
+	}
+
+	for _, line := range valid_lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"scientific_notation",
+			469600,
+		},
+		{
+			"small_inc",
+			2,
+		},
+		{
+			"big_inc",
+			1100101,
+		},
+		{
+			"zero_init",
+			0,
+		},
+		{
+			"sample_rate",
+			11,
+		},
+	}
+
+	for _, test := range validations {
+		err := test_validate_counter(test.name, test.value, s.counters)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+}
+
+// Tests low-level functionality of timings
+func TestParse_Timings(t *testing.T) {
+	s := NewTestStatsd()
+	s.Percentiles = []int{90}
+	acc := &testutil.Accumulator{}
+
+	// Test that counters work
+	valid_lines := []string{
+		"test.timing:1|ms",
+		"test.timing:11|ms",
+		"test.timing:1|ms",
+		"test.timing:1|ms",
+		"test.timing:1|ms",
+	}
+
+	for _, line := range valid_lines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
+		}
+	}
+
+	s.Gather(acc)
+
+	valid := map[string]interface{}{
+		"90_percentile": float64(11),
+		"count":         int64(5),
+		"lower":         float64(1),
+		"mean":          float64(3),
+		"stddev":        float64(4),
+		"upper":         float64(11),
+	}
+
+	acc.AssertContainsFields(t, "test_timing", valid)
+}
+
+func TestParseScientificNotation(t *testing.T) {
+	s := NewTestStatsd()
+	sciNotationLines := []string{
+		"scientific.notation:4.6968460083008E-5|ms",
+		"scientific.notation:4.6968460083008E-5|g",
+		"scientific.notation:4.6968460083008E-5|c",
+		"scientific.notation:4.6968460083008E-5|h",
+	}
+	for _, line := range sciNotationLines {
+		err := s.parseStatsdLine(line)
+		if err != nil {
+			t.Errorf("Parsing line [%s] should not have resulted in error: %s\n", line, err)
+		}
+	}
+}
+
 // Invalid lines should return an error
 func TestParse_InvalidLines(t *testing.T) {
 	s := NewTestStatsd()
@@ -713,229 +974,6 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 	if err := test_validate_gauge("valid_multiple_mixed", 1, s_multiple.gauges); err != nil {
 		t.Error(err.Error())
 	}
-}
-
-// Valid lines should be parsed and their values should be cached
-func TestParse_ValidLines(t *testing.T) {
-	s := NewTestStatsd()
-	valid_lines := []string{
-		"valid:45|c",
-		"valid:45|s",
-		"valid:45|g",
-		"valid.timer:45|ms",
-		"valid.timer:45|h",
-	}
-
-	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
-		if err != nil {
-			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
-		}
-	}
-}
-
-// Tests low-level functionality of gauges
-func TestParse_Gauges(t *testing.T) {
-	s := NewTestStatsd()
-
-	// Test that gauge +- values work
-	valid_lines := []string{
-		"plus.minus:100|g",
-		"plus.minus:-10|g",
-		"plus.minus:+30|g",
-		"plus.plus:100|g",
-		"plus.plus:+100|g",
-		"plus.plus:+100|g",
-		"minus.minus:100|g",
-		"minus.minus:-100|g",
-		"minus.minus:-100|g",
-		"lone.plus:+100|g",
-		"lone.minus:-100|g",
-		"overwrite:100|g",
-		"overwrite:300|g",
-	}
-
-	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
-		if err != nil {
-			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
-		}
-	}
-
-	validations := []struct {
-		name  string
-		value float64
-	}{
-		{
-			"plus_minus",
-			120,
-		},
-		{
-			"plus_plus",
-			300,
-		},
-		{
-			"minus_minus",
-			-100,
-		},
-		{
-			"lone_plus",
-			100,
-		},
-		{
-			"lone_minus",
-			-100,
-		},
-		{
-			"overwrite",
-			300,
-		},
-	}
-
-	for _, test := range validations {
-		err := test_validate_gauge(test.name, test.value, s.gauges)
-		if err != nil {
-			t.Error(err.Error())
-		}
-	}
-}
-
-// Tests low-level functionality of sets
-func TestParse_Sets(t *testing.T) {
-	s := NewTestStatsd()
-
-	// Test that sets work
-	valid_lines := []string{
-		"unique.user.ids:100|s",
-		"unique.user.ids:100|s",
-		"unique.user.ids:100|s",
-		"unique.user.ids:100|s",
-		"unique.user.ids:100|s",
-		"unique.user.ids:101|s",
-		"unique.user.ids:102|s",
-		"unique.user.ids:102|s",
-		"unique.user.ids:123456789|s",
-		"oneuser.id:100|s",
-		"oneuser.id:100|s",
-	}
-
-	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
-		if err != nil {
-			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
-		}
-	}
-
-	validations := []struct {
-		name  string
-		value int64
-	}{
-		{
-			"unique_user_ids",
-			4,
-		},
-		{
-			"oneuser_id",
-			1,
-		},
-	}
-
-	for _, test := range validations {
-		err := test_validate_set(test.name, test.value, s.sets)
-		if err != nil {
-			t.Error(err.Error())
-		}
-	}
-}
-
-// Tests low-level functionality of counters
-func TestParse_Counters(t *testing.T) {
-	s := NewTestStatsd()
-
-	// Test that counters work
-	valid_lines := []string{
-		"small.inc:1|c",
-		"big.inc:100|c",
-		"big.inc:1|c",
-		"big.inc:100000|c",
-		"big.inc:1000000|c",
-		"small.inc:1|c",
-		"zero.init:0|c",
-		"sample.rate:1|c|@0.1",
-		"sample.rate:1|c",
-	}
-
-	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
-		if err != nil {
-			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
-		}
-	}
-
-	validations := []struct {
-		name  string
-		value int64
-	}{
-		{
-			"small_inc",
-			2,
-		},
-		{
-			"big_inc",
-			1100101,
-		},
-		{
-			"zero_init",
-			0,
-		},
-		{
-			"sample_rate",
-			11,
-		},
-	}
-
-	for _, test := range validations {
-		err := test_validate_counter(test.name, test.value, s.counters)
-		if err != nil {
-			t.Error(err.Error())
-		}
-	}
-}
-
-// Tests low-level functionality of timings
-func TestParse_Timings(t *testing.T) {
-	s := NewTestStatsd()
-	s.Percentiles = []int{90}
-	acc := &testutil.Accumulator{}
-
-	// Test that counters work
-	valid_lines := []string{
-		"test.timing:1|ms",
-		"test.timing:11|ms",
-		"test.timing:1|ms",
-		"test.timing:1|ms",
-		"test.timing:1|ms",
-	}
-
-	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
-		if err != nil {
-			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
-		}
-	}
-
-	s.Gather(acc)
-
-	valid := map[string]interface{}{
-		"90_percentile": float64(11),
-		"count":         int64(5),
-		"lower":         float64(1),
-		"mean":          float64(3),
-		"stddev":        float64(4),
-		"upper":         float64(11),
-	}
-
-	acc.AssertContainsFields(t, "test_timing", valid)
 }
 
 // Tests low-level functionality of timings when multiple fields is enabled

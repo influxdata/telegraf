@@ -24,6 +24,7 @@
 
 - [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
 - [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags
+- [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
 
 ## v1.0 [2016-09-08]
 
