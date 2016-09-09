@@ -206,11 +206,10 @@ func gatherCoreMetrics(mbeansJson json.RawMessage, core, category string, acc te
 			"num_docs":     metrics.Stats.NumDocs,
 		}
 		acc.AddFields(
-			"solr_mbean_metrics",
+			fmt.Sprintf("solr_%s", strings.ToLower(category)),
 			coreFields,
 			map[string]string{
 				"core":    core,
-				"type":    strings.ToLower(category),
 				"handler": name},
 			measurementTime,
 		)
@@ -244,11 +243,10 @@ func gatherQueryHandlerMetrics(mbeansJson json.RawMessage, core, category string
 			"total_time":                 metrics.Stats.TotalTime,
 		}
 		acc.AddFields(
-			"solr_mbean_metrics",
+			fmt.Sprintf("solr_%s", strings.ToLower(category)),
 			coreFields,
 			map[string]string{
 				"core":    core,
-				"type":    strings.ToLower(category),
 				"handler": name},
 			measurementTime,
 		)
@@ -289,11 +287,10 @@ func gatherUpdateHandlerMetrics(mbeansJson json.RawMessage, core, category strin
 			"soft_autocommits":            metrics.Stats.SoftAutocommits,
 		}
 		acc.AddFields(
-			"solr_mbean_metrics",
+			fmt.Sprintf("solr_%s", strings.ToLower(category)),
 			coreFields,
 			map[string]string{
 				"core":    core,
-				"type":    strings.ToLower(category),
 				"handler": name},
 			measurementTime,
 		)
@@ -325,11 +322,10 @@ func gatherCacheMetrics(mbeansJson json.RawMessage, core, category string, acc t
 			"warmup_time":          metrics.Stats.WarmupTime,
 		}
 		acc.AddFields(
-			"solr_mbean_metrics",
+			fmt.Sprintf("solr_%s", strings.ToLower(category)),
 			coreFields,
 			map[string]string{
 				"core":    core,
-				"type":    strings.ToLower(category),
 				"handler": name},
 			measurementTime,
 		)

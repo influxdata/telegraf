@@ -46,30 +46,30 @@ func TestGatherClusterStats(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, solr.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "solr_mbean_metrics",
+	acc.AssertContainsTaggedFields(t, "solr_core",
 		solrCoreExpected,
-		map[string]string{"core": "main", "type": "core", "handler": "searcher"})
+		map[string]string{"core": "main", "handler": "searcher"})
 
 	solr.client.Transport = newTransportMock(http.StatusOK, queryHandlerStatsResponse)
 	require.NoError(t, solr.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "solr_mbean_metrics",
+	acc.AssertContainsTaggedFields(t, "solr_queryhandler",
 		solrQueryHandlerExpected,
-		map[string]string{"core": "main", "type": "queryhandler", "handler": "org.apache.solr.handler.component.SearchHandler"})
+		map[string]string{"core": "main", "handler": "org.apache.solr.handler.component.SearchHandler"})
 
 	solr.client.Transport = newTransportMock(http.StatusOK, updateHandlerStatsResponse)
 	require.NoError(t, solr.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "solr_mbean_metrics",
+	acc.AssertContainsTaggedFields(t, "solr_updatehandler",
 		solrUpdateHandlerExpected,
-		map[string]string{"core": "main", "type": "updatehandler", "handler": "updateHandler"})
+		map[string]string{"core": "main", "handler": "updateHandler"})
 
 	solr.client.Transport = newTransportMock(http.StatusOK, cacheStatsResponse)
 	require.NoError(t, solr.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "solr_mbean_metrics",
+	acc.AssertContainsTaggedFields(t, "solr_cache",
 		solrCacheExpected,
-		map[string]string{"core": "main", "type": "cache", "handler": "filterCache"})
+		map[string]string{"core": "main", "handler": "filterCache"})
 }
 
 func newSolrWithClient() *Solr {
