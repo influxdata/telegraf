@@ -152,11 +152,8 @@ func (s *Solr) Description() string {
 // Accumulator.
 func (s *Solr) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
-		client, err := s.createHTTPClient()
+		client := s.createHTTPClient()
 
-		if err != nil {
-			return err
-		}
 		s.client = client
 	}
 
@@ -179,7 +176,7 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 	return errChan.Error()
 }
 
-func (s *Solr) createHTTPClient() (*http.Client, error) {
+func (s *Solr) createHTTPClient() *http.Client {
 	tr := &http.Transport{
 		ResponseHeaderTimeout: s.HTTPTimeout.Duration,
 	}
@@ -188,7 +185,7 @@ func (s *Solr) createHTTPClient() (*http.Client, error) {
 		Timeout:   s.HTTPTimeout.Duration,
 	}
 
-	return client, nil
+	return client
 }
 
 func gatherCoreMetrics(mbeansJson json.RawMessage, core, category string, acc telegraf.Accumulator) error {
