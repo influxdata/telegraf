@@ -374,28 +374,28 @@ func (s *Solr) gatherCoreStats(url string, core string, acc telegraf.Accumulator
 	for _, category := range []string{"CORE", "QUERYHANDLER", "UPDATEHANDLER", "CACHE"} {
 		metrics := &Metrics{}
 		if err := s.gatherData(fmt.Sprintf("%s&cat=%s", url, category), metrics); err != nil {
-			return err
+			acc.AddError(fmt.Errorf("JSON fetch error: %s", err))
 		}
 		switch category {
 		case "CORE":
 			if err := gatherCoreMetrics(metrics.SolrMbeans[1], core, category, acc); err != nil {
-				return err
+				acc.AddError(fmt.Errorf("core category: %s", err))
 			}
 		case "QUERYHANDLER":
 			if err := gatherQueryHandlerMetrics(metrics.SolrMbeans[1], core, category, acc); err != nil {
-				return err
+				acc.AddError(fmt.Errorf("query handler category: %s", err))
 			}
 		case "UPDATEHANDLER":
 			if err := gatherUpdateHandlerMetrics(metrics.SolrMbeans[1], core, category, acc); err != nil {
-				return err
+				acc.AddError(fmt.Errorf("update handler category: %s", err))
 			}
 		case "CACHE":
 			if err := gatherCacheMetrics(metrics.SolrMbeans[1], core, category, acc); err != nil {
-				return err
+				acc.AddError(fmt.Errorf("cache category: %s", err))
 			}
 		default:
 			err := errors.New("unrecognized category")
-			return err
+			acc.AddError(fmt.Errorf("category: %s", err))
 		}
 	}
 	return nil

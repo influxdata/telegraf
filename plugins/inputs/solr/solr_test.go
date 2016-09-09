@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +42,7 @@ func TestSetDefaults(t *testing.T) {
 	solr.Servers = []string{"http://example.com:8983"}
 	solr.client.Transport = newTransportMock(http.StatusOK, adminCoresResponse)
 
-	cores, max, err := solr.setDefaults()
+	_, max, err := solr.setDefaults()
 	if max != 5 {
 		err = fmt.Errorf("Received unexpected error: max number of cores: %v, expected 5", max)
 	}
