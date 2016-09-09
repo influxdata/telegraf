@@ -1,6 +1,7 @@
 package solr
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -35,6 +36,19 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func (t *transportMock) CancelRequest(_ *http.Request) {
+}
+
+func TestSetDefaults(t *testing.T) {
+	solr := newSolrWithClient()
+	solr.Servers = []string{"http://example.com:8983"}
+	solr.client.Transport = newTransportMock(http.StatusOK, adminCoresResponse)
+
+	cores, max, err := solr.setDefaults()
+	if max != 5 {
+		err = fmt.Errorf("Received unexpected error: max number of cores: %v, expected 5", max)
+	}
+
+	require.NoError(t, err)
 }
 
 func TestGatherClusterStats(t *testing.T) {

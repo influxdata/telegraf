@@ -12,6 +12,6 @@ More about [performance statistics](https://cwiki.apache.org/confluence/display/
   ## specify a list of one or more Solr servers
   servers = ["http://localhost:8983"]
 
-  ## specify a list of one or more Solr cores
-  cores = ["main"]
+  ## specify a list of one or more Solr cores (default - all)
+  # cores = ["main"]
 ```

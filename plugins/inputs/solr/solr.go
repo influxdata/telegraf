@@ -17,6 +17,7 @@ import (
 )
 
 const mbeansPath = "/admin/mbeans?stats=true&wt=json"
+const adminCoresPath = "/solr/admin/cores?action=STATUS&wt=json"
 
 type node struct {
 	Host string `json:"host"`
@@ -26,8 +27,8 @@ const sampleConfig = `
   ## specify a list of one or more Solr servers
   servers = ["http://localhost:8983"]
 
-  ## specify a list of one or more Solr cores
-  cores = ["main"]
+  ## specify a list of one or more Solr cores (default - all)
+  # cores = ["main"]
 `
 
 // Solr is a plugin to read stats from one or many Solr servers
@@ -37,6 +38,12 @@ type Solr struct {
 	HTTPTimeout internal.Duration
 	Cores       []string
 	client      *http.Client
+}
+
+// AdminCores is an exported type that
+// contains a response with information about Solr cores.
+type AdminCores struct {
+	Status map[string]json.RawMessage `json:"status"`
 }
 
 // Metrics is an exported type that
@@ -148,20 +155,49 @@ func (s *Solr) Description() string {
 	return "Read stats from one or more Solr servers or cores"
 }
 
+// Default settings
+func (s *Solr) setDefaults() ([][]string, int, error) {
+	var max int
+	cores := [][]string{}
+	if len(s.Cores) == 0 {
+		for n, server := range s.Servers {
+			adminCores := &AdminCores{}
+			if err := s.gatherData(fmt.Sprintf("%s%s", server, adminCoresPath), adminCores); err != nil {
+				return nil, 0, err
+			}
+			serverCores := []string{}
+			for coreName := range adminCores.Status {
+				serverCores = append(serverCores, coreName)
+			}
+			cores = append(cores, serverCores)
+			if len(cores[n]) > max {
+				max = len(cores[n])
+			}
+		}
+	} else {
+		cores = append(cores, s.Cores)
+		max = len(s.Cores)
+	}
+	return cores, max, nil
+}
+
 // Gather reads the stats from Solr and writes it to the
 // Accumulator.
 func (s *Solr) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
 		client := s.createHTTPClient()
-
 		s.client = client
 	}
+	cores, max, err := s.setDefaults()
+	if err != nil {
+		return err
+	}
 
-	errChan := errchan.New(len(s.Servers) * len(s.Cores))
+	errChan := errchan.New(len(s.Servers) * max)
 	var wg sync.WaitGroup
 
-	for _, serv := range s.Servers {
-		for _, core := range s.Cores {
+	for n, serv := range s.Servers {
+		for _, core := range cores[n] {
 			wg.Add(1)
 			go func(serv string, core string, acc telegraf.Accumulator) {
 				defer wg.Done()
@@ -188,11 +224,11 @@ func (s *Solr) createHTTPClient() *http.Client {
 	return client
 }
 
-func gatherCoreMetrics(mbeansJson json.RawMessage, core, category string, acc telegraf.Accumulator) error {
+func gatherCoreMetrics(mbeansJSON json.RawMessage, core, category string, acc telegraf.Accumulator) error {
 	var coreMetrics map[string]Core
 
 	measurementTime := time.Now()
-	if err := json.Unmarshal(mbeansJson, &coreMetrics); err != nil {
+	if err := json.Unmarshal(mbeansJSON, &coreMetrics); err != nil {
 		return err
 	}
 	for name, metrics := range coreMetrics {
@@ -217,11 +253,11 @@ func gatherCoreMetrics(mbeansJson json.RawMessage, core, category string, acc te
 	return nil
 }
 
-func gatherQueryHandlerMetrics(mbeansJson json.RawMessage, core, category string, acc telegraf.Accumulator) error {
+func gatherQueryHandlerMetrics(mbeansJSON json.RawMessage, core, category string, acc telegraf.Accumulator) error {
 	var coreMetrics map[string]QueryHandler
 
 	measurementTime := time.Now()
-	if err := json.Unmarshal(mbeansJson, &coreMetrics); err != nil {
+	if err := json.Unmarshal(mbeansJSON, &coreMetrics); err != nil {
 		return err
 	}
 	for name, metrics := range coreMetrics {
@@ -254,11 +290,11 @@ func gatherQueryHandlerMetrics(mbeansJson json.RawMessage, core, category string
 	return nil
 }
 
-func gatherUpdateHandlerMetrics(mbeansJson json.RawMessage, core, category string, acc telegraf.Accumulator) error {
+func gatherUpdateHandlerMetrics(mbeansJSON json.RawMessage, core, category string, acc telegraf.Accumulator) error {
 	var coreMetrics map[string]UpdateHandler
 
 	measurementTime := time.Now()
-	if err := json.Unmarshal(mbeansJson, &coreMetrics); err != nil {
+	if err := json.Unmarshal(mbeansJSON, &coreMetrics); err != nil {
 		return err
 	}
 	for name, metrics := range coreMetrics {
@@ -298,11 +334,11 @@ func gatherUpdateHandlerMetrics(mbeansJson json.RawMessage, core, category strin
 	return nil
 }
 
-func gatherCacheMetrics(mbeansJson json.RawMessage, core, category string, acc telegraf.Accumulator) error {
+func gatherCacheMetrics(mbeansJSON json.RawMessage, core, category string, acc telegraf.Accumulator) error {
 	var coreMetrics map[string]Cache
 
 	measurementTime := time.Now()
-	if err := json.Unmarshal(mbeansJson, &coreMetrics); err != nil {
+	if err := json.Unmarshal(mbeansJSON, &coreMetrics); err != nil {
 		return err
 	}
 	for name, metrics := range coreMetrics {
