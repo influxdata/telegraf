@@ -25,6 +25,7 @@
 - [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
 - [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags
 - [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
+- [#1716](https://github.com/influxdata/telegraf/issues/1716): Sensors plugin strconv.ParseFloat: parsing "": invalid syntax
 
 ## v1.0 [2016-09-08]
 
