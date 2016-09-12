@@ -26,6 +26,7 @@
 - [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags
 - [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
 - [#1716](https://github.com/influxdata/telegraf/issues/1716): Sensors plugin strconv.ParseFloat: parsing "": invalid syntax
+- [#1530](https://github.com/influxdata/telegraf/issues/1530): Fix prometheus_client reload panic
 
 ## v1.0 [2016-09-08]
 

@@ -28,7 +28,7 @@ var sampleConfig = `
 `
 
 func (p *PrometheusClient) Start() error {
-	prometheus.MustRegister(p)
+	prometheus.Register(p)
 	defer func() {
 		if r := recover(); r != nil {
 			// recovering from panic here because there is no way to stop a
