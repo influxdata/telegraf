@@ -170,8 +170,7 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 			}
 			return
 		case *fVersion:
-			v := fmt.Sprintf("Telegraf - version %s", version)
-			fmt.Println(v)
+			fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
 			return
 		case *fSampleConfig:
 			config.PrintSampleConfig(inputFilters, outputFilters)
