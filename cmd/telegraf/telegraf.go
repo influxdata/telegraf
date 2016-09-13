@@ -52,6 +52,16 @@ var (
 	branch  string
 )
 
+func init() {
+	// If commit or branch are not set, make that clear.
+	if commit == "" {
+		commit = "unknown"
+	}
+	if branch == "" {
+		branch = "unknown"
+	}
+}
+
 const usage = `Telegraf, The plugin-driven server agent for collecting and reporting metrics.
 
 Usage:
@@ -137,8 +147,7 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		if len(args) > 0 {
 			switch args[0] {
 			case "version":
-				v := fmt.Sprintf("Telegraf - version %s", version)
-				fmt.Println(v)
+				fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
 				return
 			case "config":
 				config.PrintSampleConfig(inputFilters, outputFilters)
