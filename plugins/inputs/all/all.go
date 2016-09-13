@@ -65,6 +65,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp_legacy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
+	_ "github.com/influxdata/telegraf/plugins/inputs/ssl"
 	_ "github.com/influxdata/telegraf/plugins/inputs/statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sysstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/system"
