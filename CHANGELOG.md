@@ -27,6 +27,7 @@
 - [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
 - [#1716](https://github.com/influxdata/telegraf/issues/1716): Sensors plugin strconv.ParseFloat: parsing "": invalid syntax
 - [#1530](https://github.com/influxdata/telegraf/issues/1530): Fix prometheus_client reload panic
+- [#1764](https://github.com/influxdata/telegraf/issues/1764): Fix kafka consumer panic when nil error is returned down errs channel.
 
 ## v1.0 [2016-09-08]
 
