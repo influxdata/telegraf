@@ -1075,6 +1075,136 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 	acc.AssertContainsFields(t, "test_timing_error", expectedError)
 }
 
+func BenchmarkParse(b *testing.B) {
+	s := NewTestStatsd()
+	validLines := []string{
+		"test.timing.success:1|ms",
+		"test.timing.success:11|ms",
+		"test.timing.success:1|ms",
+		"test.timing.success:1|ms",
+		"test.timing.success:1|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:22|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:2|ms",
+	}
+	for n := 0; n < b.N; n++ {
+		for _, line := range validLines {
+			err := s.parseStatsdLine(line)
+			if err != nil {
+				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
+			}
+		}
+	}
+}
+
+func BenchmarkParseWithTemplate(b *testing.B) {
+	s := NewTestStatsd()
+	s.Templates = []string{"measurement.measurement.field"}
+	validLines := []string{
+		"test.timing.success:1|ms",
+		"test.timing.success:11|ms",
+		"test.timing.success:1|ms",
+		"test.timing.success:1|ms",
+		"test.timing.success:1|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:22|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:2|ms",
+	}
+	for n := 0; n < b.N; n++ {
+		for _, line := range validLines {
+			err := s.parseStatsdLine(line)
+			if err != nil {
+				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
+			}
+		}
+	}
+}
+
+func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
+	s := NewTestStatsd()
+	s.Templates = []string{"cpu* measurement.measurement.field"}
+	validLines := []string{
+		"test.timing.success:1|ms",
+		"test.timing.success:11|ms",
+		"test.timing.success:1|ms",
+		"cpu.timing.success:1|ms",
+		"cpu.timing.success:1|ms",
+		"cpu.timing.error:2|ms",
+		"cpu.timing.error:22|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:2|ms",
+	}
+	for n := 0; n < b.N; n++ {
+		for _, line := range validLines {
+			err := s.parseStatsdLine(line)
+			if err != nil {
+				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
+			}
+		}
+	}
+}
+
+func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
+	s := NewTestStatsd()
+	s.Templates = []string{
+		"cpu1* measurement.measurement.field",
+		"cpu2* measurement.measurement.field",
+	}
+	validLines := []string{
+		"test.timing.success:1|ms",
+		"test.timing.success:11|ms",
+		"test.timing.success:1|ms",
+		"cpu1.timing.success:1|ms",
+		"cpu1.timing.success:1|ms",
+		"cpu2.timing.error:2|ms",
+		"cpu2.timing.error:22|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:2|ms",
+		"test.timing.error:2|ms",
+	}
+	for n := 0; n < b.N; n++ {
+		for _, line := range validLines {
+			err := s.parseStatsdLine(line)
+			if err != nil {
+				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
+			}
+		}
+	}
+}
+
+func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
+	s := NewTestStatsd()
+	s.Templates = []string{
+		"cpu1* measurement.measurement.region.city.rack.field",
+		"cpu2* measurement.measurement.region.city.rack.field",
+	}
+	validLines := []string{
+		"test.timing.us-east.nyc.rack01.success:1|ms",
+		"test.timing.us-east.nyc.rack01.success:11|ms",
+		"test.timing.us-west.sf.rack01.success:1|ms",
+		"cpu1.timing.us-west.sf.rack01.success:1|ms",
+		"cpu1.timing.us-east.nyc.rack01.success:1|ms",
+		"cpu2.timing.us-east.nyc.rack01.error:2|ms",
+		"cpu2.timing.us-west.sf.rack01.error:22|ms",
+		"test.timing.us-west.sf.rack01.error:2|ms",
+		"test.timing.us-west.sf.rack01.error:2|ms",
+		"test.timing.us-east.nyc.rack01.error:2|ms",
+	}
+	for n := 0; n < b.N; n++ {
+		for _, line := range validLines {
+			err := s.parseStatsdLine(line)
+			if err != nil {
+				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
+			}
+		}
+	}
+}
+
 func TestParse_Timings_Delete(t *testing.T) {
 	s := NewTestStatsd()
 	s.DeleteTimings = true
