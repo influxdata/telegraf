@@ -85,6 +85,8 @@ type Statsd struct {
 	Templates []string
 
 	listener *net.UDPConn
+
+	graphiteParser *graphite.GraphiteParser
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
@@ -505,7 +507,15 @@ func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
 
 	var field string
 	name := bucketparts[0]
-	p, err := graphite.NewGraphiteParser(s.MetricSeparator, s.Templates, nil)
+
+	p := s.graphiteParser
+	var err error
+
+	if p == nil || s.graphiteParser.Separator != s.MetricSeparator {
+		p, err = graphite.NewGraphiteParser(s.MetricSeparator, s.Templates, nil)
+		s.graphiteParser = p
+	}
+
 	if err == nil {
 		p.DefaultTags = tags
 		name, tags, field, _ = p.ApplyTemplate(name)
