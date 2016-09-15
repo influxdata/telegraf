@@ -21,8 +21,7 @@ type Wavefront struct {
 	Debug bool
 }
 
-var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
-	`%`, "-", "#", "-", "$", "-", ":", "_")
+var sanitizedChars = strings.NewReplacer("*", "-", `%`, "-", "#", "-")
 
 var sampleConfig = `
   ## prefix for metrics keys
@@ -112,7 +111,6 @@ func buildMetrics(m telegraf.Metric, now time.Time, prefix string) []*MetricLine
 				prefix, m.Name(), fieldName)),
 			Timestamp: now.Unix(),
 		}
-
 		metricValue, buildError := buildValue(value)
 		if buildError != nil {
 			fmt.Printf("Wavefront: %s\n", buildError.Error())
