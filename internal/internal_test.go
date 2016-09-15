@@ -118,7 +118,7 @@ func TestRandomSleep(t *testing.T) {
 	s = time.Now()
 	RandomSleep(time.Millisecond*50, make(chan struct{}))
 	elapsed = time.Since(s)
-	assert.True(t, elapsed < time.Millisecond*50)
+	assert.True(t, elapsed < time.Millisecond*100)
 
 	// test that shutdown is respected
 	s = time.Now()

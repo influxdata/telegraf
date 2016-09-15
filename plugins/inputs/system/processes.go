@@ -57,7 +57,7 @@ func (p *Processes) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	acc.AddFields("processes", fields, nil)
+	acc.AddGauge("processes", fields, nil)
 	return nil
 }
 

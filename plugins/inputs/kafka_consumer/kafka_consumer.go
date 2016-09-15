@@ -128,7 +128,9 @@ func (k *Kafka) receiver() {
 		case <-k.done:
 			return
 		case err := <-k.errs:
-			log.Printf("Kafka Consumer Error: %s\n", err.Error())
+			if err != nil {
+				log.Printf("Kafka Consumer Error: %s\n", err)
+			}
 		case msg := <-k.in:
 			metrics, err := k.parser.Parse(msg.Value)
 			if err != nil {

@@ -23,6 +23,51 @@ func TestNewMetric(t *testing.T) {
 	m, err := NewMetric("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
+	assert.Equal(t, Untyped, m.Type())
+	assert.Equal(t, tags, m.Tags())
+	assert.Equal(t, fields, m.Fields())
+	assert.Equal(t, "cpu", m.Name())
+	assert.Equal(t, now, m.Time())
+	assert.Equal(t, now.UnixNano(), m.UnixNano())
+}
+
+func TestNewGaugeMetric(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"host":       "localhost",
+		"datacenter": "us-east-1",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": float64(99),
+		"usage_busy": float64(1),
+	}
+	m, err := NewGaugeMetric("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	assert.Equal(t, Gauge, m.Type())
+	assert.Equal(t, tags, m.Tags())
+	assert.Equal(t, fields, m.Fields())
+	assert.Equal(t, "cpu", m.Name())
+	assert.Equal(t, now, m.Time())
+	assert.Equal(t, now.UnixNano(), m.UnixNano())
+}
+
+func TestNewCounterMetric(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"host":       "localhost",
+		"datacenter": "us-east-1",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": float64(99),
+		"usage_busy": float64(1),
+	}
+	m, err := NewCounterMetric("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	assert.Equal(t, Counter, m.Type())
 	assert.Equal(t, tags, m.Tags())
 	assert.Equal(t, fields, m.Fields())
 	assert.Equal(t, "cpu", m.Name())

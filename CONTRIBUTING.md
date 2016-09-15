@@ -32,7 +32,7 @@ Assuming you can already build the project, run these in the telegraf directory:
 
 1. `go get github.com/sparrc/gdm`
 1. `gdm restore`
-1. `gdm save`
+1. `GOOS=linux gdm save`
 
 ## Input Plugins
 
@@ -84,9 +84,9 @@ func (s *Simple) SampleConfig() string {
 
 func (s *Simple) Gather(acc telegraf.Accumulator) error {
     if s.Ok {
-        acc.Add("state", "pretty good", nil)
+        acc.AddFields("state", map[string]interface{}{"value": "pretty good"}, nil)
     } else {
-        acc.Add("state", "not great", nil)
+        acc.AddFields("state", map[string]interface{}{"value": "not great"}, nil)
     }
 
     return nil
@@ -96,6 +96,13 @@ func init() {
     inputs.Add("simple", func() telegraf.Input { return &Simple{} })
 }
 ```
+
+## Adding Typed Metrics
+
+In addition the the `AddFields` function, the accumulator also supports an
+`AddGauge` and `AddCounter` function. These functions are for adding _typed_
+metrics. Metric types are ignored for the InfluxDB output, but can be used
+for other outputs, such as [prometheus](https://prometheus.io/docs/concepts/metric_types/).
 
 ## Input Plugins Accepting Arbitrary Data Formats
 

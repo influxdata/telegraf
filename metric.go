@@ -6,6 +6,17 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 )
 
+// ValueType is an enumeration of metric types that represent a simple value.
+type ValueType int
+
+// Possible values for the ValueType enum.
+const (
+	_ ValueType = iota
+	Counter
+	Gauge
+	Untyped
+)
+
 type Metric interface {
 	// Name returns the measurement name of the metric
 	Name() string
@@ -15,6 +26,9 @@ type Metric interface {
 
 	// Time return the timestamp for the metric
 	Time() time.Time
+
+	// Type returns the metric type. Can be either telegraf.Gauge or telegraf.Counter
+	Type() ValueType
 
 	// UnixNano returns the unix nano time of the metric
 	UnixNano() int64
@@ -35,12 +49,11 @@ type Metric interface {
 // metric is a wrapper of the influxdb client.Point struct
 type metric struct {
 	pt *client.Point
+
+	mType ValueType
 }
 
-// NewMetric returns a metric with the given timestamp. If a timestamp is not
-// given, then data is sent to the database without a timestamp, in which case
-// the server will assign local time upon reception. NOTE: it is recommended to
-// send data with a timestamp.
+// NewMetric returns an untyped metric.
 func NewMetric(
 	name string,
 	tags map[string]string,
@@ -52,7 +65,46 @@ func NewMetric(
 		return nil, err
 	}
 	return &metric{
-		pt: pt,
+		pt:    pt,
+		mType: Untyped,
+	}, nil
+}
+
+// NewGaugeMetric returns a gauge metric.
+// Gauge metrics should be used when the metric is can arbitrarily go up and
+// down. ie, temperature, memory usage, cpu usage, etc.
+func NewGaugeMetric(
+	name string,
+	tags map[string]string,
+	fields map[string]interface{},
+	t time.Time,
+) (Metric, error) {
+	pt, err := client.NewPoint(name, tags, fields, t)
+	if err != nil {
+		return nil, err
+	}
+	return &metric{
+		pt:    pt,
+		mType: Gauge,
+	}, nil
+}
+
+// NewCounterMetric returns a Counter metric.
+// Counter metrics should be used when the metric being created is an
+// always-increasing counter. ie, net bytes received, requests served, errors, etc.
+func NewCounterMetric(
+	name string,
+	tags map[string]string,
+	fields map[string]interface{},
+	t time.Time,
+) (Metric, error) {
+	pt, err := client.NewPoint(name, tags, fields, t)
+	if err != nil {
+		return nil, err
+	}
+	return &metric{
+		pt:    pt,
+		mType: Counter,
 	}, nil
 }
 
@@ -66,6 +118,10 @@ func (m *metric) Tags() map[string]string {
 
 func (m *metric) Time() time.Time {
 	return m.pt.Time()
+}
+
+func (m *metric) Type() ValueType {
+	return m.mType
 }
 
 func (m *metric) UnixNano() int64 {

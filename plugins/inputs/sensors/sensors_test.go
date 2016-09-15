@@ -122,6 +122,28 @@ func TestGatherDefault(t *testing.T) {
 				"temp_crit_alarm": 0.0,
 			},
 		},
+		{
+			map[string]string{
+				"chip":    "atk0110-acpi-0",
+				"feature": "vcore_voltage",
+			},
+			map[string]interface{}{
+				"in_input": 1.136,
+				"in_min":   0.800,
+				"in_max":   1.600,
+			},
+		},
+		{
+			map[string]string{
+				"chip":    "atk0110-acpi-0",
+				"feature": "+3.3_voltage",
+			},
+			map[string]interface{}{
+				"in_input": 3.360,
+				"in_min":   2.970,
+				"in_max":   3.630,
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -240,8 +262,29 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 				"temp3_crit_alarm": 0.0,
 			},
 		},
+		{
+			map[string]string{
+				"chip":    "atk0110-acpi-0",
+				"feature": "vcore_voltage",
+			},
+			map[string]interface{}{
+				"in0_input": 1.136,
+				"in0_min":   0.800,
+				"in0_max":   1.600,
+			},
+		},
+		{
+			map[string]string{
+				"chip":    "atk0110-acpi-0",
+				"feature": "+3.3_voltage",
+			},
+			map[string]interface{}{
+				"in1_input": 3.360,
+				"in1_min":   2.970,
+				"in1_max":   3.630,
+			},
+		},
 	}
-
 	for _, test := range tests {
 		acc.AssertContainsTaggedFields(t, "sensors", test.fields, test.tags)
 	}
@@ -309,6 +352,16 @@ Core 1:
   temp3_max: 82.000
   temp3_crit: 92.000
   temp3_crit_alarm: 0.000
+
+atk0110-acpi-0
+Vcore Voltage:
+  in0_input: 1.136
+  in0_min: 0.800
+  in0_max: 1.600
+ +3.3 Voltage:
+  in1_input: 3.360
+  in1_min: 2.970
+  in1_max: 3.630
 `
 
 	args := os.Args

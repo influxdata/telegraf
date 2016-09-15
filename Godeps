@@ -1,6 +1,6 @@
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
-github.com/aerospike/aerospike-client-go 45863b7fd8640dc12f7fdd397104d97e1986f25a
+github.com/aerospike/aerospike-client-go 7f3a312c3b2a60ac083ec6da296091c52c795c63
 github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
 github.com/aws/aws-sdk-go 13a12060f716145019378a10e2806c174356b857
 github.com/beorn7/perks 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -37,8 +37,8 @@ github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3
 github.com/miekg/dns cce6c130cdb92c752850880fd285bea1d64439dd
 github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
-github.com/nats-io/nats b13fc9d12b0b123ebc374e6b808c6228ae4234a3
-github.com/nats-io/nuid 4f84f5f3b2786224e336af2e13dba0a0a80b76fa
+github.com/nats-io/nats ea8b4fd12ebb823073c0004b9f09ac8748f4f165
+github.com/nats-io/nuid a5152d67cf63cbfb5d992a395458722a45194715
 github.com/nsqio/go-nsq 0b80d6f05e15ca1930e0c5e1d540ed627e299980
 github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
 github.com/prometheus/client_golang 18acf9993a863f4c4b40612e19cdd243e7c86831
@@ -47,8 +47,7 @@ github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
 github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
 github.com/shirou/gopsutil 4d0c402af66c78735c5ccf820dc2ca7de5e4ff08
-github.com/soniah/gosnmp b1b4f885b12c5dcbd021c5cee1c904110de6db7d
-github.com/sparrc/aerospike-client-go d4bb42d2c2d39dae68e054116f4538af189e05d5
+github.com/soniah/gosnmp eb32571c2410868d85849ad67d1e51d01273eb84
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
 github.com/vjeantet/grok 83bfdfdfd1a8146795b28e547a8e3c8b28a466c2

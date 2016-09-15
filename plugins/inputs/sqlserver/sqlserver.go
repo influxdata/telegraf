@@ -166,7 +166,9 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 
 	if query.ResultByRow {
 		// add measurement to Accumulator
-		acc.Add(measurement, *columnMap["value"], tags, time.Now())
+		acc.AddFields(measurement,
+			map[string]interface{}{"value": *columnMap["value"]},
+			tags, time.Now())
 	} else {
 		// values
 		for header, val := range columnMap {
@@ -290,8 +292,8 @@ IF OBJECT_ID('tempdb..#clerk') IS NOT NULL
 	DROP TABLE #clerk;
 
 CREATE TABLE #clerk (
-    ClerkCategory nvarchar(64) NOT NULL, 
-    UsedPercent decimal(9,2), 
+    ClerkCategory nvarchar(64) NOT NULL,
+    UsedPercent decimal(9,2),
     UsedBytes bigint
 );
 

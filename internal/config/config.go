@@ -665,7 +665,6 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
 						f.NamePass = append(f.NamePass, str.Value)
-						f.IsActive = true
 					}
 				}
 			}
@@ -678,7 +677,6 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
 						f.NameDrop = append(f.NameDrop, str.Value)
-						f.IsActive = true
 					}
 				}
 			}
@@ -693,7 +691,6 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 					for _, elem := range ary.Value {
 						if str, ok := elem.(*ast.String); ok {
 							f.FieldPass = append(f.FieldPass, str.Value)
-							f.IsActive = true
 						}
 					}
 				}
@@ -709,7 +706,6 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 					for _, elem := range ary.Value {
 						if str, ok := elem.(*ast.String); ok {
 							f.FieldDrop = append(f.FieldDrop, str.Value)
-							f.IsActive = true
 						}
 					}
 				}
@@ -730,7 +726,6 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 						}
 					}
 					f.TagPass = append(f.TagPass, *tagfilter)
-					f.IsActive = true
 				}
 			}
 		}
@@ -749,7 +744,6 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 						}
 					}
 					f.TagDrop = append(f.TagDrop, *tagfilter)
-					f.IsActive = true
 				}
 			}
 		}
@@ -778,7 +772,7 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 			}
 		}
 	}
-	if err := f.CompileFilter(); err != nil {
+	if err := f.Compile(); err != nil {
 		return f, err
 	}
 

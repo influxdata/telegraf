@@ -57,21 +57,17 @@ func NewRunningOutput(
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
 func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
-	if ro.Config.Filter.IsActive {
-		if !ro.Config.Filter.ShouldMetricPass(metric) {
-			return
-		}
-	}
-
 	// Filter any tagexclude/taginclude parameters before adding metric
-	if len(ro.Config.Filter.TagExclude) != 0 || len(ro.Config.Filter.TagInclude) != 0 {
+	if ro.Config.Filter.IsActive() {
 		// In order to filter out tags, we need to create a new metric, since
 		// metrics are immutable once created.
+		name := metric.Name()
 		tags := metric.Tags()
 		fields := metric.Fields()
 		t := metric.Time()
-		name := metric.Name()
-		ro.Config.Filter.FilterTags(tags)
+		if ok := ro.Config.Filter.Apply(name, fields, tags); !ok {
+			return
+		}
 		// error is not possible if creating from another metric, so ignore.
 		metric, _ = telegraf.NewMetric(name, tags, fields, t)
 	}
