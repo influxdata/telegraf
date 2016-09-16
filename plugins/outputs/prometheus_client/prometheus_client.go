@@ -17,7 +17,8 @@ var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 type PrometheusClient struct {
 	Listen string
 
-	metrics map[string]prometheus.Metric
+	metrics     map[string]prometheus.Metric
+	lastMetrics map[string]prometheus.Metric
 
 	sync.Mutex
 }
@@ -28,6 +29,8 @@ var sampleConfig = `
 `
 
 func (p *PrometheusClient) Start() error {
+	p.metrics = make(map[string]prometheus.Metric)
+	p.lastMetrics = make(map[string]prometheus.Metric)
 	prometheus.MustRegister(p)
 	defer func() {
 		if r := recover(); r != nil {
@@ -83,16 +86,23 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	p.Lock()
 	defer p.Unlock()
 
-	for _, m := range p.metrics {
-		ch <- m
+	if len(p.metrics) > 0 {
+		p.lastMetrics = make(map[string]prometheus.Metric)
+		for k, m := range p.metrics {
+			ch <- m
+			p.lastMetrics[k] = m
+		}
+		p.metrics = make(map[string]prometheus.Metric)
+	} else {
+		for _, m := range p.lastMetrics {
+			ch <- m
+		}
 	}
 }
 
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	p.Lock()
 	defer p.Unlock()
-
-	p.metrics = make(map[string]prometheus.Metric)
 
 	if len(metrics) == 0 {
 		return nil
