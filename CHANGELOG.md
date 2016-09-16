@@ -23,12 +23,18 @@
 ### Bugfixes
 
 - [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
-- [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags
 - [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
 - [#1716](https://github.com/influxdata/telegraf/issues/1716): Sensors plugin strconv.ParseFloat: parsing "": invalid syntax
 - [#1530](https://github.com/influxdata/telegraf/issues/1530): Fix prometheus_client reload panic
 - [#1764](https://github.com/influxdata/telegraf/issues/1764): Fix kafka consumer panic when nil error is returned down errs channel.
 - [#1768](https://github.com/influxdata/telegraf/pull/1768): Speed up statsd parsing.
+
+## v1.0.1 [unreleased]
+
+### Bugfixes
+
+- [#1775](https://github.com/influxdata/telegraf/issues/1775): Prometheus output: Fix bug with multi-batch writes.
+- [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags
 
 ## v1.0 [2016-09-08]
 
