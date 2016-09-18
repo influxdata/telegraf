@@ -264,6 +264,8 @@ type Field struct {
 	//  "float"/"float(0)" will convert the value into a float.
 	//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
 	//  "int" will conver the value into an integer.
+	//  "hwaddr" will convert a 6-byte string to a MAC address.
+	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	Conversion string
 
 	initialized bool
@@ -275,8 +277,16 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	if err := snmpTranslate(nil, &f.Oid, &f.Name); err != nil {
-		return err
+	_, oidNum, oidText, conversion, err := snmpTranslate(f.Oid)
+	if err != nil {
+		return Errorf(err, "translating %s", f.Oid)
+	}
+	f.Oid = oidNum
+	if f.Name == "" {
+		f.Name = oidText
+	}
+	if f.Conversion == "" {
+		f.Conversion = conversion
 	}
 
 	//TODO use textual convention conversion from the MIB
@@ -446,14 +456,22 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				return nil, Errorf(err, "performing get")
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject {
 				ent := pkt.Variables[0]
-				ifv[ent.Name[len(oid):]] = fieldConvert(f.Conversion, ent.Value)
+				fv, err := fieldConvert(f.Conversion, ent.Value)
+				if err != nil {
+					return nil, Errorf(err, "converting %q", ent.Value)
+				}
+				ifv[ent.Name[len(oid):]] = fv
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
 				if len(ent.Name) <= len(oid) || ent.Name[:len(oid)+1] != oid+"." {
 					return NestedError{} // break the walk
 				}
-				ifv[ent.Name[len(oid):]] = fieldConvert(f.Conversion, ent.Value)
+				fv, err := fieldConvert(f.Conversion, ent.Value)
+				if err != nil {
+					return Errorf(err, "converting %q", ent.Value)
+				}
+				ifv[ent.Name[len(oid):]] = fv
 				return nil
 			})
 			if err != nil {
@@ -675,14 +693,16 @@ func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
 //  "float"/"float(0)" will convert the value into a float.
 //  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
 //  "int" will convert the value into an integer.
+//  "hwaddr" will convert the value into a MAC address.
+//  "ipaddr" will convert the value into into an IP address.
 //  "" will convert a byte slice into a string.
 // Any other conv will return the input value unchanged.
-func fieldConvert(conv string, v interface{}) interface{} {
+func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
-			return string(bs)
+			return string(bs), nil
 		}
-		return v
+		return v, nil
 	}
 
 	var d int
@@ -719,7 +739,9 @@ func fieldConvert(conv string, v interface{}) interface{} {
 			vf, _ := strconv.ParseFloat(vt, 64)
 			v = vf / math.Pow10(d)
 		}
+		return v, nil
 	}
+
 	if conv == "int" {
 		switch vt := v.(type) {
 		case float32:
@@ -765,7 +787,7 @@ func fieldConvert(conv string, v interface{}) interface{} {
 		}
 	}
 
-	if conv == "ip" {
+	if conv == "ipaddr" {
 		var ipbs []byte
 
 		switch vt := v.(type) {
@@ -774,14 +796,14 @@ func fieldConvert(conv string, v interface{}) interface{} {
 		case []byte:
 			ipbs = vt
 		default:
-			return nil, fmt.Errorf("invalid type (%T) for ip conversion", v)
+			return nil, fmt.Errorf("invalid type (%T) for ipaddr conversion", v)
 		}
 
 		switch len(ipbs) {
 		case 4, 16:
 			v = net.IP(ipbs).String()
 		default:
-			return nil, fmt.Errorf("invalid length (%d) for ip conversion", len(ipbs))
+			return nil, fmt.Errorf("invalid length (%d) for ipaddr conversion", len(ipbs))
 		}
 
 		return v, nil
@@ -828,8 +850,8 @@ func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 		switch tc {
 		case "MacAddress", "PhysAddress":
 			conversion = "hwaddr"
-		case "InetAddressIPv4", "InetAddressIPv6":
-			conversion = "ip"
+		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress":
+			conversion = "ipaddr"
 		}
 	}
 

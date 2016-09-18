@@ -118,27 +118,34 @@ func TestSampleConfig(t *testing.T) {
 
 func TestFieldInit(t *testing.T) {
 	translations := []struct {
-		inputOid     string
-		inputName    string
-		expectedOid  string
-		expectedName string
+		inputOid           string
+		inputName          string
+		inputConversion    string
+		expectedOid        string
+		expectedName       string
+		expectedConversion string
 	}{
-		{".1.0.0.0.1.1", "", ".1.0.0.0.1.1", "server"},
-		{".1.0.0.0.1.1.0", "", ".1.0.0.0.1.1.0", "server.0"},
-		{".999", "", ".999", ".999"},
-		{"TEST::server", "", ".1.0.0.0.1.1", "server"},
-		{"TEST::server.0", "", ".1.0.0.0.1.1.0", "server.0"},
-		{"TEST::server", "foo", ".1.0.0.0.1.1", "foo"},
+		{".1.0.0.0.1.1", "", "", ".1.0.0.0.1.1", "server", ""},
+		{".1.0.0.0.1.1.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
+		{".999", "", "", ".999", ".999", ""},
+		{"TEST::server", "", "", ".1.0.0.0.1.1", "server", ""},
+		{"TEST::server.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
+		{"TEST::server", "foo", "", ".1.0.0.0.1.1", "foo", ""},
+		{"IF-MIB::ifPhysAddress.1", "", "", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "hwaddr"},
+		{"IF-MIB::ifPhysAddress.1", "", "none", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "none"},
+		{"BRIDGE-MIB::dot1dTpFdbAddress.1", "", "", ".1.3.6.1.2.1.17.4.3.1.1.1", "dot1dTpFdbAddress.1", "hwaddr"},
+		{"TCP-MIB::tcpConnectionLocalAddress.1", "", "", ".1.3.6.1.2.1.6.19.1.2.1", "tcpConnectionLocalAddress.1", "ipaddr"},
 	}
 
 	for _, txl := range translations {
-		f := Field{Oid: txl.inputOid, Name: txl.inputName}
+		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
 		err := f.init()
 		if !assert.NoError(t, err, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName) {
 			continue
 		}
-		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName)
-		assert.Equal(t, txl.expectedName, f.Name, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName)
+		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
+		assert.Equal(t, txl.expectedName, f.Name, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
+		assert.Equal(t, txl.expectedConversion, f.Conversion, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
 	}
 }
 
@@ -546,10 +553,18 @@ func TestFieldConvert(t *testing.T) {
 		{uint16(123), "int", int64(123)},
 		{uint32(123), "int", int64(123)},
 		{uint64(123), "int", int64(123)},
+		{[]byte("abcdef"), "hwaddr", "61:62:63:64:65:66"},
+		{"abcdef", "hwaddr", "61:62:63:64:65:66"},
+		{[]byte("abcd"), "ipaddr", "97.98.99.100"},
+		{"abcd", "ipaddr", "97.98.99.100"},
+		{[]byte("abcdefghijklmnop"), "ipaddr", "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
 	}
 
 	for _, tc := range testTable {
-		act := fieldConvert(tc.conv, tc.input)
+		act, err := fieldConvert(tc.conv, tc.input)
+		if !assert.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected) {
+			continue
+		}
 		assert.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 	}
 }
