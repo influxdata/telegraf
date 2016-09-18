@@ -184,23 +184,21 @@ func (t *Table) init() error {
 		return nil
 	}
 
-	mibPrefix := ""
-	if err := snmpTranslate(&mibPrefix, &t.Oid, &t.Name); err != nil {
-		return err
+	mibName, _, oidText, _, err := snmpTranslate(t.Oid)
+	if err != nil {
+		return Errorf(err, "translating %s", t.Oid)
 	}
+	if t.Name == "" {
+		t.Name = oidText
+	}
+	mibPrefix := mibName + "::"
+	oidFullName := mibPrefix + oidText
 
 	// first attempt to get the table's tags
 	tagOids := map[string]struct{}{}
 	// We have to guess that the "entry" oid is `t.Oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
-	if out, err := execCmd("snmptranslate", "-m", "all", "-Td", t.Oid+".1"); err == nil {
+	if out, err := execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
 		lines := bytes.Split(out, []byte{'\n'})
-		// get the MIB name if we didn't get it above
-		if mibPrefix == "" {
-			if i := bytes.Index(lines[0], []byte("::")); i != -1 {
-				mibPrefix = string(lines[0][:i+2])
-			}
-		}
-
 		for _, line := range lines {
 			if !bytes.HasPrefix(line, []byte("  INDEX")) {
 				continue
@@ -223,7 +221,7 @@ func (t *Table) init() error {
 	}
 
 	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
-	out, err := execCmd("snmptable", "-m", "all", "-Ch", "-Cl", "-c", "public", "127.0.0.1", t.Oid)
+	out, err := execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
 	if err != nil {
 		return Errorf(err, "getting table columns for %s", t.Oid)
 	}
@@ -753,39 +751,106 @@ func fieldConvert(conv string, v interface{}) interface{} {
 		case string:
 			v, _ = strconv.Atoi(vt)
 		}
+		return v, nil
 	}
 
-	return v
+	if conv == "hwaddr" {
+		switch vt := v.(type) {
+		case string:
+			v = net.HardwareAddr(vt).String()
+		case []byte:
+			v = net.HardwareAddr(vt).String()
+		default:
+			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", v)
+		}
+	}
+
+	if conv == "ip" {
+		var ipbs []byte
+
+		switch vt := v.(type) {
+		case string:
+			ipbs = []byte(vt)
+		case []byte:
+			ipbs = vt
+		default:
+			return nil, fmt.Errorf("invalid type (%T) for ip conversion", v)
+		}
+
+		switch len(ipbs) {
+		case 4, 16:
+			v = net.IP(ipbs).String()
+		default:
+			return nil, fmt.Errorf("invalid length (%d) for ip conversion", len(ipbs))
+		}
+
+		return v, nil
+	}
+
+	return v, nil
 }
 
 // snmpTranslate resolves the given OID.
-// The contents of the oid parameter will be replaced with the numeric oid value.
-// If name is empty, the textual OID value is stored in it. If the textual OID cannot be translated, the numeric OID is stored instead.
-// If mibPrefix is non-nil, the MIB in which the OID was found is stored, with a suffix of "::".
-func snmpTranslate(mibPrefix *string, oid *string, name *string) error {
-	if strings.ContainsAny(*oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-		out, err := execCmd("snmptranslate", "-m", "all", "-On", *oid)
-		if err != nil {
-			return Errorf(err, "translating %s", *oid)
-		}
-		*oid = string(bytes.TrimSuffix(out, []byte{'\n'}))
+func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+	var out []byte
+	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
+	} else {
+		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
+	}
+	if err != nil {
+		return "", "", "", "", err
 	}
 
-	if *name == "" {
-		out, err := execCmd("snmptranslate", "-m", "all", *oid)
+	bb := bytes.NewBuffer(out)
+
+	oidText, err = bb.ReadString('\n')
+	if err != nil {
+		return "", "", "", "", Errorf(err, "getting OID text")
+	}
+	oidText = oidText[:len(oidText)-1]
+
+	i := strings.Index(oidText, "::")
+	if i == -1 {
+		// was not found in MIB. Value is numeric
+		return "", oidText, oidText, "", nil
+	}
+	mibName = oidText[:i]
+	oidText = oidText[i+2:]
+
+	if i := bytes.Index(bb.Bytes(), []byte("  -- TEXTUAL CONVENTION ")); i != -1 {
+		bb.Next(i + len("  -- TEXTUAL CONVENTION "))
+		tc, err := bb.ReadString('\n')
 		if err != nil {
-			//TODO debug message
-			*name = *oid
+			return "", "", "", "", Errorf(err, "getting textual convention")
+		}
+		tc = tc[:len(tc)-1]
+		switch tc {
+		case "MacAddress", "PhysAddress":
+			conversion = "hwaddr"
+		case "InetAddressIPv4", "InetAddressIPv6":
+			conversion = "ip"
+		}
+	}
+
+	i = bytes.Index(bb.Bytes(), []byte("::= { "))
+	bb.Next(i + len("::= { "))
+	objs, err := bb.ReadString('}')
+	if err != nil {
+		return "", "", "", "", Errorf(err, "getting numeric oid")
+	}
+	objs = objs[:len(objs)-1]
+	for _, obj := range strings.Split(objs, " ") {
+		if len(obj) == 0 {
+			continue
+		}
+		if i := strings.Index(obj, "("); i != -1 {
+			obj = obj[i+1:]
+			oidNum += "." + obj[:strings.Index(obj, ")")]
 		} else {
-			if i := bytes.Index(out, []byte("::")); i != -1 {
-				if mibPrefix != nil {
-					*mibPrefix = string(out[:i+2])
-				}
-				out = out[i+2:]
-			}
-			*name = string(bytes.TrimSuffix(out, []byte{'\n'}))
+			oidNum += "." + obj
 		}
 	}
 
-	return nil
+	return mibName, oidNum, oidText, conversion, nil
 }

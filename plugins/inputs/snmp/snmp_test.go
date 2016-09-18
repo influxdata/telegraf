@@ -1,11 +1,9 @@
+//go:generate go run -tags generate snmp_mocks_generate.go
 package snmp
 
 import (
 	"fmt"
 	"net"
-	"os"
-	"os/exec"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -17,77 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
-	args = append([]string{"-test.run=TestMockExecCommand", "--", arg0}, args...)
-	cmd := exec.Command(os.Args[0], args...)
-	cmd.Stderr = os.Stderr // so the test output shows errors
-	return cmd
-}
-func TestMockExecCommand(t *testing.T) {
-	var cmd []string
-	for _, arg := range os.Args {
-		if string(arg) == "--" {
-			cmd = []string{}
-			continue
-		}
-		if cmd == nil {
-			continue
-		}
-		cmd = append(cmd, string(arg))
-	}
-	if cmd == nil {
-		return
-	}
-
-	// will not properly handle args with spaces, but it's good enough
-	cmdStr := strings.Join(cmd, " ")
-	switch cmdStr {
-	case "snmptranslate -m all .1.0.0.0":
-		fmt.Printf("TEST::testTable\n")
-	case "snmptranslate -m all .1.0.0.0.1.1":
-		fmt.Printf("server\n")
-	case "snmptranslate -m all .1.0.0.0.1.1.0":
-		fmt.Printf("server.0\n")
-	case "snmptranslate -m all .1.0.0.1.1":
-		fmt.Printf("hostname\n")
-	case "snmptranslate -m all .999":
-		fmt.Printf(".999\n")
-	case "snmptranslate -m all -On TEST::testTable":
-		fmt.Printf(".1.0.0.0\n")
-	case "snmptranslate -m all -On TEST::hostname":
-		fmt.Printf(".1.0.0.1.1\n")
-	case "snmptranslate -m all -On TEST::server":
-		fmt.Printf(".1.0.0.0.1.1\n")
-	case "snmptranslate -m all -On TEST::connections":
-		fmt.Printf(".1.0.0.0.1.2\n")
-	case "snmptranslate -m all -On TEST::latency":
-		fmt.Printf(".1.0.0.0.1.3\n")
-	case "snmptranslate -m all -On TEST::server.0":
-		fmt.Printf(".1.0.0.0.1.1.0\n")
-	case "snmptranslate -m all -Td .1.0.0.0.1":
-		fmt.Printf(`TEST::testTableEntry
-testTableEntry OBJECT-TYPE
-  -- FROM	TEST
-  MAX-ACCESS	not-accessible
-  STATUS	current
-  INDEX		{ server }
-::= { iso(1) 2 testOID(3) testTable(0) 1 }
-`)
-	case "snmptable -m all -Ch -Cl -c public 127.0.0.1 .1.0.0.0":
-		fmt.Printf(`server connections latency 
-TEST::testTable: No entries
-`)
-	default:
-		fmt.Fprintf(os.Stderr, "Command not mocked: `%s`\n", cmdStr)
-		// you get the expected output by running the missing command with `-M testdata` in the plugin directory.
-		os.Exit(1)
-	}
-	os.Exit(0)
-}
-func init() {
-	execCommand = mockExecCommand
-}
 
 type testSNMPConnection struct {
 	host   string
@@ -302,7 +229,7 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 	assert.Equal(t, gs.Version, gosnmp.Version3)
 	sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
 	assert.Equal(t, "1.2.3.4", gsc.Host())
-	assert.Equal(t, 20, gs.MaxRepetitions)
+	assert.EqualValues(t, 20, gs.MaxRepetitions)
 	assert.Equal(t, "mycontext", gs.ContextName)
 	assert.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
 	assert.Equal(t, "myuser", sp.UserName)
