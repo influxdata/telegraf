@@ -60,18 +60,20 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 var tsc = &testSNMPConnection{
 	host: "tsc",
 	values: map[string]interface{}{
-		".1.0.0.0.1.1.0": "foo",
-		".1.0.0.0.1.1.1": []byte("bar"),
-		".1.0.0.0.1.102": "bad",
-		".1.0.0.0.1.2.0": 1,
-		".1.0.0.0.1.2.1": 2,
-		".1.0.0.0.1.3.0": "0.123",
-		".1.0.0.0.1.3.1": "0.456",
-		".1.0.0.0.1.3.2": "9.999",
-		".1.0.0.0.1.4.0": 123456,
-		".1.0.0.1.1":     "baz",
-		".1.0.0.1.2":     234,
-		".1.0.0.1.3":     []byte("byte slice"),
+		".1.0.0.0.1.1.0":     "foo",
+		".1.0.0.0.1.1.1":     []byte("bar"),
+		".1.0.0.0.1.102":     "bad",
+		".1.0.0.0.1.2.0":     1,
+		".1.0.0.0.1.2.1":     2,
+		".1.0.0.0.1.3.0":     "0.123",
+		".1.0.0.0.1.3.1":     "0.456",
+		".1.0.0.0.1.3.2":     "9.999",
+		".1.0.0.0.1.4.0":     123456,
+		".1.0.0.1.1":         "baz",
+		".1.0.0.1.2":         234,
+		".1.0.0.1.3":         []byte("byte slice"),
+		".1.0.0.2.1.5.0.9.9": 11,
+		".1.0.0.2.1.5.1.9.9": 22,
 	},
 }
 
@@ -371,6 +373,11 @@ func TestTableBuild_walk(t *testing.T) {
 				Oid:        ".1.0.0.0.1.3",
 				Conversion: "float",
 			},
+			{
+				Name:           "myfield4",
+				Oid:            ".1.0.0.2.1.5",
+				OidIndexSuffix: ".9.9",
+			},
 		},
 	}
 
@@ -379,12 +386,20 @@ func TestTableBuild_walk(t *testing.T) {
 
 	assert.Equal(t, tb.Name, "mytable")
 	rtr1 := RTableRow{
-		Tags:   map[string]string{"myfield1": "foo"},
-		Fields: map[string]interface{}{"myfield2": 1, "myfield3": float64(0.123)},
+		Tags: map[string]string{"myfield1": "foo"},
+		Fields: map[string]interface{}{
+			"myfield2": 1,
+			"myfield3": float64(0.123),
+			"myfield4": 11,
+		},
 	}
 	rtr2 := RTableRow{
-		Tags:   map[string]string{"myfield1": "bar"},
-		Fields: map[string]interface{}{"myfield2": 2, "myfield3": float64(0.456)},
+		Tags: map[string]string{"myfield1": "bar"},
+		Fields: map[string]interface{}{
+			"myfield2": 2,
+			"myfield3": float64(0.456),
+			"myfield4": 22,
+		},
 	}
 	assert.Len(t, tb.Rows, 2)
 	assert.Contains(t, tb.Rows, rtr1)
