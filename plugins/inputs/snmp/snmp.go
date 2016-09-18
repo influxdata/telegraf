@@ -258,6 +258,8 @@ type Field struct {
 	// off the OID prefix, and use the remainder as the index. For multiple fields
 	// to show up in the same row, they must share the same index.
 	Oid string
+	// OidIndexSuffix is the trailing sub-identifier on a table record OID that will be stripped off to get the record's index.
+	OidIndexSuffix string
 	// IsTag controls whether this OID is output as a tag or a value.
 	IsTag bool
 	// Conversion controls any type conversion that is done on the value.
@@ -460,18 +462,28 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return nil, Errorf(err, "converting %q", ent.Value)
 				}
-				ifv[ent.Name[len(oid):]] = fv
+				ifv[""] = fv
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
 				if len(ent.Name) <= len(oid) || ent.Name[:len(oid)+1] != oid+"." {
 					return NestedError{} // break the walk
 				}
+
+				idx := ent.Name[len(oid):]
+				if f.OidIndexSuffix != "" {
+					if !strings.HasSuffix(idx, f.OidIndexSuffix) {
+						// this entry doesn't match our OidIndexSuffix. skip it
+						return nil
+					}
+					idx = idx[:len(idx)-len(f.OidIndexSuffix)]
+				}
+
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
 					return Errorf(err, "converting %q", ent.Value)
 				}
-				ifv[ent.Name[len(oid):]] = fv
+				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {

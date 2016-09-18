@@ -136,6 +136,9 @@ Output measurement name.
 * `oid`:  
 OID to get. May be a numeric or textual OID.
 
+* `oid_index_suffix`:
+The OID sub-identifier to strip off so that the index can be matched against other fields in the table.
+
 * `name`:  
 Output field/tag name.
 If not specified, it defaults to the value of `oid`. If `oid` is numeric, an attempt to translate the numeric OID into a texual OID will be made.
