@@ -28,6 +28,9 @@ var mockedCommands = [][]string{
 	{"snmptranslate", "-Td", "-Ob", "TEST::connections"},
 	{"snmptranslate", "-Td", "-Ob", "TEST::latency"},
 	{"snmptranslate", "-Td", "-Ob", "TEST::hostname"},
+	{"snmptranslate", "-Td", "-Ob", "IF-MIB::ifPhysAddress.1"},
+	{"snmptranslate", "-Td", "-Ob", "BRIDGE-MIB::dot1dTpFdbAddress.1"},
+	{"snmptranslate", "-Td", "-Ob", "TCP-MIB::tcpConnectionLocalAddress.1"},
 	{"snmptranslate", "-Td", "TEST::testTable.1"},
 	{"snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", "TEST::testTable"},
 }

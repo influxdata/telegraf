@@ -21,6 +21,7 @@
 - [#1407](https://github.com/influxdata/telegraf/pull/1407): HTTP service listener input plugin.
 - [#1699](https://github.com/influxdata/telegraf/pull/1699): Add database blacklist option for Postgresql
 - [#1791](https://github.com/influxdata/telegraf/pull/1791): Add Docker container state metrics to Docker input plugin output
+- [#1755](https://github.com/influxdata/telegraf/issues/1755): Add support to SNMP for IP & MAC address conversion.
 
 ### Bugfixes
 
