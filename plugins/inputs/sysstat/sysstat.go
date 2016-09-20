@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -201,6 +202,9 @@ func (s *Sysstat) collect() error {
 	cmd := execCommand(s.Sadc, options...)
 	out, err := internal.CombinedOutputTimeout(cmd, time.Second*time.Duration(collectInterval+parseInterval))
 	if err != nil {
+		if err := os.Remove(s.tmpFile); err != nil {
+			log.Printf("failed to remove tmp file after %s command: %s", strings.Join(cmd.Args, " "), err)
+		}
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	return nil
