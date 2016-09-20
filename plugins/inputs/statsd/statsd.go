@@ -348,7 +348,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				tagstr := segment[1:]
 				tags := strings.Split(tagstr, ",")
 				for _, tag := range tags {
-					ts := strings.Split(tag, ":")
+					ts := strings.SplitN(tag, ":", 2)
 					var k, v string
 					switch len(ts) {
 					case 1:
