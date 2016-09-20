@@ -39,6 +39,13 @@ func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
 }
 
+func (a *Accumulator) ClearMetrics() {
+	atomic.StoreUint64(&a.nMetrics, 0)
+	a.Lock()
+	defer a.Unlock()
+	a.Metrics = make([]*Metric, 0)
+}
+
 // AddFields adds a measurement point with a specified timestamp.
 func (a *Accumulator) AddFields(
 	measurement string,

@@ -887,8 +887,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 // buildProcessor TODO doc
 func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
-	unsupportedFields := []string{"pass", "fieldpass", "drop", "fielddrop",
-		"tagexclude", "taginclude"}
+	unsupportedFields := []string{"tagexclude", "taginclude"}
 	for _, field := range unsupportedFields {
 		if _, ok := tbl.Fields[field]; ok {
 			// TODO raise error because field is not supported

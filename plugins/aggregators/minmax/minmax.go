@@ -26,8 +26,8 @@ type MinMax struct {
 }
 
 type minmax struct {
-	min interface{}
-	max interface{}
+	min float64
+	max float64
 }
 
 var sampleConfig = `
@@ -55,24 +55,36 @@ func (m *MinMax) apply(in telegraf.Metric) {
 		m.tagCache[id] = in.Tags()
 		m.fieldCache[id] = make(map[string]minmax)
 		for k, v := range in.Fields() {
-			m.fieldCache[id][k] = minmax{
-				min: v,
-				max: v,
+			if fv, ok := convert(v); ok {
+				m.fieldCache[id][k] = minmax{
+					min: fv,
+					max: fv,
+				}
 			}
 		}
 	} else {
 		for k, v := range in.Fields() {
-			cmpmin := compare(m.fieldCache[id][k].min, v)
-			cmpmax := compare(m.fieldCache[id][k].max, v)
-			if cmpmin == 1 {
-				tmp := m.fieldCache[id][k]
-				tmp.min = v
-				m.fieldCache[id][k] = tmp
-			}
-			if cmpmax == -1 {
-				tmp := m.fieldCache[id][k]
-				tmp.max = v
-				m.fieldCache[id][k] = tmp
+			if fv, ok := convert(v); ok {
+				if _, ok := m.fieldCache[id][k]; !ok {
+					// hit an uncached field of a cached metric
+					m.fieldCache[id][k] = minmax{
+						min: fv,
+						max: fv,
+					}
+					continue
+				}
+				cmpmin := compare(m.fieldCache[id][k].min, fv)
+				cmpmax := compare(m.fieldCache[id][k].max, fv)
+				if cmpmin == 1 {
+					tmp := m.fieldCache[id][k]
+					tmp.min = fv
+					m.fieldCache[id][k] = tmp
+				}
+				if cmpmax == -1 {
+					tmp := m.fieldCache[id][k]
+					tmp.max = fv
+					m.fieldCache[id][k] = tmp
+				}
 			}
 		}
 	}
@@ -156,32 +168,23 @@ func (m *MinMax) continuousHandler() {
 	}
 }
 
-func compare(a, b interface{}) int {
-	switch at := a.(type) {
-	case int64:
-		if bt, ok := b.(int64); ok {
-			if at < bt {
-				return -1
-			} else if at > bt {
-				return 1
-			}
-			return 0
-		} else {
-			return 0
-		}
+func compare(a, b float64) int {
+	if a < b {
+		return -1
+	} else if a > b {
+		return 1
+	}
+	return 0
+}
+
+func convert(in interface{}) (float64, bool) {
+	switch v := in.(type) {
 	case float64:
-		if bt, ok := b.(float64); ok {
-			if at < bt {
-				return -1
-			} else if at > bt {
-				return 1
-			}
-			return 0
-		} else {
-			return 0
-		}
+		return v, true
+	case int64:
+		return float64(v), true
 	default:
-		return 0
+		return 0, false
 	}
 }
 
