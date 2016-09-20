@@ -59,7 +59,6 @@ type (
 		ListMetrics(*cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error)
 		GetMetricStatistics(*cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error)
 	}
-
 )
 
 func (c *CloudWatch) SampleConfig() string {
@@ -212,9 +211,9 @@ func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
 		ttl, _ := time.ParseDuration("1hr")
 		return &CloudWatch{
-			CacheTTL:  internal.Duration{Duration: ttl},
-			RateLimit: 10,
-			CWInterval:  internal.Duration{Duration: 0},
+			CacheTTL:   internal.Duration{Duration: ttl},
+			RateLimit:  10,
+			CWInterval: internal.Duration{Duration: 0},
 		}
 	})
 }
