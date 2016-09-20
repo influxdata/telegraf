@@ -20,16 +20,24 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Amazon Region (required)
   region = 'us-east-1'
 
-  ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
-  period = '1m'
-
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
   delay = '1m'
 
-  ## Override global run interval (optional - defaults to global interval)
-  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
-  ## gaps or overlap in pulled data
+  ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s). This
+  ## should match your interval setting below, unless you're using cw_interval. If this value
+  ## is greater than 1m, the response will be the average during that time.
+  period = '1m'
+
+  ## Recomended: either set interval to match 'period', or set both 'interval' and 'cw_interval'
+  ## to a multiple of 'period' to avoid gaps or overlap in pulled data.
   interval = '1m'
+
+  ## Optional: CloudWatch can return multiple results per request. If your interval is greater
+  ## than 1m, you can either set period to match or set cw_interval.
+  ## Example: period = '1m', interval = '1m' returns one datapoint per metric per minute
+  ## Example: period = '5m', interval = '5m' returns one datapoint per metric every 5m
+  ## Example: period = '1m', interval = '5m', cw_interval = '5m', 5 datapoints per metric every 5m
+  # cw_interval = 5m
 
   ## Metric Statistic Namespace (required)
   namespace = 'AWS/ELB'

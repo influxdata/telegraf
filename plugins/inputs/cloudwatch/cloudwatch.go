@@ -30,6 +30,7 @@ type (
 
 		Period      internal.Duration `toml:"period"`
 		Delay       internal.Duration `toml:"delay"`
+		CWInterval  internal.Duration `toml:"cw_interval"`
 		Namespace   string            `toml:"namespace"`
 		Metrics     []*Metric         `toml:"metrics"`
 		CacheTTL    internal.Duration `toml:"cache_ttl"`
@@ -58,6 +59,7 @@ type (
 		ListMetrics(*cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error)
 		GetMetricStatistics(*cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error)
 	}
+
 )
 
 func (c *CloudWatch) SampleConfig() string {
@@ -80,15 +82,24 @@ func (c *CloudWatch) SampleConfig() string {
   #profile = ""
   #shared_credential_file = ""
 
-  ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
-  period = '1m'
-
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
   delay = '1m'
 
-  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
-  ## gaps or overlap in pulled data
+  ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s). This
+  ## should match your interval setting below, unless you're using cw_interval. If this value
+  ## is greater than 1m, the response will be the average during that time.
+  period = '1m'
+
+  ## Recomended: either set interval to match 'period', or set both 'interval' and 'cw_interval'
+  ## to a multiple of 'period' to avoid gaps or overlap in pulled data.
   interval = '1m'
+
+  ## Optional: CloudWatch can return multiple results per request. If your interval is greater
+  ## than 1m, you can either set period to match or set cw_interval.
+  ## Example: period = '1m', interval = '1m' returns one datapoint per metric per minute
+  ## Example: period = '5m', interval = '5m' returns one datapoint per metric every 5m
+  ## Example: period = '1m', interval = '5m', cw_interval = '5m', 5 datapoints per metric every 5m
+  # cw_interval = 5m
 
   ## Configure the TTL for the internal cache of metrics.
   ## Defaults to 1 hr if not specified
@@ -203,6 +214,7 @@ func init() {
 		return &CloudWatch{
 			CacheTTL:  internal.Duration{Duration: ttl},
 			RateLimit: 10,
+			CWInterval:  internal.Duration{Duration: 0},
 		}
 	})
 }
@@ -341,9 +353,14 @@ func snakeCase(s string) string {
  */
 func (c *CloudWatch) getStatisticsInput(metric *cloudwatch.Metric, now time.Time) *cloudwatch.GetMetricStatisticsInput {
 	end := now.Add(-c.Delay.Duration)
+	start := end.Add(-c.Period.Duration)
+
+	if c.CWInterval != c.Period && c.CWInterval.Duration != 0 {
+		start = end.Add(-c.CWInterval.Duration)
+	}
 
 	input := &cloudwatch.GetMetricStatisticsInput{
-		StartTime:  aws.Time(end.Add(-c.Period.Duration)),
+		StartTime:  aws.Time(start),
 		EndTime:    aws.Time(end),
 		MetricName: metric.MetricName,
 		Namespace:  metric.Namespace,
