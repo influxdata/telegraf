@@ -109,9 +109,12 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		tags := cleanTags(m.Tags())
 
 		for fieldName, value := range m.Fields() {
-			metricValue, buildError := buildValue(value)
-			if buildError != nil {
-				fmt.Printf("OpenTSDB: %s\n", buildError.Error())
+			switch value.(type) {
+			case int64:
+			case uint64:
+			case float64:
+			default:
+				fmt.Printf("OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
 				continue
 			}
 
@@ -120,7 +123,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 					o.Prefix, m.Name(), fieldName)),
 				Tags:      tags,
 				Timestamp: now,
-				Value:     metricValue,
+				Value:     value,
 			}
 
 			if err := http.sendDataPoint(metric); err != nil {
