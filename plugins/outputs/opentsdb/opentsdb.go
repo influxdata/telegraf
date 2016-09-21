@@ -114,7 +114,9 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 			case uint64:
 			case float64:
 			default:
-				fmt.Printf("OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				if o.Debug {
+					fmt.Printf("OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				}
 				continue
 			}
 
