@@ -2,6 +2,7 @@ package opentsdb
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"sort"
@@ -114,7 +115,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 			case uint64:
 			case float64:
 			default:
-				fmt.Printf("OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
 				continue
 			}
 
@@ -156,7 +157,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 		for fieldName, value := range m.Fields() {
 			metricValue, buildError := buildValue(value)
 			if buildError != nil {
-				fmt.Printf("OpenTSDB: %s\n", buildError.Error())
+				log.Printf("E! OpenTSDB: %s\n", buildError.Error())
 				continue
 			}
 
@@ -164,9 +165,6 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 				sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
 				now, metricValue, tags)
 
-			if o.Debug {
-				fmt.Print(messageLine)
-			}
 			_, err := connection.Write([]byte(messageLine))
 			if err != nil {
 				return fmt.Errorf("OpenTSDB: Telnet writing error %s", err.Error())
