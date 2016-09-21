@@ -60,6 +60,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1793](https://github.com/influxdata/telegraf/pull/1793): Fix JSON Serialization in OpenTSDB output.
 - [#1731](https://github.com/influxdata/telegraf/issues/1731): Fix Graphite template ordering, use most specific.
 - [#1836](https://github.com/influxdata/telegraf/pull/1836): Fix snmp table field initialization for non-automatic table.
+- [#1724](https://github.com/influxdata/telegraf/issues/1724): cgroups path being parsed as metric.
 
 ## v1.0.1 [2016-09-26]
 
