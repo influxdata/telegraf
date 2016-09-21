@@ -693,7 +693,7 @@ func TestParse_DataDogTags(t *testing.T) {
 	s.ParseDataDogTags = true
 
 	lines := []string{
-		"my_counter:1|c|#host:localhost,environment:prod",
+		"my_counter:1|c|#host:localhost,environment:prod,endpoint:/:tenant?/oauth/ro",
 		"my_gauge:10.1|g|#live",
 		"my_set:1|s|#host:localhost",
 		"my_timer:3|ms|@0.1|#live,host:localhost",
@@ -703,6 +703,7 @@ func TestParse_DataDogTags(t *testing.T) {
 		"my_counter": map[string]string{
 			"host":        "localhost",
 			"environment": "prod",
+			"endpoint":    "/:tenant?/oauth/ro",
 		},
 
 		"my_gauge": map[string]string{
