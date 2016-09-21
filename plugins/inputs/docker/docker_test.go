@@ -256,6 +256,9 @@ type FakeDockerClient struct {
 func (d FakeDockerClient) Info(ctx context.Context) (types.Info, error) {
 	env := types.Info{
 		Containers:         108,
+		ContainersRunning:  98,
+		ContainersStopped:  6,
+		ContainersPaused:   3,
 		OomKillDisable:     false,
 		SystemTime:         "2016-02-24T00:55:09.15073105-05:00",
 		NEventsListener:    0,
@@ -397,6 +400,9 @@ func TestDockerGatherInfo(t *testing.T) {
 			"n_cpus":                  int(4),
 			"n_used_file_descriptors": int(19),
 			"n_containers":            int(108),
+			"n_containers_running":    int(98),
+			"n_containers_stopped":    int(6),
+			"n_containers_paused":     int(3),
 			"n_images":                int(199),
 			"n_goroutines":            int(39),
 		},
