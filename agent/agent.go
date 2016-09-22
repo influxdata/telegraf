@@ -259,9 +259,6 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 		for {
 			select {
 			case <-shutdown:
-				for _, agg := range a.Config.Aggregators {
-					agg.Aggregator.Stop()
-				}
 				if len(outMetricC) > 0 {
 					// keep going until outMetricC is flushed
 					continue
@@ -273,7 +270,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 				var dropOriginal bool
 				if !m.IsAggregate() {
 					for _, agg := range a.Config.Aggregators {
-						if ok := agg.Apply(copyMetric(m)); ok {
+						if ok := agg.Add(copyMetric(m)); ok {
 							dropOriginal = true
 						}
 					}
@@ -315,22 +312,6 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 	}
 }
 
-func copyMetric(m telegraf.Metric) telegraf.Metric {
-	t := time.Time(m.Time())
-
-	tags := make(map[string]string)
-	fields := make(map[string]interface{})
-	for k, v := range m.Tags() {
-		tags[k] = v
-	}
-	for k, v := range m.Fields() {
-		fields[k] = v
-	}
-
-	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
-	return out
-}
-
 // Run runs the agent daemon, gathering every Interval
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
@@ -367,18 +348,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		time.Sleep(time.Duration(i - (time.Now().UnixNano() % i)))
 	}
 
-	// Start all Aggregators
-	for _, aggregator := range a.Config.Aggregators {
-		acc := NewAccumulator(aggregator, metricC)
-		acc.SetPrecision(a.Config.Agent.Precision.Duration,
-			a.Config.Agent.Interval.Duration)
-		if err := aggregator.Aggregator.Start(acc); err != nil {
-			log.Printf("[%s] failed to start, exiting\n%s\n",
-				aggregator.Name(), err.Error())
-			return err
-		}
-	}
-
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -403,6 +372,33 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}(input, interval)
 	}
 
+	wg.Add(len(a.Config.Aggregators))
+	for _, aggregator := range a.Config.Aggregators {
+		go func(agg *models.RunningAggregator) {
+			defer wg.Done()
+			acc := NewAccumulator(agg, metricC)
+			acc.SetPrecision(a.Config.Agent.Precision.Duration,
+				a.Config.Agent.Interval.Duration)
+			agg.Run(acc, shutdown)
+		}(aggregator)
+	}
+
 	wg.Wait()
 	return nil
+}
+
+func copyMetric(m telegraf.Metric) telegraf.Metric {
+	t := time.Time(m.Time())
+
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
+	for k, v := range m.Tags() {
+		tags[k] = v
+	}
+	for k, v := range m.Fields() {
+		fields[k] = v
+	}
+
+	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
+	return out
 }

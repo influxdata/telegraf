@@ -693,7 +693,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	}
 	aggregator := creator()
 
-	aggregatorConfig, err := buildAggregator(name, table)
+	conf, err := buildAggregator(name, table)
 	if err != nil {
 		return err
 	}
@@ -702,12 +702,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
-	rf := &models.RunningAggregator{
-		Aggregator: aggregator,
-		Config:     aggregatorConfig,
-	}
-
-	c.Aggregators = append(c.Aggregators, rf)
+	c.Aggregators = append(c.Aggregators, models.NewRunningAggregator(aggregator, conf))
 	return nil
 }
 
@@ -818,11 +813,38 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 // buildAggregator TODO doc
 func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
-	conf := &models.AggregatorConfig{Name: name}
 	unsupportedFields := []string{"tagexclude", "taginclude"}
 	for _, field := range unsupportedFields {
 		if _, ok := tbl.Fields[field]; ok {
 			// TODO raise error because field is not supported
+		}
+	}
+
+	conf := &models.AggregatorConfig{Name: name}
+
+	if node, ok := tbl.Fields["period"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				conf.Period = dur
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["delay"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				conf.Delay = dur
+			}
 		}
 	}
 
@@ -871,6 +893,8 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
+	delete(tbl.Fields, "period")
+	delete(tbl.Fields, "delay")
 	delete(tbl.Fields, "drop_original")
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")

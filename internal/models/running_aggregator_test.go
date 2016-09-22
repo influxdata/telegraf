@@ -2,26 +2,28 @@ package models
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestApply(t *testing.T) {
+func TestAdd(t *testing.T) {
 	a := &TestAggregator{}
-	ra := RunningAggregator{
-		Config: &AggregatorConfig{
-			Name: "TestRunningAggregator",
-			Filter: Filter{
-				NamePass: []string{"*"},
-			},
+	ra := NewRunningAggregator(a, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+		Filter: Filter{
+			NamePass: []string{"*"},
 		},
-		Aggregator: a,
-	}
+	})
 	assert.NoError(t, ra.Config.Filter.Compile())
+	acc := testutil.Accumulator{}
+	go ra.Run(&acc, make(chan struct{}))
 
 	m := ra.MakeMetric(
 		"RITest",
@@ -30,21 +32,64 @@ func TestApply(t *testing.T) {
 		telegraf.Untyped,
 		time.Now(),
 	)
-	assert.False(t, ra.Apply(m))
-	assert.Equal(t, int64(101), a.sum)
+	assert.False(t, ra.Add(m))
+
+	for {
+		if atomic.LoadInt64(&a.sum) > 0 {
+			break
+		}
+	}
+	assert.Equal(t, int64(101), atomic.LoadInt64(&a.sum))
 }
 
-func TestApplyDropOriginal(t *testing.T) {
-	ra := RunningAggregator{
-		Config: &AggregatorConfig{
-			Name: "TestRunningAggregator",
-			Filter: Filter{
-				NamePass: []string{"RI*"},
-			},
-			DropOriginal: true,
+func TestAddAndPushOnePeriod(t *testing.T) {
+	a := &TestAggregator{}
+	ra := NewRunningAggregator(a, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+		Filter: Filter{
+			NamePass: []string{"*"},
 		},
-		Aggregator: &TestAggregator{},
+		Period: time.Millisecond * 500,
+	})
+	assert.NoError(t, ra.Config.Filter.Compile())
+	acc := testutil.Accumulator{}
+	shutdown := make(chan struct{})
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ra.Run(&acc, shutdown)
+	}()
+
+	m := ra.MakeMetric(
+		"RITest",
+		map[string]interface{}{"value": int(101)},
+		map[string]string{},
+		telegraf.Untyped,
+		time.Now(),
+	)
+	assert.False(t, ra.Add(m))
+
+	for {
+		if acc.NMetrics() > 0 {
+			break
+		}
 	}
+	acc.AssertContainsFields(t, "TestMetric", map[string]interface{}{"sum": int64(101)})
+
+	close(shutdown)
+	wg.Wait()
+}
+
+func TestAddDropOriginal(t *testing.T) {
+	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+		Filter: Filter{
+			NamePass: []string{"RI*"},
+		},
+		DropOriginal: true,
+	})
 	assert.NoError(t, ra.Config.Filter.Compile())
 
 	m := ra.MakeMetric(
@@ -54,9 +99,9 @@ func TestApplyDropOriginal(t *testing.T) {
 		telegraf.Untyped,
 		time.Now(),
 	)
-	assert.True(t, ra.Apply(m))
+	assert.True(t, ra.Add(m))
 
-	// this metric name doesn't match the filter, so Apply will return false
+	// this metric name doesn't match the filter, so Add will return false
 	m2 := ra.MakeMetric(
 		"foobar",
 		map[string]interface{}{"value": int(101)},
@@ -64,17 +109,15 @@ func TestApplyDropOriginal(t *testing.T) {
 		telegraf.Untyped,
 		time.Now(),
 	)
-	assert.False(t, ra.Apply(m2))
+	assert.False(t, ra.Add(m2))
 }
 
 // make an untyped, counter, & gauge metric
 func TestMakeMetricA(t *testing.T) {
 	now := time.Now()
-	ra := RunningAggregator{
-		Config: &AggregatorConfig{
-			Name: "TestRunningAggregator",
-		},
-	}
+	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+	})
 	assert.Equal(t, "aggregators.TestRunningAggregator", ra.Name())
 
 	m := ra.MakeMetric(
@@ -136,15 +179,21 @@ type TestAggregator struct {
 	sum int64
 }
 
-func (t *TestAggregator) Description() string                  { return "" }
-func (t *TestAggregator) SampleConfig() string                 { return "" }
-func (t *TestAggregator) Start(acc telegraf.Accumulator) error { return nil }
-func (t *TestAggregator) Stop()                                {}
+func (t *TestAggregator) Description() string  { return "" }
+func (t *TestAggregator) SampleConfig() string { return "" }
+func (t *TestAggregator) Reset()               {}
 
-func (t *TestAggregator) Apply(in telegraf.Metric) {
+func (t *TestAggregator) Push(acc telegraf.Accumulator) {
+	acc.AddFields("TestMetric",
+		map[string]interface{}{"sum": t.sum},
+		map[string]string{},
+	)
+}
+
+func (t *TestAggregator) Add(in telegraf.Metric) {
 	for _, v := range in.Fields() {
 		if vi, ok := v.(int64); ok {
-			t.sum += vi
+			atomic.AddInt64(&t.sum, vi)
 		}
 	}
 }

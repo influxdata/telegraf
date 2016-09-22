@@ -7,8 +7,21 @@ import (
 )
 
 type RunningAggregator struct {
-	Aggregator telegraf.Aggregator
-	Config     *AggregatorConfig
+	a      telegraf.Aggregator
+	Config *AggregatorConfig
+
+	metrics chan telegraf.Metric
+}
+
+func NewRunningAggregator(
+	a telegraf.Aggregator,
+	conf *AggregatorConfig,
+) *RunningAggregator {
+	return &RunningAggregator{
+		a:       a,
+		Config:  conf,
+		metrics: make(chan telegraf.Metric, 100),
+	}
 }
 
 // AggregatorConfig containing configuration parameters for the running
@@ -22,6 +35,9 @@ type AggregatorConfig struct {
 	MeasurementSuffix string
 	Tags              map[string]string
 	Filter            Filter
+
+	Period time.Duration
+	Delay  time.Duration
 }
 
 func (r *RunningAggregator) Name() string {
@@ -56,10 +72,10 @@ func (r *RunningAggregator) MakeMetric(
 	return m
 }
 
-// Apply applies the given metric to the aggregator.
+// Add applies the given metric to the aggregator.
 // Before applying to the plugin, it will run any defined filters on the metric.
 // Apply returns true if the original metric should be dropped.
-func (r *RunningAggregator) Apply(in telegraf.Metric) bool {
+func (r *RunningAggregator) Add(in telegraf.Metric) bool {
 	if r.Config.Filter.IsActive() {
 		// check if the aggregator should apply this metric
 		name := in.Name()
@@ -74,6 +90,49 @@ func (r *RunningAggregator) Apply(in telegraf.Metric) bool {
 		in, _ = telegraf.NewMetric(name, tags, fields, t)
 	}
 
-	r.Aggregator.Apply(in)
+	r.metrics <- in
 	return r.Config.DropOriginal
+}
+func (r *RunningAggregator) add(in telegraf.Metric) {
+	r.a.Add(in)
+}
+
+func (r *RunningAggregator) push(acc telegraf.Accumulator) {
+	r.a.Push(acc)
+}
+
+func (r *RunningAggregator) reset() {
+	r.a.Reset()
+}
+
+func (r *RunningAggregator) Run(
+	acc telegraf.Accumulator,
+	shutdown chan struct{},
+) {
+	if r.Config.Delay == 0 {
+		r.Config.Delay = time.Millisecond * 100
+	}
+	if r.Config.Period == 0 {
+		r.Config.Period = time.Second * 30
+	}
+
+	time.Sleep(r.Config.Delay)
+	periodT := time.NewTicker(r.Config.Period)
+	defer periodT.Stop()
+
+	for {
+		select {
+		case <-shutdown:
+			if len(r.metrics) > 0 {
+				// wait until metrics are flushed before exiting
+				continue
+			}
+			return
+		case m := <-r.metrics:
+			r.add(m)
+		case <-periodT.C:
+			r.push(acc)
+			r.reset()
+		}
+	}
 }
