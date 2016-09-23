@@ -219,6 +219,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
 * [nsq_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq_consumer)
 * [logparser](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/logparser)
+* [redis_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/redis_consumer)
 * [statsd](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/statsd)
 * [tail](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail)
 * [tcp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tcp_listener)

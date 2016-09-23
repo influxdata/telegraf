@@ -58,7 +58,9 @@ github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
 golang.org/x/crypto 5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3
 golang.org/x/net 6acef71eb69611914f7a30939ea9f6e194c78172
 golang.org/x/text a71fd10341b064c10f4a81ceac72bcf70f26ea34
+gopkg.in/bsm/ratelimit.v1 db14e161995a5177acef654cb0dd785e8ee8bc22
 gopkg.in/dancannon/gorethink.v1 7d1af5be49cb5ecc7b177bf387d232050299d6ef
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
 gopkg.in/mgo.v2 d90005c5262a3463800497ea5a89aed5fe22c886
+gopkg.in/redis.v4 938235994ea88a05678f8060741d5f34ed6a5ff3
 gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4
