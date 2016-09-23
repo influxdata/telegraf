@@ -24,7 +24,8 @@ const (
 
 	defaultFieldName = "value"
 
-	defaultSeparator = "_"
+	defaultSeparator           = "_"
+	defaultAllowPendingMessage = 10000
 )
 
 var dropwarn = "ERROR: statsd message queue full. " +
@@ -295,7 +296,7 @@ func (s *Statsd) udpListen() error {
 			case s.in <- bufCopy:
 			default:
 				s.drops++
-				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
+				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
 					log.Printf(dropwarn, s.drops)
 				}
 			}
@@ -640,7 +641,8 @@ func (s *Statsd) Stop() {
 func init() {
 	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
-			MetricSeparator: "_",
+			MetricSeparator:        "_",
+			AllowedPendingMessages: defaultAllowPendingMessage,
 		}
 	})
 }
