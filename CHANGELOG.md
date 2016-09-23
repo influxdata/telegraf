@@ -32,6 +32,7 @@
 - [#1764](https://github.com/influxdata/telegraf/issues/1764): Fix kafka consumer panic when nil error is returned down errs channel.
 - [#1768](https://github.com/influxdata/telegraf/pull/1768): Speed up statsd parsing.
 - [#1751](https://github.com/influxdata/telegraf/issues/1751): Fix powerdns integer parse error handling.
+- [#1752](https://github.com/influxdata/telegraf/issues/1752): Fix varnish plugin defaults not being used.
 
 ## v1.0.1 [unreleased]
 
