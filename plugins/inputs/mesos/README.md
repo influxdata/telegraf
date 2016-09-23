@@ -35,16 +35,10 @@ For more information, please check the [Mesos Observability Metrics](http://meso
   #   "tasks",
   #   "messages",
   # ]
-  ## Include mesos tasks statistics, default is false
-  # slave_tasks = true
-  ## Should tags in slave task metrics be normalized? This will remove UUIDs from
-  ## task_id tag so we don't generate milions of series in InfluxDB, default is false
-  # slave_tasks_normalize = true
 ```
 
 By default this plugin is not configured to gather metrics from mesos. Since a mesos cluster can be deployed in numerous ways it does not provide any default
-values. User needs to specify master/slave nodes this plugin will gather metrics from. Additionally, enabling `slave_tasks` will allow
-gathering metrics from tasks running on specified slaves (this option is disabled by default).
+values. User needs to specify master/slave nodes this plugin will gather metrics from.
 
 ### Measurements & Fields:
 
@@ -238,27 +232,6 @@ Mesos slave metric groups
     - slave/valid_framework_messages
     - slave/valid_status_updates
 
-Mesos tasks metric groups
-
-- executor_id
-- cpus_limit
-- cpus_system_time_secs
-- cpus_user_time_secs
-- mem_anon_bytes
-- mem_cache_bytes
-- mem_critical_pressure_counter
-- mem_file_bytes
-- mem_limit_bytes
-- mem_low_pressure_counter
-- mem_mapped_file_bytes
-- mem_medium_pressure_counter
-- mem_rss_bytes
-- mem_swap_bytes
-- mem_total_bytes
-- mem_total_memsw_bytes
-- mem_unevictable_bytes
-- timestamp
-
 ### Tags:
 
 - All master/slave measurements have the following tags:
@@ -267,10 +240,6 @@ Mesos tasks metric groups
 
 - All master measurements have the extra tags:
 	- state (leader/follower)
-
-- Tasks measurements have the following tags:
-    - server
-    - framework_id
 
 ### Example Output:
 ```
@@ -295,9 +264,3 @@ master/mem_used=0,master/messages_authenticate=0,
 master/messages_deactivate_framework=0 ...
 ```
 
-Meoso tasks metrics (if enabled):
-```
-> mesos_tasks,framework_id=20151016-120318-1243483658-5050-6139-0000,host=localhost,server=mesos-1
-cpus_limit=0.2,cpus_system_time_secs=84.04,cpus_user_time_secs=1161,executor_id="some_app.5d9f3cf8-6b19-11e6-8d24-0242f3fd597e",
-mem_limit_bytes=348127232,mem_rss_bytes=310820864,timestamp=1472572204.22177 1472572204000000000...
-```
