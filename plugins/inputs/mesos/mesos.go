@@ -30,7 +30,7 @@ type Mesos struct {
 	MasterCols []string `toml:"master_collections"`
 	Slaves     []string
 	SlaveCols  []string `toml:"slave_collections"`
-	SlaveTasks bool
+	//SlaveTasks bool
 }
 
 var allMetrics = map[Role][]string{
@@ -66,8 +66,6 @@ var sampleConfig = `
   #   "tasks",
   #   "messages",
   # ]
-  ## Include mesos tasks statistics, default is false
-  # slave_tasks = true
 `
 
 // SampleConfig returns a sample configuration block
@@ -121,16 +119,16 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 			return
 		}(v)
 
-		if !m.SlaveTasks {
-			continue
-		}
+		// if !m.SlaveTasks {
+		// 	continue
+		// }
 
-		wg.Add(1)
-		go func(c string) {
-			errorChannel <- m.gatherSlaveTaskMetrics(c, ":5051", acc)
-			wg.Done()
-			return
-		}(v)
+		// wg.Add(1)
+		// go func(c string) {
+		// 	errorChannel <- m.gatherSlaveTaskMetrics(c, ":5051", acc)
+		// 	wg.Done()
+		// 	return
+		// }(v)
 	}
 
 	wg.Wait()
