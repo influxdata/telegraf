@@ -31,6 +31,7 @@
 - [#1530](https://github.com/influxdata/telegraf/issues/1530): Fix prometheus_client reload panic
 - [#1764](https://github.com/influxdata/telegraf/issues/1764): Fix kafka consumer panic when nil error is returned down errs channel.
 - [#1768](https://github.com/influxdata/telegraf/pull/1768): Speed up statsd parsing.
+- [#1751](https://github.com/influxdata/telegraf/issues/1751): Fix powerdns integer parse error handling.
 
 ## v1.0.1 [unreleased]
 
