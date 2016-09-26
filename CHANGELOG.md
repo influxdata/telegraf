@@ -23,6 +23,7 @@
 - [#1791](https://github.com/influxdata/telegraf/pull/1791): Add Docker container state metrics to Docker input plugin output
 - [#1755](https://github.com/influxdata/telegraf/issues/1755): Add support to SNMP for IP & MAC address conversion.
 - [#1729](https://github.com/influxdata/telegraf/issues/1729): Add support to SNMP for OID index suffixes.
+- [#1813](https://github.com/influxdata/telegraf/pull/1813): Change default arguments for SNMP plugin.
 
 ### Bugfixes
 

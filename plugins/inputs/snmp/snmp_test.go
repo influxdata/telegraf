@@ -91,7 +91,8 @@ func TestSampleConfig(t *testing.T) {
 		Timeout:        internal.Duration{Duration: 5 * time.Second},
 		Version:        2,
 		Community:      "public",
-		MaxRepetitions: 50,
+		MaxRepetitions: 10,
+		Retries:        3,
 
 		Name: "system",
 		Fields: []Field{
@@ -147,7 +148,6 @@ func TestFieldInit(t *testing.T) {
 		}
 		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
 		assert.Equal(t, txl.expectedName, f.Name, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
-		assert.Equal(t, txl.expectedConversion, f.Conversion, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
 	}
 }
 

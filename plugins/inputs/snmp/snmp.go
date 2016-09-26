@@ -20,25 +20,29 @@ import (
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
   agents = [ "127.0.0.1:161" ]
+  ## Timeout for each SNMP query.
   timeout = "5s"
+  ## Number of retries to attempt within timeout.
+  retries = 3
+  ## SNMP version, values can be 1, 2, or 3
   version = 2
 
-  # SNMPv1 & SNMPv2 parameters
+  ## SNMP community string.
   community = "public"
 
-  # SNMPv2 & SNMPv3 parameters
-  max_repetitions = 50
+  ## The GETBULK max-repetitions parameter
+  max_repetitions = 10
 
-  # SNMPv3 parameters
+  ## SNMPv3 auth parameters
   #sec_name = "myuser"
-  #auth_protocol = "md5"         # Values: "MD5", "SHA", ""
-  #auth_password = "password123"
-  #sec_level = "authNoPriv"      # Values: "noAuthNoPriv", "authNoPriv", "authPriv"
+  #auth_protocol = "md5"      # Values: "MD5", "SHA", ""
+  #auth_password = "pass"
+  #sec_level = "authNoPriv"   # Values: "noAuthNoPriv", "authNoPriv", "authPriv"
   #context_name = ""
-  #priv_protocol = ""            # Values: "DES", "AES", ""
+  #priv_protocol = ""         # Values: "DES", "AES", ""
   #priv_password = ""
 
-  # measurement name
+  ## measurement name
   name = "system"
   [[inputs.snmp.field]]
     name = "hostname"
@@ -53,7 +57,7 @@ const sampleConfig = `
     oid = "HOST-RESOURCES-MIB::hrMemorySize"
 
   [[inputs.snmp.table]]
-    # measurement name
+    ## measurement name
     name = "remote_servers"
     inherit_tags = [ "hostname" ]
     [[inputs.snmp.table.field]]
@@ -68,7 +72,7 @@ const sampleConfig = `
       oid = ".1.0.0.0.1.2"
 
   [[inputs.snmp.table]]
-    # auto populate table's fields using the MIB
+    ## auto populate table's fields using the MIB
     oid = "HOST-RESOURCES-MIB::hrNetworkTable"
 `
 
@@ -105,7 +109,7 @@ type Snmp struct {
 	Community string
 
 	// Parameters for Version 2 & 3
-	MaxRepetitions uint
+	MaxRepetitions int
 
 	// Parameters for Version 3
 	ContextName string
@@ -340,8 +344,8 @@ func Errorf(err error, msg string, format ...interface{}) error {
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{
-			Retries:        5,
-			MaxRepetitions: 50,
+			Retries:        3,
+			MaxRepetitions: 10,
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
 			Version:        2,
 			Community:      "public",
@@ -638,7 +642,7 @@ func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
 		}
 	}
 
-	gs.MaxRepetitions = int(s.MaxRepetitions)
+	gs.MaxRepetitions = s.MaxRepetitions
 
 	if s.Version == 3 {
 		gs.ContextName = s.ContextName
