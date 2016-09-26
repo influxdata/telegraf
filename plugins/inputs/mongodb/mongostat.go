@@ -35,6 +35,7 @@ type MongoStatus struct {
 	ServerStatus  *ServerStatus
 	ReplSetStatus *ReplSetStatus
 	ClusterStatus *ClusterStatus
+	DbStats       *DbStats
 }
 
 type ServerStatus struct {
@@ -65,6 +66,32 @@ type ServerStatus struct {
 	Metrics            *MetricsStats          `bson:"metrics"`
 }
 
+// DbStats stores stats from all dbs
+type DbStats struct {
+	Dbs []Db
+}
+
+// Db represent a single DB
+type Db struct {
+	Name        string
+	DbStatsData *DbStatsData
+}
+
+// DbStatsData stores stats from a db
+type DbStatsData struct {
+	Db          string      `bson:"db"`
+	Collections int64       `bson:"collections"`
+	Objects     int64       `bson:"objects"`
+	AvgObjSize  float64     `bson:"avgObjSize"`
+	DataSize    int64       `bson:"dataSize"`
+	StorageSize int64       `bson:"storageSize"`
+	NumExtents  int64       `bson:"numExtents"`
+	Indexes     int64       `bson:"indexes"`
+	IndexSize   int64       `bson:"indexSize"`
+	Ok          int64       `bson:"ok"`
+	GleStats    interface{} `bson:"gleStats"`
+}
+
 // ClusterStatus stores information related to the whole cluster
 type ClusterStatus struct {
 	JumboChunksCount int64
@@ -78,9 +105,9 @@ type ReplSetStatus struct {
 
 // ReplSetMember stores information related to a replica set member
 type ReplSetMember struct {
-	Name   string               `bson:"name"`
-	State  int64                `bson:"state"`
-	Optime *bson.MongoTimestamp `bson:"optime"`
+	Name       string               `bson:"name"`
+	State      int64                `bson:"state"`
+	OptimeDate *bson.MongoTimestamp `bson:"optimeDate"`
 }
 
 // WiredTiger stores information related to the WiredTiger storage engine.
@@ -396,6 +423,22 @@ type StatLine struct {
 
 	// Cluster fields
 	JumboChunksCount int64
+
+	// DB stats field
+	DbStatsLines []DbStatLine
+}
+
+type DbStatLine struct {
+	Name        string
+	Collections int64
+	Objects     int64
+	AvgObjSize  float64
+	DataSize    int64
+	StorageSize int64
+	NumExtents  int64
+	Indexes     int64
+	IndexSize   int64
+	Ok          int64
 }
 
 func parseLocks(stat ServerStatus) map[string]LockUsage {
@@ -663,9 +706,9 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 		}
 
-		if me.Optime != nil && master.Optime != nil && me.State == 2 {
+		if me.OptimeDate != nil && master.OptimeDate != nil && me.State == 2 {
 			// MongoTimestamp type is int64 where the first 32bits are the unix timestamp
-			lag := int64(*master.Optime>>32 - *me.Optime>>32)
+			lag := int64(*master.OptimeDate>>32 - *me.OptimeDate>>32)
 			if lag < 0 {
 				returnVal.ReplLag = 0
 			} else {
@@ -676,6 +719,28 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	newClusterStat := *newMongo.ClusterStatus
 	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
+
+	newDbStats := *newMongo.DbStats
+	for _, db := range newDbStats.Dbs {
+		dbStatsData := db.DbStatsData
+		// mongos doesn't have the db key, so setting the db name
+		if dbStatsData.Db == "" {
+			dbStatsData.Db = db.Name
+		}
+		dbStatLine := &DbStatLine{
+			Name:        dbStatsData.Db,
+			Collections: dbStatsData.Collections,
+			Objects:     dbStatsData.Objects,
+			AvgObjSize:  dbStatsData.AvgObjSize,
+			DataSize:    dbStatsData.DataSize,
+			StorageSize: dbStatsData.StorageSize,
+			NumExtents:  dbStatsData.NumExtents,
+			Indexes:     dbStatsData.Indexes,
+			IndexSize:   dbStatsData.IndexSize,
+			Ok:          dbStatsData.Ok,
+		}
+		returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
+	}
 
 	return returnVal
 }

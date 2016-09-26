@@ -28,7 +28,7 @@ type Ping struct {
 	// Number of pings to send (ping -c <COUNT>)
 	Count int
 
-	// Ping timeout, in seconds. 0 means no timeout (ping -t <TIMEOUT>)
+	// Ping timeout, in seconds. 0 means no timeout (ping -W <TIMEOUT>)
 	Timeout float64
 
 	// Interface to send ping from (ping -I <INTERFACE>)
@@ -55,7 +55,7 @@ const sampleConfig = `
   count = 1 # required
   ## interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
   ping_interval = 0.0
-  ## ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
+  ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
   timeout = 1.0
   ## interface to send ping from (ping -I <INTERFACE>)
   interface = ""
@@ -76,7 +76,8 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		go func(u string) {
 			defer wg.Done()
 			args := p.args(u)
-			out, err := p.pingHost(p.Timeout, args...)
+			totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
+			out, err := p.pingHost(totalTimeout, args...)
 			if err != nil {
 				// Combine go err + stderr output
 				errorChannel <- errors.New(
@@ -138,8 +139,8 @@ func (p *Ping) args(url string) []string {
 	}
 	if p.Timeout > 0 {
 		switch runtime.GOOS {
-		case "darwin", "freebsd":
-			args = append(args, "-t", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+		case "darwin":
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', 1, 64))
 		case "linux":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
 		default:

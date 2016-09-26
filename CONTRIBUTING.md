@@ -11,6 +11,8 @@ Output plugins READMEs are less structured,
 but any information you can provide on how the data will look is appreciated.
 See the [OpenTSDB output](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
 for a good example.
+1. **Optional:** Help users of your plugin by including example queries for populating dashboards. Include these sample queries in the `README.md` for the plugin.
+1. **Optional:** Write a [tickscript](https://docs.influxdata.com/kapacitor/v1.0/tick/syntax/) for your plugin and add it to [Kapacitor](https://github.com/influxdata/kapacitor/tree/master/examples/telegraf). Or mention @jackzampolin in a PR comment with some common queries that you would want to alert on and he will write one for you.
 
 ## GoDoc
 
@@ -114,7 +116,7 @@ creating the `Parser` object.
 You should also add the following to your SampleConfig() return:
 
 ```toml
-  ## Data format to consume. 
+  ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -212,8 +214,8 @@ func (s *Simple) Close() error {
 }
 
 func (s *Simple) Write(metrics []telegraf.Metric) error {
-    for _, pt := range points {
-        // write `pt` to the output sink here
+    for _, metric := range metrics {
+        // write `metric` to the output sink here
     }
     return nil
 }
@@ -244,7 +246,7 @@ instantiating and creating the `Serializer` object.
 You should also add the following to your SampleConfig() return:
 
 ```toml
-  ## Data format to output. 
+  ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
@@ -289,10 +291,6 @@ To execute Telegraf tests follow these simple steps:
 - Install docker following [these](https://docs.docker.com/installation/)
 instructions
 - execute `make test`
-
-**OSX users**: you will need to install `boot2docker` or `docker-machine`.
-The Makefile will assume that you have a `docker-machine` box called `default` to
-get the IP address.
 
 ### Unit test troubleshooting
 

@@ -44,35 +44,35 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	for i, field := range dataFields {
 		switch {
 		case bytes.Equal(field, interrupts):
-			m, err := strconv.Atoi(string(dataFields[i+1]))
+			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
 			fields["interrupts"] = int64(m)
 		case bytes.Equal(field, context_switches):
-			m, err := strconv.Atoi(string(dataFields[i+1]))
+			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
 			fields["context_switches"] = int64(m)
 		case bytes.Equal(field, processes_forked):
-			m, err := strconv.Atoi(string(dataFields[i+1]))
+			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
 			fields["processes_forked"] = int64(m)
 		case bytes.Equal(field, boot_time):
-			m, err := strconv.Atoi(string(dataFields[i+1]))
+			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
 			fields["boot_time"] = int64(m)
 		case bytes.Equal(field, disk_pages):
-			in, err := strconv.Atoi(string(dataFields[i+1]))
+			in, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
-			out, err := strconv.Atoi(string(dataFields[i+2]))
+			out, err := strconv.ParseInt(string(dataFields[i+2]), 10, 64)
 			if err != nil {
 				return err
 			}

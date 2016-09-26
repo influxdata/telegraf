@@ -38,7 +38,7 @@ func (t *transportMock) CancelRequest(_ *http.Request) {
 }
 
 func TestElasticsearch(t *testing.T) {
-	es := NewElasticsearch()
+	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
 	es.client.Transport = newTransportMock(http.StatusOK, statsResponse)
 
@@ -67,7 +67,7 @@ func TestElasticsearch(t *testing.T) {
 }
 
 func TestGatherClusterStats(t *testing.T) {
-	es := NewElasticsearch()
+	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
 	es.ClusterHealth = true
 	es.client.Transport = newTransportMock(http.StatusOK, clusterResponse)
@@ -86,4 +86,10 @@ func TestGatherClusterStats(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
 		v2IndexExpected,
 		map[string]string{"index": "v2"})
+}
+
+func newElasticsearchWithClient() *Elasticsearch {
+	es := NewElasticsearch()
+	es.client = &http.Client{}
+	return es
 }

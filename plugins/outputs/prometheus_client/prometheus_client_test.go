@@ -17,6 +17,7 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+	now := time.Now()
 	pTesting = &PrometheusClient{Listen: "localhost:9127"}
 	err := pTesting.Start()
 	time.Sleep(time.Millisecond * 200)
@@ -30,11 +31,13 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 	pt1, _ := telegraf.NewMetric(
 		"test_point_1",
 		tags,
-		map[string]interface{}{"value": 0.0})
+		map[string]interface{}{"value": 0.0},
+		now)
 	pt2, _ := telegraf.NewMetric(
 		"test_point_2",
 		tags,
-		map[string]interface{}{"value": 1.0})
+		map[string]interface{}{"value": 1.0},
+		now)
 	var metrics = []telegraf.Metric{
 		pt1,
 		pt2,
@@ -63,11 +66,13 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 	pt3, _ := telegraf.NewMetric(
 		"test_point_3",
 		tags,
-		map[string]interface{}{"value": 0.0})
+		map[string]interface{}{"value": 0.0},
+		now)
 	pt4, _ := telegraf.NewMetric(
 		"test_point_4",
 		tags,
-		map[string]interface{}{"value": 1.0})
+		map[string]interface{}{"value": 1.0},
+		now)
 	metrics = []telegraf.Metric{
 		pt3,
 		pt4,

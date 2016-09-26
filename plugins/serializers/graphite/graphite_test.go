@@ -160,6 +160,58 @@ func TestSerializeValueField2(t *testing.T) {
 	assert.Equal(t, expS, mS)
 }
 
+// test that fields with spaces get fixed.
+func TestSerializeFieldWithSpaces(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		`field\ with\ spaces`: float64(91.5),
+	}
+	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{
+		Template: "host.tags.measurement.field",
+	}
+	mS, err := s.Serialize(m)
+	assert.NoError(t, err)
+
+	expS := []string{
+		fmt.Sprintf("localhost.cpu0.us-west-2.cpu.field_with_spaces 91.5 %d", now.Unix()),
+	}
+	assert.Equal(t, expS, mS)
+}
+
+// test that tags with spaces get fixed.
+func TestSerializeTagWithSpaces(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        `cpu\ 0`,
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		`field_with_spaces`: float64(91.5),
+	}
+	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{
+		Template: "host.tags.measurement.field",
+	}
+	mS, err := s.Serialize(m)
+	assert.NoError(t, err)
+
+	expS := []string{
+		fmt.Sprintf("localhost.cpu_0.us-west-2.cpu.field_with_spaces 91.5 %d", now.Unix()),
+	}
+	assert.Equal(t, expS, mS)
+}
+
 // test that a field named "value" gets ignored at beginning of template.
 func TestSerializeValueField3(t *testing.T) {
 	now := time.Now()
@@ -182,6 +234,32 @@ func TestSerializeValueField3(t *testing.T) {
 
 	expS := []string{
 		fmt.Sprintf("localhost.cpu0.us-west-2.cpu 91.5 %d", now.Unix()),
+	}
+	assert.Equal(t, expS, mS)
+}
+
+// test that a field named "value" gets ignored at beginning of template.
+func TestSerializeValueField5(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"value": float64(91.5),
+	}
+	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{
+		Template: template5,
+	}
+	mS, err := s.Serialize(m)
+	assert.NoError(t, err)
+
+	expS := []string{
+		fmt.Sprintf("localhost.us-west-2.cpu0.cpu 91.5 %d", now.Unix()),
 	}
 	assert.Equal(t, expS, mS)
 }
@@ -225,8 +303,7 @@ func TestSerializeBucketNameNoHost(t *testing.T) {
 	m, err := telegraf.NewMetric("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s := GraphiteSerializer{}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
+	mS := SerializeBucketName(m.Name(), m.Tags(), "", "")
 
 	expS := "cpu0.us-west-2.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)
@@ -240,8 +317,7 @@ func TestSerializeBucketNameHost(t *testing.T) {
 	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
-	s := GraphiteSerializer{}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
+	mS := SerializeBucketName(m.Name(), m.Tags(), "", "")
 
 	expS := "localhost.cpu0.us-west-2.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)
@@ -255,8 +331,7 @@ func TestSerializeBucketNamePrefix(t *testing.T) {
 	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
-	s := GraphiteSerializer{Prefix: "prefix"}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
+	mS := SerializeBucketName(m.Name(), m.Tags(), "", "prefix")
 
 	expS := "prefix.localhost.cpu0.us-west-2.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)
@@ -270,8 +345,7 @@ func TestTemplate1(t *testing.T) {
 	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
-	s := GraphiteSerializer{Template: template1}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
+	mS := SerializeBucketName(m.Name(), m.Tags(), template1, "")
 
 	expS := "cpu0.us-west-2.localhost.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)
@@ -285,8 +359,7 @@ func TestTemplate2(t *testing.T) {
 	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
-	s := GraphiteSerializer{Template: template2}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
+	mS := SerializeBucketName(m.Name(), m.Tags(), template2, "")
 
 	expS := "localhost.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)
@@ -300,8 +373,7 @@ func TestTemplate3(t *testing.T) {
 	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
-	s := GraphiteSerializer{Template: template3}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
+	mS := SerializeBucketName(m.Name(), m.Tags(), template3, "")
 
 	expS := "localhost.cpu0.us-west-2.FIELDNAME"
 	assert.Equal(t, expS, mS)
@@ -315,25 +387,9 @@ func TestTemplate4(t *testing.T) {
 	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
-	s := GraphiteSerializer{Template: template4}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
+	mS := SerializeBucketName(m.Name(), m.Tags(), template4, "")
 
 	expS := "localhost.cpu0.us-west-2.cpu"
-	assert.Equal(t, expS, mS)
-}
-
-func TestTemplate5(t *testing.T) {
-	now := time.Now()
-	fields := map[string]interface{}{
-		"usage_idle": float64(91.5),
-	}
-	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
-	assert.NoError(t, err)
-
-	s := GraphiteSerializer{Template: template5}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
-
-	expS := "localhost.us-west-2.cpu0.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)
 }
 
@@ -345,8 +401,7 @@ func TestTemplate6(t *testing.T) {
 	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
-	s := GraphiteSerializer{Template: template6}
-	mS := s.SerializeBucketName(m.Name(), m.Tags())
+	mS := SerializeBucketName(m.Name(), m.Tags(), template6, "")
 
 	expS := "localhost.cpu0.us-west-2.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)

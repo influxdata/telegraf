@@ -86,15 +86,17 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		for file, _ := range g.Match() {
 			tailer, err := tail.TailFile(file,
 				tail.Config{
-					ReOpen:   true,
-					Follow:   true,
-					Location: &seek,
+					ReOpen:    true,
+					Follow:    true,
+					Location:  &seek,
+					MustExist: true,
 				})
 			if err != nil {
 				errS += err.Error() + " "
 				continue
 			}
 			// create a goroutine for each "tailer"
+			t.wg.Add(1)
 			go t.receiver(tailer)
 			t.tailers = append(t.tailers, tailer)
 		}
@@ -109,7 +111,6 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 // this is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
 func (t *Tail) receiver(tailer *tail.Tail) {
-	t.wg.Add(1)
 	defer t.wg.Done()
 
 	var m telegraf.Metric

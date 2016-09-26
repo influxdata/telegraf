@@ -28,6 +28,7 @@ func (*InfluxDB) SampleConfig() string {
   ## See the influxdb plugin's README for more details.
 
   ## Multiple URLs from which to read InfluxDB-formatted JSON
+  ## Default is "http://localhost:8086/debug/vars".
   urls = [
     "http://localhost:8086/debug/vars"
   ]
@@ -35,6 +36,9 @@ func (*InfluxDB) SampleConfig() string {
 }
 
 func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
+	if len(i.URLs) == 0 {
+		i.URLs = []string{"http://localhost:8086/debug/vars"}
+	}
 	errorChannel := make(chan error, len(i.URLs))
 
 	var wg sync.WaitGroup
@@ -157,43 +161,45 @@ func (i *InfluxDB) gatherURL(
 			return err
 		}
 
-		if key.(string) == "memstats" {
-			var m memstats
-			if err := dec.Decode(&m); err != nil {
-				continue
+		if keyStr, ok := key.(string); ok {
+			if keyStr == "memstats" {
+				var m memstats
+				if err := dec.Decode(&m); err != nil {
+					continue
+				}
+				acc.AddFields("influxdb_memstats",
+					map[string]interface{}{
+						"alloc":           m.Alloc,
+						"total_alloc":     m.TotalAlloc,
+						"sys":             m.Sys,
+						"lookups":         m.Lookups,
+						"mallocs":         m.Mallocs,
+						"frees":           m.Frees,
+						"heap_alloc":      m.HeapAlloc,
+						"heap_sys":        m.HeapSys,
+						"heap_idle":       m.HeapIdle,
+						"heap_inuse":      m.HeapInuse,
+						"heap_released":   m.HeapReleased,
+						"heap_objects":    m.HeapObjects,
+						"stack_inuse":     m.StackInuse,
+						"stack_sys":       m.StackSys,
+						"mspan_inuse":     m.MSpanInuse,
+						"mspan_sys":       m.MSpanSys,
+						"mcache_inuse":    m.MCacheInuse,
+						"mcache_sys":      m.MCacheSys,
+						"buck_hash_sys":   m.BuckHashSys,
+						"gc_sys":          m.GCSys,
+						"other_sys":       m.OtherSys,
+						"next_gc":         m.NextGC,
+						"last_gc":         m.LastGC,
+						"pause_total_ns":  m.PauseTotalNs,
+						"num_gc":          m.NumGC,
+						"gcc_pu_fraction": m.GCCPUFraction,
+					},
+					map[string]string{
+						"url": url,
+					})
 			}
-			acc.AddFields("influxdb_memstats",
-				map[string]interface{}{
-					"alloc":           m.Alloc,
-					"total_alloc":     m.TotalAlloc,
-					"sys":             m.Sys,
-					"lookups":         m.Lookups,
-					"mallocs":         m.Mallocs,
-					"frees":           m.Frees,
-					"heap_alloc":      m.HeapAlloc,
-					"heap_sys":        m.HeapSys,
-					"heap_idle":       m.HeapIdle,
-					"heap_inuse":      m.HeapInuse,
-					"heap_released":   m.HeapReleased,
-					"heap_objects":    m.HeapObjects,
-					"stack_inuse":     m.StackInuse,
-					"stack_sys":       m.StackSys,
-					"mspan_inuse":     m.MSpanInuse,
-					"mspan_sys":       m.MSpanSys,
-					"mcache_inuse":    m.MCacheInuse,
-					"mcache_sys":      m.MCacheSys,
-					"buck_hash_sys":   m.BuckHashSys,
-					"gc_sys":          m.GCSys,
-					"other_sys":       m.OtherSys,
-					"next_gc":         m.NextGC,
-					"last_gc":         m.LastGC,
-					"pause_total_ns":  m.PauseTotalNs,
-					"num_gc":          m.NumGC,
-					"gcc_pu_fraction": m.GCCPUFraction,
-				},
-				map[string]string{
-					"url": url,
-				})
 		}
 
 		// Attempt to parse a whole object into a point.
@@ -204,14 +210,14 @@ func (i *InfluxDB) gatherURL(
 			continue
 		}
 
-		if p.Name == "shard" {
-			shardCounter++
-		}
-
 		// If the object was a point, but was not fully initialized,
 		// ignore it and move on.
 		if p.Name == "" || p.Tags == nil || p.Values == nil || len(p.Values) == 0 {
 			continue
+		}
+
+		if p.Name == "shard" {
+			shardCounter++
 		}
 
 		// Add a tag to indicate the source of the data.

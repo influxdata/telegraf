@@ -20,7 +20,6 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-
 	err := m.Gather(&acc)
 	require.NoError(t, err)
 

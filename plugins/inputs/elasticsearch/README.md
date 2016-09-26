@@ -11,6 +11,13 @@ and optionally [cluster](https://www.elastic.co/guide/en/elasticsearch/reference
   servers = ["http://localhost:9200"]
   local = true
   cluster_health = true
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 ### Measurements & Fields:

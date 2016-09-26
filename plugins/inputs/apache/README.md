@@ -1,7 +1,7 @@
 # Telegraf plugin: Apache
 
 #### Plugin arguments:
-- **urls** []string: List of apache-status URLs to collect from.
+- **urls** []string: List of apache-status URLs to collect from. Default is "http://localhost/server-status?auto".
 
 #### Description
 

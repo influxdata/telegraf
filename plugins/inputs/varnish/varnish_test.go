@@ -17,38 +17,12 @@ func fakeVarnishStat(output string) func(string) (*bytes.Buffer, error) {
 	}
 }
 
-func TestConfigsUsed(t *testing.T) {
-	saved := varnishStat
-	defer func() {
-		varnishStat = saved
-	}()
-
-	expecations := map[string]string{
-		"":             defaultBinary,
-		"/foo/bar/baz": "/foo/bar/baz",
-	}
-
-	for in, expected := range expecations {
-		varnishStat = func(actual string) (*bytes.Buffer, error) {
-			assert.Equal(t, expected, actual)
-			return &bytes.Buffer{}, nil
-		}
-
-		acc := &testutil.Accumulator{}
-		v := &Varnish{Binary: in}
-		v.Gather(acc)
-	}
-}
-
 func TestGather(t *testing.T) {
-	saved := varnishStat
-	defer func() {
-		varnishStat = saved
-	}()
-	varnishStat = fakeVarnishStat(smOutput)
-
 	acc := &testutil.Accumulator{}
-	v := &Varnish{Stats: []string{"all"}}
+	v := &Varnish{
+		run:   fakeVarnishStat(smOutput),
+		Stats: []string{"*"},
+	}
 	v.Gather(acc)
 
 	acc.HasMeasurement("varnish")
@@ -60,14 +34,11 @@ func TestGather(t *testing.T) {
 }
 
 func TestParseFullOutput(t *testing.T) {
-	saved := varnishStat
-	defer func() {
-		varnishStat = saved
-	}()
-	varnishStat = fakeVarnishStat(fullOutput)
-
 	acc := &testutil.Accumulator{}
-	v := &Varnish{Stats: []string{"all"}}
+	v := &Varnish{
+		run:   fakeVarnishStat(fullOutput),
+		Stats: []string{"*"},
+	}
 	err := v.Gather(acc)
 
 	assert.NoError(t, err)
@@ -77,15 +48,24 @@ func TestParseFullOutput(t *testing.T) {
 	assert.Equal(t, 293, len(flat))
 }
 
-func TestFieldConfig(t *testing.T) {
-	saved := varnishStat
-	defer func() {
-		varnishStat = saved
-	}()
-	varnishStat = fakeVarnishStat(fullOutput)
+func TestFilterSomeStats(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	v := &Varnish{
+		run:   fakeVarnishStat(fullOutput),
+		Stats: []string{"MGT.*", "VBE.*"},
+	}
+	err := v.Gather(acc)
 
+	assert.NoError(t, err)
+	acc.HasMeasurement("varnish")
+	flat := flatten(acc.Metrics)
+	assert.Len(t, acc.Metrics, 2)
+	assert.Equal(t, 16, len(flat))
+}
+
+func TestFieldConfig(t *testing.T) {
 	expect := map[string]int{
-		"all":                                   293,
+		"*":                                     293,
 		"":                                      0, // default
 		"MAIN.uptime":                           1,
 		"MEMPOOL.req0.sz_needed,MAIN.fetch_bad": 2,
@@ -93,7 +73,10 @@ func TestFieldConfig(t *testing.T) {
 
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
-		v := &Varnish{Stats: strings.Split(fieldCfg, ",")}
+		v := &Varnish{
+			run:   fakeVarnishStat(fullOutput),
+			Stats: strings.Split(fieldCfg, ","),
+		}
 		err := v.Gather(acc)
 
 		assert.NoError(t, err)
@@ -130,18 +113,18 @@ MEMPOOL.vbc.sz_wanted              88          .   Size requested
 
 var parsedSmOutput = map[string]map[string]interface{}{
 	"MAIN": map[string]interface{}{
-		"uptime":     895,
-		"cache_hit":  95,
-		"cache_miss": 5,
+		"uptime":     uint64(895),
+		"cache_hit":  uint64(95),
+		"cache_miss": uint64(5),
 	},
 	"MGT": map[string]interface{}{
-		"uptime":      896,
-		"child_start": 1,
+		"uptime":      uint64(896),
+		"child_start": uint64(1),
 	},
 	"MEMPOOL": map[string]interface{}{
-		"vbc.live":      0,
-		"vbc.pool":      10,
-		"vbc.sz_wanted": 88,
+		"vbc.live":      uint64(0),
+		"vbc.pool":      uint64(10),
+		"vbc.sz_wanted": uint64(88),
 	},
 }
 

@@ -3,28 +3,36 @@ package cloudwatch
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	"github.com/influxdata/telegraf/internal/errchan"
+	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type (
 	CloudWatch struct {
-		Region      string            `toml:"region"`
-		AccessKey   string            `toml:"access_key"`
-		SecretKey   string            `toml:"secret_key"`
+		Region    string `toml:"region"`
+		AccessKey string `toml:"access_key"`
+		SecretKey string `toml:"secret_key"`
+		RoleARN   string `toml:"role_arn"`
+		Profile   string `toml:"profile"`
+		Filename  string `toml:"shared_credential_file"`
+		Token     string `toml:"token"`
+
 		Period      internal.Duration `toml:"period"`
 		Delay       internal.Duration `toml:"delay"`
 		Namespace   string            `toml:"namespace"`
 		Metrics     []*Metric         `toml:"metrics"`
+		CacheTTL    internal.Duration `toml:"cache_ttl"`
 		client      cloudwatchClient
 		metricCache *MetricCache
 	}
@@ -58,12 +66,18 @@ func (c *CloudWatch) SampleConfig() string {
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) explicit credentials from 'access_key' and 'secret_key'
-  ## 2) environment variables
-  ## 3) shared credentials file
-  ## 4) EC2 Instance Profile
+  ## 1) Assumed credentials via STS if role_arn is specified
+  ## 2) explicit credentials from 'access_key' and 'secret_key'
+  ## 3) shared profile from 'profile'
+  ## 4) environment variables
+  ## 5) shared credentials file
+  ## 6) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #profile = ""
+  #shared_credential_file = ""
 
   ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
   period = '1m'
@@ -74,6 +88,10 @@ func (c *CloudWatch) SampleConfig() string {
   ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = '1m'
+
+  ## Configure the TTL for the internal cache of metrics.
+  ## Defaults to 1 hr if not specified
+  #cache_ttl = '10m'
 
   ## Metric Statistic Namespace (required)
   namespace = 'AWS/ELB'
@@ -106,20 +124,40 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	if c.Metrics != nil {
 		metrics = []*cloudwatch.Metric{}
 		for _, m := range c.Metrics {
-			dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
-			for k, d := range m.Dimensions {
-				dimensions[k] = &cloudwatch.Dimension{
-					Name:  aws.String(d.Name),
-					Value: aws.String(d.Value),
+			if !hasWilcard(m.Dimensions) {
+				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
+				for k, d := range m.Dimensions {
+					fmt.Printf("Dimension [%s]:[%s]\n", d.Name, d.Value)
+					dimensions[k] = &cloudwatch.Dimension{
+						Name:  aws.String(d.Name),
+						Value: aws.String(d.Value),
+					}
+				}
+				for _, name := range m.MetricNames {
+					metrics = append(metrics, &cloudwatch.Metric{
+						Namespace:  aws.String(c.Namespace),
+						MetricName: aws.String(name),
+						Dimensions: dimensions,
+					})
+				}
+			} else {
+				allMetrics, err := c.fetchNamespaceMetrics()
+				if err != nil {
+					return err
+				}
+				for _, name := range m.MetricNames {
+					for _, metric := range allMetrics {
+						if isSelected(metric, m.Dimensions) {
+							metrics = append(metrics, &cloudwatch.Metric{
+								Namespace:  aws.String(c.Namespace),
+								MetricName: aws.String(name),
+								Dimensions: metric.Dimensions,
+							})
+						}
+					}
 				}
 			}
-			for _, name := range m.MetricNames {
-				metrics = append(metrics, &cloudwatch.Metric{
-					Namespace:  aws.String(c.Namespace),
-					MetricName: aws.String(name),
-					Dimensions: dimensions,
-				})
-			}
+
 		}
 	} else {
 		var err error
@@ -130,30 +168,35 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	metricCount := len(metrics)
-	var errChan = make(chan error, metricCount)
+	errChan := errchan.New(metricCount)
 
 	now := time.Now()
 
 	// limit concurrency or we can easily exhaust user connection limit
-	semaphore := make(chan byte, 64)
-
+	// see cloudwatch API request limits:
+	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
+	lmtr := limiter.NewRateLimiter(10, time.Second)
+	defer lmtr.Stop()
+	var wg sync.WaitGroup
+	wg.Add(len(metrics))
 	for _, m := range metrics {
-		semaphore <- 0x1
-		go c.gatherMetric(acc, m, now, semaphore, errChan)
+		<-lmtr.C
+		go func(inm *cloudwatch.Metric) {
+			defer wg.Done()
+			c.gatherMetric(acc, inm, now, errChan.C)
+		}(m)
 	}
+	wg.Wait()
 
-	for i := 1; i <= metricCount; i++ {
-		err := <-errChan
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return errChan.Error()
 }
 
 func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
-		return &CloudWatch{}
+		ttl, _ := time.ParseDuration("1hr")
+		return &CloudWatch{
+			CacheTTL: internal.Duration{Duration: ttl},
+		}
 	})
 }
 
@@ -161,14 +204,18 @@ func init() {
  * Initialize CloudWatch client
  */
 func (c *CloudWatch) initializeCloudWatch() error {
-	config := &aws.Config{
-		Region: aws.String(c.Region),
+	credentialConfig := &internalaws.CredentialConfig{
+		Region:    c.Region,
+		AccessKey: c.AccessKey,
+		SecretKey: c.SecretKey,
+		RoleARN:   c.RoleARN,
+		Profile:   c.Profile,
+		Filename:  c.Filename,
+		Token:     c.Token,
 	}
-	if c.AccessKey != "" || c.SecretKey != "" {
-		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, "")
-	}
+	configProvider := credentialConfig.Credentials()
 
-	c.client = cloudwatch.New(session.New(config))
+	c.client = cloudwatch.New(configProvider)
 	return nil
 }
 
@@ -203,11 +250,10 @@ func (c *CloudWatch) fetchNamespaceMetrics() (metrics []*cloudwatch.Metric, err 
 		more = token != nil
 	}
 
-	cacheTTL, _ := time.ParseDuration("1hr")
 	c.metricCache = &MetricCache{
 		Metrics: metrics,
 		Fetched: time.Now(),
-		TTL:     cacheTTL,
+		TTL:     c.CacheTTL.Duration,
 	}
 
 	return
@@ -216,12 +262,16 @@ func (c *CloudWatch) fetchNamespaceMetrics() (metrics []*cloudwatch.Metric, err 
 /*
  * Gather given Metric and emit any error
  */
-func (c *CloudWatch) gatherMetric(acc telegraf.Accumulator, metric *cloudwatch.Metric, now time.Time, semaphore chan byte, errChan chan error) {
+func (c *CloudWatch) gatherMetric(
+	acc telegraf.Accumulator,
+	metric *cloudwatch.Metric,
+	now time.Time,
+	errChan chan error,
+) {
 	params := c.getStatisticsInput(metric, now)
 	resp, err := c.client.GetMetricStatistics(params)
 	if err != nil {
 		errChan <- err
-		<-semaphore
 		return
 	}
 
@@ -258,7 +308,6 @@ func (c *CloudWatch) gatherMetric(acc telegraf.Accumulator, metric *cloudwatch.M
 	}
 
 	errChan <- nil
-	<-semaphore
 }
 
 /*
@@ -308,4 +357,33 @@ func (c *CloudWatch) getStatisticsInput(metric *cloudwatch.Metric, now time.Time
  */
 func (c *MetricCache) IsValid() bool {
 	return c.Metrics != nil && time.Since(c.Fetched) < c.TTL
+}
+
+func hasWilcard(dimensions []*Dimension) bool {
+	for _, d := range dimensions {
+		if d.Value == "" || d.Value == "*" {
+			return true
+		}
+	}
+	return false
+}
+
+func isSelected(metric *cloudwatch.Metric, dimensions []*Dimension) bool {
+	if len(metric.Dimensions) != len(dimensions) {
+		return false
+	}
+	for _, d := range dimensions {
+		selected := false
+		for _, d2 := range metric.Dimensions {
+			if d.Name == *d2.Name {
+				if d.Value == "" || d.Value == "*" || d.Value == *d2.Value {
+					selected = true
+				}
+			}
+		}
+		if !selected {
+			return false
+		}
+	}
+	return true
 }

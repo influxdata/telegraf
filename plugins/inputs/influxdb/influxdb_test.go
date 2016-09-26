@@ -112,7 +112,7 @@ func TestInfluxDB(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "influxdb",
 		map[string]interface{}{
-			"n_shards": 2,
+			"n_shards": 1,
 		}, map[string]string{})
 }
 

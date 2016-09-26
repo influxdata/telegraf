@@ -21,6 +21,15 @@ type HTTPResponse struct {
 	ResponseTimeout internal.Duration
 	Headers         map[string]string
 	FollowRedirects bool
+
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 }
 
 // Description returns the plugin Description
@@ -44,6 +53,13 @@ var sampleConfig = `
   # body = '''
   # {'fake':'data'}
   # '''
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 // SampleConfig returns the plugin SampleConfig
@@ -56,17 +72,27 @@ var ErrRedirectAttempted = errors.New("redirect")
 
 // CreateHttpClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
-func CreateHttpClient(followRedirects bool, ResponseTimeout time.Duration) *http.Client {
+func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := internal.GetTLSConfig(
+		h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
+	}
+	tr := &http.Transport{
+		ResponseHeaderTimeout: h.ResponseTimeout.Duration,
+		TLSClientConfig:       tlsCfg,
+	}
 	client := &http.Client{
-		Timeout: ResponseTimeout,
+		Transport: tr,
+		Timeout:   h.ResponseTimeout.Duration,
 	}
 
-	if followRedirects == false {
+	if h.FollowRedirects == false {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return ErrRedirectAttempted
 		}
 	}
-	return client
+	return client, nil
 }
 
 // HTTPGather gathers all fields and returns any errors it encounters
@@ -74,7 +100,10 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	// Prepare fields
 	fields := make(map[string]interface{})
 
-	client := CreateHttpClient(h.FollowRedirects, h.ResponseTimeout.Duration)
+	client, err := h.createHttpClient()
+	if err != nil {
+		return nil, err
+	}
 
 	var body io.Reader
 	if h.Body != "" {

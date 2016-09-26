@@ -62,6 +62,13 @@ func TestTemplateApply(t *testing.T) {
 			tags:        map[string]string{"hostname": "server01", "region": "us-west"},
 		},
 		{
+			test:        "metric with multiple tags",
+			input:       "server01.example.org.cpu.us-west",
+			template:    "hostname.hostname.hostname.measurement.region",
+			measurement: "cpu",
+			tags:        map[string]string{"hostname": "server01.example.org", "region": "us-west"},
+		},
+		{
 			test: "no metric",
 			tags: make(map[string]string),
 			err:  `no measurement specified for template. ""`,
@@ -142,7 +149,7 @@ func TestParseMissingMeasurement(t *testing.T) {
 	}
 }
 
-func TestParse(t *testing.T) {
+func TestParseLine(t *testing.T) {
 	testTime := time.Now().Round(time.Second)
 	epochTime := testTime.Unix()
 	strTime := strconv.FormatInt(epochTime, 10)
@@ -239,6 +246,107 @@ func TestParse(t *testing.T) {
 		if metric.Time().UnixNano()/1000000 != test.time.UnixNano()/1000000 {
 			t.Fatalf("time value mismatch.  expected %v, got %v",
 				test.time.UnixNano(), metric.Time().UnixNano())
+		}
+	}
+}
+
+func TestParse(t *testing.T) {
+	testTime := time.Now().Round(time.Second)
+	epochTime := testTime.Unix()
+	strTime := strconv.FormatInt(epochTime, 10)
+
+	var tests = []struct {
+		test        string
+		input       []byte
+		measurement string
+		tags        map[string]string
+		value       float64
+		time        time.Time
+		template    string
+		err         string
+	}{
+		{
+			test:        "normal case",
+			input:       []byte(`cpu.foo.bar 50 ` + strTime),
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "metric only with float value",
+			input:       []byte(`cpu 50.554 ` + strTime),
+			measurement: "cpu",
+			template:    "measurement",
+			value:       50.554,
+			time:        testTime,
+		},
+		{
+			test:     "missing metric",
+			input:    []byte(`1419972457825`),
+			template: "measurement",
+			err:      `received "1419972457825" which doesn't have required fields`,
+		},
+		{
+			test:     "should error parsing invalid float",
+			input:    []byte(`cpu 50.554z 1419972457825`),
+			template: "measurement",
+			err:      `field "cpu" value: strconv.ParseFloat: parsing "50.554z": invalid syntax`,
+		},
+		{
+			test:     "should error parsing invalid int",
+			input:    []byte(`cpu 50z 1419972457825`),
+			template: "measurement",
+			err:      `field "cpu" value: strconv.ParseFloat: parsing "50z": invalid syntax`,
+		},
+		{
+			test:     "should error parsing invalid time",
+			input:    []byte(`cpu 50.554 14199724z57825`),
+			template: "measurement",
+			err:      `field "cpu" time: strconv.ParseFloat: parsing "14199724z57825": invalid syntax`,
+		},
+		{
+			test:     "measurement* and field* (invalid)",
+			input:    []byte(`prod.us-west.server01.cpu.util.idle.percent 99.99 1419972457825`),
+			template: "env.zone.host.measurement*.field*",
+			err:      `either 'field*' or 'measurement*' can be used in each template (but not both together): "env.zone.host.measurement*.field*"`,
+		},
+	}
+
+	for _, test := range tests {
+		p, err := NewGraphiteParser("", []string{test.template}, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating graphite parser: %v", err)
+		}
+
+		metrics, err := p.Parse(test.input)
+		if errstr(err) != test.err {
+			t.Fatalf("err does not match.  expected [%v], got [%v]", test.err, err)
+		}
+		if err != nil {
+			// If we erred out,it was intended and the following tests won't work
+			continue
+		}
+		if metrics[0].Name() != test.measurement {
+			t.Fatalf("name parse failer.  expected %v, got %v",
+				test.measurement, metrics[0].Name())
+		}
+		if len(metrics[0].Tags()) != len(test.tags) {
+			t.Fatalf("tags len mismatch.  expected %d, got %d",
+				len(test.tags), len(metrics[0].Tags()))
+		}
+		f := metrics[0].Fields()["value"].(float64)
+		if metrics[0].Fields()["value"] != f {
+			t.Fatalf("floatValue value mismatch.  expected %v, got %v",
+				test.value, f)
+		}
+		if metrics[0].Time().UnixNano()/1000000 != test.time.UnixNano()/1000000 {
+			t.Fatalf("time value mismatch.  expected %v, got %v",
+				test.time.UnixNano(), metrics[0].Time().UnixNano())
 		}
 	}
 }
