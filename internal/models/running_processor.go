@@ -10,9 +10,16 @@ type RunningProcessor struct {
 	Config    *ProcessorConfig
 }
 
+type RunningProcessors []*RunningProcessor
+
+func (rp RunningProcessors) Len() int           { return len(rp) }
+func (rp RunningProcessors) Swap(i, j int)      { rp[i], rp[j] = rp[j], rp[i] }
+func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp[j].Config.Order }
+
 // FilterConfig containing a name and filter
 type ProcessorConfig struct {
 	Name   string
+	Order  int64
 	Filter Filter
 }
 

@@ -53,8 +53,9 @@ type Config struct {
 	Agent       *AgentConfig
 	Inputs      []*models.RunningInput
 	Outputs     []*models.RunningOutput
-	Processors  []*models.RunningProcessor
 	Aggregators []*models.RunningAggregator
+	// Processors have a slice wrapper type because they need to be sorted
+	Processors models.RunningProcessors
 }
 
 func NewConfig() *Config {
@@ -654,6 +655,10 @@ func (c *Config) LoadConfig(path string) error {
 			}
 		}
 	}
+
+	if len(c.Processors) > 1 {
+		sort.Sort(c.Processors)
+	}
 	return nil
 }
 
@@ -911,13 +916,26 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 // buildProcessor TODO doc
 func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
-	unsupportedFields := []string{"tagexclude", "taginclude"}
+	unsupportedFields := []string{"tagexclude", "taginclude", "fielddrop", "fieldpass"}
 	for _, field := range unsupportedFields {
 		if _, ok := tbl.Fields[field]; ok {
 			// TODO raise error because field is not supported
 		}
 	}
 
+	if node, ok := tbl.Fields["order"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Integer); ok {
+				var err error
+				conf.Order, err = strconv.ParseInt(b.Value, 10, 64)
+				if err != nil {
+					log.Printf("Error parsing int value for %s: %s\n", name, err)
+				}
+			}
+		}
+	}
+
+	delete(tbl.Fields, "order")
 	var err error
 	conf.Filter, err = buildFilter(tbl)
 	if err != nil {
