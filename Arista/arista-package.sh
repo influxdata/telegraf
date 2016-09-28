@@ -4,10 +4,11 @@
 
 #redefine cleanup_exit
 cleanup_exit() {
+    OK=${1:-1}
     rm -rf $TMP_BIN_DIR > /dev/null 2>&1
     rm -rf $TMP_CONFIG_DIR > /dev/null 2>&1
     rm -rf ./*.rpm > /dev/null 2>&1
-    exit $1
+    exit $OK
 }
 
 check_linux
@@ -21,13 +22,11 @@ TMP_CONFIG_DIR=./rpm_config
 CONFIG_FILES_DIR=./ConfigFiles
 
 LINUX_CONFIG_FILES_VER=1.6
-LINUX_CONFIG_FILES_ITER=1
+CONFIG_FILES_ITER=2
 REDIS_CONFIG_FILES_VER=1.6
-REDIS_CONFIG_FILES_ITER=1
 PERFORCE_CONFIG_FILES_VER=1.6
-PERFORCE_CONFIG_FILES_ITER=1
 
-BIN_RPM_ITER=2
+BIN_RPM_ITER=1
 
 LICENSE=MIT
 URL=github.com/aristanetworks/telegraf
@@ -65,7 +64,6 @@ BINARY_FPM_ARGS="\
 -a $ARCH \
 -v $version \
 --iteration $BIN_RPM_ITER \
---after-install ./post_install_bin.sh \
 $COMMON_FPM_ARGS"
 
 # Make a copy of the generated binaries into a tmp directory bin
@@ -105,19 +103,20 @@ mkdir -p $TMP_CONFIG_DIR/etc/telegraf/telegraf.d
 # Linux-Config
 rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-linux.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$LINUX_CONFIG_FILES_ITER" -v "$LINUX_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Linux" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$LINUX_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Linux" etc lib || cleanup_exit 1
 
 # Redis-Config
 rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-redis.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$REDIS_CONFIG_FILES_ITER" -v "$REDIS_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Redis" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$REDIS_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Redis" etc lib || cleanup_exit 1
 
 # Perforce-Config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$PERFORCE_CONFIG_FILES_ITER" -v "$PERFORCE_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$PERFORCE_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
 
 mv ./*.rpm RPMS
 
-echo "Created RPMS" `ls RPMS`
+echo "Created RPMS"
+ls -l RPMS | awk '{print($9);}'
 cleanup_exit 0
