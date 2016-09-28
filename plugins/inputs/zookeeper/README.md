@@ -27,36 +27,39 @@ echo mntr | nc localhost 2181
               zk_max_file_descriptor_count 1024   - only available on Unix platforms
 ```
 
-## Measurements:
-#### Zookeeper measurements:
+## Configuration
 
-Meta:
-- units: int64
-- tags: `server=<hostname> port=<port>`
+```
+# Reads 'mntr' stats from one or many zookeeper servers
+[[inputs.zookeeper]]
+  ## An array of address to gather stats about. Specify an ip or hostname
+  ## with port. ie localhost:2181, 10.0.0.1:2181, etc.
 
-Measurement names:
-- zookeeper_avg_latency
-- zookeeper_max_latency
-- zookeeper_min_latency
-- zookeeper_packets_received
-- zookeeper_packets_sent
-- zookeeper_outstanding_requests
-- zookeeper_znode_count
-- zookeeper_watch_count
-- zookeeper_ephemerals_count
-- zookeeper_approximate_data_size
-- zookeeper_followers #only exposed by the Leader
-- zookeeper_synced_followers #only exposed by the Leader
-- zookeeper_pending_syncs #only exposed by the Leader
-- zookeeper_open_file_descriptor_count
-- zookeeper_max_file_descriptor_count
+  ## If no servers are specified, then localhost is used as the host.
+  ## If no port is specified, 2181 is used
+  servers = [":2181"]
+```
 
-#### Zookeeper string measurements:
+## InfluxDB Measurement:
 
-Meta:
-- units: string
-- tags: `server=<hostname> port=<port>`
-
-Measurement names:
-- zookeeper_version
-- zookeeper_server_state
+```
+M zookeeper
+  T host
+  T port
+  T state
+  
+  F approximate_data_size        integer
+  F avg_latency                  integer
+  F ephemerals_count             integer
+  F max_file_descriptor_count    integer
+  F max_latency                  integer
+  F min_latency                  integer
+  F num_alive_connections        integer
+  F open_file_descriptor_count   integer
+  F outstanding_requests         integer
+  F packets_received             integer
+  F packets_sent                 integer
+  F version                      string
+  F watch_count                  integer
+  F znode_count                  integer
+```

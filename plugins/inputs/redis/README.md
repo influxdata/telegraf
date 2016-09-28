@@ -43,6 +43,7 @@
     - latest_fork_usec
     - connected_slaves
     - master_repl_offset
+    - master_last_io_seconds_ago
     - repl_backlog_active
     - repl_backlog_size
     - repl_backlog_histlen
@@ -57,6 +58,7 @@
 - All measurements have the following tags:
     - port
     - server
+    - replication role
 
 ### Example Output:
 

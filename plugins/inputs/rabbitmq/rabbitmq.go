@@ -5,37 +5,63 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DefaultUsername will set a default value that corrasponds to the default
+// value used by Rabbitmq
 const DefaultUsername = "guest"
+
+// DefaultPassword will set a default value that corrasponds to the default
+// value used by Rabbitmq
 const DefaultPassword = "guest"
+
+// DefaultURL will set a default value that corrasponds to the default value
+// used by Rabbitmq
 const DefaultURL = "http://localhost:15672"
 
+// RabbitMQ defines the configuration necessary for gathering metrics,
+// see the sample config for further details
 type RabbitMQ struct {
 	URL      string
 	Name     string
 	Username string
 	Password string
-	Nodes    []string
-	Queues   []string
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+
+	// InsecureSkipVerify bool
+	Nodes  []string
+	Queues []string
 
 	Client *http.Client
 }
 
+// OverviewResponse ...
 type OverviewResponse struct {
 	MessageStats *MessageStats `json:"message_stats"`
 	ObjectTotals *ObjectTotals `json:"object_totals"`
 	QueueTotals  *QueueTotals  `json:"queue_totals"`
 }
 
+// Details ...
 type Details struct {
 	Rate float64
 }
 
+// MessageStats ...
 type MessageStats struct {
 	Ack               int64
 	AckDetails        Details `json:"ack_details"`
@@ -49,6 +75,7 @@ type MessageStats struct {
 	RedeliverDetails  Details `json:"redeliver_details"`
 }
 
+// ObjectTotals ...
 type ObjectTotals struct {
 	Channels    int64
 	Connections int64
@@ -57,6 +84,7 @@ type ObjectTotals struct {
 	Queues      int64
 }
 
+// QueueTotals ...
 type QueueTotals struct {
 	Messages                   int64
 	MessagesReady              int64 `json:"messages_ready"`
@@ -64,10 +92,11 @@ type QueueTotals struct {
 	MessageBytes               int64 `json:"message_bytes"`
 	MessageBytesReady          int64 `json:"message_bytes_ready"`
 	MessageBytesUnacknowledged int64 `json:"message_bytes_unacknowledged"`
-	MessageRam                 int64 `json:"message_bytes_ram"`
+	MessageRAM                 int64 `json:"message_bytes_ram"`
 	MessagePersistent          int64 `json:"message_bytes_persistent"`
 }
 
+// Queue ...
 type Queue struct {
 	QueueTotals         // just to not repeat the same code
 	MessageStats        `json:"message_stats"`
@@ -81,6 +110,7 @@ type Queue struct {
 	AutoDelete          bool `json:"auto_delete"`
 }
 
+// Node ...
 type Node struct {
 	Name string
 
@@ -97,55 +127,75 @@ type Node struct {
 	SocketsUsed   int64 `json:"sockets_used"`
 }
 
+// gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error)
 
 var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
 
 var sampleConfig = `
-  url = "http://localhost:15672" # required
+  # url = "http://localhost:15672"
   # name = "rmq-server-1" # optional tag
   # username = "guest"
   # password = "guest"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## A list of nodes to pull metrics about. If not specified, metrics for
   ## all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
 `
 
+// SampleConfig ...
 func (r *RabbitMQ) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description ...
 func (r *RabbitMQ) Description() string {
 	return "Read metrics from one or many RabbitMQ servers via the management API"
 }
 
+// Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
-		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		tlsCfg, err := internal.GetTLSConfig(
+			r.SSLCert, r.SSLKey, r.SSLCA, r.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
+		tr := &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			TLSClientConfig:       tlsCfg,
+		}
 		r.Client = &http.Client{
 			Transport: tr,
 			Timeout:   time.Duration(4 * time.Second),
 		}
 	}
 
-	var errChan = make(chan error, len(gatherFunctions))
-
+	var wg sync.WaitGroup
+	wg.Add(len(gatherFunctions))
+	errChan := errchan.New(len(gatherFunctions))
 	for _, f := range gatherFunctions {
-		go f(r, acc, errChan)
+		go func(gf gatherFunc) {
+			defer wg.Done()
+			gf(r, acc, errChan.C)
+		}(f)
 	}
+	wg.Wait()
 
-	for i := 1; i <= len(gatherFunctions); i++ {
-		err := <-errChan
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return errChan.Error()
 }
 
 func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
+	if r.URL == "" {
+		r.URL = DefaultURL
+	}
 	u = fmt.Sprintf("%s%s", r.URL, u)
 
 	req, err := http.NewRequest("GET", u, nil)
@@ -283,7 +333,7 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 				"message_bytes":             queue.MessageBytes,
 				"message_bytes_ready":       queue.MessageBytesReady,
 				"message_bytes_unacked":     queue.MessageBytesUnacknowledged,
-				"message_bytes_ram":         queue.MessageRam,
+				"message_bytes_ram":         queue.MessageRAM,
 				"message_bytes_persist":     queue.MessagePersistent,
 				"messages":                  queue.Messages,
 				"messages_ready":            queue.MessagesReady,

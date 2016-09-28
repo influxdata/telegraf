@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -21,6 +20,7 @@ type Apache struct {
 
 var sampleConfig = `
   ## An array of Apache status URI to gather stats.
+  ## Default is "http://localhost/server-status?auto".
   urls = ["http://localhost/server-status?auto"]
 `
 
@@ -33,8 +33,12 @@ func (n *Apache) Description() string {
 }
 
 func (n *Apache) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
+	if len(n.Urls) == 0 {
+		n.Urls = []string{"http://localhost/server-status?auto"}
+	}
+
 	var outerr error
+	var errch = make(chan error)
 
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
@@ -42,14 +46,17 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
 		}
 
-		wg.Add(1)
 		go func(addr *url.URL) {
-			defer wg.Done()
-			outerr = n.gatherUrl(addr, acc)
+			errch <- n.gatherUrl(addr, acc)
 		}(addr)
 	}
 
-	wg.Wait()
+	// Drain channel, waiting for all requests to finish and save last error.
+	for range n.Urls {
+		if err := <-errch; err != nil {
+			outerr = err
+		}
+	}
 
 	return outerr
 }

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"os"
 	"os/exec"
 	"strconv"
@@ -132,8 +133,8 @@ func GetTLSConfig(
 		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf(
-				"Could not load TLS client key/certificate: %s",
-				err))
+				"Could not load TLS client key/certificate from %s:%s: %s",
+				SSLKey, SSLCert, err))
 		}
 
 		t.Certificates = []tls.Certificate{cert}
@@ -203,5 +204,29 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 		// wait for the command to return after killing it
 		<-done
 		return TimeoutErr
+	}
+}
+
+// RandomSleep will sleep for a random amount of time up to max.
+// If the shutdown channel is closed, it will return before it has finished
+// sleeping.
+func RandomSleep(max time.Duration, shutdown chan struct{}) {
+	if max == 0 {
+		return
+	}
+	maxSleep := big.NewInt(max.Nanoseconds())
+
+	var sleepns int64
+	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
+		sleepns = j.Int64()
+	}
+
+	t := time.NewTimer(time.Nanosecond * time.Duration(sleepns))
+	select {
+	case <-t.C:
+		return
+	case <-shutdown:
+		t.Stop()
+		return
 	}
 }

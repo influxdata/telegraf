@@ -3,8 +3,6 @@ package haproxy
 import (
 	"encoding/csv"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"net"
 	"net/http"
@@ -13,6 +11,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/errchan"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //CSV format: https://cbonte.github.io/haproxy-dconv/configuration-1.5.html#9.1
@@ -90,9 +92,11 @@ type haproxy struct {
 var sampleConfig = `
   ## An array of address to gather stats about. Specify an ip on hostname
   ## with optional port. ie localhost, 10.10.3.33:1936, etc.
-
-  ## If no servers are specified, then default to 127.0.0.1:1936
-  servers = ["http://myhaproxy.com:1936", "http://anotherhaproxy.com:1936"]
+  ## Make sure you specify the complete path to the stats endpoint
+  ## ie 10.10.3.33:1936/haproxy?stats
+  #
+  ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
+  servers = ["http://myhaproxy.com:1936/haproxy?stats"]
   ## Or you can also use local socket
   ## servers = ["socket:/run/haproxy/admin.sock"]
 `
@@ -109,24 +113,21 @@ func (r *haproxy) Description() string {
 // Returns one of the errors encountered while gather stats (if any).
 func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 	if len(g.Servers) == 0 {
-		return g.gatherServer("http://127.0.0.1:1936", acc)
+		return g.gatherServer("http://127.0.0.1:1936/haproxy?stats", acc)
 	}
 
 	var wg sync.WaitGroup
-
-	var outerr error
-
-	for _, serv := range g.Servers {
-		wg.Add(1)
+	errChan := errchan.New(len(g.Servers))
+	wg.Add(len(g.Servers))
+	for _, server := range g.Servers {
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherServer(serv, acc)
-		}(serv)
+			errChan.C <- g.gatherServer(serv, acc)
+		}(server)
 	}
 
 	wg.Wait()
-
-	return outerr
+	return errChan.Error()
 }
 
 func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
@@ -168,12 +169,16 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 		g.client = client
 	}
 
+	if !strings.HasSuffix(addr, ";csv") {
+		addr += "/;csv"
+	}
+
 	u, err := url.Parse(addr)
 	if err != nil {
 		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s/;csv", u.Scheme, u.Host, u.Path), nil)
+	req, err := http.NewRequest("GET", addr, nil)
 	if u.User != nil {
 		p, _ := u.User.Password()
 		req.SetBasicAuth(u.User.Username(), p)
@@ -185,7 +190,7 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("Unable to get valid stat result from '%s': %s", addr, err)
+		return fmt.Errorf("Unable to get valid stat result from '%s', http response code : %d", addr, res.StatusCode)
 	}
 
 	return importCsvResult(res.Body, acc, u.Host)

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -19,7 +22,11 @@ import (
 
 const sampleConfig = `
   ## Commands array
-  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+  commands = [
+    "/tmp/test.sh",
+    "/usr/bin/mycollector --foo=bar",
+    "/tmp/collect_*.sh"
+  ]
 
   ## Timeout for each command to complete.
   timeout = "5s"
@@ -40,8 +47,6 @@ type Exec struct {
 	Timeout  internal.Duration
 
 	parser parsers.Parser
-
-	wg sync.WaitGroup
 
 	runner  Runner
 	errChan chan error
@@ -112,8 +117,8 @@ func (c CommandRunner) Run(
 	return out.Bytes(), nil
 }
 
-func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator) {
-	defer e.wg.Done()
+func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	out, err := e.runner.Run(e, command, acc)
 	if err != nil {
@@ -144,29 +149,52 @@ func (e *Exec) SetParser(parser parsers.Parser) {
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
 	// Legacy single command support
 	if e.Command != "" {
 		e.Commands = append(e.Commands, e.Command)
 		e.Command = ""
 	}
 
-	e.errChan = make(chan error, len(e.Commands))
+	commands := make([]string, 0, len(e.Commands))
+	for _, pattern := range e.Commands {
+		cmdAndArgs := strings.SplitN(pattern, " ", 2)
+		if len(cmdAndArgs) == 0 {
+			continue
+		}
 
-	e.wg.Add(len(e.Commands))
-	for _, command := range e.Commands {
-		go e.ProcessCommand(command, acc)
+		matches, err := filepath.Glob(cmdAndArgs[0])
+		if err != nil {
+			return err
+		}
+
+		if len(matches) == 0 {
+			// There were no matches with the glob pattern, so let's assume
+			// that the command is in PATH and just run it as it is
+			commands = append(commands, pattern)
+		} else {
+			// There were matches, so we'll append each match together with
+			// the arguments to the commands slice
+			for _, match := range matches {
+				if len(cmdAndArgs) == 1 {
+					commands = append(commands, match)
+				} else {
+					commands = append(commands,
+						strings.Join([]string{match, cmdAndArgs[1]}, " "))
+				}
+			}
+		}
 	}
-	e.wg.Wait()
 
-	select {
-	default:
-		close(e.errChan)
-		return nil
-	case err := <-e.errChan:
-		close(e.errChan)
-		return err
+	errChan := errchan.New(len(commands))
+	e.errChan = errChan.C
+
+	wg.Add(len(commands))
+	for _, command := range commands {
+		go e.ProcessCommand(command, acc, &wg)
 	}
-
+	wg.Wait()
+	return errChan.Error()
 }
 
 func init() {

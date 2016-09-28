@@ -1,101 +1,85 @@
-package internal_models
+package models
 
 import (
 	"fmt"
-	"strings"
-
-	"github.com/gobwas/glob"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 )
 
 // TagFilter is the name of a tag, and the values on which to filter
 type TagFilter struct {
 	Name   string
 	Filter []string
-	filter glob.Glob
+	filter filter.Filter
 }
 
 // Filter containing drop/pass and tagdrop/tagpass rules
 type Filter struct {
 	NameDrop []string
-	nameDrop glob.Glob
+	nameDrop filter.Filter
 	NamePass []string
-	namePass glob.Glob
+	namePass filter.Filter
 
 	FieldDrop []string
-	fieldDrop glob.Glob
+	fieldDrop filter.Filter
 	FieldPass []string
-	fieldPass glob.Glob
+	fieldPass filter.Filter
 
 	TagDrop []TagFilter
 	TagPass []TagFilter
 
 	TagExclude []string
-	tagExclude glob.Glob
+	tagExclude filter.Filter
 	TagInclude []string
-	tagInclude glob.Glob
+	tagInclude filter.Filter
 
 	IsActive bool
 }
 
-// Compile all Filter lists into glob.Glob objects.
+// Compile all Filter lists into filter.Filter objects.
 func (f *Filter) CompileFilter() error {
 	var err error
-	f.nameDrop, err = compileFilter(f.NameDrop)
+	f.nameDrop, err = filter.CompileFilter(f.NameDrop)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'namedrop', %s", err)
 	}
-	f.namePass, err = compileFilter(f.NamePass)
+	f.namePass, err = filter.CompileFilter(f.NamePass)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'namepass', %s", err)
 	}
 
-	f.fieldDrop, err = compileFilter(f.FieldDrop)
+	f.fieldDrop, err = filter.CompileFilter(f.FieldDrop)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'fielddrop', %s", err)
 	}
-	f.fieldPass, err = compileFilter(f.FieldPass)
+	f.fieldPass, err = filter.CompileFilter(f.FieldPass)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'fieldpass', %s", err)
 	}
 
-	f.tagExclude, err = compileFilter(f.TagExclude)
+	f.tagExclude, err = filter.CompileFilter(f.TagExclude)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'tagexclude', %s", err)
 	}
-	f.tagInclude, err = compileFilter(f.TagInclude)
+	f.tagInclude, err = filter.CompileFilter(f.TagInclude)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'taginclude', %s", err)
 	}
 
 	for i, _ := range f.TagDrop {
-		f.TagDrop[i].filter, err = compileFilter(f.TagDrop[i].Filter)
+		f.TagDrop[i].filter, err = filter.CompileFilter(f.TagDrop[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagdrop', %s", err)
 		}
 	}
 	for i, _ := range f.TagPass {
-		f.TagPass[i].filter, err = compileFilter(f.TagPass[i].Filter)
+		f.TagPass[i].filter, err = filter.CompileFilter(f.TagPass[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagpass', %s", err)
 		}
 	}
 	return nil
-}
-
-func compileFilter(filter []string) (glob.Glob, error) {
-	if len(filter) == 0 {
-		return nil, nil
-	}
-	var g glob.Glob
-	var err error
-	if len(filter) == 1 {
-		g, err = glob.Compile(filter[0])
-	} else {
-		g, err = glob.Compile("{" + strings.Join(filter, ",") + "}")
-	}
-	return g, err
 }
 
 func (f *Filter) ShouldMetricPass(metric telegraf.Metric) bool {

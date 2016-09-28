@@ -8,19 +8,23 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/influxdata/telegraf"
+	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type CloudWatch struct {
-	Region    string `toml:"region"`     // AWS Region
-	AccessKey string `toml:"access_key"` // Explicit AWS Access Key ID
-	SecretKey string `toml:"secret_key"` // Explicit AWS Secret Access Key
-	Namespace string `toml:"namespace"`  // CloudWatch Metrics Namespace
+	Region    string `toml:"region"`
+	AccessKey string `toml:"access_key"`
+	SecretKey string `toml:"secret_key"`
+	RoleARN   string `toml:"role_arn"`
+	Profile   string `toml:"profile"`
+	Filename  string `toml:"shared_credential_file"`
+	Token     string `toml:"token"`
+
+	Namespace string `toml:"namespace"` // CloudWatch Metrics Namespace
 	svc       *cloudwatch.CloudWatch
 }
 
@@ -30,12 +34,18 @@ var sampleConfig = `
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) explicit credentials from 'access_key' and 'secret_key'
-  ## 2) environment variables
-  ## 3) shared credentials file
-  ## 4) EC2 Instance Profile
+  ## 1) Assumed credentials via STS if role_arn is specified
+  ## 2) explicit credentials from 'access_key' and 'secret_key'
+  ## 3) shared profile from 'profile'
+  ## 4) environment variables
+  ## 5) shared credentials file
+  ## 6) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #profile = ""
+  #shared_credential_file = ""
 
   ## Namespace for the CloudWatch MetricDatums
   namespace = 'InfluxData/Telegraf'
@@ -50,14 +60,18 @@ func (c *CloudWatch) Description() string {
 }
 
 func (c *CloudWatch) Connect() error {
-	Config := &aws.Config{
-		Region: aws.String(c.Region),
+	credentialConfig := &internalaws.CredentialConfig{
+		Region:    c.Region,
+		AccessKey: c.AccessKey,
+		SecretKey: c.SecretKey,
+		RoleARN:   c.RoleARN,
+		Profile:   c.Profile,
+		Filename:  c.Filename,
+		Token:     c.Token,
 	}
-	if c.AccessKey != "" || c.SecretKey != "" {
-		Config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, "")
-	}
+	configProvider := credentialConfig.Credentials()
 
-	svc := cloudwatch.New(session.New(Config))
+	svc := cloudwatch.New(configProvider)
 
 	params := &cloudwatch.ListMetricsInput{
 		Namespace: aws.String(c.Namespace),

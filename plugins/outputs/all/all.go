@@ -7,6 +7,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
+	_ "github.com/influxdata/telegraf/plugins/outputs/graylog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/instrumental"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"

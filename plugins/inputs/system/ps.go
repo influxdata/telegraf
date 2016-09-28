@@ -84,10 +84,10 @@ func (s *systemPS) DiskUsage(
 		mountpoint := os.Getenv("HOST_MOUNT_PREFIX") + p.Mountpoint
 		if _, err := os.Stat(mountpoint); err == nil {
 			du, err := disk.Usage(mountpoint)
-			du.Path = p.Mountpoint
 			if err != nil {
 				return nil, err
 			}
+			du.Path = p.Mountpoint
 			// If the mount point is a member of the exclude set,
 			// don't gather info on it.
 			_, ok := fstypeExcludeSet[p.Fstype]

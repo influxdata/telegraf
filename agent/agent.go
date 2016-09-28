@@ -1,17 +1,15 @@
 package agent
 
 import (
-	cryptorand "crypto/rand"
 	"fmt"
 	"log"
-	"math/big"
-	"math/rand"
 	"os"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
 )
@@ -90,7 +88,7 @@ func (a *Agent) Close() error {
 	return err
 }
 
-func panicRecover(input *internal_models.RunningInput) {
+func panicRecover(input *models.RunningInput) {
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
@@ -106,7 +104,7 @@ func panicRecover(input *internal_models.RunningInput) {
 // reporting interval.
 func (a *Agent) gatherer(
 	shutdown chan struct{},
-	input *internal_models.RunningInput,
+	input *models.RunningInput,
 	interval time.Duration,
 	metricC chan telegraf.Metric,
 ) error {
@@ -115,27 +113,18 @@ func (a *Agent) gatherer(
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	jitter := a.Config.Agent.CollectionJitter.Duration.Nanoseconds()
-
 	for {
 		var outerr error
-		start := time.Now()
 
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetDebug(a.Config.Agent.Debug)
+		acc.SetPrecision(a.Config.Agent.Precision.Duration,
+			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
 
-		if jitter != 0 {
-			nanoSleep := rand.Int63n(jitter)
-			d, err := time.ParseDuration(fmt.Sprintf("%dns", nanoSleep))
-			if err != nil {
-				log.Printf("Jittering collection interval failed for plugin %s",
-					input.Name)
-			} else {
-				time.Sleep(d)
-			}
-		}
+		internal.RandomSleep(a.Config.Agent.CollectionJitter.Duration, shutdown)
 
+		start := time.Now()
 		gatherWithTimeout(shutdown, input, acc, interval)
 		elapsed := time.Since(start)
 
@@ -163,7 +152,7 @@ func (a *Agent) gatherer(
 //   over.
 func gatherWithTimeout(
 	shutdown chan struct{},
-	input *internal_models.RunningInput,
+	input *models.RunningInput,
 	acc *accumulator,
 	timeout time.Duration,
 ) {
@@ -214,6 +203,8 @@ func (a *Agent) Test() error {
 	for _, input := range a.Config.Inputs {
 		acc := NewAccumulator(input.Config, metricC)
 		acc.SetTrace(true)
+		acc.SetPrecision(a.Config.Agent.Precision.Duration,
+			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
@@ -223,6 +214,9 @@ func (a *Agent) Test() error {
 
 		if err := input.Input.Gather(acc); err != nil {
 			return err
+		}
+		if acc.errCount > 0 {
+			return fmt.Errorf("Errors encountered during processing")
 		}
 
 		// Special instructions for some inputs. cpu, for example, needs to be
@@ -246,7 +240,7 @@ func (a *Agent) flush() {
 
 	wg.Add(len(a.Config.Outputs))
 	for _, o := range a.Config.Outputs {
-		go func(output *internal_models.RunningOutput) {
+		go func(output *models.RunningOutput) {
 			defer wg.Done()
 			err := output.Write()
 			if err != nil {
@@ -274,43 +268,39 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			a.flush()
 			return nil
 		case <-ticker.C:
+			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
 		case m := <-metricC:
-			for _, o := range a.Config.Outputs {
-				o.AddMetric(m)
+			for i, o := range a.Config.Outputs {
+				if i == len(a.Config.Outputs)-1 {
+					o.AddMetric(m)
+				} else {
+					o.AddMetric(copyMetric(m))
+				}
 			}
 		}
 	}
 }
 
-// jitterInterval applies the the interval jitter to the flush interval using
-// crypto/rand number generator
-func jitterInterval(ininterval, injitter time.Duration) time.Duration {
-	var jitter int64
-	outinterval := ininterval
-	if injitter.Nanoseconds() != 0 {
-		maxjitter := big.NewInt(injitter.Nanoseconds())
-		if j, err := cryptorand.Int(cryptorand.Reader, maxjitter); err == nil {
-			jitter = j.Int64()
-		}
-		outinterval = time.Duration(jitter + ininterval.Nanoseconds())
+func copyMetric(m telegraf.Metric) telegraf.Metric {
+	t := time.Time(m.Time())
+
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
+	for k, v := range m.Tags() {
+		tags[k] = v
+	}
+	for k, v := range m.Fields() {
+		fields[k] = v
 	}
 
-	if outinterval.Nanoseconds() < time.Duration(500*time.Millisecond).Nanoseconds() {
-		log.Printf("Flush interval %s too low, setting to 500ms\n", outinterval)
-		outinterval = time.Duration(500 * time.Millisecond)
-	}
-
-	return outinterval
+	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
+	return out
 }
 
 // Run runs the agent daemon, gathering every Interval
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
-
-	a.Config.Agent.FlushInterval.Duration = jitterInterval(
-		a.Config.Agent.FlushInterval.Duration,
-		a.Config.Agent.FlushJitter.Duration)
 
 	log.Printf("Agent Config: Interval:%s, Debug:%#v, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s \n",
@@ -326,6 +316,9 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		case telegraf.ServiceInput:
 			acc := NewAccumulator(input.Config, metricC)
 			acc.SetDebug(a.Config.Agent.Debug)
+			// Service input plugins should set their own precision of their
+			// metrics.
+			acc.DisablePrecision()
 			acc.setDefaultTags(a.Config.Tags)
 			if err := p.Start(acc); err != nil {
 				log.Printf("Service for input %s failed to start, exiting\n%s\n",
@@ -358,7 +351,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
 		}
-		go func(in *internal_models.RunningInput, interv time.Duration) {
+		go func(in *models.RunningInput, interv time.Duration) {
 			defer wg.Done()
 			if err := a.gatherer(shutdown, in, interv, metricC); err != nil {
 				log.Printf(err.Error())

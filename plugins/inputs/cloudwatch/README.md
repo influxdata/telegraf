@@ -6,9 +6,12 @@ This plugin will pull Metric Statistics from Amazon CloudWatch.
 
 This plugin uses a credential chain for Authentication with the CloudWatch
 API endpoint. In the following order the plugin will attempt to authenticate.
-1. [IAMS Role](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
-2. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
-3. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
+1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
+2. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
+3. Shared profile from `profile` attribute
+4. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
+5. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
+6. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
 ### Configuration:
 
@@ -24,7 +27,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   delay = '1m'
 
   ## Override global run interval (optional - defaults to global interval)
-  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid 
+  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = '1m'
 
@@ -36,11 +39,15 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Refreshes Namespace available metrics every 1h
   [[inputs.cloudwatch.metrics]]
     names = ['Latency', 'RequestCount']
-	
+
     ## Dimension filters for Metric (optional)
     [[inputs.cloudwatch.metrics.dimensions]]
       name = 'LoadBalancerName'
       value = 'p-example'
+
+    [[inputs.cloudwatch.metrics.dimensions]]
+      name = 'AvailabilityZone'
+      value = '*'
 ```
 #### Requirements and Terminology
 
@@ -51,6 +58,39 @@ Plugin Configuration utilizes [CloudWatch concepts](http://docs.aws.amazon.com/A
 - `namespace` must be a valid CloudWatch [Namespace](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_concepts.html#Namespace) value
 - `names` must be valid CloudWatch [Metric](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_concepts.html#Metric) names
 - `dimensions` must be valid CloudWatch [Dimension](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_concepts.html#Dimension) name/value pairs
+
+Omitting or specifying a value of `'*'` for a dimension value configures all available metrics that contain a dimension with the specified name
+to be retrieved. If specifying >1 dimension, then the metric must contain *all* the configured dimensions where the the value of the
+wildcard dimension is ignored.
+
+Example:
+```
+[[inputs.cloudwatch.metrics]]
+  names = ['Latency']
+
+  ## Dimension filters for Metric (optional)
+  [[inputs.cloudwatch.metrics.dimensions]]
+    name = 'LoadBalancerName'
+    value = 'p-example'
+
+  [[inputs.cloudwatch.metrics.dimensions]]
+    name = 'AvailabilityZone'
+    value = '*'
+```
+
+If the following ELBs are available:
+- name: `p-example`, availabilityZone: `us-east-1a`
+- name: `p-example`, availabilityZone: `us-east-1b`
+- name: `q-example`, availabilityZone: `us-east-1a`
+- name: `q-example`, availabilityZone: `us-east-1b`
+
+
+Then 2 metrics will be output:
+- name: `p-example`, availabilityZone: `us-east-1a`
+- name: `p-example`, availabilityZone: `us-east-1b`
+
+If the `AvailabilityZone` wildcard dimension was omitted, then a single metric (name: `p-example`)
+would be exported containing the aggregate values of the ELB across availability zones.
 
 #### Restrictions and Limitations
 - CloudWatch metrics are not available instantly via the CloudWatch API. You should adjust your collection `delay` to account for this lag in metrics availability based on your [monitoring subscription level](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-cloudwatch-new.html)

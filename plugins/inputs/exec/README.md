@@ -6,14 +6,20 @@ Please also see: [Telegraf Input Data Formats](https://github.com/influxdata/tel
 
 #### Configuration
 
-In this example a script called ```/tmp/test.sh``` and a script called ```/tmp/test2.sh```
-are configured for ```[[inputs.exec]]``` in JSON format.
+In this example a script called ```/tmp/test.sh```, a script called ```/tmp/test2.sh```, and
+all scripts matching glob pattern ```/tmp/collect_*.sh``` are configured for ```[[inputs.exec]]```
+in JSON format. Glob patterns are matched on every run, so adding new scripts that match the pattern
+will cause them to be picked up immediately.
 
-```
+```toml
 # Read flattened metrics from one or more commands that output JSON to stdout
 [[inputs.exec]]
   # Shell/commands array
-  commands = ["/tmp/test.sh", "/tmp/test2.sh"]
+  # Full command line to executable with parameters, or a glob pattern to run all matching files.
+  commands = ["/tmp/test.sh", "/tmp/test2.sh", "/tmp/collect_*.sh"]
+
+  ## Timeout for each command to complete.
+  timeout = "5s"
 
   # Data format to consume.
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
@@ -21,26 +27,6 @@ are configured for ```[[inputs.exec]]``` in JSON format.
 
   # measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
-
-  ## Below configuration will be used for data_format = "graphite", can be ignored for other data_format
-  ## If matching multiple measurement files, this string will be used to join the matched values.
-  #separator = "."
-
-  ## Each template line requires a template pattern.  It can have an optional
-  ## filter before the template and separated by spaces.  It can also have optional extra
-  ## tags following the template.  Multiple tags should be separated by commas and no spaces
-  ## similar to the line protocol format.  The can be only one default template.
-  ## Templates support below format:
-  ## 1. filter + template
-  ## 2. filter + template + extra tag
-  ## 3. filter + template with field key
-  ## 4. default template
-  #templates = [
-  #  "*.app env.service.resource.measurement",
-  #  "stats.* .host.measurement* region=us-west,agent=sensu",
-  #  "stats2.* .host.measurement.field",
-  #  "measurement*"
-  #]
 ```
 
 Other options for modifying the measurement names are:
@@ -79,13 +65,16 @@ in influx line-protocol format.
 
 #### Configuration
 
-```
+```toml
 [[inputs.exec]]
   # Shell/commands array
   # compatible with old version
   # we can still use the old command configuration
   # command = "/usr/bin/line_protocol_collector"
   commands = ["/usr/bin/line_protocol_collector","/tmp/test2.sh"]
+
+  ## Timeout for each command to complete.
+  timeout = "5s"
 
   # Data format to consume.
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
@@ -120,11 +109,15 @@ We can also change the data_format to "graphite" to use the metrics collecting s
 In this example a script called /tmp/test.sh and a script called /tmp/test2.sh are configured for [[inputs.exec]] in graphite format.
 
 #### Configuration
-```
+
+```toml
 # Read flattened metrics from one or more commands that output JSON to stdout
 [[inputs.exec]]
   # Shell/commands array
   commands = ["/tmp/test.sh","/tmp/test2.sh"]
+
+  ## Timeout for each command to complete.
+  timeout = "5s"
 
   # Data format to consume.
   # NOTE json only reads numerical measurements, strings and booleans are ignored.
@@ -180,4 +173,3 @@ sensu.metric.net.server0.eth0.rx_dropped 0 1444234982
 The templates configuration will be used to parse the graphite metrics to support influxdb/opentsdb tagging store engines.
 
 More detail information about templates, please refer to [The graphite Input](https://github.com/influxdata/influxdb/blob/master/services/graphite/README.md)
-
