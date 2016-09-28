@@ -28,6 +28,7 @@
 
 ### Bugfixes
 
+- [#1748](https://github.com/influxdata/telegraf/issues/1748): Fix collation issue in SQL Server plugin
 - [#1746](https://github.com/influxdata/telegraf/issues/1746): Fix handling of non-string values for JSON keys listed in tag_keys.
 - [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
 - [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
