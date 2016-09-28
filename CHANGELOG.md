@@ -24,6 +24,7 @@
 - [#1755](https://github.com/influxdata/telegraf/issues/1755): Add support to SNMP for IP & MAC address conversion.
 - [#1729](https://github.com/influxdata/telegraf/issues/1729): Add support to SNMP for OID index suffixes.
 - [#1813](https://github.com/influxdata/telegraf/pull/1813): Change default arguments for SNMP plugin.
+- [#1686](https://github.com/influxdata/telegraf/pull/1686): Mesos input plugin: very high-cardinality mesos-task metrics removed.
 
 ### Bugfixes
 
@@ -38,6 +39,8 @@
 - [#1752](https://github.com/influxdata/telegraf/issues/1752): Fix varnish plugin defaults not being used.
 - [#1517](https://github.com/influxdata/telegraf/issues/1517): Fix windows glob paths.
 - [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix issue loading config directory on windows.
+- [#1772](https://github.com/influxdata/telegraf/pull/1772): Windows remote management interactive service fix.
+- [#1702](https://github.com/influxdata/telegraf/issues/1702): sqlserver, fix issue when case sensitive collation is activated.
 
 ## v1.0.1 [unreleased]
 
