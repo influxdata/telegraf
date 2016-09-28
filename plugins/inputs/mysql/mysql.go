@@ -313,6 +313,10 @@ var mappings = []*mapping{
 		onServer: "wsrep_",
 		inExport: "wsrep_",
 	},
+	{
+		onServer: "Uptime_",
+		inExport: "uptime_",
+	},
 }
 
 var (

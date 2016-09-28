@@ -182,15 +182,6 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 				}
 			}
 			return
-		case *fService != "" && runtime.GOOS == "windows":
-			if *fConfig != "" {
-				(*svcConfig).Arguments = []string{"-config", *fConfig}
-			}
-			err := service.Control(s, *fService)
-			if err != nil {
-				log.Fatal(err)
-			}
-			return
 		}
 
 		// If no other options are specified, load the config file and run.
@@ -320,9 +311,22 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = s.Run()
-		if err != nil {
-			logger.Error(err)
+		// Handle the -service flag here to prevent any issues with tooling that may not have an interactive
+		// session, e.g. installing from Ansible
+		flag.Parse()
+		if *fService != "" {
+			if *fConfig != "" {
+				(*svcConfig).Arguments = []string{"-config", *fConfig}
+			}
+			err := service.Control(s, *fService)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			err = s.Run()
+			if err != nil {
+				logger.Error(err)
+			}
 		}
 	} else {
 		stop = make(chan struct{})

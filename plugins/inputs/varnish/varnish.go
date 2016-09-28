@@ -146,7 +146,9 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("varnish", func() telegraf.Input {
 		return &Varnish{
-			run: varnishRunner,
+			run:    varnishRunner,
+			Stats:  defaultStats,
+			Binary: defaultBinary,
 		}
 	})
 }

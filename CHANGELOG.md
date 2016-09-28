@@ -21,6 +21,10 @@
 - [#1407](https://github.com/influxdata/telegraf/pull/1407): HTTP service listener input plugin.
 - [#1699](https://github.com/influxdata/telegraf/pull/1699): Add database blacklist option for Postgresql
 - [#1791](https://github.com/influxdata/telegraf/pull/1791): Add Docker container state metrics to Docker input plugin output
+- [#1755](https://github.com/influxdata/telegraf/issues/1755): Add support to SNMP for IP & MAC address conversion.
+- [#1729](https://github.com/influxdata/telegraf/issues/1729): Add support to SNMP for OID index suffixes.
+- [#1813](https://github.com/influxdata/telegraf/pull/1813): Change default arguments for SNMP plugin.
+- [#1686](https://github.com/influxdata/telegraf/pull/1686): Mesos input plugin: very high-cardinality mesos-task metrics removed.
 
 ### Bugfixes
 
@@ -31,6 +35,12 @@
 - [#1530](https://github.com/influxdata/telegraf/issues/1530): Fix prometheus_client reload panic
 - [#1764](https://github.com/influxdata/telegraf/issues/1764): Fix kafka consumer panic when nil error is returned down errs channel.
 - [#1768](https://github.com/influxdata/telegraf/pull/1768): Speed up statsd parsing.
+- [#1751](https://github.com/influxdata/telegraf/issues/1751): Fix powerdns integer parse error handling.
+- [#1752](https://github.com/influxdata/telegraf/issues/1752): Fix varnish plugin defaults not being used.
+- [#1517](https://github.com/influxdata/telegraf/issues/1517): Fix windows glob paths.
+- [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix issue loading config directory on windows.
+- [#1772](https://github.com/influxdata/telegraf/pull/1772): Windows remote management interactive service fix.
+- [#1702](https://github.com/influxdata/telegraf/issues/1702): sqlserver, fix issue when case sensitive collation is activated.
 
 ## v1.0.1 [unreleased]
 
@@ -39,6 +49,7 @@
 - [#1775](https://github.com/influxdata/telegraf/issues/1775): Prometheus output: Fix bug with multi-batch writes.
 - [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags.
 - [#1773](https://github.com/influxdata/telegraf/issues/1773): Add configurable timeout to influxdb input plugin.
+- [#1785](https://github.com/influxdata/telegraf/pull/1785): Fix statsd no default value panic.
 
 ## v1.0 [2016-09-08]
 
