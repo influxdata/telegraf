@@ -37,6 +37,7 @@
 - [#1751](https://github.com/influxdata/telegraf/issues/1751): Fix powerdns integer parse error handling.
 - [#1752](https://github.com/influxdata/telegraf/issues/1752): Fix varnish plugin defaults not being used.
 - [#1517](https://github.com/influxdata/telegraf/issues/1517): Fix windows glob paths.
+- [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix issue loading config directory on windows.
 
 ## v1.0.1 [unreleased]
 

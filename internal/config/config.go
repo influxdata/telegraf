@@ -404,24 +404,21 @@ func PrintOutputConfig(name string) error {
 }
 
 func (c *Config) LoadDirectory(path string) error {
-	directoryEntries, err := ioutil.ReadDir(path)
-	if err != nil {
-		return err
-	}
-	for _, entry := range directoryEntries {
-		if entry.IsDir() {
-			continue
+	walkfn := func(thispath string, info os.FileInfo, _ error) error {
+		if info.IsDir() {
+			return nil
 		}
-		name := entry.Name()
+		name := info.Name()
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
-			continue
+			return nil
 		}
-		err := c.LoadConfig(filepath.Join(path, name))
+		err := c.LoadConfig(thispath)
 		if err != nil {
 			return err
 		}
+		return nil
 	}
-	return nil
+	return filepath.Walk(path, walkfn)
 }
 
 // Try to find a default config file at these locations (in order):
