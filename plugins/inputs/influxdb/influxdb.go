@@ -258,7 +258,7 @@ func (i *InfluxDB) gatherURL(
 func init() {
 	inputs.Add("influxdb", func() telegraf.Input {
 		return &InfluxDB{
-			Timeout: internal.Duration(time.Second * 5),
+			Timeout: internal.Duration{Duration: time.Second * 5},
 		}
 	})
 }
