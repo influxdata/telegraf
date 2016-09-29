@@ -47,6 +47,9 @@ github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
 github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
 github.com/shirou/gopsutil 4d0c402af66c78735c5ccf820dc2ca7de5e4ff08
+github.com/signalfx/com_signalfx_metrics_protobuf 1477d7f5730360be99fcaf7e7d7c56e03be2eabc
+github.com/signalfx/gohistogram 1ccfd2ff508314074672f4450a917011a2060408
+github.com/signalfx/golib 93fae626851610c921ba9dfef122b6216d013903
 github.com/soniah/gosnmp eb32571c2410868d85849ad67d1e51d01273eb84
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
@@ -60,5 +63,7 @@ golang.org/x/net 6acef71eb69611914f7a30939ea9f6e194c78172
 golang.org/x/text a71fd10341b064c10f4a81ceac72bcf70f26ea34
 gopkg.in/dancannon/gorethink.v1 7d1af5be49cb5ecc7b177bf387d232050299d6ef
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
+gopkg.in/logfmt.v0 a0ff333161fe5c2daed0ba52d1792bd3d2531b94
 gopkg.in/mgo.v2 d90005c5262a3463800497ea5a89aed5fe22c886
+gopkg.in/stack.v1 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
 gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4
