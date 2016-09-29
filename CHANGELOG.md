@@ -41,6 +41,7 @@
 - [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix issue loading config directory on windows.
 - [#1772](https://github.com/influxdata/telegraf/pull/1772): Windows remote management interactive service fix.
 - [#1702](https://github.com/influxdata/telegraf/issues/1702): sqlserver, fix issue when case sensitive collation is activated.
+- [#1823](https://github.com/influxdata/telegraf/issues/1823): Fix huge allocations in http_listener when dealing with huge payloads.
 
 ## v1.0.1 [unreleased]
 
