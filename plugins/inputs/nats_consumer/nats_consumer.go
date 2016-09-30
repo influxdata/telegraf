@@ -119,7 +119,7 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 
 	// Start the message reader
 	go n.receiver()
-	log.Printf("Started the NATS consumer service, nats: %v, subjects: %v, queue: %v\n",
+	log.Printf("I! Started the NATS consumer service, nats: %v, subjects: %v, queue: %v\n",
 		n.Conn.ConnectedUrl(), n.Subjects, n.QueueGroup)
 
 	return nil
@@ -134,11 +134,11 @@ func (n *natsConsumer) receiver() {
 		case <-n.done:
 			return
 		case err := <-n.errs:
-			log.Printf("error reading from %s\n", err.Error())
+			log.Printf("E! error reading from %s\n", err.Error())
 		case msg := <-n.in:
 			metrics, err := n.parser.Parse(msg.Data)
 			if err != nil {
-				log.Printf("subject: %s, error: %s", msg.Subject, err.Error())
+				log.Printf("E! subject: %s, error: %s", msg.Subject, err.Error())
 			}
 
 			for _, metric := range metrics {
@@ -157,7 +157,7 @@ func (n *natsConsumer) clean() {
 
 	for _, sub := range n.Subs {
 		if err := sub.Unsubscribe(); err != nil {
-			log.Printf("Error unsubscribing from subject %s in queue %s: %s\n",
+			log.Printf("E! Error unsubscribing from subject %s in queue %s: %s\n",
 				sub.Subject, sub.Queue, err.Error())
 		}
 	}

@@ -80,7 +80,7 @@ func (c *CloudWatch) Connect() error {
 	_, err := svc.ListMetrics(params) // Try a read-only call to test connection.
 
 	if err != nil {
-		log.Printf("cloudwatch: Error in ListMetrics API call : %+v \n", err.Error())
+		log.Printf("E! cloudwatch: Error in ListMetrics API call : %+v \n", err.Error())
 	}
 
 	c.svc = svc
@@ -131,7 +131,7 @@ func (c *CloudWatch) WriteToCloudWatch(datums []*cloudwatch.MetricDatum) error {
 	_, err := c.svc.PutMetricData(params)
 
 	if err != nil {
-		log.Printf("CloudWatch: Unable to write to CloudWatch : %+v \n", err.Error())
+		log.Printf("E! CloudWatch: Unable to write to CloudWatch : %+v \n", err.Error())
 	}
 
 	return err

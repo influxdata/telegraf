@@ -12,15 +12,17 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+
 	"github.com/kardianos/service"
 )
 
 var fDebug = flag.Bool("debug", false,
-	"show metrics as they're generated to stdout")
+	"turn on debug logging")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
@@ -109,12 +111,9 @@ Examples:
   telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
 `
 
-var logger service.Logger
-
 var stop chan struct{}
 
 var srvc service.Service
-var svcConfig *service.Config
 
 type program struct{}
 
@@ -212,13 +211,12 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 			log.Fatal(err)
 		}
 
-		if *fDebug {
-			ag.Config.Agent.Debug = true
-		}
-
-		if *fQuiet {
-			ag.Config.Agent.Quiet = true
-		}
+		// Setup logging
+		logger.SetupLogging(
+			ag.Config.Agent.Debug || *fDebug,
+			ag.Config.Agent.Quiet || *fQuiet,
+			ag.Config.Agent.Logfile,
+		)
 
 		if *fTest {
 			err = ag.Test()
@@ -243,7 +241,7 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 					close(shutdown)
 				}
 				if sig == syscall.SIGHUP {
-					log.Printf("Reloading Telegraf config\n")
+					log.Printf("I! Reloading Telegraf config\n")
 					<-reload
 					reload <- true
 					close(shutdown)
@@ -253,10 +251,10 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 			}
 		}()
 
-		log.Printf("Starting Telegraf (version %s)\n", version)
-		log.Printf("Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-		log.Printf("Loaded inputs: %s", strings.Join(c.InputNames(), " "))
-		log.Printf("Tags enabled: %s", c.ListTags())
+		log.Printf("I! Starting Telegraf (version %s)\n", version)
+		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+		log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
+		log.Printf("I! Tags enabled: %s", c.ListTags())
 
 		if *fPidfile != "" {
 			f, err := os.Create(*fPidfile)
@@ -293,8 +291,9 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
+	flag.Parse()
 	if runtime.GOOS == "windows" {
-		svcConfig = &service.Config{
+		svcConfig := &service.Config{
 			Name:        "telegraf",
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
@@ -307,13 +306,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		logger, err = s.Logger(nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		// Handle the -service flag here to prevent any issues with tooling that may not have an interactive
-		// session, e.g. installing from Ansible
-		flag.Parse()
+		// Handle the -service flag here to prevent any issues with tooling that
+		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
 			if *fConfig != "" {
 				(*svcConfig).Arguments = []string{"-config", *fConfig}
@@ -325,7 +319,7 @@ func main() {
 		} else {
 			err = s.Run()
 			if err != nil {
-				logger.Error(err)
+				log.Println("E! " + err.Error())
 			}
 		}
 	} else {

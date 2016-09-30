@@ -29,6 +29,7 @@ github.com/hpcloud/tail b2940955ab8b26e19d43a43c4da0475dd81bdb56
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
 github.com/influxdata/influxdb e094138084855d444195b252314dfee9eae34cab
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
+github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
 github.com/kardianos/osext 29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc
 github.com/kardianos/service 5e335590050d6d00f3aa270217d288dda1c94d0a
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720

@@ -47,7 +47,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		},
 	}, result_repl)
 	if err != nil {
-		log.Println("Not gathering replica set status, member not in replica set (" + err.Error() + ")")
+		log.Println("E! Not gathering replica set status, member not in replica set (" + err.Error() + ")")
 	}
 
 	jumbo_chunks, _ := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
@@ -62,7 +62,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		names := []string{}
 		names, err = s.Session.DatabaseNames()
 		if err != nil {
-			log.Println("Error getting database names (" + err.Error() + ")")
+			log.Println("E! Error getting database names (" + err.Error() + ")")
 		}
 		for _, db_name := range names {
 			db_stat_line := &DbStatsData{}
@@ -73,7 +73,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 				},
 			}, db_stat_line)
 			if err != nil {
-				log.Println("Error getting db stats from " + db_name + "(" + err.Error() + ")")
+				log.Println("E! Error getting db stats from " + db_name + "(" + err.Error() + ")")
 			}
 			db := &Db{
 				Name:        db_name,

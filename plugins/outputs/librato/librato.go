@@ -103,15 +103,13 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		if gauges, err := l.buildGauges(m); err == nil {
 			for _, gauge := range gauges {
 				tempGauges = append(tempGauges, gauge)
-				if l.Debug {
-					log.Printf("[DEBUG] Got a gauge: %v\n", gauge)
-				}
+				log.Printf("D! Got a gauge: %v\n", gauge)
+
 			}
 		} else {
-			log.Printf("unable to build Gauge for %s, skipping\n", m.Name())
-			if l.Debug {
-				log.Printf("[DEBUG] Couldn't build gauge: %v\n", err)
-			}
+			log.Printf("I! unable to build Gauge for %s, skipping\n", m.Name())
+			log.Printf("D! Couldn't build gauge: %v\n", err)
+
 		}
 	}
 
@@ -132,9 +130,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("unable to marshal Metrics, %s\n", err.Error())
 		}
 
-		if l.Debug {
-			log.Printf("[DEBUG] Librato request: %v\n", string(metricsBytes))
-		}
+		log.Printf("D! Librato request: %v\n", string(metricsBytes))
 
 		req, err := http.NewRequest(
 			"POST",
@@ -150,9 +146,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 
 		resp, err := l.client.Do(req)
 		if err != nil {
-			if l.Debug {
-				log.Printf("[DEBUG] Error POSTing metrics: %v\n", err.Error())
-			}
+			log.Printf("D! Error POSTing metrics: %v\n", err.Error())
 			return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
 		}
 		defer resp.Body.Close()
@@ -160,7 +154,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		if resp.StatusCode != 200 || l.Debug {
 			htmlData, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				log.Printf("[DEBUG] Couldn't get response! (%v)\n", err)
+				log.Printf("D! Couldn't get response! (%v)\n", err)
 			}
 			if resp.StatusCode != 200 {
 				return fmt.Errorf(
@@ -168,9 +162,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 					resp.StatusCode,
 					string(htmlData))
 			}
-			if l.Debug {
-				log.Printf("[DEBUG] Librato response: %v\n", string(htmlData))
-			}
+			log.Printf("D! Librato response: %v\n", string(htmlData))
 		}
 	}
 
@@ -226,9 +218,8 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 		}
 		gauges = append(gauges, gauge)
 	}
-	if l.Debug {
-		fmt.Printf("[DEBUG] Built gauges: %v\n", gauges)
-	}
+
+	log.Printf("D! Built gauges: %v\n", gauges)
 	return gauges, nil
 }
 

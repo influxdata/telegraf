@@ -125,6 +125,9 @@ type AgentConfig struct {
 	// Debug is the option for running in debug mode
 	Debug bool
 
+	// Logfile specifies the file to send logs to
+	Logfile string
+
 	// Quiet is the option for running in quiet mode
 	Quiet        bool
 	Hostname     string
@@ -195,12 +198,15 @@ var header = `# Telegraf Configuration
   ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  ## Telegraf will send metrics to outputs in batches of at
-  ## most metric_batch_size metrics.
+  ## Telegraf will send metrics to outputs in batches of at most
+  ## metric_batch_size metrics.
+  ## This controls the size of writes that Telegraf sends to output plugins.
   metric_batch_size = 1000
+
   ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
   ## output, and will flush this buffer on a successful write. Oldest metrics
   ## are dropped first when this buffer fills.
+  ## This buffer only fills when writes fail to output plugin(s).
   metric_buffer_limit = 10000
 
   ## Collection jitter is used to jitter the collection by a random amount.
@@ -222,10 +228,15 @@ var header = `# Telegraf Configuration
   ## Precision will NOT be used for service inputs, such as logparser and statsd.
   ## Valid values are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
-  ## Run telegraf in debug mode
+
+  ## Logging configuration:
+  ## Run telegraf with debug log messages.
   debug = false
-  ## Run telegraf in quiet mode
+  ## Run telegraf in quiet mode (error log messages only).
   quiet = false
+  ## Specify the log file name. The empty string means to log to stdout.
+  logfile = ""
+
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
@@ -435,7 +446,7 @@ func getDefaultConfigPath() (string, error) {
 	}
 	for _, path := range []string{envfile, homefile, etcfile} {
 		if _, err := os.Stat(path); err == nil {
-			log.Printf("Using config file: %s", path)
+			log.Printf("I! Using config file: %s", path)
 			return path, nil
 		}
 	}
@@ -466,7 +477,7 @@ func (c *Config) LoadConfig(path string) error {
 				return fmt.Errorf("%s: invalid configuration", path)
 			}
 			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
-				log.Printf("Could not parse [global_tags] config\n")
+				log.Printf("E! Could not parse [global_tags] config\n")
 				return fmt.Errorf("Error parsing %s, %s", path, err)
 			}
 		}
@@ -479,7 +490,7 @@ func (c *Config) LoadConfig(path string) error {
 			return fmt.Errorf("%s: invalid configuration", path)
 		}
 		if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
-			log.Printf("Could not parse [agent] config\n")
+			log.Printf("E! Could not parse [agent] config\n")
 			return fmt.Errorf("Error parsing %s, %s", path, err)
 		}
 	}
@@ -832,7 +843,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := config.UnmarshalTable(subtbl, cp.Tags); err != nil {
-				log.Printf("Could not parse tags for input %s\n", name)
+				log.Printf("E! Could not parse tags for input %s\n", name)
 			}
 		}
 	}

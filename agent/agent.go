@@ -49,18 +49,16 @@ func (a *Agent) Connect() error {
 		switch ot := o.Output.(type) {
 		case telegraf.ServiceOutput:
 			if err := ot.Start(); err != nil {
-				log.Printf("Service for output %s failed to start, exiting\n%s\n",
+				log.Printf("E! Service for output %s failed to start, exiting\n%s\n",
 					o.Name, err.Error())
 				return err
 			}
 		}
 
-		if a.Config.Agent.Debug {
-			log.Printf("Attempting connection to output: %s\n", o.Name)
-		}
+		log.Printf("D! Attempting connection to output: %s\n", o.Name)
 		err := o.Output.Connect()
 		if err != nil {
-			log.Printf("Failed to connect to output %s, retrying in 15s, "+
+			log.Printf("E! Failed to connect to output %s, retrying in 15s, "+
 				"error was '%s' \n", o.Name, err)
 			time.Sleep(15 * time.Second)
 			err = o.Output.Connect()
@@ -68,9 +66,7 @@ func (a *Agent) Connect() error {
 				return err
 			}
 		}
-		if a.Config.Agent.Debug {
-			log.Printf("Successfully connected to output: %s\n", o.Name)
-		}
+		log.Printf("D! Successfully connected to output: %s\n", o.Name)
 	}
 	return nil
 }
@@ -92,9 +88,9 @@ func panicRecover(input *models.RunningInput) {
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
-		log.Printf("FATAL: Input [%s] panicked: %s, Stack:\n%s\n",
+		log.Printf("E! FATAL: Input [%s] panicked: %s, Stack:\n%s\n",
 			input.Name, err, trace)
-		log.Println("PLEASE REPORT THIS PANIC ON GITHUB with " +
+		log.Println("E! PLEASE REPORT THIS PANIC ON GITHUB with " +
 			"stack trace, configuration, and OS information: " +
 			"https://github.com/influxdata/telegraf/issues/new")
 	}
@@ -117,7 +113,6 @@ func (a *Agent) gatherer(
 		var outerr error
 
 		acc := NewAccumulator(input.Config, metricC)
-		acc.SetDebug(a.Config.Agent.Debug)
 		acc.SetPrecision(a.Config.Agent.Precision.Duration,
 			a.Config.Agent.Interval.Duration)
 		acc.setDefaultTags(a.Config.Tags)
@@ -131,10 +126,8 @@ func (a *Agent) gatherer(
 		if outerr != nil {
 			return outerr
 		}
-		if a.Config.Agent.Debug {
-			log.Printf("Input [%s] gathered metrics, (%s interval) in %s\n",
-				input.Name, interval, elapsed)
-		}
+		log.Printf("D! Input [%s] gathered metrics, (%s interval) in %s\n",
+			input.Name, interval, elapsed)
 
 		select {
 		case <-shutdown:
@@ -167,11 +160,11 @@ func gatherWithTimeout(
 		select {
 		case err := <-done:
 			if err != nil {
-				log.Printf("ERROR in input [%s]: %s", input.Name, err)
+				log.Printf("E! ERROR in input [%s]: %s", input.Name, err)
 			}
 			return
 		case <-ticker.C:
-			log.Printf("ERROR: input [%s] took longer to collect than "+
+			log.Printf("E! ERROR: input [%s] took longer to collect than "+
 				"collection interval (%s)",
 				input.Name, timeout)
 			continue
@@ -244,7 +237,7 @@ func (a *Agent) flush() {
 			defer wg.Done()
 			err := output.Write()
 			if err != nil {
-				log.Printf("Error writing to output [%s]: %s\n",
+				log.Printf("E! Error writing to output [%s]: %s\n",
 					output.Name, err.Error())
 			}
 		}(o)
@@ -264,7 +257,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 	for {
 		select {
 		case <-shutdown:
-			log.Println("Hang on, flushing any cached metrics before shutdown")
+			log.Println("I! Hang on, flushing any cached metrics before shutdown")
 			a.flush()
 			return nil
 		case <-ticker.C:
@@ -302,9 +295,9 @@ func copyMetric(m telegraf.Metric) telegraf.Metric {
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 
-	log.Printf("Agent Config: Interval:%s, Debug:%#v, Quiet:%#v, Hostname:%#v, "+
+	log.Printf("I! Agent Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s \n",
-		a.Config.Agent.Interval.Duration, a.Config.Agent.Debug, a.Config.Agent.Quiet,
+		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
 	// channel shared between all input threads for accumulating metrics
@@ -315,13 +308,12 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		switch p := input.Input.(type) {
 		case telegraf.ServiceInput:
 			acc := NewAccumulator(input.Config, metricC)
-			acc.SetDebug(a.Config.Agent.Debug)
 			// Service input plugins should set their own precision of their
 			// metrics.
 			acc.DisablePrecision()
 			acc.setDefaultTags(a.Config.Tags)
 			if err := p.Start(acc); err != nil {
-				log.Printf("Service for input %s failed to start, exiting\n%s\n",
+				log.Printf("E! Service for input %s failed to start, exiting\n%s\n",
 					input.Name, err.Error())
 				return err
 			}
@@ -339,7 +331,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	go func() {
 		defer wg.Done()
 		if err := a.flusher(shutdown, metricC); err != nil {
-			log.Printf("Flusher routine failed, exiting: %s\n", err.Error())
+			log.Printf("E! Flusher routine failed, exiting: %s\n", err.Error())
 			close(shutdown)
 		}
 	}()
@@ -354,7 +346,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		go func(in *models.RunningInput, interv time.Duration) {
 			defer wg.Done()
 			if err := a.gatherer(shutdown, in, interv, metricC); err != nil {
-				log.Printf(err.Error())
+				log.Printf("E! " + err.Error())
 			}
 		}(input, interval)
 	}
