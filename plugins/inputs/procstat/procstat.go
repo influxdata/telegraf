@@ -16,6 +16,7 @@ import (
 
 type Procstat struct {
 	PidFile     string `toml:"pid_file"`
+	Exact	    bool
 	Exe         string
 	Pattern     string
 	Prefix      string
@@ -43,6 +44,8 @@ var sampleConfig = `
   # exe = "nginx"
   ## pattern as argument for pgrep (ie, pgrep -f <pattern>)
   # pattern = "nginx"
+  ## match the exact name of the process (ie, pgrep -xf <pattern>)
+  # exact = false
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
 
@@ -176,11 +179,17 @@ func (p *Procstat) pidsFromExe() ([]int32, error) {
 func (p *Procstat) pidsFromPattern() ([]int32, error) {
 	var out []int32
 	var outerr error
+	var options string
 	bin, err := exec.LookPath("pgrep")
 	if err != nil {
 		return out, fmt.Errorf("Couldn't find pgrep binary: %s", err)
 	}
-	pgrep, err := exec.Command(bin, "-f", p.Pattern).Output()
+	if p.Exact == true {
+		options = "-xf"
+	} else {
+		options = "-f"
+	}
+	pgrep, err := exec.Command(bin, options, p.Pattern).Output()
 	if err != nil {
 		return out, fmt.Errorf("Failed to execute %s. Error: '%s'", bin, err)
 	} else {
