@@ -18,6 +18,10 @@ build:
 	go install -ldflags \
 		"-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" ./...
 
+# Only run the build (no dependency grabbing)
+experimental:
+	go install -tags experimental -ldflags "-X main.version=experimental-$(VERSION)" ./...
+
 build-windows:
 	GOOS=windows GOARCH=amd64 go build -o telegraf.exe -ldflags \
 		"-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" \

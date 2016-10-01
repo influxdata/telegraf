@@ -13,10 +13,14 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	"github.com/kardianos/service"
+
+	_ "github.com/influxdata/telegraf/plugins/experimental/inputs/all"
+	_ "github.com/influxdata/telegraf/plugins/experimental/outputs/all"
+
+	_ "github.com/influxdata/telegraf/plugins/inputs/all"
+	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 )
 
 var fDebug = flag.Bool("debug", false,
