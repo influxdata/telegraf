@@ -72,7 +72,7 @@ func (ac *accumulator) AddCounter(
 	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Counter, ac.getTime(t)); m != nil {
 		ac.metrics <- m
 	}
-	}
+}
 
 // AddError passes a runtime error to the accumulator.
 // The error will be tagged with the plugin name and written to the log.
@@ -112,6 +112,6 @@ func (ac accumulator) getTime(t []time.Time) time.Time {
 		timestamp = t[0]
 	} else {
 		timestamp = time.Now()
+	}
 	return timestamp.Round(ac.precision)
-}
 }

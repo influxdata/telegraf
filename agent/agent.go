@@ -122,7 +122,6 @@ func (a *Agent) gatherer(
 		gatherWithTimeout(shutdown, input, acc, interval)
 		elapsed := time.Since(start)
 
-
 		log.Printf("D! Input [%s] gathered metrics, (%s interval) in %s\n",
 			input.Name(), interval, elapsed)
 
@@ -304,7 +303,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			mS := []telegraf.Metric{metric}
 			for _, processor := range a.Config.Processors {
 				mS = processor.Apply(mS...)
-				}
+			}
 			for _, m := range mS {
 				outMetricC <- m
 			}
@@ -366,9 +365,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}
 		go func(in *models.RunningInput, interv time.Duration) {
 			defer wg.Done()
-			if err := a.gatherer(shutdown, in, interv, metricC); err != nil {
-				log.Printf("E! " + err.Error())
-			}
+			a.gatherer(shutdown, in, interv, metricC)
 		}(input, interval)
 	}
 
