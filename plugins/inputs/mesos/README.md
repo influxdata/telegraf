@@ -35,13 +35,10 @@ For more information, please check the [Mesos Observability Metrics](http://meso
   #   "tasks",
   #   "messages",
   # ]
-  ## Include mesos tasks statistics, default is false
-  # slave_tasks = true
 ```
 
 By default this plugin is not configured to gather metrics from mesos. Since a mesos cluster can be deployed in numerous ways it does not provide any default
-values. User needs to specify master/slave nodes this plugin will gather metrics from. Additionally, enabling `slave_tasks` will allow
-gathering metrics from tasks running on specified slaves (this option is disabled by default).
+values. User needs to specify master/slave nodes this plugin will gather metrics from.
 
 ### Measurements & Fields:
 
@@ -235,31 +232,6 @@ Mesos slave metric groups
     - slave/valid_framework_messages
     - slave/valid_status_updates
 
-Mesos tasks metric groups
-
-- executor_id
-- executor_name
-- framework_id
-- source
-- statistics
-    - cpus_limit
-    - cpus_system_time_secs
-    - cpus_user_time_secs
-    - mem_anon_bytes
-    - mem_cache_bytes
-    - mem_critical_pressure_counter
-    - mem_file_bytes
-    - mem_limit_bytes
-    - mem_low_pressure_counter
-    - mem_mapped_file_bytes
-    - mem_medium_pressure_counter
-    - mem_rss_bytes
-    - mem_swap_bytes
-    - mem_total_bytes
-    - mem_total_memsw_bytes
-    - mem_unevictable_bytes
-    - timestamp
-
 ### Tags:
 
 - All master/slave measurements have the following tags:
@@ -269,16 +241,11 @@ Mesos tasks metric groups
 - All master measurements have the extra tags:
 	- state (leader/follower)
 
-- Tasks measurements have the following tags:
-    - server
-	- framework_id
-	- task_id
-
 ### Example Output:
 ```
 $ telegraf -config ~/mesos.conf -input-filter mesos -test
 * Plugin: mesos, Collection 1
-mesos,role=master,state=leader,host=172.17.8.102,server=172.17.8.101 
+mesos,role=master,state=leader,host=172.17.8.102,server=172.17.8.101
 allocator/event_queue_dispatches=0,master/cpus_percent=0,
 master/cpus_revocable_percent=0,master/cpus_revocable_total=0,
 master/cpus_revocable_used=0,master/cpus_total=2,
@@ -297,15 +264,3 @@ master/mem_used=0,master/messages_authenticate=0,
 master/messages_deactivate_framework=0 ...
 ```
 
-Meoso tasks metrics (if enabled):
-```
-mesos-tasks,host=172.17.8.102,server=172.17.8.101,framework_id=e3060235-c4ed-4765-9d36-784e3beca07f-0000,task_id=hello-world.e4b5b497-2ccd-11e6-a659-0242fb222ce2
-cpus_limit=0.2,cpus_system_time_secs=142.49,cpus_user_time_secs=388.14,
-mem_anon_bytes=359129088,mem_cache_bytes=3964928,
-mem_critical_pressure_counter=0,mem_file_bytes=3964928,
-mem_limit_bytes=767557632,mem_low_pressure_counter=0,
-mem_mapped_file_bytes=114688,mem_medium_pressure_counter=0,
-mem_rss_bytes=359129088,mem_swap_bytes=0,mem_total_bytes=363094016,
-mem_total_memsw_bytes=363094016,mem_unevictable_bytes=0,
-timestamp=1465486052.70525 1465486053052811792...
-```

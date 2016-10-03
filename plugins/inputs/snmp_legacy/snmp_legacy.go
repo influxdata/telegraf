@@ -296,7 +296,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 
 		data, err := ioutil.ReadFile(s.SnmptranslateFile)
 		if err != nil {
-			log.Printf("Reading SNMPtranslate file error: %s", err)
+			log.Printf("E! Reading SNMPtranslate file error: %s", err)
 			return err
 		} else {
 			for _, line := range strings.Split(string(data), "\n") {
@@ -394,16 +394,16 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// only if len(s.OidInstanceMapping) == 0
 		if len(host.OidInstanceMapping) >= 0 {
 			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
-				log.Printf("SNMP Mapping error for host '%s': %s", host.Address, err)
+				log.Printf("E! SNMP Mapping error for host '%s': %s", host.Address, err)
 				continue
 			}
 		}
 		// Launch Get requests
 		if err := host.SNMPGet(acc, s.initNode); err != nil {
-			log.Printf("SNMP Error for host '%s': %s", host.Address, err)
+			log.Printf("E! SNMP Error for host '%s': %s", host.Address, err)
 		}
 		if err := host.SNMPBulk(acc, s.initNode); err != nil {
-			log.Printf("SNMP Error for host '%s': %s", host.Address, err)
+			log.Printf("E! SNMP Error for host '%s': %s", host.Address, err)
 		}
 	}
 	return nil
@@ -800,7 +800,7 @@ func (h *Host) HandleResponse(
 					acc.AddFields(field_name, fields, tags)
 				case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
 					// Oid not found
-					log.Printf("[snmp input] Oid not found: %s", oid_key)
+					log.Printf("E! [snmp input] Oid not found: %s", oid_key)
 				default:
 					// delete other data
 				}

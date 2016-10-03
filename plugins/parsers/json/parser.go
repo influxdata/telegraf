@@ -35,6 +35,10 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		switch v := jsonOut[tag].(type) {
 		case string:
 			tags[tag] = v
+		case bool:
+			tags[tag] = strconv.FormatBool(v)
+		case float64:
+			tags[tag] = strconv.FormatFloat(v, 'f', -1, 64)
 		}
 		delete(jsonOut, tag)
 	}

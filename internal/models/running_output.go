@@ -85,7 +85,7 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
 	if !ro.Quiet {
-		log.Printf("Output [%s] buffer fullness: %d / %d metrics. "+
+		log.Printf("I! Output [%s] buffer fullness: %d / %d metrics. "+
 			"Total gathered metrics: %d. Total dropped metrics: %d.",
 			ro.Name,
 			ro.failMetrics.Len()+ro.metrics.Len(),
@@ -142,7 +142,7 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	elapsed := time.Since(start)
 	if err == nil {
 		if !ro.Quiet {
-			log.Printf("Output [%s] wrote batch of %d metrics in %s\n",
+			log.Printf("I! Output [%s] wrote batch of %d metrics in %s\n",
 				ro.Name, len(metrics), elapsed)
 		}
 	}

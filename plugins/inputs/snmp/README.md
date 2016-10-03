@@ -136,6 +136,9 @@ Output measurement name.
 * `oid`:  
 OID to get. May be a numeric or textual OID.
 
+* `oid_index_suffix`:
+The OID sub-identifier to strip off so that the index can be matched against other fields in the table.
+
 * `name`:  
 Output field/tag name.
 If not specified, it defaults to the value of `oid`. If `oid` is numeric, an attempt to translate the numeric OID into a texual OID will be made.
@@ -149,6 +152,8 @@ Converts the value according to the given specification.
     - `float(X)`: Converts the input value into a float and divides by the Xth power of 10. Efficively just moves the decimal left X places. For example a value of `123` with `float(2)` will result in `1.23`.
     - `float`: Converts the value into a float with no adjustment. Same as `float(0)`.
     - `int`: Convertes the value into an integer.
+    - `hwaddr`: Converts the value to a MAC address.
+    - `ipaddr`: Converts the value to an IP address.
 
 #### Table parameters:
 * `oid`:  

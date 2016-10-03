@@ -126,7 +126,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
 			if err != nil {
-				log.Printf("Error gathering container %s stats: %s\n",
+				log.Printf("E! Error gathering container %s stats: %s\n",
 					c.Names, err.Error())
 			}
 		}(container)

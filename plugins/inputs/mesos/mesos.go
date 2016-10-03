@@ -30,7 +30,7 @@ type Mesos struct {
 	MasterCols []string `toml:"master_collections"`
 	Slaves     []string
 	SlaveCols  []string `toml:"slave_collections"`
-	SlaveTasks bool
+	//SlaveTasks bool
 }
 
 var allMetrics = map[Role][]string{
@@ -66,8 +66,6 @@ var sampleConfig = `
   #   "tasks",
   #   "messages",
   # ]
-  ## Include mesos tasks statistics, default is false
-  # slave_tasks = true
 `
 
 // SampleConfig returns a sample configuration block
@@ -90,7 +88,7 @@ func (m *Mesos) SetDefaults() {
 	}
 
 	if m.Timeout == 0 {
-		log.Println("[mesos] Missing timeout value, setting default value (100ms)")
+		log.Println("I! [mesos] Missing timeout value, setting default value (100ms)")
 		m.Timeout = 100
 	}
 }
@@ -121,16 +119,16 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 			return
 		}(v)
 
-		if !m.SlaveTasks {
-			continue
-		}
+		// if !m.SlaveTasks {
+		// 	continue
+		// }
 
-		wg.Add(1)
-		go func(c string) {
-			errorChannel <- m.gatherSlaveTaskMetrics(c, ":5051", acc)
-			wg.Done()
-			return
-		}(v)
+		// wg.Add(1)
+		// go func(c string) {
+		// 	errorChannel <- m.gatherSlaveTaskMetrics(c, ":5051", acc)
+		// 	wg.Done()
+		// 	return
+		// }(v)
 	}
 
 	wg.Wait()
@@ -385,7 +383,7 @@ func getMetrics(role Role, group string) []string {
 	ret, ok := m[group]
 
 	if !ok {
-		log.Printf("[mesos] Unkown %s metrics group: %s\n", role, group)
+		log.Printf("I! [mesos] Unkown %s metrics group: %s\n", role, group)
 		return []string{}
 	}
 
@@ -459,7 +457,6 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 	}
 
 	for _, task := range metrics {
-		tags["task_id"] = task.ExecutorID
 		tags["framework_id"] = task.FrameworkID
 
 		jf := jsonparser.JSONFlattener{}
@@ -468,7 +465,9 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 		if err != nil {
 			return err
 		}
+
 		timestamp := time.Unix(int64(jf.Fields["timestamp"].(float64)), 0)
+		jf.Fields["executor_id"] = task.ExecutorID
 
 		acc.AddFields("mesos_tasks", jf.Fields, tags, timestamp)
 	}

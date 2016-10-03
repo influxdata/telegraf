@@ -1,7 +1,9 @@
 package http_listener
 
 import (
-	"io/ioutil"
+	"bufio"
+	"bytes"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -72,7 +74,7 @@ func (t *HttpListener) Start(acc telegraf.Accumulator) error {
 
 	go t.httpListen()
 
-	log.Printf("Started HTTP listener service on %s\n", t.ServiceAddress)
+	log.Printf("I! Started HTTP listener service on %s\n", t.ServiceAddress)
 
 	return nil
 }
@@ -87,7 +89,7 @@ func (t *HttpListener) Stop() {
 
 	t.wg.Wait()
 
-	log.Println("Stopped HTTP listener service on ", t.ServiceAddress)
+	log.Println("I! Stopped HTTP listener service on ", t.ServiceAddress)
 }
 
 // httpListen listens for HTTP requests.
@@ -111,25 +113,34 @@ func (t *HttpListener) httpListen() error {
 func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	t.wg.Add(1)
 	defer t.wg.Done()
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		log.Printf("Problem reading request: [%s], Error: %s\n", string(body), err)
-		http.Error(res, "ERROR reading request", http.StatusInternalServerError)
-		return
-	}
 
 	switch req.URL.Path {
 	case "/write":
-		var metrics []telegraf.Metric
-		metrics, err = t.parser.Parse(body)
-		if err == nil {
-			for _, m := range metrics {
-				t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		var http400msg bytes.Buffer
+		var partial string
+		scanner := bufio.NewScanner(req.Body)
+		scanner.Buffer([]byte(""), 128*1024)
+		for scanner.Scan() {
+			metrics, err := t.parser.Parse(scanner.Bytes())
+			if err == nil {
+				for _, m := range metrics {
+					t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+				}
+				partial = "partial write: "
+			} else {
+				http400msg.WriteString(err.Error() + " ")
 			}
-			res.WriteHeader(http.StatusNoContent)
+		}
+
+		if err := scanner.Err(); err != nil {
+			http.Error(res, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		} else if http400msg.Len() > 0 {
+			res.Header().Set("Content-Type", "application/json")
+			res.Header().Set("X-Influxdb-Version", "1.0")
+			res.WriteHeader(http.StatusBadRequest)
+			res.Write([]byte(fmt.Sprintf(`{"error":"%s%s"}`, partial, http400msg.String())))
 		} else {
-			log.Printf("Problem parsing body: [%s], Error: %s\n", string(body), err)
-			http.Error(res, "ERROR parsing metrics", http.StatusInternalServerError)
+			res.WriteHeader(http.StatusNoContent)
 		}
 	case "/query":
 		// Deliver a dummy response to the query endpoint, as some InfluxDB

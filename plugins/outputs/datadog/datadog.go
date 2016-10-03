@@ -92,7 +92,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				metricCounter++
 			}
 		} else {
-			log.Printf("unable to build Metric for %s, skipping\n", m.Name())
+			log.Printf("I! unable to build Metric for %s, skipping\n", m.Name())
 		}
 	}
 

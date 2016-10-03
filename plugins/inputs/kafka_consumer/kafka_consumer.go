@@ -90,7 +90,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	case "newest":
 		config.Offsets.Initial = sarama.OffsetNewest
 	default:
-		log.Printf("WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
+		log.Printf("I! WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
 			k.Offset)
 		config.Offsets.Initial = sarama.OffsetOldest
 	}
@@ -115,7 +115,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 
 	// Start the kafka message reader
 	go k.receiver()
-	log.Printf("Started the kafka consumer service, peers: %v, topics: %v\n",
+	log.Printf("I! Started the kafka consumer service, peers: %v, topics: %v\n",
 		k.ZookeeperPeers, k.Topics)
 	return nil
 }
@@ -129,12 +129,12 @@ func (k *Kafka) receiver() {
 			return
 		case err := <-k.errs:
 			if err != nil {
-				log.Printf("Kafka Consumer Error: %s\n", err)
+				log.Printf("E! Kafka Consumer Error: %s\n", err)
 			}
 		case msg := <-k.in:
 			metrics, err := k.parser.Parse(msg.Value)
 			if err != nil {
-				log.Printf("KAFKA PARSE ERROR\nmessage: %s\nerror: %s",
+				log.Printf("E! Kafka Message Parse Error\nmessage: %s\nerror: %s",
 					string(msg.Value), err.Error())
 			}
 
@@ -158,7 +158,7 @@ func (k *Kafka) Stop() {
 	defer k.Unlock()
 	close(k.done)
 	if err := k.Consumer.Close(); err != nil {
-		log.Printf("Error closing kafka consumer: %s\n", err.Error())
+		log.Printf("E! Error closing kafka consumer: %s\n", err.Error())
 	}
 }
 

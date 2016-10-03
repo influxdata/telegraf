@@ -73,7 +73,7 @@ func (wb *Webhooks) Listen(acc telegraf.Accumulator) {
 
 	err := http.ListenAndServe(fmt.Sprintf("%s", wb.ServiceAddress), r)
 	if err != nil {
-		log.Printf("Error starting server: %v", err)
+		log.Printf("E! Error starting server: %v", err)
 	}
 }
 
@@ -100,10 +100,10 @@ func (wb *Webhooks) AvailableWebhooks() []Webhook {
 
 func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 	go wb.Listen(acc)
-	log.Printf("Started the webhooks service on %s\n", wb.ServiceAddress)
+	log.Printf("I! Started the webhooks service on %s\n", wb.ServiceAddress)
 	return nil
 }
 
 func (rb *Webhooks) Stop() {
-	log.Println("Stopping the Webhooks service")
+	log.Println("I! Stopping the Webhooks service")
 }

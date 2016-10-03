@@ -24,10 +24,11 @@ const (
 
 	defaultFieldName = "value"
 
-	defaultSeparator = "_"
+	defaultSeparator           = "_"
+	defaultAllowPendingMessage = 10000
 )
 
-var dropwarn = "ERROR: statsd message queue full. " +
+var dropwarn = "E! Error: statsd message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
@@ -250,7 +251,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	}
 
 	if s.ConvertNames {
-		log.Printf("WARNING statsd: convert_names config option is deprecated," +
+		log.Printf("I! WARNING statsd: convert_names config option is deprecated," +
 			" please use metric_separator instead")
 	}
 
@@ -263,7 +264,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	go s.udpListen()
 	// Start the line parser
 	go s.parser()
-	log.Printf("Started the statsd service on %s\n", s.ServiceAddress)
+	log.Printf("I! Started the statsd service on %s\n", s.ServiceAddress)
 	prevInstance = s
 	return nil
 }
@@ -277,7 +278,7 @@ func (s *Statsd) udpListen() error {
 	if err != nil {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
-	log.Println("Statsd listener listening on: ", s.listener.LocalAddr().String())
+	log.Println("I! Statsd listener listening on: ", s.listener.LocalAddr().String())
 
 	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
@@ -287,7 +288,7 @@ func (s *Statsd) udpListen() error {
 		default:
 			n, _, err := s.listener.ReadFromUDP(buf)
 			if err != nil && !strings.Contains(err.Error(), "closed network") {
-				log.Printf("ERROR READ: %s\n", err.Error())
+				log.Printf("E! Error READ: %s\n", err.Error())
 				continue
 			}
 			bufCopy := make([]byte, n)
@@ -297,7 +298,7 @@ func (s *Statsd) udpListen() error {
 			case s.in <- bufCopy:
 			default:
 				s.drops++
-				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
+				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
 					log.Printf(dropwarn, s.drops)
 				}
 			}
@@ -373,7 +374,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	// Validate splitting the line on ":"
 	bits := strings.Split(line, ":")
 	if len(bits) < 2 {
-		log.Printf("Error: splitting ':', Unable to parse metric: %s\n", line)
+		log.Printf("E! Error: splitting ':', Unable to parse metric: %s\n", line)
 		return errors.New("Error Parsing statsd line")
 	}
 
@@ -389,11 +390,11 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		// Validate splitting the bit on "|"
 		pipesplit := strings.Split(bit, "|")
 		if len(pipesplit) < 2 {
-			log.Printf("Error: splitting '|', Unable to parse metric: %s\n", line)
+			log.Printf("E! Error: splitting '|', Unable to parse metric: %s\n", line)
 			return errors.New("Error Parsing statsd line")
 		} else if len(pipesplit) > 2 {
 			sr := pipesplit[2]
-			errmsg := "Error: parsing sample rate, %s, it must be in format like: " +
+			errmsg := "E! Error: parsing sample rate, %s, it must be in format like: " +
 				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
 			if strings.Contains(sr, "@") && len(sr) > 1 {
 				samplerate, err := strconv.ParseFloat(sr[1:], 64)
@@ -413,14 +414,14 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "g", "c", "s", "ms", "h":
 			m.mtype = pipesplit[1]
 		default:
-			log.Printf("Error: Statsd Metric type %s unsupported", pipesplit[1])
+			log.Printf("E! Error: Statsd Metric type %s unsupported", pipesplit[1])
 			return errors.New("Error Parsing statsd line")
 		}
 
 		// Parse the value
 		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
 			if m.mtype != "g" {
-				log.Printf("Error: +- values are only supported for gauges: %s\n", line)
+				log.Printf("E! Error: +- values are only supported for gauges: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
 			m.additive = true
@@ -430,7 +431,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "g", "ms", "h":
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
-				log.Printf("Error: parsing value to float64: %s\n", line)
+				log.Printf("E! Error: parsing value to float64: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
 			m.floatvalue = v
@@ -440,7 +441,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			if err != nil {
 				v2, err2 := strconv.ParseFloat(pipesplit[0], 64)
 				if err2 != nil {
-					log.Printf("Error: parsing value to int64: %s\n", line)
+					log.Printf("E! Error: parsing value to int64: %s\n", line)
 					return errors.New("Error Parsing statsd line")
 				}
 				v = int64(v2)
@@ -640,7 +641,7 @@ func (s *Statsd) aggregate(m metric) {
 func (s *Statsd) Stop() {
 	s.Lock()
 	defer s.Unlock()
-	log.Println("Stopping the statsd service")
+	log.Println("I! Stopping the statsd service")
 	close(s.done)
 	s.listener.Close()
 	s.wg.Wait()
@@ -650,7 +651,8 @@ func (s *Statsd) Stop() {
 func init() {
 	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
-			MetricSeparator: "_",
+			MetricSeparator:        "_",
+			AllowedPendingMessages: defaultAllowPendingMessage,
 		}
 	})
 }
