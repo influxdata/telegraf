@@ -16,7 +16,7 @@ import (
 
 type Procstat struct {
 	PidFile     string `toml:"pid_file"`
-	Exact	    bool
+	Exact       bool
 	Exe         string
 	Pattern     string
 	Prefix      string
