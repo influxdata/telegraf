@@ -460,13 +460,15 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
 				return nil, Errorf(err, "performing get")
-			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject {
+			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
 					return nil, Errorf(err, "converting %q", ent.Value)
 				}
-				ifv[""] = fv
+				if fvs, ok := fv.(string); !ok || fvs != "" {
+					ifv[""] = fv
+				}
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
@@ -487,7 +489,9 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return Errorf(err, "converting %q", ent.Value)
 				}
-				ifv[idx] = fv
+				if fvs, ok := fv.(string); !ok || fvs != "" {
+					ifv[idx] = fv
+				}
 				return nil
 			})
 			if err != nil {
