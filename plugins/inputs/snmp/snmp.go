@@ -109,7 +109,7 @@ type Snmp struct {
 	Community string
 
 	// Parameters for Version 2 & 3
-	MaxRepetitions int
+	MaxRepetitions uint8
 
 	// Parameters for Version 3
 	ContextName string
