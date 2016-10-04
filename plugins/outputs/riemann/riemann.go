@@ -16,6 +16,7 @@ type Riemann struct {
 	Transport        string
 	Separator        string
 	MeasurementAsTag bool
+	Tags             []string
 
 	client *raidman.Client
 }
@@ -29,6 +30,8 @@ var sampleConfig = `
   separator = " "
   ## set measurement name as a Riemann tag instead of prepending it to the Riemann service name
   measurement_as_tag = false
+  ## list of Riemann tags, if specified use these instead of any Telegraf tags
+  tags = ["telegraf","custom_tag"]
 `
 
 func (r *Riemann) Connect() error {
@@ -107,7 +110,7 @@ func (r *Riemann) buildEvents(p telegraf.Metric) []*raidman.Event {
 			Host:       host,
 			Service:    r.service(p.Name(), fieldName),
 			Tags:       r.tags(p.Name(), p.Tags()),
-			Attributes: p.Tags(),
+			Attributes: r.attributes(p.Name(), p.Tags()),
 			Time:       p.Time().Unix(),
 		}
 
@@ -125,7 +128,18 @@ func (r *Riemann) buildEvents(p telegraf.Metric) []*raidman.Event {
 	return events
 }
 
+func (r *Riemann) attributes(name string, tags map[string]string) map[string]string {
+	if r.MeasurementAsTag {
+		tags["measurement"] = name
+	}
+	return tags
+}
+
 func (r *Riemann) tags(name string, tags map[string]string) []string {
+	if len(r.Tags) > 0 {
+		return r.Tags
+	}
+
 	var tagNames, tagValues []string
 
 	for tagName := range tags {

@@ -4,6 +4,7 @@
 
 ### Features
 
+- [#1845](https://github.com/influxdata/telegraf/pull/1845): Send measurement as Riemann tag, add overwrite tags.
 - [#1782](https://github.com/influxdata/telegraf/pull/1782): Allow numeric and non-string values for tag_keys.
 - [#1694](https://github.com/influxdata/telegraf/pull/1694): Adding Gauge and Counter metric types.
 - [#1606](https://github.com/influxdata/telegraf/pull/1606): Remove carraige returns from exec plugin output on Windows
@@ -29,6 +30,7 @@
 
 ### Bugfixes
 
+- [#1501](https://github.com/influxdata/telegraf/issues/1501): Send metric tags as Riemann tags and attributes.
 - [#1746](https://github.com/influxdata/telegraf/issues/1746): Fix handling of non-string values for JSON keys listed in tag_keys.
 - [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
 - [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
