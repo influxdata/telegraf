@@ -21,6 +21,7 @@
 - [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
 - [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus.
 - [#2146](https://github.com/influxdata/telegraf/issues/2146): Fix potential panic in aggregator plugin metric maker.
+- [#1843](https://github.com/influxdata/telegraf/pull/1843) & [#1668](https://github.com/influxdata/telegraf/issues/1668): Add optional ability to define PID as a tag.
 
 ## v1.1.2 [2016-12-12]
 
