@@ -850,11 +850,16 @@ func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 
 	i := strings.Index(oidText, "::")
 	if i == -1 {
-		// was not found in MIB. Value is numeric
-		return "", oidText, oidText, "", nil
+		// was not found in MIB.
+		if bytes.Index(bb.Bytes(), []byte(" [TRUNCATED]")) >= 0 {
+			return "", oid, oid, "", nil
+		}
+		// not truncated, but not fully found. We still need to parse out numeric OID, so keep going
+		oidText = oid
+	} else {
+		mibName = oidText[:i]
+		oidText = oidText[i+2:]
 	}
-	mibName = oidText[:i]
-	oidText = oidText[i+2:]
 
 	if i := bytes.Index(bb.Bytes(), []byte("  -- TEXTUAL CONVENTION ")); i != -1 {
 		bb.Next(i + len("  -- TEXTUAL CONVENTION "))
