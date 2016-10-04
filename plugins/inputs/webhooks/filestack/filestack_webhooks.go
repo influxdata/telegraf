@@ -19,7 +19,7 @@ type FilestackWebhook struct {
 func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(fs.Path, fs.eventHandler).Methods("POST")
 
-	log.Printf("Started the webhooks_filestack on %s\n", fs.Path)
+	log.Printf("I! Started the webhooks_filestack on %s\n", fs.Path)
 	fs.acc = acc
 }
 

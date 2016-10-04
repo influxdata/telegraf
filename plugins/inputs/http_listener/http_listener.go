@@ -74,7 +74,7 @@ func (t *HttpListener) Start(acc telegraf.Accumulator) error {
 
 	go t.httpListen()
 
-	log.Printf("Started HTTP listener service on %s\n", t.ServiceAddress)
+	log.Printf("I! Started HTTP listener service on %s\n", t.ServiceAddress)
 
 	return nil
 }
@@ -89,7 +89,7 @@ func (t *HttpListener) Stop() {
 
 	t.wg.Wait()
 
-	log.Println("Stopped HTTP listener service on ", t.ServiceAddress)
+	log.Println("I! Stopped HTTP listener service on ", t.ServiceAddress)
 }
 
 // httpListen listens for HTTP requests.

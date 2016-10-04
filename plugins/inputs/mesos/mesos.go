@@ -88,7 +88,7 @@ func (m *Mesos) SetDefaults() {
 	}
 
 	if m.Timeout == 0 {
-		log.Println("[mesos] Missing timeout value, setting default value (100ms)")
+		log.Println("I! [mesos] Missing timeout value, setting default value (100ms)")
 		m.Timeout = 100
 	}
 }
@@ -383,7 +383,7 @@ func getMetrics(role Role, group string) []string {
 	ret, ok := m[group]
 
 	if !ok {
-		log.Printf("[mesos] Unkown %s metrics group: %s\n", role, group)
+		log.Printf("I! [mesos] Unkown %s metrics group: %s\n", role, group)
 		return []string{}
 	}
 

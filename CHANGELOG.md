@@ -26,6 +26,7 @@
 - [#1813](https://github.com/influxdata/telegraf/pull/1813): Change default arguments for SNMP plugin.
 - [#1686](https://github.com/influxdata/telegraf/pull/1686): Mesos input plugin: very high-cardinality mesos-task metrics removed.
 - [#1839](https://github.com/influxdata/telegraf/pull/1839): Exact match with pgrep -x option in procstat
+- [#1838](https://github.com/influxdata/telegraf/pull/1838): Logging overhaul to centralize the logger & log levels, & provide a logfile config option.
 
 ### Bugfixes
 

@@ -167,7 +167,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 			if err != nil {
-				log.Printf("ERROR creating prometheus metric, "+
+				log.Printf("E! Error creating prometheus metric, "+
 					"key: %s, labels: %v,\nerr: %s\n",
 					mname, l, err.Error())
 			}

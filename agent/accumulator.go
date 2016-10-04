@@ -132,7 +132,7 @@ func (ac *accumulator) makeMetric(
 			// NaNs are invalid values in influxdb, skip measurement
 			if math.IsNaN(val) || math.IsInf(val, 0) {
 				if ac.debug {
-					log.Printf("Measurement [%s] field [%s] has a NaN or Inf "+
+					log.Printf("I! Measurement [%s] field [%s] has a NaN or Inf "+
 						"field, skipping",
 						measurement, k)
 				}
@@ -163,7 +163,7 @@ func (ac *accumulator) makeMetric(
 		m, err = telegraf.NewMetric(measurement, tags, fields, timestamp)
 	}
 	if err != nil {
-		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
+		log.Printf("E! Error adding point [%s]: %s\n", measurement, err.Error())
 		return nil
 	}
 
@@ -182,7 +182,7 @@ func (ac *accumulator) AddError(err error) {
 	}
 	atomic.AddUint64(&ac.errCount, 1)
 	//TODO suppress/throttle consecutive duplicate errors?
-	log.Printf("ERROR in input [%s]: %s", ac.inputConfig.Name, err)
+	log.Printf("E! Error in input [%s]: %s", ac.inputConfig.Name, err)
 }
 
 func (ac *accumulator) Debug() bool {
