@@ -128,6 +128,8 @@ func TestFieldInit(t *testing.T) {
 		expectedName       string
 		expectedConversion string
 	}{
+		{".1.2.3", "foo", "", ".1.2.3", "foo", ""},
+		{".iso.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".1.0.0.0.1.1", "", "", ".1.0.0.0.1.1", "server", ""},
 		{".1.0.0.0.1.1.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
 		{".999", "", "", ".999", ".999", ""},
