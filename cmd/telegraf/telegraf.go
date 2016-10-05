@@ -42,6 +42,10 @@ var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
 var fOutputList = flag.Bool("output-list", false,
 	"print available output plugins.")
+var fAggregatorFilters = flag.String("aggregator-filter", "",
+	"filter the aggregators to enable, separator is :")
+var fProcessorFilters = flag.String("processor-filter", "",
+	"filter the processors to enable, separator is :")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 var fService = flag.String("service", "",
@@ -78,9 +82,9 @@ The flags are:
   -sample-config     print out full sample configuration to stdout
   -config-directory  directory containing additional *.conf files
   -input-filter      filter the input plugins to enable, separator is :
-  -input-list        print all the plugins inputs
   -output-filter     filter the output plugins to enable, separator is :
-  -output-list       print all the available outputs
+  -aggregator-filter filter the aggregator plugins to enable, separator is :
+  -processor-filter  filter the processor plugins to enable, separator is :
   -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
   -debug             print metrics as they're generated to stdout
   -quiet             run in quiet mode
@@ -143,6 +147,16 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 			outputFilter := strings.TrimSpace(*fOutputFilters)
 			outputFilters = strings.Split(":"+outputFilter+":", ":")
 		}
+		var aggregatorFilters []string
+		if *fAggregatorFilters != "" {
+			aggregatorFilter := strings.TrimSpace(*fAggregatorFilters)
+			aggregatorFilters = strings.Split(":"+aggregatorFilter+":", ":")
+		}
+		var processorFilters []string
+		if *fProcessorFilters != "" {
+			processorFilter := strings.TrimSpace(*fProcessorFilters)
+			processorFilters = strings.Split(":"+processorFilter+":", ":")
+		}
 
 		if len(args) > 0 {
 			switch args[0] {
@@ -150,7 +164,12 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 				fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
 				return
 			case "config":
-				config.PrintSampleConfig(inputFilters, outputFilters)
+				config.PrintSampleConfig(
+					inputFilters,
+					outputFilters,
+					aggregatorFilters,
+					processorFilters,
+				)
 				return
 			}
 		}
@@ -173,7 +192,12 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 			fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
 			return
 		case *fSampleConfig:
-			config.PrintSampleConfig(inputFilters, outputFilters)
+			config.PrintSampleConfig(
+				inputFilters,
+				outputFilters,
+				aggregatorFilters,
+				processorFilters,
+			)
 			return
 		case *fUsage != "":
 			if err := config.PrintInputConfig(*fUsage); err != nil {

@@ -284,7 +284,12 @@ var serviceInputHeader = `
 `
 
 // PrintSampleConfig prints the sample config
-func PrintSampleConfig(inputFilters []string, outputFilters []string) {
+func PrintSampleConfig(
+	inputFilters []string,
+	outputFilters []string,
+	aggregatorFilters []string,
+	processorFilters []string,
+) {
 	fmt.Printf(header)
 
 	// print output plugins
@@ -305,21 +310,29 @@ func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 
 	// print processor plugins
 	fmt.Printf(processorHeader)
-	pnames := []string{}
-	for pname := range processors.Processors {
-		pnames = append(pnames, pname)
+	if len(processorFilters) != 0 {
+		printFilteredProcessors(processorFilters, false)
+	} else {
+		pnames := []string{}
+		for pname := range processors.Processors {
+			pnames = append(pnames, pname)
+		}
+		sort.Strings(pnames)
+		printFilteredProcessors(pnames, true)
 	}
-	sort.Strings(pnames)
-	printFilteredProcessors(pnames, true)
 
 	// pring aggregator plugins
 	fmt.Printf(aggregatorHeader)
-	pnames = []string{}
-	for pname := range aggregators.Aggregators {
-		pnames = append(pnames, pname)
+	if len(aggregatorFilters) != 0 {
+		printFilteredAggregators(aggregatorFilters, false)
+	} else {
+		pnames := []string{}
+		for pname := range aggregators.Aggregators {
+			pnames = append(pnames, pname)
+		}
+		sort.Strings(pnames)
+		printFilteredAggregators(pnames, true)
 	}
-	sort.Strings(pnames)
-	printFilteredAggregators(pnames, true)
 
 	// print input plugins
 	fmt.Printf(inputHeader)
