@@ -73,47 +73,38 @@ const usage = `Telegraf, The plugin-driven server agent for collecting and repor
 
 Usage:
 
-  telegraf <flags>
+  telegraf [commands|flags]
 
-The flags are:
+The commands & flags are:
 
-  -config <file>     configuration file to load
-  -test              gather metrics once, print them to stdout, and exit
-  -sample-config     print out full sample configuration to stdout
-  -config-directory  directory containing additional *.conf files
-  -input-filter      filter the input plugins to enable, separator is :
-  -output-filter     filter the output plugins to enable, separator is :
-  -aggregator-filter filter the aggregator plugins to enable, separator is :
-  -processor-filter  filter the processor plugins to enable, separator is :
-  -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
-  -debug             print metrics as they're generated to stdout
-  -quiet             run in quiet mode
-  -version           print the version to stdout
-  -service           Control the service, ie, 'telegraf -service install (windows only)'
+  config             print out full sample configuration to stdout
+  version            print the version to stdout
 
-In addition to the -config flag, telegraf will also load the config file from
-an environment variable or default location. Precedence is:
-  1. -config flag
-  2. $TELEGRAF_CONFIG_PATH environment variable
-  3. $HOME/.telegraf/telegraf.conf
-  4. /etc/telegraf/telegraf.conf
+  --config <file>     configuration file to load
+  --test              gather metrics once, print them to stdout, and exit
+  --config-directory  directory containing additional *.conf files
+  --input-filter      filter the input plugins to enable, separator is :
+  --output-filter     filter the output plugins to enable, separator is :
+  --usage             print usage for a plugin, ie, 'telegraf --usage mysql'
+  --debug             print metrics as they're generated to stdout
+  --quiet             run in quiet mode
 
 Examples:
 
   # generate a telegraf config file:
-  telegraf -sample-config > telegraf.conf
+  telegraf config > telegraf.conf
 
   # generate config with only cpu input & influxdb output plugins defined
-  telegraf -sample-config -input-filter cpu -output-filter influxdb
+  telegraf config -input-filter cpu -output-filter influxdb
 
   # run a single telegraf collection, outputing metrics to stdout
-  telegraf -config telegraf.conf -test
+  telegraf --config telegraf.conf -test
 
   # run telegraf with all plugins defined in config file
-  telegraf -config telegraf.conf
+  telegraf --config telegraf.conf
 
   # run telegraf, enabling the cpu & memory input, and influxdb output plugins
-  telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
+  telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 `
 
 var stop chan struct{}
@@ -133,7 +124,6 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 	reload <- true
 	for <-reload {
 		reload <- false
-		flag.Usage = func() { usageExit(0) }
 		flag.Parse()
 		args := flag.Args()
 
@@ -316,6 +306,7 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
+	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	if runtime.GOOS == "windows" {
 		svcConfig := &service.Config{
