@@ -46,7 +46,7 @@
 - [#1833](https://github.com/influxdata/telegraf/issues/1833): Fix translating SNMP fields not in MIB.
 - [#1835](https://github.com/influxdata/telegraf/issues/1835): Fix SNMP emitting empty fields.
 
-## v1.0.1 [unreleased]
+## v1.0.1 [2016-09-26]
 
 ### Bugfixes
 
