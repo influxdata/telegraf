@@ -716,7 +716,6 @@ func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
 //  "hwaddr" will convert the value into a MAC address.
 //  "ipaddr" will convert the value into into an IP address.
 //  "" will convert a byte slice into a string.
-// Any other conv will return the input value unchanged.
 func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
@@ -805,6 +804,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		default:
 			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", v)
 		}
+		return v, nil
 	}
 
 	if conv == "ipaddr" {
@@ -829,7 +829,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		return v, nil
 	}
 
-	return v, nil
+	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
 }
 
 // snmpTranslate resolves the given OID.
