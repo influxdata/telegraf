@@ -45,6 +45,7 @@
 - [#1823](https://github.com/influxdata/telegraf/issues/1823): Fix huge allocations in http_listener when dealing with huge payloads.
 - [#1833](https://github.com/influxdata/telegraf/issues/1833): Fix translating SNMP fields not in MIB.
 - [#1835](https://github.com/influxdata/telegraf/issues/1835): Fix SNMP emitting empty fields.
+- [#1854](https://github.com/influxdata/telegraf/pull/1853): SQL Server waitstats truncation bug.
 
 ## v1.0.1 [2016-09-26]
 
