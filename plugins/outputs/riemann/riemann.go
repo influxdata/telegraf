@@ -12,9 +12,11 @@ import (
 )
 
 type Riemann struct {
-	URL       string
-	Transport string
-	Separator string
+	URL              string
+	Transport        string
+	Separator        string
+	MeasurementAsTag bool
+	RiemannTagKeys   []string
 
 	client *raidman.Client
 }
@@ -24,8 +26,12 @@ var sampleConfig = `
   url = "localhost:5555"
   ## transport protocol to use either tcp or udp
   transport = "tcp"
-  ## separator to use between input name and field name in Riemann service name
+  ## separator to use between measurement name and field name in Riemann service name
   separator = " "
+  ## set measurement name as a Riemann tag instead of prepending it to the Riemann service name
+  measurement_as_tag = false
+  ## list of tag keys to specify, whose values get sent as Riemann tags. If empty, all Telegraf tag values will be sent to Riemann as tags.
+  # riemann_tag_keys = ["telegraf","custom_tag"]
 `
 
 func (r *Riemann) Connect() error {
@@ -71,7 +77,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 
 	var events []*raidman.Event
 	for _, p := range metrics {
-		evs := buildEvents(p, r.Separator)
+		evs := r.buildEvents(p)
 		for _, ev := range evs {
 			events = append(events, ev)
 		}
@@ -87,7 +93,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
+func (r *Riemann) buildEvents(p telegraf.Metric) []*raidman.Event {
 	events := []*raidman.Event{}
 	for fieldName, value := range p.Fields() {
 		host, ok := p.Tags()["host"]
@@ -101,13 +107,17 @@ func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
 		}
 
 		event := &raidman.Event{
-			Host:    host,
-			Service: serviceName(s, p.Name(), p.Tags(), fieldName),
+			Host:       host,
+			Service:    r.service(p.Name(), fieldName),
+			Tags:       r.tags(p.Name(), p.Tags()),
+			Attributes: r.attributes(p.Name(), p.Tags()),
+			Time:       p.Time().Unix(),
 		}
 
 		switch value.(type) {
 		case string:
-			event.State = value.(string)
+			state := []byte(value.(string))
+			event.State = string(state[:254]) // Riemann states must be less than 255 bytes, e.g. "ok", "warning", "critical"
 		default:
 			event.Metric = value
 		}
@@ -118,30 +128,53 @@ func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
 	return events
 }
 
-func serviceName(s string, n string, t map[string]string, f string) string {
-	serviceStrings := []string{}
-	serviceStrings = append(serviceStrings, n)
+func (r *Riemann) attributes(name string, tags map[string]string) map[string]string {
+	if r.MeasurementAsTag {
+		tags["measurement"] = name
+	}
+	return tags
+}
 
-	// we'll skip the 'host' tag
-	tagStrings := []string{}
-	tagNames := []string{}
+func (r *Riemann) tags(name string, tags map[string]string) []string {
+	var tagNames, tagValues []string
 
-	for tagName := range t {
+	if r.MeasurementAsTag {
+		tagValues = append(tagValues, name)
+	}
+
+	if len(r.RiemannTagKeys) > 0 {
+		for _, tagName := range r.RiemannTagKeys {
+			tagValue, ok := tags[tagName]
+			if ok {
+				tagValues = append(tagValues, tagValue)
+			}
+		}
+		return tagValues
+	}
+
+	for tagName := range tags {
 		tagNames = append(tagNames, tagName)
 	}
 	sort.Strings(tagNames)
 
 	for _, tagName := range tagNames {
-		if tagName != "host" {
-			tagStrings = append(tagStrings, t[tagName])
+		if tagName != "host" { // we'll skip the 'host' tag
+			tagValues = append(tagValues, tags[tagName])
 		}
 	}
-	var tagString string = strings.Join(tagStrings, s)
-	if tagString != "" {
-		serviceStrings = append(serviceStrings, tagString)
+
+	return tagValues
+}
+
+func (r *Riemann) service(name string, field string) string {
+	var serviceStrings []string
+
+	if !r.MeasurementAsTag {
+		serviceStrings = append(serviceStrings, name)
 	}
-	serviceStrings = append(serviceStrings, f)
-	return strings.Join(serviceStrings, s)
+	serviceStrings = append(serviceStrings, field)
+
+	return strings.Join(serviceStrings, r.Separator)
 }
 
 func init() {

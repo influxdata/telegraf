@@ -1,7 +1,7 @@
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
 github.com/aerospike/aerospike-client-go 7f3a312c3b2a60ac083ec6da296091c52c795c63
-github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
+github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
 github.com/aws/aws-sdk-go 13a12060f716145019378a10e2806c174356b857
 github.com/beorn7/perks 3ac7bf7a47d159a033b107610db8a1b6575507a4
 github.com/cenkalti/backoff 4dc77674aceaabba2c7e3da25d4c823edfb73f99
