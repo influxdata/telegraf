@@ -2,8 +2,16 @@
 
 ### Release Notes
 
+- On systemd Telegraf will no longer redirect it's stdout to /var/log/telegraf/telegraf.log.
+On most systems, the logs will be directed to the systemd journal and can be
+accessed by `journalctl -u telegraf.service`. Consult the systemd journal
+documentation for configuring journald. There is also a [`logfile` config option](https://github.com/influxdata/telegraf/blob/master/etc/telegraf.conf#L70)
+available in 1.1, which will allow users to easily configure telegraf to
+continue sending logs to /var/log/telegraf/telegraf.log.
+
 ### Features
 
+- [#1732](https://github.com/influxdata/telegraf/pull/1732): Telegraf systemd service, log to journal.
 - [#1782](https://github.com/influxdata/telegraf/pull/1782): Allow numeric and non-string values for tag_keys.
 - [#1694](https://github.com/influxdata/telegraf/pull/1694): Adding Gauge and Counter metric types.
 - [#1606](https://github.com/influxdata/telegraf/pull/1606): Remove carraige returns from exec plugin output on Windows
