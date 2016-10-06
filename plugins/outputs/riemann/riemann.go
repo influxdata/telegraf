@@ -16,7 +16,7 @@ type Riemann struct {
 	Transport        string
 	Separator        string
 	MeasurementAsTag bool
-	Tags             []string
+	RiemannTagKeys   []string
 
 	client *raidman.Client
 }
@@ -30,8 +30,8 @@ var sampleConfig = `
   separator = " "
   ## set measurement name as a Riemann tag instead of prepending it to the Riemann service name
   measurement_as_tag = false
-  ## list of Riemann tags, if specified use these instead of any Telegraf tags
-  tags = ["telegraf","custom_tag"]
+  ## list of tag keys to specify, whose values get sent as Riemann tags. If empty, all Telegraf tag values will be sent to Riemann as tags.
+  # riemann_tag_keys = ["telegraf","custom_tag"]
 `
 
 func (r *Riemann) Connect() error {
@@ -136,20 +136,26 @@ func (r *Riemann) attributes(name string, tags map[string]string) map[string]str
 }
 
 func (r *Riemann) tags(name string, tags map[string]string) []string {
-	if len(r.Tags) > 0 {
-		return r.Tags
+	var tagNames, tagValues []string
+
+	if r.MeasurementAsTag {
+		tagValues = append(tagValues, name)
 	}
 
-	var tagNames, tagValues []string
+	if len(r.RiemannTagKeys) > 0 {
+		for _, tagName := range r.RiemannTagKeys {
+			tagValue, ok := tags[tagName]
+			if ok {
+				tagValues = append(tagValues, tagValue)
+			}
+		}
+		return tagValues
+	}
 
 	for tagName := range tags {
 		tagNames = append(tagNames, tagName)
 	}
 	sort.Strings(tagNames)
-
-	if r.MeasurementAsTag {
-		tagValues = append(tagValues, name)
-	}
 
 	for _, tagName := range tagNames {
 		if tagName != "host" { // we'll skip the 'host' tag
