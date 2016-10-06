@@ -54,6 +54,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1833](https://github.com/influxdata/telegraf/issues/1833): Fix translating SNMP fields not in MIB.
 - [#1835](https://github.com/influxdata/telegraf/issues/1835): Fix SNMP emitting empty fields.
 - [#1854](https://github.com/influxdata/telegraf/pull/1853): SQL Server waitstats truncation bug.
+- [#1724](https://github.com/influxdata/telegraf/issues/1724): cgroups path being parsed as metric.
 
 ## v1.0.1 [2016-09-26]
 
