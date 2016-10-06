@@ -24,8 +24,12 @@ type minmax struct {
 }
 
 var sampleConfig = `
-  ## TODO doc
+  ## General Aggregator Arguments:
+  ## The period on which to flush & clear the aggregator.
   period = "30s"
+  ## If true, the original metric will be dropped by the
+  ## aggregator and will not get sent to the output plugins.
+  drop_original = false
 `
 
 func (m *MinMax) SampleConfig() string {

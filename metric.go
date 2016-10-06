@@ -65,6 +65,13 @@ type metric struct {
 	isaggregate bool
 }
 
+func NewMetricFromPoint(pt models.Point) Metric {
+	return &metric{
+		pt:    pt,
+		mType: Untyped,
+	}
+}
+
 // NewMetric returns an untyped metric.
 func NewMetric(
 	name string,
@@ -72,7 +79,7 @@ func NewMetric(
 	fields map[string]interface{},
 	t time.Time,
 ) (Metric, error) {
-	pt, err := models.NewPoint(name, tags, fields, t)
+	pt, err := models.NewPoint(name, models.NewTags(tags), fields, t)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +98,7 @@ func NewGaugeMetric(
 	fields map[string]interface{},
 	t time.Time,
 ) (Metric, error) {
-	pt, err := models.NewPoint(name, tags, fields, t)
+	pt, err := models.NewPoint(name, models.NewTags(tags), fields, t)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +117,7 @@ func NewCounterMetric(
 	fields map[string]interface{},
 	t time.Time,
 ) (Metric, error) {
-	pt, err := models.NewPoint(name, tags, fields, t)
+	pt, err := models.NewPoint(name, models.NewTags(tags), fields, t)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +132,7 @@ func (m *metric) Name() string {
 }
 
 func (m *metric) Tags() map[string]string {
-	return m.pt.Tags()
+	return m.pt.Tags().Map()
 }
 
 func (m *metric) Time() time.Time {

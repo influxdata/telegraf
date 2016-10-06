@@ -829,12 +829,15 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	return nil
 }
 
-// buildAggregator TODO doc
+// buildAggregator parses Aggregator specific items from the ast.Table,
+// builds the filter and returns a
+// models.AggregatorConfig to be inserted into models.RunningAggregator
 func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
 	unsupportedFields := []string{"tagexclude", "taginclude"}
 	for _, field := range unsupportedFields {
 		if _, ok := tbl.Fields[field]; ok {
-			// TODO raise error because field is not supported
+			return nil, fmt.Errorf("%s is not supported for aggregator plugins (%s).",
+				field, name)
 		}
 	}
 
@@ -926,13 +929,16 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	return conf, nil
 }
 
-// buildProcessor TODO doc
+// buildProcessor parses Processor specific items from the ast.Table,
+// builds the filter and returns a
+// models.ProcessorConfig to be inserted into models.RunningProcessor
 func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
 	unsupportedFields := []string{"tagexclude", "taginclude", "fielddrop", "fieldpass"}
 	for _, field := range unsupportedFields {
 		if _, ok := tbl.Fields[field]; ok {
-			// TODO raise error because field is not supported
+			return nil, fmt.Errorf("%s is not supported for processor plugins (%s).",
+				field, name)
 		}
 	}
 
