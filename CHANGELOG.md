@@ -11,6 +11,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 
 ### Features
 
+- [#1861](https://github.com/influxdata/telegraf/pull/1861): adding the tags in the graylog output plugin
 - [#1732](https://github.com/influxdata/telegraf/pull/1732): Telegraf systemd service, log to journal.
 - [#1782](https://github.com/influxdata/telegraf/pull/1782): Allow numeric and non-string values for tag_keys.
 - [#1694](https://github.com/influxdata/telegraf/pull/1694): Adding Gauge and Counter metric types.

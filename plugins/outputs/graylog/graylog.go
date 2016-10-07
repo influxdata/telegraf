@@ -226,9 +226,14 @@ func serialize(metric telegraf.Metric) ([]string, error) {
 		m["host"] = host
 	}
 
+	for key, value := range metric.Tags() {
+		if key != "host" {
+			m["_"+key] = value
+		}
+	}
+
 	for key, value := range metric.Fields() {
-		nkey := fmt.Sprintf("_%s", key)
-		m[nkey] = value
+		m["_"+key] = value
 	}
 
 	serialized, err := ejson.Marshal(m)
