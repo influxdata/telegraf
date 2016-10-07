@@ -29,6 +29,32 @@ func TestMakeMetricNoFields(t *testing.T) {
 	assert.Nil(t, m)
 }
 
+// nil fields should get dropped
+func TestMakeMetricNilFields(t *testing.T) {
+	now := time.Now()
+	ri := RunningInput{
+		Config: &InputConfig{
+			Name: "TestRunningInput",
+		},
+	}
+
+	m := ri.MakeMetric(
+		"RITest",
+		map[string]interface{}{
+			"value": int(101),
+			"nil":   nil,
+		},
+		map[string]string{},
+		telegraf.Untyped,
+		now,
+	)
+	assert.Equal(
+		t,
+		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
+		m.String(),
+	)
+}
+
 // make an untyped, counter, & gauge metric
 func TestMakeMetric(t *testing.T) {
 	now := time.Now()

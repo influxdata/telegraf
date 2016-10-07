@@ -81,6 +81,9 @@ func makemetric(
 		// Validate uint64 and float64 fields
 		// convert all int & uint types to int64
 		switch val := v.(type) {
+		case nil:
+			// delete nil fields
+			delete(fields, k)
 		case uint:
 			fields[k] = int64(val)
 			continue
@@ -127,9 +130,9 @@ func makemetric(
 				delete(fields, k)
 				continue
 			}
+		default:
+			fields[k] = v
 		}
-
-		fields[k] = v
 	}
 
 	var m telegraf.Metric
