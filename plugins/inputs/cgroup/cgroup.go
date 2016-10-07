@@ -12,6 +12,9 @@ type CGroup struct {
 
 var sampleConfig = `
     ## Directories in which to look for files, globs are supported.
+    ## Consider restricting paths to the set of cgroups you really
+    ## want to monitor if you have a large number of cgroups, to avoid
+    ## any cardinality issues.
 	# paths = [
 	#   "/cgroup/memory",
 	#   "/cgroup/memory/child1",
