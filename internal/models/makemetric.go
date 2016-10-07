@@ -19,6 +19,7 @@ import (
 //   applyFilter:  if false, the above filter is not applied to each metric.
 //                 This is used by Aggregators, because aggregators use filters
 //                 on incoming metrics instead of on created metrics.
+// TODO refactor this to not have such a huge func signature.
 func makemetric(
 	measurement string,
 	fields map[string]interface{},

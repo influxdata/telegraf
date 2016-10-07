@@ -109,13 +109,6 @@ func (r *RunningAggregator) Run(
 	acc telegraf.Accumulator,
 	shutdown chan struct{},
 ) {
-	if r.Config.Delay == 0 {
-		r.Config.Delay = time.Millisecond * 100
-	}
-	if r.Config.Period == 0 {
-		r.Config.Period = time.Second * 30
-	}
-
 	time.Sleep(r.Config.Delay)
 	periodT := time.NewTicker(r.Config.Period)
 	defer periodT.Stop()

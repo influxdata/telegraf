@@ -841,7 +841,11 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
-	conf := &models.AggregatorConfig{Name: name}
+	conf := &models.AggregatorConfig{
+		Name:   name,
+		Delay:  time.Millisecond * 100,
+		Period: time.Second * 30,
+	}
 
 	if node, ok := tbl.Fields["period"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {

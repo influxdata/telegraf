@@ -6,16 +6,19 @@ import (
 )
 
 type MinMax struct {
-	// caches for metric fields, names, and tags
-	fieldCache map[uint64]map[string]minmax
-	nameCache  map[uint64]string
-	tagCache   map[uint64]map[string]string
+	cache map[uint64]aggregate
 }
 
 func NewMinMax() telegraf.Aggregator {
 	mm := &MinMax{}
 	mm.Reset()
 	return mm
+}
+
+type aggregate struct {
+	fields map[string]minmax
+	name   string
+	tags   map[string]string
 }
 
 type minmax struct {
@@ -42,41 +45,41 @@ func (m *MinMax) Description() string {
 
 func (m *MinMax) Add(in telegraf.Metric) {
 	id := in.HashID()
-	if _, ok := m.nameCache[id]; !ok {
+	if _, ok := m.cache[id]; !ok {
 		// hit an uncached metric, create caches for first time:
-		m.nameCache[id] = in.Name()
-		m.tagCache[id] = in.Tags()
-		m.fieldCache[id] = make(map[string]minmax)
+		a := aggregate{
+			name:   in.Name(),
+			tags:   in.Tags(),
+			fields: make(map[string]minmax),
+		}
 		for k, v := range in.Fields() {
 			if fv, ok := convert(v); ok {
-				m.fieldCache[id][k] = minmax{
+				a.fields[k] = minmax{
 					min: fv,
 					max: fv,
 				}
 			}
 		}
+		m.cache[id] = a
 	} else {
 		for k, v := range in.Fields() {
 			if fv, ok := convert(v); ok {
-				if _, ok := m.fieldCache[id][k]; !ok {
+				if _, ok := m.cache[id].fields[k]; !ok {
 					// hit an uncached field of a cached metric
-					m.fieldCache[id][k] = minmax{
+					m.cache[id].fields[k] = minmax{
 						min: fv,
 						max: fv,
 					}
 					continue
 				}
-				cmpmin := compare(m.fieldCache[id][k].min, fv)
-				cmpmax := compare(m.fieldCache[id][k].max, fv)
-				if cmpmin == 1 {
-					tmp := m.fieldCache[id][k]
+				if fv < m.cache[id].fields[k].min {
+					tmp := m.cache[id].fields[k]
 					tmp.min = fv
-					m.fieldCache[id][k] = tmp
-				}
-				if cmpmax == -1 {
-					tmp := m.fieldCache[id][k]
+					m.cache[id].fields[k] = tmp
+				} else if fv > m.cache[id].fields[k].max {
+					tmp := m.cache[id].fields[k]
 					tmp.max = fv
-					m.fieldCache[id][k] = tmp
+					m.cache[id].fields[k] = tmp
 				}
 			}
 		}
@@ -84,29 +87,18 @@ func (m *MinMax) Add(in telegraf.Metric) {
 }
 
 func (m *MinMax) Push(acc telegraf.Accumulator) {
-	for id, _ := range m.nameCache {
+	for _, aggregate := range m.cache {
 		fields := map[string]interface{}{}
-		for k, v := range m.fieldCache[id] {
+		for k, v := range aggregate.fields {
 			fields[k+"_min"] = v.min
 			fields[k+"_max"] = v.max
 		}
-		acc.AddFields(m.nameCache[id], fields, m.tagCache[id])
+		acc.AddFields(aggregate.name, fields, aggregate.tags)
 	}
 }
 
 func (m *MinMax) Reset() {
-	m.fieldCache = make(map[uint64]map[string]minmax)
-	m.nameCache = make(map[uint64]string)
-	m.tagCache = make(map[uint64]map[string]string)
-}
-
-func compare(a, b float64) int {
-	if a < b {
-		return -1
-	} else if a > b {
-		return 1
-	}
-	return 0
+	m.cache = make(map[uint64]aggregate)
 }
 
 func convert(in interface{}) (float64, bool) {

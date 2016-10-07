@@ -300,6 +300,8 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
 		case metric := <-metricC:
+			// NOTE potential bottleneck here as we put each metric through the
+			// processors serially.
 			mS := []telegraf.Metric{metric}
 			for _, processor := range a.Config.Processors {
 				mS = processor.Apply(mS...)
@@ -321,7 +323,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
 	// channel shared between all input threads for accumulating metrics
-	metricC := make(chan telegraf.Metric, 10000)
+	metricC := make(chan telegraf.Metric, 100)
 
 	// Start all ServicePlugins
 	for _, input := range a.Config.Inputs {

@@ -20,6 +20,7 @@ func TestAdd(t *testing.T) {
 		Filter: Filter{
 			NamePass: []string{"*"},
 		},
+		Period: time.Millisecond * 500,
 	})
 	assert.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}

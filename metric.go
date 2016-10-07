@@ -35,6 +35,7 @@ type Metric interface {
 	UnixNano() int64
 
 	// HashID returns a non-cryptographic hash of the metric (name + tags)
+	// NOTE: do not persist & depend on this value to disk.
 	HashID() uint64
 
 	// Fields returns the fields for the metric
