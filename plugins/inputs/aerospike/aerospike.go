@@ -1,6 +1,8 @@
 package aerospike
 
 import (
+	"errors"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -11,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	as "github.com/sparrc/aerospike-client-go"
+	as "github.com/aerospike/aerospike-client-go"
 )
 
 type Aerospike struct {
@@ -82,7 +84,12 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			return err
 		}
 		for k, v := range stats {
-			fields[strings.Replace(k, "-", "_", -1)] = parseValue(v)
+			val, err := parseValue(v)
+			if err == nil {
+				fields[strings.Replace(k, "-", "_", -1)] = val
+			} else {
+				log.Printf("I! skipping aerospike field %v with int64 overflow", k)
+			}
 		}
 		acc.AddFields("aerospike_node", fields, tags, time.Now())
 
@@ -110,7 +117,12 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 				if len(parts) < 2 {
 					continue
 				}
-				nFields[strings.Replace(parts[0], "-", "_", -1)] = parseValue(parts[1])
+				val, err := parseValue(parts[1])
+				if err == nil {
+					nFields[strings.Replace(parts[0], "-", "_", -1)] = val
+				} else {
+					log.Printf("I! skipping aerospike field %v with int64 overflow", parts[0])
+				}
 			}
 			acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
 		}
@@ -118,13 +130,16 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 	return nil
 }
 
-func parseValue(v string) interface{} {
+func parseValue(v string) (interface{}, error) {
 	if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
-		return parsed
+		return parsed, nil
+	} else if _, err := strconv.ParseUint(v, 10, 64); err == nil {
+		// int64 overflow, yet valid uint64
+		return nil, errors.New("Number is too large")
 	} else if parsed, err := strconv.ParseBool(v); err == nil {
-		return parsed
+		return parsed, nil
 	} else {
-		return v
+		return v, nil
 	}
 }
 

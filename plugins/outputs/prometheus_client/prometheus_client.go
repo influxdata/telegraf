@@ -12,22 +12,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
-
-	// Prometheus metric names must match this regex
-	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-	metricName = regexp.MustCompile("^[a-zA-Z_:][a-zA-Z0-9_:]*$")
-
-	// Prometheus labels must match this regex
-	// see https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-	labelName = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
-)
+var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
 type PrometheusClient struct {
 	Listen string
 
-	metrics map[string]prometheus.Metric
+	metrics     map[string]prometheus.Metric
+	lastMetrics map[string]prometheus.Metric
 
 	sync.Mutex
 }
@@ -38,7 +29,9 @@ var sampleConfig = `
 `
 
 func (p *PrometheusClient) Start() error {
-	prometheus.MustRegister(p)
+	p.metrics = make(map[string]prometheus.Metric)
+	p.lastMetrics = make(map[string]prometheus.Metric)
+	prometheus.Register(p)
 	defer func() {
 		if r := recover(); r != nil {
 			// recovering from panic here because there is no way to stop a
@@ -93,16 +86,23 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	p.Lock()
 	defer p.Unlock()
 
-	for _, m := range p.metrics {
-		ch <- m
+	if len(p.metrics) > 0 {
+		p.lastMetrics = make(map[string]prometheus.Metric)
+		for k, m := range p.metrics {
+			ch <- m
+			p.lastMetrics[k] = m
+		}
+		p.metrics = make(map[string]prometheus.Metric)
+	} else {
+		for _, m := range p.lastMetrics {
+			ch <- m
+		}
 	}
 }
 
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	p.Lock()
 	defer p.Unlock()
-
-	p.metrics = make(map[string]prometheus.Metric)
 
 	if len(metrics) == 0 {
 		return nil
@@ -112,6 +112,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		key := point.Name()
 		key = invalidNameCharRE.ReplaceAllString(key, "_")
 
+		// convert tags into prometheus labels
 		var labels []string
 		l := prometheus.Labels{}
 		for k, v := range point.Tags() {
@@ -119,11 +120,19 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			if len(k) == 0 {
 				continue
 			}
-			if !labelName.MatchString(k) {
-				continue
-			}
 			labels = append(labels, k)
 			l[k] = v
+		}
+
+		// Get a type if it's available, defaulting to Untyped
+		var mType prometheus.ValueType
+		switch point.Type() {
+		case telegraf.Counter:
+			mType = prometheus.CounterValue
+		case telegraf.Gauge:
+			mType = prometheus.GaugeValue
+		default:
+			mType = prometheus.UntypedValue
 		}
 
 		for n, val := range point.Fields() {
@@ -144,24 +153,21 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				mname = fmt.Sprintf("%s_%s", key, n)
 			}
 
-			// verify that it is a valid measurement name
-			if !metricName.MatchString(mname) {
-				continue
-			}
-
 			desc := prometheus.NewDesc(mname, "Telegraf collected metric", nil, l)
 			var metric prometheus.Metric
 			var err error
+
+			// switch for field type
 			switch val := val.(type) {
 			case int64:
-				metric, err = prometheus.NewConstMetric(desc, prometheus.UntypedValue, float64(val))
+				metric, err = prometheus.NewConstMetric(desc, mType, float64(val))
 			case float64:
-				metric, err = prometheus.NewConstMetric(desc, prometheus.UntypedValue, val)
+				metric, err = prometheus.NewConstMetric(desc, mType, val)
 			default:
 				continue
 			}
 			if err != nil {
-				log.Printf("ERROR creating prometheus metric, "+
+				log.Printf("E! Error creating prometheus metric, "+
 					"key: %s, labels: %v,\nerr: %s\n",
 					mname, l, err.Error())
 			}

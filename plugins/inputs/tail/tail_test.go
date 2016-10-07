@@ -17,6 +17,8 @@ func TestTailFromBeginning(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
+	require.NoError(t, err)
 
 	tt := NewTail()
 	tt.FromBeginning = true
@@ -28,12 +30,10 @@ func TestTailFromBeginning(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
-
-	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
-	require.NoError(t, err)
+	time.Sleep(time.Millisecond * 100)
 	require.NoError(t, tt.Gather(&acc))
 	// arbitrary sleep to wait for message to show up
-	time.Sleep(time.Millisecond * 250)
+	time.Sleep(time.Millisecond * 150)
 
 	acc.AssertContainsTaggedFields(t, "cpu",
 		map[string]interface{}{

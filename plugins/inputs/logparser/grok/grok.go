@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-var timeFormats = map[string]string{
+var timeLayouts = map[string]string{
 	"ts-ansic":       "Mon Jan _2 15:04:05 2006",
 	"ts-unix":        "Mon Jan _2 15:04:05 MST 2006",
 	"ts-ruby":        "Mon Jan 02 15:04:05 -0700 2006",
@@ -27,27 +27,33 @@ var timeFormats = map[string]string{
 	"ts-rfc3339":     "2006-01-02T15:04:05Z07:00",
 	"ts-rfc3339nano": "2006-01-02T15:04:05.999999999Z07:00",
 	"ts-httpd":       "02/Jan/2006:15:04:05 -0700",
-	"ts-epoch":       "EPOCH",
-	"ts-epochnano":   "EPOCH_NANO",
+	// These three are not exactly "layouts", but they are special cases that
+	// will get handled in the ParseLine function.
+	"ts-epoch":     "EPOCH",
+	"ts-epochnano": "EPOCH_NANO",
+	"ts":           "GENERIC_TIMESTAMP", // try parsing all known timestamp layouts.
 }
 
 const (
-	INT      = "int"
-	TAG      = "tag"
-	FLOAT    = "float"
-	STRING   = "string"
-	DURATION = "duration"
-	DROP     = "drop"
+	INT               = "int"
+	TAG               = "tag"
+	FLOAT             = "float"
+	STRING            = "string"
+	DURATION          = "duration"
+	DROP              = "drop"
+	EPOCH             = "EPOCH"
+	EPOCH_NANO        = "EPOCH_NANO"
+	GENERIC_TIMESTAMP = "GENERIC_TIMESTAMP"
 )
 
 var (
-	// matches named captures that contain a type.
+	// matches named captures that contain a modifier.
 	//   ie,
 	//     %{NUMBER:bytes:int}
 	//     %{IPORHOST:clientip:tag}
 	//     %{HTTPDATE:ts1:ts-http}
 	//     %{HTTPDATE:ts2:ts-"02 Jan 06 15:04"}
-	typedRe = regexp.MustCompile(`%{\w+:(\w+):(ts-".+"|t?s?-?\w+)}`)
+	modifierRe = regexp.MustCompile(`%{\w+:(\w+):(ts-".+"|t?s?-?\w+)}`)
 	// matches a plain pattern name. ie, %{NUMBER}
 	patternOnlyRe = regexp.MustCompile(`%{(\w+)}`)
 )
@@ -87,6 +93,12 @@ type Parser struct {
 	//          "RESPONSE_CODE": "%{NUMBER:rc:tag}"
 	//       }
 	patterns map[string]string
+	// foundTsLayouts is a slice of timestamp patterns that have been found
+	// in the log lines. This slice gets updated if the user uses the generic
+	// 'ts' modifier for timestamps. This slice is checked first for matches,
+	// so that previously-matched layouts get priority over all other timestamp
+	// layouts.
+	foundTsLayouts []string
 
 	g        *grok.Grok
 	tsModder *tsModder
@@ -140,6 +152,7 @@ func (p *Parser) Compile() error {
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	var err error
+	// values are the parsed fields from the log line
 	var values map[string]string
 	// the matching pattern string
 	var patternName string
@@ -165,6 +178,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			continue
 		}
 
+		// t is the modifier of the field
 		var t string
 		// check if pattern has some modifiers
 		if types, ok := p.typeMap[patternName]; ok {
@@ -188,21 +202,21 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case INT:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
-				log.Printf("ERROR parsing %s to int: %s", v, err)
+				log.Printf("E! Error parsing %s to int: %s", v, err)
 			} else {
 				fields[k] = iv
 			}
 		case FLOAT:
 			fv, err := strconv.ParseFloat(v, 64)
 			if err != nil {
-				log.Printf("ERROR parsing %s to float: %s", v, err)
+				log.Printf("E! Error parsing %s to float: %s", v, err)
 			} else {
 				fields[k] = fv
 			}
 		case DURATION:
 			d, err := time.ParseDuration(v)
 			if err != nil {
-				log.Printf("ERROR parsing %s to duration: %s", v, err)
+				log.Printf("E! Error parsing %s to duration: %s", v, err)
 			} else {
 				fields[k] = int64(d)
 			}
@@ -210,19 +224,49 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			tags[k] = v
 		case STRING:
 			fields[k] = strings.Trim(v, `"`)
-		case "EPOCH":
+		case EPOCH:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
-				log.Printf("ERROR parsing %s to int: %s", v, err)
+				log.Printf("E! Error parsing %s to int: %s", v, err)
 			} else {
 				timestamp = time.Unix(iv, 0)
 			}
-		case "EPOCH_NANO":
+		case EPOCH_NANO:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
-				log.Printf("ERROR parsing %s to int: %s", v, err)
+				log.Printf("E! Error parsing %s to int: %s", v, err)
 			} else {
 				timestamp = time.Unix(0, iv)
+			}
+		case GENERIC_TIMESTAMP:
+			var foundTs bool
+			// first try timestamp layouts that we've already found
+			for _, layout := range p.foundTsLayouts {
+				ts, err := time.Parse(layout, v)
+				if err == nil {
+					timestamp = ts
+					foundTs = true
+					break
+				}
+			}
+			// if we haven't found a timestamp layout yet, try all timestamp
+			// layouts.
+			if !foundTs {
+				for _, layout := range timeLayouts {
+					ts, err := time.Parse(layout, v)
+					if err == nil {
+						timestamp = ts
+						foundTs = true
+						p.foundTsLayouts = append(p.foundTsLayouts, layout)
+						break
+					}
+				}
+			}
+			// if we still haven't found a timestamp layout, log it and we will
+			// just use time.Now()
+			if !foundTs {
+				log.Printf("E! Error parsing timestamp [%s], could not find any "+
+					"suitable time layouts.", v)
 			}
 		case DROP:
 		// goodbye!
@@ -231,7 +275,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			if err == nil {
 				timestamp = ts
 			} else {
-				log.Printf("ERROR parsing %s to time layout [%s]: %s", v, t, err)
+				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		}
 	}
@@ -267,7 +311,7 @@ func (p *Parser) compileCustomPatterns() error {
 
 	// check if pattern contains modifiers. Parse them out if it does.
 	for name, pattern := range p.patterns {
-		if typedRe.MatchString(pattern) {
+		if modifierRe.MatchString(pattern) {
 			// this pattern has modifiers, so parse out the modifiers
 			pattern, err = p.parseTypedCaptures(name, pattern)
 			if err != nil {
@@ -280,13 +324,13 @@ func (p *Parser) compileCustomPatterns() error {
 	return p.g.AddPatternsFromMap(p.patterns)
 }
 
-// parseTypedCaptures parses the capture types, and then deletes the type from
-// the line so that it is a valid "grok" pattern again.
+// parseTypedCaptures parses the capture modifiers, and then deletes the
+// modifier from the line so that it is a valid "grok" pattern again.
 //   ie,
 //     %{NUMBER:bytes:int}      => %{NUMBER:bytes}      (stores %{NUMBER}->bytes->int)
 //     %{IPORHOST:clientip:tag} => %{IPORHOST:clientip} (stores %{IPORHOST}->clientip->tag)
 func (p *Parser) parseTypedCaptures(name, pattern string) (string, error) {
-	matches := typedRe.FindAllStringSubmatch(pattern, -1)
+	matches := modifierRe.FindAllStringSubmatch(pattern, -1)
 
 	// grab the name of the capture pattern
 	patternName := "%{" + name + "}"
@@ -298,16 +342,18 @@ func (p *Parser) parseTypedCaptures(name, pattern string) (string, error) {
 	hasTimestamp := false
 	for _, match := range matches {
 		// regex capture 1 is the name of the capture
-		// regex capture 2 is the type of the capture
-		if strings.HasPrefix(match[2], "ts-") {
+		// regex capture 2 is the modifier of the capture
+		if strings.HasPrefix(match[2], "ts") {
 			if hasTimestamp {
 				return pattern, fmt.Errorf("logparser pattern compile error: "+
 					"Each pattern is allowed only one named "+
 					"timestamp data type. pattern: %s", pattern)
 			}
-			if f, ok := timeFormats[match[2]]; ok {
-				p.tsMap[patternName][match[1]] = f
+			if layout, ok := timeLayouts[match[2]]; ok {
+				// built-in time format
+				p.tsMap[patternName][match[1]] = layout
 			} else {
+				// custom time format
 				p.tsMap[patternName][match[1]] = strings.TrimSuffix(strings.TrimPrefix(match[2], `ts-"`), `"`)
 			}
 			hasTimestamp = true

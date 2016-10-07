@@ -43,11 +43,11 @@ type TcpListener struct {
 	acc    telegraf.Accumulator
 }
 
-var dropwarn = "ERROR: tcp_listener message queue full. " +
+var dropwarn = "E! Error: tcp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
-var malformedwarn = "WARNING: tcp_listener has received %d malformed packets" +
+var malformedwarn = "E! tcp_listener has received %d malformed packets" +
 	" thus far."
 
 const sampleConfig = `
@@ -108,13 +108,13 @@ func (t *TcpListener) Start(acc telegraf.Accumulator) error {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 		return err
 	}
-	log.Println("TCP server listening on: ", t.listener.Addr().String())
+	log.Println("I! TCP server listening on: ", t.listener.Addr().String())
 
 	t.wg.Add(2)
 	go t.tcpListen()
 	go t.tcpParser()
 
-	log.Printf("Started TCP listener service on %s\n", t.ServiceAddress)
+	log.Printf("I! Started TCP listener service on %s\n", t.ServiceAddress)
 	return nil
 }
 
@@ -141,7 +141,7 @@ func (t *TcpListener) Stop() {
 
 	t.wg.Wait()
 	close(t.in)
-	log.Println("Stopped TCP listener service on ", t.ServiceAddress)
+	log.Println("I! Stopped TCP listener service on ", t.ServiceAddress)
 }
 
 // tcpListen listens for incoming TCP connections.
@@ -158,7 +158,6 @@ func (t *TcpListener) tcpListen() error {
 			if err != nil {
 				return err
 			}
-			// log.Printf("Received TCP Connection from %s", conn.RemoteAddr())
 
 			select {
 			case <-t.accept:
@@ -183,8 +182,8 @@ func (t *TcpListener) refuser(conn *net.TCPConn) {
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)
 	conn.Close()
-	log.Printf("Refused TCP Connection from %s", conn.RemoteAddr())
-	log.Printf("WARNING: Maximum TCP Connections reached, you may want to" +
+	log.Printf("I! Refused TCP Connection from %s", conn.RemoteAddr())
+	log.Printf("I! WARNING: Maximum TCP Connections reached, you may want to" +
 		" adjust max_tcp_connections")
 }
 
@@ -194,7 +193,6 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 	defer func() {
 		t.wg.Done()
 		conn.Close()
-		// log.Printf("Closed TCP Connection from %s", conn.RemoteAddr())
 		// Add one connection potential back to channel when this one closes
 		t.accept <- true
 		t.forget(id)
@@ -239,14 +237,19 @@ func (t *TcpListener) tcpParser() error {
 	for {
 		select {
 		case <-t.done:
-			return nil
+			// drain input packets before finishing:
+			if len(t.in) == 0 {
+				return nil
+			}
 		case packet = <-t.in:
 			if len(packet) == 0 {
 				continue
 			}
 			metrics, err = t.parser.Parse(packet)
 			if err == nil {
-				t.storeMetrics(metrics)
+				for _, m := range metrics {
+					t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+				}
 			} else {
 				t.malformed++
 				if t.malformed == 1 || t.malformed%1000 == 0 {
@@ -255,15 +258,6 @@ func (t *TcpListener) tcpParser() error {
 			}
 		}
 	}
-}
-
-func (t *TcpListener) storeMetrics(metrics []telegraf.Metric) error {
-	t.Lock()
-	defer t.Unlock()
-	for _, m := range metrics {
-		t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-	}
-	return nil
 }
 
 // forget a TCP connection

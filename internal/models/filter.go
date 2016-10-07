@@ -1,9 +1,8 @@
-package internal_models
+package models
 
 import (
 	"fmt"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 )
 
@@ -34,47 +33,59 @@ type Filter struct {
 	TagInclude []string
 	tagInclude filter.Filter
 
-	IsActive bool
+	isActive bool
 }
 
 // Compile all Filter lists into filter.Filter objects.
-func (f *Filter) CompileFilter() error {
+func (f *Filter) Compile() error {
+	if len(f.NameDrop) == 0 &&
+		len(f.NamePass) == 0 &&
+		len(f.FieldDrop) == 0 &&
+		len(f.FieldPass) == 0 &&
+		len(f.TagInclude) == 0 &&
+		len(f.TagExclude) == 0 &&
+		len(f.TagPass) == 0 &&
+		len(f.TagDrop) == 0 {
+		return nil
+	}
+
+	f.isActive = true
 	var err error
-	f.nameDrop, err = filter.CompileFilter(f.NameDrop)
+	f.nameDrop, err = filter.Compile(f.NameDrop)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'namedrop', %s", err)
 	}
-	f.namePass, err = filter.CompileFilter(f.NamePass)
+	f.namePass, err = filter.Compile(f.NamePass)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'namepass', %s", err)
 	}
 
-	f.fieldDrop, err = filter.CompileFilter(f.FieldDrop)
+	f.fieldDrop, err = filter.Compile(f.FieldDrop)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'fielddrop', %s", err)
 	}
-	f.fieldPass, err = filter.CompileFilter(f.FieldPass)
+	f.fieldPass, err = filter.Compile(f.FieldPass)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'fieldpass', %s", err)
 	}
 
-	f.tagExclude, err = filter.CompileFilter(f.TagExclude)
+	f.tagExclude, err = filter.Compile(f.TagExclude)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'tagexclude', %s", err)
 	}
-	f.tagInclude, err = filter.CompileFilter(f.TagInclude)
+	f.tagInclude, err = filter.Compile(f.TagInclude)
 	if err != nil {
 		return fmt.Errorf("Error compiling 'taginclude', %s", err)
 	}
 
 	for i, _ := range f.TagDrop {
-		f.TagDrop[i].filter, err = filter.CompileFilter(f.TagDrop[i].Filter)
+		f.TagDrop[i].filter, err = filter.Compile(f.TagDrop[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagdrop', %s", err)
 		}
 	}
 	for i, _ := range f.TagPass {
-		f.TagPass[i].filter, err = filter.CompileFilter(f.TagPass[i].Filter)
+		f.TagPass[i].filter, err = filter.Compile(f.TagPass[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagpass', %s", err)
 		}
@@ -82,16 +93,52 @@ func (f *Filter) CompileFilter() error {
 	return nil
 }
 
-func (f *Filter) ShouldMetricPass(metric telegraf.Metric) bool {
-	if f.ShouldNamePass(metric.Name()) && f.ShouldTagsPass(metric.Tags()) {
+// Apply applies the filter to the given measurement name, fields map, and
+// tags map. It will return false if the metric should be "filtered out", and
+// true if the metric should "pass".
+// It will modify tags in-place if they need to be deleted.
+func (f *Filter) Apply(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+) bool {
+	if !f.isActive {
 		return true
 	}
-	return false
+
+	// check if the measurement name should pass
+	if !f.shouldNamePass(measurement) {
+		return false
+	}
+
+	// check if the tags should pass
+	if !f.shouldTagsPass(tags) {
+		return false
+	}
+
+	// filter fields
+	for fieldkey, _ := range fields {
+		if !f.shouldFieldPass(fieldkey) {
+			delete(fields, fieldkey)
+		}
+	}
+	if len(fields) == 0 {
+		return false
+	}
+
+	// filter tags
+	f.filterTags(tags)
+
+	return true
 }
 
-// ShouldFieldsPass returns true if the metric should pass, false if should drop
+func (f *Filter) IsActive() bool {
+	return f.isActive
+}
+
+// shouldNamePass returns true if the metric should pass, false if should drop
 // based on the drop/pass filter parameters
-func (f *Filter) ShouldNamePass(key string) bool {
+func (f *Filter) shouldNamePass(key string) bool {
 	if f.namePass != nil {
 		if f.namePass.Match(key) {
 			return true
@@ -107,9 +154,9 @@ func (f *Filter) ShouldNamePass(key string) bool {
 	return true
 }
 
-// ShouldFieldsPass returns true if the metric should pass, false if should drop
+// shouldFieldPass returns true if the metric should pass, false if should drop
 // based on the drop/pass filter parameters
-func (f *Filter) ShouldFieldsPass(key string) bool {
+func (f *Filter) shouldFieldPass(key string) bool {
 	if f.fieldPass != nil {
 		if f.fieldPass.Match(key) {
 			return true
@@ -125,9 +172,9 @@ func (f *Filter) ShouldFieldsPass(key string) bool {
 	return true
 }
 
-// ShouldTagsPass returns true if the metric should pass, false if should drop
+// shouldTagsPass returns true if the metric should pass, false if should drop
 // based on the tagdrop/tagpass filter parameters
-func (f *Filter) ShouldTagsPass(tags map[string]string) bool {
+func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 	if f.TagPass != nil {
 		for _, pat := range f.TagPass {
 			if pat.filter == nil {
@@ -161,7 +208,7 @@ func (f *Filter) ShouldTagsPass(tags map[string]string) bool {
 
 // Apply TagInclude and TagExclude filters.
 // modifies the tags map in-place.
-func (f *Filter) FilterTags(tags map[string]string) {
+func (f *Filter) filterTags(tags map[string]string) {
 	if f.tagInclude != nil {
 		for k, _ := range tags {
 			if !f.tagInclude.Match(k) {

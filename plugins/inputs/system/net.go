@@ -81,7 +81,7 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 			"drop_in":      io.Dropin,
 			"drop_out":     io.Dropout,
 		}
-		acc.AddFields("net", fields, tags)
+		acc.AddCounter("net", fields, tags)
 	}
 
 	// Get system wide stats for different network protocols

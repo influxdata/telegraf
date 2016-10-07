@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0-beta3_amd64.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_beta3.x86_64.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.1_amd64.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1.x86_64.rpm
 
 Latest (arm):
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0-beta3_armhf.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_beta3.armhf.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.1_armhf.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,14 +46,14 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta3_linux_amd64.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta3_linux_i386.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta3_linux_armhf.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_i386.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_armhf.tar.gz
 
 ### FreeBSD tarball:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta3_freebsd_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
@@ -69,7 +69,7 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-beta3_windows_amd64.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_windows_amd64.zip
 
 ### From Source:
 
@@ -156,10 +156,12 @@ Currently implemented sources:
 * [exec](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [filestat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/filestat)
 * [haproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/haproxy)
+* [hddtemp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/hddtemp)
 * [http_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_response)
 * [httpjson](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [influxdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/influxdb)
 * [ipmi_sensor](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ipmi_sensor)
+* [iptables](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/iptables)
 * [jolokia](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia)
 * [leofs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/leofs)
 * [lustre2](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/lustre2)
@@ -187,8 +189,9 @@ Currently implemented sources:
 * [redis](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/redis)
 * [rethinkdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/rethinkdb)
 * [riak](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/riak)
-* [sensors ](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sensors) (only available if built from source)
+* [sensors](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sensors)
 * [snmp](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
+* [snmp_legacy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp_legacy)
 * [sql server](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/sqlserver) (microsoft)
 * [twemproxy](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/twemproxy)
 * [varnish](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/varnish)
@@ -210,18 +213,21 @@ Currently implemented sources:
 
 Telegraf can also collect metrics via the following service plugins:
 
+* [http_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_listener)
+* [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
+* [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
+* [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
+* [nsq_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq_consumer)
+* [logparser](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/logparser)
 * [statsd](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/statsd)
 * [tail](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail)
-* [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [tcp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tcp_listener)
-* [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
-* [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
-* [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
+* [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks)
+  * [filestack](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/filestack)
   * [github](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/github)
   * [mandrill](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/mandrill)
   * [rollbar](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/rollbar)
-* [nsq_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq_consumer)
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.
@@ -241,6 +247,7 @@ want to add support for another service or third-party API.
 * [kafka](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kafka)
 * [librato](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/librato)
 * [mqtt](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/mqtt)
+* [nats](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/nats)
 * [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/nsq)
 * [opentsdb](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
 * [prometheus](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/prometheus_client)

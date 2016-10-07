@@ -83,7 +83,7 @@ func (k *KinesisOutput) Connect() error {
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
-		log.Printf("kinesis: Establishing a connection to Kinesis in %+v", k.Region)
+		log.Printf("E! kinesis: Establishing a connection to Kinesis in %+v", k.Region)
 	}
 
 	credentialConfig := &internalaws.CredentialConfig{
@@ -105,17 +105,17 @@ func (k *KinesisOutput) Connect() error {
 	resp, err := svc.ListStreams(KinesisParams)
 
 	if err != nil {
-		log.Printf("kinesis: Error in ListSteams API call : %+v \n", err)
+		log.Printf("E! kinesis: Error in ListSteams API call : %+v \n", err)
 	}
 
 	if checkstream(resp.StreamNames, k.StreamName) {
 		if k.Debug {
-			log.Printf("kinesis: Stream Exists")
+			log.Printf("E! kinesis: Stream Exists")
 		}
 		k.svc = svc
 		return nil
 	} else {
-		log.Printf("kinesis : You have configured a StreamName %+v which does not exist. exiting.", k.StreamName)
+		log.Printf("E! kinesis : You have configured a StreamName %+v which does not exist. exiting.", k.StreamName)
 		os.Exit(1)
 	}
 	return err
@@ -147,14 +147,14 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 	if k.Debug {
 		resp, err := k.svc.PutRecords(payload)
 		if err != nil {
-			log.Printf("kinesis: Unable to write to Kinesis : %+v \n", err.Error())
+			log.Printf("E! kinesis: Unable to write to Kinesis : %+v \n", err.Error())
 		}
-		log.Printf("%+v \n", resp)
+		log.Printf("E! %+v \n", resp)
 
 	} else {
 		_, err := k.svc.PutRecords(payload)
 		if err != nil {
-			log.Printf("kinesis: Unable to write to Kinesis : %+v \n", err.Error())
+			log.Printf("E! kinesis: Unable to write to Kinesis : %+v \n", err.Error())
 		}
 	}
 	return time.Since(start)
@@ -182,7 +182,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		if sz == 500 {
 			// Max Messages Per PutRecordRequest is 500
 			elapsed := writekinesis(k, r)
-			log.Printf("Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
+			log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
 			atomic.StoreUint32(&sz, 0)
 			r = nil
 		}

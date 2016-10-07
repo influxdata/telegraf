@@ -11,6 +11,8 @@ Output plugins READMEs are less structured,
 but any information you can provide on how the data will look is appreciated.
 See the [OpenTSDB output](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
 for a good example.
+1. **Optional:** Help users of your plugin by including example queries for populating dashboards. Include these sample queries in the `README.md` for the plugin.
+1. **Optional:** Write a [tickscript](https://docs.influxdata.com/kapacitor/v1.0/tick/syntax/) for your plugin and add it to [Kapacitor](https://github.com/influxdata/kapacitor/tree/master/examples/telegraf). Or mention @jackzampolin in a PR comment with some common queries that you would want to alert on and he will write one for you.
 
 ## GoDoc
 
@@ -30,7 +32,7 @@ Assuming you can already build the project, run these in the telegraf directory:
 
 1. `go get github.com/sparrc/gdm`
 1. `gdm restore`
-1. `gdm save`
+1. `GOOS=linux gdm save`
 
 ## Input Plugins
 
@@ -82,9 +84,9 @@ func (s *Simple) SampleConfig() string {
 
 func (s *Simple) Gather(acc telegraf.Accumulator) error {
     if s.Ok {
-        acc.Add("state", "pretty good", nil)
+        acc.AddFields("state", map[string]interface{}{"value": "pretty good"}, nil)
     } else {
-        acc.Add("state", "not great", nil)
+        acc.AddFields("state", map[string]interface{}{"value": "not great"}, nil)
     }
 
     return nil
@@ -94,6 +96,13 @@ func init() {
     inputs.Add("simple", func() telegraf.Input { return &Simple{} })
 }
 ```
+
+## Adding Typed Metrics
+
+In addition the the `AddFields` function, the accumulator also supports an
+`AddGauge` and `AddCounter` function. These functions are for adding _typed_
+metrics. Metric types are ignored for the InfluxDB output, but can be used
+for other outputs, such as [prometheus](https://prometheus.io/docs/concepts/metric_types/).
 
 ## Input Plugins Accepting Arbitrary Data Formats
 
