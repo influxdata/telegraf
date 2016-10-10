@@ -2,21 +2,21 @@ package elasticsearch
 
 import (
 	"fmt"
-	"os"
-	"time"
-	"strings"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-  	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v2"
+	"os"
+	"strings"
+	"time"
 )
 
 type Elasticsearch struct {
 	ServerHost    string
 	IndexName     string
 	EnableSniffer bool
-        Separator     string			
-	Client 	      *elastic.Client
-	Version	      string
+	Separator     string
+	Client        *elastic.Client
+	Version       string
 }
 
 var sampleConfig = `
@@ -43,23 +43,23 @@ func (a *Elasticsearch) Connect() error {
 	}
 
 	client, err := elastic.NewClient(
-                elastic.SetHealthcheck(true),
-                elastic.SetSniff(a.EnableSniffer),
-                elastic.SetHealthcheckInterval(30*time.Second),
-                elastic.SetURL(a.ServerHost),
-        )
+		elastic.SetHealthcheck(true),
+		elastic.SetSniff(a.EnableSniffer),
+		elastic.SetHealthcheckInterval(30*time.Second),
+		elastic.SetURL(a.ServerHost),
+	)
 
-  	if err != nil {
+	if err != nil {
 		return fmt.Errorf("FAILED to connect to elasticsearch host %s : %s\n", a.ServerHost, err)
-  	}
+	}
 
 	a.Client = client
 
 	version, errVersion := a.Client.ElasticsearchVersion(a.ServerHost)
 
-  	if errVersion != nil {
+	if errVersion != nil {
 		return fmt.Errorf("FAILED to get elasticsearch version : %s\n", errVersion)
-  	}
+	}
 
 	a.Version = version
 
@@ -73,52 +73,52 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 	for _, metric := range metrics {
 
-	        m := make(map[string]interface{})
+		m := make(map[string]interface{})
 		//m["created"] = metric.UnixNano() / 1000000
 		m["created"] = time.Now()
 
-        	if host, ok := metric.Tags()["host"]; ok {
-                	m["host"] = host
-        	} else {
-                	host, err := os.Hostname()
-                	if err != nil {
+		if host, ok := metric.Tags()["host"]; ok {
+			m["host"] = host
+		} else {
+			host, err := os.Hostname()
+			if err != nil {
 				panic(err)
-                	}
-                	m["host"] = host
-        	}
+			}
+			m["host"] = host
+		}
 
 		// Earlier versions of EL doesnt accept '.' in field name
 		if len(a.Separator) > 1 {
 			return fmt.Errorf("FAILED Separator exceed one character : %s\n", a.Separator)
 		}
 
-        	for key, value := range metric.Tags() {
-                	if key != "host" {
-	                        if strings.HasPrefix(a.Version, "2.") {
-                                	m[strings.Replace(key, ".", a.Separator, -1)] = value
-                        	} else {
-                                	m[key] = value
-                        	}
-                	}
-        	}
+		for key, value := range metric.Tags() {
+			if key != "host" {
+				if strings.HasPrefix(a.Version, "2.") {
+					m[strings.Replace(key, ".", a.Separator, -1)] = value
+				} else {
+					m[key] = value
+				}
+			}
+		}
 
-        	for key, value := range metric.Fields() {
+		for key, value := range metric.Fields() {
 			if strings.HasPrefix(a.Version, "2.") {
-	                	m[strings.Replace(key, ".", a.Separator, -1)] = value
+				m[strings.Replace(key, ".", a.Separator, -1)] = value
 			} else {
 				m[key] = value
 			}
-        	}
+		}
 
-		_, errMessage:= a.Client.Index().
-                	Index(a.IndexName).
-                	Type(metric.Name()).
+		_, errMessage := a.Client.Index().
+			Index(a.IndexName).
+			Type(metric.Name()).
 			BodyJson(m).
-                	Do()
+			Do()
 
-        	if errMessage != nil {
-			return fmt.Errorf("FAILED to send elasticsearch message to index %s : %s\n", a.IndexName, errMessage)	
-        	}	
+		if errMessage != nil {
+			return fmt.Errorf("FAILED to send elasticsearch message to index %s : %s\n", a.IndexName, errMessage)
+		}
 
 	}
 
@@ -132,7 +132,6 @@ func (a *Elasticsearch) SampleConfig() string {
 func (a *Elasticsearch) Description() string {
 	return "Configuration for Elasticsearch to send metrics to."
 }
-
 
 func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 	ms := make(map[string]Point)
