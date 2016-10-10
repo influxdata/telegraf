@@ -11,6 +11,9 @@ type RunningAggregator struct {
 	Config *AggregatorConfig
 
 	metrics chan telegraf.Metric
+
+	periodStart time.Time
+	periodEnd   time.Time
 }
 
 func NewRunningAggregator(
@@ -105,10 +108,32 @@ func (r *RunningAggregator) reset() {
 	r.a.Reset()
 }
 
+// Run runs the running aggregator, listens for incoming metrics, and waits
+// for period ticks to tell it when to push and reset the aggregator.
 func (r *RunningAggregator) Run(
 	acc telegraf.Accumulator,
 	shutdown chan struct{},
 ) {
+	// The start of the period is truncated to the nearest second.
+	//
+	// Every metric then gets it's timestamp checked and is dropped if it
+	// is not within:
+	//
+	//   start < t < end + truncation + delay
+	//
+	// So if we start at now = 00:00.2 with a 10s period and 0.3s delay:
+	//   now = 00:00.2
+	//   start = 00:00
+	//   truncation = 00:00.2
+	//   end = 00:10
+	// 1st interval: 00:00 - 00:10.5
+	// 2nd interval: 00:10 - 00:20.5
+	// etc.
+	//
+	now := time.Now()
+	r.periodStart = now.Truncate(time.Second)
+	truncation := now.Sub(r.periodStart)
+	r.periodEnd = r.periodStart.Add(r.Config.Period)
 	time.Sleep(r.Config.Delay)
 	periodT := time.NewTicker(r.Config.Period)
 	defer periodT.Stop()
@@ -122,8 +147,16 @@ func (r *RunningAggregator) Run(
 			}
 			return
 		case m := <-r.metrics:
+			if m.Time().Before(r.periodStart) ||
+				m.Time().After(r.periodEnd.Add(truncation).Add(r.Config.Delay)) {
+				// the metric is outside the current aggregation period, so
+				// skip it.
+				continue
+			}
 			r.add(m)
 		case <-periodT.C:
+			r.periodStart = r.periodEnd
+			r.periodEnd = r.periodStart.Add(r.Config.Period)
 			r.push(acc)
 			r.reset()
 		}

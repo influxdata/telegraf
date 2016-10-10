@@ -358,6 +358,17 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}
 	}()
 
+	wg.Add(len(a.Config.Aggregators))
+	for _, aggregator := range a.Config.Aggregators {
+		go func(agg *models.RunningAggregator) {
+			defer wg.Done()
+			acc := NewAccumulator(agg, metricC)
+			acc.SetPrecision(a.Config.Agent.Precision.Duration,
+				a.Config.Agent.Interval.Duration)
+			agg.Run(acc, shutdown)
+		}(aggregator)
+	}
+
 	wg.Add(len(a.Config.Inputs))
 	for _, input := range a.Config.Inputs {
 		interval := a.Config.Agent.Interval.Duration
@@ -369,17 +380,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			defer wg.Done()
 			a.gatherer(shutdown, in, interv, metricC)
 		}(input, interval)
-	}
-
-	wg.Add(len(a.Config.Aggregators))
-	for _, aggregator := range a.Config.Aggregators {
-		go func(agg *models.RunningAggregator) {
-			defer wg.Done()
-			acc := NewAccumulator(agg, metricC)
-			acc.SetPrecision(a.Config.Agent.Precision.Duration,
-				a.Config.Agent.Interval.Duration)
-			agg.Run(acc, shutdown)
-		}(aggregator)
 	}
 
 	wg.Wait()

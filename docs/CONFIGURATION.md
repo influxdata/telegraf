@@ -87,7 +87,9 @@ There are no generic configuration options available for all outputs.
 
 The following config parameters are available for all aggregators:
 
-* **period**: The period on which to flush & clear each aggregator.
+* **period**: The period on which to flush & clear each aggregator. All metrics
+that are sent with timestamps outside of this period will be ignored by the
+aggregator.
 * **delay**: The delay before each aggregator is flushed. This is to control
 how long for aggregators to wait before receiving metrics from input plugins,
 in the case that aggregators are flushing and inputs are gathering on the

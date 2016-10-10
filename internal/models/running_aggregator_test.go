@@ -31,11 +31,64 @@ func TestAdd(t *testing.T) {
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
 		telegraf.Untyped,
-		time.Now(),
+		time.Now().Add(time.Millisecond*150),
 	)
 	assert.False(t, ra.Add(m))
 
 	for {
+		time.Sleep(time.Millisecond)
+		if atomic.LoadInt64(&a.sum) > 0 {
+			break
+		}
+	}
+	assert.Equal(t, int64(101), atomic.LoadInt64(&a.sum))
+}
+
+func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
+	a := &TestAggregator{}
+	ra := NewRunningAggregator(a, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+		Filter: Filter{
+			NamePass: []string{"*"},
+		},
+		Period: time.Millisecond * 500,
+	})
+	assert.NoError(t, ra.Config.Filter.Compile())
+	acc := testutil.Accumulator{}
+	go ra.Run(&acc, make(chan struct{}))
+
+	// metric before current period
+	m := ra.MakeMetric(
+		"RITest",
+		map[string]interface{}{"value": int(101)},
+		map[string]string{},
+		telegraf.Untyped,
+		time.Now().Add(-time.Hour),
+	)
+	assert.False(t, ra.Add(m))
+
+	// metric after current period
+	m = ra.MakeMetric(
+		"RITest",
+		map[string]interface{}{"value": int(101)},
+		map[string]string{},
+		telegraf.Untyped,
+		time.Now().Add(time.Hour),
+	)
+	assert.False(t, ra.Add(m))
+
+	// "now" metric
+	m = ra.MakeMetric(
+		"RITest",
+		map[string]interface{}{"value": int(101)},
+		map[string]string{},
+		telegraf.Untyped,
+		time.Now().Add(time.Millisecond*50),
+	)
+	assert.False(t, ra.Add(m))
+
+	for {
+		time.Sleep(time.Millisecond)
 		if atomic.LoadInt64(&a.sum) > 0 {
 			break
 		}
@@ -68,11 +121,12 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
 		telegraf.Untyped,
-		time.Now(),
+		time.Now().Add(time.Millisecond*100),
 	)
 	assert.False(t, ra.Add(m))
 
 	for {
+		time.Sleep(time.Millisecond)
 		if acc.NMetrics() > 0 {
 			break
 		}
@@ -182,7 +236,9 @@ type TestAggregator struct {
 
 func (t *TestAggregator) Description() string  { return "" }
 func (t *TestAggregator) SampleConfig() string { return "" }
-func (t *TestAggregator) Reset()               {}
+func (t *TestAggregator) Reset() {
+	atomic.StoreInt64(&t.sum, 0)
+}
 
 func (t *TestAggregator) Push(acc telegraf.Accumulator) {
 	acc.AddFields("TestMetric",
