@@ -11,14 +11,18 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+// UdpListener main struct for the collector
 type UdpListener struct {
 	ServiceAddress string
+
+	UDPBufferSize          int `toml:"udp_buffer_size"`
+	AllowedPendingMessages int
+
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
 	// see https://github.com/influxdata/telegraf/pull/992
-	UDPPacketSize          int `toml:"udp_packet_size"`
-	AllowedPendingMessages int
+	UDPPacketSize int `toml:"udp_packet_size"`
 
 	sync.Mutex
 	wg sync.WaitGroup
@@ -38,7 +42,7 @@ type UdpListener struct {
 	listener *net.UDPConn
 }
 
-// UDP packet limit, see
+// UDP_MAX_PACKET_SIZE is packet limit, see
 // https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 const UDP_MAX_PACKET_SIZE int = 64 * 1024
 
@@ -56,6 +60,10 @@ const sampleConfig = `
   ## Number of UDP messages allowed to queue up. Once filled, the
   ## UDP listener will start dropping packets.
   allowed_pending_messages = 10000
+
+  ## Set the buffer size of the UDP connection outside of OS default (in bytes)
+  ## If set to 0, take OS default
+  udp_buffer_size = 16777216
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
@@ -94,7 +102,7 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 	go u.udpListen()
 	go u.udpParser()
 
-	log.Printf("I! Started UDP listener service on %s\n", u.ServiceAddress)
+	log.Printf("I! Started UDP listener service on %s (ReadBuffer: %d)\n", u.ServiceAddress, u.UDPBufferSize)
 	return nil
 }
 
@@ -111,20 +119,29 @@ func (u *UdpListener) Stop() {
 func (u *UdpListener) udpListen() error {
 	defer u.wg.Done()
 	var err error
+
 	address, _ := net.ResolveUDPAddr("udp", u.ServiceAddress)
 	u.listener, err = net.ListenUDP("udp", address)
+
 	if err != nil {
-		log.Fatalf("ERROR: ListenUDP - %s", err)
+		log.Fatalf("E! Error: ListenUDP - %s", err)
 	}
+
 	log.Println("I! UDP server listening on: ", u.listener.LocalAddr().String())
 
 	buf := make([]byte, UDP_MAX_PACKET_SIZE)
+
 	for {
 		select {
 		case <-u.done:
 			return nil
 		default:
 			u.listener.SetReadDeadline(time.Now().Add(time.Second))
+
+			if u.UDPBufferSize > 0 {
+				u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default
+			}
+
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil {
 				if err, ok := err.(net.Error); ok && err.Timeout() {
