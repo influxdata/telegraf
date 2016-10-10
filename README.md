@@ -240,6 +240,7 @@ want to add support for another service or third-party API.
 * [aws kinesis](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kinesis)
 * [aws cloudwatch](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/cloudwatch)
 * [datadog](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/datadog)
+* [elasticsearch](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/elasticsearch)
 * [file](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/file)
 * [graphite](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/graphite)
 * [graylog](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/graylog)
