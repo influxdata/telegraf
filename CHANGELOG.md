@@ -38,6 +38,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 
 ### Bugfixes
 
+- [#1870](https://github.com/influxdata/telegraf/pull/1870): plugins/inputs/statsd: enforce minimum allowed_pending_messages
 - [#1746](https://github.com/influxdata/telegraf/issues/1746): Fix handling of non-string values for JSON keys listed in tag_keys.
 - [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
 - [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
