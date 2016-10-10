@@ -36,7 +36,7 @@ func TestParse_ValidLines(t *testing.T) {
 	}
 
 	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -67,7 +67,7 @@ func TestParse_Gauges(t *testing.T) {
 	}
 
 	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -142,7 +142,7 @@ func TestParse_Sets(t *testing.T) {
 	}
 
 	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -193,7 +193,7 @@ func TestParse_Counters(t *testing.T) {
 	}
 
 	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -249,7 +249,7 @@ func TestParse_Timings(t *testing.T) {
 	}
 
 	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -278,7 +278,7 @@ func TestParseScientificNotation(t *testing.T) {
 		"scientific.notation:4.6968460083008E-5|h",
 	}
 	for _, line := range sciNotationLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line [%s] should not have resulted in error: %s\n", line, err)
 		}
@@ -302,7 +302,7 @@ func TestParse_InvalidLines(t *testing.T) {
 		"invalid.value:1d1|c",
 	}
 	for _, line := range invalid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err == nil {
 			t.Errorf("Parsing line %s should have resulted in an error\n", line)
 		}
@@ -320,7 +320,7 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 	}
 
 	for _, line := range invalid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -370,7 +370,7 @@ func TestParse_DefaultNameParsing(t *testing.T) {
 	}
 
 	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -411,7 +411,7 @@ func TestParse_Template(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -453,7 +453,7 @@ func TestParse_TemplateFilter(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -495,7 +495,7 @@ func TestParse_TemplateSpecificity(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -543,7 +543,7 @@ func TestParse_TemplateFields(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -721,7 +721,7 @@ func TestParse_DataDogTags(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -836,7 +836,7 @@ func TestParse_MeasurementsWithSameName(t *testing.T) {
 	}
 
 	for _, line := range valid_lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -889,14 +889,14 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 	s_multiple := NewTestStatsd()
 
 	for _, line := range single_lines {
-		err := s_single.parseStatsdLine(line)
+		err := s_single.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
 	}
 
 	for _, line := range multiple_lines {
-		err := s_multiple.parseStatsdLine(line)
+		err := s_multiple.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -999,7 +999,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine([]byte(line))
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -1034,17 +1034,17 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 	s.Percentiles = []int{90}
 	acc := &testutil.Accumulator{}
 
-	validLines := []string{
-		"test_timing.success:1|ms",
-		"test_timing.success:11|ms",
-		"test_timing.success:1|ms",
-		"test_timing.success:1|ms",
-		"test_timing.success:1|ms",
-		"test_timing.error:2|ms",
-		"test_timing.error:22|ms",
-		"test_timing.error:2|ms",
-		"test_timing.error:2|ms",
-		"test_timing.error:2|ms",
+	validLines := [][]byte{
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:11|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:22|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
 	}
 
 	for _, line := range validLines {
@@ -1078,17 +1078,17 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 
 func BenchmarkParse(b *testing.B) {
 	s := NewTestStatsd()
-	validLines := []string{
-		"test.timing.success:1|ms",
-		"test.timing.success:11|ms",
-		"test.timing.success:1|ms",
-		"test.timing.success:1|ms",
-		"test.timing.success:1|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:22|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:2|ms",
+	validLines := [][]byte{
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:11|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:22|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
@@ -1103,17 +1103,17 @@ func BenchmarkParse(b *testing.B) {
 func BenchmarkParseWithTemplate(b *testing.B) {
 	s := NewTestStatsd()
 	s.Templates = []string{"measurement.measurement.field"}
-	validLines := []string{
-		"test.timing.success:1|ms",
-		"test.timing.success:11|ms",
-		"test.timing.success:1|ms",
-		"test.timing.success:1|ms",
-		"test.timing.success:1|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:22|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:2|ms",
+	validLines := [][]byte{
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:11|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:22|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
@@ -1128,17 +1128,17 @@ func BenchmarkParseWithTemplate(b *testing.B) {
 func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
 	s := NewTestStatsd()
 	s.Templates = []string{"cpu* measurement.measurement.field"}
-	validLines := []string{
-		"test.timing.success:1|ms",
-		"test.timing.success:11|ms",
-		"test.timing.success:1|ms",
-		"cpu.timing.success:1|ms",
-		"cpu.timing.success:1|ms",
-		"cpu.timing.error:2|ms",
-		"cpu.timing.error:22|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:2|ms",
+	validLines := [][]byte{
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:11|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:22|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
@@ -1156,21 +1156,21 @@ func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
 		"cpu1* measurement.measurement.field",
 		"cpu2* measurement.measurement.field",
 	}
-	validLines := []string{
-		"test.timing.success:1|ms",
-		"test.timing.success:11|ms",
-		"test.timing.success:1|ms",
-		"cpu1.timing.success:1|ms",
-		"cpu1.timing.success:1|ms",
-		"cpu2.timing.error:2|ms",
-		"cpu2.timing.error:22|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:2|ms",
-		"test.timing.error:2|ms",
+	validLines := [][]byte{
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:11|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.success:1|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:22|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
+		[]byte("test_timing.error:2|ms"),
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine([]byte(line))
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1184,17 +1184,17 @@ func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
 		"cpu1* measurement.measurement.region.city.rack.field",
 		"cpu2* measurement.measurement.region.city.rack.field",
 	}
-	validLines := []string{
-		"test.timing.us-east.nyc.rack01.success:1|ms",
-		"test.timing.us-east.nyc.rack01.success:11|ms",
-		"test.timing.us-west.sf.rack01.success:1|ms",
-		"cpu1.timing.us-west.sf.rack01.success:1|ms",
-		"cpu1.timing.us-east.nyc.rack01.success:1|ms",
-		"cpu2.timing.us-east.nyc.rack01.error:2|ms",
-		"cpu2.timing.us-west.sf.rack01.error:22|ms",
-		"test.timing.us-west.sf.rack01.error:2|ms",
-		"test.timing.us-west.sf.rack01.error:2|ms",
-		"test.timing.us-east.nyc.rack01.error:2|ms",
+	validLines := [][]byte{
+		[]byte("test.timing.us-east.nyc.rack01.success:1|ms"),
+		[]byte("test.timing.us-east.nyc.rack01.success:11|ms"),
+		[]byte("test.timing.us-west.sf.rack01.success:1|ms"),
+		[]byte("cpu1.timing.us-west.sf.rack01.success:1|ms"),
+		[]byte("cpu1.timing.us-east.nyc.rack01.success:1|ms"),
+		[]byte("cpu2.timing.us-east.nyc.rack01.error:2|ms"),
+		[]byte("cpu2.timing.us-west.sf.rack01.error:22|ms"),
+		[]byte("test.timing.us-west.sf.rack01.error:2|ms"),
+		[]byte("test.timing.us-west.sf.rack01.error:2|ms"),
+		[]byte("test.timing.us-east.nyc.rack01.error:2|ms"),
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
@@ -1213,7 +1213,7 @@ func TestParse_Timings_Delete(t *testing.T) {
 	var err error
 
 	line := "timing:100|ms"
-	err = s.parseStatsdLine(line)
+	err = s.parseStatsdLine([]byte(line))
 	if err != nil {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
@@ -1237,7 +1237,7 @@ func TestParse_Gauges_Delete(t *testing.T) {
 	var err error
 
 	line := "current.users:100|g"
-	err = s.parseStatsdLine(line)
+	err = s.parseStatsdLine([]byte(line))
 	if err != nil {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
@@ -1263,7 +1263,7 @@ func TestParse_Sets_Delete(t *testing.T) {
 	var err error
 
 	line := "unique.user.ids:100|s"
-	err = s.parseStatsdLine(line)
+	err = s.parseStatsdLine([]byte(line))
 	if err != nil {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
@@ -1289,7 +1289,7 @@ func TestParse_Counters_Delete(t *testing.T) {
 	var err error
 
 	line := "total.users:100|c"
-	err = s.parseStatsdLine(line)
+	err = s.parseStatsdLine([]byte(line))
 	if err != nil {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}

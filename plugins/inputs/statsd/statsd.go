@@ -1,15 +1,18 @@
 package statsd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
 	"net"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 
@@ -317,10 +320,10 @@ func (s *Statsd) parser() error {
 		case <-s.done:
 			return nil
 		case packet = <-s.in:
-			lines := strings.Split(string(packet), "\n")
+			lines := bytes.Split(packet, []byte{'\n'})
 			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if line != "" {
+				line = bytes.TrimSpace(line)
+				if len(line) != 0 {
 					s.parseStatsdLine(line)
 				}
 			}
@@ -328,51 +331,57 @@ func (s *Statsd) parser() error {
 	}
 }
 
+func bytesToString(b []byte) string {
+	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	sh := reflect.StringHeader{Data: bh.Data, Len: bh.Len}
+	return *(*string)(unsafe.Pointer(&sh)) + ""
+}
+
 // parseStatsdLine will parse the given statsd line, validating it as it goes.
 // If the line is valid, it will be cached for the next call to Gather()
-func (s *Statsd) parseStatsdLine(line string) error {
+func (s *Statsd) parseStatsdLine(line []byte) error {
 	s.Lock()
 	defer s.Unlock()
 
-	lineTags := make(map[string]string)
+	lineTags := make(map[string][]byte)
 	if s.ParseDataDogTags {
-		recombinedSegments := make([]string, 0)
+		var recombinedSegments [][]byte
 		// datadog tags look like this:
 		// users.online:1|c|@0.5|#country:china,environment:production
 		// users.online:1|c|#sometagwithnovalue
 		// we will split on the pipe and remove any elements that are datadog
 		// tags, parse them, and rebuild the line sans the datadog tags
-		pipesplit := strings.Split(line, "|")
+		pipesplit := bytes.Split(line, []byte{'|'})
 		for _, segment := range pipesplit {
 			if len(segment) > 0 && segment[0] == '#' {
 				// we have ourselves a tag; they are comma separated
 				tagstr := segment[1:]
-				tags := strings.Split(tagstr, ",")
+				tags := bytes.Split(tagstr, []byte{','})
 				for _, tag := range tags {
-					ts := strings.SplitN(tag, ":", 2)
-					var k, v string
+					ts := bytes.SplitN(tag, []byte{':'}, 2)
+					var k, v []byte
 					switch len(ts) {
 					case 1:
 						// just a tag
 						k = ts[0]
-						v = ""
+						v = []byte{}
 					case 2:
 						k = ts[0]
 						v = ts[1]
 					}
-					if k != "" {
-						lineTags[k] = v
+					if len(k) != 0 {
+						lineTags[string(k)] = v
 					}
 				}
 			} else {
 				recombinedSegments = append(recombinedSegments, segment)
 			}
 		}
-		line = strings.Join(recombinedSegments, "|")
+		line = bytes.Join(recombinedSegments, []byte{'|'})
 	}
 
 	// Validate splitting the line on ":"
-	bits := strings.Split(line, ":")
+	bits := bytes.Split(line, []byte{':'})
 	if len(bits) < 2 {
 		log.Printf("E! Error: splitting ':', Unable to parse metric: %s\n", line)
 		return errors.New("Error Parsing statsd line")
@@ -385,10 +394,10 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	for _, bit := range bits {
 		m := metric{}
 
-		m.bucket = bucketName
+		m.bucket = bytesToString(bucketName)
 
 		// Validate splitting the bit on "|"
-		pipesplit := strings.Split(bit, "|")
+		pipesplit := bytes.Split(bit, []byte{'|'})
 		if len(pipesplit) < 2 {
 			log.Printf("E! Error: splitting '|', Unable to parse metric: %s\n", line)
 			return errors.New("Error Parsing statsd line")
@@ -396,8 +405,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			sr := pipesplit[2]
 			errmsg := "E! Error: parsing sample rate, %s, it must be in format like: " +
 				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
-			if strings.Contains(sr, "@") && len(sr) > 1 {
-				samplerate, err := strconv.ParseFloat(sr[1:], 64)
+			if bytes.IndexByte(sr, '@') != -1 && len(sr) > 1 {
+				samplerate, err := strconv.ParseFloat(string(sr[1:]), 64)
 				if err != nil {
 					log.Printf(errmsg, err.Error(), line)
 				} else {
@@ -409,17 +418,21 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			}
 		}
 
+		// avoid loads of []byte <> string conversions
+		strPipeSplit0 := bytesToString(pipesplit[0])
+		strPipeSplit1 := bytesToString(pipesplit[1])
+
 		// Validate metric type
-		switch pipesplit[1] {
+		switch strPipeSplit1 {
 		case "g", "c", "s", "ms", "h":
-			m.mtype = pipesplit[1]
+			m.mtype = strPipeSplit1
 		default:
-			log.Printf("E! Error: Statsd Metric type %s unsupported", pipesplit[1])
+			log.Printf("E! Error: Statsd Metric type %s unsupported", strPipeSplit1)
 			return errors.New("Error Parsing statsd line")
 		}
 
 		// Parse the value
-		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
+		if pipesplit[0][0] == '-' || pipesplit[0][0] == '+' {
 			if m.mtype != "g" {
 				log.Printf("E! Error: +- values are only supported for gauges: %s\n", line)
 				return errors.New("Error Parsing statsd line")
@@ -429,7 +442,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		switch m.mtype {
 		case "g", "ms", "h":
-			v, err := strconv.ParseFloat(pipesplit[0], 64)
+			v, err := strconv.ParseFloat(strPipeSplit0, 64)
 			if err != nil {
 				log.Printf("E! Error: parsing value to float64: %s\n", line)
 				return errors.New("Error Parsing statsd line")
@@ -437,9 +450,9 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			m.floatvalue = v
 		case "c", "s":
 			var v int64
-			v, err := strconv.ParseInt(pipesplit[0], 10, 64)
+			v, err := strconv.ParseInt(strPipeSplit0, 10, 64)
 			if err != nil {
-				v2, err2 := strconv.ParseFloat(pipesplit[0], 64)
+				v2, err2 := strconv.ParseFloat(strPipeSplit0, 64)
 				if err2 != nil {
 					log.Printf("E! Error: parsing value to int64: %s\n", line)
 					return errors.New("Error Parsing statsd line")
@@ -470,17 +483,22 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		if len(lineTags) > 0 {
 			for k, v := range lineTags {
-				m.tags[k] = v
+				m.tags[k] = bytesToString(v)
 			}
 		}
 
 		// Make a unique key for the measurement name/tags
-		var tg []string
+		var tg = make([]string, len(m.tags))
+		i := 0
 		for k, v := range m.tags {
-			tg = append(tg, fmt.Sprintf("%s=%s", k, v))
+			tg[i] = k + "=" + v
+			i++
 		}
 		sort.Strings(tg)
-		m.hash = fmt.Sprintf("%s%s", strings.Join(tg, ""), m.name)
+		for i := range tg {
+			m.hash = m.hash + tg[i]
+		}
+		m.hash = m.hash + m.name
 
 		s.aggregate(m)
 	}
