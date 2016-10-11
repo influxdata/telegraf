@@ -13,6 +13,7 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 
 	serverhost := "http://" + testutil.GetLocalHost() + ":9200"
+
 	e := &Elasticsearch{
 		ServerHost: serverhost,
 		IndexName:  "littletest",
