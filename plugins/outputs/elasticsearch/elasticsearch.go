@@ -74,7 +74,6 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 
 		m := make(map[string]interface{})
-		//m["created"] = metric.UnixNano() / 1000000
 		m["created"] = time.Now()
 
 		if host, ok := metric.Tags()["host"]; ok {
@@ -171,6 +170,9 @@ func (a *Elasticsearch) Close() error {
 
 func init() {
 	outputs.Add("elasticsearch", func() telegraf.Output {
-		return &Elasticsearch{}
+		return &Elasticsearch{
+			EnableSniffer: false,
+			Separator:     "_",
+		}
 	})
 }
