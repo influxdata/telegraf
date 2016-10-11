@@ -126,7 +126,7 @@ func (c *CloudWatch) Description() string {
 	return "Pull Metric Statistics from Amazon CloudWatch"
 }
 
-func SelectMetrics (c *CloudWatch) ([]*cloudwatch.Metric, error) {
+func SelectMetrics(c *CloudWatch) ([]*cloudwatch.Metric, error) {
 	var metrics []*cloudwatch.Metric
 
 	// check for provided metric filter

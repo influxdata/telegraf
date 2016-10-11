@@ -88,36 +88,36 @@ type mockSelectMetricsCloudWatchClient struct{}
 func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
 	metrics := []*cloudwatch.Metric{}
 	// 4 metrics are available
-	metricNames := []string { "Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount" }
+	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
 	// for 3 ELBs
-	loadBalancers := []string { "lb-1", "lb-2", "lb-3" }
+	loadBalancers := []string{"lb-1", "lb-2", "lb-3"}
 	// in 2 AZs
-	availabilityZones := []string { "us-east-1a", "us-east-1b" }
+	availabilityZones := []string{"us-east-1a", "us-east-1b"}
 	for _, m := range metricNames {
 		for _, lb := range loadBalancers {
 			// For each metric/ELB pair, we get an aggregate value across all AZs.
-			metrics = append(metrics, &cloudwatch.Metric {
-				Namespace: aws.String("AWS/ELB"),
+			metrics = append(metrics, &cloudwatch.Metric{
+				Namespace:  aws.String("AWS/ELB"),
 				MetricName: aws.String(m),
-				Dimensions: []*cloudwatch.Dimension {
-					&cloudwatch.Dimension {
-						Name: aws.String("LoadBalancerName"),
+				Dimensions: []*cloudwatch.Dimension{
+					&cloudwatch.Dimension{
+						Name:  aws.String("LoadBalancerName"),
 						Value: aws.String(lb),
 					},
 				},
 			})
 			for _, az := range availabilityZones {
 				// We get a metric for each metric/ELB/AZ triplet.
-				metrics = append(metrics, &cloudwatch.Metric {
-					Namespace: aws.String("AWS/ELB"),
+				metrics = append(metrics, &cloudwatch.Metric{
+					Namespace:  aws.String("AWS/ELB"),
 					MetricName: aws.String(m),
-					Dimensions: []*cloudwatch.Dimension {
-						&cloudwatch.Dimension {
-							Name: aws.String("LoadBalancerName"),
+					Dimensions: []*cloudwatch.Dimension{
+						&cloudwatch.Dimension{
+							Name:  aws.String("LoadBalancerName"),
 							Value: aws.String(lb),
 						},
-						&cloudwatch.Dimension {
-							Name: aws.String("AvailabilityZone"),
+						&cloudwatch.Dimension{
+							Name:  aws.String("AvailabilityZone"),
 							Value: aws.String(az),
 						},
 					},
@@ -148,15 +148,15 @@ func TestSelectMetrics(t *testing.T) {
 		Period:    internalDuration,
 		RateLimit: 10,
 		Metrics: []*Metric{
-			&Metric {
-				MetricNames: []string { "Latency", "RequestCount" },
-				Dimensions: []*Dimension {
-					&Dimension {
-						Name: "LoadBalancerName",
+			&Metric{
+				MetricNames: []string{"Latency", "RequestCount"},
+				Dimensions: []*Dimension{
+					&Dimension{
+						Name:  "LoadBalancerName",
 						Value: "*",
 					},
-					&Dimension {
-						Name: "AvailabilityZone",
+					&Dimension{
+						Name:  "AvailabilityZone",
 						Value: "*",
 					},
 				},
