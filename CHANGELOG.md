@@ -35,6 +35,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1813](https://github.com/influxdata/telegraf/pull/1813): Change default arguments for SNMP plugin.
 - [#1686](https://github.com/influxdata/telegraf/pull/1686): Mesos input plugin: very high-cardinality mesos-task metrics removed.
 - [#1838](https://github.com/influxdata/telegraf/pull/1838): Logging overhaul to centralize the logger & log levels, & provide a logfile config option.
+- [#1700](https://github.com/influxdata/telegraf/pull/1700): HAProxy plugin socket glob matching.
 
 ### Bugfixes
 
@@ -56,6 +57,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1835](https://github.com/influxdata/telegraf/issues/1835): Fix SNMP emitting empty fields.
 - [#1854](https://github.com/influxdata/telegraf/pull/1853): SQL Server waitstats truncation bug.
 - [#1810](https://github.com/influxdata/telegraf/issues/1810): Fix logparser common log format: numbers in ident.
+- [#1793](https://github.com/influxdata/telegraf/pull/1793): Fix JSON Serialization in OpenTSDB output.
 
 ## v1.0.1 [2016-09-26]
 

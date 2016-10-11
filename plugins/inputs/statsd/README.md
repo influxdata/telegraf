@@ -93,7 +93,6 @@ tags in a manner similar to the line-protocol, like this:
 users.current,service=payroll,region=us-west:32|g
 ```
 
-COMING SOON: there will be a way to specify multiple fields.
 <!-- TODO Second, you can specify multiple fields within a measurement:
 
 ```
