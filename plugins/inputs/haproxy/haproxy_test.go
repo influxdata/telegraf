@@ -72,38 +72,7 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 		"sv":     "host0",
 	}
 
-	fields := map[string]interface{}{
-		"active_servers":    uint64(1),
-		"backup_servers":    uint64(0),
-		"bin":               uint64(510913516),
-		"bout":              uint64(2193856571),
-		"check_duration":    uint64(10),
-		"cli_abort":         uint64(73),
-		"ctime":             uint64(2),
-		"downtime":          uint64(0),
-		"dresp":             uint64(0),
-		"econ":              uint64(0),
-		"eresp":             uint64(1),
-		"http_response.1xx": uint64(0),
-		"http_response.2xx": uint64(119534),
-		"http_response.3xx": uint64(48051),
-		"http_response.4xx": uint64(2345),
-		"http_response.5xx": uint64(1056),
-		"lbtot":             uint64(171013),
-		"qcur":              uint64(0),
-		"qmax":              uint64(0),
-		"qtime":             uint64(0),
-		"rate":              uint64(3),
-		"rate_max":          uint64(12),
-		"rtime":             uint64(312),
-		"scur":              uint64(1),
-		"smax":              uint64(32),
-		"srv_abort":         uint64(1),
-		"stot":              uint64(171014),
-		"ttime":             uint64(2341),
-		"wredis":            uint64(0),
-		"wretr":             uint64(1),
-	}
+	fields := HaproxyGetFieldValues()
 	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 
 	//Here, we should get error because we don't pass authentication data
@@ -136,102 +105,58 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 		"sv":     "host0",
 	}
 
-	fields := map[string]interface{}{
-		"active_servers":    uint64(1),
-		"backup_servers":    uint64(0),
-		"bin":               uint64(510913516),
-		"bout":              uint64(2193856571),
-		"check_duration":    uint64(10),
-		"cli_abort":         uint64(73),
-		"ctime":             uint64(2),
-		"downtime":          uint64(0),
-		"dresp":             uint64(0),
-		"econ":              uint64(0),
-		"eresp":             uint64(1),
-		"http_response.1xx": uint64(0),
-		"http_response.2xx": uint64(119534),
-		"http_response.3xx": uint64(48051),
-		"http_response.4xx": uint64(2345),
-		"http_response.5xx": uint64(1056),
-		"lbtot":             uint64(171013),
-		"qcur":              uint64(0),
-		"qmax":              uint64(0),
-		"qtime":             uint64(0),
-		"rate":              uint64(3),
-		"rate_max":          uint64(12),
-		"rtime":             uint64(312),
-		"scur":              uint64(1),
-		"smax":              uint64(32),
-		"srv_abort":         uint64(1),
-		"stot":              uint64(171014),
-		"ttime":             uint64(2341),
-		"wredis":            uint64(0),
-		"wretr":             uint64(1),
-	}
+	fields := HaproxyGetFieldValues()
 	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 }
 
 func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	var randomNumber int64
-	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
-	sock, err := net.Listen("unix", fmt.Sprintf("/tmp/test-haproxy%d.sock", randomNumber))
-	if err != nil {
-		t.Fatal("Cannot initialize socket ")
+	var sockets [5]net.Listener
+	_globmask := "/tmp/test-haproxy*.sock"
+	_badmask := "/tmp/test-fail-haproxy*.sock"
+
+	for i := 0; i < 5; i++ {
+		binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
+		sockname := fmt.Sprintf("/tmp/test-haproxy%d.sock", randomNumber)
+
+		sock, err := net.Listen("unix", sockname)
+		if err != nil {
+			t.Fatal("Cannot initialize socket ")
+		}
+
+		sockets[i] = sock
+		defer sock.Close()
+
+		s := statServer{}
+		go s.serverSocket(sock)
 	}
 
-	defer sock.Close()
-
-	s := statServer{}
-	go s.serverSocket(sock)
-
 	r := &haproxy{
-		Servers: []string{sock.Addr().String()},
+		Servers: []string{_globmask},
 	}
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err := r.Gather(&acc)
 	require.NoError(t, err)
 
-	tags := map[string]string{
-		"proxy":  "be_app",
-		"server": sock.Addr().String(),
-		"sv":     "host0",
+	fields := HaproxyGetFieldValues()
+
+	for _, sock := range sockets {
+		tags := map[string]string{
+			"proxy":  "be_app",
+			"server": sock.Addr().String(),
+			"sv":     "host0",
+		}
+
+		acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 	}
 
-	fields := map[string]interface{}{
-		"active_servers":    uint64(1),
-		"backup_servers":    uint64(0),
-		"bin":               uint64(510913516),
-		"bout":              uint64(2193856571),
-		"check_duration":    uint64(10),
-		"cli_abort":         uint64(73),
-		"ctime":             uint64(2),
-		"downtime":          uint64(0),
-		"dresp":             uint64(0),
-		"econ":              uint64(0),
-		"eresp":             uint64(1),
-		"http_response.1xx": uint64(0),
-		"http_response.2xx": uint64(119534),
-		"http_response.3xx": uint64(48051),
-		"http_response.4xx": uint64(2345),
-		"http_response.5xx": uint64(1056),
-		"lbtot":             uint64(171013),
-		"qcur":              uint64(0),
-		"qmax":              uint64(0),
-		"qtime":             uint64(0),
-		"rate":              uint64(3),
-		"rate_max":          uint64(12),
-		"rtime":             uint64(312),
-		"scur":              uint64(1),
-		"smax":              uint64(32),
-		"srv_abort":         uint64(1),
-		"stot":              uint64(171014),
-		"ttime":             uint64(2341),
-		"wredis":            uint64(0),
-		"wretr":             uint64(1),
-	}
-	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
+	// This mask should not match any socket
+	r.Servers = []string{_badmask}
+
+	err = r.Gather(&acc)
+	require.Error(t, err)
 }
 
 //When not passing server config, we default to localhost
@@ -244,6 +169,42 @@ func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
 	err := r.Gather(&acc)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "127.0.0.1:1936/haproxy?stats/;csv")
+}
+
+func HaproxyGetFieldValues() map[string]interface{} {
+	fields := map[string]interface{}{
+		"active_servers":    uint64(1),
+		"backup_servers":    uint64(0),
+		"bin":               uint64(510913516),
+		"bout":              uint64(2193856571),
+		"check_duration":    uint64(10),
+		"cli_abort":         uint64(73),
+		"ctime":             uint64(2),
+		"downtime":          uint64(0),
+		"dresp":             uint64(0),
+		"econ":              uint64(0),
+		"eresp":             uint64(1),
+		"http_response.1xx": uint64(0),
+		"http_response.2xx": uint64(119534),
+		"http_response.3xx": uint64(48051),
+		"http_response.4xx": uint64(2345),
+		"http_response.5xx": uint64(1056),
+		"lbtot":             uint64(171013),
+		"qcur":              uint64(0),
+		"qmax":              uint64(0),
+		"qtime":             uint64(0),
+		"rate":              uint64(3),
+		"rate_max":          uint64(12),
+		"rtime":             uint64(312),
+		"scur":              uint64(1),
+		"smax":              uint64(32),
+		"srv_abort":         uint64(1),
+		"stot":              uint64(171014),
+		"ttime":             uint64(2341),
+		"wredis":            uint64(0),
+		"wretr":             uint64(1),
+	}
+	return fields
 }
 
 const csvOutputSample = `
