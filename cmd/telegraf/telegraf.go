@@ -192,7 +192,7 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		case *fUsage != "":
 			if err := config.PrintInputConfig(*fUsage); err != nil {
 				if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
-					log.Fatalf("%s and %s", err, err2)
+					log.Fatalf("E! %s and %s", err, err2)
 				}
 			}
 			return
@@ -204,26 +204,25 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		c.InputFilters = inputFilters
 		err := c.LoadConfig(*fConfig)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal("E! " + err.Error())
 		}
 
 		if *fConfigDirectory != "" {
 			err = c.LoadDirectory(*fConfigDirectory)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("E! " + err.Error())
 			}
 		}
 		if len(c.Outputs) == 0 {
-			log.Fatalf("Error: no outputs found, did you provide a valid config file?")
+			log.Fatalf("E! Error: no outputs found, did you provide a valid config file?")
 		}
 		if len(c.Inputs) == 0 {
-			log.Fatalf("Error: no inputs found, did you provide a valid config file?")
+			log.Fatalf("E! Error: no inputs found, did you provide a valid config file?")
 		}
 
 		ag, err := agent.NewAgent(c)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("E! " + err.Error())
 		}
 
 		// Setup logging
@@ -236,14 +235,14 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		if *fTest {
 			err = ag.Test()
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("E! " + err.Error())
 			}
 			return
 		}
 
 		err = ag.Connect()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("E! " + err.Error())
 		}
 
 		shutdown := make(chan struct{})
@@ -274,7 +273,7 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		if *fPidfile != "" {
 			f, err := os.Create(*fPidfile)
 			if err != nil {
-				log.Fatalf("Unable to create pidfile: %s", err)
+				log.Fatalf("E! Unable to create pidfile: %s", err)
 			}
 
 			fmt.Fprintf(f, "%d\n", os.Getpid())
@@ -320,7 +319,7 @@ func main() {
 		prg := &program{}
 		s, err := service.New(prg, svcConfig)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("E! " + err.Error())
 		}
 		// Handle the -service flag here to prevent any issues with tooling that
 		// may not have an interactive session, e.g. installing from Ansible.
@@ -330,7 +329,7 @@ func main() {
 			}
 			err := service.Control(s, *fService)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("E! " + err.Error())
 			}
 		} else {
 			err = s.Run()

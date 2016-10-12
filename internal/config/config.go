@@ -241,7 +241,7 @@ var header = `# Telegraf Configuration
   debug = false
   ## Run telegraf in quiet mode (error log messages only).
   quiet = false
-  ## Specify the log file name. The empty string means to log to stdout.
+  ## Specify the log file name. The empty string means to log to stderr.
   logfile = ""
 
   ## Override default hostname, if empty use os.Hostname()
