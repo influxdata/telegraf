@@ -19,6 +19,7 @@ type Wavefront struct {
 	Port int
 
 	Debug bool
+	Metric_separator string
 }
 
 var sanitizedChars = strings.NewReplacer("*", "-", `%`, "-", "#", "-")
@@ -47,6 +48,9 @@ type MetricLine struct {
 
 func (w *Wavefront) Connect() error {
 	// Test Connection to OpenTSDB Server
+	if w.Metric_separator == "" {
+		w.Metric_separator = "_"
+	}
 	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
@@ -76,7 +80,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	defer connection.Close()
 
 	for _, m := range metrics {
-		for _, metric := range buildMetrics(m, now, w.Prefix) {
+		for _, metric := range buildMetrics(m, now, w) {
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
 				metric.Metric, metric.Timestamp, metric.Value, metric.Tags)
 			if w.Debug {
@@ -103,15 +107,15 @@ func buildTags(mTags map[string]string) []string {
 	return tags
 }
 
-func buildMetrics(m telegraf.Metric, now time.Time, prefix string) []*MetricLine {
+func buildMetrics(m telegraf.Metric, now time.Time, w *Wavefront) []*MetricLine {
 	ret := []*MetricLine{}
 	for fieldName, value := range m.Fields() {
 		metric := &MetricLine{
-			Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
-				prefix, m.Name(), fieldName)),
+			Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s%s%s",
+				w.Prefix, m.Name(), w.Metric_separator, fieldName)),
 			Timestamp: now.Unix(),
 		}
-		metricValue, buildError := buildValue(value)
+		metricValue, buildError := buildValue(value, metric.Metric)
 		if buildError != nil {
 			fmt.Printf("Wavefront: %s\n", buildError.Error())
 			continue
@@ -124,7 +128,7 @@ func buildMetrics(m telegraf.Metric, now time.Time, prefix string) []*MetricLine
 	return ret
 }
 
-func buildValue(v interface{}) (string, error) {
+func buildValue(v interface{}, name string) (string, error) {
 	var retv string
 	switch p := v.(type) {
 	case int64:
@@ -134,7 +138,7 @@ func buildValue(v interface{}) (string, error) {
 	case float64:
 		retv = FloatToString(float64(p))
 	default:
-		return retv, fmt.Errorf("unexpected type %T with value %v for Wavefront", v, v)
+		return retv, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	}
 	return retv, nil
 }
