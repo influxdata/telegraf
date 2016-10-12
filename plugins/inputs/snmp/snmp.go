@@ -178,13 +178,30 @@ type Table struct {
 	initialized bool
 }
 
-// init() populates Fields if a table OID is provided.
+// init() builds & initializes the nested fields.
 func (t *Table) init() error {
 	if t.initialized {
 		return nil
 	}
+
+	if err := t.initBuild(); err != nil {
+		return err
+	}
+
+	// initialize all the nested fields
+	for i := range t.Fields {
+		if err := t.Fields[i].init(); err != nil {
+			return err
+		}
+	}
+
+	t.initialized = true
+	return nil
+}
+
+// init() populates Fields if a table OID is provided.
+func (t *Table) initBuild() error {
 	if t.Oid == "" {
-		t.initialized = true
 		return nil
 	}
 
@@ -242,14 +259,6 @@ func (t *Table) init() error {
 		t.Fields = append(t.Fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
 	}
 
-	// initialize all the nested fields
-	for i := range t.Fields {
-		if err := t.Fields[i].init(); err != nil {
-			return err
-		}
-	}
-
-	t.initialized = true
 	return nil
 }
 
