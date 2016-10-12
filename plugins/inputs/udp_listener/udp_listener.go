@@ -15,6 +15,14 @@ import (
 type UdpListener struct {
 	ServiceAddress string
 
+	// UDPBufferSize should only be set if you want/need the telegraf UDP socket to
+	// differ from the system setting. In cases where you set the rmem_default to a lower
+	// value at the host level, but need a larger buffer for UDP bursty traffic, this
+	// setting enables you to configure that value ONLY for telegraf UDP sockets on this listener
+	// Set this to 0 (or comment out) to take system default
+	//
+	// NOTE: You should ensure that your rmem_max is >= to this setting to work properly!
+	// (e.g. sysctl -w net.core.rmem_max=N)
 	UDPBufferSize          int `toml:"udp_buffer_size"`
 	AllowedPendingMessages int
 
@@ -131,16 +139,20 @@ func (u *UdpListener) udpListen() error {
 
 	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 
+	if u.UDPBufferSize > 0 {
+		err = u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default
+		if err != nil {
+			log.Printf("E! Failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
+			return err
+		}
+	}
+
 	for {
 		select {
 		case <-u.done:
 			return nil
 		default:
 			u.listener.SetReadDeadline(time.Now().Add(time.Second))
-
-			if u.UDPBufferSize > 0 {
-				u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default
-			}
 
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil {
