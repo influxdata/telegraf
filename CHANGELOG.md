@@ -68,6 +68,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1344](https://github.com/influxdata/telegraf/issues/1344): Fix config file parse error logging.
 - [#1771](https://github.com/influxdata/telegraf/issues/1771): Delete nil fields in the metric maker.
 - [#870](https://github.com/influxdata/telegraf/issues/870): Fix MySQL special characters in DSN parsing.
+- [#1742](https://github.com/influxdata/telegraf/issues/1742): Ping input odd timeout behavior.
 
 ## v1.0.1 [2016-09-26]
 
