@@ -236,6 +236,11 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Make data structures
 	s.done = make(chan struct{})
+
+	if s.AllowedPendingMessages < 1 {
+		log.Printf("I! statsd: allowed_pending_messages < 1 not allowed (%v) set to 1", s.AllowedPendingMessages)
+		s.AllowedPendingMessages = 1
+	}
 	s.in = make(chan []byte, s.AllowedPendingMessages)
 
 	if prevInstance == nil {
