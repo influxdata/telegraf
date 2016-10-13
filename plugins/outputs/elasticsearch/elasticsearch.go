@@ -117,7 +117,7 @@ func (a *Elasticsearch) WriteOneMessage(metric telegraf.Metric) (string, error) 
 
 	if host, ok := metric.Tags()["host"]; ok {
 		m["host"] = host
-	} 
+	}
 
 	// Elasticsearch 2.x does not support this dots-to-object transformation
 	// and so dots in field names are not allowed in versions 2.X.
@@ -148,10 +148,10 @@ func (a *Elasticsearch) WriteOneMessage(metric telegraf.Metric) (string, error) 
 		Do()
 
 	if errMessage != nil {
-		return "",fmt.Errorf("FAILED to send Elasticsearch message to index %s : %s\n", a.IndexName, errMessage)
+		return "", fmt.Errorf("FAILED to send Elasticsearch message to index %s : %s\n", a.IndexName, errMessage)
 	}
 
-	return put1.Id,nil
+	return put1.Id, nil
 
 }
 
