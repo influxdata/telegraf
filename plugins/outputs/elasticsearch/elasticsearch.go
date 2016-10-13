@@ -110,6 +110,51 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+func (a *Elasticsearch) WriteOneMessage(metric telegraf.Metric) (string, error) {
+
+	m := make(map[string]interface{})
+	m["created"] = metric.Time()
+
+	if host, ok := metric.Tags()["host"]; ok {
+		m["host"] = host
+	} 
+
+	// Elasticsearch 2.x does not support this dots-to-object transformation
+	// and so dots in field names are not allowed in versions 2.X.
+	// In this case, dots will be replaced with "_"
+
+	for key, value := range metric.Tags() {
+		if key != "host" {
+			if strings.HasPrefix(a.Version, "2.") {
+				m[strings.Replace(key, ".", "_", -1)] = value
+			} else {
+				m[key] = value
+			}
+		}
+	}
+
+	for key, value := range metric.Fields() {
+		if strings.HasPrefix(a.Version, "2.") {
+			m[strings.Replace(key, ".", "_", -1)] = value
+		} else {
+			m[key] = value
+		}
+	}
+
+	put1, errMessage := a.Client.Index().
+		Index(a.IndexName).
+		Type(metric.Name()).
+		BodyJson(m).
+		Do()
+
+	if errMessage != nil {
+		return "",fmt.Errorf("FAILED to send Elasticsearch message to index %s : %s\n", a.IndexName, errMessage)
+	}
+
+	return put1.Id,nil
+
+}
+
 func (a *Elasticsearch) SampleConfig() string {
 	return sampleConfig
 }
