@@ -13,11 +13,12 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
-
+	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"github.com/kardianos/service"
 )
 
@@ -41,6 +42,10 @@ var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
 var fOutputList = flag.Bool("output-list", false,
 	"print available output plugins.")
+var fAggregatorFilters = flag.String("aggregator-filter", "",
+	"filter the aggregators to enable, separator is :")
+var fProcessorFilters = flag.String("processor-filter", "",
+	"filter the processors to enable, separator is :")
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 var fService = flag.String("service", "",
@@ -68,47 +73,38 @@ const usage = `Telegraf, The plugin-driven server agent for collecting and repor
 
 Usage:
 
-  telegraf <flags>
+  telegraf [commands|flags]
 
-The flags are:
+The commands & flags are:
 
-  -config <file>     configuration file to load
-  -test              gather metrics once, print them to stdout, and exit
-  -sample-config     print out full sample configuration to stdout
-  -config-directory  directory containing additional *.conf files
-  -input-filter      filter the input plugins to enable, separator is :
-  -input-list        print all the plugins inputs
-  -output-filter     filter the output plugins to enable, separator is :
-  -output-list       print all the available outputs
-  -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
-  -debug             print metrics as they're generated to stdout
-  -quiet             run in quiet mode
-  -version           print the version to stdout
-  -service           Control the service, ie, 'telegraf -service install (windows only)'
+  config             print out full sample configuration to stdout
+  version            print the version to stdout
 
-In addition to the -config flag, telegraf will also load the config file from
-an environment variable or default location. Precedence is:
-  1. -config flag
-  2. $TELEGRAF_CONFIG_PATH environment variable
-  3. $HOME/.telegraf/telegraf.conf
-  4. /etc/telegraf/telegraf.conf
+  --config <file>     configuration file to load
+  --test              gather metrics once, print them to stdout, and exit
+  --config-directory  directory containing additional *.conf files
+  --input-filter      filter the input plugins to enable, separator is :
+  --output-filter     filter the output plugins to enable, separator is :
+  --usage             print usage for a plugin, ie, 'telegraf --usage mysql'
+  --debug             print metrics as they're generated to stdout
+  --quiet             run in quiet mode
 
 Examples:
 
   # generate a telegraf config file:
-  telegraf -sample-config > telegraf.conf
+  telegraf config > telegraf.conf
 
   # generate config with only cpu input & influxdb output plugins defined
-  telegraf -sample-config -input-filter cpu -output-filter influxdb
+  telegraf config -input-filter cpu -output-filter influxdb
 
   # run a single telegraf collection, outputing metrics to stdout
-  telegraf -config telegraf.conf -test
+  telegraf --config telegraf.conf -test
 
   # run telegraf with all plugins defined in config file
-  telegraf -config telegraf.conf
+  telegraf --config telegraf.conf
 
   # run telegraf, enabling the cpu & memory input, and influxdb output plugins
-  telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
+  telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 `
 
 var stop chan struct{}
@@ -128,7 +124,6 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 	reload <- true
 	for <-reload {
 		reload <- false
-		flag.Usage = func() { usageExit(0) }
 		flag.Parse()
 		args := flag.Args()
 
@@ -142,6 +137,16 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 			outputFilter := strings.TrimSpace(*fOutputFilters)
 			outputFilters = strings.Split(":"+outputFilter+":", ":")
 		}
+		var aggregatorFilters []string
+		if *fAggregatorFilters != "" {
+			aggregatorFilter := strings.TrimSpace(*fAggregatorFilters)
+			aggregatorFilters = strings.Split(":"+aggregatorFilter+":", ":")
+		}
+		var processorFilters []string
+		if *fProcessorFilters != "" {
+			processorFilter := strings.TrimSpace(*fProcessorFilters)
+			processorFilters = strings.Split(":"+processorFilter+":", ":")
+		}
 
 		if len(args) > 0 {
 			switch args[0] {
@@ -149,7 +154,12 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 				fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
 				return
 			case "config":
-				config.PrintSampleConfig(inputFilters, outputFilters)
+				config.PrintSampleConfig(
+					inputFilters,
+					outputFilters,
+					aggregatorFilters,
+					processorFilters,
+				)
 				return
 			}
 		}
@@ -172,12 +182,17 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 			fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
 			return
 		case *fSampleConfig:
-			config.PrintSampleConfig(inputFilters, outputFilters)
+			config.PrintSampleConfig(
+				inputFilters,
+				outputFilters,
+				aggregatorFilters,
+				processorFilters,
+			)
 			return
 		case *fUsage != "":
 			if err := config.PrintInputConfig(*fUsage); err != nil {
 				if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
-					log.Fatalf("%s and %s", err, err2)
+					log.Fatalf("E! %s and %s", err, err2)
 				}
 			}
 			return
@@ -189,26 +204,25 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		c.InputFilters = inputFilters
 		err := c.LoadConfig(*fConfig)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal("E! " + err.Error())
 		}
 
 		if *fConfigDirectory != "" {
 			err = c.LoadDirectory(*fConfigDirectory)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("E! " + err.Error())
 			}
 		}
 		if len(c.Outputs) == 0 {
-			log.Fatalf("Error: no outputs found, did you provide a valid config file?")
+			log.Fatalf("E! Error: no outputs found, did you provide a valid config file?")
 		}
 		if len(c.Inputs) == 0 {
-			log.Fatalf("Error: no inputs found, did you provide a valid config file?")
+			log.Fatalf("E! Error: no inputs found, did you provide a valid config file?")
 		}
 
 		ag, err := agent.NewAgent(c)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("E! " + err.Error())
 		}
 
 		// Setup logging
@@ -221,14 +235,14 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		if *fTest {
 			err = ag.Test()
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("E! " + err.Error())
 			}
 			return
 		}
 
 		err = ag.Connect()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("E! " + err.Error())
 		}
 
 		shutdown := make(chan struct{})
@@ -259,7 +273,7 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		if *fPidfile != "" {
 			f, err := os.Create(*fPidfile)
 			if err != nil {
-				log.Fatalf("Unable to create pidfile: %s", err)
+				log.Fatalf("E! Unable to create pidfile: %s", err)
 			}
 
 			fmt.Fprintf(f, "%d\n", os.Getpid())
@@ -291,6 +305,7 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
+	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	if runtime.GOOS == "windows" {
 		svcConfig := &service.Config{
@@ -304,7 +319,7 @@ func main() {
 		prg := &program{}
 		s, err := service.New(prg, svcConfig)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("E! " + err.Error())
 		}
 		// Handle the -service flag here to prevent any issues with tooling that
 		// may not have an interactive session, e.g. installing from Ansible.
@@ -314,7 +329,7 @@ func main() {
 			}
 			err := service.Control(s, *fService)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("E! " + err.Error())
 			}
 		} else {
 			err = s.Run()

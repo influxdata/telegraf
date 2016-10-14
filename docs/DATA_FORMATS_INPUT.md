@@ -232,6 +232,16 @@ us.west.cpu.load 100
 => cpu.load,region=us.west value=100
 ```
 
+Multiple templates can also be specified, but these should be differentiated
+using _filters_ (see below for more details)
+
+```toml
+templates = [
+    "*.*.* region.region.measurement", # <- all 3-part measurements will match this one.
+    "*.*.*.* region.region.host.measurement", # <- all 4-part measurements will match this one.
+]
+```
+
 #### Field Templates:
 
 The field keyword tells Telegraf to give the metric that field name.

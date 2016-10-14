@@ -2,6 +2,8 @@
 
 ### Release Notes
 
+- Telegraf now supports two new types of plugins: processors & aggregators.
+
 - On systemd Telegraf will no longer redirect it's stdout to /var/log/telegraf/telegraf.log.
 On most systems, the logs will be directed to the systemd journal and can be
 accessed by `journalctl -u telegraf.service`. Consult the systemd journal
@@ -11,6 +13,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 
 ### Features
 
+- [#1726](https://github.com/influxdata/telegraf/issues/1726): Processor & Aggregator plugin support.
 - [#1861](https://github.com/influxdata/telegraf/pull/1861): adding the tags in the graylog output plugin
 - [#1732](https://github.com/influxdata/telegraf/pull/1732): Telegraf systemd service, log to journal.
 - [#1782](https://github.com/influxdata/telegraf/pull/1782): Allow numeric and non-string values for tag_keys.
@@ -58,6 +61,13 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1854](https://github.com/influxdata/telegraf/pull/1853): SQL Server waitstats truncation bug.
 - [#1810](https://github.com/influxdata/telegraf/issues/1810): Fix logparser common log format: numbers in ident.
 - [#1793](https://github.com/influxdata/telegraf/pull/1793): Fix JSON Serialization in OpenTSDB output.
+- [#1731](https://github.com/influxdata/telegraf/issues/1731): Fix Graphite template ordering, use most specific.
+- [#1836](https://github.com/influxdata/telegraf/pull/1836): Fix snmp table field initialization for non-automatic table.
+- [#1724](https://github.com/influxdata/telegraf/issues/1724): cgroups path being parsed as metric.
+- [#1886](https://github.com/influxdata/telegraf/issues/1886): Fix phpfpm fcgi client panic when URL does not exist.
+- [#1344](https://github.com/influxdata/telegraf/issues/1344): Fix config file parse error logging.
+- [#1771](https://github.com/influxdata/telegraf/issues/1771): Delete nil fields in the metric maker.
+- [#870](https://github.com/influxdata/telegraf/issues/870): Fix MySQL special characters in DSN parsing.
 
 ## v1.0.1 [2016-09-26]
 

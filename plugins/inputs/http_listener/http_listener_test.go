@@ -99,14 +99,14 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
-		go func() {
+		go func(innerwg *sync.WaitGroup) {
+			defer innerwg.Done()
 			for i := 0; i < 500; i++ {
 				resp, err := http.Post("http://localhost:8286/write?db=mydb", "", bytes.NewBuffer([]byte(testMsgs)))
 				require.NoError(t, err)
 				require.EqualValues(t, 204, resp.StatusCode)
 			}
-			wg.Done()
-		}()
+		}(&wg)
 	}
 
 	wg.Wait()

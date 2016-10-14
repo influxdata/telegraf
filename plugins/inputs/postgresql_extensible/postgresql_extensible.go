@@ -29,6 +29,7 @@ type Postgresql struct {
 		Tagvalue    string
 		Measurement string
 	}
+	Debug bool
 }
 
 type query []struct {
