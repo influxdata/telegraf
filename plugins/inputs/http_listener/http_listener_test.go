@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -133,7 +134,11 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 
 // // writes 5000 metrics to the listener with 10 different writers
 func TestWriteHTTPHighBatchSize(t *testing.T) {
-	listener := &HttpListener{ServiceAddress: ":8287"}
+	listener := &HttpListener{
+		ServiceAddress: ":8287",
+		ReadTimeout:    internal.Duration{Duration: time.Second * 30},
+		WriteTimeout:   internal.Duration{Duration: time.Second * 30},
+	}
 	parser, _ := parsers.NewInfluxParser()
 	listener.SetParser(parser)
 
@@ -143,6 +148,11 @@ func TestWriteHTTPHighBatchSize(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 25)
 
+	type result struct {
+		err  error
+		resp *http.Response
+	}
+	results := make(chan *result, 10)
 	// post many messages to listener
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
@@ -150,12 +160,17 @@ func TestWriteHTTPHighBatchSize(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			resp, err := http.Post("http://localhost:8287/write?db=mydb", "", bytes.NewBuffer(makeMetricsBatch(5000)))
-			require.NoError(t, err)
-			require.EqualValues(t, 204, resp.StatusCode)
+			results <- &result{err: err, resp: resp}
 		}()
 	}
 
 	wg.Wait()
+	close(results)
+	for result := range results {
+		require.NoError(t, result.err)
+		require.EqualValues(t, 204, result.resp.StatusCode)
+	}
+
 	time.Sleep(time.Millisecond * 50)
 	listener.Gather(acc)
 
