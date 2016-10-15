@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"regexp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -39,6 +40,8 @@ type Ping struct {
 
 	// host ping function
 	pingHost HostPinger
+
+	IPVersion int
 }
 
 func (_ *Ping) Description() string {
@@ -59,6 +62,8 @@ const sampleConfig = `
   timeout = 1.0
   ## interface to send ping from (ping -I <INTERFACE>)
   interface = ""
+  ## force which IP version to use. (ping -6 or ping -4)
+  IPVersion = 4
 `
 
 func (_ *Ping) SampleConfig() string {
@@ -84,12 +89,14 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					strings.TrimSpace(out) + ", " + err.Error())
 			}
 			tags := map[string]string{"url": u}
-			trans, rec, avg, err := processPingOutput(out)
+
+			trans, rec, avg, ipversion, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
 				errorChannel <- err
 				return
 			}
+			tags["ipversion"] = strconv.Itoa(ipversion)
 			// Calculate packet loss percentage
 			loss := float64(trans-rec) / float64(trans) * 100.0
 			fields := map[string]interface{}{
@@ -152,6 +159,11 @@ func (p *Ping) args(url string) []string {
 		args = append(args, "-I", p.Interface)
 	}
 	args = append(args, url)
+	switch p.IPVersion {
+	case 4: args = append(args, "-4")
+	case 6: args = append(args, "-6")
+	}
+
 	return args
 }
 
@@ -166,36 +178,47 @@ func (p *Ping) args(url string) []string {
 //     round-trip min/avg/max/stddev = 34.843/43.508/52.172/8.664 ms
 //
 // It returns (<transmitted packets>, <received packets>, <average response>)
-func processPingOutput(out string) (int, int, float64, error) {
-	var trans, recv int
+
+// for IPv6 address the ping looks like
+//    PING google.com(fra16s08-in-x0e.1e100.net (2a00:1450:4001:817::200e)) 56 data bytes
+func processPingOutput(out string) (int, int, float64, int, error) {
+	var trans, recv, ipversion int
 	var avg float64
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("Fatal error processing ping output")
+	re := regexp.MustCompile(`(?i)^ping.+\(([a-f0-9\.:]+)\)`)  // re[1] is the IP
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
-		if strings.Contains(line, "transmitted") &&
+		str := re.FindStringSubmatch(line)
+		if len(str) != 0 {
+			if strings.Contains(str[1],":") {
+				ipversion = 6
+			} else {
+				ipversion = 4
+			}
+		} else if strings.Contains(line, "transmitted") &&
 			strings.Contains(line, "received") {
 			err = nil
 			stats := strings.Split(line, ", ")
 			// Transmitted packets
 			trans, err = strconv.Atoi(strings.Split(stats[0], " ")[0])
 			if err != nil {
-				return trans, recv, avg, err
+				return trans, recv, avg, ipversion, err
 			}
 			// Received packets
 			recv, err = strconv.Atoi(strings.Split(stats[1], " ")[0])
 			if err != nil {
-				return trans, recv, avg, err
+				return trans, recv, avg, ipversion, err
 			}
 		} else if strings.Contains(line, "min/avg/max") {
 			stats := strings.Split(line, " = ")[1]
 			avg, err = strconv.ParseFloat(strings.Split(stats, "/")[1], 64)
 			if err != nil {
-				return trans, recv, avg, err
+				return trans, recv, avg, ipversion, err
 			}
 		}
 	}
-	return trans, recv, avg, err
+	return trans, recv, avg, ipversion, err
 }
 
 func init() {

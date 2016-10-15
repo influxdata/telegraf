@@ -13,6 +13,9 @@ This input plugin will measures the round-trip
 	
 	## Ping timeout, in seconds. 0 means default timeout (ping -w <TIMEOUT>)
 	Timeout = 0
+
+	## force ipv4 or ipv6 ('ping -6' or 'ping -4')
+	IPVersion = 6
 ```
 ### Measurements & Fields:
 - packets_transmitted ( from ping output )
@@ -28,6 +31,7 @@ This input plugin will measures the round-trip
 	
 ### Tags:
 - server
+- ipversion
 
 ### Example Output:
 ```
