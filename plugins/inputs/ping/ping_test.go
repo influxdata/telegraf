@@ -48,13 +48,13 @@ ping: -i interval too short: Operation not permitted
 
 // Test that ping command output is processed properly
 func TestProcessPingOutput(t *testing.T) {
-	trans, rec, avg, err := processPingOutput(bsdPingOutput)
+	trans, rec, avg, ipversion, err := processPingOutput(bsdPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
 	assert.Equal(t, 5, rec, "5 packets were transmitted")
 	assert.InDelta(t, 20.224, avg, 0.001)
 
-	trans, rec, avg, err = processPingOutput(linuxPingOutput)
+	trans, rec, avg, ipversion, err = processPingOutput(linuxPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
 	assert.Equal(t, 5, rec, "5 packets were transmitted")
@@ -64,7 +64,7 @@ func TestProcessPingOutput(t *testing.T) {
 // Test that processPingOutput returns an error when 'ping' fails to run, such
 // as when an invalid argument is provided
 func TestErrorProcessPingOutput(t *testing.T) {
-	_, _, _, err := processPingOutput(fatalPingOutput)
+	_, _, _, _, err := processPingOutput(fatalPingOutput)
 	assert.Error(t, err, "Error was expected from processPingOutput")
 }
 
