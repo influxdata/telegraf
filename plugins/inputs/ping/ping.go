@@ -5,12 +5,12 @@ package ping
 import (
 	"errors"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"regexp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -160,8 +160,10 @@ func (p *Ping) args(url string) []string {
 	}
 	args = append(args, url)
 	switch p.IPVersion {
-	case 4: args = append(args, "-4")
-	case 6: args = append(args, "-6")
+	case 4:
+		args = append(args, "-4")
+	case 6:
+		args = append(args, "-6")
 	}
 
 	return args
@@ -186,12 +188,12 @@ func processPingOutput(out string) (int, int, float64, int, error) {
 	var avg float64
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("Fatal error processing ping output")
-	re := regexp.MustCompile(`(?i)^ping.+\(([a-f0-9\.:]+)\)`)  // re[1] is the IP
+	re := regexp.MustCompile(`(?i)^ping.+\(([a-f0-9\.:]+)\)`) // re[1] is the IP
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
 		str := re.FindStringSubmatch(line)
 		if len(str) != 0 {
-			if strings.Contains(str[1],":") {
+			if strings.Contains(str[1], ":") {
 				ipversion = 6
 			} else {
 				ipversion = 4
