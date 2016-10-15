@@ -1,4 +1,4 @@
-package riemann
+package riemann_legacy
 
 import (
 	"testing"

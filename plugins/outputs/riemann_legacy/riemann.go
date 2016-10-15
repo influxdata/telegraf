@@ -1,4 +1,4 @@
-package riemann
+package riemann_legacy
 
 import (
 	"fmt"
@@ -150,7 +150,7 @@ func serviceName(s string, n string, t map[string]string, f string) string {
 }
 
 func init() {
-	outputs.Add("riemann", func() telegraf.Output {
+	outputs.Add("riemann_legacy", func() telegraf.Output {
 		return &Riemann{}
 	})
 }
