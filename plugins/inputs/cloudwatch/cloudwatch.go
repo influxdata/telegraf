@@ -2,6 +2,7 @@ package cloudwatch
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -124,53 +125,9 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		c.initializeCloudWatch()
 	}
 
-	var metrics []*cloudwatch.Metric
-
-	// check for provided metric filter
-	if c.Metrics != nil {
-		metrics = []*cloudwatch.Metric{}
-		for _, m := range c.Metrics {
-			if !hasWilcard(m.Dimensions) {
-				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
-				for k, d := range m.Dimensions {
-					fmt.Printf("Dimension [%s]:[%s]\n", d.Name, d.Value)
-					dimensions[k] = &cloudwatch.Dimension{
-						Name:  aws.String(d.Name),
-						Value: aws.String(d.Value),
-					}
-				}
-				for _, name := range m.MetricNames {
-					metrics = append(metrics, &cloudwatch.Metric{
-						Namespace:  aws.String(c.Namespace),
-						MetricName: aws.String(name),
-						Dimensions: dimensions,
-					})
-				}
-			} else {
-				allMetrics, err := c.fetchNamespaceMetrics()
-				if err != nil {
-					return err
-				}
-				for _, name := range m.MetricNames {
-					for _, metric := range allMetrics {
-						if isSelected(metric, m.Dimensions) {
-							metrics = append(metrics, &cloudwatch.Metric{
-								Namespace:  aws.String(c.Namespace),
-								MetricName: aws.String(name),
-								Dimensions: metric.Dimensions,
-							})
-						}
-					}
-				}
-			}
-
-		}
-	} else {
-		var err error
-		metrics, err = c.fetchNamespaceMetrics()
-		if err != nil {
-			return err
-		}
+	metrics, err := selectMetrics(c)
+	if err != nil {
+		return err
 	}
 
 	metricCount := len(metrics)
@@ -224,6 +181,63 @@ func (c *CloudWatch) initializeCloudWatch() error {
 
 	c.client = cloudwatch.New(configProvider)
 	return nil
+}
+
+/*
+ * Select metrics to gather
+ */
+func selectMetrics(c *CloudWatch) ([]*cloudwatch.Metric, error) {
+	var metrics []*cloudwatch.Metric
+
+	// check for provided metric filter
+	if c.Metrics == nil {
+		return c.fetchNamespaceMetrics()
+	}
+
+	metrics = []*cloudwatch.Metric{}
+	for _, m := range c.Metrics {
+		if hasWilcard(m.Dimensions) {
+			allMetrics, err := c.fetchNamespaceMetrics()
+			if err != nil {
+				return nil, err
+			}
+			for _, name := range m.MetricNames {
+				for _, metric := range allMetrics {
+					s, e := isSelected(metric, m.Dimensions)
+					if e != nil {
+						return nil, e
+					}
+					if s {
+						for _, d := range metric.Dimensions {
+							fmt.Printf("Dimension [%s]:[%s]\n", *d.Name, *d.Value)
+						}
+						metrics = append(metrics, &cloudwatch.Metric{
+							Namespace:  aws.String(c.Namespace),
+							MetricName: aws.String(name),
+							Dimensions: metric.Dimensions,
+						})
+					}
+				}
+			}
+		} else {
+			dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
+			for k, d := range m.Dimensions {
+				fmt.Printf("Dimension [%s]:[%s]\n", d.Name, d.Value)
+				dimensions[k] = &cloudwatch.Dimension{
+					Name:  aws.String(d.Name),
+					Value: aws.String(d.Value),
+				}
+			}
+			for _, name := range m.MetricNames {
+				metrics = append(metrics, &cloudwatch.Metric{
+					Namespace:  aws.String(c.Namespace),
+					MetricName: aws.String(name),
+					Dimensions: dimensions,
+				})
+			}
+		}
+	}
+	return metrics, nil
 }
 
 /*
@@ -368,29 +382,34 @@ func (c *MetricCache) IsValid() bool {
 
 func hasWilcard(dimensions []*Dimension) bool {
 	for _, d := range dimensions {
-		if d.Value == "" || d.Value == "*" {
+		if d.Value == "" || strings.ContainsRune(d.Value, '*') {
 			return true
 		}
 	}
 	return false
 }
 
-func isSelected(metric *cloudwatch.Metric, dimensions []*Dimension) bool {
+func isSelected(metric *cloudwatch.Metric, dimensions []*Dimension) (bool, error) {
 	if len(metric.Dimensions) != len(dimensions) {
-		return false
+		return false, nil
 	}
 	for _, d := range dimensions {
+		if d.Value == "" {
+			d.Value = "*"
+		}
+		r, e := regexp.Compile(strings.Replace(d.Value, "*", ".*", -1))
+		if e != nil {
+			return false, e
+		}
 		selected := false
 		for _, d2 := range metric.Dimensions {
-			if d.Name == *d2.Name {
-				if d.Value == "" || d.Value == "*" || d.Value == *d2.Value {
-					selected = true
-				}
+			if d.Name == *d2.Name && r.MatchString(*d2.Value) {
+				selected = true
 			}
 		}
 		if !selected {
-			return false
+			return false, nil
 		}
 	}
-	return true
+	return true, nil
 }
