@@ -153,6 +153,8 @@ func (r *Riemann) attributes(name string, tags map[string]string) map[string]str
 	if r.MeasurementAsAttribute {
 		tags["measurement"] = name
 	}
+
+	delete(tags, "host") // exclude 'host' tag
 	return tags
 }
 

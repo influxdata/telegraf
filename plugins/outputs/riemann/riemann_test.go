@@ -2,7 +2,9 @@ package riemann
 
 import (
 	"testing"
+	"time"
 
+	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -54,15 +56,105 @@ func TestTags(t *testing.T) {
 		r.tags(tags))
 }
 
+func TestMetricEvents(t *testing.T) {
+	r := &Riemann{
+		Address:                testutil.GetLocalHost() + ":5555",
+		Transport:              "tcp",
+		TTL:                    20,
+		Separator:              "/",
+		MeasurementAsAttribute: false,
+		DescriptionText:        "metrics from telegraf",
+		Tags:                   []string{"telegraf"},
+	}
+
+	// 1 event
+	metric, _ := telegraf.NewMetric(
+		"test1",
+		map[string]string{"tag1": "value1", "host": "abc123"},
+		map[string]interface{}{"value": 5.6},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	events := r.buildRiemannEvents(metric)
+	require.Len(t, events, 1)
+
+	expectedEvent := &raidman.Event{
+		Ttl:         20,
+		Time:        1257894000,
+		Tags:        []string{"telegraf", "value1"},
+		Host:        "abc123",
+		State:       "",
+		Service:     "test1/value",
+		Metric:      5.6,
+		Description: "metrics from telegraf",
+		Attributes:  map[string]string{"tag1": "value1"},
+	}
+	require.Equal(t, expectedEvent, events[0])
+
+	// 2 events
+	metric, _ = telegraf.NewMetric(
+		"test2",
+		map[string]string{"host": "xyz987"},
+		map[string]interface{}{"point": 1},
+		time.Date(2012, time.November, 2, 3, 0, 0, 0, time.UTC),
+	)
+
+	events = append(events, r.buildRiemannEvents(metric)...)
+	require.Len(t, events, 2)
+	require.Equal(t, expectedEvent, events[0])
+
+	expectedEvent = &raidman.Event{
+		Ttl:         20,
+		Time:        1351825200,
+		Tags:        []string{"telegraf"},
+		Host:        "xyz987",
+		State:       "",
+		Service:     "test2/point",
+		Metric:      int64(1),
+		Description: "metrics from telegraf",
+		Attributes:  map[string]string{},
+	}
+	require.Equal(t, expectedEvent, events[1])
+}
+
+func TestStateEvent(t *testing.T) {
+	r := &Riemann{
+		Address:                testutil.GetLocalHost() + ":5555",
+		Transport:              "tcp",
+		MeasurementAsAttribute: true,
+	}
+
+	metric, _ := telegraf.NewMetric(
+		"test",
+		map[string]string{"host": "host"},
+		map[string]interface{}{"value": "running"},
+		time.Date(2015, time.November, 9, 22, 0, 0, 0, time.UTC),
+	)
+
+	events := r.buildRiemannEvents(metric)
+	require.Len(t, events, 1)
+
+	expectedEvent := &raidman.Event{
+		Ttl:         0,
+		Time:        1447106400,
+		Tags:        nil,
+		Host:        "host",
+		State:       "running",
+		Service:     "value",
+		Metric:      nil,
+		Description: "",
+		Attributes:  map[string]string{"measurement": "test"},
+	}
+	require.Equal(t, expectedEvent, events[0])
+}
+
 func TestConnectAndWrite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := testutil.GetLocalHost() + ":5555"
-
 	r := &Riemann{
-		Address:                addr,
+		Address:                testutil.GetLocalHost() + ":5555",
 		Transport:              "tcp",
 		Separator:              "/",
 		MeasurementAsAttribute: false,
