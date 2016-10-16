@@ -63,8 +63,6 @@ func TestTags(t *testing.T) {
 
 func TestMetricEvents(t *testing.T) {
 	r := &Riemann{
-		Address:                testutil.GetLocalHost() + ":5555",
-		Transport:              "tcp",
 		TTL:                    20.0,
 		Separator:              "/",
 		MeasurementAsAttribute: false,
@@ -128,8 +126,6 @@ func TestMetricEvents(t *testing.T) {
 
 func TestStateEvents(t *testing.T) {
 	r := &Riemann{
-		Address:                testutil.GetLocalHost() + ":5555",
-		Transport:              "tcp",
 		MeasurementAsAttribute: true,
 	}
 
@@ -173,11 +169,12 @@ func TestConnectAndWrite(t *testing.T) {
 	r := &Riemann{
 		Address:                testutil.GetLocalHost() + ":5555",
 		Transport:              "tcp",
+		TTL:                    15.0,
 		Separator:              "/",
 		MeasurementAsAttribute: false,
 		StringAsState:          true,
 		DescriptionText:        "metrics from telegraf",
-		Tags:                   []string{"telegraf"},
+		Tags:                   []string{"docker"},
 	}
 
 	err := r.Connect()
@@ -194,4 +191,23 @@ func TestConnectAndWrite(t *testing.T) {
 	metrics = append(metrics, testutil.TestMetric("running"))
 	err = r.Write(metrics)
 	require.NoError(t, err)
+
+	time.Sleep(200 * time.Millisecond)
+
+	// are there any "docker" tagged events in Riemann?
+	events, err := r.client.Query(`tagged "docker"`)
+	require.NoError(t, err)
+	require.NotZero(t, len(events))
+
+	// get Riemann events with state = "running", should be 1 event
+	events, err = r.client.Query(`state = "running"`)
+	require.NoError(t, err)
+	require.Len(t, events, 1)
+
+	// is event as expected?
+	require.Equal(t, []string{"docker", "value1"}, events[0].Tags)
+	require.Equal(t, "running", events[0].State)
+	require.Equal(t, "test1/value", events[0].Service)
+	require.Equal(t, "metrics from telegraf", events[0].Description)
+	require.Equal(t, map[string]string{"tag1": "value1"}, events[0].Attributes)
 }
