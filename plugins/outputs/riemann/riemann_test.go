@@ -18,6 +18,7 @@ func TestAttributes(t *testing.T) {
 		map[string]string{"tag1": "value1", "tag2": "value2"},
 		r.attributes("test", tags))
 
+	// enable measurement as attribute, should now be included
 	r.MeasurementAsAttribute = true
 	require.Equal(t,
 		map[string]string{"tag1": "value1", "tag2": "value2", "measurement": "test"},
@@ -30,6 +31,7 @@ func TestService(t *testing.T) {
 	}
 	require.Equal(t, "test/value", r.service("test", "value"))
 
+	// enable measurement as attribute, should not be part of service name anymore
 	r.MeasurementAsAttribute = true
 	require.Equal(t, "value", r.service("test", "value"))
 }
@@ -37,6 +39,7 @@ func TestService(t *testing.T) {
 func TestTags(t *testing.T) {
 	tags := map[string]string{"tag1": "value1", "tag2": "value2"}
 
+	// all tag values plus additional tag should be present
 	r := &Riemann{
 		Tags: []string{"test"},
 	}
@@ -44,11 +47,13 @@ func TestTags(t *testing.T) {
 		[]string{"test", "value1", "value2"},
 		r.tags(tags))
 
+	// only tag2 value plus additional tag should be present
 	r.TagKeys = []string{"tag2"}
 	require.Equal(t,
 		[]string{"test", "value2"},
 		r.tags(tags))
 
+	// only tag1 value should be present
 	r.Tags = nil
 	r.TagKeys = []string{"tag1"}
 	require.Equal(t,
@@ -60,14 +65,14 @@ func TestMetricEvents(t *testing.T) {
 	r := &Riemann{
 		Address:                testutil.GetLocalHost() + ":5555",
 		Transport:              "tcp",
-		TTL:                    20,
+		TTL:                    20.0,
 		Separator:              "/",
 		MeasurementAsAttribute: false,
 		DescriptionText:        "metrics from telegraf",
 		Tags:                   []string{"telegraf"},
 	}
 
-	// 1 event
+	// build a single event
 	metric, _ := telegraf.NewMetric(
 		"test1",
 		map[string]string{"tag1": "value1", "host": "abc123"},
@@ -78,8 +83,9 @@ func TestMetricEvents(t *testing.T) {
 	events := r.buildRiemannEvents(metric)
 	require.Len(t, events, 1)
 
+	// is event as expected?
 	expectedEvent := &raidman.Event{
-		Ttl:         20,
+		Ttl:         20.0,
 		Time:        1257894000,
 		Tags:        []string{"telegraf", "value1"},
 		Host:        "abc123",
@@ -91,7 +97,7 @@ func TestMetricEvents(t *testing.T) {
 	}
 	require.Equal(t, expectedEvent, events[0])
 
-	// 2 events
+	// build 2 events
 	metric, _ = telegraf.NewMetric(
 		"test2",
 		map[string]string{"host": "xyz987"},
@@ -101,10 +107,13 @@ func TestMetricEvents(t *testing.T) {
 
 	events = append(events, r.buildRiemannEvents(metric)...)
 	require.Len(t, events, 2)
+
+	// first event should still be the same
 	require.Equal(t, expectedEvent, events[0])
 
+	// second event
 	expectedEvent = &raidman.Event{
-		Ttl:         20,
+		Ttl:         20.0,
 		Time:        1351825200,
 		Tags:        []string{"telegraf"},
 		Host:        "xyz987",
@@ -117,13 +126,14 @@ func TestMetricEvents(t *testing.T) {
 	require.Equal(t, expectedEvent, events[1])
 }
 
-func TestStateEvent(t *testing.T) {
+func TestStateEvents(t *testing.T) {
 	r := &Riemann{
 		Address:                testutil.GetLocalHost() + ":5555",
 		Transport:              "tcp",
 		MeasurementAsAttribute: true,
 	}
 
+	// string metrics will be skipped unless explicitly enabled
 	metric, _ := telegraf.NewMetric(
 		"test",
 		map[string]string{"host": "host"},
@@ -132,8 +142,15 @@ func TestStateEvent(t *testing.T) {
 	)
 
 	events := r.buildRiemannEvents(metric)
+	// no event should be present
+	require.Len(t, events, 0)
+
+	// enable string metrics as event states
+	r.StringAsState = true
+	events = r.buildRiemannEvents(metric)
 	require.Len(t, events, 1)
 
+	// is event as expected?
 	expectedEvent := &raidman.Event{
 		Ttl:         0,
 		Time:        1447106400,
@@ -158,6 +175,7 @@ func TestConnectAndWrite(t *testing.T) {
 		Transport:              "tcp",
 		Separator:              "/",
 		MeasurementAsAttribute: false,
+		StringAsState:          true,
 		DescriptionText:        "metrics from telegraf",
 		Tags:                   []string{"telegraf"},
 	}

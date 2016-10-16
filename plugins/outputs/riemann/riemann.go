@@ -18,6 +18,7 @@ type Riemann struct {
 	TTL                    float32
 	Separator              string
 	MeasurementAsAttribute bool
+	StringAsState          bool
 	TagKeys                []string
 	Tags                   []string
 	DescriptionText        string
@@ -34,7 +35,7 @@ var sampleConfig = `
 
   ## Riemann TTL, floating-point time in seconds.
   ## Defines how long that an event is considered valid for in Riemann
-  ttl = 0
+  # ttl = 30.0
 
   ## Separator to use between measurement and field name in Riemann service name
   separator = "/"
@@ -42,6 +43,10 @@ var sampleConfig = `
   ## Set measurement name as a Riemann attribute,
   ## instead of prepending it to the Riemann service name
   # measurement_as_attribute = false
+
+  ## Send string metrics as Riemann event states.
+  ## Unless enabled all string metrics will be ignored
+  # string_as_state = false
 
   ## A list of tag keys whose values get sent as Riemann tags.
   ## If empty, all Telegraf tag values will be sent as tags
@@ -135,6 +140,11 @@ func (r *Riemann) buildRiemannEvents(m telegraf.Metric) []*raidman.Event {
 
 		switch value.(type) {
 		case string:
+			// only send string metrics if explicitly enabled, skip otherwise
+			if !r.StringAsState {
+				log.Printf("D! Riemann event states disabled, skipping metric value [%s]\n", value)
+				continue
+			}
 			event.State = value.(string)
 		case int, int64, uint64, float32, float64:
 			event.Metric = value
@@ -145,7 +155,6 @@ func (r *Riemann) buildRiemannEvents(m telegraf.Metric) []*raidman.Event {
 
 		events = append(events, event)
 	}
-
 	return events
 }
 
