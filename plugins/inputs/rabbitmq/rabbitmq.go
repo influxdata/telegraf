@@ -131,14 +131,14 @@ type Node struct {
 
 // Connection ...
 type Connection struct {
-	Name          string
-	State         string
-	Vhost         string
-	Host          string
-	Node          string
-	ReceiveCount  int64 `json:"recv_cnt"`
-	SendCount     int64 `json:"send_cnt"`
-	SendPend      int64 `json:"send_pend"`
+	Name         string
+	State        string
+	Vhost        string
+	Host         string
+	Node         string
+	ReceiveCount int64 `json:"recv_cnt"`
+	SendCount    int64 `json:"send_cnt"`
+	SendPend     int64 `json:"send_pend"`
 }
 
 // gatherFunc ...
@@ -385,20 +385,20 @@ func gatherConnections(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error
 			continue
 		}
 		tags := map[string]string{
-			"url":         r.URL,
-			"connection":  connection.Name,
-			"vhost":       connection.Vhost,
-			"host":        connection.Host,
-			"node":        connection.Node,
+			"url":        r.URL,
+			"connection": connection.Name,
+			"vhost":      connection.Vhost,
+			"host":       connection.Host,
+			"node":       connection.Node,
 		}
 
 		acc.AddFields(
 			"rabbitmq_connection",
 			map[string]interface{}{
-				"recv_cnt":     connection.ReceiveCount,
-				"send_cnt": 	connection.SendCount,
-				"send_pend":    connection.SendPend,
-				"state":        connection.State,
+				"recv_cnt":  connection.ReceiveCount,
+				"send_cnt":  connection.SendCount,
+				"send_pend": connection.SendPend,
+				"state":     connection.State,
 			},
 			tags,
 		)
@@ -406,7 +406,6 @@ func gatherConnections(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error
 
 	errChan <- nil
 }
-
 
 func (r *RabbitMQ) shouldGatherNode(node Node) bool {
 	if len(r.Nodes) == 0 {

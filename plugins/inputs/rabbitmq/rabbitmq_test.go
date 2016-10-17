@@ -498,10 +498,10 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("rabbitmq_connection"))
 
 	connection_fields := map[string]interface{}{
-		"recv_cnt":     int64(124),
-		"send_cnt": 	int64(7),
-		"send_pend":    int64(0),
-		"state":        "running",
+		"recv_cnt":  int64(124),
+		"send_cnt":  int64(7),
+		"send_pend": int64(0),
+		"state":     "running",
 	}
 
 	acc.AssertContainsFields(t, "rabbitmq_connection", connection_fields)
