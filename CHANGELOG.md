@@ -39,6 +39,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1686](https://github.com/influxdata/telegraf/pull/1686): Mesos input plugin: very high-cardinality mesos-task metrics removed.
 - [#1838](https://github.com/influxdata/telegraf/pull/1838): Logging overhaul to centralize the logger & log levels, & provide a logfile config option.
 - [#1700](https://github.com/influxdata/telegraf/pull/1700): HAProxy plugin socket glob matching.
+- [#1847](https://github.com/influxdata/telegraf/pull/1847): Add Kubernetes plugin for retrieving pod metrics.
 
 ### Bugfixes
 
