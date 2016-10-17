@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0-rc1_amd64.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_rc1.x86_64.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.1_amd64.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1.x86_64.rpm
 
 Latest (arm):
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0-rc1_armhf.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_rc1.armhf.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.1_armhf.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,14 +46,14 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-rc1_linux_amd64.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-rc1_linux_i386.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-rc1_linux_armhf.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_i386.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_armhf.tar.gz
 
 ### FreeBSD tarball:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-rc1_freebsd_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
@@ -69,7 +69,7 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0-rc1_windows_amd64.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_windows_amd64.zip
 
 ### From Source:
 
@@ -86,42 +86,43 @@ if you don't have it already. You also must build with golang version 1.5+.
 ## How to use it:
 
 ```console
-$ telegraf -help
+$ telegraf --help
 Telegraf, The plugin-driven server agent for collecting and reporting metrics.
 
 Usage:
 
-  telegraf <flags>
+  telegraf [commands|flags]
 
-The flags are:
+The commands & flags are:
 
-  -config <file>     configuration file to load
-  -test              gather metrics once, print them to stdout, and exit
-  -sample-config     print out full sample configuration to stdout
-  -config-directory  directory containing additional *.conf files
-  -input-filter      filter the input plugins to enable, separator is :
-  -output-filter     filter the output plugins to enable, separator is :
-  -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
-  -debug             print metrics as they're generated to stdout
-  -quiet             run in quiet mode
-  -version           print the version to stdout
+  config             print out full sample configuration to stdout
+  version            print the version to stdout
+
+  --config <file>     configuration file to load
+  --test              gather metrics once, print them to stdout, and exit
+  --config-directory  directory containing additional *.conf files
+  --input-filter      filter the input plugins to enable, separator is :
+  --output-filter     filter the output plugins to enable, separator is :
+  --usage             print usage for a plugin, ie, 'telegraf -usage mysql'
+  --debug             print metrics as they're generated to stdout
+  --quiet             run in quiet mode
 
 Examples:
 
   # generate a telegraf config file:
-  telegraf -sample-config > telegraf.conf
+  telegraf config > telegraf.conf
 
   # generate config with only cpu input & influxdb output plugins defined
-  telegraf -sample-config -input-filter cpu -output-filter influxdb
+  telegraf config -input-filter cpu -output-filter influxdb
 
   # run a single telegraf collection, outputing metrics to stdout
-  telegraf -config telegraf.conf -test
+  telegraf --config telegraf.conf -test
 
   # run telegraf with all plugins defined in config file
-  telegraf -config telegraf.conf
+  telegraf --config telegraf.conf
 
   # run telegraf, enabling the cpu & memory input, and influxdb output plugins
-  telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
+  telegraf --config telegraf.conf -input-filter cpu:mem -output-filter influxdb
 ```
 
 ## Configuration
@@ -161,6 +162,7 @@ Currently implemented sources:
 * [httpjson](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [influxdb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/influxdb)
 * [ipmi_sensor](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ipmi_sensor)
+* [iptables](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/iptables)
 * [jolokia](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia)
 * [leofs](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/leofs)
 * [lustre2](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/lustre2)
@@ -212,18 +214,21 @@ Currently implemented sources:
 
 Telegraf can also collect metrics via the following service plugins:
 
+* [http_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_listener)
+* [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
+* [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
+* [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
+* [nsq_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq_consumer)
+* [logparser](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/logparser)
 * [statsd](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/statsd)
 * [tail](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail)
-* [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [tcp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tcp_listener)
-* [mqtt_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer)
-* [kafka_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
-* [nats_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nats_consumer)
+* [udp_listener](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/udp_listener)
 * [webhooks](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks)
+  * [filestack](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/filestack)
   * [github](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/github)
   * [mandrill](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/mandrill)
   * [rollbar](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/webhooks/rollbar)
-* [nsq_consumer](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq_consumer)
 
 We'll be adding support for many more over the coming months. Read on if you
 want to add support for another service or third-party API.
@@ -243,6 +248,7 @@ want to add support for another service or third-party API.
 * [kafka](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kafka)
 * [librato](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/librato)
 * [mqtt](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/mqtt)
+* [nats](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/nats)
 * [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/nsq)
 * [opentsdb](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
 * [prometheus](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/prometheus_client)

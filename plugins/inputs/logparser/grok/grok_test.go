@@ -152,6 +152,31 @@ func TestBuiltinCommonLogFormat(t *testing.T) {
 	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 }
 
+// common log format
+// 127.0.0.1 user1234 frank1234 [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326
+func TestBuiltinCommonLogFormatWithNumbers(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
+	}
+	assert.NoError(t, p.Compile())
+
+	// Parse an influxdb POST request
+	m, err := p.ParseLine(`127.0.0.1 user1234 frank1234 [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	require.NotNil(t, m)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"resp_bytes":   int64(2326),
+			"auth":         "frank1234",
+			"client_ip":    "127.0.0.1",
+			"http_version": float64(1.0),
+			"ident":        "user1234",
+			"request":      "/apache_pb.gif",
+		},
+		m.Fields())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
+}
+
 // combined log format
 // 127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "-" "Mozilla"
 func TestBuiltinCombinedLogFormat(t *testing.T) {

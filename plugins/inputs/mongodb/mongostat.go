@@ -514,7 +514,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Command = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
 	}
 
-	if newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
+	if newStat.Metrics != nil && newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
 		returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
 		returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
 	}

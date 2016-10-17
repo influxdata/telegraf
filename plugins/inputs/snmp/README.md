@@ -4,6 +4,8 @@ The SNMP input plugin gathers metrics from SNMP agents.
 
 ## Configuration:
 
+See additional SNMP plugin configuration examples [here](./CONFIG-EXAMPLES.md).
+
 ### Example:
 
 SNMP data:
@@ -67,7 +69,7 @@ Resulting output:
 
 #### Configuration via MIB:
 
-This example uses the SNMP data above, but is configured via the MIB.  
+This example uses the SNMP data above, but is configured via the MIB.
 The example MIB file can be found in the `testdata` directory. See the [MIB lookups](#mib-lookups) section for more information.
 
 Telegraf config:
@@ -95,70 +97,75 @@ Resulting output:
 
 ### Config parameters
 
-* `agents`: Default: `[]`  
+* `agents`: Default: `[]`
 List of SNMP agents to connect to in the form of `IP[:PORT]`. If `:PORT` is unspecified, it defaults to `161`.
 
-* `version`: Default: `2`  
+* `version`: Default: `2`
 SNMP protocol version to use.
 
-* `community`: Default: `"public"`  
+* `community`: Default: `"public"`
 SNMP community to use.
 
-* `max_repetitions`: Default: `50`  
+* `max_repetitions`: Default: `50`
 Maximum number of iterations for repeating variables.
 
-* `sec_name`:  
+* `sec_name`:
 Security name for authenticated SNMPv3 requests.
 
-* `auth_protocol`: Values: `"MD5"`,`"SHA"`,`""`. Default: `""`  
+* `auth_protocol`: Values: `"MD5"`,`"SHA"`,`""`. Default: `""`
 Authentication protocol for authenticated SNMPv3 requests.
 
-* `auth_password`:  
+* `auth_password`:
 Authentication password for authenticated SNMPv3 requests.
 
-* `sec_level`: Values: `"noAuthNoPriv"`,`"authNoPriv"`,`"authPriv"`. Default: `"noAuthNoPriv"`  
+* `sec_level`: Values: `"noAuthNoPriv"`,`"authNoPriv"`,`"authPriv"`. Default: `"noAuthNoPriv"`
 Security level used for SNMPv3 messages.
 
-* `context_name`:  
+* `context_name`:
 Context name used for SNMPv3 requests.
 
-* `priv_protocol`: Values: `"DES"`,`"AES"`,`""`. Default: `""`  
+* `priv_protocol`: Values: `"DES"`,`"AES"`,`""`. Default: `""`
 Privacy protocol used for encrypted SNMPv3 messages.
 
-* `priv_password`:  
+* `priv_password`:
 Privacy password used for encrypted SNMPv3 messages.
 
 
-* `name`:  
+* `name`:
 Output measurement name.
 
 #### Field parameters:
-* `oid`:  
+* `oid`:
 OID to get. May be a numeric or textual OID.
 
-* `name`:  
+* `oid_index_suffix`:
+The OID sub-identifier to strip off so that the index can be matched against other fields in the table.
+
+* `name`:
 Output field/tag name.
 If not specified, it defaults to the value of `oid`. If `oid` is numeric, an attempt to translate the numeric OID into a texual OID will be made.
 
-* `is_tag`:  
+* `is_tag`:
 Output this field as a tag.
 
-* `conversion`: Values: `"float(X)"`,`"float"`,`"int"`,`""`. Default: `""`  
+* `conversion`: Values: `"float(X)"`,`"float"`,`"int"`,`""`. Default: `""`
 Converts the value according to the given specification.
 
     - `float(X)`: Converts the input value into a float and divides by the Xth power of 10. Efficively just moves the decimal left X places. For example a value of `123` with `float(2)` will result in `1.23`.
     - `float`: Converts the value into a float with no adjustment. Same as `float(0)`.
     - `int`: Convertes the value into an integer.
+    - `hwaddr`: Converts the value to a MAC address.
+    - `ipaddr`: Converts the value to an IP address.
 
 #### Table parameters:
-* `oid`:  
+* `oid`:
 Automatically populates the table's fields using data from the MIB.
 
-* `name`:  
+* `name`:
 Output measurement name.
 If not specified, it defaults to the value of `oid`.  If `oid` is numeric, an attempt to translate the numeric OID into a texual OID will be made.
 
-* `inherit_tags`:  
+* `inherit_tags`:
 Which tags to inherit from the top-level config and to use in the output of this table's measurement.
 
 ### MIB lookups

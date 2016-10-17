@@ -153,10 +153,10 @@ func (q *AMQP) Connect() error {
 	}
 	q.channel = channel
 	go func() {
-		log.Printf("Closing: %s", <-connection.NotifyClose(make(chan *amqp.Error)))
-		log.Printf("Trying to reconnect")
+		log.Printf("I! Closing: %s", <-connection.NotifyClose(make(chan *amqp.Error)))
+		log.Printf("I! Trying to reconnect")
 		for err := q.Connect(); err != nil; err = q.Connect() {
-			log.Println(err)
+			log.Println("E! ", err.Error())
 			time.Sleep(10 * time.Second)
 		}
 

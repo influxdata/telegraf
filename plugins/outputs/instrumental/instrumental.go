@@ -119,7 +119,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 
 		stats, err := s.Serialize(toSerialize)
 		if err != nil {
-			log.Printf("Error serializing a metric to Instrumental: %s", err)
+			log.Printf("E! Error serializing a metric to Instrumental: %s", err)
 		}
 
 		switch metricType {
@@ -144,7 +144,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 			if !ValueIncludesBadChar.MatchString(value) {
 				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, clean_metric, value, time))
 			} else if i.Debug {
-				log.Printf("Unable to send bad stat: %s", stat)
+				log.Printf("E! Instrumental unable to send bad stat: %s", stat)
 			}
 		}
 	}
@@ -152,9 +152,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	allPoints := strings.Join(points, "\n") + "\n"
 	_, err = fmt.Fprintf(i.conn, allPoints)
 
-	if i.Debug {
-		log.Println(allPoints)
-	}
+	log.Println("D! Instrumental: " + allPoints)
 
 	if err != nil {
 		if err == io.EOF {

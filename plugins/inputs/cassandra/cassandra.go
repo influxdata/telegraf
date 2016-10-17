@@ -274,7 +274,7 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				m = newCassandraMetric(serverTokens["host"], metric, acc)
 			} else {
 				// unsupported metric type
-				log.Printf("Unsupported Cassandra metric [%s], skipping",
+				log.Printf("I! Unsupported Cassandra metric [%s], skipping",
 					metric)
 				continue
 			}

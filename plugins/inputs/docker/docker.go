@@ -28,7 +28,8 @@ type Docker struct {
 	PerDevice      bool `toml:"perdevice"`
 	Total          bool `toml:"total"`
 
-	client DockerClient
+	client      DockerClient
+	engine_host string
 }
 
 // DockerClient interface, useful for testing
@@ -125,7 +126,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
 			if err != nil {
-				log.Printf("Error gathering container %s stats: %s\n",
+				log.Printf("E! Error gathering container %s stats: %s\n",
 					c.Names, err.Error())
 			}
 		}(container)
@@ -147,11 +148,15 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	d.engine_host = info.Name
 
 	fields := map[string]interface{}{
 		"n_cpus":                  info.NCPU,
 		"n_used_file_descriptors": info.NFd,
 		"n_containers":            info.Containers,
+		"n_containers_running":    info.ContainersRunning,
+		"n_containers_stopped":    info.ContainersStopped,
+		"n_containers_paused":     info.ContainersPaused,
 		"n_images":                info.Images,
 		"n_goroutines":            info.NGoroutines,
 		"n_listener_events":       info.NEventsListener,
@@ -159,11 +164,11 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	// Add metrics
 	acc.AddFields("docker",
 		fields,
-		nil,
+		map[string]string{"engine_host": d.engine_host},
 		now)
 	acc.AddFields("docker",
 		map[string]interface{}{"memory_total": info.MemTotal},
-		map[string]string{"unit": "bytes"},
+		map[string]string{"unit": "bytes", "engine_host": d.engine_host},
 		now)
 	// Get storage metrics
 	for _, rawData := range info.DriverStatus {
@@ -177,7 +182,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 			// pool blocksize
 			acc.AddFields("docker",
 				map[string]interface{}{"pool_blocksize": value},
-				map[string]string{"unit": "bytes"},
+				map[string]string{"unit": "bytes", "engine_host": d.engine_host},
 				now)
 		} else if strings.HasPrefix(name, "data_space_") {
 			// data space
@@ -192,13 +197,13 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	if len(dataFields) > 0 {
 		acc.AddFields("docker_data",
 			dataFields,
-			map[string]string{"unit": "bytes"},
+			map[string]string{"unit": "bytes", "engine_host": d.engine_host},
 			now)
 	}
 	if len(metadataFields) > 0 {
 		acc.AddFields("docker_metadata",
 			metadataFields,
-			map[string]string{"unit": "bytes"},
+			map[string]string{"unit": "bytes", "engine_host": d.engine_host},
 			now)
 	}
 	return nil
@@ -225,6 +230,7 @@ func (d *Docker) gatherContainer(
 		imageVersion = imageParts[1]
 	}
 	tags := map[string]string{
+		"engine_host":       d.engine_host,
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,

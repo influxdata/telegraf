@@ -43,9 +43,8 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 				Filter: []string{"mytag"},
 			},
 		},
-		IsActive: true,
 	}
-	assert.NoError(t, filter.CompileFilter())
+	assert.NoError(t, filter.Compile())
 	mConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
@@ -83,9 +82,8 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 				Filter: []string{"mytag"},
 			},
 		},
-		IsActive: true,
 	}
-	assert.NoError(t, filter.CompileFilter())
+	assert.NoError(t, filter.Compile())
 	mConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
@@ -130,9 +128,8 @@ func TestConfig_LoadDirectory(t *testing.T) {
 				Filter: []string{"mytag"},
 			},
 		},
-		IsActive: true,
 	}
-	assert.NoError(t, filter.CompileFilter())
+	assert.NoError(t, filter.Compile())
 	mConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,

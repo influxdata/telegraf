@@ -26,17 +26,15 @@ func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	points, err := models.ParsePoints(buf)
 	metrics := make([]telegraf.Metric, len(points))
 	for i, point := range points {
-		tags := point.Tags()
 		for k, v := range p.DefaultTags {
-			// Only set tags not in parsed metric
-			if _, ok := tags[k]; !ok {
-				tags[k] = v
+			// only set the default tag if it doesn't already exist:
+			if tmp := point.Tags().GetString(k); tmp == "" {
+				point.AddTag(k, v)
 			}
 		}
 		// Ignore error here because it's impossible that a model.Point
 		// wouldn't parse into client.Point properly
-		metrics[i], _ = telegraf.NewMetric(point.Name(), tags,
-			point.Fields(), point.Time())
+		metrics[i] = telegraf.NewMetricFromPoint(point)
 	}
 	return metrics, err
 }

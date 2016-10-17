@@ -107,7 +107,8 @@ type Queue struct {
 	Node                string
 	Vhost               string
 	Durable             bool
-	AutoDelete          bool `json:"auto_delete"`
+	AutoDelete          bool   `json:"auto_delete"`
+	IdleSince           string `json:"idle_since"`
 }
 
 // Node ...
@@ -328,6 +329,7 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 				// common information
 				"consumers":            queue.Consumers,
 				"consumer_utilisation": queue.ConsumerUtilisation,
+				"idle_since":           queue.IdleSince,
 				"memory":               queue.Memory,
 				// messages information
 				"message_bytes":             queue.MessageBytes,

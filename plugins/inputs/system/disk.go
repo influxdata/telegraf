@@ -70,7 +70,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"inodes_free":  du.InodesFree,
 			"inodes_used":  du.InodesUsed,
 		}
-		acc.AddFields("disk", fields, tags)
+		acc.AddGauge("disk", fields, tags)
 	}
 
 	return nil
@@ -139,7 +139,7 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 			"write_time":  io.WriteTime,
 			"io_time":     io.IoTime,
 		}
-		acc.AddFields("diskio", fields, tags)
+		acc.AddCounter("diskio", fields, tags)
 	}
 
 	return nil

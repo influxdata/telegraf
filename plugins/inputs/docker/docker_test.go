@@ -256,6 +256,9 @@ type FakeDockerClient struct {
 func (d FakeDockerClient) Info(ctx context.Context) (types.Info, error) {
 	env := types.Info{
 		Containers:         108,
+		ContainersRunning:  98,
+		ContainersStopped:  6,
+		ContainersPaused:   3,
 		OomKillDisable:     false,
 		SystemTime:         "2016-02-24T00:55:09.15073105-05:00",
 		NEventsListener:    0,
@@ -397,10 +400,13 @@ func TestDockerGatherInfo(t *testing.T) {
 			"n_cpus":                  int(4),
 			"n_used_file_descriptors": int(19),
 			"n_containers":            int(108),
+			"n_containers_running":    int(98),
+			"n_containers_stopped":    int(6),
+			"n_containers_paused":     int(3),
 			"n_images":                int(199),
 			"n_goroutines":            int(39),
 		},
-		map[string]string{},
+		map[string]string{"engine_host": "absol"},
 	)
 
 	acc.AssertContainsTaggedFields(t,
@@ -411,7 +417,8 @@ func TestDockerGatherInfo(t *testing.T) {
 			"available": int64(36530000000),
 		},
 		map[string]string{
-			"unit": "bytes",
+			"unit":        "bytes",
+			"engine_host": "absol",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -425,6 +432,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_image":   "quay.io/coreos/etcd",
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
+			"engine_host":       "absol",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -467,6 +475,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_id":              "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		},
 		map[string]string{
+			"engine_host":       "absol",
 			"container_name":    "etcd2",
 			"container_image":   "quay.io/coreos/etcd",
 			"container_version": "v2.2.2",

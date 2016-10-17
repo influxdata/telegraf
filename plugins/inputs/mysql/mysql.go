@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	"github.com/go-sql-driver/mysql"
 )
 
 type Mysql struct {
@@ -313,6 +313,10 @@ var mappings = []*mapping{
 		onServer: "wsrep_",
 		inExport: "wsrep_",
 	},
+	{
+		onServer: "Uptime_",
+		inExport: "uptime_",
+	},
 }
 
 var (
@@ -393,27 +397,6 @@ var (
 		"deleting from reference tables":           "deleting",
 	}
 )
-
-func dsnAddTimeout(dsn string) (string, error) {
-
-	// DSN "?timeout=5s" is not valid, but "/?timeout=5s" is valid ("" and "/"
-	// are the same DSN)
-	if dsn == "" {
-		dsn = "/"
-	}
-	u, err := url.Parse(dsn)
-	if err != nil {
-		return "", err
-	}
-	v := u.Query()
-
-	// Only override timeout if not already defined
-	if _, ok := v["timeout"]; ok == false {
-		v.Add("timeout", defaultTimeout.String())
-		u.RawQuery = v.Encode()
-	}
-	return u.String(), nil
-}
 
 // Math constants
 const (
@@ -678,10 +661,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 	var val sql.RawBytes
 
 	// parse DSN and save server tag
-	servtag, err := parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
@@ -718,10 +698,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 	}
 	defer rows.Close()
 
-	servtag, err := parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
@@ -766,11 +743,7 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	defer rows.Close()
 
 	// parse DSN and save host as a tag
-	var servtag string
-	servtag, err = parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	var (
 		size     uint64 = 0
@@ -813,11 +786,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 	}
 
 	// parse the DSN and save host name as a tag
-	var servtag string
-	servtag, err = parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
@@ -928,10 +897,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 
 	var servtag string
 	fields := make(map[string]interface{})
-	servtag, err = parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag = getDSNTag(serv)
 
 	// mapping of state with its counts
 	stateCounts := make(map[string]uint32, len(generalThreadStates))
@@ -974,10 +940,7 @@ func (m *Mysql) gatherPerfTableIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 		timeFetch, timeInsert, timeUpdate, timeDelete     float64
 	)
 
-	servtag, err = parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag = getDSNTag(serv)
 
 	for rows.Next() {
 		err = rows.Scan(&objSchema, &objName,
@@ -1026,10 +989,7 @@ func (m *Mysql) gatherPerfIndexIOWaits(db *sql.DB, serv string, acc telegraf.Acc
 		timeFetch, timeInsert, timeUpdate, timeDelete     float64
 	)
 
-	servtag, err = parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag = getDSNTag(serv)
 
 	for rows.Next() {
 		err = rows.Scan(&objSchema, &objName, &indexName,
@@ -1081,10 +1041,7 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 		incValue, maxInt      uint64
 	)
 
-	servtag, err := parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 
 	for rows.Next() {
 		if err := rows.Scan(&schema, &table, &column, &incValue, &maxInt); err != nil {
@@ -1128,10 +1085,7 @@ func (m *Mysql) gatherPerfTableLockWaits(db *sql.DB, serv string, acc telegraf.A
 	}
 	defer rows.Close()
 
-	servtag, err := parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 
 	var (
 		objectSchema               string
@@ -1253,10 +1207,7 @@ func (m *Mysql) gatherPerfEventWaits(db *sql.DB, serv string, acc telegraf.Accum
 		starCount, timeWait float64
 	)
 
-	servtag, err := parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 	tags := map[string]string{
 		"server": servtag,
 	}
@@ -1291,10 +1242,7 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 		sumNumBytesRead, sumNumBytesWrite         float64
 	)
 
-	servtag, err := parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 	tags := map[string]string{
 		"server": servtag,
 	}
@@ -1361,10 +1309,7 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 		noIndexUsed                          float64
 	)
 
-	servtag, err := parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	servtag := getDSNTag(serv)
 	tags := map[string]string{
 		"server": servtag,
 	}
@@ -1408,14 +1353,8 @@ func (m *Mysql) gatherPerfEventsStatements(db *sql.DB, serv string, acc telegraf
 
 // gatherTableSchema can be used to gather stats on each schema
 func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumulator) error {
-	var (
-		dbList  []string
-		servtag string
-	)
-	servtag, err := parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
+	var dbList []string
+	servtag := getDSNTag(serv)
 
 	// if the list of databases if empty, then get all databases
 	if len(m.TableSchemaDatabases) == 0 {
@@ -1478,19 +1417,23 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			tags["schema"] = tableSchema
 			tags["table"] = tableName
 
-			acc.Add(newNamespace("info_schema", "table_rows"), tableRows, tags)
+			acc.AddFields(newNamespace("info_schema", "table_rows"),
+				map[string]interface{}{"value": tableRows}, tags)
 
 			dlTags := copyTags(tags)
 			dlTags["component"] = "data_length"
-			acc.Add(newNamespace("info_schema", "table_size", "data_length"), dataLength, dlTags)
+			acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
+				map[string]interface{}{"value": dataLength}, dlTags)
 
 			ilTags := copyTags(tags)
 			ilTags["component"] = "index_length"
-			acc.Add(newNamespace("info_schema", "table_size", "index_length"), indexLength, ilTags)
+			acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
+				map[string]interface{}{"value": indexLength}, ilTags)
 
 			dfTags := copyTags(tags)
 			dfTags["component"] = "data_free"
-			acc.Add(newNamespace("info_schema", "table_size", "data_free"), dataFree, dfTags)
+			acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
+				map[string]interface{}{"value": dataFree}, dfTags)
 
 			versionTags := copyTags(tags)
 			versionTags["type"] = tableType
@@ -1498,7 +1441,8 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			versionTags["row_format"] = rowFormat
 			versionTags["create_options"] = createOptions
 
-			acc.Add(newNamespace("info_schema", "table_version"), version, versionTags)
+			acc.AddFields(newNamespace("info_schema", "table_version"),
+				map[string]interface{}{"value": version}, versionTags)
 		}
 	}
 	return nil
@@ -1511,7 +1455,7 @@ func parseValue(value sql.RawBytes) (float64, bool) {
 	}
 
 	if bytes.Compare(value, []byte("No")) == 0 || bytes.Compare(value, []byte("OFF")) == 0 {
-		return 0, false
+		return 0, true
 	}
 	n, err := strconv.ParseFloat(string(value), 64)
 	return n, err == nil
@@ -1564,6 +1508,27 @@ func copyTags(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
+}
+
+func dsnAddTimeout(dsn string) (string, error) {
+	conf, err := mysql.ParseDSN(dsn)
+	if err != nil {
+		return "", err
+	}
+
+	if conf.Timeout == 0 {
+		conf.Timeout = time.Second * 5
+	}
+
+	return conf.FormatDSN(), nil
+}
+
+func getDSNTag(dsn string) string {
+	conf, err := mysql.ParseDSN(dsn)
+	if err != nil {
+		return "127.0.0.1:3306"
+	}
+	return conf.Addr
 }
 
 func init() {

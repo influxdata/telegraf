@@ -10,11 +10,16 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type InfluxDB struct {
 	URLs []string `toml:"urls"`
+
+	Timeout internal.Duration
+
+	client *http.Client
 }
 
 func (*InfluxDB) Description() string {
@@ -32,6 +37,9 @@ func (*InfluxDB) SampleConfig() string {
   urls = [
     "http://localhost:8086/debug/vars"
   ]
+
+  ## http request & header timeout
+  timeout = "5s"
 `
 }
 
@@ -39,6 +47,16 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	if len(i.URLs) == 0 {
 		i.URLs = []string{"http://localhost:8086/debug/vars"}
 	}
+
+	if i.client == nil {
+		i.client = &http.Client{
+			Transport: &http.Transport{
+				ResponseHeaderTimeout: i.Timeout.Duration,
+			},
+			Timeout: i.Timeout.Duration,
+		}
+	}
+
 	errorChannel := make(chan error, len(i.URLs))
 
 	var wg sync.WaitGroup
@@ -104,15 +122,6 @@ type memstats struct {
 	GCCPUFraction float64 `json:"GCCPUFraction"`
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
-}
-
 // Gathers data from a particular URL
 // Parameters:
 //     acc    : The telegraf Accumulator to use
@@ -127,7 +136,7 @@ func (i *InfluxDB) gatherURL(
 	shardCounter := 0
 	now := time.Now()
 
-	resp, err := client.Get(url)
+	resp, err := i.client.Get(url)
 	if err != nil {
 		return err
 	}
@@ -210,9 +219,13 @@ func (i *InfluxDB) gatherURL(
 			continue
 		}
 
+		if p.Tags == nil {
+			p.Tags = make(map[string]string)
+		}
+
 		// If the object was a point, but was not fully initialized,
 		// ignore it and move on.
-		if p.Name == "" || p.Tags == nil || p.Values == nil || len(p.Values) == 0 {
+		if p.Name == "" || p.Values == nil || len(p.Values) == 0 {
 			continue
 		}
 
@@ -244,6 +257,8 @@ func (i *InfluxDB) gatherURL(
 
 func init() {
 	inputs.Add("influxdb", func() telegraf.Input {
-		return &InfluxDB{}
+		return &InfluxDB{
+			Timeout: internal.Duration{Duration: time.Second * 5},
+		}
 	})
 }
