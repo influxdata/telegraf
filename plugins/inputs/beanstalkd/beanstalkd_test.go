@@ -128,7 +128,7 @@ cmd-ignore: 805
 cmd-bury: 0
 cmd-kick: 0
 cmd-touch: 0
-cmd-stats: 1
+cmd-stats: 5
 cmd-stats-job: 0
 cmd-stats-tube: 0
 cmd-list-tubes: 0
@@ -142,11 +142,11 @@ current-connections: 1
 current-producers: 0
 current-workers: 0
 current-waiting: 0
-total-connections: 806
+total-connections: 809
 version: 1.10
 rusage-utime: 0.060000
 rusage-stime: 0.212000
-uptime: 7754
+uptime: 8007
 binlog-oldest-index: 10
 binlog-current-index: 10
 binlog-records-migrated: 0
