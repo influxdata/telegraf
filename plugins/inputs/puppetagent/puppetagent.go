@@ -68,7 +68,6 @@ type time struct {
 }
 
 type version struct {
-//	Config int64  `yaml:"config"`
 	Config string `yaml:"config"`
 	Puppet string `yaml:"puppet"`
 }
