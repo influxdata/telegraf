@@ -15,7 +15,7 @@ import (
 
 // Beanstalkd is a Beanstalkd plugin
 type Beanstalkd struct {
-	Servers     []string
+	Servers []string
 }
 
 var sampleConfig = `
