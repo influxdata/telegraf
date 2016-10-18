@@ -1,16 +1,15 @@
 package http_listener
 
 import (
+	"bytes"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
-	"bytes"
 	"github.com/stretchr/testify/require"
-	"net/http"
 )
 
 const (
@@ -36,8 +35,6 @@ func newTestHttpListener() *HttpListener {
 
 func TestWriteHTTP(t *testing.T) {
 	listener := newTestHttpListener()
-	parser, _ := parsers.NewInfluxParser()
-	listener.SetParser(parser)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -71,10 +68,10 @@ func TestWriteHTTP(t *testing.T) {
 		)
 	}
 
-	// Post a gigantic metric to the listener:
+	// Post a gigantic metric to the listener and verify that an error is returned:
 	resp, err = http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
-	require.EqualValues(t, 204, resp.StatusCode)
+	require.EqualValues(t, 400, resp.StatusCode)
 
 	time.Sleep(time.Millisecond * 15)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -83,11 +80,27 @@ func TestWriteHTTP(t *testing.T) {
 	)
 }
 
+func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
+	listener := &HttpListener{
+		ServiceAddress: ":8296",
+		MaxLineSize:    128 * 1000,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	// Post a gigantic metric to the listener and verify that an error is returned:
+	resp, err := http.Post("http://localhost:8296/write?db=mydb", "", bytes.NewBuffer([]byte(hugeMetric)))
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+}
+
 // writes 25,000 metrics to the listener with 10 different writers
 func TestWriteHTTPHighTraffic(t *testing.T) {
 	listener := &HttpListener{ServiceAddress: ":8286"}
-	parser, _ := parsers.NewInfluxParser()
-	listener.SetParser(parser)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -118,7 +131,6 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -136,7 +148,6 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	time.Sleep(time.Millisecond * 250)
 
 	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -154,7 +165,6 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	time.Sleep(time.Millisecond * 250)
 
 	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -172,7 +182,6 @@ func TestQueryAndPingHTTP(t *testing.T) {
 	time.Sleep(time.Millisecond * 250)
 
 	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
