@@ -34,7 +34,7 @@ func TestBeanstalkdGeneratesMetrics(t *testing.T) {
 		"current-tubes", "current-connections", "current-producers",
 		"current-workers", "current-waiting", "total-connections", "pid", "uptime",
 		"binlog-oldest-index", "binlog-current-index", "binlog-records-migrated",
-		"binlog-records-written", "binlog-max-size"
+		"binlog-records-written", "binlog-max-size",
 	}
 
 	for _, metric := range intMetrics {
