@@ -142,6 +142,7 @@ Currently implemented sources:
 * [aerospike](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/aerospike)
 * [apache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/apache)
 * [bcache](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/bcache)
+* [beanstalkd](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/beanstalkd)
 * [cassandra](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cassandra)
 * [ceph](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/ceph)
 * [chrony](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/chrony)
