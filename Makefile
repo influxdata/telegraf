@@ -30,7 +30,7 @@ build-for-docker:
 
 # run package script
 package:
-	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all --upload
+	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all
 
 # Get dependencies and use gdm to checkout changesets
 prepare:
