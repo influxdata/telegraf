@@ -4,7 +4,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/aerospike"
 	_ "github.com/influxdata/telegraf/plugins/inputs/apache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
-    _ "github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
+	_ "github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cassandra"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ceph"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cgroup"
