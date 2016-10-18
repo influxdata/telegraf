@@ -60,6 +60,7 @@ docker-run:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
 	docker run --name nats -p "4222:4222" -d nats
+	docker run --name warp10 -p "8090:8080" -p "8091:8081" -d -i warp10io/warp10:1.0.15-1-ga07cb94-ci
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -76,8 +77,8 @@ docker-run-circle:
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats
+	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats warp10
+	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats warp10
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: vet docker-kill docker-run
