@@ -38,6 +38,7 @@ in their config file.
 - [#2045](https://github.com/influxdata/telegraf/issues/2045): Graylog output should set short_message field.
 - [#1904](https://github.com/influxdata/telegraf/issues/1904): Hddtemp always put the value in the field temperature.
 - [#1693](https://github.com/influxdata/telegraf/issues/1693): Properly collect nested jolokia struct data.
+- [#1917](https://github.com/influxdata/telegraf/pull/1917): fix puppetagent inputs plugin to support string for config variable.
 
 ## v1.1.2 [2016-12-12]
 
