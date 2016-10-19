@@ -64,7 +64,6 @@ docker-run:
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
-	docker pull warp10io/warp10:1.0.15-1-ga07cb94-ci
 	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server:3.9.0
 	docker run --name kafka \
 		-e ADVERTISED_HOST=localhost \
