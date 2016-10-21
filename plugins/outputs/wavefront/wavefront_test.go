@@ -46,18 +46,18 @@ func TestBuildTagsTelnet(t *testing.T) {
 // 		t.Skip("Skipping integration test in short mode")
 // 	}
 
-// 	o := &OpenTSDB{
+// 	w := &Wavefront{
 // 		Host:   testutil.GetLocalHost(),
-// 		Port:   4242,
+// 		Port:   2878,
 // 		Prefix: "prefix.test.",
 // 	}
 
-// 	// Verify that we can connect to the OpenTSDB instance
-// 	err := o.Connect()
+// 	// Verify that we can connect to the Wavefront instance
+// 	err := w.Connect()
 // 	require.NoError(t, err)
 
-// 	// Verify that we can successfully write data to OpenTSDB
-// 	err = o.Write(testutil.MockMetrics())
+// 	// Verify that we can successfully write data to Wavefront
+// 	err = w.Write(testutil.MockMetrics())
 // 	require.NoError(t, err)
 
 // 	// Verify postive and negative test cases of writing data
@@ -75,6 +75,6 @@ func TestBuildTagsTelnet(t *testing.T) {
 // 	metrics = append(metrics, testutil.TestMetric(float64(42.0),
 // 		"metric w/ specialchars"))
 
-// 	err = o.Write(metrics)
+// 	err = w.Write(metrics)
 // 	require.NoError(t, err)
 // }

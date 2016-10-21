@@ -14,15 +14,16 @@ import (
 
 type Wavefront struct {
 	Prefix string
-
 	Host string
 	Port int
+	Metric_separator string
+	Convert_groups bool
 
 	Debug bool
-	Metric_separator string
 }
 
 var sanitizedChars = strings.NewReplacer("*", "-", `%`, "-", "#", "-")
+var groupReplacer = strings.NewReplacer("_", "_")
 
 var sampleConfig = `
   ## prefix for metrics keys
@@ -33,7 +34,14 @@ var sampleConfig = `
   host = "wavefront.example.com"
 
   ## Port of the Wavefront proxy server in telnet mode
-  port = 4242
+  port = 2878
+
+  ## character to use between metric and field name.  defaults to _ (underscore)
+  metric_separator = "." 
+
+  ## Convert metric name groups to use metric_seperator character
+  ## When true will convert all _ (underscore) chartacters in final metric name
+  convert_groups = true
 
   ## Debug true - Prints Wavefront communication
   debug = false
@@ -47,18 +55,22 @@ type MetricLine struct {
 }
 
 func (w *Wavefront) Connect() error {
-	// Test Connection to OpenTSDB Server
 	if w.Metric_separator == "" {
 		w.Metric_separator = "_"
 	}
+	if w.Convert_groups {
+		groupReplacer = strings.NewReplacer("_", w.Metric_separator)
+	}
+
+	// Test Connection to Wavefront Server
 	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
-		return fmt.Errorf("Wavefront: TCP address cannot be resolved")
+		return fmt.Errorf("Wavefront: TCP address cannot be resolved %s", err.Error())
 	}
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return fmt.Errorf("Wavefront: TCP connect fail")
+		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
 	}
 	defer connection.Close()
 	return nil
@@ -75,14 +87,14 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return fmt.Errorf("Wavefront: TCP connect fail")
+		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
 	}
 	defer connection.Close()
 
 	for _, m := range metrics {
 		for _, metric := range buildMetrics(m, now, w) {
-			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-				metric.Metric, metric.Timestamp, metric.Value, metric.Tags)
+			messageLine := fmt.Sprintf("%s %s %v %s\n",
+				metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
 			if w.Debug {
 				fmt.Print(messageLine)
 			}
@@ -110,9 +122,12 @@ func buildTags(mTags map[string]string) []string {
 func buildMetrics(m telegraf.Metric, now time.Time, w *Wavefront) []*MetricLine {
 	ret := []*MetricLine{}
 	for fieldName, value := range m.Fields() {
+		name := sanitizedChars.Replace(fmt.Sprintf("%s%s%s%s", w.Prefix, m.Name(), w.Metric_separator, fieldName))
+		if w.Convert_groups {
+			name = groupReplacer.Replace(name)
+		}
 		metric := &MetricLine{
-			Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s%s%s",
-				w.Prefix, m.Name(), w.Metric_separator, fieldName)),
+			Metric: name,
 			Timestamp: now.Unix(),
 		}
 		metricValue, buildError := buildValue(value, metric.Metric)
@@ -160,7 +175,7 @@ func (w *Wavefront) SampleConfig() string {
 }
 
 func (w *Wavefront) Description() string {
-	return "Configuration for OpenTSDB server to send metrics to"
+	return "Configuration for Wavefront server to send metrics to"
 }
 
 func (w *Wavefront) Close() error {
