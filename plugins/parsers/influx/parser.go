@@ -24,6 +24,14 @@ func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
 	points, err := models.ParsePoints(buf)
+
+	if err != nil {
+		if len(err.Error()) > 1024 {
+			err = fmt.Errorf("Error parsing influx line-protocol (error truncated): %s",
+				err.Error()[0:256])
+		}
+	}
+
 	metrics := make([]telegraf.Metric, len(points))
 	for i, point := range points {
 		for k, v := range p.DefaultTags {
