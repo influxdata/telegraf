@@ -28,7 +28,7 @@ const (
 	DEFAULT_MAX_LINE_SIZE = 64 * 1024
 )
 
-type HttpListener struct {
+type HTTPListener struct {
 	ServiceAddress string
 	ReadTimeout    internal.Duration
 	WriteTimeout   internal.Duration
@@ -63,24 +63,23 @@ const sampleConfig = `
   max_line_size = 0
 `
 
-func (h *HttpListener) SampleConfig() string {
+func (h *HTTPListener) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *HttpListener) Description() string {
+func (h *HTTPListener) Description() string {
 	return "Influx HTTP write listener"
 }
 
-func (h *HttpListener) Gather(_ telegraf.Accumulator) error {
+func (h *HTTPListener) Gather(_ telegraf.Accumulator) error {
 	log.Printf("D! The http_listener has created %d buffers", h.pool.ncreated())
 	return nil
 }
 
 // Start starts the http listener service.
-func (h *HttpListener) Start(acc telegraf.Accumulator) error {
+func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.parser = influx.InfluxParser{}
 
 	if h.MaxBodySize == 0 {
 		h.MaxBodySize = DEFAULT_MAX_BODY_SIZE
@@ -110,7 +109,7 @@ func (h *HttpListener) Start(acc telegraf.Accumulator) error {
 }
 
 // Stop cleans up all resources
-func (h *HttpListener) Stop() {
+func (h *HTTPListener) Stop() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -124,7 +123,7 @@ func (h *HttpListener) Stop() {
 // like server.Serve, httpListen will always return a non-nil error, for this
 // reason, the error returned should probably be ignored.
 // see https://golang.org/pkg/net/http/#Server.Serve
-func (h *HttpListener) httpListen() error {
+func (h *HTTPListener) httpListen() error {
 	if h.ReadTimeout.Duration < time.Second {
 		h.ReadTimeout.Duration = time.Second * 10
 	}
@@ -141,7 +140,7 @@ func (h *HttpListener) httpListen() error {
 	return server.Serve(h.listener)
 }
 
-func (h *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
 	case "/write":
 		h.serveWrite(res, req)
@@ -161,7 +160,7 @@ func (h *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HttpListener) serveWrite(res http.ResponseWriter, req *http.Request) {
+func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
 	if req.ContentLength > h.MaxBodySize {
 		tooLarge(res)
@@ -171,8 +170,9 @@ func (h *HttpListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 	// Handle gzip request bodies
 	body := req.Body
+	var err error
 	if req.Header.Get("Content-Encoding") == "gzip" {
-		body, err := gzip.NewReader(req.Body)
+		body, err = gzip.NewReader(req.Body)
 		defer body.Close()
 		if err != nil {
 			log.Println("E! " + err.Error())
@@ -185,7 +185,7 @@ func (h *HttpListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	var return400 bool
 	var hangingBytes bool
 	buf := h.pool.get()
-	defer func() { h.pool.put(buf) }()
+	defer h.pool.put(buf)
 	bufStart := 0
 	for {
 		n, err := io.ReadFull(body, buf[bufStart:])
@@ -261,7 +261,7 @@ func (h *HttpListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HttpListener) parse(b []byte, t time.Time) error {
+func (h *HTTPListener) parse(b []byte, t time.Time) error {
 	metrics, err := h.parser.ParseWithDefaultTime(b, t)
 
 	for _, m := range metrics {
@@ -287,7 +287,7 @@ func badRequest(res http.ResponseWriter) {
 
 func init() {
 	inputs.Add("http_listener", func() telegraf.Input {
-		return &HttpListener{
+		return &HTTPListener{
 			ServiceAddress: ":8186",
 		}
 	})

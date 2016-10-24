@@ -30,7 +30,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
 - [#1599](https://github.com/influxdata/telegraf/pull/1599): Add server hostname for each docker measurements.
 - [#1697](https://github.com/influxdata/telegraf/pull/1697): Add NATS output plugin.
-- [#1407](https://github.com/influxdata/telegraf/pull/1407): HTTP service listener input plugin.
+- [#1407](https://github.com/influxdata/telegraf/pull/1407) & [#1915](https://github.com/influxdata/telegraf/pull/1915): HTTP service listener input plugin.
 - [#1699](https://github.com/influxdata/telegraf/pull/1699): Add database blacklist option for Postgresql
 - [#1791](https://github.com/influxdata/telegraf/pull/1791): Add Docker container state metrics to Docker input plugin output
 - [#1755](https://github.com/influxdata/telegraf/issues/1755): Add support to SNMP for IP & MAC address conversion.

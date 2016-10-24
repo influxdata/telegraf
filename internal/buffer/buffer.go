@@ -14,7 +14,7 @@ type Buffer struct {
 	// total metrics added
 	total int
 
-	sync.Mutex
+	mu sync.Mutex
 }
 
 // NewBuffer returns a Buffer
@@ -65,13 +65,13 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) {
 // the batch will be of maximum length batchSize. It can be less than batchSize,
 // if the length of Buffer is less than batchSize.
 func (b *Buffer) Batch(batchSize int) []telegraf.Metric {
-	b.Lock()
+	b.mu.Lock()
 	n := min(len(b.buf), batchSize)
 	out := make([]telegraf.Metric, n)
 	for i := 0; i < n; i++ {
 		out[i] = <-b.buf
 	}
-	b.Unlock()
+	b.mu.Unlock()
 	return out
 }
 
