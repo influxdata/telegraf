@@ -188,8 +188,12 @@
 [[inputs.mesos]]
   # Timeout, in ms.
   timeout = 100
-  # A list of Mesos masters, default value is localhost:5050.
-  masters = ["localhost:5050"]
+  # A list of Mesos masters, default value is http://localhost:5050.
+  masters = ["http://localhost:5050"]
+  # Authentication username
+  username = ""
+  # Authentication password
+  password = ""
   # Metrics groups to be collected, by default, all enabled.
   master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
 

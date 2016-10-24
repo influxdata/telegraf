@@ -278,7 +278,7 @@ func TestMesosMaster(t *testing.T) {
 	var acc testutil.Accumulator
 
 	m := Mesos{
-		Masters: []string{masterTestServer.Listener.Addr().String()},
+		Masters: []string{"http://" + masterTestServer.Listener.Addr().String()},
 		Timeout: 10,
 	}
 
