@@ -39,6 +39,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1686](https://github.com/influxdata/telegraf/pull/1686): Mesos input plugin: very high-cardinality mesos-task metrics removed.
 - [#1838](https://github.com/influxdata/telegraf/pull/1838): Logging overhaul to centralize the logger & log levels, & provide a logfile config option.
 - [#1700](https://github.com/influxdata/telegraf/pull/1700): HAProxy plugin socket glob matching.
+- [#1847](https://github.com/influxdata/telegraf/pull/1847): Add Kubernetes plugin for retrieving pod metrics.
 
 ### Bugfixes
 
@@ -68,6 +69,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1344](https://github.com/influxdata/telegraf/issues/1344): Fix config file parse error logging.
 - [#1771](https://github.com/influxdata/telegraf/issues/1771): Delete nil fields in the metric maker.
 - [#870](https://github.com/influxdata/telegraf/issues/870): Fix MySQL special characters in DSN parsing.
+- [#1742](https://github.com/influxdata/telegraf/issues/1742): Ping input odd timeout behavior.
 
 ## v1.0.1 [2016-09-26]
 
