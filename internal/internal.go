@@ -35,10 +35,13 @@ type Duration struct {
 // UnmarshalTOML parses the duration from the TOML config file
 func (d *Duration) UnmarshalTOML(b []byte) error {
 	var err error
+
 	// Parse string duration, ie, "1s"
-	d.Duration, err = time.ParseDuration(string(b[1 : len(b)-1]))
-	if err == nil {
-		return nil
+	if uq, err := strconv.Unquote(string(b)); err == nil && len(uq) > 0 {
+		d.Duration, err = time.ParseDuration(uq)
+		if err == nil {
+			return nil
+		}
 	}
 
 	// First try parsing as integer seconds
