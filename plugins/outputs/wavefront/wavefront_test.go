@@ -6,6 +6,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/telegraf"
 	"strings"
+	"time"
 )
 
 func defaultWavefront() *Wavefront {
@@ -13,6 +14,7 @@ func defaultWavefront() *Wavefront {
 		Host: "localhost",
 		Port: 2878,
 		Prefix: "testWF.",
+		SimpleFields: false,
 		MetricSeparator: ".",
 		ConvertPaths: true,
 		UseRegex: false,
@@ -20,11 +22,20 @@ func defaultWavefront() *Wavefront {
 	}
 }
 
-func TestBuildMetrics(t *testing.T) {
+func TestBuildMetricsNoSimpleFields(t *testing.T) {
 	w := defaultWavefront()
 	w.UseRegex = false
 	w.Prefix = "testthis."
+	w.SimpleFields = false
+
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
+
+	testMetric1, _ := telegraf.NewMetric(
+					"test.simple.metric",
+					map[string]string{"tag1": "value1"},
+					map[string]interface{}{"value": 123},
+					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+				)
 
 	var metricTests = []struct {
 		metric  telegraf.Metric
@@ -32,15 +43,59 @@ func TestBuildMetrics(t *testing.T) {
 	} {
 		{
 			testutil.TestMetric(float64(1.0), "testing_just*a%metric:float"),
-			[]MetricLine{{Metric: w.Prefix + "testing.just-a-metric-float.value"}},
+			[]MetricLine{{Metric: w.Prefix + "testing.just-a-metric-float", Value: "1.000000"}},
+		},
+		{
+			testMetric1,
+			[]MetricLine{{Metric: w.Prefix + "test.simple.metric", Value: "123"}},
 		},
 	}
 
 	for _, mt := range metricTests {
 		ml := buildMetrics(mt.metric, w)
 		for i, line := range ml {
-			if mt.metricLines[i].Metric != line.Metric {
-				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric, line.Metric)
+			if mt.metricLines[i].Metric != line.Metric || mt.metricLines[i].Value != line.Value {
+				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric + " " + mt.metricLines[i].Value, line.Metric + " " + line.Value)
+			}
+		}
+	}
+
+}
+
+func TestBuildMetricsWithSimpleFields(t *testing.T) {
+	w := defaultWavefront()
+	w.UseRegex = false
+	w.Prefix = "testthis."
+	w.SimpleFields = true
+
+	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
+
+	testMetric1, _ := telegraf.NewMetric(
+					"test.simple.metric",
+					map[string]string{"tag1": "value1"},
+					map[string]interface{}{"value": 123},
+					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+				)
+
+	var metricTests = []struct {
+		metric  telegraf.Metric
+		metricLines []MetricLine
+	} {
+		{
+			testutil.TestMetric(float64(1.0), "testing_just*a%metric:float"),
+			[]MetricLine{{Metric: w.Prefix + "testing.just-a-metric-float.value", Value: "1.000000"}},
+		},
+		{
+			testMetric1,
+			[]MetricLine{{Metric: w.Prefix + "test.simple.metric.value", Value: "123"}},
+		},
+	}
+
+	for _, mt := range metricTests {
+		ml := buildMetrics(mt.metric, w)
+		for i, line := range ml {
+			if mt.metricLines[i].Metric != line.Metric || mt.metricLines[i].Value != line.Value {
+				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric + " " + mt.metricLines[i].Value, line.Metric + " " + line.Value)
 			}
 		}
 	}
@@ -64,12 +119,16 @@ func TestBuildTags(t *testing.T) {
 			[]string{"aaa=\"bbb\""},
 		},
 		{
-			map[string]string{"one": "two", "aaa": "bbb"},
-			[]string{"aaa=\"bbb\"", "one=\"two\""},
+			map[string]string{"bbb": "789", "aaa": "123"},
+			[]string{"aaa=\"123\"", "bbb=\"789\""},
 		},
 		{
-			map[string]string{"Sp%ci@l Chars": "g$t repl#ced"},
-			[]string{"Sp-ci-l-Chars=\"g-t-repl-ced\""},
+			map[string]string{"host": "aaa", "dc": "bbb"},
+			[]string{"dc=\"bbb\"", "source=\"aaa\""},
+		},
+		{
+			map[string]string{"Sp%ci@l Chars": "\"g$t repl#ced"},
+			[]string{"Sp-ci-l-Chars=\"-g-t-repl-ced\""},
 		},
 		{
 			map[string]string{},
