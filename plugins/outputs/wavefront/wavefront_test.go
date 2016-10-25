@@ -3,30 +3,73 @@ package wavefront
 import (
 	"reflect"
 	"testing"
-	// "github.com/influxdata/telegraf/testutil"
-	// "github.com/stretchr/testify/require"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf"
+	"strings"
 )
 
-func TestBuildTagsTelnet(t *testing.T) {
+func defaultWavefront() *Wavefront {
+	return &Wavefront{
+		Host: "localhost",
+		Port: 2878,
+		Prefix: "testWF.",
+		MetricSeparator: ".",
+		ConvertPaths: true,
+		UseRegex: false,
+		Debug: true,
+	}
+}
+
+func TestBuildMetrics(t *testing.T) {
+	w := defaultWavefront()
+	w.UseRegex = false
+	w.Prefix = "testthis."
+	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
+
+	var metricTests = []struct {
+		metric  telegraf.Metric
+		metricLines []MetricLine
+	} {
+		{
+			testutil.TestMetric(float64(1.0), "testing_just*a%metric:float"),
+			[]MetricLine{{Metric: w.Prefix + "testing.just-a-metric-float.value"}},
+		},
+	}
+
+	for _, mt := range metricTests {
+		ml := buildMetrics(mt.metric, w)
+		for i, line := range ml {
+			if mt.metricLines[i].Metric != line.Metric {
+				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric, line.Metric)
+			}
+		}
+	}
+
+}
+
+func TestBuildTags(t *testing.T) {
+
+	w := defaultWavefront()
+
 	var tagtests = []struct {
 		ptIn    map[string]string
 		outTags []string
 	}{
 		{
 			map[string]string{"one": "two", "three": "four"},
-			[]string{"one=two", "three=four"},
+			[]string{"one=\"two\"", "three=\"four\""},
 		},
 		{
 			map[string]string{"aaa": "bbb"},
-			[]string{"aaa=bbb"},
+			[]string{"aaa=\"bbb\""},
 		},
 		{
 			map[string]string{"one": "two", "aaa": "bbb"},
-			[]string{"aaa=bbb", "one=two"},
+			[]string{"aaa=\"bbb\"", "one=\"two\""},
 		},
 		{
 			map[string]string{"Sp%ci@l Chars": "g$t repl#ced"},
-			[]string{"Sp-ci-l_Chars=g-t_repl-ced"},
+			[]string{"Sp-ci-l-Chars=\"g-t-repl-ced\""},
 		},
 		{
 			map[string]string{},
@@ -34,9 +77,9 @@ func TestBuildTagsTelnet(t *testing.T) {
 		},
 	}
 	for _, tt := range tagtests {
-		tags := buildTags(tt.ptIn)
+		tags := buildTags(tt.ptIn, w)
 		if !reflect.DeepEqual(tags, tt.outTags) {
-			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outTags, tags)
+			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", tt.outTags, tags)
 		}
 	}
 }

@@ -6,63 +6,78 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"regexp"
 )
 
 type Wavefront struct {
-	Prefix string
-	Host string
-	Port int
-	Metric_separator string
-	Convert_groups bool
+	Host            string
+	Port            int
+	Prefix          string
+	MetricSeparator string
+	ConvertPaths    bool
+	UseRegex    	bool
 
-	Debug bool
+	Debug           bool
+	DebugAll        bool
 }
 
-var sanitizedChars = strings.NewReplacer("*", "-", `%`, "-", "#", "-")
-var groupReplacer = strings.NewReplacer("_", "_")
+// catch many of the invalid chars that could appear in a metric or tag name
+var sanitizedChars = strings.NewReplacer(
+		"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
+		"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
+		"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
+		">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
+	)
+// instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
+var sanitizedRegex, _ = regexp.Compile("[^a-zA-Z\\d_.-]")
+
+var pathReplacer = strings.NewReplacer("_", "_")
 
 var sampleConfig = `
   ## prefix for metrics keys
   prefix = "my.specific.prefix."
 
-  ## Telnet Mode ##
-  ## DNS name of the wavefront proxy server in telnet mode
+  ## DNS name of the wavefront proxy server
   host = "wavefront.example.com"
 
-  ## Port of the Wavefront proxy server in telnet mode
+  ## Port that the Wavefront proxy server listens on
   port = 2878
 
-  ## character to use between metric and field name.  defaults to _ (underscore)
-  metric_separator = "." 
+  ## character to use between metric and field name.  defaults to . (dot)
+  metricSeparator = "."
 
-  ## Convert metric name groups to use metric_seperator character
-  ## When true will convert all _ (underscore) chartacters in final metric name
-  convert_groups = true
+  ## Convert metric name paths to use metricSeperator character
+  ## When true (edfault) will convert all _ (underscore) chartacters in final metric name
+  convertPaths = true
 
-  ## Debug true - Prints Wavefront communication
+  ## Use Regex to sanitize metric and tag names from invalid characters
+  ## Regex is more thorough, but significantly slower
+  useRegex = false
+
+  ## Print all Wavefront communication
   debug = false
 `
 
 type MetricLine struct {
 	Metric    string
-	Timestamp int64
 	Value     string
+	Timestamp int64
 	Tags      string
 }
 
 func (w *Wavefront) Connect() error {
-	if w.Metric_separator == "" {
-		w.Metric_separator = "_"
+
+	if w.ConvertPaths && w.MetricSeparator == "_" {
+		w.ConvertPaths = false
 	}
-	if w.Convert_groups {
-		groupReplacer = strings.NewReplacer("_", w.Metric_separator)
+	if w.ConvertPaths {
+		pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 	}
 
-	// Test Connection to Wavefront Server
+	// Test Connection to Wavefront proxy Server
 	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
@@ -80,9 +95,8 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	now := time.Now()
 
-	// Send Data with telnet / socket communication
+	// Send Data to Wavefront proxy Server
 	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
@@ -92,9 +106,8 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	defer connection.Close()
 
 	for _, m := range metrics {
-		for _, metric := range buildMetrics(m, now, w) {
-			messageLine := fmt.Sprintf("%s %s %v %s\n",
-				metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
+		for _, metric := range buildMetrics(m, w) {
+			messageLine := fmt.Sprintf("%s %s %v %s\n",	metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
 			if w.Debug {
 				fmt.Print(messageLine)
 			}
@@ -108,27 +121,46 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func buildTags(mTags map[string]string) []string {
+func buildTags(mTags map[string]string, w *Wavefront) []string {
 	tags := make([]string, len(mTags))
 	index := 0
 	for k, v := range mTags {
-		tags[index] = sanitizedChars.Replace(fmt.Sprintf("%s=\"%s\"", k, v))
+		if w.UseRegex {
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), sanitizedRegex.ReplaceAllString(v, "-"))
+		} else {
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), sanitizedChars.Replace(v))
+		}
 		index++
 	}
 	sort.Strings(tags)
 	return tags
 }
 
-func buildMetrics(m telegraf.Metric, now time.Time, w *Wavefront) []*MetricLine {
+func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
+	if w.DebugAll {
+		fmt.Printf("Original name: %s\n", m.Name())
+	}
+
 	ret := []*MetricLine{}
 	for fieldName, value := range m.Fields() {
-		name := sanitizedChars.Replace(fmt.Sprintf("%s%s%s%s", w.Prefix, m.Name(), w.Metric_separator, fieldName))
-		if w.Convert_groups {
-			name = groupReplacer.Replace(name)
+		if w.DebugAll {
+			fmt.Printf("Original field: %s\n", fieldName)
 		}
+
+		name := fmt.Sprintf("%s%s%s%s", w.Prefix, m.Name(), w.MetricSeparator, fieldName)
+		if w.UseRegex {
+			name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
+		} else {
+			name = sanitizedChars.Replace(name)
+		}
+
+		if w.ConvertPaths {
+			name = pathReplacer.Replace(name)
+		}
+
 		metric := &MetricLine{
 			Metric: name,
-			Timestamp: now.Unix(),
+			Timestamp: m.UnixNano() / 1000000000,
 		}
 		metricValue, buildError := buildValue(value, metric.Metric)
 		if buildError != nil {
@@ -136,7 +168,7 @@ func buildMetrics(m telegraf.Metric, now time.Time, w *Wavefront) []*MetricLine 
 			continue
 		}
 		metric.Value = metricValue
-		tagsSlice := buildTags(m.Tags())
+		tagsSlice := buildTags(m.Tags(), w)
 		metric.Tags = fmt.Sprint(strings.Join(tagsSlice, " "))
 		ret = append(ret, metric)
 	}
@@ -184,6 +216,9 @@ func (w *Wavefront) Close() error {
 
 func init() {
 	outputs.Add("wavefront", func() telegraf.Output {
-		return &Wavefront{}
+		return &Wavefront{
+			MetricSeparator: ".",
+			ConvertPaths: true,
+		}
 	})
 }
