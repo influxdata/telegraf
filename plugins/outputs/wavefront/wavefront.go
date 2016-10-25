@@ -3,19 +3,20 @@ package wavefront
 import (
 	"fmt"
 	"net"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"regexp"
 )
 
 type Wavefront struct {
 	Host            string
 	Port            int
 	Prefix          string
+	SimpleFields    bool
 	MetricSeparator string
 	ConvertPaths    bool
 	UseRegex    	bool
@@ -46,16 +47,19 @@ var sampleConfig = `
   ## Port that the Wavefront proxy server listens on
   port = 2878
 
+  ## wether to use "value" for name of simple fields
+  simple_fields = false
+
   ## character to use between metric and field name.  defaults to . (dot)
-  metricSeparator = "."
+  metric_separator = "."
 
   ## Convert metric name paths to use metricSeperator character
   ## When true (edfault) will convert all _ (underscore) chartacters in final metric name
-  convertPaths = true
+  convert_paths = true
 
   ## Use Regex to sanitize metric and tag names from invalid characters
   ## Regex is more thorough, but significantly slower
-  useRegex = false
+  use_regex = false
 
   ## Print all Wavefront communication
   debug = false
@@ -125,11 +129,16 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 	tags := make([]string, len(mTags))
 	index := 0
 	for k, v := range mTags {
+		if k == "host" {
+			k = "source"
+		}
+
 		if w.UseRegex {
 			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), sanitizedRegex.ReplaceAllString(v, "-"))
 		} else {
 			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), sanitizedChars.Replace(v))
 		}
+
 		index++
 	}
 	sort.Strings(tags)
@@ -147,7 +156,13 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 			fmt.Printf("Original field: %s\n", fieldName)
 		}
 
-		name := fmt.Sprintf("%s%s%s%s", w.Prefix, m.Name(), w.MetricSeparator, fieldName)
+		var name string
+		if !w.SimpleFields && fieldName == "value" {
+			name = fmt.Sprintf("%s%s", w.Prefix, m.Name())
+		} else {
+			name = fmt.Sprintf("%s%s%s%s", w.Prefix, m.Name(), w.MetricSeparator, fieldName)
+		}
+
 		if w.UseRegex {
 			name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
 		} else {
