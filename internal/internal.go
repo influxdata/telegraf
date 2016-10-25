@@ -36,6 +36,12 @@ type Duration struct {
 func (d *Duration) UnmarshalTOML(b []byte) error {
 	var err error
 
+	// see if we can straight convert it
+	d.Duration, err = time.ParseDuration(string(b))
+	if err == nil {
+		return nil
+	}
+
 	// Parse string duration, ie, "1s"
 	if uq, err := strconv.Unquote(string(b)); err == nil && len(uq) > 0 {
 		d.Duration, err = time.ParseDuration(uq)
