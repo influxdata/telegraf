@@ -411,7 +411,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Validate metric type
 		switch pipesplit[1] {
-		case "g", "c", "s", "ms", "h":
+		case "g", "c", "s", "ms", "h", "gd":
 			m.mtype = pipesplit[1]
 		default:
 			log.Printf("E! Error: Statsd Metric type %s unsupported", pipesplit[1])
@@ -420,7 +420,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Parse the value
 		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
-			if m.mtype != "g" {
+			if m.mtype != "g" && m.mtype != "gd" {
 				log.Printf("E! Error: +- values are only supported for gauges: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
@@ -428,7 +428,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		}
 
 		switch m.mtype {
-		case "g", "ms", "h":
+		case "g", "ms", "h", "gd":
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
 				log.Printf("E! Error: parsing value to float64: %s\n", line)
@@ -458,7 +458,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		switch m.mtype {
 		case "c":
 			m.tags["metric_type"] = "counter"
-		case "g":
+		case "g", "gd":
 			m.tags["metric_type"] = "gauge"
 		case "s":
 			m.tags["metric_type"] = "set"
@@ -598,6 +598,13 @@ func (s *Statsd) aggregate(m metric) {
 		}
 		s.counters[m.hash].fields[m.field] =
 			s.counters[m.hash].fields[m.field].(int64) + m.intvalue
+
+	case "gd":
+		// delete a gauge if it exists
+		_, ok := s.gauges[m.hash]
+		if ok {
+			delete (s.gauges,m.hash)
+		}
 	case "g":
 		// check if the measurement exists
 		_, ok := s.gauges[m.hash]
