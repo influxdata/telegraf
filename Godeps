@@ -47,7 +47,7 @@ github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
 github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
-github.com/shirou/gopsutil 4d0c402af66c78735c5ccf820dc2ca7de5e4ff08
+github.com/shirou/gopsutil 1516eb9ddc5e61ba58874047a98f8b44b5e585e8
 github.com/soniah/gosnmp 3fe3beb30fa9700988893c56a63b1df8e1b68c26
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c

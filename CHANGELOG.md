@@ -6,6 +6,8 @@
 
 ### Bugfixes
 
+- [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
+
 ## v1.1 [unreleased]
 
 ### Release Notes
