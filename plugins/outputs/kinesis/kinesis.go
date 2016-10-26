@@ -3,7 +3,6 @@ package kinesis
 import (
 	"log"
 	"os"
-	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -158,7 +157,7 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 }
 
 func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
-	var sz uint32 = 0
+	var sz uint32
 
 	if len(metrics) == 0 {
 		return nil
@@ -167,7 +166,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 	r := []*kinesis.PutRecordsRequestEntry{}
 
 	for _, metric := range metrics {
-		atomic.AddUint32(&sz, 1)
+		sz++
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
@@ -185,7 +184,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 				// Max Messages Per PutRecordRequest is 500
 				elapsed := writekinesis(k, r)
 				log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
-				atomic.StoreUint32(&sz, 0)
+				sz = 0
 				r = nil
 			}
 		}
