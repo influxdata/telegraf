@@ -6,27 +6,43 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"gopkg.in/olivere/elastic.v2"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type Elasticsearch struct {
-	ServerHost    string
-	IndexName     string
-	EnableSniffer bool
-	Client        *elastic.Client
-	Version       string
+	ServerHost       string
+	IndexName        string
+	EnableSniffer    bool
+	NumberOfShards   int
+	NumberOfReplicas int
+	Client           *elastic.Client
+	Version          string
 }
 
 var sampleConfig = `
   server_host = "http://10.10.10.10:9200" # required.
   index_name = "test" # required.
+  # regex allowed on index_name: 
+  # %Y - year (2016)
+  # %y - last two digits of year (00..99)
+  # %m - month (01..12)
+  # %d - day of month (e.g., 01)
+  # %H - hour (00..23)
   enable_sniffer = false
+  number_of_shards = 5
+  number_of_replicas = 1
 `
 
 func (a *Elasticsearch) Connect() error {
 	if a.ServerHost == "" || a.IndexName == "" {
 		return fmt.Errorf("FAILED server_host and index_name are required fields for Elasticsearch output")
+	}
+
+	// Check if index's name has a prefix
+	if strings.HasPrefix(a.IndexName, "%") {
+		return fmt.Errorf("FAILED  Elasticsearch index's name must start with a prefix. \n")
 	}
 
 	client, err := elastic.NewClient(
@@ -49,6 +65,68 @@ func (a *Elasticsearch) Connect() error {
 	}
 
 	a.Version = version
+
+	templateName := a.IndexName
+
+	if strings.Contains(a.IndexName, "%") {
+		// Template's name its Index's name without date patterns
+		templateName = a.IndexName[0:strings.Index(a.IndexName, "%")]
+
+		year := strconv.Itoa(time.Now().Year())
+		a.IndexName = strings.Replace(a.IndexName, "%Y", year, -1)
+		a.IndexName = strings.Replace(a.IndexName, "%y", year[len(year)-2:], -1)
+		a.IndexName = strings.Replace(a.IndexName, "%m", strconv.Itoa(int(time.Now().Month())), -1)
+		a.IndexName = strings.Replace(a.IndexName, "%d", strconv.Itoa(time.Now().Day()), -1)
+		a.IndexName = strings.Replace(a.IndexName, "%H", strconv.Itoa(time.Now().Hour()), -1)
+	}
+
+	exists, errExists := a.Client.IndexExists(a.IndexName).Do()
+
+	if errExists != nil {
+		return fmt.Errorf("FAILED to check if Elasticsearch index %s exists : %s\n", a.IndexName, errExists)
+	}
+
+	if !exists {
+		// First create a template for the new index
+		tmpl := fmt.Sprintf(`{
+			"template":"%s*",
+    			"settings" : {
+        			"number_of_shards" : %s,
+				"number_of_replicas" : %s
+    			},
+    			"mappings" : {
+        			"_default_" : {
+            				"properties" : {
+                				"created" : { "type" : "date" },
+						"host":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":256}}}
+            				},
+	    				"dynamic_templates": [
+                			{ "unknow": {
+                      				"match": "*", 
+                      				"match_mapping_type": "unknow",
+                      				"mapping": {
+                          				"type":"string"
+                      				}
+                			}}
+            				]
+        			}
+    			}
+		}`, templateName, strconv.Itoa(a.NumberOfShards), strconv.Itoa(a.NumberOfShards))
+
+		_, errCreateTemplate := a.Client.IndexPutTemplate(templateName).BodyString(tmpl).Do()
+
+		if errCreateTemplate != nil {
+			return fmt.Errorf("FAILED to create Elasticsearch index template %s : %s\n", templateName, errCreateTemplate)
+		}
+
+		// Now create the new index
+		_, errCreateIndex := a.Client.CreateIndex(a.IndexName).Do()
+
+		if errCreateIndex != nil {
+			return fmt.Errorf("FAILED to create Elasticsearch index %s : %s\n", a.IndexName, errCreateIndex)
+		}
+
+	}
 
 	return nil
 }
