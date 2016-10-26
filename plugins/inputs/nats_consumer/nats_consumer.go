@@ -96,7 +96,7 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 
 	// override max reconnection tries
 	opts.MaxReconnect = -1
-	
+
 	// override servers if any were specified
 	opts.Servers = n.Servers
 
