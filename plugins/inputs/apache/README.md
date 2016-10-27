@@ -2,6 +2,10 @@
 
 #### Plugin arguments:
 - **urls** []string: List of apache-status URLs to collect from. Default is "http://localhost/server-status?auto".
+- **username** string: Username for HTTP basic authentication
+- **password** string: Password for HTTP basic authentication
+- **sslskipverify** bool: if true HTTP client will skip all SSL verifications related to peer and host. Default to false
+- **timeout** int: number of second the HTTP connection will remain waiting for response. Defalt 4 seconds
 
 #### Description
 
