@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"log"
 )
 
 type Wavefront struct {
@@ -113,7 +114,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 		for _, metric := range buildMetrics(m, w) {
 			messageLine := fmt.Sprintf("%s %s %v %s\n",	metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
 			if w.Debug {
-				fmt.Print(messageLine)
+				log.Printf("DEBUG: output [wavefront] %s", messageLine)
 			}
 			_, err := connection.Write([]byte(messageLine))
 			if err != nil {
@@ -147,13 +148,13 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 
 func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 	if w.DebugAll {
-		fmt.Printf("Original name: %s\n", m.Name())
+		log.Printf("DEBUG: output [wavefront] original name: %s\n", m.Name())
 	}
 
 	ret := []*MetricLine{}
 	for fieldName, value := range m.Fields() {
 		if w.DebugAll {
-			fmt.Printf("Original field: %s\n", fieldName)
+			log.Printf("DEBUG: output [wavefront] original field: %s\n", fieldName)
 		}
 
 		var name string
@@ -179,7 +180,7 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 		}
 		metricValue, buildError := buildValue(value, metric.Metric)
 		if buildError != nil {
-			fmt.Printf("Wavefront: %s\n", buildError.Error())
+			log.Printf("ERROR: output [wavefront] %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue
