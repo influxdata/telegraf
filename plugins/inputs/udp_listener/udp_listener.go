@@ -51,11 +51,11 @@ var malformedwarn = "E! udp_listener has received %d malformed packets" +
 
 const sampleConfig = `
   ## Address and port to host UDP listener on
-  service_address = ":8092"
+  # service_address = ":8092"
 
   ## Number of UDP messages allowed to queue up. Once filled, the
   ## UDP listener will start dropping packets.
-  allowed_pending_messages = 10000
+  # allowed_pending_messages = 10000
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
@@ -178,6 +178,9 @@ func (u *UdpListener) udpParser() error {
 
 func init() {
 	inputs.Add("udp_listener", func() telegraf.Input {
-		return &UdpListener{}
+		return &UdpListener{
+			ServiceAddress:         ":8092",
+			AllowedPendingMessages: 10000,
+		}
 	})
 }
