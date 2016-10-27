@@ -30,7 +30,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
 - [#1599](https://github.com/influxdata/telegraf/pull/1599): Add server hostname for each docker measurements.
 - [#1697](https://github.com/influxdata/telegraf/pull/1697): Add NATS output plugin.
-- [#1407](https://github.com/influxdata/telegraf/pull/1407): HTTP service listener input plugin.
+- [#1407](https://github.com/influxdata/telegraf/pull/1407) & [#1915](https://github.com/influxdata/telegraf/pull/1915): HTTP service listener input plugin.
 - [#1699](https://github.com/influxdata/telegraf/pull/1699): Add database blacklist option for Postgresql
 - [#1791](https://github.com/influxdata/telegraf/pull/1791): Add Docker container state metrics to Docker input plugin output
 - [#1755](https://github.com/influxdata/telegraf/issues/1755): Add support to SNMP for IP & MAC address conversion.
@@ -43,6 +43,9 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 
 ### Bugfixes
 
+- [#1955](https://github.com/influxdata/telegraf/issues/1955): Fix NATS plug-ins reconnection logic.
+- [#1936](https://github.com/influxdata/telegraf/issues/1936): Set required default values in udp_listener & tcp_listener.
+- [#1926](https://github.com/influxdata/telegraf/issues/1926): Fix toml unmarshal panic in Duration objects.
 - [#1746](https://github.com/influxdata/telegraf/issues/1746): Fix handling of non-string values for JSON keys listed in tag_keys.
 - [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
 - [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
