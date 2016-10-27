@@ -221,7 +221,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("influxdb", func() telegraf.Output {
 		return &InfluxDB{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout:  internal.Duration{Duration: time.Second * 5},
+			Database: "telegraf",
 		}
 	})
 }
