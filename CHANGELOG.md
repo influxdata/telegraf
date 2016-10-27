@@ -1,3 +1,9 @@
+## v1.2 [unreleased]
+
+### Bugfixes
+
+- [#1917](https://github.com/influxdata/telegraf/pull/1917): fix puppetagent inputs plugin to support string for config variable.
+ 
 ## v1.1 [unreleased]
 
 ### Release Notes
