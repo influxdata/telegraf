@@ -16,12 +16,11 @@ func TestConnectAndWrite(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	//serverhost := "http://" + testutil.GetLocalHost() + ":19200"
-	serverhost := "http://10.200.83.10:19200"
+	serverhost := "http://" + testutil.GetLocalHost() + ":19200"
 
 	e := &Elasticsearch{
 		ServerHost:       serverhost,
-		IndexName:        "littletest3%Y%m%d",
+		IndexName:        "littletest%Y%m%d",
 		NumberOfShards:   2,
 		NumberOfReplicas: 2,
 	}
