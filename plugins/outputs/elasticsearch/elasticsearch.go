@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v3"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +15,7 @@ type Elasticsearch struct {
 	ServerHost       string
 	IndexName        string
 	EnableSniffer    bool
+	HealthCheck      bool
 	NumberOfShards   int
 	NumberOfReplicas int
 	Client           *elastic.Client
@@ -31,8 +32,9 @@ var sampleConfig = `
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
   enable_sniffer = false
-  number_of_shards = 5
-  number_of_replicas = 1
+  health_check = false
+  number_of_shards = 1
+  number_of_replicas = 0
 `
 
 func (a *Elasticsearch) Connect() error {
@@ -46,7 +48,7 @@ func (a *Elasticsearch) Connect() error {
 	}
 
 	client, err := elastic.NewClient(
-		elastic.SetHealthcheck(true),
+		elastic.SetHealthcheck(a.HealthCheck),
 		elastic.SetSniff(a.EnableSniffer),
 		elastic.SetHealthcheckInterval(30*time.Second),
 		elastic.SetURL(a.ServerHost),
@@ -88,6 +90,14 @@ func (a *Elasticsearch) Connect() error {
 
 	if !exists {
 		// First create a template for the new index
+
+		// The [string] type is removed in 5.0
+		typeHostandUnknow := "text"
+
+		if strings.HasPrefix(a.Version, "2.") {
+			typeHostandUnknow = "string"
+		}
+
 		tmpl := fmt.Sprintf(`{
 			"template":"%s*",
     			"settings" : {
@@ -96,22 +106,25 @@ func (a *Elasticsearch) Connect() error {
     			},
     			"mappings" : {
         			"_default_" : {
+					"_all": {
+        					"enabled": false
+      					},
             				"properties" : {
                 				"created" : { "type" : "date" },
-						"host":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":256}}}
+						"host":{"type":"%s"}
             				},
 	    				"dynamic_templates": [
-                			{ "unknow": {
+                			{ "unknowfields": {
                       				"match": "*", 
                       				"match_mapping_type": "unknow",
                       				"mapping": {
-                          				"type":"string"
+                          				"type":"%s"
                       				}
                 			}}
             				]
         			}
     			}
-		}`, templateName, strconv.Itoa(a.NumberOfShards), strconv.Itoa(a.NumberOfShards))
+		}`, templateName, strconv.Itoa(a.NumberOfShards), strconv.Itoa(a.NumberOfReplicas), typeHostandUnknow, typeHostandUnknow)
 
 		_, errCreateTemplate := a.Client.IndexPutTemplate(templateName).BodyString(tmpl).Do()
 
@@ -249,7 +262,10 @@ func (a *Elasticsearch) Close() error {
 func init() {
 	outputs.Add("elasticsearch", func() telegraf.Output {
 		return &Elasticsearch{
-			EnableSniffer: false,
+			EnableSniffer:    false,
+			HealthCheck:      false,
+			NumberOfShards:   1,
+			NumberOfReplicas: 0,
 		}
 	})
 }

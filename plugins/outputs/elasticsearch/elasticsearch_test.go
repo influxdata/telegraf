@@ -2,13 +2,11 @@ package elasticsearch
 
 import (
 	"encoding/json"
-	"testing"
-	"time"
-
 	"github.com/influxdata/telegraf"
-
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 func TestConnectAndWrite(t *testing.T) {
@@ -20,9 +18,9 @@ func TestConnectAndWrite(t *testing.T) {
 
 	e := &Elasticsearch{
 		ServerHost:       serverhost,
-		IndexName:        "littletest%Y%m%d",
-		NumberOfShards:   2,
-		NumberOfReplicas: 2,
+		IndexName:        "littletest",
+		NumberOfShards:   1,
+		NumberOfReplicas: 0,
 	}
 
 	// Verify that we can connect to the ElasticSearch

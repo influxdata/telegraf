@@ -62,5 +62,5 @@ golang.org/x/text a71fd10341b064c10f4a81ceac72bcf70f26ea34
 gopkg.in/dancannon/gorethink.v1 7d1af5be49cb5ecc7b177bf387d232050299d6ef
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
 gopkg.in/mgo.v2 d90005c5262a3463800497ea5a89aed5fe22c886
-gopkg.in/olivere/elastic.v2 4ca0a93672aab0aacb92e0ed205bdf1d3a81f9ed
+gopkg.in/olivere/elastic.v3 1ad75b5396674e9c783400e89106bc0c8da9d786
 gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4

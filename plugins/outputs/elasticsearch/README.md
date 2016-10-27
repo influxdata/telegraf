@@ -23,10 +23,12 @@ In this case, dots will be replaced with "_".
   index_name = "test"
   ## ElasticSearch uses a sniffing process to find all nodes of your cluster by default, automatically
   enable_sniffer = false
+  ## Enable health check
+  health_check = false
   ## If index not exists, a template will be created and then the new index.
   ##  You can set number of shards and replicas for this template.
   ## If the index's name uses formats ("myindex%Y%m%d"), the template's name will be the characters before
   ## the first '%' ("myindex").
-  number_of_shards = 5
-  number_of_replicas = 1
+  number_of_shards = 1
+  number_of_replicas = 0
   
