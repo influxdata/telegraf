@@ -15,11 +15,10 @@ import (
 	"time"
 )
 
-var timeout = 5 * time.Second
-
 // uWSGI Server struct
 type Uwsgi struct {
 	Servers []string `toml:"server"`
+	Timeout int      `toml:"timeout"`
 }
 
 // Errors is a list of errors accumulated during an interval.
@@ -72,6 +71,7 @@ func (u *Uwsgi) SampleConfig() string {
     ## For example:
     ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
     servers = []
+    timeout = 5
 `
 }
 
@@ -94,6 +94,10 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 	var err error
 	var r io.ReadCloser
+	var timeout = time.Duration(u.Timeout) * time.Second
+	var httpClient = &http.Client{
+		Timeout: timeout,
+	}
 
 	switch url.Scheme {
 	case "unix":
@@ -101,7 +105,7 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 	case "tcp":
 		r, err = net.DialTimeout(url.Scheme, url.Host, timeout)
 	case "http":
-		resp, err := http.Get(url.String())
+		resp, err := httpClient.Get(url.String())
 		if err != nil {
 			return Errorf(err, "Could not connect to uWSGI Stats Server '%s'", url.String())
 		}

@@ -12,6 +12,8 @@ The uWSGI gathers metrics about uWSGI using its [Stats Server][stats_server].
     ## For example:
     ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
     servers = []
+    ## General connection timout in seconds
+    timeout = 5
 ```
 
 ### Measurements and fields
