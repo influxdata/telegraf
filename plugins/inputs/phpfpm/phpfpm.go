@@ -44,6 +44,9 @@ var sampleConfig = `
   ## An array of addresses to gather stats about. Specify an ip or hostname
   ## with optional port and path
   ##
+  ## If you want to customize the pool name,
+  ## add the "@poolname" after the url
+  ##
   ## Plugin can be configured in three modes (either can be used):
   ##   - http: the URL must start with http:// or https://, ie:
   ##       "http://localhost/status"
@@ -153,8 +156,18 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 	return g.gatherFcgi(fcgi, statusPath, acc)
 }
 
+func parseCustomPoolName(p string) (path, pool string) {
+	s := strings.Split(p, "@")
+	if len(s) >= 2 {
+		return s[0], s[1]
+	} else {
+		return s[0], ""
+	}
+}
+
 // Gather stat using fcgi protocol
 func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumulator) error {
+	statusPath, poolName := parseCustomPoolName(statusPath)
 	fpmOutput, fpmErr, err := fcgi.Request(map[string]string{
 		"SCRIPT_NAME":     "/" + statusPath,
 		"SCRIPT_FILENAME": statusPath,
@@ -166,7 +179,7 @@ func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumula
 	}, "/"+statusPath)
 
 	if len(fpmErr) == 0 && err == nil {
-		importMetric(bytes.NewReader(fpmOutput), acc)
+		importMetric(bytes.NewReader(fpmOutput), acc, poolName)
 		return nil
 	} else {
 		return fmt.Errorf("Unable parse phpfpm status. Error: %v %v", string(fpmErr), err)
@@ -175,6 +188,7 @@ func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumula
 
 // Gather stat using http protocol
 func (g *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
+	addr, poolName := parseCustomPoolName(addr)
 	u, err := url.Parse(addr)
 	if err != nil {
 		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
@@ -194,12 +208,12 @@ func (g *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 			addr, err)
 	}
 
-	importMetric(res.Body, acc)
+	importMetric(res.Body, acc, poolName)
 	return nil
 }
 
 // Import stat data into Telegraf system
-func importMetric(r io.Reader, acc telegraf.Accumulator) (poolStat, error) {
+func importMetric(r io.Reader, acc telegraf.Accumulator, customPoolName string) (poolStat, error) {
 	stats := make(poolStat)
 	var currentPool string
 
@@ -214,7 +228,11 @@ func importMetric(r io.Reader, acc telegraf.Accumulator) (poolStat, error) {
 		fieldName := strings.Trim(keyvalue[0], " ")
 		// We start to gather data for a new pool here
 		if fieldName == PF_POOL {
-			currentPool = strings.Trim(keyvalue[1], " ")
+			if len(customPoolName) == 0 {
+				currentPool = strings.Trim(keyvalue[1], " ")
+			} else {
+				currentPool = customPoolName
+			}
 			stats[currentPool] = make(metric)
 			continue
 		}
