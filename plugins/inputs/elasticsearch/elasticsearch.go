@@ -63,17 +63,17 @@ type indexHealth struct {
 }
 
 type clusterStats struct {
-	NodeName    string            `json:"node_name"`
-	ClusterName string            `json:"cluster_name"`
-	Status      string            `json:"status"`
-	Indices     interface{}       `json:"indices"`
-	Nodes       interface{}       `json:"nodes"`
+	NodeName    string      `json:"node_name"`
+	ClusterName string      `json:"cluster_name"`
+	Status      string      `json:"status"`
+	Indices     interface{} `json:"indices"`
+	Nodes       interface{} `json:"nodes"`
 }
 
 type catMaster struct {
-	NodeID   string     `json:"id"`
-	NodeIP   string     `json:"ip"`
-	NodeName string     `json:"node"`
+	NodeID   string `json:"id"`
+	NodeIP   string `json:"ip"`
+	NodeName string `json:"node"`
 }
 
 const sampleConfig = `
@@ -113,7 +113,7 @@ type Elasticsearch struct {
 	SSLCA              string `toml:"ssl_ca"`   // Path to CA file
 	SSLCert            string `toml:"ssl_cert"` // Path to host cert file
 	SSLKey             string `toml:"ssl_key"`  // Path to cert key file
-	InsecureSkipVerify bool                     // Use SSL but skip chain & host verification
+	InsecureSkipVerify bool   // Use SSL but skip chain & host verification
 	client             *http.Client
 	catMasterResponse  string
 	isMaster           bool
@@ -181,7 +181,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if e.ClusterStats && e.isMaster {
-				e.gatherClusterStats(s + clusterStatsPath, acc)
+				e.gatherClusterStats(s+clusterStatsPath, acc)
 			}
 		}(serv, acc)
 	}
@@ -224,7 +224,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			"cluster_name": nodeStats.ClusterName,
 		}
 
-		if (e.ClusterStats && e.Local) {
+		if e.ClusterStats && e.Local {
 			// check for master
 			tokens := strings.Split(e.catMasterResponse, " ")
 			masterNode := tokens[0] // get the node ID and compare it
@@ -232,7 +232,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 		}
 
 		for k, v := range n.Attributes {
-			tags["node_attribute_" + k] = v
+			tags["node_attribute_"+k] = v
 		}
 
 		stats := map[string]interface{}{
@@ -255,7 +255,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			if err != nil {
 				return err
 			}
-			acc.AddFields("elasticsearch_" + p, f.Fields, tags, now)
+			acc.AddFields("elasticsearch_"+p, f.Fields, tags, now)
 		}
 	}
 	return nil
@@ -313,14 +313,14 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 	}
 	now := time.Now()
 	tags := map[string]string{
-		"node_name":     clusterStats.NodeName,
-		"cluster_name":  clusterStats.ClusterName,
-		"status":        clusterStats.Status,
+		"node_name":    clusterStats.NodeName,
+		"cluster_name": clusterStats.ClusterName,
+		"status":       clusterStats.Status,
 	}
 
 	stats := map[string]interface{}{
-		"nodes":     clusterStats.Nodes,
-		"indices":   clusterStats.Indices,
+		"nodes":   clusterStats.Nodes,
+		"indices": clusterStats.Indices,
 	}
 
 	for p, s := range stats {
@@ -330,7 +330,7 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 		if err != nil {
 			return err
 		}
-		acc.AddFields("elasticsearch_clusterstats_" + p, f.Fields, tags, now)
+		acc.AddFields("elasticsearch_clusterstats_"+p, f.Fields, tags, now)
 	}
 
 	return nil

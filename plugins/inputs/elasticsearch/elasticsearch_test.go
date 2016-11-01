@@ -8,9 +8,9 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/stretchr/testify/require"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type transportMock struct {
@@ -123,7 +123,6 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	es.ClusterStats = true
 	es.Servers = []string{"http://example.com:9200"}
 
-
 	// first get catMaster
 	es.client.Transport = newTransportMock(http.StatusOK, IsMasterResult)
 	require.NoError(t, es.setCatMaster("junk"))
@@ -149,9 +148,9 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	require.NoError(t, es.gatherClusterStats("junk", &acc))
 
 	tags := map[string]string{
-		"cluster_name":          "es-testcluster",
-		"node_name":             "test.host.com",
-		"status":                "red",
+		"cluster_name": "es-testcluster",
+		"node_name":    "test.host.com",
+		"status":       "red",
 	}
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats_nodes", clusterstatsNodesExpected, tags)
@@ -163,7 +162,6 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.ClusterStats = true
 	es.Servers = []string{"http://example.com:9200"}
-
 
 	// first get catMaster
 	es.client.Transport = newTransportMock(http.StatusOK, IsNotMasterResult)
