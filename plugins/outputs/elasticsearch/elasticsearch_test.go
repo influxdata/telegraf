@@ -18,7 +18,7 @@ func TestConnectAndWrite(t *testing.T) {
 
 	e := &Elasticsearch{
 		ServerHost:       serverhost,
-		IndexName:        "littletest",
+		IndexName:        "littletest-%Y%m%d",
 		NumberOfShards:   1,
 		NumberOfReplicas: 0,
 	}

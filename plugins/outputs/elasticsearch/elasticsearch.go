@@ -77,9 +77,9 @@ func (a *Elasticsearch) Connect() error {
 		year := strconv.Itoa(time.Now().Year())
 		a.IndexName = strings.Replace(a.IndexName, "%Y", year, -1)
 		a.IndexName = strings.Replace(a.IndexName, "%y", year[len(year)-2:], -1)
-		a.IndexName = strings.Replace(a.IndexName, "%m", strconv.Itoa(int(time.Now().Month())), -1)
-		a.IndexName = strings.Replace(a.IndexName, "%d", strconv.Itoa(time.Now().Day()), -1)
-		a.IndexName = strings.Replace(a.IndexName, "%H", strconv.Itoa(time.Now().Hour()), -1)
+		a.IndexName = strings.Replace(a.IndexName, "%m", fmt.Sprintf("%0.2d", time.Now().Month()), -1)
+		a.IndexName = strings.Replace(a.IndexName, "%d", fmt.Sprintf("%0.2d", time.Now().Day()), -1)
+		a.IndexName = strings.Replace(a.IndexName, "%H", fmt.Sprintf("%0.2d", time.Now().Hour()), -1)
 	}
 
 	exists, errExists := a.Client.IndexExists(a.IndexName).Do()
