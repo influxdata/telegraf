@@ -2,8 +2,8 @@
 
 The [elasticsearch](https://www.elastic.co/) plugin queries endpoints to obtain
 [node](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
-and optionally [cluster](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
-and [cluster](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html) stats.
+and optionally [cluster-health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
+or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html) metrics.
 
 ### Configuration:
 
@@ -21,8 +21,9 @@ and [cluster](https://www.elastic.co/guide/en/elasticsearch/reference/current/cl
 
   ## set cluster_health to true when you want to also obtain cluster health stats
   #   cluster_health = false
-  #
-  ## set cluster_stats to true when you want to also obtain cluster level stats
+
+  ## Set cluster_stats to true when you want to obtain cluster stats from the Master node.
+  ## Currently only implemented when local=true
   #   cluster_stats = false
 
   ## Optional SSL Config

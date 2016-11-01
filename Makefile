@@ -19,8 +19,8 @@ build:
 		"-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" ./...
 
 build-windows:
-	GOOS=windows GOARCH=386 go build -o telegraf.exe -ldflags \
-		"-X main.version=$(VERSION)" \
+	GOOS=windows GOARCH=amd64 go build -o telegraf.exe -ldflags \
+		"-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" \
 		./cmd/telegraf/telegraf.go
 
 build-for-docker:

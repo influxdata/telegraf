@@ -55,15 +55,15 @@ func checkNodeStatsResult (t *testing.T, acc testutil.Accumulator) {
 	}
 
 
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_indices", nodestatsIndicesExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_os", nodestatsOsExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_process", nodestatsProcessExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_jvm", nodestatsJvmExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_thread_pool", nodestatsThreadPoolExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_fs", nodestatsFsExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_transport", nodestatsTransportExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_http", nodestatsHttpExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_nodestats_breakers", nodestatsBreakersExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
 }
 
 func TestGather(t *testing.T) {
@@ -109,11 +109,11 @@ func TestGatherClusterHealth(t *testing.T) {
 		clusterHealthExpected,
 		map[string]string{"name": "elasticsearch_telegraf"})
 
-	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health_indices",
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
 		v1IndexExpected,
 		map[string]string{"index": "v1"})
 
-	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health_indices",
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
 		v2IndexExpected,
 		map[string]string{"index": "v2"})
 }
@@ -183,7 +183,7 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// insure flag is clear to prevent doing Cluster Stats
+	// ensure flag is clear so Cluster Stats would not be done
 	checkIsMaster (es, false, t)
 	checkNodeStatsResult (t, acc)
 

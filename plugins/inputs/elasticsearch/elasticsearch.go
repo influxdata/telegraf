@@ -90,8 +90,8 @@ const sampleConfig = `
   ## set cluster_health to true when you want to also obtain cluster health stats
   cluster_health = false
 
-  ## set cluster_stats to true when you want to also obtain cluster stats from
-  ## Master nodes. Currently only implemented when local=true
+  ## Set cluster_stats to true when you want to also obtain cluster stats from the Master node.
+  ## Currently only implemented when local=true
   cluster_stats = false
 
   ## Optional SSL Config
@@ -297,7 +297,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 			"unassigned_shards":     health.UnassignedShards,
 		}
 		acc.AddFields(
-			"elasticsearch_cluster_health_indices",
+			"elasticsearch_indices",
 			indexFields,
 			map[string]string{"index": name},
 			measurementTime,
