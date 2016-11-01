@@ -2,7 +2,8 @@
 
 The [elasticsearch](https://www.elastic.co/) plugin queries endpoints to obtain
 [node](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
-and optionally [cluster](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html) stats.
+and optionally [cluster](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
+and [cluster](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html) stats.
 
 ### Configuration:
 
@@ -18,8 +19,11 @@ and optionally [cluster](https://www.elastic.co/guide/en/elasticsearch/reference
   ## within the cluster
   local = true
 
-  ## set cluster_health to true when you want to also obtain cluster level stats
-  cluster_health = false
+  ## set cluster_health to true when you want to also obtain cluster health stats
+  #   cluster_health = false
+  #
+  ## set cluster_stats to true when you want to also obtain cluster level stats
+  #   cluster_stats = false
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"

@@ -12,13 +12,17 @@ import (
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	"io/ioutil"
+	"strings"
 )
 
 const statsPath = "/_nodes/stats"
 const statsPathLocal = "/_nodes/_local/stats"
-const healthPath = "/_cluster/health"
+const clusterHealthPath = "/_cluster/health"
+const clusterStatsPath = "/_cluster/stats"
+const catMasterPath = "/_cat/master"
 
-type node struct {
+type nodeStat struct {
 	Host       string            `json:"host"`
 	Name       string            `json:"name"`
 	Attributes map[string]string `json:"attributes"`
@@ -58,6 +62,20 @@ type indexHealth struct {
 	UnassignedShards    int    `json:"unassigned_shards"`
 }
 
+type clusterStats struct {
+	NodeName    string            `json:"node_name"`
+	ClusterName string            `json:"cluster_name"`
+	Status      string            `json:"status"`
+	Indices     interface{}       `json:"indices"`
+	Nodes       interface{}       `json:"nodes"`
+}
+
+type catMaster struct {
+	NodeID         string     `json:"id"`
+	NodeIP         string     `json:"ip"`
+	NodeName       string     `json:"node"`
+}
+
 const sampleConfig = `
   ## specify a list of one or more Elasticsearch servers
   servers = ["http://localhost:9200"]
@@ -69,8 +87,12 @@ const sampleConfig = `
   ## within the cluster
   local = true
 
-  ## set cluster_health to true when you want to also obtain cluster level stats
+  ## set cluster_health to true when you want to also obtain cluster health stats
   cluster_health = false
+
+  ## set cluster_stats to true when you want to also obtain cluster stats from
+  ## Master nodes. Currently only implemented when local=true
+  cluster_stats = false
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -87,11 +109,14 @@ type Elasticsearch struct {
 	Servers            []string
 	HttpTimeout        internal.Duration
 	ClusterHealth      bool
+	ClusterStats       bool
 	SSLCA              string `toml:"ssl_ca"`   // Path to CA file
 	SSLCert            string `toml:"ssl_cert"` // Path to host cert file
 	SSLKey             string `toml:"ssl_key"`  // Path to cert key file
 	InsecureSkipVerify bool   // Use SSL but skip chain & host verification
 	client             *http.Client
+	catMasterResponse  string
+	isMaster           bool
 }
 
 // NewElasticsearch return a new instance of Elasticsearch
@@ -136,12 +161,27 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			} else {
 				url = s + statsPath
 			}
+			e.isMaster = false
+
+			if e.ClusterStats {
+				// get cat/master information here so NodeStats can determine
+				// whether this entrance is on the Master
+				e.setCatMaster(s+ catMasterPath)
+			}
+
+			// Always gather node states
 			if err := e.gatherNodeStats(url, acc); err != nil {
 				errChan.C <- err
 				return
 			}
+
 			if e.ClusterHealth {
-				e.gatherClusterStats(fmt.Sprintf("%s/_cluster/health?level=indices", s), acc)
+				url = s + clusterHealthPath + "?level=indices"
+				e.gatherClusterHealth(url, acc)
+			}
+
+			if e.ClusterStats && e.isMaster {
+				e.gatherClusterStats(s + clusterStatsPath, acc)
 			}
 		}(serv, acc)
 	}
@@ -169,18 +209,26 @@ func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
 
 func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) error {
 	nodeStats := &struct {
-		ClusterName string           `json:"cluster_name"`
-		Nodes       map[string]*node `json:"nodes"`
+		ClusterName string               `json:"cluster_name"`
+		Nodes       map[string]*nodeStat `json:"nodes"`
 	}{}
-	if err := e.gatherData(url, nodeStats); err != nil {
+	if err := e.gatherJsonData(url, nodeStats); err != nil {
 		return err
 	}
+
 	for id, n := range nodeStats.Nodes {
 		tags := map[string]string{
 			"node_id":      id,
 			"node_host":    n.Host,
 			"node_name":    n.Name,
 			"cluster_name": nodeStats.ClusterName,
+		}
+
+		if (e.ClusterStats && e.Local) {
+			// check for master
+			tokens := strings.Split(e.catMasterResponse, " ")
+			masterNode := tokens[0] // get the node ID and compare it
+			e.isMaster = (id == masterNode)
 		}
 
 		for k, v := range n.Attributes {
@@ -202,6 +250,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 		now := time.Now()
 		for p, s := range stats {
 			f := jsonparser.JSONFlattener{}
+			// parse Json, ignoring strings and bools
 			err := f.FlattenJSON("", s)
 			if err != nil {
 				return err
@@ -212,31 +261,31 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 	return nil
 }
 
-func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator) error {
-	clusterStats := &clusterHealth{}
-	if err := e.gatherData(url, clusterStats); err != nil {
+func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator) error {
+	healthStats := &clusterHealth{}
+	if err := e.gatherJsonData(url, healthStats); err != nil {
 		return err
 	}
 	measurementTime := time.Now()
 	clusterFields := map[string]interface{}{
-		"status":                clusterStats.Status,
-		"timed_out":             clusterStats.TimedOut,
-		"number_of_nodes":       clusterStats.NumberOfNodes,
-		"number_of_data_nodes":  clusterStats.NumberOfDataNodes,
-		"active_primary_shards": clusterStats.ActivePrimaryShards,
-		"active_shards":         clusterStats.ActiveShards,
-		"relocating_shards":     clusterStats.RelocatingShards,
-		"initializing_shards":   clusterStats.InitializingShards,
-		"unassigned_shards":     clusterStats.UnassignedShards,
+		"status":                healthStats.Status,
+		"timed_out":             healthStats.TimedOut,
+		"number_of_nodes":       healthStats.NumberOfNodes,
+		"number_of_data_nodes":  healthStats.NumberOfDataNodes,
+		"active_primary_shards": healthStats.ActivePrimaryShards,
+		"active_shards":         healthStats.ActiveShards,
+		"relocating_shards":     healthStats.RelocatingShards,
+		"initializing_shards":   healthStats.InitializingShards,
+		"unassigned_shards":     healthStats.UnassignedShards,
 	}
 	acc.AddFields(
 		"elasticsearch_cluster_health",
 		clusterFields,
-		map[string]string{"name": clusterStats.ClusterName},
+		map[string]string{"name": healthStats.ClusterName},
 		measurementTime,
 	)
 
-	for name, health := range clusterStats.Indices {
+	for name, health := range healthStats.Indices {
 		indexFields := map[string]interface{}{
 			"status":                health.Status,
 			"number_of_shards":      health.NumberOfShards,
@@ -248,7 +297,7 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 			"unassigned_shards":     health.UnassignedShards,
 		}
 		acc.AddFields(
-			"elasticsearch_indices",
+			"elasticsearch_cluster_health_indices",
 			indexFields,
 			map[string]string{"index": name},
 			measurementTime,
@@ -257,7 +306,66 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 	return nil
 }
 
-func (e *Elasticsearch) gatherData(url string, v interface{}) error {
+func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator) error {
+	clusterStats := &clusterStats{}
+	if err := e.gatherJsonData(url, clusterStats); err != nil {
+		return err
+	}
+	now := time.Now()
+	tags := map[string]string{
+		"node_name":     clusterStats.NodeName,
+		"cluster_name":  clusterStats.ClusterName,
+		"status":        clusterStats.Status,
+	}
+
+	stats := map[string]interface{}{
+		"nodes":     clusterStats.Nodes,
+		"indices":   clusterStats.Indices,
+	}
+
+	for p, s := range stats {
+		f := jsonparser.JSONFlattener{}
+		// parse json, including bools and strings
+		err := f.FullFlattenJSON("", s, true, true)
+		if err != nil {
+			return err
+		}
+		acc.AddFields("elasticsearch_clusterstats_"+p, f.Fields, tags, now)
+	}
+
+	return nil
+}
+
+func (e *Elasticsearch) setCatMaster(url string) error {
+	response, err := e.gatherStringData(url)
+
+	if  err != nil {
+		return err
+	}
+
+	e.catMasterResponse = response
+	return nil
+}
+
+
+func (e *Elasticsearch) gatherStringData(url string) (string, error) {
+	r, err := e.client.Get(url)
+	if err != nil {
+		return "elasticsearch: API responded with error", err
+	}
+	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		// NOTE: we are not going to read/discard r.Body under the assumption we'd prefer
+		// to let the underlying transport close the connection and re-establish a new one for
+		// future calls.
+		return "elasticsearch: API responded with error", fmt.Errorf("status-code %d, expected %d",
+			r.StatusCode, http.StatusOK)
+	}
+	htmlData, err := ioutil.ReadAll(r.Body)
+	return string(htmlData), err
+}
+
+func (e *Elasticsearch) gatherJsonData(url string, v interface{}) error {
 	r, err := e.client.Get(url)
 	if err != nil {
 		return err
@@ -270,9 +378,11 @@ func (e *Elasticsearch) gatherData(url string, v interface{}) error {
 		return fmt.Errorf("elasticsearch: API responded with status-code %d, expected %d",
 			r.StatusCode, http.StatusOK)
 	}
+
 	if err = json.NewDecoder(r.Body).Decode(v); err != nil {
 		return err
 	}
+
 	return nil
 }
 
