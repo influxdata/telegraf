@@ -71,9 +71,9 @@ type clusterStats struct {
 }
 
 type catMaster struct {
-	NodeID         string     `json:"id"`
-	NodeIP         string     `json:"ip"`
-	NodeName       string     `json:"node"`
+	NodeID   string     `json:"id"`
+	NodeIP   string     `json:"ip"`
+	NodeName string     `json:"node"`
 }
 
 const sampleConfig = `
@@ -113,7 +113,7 @@ type Elasticsearch struct {
 	SSLCA              string `toml:"ssl_ca"`   // Path to CA file
 	SSLCert            string `toml:"ssl_cert"` // Path to host cert file
 	SSLKey             string `toml:"ssl_key"`  // Path to cert key file
-	InsecureSkipVerify bool   // Use SSL but skip chain & host verification
+	InsecureSkipVerify bool                     // Use SSL but skip chain & host verification
 	client             *http.Client
 	catMasterResponse  string
 	isMaster           bool
@@ -166,7 +166,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if e.ClusterStats {
 				// get cat/master information here so NodeStats can determine
 				// whether this entrance is on the Master
-				e.setCatMaster(s+ catMasterPath)
+				e.setCatMaster(s + catMasterPath)
 			}
 
 			// Always gather node states
@@ -232,7 +232,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 		}
 
 		for k, v := range n.Attributes {
-			tags["node_attribute_"+k] = v
+			tags["node_attribute_" + k] = v
 		}
 
 		stats := map[string]interface{}{
@@ -255,7 +255,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			if err != nil {
 				return err
 			}
-			acc.AddFields("elasticsearch_"+p, f.Fields, tags, now)
+			acc.AddFields("elasticsearch_" + p, f.Fields, tags, now)
 		}
 	}
 	return nil
@@ -330,7 +330,7 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 		if err != nil {
 			return err
 		}
-		acc.AddFields("elasticsearch_clusterstats_"+p, f.Fields, tags, now)
+		acc.AddFields("elasticsearch_clusterstats_" + p, f.Fields, tags, now)
 	}
 
 	return nil
@@ -339,14 +339,13 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 func (e *Elasticsearch) setCatMaster(url string) error {
 	response, err := e.gatherStringData(url)
 
-	if  err != nil {
+	if err != nil {
 		return err
 	}
 
 	e.catMasterResponse = response
 	return nil
 }
-
 
 func (e *Elasticsearch) gatherStringData(url string) (string, error) {
 	r, err := e.client.Get(url)

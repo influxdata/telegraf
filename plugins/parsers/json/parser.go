@@ -81,8 +81,8 @@ type JSONFlattener struct {
 
 // FlattenJSON flattens nested maps/interfaces into a fields map (ignoring bools and string)
 func (f *JSONFlattener) FlattenJSON(
-	fieldname string,
-	v interface{}) error {
+fieldname string,
+v interface{}) error {
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
@@ -91,10 +91,10 @@ func (f *JSONFlattener) FlattenJSON(
 
 // FullFlattenJSON flattens nested maps/interfaces into a fields map (including bools and string)
 func (f *JSONFlattener) FullFlattenJSON(
-	fieldname string,
-	v interface{},
-	convertString bool,
-	convertBool bool,
+fieldname string,
+v interface{},
+convertString bool,
+convertBool bool,
 ) error {
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
@@ -103,7 +103,7 @@ func (f *JSONFlattener) FullFlattenJSON(
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {
-			err := f.FullFlattenJSON(fieldname+"_"+k+"_", v, convertString, convertBool)
+			err := f.FullFlattenJSON(fieldname + "_" + k + "_", v, convertString, convertBool)
 			if err != nil {
 				return err
 			}
@@ -111,7 +111,7 @@ func (f *JSONFlattener) FullFlattenJSON(
 	case []interface{}:
 		for i, v := range t {
 			k := strconv.Itoa(i)
-			err := f.FullFlattenJSON(fieldname+"_"+k+"_", v, convertString, convertBool)
+			err := f.FullFlattenJSON(fieldname + "_" + k + "_", v, convertString, convertBool)
 			if err != nil {
 				return nil
 			}

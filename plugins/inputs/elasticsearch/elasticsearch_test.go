@@ -45,7 +45,7 @@ func checkIsMaster(es *Elasticsearch, expected bool, t *testing.T) {
 		assert.Fail(t, msg)
 	}
 }
-func checkNodeStatsResult (t *testing.T, acc testutil.Accumulator) {
+func checkNodeStatsResult(t *testing.T, acc testutil.Accumulator) {
 	tags := map[string]string{
 		"cluster_name":          "es-testcluster",
 		"node_attribute_master": "true",
@@ -53,7 +53,6 @@ func checkNodeStatsResult (t *testing.T, acc testutil.Accumulator) {
 		"node_name":             "test.host.com",
 		"node_host":             "test",
 	}
-
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
 	acc.AssertContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
@@ -76,8 +75,8 @@ func TestGather(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkIsMaster (es, false, t)
-	checkNodeStatsResult (t, acc)
+	checkIsMaster(es, false, t)
+	checkNodeStatsResult(t, acc)
 }
 
 func TestGatherNodeStats(t *testing.T) {
@@ -90,8 +89,8 @@ func TestGatherNodeStats(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkIsMaster (es, false, t)
-	checkNodeStatsResult (t, acc)
+	checkIsMaster(es, false, t)
+	checkNodeStatsResult(t, acc)
 }
 
 func TestGatherClusterHealth(t *testing.T) {
@@ -103,7 +102,7 @@ func TestGatherClusterHealth(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, es.gatherClusterHealth("junk", &acc))
 
-	checkIsMaster (es, false, t)
+	checkIsMaster(es, false, t)
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health",
 		clusterHealthExpected,
@@ -142,8 +141,8 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkIsMaster (es, true, t)
-	checkNodeStatsResult (t, acc)
+	checkIsMaster(es, true, t)
+	checkNodeStatsResult(t, acc)
 
 	// now test the clusterstats method
 	es.client.Transport = newTransportMock(http.StatusOK, clusterStatsResponse)
@@ -184,8 +183,8 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	}
 
 	// ensure flag is clear so Cluster Stats would not be done
-	checkIsMaster (es, false, t)
-	checkNodeStatsResult (t, acc)
+	checkIsMaster(es, false, t)
+	checkNodeStatsResult(t, acc)
 
 }
 
