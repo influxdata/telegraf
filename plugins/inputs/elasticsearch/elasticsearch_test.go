@@ -45,7 +45,7 @@ func checkIsMaster(es *Elasticsearch, expected bool, t *testing.T) {
 		assert.Fail(t, msg)
 	}
 }
-func checkNodeStatsResult(t *testing.T, acc testutil.Accumulator) {
+func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
 	tags := map[string]string{
 		"cluster_name":          "es-testcluster",
 		"node_attribute_master": "true",
@@ -76,7 +76,7 @@ func TestGather(t *testing.T) {
 	}
 
 	checkIsMaster(es, false, t)
-	checkNodeStatsResult(t, acc)
+	checkNodeStatsResult(t, &acc)
 }
 
 func TestGatherNodeStats(t *testing.T) {
@@ -90,7 +90,7 @@ func TestGatherNodeStats(t *testing.T) {
 	}
 
 	checkIsMaster(es, false, t)
-	checkNodeStatsResult(t, acc)
+	checkNodeStatsResult(t, &acc)
 }
 
 func TestGatherClusterHealth(t *testing.T) {
@@ -141,7 +141,7 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	}
 
 	checkIsMaster(es, true, t)
-	checkNodeStatsResult(t, acc)
+	checkNodeStatsResult(t, &acc)
 
 	// now test the clusterstats method
 	es.client.Transport = newTransportMock(http.StatusOK, clusterStatsResponse)
@@ -182,7 +182,7 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 
 	// ensure flag is clear so Cluster Stats would not be done
 	checkIsMaster(es, false, t)
-	checkNodeStatsResult(t, acc)
+	checkNodeStatsResult(t, &acc)
 
 }
 
