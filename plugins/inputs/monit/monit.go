@@ -1,9 +1,13 @@
 package monit
 
 import (
+	"encoding/xml"
 	"fmt"
+	"net/http"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"golang.org/x/net/html/charset"
 )
 
 var pendingActions = []string{"ignore", "alert", "restart", "stop", "exec", "unmonitor", "start", "monitor"}
@@ -68,7 +72,7 @@ type System struct {
 	} `xml:"cpu"`
 	Memory struct {
 		Percent  float64 `xml:"percent"`
-		Kilobyte float64 `xml:"kilobyte"`
+		Kilobyte int64   `xml:"kilobyte"`
 	} `xml:"memory"`
 	Swap struct {
 		Percent  float64 `xml:"percent"`
@@ -77,7 +81,9 @@ type System struct {
 }
 
 type Monit struct {
-	Address string
+	Address           string
+	BasicAuthUsername string
+	BasicAuthPassword string
 }
 
 func (m *Monit) Description() string {
@@ -86,7 +92,7 @@ func (m *Monit) Description() string {
 
 var sampleConfig = `
   ## Monit
-  url = "http://127.0.0.1:2812"
+  address = "http://127.0.0.1:2812"
   basic_auth_username = ""
   basic_auth_password = ""
 `
@@ -96,6 +102,62 @@ func (m *Monit) SampleConfig() string {
 }
 
 func (m *Monit) Gather(acc telegraf.Accumulator) error {
+	client := &http.Client{}
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/_status?format=xml", m.Address), nil)
+	if err != nil {
+		return err
+	}
+	if len(m.BasicAuthUsername) > 0 || len(m.BasicAuthPassword) > 0 {
+		req.SetBasicAuth(m.BasicAuthUsername, m.BasicAuthPassword)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var status Status
+	decoder := xml.NewDecoder(resp.Body)
+	decoder.CharsetReader = charset.NewReaderLabel
+	if err := decoder.Decode(&status); err != nil {
+		return fmt.Errorf("Cannot parse input with error: %v\n", err)
+	}
+
+	// Prepare tags
+	tags := map[string]string{"address": m.Address, "version": status.Server.Version}
+
+	for _, service := range status.Services {
+		// Prepare fields
+		fields := make(map[string]interface{})
+		fields["status"] = serviceStatus(service)
+		fields["monitoring_status"] = monitoringStatus(service)
+		fields["service_uptime"] = service.Uptime
+
+		if service.Type == "3" {
+			fields["cpu_percent"] = service.CPU.Percent
+			fields["cpu_percent_total"] = service.CPU.PercentTotal
+			fields["mem_kb"] = service.Memory.Kilobyte
+			fields["mem_kb_total"] = service.Memory.KilobyteTotal
+			fields["mem_percent"] = service.Memory.Percent
+			fields["mem_percent_total"] = service.Memory.PercentTotal
+		} else if service.Type == "5" {
+			fields["cpu_system"] = service.System.CPU.System
+			fields["cpu_user"] = service.System.CPU.User
+			fields["cpu_wait"] = service.System.CPU.Wait
+			fields["cpu_load_avg_1m"] = service.System.Load.Avg01
+			fields["cpu_load_avg_5m"] = service.System.Load.Avg05
+			fields["cpu_load_avg_15m"] = service.System.Load.Avg15
+			fields["mem_kb"] = service.System.Memory.Kilobyte
+			fields["mem_percent"] = service.System.Memory.Percent
+			fields["swap_kb"] = service.System.Swap.Kilobyte
+			fields["swap_percent"] = service.System.Swap.Percent
+		}
+
+		tags["service"] = service.Name
+		acc.AddFields("monit", fields, tags)
+	}
 	return nil
 }
 
