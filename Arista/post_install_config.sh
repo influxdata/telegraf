@@ -37,6 +37,7 @@ if [[ "$SYSTEMD_NETWORKD_INUSE" != "$TRUE" ]]; then
   cat >> /etc/dhcp/dhclient-up-hooks <<EOF
    echo "Starting telegraf from dhclient hook"; systemctl start telegraf
 EOF
+  chmod a+x /etc/dhcp/dhclient-up-hooks
   fi
 else
   cp /usr/lib/systemd/system/telegraf-networkd.service /usr/lib/systemd/system/telegraf.service
