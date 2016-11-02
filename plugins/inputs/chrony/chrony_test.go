@@ -27,7 +27,7 @@ func TestGather(t *testing.T) {
 
 	tags := map[string]string{
 		"reference_id": "192.168.1.22",
-		"leap_status":  "normal",
+		"leap_status":  "not synchronized",
 		"stratum":      "3",
 	}
 	fields := map[string]interface{}{
@@ -85,7 +85,7 @@ Skew            : 0.006 ppm
 Root delay      : 0.001655 seconds
 Root dispersion : 0.003307 seconds
 Update interval : 507.2 seconds
-Leap status     : Normal
+Leap status     : Not synchronized
 `
 
 	args := os.Args
