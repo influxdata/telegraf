@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> wavefrontHQ/master
 package wavefront
 
 import (
@@ -28,11 +33,19 @@ type Wavefront struct {
 
 // catch many of the invalid chars that could appear in a metric or tag name
 var sanitizedChars = strings.NewReplacer(
+<<<<<<< HEAD
 		"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
 		"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
 		"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
 		">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
 	)
+=======
+	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
+	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
+	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
+	">", "-", ",", "-", "?", "-", "\\", "-", "|", "-", " ", "-",
+)
+>>>>>>> wavefrontHQ/master
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
 var sanitizedRegex, _ = regexp.Compile("[^a-zA-Z\\d_.-]")
 
@@ -238,3 +251,7 @@ func init() {
 		}
 	})
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> wavefrontHQ/master

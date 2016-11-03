@@ -62,14 +62,23 @@ func (n *NATS) SetSerializer(serializer serializers.Serializer) {
 
 func (n *NATS) Connect() error {
 	var err error
-	// set NATS connection options
+
+	// set default NATS connection options
 	opts := nats_client.DefaultOptions
+
+	// override max reconnection tries
+	opts.MaxReconnect = -1
+
+	// override servers, if any were specified
 	opts.Servers = n.Servers
+
+	// override authentication, if any was specified
 	if n.Username != "" {
 		opts.User = n.Username
 		opts.Password = n.Password
 	}
 
+	// override TLS, if it was specified
 	tlsConfig, err := internal.GetTLSConfig(
 		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
 	if err != nil {

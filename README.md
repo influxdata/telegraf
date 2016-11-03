@@ -20,12 +20,12 @@ new plugins.
 ### Linux deb and rpm Packages:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0_amd64.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0.x86_64.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.1_amd64.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1.x86_64.rpm
 
 Latest (arm):
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.0_armhf.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0.armhf.rpm
+* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.1_armhf.deb
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1.armhf.rpm
 
 ##### Package Instructions:
 
@@ -46,14 +46,14 @@ to use this repo to install & update telegraf.
 ### Linux tarballs:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_linux_amd64.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_linux_i386.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_linux_armhf.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_i386.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_armhf.tar.gz
 
 ### FreeBSD tarball:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_freebsd_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
@@ -69,7 +69,7 @@ brew install telegraf
 ### Windows Binaries (EXPERIMENTAL)
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.0_windows_amd64.zip
+* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_windows_amd64.zip
 
 ### From Source:
 
@@ -85,44 +85,42 @@ if you don't have it already. You also must build with golang version 1.5+.
 
 ## How to use it:
 
-```console
-$ telegraf -help
-Telegraf, The plugin-driven server agent for collecting and reporting metrics.
+See usage with:
 
-Usage:
-
-  telegraf <flags>
-
-The flags are:
-
-  -config <file>     configuration file to load
-  -test              gather metrics once, print them to stdout, and exit
-  -sample-config     print out full sample configuration to stdout
-  -config-directory  directory containing additional *.conf files
-  -input-filter      filter the input plugins to enable, separator is :
-  -output-filter     filter the output plugins to enable, separator is :
-  -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
-  -debug             print metrics as they're generated to stdout
-  -quiet             run in quiet mode
-  -version           print the version to stdout
-
-Examples:
-
-  # generate a telegraf config file:
-  telegraf -sample-config > telegraf.conf
-
-  # generate config with only cpu input & influxdb output plugins defined
-  telegraf -sample-config -input-filter cpu -output-filter influxdb
-
-  # run a single telegraf collection, outputing metrics to stdout
-  telegraf -config telegraf.conf -test
-
-  # run telegraf with all plugins defined in config file
-  telegraf -config telegraf.conf
-
-  # run telegraf, enabling the cpu & memory input, and influxdb output plugins
-  telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
 ```
+telegraf --help
+```
+
+### Generate a telegraf config file:
+
+```
+telegraf config > telegraf.conf
+```
+
+### Generate config with only cpu input & influxdb output plugins defined
+
+```
+telegraf --input-filter cpu --output-filter influxdb config
+```
+
+### Run a single telegraf collection, outputing metrics to stdout
+
+```
+telegraf --config telegraf.conf -test
+```
+
+### Run telegraf with all plugins defined in config file
+
+```
+telegraf --config telegraf.conf
+```
+
+### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
+
+```
+telegraf --config telegraf.conf -input-filter cpu:mem -output-filter influxdb
+```
+
 
 ## Configuration
 

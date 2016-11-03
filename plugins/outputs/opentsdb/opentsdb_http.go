@@ -16,7 +16,7 @@ import (
 type HttpMetric struct {
 	Metric    string            `json:"metric"`
 	Timestamp int64             `json:"timestamp"`
-	Value     string            `json:"value"`
+	Value     interface{}       `json:"value"`
 	Tags      map[string]string `json:"tags"`
 }
 
@@ -164,9 +164,11 @@ func (o *openTSDBHttp) flush() error {
 
 	if resp.StatusCode/100 != 2 {
 		if resp.StatusCode/100 == 4 {
-			log.Printf("WARNING: Received %d status code. Dropping metrics to avoid overflowing buffer.", resp.StatusCode)
+			log.Printf("E! Received %d status code. Dropping metrics to avoid overflowing buffer.",
+				resp.StatusCode)
 		} else {
-			return fmt.Errorf("Error when sending metrics.Received status %d", resp.StatusCode)
+			return fmt.Errorf("Error when sending metrics. Received status %d",
+				resp.StatusCode)
 		}
 	}
 

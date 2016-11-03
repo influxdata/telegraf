@@ -2,9 +2,8 @@ package telegraf
 
 import "time"
 
-// Accumulator is an interface for "accumulating" metrics from input plugin(s).
-// The metrics are sent down a channel shared between all input plugins and then
-// flushed on the configured flush_interval.
+// Accumulator is an interface for "accumulating" metrics from plugin(s).
+// The metrics are sent down a channel shared between all plugins.
 type Accumulator interface {
 	// AddFields adds a metric to the accumulator with the given measurement
 	// name, fields, and tags (and timestamp). If a timestamp is not provided,
@@ -29,12 +28,7 @@ type Accumulator interface {
 		tags map[string]string,
 		t ...time.Time)
 
-	AddError(err error)
-
-	Debug() bool
-	SetDebug(enabled bool)
-
 	SetPrecision(precision, interval time.Duration)
 
-	DisablePrecision()
+	AddError(err error)
 }

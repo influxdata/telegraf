@@ -34,7 +34,11 @@ package:
 
 package-wavefront:
 	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> wavefrontHQ/master
 # Get dependencies and use gdm to checkout changesets
 prepare:
 	go get github.com/sparrc/gdm

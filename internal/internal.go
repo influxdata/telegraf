@@ -35,10 +35,19 @@ type Duration struct {
 // UnmarshalTOML parses the duration from the TOML config file
 func (d *Duration) UnmarshalTOML(b []byte) error {
 	var err error
-	// Parse string duration, ie, "1s"
-	d.Duration, err = time.ParseDuration(string(b[1 : len(b)-1]))
+
+	// see if we can straight convert it
+	d.Duration, err = time.ParseDuration(string(b))
 	if err == nil {
 		return nil
+	}
+
+	// Parse string duration, ie, "1s"
+	if uq, err := strconv.Unquote(string(b)); err == nil && len(uq) > 0 {
+		d.Duration, err = time.ParseDuration(uq)
+		if err == nil {
+			return nil
+		}
 	}
 
 	// First try parsing as integer seconds
@@ -198,7 +207,7 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 		return err
 	case <-timer.C:
 		if err := c.Process.Kill(); err != nil {
-			log.Printf("FATAL error killing process: %s", err)
+			log.Printf("E! FATAL error killing process: %s", err)
 			return err
 		}
 		// wait for the command to return after killing it

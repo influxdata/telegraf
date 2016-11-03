@@ -747,6 +747,48 @@ func TestApplyTemplateGreedyField(t *testing.T) {
 	}
 }
 
+func TestApplyTemplateOverSpecific(t *testing.T) {
+	p, err := NewGraphiteParser(
+		".",
+		[]string{
+			"measurement.host.metric.metric.metric",
+		},
+		nil,
+	)
+	assert.NoError(t, err)
+
+	measurement, tags, _, err := p.ApplyTemplate("net.server001.a.b 2")
+	assert.Equal(t, "net", measurement)
+	assert.Equal(t,
+		map[string]string{"host": "server001", "metric": "a.b"},
+		tags)
+}
+
+func TestApplyTemplateMostSpecificTemplate(t *testing.T) {
+	p, err := NewGraphiteParser(
+		".",
+		[]string{
+			"measurement.host.metric",
+			"measurement.host.metric.metric.metric",
+			"measurement.host.metric.metric",
+		},
+		nil,
+	)
+	assert.NoError(t, err)
+
+	measurement, tags, _, err := p.ApplyTemplate("net.server001.a.b.c 2")
+	assert.Equal(t, "net", measurement)
+	assert.Equal(t,
+		map[string]string{"host": "server001", "metric": "a.b.c"},
+		tags)
+
+	measurement, tags, _, err = p.ApplyTemplate("net.server001.a.b 2")
+	assert.Equal(t, "net", measurement)
+	assert.Equal(t,
+		map[string]string{"host": "server001", "metric": "a.b"},
+		tags)
+}
+
 // Test Helpers
 func errstr(err error) string {
 	if err != nil {

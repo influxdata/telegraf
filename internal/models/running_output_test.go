@@ -132,7 +132,6 @@ func TestRunningOutput_PassFilter(t *testing.T) {
 func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-
 			TagInclude: []string{"nothing*"},
 		},
 	}
@@ -154,7 +153,6 @@ func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 func TestRunningOutput_TagExcludeMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-
 			TagExclude: []string{"tag*"},
 		},
 	}
@@ -176,7 +174,6 @@ func TestRunningOutput_TagExcludeMatch(t *testing.T) {
 func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-
 			TagExclude: []string{"nothing*"},
 		},
 	}
@@ -198,7 +195,6 @@ func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
 func TestRunningOutput_TagIncludeMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-
 			TagInclude: []string{"tag*"},
 		},
 	}

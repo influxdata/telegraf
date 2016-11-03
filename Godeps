@@ -19,7 +19,7 @@ github.com/eclipse/paho.mqtt.golang 0f7a459f04f13a41b7ed752d47944528d4bf9a86
 github.com/go-sql-driver/mysql 1fca743146605a172a266e1654e01e5cd5669bee
 github.com/gobwas/glob 49571a1557cd20e6a2410adc6421f85b66c730b5
 github.com/golang/protobuf 552c7b9542c194800fd493123b3798ef0a832032
-github.com/golang/snappy 427fb6fc07997f43afa32f35e850833760e489a7
+github.com/golang/snappy d9eb7a3d35ec988b8585d4a0068e462c27d28380
 github.com/gonuts/go-shellquote e842a11b24c6abfb3dd27af69a17f482e4b483c2
 github.com/gorilla/context 1ea25387ff6f684839d82767c1733ff4d4d15d0a
 github.com/gorilla/mux c9e326e2bdec29039a3761c07bece13133863e1e
@@ -27,8 +27,9 @@ github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 5aa90455ce78d4d41578bafc86305e6e6b28d7d2
 github.com/hpcloud/tail b2940955ab8b26e19d43a43c4da0475dd81bdb56
 github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
-github.com/influxdata/influxdb e094138084855d444195b252314dfee9eae34cab
+github.com/influxdata/influxdb fc57c0f7c635df3873f3d64f0ed2100ddc94d5ae
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
+github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
 github.com/kardianos/osext 29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc
 github.com/kardianos/service 5e335590050d6d00f3aa270217d288dda1c94d0a
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
@@ -47,7 +48,7 @@ github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
 github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
 github.com/shirou/gopsutil 4d0c402af66c78735c5ccf820dc2ca7de5e4ff08
-github.com/soniah/gosnmp eb32571c2410868d85849ad67d1e51d01273eb84
+github.com/soniah/gosnmp 3fe3beb30fa9700988893c56a63b1df8e1b68c26
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
 github.com/vjeantet/grok 83bfdfdfd1a8146795b28e547a8e3c8b28a466c2
@@ -55,7 +56,7 @@ github.com/wvanbergen/kafka 46f9a1cf3f670edec492029fadded9c2d9e18866
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 github.com/yuin/gopher-lua bf3808abd44b1e55143a2d7f08571aaa80db1808
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
-golang.org/x/crypto 5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3
+golang.org/x/crypto c197bcf24cde29d3f73c7b4ac6fd41f4384e8af6
 golang.org/x/net 6acef71eb69611914f7a30939ea9f6e194c78172
 golang.org/x/text a71fd10341b064c10f4a81ceac72bcf70f26ea34
 gopkg.in/dancannon/gorethink.v1 7d1af5be49cb5ecc7b177bf387d232050299d6ef

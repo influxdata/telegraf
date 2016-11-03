@@ -52,13 +52,13 @@ const sampleConfig = `
   ## urls to ping
   urls = ["www.google.com"] # required
   ## number of pings to send per collection (ping -c <COUNT>)
-  count = 1 # required
+  # count = 1
   ## interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
-  ping_interval = 0.0
+  # ping_interval = 1.0
   ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
-  timeout = 1.0
+  # timeout = 1.0
   ## interface to send ping from (ping -I <INTERFACE>)
-  interface = ""
+  # interface = ""
 `
 
 func (_ *Ping) SampleConfig() string {
@@ -200,6 +200,11 @@ func processPingOutput(out string) (int, int, float64, error) {
 
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
-		return &Ping{pingHost: hostPinger}
+		return &Ping{
+			pingHost:     hostPinger,
+			PingInterval: 1.0,
+			Count:        1,
+			Timeout:      1.0,
+		}
 	})
 }

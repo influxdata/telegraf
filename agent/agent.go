@@ -49,18 +49,16 @@ func (a *Agent) Connect() error {
 		switch ot := o.Output.(type) {
 		case telegraf.ServiceOutput:
 			if err := ot.Start(); err != nil {
-				log.Printf("Service for output %s failed to start, exiting\n%s\n",
+				log.Printf("E! Service for output %s failed to start, exiting\n%s\n",
 					o.Name, err.Error())
 				return err
 			}
 		}
 
-		if a.Config.Agent.Debug {
-			log.Printf("Attempting connection to output: %s\n", o.Name)
-		}
+		log.Printf("D! Attempting connection to output: %s\n", o.Name)
 		err := o.Output.Connect()
 		if err != nil {
-			log.Printf("Failed to connect to output %s, retrying in 15s, "+
+			log.Printf("E! Failed to connect to output %s, retrying in 15s, "+
 				"error was '%s' \n", o.Name, err)
 			time.Sleep(15 * time.Second)
 			err = o.Output.Connect()
@@ -68,9 +66,7 @@ func (a *Agent) Connect() error {
 				return err
 			}
 		}
-		if a.Config.Agent.Debug {
-			log.Printf("Successfully connected to output: %s\n", o.Name)
-		}
+		log.Printf("D! Successfully connected to output: %s\n", o.Name)
 	}
 	return nil
 }
@@ -92,9 +88,9 @@ func panicRecover(input *models.RunningInput) {
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
-		log.Printf("FATAL: Input [%s] panicked: %s, Stack:\n%s\n",
-			input.Name, err, trace)
-		log.Println("PLEASE REPORT THIS PANIC ON GITHUB with " +
+		log.Printf("E! FATAL: Input [%s] panicked: %s, Stack:\n%s\n",
+			input.Name(), err, trace)
+		log.Println("E! PLEASE REPORT THIS PANIC ON GITHUB with " +
 			"stack trace, configuration, and OS information: " +
 			"https://github.com/influxdata/telegraf/issues/new")
 	}
@@ -107,20 +103,18 @@ func (a *Agent) gatherer(
 	input *models.RunningInput,
 	interval time.Duration,
 	metricC chan telegraf.Metric,
-) error {
+) {
 	defer panicRecover(input)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
-		var outerr error
-
-		acc := NewAccumulator(input.Config, metricC)
-		acc.SetDebug(a.Config.Agent.Debug)
+		acc := NewAccumulator(input, metricC)
 		acc.SetPrecision(a.Config.Agent.Precision.Duration,
 			a.Config.Agent.Interval.Duration)
-		acc.setDefaultTags(a.Config.Tags)
+		input.SetDebug(a.Config.Agent.Debug)
+		input.SetDefaultTags(a.Config.Tags)
 
 		internal.RandomSleep(a.Config.Agent.CollectionJitter.Duration, shutdown)
 
@@ -128,17 +122,12 @@ func (a *Agent) gatherer(
 		gatherWithTimeout(shutdown, input, acc, interval)
 		elapsed := time.Since(start)
 
-		if outerr != nil {
-			return outerr
-		}
-		if a.Config.Agent.Debug {
-			log.Printf("Input [%s] gathered metrics, (%s interval) in %s\n",
-				input.Name, interval, elapsed)
-		}
+		log.Printf("D! Input [%s] gathered metrics, (%s interval) in %s\n",
+			input.Name(), interval, elapsed)
 
 		select {
 		case <-shutdown:
-			return nil
+			return
 		case <-ticker.C:
 			continue
 		}
@@ -167,13 +156,13 @@ func gatherWithTimeout(
 		select {
 		case err := <-done:
 			if err != nil {
-				log.Printf("ERROR in input [%s]: %s", input.Name, err)
+				log.Printf("E! ERROR in input [%s]: %s", input.Name(), err)
 			}
 			return
 		case <-ticker.C:
-			log.Printf("ERROR: input [%s] took longer to collect than "+
+			log.Printf("E! ERROR: input [%s] took longer to collect than "+
 				"collection interval (%s)",
-				input.Name, timeout)
+				input.Name(), timeout)
 			continue
 		case <-shutdown:
 			return
@@ -201,13 +190,13 @@ func (a *Agent) Test() error {
 	}()
 
 	for _, input := range a.Config.Inputs {
-		acc := NewAccumulator(input.Config, metricC)
-		acc.SetTrace(true)
+		acc := NewAccumulator(input, metricC)
 		acc.SetPrecision(a.Config.Agent.Precision.Duration,
 			a.Config.Agent.Interval.Duration)
-		acc.setDefaultTags(a.Config.Tags)
+		input.SetTrace(true)
+		input.SetDefaultTags(a.Config.Tags)
 
-		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name)
+		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name())
 		if input.Config.Interval != 0 {
 			fmt.Printf("* Internal: %s\n", input.Config.Interval)
 		}
@@ -221,10 +210,10 @@ func (a *Agent) Test() error {
 
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
-		switch input.Name {
+		switch input.Name() {
 		case "cpu", "mongodb", "procstat":
 			time.Sleep(500 * time.Millisecond)
-			fmt.Printf("* Plugin: %s, Collection 2\n", input.Name)
+			fmt.Printf("* Plugin: %s, Collection 2\n", input.Name())
 			if err := input.Input.Gather(acc); err != nil {
 				return err
 			}
@@ -244,7 +233,7 @@ func (a *Agent) flush() {
 			defer wg.Done()
 			err := output.Write()
 			if err != nil {
-				log.Printf("Error writing to output [%s]: %s\n",
+				log.Printf("E! Error writing to output [%s]: %s\n",
 					output.Name, err.Error())
 			}
 		}(o)
@@ -257,72 +246,97 @@ func (a *Agent) flush() {
 func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) error {
 	// Inelegant, but this sleep is to allow the Gather threads to run, so that
 	// the flusher will flush after metrics are collected.
-	time.Sleep(time.Millisecond * 200)
+	time.Sleep(time.Millisecond * 300)
+
+	// create an output metric channel and a gorouting that continously passes
+	// each metric onto the output plugins & aggregators.
+	outMetricC := make(chan telegraf.Metric, 100)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-shutdown:
+				if len(outMetricC) > 0 {
+					// keep going until outMetricC is flushed
+					continue
+				}
+				return
+			case m := <-outMetricC:
+				// if dropOriginal is set to true, then we will only send this
+				// metric to the aggregators, not the outputs.
+				var dropOriginal bool
+				if !m.IsAggregate() {
+					for _, agg := range a.Config.Aggregators {
+						if ok := agg.Add(copyMetric(m)); ok {
+							dropOriginal = true
+						}
+					}
+				}
+				if !dropOriginal {
+					for i, o := range a.Config.Outputs {
+						if i == len(a.Config.Outputs)-1 {
+							o.AddMetric(m)
+						} else {
+							o.AddMetric(copyMetric(m))
+						}
+					}
+				}
+			}
+		}
+	}()
 
 	ticker := time.NewTicker(a.Config.Agent.FlushInterval.Duration)
-
 	for {
 		select {
 		case <-shutdown:
-			log.Println("Hang on, flushing any cached metrics before shutdown")
+			log.Println("I! Hang on, flushing any cached metrics before shutdown")
+			// wait for outMetricC to get flushed before flushing outputs
+			wg.Wait()
 			a.flush()
 			return nil
 		case <-ticker.C:
 			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
 			a.flush()
-		case m := <-metricC:
-			for i, o := range a.Config.Outputs {
-				if i == len(a.Config.Outputs)-1 {
-					o.AddMetric(m)
-				} else {
-					o.AddMetric(copyMetric(m))
-				}
+		case metric := <-metricC:
+			// NOTE potential bottleneck here as we put each metric through the
+			// processors serially.
+			mS := []telegraf.Metric{metric}
+			for _, processor := range a.Config.Processors {
+				mS = processor.Apply(mS...)
+			}
+			for _, m := range mS {
+				outMetricC <- m
 			}
 		}
 	}
-}
-
-func copyMetric(m telegraf.Metric) telegraf.Metric {
-	t := time.Time(m.Time())
-
-	tags := make(map[string]string)
-	fields := make(map[string]interface{})
-	for k, v := range m.Tags() {
-		tags[k] = v
-	}
-	for k, v := range m.Fields() {
-		fields[k] = v
-	}
-
-	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
-	return out
 }
 
 // Run runs the agent daemon, gathering every Interval
 func (a *Agent) Run(shutdown chan struct{}) error {
 	var wg sync.WaitGroup
 
-	log.Printf("Agent Config: Interval:%s, Debug:%#v, Quiet:%#v, Hostname:%#v, "+
+	log.Printf("I! Agent Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s \n",
-		a.Config.Agent.Interval.Duration, a.Config.Agent.Debug, a.Config.Agent.Quiet,
+		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
 	// channel shared between all input threads for accumulating metrics
-	metricC := make(chan telegraf.Metric, 10000)
+	metricC := make(chan telegraf.Metric, 100)
 
+	// Start all ServicePlugins
 	for _, input := range a.Config.Inputs {
-		// Start service of any ServicePlugins
 		switch p := input.Input.(type) {
 		case telegraf.ServiceInput:
-			acc := NewAccumulator(input.Config, metricC)
-			acc.SetDebug(a.Config.Agent.Debug)
+			acc := NewAccumulator(input, metricC)
 			// Service input plugins should set their own precision of their
 			// metrics.
-			acc.DisablePrecision()
-			acc.setDefaultTags(a.Config.Tags)
+			acc.SetPrecision(time.Nanosecond, 0)
+			input.SetDefaultTags(a.Config.Tags)
 			if err := p.Start(acc); err != nil {
-				log.Printf("Service for input %s failed to start, exiting\n%s\n",
-					input.Name, err.Error())
+				log.Printf("E! Service for input %s failed to start, exiting\n%s\n",
+					input.Name(), err.Error())
 				return err
 			}
 			defer p.Stop()
@@ -339,10 +353,21 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	go func() {
 		defer wg.Done()
 		if err := a.flusher(shutdown, metricC); err != nil {
-			log.Printf("Flusher routine failed, exiting: %s\n", err.Error())
+			log.Printf("E! Flusher routine failed, exiting: %s\n", err.Error())
 			close(shutdown)
 		}
 	}()
+
+	wg.Add(len(a.Config.Aggregators))
+	for _, aggregator := range a.Config.Aggregators {
+		go func(agg *models.RunningAggregator) {
+			defer wg.Done()
+			acc := NewAccumulator(agg, metricC)
+			acc.SetPrecision(a.Config.Agent.Precision.Duration,
+				a.Config.Agent.Interval.Duration)
+			agg.Run(acc, shutdown)
+		}(aggregator)
+	}
 
 	wg.Add(len(a.Config.Inputs))
 	for _, input := range a.Config.Inputs {
@@ -353,12 +378,26 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}
 		go func(in *models.RunningInput, interv time.Duration) {
 			defer wg.Done()
-			if err := a.gatherer(shutdown, in, interv, metricC); err != nil {
-				log.Printf(err.Error())
-			}
+			a.gatherer(shutdown, in, interv, metricC)
 		}(input, interval)
 	}
 
 	wg.Wait()
 	return nil
+}
+
+func copyMetric(m telegraf.Metric) telegraf.Metric {
+	t := time.Time(m.Time())
+
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
+	for k, v := range m.Tags() {
+		tags[k] = v
+	}
+	for k, v := range m.Fields() {
+		fields[k] = v
+	}
+
+	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
+	return out
 }
