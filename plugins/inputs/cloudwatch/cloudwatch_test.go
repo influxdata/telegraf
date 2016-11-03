@@ -11,9 +11,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCloudWatchClient struct{}
+type (
+	basicCloudWatchClient struct{}
+	regexCloudWatchClient struct{}
+)
 
-func (m *mockCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
+func (*basicCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
 	metric := &cloudwatch.Metric{
 		Namespace:  params.Namespace,
 		MetricName: aws.String("Latency"),
@@ -31,7 +34,7 @@ func (m *mockCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) 
 	return result, nil
 }
 
-func (m *mockCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error) {
+func (*basicCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error) {
 	dataPoint := &cloudwatch.Datapoint{
 		Timestamp:   params.EndTime,
 		Minimum:     aws.Float64(0.1),
@@ -48,7 +51,53 @@ func (m *mockCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricS
 	return result, nil
 }
 
-func TestGather(t *testing.T) {
+func tblMetric(params *cloudwatch.ListMetricsInput, d1 string, d2 string) *cloudwatch.Metric {
+	return &cloudwatch.Metric{
+		Namespace:  params.Namespace,
+		MetricName: aws.String("ConsumedReadCapacityUnits"),
+		Dimensions: []*cloudwatch.Dimension{
+			&cloudwatch.Dimension{
+				Name:  aws.String("TableName"),
+				Value: aws.String(d1),
+			},
+			&cloudwatch.Dimension{
+				Name:  aws.String("IndexName"),
+				Value: aws.String(d2),
+			},
+		},
+	}
+}
+
+func (*regexCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
+	metric1 := tblMetric(params, "foo-table1", "ix-foo-t1")
+	metric2 := tblMetric(params, "foo-table2", "ix-foo-t2")
+	metric3 := tblMetric(params, "bar-table1", "ix-bar-t1")
+	metric4 := tblMetric(params, "bar-table2", "ix-bar-t2")
+
+	result := &cloudwatch.ListMetricsOutput{
+		Metrics: []*cloudwatch.Metric{metric1, metric2, metric3, metric4},
+	}
+	return result, nil
+}
+
+func (*regexCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error) {
+	dataPoint := &cloudwatch.Datapoint{
+		Timestamp:   params.EndTime,
+		Minimum:     aws.Float64(0),
+		Maximum:     aws.Float64(10),
+		Average:     aws.Float64(4),
+		Sum:         aws.Float64(40),
+		SampleCount: aws.Float64(10),
+		Unit:        aws.String("Units"),
+	}
+	result := &cloudwatch.GetMetricStatisticsOutput{
+		Label:      aws.String("ConsumedReadCapacityUnits"),
+		Datapoints: []*cloudwatch.Datapoint{dataPoint},
+	}
+	return result, nil
+}
+
+func TestBasicGather(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := internal.Duration{
 		Duration: duration,
@@ -62,7 +111,7 @@ func TestGather(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	c.client = &mockCloudWatchClient{}
+	c.client = &basicCloudWatchClient{}
 
 	c.Gather(&acc)
 
@@ -81,6 +130,145 @@ func TestGather(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
 
+}
+
+func TestSingleDimensionRegexGather(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/DynamoDB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 10,
+		Metrics: []*Metric{
+			&Metric{
+				MetricNames: []string{"ConsumedReadCapacityUnits"},
+				Dimensions: []*Dimension{
+					&Dimension{Name: "TableName", Value: "foo*"},
+					&Dimension{Name: "IndexName", Value: ""},
+				},
+			},
+		},
+	}
+
+	var acc testutil.Accumulator
+	acc.SetDebug(true)
+	c.client = &regexCloudWatchClient{}
+
+	c.Gather(&acc)
+
+	fields := map[string]interface{}{}
+	fields["consumed_read_capacity_units_minimum"] = 0.
+	fields["consumed_read_capacity_units_maximum"] = 10.
+	fields["consumed_read_capacity_units_average"] = 4.
+	fields["consumed_read_capacity_units_sum"] = 40.
+	fields["consumed_read_capacity_units_sample_count"] = 10.
+
+	tags := map[string]string{}
+	tags["unit"] = "units"
+	tags["region"] = "us-east-1"
+	tags["table_name"] = "foo-table1"
+	tags["index_name"] = "ix-foo-t1"
+
+	assert.True(t, acc.HasMeasurement("cloudwatch_aws_dynamo_db"))
+	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_dynamo_db", fields, tags)
+
+	tags["table_name"] = "foo-table2"
+	tags["index_name"] = "ix-foo-t2"
+	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_dynamo_db", fields, tags)
+}
+
+func TestMultiDimensionRegexGather(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/DynamoDB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 10,
+		Metrics: []*Metric{
+			&Metric{
+				MetricNames: []string{"ConsumedReadCapacityUnits"},
+				Dimensions: []*Dimension{
+					&Dimension{Name: "TableName", Value: "foo*"},
+					&Dimension{Name: "IndexName", Value: "*t2"},
+				},
+			},
+		},
+	}
+
+	var acc testutil.Accumulator
+	c.client = &regexCloudWatchClient{}
+
+	c.Gather(&acc)
+
+	fields := map[string]interface{}{}
+	fields["consumed_read_capacity_units_minimum"] = 0.
+	fields["consumed_read_capacity_units_maximum"] = 10.
+	fields["consumed_read_capacity_units_average"] = 4.
+	fields["consumed_read_capacity_units_sum"] = 40.
+	fields["consumed_read_capacity_units_sample_count"] = 10.
+
+	tags := map[string]string{}
+	tags["unit"] = "units"
+	tags["region"] = "us-east-1"
+	tags["table_name"] = "foo-table2"
+	tags["index_name"] = "ix-foo-t2"
+
+	assert.True(t, acc.HasMeasurement("cloudwatch_aws_dynamo_db"))
+	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_dynamo_db", fields, tags)
+	assert.Equal(t, 1, acc.CountTaggedMeasurements("cloudwatch_aws_dynamo_db", tags))
+}
+
+func TestDimensionGather(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/DynamoDB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 10,
+		Metrics: []*Metric{
+			&Metric{
+				MetricNames: []string{"ConsumedReadCapacityUnits"},
+				Dimensions: []*Dimension{
+					&Dimension{Name: "TableName", Value: "foo-table1"},
+					&Dimension{Name: "IndexName", Value: "ix-foo-t1"},
+				},
+			},
+		},
+	}
+
+	var acc testutil.Accumulator
+	c.client = &regexCloudWatchClient{}
+
+	c.Gather(&acc)
+
+	fields := map[string]interface{}{}
+	fields["consumed_read_capacity_units_minimum"] = 0.
+	fields["consumed_read_capacity_units_maximum"] = 10.
+	fields["consumed_read_capacity_units_average"] = 4.
+	fields["consumed_read_capacity_units_sum"] = 40.
+	fields["consumed_read_capacity_units_sample_count"] = 10.
+
+	tags := map[string]string{}
+	tags["unit"] = "units"
+	tags["region"] = "us-east-1"
+	tags["table_name"] = "foo-table1"
+	tags["index_name"] = "ix-foo-t1"
+
+	assert.True(t, acc.HasMeasurement("cloudwatch_aws_dynamo_db"))
+	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_dynamo_db", fields, tags)
+	assert.Equal(t, 1, acc.CountTaggedMeasurements("cloudwatch_aws_dynamo_db", tags))
 }
 
 func TestGenerateStatisticsInputParams(t *testing.T) {

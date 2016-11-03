@@ -185,6 +185,23 @@ func (a *Accumulator) AssertContainsTaggedFields(
 	assert.Fail(t, msg)
 }
 
+func (a *Accumulator) CountTaggedMeasurements(
+	measurement string,
+	tags map[string]string,
+) int {
+	a.Lock()
+	defer a.Unlock()
+
+	cnt := 0
+	for _, p := range a.Metrics {
+		if reflect.DeepEqual(tags, p.Tags) &&
+			p.Measurement == measurement {
+			cnt++
+		}
+	}
+	return cnt
+}
+
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,
 	measurement string,

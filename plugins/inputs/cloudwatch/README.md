@@ -64,11 +64,14 @@ Plugin Configuration utilizes [CloudWatch concepts](http://docs.aws.amazon.com/A
 - `names` must be valid CloudWatch [Metric](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_concepts.html#Metric) names
 - `dimensions` must be valid CloudWatch [Dimension](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_concepts.html#Dimension) name/value pairs
 
-Omitting or specifying a value of `'*'` for a dimension value configures all available metrics that contain a dimension with the specified name
-to be retrieved. If specifying >1 dimension, then the metric must contain *all* the configured dimensions where the the value of the
-wildcard dimension is ignored.
+A wildcard (`*`) can be used in the dimension value as follows:
+- `value = '*' or value = ''` - includes metrics that have the specified dimension name and any value same as `Regexp('.*')`
+- `value = 'foo*'` - includes metrics that have the specified dimension name and any value that starts with foo same as `Regexp('foo.*')`
 
-Example:
+If dimension wildcards are used, the metric must contain *all* the configured dimensions where the the value
+matches the wildcard pattern.
+
+Example 1:
 ```
 [[inputs.cloudwatch.metrics]]
   names = ['Latency']
@@ -76,7 +79,7 @@ Example:
   ## Dimension filters for Metric (optional)
   [[inputs.cloudwatch.metrics.dimensions]]
     name = 'LoadBalancerName'
-    value = 'p-example'
+    value = 'foo-*'
 
   [[inputs.cloudwatch.metrics.dimensions]]
     name = 'AvailabilityZone'
@@ -84,18 +87,41 @@ Example:
 ```
 
 If the following ELBs are available:
-- name: `p-example`, availabilityZone: `us-east-1a`
-- name: `p-example`, availabilityZone: `us-east-1b`
-- name: `q-example`, availabilityZone: `us-east-1a`
-- name: `q-example`, availabilityZone: `us-east-1b`
+- LoadBalancerName: `foo-example1`, AvailabilityZone: `us-east-1a`
+- LoadBalancerName: `foo-example1`, AvailabilityZone: `us-east-1b`
+- LoadBalancerName: `foo-example2`, AvailabilityZone: `us-east-1a`
+- LoadBalancerName: `foo-example2`, AvailabilityZone: `us-east-1b`
+- LoadBalancerName: `bar-example`, AvailabilityZone: `us-east-1a`
+- LoadBalancerName: `bar-example`, AvailabilityZone: `us-east-1b`
 
+Then 4 metrics will be output:
+- LoadBalancerName: `foo-example1`, AvailabilityZone: `us-east-1a`
+- LoadBalancerName: `foo-example1`, AvailabilityZone: `us-east-1b`
+- LoadBalancerName: `foo-example2`, AvailabilityZone: `us-east-1a`
+- LoadBalancerName: `foo-example2`, AvailabilityZone: `us-east-1b`
 
-Then 2 metrics will be output:
-- name: `p-example`, availabilityZone: `us-east-1a`
-- name: `p-example`, availabilityZone: `us-east-1b`
+Example 2:
+```
+[[inputs.cloudwatch.metrics]]
+  names = ['Latency']
 
-If the `AvailabilityZone` wildcard dimension was omitted, then a single metric (name: `p-example`)
-would be exported containing the aggregate values of the ELB across availability zones.
+  ## Dimension filters for Metric (optional)
+  [[inputs.cloudwatch.metrics.dimensions]]
+    name = 'LoadBalancerName'
+    value = 'foo-example1'
+```
+
+If the following ELBs are available:
+- LoadBalancerName: `foo-example1`, AvailabilityZone: `us-east-1a`
+- LoadBalancerName: `foo-example1`, AvailabilityZone: `us-east-1b`
+- LoadBalancerName: `foo-example2`, AvailabilityZone: `us-east-1a`
+- LoadBalancerName: `foo-example2`, AvailabilityZone: `us-east-1b`
+- LoadBalancerName: `bar-example`, AvailabilityZone: `us-east-1a`
+- LoadBalancerName: `bar-example`, AvailabilityZone: `us-east-1b`
+
+Then 4 metrics will be output:
+- LoadBalancerName: `foo-example1` - aggregated across all availability zones.
+
 
 #### Restrictions and Limitations
 - CloudWatch metrics are not available instantly via the CloudWatch API. You should adjust your collection `delay` to account for this lag in metrics availability based on your [monitoring subscription level](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-cloudwatch-new.html)

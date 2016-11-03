@@ -88,12 +88,14 @@ func TestCombinedOutputError(t *testing.T) {
 		t.Skip("'sleep' binary not available on OS, skipping.")
 	}
 	cmd := exec.Command(sleepbin, "foo")
-	expected, err := cmd.CombinedOutput()
+	expected, expectedErr := cmd.CombinedOutput()
 
 	cmd2 := exec.Command(sleepbin, "foo")
-	actual, err := CombinedOutputTimeout(cmd2, time.Second)
+	actual, actualErr := CombinedOutputTimeout(cmd2, time.Second)
 
-	assert.Error(t, err)
+	if expectedErr != nil {
+		assert.Error(t, actualErr)
+	}
 	assert.Equal(t, expected, actual)
 }
 
@@ -102,9 +104,14 @@ func TestRunError(t *testing.T) {
 		t.Skip("'sleep' binary not available on OS, skipping.")
 	}
 	cmd := exec.Command(sleepbin, "foo")
-	err := RunTimeout(cmd, time.Second)
+	expectedErr := cmd.Run()
 
-	assert.Error(t, err)
+	cmd2 := exec.Command(sleepbin, "foo")
+	actualErr := RunTimeout(cmd2, time.Second)
+
+	if expectedErr != nil {
+		assert.Error(t, actualErr)
+	}
 }
 
 func TestRandomSleep(t *testing.T) {
