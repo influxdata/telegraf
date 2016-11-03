@@ -1,3 +1,11 @@
+## v1.2 [unreleased]
+
+### Release Notes
+
+### Features
+
+### Bugfixes
+
 ## v1.1 [unreleased]
 
 ### Release Notes
