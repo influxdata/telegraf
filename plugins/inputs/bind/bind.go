@@ -88,13 +88,12 @@ func (p *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		}
 
 		if xmlRoot.XMLName.Local == "statistics" && strings.HasPrefix(xmlRoot.Version, "3.") {
+			// TODO: copy parsed stats into struct to feed into telegraf.Accumulator
 			readStatsV3(br)
 		} else {
-			readStatsV2(br)
+			return readStatsV2(br, acc)
 		}
 	}
-
-	// TODO: copy parsed stats into struct to feed into telegraf.Accumulator
 
 	return nil
 }

@@ -4,6 +4,8 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+
+	"github.com/influxdata/telegraf"
 )
 
 type v2Root struct {
@@ -46,44 +48,53 @@ type v2StatCounter struct {
 	Value int    `xml:"counter"`
 }
 
-// dumpStats prints the key-value pairs of a version 2 statistics struct
-func (stats *v2Root) dumpStats() {
-	fmt.Printf("%#v\n", stats)
-
-	fmt.Println("\nNAMESERVER STATS")
-	for _, st := range stats.Statistics.Server.NSStats {
-		fmt.Printf("%s => %d\n", st.Name, st.Value)
-	}
-
-	fmt.Println("\nOPCODE STATS")
-	for _, st := range stats.Statistics.Server.OpCodeStats {
-		fmt.Printf("%s => %d\n", st.Name, st.Value)
-	}
-
-	fmt.Println("\nQUERY TYPE STATS")
-	for _, st := range stats.Statistics.Server.QueryStats {
-		fmt.Printf("%s => %d\n", st.Name, st.Value)
-	}
-
-	fmt.Println("\nSOCK STATS")
-	for _, st := range stats.Statistics.Server.SockStats {
-		fmt.Printf("%s => %d\n", st.Name, st.Value)
-	}
-
-	fmt.Println("\nZONE STATS")
-	for _, st := range stats.Statistics.Server.ZoneStats {
-		fmt.Printf("%s => %d\n", st.Name, st.Value)
-	}
-}
-
 // readStatsV2 decodes a BIND9 XML statistics version 2 document
-func readStatsV2(r io.Reader) {
+func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	var stats v2Root
 
 	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
-		fmt.Println(err)
-		return
+		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
-	stats.dumpStats()
+	// Nameserver stats
+	tags := map[string]string{}
+	fields := make(map[string]interface{})
+	for _, st := range stats.Statistics.Server.NSStats {
+		fields[st.Name] = st.Value
+	}
+	acc.AddCounter("bind_server", fields, tags)
+
+	// Opcodes
+	tags = map[string]string{}
+	fields = make(map[string]interface{})
+	for _, st := range stats.Statistics.Server.OpCodeStats {
+		fields[st.Name] = st.Value
+	}
+	acc.AddCounter("bind_opcodes", fields, tags)
+
+	// Query types
+	tags = map[string]string{}
+	fields = make(map[string]interface{})
+	for _, st := range stats.Statistics.Server.QueryStats {
+		fields[st.Name] = st.Value
+	}
+	acc.AddCounter("bind_querytypes", fields, tags)
+
+	// Socket statistics
+	tags = map[string]string{}
+	fields = make(map[string]interface{})
+	for _, st := range stats.Statistics.Server.SockStats {
+		fields[st.Name] = st.Value
+	}
+	acc.AddCounter("bind_sockstats", fields, tags)
+
+	// Zone statistics
+	tags = map[string]string{"zone": "_global"}
+	fields = make(map[string]interface{})
+	for _, st := range stats.Statistics.Server.ZoneStats {
+		fields[st.Name] = st.Value
+	}
+	acc.AddCounter("bind_zonestats", fields, tags)
+
+	return nil
 }
