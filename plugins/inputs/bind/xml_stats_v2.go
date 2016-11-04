@@ -48,6 +48,16 @@ type v2StatCounter struct {
 	Value int    `xml:"counter"`
 }
 
+func makeFieldMap(stats []v2StatCounter) map[string]interface{} {
+	fm := make(map[string]interface{})
+
+	for _, st := range stats {
+		fm[st.Name] = st.Value
+	}
+
+	return fm
+}
+
 // readStatsV2 decodes a BIND9 XML statistics version 2 document
 func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	var stats v2Root
@@ -58,42 +68,24 @@ func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 
 	// Nameserver stats
 	tags := map[string]string{}
-	fields := make(map[string]interface{})
-	for _, st := range stats.Statistics.Server.NSStats {
-		fields[st.Name] = st.Value
-	}
+	fields := makeFieldMap(stats.Statistics.Server.NSStats)
 	acc.AddCounter("bind_server", fields, tags)
 
 	// Opcodes
-	tags = map[string]string{}
-	fields = make(map[string]interface{})
-	for _, st := range stats.Statistics.Server.OpCodeStats {
-		fields[st.Name] = st.Value
-	}
+	fields = makeFieldMap(stats.Statistics.Server.OpCodeStats)
 	acc.AddCounter("bind_opcodes", fields, tags)
 
 	// Query types
-	tags = map[string]string{}
-	fields = make(map[string]interface{})
-	for _, st := range stats.Statistics.Server.QueryStats {
-		fields[st.Name] = st.Value
-	}
+	fields = makeFieldMap(stats.Statistics.Server.QueryStats)
 	acc.AddCounter("bind_querytypes", fields, tags)
 
 	// Socket statistics
-	tags = map[string]string{}
-	fields = make(map[string]interface{})
-	for _, st := range stats.Statistics.Server.SockStats {
-		fields[st.Name] = st.Value
-	}
+	fields = makeFieldMap(stats.Statistics.Server.SockStats)
 	acc.AddCounter("bind_sockstats", fields, tags)
 
 	// Zone statistics
 	tags = map[string]string{"zone": "_global"}
-	fields = make(map[string]interface{})
-	for _, st := range stats.Statistics.Server.ZoneStats {
-		fields[st.Name] = st.Value
-	}
+	fields = makeFieldMap(stats.Statistics.Server.ZoneStats)
 	acc.AddCounter("bind_zonestats", fields, tags)
 
 	return nil
