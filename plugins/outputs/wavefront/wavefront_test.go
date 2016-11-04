@@ -31,11 +31,19 @@ func TestBuildMetricsNoSimpleFields(t *testing.T) {
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 
 	testMetric1, _ := telegraf.NewMetric(
+<<<<<<< HEAD
 					"test.simple.metric",
 					map[string]string{"tag1": "value1"},
 					map[string]interface{}{"value": 123},
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				)
+=======
+		"test.simple.metric",
+		map[string]string{"tag1": "value1"},
+		map[string]interface{}{"value": 123},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+>>>>>>> wavefrontHQ/master
 
 	var metricTests = []struct {
 		metric  telegraf.Metric
@@ -71,11 +79,19 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 
 	testMetric1, _ := telegraf.NewMetric(
+<<<<<<< HEAD
 					"test.simple.metric",
 					map[string]string{"tag1": "value1"},
 					map[string]interface{}{"value": 123},
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				)
+=======
+		"test.simple.metric",
+		map[string]string{"tag1": "value1"},
+		map[string]interface{}{"value": 123},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+>>>>>>> wavefrontHQ/master
 
 	var metricTests = []struct {
 		metric  telegraf.Metric
@@ -179,4 +195,8 @@ func TestBuildTags(t *testing.T) {
 
 // 	err = w.Write(metrics)
 // 	require.NoError(t, err)
+<<<<<<< HEAD
 // }
+=======
+// }
+>>>>>>> wavefrontHQ/master

@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> wavefrontHQ/master
 package wavefront
 
 import (
@@ -36,9 +41,12 @@ var sanitizedChars = strings.NewReplacer(
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
 var sanitizedRegex, _ = regexp.Compile("[^a-zA-Z\\d_.-]")
 
+<<<<<<< HEAD
 // ensure tag values don't have double quotes inside the value itself
 var tagValueReplacer = strings.NewReplacer("\"", "-", "*", "-")
 
+=======
+>>>>>>> wavefrontHQ/master
 var pathReplacer = strings.NewReplacer("_", "_")
 
 var sampleConfig = `
@@ -138,9 +146,15 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 		}
 
 		if w.UseRegex {
+<<<<<<< HEAD
 			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), tagValueReplacer.Replace(v))
 		} else {
 			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), tagValueReplacer.Replace(v))
+=======
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), sanitizedRegex.ReplaceAllString(v, "-"))
+		} else {
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), sanitizedChars.Replace(v))
+>>>>>>> wavefrontHQ/master
 		}
 
 		index++
@@ -241,3 +255,7 @@ func init() {
 		}
 	})
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> wavefrontHQ/master
