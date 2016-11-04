@@ -37,6 +37,7 @@ in their config file.
 - [#2061](https://github.com/influxdata/telegraf/issues/2061): Fix panic when file stat info cannot be collected due to permissions or other issue(s).
 - [#2045](https://github.com/influxdata/telegraf/issues/2045): Graylog output should set short_message field.
 - [#1904](https://github.com/influxdata/telegraf/issues/1904): Hddtemp always put the value in the field temperature.
+- [#1693](https://github.com/influxdata/telegraf/issues/1693): Properly collect nested jolokia struct data.
 
 ## v1.1.2 [2016-12-12]
 
