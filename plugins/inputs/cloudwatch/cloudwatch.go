@@ -63,7 +63,7 @@ type (
 func (c *CloudWatch) SampleConfig() string {
 	return `
   ## Amazon Region
-  region = 'us-east-1'
+  region = "us-east-1"
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
@@ -81,21 +81,21 @@ func (c *CloudWatch) SampleConfig() string {
   #shared_credential_file = ""
 
   ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
-  period = '1m'
+  period = "1m"
 
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
-  delay = '1m'
+  delay = "1m"
 
   ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
-  interval = '1m'
+  interval = "1m"
 
   ## Configure the TTL for the internal cache of metrics.
   ## Defaults to 1 hr if not specified
-  #cache_ttl = '10m'
+  #cache_ttl = "10m"
 
   ## Metric Statistic Namespace (required)
-  namespace = 'AWS/ELB'
+  namespace = "AWS/ELB"
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 10 reqs/sec, so if you define multiple namespaces, these should add up to a
@@ -106,12 +106,12 @@ func (c *CloudWatch) SampleConfig() string {
   ## Defaults to all Metrics in Namespace if nothing is provided
   ## Refreshes Namespace available metrics every 1h
   #[[inputs.cloudwatch.metrics]]
-  #  names = ['Latency', 'RequestCount']
+  #  names = ["Latency", "RequestCount"]
   #
   #  ## Dimension filters for Metric (optional)
   #  [[inputs.cloudwatch.metrics.dimensions]]
-  #    name = 'LoadBalancerName'
-  #    value = 'p-example'
+  #    name = "LoadBalancerName"
+  #    value = "p-example"
 `
 }
 
@@ -133,7 +133,6 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 			if !hasWilcard(m.Dimensions) {
 				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
 				for k, d := range m.Dimensions {
-					fmt.Printf("Dimension [%s]:[%s]\n", d.Name, d.Value)
 					dimensions[k] = &cloudwatch.Dimension{
 						Name:  aws.String(d.Name),
 						Value: aws.String(d.Value),
@@ -229,13 +228,12 @@ func (c *CloudWatch) initializeCloudWatch() error {
 /*
  * Fetch available metrics for given CloudWatch Namespace
  */
-func (c *CloudWatch) fetchNamespaceMetrics() (metrics []*cloudwatch.Metric, err error) {
+func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
 	if c.metricCache != nil && c.metricCache.IsValid() {
-		metrics = c.metricCache.Metrics
-		return
+		return c.metricCache.Metrics, nil
 	}
 
-	metrics = []*cloudwatch.Metric{}
+	metrics := []*cloudwatch.Metric{}
 
 	var token *string
 	for more := true; more; {
@@ -263,7 +261,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() (metrics []*cloudwatch.Metric, err 
 		TTL:     c.CacheTTL.Duration,
 	}
 
-	return
+	return metrics, nil
 }
 
 /*
