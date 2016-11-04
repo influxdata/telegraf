@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -14,11 +15,16 @@ import (
 
 var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
-type PrometheusClient struct {
-	Listen string
+type MetricWithExpiration struct {
+	Metric     prometheus.Metric
+	Expiration time.Time
+}
 
-	metrics     map[string]prometheus.Metric
-	lastMetrics map[string]prometheus.Metric
+type PrometheusClient struct {
+	Listen             string
+	ExpirationInterval int64 `toml:"expiration_interval"`
+
+	metrics map[string]*MetricWithExpiration
 
 	sync.Mutex
 }
@@ -26,11 +32,13 @@ type PrometheusClient struct {
 var sampleConfig = `
   ## Address to listen on
   # listen = ":9126"
+
+  ## Interval to expire metrics and not deliver to prometheus (seconds), 0 == no expiration
+  # expiration_interval = 0
 `
 
 func (p *PrometheusClient) Start() error {
-	p.metrics = make(map[string]prometheus.Metric)
-	p.lastMetrics = make(map[string]prometheus.Metric)
+	p.metrics = make(map[string]*MetricWithExpiration)
 	prometheus.Register(p)
 	defer func() {
 		if r := recover(); r != nil {
@@ -86,16 +94,11 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	p.Lock()
 	defer p.Unlock()
 
-	if len(p.metrics) > 0 {
-		p.lastMetrics = make(map[string]prometheus.Metric)
-		for k, m := range p.metrics {
-			ch <- m
-			p.lastMetrics[k] = m
-		}
-		p.metrics = make(map[string]prometheus.Metric)
-	} else {
-		for _, m := range p.lastMetrics {
-			ch <- m
+	for key, m := range p.metrics {
+		if p.ExpirationInterval != 0 && time.Now().After(m.Expiration) {
+			delete(p.metrics, key)
+		} else {
+			ch <- m.Metric
 		}
 	}
 }
@@ -171,7 +174,12 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 					"key: %s, labels: %v,\nerr: %s\n",
 					mname, l, err.Error())
 			}
-			p.metrics[desc.String()] = metric
+
+			metricWithTime := &MetricWithExpiration{
+				Metric:     metric,
+				Expiration: time.Now().Add(time.Duration(p.ExpirationInterval) * time.Second),
+			}
+			p.metrics[desc.String()] = metricWithTime
 		}
 	}
 	return nil
