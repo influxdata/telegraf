@@ -66,9 +66,19 @@ func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
-	// Nameserver stats
+	// Memory stats
 	tags := map[string]string{}
-	fields := makeFieldMap(stats.Statistics.Server.NSStats)
+	fields := map[string]interface{}{
+		"TotalUse":    stats.Statistics.Memory.TotalUse,
+		"InUse":       stats.Statistics.Memory.InUse,
+		"BlockSize":   stats.Statistics.Memory.BlockSize,
+		"ContextSize": stats.Statistics.Memory.ContextSize,
+		"Lost":        stats.Statistics.Memory.Lost,
+	}
+	acc.AddCounter("bind_memory", fields, tags)
+
+	// Nameserver stats
+	fields = makeFieldMap(stats.Statistics.Server.NSStats)
 	acc.AddCounter("bind_server", fields, tags)
 
 	// Opcodes
