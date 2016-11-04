@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-
-
->>>>>>> wavefrontHQ/master
 package wavefront
 
 import (
@@ -33,21 +28,16 @@ type Wavefront struct {
 
 // catch many of the invalid chars that could appear in a metric or tag name
 var sanitizedChars = strings.NewReplacer(
-<<<<<<< HEAD
-		"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
-		"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
-		"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
-		">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
-	)
-=======
 	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
 	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
 	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
 	">", "-", ",", "-", "?", "-", "\\", "-", "|", "-", " ", "-",
 )
->>>>>>> wavefrontHQ/master
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
 var sanitizedRegex, _ = regexp.Compile("[^a-zA-Z\\d_.-]")
+
+// ensure tag values don't have double quotes inside the value itself
+var tagValueReplacer = strings.NewReplacer("\"", "-", "*", "-")
 
 var pathReplacer = strings.NewReplacer("_", "_")
 
@@ -148,9 +138,9 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 		}
 
 		if w.UseRegex {
-			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), sanitizedRegex.ReplaceAllString(v, "-"))
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), tagValueReplacer.Replace(v))
 		} else {
-			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), sanitizedChars.Replace(v))
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), tagValueReplacer.Replace(v))
 		}
 
 		index++
@@ -251,7 +241,3 @@ func init() {
 		}
 	})
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> wavefrontHQ/master
