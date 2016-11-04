@@ -12,29 +12,43 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Apache struct {
-	Urls          []string
-	useHTTPAuth   bool
-	Username      string
-	Password      string
-	Sslskipverify bool
-	Timeout       int
+	Urls []string
+
+	Username        string
+	Password        string
+	ResponseTimeout internal.Duration
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 }
 
 var sampleConfig = `
   ## An array of Apache status URI to gather stats.
   ## Default is "http://localhost/server-status?auto".
   urls = ["http://localhost/server-status?auto"]
-	## user credentials for basic HTTP authentication
-	username = "myuser"
-	password = "mypassword"
-	## set to true on HTTPS conections where you want skip SSL verifications
-	sslskipverify = true ## default false
-	## Timeout to the complete conection and reponse time in seconds
-	timeout = 25 ## default to 4 seconds
+  ## user credentials for basic HTTP authentication
+  username = "myuser"
+  password = "mypassword"
+
+  ## Timeout to the complete conection and reponse time in seconds
+  response_timeout = "25s" ## default to 5 seconds
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (n *Apache) SampleConfig() string {
@@ -49,16 +63,9 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	if len(n.Urls) == 0 {
 		n.Urls = []string{"http://localhost/server-status?auto"}
 	}
-	if len(n.Username) == 0 || len(n.Password) == 0 {
-		fmt.Printf("User / Password for basic authentication not found [%s/%s]\n", n.Username, n.Password)
-		n.useHTTPAuth = false
-	} else {
-		n.useHTTPAuth = true
+	if n.ResponseTimeout.Duration < time.Second {
+		n.ResponseTimeout.Duration = time.Second * 5
 	}
-	if n.Timeout == 0 {
-		n.Timeout = 4
-	}
-	//fmt.Printf("DEBUG: %+v\n", n)
 
 	var outerr error
 	var errch = make(chan error)
@@ -90,26 +97,32 @@ func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	var req *http.Request
 	var tr *http.Transport
 	var client *http.Client
+	var tlsCfg *tls.Config
 
 	if addr.Scheme == "https" {
+		tlsCfg, err = internal.GetTLSConfig(
+			n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
 		//fmt.Printf("SSL skip verify = true\n")
 		tr = &http.Transport{
 			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: n.Sslskipverify},
+			TLSClientConfig:       tlsCfg,
 		}
 	} else {
 		//fmt.Printf("no verify configured\n")
 		tr = &http.Transport{
-			ResponseHeaderTimeout: time.Duration(n.Timeout) * time.Second,
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
 		}
 	}
 
 	client = &http.Client{
 		Transport: tr,
-		Timeout:   time.Duration(n.Timeout) * time.Second,
+		Timeout:   n.ResponseTimeout.Duration,
 	}
 
-	if n.useHTTPAuth {
+	if len(n.Username) != 0 && len(n.Password) != 0 {
 		req, err = http.NewRequest("GET", addr.String(), nil)
 		req.SetBasicAuth(n.Username, n.Password)
 		resp, err = client.Do(req)
