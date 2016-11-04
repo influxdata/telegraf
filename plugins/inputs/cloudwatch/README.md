@@ -18,21 +18,21 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 ```toml
 [[inputs.cloudwatch]]
   ## Amazon Region (required)
-  region = 'us-east-1'
+  region = "us-east-1"
 
   ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
-  period = '1m'
+  period = "1m"
 
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
-  delay = '1m'
+  delay = "1m"
 
   ## Override global run interval (optional - defaults to global interval)
   ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
-  interval = '1m'
+  interval = "1m"
 
   ## Metric Statistic Namespace (required)
-  namespace = 'AWS/ELB'
+  namespace = "AWS/ELB"
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 10 reqs/sec, so if you define multiple namespaces, these should add up to a
@@ -43,16 +43,16 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Defaults to all Metrics in Namespace if nothing is provided
   ## Refreshes Namespace available metrics every 1h
   [[inputs.cloudwatch.metrics]]
-    names = ['Latency', 'RequestCount']
+    names = ["Latency", "RequestCount"]
 
     ## Dimension filters for Metric (optional)
     [[inputs.cloudwatch.metrics.dimensions]]
-      name = 'LoadBalancerName'
-      value = 'p-example'
+      name = "LoadBalancerName"
+      value = "p-example"
 
     [[inputs.cloudwatch.metrics.dimensions]]
-      name = 'AvailabilityZone'
-      value = '*'
+      name = "AvailabilityZone"
+      value = "*"
 ```
 #### Requirements and Terminology
 
