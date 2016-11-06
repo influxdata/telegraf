@@ -14,41 +14,52 @@ type v2Root struct {
 	Statistics v2Statistics `xml:"bind>statistics"`
 }
 
+// Omitted branches: socketmgr, taskmgr
 type v2Statistics struct {
-	Version string       `xml:"version,attr"`
-	Memory  v2MemoryStat `xml:"memory>summary"`
-	Server  v2Server     `xml:"server"`
-	Views   []v2View     `xml:"views>view"`
+	Version string `xml:"version,attr"`
+	Views   []struct {
+		// Omitted branches: zones
+		Name     string      `xml:"name"`
+		RdTypes  []v2Counter `xml:"rdtype"`
+		ResStats []v2Counter `xml:"resstat"`
+		Caches   []struct {
+			Name   string      `xml:"name,attr"`
+			RRSets []v2Counter `xml:"rrset"`
+		} `xml:"cache"`
+	} `xml:"views>view"`
+	Server struct {
+		OpCodes   []v2Counter `xml:"requests>opcode"`
+		RdTypes   []v2Counter `xml:"queries-in>rdtype"`
+		NSStats   []v2Counter `xml:"nsstat"`
+		ZoneStats []v2Counter `xml:"zonestat"`
+		ResStats  []v2Counter `xml:"resstat"`
+		SockStats []v2Counter `xml:"sockstat"`
+	} `xml:"server"`
+	Memory struct {
+		Contexts []struct {
+			// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
+			Id    string `xml:"id"`
+			Name  string `xml:"name"`
+			Total int    `xml:"total"`
+			InUse int    `xml:"inuse"`
+		} `xml:"contexts>context"`
+		Summary struct {
+			TotalUse    int
+			InUse       int
+			BlockSize   int
+			ContextSize int
+			Lost        int
+		} `xml:"summary"`
+	} `xml:"memory"`
 }
 
-type v2MemoryStat struct {
-	TotalUse    int
-	InUse       int
-	BlockSize   int
-	ContextSize int
-	Lost        int
-}
-
-type v2Server struct {
-	NSStats     []v2StatCounter `xml:"nsstat"`
-	OpCodeStats []v2StatCounter `xml:"requests>opcode"`
-	QueryStats  []v2StatCounter `xml:"queries-in>rdtype"`
-	SockStats   []v2StatCounter `xml:"sockstat"`
-	ZoneStats   []v2StatCounter `xml:"zonestat"`
-}
-
-type v2View struct {
-	Name          string          `xml:"name"`
-	QueryStats    []v2StatCounter `xml:"rdtype"`
-	ResolverStats []v2StatCounter `xml:"resstat"`
-}
-
-type v2StatCounter struct {
+// BIND statistics v2 counter struct used throughout
+type v2Counter struct {
 	Name  string `xml:"name"`
 	Value int    `xml:"counter"`
 }
 
-func makeFieldMap(stats []v2StatCounter) map[string]interface{} {
+func makeFieldMap(stats []v2Counter) map[string]interface{} {
 	fm := make(map[string]interface{})
 
 	for _, st := range stats {
@@ -69,11 +80,11 @@ func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	// Memory stats
 	tags := map[string]string{}
 	fields := map[string]interface{}{
-		"TotalUse":    stats.Statistics.Memory.TotalUse,
-		"InUse":       stats.Statistics.Memory.InUse,
-		"BlockSize":   stats.Statistics.Memory.BlockSize,
-		"ContextSize": stats.Statistics.Memory.ContextSize,
-		"Lost":        stats.Statistics.Memory.Lost,
+		"TotalUse":    stats.Statistics.Memory.Summary.TotalUse,
+		"InUse":       stats.Statistics.Memory.Summary.InUse,
+		"BlockSize":   stats.Statistics.Memory.Summary.BlockSize,
+		"ContextSize": stats.Statistics.Memory.Summary.ContextSize,
+		"Lost":        stats.Statistics.Memory.Summary.Lost,
 	}
 	acc.AddCounter("bind_memory", fields, tags)
 
@@ -82,12 +93,12 @@ func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	acc.AddCounter("bind_server", fields, tags)
 
 	// Opcodes
-	fields = makeFieldMap(stats.Statistics.Server.OpCodeStats)
+	fields = makeFieldMap(stats.Statistics.Server.OpCodes)
 	acc.AddCounter("bind_opcodes", fields, tags)
 
 	// Query types
-	fields = makeFieldMap(stats.Statistics.Server.QueryStats)
-	acc.AddCounter("bind_querytypes", fields, tags)
+	fields = makeFieldMap(stats.Statistics.Server.RdTypes)
+	acc.AddCounter("bind_rdtypes", fields, tags)
 
 	// Socket statistics
 	fields = makeFieldMap(stats.Statistics.Server.SockStats)
