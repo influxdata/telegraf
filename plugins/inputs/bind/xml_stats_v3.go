@@ -6,22 +6,46 @@ import (
 	"io"
 )
 
+// Omitted branches: socketmgr, taskmgr
 type v3Stats struct {
-	Server v3Server `xml:"server"`
-}
-
-type v3Server struct {
-	CounterGroups []v3Counters `xml:"counters"`
+	Server struct {
+		CounterGroups []v3Counters `xml:"counters"`
+	} `xml:"server"`
+	Views []struct {
+		Name          string       `xml:"name,attr"`
+		CounterGroups []v3Counters `xml:"counters"`
+		Caches        []struct {
+			Name   string `xml:"name,attr"`
+			RRSets []struct {
+				Name  string `xml:"name"`
+				Value int    `xml:"counter"`
+			} `xml:"rrset"`
+		} `xml:"cache"`
+	} `xml:"views>view"`
+	Memory struct {
+		Contexts []struct {
+			// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
+			Id    string `xml:"id"`
+			Name  string `xml:"name"`
+			Total int    `xml:"total"`
+			InUse int    `xml:"inuse"`
+		} `xml:"contexts>context"`
+		Summary struct {
+			TotalUse    int
+			InUse       int
+			BlockSize   int
+			ContextSize int
+			Lost        int
+		} `xml:"summary"`
+	} `xml:"memory"`
 }
 
 type v3Counters struct {
-	Type     string      `xml:"type,attr"`
-	Counters []v3Counter `xml:"counter"`
-}
-
-type v3Counter struct {
-	Name  string `xml:"name,attr"`
-	Value int    `xml:",chardata"`
+	Type     string `xml:"type,attr"`
+	Counters []struct {
+		Name  string `xml:"name,attr"`
+		Value int    `xml:",chardata"`
+	} `xml:"counter"`
 }
 
 // dumpStats prints the key-value pairs of a version 3 statistics struct
