@@ -96,7 +96,7 @@ func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	fields = makeFieldMap(stats.Statistics.Server.OpCodes)
 	acc.AddCounter("bind_opcodes", fields, tags)
 
-	// Query types
+	// RDATA types
 	fields = makeFieldMap(stats.Statistics.Server.RdTypes)
 	acc.AddCounter("bind_rdtypes", fields, tags)
 

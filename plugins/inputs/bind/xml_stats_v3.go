@@ -4,6 +4,8 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+
+	"github.com/influxdata/telegraf"
 )
 
 // Omitted branches: socketmgr, taskmgr
@@ -48,27 +50,35 @@ type v3Counters struct {
 	} `xml:"counter"`
 }
 
-// dumpStats prints the key-value pairs of a version 3 statistics struct
-func (stats *v3Stats) dumpStats() {
-	for _, cg := range stats.Server.CounterGroups {
-		fmt.Printf("COUNTER GROUP - %s\n", cg.Type)
-
-		for _, c := range cg.Counters {
-			fmt.Printf("%s => %d\n", c.Name, c.Value)
-		}
-
-		fmt.Println()
-	}
-}
-
 // readStatsV2 decodes a BIND9 XML statistics version 3 document
-func readStatsV3(r io.Reader) {
+func readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 	var stats v3Stats
 
 	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
-		fmt.Println(err)
-		return
+		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
-	stats.dumpStats()
+	// Memory stats
+	tags := map[string]string{}
+	fields := map[string]interface{}{
+		"TotalUse":    stats.Memory.Summary.TotalUse,
+		"InUse":       stats.Memory.Summary.InUse,
+		"BlockSize":   stats.Memory.Summary.BlockSize,
+		"ContextSize": stats.Memory.Summary.ContextSize,
+		"Lost":        stats.Memory.Summary.Lost,
+	}
+	acc.AddCounter("bind_memory", fields, tags)
+
+	for _, cg := range stats.Server.CounterGroups {
+		tags = map[string]string{}
+		fields = make(map[string]interface{})
+
+		for _, c := range cg.Counters {
+			fields[c.Name] = c.Value
+		}
+
+		acc.AddCounter(fmt.Sprintf("bind_%s_counters", cg.Type), fields, tags)
+	}
+
+	return nil
 }
