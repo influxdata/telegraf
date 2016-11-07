@@ -169,6 +169,7 @@ Currently implemented sources:
 * [mongodb](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mongodb)
 * [mysql](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mysql)
 * [net_response](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/net_response)
+* [nfsclient](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nfsclient)
 * [nginx](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nginx)
 * [nsq](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nsq)
 * [nstat](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/nstat)
