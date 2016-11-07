@@ -265,6 +265,7 @@ For documentation on the latest development code see the [documentation index][d
 * [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [openweathermap](./plugins/inputs/openweathermap)
+* [openstack](./plugins/inputs/openstack)
 * [pf](./plugins/inputs/pf)
 * [pgbouncer](./plugins/inputs/pgbouncer)
 * [phpfpm](./plugins/inputs/phpfpm)
