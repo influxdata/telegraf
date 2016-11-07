@@ -36,7 +36,6 @@ func BenchmarkRunningOutputAddWrite(b *testing.B) {
 
 	m := &perfOutput{}
 	ro := NewRunningOutput("test", m, conf, 1000, 10000)
-	ro.Quiet = true
 
 	for n := 0; n < b.N; n++ {
 		ro.AddMetric(testutil.TestMetric(101, "metric1"))
@@ -52,7 +51,6 @@ func BenchmarkRunningOutputAddWriteEvery100(b *testing.B) {
 
 	m := &perfOutput{}
 	ro := NewRunningOutput("test", m, conf, 1000, 10000)
-	ro.Quiet = true
 
 	for n := 0; n < b.N; n++ {
 		ro.AddMetric(testutil.TestMetric(101, "metric1"))
@@ -71,7 +69,6 @@ func BenchmarkRunningOutputAddFailWrites(b *testing.B) {
 	m := &perfOutput{}
 	m.failWrite = true
 	ro := NewRunningOutput("test", m, conf, 1000, 10000)
-	ro.Quiet = true
 
 	for n := 0; n < b.N; n++ {
 		ro.AddMetric(testutil.TestMetric(101, "metric1"))

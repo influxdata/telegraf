@@ -66,7 +66,6 @@ func (r *RunningAggregator) MakeMetric(
 		nil,
 		r.Config.Filter,
 		false,
-		false,
 		mType,
 		t,
 	)

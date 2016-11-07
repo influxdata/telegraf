@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 const (
@@ -43,6 +44,18 @@ type HTTPListener struct {
 	parser influx.InfluxParser
 	acc    telegraf.Accumulator
 	pool   *pool
+
+	BytesRecv       selfstat.Stat
+	RequestsServed  selfstat.Stat
+	WritesServed    selfstat.Stat
+	QueriesServed   selfstat.Stat
+	PingsServed     selfstat.Stat
+	RequestsRecv    selfstat.Stat
+	WritesRecv      selfstat.Stat
+	QueriesRecv     selfstat.Stat
+	PingsRecv       selfstat.Stat
+	NotFoundsServed selfstat.Stat
+	BuffersCreated  selfstat.Stat
 }
 
 const sampleConfig = `
@@ -72,7 +85,7 @@ func (h *HTTPListener) Description() string {
 }
 
 func (h *HTTPListener) Gather(_ telegraf.Accumulator) error {
-	log.Printf("D! The http_listener has created %d buffers", h.pool.ncreated())
+	h.BuffersCreated.Set(h.pool.ncreated())
 	return nil
 }
 
@@ -80,6 +93,21 @@ func (h *HTTPListener) Gather(_ telegraf.Accumulator) error {
 func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
+	tags := map[string]string{
+		"address": h.ServiceAddress,
+	}
+	h.BytesRecv = selfstat.Register("http_listener", "bytes_received", tags)
+	h.RequestsServed = selfstat.Register("http_listener", "requests_served", tags)
+	h.WritesServed = selfstat.Register("http_listener", "writes_served", tags)
+	h.QueriesServed = selfstat.Register("http_listener", "queries_served", tags)
+	h.PingsServed = selfstat.Register("http_listener", "pings_served", tags)
+	h.RequestsRecv = selfstat.Register("http_listener", "requests_received", tags)
+	h.WritesRecv = selfstat.Register("http_listener", "writes_received", tags)
+	h.QueriesRecv = selfstat.Register("http_listener", "queries_received", tags)
+	h.PingsRecv = selfstat.Register("http_listener", "pings_received", tags)
+	h.NotFoundsServed = selfstat.Register("http_listener", "not_founds_served", tags)
+	h.BuffersCreated = selfstat.Register("http_listener", "buffers_created", tags)
 
 	if h.MaxBodySize == 0 {
 		h.MaxBodySize = DEFAULT_MAX_BODY_SIZE
@@ -141,10 +169,16 @@ func (h *HTTPListener) httpListen() error {
 }
 
 func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	h.RequestsRecv.Incr(1)
+	defer h.RequestsServed.Incr(1)
 	switch req.URL.Path {
 	case "/write":
+		h.WritesRecv.Incr(1)
+		defer h.WritesServed.Incr(1)
 		h.serveWrite(res, req)
 	case "/query":
+		h.QueriesRecv.Incr(1)
+		defer h.QueriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
 		// clients test endpoint availability with a query
 		res.Header().Set("Content-Type", "application/json")
@@ -152,9 +186,12 @@ func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 		res.Write([]byte("{\"results\":[]}"))
 	case "/ping":
+		h.PingsRecv.Incr(1)
+		defer h.PingsServed.Incr(1)
 		// respond to ping requests
 		res.WriteHeader(http.StatusNoContent)
 	default:
+		defer h.NotFoundsServed.Incr(1)
 		// Don't know how to respond to calls to other endpoints
 		http.NotFound(res, req)
 	}
@@ -195,6 +232,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			badRequest(res)
 			return
 		}
+		h.BytesRecv.Incr(int64(n))
 
 		if err == io.EOF {
 			if return400 {
