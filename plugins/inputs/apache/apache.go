@@ -2,7 +2,6 @@ package apache
 
 import (
 	"bufio"
-	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -17,8 +16,7 @@ import (
 )
 
 type Apache struct {
-	Urls []string
-
+	Urls            []string
 	Username        string
 	Password        string
 	ResponseTimeout internal.Duration
@@ -92,50 +90,43 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	var err error
-	var resp *http.Response
-	var req *http.Request
+
 	var tr *http.Transport
-	var client *http.Client
-	var tlsCfg *tls.Config
 
 	if addr.Scheme == "https" {
-		tlsCfg, err = internal.GetTLSConfig(
+		tlsCfg, err := internal.GetTLSConfig(
 			n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
 		if err != nil {
 			return err
 		}
-		//fmt.Printf("SSL skip verify = true\n")
 		tr = &http.Transport{
 			ResponseHeaderTimeout: time.Duration(3 * time.Second),
 			TLSClientConfig:       tlsCfg,
 		}
 	} else {
-		//fmt.Printf("no verify configured\n")
 		tr = &http.Transport{
 			ResponseHeaderTimeout: time.Duration(3 * time.Second),
 		}
 	}
 
-	client = &http.Client{
+	client := &http.Client{
 		Transport: tr,
 		Timeout:   n.ResponseTimeout.Duration,
 	}
 
-	if len(n.Username) != 0 && len(n.Password) != 0 {
-		req, err = http.NewRequest("GET", addr.String(), nil)
-		req.SetBasicAuth(n.Username, n.Password)
-		resp, err = client.Do(req)
-		if err != nil {
-			return fmt.Errorf("error making Basic Auth HTTP request to %s (USER:%s|PASSWORD:%s): %s\n", addr.String(), n.Username, n.Password, err)
-		}
-	} else {
-		resp, err = client.Get(addr.String())
-		if err != nil {
-			return fmt.Errorf("error making HTTP request to %s: %s\n", addr.String(), err)
-		}
+	req, err := http.NewRequest("GET", addr.String(), nil)
+	if err != nil {
+		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
 	}
 
+	if len(n.Username) != 0 && len(n.Password) != 0 {
+		req.SetBasicAuth(n.Username, n.Password)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
