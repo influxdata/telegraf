@@ -32,7 +32,6 @@ func makemetric(
 	daemonTags map[string]string,
 	filter Filter,
 	applyFilter bool,
-	debug bool,
 	mType telegraf.ValueType,
 	t time.Time,
 ) telegraf.Metric {
@@ -123,11 +122,9 @@ func makemetric(
 		case float64:
 			// NaNs are invalid values in influxdb, skip measurement
 			if math.IsNaN(val) || math.IsInf(val, 0) {
-				if debug {
-					log.Printf("Measurement [%s] field [%s] has a NaN or Inf "+
-						"field, skipping",
-						measurement, k)
-				}
+				log.Printf("D! Measurement [%s] field [%s] has a NaN or Inf "+
+					"field, skipping",
+					measurement, k)
 				delete(fields, k)
 				continue
 			}

@@ -13,11 +13,9 @@ import (
 
 func TestMakeMetricNoFields(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -32,11 +30,9 @@ func TestMakeMetricNoFields(t *testing.T) {
 // nil fields should get dropped
 func TestMakeMetricNilFields(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -58,13 +54,10 @@ func TestMakeMetricNilFields(t *testing.T) {
 // make an untyped, counter, & gauge metric
 func TestMakeMetric(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 	assert.Equal(t, "inputs.TestRunningInput", ri.Name())
@@ -126,16 +119,13 @@ func TestMakeMetric(t *testing.T) {
 
 func TestMakeMetricWithPluginTags(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-			Tags: map[string]string{
-				"foo": "bar",
-			},
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"foo": "bar",
 		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 
@@ -155,17 +145,14 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 
 func TestMakeMetricFilteredOut(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-			Tags: map[string]string{
-				"foo": "bar",
-			},
-			Filter: Filter{NamePass: []string{"foobar"}},
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"foo": "bar",
 		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+		Filter: Filter{NamePass: []string{"foobar"}},
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 	assert.NoError(t, ri.Config.Filter.Compile())
@@ -182,16 +169,13 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 
 func TestMakeMetricWithDaemonTags(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
 	ri.SetDefaultTags(map[string]string{
 		"foo": "bar",
 	})
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 
@@ -214,13 +198,10 @@ func TestMakeMetricInfFields(t *testing.T) {
 	inf := math.Inf(1)
 	ninf := math.Inf(-1)
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 
@@ -244,13 +225,10 @@ func TestMakeMetricInfFields(t *testing.T) {
 
 func TestMakeMetricAllFieldTypes(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 
@@ -293,12 +271,10 @@ func TestMakeMetricAllFieldTypes(t *testing.T) {
 
 func TestMakeMetricNameOverride(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name:         "TestRunningInput",
-			NameOverride: "foobar",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:         "TestRunningInput",
+		NameOverride: "foobar",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -316,12 +292,10 @@ func TestMakeMetricNameOverride(t *testing.T) {
 
 func TestMakeMetricNamePrefix(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name:              "TestRunningInput",
-			MeasurementPrefix: "foobar_",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:              "TestRunningInput",
+		MeasurementPrefix: "foobar_",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -339,12 +313,10 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 
 func TestMakeMetricNameSuffix(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name:              "TestRunningInput",
-			MeasurementSuffix: "_foobar",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:              "TestRunningInput",
+		MeasurementSuffix: "_foobar",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -359,3 +331,9 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 		m.String(),
 	)
 }
+
+type testInput struct{}
+
+func (t *testInput) Description() string                   { return "" }
+func (t *testInput) SampleConfig() string                  { return "" }
+func (t *testInput) Gather(acc telegraf.Accumulator) error { return nil }
