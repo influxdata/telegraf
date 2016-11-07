@@ -155,7 +155,7 @@ func SelectMetrics(c *CloudWatch) ([]*cloudwatch.Metric, error) {
 				}
 				for _, name := range m.MetricNames {
 					for _, metric := range allMetrics {
-						if name == *metric.MetricName && isSelected(metric, m.Dimensions) {
+						if isSelected(name, metric, m.Dimensions) {
 							metrics = append(metrics, &cloudwatch.Metric{
 								Namespace:  aws.String(c.Namespace),
 								MetricName: aws.String(name),
@@ -386,7 +386,10 @@ func hasWilcard(dimensions []*Dimension) bool {
 	return false
 }
 
-func isSelected(metric *cloudwatch.Metric, dimensions []*Dimension) bool {
+func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension) bool {
+	if name != *metric.MetricName {
+		return false
+	}
 	if len(metric.Dimensions) != len(dimensions) {
 		return false
 	}
