@@ -80,15 +80,22 @@ func (c *CloudWatch) SampleConfig() string {
   #profile = ""
   #shared_credential_file = ""
 
+  # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
+  # metrics are made available to the 1 minute period. Some are collected at
+  # 3 minute and 5 minutes intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
+  # Note that if a period is configured that is smaller than the minimum for a
+  # particular metric, that metric will not be returned by the Cloudwatch API
+  # and will not be collected by Telegraf.
+  #
   ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
-  period = "1m"
+  period = "5m"
 
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
-  delay = "1m"
+  delay = "5m"
 
   ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
-  interval = "1m"
+  interval = "5m"
 
   ## Configure the TTL for the internal cache of metrics.
   ## Defaults to 1 hr if not specified
