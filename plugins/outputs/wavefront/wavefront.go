@@ -22,7 +22,6 @@ type Wavefront struct {
 	ConvertPaths    bool
 	UseRegex    	bool
 
-	Debug           bool
 	DebugAll        bool
 }
 
@@ -31,10 +30,12 @@ var sanitizedChars = strings.NewReplacer(
 	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
 	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
 	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
-	">", "-", ",", "-", "?", "-", "\\", "-", "|", "-", " ", "-",
+	">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
 )
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
 var sanitizedRegex, _ = regexp.Compile("[^a-zA-Z\\d_.-]")
+
+var tagValueReplacer = strings.NewReplacer("\"", "-", "*", "-")
 
 var pathReplacer = strings.NewReplacer("_", "_")
 
@@ -62,8 +63,8 @@ var sampleConfig = `
   ## Regex is more thorough, but significantly slower
   use_regex = false
 
-  ## Print all Wavefront communication
-  debug = false
+  ## Print additional Debug information
+  debug_all = false
 `
 
 type MetricLine struct {
@@ -113,9 +114,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		for _, metric := range buildMetrics(m, w) {
 			messageLine := fmt.Sprintf("%s %s %v %s\n",	metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
-			if w.Debug {
-				log.Printf("DEBUG: output [wavefront] %s", messageLine)
-			}
+			log.Printf("D! Output [wavefront] %s", messageLine)
 			_, err := connection.Write([]byte(messageLine))
 			if err != nil {
 				return fmt.Errorf("Wavefront: TCP writing error %s", err.Error())
@@ -135,9 +134,9 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 		}
 
 		if w.UseRegex {
-			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), sanitizedRegex.ReplaceAllString(v, "-"))
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), tagValueReplacer.Replace(v))
 		} else {
-			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), sanitizedChars.Replace(v))
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), tagValueReplacer.Replace(v))
 		}
 
 		index++
@@ -148,13 +147,13 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 
 func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 	if w.DebugAll {
-		log.Printf("DEBUG: output [wavefront] original name: %s\n", m.Name())
+		log.Printf("D! Output [wavefront] original name: %s\n", m.Name())
 	}
 
 	ret := []*MetricLine{}
 	for fieldName, value := range m.Fields() {
 		if w.DebugAll {
-			log.Printf("DEBUG: output [wavefront] original field: %s\n", fieldName)
+			log.Printf("D! Output [wavefront] original field: %s\n", fieldName)
 		}
 
 		var name string
@@ -180,7 +179,7 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 		}
 		metricValue, buildError := buildValue(value, metric.Metric)
 		if buildError != nil {
-			log.Printf("ERROR: output [wavefront] %s\n", buildError.Error())
+			log.Printf("E! Output [wavefront] %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue
