@@ -13,6 +13,17 @@ Example for Kubernetes apiserver
   urls = ["http://my-kube-apiserver:8080/metrics"]
 ```
 
+Specify a 10 second timeout for slower/over-loaded clients
+```toml
+# Get all metrics from Kube-apiserver
+[[inputs.prometheus]]
+  # An array of urls to scrape metrics from.
+  urls = ["http://my-kube-apiserver:8080/metrics"]
+
+  # Specify timeout duration for slower prometheus clients (default is 3s)
+  response_timeout = "10s"
+```
+
 You can use more complex configuration
 to filter and some tags
 
