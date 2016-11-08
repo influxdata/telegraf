@@ -848,6 +848,11 @@ func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
 	} else {
 		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
+		if err, ok := err.(*exec.Error); ok && err.Err == exec.ErrNotFound {
+			// Silently discard error if snmptranslate not found and we have a numeric OID.
+			// Meaning we can get by without the lookup.
+			return "", oid, oid, "", nil
+		}
 	}
 	if err != nil {
 		return "", "", "", "", err

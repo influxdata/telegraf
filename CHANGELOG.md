@@ -9,6 +9,7 @@
 ### Bugfixes
 
 - [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
+- [#2007](https://github.com/influxdata/telegraf/issues/2007): Make snmptranslate not required when using numeric OID.
 
 ## v1.1 [unreleased]
 
