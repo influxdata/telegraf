@@ -3,7 +3,7 @@
 This plugin writes to [Elasticsearch](https://www.elastic.co) via Elastic (http://olivere.github.io/elastic/).
 
 Attention: 
-Elasticsearch 2.x does not support this dots-to-object transformation and so dots in field names are not allowed in versions 2.X.
+ Elasticsearch 2.x does not support this dots-to-object transformation and so dots in field names are not allowed in versions 2.X.
 In this case, dots will be replaced with "_".
 
 ### Configuration:
