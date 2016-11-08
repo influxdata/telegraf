@@ -102,8 +102,6 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 			return b.readStatsV2(br, acc)
 		}
 	}
-
-	return nil
 }
 
 func init() {

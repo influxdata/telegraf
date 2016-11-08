@@ -58,8 +58,35 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
+	// Detailed, per-view stats
+	if b.GatherViews {
+		for _, v := range stats.Views {
+			tags := map[string]string{"name": v.Name}
+
+			for _, cg := range v.CounterGroups {
+				fields := make(map[string]interface{})
+
+				for _, c := range cg.Counters {
+					fields[c.Name] = c.Value
+				}
+
+				acc.AddCounter(fmt.Sprintf("bind_view_%s_counters", cg.Type), fields, tags)
+			}
+		}
+	}
+
+	// Counter groups
+	for _, cg := range stats.Server.CounterGroups {
+		fields := make(map[string]interface{})
+
+		for _, c := range cg.Counters {
+			fields[c.Name] = c.Value
+		}
+
+		acc.AddCounter(fmt.Sprintf("bind_%s_counters", cg.Type), fields, nil)
+	}
+
 	// Memory stats
-	tags := map[string]string{}
 	fields := map[string]interface{}{
 		"TotalUse":    stats.Memory.Summary.TotalUse,
 		"InUse":       stats.Memory.Summary.InUse,
@@ -67,17 +94,15 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 		"ContextSize": stats.Memory.Summary.ContextSize,
 		"Lost":        stats.Memory.Summary.Lost,
 	}
-	acc.AddCounter("bind_memory", fields, tags)
+	acc.AddCounter("bind_memory", fields, nil)
 
-	for _, cg := range stats.Server.CounterGroups {
-		tags = map[string]string{}
-		fields = make(map[string]interface{})
-
-		for _, c := range cg.Counters {
-			fields[c.Name] = c.Value
+	// Detailed, per-context memory stats
+	if b.GatherMemoryContexts {
+		for _, c := range stats.Memory.Contexts {
+			tags := map[string]string{"id": c.Id, "name": c.Name}
+			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
+			acc.AddCounter("bind_memory_context", fields, tags)
 		}
-
-		acc.AddCounter(fmt.Sprintf("bind_%s_counters", cg.Type), fields, tags)
 	}
 
 	return nil

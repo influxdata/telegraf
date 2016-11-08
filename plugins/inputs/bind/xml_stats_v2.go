@@ -77,6 +77,7 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
+	// Detailed, per-view stats
 	if b.GatherViews {
 		for _, v := range stats.Statistics.Views {
 			tags := map[string]string{"name": v.Name}
@@ -101,7 +102,7 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	fields = makeFieldMap(stats.Statistics.Server.NSStats)
 	acc.AddCounter("bind_server", fields, nil)
 
-	// Zone statistics
+	// Zone stats
 	tags := map[string]string{"zone": "_global"}
 	fields = makeFieldMap(stats.Statistics.Server.ZoneStats)
 	acc.AddCounter("bind_zonestats", fields, tags)
