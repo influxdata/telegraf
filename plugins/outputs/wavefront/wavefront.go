@@ -14,14 +14,13 @@ import (
 )
 
 type Wavefront struct {
+	Prefix          string
 	Host            string
 	Port            int
-	Prefix          string
 	SimpleFields    bool
 	MetricSeparator string
 	ConvertPaths    bool
 	UseRegex    	bool
-
 	DebugAll        bool
 }
 
