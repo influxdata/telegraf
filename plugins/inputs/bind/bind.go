@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -84,7 +83,7 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	} else {
 		var xmlRoot struct {
 			XMLName xml.Name
-			Version string `xml:"version,attr"`
+			Version float64 `xml:"version,attr"`
 		}
 
 		err := xml.Unmarshal(p, &xmlRoot)
@@ -96,7 +95,7 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 			}
 		}
 
-		if xmlRoot.XMLName.Local == "statistics" && strings.HasPrefix(xmlRoot.Version, "3.") {
+		if (xmlRoot.XMLName.Local == "statistics") && (int(xmlRoot.Version) == 3) {
 			return b.readStatsV3(br, acc)
 		} else {
 			return b.readStatsV2(br, acc)
