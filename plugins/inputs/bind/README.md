@@ -7,7 +7,8 @@ JSON statistics are not currently supported.
 
 ### Configuration:
 
-- **urls** []string: List of BIND XML statistics URLs to collect from. Default is "http://localhost:8053/".
+- **urls** []string: List of BIND XML statistics URLs to collect from. Default is
+  "http://localhost:8053/".
 - **gather_memory_contexts** bool: Report per-context memory statistics.
 - **gather_views** bool: Report per-view query statistics.
 
@@ -20,9 +21,10 @@ statistics-channels {
 };
 ```
 
-Alternatively, specify a wildcard address (e.g., 0.0.0.0) or specific IP address of an interface to configure
-the BIND daemon to listen on that address. Note that you should secure the statistics channel with an ACL if it
-is publicly reachable. Consult the BIND Administrator Reference Manual for more information.
+Alternatively, specify a wildcard address (e.g., 0.0.0.0) or specific IP address of an interface to
+configure the BIND daemon to listen on that address. Note that you should secure the statistics
+channel with an ACL if it is publicly reachable. Consult the BIND Administrator Reference Manual
+for more information.
 
 ### Measurements & Fields:
 
@@ -45,7 +47,8 @@ TBC
 
 ### Sample Queries:
 
-These are some useful queries (to generate dashboards or other) to run against data from this plugin:
+These are some useful queries (to generate dashboards or other) to run against data from this
+plugin:
 
 TBC
 
