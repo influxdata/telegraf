@@ -19,9 +19,9 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	pTesting, p, err := setupPrometheus()
+	pClient, p, err := setupPrometheus()
 	require.NoError(t, err)
-	defer pTesting.Stop()
+	defer pClient.Stop()
 
 	now := time.Now()
 	tags := make(map[string]string)
@@ -39,7 +39,7 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		pt1,
 		pt2,
 	}
-	require.NoError(t, pTesting.Write(metrics))
+	require.NoError(t, pClient.Write(metrics))
 
 	expected := []struct {
 		name  string
@@ -74,7 +74,7 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		pt3,
 		pt4,
 	}
-	require.NoError(t, pTesting.Write(metrics))
+	require.NoError(t, pClient.Write(metrics))
 
 	expected2 := []struct {
 		name  string
@@ -96,10 +96,10 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	pTesting, p, err := setupPrometheus()
-	pTesting.ExpirationInterval = 10
+	pClient, p, err := setupPrometheus()
+	pClient.ExpirationInterval = 10
 	require.NoError(t, err)
-	defer pTesting.Stop()
+	defer pClient.Stop()
 
 	now := time.Now()
 	tags := make(map[string]string)
@@ -109,9 +109,9 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 		map[string]interface{}{"value": 0.0},
 		now)
 	var metrics = []telegraf.Metric{pt1}
-	require.NoError(t, pTesting.Write(metrics))
+	require.NoError(t, pClient.Write(metrics))
 
-	for _, m := range pTesting.metrics {
+	for _, m := range pClient.metrics {
 		m.Expiration = now.Add(time.Duration(-15) * time.Second)
 	}
 
@@ -121,7 +121,7 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 		map[string]interface{}{"value": 1.0},
 		now)
 	var metrics2 = []telegraf.Metric{pt2}
-	require.NoError(t, pTesting.Write(metrics2))
+	require.NoError(t, pClient.Write(metrics2))
 
 	expected := []struct {
 		name  string
@@ -142,14 +142,18 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 	acc.AssertDoesNotContainMeasurement(t, "test_point_1")
 
 	// Confirm that it's not in the PrometheusClient map anymore
-	assert.Equal(t, 1, len(pTesting.metrics))
+	assert.Equal(t, 1, len(pClient.metrics))
 }
 
 func setupPrometheus() (*PrometheusClient, *prometheus.Prometheus, error) {
-	pTesting = &PrometheusClient{Listen: "localhost:9127"}
-	err := pTesting.Start()
-	if err != nil {
-		return nil, nil, err
+	if pTesting == nil {
+		pTesting = &PrometheusClient{Listen: "localhost:9127"}
+		err := pTesting.Start()
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		pTesting.metrics = make(map[string]*MetricWithExpiration)
 	}
 
 	time.Sleep(time.Millisecond * 200)
