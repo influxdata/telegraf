@@ -1,3 +1,15 @@
+## v1.2 [unreleased]
+
+### Release Notes
+
+### Features
+
+- [#1564](https://github.com/influxdata/telegraf/issues/1564): Use RFC3339 timestamps in log output.
+
+### Bugfixes
+
+- [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
+
 ## v1.1 [unreleased]
 
 ### Release Notes

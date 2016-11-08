@@ -1,6 +1,6 @@
 VERSION := $(shell sh -c 'git describe --always --tags')
 BRANCH := $(shell sh -c 'git rev-parse --abbrev-ref HEAD')
-COMMIT := $(shell sh -c 'git rev-parse HEAD')
+COMMIT := $(shell sh -c 'git rev-parse --short HEAD')
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
 else
