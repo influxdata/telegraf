@@ -77,8 +77,41 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
+	if b.GatherViews {
+		for _, v := range stats.Statistics.Views {
+			tags := map[string]string{"name": v.Name}
+
+			fields := makeFieldMap(v.RdTypes)
+			acc.AddCounter("bind_view_rdtypes", fields, tags)
+
+			fields = makeFieldMap(v.ResStats)
+			acc.AddCounter("bind_view_resstats", fields, tags)
+		}
+	}
+
+	// Opcodes
+	fields := makeFieldMap(stats.Statistics.Server.OpCodes)
+	acc.AddCounter("bind_opcodes", fields, nil)
+
+	// RDATA types
+	fields = makeFieldMap(stats.Statistics.Server.RdTypes)
+	acc.AddCounter("bind_rdtypes", fields, nil)
+
+	// Nameserver stats
+	fields = makeFieldMap(stats.Statistics.Server.NSStats)
+	acc.AddCounter("bind_server", fields, nil)
+
+	// Zone statistics
+	tags := map[string]string{"zone": "_global"}
+	fields = makeFieldMap(stats.Statistics.Server.ZoneStats)
+	acc.AddCounter("bind_zonestats", fields, tags)
+
+	// Socket statistics
+	fields = makeFieldMap(stats.Statistics.Server.SockStats)
+	acc.AddCounter("bind_sockstats", fields, nil)
+
 	// Memory stats
-	fields := map[string]interface{}{
+	fields = map[string]interface{}{
 		"TotalUse":    stats.Statistics.Memory.Summary.TotalUse,
 		"InUse":       stats.Statistics.Memory.Summary.InUse,
 		"BlockSize":   stats.Statistics.Memory.Summary.BlockSize,
@@ -91,31 +124,10 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Statistics.Memory.Contexts {
 			tags := map[string]string{"id": c.Id, "name": c.Name}
-			fields = map[string]interface{} {"Total": c.Total, "InUse": c.InUse}
+			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
 			acc.AddCounter("bind_memory_context", fields, tags)
 		}
 	}
-
-	// Nameserver stats
-	fields = makeFieldMap(stats.Statistics.Server.NSStats)
-	acc.AddCounter("bind_server", fields, nil)
-
-	// Opcodes
-	fields = makeFieldMap(stats.Statistics.Server.OpCodes)
-	acc.AddCounter("bind_opcodes", fields, nil)
-
-	// RDATA types
-	fields = makeFieldMap(stats.Statistics.Server.RdTypes)
-	acc.AddCounter("bind_rdtypes", fields, nil)
-
-	// Socket statistics
-	fields = makeFieldMap(stats.Statistics.Server.SockStats)
-	acc.AddCounter("bind_sockstats", fields, nil)
-
-	// Zone statistics
-	tags := map[string]string{"zone": "_global"}
-	fields = makeFieldMap(stats.Statistics.Server.ZoneStats)
-	acc.AddCounter("bind_zonestats", fields, tags)
 
 	return nil
 }

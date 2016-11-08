@@ -14,8 +14,9 @@ import (
 )
 
 type Bind struct {
-	Urls []string
+	Urls                 []string
 	GatherMemoryContexts bool
+	GatherViews          bool
 }
 
 var sampleConfig = `
@@ -23,6 +24,7 @@ var sampleConfig = `
   ## Default is "http://localhost:8053/".
   urls = ["http://localhost:8053/"]
   gather_memory_contexts = false
+  gather_views = false
 `
 
 var client = &http.Client{

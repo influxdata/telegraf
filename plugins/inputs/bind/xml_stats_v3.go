@@ -50,7 +50,7 @@ type v3Counters struct {
 	} `xml:"counter"`
 }
 
-// readStatsV2 decodes a BIND9 XML statistics version 3 document
+// readStatsV3 decodes a BIND9 XML statistics version 3 document
 func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 	var stats v3Stats
 
