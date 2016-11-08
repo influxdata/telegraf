@@ -70,7 +70,7 @@ func makeFieldMap(stats []v2Counter) map[string]interface{} {
 }
 
 // readStatsV2 decodes a BIND9 XML statistics version 2 document
-func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
+func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	var stats v2Root
 
 	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
@@ -78,7 +78,6 @@ func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	}
 
 	// Memory stats
-	tags := map[string]string{}
 	fields := map[string]interface{}{
 		"TotalUse":    stats.Statistics.Memory.Summary.TotalUse,
 		"InUse":       stats.Statistics.Memory.Summary.InUse,
@@ -86,26 +85,35 @@ func readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 		"ContextSize": stats.Statistics.Memory.Summary.ContextSize,
 		"Lost":        stats.Statistics.Memory.Summary.Lost,
 	}
-	acc.AddCounter("bind_memory", fields, tags)
+	acc.AddCounter("bind_memory", fields, nil)
+
+	// Detailed, per-context memory stats
+	if b.GatherMemoryContexts {
+		for _, c := range stats.Statistics.Memory.Contexts {
+			tags := map[string]string{"id": c.Id, "name": c.Name}
+			fields = map[string]interface{} {"Total": c.Total, "InUse": c.InUse}
+			acc.AddCounter("bind_memory_context", fields, tags)
+		}
+	}
 
 	// Nameserver stats
 	fields = makeFieldMap(stats.Statistics.Server.NSStats)
-	acc.AddCounter("bind_server", fields, tags)
+	acc.AddCounter("bind_server", fields, nil)
 
 	// Opcodes
 	fields = makeFieldMap(stats.Statistics.Server.OpCodes)
-	acc.AddCounter("bind_opcodes", fields, tags)
+	acc.AddCounter("bind_opcodes", fields, nil)
 
 	// RDATA types
 	fields = makeFieldMap(stats.Statistics.Server.RdTypes)
-	acc.AddCounter("bind_rdtypes", fields, tags)
+	acc.AddCounter("bind_rdtypes", fields, nil)
 
 	// Socket statistics
 	fields = makeFieldMap(stats.Statistics.Server.SockStats)
-	acc.AddCounter("bind_sockstats", fields, tags)
+	acc.AddCounter("bind_sockstats", fields, nil)
 
 	// Zone statistics
-	tags = map[string]string{"zone": "_global"}
+	tags := map[string]string{"zone": "_global"}
 	fields = makeFieldMap(stats.Statistics.Server.ZoneStats)
 	acc.AddCounter("bind_zonestats", fields, tags)
 

@@ -51,7 +51,7 @@ type v3Counters struct {
 }
 
 // readStatsV2 decodes a BIND9 XML statistics version 3 document
-func readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
+func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 	var stats v3Stats
 
 	if err := xml.NewDecoder(r).Decode(&stats); err != nil {

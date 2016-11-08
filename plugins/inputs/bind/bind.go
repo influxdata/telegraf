@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -14,39 +15,45 @@ import (
 
 type Bind struct {
 	Urls []string
+	GatherMemoryContexts bool
 }
 
 var sampleConfig = `
   ## An array of BIND XML statistics URI to gather stats.
   ## Default is "http://localhost:8053/".
   urls = ["http://localhost:8053/"]
+  gather_memory_contexts = false
 `
 
-func (p *Bind) Description() string {
+var client = &http.Client{
+	Timeout: time.Duration(4 * time.Second),
+}
+
+func (b *Bind) Description() string {
 	return "Read BIND nameserver XML statistics"
 }
 
-func (p *Bind) SampleConfig() string {
+func (b *Bind) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Bind) Gather(acc telegraf.Accumulator) error {
+func (b *Bind) Gather(acc telegraf.Accumulator) error {
 	var outerr error
 	var errch = make(chan error)
 
-	for _, u := range p.Urls {
+	for _, u := range b.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
 			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
 		}
 
 		go func(addr *url.URL) {
-			errch <- p.GatherUrl(addr, acc)
+			errch <- b.GatherUrl(addr, acc)
 		}(addr)
 	}
 
 	// Drain channel, waiting for all requests to finish and save last error
-	for range p.Urls {
+	for range b.Urls {
 		if err := <-errch; err != nil {
 			outerr = err
 		}
@@ -55,8 +62,8 @@ func (p *Bind) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-func (p *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	resp, err := http.Get(addr.String())
+func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+	resp, err := client.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
 	}
@@ -88,9 +95,9 @@ func (p *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		}
 
 		if xmlRoot.XMLName.Local == "statistics" && strings.HasPrefix(xmlRoot.Version, "3.") {
-			return readStatsV3(br, acc)
+			return b.readStatsV3(br, acc)
 		} else {
-			return readStatsV2(br, acc)
+			return b.readStatsV2(br, acc)
 		}
 	}
 
