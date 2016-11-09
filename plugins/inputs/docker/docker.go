@@ -225,13 +225,14 @@ func (d *Docker) gatherContainer(
 	//   ie, rabbitmq:3-management or docker.someco.net:4443/rabbitmq:3-management
 	imageName := ""
 	imageVersion := "unknown"
-	if (strings.LastIndex(container.Image, ":") > -1) {
-		imageVersion = container.Image[strings.LastIndex(container.Image, ":")+1:]
-		imageName = container.Image[:strings.LastIndex(container.Image, ":")]
+	imageVersionMarkerIndex := strings.LastIndex(container.Image, ":")
+	if imageVersionMarkerIndex > -1 {
+		imageVersion = container.Image[imageVersionMarkerIndex+1:]
+		imageName = container.Image[:imageVersionMarkerIndex]
 	} else {
 		imageName = container.Image
 	}
-	
+
 	tags := map[string]string{
 		"engine_host":       d.engine_host,
 		"container_name":    cname,
