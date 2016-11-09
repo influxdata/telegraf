@@ -7,6 +7,15 @@
 ### Bugfixes
 
 ## v1.1 [unreleased]
+- [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
+
+## v1.1.1 [unreleased]
+
+### Bugfixes
+
+- [#2023](https://github.com/influxdata/telegraf/issues/2023): Fix issue parsing toml durations with single quotes.
+
+## v1.1.0 [2016-11-07]
 
 ### Release Notes
 
