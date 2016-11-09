@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -22,7 +23,7 @@ type MetricWithExpiration struct {
 
 type PrometheusClient struct {
 	Listen             string
-	ExpirationInterval int64 `toml:"expiration_interval"`
+	ExpirationInterval internal.Duration `toml:"expiration_interval"`
 
 	metrics map[string]*MetricWithExpiration
 
@@ -33,7 +34,7 @@ var sampleConfig = `
   ## Address to listen on
   # listen = ":9126"
 
-  ## Interval to expire metrics and not deliver to prometheus (seconds), 0 == no expiration
+  ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
   # expiration_interval = 0
 `
 
@@ -95,7 +96,7 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	defer p.Unlock()
 
 	for key, m := range p.metrics {
-		if p.ExpirationInterval != 0 && time.Now().After(m.Expiration) {
+		if p.ExpirationInterval.Duration != 0 && time.Now().After(m.Expiration) {
 			delete(p.metrics, key)
 		} else {
 			ch <- m.Metric
@@ -175,11 +176,10 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 					mname, l, err.Error())
 			}
 
-			metricWithTime := &MetricWithExpiration{
+			p.metrics[desc.String()] = &MetricWithExpiration{
 				Metric:     metric,
-				Expiration: time.Now().Add(time.Duration(p.ExpirationInterval) * time.Second),
+				Expiration: time.Now().Add(p.ExpirationInterval.Duration),
 			}
-			p.metrics[desc.String()] = metricWithTime
 		}
 	}
 	return nil

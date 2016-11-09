@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -97,7 +98,7 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 	}
 
 	pClient, p, err := setupPrometheus()
-	pClient.ExpirationInterval = 10
+	pClient.ExpirationInterval = internal.Duration{Duration: time.Second * 10}
 	require.NoError(t, err)
 	defer pClient.Stop()
 
