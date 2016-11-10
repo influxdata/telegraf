@@ -8,19 +8,22 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-const DEFAULT_TEMPLATE = "host.tags.measurement.field"
+// DefaultTemplate const
+const DefaultTemplate = "host.tags.measurement.field"
 
 var (
 	fieldDeleter   = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
 	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".", `\`, "", ")", "_", "(", "_")
 )
 
-type GraphiteSerializer struct {
+// SerializerGraphite struct
+type SerializerGraphite struct {
 	Prefix   string
 	Template string
 }
 
-func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
+// Serialize ([]string, error)
+func (s *SerializerGraphite) Serialize(metric telegraf.Metric) ([]string, error) {
 	out := []string{}
 
 	// Convert UnixNano to Unix timestamps
@@ -45,13 +48,13 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 }
 
 // SerializeBucketName will take the given measurement name and tags and
-// produce a graphite bucket. It will use the GraphiteSerializer.Template
-// to generate this, or DEFAULT_TEMPLATE.
+// produce a graphite bucket. It will use the Serializer.Template
+// to generate this, or DefaultTemplate.
 //
 // NOTE: SerializeBucketName replaces the "field" portion of the template with
 // FIELDNAME. It is up to the user to replace this. This is so that
 // SerializeBucketName can be called just once per measurement, rather than
-// once per field. See GraphiteSerializer.InsertField() function.
+// once per field. See Serializer.InsertField() function.
 func SerializeBucketName(
 	measurement string,
 	tags map[string]string,
@@ -59,7 +62,7 @@ func SerializeBucketName(
 	prefix string,
 ) string {
 	if template == "" {
-		template = DEFAULT_TEMPLATE
+		template = DefaultTemplate
 	}
 	tagsCopy := make(map[string]string)
 	for k, v := range tags {
@@ -81,7 +84,14 @@ func SerializeBucketName(
 		default:
 			// This is a tag being applied
 			if tagvalue, ok := tagsCopy[templatePart]; ok {
-				out = append(out, strings.Replace(tagvalue, ".", "_", -1))
+				if templatePart == "host" {
+					hostSplit := strings.Split(tagvalue, ".")
+					for i := len(hostSplit) - 1; i >= 0; i-- {
+						out = append(out, hostSplit[i])
+					}
+				} else {
+					out = append(out, strings.Replace(tagvalue, ".", "_", -1))
+				}
 				delete(tagsCopy, templatePart)
 			}
 		}
@@ -123,14 +133,24 @@ func buildTags(tags map[string]string) string {
 	}
 	sort.Strings(keys)
 
-	var tag_str string
+	var tagStr string
+	var tagValue string
+	var reversedHost []string
 	for i, k := range keys {
-		tag_value := strings.Replace(tags[k], ".", "_", -1)
-		if i == 0 {
-			tag_str += tag_value
+		if k == "host" {
+			hostSplit := strings.Split(tags[k], ".")
+			for i := len(hostSplit) - 1; i >= 0; i-- {
+				reversedHost = append(reversedHost, hostSplit[i])
+			}
+			tagValue = strings.Join(reversedHost, ".")
 		} else {
-			tag_str += "." + tag_value
+			tagValue = strings.Replace(tags[k], ".", "_", -1)
+		}
+		if i == 0 {
+			tagStr += tagValue
+		} else {
+			tagStr += "." + tagValue
 		}
 	}
-	return tag_str
+	return tagStr
 }
