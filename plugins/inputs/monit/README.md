@@ -19,39 +19,39 @@ The monit plugin gathers metrics and status information about local processes ma
 
 Measurement:  monit
 
-    Fields for all Monit service types:
-    - status (value)
-    - status_decoded (decoded status text) 
-    - monitoring_status (value)
-    - monitoring_status_decoded (decoded monitoring text)
+Fields for all Monit service types:
+- status (value)
+- status_decoded (decoded status text) 
+- monitoring_status (value)
+- monitoring_status_decoded (decoded monitoring text)
 
-	Fields for Monit service type 3:
-    - cpu_percent
-    - cpu_percent_total
-    - mem_kb
-    - mem_kb_total
-    - mem_percent
-    - mem_percent_total
-    - service_uptime
+Fields for Monit service type 3:
+- cpu_percent
+- cpu_percent_total
+- mem_kb
+- mem_kb_total
+- mem_percent
+- mem_percent_total
+- service_uptime
       
-	Fields for Monit service type 5:
-    - cpu_system
-    - cpu_user
-    - cpu_wait
-    - cpu_load_avg_1m
-    - cpu_load_avg_5m
-    - cpu_load_avg_15m
-    - mem_kb
-    - mem_percent
-    - swap_kb
-    - swap_percent
+Fields for Monit service type 5:
+- cpu_system
+- cpu_user
+- cpu_wait
+- cpu_load_avg_1m
+- cpu_load_avg_5m
+- cpu_load_avg_15m
+- mem_kb
+- mem_percent
+- swap_kb
+- swap_percent
 
 ### Tags:
-    All measurements have the following tags:
-    - address
-    - version
-    - service
-    - service_type
+All measurements have the following tags:
+- address
+- version
+- service
+- service_type
 
 ### Example Output:
 ```
