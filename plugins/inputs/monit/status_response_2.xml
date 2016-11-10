@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<monit>
+  <server>
+    <id>0ed39c522be4c3971541412c43141613</id>
+    <incarnation>1476518435</incarnation>
+    <version>5.2.5</version>
+    <uptime>109878</uptime>
+    <poll>10</poll>
+    <startdelay>0</startdelay>
+    <localhostname>localhost</localhostname>
+    <controlfile>/var/vcap/bosh/etc/monitrc</controlfile>
+    <httpd>
+      <address>127.0.0.1</address>
+      <port>2822</port>
+      <ssl>0</ssl>
+    </httpd>
+  </server>
+  <platform>
+    <name>Linux</name>
+    <release>4.4.0-42-generic</release>
+    <version>#62~14.04.1-Ubuntu SMP Fri Oct 7 23:15:48 UTC 2016</version>
+    <machine>x86_64</machine>
+    <cpu>8</cpu>
+    <memory>16432272</memory>
+    <swap>16432268</swap>
+  </platform>
+  <service type="2">
+    <name>telegraf-config</name>
+    <collected_sec>1476628305</collected_sec>
+    <collected_usec>302669</collected_usec>
+    <status>0</status>
+    <status_hint>0</status_hint>
+    <monitor>1</monitor>
+    <monitormode>0</monitormode>
+    <pendingaction>0</pendingaction>
+    <mode>644</mode>
+    <uid>1000</uid>
+    <gid>1000</gid>
+    <timestamp>1476518441</timestamp>
+    <size>1565</size>
+  </service>
+</monit>

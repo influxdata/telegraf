@@ -38,10 +38,10 @@ type Platform struct {
 type Service struct {
 	Type             string `xml:"type,attr"`
 	Name             string `xml:"name"`
-	Status           int    `xml:"status"`
-	MonitoringStatus int    `xml:"monitor"`
+	Status           int64  `xml:"status"`
+	MonitoringStatus int64  `xml:"monitor"`
 	PendingAction    int    `xml:"pendingaction"`
-	Uptime           int    `xml:"uptime"`
+	Uptime           int64  `xml:"uptime"`
 	Memory           Memory `xml:"memory"`
 	CPU              CPU    `xml:"cpu"`
 	System           System `xml:"system"`
@@ -131,9 +131,10 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	for _, service := range status.Services {
 		// Prepare fields
 		fields := make(map[string]interface{})
-		fields["status"] = serviceStatus(service)
-		fields["monitoring_status"] = monitoringStatus(service)
-		fields["service_uptime"] = service.Uptime
+		fields["status"] = service.Status
+		fields["status_decoded"] = serviceStatus(service)
+		fields["monitoring_status"] = service.MonitoringStatus
+		fields["monitoring_status_decoded"] = monitoringStatus(service)
 
 		if service.Type == "3" {
 			fields["cpu_percent"] = service.CPU.Percent
@@ -142,6 +143,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			fields["mem_kb_total"] = service.Memory.KilobyteTotal
 			fields["mem_percent"] = service.Memory.Percent
 			fields["mem_percent_total"] = service.Memory.PercentTotal
+			fields["service_uptime"] = service.Uptime
 		} else if service.Type == "5" {
 			fields["cpu_system"] = service.System.CPU.System
 			fields["cpu_user"] = service.System.CPU.User
@@ -156,8 +158,10 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 		}
 
 		tags["service"] = service.Name
+		tags["service_type"] = service.Type
 		acc.AddFields("monit", fields, tags)
 	}
+
 	return nil
 }
 
@@ -166,7 +170,7 @@ func serviceStatus(s Service) string {
 
 	if s.MonitoringStatus == 0 || s.MonitoringStatus == 2 {
 		status = monitoringStatus(s)
-	} else if s.Status == 1 {
+	} else if s.Status == 0 {
 		status = "Running"
 	} else {
 		status = "Failure"
