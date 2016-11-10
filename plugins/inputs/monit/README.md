@@ -20,10 +20,10 @@ The monit plugin gathers metrics and status information about local processes ma
 Measurement:  monit
 
 Fields for all Monit service types:
-- status (value)
-- status_decoded (decoded status text) 
-- monitoring_status (value)
-- monitoring_status_decoded (decoded monitoring text)
+- status
+- status_text 
+- monitoring_status
+- monitoring_status_text
 
 Fields for Monit service type 3:
 - cpu_percent
