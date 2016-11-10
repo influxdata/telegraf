@@ -5,41 +5,56 @@ The monit plugin gathers metrics and status information about local processes ma
 ### Configuration:
 
 ```toml
-# Description
-[[inputs.example]]
-  # SampleConfig
+# Read metrics and status information about processes managed by Monit
+ [[inputs.monit]]
+   #SampleConfig
+   address = "http://127.0.0.1:2812"
+   basic_auth_username = "test"
+   basic_auth_password = "test"
 ```
 
 ### Measurements & Fields:
 
 <optional description>
 
-- measurement1
-    - field1 (type, unit)
-    - field2 (float, percent)
-- measurement2
-    - field3 (integer, bytes)
+Measurement:  monit
+
+    Fields for all Monit service types:
+    - status (value)
+    - status_decoded (decoded status text) 
+    - monitoring_status (value)
+    - monitoring_status_decoded (decoded monitoring text)
+
+	Fields for Monit service type 3:
+    - cpu_percent
+    - cpu_percent_total
+    - mem_kb
+    - mem_kb_total
+    - mem_percent
+    - mem_percent_total
+    - service_uptime
+      
+	Fields for Monit service type 5:
+    - cpu_system
+    - cpu_user
+    - cpu_wait
+    - cpu_load_avg_1m
+    - cpu_load_avg_5m
+    - cpu_load_avg_15m
+    - mem_kb
+    - mem_percent
+    - swap_kb
+    - swap_percent
 
 ### Tags:
-
-- All measurements have the following tags:
-    - tag1 (optional description)
-    - tag2
-- measurement2 has the following tags:
-    - tag3
-    
-### Sample Queries:
-
-These are some useful queries (to generate dashboards or other) to run against data from this plugin:
-
-```
-SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar AND time > now() - 1h GROUP BY tag
-```
+    All measurements have the following tags:
+    - address
+    - version
+    - service
+    - service_type
 
 ### Example Output:
-
 ```
-$ ./telegraf -config telegraf.conf -input-filter example -test
-measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
-measurement2,tag1=foo,tag2=bar,tag3=baz field3=1i 1453831884664956455
+$ ./telegraf -config telegraf.conf -input-filter monit -test
+monit,address=http://127.0.0.1:2812,host=ubuntu,service=telegraf,service_type=3,version=5.20.0 cpu_percent=0,cpu_percent_total=0,mem_kb=0i,mem_kb_total=0i,mem_percent=0,mem_percent_total=0,monitoring_status=1i,monitoring_status_decoded="Running",service_uptime=0i,status=4608i,status_decoded="Failure" 1478782321000000000
 ```
