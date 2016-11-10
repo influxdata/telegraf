@@ -35,7 +35,7 @@ var sampleConfig = `
   # listen = ":9126"
 
   ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
-  # expiration_interval = 0
+  # expiration_interval = "60s"
 `
 
 func (p *PrometheusClient) Start() error {
@@ -187,6 +187,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("prometheus_client", func() telegraf.Output {
-		return &PrometheusClient{}
+		return &PrometheusClient{
+			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+		}
 	})
 }
