@@ -119,14 +119,14 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 		"ContextSize": stats.Statistics.Memory.Summary.ContextSize,
 		"Lost":        stats.Statistics.Memory.Summary.Lost,
 	}
-	acc.AddCounter("bind_memory", fields, nil)
+	acc.AddGauge("bind_memory", fields, nil)
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Statistics.Memory.Contexts {
 			tags := map[string]string{"id": c.Id, "name": c.Name}
 			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
-			acc.AddCounter("bind_memory_context", fields, tags)
+			acc.AddGauge("bind_memory_context", fields, tags)
 		}
 	}
 
