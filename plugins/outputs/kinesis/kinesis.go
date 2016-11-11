@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync/atomic"
 	"time"
+	ejson "encoding/json"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
@@ -55,7 +56,7 @@ var sampleConfig = `
   ## PartitionKey as used for sharding data.
   partitionkey = "PartitionKey"
   ## format of the Data payload in the kinesis PutRecord, supported
-  ## String and Custom.
+  ## string, json and custom.
   format = "string"
   ## debug will show upstream aws messages.
   debug = false
@@ -128,13 +129,25 @@ func (k *KinesisOutput) Close() error {
 func FormatMetric(k *KinesisOutput, point telegraf.Metric) (string, error) {
 	if k.Format == "string" {
 		return point.String(), nil
-	} else {
-		m := fmt.Sprintf("%+v,%+v,%+v",
-			point.Name(),
-			point.Tags(),
-			point.String())
-		return m, nil
+	} 
+	if k.Format == "json"{		
+			m := make(map[string]interface{})
+			m["tags"] = point.Tags()
+			m["fields"] = point.Fields()
+			m["name"] = point.Name()
+			m["timestamp"] = point.UnixNano() / 1000000000
+			serialized, err := ejson.Marshal(m)
+			if err != nil {
+				return "", err
+			}
+		return string(serialized), nil
 	}
+
+	m := fmt.Sprintf("%+v,%+v,%+v",
+		point.Name(),
+		point.Tags(),
+		point.String())
+	return m, nil
 }
 
 func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Duration {
