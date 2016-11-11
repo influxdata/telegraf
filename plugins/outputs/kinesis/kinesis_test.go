@@ -25,11 +25,11 @@ func TestFormatMetric(t *testing.T) {
 	}
 	require.NoError(t, err)
 
-	k := &KinesisOutput{
+	k = &KinesisOutput{
 		Format: "json",
 	}
 
-	valid_json := "{\"fields\":{\"value\":1},\"name\":\"docker\",\"tags\":{\"tag1\":\"value1\"},\"timestamp\":1257894000}"
+	valid_json := "{\"fields\":{\"value\":1},\"name\":\"test1\",\"tags\":{\"tag1\":\"value1\"},\"timestamp\":1257894000}"
 	func_json, err := FormatMetric(k, p)
 
 	if func_json != valid_json {
