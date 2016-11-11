@@ -53,7 +53,7 @@ solution to scale out.
 ### format
 
 The format configuration value has been designated to allow people to change the format of the Point as written to
-Kinesis. Right now there are two supported formats string and custom.
+Kinesis. Right now there are three supported formats; string, json and custom.
 
 #### string
 
