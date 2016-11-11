@@ -1,12 +1,12 @@
 package kinesis
 
 import (
+	ejson "encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"sync/atomic"
 	"time"
-	ejson "encoding/json"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
@@ -129,17 +129,17 @@ func (k *KinesisOutput) Close() error {
 func FormatMetric(k *KinesisOutput, point telegraf.Metric) (string, error) {
 	if k.Format == "string" {
 		return point.String(), nil
-	} 
-	if k.Format == "json"{		
-			m := make(map[string]interface{})
-			m["tags"] = point.Tags()
-			m["fields"] = point.Fields()
-			m["name"] = point.Name()
-			m["timestamp"] = point.UnixNano() / 1000000000
-			serialized, err := ejson.Marshal(m)
-			if err != nil {
-				return "", err
-			}
+	}
+	if k.Format == "json" {
+		m := make(map[string]interface{})
+		m["tags"] = point.Tags()
+		m["fields"] = point.Fields()
+		m["name"] = point.Name()
+		m["timestamp"] = point.UnixNano() / 1000000000
+		serialized, err := ejson.Marshal(m)
+		if err != nil {
+			return "", err
+		}
 		return string(serialized), nil
 	}
 
