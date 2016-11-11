@@ -232,6 +232,11 @@ Telegraf can also collect metrics via the following service plugins:
 
 ## Processor Plugins
 
+* [aws_metadata](./plugins/processors/aws)
+  * [aws_metadata_ec2](./plugins/processors/aws/ec2)
+  * [aws_metadata_elb](./plugins/processors/aws/elb)
+  * [aws_metadata_rds](./plugins/processors/aws/rds)
+  * [aws_metadata_sqs](./plugins/processors/aws/sqs)
 * [printer](./plugins/processors/printer)
 
 ## Aggregator Plugins
