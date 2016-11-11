@@ -2,7 +2,7 @@ github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
 github.com/aerospike/aerospike-client-go 7f3a312c3b2a60ac083ec6da296091c52c795c63
 github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
-github.com/aws/aws-sdk-go 13a12060f716145019378a10e2806c174356b857
+github.com/aws/aws-sdk-go 1355b456f6ba4a8453249e0dc7743f16ccac362d
 github.com/beorn7/perks 3ac7bf7a47d159a033b107610db8a1b6575507a4
 github.com/cenkalti/backoff 4dc77674aceaabba2c7e3da25d4c823edfb73f99
 github.com/couchbase/go-couchbase cb664315a324d87d19c879d9cc67fda6be8c2ac1
@@ -41,7 +41,6 @@ github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/nats ea8b4fd12ebb823073c0004b9f09ac8748f4f165
 github.com/nats-io/nuid a5152d67cf63cbfb5d992a395458722a45194715
 github.com/nsqio/go-nsq 0b80d6f05e15ca1930e0c5e1d540ed627e299980
-github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
 github.com/prometheus/client_golang 18acf9993a863f4c4b40612e19cdd243e7c86831
 github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
