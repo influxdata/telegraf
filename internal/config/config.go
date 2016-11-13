@@ -240,7 +240,7 @@ var header = `# Telegraf Configuration
   ## Run telegraf with debug log messages.
   debug = false
   ## Run telegraf in quiet mode (error log messages only).
-  quiet = false
+  quiet = true
   ## Specify the log file name. The empty string means to log to stderr.
   logfile = ""
 

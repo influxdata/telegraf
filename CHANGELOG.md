@@ -5,6 +5,7 @@
 ### Features
 
 - [#1564](https://github.com/influxdata/telegraf/issues/1564): Use RFC3339 timestamps in log output.
+- [#2026](https://github.com/influxdata/telegraf/pull/2026): Log quietly by default.
 
 ### Bugfixes
 
