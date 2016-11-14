@@ -131,14 +131,14 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 		}
 
 		fields := map[string]interface{}{
-			"reads":         io.ReadCount,
-			"writes":        io.WriteCount,
-			"read_bytes":    io.ReadBytes,
-			"write_bytes":   io.WriteBytes,
-			"read_time":     io.ReadTime,
-			"write_time":    io.WriteTime,
-			"io_time":       io.IoTime,
-			"io_inprogress": io.IopsInProgress,
+			"reads":            io.ReadCount,
+			"writes":           io.WriteCount,
+			"read_bytes":       io.ReadBytes,
+			"write_bytes":      io.WriteBytes,
+			"read_time":        io.ReadTime,
+			"write_time":       io.WriteTime,
+			"io_time":          io.IoTime,
+			"iops_in_progress": io.IopsInProgress,
 		}
 		acc.AddCounter("diskio", fields, tags)
 	}
