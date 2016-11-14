@@ -59,14 +59,14 @@ type v2Counter struct {
 	Value int    `xml:"counter"`
 }
 
-func makeFieldMap(stats []v2Counter) map[string]interface{} {
-	fm := make(map[string]interface{})
+func accumulate(acc telegraf.Accumulator, measurement string, tags map[string]string, tagname string, stats []v2Counter) {
+	fields := make(map[string]interface{})
 
 	for _, st := range stats {
-		fm[st.Name] = st.Value
+		tags[tagname] = st.Name
+		fields["counter"] = st.Value
+		acc.AddCounter(measurement, fields, tags)
 	}
-
-	return fm
 }
 
 // readStatsV2 decodes a BIND9 XML statistics version 2 document
@@ -80,39 +80,33 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	// Detailed, per-view stats
 	if b.GatherViews {
 		for _, v := range stats.Statistics.Views {
-			tags := map[string]string{"name": v.Name}
+			tags := map[string]string{"view": v.Name}
 
-			fields := makeFieldMap(v.RdTypes)
-			acc.AddCounter("bind_view_rdtypes", fields, tags)
+			// Query RDATA types
+			accumulate(acc, "bind_qtype", tags, "qtype", v.RdTypes)
 
-			fields = makeFieldMap(v.ResStats)
-			acc.AddCounter("bind_view_resstats", fields, tags)
+			// Resolver stats
+			accumulate(acc, "bind_resstats", tags, "resstats", v.ResStats)
 		}
 	}
 
 	// Opcodes
-	fields := makeFieldMap(stats.Statistics.Server.OpCodes)
-	acc.AddCounter("bind_opcodes", fields, nil)
+	accumulate(acc, "bind_opcode", map[string]string{}, "opcode", stats.Statistics.Server.OpCodes)
 
-	// RDATA types
-	fields = makeFieldMap(stats.Statistics.Server.RdTypes)
-	acc.AddCounter("bind_rdtypes", fields, nil)
+	// Query RDATA types
+	accumulate(acc, "bind_qtype", map[string]string{}, "qtype", stats.Statistics.Server.RdTypes)
 
 	// Nameserver stats
-	fields = makeFieldMap(stats.Statistics.Server.NSStats)
-	acc.AddCounter("bind_server", fields, nil)
+	accumulate(acc, "bind_nsstat", map[string]string{}, "nsstat", stats.Statistics.Server.NSStats)
 
 	// Zone stats
-	tags := map[string]string{"zone": "_global"}
-	fields = makeFieldMap(stats.Statistics.Server.ZoneStats)
-	acc.AddCounter("bind_zonestats", fields, tags)
+	accumulate(acc, "bind_zonestat", map[string]string{}, "zonestat", stats.Statistics.Server.ZoneStats)
 
 	// Socket statistics
-	fields = makeFieldMap(stats.Statistics.Server.SockStats)
-	acc.AddCounter("bind_sockstats", fields, nil)
+	accumulate(acc, "bind_sockstat", map[string]string{}, "sockstat", stats.Statistics.Server.SockStats)
 
 	// Memory stats
-	fields = map[string]interface{}{
+	fields := map[string]interface{}{
 		"TotalUse":    stats.Statistics.Memory.Summary.TotalUse,
 		"InUse":       stats.Statistics.Memory.Summary.InUse,
 		"BlockSize":   stats.Statistics.Memory.Summary.BlockSize,
