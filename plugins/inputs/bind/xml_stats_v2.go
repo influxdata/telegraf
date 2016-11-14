@@ -59,14 +59,13 @@ type v2Counter struct {
 	Value int    `xml:"counter"`
 }
 
-func accumulate(acc telegraf.Accumulator, mSuffix string, tags map[string]string, stats []v2Counter) {
-	measurement := fmt.Sprintf("bind_%s", mSuffix)
+func accumulate(acc telegraf.Accumulator, tags map[string]string, stats []v2Counter) {
 	fields := make(map[string]interface{})
 
-	for _, st := range stats {
-		tags[mSuffix] = st.Name
-		fields["counter"] = st.Value
-		acc.AddCounter(measurement, fields, tags)
+	for _, c := range stats {
+		tags["name"] = c.Name
+		fields["value"] = c.Value
+		acc.AddCounter("bind_counter", fields, tags)
 	}
 }
 
@@ -82,27 +81,27 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 	if b.GatherViews {
 		for _, v := range stats.Statistics.Views {
 			// Query RDATA types
-			accumulate(acc, "qtype", map[string]string{"view": v.Name}, v.RdTypes)
+			accumulate(acc, map[string]string{"type": "qtype", "view": v.Name}, v.RdTypes)
 
 			// Resolver stats
-			accumulate(acc, "resstats", map[string]string{"view": v.Name}, v.ResStats)
+			accumulate(acc, map[string]string{"type": "resstats", "view": v.Name}, v.ResStats)
 		}
 	}
 
 	// Opcodes
-	accumulate(acc, "opcode", map[string]string{}, stats.Statistics.Server.OpCodes)
+	accumulate(acc, map[string]string{"type": "opcode"}, stats.Statistics.Server.OpCodes)
 
 	// Query RDATA types
-	accumulate(acc, "qtype", map[string]string{}, stats.Statistics.Server.RdTypes)
+	accumulate(acc, map[string]string{"type": "qtype"}, stats.Statistics.Server.RdTypes)
 
 	// Nameserver stats
-	accumulate(acc, "nsstat", map[string]string{}, stats.Statistics.Server.NSStats)
+	accumulate(acc, map[string]string{"type": "nsstat"}, stats.Statistics.Server.NSStats)
 
 	// Zone stats
-	accumulate(acc, "zonestat", map[string]string{}, stats.Statistics.Server.ZoneStats)
+	accumulate(acc, map[string]string{"type": "zonestat"}, stats.Statistics.Server.ZoneStats)
 
 	// Socket statistics
-	accumulate(acc, "sockstat", map[string]string{}, stats.Statistics.Server.SockStats)
+	accumulate(acc, map[string]string{"type": "sockstat"}, stats.Statistics.Server.SockStats)
 
 	// Memory stats
 	fields := map[string]interface{}{
