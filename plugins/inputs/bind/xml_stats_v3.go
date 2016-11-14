@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 )
@@ -61,29 +62,53 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 	// Detailed, per-view stats
 	if b.GatherViews {
 		for _, v := range stats.Views {
-			tags := map[string]string{"name": v.Name}
-
 			for _, cg := range v.CounterGroups {
+				tags := map[string]string{"view": v.Name}
 				fields := make(map[string]interface{})
 
-				for _, c := range cg.Counters {
-					fields[c.Name] = c.Value
-				}
+				switch cg.Type {
+				case "resqtype":
+					for _, c := range cg.Counters {
+						tags["qtype"] = c.Name
+						fields["counter"] = c.Value
+						acc.AddCounter("bind_qtype", fields, tags)
+					}
+				default:
+					measurement := fmt.Sprintf("bind_%s", cg.Type)
 
-				acc.AddCounter(fmt.Sprintf("bind_view_%s_counters", cg.Type), fields, tags)
+					for _, c := range cg.Counters {
+						tags[cg.Type] = c.Name
+						fields["counter"] = c.Value
+						acc.AddCounter(measurement, fields, tags)
+					}
+				}
 			}
 		}
 	}
 
 	// Counter groups
 	for _, cg := range stats.Server.CounterGroups {
+		tags := map[string]string{}
 		fields := make(map[string]interface{})
 
-		for _, c := range cg.Counters {
-			fields[c.Name] = c.Value
-		}
+		switch cg.Type {
+		case "opcode":
+			for _, c := range cg.Counters {
+				if !strings.HasPrefix(c.Name, "RESERVED") {
+					tags[cg.Type] = c.Name
+					fields["counter"] = c.Value
+					acc.AddCounter("bind_opcode", fields, tags)
+				}
+			}
+		default:
+			measurement := fmt.Sprintf("bind_%s", cg.Type)
 
-		acc.AddCounter(fmt.Sprintf("bind_%s_counters", cg.Type), fields, nil)
+			for _, c := range cg.Counters {
+				tags[cg.Type] = c.Name
+				fields["counter"] = c.Value
+				acc.AddCounter(measurement, fields, tags)
+			}
+		}
 	}
 
 	// Memory stats
