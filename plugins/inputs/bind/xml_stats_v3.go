@@ -62,25 +62,16 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 	// Detailed, per-view stats
 	if b.GatherViews {
 		for _, v := range stats.Views {
+			tags := map[string]string{"view": v.Name}
+			fields := make(map[string]interface{})
+
 			for _, cg := range v.CounterGroups {
-				tags := map[string]string{"view": v.Name}
-				fields := make(map[string]interface{})
+				tags["type"] = cg.Type
 
-				switch cg.Type {
-				case "resqtype":
-					for _, c := range cg.Counters {
-						tags["qtype"] = c.Name
-						fields["counter"] = c.Value
-						acc.AddCounter("bind_qtype", fields, tags)
-					}
-				default:
-					measurement := fmt.Sprintf("bind_%s", cg.Type)
-
-					for _, c := range cg.Counters {
-						tags[cg.Type] = c.Name
-						fields["counter"] = c.Value
-						acc.AddCounter(measurement, fields, tags)
-					}
+				for _, c := range cg.Counters {
+					tags["name"] = c.Name
+					fields["value"] = c.Value
+					acc.AddCounter("bind_counter", fields, tags)
 				}
 			}
 		}
@@ -88,26 +79,17 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 
 	// Counter groups
 	for _, cg := range stats.Server.CounterGroups {
-		tags := map[string]string{}
+		tags := map[string]string{"type": cg.Type}
 		fields := make(map[string]interface{})
 
-		switch cg.Type {
-		case "opcode":
-			for _, c := range cg.Counters {
-				if !strings.HasPrefix(c.Name, "RESERVED") {
-					tags[cg.Type] = c.Name
-					fields["counter"] = c.Value
-					acc.AddCounter("bind_opcode", fields, tags)
-				}
+		for _, c := range cg.Counters {
+			if cg.Type == "opcode" && strings.HasPrefix(c.Name, "RESERVED") {
+				continue
 			}
-		default:
-			measurement := fmt.Sprintf("bind_%s", cg.Type)
 
-			for _, c := range cg.Counters {
-				tags[cg.Type] = c.Name
-				fields["counter"] = c.Value
-				acc.AddCounter(measurement, fields, tags)
-			}
+			tags["name"] = c.Name
+			fields["value"] = c.Value
+			acc.AddCounter("bind_counter", fields, tags)
 		}
 	}
 
