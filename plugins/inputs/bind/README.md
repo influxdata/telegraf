@@ -28,29 +28,40 @@ for more information.
 
 ### Measurements & Fields:
 
-- bind_adbstats
-- bind_cache
+- bind_counter
+  - value
 - bind_memory
+  - TotalUse
+  - InUse
+  - BlockSize
+  - ContextSize
+  - Lost
 - bind_memory_context
-- bind_opcodes
-- bind_nsstats
-- bind_resstats
-- bind_server
-- bind_sockstats
-- bind_rdtypes
-- bind_zonestats
-- bind_view_*
+  - Total
+  - InUse
 
 ### Tags:
 
-TBC
+- All measurements
+  - url
+- bind_counter
+  - type
+  - name
+  - view (optional)
+- bind_memory_context
+  - id
+  - name
 
 ### Sample Queries:
 
 These are some useful queries (to generate dashboards or other) to run against data from this
 plugin:
 
-TBC
+```
+SELECT derivative(mean("value"), 1s) FROM bind_counter \
+WHERE host = 'example.com' AND type = 'qtype' AND time > now() - 6h \
+GROUP BY time(1m), name
+```
 
 ### Example Output:
 
