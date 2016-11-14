@@ -96,9 +96,9 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		}
 
 		if (xmlRoot.XMLName.Local == "statistics") && (int(xmlRoot.Version) == 3) {
-			return b.readStatsV3(br, acc)
+			return b.readStatsV3(br, acc, addr.Host)
 		} else {
-			return b.readStatsV2(br, acc)
+			return b.readStatsV2(br, acc, addr.Host)
 		}
 	}
 }

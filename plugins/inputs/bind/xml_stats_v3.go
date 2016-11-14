@@ -52,34 +52,16 @@ type v3Counters struct {
 }
 
 // readStatsV3 decodes a BIND9 XML statistics version 3 document
-func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
+func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) error {
 	var stats v3Stats
 
 	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
 		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
-	// Detailed, per-view stats
-	if b.GatherViews {
-		for _, v := range stats.Views {
-			tags := map[string]string{"view": v.Name}
-			fields := make(map[string]interface{})
-
-			for _, cg := range v.CounterGroups {
-				tags["type"] = cg.Type
-
-				for _, c := range cg.Counters {
-					tags["name"] = c.Name
-					fields["value"] = c.Value
-					acc.AddCounter("bind_counter", fields, tags)
-				}
-			}
-		}
-	}
-
 	// Counter groups
 	for _, cg := range stats.Server.CounterGroups {
-		tags := map[string]string{"type": cg.Type}
+		tags := map[string]string{"url": url, "type": cg.Type}
 		fields := make(map[string]interface{})
 
 		for _, c := range cg.Counters {
@@ -101,14 +83,35 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator) error {
 		"ContextSize": stats.Memory.Summary.ContextSize,
 		"Lost":        stats.Memory.Summary.Lost,
 	}
-	acc.AddGauge("bind_memory", fields, nil)
+	acc.AddGauge("bind_memory", fields, map[string]string{"url": url})
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
+		tags := map[string]string{"url": url}
+
 		for _, c := range stats.Memory.Contexts {
-			tags := map[string]string{"id": c.Id, "name": c.Name}
+			tags["id"] = c.Id
+			tags["name"] = c.Name
 			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
 			acc.AddGauge("bind_memory_context", fields, tags)
+		}
+	}
+
+	// Detailed, per-view stats
+	if b.GatherViews {
+		for _, v := range stats.Views {
+			tags := map[string]string{"url": url, "view": v.Name}
+			fields := make(map[string]interface{})
+
+			for _, cg := range v.CounterGroups {
+				tags["type"] = cg.Type
+
+				for _, c := range cg.Counters {
+					tags["name"] = c.Name
+					fields["value"] = c.Value
+					acc.AddCounter("bind_counter", fields, tags)
+				}
+			}
 		}
 	}
 

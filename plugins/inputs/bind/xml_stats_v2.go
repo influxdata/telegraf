@@ -59,7 +59,8 @@ type v2Counter struct {
 	Value int    `xml:"counter"`
 }
 
-func accumulate(acc telegraf.Accumulator, tags map[string]string, stats []v2Counter) {
+// addCounter adds a v2Counter array to a Telegraf Accumulator, with the specified tags
+func addCounter(acc telegraf.Accumulator, tags map[string]string, stats []v2Counter) {
 	fields := make(map[string]interface{})
 
 	for _, c := range stats {
@@ -70,38 +71,34 @@ func accumulate(acc telegraf.Accumulator, tags map[string]string, stats []v2Coun
 }
 
 // readStatsV2 decodes a BIND9 XML statistics version 2 document
-func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
+func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator, url string) error {
 	var stats v2Root
 
 	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
 		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
-	// Detailed, per-view stats
-	if b.GatherViews {
-		for _, v := range stats.Statistics.Views {
-			// Query RDATA types
-			accumulate(acc, map[string]string{"type": "qtype", "view": v.Name}, v.RdTypes)
-
-			// Resolver stats
-			accumulate(acc, map[string]string{"type": "resstats", "view": v.Name}, v.ResStats)
-		}
-	}
+	tags := map[string]string{"url": url}
 
 	// Opcodes
-	accumulate(acc, map[string]string{"type": "opcode"}, stats.Statistics.Server.OpCodes)
+	tags["type"] = "opcode"
+	addCounter(acc, tags, stats.Statistics.Server.OpCodes)
 
 	// Query RDATA types
-	accumulate(acc, map[string]string{"type": "qtype"}, stats.Statistics.Server.RdTypes)
+	tags["type"] = "qtype"
+	addCounter(acc, tags, stats.Statistics.Server.RdTypes)
 
 	// Nameserver stats
-	accumulate(acc, map[string]string{"type": "nsstat"}, stats.Statistics.Server.NSStats)
+	tags["type"] = "nsstat"
+	addCounter(acc, tags, stats.Statistics.Server.NSStats)
 
 	// Zone stats
-	accumulate(acc, map[string]string{"type": "zonestat"}, stats.Statistics.Server.ZoneStats)
+	tags["type"] = "zonestat"
+	addCounter(acc, tags, stats.Statistics.Server.ZoneStats)
 
 	// Socket statistics
-	accumulate(acc, map[string]string{"type": "sockstat"}, stats.Statistics.Server.SockStats)
+	tags["type"] = "sockstat"
+	addCounter(acc, tags, stats.Statistics.Server.SockStats)
 
 	// Memory stats
 	fields := map[string]interface{}{
@@ -111,14 +108,32 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator) error {
 		"ContextSize": stats.Statistics.Memory.Summary.ContextSize,
 		"Lost":        stats.Statistics.Memory.Summary.Lost,
 	}
-	acc.AddGauge("bind_memory", fields, nil)
+	acc.AddGauge("bind_memory", fields, map[string]string{"url": url})
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
+		tags := map[string]string{"url": url}
+
 		for _, c := range stats.Statistics.Memory.Contexts {
-			tags := map[string]string{"id": c.Id, "name": c.Name}
+			tags["id"] = c.Id
+			tags["name"] = c.Name
 			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
 			acc.AddGauge("bind_memory_context", fields, tags)
+		}
+	}
+
+	// Detailed, per-view stats
+	if b.GatherViews {
+		for _, v := range stats.Statistics.Views {
+			tags := map[string]string{"url": url, "view": v.Name}
+
+			// Query RDATA types
+			tags["type"] = "qtype"
+			addCounter(acc, tags, v.RdTypes)
+
+			// Resolver stats
+			tags["type"] = "resstats"
+			addCounter(acc, tags, v.ResStats)
 		}
 	}
 
