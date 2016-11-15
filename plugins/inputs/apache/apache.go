@@ -11,17 +11,42 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Apache struct {
-	Urls []string
+	Urls            []string
+	Username        string
+	Password        string
+	ResponseTimeout internal.Duration
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 }
 
 var sampleConfig = `
   ## An array of Apache status URI to gather stats.
   ## Default is "http://localhost/server-status?auto".
   urls = ["http://localhost/server-status?auto"]
+  ## user credentials for basic HTTP authentication
+  username = "myuser"
+  password = "mypassword"
+
+  ## Timeout to the complete conection and reponse time in seconds
+  response_timeout = "25s" ## default to 5 seconds
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (n *Apache) SampleConfig() string {
@@ -35,6 +60,9 @@ func (n *Apache) Description() string {
 func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	if len(n.Urls) == 0 {
 		n.Urls = []string{"http://localhost/server-status?auto"}
+	}
+	if n.ResponseTimeout.Duration < time.Second {
+		n.ResponseTimeout.Duration = time.Second * 5
 	}
 
 	var outerr error
@@ -61,21 +89,46 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
-}
-
 func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	resp, err := client.Get(addr.String())
+
+	var tr *http.Transport
+
+	if addr.Scheme == "https" {
+		tlsCfg, err := internal.GetTLSConfig(
+			n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
+		tr = &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			TLSClientConfig:       tlsCfg,
+		}
+	} else {
+		tr = &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		}
+	}
+
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   n.ResponseTimeout.Duration,
+	}
+
+	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
+		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
+	}
+
+	if len(n.Username) != 0 && len(n.Password) != 0 {
+		req.SetBasicAuth(n.Username, n.Password)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
 	}
