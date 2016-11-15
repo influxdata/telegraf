@@ -1,6 +1,7 @@
 package json
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -16,15 +17,22 @@ type JSONParser struct {
 	DefaultTags map[string]string
 }
 
-func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 
-	var jsonOut map[string]interface{}
+	var jsonOut []map[string]interface{}
 	err := json.Unmarshal(buf, &jsonOut)
 	if err != nil {
-		err = fmt.Errorf("unable to parse out as JSON, %s", err)
+		err = fmt.Errorf("unable to parse out as JSON Array, %s", err)
 		return nil, err
 	}
+	for _, item := range jsonOut {
+		metrics, err = p.parseObject(metrics, item)
+	}
+	return metrics, nil
+}
+
+func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
 
 	tags := make(map[string]string)
 	for k, v := range p.DefaultTags {
@@ -44,7 +52,7 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	f := JSONFlattener{}
-	err = f.FlattenJSON("", jsonOut)
+	err := f.FlattenJSON("", jsonOut)
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +63,21 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 	return append(metrics, metric), nil
+}
+
+func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+
+	if !isarray(buf) {
+		metrics := make([]telegraf.Metric, 0)
+		var jsonOut map[string]interface{}
+		err := json.Unmarshal(buf, &jsonOut)
+		if err != nil {
+			err = fmt.Errorf("unable to parse out as JSON, %s", err)
+			return nil, err
+		}
+		return p.parseObject(metrics, jsonOut)
+	}
+	return p.parseArray(buf)
 }
 
 func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
@@ -114,4 +137,14 @@ func (f *JSONFlattener) FlattenJSON(
 			t, t, fieldname)
 	}
 	return nil
+}
+
+func isarray(buf []byte) bool {
+	ia := bytes.IndexByte(buf, '[')
+	ib := bytes.IndexByte(buf, '{')
+	if ia > -1 && ia < ib {
+		return true
+	} else {
+		return false
+	}
 }

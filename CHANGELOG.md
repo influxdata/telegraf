@@ -30,6 +30,9 @@ documentation for configuring journald. There is also a [`logfile` config option
 available in 1.1, which will allow users to easily configure telegraf to
 continue sending logs to /var/log/telegraf/telegraf.log.
 
+- The JSON parser can now parse JSON data where the root object is an array.
+The parsing configuration is applied to each element of the array.
+
 ### Features
 
 - [#1726](https://github.com/influxdata/telegraf/issues/1726): Processor & Aggregator plugin support.
