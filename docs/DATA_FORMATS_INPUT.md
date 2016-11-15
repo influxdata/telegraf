@@ -147,6 +147,62 @@ Your Telegraf metrics would get tagged with "my_tag_1"
 exec_mycollector,my_tag_1=foo a=5,b_c=6
 ```
 
+If the JSON data is an array, then each element of the array is parsed with the configured settings.
+Each resulting metric will be output with the same timestamp.
+
+For example, if the following configuration:
+
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/usr/bin/mycollector --foo=bar"]
+
+  ## measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
+
+  ## Data format to consume.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "json"
+
+  ## List of tag names to extract from top-level of JSON server response
+  tag_keys = [
+    "my_tag_1",
+    "my_tag_2"
+  ]
+```
+
+with this JSON output from a command:
+
+```json
+[
+    {
+        "a": 5,
+        "b": {
+            "c": 6
+        },
+        "my_tag_1": "foo",
+        "my_tag_2": "baz"
+    },
+    {
+        "a": 7,
+        "b": {
+            "c": 8
+        },
+        "my_tag_1": "bar",
+        "my_tag_2": "baz"
+    }
+]
+```
+
+Your Telegraf metrics would get tagged with "my_tag_1" and "my_tag_2"
+
+```
+exec_mycollector,my_tag_1=foo,my_tag_2=baz a=5,b_c=6
+exec_mycollector,my_tag_1=bar,my_tag_2=baz a=7,b_c=8
+```
+
 # Value:
 
 The "value" data format translates single values into Telegraf metrics. This
