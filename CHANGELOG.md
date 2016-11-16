@@ -8,6 +8,7 @@
 
 ### Bugfixes
 
+- [#2049](https://github.com/influxdata/telegraf/pull/2049): Fix the Value data format not trimming null characters from input.
 - [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
 - [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus
 
