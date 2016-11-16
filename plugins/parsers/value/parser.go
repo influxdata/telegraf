@@ -23,6 +23,7 @@ func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if v.DataType == "string" {
 		vStr = strings.TrimSpace(string(buf))
 	} else {
+		buf = bytes.Trim(buf, "\x00")
 		values := bytes.Fields(buf)
 		if len(values) < 1 {
 			return []telegraf.Metric{}, nil
