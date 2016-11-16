@@ -97,6 +97,7 @@ The parsing configuration is applied to each element of the array.
 - [#1771](https://github.com/influxdata/telegraf/issues/1771): Delete nil fields in the metric maker.
 - [#870](https://github.com/influxdata/telegraf/issues/870): Fix MySQL special characters in DSN parsing.
 - [#1742](https://github.com/influxdata/telegraf/issues/1742): Ping input odd timeout behavior.
+- [#1950](https://github.com/influxdata/telegraf/pull/1950): Switch to github.com/kballard/go-shellquote.
 
 ## v1.0.1 [2016-09-26]
 
