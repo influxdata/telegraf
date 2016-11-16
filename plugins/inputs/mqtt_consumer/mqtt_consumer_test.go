@@ -11,6 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testMsg = "cpu_load_short,host=server01 value=23422.0 1422568543702900257"
+)
+
 type FakeClient struct {
 	ConnectF           func() mqtt.Token
 	SubscribeMultipleF func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token
@@ -153,6 +157,12 @@ func TestPersistentClientIDFail(t *testing.T) {
 }
 
 type Message struct {
+	duplicate bool
+	qos       byte
+	retained  bool
+	topic     string
+	messageID uint16
+	payload   []byte
 }
 
 func (m *Message) Duplicate() bool {
@@ -173,6 +183,76 @@ func (m *Message) Topic() string {
 
 func (m *Message) MessageID() uint16 {
 	panic("not implemented")
+}
+
+func newTestMQTTConsumer() (*MQTTConsumer, chan mqtt.Message) {
+	in := make(chan mqtt.Message, 100)
+	n := &MQTTConsumer{
+		Topics:  []string{"telegraf"},
+		Servers: []string{"localhost:1883"},
+	}
+	return n, in
+}
+
+func TestTopicTags(t *testing.T) {
+	m, in := newTestMQTTConsumer()
+	acc := testutil.Accumulator{}
+	m.acc = &acc
+	m.TopicTags = []TopicTag{
+		{Tag: "source", Index: 0},
+		{Tag: "device", Index: 1},
+	}
+
+	m.parser, _ = parsers.NewInfluxParser()
+	in <- mqttTopicMsg("test/device1", testMsg)
+	time.Sleep(time.Millisecond * 25)
+
+	acc.AssertContainsTaggedFields(t,
+		"cpu_load_short",
+		map[string]interface{}{"value": 23422.0},
+		map[string]string{
+			"source": "test",
+			"device": "device1",
+			"host":   "server01",
+			"topic":  "test/device1",
+		},
+	)
+}
+
+func TestTopicTagsFail(t *testing.T) {
+	acc := testutil.Accumulator{}
+
+	m1 := &MQTTConsumer{
+		Topics: []string{"test"},
+		TopicTags: []TopicTag{
+			{Tag: "negative", Index: -1},
+		},
+	}
+	err := m1.Start(&acc)
+	require.Error(t, err)
+
+	m2 := &MQTTConsumer{
+		Topics: []string{"test"},
+		TopicTags: []TopicTag{
+			{Tag: "outofrange", Index: 1},
+		},
+	}
+	err = m2.Start(&acc)
+	require.Error(t, err)
+}
+
+func mqttMsg(val string) mqtt.Message {
+	return &Message{
+		topic:   "telegraf/unit_test",
+		payload: []byte(val),
+	}
+}
+
+func mqttTopicMsg(topic, val string) mqtt.Message {
+	return &Message{
+		topic:   topic,
+		payload: []byte(val),
+	}
 }
 
 func (m *Message) Payload() []byte {

@@ -58,6 +58,8 @@ type MQTTConsumer struct {
 	// Legacy metric buffer support; deprecated in v0.10.3
 	MetricBuffer int
 
+	TopicTags []TopicTag `toml:"topic_tags"`
+
 	PersistentSession bool
 	ClientID          string `toml:"client_id"`
 	tls.ClientConfig
@@ -76,6 +78,11 @@ type MQTTConsumer struct {
 
 	ctx    context.Context
 	cancel context.CancelFunc
+}
+
+type TopicTag struct {
+	Tag   string
+	Index int `toml:"topic_index"`
 }
 
 var sampleConfig = `
@@ -145,6 +152,17 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  # Get tags from the topic
+  # the source of the metric comes from the first part of the topic
+  [[inputs.mqtt_consumer.topic_tags]]
+  tag = "source"
+  topic_index = 0
+
+  # Get the host from the second part of the topic
+  [[inputs.mqtt_consumer.topic_tags]]
+  tag = "host"
+  topic_index = 1
 `
 
 func (m *MQTTConsumer) SampleConfig() string {
@@ -177,6 +195,19 @@ func (m *MQTTConsumer) Init() error {
 	m.topicTag = "topic"
 	if m.TopicTag != nil {
 		m.topicTag = *m.TopicTag
+	}
+
+	for _, tp := range m.TopicTags {
+		if tp.Index < 0 {
+			return fmt.Errorf("MQTT Consumer: tag index can't be negative")
+		}
+
+		for _, topic := range m.Topics {
+			parts := strings.Split(topic, "/")
+			if len(parts) <= tp.Index {
+				return fmt.Errorf("MQTT Consumer: Topic too short for tag part")
+			}
+		}
 	}
 
 	opts, err := m.createOpts()
@@ -284,17 +315,41 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		return err
 	}
 
-	if m.topicTag != "" {
+	for _, metric := range metrics {
+		tags := metric.Tags()
 		topic := msg.Topic()
-		for _, metric := range metrics {
+		if m.topicTag != "" {
 			metric.AddTag(m.topicTag, topic)
+		} else {
+			tags["topic"] = topic
 		}
+		if err := m.setTopicTags(tags, topic); err != nil {
+			m.Log.Errorf("E! MQTT Parse Error\nmessage: %s\nerror: %s",
+				string(msg.Payload()), err.Error())
+			continue
+		}
+
+		m.acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 	}
 
 	id := acc.AddTrackingMetricGroup(metrics)
 	m.messagesMutex.Lock()
 	m.messages[id] = true
 	m.messagesMutex.Unlock()
+	return nil
+}
+
+// setTopicTags sets tag values to topic parts
+func (m *MQTTConsumer) setTopicTags(tags map[string]string, topic string) error {
+	for _, tt := range m.TopicTags {
+		parts := strings.Split(topic, "/")
+		if len(parts) <= tt.Index {
+			return fmt.Errorf("index for topic tag out of range")
+		}
+
+		tags[tt.Tag] = parts[tt.Index]
+	}
+
 	return nil
 }
 
