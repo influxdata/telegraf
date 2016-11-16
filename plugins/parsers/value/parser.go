@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -16,13 +17,12 @@ type ValueParser struct {
 }
 
 func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	buf = bytes.TrimSpace(bytes.Trim(buf, "\x00"))
+	vStr := string(bytes.TrimSpace(bytes.Trim(buf, "\x00")))
 
 	// unless it's a string, separate out any fields in the buffer,
 	// ignore anything but the last.
-	vStr := string(buf)
 	if v.DataType != "string" {
-		values := bytes.Fields(buf)
+		values := strings.Fields(vStr)
 		if len(values) < 1 {
 			return []telegraf.Metric{}, nil
 		}
