@@ -157,6 +157,7 @@ configuration options.
 * [filestat](./plugins/inputs/filestat)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
+* [hsperfdata](./plugins/inputs/hsperfdata) (Hostpot JVMs)
 * [http_response](./plugins/inputs/http_response)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [influxdb](./plugins/inputs/influxdb)
