@@ -6,10 +6,14 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
+	"path/filepath"
+	"plugin"
 	"runtime"
 	"strings"
 	"syscall"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
@@ -304,9 +308,68 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
+func loadExternalPlugins(dir string) error {
+	return filepath.Walk(dir, func(pth string, info os.FileInfo, err error) error {
+		// Stop if there was an error.
+		if err != nil {
+			return err
+		}
+
+		// Ignore directories.
+		if info.IsDir() {
+			return nil
+		}
+
+		// Ignore files that aren't shared libraries.
+		ext := strings.ToLower(path.Ext(pth))
+		if ext != ".so" && ext != ".dll" {
+			return nil
+		}
+
+		// Load plugin.
+		p, err := plugin.Open(pth)
+		if err != nil {
+			return err
+		}
+
+		// Register plugin.
+		if err := registerPlugin(pth, p); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func registerPlugin(filePath string, p *plugin.Plugin) error {
+	// Clean the file path and strip the suffix.
+	filePath = filepath.Clean(filePath)
+	ext := path.Ext(filePath)
+	filePath = strings.TrimSuffix(filePath, ext)
+	// Convert path separators to "." to generate a plugin name namespaced by directory names.
+	name := strings.Replace(filePath, string(os.PathSeparator), ".", -1)
+
+	if create, err := p.Lookup("NewInput"); err == nil {
+		inputs.Add(name, inputs.Creator(create.(func() telegraf.Input)))
+	} else if create, err := p.Lookup("NewOutput"); err == nil {
+		outputs.Add(name, outputs.Creator(create.(func() telegraf.Output)))
+	} else {
+		return fmt.Errorf("not a telegraf plugin: %s%s", filePath, ext)
+	}
+
+	fmt.Printf("registered: %s (from %s%s)\n", name, filePath, ext)
+
+	return nil
+}
+
 func main() {
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
+
+	if err := loadExternalPlugins("external"); err != nil {
+		log.Fatal("E! " + err.Error())
+	}
+
 	if runtime.GOOS == "windows" {
 		svcConfig := &service.Config{
 			Name:        "telegraf",
