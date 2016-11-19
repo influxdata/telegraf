@@ -34,8 +34,8 @@ func TestMonitAll(t *testing.T) {
 	require.NoError(t, err)
 
 	intMetrics := []string{
-		"status",
-		"monitoring_status",
+		"status_code",
+		"monitoring_status_code",
 		"service_uptime",
 		"mem_kb",
 		"mem_kb_total",
@@ -92,8 +92,8 @@ func TestMonit2(t *testing.T) {
 	require.NoError(t, err)
 
 	intMetrics := []string{
-		"status",
-		"monitoring_status",
+		"status_code",
+		"monitoring_status_code",
 	}
 
 	assert.True(t, acc.HasMeasurement("monit"))
@@ -128,8 +128,8 @@ func TestMonit3(t *testing.T) {
 	require.NoError(t, err)
 
 	intMetrics := []string{
-		"status",
-		"monitoring_status",
+		"status_code",
+		"monitoring_status_code",
 		"service_uptime",
 		"mem_kb",
 		"mem_kb_total",
@@ -178,8 +178,8 @@ func TestMonit5(t *testing.T) {
 	require.NoError(t, err)
 
 	intMetrics := []string{
-		"status",
-		"monitoring_status",
+		"status_code",
+		"monitoring_status_code",
 		"mem_kb",
 	}
 

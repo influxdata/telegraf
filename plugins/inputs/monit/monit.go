@@ -131,10 +131,10 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	for _, service := range status.Services {
 		// Prepare fields
 		fields := make(map[string]interface{})
-		fields["status"] = service.Status
-		fields["status_text"] = serviceStatus(service)
-		fields["monitoring_status"] = service.MonitoringStatus
-		fields["monitoring_status_text"] = monitoringStatus(service)
+		fields["status_code"] = service.Status
+		fields["status"] = serviceStatus(service)
+		fields["monitoring_status_code"] = service.MonitoringStatus
+		fields["monitoring_status"] = monitoringStatus(service)
 
 		if service.Type == "3" {
 			fields["cpu_percent"] = service.CPU.Percent
