@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -12,6 +14,8 @@ import (
 
 type File struct {
 	Files []string
+
+	Timestamp bool
 
 	writer  io.Writer
 	closers []io.Closer
@@ -22,6 +26,9 @@ type File struct {
 var sampleConfig = `
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
+
+  ## Prefix each output line with timestamp
+  timestamp = true
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
@@ -48,10 +55,19 @@ func (f *File) Connect() error {
 		} else {
 			var of *os.File
 			var err error
-			if _, err := os.Stat(file); os.IsNotExist(err) {
-				of, err = os.Create(file)
+			generatedFile := generateFileName(file)
+			if _, err := os.Stat(generatedFile); os.IsNotExist(err) {
+				// create directory f it doesn't exist
+				lastSlash := strings.LastIndex(generatedFile, "/")
+				if lastSlash != -1 {
+					err = os.MkdirAll(generatedFile[:lastSlash], os.ModeDir)
+				}
+				// create file if it doesn't exist
+				if err == nil {
+					of, err = os.Create(generatedFile)
+				}
 			} else {
-				of, err = os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+				of, err = os.OpenFile(generatedFile, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 			}
 
 			if err != nil {
@@ -91,6 +107,12 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	prefix := ""
+	if f.Timestamp {
+		t := time.Now().UTC()
+		prefix = t.Format(time.RFC3339) + " "
+	}
+
 	for _, metric := range metrics {
 		values, err := f.serializer.Serialize(metric)
 		if err != nil {
@@ -98,13 +120,36 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, value := range values {
-			_, err = f.writer.Write([]byte(value + "\n"))
+			_, err = f.writer.Write([]byte(prefix + value + "\n"))
 			if err != nil {
 				return fmt.Errorf("FAILED to write message: %s, %s", value, err)
 			}
 		}
 	}
 	return nil
+}
+
+// Generate filename, replace tokens enclosed by { and } with time format
+func generateFileName(s string) string {
+	t := time.Now().UTC()
+	//split on opening brace
+	tokens := strings.Split(s, "{")
+	// first token has no left bracket
+	outputString := tokens[0]
+	// cycle through remaining tokens
+	for j := 1; j < len(tokens); j++ {
+		//find closing brace
+		index := strings.Index(tokens[j], "}")
+		// if -1 we have opening brace with no closing brace so we don't format
+		if index == -1 {
+			outputString += tokens[j]
+		} else {
+			// Extract enclosed token and format, concatenate anything after closing brace on output
+			generatedString := t.Format(tokens[j][:index])
+			outputString += generatedString + tokens[j][index+1:]
+		}
+	}
+	return outputString
 }
 
 func init() {
