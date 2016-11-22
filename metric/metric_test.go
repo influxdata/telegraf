@@ -1,4 +1,4 @@
-package telegraf
+package metric
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ func TestNewMetric(t *testing.T) {
 		"usage_idle": float64(99),
 		"usage_busy": float64(1),
 	}
-	m, err := NewMetric("cpu", tags, fields, now)
+	m, err := New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	assert.Equal(t, Untyped, m.Type())
@@ -42,7 +42,7 @@ func TestNewGaugeMetric(t *testing.T) {
 		"usage_idle": float64(99),
 		"usage_busy": float64(1),
 	}
-	m, err := NewGaugeMetric("cpu", tags, fields, now)
+	m, err := New("cpu", tags, fields, now, Gauge)
 	assert.NoError(t, err)
 
 	assert.Equal(t, Gauge, m.Type())
@@ -64,7 +64,7 @@ func TestNewCounterMetric(t *testing.T) {
 		"usage_idle": float64(99),
 		"usage_busy": float64(1),
 	}
-	m, err := NewCounterMetric("cpu", tags, fields, now)
+	m, err := New("cpu", tags, fields, now, Counter)
 	assert.NoError(t, err)
 
 	assert.Equal(t, Counter, m.Type())
@@ -84,16 +84,12 @@ func TestNewMetricString(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(99),
 	}
-	m, err := NewMetric("cpu", tags, fields, now)
+	m, err := New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	lineProto := fmt.Sprintf("cpu,host=localhost usage_idle=99 %d",
+	lineProto := fmt.Sprintf("cpu,host=localhost usage_idle=99 %d\n",
 		now.UnixNano())
 	assert.Equal(t, lineProto, m.String())
-
-	lineProtoPrecision := fmt.Sprintf("cpu,host=localhost usage_idle=99 %d",
-		now.Unix())
-	assert.Equal(t, lineProtoPrecision, m.PrecisionString("s"))
 }
 
 func TestNewMetricFailNaN(t *testing.T) {
@@ -106,6 +102,6 @@ func TestNewMetricFailNaN(t *testing.T) {
 		"usage_idle": math.NaN(),
 	}
 
-	_, err := NewMetric("cpu", tags, fields, now)
-	assert.Error(t, err)
+	_, err := New("cpu", tags, fields, now)
+	assert.NoError(t, err)
 }

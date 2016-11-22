@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -369,7 +370,7 @@ func TestFilterMatchDefault(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("miss.servers.localhost.cpu_load",
+	exp, err := metric.New("miss.servers.localhost.cpu_load",
 		map[string]string{},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -387,7 +388,7 @@ func TestFilterMatchMultipleMeasurement(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu.cpu_load.10",
+	exp, err := metric.New("cpu.cpu_load.10",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -406,7 +407,7 @@ func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	exp, err := telegraf.NewMetric("cpu_cpu_load_10",
+	exp, err := metric.New("cpu_cpu_load_10",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -424,7 +425,7 @@ func TestFilterMatchSingle(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -441,7 +442,7 @@ func TestParseNoMatch(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("servers.localhost.memory.VmallocChunk",
+	exp, err := metric.New("servers.localhost.memory.VmallocChunk",
 		map[string]string{},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -459,7 +460,7 @@ func TestFilterMatchWildcard(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -479,7 +480,7 @@ func TestFilterMatchExactBeforeWildcard(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -504,7 +505,7 @@ func TestFilterMatchMostLongestFilter(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost", "resource": "cpu"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -528,7 +529,7 @@ func TestFilterMatchMultipleWildcards(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "server01"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -550,7 +551,7 @@ func TestParseDefaultTags(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -571,7 +572,7 @@ func TestParseDefaultTemplateTags(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -592,7 +593,7 @@ func TestParseDefaultTemplateTagsOverridGlobal(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -615,7 +616,7 @@ func TestParseTemplateWhitespace(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))

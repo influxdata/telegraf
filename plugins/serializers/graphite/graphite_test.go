@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 var defaultTags = map[string]string{
@@ -29,19 +30,19 @@ const (
 )
 
 func TestGraphiteTags(t *testing.T) {
-	m1, _ := telegraf.NewMetric(
+	m1, _ := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m2, _ := telegraf.NewMetric(
+	m2, _ := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1", "afoo": "first", "bfoo": "second"},
 		map[string]interface{}{"value": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	m3, _ := telegraf.NewMetric(
+	m3, _ := metric.New(
 		"mymeasurement",
 		map[string]string{"afoo": "first", "bfoo": "second"},
 		map[string]interface{}{"value": float64(3.14)},
@@ -67,7 +68,7 @@ func TestSerializeMetricNoHost(t *testing.T) {
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{}
@@ -94,7 +95,7 @@ func TestSerializeMetricHost(t *testing.T) {
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{}
@@ -121,7 +122,7 @@ func TestSerializeValueField(t *testing.T) {
 	fields := map[string]interface{}{
 		"value": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{}
@@ -145,7 +146,7 @@ func TestSerializeValueField2(t *testing.T) {
 	fields := map[string]interface{}{
 		"value": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{
@@ -171,7 +172,7 @@ func TestSerializeFieldWithSpaces(t *testing.T) {
 	fields := map[string]interface{}{
 		`field\ with\ spaces`: float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{
@@ -197,7 +198,7 @@ func TestSerializeTagWithSpaces(t *testing.T) {
 	fields := map[string]interface{}{
 		`field_with_spaces`: float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{
@@ -223,7 +224,7 @@ func TestSerializeValueField3(t *testing.T) {
 	fields := map[string]interface{}{
 		"value": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{
@@ -249,7 +250,7 @@ func TestSerializeValueField5(t *testing.T) {
 	fields := map[string]interface{}{
 		"value": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{
@@ -275,7 +276,7 @@ func TestSerializeMetricPrefix(t *testing.T) {
 		"usage_idle": float64(91.5),
 		"usage_busy": float64(8.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{Prefix: "prefix"}
@@ -300,7 +301,7 @@ func TestSerializeBucketNameNoHost(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	mS := SerializeBucketName(m.Name(), m.Tags(), "", "")
@@ -314,7 +315,7 @@ func TestSerializeBucketNameHost(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
+	m, err := metric.New("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
 	mS := SerializeBucketName(m.Name(), m.Tags(), "", "")
@@ -328,7 +329,7 @@ func TestSerializeBucketNamePrefix(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
+	m, err := metric.New("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
 	mS := SerializeBucketName(m.Name(), m.Tags(), "", "prefix")
@@ -342,7 +343,7 @@ func TestTemplate1(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
+	m, err := metric.New("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
 	mS := SerializeBucketName(m.Name(), m.Tags(), template1, "")
@@ -356,7 +357,7 @@ func TestTemplate2(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
+	m, err := metric.New("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
 	mS := SerializeBucketName(m.Name(), m.Tags(), template2, "")
@@ -370,7 +371,7 @@ func TestTemplate3(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
+	m, err := metric.New("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
 	mS := SerializeBucketName(m.Name(), m.Tags(), template3, "")
@@ -384,7 +385,7 @@ func TestTemplate4(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
+	m, err := metric.New("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
 	mS := SerializeBucketName(m.Name(), m.Tags(), template4, "")
@@ -398,7 +399,7 @@ func TestTemplate6(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", defaultTags, fields, now)
+	m, err := metric.New("cpu", defaultTags, fields, now)
 	assert.NoError(t, err)
 
 	mS := SerializeBucketName(m.Name(), m.Tags(), template6, "")

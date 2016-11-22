@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 func TestSerializeMetricFloat(t *testing.T) {
@@ -18,7 +19,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
@@ -37,7 +38,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": int64(90),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
@@ -56,7 +57,7 @@ func TestSerializeMetricString(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": "foobar",
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
