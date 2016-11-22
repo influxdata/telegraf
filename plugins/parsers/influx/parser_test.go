@@ -14,15 +14,14 @@ var (
 	ms         []telegraf.Metric
 	writer     = ioutil.Discard
 	metrics500 []byte
+	exptime    = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano()
 )
 
-var exptime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-
 const (
-	validInflux        = "cpu_load_short,cpu=cpu0 value=10 1257894000000000000"
+	validInflux        = "cpu_load_short,cpu=cpu0 value=10 1257894000000000000\n"
 	validInfluxNewline = "\ncpu_load_short,cpu=cpu0 value=10 1257894000000000000\n"
-	invalidInflux      = "I don't think this is line protocol"
-	invalidInflux2     = "{\"a\": 5, \"b\": {\"c\": 6}}"
+	invalidInflux      = "I don't think this is line protocol\n"
+	invalidInflux2     = "{\"a\": 5, \"b\": {\"c\": 6}}\n"
 )
 
 const influxMulti = `
@@ -57,7 +56,7 @@ func TestParseValidInflux(t *testing.T) {
 	assert.Equal(t, map[string]string{
 		"cpu": "cpu0",
 	}, metrics[0].Tags())
-	assert.Equal(t, exptime, metrics[0].Time())
+	assert.Equal(t, exptime, metrics[0].Time().UnixNano())
 
 	metrics, err = parser.Parse([]byte(validInfluxNewline))
 	assert.NoError(t, err)
@@ -69,7 +68,7 @@ func TestParseValidInflux(t *testing.T) {
 	assert.Equal(t, map[string]string{
 		"cpu": "cpu0",
 	}, metrics[0].Tags())
-	assert.Equal(t, exptime, metrics[0].Time())
+	assert.Equal(t, exptime, metrics[0].Time().UnixNano())
 }
 
 func TestParseLineValidInflux(t *testing.T) {
@@ -84,7 +83,7 @@ func TestParseLineValidInflux(t *testing.T) {
 	assert.Equal(t, map[string]string{
 		"cpu": "cpu0",
 	}, metric.Tags())
-	assert.Equal(t, exptime, metric.Time())
+	assert.Equal(t, exptime, metric.Time().UnixNano())
 
 	metric, err = parser.ParseLine(validInfluxNewline)
 	assert.NoError(t, err)
@@ -95,7 +94,7 @@ func TestParseLineValidInflux(t *testing.T) {
 	assert.Equal(t, map[string]string{
 		"cpu": "cpu0",
 	}, metric.Tags())
-	assert.Equal(t, exptime, metric.Time())
+	assert.Equal(t, exptime, metric.Time().UnixNano())
 }
 
 func TestParseMultipleValid(t *testing.T) {
@@ -229,11 +228,8 @@ func BenchmarkParseAddTagWrite(b *testing.B) {
 			panic("500 metrics not parsed!!")
 		}
 		for _, tmp := range ms {
-			tags := tmp.Tags()
-			tags["host"] = "localhost"
-			tmp, _ = telegraf.NewMetric(tmp.Name(), tags, tmp.Fields(), tmp.Time())
-			writer.Write([]byte(tmp.String()))
-			writer.Write([]byte{'\n'})
+			tmp.AddTag("host", "localhost")
+			writer.Write(tmp.Serialize())
 		}
 	}
 }

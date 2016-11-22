@@ -115,20 +115,13 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, metric := range metrics {
-		values, err := n.serializer.Serialize(metric)
+		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		var pubErr error
-		for _, value := range values {
-			err = n.conn.Publish(n.Subject, []byte(value))
-			if err != nil {
-				pubErr = err
-			}
-		}
-
-		if pubErr != nil {
+		err = n.conn.Publish(n.Subject, buf)
+		if err != nil {
 			return fmt.Errorf("FAILED to send NATS message: %s", err)
 		}
 	}

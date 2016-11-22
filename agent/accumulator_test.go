@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -323,7 +324,7 @@ func (tm *TestMetricMaker) MakeMetric(
 ) telegraf.Metric {
 	switch mType {
 	case telegraf.Untyped:
-		if m, err := telegraf.NewMetric(measurement, tags, fields, t); err == nil {
+		if m, err := metric.New(measurement, tags, fields, t); err == nil {
 			return m
 		}
 	case telegraf.Counter:

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 // Minimum and maximum supported dates for timestamps.
@@ -216,7 +217,7 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	return telegraf.NewMetric(measurement, tags, fieldValues, timestamp)
+	return metric.New(measurement, tags, fieldValues, timestamp)
 }
 
 // ApplyTemplate extracts the template fields from the given line and
