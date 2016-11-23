@@ -1,10 +1,19 @@
 package influx
 
 import (
+	"io/ioutil"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
+
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	ms         []telegraf.Metric
+	writer     = ioutil.Discard
+	metrics500 []byte
 )
 
 var exptime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
@@ -191,4 +200,48 @@ func TestParseInvalidInflux(t *testing.T) {
 	assert.Error(t, err)
 	_, err = parser.ParseLine(invalidInflux2)
 	assert.Error(t, err)
+}
+
+func BenchmarkParse(b *testing.B) {
+	var err error
+	parser := InfluxParser{}
+	for n := 0; n < b.N; n++ {
+		// parse:
+		ms, err = parser.Parse(metrics500)
+		if err != nil {
+			panic(err)
+		}
+		if len(ms) != 500 {
+			panic("500 metrics not parsed!!")
+		}
+	}
+}
+
+func BenchmarkParseAddTagWrite(b *testing.B) {
+	var err error
+	parser := InfluxParser{}
+	for n := 0; n < b.N; n++ {
+		ms, err = parser.Parse(metrics500)
+		if err != nil {
+			panic(err)
+		}
+		if len(ms) != 500 {
+			panic("500 metrics not parsed!!")
+		}
+		for _, tmp := range ms {
+			tags := tmp.Tags()
+			tags["host"] = "localhost"
+			tmp, _ = telegraf.NewMetric(tmp.Name(), tags, tmp.Fields(), tmp.Time())
+			writer.Write([]byte(tmp.String()))
+			writer.Write([]byte{'\n'})
+		}
+	}
+}
+
+func init() {
+	var err error
+	metrics500, err = ioutil.ReadFile("500.metrics")
+	if err != nil {
+		panic(err)
+	}
 }
