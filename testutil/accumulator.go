@@ -202,6 +202,17 @@ func (a *Accumulator) AssertContainsFields(
 	assert.Fail(t, msg)
 }
 
+func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			msg := fmt.Sprintf("found unexpected measurement %s", measurement)
+			assert.Fail(t, msg)
+		}
+	}
+}
+
 // HasIntValue returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
 	a.Lock()

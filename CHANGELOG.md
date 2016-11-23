@@ -5,12 +5,23 @@
 ### Features
 
 - [#1564](https://github.com/influxdata/telegraf/issues/1564): Use RFC3339 timestamps in log output.
+- [#1997](https://github.com/influxdata/telegraf/issues/1997): Non-default HTTP timeouts for RabbitMQ plugin.
+- [#2074](https://github.com/influxdata/telegraf/pull/2074): "discard" output plugin added, primarily for testing purposes.
+- [#2001](https://github.com/influxdata/telegraf/pull/2001): MongoDB input plugin: Improve state data
 
 ### Bugfixes
 
+- [#2049](https://github.com/influxdata/telegraf/pull/2049): Fix the Value data format not trimming null characters from input.
 - [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
+- [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus
 
-## v1.1 [unreleased]
+## v1.1.1 [2016-11-14]
+
+### Bugfixes
+
+- [#2023](https://github.com/influxdata/telegraf/issues/2023): Fix issue parsing toml durations with single quotes.
+
+## v1.1.0 [2016-11-07]
 
 ### Release Notes
 
@@ -22,6 +33,9 @@ accessed by `journalctl -u telegraf.service`. Consult the systemd journal
 documentation for configuring journald. There is also a [`logfile` config option](https://github.com/influxdata/telegraf/blob/master/etc/telegraf.conf#L70)
 available in 1.1, which will allow users to easily configure telegraf to
 continue sending logs to /var/log/telegraf/telegraf.log.
+
+- The JSON parser can now parse JSON data where the root object is an array.
+The parsing configuration is applied to each element of the array.
 
 ### Features
 
@@ -85,6 +99,7 @@ continue sending logs to /var/log/telegraf/telegraf.log.
 - [#1771](https://github.com/influxdata/telegraf/issues/1771): Delete nil fields in the metric maker.
 - [#870](https://github.com/influxdata/telegraf/issues/870): Fix MySQL special characters in DSN parsing.
 - [#1742](https://github.com/influxdata/telegraf/issues/1742): Ping input odd timeout behavior.
+- [#1950](https://github.com/influxdata/telegraf/pull/1950): Switch to github.com/kballard/go-shellquote.
 
 ## v1.0.1 [2016-09-26]
 

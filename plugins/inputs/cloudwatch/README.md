@@ -20,16 +20,23 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Amazon Region (required)
   region = "us-east-1"
 
+  # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
+  # metrics are made available to the 1 minute period. Some are collected at
+  # 3 minute and 5 minutes intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
+  # Note that if a period is configured that is smaller than the minimum for a
+  # particular metric, that metric will not be returned by the Cloudwatch API
+  # and will not be collected by Telegraf.
+  #
   ## Requested CloudWatch aggregation Period (required - must be a multiple of 60s)
-  period = "1m"
+  period = "5m"
 
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
-  delay = "1m"
+  delay = "5m"
 
   ## Override global run interval (optional - defaults to global interval)
   ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
-  interval = "1m"
+  interval = "5m"
 
   ## Metric Statistic Namespace (required)
   namespace = "AWS/ELB"
@@ -71,16 +78,16 @@ wildcard dimension is ignored.
 Example:
 ```
 [[inputs.cloudwatch.metrics]]
-  names = ['Latency']
+  names = ["Latency"]
 
   ## Dimension filters for Metric (optional)
   [[inputs.cloudwatch.metrics.dimensions]]
-    name = 'LoadBalancerName'
-    value = 'p-example'
+    name = "LoadBalancerName"
+    value = "p-example"
 
   [[inputs.cloudwatch.metrics.dimensions]]
-    name = 'AvailabilityZone'
-    value = '*'
+    name = "AvailabilityZone"
+    value = "*"
 ```
 
 If the following ELBs are available:

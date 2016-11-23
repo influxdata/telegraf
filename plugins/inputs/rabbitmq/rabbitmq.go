@@ -26,6 +26,10 @@ const DefaultPassword = "guest"
 // used by Rabbitmq
 const DefaultURL = "http://localhost:15672"
 
+// Default http timeouts
+const DefaultResponseHeaderTimeout = 3
+const DefaultClientTimeout = 4
+
 // RabbitMQ defines the configuration necessary for gathering metrics,
 // see the sample config for further details
 type RabbitMQ struct {
@@ -41,6 +45,9 @@ type RabbitMQ struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+
+	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
+	ClientTimeout         internal.Duration `toml:"client_timeout"`
 
 	// InsecureSkipVerify bool
 	Nodes  []string
@@ -146,6 +153,21 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional request timeouts
+  ##
+  ## ResponseHeaderTimeout, if non-zero, specifies the amount of
+  ## time to wait for a server's response headers after fully
+  ## writing the request (including its body, if any). This
+  ## time does not include the time to read the response body.
+  ## See http.Transport.ResponseHeaderTimeout
+  # header_timeout = "3s"
+  ##
+  ## Timeout specifies a time limit for requests made by this
+  ## Client. The timeout includes connection time, any
+  ## redirects, and reading the response body.
+  ## See http.Client.Timeout
+  # client_timeout = "4s"
+
   ## A list of nodes to pull metrics about. If not specified, metrics for
   ## all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
@@ -170,12 +192,12 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			ResponseHeaderTimeout: r.ResponseHeaderTimeout.Duration,
 			TLSClientConfig:       tlsCfg,
 		}
 		r.Client = &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+			Timeout:   r.ClientTimeout.Duration,
 		}
 	}
 
@@ -388,6 +410,9 @@ func (r *RabbitMQ) shouldGatherQueue(queue Queue) bool {
 
 func init() {
 	inputs.Add("rabbitmq", func() telegraf.Input {
-		return &RabbitMQ{}
+		return &RabbitMQ{
+			ResponseHeaderTimeout: internal.Duration{Duration: DefaultResponseHeaderTimeout * time.Second},
+			ClientTimeout:         internal.Duration{Duration: DefaultClientTimeout * time.Second},
+		}
 	})
 }
