@@ -60,6 +60,8 @@ type indexHealth struct {
 
 const sampleConfig = `
   ## specify a list of one or more Elasticsearch servers
+  # you can add username and password to your url to use basic authentication:
+  # servers = ["http://user:pass@localhost:9200"]
   servers = ["http://localhost:9200"]
 
   ## Timeout for HTTP requests to the elastic search server(s)
