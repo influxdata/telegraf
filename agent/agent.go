@@ -269,7 +269,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 				var dropOriginal bool
 				if !m.IsAggregate() {
 					for _, agg := range a.Config.Aggregators {
-						if ok := agg.Add(copyMetric(m)); ok {
+						if ok := agg.Add(m.Copy()); ok {
 							dropOriginal = true
 						}
 					}
@@ -279,7 +279,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 						if i == len(a.Config.Outputs)-1 {
 							o.AddMetric(m)
 						} else {
-							o.AddMetric(copyMetric(m))
+							o.AddMetric(m.Copy())
 						}
 					}
 				}
@@ -384,20 +384,4 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 
 	wg.Wait()
 	return nil
-}
-
-func copyMetric(m telegraf.Metric) telegraf.Metric {
-	t := time.Time(m.Time())
-
-	tags := make(map[string]string)
-	fields := make(map[string]interface{})
-	for k, v := range m.Tags() {
-		tags[k] = v
-	}
-	for k, v := range m.Fields() {
-		fields[k] = v
-	}
-
-	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
-	return out
 }
