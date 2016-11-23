@@ -55,6 +55,9 @@ type Metric interface {
 	SetAggregate(bool)
 	// IsAggregate returns true if the metric is an aggregate
 	IsAggregate() bool
+
+	// Copy copies the metric
+	Copy() Metric
 }
 
 // metric is a wrapper of the influxdb client.Point struct
@@ -174,4 +177,20 @@ func (m *metric) IsAggregate() bool {
 
 func (m *metric) SetAggregate(b bool) {
 	m.isaggregate = b
+}
+
+func (m *metric) Copy() Metric {
+	t := time.Time(m.Time())
+
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
+	for k, v := range m.Tags() {
+		tags[k] = v
+	}
+	for k, v := range m.Fields() {
+		fields[k] = v
+	}
+
+	out, _ := NewMetric(m.Name(), tags, fields, t)
+	return out
 }
