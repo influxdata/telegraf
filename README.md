@@ -245,6 +245,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [datadog](./plugins/outputs/datadog)
+* [discard](./plugins/outputs/discard)
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
