@@ -24,6 +24,7 @@ in their config file.
 - [#1937](https://github.com/influxdata/telegraf/pull/1937): HAProxy session limit metric.
 - [#2068](https://github.com/influxdata/telegraf/issues/2068): Accept strings for StatsD sets.
 - [#1893](https://github.com/influxdata/telegraf/issues/1893): Change StatsD default "reset" behavior.
+- [#2079](https://github.com/influxdata/telegraf/pull/2079): Enable setting ClientID in MQTT output.
 
 ### Bugfixes
 
