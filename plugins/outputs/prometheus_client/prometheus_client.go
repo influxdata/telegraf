@@ -6,18 +6,26 @@ import (
 	"net/http"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
-type PrometheusClient struct {
-	Listen string
+type MetricWithExpiration struct {
+	Metric     prometheus.Metric
+	Expiration time.Time
+}
 
-	metrics map[string]prometheus.Metric
+type PrometheusClient struct {
+	Listen             string
+	ExpirationInterval internal.Duration `toml:"expiration_interval"`
+
+	metrics map[string]*MetricWithExpiration
 
 	sync.Mutex
 }
@@ -25,10 +33,14 @@ type PrometheusClient struct {
 var sampleConfig = `
   ## Address to listen on
   # listen = ":9126"
+
+  ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
+  # expiration_interval = "60s"
 `
 
 func (p *PrometheusClient) Start() error {
-	prometheus.MustRegister(p)
+	p.metrics = make(map[string]*MetricWithExpiration)
+	prometheus.Register(p)
 	defer func() {
 		if r := recover(); r != nil {
 			// recovering from panic here because there is no way to stop a
@@ -83,16 +95,18 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	p.Lock()
 	defer p.Unlock()
 
-	for _, m := range p.metrics {
-		ch <- m
+	for key, m := range p.metrics {
+		if p.ExpirationInterval.Duration != 0 && time.Now().After(m.Expiration) {
+			delete(p.metrics, key)
+		} else {
+			ch <- m.Metric
+		}
 	}
 }
 
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	p.Lock()
 	defer p.Unlock()
-
-	p.metrics = make(map[string]prometheus.Metric)
 
 	if len(metrics) == 0 {
 		return nil
@@ -157,11 +171,15 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 			if err != nil {
-				log.Printf("ERROR creating prometheus metric, "+
+				log.Printf("E! Error creating prometheus metric, "+
 					"key: %s, labels: %v,\nerr: %s\n",
 					mname, l, err.Error())
 			}
-			p.metrics[desc.String()] = metric
+
+			p.metrics[desc.String()] = &MetricWithExpiration{
+				Metric:     metric,
+				Expiration: time.Now().Add(p.ExpirationInterval.Duration),
+			}
 		}
 	}
 	return nil
@@ -169,6 +187,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("prometheus_client", func() telegraf.Output {
-		return &PrometheusClient{}
+		return &PrometheusClient{
+			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+		}
 	})
 }

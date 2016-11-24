@@ -626,26 +626,22 @@ const sqlDatabaseIO string = `SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 DECLARE @secondsBetween tinyint = 5;
 DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
-
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
 	DROP TABLE #baseline;
 IF OBJECT_ID('tempdb..#baselinewritten') IS NOT NULL
 	DROP TABLE #baselinewritten;
-
 SELECT DB_NAME(mf.database_id) AS databaseName ,
     mf.physical_name,
     divfs.num_of_bytes_read,
     divfs.num_of_bytes_written,
 	divfs.num_of_reads,
 	divfs.num_of_writes,
-    GETDATE() AS baselineDate
+    GETDATE() AS baselinedate
 INTO #baseline
 FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS divfs
 INNER JOIN sys.master_files AS mf ON mf.database_id = divfs.database_id
 	AND mf.file_id = divfs.file_id
-
 WAITFOR DELAY @delayInterval;
-
 ;WITH currentLine AS
 (
 	SELECT DB_NAME(mf.database_id) AS databaseName ,
@@ -655,12 +651,11 @@ WAITFOR DELAY @delayInterval;
 		divfs.num_of_bytes_written,
 		divfs.num_of_reads,
 	    divfs.num_of_writes,
-		GETDATE() AS currentlineDate
+		GETDATE() AS currentlinedate
 	FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS divfs
 	INNER JOIN sys.master_files AS mf ON mf.database_id = divfs.database_id
 			AND mf.file_id = divfs.file_id
 )
-
 SELECT database_name
 , datafile_type
 , num_of_bytes_read_persec = SUM(num_of_bytes_read_persec)
@@ -673,23 +668,21 @@ FROM
 SELECT
   database_name = currentLine.databaseName
 , datafile_type = type_desc
-, num_of_bytes_read_persec = (currentLine.num_of_bytes_read - T1.num_of_bytes_read) / (DATEDIFF(SECOND,baseLineDate,currentLineDate))
-, num_of_bytes_written_persec = (currentLine.num_of_bytes_written - T1.num_of_bytes_written) / (DATEDIFF(SECOND,baseLineDate,currentLineDate))
-, num_of_reads_persec =  (currentLine.num_of_reads - T1.num_of_reads) / (DATEDIFF(SECOND,baseLineDate,currentLineDate))
-, num_of_writes_persec =  (currentLine.num_of_writes - T1.num_of_writes) / (DATEDIFF(SECOND,baseLineDate,currentLineDate))
+, num_of_bytes_read_persec = (currentLine.num_of_bytes_read - T1.num_of_bytes_read) / (DATEDIFF(SECOND,baselinedate,currentlinedate))
+, num_of_bytes_written_persec = (currentLine.num_of_bytes_written - T1.num_of_bytes_written) / (DATEDIFF(SECOND,baselinedate,currentlinedate))
+, num_of_reads_persec =  (currentLine.num_of_reads - T1.num_of_reads) / (DATEDIFF(SECOND,baselinedate,currentlinedate))
+, num_of_writes_persec =  (currentLine.num_of_writes - T1.num_of_writes) / (DATEDIFF(SECOND,baselinedate,currentlinedate))
 FROM currentLine
 INNER JOIN #baseline T1 ON T1.databaseName = currentLine.databaseName
 	AND T1.physical_name = currentLine.physical_name
 ) as T
 GROUP BY database_name, datafile_type
-
 DECLARE @DynamicPivotQuery AS NVARCHAR(MAX)
 DECLARE @ColumnName AS NVARCHAR(MAX), @ColumnName2 AS NVARCHAR(MAX)
 SELECT @ColumnName = ISNULL(@ColumnName + ',','') + QUOTENAME(database_name)
 	FROM (SELECT DISTINCT database_name FROM #baselinewritten) AS bl
 SELECT @ColumnName2 = ISNULL(@ColumnName2 + '+','') + QUOTENAME(database_name)
 	FROM (SELECT DISTINCT database_name FROM #baselinewritten) AS bl
-
 SET @DynamicPivotQuery = N'
 SELECT measurement = ''Log writes (bytes/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
@@ -699,9 +692,7 @@ FROM #baselinewritten
 WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(num_of_bytes_written_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows writes (bytes/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
 (
@@ -710,9 +701,7 @@ FROM #baselinewritten
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(num_of_bytes_written_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Log reads (bytes/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
 (
@@ -721,9 +710,7 @@ FROM #baselinewritten
 WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(num_of_bytes_read_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows reads (bytes/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
 (
@@ -732,9 +719,7 @@ FROM #baselinewritten
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(num_of_bytes_read_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Log (writes/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
 (
@@ -743,9 +728,7 @@ FROM #baselinewritten
 WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(num_of_writes_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows (writes/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
 (
@@ -754,9 +737,7 @@ FROM #baselinewritten
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(num_of_writes_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTabl
-
 UNION ALL
-
 SELECT measurement = ''Log (reads/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
 (
@@ -765,9 +746,7 @@ FROM #baselinewritten
 WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(num_of_reads_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows (reads/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
 (
@@ -777,7 +756,6 @@ WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(num_of_reads_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
 '
-
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
@@ -1161,7 +1139,7 @@ DECLARE @w4 TABLE
 )
 DECLARE @w5 TABLE
 (
-	WaitCategory nvarchar(16) NOT NULL,
+	WaitCategory nvarchar(64) NOT NULL,
 	WaitTimeInMs bigint NOT NULL,
 	WaitTaskCount bigint NOT NULL
 )

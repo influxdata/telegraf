@@ -9,14 +9,14 @@ import (
 	"os"
 	"testing"
 
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 var masterMetrics map[string]interface{}
 var masterTestServer *httptest.Server
 var slaveMetrics map[string]interface{}
-var slaveTaskMetrics map[string]interface{}
+
+// var slaveTaskMetrics map[string]interface{}
 var slaveTestServer *httptest.Server
 
 func randUUID() string {
@@ -216,31 +216,31 @@ func generateMetrics() {
 		slaveMetrics[k] = rand.Float64()
 	}
 
-	slaveTaskMetrics = map[string]interface{}{
-		"executor_id":   fmt.Sprintf("task_%s", randUUID()),
-		"executor_name": "Some task description",
-		"framework_id":  randUUID(),
-		"source":        fmt.Sprintf("task_source_%s", randUUID()),
-		"statistics": map[string]interface{}{
-			"cpus_limit":                    rand.Float64(),
-			"cpus_system_time_secs":         rand.Float64(),
-			"cpus_user_time_secs":           rand.Float64(),
-			"mem_anon_bytes":                float64(rand.Int63()),
-			"mem_cache_bytes":               float64(rand.Int63()),
-			"mem_critical_pressure_counter": float64(rand.Int63()),
-			"mem_file_bytes":                float64(rand.Int63()),
-			"mem_limit_bytes":               float64(rand.Int63()),
-			"mem_low_pressure_counter":      float64(rand.Int63()),
-			"mem_mapped_file_bytes":         float64(rand.Int63()),
-			"mem_medium_pressure_counter":   float64(rand.Int63()),
-			"mem_rss_bytes":                 float64(rand.Int63()),
-			"mem_swap_bytes":                float64(rand.Int63()),
-			"mem_total_bytes":               float64(rand.Int63()),
-			"mem_total_memsw_bytes":         float64(rand.Int63()),
-			"mem_unevictable_bytes":         float64(rand.Int63()),
-			"timestamp":                     rand.Float64(),
-		},
-	}
+	// slaveTaskMetrics = map[string]interface{}{
+	// 	"executor_id":   fmt.Sprintf("task_name.%s", randUUID()),
+	// 	"executor_name": "Some task description",
+	// 	"framework_id":  randUUID(),
+	// 	"source":        fmt.Sprintf("task_source.%s", randUUID()),
+	// 	"statistics": map[string]interface{}{
+	// 		"cpus_limit":                    rand.Float64(),
+	// 		"cpus_system_time_secs":         rand.Float64(),
+	// 		"cpus_user_time_secs":           rand.Float64(),
+	// 		"mem_anon_bytes":                float64(rand.Int63()),
+	// 		"mem_cache_bytes":               float64(rand.Int63()),
+	// 		"mem_critical_pressure_counter": float64(rand.Int63()),
+	// 		"mem_file_bytes":                float64(rand.Int63()),
+	// 		"mem_limit_bytes":               float64(rand.Int63()),
+	// 		"mem_low_pressure_counter":      float64(rand.Int63()),
+	// 		"mem_mapped_file_bytes":         float64(rand.Int63()),
+	// 		"mem_medium_pressure_counter":   float64(rand.Int63()),
+	// 		"mem_rss_bytes":                 float64(rand.Int63()),
+	// 		"mem_swap_bytes":                float64(rand.Int63()),
+	// 		"mem_total_bytes":               float64(rand.Int63()),
+	// 		"mem_total_memsw_bytes":         float64(rand.Int63()),
+	// 		"mem_unevictable_bytes":         float64(rand.Int63()),
+	// 		"timestamp":                     rand.Float64(),
+	// 	},
+	// }
 }
 
 func TestMain(m *testing.M) {
@@ -260,11 +260,11 @@ func TestMain(m *testing.M) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(slaveMetrics)
 	})
-	slaveRouter.HandleFunc("/monitor/statistics", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]map[string]interface{}{slaveTaskMetrics})
-	})
+	// slaveRouter.HandleFunc("/monitor/statistics", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.WriteHeader(http.StatusOK)
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	json.NewEncoder(w).Encode([]map[string]interface{}{slaveTaskMetrics})
+	// })
 	slaveTestServer = httptest.NewServer(slaveRouter)
 
 	rc := m.Run()
@@ -324,10 +324,10 @@ func TestMesosSlave(t *testing.T) {
 	var acc testutil.Accumulator
 
 	m := Mesos{
-		Masters:    []string{},
-		Slaves:     []string{slaveTestServer.Listener.Addr().String()},
-		SlaveTasks: true,
-		Timeout:    10,
+		Masters: []string{},
+		Slaves:  []string{slaveTestServer.Listener.Addr().String()},
+		// SlaveTasks: true,
+		Timeout: 10,
 	}
 
 	err := m.Gather(&acc)
@@ -338,17 +338,17 @@ func TestMesosSlave(t *testing.T) {
 
 	acc.AssertContainsFields(t, "mesos", slaveMetrics)
 
-	jf := jsonparser.JSONFlattener{}
-	err = jf.FlattenJSON("", slaveTaskMetrics)
+	// expectedFields := make(map[string]interface{}, len(slaveTaskMetrics["statistics"].(map[string]interface{}))+1)
+	// for k, v := range slaveTaskMetrics["statistics"].(map[string]interface{}) {
+	// 	expectedFields[k] = v
+	// }
+	// expectedFields["executor_id"] = slaveTaskMetrics["executor_id"]
 
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-
-	acc.AssertContainsFields(
-		t,
-		"mesos_tasks",
-		slaveTaskMetrics["statistics"].(map[string]interface{}))
+	// acc.AssertContainsTaggedFields(
+	// 	t,
+	// 	"mesos_tasks",
+	// 	expectedFields,
+	// 	map[string]string{"server": "127.0.0.1", "framework_id": slaveTaskMetrics["framework_id"].(string)})
 }
 
 func TestSlaveFilter(t *testing.T) {

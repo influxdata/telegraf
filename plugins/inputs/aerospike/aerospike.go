@@ -88,7 +88,7 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			if err == nil {
 				fields[strings.Replace(k, "-", "_", -1)] = val
 			} else {
-				log.Printf("skipping aerospike field %v with int64 overflow", k)
+				log.Printf("I! skipping aerospike field %v with int64 overflow", k)
 			}
 		}
 		acc.AddFields("aerospike_node", fields, tags, time.Now())
@@ -121,7 +121,7 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 				if err == nil {
 					nFields[strings.Replace(parts[0], "-", "_", -1)] = val
 				} else {
-					log.Printf("skipping aerospike field %v with int64 overflow", parts[0])
+					log.Printf("I! skipping aerospike field %v with int64 overflow", parts[0])
 				}
 			}
 			acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())

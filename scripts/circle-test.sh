@@ -75,9 +75,13 @@ cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
 
 eval "git describe --exact-match HEAD"
 if [ $? -eq 0 ]; then
+    # install fpm (packaging dependency)
+    exit_if_fail gem install fpm
+    # install boto & rpm (packaging & AWS dependencies)
+    exit_if_fail sudo apt-get install -y rpm python-boto
     unset GOGC
     tag=$(git describe --exact-match HEAD)
     echo $tag
-    exit_if_fail ./scripts/build.py --release --package --version=$tag --platform=all --arch=all --upload --bucket=dl.influxdata.com/telegraf/releases
+    exit_if_fail ./scripts/build.py --release --package --platform=all --arch=all --upload --bucket=dl.influxdata.com/telegraf/releases
     mv build $CIRCLE_ARTIFACTS
 fi
