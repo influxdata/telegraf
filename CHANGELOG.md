@@ -13,6 +13,7 @@
 - [#2049](https://github.com/influxdata/telegraf/pull/2049): Fix the Value data format not trimming null characters from input.
 - [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
 - [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus
+- [#2089](https://github.com/influxdata/telegraf/issues/2089): Fix tail input when reading from a pipe.
 
 ## v1.1.1 [2016-11-14]
 
