@@ -149,7 +149,7 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 					// - the name of the element   		(interface)
 					// - the name of the attribute 		(name)
 					// - the value of the attribute		(xe-0/0/0)
-					re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-]*)\\=([^\\[]*)\\]")
+					re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*)\\=([^\\[]*)\\]")
 					subs := re.FindAllStringSubmatch(prefix, -1)
 
 					if len(subs) > 0 {
@@ -160,7 +160,11 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 							// /junos/interface[name=xe-0/0/0]/test
 							if sub[2] == "name" {
 								sub[3] = strings.Replace(sub[3], "'", "", -1)
-								tags[sub[1]] = sub[3]
+								if sub[1] == "" {
+									tags[sub[2]] = sub[3]
+								} else {
+									tags[sub[1]] = sub[3]
+								}
 							}
 						}
 					}
