@@ -39,6 +39,18 @@ You can also specify which keys from server response should be considered tags:
 
 If the JSON response is an array of objects, then each object will be parsed with the same configuration.
 
+You can also specify paths to nested JSON objects and arrays of objects using dot-notation such that each object will be parsed with the same configuration.
+
+```
+[[inputs.httpjson]]
+  ...
+
+  json_paths = [
+    "path.to.my.metricsArr",
+    "path.to.my.metricsObj"
+  ]
+```
+
 You can also specify additional request parameters for the service:
 
 ```
@@ -201,4 +213,35 @@ httpjson_mycollector_b_e,service='service01',server='http://my.service.com/_stat
 httpjson_mycollector_a,service='service02',server='http://my.service.com/_stats' value=0.6
 httpjson_mycollector_b_d,service='service02',server='http://my.service.com/_stats' value=0.2
 httpjson_mycollector_b_e,service='service02',server='http://my.service.com/_stats' value=6
+```
+
+# Example 4, nested arrays with local and global tag keys in Response:
+
+The response JSON can be parsed to treat nested objects and arrays of objects as unique points with the top-level and object specific tags:
+
+```
+[[inputs.httpjson]]
+  name = "mycollector"
+  servers = ["http://my.service.com/_stats"] 
+  method = "GET"
+  tag_keys = ["service", "tagA", "tagB"]
+  json_paths = ["metrics.myMetricsArr"]
+
+```
+
+which responds with the following JSON:
+
+```json
+{"service":"myservice",
+ "metrics":{"myMetricsArr": 
+	     [{"tagA":"ABC", "tagB":"XYZ", "value":1.0},
+	      {"tagA":"DEF", "tagB":"UVW", "value":2.0}]
+	   }
+}
+```
+
+The collected metrics will be:
+```
+httpjson_mycollector,service=myservice,server=http://my.service.com/_stats,tagA=ABC,tagB=XYZ value=1.0
+httpjson_mycollector,service=myservice,server=http://my.service.com/_stats,tagA=DEF,tagB=UVW value=2.0
 ```

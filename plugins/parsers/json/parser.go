@@ -9,12 +9,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/jmoiron/jsonq"
 )
 
 type JSONParser struct {
 	MetricName  string
 	TagKeys     []string
 	DefaultTags map[string]string
+	JSONPaths   []string
 }
 
 func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
@@ -65,6 +67,77 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 	return append(metrics, metric), nil
 }
 
+func (p *JSONParser) parsePath(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
+	jq := jsonq.NewQuery(jsonOut)
+	tags := make(map[string]string)
+	for k, v := range p.DefaultTags {
+		tags[k] = v
+	}
+	for _, tag := range p.TagKeys {
+		if v, err := jq.String(tag); err == nil {
+			tags[tag] = v
+		}
+	}
+
+	for _, path := range p.JSONPaths {
+		pathByNode := strings.Split(path, ".")
+		if a, err := jq.ArrayOfObjects(pathByNode...); err == nil {
+			metrics, err = p.parseArrayPath(metrics, a, tags)
+			if err != nil {
+				return nil, err
+			}
+			parentObj, err := jq.Object(pathByNode[:len(pathByNode)-1]...)
+			if err != nil {
+				return nil, err
+			}
+			delete(parentObj, pathByNode[len(pathByNode)-1])
+		}
+		if o, err := jq.Object(pathByNode...); err == nil {
+			metrics, err = p.parseObjectPath(metrics, o, tags)
+			if err != nil {
+				return nil, err
+			}
+			parentObj, err := jq.Object(pathByNode[:len(pathByNode)-1]...)
+			if err != nil {
+				return nil, err
+			}
+			delete(parentObj, pathByNode[len(pathByNode)-1])
+		}
+	}
+
+	return metrics, nil
+}
+
+func (p *JSONParser) parseArrayPath(metrics []telegraf.Metric, jsonOut []map[string]interface{}, tags map[string]string) ([]telegraf.Metric, error) {
+	var err error
+	for _, doc := range jsonOut {
+		metrics, err = p.parseObjectPath(metrics, doc, tags)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return metrics, nil
+}
+
+func (p *JSONParser) parseObjectPath(metrics []telegraf.Metric, jsonOut map[string]interface{}, tags map[string]string) ([]telegraf.Metric, error) {
+	jq := jsonq.NewQuery(jsonOut)
+	for _, tag := range p.TagKeys {
+		if v, err := jq.String(tag); err == nil {
+			tags[tag] = v
+		}
+	}
+	f := JSONFlattener{}
+	err := f.FlattenJSON("", jsonOut)
+	if err != nil {
+		return nil, err
+	}
+	metric, err := telegraf.NewMetric(p.MetricName, tags, f.Fields, time.Now().UTC())
+	if err != nil {
+		return nil, err
+	}
+	return append(metrics, metric), nil
+}
+
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	if !isarray(buf) {
@@ -74,6 +147,9 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if err != nil {
 			err = fmt.Errorf("unable to parse out as JSON, %s", err)
 			return nil, err
+		}
+		if len(p.JSONPaths) > 0 {
+			metrics, err = p.parsePath(metrics, jsonOut)
 		}
 		return p.parseObject(metrics, jsonOut)
 	}
