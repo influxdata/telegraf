@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )

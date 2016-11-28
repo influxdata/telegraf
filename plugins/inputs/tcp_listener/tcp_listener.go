@@ -212,8 +212,9 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 			if n == 0 {
 				continue
 			}
-			bufCopy := make([]byte, n)
+			bufCopy := make([]byte, n+1)
 			copy(bufCopy, scanner.Bytes())
+			bufCopy[n] = '\n'
 
 			select {
 			case t.in <- bufCopy:

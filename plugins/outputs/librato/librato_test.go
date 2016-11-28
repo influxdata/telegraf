@@ -163,14 +163,14 @@ func TestBuildGauge(t *testing.T) {
 	}
 }
 
-func newHostMetric(value interface{}, name, host string) (metric telegraf.Metric) {
-	metric, _ = metric.New(
+func newHostMetric(value interface{}, name, host string) telegraf.Metric {
+	m, _ := metric.New(
 		name,
 		map[string]string{"host": host},
 		map[string]interface{}{"value": value},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	return
+	return m
 }
 
 func TestBuildGaugeWithSource(t *testing.T) {

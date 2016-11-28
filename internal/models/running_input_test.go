@@ -50,7 +50,7 @@ func TestMakeMetricNilFields(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
 	)
 }
@@ -78,8 +78,8 @@ func TestMakeMetric(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,
@@ -96,8 +96,8 @@ func TestMakeMetric(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,
@@ -114,8 +114,8 @@ func TestMakeMetric(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,
@@ -148,8 +148,8 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest,foo=bar value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest,foo=bar value=101i %d", now.UnixNano()),
 	)
 }
 
@@ -204,8 +204,8 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest,foo=bar value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest,foo=bar value=101i %d", now.UnixNano()),
 	)
 }
 
@@ -237,8 +237,8 @@ func TestMakeMetricInfFields(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 }
 
@@ -275,11 +275,20 @@ func TestMakeMetricAllFieldTypes(t *testing.T) {
 		telegraf.Untyped,
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest a=10i,b=10i,c=10i,d=10i,e=10i,f=10i,g=10i,h=10i,i=10i,j=10,k=9223372036854775807i,l=\"foobar\",m=true %d", now.UnixNano()),
-		m.String(),
-	)
+	assert.Contains(t, m.String(), "a=10i")
+	assert.Contains(t, m.String(), "b=10i")
+	assert.Contains(t, m.String(), "c=10i")
+	assert.Contains(t, m.String(), "d=10i")
+	assert.Contains(t, m.String(), "e=10i")
+	assert.Contains(t, m.String(), "f=10i")
+	assert.Contains(t, m.String(), "g=10i")
+	assert.Contains(t, m.String(), "h=10i")
+	assert.Contains(t, m.String(), "i=10i")
+	assert.Contains(t, m.String(), "j=10")
+	assert.NotContains(t, m.String(), "j=10i")
+	assert.Contains(t, m.String(), "k=9223372036854775807i")
+	assert.Contains(t, m.String(), "l=\"foobar\"")
+	assert.Contains(t, m.String(), "m=true")
 }
 
 func TestMakeMetricNameOverride(t *testing.T) {
@@ -300,8 +309,8 @@ func TestMakeMetricNameOverride(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("foobar value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("foobar value=101i %d", now.UnixNano()),
 	)
 }
 
@@ -323,8 +332,8 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("foobar_RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("foobar_RITest value=101i %d", now.UnixNano()),
 	)
 }
 
@@ -346,7 +355,7 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest_foobar value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest_foobar value=101i %d", now.UnixNano()),
 	)
 }

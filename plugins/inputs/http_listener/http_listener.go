@@ -248,7 +248,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			bufStart = 0
 			continue
 		}
-		if err := h.parse(buf[:i], now); err != nil {
+		if err := h.parse(buf[:i+1], now); err != nil {
 			log.Println("E! " + err.Error())
 			return400 = true
 		}

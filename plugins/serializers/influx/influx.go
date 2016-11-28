@@ -7,6 +7,6 @@ import (
 type InfluxSerializer struct {
 }
 
-func (s *InfluxSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	return metric.Serialize(), nil
+func (s *InfluxSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
+	return m.Serialize(), nil
 }

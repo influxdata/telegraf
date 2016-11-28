@@ -2,12 +2,12 @@ package influx
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -23,7 +23,8 @@ func TestSerializeMetricFloat(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{fmt.Sprintf("cpu,cpu=cpu0 usage_idle=91.5 %d", now.UnixNano())}
@@ -42,7 +43,8 @@ func TestSerializeMetricInt(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{fmt.Sprintf("cpu,cpu=cpu0 usage_idle=90i %d", now.UnixNano())}
@@ -61,7 +63,8 @@ func TestSerializeMetricString(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{fmt.Sprintf("cpu,cpu=cpu0 usage_idle=\"foobar\" %d", now.UnixNano())}

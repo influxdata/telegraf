@@ -3,12 +3,12 @@ package graphite
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -72,7 +72,8 @@ func TestSerializeMetricNoHost(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
@@ -99,7 +100,8 @@ func TestSerializeMetricHost(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
@@ -126,7 +128,8 @@ func TestSerializeValueField(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
@@ -152,7 +155,8 @@ func TestSerializeValueField2(t *testing.T) {
 	s := GraphiteSerializer{
 		Template: "host.field.tags.measurement",
 	}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
@@ -178,7 +182,8 @@ func TestSerializeFieldWithSpaces(t *testing.T) {
 	s := GraphiteSerializer{
 		Template: "host.tags.measurement.field",
 	}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
@@ -204,7 +209,8 @@ func TestSerializeTagWithSpaces(t *testing.T) {
 	s := GraphiteSerializer{
 		Template: "host.tags.measurement.field",
 	}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
@@ -230,7 +236,8 @@ func TestSerializeValueField3(t *testing.T) {
 	s := GraphiteSerializer{
 		Template: "field.host.tags.measurement",
 	}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
@@ -256,7 +263,8 @@ func TestSerializeValueField5(t *testing.T) {
 	s := GraphiteSerializer{
 		Template: template5,
 	}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
@@ -280,7 +288,8 @@ func TestSerializeMetricPrefix(t *testing.T) {
 	assert.NoError(t, err)
 
 	s := GraphiteSerializer{Prefix: "prefix"}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf"
 )
 
 // vars for making sure that the compiler doesnt optimize out the benchmarks:
@@ -15,9 +17,9 @@ var (
 )
 
 func BenchmarkNewMetric(b *testing.B) {
-	var mt Metric
+	var mt telegraf.Metric
 	for n := 0; n < b.N; n++ {
-		mt, _ = NewMetric("test_metric",
+		mt, _ = New("test_metric",
 			map[string]string{
 				"test_tag_1": "tag_value_1",
 				"test_tag_2": "tag_value_2",
@@ -35,9 +37,9 @@ func BenchmarkNewMetric(b *testing.B) {
 }
 
 func BenchmarkNewMetricAndInspect(b *testing.B) {
-	var mt Metric
+	var mt telegraf.Metric
 	for n := 0; n < b.N; n++ {
-		mt, _ = NewMetric("test_metric",
+		mt, _ = New("test_metric",
 			map[string]string{
 				"test_tag_1": "tag_value_1",
 				"test_tag_2": "tag_value_2",
@@ -59,7 +61,7 @@ func BenchmarkNewMetricAndInspect(b *testing.B) {
 }
 
 func BenchmarkTags(b *testing.B) {
-	var mt, _ = NewMetric("test_metric",
+	var mt, _ = New("test_metric",
 		map[string]string{
 			"test_tag_1": "tag_value_1",
 			"test_tag_2": "tag_value_2",
@@ -79,7 +81,7 @@ func BenchmarkTags(b *testing.B) {
 }
 
 func BenchmarkFields(b *testing.B) {
-	var mt, _ = NewMetric("test_metric",
+	var mt, _ = New("test_metric",
 		map[string]string{
 			"test_tag_1": "tag_value_1",
 			"test_tag_2": "tag_value_2",
@@ -99,7 +101,7 @@ func BenchmarkFields(b *testing.B) {
 }
 
 func BenchmarkSerializeMetric(b *testing.B) {
-	mt, _ := NewMetric("test_metric",
+	mt, _ := New("test_metric",
 		map[string]string{
 			"test_tag_1": "tag_value_1",
 			"test_tag_2": "tag_value_2",
@@ -120,7 +122,7 @@ func BenchmarkSerializeMetric(b *testing.B) {
 }
 
 func BenchmarkSerializeMetricBytes(b *testing.B) {
-	mt, _ := NewMetric("test_metric",
+	mt, _ := New("test_metric",
 		map[string]string{
 			"test_tag_1": "tag_value_1",
 			"test_tag_2": "tag_value_2",
