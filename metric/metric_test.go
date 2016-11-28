@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +25,7 @@ func TestNewMetric(t *testing.T) {
 	m, err := New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	assert.Equal(t, Untyped, m.Type())
+	assert.Equal(t, telegraf.Untyped, m.Type())
 	assert.Equal(t, tags, m.Tags())
 	assert.Equal(t, fields, m.Fields())
 	assert.Equal(t, "cpu", m.Name())
@@ -42,10 +44,10 @@ func TestNewGaugeMetric(t *testing.T) {
 		"usage_idle": float64(99),
 		"usage_busy": float64(1),
 	}
-	m, err := New("cpu", tags, fields, now, Gauge)
+	m, err := New("cpu", tags, fields, now, telegraf.Gauge)
 	assert.NoError(t, err)
 
-	assert.Equal(t, Gauge, m.Type())
+	assert.Equal(t, telegraf.Gauge, m.Type())
 	assert.Equal(t, tags, m.Tags())
 	assert.Equal(t, fields, m.Fields())
 	assert.Equal(t, "cpu", m.Name())
@@ -64,10 +66,10 @@ func TestNewCounterMetric(t *testing.T) {
 		"usage_idle": float64(99),
 		"usage_busy": float64(1),
 	}
-	m, err := New("cpu", tags, fields, now, Counter)
+	m, err := New("cpu", tags, fields, now, telegraf.Counter)
 	assert.NoError(t, err)
 
-	assert.Equal(t, Counter, m.Type())
+	assert.Equal(t, telegraf.Counter, m.Type())
 	assert.Equal(t, tags, m.Tags())
 	assert.Equal(t, fields, m.Fields())
 	assert.Equal(t, "cpu", m.Name())

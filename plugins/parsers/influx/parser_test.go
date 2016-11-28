@@ -155,11 +155,11 @@ func TestParseDefaultTags(t *testing.T) {
 			"datacenter": "us-east",
 			"host":       "foo",
 			"tag":        "default",
-		}, metrics[0].Tags())
+		}, metric.Tags())
 		assert.Equal(t, map[string]interface{}{
 			"usage_idle": float64(99),
 			"usage_busy": float64(1),
-		}, metrics[0].Fields())
+		}, metric.Fields())
 	}
 }
 

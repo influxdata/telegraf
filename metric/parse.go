@@ -45,28 +45,25 @@ func Parse(buf []byte) ([]telegraf.Metric, error) {
 
 func ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0, bytes.Count(buf, []byte("\n"))+1)
-	var (
-		errStr string
-		line   []byte
-		err    error
-	)
-	b := bytes.NewBuffer(buf)
+	var errStr string
+	i := 0
 	for {
-		line, err = b.ReadBytes('\n')
-		if err != nil {
+		j := bytes.IndexByte(buf[i:], '\n')
+		if j == -1 {
 			break
 		}
-		if len(line) < 2 {
+		if len(buf[i:i+j]) < 2 {
+			i += j + 1 // increment i past the previous newline
 			continue
 		}
-		// trim the newline:
-		line = line[0 : len(line)-1]
 
-		m, err := parseMetric(line, t)
+		m, err := parseMetric(buf[i:i+j], t)
 		if err != nil {
+			i += j + 1 // increment i past the previous newline
 			errStr += " " + err.Error()
 			continue
 		}
+		i += j + 1 // increment i past the previous newline
 
 		metrics = append(metrics, m)
 	}
@@ -135,7 +132,10 @@ func parseMetric(buf []byte, defaultTime time.Time) (telegraf.Metric, error) {
 		m.t = []byte(dTime)
 	}
 
-	return m, nil
+	// here we copy on return because this allows us to later call
+	// AddTag, AddField, RemoveTag, RemoveField, etc. without worrying about
+	// modifying 'tag' bytes having an affect on 'field' bytes, for example.
+	return m.Copy(), nil
 }
 
 // scanKey scans buf starting at i for the measurement and tag portion of the point.

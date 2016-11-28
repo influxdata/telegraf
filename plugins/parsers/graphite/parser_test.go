@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
@@ -505,16 +504,11 @@ func TestFilterMatchMostLongestFilter(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
-		map[string]string{"host": "localhost", "resource": "cpu"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Contains(t, m.String(), ",host=localhost")
+	assert.Contains(t, m.String(), ",resource=cpu")
 }
 
 func TestFilterMatchMultipleWildcards(t *testing.T) {
@@ -551,16 +545,12 @@ func TestParseDefaultTags(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
-		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Contains(t, m.String(), ",host=localhost")
+	assert.Contains(t, m.String(), ",region=us-east")
+	assert.Contains(t, m.String(), ",zone=1c")
 }
 
 func TestParseDefaultTemplateTags(t *testing.T) {
@@ -572,16 +562,12 @@ func TestParseDefaultTemplateTags(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
-		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Contains(t, m.String(), ",host=localhost")
+	assert.Contains(t, m.String(), ",region=us-east")
+	assert.Contains(t, m.String(), ",zone=1c")
 }
 
 func TestParseDefaultTemplateTagsOverridGlobal(t *testing.T) {
@@ -593,16 +579,12 @@ func TestParseDefaultTemplateTagsOverridGlobal(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
-		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Contains(t, m.String(), ",host=localhost")
+	assert.Contains(t, m.String(), ",region=us-east")
+	assert.Contains(t, m.String(), ",zone=1c")
 }
 
 func TestParseTemplateWhitespace(t *testing.T) {
@@ -616,16 +598,12 @@ func TestParseTemplateWhitespace(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
-		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Contains(t, m.String(), ",host=localhost")
+	assert.Contains(t, m.String(), ",region=us-east")
+	assert.Contains(t, m.String(), ",zone=1c")
 }
 
 // Test basic functionality of ApplyTemplate

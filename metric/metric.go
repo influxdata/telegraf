@@ -15,6 +15,8 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 )
 
+const MaxInt = int(^uint(0) >> 1)
+
 var (
 	// escaper is for escaping:
 	//   - tag keys
@@ -63,7 +65,6 @@ func New(
 		m.tags = append(m.tags, []byte("="+escaper.Replace(v))...)
 	}
 
-	m.fields = []byte{' '}
 	i := 0
 	for k, v := range fields {
 		if i != 0 {
@@ -72,7 +73,6 @@ func New(
 		m.fields = appendField(m.fields, k, v)
 		i++
 	}
-	m.fields = append(m.fields, ' ')
 
 	return m, nil
 }
@@ -103,6 +103,9 @@ func indexUnescapedByte(buf []byte, b byte) int {
 func countBackslashes(buf []byte, index int) int {
 	var count int
 	for {
+		if index < 0 {
+			return count
+		}
 		if buf[index] == '\\' {
 			count++
 			index--
@@ -130,7 +133,8 @@ type metric struct {
 }
 
 func (m *metric) Point() *client.Point {
-	return &client.Point{}
+	c, _ := client.NewPoint(m.Name(), m.Tags(), m.Fields(), m.Time())
+	return c
 }
 
 func (m *metric) String() string {
@@ -150,16 +154,25 @@ func (m *metric) Type() telegraf.ValueType {
 }
 
 func (m *metric) Len() int {
-	return len(m.name) + len(m.tags) + len(m.fields) + len(m.t) + 1
+	return len(m.name) + len(m.tags) + 1 + len(m.fields) + 1 + len(m.t) + 1
 }
 
 func (m *metric) Serialize() []byte {
 	tmp := make([]byte, m.Len())
-	copy(tmp, m.name)
-	copy(tmp[len(m.name):], m.tags)
-	copy(tmp[len(m.name)+len(m.tags):], m.fields)
-	copy(tmp[len(m.name)+len(m.tags)+len(m.fields):], m.t)
-	tmp[len(tmp)-1] = '\n'
+	i := 0
+	copy(tmp[i:], m.name)
+	i += len(m.name)
+	copy(tmp[i:], m.tags)
+	i += len(m.tags)
+	tmp[i] = ' '
+	i++
+	copy(tmp[i:], m.fields)
+	i += len(m.fields)
+	tmp[i] = ' '
+	i++
+	copy(tmp[i:], m.t)
+	i += len(m.t)
+	tmp[i] = '\n'
 	return tmp
 }
 
@@ -170,7 +183,7 @@ func (m *metric) Fields() map[string]interface{} {
 	}
 
 	m.fieldMap = map[string]interface{}{}
-	i := 1
+	i := 0
 	for {
 		if i >= len(m.fields) {
 			break
@@ -182,10 +195,20 @@ func (m *metric) Fields() map[string]interface{} {
 		}
 		// start index of field value
 		i2 := i1 + 1
+
 		// end index of field value
-		i3 := indexUnescapedByte(m.fields[i:], ',')
-		if i3 == -1 {
-			i3 = len(m.fields[i:]) - 1
+		var i3 int
+		if m.fields[i:][i2] == '"' {
+			i3 = indexUnescapedByte(m.fields[i:][i2+1:], '"')
+			if i3 == -1 {
+				i3 = len(m.fields[i:])
+			}
+			i3 += i2 + 2 // increment index to the comma
+		} else {
+			i3 = indexUnescapedByte(m.fields[i:], ',')
+			if i3 == -1 {
+				i3 = len(m.fields[i:])
+			}
 		}
 
 		switch m.fields[i:][i2] {
@@ -213,9 +236,9 @@ func (m *metric) Fields() map[string]interface{} {
 				}
 			}
 		case 'T', 't':
-			// TODO handle "true" booleans
+			m.fieldMap[string(m.fields[i:][0:i1])] = true
 		case 'F', 'f':
-			// TODO handle "false" booleans
+			m.fieldMap[string(m.fields[i:][0:i1])] = false
 		default:
 			// TODO handle unsupported field type
 		}
@@ -309,6 +332,7 @@ func (m *metric) HasTag(key string) bool {
 func (m *metric) RemoveTag(key string) bool {
 	m.tagMap = nil
 	m.hashID = 0
+
 	i := bytes.Index(m.tags, []byte(escaper.Replace(key)+"="))
 	if i == -1 {
 		return false
@@ -355,21 +379,17 @@ func (m *metric) RemoveField(key string) bool {
 }
 
 func (m *metric) Copy() telegraf.Metric {
-	name := make([]byte, len(m.name))
-	tags := make([]byte, len(m.tags))
-	fields := make([]byte, len(m.fields))
-	t := make([]byte, len(m.t))
-	copy(name, m.name)
-	copy(tags, m.tags)
-	copy(fields, m.fields)
-	copy(t, m.t)
-	return &metric{
-		name:   name,
-		tags:   tags,
-		fields: fields,
-		t:      t,
-		hashID: m.hashID,
+	mOut := metric{
+		name:   make([]byte, len(m.name)),
+		tags:   make([]byte, len(m.tags)),
+		fields: make([]byte, len(m.fields)),
+		t:      make([]byte, len(m.t)),
 	}
+	copy(mOut.name, m.name)
+	copy(mOut.tags, m.tags)
+	copy(mOut.fields, m.fields)
+	copy(mOut.t, m.t)
+	return &mOut
 }
 
 func (m *metric) HashID() uint64 {
@@ -423,6 +443,16 @@ func appendField(b []byte, k string, v interface{}) []byte {
 	case int:
 		b = strconv.AppendInt(b, int64(v), 10)
 		b = append(b, 'i')
+	case uint64:
+		// Cap uints above the maximum int value
+		var intv int64
+		if v <= uint64(MaxInt) {
+			intv = int64(v)
+		} else {
+			intv = int64(MaxInt)
+		}
+		b = strconv.AppendInt(b, intv, 10)
+		b = append(b, 'i')
 	case uint32:
 		b = strconv.AppendInt(b, int64(v), 10)
 		b = append(b, 'i')
@@ -432,11 +462,15 @@ func appendField(b []byte, k string, v interface{}) []byte {
 	case uint8:
 		b = strconv.AppendInt(b, int64(v), 10)
 		b = append(b, 'i')
-	// TODO: 'uint' should be considered just as "dangerous" as a uint64,
-	// perhaps the value should be checked and capped at MaxInt64? We could
-	// then include uint64 as an accepted value
 	case uint:
-		b = strconv.AppendInt(b, int64(v), 10)
+		// Cap uints above the maximum int value
+		var intv int64
+		if v <= uint(MaxInt) {
+			intv = int64(v)
+		} else {
+			intv = int64(MaxInt)
+		}
+		b = strconv.AppendInt(b, intv, 10)
 		b = append(b, 'i')
 	case float32:
 		b = strconv.AppendFloat(b, float64(v), 'f', -1, 32)

@@ -156,7 +156,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	allPoints := strings.Join(points, "\n") + "\n"
+	allPoints := strings.Join(points, "")
 	_, err = fmt.Fprintf(i.conn, allPoints)
 
 	if err != nil {
