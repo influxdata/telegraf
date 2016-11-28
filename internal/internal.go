@@ -17,8 +17,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-
-	"github.com/gobwas/glob"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -37,10 +35,20 @@ type Duration struct {
 // UnmarshalTOML parses the duration from the TOML config file
 func (d *Duration) UnmarshalTOML(b []byte) error {
 	var err error
-	// Parse string duration, ie, "1s"
-	d.Duration, err = time.ParseDuration(string(b[1 : len(b)-1]))
+	b = bytes.Trim(b, `'`)
+
+	// see if we can directly convert it
+	d.Duration, err = time.ParseDuration(string(b))
 	if err == nil {
 		return nil
+	}
+
+	// Parse string duration, ie, "1s"
+	if uq, err := strconv.Unquote(string(b)); err == nil && len(uq) > 0 {
+		d.Duration, err = time.ParseDuration(uq)
+		if err == nil {
+			return nil
+		}
 	}
 
 	// First try parsing as integer seconds
@@ -135,8 +143,8 @@ func GetTLSConfig(
 		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf(
-				"Could not load TLS client key/certificate: %s",
-				err))
+				"Could not load TLS client key/certificate from %s:%s: %s",
+				SSLKey, SSLCert, err))
 		}
 
 		t.Certificates = []tls.Certificate{cert}
@@ -200,34 +208,13 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 		return err
 	case <-timer.C:
 		if err := c.Process.Kill(); err != nil {
-			log.Printf("FATAL error killing process: %s", err)
+			log.Printf("E! FATAL error killing process: %s", err)
 			return err
 		}
 		// wait for the command to return after killing it
 		<-done
 		return TimeoutErr
 	}
-}
-
-// CompileFilter takes a list of glob "filters", ie:
-//   ["MAIN.*", "CPU.*", "NET"]
-// and compiles them into a glob object. This glob object can
-// then be used to match keys to the filter.
-func CompileFilter(filters []string) (glob.Glob, error) {
-	var out glob.Glob
-
-	// return if there is nothing to compile
-	if len(filters) == 0 {
-		return out, nil
-	}
-
-	var err error
-	if len(filters) == 1 {
-		out, err = glob.Compile(filters[0])
-	} else {
-		out, err = glob.Compile("{" + strings.Join(filters, ",") + "}")
-	}
-	return out, err
 }
 
 // RandomSleep will sleep for a random amount of time up to max.

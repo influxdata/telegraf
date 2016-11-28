@@ -9,16 +9,20 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/influxdata/config"
@@ -46,9 +50,12 @@ type Config struct {
 	InputFilters  []string
 	OutputFilters []string
 
-	Agent   *AgentConfig
-	Inputs  []*internal_models.RunningInput
-	Outputs []*internal_models.RunningOutput
+	Agent       *AgentConfig
+	Inputs      []*models.RunningInput
+	Outputs     []*models.RunningOutput
+	Aggregators []*models.RunningAggregator
+	// Processors have a slice wrapper type because they need to be sorted
+	Processors models.RunningProcessors
 }
 
 func NewConfig() *Config {
@@ -61,8 +68,9 @@ func NewConfig() *Config {
 		},
 
 		Tags:          make(map[string]string),
-		Inputs:        make([]*internal_models.RunningInput, 0),
-		Outputs:       make([]*internal_models.RunningOutput, 0),
+		Inputs:        make([]*models.RunningInput, 0),
+		Outputs:       make([]*models.RunningOutput, 0),
+		Processors:    make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -76,6 +84,14 @@ type AgentConfig struct {
 	// RoundInterval rounds collection interval to 'interval'.
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
+
+	// By default, precision will be set to the same timestamp order as the
+	// collection interval, with the maximum being 1s.
+	//   ie, when interval = "10s", precision will be "1s"
+	//       when interval = "250ms", precision will be "1ms"
+	// Precision will NOT be used for service inputs. It is up to each individual
+	// service input to set the timestamp at the appropriate precision.
+	Precision internal.Duration
 
 	// CollectionJitter is used to jitter the collection by a random amount.
 	// Each plugin will sleep for a random time within jitter before collecting.
@@ -108,14 +124,16 @@ type AgentConfig struct {
 	// does _not_ deactivate FlushInterval.
 	FlushBufferWhenFull bool
 
-	// TODO(cam): Remove UTC and Precision parameters, they are no longer
+	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatability
-	UTC       bool `toml:"utc"`
-	Precision string
+	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
 	Debug bool
+
+	// Logfile specifies the file to send logs to
+	Logfile string
 
 	// Quiet is the option for running in quiet mode
 	Quiet        bool
@@ -127,12 +145,12 @@ type AgentConfig struct {
 func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
-		name = append(name, input.Name)
+		name = append(name, input.Name())
 	}
 	return name
 }
 
-// Outputs returns a list of strings of the configured inputs.
+// Outputs returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
@@ -187,12 +205,15 @@ var header = `# Telegraf Configuration
   ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
 
-  ## Telegraf will send metrics to outputs in batches of at
-  ## most metric_batch_size metrics.
+  ## Telegraf will send metrics to outputs in batches of at most
+  ## metric_batch_size metrics.
+  ## This controls the size of writes that Telegraf sends to output plugins.
   metric_batch_size = 1000
+
   ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
   ## output, and will flush this buffer on a successful write. Oldest metrics
   ## are dropped first when this buffer fills.
+  ## This buffer only fills when writes fail to output plugin(s).
   metric_buffer_limit = 10000
 
   ## Collection jitter is used to jitter the collection by a random amount.
@@ -209,10 +230,20 @@ var header = `# Telegraf Configuration
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
-  ## Run telegraf in debug mode
+  ## By default, precision will be set to the same timestamp order as the
+  ## collection interval, with the maximum being 1s.
+  ## Precision will NOT be used for service inputs, such as logparser and statsd.
+  ## Valid values are "ns", "us" (or "µs"), "ms", "s".
+  precision = ""
+
+  ## Logging configuration:
+  ## Run telegraf with debug log messages.
   debug = false
-  ## Run telegraf in quiet mode
+  ## Run telegraf in quiet mode (error log messages only).
   quiet = false
+  ## Specify the log file name. The empty string means to log to stderr.
+  logfile = ""
+
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
@@ -221,6 +252,20 @@ var header = `# Telegraf Configuration
 
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #
+###############################################################################
+`
+
+var processorHeader = `
+
+###############################################################################
+#                            PROCESSOR PLUGINS                                #
+###############################################################################
+`
+
+var aggregatorHeader = `
+
+###############################################################################
+#                            AGGREGATOR PLUGINS                               #
 ###############################################################################
 `
 
@@ -239,9 +284,15 @@ var serviceInputHeader = `
 `
 
 // PrintSampleConfig prints the sample config
-func PrintSampleConfig(inputFilters []string, outputFilters []string) {
+func PrintSampleConfig(
+	inputFilters []string,
+	outputFilters []string,
+	aggregatorFilters []string,
+	processorFilters []string,
+) {
 	fmt.Printf(header)
 
+	// print output plugins
 	if len(outputFilters) != 0 {
 		printFilteredOutputs(outputFilters, false)
 	} else {
@@ -257,6 +308,33 @@ func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 		printFilteredOutputs(pnames, true)
 	}
 
+	// print processor plugins
+	fmt.Printf(processorHeader)
+	if len(processorFilters) != 0 {
+		printFilteredProcessors(processorFilters, false)
+	} else {
+		pnames := []string{}
+		for pname := range processors.Processors {
+			pnames = append(pnames, pname)
+		}
+		sort.Strings(pnames)
+		printFilteredProcessors(pnames, true)
+	}
+
+	// pring aggregator plugins
+	fmt.Printf(aggregatorHeader)
+	if len(aggregatorFilters) != 0 {
+		printFilteredAggregators(aggregatorFilters, false)
+	} else {
+		pnames := []string{}
+		for pname := range aggregators.Aggregators {
+			pnames = append(pnames, pname)
+		}
+		sort.Strings(pnames)
+		printFilteredAggregators(pnames, true)
+	}
+
+	// print input plugins
 	fmt.Printf(inputHeader)
 	if len(inputFilters) != 0 {
 		printFilteredInputs(inputFilters, false)
@@ -271,6 +349,42 @@ func PrintSampleConfig(inputFilters []string, outputFilters []string) {
 		}
 		sort.Strings(pnames)
 		printFilteredInputs(pnames, true)
+	}
+}
+
+func printFilteredProcessors(processorFilters []string, commented bool) {
+	// Filter processors
+	var pnames []string
+	for pname := range processors.Processors {
+		if sliceContains(pname, processorFilters) {
+			pnames = append(pnames, pname)
+		}
+	}
+	sort.Strings(pnames)
+
+	// Print Outputs
+	for _, pname := range pnames {
+		creator := processors.Processors[pname]
+		output := creator()
+		printConfig(pname, output, "processors", commented)
+	}
+}
+
+func printFilteredAggregators(aggregatorFilters []string, commented bool) {
+	// Filter outputs
+	var anames []string
+	for aname := range aggregators.Aggregators {
+		if sliceContains(aname, aggregatorFilters) {
+			anames = append(anames, aname)
+		}
+	}
+	sort.Strings(anames)
+
+	// Print Outputs
+	for _, aname := range anames {
+		creator := aggregators.Aggregators[aname]
+		output := creator()
+		printConfig(aname, output, "aggregators", commented)
 	}
 }
 
@@ -391,24 +505,21 @@ func PrintOutputConfig(name string) error {
 }
 
 func (c *Config) LoadDirectory(path string) error {
-	directoryEntries, err := ioutil.ReadDir(path)
-	if err != nil {
-		return err
-	}
-	for _, entry := range directoryEntries {
-		if entry.IsDir() {
-			continue
+	walkfn := func(thispath string, info os.FileInfo, _ error) error {
+		if info.IsDir() {
+			return nil
 		}
-		name := entry.Name()
+		name := info.Name()
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
-			continue
+			return nil
 		}
-		err := c.LoadConfig(filepath.Join(path, name))
+		err := c.LoadConfig(thispath)
 		if err != nil {
 			return err
 		}
+		return nil
 	}
-	return nil
+	return filepath.Walk(path, walkfn)
 }
 
 // Try to find a default config file at these locations (in order):
@@ -420,9 +531,12 @@ func getDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
+	if runtime.GOOS == "windows" {
+		etcfile = `C:\Program Files\Telegraf\telegraf.conf`
+	}
 	for _, path := range []string{envfile, homefile, etcfile} {
 		if _, err := os.Stat(path); err == nil {
-			log.Printf("Using config file: %s", path)
+			log.Printf("I! Using config file: %s", path)
 			return path, nil
 		}
 	}
@@ -453,7 +567,7 @@ func (c *Config) LoadConfig(path string) error {
 				return fmt.Errorf("%s: invalid configuration", path)
 			}
 			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
-				log.Printf("Could not parse [global_tags] config\n")
+				log.Printf("E! Could not parse [global_tags] config\n")
 				return fmt.Errorf("Error parsing %s, %s", path, err)
 			}
 		}
@@ -466,7 +580,7 @@ func (c *Config) LoadConfig(path string) error {
 			return fmt.Errorf("%s: invalid configuration", path)
 		}
 		if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
-			log.Printf("Could not parse [agent] config\n")
+			log.Printf("E! Could not parse [agent] config\n")
 			return fmt.Errorf("Error parsing %s, %s", path, err)
 		}
 	}
@@ -483,6 +597,7 @@ func (c *Config) LoadConfig(path string) error {
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
+				// legacy [outputs.influxdb] support
 				case *ast.Table:
 					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
 						return fmt.Errorf("Error parsing %s, %s", path, err)
@@ -501,6 +616,7 @@ func (c *Config) LoadConfig(path string) error {
 		case "inputs", "plugins":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
+				// legacy [inputs.cpu] support
 				case *ast.Table:
 					if err = c.addInput(pluginName, pluginSubTable); err != nil {
 						return fmt.Errorf("Error parsing %s, %s", path, err)
@@ -508,6 +624,34 @@ func (c *Config) LoadConfig(path string) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addInput(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", path, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
+				}
+			}
+		case "processors":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addProcessor(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", path, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
+				}
+			}
+		case "aggregators":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addAggregator(pluginName, t); err != nil {
 							return fmt.Errorf("Error parsing %s, %s", path, err)
 						}
 					}
@@ -524,7 +668,18 @@ func (c *Config) LoadConfig(path string) error {
 			}
 		}
 	}
+
+	if len(c.Processors) > 1 {
+		sort.Sort(c.Processors)
+	}
 	return nil
+}
+
+// trimBOM trims the Byte-Order-Marks from the beginning of the file.
+// this is for Windows compatability only.
+// see https://github.com/influxdata/telegraf/issues/1378
+func trimBOM(f []byte) []byte {
+	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }
 
 // parseFile loads a TOML configuration from a provided path and
@@ -535,6 +690,8 @@ func parseFile(fpath string) (*ast.Table, error) {
 	if err != nil {
 		return nil, err
 	}
+	// ugh windows why
+	contents = trimBOM(contents)
 
 	env_vars := envVarRe.FindAll(contents, -1)
 	for _, env_var := range env_vars {
@@ -545,6 +702,52 @@ func parseFile(fpath string) (*ast.Table, error) {
 	}
 
 	return toml.Parse(contents)
+}
+
+func (c *Config) addAggregator(name string, table *ast.Table) error {
+	creator, ok := aggregators.Aggregators[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested aggregator: %s", name)
+	}
+	aggregator := creator()
+
+	conf, err := buildAggregator(name, table)
+	if err != nil {
+		return err
+	}
+
+	if err := config.UnmarshalTable(table, aggregator); err != nil {
+		return err
+	}
+
+	c.Aggregators = append(c.Aggregators, models.NewRunningAggregator(aggregator, conf))
+	return nil
+}
+
+func (c *Config) addProcessor(name string, table *ast.Table) error {
+	creator, ok := processors.Processors[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested processor: %s", name)
+	}
+	processor := creator()
+
+	processorConfig, err := buildProcessor(name, table)
+	if err != nil {
+		return err
+	}
+
+	if err := config.UnmarshalTable(table, processor); err != nil {
+		return err
+	}
+
+	rf := &models.RunningProcessor{
+		Name:      name,
+		Processor: processor,
+		Config:    processorConfig,
+	}
+
+	c.Processors = append(c.Processors, rf)
+	return nil
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -577,7 +780,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	ro := internal_models.NewRunningOutput(name, output, outputConfig,
+	ro := models.NewRunningOutput(name, output, outputConfig,
 		c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
@@ -618,8 +821,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	rp := &internal_models.RunningInput{
-		Name:   name,
+	rp := &models.RunningInput{
 		Input:  input,
 		Config: pluginConfig,
 	}
@@ -627,12 +829,150 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	return nil
 }
 
+// buildAggregator parses Aggregator specific items from the ast.Table,
+// builds the filter and returns a
+// models.AggregatorConfig to be inserted into models.RunningAggregator
+func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
+	unsupportedFields := []string{"tagexclude", "taginclude"}
+	for _, field := range unsupportedFields {
+		if _, ok := tbl.Fields[field]; ok {
+			return nil, fmt.Errorf("%s is not supported for aggregator plugins (%s).",
+				field, name)
+		}
+	}
+
+	conf := &models.AggregatorConfig{
+		Name:   name,
+		Delay:  time.Millisecond * 100,
+		Period: time.Second * 30,
+	}
+
+	if node, ok := tbl.Fields["period"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				conf.Period = dur
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["delay"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				conf.Delay = dur
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["drop_original"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				conf.DropOriginal, err = strconv.ParseBool(b.Value)
+				if err != nil {
+					log.Printf("Error parsing boolean value for %s: %s\n", name, err)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_prefix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.MeasurementPrefix = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_suffix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.MeasurementSuffix = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_override"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.NameOverride = str.Value
+			}
+		}
+	}
+
+	conf.Tags = make(map[string]string)
+	if node, ok := tbl.Fields["tags"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			if err := config.UnmarshalTable(subtbl, conf.Tags); err != nil {
+				log.Printf("Could not parse tags for input %s\n", name)
+			}
+		}
+	}
+
+	delete(tbl.Fields, "period")
+	delete(tbl.Fields, "delay")
+	delete(tbl.Fields, "drop_original")
+	delete(tbl.Fields, "name_prefix")
+	delete(tbl.Fields, "name_suffix")
+	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "tags")
+	var err error
+	conf.Filter, err = buildFilter(tbl)
+	if err != nil {
+		return conf, err
+	}
+	return conf, nil
+}
+
+// buildProcessor parses Processor specific items from the ast.Table,
+// builds the filter and returns a
+// models.ProcessorConfig to be inserted into models.RunningProcessor
+func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+	conf := &models.ProcessorConfig{Name: name}
+	unsupportedFields := []string{"tagexclude", "taginclude", "fielddrop", "fieldpass"}
+	for _, field := range unsupportedFields {
+		if _, ok := tbl.Fields[field]; ok {
+			return nil, fmt.Errorf("%s is not supported for processor plugins (%s).",
+				field, name)
+		}
+	}
+
+	if node, ok := tbl.Fields["order"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Integer); ok {
+				var err error
+				conf.Order, err = strconv.ParseInt(b.Value, 10, 64)
+				if err != nil {
+					log.Printf("Error parsing int value for %s: %s\n", name, err)
+				}
+			}
+		}
+	}
+
+	delete(tbl.Fields, "order")
+	var err error
+	conf.Filter, err = buildFilter(tbl)
+	if err != nil {
+		return conf, err
+	}
+	return conf, nil
+}
+
 // buildFilter builds a Filter
 // (tagpass/tagdrop/namepass/namedrop/fieldpass/fielddrop) to
-// be inserted into the internal_models.OutputConfig/internal_models.InputConfig
+// be inserted into the models.OutputConfig/models.InputConfig
 // to be used for glob filtering on tags and measurements
-func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
-	f := internal_models.Filter{}
+func buildFilter(tbl *ast.Table) (models.Filter, error) {
+	f := models.Filter{}
 
 	if node, ok := tbl.Fields["namepass"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -640,7 +980,6 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
 						f.NamePass = append(f.NamePass, str.Value)
-						f.IsActive = true
 					}
 				}
 			}
@@ -653,7 +992,6 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
 						f.NameDrop = append(f.NameDrop, str.Value)
-						f.IsActive = true
 					}
 				}
 			}
@@ -668,7 +1006,6 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 					for _, elem := range ary.Value {
 						if str, ok := elem.(*ast.String); ok {
 							f.FieldPass = append(f.FieldPass, str.Value)
-							f.IsActive = true
 						}
 					}
 				}
@@ -684,7 +1021,6 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 					for _, elem := range ary.Value {
 						if str, ok := elem.(*ast.String); ok {
 							f.FieldDrop = append(f.FieldDrop, str.Value)
-							f.IsActive = true
 						}
 					}
 				}
@@ -696,7 +1032,7 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 		if subtbl, ok := node.(*ast.Table); ok {
 			for name, val := range subtbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
-					tagfilter := &internal_models.TagFilter{Name: name}
+					tagfilter := &models.TagFilter{Name: name}
 					if ary, ok := kv.Value.(*ast.Array); ok {
 						for _, elem := range ary.Value {
 							if str, ok := elem.(*ast.String); ok {
@@ -705,7 +1041,6 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 						}
 					}
 					f.TagPass = append(f.TagPass, *tagfilter)
-					f.IsActive = true
 				}
 			}
 		}
@@ -715,7 +1050,7 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 		if subtbl, ok := node.(*ast.Table); ok {
 			for name, val := range subtbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
-					tagfilter := &internal_models.TagFilter{Name: name}
+					tagfilter := &models.TagFilter{Name: name}
 					if ary, ok := kv.Value.(*ast.Array); ok {
 						for _, elem := range ary.Value {
 							if str, ok := elem.(*ast.String); ok {
@@ -724,7 +1059,6 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 						}
 					}
 					f.TagDrop = append(f.TagDrop, *tagfilter)
-					f.IsActive = true
 				}
 			}
 		}
@@ -753,7 +1087,7 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 			}
 		}
 	}
-	if err := f.CompileFilter(); err != nil {
+	if err := f.Compile(); err != nil {
 		return f, err
 	}
 
@@ -772,9 +1106,9 @@ func buildFilter(tbl *ast.Table) (internal_models.Filter, error) {
 
 // buildInput parses input specific items from the ast.Table,
 // builds the filter and returns a
-// internal_models.InputConfig to be inserted into internal_models.RunningInput
-func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, error) {
-	cp := &internal_models.InputConfig{Name: name}
+// models.InputConfig to be inserted into models.RunningInput
+func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
+	cp := &models.InputConfig{Name: name}
 	if node, ok := tbl.Fields["interval"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -816,7 +1150,7 @@ func buildInput(name string, tbl *ast.Table) (*internal_models.InputConfig, erro
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := config.UnmarshalTable(subtbl, cp.Tags); err != nil {
-				log.Printf("Could not parse tags for input %s\n", name)
+				log.Printf("E! Could not parse tags for input %s\n", name)
 			}
 		}
 	}
@@ -948,14 +1282,14 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 
 // buildOutput parses output specific items from the ast.Table,
 // builds the filter and returns an
-// internal_models.OutputConfig to be inserted into internal_models.RunningInput
+// models.OutputConfig to be inserted into models.RunningInput
 // Note: error exists in the return for future calls that might require error
-func buildOutput(name string, tbl *ast.Table) (*internal_models.OutputConfig, error) {
+func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	filter, err := buildFilter(tbl)
 	if err != nil {
 		return nil, err
 	}
-	oc := &internal_models.OutputConfig{
+	oc := &models.OutputConfig{
 		Name:   name,
 		Filter: filter,
 	}

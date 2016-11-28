@@ -35,6 +35,7 @@ type MongoStatus struct {
 	ServerStatus  *ServerStatus
 	ReplSetStatus *ReplSetStatus
 	ClusterStatus *ClusterStatus
+	DbStats       *DbStats
 }
 
 type ServerStatus struct {
@@ -63,6 +64,32 @@ type ServerStatus struct {
 	StorageEngine      map[string]string      `bson:"storageEngine"`
 	WiredTiger         *WiredTiger            `bson:"wiredTiger"`
 	Metrics            *MetricsStats          `bson:"metrics"`
+}
+
+// DbStats stores stats from all dbs
+type DbStats struct {
+	Dbs []Db
+}
+
+// Db represent a single DB
+type Db struct {
+	Name        string
+	DbStatsData *DbStatsData
+}
+
+// DbStatsData stores stats from a db
+type DbStatsData struct {
+	Db          string      `bson:"db"`
+	Collections int64       `bson:"collections"`
+	Objects     int64       `bson:"objects"`
+	AvgObjSize  float64     `bson:"avgObjSize"`
+	DataSize    int64       `bson:"dataSize"`
+	StorageSize int64       `bson:"storageSize"`
+	NumExtents  int64       `bson:"numExtents"`
+	Indexes     int64       `bson:"indexes"`
+	IndexSize   int64       `bson:"indexSize"`
+	Ok          int64       `bson:"ok"`
+	GleStats    interface{} `bson:"gleStats"`
 }
 
 // ClusterStatus stores information related to the whole cluster
@@ -396,6 +423,22 @@ type StatLine struct {
 
 	// Cluster fields
 	JumboChunksCount int64
+
+	// DB stats field
+	DbStatsLines []DbStatLine
+}
+
+type DbStatLine struct {
+	Name        string
+	Collections int64
+	Objects     int64
+	AvgObjSize  float64
+	DataSize    int64
+	StorageSize int64
+	NumExtents  int64
+	Indexes     int64
+	IndexSize   int64
+	Ok          int64
 }
 
 func parseLocks(stat ServerStatus) map[string]LockUsage {
@@ -471,7 +514,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Command = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
 	}
 
-	if newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
+	if newStat.Metrics != nil && newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
 		returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
 		returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
 	}
@@ -676,6 +719,28 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	newClusterStat := *newMongo.ClusterStatus
 	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
+
+	newDbStats := *newMongo.DbStats
+	for _, db := range newDbStats.Dbs {
+		dbStatsData := db.DbStatsData
+		// mongos doesn't have the db key, so setting the db name
+		if dbStatsData.Db == "" {
+			dbStatsData.Db = db.Name
+		}
+		dbStatLine := &DbStatLine{
+			Name:        dbStatsData.Db,
+			Collections: dbStatsData.Collections,
+			Objects:     dbStatsData.Objects,
+			AvgObjSize:  dbStatsData.AvgObjSize,
+			DataSize:    dbStatsData.DataSize,
+			StorageSize: dbStatsData.StorageSize,
+			NumExtents:  dbStatsData.NumExtents,
+			Indexes:     dbStatsData.Indexes,
+			IndexSize:   dbStatsData.IndexSize,
+			Ok:          dbStatsData.Ok,
+		}
+		returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
+	}
 
 	return returnVal
 }

@@ -24,7 +24,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_name":  "redis",
 		"container_image": "redis/image",
 	}
-	gatherContainerStats(stats, &acc, tags, "123456789")
+	gatherContainerStats(stats, &acc, tags, "123456789", true, true)
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
@@ -42,12 +42,36 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	nettags["network"] = "eth0"
 	acc.AssertContainsTaggedFields(t, "docker_container_net", netfields, nettags)
 
+	netfields = map[string]interface{}{
+		"rx_dropped":   uint64(6),
+		"rx_bytes":     uint64(8),
+		"rx_errors":    uint64(10),
+		"tx_packets":   uint64(12),
+		"tx_dropped":   uint64(6),
+		"rx_packets":   uint64(8),
+		"tx_errors":    uint64(10),
+		"tx_bytes":     uint64(12),
+		"container_id": "123456789",
+	}
+	nettags = copyTags(tags)
+	nettags["network"] = "total"
+	acc.AssertContainsTaggedFields(t, "docker_container_net", netfields, nettags)
+
 	// test docker_blkio measurement
 	blkiotags := copyTags(tags)
 	blkiotags["device"] = "6:0"
 	blkiofields := map[string]interface{}{
 		"io_service_bytes_recursive_read": uint64(100),
 		"io_serviced_recursive_write":     uint64(101),
+		"container_id":                    "123456789",
+	}
+	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
+
+	blkiotags = copyTags(tags)
+	blkiotags["device"] = "total"
+	blkiofields = map[string]interface{}{
+		"io_service_bytes_recursive_read": uint64(100),
+		"io_serviced_recursive_write":     uint64(302),
 		"container_id":                    "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
@@ -186,6 +210,17 @@ func testStats() *types.StatsJSON {
 		TxBytes:   4,
 	}
 
+	stats.Networks["eth1"] = types.NetworkStats{
+		RxDropped: 5,
+		RxBytes:   6,
+		RxErrors:  7,
+		TxPackets: 8,
+		TxDropped: 5,
+		RxPackets: 6,
+		TxErrors:  7,
+		TxBytes:   8,
+	}
+
 	sbr := types.BlkioStatEntry{
 		Major: 6,
 		Minor: 0,
@@ -198,11 +233,19 @@ func testStats() *types.StatsJSON {
 		Op:    "write",
 		Value: 101,
 	}
+	sr2 := types.BlkioStatEntry{
+		Major: 6,
+		Minor: 1,
+		Op:    "write",
+		Value: 201,
+	}
 
 	stats.BlkioStats.IoServiceBytesRecursive = append(
 		stats.BlkioStats.IoServiceBytesRecursive, sbr)
 	stats.BlkioStats.IoServicedRecursive = append(
 		stats.BlkioStats.IoServicedRecursive, sr)
+	stats.BlkioStats.IoServicedRecursive = append(
+		stats.BlkioStats.IoServicedRecursive, sr2)
 
 	return stats
 }
@@ -213,6 +256,9 @@ type FakeDockerClient struct {
 func (d FakeDockerClient) Info(ctx context.Context) (types.Info, error) {
 	env := types.Info{
 		Containers:         108,
+		ContainersRunning:  98,
+		ContainersStopped:  6,
+		ContainersPaused:   3,
 		OomKillDisable:     false,
 		SystemTime:         "2016-02-24T00:55:09.15073105-05:00",
 		NEventsListener:    0,
@@ -354,10 +400,13 @@ func TestDockerGatherInfo(t *testing.T) {
 			"n_cpus":                  int(4),
 			"n_used_file_descriptors": int(19),
 			"n_containers":            int(108),
+			"n_containers_running":    int(98),
+			"n_containers_stopped":    int(6),
+			"n_containers_paused":     int(3),
 			"n_images":                int(199),
 			"n_goroutines":            int(39),
 		},
-		map[string]string{},
+		map[string]string{"engine_host": "absol"},
 	)
 
 	acc.AssertContainsTaggedFields(t,
@@ -368,7 +417,8 @@ func TestDockerGatherInfo(t *testing.T) {
 			"available": int64(36530000000),
 		},
 		map[string]string{
-			"unit": "bytes",
+			"unit":        "bytes",
+			"engine_host": "absol",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -378,9 +428,11 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		},
 		map[string]string{
-			"container_name":  "etcd2",
-			"container_image": "quay.io/coreos/etcd:v2.2.2",
-			"cpu":             "cpu3",
+			"container_name":    "etcd2",
+			"container_image":   "quay.io/coreos/etcd",
+			"cpu":               "cpu3",
+			"container_version": "v2.2.2",
+			"engine_host":       "absol",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -423,8 +475,10 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_id":              "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		},
 		map[string]string{
-			"container_name":  "etcd2",
-			"container_image": "quay.io/coreos/etcd:v2.2.2",
+			"engine_host":       "absol",
+			"container_name":    "etcd2",
+			"container_image":   "quay.io/coreos/etcd",
+			"container_version": "v2.2.2",
 		},
 	)
 

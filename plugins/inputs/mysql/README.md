@@ -53,13 +53,13 @@ This plugin gathers the statistic data from MySQL server
   ## gather metrics from SHOW BINARY LOGS command output
   gather_binary_logs                        = false
   #
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_TABLE
+  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
   gather_table_io_waits                     = false
   #
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
   gather_table_lock_waits                   = false
   #
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMART_BY_INDEX_USAGE
+  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_INDEX_USAGE
   gather_index_io_waits                     = false
   #
   ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
@@ -133,7 +133,7 @@ The unit of fields varies by the tags.
     * file_events_total(float,number)
     * file_events_seconds_total(float, milliseconds)
     * file_events_bytes_total(float, bytes)
-* Perf file events statements - gathers attributes of each event
+* Perf events statements - gathers attributes of each event
     * events_statements_total(float, number)
     * events_statements_seconds_total(float, millieconds)
     * events_statements_errors_total(float, number)

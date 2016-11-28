@@ -1,32 +1,192 @@
-## v1.0 beta 1 [2016-06-07]
+## v1.2 [unreleased]
 
 ### Release Notes
+
+### Features
+
+- [#1564](https://github.com/influxdata/telegraf/issues/1564): Use RFC3339 timestamps in log output.
+- [#1997](https://github.com/influxdata/telegraf/issues/1997): Non-default HTTP timeouts for RabbitMQ plugin.
+- [#2074](https://github.com/influxdata/telegraf/pull/2074): "discard" output plugin added, primarily for testing purposes.
+
+### Bugfixes
+
+- [#2049](https://github.com/influxdata/telegraf/pull/2049): Fix the Value data format not trimming null characters from input.
+- [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
+- [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus
+
+## v1.1.1 [2016-11-14]
+
+### Bugfixes
+
+- [#2023](https://github.com/influxdata/telegraf/issues/2023): Fix issue parsing toml durations with single quotes.
+
+## v1.1.0 [2016-11-07]
+
+### Release Notes
+
+- Telegraf now supports two new types of plugins: processors & aggregators.
+
+- On systemd Telegraf will no longer redirect it's stdout to /var/log/telegraf/telegraf.log.
+On most systems, the logs will be directed to the systemd journal and can be
+accessed by `journalctl -u telegraf.service`. Consult the systemd journal
+documentation for configuring journald. There is also a [`logfile` config option](https://github.com/influxdata/telegraf/blob/master/etc/telegraf.conf#L70)
+available in 1.1, which will allow users to easily configure telegraf to
+continue sending logs to /var/log/telegraf/telegraf.log.
+
+- The JSON parser can now parse JSON data where the root object is an array.
+The parsing configuration is applied to each element of the array.
+
+### Features
+
+- [#1726](https://github.com/influxdata/telegraf/issues/1726): Processor & Aggregator plugin support.
+- [#1861](https://github.com/influxdata/telegraf/pull/1861): adding the tags in the graylog output plugin
+- [#1732](https://github.com/influxdata/telegraf/pull/1732): Telegraf systemd service, log to journal.
+- [#1782](https://github.com/influxdata/telegraf/pull/1782): Allow numeric and non-string values for tag_keys.
+- [#1694](https://github.com/influxdata/telegraf/pull/1694): Adding Gauge and Counter metric types.
+- [#1606](https://github.com/influxdata/telegraf/pull/1606): Remove carraige returns from exec plugin output on Windows
+- [#1674](https://github.com/influxdata/telegraf/issues/1674): elasticsearch input: configurable timeout.
+- [#1607](https://github.com/influxdata/telegraf/pull/1607): Massage metric names in Instrumental output plugin
+- [#1572](https://github.com/influxdata/telegraf/pull/1572): mesos improvements.
+- [#1513](https://github.com/influxdata/telegraf/issues/1513): Add Ceph Cluster Performance Statistics
+- [#1650](https://github.com/influxdata/telegraf/issues/1650): Ability to configure response_timeout in httpjson input.
+- [#1685](https://github.com/influxdata/telegraf/issues/1685): Add additional redis metrics.
+- [#1539](https://github.com/influxdata/telegraf/pull/1539): Added capability to send metrics through Http API for OpenTSDB.
+- [#1471](https://github.com/influxdata/telegraf/pull/1471): iptables input plugin.
+- [#1542](https://github.com/influxdata/telegraf/pull/1542): Add filestack webhook plugin.
+- [#1599](https://github.com/influxdata/telegraf/pull/1599): Add server hostname for each docker measurements.
+- [#1697](https://github.com/influxdata/telegraf/pull/1697): Add NATS output plugin.
+- [#1407](https://github.com/influxdata/telegraf/pull/1407) & [#1915](https://github.com/influxdata/telegraf/pull/1915): HTTP service listener input plugin.
+- [#1699](https://github.com/influxdata/telegraf/pull/1699): Add database blacklist option for Postgresql
+- [#1791](https://github.com/influxdata/telegraf/pull/1791): Add Docker container state metrics to Docker input plugin output
+- [#1755](https://github.com/influxdata/telegraf/issues/1755): Add support to SNMP for IP & MAC address conversion.
+- [#1729](https://github.com/influxdata/telegraf/issues/1729): Add support to SNMP for OID index suffixes.
+- [#1813](https://github.com/influxdata/telegraf/pull/1813): Change default arguments for SNMP plugin.
+- [#1686](https://github.com/influxdata/telegraf/pull/1686): Mesos input plugin: very high-cardinality mesos-task metrics removed.
+- [#1838](https://github.com/influxdata/telegraf/pull/1838): Logging overhaul to centralize the logger & log levels, & provide a logfile config option.
+- [#1700](https://github.com/influxdata/telegraf/pull/1700): HAProxy plugin socket glob matching.
+- [#1847](https://github.com/influxdata/telegraf/pull/1847): Add Kubernetes plugin for retrieving pod metrics.
+
+### Bugfixes
+
+- [#1955](https://github.com/influxdata/telegraf/issues/1955): Fix NATS plug-ins reconnection logic.
+- [#1936](https://github.com/influxdata/telegraf/issues/1936): Set required default values in udp_listener & tcp_listener.
+- [#1926](https://github.com/influxdata/telegraf/issues/1926): Fix toml unmarshal panic in Duration objects.
+- [#1746](https://github.com/influxdata/telegraf/issues/1746): Fix handling of non-string values for JSON keys listed in tag_keys.
+- [#1628](https://github.com/influxdata/telegraf/issues/1628): Fix mongodb input panic on version 2.2.
+- [#1733](https://github.com/influxdata/telegraf/issues/1733): Fix statsd scientific notation parsing
+- [#1716](https://github.com/influxdata/telegraf/issues/1716): Sensors plugin strconv.ParseFloat: parsing "": invalid syntax
+- [#1530](https://github.com/influxdata/telegraf/issues/1530): Fix prometheus_client reload panic
+- [#1764](https://github.com/influxdata/telegraf/issues/1764): Fix kafka consumer panic when nil error is returned down errs channel.
+- [#1768](https://github.com/influxdata/telegraf/pull/1768): Speed up statsd parsing.
+- [#1751](https://github.com/influxdata/telegraf/issues/1751): Fix powerdns integer parse error handling.
+- [#1752](https://github.com/influxdata/telegraf/issues/1752): Fix varnish plugin defaults not being used.
+- [#1517](https://github.com/influxdata/telegraf/issues/1517): Fix windows glob paths.
+- [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix issue loading config directory on windows.
+- [#1772](https://github.com/influxdata/telegraf/pull/1772): Windows remote management interactive service fix.
+- [#1702](https://github.com/influxdata/telegraf/issues/1702): sqlserver, fix issue when case sensitive collation is activated.
+- [#1823](https://github.com/influxdata/telegraf/issues/1823): Fix huge allocations in http_listener when dealing with huge payloads.
+- [#1833](https://github.com/influxdata/telegraf/issues/1833): Fix translating SNMP fields not in MIB.
+- [#1835](https://github.com/influxdata/telegraf/issues/1835): Fix SNMP emitting empty fields.
+- [#1854](https://github.com/influxdata/telegraf/pull/1853): SQL Server waitstats truncation bug.
+- [#1810](https://github.com/influxdata/telegraf/issues/1810): Fix logparser common log format: numbers in ident.
+- [#1793](https://github.com/influxdata/telegraf/pull/1793): Fix JSON Serialization in OpenTSDB output.
+- [#1731](https://github.com/influxdata/telegraf/issues/1731): Fix Graphite template ordering, use most specific.
+- [#1836](https://github.com/influxdata/telegraf/pull/1836): Fix snmp table field initialization for non-automatic table.
+- [#1724](https://github.com/influxdata/telegraf/issues/1724): cgroups path being parsed as metric.
+- [#1886](https://github.com/influxdata/telegraf/issues/1886): Fix phpfpm fcgi client panic when URL does not exist.
+- [#1344](https://github.com/influxdata/telegraf/issues/1344): Fix config file parse error logging.
+- [#1771](https://github.com/influxdata/telegraf/issues/1771): Delete nil fields in the metric maker.
+- [#870](https://github.com/influxdata/telegraf/issues/870): Fix MySQL special characters in DSN parsing.
+- [#1742](https://github.com/influxdata/telegraf/issues/1742): Ping input odd timeout behavior.
+- [#1950](https://github.com/influxdata/telegraf/pull/1950): Switch to github.com/kballard/go-shellquote.
+
+## v1.0.1 [2016-09-26]
+
+### Bugfixes
+
+- [#1775](https://github.com/influxdata/telegraf/issues/1775): Prometheus output: Fix bug with multi-batch writes.
+- [#1738](https://github.com/influxdata/telegraf/issues/1738): Fix unmarshal of influxdb metrics with null tags.
+- [#1773](https://github.com/influxdata/telegraf/issues/1773): Add configurable timeout to influxdb input plugin.
+- [#1785](https://github.com/influxdata/telegraf/pull/1785): Fix statsd no default value panic.
+
+## v1.0 [2016-09-08]
+
+### Release Notes
+
+**Breaking Change** The SNMP plugin is being deprecated in it's current form.
+There is a [new SNMP plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/snmp)
+which fixes many of the issues and confusions
+of its predecessor. For users wanting to continue to use the deprecated SNMP
+plugin, you will need to change your config file from `[[inputs.snmp]]` to
+`[[inputs.snmp_legacy]]`. The configuration of the new SNMP plugin is _not_
+backwards-compatible.
+
+**Breaking Change**: Aerospike main server node measurements have been renamed
+aerospike_node. Aerospike namespace measurements have been renamed to
+aerospike_namespace. They will also now be tagged with the node_name
+that they correspond to. This has been done to differentiate measurements
+that pertain to node vs. namespace statistics.
+
+**Breaking Change**: users of github_webhooks must change to the new
+`[[inputs.webhooks]]` plugin.
+
+This means that the default github_webhooks config:
+
+```
+# A Github Webhook Event collector
+[[inputs.github_webhooks]]
+  ## Address and port to host Webhook listener on
+  service_address = ":1618"
+```
+
+should now look like:
+
+```
+# A Webhooks Event collector
+[[inputs.webhooks]]
+  ## Address and port to host Webhook listener on
+  service_address = ":1618"
+
+  [inputs.webhooks.github]
+    path = "/"
+```
+
+- Telegraf now supports being installed as an official windows service,
+which can be installed via
+`> C:\Program Files\Telegraf\telegraf.exe --service install`
 
 - `flush_jitter` behavior has been changed. The random jitter will now be
 evaluated at every flush interval, rather than once at startup. This makes it
 consistent with the behavior of `collection_jitter`.
 
-- All AWS plugins now utilize a standard mechanism for evaluating credentials.
-This allows all AWS plugins to support environment variables, shared credential
-files & profiles, and role assumptions. See the specific plugin README for
-details.
-
-- The AWS CloudWatch input plugin can now declare a wildcard value for a metric
-dimension. This causes the plugin to read all metrics that contain the specified
-dimension key regardless of value. This is used to export collections of metrics
-without having to know the dimension values ahead of time.
-
-- The AWS CloudWatch input plugin can now be configured with the `cache_ttl`
-attribute. This configures the TTL of the internal metric cache. This is useful
-in conjunction with wildcard dimension values as it will control the amount of
-time before a new metric is included by the plugin.
-
 ### Features
+
+- [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
+- [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
+- [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
+- [#1503](https://github.com/influxdata/telegraf/pull/1503): Add tls support for certs to RabbitMQ input plugin
+- [#1289](https://github.com/influxdata/telegraf/pull/1289): webhooks input plugin. Thanks @francois2metz and @cduez!
+- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar webhook plugin.
+- [#1408](https://github.com/influxdata/telegraf/pull/1408): mandrill webhook plugin.
+- [#1402](https://github.com/influxdata/telegraf/pull/1402): docker-machine/boot2docker no longer required for unit tests.
+- [#1350](https://github.com/influxdata/telegraf/pull/1350): cgroup input plugin.
+- [#1369](https://github.com/influxdata/telegraf/pull/1369): Add input plugin for consuming metrics from NSQD.
+- [#1369](https://github.com/influxdata/telegraf/pull/1480): add ability to read redis from a socket.
+- [#1387](https://github.com/influxdata/telegraf/pull/1387): **Breaking Change** - Redis `role` tag renamed to `replication_role` to avoid global_tags override
+- [#1437](https://github.com/influxdata/telegraf/pull/1437): Fetching Galera status metrics in MySQL
+- [#1500](https://github.com/influxdata/telegraf/pull/1500): Aerospike plugin refactored to use official client lib.
+- [#1434](https://github.com/influxdata/telegraf/pull/1434): Add measurement name arg to logparser plugin.
+- [#1479](https://github.com/influxdata/telegraf/pull/1479): logparser: change resp_code from a field to a tag.
+- [#1411](https://github.com/influxdata/telegraf/pull/1411): Implement support for fetching hddtemp data
+- [#1340](https://github.com/influxdata/telegraf/issues/1340): statsd: do not log every dropped metric.
+- [#1368](https://github.com/influxdata/telegraf/pull/1368): Add precision rounding to all metrics on collection.
+- [#1390](https://github.com/influxdata/telegraf/pull/1390): Add support for Tengine
+- [#1320](https://github.com/influxdata/telegraf/pull/1320): Logparser input plugin for parsing grok-style log patterns.
+- [#1397](https://github.com/influxdata/telegraf/issues/1397): ElasticSearch: now supports connecting to ElasticSearch via SSL
 - [#1262](https://github.com/influxdata/telegraf/pull/1261): Add graylog input pluging.
 - [#1294](https://github.com/influxdata/telegraf/pull/1294): consul input plugin. Thanks @harnash
 - [#1164](https://github.com/influxdata/telegraf/pull/1164): conntrack input plugin. Thanks @robinpercy!
 - [#1165](https://github.com/influxdata/telegraf/pull/1165): vmstat input plugin. Thanks @jshim-xm!
-- [#1247](https://github.com/influxdata/telegraf/pull/1247): rollbar input plugin. Thanks @francois2metz and @cduez!
 - [#1208](https://github.com/influxdata/telegraf/pull/1208): Standardized AWS credentials evaluation & wildcard CloudWatch dimensions. Thanks @johnrengelman!
 - [#1264](https://github.com/influxdata/telegraf/pull/1264): Add SSL config options to http_response plugin.
 - [#1272](https://github.com/influxdata/telegraf/pull/1272): graphite parser: add ability to specify multiple tag keys, for consistency with influxdb parser.
@@ -38,9 +198,45 @@ time before a new metric is included by the plugin.
 - [#1278](https://github.com/influxdata/telegraf/pull/1278) & [#1288](https://github.com/influxdata/telegraf/pull/1288) & [#1295](https://github.com/influxdata/telegraf/pull/1295): RabbitMQ/Apache/InfluxDB inputs: made url(s) parameter optional by using reasonable input defaults if not specified
 - [#1296](https://github.com/influxdata/telegraf/issues/1296): Refactor of flush_jitter argument.
 - [#1213](https://github.com/influxdata/telegraf/issues/1213): Add inactive & active memory to mem plugin.
+- [#1543](https://github.com/influxdata/telegraf/pull/1543): Official Windows service.
+- [#1414](https://github.com/influxdata/telegraf/pull/1414): Forking sensors command to remove C package dependency.
+- [#1389](https://github.com/influxdata/telegraf/pull/1389): Add a new SNMP plugin.
 
 ### Bugfixes
 
+- [#1619](https://github.com/influxdata/telegraf/issues/1619): Fix `make windows` build target
+- [#1519](https://github.com/influxdata/telegraf/pull/1519): Fix error race conditions and partial failures.
+- [#1477](https://github.com/influxdata/telegraf/issues/1477): nstat: fix inaccurate config panic.
+- [#1481](https://github.com/influxdata/telegraf/issues/1481): jolokia: fix handling multiple multi-dimensional attributes.
+- [#1430](https://github.com/influxdata/telegraf/issues/1430): Fix prometheus character sanitizing. Sanitize more win_perf_counters characters.
+- [#1534](https://github.com/influxdata/telegraf/pull/1534): Add diskio io_time to FreeBSD & report timing metrics as ms (as linux does).
+- [#1379](https://github.com/influxdata/telegraf/issues/1379): Fix covering Amazon Linux for post remove flow.
+- [#1584](https://github.com/influxdata/telegraf/issues/1584): procstat missing fields: read/write bytes & count
+- [#1472](https://github.com/influxdata/telegraf/pull/1472): diskio input plugin: set 'skip_serial_number = true' by default to avoid high cardinality.
+- [#1426](https://github.com/influxdata/telegraf/pull/1426): nil metrics panic fix.
+- [#1384](https://github.com/influxdata/telegraf/pull/1384): Fix datarace in apache input plugin.
+- [#1399](https://github.com/influxdata/telegraf/issues/1399): Add `read_repairs` statistics to riak plugin.
+- [#1405](https://github.com/influxdata/telegraf/issues/1405): Fix memory/connection leak in prometheus input plugin.
+- [#1378](https://github.com/influxdata/telegraf/issues/1378): Trim BOM from config file for Windows support.
+- [#1339](https://github.com/influxdata/telegraf/issues/1339): Prometheus client output panic on service reload.
+- [#1461](https://github.com/influxdata/telegraf/pull/1461): Prometheus parser, protobuf format header fix.
+- [#1334](https://github.com/influxdata/telegraf/issues/1334): Prometheus output, metric refresh and caching fixes.
+- [#1432](https://github.com/influxdata/telegraf/issues/1432): Panic fix for multiple graphite outputs under very high load.
+- [#1412](https://github.com/influxdata/telegraf/pull/1412): Instrumental output has better reconnect behavior
+- [#1460](https://github.com/influxdata/telegraf/issues/1460): Remove PID from procstat plugin to fix cardinality issues.
+- [#1427](https://github.com/influxdata/telegraf/issues/1427): Cassandra input: version 2.x "column family" fix.
+- [#1463](https://github.com/influxdata/telegraf/issues/1463): Shared WaitGroup in Exec plugin
+- [#1436](https://github.com/influxdata/telegraf/issues/1436): logparser: honor modifiers in "pattern" config.
+- [#1418](https://github.com/influxdata/telegraf/issues/1418): logparser: error and exit on file permissions/missing errors.
+- [#1499](https://github.com/influxdata/telegraf/pull/1499): Make the user able to specify full path for HAproxy stats
+- [#1521](https://github.com/influxdata/telegraf/pull/1521): Fix Redis url, an extra "tcp://" was added.
+- [#1330](https://github.com/influxdata/telegraf/issues/1330): Fix exec plugin panic when using single binary.
+- [#1336](https://github.com/influxdata/telegraf/issues/1336): Fixed incorrect prometheus metrics source selection.
+- [#1112](https://github.com/influxdata/telegraf/issues/1112): Set default Zookeeper chroot to empty string.
+- [#1335](https://github.com/influxdata/telegraf/issues/1335): Fix overall ping timeout to be calculated based on per-ping timeout.
+- [#1374](https://github.com/influxdata/telegraf/pull/1374): Change "default" retention policy to "".
+- [#1377](https://github.com/influxdata/telegraf/issues/1377): Graphite output mangling '%' character.
+- [#1396](https://github.com/influxdata/telegraf/pull/1396): Prometheus input plugin now supports x509 certs authentication
 - [#1252](https://github.com/influxdata/telegraf/pull/1252) & [#1279](https://github.com/influxdata/telegraf/pull/1279): Fix systemd service. Thanks @zbindenren & @PierreF!
 - [#1221](https://github.com/influxdata/telegraf/pull/1221): Fix influxdb n_shards counter.
 - [#1258](https://github.com/influxdata/telegraf/pull/1258): Fix potential kernel plugin integer parse error.
@@ -50,6 +246,12 @@ time before a new metric is included by the plugin.
 - [#1316](https://github.com/influxdata/telegraf/pull/1316): Removed leaked "database" tag on redis metrics. Thanks @PierreF!
 - [#1323](https://github.com/influxdata/telegraf/issues/1323): Processes plugin: fix potential error with /proc/net/stat directory.
 - [#1322](https://github.com/influxdata/telegraf/issues/1322): Fix rare RHEL 5.2 panic in gopsutil diskio gathering function.
+- [#1586](https://github.com/influxdata/telegraf/pull/1586): Remove IF NOT EXISTS from influxdb output database creation.
+- [#1600](https://github.com/influxdata/telegraf/issues/1600): Fix quoting with text values in postgresql_extensible plugin.
+- [#1425](https://github.com/influxdata/telegraf/issues/1425): Fix win_perf_counter "index out of range" panic.
+- [#1634](https://github.com/influxdata/telegraf/issues/1634): Fix ntpq panic when field is missing.
+- [#1637](https://github.com/influxdata/telegraf/issues/1637): Sanitize graphite output field names.
+- [#1695](https://github.com/influxdata/telegraf/pull/1695): Fix MySQL plugin not sending 0 value fields.
 
 ## v0.13.1 [2016-05-24]
 

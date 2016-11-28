@@ -8,9 +8,25 @@ and optionally [cluster](https://www.elastic.co/guide/en/elasticsearch/reference
 
 ```
 [[inputs.elasticsearch]]
+  ## specify a list of one or more Elasticsearch servers
   servers = ["http://localhost:9200"]
+
+  ## Timeout for HTTP requests to the elastic search server(s)
+  http_timeout = "5s"
+
+  ## set local to false when you want to read the indices stats from all nodes
+  ## within the cluster
   local = true
-  cluster_health = true
+
+  ## set cluster_health to true when you want to also obtain cluster level stats
+  cluster_health = false
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 ### Measurements & Fields:

@@ -53,7 +53,9 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 					require.NoError(t, err)
 
 					// add value to Accumulator
-					acc.Add(measurement, value, tags, time.Now())
+					acc.AddFields(measurement,
+						map[string]interface{}{"value": value},
+						tags, time.Now())
 					// assert
 					acc.AssertContainsTaggedFields(t, measurement, map[string]interface{}{"value": value}, tags)
 

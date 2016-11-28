@@ -70,7 +70,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"inodes_free":  du.InodesFree,
 			"inodes_used":  du.InodesUsed,
 		}
-		acc.AddFields("disk", fields, tags)
+		acc.AddGauge("disk", fields, tags)
 	}
 
 	return nil
@@ -92,8 +92,8 @@ var diskIoSampleConfig = `
   ## disk partitions.
   ## Setting devices will restrict the stats to the specified devices.
   # devices = ["sda", "sdb"]
-  ## Uncomment the following line if you do not need disk serial numbers.
-  # skip_serial_number = true
+  ## Uncomment the following line if you need disk serial numbers.
+  # skip_serial_number = false
 `
 
 func (_ *DiskIOStats) SampleConfig() string {
@@ -131,15 +131,16 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 		}
 
 		fields := map[string]interface{}{
-			"reads":       io.ReadCount,
-			"writes":      io.WriteCount,
-			"read_bytes":  io.ReadBytes,
-			"write_bytes": io.WriteBytes,
-			"read_time":   io.ReadTime,
-			"write_time":  io.WriteTime,
-			"io_time":     io.IoTime,
+			"reads":            io.ReadCount,
+			"writes":           io.WriteCount,
+			"read_bytes":       io.ReadBytes,
+			"write_bytes":      io.WriteBytes,
+			"read_time":        io.ReadTime,
+			"write_time":       io.WriteTime,
+			"io_time":          io.IoTime,
+			"iops_in_progress": io.IopsInProgress,
 		}
-		acc.AddFields("diskio", fields, tags)
+		acc.AddCounter("diskio", fields, tags)
 	}
 
 	return nil
@@ -151,6 +152,6 @@ func init() {
 	})
 
 	inputs.Add("diskio", func() telegraf.Input {
-		return &DiskIOStats{ps: &systemPS{}}
+		return &DiskIOStats{ps: &systemPS{}, SkipSerialNumber: true}
 	})
 }

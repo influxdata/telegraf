@@ -12,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gobwas/glob"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -26,7 +25,7 @@ type Varnish struct {
 	Stats  []string
 	Binary string
 
-	filter glob.Glob
+	filter filter.Filter
 	run    runner
 }
 
@@ -78,13 +77,13 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 	if s.filter == nil {
 		var err error
 		if len(s.Stats) == 0 {
-			s.filter, err = internal.CompileFilter(defaultStats)
+			s.filter, err = filter.Compile(defaultStats)
 		} else {
 			// legacy support, change "all" -> "*":
 			if s.Stats[0] == "all" {
 				s.Stats[0] = "*"
 			}
-			s.filter, err = internal.CompileFilter(s.Stats)
+			s.filter, err = filter.Compile(s.Stats)
 		}
 		if err != nil {
 			return err
@@ -147,7 +146,9 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("varnish", func() telegraf.Input {
 		return &Varnish{
-			run: varnishRunner,
+			run:    varnishRunner,
+			Stats:  defaultStats,
+			Binary: defaultBinary,
 		}
 	})
 }

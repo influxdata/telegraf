@@ -26,27 +26,26 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"192.168.1.1"}
 
-	filter := internal_models.Filter{
+	filter := models.Filter{
 		NameDrop:  []string{"metricname2"},
 		NamePass:  []string{"metricname1"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
-		TagDrop: []internal_models.TagFilter{
-			internal_models.TagFilter{
+		TagDrop: []models.TagFilter{
+			models.TagFilter{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
-		TagPass: []internal_models.TagFilter{
-			internal_models.TagFilter{
+		TagPass: []models.TagFilter{
+			models.TagFilter{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},
 		},
-		IsActive: true,
 	}
-	assert.NoError(t, filter.CompileFilter())
-	mConfig := &internal_models.InputConfig{
+	assert.NoError(t, filter.Compile())
+	mConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
 		Interval: 10 * time.Second,
@@ -66,27 +65,26 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	filter := internal_models.Filter{
+	filter := models.Filter{
 		NameDrop:  []string{"metricname2"},
 		NamePass:  []string{"metricname1"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
-		TagDrop: []internal_models.TagFilter{
-			internal_models.TagFilter{
+		TagDrop: []models.TagFilter{
+			models.TagFilter{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
-		TagPass: []internal_models.TagFilter{
-			internal_models.TagFilter{
+		TagPass: []models.TagFilter{
+			models.TagFilter{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},
 		},
-		IsActive: true,
 	}
-	assert.NoError(t, filter.CompileFilter())
-	mConfig := &internal_models.InputConfig{
+	assert.NoError(t, filter.Compile())
+	mConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
 		Interval: 5 * time.Second,
@@ -113,27 +111,26 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
 
-	filter := internal_models.Filter{
+	filter := models.Filter{
 		NameDrop:  []string{"metricname2"},
 		NamePass:  []string{"metricname1"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
-		TagDrop: []internal_models.TagFilter{
-			internal_models.TagFilter{
+		TagDrop: []models.TagFilter{
+			models.TagFilter{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
-		TagPass: []internal_models.TagFilter{
-			internal_models.TagFilter{
+		TagPass: []models.TagFilter{
+			models.TagFilter{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},
 		},
-		IsActive: true,
 	}
-	assert.NoError(t, filter.CompileFilter())
-	mConfig := &internal_models.InputConfig{
+	assert.NoError(t, filter.Compile())
+	mConfig := &models.InputConfig{
 		Name:     "memcached",
 		Filter:   filter,
 		Interval: 5 * time.Second,
@@ -150,7 +147,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	assert.NoError(t, err)
 	ex.SetParser(p)
 	ex.Command = "/usr/bin/myothercollector --foo=bar"
-	eConfig := &internal_models.InputConfig{
+	eConfig := &models.InputConfig{
 		Name:              "exec",
 		MeasurementSuffix: "_myothercollector",
 	}
@@ -169,7 +166,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	pstat := inputs.Inputs["procstat"]().(*procstat.Procstat)
 	pstat.PidFile = "/var/run/grafana-server.pid"
 
-	pConfig := &internal_models.InputConfig{Name: "procstat"}
+	pConfig := &models.InputConfig{Name: "procstat"}
 	pConfig.Tags = make(map[string]string)
 
 	assert.Equal(t, pstat, c.Inputs[3].Input,

@@ -107,37 +107,6 @@ func TestRunError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCompileFilter(t *testing.T) {
-	f, err := CompileFilter([]string{})
-	assert.NoError(t, err)
-	assert.Nil(t, f)
-
-	f, err = CompileFilter([]string{"cpu"})
-	assert.NoError(t, err)
-	assert.True(t, f.Match("cpu"))
-	assert.False(t, f.Match("cpu0"))
-	assert.False(t, f.Match("mem"))
-
-	f, err = CompileFilter([]string{"cpu*"})
-	assert.NoError(t, err)
-	assert.True(t, f.Match("cpu"))
-	assert.True(t, f.Match("cpu0"))
-	assert.False(t, f.Match("mem"))
-
-	f, err = CompileFilter([]string{"cpu", "mem"})
-	assert.NoError(t, err)
-	assert.True(t, f.Match("cpu"))
-	assert.False(t, f.Match("cpu0"))
-	assert.True(t, f.Match("mem"))
-
-	f, err = CompileFilter([]string{"cpu", "mem", "net*"})
-	assert.NoError(t, err)
-	assert.True(t, f.Match("cpu"))
-	assert.False(t, f.Match("cpu0"))
-	assert.True(t, f.Match("mem"))
-	assert.True(t, f.Match("network"))
-}
-
 func TestRandomSleep(t *testing.T) {
 	// test that zero max returns immediately
 	s := time.Now()
@@ -149,7 +118,7 @@ func TestRandomSleep(t *testing.T) {
 	s = time.Now()
 	RandomSleep(time.Millisecond*50, make(chan struct{}))
 	elapsed = time.Since(s)
-	assert.True(t, elapsed < time.Millisecond*50)
+	assert.True(t, elapsed < time.Millisecond*100)
 
 	// test that shutdown is respected
 	s = time.Now()
@@ -161,4 +130,27 @@ func TestRandomSleep(t *testing.T) {
 	RandomSleep(time.Second, shutdown)
 	elapsed = time.Since(s)
 	assert.True(t, elapsed < time.Millisecond*150)
+}
+
+func TestDuration(t *testing.T) {
+	var d Duration
+
+	d.UnmarshalTOML([]byte(`"1s"`))
+	assert.Equal(t, time.Second, d.Duration)
+
+	d = Duration{}
+	d.UnmarshalTOML([]byte(`1s`))
+	assert.Equal(t, time.Second, d.Duration)
+
+	d = Duration{}
+	d.UnmarshalTOML([]byte(`'1s'`))
+	assert.Equal(t, time.Second, d.Duration)
+
+	d = Duration{}
+	d.UnmarshalTOML([]byte(`10`))
+	assert.Equal(t, 10*time.Second, d.Duration)
+
+	d = Duration{}
+	d.UnmarshalTOML([]byte(`1.5`))
+	assert.Equal(t, time.Second, d.Duration)
 }

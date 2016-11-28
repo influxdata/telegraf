@@ -10,14 +10,15 @@ import (
 
 const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
-var fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
+var (
+	fieldDeleter   = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
+	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".", `\`, "", ")", "_", "(", "_")
+)
 
 type GraphiteSerializer struct {
 	Prefix   string
 	Template string
 }
-
-var sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".")
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
 	out := []string{}
@@ -25,15 +26,18 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 	// Convert UnixNano to Unix timestamps
 	timestamp := metric.UnixNano() / 1000000000
 
-	bucket := s.SerializeBucketName(metric.Name(), metric.Tags())
+	bucket := SerializeBucketName(metric.Name(), metric.Tags(), s.Template, s.Prefix)
+	if bucket == "" {
+		return out, nil
+	}
 
 	for fieldName, value := range metric.Fields() {
 		// Convert value to string
 		valueS := fmt.Sprintf("%#v", value)
 		point := fmt.Sprintf("%s %s %d",
 			// insert "field" section of template
-			InsertField(bucket, fieldName),
-			valueS,
+			sanitizedChars.Replace(InsertField(bucket, fieldName)),
+			sanitizedChars.Replace(valueS),
 			timestamp)
 		out = append(out, point)
 	}
@@ -48,12 +52,14 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 // FIELDNAME. It is up to the user to replace this. This is so that
 // SerializeBucketName can be called just once per measurement, rather than
 // once per field. See GraphiteSerializer.InsertField() function.
-func (s *GraphiteSerializer) SerializeBucketName(
+func SerializeBucketName(
 	measurement string,
 	tags map[string]string,
+	template string,
+	prefix string,
 ) string {
-	if s.Template == "" {
-		s.Template = DEFAULT_TEMPLATE
+	if template == "" {
+		template = DEFAULT_TEMPLATE
 	}
 	tagsCopy := make(map[string]string)
 	for k, v := range tags {
@@ -61,7 +67,7 @@ func (s *GraphiteSerializer) SerializeBucketName(
 	}
 
 	var out []string
-	templateParts := strings.Split(s.Template, ".")
+	templateParts := strings.Split(template, ".")
 	for _, templatePart := range templateParts {
 		switch templatePart {
 		case "measurement":
@@ -89,10 +95,14 @@ func (s *GraphiteSerializer) SerializeBucketName(
 		}
 	}
 
-	if s.Prefix == "" {
-		return sanitizedChars.Replace(strings.Join(out, "."))
+	if len(out) == 0 {
+		return ""
 	}
-	return sanitizedChars.Replace(s.Prefix + "." + strings.Join(out, "."))
+
+	if prefix == "" {
+		return strings.Join(out, ".")
+	}
+	return prefix + "." + strings.Join(out, ".")
 }
 
 // InsertField takes the bucket string from SerializeBucketName and replaces the

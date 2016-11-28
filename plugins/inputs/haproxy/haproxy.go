@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-//CSV format: https://cbonte.github.io/haproxy-dconv/configuration-1.5.html#9.1
+//CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
 const (
 	HF_PXNAME         = 0  // 0. pxname [LFBS]: proxy name
 	HF_SVNAME         = 1  // 1. svname [LFBS]: service name (FRONTEND for frontend, BACKEND for backend, any name for server/listener)
@@ -92,11 +93,16 @@ type haproxy struct {
 var sampleConfig = `
   ## An array of address to gather stats about. Specify an ip on hostname
   ## with optional port. ie localhost, 10.10.3.33:1936, etc.
-
-  ## If no servers are specified, then default to 127.0.0.1:1936
-  servers = ["http://myhaproxy.com:1936", "http://anotherhaproxy.com:1936"]
-  ## Or you can also use local socket
-  ## servers = ["socket:/run/haproxy/admin.sock"]
+  ## Make sure you specify the complete path to the stats endpoint
+  ## including the protocol, ie http://10.10.3.33:1936/haproxy?stats
+  #
+  ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
+  servers = ["http://myhaproxy.com:1936/haproxy?stats"]
+  ##
+  ## You can also use local socket with standard wildcard globbing.
+  ## Server address not starting with 'http' will be treated as a possible
+  ## socket, so both examples below are valid.
+  ## servers = ["socket:/run/haproxy/admin.sock", "/run/haproxy/*.sock"]
 `
 
 func (r *haproxy) SampleConfig() string {
@@ -111,13 +117,39 @@ func (r *haproxy) Description() string {
 // Returns one of the errors encountered while gather stats (if any).
 func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 	if len(g.Servers) == 0 {
-		return g.gatherServer("http://127.0.0.1:1936", acc)
+		return g.gatherServer("http://127.0.0.1:1936/haproxy?stats", acc)
+	}
+
+	endpoints := make([]string, 0, len(g.Servers))
+
+	for _, endpoint := range g.Servers {
+
+		if strings.HasPrefix(endpoint, "http") {
+			endpoints = append(endpoints, endpoint)
+			continue
+		}
+
+		socketPath := getSocketAddr(endpoint)
+
+		matches, err := filepath.Glob(socketPath)
+
+		if err != nil {
+			return err
+		}
+
+		if len(matches) == 0 {
+			endpoints = append(endpoints, socketPath)
+		} else {
+			for _, match := range matches {
+				endpoints = append(endpoints, match)
+			}
+		}
 	}
 
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(g.Servers))
-	wg.Add(len(g.Servers))
-	for _, server := range g.Servers {
+	errChan := errchan.New(len(endpoints))
+	wg.Add(len(endpoints))
+	for _, server := range endpoints {
 		go func(serv string) {
 			defer wg.Done()
 			errChan.C <- g.gatherServer(serv, acc)
@@ -129,14 +161,7 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 }
 
 func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
-	var socketPath string
-	socketAddr := strings.Split(addr, ":")
-
-	if len(socketAddr) >= 2 {
-		socketPath = socketAddr[1]
-	} else {
-		socketPath = socketAddr[0]
-	}
+	socketPath := getSocketAddr(addr)
 
 	c, err := net.Dial("unix", socketPath)
 
@@ -167,12 +192,16 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 		g.client = client
 	}
 
+	if !strings.HasSuffix(addr, ";csv") {
+		addr += "/;csv"
+	}
+
 	u, err := url.Parse(addr)
 	if err != nil {
 		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s/;csv", u.Scheme, u.Host, u.Path), nil)
+	req, err := http.NewRequest("GET", addr, nil)
 	if u.User != nil {
 		p, _ := u.User.Password()
 		req.SetBasicAuth(u.User.Username(), p)
@@ -184,10 +213,20 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("Unable to get valid stat result from '%s': %s", addr, err)
+		return fmt.Errorf("Unable to get valid stat result from '%s', http response code : %d", addr, res.StatusCode)
 	}
 
 	return importCsvResult(res.Body, acc, u.Host)
+}
+
+func getSocketAddr(sock string) string {
+	socketAddr := strings.Split(sock, ":")
+
+	if len(socketAddr) >= 2 {
+		return socketAddr[1]
+	} else {
+		return socketAddr[0]
+	}
 }
 
 func importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {

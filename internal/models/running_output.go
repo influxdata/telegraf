@@ -1,4 +1,4 @@
-package internal_models
+package models
 
 import (
 	"log"
@@ -57,21 +57,17 @@ func NewRunningOutput(
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
 func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
-	if ro.Config.Filter.IsActive {
-		if !ro.Config.Filter.ShouldMetricPass(metric) {
-			return
-		}
-	}
-
 	// Filter any tagexclude/taginclude parameters before adding metric
-	if len(ro.Config.Filter.TagExclude) != 0 || len(ro.Config.Filter.TagInclude) != 0 {
+	if ro.Config.Filter.IsActive() {
 		// In order to filter out tags, we need to create a new metric, since
 		// metrics are immutable once created.
+		name := metric.Name()
 		tags := metric.Tags()
 		fields := metric.Fields()
 		t := metric.Time()
-		name := metric.Name()
-		ro.Config.Filter.FilterTags(tags)
+		if ok := ro.Config.Filter.Apply(name, fields, tags); !ok {
+			return
+		}
 		// error is not possible if creating from another metric, so ignore.
 		metric, _ = telegraf.NewMetric(name, tags, fields, t)
 	}
@@ -89,7 +85,7 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
 	if !ro.Quiet {
-		log.Printf("Output [%s] buffer fullness: %d / %d metrics. "+
+		log.Printf("I! Output [%s] buffer fullness: %d / %d metrics. "+
 			"Total gathered metrics: %d. Total dropped metrics: %d.",
 			ro.Name,
 			ro.failMetrics.Len()+ro.metrics.Len(),
@@ -138,7 +134,7 @@ func (ro *RunningOutput) Write() error {
 }
 
 func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
+	if metrics == nil || len(metrics) == 0 {
 		return nil
 	}
 	start := time.Now()
@@ -146,7 +142,7 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	elapsed := time.Since(start)
 	if err == nil {
 		if !ro.Quiet {
-			log.Printf("Output [%s] wrote batch of %d metrics in %s\n",
+			log.Printf("I! Output [%s] wrote batch of %d metrics in %s\n",
 				ro.Name, len(metrics), elapsed)
 		}
 	}

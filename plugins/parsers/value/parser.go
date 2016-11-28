@@ -17,13 +17,12 @@ type ValueParser struct {
 }
 
 func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	vStr := string(bytes.TrimSpace(bytes.Trim(buf, "\x00")))
+
 	// unless it's a string, separate out any fields in the buffer,
 	// ignore anything but the last.
-	var vStr string
-	if v.DataType == "string" {
-		vStr = strings.TrimSpace(string(buf))
-	} else {
-		values := bytes.Fields(buf)
+	if v.DataType != "string" {
+		values := strings.Fields(vStr)
 		if len(values) < 1 {
 			return []telegraf.Metric{}, nil
 		}
