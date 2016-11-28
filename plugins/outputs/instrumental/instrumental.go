@@ -15,9 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
+// Instrumental struct
 type Instrumental struct {
 	Host       string
-	ApiToken   string
+	APIToken   string
 	Prefix     string
 	DataFormat string
 	Template   string
@@ -27,6 +28,7 @@ type Instrumental struct {
 	conn net.Conn
 }
 
+// constants
 const (
 	DefaultHost     = "collector.instrumentalapp.com"
 	HelloMessage    = "hello version go/telegraf/1.1\n"
@@ -34,6 +36,7 @@ const (
 	HandshakeFormat = HelloMessage + AuthFormat
 )
 
+// vars
 var (
 	ValueIncludesBadChar = regexp.MustCompile("[^[:digit:].]")
 	MetricNameReplacer   = regexp.MustCompile("[^-[:alnum:]_.]+")
@@ -53,6 +56,7 @@ var sampleConfig = `
   debug = false
 `
 
+// Connect func
 func (i *Instrumental) Connect() error {
 	connection, err := net.DialTimeout("tcp", i.Host+":8000", i.Timeout.Duration)
 
@@ -70,6 +74,7 @@ func (i *Instrumental) Connect() error {
 	return nil
 }
 
+// Close func
 func (i *Instrumental) Close() error {
 	i.conn.Close()
 	i.conn = nil
@@ -139,10 +144,10 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 			time := splitStat[2]
 
 			// replace invalid components of metric name with underscore
-			clean_metric := MetricNameReplacer.ReplaceAllString(metric, "_")
+			cleanMetric := MetricNameReplacer.ReplaceAllString(metric, "_")
 
 			if !ValueIncludesBadChar.MatchString(value) {
-				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, clean_metric, value, time))
+				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, cleanMetric, value, time))
 			} else if i.Debug {
 				log.Printf("E! Instrumental unable to send bad stat: %s", stat)
 			}
@@ -170,16 +175,18 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+// Description func
 func (i *Instrumental) Description() string {
 	return "Configuration for sending metrics to an Instrumental project"
 }
 
+// SampleConfig func
 func (i *Instrumental) SampleConfig() string {
 	return sampleConfig
 }
 
 func (i *Instrumental) authenticate(conn net.Conn) error {
-	_, err := fmt.Fprintf(conn, HandshakeFormat, i.ApiToken)
+	_, err := fmt.Fprintf(conn, HandshakeFormat, i.APIToken)
 	if err != nil {
 		return err
 	}
@@ -202,7 +209,7 @@ func init() {
 	outputs.Add("instrumental", func() telegraf.Output {
 		return &Instrumental{
 			Host:     DefaultHost,
-			Template: graphite.DEFAULT_TEMPLATE,
+			Template: graphite.DefaultTemplate,
 		}
 	})
 }

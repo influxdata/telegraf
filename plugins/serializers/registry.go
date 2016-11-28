@@ -46,21 +46,24 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
-		serializer, err = NewJsonSerializer()
+		serializer, err = NewJSONSerializer()
 	}
 	return serializer, err
 }
 
-func NewJsonSerializer() (Serializer, error) {
+// NewJSONSerializer func
+func NewJSONSerializer() (Serializer, error) {
 	return &json.JsonSerializer{}, nil
 }
 
+// NewInfluxSerializer func
 func NewInfluxSerializer() (Serializer, error) {
 	return &influx.InfluxSerializer{}, nil
 }
 
+// NewGraphiteSerializer func
 func NewGraphiteSerializer(prefix, template string) (Serializer, error) {
-	return &graphite.GraphiteSerializer{
+	return &graphite.SerializerGraphite{
 		Prefix:   prefix,
 		Template: template,
 	}, nil

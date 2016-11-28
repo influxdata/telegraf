@@ -21,7 +21,7 @@ func TestWrite(t *testing.T) {
 
 	i := Instrumental{
 		Host:     "127.0.0.1",
-		ApiToken: "abc123token",
+		APIToken: "abc123token",
 		Prefix:   "my.prefix",
 	}
 
@@ -91,9 +91,9 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	conn.Write([]byte("ok\nok\n"))
 
 	data1, _ := tp.ReadLine()
-	assert.Equal(t, "gauge my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
+	assert.Equal(t, "gauge my.prefix.1.0.168.192.mymeasurement.myfield 3.14 1289430000", data1)
 	data2, _ := tp.ReadLine()
-	assert.Equal(t, "gauge my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
+	assert.Equal(t, "gauge my.prefix.1.0.168.192.mymeasurement 3.14 1289430000", data2)
 
 	conn, _ = tcpServer.Accept()
 	conn.SetDeadline(time.Now().Add(1 * time.Second))
@@ -107,13 +107,13 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	conn.Write([]byte("ok\nok\n"))
 
 	data3, _ := tp.ReadLine()
-	assert.Equal(t, "increment my.prefix.192_168_0_1.my_histogram 3.14 1289430000", data3)
+	assert.Equal(t, "increment my.prefix.1.0.168.192.my_histogram 3.14 1289430000", data3)
 
 	data4, _ := tp.ReadLine()
-	assert.Equal(t, "increment my.prefix.192_168_0_1_8888_123.bad_metric_name 1 1289430000", data4)
+	assert.Equal(t, "increment my.prefix.1.0.168.192_8888_123.bad_metric_name 1 1289430000", data4)
 
 	data5, _ := tp.ReadLine()
-	assert.Equal(t, "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000", data5)
+	assert.Equal(t, "increment my.prefix.1.0.168.192.my_counter 3.14 1289430000", data5)
 
 	data6, _ := tp.ReadLine()
 	assert.Equal(t, "", data6)
