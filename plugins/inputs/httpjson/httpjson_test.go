@@ -201,6 +201,33 @@ func genMockHttpJson(response string, statusCode int) []*HttpJson {
 				"build",
 			},
 		},
+		&HttpJson{
+			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
+			Servers: []string{
+				"http://server5.example.com/metrics/",
+				"http://server6.example.com/metrics/",
+			},
+			Name:   "other_other_webapp",
+			Method: "POST",
+			Parameters: map[string]string{
+				"httpParam1": "12",
+				"httpParam2": "the second parameter",
+			},
+			Headers: map[string]string{
+				"X-Auth-Token": "the-first-parameter",
+				"apiVersion":   "v1",
+			},
+			TagKeys: []string{
+				"service",
+				"tagA",
+				"tagB",
+				"tagC",
+			},
+			JSONPaths: []string{
+				"metrics.myMetricsArr",
+				"metrics.myMetricsObj",
+			},
+		},
 	}
 }
 
@@ -554,6 +581,61 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 					assert.Equal(t, float64(1), m.Fields["response_time"])
 					assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
 				} else {
+					assert.FailNow(t, "unknown metric")
+				}
+			}
+		}
+	}
+}
+
+const validJSON3 = `
+{"service":"myservice",
+ "notATag":"abcd",
+ "notATag2":1.234,
+ "metrics":{"myMetricsArr": [{"tagA":"ABC", "tagB":"XYZ", "value":1.0}, {"tagA":"DEF", "tagB":"UVW", "value":2.0}],
+	    "myMetricsObj": {"tagA": "HIJ", "tagC":"LMN", "value":3.0, "anotherValue": 4.0}
+	   }
+}
+`
+
+// Test that nested array data is collected correctly
+func TestHttpJsonNestedArrayTags(t *testing.T) {
+	httpjson := genMockHttpJson(validJSON3, 200)
+
+	for _, service := range httpjson {
+		if service.Name == "other_other_webapp" {
+			var acc testutil.Accumulator
+			err := service.Gather(&acc)
+			// Set responsetime
+			for _, p := range acc.Metrics {
+				p.Fields["response_time"] = 1.0
+			}
+			require.NoError(t, err)
+			assert.Equal(t, 18, acc.NFields())
+			assert.Equal(t, uint64(8), acc.NMetrics())
+
+			for _, m := range acc.Metrics {
+				if m.Tags["tagA"] == "ABC" {
+					assert.Equal(t, "XYZ", m.Tags["tagB"])
+					assert.Equal(t, "myservice", m.Tags["service"])
+					assert.Equal(t, float64(1), m.Fields["value"])
+					// assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
+				} else if m.Tags["tagA"] == "DEF" {
+					assert.Equal(t, "UVW", m.Tags["tagB"])
+					assert.Equal(t, "myservice", m.Tags["service"])
+					assert.Equal(t, float64(2), m.Fields["value"])
+					// assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
+				} else if m.Tags["tagA"] == "HIJ" {
+					assert.Equal(t, "LMN", m.Tags["tagC"])
+					assert.Equal(t, "myservice", m.Tags["service"])
+					assert.Equal(t, float64(3.0), m.Fields["value"])
+					// assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
+				} else if _, ok := m.Tags["tagA"]; !ok {
+					assert.Equal(t, "myservice", m.Tags["service"])
+					assert.Equal(t, float64(1.234), m.Fields["notATag2"])
+					// assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
+				} else {
+					fmt.Printf("tags: %v\nfields: %v\nmeasurement: %v\n", m.Tags, m.Fields, m.Measurement)
 					assert.FailNow(t, "unknown metric")
 				}
 			}

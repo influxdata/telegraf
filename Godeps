@@ -29,6 +29,7 @@ github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
 github.com/influxdata/influxdb fc57c0f7c635df3873f3d64f0ed2100ddc94d5ae
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
+github.com/jmoiron/jsonq e874b168d07ecc7808bc950a17998a8aa3141d82
 github.com/kardianos/osext 29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc
 github.com/kardianos/service 5e335590050d6d00f3aa270217d288dda1c94d0a
 github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142

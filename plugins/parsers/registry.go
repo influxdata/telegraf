@@ -52,6 +52,8 @@ type Config struct {
 	TagKeys []string
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
+	// JSONPaths only appear in JSON data
+	JSONPaths []string
 
 	// DataType only applies to value, this will be the type to parse value to
 	DataType string
@@ -66,8 +68,16 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "json":
-		parser, err = NewJSONParser(config.MetricName,
-			config.TagKeys, config.DefaultTags)
+		switch len(config.JSONPaths) {
+		case 0:
+			parser, err = NewJSONParser(config.MetricName,
+				config.TagKeys, config.DefaultTags)
+		default:
+			parser, err = NewJSONQParser(config.MetricName,
+				config.TagKeys, config.DefaultTags,
+				config.JSONPaths)
+		}
+
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -93,6 +103,21 @@ func NewJSONParser(
 		MetricName:  metricName,
 		TagKeys:     tagKeys,
 		DefaultTags: defaultTags,
+	}
+	return parser, nil
+}
+
+func NewJSONQParser(
+	metricName string,
+	tagKeys []string,
+	defaultTags map[string]string,
+	jsonPaths []string,
+) (Parser, error) {
+	parser := &json.JSONParser{
+		MetricName:  metricName,
+		TagKeys:     tagKeys,
+		DefaultTags: defaultTags,
+		JSONPaths:   jsonPaths,
 	}
 	return parser, nil
 }
