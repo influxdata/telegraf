@@ -7,6 +7,7 @@
 - [#1564](https://github.com/influxdata/telegraf/issues/1564): Use RFC3339 timestamps in log output.
 - [#1997](https://github.com/influxdata/telegraf/issues/1997): Non-default HTTP timeouts for RabbitMQ plugin.
 - [#2074](https://github.com/influxdata/telegraf/pull/2074): "discard" output plugin added, primarily for testing purposes.
+- [#1965](https://github.com/influxdata/telegraf/pull/1965): The JSON parser can now parse an array of objects using the same configuration.
 
 ### Bugfixes
 
@@ -32,9 +33,6 @@ accessed by `journalctl -u telegraf.service`. Consult the systemd journal
 documentation for configuring journald. There is also a [`logfile` config option](https://github.com/influxdata/telegraf/blob/master/etc/telegraf.conf#L70)
 available in 1.1, which will allow users to easily configure telegraf to
 continue sending logs to /var/log/telegraf/telegraf.log.
-
-- The JSON parser can now parse JSON data where the root object is an array.
-The parsing configuration is applied to each element of the array.
 
 ### Features
 
