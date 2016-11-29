@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,12 +15,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type OpenConfigTelemetry struct {
 	Server          string
 	Sensors         []string
 	SampleFrequency uint32
+	CertFile        string
+	Debug           bool
 
 	parser parsers.Parser
 	sync.Mutex
@@ -32,8 +36,8 @@ type OpenConfigTelemetry struct {
 var sampleConfig = `
   server = "localhost:1883"
 
-  ## Frequency to get data in seconds
-  sampleFrequency = 1
+  ## Frequency to get data in milliseconds
+  sampleFrequency = 1000
 
   ## Sensors to subscribe for
   ## A identifier for each sensor can be provided in path by separating with space
@@ -43,11 +47,12 @@ var sampleConfig = `
    "interfaces /oc/interfaces/",
   ]
 
-  ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
+  ## x509 Certificate to use with TLS connection. If it is not provided, an insecure 
+  ## channel will be opened with server
+  certFile = "/path/to/x509_cert_file"
+
+  ## To see data being received from gRPC server, set debug to true
+  debug = true
 `
 
 func (m *OpenConfigTelemetry) SampleConfig() string {
@@ -63,7 +68,7 @@ func (m *OpenConfigTelemetry) SetParser(parser parsers.Parser) {
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
-	log.Print("Started OpenConfig Telemetry plugin\n")
+	log.Print("I! Started OpenConfig Telemetry plugin\n")
 	return nil
 }
 
@@ -84,13 +89,23 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 	grpc_server, grpc_port := s[0], s[1]
 
 	var err error
-	m.grpcClientConn, err = grpc.Dial(m.Server, grpc.WithInsecure())
+
+	// If a certificate is provided, open a secure channel. Else open insecure one
+	if m.CertFile != "" {
+		creds, err := credentials.NewClientTLSFromFile(m.CertFile, "")
+		if err != nil {
+			log.Fatalf("E! Failed to read certificate: %v", err)
+		}
+		m.grpcClientConn, err = grpc.Dial(m.Server, grpc.WithTransportCredentials(creds))
+	} else {
+		m.grpcClientConn, err = grpc.Dial(m.Server, grpc.WithInsecure())
+	}
 	if err != nil {
-		log.Fatalf("Failed to connect: %v", err)
+		log.Fatalf("E! Failed to connect: %v", err)
 	}
 
 	c := telemetry.NewOpenConfigTelemetryClient(m.grpcClientConn)
-	log.Printf("Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
+	log.Printf("I! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
 
 	wg := new(sync.WaitGroup)
 
@@ -109,9 +124,10 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 				sensorPath = sensor
 			}
 			stream, err := c.TelemetrySubscribe(context.Background(),
-				&telemetry.SubscriptionRequest{PathList: []*telemetry.Path{&telemetry.Path{Path: sensorPath, SampleFrequency: m.SampleFrequency}}})
+				&telemetry.SubscriptionRequest{PathList: []*telemetry.Path{&telemetry.Path{Path: sensorPath,
+					SampleFrequency: m.SampleFrequency}}})
 			if err != nil {
-				log.Fatalf("Could not subscribe: %v", err)
+				log.Fatalf("E! Could not subscribe: %v", err)
 			}
 			for {
 				r, err := stream.Recv()
@@ -119,7 +135,12 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 					break
 				}
 				if err != nil {
-					log.Fatalf("Failed to read: %v", err)
+					log.Fatalf("E! Failed to read: %v", err)
+				}
+
+				// Print incoming data as info if debug is set
+				if m.Debug {
+					log.Printf("I! Received: ", r)
 				}
 
 				// Create a point and add to batch
@@ -127,7 +148,7 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 				fields := make(map[string]interface{})
 
 				if err != nil {
-					log.Fatalln("Error: ", err)
+					log.Fatalln("E! Error: %v", err)
 				}
 
 				// variables initialization
@@ -176,7 +197,13 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 				for _, v := range r.Kv {
 					switch v.Value.(type) {
 					case *telemetry.KeyValue_StrValue:
-						tags[v.Key] = v.GetStrValue()
+						// If this is actually a integer value but wrongly encoded as string,
+						// convert and use it as value to field
+						if val, err := strconv.Atoi(v.GetStrValue()); err == nil {
+							fields[v.Key] = val
+						} else {
+							tags[v.Key] = v.GetStrValue()
+						}
 						break
 					case *telemetry.KeyValue_DoubleValue:
 						fields[v.Key] = v.GetDoubleValue()
