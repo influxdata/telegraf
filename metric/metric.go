@@ -59,13 +59,34 @@ func New(
 		mType: thisType,
 	}
 
-	m.tags = []byte{}
+	// pre-allocate exact size of the tags slice
+	taglen := 0
 	for k, v := range tags {
-		m.tags = append(m.tags, []byte(","+escaper.Replace(k))...)
-		m.tags = append(m.tags, []byte("="+escaper.Replace(v))...)
+		taglen += 2 + len(escaper.Replace(k)) + len(escaper.Replace(v))
 	}
+	m.tags = make([]byte, taglen)
 
 	i := 0
+	for k, v := range tags {
+		m.tags[i] = ','
+		i++
+		i += copy(m.tags[i:], escaper.Replace(k))
+		m.tags[i] = '='
+		i++
+		i += copy(m.tags[i:], escaper.Replace(v))
+	}
+
+	// pre-allocate capacity of the fields slice
+	fieldlen := 0
+	for k, _ := range fields {
+		// 10 bytes is completely arbitrary, but will at least prevent some
+		// amount of allocations. There's a small possibility this will create
+		// slightly more allocations for a metric that has many short fields.
+		fieldlen += len(k) + 10
+	}
+	m.fields = make([]byte, 0, fieldlen)
+
+	i = 0
 	for k, v := range fields {
 		if i != 0 {
 			m.fields = append(m.fields, ',')
@@ -138,7 +159,7 @@ func (m *metric) Point() *client.Point {
 }
 
 func (m *metric) String() string {
-	return string(m.Serialize())
+	return string(m.name) + string(m.tags) + " " + string(m.fields) + " " + string(m.t) + "\n"
 }
 
 func (m *metric) SetAggregate(b bool) {
@@ -154,24 +175,21 @@ func (m *metric) Type() telegraf.ValueType {
 }
 
 func (m *metric) Len() int {
-	return len(m.name) + len(m.tags) + 1 + len(m.fields) + 1 + len(m.t) + 1
+	// 3 is for 2 spaces surrounding the fields array + newline at the end.
+	return len(m.name) + len(m.tags) + len(m.fields) + len(m.t) + 3
 }
 
 func (m *metric) Serialize() []byte {
 	tmp := make([]byte, m.Len())
 	i := 0
-	copy(tmp[i:], m.name)
-	i += len(m.name)
-	copy(tmp[i:], m.tags)
-	i += len(m.tags)
+	i += copy(tmp[i:], m.name)
+	i += copy(tmp[i:], m.tags)
 	tmp[i] = ' '
 	i++
-	copy(tmp[i:], m.fields)
-	i += len(m.fields)
+	i += copy(tmp[i:], m.fields)
 	tmp[i] = ' '
 	i++
-	copy(tmp[i:], m.t)
-	i += len(m.t)
+	i += copy(tmp[i:], m.t)
 	tmp[i] = '\n'
 	return tmp
 }
@@ -307,12 +325,15 @@ func (m *metric) UnixNano() int64 {
 }
 
 func (m *metric) SetName(name string) {
+	m.hashID = 0
 	m.name = []byte(nameEscaper.Replace(name))
 }
 func (m *metric) SetPrefix(prefix string) {
+	m.hashID = 0
 	m.name = append([]byte(nameEscaper.Replace(prefix)), m.name...)
 }
 func (m *metric) SetSuffix(suffix string) {
+	m.hashID = 0
 	m.name = append(m.name, []byte(nameEscaper.Replace(suffix))...)
 }
 

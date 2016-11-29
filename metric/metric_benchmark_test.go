@@ -36,10 +36,9 @@ func BenchmarkNewMetric(b *testing.B) {
 	s = string(mt.String())
 }
 
-func BenchmarkNewMetricAndInspect(b *testing.B) {
-	var mt telegraf.Metric
+func BenchmarkTags(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		mt, _ = New("test_metric",
+		var mt, _ = New("test_metric",
 			map[string]string{
 				"test_tag_1": "tag_value_1",
 				"test_tag_2": "tag_value_2",
@@ -52,55 +51,32 @@ func BenchmarkNewMetricAndInspect(b *testing.B) {
 			},
 			time.Now(),
 		)
-		for k, v := range mt.Fields() {
-			s = k
-			I = v
-		}
-	}
-	s = mt.String()
-}
-
-func BenchmarkTags(b *testing.B) {
-	var mt, _ = New("test_metric",
-		map[string]string{
-			"test_tag_1": "tag_value_1",
-			"test_tag_2": "tag_value_2",
-			"test_tag_3": "tag_value_3",
-		},
-		map[string]interface{}{
-			"string_field": "string",
-			"int_field":    int64(1000),
-			"float_field":  float64(2.1),
-		},
-		time.Now(),
-	)
-	for n := 0; n < b.N; n++ {
 		tags = mt.Tags()
 	}
 	s = fmt.Sprint(tags)
 }
 
 func BenchmarkFields(b *testing.B) {
-	var mt, _ = New("test_metric",
-		map[string]string{
-			"test_tag_1": "tag_value_1",
-			"test_tag_2": "tag_value_2",
-			"test_tag_3": "tag_value_3",
-		},
-		map[string]interface{}{
-			"string_field": "string",
-			"int_field":    int64(1000),
-			"float_field":  float64(2.1),
-		},
-		time.Now(),
-	)
 	for n := 0; n < b.N; n++ {
+		var mt, _ = New("test_metric",
+			map[string]string{
+				"test_tag_1": "tag_value_1",
+				"test_tag_2": "tag_value_2",
+				"test_tag_3": "tag_value_3",
+			},
+			map[string]interface{}{
+				"string_field": "string",
+				"int_field":    int64(1000),
+				"float_field":  float64(2.1),
+			},
+			time.Now(),
+		)
 		fields = mt.Fields()
 	}
 	s = fmt.Sprint(fields)
 }
 
-func BenchmarkSerializeMetric(b *testing.B) {
+func BenchmarkString(b *testing.B) {
 	mt, _ := New("test_metric",
 		map[string]string{
 			"test_tag_1": "tag_value_1",
@@ -121,7 +97,7 @@ func BenchmarkSerializeMetric(b *testing.B) {
 	s = S
 }
 
-func BenchmarkSerializeMetricBytes(b *testing.B) {
+func BenchmarkSerialize(b *testing.B) {
 	mt, _ := New("test_metric",
 		map[string]string{
 			"test_tag_1": "tag_value_1",
