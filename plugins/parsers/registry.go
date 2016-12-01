@@ -5,6 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/influxdata/telegraf/plugins/parsers/access_log"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -78,6 +79,9 @@ func NewParser(config *Config) (Parser, error) {
 	case "graphite":
 		parser, err = NewGraphiteParser(config.Separator,
 			config.Templates, config.DefaultTags)
+	case "access_log":
+		parser, err = NewAccessLogParser(config.MetricName,
+			config.DataType, config.DefaultTags)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -119,6 +123,18 @@ func NewValueParser(
 	defaultTags map[string]string,
 ) (Parser, error) {
 	return &value.ValueParser{
+		MetricName:  metricName,
+		DataType:    dataType,
+		DefaultTags: defaultTags,
+	}, nil
+}
+
+func NewAccessLogParser(
+	metricName string,
+	dataType string,
+	defaultTags map[string]string,
+) (Parser, error) {
+	return &access_log.AccessLogParser{
 		MetricName:  metricName,
 		DataType:    dataType,
 		DefaultTags: defaultTags,
