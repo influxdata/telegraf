@@ -85,3 +85,22 @@ func TestSerializeMultiFields(t *testing.T) {
 	expS := []string{fmt.Sprintf("{\"fields\":{\"usage_idle\":90,\"usage_total\":8559615},\"name\":\"cpu\",\"tags\":{\"cpu\":\"cpu0\"},\"timestamp\":%d}", now.Unix())}
 	assert.Equal(t, expS, mS)
 }
+
+func TestSerializeMetricWithEscapes(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"cpu tag": "cpu0",
+	}
+	fields := map[string]interface{}{
+		"U,age=Idle": int64(90),
+	}
+	m, err := telegraf.NewMetric("My CPU", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := JsonSerializer{}
+	mS, err := s.Serialize(m)
+	assert.NoError(t, err)
+
+	expS := []string{fmt.Sprintf(`{"fields":{"U,age=Idle":90},"name":"My CPU","tags":{"cpu tag":"cpu0"},"timestamp":%d}`, now.Unix())}
+	assert.Equal(t, expS, mS)
+}
