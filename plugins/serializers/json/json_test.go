@@ -2,7 +2,6 @@ package json
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -25,10 +24,9 @@ func TestSerializeMetricFloat(t *testing.T) {
 	s := JsonSerializer{}
 	var buf []byte
 	buf, err = s.Serialize(m)
-	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
-	expS := []string{fmt.Sprintf("{\"fields\":{\"usage_idle\":91.5},\"name\":\"cpu\",\"tags\":{\"cpu\":\"cpu0\"},\"timestamp\":%d}", now.Unix())}
-	assert.Equal(t, expS, mS)
+	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":91.5},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMetricInt(t *testing.T) {
@@ -45,11 +43,10 @@ func TestSerializeMetricInt(t *testing.T) {
 	s := JsonSerializer{}
 	var buf []byte
 	buf, err = s.Serialize(m)
-	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
-	expS := []string{fmt.Sprintf("{\"fields\":{\"usage_idle\":90},\"name\":\"cpu\",\"tags\":{\"cpu\":\"cpu0\"},\"timestamp\":%d}", now.Unix())}
-	assert.Equal(t, expS, mS)
+	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":90},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMetricString(t *testing.T) {
@@ -66,11 +63,10 @@ func TestSerializeMetricString(t *testing.T) {
 	s := JsonSerializer{}
 	var buf []byte
 	buf, err = s.Serialize(m)
-	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
-	expS := []string{fmt.Sprintf("{\"fields\":{\"usage_idle\":\"foobar\"},\"name\":\"cpu\",\"tags\":{\"cpu\":\"cpu0\"},\"timestamp\":%d}", now.Unix())}
-	assert.Equal(t, expS, mS)
+	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":"foobar"},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMultiFields(t *testing.T) {
@@ -88,11 +84,10 @@ func TestSerializeMultiFields(t *testing.T) {
 	s := JsonSerializer{}
 	var buf []byte
 	buf, err = s.Serialize(m)
-	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
-	expS := []string{fmt.Sprintf("{\"fields\":{\"usage_idle\":90,\"usage_total\":8559615},\"name\":\"cpu\",\"tags\":{\"cpu\":\"cpu0\"},\"timestamp\":%d}", now.Unix())}
-	assert.Equal(t, expS, mS)
+	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":90,"usage_total":8559615},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMetricWithEscapes(t *testing.T) {
@@ -103,13 +98,13 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	fields := map[string]interface{}{
 		"U,age=Idle": int64(90),
 	}
-	m, err := telegraf.NewMetric("My CPU", tags, fields, now)
+	m, err := metric.New("My CPU", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := JsonSerializer{}
-	mS, err := s.Serialize(m)
+	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []string{fmt.Sprintf(`{"fields":{"U,age=Idle":90},"name":"My CPU","tags":{"cpu tag":"cpu0"},"timestamp":%d}`, now.Unix())}
-	assert.Equal(t, expS, mS)
+	expS := []byte(fmt.Sprintf(`{"fields":{"U,age=Idle":90},"name":"My CPU","tags":{"cpu tag":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
 }

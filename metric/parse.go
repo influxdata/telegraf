@@ -44,6 +44,9 @@ func Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
+	if len(buf) <= 6 {
+		return []telegraf.Metric{}, makeError("buffer too short", buf, 0)
+	}
 	metrics := make([]telegraf.Metric, 0, bytes.Count(buf, []byte("\n"))+1)
 	var errStr string
 	i := 0
@@ -169,14 +172,14 @@ func scanMeasurement(buf []byte, i int) (int, int, error) {
 	// It can't be a space, since whitespace is stripped prior to this
 	// function call.
 	if i >= len(buf) || buf[i] == ',' {
-		return -1, i, fmt.Errorf("missing measurement")
+		return -1, i, makeError("missing measurement", buf, i)
 	}
 
 	for {
 		i++
 		if i >= len(buf) {
 			// cpu
-			return -1, i, fmt.Errorf("missing fields")
+			return -1, i, makeError("missing fields", buf, i)
 		}
 
 		if buf[i-1] == '\\' {
@@ -228,7 +231,7 @@ func scanTagsKey(buf []byte, i int) (int, error) {
 	// First character of the key.
 	if i >= len(buf) || buf[i] == ' ' || buf[i] == ',' || buf[i] == '=' {
 		// cpu,{'', ' ', ',', '='}
-		return i, fmt.Errorf("missing tag key")
+		return i, makeError("missing tag key", buf, i)
 	}
 
 	// Examine each character in the tag key until we hit an unescaped
@@ -242,7 +245,7 @@ func scanTagsKey(buf []byte, i int) (int, error) {
 		if i >= len(buf) ||
 			((buf[i] == ' ' || buf[i] == ',') && buf[i-1] != '\\') {
 			// cpu,tag{'', ' ', ','}
-			return i, fmt.Errorf("missing tag value")
+			return i, makeError("missing tag value", buf, i)
 		}
 
 		if buf[i] == '=' && buf[i-1] != '\\' {
@@ -257,7 +260,7 @@ func scanTagsValue(buf []byte, i int) (int, int, error) {
 	// Tag value cannot be empty.
 	if i >= len(buf) || buf[i] == ',' || buf[i] == ' ' {
 		// cpu,tag={',', ' '}
-		return -1, i, fmt.Errorf("missing tag value")
+		return -1, i, makeError("missing tag value", buf, i)
 	}
 
 	// Examine each character in the tag value until we hit an unescaped
@@ -267,13 +270,13 @@ func scanTagsValue(buf []byte, i int) (int, int, error) {
 		i++
 		if i >= len(buf) {
 			// cpu,tag=value
-			return -1, i, fmt.Errorf("missing fields")
+			return -1, i, makeError("missing fields", buf, i)
 		}
 
 		// An unescaped equals sign is an invalid tag value.
 		if buf[i] == '=' && buf[i-1] != '\\' {
 			// cpu,tag={'=', 'fo=o'}
-			return -1, i, fmt.Errorf("invalid tag format")
+			return -1, i, makeError("invalid tag format", buf, i)
 		}
 
 		if buf[i] == ',' && buf[i-1] != '\\' {
@@ -329,22 +332,22 @@ func scanFields(buf []byte, i int) (int, []byte, error) {
 
 			// check for "... =123" but allow "a\ =123"
 			if buf[i-1] == ' ' && buf[i-2] != '\\' {
-				return i, buf[start:i], fmt.Errorf("missing field key")
+				return i, buf[start:i], makeError("missing field key", buf, i)
 			}
 
 			// check for "...a=123,=456" but allow "a=123,a\,=456"
 			if buf[i-1] == ',' && buf[i-2] != '\\' {
-				return i, buf[start:i], fmt.Errorf("missing field key")
+				return i, buf[start:i], makeError("missing field key", buf, i)
 			}
 
 			// check for "... value="
 			if i+1 >= len(buf) {
-				return i, buf[start:i], fmt.Errorf("missing field value")
+				return i, buf[start:i], makeError("missing field value", buf, i)
 			}
 
 			// check for "... value=,value2=..."
 			if buf[i+1] == ',' || buf[i+1] == ' ' {
-				return i, buf[start:i], fmt.Errorf("missing field value")
+				return i, buf[start:i], makeError("missing field value", buf, i)
 			}
 
 			if isNumeric(buf[i+1]) || buf[i+1] == '-' || buf[i+1] == 'N' || buf[i+1] == 'n' {
@@ -378,12 +381,12 @@ func scanFields(buf []byte, i int) (int, []byte, error) {
 	}
 
 	if quoted {
-		return i, buf[start:i], fmt.Errorf("unbalanced quotes")
+		return i, buf[start:i], makeError("unbalanced quotes", buf, i)
 	}
 
 	// check that all field sections had key and values (e.g. prevent "a=1,b"
 	if equals == 0 || commas != equals-1 {
-		return i, buf[start:i], fmt.Errorf("invalid field format")
+		return i, buf[start:i], makeError("invalid field format", buf, i)
 	}
 
 	return i, buf[start:i], nil
@@ -416,7 +419,7 @@ func scanTime(buf []byte, i int) (int, []byte, error) {
 		// Timestamps should be integers, make sure they are so we don't need
 		// to actually  parse the timestamp until needed.
 		if buf[i] < '0' || buf[i] > '9' {
-			return i, buf[start:i], fmt.Errorf("bad timestamp")
+			return i, buf[start:i], makeError("invalid timestamp", buf, i)
 		}
 		i++
 	}
@@ -528,14 +531,14 @@ func scanNumber(buf []byte, i int) (int, error) {
 		// We subtract 1 from the index to remove the `i` from our tests
 		if len(buf[start:i-1]) >= maxInt64Digits || len(buf[start:i-1]) >= minInt64Digits {
 			if _, err := parseIntBytes(buf[start:i-1], 10, 64); err != nil {
-				return i, fmt.Errorf("unable to parse integer %s: %s", buf[start:i-1], err)
+				return i, makeError(fmt.Sprintf("unable to parse integer %s: %s", buf[start:i-1], err), buf, i)
 			}
 		}
 	} else {
 		// Parse the float to check bounds if it's scientific or the number of digits could be larger than the max range
 		if scientific || len(buf[start:i]) >= maxFloat64Digits || len(buf[start:i]) >= minFloat64Digits {
 			if _, err := parseFloatBytes(buf[start:i], 10); err != nil {
-				return i, fmt.Errorf("invalid float")
+				return i, makeError("invalid float", buf, i)
 			}
 		}
 	}
@@ -551,7 +554,7 @@ func scanBoolean(buf []byte, i int) (int, []byte, error) {
 	start := i
 
 	if i < len(buf) && (buf[i] != 't' && buf[i] != 'f' && buf[i] != 'T' && buf[i] != 'F') {
-		return i, buf[start:i], fmt.Errorf("invalid boolean")
+		return i, buf[start:i], makeError("invalid value", buf, i)
 	}
 
 	i++
@@ -573,12 +576,12 @@ func scanBoolean(buf []byte, i int) (int, []byte, error) {
 
 	// length must be 4 for true or TRUE
 	if (buf[start] == 't' || buf[start] == 'T') && i-start != 4 {
-		return i, buf[start:i], fmt.Errorf("invalid boolean")
+		return i, buf[start:i], makeError("invalid boolean", buf, i)
 	}
 
 	// length must be 5 for false or FALSE
 	if (buf[start] == 'f' || buf[start] == 'F') && i-start != 5 {
-		return i, buf[start:i], fmt.Errorf("invalid boolean")
+		return i, buf[start:i], makeError("invalid boolean", buf, i)
 	}
 
 	// Otherwise
@@ -595,7 +598,7 @@ func scanBoolean(buf []byte, i int) (int, []byte, error) {
 	}
 
 	if !valid {
-		return i, buf[start:i], fmt.Errorf("invalid boolean")
+		return i, buf[start:i], makeError("invalid boolean", buf, i)
 	}
 
 	return i, buf[start:i], nil

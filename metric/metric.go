@@ -6,7 +6,6 @@ import (
 	"hash/fnv"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -16,23 +15,6 @@ import (
 )
 
 const MaxInt = int(^uint(0) >> 1)
-
-var (
-	// escaper is for escaping:
-	//   - tag keys
-	//   - tag values
-	//   - field keys
-	// see https://docs.influxdata.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
-	escaper = strings.NewReplacer(`,`, `\,`, `"`, `\"`, ` `, `\ `, `=`, `\=`)
-
-	// nameEscaper is for escaping measurement names only.
-	// see https://docs.influxdata.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
-	nameEscaper = strings.NewReplacer(`,`, `\,`, ` `, `\ `)
-
-	// stringFieldEscaper is for escaping string field values only.
-	// see https://docs.influxdata.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
-	stringFieldEscaper = strings.NewReplacer(`"`, `\"`)
-)
 
 func New(
 	name string,
@@ -44,6 +26,9 @@ func New(
 	if len(fields) == 0 {
 		return nil, fmt.Errorf("Metric cannot be made without any fields")
 	}
+	if len(name) == 0 {
+		return nil, fmt.Errorf("Metric cannot be made with an empty name")
+	}
 
 	var thisType telegraf.ValueType
 	if len(mType) > 0 {
@@ -53,7 +38,7 @@ func New(
 	}
 
 	m := &metric{
-		name:  []byte(nameEscaper.Replace(name)),
+		name:  []byte(escape(name, "name")),
 		t:     []byte(fmt.Sprint(t.UnixNano())),
 		nsec:  t.UnixNano(),
 		mType: thisType,
@@ -62,7 +47,8 @@ func New(
 	// pre-allocate exact size of the tags slice
 	taglen := 0
 	for k, v := range tags {
-		taglen += 2 + len(escaper.Replace(k)) + len(escaper.Replace(v))
+		// TODO check that length of tag key & value are > 0
+		taglen += 2 + len(escape(k, "tagkey")) + len(escape(v, "tagval"))
 	}
 	m.tags = make([]byte, taglen)
 
@@ -70,10 +56,10 @@ func New(
 	for k, v := range tags {
 		m.tags[i] = ','
 		i++
-		i += copy(m.tags[i:], escaper.Replace(k))
+		i += copy(m.tags[i:], escape(k, "tagkey"))
 		m.tags[i] = '='
 		i++
-		i += copy(m.tags[i:], escaper.Replace(v))
+		i += copy(m.tags[i:], escape(v, "tagval"))
 	}
 
 	// pre-allocate capacity of the fields slice
@@ -147,10 +133,8 @@ type metric struct {
 	aggregate bool
 
 	// cached values for reuse in "get" functions
-	hashID   uint64
-	nsec     int64
-	fieldMap map[string]interface{}
-	tagMap   map[string]string
+	hashID uint64
+	nsec   int64
 }
 
 func (m *metric) Point() *client.Point {
@@ -195,12 +179,7 @@ func (m *metric) Serialize() []byte {
 }
 
 func (m *metric) Fields() map[string]interface{} {
-	if m.fieldMap != nil {
-		// TODO should we return a copy?
-		return m.fieldMap
-	}
-
-	m.fieldMap = map[string]interface{}{}
+	fieldMap := map[string]interface{}{}
 	i := 0
 	for {
 		if i >= len(m.fields) {
@@ -232,31 +211,31 @@ func (m *metric) Fields() map[string]interface{} {
 		switch m.fields[i:][i2] {
 		case '"':
 			// string field
-			m.fieldMap[string(m.fields[i:][0:i1])] = string(m.fields[i:][i2+1 : i3-1])
+			fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = unescape(string(m.fields[i:][i2+1:i3-1]), "fieldval")
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			// number field
 			switch m.fields[i:][i3-1] {
 			case 'i':
 				// integer field
-				n, err := strconv.ParseInt(string(m.fields[i:][i2:i3-1]), 10, 64)
+				n, err := parseIntBytes(m.fields[i:][i2:i3-1], 10, 64)
 				if err == nil {
-					m.fieldMap[string(m.fields[i:][0:i1])] = n
+					fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = n
 				} else {
 					// TODO handle error or just ignore field silently?
 				}
 			default:
 				// float field
-				n, err := strconv.ParseFloat(string(m.fields[i:][i2:i3]), 64)
+				n, err := parseFloatBytes(m.fields[i:][i2:i3], 64)
 				if err == nil {
-					m.fieldMap[string(m.fields[i:][0:i1])] = n
+					fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = n
 				} else {
 					// TODO handle error or just ignore field silently?
 				}
 			}
 		case 'T', 't':
-			m.fieldMap[string(m.fields[i:][0:i1])] = true
+			fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = true
 		case 'F', 'f':
-			m.fieldMap[string(m.fields[i:][0:i1])] = false
+			fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = false
 		default:
 			// TODO handle unsupported field type
 		}
@@ -264,18 +243,13 @@ func (m *metric) Fields() map[string]interface{} {
 		i += i3 + 1
 	}
 
-	return m.fieldMap
+	return fieldMap
 }
 
 func (m *metric) Tags() map[string]string {
-	if m.tagMap != nil {
-		// TODO should we return a copy?
-		return m.tagMap
-	}
-
-	m.tagMap = map[string]string{}
+	tagMap := map[string]string{}
 	if len(m.tags) == 0 {
-		return m.tagMap
+		return tagMap
 	}
 
 	i := 0
@@ -293,25 +267,25 @@ func (m *metric) Tags() map[string]string {
 		// end index of tag value (starting from i2)
 		i3 := indexUnescapedByte(m.tags[i+i2:], ',')
 		if i3 == -1 {
-			m.tagMap[string(m.tags[i:][i0:i1])] = string(m.tags[i:][i2:])
+			tagMap[unescape(string(m.tags[i:][i0:i1]), "tagkey")] = unescape(string(m.tags[i:][i2:]), "tagval")
 			break
 		}
-		m.tagMap[string(m.tags[i:][i0:i1])] = string(m.tags[i:][i2 : i2+i3])
+		tagMap[unescape(string(m.tags[i:][i0:i1]), "tagkey")] = unescape(string(m.tags[i:][i2:i2+i3]), "tagval")
 		// increment start index for the next tag
 		i += i2 + i3
 	}
 
-	return m.tagMap
+	return tagMap
 }
 
 func (m *metric) Name() string {
-	return string(m.name)
+	return unescape(string(m.name), "name")
 }
 
 func (m *metric) Time() time.Time {
 	// assume metric has been verified already and ignore error:
 	if m.nsec == 0 {
-		m.nsec, _ = strconv.ParseInt(string(m.t), 10, 64)
+		m.nsec, _ = parseIntBytes(m.t, 10, 64)
 	}
 	return time.Unix(0, m.nsec)
 }
@@ -319,7 +293,7 @@ func (m *metric) Time() time.Time {
 func (m *metric) UnixNano() int64 {
 	// assume metric has been verified already and ignore error:
 	if m.nsec == 0 {
-		m.nsec, _ = strconv.ParseInt(string(m.t), 10, 64)
+		m.nsec, _ = parseIntBytes(m.t, 10, 64)
 	}
 	return m.nsec
 }
@@ -328,10 +302,12 @@ func (m *metric) SetName(name string) {
 	m.hashID = 0
 	m.name = []byte(nameEscaper.Replace(name))
 }
+
 func (m *metric) SetPrefix(prefix string) {
 	m.hashID = 0
 	m.name = append([]byte(nameEscaper.Replace(prefix)), m.name...)
 }
+
 func (m *metric) SetSuffix(suffix string) {
 	m.hashID = 0
 	m.name = append(m.name, []byte(nameEscaper.Replace(suffix))...)
@@ -339,24 +315,23 @@ func (m *metric) SetSuffix(suffix string) {
 
 func (m *metric) AddTag(key, value string) {
 	m.RemoveTag(key)
-	m.tags = append(m.tags, []byte(","+escaper.Replace(key)+"="+escaper.Replace(value))...)
+	m.tags = append(m.tags, []byte(","+escape(key, "tagkey")+"="+escape(value, "tagval"))...)
 }
 
 func (m *metric) HasTag(key string) bool {
-	i := bytes.Index(m.tags, []byte(escaper.Replace(key)+"="))
+	i := bytes.Index(m.tags, []byte(escape(key, "tagkey")+"="))
 	if i == -1 {
 		return false
 	}
 	return true
 }
 
-func (m *metric) RemoveTag(key string) bool {
-	m.tagMap = nil
+func (m *metric) RemoveTag(key string) {
 	m.hashID = 0
 
-	i := bytes.Index(m.tags, []byte(escaper.Replace(key)+"="))
+	i := bytes.Index(m.tags, []byte(escape(key, "tagkey")+"="))
 	if i == -1 {
-		return false
+		return
 	}
 
 	tmp := m.tags[0 : i-1]
@@ -365,38 +340,43 @@ func (m *metric) RemoveTag(key string) bool {
 		tmp = append(tmp, m.tags[i+j:]...)
 	}
 	m.tags = tmp
-	return true
+	return
 }
 
 func (m *metric) AddField(key string, value interface{}) {
-	m.fieldMap = nil
 	m.fields = append(m.fields, ',')
-	appendField(m.fields, key, value)
+	m.fields = appendField(m.fields, key, value)
 }
 
 func (m *metric) HasField(key string) bool {
-	i := bytes.Index(m.fields, []byte(escaper.Replace(key)+"="))
+	i := bytes.Index(m.fields, []byte(escape(key, "tagkey")+"="))
 	if i == -1 {
 		return false
 	}
 	return true
 }
 
-func (m *metric) RemoveField(key string) bool {
-	m.fieldMap = nil
-	m.hashID = 0
-	i := bytes.Index(m.fields, []byte(escaper.Replace(key)+"="))
+func (m *metric) RemoveField(key string) error {
+	i := bytes.Index(m.fields, []byte(escape(key, "tagkey")+"="))
 	if i == -1 {
-		return false
+		return nil
 	}
 
-	tmp := m.fields[0 : i-1]
+	var tmp []byte
+	if i != 0 {
+		tmp = m.fields[0 : i-1]
+	}
 	j := indexUnescapedByte(m.fields[i:], ',')
 	if j != -1 {
 		tmp = append(tmp, m.fields[i+j:]...)
 	}
+
+	if len(tmp) == 0 {
+		return fmt.Errorf("Metric cannot remove final field: %s", m.fields)
+	}
+
 	m.fields = tmp
-	return true
+	return nil
 }
 
 func (m *metric) Copy() telegraf.Metric {
@@ -437,7 +417,10 @@ func (m *metric) HashID() uint64 {
 }
 
 func appendField(b []byte, k string, v interface{}) []byte {
-	b = append(b, []byte(escaper.Replace(k)+"=")...)
+	if v == nil {
+		return b
+	}
+	b = append(b, []byte(escape(k, "tagkey")+"=")...)
 
 	// check popular types first
 	switch v := v.(type) {
@@ -448,7 +431,7 @@ func appendField(b []byte, k string, v interface{}) []byte {
 		b = append(b, 'i')
 	case string:
 		b = append(b, '"')
-		b = append(b, []byte(stringFieldEscaper.Replace(v))...)
+		b = append(b, []byte(escape(v, "fieldval"))...)
 		b = append(b, '"')
 	case bool:
 		b = strconv.AppendBool(b, v)
@@ -497,12 +480,10 @@ func appendField(b []byte, k string, v interface{}) []byte {
 		b = strconv.AppendFloat(b, float64(v), 'f', -1, 32)
 	case []byte:
 		b = append(b, v...)
-	case nil:
-		// skip
 	default:
 		// Can't determine the type, so convert to string
 		b = append(b, '"')
-		b = append(b, []byte(stringFieldEscaper.Replace(fmt.Sprintf("%v", v)))...)
+		b = append(b, []byte(escape(fmt.Sprintf("%v", v), "fieldval"))...)
 		b = append(b, '"')
 	}
 
