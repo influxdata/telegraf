@@ -26,12 +26,12 @@ type Metric interface {
 	// Tag functions
 	HasTag(key string) bool
 	AddTag(key, value string)
-	RemoveTag(key string) bool
+	RemoveTag(key string)
 
 	// Field functions
 	HasField(key string) bool
 	AddField(key string, value interface{})
-	RemoveField(key string) bool
+	RemoveField(key string) error
 
 	// Name functions
 	SetName(name string)

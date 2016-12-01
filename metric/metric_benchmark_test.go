@@ -36,6 +36,20 @@ func BenchmarkNewMetric(b *testing.B) {
 	s = string(mt.String())
 }
 
+func BenchmarkAddTag(b *testing.B) {
+	var mt telegraf.Metric
+	mt = &metric{
+		name:   []byte("cpu"),
+		tags:   []byte(",host=localhost"),
+		fields: []byte("a=101"),
+		t:      []byte("1480614053000000000"),
+	}
+	for n := 0; n < b.N; n++ {
+		mt.AddTag("foo", "bar")
+	}
+	s = string(mt.String())
+}
+
 func BenchmarkTags(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		var mt, _ = New("test_metric",
