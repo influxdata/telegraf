@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -134,11 +135,6 @@ func (r *LaravelRedisQueue) gatherServer(addr *url.URL, acc telegraf.Accumulator
 	}
 
 	for _, queue := range r.Queues {
-		// Static Pushed Queues
-		c.Write([]byte("LLEN queues:" + queue + ":reserved\r\n"))
-		c.Write([]byte("EOF\r\n"))
-		rdr := bufio.NewReader(c)
-
 		var tags map[string]string
 
 		if addr.Scheme == "unix" {
@@ -150,28 +146,40 @@ func (r *LaravelRedisQueue) gatherServer(addr *url.URL, acc telegraf.Accumulator
 			host, port, _ = net.SplitHostPort(addr.Host)
 			tags = map[string]string{"server": host, "port": port}
 		}
-		_ = gatherInfoOutput(rdr, acc, tags, "pushed_count_"+queue)
 
-		// Static Delayed Queues
+		fields := make(map[string]interface{})
+
+		// Statistic Pushed Queues
+		c.Write([]byte("LLEN queues:" + queue + ":reserved\r\n"))
+		c.Write([]byte("EOF\r\n"))
+		rdr := bufio.NewReader(c)
+		fields["pushed_count_"+queue] = getFieldValue(rdr)
+
+		// Statistic Delayed Queues
 		c.Write([]byte("ZCARD queues:" + queue + ":delayed\r\n"))
 		c.Write([]byte("EOF\r\n"))
 		rdr = bufio.NewReader(c)
-		_ = gatherInfoOutput(rdr, acc, tags, "delayed_count_"+queue)
+		fields["delayed_count_"+queue] = getFieldValue(rdr)
 
-		// Static Reserved Queues
+		// Statistic Reserved Queues
 		c.Write([]byte("ZCARD queues:" + queue + ":reserved\r\n"))
 		c.Write([]byte("EOF\r\n"))
 		rdr = bufio.NewReader(c)
-		_ = gatherInfoOutput(rdr, acc, tags, "reserved_count_"+queue)
+		fields["reserved_count_"+queue] = getFieldValue(rdr)
+
+		gatherInfoOutput(acc, tags, fields)
 	}
 
 	return nil
 }
 
 // gatherInfoOutput gathers
-func gatherInfoOutput(rdr *bufio.Reader, acc telegraf.Accumulator, tags map[string]string, field_name string) error {
+func gatherInfoOutput(acc telegraf.Accumulator, tags map[string]string, fields map[string]interface{}) {
+	acc.AddFields("laravel_redis_queue", fields, tags)
+}
+
+func getFieldValue(rdr *bufio.Reader) int {
 	scanner := bufio.NewScanner(rdr)
-	fields := make(map[string]interface{})
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -183,10 +191,15 @@ func gatherInfoOutput(rdr *bufio.Reader, acc telegraf.Accumulator, tags map[stri
 			continue
 		}
 
-		fields[field_name] = string(line)
+		value, err := strconv.Atoi(line)
+		if err != nil {
+			return 0
+		}
+
+		return value
 	}
-	acc.AddFields("laravel_redis_queue", fields, tags)
-	return nil
+
+	return 0
 }
 
 func init() {

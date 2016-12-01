@@ -32,12 +32,15 @@ func TestLaravelRedisQueue_ParseMetrics(t *testing.T) {
 	tags := map[string]string{"host": "redis.net"}
 	rdr := bufio.NewReader(strings.NewReader(testOutput))
 
-	err := gatherInfoOutput(rdr, &acc, tags, "pushed_count")
-	require.NoError(t, err)
+	actual_fields := map[string]interface{}{
+		"pushed_count": getFieldValue(rdr),
+	}
+
+	gatherInfoOutput(&acc, tags, actual_fields)
 
 	tags = map[string]string{"host": "redis.net"}
 	fields := map[string]interface{}{
-		"pushed_count": uint64(1),
+		"pushed_count": int(1),
 	}
 
 	// We have to test rdb_last_save_time_offset manually because the value is based on the time when gathered

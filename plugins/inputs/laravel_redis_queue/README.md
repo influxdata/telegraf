@@ -66,7 +66,5 @@ When run with:
 It produces:
 ```
 * Plugin: inputs.laravel_redis_queue, Collection 1
-> laravel_redis_queue,host=luoxiaojun1992-OptiPlex-7020,port=6379,server=192.168.169.13 pushed_count_default=":0" 1480145343000000000
-> laravel_redis_queue,host=luoxiaojun1992-OptiPlex-7020,port=6379,server=192.168.169.13 delayed_count_default=":1" 1480145343000000000
-> laravel_redis_queue,host=luoxiaojun1992-OptiPlex-7020,port=6379,server=192.168.169.13 reserved_count_default=":0" 1480145343000000000
+> laravel_redis_queue,host=luoxiaojun1992-OptiPlex-7020,port=6379,server=192.168.169.13 pushed_count_default=0,delayed_count_default=1,reserved_count_default=0 1480145343000000000
 ```
