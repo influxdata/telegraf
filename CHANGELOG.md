@@ -26,6 +26,7 @@
 ### Bugfixes
 
 - [#2007](https://github.com/influxdata/telegraf/issues/2007): Make snmptranslate not required when using numeric OID.
+- [#2104](https://github.com/influxdata/telegraf/issues/2104): Add a global snmp translation cache.
 
 ## v1.1.1 [2016-11-14]
 
