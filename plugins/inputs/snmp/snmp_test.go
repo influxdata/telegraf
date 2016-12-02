@@ -597,6 +597,71 @@ func TestFieldConvert(t *testing.T) {
 	}
 }
 
+func TestSnmpTranslateCache_miss(t *testing.T) {
+	snmpTranslateCaches = nil
+	oid := "IF-MIB::ifPhysAddress.1"
+	mibName, oidNum, oidText, conversion, err := snmpTranslate(oid)
+	assert.Len(t, snmpTranslateCaches, 1)
+	stc := snmpTranslateCaches[oid]
+	require.NotNil(t, stc)
+	assert.Equal(t, mibName, stc.mibName)
+	assert.Equal(t, oidNum, stc.oidNum)
+	assert.Equal(t, oidText, stc.oidText)
+	assert.Equal(t, conversion, stc.conversion)
+	assert.Equal(t, err, stc.err)
+}
+
+func TestSnmpTranslateCache_hit(t *testing.T) {
+	snmpTranslateCaches = map[string]snmpTranslateCache{
+		"foo": snmpTranslateCache{
+			mibName:    "a",
+			oidNum:     "b",
+			oidText:    "c",
+			conversion: "d",
+			err:        fmt.Errorf("e"),
+		},
+	}
+	mibName, oidNum, oidText, conversion, err := snmpTranslate("foo")
+	assert.Equal(t, "a", mibName)
+	assert.Equal(t, "b", oidNum)
+	assert.Equal(t, "c", oidText)
+	assert.Equal(t, "d", conversion)
+	assert.Equal(t, fmt.Errorf("e"), err)
+	snmpTranslateCaches = nil
+}
+
+func TestSnmpTableCache_miss(t *testing.T) {
+	snmpTableCaches = nil
+	oid := ".1.0.0.0"
+	mibName, oidNum, oidText, fields, err := snmpTable(oid)
+	assert.Len(t, snmpTableCaches, 1)
+	stc := snmpTableCaches[oid]
+	require.NotNil(t, stc)
+	assert.Equal(t, mibName, stc.mibName)
+	assert.Equal(t, oidNum, stc.oidNum)
+	assert.Equal(t, oidText, stc.oidText)
+	assert.Equal(t, fields, stc.fields)
+	assert.Equal(t, err, stc.err)
+}
+
+func TestSnmpTableCache_hit(t *testing.T) {
+	snmpTableCaches = map[string]snmpTableCache{
+		"foo": snmpTableCache{
+			mibName: "a",
+			oidNum:  "b",
+			oidText: "c",
+			fields:  []Field{{Name: "d"}},
+			err:     fmt.Errorf("e"),
+		},
+	}
+	mibName, oidNum, oidText, fields, err := snmpTable("foo")
+	assert.Equal(t, "a", mibName)
+	assert.Equal(t, "b", oidNum)
+	assert.Equal(t, "c", oidText)
+	assert.Equal(t, []Field{{Name: "d"}}, fields)
+	assert.Equal(t, fmt.Errorf("e"), err)
+}
+
 func TestError(t *testing.T) {
 	e := fmt.Errorf("nested error")
 	err := Errorf(e, "top error %d", 123)
