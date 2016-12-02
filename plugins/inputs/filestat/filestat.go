@@ -80,6 +80,7 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			fields := map[string]interface{}{
 				"exists":     int64(1),
 				"size_bytes": fileInfo.Size(),
+				"modification_time": fileInfo.ModTime().Unix(),
 			}
 
 			if f.Md5 {
