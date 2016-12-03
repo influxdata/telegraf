@@ -91,10 +91,10 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 		fieldsG := map[string]interface{}{
-			"usage_user":       100 * (cts.User - lastCts.User) / totalDelta,
+			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
 			"usage_system":     100 * (cts.System - lastCts.System) / totalDelta,
 			"usage_idle":       100 * (cts.Idle - lastCts.Idle) / totalDelta,
-			"usage_nice":       100 * (cts.Nice - lastCts.Nice) / totalDelta,
+			"usage_nice":       100 * (cts.Nice - lastCts.Nice - (cts.GuestNice - lastCts.GuestNice)) / totalDelta,
 			"usage_iowait":     100 * (cts.Iowait - lastCts.Iowait) / totalDelta,
 			"usage_irq":        100 * (cts.Irq - lastCts.Irq) / totalDelta,
 			"usage_softirq":    100 * (cts.Softirq - lastCts.Softirq) / totalDelta,
@@ -112,7 +112,7 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 
 func totalCpuTime(t cpu.TimesStat) float64 {
 	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal +
-		t.Guest + t.GuestNice + t.Idle
+		t.Idle
 	return total
 }
 
