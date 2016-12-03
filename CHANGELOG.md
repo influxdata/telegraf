@@ -25,6 +25,7 @@ in their config file.
 - [#2068](https://github.com/influxdata/telegraf/issues/2068): Accept strings for StatsD sets.
 - [#1893](https://github.com/influxdata/telegraf/issues/1893): Change StatsD default "reset" behavior.
 - [#2079](https://github.com/influxdata/telegraf/pull/2079): Enable setting ClientID in MQTT output.
+- [#2121](https://github.com/influxdata/telegraf/pull/2121): Add GC pause metric to InfluxDB input plugin.
 
 ### Bugfixes
 
