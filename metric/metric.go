@@ -178,6 +178,48 @@ func (m *metric) Serialize() []byte {
 	return tmp
 }
 
+func (m *metric) SerializeTo(dst []byte) int {
+	i := 0
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.name)
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.tags)
+	if i >= len(dst) {
+		return i
+	}
+
+	dst[i] = ' '
+	i++
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.fields)
+	if i >= len(dst) {
+		return i
+	}
+
+	dst[i] = ' '
+	i++
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.t)
+	if i >= len(dst) {
+		return i
+	}
+	dst[i] = '\n'
+
+	return i + 1
+}
+
 func (m *metric) Split(maxSize int) []telegraf.Metric {
 	if m.Len() < maxSize {
 		return []telegraf.Metric{m}
