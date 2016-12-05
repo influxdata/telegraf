@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/buffer"
+	"github.com/influxdata/telegraf/metric"
 )
 
 const (
@@ -56,23 +57,23 @@ func NewRunningOutput(
 
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
-func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
+func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 	// Filter any tagexclude/taginclude parameters before adding metric
 	if ro.Config.Filter.IsActive() {
 		// In order to filter out tags, we need to create a new metric, since
 		// metrics are immutable once created.
-		name := metric.Name()
-		tags := metric.Tags()
-		fields := metric.Fields()
-		t := metric.Time()
+		name := m.Name()
+		tags := m.Tags()
+		fields := m.Fields()
+		t := m.Time()
 		if ok := ro.Config.Filter.Apply(name, fields, tags); !ok {
 			return
 		}
 		// error is not possible if creating from another metric, so ignore.
-		metric, _ = telegraf.NewMetric(name, tags, fields, t)
+		m, _ = metric.New(name, tags, fields, t)
 	}
 
-	ro.metrics.Add(metric)
+	ro.metrics.Add(m)
 	if ro.metrics.Len() == ro.MetricBatchSize {
 		batch := ro.metrics.Batch(ro.MetricBatchSize)
 		err := ro.write(batch)
@@ -85,7 +86,7 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
 	if !ro.Quiet {
-		log.Printf("Output [%s] buffer fullness: %d / %d metrics. "+
+		log.Printf("I! Output [%s] buffer fullness: %d / %d metrics. "+
 			"Total gathered metrics: %d. Total dropped metrics: %d.",
 			ro.Name,
 			ro.failMetrics.Len()+ro.metrics.Len(),
@@ -142,7 +143,7 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	elapsed := time.Since(start)
 	if err == nil {
 		if !ro.Quiet {
-			log.Printf("Output [%s] wrote batch of %d metrics in %s\n",
+			log.Printf("I! Output [%s] wrote batch of %d metrics in %s\n",
 				ro.Name, len(metrics), elapsed)
 		}
 	}

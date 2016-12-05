@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gonuts/go-shellquote"
+	"github.com/kballard/go-shellquote"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"

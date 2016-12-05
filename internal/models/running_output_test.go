@@ -39,7 +39,7 @@ func BenchmarkRunningOutputAddWrite(b *testing.B) {
 	ro.Quiet = true
 
 	for n := 0; n < b.N; n++ {
-		ro.AddMetric(first5[0])
+		ro.AddMetric(testutil.TestMetric(101, "metric1"))
 		ro.Write()
 	}
 }
@@ -55,7 +55,7 @@ func BenchmarkRunningOutputAddWriteEvery100(b *testing.B) {
 	ro.Quiet = true
 
 	for n := 0; n < b.N; n++ {
-		ro.AddMetric(first5[0])
+		ro.AddMetric(testutil.TestMetric(101, "metric1"))
 		if n%100 == 0 {
 			ro.Write()
 		}
@@ -74,7 +74,7 @@ func BenchmarkRunningOutputAddFailWrites(b *testing.B) {
 	ro.Quiet = true
 
 	for n := 0; n < b.N; n++ {
-		ro.AddMetric(first5[0])
+		ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	}
 }
 
@@ -132,7 +132,6 @@ func TestRunningOutput_PassFilter(t *testing.T) {
 func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-
 			TagInclude: []string{"nothing*"},
 		},
 	}
@@ -141,7 +140,7 @@ func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput("test", m, conf, 1000, 10000)
 
-	ro.AddMetric(first5[0])
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
 
 	err := ro.Write()
@@ -154,7 +153,6 @@ func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 func TestRunningOutput_TagExcludeMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-
 			TagExclude: []string{"tag*"},
 		},
 	}
@@ -163,7 +161,7 @@ func TestRunningOutput_TagExcludeMatch(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput("test", m, conf, 1000, 10000)
 
-	ro.AddMetric(first5[0])
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
 
 	err := ro.Write()
@@ -176,7 +174,6 @@ func TestRunningOutput_TagExcludeMatch(t *testing.T) {
 func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-
 			TagExclude: []string{"nothing*"},
 		},
 	}
@@ -185,7 +182,7 @@ func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput("test", m, conf, 1000, 10000)
 
-	ro.AddMetric(first5[0])
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
 
 	err := ro.Write()
@@ -198,7 +195,6 @@ func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
 func TestRunningOutput_TagIncludeMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
-
 			TagInclude: []string{"tag*"},
 		},
 	}
@@ -207,7 +203,7 @@ func TestRunningOutput_TagIncludeMatch(t *testing.T) {
 	m := &mockOutput{}
 	ro := NewRunningOutput("test", m, conf, 1000, 10000)
 
-	ro.AddMetric(first5[0])
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
 	assert.Len(t, m.Metrics(), 0)
 
 	err := ro.Write()

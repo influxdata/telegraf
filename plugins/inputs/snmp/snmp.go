@@ -109,7 +109,7 @@ type Snmp struct {
 	Community string
 
 	// Parameters for Version 2 & 3
-	MaxRepetitions int
+	MaxRepetitions uint8
 
 	// Parameters for Version 3
 	ContextName string
@@ -178,13 +178,30 @@ type Table struct {
 	initialized bool
 }
 
-// init() populates Fields if a table OID is provided.
+// init() builds & initializes the nested fields.
 func (t *Table) init() error {
 	if t.initialized {
 		return nil
 	}
+
+	if err := t.initBuild(); err != nil {
+		return err
+	}
+
+	// initialize all the nested fields
+	for i := range t.Fields {
+		if err := t.Fields[i].init(); err != nil {
+			return err
+		}
+	}
+
+	t.initialized = true
+	return nil
+}
+
+// init() populates Fields if a table OID is provided.
+func (t *Table) initBuild() error {
 	if t.Oid == "" {
-		t.initialized = true
 		return nil
 	}
 
@@ -242,14 +259,6 @@ func (t *Table) init() error {
 		t.Fields = append(t.Fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
 	}
 
-	// initialize all the nested fields
-	for i := range t.Fields {
-		if err := t.Fields[i].init(); err != nil {
-			return err
-		}
-	}
-
-	t.initialized = true
 	return nil
 }
 
@@ -460,13 +469,15 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
 				return nil, Errorf(err, "performing get")
-			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject {
+			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
 					return nil, Errorf(err, "converting %q", ent.Value)
 				}
-				ifv[""] = fv
+				if fvs, ok := fv.(string); !ok || fvs != "" {
+					ifv[""] = fv
+				}
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
@@ -487,7 +498,9 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return Errorf(err, "converting %q", ent.Value)
 				}
-				ifv[idx] = fv
+				if fvs, ok := fv.(string); !ok || fvs != "" {
+					ifv[idx] = fv
+				}
 				return nil
 			})
 			if err != nil {
@@ -712,7 +725,6 @@ func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
 //  "hwaddr" will convert the value into a MAC address.
 //  "ipaddr" will convert the value into into an IP address.
 //  "" will convert a byte slice into a string.
-// Any other conv will return the input value unchanged.
 func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
@@ -801,6 +813,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		default:
 			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", v)
 		}
+		return v, nil
 	}
 
 	if conv == "ipaddr" {
@@ -825,7 +838,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		return v, nil
 	}
 
-	return v, nil
+	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
 }
 
 // snmpTranslate resolves the given OID.
@@ -850,11 +863,16 @@ func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 
 	i := strings.Index(oidText, "::")
 	if i == -1 {
-		// was not found in MIB. Value is numeric
-		return "", oidText, oidText, "", nil
+		// was not found in MIB.
+		if bytes.Index(bb.Bytes(), []byte(" [TRUNCATED]")) >= 0 {
+			return "", oid, oid, "", nil
+		}
+		// not truncated, but not fully found. We still need to parse out numeric OID, so keep going
+		oidText = oid
+	} else {
+		mibName = oidText[:i]
+		oidText = oidText[i+2:]
 	}
-	mibName = oidText[:i]
-	oidText = oidText[i+2:]
 
 	if i := bytes.Index(bb.Bytes(), []byte("  -- TEXTUAL CONVENTION ")); i != -1 {
 		bb.Next(i + len("  -- TEXTUAL CONVENTION "))

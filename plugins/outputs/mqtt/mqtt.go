@@ -128,24 +128,22 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
 
-		values, err := m.serializer.Serialize(metric)
+		buf, err := m.serializer.Serialize(metric)
 		if err != nil {
 			return fmt.Errorf("MQTT Could not serialize metric: %s",
 				metric.String())
 		}
 
-		for _, value := range values {
-			err = m.publish(topic, value)
-			if err != nil {
-				return fmt.Errorf("Could not write to MQTT server, %s", err)
-			}
+		err = m.publish(topic, buf)
+		if err != nil {
+			return fmt.Errorf("Could not write to MQTT server, %s", err)
 		}
 	}
 
 	return nil
 }
 
-func (m *MQTT) publish(topic, body string) error {
+func (m *MQTT) publish(topic string, body []byte) error {
 	token := m.client.Publish(topic, byte(m.QoS), false, body)
 	token.Wait()
 	if token.Error() != nil {

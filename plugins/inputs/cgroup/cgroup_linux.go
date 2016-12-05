@@ -56,9 +56,10 @@ func (g *CGroup) gatherDir(dir string, acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	fields["path"] = dir
 
-	acc.AddFields(metricName, fields, nil)
+	tags := map[string]string{"path": dir}
+
+	acc.AddFields(metricName, fields, tags)
 
 	return nil
 }

@@ -1139,7 +1139,7 @@ DECLARE @w4 TABLE
 )
 DECLARE @w5 TABLE
 (
-	WaitCategory nvarchar(16) NOT NULL,
+	WaitCategory nvarchar(64) NOT NULL,
 	WaitTimeInMs bigint NOT NULL,
 	WaitTaskCount bigint NOT NULL
 )

@@ -64,7 +64,7 @@ Instances (this is an array) is the instances of a counter you would like return
 it can be one or more values.
 
 Example, `Instances = ["C:","D:","E:"]` will return only for the instances
-C:, D: and E: where relevant. To get all instnaces of a Counter, use ["*"] only.
+C:, D: and E: where relevant. To get all instances of a Counter, use ["*"] only.
 By default any results containing _Total are stripped,
 unless this is specified as the wanted instance.
 Alternatively see the option IncludeTotal below.
@@ -144,7 +144,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     ObjectName = "System"
-    Counters = ["Context Switches/sec","System Calls/sec"]
+    Counters = ["Context Switches/sec","System Calls/sec", "Processor Queue Length"]
     Instances = ["------"]
     Measurement = "win_system"
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
