@@ -22,6 +22,10 @@ type Metric interface {
 	Serialize() []byte
 	String() string // convenience function for string(Serialize())
 	Copy() Metric
+	// Split will attempt to return multiple metrics with the same timestamp
+	// whose string representations are no longer than maxSize.
+	// Metrics with a single field may exceed the requested size.
+	Split(maxSize int) []Metric
 
 	// Tag functions
 	HasTag(key string) bool

@@ -12,6 +12,7 @@
 - [#1807](https://github.com/influxdata/telegraf/pull/1807): Option to use device name rather than path for reporting disk stats.
 - [#1348](https://github.com/influxdata/telegraf/issues/1348): Telegraf "internal" plugin for collecting stats on itself.
 - [#2127](https://github.com/influxdata/telegraf/pull/2127): Update Go version to 1.7.4.
+- [#2126](https://github.com/influxdata/telegraf/pull/2126): Support a metric.Split function.
 
 ### Bugfixes
 

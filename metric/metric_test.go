@@ -3,6 +3,7 @@ package metric
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"testing"
 	"time"
 
@@ -432,6 +433,149 @@ func TestNewCounterMetric(t *testing.T) {
 	assert.Equal(t, "cpu", m.Name())
 	assert.Equal(t, now, m.Time())
 	assert.Equal(t, now.UnixNano(), m.UnixNano())
+}
+
+// test splitting metric into various max lengths
+func TestSplitMetric(t *testing.T) {
+	now := time.Unix(0, 1480940990034083306)
+	tags := map[string]string{
+		"host": "localhost",
+	}
+	fields := map[string]interface{}{
+		"float":  float64(100001),
+		"int":    int64(100001),
+		"bool":   true,
+		"false":  false,
+		"string": "test",
+	}
+	m, err := New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	split80 := m.Split(80)
+	assert.Len(t, split80, 2)
+
+	split70 := m.Split(70)
+	assert.Len(t, split70, 3)
+
+	split60 := m.Split(60)
+	assert.Len(t, split60, 4)
+}
+
+// test splitting metric into various max lengths
+// use a simple regex check to verify that the split metrics are valid
+func TestSplitMetric_RegexVerify(t *testing.T) {
+	now := time.Unix(0, 1480940990034083306)
+	tags := map[string]string{
+		"host": "localhost",
+	}
+	fields := map[string]interface{}{
+		"foo":     float64(98934259085),
+		"bar":     float64(19385292),
+		"number":  float64(19385292),
+		"another": float64(19385292),
+		"n":       float64(19385292),
+	}
+	m, err := New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	// verification regex
+	re := regexp.MustCompile(`cpu,host=localhost \w+=\d+(,\w+=\d+)* 1480940990034083306`)
+
+	split90 := m.Split(90)
+	assert.Len(t, split90, 2)
+	for _, splitM := range split90 {
+		assert.True(t, re.Match(splitM.Serialize()), splitM.String())
+	}
+
+	split70 := m.Split(70)
+	assert.Len(t, split70, 3)
+	for _, splitM := range split70 {
+		assert.True(t, re.Match(splitM.Serialize()), splitM.String())
+	}
+
+	split20 := m.Split(20)
+	assert.Len(t, split20, 5)
+	for _, splitM := range split20 {
+		assert.True(t, re.Match(splitM.Serialize()), splitM.String())
+	}
+}
+
+// test splitting metric even when given length is shorter than
+// shortest possible length
+// Split should split metric as short as possible, ie, 1 field per metric
+func TestSplitMetric_TooShort(t *testing.T) {
+	now := time.Unix(0, 1480940990034083306)
+	tags := map[string]string{
+		"host": "localhost",
+	}
+	fields := map[string]interface{}{
+		"float":  float64(100001),
+		"int":    int64(100001),
+		"bool":   true,
+		"false":  false,
+		"string": "test",
+	}
+	m, err := New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	split := m.Split(10)
+	assert.Len(t, split, 5)
+	strings := make([]string, 5)
+	for i, splitM := range split {
+		strings[i] = splitM.String()
+	}
+
+	assert.Contains(t, strings, "cpu,host=localhost float=100001 1480940990034083306\n")
+	assert.Contains(t, strings, "cpu,host=localhost int=100001i 1480940990034083306\n")
+	assert.Contains(t, strings, "cpu,host=localhost bool=true 1480940990034083306\n")
+	assert.Contains(t, strings, "cpu,host=localhost false=false 1480940990034083306\n")
+	assert.Contains(t, strings, "cpu,host=localhost string=\"test\" 1480940990034083306\n")
+}
+
+func TestSplitMetric_NoOp(t *testing.T) {
+	now := time.Unix(0, 1480940990034083306)
+	tags := map[string]string{
+		"host": "localhost",
+	}
+	fields := map[string]interface{}{
+		"float":  float64(100001),
+		"int":    int64(100001),
+		"bool":   true,
+		"false":  false,
+		"string": "test",
+	}
+	m, err := New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	split := m.Split(1000)
+	assert.Len(t, split, 1)
+	assert.Equal(t, m, split[0])
+}
+
+func TestSplitMetric_OneField(t *testing.T) {
+	now := time.Unix(0, 1480940990034083306)
+	tags := map[string]string{
+		"host": "localhost",
+	}
+	fields := map[string]interface{}{
+		"float": float64(100001),
+	}
+	m, err := New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "cpu,host=localhost float=100001 1480940990034083306\n", m.String())
+
+	split := m.Split(1000)
+	assert.Len(t, split, 1)
+	assert.Equal(t, "cpu,host=localhost float=100001 1480940990034083306\n", split[0].String())
+
+	split = m.Split(1)
+	assert.Len(t, split, 1)
+	assert.Equal(t, "cpu,host=localhost float=100001 1480940990034083306\n", split[0].String())
+
+	split = m.Split(40)
+	assert.Len(t, split, 1)
+	assert.Equal(t, "cpu,host=localhost float=100001 1480940990034083306\n", split[0].String())
 }
 
 func TestNewMetricAggregate(t *testing.T) {
