@@ -4,6 +4,7 @@
 
 ### Features
 
+- [#2123](https://github.com/influxdata/telegraf/pull/2123): Fix improper calculation of CPU percentages
 - [#1564](https://github.com/influxdata/telegraf/issues/1564): Use RFC3339 timestamps in log output.
 - [#1997](https://github.com/influxdata/telegraf/issues/1997): Non-default HTTP timeouts for RabbitMQ plugin.
 - [#2074](https://github.com/influxdata/telegraf/pull/2074): "discard" output plugin added, primarily for testing purposes.
