@@ -50,6 +50,21 @@ func BenchmarkAddTag(b *testing.B) {
 	s = string(mt.String())
 }
 
+func BenchmarkSplit(b *testing.B) {
+	var mt telegraf.Metric
+	mt = &metric{
+		name:   []byte("cpu"),
+		tags:   []byte(",host=localhost"),
+		fields: []byte("a=101,b=10i,c=10101,d=101010,e=42"),
+		t:      []byte("1480614053000000000"),
+	}
+	var metrics []telegraf.Metric
+	for n := 0; n < b.N; n++ {
+		metrics = mt.Split(60)
+	}
+	s = string(metrics[0].String())
+}
+
 func BenchmarkTags(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		var mt, _ = New("test_metric",
