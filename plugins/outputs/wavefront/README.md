@@ -17,13 +17,13 @@ More information about the Wavefront data format is available [here](https://com
 By default, to ease Metrics browsing in the Wavefront UI, metrics are grouped by converting any `_` characters to `.` in the final name.
 This behavior can be altered by changing the `metric_separator` and/or the `convert_paths` settings.  
 Most illegal characters in the metric name are automatically converted to `-`.  
-The `use_regex` setting can be used to ensure all illegal characters are properly handled, but can lead to performance degredation.
+The `use_regex` setting can be used to ensure all illegal characters are properly handled, but can lead to performance degradation.
 
 ## Configuration:
 
 ```toml
-# Configuration for Graphite server to send metrics to
-[[outputs.graphite]]
+# Configuration for Wavefront output 
+[[outputs.wavefront]]
   ## prefix for metrics keys
   prefix = "my.specific.prefix."
 
@@ -40,14 +40,17 @@ The `use_regex` setting can be used to ensure all illegal characters are properl
   metric_separator = "."
 
   ## Convert metric name paths to use metricSeperator character
-  ## When true (edfault) will convert all _ (underscore) chartacters in final metric name
+  ## When true (default) will convert all _ (underscore) chartacters in final metric name
   convert_paths = true
 
   ## Use Regex to sanitize metric and tag names from invalid characters
   ## Regex is more thorough, but significantly slower
   use_regex = false
 
-  ## Print additional Debug information. requires debug = true at the [agent] level
+  ## point tags to use as the source name for Wavefront (if none found, host will be used)
+  source_tags = ["hostname", "snmp_host", "node_host"]
+
+  ## Print additional debug information requires debug = true at the agent level
   debug_all = false
 ```
 
@@ -60,6 +63,7 @@ Parameters:
 	MetricSeparator string
 	ConvertPaths    bool
 	UseRegex    	bool
+	SourceTags       string
 	DebugAll        bool
 
 * `prefix`: String to use as a prefix for all sent metrics.
@@ -69,6 +73,7 @@ Parameters:
 * `metric_separator`: character to use to separate metric and field names. (default is `_`)
 * `convert_paths`: if true (default) will convert all `_` in metric and field names to `metric_seperator`
 * `use_regex`: if true (default is false) will use regex to ensure all illegal characters are converted to `-`.  Regex is much slower than the default mode which will catch most illegal characters.  Use with caution.
+* `source_tags`: ordered list of point tags to use as the source name for Wavefront. Once a match a found that tag is used for that point.  If no tags are found the host tag will be used.
 * `debug_all`: Will output additional debug information.  Requires `debug = true` to be configured at the agent level
 
 
