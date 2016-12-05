@@ -11,6 +11,7 @@
 - [#1965](https://github.com/influxdata/telegraf/pull/1965): The JSON parser can now parse an array of objects using the same configuration.
 - [#1807](https://github.com/influxdata/telegraf/pull/1807): Option to use device name rather than path for reporting disk stats.
 - [#1348](https://github.com/influxdata/telegraf/issues/1348): Telegraf "internal" plugin for collecting stats on itself.
+- [#2127](https://github.com/influxdata/telegraf/pull/2127): Update Go version to 1.7.4.
 
 ### Bugfixes
 
