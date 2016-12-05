@@ -583,6 +583,8 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     if "static_" in arch:
                         # Remove the "static_" from the displayed arch on the package
                         package_arch = arch.replace("static_", "")
+                    elif package_type == "rpm" and arch == 'armhf':
+                        package_arch = 'armv6hl'
                     else:
                         package_arch = arch
                     if not release and not nightly:
