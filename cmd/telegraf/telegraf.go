@@ -17,11 +17,13 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/aggregators"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	"github.com/influxdata/telegraf/plugins/processors"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"github.com/kardianos/service"
 )
@@ -54,6 +56,8 @@ var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service")
+var fPlugins = flag.String("plugins", "",
+	"path to directory containing external plugins")
 
 // Telegraf version, populated linker.
 //   ie, -ldflags "-X main.version=`git describe --always --tags`"
@@ -308,6 +312,8 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
+// loadExternalPlugins loads external plugins from shared libraries (.so, .dll, etc.)
+// in the specified directory.
 func loadExternalPlugins(dir string) error {
 	return filepath.Walk(dir, func(pth string, info os.FileInfo, err error) error {
 		// Stop if there was an error.
@@ -333,7 +339,7 @@ func loadExternalPlugins(dir string) error {
 		}
 
 		// Register plugin.
-		if err := registerPlugin(pth, p); err != nil {
+		if err := registerPlugin(dir, pth, p); err != nil {
 			return err
 		}
 
@@ -341,9 +347,19 @@ func loadExternalPlugins(dir string) error {
 	})
 }
 
-func registerPlugin(filePath string, p *plugin.Plugin) error {
-	// Clean the file path and strip the suffix.
-	filePath = filepath.Clean(filePath)
+// registerPlugin registers an external plugin with telegraf.
+func registerPlugin(pluginsDir, filePath string, p *plugin.Plugin) error {
+	// Clean the file path and make sure it's relative to the root plugins directory.
+	// This is done because plugin names are namespaced using the directory
+	// structure. E.g., if the root plugin directory, passed in the pluginsDir
+	// argument, is '/home/jdoe/bin/telegraf/plugins' and we're registering plugin
+	// '/home/jdoe/bin/telegraf/plugins/input/mysql.so'
+	parentDir, _ := filepath.Split(pluginsDir)
+	var err error
+	if filePath, err = filepath.Rel(parentDir, filePath); err != nil {
+		return err
+	}
+	// Strip the file extension and save it.
 	ext := path.Ext(filePath)
 	filePath = strings.TrimSuffix(filePath, ext)
 	// Convert path separators to "." to generate a plugin name namespaced by directory names.
@@ -353,11 +369,15 @@ func registerPlugin(filePath string, p *plugin.Plugin) error {
 		inputs.Add(name, inputs.Creator(create.(func() telegraf.Input)))
 	} else if create, err := p.Lookup("NewOutput"); err == nil {
 		outputs.Add(name, outputs.Creator(create.(func() telegraf.Output)))
+	} else if create, err := p.Lookup("NewProcessor"); err == nil {
+		processors.Add(name, processors.Creator(create.(func() telegraf.Processor)))
+	} else if create, err := p.Lookup("NewAggregator"); err == nil {
+		aggregators.Add(name, aggregators.Creator(create.(func() telegraf.Aggregator)))
 	} else {
 		return fmt.Errorf("not a telegraf plugin: %s%s", filePath, ext)
 	}
 
-	fmt.Printf("registered: %s (from %s%s)\n", name, filePath, ext)
+	log.Printf("I! Registered: %s (from %s%s)\n", name, filePath, ext)
 
 	return nil
 }
@@ -366,8 +386,16 @@ func main() {
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 
-	if err := loadExternalPlugins("external"); err != nil {
-		log.Fatal("E! " + err.Error())
+	// Load external plugins, if requested.
+	if *fPlugins != "" {
+		pluginsDir, err := filepath.Abs(*fPlugins)
+		if err != nil {
+			log.Fatal("E! " + err.Error())
+		}
+		log.Printf("I! Loading external plugins from: %s\n", pluginsDir)
+		if err := loadExternalPlugins(*fPlugins); err != nil {
+			log.Fatal("E! " + err.Error())
+		}
 	}
 
 	if runtime.GOOS == "windows" {
