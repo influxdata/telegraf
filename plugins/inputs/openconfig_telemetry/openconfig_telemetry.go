@@ -105,7 +105,9 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 	}
 
 	c := telemetry.NewOpenConfigTelemetryClient(m.grpcClientConn)
-	log.Printf("I! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
+	if m.Debug {
+		log.Printf("I! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
+	}
 
 	wg := new(sync.WaitGroup)
 
@@ -199,7 +201,7 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 					case *telemetry.KeyValue_StrValue:
 						// If this is actually a integer value but wrongly encoded as string,
 						// convert and use it as value to field
-						if val, err := strconv.Atoi(v.GetStrValue()); err == nil {
+						if val, err := strconv.ParseInt(v.GetStrValue(), 10, 64); err == nil {
 							fields[v.Key] = val
 						} else {
 							tags[v.Key] = v.GetStrValue()
