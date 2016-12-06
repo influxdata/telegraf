@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 // UdpListener main struct for the collector
@@ -48,6 +49,9 @@ type UdpListener struct {
 	acc telegraf.Accumulator
 
 	listener *net.UDPConn
+
+	PacketsRecv selfstat.Stat
+	BytesRecv   selfstat.Stat
 }
 
 // UDP_MAX_PACKET_SIZE is packet limit, see
@@ -101,6 +105,12 @@ func (u *UdpListener) SetParser(parser parsers.Parser) {
 func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 	u.Lock()
 	defer u.Unlock()
+
+	tags := map[string]string{
+		"address": u.ServiceAddress,
+	}
+	u.PacketsRecv = selfstat.Register("udp_listener", "packets_received", tags)
+	u.BytesRecv = selfstat.Register("udp_listener", "bytes_received", tags)
 
 	u.acc = acc
 	u.in = make(chan []byte, u.AllowedPendingMessages)
@@ -162,6 +172,8 @@ func (u *UdpListener) udpListen() error {
 				}
 				continue
 			}
+			u.BytesRecv.Incr(int64(n))
+			u.PacketsRecv.Incr(1)
 			bufCopy := make([]byte, n)
 			copy(bufCopy, buf[:n])
 

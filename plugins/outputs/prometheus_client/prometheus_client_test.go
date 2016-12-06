@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -26,12 +27,12 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 
 	now := time.Now()
 	tags := make(map[string]string)
-	pt1, _ := telegraf.NewMetric(
+	pt1, _ := metric.New(
 		"test_point_1",
 		tags,
 		map[string]interface{}{"value": 0.0},
 		now)
-	pt2, _ := telegraf.NewMetric(
+	pt2, _ := metric.New(
 		"test_point_2",
 		tags,
 		map[string]interface{}{"value": 1.0},
@@ -61,12 +62,12 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 
 	tags = make(map[string]string)
 	tags["testtag"] = "testvalue"
-	pt3, _ := telegraf.NewMetric(
+	pt3, _ := metric.New(
 		"test_point_3",
 		tags,
 		map[string]interface{}{"value": 0.0},
 		now)
-	pt4, _ := telegraf.NewMetric(
+	pt4, _ := metric.New(
 		"test_point_4",
 		tags,
 		map[string]interface{}{"value": 1.0},
@@ -104,7 +105,7 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 
 	now := time.Now()
 	tags := make(map[string]string)
-	pt1, _ := telegraf.NewMetric(
+	pt1, _ := metric.New(
 		"test_point_1",
 		tags,
 		map[string]interface{}{"value": 0.0},
@@ -116,7 +117,7 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 		m.Expiration = now.Add(time.Duration(-15) * time.Second)
 	}
 
-	pt2, _ := telegraf.NewMetric(
+	pt2, _ := metric.New(
 		"test_point_2",
 		tags,
 		map[string]interface{}{"value": 1.0},

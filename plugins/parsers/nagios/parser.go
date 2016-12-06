@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 type NagiosParser struct {
@@ -90,7 +91,7 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			fields["max"] = perf[0][7]
 		}
 		// Create metric
-		metric, err := telegraf.NewMetric(fieldName, tags, fields, time.Now().UTC())
+		metric, err := metric.New(fieldName, tags, fields, time.Now().UTC())
 		if err != nil {
 			return nil, err
 		}

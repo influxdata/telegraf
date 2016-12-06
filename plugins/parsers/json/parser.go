@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 type JSONParser struct {
@@ -57,7 +58,7 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 		return nil, err
 	}
 
-	metric, err := telegraf.NewMetric(p.MetricName, tags, f.Fields, time.Now().UTC())
+	metric, err := metric.New(p.MetricName, tags, f.Fields, time.Now().UTC())
 
 	if err != nil {
 		return nil, err

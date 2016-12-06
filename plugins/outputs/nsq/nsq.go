@@ -66,20 +66,13 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, metric := range metrics {
-		values, err := n.serializer.Serialize(metric)
+		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		var pubErr error
-		for _, value := range values {
-			err = n.producer.Publish(n.Topic, []byte(value))
-			if err != nil {
-				pubErr = err
-			}
-		}
-
-		if pubErr != nil {
+		err = n.producer.Publish(n.Topic, buf)
+		if err != nil {
 			return fmt.Errorf("FAILED to send NSQD message: %s", err)
 		}
 	}
