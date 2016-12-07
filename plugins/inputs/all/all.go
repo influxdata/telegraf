@@ -75,6 +75,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/trig"
 	_ "github.com/influxdata/telegraf/plugins/inputs/twemproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/udp_listener"
+	_ "github.com/influxdata/telegraf/plugins/inputs/usgs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/varnish"
 	_ "github.com/influxdata/telegraf/plugins/inputs/webhooks"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
