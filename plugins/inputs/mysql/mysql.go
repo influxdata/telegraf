@@ -703,7 +703,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			return err
 		}
 		key = strings.ToLower(key)
-                // mysql version key/value pair 
+                // parse mysql version and put into field and tag
 		if strings.Contains(key, "version") {
 			fields[key] = string(val)
 			tags[key] = string(val)
@@ -974,27 +974,27 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 
 			tags := map[string]string{"server": servtag, "user": user}
 			fields := map[string]interface{}{
-			  "total_connections"] = total_connections
-			  "concurrent_connections"] = concurrent_connections
-			  "connected_time"] = connected_time
-			  "busy_time"] = busy_time
-			  "cpu_time"] = cpu_time
-			  "bytes_received"] = bytes_received
-			  "bytes_sent"] = bytes_sent
-			  "binlog_bytes_written"] = binlog_bytes_written
-			  "rows_fetched"] = rows_fetched
-			  "rows_updated"] = rows_updated
-			  "table_rows_read"] = table_rows_read
-			  "select_commands"] = select_commands
-			  "update_commands"] = update_commands
-			  "other_commands"] = other_commands
-			  "commit_transactions"] = commit_transactions
-			  "rollback_transactions"] = rollback_transactions
-			  "denied_connections"] = denied_connections
-			  "lost_connections"] = lost_connections
-			  "access_denied"] = access_denied
-			  "empty_queries"] = empty_queries
-			  "total_ssl_connections"] = total_ssl_connections
+			  "total_connections": total_connections,
+			  "concurrent_connections": concurrent_connections,
+			  "connected_time": connected_time,
+			  "busy_time": busy_time,
+			  "cpu_time": cpu_time,
+			  "bytes_received": bytes_received,
+			  "bytes_sent": bytes_sent,
+			  "binlog_bytes_written": binlog_bytes_written,
+			  "rows_fetched": rows_fetched,
+			  "rows_updated": rows_updated,
+			  "table_rows_read": table_rows_read,
+			  "select_commands": select_commands,
+			  "update_commands": update_commands,
+			  "other_commands": other_commands,
+			  "commit_transactions": commit_transactions,
+			  "rollback_transactions": rollback_transactions,
+			  "denied_connections": denied_connections,
+			  "lost_connections": lost_connections,
+			  "access_denied": access_denied,
+			  "empty_queries": empty_queries,
+			  "total_ssl_connections": total_ssl_connections,
                         }
 
 			acc.AddFields("mysql_user_stats", fields, tags)
