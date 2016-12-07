@@ -550,7 +550,7 @@ func (c *Config) LoadConfig(path string) error {
 	var err error
 	if path == "" {
 		if path, err = getDefaultConfigPath(); err != nil {
-			return err
+			return nil
 		}
 	}
 	tbl, err := parseFile(path)
@@ -664,6 +664,195 @@ func (c *Config) LoadConfig(path string) error {
 		default:
 			if err = c.addInput(name, subTable); err != nil {
 				return fmt.Errorf("Error parsing %s, %s", path, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func MapToTable(config map[string]interface{}) (*ast.Table, error) {
+	var buf bytes.Buffer
+	for key, value := range config {
+		if v, ok := value.(string); ok {
+			buf.WriteString(key + "=" + v + "\n")
+		}
+	}
+	for key, value := range config {
+		if v, ok := value.(map[string]string); ok {
+			buf.WriteString("[" + key + "]\n")
+			for key, value := range v {
+				buf.WriteString(key + "=" + value + "\n")
+			}
+		}
+	}
+	table, err := toml.Parse(buf.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("%s%s", buf.Bytes(), err)
+	}
+	return table, nil
+}
+
+func UnmarshalMap(config map[string]interface{}, target interface{}) error {
+	table, err := MapToTable(config)
+	if err != nil {
+		return err
+	}
+	return toml.UnmarshalTable(table, target)
+}
+
+// LoadEnvConfig loads the configuration from environment variables and applies it to c
+func (c *Config) LoadEnvConfig() error {
+	tagsConfig := make(map[string]interface{})
+	agentConfig := make(map[string]interface{})
+	pluginsConfigs := make(map[string]map[string][]map[string]interface{})
+
+	currentPluginNum := 0
+	pluginNum := 0
+
+	environ := make([]string, len(os.Environ()))
+	copy(environ, os.Environ())
+	sort.Strings(environ)
+envVariable:
+	for _, e := range environ {
+		env := strings.SplitN(e, "=", 2)
+		if len(env) < 2 {
+			continue
+		}
+		orig_key, value := env[0], env[1]
+		if !strings.HasPrefix(orig_key, "TELEGRAF_") {
+			continue
+		}
+		key := strings.ToLower(strings.TrimPrefix(orig_key, "TELEGRAF_"))
+
+		// sanity checking
+		if key == "" {
+			log.Printf("W! Invalid environment variable: '%s'\n", e)
+			continue
+		}
+		if strings.Contains(value, "\n") {
+			// interferes with toml parsing
+			log.Printf("W! Invalid environment variable: '%s' (contains newline)\n", e)
+			continue
+		}
+
+		// Parse tags config:
+		for _, tableName := range []string{"tags", "global_tags"} {
+			if strings.HasPrefix(key, tableName+"_") {
+				key = strings.TrimPrefix(key, tableName+"_")
+				if key == "" {
+					log.Printf("W! Invalid tag environment variable: '%s'", e)
+					continue
+				}
+				tagsConfig[key] = value
+				continue envVariable
+			}
+		}
+
+		// Parse agent config:
+		if strings.HasPrefix(key, "agent_") {
+			key = strings.TrimPrefix(key, "agent_")
+			if key == "" {
+				log.Printf("W! Invalid agent environment variable: '%s'", e)
+				continue
+			}
+			agentConfig[key] = value
+			continue
+		}
+
+		// Parse plugins config:
+
+		// split into plugin type and name
+		config := strings.SplitN(key, "_", 3)
+		if len(config) < 2 || config[0] == "" || config[1] == "" {
+			log.Printf("W! Invalid environment variable: '%s'", e)
+			continue
+		}
+		pluginType, pluginName := config[0], config[1]
+		if pluginsConfigs[pluginType] == nil {
+			pluginsConfigs[pluginType] = make(map[string][]map[string]interface{})
+		}
+		if pluginsConfigs[pluginType][pluginName] == nil {
+			pluginsConfigs[pluginType][pluginName] = []map[string]interface{}{map[string]interface{}{}}
+			pluginNum = 0
+		}
+		targetMap := pluginsConfigs[pluginType][pluginName]
+
+		// check if this plugin configuration is enumerated
+		if len(config) == 3 && config[2] != "" {
+			if numberedOption := strings.SplitN(config[2], "_", 2); len(numberedOption) == 2 {
+				if num, err := strconv.Atoi(numberedOption[0]); err == nil {
+					// this is an enumerated options to support multiple configurations for the same plugin
+					// (e.g. TELEGRAF_OUTPUTS_INFLUXDB_1_...); the number itself is not used
+					if num != currentPluginNum {
+						pluginNum += 1
+						targetMap = append(targetMap, map[string]interface{}{})
+						pluginsConfigs[pluginType][pluginName] = targetMap
+					}
+					currentPluginNum = num
+					config[2] = numberedOption[1]
+				}
+			}
+		}
+		currentMap := targetMap[pluginNum]
+
+		if len(config) == 3 && config[2] != "" {
+			pluginKey := config[2]
+			if pluginKey[0] == '_' {
+				// this is a suboption (like outputs.influxdb.tagpass -> TELEGRAF_OUTPUTS_INFLUXDB__TAGPASS_...)
+				suboption := strings.SplitN(pluginKey[1:len(pluginKey)], "_", 2)
+				pluginSuboption, pluginKey := suboption[0], suboption[1]
+				if currentMap[pluginSuboption] == nil {
+					currentMap[pluginSuboption] = make(map[string]string)
+				}
+				if value != "" {
+					currentMap[pluginSuboption].(map[string]string)[pluginKey] = value
+				}
+			} else {
+				if value != "" {
+					currentMap[pluginKey] = value
+				}
+			}
+		}
+	}
+
+	// apply tags and agent configuration
+	if err := UnmarshalMap(tagsConfig, c.Tags); err != nil {
+		return fmt.Errorf("Error parsing configuration provided by environment:\n%s", err)
+	}
+	if err := UnmarshalMap(agentConfig, c.Agent); err != nil {
+		return fmt.Errorf("Error parsing configuration provided by environment:\n%s", err)
+	}
+
+	// apply plugin configuration
+	for pluginType, plugins := range pluginsConfigs {
+		for pluginName, pluginConfigs := range plugins {
+			for _, pluginConfig := range pluginConfigs {
+				var table *ast.Table
+				var err error
+				if len(pluginConfig) > 0 {
+					if table, err = MapToTable(pluginConfig); err != nil {
+						return fmt.Errorf("Error parsing configuration provided by environment:\n%s", err)
+					}
+				} else {
+					// allow plugins without config
+					table = new(ast.Table)
+				}
+
+				switch pluginType {
+				case "outputs":
+					err = c.addOutput(pluginName, table)
+				case "processors":
+					err = c.addProcessor(pluginName, table)
+				case "aggregators":
+					err = c.addAggregator(pluginName, table)
+				default:
+					err = c.addInput(pluginName, table)
+				}
+
+				if err != nil {
+					return fmt.Errorf("Error parsing configuration provided by environment:\n%s", err)
+				}
 			}
 		}
 	}

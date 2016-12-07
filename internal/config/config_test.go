@@ -174,3 +174,60 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	assert.Equal(t, pConfig, c.Inputs[3].Config,
 		"Merged Testdata did not produce correct procstat metadata.")
 }
+
+func TestConfig_LoadEnv(t *testing.T) {
+	c := NewConfig()
+
+	err := os.Setenv("TELEGRAF_INPUTS_MEMCACHED_SERVERS", "[\"localhost\"]")
+	assert.NoError(t, err)
+	err = os.Setenv("TELEGRAF_INPUTS_MEMCACHED_NAMEPASS", "[\"metricname1\"]")
+	assert.NoError(t, err)
+	err = os.Setenv("TELEGRAF_INPUTS_MEMCACHED_NAMEDROP", "[\"metricname2\"]")
+	assert.NoError(t, err)
+	err = os.Setenv("TELEGRAF_INPUTS_MEMCACHED_FIELDPASS", "[\"some\", \"strings\"]")
+	assert.NoError(t, err)
+	err = os.Setenv("TELEGRAF_INPUTS_MEMCACHED_FIELDDROP", "[\"other\", \"stuff\"]")
+	assert.NoError(t, err)
+	err = os.Setenv("TELEGRAF_INPUTS_MEMCACHED_INTERVAL", "\"5s\"")
+	assert.NoError(t, err)
+	err = os.Setenv("TELEGRAF_INPUTS_MEMCACHED__TAGPASS_GOODTAG", "[\"mytag\"]")
+	assert.NoError(t, err)
+	err = os.Setenv("TELEGRAF_INPUTS_MEMCACHED__TAGDROP_BADTAG", "[\"othertag\"]")
+	assert.NoError(t, err)
+
+	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
+	memcached.Servers = []string{"localhost"}
+
+	filter := models.Filter{
+		NameDrop:  []string{"metricname2"},
+		NamePass:  []string{"metricname1"},
+		FieldDrop: []string{"other", "stuff"},
+		FieldPass: []string{"some", "strings"},
+		TagDrop: []models.TagFilter{
+			models.TagFilter{
+				Name:   "badtag",
+				Filter: []string{"othertag"},
+			},
+		},
+		TagPass: []models.TagFilter{
+			models.TagFilter{
+				Name:   "goodtag",
+				Filter: []string{"mytag"},
+			},
+		},
+	}
+	assert.NoError(t, filter.Compile())
+	mConfig := &models.InputConfig{
+		Name:     "memcached",
+		Filter:   filter,
+		Interval: 5 * time.Second,
+	}
+	mConfig.Tags = make(map[string]string)
+
+	c.LoadEnvConfig()
+
+	assert.Equal(t, memcached, c.Inputs[0].Input,
+		"Testdata did not produce a correct memcached struct.")
+	assert.Equal(t, mConfig, c.Inputs[0].Config,
+		"Testdata did not produce correct memcached metadata.")
+}

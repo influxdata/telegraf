@@ -24,11 +24,20 @@ Environment variables can be used anywhere in the config file, simply prepend
 them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
 for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
 
+## Configuration by environment variables
+
+All settings that a configurable by the config file can also be configured via
+environment variables that are prefixed with `TELEGRAF_`. See below for further
+explanations and examples.
+
 # Global Tags
 
 Global tags can be specified in the `[global_tags]` section of the config file
 in key="value" format. All metrics being gathered on this host will be tagged
 with the tags specified here.
+
+Global tags configured via environment variables override those configured in
+the config file.
 
 ## Agent Configuration
 
@@ -65,6 +74,9 @@ be used for service inputs, such as logparser and statsd. Valid values are
 * **quiet**: Run telegraf in quiet mode (error messages only).
 * **hostname**: Override default hostname, if empty use os.Hostname().
 * **omit_hostname**: If true, do no set the "host" tag in the telegraf agent.
+
+Agent options configured via environment variables override those configured in
+the config file.
 
 ## Input Configuration
 
@@ -168,6 +180,21 @@ fields which begin with `time_`.
   fielddrop = ["time_*"]
 ```
 
+The same settings configured via environment variables:
+
+```
+TELEGRAF_GLOBAL_TAGS_DC='"denver-1"'
+TELEGRAF_AGENT_INTERVAL='"10s"'
+TELEGRAF_OUTPUTS_INFLUXDB_URL='"http://192.168.59.103:8086"'
+TELEGRAF_OUTPUTS_INFLUXDB_DATABASE='"telegraf"'
+TELEGRAF_OUTPUTS_INFLUXDB_PRECEISION='"s"'
+TELEGRAF_INPUTS_CPU_PERCPU=true
+TELEGRAF_INPUTS_CPU_TOTALCPU=false
+TELEGRAF_INPUTS_CPU_FIELDDROP='["time_*"]'
+```
+
+Make sure to also pass in the `"` characters when writing strings.
+
 #### Input Config: tagpass and tagdrop
 
 **NOTE** `tagpass` and `tagdrop` parameters must be defined at the _end_ of
@@ -191,6 +218,18 @@ interpreted as part of the tagpass/tagdrop map.
     fstype = [ "ext4", "xfs" ]
     # Globs can also be used on the tag values
     path = [ "/opt", "/home*" ]
+```
+
+Separate the nested `tagpass` and `tagdrop` options with `__` when configuring
+them via environment variables:
+
+```
+TELEGRAF_INPUTS_CPU_PERCPU=true
+TELEGRAF_INPUTS_CPU_TOTALCPU=false
+TELEGRAF_INPUTS_CPU_FIELDDROP='["cpu_time"]'
+TELEGRAF_INPUTS_CPU__TAGDROP_CPU='[ "cpu6", "cpu7" ]'
+TELEGRAF_INPUTS_DISK__TAGPASS_TSTYPE='[ "ext4", "xfs" ]'
+TELEGRAF_INPUTS_DISK__TAGPASS_PATH='[ "/opt", "/home*" ]'
 ```
 
 #### Input Config: fieldpass and fielddrop
@@ -290,6 +329,24 @@ to avoid measurement collisions:
   name_override = "percpu_usage"
   fielddrop = ["cpu_time*"]
 ```
+
+When using environment variables, suffix the plugin name with any number to
+achieve the same effect:
+
+```
+TELEGRAF_INPUTS_CPU_1_PERCPU=false
+TELEGRAF_INPUTS_CPU_1_TOTALCPU=true
+TELEGRAF_INPUTS_CPU_2_PERCPU=true
+TELEGRAF_INPUTS_CPU_2_TOTALCPU=false
+TELEGRAF_INPUTS_CPU_2_NAME_OVERRIDE='"percpu_usage"'
+TELEGRAF_INPUTS_CPU_2_FIELDDROP='["cpu_time*"]'
+```
+
+Always use positive numbers as indices. Using `0` is the same as leaving out the
+number. The numbers have no meaning in this context and are just there for
+grouping the settings. Plugins configured via environment are configured
+in addition to those defined in the config file and do not override their
+settings.
 
 #### Output Configuration Examples:
 

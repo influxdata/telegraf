@@ -121,11 +121,15 @@ func reloadLoop(
 	for <-reload {
 		reload <- false
 
-		// If no other options are specified, load the config file and run.
+		// If no other options are specified, load the config file and env and run.
 		c := config.NewConfig()
 		c.OutputFilters = outputFilters
 		c.InputFilters = inputFilters
 		err := c.LoadConfig(*fConfig)
+		if err != nil {
+			log.Fatal("E! " + err.Error())
+		}
+		err = c.LoadEnvConfig()
 		if err != nil {
 			log.Fatal("E! " + err.Error())
 		}
