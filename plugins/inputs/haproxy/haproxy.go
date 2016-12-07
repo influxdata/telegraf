@@ -258,6 +258,11 @@ func importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
 				if err == nil {
 					fields["scur"] = ival
 				}
+			case HF_SLIM:
+				ival, err := strconv.ParseUint(v, 10, 64)
+				if err == nil {
+					fields["slim"] = ival
+				}
 			case HF_SMAX:
 				ival, err := strconv.ParseUint(v, 10, 64)
 				if err == nil {
