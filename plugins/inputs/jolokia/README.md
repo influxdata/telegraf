@@ -6,7 +6,7 @@
 # Read JMX metrics through Jolokia
 [[inputs.jolokia]]
   ## This is the context root used to compose the jolokia url
-  context = "/jolokia"
+  context = "/jolokia/read"
 
   ## This specifies the mode used
   # mode = "proxy"
