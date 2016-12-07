@@ -703,11 +703,12 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			return err
 		}
 		key = strings.ToLower(key)
-		// parse value, if it is numeric then save, otherwise ignore
+                // mysql version key/value pair 
 		if strings.Contains(key, "version") {
 			fields[key] = string(val)
 			tags[key] = string(val)
 		}
+		// parse value, if it is numeric then save, otherwise ignore
 		if floatVal, ok := parseValue(val); ok {
 			fields[key] = floatVal
 		}
@@ -972,32 +973,29 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			}
 
 			tags := map[string]string{"server": servtag, "user": user}
-			fields := make(map[string]interface{})
-
-			if err != nil {
-				return err
-			}
-			fields["total_connections"] = total_connections
-			fields["concurrent_connections"] = concurrent_connections
-			fields["connected_time"] = connected_time
-			fields["busy_time"] = busy_time
-			fields["cpu_time"] = cpu_time
-			fields["bytes_received"] = bytes_received
-			fields["bytes_sent"] = bytes_sent
-			fields["binlog_bytes_written"] = binlog_bytes_written
-			fields["rows_fetched"] = rows_fetched
-			fields["rows_updated"] = rows_updated
-			fields["table_rows_read"] = table_rows_read
-			fields["select_commands"] = select_commands
-			fields["update_commands"] = update_commands
-			fields["other_commands"] = other_commands
-			fields["commit_transactions"] = commit_transactions
-			fields["rollback_transactions"] = rollback_transactions
-			fields["denied_connections"] = denied_connections
-			fields["lost_connections"] = lost_connections
-			fields["access_denied"] = access_denied
-			fields["empty_queries"] = empty_queries
-			fields["total_ssl_connections"] = total_ssl_connections
+			fields := map[string]interface{}{
+			  "total_connections"] = total_connections
+			  "concurrent_connections"] = concurrent_connections
+			  "connected_time"] = connected_time
+			  "busy_time"] = busy_time
+			  "cpu_time"] = cpu_time
+			  "bytes_received"] = bytes_received
+			  "bytes_sent"] = bytes_sent
+			  "binlog_bytes_written"] = binlog_bytes_written
+			  "rows_fetched"] = rows_fetched
+			  "rows_updated"] = rows_updated
+			  "table_rows_read"] = table_rows_read
+			  "select_commands"] = select_commands
+			  "update_commands"] = update_commands
+			  "other_commands"] = other_commands
+			  "commit_transactions"] = commit_transactions
+			  "rollback_transactions"] = rollback_transactions
+			  "denied_connections"] = denied_connections
+			  "lost_connections"] = lost_connections
+			  "access_denied"] = access_denied
+			  "empty_queries"] = empty_queries
+			  "total_ssl_connections"] = total_ssl_connections
+                        }
 
 			acc.AddFields("mysql_user_stats", fields, tags)
 		}
