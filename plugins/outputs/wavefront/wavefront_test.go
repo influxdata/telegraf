@@ -23,7 +23,7 @@ func defaultWavefront() *Wavefront {
 
 func TestSourceTags(t *testing.T) {
 	w := defaultWavefront()
-	w.SourceTags = []string{"snmp_host", "hostagent"}
+	w.SourceOverride = []string{"snmp_host", "hostagent"}
 
 	var tagtests = []struct {
 		ptIn    map[string]string
