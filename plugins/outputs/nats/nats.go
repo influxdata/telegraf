@@ -19,6 +19,9 @@ type NATS struct {
 	Password string
 	// NATS subject to publish metrics to
 	Subject string
+	// OutputPrecision string (parsed as a duration,
+	// only used for JSON output)
+	OutputPrecision string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -41,6 +44,14 @@ var sampleConfig = `
   # password = ""
   ## NATS subject for producer messages
   subject = "telegraf"
+  ## The output_precision parameter can be used to specify the units that should
+  ## be used when creating timestamps and is only used when the data_format is
+  ## set to "json"; in that case valid values are "1ns", "1us" (or "1µs"), "1ms",
+  ## or "1s"; for the other supported data_format types, the precision will depend
+  ## on the data_format (seconds for "graphite" data, nanoseconds for "influx"
+  ## data); if unspecified, then the timestamps output with "json" data
+  ## will be in seconds
+  output_precision = ""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -115,7 +126,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, metric := range metrics {
-		buf, err := n.serializer.Serialize(metric)
+		buf, err := n.serializer.Serialize(metric, n.OutputPrecision)
 		if err != nil {
 			return err
 		}

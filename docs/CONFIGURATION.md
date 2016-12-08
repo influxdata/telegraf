@@ -59,7 +59,7 @@ ie, a jitter of 5s and flush_interval 10s means flushes will happen every 10-15s
 * **precision**: By default, precision will be set to the same timestamp order
 as the collection interval, with the maximum being 1s. Precision will NOT
 be used for service inputs, such as logparser and statsd. Valid values are
-"ns", "us" (or "µs"), "ms", "s".
+"1ns", "1us" (or "1µs"), "1ms", "1s".
 * **logfile**: Specify the log file name. The empty string means to log to stdout.
 * **debug**: Run telegraf in debug mode.
 * **quiet**: Run telegraf in quiet mode (error messages only).

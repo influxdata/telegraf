@@ -233,7 +233,7 @@ var header = `# Telegraf Configuration
   ## By default, precision will be set to the same timestamp order as the
   ## collection interval, with the maximum being 1s.
   ## Precision will NOT be used for service inputs, such as logparser and statsd.
-  ## Valid values are "ns", "us" (or "µs"), "ms", "s".
+  ## Valid values are "1ns", "1us" (or "1µs"), "1ms", "1s".
   precision = ""
 
   ## Logging configuration:
