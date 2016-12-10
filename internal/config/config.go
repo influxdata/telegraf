@@ -139,6 +139,15 @@ type AgentConfig struct {
 	Quiet        bool
 	Hostname     string
 	OmitHostname bool
+
+	// TimestampUnits can be used to specify the units that the timestamp
+	// should be output in for the "json" data_format; it is not used for
+	// the "influx" or "graphite" data_formats since the timestamp units
+	// for those two output data_formats are fixed (as nanoseconds and
+	// seconds, respectively).  Valid values for this parameter are
+	// "ns", "us" (or "µs"), "ms", or "s", and the timestamp units used if
+	// this parameter is not specified are "s"
+	TimestampUnits internal.Duration
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -248,6 +257,14 @@ var header = `# Telegraf Configuration
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
+
+  ## Units to use for the timestamps that are output by the agent; this parameter
+  ## only effects timestamps for the "json" data_format, since the units for the
+  ## timestamps output in the "influx" and "graphite" data formats are fixed as
+  ## nanoseconds and seconds, respectively.
+  ## Valid values are "ns", "us" (or "µs"), "ms", or "s", and the default units
+  ## used if this parameter is not specified are "s"
+  timestamp_units = ""
 
 
 ###############################################################################
@@ -764,7 +781,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	// arbitrary types of output, so build the serializer and set it.
 	switch t := output.(type) {
 	case serializers.SerializerOutput:
-		serializer, err := buildSerializer(name, table)
+		serializer, err := buildSerializer(name, table, c.Agent.TimestampUnits)
 		if err != nil {
 			return err
 		}
@@ -1240,7 +1257,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 // buildSerializer grabs the necessary entries from the ast.Table for creating
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
-func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error) {
+func buildSerializer(name string, tbl *ast.Table, timestamp_units internal.Duration) (serializers.Serializer, error) {
 	c := &serializers.Config{}
 
 	if node, ok := tbl.Fields["data_format"]; ok {
@@ -1274,7 +1291,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
-	return serializers.NewSerializer(c)
+	return serializers.NewSerializer(c, timestamp_units)
 }
 
 // buildOutput parses output specific items from the ast.Table,

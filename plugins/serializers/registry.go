@@ -3,6 +3,9 @@ package serializers
 import (
 	"github.com/influxdata/telegraf"
 
+	"time"
+
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -39,7 +42,7 @@ type Config struct {
 }
 
 // NewSerializer a Serializer interface based on the given config.
-func NewSerializer(config *Config) (Serializer, error) {
+func NewSerializer(config *Config, timestamp_units internal.Duration) (Serializer, error) {
 	var err error
 	var serializer Serializer
 	switch config.DataFormat {
@@ -48,13 +51,18 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
-		serializer, err = NewJsonSerializer()
+		serializer, err = NewJsonSerializer(timestamp_units)
 	}
 	return serializer, err
 }
 
-func NewJsonSerializer() (Serializer, error) {
-	return &json.JsonSerializer{}, nil
+func NewJsonSerializer(timestamp_units internal.Duration) (Serializer, error) {
+	if timestamp_units.Duration.Seconds() <= 0 {
+		timestamp_units.Duration, _ = time.ParseDuration("1s")
+	}
+	return &json.JsonSerializer{
+		TimestampUnits: timestamp_units,
+	}, nil
 }
 
 func NewInfluxSerializer() (Serializer, error) {
