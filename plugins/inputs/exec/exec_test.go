@@ -36,7 +36,7 @@ const malformedJson = `
     "status": "green",
 `
 
-const lineProtocol = "cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1"
+const lineProtocol = "cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1\n"
 
 const lineProtocolMulti = `
 cpu,cpu=cpu0,host=foo,datacenter=us-east usage_idle=99,usage_busy=1

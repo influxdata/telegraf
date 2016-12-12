@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -41,18 +42,19 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 		s.MountPoints = s.Mountpoints
 	}
 
-	disks, err := s.ps.DiskUsage(s.MountPoints, s.IgnoreFS)
+	disks, partitions, err := s.ps.DiskUsage(s.MountPoints, s.IgnoreFS)
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
 
-	for _, du := range disks {
+	for i, du := range disks {
 		if du.Total == 0 {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
 			continue
 		}
 		tags := map[string]string{
 			"path":   du.Path,
+			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
 			"fstype": du.Fstype,
 		}
 		var used_percent float64
@@ -131,13 +133,14 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 		}
 
 		fields := map[string]interface{}{
-			"reads":       io.ReadCount,
-			"writes":      io.WriteCount,
-			"read_bytes":  io.ReadBytes,
-			"write_bytes": io.WriteBytes,
-			"read_time":   io.ReadTime,
-			"write_time":  io.WriteTime,
-			"io_time":     io.IoTime,
+			"reads":            io.ReadCount,
+			"writes":           io.WriteCount,
+			"read_bytes":       io.ReadBytes,
+			"write_bytes":      io.WriteBytes,
+			"read_time":        io.ReadTime,
+			"write_time":       io.WriteTime,
+			"io_time":          io.IoTime,
+			"iops_in_progress": io.IopsInProgress,
 		}
 		acc.AddCounter("diskio", fields, tags)
 	}
