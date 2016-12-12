@@ -354,6 +354,7 @@ func registerPlugin(pluginsDir, filePath string, p *plugin.Plugin) error {
 	// structure. E.g., if the root plugin directory, passed in the pluginsDir
 	// argument, is '/home/jdoe/bin/telegraf/plugins' and we're registering plugin
 	// '/home/jdoe/bin/telegraf/plugins/input/mysql.so'
+	pluginsDir = filepath.Clean(pluginsDir)
 	parentDir, _ := filepath.Split(pluginsDir)
 	var err error
 	if filePath, err = filepath.Rel(parentDir, filePath); err != nil {
