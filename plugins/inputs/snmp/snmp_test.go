@@ -4,6 +4,7 @@ package snmp
 import (
 	"fmt"
 	"net"
+	"os/exec"
 	"sync"
 	"testing"
 	"time"
@@ -196,6 +197,56 @@ func TestSnmpInit(t *testing.T) {
 		Name:        "hostname",
 		initialized: true,
 	}, s.Fields[0])
+}
+
+func TestSnmpInit_noTranslate(t *testing.T) {
+	// override execCommand so it returns exec.ErrNotFound
+	defer func(ec func(string, ...string) *exec.Cmd) { execCommand = ec }(execCommand)
+	execCommand = func(_ string, _ ...string) *exec.Cmd {
+		return exec.Command("snmptranslateExecErrNotFound")
+	}
+
+	s := &Snmp{
+		Fields: []Field{
+			{Oid: ".1.1.1.1", Name: "one", IsTag: true},
+			{Oid: ".1.1.1.2", Name: "two"},
+			{Oid: ".1.1.1.3"},
+		},
+		Tables: []Table{
+			{Fields: []Field{
+				{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+				{Oid: ".1.1.1.5", Name: "five"},
+				{Oid: ".1.1.1.6"},
+			}},
+		},
+	}
+
+	err := s.init()
+	require.NoError(t, err)
+
+	assert.Equal(t, ".1.1.1.1", s.Fields[0].Oid)
+	assert.Equal(t, "one", s.Fields[0].Name)
+	assert.Equal(t, true, s.Fields[0].IsTag)
+
+	assert.Equal(t, ".1.1.1.2", s.Fields[1].Oid)
+	assert.Equal(t, "two", s.Fields[1].Name)
+	assert.Equal(t, false, s.Fields[1].IsTag)
+
+	assert.Equal(t, ".1.1.1.3", s.Fields[2].Oid)
+	assert.Equal(t, ".1.1.1.3", s.Fields[2].Name)
+	assert.Equal(t, false, s.Fields[2].IsTag)
+
+	assert.Equal(t, ".1.1.1.4", s.Tables[0].Fields[0].Oid)
+	assert.Equal(t, "four", s.Tables[0].Fields[0].Name)
+	assert.Equal(t, true, s.Tables[0].Fields[0].IsTag)
+
+	assert.Equal(t, ".1.1.1.5", s.Tables[0].Fields[1].Oid)
+	assert.Equal(t, "five", s.Tables[0].Fields[1].Name)
+	assert.Equal(t, false, s.Tables[0].Fields[1].IsTag)
+
+	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Oid)
+	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Name)
+	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 
 func TestGetSNMPConnection_v2(t *testing.T) {
