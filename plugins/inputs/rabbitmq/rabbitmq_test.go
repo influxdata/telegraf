@@ -374,6 +374,57 @@ const sampleQueuesResponse = `
 ]
 `
 
+const sampleConnectionsResponse = `
+[
+  {
+    "recv_oct": 166055,
+    "recv_oct_details": {
+      "rate": 0
+    },
+    "send_oct": 589,
+    "send_oct_details": {
+      "rate": 0
+    },
+    "recv_cnt": 124,
+    "send_cnt": 7,
+    "send_pend": 0,
+    "state": "running",
+    "channels": 1,
+    "type": "network",
+    "node": "rabbit@ip-10-0-12-133",
+    "name": "10.0.10.8:32774 -> 10.0.12.131:5672",
+    "port": 5672,
+    "peer_port": 32774,
+    "host": "10.0.12.131",
+    "peer_host": "10.0.10.8",
+    "ssl": false,
+    "peer_cert_subject": null,
+    "peer_cert_issuer": null,
+    "peer_cert_validity": null,
+    "auth_mechanism": "AMQPLAIN",
+    "ssl_protocol": null,
+    "ssl_key_exchange": null,
+    "ssl_cipher": null,
+    "ssl_hash": null,
+    "protocol": "AMQP 0-9-1",
+    "user": "workers",
+    "vhost": "main",
+    "timeout": 0,
+    "frame_max": 131072,
+    "channel_max": 65535,
+    "client_properties": {
+      "product": "py-amqp",
+      "product_version": "1.4.7",
+      "capabilities": {
+        "connection.blocked": true,
+        "consumer_cancel_notify": true
+      }
+    },
+    "connected_at": 1476647837266
+  }
+]
+`
+
 func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
@@ -385,6 +436,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			rsp = sampleNodesResponse
 		case "/api/queues":
 			rsp = sampleQueuesResponse
+		case "/api/connections":
+			rsp = sampleConnectionsResponse
 		default:
 			panic("Cannot handle request")
 		}
@@ -441,4 +494,15 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	}
 
 	assert.True(t, acc.HasMeasurement("rabbitmq_queue"))
+
+	assert.True(t, acc.HasMeasurement("rabbitmq_connection"))
+
+	connection_fields := map[string]interface{}{
+		"recv_cnt":  int64(124),
+		"send_cnt":  int64(7),
+		"send_pend": int64(0),
+		"state":     "running",
+	}
+
+	acc.AssertContainsFields(t, "rabbitmq_connection", connection_fields)
 }
