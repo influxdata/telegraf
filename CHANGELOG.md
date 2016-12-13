@@ -11,13 +11,25 @@
 - [#1965](https://github.com/influxdata/telegraf/pull/1965): The JSON parser can now parse an array of objects using the same configuration.
 - [#1807](https://github.com/influxdata/telegraf/pull/1807): Option to use device name rather than path for reporting disk stats.
 - [#1348](https://github.com/influxdata/telegraf/issues/1348): Telegraf "internal" plugin for collecting stats on itself.
+- [#2127](https://github.com/influxdata/telegraf/pull/2127): Update Go version to 1.7.4.
+- [#2126](https://github.com/influxdata/telegraf/pull/2126): Support a metric.Split function.
+- [#2026](https://github.com/influxdata/telegraf/pull/2065): elasticsearch "shield" (basic auth) support doc.
 - [#1885](https://github.com/influxdata/telegraf/pull/1885): Fix over-querying of cloudwatch metrics
 
 ### Bugfixes
 
 - [#2049](https://github.com/influxdata/telegraf/pull/2049): Fix the Value data format not trimming null characters from input.
 - [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
-- [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus
+- [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus.
+- [#2146](https://github.com/influxdata/telegraf/issues/2146): Fix potential panic in aggregator plugin metric maker.
+- [#1843](https://github.com/influxdata/telegraf/pull/1843) & [#1668](https://github.com/influxdata/telegraf/issues/1668): Add optional ability to define PID as a tag.
+
+## v1.1.2 [2016-12-12]
+
+### Bugfixes
+
+- [#2007](https://github.com/influxdata/telegraf/issues/2007): Make snmptranslate not required when using numeric OID.
+- [#2104](https://github.com/influxdata/telegraf/issues/2104): Add a global snmp translation cache.
 
 ## v1.1.1 [2016-11-14]
 

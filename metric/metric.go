@@ -178,6 +178,57 @@ func (m *metric) Serialize() []byte {
 	return tmp
 }
 
+func (m *metric) Split(maxSize int) []telegraf.Metric {
+	if m.Len() < maxSize {
+		return []telegraf.Metric{m}
+	}
+	var out []telegraf.Metric
+
+	// constant number of bytes for each metric (in addition to field bytes)
+	constant := len(m.name) + len(m.tags) + len(m.t) + 3
+	// currently selected fields
+	fields := make([]byte, 0, maxSize)
+
+	i := 0
+	for {
+		if i >= len(m.fields) {
+			// hit the end of the field byte slice
+			if len(fields) > 0 {
+				out = append(out, copyWith(m.name, m.tags, fields, m.t))
+			}
+			break
+		}
+
+		// find the end of the next field
+		j := indexUnescapedByte(m.fields[i:], ',')
+		if j == -1 {
+			j = len(m.fields)
+		} else {
+			j += i
+		}
+
+		// if true, then we need to create a metric _not_ including the currently
+		// selected field
+		if len(m.fields[i:j])+len(fields)+constant > maxSize {
+			// if false, then we'll create a metric including the currently
+			// selected field anyways. This means that the given maxSize is too
+			// small for a single field to fit.
+			if len(fields) > 0 {
+				out = append(out, copyWith(m.name, m.tags, fields, m.t))
+			}
+
+			fields = make([]byte, 0, maxSize)
+		}
+		if len(fields) > 0 {
+			fields = append(fields, ',')
+		}
+		fields = append(fields, m.fields[i:j]...)
+
+		i = j + 1
+	}
+	return out
+}
+
 func (m *metric) Fields() map[string]interface{} {
 	fieldMap := map[string]interface{}{}
 	i := 0
@@ -380,17 +431,21 @@ func (m *metric) RemoveField(key string) error {
 }
 
 func (m *metric) Copy() telegraf.Metric {
-	mOut := metric{
-		name:   make([]byte, len(m.name)),
-		tags:   make([]byte, len(m.tags)),
-		fields: make([]byte, len(m.fields)),
-		t:      make([]byte, len(m.t)),
+	return copyWith(m.name, m.tags, m.fields, m.t)
+}
+
+func copyWith(name, tags, fields, t []byte) telegraf.Metric {
+	out := metric{
+		name:   make([]byte, len(name)),
+		tags:   make([]byte, len(tags)),
+		fields: make([]byte, len(fields)),
+		t:      make([]byte, len(t)),
 	}
-	copy(mOut.name, m.name)
-	copy(mOut.tags, m.tags)
-	copy(mOut.fields, m.fields)
-	copy(mOut.t, m.t)
-	return &mOut
+	copy(out.name, name)
+	copy(out.tags, tags)
+	copy(out.fields, fields)
+	copy(out.t, t)
+	return &out
 }
 
 func (m *metric) HashID() uint64 {
