@@ -57,6 +57,12 @@ sysctl -w net.core.rmem_max=8388608
 sysctl -w net.core.rmem_default=8388608
 ```
 
+To enable the new values without a system restart, type the following command as root:
+
+```
+sysctl -p
+```
+
 ### BSD/Darwin
 
 On BSD/Darwin systems you need to add about a 15% padding to the kernel limit
