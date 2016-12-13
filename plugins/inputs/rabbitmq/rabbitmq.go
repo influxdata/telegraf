@@ -50,8 +50,9 @@ type RabbitMQ struct {
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
 
 	// InsecureSkipVerify bool
-	Nodes  []string
-	Queues []string
+	Nodes       []string
+	Queues      []string
+	Connections []string
 
 	Client *http.Client
 }
@@ -135,10 +136,22 @@ type Node struct {
 	SocketsUsed   int64 `json:"sockets_used"`
 }
 
+// Connection ...
+type Connection struct {
+	Name         string
+	State        string
+	Vhost        string
+	Host         string
+	Node         string
+	ReceiveCount int64 `json:"recv_cnt"`
+	SendCount    int64 `json:"send_cnt"`
+	SendPend     int64 `json:"send_pend"`
+}
+
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error)
 
-var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
+var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherConnections}
 
 var sampleConfig = `
   # url = "http://localhost:15672"
@@ -380,6 +393,42 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 	errChan <- nil
 }
 
+func gatherConnections(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
+	// Gather information about connections
+	connections := make([]Connection, 0)
+	err := r.requestJSON("/api/connections", &connections)
+	if err != nil {
+		errChan <- err
+		return
+	}
+
+	for _, connection := range connections {
+		if !r.shouldGatherConnection(connection) {
+			continue
+		}
+		tags := map[string]string{
+			"url":        r.URL,
+			"connection": connection.Name,
+			"vhost":      connection.Vhost,
+			"host":       connection.Host,
+			"node":       connection.Node,
+		}
+
+		acc.AddFields(
+			"rabbitmq_connection",
+			map[string]interface{}{
+				"recv_cnt":  connection.ReceiveCount,
+				"send_cnt":  connection.SendCount,
+				"send_pend": connection.SendPend,
+				"state":     connection.State,
+			},
+			tags,
+		)
+	}
+
+	errChan <- nil
+}
+
 func (r *RabbitMQ) shouldGatherNode(node Node) bool {
 	if len(r.Nodes) == 0 {
 		return true
@@ -401,6 +450,20 @@ func (r *RabbitMQ) shouldGatherQueue(queue Queue) bool {
 
 	for _, name := range r.Queues {
 		if name == queue.Name {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *RabbitMQ) shouldGatherConnection(connection Connection) bool {
+	if len(r.Connections) == 0 {
+		return true
+	}
+
+	for _, name := range r.Connections {
+		if name == connection.Name {
 			return true
 		}
 	}
