@@ -18,6 +18,7 @@
 - [#1913](https://github.com/influxdata/telegraf/pull/1913): OpenTSDB basic auth support.
 - [#1908](https://github.com/influxdata/telegraf/pull/1908): RabbitMQ Connection metrics.
 - [#1937](https://github.com/influxdata/telegraf/pull/1937): HAProxy session limit metric.
+- [#2068](https://github.com/influxdata/telegraf/issues/2068): Accept strings for StatsD sets.
 
 ### Bugfixes
 

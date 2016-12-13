@@ -98,6 +98,7 @@ type metric struct {
 	hash       string
 	intvalue   int64
 	floatvalue float64
+	strvalue   string
 	mtype      string
 	additive   bool
 	samplerate float64
@@ -106,7 +107,7 @@ type metric struct {
 
 type cachedset struct {
 	name   string
-	fields map[string]map[int64]bool
+	fields map[string]map[string]bool
 	tags   map[string]string
 }
 
@@ -435,7 +436,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				return errors.New("Error Parsing statsd line")
 			}
 			m.floatvalue = v
-		case "c", "s":
+		case "c":
 			var v int64
 			v, err := strconv.ParseInt(pipesplit[0], 10, 64)
 			if err != nil {
@@ -451,6 +452,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				v = int64(float64(v) / m.samplerate)
 			}
 			m.intvalue = v
+		case "s":
+			m.strvalue = pipesplit[0]
 		}
 
 		// Parse the name & tags from bucket
@@ -625,16 +628,16 @@ func (s *Statsd) aggregate(m metric) {
 		if !ok {
 			s.sets[m.hash] = cachedset{
 				name:   m.name,
-				fields: make(map[string]map[int64]bool),
+				fields: make(map[string]map[string]bool),
 				tags:   m.tags,
 			}
 		}
 		// check if the field exists
 		_, ok = s.sets[m.hash].fields[m.field]
 		if !ok {
-			s.sets[m.hash].fields[m.field] = make(map[int64]bool)
+			s.sets[m.hash].fields[m.field] = make(map[string]bool)
 		}
-		s.sets[m.hash].fields[m.field][m.intvalue] = true
+		s.sets[m.hash].fields[m.field][m.strvalue] = true
 	}
 }
 
