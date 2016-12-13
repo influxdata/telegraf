@@ -11,15 +11,25 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Server struct {
 	Name     string
-	Host     string
+	Url      string
+	Headertimeout  internal.Duration
+        Requesttimeout  internal.Duration
 	Username string
 	Password string
-	Port     string
+	// Path to CA file
+	Ca    string
+	// Path to host cert file
+	Cert  string
+	// Path to cert key file
+	Key   string
+	// Use SSL but skip chain & host verification
+	Insecureverify bool
 }
 
 type Metric struct {
@@ -29,25 +39,13 @@ type Metric struct {
 	Path      string
 }
 
-type JolokiaClient interface {
-	MakeRequest(req *http.Request) (*http.Response, error)
-}
-
-type JolokiaClientImpl struct {
-	client *http.Client
-}
-
-func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error) {
-	return c.client.Do(req)
-}
-
 type Jolokia struct {
-	jClient JolokiaClient
-	Context string
-	Mode    string
-	Servers []Server
-	Metrics []Metric
-	Proxy   Server
+	Context         string
+	Mode            string
+	Proxy           Server
+	Servers         []Server
+	Metrics	        []Metric
+
 }
 
 const sampleConfig = `
@@ -62,38 +60,54 @@ const sampleConfig = `
   ## proxy address configurations.
   ## Remember to change host address to fit your environment.
   # [inputs.jolokia.proxy]
-  #   host = "127.0.0.1"
-  #   port = "8080"
-
+  #   url = "localhost:8080"
+  #   headertimeout = 30
+  #   requesttimeout = 30
+  #   username = "myuser"
+  #   password = "mypassword"
+  ## Optional SSL Config
+  #   ca = "/etc/telegraf/ca.pem"
+  #   cert = "/etc/telegraf/cert.pem"
+  #   key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  #   insecureverify = false
 
   ## List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]
     name = "as-server-01"
-    host = "127.0.0.1"
-    port = "8080"
+    url = "http://as-server-01:8080"
+    # headertimeout = 30
+    # requesttimeout = 30
     # username = "myuser"
     # password = "mypassword"
+    ## Optional SSL Config
+    # ca = "/etc/telegraf/ca.pem"
+    # cert = "/etc/telegraf/cert.pem"
+    # key = "/etc/telegraf/key.pem"
+    ## Use SSL but skip chain & host verification
+    # insecureverify = false
 
   ## List of metrics collected on above servers
   ## Each metric consists in a name, a jmx path and either
   ## a pass or drop slice attribute.
-  ## This collect all heap memory usage metrics.
+  ## This collect all heap memory usage metrics.
   [[inputs.jolokia.metrics]]
     name = "heap_memory_usage"
     mbean  = "java.lang:type=Memory"
     attribute = "HeapMemoryUsage"
 
-  ## This collect thread counts metrics.
+  ## This collect thread counts metrics.
   [[inputs.jolokia.metrics]]
     name = "thread_count"
     mbean  = "java.lang:type=Threading"
     attribute = "TotalStartedThreadCount,ThreadCount,DaemonThreadCount,PeakThreadCount"
 
-  ## This collect number of class loaded/unloaded counts metrics.
+  ## This collect number of class loaded/unloaded counts metrics.
   [[inputs.jolokia.metrics]]
     name = "class_count"
     mbean  = "java.lang:type=ClassLoading"
     attribute = "LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
+
 `
 
 func (j *Jolokia) SampleConfig() string {
@@ -104,8 +118,71 @@ func (j *Jolokia) Description() string {
 	return "Read JMX metrics through Jolokia"
 }
 
-func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
-	resp, err := j.jClient.MakeRequest(req)
+func (j *Jolokia) createHttpClient(server Server) (*http.Client, error) {
+	var tr *http.Transport
+
+	if server.Headertimeout.Duration < time.Second {
+		server.Headertimeout.Duration = time.Second * 5
+	}
+
+        if server.Requesttimeout.Duration < time.Second {
+                server.Requesttimeout.Duration = time.Second * 5
+        }
+
+	serverUrl, err := url.Parse(server.Url)
+	if err != nil || serverUrl.String() == "" {
+		return nil, err
+        }
+
+	if serverUrl.Scheme == "https" {
+		if server.Cert == "" && server.Key == "" && server.Ca == "" {
+			err = fmt.Errorf("No SSL configuration provided")
+			return nil,err
+		}
+		tlsCfg, err := internal.GetTLSConfig(
+			server.Cert, server.Key, server.Ca, server.Insecureverify)
+		if err != nil {
+			return nil, err
+		}
+		tr = &http.Transport{
+			ResponseHeaderTimeout: server.Headertimeout.Duration,
+			TLSClientConfig:       tlsCfg,
+		}
+	} else {
+		tr = &http.Transport{
+			ResponseHeaderTimeout: server.Headertimeout.Duration,
+		}
+	}
+
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   server.Requesttimeout.Duration,
+	}
+
+	return client, nil
+}
+
+func (j *Jolokia) doRequest(server Server,metric Metric) (map[string]interface{}, error) {
+	var client *http.Client
+
+        req, err := j.prepareRequest(server, metric)
+	if err != nil || req.URL.String() == "" {
+		return nil, err
+	}
+
+	if j.Mode == "proxy" {
+		client, err = j.createHttpClient(j.Proxy)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		client, err = j.createHttpClient(server)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +191,7 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 	// Process response
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			req.RequestURI,
+			req.URL.String(),
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
@@ -148,6 +225,7 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 
 func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, error) {
 	var jolokiaUrl *url.URL
+
 	context := j.Context // Usually "/jolokia"
 
 	// Create bodyContent
@@ -163,10 +241,15 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 		}
 	}
 
+        serverUrl, err := url.Parse(server.Url + context)
+        if err != nil || serverUrl.String() == "" {
+                return nil, err
+        }
+
 	// Add target, only in proxy mode
 	if j.Mode == "proxy" {
-		serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi",
-			server.Host, server.Port)
+		serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s/jmxrmi",
+			serverUrl.Host)
 
 		target := map[string]string{
 			"url": serviceUrl,
@@ -185,8 +268,8 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 		proxy := j.Proxy
 
 		// Prepare ProxyURL
-		proxyUrl, err := url.Parse("http://" + proxy.Host + ":" + proxy.Port + context)
-		if err != nil {
+		proxyUrl, err := url.Parse(proxy.Url + context)
+		if err != nil || proxyUrl.String() == "" {
 			return nil, err
 		}
 		if proxy.Username != "" || proxy.Password != "" {
@@ -196,10 +279,6 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 		jolokiaUrl = proxyUrl
 
 	} else {
-		serverUrl, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
-		if err != nil {
-			return nil, err
-		}
 		if server.Username != "" || server.Password != "" {
 			serverUrl.User = url.UserPassword(server.Username, server.Password)
 		}
@@ -225,21 +304,16 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 	metrics := j.Metrics
 	tags := make(map[string]string)
 
+
 	for _, server := range servers {
 		tags["jolokia_name"] = server.Name
-		tags["jolokia_port"] = server.Port
-		tags["jolokia_host"] = server.Host
+		tags["jolokia_url"] = server.Url
 		fields := make(map[string]interface{})
 
 		for _, metric := range metrics {
 			measurement := metric.Name
 
-			req, err := j.prepareRequest(server, metric)
-			if err != nil {
-				return err
-			}
-
-			out, err := j.doRequest(req)
+			out, err := j.doRequest(server,metric)
 
 			if err != nil {
 				fmt.Printf("Error handling response: %s\n", err)
@@ -276,11 +350,6 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("jolokia", func() telegraf.Input {
-		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
-		client := &http.Client{
-			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
-		}
-		return &Jolokia{jClient: &JolokiaClientImpl{client: client}}
+		return &Jolokia{}
 	})
 }
