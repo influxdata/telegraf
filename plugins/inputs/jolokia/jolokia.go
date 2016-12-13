@@ -252,7 +252,14 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 							switch t2 := v.(type) {
 							case map[string]interface{}:
 								for k2, v2 := range t2 {
-									fields[measurement+"_"+k+"_"+k2] = v2
+									switch t3 := v2.(type) {
+									case map[string]interface{}:
+										for k3, v3 := range t3 {
+											fields[measurement+"_"+k+"_"+k2+"_"+k3] = v3
+										}
+									case interface{}:
+										fields[measurement+"_"+k+"_"+k2] = v2
+									}
 								}
 							case interface{}:
 								fields[measurement+"_"+k] = t2
