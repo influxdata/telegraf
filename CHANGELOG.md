@@ -15,6 +15,9 @@
 - [#2126](https://github.com/influxdata/telegraf/pull/2126): Support a metric.Split function.
 - [#2026](https://github.com/influxdata/telegraf/pull/2065): elasticsearch "shield" (basic auth) support doc.
 - [#1885](https://github.com/influxdata/telegraf/pull/1885): Fix over-querying of cloudwatch metrics
+- [#1913](https://github.com/influxdata/telegraf/pull/1913): OpenTSDB basic auth support.
+- [#1908](https://github.com/influxdata/telegraf/pull/1908): RabbitMQ Connection metrics.
+- [#1937](https://github.com/influxdata/telegraf/pull/1937): HAProxy session limit metric.
 
 ### Bugfixes
 
@@ -23,6 +26,7 @@
 - [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus.
 - [#2146](https://github.com/influxdata/telegraf/issues/2146): Fix potential panic in aggregator plugin metric maker.
 - [#1843](https://github.com/influxdata/telegraf/pull/1843) & [#1668](https://github.com/influxdata/telegraf/issues/1668): Add optional ability to define PID as a tag.
+- [#1730](https://github.com/influxdata/telegraf/issues/1730): Fix win_perf_counters not gathering non-English counters.
 
 ## v1.1.2 [2016-12-12]
 
