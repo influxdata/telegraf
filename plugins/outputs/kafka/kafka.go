@@ -25,6 +25,9 @@ type Kafka struct {
 	RequiredAcks int
 	// MaxRetry Tag
 	MaxRetry int
+	// OutputPrecision string (parsed as a duration,
+	// only used for JSON output)
+	OutputPrecision string
 
 	// Legacy SSL config options
 	// TLS client certificate
@@ -84,6 +87,15 @@ var sampleConfig = `
 
   ##  The total number of times to retry sending a message
   max_retry = 3
+
+  ## The output_precision parameter can be used to specify the units that should
+  ## be used when creating timestamps and is only used when the data_format is
+  ## set to "json"; in that case valid values are "1ns", "1us" (or "1µs"), "1ms",
+  ## or "1s"; for the other supported data_format types, the precision will depend
+  ## on the data_format (seconds for "graphite" data, nanoseconds for "influx"
+  ## data); if unspecified, then the timestamps output with "json" data
+  ## will be in seconds
+  output_precision = ""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -154,7 +166,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, metric := range metrics {
-		buf, err := k.serializer.Serialize(metric)
+		buf, err := k.serializer.Serialize(metric, k.OutputPrecision)
 		if err != nil {
 			return err
 		}
