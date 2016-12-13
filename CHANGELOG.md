@@ -14,6 +14,7 @@
 - [#2127](https://github.com/influxdata/telegraf/pull/2127): Update Go version to 1.7.4.
 - [#2126](https://github.com/influxdata/telegraf/pull/2126): Support a metric.Split function.
 - [#2026](https://github.com/influxdata/telegraf/pull/2065): elasticsearch "shield" (basic auth) support doc.
+- [#1885](https://github.com/influxdata/telegraf/pull/1885): Fix over-querying of cloudwatch metrics
 
 ### Bugfixes
 
