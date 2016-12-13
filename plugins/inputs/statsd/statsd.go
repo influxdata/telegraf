@@ -136,14 +136,19 @@ func (_ *Statsd) Description() string {
 const sampleConfig = `
   ## Address and port to host UDP listener on
   service_address = ":8125"
-  ## Delete gauges every interval (default=false)
-  delete_gauges = false
-  ## Delete counters every interval (default=false)
-  delete_counters = false
-  ## Delete sets every interval (default=false)
-  delete_sets = false
-  ## Delete timings & histograms every interval (default=true)
+
+  ## The following configuration options control when telegraf clears it's cache
+  ## of previous values. If set to false, then telegraf will only clear it's
+  ## cache when the daemon is restarted.
+  ## Reset gauges every interval (default=true)
+  delete_gauges = true
+  ## Reset counters every interval (default=true)
+  delete_counters = true
+  ## Reset sets every interval (default=true)
+  delete_sets = true
+  ## Reset timings & histograms every interval (default=true)
   delete_timings = true
+
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -654,8 +659,13 @@ func (s *Statsd) Stop() {
 func init() {
 	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
+			ServiceAddress:         ":8125",
 			MetricSeparator:        "_",
 			AllowedPendingMessages: defaultAllowPendingMessage,
+			DeleteCounters:         true,
+			DeleteGauges:           true,
+			DeleteSets:             true,
+			DeleteTimings:          true,
 		}
 	})
 }

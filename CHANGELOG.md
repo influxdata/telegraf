@@ -2,6 +2,10 @@
 
 ### Release Notes
 
+- The StatsD plugin will now default all "delete_" config options to "true". This
+will change te default behavior for users who were not specifying these parameters
+in their config file.
+
 ### Features
 
 - [#2123](https://github.com/influxdata/telegraf/pull/2123): Fix improper calculation of CPU percentages
@@ -19,6 +23,7 @@
 - [#1908](https://github.com/influxdata/telegraf/pull/1908): RabbitMQ Connection metrics.
 - [#1937](https://github.com/influxdata/telegraf/pull/1937): HAProxy session limit metric.
 - [#2068](https://github.com/influxdata/telegraf/issues/2068): Accept strings for StatsD sets.
+- [#1893](https://github.com/influxdata/telegraf/issues/1893): Change StatsD default "reset" behavior.
 
 ### Bugfixes
 
