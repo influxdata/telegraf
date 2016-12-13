@@ -48,7 +48,7 @@ The `use_regex` setting can be used to ensure all illegal characters are properl
   use_regex = false
 
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
-  source_tags = ["hostname", "snmp_host", "node_host"]
+  source_override = ["hostname", "snmp_host", "node_host"]
 
   ## Print additional debug information requires debug = true at the agent level
   debug_all = false
@@ -63,7 +63,7 @@ Parameters:
 	MetricSeparator string
 	ConvertPaths    bool
 	UseRegex    	bool
-	SourceTags       string
+	SourceOverride  string
 	DebugAll        bool
 
 * `prefix`: String to use as a prefix for all sent metrics.
@@ -73,7 +73,7 @@ Parameters:
 * `metric_separator`: character to use to separate metric and field names. (default is `_`)
 * `convert_paths`: if true (default) will convert all `_` in metric and field names to `metric_seperator`
 * `use_regex`: if true (default is false) will use regex to ensure all illegal characters are converted to `-`.  Regex is much slower than the default mode which will catch most illegal characters.  Use with caution.
-* `source_tags`: ordered list of point tags to use as the source name for Wavefront. Once a match a found that tag is used for that point.  If no tags are found the host tag will be used.
+* `source_override`: ordered list of point tags to use as the source name for Wavefront. Once a match is found, that tag is used as the source for that point.  If no tags are found the host tag will be used.
 * `debug_all`: Will output additional debug information.  Requires `debug = true` to be configured at the agent level
 
 

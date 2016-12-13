@@ -20,8 +20,8 @@ type Wavefront struct {
 	SimpleFields    bool
 	MetricSeparator string
 	ConvertPaths    bool
-	UseRegex    	bool
-	SourceTags      []string
+	UseRegex        bool
+	SourceOverride  []string
 	DebugAll        bool
 }
 
@@ -64,7 +64,7 @@ var sampleConfig = `
   #use_regex = false
 
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
-  #source_tags = ["hostname", "snmp_host", "node_host"]
+  #source_override = ["hostname", "snmp_host", "node_host"]
 
   ## Print additional debug information requires debug = true at the agent level
   #debug_all = false
@@ -131,7 +131,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 func buildTags(mTags map[string]string, w *Wavefront) []string {
 	sourceTagFound := false
 
-	for _, s := range w.SourceTags {
+	for _, s := range w.SourceOverride {
 		for k, v := range mTags {
 			if k == s {
 				mTags["source"] = v
