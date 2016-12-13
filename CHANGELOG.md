@@ -27,6 +27,7 @@
 - [#2146](https://github.com/influxdata/telegraf/issues/2146): Fix potential panic in aggregator plugin metric maker.
 - [#1843](https://github.com/influxdata/telegraf/pull/1843) & [#1668](https://github.com/influxdata/telegraf/issues/1668): Add optional ability to define PID as a tag.
 - [#1730](https://github.com/influxdata/telegraf/issues/1730): Fix win_perf_counters not gathering non-English counters.
+- [#2061](https://github.com/influxdata/telegraf/issues/2061): Fix panic when file stat info cannot be collected due to permissions or other issue(s).
 
 ## v1.1.2 [2016-12-12]
 
