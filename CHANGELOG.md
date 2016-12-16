@@ -31,6 +31,7 @@ in their config file.
 
 - [#2049](https://github.com/influxdata/telegraf/pull/2049): Fix the Value data format not trimming null characters from input.
 - [#1949](https://github.com/influxdata/telegraf/issues/1949): Fix windows `net` plugin.
+- [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus
 - [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus.
 - [#2146](https://github.com/influxdata/telegraf/issues/2146): Fix potential panic in aggregator plugin metric maker.
 - [#1843](https://github.com/influxdata/telegraf/pull/1843) & [#1668](https://github.com/influxdata/telegraf/issues/1668): Add optional ability to define PID as a tag.
@@ -41,6 +42,7 @@ in their config file.
 - [#1693](https://github.com/influxdata/telegraf/issues/1693): Properly collect nested jolokia struct data.
 - [#1917](https://github.com/influxdata/telegraf/pull/1917): fix puppetagent inputs plugin to support string for config variable.
 - [#1987](https://github.com/influxdata/telegraf/issues/1987): fix docker input plugin tags when registry has port.
+- [#2089](https://github.com/influxdata/telegraf/issues/2089): Fix tail input when reading from a pipe.
 
 ## v1.1.2 [2016-12-12]
 

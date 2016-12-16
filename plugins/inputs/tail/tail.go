@@ -16,6 +16,7 @@ import (
 type Tail struct {
 	Files         []string
 	FromBeginning bool
+	Pipe          bool
 
 	tailers []*tail.Tail
 	parser  parsers.Parser
@@ -44,6 +45,8 @@ const sampleConfig = `
   files = ["/var/mymetrics.out"]
   ## Read file from beginning.
   from_beginning = false
+  ## Whether file is a named pipe
+  pipe = false
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
@@ -70,10 +73,12 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 	t.acc = acc
 
-	var seek tail.SeekInfo
-	if !t.FromBeginning {
-		seek.Whence = 2
-		seek.Offset = 0
+	var seek *tail.SeekInfo
+	if !t.Pipe && !t.FromBeginning {
+		seek = &tail.SeekInfo{
+			Whence: 2,
+			Offset: 0,
+		}
 	}
 
 	var errS string
@@ -88,8 +93,9 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 				tail.Config{
 					ReOpen:    true,
 					Follow:    true,
-					Location:  &seek,
+					Location:  seek,
 					MustExist: true,
+					Pipe:      t.Pipe,
 				})
 			if err != nil {
 				errS += err.Error() + " "
@@ -129,6 +135,10 @@ func (t *Tail) receiver(tailer *tail.Tail) {
 			log.Printf("E! Malformed log line in %s: [%s], Error: %s\n",
 				tailer.Filename, line.Text, err)
 		}
+	}
+	if err := tailer.Err(); err != nil {
+		log.Printf("E! Error tailing file %s, Error: %s\n",
+			tailer.Filename, err)
 	}
 }
 
