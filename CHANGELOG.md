@@ -40,6 +40,7 @@ in their config file.
 - [#1904](https://github.com/influxdata/telegraf/issues/1904): Hddtemp always put the value in the field temperature.
 - [#1693](https://github.com/influxdata/telegraf/issues/1693): Properly collect nested jolokia struct data.
 - [#1917](https://github.com/influxdata/telegraf/pull/1917): fix puppetagent inputs plugin to support string for config variable.
+- [#1987](https://github.com/influxdata/telegraf/issues/1987): fix docker input plugin tags when registry has port.
 
 ## v1.1.2 [2016-12-12]
 
