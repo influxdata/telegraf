@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCloudWatchClient struct{}
+type mockGatherCloudWatchClient struct{}
 
-func (m *mockCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
+func (m *mockGatherCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
 	metric := &cloudwatch.Metric{
 		Namespace:  params.Namespace,
 		MetricName: aws.String("Latency"),
@@ -31,7 +31,7 @@ func (m *mockCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) 
 	return result, nil
 }
 
-func (m *mockCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error) {
+func (m *mockGatherCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error) {
 	dataPoint := &cloudwatch.Datapoint{
 		Timestamp:   params.EndTime,
 		Minimum:     aws.Float64(0.1),
@@ -62,7 +62,7 @@ func TestGather(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	c.client = &mockCloudWatchClient{}
+	c.client = &mockGatherCloudWatchClient{}
 
 	c.Gather(&acc)
 
@@ -81,6 +81,94 @@ func TestGather(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
 
+}
+
+type mockSelectMetricsCloudWatchClient struct{}
+
+func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
+	metrics := []*cloudwatch.Metric{}
+	// 4 metrics are available
+	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
+	// for 3 ELBs
+	loadBalancers := []string{"lb-1", "lb-2", "lb-3"}
+	// in 2 AZs
+	availabilityZones := []string{"us-east-1a", "us-east-1b"}
+	for _, m := range metricNames {
+		for _, lb := range loadBalancers {
+			// For each metric/ELB pair, we get an aggregate value across all AZs.
+			metrics = append(metrics, &cloudwatch.Metric{
+				Namespace:  aws.String("AWS/ELB"),
+				MetricName: aws.String(m),
+				Dimensions: []*cloudwatch.Dimension{
+					&cloudwatch.Dimension{
+						Name:  aws.String("LoadBalancerName"),
+						Value: aws.String(lb),
+					},
+				},
+			})
+			for _, az := range availabilityZones {
+				// We get a metric for each metric/ELB/AZ triplet.
+				metrics = append(metrics, &cloudwatch.Metric{
+					Namespace:  aws.String("AWS/ELB"),
+					MetricName: aws.String(m),
+					Dimensions: []*cloudwatch.Dimension{
+						&cloudwatch.Dimension{
+							Name:  aws.String("LoadBalancerName"),
+							Value: aws.String(lb),
+						},
+						&cloudwatch.Dimension{
+							Name:  aws.String("AvailabilityZone"),
+							Value: aws.String(az),
+						},
+					},
+				})
+			}
+		}
+	}
+
+	result := &cloudwatch.ListMetricsOutput{
+		Metrics: metrics,
+	}
+	return result, nil
+}
+
+func (m *mockSelectMetricsCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error) {
+	return nil, nil
+}
+
+func TestSelectMetrics(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 10,
+		Metrics: []*Metric{
+			&Metric{
+				MetricNames: []string{"Latency", "RequestCount"},
+				Dimensions: []*Dimension{
+					&Dimension{
+						Name:  "LoadBalancerName",
+						Value: "*",
+					},
+					&Dimension{
+						Name:  "AvailabilityZone",
+						Value: "*",
+					},
+				},
+			},
+		},
+	}
+	c.client = &mockSelectMetricsCloudWatchClient{}
+	metrics, err := SelectMetrics(c)
+	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
+	// AZs. We should get 12 metrics.
+	assert.Equal(t, 12, len(metrics))
+	assert.Nil(t, err)
 }
 
 func TestGenerateStatisticsInputParams(t *testing.T) {

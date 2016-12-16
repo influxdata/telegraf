@@ -17,7 +17,7 @@ func TestFormatMetric(t *testing.T) {
 
 	p := testutil.MockMetrics()[0]
 
-	valid_string := "test1,tag1=value1 value=1 1257894000000000000"
+	valid_string := "test1,tag1=value1 value=1 1257894000000000000\n"
 	func_string, err := FormatMetric(k, p)
 
 	if func_string != valid_string {
@@ -29,7 +29,7 @@ func TestFormatMetric(t *testing.T) {
 		Format: "custom",
 	}
 
-	valid_custom := "test1,map[tag1:value1],test1,tag1=value1 value=1 1257894000000000000"
+	valid_custom := "test1,map[tag1:value1],test1,tag1=value1 value=1 1257894000000000000\n"
 	func_custom, err := FormatMetric(k, p)
 
 	if func_custom != valid_custom {

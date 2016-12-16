@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -110,6 +112,12 @@ func (a *Accumulator) AddGauge(
 	a.AddFields(measurement, fields, tags, timestamp...)
 }
 
+func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
+	for _, m := range metrics {
+		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	}
+}
+
 // AddError appends the given error to Accumulator.Errors.
 func (a *Accumulator) AddError(err error) {
 	if err == nil {
@@ -200,6 +208,17 @@ func (a *Accumulator) AssertContainsFields(
 	}
 	msg := fmt.Sprintf("unknown measurement %s", measurement)
 	assert.Fail(t, msg)
+}
+
+func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			msg := fmt.Sprintf("found unexpected measurement %s", measurement)
+			assert.Fail(t, msg)
+		}
+	}
 }
 
 // HasIntValue returns true if the measurement has an Int value

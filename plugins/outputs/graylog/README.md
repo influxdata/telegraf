@@ -9,6 +9,6 @@ It requires a `servers` name.
 ```toml
 # Send telegraf metrics to graylog(s)
 [[outputs.graylog]]
-  ## Udp endpoint for your graylog instance.
+  ## UDP endpoint for your graylog instance(s).
   servers = ["127.0.0.1:12201", "192.168.1.1:12201"]
 ```

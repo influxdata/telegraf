@@ -20,7 +20,6 @@ github.com/go-sql-driver/mysql 1fca743146605a172a266e1654e01e5cd5669bee
 github.com/gobwas/glob 49571a1557cd20e6a2410adc6421f85b66c730b5
 github.com/golang/protobuf 552c7b9542c194800fd493123b3798ef0a832032
 github.com/golang/snappy d9eb7a3d35ec988b8585d4a0068e462c27d28380
-github.com/gonuts/go-shellquote e842a11b24c6abfb3dd27af69a17f482e4b483c2
 github.com/gorilla/context 1ea25387ff6f684839d82767c1733ff4d4d15d0a
 github.com/gorilla/mux c9e326e2bdec29039a3761c07bece13133863e1e
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
@@ -32,6 +31,7 @@ github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
 github.com/kardianos/osext 29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc
 github.com/kardianos/service 5e335590050d6d00f3aa270217d288dda1c94d0a
+github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
 github.com/lib/pq e182dc4027e2ded4b19396d638610f2653295f36
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
@@ -47,7 +47,7 @@ github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common e8eabff8812b05acf522b45fdcd725a785188e37
 github.com/prometheus/procfs 406e5b7bfd8201a36e2bb5f7bdae0b03380c2ce8
 github.com/samuel/go-zookeeper 218e9c81c0dd8b3b18172b2bbfad92cc7d6db55f
-github.com/shirou/gopsutil 4d0c402af66c78735c5ccf820dc2ca7de5e4ff08
+github.com/shirou/gopsutil 1516eb9ddc5e61ba58874047a98f8b44b5e585e8
 github.com/soniah/gosnmp 3fe3beb30fa9700988893c56a63b1df8e1b68c26
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c

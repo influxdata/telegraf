@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 // Agent runs telegraf and collects data based on the given config
@@ -44,8 +45,6 @@ func NewAgent(config *config.Config) (*Agent, error) {
 // Connect connects to all configured outputs
 func (a *Agent) Connect() error {
 	for _, o := range a.Config.Outputs {
-		o.Quiet = a.Config.Agent.Quiet
-
 		switch ot := o.Output.(type) {
 		case telegraf.ServiceOutput:
 			if err := ot.Start(); err != nil {
@@ -106,24 +105,26 @@ func (a *Agent) gatherer(
 ) {
 	defer panicRecover(input)
 
+	GatherTime := selfstat.RegisterTiming("gather",
+		"gather_time_ns",
+		map[string]string{"input": input.Config.Name},
+	)
+
+	acc := NewAccumulator(input, metricC)
+	acc.SetPrecision(a.Config.Agent.Precision.Duration,
+		a.Config.Agent.Interval.Duration)
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
-		acc := NewAccumulator(input, metricC)
-		acc.SetPrecision(a.Config.Agent.Precision.Duration,
-			a.Config.Agent.Interval.Duration)
-		input.SetDebug(a.Config.Agent.Debug)
-		input.SetDefaultTags(a.Config.Tags)
-
 		internal.RandomSleep(a.Config.Agent.CollectionJitter.Duration, shutdown)
 
 		start := time.Now()
 		gatherWithTimeout(shutdown, input, acc, interval)
 		elapsed := time.Since(start)
 
-		log.Printf("D! Input [%s] gathered metrics, (%s interval) in %s\n",
-			input.Name(), interval, elapsed)
+		GatherTime.Incr(elapsed.Nanoseconds())
 
 		select {
 		case <-shutdown:
@@ -204,9 +205,6 @@ func (a *Agent) Test() error {
 		if err := input.Input.Gather(acc); err != nil {
 			return err
 		}
-		if acc.errCount > 0 {
-			return fmt.Errorf("Errors encountered during processing")
-		}
 
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
@@ -269,7 +267,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 				var dropOriginal bool
 				if !m.IsAggregate() {
 					for _, agg := range a.Config.Aggregators {
-						if ok := agg.Add(copyMetric(m)); ok {
+						if ok := agg.Add(m.Copy()); ok {
 							dropOriginal = true
 						}
 					}
@@ -279,7 +277,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 						if i == len(a.Config.Outputs)-1 {
 							o.AddMetric(m)
 						} else {
-							o.AddMetric(copyMetric(m))
+							o.AddMetric(m.Copy())
 						}
 					}
 				}
@@ -327,13 +325,13 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 
 	// Start all ServicePlugins
 	for _, input := range a.Config.Inputs {
+		input.SetDefaultTags(a.Config.Tags)
 		switch p := input.Input.(type) {
 		case telegraf.ServiceInput:
 			acc := NewAccumulator(input, metricC)
 			// Service input plugins should set their own precision of their
 			// metrics.
 			acc.SetPrecision(time.Nanosecond, 0)
-			input.SetDefaultTags(a.Config.Tags)
 			if err := p.Start(acc); err != nil {
 				log.Printf("E! Service for input %s failed to start, exiting\n%s\n",
 					input.Name(), err.Error())
@@ -384,20 +382,4 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 
 	wg.Wait()
 	return nil
-}
-
-func copyMetric(m telegraf.Metric) telegraf.Metric {
-	t := time.Time(m.Time())
-
-	tags := make(map[string]string)
-	fields := make(map[string]interface{})
-	for k, v := range m.Tags() {
-		tags[k] = v
-	}
-	for k, v := range m.Fields() {
-		fields[k] = v
-	}
-
-	out, _ := telegraf.NewMetric(m.Name(), tags, fields, t)
-	return out
 }

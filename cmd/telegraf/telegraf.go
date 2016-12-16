@@ -95,7 +95,7 @@ Examples:
   telegraf config > telegraf.conf
 
   # generate config with only cpu input & influxdb output plugins defined
-  telegraf config -input-filter cpu -output-filter influxdb
+  telegraf --input-filter cpu --output-filter influxdb config
 
   # run a single telegraf collection, outputing metrics to stdout
   telegraf --config telegraf.conf -test

@@ -10,7 +10,7 @@ The plugin will tag processes by their PID and their process name.
 Processes can be specified either by pid file, by executable name, by command
 line pattern matching, or by username (in this order or priority. Procstat
 plugin will use `pgrep` when executable name is provided to obtain the pid.
-Proctstas plugin will transmit IO, memory, cpu, file descriptor related
+Procstat plugin will transmit IO, memory, cpu, file descriptor related
 measurements for every process specified. A prefix can be set to isolate
 individual process specific measurements.
 
