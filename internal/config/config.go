@@ -821,10 +821,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	rp := &models.RunningInput{
-		Input:  input,
-		Config: pluginConfig,
-	}
+	rp := models.NewRunningInput(input, pluginConfig)
 	c.Inputs = append(c.Inputs, rp)
 	return nil
 }

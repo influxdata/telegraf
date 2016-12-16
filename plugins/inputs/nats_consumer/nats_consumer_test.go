@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	testMsg         = "cpu_load_short,host=server01 value=23422.0 1422568543702900257"
+	testMsg         = "cpu_load_short,host=server01 value=23422.0 1422568543702900257\n"
 	testMsgGraphite = "cpu.load.short.graphite 23422 1454780029"
 	testMsgJSON     = "{\"a\": 5, \"b\": {\"c\": 6}}\n"
-	invalidMsg      = "cpu_load_short,host=server01 1422568543702900257"
+	invalidMsg      = "cpu_load_short,host=server01 1422568543702900257\n"
 	metricBuffer    = 5
 )
 

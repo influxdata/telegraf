@@ -68,8 +68,8 @@ type time struct {
 }
 
 type version struct {
-	Config int64  `yaml:"config"`
-	Puppet string `yaml:"puppet"`
+	ConfigString string `yaml:"config"`
+	Puppet       string `yaml:"puppet"`
 }
 
 // SampleConfig returns sample configuration message

@@ -4,6 +4,7 @@ package snmp
 import (
 	"fmt"
 	"net"
+	"os/exec"
 	"sync"
 	"testing"
 	"time"
@@ -196,6 +197,56 @@ func TestSnmpInit(t *testing.T) {
 		Name:        "hostname",
 		initialized: true,
 	}, s.Fields[0])
+}
+
+func TestSnmpInit_noTranslate(t *testing.T) {
+	// override execCommand so it returns exec.ErrNotFound
+	defer func(ec func(string, ...string) *exec.Cmd) { execCommand = ec }(execCommand)
+	execCommand = func(_ string, _ ...string) *exec.Cmd {
+		return exec.Command("snmptranslateExecErrNotFound")
+	}
+
+	s := &Snmp{
+		Fields: []Field{
+			{Oid: ".1.1.1.1", Name: "one", IsTag: true},
+			{Oid: ".1.1.1.2", Name: "two"},
+			{Oid: ".1.1.1.3"},
+		},
+		Tables: []Table{
+			{Fields: []Field{
+				{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+				{Oid: ".1.1.1.5", Name: "five"},
+				{Oid: ".1.1.1.6"},
+			}},
+		},
+	}
+
+	err := s.init()
+	require.NoError(t, err)
+
+	assert.Equal(t, ".1.1.1.1", s.Fields[0].Oid)
+	assert.Equal(t, "one", s.Fields[0].Name)
+	assert.Equal(t, true, s.Fields[0].IsTag)
+
+	assert.Equal(t, ".1.1.1.2", s.Fields[1].Oid)
+	assert.Equal(t, "two", s.Fields[1].Name)
+	assert.Equal(t, false, s.Fields[1].IsTag)
+
+	assert.Equal(t, ".1.1.1.3", s.Fields[2].Oid)
+	assert.Equal(t, ".1.1.1.3", s.Fields[2].Name)
+	assert.Equal(t, false, s.Fields[2].IsTag)
+
+	assert.Equal(t, ".1.1.1.4", s.Tables[0].Fields[0].Oid)
+	assert.Equal(t, "four", s.Tables[0].Fields[0].Name)
+	assert.Equal(t, true, s.Tables[0].Fields[0].IsTag)
+
+	assert.Equal(t, ".1.1.1.5", s.Tables[0].Fields[1].Oid)
+	assert.Equal(t, "five", s.Tables[0].Fields[1].Name)
+	assert.Equal(t, false, s.Tables[0].Fields[1].IsTag)
+
+	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Oid)
+	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Name)
+	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 
 func TestGetSNMPConnection_v2(t *testing.T) {
@@ -595,6 +646,71 @@ func TestFieldConvert(t *testing.T) {
 		}
 		assert.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 	}
+}
+
+func TestSnmpTranslateCache_miss(t *testing.T) {
+	snmpTranslateCaches = nil
+	oid := "IF-MIB::ifPhysAddress.1"
+	mibName, oidNum, oidText, conversion, err := snmpTranslate(oid)
+	assert.Len(t, snmpTranslateCaches, 1)
+	stc := snmpTranslateCaches[oid]
+	require.NotNil(t, stc)
+	assert.Equal(t, mibName, stc.mibName)
+	assert.Equal(t, oidNum, stc.oidNum)
+	assert.Equal(t, oidText, stc.oidText)
+	assert.Equal(t, conversion, stc.conversion)
+	assert.Equal(t, err, stc.err)
+}
+
+func TestSnmpTranslateCache_hit(t *testing.T) {
+	snmpTranslateCaches = map[string]snmpTranslateCache{
+		"foo": snmpTranslateCache{
+			mibName:    "a",
+			oidNum:     "b",
+			oidText:    "c",
+			conversion: "d",
+			err:        fmt.Errorf("e"),
+		},
+	}
+	mibName, oidNum, oidText, conversion, err := snmpTranslate("foo")
+	assert.Equal(t, "a", mibName)
+	assert.Equal(t, "b", oidNum)
+	assert.Equal(t, "c", oidText)
+	assert.Equal(t, "d", conversion)
+	assert.Equal(t, fmt.Errorf("e"), err)
+	snmpTranslateCaches = nil
+}
+
+func TestSnmpTableCache_miss(t *testing.T) {
+	snmpTableCaches = nil
+	oid := ".1.0.0.0"
+	mibName, oidNum, oidText, fields, err := snmpTable(oid)
+	assert.Len(t, snmpTableCaches, 1)
+	stc := snmpTableCaches[oid]
+	require.NotNil(t, stc)
+	assert.Equal(t, mibName, stc.mibName)
+	assert.Equal(t, oidNum, stc.oidNum)
+	assert.Equal(t, oidText, stc.oidText)
+	assert.Equal(t, fields, stc.fields)
+	assert.Equal(t, err, stc.err)
+}
+
+func TestSnmpTableCache_hit(t *testing.T) {
+	snmpTableCaches = map[string]snmpTableCache{
+		"foo": snmpTableCache{
+			mibName: "a",
+			oidNum:  "b",
+			oidText: "c",
+			fields:  []Field{{Name: "d"}},
+			err:     fmt.Errorf("e"),
+		},
+	}
+	mibName, oidNum, oidText, fields, err := snmpTable("foo")
+	assert.Equal(t, "a", mibName)
+	assert.Equal(t, "b", oidNum)
+	assert.Equal(t, "c", oidText)
+	assert.Equal(t, []Field{{Name: "d"}}, fields)
+	assert.Equal(t, fmt.Errorf("e"), err)
 }
 
 func TestError(t *testing.T) {
