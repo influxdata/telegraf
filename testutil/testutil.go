@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 var localhost = "localhost"
@@ -54,7 +55,7 @@ func TestMetric(value interface{}, name ...string) telegraf.Metric {
 		measurement = name[0]
 	}
 	tags := map[string]string{"tag1": "value1"}
-	pt, _ := telegraf.NewMetric(
+	pt, _ := metric.New(
 		measurement,
 		tags,
 		map[string]interface{}{"value": value},

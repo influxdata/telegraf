@@ -90,7 +90,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 
 	if u.Scheme == "" || u.Scheme == "tcp" {
 		return o.WriteTelnet(metrics, u)
-	} else if u.Scheme == "http" {
+	} else if u.Scheme == "http" || u.Scheme == "https" {
 		return o.WriteHttp(metrics, u)
 	} else {
 		return fmt.Errorf("Unknown scheme in host parameter.")
@@ -101,6 +101,8 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 	http := openTSDBHttp{
 		Host:      u.Host,
 		Port:      o.Port,
+		Scheme:    u.Scheme,
+		User:      u.User,
 		BatchSize: o.HttpBatchSize,
 		Debug:     o.Debug,
 	}
