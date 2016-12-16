@@ -340,7 +340,7 @@ func (d FakeDockerClient) ContainerList(octx context.Context, options types.Cont
 	container2 := types.Container{
 		ID:      "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		Names:   []string{"/etcd2"},
-		Image:   "quay.io/coreos/etcd:v2.2.2",
+		Image:   "quay.io:4443/coreos/etcd:v2.2.2",
 		Command: "/etcd -name etcd2 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941933,
 		Status:  "Up 4 hours",
@@ -429,7 +429,7 @@ func TestDockerGatherInfo(t *testing.T) {
 		},
 		map[string]string{
 			"container_name":    "etcd2",
-			"container_image":   "quay.io/coreos/etcd",
+			"container_image":   "quay.io:4443/coreos/etcd",
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
 			"engine_host":       "absol",
@@ -477,7 +477,7 @@ func TestDockerGatherInfo(t *testing.T) {
 		map[string]string{
 			"engine_host":       "absol",
 			"container_name":    "etcd2",
-			"container_image":   "quay.io/coreos/etcd",
+			"container_image":   "quay.io:4443/coreos/etcd",
 			"container_version": "v2.2.2",
 		},
 	)
