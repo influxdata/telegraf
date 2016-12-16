@@ -27,6 +27,7 @@ in their config file.
 - [#2079](https://github.com/influxdata/telegraf/pull/2079): Enable setting ClientID in MQTT output.
 - [#2001](https://github.com/influxdata/telegraf/pull/2001): MongoDB input plugin: Improve state data.
 - [#2078](https://github.com/influxdata/telegraf/pull/2078): Ping input: add standard deviation field.
+- [#2121](https://github.com/influxdata/telegraf/pull/2121): Add GC pause metric to InfluxDB input plugin.
 
 ### Bugfixes
 
