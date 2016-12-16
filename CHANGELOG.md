@@ -45,6 +45,7 @@ in their config file.
 - [#1917](https://github.com/influxdata/telegraf/pull/1917): fix puppetagent inputs plugin to support string for config variable.
 - [#1987](https://github.com/influxdata/telegraf/issues/1987): fix docker input plugin tags when registry has port.
 - [#2089](https://github.com/influxdata/telegraf/issues/2089): Fix tail input when reading from a pipe.
+- [#1449](https://github.com/influxdata/telegraf/issues/1449): MongoDB plugin always shows 0 replication lag.
 
 ## v1.1.2 [2016-12-12]
 
