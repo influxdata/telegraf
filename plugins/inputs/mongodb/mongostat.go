@@ -11,8 +11,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -105,10 +103,10 @@ type ReplSetStatus struct {
 
 // ReplSetMember stores information related to a replica set member
 type ReplSetMember struct {
-	Name       string               `bson:"name"`
-	State      int64                `bson:"state"`
-	StateStr   string               `bson:"stateStr"`
-	OptimeDate *bson.MongoTimestamp `bson:"optimeDate"`
+	Name       string    `bson:"name"`
+	State      int64     `bson:"state"`
+	StateStr   string    `bson:"stateStr"`
+	OptimeDate time.Time `bson:"optimeDate"`
 }
 
 // WiredTiger stores information related to the WiredTiger storage engine.
@@ -712,9 +710,9 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 		}
 
-		if me.OptimeDate != nil && master.OptimeDate != nil && me.State == 2 {
-			// MongoTimestamp type is int64 where the first 32bits are the unix timestamp
-			lag := int64(*master.OptimeDate>>32 - *me.OptimeDate>>32)
+		if me.State == 2 {
+			// OptimeDate.Unix() type is int64
+			lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
 			if lag < 0 {
 				returnVal.ReplLag = 0
 			} else {
