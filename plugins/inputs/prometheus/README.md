@@ -20,8 +20,8 @@ Specify a 10 second timeout for slower/over-loaded clients
   # An array of urls to scrape metrics from.
   urls = ["http://my-kube-apiserver:8080/metrics"]
   
-  # Specify timeout in seconds for slower prometheus clients (default is 3)
-  response_timeout = 10
+  # Specify timeout duration for slower prometheus clients (default is 3s)
+  response_timeout = 10s
 ```
 
 You can use more complex configuration

@@ -21,7 +21,7 @@ type Prometheus struct {
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
 
-	ResponseTimeout int `toml:"response_timeout"`
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -40,8 +40,8 @@ var sampleConfig = `
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
 
-  ## Specify timeout in seconds for slower prometheus clients (default is 3)
-  # response_timeout = 3
+  ## Specify timeout duration for slower prometheus clients (default is 3s)
+  # response_timeout = 3s
 
   ## Optional SSL Config
   # ssl_ca = /path/to/cafile
@@ -110,7 +110,7 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 		}).Dial,
 		TLSHandshakeTimeout:   5 * time.Second,
 		TLSClientConfig:       tlsCfg,
-		ResponseHeaderTimeout: time.Duration(time.Duration(p.ResponseTimeout) * time.Second),
+		ResponseHeaderTimeout: p.ResponseTimeout.Duration,
 		DisableKeepAlives:     true,
 	}
 
@@ -153,6 +153,6 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
-		return &Prometheus{ResponseTimeout: 3}
+		return &Prometheus{ResponseTimeout: "3s"}
 	})
 }
