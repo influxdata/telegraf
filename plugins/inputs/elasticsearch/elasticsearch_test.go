@@ -127,7 +127,8 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	es.client.Transport = newTransportMock(http.StatusOK, IsMasterResult)
 	require.NoError(t, es.setCatMaster("junk"))
 
-	if es.catMasterResponse != IsMasterResult {
+	IsMasterResultTokens := strings.Split(string(IsMasterResult), " ")
+	if es.catMasterResponseTokens[0] != IsMasterResultTokens[0] {
 		msg := fmt.Sprintf("catmaster is incorrect")
 		assert.Fail(t, msg)
 	}
@@ -167,7 +168,8 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	es.client.Transport = newTransportMock(http.StatusOK, IsNotMasterResult)
 	require.NoError(t, es.setCatMaster("junk"))
 
-	if es.catMasterResponse != IsNotMasterResult {
+	IsNotMasterResultTokens := strings.Split(string(IsNotMasterResult), " ")
+	if es.catMasterResponseTokens[0] != IsNotMasterResultTokens[0] {
 		msg := fmt.Sprintf("catmaster is incorrect")
 		assert.Fail(t, msg)
 	}

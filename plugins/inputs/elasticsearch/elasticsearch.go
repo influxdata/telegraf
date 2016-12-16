@@ -16,11 +16,9 @@ import (
 	"strings"
 )
 
+// Nodestats are always generated, so simply define a constant for these endpoints
 const statsPath = "/_nodes/stats"
 const statsPathLocal = "/_nodes/_local/stats"
-const clusterHealthPath = "/_cluster/health"
-const clusterStatsPath = "/_cluster/stats"
-const catMasterPath = "/_cat/master"
 
 type nodeStat struct {
 	Host       string            `json:"host"`
@@ -83,15 +81,16 @@ const sampleConfig = `
   ## Timeout for HTTP requests to the elastic search server(s)
   http_timeout = "5s"
 
-  ## set local to false when you want to read the indices stats from all nodes
-  ## within the cluster
+  ## When local is true (the default), the node will read only its own stats.
+  ## Set local to false when you want to read the node stats from all nodes
+  ## of the cluster.
   local = true
 
-  ## set cluster_health to true when you want to also obtain cluster health stats
+  ## Set cluster_health to true when you want to also obtain cluster health stats
   cluster_health = false
 
-  ## Set cluster_stats to true when you want to also obtain cluster stats from the Master node.
-  ## Currently only implemented when local=true
+  ## Set cluster_stats to true when you want to also obtain cluster stats from the
+  ## Master node. This is recommended for use only when local = true
   cluster_stats = false
 
   ## Optional SSL Config
@@ -105,18 +104,18 @@ const sampleConfig = `
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
 // servers.
 type Elasticsearch struct {
-	Local              bool
-	Servers            []string
-	HttpTimeout        internal.Duration
-	ClusterHealth      bool
-	ClusterStats       bool
-	SSLCA              string `toml:"ssl_ca"`   // Path to CA file
-	SSLCert            string `toml:"ssl_cert"` // Path to host cert file
-	SSLKey             string `toml:"ssl_key"`  // Path to cert key file
-	InsecureSkipVerify bool   // Use SSL but skip chain & host verification
-	client             *http.Client
-	catMasterResponse  string
-	isMaster           bool
+	Local                   bool
+	Servers                 []string
+	HttpTimeout             internal.Duration
+	ClusterHealth           bool
+	ClusterStats            bool
+	SSLCA                   string `toml:"ssl_ca"`   // Path to CA file
+	SSLCert                 string `toml:"ssl_cert"` // Path to host cert file
+	SSLKey                  string `toml:"ssl_key"`  // Path to cert key file
+	InsecureSkipVerify      bool   // Use SSL but skip chain & host verification
+	client                  *http.Client
+	catMasterResponseTokens []string
+	isMaster                bool
 }
 
 // NewElasticsearch return a new instance of Elasticsearch
@@ -165,8 +164,8 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 			if e.ClusterStats {
 				// get cat/master information here so NodeStats can determine
-				// whether this entrance is on the Master
-				e.setCatMaster(s + catMasterPath)
+				// whether this node is the Master
+				e.setCatMaster(s + "/_cat/master")
 			}
 
 			// Always gather node states
@@ -176,12 +175,12 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if e.ClusterHealth {
-				url = s + clusterHealthPath + "?level=indices"
+				url = s + "/_cluster/health?level=indices"
 				e.gatherClusterHealth(url, acc)
 			}
 
 			if e.ClusterStats && e.isMaster {
-				e.gatherClusterStats(s+clusterStatsPath, acc)
+				e.gatherClusterStats(s+"/_cluster/stats", acc)
 			}
 		}(serv, acc)
 	}
@@ -224,11 +223,9 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			"cluster_name": nodeStats.ClusterName,
 		}
 
-		if e.ClusterStats && e.Local {
+		if e.ClusterStats {
 			// check for master
-			tokens := strings.Split(e.catMasterResponse, " ")
-			masterNode := tokens[0] // get the node ID and compare it
-			e.isMaster = (id == masterNode)
+			e.isMaster = (id == e.catMasterResponseTokens[0])
 		}
 
 		for k, v := range n.Attributes {
@@ -337,31 +334,26 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 }
 
 func (e *Elasticsearch) setCatMaster(url string) error {
-	response, err := e.gatherStringData(url)
-
-	if err != nil {
-		return err
-	}
-
-	e.catMasterResponse = response
-	return nil
-}
-
-func (e *Elasticsearch) gatherStringData(url string) (string, error) {
 	r, err := e.client.Get(url)
 	if err != nil {
-		return "elasticsearch: API responded with error", err
+		return err
 	}
 	defer r.Body.Close()
 	if r.StatusCode != http.StatusOK {
 		// NOTE: we are not going to read/discard r.Body under the assumption we'd prefer
 		// to let the underlying transport close the connection and re-establish a new one for
 		// future calls.
-		return "elasticsearch: API responded with error", fmt.Errorf("status-code %d, expected %d",
-			r.StatusCode, http.StatusOK)
+		return fmt.Errorf("status-code %d, expected %d", r.StatusCode, http.StatusOK)
 	}
-	htmlData, err := ioutil.ReadAll(r.Body)
-	return string(htmlData), err
+	response, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		return err
+	}
+
+	e.catMasterResponseTokens = strings.Split(string(response), " ")
+
+	return nil
 }
 
 func (e *Elasticsearch) gatherJsonData(url string, v interface{}) error {

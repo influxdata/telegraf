@@ -15,16 +15,17 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## Timeout for HTTP requests to the elastic search server(s)
   http_timeout = "5s"
 
-  ## set local to false when you want to read the indices stats from all nodes
-  ## within the cluster
+  ## When local is true (the default), the node will read only its own stats.
+  ## Set local to false when you want to read the node stats from all nodes
+  ## of the cluster. 
   local = true
 
-  ## set cluster_health to true when you want to also obtain cluster health stats
-  #   cluster_health = false
+  ## Set cluster_health to true when you want to also obtain cluster health stats
+  cluster_health = false
 
-  ## Set cluster_stats to true when you want to obtain cluster stats from the Master node.
-  ## Currently only implemented when local=true
-  #   cluster_stats = false
+  ## Set cluster_stats to true when you want to obtain cluster stats from the 
+  ## Master node. This is recommended for use only when local = true
+  cluster_stats = false
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
