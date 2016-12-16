@@ -155,17 +155,12 @@ var sampleConfig = `
 
   ## Optional request timeouts
   ##
-  ## ResponseHeaderTimeout, if non-zero, specifies the amount of
-  ## time to wait for a server's response headers after fully
-  ## writing the request (including its body, if any). This
-  ## time does not include the time to read the response body.
-  ## See http.Transport.ResponseHeaderTimeout
+  ## ResponseHeaderTimeout, if non-zero, specifies the amount of time to wait
+  ## for a server's response headers after fully writing the request.
   # header_timeout = "3s"
   ##
-  ## Timeout specifies a time limit for requests made by this
-  ## Client. The timeout includes connection time, any
-  ## redirects, and reading the response body.
-  ## See http.Client.Timeout
+  ## client_timeout specifies a time limit for requests made by this client.
+  ## Includes connection time, any redirects, and reading the response body.
   # client_timeout = "4s"
 
   ## A list of nodes to pull metrics about. If not specified, metrics for
