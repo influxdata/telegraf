@@ -26,6 +26,7 @@ in their config file.
 - [#1893](https://github.com/influxdata/telegraf/issues/1893): Change StatsD default "reset" behavior.
 - [#2079](https://github.com/influxdata/telegraf/pull/2079): Enable setting ClientID in MQTT output.
 - [#2001](https://github.com/influxdata/telegraf/pull/2001): MongoDB input plugin: Improve state data.
+- [#2078](https://github.com/influxdata/telegraf/pull/2078): Ping input: add standard deviation field.
 
 ### Bugfixes
 
