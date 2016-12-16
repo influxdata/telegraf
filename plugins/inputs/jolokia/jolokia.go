@@ -220,6 +220,16 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 	return req, nil
 }
 
+func extractValues(measurement string, value interface{}, fields map[string]interface{}) {
+	if mapValues, ok := value.(map[string]interface{}); ok {
+		for k2, v2 := range mapValues {
+			extractValues(measurement+"_"+k2, v2, fields)
+		}
+	} else {
+		fields[measurement] = value
+	}
+}
+
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 	servers := j.Servers
 	metrics := j.Metrics
@@ -244,23 +254,8 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				fmt.Printf("Error handling response: %s\n", err)
 			} else {
-
 				if values, ok := out["value"]; ok {
-					switch t := values.(type) {
-					case map[string]interface{}:
-						for k, v := range t {
-							switch t2 := v.(type) {
-							case map[string]interface{}:
-								for k2, v2 := range t2 {
-									fields[measurement+"_"+k+"_"+k2] = v2
-								}
-							case interface{}:
-								fields[measurement+"_"+k] = t2
-							}
-						}
-					case interface{}:
-						fields[measurement] = t
-					}
+					extractValues(measurement, values, fields)
 				} else {
 					fmt.Printf("Missing key 'value' in output response\n")
 				}
