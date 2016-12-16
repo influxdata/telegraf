@@ -84,7 +84,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					strings.TrimSpace(out) + ", " + err.Error())
 			}
 			tags := map[string]string{"url": u}
-			trans, rec, avg, err := processPingOutput(out)
+			trans, rec, avg, stddev, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
 				errorChannel <- err
@@ -99,6 +99,9 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			}
 			if avg > 0 {
 				fields["average_response_ms"] = avg
+			}
+			if stddev > 0 {
+				fields["standard_deviation_ms"] = stddev
 			}
 			acc.AddFields("ping", fields, tags)
 		}(url)
@@ -166,9 +169,9 @@ func (p *Ping) args(url string) []string {
 //     round-trip min/avg/max/stddev = 34.843/43.508/52.172/8.664 ms
 //
 // It returns (<transmitted packets>, <received packets>, <average response>)
-func processPingOutput(out string) (int, int, float64, error) {
+func processPingOutput(out string) (int, int, float64, float64, error) {
 	var trans, recv int
-	var avg float64
+	var avg, stddev float64
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("Fatal error processing ping output")
 	lines := strings.Split(out, "\n")
@@ -180,22 +183,23 @@ func processPingOutput(out string) (int, int, float64, error) {
 			// Transmitted packets
 			trans, err = strconv.Atoi(strings.Split(stats[0], " ")[0])
 			if err != nil {
-				return trans, recv, avg, err
+				return trans, recv, avg, stddev, err
 			}
 			// Received packets
 			recv, err = strconv.Atoi(strings.Split(stats[1], " ")[0])
 			if err != nil {
-				return trans, recv, avg, err
+				return trans, recv, avg, stddev, err
 			}
 		} else if strings.Contains(line, "min/avg/max") {
-			stats := strings.Split(line, " = ")[1]
+			stats := strings.Split(line, " ")[3]
 			avg, err = strconv.ParseFloat(strings.Split(stats, "/")[1], 64)
+			stddev, err = strconv.ParseFloat(strings.Split(stats, "/")[3], 64)
 			if err != nil {
-				return trans, recv, avg, err
+				return trans, recv, avg, stddev, err
 			}
 		}
 	}
-	return trans, recv, avg, err
+	return trans, recv, avg, stddev, err
 }
 
 func init() {
