@@ -105,6 +105,7 @@ type ReplSetStatus struct {
 type ReplSetMember struct {
 	Name       string    `bson:"name"`
 	State      int64     `bson:"state"`
+	StateStr   string    `bson:"stateStr"`
 	OptimeDate time.Time `bson:"optimeDate"`
 }
 
@@ -418,6 +419,7 @@ type StatLine struct {
 	NumConnections                                        int64
 	ReplSetName                                           string
 	NodeType                                              string
+	NodeState                                             string
 
 	// Cluster fields
 	JumboChunksCount int64
@@ -564,6 +566,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			returnVal.NodeType = "PRI"
 		} else if newStat.Repl.Secondary.(bool) {
 			returnVal.NodeType = "SEC"
+		} else if newStat.Repl.ArbiterOnly != nil && newStat.Repl.ArbiterOnly.(bool) {
+			returnVal.NodeType = "ARB"
 		} else {
 			returnVal.NodeType = "UNK"
 		}
@@ -690,6 +694,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		me := ReplSetMember{}
 		for _, member := range newReplStat.Members {
 			if member.Name == myName {
+				// Store my state string
+				returnVal.NodeState = member.StateStr
 				if member.State == 1 {
 					// I'm the master
 					returnVal.ReplLag = 0

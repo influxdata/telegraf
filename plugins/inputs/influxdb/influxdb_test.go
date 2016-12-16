@@ -86,6 +86,7 @@ func TestInfluxDB(t *testing.T) {
 		"frees":           int64(381008),
 		"heap_idle":       int64(15802368),
 		"pause_total_ns":  int64(5132914),
+		"pause_ns":        int64(127053),
 		"lookups":         int64(77),
 		"heap_sys":        int64(33849344),
 		"mcache_sys":      int64(16384),

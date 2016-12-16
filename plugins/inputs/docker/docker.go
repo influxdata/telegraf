@@ -221,14 +221,18 @@ func (d *Docker) gatherContainer(
 		cname = strings.TrimPrefix(container.Names[0], "/")
 	}
 
-	// the image name sometimes has a version part.
-	//   ie, rabbitmq:3-management
-	imageParts := strings.Split(container.Image, ":")
-	imageName := imageParts[0]
+	// the image name sometimes has a version part, or a private repo
+	//   ie, rabbitmq:3-management or docker.someco.net:4443/rabbitmq:3-management
+	imageName := ""
 	imageVersion := "unknown"
-	if len(imageParts) > 1 {
-		imageVersion = imageParts[1]
+	i := strings.LastIndex(container.Image, ":") // index of last ':' character
+	if i > -1 {
+		imageVersion = container.Image[i+1:]
+		imageName = container.Image[:i]
+	} else {
+		imageName = container.Image
 	}
+
 	tags := map[string]string{
 		"engine_host":       d.engine_host,
 		"container_name":    cname,
