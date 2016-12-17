@@ -52,8 +52,9 @@ type Jolokia struct {
 
 const sampleConfig = `
   ## This is the context root used to compose the jolokia url
+  ## NOTE that Jolokia requires a trailing slash at the end of the context root
   ## NOTE that your jolokia security policy must allow for POST requests.
-  context = "/jolokia"
+  context = "/jolokia/"
 
   ## This specifies the mode used
   # mode = "proxy"
@@ -148,7 +149,7 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 
 func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, error) {
 	var jolokiaUrl *url.URL
-	context := j.Context // Usually "/jolokia"
+	context := j.Context // Usually "/jolokia/"
 
 	// Create bodyContent
 	bodyContent := map[string]interface{}{
