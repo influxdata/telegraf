@@ -153,6 +153,6 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
-		return &Prometheus{ResponseTimeout: "3s"}
+		return &Prometheus{ResponseTimeout: internal.Duration{Duration: time.Second * 3}}
 	})
 }
