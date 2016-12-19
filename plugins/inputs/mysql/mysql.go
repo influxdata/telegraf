@@ -24,6 +24,7 @@ type Mysql struct {
 	TableSchemaDatabases                []string `toml:"table_schema_databases"`
 	GatherProcessList                   bool     `toml:"gather_process_list"`
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
+	GatherInnoDBMetrics                 bool     `toml:"gather_innodb_metrics"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
@@ -62,6 +63,9 @@ var sampleConfig = `
   #
   ## gather auto_increment columns and max values from information schema
   gather_info_schema_auto_inc               = true
+  #
+  ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
+  gather_innodb_metrics                     = true
   #
   ## gather metrics from SHOW SLAVE STATUS command output
   gather_slave_status                       = true
@@ -428,6 +432,11 @@ const (
           JOIN information_schema.columns c USING (table_schema,table_name)
           WHERE c.extra = 'auto_increment' AND t.auto_increment IS NOT NULL
     `
+	innoDBMetricsQuery = `
+        SELECT NAME, COUNT
+        FROM information_schema.INNODB_METRICS
+        WHERE status='enabled'
+    `
 	perfTableIOWaitsQuery = `
         SELECT OBJECT_SCHEMA, OBJECT_NAME, COUNT_FETCH, COUNT_INSERT, COUNT_UPDATE, COUNT_DELETE,
         SUM_TIMER_FETCH, SUM_TIMER_INSERT, SUM_TIMER_UPDATE, SUM_TIMER_DELETE
@@ -591,6 +600,13 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	if m.GatherInfoSchemaAutoInc {
 		err = m.gatherInfoSchemaAutoIncStatuses(db, serv, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	if m.GatherInnoDBMetrics {
+		err = m.gatherInnoDBMetrics(db, serv, acc)
 		if err != nil {
 			return err
 		}
@@ -1065,6 +1081,45 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 		fields["auto_increment_column_max"] = maxInt
 
 		acc.AddFields("mysql_info_schema", fields, tags)
+	}
+	return nil
+}
+
+// gatherInnoDBMetrics can be used to fetch enabled metrics from
+// information_schema.INNODB_METRICS
+func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	// run query
+	rows, err := db.Query(innoDBMetricsQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var key string
+	var val sql.RawBytes
+
+	// parse DSN and save server tag
+	servtag := getDSNTag(serv)
+	tags := map[string]string{"server": servtag}
+	fields := make(map[string]interface{})
+	for rows.Next() {
+		if err := rows.Scan(&key, &val); err != nil {
+			return err
+		}
+		key = strings.ToLower(key)
+		// parse value, if it is numeric then save, otherwise ignore
+		if floatVal, ok := parseValue(val); ok {
+			fields[key] = floatVal
+		}
+		// Send 20 fields at a time
+		if len(fields) >= 20 {
+			acc.AddFields("mysql_innodb", fields, tags)
+			fields = make(map[string]interface{})
+		}
+	}
+	// Send any remaining fields
+	if len(fields) > 0 {
+		acc.AddFields("mysql_innodb", fields, tags)
 	}
 	return nil
 }
