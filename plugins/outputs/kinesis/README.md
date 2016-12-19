@@ -53,11 +53,29 @@ solution to scale out.
 ### format
 
 The format configuration value has been designated to allow people to change the format of the Point as written to
-Kinesis. Right now there are two supported formats string and custom.
+Kinesis. Right now there are three supported formats; string, json and custom.
 
 #### string
 
 String is defined using the default Point.String() value and translated to []byte for the Kinesis stream.
+
+#### json
+
+Json format serialized Telegraf metrics in json format. The format is:
+
+    {
+       "fields":{
+          "field_1":30,
+          "field_2":4,
+          "field_N":59,
+          "n_images":660
+       },
+       "name":"docker",
+       "tags":{
+          "host":"raynor"
+       },
+       "timestamp":1458229140
+    }
 
 #### custom
 
