@@ -90,7 +90,7 @@ const sampleConfig = `
   cluster_health = false
 
   ## Set cluster_stats to true when you want to also obtain cluster stats from the
-  ## Master node. This is recommended for use only when local = true
+  ## Master node.
   cluster_stats = false
 
   ## Optional SSL Config

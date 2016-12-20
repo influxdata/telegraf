@@ -24,7 +24,7 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   cluster_health = false
 
   ## Set cluster_stats to true when you want to obtain cluster stats from the 
-  ## Master node. This is recommended for use only when local = true
+  ## Master node. 
   cluster_stats = false
 
   ## Optional SSL Config
