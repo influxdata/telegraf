@@ -48,7 +48,12 @@ func (p *SpecProcessor) pushMetrics() {
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
 	}
-	fields := map[string]interface{}{"pid": p.pid}
+	fields := map[string]interface{}{}
+
+	//If pid is not present as a tag, include it as a field.
+	if _, pidInTags := p.tags["pid"]; !pidInTags {
+		fields["pid"] = p.pid
+	}
 
 	numThreads, err := p.proc.NumThreads()
 	if err == nil {

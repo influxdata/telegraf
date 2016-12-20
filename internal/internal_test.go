@@ -131,3 +131,26 @@ func TestRandomSleep(t *testing.T) {
 	elapsed = time.Since(s)
 	assert.True(t, elapsed < time.Millisecond*150)
 }
+
+func TestDuration(t *testing.T) {
+	var d Duration
+
+	d.UnmarshalTOML([]byte(`"1s"`))
+	assert.Equal(t, time.Second, d.Duration)
+
+	d = Duration{}
+	d.UnmarshalTOML([]byte(`1s`))
+	assert.Equal(t, time.Second, d.Duration)
+
+	d = Duration{}
+	d.UnmarshalTOML([]byte(`'1s'`))
+	assert.Equal(t, time.Second, d.Duration)
+
+	d = Duration{}
+	d.UnmarshalTOML([]byte(`10`))
+	assert.Equal(t, 10*time.Second, d.Duration)
+
+	d = Duration{}
+	d.UnmarshalTOML([]byte(`1.5`))
+	assert.Equal(t, time.Second, d.Duration)
+}

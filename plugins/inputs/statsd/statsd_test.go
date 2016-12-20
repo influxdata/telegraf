@@ -139,6 +139,9 @@ func TestParse_Sets(t *testing.T) {
 		"scientific.notation.sets:4.696E+5|s",
 		"scientific.notation.sets:4.696E+5|s",
 		"scientific.notation.sets:4.697E+5|s",
+		"string.sets:foobar|s",
+		"string.sets:foobar|s",
+		"string.sets:bar|s",
 	}
 
 	for _, line := range valid_lines {
@@ -163,6 +166,10 @@ func TestParse_Sets(t *testing.T) {
 		{
 			"oneuser_id",
 			1,
+		},
+		{
+			"string_sets",
+			2,
 		},
 	}
 

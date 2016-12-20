@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
 	"github.com/influxdata/wlog"
 )
@@ -19,8 +20,8 @@ type telegrafLog struct {
 	writer io.Writer
 }
 
-func (t *telegrafLog) Write(p []byte) (n int, err error) {
-	return t.writer.Write(p)
+func (t *telegrafLog) Write(b []byte) (n int, err error) {
+	return t.writer.Write(append([]byte(time.Now().UTC().Format(time.RFC3339)+" "), b...))
 }
 
 // SetupLogging configures the logging output.
@@ -30,6 +31,7 @@ func (t *telegrafLog) Write(p []byte) (n int, err error) {
 //           interpreted as stderr. If there is an error opening the file the
 //           logger will fallback to stderr.
 func SetupLogging(debug, quiet bool, logfile string) {
+	log.SetFlags(0)
 	if debug {
 		wlog.SetLevel(wlog.DEBUG)
 	}

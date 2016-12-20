@@ -116,11 +116,7 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 	var handle win.PDH_HQUERY
 	var counterHandle win.PDH_HCOUNTER
 	ret := win.PdhOpenQuery(0, 0, &handle)
-	if m.PreVistaSupport {
-		ret = win.PdhAddCounter(handle, query, 0, &counterHandle)
-	} else {
-		ret = win.PdhAddEnglishCounter(handle, query, 0, &counterHandle)
-	}
+	ret = win.PdhAddCounter(handle, query, 0, &counterHandle)
 	_ = ret
 
 	temp := &item{query, objectName, counter, instance, measurement,

@@ -1,9 +1,9 @@
 package http_listener
 
 import (
-	"bufio"
 	"bytes"
-	"fmt"
+	"compress/gzip"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -13,136 +13,172 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/http_listener/stoppableListener"
-	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
-type HttpListener struct {
+const (
+	// DEFAULT_MAX_BODY_SIZE is the default maximum request body size, in bytes.
+	// if the request body is over this size, we will return an HTTP 413 error.
+	// 500 MB
+	DEFAULT_MAX_BODY_SIZE = 500 * 1024 * 1024
+
+	// MAX_LINE_SIZE is the maximum size, in bytes, that can be allocated for
+	// a single InfluxDB point.
+	// 64 KB
+	DEFAULT_MAX_LINE_SIZE = 64 * 1024
+)
+
+type HTTPListener struct {
 	ServiceAddress string
 	ReadTimeout    internal.Duration
 	WriteTimeout   internal.Duration
+	MaxBodySize    int64
+	MaxLineSize    int
 
-	sync.Mutex
+	mu sync.Mutex
 	wg sync.WaitGroup
 
-	listener *stoppableListener.StoppableListener
+	listener net.Listener
 
-	parser parsers.Parser
+	parser influx.InfluxParser
 	acc    telegraf.Accumulator
+	pool   *pool
+
+	BytesRecv       selfstat.Stat
+	RequestsServed  selfstat.Stat
+	WritesServed    selfstat.Stat
+	QueriesServed   selfstat.Stat
+	PingsServed     selfstat.Stat
+	RequestsRecv    selfstat.Stat
+	WritesRecv      selfstat.Stat
+	QueriesRecv     selfstat.Stat
+	PingsRecv       selfstat.Stat
+	NotFoundsServed selfstat.Stat
+	BuffersCreated  selfstat.Stat
 }
 
 const sampleConfig = `
   ## Address and port to host HTTP listener on
   service_address = ":8186"
 
-  ## timeouts
+  ## maximum duration before timing out read of the request
   read_timeout = "10s"
+  ## maximum duration before timing out write of the response
   write_timeout = "10s"
+
+  ## Maximum allowed http request body size in bytes.
+  ## 0 means to use the default of 536,870,912 bytes (500 mebibytes)
+  max_body_size = 0
+
+  ## Maximum line size allowed to be sent in bytes.
+  ## 0 means to use the default of 65536 bytes (64 kibibytes)
+  max_line_size = 0
 `
 
-func (t *HttpListener) SampleConfig() string {
+func (h *HTTPListener) SampleConfig() string {
 	return sampleConfig
 }
 
-func (t *HttpListener) Description() string {
+func (h *HTTPListener) Description() string {
 	return "Influx HTTP write listener"
 }
 
-func (t *HttpListener) Gather(_ telegraf.Accumulator) error {
+func (h *HTTPListener) Gather(_ telegraf.Accumulator) error {
+	h.BuffersCreated.Set(h.pool.ncreated())
 	return nil
 }
 
-func (t *HttpListener) SetParser(parser parsers.Parser) {
-	t.parser = parser
-}
-
 // Start starts the http listener service.
-func (t *HttpListener) Start(acc telegraf.Accumulator) error {
-	t.Lock()
-	defer t.Unlock()
+func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	t.acc = acc
+	tags := map[string]string{
+		"address": h.ServiceAddress,
+	}
+	h.BytesRecv = selfstat.Register("http_listener", "bytes_received", tags)
+	h.RequestsServed = selfstat.Register("http_listener", "requests_served", tags)
+	h.WritesServed = selfstat.Register("http_listener", "writes_served", tags)
+	h.QueriesServed = selfstat.Register("http_listener", "queries_served", tags)
+	h.PingsServed = selfstat.Register("http_listener", "pings_served", tags)
+	h.RequestsRecv = selfstat.Register("http_listener", "requests_received", tags)
+	h.WritesRecv = selfstat.Register("http_listener", "writes_received", tags)
+	h.QueriesRecv = selfstat.Register("http_listener", "queries_received", tags)
+	h.PingsRecv = selfstat.Register("http_listener", "pings_received", tags)
+	h.NotFoundsServed = selfstat.Register("http_listener", "not_founds_served", tags)
+	h.BuffersCreated = selfstat.Register("http_listener", "buffers_created", tags)
 
-	var rawListener, err = net.Listen("tcp", t.ServiceAddress)
+	if h.MaxBodySize == 0 {
+		h.MaxBodySize = DEFAULT_MAX_BODY_SIZE
+	}
+	if h.MaxLineSize == 0 {
+		h.MaxLineSize = DEFAULT_MAX_LINE_SIZE
+	}
+
+	h.acc = acc
+	h.pool = NewPool(200, h.MaxLineSize)
+
+	var listener, err = net.Listen("tcp", h.ServiceAddress)
 	if err != nil {
 		return err
 	}
-	t.listener, err = stoppableListener.New(rawListener)
-	if err != nil {
-		return err
-	}
+	h.listener = listener
 
-	go t.httpListen()
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		h.httpListen()
+	}()
 
-	log.Printf("I! Started HTTP listener service on %s\n", t.ServiceAddress)
+	log.Printf("I! Started HTTP listener service on %s\n", h.ServiceAddress)
 
 	return nil
 }
 
 // Stop cleans up all resources
-func (t *HttpListener) Stop() {
-	t.Lock()
-	defer t.Unlock()
+func (h *HTTPListener) Stop() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	t.listener.Stop()
-	t.listener.Close()
+	h.listener.Close()
+	h.wg.Wait()
 
-	t.wg.Wait()
-
-	log.Println("I! Stopped HTTP listener service on ", t.ServiceAddress)
+	log.Println("I! Stopped HTTP listener service on ", h.ServiceAddress)
 }
 
-// httpListen listens for HTTP requests.
-func (t *HttpListener) httpListen() error {
-	if t.ReadTimeout.Duration < time.Second {
-		t.ReadTimeout.Duration = time.Second * 10
+// httpListen sets up an http.Server and calls server.Serve.
+// like server.Serve, httpListen will always return a non-nil error, for this
+// reason, the error returned should probably be ignored.
+// see https://golang.org/pkg/net/http/#Server.Serve
+func (h *HTTPListener) httpListen() error {
+	if h.ReadTimeout.Duration < time.Second {
+		h.ReadTimeout.Duration = time.Second * 10
 	}
-	if t.WriteTimeout.Duration < time.Second {
-		t.WriteTimeout.Duration = time.Second * 10
+	if h.WriteTimeout.Duration < time.Second {
+		h.WriteTimeout.Duration = time.Second * 10
 	}
 
 	var server = http.Server{
-		Handler:      t,
-		ReadTimeout:  t.ReadTimeout.Duration,
-		WriteTimeout: t.WriteTimeout.Duration,
+		Handler:      h,
+		ReadTimeout:  h.ReadTimeout.Duration,
+		WriteTimeout: h.WriteTimeout.Duration,
 	}
 
-	return server.Serve(t.listener)
+	return server.Serve(h.listener)
 }
 
-func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	t.wg.Add(1)
-	defer t.wg.Done()
-
+func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	h.RequestsRecv.Incr(1)
+	defer h.RequestsServed.Incr(1)
 	switch req.URL.Path {
 	case "/write":
-		var http400msg bytes.Buffer
-		var partial string
-		scanner := bufio.NewScanner(req.Body)
-		scanner.Buffer([]byte(""), 128*1024)
-		for scanner.Scan() {
-			metrics, err := t.parser.Parse(scanner.Bytes())
-			if err == nil {
-				for _, m := range metrics {
-					t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-				}
-				partial = "partial write: "
-			} else {
-				http400msg.WriteString(err.Error() + " ")
-			}
-		}
-
-		if err := scanner.Err(); err != nil {
-			http.Error(res, "Internal server error: "+err.Error(), http.StatusInternalServerError)
-		} else if http400msg.Len() > 0 {
-			res.Header().Set("Content-Type", "application/json")
-			res.Header().Set("X-Influxdb-Version", "1.0")
-			res.WriteHeader(http.StatusBadRequest)
-			res.Write([]byte(fmt.Sprintf(`{"error":"%s%s"}`, partial, http400msg.String())))
-		} else {
-			res.WriteHeader(http.StatusNoContent)
-		}
+		h.WritesRecv.Incr(1)
+		defer h.WritesServed.Incr(1)
+		h.serveWrite(res, req)
 	case "/query":
+		h.QueriesRecv.Incr(1)
+		defer h.QueriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
 		// clients test endpoint availability with a query
 		res.Header().Set("Content-Type", "application/json")
@@ -150,16 +186,147 @@ func (t *HttpListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 		res.Write([]byte("{\"results\":[]}"))
 	case "/ping":
+		h.PingsRecv.Incr(1)
+		defer h.PingsServed.Incr(1)
 		// respond to ping requests
 		res.WriteHeader(http.StatusNoContent)
 	default:
+		defer h.NotFoundsServed.Incr(1)
 		// Don't know how to respond to calls to other endpoints
 		http.NotFound(res, req)
 	}
 }
 
+func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
+	// Check that the content length is not too large for us to handle.
+	if req.ContentLength > h.MaxBodySize {
+		tooLarge(res)
+		return
+	}
+	now := time.Now()
+
+	// Handle gzip request bodies
+	body := req.Body
+	var err error
+	if req.Header.Get("Content-Encoding") == "gzip" {
+		body, err = gzip.NewReader(req.Body)
+		defer body.Close()
+		if err != nil {
+			log.Println("E! " + err.Error())
+			badRequest(res)
+			return
+		}
+	}
+	body = http.MaxBytesReader(res, body, h.MaxBodySize)
+
+	var return400 bool
+	var hangingBytes bool
+	buf := h.pool.get()
+	defer h.pool.put(buf)
+	bufStart := 0
+	for {
+		n, err := io.ReadFull(body, buf[bufStart:])
+		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+			log.Println("E! " + err.Error())
+			// problem reading the request body
+			badRequest(res)
+			return
+		}
+		h.BytesRecv.Incr(int64(n))
+
+		if err == io.EOF {
+			if return400 {
+				badRequest(res)
+			} else {
+				res.WriteHeader(http.StatusNoContent)
+			}
+			return
+		}
+
+		if hangingBytes {
+			i := bytes.IndexByte(buf, '\n')
+			if i == -1 {
+				// still didn't find a newline, keep scanning
+				continue
+			}
+			// rotate the bit remaining after the first newline to the front of the buffer
+			i++ // start copying after the newline
+			bufStart = len(buf) - i
+			if bufStart > 0 {
+				copy(buf, buf[i:])
+			}
+			hangingBytes = false
+			continue
+		}
+
+		if err == io.ErrUnexpectedEOF {
+			// finished reading the request body
+			if err := h.parse(buf[:n+bufStart], now); err != nil {
+				log.Println("E! " + err.Error())
+				return400 = true
+			}
+			if return400 {
+				badRequest(res)
+			} else {
+				res.WriteHeader(http.StatusNoContent)
+			}
+			return
+		}
+
+		// if we got down here it means that we filled our buffer, and there
+		// are still bytes remaining to be read. So we will parse up until the
+		// final newline, then push the rest of the bytes into the next buffer.
+		i := bytes.LastIndexByte(buf, '\n')
+		if i == -1 {
+			// drop any line longer than the max buffer size
+			log.Printf("E! http_listener received a single line longer than the maximum of %d bytes",
+				len(buf))
+			hangingBytes = true
+			return400 = true
+			bufStart = 0
+			continue
+		}
+		if err := h.parse(buf[:i+1], now); err != nil {
+			log.Println("E! " + err.Error())
+			return400 = true
+		}
+		// rotate the bit remaining after the last newline to the front of the buffer
+		i++ // start copying after the newline
+		bufStart = len(buf) - i
+		if bufStart > 0 {
+			copy(buf, buf[i:])
+		}
+	}
+}
+
+func (h *HTTPListener) parse(b []byte, t time.Time) error {
+	metrics, err := h.parser.ParseWithDefaultTime(b, t)
+
+	for _, m := range metrics {
+		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	}
+
+	return err
+}
+
+func tooLarge(res http.ResponseWriter) {
+	res.Header().Set("Content-Type", "application/json")
+	res.Header().Set("X-Influxdb-Version", "1.0")
+	res.WriteHeader(http.StatusRequestEntityTooLarge)
+	res.Write([]byte(`{"error":"http: request body too large"}`))
+}
+
+func badRequest(res http.ResponseWriter) {
+	res.Header().Set("Content-Type", "application/json")
+	res.Header().Set("X-Influxdb-Version", "1.0")
+	res.WriteHeader(http.StatusBadRequest)
+	res.Write([]byte(`{"error":"http: bad request"}`))
+}
+
 func init() {
 	inputs.Add("http_listener", func() telegraf.Input {
-		return &HttpListener{}
+		return &HTTPListener{
+			ServiceAddress: ":8186",
+		}
 	})
 }

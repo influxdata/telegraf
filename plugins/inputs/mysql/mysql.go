@@ -828,6 +828,13 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			}
 
 			fields["queries"] = i
+		case "Questions":
+			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
+			if err != nil {
+				return err
+			}
+
+			fields["questions"] = i
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {

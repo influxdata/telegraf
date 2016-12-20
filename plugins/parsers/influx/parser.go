@@ -3,10 +3,10 @@ package influx
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
-
-	"github.com/influxdata/influxdb/models"
+	"github.com/influxdata/telegraf/metric"
 )
 
 // InfluxParser is an object for Parsing incoming metrics.
@@ -15,28 +15,30 @@ type InfluxParser struct {
 	DefaultTags map[string]string
 }
 
+func (p *InfluxParser) ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
+	// parse even if the buffer begins with a newline
+	buf = bytes.TrimPrefix(buf, []byte("\n"))
+	metrics, err := metric.ParseWithDefaultTime(buf, t)
+	if len(p.DefaultTags) > 0 {
+		for _, m := range metrics {
+			for k, v := range p.DefaultTags {
+				// only set the default tag if it doesn't already exist:
+				if !m.HasTag(k) {
+					m.AddTag(k, v)
+				}
+			}
+		}
+	}
+	return metrics, err
+}
+
 // Parse returns a slice of Metrics from a text representation of a
 // metric (in line-protocol format)
 // with each metric separated by newlines. If any metrics fail to parse,
 // a non-nil error will be returned in addition to the metrics that parsed
 // successfully.
 func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	// parse even if the buffer begins with a newline
-	buf = bytes.TrimPrefix(buf, []byte("\n"))
-	points, err := models.ParsePoints(buf)
-	metrics := make([]telegraf.Metric, len(points))
-	for i, point := range points {
-		for k, v := range p.DefaultTags {
-			// only set the default tag if it doesn't already exist:
-			if tmp := point.Tags().GetString(k); tmp == "" {
-				point.AddTag(k, v)
-			}
-		}
-		// Ignore error here because it's impossible that a model.Point
-		// wouldn't parse into client.Point properly
-		metrics[i] = telegraf.NewMetricFromPoint(point)
-	}
-	return metrics, err
+	return p.ParseWithDefaultTime(buf, time.Now())
 }
 
 func (p *InfluxParser) ParseLine(line string) (telegraf.Metric, error) {
