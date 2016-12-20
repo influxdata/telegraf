@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"sync"
 	"time"
 
@@ -15,6 +16,9 @@ import (
 	"io/ioutil"
 	"strings"
 )
+
+// mask for masking username/password from error messages
+var mask = regexp.MustCompile(`https?:\/\/\S+:\S+@`)
 
 // Nodestats are always generated, so simply define a constant for these endpoints
 const statsPath = "/_nodes/stats"
@@ -149,7 +153,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 		e.client = client
 	}
 
-	errChan := errchan.New(len(e.Servers))
+	errChan := errchan.New(len(e.Servers) * 3)
 	var wg sync.WaitGroup
 	wg.Add(len(e.Servers))
 
@@ -172,17 +176,26 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 			// Always gather node states
 			if err := e.gatherNodeStats(url, acc); err != nil {
+				err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
 				errChan.C <- err
 				return
 			}
 
 			if e.ClusterHealth {
 				url = s + "/_cluster/health?level=indices"
-				e.gatherClusterHealth(url, acc)
+				if err := e.gatherClusterHealth(url, acc); err != nil {
+					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
+					errChan.C <- err
+					return
+				}
 			}
 
 			if e.ClusterStats && e.isMaster {
-				e.gatherClusterStats(s+"/_cluster/stats", acc)
+				if err := e.gatherClusterStats(s+"/_cluster/stats", acc); err != nil {
+					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
+					errChan.C <- err
+					return
+				}
 			}
 		}(serv, acc)
 	}

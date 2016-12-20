@@ -42,6 +42,7 @@ plugins, not just statsd.
 - [#1898](https://github.com/influxdata/telegraf/issues/1898): Support negative statsd counters.
 - [#1921](https://github.com/influxdata/telegraf/issues/1921): Elasticsearch cluster stats support.
 - [#1942](https://github.com/influxdata/telegraf/pull/1942): Change Amazon Kinesis output plugin to use the built-in serializer plugins.
+- [#1980](https://github.com/influxdata/telegraf/issues/1980): Hide username/password from elasticsearch error log messages.
 
 ### Bugfixes
 
