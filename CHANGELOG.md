@@ -29,7 +29,8 @@ in their config file.
 - [#2078](https://github.com/influxdata/telegraf/pull/2078): Ping input: add standard deviation field.
 - [#2121](https://github.com/influxdata/telegraf/pull/2121): Add GC pause metric to InfluxDB input plugin.
 - [#2006](https://github.com/influxdata/telegraf/pull/2006): Added response_timeout property to prometheus input plugin.
-- [#1763](https://github.com/influxdata/telegraf/issues/1763): Pulling github.com/lxn/win's pdh wrapper into telegraf
+- [#1763](https://github.com/influxdata/telegraf/issues/1763): Pulling github.com/lxn/win's pdh wrapper into telegraf.
+- [#1898](https://github.com/influxdata/telegraf/issues/1898): Support negative statsd counters.
 
 ### Bugfixes
 
