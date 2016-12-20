@@ -173,20 +173,19 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
-		for _, metric := range values {
-			d := kinesis.PutRecordsRequestEntry{
-				Data:         []byte(metric),
-				PartitionKey: aws.String(k.PartitionKey),
-			}
-			r = append(r, &d)
+		d := kinesis.PutRecordsRequestEntry{
+			Data:         values,
+			PartitionKey: aws.String(k.PartitionKey),
+		}
 
-			if sz == 500 {
-				// Max Messages Per PutRecordRequest is 500
-				elapsed := writekinesis(k, r)
-				log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
-				sz = 0
-				r = nil
-			}
+		r = append(r, &d)
+
+		if sz == 500 {
+			// Max Messages Per PutRecordRequest is 500
+			elapsed := writekinesis(k, r)
+			log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
+			sz = 0
+			r = nil
 		}
 
 	}
