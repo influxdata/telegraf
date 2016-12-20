@@ -18,9 +18,10 @@ import (
 )
 
 type Hsperfdata struct {
-	Directory string
-	Tags      []string
-	Filter    string
+	Directory      string
+	Tags           []string
+	Filter         string
+	NormalizeTicks bool
 }
 
 // Perfdata structs, as defined by Hotspot (e.g. src/share/vm/runtime/vmStructs.[hc]pp)
@@ -57,19 +58,25 @@ type Entry struct {
 
 // see: com.sun.hotspot.perfdata.Variability
 const (
-	V_Constant  = iota + 1
-	V_Monotonic = iota + 1
-	V_Variable  = iota + 1
+	V_Constant = iota + 1
+	V_Monotonic
+	V_Variable
 )
 
 // see: com.sun.hotspot.perfdata.Units
 const (
-	U_None   = iota + 1
-	U_Bytes  = iota + 1
-	U_Ticks  = iota + 1
-	U_Events = iota + 1
-	U_String = iota + 1
-	U_Hertz  = iota + 1
+	U_None = iota + 1
+	U_Bytes
+	U_Ticks
+	U_Events
+	U_String
+	U_Hertz
+)
+
+const (
+	HaveBeginTime = 1 << iota
+	HaveFrequency
+	HaveTicks
 )
 
 func (header *PrologueHeader) GetEndian() binary.ByteOrder {
@@ -92,6 +99,11 @@ var sampleConfig = `
   ## Filter the keys in the hsperfdata that are turned into fields by a given
   ## regexp
   # filter = "^java\\."
+  #
+  ## Whether to convert fields measured in JVM "ticks" into nanoseconds using
+  ## the "sun.os.hrt.frequency" key in the hsperfdata. If true, any values that
+  ##  can't be converted will be dropped.
+  # normalizeTicks = true
 `
 
 func (n *Hsperfdata) SampleConfig() string {
@@ -177,10 +189,16 @@ func (n *Hsperfdata) GatherOne(acc telegraf.Accumulator, file string, pid string
 	// "ticks" are the unit of measurement of time in the Hotspot JVM. We'll
 	// work out when this sample was taking (in ticks) by taking the current
 	// ticks and add the start time of the JVM.
-	timePartsFound := uint8(0)
+	timePartsFound := 0
 	jvmStart := time.Time{}
 	ticks := int64(0)
-	frequency := int64(0)
+	var frequency time.Duration // the length of a tick
+
+	type tickfield struct {
+		name  string
+		value int64
+	}
+	unconvertedTickFields := []tickfield{}
 
 	filter, err := regexp.Compile(n.Filter)
 	if err != nil {
@@ -213,23 +231,47 @@ func (n *Hsperfdata) GatherOne(acc telegraf.Accumulator, file string, pid string
 			case 'J':
 				v := int64(0)
 				err = binary.Read(buffer, header.GetEndian(), &v)
-				value = v
 
 				if name == "sun.rt.createVmBeginTime" {
 					// wall clock time in millis since the epoch. See
 					// TraceVmCreationTime in management.hpp of Hotspot.
 					jvmStart = time.Unix(0, v*int64(time.Millisecond))
-					timePartsFound += 1
+					timePartsFound |= HaveBeginTime
 				} else if name == "sun.os.hrt.ticks" {
 					// The number of ticks since the Hotspot JVM started. See
 					// HighResTimeSampler in statSampler.cpp, which delegates
 					// to os::elapsed_counter.
 					ticks = v
-					timePartsFound += 1
+					timePartsFound |= HaveTicks
 				} else if name == "sun.os.hrt.frequency" {
 					// how big each "tick" is - but in Hz.
-					frequency = v
-					timePartsFound += 1
+					frequency = time.Duration(time.Second.Nanoseconds() / v)
+					timePartsFound |= HaveFrequency
+
+					// now we have the frequency, we can convert all the tick
+					// fields we were storing
+					for _, unconverted := range unconvertedTickFields {
+						n.append(
+							acc,
+							filter,
+							tags,
+							fields,
+							unconverted.name,
+							unconverted.value*frequency.Nanoseconds())
+					}
+				}
+
+				if n.NormalizeTicks && entry.DataUnits == U_Ticks {
+					if (timePartsFound & HaveFrequency) == HaveFrequency {
+						value = v * frequency.Nanoseconds()
+					} else {
+						// don't have the frequency we need to convert, so put it
+						// on the list for later
+						unconvertedTickFields = append(unconvertedTickFields, tickfield{name, int64(v)})
+					}
+				} else {
+					// just a normal value
+					value = v
 				}
 			case 'I':
 				v := int32(0)
@@ -255,40 +297,30 @@ func (n *Hsperfdata) GatherOne(acc telegraf.Accumulator, file string, pid string
 			if err != nil {
 				return err
 			}
-		} else {
-			if entry.DataType == 'B' && entry.DataUnits == U_String && entry.DataVar != V_Monotonic {
-				v := string(bytes.Trim(data[data_start:data_start+entry.VectorLength], "\x00"))
+		} else if entry.DataType == 'B' && entry.DataUnits == U_String && entry.DataVar != V_Monotonic {
+			// how string values are marked
+			v := string(bytes.Trim(data[data_start:data_start+entry.VectorLength], "\x00"))
 
-				// a special tag - the "name" of the running java process
-				if name == "sun.rt.javaCommand" {
-					procname := strings.SplitN(v, " ", 2)[0]
-					if procname != "" {
-						tags["procname"] = procname
-					}
+			// a special tag - the "name" of the running java process
+			if name == "sun.rt.javaCommand" {
+				procname := strings.SplitN(v, " ", 2)[0]
+				if procname != "" {
+					tags["procname"] = procname
 				}
-
-				value = v
 			}
+
+			value = v
 		}
 
-		// store the decoded reading
-		if value != nil {
-			if n.IsTag(name) {
-				// don't tag metrics with "nil", just skip the tag if it's not there
-				tags[name] = Stringify(value)
-			} else if filter.MatchString(name) {
-				fields[name] = value
-			}
-		}
-
+		n.append(acc, filter, tags, fields, name, value)
 		start_offset += entry.EntryLength
 	}
 
 	// Converting the number of ticks into a wall-clock time is machine-
 	// specific.
-	if timePartsFound == 3 {
-		scale := time.Second / time.Duration(frequency)
-		acc.AddFields("java", fields, tags, jvmStart.Add(time.Duration(ticks)*scale))
+	timePartsForConversion := HaveFrequency | HaveTicks | HaveBeginTime
+	if (timePartsFound & timePartsForConversion) == timePartsForConversion {
+		acc.AddFields("java", fields, tags, jvmStart.Add(time.Duration(ticks)*frequency))
 	} else {
 		// not enough info in the hsperfdata to reconstruct the time, so just
 		// use the current time
@@ -298,11 +330,24 @@ func (n *Hsperfdata) GatherOne(acc telegraf.Accumulator, file string, pid string
 	return nil
 }
 
-func Stringify(value interface{}) string {
-	if valuestr, ok := value.(string); ok {
-		return valuestr
-	} else {
-		return fmt.Sprintf("%#v", value)
+func (n *Hsperfdata) append(
+	acc telegraf.Accumulator,
+	filter *regexp.Regexp,
+	tags map[string]string,
+	fields map[string]interface{},
+	name string,
+	value interface{}) {
+	if value != nil {
+		if n.IsTag(name) {
+			// don't tag metrics with "nil", just skip the tag if it's not there
+			if valuestr, ok := value.(string); ok {
+				tags[name] = valuestr
+			} else {
+				tags[name] = fmt.Sprintf("%#v", value)
+			}
+		} else if filter.MatchString(name) {
+			fields[name] = value
+		}
 	}
 }
 
