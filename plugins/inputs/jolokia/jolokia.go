@@ -52,8 +52,9 @@ type Jolokia struct {
 
 const sampleConfig = `
   ## This is the context root used to compose the jolokia url
+  ## NOTE that Jolokia requires a trailing slash at the end of the context root
   ## NOTE that your jolokia security policy must allow for POST requests.
-  context = "/jolokia"
+  context = "/jolokia/"
 
   ## This specifies the mode used
   # mode = "proxy"
@@ -148,7 +149,7 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 
 func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, error) {
 	var jolokiaUrl *url.URL
-	context := j.Context // Usually "/jolokia"
+	context := j.Context // Usually "/jolokia/"
 
 	// Create bodyContent
 	bodyContent := map[string]interface{}{
@@ -220,6 +221,16 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 	return req, nil
 }
 
+func extractValues(measurement string, value interface{}, fields map[string]interface{}) {
+	if mapValues, ok := value.(map[string]interface{}); ok {
+		for k2, v2 := range mapValues {
+			extractValues(measurement+"_"+k2, v2, fields)
+		}
+	} else {
+		fields[measurement] = value
+	}
+}
+
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 	servers := j.Servers
 	metrics := j.Metrics
@@ -244,23 +255,8 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				fmt.Printf("Error handling response: %s\n", err)
 			} else {
-
 				if values, ok := out["value"]; ok {
-					switch t := values.(type) {
-					case map[string]interface{}:
-						for k, v := range t {
-							switch t2 := v.(type) {
-							case map[string]interface{}:
-								for k2, v2 := range t2 {
-									fields[measurement+"_"+k+"_"+k2] = v2
-								}
-							case interface{}:
-								fields[measurement+"_"+k] = t2
-							}
-						}
-					case interface{}:
-						fields[measurement] = t
-					}
+					extractValues(measurement, values, fields)
 				} else {
 					fmt.Printf("Missing key 'value' in output response\n")
 				}

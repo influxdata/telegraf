@@ -36,6 +36,8 @@ The plugin expects messages in one of the
   files = ["/var/mymetrics.out"]
   ## Read file from beginning.
   from_beginning = false
+  ## Whether file is a named pipe
+  pipe = false
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
