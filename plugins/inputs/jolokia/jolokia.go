@@ -11,8 +11,13 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// Default http timeouts
+var DefaultResponseHeaderTimeout = internal.Duration{Duration: 3 * time.Second}
+var DefaultClientTimeout = internal.Duration{Duration: 4 * time.Second}
 
 type Server struct {
 	Name     string
@@ -48,6 +53,9 @@ type Jolokia struct {
 	Servers []Server
 	Metrics []Metric
 	Proxy   Server
+
+	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
+	ClientTimeout         internal.Duration `toml:"client_timeout"`
 }
 
 const sampleConfig = `
@@ -66,6 +74,15 @@ const sampleConfig = `
   #   host = "127.0.0.1"
   #   port = "8080"
 
+  ## Optional http timeouts
+  ##
+  ## response_header_timeout, if non-zero, specifies the amount of time to wait
+  ## for a server's response headers after fully writing the request.
+  # response_header_timeout = "3s"
+  ##
+  ## client_timeout specifies a time limit for requests made by this client.
+  ## Includes connection time, any redirects, and reading the response body.
+  # client_timeout = "4s"
 
   ## List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]
@@ -232,6 +249,15 @@ func extractValues(measurement string, value interface{}, fields map[string]inte
 }
 
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
+
+	if j.jClient == nil {
+		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
+		j.jClient = &JolokiaClientImpl{&http.Client{
+			Transport: tr,
+			Timeout:   j.ClientTimeout.Duration,
+		}}
+	}
+
 	servers := j.Servers
 	metrics := j.Metrics
 	tags := make(map[string]string)
@@ -272,11 +298,9 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("jolokia", func() telegraf.Input {
-		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
-		client := &http.Client{
-			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+		return &Jolokia{
+			ResponseHeaderTimeout: DefaultResponseHeaderTimeout,
+			ClientTimeout:         DefaultClientTimeout,
 		}
-		return &Jolokia{jClient: &JolokiaClientImpl{client: client}}
 	})
 }
