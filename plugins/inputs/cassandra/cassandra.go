@@ -289,7 +289,6 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				requestUrl.User = url.UserPassword(serverTokens["user"],
 					serverTokens["passwd"])
 			}
-			fmt.Printf("host %s url %s\n", serverTokens["host"], requestUrl)
 
 			out, err := c.getAttr(requestUrl)
 			if out["status"] != 200.0 {
