@@ -43,6 +43,7 @@ plugins, not just statsd.
 - [#1921](https://github.com/influxdata/telegraf/issues/1921): Elasticsearch cluster stats support.
 - [#1942](https://github.com/influxdata/telegraf/pull/1942): Change Amazon Kinesis output plugin to use the built-in serializer plugins.
 - [#1980](https://github.com/influxdata/telegraf/issues/1980): Hide username/password from elasticsearch error log messages.
+- [#2097](https://github.com/influxdata/telegraf/issues/2097): Configurable HTTP timeouts in Jolokia plugin
 
 ### Bugfixes
 
