@@ -32,8 +32,6 @@ var dropwarn = "E! Error: statsd message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
-var prevInstance *Statsd
-
 type Statsd struct {
 	// Address & Port to serve from
 	ServiceAddress string
@@ -244,17 +242,10 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	s.done = make(chan struct{})
 	s.in = make(chan []byte, s.AllowedPendingMessages)
 
-	if prevInstance == nil {
-		s.gauges = make(map[string]cachedgauge)
-		s.counters = make(map[string]cachedcounter)
-		s.sets = make(map[string]cachedset)
-		s.timings = make(map[string]cachedtimings)
-	} else {
-		s.gauges = prevInstance.gauges
-		s.counters = prevInstance.counters
-		s.sets = prevInstance.sets
-		s.timings = prevInstance.timings
-	}
+	s.gauges = make(map[string]cachedgauge)
+	s.counters = make(map[string]cachedcounter)
+	s.sets = make(map[string]cachedset)
+	s.timings = make(map[string]cachedtimings)
 
 	if s.ConvertNames {
 		log.Printf("I! WARNING statsd: convert_names config option is deprecated," +
@@ -271,7 +262,6 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Start the line parser
 	go s.parser()
 	log.Printf("I! Started the statsd service on %s\n", s.ServiceAddress)
-	prevInstance = s
 	return nil
 }
 
@@ -426,8 +416,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Parse the value
 		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
-			if m.mtype != "g" {
-				log.Printf("E! Error: +- values are only supported for gauges: %s\n", line)
+			if m.mtype != "g" && m.mtype != "c" {
+				log.Printf("E! Error: +- values are only supported for gauges & counters: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
 			m.additive = true

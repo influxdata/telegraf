@@ -6,6 +6,15 @@
 will change te default behavior for users who were not specifying these parameters
 in their config file.
 
+- The StatsD plugin will also no longer save it's state on a service reload.
+Essentially we have reverted PR [#887](https://github.com/influxdata/telegraf/pull/887).
+The reason for this is that saving the state in a global variable is not
+thread-safe (see [#1975](https://github.com/influxdata/telegraf/issues/1975) & [#2102](https://github.com/influxdata/telegraf/issues/2102)),
+and this creates issues if users want to define multiple instances
+of the statsd plugin. Saving state on reload may be considered in the future,
+but this would need to be implemented at a higher level and applied to all
+plugins, not just statsd.
+
 ### Features
 
 - [#2123](https://github.com/influxdata/telegraf/pull/2123): Fix improper calculation of CPU percentages
@@ -29,6 +38,11 @@ in their config file.
 - [#2078](https://github.com/influxdata/telegraf/pull/2078): Ping input: add standard deviation field.
 - [#2121](https://github.com/influxdata/telegraf/pull/2121): Add GC pause metric to InfluxDB input plugin.
 - [#2006](https://github.com/influxdata/telegraf/pull/2006): Added response_timeout property to prometheus input plugin.
+- [#1763](https://github.com/influxdata/telegraf/issues/1763): Pulling github.com/lxn/win's pdh wrapper into telegraf.
+- [#1898](https://github.com/influxdata/telegraf/issues/1898): Support negative statsd counters.
+- [#1921](https://github.com/influxdata/telegraf/issues/1921): Elasticsearch cluster stats support.
+- [#1942](https://github.com/influxdata/telegraf/pull/1942): Change Amazon Kinesis output plugin to use the built-in serializer plugins.
+- [#1980](https://github.com/influxdata/telegraf/issues/1980): Hide username/password from elasticsearch error log messages.
 - [#2097](https://github.com/influxdata/telegraf/issues/2097): Configurable HTTP timeouts in Jolokia plugin
 
 ### Bugfixes
@@ -48,6 +62,9 @@ in their config file.
 - [#1987](https://github.com/influxdata/telegraf/issues/1987): fix docker input plugin tags when registry has port.
 - [#2089](https://github.com/influxdata/telegraf/issues/2089): Fix tail input when reading from a pipe.
 - [#1449](https://github.com/influxdata/telegraf/issues/1449): MongoDB plugin always shows 0 replication lag.
+- [#1825](https://github.com/influxdata/telegraf/issues/1825): Consul plugin: add check_id as a tag in metrics to avoid overwrites.
+- [#1973](https://github.com/influxdata/telegraf/issues/1973): Partial fix: logparser CLF pattern with IPv6 addresses.
+- [#1975](https://github.com/influxdata/telegraf/issues/1975) & [#2102](https://github.com/influxdata/telegraf/issues/2102): Fix thread-safety when using multiple instances of the statsd input plugin.
 
 ## v1.1.2 [2016-12-12]
 
