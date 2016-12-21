@@ -65,6 +65,7 @@ be used for service inputs, such as logparser and statsd. Valid values are
 * **quiet**: Run telegraf in quiet mode (error messages only).
 * **hostname**: Override default hostname, if empty use os.Hostname().
 * **omit_hostname**: If true, do no set the "host" tag in the telegraf agent.
+* **aws_instance_id**: If true, query the AWS meta data API for the instance ID and add the "InstanceId" tag.
 
 ## Input Configuration
 
