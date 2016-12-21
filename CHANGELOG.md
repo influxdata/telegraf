@@ -64,6 +64,7 @@ plugins, not just statsd.
 - [#1825](https://github.com/influxdata/telegraf/issues/1825): Consul plugin: add check_id as a tag in metrics to avoid overwrites.
 - [#1973](https://github.com/influxdata/telegraf/issues/1973): Partial fix: logparser CLF pattern with IPv6 addresses.
 - [#1975](https://github.com/influxdata/telegraf/issues/1975) & [#2102](https://github.com/influxdata/telegraf/issues/2102): Fix thread-safety when using multiple instances of the statsd input plugin.
+- [#2027](https://github.com/influxdata/telegraf/issues/2027): docker input: interface conversion panic fix.
 
 ## v1.1.2 [2016-12-12]
 

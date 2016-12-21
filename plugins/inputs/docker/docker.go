@@ -368,11 +368,22 @@ func gatherContainerStats(
 				if field == "container_id" {
 					continue
 				}
+
+				var uintV uint64
+				switch v := value.(type) {
+				case uint64:
+					uintV = v
+				case int64:
+					uintV = uint64(v)
+				default:
+					continue
+				}
+
 				_, ok := totalNetworkStatMap[field]
 				if ok {
-					totalNetworkStatMap[field] = totalNetworkStatMap[field].(uint64) + value.(uint64)
+					totalNetworkStatMap[field] = totalNetworkStatMap[field].(uint64) + uintV
 				} else {
-					totalNetworkStatMap[field] = value
+					totalNetworkStatMap[field] = uintV
 				}
 			}
 		}
@@ -491,11 +502,22 @@ func gatherBlockIOMetrics(
 				if field == "container_id" {
 					continue
 				}
+
+				var uintV uint64
+				switch v := value.(type) {
+				case uint64:
+					uintV = v
+				case int64:
+					uintV = uint64(v)
+				default:
+					continue
+				}
+
 				_, ok := totalStatMap[field]
 				if ok {
-					totalStatMap[field] = totalStatMap[field].(uint64) + value.(uint64)
+					totalStatMap[field] = totalStatMap[field].(uint64) + uintV
 				} else {
-					totalStatMap[field] = value
+					totalStatMap[field] = uintV
 				}
 			}
 		}
