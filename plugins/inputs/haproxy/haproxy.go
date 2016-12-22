@@ -181,7 +181,6 @@ func importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
 		"iid":          true,
 		"sid":          true,
 		"lastchg":      true,
-		"tracked":      true,
 		"check_code":   true,
 		"agent_status": true,
 		"agent_code":   true,
