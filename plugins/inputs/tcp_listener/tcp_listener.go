@@ -52,14 +52,14 @@ var malformedwarn = "E! tcp_listener has received %d malformed packets" +
 
 const sampleConfig = `
   ## Address and port to host TCP listener on
-  service_address = ":8094"
+  # service_address = ":8094"
 
   ## Number of TCP messages allowed to queue up. Once filled, the
   ## TCP listener will start dropping packets.
-  allowed_pending_messages = 10000
+  # allowed_pending_messages = 10000
 
   ## Maximum number of concurrent TCP connections to allow
-  max_tcp_connections = 250
+  # max_tcp_connections = 250
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
@@ -276,6 +276,10 @@ func (t *TcpListener) remember(id string, conn *net.TCPConn) {
 
 func init() {
 	inputs.Add("tcp_listener", func() telegraf.Input {
-		return &TcpListener{}
+		return &TcpListener{
+			ServiceAddress:         ":8094",
+			AllowedPendingMessages: 10000,
+			MaxTCPConnections:      250,
+		}
 	})
 }

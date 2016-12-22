@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"sync"
@@ -31,6 +30,8 @@ type Kubernetes struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+
+	RoundTripper http.RoundTripper
 }
 
 var sampleConfig = `
@@ -101,15 +102,12 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 		return err
 	}
 
-	var rt http.RoundTripper = &http.Transport{
-		Dial: (&net.Dialer{
-			Timeout:   5 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout:   5 * time.Second,
-		TLSClientConfig:       tlsCfg,
-		ResponseHeaderTimeout: time.Duration(3 * time.Second),
-		DisableKeepAlives:     false,
+	if k.RoundTripper == nil {
+		k.RoundTripper = &http.Transport{
+			TLSHandshakeTimeout:   5 * time.Second,
+			TLSClientConfig:       tlsCfg,
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		}
 	}
 
 	if k.BearerToken != "" {
@@ -120,7 +118,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 		req.Header.Set("Authorization", "Bearer "+string(token))
 	}
 
-	resp, err = rt.RoundTrip(req)
+	resp, err = k.RoundTripper.RoundTrip(req)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}

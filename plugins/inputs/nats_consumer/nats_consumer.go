@@ -91,8 +91,15 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 
 	var connectErr error
 
+	// set default NATS connection options
 	opts := nats.DefaultOptions
+
+	// override max reconnection tries
+	opts.MaxReconnect = -1
+
+	// override servers if any were specified
 	opts.Servers = n.Servers
+
 	opts.Secure = n.Secure
 
 	if n.Conn == nil || n.Conn.IsClosed() {

@@ -3,6 +3,7 @@ package influx
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
 
@@ -15,15 +16,10 @@ type InfluxParser struct {
 	DefaultTags map[string]string
 }
 
-// Parse returns a slice of Metrics from a text representation of a
-// metric (in line-protocol format)
-// with each metric separated by newlines. If any metrics fail to parse,
-// a non-nil error will be returned in addition to the metrics that parsed
-// successfully.
-func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *InfluxParser) ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
-	points, err := models.ParsePoints(buf)
+	points, err := models.ParsePointsWithPrecision(buf, t, "n")
 	metrics := make([]telegraf.Metric, len(points))
 	for i, point := range points {
 		for k, v := range p.DefaultTags {
@@ -37,6 +33,15 @@ func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		metrics[i] = telegraf.NewMetricFromPoint(point)
 	}
 	return metrics, err
+}
+
+// Parse returns a slice of Metrics from a text representation of a
+// metric (in line-protocol format)
+// with each metric separated by newlines. If any metrics fail to parse,
+// a non-nil error will be returned in addition to the metrics that parsed
+// successfully.
+func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	return p.ParseWithDefaultTime(buf, time.Now())
 }
 
 func (p *InfluxParser) ParseLine(line string) (telegraf.Metric, error) {
