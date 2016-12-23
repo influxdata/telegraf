@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +39,7 @@ func TestUriOverride(t *testing.T) {
 	l.APIToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write([]telegraf.Metric{newHostMetric(int32(0), "name", "host")})
+	err = l.Write([]plugins.Metric{newHostMetric(int32(0), "name", "host")})
 	require.NoError(t, err)
 }
 
@@ -55,7 +55,7 @@ func TestBadStatusCode(t *testing.T) {
 	l.APIToken = "123456"
 	err := l.Connect()
 	require.NoError(t, err)
-	err = l.Write([]telegraf.Metric{newHostMetric(int32(0), "name", "host")})
+	err = l.Write([]plugins.Metric{newHostMetric(int32(0), "name", "host")})
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
@@ -69,7 +69,7 @@ func TestBuildGauge(t *testing.T) {
 
 	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()
 	var gaugeTests = []struct {
-		ptIn     telegraf.Metric
+		ptIn     plugins.Metric
 		outGauge *Gauge
 		err      error
 	}{
@@ -163,7 +163,7 @@ func TestBuildGauge(t *testing.T) {
 	}
 }
 
-func newHostMetric(value interface{}, name, host string) telegraf.Metric {
+func newHostMetric(value interface{}, name, host string) plugins.Metric {
 	m, _ := metric.New(
 		name,
 		map[string]string{"host": host},
@@ -206,7 +206,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		mtime,
 	)
 	var gaugeTests = []struct {
-		ptIn     telegraf.Metric
+		ptIn     plugins.Metric
 		template string
 		outGauge *Gauge
 		err      error

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/testutil"
 	//"github.com/stretchr/testify/require"
 )
@@ -78,7 +78,7 @@ func TestBuildTagsTelnet(t *testing.T) {
 func BenchmarkHttpSend(b *testing.B) {
 	const BatchSize = 50
 	const MetricsCount = 4 * BatchSize
-	metrics := make([]telegraf.Metric, MetricsCount)
+	metrics := make([]plugins.Metric, MetricsCount)
 	for i := 0; i < MetricsCount; i++ {
 		metrics[i] = testutil.TestMetric(1.0)
 	}

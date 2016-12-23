@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,7 +36,7 @@ func (_ *DiskStats) SampleConfig() string {
 	return diskSampleConfig
 }
 
-func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
+func (s *DiskStats) Gather(acc plugins.Accumulator) error {
 	// Legacy support:
 	if len(s.Mountpoints) != 0 {
 		s.MountPoints = s.Mountpoints
@@ -102,7 +102,7 @@ func (_ *DiskIOStats) SampleConfig() string {
 	return diskIoSampleConfig
 }
 
-func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
+func (s *DiskIOStats) Gather(acc plugins.Accumulator) error {
 	diskio, err := s.ps.DiskIO()
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %s", err)
@@ -149,11 +149,11 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("disk", func() telegraf.Input {
+	inputs.Add("disk", func() plugins.Input {
 		return &DiskStats{ps: &systemPS{}}
 	})
 
-	inputs.Add("diskio", func() telegraf.Input {
+	inputs.Add("diskio", func() plugins.Input {
 		return &DiskIOStats{ps: &systemPS{}, SkipSerialNumber: true}
 	})
 }

@@ -3,13 +3,13 @@ package json
 import (
 	ejson "encoding/json"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 type JsonSerializer struct {
 }
 
-func (s *JsonSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+func (s *JsonSerializer) Serialize(metric plugins.Metric) ([]byte, error) {
 	m := make(map[string]interface{})
 	m["tags"] = metric.Tags()
 	m["fields"] = metric.Fields()

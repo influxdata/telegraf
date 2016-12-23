@@ -5,7 +5,7 @@ import (
 
 	"github.com/shirou/gopsutil/process"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 type SpecProcessor struct {
@@ -13,7 +13,7 @@ type SpecProcessor struct {
 	pid    int32
 	tags   map[string]string
 	fields map[string]interface{}
-	acc    telegraf.Accumulator
+	acc    plugins.Accumulator
 	proc   *process.Process
 }
 
@@ -21,7 +21,7 @@ func NewSpecProcessor(
 	processName string,
 	prefix string,
 	pid int32,
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	p *process.Process,
 	tags map[string]string,
 ) *SpecProcessor {

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
@@ -309,7 +309,7 @@ func Errorf(err error, msg string, format ...interface{}) error {
 }
 
 func init() {
-	inputs.Add("snmp", func() telegraf.Input {
+	inputs.Add("snmp", func() plugins.Input {
 		return &Snmp{
 			Retries:        3,
 			MaxRepetitions: 10,
@@ -333,7 +333,7 @@ func (s *Snmp) Description() string {
 // Gather retrieves all the configured fields and tables.
 // Any error encountered does not halt the process. The errors are accumulated
 // and returned at the end.
-func (s *Snmp) Gather(acc telegraf.Accumulator) error {
+func (s *Snmp) Gather(acc plugins.Accumulator) error {
 	if err := s.init(); err != nil {
 		return err
 	}
@@ -366,7 +366,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table, topTags map[string]string, walk bool) error {
+func (s *Snmp) gatherTable(acc plugins.Accumulator, gs snmpConnection, t Table, topTags map[string]string, walk bool) error {
 	rt, err := t.Build(gs, walk)
 	if err != nil {
 		return err

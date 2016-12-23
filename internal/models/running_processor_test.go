@@ -3,7 +3,7 @@ package models
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
@@ -19,8 +19,8 @@ func (f *TestProcessor) Description() string  { return "" }
 //   "foo" to "fuz"
 //   "bar" to "baz"
 // And it also drops measurements named "dropme"
-func (f *TestProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	out := make([]telegraf.Metric, 0)
+func (f *TestProcessor) Apply(in ...plugins.Metric) []plugins.Metric {
+	out := make([]plugins.Metric, 0)
 	for _, m := range in {
 		switch m.Name() {
 		case "foo":
@@ -46,7 +46,7 @@ func NewTestRunningProcessor() *RunningProcessor {
 }
 
 func TestRunningProcessor(t *testing.T) {
-	inmetrics := []telegraf.Metric{
+	inmetrics := []plugins.Metric{
 		testutil.TestMetric(1, "foo"),
 		testutil.TestMetric(1, "bar"),
 		testutil.TestMetric(1, "baz"),
@@ -69,7 +69,7 @@ func TestRunningProcessor(t *testing.T) {
 }
 
 func TestRunningProcessor_WithNameDrop(t *testing.T) {
-	inmetrics := []telegraf.Metric{
+	inmetrics := []plugins.Metric{
 		testutil.TestMetric(1, "foo"),
 		testutil.TestMetric(1, "bar"),
 		testutil.TestMetric(1, "baz"),
@@ -96,7 +96,7 @@ func TestRunningProcessor_WithNameDrop(t *testing.T) {
 }
 
 func TestRunningProcessor_DroppedMetric(t *testing.T) {
-	inmetrics := []telegraf.Metric{
+	inmetrics := []plugins.Metric{
 		testutil.TestMetric(1, "dropme"),
 		testutil.TestMetric(1, "foo"),
 		testutil.TestMetric(1, "bar"),

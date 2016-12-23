@@ -3,7 +3,7 @@ package nsq_consumer
 import (
 	"log"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/nsqio/go-nsq"
@@ -17,7 +17,7 @@ type NSQConsumer struct {
 	MaxInFlight int
 	parser      parsers.Parser
 	consumer    *nsq.Consumer
-	acc         telegraf.Accumulator
+	acc         plugins.Accumulator
 }
 
 var sampleConfig = `
@@ -35,7 +35,7 @@ var sampleConfig = `
 `
 
 func init() {
-	inputs.Add("nsq_consumer", func() telegraf.Input {
+	inputs.Add("nsq_consumer", func() plugins.Input {
 		return &NSQConsumer{}
 	})
 }
@@ -56,7 +56,7 @@ func (n *NSQConsumer) Description() string {
 }
 
 // Start pulls data from nsq
-func (n *NSQConsumer) Start(acc telegraf.Accumulator) error {
+func (n *NSQConsumer) Start(acc plugins.Accumulator) error {
 	n.acc = acc
 	n.connect()
 	n.consumer.AddConcurrentHandlers(nsq.HandlerFunc(func(message *nsq.Message) error {
@@ -81,7 +81,7 @@ func (n *NSQConsumer) Stop() {
 }
 
 // Gather is a noop
-func (n *NSQConsumer) Gather(acc telegraf.Accumulator) error {
+func (n *NSQConsumer) Gather(acc plugins.Accumulator) error {
 	return nil
 }
 

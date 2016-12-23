@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -25,7 +25,7 @@ func (k *KernelVmstat) SampleConfig() string {
 	return ""
 }
 
-func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
+func (k *KernelVmstat) Gather(acc plugins.Accumulator) error {
 	data, err := k.getProcVmstat()
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (k *KernelVmstat) getProcVmstat() ([]byte, error) {
 }
 
 func init() {
-	inputs.Add("kernel_vmstat", func() telegraf.Input {
+	inputs.Add("kernel_vmstat", func() plugins.Input {
 		return &KernelVmstat{
 			statFile: "/proc/vmstat",
 		}

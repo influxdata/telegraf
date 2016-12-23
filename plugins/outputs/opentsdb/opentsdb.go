@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -78,7 +78,7 @@ func (o *OpenTSDB) Connect() error {
 	return nil
 }
 
-func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
+func (o *OpenTSDB) Write(metrics []plugins.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -97,7 +97,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 	}
 }
 
-func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
+func (o *OpenTSDB) WriteHttp(metrics []plugins.Metric, u *url.URL) error {
 	http := openTSDBHttp{
 		Host:      u.Host,
 		Port:      o.Port,
@@ -142,7 +142,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 	return nil
 }
 
-func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
+func (o *OpenTSDB) WriteTelnet(metrics []plugins.Metric, u *url.URL) error {
 	// Send Data with telnet / socket communication
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
@@ -225,7 +225,7 @@ func (o *OpenTSDB) Close() error {
 }
 
 func init() {
-	outputs.Add("opentsdb", func() telegraf.Output {
+	outputs.Add("opentsdb", func() plugins.Output {
 		return &OpenTSDB{}
 	})
 }

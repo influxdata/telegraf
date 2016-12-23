@@ -10,7 +10,7 @@ import (
 
 	"github.com/shirou/gopsutil/process"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -66,7 +66,7 @@ func (_ *Procstat) Description() string {
 	return "Monitor process cpu and memory usage"
 }
 
-func (p *Procstat) Gather(acc telegraf.Accumulator) error {
+func (p *Procstat) Gather(acc plugins.Accumulator) error {
 	err := p.createProcesses()
 	if err != nil {
 		log.Printf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
@@ -234,7 +234,7 @@ func (p *Procstat) pidsFromUser() ([]int32, error) {
 }
 
 func init() {
-	inputs.Add("procstat", func() telegraf.Input {
+	inputs.Add("procstat", func() plugins.Input {
 		return NewProcstat()
 	})
 }

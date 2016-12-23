@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"net/http"
 	"reflect"
@@ -82,7 +82,7 @@ func (*CouchDB) SampleConfig() string {
 `
 }
 
-func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
+func (c *CouchDB) Gather(accumulator plugins.Accumulator) error {
 	errorChannel := make(chan error, len(c.HOSTs))
 	var wg sync.WaitGroup
 	for _, u := range c.HOSTs {
@@ -122,7 +122,7 @@ var client = &http.Client{
 	Timeout:   time.Duration(4 * time.Second),
 }
 
-func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host string) error {
+func (c *CouchDB) fetchAndInsertData(accumulator plugins.Accumulator, host string) error {
 
 	response, error := client.Get(host)
 	if error != nil {
@@ -209,7 +209,7 @@ func (c *CouchDB) generateFields(prefix string, obj metaData) map[string]interfa
 }
 
 func init() {
-	inputs.Add("couchdb", func() telegraf.Input {
+	inputs.Add("couchdb", func() plugins.Input {
 		return &CouchDB{}
 	})
 }

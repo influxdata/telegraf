@@ -1,12 +1,12 @@
 package models
 
 import (
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 type RunningProcessor struct {
 	Name      string
-	Processor telegraf.Processor
+	Processor plugins.Processor
 	Config    *ProcessorConfig
 }
 
@@ -23,8 +23,8 @@ type ProcessorConfig struct {
 	Filter Filter
 }
 
-func (rp *RunningProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	ret := []telegraf.Metric{}
+func (rp *RunningProcessor) Apply(in ...plugins.Metric) []plugins.Metric {
+	ret := []plugins.Metric{}
 
 	for _, metric := range in {
 		if rp.Config.Filter.IsActive() {

@@ -1,7 +1,7 @@
 package serializers
 
 import (
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -21,7 +21,7 @@ type Serializer interface {
 	// Serialize takes a single telegraf metric and turns it into a byte buffer.
 	// separate metrics should be separated by a newline, and there should be
 	// a newline at the end of the buffer.
-	Serialize(metric telegraf.Metric) ([]byte, error)
+	Serialize(metric plugins.Metric) ([]byte, error)
 }
 
 // Config is a struct that covers the data types needed for all serializer types,

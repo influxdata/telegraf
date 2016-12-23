@@ -13,10 +13,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -367,13 +367,13 @@ func registerPlugin(pluginsDir, filePath string, p *plugin.Plugin) error {
 	name := strings.Replace(filePath, string(os.PathSeparator), ".", -1)
 
 	if create, err := p.Lookup("NewInput"); err == nil {
-		inputs.Add(name, inputs.Creator(create.(func() telegraf.Input)))
+		inputs.Add(name, inputs.Creator(create.(func() plugins.Input)))
 	} else if create, err := p.Lookup("NewOutput"); err == nil {
-		outputs.Add(name, outputs.Creator(create.(func() telegraf.Output)))
+		outputs.Add(name, outputs.Creator(create.(func() plugins.Output)))
 	} else if create, err := p.Lookup("NewProcessor"); err == nil {
-		processors.Add(name, processors.Creator(create.(func() telegraf.Processor)))
+		processors.Add(name, processors.Creator(create.(func() plugins.Processor)))
 	} else if create, err := p.Lookup("NewAggregator"); err == nil {
-		aggregators.Add(name, aggregators.Creator(create.(func() telegraf.Aggregator)))
+		aggregators.Add(name, aggregators.Creator(create.(func() plugins.Aggregator)))
 	} else {
 		return fmt.Errorf("not a telegraf plugin: %s%s", filePath, ext)
 	}

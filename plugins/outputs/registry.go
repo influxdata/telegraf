@@ -1,10 +1,10 @@
 package outputs
 
 import (
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
-type Creator func() telegraf.Output
+type Creator func() plugins.Output
 
 var Outputs = map[string]Creator{}
 

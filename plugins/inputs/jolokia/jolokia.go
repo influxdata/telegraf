@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -248,7 +248,7 @@ func extractValues(measurement string, value interface{}, fields map[string]inte
 	}
 }
 
-func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
+func (j *Jolokia) Gather(acc plugins.Accumulator) error {
 
 	if j.jClient == nil {
 		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
@@ -297,7 +297,7 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("jolokia", func() telegraf.Input {
+	inputs.Add("jolokia", func() plugins.Input {
 		return &Jolokia{
 			ResponseHeaderTimeout: DefaultResponseHeaderTimeout,
 			ClientTimeout:         DefaultClientTimeout,

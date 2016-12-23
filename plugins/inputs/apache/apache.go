@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -57,7 +57,7 @@ func (n *Apache) Description() string {
 	return "Read Apache status information (mod_status)"
 }
 
-func (n *Apache) Gather(acc telegraf.Accumulator) error {
+func (n *Apache) Gather(acc plugins.Accumulator) error {
 	if len(n.Urls) == 0 {
 		n.Urls = []string{"http://localhost/server-status?auto"}
 	}
@@ -89,7 +89,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *Apache) gatherUrl(addr *url.URL, acc plugins.Accumulator) error {
 
 	var tr *http.Transport
 
@@ -228,7 +228,7 @@ func getTags(addr *url.URL) map[string]string {
 }
 
 func init() {
-	inputs.Add("apache", func() telegraf.Input {
+	inputs.Add("apache", func() plugins.Input {
 		return &Apache{}
 	})
 }

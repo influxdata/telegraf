@@ -7,7 +7,7 @@ import (
 
 	"github.com/hpcloud/tail"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -21,7 +21,7 @@ type Tail struct {
 	tailers []*tail.Tail
 	parser  parsers.Parser
 	wg      sync.WaitGroup
-	acc     telegraf.Accumulator
+	acc     plugins.Accumulator
 
 	sync.Mutex
 }
@@ -63,11 +63,11 @@ func (t *Tail) Description() string {
 	return "Stream a log file, like the tail -f command"
 }
 
-func (t *Tail) Gather(acc telegraf.Accumulator) error {
+func (t *Tail) Gather(acc plugins.Accumulator) error {
 	return nil
 }
 
-func (t *Tail) Start(acc telegraf.Accumulator) error {
+func (t *Tail) Start(acc plugins.Accumulator) error {
 	t.Lock()
 	defer t.Unlock()
 
@@ -119,7 +119,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 func (t *Tail) receiver(tailer *tail.Tail) {
 	defer t.wg.Done()
 
-	var m telegraf.Metric
+	var m plugins.Metric
 	var err error
 	var line *tail.Line
 	for line = range tailer.Lines {
@@ -161,7 +161,7 @@ func (t *Tail) SetParser(parser parsers.Parser) {
 }
 
 func init() {
-	inputs.Add("tail", func() telegraf.Input {
+	inputs.Add("tail", func() plugins.Input {
 		return NewTail()
 	})
 }

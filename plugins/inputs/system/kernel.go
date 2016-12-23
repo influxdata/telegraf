@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -32,7 +32,7 @@ func (k *Kernel) Description() string {
 
 func (k *Kernel) SampleConfig() string { return "" }
 
-func (k *Kernel) Gather(acc telegraf.Accumulator) error {
+func (k *Kernel) Gather(acc plugins.Accumulator) error {
 	data, err := k.getProcStat()
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func (k *Kernel) getProcStat() ([]byte, error) {
 }
 
 func init() {
-	inputs.Add("kernel", func() telegraf.Input {
+	inputs.Add("kernel", func() plugins.Input {
 		return &Kernel{
 			statFile: "/proc/stat",
 		}

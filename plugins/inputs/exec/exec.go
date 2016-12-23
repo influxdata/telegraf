@@ -13,7 +13,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -61,12 +61,12 @@ func NewExec() *Exec {
 }
 
 type Runner interface {
-	Run(*Exec, string, telegraf.Accumulator) ([]byte, error)
+	Run(*Exec, string, plugins.Accumulator) ([]byte, error)
 }
 
 type CommandRunner struct{}
 
-func AddNagiosState(exitCode error, acc telegraf.Accumulator) error {
+func AddNagiosState(exitCode error, acc plugins.Accumulator) error {
 	nagiosState := 0
 	if exitCode != nil {
 		exiterr, ok := exitCode.(*exec.ExitError)
@@ -89,7 +89,7 @@ func AddNagiosState(exitCode error, acc telegraf.Accumulator) error {
 func (c CommandRunner) Run(
 	e *Exec,
 	command string,
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 ) ([]byte, error) {
 	split_cmd, err := shellquote.Split(command)
 	if err != nil || len(split_cmd) == 0 {
@@ -145,7 +145,7 @@ func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
 
 }
 
-func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
+func (e *Exec) ProcessCommand(command string, acc plugins.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	out, err := e.runner.Run(e, command, acc)
@@ -176,7 +176,7 @@ func (e *Exec) SetParser(parser parsers.Parser) {
 	e.parser = parser
 }
 
-func (e *Exec) Gather(acc telegraf.Accumulator) error {
+func (e *Exec) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 	// Legacy single command support
 	if e.Command != "" {
@@ -226,7 +226,7 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("exec", func() telegraf.Input {
+	inputs.Add("exec", func() plugins.Input {
 		return NewExec()
 	})
 }

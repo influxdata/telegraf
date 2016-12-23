@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -46,7 +46,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 func (a *Agent) Connect() error {
 	for _, o := range a.Config.Outputs {
 		switch ot := o.Output.(type) {
-		case telegraf.ServiceOutput:
+		case plugins.ServiceOutput:
 			if err := ot.Start(); err != nil {
 				log.Printf("E! Service for output %s failed to start, exiting\n%s\n",
 					o.Name, err.Error())
@@ -76,7 +76,7 @@ func (a *Agent) Close() error {
 	for _, o := range a.Config.Outputs {
 		err = o.Output.Close()
 		switch ot := o.Output.(type) {
-		case telegraf.ServiceOutput:
+		case plugins.ServiceOutput:
 			ot.Stop()
 		}
 	}
@@ -101,7 +101,7 @@ func (a *Agent) gatherer(
 	shutdown chan struct{},
 	input *models.RunningInput,
 	interval time.Duration,
-	metricC chan telegraf.Metric,
+	metricC chan plugins.Metric,
 ) {
 	defer panicRecover(input)
 
@@ -176,7 +176,7 @@ func gatherWithTimeout(
 func (a *Agent) Test() error {
 	shutdown := make(chan struct{})
 	defer close(shutdown)
-	metricC := make(chan telegraf.Metric)
+	metricC := make(chan plugins.Metric)
 
 	// dummy receiver for the point channel
 	go func() {
@@ -241,14 +241,14 @@ func (a *Agent) flush() {
 }
 
 // flusher monitors the metrics input channel and flushes on the minimum interval
-func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) error {
+func (a *Agent) flusher(shutdown chan struct{}, metricC chan plugins.Metric) error {
 	// Inelegant, but this sleep is to allow the Gather threads to run, so that
 	// the flusher will flush after metrics are collected.
 	time.Sleep(time.Millisecond * 300)
 
 	// create an output metric channel and a gorouting that continously passes
 	// each metric onto the output plugins & aggregators.
-	outMetricC := make(chan telegraf.Metric, 100)
+	outMetricC := make(chan plugins.Metric, 100)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -300,7 +300,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 		case metric := <-metricC:
 			// NOTE potential bottleneck here as we put each metric through the
 			// processors serially.
-			mS := []telegraf.Metric{metric}
+			mS := []plugins.Metric{metric}
 			for _, processor := range a.Config.Processors {
 				mS = processor.Apply(mS...)
 			}
@@ -321,13 +321,13 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
 	// channel shared between all input threads for accumulating metrics
-	metricC := make(chan telegraf.Metric, 100)
+	metricC := make(chan plugins.Metric, 100)
 
 	// Start all ServicePlugins
 	for _, input := range a.Config.Inputs {
 		input.SetDefaultTags(a.Config.Tags)
 		switch p := input.Input.(type) {
-		case telegraf.ServiceInput:
+		case plugins.ServiceInput:
 			acc := NewAccumulator(input, metricC)
 			// Service input plugins should set their own precision of their
 			// metrics.

@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	ejson "encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"io"
 	"math"
@@ -186,7 +186,7 @@ func (g *Graylog) Description() string {
 	return "Send telegraf metrics to graylog(s)"
 }
 
-func (g *Graylog) Write(metrics []telegraf.Metric) error {
+func (g *Graylog) Write(metrics []plugins.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -207,7 +207,7 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func serialize(metric telegraf.Metric) ([]string, error) {
+func serialize(metric plugins.Metric) ([]string, error) {
 	out := []string{}
 
 	m := make(map[string]interface{})
@@ -246,7 +246,7 @@ func serialize(metric telegraf.Metric) ([]string, error) {
 }
 
 func init() {
-	outputs.Add("graylog", func() telegraf.Output {
+	outputs.Add("graylog", func() plugins.Output {
 		return &Graylog{}
 	})
 }

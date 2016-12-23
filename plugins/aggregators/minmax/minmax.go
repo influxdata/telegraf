@@ -1,7 +1,7 @@
 package minmax
 
 import (
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
@@ -9,7 +9,7 @@ type MinMax struct {
 	cache map[uint64]aggregate
 }
 
-func NewMinMax() telegraf.Aggregator {
+func NewMinMax() plugins.Aggregator {
 	mm := &MinMax{}
 	mm.Reset()
 	return mm
@@ -43,7 +43,7 @@ func (m *MinMax) Description() string {
 	return "Keep the aggregate min/max of each metric passing through."
 }
 
-func (m *MinMax) Add(in telegraf.Metric) {
+func (m *MinMax) Add(in plugins.Metric) {
 	id := in.HashID()
 	if _, ok := m.cache[id]; !ok {
 		// hit an uncached metric, create caches for first time:
@@ -86,7 +86,7 @@ func (m *MinMax) Add(in telegraf.Metric) {
 	}
 }
 
-func (m *MinMax) Push(acc telegraf.Accumulator) {
+func (m *MinMax) Push(acc plugins.Accumulator) {
 	for _, aggregate := range m.cache {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
@@ -113,7 +113,7 @@ func convert(in interface{}) (float64, bool) {
 }
 
 func init() {
-	aggregators.Add("minmax", func() telegraf.Aggregator {
+	aggregators.Add("minmax", func() plugins.Aggregator {
 		return NewMinMax()
 	})
 }

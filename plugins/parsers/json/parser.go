@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -18,8 +18,8 @@ type JSONParser struct {
 	DefaultTags map[string]string
 }
 
-func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
-	metrics := make([]telegraf.Metric, 0)
+func (p *JSONParser) parseArray(buf []byte) ([]plugins.Metric, error) {
+	metrics := make([]plugins.Metric, 0)
 
 	var jsonOut []map[string]interface{}
 	err := json.Unmarshal(buf, &jsonOut)
@@ -33,7 +33,7 @@ func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
+func (p *JSONParser) parseObject(metrics []plugins.Metric, jsonOut map[string]interface{}) ([]plugins.Metric, error) {
 
 	tags := make(map[string]string)
 	for k, v := range p.DefaultTags {
@@ -66,10 +66,10 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 	return append(metrics, metric), nil
 }
 
-func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *JSONParser) Parse(buf []byte) ([]plugins.Metric, error) {
 
 	if !isarray(buf) {
-		metrics := make([]telegraf.Metric, 0)
+		metrics := make([]plugins.Metric, 0)
 		var jsonOut map[string]interface{}
 		err := json.Unmarshal(buf, &jsonOut)
 		if err != nil {
@@ -81,7 +81,7 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return p.parseArray(buf)
 }
 
-func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *JSONParser) ParseLine(line string) (plugins.Metric, error) {
 	metrics, err := p.Parse([]byte(line + "\n"))
 
 	if err != nil {

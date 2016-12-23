@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -41,7 +41,7 @@ type TcpListener struct {
 	conns map[string]*net.TCPConn
 
 	parser parsers.Parser
-	acc    telegraf.Accumulator
+	acc    plugins.Accumulator
 
 	MaxConnections     selfstat.Stat
 	CurrentConnections selfstat.Stat
@@ -85,7 +85,7 @@ func (t *TcpListener) Description() string {
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.
-func (t *TcpListener) Gather(_ telegraf.Accumulator) error {
+func (t *TcpListener) Gather(_ plugins.Accumulator) error {
 	return nil
 }
 
@@ -94,7 +94,7 @@ func (t *TcpListener) SetParser(parser parsers.Parser) {
 }
 
 // Start starts the tcp listener service.
-func (t *TcpListener) Start(acc telegraf.Accumulator) error {
+func (t *TcpListener) Start(acc plugins.Accumulator) error {
 	t.Lock()
 	defer t.Unlock()
 
@@ -255,7 +255,7 @@ func (t *TcpListener) tcpParser() error {
 	defer t.wg.Done()
 
 	var packet []byte
-	var metrics []telegraf.Metric
+	var metrics []plugins.Metric
 	var err error
 	for {
 		select {
@@ -298,7 +298,7 @@ func (t *TcpListener) remember(id string, conn *net.TCPConn) {
 }
 
 func init() {
-	inputs.Add("tcp_listener", func() telegraf.Input {
+	inputs.Add("tcp_listener", func() plugins.Input {
 		return &TcpListener{
 			ServiceAddress:         ":8094",
 			AllowedPendingMessages: 10000,

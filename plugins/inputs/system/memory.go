@@ -3,7 +3,7 @@ package system
 import (
 	"fmt"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -17,7 +17,7 @@ func (_ *MemStats) Description() string {
 
 func (_ *MemStats) SampleConfig() string { return "" }
 
-func (s *MemStats) Gather(acc telegraf.Accumulator) error {
+func (s *MemStats) Gather(acc plugins.Accumulator) error {
 	vm, err := s.ps.VMStat()
 	if err != nil {
 		return fmt.Errorf("error getting virtual memory info: %s", err)
@@ -50,7 +50,7 @@ func (_ *SwapStats) Description() string {
 
 func (_ *SwapStats) SampleConfig() string { return "" }
 
-func (s *SwapStats) Gather(acc telegraf.Accumulator) error {
+func (s *SwapStats) Gather(acc plugins.Accumulator) error {
 	swap, err := s.ps.SwapStat()
 	if err != nil {
 		return fmt.Errorf("error getting swap memory info: %s", err)
@@ -73,11 +73,11 @@ func (s *SwapStats) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("mem", func() telegraf.Input {
+	inputs.Add("mem", func() plugins.Input {
 		return &MemStats{ps: &systemPS{}}
 	})
 
-	inputs.Add("swap", func() telegraf.Input {
+	inputs.Add("swap", func() plugins.Input {
 		return &SwapStats{ps: &systemPS{}}
 	})
 }

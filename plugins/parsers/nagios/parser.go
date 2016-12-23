@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -19,7 +19,7 @@ type NagiosParser struct {
 var perfSplitRegExp, _ = regexp.Compile(`([^=]+=\S+)`)
 var nagiosRegExp, _ = regexp.Compile(`^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*);?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*`)
 
-func (p *NagiosParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *NagiosParser) ParseLine(line string) (plugins.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	return metrics[0], err
 }
@@ -31,8 +31,8 @@ func (p *NagiosParser) SetDefaultTags(tags map[string]string) {
 //> rta,host=absol,unit=ms critical=6000,min=0,value=0.332,warning=4000 1456374625003628099
 //> pl,host=absol,unit=% critical=90,min=0,value=0,warning=80 1456374625003693967
 
-func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	metrics := make([]telegraf.Metric, 0)
+func (p *NagiosParser) Parse(buf []byte) ([]plugins.Metric, error) {
+	metrics := make([]plugins.Metric, 0)
 	// Convert to string
 	out := string(buf)
 	// Prepare output for splitting

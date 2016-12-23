@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/nats-io/nats"
@@ -47,7 +47,7 @@ type natsConsumer struct {
 	// channel for all NATS read errors
 	errs chan error
 	done chan struct{}
-	acc  telegraf.Accumulator
+	acc  plugins.Accumulator
 }
 
 var sampleConfig = `
@@ -93,7 +93,7 @@ func (n *natsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 }
 
 // Start the nats consumer. Caller must call *natsConsumer.Stop() to clean up.
-func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
+func (n *natsConsumer) Start(acc plugins.Accumulator) error {
 	n.Lock()
 	defer n.Unlock()
 
@@ -197,12 +197,12 @@ func (n *natsConsumer) Stop() {
 	n.Unlock()
 }
 
-func (n *natsConsumer) Gather(acc telegraf.Accumulator) error {
+func (n *natsConsumer) Gather(acc plugins.Accumulator) error {
 	return nil
 }
 
 func init() {
-	inputs.Add("nats_consumer", func() telegraf.Input {
+	inputs.Add("nats_consumer", func() plugins.Input {
 		return &natsConsumer{
 			Servers:             []string{"nats://localhost:4222"},
 			Secure:              false,

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
@@ -104,7 +104,7 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
+func (p *PrometheusClient) Write(metrics []plugins.Metric) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -131,9 +131,9 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		// Get a type if it's available, defaulting to Untyped
 		var mType prometheus.ValueType
 		switch point.Type() {
-		case telegraf.Counter:
+		case plugins.Counter:
 			mType = prometheus.CounterValue
-		case telegraf.Gauge:
+		case plugins.Gauge:
 			mType = prometheus.GaugeValue
 		default:
 			mType = prometheus.UntypedValue
@@ -186,7 +186,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("prometheus_client", func() telegraf.Output {
+	outputs.Add("prometheus_client", func() plugins.Output {
 		return &PrometheusClient{
 			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
 		}

@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -129,7 +129,7 @@ func (h *GrayLog) Description() string {
 }
 
 // Gathers data for all servers.
-func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
+func (h *GrayLog) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
@@ -178,14 +178,14 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 
 // Gathers data from a particular server
 // Parameters:
-//     acc      : The telegraf Accumulator to use
+//     acc      : The plugins.Accumulator to use
 //     serverURL: endpoint to send request to
 //     service  : the service being queried
 //
 // Returns:
 //     error: Any error that may have occurred
 func (h *GrayLog) gatherServer(
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	serverURL string,
 ) error {
 	resp, _, err := h.sendRequest(serverURL)
@@ -304,7 +304,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 }
 
 func init() {
-	inputs.Add("graylog", func() telegraf.Input {
+	inputs.Add("graylog", func() plugins.Input {
 		return &GrayLog{
 			client: &RealHTTPClient{},
 		}

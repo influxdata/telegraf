@@ -5,14 +5,14 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var first5 = []telegraf.Metric{
+var first5 = []plugins.Metric{
 	testutil.TestMetric(101, "metric1"),
 	testutil.TestMetric(101, "metric2"),
 	testutil.TestMetric(101, "metric3"),
@@ -20,7 +20,7 @@ var first5 = []telegraf.Metric{
 	testutil.TestMetric(101, "metric5"),
 }
 
-var next5 = []telegraf.Metric{
+var next5 = []plugins.Metric{
 	testutil.TestMetric(101, "metric6"),
 	testutil.TestMetric(101, "metric7"),
 	testutil.TestMetric(101, "metric8"),
@@ -465,7 +465,7 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 type mockOutput struct {
 	sync.Mutex
 
-	metrics []telegraf.Metric
+	metrics []plugins.Metric
 
 	// if true, mock a write failure
 	failWrite bool
@@ -487,7 +487,7 @@ func (m *mockOutput) SampleConfig() string {
 	return ""
 }
 
-func (m *mockOutput) Write(metrics []telegraf.Metric) error {
+func (m *mockOutput) Write(metrics []plugins.Metric) error {
 	m.Lock()
 	defer m.Unlock()
 	if m.failWrite {
@@ -495,7 +495,7 @@ func (m *mockOutput) Write(metrics []telegraf.Metric) error {
 	}
 
 	if m.metrics == nil {
-		m.metrics = []telegraf.Metric{}
+		m.metrics = []plugins.Metric{}
 	}
 
 	for _, metric := range metrics {
@@ -504,7 +504,7 @@ func (m *mockOutput) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (m *mockOutput) Metrics() []telegraf.Metric {
+func (m *mockOutput) Metrics() []plugins.Metric {
 	m.Lock()
 	defer m.Unlock()
 	return m.metrics
@@ -531,7 +531,7 @@ func (m *perfOutput) SampleConfig() string {
 	return ""
 }
 
-func (m *perfOutput) Write(metrics []telegraf.Metric) error {
+func (m *perfOutput) Write(metrics []plugins.Metric) error {
 	if m.failWrite {
 		return fmt.Errorf("Failed Write!")
 	}

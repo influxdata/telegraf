@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -112,7 +112,7 @@ func (a *Accumulator) AddGauge(
 	a.AddFields(measurement, fields, tags, timestamp...)
 }
 
-func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
+func (a *Accumulator) AddMetrics(metrics []plugins.Metric) {
 	for _, m := range metrics {
 		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}

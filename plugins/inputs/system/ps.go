@@ -3,7 +3,7 @@ package system
 import (
 	"os"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -23,7 +23,7 @@ type PS interface {
 	NetConnections() ([]net.ConnectionStat, error)
 }
 
-func add(acc telegraf.Accumulator,
+func add(acc plugins.Accumulator,
 	name string, val float64, tags map[string]string) {
 	if val >= 0 {
 		acc.AddFields(name, map[string]interface{}{"value": val}, tags)

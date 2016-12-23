@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -353,7 +353,7 @@ var wanted_mdt_jobstats_fields = []*mapping{
 	},
 }
 
-func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, acc telegraf.Accumulator) error {
+func (l *Lustre2) GetLustreProcStats(fileglob string, wanted_fields []*mapping, acc plugins.Accumulator) error {
 	files, err := filepath.Glob(fileglob)
 	if err != nil {
 		return err
@@ -422,7 +422,7 @@ func (l *Lustre2) Description() string {
 }
 
 // Gather reads stats from all lustre targets
-func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
+func (l *Lustre2) Gather(acc plugins.Accumulator) error {
 	l.allFields = make(map[string]map[string]interface{})
 
 	if len(l.Ost_procfiles) == 0 {
@@ -500,7 +500,7 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("lustre2", func() telegraf.Input {
+	inputs.Add("lustre2", func() plugins.Input {
 		return &Lustre2{}
 	})
 }

@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -136,7 +136,7 @@ func (*Sysstat) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
+func (s *Sysstat) Gather(acc plugins.Accumulator) error {
 	if s.interval == 0 {
 		if firstTimestamp.IsZero() {
 			firstTimestamp = time.Now()
@@ -152,7 +152,7 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 	errorChannel := make(chan error, len(s.Options)*2)
 	for option := range s.Options {
 		wg.Add(1)
-		go func(acc telegraf.Accumulator, option string) {
+		go func(acc plugins.Accumulator, option string) {
 			defer wg.Done()
 			if err := s.parse(acc, option, ts); err != nil {
 				errorChannel <- err
@@ -212,8 +212,8 @@ func (s *Sysstat) collect() error {
 
 // parse runs Sadf on the previously saved tmpFile:
 //    Sadf -p -- -p <option> tmpFile
-// and parses the output to add it to the telegraf.Accumulator acc.
-func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) error {
+// and parses the output to add it to the plugins.Accumulator acc.
+func (s *Sysstat) parse(acc plugins.Accumulator, option string, ts time.Time) error {
 	cmd := execCommand(s.Sadf, s.sadfOptions(option)...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -331,7 +331,7 @@ func init() {
 	if len(sadf) > 0 {
 		s.Sadf = sadf
 	}
-	inputs.Add("sysstat", func() telegraf.Input {
+	inputs.Add("sysstat", func() plugins.Input {
 		return &s
 	})
 }

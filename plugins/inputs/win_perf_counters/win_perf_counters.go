@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -231,7 +231,7 @@ func (m *Win_PerfCounters) CleanupTestMode() {
 	}
 }
 
-func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
+func (m *Win_PerfCounters) Gather(acc plugins.Accumulator) error {
 	metrics := itemList{}
 
 	// Both values are empty in normal use.
@@ -323,5 +323,5 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("win_perf_counters", func() telegraf.Input { return &Win_PerfCounters{} })
+	inputs.Add("win_perf_counters", func() plugins.Input { return &Win_PerfCounters{} })
 }

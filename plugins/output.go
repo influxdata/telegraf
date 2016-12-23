@@ -1,4 +1,4 @@
-package telegraf
+package plugins
 
 type Output interface {
 	// Connect to the Output

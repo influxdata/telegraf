@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -109,7 +109,7 @@ func (m *MQTT) Description() string {
 	return "Configuration for MQTT server to send metrics to"
 }
 
-func (m *MQTT) Write(metrics []telegraf.Metric) error {
+func (m *MQTT) Write(metrics []plugins.Metric) error {
 	m.Lock()
 	defer m.Unlock()
 	if len(metrics) == 0 {
@@ -199,7 +199,7 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 }
 
 func init() {
-	outputs.Add("mqtt", func() telegraf.Output {
+	outputs.Add("mqtt", func() plugins.Output {
 		return &MQTT{}
 	})
 }

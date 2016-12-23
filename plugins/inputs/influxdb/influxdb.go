@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -43,7 +43,7 @@ func (*InfluxDB) SampleConfig() string {
 `
 }
 
-func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
+func (i *InfluxDB) Gather(acc plugins.Accumulator) error {
 	if len(i.URLs) == 0 {
 		i.URLs = []string{"http://localhost:8086/debug/vars"}
 	}
@@ -125,13 +125,13 @@ type memstats struct {
 
 // Gathers data from a particular URL
 // Parameters:
-//     acc    : The telegraf Accumulator to use
+//     acc    : The plugins.Accumulator to use
 //     url    : endpoint to send request to
 //
 // Returns:
 //     error: Any error that may have occurred
 func (i *InfluxDB) gatherURL(
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	url string,
 ) error {
 	shardCounter := 0
@@ -258,7 +258,7 @@ func (i *InfluxDB) gatherURL(
 }
 
 func init() {
-	inputs.Add("influxdb", func() telegraf.Input {
+	inputs.Add("influxdb", func() plugins.Input {
 		return &InfluxDB{
 			Timeout: internal.Duration{Duration: time.Second * 5},
 		}

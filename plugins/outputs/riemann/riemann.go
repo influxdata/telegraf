@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/amir/raidman"
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -61,7 +61,7 @@ func (r *Riemann) Description() string {
 	return "Configuration for the Riemann server to send metrics to"
 }
 
-func (r *Riemann) Write(metrics []telegraf.Metric) error {
+func (r *Riemann) Write(metrics []plugins.Metric) error {
 	log.Printf(deprecationMsg)
 	if len(metrics) == 0 {
 		return nil
@@ -92,7 +92,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
+func buildEvents(p plugins.Metric, s string) []*raidman.Event {
 	events := []*raidman.Event{}
 	for fieldName, value := range p.Fields() {
 		host, ok := p.Tags()["host"]
@@ -150,7 +150,7 @@ func serviceName(s string, n string, t map[string]string, f string) string {
 }
 
 func init() {
-	outputs.Add("riemann", func() telegraf.Output {
+	outputs.Add("riemann", func() plugins.Output {
 		return &Riemann{}
 	})
 }

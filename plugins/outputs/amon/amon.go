@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -53,7 +53,7 @@ func (a *Amon) Connect() error {
 	return nil
 }
 
-func (a *Amon) Write(metrics []telegraf.Metric) error {
+func (a *Amon) Write(metrics []plugins.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -115,7 +115,7 @@ func (a *Amon) authenticatedUrl() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
 
-func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
+func buildMetrics(m plugins.Metric) (map[string]Point, error) {
 	ms := make(map[string]Point)
 	for k, v := range m.Fields() {
 		var p Point
@@ -151,7 +151,7 @@ func (a *Amon) Close() error {
 }
 
 func init() {
-	outputs.Add("amon", func() telegraf.Output {
+	outputs.Add("amon", func() plugins.Output {
 		return &Amon{}
 	})
 }

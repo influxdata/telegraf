@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -148,7 +148,7 @@ func (k *Kafka) Description() string {
 	return "Configuration for the Kafka server to send metrics to"
 }
 
-func (k *Kafka) Write(metrics []telegraf.Metric) error {
+func (k *Kafka) Write(metrics []plugins.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -177,7 +177,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("kafka", func() telegraf.Output {
+	outputs.Add("kafka", func() plugins.Output {
 		return &Kafka{
 			MaxRetry:     3,
 			RequiredAcks: -1,

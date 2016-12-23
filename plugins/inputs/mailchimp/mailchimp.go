@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -35,7 +35,7 @@ func (m *MailChimp) Description() string {
 	return "Gathers metrics from the /3.0/reports MailChimp API"
 }
 
-func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
+func (m *MailChimp) Gather(acc plugins.Accumulator) error {
 	if m.api == nil {
 		m.api = NewChimpAPI(m.ApiKey)
 	}
@@ -72,7 +72,7 @@ func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func gatherReport(acc telegraf.Accumulator, report Report, now time.Time) {
+func gatherReport(acc plugins.Accumulator, report Report, now time.Time) {
 	tags := make(map[string]string)
 	tags["id"] = report.ID
 	tags["campaign_title"] = report.CampaignTitle
@@ -111,7 +111,7 @@ func gatherReport(acc telegraf.Accumulator, report Report, now time.Time) {
 }
 
 func init() {
-	inputs.Add("mailchimp", func() telegraf.Input {
+	inputs.Add("mailchimp", func() plugins.Input {
 		return &MailChimp{}
 	})
 }

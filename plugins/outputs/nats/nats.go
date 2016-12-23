@@ -5,7 +5,7 @@ import (
 
 	nats_client "github.com/nats-io/nats"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -109,7 +109,7 @@ func (n *NATS) Description() string {
 	return "Send telegraf measurements to NATS"
 }
 
-func (n *NATS) Write(metrics []telegraf.Metric) error {
+func (n *NATS) Write(metrics []plugins.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -129,7 +129,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("nats", func() telegraf.Output {
+	outputs.Add("nats", func() plugins.Output {
 		return &NATS{}
 	})
 }

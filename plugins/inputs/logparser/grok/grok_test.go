@@ -4,13 +4,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var benchM telegraf.Metric
+var benchM plugins.Metric
 
 func Benchmark_ParseLine_CommonLogFormat(b *testing.B) {
 	p := &Parser{
@@ -18,7 +18,7 @@ func Benchmark_ParseLine_CommonLogFormat(b *testing.B) {
 	}
 	p.Compile()
 
-	var m telegraf.Metric
+	var m plugins.Metric
 	for n := 0; n < b.N; n++ {
 		m, _ = p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
 	}
@@ -31,7 +31,7 @@ func Benchmark_ParseLine_CombinedLogFormat(b *testing.B) {
 	}
 	p.Compile()
 
-	var m telegraf.Metric
+	var m plugins.Metric
 	for n := 0; n < b.N; n++ {
 		m, _ = p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "-" "Mozilla"`)
 	}
@@ -50,7 +50,7 @@ func Benchmark_ParseLine_CustomPattern(b *testing.B) {
 	}
 	p.Compile()
 
-	var m telegraf.Metric
+	var m plugins.Metric
 	for n := 0; n < b.N; n++ {
 		m, _ = p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
 	}

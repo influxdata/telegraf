@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -399,7 +399,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	sort.Strings(pnames)
 
 	// cache service inputs to print them at the end
-	servInputs := make(map[string]telegraf.ServiceInput)
+	servInputs := make(map[string]plugins.ServiceInput)
 	// for alphabetical looping:
 	servInputNames := []string{}
 
@@ -409,7 +409,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 		input := creator()
 
 		switch p := input.(type) {
-		case telegraf.ServiceInput:
+		case plugins.ServiceInput:
 			servInputs[pname] = p
 			servInputNames = append(servInputNames, pname)
 			continue

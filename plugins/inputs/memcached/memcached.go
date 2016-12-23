@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -69,7 +69,7 @@ func (m *Memcached) Description() string {
 }
 
 // Gather reads stats from all configured servers accumulates stats
-func (m *Memcached) Gather(acc telegraf.Accumulator) error {
+func (m *Memcached) Gather(acc plugins.Accumulator) error {
 	if len(m.Servers) == 0 && len(m.UnixSockets) == 0 {
 		return m.gatherServer(":11211", false, acc)
 	}
@@ -89,7 +89,7 @@ func (m *Memcached) Gather(acc telegraf.Accumulator) error {
 func (m *Memcached) gatherServer(
 	address string,
 	unix bool,
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 ) error {
 	var conn net.Conn
 	var err error
@@ -180,7 +180,7 @@ func parseResponse(r *bufio.Reader) (map[string]string, error) {
 }
 
 func init() {
-	inputs.Add("memcached", func() telegraf.Input {
+	inputs.Add("memcached", func() plugins.Input {
 		return &Memcached{}
 	})
 }

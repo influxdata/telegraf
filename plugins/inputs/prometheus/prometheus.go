@@ -3,7 +3,7 @@ package prometheus
 import (
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
@@ -63,7 +63,7 @@ var ErrProtocolError = errors.New("prometheus protocol error")
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
+func (p *Prometheus) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 
 	var outerr error
@@ -90,7 +90,7 @@ var client = &http.Client{
 	Timeout:   time.Duration(4 * time.Second),
 }
 
-func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
+func (p *Prometheus) gatherURL(url string, acc plugins.Accumulator) error {
 	collectDate := time.Now()
 	var req, err = http.NewRequest("GET", url, nil)
 	req.Header.Add("Accept", acceptHeader)
@@ -152,7 +152,7 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("prometheus", func() telegraf.Input {
+	inputs.Add("prometheus", func() plugins.Input {
 		return &Prometheus{ResponseTimeout: internal.Duration{Duration: time.Second * 3}}
 	})
 }

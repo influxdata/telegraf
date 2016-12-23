@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 var (
@@ -39,15 +39,15 @@ const (
 	fieldsState
 )
 
-func Parse(buf []byte) ([]telegraf.Metric, error) {
+func Parse(buf []byte) ([]plugins.Metric, error) {
 	return ParseWithDefaultTime(buf, time.Now())
 }
 
-func ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
+func ParseWithDefaultTime(buf []byte, t time.Time) ([]plugins.Metric, error) {
 	if len(buf) <= 6 {
-		return []telegraf.Metric{}, makeError("buffer too short", buf, 0)
+		return []plugins.Metric{}, makeError("buffer too short", buf, 0)
 	}
-	metrics := make([]telegraf.Metric, 0, bytes.Count(buf, []byte("\n"))+1)
+	metrics := make([]plugins.Metric, 0, bytes.Count(buf, []byte("\n"))+1)
 	var errStr string
 	i := 0
 	for {
@@ -77,7 +77,7 @@ func ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func parseMetric(buf []byte, defaultTime time.Time) (telegraf.Metric, error) {
+func parseMetric(buf []byte, defaultTime time.Time) (plugins.Metric, error) {
 	var dTime string
 	// scan the first block which is measurement[,tag1=value1,tag2=value=2...]
 	pos, key, err := scanKey(buf, 0)

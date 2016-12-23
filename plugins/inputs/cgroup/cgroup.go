@@ -1,7 +1,7 @@
 package cgroup
 
 import (
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -34,5 +34,5 @@ func (g *CGroup) Description() string {
 }
 
 func init() {
-	inputs.Add("cgroup", func() telegraf.Input { return &CGroup{} })
+	inputs.Add("cgroup", func() plugins.Input { return &CGroup{} })
 }

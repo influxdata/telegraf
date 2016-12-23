@@ -2,7 +2,7 @@ package sqlserver
 
 import (
 	"database/sql"
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"sync"
 	"time"
@@ -71,7 +71,7 @@ func initQueries() {
 }
 
 // Gather collect data from SQL Server
-func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
+func (s *SQLServer) Gather(acc plugins.Accumulator) error {
 	initQueries()
 
 	if len(s.Servers) == 0 {
@@ -95,7 +95,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumulator) error {
+func (s *SQLServer) gatherServer(server string, query Query, acc plugins.Accumulator) error {
 	// deferred opening
 	conn, err := sql.Open("mssql", server)
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 	return rows.Err()
 }
 
-func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) error {
+func (s *SQLServer) accRow(query Query, acc plugins.Accumulator, row scanner) error {
 	var columnVars []interface{}
 	var fields = make(map[string]interface{})
 
@@ -183,7 +183,7 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 }
 
 func init() {
-	inputs.Add("sqlserver", func() telegraf.Input {
+	inputs.Add("sqlserver", func() plugins.Input {
 		return &SQLServer{}
 	})
 }

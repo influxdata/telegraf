@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/internal/errchan"
@@ -176,7 +176,7 @@ func SelectMetrics(c *CloudWatch) ([]*cloudwatch.Metric, error) {
 	return metrics, nil
 }
 
-func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
+func (c *CloudWatch) Gather(acc plugins.Accumulator) error {
 	if c.client == nil {
 		c.initializeCloudWatch()
 	}
@@ -210,7 +210,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("cloudwatch", func() telegraf.Input {
+	inputs.Add("cloudwatch", func() plugins.Input {
 		ttl, _ := time.ParseDuration("1hr")
 		return &CloudWatch{
 			CacheTTL:  internal.Duration{Duration: ttl},
@@ -281,7 +281,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
  * Gather given Metric and emit any error
  */
 func (c *CloudWatch) gatherMetric(
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	metric *cloudwatch.Metric,
 	now time.Time,
 	errChan chan error,

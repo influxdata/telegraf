@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -70,7 +70,7 @@ func prettyToBytes(v string) uint64 {
 	return uint64(result)
 }
 
-func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
+func (b *Bcache) gatherBcache(bdev string, acc plugins.Accumulator) error {
 	tags := getTags(bdev)
 	metrics, err := filepath.Glob(bdev + "/stats_total/*")
 	if len(metrics) < 0 {
@@ -105,7 +105,7 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (b *Bcache) Gather(acc telegraf.Accumulator) error {
+func (b *Bcache) Gather(acc plugins.Accumulator) error {
 	bcacheDevsChecked := make(map[string]bool)
 	var restrictDevs bool
 	if len(b.BcacheDevs) != 0 {
@@ -136,7 +136,7 @@ func (b *Bcache) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("bcache", func() telegraf.Input {
+	inputs.Add("bcache", func() plugins.Input {
 		return &Bcache{}
 	})
 }

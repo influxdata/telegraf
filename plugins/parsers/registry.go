@@ -3,7 +3,7 @@ package parsers
 import (
 	"fmt"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -24,12 +24,12 @@ type Parser interface {
 	// Parse takes a byte buffer separated by newlines
 	// ie, `cpu.usage.idle 90\ncpu.usage.busy 10`
 	// and parses it into telegraf metrics
-	Parse(buf []byte) ([]telegraf.Metric, error)
+	Parse(buf []byte) ([]plugins.Metric, error)
 
 	// ParseLine takes a single string metric
 	// ie, "cpu.usage.idle 90"
 	// and parses it into a telegraf metric.
-	ParseLine(line string) (telegraf.Metric, error)
+	ParseLine(line string) (plugins.Metric, error)
 
 	// SetDefaultTags tells the parser to add all of the given tags
 	// to each parsed metric.

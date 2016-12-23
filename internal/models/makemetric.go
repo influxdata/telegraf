@@ -5,8 +5,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 // makemetric is used by both RunningAggregator & RunningInput
@@ -32,9 +32,9 @@ func makemetric(
 	daemonTags map[string]string,
 	filter Filter,
 	applyFilter bool,
-	mType telegraf.ValueType,
+	mType plugins.ValueType,
 	t time.Time,
-) telegraf.Metric {
+) plugins.Metric {
 	if len(fields) == 0 || len(measurement) == 0 {
 		return nil
 	}

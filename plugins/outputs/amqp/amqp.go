@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -171,7 +171,7 @@ func (q *AMQP) Description() string {
 	return "Configuration for the AMQP server to send metrics to"
 }
 
-func (q *AMQP) Write(metrics []telegraf.Metric) error {
+func (q *AMQP) Write(metrics []plugins.Metric) error {
 	q.Lock()
 	defer q.Unlock()
 	if len(metrics) == 0 {
@@ -214,7 +214,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("amqp", func() telegraf.Output {
+	outputs.Add("amqp", func() plugins.Output {
 		return &AMQP{
 			AuthMethod:      DefaultAuthMethod,
 			Database:        DefaultDatabase,

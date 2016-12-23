@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -54,7 +54,7 @@ const (
 )
 
 func init() {
-	inputs.Add("kubernetes", func() telegraf.Input {
+	inputs.Add("kubernetes", func() plugins.Input {
 		return &Kubernetes{}
 	})
 }
@@ -70,7 +70,7 @@ func (k *Kubernetes) Description() string {
 }
 
 //Gather collects kubernetes metrics from a given URL
-func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
+func (k *Kubernetes) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 	errChan := errchan.New(1)
 	wg.Add(1)
@@ -91,7 +91,7 @@ func buildURL(endpoint string, base string) (*url.URL, error) {
 	return addr, nil
 }
 
-func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
+func (k *Kubernetes) gatherSummary(baseURL string, acc plugins.Accumulator) error {
 	url := fmt.Sprintf("%s/stats/summary", baseURL)
 	var req, err = http.NewRequest("GET", url, nil)
 	var token []byte
@@ -139,7 +139,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	return nil
 }
 
-func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
+func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc plugins.Accumulator) {
 	for _, container := range summaryMetrics.Node.SystemContainers {
 		tags := map[string]string{
 			"node_name":      summaryMetrics.Node.NodeName,
@@ -161,7 +161,7 @@ func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Ac
 	}
 }
 
-func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
+func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc plugins.Accumulator) {
 	tags := map[string]string{
 		"node_name": summaryMetrics.Node.NodeName,
 	}
@@ -187,7 +187,7 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 	acc.AddFields("kubernetes_node", fields, tags)
 }
 
-func buildPodMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *SummaryMetrics, acc plugins.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		for _, container := range pod.Containers {
 			tags := map[string]string{

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 const DEFAULT_TEMPLATE = "host.tags.measurement.field"
@@ -20,7 +20,7 @@ type GraphiteSerializer struct {
 	Template string
 }
 
-func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+func (s *GraphiteSerializer) Serialize(metric plugins.Metric) ([]byte, error) {
 	out := []byte{}
 
 	// Convert UnixNano to Unix timestamps

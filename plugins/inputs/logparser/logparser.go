@@ -8,7 +8,7 @@ import (
 
 	"github.com/hpcloud/tail"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -18,7 +18,7 @@ import (
 )
 
 type LogParser interface {
-	ParseLine(line string) (telegraf.Metric, error)
+	ParseLine(line string) (plugins.Metric, error)
 	Compile() error
 }
 
@@ -30,7 +30,7 @@ type LogParserPlugin struct {
 	lines   chan string
 	done    chan struct{}
 	wg      sync.WaitGroup
-	acc     telegraf.Accumulator
+	acc     plugins.Accumulator
 	parsers []LogParser
 
 	sync.Mutex
@@ -76,11 +76,11 @@ func (l *LogParserPlugin) Description() string {
 	return "Stream and parse log file(s)."
 }
 
-func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
+func (l *LogParserPlugin) Gather(acc plugins.Accumulator) error {
 	return nil
 }
 
-func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
+func (l *LogParserPlugin) Start(acc plugins.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
 
@@ -185,7 +185,7 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 func (l *LogParserPlugin) parser() {
 	defer l.wg.Done()
 
-	var m telegraf.Metric
+	var m plugins.Metric
 	var err error
 	var line string
 	for {
@@ -225,7 +225,7 @@ func (l *LogParserPlugin) Stop() {
 }
 
 func init() {
-	inputs.Add("logparser", func() telegraf.Input {
+	inputs.Add("logparser", func() plugins.Input {
 		return &LogParserPlugin{}
 	})
 }

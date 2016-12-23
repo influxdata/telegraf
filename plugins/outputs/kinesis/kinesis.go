@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -156,7 +156,7 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 	return time.Since(start)
 }
 
-func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
+func (k *KinesisOutput) Write(metrics []plugins.Metric) error {
 	var sz uint32
 
 	if len(metrics) == 0 {
@@ -196,7 +196,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("kinesis", func() telegraf.Output {
+	outputs.Add("kinesis", func() plugins.Output {
 		return &KinesisOutput{}
 	})
 }

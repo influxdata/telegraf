@@ -13,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -177,7 +177,7 @@ func (_ *Statsd) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *Statsd) Gather(acc telegraf.Accumulator) error {
+func (s *Statsd) Gather(acc plugins.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
 	now := time.Now()
@@ -237,7 +237,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Statsd) Start(_ telegraf.Accumulator) error {
+func (s *Statsd) Start(_ plugins.Accumulator) error {
 	// Make data structures
 	s.done = make(chan struct{})
 	s.in = make(chan []byte, s.AllowedPendingMessages)
@@ -647,7 +647,7 @@ func (s *Statsd) Stop() {
 }
 
 func init() {
-	inputs.Add("statsd", func() telegraf.Input {
+	inputs.Add("statsd", func() plugins.Input {
 		return &Statsd{
 			ServiceAddress:         ":8125",
 			MetricSeparator:        "_",

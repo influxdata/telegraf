@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -65,7 +65,7 @@ func (_ *Ping) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Ping) Gather(acc telegraf.Accumulator) error {
+func (p *Ping) Gather(acc plugins.Accumulator) error {
 
 	var wg sync.WaitGroup
 	errorChannel := make(chan error, len(p.Urls)*2)
@@ -203,7 +203,7 @@ func processPingOutput(out string) (int, int, float64, float64, error) {
 }
 
 func init() {
-	inputs.Add("ping", func() telegraf.Input {
+	inputs.Add("ping", func() plugins.Input {
 		return &Ping{
 			pingHost:     hostPinger,
 			PingInterval: 1.0,

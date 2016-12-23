@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
@@ -37,7 +37,7 @@ type Kafka struct {
 	done chan struct{}
 
 	// keep the accumulator internally:
-	acc telegraf.Accumulator
+	acc plugins.Accumulator
 
 	// doNotCommitMsgs tells the parser not to call CommitUpTo on the consumer
 	// this is mostly for test purposes, but there may be a use-case for it later.
@@ -75,7 +75,7 @@ func (k *Kafka) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }
 
-func (k *Kafka) Start(acc telegraf.Accumulator) error {
+func (k *Kafka) Start(acc plugins.Accumulator) error {
 	k.Lock()
 	defer k.Unlock()
 	var consumerErr error
@@ -162,12 +162,12 @@ func (k *Kafka) Stop() {
 	}
 }
 
-func (k *Kafka) Gather(acc telegraf.Accumulator) error {
+func (k *Kafka) Gather(acc plugins.Accumulator) error {
 	return nil
 }
 
 func init() {
-	inputs.Add("kafka_consumer", func() telegraf.Input {
+	inputs.Add("kafka_consumer", func() plugins.Input {
 		return &Kafka{}
 	})
 }

@@ -3,7 +3,7 @@
 package hddtemp
 
 import (
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	gohddtemp "github.com/influxdata/telegraf/plugins/inputs/hddtemp/go-hddtemp"
 )
@@ -40,7 +40,7 @@ func (_ *HDDTemp) SampleConfig() string {
 	return hddtempSampleConfig
 }
 
-func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {
+func (h *HDDTemp) Gather(acc plugins.Accumulator) error {
 	if h.fetcher == nil {
 		h.fetcher = gohddtemp.New()
 	}
@@ -73,7 +73,7 @@ func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("hddtemp", func() telegraf.Input {
+	inputs.Add("hddtemp", func() plugins.Input {
 		return &HDDTemp{
 			Address: defaultAddress,
 			Devices: []string{"*"},

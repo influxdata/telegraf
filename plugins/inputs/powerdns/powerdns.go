@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -34,7 +34,7 @@ func (p *Powerdns) Description() string {
 	return "Read metrics from one or many PowerDNS servers"
 }
 
-func (p *Powerdns) Gather(acc telegraf.Accumulator) error {
+func (p *Powerdns) Gather(acc plugins.Accumulator) error {
 	if len(p.UnixSockets) == 0 {
 		return p.gatherServer("/var/run/pdns.controlsocket", acc)
 	}
@@ -48,7 +48,7 @@ func (p *Powerdns) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Powerdns) gatherServer(address string, acc telegraf.Accumulator) error {
+func (p *Powerdns) gatherServer(address string, acc plugins.Accumulator) error {
 	conn, err := net.DialTimeout("unix", address, defaultTimeout)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func parseResponse(metrics string) map[string]interface{} {
 }
 
 func init() {
-	inputs.Add("powerdns", func() telegraf.Input {
+	inputs.Add("powerdns", func() plugins.Input {
 		return &Powerdns{}
 	})
 }

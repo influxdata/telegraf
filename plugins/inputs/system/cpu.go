@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/shirou/gopsutil/cpu"
 )
@@ -42,7 +42,7 @@ func (_ *CPUStats) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
+func (s *CPUStats) Gather(acc plugins.Accumulator) error {
 	times, err := s.ps.CPUTimes(s.PerCPU, s.TotalCPU)
 	if err != nil {
 		return fmt.Errorf("error getting CPU info: %s", err)
@@ -117,7 +117,7 @@ func totalCpuTime(t cpu.TimesStat) float64 {
 }
 
 func init() {
-	inputs.Add("cpu", func() telegraf.Input {
+	inputs.Add("cpu", func() plugins.Input {
 		return &CPUStats{
 			PerCPU:   true,
 			TotalCPU: true,

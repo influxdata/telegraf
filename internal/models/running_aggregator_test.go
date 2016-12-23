@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
@@ -30,7 +30,7 @@ func TestAdd(t *testing.T) {
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Untyped,
+		plugins.Untyped,
 		time.Now().Add(time.Millisecond*150),
 	)
 	assert.False(t, ra.Add(m))
@@ -62,7 +62,7 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Untyped,
+		plugins.Untyped,
 		time.Now().Add(-time.Hour),
 	)
 	assert.False(t, ra.Add(m))
@@ -72,7 +72,7 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Untyped,
+		plugins.Untyped,
 		time.Now().Add(time.Hour),
 	)
 	assert.False(t, ra.Add(m))
@@ -82,7 +82,7 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Untyped,
+		plugins.Untyped,
 		time.Now().Add(time.Millisecond*50),
 	)
 	assert.False(t, ra.Add(m))
@@ -120,7 +120,7 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Untyped,
+		plugins.Untyped,
 		time.Now().Add(time.Millisecond*100),
 	)
 	assert.False(t, ra.Add(m))
@@ -151,7 +151,7 @@ func TestAddDropOriginal(t *testing.T) {
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Untyped,
+		plugins.Untyped,
 		time.Now(),
 	)
 	assert.True(t, ra.Add(m))
@@ -161,7 +161,7 @@ func TestAddDropOriginal(t *testing.T) {
 		"foobar",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Untyped,
+		plugins.Untyped,
 		time.Now(),
 	)
 	assert.False(t, ra.Add(m2))
@@ -179,7 +179,7 @@ func TestMakeMetricA(t *testing.T) {
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Untyped,
+		plugins.Untyped,
 		now,
 	)
 	assert.Equal(
@@ -190,14 +190,14 @@ func TestMakeMetricA(t *testing.T) {
 	assert.Equal(
 		t,
 		m.Type(),
-		telegraf.Untyped,
+		plugins.Untyped,
 	)
 
 	m = ra.MakeMetric(
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Counter,
+		plugins.Counter,
 		now,
 	)
 	assert.Equal(
@@ -208,14 +208,14 @@ func TestMakeMetricA(t *testing.T) {
 	assert.Equal(
 		t,
 		m.Type(),
-		telegraf.Counter,
+		plugins.Counter,
 	)
 
 	m = ra.MakeMetric(
 		"RITest",
 		map[string]interface{}{"value": int(101)},
 		map[string]string{},
-		telegraf.Gauge,
+		plugins.Gauge,
 		now,
 	)
 	assert.Equal(
@@ -226,7 +226,7 @@ func TestMakeMetricA(t *testing.T) {
 	assert.Equal(
 		t,
 		m.Type(),
-		telegraf.Gauge,
+		plugins.Gauge,
 	)
 }
 
@@ -240,14 +240,14 @@ func (t *TestAggregator) Reset() {
 	atomic.StoreInt64(&t.sum, 0)
 }
 
-func (t *TestAggregator) Push(acc telegraf.Accumulator) {
+func (t *TestAggregator) Push(acc plugins.Accumulator) {
 	acc.AddFields("TestMetric",
 		map[string]interface{}{"sum": t.sum},
 		map[string]string{},
 	)
 }
 
-func (t *TestAggregator) Add(in telegraf.Metric) {
+func (t *TestAggregator) Add(in plugins.Metric) {
 	for _, v := range in.Fields() {
 		if vi, ok := v.(int64); ok {
 			atomic.AddInt64(&t.sum, vi)

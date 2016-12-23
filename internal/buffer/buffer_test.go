@@ -3,13 +3,13 @@ package buffer
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var metricList = []telegraf.Metric{
+var metricList = []plugins.Metric{
 	testutil.TestMetric(2, "mymetric1"),
 	testutil.TestMetric(1, "mymetric2"),
 	testutil.TestMetric(11, "mymetric3"),

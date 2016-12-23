@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 type serverStatus struct {
@@ -88,7 +88,7 @@ var engineStats = map[string]string{
 
 func (e *Engine) AddEngineStats(
 	keys []string,
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	tags map[string]string,
 ) {
 	engine := reflect.ValueOf(e).Elem()
@@ -99,7 +99,7 @@ func (e *Engine) AddEngineStats(
 	acc.AddFields("rethinkdb_engine", fields, tags)
 }
 
-func (s *Storage) AddStats(acc telegraf.Accumulator, tags map[string]string) {
+func (s *Storage) AddStats(acc plugins.Accumulator, tags map[string]string) {
 	fields := map[string]interface{}{
 		"cache_bytes_in_use":            s.Cache.BytesInUse,
 		"disk_read_bytes_per_sec":       s.Disk.ReadBytesPerSec,

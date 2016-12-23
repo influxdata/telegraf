@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -42,7 +42,7 @@ type HTTPListener struct {
 	listener net.Listener
 
 	parser influx.InfluxParser
-	acc    telegraf.Accumulator
+	acc    plugins.Accumulator
 	pool   *pool
 
 	BytesRecv       selfstat.Stat
@@ -84,13 +84,13 @@ func (h *HTTPListener) Description() string {
 	return "Influx HTTP write listener"
 }
 
-func (h *HTTPListener) Gather(_ telegraf.Accumulator) error {
+func (h *HTTPListener) Gather(_ plugins.Accumulator) error {
 	h.BuffersCreated.Set(h.pool.ncreated())
 	return nil
 }
 
 // Start starts the http listener service.
-func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
+func (h *HTTPListener) Start(acc plugins.Accumulator) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -324,7 +324,7 @@ func badRequest(res http.ResponseWriter) {
 }
 
 func init() {
-	inputs.Add("http_listener", func() telegraf.Input {
+	inputs.Add("http_listener", func() plugins.Input {
 		return &HTTPListener{
 			ServiceAddress: ":8186",
 		}

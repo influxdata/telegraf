@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 
 	// TODO remove
 	"github.com/influxdata/influxdb/client/v2"
@@ -21,8 +21,8 @@ func New(
 	tags map[string]string,
 	fields map[string]interface{},
 	t time.Time,
-	mType ...telegraf.ValueType,
-) (telegraf.Metric, error) {
+	mType ...plugins.ValueType,
+) (plugins.Metric, error) {
 	if len(fields) == 0 {
 		return nil, fmt.Errorf("Metric cannot be made without any fields")
 	}
@@ -30,11 +30,11 @@ func New(
 		return nil, fmt.Errorf("Metric cannot be made with an empty name")
 	}
 
-	var thisType telegraf.ValueType
+	var thisType plugins.ValueType
 	if len(mType) > 0 {
 		thisType = mType[0]
 	} else {
-		thisType = telegraf.Untyped
+		thisType = plugins.Untyped
 	}
 
 	m := &metric{
@@ -129,7 +129,7 @@ type metric struct {
 	fields []byte
 	t      []byte
 
-	mType     telegraf.ValueType
+	mType     plugins.ValueType
 	aggregate bool
 
 	// cached values for reuse in "get" functions
@@ -154,7 +154,7 @@ func (m *metric) IsAggregate() bool {
 	return m.aggregate
 }
 
-func (m *metric) Type() telegraf.ValueType {
+func (m *metric) Type() plugins.ValueType {
 	return m.mType
 }
 
@@ -178,11 +178,11 @@ func (m *metric) Serialize() []byte {
 	return tmp
 }
 
-func (m *metric) Split(maxSize int) []telegraf.Metric {
+func (m *metric) Split(maxSize int) []plugins.Metric {
 	if m.Len() < maxSize {
-		return []telegraf.Metric{m}
+		return []plugins.Metric{m}
 	}
-	var out []telegraf.Metric
+	var out []plugins.Metric
 
 	// constant number of bytes for each metric (in addition to field bytes)
 	constant := len(m.name) + len(m.tags) + len(m.t) + 3
@@ -430,11 +430,11 @@ func (m *metric) RemoveField(key string) error {
 	return nil
 }
 
-func (m *metric) Copy() telegraf.Metric {
+func (m *metric) Copy() plugins.Metric {
 	return copyWith(m.name, m.tags, m.fields, m.t)
 }
 
-func copyWith(name, tags, fields, t []byte) telegraf.Metric {
+func copyWith(name, tags, fields, t []byte) plugins.Metric {
 	out := metric{
 		name:   make([]byte, len(name)),
 		tags:   make([]byte, len(tags)),

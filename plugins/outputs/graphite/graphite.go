@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -73,7 +73,7 @@ func (g *Graphite) Description() string {
 
 // Choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
-func (g *Graphite) Write(metrics []telegraf.Metric) error {
+func (g *Graphite) Write(metrics []plugins.Metric) error {
 	// Prepare data
 	var batch []byte
 	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template)
@@ -116,7 +116,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("graphite", func() telegraf.Output {
+	outputs.Add("graphite", func() plugins.Output {
 		return &Graphite{}
 	})
 }

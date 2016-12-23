@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,7 +40,7 @@ func TestWrite(t *testing.T) {
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-	metrics := []telegraf.Metric{m1, m2}
+	metrics := []plugins.Metric{m1, m2}
 	i.Write(metrics)
 
 	// Counter and Histogram are increments
@@ -71,7 +71,7 @@ func TestWrite(t *testing.T) {
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-	metrics = []telegraf.Metric{m3, m4, m5, m6}
+	metrics = []plugins.Metric{m3, m4, m5, m6}
 	i.Write(metrics)
 
 	wg.Wait()

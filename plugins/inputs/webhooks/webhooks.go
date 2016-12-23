@@ -7,7 +7,7 @@ import (
 	"reflect"
 
 	"github.com/gorilla/mux"
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
@@ -17,11 +17,11 @@ import (
 )
 
 type Webhook interface {
-	Register(router *mux.Router, acc telegraf.Accumulator)
+	Register(router *mux.Router, acc plugins.Accumulator)
 }
 
 func init() {
-	inputs.Add("webhooks", func() telegraf.Input { return NewWebhooks() })
+	inputs.Add("webhooks", func() plugins.Input { return NewWebhooks() })
 }
 
 type Webhooks struct {
@@ -60,11 +60,11 @@ func (wb *Webhooks) Description() string {
 	return "A Webhooks Event collector"
 }
 
-func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
+func (wb *Webhooks) Gather(_ plugins.Accumulator) error {
 	return nil
 }
 
-func (wb *Webhooks) Listen(acc telegraf.Accumulator) {
+func (wb *Webhooks) Listen(acc plugins.Accumulator) {
 	r := mux.NewRouter()
 
 	for _, webhook := range wb.AvailableWebhooks() {
@@ -98,7 +98,7 @@ func (wb *Webhooks) AvailableWebhooks() []Webhook {
 	return webhooks
 }
 
-func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
+func (wb *Webhooks) Start(acc plugins.Accumulator) error {
 	go wb.Listen(acc)
 	log.Printf("I! Started the webhooks service on %s\n", wb.ServiceAddress)
 	return nil

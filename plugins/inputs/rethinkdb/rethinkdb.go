@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"gopkg.in/dancannon/gorethink.v1"
@@ -36,7 +36,7 @@ var localhost = &Server{Url: &url.URL{Host: "127.0.0.1:28015"}}
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
+func (r *RethinkDB) Gather(acc plugins.Accumulator) error {
 	if len(r.Servers) == 0 {
 		r.gatherServer(localhost, acc)
 		return nil
@@ -66,7 +66,7 @@ func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-func (r *RethinkDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
+func (r *RethinkDB) gatherServer(server *Server, acc plugins.Accumulator) error {
 	var err error
 	connectOpts := gorethink.ConnectOpts{
 		Address:       server.Url.Host,
@@ -88,7 +88,7 @@ func (r *RethinkDB) gatherServer(server *Server, acc telegraf.Accumulator) error
 }
 
 func init() {
-	inputs.Add("rethinkdb", func() telegraf.Input {
+	inputs.Add("rethinkdb", func() plugins.Input {
 		return &RethinkDB{}
 	})
 }

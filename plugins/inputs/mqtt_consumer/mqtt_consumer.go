@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -46,7 +46,7 @@ type MQTTConsumer struct {
 	done chan struct{}
 
 	// keep the accumulator internally:
-	acc telegraf.Accumulator
+	acc plugins.Accumulator
 
 	started bool
 }
@@ -100,7 +100,7 @@ func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
 	m.parser = parser
 }
 
-func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
+func (m *MQTTConsumer) Start(acc plugins.Accumulator) error {
 	m.Lock()
 	defer m.Unlock()
 	m.started = false
@@ -191,7 +191,7 @@ func (m *MQTTConsumer) Stop() {
 	m.started = false
 }
 
-func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
+func (m *MQTTConsumer) Gather(acc plugins.Accumulator) error {
 	return nil
 }
 
@@ -242,7 +242,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 }
 
 func init() {
-	inputs.Add("mqtt_consumer", func() telegraf.Input {
+	inputs.Add("mqtt_consumer", func() plugins.Input {
 		return &MQTTConsumer{}
 	})
 }

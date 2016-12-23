@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -113,7 +113,7 @@ func (p *GraphiteParser) addToMatcher(tmplt parsedTemplate) error {
 	return nil
 }
 
-func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *GraphiteParser) Parse(buf []byte) ([]plugins.Metric, error) {
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
 	// add newline to end if not exists:
@@ -121,7 +121,7 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		buf = append(buf, []byte("\n")...)
 	}
 
-	metrics := make([]telegraf.Metric, 0)
+	metrics := make([]plugins.Metric, 0)
 
 	var errStr string
 	buffer := bytes.NewBuffer(buf)
@@ -154,7 +154,7 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 // Parse performs Graphite parsing of a single line.
-func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *GraphiteParser) ParseLine(line string) (plugins.Metric, error) {
 	// Break into 3 fields (name, value, timestamp).
 	fields := strings.Fields(line)
 	if len(fields) != 2 && len(fields) != 3 {

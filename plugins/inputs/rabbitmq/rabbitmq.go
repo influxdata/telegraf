@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -136,7 +136,7 @@ type Node struct {
 }
 
 // gatherFunc ...
-type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error)
+type gatherFunc func(r *RabbitMQ, acc plugins.Accumulator, errChan chan error)
 
 var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
 
@@ -179,7 +179,7 @@ func (r *RabbitMQ) Description() string {
 }
 
 // Gather ...
-func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
+func (r *RabbitMQ) Gather(acc plugins.Accumulator) error {
 	if r.Client == nil {
 		tlsCfg, err := internal.GetTLSConfig(
 			r.SSLCert, r.SSLKey, r.SSLCA, r.InsecureSkipVerify)
@@ -245,7 +245,7 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 	return nil
 }
 
-func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
+func gatherOverview(r *RabbitMQ, acc plugins.Accumulator, errChan chan error) {
 	overview := &OverviewResponse{}
 
 	err := r.requestJSON("/api/overview", &overview)
@@ -281,7 +281,7 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 	errChan <- nil
 }
 
-func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
+func gatherNodes(r *RabbitMQ, acc plugins.Accumulator, errChan chan error) {
 	nodes := make([]Node, 0)
 	// Gather information about nodes
 	err := r.requestJSON("/api/nodes", &nodes)
@@ -318,7 +318,7 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 	errChan <- nil
 }
 
-func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
+func gatherQueues(r *RabbitMQ, acc plugins.Accumulator, errChan chan error) {
 	// Gather information about queues
 	queues := make([]Queue, 0)
 	err := r.requestJSON("/api/queues", &queues)
@@ -404,7 +404,7 @@ func (r *RabbitMQ) shouldGatherQueue(queue Queue) bool {
 }
 
 func init() {
-	inputs.Add("rabbitmq", func() telegraf.Input {
+	inputs.Add("rabbitmq", func() plugins.Input {
 		return &RabbitMQ{
 			ResponseHeaderTimeout: internal.Duration{Duration: DefaultResponseHeaderTimeout * time.Second},
 			ClientTimeout:         internal.Duration{Duration: DefaultClientTimeout * time.Second},

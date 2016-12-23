@@ -15,7 +15,7 @@ import (
 
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -79,7 +79,7 @@ func (d *Docker) Description() string {
 func (d *Docker) SampleConfig() string { return sampleConfig }
 
 // Gather starts stats collection
-func (d *Docker) Gather(acc telegraf.Accumulator) error {
+func (d *Docker) Gather(acc plugins.Accumulator) error {
 	if d.client == nil {
 		var c *client.Client
 		var err error
@@ -136,7 +136,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
+func (d *Docker) gatherInfo(acc plugins.Accumulator) error {
 	// Init vars
 	dataFields := make(map[string]interface{})
 	metadataFields := make(map[string]interface{})
@@ -211,7 +211,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 
 func (d *Docker) gatherContainer(
 	container types.Container,
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 ) error {
 	var v *types.StatsJSON
 	// Parse container name
@@ -272,7 +272,7 @@ func (d *Docker) gatherContainer(
 
 func gatherContainerStats(
 	stat *types.StatsJSON,
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	tags map[string]string,
 	id string,
 	perDevice bool,
@@ -422,7 +422,7 @@ func calculateCPUPercent(stat *types.StatsJSON) float64 {
 
 func gatherBlockIOMetrics(
 	stat *types.StatsJSON,
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	tags map[string]string,
 	now time.Time,
 	id string,
@@ -569,7 +569,7 @@ func parseSize(sizeStr string) (int64, error) {
 }
 
 func init() {
-	inputs.Add("docker", func() telegraf.Input {
+	inputs.Add("docker", func() plugins.Input {
 		return &Docker{
 			PerDevice: true,
 			Timeout:   internal.Duration{Duration: time.Second * 5},

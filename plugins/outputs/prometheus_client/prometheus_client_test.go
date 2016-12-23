@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/prometheus"
@@ -37,7 +37,7 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		tags,
 		map[string]interface{}{"value": 1.0},
 		now)
-	var metrics = []telegraf.Metric{
+	var metrics = []plugins.Metric{
 		pt1,
 		pt2,
 	}
@@ -72,7 +72,7 @@ func TestPrometheusWritePointEmptyTag(t *testing.T) {
 		tags,
 		map[string]interface{}{"value": 1.0},
 		now)
-	metrics = []telegraf.Metric{
+	metrics = []plugins.Metric{
 		pt3,
 		pt4,
 	}
@@ -110,7 +110,7 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 		tags,
 		map[string]interface{}{"value": 0.0},
 		now)
-	var metrics = []telegraf.Metric{pt1}
+	var metrics = []plugins.Metric{pt1}
 	require.NoError(t, pClient.Write(metrics))
 
 	for _, m := range pClient.metrics {
@@ -122,7 +122,7 @@ func TestPrometheusExpireOldMetrics(t *testing.T) {
 		tags,
 		map[string]interface{}{"value": 1.0},
 		now)
-	var metrics2 = []telegraf.Metric{pt2}
+	var metrics2 = []plugins.Metric{pt2}
 	require.NoError(t, pClient.Write(metrics2))
 
 	expected := []struct {

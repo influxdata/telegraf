@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -141,7 +141,7 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 }
 
 // Gather gets all metric fields and tags and returns any errors it encounters
-func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
+func (h *HTTPResponse) Gather(acc plugins.Accumulator) error {
 	// Set default values
 	if h.ResponseTimeout.Duration < time.Second {
 		h.ResponseTimeout.Duration = time.Second * 5
@@ -174,7 +174,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("http_response", func() telegraf.Input {
+	inputs.Add("http_response", func() plugins.Input {
 		return &HTTPResponse{}
 	})
 }

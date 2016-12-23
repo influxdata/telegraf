@@ -3,7 +3,7 @@ package buffer
 import (
 	"sync"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -14,7 +14,7 @@ var (
 
 // Buffer is an object for storing metrics in a circular buffer.
 type Buffer struct {
-	buf chan telegraf.Metric
+	buf chan plugins.Metric
 
 	mu sync.Mutex
 }
@@ -24,7 +24,7 @@ type Buffer struct {
 //   called when the buffer is full, then the oldest metric(s) will be dropped.
 func NewBuffer(size int) *Buffer {
 	return &Buffer{
-		buf: make(chan telegraf.Metric, size),
+		buf: make(chan plugins.Metric, size),
 	}
 }
 
@@ -39,7 +39,7 @@ func (b *Buffer) Len() int {
 }
 
 // Add adds metrics to the buffer.
-func (b *Buffer) Add(metrics ...telegraf.Metric) {
+func (b *Buffer) Add(metrics ...plugins.Metric) {
 	for i, _ := range metrics {
 		MetricsWritten.Incr(1)
 		select {
@@ -55,10 +55,10 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) {
 // Batch returns a batch of metrics of size batchSize.
 // the batch will be of maximum length batchSize. It can be less than batchSize,
 // if the length of Buffer is less than batchSize.
-func (b *Buffer) Batch(batchSize int) []telegraf.Metric {
+func (b *Buffer) Batch(batchSize int) []plugins.Metric {
 	b.mu.Lock()
 	n := min(len(b.buf), batchSize)
-	out := make([]telegraf.Metric, n)
+	out := make([]plugins.Metric, n)
 	for i := 0; i < n; i++ {
 		out[i] = <-b.buf
 	}

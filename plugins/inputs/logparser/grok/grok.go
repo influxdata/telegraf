@@ -12,7 +12,7 @@ import (
 
 	"github.com/vjeantet/grok"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -151,7 +151,7 @@ func (p *Parser) Compile() error {
 	return p.compileCustomPatterns()
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (plugins.Metric, error) {
 	var err error
 	// values are the parsed fields from the log line
 	var values map[string]string

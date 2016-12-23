@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -88,10 +88,10 @@ func RegisterTiming(measurement, field string, tags map[string]string) Stat {
 }
 
 // Metrics returns all registered stats as telegraf metrics.
-func Metrics() []telegraf.Metric {
+func Metrics() []plugins.Metric {
 	registry.mu.Lock()
 	now := time.Now()
-	metrics := make([]telegraf.Metric, len(registry.stats))
+	metrics := make([]plugins.Metric, len(registry.stats))
 	i := 0
 	for _, stats := range registry.stats {
 		if len(stats) > 0 {

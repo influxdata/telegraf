@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -64,7 +64,7 @@ var ErrProtocolError = errors.New("disque protocol error")
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *Disque) Gather(acc telegraf.Accumulator) error {
+func (g *Disque) Gather(acc plugins.Accumulator) error {
 	if len(g.Servers) == 0 {
 		url := &url.URL{
 			Host: ":7711",
@@ -101,7 +101,7 @@ func (g *Disque) Gather(acc telegraf.Accumulator) error {
 
 const defaultPort = "7711"
 
-func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
+func (g *Disque) gatherServer(addr *url.URL, acc plugins.Accumulator) error {
 	if g.c == nil {
 
 		_, _, err := net.SplitHostPort(addr.Host)
@@ -204,7 +204,7 @@ func (g *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("disque", func() telegraf.Input {
+	inputs.Add("disque", func() plugins.Input {
 		return &Disque{}
 	})
 }

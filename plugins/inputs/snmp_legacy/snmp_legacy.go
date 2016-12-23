@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/soniah/gosnmp"
@@ -275,7 +275,7 @@ func findnodename(node Node, ids []string) (string, string) {
 	return node.name, ""
 }
 
-func (s *Snmp) Gather(acc telegraf.Accumulator) error {
+func (s *Snmp) Gather(acc plugins.Accumulator) error {
 	// TODO put this in cache on first run
 	// Create subtables mapping
 	if len(s.subTableMap) == 0 {
@@ -410,7 +410,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 }
 
 func (h *Host) SNMPMap(
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	nameToOid map[string]string,
 	subTableMap map[string]Subtable,
 ) error {
@@ -595,7 +595,7 @@ func (h *Host) SNMPMap(
 	return nil
 }
 
-func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
+func (h *Host) SNMPGet(acc plugins.Accumulator, initNode Node) error {
 	// Get snmp client
 	snmpClient, err := h.GetSNMPClient()
 	if err != nil {
@@ -636,7 +636,7 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
 	return nil
 }
 
-func (h *Host) SNMPBulk(acc telegraf.Accumulator, initNode Node) error {
+func (h *Host) SNMPBulk(acc plugins.Accumulator, initNode Node) error {
 	// Get snmp client
 	snmpClient, err := h.GetSNMPClient()
 	if err != nil {
@@ -726,7 +726,7 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 func (h *Host) HandleResponse(
 	oids map[string]Data,
 	result *gosnmp.SnmpPacket,
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	initNode Node,
 ) (string, error) {
 	var lastOid string
@@ -812,7 +812,7 @@ func (h *Host) HandleResponse(
 }
 
 func init() {
-	inputs.Add("snmp_legacy", func() telegraf.Input {
+	inputs.Add("snmp_legacy", func() plugins.Input {
 		return &Snmp{}
 	})
 }

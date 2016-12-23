@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -47,7 +47,7 @@ func (_ *FileStat) Description() string {
 
 func (_ *FileStat) SampleConfig() string { return sampleConfig }
 
-func (f *FileStat) Gather(acc telegraf.Accumulator) error {
+func (f *FileStat) Gather(acc plugins.Accumulator) error {
 	var errS string
 	var err error
 
@@ -126,7 +126,7 @@ func getMd5(file string) (string, error) {
 }
 
 func init() {
-	inputs.Add("filestat", func() telegraf.Input {
+	inputs.Add("filestat", func() plugins.Input {
 		return NewFileStat()
 	})
 }

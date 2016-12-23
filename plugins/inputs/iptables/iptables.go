@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -42,7 +42,7 @@ func (ipt *Iptables) SampleConfig() string {
 }
 
 // Gather gathers iptables packets and bytes throughput from the configured tables and chains.
-func (ipt *Iptables) Gather(acc telegraf.Accumulator) error {
+func (ipt *Iptables) Gather(acc plugins.Accumulator) error {
 	if ipt.Table == "" || len(ipt.Chains) == 0 {
 		return nil
 	}
@@ -88,7 +88,7 @@ var chainNameRe = regexp.MustCompile(`^Chain\s+(\S+)`)
 var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+`)
 var valuesRe = regexp.MustCompile(`^\s*([0-9]+)\s+([0-9]+)\s+.*?(/\*\s(.*)\s\*/)?$`)
 
-func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error {
+func (ipt *Iptables) parseAndGather(data string, acc plugins.Accumulator) error {
 	lines := strings.Split(data, "\n")
 	if len(lines) < 3 {
 		return nil
@@ -120,7 +120,7 @@ func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error
 type chainLister func(table, chain string) (string, error)
 
 func init() {
-	inputs.Add("iptables", func() telegraf.Input {
+	inputs.Add("iptables", func() plugins.Input {
 		ipt := new(Iptables)
 		ipt.lister = ipt.chainList
 		return ipt

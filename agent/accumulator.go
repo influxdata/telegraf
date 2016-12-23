@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -18,14 +18,14 @@ type MetricMaker interface {
 		measurement string,
 		fields map[string]interface{},
 		tags map[string]string,
-		mType telegraf.ValueType,
+		mType plugins.ValueType,
 		t time.Time,
-	) telegraf.Metric
+	) plugins.Metric
 }
 
 func NewAccumulator(
 	maker MetricMaker,
-	metrics chan telegraf.Metric,
+	metrics chan plugins.Metric,
 ) *accumulator {
 	acc := accumulator{
 		maker:     maker,
@@ -36,7 +36,7 @@ func NewAccumulator(
 }
 
 type accumulator struct {
-	metrics chan telegraf.Metric
+	metrics chan plugins.Metric
 
 	maker MetricMaker
 
@@ -49,7 +49,7 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Untyped, ac.getTime(t)); m != nil {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, plugins.Untyped, ac.getTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }
@@ -60,7 +60,7 @@ func (ac *accumulator) AddGauge(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Gauge, ac.getTime(t)); m != nil {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, plugins.Gauge, ac.getTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }
@@ -71,7 +71,7 @@ func (ac *accumulator) AddCounter(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Counter, ac.getTime(t)); m != nil {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, plugins.Counter, ac.getTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }

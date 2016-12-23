@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -15,7 +15,7 @@ type InfluxParser struct {
 	DefaultTags map[string]string
 }
 
-func (p *InfluxParser) ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
+func (p *InfluxParser) ParseWithDefaultTime(buf []byte, t time.Time) ([]plugins.Metric, error) {
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
 	metrics, err := metric.ParseWithDefaultTime(buf, t)
@@ -37,11 +37,11 @@ func (p *InfluxParser) ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf
 // with each metric separated by newlines. If any metrics fail to parse,
 // a non-nil error will be returned in addition to the metrics that parsed
 // successfully.
-func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *InfluxParser) Parse(buf []byte) ([]plugins.Metric, error) {
 	return p.ParseWithDefaultTime(buf, time.Now())
 }
 
-func (p *InfluxParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *InfluxParser) ParseLine(line string) (plugins.Metric, error) {
 	metrics, err := p.Parse([]byte(line + "\n"))
 
 	if err != nil {

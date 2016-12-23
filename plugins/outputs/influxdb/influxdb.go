@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 
@@ -174,7 +174,7 @@ func (i *InfluxDB) Description() string {
 
 // Choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
-func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
+func (i *InfluxDB) Write(metrics []plugins.Metric) error {
 	if len(i.conns) == 0 {
 		err := i.Connect()
 		if err != nil {
@@ -219,7 +219,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("influxdb", func() telegraf.Output {
+	outputs.Add("influxdb", func() plugins.Output {
 		return &InfluxDB{
 			Timeout: internal.Duration{Duration: time.Second * 5},
 		}

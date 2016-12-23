@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 type MongodbData struct {
@@ -138,7 +138,7 @@ func (d *MongodbData) add(key string, val interface{}) {
 	d.Fields[key] = val
 }
 
-func (d *MongodbData) flush(acc telegraf.Accumulator) {
+func (d *MongodbData) flush(acc plugins.Accumulator) {
 	acc.AddFields(
 		"mongodb",
 		d.Fields,

@@ -1,8 +1,8 @@
 package processors
 
-import "github.com/influxdata/telegraf"
+import "github.com/influxdata/telegraf/plugins"
 
-type Creator func() telegraf.Processor
+type Creator func() plugins.Processor
 
 var Processors = map[string]Creator{}
 

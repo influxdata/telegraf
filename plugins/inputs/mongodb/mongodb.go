@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
@@ -49,7 +49,7 @@ var localhost = &url.URL{Host: "127.0.0.1:27017"}
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
+func (m *MongoDB) Gather(acc plugins.Accumulator) error {
 	if len(m.Servers) == 0 {
 		m.gatherServer(m.getMongoServer(localhost), acc)
 		return nil
@@ -89,7 +89,7 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 	return m.mongos[url.Host]
 }
 
-func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
+func (m *MongoDB) gatherServer(server *Server, acc plugins.Accumulator) error {
 	if server.Session == nil {
 		var dialAddrs []string
 		if server.Url.User != nil {
@@ -139,7 +139,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("mongodb", func() telegraf.Input {
+	inputs.Add("mongodb", func() plugins.Input {
 		return &MongoDB{
 			mongos: make(map[string]*Server),
 		}

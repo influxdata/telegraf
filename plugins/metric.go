@@ -1,4 +1,4 @@
-package telegraf
+package plugins
 
 import (
 	"time"

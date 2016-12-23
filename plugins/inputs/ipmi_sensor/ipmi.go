@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,7 +37,7 @@ func (m *Ipmi) Description() string {
 	return "Read metrics from one or many bare metal servers"
 }
 
-func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
+func (m *Ipmi) Gather(acc plugins.Accumulator) error {
 	if m.runner == nil {
 		m.runner = CommandRunner{}
 	}
@@ -51,7 +51,7 @@ func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *Ipmi) gatherServer(serv string, acc telegraf.Accumulator) error {
+func (m *Ipmi) gatherServer(serv string, acc plugins.Accumulator) error {
 	conn := NewConnection(serv)
 
 	res, err := m.runner.Run(conn, "sdr")
@@ -123,7 +123,7 @@ func transform(s string) string {
 }
 
 func init() {
-	inputs.Add("ipmi_sensor", func() telegraf.Input {
+	inputs.Add("ipmi_sensor", func() plugins.Input {
 		return &Ipmi{}
 	})
 }

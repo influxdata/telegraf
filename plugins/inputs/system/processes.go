@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,7 +31,7 @@ func (p *Processes) Description() string {
 
 func (p *Processes) SampleConfig() string { return "" }
 
-func (p *Processes) Gather(acc telegraf.Accumulator) error {
+func (p *Processes) Gather(acc plugins.Accumulator) error {
 	// Get an empty map of metric fields
 	fields := getEmptyFields()
 
@@ -211,7 +211,7 @@ func execPS() ([]byte, error) {
 }
 
 func init() {
-	inputs.Add("processes", func() telegraf.Input {
+	inputs.Add("processes", func() plugins.Input {
 		return &Processes{
 			execPS:       execPS,
 			readProcFile: readProcFile,

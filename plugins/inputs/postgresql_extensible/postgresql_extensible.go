@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/lib/pq"
@@ -113,7 +113,7 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 
 var localhost = "host=localhost sslmode=disable"
 
-func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
+func (p *Postgresql) Gather(acc plugins.Accumulator) error {
 
 	var sql_query string
 	var query_addon string
@@ -224,7 +224,7 @@ func (p *Postgresql) SanitizedAddress() (_ string, err error) {
 	return p.sanitizedAddress, err
 }
 
-func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumulator) error {
+func (p *Postgresql) accRow(meas_name string, row scanner, acc plugins.Accumulator) error {
 	var columnVars []interface{}
 	var dbname bytes.Buffer
 
@@ -299,7 +299,7 @@ COLUMN:
 }
 
 func init() {
-	inputs.Add("postgresql_extensible", func() telegraf.Input {
+	inputs.Add("postgresql_extensible", func() plugins.Input {
 		return &Postgresql{}
 	})
 }

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
@@ -85,7 +85,7 @@ func (l *Librato) Connect() error {
 	return nil
 }
 
-func (l *Librato) Write(metrics []telegraf.Metric) error {
+func (l *Librato) Write(metrics []plugins.Metric) error {
 
 	if len(metrics) == 0 {
 		return nil
@@ -180,7 +180,7 @@ func (l *Librato) Description() string {
 	return "Configuration for Librato API to send metrics to."
 }
 
-func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
+func (l *Librato) buildGauges(m plugins.Metric) ([]*Gauge, error) {
 
 	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {
@@ -255,7 +255,7 @@ func (l *Librato) Close() error {
 }
 
 func init() {
-	outputs.Add("librato", func() telegraf.Output {
+	outputs.Add("librato", func() plugins.Output {
 		return NewLibrato(libratoAPI)
 	})
 }

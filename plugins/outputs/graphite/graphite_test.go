@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
@@ -29,7 +29,7 @@ func TestGraphiteError(t *testing.T) {
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	// Prepare point list
-	var metrics []telegraf.Metric
+	var metrics []plugins.Metric
 	metrics = append(metrics, m1)
 	// Error
 	err1 := g.Connect()
@@ -72,7 +72,7 @@ func TestGraphiteOK(t *testing.T) {
 	)
 
 	// Prepare point list
-	metrics := []telegraf.Metric{m1, m2, m3}
+	metrics := []plugins.Metric{m1, m2, m3}
 	err1 := g.Connect()
 	require.NoError(t, err1)
 	// Send Data

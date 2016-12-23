@@ -1,4 +1,4 @@
-package telegraf
+package plugins
 
 type Input interface {
 	// SampleConfig returns the default configuration of the Input

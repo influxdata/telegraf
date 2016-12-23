@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
@@ -46,7 +46,7 @@ type UdpListener struct {
 	parser parsers.Parser
 
 	// Keep the accumulator in this struct
-	acc telegraf.Accumulator
+	acc plugins.Accumulator
 
 	listener *net.UDPConn
 
@@ -94,7 +94,7 @@ func (u *UdpListener) Description() string {
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.
-func (u *UdpListener) Gather(_ telegraf.Accumulator) error {
+func (u *UdpListener) Gather(_ plugins.Accumulator) error {
 	return nil
 }
 
@@ -102,7 +102,7 @@ func (u *UdpListener) SetParser(parser parsers.Parser) {
 	u.parser = parser
 }
 
-func (u *UdpListener) Start(acc telegraf.Accumulator) error {
+func (u *UdpListener) Start(acc plugins.Accumulator) error {
 	u.Lock()
 	defer u.Unlock()
 
@@ -193,7 +193,7 @@ func (u *UdpListener) udpParser() error {
 	defer u.wg.Done()
 
 	var packet []byte
-	var metrics []telegraf.Metric
+	var metrics []plugins.Metric
 	var err error
 	for {
 		select {
@@ -218,7 +218,7 @@ func (u *UdpListener) udpParser() error {
 }
 
 func init() {
-	inputs.Add("udp_listener", func() telegraf.Input {
+	inputs.Add("udp_listener", func() plugins.Input {
 		return &UdpListener{
 			ServiceAddress:         ":8092",
 			AllowedPendingMessages: 10000,

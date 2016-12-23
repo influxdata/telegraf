@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -96,7 +96,7 @@ func (r *Riak) Description() string {
 }
 
 // Reads stats from all configured servers.
-func (r *Riak) Gather(acc telegraf.Accumulator) error {
+func (r *Riak) Gather(acc plugins.Accumulator) error {
 	// Default to a single server at localhost (default port) if none specified
 	if len(r.Servers) == 0 {
 		r.Servers = []string{"http://127.0.0.1:8098"}
@@ -113,7 +113,7 @@ func (r *Riak) Gather(acc telegraf.Accumulator) error {
 }
 
 // Gathers stats from a single server, adding them to the accumulator
-func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
+func (r *Riak) gatherServer(s string, acc plugins.Accumulator) error {
 	// Parse the given URL to extract the server tag
 	u, err := url.Parse(s)
 	if err != nil {
@@ -200,7 +200,7 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("riak", func() telegraf.Input {
+	inputs.Add("riak", func() plugins.Input {
 		return NewRiak()
 	})
 }

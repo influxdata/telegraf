@@ -3,7 +3,7 @@ package internal
 import (
 	"runtime"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -12,7 +12,7 @@ type Self struct {
 	CollectMemstats bool
 }
 
-func NewSelf() telegraf.Input {
+func NewSelf() plugins.Input {
 	return &Self{
 		CollectMemstats: true,
 	}
@@ -31,7 +31,7 @@ func (s *Self) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *Self) Gather(acc telegraf.Accumulator) error {
+func (s *Self) Gather(acc plugins.Accumulator) error {
 	if s.CollectMemstats {
 		m := &runtime.MemStats{}
 		runtime.ReadMemStats(m)

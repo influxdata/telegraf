@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 // vars for making sure that the compiler doesnt optimize out the benchmarks:
@@ -17,7 +17,7 @@ var (
 )
 
 func BenchmarkNewMetric(b *testing.B) {
-	var mt telegraf.Metric
+	var mt plugins.Metric
 	for n := 0; n < b.N; n++ {
 		mt, _ = New("test_metric",
 			map[string]string{
@@ -37,7 +37,7 @@ func BenchmarkNewMetric(b *testing.B) {
 }
 
 func BenchmarkAddTag(b *testing.B) {
-	var mt telegraf.Metric
+	var mt plugins.Metric
 	mt = &metric{
 		name:   []byte("cpu"),
 		tags:   []byte(",host=localhost"),
@@ -51,14 +51,14 @@ func BenchmarkAddTag(b *testing.B) {
 }
 
 func BenchmarkSplit(b *testing.B) {
-	var mt telegraf.Metric
+	var mt plugins.Metric
 	mt = &metric{
 		name:   []byte("cpu"),
 		tags:   []byte(",host=localhost"),
 		fields: []byte("a=101,b=10i,c=10101,d=101010,e=42"),
 		t:      []byte("1480614053000000000"),
 	}
-	var metrics []telegraf.Metric
+	var metrics []plugins.Metric
 	for n := 0; n < b.N; n++ {
 		metrics = mt.Split(60)
 	}

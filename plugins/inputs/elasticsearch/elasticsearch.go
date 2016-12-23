@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -143,7 +143,7 @@ func (e *Elasticsearch) Description() string {
 
 // Gather reads the stats from Elasticsearch and writes it to the
 // Accumulator.
-func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
+func (e *Elasticsearch) Gather(acc plugins.Accumulator) error {
 	if e.client == nil {
 		client, err := e.createHttpClient()
 
@@ -158,7 +158,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	wg.Add(len(e.Servers))
 
 	for _, serv := range e.Servers {
-		go func(s string, acc telegraf.Accumulator) {
+		go func(s string, acc plugins.Accumulator) {
 			defer wg.Done()
 			var url string
 			if e.Local {
@@ -221,7 +221,7 @@ func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) error {
+func (e *Elasticsearch) gatherNodeStats(url string, acc plugins.Accumulator) error {
 	nodeStats := &struct {
 		ClusterName string               `json:"cluster_name"`
 		Nodes       map[string]*nodeStat `json:"nodes"`
@@ -273,7 +273,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 	return nil
 }
 
-func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator) error {
+func (e *Elasticsearch) gatherClusterHealth(url string, acc plugins.Accumulator) error {
 	healthStats := &clusterHealth{}
 	if err := e.gatherJsonData(url, healthStats); err != nil {
 		return err
@@ -318,7 +318,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	return nil
 }
 
-func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator) error {
+func (e *Elasticsearch) gatherClusterStats(url string, acc plugins.Accumulator) error {
 	clusterStats := &clusterStats{}
 	if err := e.gatherJsonData(url, clusterStats); err != nil {
 		return err
@@ -393,7 +393,7 @@ func (e *Elasticsearch) gatherJsonData(url string, v interface{}) error {
 }
 
 func init() {
-	inputs.Add("elasticsearch", func() telegraf.Input {
+	inputs.Add("elasticsearch", func() plugins.Input {
 		return NewElasticsearch()
 	})
 }

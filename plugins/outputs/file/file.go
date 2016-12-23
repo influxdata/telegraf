@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -86,7 +86,7 @@ func (f *File) Description() string {
 	return "Send telegraf metrics to file(s)"
 }
 
-func (f *File) Write(metrics []telegraf.Metric) error {
+func (f *File) Write(metrics []plugins.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -105,7 +105,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("file", func() telegraf.Output {
+	outputs.Add("file", func() plugins.Output {
 		return &File{}
 	})
 }

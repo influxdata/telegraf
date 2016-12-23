@@ -8,12 +8,12 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 func TestBuildPoint(t *testing.T) {
 	var tagtests = []struct {
-		ptIn  telegraf.Metric
+		ptIn  plugins.Metric
 		outPt Point
 		err   error
 	}{

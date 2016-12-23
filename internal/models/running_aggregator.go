@@ -3,28 +3,28 @@ package models
 import (
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins"
 )
 
 type RunningAggregator struct {
-	a      telegraf.Aggregator
+	a      plugins.Aggregator
 	Config *AggregatorConfig
 
-	metrics chan telegraf.Metric
+	metrics chan plugins.Metric
 
 	periodStart time.Time
 	periodEnd   time.Time
 }
 
 func NewRunningAggregator(
-	a telegraf.Aggregator,
+	a plugins.Aggregator,
 	conf *AggregatorConfig,
 ) *RunningAggregator {
 	return &RunningAggregator{
 		a:       a,
 		Config:  conf,
-		metrics: make(chan telegraf.Metric, 100),
+		metrics: make(chan plugins.Metric, 100),
 	}
 }
 
@@ -52,9 +52,9 @@ func (r *RunningAggregator) MakeMetric(
 	measurement string,
 	fields map[string]interface{},
 	tags map[string]string,
-	mType telegraf.ValueType,
+	mType plugins.ValueType,
 	t time.Time,
-) telegraf.Metric {
+) plugins.Metric {
 	m := makemetric(
 		measurement,
 		fields,
@@ -80,7 +80,7 @@ func (r *RunningAggregator) MakeMetric(
 // Add applies the given metric to the aggregator.
 // Before applying to the plugin, it will run any defined filters on the metric.
 // Apply returns true if the original metric should be dropped.
-func (r *RunningAggregator) Add(in telegraf.Metric) bool {
+func (r *RunningAggregator) Add(in plugins.Metric) bool {
 	if r.Config.Filter.IsActive() {
 		// check if the aggregator should apply this metric
 		name := in.Name()
@@ -98,11 +98,11 @@ func (r *RunningAggregator) Add(in telegraf.Metric) bool {
 	r.metrics <- in
 	return r.Config.DropOriginal
 }
-func (r *RunningAggregator) add(in telegraf.Metric) {
+func (r *RunningAggregator) add(in plugins.Metric) {
 	r.a.Add(in)
 }
 
-func (r *RunningAggregator) push(acc telegraf.Accumulator) {
+func (r *RunningAggregator) push(acc plugins.Accumulator) {
 	r.a.Push(acc)
 }
 
@@ -113,7 +113,7 @@ func (r *RunningAggregator) reset() {
 // Run runs the running aggregator, listens for incoming metrics, and waits
 // for period ticks to tell it when to push and reset the aggregator.
 func (r *RunningAggregator) Run(
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	shutdown chan struct{},
 ) {
 	// The start of the period is truncated to the nearest second.

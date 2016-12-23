@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -55,7 +55,7 @@ func (d *DnsQuery) SampleConfig() string {
 func (d *DnsQuery) Description() string {
 	return "Query given DNS server and gives statistics"
 }
-func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
+func (d *DnsQuery) Gather(acc plugins.Accumulator) error {
 	d.setDefaultValues()
 
 	errChan := errchan.New(len(d.Domains) * len(d.Servers))
@@ -156,7 +156,7 @@ func (d *DnsQuery) parseRecordType() (uint16, error) {
 }
 
 func init() {
-	inputs.Add("dns_query", func() telegraf.Input {
+	inputs.Add("dns_query", func() plugins.Input {
 		return &DnsQuery{}
 	})
 }

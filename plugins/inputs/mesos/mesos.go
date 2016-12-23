@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -94,7 +94,7 @@ func (m *Mesos) SetDefaults() {
 }
 
 // Gather() metrics from given list of Mesos Masters
-func (m *Mesos) Gather(acc telegraf.Accumulator) error {
+func (m *Mesos) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 	var errorChannel chan error
 
@@ -425,7 +425,7 @@ type TaskStats struct {
 	Statistics  map[string]interface{} `json:"statistics"`
 }
 
-func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc telegraf.Accumulator) error {
+func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc plugins.Accumulator) error {
 	var metrics []TaskStats
 
 	host, _, err := net.SplitHostPort(address)
@@ -476,7 +476,7 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 }
 
 // This should not belong to the object
-func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc telegraf.Accumulator) error {
+func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc plugins.Accumulator) error {
 	var jsonOut map[string]interface{}
 
 	host, _, err := net.SplitHostPort(a)
@@ -532,7 +532,7 @@ func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc t
 }
 
 func init() {
-	inputs.Add("mesos", func() telegraf.Input {
+	inputs.Add("mesos", func() plugins.Input {
 		return &Mesos{}
 	})
 }

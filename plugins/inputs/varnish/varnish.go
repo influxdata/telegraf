@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -73,7 +73,7 @@ func varnishRunner(cmdName string) (*bytes.Buffer, error) {
 // The prefix of each stat (eg MAIN, MEMPOOL, LCK, etc) will be used as a
 // 'section' tag and all stats that share that prefix will be reported as fields
 // with that tag
-func (s *Varnish) Gather(acc telegraf.Accumulator) error {
+func (s *Varnish) Gather(acc plugins.Accumulator) error {
 	if s.filter == nil {
 		var err error
 		if len(s.Stats) == 0 {
@@ -144,7 +144,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("varnish", func() telegraf.Input {
+	inputs.Add("varnish", func() plugins.Input {
 		return &Varnish{
 			run:    varnishRunner,
 			Stats:  defaultStats,

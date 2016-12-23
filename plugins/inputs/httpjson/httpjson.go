@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -120,7 +120,7 @@ func (h *HttpJson) Description() string {
 }
 
 // Gathers data for all servers.
-func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
+func (h *HttpJson) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
@@ -169,14 +169,14 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 
 // Gathers data from a particular server
 // Parameters:
-//     acc      : The telegraf Accumulator to use
+//     acc      : The plugins.Accumulator to use
 //     serverURL: endpoint to send request to
 //     service  : the service being queried
 //
 // Returns:
 //     error: Any error that may have occurred
 func (h *HttpJson) gatherServer(
-	acc telegraf.Accumulator,
+	acc plugins.Accumulator,
 	serverURL string,
 ) error {
 	resp, responseTime, err := h.sendRequest(serverURL)
@@ -292,7 +292,7 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 }
 
 func init() {
-	inputs.Add("httpjson", func() telegraf.Input {
+	inputs.Add("httpjson", func() plugins.Input {
 		return &HttpJson{
 			client: &RealHTTPClient{},
 			ResponseTimeout: internal.Duration{

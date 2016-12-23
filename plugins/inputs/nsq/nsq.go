@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -51,7 +51,7 @@ const (
 )
 
 func init() {
-	inputs.Add("nsq", func() telegraf.Input {
+	inputs.Add("nsq", func() plugins.Input {
 		return &NSQ{}
 	})
 }
@@ -64,7 +64,7 @@ func (n *NSQ) Description() string {
 	return "Read NSQ topic and channel statistics."
 }
 
-func (n *NSQ) Gather(acc telegraf.Accumulator) error {
+func (n *NSQ) Gather(acc plugins.Accumulator) error {
 	var wg sync.WaitGroup
 	errChan := errchan.New(len(n.Endpoints))
 	for _, e := range n.Endpoints {
@@ -88,7 +88,7 @@ var client = &http.Client{
 	Timeout:   time.Duration(4 * time.Second),
 }
 
-func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
+func (n *NSQ) gatherEndpoint(e string, acc plugins.Accumulator) error {
 	u, err := buildURL(e)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func buildURL(e string) (*url.URL, error) {
 	return addr, nil
 }
 
-func topicStats(t TopicStats, acc telegraf.Accumulator, host, version string) {
+func topicStats(t TopicStats, acc plugins.Accumulator, host, version string) {
 	// per topic overall (tag: name, paused, channel count)
 	tags := map[string]string{
 		"server_host":    host,
@@ -160,7 +160,7 @@ func topicStats(t TopicStats, acc telegraf.Accumulator, host, version string) {
 	}
 }
 
-func channelStats(c ChannelStats, acc telegraf.Accumulator, host, version, topic string) {
+func channelStats(c ChannelStats, acc plugins.Accumulator, host, version, topic string) {
 	tags := map[string]string{
 		"server_host":    host,
 		"server_version": version,
@@ -185,7 +185,7 @@ func channelStats(c ChannelStats, acc telegraf.Accumulator, host, version, topic
 	}
 }
 
-func clientStats(c ClientStats, acc telegraf.Accumulator, host, version, topic, channel string) {
+func clientStats(c ClientStats, acc plugins.Accumulator, host, version, topic, channel string) {
 	tags := map[string]string{
 		"server_host":       host,
 		"server_version":    version,

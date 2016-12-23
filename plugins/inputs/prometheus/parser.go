@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/metric"
 
 	"github.com/matttproud/golang_protobuf_extensions/pbutil"
@@ -23,8 +23,8 @@ import (
 
 // Parse returns a slice of Metrics from a text representation of a
 // metrics
-func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
-	var metrics []telegraf.Metric
+func Parse(buf []byte, header http.Header) ([]plugins.Metric, error) {
+	var metrics []plugins.Metric
 	var parser expfmt.TextParser
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))

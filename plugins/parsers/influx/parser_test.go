@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	ms         []telegraf.Metric
+	ms         []plugins.Metric
 	writer     = ioutil.Discard
 	metrics500 []byte
 	exptime    = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano()

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -61,7 +61,7 @@ func (n *NTPQ) SampleConfig() string {
 `
 }
 
-func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
+func (n *NTPQ) Gather(acc plugins.Accumulator) error {
 	out, err := n.runQ()
 	if err != nil {
 		return err
@@ -209,7 +209,7 @@ func (n *NTPQ) runq() ([]byte, error) {
 }
 
 func init() {
-	inputs.Add("ntpq", func() telegraf.Input {
+	inputs.Add("ntpq", func() plugins.Input {
 		n := &NTPQ{}
 		n.runQ = n.runq
 		return n

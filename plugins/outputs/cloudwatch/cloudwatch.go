@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -92,7 +92,7 @@ func (c *CloudWatch) Close() error {
 	return nil
 }
 
-func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
+func (c *CloudWatch) Write(metrics []plugins.Metric) error {
 	for _, m := range metrics {
 		err := c.WriteSinglePoint(m)
 		if err != nil {
@@ -106,7 +106,7 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 // Write data for a single point. A point can have many fields and one field
 // is equal to one MetricDatum. There is a limit on how many MetricDatums a
 // request can have so we process one Point at a time.
-func (c *CloudWatch) WriteSinglePoint(point telegraf.Metric) error {
+func (c *CloudWatch) WriteSinglePoint(point plugins.Metric) error {
 	datums := BuildMetricDatum(point)
 
 	const maxDatumsPerCall = 20 // PutMetricData only supports up to 20 data metrics per call
@@ -163,7 +163,7 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 
 // Make a MetricDatum for each field in a Point. Only fields with values that can be
 // converted to float64 are supported. Non-supported fields are skipped.
-func BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
+func BuildMetricDatum(point plugins.Metric) []*cloudwatch.MetricDatum {
 	datums := make([]*cloudwatch.MetricDatum, len(point.Fields()))
 	i := 0
 
@@ -250,7 +250,7 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 }
 
 func init() {
-	outputs.Add("cloudwatch", func() telegraf.Output {
+	outputs.Add("cloudwatch", func() plugins.Output {
 		return &CloudWatch{}
 	})
 }

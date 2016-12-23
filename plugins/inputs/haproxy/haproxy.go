@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -115,7 +115,7 @@ func (r *haproxy) Description() string {
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *haproxy) Gather(acc telegraf.Accumulator) error {
+func (g *haproxy) Gather(acc plugins.Accumulator) error {
 	if len(g.Servers) == 0 {
 		return g.gatherServer("http://127.0.0.1:1936/haproxy?stats", acc)
 	}
@@ -160,7 +160,7 @@ func (g *haproxy) Gather(acc telegraf.Accumulator) error {
 	return errChan.Error()
 }
 
-func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
+func (g *haproxy) gatherServerSocket(addr string, acc plugins.Accumulator) error {
 	socketPath := getSocketAddr(addr)
 
 	c, err := net.Dial("unix", socketPath)
@@ -178,7 +178,7 @@ func (g *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) erro
 	return importCsvResult(c, acc, socketPath)
 }
 
-func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
+func (g *haproxy) gatherServer(addr string, acc plugins.Accumulator) error {
 	if !strings.HasPrefix(addr, "http") {
 		return g.gatherServerSocket(addr, acc)
 	}
@@ -229,7 +229,7 @@ func getSocketAddr(sock string) string {
 	}
 }
 
-func importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
+func importCsvResult(r io.Reader, acc plugins.Accumulator, host string) error {
 	csv := csv.NewReader(r)
 	result, err := csv.ReadAll()
 	now := time.Now()
@@ -436,7 +436,7 @@ func importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
 }
 
 func init() {
-	inputs.Add("haproxy", func() telegraf.Input {
+	inputs.Add("haproxy", func() plugins.Input {
 		return &haproxy{}
 	})
 }

@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -78,7 +78,7 @@ func (i *Instrumental) Close() error {
 	return nil
 }
 
-func (i *Instrumental) Write(metrics []telegraf.Metric) error {
+func (i *Instrumental) Write(metrics []plugins.Metric) error {
 	if i.conn == nil {
 		err := i.Connect()
 		if err != nil {
@@ -93,7 +93,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 
 	var points []string
 	var metricType string
-	var toSerialize telegraf.Metric
+	var toSerialize plugins.Metric
 	var newTags map[string]string
 
 	for _, m := range metrics {
@@ -204,7 +204,7 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 }
 
 func init() {
-	outputs.Add("instrumental", func() telegraf.Output {
+	outputs.Add("instrumental", func() plugins.Output {
 		return &Instrumental{
 			Host:     DefaultHost,
 			Template: graphite.DEFAULT_TEMPLATE,
