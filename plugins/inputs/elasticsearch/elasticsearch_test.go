@@ -39,8 +39,14 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 func (t *transportMock) CancelRequest(_ *http.Request) {
 }
 
+func newElasticsearchWithClient() *Elasticsearch {
+	es := NewElasticsearch()
+	es.client = &http.Client{}
+	return es
+}
+
 func checkIsMaster(es *Elasticsearch, expected bool, t *testing.T) {
-	if es.isMaster != expected {
+	if es.localNodeIsMaster != expected {
 		msg := fmt.Sprintf("IsMaster set incorrectly")
 		assert.Fail(t, msg)
 	}
@@ -108,32 +114,32 @@ func TestGatherClusterHealth(t *testing.T) {
 		clusterHealthExpected,
 		map[string]string{"name": "elasticsearch_telegraf"})
 
-	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
+	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health_indices",
 		v1IndexExpected,
-		map[string]string{"index": "v1"})
+		map[string]string{"name": "v1"})
 
-	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
+	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health_indices",
 		v2IndexExpected,
-		map[string]string{"index": "v2"})
+		map[string]string{"name": "v2"})
 }
 
 func TestGatherClusterStatsMaster(t *testing.T) {
 	// This needs multiple steps to replicate the multiple calls internally.
+	var acc testutil.Accumulator
 	es := newElasticsearchWithClient()
 	es.ClusterStats = true
 	es.Servers = []string{"http://example.com:9200"}
 
 	// first get catMaster
 	es.client.Transport = newTransportMock(http.StatusOK, IsMasterResult)
-	require.NoError(t, es.setCatMaster("junk"))
+	require.NoError(t, es.gatherCatMaster("junk", &acc))
 
-	if es.catMasterResponse != IsMasterResult {
-		msg := fmt.Sprintf("catmaster is incorrect")
+	if es.masterNodeId != catMasterNodeId {
+		msg := fmt.Sprintf("catmaster is incorrect [" + es.masterNodeId + "] vs [" + catMasterNodeId + "]")
 		assert.Fail(t, msg)
 	}
 
 	// now get node status, which determines whether we're master
-	var acc testutil.Accumulator
 	es.Local = true
 	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
 	if err := es.gatherNodeStats("junk", &acc); err != nil {
@@ -147,33 +153,30 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	es.client.Transport = newTransportMock(http.StatusOK, clusterStatsResponse)
 	require.NoError(t, es.gatherClusterStats("junk", &acc))
 
-	tags := map[string]string{
-		"cluster_name": "es-testcluster",
-		"node_name":    "test.host.com",
-		"status":       "red",
-	}
-
-	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats_nodes", clusterstatsNodesExpected, tags)
-	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats_indices", clusterstatsIndicesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats", clusterstatsExpected, map[string]string{"name": ""})
+	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats_nodes", clusterstatsNodesExpected, map[string]string{"name": ""})
+	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats_indices", clusterstatsIndicesExpected, map[string]string{"name": ""})
 }
 
 func TestGatherClusterStatsNonMaster(t *testing.T) {
 	// This needs multiple steps to replicate the multiple calls internally.
+	var acc testutil.Accumulator
 	es := newElasticsearchWithClient()
 	es.ClusterStats = true
 	es.Servers = []string{"http://example.com:9200"}
 
 	// first get catMaster
 	es.client.Transport = newTransportMock(http.StatusOK, IsNotMasterResult)
-	require.NoError(t, es.setCatMaster("junk"))
+	require.NoError(t, es.gatherCatMaster("junk", &acc))
 
-	if es.catMasterResponse != IsNotMasterResult {
-		msg := fmt.Sprintf("catmaster is incorrect")
+	if es.masterNodeId == catMasterNodeId {
+		msg := fmt.Sprintf("catmaster is incorrect [" + es.masterNodeId + "] vs [" + catMasterNodeId + "]")
 		assert.Fail(t, msg)
 	}
 
+	acc.AssertContainsTaggedFields(t, "elasticsearch_catmaster", catNotMasterStatsExpected, map[string]string{"name": ""})
+
 	// now get node status, which determines whether we're master
-	var acc testutil.Accumulator
 	es.Local = true
 	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
 	if err := es.gatherNodeStats("junk", &acc); err != nil {
@@ -186,8 +189,69 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 
 }
 
-func newElasticsearchWithClient() *Elasticsearch {
-	es := NewElasticsearch()
-	es.client = &http.Client{}
-	return es
+func TestGatherIndicesStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.IndicesIntervalMultiplier = 1
+	es.IndicesStats = true
+	es.client.Transport = newTransportMock(http.StatusOK, IndicesStatsResponse)
+
+	var acc testutil.Accumulator
+	require.NoError(t, es.gatherIndicesStats("junk", &acc, false))
+
+	checkIsMaster(es, false, t)
+
+	shardsTags := map[string]string{"name": ""}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_shards", Indices_ShardStatsExpected, shardsTags)
+
+	allName := map[string]string{"index_name": "all"}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_primaries", AllPrimaryStatsExpected, allName)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_total", AllTotalStatsExpected, allName)
+
+	v1Name := map[string]string{"index_name": "test-index-1"}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_primaries", V1IndicesPrimaryStatsExpected, v1Name)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_total", V1IndicesTotalStatsExpected, v1Name)
+
+	v2Name := map[string]string{"index_name": "test-index-2"}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_primaries", V2IndicesPrimaryStatsExpected, v2Name)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_total", V2IndicesTotalStatsExpected, v2Name)
+
+}
+
+func TestGatherShardsStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.IndicesIntervalMultiplier = 1
+	es.IndicesStats = true
+	es.ShardsStats = true
+	es.client.Transport = newTransportMock(http.StatusOK, IndicesStatsResponse)
+
+	var acc testutil.Accumulator
+	require.NoError(t, es.gatherIndicesStats("junk", &acc, true))
+
+	checkIsMaster(es, false, t)
+
+	shardsTags := map[string]string{"name": ""}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_shards", Indices_ShardStatsExpected, shardsTags)
+
+	allName := map[string]string{"index_name": "all"}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_primaries", AllPrimaryStatsExpected, allName)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_total", AllTotalStatsExpected, allName)
+
+	v1Name := map[string]string{"index_name": "test-index-1"}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_primaries", V1IndicesPrimaryStatsExpected, v1Name)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_total", V1IndicesTotalStatsExpected, v1Name)
+
+	v2Name := map[string]string{"index_name": "test-index-2"}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_primaries", V2IndicesPrimaryStatsExpected, v2Name)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_total", V2IndicesTotalStatsExpected, v2Name)
+
+	// shards stats are in index 2
+	shardTags0 := map[string]string{"index_name": "test-index-2", "shard_name": "0"}
+	shardTags1 := map[string]string{"index_name": "test-index-2", "shard_name": "1"}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_shards_primary", Index2Shard0PrimaryExpected, shardTags0)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_shards_primary", Index2Shard1PrimaryExpected, shardTags1)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_shards_replica", Index2Shard0ReplicaExpected, shardTags0)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicesstats_shards_replica", Index2Shard1ReplicaExpected, shardTags1)
+
 }
