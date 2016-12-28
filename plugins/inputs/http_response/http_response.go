@@ -3,6 +3,7 @@ package http_response
 import (
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,12 +16,13 @@ import (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address         string
-	Body            string
-	Method          string
-	ResponseTimeout internal.Duration
-	Headers         map[string]string
-	FollowRedirects bool
+	Address             string
+	Body                string
+	Method              string
+	ResponseTimeout     internal.Duration
+	Headers             map[string]string
+	FollowRedirects     bool
+	ResponseStringMatch string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -53,6 +55,11 @@ var sampleConfig = `
   # body = '''
   # {'fake':'data'}
   # '''
+
+  ## Optional : Look for substring in body of the response
+  # response_string_match = "\"service_status\": \"up\""
+  #  or
+  # response_string_match = "ok"
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -137,6 +144,17 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	}
 	fields["response_time"] = time.Since(start).Seconds()
 	fields["http_response_code"] = resp.StatusCode
+
+	if h.ResponseStringMatch != "" {
+		bodyBytes, _ := ioutil.ReadAll(resp.Body)
+		bodyString := string(bodyBytes)
+		if strings.Contains(bodyString, h.ResponseStringMatch) {
+			fields["response_string_match"] = 1
+		} else {
+			fields["response_string_match"] = 0
+		}
+	}
+
 	return fields, nil
 }
 
