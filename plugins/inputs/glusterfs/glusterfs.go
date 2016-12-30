@@ -1,0 +1,66 @@
+package glusterfs
+
+// glusterfs.go
+
+import (
+    "github.com/influxdata/telegraf"
+    "github.com/influxdata/telegraf/plugins/inputs"
+
+		"bufio"
+		"regexp"
+		"os/exec"
+)
+
+var matchBrick = regexp.MustCompile("^Brick: (.*)$")
+var matchRead  = regexp.MustCompile("Data Read: ([0-9]+) bytes$")
+var matchWrite = regexp.MustCompile("Data Written: ([0-9]+) bytes$")
+
+type GlusterFS struct {
+    Volume string
+}
+
+func (gfs *GlusterFS) Description() string {
+    return "Plugin reading values from the GlusterFS profiler"
+}
+
+func (gfs *GlusterFS) SampleConfig() string {
+    return "volume = volume-name"
+}
+
+func (gfs *GlusterFS) Gather(acc telegraf.Accumulator) error {
+		cmdName := "gluster"
+		cmdArgs := []string{"volume", "profile", gfs.Volume, "info", "cumulative"}
+
+		cmd := exec.Command(cmdName, cmdArgs...)
+		cmdReader, err := cmd.StdoutPipe()
+		if err != nil {
+			return nil
+		}
+
+		scanner := bufio.NewScanner(cmdReader)
+		go func() {
+     var tags map[string]string
+	   for scanner.Scan() {
+		   var txt = scanner.Text()
+       if brick := matchBrick.FindStringSubmatch(txt); brick != nil {
+         tags = map[string]string{"volume": gfs.Volume, "brick": brick[1]}
+       } else if gread := matchRead.FindStringSubmatch(txt); gread != nil {
+         acc.AddFields("glusterfs_read", map[string]interface{}{"value": gread[1]}, tags)
+       } else if gwrite := matchWrite.FindStringSubmatch(txt); gwrite != nil {
+         acc.AddFields("glusterfs_write", map[string]interface{}{"value": gwrite[1]}, tags)
+			 }
+			}
+		}()
+
+		err = cmd.Start()
+		if err != nil {
+			return nil
+		}
+
+		cmd.Wait()
+    return nil
+}
+
+func init() {
+    inputs.Add("glusterfs", func() telegraf.Input { return &GlusterFS{} })
+}
