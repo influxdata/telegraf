@@ -16,7 +16,7 @@ var matchRead  = regexp.MustCompile("Data Read: ([0-9]+) bytes$")
 var matchWrite = regexp.MustCompile("Data Written: ([0-9]+) bytes$")
 
 type GlusterFS struct {
-    Volume string
+    Volumes []string
 }
 
 func (gfs *GlusterFS) Description() string {
@@ -28,36 +28,38 @@ func (gfs *GlusterFS) SampleConfig() string {
 }
 
 func (gfs *GlusterFS) Gather(acc telegraf.Accumulator) error {
-		cmdName := "gluster"
-		cmdArgs := []string{"volume", "profile", gfs.Volume, "info", "cumulative"}
+    for _, volume := range gfs.Volumes {
+      cmdName := "gluster"
+		  cmdArgs := []string{"volume", "profile", volume, "info", "cumulative"}
 
-		cmd := exec.Command(cmdName, cmdArgs...)
-		cmdReader, err := cmd.StdoutPipe()
-		if err != nil {
-			return nil
-		}
+		  cmd := exec.Command(cmdName, cmdArgs...)
+		  cmdReader, err := cmd.StdoutPipe()
+		  if err != nil {
+        continue
+      }
 
-		scanner := bufio.NewScanner(cmdReader)
-		go func() {
-     var tags map[string]string
-	   for scanner.Scan() {
-		   var txt = scanner.Text()
-       if brick := matchBrick.FindStringSubmatch(txt); brick != nil {
-         tags = map[string]string{"volume": gfs.Volume, "brick": brick[1]}
-       } else if gread := matchRead.FindStringSubmatch(txt); gread != nil {
-         acc.AddFields("glusterfs_read", map[string]interface{}{"value": gread[1]}, tags)
-       } else if gwrite := matchWrite.FindStringSubmatch(txt); gwrite != nil {
-         acc.AddFields("glusterfs_write", map[string]interface{}{"value": gwrite[1]}, tags)
-			 }
-			}
-		}()
+		  scanner := bufio.NewScanner(cmdReader)
+		  go func() {
+        var tags map[string]string
+			  for scanner.Scan() {
+				  var txt = scanner.Text()
+          if brick := matchBrick.FindStringSubmatch(txt); brick != nil {
+            tags = map[string]string{"volume": volume, "brick": brick[1]}
+          } else if gread := matchRead.FindStringSubmatch(txt); gread != nil {
+            acc.AddFields("glusterfs_read", map[string]interface{}{"value": gread[1]}, tags)
+          } else if gwrite := matchWrite.FindStringSubmatch(txt); gwrite != nil {
+            acc.AddFields("glusterfs_write", map[string]interface{}{"value": gwrite[1]}, tags)
+				  }
+			  }
+		  }()
 
-		err = cmd.Start()
-		if err != nil {
-			return nil
-		}
+		  err = cmd.Start()
+		  if err != nil {
+			  continue
+		  }
 
-		cmd.Wait()
+		  cmd.Wait()
+    }
     return nil
 }
 
