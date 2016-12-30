@@ -1,8 +1,8 @@
 package procstat
 
 import (
-	"time"
 	"fmt"
+	"time"
 
 	"github.com/shirou/gopsutil/process"
 
@@ -28,15 +28,15 @@ func NewSpecProcessor(
 ) *SpecProcessor {
 	return &SpecProcessor{
 		ProcessName: processName,
-		Prefix: prefix,
-		pid:    pid,
-		tags:   tags,
-		fields: make(map[string]interface{}),
-		acc:    acc,
+		Prefix:      prefix,
+		pid:         pid,
+		tags:        tags,
+		fields:      make(map[string]interface{}),
+		acc:         acc,
 	}
 }
 
-func (p *SpecProcessor) pushMetrics() (error) {
+func (p *SpecProcessor) pushMetrics() error {
 	var prefix string
 	proc, err := process.NewProcess(p.pid)
 	if err != nil {
