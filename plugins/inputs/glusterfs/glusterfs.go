@@ -24,7 +24,7 @@ func (gfs *GlusterFS) Description() string {
 }
 
 func (gfs *GlusterFS) SampleConfig() string {
-    return "volume = volume-name"
+    return "volumes = [\"volume-name\"]"
 }
 
 func (gfs *GlusterFS) Gather(acc telegraf.Accumulator) error {
