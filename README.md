@@ -155,6 +155,7 @@ configuration options.
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [filestat](./plugins/inputs/filestat)
+* [glusterfs](./plugins/inputs/glusterfs)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
 * [http_response](./plugins/inputs/http_response)
