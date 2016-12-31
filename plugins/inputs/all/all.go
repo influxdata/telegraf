@@ -20,7 +20,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
 	_ "github.com/influxdata/telegraf/plugins/inputs/filestat"
-  _ "github.com/influxdata/telegraf/plugins/inputs/glusterfs"
+	_ "github.com/influxdata/telegraf/plugins/inputs/glusterfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/hddtemp"
