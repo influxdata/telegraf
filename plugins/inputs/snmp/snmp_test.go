@@ -637,6 +637,8 @@ func TestFieldConvert(t *testing.T) {
 		{[]byte("abcd"), "ipaddr", "97.98.99.100"},
 		{"abcd", "ipaddr", "97.98.99.100"},
 		{[]byte("abcdefghijklmnop"), "ipaddr", "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
+		{[]byte("123W"), "watts", int64(123)},
+		{"321W", "watts", int64(321)},
 	}
 
 	for _, tc := range testTable {
