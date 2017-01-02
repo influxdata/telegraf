@@ -168,7 +168,7 @@ func (c *Config) ListTags() string {
 		tags = append(tags, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	sort.Strings(tags)
+	//sort.Strings(tags)
 
 	return strings.Join(tags, " ")
 }
