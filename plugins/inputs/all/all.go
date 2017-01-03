@@ -30,6 +30,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ipmi_sensor"
 	_ "github.com/influxdata/telegraf/plugins/inputs/iptables"
+        _ "github.com/influxdata/telegraf/plugins/inputs/jboss"
 	_ "github.com/influxdata/telegraf/plugins/inputs/jolokia"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kafka_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kubernetes"
