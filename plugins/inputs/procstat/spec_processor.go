@@ -1,6 +1,8 @@
 package procstat
 
 import (
+	"runtime"
+	
 	"time"
 
 	"github.com/shirou/gopsutil/process"
@@ -106,5 +108,7 @@ func (p *SpecProcessor) pushMetrics() {
 		fields[prefix+"memory_swap"] = mem.Swap
 	}
 
+	fields[prefix+"num_cpu"] = runtime.NumCPU()
+	
 	p.acc.AddFields("procstat", fields, p.tags)
 }
