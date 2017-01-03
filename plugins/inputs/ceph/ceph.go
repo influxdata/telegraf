@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const (
@@ -108,7 +109,7 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 			log.Printf("E! error parsing dump from socket '%s': %v", s.socket, err)
 			continue
 		}
-		for tag, metrics := range *data {
+		for tag, metrics := range data {
 			acc.AddFields(measurement,
 				map[string]interface{}(metrics),
 				map[string]string{"type": s.sockType, "id": s.sockId, "collection": tag})
@@ -244,25 +245,19 @@ type taggedMetricMap map[string]metricMap
 
 // Parses a raw JSON string into a taggedMetricMap
 // Delegates the actual parsing to newTaggedMetricMap(..)
-func parseDump(dump string) (*taggedMetricMap, error) {
+func parseDump(dump string) (taggedMetricMap, error) {
 	data := make(map[string]interface{})
 	err := json.Unmarshal([]byte(dump), &data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse json: '%s': %v", dump, err)
 	}
 
-	tmm := newTaggedMetricMap(data)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to tag dataset: '%v': %v", tmm, err)
-	}
-
-	return tmm, nil
+	return newTaggedMetricMap(data), nil
 }
 
 // Builds a TaggedMetricMap out of a generic string map.
 // The top-level key is used as a tag and all sub-keys are flattened into metrics
-func newTaggedMetricMap(data map[string]interface{}) *taggedMetricMap {
+func newTaggedMetricMap(data map[string]interface{}) taggedMetricMap {
 	tmm := make(taggedMetricMap)
 	for tag, datapoints := range data {
 		mm := make(metricMap)
@@ -271,7 +266,7 @@ func newTaggedMetricMap(data map[string]interface{}) *taggedMetricMap {
 		}
 		tmm[tag] = mm
 	}
-	return &tmm
+	return tmm
 }
 
 // Recursively flattens any k-v hierarchy present in data.

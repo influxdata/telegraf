@@ -2,14 +2,15 @@ package ceph
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -24,15 +25,15 @@ func TestParseSockId(t *testing.T) {
 func TestParseMonDump(t *testing.T) {
 	dump, err := parseDump(monPerfDump)
 	assert.NoError(t, err)
-	assert.InEpsilon(t, 5678670180, (*dump)["cluster"]["osd_kb_used"], epsilon)
-	assert.InEpsilon(t, 6866.540527000, (*dump)["paxos"]["store_state_latency.sum"], epsilon)
+	assert.InEpsilon(t, 5678670180, dump["cluster"]["osd_kb_used"], epsilon)
+	assert.InEpsilon(t, 6866.540527000, dump["paxos"]["store_state_latency.sum"], epsilon)
 }
 
 func TestParseOsdDump(t *testing.T) {
 	dump, err := parseDump(osdPerfDump)
 	assert.NoError(t, err)
-	assert.InEpsilon(t, 552132.109360000, (*dump)["filestore"]["commitcycle_interval.sum"], epsilon)
-	assert.Equal(t, float64(0), (*dump)["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
+	assert.InEpsilon(t, 552132.109360000, dump["filestore"]["commitcycle_interval.sum"], epsilon)
+	assert.Equal(t, float64(0), dump["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
 }
 
 func TestGather(t *testing.T) {
