@@ -157,6 +157,9 @@ Converts the value according to the given specification.
     - `hwaddr`: Converts the value to a MAC address.
     - `ipaddr`: Converts the value to an IP address.
 
+* `strip`:
+set it true if you want to strip any characters (a-z,A-Z and space) from snmp value before conversion to int or float.
+
 #### Table parameters:
 * `oid`:
 Automatically populates the table's fields using data from the MIB.

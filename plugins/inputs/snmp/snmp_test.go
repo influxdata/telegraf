@@ -599,52 +599,61 @@ func TestFieldConvert(t *testing.T) {
 	testTable := []struct {
 		input    interface{}
 		conv     string
+		strip    bool
 		expected interface{}
 	}{
-		{[]byte("foo"), "", string("foo")},
-		{"0.123", "float", float64(0.123)},
-		{[]byte("0.123"), "float", float64(0.123)},
-		{float32(0.123), "float", float64(float32(0.123))},
-		{float64(0.123), "float", float64(0.123)},
-		{123, "float", float64(123)},
-		{123, "float(0)", float64(123)},
-		{123, "float(4)", float64(0.0123)},
-		{int8(123), "float(3)", float64(0.123)},
-		{int16(123), "float(3)", float64(0.123)},
-		{int32(123), "float(3)", float64(0.123)},
-		{int64(123), "float(3)", float64(0.123)},
-		{uint(123), "float(3)", float64(0.123)},
-		{uint8(123), "float(3)", float64(0.123)},
-		{uint16(123), "float(3)", float64(0.123)},
-		{uint32(123), "float(3)", float64(0.123)},
-		{uint64(123), "float(3)", float64(0.123)},
-		{"123", "int", int64(123)},
-		{[]byte("123"), "int", int64(123)},
-		{float32(12.3), "int", int64(12)},
-		{float64(12.3), "int", int64(12)},
-		{int(123), "int", int64(123)},
-		{int8(123), "int", int64(123)},
-		{int16(123), "int", int64(123)},
-		{int32(123), "int", int64(123)},
-		{int64(123), "int", int64(123)},
-		{uint(123), "int", int64(123)},
-		{uint8(123), "int", int64(123)},
-		{uint16(123), "int", int64(123)},
-		{uint32(123), "int", int64(123)},
-		{uint64(123), "int", int64(123)},
-		{[]byte("abcdef"), "hwaddr", "61:62:63:64:65:66"},
-		{"abcdef", "hwaddr", "61:62:63:64:65:66"},
-		{[]byte("abcd"), "ipaddr", "97.98.99.100"},
-		{"abcd", "ipaddr", "97.98.99.100"},
-		{[]byte("abcdefghijklmnop"), "ipaddr", "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
+		{[]byte("foo"), "", false, string("foo")},
+		{"0.123", "float", false, float64(0.123)},
+		{[]byte("0.123"), "float", false, float64(0.123)},
+		{float32(0.123), "float", false, float64(float32(0.123))},
+		{float64(0.123), "float", false, float64(0.123)},
+		{123, "float", false, float64(123)},
+		{123, "float(0)", false, float64(123)},
+		{123, "float(4)", false, float64(0.0123)},
+		{int8(123), "float(3)", false, float64(0.123)},
+		{int16(123), "float(3)", false, float64(0.123)},
+		{int32(123), "float(3)", false, float64(0.123)},
+		{int64(123), "float(3)", false, float64(0.123)},
+		{uint(123), "float(3)", false, float64(0.123)},
+		{uint8(123), "float(3)", false, float64(0.123)},
+		{uint16(123), "float(3)", false, float64(0.123)},
+		{uint32(123), "float(3)", false, float64(0.123)},
+		{uint64(123), "float(3)", false, float64(0.123)},
+		{"123", "int", false, int64(123)},
+		{[]byte("123"), "int", false, int64(123)},
+		{float32(12.3), "int", false, int64(12)},
+		{float64(12.3), "int", false, int64(12)},
+		{int(123), "int", false, int64(123)},
+		{int8(123), "int", false, int64(123)},
+		{int16(123), "int", false, int64(123)},
+		{int32(123), "int", false, int64(123)},
+		{int64(123), "int", false, int64(123)},
+		{uint(123), "int", false, int64(123)},
+		{uint8(123), "int", false, int64(123)},
+		{uint16(123), "int", false, int64(123)},
+		{uint32(123), "int", false, int64(123)},
+		{uint64(123), "int", false, int64(123)},
+		{[]byte("abcdef"), "hwaddr", false, "61:62:63:64:65:66"},
+		{"abcdef", "hwaddr", false, "61:62:63:64:65:66"},
+		{[]byte("abcd"), "ipaddr", false, "97.98.99.100"},
+		{"abcd", "ipaddr", false, "97.98.99.100"},
+		{[]byte("abcdefghijklmnop"), "ipaddr", false, "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
+		{[]byte("123W"), "int", true, int64(123)},
+		{[]byte("123 w"), "int", true, int64(123)},
+		{"123W", "int", true, int64(123)},
+		{"123 w", "int", true, int64(123)},
+		{"123 RPM", "int", true, int64(123)},
+		{"123 kW", "int", true, int64(123)},
+		{[]byte("0.123V"), "float", true, float64(0.123)},
+		{"0.123 V", "float", true, float64(0.123)},
 	}
 
 	for _, tc := range testTable {
-		act, err := fieldConvert(tc.conv, tc.input)
-		if !assert.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected) {
+		act, err := fieldConvert(tc.conv, tc.strip, tc.input)
+		if !assert.NoError(t, err, "input=%T(%v) conv=%s strip=%t expected=%T(%v)", tc.input, tc.input, tc.conv, tc.strip, tc.expected, tc.expected) {
 			continue
 		}
-		assert.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
+		assert.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s strip=%t expected=%T(%v)", tc.input, tc.input, tc.conv, tc.strip, tc.expected, tc.expected)
 	}
 }
 

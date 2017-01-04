@@ -240,6 +240,9 @@ type Field struct {
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	Conversion string
+	// Strip characters before doing int/float conversion.
+	// you can use this if returned SNMP data is a string with some suffix, eg. W, RPM, V, etc.
+	Strip bool
 
 	initialized bool
 }
@@ -429,7 +432,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				return nil, Errorf(err, "performing get")
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
-				fv, err := fieldConvert(f.Conversion, ent.Value)
+				fv, err := fieldConvert(f.Conversion, f.Strip, ent.Value)
 				if err != nil {
 					return nil, Errorf(err, "converting %q", ent.Value)
 				}
@@ -452,7 +455,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					idx = idx[:len(idx)-len(f.OidIndexSuffix)]
 				}
 
-				fv, err := fieldConvert(f.Conversion, ent.Value)
+				fv, err := fieldConvert(f.Conversion, f.Strip, ent.Value)
 				if err != nil {
 					return Errorf(err, "converting %q", ent.Value)
 				}
@@ -683,12 +686,25 @@ func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
 //  "hwaddr" will convert the value into a MAC address.
 //  "ipaddr" will convert the value into into an IP address.
 //  "" will convert a byte slice into a string.
-func fieldConvert(conv string, v interface{}) (interface{}, error) {
+//  strip true/false if you want strip characters before int/float conversion.
+func fieldConvert(conv string, strip bool, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
 			return string(bs), nil
 		}
 		return v, nil
+	}
+
+	stripFunc := func(r rune) rune {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			return -1
+		case r >= 'a' && r <= 'z':
+			return -1
+		case r == ' ':
+			return -1
+		}
+		return r
 	}
 
 	var d int
@@ -719,11 +735,21 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case uint64:
 			v = float64(vt) / math.Pow10(d)
 		case []byte:
-			vf, _ := strconv.ParseFloat(string(vt), 64)
-			v = vf / math.Pow10(d)
+			if strip {
+				vf, _ := strconv.ParseFloat(strings.Map(stripFunc, string(vt)), 64)
+				v = vf / math.Pow10(d)
+			} else {
+				vf, _ := strconv.ParseFloat(string(vt), 64)
+				v = vf / math.Pow10(d)
+			}
 		case string:
-			vf, _ := strconv.ParseFloat(vt, 64)
-			v = vf / math.Pow10(d)
+			if strip {
+				vf, _ := strconv.ParseFloat(strings.Map(stripFunc, string(vt)), 64)
+				v = vf / math.Pow10(d)
+			} else {
+				vf, _ := strconv.ParseFloat(vt, 64)
+				v = vf / math.Pow10(d)
+			}
 		}
 		return v, nil
 	}
@@ -755,9 +781,17 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case uint64:
 			v = int64(vt)
 		case []byte:
-			v, _ = strconv.Atoi(string(vt))
+			if strip {
+				v, _ = strconv.Atoi(strings.Map(stripFunc, string(vt)))
+			} else {
+				v, _ = strconv.Atoi(string(vt))
+			}
 		case string:
-			v, _ = strconv.Atoi(vt)
+			if strip {
+				v, _ = strconv.Atoi(strings.Map(stripFunc, vt))
+			} else {
+				v, _ = strconv.Atoi(vt)
+			}
 		}
 		return v, nil
 	}
