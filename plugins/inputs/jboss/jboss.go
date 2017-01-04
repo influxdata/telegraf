@@ -22,17 +22,48 @@ import (
 const (
         GET_HOSTS = 0
 		GET_SERVERS = 1
+		GET_DB_STAT = 2
 )
 		
 type HostResponse struct {
-	outcome string `json:"outcome"`
-	result []string `json:"result"`
+	Outcome string `json:"outcome"`
+	Result []string `json:"result"`
 }
+
+type DatasourceResponse struct {
+	Outcome string `json:"outcome"`
+	Result DatabaseMetrics `json:"result"`
+}
+
+
+type DatabaseMetrics struct {
+//	InstalledDrivers interface `json:"installed-drivers"`
+	DataSource  map[string]DataSourceMetrics `json:"data-source"`
+	XaDataSource  map[string]DataSourceMetrics `json:"xa-data-source"`
+}
+
+type DataSourceMetrics struct {
+	JndiName string `json:"jndi-name"`
+	Statistics  DBStatistics `json:"statistics"`
+}
+
+type DBStatistics struct {
+	Pool DBPoolStatistics `json:"pool"`
+}
+
+type DBPoolStatistics struct {
+	ActiveCount string `json:"ActiveCount"`
+	AvailableCount string `json:"AvailableCount"`
+	InUseCount string `json:"InUseCount"`
+	
+}
+
 
 type ResponseMetrics struct {
 	outcome string `json:"outcome"`
 	Metrics []Metric `json:"result"`
 }
+
 
 type Metric struct {
 	FullName string                 `json:"full_name"`
@@ -47,6 +78,8 @@ type JBoss struct {
 	Username string
 	Password string
 
+	ResponseTimeout internal.Duration
+	
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
 	// Path to host cert file
@@ -120,7 +153,7 @@ func (m *JBoss) Description() string {
 	return "Telegraf plugin for gathering metrics from JBoss AS"
 }
 
-func (j *JBoss) doRequest(req *http.Request) (map[string]interface{}, error) {
+func (j *JBoss) doRequest(req *http.Request) ([]byte, error) {
 	resp, err := j.client.MakeRequest(req)
 	if err != nil {
 		return nil, err
@@ -141,31 +174,23 @@ func (j *JBoss) doRequest(req *http.Request) (map[string]interface{}, error) {
 	// read body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		fmt.Printf("Error: %s", err)
 		return nil, err
 	}
 
-	fmt.Printf("%s", body)
-	// Unmarshal json
-	var jsonOut map[string]interface{}
-	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
-		return nil, errors.New("Error decoding JSON response")
-	}
+	// Debug response
+//	fmt.Printf("%s", body)
 
-	if status, ok := jsonOut["outcome"]; ok {
-		if status != "success" {
-			return nil, fmt.Errorf("Not expected status value in response body: %s",
-				status)
-		}
-	} else {
-		return nil, fmt.Errorf("Missing status in response body")
-	}
-
-	return jsonOut, nil
+	return []byte(body), nil
 }
 
 // Gathers data for all servers.
 func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
+
+	if h.ResponseTimeout.Duration < time.Second {
+		h.ResponseTimeout.Duration = time.Second * 5
+	}
 
 	if h.client.HTTPClient() == nil {
 		tlsCfg, err := internal.GetTLSConfig(
@@ -179,7 +204,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+			Timeout:   h.ResponseTimeout.Duration,
 		}
 		h.client.SetHTTPClient(client)
 	}
@@ -201,19 +226,14 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 				fmt.Printf("Error handling response: %s\n", err)
 				errorChannel <- err
 			} else {
-				fmt.Printf("%s\n",out["result"])
-				fmt.Printf("Missing key 'result' in output response\n")
-
-				if values, ok := out["result"]; ok {
-					adr := values.([]string)
-					for k, v := range adr {
-							fmt.Printf("%s -> %s\n", k, v)
-					}
-					h.getServersOnHost(acc, server, adr)
-				} else {
-					fmt.Printf("Missing key 'result' in output response\n")
+			// Unmarshal json
+				hosts := HostResponse{}
+				if err = json.Unmarshal(out, &hosts); err != nil {
+					errorChannel <- errors.New("Error decoding JSON response")
 				}
-
+// 				fmt.Println(hosts)
+				oneH := []string{hosts.Result[0],hosts.Result[1]}
+				h.getServersOnHost(acc, server, oneH)
 			}
 		}(server)
 	}
@@ -256,7 +276,10 @@ func (h *JBoss) getServersOnHost(
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			adr := []string{"host=" + host}
+			// fmt.Printf("Get Servers from host %s\n", host)
+			adr := make(map[string]interface{})
+			adr["host"] = host
+			//adr := []string{"host=" + host}
 			req, err := h.prepareRequest(serverURL, GET_SERVERS, adr);
 			if err != nil {
 				errorChannel <- err
@@ -268,22 +291,91 @@ func (h *JBoss) getServersOnHost(
 				fmt.Printf("Error handling response: %s\n", err)
 				errorChannel <- err
 			} else {
-				fmt.Printf("%s\n",out["result"])
-				fmt.Printf("Missing key 'result' in output response\n")
-
-				if values, ok := out["result"]; ok {
-					fmt.Printf("%s\n", values)
-//					h.getServersOnHost(values)
-				} else {
-					fmt.Printf("Missing key 'result' in output response\n")
+				servers := HostResponse{}
+				if err = json.Unmarshal(out, &servers); err != nil {
+					errorChannel <- errors.New("Error decoding JSON response")
 				}
-
+//				fmt.Println(servers)
+				for _, server := range servers.Result {
+					h.getDatasourceStatistics(acc, serverURL, host, server)
+				}
 			}
 		}(host)
 	}
 
 	wg.Wait()
 	close(errorChannel)
+	
+	return nil
+}
+
+// Gathers data from a particular host
+// Parameters:
+//     acc      : The telegraf Accumulator to use
+//     serverURL: endpoint to send request to
+//     host     : the host being queried
+//     server   : the server being queried
+//
+// Returns:
+//     error: Any error that may have occurred
+
+func (h *JBoss) getDatasourceStatistics(
+	acc telegraf.Accumulator,
+	serverURL string,
+	host string,
+	serverName string,
+) error {
+	//fmt.Printf("getDatasourceStatistics %s %s\n", host, serverName)
+	
+	adr := make(map[string]interface{})
+	adr["host"] = host
+	adr["server"] = serverName
+	adr["subsystem"] = "datasources"
+	 
+	req, err := h.prepareRequest(serverURL, GET_DB_STAT, adr);
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	}
+
+	out, err := h.doRequest(req)
+
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	} else {
+		server := DatasourceResponse{}
+		if err = json.Unmarshal(out, &server); err != nil {
+			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		}
+//		fmt.Println(server)
+
+	
+		for database, value := range server.Result.DataSource {
+			fields := make(map[string]interface{})
+			fields["InUseCount"] = value.Statistics.Pool.InUseCount
+			fields["ActiveCount"] = value.Statistics.Pool.ActiveCount
+			fields["AvailableCount"] = value.Statistics.Pool.AvailableCount
+			tags := map[string]string{
+				"host":   host,
+				"server": serverName,
+				"name":   database,
+				"type":   "datasource",
+			}
+			acc.AddFields("jboss", fields, tags)
+		}
+		for database, value := range server.Result.XaDataSource {
+			fields := make(map[string]interface{})
+			fields["InUseCount"] = value.Statistics.Pool.InUseCount
+			fields["ActiveCount"] = value.Statistics.Pool.ActiveCount
+			fields["AvailableCount"] = value.Statistics.Pool.AvailableCount
+			tags := map[string]string{
+				"host":   host,
+				"server": serverName,
+				"name":   database,
+				"type":   "datasource",
+			}
+			acc.AddFields("jboss", fields, tags)
+		}
+	}
 	
 	return nil
 }
@@ -352,9 +444,10 @@ func (h *JBoss) flatten(item map[string]interface{}, fields map[string]interface
 }
 
 
-func (j *JBoss) prepareRequest(domainUrl string, optype int, adress []string) (*http.Request, error) {
+func (j *JBoss) prepareRequest(domainUrl string, optype int, adress map[string]interface{}) (*http.Request, error) {
 	bodyContent := make(map[string]interface{})
 	
+//	fmt.Printf("url: %s , optype %d, adress %s\n", domainUrl, optype, adress)
 	// Create bodyContent
 	switch optype {
 	case GET_HOSTS:
@@ -363,9 +456,15 @@ func (j *JBoss) prepareRequest(domainUrl string, optype int, adress []string) (*
 		bodyContent["address"] = []string{}
 		bodyContent["json.pretty"] = 1
 	case GET_SERVERS:
-		bodyContent["operation"] = "read-children-resources"
+		bodyContent["operation"] = "read-children-names"
 		bodyContent["child-type"] = "server"
 		bodyContent["recursive-depth"] = 0
+		bodyContent["address"] = adress
+		bodyContent["json.pretty"] = 1
+	case GET_DB_STAT:
+		bodyContent["operation"] = "read-resource"
+		bodyContent["include-runtime"] = "true"
+		bodyContent["recursive-depth"] = 2
 		bodyContent["address"] = adress
 		bodyContent["json.pretty"] = 1
 	}
@@ -380,6 +479,8 @@ func (j *JBoss) prepareRequest(domainUrl string, optype int, adress []string) (*
 
 	
 	requestBody, err := json.Marshal(bodyContent)
+	// Debug JSON request
+	// fmt.Printf("Req: %s\n", requestBody)
 
 	req, err := http.NewRequest("POST", serverUrl.String(), bytes.NewBuffer(requestBody))
 
