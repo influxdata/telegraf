@@ -46,9 +46,9 @@ func (gfs *GlusterFS) Gather(acc telegraf.Accumulator) error {
 				if brick := matchBrick.FindStringSubmatch(txt); brick != nil {
 					tags = map[string]string{"volume": volume, "brick": brick[1]}
 				} else if gread := matchRead.FindStringSubmatch(txt); gread != nil {
-					acc.AddFields("glusterfs_read", map[string]interface{}{"value": gread[1]}, tags)
+					acc.AddFields("glusterfs", map[string]interface{}{"read": gread[1]}, tags)
 				} else if gwrite := matchWrite.FindStringSubmatch(txt); gwrite != nil {
-					acc.AddFields("glusterfs_write", map[string]interface{}{"value": gwrite[1]}, tags)
+					acc.AddFields("glusterfs", map[string]interface{}{"write": gwrite[1]}, tags)
 				}
 			}
 		}()
