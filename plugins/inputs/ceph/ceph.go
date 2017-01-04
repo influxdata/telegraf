@@ -371,36 +371,53 @@ func decodeStatusPgmap(acc telegraf.Accumulator, data map[string]interface{}) er
 	return nil
 }
 
-func decodeStatusPgmapState(acc telegraf.Accumulator, data map[string]interface{}) error {
+func extractPgmapStates(data map[string]interface{}) ([]interface{}, error) {
+	const key = "pgs_by_state"
+
 	pgmap, ok := data["pgmap"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("WARNING %s - unable to decode pgmap", measurement)
+		return nil, fmt.Errorf("WARNING %s - unable to decode pgmap", measurement)
 	}
-	fields := make(map[string]interface{})
-	for key, value := range pgmap {
-		switch value.(type) {
-		case []interface{}:
-			if key != "pgs_by_state" {
-				continue
-			}
-			for _, state := range value.([]interface{}) {
-				state_map, ok := state.(map[string]interface{})
-				if !ok {
-					return fmt.Errorf("WARNING %s - unable to decode pg state", measurement)
-				}
-				state_name, ok := state_map["state_name"].(string)
-				if !ok {
-					return fmt.Errorf("WARNING %s - unable to decode pg state name", measurement)
-				}
-				state_count, ok := state_map["count"].(float64)
-				if !ok {
-					return fmt.Errorf("WARNING %s - unable to decode pg state count", measurement)
-				}
-				fields[state_name] = state_count
-			}
+
+	s, ok := pgmap[key]
+	if !ok {
+		return nil, fmt.Errorf("WARNING %s - pgmap is missing the %s field", measurement, key)
+	}
+
+	states, ok := s.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("WARNING %s - pgmap[%s] is not a list", measurement, key)
+	}
+	return states, nil
+}
+
+func decodeStatusPgmapState(acc telegraf.Accumulator, data map[string]interface{}) error {
+	states, err := extractPgmapStates(data)
+	if err != nil {
+		return err
+	}
+	for _, state := range states {
+		stateMap, ok := state.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("WARNING %s - unable to decode pg state", measurement)
 		}
+		stateName, ok := stateMap["state_name"].(string)
+		if !ok {
+			return fmt.Errorf("WARNING %s - unable to decode pg state name", measurement)
+		}
+		stateCount, ok := stateMap["count"].(float64)
+		if !ok {
+			return fmt.Errorf("WARNING %s - unable to decode pg state count", measurement)
+		}
+
+		tags := map[string]string{
+			"state": stateName,
+		}
+		fields := map[string]interface{}{
+			"count": stateCount,
+		}
+		acc.AddFields("ceph_pgmap_state", fields, tags)
 	}
-	acc.AddFields("ceph_pgmap_state", fields, map[string]string{})
 	return nil
 }
 
