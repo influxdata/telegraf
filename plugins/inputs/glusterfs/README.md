@@ -16,10 +16,18 @@ You also need to activate the profiler on the volume(s) by running this command 
 gluster volume profile volume-name start
 ```
 
+Since telegraf doesn't run as root, you will need to configure sudo to work without
+password for the gluster command. For example, run the command visudo then add :
+```
+telegraf ALL=(ALL) NOPASSWD:/usr/sbin/gluster
+```
+
+You might need to adjust that if your distribution has a different path.
+
 ### Measurements & Fields:
 
-glusterfs_read is the number of bytes read from the brick
-glusterfs_write is the number of bytes written to the brick
+glusterfs -> read is the number of bytes read from the brick
+glusterfs -> write is the number of bytes written to the brick
 
 ### Tags:
 

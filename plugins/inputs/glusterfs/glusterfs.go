@@ -29,14 +29,14 @@ func (gfs *GlusterFS) SampleConfig() string {
 
 func (gfs *GlusterFS) Gather(acc telegraf.Accumulator) error {
 	for _, volume := range gfs.Volumes {
-		cmdName := "gluster"
-		cmdArgs := []string{"volume", "profile", volume, "info", "cumulative"}
+		var cmdName = "sudo"
+		var cmdArgs = []string{"gluster", "volume", "profile", volume, "info", "cumulative"}
 
 		cmd := exec.Command(cmdName, cmdArgs...)
 		cmdReader, err := cmd.StdoutPipe()
 		if err != nil {
-			continue
-		}
+      continue
+    }
 
 		scanner := bufio.NewScanner(cmdReader)
 		go func() {
@@ -55,7 +55,7 @@ func (gfs *GlusterFS) Gather(acc telegraf.Accumulator) error {
 
 		err = cmd.Start()
 		if err != nil {
-			continue
+      continue
 		}
 
 		cmd.Wait()
