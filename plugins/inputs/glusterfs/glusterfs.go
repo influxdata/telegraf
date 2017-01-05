@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"os/exec"
 	"regexp"
+  "strconv"
 )
 
 var matchBrick = regexp.MustCompile("^Brick: (.*)$")
@@ -46,9 +47,11 @@ func (gfs *GlusterFS) Gather(acc telegraf.Accumulator) error {
 				if brick := matchBrick.FindStringSubmatch(txt); brick != nil {
 					tags = map[string]string{"volume": volume, "brick": brick[1]}
 				} else if gread := matchRead.FindStringSubmatch(txt); gread != nil {
-					acc.AddFields("glusterfs", map[string]interface{}{"read": gread[1]}, tags)
+          var val, _ = strconv.Atoi(gread[1])
+					acc.AddFields("glusterfs", map[string]interface{}{"read": val}, tags)
 				} else if gwrite := matchWrite.FindStringSubmatch(txt); gwrite != nil {
-					acc.AddFields("glusterfs", map[string]interface{}{"write": gwrite[1]}, tags)
+          var val, _ = strconv.Atoi(gwrite[1])
+					acc.AddFields("glusterfs", map[string]interface{}{"write": val}, tags)
 				}
 			}
 		}()
