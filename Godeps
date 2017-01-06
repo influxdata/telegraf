@@ -52,7 +52,7 @@ github.com/soniah/gosnmp 3fe3beb30fa9700988893c56a63b1df8e1b68c26
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
 github.com/vjeantet/grok 83bfdfdfd1a8146795b28e547a8e3c8b28a466c2
-github.com/wvanbergen/kafka 46f9a1cf3f670edec492029fadded9c2d9e18866
+github.com/wvanbergen/kafka bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 github.com/yuin/gopher-lua bf3808abd44b1e55143a2d7f08571aaa80db1808
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
