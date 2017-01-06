@@ -130,7 +130,6 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 
 		sess, err := mgo.DialWithInfo(dialInfo)
 		if err != nil {
-			fmt.Printf("error dialing over ssl, %s\n", err.Error())
 			return fmt.Errorf("Unable to connect to MongoDB, %s\n", err.Error())
 		}
 		server.Session = sess
