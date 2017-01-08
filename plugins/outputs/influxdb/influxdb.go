@@ -133,7 +133,7 @@ func (i *InfluxDB) Connect() error {
 			}
 
 			if i.InsecureFollowRedirect {
-				c.Ping(10)
+				c.CheckHTTPRedirect()
 			}
 
 			err = createDatabase(c, i.Database)
