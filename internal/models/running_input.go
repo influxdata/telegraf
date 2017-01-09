@@ -75,7 +75,7 @@ func (r *RunningInput) MakeMetric(
 	)
 
 	if r.trace && m != nil {
-		fmt.Println("> " + m.String())
+		fmt.Print("> " + m.String())
 	}
 
 	r.MetricsGathered.Incr(1)
