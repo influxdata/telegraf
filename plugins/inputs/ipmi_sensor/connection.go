@@ -12,7 +12,6 @@ type Connection struct {
 	Hostname  string
 	Username  string
 	Password  string
-	Path      string
 	Port      int
 	Interface string
 }
