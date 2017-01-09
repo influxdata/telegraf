@@ -82,7 +82,7 @@ the cluster.  The currently supported commands are:
 
   ## Whether to gather statistics via ceph commands, requires ceph_user and ceph_config
   ## to be specified
-  gather_cluster_stats = true
+  gather_cluster_stats = false
 ```
 
 ### Measurements & Fields:

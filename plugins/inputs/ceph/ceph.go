@@ -68,7 +68,7 @@ var sampleConfig = `
   gather_admin_socket_stats = true
 
   ## Whether to gather statistics via ceph commands
-  gather_cluster_stats = true
+  gather_cluster_stats = false
 `
 
 func (c *Ceph) SampleConfig() string {
