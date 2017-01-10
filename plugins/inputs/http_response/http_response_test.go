@@ -23,7 +23,7 @@ func setUpTestMux() http.Handler {
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/jsonresponse", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "\"service_status\": \"up\"")
+		fmt.Fprintf(w, "\"service_status\": \"up\", \"healthy\" : \"true\"")
 	})
 	mux.HandleFunc("/badredirect", func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/badredirect", http.StatusMovedPermanently)
@@ -337,4 +337,31 @@ func TestTimeout(t *testing.T) {
 	}
 	_, err := h.HTTPGather()
 	require.Error(t, err)
+}
+
+func TestStringRegexMatch(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Address:             ts.URL + "/jsonresponse",
+		Body:                "{ 'test': 'data'}",
+		Method:              "GET",
+		ResponseStringMatch: "\".*_status\".?:.?\"up\"",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+	}
+	fields, err := h.HTTPGather()
+	require.NoError(t, err)
+	assert.NotEmpty(t, fields)
+	if assert.NotNil(t, fields["http_response_code"]) {
+		assert.Equal(t, http.StatusOK, fields["http_response_code"])
+	}
+	assert.Equal(t, 1, fields["response_string_match"])
+	assert.NotNil(t, fields["response_time"])
+
 }

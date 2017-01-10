@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -56,7 +57,7 @@ var sampleConfig = `
   # {'fake':'data'}
   # '''
 
-  ## Optional : Look for substring in body of the response
+  ## Optional : Look for substring in body of the response. Can use regex
   # response_string_match = "\"service_status\": \"up\""
   #  or
   # response_string_match = "ok"
@@ -145,10 +146,16 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	fields["response_time"] = time.Since(start).Seconds()
 	fields["http_response_code"] = resp.StatusCode
 
+	// Check the response for a regex match
 	if h.ResponseStringMatch != "" {
+		regex, compile_err := regexp.Compile(h.ResponseStringMatch)
+		if compile_err != nil {
+			fields["response_string_match"] = 0
+		}
+
 		bodyBytes, _ := ioutil.ReadAll(resp.Body)
 		bodyString := string(bodyBytes)
-		if strings.Contains(bodyString, h.ResponseStringMatch) {
+		if regex.MatchString(bodyString) {
 			fields["response_string_match"] = 1
 		} else {
 			fields["response_string_match"] = 0
