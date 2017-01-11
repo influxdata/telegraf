@@ -2,10 +2,14 @@ package jboss
 
 import (
 	"bytes"
+	"crypto/md5"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -78,6 +82,8 @@ type JBoss struct {
 	Username string
 	Password string
 
+	Authorization string
+
 	ResponseTimeout internal.Duration
 	
 	// Path to CA file
@@ -135,6 +141,8 @@ var sampleConfig = `
   ## Username and password
   username = ""
   password = ""
+  authrization = basic|digest
+  
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
@@ -153,35 +161,100 @@ func (m *JBoss) Description() string {
 	return "Telegraf plugin for gathering metrics from JBoss AS"
 }
 
-func (j *JBoss) doRequest(req *http.Request) ([]byte, error) {
-	resp, err := j.client.MakeRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+func (h *JBoss) checkAuth(host string, uri string) error {
+	url := h.Servers[0]
+	
+    method := "POST"
+    req, err := http.NewRequest(method, url, nil)
+    req.Header.Set("Content-Type", "application/json")
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+    if resp.StatusCode != http.StatusUnauthorized {
+        fmt.Printf("Recieved status code '%v' auth skipped\n", resp.StatusCode)
+        return nil
+    }
+    digestParts := digestParts(resp)
+    digestParts["uri"] = uri
+    digestParts["method"] = method
+    digestParts["username"] = h.Username
+    digestParts["password"] = h.Password
+	postData := []byte("{\"address\":[\"\"],\"child-type\":\"host\",\"json.pretty\":1,\"operation\":\"read-children-names\"}")
+    req, err = http.NewRequest(method, url, bytes.NewBuffer(postData))
+	h.Authorization = getDigestAuthrization2(digestParts)
+    req.Header.Set("Authorization", h.Authorization)
+    req.Header.Set("Content-Type", "application/json")
 
-	// Process response
-	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			req.RequestURI,
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode),
-			http.StatusOK,
-			http.StatusText(http.StatusOK))
-		return nil, err
-	}
+    resp, err = client.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+    fmt.Printf("response code: %d \n", resp.StatusCode)
 
-	// read body
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
-		return nil, err
-	}
+    if resp.StatusCode != http.StatusOK {
+        body, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+            panic(err)
+        }
+        fmt.Printf("response body: %s \n", string(body))
+        return nil
+    }
+    return nil
+}
 
-	// Debug response
-//	fmt.Printf("%s", body)
+func digestParts(resp *http.Response) map[string]string {
+    result := map[string]string{}
+    if len(resp.Header["Www-Authenticate"]) > 0 {
+//        wantedHeaders := []string{"nonce", "realm", "qop"}
+        wantedHeaders := []string{"nonce", "realm"}
+        responseHeaders := strings.Split(resp.Header["Www-Authenticate"][0], ",")
+        for _, r := range responseHeaders {
+            for _, w := range wantedHeaders {
+                if strings.Contains(r, w) {
+                    result[w] = strings.Split(r, `"`)[1]
+                }
+            }
+        }
+    }
+    return result
+}
 
-	return []byte(body), nil
+func getMD5(text string) string {
+    hasher := md5.New()
+    hasher.Write([]byte(text))
+    return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func getCnonce() string {
+    b := make([]byte, 8)
+    io.ReadFull(rand.Reader, b)
+    return fmt.Sprintf("%x", b)[:16]
+}
+
+func getDigestAuthrization(digestParts map[string]string) string {
+    d := digestParts
+    ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
+    ha2 := getMD5(d["method"] + ":" + d["uri"])
+    nonceCount := 00000001
+    cnonce := getCnonce()
+    response := getMD5(fmt.Sprintf("%s:%s:%v:%s:%s:%s", ha1, d["nonce"], nonceCount, cnonce, d["qop"], ha2))
+    authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", cnonce="%s", nc="%v", qop="%s", response="%s"`,
+        d["username"], d["realm"], d["nonce"], d["uri"], cnonce, nonceCount, d["qop"], response)
+    return authorization
+}
+
+func getDigestAuthrization2(digestParts map[string]string) string {
+    d := digestParts
+    ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
+    ha2 := getMD5(d["method"] + ":" + d["uri"])
+    response := getMD5(fmt.Sprintf("%s:%s:%s", ha1, d["nonce"], ha2))
+    authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", response="%s"`,
+        d["username"], d["realm"], d["nonce"], d["uri"], response)
+    return authorization
 }
 
 // Gathers data for all servers.
@@ -193,6 +266,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if h.client.HTTPClient() == nil {
+		fmt.Printf("asdasSet Authorization '%s' \n", h.Authorization)
 		tlsCfg, err := internal.GetTLSConfig(
 			h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
 		if err != nil {
@@ -207,6 +281,9 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 			Timeout:   h.ResponseTimeout.Duration,
 		}
 		h.client.SetHTTPClient(client)
+		if h.Authorization == "digest" {
+			h.checkAuth(h.Servers[0], "/management")
+		}
 	}
 
 	errorChannel := make(chan error, len(h.Servers))
@@ -215,12 +292,12 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			req, err := h.prepareRequest(server, GET_HOSTS, nil);
+			bodyContent, err := h.prepareRequest(server, GET_HOSTS, nil);
 			if err != nil {
 				errorChannel <- err
 			}
 
-			out, err := h.doRequest(req)
+			out, err := h.doRequest(server, bodyContent)
 
 			if err != nil {
 				fmt.Printf("Error handling response: %s\n", err)
@@ -232,8 +309,8 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 					errorChannel <- errors.New("Error decoding JSON response")
 				}
 // 				fmt.Println(hosts)
-				oneH := []string{hosts.Result[0],hosts.Result[1]}
-				h.getServersOnHost(acc, server, oneH)
+				//oneH := []string{hosts.Result[0],hosts.Result[1]}
+				h.getServersOnHost(acc, server, hosts.Result)
 			}
 		}(server)
 	}
@@ -280,12 +357,12 @@ func (h *JBoss) getServersOnHost(
 			adr := make(map[string]interface{})
 			adr["host"] = host
 			//adr := []string{"host=" + host}
-			req, err := h.prepareRequest(serverURL, GET_SERVERS, adr);
+			bodyContent, err := h.prepareRequest(serverURL, GET_SERVERS, adr);
 			if err != nil {
 				errorChannel <- err
 			}
 
-			out, err := h.doRequest(req)
+			out, err := h.doRequest(serverURL, bodyContent)
 
 			if err != nil {
 				fmt.Printf("Error handling response: %s\n", err)
@@ -332,12 +409,12 @@ func (h *JBoss) getDatasourceStatistics(
 	adr["server"] = serverName
 	adr["subsystem"] = "datasources"
 	 
-	req, err := h.prepareRequest(serverURL, GET_DB_STAT, adr);
+	bodyContent, err := h.prepareRequest(serverURL, GET_DB_STAT, adr);
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
 
-	out, err := h.doRequest(req)
+	out, err := h.doRequest(serverURL, bodyContent)
 
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
@@ -444,7 +521,7 @@ func (h *JBoss) flatten(item map[string]interface{}, fields map[string]interface
 }
 
 
-func (j *JBoss) prepareRequest(domainUrl string, optype int, adress map[string]interface{}) (*http.Request, error) {
+func (j *JBoss) prepareRequest(domainUrl string, optype int, adress map[string]interface{}) (map[string]interface{}, error) {
 	bodyContent := make(map[string]interface{})
 	
 //	fmt.Printf("url: %s , optype %d, adress %s\n", domainUrl, optype, adress)
@@ -469,30 +546,89 @@ func (j *JBoss) prepareRequest(domainUrl string, optype int, adress map[string]i
 		bodyContent["json.pretty"] = 1
 	}
 
+	return bodyContent, nil
+}
+
+func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) ([]byte, error) {
+
 	serverUrl, err := url.Parse(domainUrl)
 	if err != nil {
 		return nil, err
 	}
-	if j.Username != "" || j.Password != "" {
-		serverUrl.User = url.UserPassword(j.Username, j.Password)
-	}
-
-	
 	requestBody, err := json.Marshal(bodyContent)
+	method := "POST"
+
 	// Debug JSON request
 	// fmt.Printf("Req: %s\n", requestBody)
 
-	req, err := http.NewRequest("POST", serverUrl.String(), bytes.NewBuffer(requestBody))
-
+	req, err := http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("Content-Type", "application/json")
 
-	req.Header.Add("Content-type", "application/json")
+	
+	if j.Authorization == "basic" {
+		if j.Username != "" || j.Password != "" {
+			serverUrl.User = url.UserPassword(j.Username, j.Password)
+		}
+	}
 
-	return req, nil
+	resp, err := j.client.MakeRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	
+	// Process response
+	
+	if resp.StatusCode == http.StatusUnauthorized {
+		fmt.Printf("Do digest\n")
+		digestParts := digestParts(resp)
+		digestParts["uri"] = serverUrl.RequestURI()
+		digestParts["method"] = method
+		digestParts["username"] = j.Username
+		digestParts["password"] = j.Password
+		
+		req, err = http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
+
+		j.Authorization = getDigestAuthrization2(digestParts)
+		req.Header.Set("Authorization", j.Authorization)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err = j.client.MakeRequest(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+	}
+	 
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+			req.RequestURI,
+			resp.StatusCode,
+			http.StatusText(resp.StatusCode),
+			http.StatusOK,
+			http.StatusText(http.StatusOK))
+		return nil, err
+	}
+
+
+	//req, err := http.NewRequest("POST", serverUrl.String(), bytes.NewBuffer(requestBody))
+
+	
+	// read body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	// Debug response
+//	fmt.Printf("%s", body)
+
+	return []byte(body), nil
 }
-
 
 
 // Sends an HTTP request to the server using the GrayLog object's HTTPClient.
