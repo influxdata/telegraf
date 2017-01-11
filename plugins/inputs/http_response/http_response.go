@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -148,17 +149,19 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 
 	// Check the response for a regex match
 	if h.ResponseStringMatch != "" {
-		regex, compile_err := regexp.Compile(h.ResponseStringMatch)
-		if compile_err != nil {
+		regex, err := regexp.Compile(h.ResponseStringMatch)
+		if err != nil {
+			log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
 			fields["response_string_match"] = 0
-		}
-
-		bodyBytes, _ := ioutil.ReadAll(resp.Body)
-		bodyString := string(bodyBytes)
-		if regex.MatchString(bodyString) {
-			fields["response_string_match"] = 1
 		} else {
-			fields["response_string_match"] = 0
+
+			bodyBytes, _ := ioutil.ReadAll(resp.Body)
+			bodyString := string(bodyBytes)
+			if regex.MatchString(bodyString) {
+				fields["response_string_match"] = 1
+			} else {
+				fields["response_string_match"] = 0
+			}
 		}
 	}
 
