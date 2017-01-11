@@ -99,8 +99,8 @@ func (i *InfluxDB) Connect() error {
 			config := client.UDPConfig{
 				URL:         u,
 				PayloadSize: i.UDPPayload,
-			c, err := client.NewUDP(config)
 			}
+			c, err := client.NewUDP(config)
 			if err != nil {
 				return fmt.Errorf("Error creating UDP Client [%s]: %s", u, err)
 			}
@@ -154,8 +154,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	bufsize := 0
 	for _, m := range metrics {
 		bufsize += m.Len()
-	r := metric.NewReader(metrics)
 	}
+	r := metric.NewReader(metrics)
 
 	// This will get set to nil if a successful write occurs
 	err := fmt.Errorf("Could not write to any InfluxDB server in cluster")
@@ -163,9 +163,6 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	p := rand.Perm(len(i.clients))
 	for _, n := range p {
 		if _, e := i.clients[n].WriteStream(r, bufsize); e != nil {
-			// Log write failure:
-			log.Printf("E! InfluxDB Output Error: %s", e)
-
 			// If the database was not found, try to recreate it:
 			if strings.Contains(e.Error(), "database not found") {
 				if errc := i.clients[n].Query("CREATE DATABASE  " + i.Database); errc != nil {

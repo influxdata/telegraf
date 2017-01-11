@@ -140,3 +140,27 @@ func TestHTTPError_DatabaseNotFound(t *testing.T) {
 	require.Error(t, err)
 	require.NoError(t, i.Close())
 }
+
+// field type conflict does not return an error, instead we
+func TestHTTPError_FieldTypeConflict(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/write":
+			w.WriteHeader(http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintln(w, `{"results":[{}],"error":"field type conflict: input field \"value\" on measurement \"test\" is type integer, already exists as type float dropped=1"}`)
+		}
+	}))
+	defer ts.Close()
+
+	i := InfluxDB{
+		URLs:     []string{ts.URL},
+		Database: "test",
+	}
+
+	err := i.Connect()
+	require.NoError(t, err)
+	err = i.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+	require.NoError(t, i.Close())
+}
