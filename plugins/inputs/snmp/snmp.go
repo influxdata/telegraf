@@ -683,6 +683,7 @@ func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
 //  "hwaddr" will convert the value into a MAC address.
 //  "ipaddr" will convert the value into into an IP address.
 //  "" will convert a byte slice into a string.
+//  "watts" will convert string with W suffix to integer.
 func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
@@ -793,6 +794,18 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 			return nil, fmt.Errorf("invalid length (%d) for ipaddr conversion", len(ipbs))
 		}
 
+		return v, nil
+	}
+
+	if conv == "watts" {
+		switch vt := v.(type) {
+		case []byte:
+			v, _ = strconv.Atoi(strings.TrimSuffix(string(vt), "W"))
+		case string:
+			v, _ = strconv.Atoi(strings.TrimSuffix(vt, "W"))
+		default:
+			return nil, fmt.Errorf("invalid type (%T) for watts conversion", v)
+		}
 		return v, nil
 	}
 

@@ -148,7 +148,7 @@ If not specified, it defaults to the value of `oid`. If `oid` is numeric, an att
 * `is_tag`:
 Output this field as a tag.
 
-* `conversion`: Values: `"float(X)"`,`"float"`,`"int"`,`""`. Default: `""`
+* `conversion`: Values: `"watts"`,`"float(X)"`,`"float"`,`"int"`,`""`. Default: `""`
 Converts the value according to the given specification.
 
     - `float(X)`: Converts the input value into a float and divides by the Xth power of 10. Efficively just moves the decimal left X places. For example a value of `123` with `float(2)` will result in `1.23`.
@@ -156,6 +156,7 @@ Converts the value according to the given specification.
     - `int`: Convertes the value into an integer.
     - `hwaddr`: Converts the value to a MAC address.
     - `ipaddr`: Converts the value to an IP address.
+    - `watts`: Converts the value with W suffix to integer.
 
 #### Table parameters:
 * `oid`:
