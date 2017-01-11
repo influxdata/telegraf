@@ -33,7 +33,7 @@ type Kafka struct {
 	// channel for all incoming kafka messages
 	in <-chan *sarama.ConsumerMessage
 	// channel for all kafka consumer errors
-	errs <-chan *sarama.ConsumerError
+	errs <-chan error
 	done chan struct{}
 
 	// keep the accumulator internally:
