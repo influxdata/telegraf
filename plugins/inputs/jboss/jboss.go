@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"crypto/md5"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -27,8 +25,46 @@ const (
         GET_HOSTS = 0
 		GET_SERVERS = 1
 		GET_DB_STAT = 2
+		GET_JVM_STAT = 3
 )
-		
+
+type KeyVal struct {
+    Key string
+    Val interface{}
+}
+
+// Define an ordered map
+type OrderedMap []KeyVal
+
+// Implement the json.Marshaler interface
+func (omap OrderedMap) MarshalJSON() ([]byte, error) {
+    var buf bytes.Buffer
+
+    buf.WriteString("{")
+    for i, kv := range omap {
+        if i != 0 {
+            buf.WriteString(",")
+        }
+        // marshal key
+        key, err := json.Marshal(kv.Key)
+        if err != nil {
+            return nil, err
+        }
+        buf.Write(key)
+        buf.WriteString(":")
+        // marshal value
+        val, err := json.Marshal(kv.Val)
+        if err != nil {
+            return nil, err
+        }
+        buf.Write(val)
+    }
+
+    buf.WriteString("}")
+    return buf.Bytes(), nil
+}
+
+
 type HostResponse struct {
 	Outcome string `json:"outcome"`
 	Result []string `json:"result"`
@@ -38,7 +74,6 @@ type DatasourceResponse struct {
 	Outcome string `json:"outcome"`
 	Result DatabaseMetrics `json:"result"`
 }
-
 
 type DatabaseMetrics struct {
 //	InstalledDrivers interface `json:"installed-drivers"`
@@ -60,6 +95,15 @@ type DBPoolStatistics struct {
 	AvailableCount string `json:"AvailableCount"`
 	InUseCount string `json:"InUseCount"`
 	
+}
+
+type JVMResponse struct {
+	Outcome string `json:"outcome"`
+	Result JVMMetrics `json:"result"`
+}
+
+type JVMMetrics struct {
+	Type map[string]interface{} `json:"type"`
 }
 
 
@@ -266,7 +310,6 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if h.client.HTTPClient() == nil {
-		fmt.Printf("asdasSet Authorization '%s' \n", h.Authorization)
 		tlsCfg, err := internal.GetTLSConfig(
 			h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
 		if err != nil {
@@ -281,9 +324,6 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 			Timeout:   h.ResponseTimeout.Duration,
 		}
 		h.client.SetHTTPClient(client)
-		if h.Authorization == "digest" {
-			h.checkAuth(h.Servers[0], "/management")
-		}
 	}
 
 	errorChannel := make(chan error, len(h.Servers))
@@ -292,7 +332,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			bodyContent, err := h.prepareRequest(server, GET_HOSTS, nil);
+			bodyContent, err := h.prepareRequest(GET_HOSTS, nil);
 			if err != nil {
 				errorChannel <- err
 			}
@@ -354,10 +394,14 @@ func (h *JBoss) getServersOnHost(
 		go func(host string) {
 			defer wg.Done()
 			// fmt.Printf("Get Servers from host %s\n", host)
-			adr := make(map[string]interface{})
-			adr["host"] = host
+//			adr := make(map[string]interface{})
+//			adr["host"] = host
+			adr :=  OrderedMap{
+				{"host",  host},
+			}
+//			adr := []string{"host\":" + host }
 			//adr := []string{"host=" + host}
-			bodyContent, err := h.prepareRequest(serverURL, GET_SERVERS, adr);
+			bodyContent, err := h.prepareRequest(GET_SERVERS, adr);
 			if err != nil {
 				errorChannel <- err
 			}
@@ -374,7 +418,8 @@ func (h *JBoss) getServersOnHost(
 				}
 //				fmt.Println(servers)
 				for _, server := range servers.Result {
-					h.getDatasourceStatistics(acc, serverURL, host, server)
+//					h.getDatasourceStatistics(acc, serverURL, host, server)
+					h.getJVMStatistics(acc, serverURL, host, server)
 				}
 			}
 		}(host)
@@ -404,12 +449,17 @@ func (h *JBoss) getDatasourceStatistics(
 ) error {
 	//fmt.Printf("getDatasourceStatistics %s %s\n", host, serverName)
 	
-	adr := make(map[string]interface{})
-	adr["host"] = host
-	adr["server"] = serverName
-	adr["subsystem"] = "datasources"
+	//adr := make(map[string]interface{})
+	adr := OrderedMap{
+		{"host", host},
+		{"server", serverName},
+		{"subsystem", "datasources"},
+	}
+	//adr["host"] = host
+	//adr["server"] = serverName
+	//adr["subsystem"] = "datasources"
 	 
-	bodyContent, err := h.prepareRequest(serverURL, GET_DB_STAT, adr);
+	bodyContent, err := h.prepareRequest(GET_DB_STAT, adr);
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -457,42 +507,81 @@ func (h *JBoss) getDatasourceStatistics(
 	return nil
 }
 
-// Gathers data from a particular server
+// Gathers JVM data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
 //     serverURL: endpoint to send request to
-//     service  : the service being queried
+//     host     : the host being queried
+//     server   : the server being queried
 //
 // Returns:
 //     error: Any error that may have occurred
-func (h *JBoss) gatherServer(
+
+func (h *JBoss) getJVMStatistics(
 	acc telegraf.Accumulator,
 	serverURL string,
+	host string,
+	serverName string,
 ) error {
-	resp, _, err := h.sendRequest(serverURL)
+	adr := OrderedMap{
+        {"host",  host},
+        {"server", serverName},
+		{"core-service", "platform-mbean"},
+    }
+
+	bodyContent, err := h.prepareRequest(GET_JVM_STAT, adr);
 	if err != nil {
-		return err
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
-	requestURL, err := url.Parse(serverURL)
-	host, port, _ := net.SplitHostPort(requestURL.Host)
-	var dat ResponseMetrics
+
+	out, err := h.doRequest(serverURL, bodyContent)
+
+//	fmt.Println("out: %s\n", out)
+	
 	if err != nil {
-		return err
-	}
-	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
-		return err
-	}
-	for _, m_item := range dat.Metrics {
-		fields := make(map[string]interface{})
-		tags := map[string]string{
-			"server": host,
-			"port":   port,
-			"name":   m_item.Name,
-			"type":   m_item.Type,
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	} else {
+		server := JVMResponse{}
+		if err = json.Unmarshal(out, &server); err != nil {
+			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
 		}
-		h.flatten(m_item.Fields, fields, "")
-		acc.AddFields(m_item.FullName, fields, tags)
+//		fmt.Println(server)
+
+	
+		for typeName, value := range server.Result.Type {
+			fields := make(map[string]interface{})
+			if typeName == "threading" {
+				t := value.(map[string]interface{})
+				fields["thread-count"]  = t["thread-count"]
+				fields["peak-thread-count"]  = t["peak-thread-count"]
+				fields["daemon-thread-count"]  = t["daemon-thread-count"]
+			} else if  typeName == "memory" {
+				mem := value.(map[string]interface{})
+				heap := mem["heap-memory-usage"].(map[string]interface{})
+				nonHeap := mem["non-heap-memory-usage"].(map[string]interface{})
+				h.flatten(heap, fields, "heap")
+				h.flatten(nonHeap, fields, "nonheap")
+			} else if typeName == "garbage-collector" {
+				gc := value.(map[string]interface{})
+				gc_name := gc["name"].(map[string]interface{})
+				Scavenge := gc_name["PS_Scavenge"].(map[string]interface{})
+				MarkSweep := gc_name["PS_MarkSweep"].(map[string]interface{})
+				fields["scavenge-count"] = Scavenge["collection-count"]
+				fields["scavenge-time"] = Scavenge["collection-time"]
+				fields["marksweep-count"] = MarkSweep["collection-count"]
+				fields["marksweep-time"] = MarkSweep["collection-time"]
+			}
+			tags := map[string]string{
+				"host":   host,
+				"server": serverName,
+				"name":   typeName,
+				"type":   "jvm",
+			}
+			acc.AddFields("jboss", fields, tags)
+		}
+		
 	}
+	
 	return nil
 }
 
@@ -520,11 +609,10 @@ func (h *JBoss) flatten(item map[string]interface{}, fields map[string]interface
 	}
 }
 
-
-func (j *JBoss) prepareRequest(domainUrl string, optype int, adress map[string]interface{}) (map[string]interface{}, error) {
+//func (j *JBoss) prepareRequest(optype int, adress map[string]interface{}) (map[string]interface{}, error) {
+func (j *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interface{}, error) {
 	bodyContent := make(map[string]interface{})
 	
-//	fmt.Printf("url: %s , optype %d, adress %s\n", domainUrl, optype, adress)
 	// Create bodyContent
 	switch optype {
 	case GET_HOSTS:
@@ -544,6 +632,12 @@ func (j *JBoss) prepareRequest(domainUrl string, optype int, adress map[string]i
 		bodyContent["recursive-depth"] = 2
 		bodyContent["address"] = adress
 		bodyContent["json.pretty"] = 1
+	case GET_JVM_STAT:	
+		bodyContent["operation"] = "read-resource"
+		bodyContent["include-runtime"] = "true"
+		bodyContent["recursive"] = "true"
+		bodyContent["address"] = adress
+		bodyContent["json.pretty"] = 1
 	}
 
 	return bodyContent, nil
@@ -559,7 +653,7 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	method := "POST"
 
 	// Debug JSON request
-	// fmt.Printf("Req: %s\n", requestBody)
+//	fmt.Printf("Req: %s\n", requestBody)
 
 	req, err := http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -591,7 +685,9 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 		digestParts["password"] = j.Password
 		
 		req, err = http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
-
+		if err != nil {
+			return nil, err
+		}
 		j.Authorization = getDigestAuthrization2(digestParts)
 		req.Header.Set("Authorization", j.Authorization)
 		req.Header.Set("Content-Type", "application/json")
@@ -625,76 +721,10 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	}
 
 	// Debug response
-//	fmt.Printf("%s", body)
+//	fmt.Printf("body: %s", body)
 
 	return []byte(body), nil
 }
-
-
-// Sends an HTTP request to the server using the GrayLog object's HTTPClient.
-// Parameters:
-//     serverURL: endpoint to send request to
-//
-// Returns:
-//     string: body of the response
-//     error : Any error that may have occurred
-func (h *JBoss) sendRequest(serverURL string) (string, float64, error) {
-	headers := map[string]string{
-		"Content-Type": "application/json",
-		"Accept":       "application/json",
-	}
-	method := "GET"
-	content := bytes.NewBufferString("")
-	headers["Authorization"] = "Basic " + base64.URLEncoding.EncodeToString([]byte(h.Username+":"+h.Password))
-	// Prepare URL
-	requestURL, err := url.Parse(serverURL)
-	if err != nil {
-		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
-	}
-	if strings.Contains(requestURL.String(), "multiple") {
-		m := &Messagebody{Metrics: h.Metrics}
-		http_body, err := json.Marshal(m)
-		if err != nil {
-			return "", -1, fmt.Errorf("Invalid list of Metrics %s", h.Metrics)
-		}
-		method = "POST"
-		content = bytes.NewBuffer(http_body)
-	}
-	req, err := http.NewRequest(method, requestURL.String(), content)
-	if err != nil {
-		return "", -1, err
-	}
-	// Add header parameters
-	for k, v := range headers {
-		req.Header.Add(k, v)
-	}
-	start := time.Now()
-	resp, err := h.client.MakeRequest(req)
-	if err != nil {
-		return "", -1, err
-	}
-
-	defer resp.Body.Close()
-	responseTime := time.Since(start).Seconds()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return string(body), responseTime, err
-	}
-
-	// Process response
-	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			requestURL.String(),
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode),
-			http.StatusOK,
-			http.StatusText(http.StatusOK))
-		return string(body), responseTime, err
-	}
-	return string(body), responseTime, err
-}
-
 
 func init() {
 	inputs.Add("jboss", func() telegraf.Input {
