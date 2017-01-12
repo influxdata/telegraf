@@ -12,6 +12,8 @@
 
 Server addresses need to explicitly start with 'http' if you wish to use HAproxy status page. Otherwise, address will be assumed to be an UNIX socket and protocol (if present) will be discarded.
 
+For basic authentication you need to add username and password in the URL: `http://user:password@1.2.3.4/haproxy?stats`.
+
 Following examples will all resolve to the same socket:
 ```
 socket:/var/run/haproxy.sock
