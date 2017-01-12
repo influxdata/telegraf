@@ -47,12 +47,13 @@ func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error
 }
 
 type Jolokia struct {
-	jClient JolokiaClient
-	Context string
-	Mode    string
-	Servers []Server
-	Metrics []Metric
-	Proxy   Server
+	jClient   JolokiaClient
+	Context   string
+	Mode      string
+	Servers   []Server
+	Metrics   []Metric
+	Proxy     Server
+	Delimiter string
 
 	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
@@ -83,6 +84,13 @@ const sampleConfig = `
   ## client_timeout specifies a time limit for requests made by this client.
   ## Includes connection time, any redirects, and reading the response body.
   # client_timeout = "4s"
+
+  ## Attribute delimiter
+  ##
+  ## When multiple attributes are returned for a single
+  ## [inputs.jolokia.metrics], the field name is a concatenation of the metric
+  ## name, and the attribute name, separated by the given delimiter.
+  # delimiter = "_"
 
   ## List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]
@@ -238,10 +246,10 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 	return req, nil
 }
 
-func extractValues(measurement string, value interface{}, fields map[string]interface{}) {
+func (j *Jolokia) extractValues(measurement string, value interface{}, fields map[string]interface{}) {
 	if mapValues, ok := value.(map[string]interface{}); ok {
 		for k2, v2 := range mapValues {
-			extractValues(measurement+"_"+k2, v2, fields)
+			j.extractValues(measurement+j.Delimiter+k2, v2, fields)
 		}
 	} else {
 		fields[measurement] = value
@@ -282,7 +290,7 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 				fmt.Printf("Error handling response: %s\n", err)
 			} else {
 				if values, ok := out["value"]; ok {
-					extractValues(measurement, values, fields)
+					j.extractValues(measurement, values, fields)
 				} else {
 					fmt.Printf("Missing key 'value' in output response\n")
 				}
@@ -301,6 +309,7 @@ func init() {
 		return &Jolokia{
 			ResponseHeaderTimeout: DefaultResponseHeaderTimeout,
 			ClientTimeout:         DefaultClientTimeout,
+			Delimiter:             "_",
 		}
 	})
 }
