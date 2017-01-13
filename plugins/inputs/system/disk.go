@@ -29,7 +29,7 @@ var diskSampleConfig = `
 
   ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
   ## present on /run, /var/run, /dev/shm or /dev).
-  ignore_fs = ["tmpfs", "devtmpfs"]
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
