@@ -1,4 +1,14 @@
-## v1.2 [unreleased]
+## v1.3 [unreleased]
+
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+- [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
+
+## v1.2 [2017-01-00]
 
 ### Release Notes
 
