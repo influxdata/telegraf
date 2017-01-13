@@ -9,6 +9,7 @@ This plugin gathers the statistic data from MySQL server
 * Process list
 * User Statistics
 * Info schema auto increment columns
+* InnoDB metrics
 * Table I/O waits
 * Index I/O waits
 * Perf Schema table lock waits
@@ -50,6 +51,9 @@ This plugin gathers the statistic data from MySQL server
   #
   ## gather auto_increment columns and max values from information schema
   gather_info_schema_auto_inc               = true
+  #
+  ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
+  gather_innodb_metrics                     = true
   #
   ## gather metrics from SHOW SLAVE STATUS command output
   gather_slave_status                       = true
@@ -141,6 +145,7 @@ and process. It has following fields:
 for them. It has following fields:
     * auto_increment_column(int, number)
     * auto_increment_column_max(int, number)
+* InnoDB metrics - all metrics of information_schema.INNODB_METRICS with a status "enabled"
 * Perf table lock waits - gathers total number and time for SQL and external
 lock waits events for each table and operation. It has following fields.
 The unit of fields varies by the tags.
