@@ -1076,12 +1076,7 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 		count                  uint32
 	)
 
-	var servtag string
-	servtag, err = parseDSN(serv)
-	if err != nil {
-		servtag = "localhost"
-	}
-
+	servtag := getDSNTag(serv)
 	for rows.Next() {
 		err = rows.Scan(&user, &total_connections, &concurrent_connections,
 			&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
