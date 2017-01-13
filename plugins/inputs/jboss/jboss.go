@@ -418,7 +418,7 @@ func (h *JBoss) getServersOnHost(
 				}
 //				fmt.Println(servers)
 				for _, server := range servers.Result {
-//					h.getDatasourceStatistics(acc, serverURL, host, server)
+					h.getDatasourceStatistics(acc, serverURL, host, server)
 					h.getJVMStatistics(acc, serverURL, host, server)
 				}
 			}
