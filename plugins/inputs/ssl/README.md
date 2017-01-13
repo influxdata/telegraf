@@ -10,8 +10,8 @@ Warning, this check doesnt verify if SSL is valid/secure or not.
 [[inputs.check_ssl]]
   ## Servers ( Default [] )
   servers = ["github.com:443"]
-  ## Set response_timeout (default 5 seconds)
-  response_timeout = 5s
+  ## Set timeout (default 5 seconds)
+  timeout = "5s"
 ```
 
 ### Measurements & Fields:
