@@ -170,7 +170,7 @@ const sampleConfig = `
   ## Protocol, must be "tcp" or "udp"
   protocol = "udp"
 
-  ## MaxTCPConnection - default 250
+  ## MaxTCPConnection - applicable when protocol is set to tcp
   max_tcp_connections = 250
 
   ## Address and port to host UDP listener on

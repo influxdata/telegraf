@@ -5,6 +5,12 @@
 ```toml
 # Statsd Server
 [[inputs.statsd]]
+  ## Protocol, must be "tcp" or "udp"
+  protocol = "udp"
+
+  ## MaxTCPConnection - applicable when protocol is set to tcp
+  max_tcp_connections = 250
+
   ## Address and port to host UDP listener on
   service_address = ":8125"
 
@@ -146,6 +152,9 @@ metric type:
 
 ### Plugin arguments
 
+- **protocol** string: Protocol used in listener - tcp or udp options
+- **max_tcp_connections** []int: Maximum number of concurrent TCP connections
+to allow. Used when protocol is set to tcp.
 - **service_address** string: Address to listen for statsd UDP packets on
 - **delete_gauges** boolean: Delete gauges on every collection interval
 - **delete_counters** boolean: Delete counters on every collection interval
