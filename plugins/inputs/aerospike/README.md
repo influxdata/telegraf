@@ -11,7 +11,7 @@ All metrics are attempted to be cast to integers, then booleans, then strings.
 
 ### Measurements:
 
-The aerospike metrics are under two measurement names:
+The aerospike metrics are under four measurement names:
 
 ***aerospike_node***: These are the aerospike **node** measurements, which are
 available from the aerospike `statistics` command.
@@ -32,6 +32,26 @@ are available from the aerospike `namespace/<namespace_name>` command.
         namespaces
         <namespace_1>;<namespace_2>;etc.
         namespace/<namespace_name>
+        ...
+      ```
+***aerospike_latency***: These are aerospike latency measurements, which
+are available from the aerospike `latency` command.
+
+      ie,
+      ```
+        telnet localhost 3003
+        latency:
+        ...
+        ...
+      ```
+***aerospike_throughput***: These are aerospike throughput measurements, which
+are available from the aerospike `throughput` command.
+
+      ie,
+      ```
+        telnet localhost 3003
+        throughput:
+        ...
         ...
       ```
 
