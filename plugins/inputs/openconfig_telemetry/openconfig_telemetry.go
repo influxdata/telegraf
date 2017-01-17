@@ -70,8 +70,7 @@ func (m *OpenConfigTelemetry) SetParser(parser parsers.Parser) {
 	m.parser = parser
 }
 
-func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
-	log.Print("I! Started OpenConfig Telemetry plugin\n")
+func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
@@ -102,7 +101,9 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 	return xmlpath, tags
 }
 
-func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
+func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
+	log.Print("I! Started OpenConfig Telemetry plugin\n")
+
 	m.Lock()
 	defer m.Unlock()
 
@@ -133,12 +134,8 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 		log.Printf("I! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
 	}
 
-	wg := new(sync.WaitGroup)
-
 	for _, sensor := range m.Sensors {
-		wg.Add(1)
 		go func(sensor string, acc telegraf.Accumulator) {
-			defer wg.Done()
 			spathSplit := strings.SplitN(sensor, " ", -1)
 			var sensorName string
 			var pathlist []*telemetry.Path
@@ -231,8 +228,6 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 					case *telemetry.KeyValue_BytesValue:
 						kv[xmlpath] = v.GetBytesValue()
 						break
-					default:
-						log.Printf("I! Unusable value: ", v.GetValue())
 					}
 					dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
 				}
@@ -255,7 +250,6 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 		}(sensor, acc)
 
 	}
-	wg.Wait()
 
 	return nil
 }
