@@ -286,6 +286,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 	}()
 
 	ticker := time.NewTicker(a.Config.Agent.FlushInterval.Duration)
+	semaphore := make(chan struct{}, 1)
 	for {
 		select {
 		case <-shutdown:
@@ -295,8 +296,18 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			a.flush()
 			return nil
 		case <-ticker.C:
-			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
-			a.flush()
+			go func() {
+				select {
+				case semaphore <- struct{}{}:
+					internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
+					a.flush()
+					<-semaphore
+				default:
+					// skipping this flush because one is already happening
+					log.Println("W! Skipping a scheduled flush because there is" +
+						" already a flush ongoing.")
+				}
+			}()
 		case metric := <-metricC:
 			// NOTE potential bottleneck here as we put each metric through the
 			// processors serially.
