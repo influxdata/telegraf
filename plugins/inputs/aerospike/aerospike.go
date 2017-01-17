@@ -27,7 +27,7 @@ var sampleConfig = `
   ## Aerospike servers to connect to (with port)
   ## This plugin will query all namespaces the aerospike
   ## server has configured and get stats for them.
-  servers = ["localhost:3000"]
+  servers = ["user:password@localhost:3000","localhost:3000"]
  `
 
 func (a *Aerospike) SampleConfig() string {
