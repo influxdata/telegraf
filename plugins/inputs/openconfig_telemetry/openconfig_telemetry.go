@@ -42,9 +42,12 @@ var sampleConfig = `
   ## Sensors to subscribe for
   ## A identifier for each sensor can be provided in path by separating with space
   ## Else sensor path will be used as identifier
+  ## When identifier is used, we can provide a list of space separated sensors. 
+  ## A single subscription will be created with all these sensors and data will 
+  ## be saved to measurement with this identifier name
   sensors = [
    "/oc/firewall/usage",
-   "interfaces /oc/interfaces/",
+   "interfaces /oc/interfaces/ /oc/lldp/",
   ]
 
   ## x509 Certificate to use with TLS connection. If it is not provided, an insecure 
@@ -136,19 +139,24 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(sensor string, acc telegraf.Accumulator) {
 			defer wg.Done()
-			spathSplit := strings.SplitN(sensor, " ", 2)
+			spathSplit := strings.SplitN(sensor, " ", -1)
 			var sensorName string
-			var sensorPath string
+			var pathlist []*telemetry.Path
+
 			if len(spathSplit) > 1 {
-				sensorName = spathSplit[0]
-				sensorPath = spathSplit[1]
+				for i, path := range spathSplit {
+					if i == 0 {
+						sensorName = path
+					} else {
+						pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: m.SampleFrequency})
+					}
+				}
 			} else {
 				sensorName = sensor
-				sensorPath = sensor
+				pathlist = append(pathlist, &telemetry.Path{Path: sensor, SampleFrequency: m.SampleFrequency})
 			}
 			stream, err := c.TelemetrySubscribe(context.Background(),
-				&telemetry.SubscriptionRequest{PathList: []*telemetry.Path{&telemetry.Path{Path: sensorPath,
-					SampleFrequency: m.SampleFrequency}}})
+				&telemetry.SubscriptionRequest{PathList: pathlist})
 			if err != nil {
 				log.Fatalf("E! Could not subscribe: %v", err)
 			}
@@ -180,36 +188,6 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 				for _, v := range r.Kv {
 					if v.Key == "__prefix__" {
 						prefix = v.GetStrValue()
-					}
-				}
-
-				// Extract information from prefix if Exist
-				// TODO make this block a function
-				if prefix != "" {
-
-					// Will search for attribute and will extract
-					// example : /junos/interface[name=xe-0/0/0]/test
-					// - the name of the element   		(interface)
-					// - the name of the attribute 		(name)
-					// - the value of the attribute		(xe-0/0/0)
-					re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*)\\=([^\\[]*)\\]")
-					subs := re.FindAllStringSubmatch(prefix, -1)
-
-					if len(subs) > 0 {
-						for _, sub := range subs {
-
-							// if the  attribute name is "name",
-							// Extract the name of the element as "key" and the value of the attribute as value
-							// /junos/interface[name=xe-0/0/0]/test
-							if sub[2] == "name" {
-								sub[3] = strings.Replace(sub[3], "'", "", -1)
-								if sub[1] == "" {
-									tags[sub[2]] = sub[3]
-								} else {
-									tags[sub[1]] = sub[3]
-								}
-							}
-						}
 					}
 				}
 
@@ -254,7 +232,7 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 						kv[xmlpath] = v.GetBytesValue()
 						break
 					default:
-						log.Println(v.GetValue())
+						log.Printf("I! Unusable value: ", v.GetValue())
 					}
 					dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
 				}
