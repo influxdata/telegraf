@@ -88,11 +88,11 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 	if len(subs) > 0 {
 		for _, sub := range subs {
 			tagKey := strings.Split(xmlpath, sub[0])[0]
-			tagKey += "/" + sub[1] + "/@" + sub[2]
+			tagKey += "/" + strings.TrimSpace(sub[1]) + "/@" + strings.TrimSpace(sub[2])
 			tagValue := strings.Replace(sub[3], "'", "", -1)
 
 			tags[tagKey] = tagValue
-			xmlpath = strings.Replace(xmlpath, sub[0], "/"+sub[1], 1)
+			xmlpath = strings.Replace(xmlpath, sub[0], "/"+strings.TrimSpace(sub[1]), 1)
 		}
 	}
 
@@ -220,7 +220,9 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 
 				for _, v := range r.Kv {
 					kv := make(map[string]interface{})
-					xmlpath, finaltags := spitTagsNPath(v.Key)
+
+					// Also, lets use prefix if there is one
+					xmlpath, finaltags := spitTagsNPath(prefix + v.Key)
 					finaltags["device"] = grpc_server
 
 					switch v.Value.(type) {
