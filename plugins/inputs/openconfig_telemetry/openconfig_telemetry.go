@@ -78,6 +78,27 @@ func (m *OpenConfigTelemetry) Stop() {
 	m.grpcClientConn.Close()
 }
 
+// Takes in XML path with predicates and returns list of tags+values along with a final XML path without predicates
+func spitTagsNPath(xmlpath string) (string, map[string]string) {
+	re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*)\\=([^\\[]*)\\]")
+	subs := re.FindAllStringSubmatch(xmlpath, -1)
+	tags := make(map[string]string)
+
+	// Given XML path, this will spit out final path without predicates
+	if len(subs) > 0 {
+		for _, sub := range subs {
+			tagKey := strings.Split(xmlpath, sub[0])[0]
+			tagKey += "/" + sub[1] + "/@" + sub[2]
+			tagValue := strings.Replace(sub[3], "'", "", -1)
+
+			tags[tagKey] = tagValue
+			xmlpath = strings.Replace(xmlpath, sub[0], "/"+sub[1], 1)
+		}
+	}
+
+	return xmlpath, tags
+}
+
 func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 	m.Lock()
 	defer m.Unlock()
@@ -147,7 +168,6 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 
 				// Create a point and add to batch
 				tags := make(map[string]string)
-				fields := make(map[string]interface{})
 
 				if err != nil {
 					log.Fatalln("E! Error: %v", err)
@@ -196,42 +216,61 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 				// Insert additional tags
 				tags["device"] = grpc_server
 
+				dgroups := []DataGroup{}
+
 				for _, v := range r.Kv {
+					kv := make(map[string]interface{})
+					xmlpath, finaltags := spitTagsNPath(v.Key)
+					finaltags["device"] = grpc_server
+
 					switch v.Value.(type) {
 					case *telemetry.KeyValue_StrValue:
 						// If this is actually a integer value but wrongly encoded as string,
 						// convert and use it as value to field
 						if val, err := strconv.ParseInt(v.GetStrValue(), 10, 64); err == nil {
-							fields[v.Key] = val
+							kv[xmlpath] = val
 						} else {
 							tags[v.Key] = v.GetStrValue()
 						}
 						break
 					case *telemetry.KeyValue_DoubleValue:
-						fields[v.Key] = v.GetDoubleValue()
+						kv[xmlpath] = v.GetDoubleValue()
 						break
 					case *telemetry.KeyValue_IntValue:
-						fields[v.Key] = v.GetIntValue()
+						kv[xmlpath] = v.GetIntValue()
 						break
 					case *telemetry.KeyValue_UintValue:
-						fields[v.Key] = v.GetUintValue()
+						kv[xmlpath] = v.GetUintValue()
 						break
 					case *telemetry.KeyValue_SintValue:
-						fields[v.Key] = v.GetSintValue()
+						kv[xmlpath] = v.GetSintValue()
 						break
 					case *telemetry.KeyValue_BoolValue:
-						fields[v.Key] = v.GetBoolValue()
+						kv[xmlpath] = v.GetBoolValue()
 						break
 					case *telemetry.KeyValue_BytesValue:
-						fields[v.Key] = v.GetBytesValue()
+						kv[xmlpath] = v.GetBytesValue()
 						break
 					default:
-						fields[v.Key] = v.Value
 						log.Println(v.GetValue())
 					}
+					dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
 				}
 
-				acc.AddFields(sensorName, fields, tags, time.Now())
+				// Print final data collection
+				if m.Debug {
+					log.Printf("I! Available collection is: ", dgroups)
+				}
+
+				tnow := time.Now()
+				// Iterate through data groups and add them
+				for _, group := range dgroups {
+					if len(group.tags) == 0 {
+						acc.AddFields(sensorName, group.data, tags, tnow)
+					} else {
+						acc.AddFields(sensorName, group.data, group.tags, tnow)
+					}
+				}
 			}
 		}(sensor, acc)
 
