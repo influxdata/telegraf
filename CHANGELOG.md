@@ -10,6 +10,7 @@
 ### Bugfixes
 
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
+- [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
 
 ## v1.2 [2017-01-00]
 
