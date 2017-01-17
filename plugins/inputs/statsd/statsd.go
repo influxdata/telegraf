@@ -294,12 +294,12 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	tags := map[string]string{
 		"address": s.ServiceAddress,
 	}
-	s.MaxConnections = selfstat.Register("statsd", "max_connections", tags)
+	s.MaxConnections = selfstat.Register("statsd", "tcp_max_connections", tags)
 	s.MaxConnections.Set(int64(s.MaxTCPConnections))
-	s.CurrentConnections = selfstat.Register("statsd", "current_connections", tags)
-	s.TotalConnections = selfstat.Register("statsd", "total_connections", tags)
-	s.PacketsRecv = selfstat.Register("statsd", "packets_received", tags)
-	s.BytesRecv = selfstat.Register("statsd", "bytes_received", tags)
+	s.CurrentConnections = selfstat.Register("statsd", "tcp_current_connections", tags)
+	s.TotalConnections = selfstat.Register("statsd", "tcp_total_connections", tags)
+	s.PacketsRecv = selfstat.Register("statsd", "tcp_packets_received", tags)
+	s.BytesRecv = selfstat.Register("statsd", "tcp_bytes_received", tags)
 
 	s.in = make(chan []byte, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
