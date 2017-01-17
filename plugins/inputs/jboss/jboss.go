@@ -26,6 +26,8 @@ const (
 		GET_SERVERS = 1
 		GET_DB_STAT = 2
 		GET_JVM_STAT = 3
+		GET_DEPLOYMENTS = 4
+		GET_DEPLOYMENT_STAT = 5
 )
 
 type KeyVal struct {
@@ -106,12 +108,31 @@ type JVMMetrics struct {
 	Type map[string]interface{} `json:"type"`
 }
 
+type DeploymentResponse struct {
+	Outcome string `json:"outcome"`
+	Result DeploymentMetrics `json:"result"`
+}
+
+type DeploymentMetrics struct {
+	Name string `json:"name"`
+	RuntimeName string `json:"runtime-name"`
+	Status string `json:"status"`
+	Subdeployment map[string]interface{} `json:"subdeployment"`
+}
+
+type WebMetrics struct {
+	ActiveSessions string `json:"active-sessions"`
+	ContextRoot string `json:"context-root"`
+	ExpiredSessions string `json:"expired-sessions"`
+	MaxActiveSessions string `json:"max-active-sessions"`
+	SessionsCreated string `json:"sessions-created"`
+	Servlet map[string]interface{} `json:"servlet"`
+}
 
 type ResponseMetrics struct {
 	outcome string `json:"outcome"`
 	Metrics []Metric `json:"result"`
 }
-
 
 type Metric struct {
 	FullName string                 `json:"full_name"`
@@ -420,6 +441,7 @@ func (h *JBoss) getServersOnHost(
 				for _, server := range servers.Result {
 					h.getDatasourceStatistics(acc, serverURL, host, server)
 					h.getJVMStatistics(acc, serverURL, host, server)
+					h.getServerDeploymentStatistics(acc, serverURL, host, server)
 				}
 			}
 		}(host)
@@ -428,7 +450,16 @@ func (h *JBoss) getServersOnHost(
 	wg.Wait()
 	close(errorChannel)
 	
-	return nil
+	// Get all errors and return them as one giant error
+	errorStrings := []string{}
+	for err := range errorChannel {
+		errorStrings = append(errorStrings, err.Error())
+	}
+
+	if len(errorStrings) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(errorStrings, "\n"))
 }
 
 // Gathers data from a particular host
@@ -487,7 +518,7 @@ func (h *JBoss) getDatasourceStatistics(
 				"name":   database,
 				"type":   "datasource",
 			}
-			acc.AddFields("jboss", fields, tags)
+			acc.AddFields("jboss_database", fields, tags)
 		}
 		for database, value := range server.Result.XaDataSource {
 			fields := make(map[string]interface{})
@@ -500,7 +531,7 @@ func (h *JBoss) getDatasourceStatistics(
 				"name":   database,
 				"type":   "datasource",
 			}
-			acc.AddFields("jboss", fields, tags)
+			acc.AddFields("jboss_database", fields, tags)
 		}
 	}
 	
@@ -577,12 +608,140 @@ func (h *JBoss) getJVMStatistics(
 				"name":   typeName,
 				"type":   "jvm",
 			}
-			acc.AddFields("jboss", fields, tags)
+			acc.AddFields("jboss_jvm", fields, tags)
 		}
 		
 	}
 	
 	return nil
+}
+
+// Gathers Deployment data from a particular host and server
+// Parameters:
+//     acc      : The telegraf Accumulator to use
+//     serverURL: endpoint to send request to
+//     host     : the host being queried
+//     server   : the server being queried
+//
+// Returns:
+//     error: Any error that may have occurred
+
+func (h *JBoss) getServerDeploymentStatistics(
+	acc telegraf.Accumulator,
+	serverURL string,
+	host string,
+	serverName string,
+) error {
+	var wg sync.WaitGroup
+	adr := OrderedMap{
+        {"host",  host},
+        {"server", serverName},
+    }
+
+	bodyContent, err := h.prepareRequest(GET_DEPLOYMENTS, adr);
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	}
+
+	out, err := h.doRequest(serverURL, bodyContent)
+
+//	fmt.Println("out: %s\n", out)
+	
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	} 
+	
+		deployments := HostResponse{}
+		if err = json.Unmarshal(out, &deployments); err != nil {
+			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		}
+//		fmt.Println(server)
+
+	
+	errorChannel := make(chan error, len(deployments.Result))
+
+	for _, deployment := range deployments.Result {
+		wg.Add(1)
+		go func(deployment string) {
+			defer wg.Done()
+			// fmt.Printf("Get Servers from host %s\n", host)
+//			adr := make(map[string]interface{})
+//			adr["host"] = host
+			adr2 := OrderedMap{
+				{"host",  host},
+				{"server", serverName},
+				{"deployment", deployment},
+			}
+			
+//			adr := []string{"host\":" + host }
+			//adr := []string{"host=" + host}
+			bodyContent, err := h.prepareRequest(GET_DEPLOYMENT_STAT, adr2);
+			if err != nil {
+				errorChannel <- err
+			}
+
+			out, err := h.doRequest(serverURL, bodyContent)
+
+			if err != nil {
+				fmt.Printf("Error handling response: %s\n", err)
+				errorChannel <- err
+			} else {
+				deployment := DeploymentResponse{}
+				if err = json.Unmarshal(out, &deployment); err != nil {
+					errorChannel <- errors.New("Error decoding JSON response")
+				}
+
+	//			fmt.Println(deployment)
+				
+				for typeName, value := range deployment.Result.Subdeployment {
+					fields := make(map[string]interface{})
+//					fmt.Println(typeName)
+					t := value.(map[string]interface{})
+					subsystem := t["subsystem"].(map[string]interface{})
+//					fmt.Println(t["subsystem"])
+					
+					if value, ok := subsystem["ejb"]; ok {
+						fmt.Println("EJB data")
+						fmt.Println(value)
+					}
+					
+					if webValue, ok := subsystem["web"]; ok {
+//						fmt.Println("WEB data")
+//						fmt.Println(webValue)
+						t2 := webValue.(map[string]interface{})
+
+						fields["active-sessions"]  = t2["active-sessions"]
+						fields["expired-sessions"]  = t2["expired-sessions"]
+						fields["max-active-sessions"]  = t2["max-active-sessions"]
+						fields["sessions-created"]  = t2["sessions-created"]
+					}
+					tags := map[string]string{
+						"host":   host,
+						"server": serverName,
+						"name":   typeName,
+						"system": deployment.Result.Name,
+						"type":   "deployment",
+			}
+			acc.AddFields("jboss_web", fields, tags)
+		}
+				
+			}
+		}(deployment)
+	}
+
+	wg.Wait()
+	close(errorChannel)
+
+	// Get all errors and return them as one giant error
+	errorStrings := []string{}
+	for err := range errorChannel {
+		errorStrings = append(errorStrings, err.Error())
+	}
+
+	if len(errorStrings) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(errorStrings, "\n"))
 }
 
 // Flatten JSON hierarchy to produce field name and field value
@@ -636,6 +795,17 @@ func (j *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interf
 		bodyContent["operation"] = "read-resource"
 		bodyContent["include-runtime"] = "true"
 		bodyContent["recursive"] = "true"
+		bodyContent["address"] = adress
+		bodyContent["json.pretty"] = 1
+	case GET_DEPLOYMENTS:
+		bodyContent["operation"] = "read-children-names"
+		bodyContent["child-type"] = "deployment"
+		bodyContent["address"] = adress
+		bodyContent["json.pretty"] = 1
+	case GET_DEPLOYMENT_STAT:
+		bodyContent["operation"] = "read-resource"
+		bodyContent["include-runtime"] = "true"
+		bodyContent["recursive-depth"] = 2
 		bodyContent["address"] = adress
 		bodyContent["json.pretty"] = 1
 	}
