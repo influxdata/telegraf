@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
+	"strings"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -21,10 +21,9 @@ var DefaultClientTimeout = internal.Duration{Duration: 4 * time.Second}
 
 type Server struct {
 	Name     string
-	Host     string
+	Url      string
 	Username string
 	Password string
-	Port     string
 }
 
 type Metric struct {
@@ -72,7 +71,7 @@ const sampleConfig = `
   ## proxy address configurations.
   ## Remember to change host address to fit your environment.
   # [inputs.jolokia.proxy]
-  #   host = "127.0.0.1"
+  #   url = "127.0.0.1"
   #   port = "8080"
 
   ## Optional http timeouts
@@ -95,8 +94,7 @@ const sampleConfig = `
   ## List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]
     name = "as-server-01"
-    host = "127.0.0.1"
-    port = "8080"
+    url = "https://as-server-01:8080
     # username = "myuser"
     # password = "mypassword"
 
@@ -191,8 +189,10 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 
 	// Add target, only in proxy mode
 	if j.Mode == "proxy" {
-		serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi",
-			server.Host, server.Port)
+		serverUrlForScheme, err := url.Parse(server.Url)
+		replacedUrl := strings.Replace(server.Url, serverUrlForScheme.Scheme + "://", "", 1)
+
+		serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s/jmxrmi", replacedUrl)
 
 		target := map[string]string{
 			"url": serviceUrl,
@@ -211,7 +211,7 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 		proxy := j.Proxy
 
 		// Prepare ProxyURL
-		proxyUrl, err := url.Parse("http://" + proxy.Host + ":" + proxy.Port + context)
+		proxyUrl, err := url.Parse(proxy.Url + context)
 		if err != nil {
 			return nil, err
 		}
@@ -222,7 +222,7 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 		jolokiaUrl = proxyUrl
 
 	} else {
-		serverUrl, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
+		serverUrl, err := url.Parse(server.Url + context)
 		if err != nil {
 			return nil, err
 		}
@@ -272,8 +272,7 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 
 	for _, server := range servers {
 		tags["jolokia_name"] = server.Name
-		tags["jolokia_port"] = server.Port
-		tags["jolokia_host"] = server.Host
+		tags["jolokia_url"] = server.Url
 		fields := make(map[string]interface{})
 
 		for _, metric := range metrics {

@@ -77,7 +77,7 @@ const invalidJSON = "I don't think this is JSON"
 
 const empty = ""
 
-var Servers = []Server{Server{Name: "as1", Host: "127.0.0.1", Port: "8080"}}
+var Servers = []Server{Server{Name: "as1", Url: "127.0.0.1:8080"}}
 var HeapMetric = Metric{Name: "heap_memory_usage",
 	Mbean: "java.lang:type=Memory", Attribute: "HeapMemoryUsage"}
 var UsedHeapMetric = Metric{Name: "heap_memory_usage",
@@ -128,8 +128,7 @@ func TestHttpJsonMultiValue(t *testing.T) {
 		"heap_memory_usage_used":      203288528.0,
 	}
 	tags := map[string]string{
-		"jolokia_host": "127.0.0.1",
-		"jolokia_port": "8080",
+		"jolokia_url": "127.0.0.1:8080",
 		"jolokia_name": "as1",
 	}
 	acc.AssertContainsTaggedFields(t, "jolokia", fields, tags)
