@@ -212,10 +212,11 @@ func (p *Genericdb) SanitizedAddress() (_ string, err error) {
   	} else {
   		canonicalizedAddress = p.Address
   	}
-  	p.sanitizedAddress = KVMatcher.ReplaceAllString(canonicalizedAddress, "")
-
-  	return p.sanitizedAddress, err
+  } else {
+    canonicalizedAddress = p.Address
   }
+  p.sanitizedAddress = KVMatcher.ReplaceAllString(canonicalizedAddress, "")
+  return p.sanitizedAddress, err
 }
 
 func (p *Genericdb) accRow(meas_name string, row scanner, acc telegraf.Accumulator) error {
