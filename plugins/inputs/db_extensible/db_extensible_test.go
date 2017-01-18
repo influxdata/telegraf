@@ -21,7 +21,6 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		Databases: []string{"postgres"},
 		Query: query{
 			{Sqlquery: "select * from pg_stat_database",
-				Version:    901,
 				Withdbname: false,
 				Tagvalue:   ""},
 		},
@@ -97,4 +96,51 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 	for col := range p.IgnoredColumns() {
 		assert.False(t, acc.HasMeasurement(col))
 	}
+}
+
+func TestMysqlGeneratesMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Genericdb{
+		Dbtype: fmt.Sprintf("mysql"),
+		Address: fmt.Sprintf("root@%s/mysql host=%s",
+			testutil.GetLocalHost()),
+		Databases: []string{"mysql"},
+		Query: query{
+			{Sqlquery: "SELECT TABLE_SCHEMA, TABLE_NAME, ifnull(TABLE_ROWS, '0') as TABLE_ROWS, ifnull(DATA_LENGTH, '0') as , ifnull(INDEX_LENGTH, '0') as INDEX_LENGTH, ifnull(DATA_FREE, '0') as DATA_FREE FROM information_schema.tables",
+				Withdbname: true,
+				Tagvalue:   "TABLE_SCHEMA"},
+		},
+	}
+	var acc testutil.Accumulator
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	availableColumns := make(map[string]bool)
+	for _, col := range p.AllColumns {
+		availableColumns[col] = true
+	}
+	intMetrics := []string{
+		"TABLE_ROWS",
+		"DATA_LENGTH",
+		"INDEX_LENGTH",
+		"DATA_FREE",
+	}
+
+
+	metricsCounted := 0
+
+	for _, metric := range intMetrics {
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasIntField("mysql", metric))
+			metricsCounted++
+		}
+	}
+
+
+	assert.True(t, metricsCounted > 0)
+	assert.Equal(t, len(availableColumns)-len(p.IgnoredColumns()), metricsCounted)
 }
