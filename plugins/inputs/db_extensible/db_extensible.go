@@ -195,7 +195,7 @@ func (p *Genericdb) Gather(acc telegraf.Accumulator) error {
 type scanner interface {
 	Scan(dest ...interface{}) error
 }
-
+/*
 var KVMatcher, _ = regexp.Compile("(password|sslcert|sslkey|sslmode|sslrootcert)=\\S+ ?")
 
 func (p *Genericdb) SanitizedAddress() (_ string, err error) {
@@ -218,6 +218,7 @@ func (p *Genericdb) SanitizedAddress() (_ string, err error) {
   p.sanitizedAddress = KVMatcher.ReplaceAllString(canonicalizedAddress, "")
   return p.sanitizedAddress, err
 }
+*/
 
 func (p *Genericdb) accRow(meas_name string, row scanner, acc telegraf.Accumulator) error {
 	var columnVars []interface{}
@@ -252,7 +253,8 @@ func (p *Genericdb) accRow(meas_name string, row scanner, acc telegraf.Accumulat
 	}
 
 	var tagAddress string
-	tagAddress, err = p.SanitizedAddress()
+	//tagAddress, err = p.SanitizedAddress()
+  tagAddress, err = p.Address
 	if err != nil {
 		return err
 	}
