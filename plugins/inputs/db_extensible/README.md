@@ -1,7 +1,7 @@
-# PostgreSQL plugin
+# DB Extensible plugin
 
-This postgresql plugin provides metrics for your postgres database. It has been
-designed to parse ithe sql queries in the plugin section of your telegraf.conf.
+This plugin provides metrics for your postgres or mysql database. It has been
+designed to parse the sql queries in the plugin section of your telegraf.conf.
 
 For now only two queries are specified and it's up to you to add more; some per
 query parameters have been added :
@@ -9,11 +9,11 @@ query parameters have been added :
 * The SQl query itself
 * The minimum version supported (here in numeric display visible in pg_settings)
 * A boolean to define if the query have to be run against some specific
-* variables (defined in the databaes variable of the plugin section)
+* variables (defined in the databases variable of the plugin section)
 * The list of the column that have to be defined has tags
 
 ```
-[[inputs.postgresql_extensible]]
+[[inputs.db]]
   # specify address via a url matching:
   # postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=...
   # or a simple string:
@@ -30,6 +30,14 @@ query parameters have been added :
   # databases are gathered.
   # databases = ["app_production", "testing"]
   #
+  # outputaddress = "db01"
+  ## A custom name for the database that will be used as the "server" tag in the
+  ## measurement output. If not specified, a default one generated from
+  ## the connection address is used.
+  #
+  ## Define the database type
+  ## Value can be "postgres", "mysql"
+  dbtype = "postgres"
   # Define the toml config where the sql queries are stored
   # New queries can be added, if the withdbname is set to true and there is no
   # databases defined in the 'databases field', the sql query is ended by a 'is
