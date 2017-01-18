@@ -256,9 +256,9 @@ func (p *Genericdb) accRow(meas_name string, row scanner, acc telegraf.Accumulat
 	//tagAddress, err = p.SanitizedAddress()
   tagAddress= p.Address
 	/*if err != nil {
-		return err*/
+		return err
 	}
-
+*/
 	// Process the additional tags
 
 	tags := map[string]string{}
