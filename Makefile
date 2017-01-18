@@ -32,9 +32,6 @@ build-for-docker:
 package:
 	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all --upload
 
-package-wavefront:
-	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all
-
 # Get dependencies and use gdm to checkout changesets
 prepare:
 	go get github.com/sparrc/gdm
