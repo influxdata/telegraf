@@ -40,15 +40,14 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		return err
 	}
 	result_repl := &ReplSetStatus{}
-	err = s.Session.DB("admin").Run(bson.D{
+	// ignore error because it simply indicates that the db is not a member
+	// in a replica set, which is fine.
+	_ = s.Session.DB("admin").Run(bson.D{
 		{
 			Name:  "replSetGetStatus",
 			Value: 1,
 		},
 	}, result_repl)
-	if err != nil {
-		log.Println("E! Not gathering replica set status, member not in replica set (" + err.Error() + ")")
-	}
 
 	jumbo_chunks, _ := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
 

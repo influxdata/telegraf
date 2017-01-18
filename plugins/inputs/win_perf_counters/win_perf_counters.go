@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/lxn/win"
 )
 
 var sampleConfig string = `
@@ -103,8 +102,8 @@ type item struct {
 	instance      string
 	measurement   string
 	include_total bool
-	handle        win.PDH_HQUERY
-	counterHandle win.PDH_HCOUNTER
+	handle        PDH_HQUERY
+	counterHandle PDH_HCOUNTER
 }
 
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
@@ -113,14 +112,10 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName string, counter string, instance string,
 	measurement string, include_total bool) {
 
-	var handle win.PDH_HQUERY
-	var counterHandle win.PDH_HCOUNTER
-	ret := win.PdhOpenQuery(0, 0, &handle)
-	if m.PreVistaSupport {
-		ret = win.PdhAddCounter(handle, query, 0, &counterHandle)
-	} else {
-		ret = win.PdhAddEnglishCounter(handle, query, 0, &counterHandle)
-	}
+	var handle PDH_HQUERY
+	var counterHandle PDH_HCOUNTER
+	ret := PdhOpenQuery(0, 0, &handle)
+	ret = PdhAddCounter(handle, query, 0, &counterHandle)
 	_ = ret
 
 	temp := &item{query, objectName, counter, instance, measurement,
@@ -135,14 +130,14 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 }
 
 func (m *Win_PerfCounters) InvalidObject(exists uint32, query string, PerfObject perfobject, instance string, counter string) error {
-	if exists == 3221228472 { // win.PDH_CSTATUS_NO_OBJECT
+	if exists == 3221228472 { // PDH_CSTATUS_NO_OBJECT
 		if PerfObject.FailOnMissing {
 			err := errors.New("Performance object does not exist")
 			return err
 		} else {
 			fmt.Printf("Performance Object '%s' does not exist in query: %s\n", PerfObject.ObjectName, query)
 		}
-	} else if exists == 3221228473 { //win.PDH_CSTATUS_NO_COUNTER
+	} else if exists == 3221228473 { // PDH_CSTATUS_NO_COUNTER
 
 		if PerfObject.FailOnMissing {
 			err := errors.New("Counter in Performance object does not exist")
@@ -150,7 +145,7 @@ func (m *Win_PerfCounters) InvalidObject(exists uint32, query string, PerfObject
 		} else {
 			fmt.Printf("Counter '%s' does not exist in query: %s\n", counter, query)
 		}
-	} else if exists == 2147485649 { //win.PDH_CSTATUS_NO_INSTANCE
+	} else if exists == 2147485649 { // PDH_CSTATUS_NO_INSTANCE
 		if PerfObject.FailOnMissing {
 			err := errors.New("Instance in Performance object does not exist")
 			return err
@@ -193,9 +188,9 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						query = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					var exists uint32 = win.PdhValidatePath(query)
+					var exists uint32 = PdhValidatePath(query)
 
-					if exists == win.ERROR_SUCCESS {
+					if exists == ERROR_SUCCESS {
 						if m.PrintValid {
 							fmt.Printf("Valid: %s\n", query)
 						}
@@ -222,7 +217,7 @@ func (m *Win_PerfCounters) Cleanup(metrics *itemList) {
 	// Cleanup
 
 	for _, metric := range metrics.items {
-		ret := win.PdhCloseQuery(metric.handle)
+		ret := PdhCloseQuery(metric.handle)
 		_ = ret
 	}
 }
@@ -231,7 +226,7 @@ func (m *Win_PerfCounters) CleanupTestMode() {
 	// Cleanup for the testmode.
 
 	for _, metric := range gItemList {
-		ret := win.PdhCloseQuery(metric.handle)
+		ret := PdhCloseQuery(metric.handle)
 		_ = ret
 	}
 }
@@ -260,26 +255,26 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	var bufSize uint32
 	var bufCount uint32
-	var size uint32 = uint32(unsafe.Sizeof(win.PDH_FMT_COUNTERVALUE_ITEM_DOUBLE{}))
-	var emptyBuf [1]win.PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
+	var size uint32 = uint32(unsafe.Sizeof(PDH_FMT_COUNTERVALUE_ITEM_DOUBLE{}))
+	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
 
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range gItemList {
 		// collect
-		ret := win.PdhCollectQueryData(metric.handle)
-		if ret == win.ERROR_SUCCESS {
-			ret = win.PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
+		ret := PdhCollectQueryData(metric.handle)
+		if ret == ERROR_SUCCESS {
+			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
 				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
-			if ret == win.PDH_MORE_DATA {
-				filledBuf := make([]win.PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
+			if ret == PDH_MORE_DATA {
+				filledBuf := make([]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
 				if len(filledBuf) == 0 {
 					continue
 				}
-				ret = win.PdhGetFormattedCounterArrayDouble(metric.counterHandle,
+				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle,
 					&bufSize, &bufCount, &filledBuf[0])
 				for i := 0; i < int(bufCount); i++ {
 					c := filledBuf[i]
-					var s string = win.UTF16PtrToString(c.SzName)
+					var s string = UTF16PtrToString(c.SzName)
 
 					var add bool
 

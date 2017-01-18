@@ -25,59 +25,19 @@ new plugins.
 
 ## Installation:
 
-### Linux deb and rpm Packages:
+You can either download the binaries directly from the
+[downloads](https://www.influxdata.com/downloads) page.
 
-Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.1_amd64.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1.x86_64.rpm
-
-Latest (arm):
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.0.1_armhf.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1.armhf.rpm
-
-##### Package Instructions:
-
-* Telegraf binary is installed in `/usr/bin/telegraf`
-* Telegraf daemon configuration file is in `/etc/telegraf/telegraf.conf`
-* On sysv systems, the telegraf daemon can be controlled via
-`service telegraf [action]`
-* On systemd systems (such as Ubuntu 15+), the telegraf daemon can be
-controlled via `systemctl [action] telegraf`
-
-### yum/apt Repositories:
-
-There is a yum/apt repo available for the whole InfluxData stack, see
-[here](https://docs.influxdata.com/influxdb/latest/introduction/installation/#installation)
-for instructions on setting up the repo. Once it is configured, you will be able
-to use this repo to install & update telegraf.
-
-### Linux tarballs:
-
-Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_amd64.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_i386.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_linux_armhf.tar.gz
+A few alternate installs are available here as well:
 
 ### FreeBSD tarball:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_freebsd_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-VERSION_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
 Ansible role: https://github.com/rossmcdonald/telegraf
-
-### OSX via Homebrew:
-
-```
-brew update
-brew install telegraf
-```
-
-### Windows Binaries (EXPERIMENTAL)
-
-Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.0.1_windows_amd64.zip
 
 ### From Source:
 
@@ -99,31 +59,31 @@ See usage with:
 telegraf --help
 ```
 
-### Generate a telegraf config file:
+#### Generate a telegraf config file:
 
 ```
 telegraf config > telegraf.conf
 ```
 
-### Generate config with only cpu input & influxdb output plugins defined
+#### Generate config with only cpu input & influxdb output plugins defined
 
 ```
 telegraf --input-filter cpu --output-filter influxdb config
 ```
 
-### Run a single telegraf collection, outputing metrics to stdout
+#### Run a single telegraf collection, outputing metrics to stdout
 
 ```
 telegraf --config telegraf.conf -test
 ```
 
-### Run telegraf with all plugins defined in config file
+#### Run telegraf with all plugins defined in config file
 
 ```
 telegraf --config telegraf.conf
 ```
 
-### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
+#### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
 
 ```
 telegraf --config telegraf.conf -input-filter cpu:mem -output-filter influxdb
@@ -159,6 +119,7 @@ configuration options.
 * [hddtemp](./plugins/inputs/hddtemp)
 * [http_response](./plugins/inputs/http_response)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
+* [internal](./plugins/inputs/internal)
 * [influxdb](./plugins/inputs/influxdb)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
@@ -241,7 +202,7 @@ Telegraf can also collect metrics via the following service plugins:
 
 * [influxdb](./plugins/outputs/influxdb)
 * [amon](./plugins/outputs/amon)
-* [amqp](./plugins/outputs/amqp)
+* [amqp](./plugins/outputs/amqp) (rabbitmq)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [datadog](./plugins/outputs/datadog)

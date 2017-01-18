@@ -27,47 +27,53 @@ func BenchmarkAddMetrics(b *testing.B) {
 
 func TestNewBufferBasicFuncs(t *testing.T) {
 	b := NewBuffer(10)
+	MetricsDropped.Set(0)
+	MetricsWritten.Set(0)
 
 	assert.True(t, b.IsEmpty())
 	assert.Zero(t, b.Len())
-	assert.Zero(t, b.Drops())
-	assert.Zero(t, b.Total())
+	assert.Zero(t, MetricsDropped.Get())
+	assert.Zero(t, MetricsWritten.Get())
 
 	m := testutil.TestMetric(1, "mymetric")
 	b.Add(m)
 	assert.False(t, b.IsEmpty())
 	assert.Equal(t, b.Len(), 1)
-	assert.Equal(t, b.Drops(), 0)
-	assert.Equal(t, b.Total(), 1)
+	assert.Equal(t, int64(0), MetricsDropped.Get())
+	assert.Equal(t, int64(1), MetricsWritten.Get())
 
 	b.Add(metricList...)
 	assert.False(t, b.IsEmpty())
 	assert.Equal(t, b.Len(), 6)
-	assert.Equal(t, b.Drops(), 0)
-	assert.Equal(t, b.Total(), 6)
+	assert.Equal(t, int64(0), MetricsDropped.Get())
+	assert.Equal(t, int64(6), MetricsWritten.Get())
 }
 
 func TestDroppingMetrics(t *testing.T) {
 	b := NewBuffer(10)
+	MetricsDropped.Set(0)
+	MetricsWritten.Set(0)
 
 	// Add up to the size of the buffer
 	b.Add(metricList...)
 	b.Add(metricList...)
 	assert.False(t, b.IsEmpty())
 	assert.Equal(t, b.Len(), 10)
-	assert.Equal(t, b.Drops(), 0)
-	assert.Equal(t, b.Total(), 10)
+	assert.Equal(t, int64(0), MetricsDropped.Get())
+	assert.Equal(t, int64(10), MetricsWritten.Get())
 
 	// Add 5 more and verify they were dropped
 	b.Add(metricList...)
 	assert.False(t, b.IsEmpty())
 	assert.Equal(t, b.Len(), 10)
-	assert.Equal(t, b.Drops(), 5)
-	assert.Equal(t, b.Total(), 15)
+	assert.Equal(t, int64(5), MetricsDropped.Get())
+	assert.Equal(t, int64(15), MetricsWritten.Get())
 }
 
 func TestGettingBatches(t *testing.T) {
 	b := NewBuffer(20)
+	MetricsDropped.Set(0)
+	MetricsWritten.Set(0)
 
 	// Verify that the buffer returned is smaller than requested when there are
 	// not as many items as requested.
@@ -78,8 +84,8 @@ func TestGettingBatches(t *testing.T) {
 	// Verify that the buffer is now empty
 	assert.True(t, b.IsEmpty())
 	assert.Zero(t, b.Len())
-	assert.Zero(t, b.Drops())
-	assert.Equal(t, b.Total(), 5)
+	assert.Zero(t, MetricsDropped.Get())
+	assert.Equal(t, int64(5), MetricsWritten.Get())
 
 	// Verify that the buffer returned is not more than the size requested
 	b.Add(metricList...)
@@ -89,6 +95,6 @@ func TestGettingBatches(t *testing.T) {
 	// Verify that buffer is not empty
 	assert.False(t, b.IsEmpty())
 	assert.Equal(t, b.Len(), 2)
-	assert.Equal(t, b.Drops(), 0)
-	assert.Equal(t, b.Total(), 10)
+	assert.Equal(t, int64(0), MetricsDropped.Get())
+	assert.Equal(t, int64(10), MetricsWritten.Get())
 }

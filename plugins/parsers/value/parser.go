@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 type ValueParser struct {
@@ -46,7 +47,7 @@ func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	fields := map[string]interface{}{"value": value}
-	metric, err := telegraf.NewMetric(v.MetricName, v.DefaultTags,
+	metric, err := metric.New(v.MetricName, v.DefaultTags,
 		fields, time.Now().UTC())
 	if err != nil {
 		return nil, err

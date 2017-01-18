@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -78,8 +79,14 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 				"file": fileName,
 			}
 			fields := map[string]interface{}{
-				"exists":     int64(1),
-				"size_bytes": fileInfo.Size(),
+				"exists": int64(1),
+			}
+
+			if fileInfo == nil {
+				log.Printf("E! Unable to get info for file [%s], possible permissions issue",
+					fileName)
+			} else {
+				fields["size_bytes"] = fileInfo.Size()
 			}
 
 			if f.Md5 {

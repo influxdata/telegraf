@@ -23,7 +23,9 @@ type Mysql struct {
 	PerfEventsStatementsTimeLimit       int64    `toml:"perf_events_statemetns_time_limit"`
 	TableSchemaDatabases                []string `toml:"table_schema_databases"`
 	GatherProcessList                   bool     `toml:"gather_process_list"`
+	GatherUserStatistics                bool     `toml:"gather_user_statistics"`
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
+	GatherInnoDBMetrics                 bool     `toml:"gather_innodb_metrics"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
@@ -41,8 +43,8 @@ var sampleConfig = `
   ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   ##  e.g.
-  ##    db_user:passwd@tcp(127.0.0.1:3306)/?tls=false
-  ##    db_user@tcp(127.0.0.1:3306)/?tls=false
+  ##    servers = ["user:passwd@tcp(127.0.0.1:3306)/?tls=false"]
+  ##    servers = ["user@tcp(127.0.0.1:3306)/?tls=false"]
   #
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
@@ -60,8 +62,14 @@ var sampleConfig = `
   ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
   gather_process_list                       = true
   #
+  ## gather thread state counts from INFORMATION_SCHEMA.USER_STATISTICS
+  gather_user_statistics                    = true
+  #
   ## gather auto_increment columns and max values from information schema
   gather_info_schema_auto_inc               = true
+  #
+  ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
+  gather_innodb_metrics                     = true
   #
   ## gather metrics from SHOW SLAVE STATUS command output
   gather_slave_status                       = true
@@ -415,6 +423,10 @@ const (
         WHERE ID != connection_id()
         GROUP BY command,state
         ORDER BY null`
+	infoSchemaUserStatisticsQuery = `
+        SELECT *,count(*)
+        FROM information_schema.user_statistics
+	GROUP BY user`
 	infoSchemaAutoIncQuery = `
         SELECT table_schema, table_name, column_name, auto_increment,
           CAST(pow(2, case data_type
@@ -427,6 +439,11 @@ const (
           FROM information_schema.tables t
           JOIN information_schema.columns c USING (table_schema,table_name)
           WHERE c.extra = 'auto_increment' AND t.auto_increment IS NOT NULL
+    `
+	innoDBMetricsQuery = `
+        SELECT NAME, COUNT
+        FROM information_schema.INNODB_METRICS
+        WHERE status='enabled'
     `
 	perfTableIOWaitsQuery = `
         SELECT OBJECT_SCHEMA, OBJECT_NAME, COUNT_FETCH, COUNT_INSERT, COUNT_UPDATE, COUNT_DELETE,
@@ -530,7 +547,6 @@ const (
 			table_name
 			FROM information_schema.tables
 		WHERE table_schema = 'performance_schema' AND table_name = ?
-
 	`
 )
 
@@ -582,6 +598,13 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		}
 	}
 
+	if m.GatherUserStatistics {
+		err = m.GatherUserStatisticsStatuses(db, serv, acc)
+		if err != nil {
+			return err
+		}
+	}
+
 	if m.GatherSlaveStatus {
 		err = m.gatherSlaveStatuses(db, serv, acc)
 		if err != nil {
@@ -591,6 +614,13 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	if m.GatherInfoSchemaAutoInc {
 		err = m.gatherInfoSchemaAutoIncStatuses(db, serv, acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	if m.GatherInnoDBMetrics {
+		err = m.gatherInnoDBMetrics(db, serv, acc)
 		if err != nil {
 			return err
 		}
@@ -669,6 +699,11 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			return err
 		}
 		key = strings.ToLower(key)
+		// parse mysql version and put into field and tag
+		if strings.Contains(key, "version") {
+			fields[key] = string(val)
+			tags[key] = string(val)
+		}
 		// parse value, if it is numeric then save, otherwise ignore
 		if floatVal, ok := parseValue(val); ok {
 			fields[key] = floatVal
@@ -828,6 +863,13 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			}
 
 			fields["queries"] = i
+		case "Questions":
+			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
+			if err != nil {
+				return err
+			}
+
+			fields["questions"] = i
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
@@ -847,6 +889,12 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 				return err
 			}
 			fields["syncs"] = i
+		case "Uptime":
+			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
+			if err != nil {
+				return err
+			}
+			fields["uptime"] = i
 		}
 	}
 	// Send any remaining fields
@@ -874,6 +922,74 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			}
 			fields["connections"] = connections
 			acc.AddFields("mysql_users", fields, tags)
+		}
+	}
+
+	// gather connection metrics from user_statistics for each user
+	if m.GatherUserStatistics {
+		conn_rows, err := db.Query("select user, total_connections, concurrent_connections, connected_time, busy_time, cpu_time, bytes_received, bytes_sent, binlog_bytes_written, rows_fetched, rows_updated, table_rows_read, select_commands, update_commands, other_commands, commit_transactions, rollback_transactions, denied_connections, lost_connections, access_denied, empty_queries, total_ssl_connections FROM INFORMATION_SCHEMA.USER_STATISTICS GROUP BY user")
+
+		for conn_rows.Next() {
+			var user string
+			var total_connections int64
+			var concurrent_connections int64
+			var connected_time int64
+			var busy_time int64
+			var cpu_time int64
+			var bytes_received int64
+			var bytes_sent int64
+			var binlog_bytes_written int64
+			var rows_fetched int64
+			var rows_updated int64
+			var table_rows_read int64
+			var select_commands int64
+			var update_commands int64
+			var other_commands int64
+			var commit_transactions int64
+			var rollback_transactions int64
+			var denied_connections int64
+			var lost_connections int64
+			var access_denied int64
+			var empty_queries int64
+			var total_ssl_connections int64
+
+			err = conn_rows.Scan(&user, &total_connections, &concurrent_connections,
+				&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+				&rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
+				&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+				&empty_queries, &total_ssl_connections,
+			)
+
+			if err != nil {
+				return err
+			}
+
+			tags := map[string]string{"server": servtag, "user": user}
+			fields := map[string]interface{}{
+				"total_connections":      total_connections,
+				"concurrent_connections": concurrent_connections,
+				"connected_time":         connected_time,
+				"busy_time":              busy_time,
+				"cpu_time":               cpu_time,
+				"bytes_received":         bytes_received,
+				"bytes_sent":             bytes_sent,
+				"binlog_bytes_written":   binlog_bytes_written,
+				"rows_fetched":           rows_fetched,
+				"rows_updated":           rows_updated,
+				"table_rows_read":        table_rows_read,
+				"select_commands":        select_commands,
+				"update_commands":        update_commands,
+				"other_commands":         other_commands,
+				"commit_transactions":    commit_transactions,
+				"rollback_transactions":  rollback_transactions,
+				"denied_connections":     denied_connections,
+				"lost_connections":       lost_connections,
+				"access_denied":          access_denied,
+				"empty_queries":          empty_queries,
+				"total_ssl_connections":  total_ssl_connections,
+			}
+
+			acc.AddFields("mysql_user_stats", fields, tags)
 		}
 	}
 
@@ -922,6 +1038,83 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 		fields[newNamespace("threads", s)] = c
 	}
 	acc.AddFields("mysql_info_schema", fields, tags)
+	return nil
+}
+
+// GatherUserStatistics can be used to collect metrics on each running command
+// and its state with its running count
+func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	// run query
+	rows, err := db.Query(infoSchemaUserStatisticsQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var (
+		user                   string
+		total_connections      int64
+		concurrent_connections int64
+		connected_time         int64
+		busy_time              int64
+		cpu_time               int64
+		bytes_received         int64
+		bytes_sent             int64
+		binlog_bytes_written   int64
+		rows_fetched           int64
+		rows_updated           int64
+		table_rows_read        int64
+		select_commands        int64
+		update_commands        int64
+		other_commands         int64
+		commit_transactions    int64
+		rollback_transactions  int64
+		denied_connections     int64
+		lost_connections       int64
+		access_denied          int64
+		empty_queries          int64
+		total_ssl_connections  int64
+		count                  uint32
+	)
+
+	servtag := getDSNTag(serv)
+	for rows.Next() {
+		err = rows.Scan(&user, &total_connections, &concurrent_connections,
+			&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+			&rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
+			&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+			&empty_queries, &total_ssl_connections, &count,
+		)
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag, "user": user}
+		fields := map[string]interface{}{
+
+			"total_connections":      total_connections,
+			"concurrent_connections": concurrent_connections,
+			"connected_time":         connected_time,
+			"busy_time":              busy_time,
+			"cpu_time":               cpu_time,
+			"bytes_received":         bytes_received,
+			"bytes_sent":             bytes_sent,
+			"binlog_bytes_written":   binlog_bytes_written,
+			"rows_fetched":           rows_fetched,
+			"rows_updated":           rows_updated,
+			"table_rows_read":        table_rows_read,
+			"select_commands":        select_commands,
+			"update_commands":        update_commands,
+			"other_commands":         other_commands,
+			"commit_transactions":    commit_transactions,
+			"rollback_transactions":  rollback_transactions,
+			"denied_connections":     denied_connections,
+			"lost_connections":       lost_connections,
+			"access_denied":          access_denied,
+			"empty_queries":          empty_queries,
+			"total_ssl_connections":  total_ssl_connections,
+		}
+		acc.AddFields("mysql_user_stats", fields, tags)
+	}
 	return nil
 }
 
@@ -1058,6 +1251,45 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 		fields["auto_increment_column_max"] = maxInt
 
 		acc.AddFields("mysql_info_schema", fields, tags)
+	}
+	return nil
+}
+
+// gatherInnoDBMetrics can be used to fetch enabled metrics from
+// information_schema.INNODB_METRICS
+func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	// run query
+	rows, err := db.Query(innoDBMetricsQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var key string
+	var val sql.RawBytes
+
+	// parse DSN and save server tag
+	servtag := getDSNTag(serv)
+	tags := map[string]string{"server": servtag}
+	fields := make(map[string]interface{})
+	for rows.Next() {
+		if err := rows.Scan(&key, &val); err != nil {
+			return err
+		}
+		key = strings.ToLower(key)
+		// parse value, if it is numeric then save, otherwise ignore
+		if floatVal, ok := parseValue(val); ok {
+			fields[key] = floatVal
+		}
+		// Send 20 fields at a time
+		if len(fields) >= 20 {
+			acc.AddFields("mysql_innodb", fields, tags)
+			fields = make(map[string]interface{})
+		}
+	}
+	// Send any remaining fields
+	if len(fields) > 0 {
+		acc.AddFields("mysql_innodb", fields, tags)
 	}
 	return nil
 }

@@ -90,7 +90,7 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 
 	if u.Scheme == "" || u.Scheme == "tcp" {
 		return o.WriteTelnet(metrics, u)
-	} else if u.Scheme == "http" {
+	} else if u.Scheme == "http" || u.Scheme == "https" {
 		return o.WriteHttp(metrics, u)
 	} else {
 		return fmt.Errorf("Unknown scheme in host parameter.")
@@ -101,6 +101,8 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 	http := openTSDBHttp{
 		Host:      u.Host,
 		Port:      o.Port,
+		Scheme:    u.Scheme,
+		User:      u.User,
 		BatchSize: o.HttpBatchSize,
 		Debug:     o.Debug,
 	}
@@ -155,6 +157,15 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 		tags := ToLineFormat(cleanTags(m.Tags()))
 
 		for fieldName, value := range m.Fields() {
+			switch value.(type) {
+			case int64:
+			case uint64:
+			case float64:
+			default:
+				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				continue
+			}
+
 			metricValue, buildError := buildValue(value)
 			if buildError != nil {
 				log.Printf("E! OpenTSDB: %s\n", buildError.Error())
