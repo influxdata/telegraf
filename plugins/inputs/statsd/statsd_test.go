@@ -3,10 +3,31 @@ package statsd
 import (
 	"errors"
 	"fmt"
+	"net"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+const (
+	testMsg = "test.tcp.msg:100|c"
+)
+
+func newTestTcpListener() (*Statsd, chan []byte) {
+	in := make(chan []byte, 1500)
+	listener := &Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      250,
+		in:                     in,
+		done:                   make(chan struct{}),
+	}
+	return listener, in
+}
 
 func NewTestStatsd() *Statsd {
 	s := Statsd{}
@@ -22,6 +43,132 @@ func NewTestStatsd() *Statsd {
 	s.MetricSeparator = "_"
 
 	return &s
+}
+
+// Test that MaxTCPConections is respected
+func TestConcurrentConns(t *testing.T) {
+	listener := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      2,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+	_, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+
+	// Connection over the limit:
+	conn, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	net.Dial("tcp", "127.0.0.1:8125")
+	buf := make([]byte, 1500)
+	n, err := conn.Read(buf)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		"Telegraf maximum concurrent TCP connections (2) reached, closing.\n"+
+			"You may want to increase max_tcp_connections in"+
+			" the Telegraf tcp listener configuration.\n",
+		string(buf[:n]))
+
+	_, err = conn.Write([]byte(testMsg))
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 10)
+	assert.Zero(t, acc.NFields())
+}
+
+// Test that MaxTCPConections is respected when max==1
+func TestConcurrentConns1(t *testing.T) {
+	listener := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      1,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+	_, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+
+	// Connection over the limit:
+	conn, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	net.Dial("tcp", "127.0.0.1:8125")
+	buf := make([]byte, 1500)
+	n, err := conn.Read(buf)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		"Telegraf maximum concurrent TCP connections (1) reached, closing.\n"+
+			"You may want to increase max_tcp_connections in"+
+			" the Telegraf tcp listener configuration.\n",
+		string(buf[:n]))
+
+	_, err = conn.Write([]byte(testMsg))
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 10)
+	assert.Zero(t, acc.NFields())
+}
+
+// Test that MaxTCPConections is respected
+func TestCloseConcurrentConns(t *testing.T) {
+	listener := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      2,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+
+	time.Sleep(time.Millisecond * 25)
+	_, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+
+	listener.Stop()
+}
+
+// benchmark how long it takes to accept & process 100,000 metrics:
+func BenchmarkTCP(b *testing.B) {
+	listener := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 250000,
+		MaxTCPConnections:      250,
+	}
+	acc := &testutil.Accumulator{Discard: true}
+
+	// send multiple messages to socket
+	for n := 0; n < b.N; n++ {
+		err := listener.Start(acc)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(time.Millisecond * 25)
+		conn, err := net.Dial("tcp", "127.0.0.1:8125")
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < 250000; i++ {
+			fmt.Fprintf(conn, testMsg)
+		}
+		// wait for 250,000 metrics to get added to accumulator
+		time.Sleep(time.Millisecond)
+		listener.Stop()
+	}
 }
 
 // Valid lines should be parsed and their values should be cached
