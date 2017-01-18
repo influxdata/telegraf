@@ -28,7 +28,6 @@ type Genericdb struct {
 	sanitizedAddress string
 	Query            []struct {
 		Sqlquery    string
-		Version     int
 		Withdbname  bool
 		Tagvalue    string
 		Measurement string
@@ -38,7 +37,6 @@ type Genericdb struct {
 
 type query []struct {
 	Sqlquery    string
-	Version     int
 	Withdbname  bool
 	Tagvalue    string
 	Measurement string
@@ -87,21 +85,18 @@ var sampleConfig = `
   ## output measurement name ("postgresql").
   #
   ## Structure :
-  ## [[inputs.postgresql_extensible.query]]
+  ## [[inputs.db_extensible.query]]
   ##   sqlquery string
-  ##   version string
   ##   withdbname boolean
   ##   tagvalue string (comma separated)
   ##   measurement string
-  [[inputs.postgresql_extensible.query]]
+  [[inputs.db_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database"
-    version=901
     withdbname=false
     tagvalue=""
     measurement=""
-  [[inputs.postgresql_extensible.query]]
+  [[inputs.db_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_bgwriter"
-    version=901
     withdbname=false
     tagvalue="postgresql.stats"
 `
@@ -124,18 +119,10 @@ func (p *Genericdb) Gather(acc telegraf.Accumulator) error {
 
 	var sql_query string
 	var query_addon string
-	var db_version int
-	var query_version string
 	var query string
 	var tag_value string
 	var meas_name string
 
-	switch {
-	case p.Dbtype == "postgres":
-		query_version = `select substring(setting from 1 for 3) as version from pg_settings where name='server_version_num'`
-	case p.Dbtype == "mysql":
-		query_version = `SHOW VARIABLES LIKE "%version%"`
-	}
 	if p.Address == "" || p.Address == "localhost" {
 		p.Address = localhost
 	}
@@ -147,12 +134,6 @@ func (p *Genericdb) Gather(acc telegraf.Accumulator) error {
 
 	defer db.Close()
 
-	// Retreiving the database version
-
-	err = db.QueryRow(query_version).Scan(&db_version)
-	if err != nil {
-		return err
-	}
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 
