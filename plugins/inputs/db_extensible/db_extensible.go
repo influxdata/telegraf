@@ -18,7 +18,7 @@ import (
 
 
 type Genericdb struct {
-	Dbtype		 string
+	Dbtype           string
 	Address          string
 	Outputaddress    string
 	Databases        []string
@@ -203,17 +203,19 @@ func (p *Genericdb) SanitizedAddress() (_ string, err error) {
 		return p.Outputaddress, nil
 	}
 	var canonicalizedAddress string
-	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
-		canonicalizedAddress, err = pq.ParseURL(p.Address)
-		if err != nil {
-			return p.sanitizedAddress, err
-		}
-	} else {
-		canonicalizedAddress = p.Address
-	}
-	p.sanitizedAddress = KVMatcher.ReplaceAllString(canonicalizedAddress, "")
+  if p.Dbtype == "postgres" {
+  	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
+  		canonicalizedAddress, err = pq.ParseURL(p.Address)
+  		if err != nil {
+  			return p.sanitizedAddress, err
+  		}
+  	} else {
+  		canonicalizedAddress = p.Address
+  	}
+  	p.sanitizedAddress = KVMatcher.ReplaceAllString(canonicalizedAddress, "")
 
-	return p.sanitizedAddress, err
+  	return p.sanitizedAddress, err
+  }
 }
 
 func (p *Genericdb) accRow(meas_name string, row scanner, acc telegraf.Accumulator) error {
