@@ -134,8 +134,8 @@ func (p *Genericdb) Gather(acc telegraf.Accumulator) error {
 
 	defer db.Close()
 
-	// We loop in order to process each query
 
+	// We loop in order to process each query
 
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
@@ -158,30 +158,34 @@ func (p *Genericdb) Gather(acc telegraf.Accumulator) error {
 		}
 		sql_query += query_addon
 
-			defer rows.Close()
+		rows, err := db.Query(sql_query)
+		if err != nil {
+			return err
+		}
 
-			// grab the column information from the result
-			p.OrderedColumns, err = rows.Columns()
+		defer rows.Close()
+
+		// grab the column information from the result
+		p.OrderedColumns, err = rows.Columns()
+		if err != nil {
+			return err
+		} else {
+			for _, v := range p.OrderedColumns {
+				p.AllColumns = append(p.AllColumns, v)
+			}
+		}
+		p.AdditionalTags = nil
+		if tag_value != "" {
+			tag_list := strings.Split(tag_value, ",")
+			for t := range tag_list {
+				p.AdditionalTags = append(p.AdditionalTags, tag_list[t])
+			}
+		}
+
+		for rows.Next() {
+			err = p.accRow(meas_name, rows, acc)
 			if err != nil {
 				return err
-			} else {
-				for _, v := range p.OrderedColumns {
-					p.AllColumns = append(p.AllColumns, v)
-				}
-			}
-			p.AdditionalTags = nil
-			if tag_value != "" {
-				tag_list := strings.Split(tag_value, ",")
-				for t := range tag_list {
-					p.AdditionalTags = append(p.AdditionalTags, tag_list[t])
-				}
-			}
-
-			for rows.Next() {
-				err = p.accRow(meas_name, rows, acc)
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}
