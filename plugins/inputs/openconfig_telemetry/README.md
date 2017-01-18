@@ -1,8 +1,7 @@
 # OpenConfig Telemetry Input Plugin
 
-Openconfig Telemetry data.
-The plugin expects messages in the
-[Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+The plugin reads OpenConfig telemetry data from listed sensors. Refer to
+[openconfig.net](http://openconfig.net/) for more details.
 
 ### Configuration:
 
@@ -11,16 +10,23 @@ The plugin expects messages in the
 [[inputs.openconfig_telemetry]]
   server = ["localhost:1883"]
 
-  ## Frequency to get data in seconds
-  sampleFrequency = 1
+  ## Frequency to get data in milliseconds
+  sampleFrequency = 2000
 
   ## Sensors to subscribe for
   ## A identifier for each sensor can be provided in path by separating with space
   ## Else sensor path will be used as identifier
   sensors = [
-   "/oc/firewall/usage",
-   "interfaces /oc/interfaces/",
+   "/interfaces/",
+   "collection /components/ /lldp",
   ]
+
+  ## x509 Certificate to use with TLS connection. If it is not provided, an insecure
+  ## channel will be opened with server
+  certFile = "/path/to/x509_cert_file"
+
+  ## Option to debug incoming protobuf encoded data
+  debug = true
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
@@ -31,4 +37,5 @@ The plugin expects messages in the
 
 ### Tags:
 
-- All measurements are tagged with the prefix data
+- All measurements are tagged appropriately using the identifier information
+  in incoming data

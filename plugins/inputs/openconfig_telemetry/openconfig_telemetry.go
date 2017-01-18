@@ -46,8 +46,8 @@ var sampleConfig = `
   ## A single subscription will be created with all these sensors and data will 
   ## be saved to measurement with this identifier name
   sensors = [
-   "/oc/firewall/usage",
-   "interfaces /oc/interfaces/ /oc/lldp/",
+   "/interfaces/",
+   "collection /components/ /lldp",
   ]
 
   ## x509 Certificate to use with TLS connection. If it is not provided, an insecure 
