@@ -32,6 +32,7 @@ var sanitizedChars = strings.NewReplacer(
 	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
 	">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
 )
+
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
 var sanitizedRegex, _ = regexp.Compile("[^a-zA-Z\\d_.-]")
 
@@ -116,7 +117,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 
 	for _, m := range metrics {
 		for _, metric := range buildMetrics(m, w) {
-			messageLine := fmt.Sprintf("%s %s %v %s\n",	metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
+			messageLine := fmt.Sprintf("%s %s %v %s\n", metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
 			log.Printf("D! Output [wavefront] %s", messageLine)
 			_, err := connection.Write([]byte(messageLine))
 			if err != nil {
@@ -196,7 +197,7 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 		}
 
 		metric := &MetricLine{
-			Metric: name,
+			Metric:    name,
 			Timestamp: m.UnixNano() / 1000000000,
 		}
 		metricValue, buildError := buildValue(value, metric.Metric)
@@ -255,7 +256,7 @@ func init() {
 	outputs.Add("wavefront", func() telegraf.Output {
 		return &Wavefront{
 			MetricSeparator: ".",
-			ConvertPaths: true,
+			ConvertPaths:    true,
 		}
 	})
 }

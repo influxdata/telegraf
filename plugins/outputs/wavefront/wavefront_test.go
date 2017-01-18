@@ -1,23 +1,23 @@
 package wavefront
 
 import (
-	"reflect"
-	"testing"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
+	"reflect"
 	"strings"
+	"testing"
 	"time"
 )
 
 func defaultWavefront() *Wavefront {
 	return &Wavefront{
-		Host: "localhost",
-		Port: 2878,
-		Prefix: "testWF.",
-		SimpleFields: false,
+		Host:            "localhost",
+		Port:            2878,
+		Prefix:          "testWF.",
+		SimpleFields:    false,
 		MetricSeparator: ".",
-		ConvertPaths: true,
-		UseRegex: false,
+		ConvertPaths:    true,
+		UseRegex:        false,
 	}
 }
 
@@ -87,7 +87,7 @@ func TestBuildMetricsNoSimpleFields(t *testing.T) {
 		ml := buildMetrics(mt.metric, w)
 		for i, line := range ml {
 			if mt.metricLines[i].Metric != line.Metric || mt.metricLines[i].Value != line.Value {
-				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric + " " + mt.metricLines[i].Value, line.Metric + " " + line.Value)
+				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric+" "+mt.metricLines[i].Value, line.Metric+" "+line.Value)
 			}
 		}
 	}
@@ -127,7 +127,7 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 		ml := buildMetrics(mt.metric, w)
 		for i, line := range ml {
 			if mt.metricLines[i].Metric != line.Metric || mt.metricLines[i].Value != line.Value {
-				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric + " " + mt.metricLines[i].Value, line.Metric + " " + line.Value)
+				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric+" "+mt.metricLines[i].Value, line.Metric+" "+line.Value)
 			}
 		}
 	}
@@ -208,4 +208,3 @@ func TestBuildTags(t *testing.T) {
 // 	err = w.Write(metrics)
 // 	require.NoError(t, err)
 // }
-
