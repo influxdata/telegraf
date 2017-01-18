@@ -11,8 +11,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/lib/pq"
-	"github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 
