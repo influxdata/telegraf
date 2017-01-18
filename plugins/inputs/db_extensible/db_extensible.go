@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"regexp"
+	_ "regexp"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -254,9 +254,9 @@ func (p *Genericdb) accRow(meas_name string, row scanner, acc telegraf.Accumulat
 
 	var tagAddress string
 	//tagAddress, err = p.SanitizedAddress()
-  tagAddress, err = p.Address
-	if err != nil {
-		return err
+  tagAddress= p.Address
+	/*if err != nil {
+		return err*/
 	}
 
 	// Process the additional tags
