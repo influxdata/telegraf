@@ -119,7 +119,7 @@ func (p *Genericdb) Gather(acc telegraf.Accumulator) error {
 
 	var sql_query string
 	var query_addon string
-	var query string
+	//var query string
 	var tag_value string
 	var meas_name string
 
