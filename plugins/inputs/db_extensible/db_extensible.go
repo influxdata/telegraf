@@ -135,7 +135,7 @@ func (p *Genericdb) Gather(acc telegraf.Accumulator) error {
 	defer db.Close()
 
 	// We loop in order to process each query
-	// Query is not run if Database version does not match the query version.
+
 
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
@@ -157,12 +157,6 @@ func (p *Genericdb) Gather(acc telegraf.Accumulator) error {
 			query_addon = ""
 		}
 		sql_query += query_addon
-
-		if p.Query[i].Version <= db_version {
-			rows, err := db.Query(sql_query)
-			if err != nil {
-				return err
-			}
 
 			defer rows.Close()
 
