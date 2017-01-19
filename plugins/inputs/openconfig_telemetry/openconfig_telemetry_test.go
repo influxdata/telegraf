@@ -22,26 +22,26 @@ var cfg = &OpenConfigTelemetry{
 
 var data = &telemetry.OpenConfigData{
 	Path: "/sensor",
-	Kv:   []*telemetry.KeyValue{{Key: "/sensor[tag='tagValue']/intKey", Value: &telemetry.KeyValue_IntValue{10}}},
+	Kv:   []*telemetry.KeyValue{{Key: "/sensor[tag='tagValue']/intKey", Value: &telemetry.KeyValue_IntValue{IntValue: 10}}},
 }
 
 var data_with_prefix = &telemetry.OpenConfigData{
 	Path: "/sensor_with_prefix",
-	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{"/sensor/prefix/"}},
-		{Key: "intKey", Value: &telemetry.KeyValue_IntValue{10}}},
+	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{StrValue: "/sensor/prefix/"}},
+		{Key: "intKey", Value: &telemetry.KeyValue_IntValue{IntValue: 10}}},
 }
 
 var data_with_multiple_tags = &telemetry.OpenConfigData{
 	Path: "/sensor_with_multiple_tags",
-	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{"/sensor/prefix/"}},
-		{Key: "tagKey[tag='tagValue']/boolKey", Value: &telemetry.KeyValue_BoolValue{false}},
-		{Key: "intKey", Value: &telemetry.KeyValue_IntValue{10}}},
+	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{StrValue: "/sensor/prefix/"}},
+		{Key: "tagKey[tag='tagValue']/boolKey", Value: &telemetry.KeyValue_BoolValue{BoolValue: false}},
+		{Key: "intKey", Value: &telemetry.KeyValue_IntValue{IntValue: 10}}},
 }
 
 var data_with_string_values = &telemetry.OpenConfigData{
 	Path: "/sensor_with_string_values",
-	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{"/sensor/prefix/"}},
-		{Key: "strKey[tag='tagValue']/strValue", Value: &telemetry.KeyValue_StrValue{"10"}}},
+	Kv: []*telemetry.KeyValue{{Key: "__prefix__", Value: &telemetry.KeyValue_StrValue{StrValue: "/sensor/prefix/"}},
+		{Key: "strKey[tag='tagValue']/strValue", Value: &telemetry.KeyValue_StrValue{StrValue: "10"}}},
 }
 
 type openConfigTelemetryServer struct {
