@@ -16,6 +16,7 @@ github.com/docker/go-units 5d2041e26a699eaca682e2ea41c8f891e1060444
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/queue ded5959c0d4e360646dc9e9908cff48666781367
 github.com/eclipse/paho.mqtt.golang 0f7a459f04f13a41b7ed752d47944528d4bf9a86
+github.com/fatih/structs a720dfa8df582c51dee1b36feabb906bde1588bd
 github.com/go-sql-driver/mysql 1fca743146605a172a266e1654e01e5cd5669bee
 github.com/gobwas/glob 49571a1557cd20e6a2410adc6421f85b66c730b5
 github.com/golang/protobuf 552c7b9542c194800fd493123b3798ef0a832032
@@ -33,6 +34,8 @@ github.com/kardianos/osext 29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc
 github.com/kardianos/service 5e335590050d6d00f3aa270217d288dda1c94d0a
 github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
+github.com/kolo/xmlrpc 0826b98aaa29c0766956cb40d45cf7482a597671
+github.com/lib/pq e182dc4027e2ded4b19396d638610f2653295f36
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
 github.com/miekg/dns cce6c130cdb92c752850880fd285bea1d64439dd
 github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
