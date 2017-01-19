@@ -408,6 +408,16 @@ func (h *JBoss) getServersOnHost(
 ) error {
 	var wg sync.WaitGroup
 
+	for _, host := range hosts {
+		fields := make(map[string]interface{})
+		fields["name"] = host
+		tags := map[string]string{
+			"type":   "host",
+		}
+	
+		acc.AddFields("jboss_domain", fields, tags)
+	}
+	
 	errorChannel := make(chan error, len(hosts))
 
 	for _, host := range hosts {
@@ -439,6 +449,15 @@ func (h *JBoss) getServersOnHost(
 				}
 //				fmt.Println(servers)
 				for _, server := range servers.Result {
+					fields := make(map[string]interface{})
+					fields["name"] = server
+					tags := map[string]string{
+						"host":   host,
+						"type":   "server",
+					}
+	
+					acc.AddFields("jboss_domain", fields, tags)
+					
 					h.getDatasourceStatistics(acc, serverURL, host, server)
 					h.getJVMStatistics(acc, serverURL, host, server)
 					h.getServerDeploymentStatistics(acc, serverURL, host, server)
@@ -651,12 +670,23 @@ func (h *JBoss) getServerDeploymentStatistics(
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	} 
 	
-		deployments := HostResponse{}
-		if err = json.Unmarshal(out, &deployments); err != nil {
-			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
-		}
+	deployments := HostResponse{}
+	if err = json.Unmarshal(out, &deployments); err != nil {
+		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+	}
 //		fmt.Println(server)
 
+	for _, value := range deployments.Result {
+		fields := make(map[string]interface{})
+		fields["name"] = value
+		tags := map[string]string{
+			"host":   host,
+			"server": serverName,
+			"type":   "deployment",
+			}
+	
+			acc.AddFields("jboss_domain", fields, tags)
+	}
 	
 	errorChannel := make(chan error, len(deployments.Result))
 
@@ -714,17 +744,16 @@ func (h *JBoss) getServerDeploymentStatistics(
 						fields["expired-sessions"]  = t2["expired-sessions"]
 						fields["max-active-sessions"]  = t2["max-active-sessions"]
 						fields["sessions-created"]  = t2["sessions-created"]
+						tags := map[string]string{
+							"host":   host,
+							"server": serverName,
+							"name":   typeName,
+							"system": deployment.Result.RuntimeName,
+							"type":   "deployment",
+						}
+						acc.AddFields("jboss_web", fields, tags)
 					}
-					tags := map[string]string{
-						"host":   host,
-						"server": serverName,
-						"name":   typeName,
-						"system": deployment.Result.Name,
-						"type":   "deployment",
-			}
-			acc.AddFields("jboss_web", fields, tags)
-		}
-				
+				}
 			}
 		}(deployment)
 	}
