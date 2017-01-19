@@ -168,7 +168,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 				// Print incoming data as info if debug is set
 				if m.Debug {
-					log.Printf("I! Received: ", r)
+					log.Printf("I! Received: %v", r)
 				}
 
 				// Create a point and add to batch
@@ -234,7 +234,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 				// Print final data collection
 				if m.Debug {
-					log.Printf("I! Available collection is: ", dgroups)
+					log.Printf("I! Available collection is: %v", dgroups)
 				}
 
 				tnow := time.Now()
