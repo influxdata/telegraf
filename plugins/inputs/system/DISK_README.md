@@ -70,7 +70,7 @@ The diskio input plugin gathers metrics about disk traffic and timing.
   # skip_serial_number = false
 ```
 
-Data collection is based on github.com/shirou/gopsutil. This package handles platform dependencies and converts all timing information to miliseconds.
+Data collection is based on github.com/shirou/gopsutil. This package handles platform dependencies and converts all timing information to milliseconds.
 
 
 ### Measurements & Fields:
@@ -80,10 +80,10 @@ Data collection is based on github.com/shirou/gopsutil. This package handles pla
     - writes (integer, counter)
     - read_bytes (integer, bytes)
     - write_bytes (integer, bytes)
-    - read_time (integer, miliseconds)
-    - write_time (integer, miliseconds)
-    - io_time (integer, miliseconds)
-    - iops_in_progress (integer, miliseconds) (since #2037, not yet in STABLE)
+    - read_time (integer, milliseconds)
+    - write_time (integer, milliseconds)
+    - io_time (integer, milliseconds)
+    - iops_in_progress (integer, counter) (since #2037, not yet in STABLE)
 
 ### Tags:
 
