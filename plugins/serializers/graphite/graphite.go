@@ -8,7 +8,10 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-const DEFAULT_TEMPLATE = "host.tags.measurement.field"
+const (
+	DEFAULT_TEMPLATE = "host.tags.measurement.field"
+	DEFAULT_PROTOCOL = "plain/text"
+)
 
 var (
 	fieldDeleter   = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
@@ -22,15 +25,36 @@ type GraphiteSerializer struct {
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	out := []byte{}
-
 	// Convert UnixNano to Unix timestamps
 	timestamp := metric.UnixNano() / 1000000000
 
 	bucket := SerializeBucketName(metric.Name(), metric.Tags(), s.Template, s.Prefix)
 	if bucket == "" {
-		return out, nil
+		return []byte{}, nil
 	}
+
+	if s.Protocol == "" {
+		s.Protocol = DEFAULT_PROTOCOL
+	}
+
+	switch s.Protocol {
+	case "plain/text":
+		return plainTextSerialize(bucket, metric, timestamp)
+	case "json":
+		return jsonSerialize(bucket, metric, timestamp)
+	default:
+		return plainTextSerialize(bucket, metric, timestamp)
+	}
+}
+
+// jsonSerialize will serialize as json graphite format with bucket and metric.
+func jsonSerialize(bucket string, metric telegraf.Metric, timestamp int64) ([]byte, error) {
+	return nil, nil
+}
+
+// plainTextSerialize will serialize as plain / text graphite format with bucket and metric.
+func plainTextSerialize(bucket string, metric telegraf.Metric, timestamp int64) ([]byte, error) {
+	out := []byte{}
 
 	for fieldName, value := range metric.Fields() {
 		// Convert value to string
