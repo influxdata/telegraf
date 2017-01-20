@@ -22,19 +22,32 @@ func (s *Server) getDefaultTags() map[string]string {
 	return tags
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator) error {
+func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error {
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 	result_server := &ServerStatus{}
-	err := s.Session.DB("admin").Run(bson.D{{"serverStatus", 1}, {"recordStats", 0}}, result_server)
+	err := s.Session.DB("admin").Run(bson.D{
+		{
+			Name:  "serverStatus",
+			Value: 1,
+		},
+		{
+			Name:  "recordStats",
+			Value: 0,
+		},
+	}, result_server)
 	if err != nil {
 		return err
 	}
 	result_repl := &ReplSetStatus{}
-	err = s.Session.DB("admin").Run(bson.D{{"replSetGetStatus", 1}}, result_repl)
-	if err != nil {
-		log.Println("Not gathering replica set status, member not in replica set (" + err.Error() + ")")
-	}
+	// ignore error because it simply indicates that the db is not a member
+	// in a replica set, which is fine.
+	_ = s.Session.DB("admin").Run(bson.D{
+		{
+			Name:  "replSetGetStatus",
+			Value: 1,
+		},
+	}, result_repl)
 
 	jumbo_chunks, _ := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
 
@@ -42,10 +55,39 @@ func (s *Server) gatherData(acc telegraf.Accumulator) error {
 		JumboChunksCount: int64(jumbo_chunks),
 	}
 
+	result_db_stats := &DbStats{}
+
+	if gatherDbStats == true {
+		names := []string{}
+		names, err = s.Session.DatabaseNames()
+		if err != nil {
+			log.Println("E! Error getting database names (" + err.Error() + ")")
+		}
+		for _, db_name := range names {
+			db_stat_line := &DbStatsData{}
+			err = s.Session.DB(db_name).Run(bson.D{
+				{
+					Name:  "dbStats",
+					Value: 1,
+				},
+			}, db_stat_line)
+			if err != nil {
+				log.Println("E! Error getting db stats from " + db_name + "(" + err.Error() + ")")
+			}
+			db := &Db{
+				Name:        db_name,
+				DbStatsData: db_stat_line,
+			}
+
+			result_db_stats.Dbs = append(result_db_stats.Dbs, *db)
+		}
+	}
+
 	result := &MongoStatus{
 		ServerStatus:  result_server,
 		ReplSetStatus: result_repl,
 		ClusterStatus: result_cluster,
+		DbStats:       result_db_stats,
 	}
 
 	defer func() {
@@ -64,6 +106,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator) error {
 			s.getDefaultTags(),
 		)
 		data.AddDefaultStats()
+		data.AddDbStats()
 		data.flush(acc)
 	}
 	return nil

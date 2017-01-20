@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	testMsg         = "cpu_load_short,host=server01 value=23422.0 1422568543702900257"
+	testMsg         = "cpu_load_short,host=server01 value=23422.0 1422568543702900257\n"
 	testMsgGraphite = "cpu.load.short.graphite 23422 1454780029"
 	testMsgJSON     = "{\"a\": 5, \"b\": {\"c\": 6}}\n"
-	invalidMsg      = "cpu_load_short,host=server01 1422568543702900257"
+	invalidMsg      = "cpu_load_short,host=server01 1422568543702900257\n"
 	metricBuffer    = 5
 )
 
@@ -39,6 +39,7 @@ func TestRunParser(t *testing.T) {
 	defer close(n.done)
 
 	n.parser, _ = parsers.NewInfluxParser()
+	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsg)
 	time.Sleep(time.Millisecond * 25)
@@ -56,6 +57,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	defer close(n.done)
 
 	n.parser, _ = parsers.NewInfluxParser()
+	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(invalidMsg)
 	time.Sleep(time.Millisecond * 25)
@@ -73,6 +75,7 @@ func TestRunParserAndGather(t *testing.T) {
 	defer close(n.done)
 
 	n.parser, _ = parsers.NewInfluxParser()
+	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsg)
 	time.Sleep(time.Millisecond * 25)
@@ -91,6 +94,7 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	defer close(n.done)
 
 	n.parser, _ = parsers.NewGraphiteParser("_", []string{}, nil)
+	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsgGraphite)
 	time.Sleep(time.Millisecond * 25)
@@ -109,6 +113,7 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	defer close(n.done)
 
 	n.parser, _ = parsers.NewJSONParser("nats_json_test", []string{}, nil)
+	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsgJSON)
 	time.Sleep(time.Millisecond * 25)

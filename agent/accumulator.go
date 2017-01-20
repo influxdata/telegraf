@@ -1,56 +1,46 @@
 package agent
 
 import (
-	"fmt"
 	"log"
-	"math"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
+var (
+	NErrors = selfstat.Register("agent", "gather_errors", map[string]string{})
+)
+
+type MetricMaker interface {
+	Name() string
+	MakeMetric(
+		measurement string,
+		fields map[string]interface{},
+		tags map[string]string,
+		mType telegraf.ValueType,
+		t time.Time,
+	) telegraf.Metric
+}
+
 func NewAccumulator(
-	inputConfig *internal_models.InputConfig,
+	maker MetricMaker,
 	metrics chan telegraf.Metric,
 ) *accumulator {
-	acc := accumulator{}
-	acc.metrics = metrics
-	acc.inputConfig = inputConfig
-	acc.precision = time.Nanosecond
+	acc := accumulator{
+		maker:     maker,
+		metrics:   metrics,
+		precision: time.Nanosecond,
+	}
 	return &acc
 }
 
 type accumulator struct {
 	metrics chan telegraf.Metric
 
-	defaultTags map[string]string
-
-	debug bool
-	// print every point added to the accumulator
-	trace bool
-
-	inputConfig *internal_models.InputConfig
-
-	prefix string
+	maker MetricMaker
 
 	precision time.Duration
-}
-
-func (ac *accumulator) Add(
-	measurement string,
-	value interface{},
-	tags map[string]string,
-	t ...time.Time,
-) {
-	fields := make(map[string]interface{})
-	fields["value"] = value
-
-	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return
-	}
-
-	ac.AddFields(measurement, fields, tags, t...)
 }
 
 func (ac *accumulator) AddFields(
@@ -59,122 +49,42 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if len(fields) == 0 || len(measurement) == 0 {
-		return
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Untyped, ac.getTime(t)); m != nil {
+		ac.metrics <- m
 	}
-
-	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return
-	}
-
-	if !ac.inputConfig.Filter.ShouldTagsPass(tags) {
-		return
-	}
-
-	// Override measurement name if set
-	if len(ac.inputConfig.NameOverride) != 0 {
-		measurement = ac.inputConfig.NameOverride
-	}
-	// Apply measurement prefix and suffix if set
-	if len(ac.inputConfig.MeasurementPrefix) != 0 {
-		measurement = ac.inputConfig.MeasurementPrefix + measurement
-	}
-	if len(ac.inputConfig.MeasurementSuffix) != 0 {
-		measurement = measurement + ac.inputConfig.MeasurementSuffix
-	}
-
-	if tags == nil {
-		tags = make(map[string]string)
-	}
-	// Apply plugin-wide tags if set
-	for k, v := range ac.inputConfig.Tags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
-	}
-	// Apply daemon-wide tags if set
-	for k, v := range ac.defaultTags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
-	}
-	ac.inputConfig.Filter.FilterTags(tags)
-
-	result := make(map[string]interface{})
-	for k, v := range fields {
-		// Filter out any filtered fields
-		if ac.inputConfig != nil {
-			if !ac.inputConfig.Filter.ShouldFieldsPass(k) {
-				continue
-			}
-		}
-
-		// Validate uint64 and float64 fields
-		switch val := v.(type) {
-		case uint64:
-			// InfluxDB does not support writing uint64
-			if val < uint64(9223372036854775808) {
-				result[k] = int64(val)
-			} else {
-				result[k] = int64(9223372036854775807)
-			}
-			continue
-		case float64:
-			// NaNs are invalid values in influxdb, skip measurement
-			if math.IsNaN(val) || math.IsInf(val, 0) {
-				if ac.debug {
-					log.Printf("Measurement [%s] field [%s] has a NaN or Inf "+
-						"field, skipping",
-						measurement, k)
-				}
-				continue
-			}
-		}
-
-		result[k] = v
-	}
-	fields = nil
-	if len(result) == 0 {
-		return
-	}
-
-	var timestamp time.Time
-	if len(t) > 0 {
-		timestamp = t[0]
-	} else {
-		timestamp = time.Now()
-	}
-	timestamp = timestamp.Round(ac.precision)
-
-	if ac.prefix != "" {
-		measurement = ac.prefix + measurement
-	}
-
-	m, err := telegraf.NewMetric(measurement, tags, result, timestamp)
-	if err != nil {
-		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
-		return
-	}
-	if ac.trace {
-		fmt.Println("> " + m.String())
-	}
-	ac.metrics <- m
 }
 
-func (ac *accumulator) Debug() bool {
-	return ac.debug
+func (ac *accumulator) AddGauge(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Gauge, ac.getTime(t)); m != nil {
+		ac.metrics <- m
+	}
 }
 
-func (ac *accumulator) SetDebug(debug bool) {
-	ac.debug = debug
+func (ac *accumulator) AddCounter(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Counter, ac.getTime(t)); m != nil {
+		ac.metrics <- m
+	}
 }
 
-func (ac *accumulator) Trace() bool {
-	return ac.trace
-}
-
-func (ac *accumulator) SetTrace(trace bool) {
-	ac.trace = trace
+// AddError passes a runtime error to the accumulator.
+// The error will be tagged with the plugin name and written to the log.
+func (ac *accumulator) AddError(err error) {
+	if err == nil {
+		return
+	}
+	NErrors.Incr(1)
+	//TODO suppress/throttle consecutive duplicate errors?
+	log.Printf("E! Error in plugin [%s]: %s", ac.maker.Name(), err)
 }
 
 // SetPrecision takes two time.Duration objects. If the first is non-zero,
@@ -198,17 +108,12 @@ func (ac *accumulator) SetPrecision(precision, interval time.Duration) {
 	}
 }
 
-func (ac *accumulator) DisablePrecision() {
-	ac.precision = time.Nanosecond
-}
-
-func (ac *accumulator) setDefaultTags(tags map[string]string) {
-	ac.defaultTags = tags
-}
-
-func (ac *accumulator) addDefaultTag(key, value string) {
-	if ac.defaultTags == nil {
-		ac.defaultTags = make(map[string]string)
+func (ac accumulator) getTime(t []time.Time) time.Time {
+	var timestamp time.Time
+	if len(t) > 0 {
+		timestamp = t[0]
+	} else {
+		timestamp = time.Now()
 	}
-	ac.defaultTags[key] = value
+	return timestamp.Round(ac.precision)
 }

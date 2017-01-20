@@ -1,7 +1,6 @@
 package aerospike
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -11,7 +10,7 @@ import (
 
 func TestAerospikeStatistics(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+		t.Skip("Skipping aerospike integration tests.")
 	}
 
 	a := &Aerospike{
@@ -23,96 +22,46 @@ func TestAerospikeStatistics(t *testing.T) {
 	err := a.Gather(&acc)
 	require.NoError(t, err)
 
-	// Only use a few of the metrics
-	asMetrics := []string{
-		"transactions",
-		"stat_write_errs",
-		"stat_read_reqs",
-		"stat_write_reqs",
-	}
-
-	for _, metric := range asMetrics {
-		assert.True(t, acc.HasIntField("aerospike", metric), metric)
-	}
-
+	assert.True(t, acc.HasMeasurement("aerospike_node"))
+	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
+	assert.True(t, acc.HasIntField("aerospike_node", "batch_error"))
 }
 
-func TestAerospikeMsgLenFromToBytes(t *testing.T) {
-	var i int64 = 8
-	assert.True(t, i == msgLenFromBytes(msgLenToBytes(i)))
-}
+func TestAerospikeStatisticsPartialErr(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping aerospike integration tests.")
+	}
 
-func TestReadAerospikeStatsNoNamespace(t *testing.T) {
-	// Also test for re-writing
+	a := &Aerospike{
+		Servers: []string{
+			testutil.GetLocalHost() + ":3000",
+			testutil.GetLocalHost() + ":9999",
+		},
+	}
+
 	var acc testutil.Accumulator
-	stats := map[string]string{
-		"stat-write-errs": "12345",
-		"stat_read_reqs":  "12345",
-	}
-	readAerospikeStats(stats, &acc, "host1", "")
 
-	fields := map[string]interface{}{
-		"stat_write_errs": int64(12345),
-		"stat_read_reqs":  int64(12345),
-	}
-	tags := map[string]string{
-		"aerospike_host": "host1",
-		"namespace":      "_service",
-	}
-	acc.AssertContainsTaggedFields(t, "aerospike", fields, tags)
+	err := a.Gather(&acc)
+	require.Error(t, err)
+
+	assert.True(t, acc.HasMeasurement("aerospike_node"))
+	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
+	assert.True(t, acc.HasIntField("aerospike_node", "batch_error"))
 }
 
-func TestReadAerospikeStatsNamespace(t *testing.T) {
-	var acc testutil.Accumulator
-	stats := map[string]string{
-		"stat_write_errs": "12345",
-		"stat_read_reqs":  "12345",
-	}
-	readAerospikeStats(stats, &acc, "host1", "test")
+func TestAerospikeParseValue(t *testing.T) {
+	// uint64 with value bigger than int64 max
+	val, err := parseValue("18446744041841121751")
+	assert.Nil(t, val)
+	assert.Error(t, err)
 
-	fields := map[string]interface{}{
-		"stat_write_errs": int64(12345),
-		"stat_read_reqs":  int64(12345),
-	}
-	tags := map[string]string{
-		"aerospike_host": "host1",
-		"namespace":      "test",
-	}
-	acc.AssertContainsTaggedFields(t, "aerospike", fields, tags)
-}
+	// int values
+	val, err = parseValue("42")
+	assert.NoError(t, err)
+	assert.Equal(t, val, int64(42), "must be parsed as int")
 
-func TestAerospikeUnmarshalList(t *testing.T) {
-	i := map[string]string{
-		"test": "one;two;three",
-	}
-
-	expected := []string{"one", "two", "three"}
-
-	list, err := unmarshalListInfo(i, "test2")
-	assert.True(t, err != nil)
-
-	list, err = unmarshalListInfo(i, "test")
-	assert.True(t, err == nil)
-	equal := true
-	for ix := range expected {
-		if list[ix] != expected[ix] {
-			equal = false
-			break
-		}
-	}
-	assert.True(t, equal)
-}
-
-func TestAerospikeUnmarshalMap(t *testing.T) {
-	i := map[string]string{
-		"test": "key1=value1;key2=value2",
-	}
-
-	expected := map[string]string{
-		"key1": "value1",
-		"key2": "value2",
-	}
-	m, err := unmarshalMapInfo(i, "test")
-	assert.True(t, err == nil)
-	assert.True(t, reflect.DeepEqual(m, expected))
+	// string values
+	val, err = parseValue("BB977942A2CA502")
+	assert.NoError(t, err)
+	assert.Equal(t, val, `BB977942A2CA502`, "must be left as string")
 }

@@ -148,7 +148,7 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 	tokens := parseJmxMetricRequest(r.(map[string]interface{})["mbean"].(string))
 	// Requests with wildcards for keyspace or table names will return nested
 	// maps in the json response
-	if tokens["type"] == "Table" && (tokens["keyspace"] == "*" ||
+	if (tokens["type"] == "Table" || tokens["type"] == "ColumnFamily") && (tokens["keyspace"] == "*" ||
 		tokens["scope"] == "*") {
 		if valuesMap, ok := out["value"]; ok {
 			for k, v := range valuesMap.(map[string]interface{}) {
@@ -274,7 +274,7 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				m = newCassandraMetric(serverTokens["host"], metric, acc)
 			} else {
 				// unsupported metric type
-				log.Printf("Unsupported Cassandra metric [%s], skipping",
+				log.Printf("I! Unsupported Cassandra metric [%s], skipping",
 					metric)
 				continue
 			}
@@ -289,7 +289,6 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				requestUrl.User = url.UserPassword(serverTokens["user"],
 					serverTokens["passwd"])
 			}
-			fmt.Printf("host %s url %s\n", serverTokens["host"], requestUrl)
 
 			out, err := c.getAttr(requestUrl)
 			if out["status"] != 200.0 {

@@ -9,35 +9,66 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DefaultUsername will set a default value that corrasponds to the default
+// value used by Rabbitmq
 const DefaultUsername = "guest"
+
+// DefaultPassword will set a default value that corrasponds to the default
+// value used by Rabbitmq
 const DefaultPassword = "guest"
+
+// DefaultURL will set a default value that corrasponds to the default value
+// used by Rabbitmq
 const DefaultURL = "http://localhost:15672"
 
+// Default http timeouts
+const DefaultResponseHeaderTimeout = 3
+const DefaultClientTimeout = 4
+
+// RabbitMQ defines the configuration necessary for gathering metrics,
+// see the sample config for further details
 type RabbitMQ struct {
 	URL      string
 	Name     string
 	Username string
 	Password string
-	Nodes    []string
-	Queues   []string
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+
+	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
+	ClientTimeout         internal.Duration `toml:"client_timeout"`
+
+	// InsecureSkipVerify bool
+	Nodes  []string
+	Queues []string
 
 	Client *http.Client
 }
 
+// OverviewResponse ...
 type OverviewResponse struct {
 	MessageStats *MessageStats `json:"message_stats"`
 	ObjectTotals *ObjectTotals `json:"object_totals"`
 	QueueTotals  *QueueTotals  `json:"queue_totals"`
 }
 
+// Details ...
 type Details struct {
 	Rate float64
 }
 
+// MessageStats ...
 type MessageStats struct {
 	Ack               int64
 	AckDetails        Details `json:"ack_details"`
@@ -51,6 +82,7 @@ type MessageStats struct {
 	RedeliverDetails  Details `json:"redeliver_details"`
 }
 
+// ObjectTotals ...
 type ObjectTotals struct {
 	Channels    int64
 	Connections int64
@@ -59,6 +91,7 @@ type ObjectTotals struct {
 	Queues      int64
 }
 
+// QueueTotals ...
 type QueueTotals struct {
 	Messages                   int64
 	MessagesReady              int64 `json:"messages_ready"`
@@ -66,10 +99,11 @@ type QueueTotals struct {
 	MessageBytes               int64 `json:"message_bytes"`
 	MessageBytesReady          int64 `json:"message_bytes_ready"`
 	MessageBytesUnacknowledged int64 `json:"message_bytes_unacknowledged"`
-	MessageRam                 int64 `json:"message_bytes_ram"`
+	MessageRAM                 int64 `json:"message_bytes_ram"`
 	MessagePersistent          int64 `json:"message_bytes_persistent"`
 }
 
+// Queue ...
 type Queue struct {
 	QueueTotals         // just to not repeat the same code
 	MessageStats        `json:"message_stats"`
@@ -80,9 +114,11 @@ type Queue struct {
 	Node                string
 	Vhost               string
 	Durable             bool
-	AutoDelete          bool `json:"auto_delete"`
+	AutoDelete          bool   `json:"auto_delete"`
+	IdleSince           string `json:"idle_since"`
 }
 
+// Node ...
 type Node struct {
 	Name string
 
@@ -99,6 +135,7 @@ type Node struct {
 	SocketsUsed   int64 `json:"sockets_used"`
 }
 
+// gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error)
 
 var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
@@ -109,25 +146,53 @@ var sampleConfig = `
   # username = "guest"
   # password = "guest"
 
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
+  ## Optional request timeouts
+  ##
+  ## ResponseHeaderTimeout, if non-zero, specifies the amount of time to wait
+  ## for a server's response headers after fully writing the request.
+  # header_timeout = "3s"
+  ##
+  ## client_timeout specifies a time limit for requests made by this client.
+  ## Includes connection time, any redirects, and reading the response body.
+  # client_timeout = "4s"
+
   ## A list of nodes to pull metrics about. If not specified, metrics for
   ## all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
 `
 
+// SampleConfig ...
 func (r *RabbitMQ) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description ...
 func (r *RabbitMQ) Description() string {
 	return "Read metrics from one or many RabbitMQ servers via the management API"
 }
 
+// Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
-		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		tlsCfg, err := internal.GetTLSConfig(
+			r.SSLCert, r.SSLKey, r.SSLCA, r.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
+		tr := &http.Transport{
+			ResponseHeaderTimeout: r.ResponseHeaderTimeout.Duration,
+			TLSClientConfig:       tlsCfg,
+		}
 		r.Client = &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+			Timeout:   r.ClientTimeout.Duration,
 		}
 	}
 
@@ -281,12 +346,13 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 				// common information
 				"consumers":            queue.Consumers,
 				"consumer_utilisation": queue.ConsumerUtilisation,
+				"idle_since":           queue.IdleSince,
 				"memory":               queue.Memory,
 				// messages information
 				"message_bytes":             queue.MessageBytes,
 				"message_bytes_ready":       queue.MessageBytesReady,
 				"message_bytes_unacked":     queue.MessageBytesUnacknowledged,
-				"message_bytes_ram":         queue.MessageRam,
+				"message_bytes_ram":         queue.MessageRAM,
 				"message_bytes_persist":     queue.MessagePersistent,
 				"messages":                  queue.Messages,
 				"messages_ready":            queue.MessagesReady,
@@ -339,6 +405,9 @@ func (r *RabbitMQ) shouldGatherQueue(queue Queue) bool {
 
 func init() {
 	inputs.Add("rabbitmq", func() telegraf.Input {
-		return &RabbitMQ{}
+		return &RabbitMQ{
+			ResponseHeaderTimeout: internal.Duration{Duration: DefaultResponseHeaderTimeout * time.Second},
+			ClientTimeout:         internal.Duration{Duration: DefaultClientTimeout * time.Second},
+		}
 	})
 }

@@ -53,20 +53,18 @@ RESPONSE_TIME %{DURATION:response_time_ns:duration}
 EXAMPLE_LOG \[%{HTTPDATE:ts:ts-httpd}\] %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
 
 # Wider-ranging username matching vs. logstash built-in %{USER}
-NGUSERNAME [a-zA-Z\.\@\-\+_%]+
+NGUSERNAME [a-zA-Z0-9\.\@\-\+_%]+
 NGUSER %{NGUSERNAME}
+# Wider-ranging client IP matching
+CLIENT (?:%{IPV6}|%{IPV4}|%{HOSTNAME}|%{HOSTPORT})
 
 ##
 ## COMMON LOG PATTERNS
 ##
 
-# InfluxDB log patterns
-CLIENT (?:%{IPORHOST}|%{HOSTPORT}|::1)
-INFLUXDB_HTTPD_LOG \[httpd\] %{COMBINED_LOG_FORMAT} %{UUID:uuid:drop} %{NUMBER:response_time_us:int}
-
 # apache & nginx logs, this is also known as the "common log format"
 #   see https://en.wikipedia.org/wiki/Common_Log_Format
-COMMON_LOG_FORMAT %{CLIENT:client_ip} %{NGUSER:ident} %{NGUSER:auth} \[%{HTTPDATE:ts:ts-httpd}\] "(?:%{WORD:verb:tag} %{NOTSPACE:request}(?: HTTP/%{NUMBER:http_version:float})?|%{DATA})" %{NUMBER:resp_code:int} (?:%{NUMBER:resp_bytes:int}|-)
+COMMON_LOG_FORMAT %{CLIENT:client_ip} %{NOTSPACE:ident} %{NOTSPACE:auth} \[%{HTTPDATE:ts:ts-httpd}\] "(?:%{WORD:verb:tag} %{NOTSPACE:request}(?: HTTP/%{NUMBER:http_version:float})?|%{DATA})" %{NUMBER:resp_code:tag} (?:%{NUMBER:resp_bytes:int}|-)
 
 # Combined log format is the same as the common log format but with the addition
 # of two quoted strings at the end for "referrer" and "agent"

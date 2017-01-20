@@ -22,7 +22,6 @@ var sampleChecks = []*api.HealthCheck{
 
 func TestGatherHealtCheck(t *testing.T) {
 	expectedFields := map[string]interface{}{
-		"check_id":   "foo.health123",
 		"check_name": "foo.health",
 		"status":     "passing",
 		"service_id": "foo.123",
@@ -31,6 +30,7 @@ func TestGatherHealtCheck(t *testing.T) {
 	expectedTags := map[string]string{
 		"node":         "localhost",
 		"service_name": "foo",
+		"check_id":     "foo.health123",
 	}
 
 	var acc testutil.Accumulator

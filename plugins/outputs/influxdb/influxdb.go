@@ -55,7 +55,7 @@ var sampleConfig = `
 
   ## Retention policy to write to. Empty string writes to the default rp.
   retention_policy = ""
-  ## Write consistency (clusters only), can be: "any", "one", "quorom", "all"
+  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
   write_consistency = "any"
 
   ## Write timeout (for the InfluxDB client), formatted as a string.
@@ -130,7 +130,7 @@ func (i *InfluxDB) Connect() error {
 
 			err = createDatabase(c, i.Database)
 			if err != nil {
-				log.Println("Database creation failed: " + err.Error())
+				log.Println("E! Database creation failed: " + err.Error())
 				continue
 			}
 
@@ -146,7 +146,7 @@ func (i *InfluxDB) Connect() error {
 func createDatabase(c client.Client, database string) error {
 	// Create Database if it doesn't exist
 	_, err := c.Query(client.Query{
-		Command: fmt.Sprintf("CREATE DATABASE IF NOT EXISTS \"%s\"", database),
+		Command: fmt.Sprintf("CREATE DATABASE \"%s\"", database),
 	})
 	return err
 }
@@ -201,11 +201,11 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	for _, n := range p {
 		if e := i.conns[n].Write(bp); e != nil {
 			// Log write failure
-			log.Printf("ERROR: %s", e)
+			log.Printf("E! InfluxDB Output Error: %s", e)
 			// If the database was not found, try to recreate it
 			if strings.Contains(e.Error(), "database not found") {
 				if errc := createDatabase(i.conns[n], i.Database); errc != nil {
-					log.Printf("ERROR: Database %s not found and failed to recreate\n",
+					log.Printf("E! Error: Database %s not found and failed to recreate\n",
 						i.Database)
 				}
 			}

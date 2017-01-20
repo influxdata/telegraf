@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,19 +30,22 @@ func (p *Metric) String() string {
 type Accumulator struct {
 	sync.Mutex
 
-	Metrics []*Metric
-	debug   bool
+	Metrics  []*Metric
+	nMetrics uint64
+	Discard  bool
+	Errors   []error
+	debug    bool
 }
 
-// Add adds a measurement point to the accumulator
-func (a *Accumulator) Add(
-	measurement string,
-	value interface{},
-	tags map[string]string,
-	t ...time.Time,
-) {
-	fields := map[string]interface{}{"value": value}
-	a.AddFields(measurement, fields, tags, t...)
+func (a *Accumulator) NMetrics() uint64 {
+	return atomic.LoadUint64(&a.nMetrics)
+}
+
+func (a *Accumulator) ClearMetrics() {
+	atomic.StoreUint64(&a.nMetrics, 0)
+	a.Lock()
+	defer a.Unlock()
+	a.Metrics = make([]*Metric, 0)
 }
 
 // AddFields adds a measurement point with a specified timestamp.
@@ -49,6 +55,10 @@ func (a *Accumulator) AddFields(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
+	atomic.AddUint64(&a.nMetrics, 1)
+	if a.Discard {
+		return
+	}
 	a.Lock()
 	defer a.Unlock()
 	if tags == nil {
@@ -82,6 +92,40 @@ func (a *Accumulator) AddFields(
 	}
 
 	a.Metrics = append(a.Metrics, p)
+}
+
+func (a *Accumulator) AddCounter(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
+func (a *Accumulator) AddGauge(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
+func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
+	for _, m := range metrics {
+		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	}
+}
+
+// AddError appends the given error to Accumulator.Errors.
+func (a *Accumulator) AddError(err error) {
+	if err == nil {
+		return
+	}
+	a.Lock()
+	a.Errors = append(a.Errors, err)
+	a.Unlock()
 }
 
 func (a *Accumulator) SetPrecision(precision, interval time.Duration) {
@@ -164,6 +208,17 @@ func (a *Accumulator) AssertContainsFields(
 	}
 	msg := fmt.Sprintf("unknown measurement %s", measurement)
 	assert.Fail(t, msg)
+}
+
+func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			msg := fmt.Sprintf("found unexpected measurement %s", measurement)
+			assert.Fail(t, msg)
+		}
+	}
 }
 
 // HasIntValue returns true if the measurement has an Int value

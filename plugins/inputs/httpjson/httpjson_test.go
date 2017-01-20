@@ -511,3 +511,52 @@ func TestHttpJson200Tags(t *testing.T) {
 		}
 	}
 }
+
+const validJSONArrayTags = `
+[
+	{
+		"value": 15,
+		"role": "master",
+		"build": "123"
+	},
+	{
+		"value": 17,
+		"role": "slave",
+		"build": "456"
+	}
+]`
+
+// Test that array data is collected correctly
+func TestHttpJsonArray200Tags(t *testing.T) {
+	httpjson := genMockHttpJson(validJSONArrayTags, 200)
+
+	for _, service := range httpjson {
+		if service.Name == "other_webapp" {
+			var acc testutil.Accumulator
+			err := service.Gather(&acc)
+			// Set responsetime
+			for _, p := range acc.Metrics {
+				p.Fields["response_time"] = 1.0
+			}
+			require.NoError(t, err)
+			assert.Equal(t, 8, acc.NFields())
+			assert.Equal(t, uint64(4), acc.NMetrics())
+
+			for _, m := range acc.Metrics {
+				if m.Tags["role"] == "master" {
+					assert.Equal(t, "123", m.Tags["build"])
+					assert.Equal(t, float64(15), m.Fields["value"])
+					assert.Equal(t, float64(1), m.Fields["response_time"])
+					assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
+				} else if m.Tags["role"] == "slave" {
+					assert.Equal(t, "456", m.Tags["build"])
+					assert.Equal(t, float64(17), m.Fields["value"])
+					assert.Equal(t, float64(1), m.Fields["response_time"])
+					assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
+				} else {
+					assert.FailNow(t, "unknown metric")
+				}
+			}
+		}
+	}
+}

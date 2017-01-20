@@ -17,6 +17,7 @@ import (
 type Postgresql struct {
 	Address          string
 	Databases        []string
+	IgnoredDatabases []string
 	OrderedColumns   []string
 	AllColumns       []string
 	sanitizedAddress string
@@ -40,8 +41,12 @@ var sampleConfig = `
   ##
   address = "host=localhost user=postgres sslmode=disable"
 
+  ## A  list of databases to explicitly ignore.  If not specified, metrics for all
+  ## databases are gathered.  Do NOT use with the 'databases' option.
+  # ignored_databases = ["postgres", "template0", "template1"]
+
   ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.
+  ## databases are gathered.  Do NOT use with the 'ignore_databases' option.
   # databases = ["app_production", "testing"]
 `
 
@@ -73,8 +78,11 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 	defer db.Close()
 
-	if len(p.Databases) == 0 {
+	if len(p.Databases) == 0 && len(p.IgnoredDatabases) == 0 {
 		query = `SELECT * FROM pg_stat_database`
+	} else if len(p.IgnoredDatabases) != 0 {
+		query = fmt.Sprintf(`SELECT * FROM pg_stat_database WHERE datname NOT IN ('%s')`,
+			strings.Join(p.IgnoredDatabases, "','"))
 	} else {
 		query = fmt.Sprintf(`SELECT * FROM pg_stat_database WHERE datname IN ('%s')`,
 			strings.Join(p.Databases, "','"))

@@ -67,8 +67,6 @@ func TestMemStats(t *testing.T) {
 		"used":         uint64(1232),
 		"used_percent": float64(12.2),
 		"free":         uint64(6412),
-		"in":           uint64(7),
-		"out":          uint64(830),
 	}
 	acc.AssertContainsTaggedFields(t, "swap", swapfields, make(map[string]string))
 }

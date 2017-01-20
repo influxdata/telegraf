@@ -83,27 +83,15 @@ targets = {
 }
 
 supported_builds = {
-    "darwin": [ "amd64" ],
     "windows": [ "amd64" ],
     "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64" ],
     "freebsd": [ "amd64" ]
 }
 
 supported_packages = {
-    "darwin": [ "tar" ],
     "linux": [ "deb", "rpm", "tar" ],
     "windows": [ "zip" ],
     "freebsd": [ "tar" ]
-}
-
-supported_tags = {
-    # "linux": {
-    #     "amd64": ["sensors"]
-    # }
-}
-
-prereq_cmds = {
-    # "linux": "sudo apt-get install lm-sensors libsensors4-dev"
 }
 
 ################
@@ -595,6 +583,8 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     if "static_" in arch:
                         # Remove the "static_" from the displayed arch on the package
                         package_arch = arch.replace("static_", "")
+                    elif package_type == "rpm" and arch == 'armhf':
+                        package_arch = 'armv6hl'
                     else:
                         package_arch = arch
                     if not release and not nightly:

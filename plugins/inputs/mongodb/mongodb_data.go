@@ -12,16 +12,20 @@ type MongodbData struct {
 	StatLine *StatLine
 	Fields   map[string]interface{}
 	Tags     map[string]string
+	DbData   []DbData
+}
+
+type DbData struct {
+	Name   string
+	Fields map[string]interface{}
 }
 
 func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
-	if statLine.NodeType != "" && statLine.NodeType != "UNK" {
-		tags["state"] = statLine.NodeType
-	}
 	return &MongodbData{
 		StatLine: statLine,
 		Tags:     tags,
 		Fields:   make(map[string]interface{}),
+		DbData:   []DbData{},
 	}
 }
 
@@ -54,6 +58,7 @@ var DefaultReplStats = map[string]string{
 	"repl_getmores_per_sec": "GetMoreR",
 	"repl_commands_per_sec": "CommandR",
 	"member_status":         "NodeType",
+	"state":                 "NodeState",
 	"repl_lag":              "ReplLag",
 }
 
@@ -70,6 +75,34 @@ var MmapStats = map[string]string{
 var WiredTigerStats = map[string]string{
 	"percent_cache_dirty": "CacheDirtyPercent",
 	"percent_cache_used":  "CacheUsedPercent",
+}
+
+var DbDataStats = map[string]string{
+	"collections":  "Collections",
+	"objects":      "Objects",
+	"avg_obj_size": "AvgObjSize",
+	"data_size":    "DataSize",
+	"storage_size": "StorageSize",
+	"num_extents":  "NumExtents",
+	"indexes":      "Indexes",
+	"index_size":   "IndexSize",
+	"ok":           "Ok",
+}
+
+func (d *MongodbData) AddDbStats() {
+	for _, dbstat := range d.StatLine.DbStatsLines {
+		dbStatLine := reflect.ValueOf(&dbstat).Elem()
+		newDbData := &DbData{
+			Name:   dbstat.Name,
+			Fields: make(map[string]interface{}),
+		}
+		newDbData.Fields["type"] = "db_stat"
+		for key, value := range DbDataStats {
+			val := dbStatLine.FieldByName(value).Interface()
+			newDbData.Fields[key] = val
+		}
+		d.DbData = append(d.DbData, *newDbData)
+	}
 }
 
 func (d *MongodbData) AddDefaultStats() {
@@ -113,4 +146,15 @@ func (d *MongodbData) flush(acc telegraf.Accumulator) {
 		d.StatLine.Time,
 	)
 	d.Fields = make(map[string]interface{})
+
+	for _, db := range d.DbData {
+		d.Tags["db_name"] = db.Name
+		acc.AddFields(
+			"mongodb_db_stats",
+			db.Fields,
+			d.Tags,
+			d.StatLine.Time,
+		)
+		db.Fields = make(map[string]interface{})
+	}
 }

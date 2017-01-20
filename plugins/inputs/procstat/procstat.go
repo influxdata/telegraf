@@ -21,6 +21,7 @@ type Procstat struct {
 	Prefix      string
 	ProcessName string
 	User        string
+	PidTag      bool
 
 	// pidmap maps a pid to a process object, so we don't recreate every gather
 	pidmap map[int32]*process.Process
@@ -53,6 +54,8 @@ var sampleConfig = `
   prefix = ""
   ## comment this out if you want raw cpu_time stats
   fielddrop = ["cpu_time_*"]
+  ## This is optional; moves pid into a tag instead of a field
+  pid_tag = false
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -66,11 +69,14 @@ func (_ *Procstat) Description() string {
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	err := p.createProcesses()
 	if err != nil {
-		log.Printf("Error: procstat getting process, exe: [%s]	pidfile: [%s] pattern: [%s] user: [%s] %s",
+		log.Printf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error())
 	} else {
 		for pid, proc := range p.pidmap {
-			p := NewSpecProcessor(p.ProcessName, p.Prefix, acc, proc, p.tagmap[pid])
+			if p.PidTag {
+				p.tagmap[pid]["pid"] = fmt.Sprint(pid)
+			}
+			p := NewSpecProcessor(p.ProcessName, p.Prefix, pid, acc, proc, p.tagmap[pid])
 			p.pushMetrics()
 		}
 	}
@@ -140,7 +146,6 @@ func (p *Procstat) pidsFromFile() ([]int32, error) {
 			out = append(out, int32(pid))
 			p.tagmap[int32(pid)] = map[string]string{
 				"pidfile": p.PidFile,
-				"pid":     strings.TrimSpace(string(pidString)),
 			}
 		}
 	}
@@ -165,7 +170,6 @@ func (p *Procstat) pidsFromExe() ([]int32, error) {
 				out = append(out, int32(ipid))
 				p.tagmap[int32(ipid)] = map[string]string{
 					"exe": p.Exe,
-					"pid": pid,
 				}
 			} else {
 				outerr = err
@@ -193,7 +197,6 @@ func (p *Procstat) pidsFromPattern() ([]int32, error) {
 				out = append(out, int32(ipid))
 				p.tagmap[int32(ipid)] = map[string]string{
 					"pattern": p.Pattern,
-					"pid":     pid,
 				}
 			} else {
 				outerr = err
@@ -221,7 +224,6 @@ func (p *Procstat) pidsFromUser() ([]int32, error) {
 				out = append(out, int32(ipid))
 				p.tagmap[int32(ipid)] = map[string]string{
 					"user": p.User,
-					"pid":  pid,
 				}
 			} else {
 				outerr = err

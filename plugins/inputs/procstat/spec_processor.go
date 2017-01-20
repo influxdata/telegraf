@@ -10,6 +10,7 @@ import (
 
 type SpecProcessor struct {
 	Prefix string
+	pid    int32
 	tags   map[string]string
 	fields map[string]interface{}
 	acc    telegraf.Accumulator
@@ -19,6 +20,7 @@ type SpecProcessor struct {
 func NewSpecProcessor(
 	processName string,
 	prefix string,
+	pid int32,
 	acc telegraf.Accumulator,
 	p *process.Process,
 	tags map[string]string,
@@ -33,6 +35,7 @@ func NewSpecProcessor(
 	}
 	return &SpecProcessor{
 		Prefix: prefix,
+		pid:    pid,
 		tags:   tags,
 		fields: make(map[string]interface{}),
 		acc:    acc,
@@ -46,6 +49,11 @@ func (p *SpecProcessor) pushMetrics() {
 		prefix = p.Prefix + "_"
 	}
 	fields := map[string]interface{}{}
+
+	//If pid is not present as a tag, include it as a field.
+	if _, pidInTags := p.tags["pid"]; !pidInTags {
+		fields["pid"] = p.pid
+	}
 
 	numThreads, err := p.proc.NumThreads()
 	if err == nil {
@@ -68,7 +76,7 @@ func (p *SpecProcessor) pushMetrics() {
 		fields[prefix+"read_count"] = io.ReadCount
 		fields[prefix+"write_count"] = io.WriteCount
 		fields[prefix+"read_bytes"] = io.ReadBytes
-		fields[prefix+"write_bytes"] = io.WriteCount
+		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
 	cpu_time, err := p.proc.Times()

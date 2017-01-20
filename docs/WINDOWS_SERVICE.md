@@ -1,36 +1,39 @@
 # Running Telegraf as a Windows Service
 
-If you have tried to install Go binaries as Windows Services with the **sc.exe**
-tool you may have seen that the service errors and stops running after a while.
+Telegraf natively supports running as a Windows Service. Outlined below is are
+the general steps to set it up.
 
-**NSSM** (the Non-Sucking Service Manager) is a tool that helps you in a 
-[number of scenarios](http://nssm.cc/scenarios) including running Go binaries
-that were not specifically designed to run only in Windows platforms.
+1. Obtain the telegraf windows distribution
+2. Create the directory `C:\Program Files\Telegraf` (if you install in a different
+   location simply specify the `-config` parameter with the desired location)
+3. Place the telegraf.exe and the telegraf.conf config file into `C:\Program Files\Telegraf`
+4. To install the service into the Windows Service Manager, run the following in PowerShell as an administrator (If necessary, you can wrap any spaces in the file paths in double quotes ""):
 
-## NSSM Installation via Chocolatey
+   ```
+   > C:\"Program Files"\Telegraf\telegraf.exe --service install
+   ```
 
-You can install [Chocolatey](https://chocolatey.org/) and [NSSM](http://nssm.cc/) 
-with these commands
+5. Edit the configuration file to meet your needs
+6. To check that it works, run:
 
-```powershell
-iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
-choco install -y nssm
-```
+   ```
+   > C:\"Program Files"\Telegraf\telegraf.exe --config C:\"Program Files"\Telegraf\telegraf.conf --test
+   ```
 
-## Installing Telegraf as a Windows Service with NSSM
+7. To start collecting data, run:
 
-You can download the latest Telegraf Windows binaries (still Experimental at 
-the moment) from [the Telegraf Github repo](https://github.com/influxdata/telegraf).
+   ```
+   > net start telegraf
+   ```
 
-Then you can create a C:\telegraf folder, unzip the binary there and modify the 
-**telegraf.conf** sample to allocate the metrics you want to send to **InfluxDB**.
+## Other supported operations
 
-Once you have NSSM installed in your system, the process is quite straightforward.
-You only need to type this command in your Windows shell
+Telegraf can manage its own service through the --service flag:
 
-```powershell
-nssm install Telegraf c:\telegraf\telegraf.exe -config c:\telegraf\telegraf.config
-```
+| Command                            | Effect                        |
+|------------------------------------|-------------------------------|
+| `telegraf.exe --service install`   | Install telegraf as a service |
+| `telegraf.exe --service uninstall` | Remove the telegraf service   |
+| `telegraf.exe --service start`     | Start the telegraf service    |
+| `telegraf.exe --service stop`      | Stop the telegraf service     |
 
-And now your service will be installed in Windows and you will be able to start and
-stop it gracefully

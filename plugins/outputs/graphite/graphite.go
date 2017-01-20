@@ -2,11 +2,9 @@ package graphite
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -25,6 +23,8 @@ type Graphite struct {
 
 var sampleConfig = `
   ## TCP endpoint for your graphite instance.
+  ## If multiple endpoints are configured, output will be load balanced.
+  ## Only one of the endpoints will be written to with each iteration.
   servers = ["localhost:2003"]
   ## Prefix metrics name
   prefix = ""
@@ -75,20 +75,19 @@ func (g *Graphite) Description() string {
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
-	var bp []string
+	var batch []byte
 	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template)
 	if err != nil {
 		return err
 	}
 
 	for _, metric := range metrics {
-		gMetrics, err := s.Serialize(metric)
+		buf, err := s.Serialize(metric)
 		if err != nil {
-			log.Printf("Error serializing some metrics to graphite: %s", err.Error())
+			log.Printf("E! Error serializing some metrics to graphite: %s", err.Error())
 		}
-		bp = append(bp, gMetrics...)
+		batch = append(batch, buf...)
 	}
-	graphitePoints := strings.Join(bp, "\n") + "\n"
 
 	// This will get set to nil if a successful write occurs
 	err = errors.New("Could not write to any Graphite server in cluster\n")
@@ -96,9 +95,12 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))
 	for _, n := range p {
-		if _, e := fmt.Fprint(g.conns[n], graphitePoints); e != nil {
+		if g.Timeout > 0 {
+			g.conns[n].SetWriteDeadline(time.Now().Add(time.Duration(g.Timeout) * time.Second))
+		}
+		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
-			log.Println("ERROR: " + err.Error())
+			log.Println("E! Graphite Error: " + e.Error())
 			// Let's try the next one
 		} else {
 			// Success

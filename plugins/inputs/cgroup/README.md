@@ -2,6 +2,10 @@
 
 This input plugin will capture specific statistics per cgroup.
 
+Consider restricting paths to the set of cgroups you really
+want to monitor if you have a large number of cgroups, to avoid
+any cardinality issues.
+
 Following file formats are supported:
 
 * Single value
