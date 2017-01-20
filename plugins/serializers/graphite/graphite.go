@@ -18,6 +18,7 @@ var (
 type GraphiteSerializer struct {
 	Prefix   string
 	Template string
+	Protocol string
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {

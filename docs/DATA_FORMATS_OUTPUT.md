@@ -87,13 +87,30 @@ tag keys are filled.
 1. _measurement_ is a special keyword that outputs the measurement name.
 1. _field_ is a special keyword that outputs the field name.
 
-Which means the following influx metric -> graphite conversion would happen:
+Which means the following influx metric -> graphite conversion would happen depending on the each protocol:
 
+1. protocol = "plain/text"
 ```
 cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
 =>
 tars.cpu-total.us-east-1.cpu.usage_user 0.89 1455320690
 tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
+```
+
+2. protocol = "json"
+```
+cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
+=>
+[{
+    "path":"tars.cpu-total.us-east-1.cpu.usage_user",
+    "value":"0.89",
+    "timestamp":"1455320690"
+},
+{
+    "path":"tars.cpu-total.us-east-1.cpu.usage_idle",
+    "value":"98.09",
+    "timestamp":"1455320690"
+}]
 ```
 
 ### Graphite Configuration:
@@ -113,6 +130,8 @@ tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
   prefix = "telegraf"
   # graphite template
   template = "host.tags.measurement.field"
+  # graphite protocol with plain/text or json
+  protocol = "plain/text"
 ```
 
 # JSON:

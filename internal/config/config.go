@@ -1255,6 +1255,20 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		c.DataFormat = "influx"
 	}
 
+	if c.DataFormat == "graphite" {
+		buildGraphiteSerializer(c, tbl)
+	}
+
+	delete(tbl.Fields, "data_format")
+	return serializers.NewSerializer(c)
+}
+
+// buildGraphiteSerializer grabs the necessary entries from the ast.Table for creating
+// a serializers.GraphiteSerializer object, and creates it, which can then be added onto
+// an Output object.
+// A detailed description of the entries available in GraphiteSerializer can be found at the URL below.
+// https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
+func buildGraphiteSerializer(c *serializers.Config, tbl *ast.Table) {
 	if node, ok := tbl.Fields["prefix"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1271,10 +1285,23 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
-	delete(tbl.Fields, "data_format")
+	if node, ok := tbl.Fields["protocol"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.Protocol = str.Value
+			}
+		}
+	}
+
+	if (c.Protocol == "") {
+		log.Print("I! GraphiteSerializer protocol is empty! so, default protocol is setting as plain/text.")
+
+		c.Protocol = "plain/text"
+	}
+
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
-	return serializers.NewSerializer(c)
+	delete(tbl.Fields, "protocol")
 }
 
 // buildOutput parses output specific items from the ast.Table,

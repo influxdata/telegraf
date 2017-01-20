@@ -76,7 +76,7 @@ func (g *Graphite) Description() string {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, "plain/text")
 	if err != nil {
 		return err
 	}
