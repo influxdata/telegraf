@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
 var (
@@ -25,13 +24,11 @@ var (
 type Instrumental struct {
 	Host       string
 	ApiToken   string
-	Prefix     string
-	DataFormat string
-	Template   string
 	Timeout    internal.Duration
 	Debug      bool
 
 	conn net.Conn
+	serializer serializers.Serializer
 }
 
 const (
@@ -44,16 +41,28 @@ const (
 var sampleConfig = `
   ## Project API Token (required)
   api_token = "API Token" # required
-  ## Prefix the metrics with a given name
-  prefix = ""
-  ## Stats output template (Graphite formatting)
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  template = "host.tags.measurement.field"
   ## Timeout in seconds to connect
   timeout = "2s"
   ## Display Communcation to Instrumental
   debug = false
+
+  ## Data format to output.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "graphite"
+  # prefix each graphite bucket
+  prefix = ""
+  # Graphite output template
+  template = "host.tags.measurement.field"
+  # graphite protocol with plain/text or json.
+  # If no value is set, plain/text is default.
+  protocol = "plain/text"
 `
+
+func (i *Instrumental) SetSerializer(serializer serializers.Serializer) {
+	i.serializer = serializer
+}
 
 func (i *Instrumental) Connect() error {
 	connection, err := net.DialTimeout("tcp", i.Host+":8000", i.Timeout.Duration)
@@ -86,11 +95,6 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, "plain/text")
-	if err != nil {
-		return err
-	}
-
 	var points []string
 	var metricType string
 	var toSerialize telegraf.Metric
@@ -119,7 +123,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 			m.Time(),
 		)
 
-		buf, err := s.Serialize(toSerialize)
+		buf, err := i.serializer.Serialize(toSerialize)
 		if err != nil {
 			log.Printf("E! Error serializing a metric to Instrumental: %s", err)
 		}
@@ -157,7 +161,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	}
 
 	allPoints := strings.Join(points, "")
-	_, err = fmt.Fprintf(i.conn, allPoints)
+	_, err := fmt.Fprintf(i.conn, allPoints)
 
 	if err != nil {
 		if err == io.EOF {
@@ -207,7 +211,6 @@ func init() {
 	outputs.Add("instrumental", func() telegraf.Output {
 		return &Instrumental{
 			Host:     DefaultHost,
-			Template: graphite.DEFAULT_TEMPLATE,
 		}
 	})
 }
