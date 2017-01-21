@@ -1293,12 +1293,6 @@ func buildGraphiteSerializer(c *serializers.Config, tbl *ast.Table) {
 		}
 	}
 
-	if (c.Protocol == "") {
-		log.Print("I! GraphiteSerializer protocol is empty! so, default protocol is setting as plain/text.")
-
-		c.Protocol = "plain/text"
-	}
-
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "protocol")
