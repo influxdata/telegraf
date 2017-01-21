@@ -442,13 +442,13 @@ func TestSerializeWithoutProtocol(t *testing.T) {
 	buf, _ := s.Serialize(m)
 
 	// then
-	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	actualS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{
 		fmt.Sprintf("localhost.cpu0.us-west-2.cpu.usage_idle 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	assert.Equal(t, expS, actualS)
 }
 
 func TestSerializerWithJsonProtocol1(t *testing.T) {
@@ -466,11 +466,11 @@ func TestSerializerWithJsonProtocol1(t *testing.T) {
 	buf, err := s.Serialize(m)
 
 	// then
-	mS := string(buf)
+	actualS := string(buf)
 	assert.NoError(t, err)
 
 	expS := fmt.Sprintf("[{\"path\":\"localhost.cpu0.us-west-2.cpu\",\"value\":\"91.5\",\"timestamp\":\"%d\"}]", now.Unix())
-	assert.Equal(t, expS, mS)
+	assert.Equal(t, expS, actualS)
 }
 
 func TestSerializerWithJsonProtocol2(t *testing.T) {
@@ -488,12 +488,23 @@ func TestSerializerWithJsonProtocol2(t *testing.T) {
 	buf, _ := s.Serialize(m)
 
 	// then
-	mS := string(buf)
-	assert.NoError(t, err)
+	actualS := string(buf)
 
 	expS := fmt.Sprintf("[" +
 		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_idle\",\"value\":\"91.5\",\"timestamp\":\"%d\"}," +
 		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_busy\",\"value\":\"8.5\",\"timestamp\":\"%d\"}" +
 		"]", now.Unix(), now.Unix())
-	assert.Equal(t, expS, mS)
+
+	reorderedExpS := fmt.Sprintf("[" +
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_busy\",\"value\":\"8.5\",\"timestamp\":\"%d\"}," +
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_idle\",\"value\":\"91.5\",\"timestamp\":\"%d\"}" +
+		"]", now.Unix(), now.Unix())
+
+	// serialize function uses internally map. result is not same everytime because map is not guaranteed key ordering.
+	// So I decided to succeed with one of the two expected values in order.
+	if actualS == expS || actualS == reorderedExpS {
+		assert.True(t, true)
+	} else {
+		assert.True(t, false)
+	}
 }
