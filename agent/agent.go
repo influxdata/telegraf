@@ -398,5 +398,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	}
 
 	wg.Wait()
+	a.Close()
 	return nil
 }
