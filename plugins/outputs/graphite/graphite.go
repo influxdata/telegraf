@@ -15,10 +15,10 @@ import (
 type Graphite struct {
 	// URL is only for backwards compatability
 	Servers  []string
-	Prefix   string
-	Template string
 	Timeout  int
+
 	conns    []net.Conn
+	serializer serializers.Serializer
 }
 
 var sampleConfig = `
@@ -26,14 +26,25 @@ var sampleConfig = `
   ## If multiple endpoints are configured, output will be load balanced.
   ## Only one of the endpoints will be written to with each iteration.
   servers = ["localhost:2003"]
-  ## Prefix metrics name
-  prefix = ""
-  ## Graphite output template
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  template = "host.tags.measurement.field"
   ## timeout in seconds for the write connection to graphite
   timeout = 2
+  ## Data format to output.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "graphite"
+  # prefix each graphite bucket
+  prefix = ""
+  # Graphite output template
+  template = "host.tags.measurement.field"
+  # graphite protocol with plain/text or json.
+  # If no value is set, plain/text is default.
+  protocol = "plain/text"
 `
+
+func (g *Graphite) SetSerializer(serializer serializers.Serializer) {
+	g.serializer = serializer
+}
 
 func (g *Graphite) Connect() error {
 	// Set default values
@@ -41,7 +52,7 @@ func (g *Graphite) Connect() error {
 		g.Timeout = 2
 	}
 	if len(g.Servers) == 0 {
-		g.Servers = append(g.Servers, "localhost:2003")
+		g.Servers = append(g.Servers, "127.0.0.1:2003")
 	}
 	// Get Connections
 	var conns []net.Conn
@@ -76,13 +87,9 @@ func (g *Graphite) Description() string {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, "plain/text")
-	if err != nil {
-		return err
-	}
 
 	for _, metric := range metrics {
-		buf, err := s.Serialize(metric)
+		buf, err := g.serializer.Serialize(metric)
 		if err != nil {
 			log.Printf("E! Error serializing some metrics to graphite: %s", err.Error())
 		}
@@ -90,7 +97,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	}
 
 	// This will get set to nil if a successful write occurs
-	err = errors.New("Could not write to any Graphite server in cluster\n")
+	err := errors.New("Could not write to any Graphite server in cluster\n")
 
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))

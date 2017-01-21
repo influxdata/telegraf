@@ -130,7 +130,8 @@ cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 145532
   prefix = "telegraf"
   # graphite template
   template = "host.tags.measurement.field"
-  # graphite protocol with plain/text or json
+  # graphite protocol with plain/text or json.
+  # If no value is set, plain/text is default.
   protocol = "plain/text"
 ```
 
