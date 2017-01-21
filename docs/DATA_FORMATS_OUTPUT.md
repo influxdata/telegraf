@@ -126,7 +126,7 @@ cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 145532
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "graphite"
 
-  # prefix each graphite bucket
+  # prefix each graphite bucket, use to prefix all sent metrics.
   prefix = "telegraf"
   # graphite template
   template = "host.tags.measurement.field"
