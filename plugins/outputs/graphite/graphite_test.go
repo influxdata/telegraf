@@ -11,9 +11,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
+	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
 func TestGraphiteError(t *testing.T) {

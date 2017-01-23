@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/influxdata/telegraf"
 	"encoding/json"
+	"github.com/influxdata/telegraf"
 )
 
 const (
@@ -26,8 +26,8 @@ type GraphiteSerializer struct {
 
 // GraphiteJson struct for json processing.
 type GraphiteJson struct {
-	Path string `json:"path"`
-	Value string `json:"value"`
+	Path      string `json:"path"`
+	Value     string `json:"value"`
 	Timestamp string `json:"timestamp"`
 }
 
@@ -54,8 +54,8 @@ func jsonSerialize(bucket string, metric telegraf.Metric, timestamp int64) ([]by
 
 	for fieldName, value := range metric.Fields() {
 		out = append(out, GraphiteJson{
-			Path: sanitizedChars.Replace(InsertField(bucket, fieldName)),
-			Value: sanitizedChars.Replace(fmt.Sprintf("%#v", value)),
+			Path:      sanitizedChars.Replace(InsertField(bucket, fieldName)),
+			Value:     sanitizedChars.Replace(fmt.Sprintf("%#v", value)),
 			Timestamp: fmt.Sprintf("%d", timestamp),
 		})
 	}

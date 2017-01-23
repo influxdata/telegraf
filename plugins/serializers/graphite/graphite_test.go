@@ -490,14 +490,14 @@ func TestSerializerWithJsonProtocol2(t *testing.T) {
 	// then
 	actualS := string(buf)
 
-	expS := fmt.Sprintf("[" +
-		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_idle\",\"value\":\"91.5\",\"timestamp\":\"%d\"}," +
-		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_busy\",\"value\":\"8.5\",\"timestamp\":\"%d\"}" +
+	expS := fmt.Sprintf("["+
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_idle\",\"value\":\"91.5\",\"timestamp\":\"%d\"},"+
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_busy\",\"value\":\"8.5\",\"timestamp\":\"%d\"}"+
 		"]", now.Unix(), now.Unix())
 
-	reorderedExpS := fmt.Sprintf("[" +
-		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_busy\",\"value\":\"8.5\",\"timestamp\":\"%d\"}," +
-		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_idle\",\"value\":\"91.5\",\"timestamp\":\"%d\"}" +
+	reorderedExpS := fmt.Sprintf("["+
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_busy\",\"value\":\"8.5\",\"timestamp\":\"%d\"},"+
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_idle\",\"value\":\"91.5\",\"timestamp\":\"%d\"}"+
 		"]", now.Unix(), now.Unix())
 
 	// serialize function uses internally map. result is not same everytime because map is not guaranteed key ordering.

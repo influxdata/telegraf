@@ -22,12 +22,12 @@ var (
 )
 
 type Instrumental struct {
-	Host       string
-	ApiToken   string
-	Timeout    internal.Duration
-	Debug      bool
+	Host     string
+	ApiToken string
+	Timeout  internal.Duration
+	Debug    bool
 
-	conn net.Conn
+	conn       net.Conn
 	serializer serializers.Serializer
 }
 
@@ -210,7 +210,7 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 func init() {
 	outputs.Add("instrumental", func() telegraf.Output {
 		return &Instrumental{
-			Host:     DefaultHost,
+			Host: DefaultHost,
 		}
 	})
 }

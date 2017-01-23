@@ -14,10 +14,10 @@ import (
 
 type Graphite struct {
 	// URL is only for backwards compatability
-	Servers  []string
-	Timeout  int
+	Servers []string
+	Timeout int
 
-	conns    []net.Conn
+	conns      []net.Conn
 	serializer serializers.Serializer
 }
 

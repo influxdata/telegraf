@@ -67,7 +67,7 @@ func NewInfluxSerializer() (Serializer, error) {
 }
 
 func NewGraphiteSerializer(prefix, template, protocol string) (Serializer, error) {
- 	return &graphite.GraphiteSerializer{
+	return &graphite.GraphiteSerializer{
 		Prefix:   prefix,
 		Template: template,
 		Protocol: protocol,

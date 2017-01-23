@@ -10,8 +10,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWrite(t *testing.T) {
