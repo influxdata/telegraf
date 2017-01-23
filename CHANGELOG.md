@@ -68,6 +68,7 @@ plugins, not just statsd.
 - [#1975](https://github.com/influxdata/telegraf/issues/1975) & [#2102](https://github.com/influxdata/telegraf/issues/2102): Fix thread-safety when using multiple instances of the statsd input plugin.
 - [#2027](https://github.com/influxdata/telegraf/issues/2027): docker input: interface conversion panic fix.
 - [#1814](https://github.com/influxdata/telegraf/issues/1814): snmp: ensure proper context is present on error messages
+- [#2299](https://github.com/influxdata/telegraf/issues/2299): opentsdb: add tcp:// prefix if no scheme provided.
 
 ## v1.1.2 [2016-12-12]
 
