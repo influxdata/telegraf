@@ -9,6 +9,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graylog"
+	_ "github.com/influxdata/telegraf/plugins/outputs/http"
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/instrumental"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
@@ -20,5 +21,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/opentsdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
-	_ "github.com/influxdata/telegraf/plugins/outputs/http"
 )
