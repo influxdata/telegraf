@@ -1,16 +1,16 @@
 package http
 
 import (
-	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf"
 	"bytes"
-	"net/http"
-	"net"
-	"time"
-	"log"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"fmt"
 	"errors"
+	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers"
+	"log"
+	"net"
+	"net/http"
+	"time"
 )
 
 var sampleConfig = `
@@ -41,35 +41,35 @@ var sampleConfig = `
 `
 
 const (
-	POST = "POST"
+	POST         = "POST"
 	CONTENT_TYPE = "Content-Type"
 
-	DEFAULT_RETRY = 3
-	DEFAULT_CONTENT_TYPE = "application/json"
-	DEFAULT_TLS_HANDSHAKE_TIMEOUT = 10
+	DEFAULT_RETRY                   = 3
+	DEFAULT_CONTENT_TYPE            = "application/json"
+	DEFAULT_TLS_HANDSHAKE_TIMEOUT   = 10
 	DEFAULT_RESPONSE_HEADER_TIMEOUT = 3
-	DEFAULT_DIAL_TIME_OUT = 3
-	DEFAULT_KEEP_ALIVE = 3
+	DEFAULT_DIAL_TIME_OUT           = 3
+	DEFAULT_KEEP_ALIVE              = 3
 	DEFAULT_EXPECT_CONTINUE_TIMEOUT = 3
-	DEFAULT_IDLE_CONN_TIMEOUT = 3
+	DEFAULT_IDLE_CONN_TIMEOUT       = 3
 )
 
 type Http struct {
 	// http required option
-	URL                   string `toml:"url"`
+	URL string `toml:"url"`
 
 	// http default value가 있는 option
 	ContentType           string `toml:"content_type"`
-	Retry                 int `toml:"retry"`
-	TLSHandshakeTimeout   int `toml:"tls_handshake_timeout"`
-	ResponseHeaderTimeout int `toml:"response_header_timeout"`
-	DialTimeOut           int `toml:"dial_timeout"`
-	KeepAlive             int `toml:"keepalive"`
-	ExpectContinueTimeout int `toml:"expect_continue_timeout"`
-	IdleConnTimeout       int `toml:"idle_conn_timeout"`
+	Retry                 int    `toml:"retry"`
+	TLSHandshakeTimeout   int    `toml:"tls_handshake_timeout"`
+	ResponseHeaderTimeout int    `toml:"response_header_timeout"`
+	DialTimeOut           int    `toml:"dial_timeout"`
+	KeepAlive             int    `toml:"keepalive"`
+	ExpectContinueTimeout int    `toml:"expect_continue_timeout"`
+	IdleConnTimeout       int    `toml:"idle_conn_timeout"`
 
-	client                http.Client
-	serializer            serializers.Serializer
+	client     http.Client
+	serializer serializers.Serializer
 }
 
 func (h *Http) SetSerializer(serializer serializers.Serializer) {
@@ -87,7 +87,7 @@ func (h Http) Connect() error {
 			TLSHandshakeTimeout:   time.Duration(h.TLSHandshakeTimeout) * time.Second,
 			ResponseHeaderTimeout: time.Duration(h.ResponseHeaderTimeout) * time.Second,
 			ExpectContinueTimeout: time.Duration(h.ExpectContinueTimeout) * time.Second,
-			IdleConnTimeout: time.Duration(h.IdleConnTimeout) * time.Second,
+			IdleConnTimeout:       time.Duration(h.IdleConnTimeout) * time.Second,
 		},
 	}
 
@@ -120,7 +120,7 @@ func (h Http) Write(metrics []telegraf.Metric) error {
 		buf, err := h.serializer.Serialize(metric)
 
 		if err != nil {
-			log.Println("E! Error serializing some metrics: %s", err.Error())
+			log.Printf("E! Error serializing some metrics: %s", err.Error())
 		}
 
 		if response, err := write(h, buf); err != nil || response.StatusCode != 200 {
@@ -130,13 +130,13 @@ func (h Http) Write(metrics []telegraf.Metric) error {
 				responseBodyClose(response)
 
 				if err == nil || response.StatusCode == 200 {
-					break;
+					break
 				}
 
 				if err != nil || response.StatusCode != 200 {
-					log.Println(fmt.Sprintf("E! [Try %d] %s request failed! Try again because retry limit is %d. Http Error: %s", i, h.URL, h.Retry, err.Error()))
+					log.Printf("E! [Try %d] %s request failed! Try again because retry limit is %d. Http Error: %s", i, h.URL, h.Retry, err.Error())
 
-					if (i == h.Retry) {
+					if i == h.Retry {
 						return errors.New(fmt.Sprintf("E! Since the retry limit %d has been reached, this request is discarded.", h.Retry))
 					}
 				}
@@ -161,7 +161,7 @@ func write(h Http, buf []byte) (*http.Response, error) {
 	req.Header.Set(CONTENT_TYPE, h.ContentType)
 	req.Close = true
 
-	response, err := h.client.Do(req);
+	response, err := h.client.Do(req)
 
 	return response, err
 }

@@ -1,16 +1,16 @@
 package http
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/influxdata/telegraf/metric"
-	"time"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf"
-	"io/ioutil"
 	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/serializers/graphite"
+	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"net/http"
 	"sync"
+	"testing"
+	"time"
 )
 
 var (
@@ -29,11 +29,10 @@ func TestHttpWriteWithoutURL(t *testing.T) {
 	m, _ := metric.New("cpu", tags, fields, time.Now())
 	metrics := []telegraf.Metric{m}
 
-	http := &Http{
-	}
+	http := &Http{}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix: "telegraf",
+		Prefix:   "telegraf",
 		Template: "tags.measurement.field",
 	})
 
@@ -52,11 +51,11 @@ func TestHttpWriteNormalCase(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:"http://127.0.0.1:9880/metric1",
+		URL: "http://127.0.0.1:9880/metric1",
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix: "telegraf",
+		Prefix:   "telegraf",
 		Template: "tags.measurement.field",
 	})
 
@@ -71,11 +70,11 @@ func TestHttpWriteWithIncorrectURLForRetry(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:"http://127.0.0.1:9880/incorrect/url",
+		URL: "http://127.0.0.1:9880/incorrect/url",
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix: "telegraf",
+		Prefix:   "telegraf",
 		Template: "tags.measurement.field",
 	})
 
