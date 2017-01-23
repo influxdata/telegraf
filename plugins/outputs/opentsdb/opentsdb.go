@@ -59,6 +59,9 @@ func ToLineFormat(tags map[string]string) string {
 }
 
 func (o *OpenTSDB) Connect() error {
+	if !strings.HasPrefix(o.Host, "http") && !strings.HasPrefix(o.Host, "tcp") {
+		o.Host = "tcp://" + o.Host
+	}
 	// Test Connection to OpenTSDB Server
 	u, err := url.Parse(o.Host)
 	if err != nil {
@@ -68,11 +71,11 @@ func (o *OpenTSDB) Connect() error {
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB: TCP address cannot be resolved")
+		return fmt.Errorf("OpenTSDB TCP address cannot be resolved: %s", err)
 	}
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB: Telnet connect fail")
+		return fmt.Errorf("OpenTSDB Telnet connect fail: %s", err)
 	}
 	defer connection.Close()
 	return nil
