@@ -110,13 +110,23 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
 func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName string, counter string, instance string,
-	measurement string, include_total bool) {
+	measurement string, include_total bool) error {
 
 	var handle PDH_HQUERY
 	var counterHandle PDH_HCOUNTER
 	ret := PdhOpenQuery(0, 0, &handle)
-	ret = PdhAddCounter(handle, query, 0, &counterHandle)
-	_ = ret
+	if m.PreVistaSupport {
+		ret = PdhAddCounter(handle, query, 0, &counterHandle)
+	} else {
+		ret = PdhAddEnglishCounter(handle, query, 0, &counterHandle)
+	}
+
+	// Call PdhCollectQueryData one time to check existance of the counter
+	ret = PdhCollectQueryData(handle)
+	if ret != ERROR_SUCCESS {
+		ret = PdhCloseQuery(handle)
+		return errors.New("Invalid query for Performance Counters")
+	}
 
 	temp := &item{query, objectName, counter, instance, measurement,
 		include_total, handle, counterHandle}
@@ -127,39 +137,6 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 		metrics.items = make(map[int]*item)
 	}
 	metrics.items[index] = temp
-}
-
-func (m *Win_PerfCounters) InvalidObject(exists uint32, query string, PerfObject perfobject, instance string, counter string) error {
-	if exists == 3221228472 { // PDH_CSTATUS_NO_OBJECT
-		if PerfObject.FailOnMissing {
-			err := errors.New("Performance object does not exist")
-			return err
-		} else {
-			fmt.Printf("Performance Object '%s' does not exist in query: %s\n", PerfObject.ObjectName, query)
-		}
-	} else if exists == 3221228473 { // PDH_CSTATUS_NO_COUNTER
-
-		if PerfObject.FailOnMissing {
-			err := errors.New("Counter in Performance object does not exist")
-			return err
-		} else {
-			fmt.Printf("Counter '%s' does not exist in query: %s\n", counter, query)
-		}
-	} else if exists == 2147485649 { // PDH_CSTATUS_NO_INSTANCE
-		if PerfObject.FailOnMissing {
-			err := errors.New("Instance in Performance object does not exist")
-			return err
-		} else {
-			fmt.Printf("Instance '%s' does not exist in query: %s\n", instance, query)
-
-		}
-	} else {
-		fmt.Printf("Invalid result: %v, query: %s\n", exists, query)
-		if PerfObject.FailOnMissing {
-			err := errors.New("Invalid query for Performance Counters")
-			return err
-		}
-	}
 	return nil
 }
 
@@ -188,17 +165,18 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						query = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					var exists uint32 = PdhValidatePath(query)
+					err := m.AddItem(metrics, query, objectname, counter, instance,
+						PerfObject.Measurement, PerfObject.IncludeTotal)
 
-					if exists == ERROR_SUCCESS {
+					if err == nil {
 						if m.PrintValid {
 							fmt.Printf("Valid: %s\n", query)
 						}
-						m.AddItem(metrics, query, objectname, counter, instance,
-							PerfObject.Measurement, PerfObject.IncludeTotal)
 					} else {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							err := m.InvalidObject(exists, query, PerfObject, instance, counter)
+							fmt.Printf("Invalid query: %s\n", query)
+						}
+						if PerfObject.FailOnMissing {
 							return err
 						}
 					}
