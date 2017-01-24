@@ -200,8 +200,6 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	p := rand.Perm(len(i.conns))
 	for _, n := range p {
 		if e := i.conns[n].Write(bp); e != nil {
-			// Log write failure
-			log.Printf("E! InfluxDB Output Error: %s", e)
 			// If the database was not found, try to recreate it
 			if strings.Contains(e.Error(), "database not found") {
 				if errc := createDatabase(i.conns[n], i.Database); errc != nil {
@@ -209,6 +207,15 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 						i.Database)
 				}
 			}
+			if strings.Contains(e.Error(), "field type conflict") {
+				log.Printf("E! Field type conflict, dropping conflicted points: %s", e)
+				// setting err to nil, otherwise we will keep retrying and points
+				// w/ conflicting types will get stuck in the buffer forever.
+				err = nil
+				break
+			}
+			// Log write failure
+			log.Printf("E! InfluxDB Output Error: %s", e)
 		} else {
 			err = nil
 			break
