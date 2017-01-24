@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,8 +24,11 @@ func TestWrite(t *testing.T) {
 	i := Instrumental{
 		Host:     "127.0.0.1",
 		ApiToken: "abc123token",
-		Prefix:   "my.prefix",
 	}
+
+	i.SetSerializer(&graphite.GraphiteSerializer{
+		Prefix: "my.prefix",
+	})
 
 	// Default to gauge
 	m1, _ := metric.New(

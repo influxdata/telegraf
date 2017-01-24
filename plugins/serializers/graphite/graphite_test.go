@@ -18,6 +18,19 @@ var defaultTags = map[string]string{
 	"datacenter": "us-west-2",
 }
 
+var oneField = map[string]interface{}{
+	"usage_idle": float64(91.5),
+}
+
+var valueField = map[string]interface{}{
+	"value": float64(91.5),
+}
+
+var multiFields = map[string]interface{}{
+	"usage_idle": float64(91.5),
+	"usage_busy": float64(8.5),
+}
+
 const (
 	template1 = "tags.measurement.field"
 	template2 = "host.measurement.field"
@@ -415,4 +428,83 @@ func TestTemplate6(t *testing.T) {
 
 	expS := "localhost.cpu0.us-west-2.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)
+}
+
+func TestSerializeWithoutProtocol(t *testing.T) {
+	// given
+	now := time.Now()
+
+	m, err := metric.New("cpu", defaultTags, oneField, now)
+	assert.NoError(t, err)
+
+	// when
+	s := GraphiteSerializer{}
+	buf, _ := s.Serialize(m)
+
+	// then
+	actualS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+
+	expS := []string{
+		fmt.Sprintf("localhost.cpu0.us-west-2.cpu.usage_idle 91.5 %d", now.Unix()),
+	}
+	assert.Equal(t, expS, actualS)
+}
+
+func TestSerializerWithJsonProtocol1(t *testing.T) {
+	// given
+	now := time.Now()
+
+	m, err := metric.New("cpu", defaultTags, valueField, now)
+	assert.NoError(t, err)
+
+	// when
+	s := GraphiteSerializer{
+		Template: DEFAULT_TEMPLATE,
+		Protocol: "json",
+	}
+	buf, err := s.Serialize(m)
+
+	// then
+	actualS := string(buf)
+	assert.NoError(t, err)
+
+	expS := fmt.Sprintf("[{\"path\":\"localhost.cpu0.us-west-2.cpu\",\"value\":\"91.5\",\"timestamp\":\"%d\"}]", now.Unix())
+	assert.Equal(t, expS, actualS)
+}
+
+func TestSerializerWithJsonProtocol2(t *testing.T) {
+	// given
+	now := time.Now()
+
+	m, err := metric.New("cpu", defaultTags, multiFields, now)
+	assert.NoError(t, err)
+
+	// when
+	s := GraphiteSerializer{
+		Template: DEFAULT_TEMPLATE,
+		Protocol: "json",
+	}
+	buf, _ := s.Serialize(m)
+
+	// then
+	actualS := string(buf)
+
+	expS := fmt.Sprintf("["+
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_idle\",\"value\":\"91.5\",\"timestamp\":\"%d\"},"+
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_busy\",\"value\":\"8.5\",\"timestamp\":\"%d\"}"+
+		"]", now.Unix(), now.Unix())
+
+	reorderedExpS := fmt.Sprintf("["+
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_busy\",\"value\":\"8.5\",\"timestamp\":\"%d\"},"+
+		"{\"path\":\"localhost.cpu0.us-west-2.cpu.usage_idle\",\"value\":\"91.5\",\"timestamp\":\"%d\"}"+
+		"]", now.Unix(), now.Unix())
+
+	// serialize function uses internally map. result is not same everytime because map is not guaranteed key ordering.
+	// So I decided to succeed with one of the two expected values in order.
+	if actualS == expS || actualS == reorderedExpS {
+		assert.True(t, true)
+	} else {
+		assert.True(t, false)
+	}
 }

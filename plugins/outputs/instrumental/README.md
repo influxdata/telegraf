@@ -13,13 +13,21 @@ by whitespace. The `increment` type is only used if the metric comes in as a cou
 [[outputs.instrumental]]
   ## Project API Token (required)
   api_token = "API Token"  # required
-  ## Prefix the metrics with a given name
-  prefix = ""
-  ## Stats output template (Graphite formatting)
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  template = "host.tags.measurement.field"
   ## Timeout in seconds to connect
   timeout = "2s"
   ## Debug true - Print communcation to Instrumental
   debug = false
+  
+  ## Data format to output.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "graphite"
+  # prefix each graphite bucket
+  prefix = ""
+  # Graphite output template
+  template = "host.tags.measurement.field"
+  # graphite protocol with plain/text or json.
+  # If no value is set, plain/text is default.
+  protocol = "plain/text"
 ```

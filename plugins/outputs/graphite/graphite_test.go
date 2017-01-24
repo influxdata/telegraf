@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
+	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,8 +20,10 @@ func TestGraphiteError(t *testing.T) {
 	// Init plugin
 	g := Graphite{
 		Servers: []string{"127.0.0.1:2003", "127.0.0.1:12003"},
-		Prefix:  "my.prefix",
 	}
+	g.SetSerializer(&graphite.GraphiteSerializer{
+		Prefix: "my.prefix",
+	})
 	// Init metrics
 	m1, _ := metric.New(
 		"mymeasurement",
@@ -48,9 +51,10 @@ func TestGraphiteOK(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	// Init plugin
-	g := Graphite{
+	g := Graphite{}
+	g.SetSerializer(&graphite.GraphiteSerializer{
 		Prefix: "my.prefix",
-	}
+	})
 	// Init metrics
 	m1, _ := metric.New(
 		"mymeasurement",
