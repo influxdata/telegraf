@@ -68,7 +68,7 @@ var sampleConfig = `
   gather_admin_socket_stats = true
 
   ## Whether to gather statistics via ceph commands
-  gather_cluster_stats = true
+  gather_cluster_stats = false
 `
 
 func (c *Ceph) SampleConfig() string {
@@ -100,12 +100,12 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 	for _, s := range sockets {
 		dump, err := perfDump(c.CephBinary, s)
 		if err != nil {
-			log.Printf("error reading from socket '%s': %v", s.socket, err)
+			log.Printf("E! error reading from socket '%s': %v", s.socket, err)
 			continue
 		}
 		data, err := parseDump(dump)
 		if err != nil {
-			log.Printf("error parsing dump from socket '%s': %v", s.socket, err)
+			log.Printf("E! error parsing dump from socket '%s': %v", s.socket, err)
 			continue
 		}
 		for tag, metrics := range *data {
@@ -293,7 +293,7 @@ func flatten(data interface{}) []*metric {
 			}
 		}
 	default:
-		log.Printf("Ignoring unexpected type '%T' for value %v", val, val)
+		log.Printf("I! Ignoring unexpected type '%T' for value %v", val, val)
 	}
 
 	return metrics

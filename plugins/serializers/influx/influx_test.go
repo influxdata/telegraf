@@ -2,12 +2,13 @@ package influx
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 func TestSerializeMetricFloat(t *testing.T) {
@@ -18,11 +19,12 @@ func TestSerializeMetricFloat(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{fmt.Sprintf("cpu,cpu=cpu0 usage_idle=91.5 %d", now.UnixNano())}
@@ -37,11 +39,12 @@ func TestSerializeMetricInt(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": int64(90),
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{fmt.Sprintf("cpu,cpu=cpu0 usage_idle=90i %d", now.UnixNano())}
@@ -56,11 +59,12 @@ func TestSerializeMetricString(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": "foobar",
 	}
-	m, err := telegraf.NewMetric("cpu", tags, fields, now)
+	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s := InfluxSerializer{}
-	mS, err := s.Serialize(m)
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 	assert.NoError(t, err)
 
 	expS := []string{fmt.Sprintf("cpu,cpu=cpu0 usage_idle=\"foobar\" %d", now.UnixNano())}

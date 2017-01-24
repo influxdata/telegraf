@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 type TcpListener struct {
@@ -41,25 +42,31 @@ type TcpListener struct {
 
 	parser parsers.Parser
 	acc    telegraf.Accumulator
+
+	MaxConnections     selfstat.Stat
+	CurrentConnections selfstat.Stat
+	TotalConnections   selfstat.Stat
+	PacketsRecv        selfstat.Stat
+	BytesRecv          selfstat.Stat
 }
 
-var dropwarn = "ERROR: tcp_listener message queue full. " +
+var dropwarn = "E! Error: tcp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
-var malformedwarn = "WARNING: tcp_listener has received %d malformed packets" +
+var malformedwarn = "E! tcp_listener has received %d malformed packets" +
 	" thus far."
 
 const sampleConfig = `
   ## Address and port to host TCP listener on
-  service_address = ":8094"
+  # service_address = ":8094"
 
   ## Number of TCP messages allowed to queue up. Once filled, the
   ## TCP listener will start dropping packets.
-  allowed_pending_messages = 10000
+  # allowed_pending_messages = 10000
 
   ## Maximum number of concurrent TCP connections to allow
-  max_tcp_connections = 250
+  # max_tcp_connections = 250
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
@@ -91,6 +98,16 @@ func (t *TcpListener) Start(acc telegraf.Accumulator) error {
 	t.Lock()
 	defer t.Unlock()
 
+	tags := map[string]string{
+		"address": t.ServiceAddress,
+	}
+	t.MaxConnections = selfstat.Register("tcp_listener", "max_connections", tags)
+	t.MaxConnections.Set(int64(t.MaxTCPConnections))
+	t.CurrentConnections = selfstat.Register("tcp_listener", "current_connections", tags)
+	t.TotalConnections = selfstat.Register("tcp_listener", "total_connections", tags)
+	t.PacketsRecv = selfstat.Register("tcp_listener", "packets_received", tags)
+	t.BytesRecv = selfstat.Register("tcp_listener", "bytes_received", tags)
+
 	t.acc = acc
 	t.in = make(chan []byte, t.AllowedPendingMessages)
 	t.done = make(chan struct{})
@@ -108,13 +125,13 @@ func (t *TcpListener) Start(acc telegraf.Accumulator) error {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 		return err
 	}
-	log.Println("TCP server listening on: ", t.listener.Addr().String())
+	log.Println("I! TCP server listening on: ", t.listener.Addr().String())
 
 	t.wg.Add(2)
 	go t.tcpListen()
 	go t.tcpParser()
 
-	log.Printf("Started TCP listener service on %s\n", t.ServiceAddress)
+	log.Printf("I! Started TCP listener service on %s\n", t.ServiceAddress)
 	return nil
 }
 
@@ -141,7 +158,7 @@ func (t *TcpListener) Stop() {
 
 	t.wg.Wait()
 	close(t.in)
-	log.Println("Stopped TCP listener service on ", t.ServiceAddress)
+	log.Println("I! Stopped TCP listener service on ", t.ServiceAddress)
 }
 
 // tcpListen listens for incoming TCP connections.
@@ -182,13 +199,15 @@ func (t *TcpListener) refuser(conn *net.TCPConn) {
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)
 	conn.Close()
-	log.Printf("Refused TCP Connection from %s", conn.RemoteAddr())
-	log.Printf("WARNING: Maximum TCP Connections reached, you may want to" +
+	log.Printf("I! Refused TCP Connection from %s", conn.RemoteAddr())
+	log.Printf("I! WARNING: Maximum TCP Connections reached, you may want to" +
 		" adjust max_tcp_connections")
 }
 
 // handler handles a single TCP Connection
 func (t *TcpListener) handler(conn *net.TCPConn, id string) {
+	t.CurrentConnections.Incr(1)
+	t.TotalConnections.Incr(1)
 	// connection cleanup function
 	defer func() {
 		t.wg.Done()
@@ -196,6 +215,7 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 		// Add one connection potential back to channel when this one closes
 		t.accept <- true
 		t.forget(id)
+		t.CurrentConnections.Incr(-1)
 	}()
 
 	var n int
@@ -212,8 +232,11 @@ func (t *TcpListener) handler(conn *net.TCPConn, id string) {
 			if n == 0 {
 				continue
 			}
-			bufCopy := make([]byte, n)
+			t.BytesRecv.Incr(int64(n))
+			t.PacketsRecv.Incr(1)
+			bufCopy := make([]byte, n+1)
 			copy(bufCopy, scanner.Bytes())
+			bufCopy[n] = '\n'
 
 			select {
 			case t.in <- bufCopy:
@@ -276,6 +299,10 @@ func (t *TcpListener) remember(id string, conn *net.TCPConn) {
 
 func init() {
 	inputs.Add("tcp_listener", func() telegraf.Input {
-		return &TcpListener{}
+		return &TcpListener{
+			ServiceAddress:         ":8094",
+			AllowedPendingMessages: 10000,
+			MaxTCPConnections:      250,
+		}
 	})
 }

@@ -96,7 +96,7 @@ func (f *Filter) Compile() error {
 // Apply applies the filter to the given measurement name, fields map, and
 // tags map. It will return false if the metric should be "filtered out", and
 // true if the metric should "pass".
-// It will modify tags in-place if they need to be deleted.
+// It will modify tags & fields in-place if they need to be deleted.
 func (f *Filter) Apply(
 	measurement string,
 	fields map[string]interface{},

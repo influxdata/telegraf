@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,6 +39,13 @@ type Accumulator struct {
 
 func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
+}
+
+func (a *Accumulator) ClearMetrics() {
+	atomic.StoreUint64(&a.nMetrics, 0)
+	a.Lock()
+	defer a.Unlock()
+	a.Metrics = make([]*Metric, 0)
 }
 
 // AddFields adds a measurement point with a specified timestamp.
@@ -101,6 +110,12 @@ func (a *Accumulator) AddGauge(
 	timestamp ...time.Time,
 ) {
 	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
+func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
+	for _, m := range metrics {
+		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	}
 }
 
 // AddError appends the given error to Accumulator.Errors.
@@ -193,6 +208,17 @@ func (a *Accumulator) AssertContainsFields(
 	}
 	msg := fmt.Sprintf("unknown measurement %s", measurement)
 	assert.Fail(t, msg)
+}
+
+func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			msg := fmt.Sprintf("found unexpected measurement %s", measurement)
+			assert.Fail(t, msg)
+		}
+	}
 }
 
 // HasIntValue returns true if the measurement has an Int value

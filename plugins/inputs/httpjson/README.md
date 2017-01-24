@@ -37,6 +37,8 @@ You can also specify which keys from server response should be considered tags:
   ]
 ```
 
+If the JSON response is an array of objects, then each object will be parsed with the same configuration.
+
 You can also specify additional request parameters for the service:
 
 ```
@@ -149,4 +151,54 @@ httpjson_mycollector1_b_e,server='http://my.service.com/_stats' value=5
 
 httpjson_mycollector2_load,server='http://service.net/json/stats' value=100
 httpjson_mycollector2_users,server='http://service.net/json/stats' value=1335
+```
+
+# Example 3, Multiple Metrics in Response:
+
+The response JSON can be treated as an array of data points that are all parsed with the same configuration.
+
+```
+[[inputs.httpjson]]
+  name = "mycollector"
+  servers = [
+    "http://my.service.com/_stats"
+  ]
+  # HTTP method to use (case-sensitive)
+  method = "GET"
+  tag_keys = ["service"]
+```
+
+which responds with the following JSON:
+
+```json
+[
+    {
+        "service": "service01",
+        "a": 0.5,
+        "b": {
+            "c": "some text",
+            "d": 0.1,
+            "e": 5
+        }
+    },
+    {
+        "service": "service02",
+        "a": 0.6,
+        "b": {
+            "c": "some text",
+            "d": 0.2,
+            "e": 6
+        }
+    }
+]
+```
+
+The collected metrics will be:
+```
+httpjson_mycollector_a,service='service01',server='http://my.service.com/_stats' value=0.5
+httpjson_mycollector_b_d,service='service01',server='http://my.service.com/_stats' value=0.1
+httpjson_mycollector_b_e,service='service01',server='http://my.service.com/_stats' value=5
+httpjson_mycollector_a,service='service02',server='http://my.service.com/_stats' value=0.6
+httpjson_mycollector_b_d,service='service02',server='http://my.service.com/_stats' value=0.2
+httpjson_mycollector_b_e,service='service02',server='http://my.service.com/_stats' value=6
 ```

@@ -20,8 +20,8 @@ type GraphiteSerializer struct {
 	Template string
 }
 
-func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
-	out := []string{}
+func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+	out := []byte{}
 
 	// Convert UnixNano to Unix timestamps
 	timestamp := metric.UnixNano() / 1000000000
@@ -34,12 +34,12 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 	for fieldName, value := range metric.Fields() {
 		// Convert value to string
 		valueS := fmt.Sprintf("%#v", value)
-		point := fmt.Sprintf("%s %s %d",
+		point := []byte(fmt.Sprintf("%s %s %d\n",
 			// insert "field" section of template
 			sanitizedChars.Replace(InsertField(bucket, fieldName)),
 			sanitizedChars.Replace(valueS),
-			timestamp)
-		out = append(out, point)
+			timestamp))
+		out = append(out, point...)
 	}
 	return out, nil
 }
