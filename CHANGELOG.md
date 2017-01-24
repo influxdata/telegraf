@@ -235,8 +235,11 @@ which can be installed via
 evaluated at every flush interval, rather than once at startup. This makes it
 consistent with the behavior of `collection_jitter`.
 
+- postgresql plugins now handle oid and name typed columns seamlessly, previously they were ignored/skipped.
+
 ### Features
 
+- [#1617](https://github.com/influxdata/telegraf/pull/1617): postgresql_extensible now handles name and oid types correctly.
 - [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
 - [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
 - [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
