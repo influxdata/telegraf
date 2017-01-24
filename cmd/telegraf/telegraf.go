@@ -314,8 +314,8 @@ func main() {
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
 			Arguments: []string{
-			    "-config", "C:\\Program Files\\Telegraf\\telegraf.conf",
-			    "-config-directory", "C:\\Program Files\\Telegraf\\telegraf.d",
+				"-config", "C:\\Program Files\\Telegraf\\telegraf.conf",
+				"-config-directory", "C:\\Program Files\\Telegraf\\telegraf.d",
 			},
 		}
 
