@@ -398,6 +398,7 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 // Build retrieves all the fields specified in the table and constructs the RTable.
 func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 	rows := map[string]RTableRow{}
+	emptyTags := map[string]int{}
 
 	tagCount := 0
 	for _, f := range t.Fields {
@@ -433,9 +434,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return nil, Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
 				}
-				if fvs, ok := fv.(string); !ok || fvs != "" {
-					ifv[""] = fv
-				}
+				ifv[""] = fv
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
@@ -456,9 +455,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
 				}
-				if fvs, ok := fv.(string); !ok || fvs != "" {
-					ifv[idx] = fv
-				}
+				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {
@@ -476,14 +473,20 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				rtr.Fields = map[string]interface{}{}
 				rows[i] = rtr
 			}
-			if f.IsTag {
-				if vs, ok := v.(string); ok {
-					rtr.Tags[f.Name] = vs
+			// don't add an empty string
+			if vs, ok := v.(string); !ok || vs != "" {
+				if f.IsTag {
+					if ok {
+						rtr.Tags[f.Name] = vs
+					} else {
+						rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+					}
 				} else {
-					rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+					rtr.Fields[f.Name] = v
 				}
-			} else {
-				rtr.Fields[f.Name] = v
+			} else if f.IsTag {
+				// count that we had an empty tag so that we don't reject the row for wrong reasons
+				emptyTags[i]++
 			}
 		}
 	}
@@ -493,8 +496,8 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		Time: time.Now(), //TODO record time at start
 		Rows: make([]RTableRow, 0, len(rows)),
 	}
-	for _, r := range rows {
-		if len(r.Tags) < tagCount {
+	for i, r := range rows {
+		if len(r.Tags)+emptyTags[i] < tagCount {
 			// don't add rows which are missing tags, as without tags you can't filter
 			continue
 		}
