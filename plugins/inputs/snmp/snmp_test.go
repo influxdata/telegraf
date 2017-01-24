@@ -457,9 +457,24 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield4": 22,
 		},
 	}
-	assert.Len(t, tb.Rows, 2)
+	rtr3 := RTableRow{
+		Tags: map[string]string{},
+		Fields: map[string]interface{}{
+			"myfield2": 0,
+			"myfield3": float64(0.0),
+		},
+	}
+	rtr4 := RTableRow{
+		Tags: map[string]string{},
+		Fields: map[string]interface{}{
+			"myfield3": float64(9.999),
+		},
+	}
+	assert.Len(t, tb.Rows, 4)
 	assert.Contains(t, tb.Rows, rtr1)
 	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
+	assert.Contains(t, tb.Rows, rtr4)
 }
 
 func TestTableBuild_noWalk(t *testing.T) {

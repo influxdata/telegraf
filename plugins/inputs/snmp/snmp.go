@@ -433,9 +433,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return nil, Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
 				}
-				if fvs, ok := fv.(string); !ok || fvs != "" {
-					ifv[""] = fv
-				}
+				ifv[""] = fv
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
@@ -456,9 +454,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
 				}
-				if fvs, ok := fv.(string); !ok || fvs != "" {
-					ifv[idx] = fv
-				}
+				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {
@@ -476,14 +472,17 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				rtr.Fields = map[string]interface{}{}
 				rows[i] = rtr
 			}
-			if f.IsTag {
-				if vs, ok := v.(string); ok {
-					rtr.Tags[f.Name] = vs
+			// don't add an empty string
+			if vs, ok := v.(string); !ok || vs != "" {
+				if f.IsTag {
+					if ok {
+						rtr.Tags[f.Name] = vs
+					} else {
+						rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+					}
 				} else {
-					rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+					rtr.Fields[f.Name] = v
 				}
-			} else {
-				rtr.Fields[f.Name] = v
 			}
 		}
 	}
@@ -494,10 +493,6 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		Rows: make([]RTableRow, 0, len(rows)),
 	}
 	for _, r := range rows {
-		if len(r.Tags) < tagCount {
-			// don't add rows which are missing tags, as without tags you can't filter
-			continue
-		}
 		rt.Rows = append(rt.Rows, r)
 	}
 	return &rt, nil
