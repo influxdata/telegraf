@@ -38,6 +38,9 @@ type InfluxDB struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
+	// Follow Redirects even for puts/posts. This can be insuecure
+	InsecureFollowRedirect bool
+
 	// Precision is only here for legacy support. It will be ignored.
 	Precision string
 
@@ -117,15 +120,20 @@ func (i *InfluxDB) Connect() error {
 		default:
 			// If URL doesn't start with "udp", assume HTTP client
 			c, err := client.NewHTTPClient(client.HTTPConfig{
-				Addr:      u,
-				Username:  i.Username,
-				Password:  i.Password,
-				UserAgent: i.UserAgent,
-				Timeout:   i.Timeout.Duration,
-				TLSConfig: tlsCfg,
+				Addr:                   u,
+				Username:               i.Username,
+				Password:               i.Password,
+				UserAgent:              i.UserAgent,
+				Timeout:                i.Timeout.Duration,
+				InsecureFollowRedirect: i.InsecureFollowRedirect,
+				TLSConfig:              tlsCfg,
 			})
 			if err != nil {
 				return err
+			}
+
+			if i.InsecureFollowRedirect {
+				c.CheckHTTPRedirect()
 			}
 
 			err = createDatabase(c, i.Database)
