@@ -33,15 +33,15 @@ var sampleConfig = `
   ## Transport protocol to use, either tcp or udp
   transport = "tcp"
 
-  ## Riemann TTL, floating-point time in seconds.
+  ## Riemann event TTL, floating-point time in seconds.
   ## Defines how long that an event is considered valid for in Riemann
   # ttl = 30.0
 
   ## Separator to use between measurement and field name in Riemann service name
+  ## This does not have any effect if 'measurement_as_attribute' is set to 'true'
   separator = "/"
 
-  ## Set measurement name as a Riemann attribute,
-  ## instead of prepending it to the Riemann service name
+  ## Set measurement name as Riemann attribute 'measurement', instead of prepending it to the Riemann service name
   # measurement_as_attribute = false
 
   ## Send string metrics as Riemann event states.
