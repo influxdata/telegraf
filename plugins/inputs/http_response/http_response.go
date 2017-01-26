@@ -58,10 +58,10 @@ var sampleConfig = `
   # {'fake':'data'}
   # '''
 
-  ## Optional : Look for substring in body of the response. Can use regex
-  # response_string_match = "\"service_status\": \"up\""
-  #  or
-  # response_string_match = "ok"
+	## Optional substring or regex match in body of the response
+  ## response_string_match = "\"service_status\": \"up\""
+  ## response_string_match = "ok"
+  ## response_string_match = "\".*_status\".?:.?\"up\""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -153,16 +153,22 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 		if err != nil {
 			log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
 			fields["response_string_match"] = 0
-		} else {
-
-			bodyBytes, _ := ioutil.ReadAll(resp.Body)
-			bodyString := string(bodyBytes)
-			if regex.MatchString(bodyString) {
-				fields["response_string_match"] = 1
-			} else {
-				fields["response_string_match"] = 0
-			}
+			return fields, nil
 		}
+
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("E! Failed to read body of HTTP Response : %s", err)
+			fields["response_string_match"] = 0
+			return fields, nil
+		}
+
+		if regex.Match(bodyBytes) {
+			fields["response_string_match"] = 1
+		} else {
+			fields["response_string_match"] = 0
+		}
+
 	}
 
 	return fields, nil
