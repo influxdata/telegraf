@@ -33,10 +33,10 @@ func (ipt *Iptables) SampleConfig() string {
   ## iptables require root access on most systems.
   ## Setting 'use_sudo' to true will make use of sudo to run iptables.
   ## Users must configure sudo to allow telegraf user to run iptables with no password.
-  ## iptables can be restricted to only list command  "iptables -nvL" or "iptables -wnvl" if using 'use_lock = true'
+  ## iptables can be restricted to only list command "iptables -nvL"
   use_sudo = false
-  ## Setting 'use_lock' to true will run iptables with xtables lock support.
-  ## This option is useful to avoid iptables concurrency errors when running multiple instances of this plugin.
+  ## Setting 'use_lock' to true runs iptables with the "-w" option.
+  ## Adjust your sudo settings appropriately if using this option ("iptables -wnvl")
   use_lock = false
   ## defines the table to monitor:
   table = "filter"
