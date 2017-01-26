@@ -54,6 +54,7 @@ I/O related measurement names:
 
 CPU related measurement names:
 - procstat_[prefix_]cpu_user value=0
+- procstat_[prefix_]cpu_percent value=0.0
 - procstat_[prefix_]cpu_system value=0.01
 - procstat_[prefix_]cpu_idle value=0
 - procstat_[prefix_]cpu_nice value=0
