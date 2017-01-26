@@ -35,6 +35,13 @@ regex patterns.
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
     '''
+    # This will enrich the measurement with a field with the preset name
+    # and a constant numeric value (one). 
+    # This is helpful when using custom log patterns on log lines that do
+    # not parse numerical fields and only the acknowledgemnt of the matched 
+    # tags is necessary, thus acting as a simple tick.
+    # Optional, adds the tick if the property is not empty.
+    tick_field = "count"
 ```
 
 ## Grok Parser

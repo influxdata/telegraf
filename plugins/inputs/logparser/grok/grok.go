@@ -69,6 +69,7 @@ type Parser struct {
 	CustomPatterns     string
 	CustomPatternFiles []string
 	Measurement        string
+	TickField          string
 
 	// typeMap is a map of patterns -> capture name -> modifier,
 	//   ie, {
@@ -149,6 +150,13 @@ func (p *Parser) Compile() error {
 	}
 
 	return p.compileCustomPatterns()
+}
+
+func (p *Parser) enrichTick(fields map[string]interface{}) map[string]interface{} {
+	if p.TickField != "" {
+		fields[p.TickField] = 1
+	}
+	return fields
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
@@ -281,7 +289,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
+	return metric.New(p.Measurement, tags, p.enrichTick(fields), p.tsModder.tsMod(timestamp))
 }
 
 func (p *Parser) addCustomPatterns(scanner *bufio.Scanner) {

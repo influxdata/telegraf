@@ -498,6 +498,40 @@ func TestCompileNoNamesAndParse(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestTickField(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST_CUSTOM_LOG}"},
+		CustomPatterns: `
+			TEXT ([A-Z]+)
+			TEST_CUSTOM_LOG %{TEXT:text:tag}
+		`,
+		TickField: `count`,
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`2017-01-01T00:00:00`)
+	assert.NoError(t, err)
+	assert.EqualValues(t, 1, metricA.Fields()["count"])
+	assert.Equal(t, "T", metricA.Tags()["text"])
+}
+
+func TestEmptyTickField(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST_CUSTOM_LOG}"},
+		CustomPatterns: `
+			TEXT ([A-Z]+)
+			NUM (\d+)
+			TEST_CUSTOM_LOG %{NUM:day:int}%{TEXT:text:tag}
+		`,
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`2017-01-01T00:00:00`)
+	assert.NoError(t, err)
+	assert.EqualValues(t, 1, metricA.Fields()["day"])
+	assert.Equal(t, "T", metricA.Tags()["text"])
+}
+
 func TestParseNoMatch(t *testing.T) {
 	p := &Parser{
 		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
