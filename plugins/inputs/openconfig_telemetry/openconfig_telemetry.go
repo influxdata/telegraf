@@ -178,15 +178,8 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 					log.Fatalln("E! Error: %v", err)
 				}
 
-				// variables initialization
-				var prefix string
-
-				// Search for Prefix if exist
-				for _, v := range r.Kv {
-					if v.Key == "__prefix__" {
-						prefix = v.GetStrValue()
-					}
-				}
+				// Use empty prefix. We will update this when we iterate over key-value pairs
+				prefix := ""
 
 				// Insert additional tags
 				tags["device"] = grpc_server
@@ -195,6 +188,10 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 				for _, v := range r.Kv {
 					kv := make(map[string]interface{})
+
+					if v.Key == "__prefix__" {
+						prefix = v.GetStrValue()
+					}
 
 					// Also, lets use prefix if there is one
 					xmlpath, finaltags := spitTagsNPath(prefix + v.Key)
