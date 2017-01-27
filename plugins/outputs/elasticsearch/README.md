@@ -8,7 +8,7 @@ It only supports Elasticsearch 5.x series currently.
 
 The plugin will format the metrics in the following way:
 
-```
+```json
 {
   "@timestamp": "2017-01-01T00:00:00+00:00",
   "input_plugin": "cpu",
@@ -30,7 +30,9 @@ The plugin will format the metrics in the following way:
     "dc": "datacenter1"
   }
 }
+```
 
+```json
 {
   "@timestamp": "2017-01-01T00:00:00+00:00",
   "input_plugin": "system",
@@ -46,8 +48,6 @@ The plugin will format the metrics in the following way:
     "dc": "datacenter1"
   }
 }
-
-
 ```
 
 ### Configuration:
