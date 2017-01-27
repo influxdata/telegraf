@@ -3,6 +3,7 @@ package riemann
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -13,8 +14,7 @@ import (
 )
 
 type Riemann struct {
-	Address                string
-	Transport              string
+	URL                    string
 	TTL                    float32
 	Separator              string
 	MeasurementAsAttribute bool
@@ -27,11 +27,8 @@ type Riemann struct {
 }
 
 var sampleConfig = `
-  ## Address of the Riemann server
-  address = "localhost:5555"
-
-  ## Transport protocol to use, either tcp or udp
-  transport = "tcp"
+  ## The full TCP or UDP URL of the Riemann server
+  url = "tcp://localhost:5555"
 
   ## Riemann event TTL, floating-point time in seconds.
   ## Defines how long that an event is considered valid for in Riemann
@@ -60,8 +57,12 @@ var sampleConfig = `
 `
 
 func (r *Riemann) Connect() error {
-	client, err := raidman.Dial(r.Transport, r.Address)
+	parsed_url, err := url.Parse(r.URL)
+	if err != nil {
+		return err
+	}
 
+	client, err := raidman.Dial(parsed_url.Scheme, parsed_url.Host)
 	if err != nil {
 		r.client = nil
 		return err

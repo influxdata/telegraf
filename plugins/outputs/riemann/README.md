@@ -7,11 +7,8 @@ This plugin writes to [Riemann](http://riemann.io/) via TCP or UDP.
 ```toml
 # Configuration for Riemann to send metrics to
 [[outputs.riemann]]
-  ## Address of the Riemann server
-  address = "localhost:5555"
-
-  ## Transport protocol to use, either tcp or udp
-  transport = "tcp"
+  ## The full TCP or UDP URL of the Riemann server
+  url = "tcp://localhost:5555"
 
   ## Riemann event TTL, floating-point time in seconds.
   ## Defines how long that an event is considered valid for in Riemann
@@ -41,8 +38,7 @@ This plugin writes to [Riemann](http://riemann.io/) via TCP or UDP.
 
 ### Required parameters:
 
-* `address`: Address of the Riemann server to send Riemann events to.
-* `transport`: Transport protocol to use, must be either tcp or udp.
+* `url`: The full TCP or UDP URL of the Riemann server to send events to.
 
 ### Optional parameters:
 

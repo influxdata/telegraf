@@ -1,6 +1,7 @@
 package riemann
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -167,8 +168,7 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 
 	r := &Riemann{
-		Address:                testutil.GetLocalHost() + ":5555",
-		Transport:              "tcp",
+		URL:                    fmt.Sprintf("tcp://%s:5555", testutil.GetLocalHost()),
 		TTL:                    15.0,
 		Separator:              "/",
 		MeasurementAsAttribute: false,
