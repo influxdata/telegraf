@@ -7,6 +7,7 @@ import (
 
 	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -72,14 +73,14 @@ func TestMetricEvents(t *testing.T) {
 	}
 
 	// build a single event
-	metric, _ := telegraf.NewMetric(
+	m, _ := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1", "host": "abc123"},
 		map[string]interface{}{"value": 5.6},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
-	events := r.buildRiemannEvents(metric)
+	events := r.buildRiemannEvents(m)
 	require.Len(t, events, 1)
 
 	// is event as expected?
@@ -97,14 +98,14 @@ func TestMetricEvents(t *testing.T) {
 	require.Equal(t, expectedEvent, events[0])
 
 	// build 2 events
-	metric, _ = telegraf.NewMetric(
+	m, _ = metric.New(
 		"test2",
 		map[string]string{"host": "xyz987"},
 		map[string]interface{}{"point": 1},
 		time.Date(2012, time.November, 2, 3, 0, 0, 0, time.UTC),
 	)
 
-	events = append(events, r.buildRiemannEvents(metric)...)
+	events = append(events, r.buildRiemannEvents(m)...)
 	require.Len(t, events, 2)
 
 	// first event should still be the same
@@ -131,20 +132,20 @@ func TestStateEvents(t *testing.T) {
 	}
 
 	// string metrics will be skipped unless explicitly enabled
-	metric, _ := telegraf.NewMetric(
+	m, _ := metric.New(
 		"test",
 		map[string]string{"host": "host"},
 		map[string]interface{}{"value": "running"},
 		time.Date(2015, time.November, 9, 22, 0, 0, 0, time.UTC),
 	)
 
-	events := r.buildRiemannEvents(metric)
+	events := r.buildRiemannEvents(m)
 	// no event should be present
 	require.Len(t, events, 0)
 
 	// enable string metrics as event states
 	r.StringAsState = true
-	events = r.buildRiemannEvents(metric)
+	events = r.buildRiemannEvents(m)
 	require.Len(t, events, 1)
 
 	// is event as expected?
