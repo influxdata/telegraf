@@ -1,0 +1,240 @@
+package wavefront
+
+import (
+	"fmt"
+	"net"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"log"
+)
+
+type Wavefront struct {
+	Host            string
+	Port            int
+	Prefix          string
+	SimpleFields    bool
+	MetricSeparator string
+	ConvertPaths    bool
+	UseRegex    	bool
+
+	Debug           bool
+	DebugAll        bool
+}
+
+// catch many of the invalid chars that could appear in a metric or tag name
+var sanitizedChars = strings.NewReplacer(
+	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
+	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
+	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
+	">", "-", ",", "-", "?", "-", "\\", "-", "|", "-", " ", "-",
+)
+// instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
+var sanitizedRegex, _ = regexp.Compile("[^a-zA-Z\\d_.-]")
+
+var pathReplacer = strings.NewReplacer("_", "_")
+
+var sampleConfig = `
+  ## prefix for metrics keys
+  prefix = "my.specific.prefix."
+
+  ## DNS name of the wavefront proxy server
+  host = "wavefront.example.com"
+
+  ## Port that the Wavefront proxy server listens on
+  port = 2878
+
+  ## wether to use "value" for name of simple fields
+  simple_fields = false
+
+  ## character to use between metric and field name.  defaults to . (dot)
+  metric_separator = "."
+
+  ## Convert metric name paths to use metricSeperator character
+  ## When true (edfault) will convert all _ (underscore) chartacters in final metric name
+  convert_paths = true
+
+  ## Use Regex to sanitize metric and tag names from invalid characters
+  ## Regex is more thorough, but significantly slower
+  use_regex = false
+
+  ## Print all Wavefront communication
+  debug = false
+`
+
+type MetricLine struct {
+	Metric    string
+	Value     string
+	Timestamp int64
+	Tags      string
+}
+
+func (w *Wavefront) Connect() error {
+
+	if w.ConvertPaths && w.MetricSeparator == "_" {
+		w.ConvertPaths = false
+	}
+	if w.ConvertPaths {
+		pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
+	}
+
+	// Test Connection to Wavefront proxy Server
+	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
+	if err != nil {
+		return fmt.Errorf("Wavefront: TCP address cannot be resolved %s", err.Error())
+	}
+	connection, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
+	}
+	defer connection.Close()
+	return nil
+}
+
+func (w *Wavefront) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+
+	// Send Data to Wavefront proxy Server
+	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
+	connection, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
+	}
+	defer connection.Close()
+
+	for _, m := range metrics {
+		for _, metric := range buildMetrics(m, w) {
+			messageLine := fmt.Sprintf("%s %s %v %s\n",	metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
+			if w.Debug {
+				log.Printf("DEBUG: output [wavefront] %s", messageLine)
+			}
+			_, err := connection.Write([]byte(messageLine))
+			if err != nil {
+				return fmt.Errorf("Wavefront: TCP writing error %s", err.Error())
+			}
+		}
+	}
+
+	return nil
+}
+
+func buildTags(mTags map[string]string, w *Wavefront) []string {
+	tags := make([]string, len(mTags))
+	index := 0
+	for k, v := range mTags {
+		if k == "host" {
+			k = "source"
+		}
+
+		if w.UseRegex {
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), sanitizedRegex.ReplaceAllString(v, "-"))
+		} else {
+			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), sanitizedChars.Replace(v))
+		}
+
+		index++
+	}
+	sort.Strings(tags)
+	return tags
+}
+
+func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
+	if w.DebugAll {
+		log.Printf("DEBUG: output [wavefront] original name: %s\n", m.Name())
+	}
+
+	ret := []*MetricLine{}
+	for fieldName, value := range m.Fields() {
+		if w.DebugAll {
+			log.Printf("DEBUG: output [wavefront] original field: %s\n", fieldName)
+		}
+
+		var name string
+		if !w.SimpleFields && fieldName == "value" {
+			name = fmt.Sprintf("%s%s", w.Prefix, m.Name())
+		} else {
+			name = fmt.Sprintf("%s%s%s%s", w.Prefix, m.Name(), w.MetricSeparator, fieldName)
+		}
+
+		if w.UseRegex {
+			name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
+		} else {
+			name = sanitizedChars.Replace(name)
+		}
+
+		if w.ConvertPaths {
+			name = pathReplacer.Replace(name)
+		}
+
+		metric := &MetricLine{
+			Metric: name,
+			Timestamp: m.UnixNano() / 1000000000,
+		}
+		metricValue, buildError := buildValue(value, metric.Metric)
+		if buildError != nil {
+			log.Printf("ERROR: output [wavefront] %s\n", buildError.Error())
+			continue
+		}
+		metric.Value = metricValue
+		tagsSlice := buildTags(m.Tags(), w)
+		metric.Tags = fmt.Sprint(strings.Join(tagsSlice, " "))
+		ret = append(ret, metric)
+	}
+	return ret
+}
+
+func buildValue(v interface{}, name string) (string, error) {
+	var retv string
+	switch p := v.(type) {
+	case int64:
+		retv = IntToString(int64(p))
+	case uint64:
+		retv = UIntToString(uint64(p))
+	case float64:
+		retv = FloatToString(float64(p))
+	default:
+		return retv, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
+	}
+	return retv, nil
+}
+
+func IntToString(input_num int64) string {
+	return strconv.FormatInt(input_num, 10)
+}
+
+func UIntToString(input_num uint64) string {
+	return strconv.FormatUint(input_num, 10)
+}
+
+func FloatToString(input_num float64) string {
+	return strconv.FormatFloat(input_num, 'f', 6, 64)
+}
+
+func (w *Wavefront) SampleConfig() string {
+	return sampleConfig
+}
+
+func (w *Wavefront) Description() string {
+	return "Configuration for Wavefront server to send metrics to"
+}
+
+func (w *Wavefront) Close() error {
+	return nil
+}
+
+func init() {
+	outputs.Add("wavefront", func() telegraf.Output {
+		return &Wavefront{
+			MetricSeparator: ".",
+			ConvertPaths: true,
+		}
+	})
+}
