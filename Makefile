@@ -51,6 +51,7 @@ docker-run:
 		-e ADVERTISED_PORT=9092 \
 		-p "2181:2181" -p "9092:9092" \
 		-d spotify/kafka
+	docker run --name elasticsearch -p "9200:9200" -p "9300:9300" -d elasticsearch:5
 	docker run --name mysql -p "3306:3306" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql
 	docker run --name memcached -p "11211:11211" -d memcached
 	docker run --name postgres -p "5432:5432" -d postgres
@@ -69,6 +70,7 @@ docker-run-circle:
 		-e ADVERTISED_PORT=9092 \
 		-p "2181:2181" -p "9092:9092" \
 		-d spotify/kafka
+	docker run --name elasticsearch -p "9200:9200" -p "9300:9300" -d elasticsearch:5
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d blalor/riemann
@@ -76,8 +78,8 @@ docker-run-circle:
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats
+	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats elasticsearch
+	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats elasticsearch
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: vet docker-kill docker-run

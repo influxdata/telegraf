@@ -29,6 +29,7 @@ github.com/influxdata/config b79f6829346b8d6e78ba73544b1e1038f1f1c9da
 github.com/influxdata/influxdb fc57c0f7c635df3873f3d64f0ed2100ddc94d5ae
 github.com/influxdata/toml af4df43894b16e3fd2b788d01bd27ad0776ef2d0
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
+github.com/jackc/pgx bb73d8427902891bbad7b949b9c60b32949d935f
 github.com/kardianos/osext 29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc
 github.com/kardianos/service 5e335590050d6d00f3aa270217d288dda1c94d0a
 github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
@@ -61,5 +62,5 @@ golang.org/x/text a71fd10341b064c10f4a81ceac72bcf70f26ea34
 gopkg.in/dancannon/gorethink.v1 7d1af5be49cb5ecc7b177bf387d232050299d6ef
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
 gopkg.in/mgo.v2 d90005c5262a3463800497ea5a89aed5fe22c886
+gopkg.in/olivere/elastic.v5 ee3ebceab960cf68ab9a89ee6d78c031ef5b4a4e
 gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4
-github.com/jackc/pgx bb73d8427902891bbad7b949b9c60b32949d935f
