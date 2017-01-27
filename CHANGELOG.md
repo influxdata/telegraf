@@ -2,11 +2,19 @@
 
 ### Release Notes
 
+- The [Riemann output plugin](./plugins/outputs/riemann) has been rewritten
+and the previous riemann plugin is _incompatible_ with the new one. The reasons
+for this are outlined in issue [#1878](https://github.com/influxdata/telegraf/issues/1878).
+The previous riemann output will still be available using
+`outputs.riemann_legacy` if needed, but that will eventually be deprecated.
+It is highly recommended that all users migrate to the new riemann output plugin.
+
 ### Features
 
 - [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
 - [#2179](https://github.com/influxdata/telegraf/pull/2179): Added more InnoDB metric to MySQL plugin.
 - [#2251](https://github.com/influxdata/telegraf/pull/2251): InfluxDB output: use own client for improved through-put and less allocations.
+- [#1900](https://github.com/influxdata/telegraf/pull/1900): Riemann plugin rewrite.
 
 ### Bugfixes
 
