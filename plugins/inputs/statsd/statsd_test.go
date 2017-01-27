@@ -139,6 +139,9 @@ func TestParse_Sets(t *testing.T) {
 		"scientific.notation.sets:4.696E+5|s",
 		"scientific.notation.sets:4.696E+5|s",
 		"scientific.notation.sets:4.697E+5|s",
+		"string.sets:foobar|s",
+		"string.sets:foobar|s",
+		"string.sets:bar|s",
 	}
 
 	for _, line := range valid_lines {
@@ -163,6 +166,10 @@ func TestParse_Sets(t *testing.T) {
 		{
 			"oneuser_id",
 			1,
+		},
+		{
+			"string_sets",
+			2,
 		},
 	}
 
@@ -190,6 +197,8 @@ func TestParse_Counters(t *testing.T) {
 		"sample.rate:1|c|@0.1",
 		"sample.rate:1|c",
 		"scientific.notation:4.696E+5|c",
+		"negative.test:100|c",
+		"negative.test:-5|c",
 	}
 
 	for _, line := range valid_lines {
@@ -222,6 +231,10 @@ func TestParse_Counters(t *testing.T) {
 		{
 			"sample_rate",
 			11,
+		},
+		{
+			"negative_test",
+			95,
 		},
 	}
 
@@ -292,11 +305,9 @@ func TestParse_InvalidLines(t *testing.T) {
 		"i.dont.have.a.pipe:45g",
 		"i.dont.have.a.colon45|c",
 		"invalid.metric.type:45|e",
-		"invalid.plus.minus.non.gauge:+10|c",
 		"invalid.plus.minus.non.gauge:+10|s",
 		"invalid.plus.minus.non.gauge:+10|ms",
 		"invalid.plus.minus.non.gauge:+10|h",
-		"invalid.plus.minus.non.gauge:-10|c",
 		"invalid.value:foobar|c",
 		"invalid.value:d11|c",
 		"invalid.value:1d1|c",

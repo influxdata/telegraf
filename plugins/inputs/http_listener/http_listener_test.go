@@ -1,20 +1,22 @@
 package http_listener
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
-	"bytes"
 	"github.com/stretchr/testify/require"
-	"net/http"
 )
 
 const (
 	testMsg = "cpu_load_short,host=server01 value=12.0 1422568543702900257\n"
+
+	testMsgNoNewline = "cpu_load_short,host=server01 value=12.0 1422568543702900257"
 
 	testMsgs = `cpu_load_short,host=server02 value=12.0 1422568543702900257
 cpu_load_short,host=server03 value=12.0 1422568543702900257
@@ -27,17 +29,15 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 	emptyMsg = ""
 )
 
-func newTestHttpListener() *HttpListener {
-	listener := &HttpListener{
+func newTestHTTPListener() *HTTPListener {
+	listener := &HTTPListener{
 		ServiceAddress: ":8186",
 	}
 	return listener
 }
 
 func TestWriteHTTP(t *testing.T) {
-	listener := newTestHttpListener()
-	parser, _ := parsers.NewInfluxParser()
-	listener.SetParser(parser)
+	listener := newTestHTTPListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -71,8 +71,30 @@ func TestWriteHTTP(t *testing.T) {
 		)
 	}
 
-	// Post a gigantic metric to the listener:
+	// Post a gigantic metric to the listener and verify that an error is returned:
 	resp, err = http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(hugeMetric)))
+	require.NoError(t, err)
+	require.EqualValues(t, 400, resp.StatusCode)
+
+	time.Sleep(time.Millisecond * 15)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01"},
+	)
+}
+
+// http listener should add a newline at the end of the buffer if it's not there
+func TestWriteHTTPNoNewline(t *testing.T) {
+	listener := newTestHTTPListener()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	// post single message to listener
+	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(testMsgNoNewline)))
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 
@@ -83,11 +105,133 @@ func TestWriteHTTP(t *testing.T) {
 	)
 }
 
+func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
+	listener := &HTTPListener{
+		ServiceAddress: ":8296",
+		MaxLineSize:    128 * 1000,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	// Post a gigantic metric to the listener and verify that it writes OK this time:
+	resp, err := http.Post("http://localhost:8296/write?db=mydb", "", bytes.NewBuffer([]byte(hugeMetric)))
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+}
+
+func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
+	listener := &HTTPListener{
+		ServiceAddress: ":8297",
+		MaxBodySize:    4096,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	resp, err := http.Post("http://localhost:8297/write", "", bytes.NewBuffer([]byte(hugeMetric)))
+	require.NoError(t, err)
+	require.EqualValues(t, 413, resp.StatusCode)
+}
+
+func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
+	listener := &HTTPListener{
+		ServiceAddress: ":8298",
+		MaxLineSize:    70,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	resp, err := http.Post("http://localhost:8298/write", "", bytes.NewBuffer([]byte(testMsgs)))
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	time.Sleep(time.Millisecond * 15)
+	hostTags := []string{"server02", "server03",
+		"server04", "server05", "server06"}
+	for _, hostTag := range hostTags {
+		acc.AssertContainsTaggedFields(t, "cpu_load_short",
+			map[string]interface{}{"value": float64(12)},
+			map[string]string{"host": hostTag},
+		)
+	}
+}
+
+func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
+	listener := &HTTPListener{
+		ServiceAddress: ":8300",
+		MaxLineSize:    100,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	resp, err := http.Post("http://localhost:8300/write", "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
+	require.NoError(t, err)
+	require.EqualValues(t, 400, resp.StatusCode)
+
+	time.Sleep(time.Millisecond * 15)
+	hostTags := []string{"server02", "server03",
+		"server04", "server05", "server06"}
+	for _, hostTag := range hostTags {
+		acc.AssertContainsTaggedFields(t, "cpu_load_short",
+			map[string]interface{}{"value": float64(12)},
+			map[string]string{"host": hostTag},
+		)
+	}
+}
+
+// test that writing gzipped data works
+func TestWriteHTTPGzippedData(t *testing.T) {
+	listener := &HTTPListener{
+		ServiceAddress: ":8299",
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	data, err := ioutil.ReadFile("./testdata/testmsgs.gz")
+	require.NoError(t, err)
+
+	req, err := http.NewRequest("POST", "http://localhost:8299/write", bytes.NewBuffer(data))
+	require.NoError(t, err)
+	req.Header.Set("Content-Encoding", "gzip")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	time.Sleep(time.Millisecond * 50)
+	hostTags := []string{"server02", "server03",
+		"server04", "server05", "server06"}
+	for _, hostTag := range hostTags {
+		acc.AssertContainsTaggedFields(t, "cpu_load_short",
+			map[string]interface{}{"value": float64(12)},
+			map[string]string{"host": hostTag},
+		)
+	}
+}
+
 // writes 25,000 metrics to the listener with 10 different writers
 func TestWriteHTTPHighTraffic(t *testing.T) {
-	listener := &HttpListener{ServiceAddress: ":8286"}
-	parser, _ := parsers.NewInfluxParser()
-	listener.SetParser(parser)
+	listener := &HTTPListener{ServiceAddress: ":8286"}
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -110,15 +254,14 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 	}
 
 	wg.Wait()
-	time.Sleep(time.Millisecond * 50)
+	time.Sleep(time.Millisecond * 250)
 	listener.Gather(acc)
 
 	require.Equal(t, int64(25000), int64(acc.NMetrics()))
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
-	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
+	listener := newTestHTTPListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -135,8 +278,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 func TestWriteHTTPInvalid(t *testing.T) {
 	time.Sleep(time.Millisecond * 250)
 
-	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
+	listener := newTestHTTPListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -153,8 +295,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 func TestWriteHTTPEmpty(t *testing.T) {
 	time.Sleep(time.Millisecond * 250)
 
-	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
+	listener := newTestHTTPListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -171,8 +312,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 func TestQueryAndPingHTTP(t *testing.T) {
 	time.Sleep(time.Millisecond * 250)
 
-	listener := newTestHttpListener()
-	listener.parser, _ = parsers.NewInfluxParser()
+	listener := newTestHTTPListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))

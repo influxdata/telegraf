@@ -6,6 +6,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/buffer"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 const (
@@ -21,9 +23,14 @@ type RunningOutput struct {
 	Name              string
 	Output            telegraf.Output
 	Config            *OutputConfig
-	Quiet             bool
 	MetricBufferLimit int
 	MetricBatchSize   int
+
+	MetricsFiltered selfstat.Stat
+	MetricsWritten  selfstat.Stat
+	BufferSize      selfstat.Stat
+	BufferLimit     selfstat.Stat
+	WriteTime       selfstat.Stat
 
 	metrics     *buffer.Buffer
 	failMetrics *buffer.Buffer
@@ -50,29 +57,56 @@ func NewRunningOutput(
 		Config:            conf,
 		MetricBufferLimit: bufferLimit,
 		MetricBatchSize:   batchSize,
+		MetricsWritten: selfstat.Register(
+			"write",
+			"metrics_written",
+			map[string]string{"output": name},
+		),
+		MetricsFiltered: selfstat.Register(
+			"write",
+			"metrics_filtered",
+			map[string]string{"output": name},
+		),
+		BufferSize: selfstat.Register(
+			"write",
+			"buffer_size",
+			map[string]string{"output": name},
+		),
+		BufferLimit: selfstat.Register(
+			"write",
+			"buffer_limit",
+			map[string]string{"output": name},
+		),
+		WriteTime: selfstat.RegisterTiming(
+			"write",
+			"write_time_ns",
+			map[string]string{"output": name},
+		),
 	}
+	ro.BufferLimit.Incr(int64(ro.MetricBufferLimit))
 	return ro
 }
 
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
-func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
+func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 	// Filter any tagexclude/taginclude parameters before adding metric
 	if ro.Config.Filter.IsActive() {
 		// In order to filter out tags, we need to create a new metric, since
 		// metrics are immutable once created.
-		name := metric.Name()
-		tags := metric.Tags()
-		fields := metric.Fields()
-		t := metric.Time()
+		name := m.Name()
+		tags := m.Tags()
+		fields := m.Fields()
+		t := m.Time()
 		if ok := ro.Config.Filter.Apply(name, fields, tags); !ok {
+			ro.MetricsFiltered.Incr(1)
 			return
 		}
 		// error is not possible if creating from another metric, so ignore.
-		metric, _ = telegraf.NewMetric(name, tags, fields, t)
+		m, _ = metric.New(name, tags, fields, t)
 	}
 
-	ro.metrics.Add(metric)
+	ro.metrics.Add(m)
 	if ro.metrics.Len() == ro.MetricBatchSize {
 		batch := ro.metrics.Batch(ro.MetricBatchSize)
 		err := ro.write(batch)
@@ -84,28 +118,21 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
-	if !ro.Quiet {
-		log.Printf("I! Output [%s] buffer fullness: %d / %d metrics. "+
-			"Total gathered metrics: %d. Total dropped metrics: %d.",
-			ro.Name,
-			ro.failMetrics.Len()+ro.metrics.Len(),
-			ro.MetricBufferLimit,
-			ro.metrics.Total(),
-			ro.metrics.Drops()+ro.failMetrics.Drops())
-	}
-
+	nFails, nMetrics := ro.failMetrics.Len(), ro.metrics.Len()
+	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
+		ro.Name, nFails+nMetrics, ro.MetricBufferLimit)
+	ro.BufferSize.Incr(int64(nFails + nMetrics))
 	var err error
 	if !ro.failMetrics.IsEmpty() {
-		bufLen := ro.failMetrics.Len()
 		// how many batches of failed writes we need to write.
-		nBatches := bufLen/ro.MetricBatchSize + 1
+		nBatches := nFails/ro.MetricBatchSize + 1
 		batchSize := ro.MetricBatchSize
 
 		for i := 0; i < nBatches; i++ {
 			// If it's the last batch, only grab the metrics that have not had
 			// a write attempt already (this is primarily to preserve order).
 			if i == nBatches-1 {
-				batchSize = bufLen % ro.MetricBatchSize
+				batchSize = nFails % ro.MetricBatchSize
 			}
 			batch := ro.failMetrics.Batch(batchSize)
 			// If we've already failed previous writes, don't bother trying to
@@ -126,6 +153,7 @@ func (ro *RunningOutput) Write() error {
 	if err == nil {
 		err = ro.write(batch)
 	}
+
 	if err != nil {
 		ro.failMetrics.Add(batch...)
 		return err
@@ -134,17 +162,19 @@ func (ro *RunningOutput) Write() error {
 }
 
 func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
-	if metrics == nil || len(metrics) == 0 {
+	nMetrics := len(metrics)
+	if nMetrics == 0 {
 		return nil
 	}
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)
 	if err == nil {
-		if !ro.Quiet {
-			log.Printf("I! Output [%s] wrote batch of %d metrics in %s\n",
-				ro.Name, len(metrics), elapsed)
-		}
+		log.Printf("D! Output [%s] wrote batch of %d metrics in %s\n",
+			ro.Name, nMetrics, elapsed)
+		ro.MetricsWritten.Incr(int64(nMetrics))
+		ro.BufferSize.Incr(-int64(nMetrics))
+		ro.WriteTime.Incr(elapsed.Nanoseconds())
 	}
 	return err
 }

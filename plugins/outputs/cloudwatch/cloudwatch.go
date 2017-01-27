@@ -30,7 +30,7 @@ type CloudWatch struct {
 
 var sampleConfig = `
   ## Amazon REGION
-  region = 'us-east-1'
+  region = "us-east-1"
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
@@ -48,7 +48,7 @@ var sampleConfig = `
   #shared_credential_file = ""
 
   ## Namespace for the CloudWatch MetricDatums
-  namespace = 'InfluxData/Telegraf'
+  namespace = "InfluxData/Telegraf"
 `
 
 func (c *CloudWatch) SampleConfig() string {

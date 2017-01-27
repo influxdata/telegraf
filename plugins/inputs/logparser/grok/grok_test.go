@@ -82,6 +82,46 @@ func TestMeasurementName(t *testing.T) {
 	assert.Equal(t, "my_web_log", m.Name())
 }
 
+func TestCLF_IPv6(t *testing.T) {
+	p := &Parser{
+		Measurement: "my_web_log",
+		Patterns:    []string{"%{COMMON_LOG_FORMAT}"},
+	}
+	assert.NoError(t, p.Compile())
+
+	m, err := p.ParseLine(`2001:0db8:85a3:0000:0000:8a2e:0370:7334 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	require.NotNil(t, m)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"resp_bytes":   int64(2326),
+			"auth":         "frank",
+			"client_ip":    "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+			"http_version": float64(1.0),
+			"ident":        "user-identifier",
+			"request":      "/apache_pb.gif",
+		},
+		m.Fields())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
+	assert.Equal(t, "my_web_log", m.Name())
+
+	m, err = p.ParseLine(`::1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	require.NotNil(t, m)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"resp_bytes":   int64(2326),
+			"auth":         "frank",
+			"client_ip":    "::1",
+			"http_version": float64(1.0),
+			"ident":        "user-identifier",
+			"request":      "/apache_pb.gif",
+		},
+		m.Fields())
+	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
+	assert.Equal(t, "my_web_log", m.Name())
+}
+
 func TestCustomInfluxdbHttpd(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{`\[httpd\] %{COMBINED_LOG_FORMAT} %{UUID:uuid:drop} %{NUMBER:response_time_us:int}`},

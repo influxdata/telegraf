@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -110,6 +112,12 @@ func (a *Accumulator) AddGauge(
 	a.AddFields(measurement, fields, tags, timestamp...)
 }
 
+func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
+	for _, m := range metrics {
+		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	}
+}
+
 // AddError appends the given error to Accumulator.Errors.
 func (a *Accumulator) AddError(err error) {
 	if err == nil {
@@ -202,7 +210,18 @@ func (a *Accumulator) AssertContainsFields(
 	assert.Fail(t, msg)
 }
 
-// HasIntValue returns true if the measurement has an Int value
+func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			msg := fmt.Sprintf("found unexpected measurement %s", measurement)
+			assert.Fail(t, msg)
+		}
+	}
+}
+
+// HasIntField returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
 	a.Lock()
 	defer a.Unlock()
@@ -211,6 +230,42 @@ func (a *Accumulator) HasIntField(measurement string, field string) bool {
 			for fieldname, value := range p.Fields {
 				if fieldname == field {
 					_, ok := value.(int64)
+					return ok
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// HasInt32Field returns true if the measurement has an Int value
+func (a *Accumulator) HasInt32Field(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(int32)
+					return ok
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// HasStringField returns true if the measurement has an String value
+func (a *Accumulator) HasStringField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(string)
 					return ok
 				}
 			}

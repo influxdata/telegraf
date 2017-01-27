@@ -32,8 +32,6 @@ var dropwarn = "E! Error: statsd message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
-var prevInstance *Statsd
-
 type Statsd struct {
 	// Address & Port to serve from
 	ServiceAddress string
@@ -98,6 +96,7 @@ type metric struct {
 	hash       string
 	intvalue   int64
 	floatvalue float64
+	strvalue   string
 	mtype      string
 	additive   bool
 	samplerate float64
@@ -106,7 +105,7 @@ type metric struct {
 
 type cachedset struct {
 	name   string
-	fields map[string]map[int64]bool
+	fields map[string]map[string]bool
 	tags   map[string]string
 }
 
@@ -135,14 +134,19 @@ func (_ *Statsd) Description() string {
 const sampleConfig = `
   ## Address and port to host UDP listener on
   service_address = ":8125"
-  ## Delete gauges every interval (default=false)
-  delete_gauges = false
-  ## Delete counters every interval (default=false)
-  delete_counters = false
-  ## Delete sets every interval (default=false)
-  delete_sets = false
-  ## Delete timings & histograms every interval (default=true)
+
+  ## The following configuration options control when telegraf clears it's cache
+  ## of previous values. If set to false, then telegraf will only clear it's
+  ## cache when the daemon is restarted.
+  ## Reset gauges every interval (default=true)
+  delete_gauges = true
+  ## Reset counters every interval (default=true)
+  delete_counters = true
+  ## Reset sets every interval (default=true)
+  delete_sets = true
+  ## Reset timings & histograms every interval (default=true)
   delete_timings = true
+
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -238,17 +242,10 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	s.done = make(chan struct{})
 	s.in = make(chan []byte, s.AllowedPendingMessages)
 
-	if prevInstance == nil {
-		s.gauges = make(map[string]cachedgauge)
-		s.counters = make(map[string]cachedcounter)
-		s.sets = make(map[string]cachedset)
-		s.timings = make(map[string]cachedtimings)
-	} else {
-		s.gauges = prevInstance.gauges
-		s.counters = prevInstance.counters
-		s.sets = prevInstance.sets
-		s.timings = prevInstance.timings
-	}
+	s.gauges = make(map[string]cachedgauge)
+	s.counters = make(map[string]cachedcounter)
+	s.sets = make(map[string]cachedset)
+	s.timings = make(map[string]cachedtimings)
 
 	if s.ConvertNames {
 		log.Printf("I! WARNING statsd: convert_names config option is deprecated," +
@@ -265,7 +262,6 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Start the line parser
 	go s.parser()
 	log.Printf("I! Started the statsd service on %s\n", s.ServiceAddress)
-	prevInstance = s
 	return nil
 }
 
@@ -420,8 +416,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 		// Parse the value
 		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
-			if m.mtype != "g" {
-				log.Printf("E! Error: +- values are only supported for gauges: %s\n", line)
+			if m.mtype != "g" && m.mtype != "c" {
+				log.Printf("E! Error: +- values are only supported for gauges & counters: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
 			m.additive = true
@@ -435,7 +431,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				return errors.New("Error Parsing statsd line")
 			}
 			m.floatvalue = v
-		case "c", "s":
+		case "c":
 			var v int64
 			v, err := strconv.ParseInt(pipesplit[0], 10, 64)
 			if err != nil {
@@ -451,6 +447,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				v = int64(float64(v) / m.samplerate)
 			}
 			m.intvalue = v
+		case "s":
+			m.strvalue = pipesplit[0]
 		}
 
 		// Parse the name & tags from bucket
@@ -625,16 +623,16 @@ func (s *Statsd) aggregate(m metric) {
 		if !ok {
 			s.sets[m.hash] = cachedset{
 				name:   m.name,
-				fields: make(map[string]map[int64]bool),
+				fields: make(map[string]map[string]bool),
 				tags:   m.tags,
 			}
 		}
 		// check if the field exists
 		_, ok = s.sets[m.hash].fields[m.field]
 		if !ok {
-			s.sets[m.hash].fields[m.field] = make(map[int64]bool)
+			s.sets[m.hash].fields[m.field] = make(map[string]bool)
 		}
-		s.sets[m.hash].fields[m.field][m.intvalue] = true
+		s.sets[m.hash].fields[m.field][m.strvalue] = true
 	}
 }
 
@@ -651,8 +649,13 @@ func (s *Statsd) Stop() {
 func init() {
 	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
+			ServiceAddress:         ":8125",
 			MetricSeparator:        "_",
 			AllowedPendingMessages: defaultAllowPendingMessage,
+			DeleteCounters:         true,
+			DeleteGauges:           true,
+			DeleteSets:             true,
+			DeleteTimings:          true,
 		}
 	})
 }

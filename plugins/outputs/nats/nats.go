@@ -62,14 +62,23 @@ func (n *NATS) SetSerializer(serializer serializers.Serializer) {
 
 func (n *NATS) Connect() error {
 	var err error
-	// set NATS connection options
+
+	// set default NATS connection options
 	opts := nats_client.DefaultOptions
+
+	// override max reconnection tries
+	opts.MaxReconnect = -1
+
+	// override servers, if any were specified
 	opts.Servers = n.Servers
+
+	// override authentication, if any was specified
 	if n.Username != "" {
 		opts.User = n.Username
 		opts.Password = n.Password
 	}
 
+	// override TLS, if it was specified
 	tlsConfig, err := internal.GetTLSConfig(
 		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
 	if err != nil {
@@ -106,20 +115,13 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, metric := range metrics {
-		values, err := n.serializer.Serialize(metric)
+		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		var pubErr error
-		for _, value := range values {
-			err = n.conn.Publish(n.Subject, []byte(value))
-			if err != nil {
-				pubErr = err
-			}
-		}
-
-		if pubErr != nil {
+		err = n.conn.Publish(n.Subject, buf)
+		if err != nil {
 			return fmt.Errorf("FAILED to send NATS message: %s", err)
 		}
 	}
