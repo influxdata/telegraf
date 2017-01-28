@@ -1,12 +1,29 @@
-# Elasticsearch Output Plugin
+## Elasticsearch Output Plugin for Telegraf
 
 This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (http://olivere.github.io/elastic/).
 
 It only supports Elasticsearch 5.x series currently.
 
-### Example:
+## Elasticsearch indexes and templates
 
-The plugin will format the metrics in the following way:
+### Indexes per time-frame
+
+This plugin can manage indexes per time-frame, as commonly done in other tools with Elasticsearch.
+
+The timestamp of the metric collected will be used to decide the index destination.
+
+For more information about this usage on Elasticsearch, check https://www.elastic.co/guide/en/elasticsearch/guide/master/time-based.html#index-per-timeframe
+
+### Template management
+
+Index templates are used in Elasticsearch to define settings and mappings for the indexes and how the fields should be analyzed.
+For more information on how this works, see https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+
+This plugin can create a recommended template for use with telegraf metrics. If it already exists, it will not overwrite unless you configure this plugin to do so.
+
+### Example events:
+
+This plugin will format the events in the following way:
 
 ```json
 {
@@ -62,7 +79,7 @@ The plugin will format the metrics in the following way:
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
   enable_sniffer = true
-  ## Set the interval to check if the nodes are available, in seconds
+  ## Set the interval to check if the nodes are available, in seconds.
   ## Setting to 0 will disable the health check (not recommended in production)
   health_check_interval = 10
   ## HTTP basic authentication details (eg. when using Shield)
@@ -70,8 +87,9 @@ The plugin will format the metrics in the following way:
   # password = "mypassword"
 
   # Index Config
-  ## The target index for metrics (telegraf will create it if not exists)
-  ## You can use a different index per time frame using the patterns below
+  ## The target index for metrics (Elasticsearch will create if it not exists).
+  ## You can use the date specifiers below to create indexes per time frame.
+  ## The metric timestamp will be used to decide the destination index name
   # %Y - year (2016)
   # %y - last two digits of year (00..99)
   # %m - month (01..12)
@@ -80,10 +98,34 @@ The plugin will format the metrics in the following way:
   index_name = "telegraf-%Y.%m.%d" # required.
 
   ## Template Config
-  ## set to true if you want telegraf to manage its index template
+  ## Set to true if you want telegraf to manage its index template.
+  ## If enabled it will create a recommended index template for telegraf indexes
   manage_template = true
   ## The template name used for telegraf indexes
   template_name = "telegraf"
-  ## set to true if you want to overwrite an existing template
+  ## Set to true if you want to overwrite an existing template
   overwrite_template = false
 ```
+
+### Required parameters:
+
+* `urls`: A list containing the full HTTP URL of one or more nodes from your Elasticsearch instance.
+* `index_name`: The target index for metrics. You can use the date specifiers below to create indexes per time frame.
+
+``` 
+  %Y - year (2017)
+  %y - last two digits of year (00..99)
+  %m - month (01..12)
+  %d - day of month (e.g., 01)
+  %H - hour (00..23)
+```
+
+### Optional parameters:
+
+* `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster nodes, thus it is not necessary to list all nodes in the urls config option.
+* `health_check_interval`: Set the interval to check if the nodes are available, in seconds. Setting to 0 will disable the health check (not recommended in production).
+* `username`: The username for HTTP basic authentication details (eg. when using Shield).
+* `password`: The password for HTTP basic authentication details (eg. when using Shield).
+* `manage_template`: Set to true if you want telegraf to manage its index template. If enabled it will create a recommended index template for telegraf indexes.
+* `template_name`: The template name used for telegraf indexes.
+* `overwrite_template`: Set to true if you want to overwrite an existing template.

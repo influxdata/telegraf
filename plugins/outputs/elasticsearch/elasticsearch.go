@@ -42,8 +42,9 @@ var sampleConfig = `
   # password = "mypassword"
 
   # Index Config
-  ## The target index for metrics (telegraf will create it if not exists)
-  ## You can use a different index per time frame using the patterns below
+  ## The target index for metrics (Elasticsearch will create if it not exists).
+  ## You can use the date specifiers below to create indexes per time frame.
+  ## The metric timestamp will be used to decide the destination index name
   # %Y - year (2016)
   # %y - last two digits of year (00..99)
   # %m - month (01..12)
@@ -52,11 +53,12 @@ var sampleConfig = `
   index_name = "telegraf-%Y.%m.%d" # required.
 
   ## Template Config
-  ## set to true if you want telegraf to manage its index template
+  ## Set to true if you want telegraf to manage its index template.
+  ## If enabled it will create a recommended index template for telegraf indexes
   manage_template = true
   ## The template name used for telegraf indexes
   template_name = "telegraf"
-  ## set to true if you want to overwrite an existing template
+  ## Set to true if you want to overwrite an existing template
   overwrite_template = false
 `
 
@@ -111,6 +113,10 @@ func (a *Elasticsearch) Connect() error {
 	a.Client = client
 
 	if a.ManageTemplate {
+		if a.TemplateName == "" {
+			return fmt.Errorf("Elasticsearch template_name configuration not defined")
+		}
+
 		templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
 
 		if errExists != nil {
