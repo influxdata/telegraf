@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/consul/api"
-	consulStruct "github.com/hashicorp/consul/consul/structs"
+	"github.com/hashicorp/consul/consul/structs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -135,7 +135,7 @@ func (c *Consul) GatherServiceHealth(services map[string][]string, acc telegraf.
 				if len(tags["node"]) == 0 {
 					tags["node"] = check.Node
 				}
-				if check.Status != consulStruct.HealthPassing {
+				if check.Status != structs.HealthPassing {
 					record["healthy"] = 0.0
 					break
 				}
