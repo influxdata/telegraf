@@ -126,11 +126,7 @@ func (c *CloudWatch) Description() string {
 	return "Pull Metric Statistics from Amazon CloudWatch"
 }
 
-func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
-	if c.client == nil {
-		c.initializeCloudWatch()
-	}
-
+func SelectMetrics(c *CloudWatch) ([]*cloudwatch.Metric, error) {
 	var metrics []*cloudwatch.Metric
 
 	// check for provided metric filter
@@ -155,11 +151,11 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 			} else {
 				allMetrics, err := c.fetchNamespaceMetrics()
 				if err != nil {
-					return err
+					return nil, err
 				}
 				for _, name := range m.MetricNames {
 					for _, metric := range allMetrics {
-						if isSelected(metric, m.Dimensions) {
+						if isSelected(name, metric, m.Dimensions) {
 							metrics = append(metrics, &cloudwatch.Metric{
 								Namespace:  aws.String(c.Namespace),
 								MetricName: aws.String(name),
@@ -169,16 +165,26 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 					}
 				}
 			}
-
 		}
 	} else {
 		var err error
 		metrics, err = c.fetchNamespaceMetrics()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
+	return metrics, nil
+}
 
+func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
+	if c.client == nil {
+		c.initializeCloudWatch()
+	}
+
+	metrics, err := SelectMetrics(c)
+	if err != nil {
+		return err
+	}
 	metricCount := len(metrics)
 	errChan := errchan.New(metricCount)
 
@@ -380,7 +386,10 @@ func hasWilcard(dimensions []*Dimension) bool {
 	return false
 }
 
-func isSelected(metric *cloudwatch.Metric, dimensions []*Dimension) bool {
+func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension) bool {
+	if name != *metric.MetricName {
+		return false
+	}
 	if len(metric.Dimensions) != len(dimensions) {
 		return false
 	}

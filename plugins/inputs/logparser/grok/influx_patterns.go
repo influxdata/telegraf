@@ -56,7 +56,7 @@ EXAMPLE_LOG \[%{HTTPDATE:ts:ts-httpd}\] %{NUMBER:myfloat:float} %{RESPONSE_CODE}
 NGUSERNAME [a-zA-Z0-9\.\@\-\+_%]+
 NGUSER %{NGUSERNAME}
 # Wider-ranging client IP matching
-CLIENT (?:%{IPORHOST}|%{HOSTPORT}|::1)
+CLIENT (?:%{IPV6}|%{IPV4}|%{HOSTNAME}|%{HOSTPORT})
 
 ##
 ## COMMON LOG PATTERNS

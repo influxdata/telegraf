@@ -221,14 +221,18 @@ func (d *Docker) gatherContainer(
 		cname = strings.TrimPrefix(container.Names[0], "/")
 	}
 
-	// the image name sometimes has a version part.
-	//   ie, rabbitmq:3-management
-	imageParts := strings.Split(container.Image, ":")
-	imageName := imageParts[0]
+	// the image name sometimes has a version part, or a private repo
+	//   ie, rabbitmq:3-management or docker.someco.net:4443/rabbitmq:3-management
+	imageName := ""
 	imageVersion := "unknown"
-	if len(imageParts) > 1 {
-		imageVersion = imageParts[1]
+	i := strings.LastIndex(container.Image, ":") // index of last ':' character
+	if i > -1 {
+		imageVersion = container.Image[i+1:]
+		imageName = container.Image[:i]
+	} else {
+		imageName = container.Image
 	}
+
 	tags := map[string]string{
 		"engine_host":       d.engine_host,
 		"container_name":    cname,
@@ -364,11 +368,22 @@ func gatherContainerStats(
 				if field == "container_id" {
 					continue
 				}
+
+				var uintV uint64
+				switch v := value.(type) {
+				case uint64:
+					uintV = v
+				case int64:
+					uintV = uint64(v)
+				default:
+					continue
+				}
+
 				_, ok := totalNetworkStatMap[field]
 				if ok {
-					totalNetworkStatMap[field] = totalNetworkStatMap[field].(uint64) + value.(uint64)
+					totalNetworkStatMap[field] = totalNetworkStatMap[field].(uint64) + uintV
 				} else {
-					totalNetworkStatMap[field] = value
+					totalNetworkStatMap[field] = uintV
 				}
 			}
 		}
@@ -487,11 +502,22 @@ func gatherBlockIOMetrics(
 				if field == "container_id" {
 					continue
 				}
+
+				var uintV uint64
+				switch v := value.(type) {
+				case uint64:
+					uintV = v
+				case int64:
+					uintV = uint64(v)
+				default:
+					continue
+				}
+
 				_, ok := totalStatMap[field]
 				if ok {
-					totalStatMap[field] = totalStatMap[field].(uint64) + value.(uint64)
+					totalStatMap[field] = totalStatMap[field].(uint64) + uintV
 				} else {
-					totalStatMap[field] = value
+					totalStatMap[field] = uintV
 				}
 			}
 		}

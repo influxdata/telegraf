@@ -37,9 +37,9 @@ consuming it is disabled by default.
 Tags:
 - node: on which node check/service is registered on
 - service_name: name of the service (this is the service name not the service ID)
+- check_id
 
 Fields:
-- check_id
 - check_name
 - service_id
 - status
@@ -77,4 +77,6 @@ and with `serivce_health` set to `true` additional measurements are provided:
 > consul_service_health,host=wolfpit,node=dev-db-f1,service_name=db-dev-db healthy=1 1480009729000000000
 > consul_service_health,host=wolfpit,node=dev-db-f2,service_name=db-dev-db healthy=1 1480009729000000000
 > consul_service_health,host=wolfpit,node=dev-mesos-1,service_name=example healthy=1 1480009730000000000
+> consul_health_checks,host=wolfpit,node=consul-server-node,check_id="serfHealth" check_name="Serf Health Status",service_id="",status="passing" 1464698464486439902
+> consul_health_checks,host=wolfpit,node=consul-server-node,service_name=www.example.com,check_id="service:www-example-com.test01" check_name="Service 'www.example.com' check",service_id="www-example-com.test01",status="critical" 1464698464486519036
 ```

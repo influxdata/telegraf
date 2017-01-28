@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -145,13 +146,13 @@ func (s *Snmp) init() error {
 
 	for i := range s.Tables {
 		if err := s.Tables[i].init(); err != nil {
-			return err
+			return Errorf(err, "initializing table %s", s.Tables[i].Name)
 		}
 	}
 
 	for i := range s.Fields {
 		if err := s.Fields[i].init(); err != nil {
-			return err
+			return Errorf(err, "initializing field %s", s.Fields[i].Name)
 		}
 	}
 
@@ -191,7 +192,7 @@ func (t *Table) init() error {
 	// initialize all the nested fields
 	for i := range t.Fields {
 		if err := t.Fields[i].init(); err != nil {
-			return err
+			return Errorf(err, "initializing field %s", t.Fields[i].Name)
 		}
 	}
 
@@ -199,65 +200,22 @@ func (t *Table) init() error {
 	return nil
 }
 
-// init() populates Fields if a table OID is provided.
+// initBuild initializes the table if it has an OID configured. If so, the
+// net-snmp tools will be used to look up the OID and auto-populate the table's
+// fields.
 func (t *Table) initBuild() error {
 	if t.Oid == "" {
 		return nil
 	}
 
-	mibName, _, oidText, _, err := snmpTranslate(t.Oid)
+	_, _, oidText, fields, err := snmpTable(t.Oid)
 	if err != nil {
-		return Errorf(err, "translating %s", t.Oid)
+		return err
 	}
 	if t.Name == "" {
 		t.Name = oidText
 	}
-	mibPrefix := mibName + "::"
-	oidFullName := mibPrefix + oidText
-
-	// first attempt to get the table's tags
-	tagOids := map[string]struct{}{}
-	// We have to guess that the "entry" oid is `t.Oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
-	if out, err := execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
-		lines := bytes.Split(out, []byte{'\n'})
-		for _, line := range lines {
-			if !bytes.HasPrefix(line, []byte("  INDEX")) {
-				continue
-			}
-
-			i := bytes.Index(line, []byte("{ "))
-			if i == -1 { // parse error
-				continue
-			}
-			line = line[i+2:]
-			i = bytes.Index(line, []byte(" }"))
-			if i == -1 { // parse error
-				continue
-			}
-			line = line[:i]
-			for _, col := range bytes.Split(line, []byte(", ")) {
-				tagOids[mibPrefix+string(col)] = struct{}{}
-			}
-		}
-	}
-
-	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
-	out, err := execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
-	if err != nil {
-		return Errorf(err, "getting table columns for %s", t.Oid)
-	}
-	cols := bytes.SplitN(out, []byte{'\n'}, 2)[0]
-	if len(cols) == 0 {
-		return fmt.Errorf("unable to get columns for table %s", t.Oid)
-	}
-	for _, col := range bytes.Split(cols, []byte{' '}) {
-		if len(col) == 0 {
-			continue
-		}
-		col := string(col)
-		_, isTag := tagOids[mibPrefix+col]
-		t.Fields = append(t.Fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
-	}
+	t.Fields = append(t.Fields, fields...)
 
 	return nil
 }
@@ -294,7 +252,7 @@ func (f *Field) init() error {
 
 	_, oidNum, oidText, conversion, err := snmpTranslate(f.Oid)
 	if err != nil {
-		return Errorf(err, "translating %s", f.Oid)
+		return Errorf(err, "translating")
 	}
 	f.Oid = oidNum
 	if f.Name == "" {
@@ -400,7 +358,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// Now is the real tables.
 		for _, t := range s.Tables {
 			if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
-				acc.AddError(Errorf(err, "agent %s", agent))
+				acc.AddError(Errorf(err, "agent %s: gathering table %s", agent, t.Name))
 			}
 		}
 	}
@@ -448,7 +406,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		}
 
 		if len(f.Oid) == 0 {
-			return nil, fmt.Errorf("cannot have empty OID")
+			return nil, fmt.Errorf("cannot have empty OID on field %s", f.Name)
 		}
 		var oid string
 		if f.Oid[0] == '.' {
@@ -468,16 +426,14 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// empty string. This results in all the non-table fields sharing the same
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
-				return nil, Errorf(err, "performing get")
+				return nil, Errorf(err, "performing get on field %s", f.Name)
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
-					return nil, Errorf(err, "converting %q", ent.Value)
+					return nil, Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
 				}
-				if fvs, ok := fv.(string); !ok || fvs != "" {
-					ifv[""] = fv
-				}
+				ifv[""] = fv
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
@@ -496,16 +452,14 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
-					return Errorf(err, "converting %q", ent.Value)
+					return Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
 				}
-				if fvs, ok := fv.(string); !ok || fvs != "" {
-					ifv[idx] = fv
-				}
+				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {
 				if _, ok := err.(NestedError); !ok {
-					return nil, Errorf(err, "performing bulk walk")
+					return nil, Errorf(err, "performing bulk walk for field %s", f.Name)
 				}
 			}
 		}
@@ -518,14 +472,17 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				rtr.Fields = map[string]interface{}{}
 				rows[i] = rtr
 			}
-			if f.IsTag {
-				if vs, ok := v.(string); ok {
-					rtr.Tags[f.Name] = vs
+			// don't add an empty string
+			if vs, ok := v.(string); !ok || vs != "" {
+				if f.IsTag {
+					if ok {
+						rtr.Tags[f.Name] = vs
+					} else {
+						rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+					}
 				} else {
-					rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+					rtr.Fields[f.Name] = v
 				}
-			} else {
-				rtr.Fields[f.Name] = v
 			}
 		}
 	}
@@ -536,10 +493,6 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		Rows: make([]RTableRow, 0, len(rows)),
 	}
 	for _, r := range rows {
-		if len(r.Tags) < tagCount {
-			// don't add rows which are missing tags, as without tags you can't filter
-			continue
-		}
 		rt.Rows = append(rt.Rows, r)
 	}
 	return &rt, nil
@@ -841,13 +794,141 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
 }
 
+type snmpTableCache struct {
+	mibName string
+	oidNum  string
+	oidText string
+	fields  []Field
+	err     error
+}
+
+var snmpTableCaches map[string]snmpTableCache
+var snmpTableCachesLock sync.Mutex
+
+// snmpTable resolves the given OID as a table, providing information about the
+// table and fields within.
+func snmpTable(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
+	snmpTableCachesLock.Lock()
+	if snmpTableCaches == nil {
+		snmpTableCaches = map[string]snmpTableCache{}
+	}
+
+	var stc snmpTableCache
+	var ok bool
+	if stc, ok = snmpTableCaches[oid]; !ok {
+		stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
+		snmpTableCaches[oid] = stc
+	}
+
+	snmpTableCachesLock.Unlock()
+	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
+}
+
+func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
+	mibName, oidNum, oidText, _, err = snmpTranslate(oid)
+	if err != nil {
+		return "", "", "", nil, Errorf(err, "translating")
+	}
+
+	mibPrefix := mibName + "::"
+	oidFullName := mibPrefix + oidText
+
+	// first attempt to get the table's tags
+	tagOids := map[string]struct{}{}
+	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
+	if out, err := execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
+		lines := bytes.Split(out, []byte{'\n'})
+		for _, line := range lines {
+			if !bytes.HasPrefix(line, []byte("  INDEX")) {
+				continue
+			}
+
+			i := bytes.Index(line, []byte("{ "))
+			if i == -1 { // parse error
+				continue
+			}
+			line = line[i+2:]
+			i = bytes.Index(line, []byte(" }"))
+			if i == -1 { // parse error
+				continue
+			}
+			line = line[:i]
+			for _, col := range bytes.Split(line, []byte(", ")) {
+				tagOids[mibPrefix+string(col)] = struct{}{}
+			}
+		}
+	}
+
+	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
+	out, err := execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
+	if err != nil {
+		return "", "", "", nil, Errorf(err, "getting table columns")
+	}
+	cols := bytes.SplitN(out, []byte{'\n'}, 2)[0]
+	if len(cols) == 0 {
+		return "", "", "", nil, fmt.Errorf("could not find any columns in table")
+	}
+	for _, col := range bytes.Split(cols, []byte{' '}) {
+		if len(col) == 0 {
+			continue
+		}
+		col := string(col)
+		_, isTag := tagOids[mibPrefix+col]
+		fields = append(fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
+	}
+
+	return mibName, oidNum, oidText, fields, err
+}
+
+type snmpTranslateCache struct {
+	mibName    string
+	oidNum     string
+	oidText    string
+	conversion string
+	err        error
+}
+
+var snmpTranslateCachesLock sync.Mutex
+var snmpTranslateCaches map[string]snmpTranslateCache
+
 // snmpTranslate resolves the given OID.
 func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+	snmpTranslateCachesLock.Lock()
+	if snmpTranslateCaches == nil {
+		snmpTranslateCaches = map[string]snmpTranslateCache{}
+	}
+
+	var stc snmpTranslateCache
+	var ok bool
+	if stc, ok = snmpTranslateCaches[oid]; !ok {
+		// This will result in only one call to snmptranslate running at a time.
+		// We could speed it up by putting a lock in snmpTranslateCache and then
+		// returning it immediately, and multiple callers would then release the
+		// snmpTranslateCachesLock and instead wait on the individual
+		// snmpTranlsation.Lock to release. But I don't know that the extra complexity
+		// is worth it. Especially when it would slam the system pretty hard if lots
+		// of lookups are being perfomed.
+
+		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmpTranslateCall(oid)
+		snmpTranslateCaches[oid] = stc
+	}
+
+	snmpTranslateCachesLock.Unlock()
+
+	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
+}
+
+func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	var out []byte
 	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
 		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
 	} else {
 		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
+		if err, ok := err.(*exec.Error); ok && err.Err == exec.ErrNotFound {
+			// Silently discard error if snmptranslate not found and we have a numeric OID.
+			// Meaning we can get by without the lookup.
+			return "", oid, oid, "", nil
+		}
 	}
 	if err != nil {
 		return "", "", "", "", err

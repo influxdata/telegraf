@@ -1,7 +1,6 @@
 package amqp
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"strings"
@@ -178,7 +177,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	var outbuf = make(map[string][][]byte)
+	outbuf := make(map[string][]byte)
 
 	for _, metric := range metrics {
 		var key string
@@ -188,14 +187,12 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		values, err := q.serializer.Serialize(metric)
+		buf, err := q.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		for _, value := range values {
-			outbuf[key] = append(outbuf[key], []byte(value))
-		}
+		outbuf[key] = append(outbuf[key], buf...)
 	}
 
 	for key, buf := range outbuf {
@@ -207,7 +204,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			amqp.Publishing{
 				Headers:     q.headers,
 				ContentType: "text/plain",
-				Body:        bytes.Join(buf, []byte("\n")),
+				Body:        buf,
 			})
 		if err != nil {
 			return fmt.Errorf("FAILED to send amqp message: %s", err)
