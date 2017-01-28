@@ -140,7 +140,7 @@ func (a *Elasticsearch) Connect() error {
 						}]
 					}
 				}
-			}`, a.TemplateName)
+			}`, a.IndexName[0:strings.Index(a.IndexName, "%")])
 
 			_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx)
 
