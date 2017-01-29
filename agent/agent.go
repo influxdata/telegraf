@@ -157,7 +157,7 @@ func gatherWithTimeout(
 		select {
 		case err := <-done:
 			if err != nil {
-				log.Printf("E! ERROR in input [%s]: %s", input.Name(), err)
+				acc.AddError(err)
 			}
 			return
 		case <-ticker.C:
