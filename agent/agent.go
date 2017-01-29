@@ -157,13 +157,13 @@ func gatherWithTimeout(
 		select {
 		case err := <-done:
 			if err != nil {
-				log.Printf("E! ERROR in input [%s]: %s", input.Name(), err)
+				acc.AddError(err)
 			}
 			return
 		case <-ticker.C:
-			log.Printf("E! ERROR: input [%s] took longer to collect than "+
-				"collection interval (%s)",
-				input.Name(), timeout)
+			err := fmt.Errorf("took longer to collect than collection interval (%s)",
+				timeout)
+			acc.AddError(err)
 			continue
 		case <-shutdown:
 			return
