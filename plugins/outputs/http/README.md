@@ -1,14 +1,15 @@
 # HTTP Output Plugin
 
-This plugin writes to a HTTP Server using the `POST Method`
+This plugin writes to a HTTP Server using the `POST Method`.
 
-It requires a `url` name.
+Data collected from telegraf is sent in the Request Body.
 
 ### Configuration:
 
 ```toml
 # Send telegraf metrics to HTTP Server(s)
-[[outputs.graylog]]
+[[outputs.http]]
+  ## It requires a `url` name.
   ## Will be transmitted telegraf metrics to the HTTP Server using the below URL.
   url = "http://127.0.0.1:8080/metric"
   ## HTTP Content-Type. Default : application/json
