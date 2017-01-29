@@ -7,19 +7,24 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
 var sampleConfig = `
+  ## It requires a url name.
   ## Will be transmitted telegraf metrics to the HTTP Server using the below URL.
   url = "http://127.0.0.1:8080/metric"
-  ## HTTP Content-Type. Default : application/json
-  content_type = "application/json"
-  ## Set the number of times to retry when the status code is not 200 or an error occurs during HTTP call. Default: 3
-  retry = 3
+  ## http_headers option can add a custom header to the request.
+  ## The value is written as a delimiter(:).
+  ## Content-Type is required http header in http plugin.
+  ## so content-type of HTTP specification (plain/text, application/json, etc...) must be filled out.
+  http_headers = [ "Content-Type:application/json" ]
+  ## With this HTTP status code, the http plugin checks that the HTTP request is completed normally.
+  ## As a result, any status code that is not a specified status code is considered to be an error condition and processed.
+  expected_status_codes = [ 200, 204 ]
   ## Configure TLS handshake timeout. Default : 10
   tls_handshake_timeout = 10
   ## Configure response header timeout in seconds. Default : 3
@@ -41,11 +46,8 @@ var sampleConfig = `
 `
 
 const (
-	POST         = "POST"
-	CONTENT_TYPE = "Content-Type"
+	POST = "POST"
 
-	DEFAULT_RETRY                   = 3
-	DEFAULT_CONTENT_TYPE            = "application/json"
 	DEFAULT_TLS_HANDSHAKE_TIMEOUT   = 10
 	DEFAULT_RESPONSE_HEADER_TIMEOUT = 3
 	DEFAULT_DIAL_TIME_OUT           = 3
@@ -56,20 +58,21 @@ const (
 
 type Http struct {
 	// http required option
-	URL string `toml:"url"`
+	URL                 string   `toml:"url"`
+	HttpHeaders         []string `toml:"http_headers"`
+	ExpectedStatusCodes []int    `toml:"expected_status_codes"`
 
-	// http default value가 있는 option
-	ContentType           string `toml:"content_type"`
-	Retry                 int    `toml:"retry"`
-	TLSHandshakeTimeout   int    `toml:"tls_handshake_timeout"`
-	ResponseHeaderTimeout int    `toml:"response_header_timeout"`
-	DialTimeOut           int    `toml:"dial_timeout"`
-	KeepAlive             int    `toml:"keepalive"`
-	ExpectContinueTimeout int    `toml:"expect_continue_timeout"`
-	IdleConnTimeout       int    `toml:"idle_conn_timeout"`
+	// Option with http default value
+	TLSHandshakeTimeout   int `toml:"tls_handshake_timeout"`
+	ResponseHeaderTimeout int `toml:"response_header_timeout"`
+	DialTimeOut           int `toml:"dial_timeout"`
+	KeepAlive             int `toml:"keepalive"`
+	ExpectContinueTimeout int `toml:"expect_continue_timeout"`
+	IdleConnTimeout       int `toml:"idle_conn_timeout"`
 
-	client     http.Client
-	serializer serializers.Serializer
+	client                http.Client
+	serializer            serializers.Serializer
+	expectedStatusCodeMap map[int]bool
 }
 
 func (h *Http) SetSerializer(serializer serializers.Serializer) {
@@ -110,55 +113,75 @@ func (h Http) SampleConfig() string {
 }
 
 // Writes metrics over HTTP POST
-// If the request is failed, try again until retry limit.
 func (h Http) Write(metrics []telegraf.Metric) error {
-	if h.URL == "" {
-		return errors.New("Http Output URL Option is empty! It is necessary.")
+	if err := validate(h); err != nil {
+		return err
 	}
 
 	for _, metric := range metrics {
 		buf, err := h.serializer.Serialize(metric)
 
 		if err != nil {
-			log.Printf("E! Error serializing some metrics: %s", err.Error())
+			return fmt.Errorf("E! Error serializing some metrics: %s", err.Error())
 		}
 
-		if response, err := write(h, buf); err != nil || response.StatusCode != 200 {
-			for i := 1; i <= h.Retry; i++ {
-				response, err := write(h, buf)
+		response, err := write(h, buf)
 
-				responseBodyClose(response)
-
-				if err == nil || response.StatusCode == 200 {
-					break
-				}
-
-				if err != nil || response.StatusCode != 200 {
-					log.Printf("E! [Try %d] %s request failed! Try again because retry limit is %d. Http Error: %s", i, h.URL, h.Retry, err.Error())
-
-					if i == h.Retry {
-						return errors.New(fmt.Sprintf("E! Since the retry limit %d has been reached, this request is discarded.", h.Retry))
-					}
-				}
-			}
-		} else {
-			responseBodyClose(response)
+		if err := h.isOk(response, err); err != nil {
+			return err
 		}
+
+		defer response.Body.Close()
 	}
 
 	return nil
 }
 
-func responseBodyClose(response *http.Response) {
-	if response != nil {
-		defer response.Body.Close()
+func (h Http) isOk(response *http.Response, err error) error {
+	if response == nil || err != nil {
+		return fmt.Errorf("E! %s request failed! %s.", h.URL, err.Error())
 	}
+
+	if !h.isExpectedStatusCode(response.StatusCode) {
+		return fmt.Errorf("E! %s response is unexpected status code : %d.", h.URL, response.StatusCode)
+	}
+
+	return nil
+}
+
+func (h Http) isExpectedStatusCode(responseStatusCode int) bool {
+	if h.expectedStatusCodeMap == nil {
+		h.expectedStatusCodeMap = make(map[int]bool)
+
+		for _, expectedStatusCode := range h.ExpectedStatusCodes {
+			h.expectedStatusCodeMap[expectedStatusCode] = true
+		}
+	}
+
+	if h.expectedStatusCodeMap[responseStatusCode] {
+		return true
+	}
+
+	return false
+}
+
+// required option validate
+func validate(h Http) error {
+	if h.URL == "" || len(h.HttpHeaders) == 0 || len(h.ExpectedStatusCodes) == 0 {
+		return errors.New("E! Http ouput plugin is not working. Because your configuration omits the required option. Please check url, http_headers, expected_status_codes is empty!")
+	}
+
+	return nil
 }
 
 func write(h Http, buf []byte) (*http.Response, error) {
 	req, err := http.NewRequest(POST, h.URL, bytes.NewBuffer(buf))
 
-	req.Header.Set(CONTENT_TYPE, h.ContentType)
+	for _, httpHeader := range h.HttpHeaders {
+		keyAndValue := strings.Split(httpHeader, ":")
+		req.Header.Set(keyAndValue[0], keyAndValue[1])
+	}
+
 	req.Close = true
 
 	response, err := h.client.Do(req)
@@ -169,8 +192,6 @@ func write(h Http, buf []byte) (*http.Response, error) {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &Http{
-			ContentType:           DEFAULT_CONTENT_TYPE,
-			Retry:                 DEFAULT_RETRY,
 			TLSHandshakeTimeout:   DEFAULT_TLS_HANDSHAKE_TIMEOUT,
 			ResponseHeaderTimeout: DEFAULT_RESPONSE_HEADER_TIMEOUT,
 			DialTimeOut:           DEFAULT_DIAL_TIME_OUT,

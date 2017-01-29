@@ -25,7 +25,7 @@ var (
 	}
 )
 
-func TestHttpWriteWithoutURL(t *testing.T) {
+func TestHttpWriteWithoutRequiredOption(t *testing.T) {
 	m, _ := metric.New("cpu", tags, fields, time.Now())
 	metrics := []telegraf.Metric{m}
 
@@ -38,9 +38,9 @@ func TestHttpWriteWithoutURL(t *testing.T) {
 
 	http.Connect()
 
-	if err := http.Write(metrics); err != nil {
-		assert.Equal(t, "Http Output URL Option is empty! It is necessary.", err.Error())
-	}
+	err := http.Write(metrics)
+
+	assert.Error(t, err)
 }
 
 func TestHttpWriteNormalCase(t *testing.T) {
@@ -51,7 +51,9 @@ func TestHttpWriteNormalCase(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL: "http://127.0.0.1:9880/metric1",
+		URL:                 "http://127.0.0.1:9880/metric1",
+		HttpHeaders:         []string{"Content-Type:application/json"},
+		ExpectedStatusCodes: []int{200, 204},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -63,14 +65,16 @@ func TestHttpWriteNormalCase(t *testing.T) {
 	http.Write(metrics)
 }
 
-func TestHttpWriteWithIncorrectURLForRetry(t *testing.T) {
+func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 	now := time.Now()
 
 	m, _ := metric.New("cpu", tags, fields, now)
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL: "http://127.0.0.1:9880/incorrect/url",
+		URL:                 "http://127.0.0.1:9880/incorrect/url",
+		HttpHeaders:         []string{"Content-Type:application/json"},
+		ExpectedStatusCodes: []int{200},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -79,9 +83,55 @@ func TestHttpWriteWithIncorrectURLForRetry(t *testing.T) {
 	})
 
 	http.Connect()
-	if err := http.Write(metrics); err != nil {
-		assert.Equal(t, fmt.Sprintf("E! Since the retry limit %d has been reached, this request is discarded.", http.Retry), err.Error())
+	err := http.Write(metrics)
+
+	assert.Error(t, err)
+}
+
+func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
+	now := time.Now()
+
+	m, _ := metric.New("cpu", tags, fields, now)
+	metrics := []telegraf.Metric{m}
+
+	http := &Http{
+		URL:                 "http://127.0.0.1:9880/incorrect/url",
+		HttpHeaders:         []string{"Content-Type:application/json"},
+		ExpectedStatusCodes: []int{200, 404},
 	}
+
+	http.SetSerializer(&graphite.GraphiteSerializer{
+		Prefix:   "telegraf",
+		Template: "tags.measurement.field",
+	})
+
+	http.Connect()
+	err := http.Write(metrics)
+
+	assert.NoError(t, err)
+}
+
+func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
+	now := time.Now()
+
+	m, _ := metric.New("cpu", tags, fields, now)
+	metrics := []telegraf.Metric{m}
+
+	http := &Http{
+		URL:                 "http://127.0.0.1:56879/incorrect/url",
+		HttpHeaders:         []string{"Content-Type:application/json"},
+		ExpectedStatusCodes: []int{200},
+	}
+
+	http.SetSerializer(&graphite.GraphiteSerializer{
+		Prefix:   "telegraf",
+		Template: "tags.measurement.field",
+	})
+
+	http.Connect()
+	err := http.Write(metrics)
+
+	assert.Error(t, err)
 }
 
 func HTTPServer(t *testing.T, now time.Time, port int) {
