@@ -121,6 +121,15 @@ It is a simple bool, if it is not set to true or included this is treaded as fal
 If this is set to true, the plugin will abort and end prematurely
 if any of the combinations of ObjectName/Instances/Counters are invalid.
 
+#### Expand
+*Optional*
+
+This key is optional, it is a simple bool.
+If it is not set to true or included it is treated as false.
+When the option is set to true Telegraf will expand wildcards "*"
+used in defintions of ObjectName/Instance/Counter.
+Read more about wildcards in https://msdn.microsoft.com/en-us/library/windows/desktop/aa372605(v=vs.85).aspx
+
 ## Examples
 
 ### Generic Queries
