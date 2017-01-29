@@ -174,7 +174,7 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						}
 					} else {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							fmt.Printf("Invalid query: '%s'. Error: '%s'", query, err.Error())
+							fmt.Printf("Invalid query: '%s'. Error: %s", query, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err
