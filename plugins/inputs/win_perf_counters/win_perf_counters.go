@@ -293,8 +293,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				bufCount = 0
 				bufSize = 0
 			}
-		} else {
-			// handle error
 		}
 	}
 
