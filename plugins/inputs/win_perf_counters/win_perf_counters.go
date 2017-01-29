@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var sampleConfig string = `
+var sampleConfig = `
   ## By default this plugin returns basic CPU and Disk statistics.
   ## See the README file for more examples.
   ## Uncomment examples below or write your own as you see fit. If the system
@@ -87,6 +87,7 @@ type perfobject struct {
 	WarnOnMissing bool
 	FailOnMissing bool
 	IncludeTotal  bool
+	Expand        bool
 }
 
 // Parsed configuration ends up here after it has been validated for valid
@@ -109,8 +110,14 @@ type item struct {
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
-func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName string, counter string, instance string,
-	measurement string, include_total bool) error {
+func (m *Win_PerfCounters) AddItem(
+	metrics *itemList,
+	query string,
+	objectName string,
+	counter string,
+	instance string,
+	measurement string,
+	includeTotal bool) error {
 
 	var handle PDH_HQUERY
 	var counterHandle PDH_HCOUNTER
@@ -129,7 +136,7 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 	}
 
 	temp := &item{query, objectName, counter, instance, measurement,
-		include_total, handle, counterHandle}
+		includeTotal, handle, counterHandle}
 	index := len(gItemList)
 	gItemList[index] = temp
 
@@ -148,9 +155,55 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
-	var query string
+func expandCounterPathToBuffer(query string) ([]uint16, error) {
+	var bufSize uint32
+	var buf []uint16
+	ret := PdhExpandCounterPath(query, nil, &bufSize)
+	for ret == PDH_MORE_DATA {
+		buf = make([]uint16, bufSize)
+		ret = PdhExpandCounterPath(query, &buf[0], &bufSize)
+	}
+	if ret == ERROR_SUCCESS {
+		return buf, nil
+	}
+	return nil, fmt.Errorf("Failed to expand query: '%s', err(%d)", query, ret)
+}
 
+func expandCounterQuery(query string) ([]string, error) {
+	buf, err := expandCounterPathToBuffer(query)
+	if buf == nil {
+		return nil, err
+	}
+	return UTF16ToStringArray(buf), nil
+}
+
+func formatCounterQuery(objectname string, instance string, counter string) string {
+	if instance == "------" {
+		return "\\" + objectname + "\\" + counter
+	}
+	return "\\" + objectname + "(" + instance + ")\\" + counter
+}
+
+func (m *Win_PerfCounters) ProcessQueryStatus(query string, err error, perfObject perfobject) {
+	if err == nil {
+		if m.PrintValid {
+			fmt.Printf("Valid: %s\n", query)
+		}
+	} else {
+		if perfObject.FailOnMissing || perfObject.WarnOnMissing {
+			fmt.Printf("Invalid query: %s\n", query)
+		}
+	}
+}
+
+func expandQuery(query string, expand bool) ([]string, error) {
+	if expand {
+		return expandCounterQuery(query)
+	}
+	return []string{query}, nil
+}
+
+func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 	configParsed = true
 
 	if len(m.Object) > 0 {
@@ -158,24 +211,21 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 			for _, counter := range PerfObject.Counters {
 				for _, instance := range PerfObject.Instances {
 					objectname := PerfObject.ObjectName
+					query := formatCounterQuery(objectname, instance, counter)
+					expandedQueries, err := expandQuery(query, PerfObject.Expand)
 
-					if instance == "------" {
-						query = "\\" + objectname + "\\" + counter
-					} else {
-						query = "\\" + objectname + "(" + instance + ")\\" + counter
+					if err != nil {
+						m.ProcessQueryStatus(query, err, PerfObject)
+						if PerfObject.FailOnMissing {
+							return err
+						}
+						continue
 					}
 
-					err := m.AddItem(metrics, query, objectname, counter, instance,
-						PerfObject.Measurement, PerfObject.IncludeTotal)
-
-					if err == nil {
-						if m.PrintValid {
-							fmt.Printf("Valid: %s\n", query)
-						}
-					} else {
-						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							fmt.Printf("Invalid query: %s\n", query)
-						}
+					for _, expandedQuery := range expandedQueries {
+						err = m.AddItem(metrics, expandedQuery, objectname, counter, instance,
+							PerfObject.Measurement, PerfObject.IncludeTotal)
+						m.ProcessQueryStatus(expandedQuery, err, PerfObject)
 						if PerfObject.FailOnMissing {
 							return err
 						}
@@ -233,8 +283,8 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	var bufSize uint32
 	var bufCount uint32
-	var size uint32 = uint32(unsafe.Sizeof(PDH_FMT_COUNTERVALUE_ITEM_DOUBLE{}))
 	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
+	size := uint32(unsafe.Sizeof(PDH_FMT_COUNTERVALUE_ITEM_DOUBLE{}))
 
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range gItemList {
@@ -252,7 +302,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 					&bufSize, &bufCount, &filledBuf[0])
 				for i := 0; i < int(bufCount); i++ {
 					c := filledBuf[i]
-					var s string = UTF16PtrToString(c.SzName)
+					s := UTF16PtrToString(c.SzName)
 
 					var add bool
 

@@ -208,6 +208,7 @@ var (
 	pdh_GetFormattedCounterArrayW *syscall.Proc
 	pdh_OpenQuery                 *syscall.Proc
 	pdh_ValidatePathW             *syscall.Proc
+	pdh_PdhExpandCounterPath      *syscall.Proc
 )
 
 func init() {
@@ -223,6 +224,7 @@ func init() {
 	pdh_GetFormattedCounterArrayW = libpdhDll.MustFindProc("PdhGetFormattedCounterArrayW")
 	pdh_OpenQuery = libpdhDll.MustFindProc("PdhOpenQuery")
 	pdh_ValidatePathW = libpdhDll.MustFindProc("PdhValidatePathW")
+	pdh_PdhExpandCounterPath = libpdhDll.MustFindProc("PdhExpandCounterPathW")
 }
 
 // Adds the specified counter to the query. This is the internationalized version. Preferably, use the
@@ -402,6 +404,16 @@ func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *PDH_HQUERY)
 	return uint32(ret)
 }
 
+func PdhExpandCounterPath(szWildCardPath string, mszExpandedPathList *uint16, pcchPathListLength *uint32) uint32 {
+	ptxt, _ := syscall.UTF16PtrFromString(szWildCardPath)
+	ret, _, _ := pdh_PdhExpandCounterPath.Call(
+		uintptr(unsafe.Pointer(ptxt)),
+		uintptr(unsafe.Pointer(mszExpandedPathList)),
+		uintptr(unsafe.Pointer(pcchPathListLength)))
+
+	return uint32(ret)
+}
+
 // Validates a path. Will return ERROR_SUCCESS when ok, or PDH_CSTATUS_BAD_COUNTERNAME when the path is
 // erroneous.
 func PdhValidatePath(path string) uint32 {
@@ -416,4 +428,17 @@ func UTF16PtrToString(s *uint16) string {
 		return ""
 	}
 	return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
+}
+
+func UTF16ToStringArray(buf []uint16) []string {
+	var strings []string
+	nextLineStart := 0
+	stringLine := UTF16PtrToString(&buf[0])
+	for stringLine != "" {
+		strings = append(strings, stringLine)
+		nextLineStart += len(stringLine) + 1
+		remainingBuf := buf[nextLineStart:]
+		stringLine = UTF16PtrToString(&remainingBuf[0])
+	}
+	return strings
 }
