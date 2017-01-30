@@ -155,26 +155,18 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func expandCounterPathToBuffer(query string) ([]uint16, error) {
+func expandCounterQuery(query string) ([]string, error) {
 	var bufSize uint32
 	var buf []uint16
-	ret := PdhExpandCounterPath(query, nil, &bufSize)
+	ret := PdhExpandWildCardPath(query, nil, &bufSize)
 	for ret == PDH_MORE_DATA {
 		buf = make([]uint16, bufSize)
-		ret = PdhExpandCounterPath(query, &buf[0], &bufSize)
+		ret = PdhExpandWildCardPath(query, &buf[0], &bufSize)
 	}
 	if ret == ERROR_SUCCESS {
-		return buf, nil
+		return UTF16ToStringArray(buf), nil
 	}
 	return nil, fmt.Errorf("Failed to expand query: '%s', err(%d)", query, ret)
-}
-
-func expandCounterQuery(query string) ([]string, error) {
-	buf, err := expandCounterPathToBuffer(query)
-	if buf == nil {
-		return nil, err
-	}
-	return UTF16ToStringArray(buf), nil
 }
 
 func formatCounterQuery(objectname string, instance string, counter string) string {

@@ -208,7 +208,7 @@ var (
 	pdh_GetFormattedCounterArrayW *syscall.Proc
 	pdh_OpenQuery                 *syscall.Proc
 	pdh_ValidatePathW             *syscall.Proc
-	pdh_PdhExpandCounterPath      *syscall.Proc
+	pdh_ExpandWildCardPathW       *syscall.Proc
 )
 
 func init() {
@@ -224,7 +224,7 @@ func init() {
 	pdh_GetFormattedCounterArrayW = libpdhDll.MustFindProc("PdhGetFormattedCounterArrayW")
 	pdh_OpenQuery = libpdhDll.MustFindProc("PdhOpenQuery")
 	pdh_ValidatePathW = libpdhDll.MustFindProc("PdhValidatePathW")
-	pdh_PdhExpandCounterPath = libpdhDll.MustFindProc("PdhExpandCounterPathW")
+	pdh_ExpandWildCardPathW = libpdhDll.MustFindProc("PdhExpandWildCardPathW")
 }
 
 // Adds the specified counter to the query. This is the internationalized version. Preferably, use the
@@ -404,12 +404,15 @@ func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *PDH_HQUERY)
 	return uint32(ret)
 }
 
-func PdhExpandCounterPath(szWildCardPath string, mszExpandedPathList *uint16, pcchPathListLength *uint32) uint32 {
+func PdhExpandWildCardPath(szWildCardPath string, mszExpandedPathList *uint16, pcchPathListLength *uint32) uint32 {
 	ptxt, _ := syscall.UTF16PtrFromString(szWildCardPath)
-	ret, _, _ := pdh_PdhExpandCounterPath.Call(
+	flags := uint32(0) // expand instances and counters
+	ret, _, _ := pdh_ExpandWildCardPathW.Call(
+		uintptr(unsafe.Pointer(nil)), // search counters on local computer
 		uintptr(unsafe.Pointer(ptxt)),
 		uintptr(unsafe.Pointer(mszExpandedPathList)),
-		uintptr(unsafe.Pointer(pcchPathListLength)))
+		uintptr(unsafe.Pointer(pcchPathListLength)),
+		uintptr(unsafe.Pointer(&flags)))
 
 	return uint32(ret)
 }
