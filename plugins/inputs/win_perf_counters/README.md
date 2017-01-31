@@ -104,6 +104,25 @@ and you would also like all instances containg _Total returned,
 like "_Total", "0,_Total" and so on where applicable
 (Processor Information is one example).
 
+#### KeepAlive
+*Optional*
+
+This key is optional, it is a simple bool.
+If it is not set to true or included it is treated as false.
+By default Telegraf reads all counters definitions from the config file
+at start and looks if the specified counters do actually exist in the 
+system. If the given counter doesn't exist at the start time, then Telegraf
+ignores is and never collects from the counter.
+The flag allows to change the behaviour and tells Telegraf to poll existence
+of the counter periodically (each 10th collection interval). If Telegraf 
+founds the counter during the poll, then Telegraph will collect statistics from 
+the counter in the same way as from the rest of counters which were available
+from the Telegraf's start.
+The flag is useful for "dynamic" counters, which exists only for a certain period 
+of time: e.g. process-level counters (where Instance is a process name). If the 
+process will start after Telegraf's start, then you should specify KeepAlive=true
+for its counter(s).
+
 #### WarnOnMissing
 *Optional*
 

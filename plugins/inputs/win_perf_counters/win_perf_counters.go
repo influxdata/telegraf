@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var sampleConfig string = `
+var sampleConfig = `
   ## By default this plugin returns basic CPU and Disk statistics.
   ## See the README file for more examples.
   ## Uncomment examples below or write your own as you see fit. If the system
@@ -65,10 +65,13 @@ var sampleConfig string = `
     Measurement = "win_mem"
 `
 
+const keepAliveFrequency = 10 // refresh KeepAlive counters every 10th call to Gather
+
 // Valid queries end up in this map.
 var gItemList = make(map[int]*item)
 
 var configParsed bool
+var gatherCallCount uint
 var testConfigParsed bool
 var testObject string
 
@@ -87,6 +90,7 @@ type perfobject struct {
 	WarnOnMissing bool
 	FailOnMissing bool
 	IncludeTotal  bool
+	KeepAlive     bool
 }
 
 // Parsed configuration ends up here after it has been validated for valid
@@ -130,12 +134,11 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 
 	temp := &item{query, objectName, counter, instance, measurement,
 		include_total, handle, counterHandle}
-	index := len(gItemList)
-	gItemList[index] = temp
 
 	if metrics.items == nil {
 		metrics.items = make(map[int]*item)
 	}
+	index := len(metrics.items)
 	metrics.items[index] = temp
 	return nil
 }
@@ -148,7 +151,7 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
+func (m *Win_PerfCounters) ParseConfig(metrics *itemList, shouldProcessQuery func(string, perfobject) bool) error {
 	var query string
 
 	configParsed = true
@@ -163,6 +166,10 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						query = "\\" + objectname + "\\" + counter
 					} else {
 						query = "\\" + objectname + "(" + instance + ")\\" + counter
+					}
+
+					if !shouldProcessQuery(query, PerfObject) {
+						continue
 					}
 
 					err := m.AddItem(metrics, query, objectname, counter, instance,
@@ -209,7 +216,53 @@ func (m *Win_PerfCounters) CleanupTestMode() {
 	}
 }
 
+func isAlive(query string) bool {
+	for _, metric := range gItemList {
+		if metric.query == query {
+			return true
+		}
+	}
+	return false
+}
+
+// merge old map with new preserving order of elements in both maps, the old comes first
+func mergeMetrics(old map[int]*item, new map[int]*item) map[int]*item {
+	merged := make(map[int]*item)
+	for k, v := range old {
+		merged[k] = v
+	}
+	for i := 0; i < len(new); i++ {
+		merged[i+len(old)] = new[i]
+	}
+	return merged
+}
+
+// Poll the KeepAlive counters after polling command is received
+func pollKeepAliveCounters(m *Win_PerfCounters, doPoll <-chan bool) <-chan map[int]*item {
+	out := make(chan map[int]*item)
+
+	go func() {
+		doPollValue := <-doPoll
+		for doPollValue {
+			becameAliveMetrics := itemList{}
+			processKeepAlive := func(query string, perfObject perfobject) bool {
+				return perfObject.KeepAlive && !isAlive(query)
+			}
+			m.ParseConfig(&becameAliveMetrics, processKeepAlive)
+
+			out <- mergeMetrics(gItemList, becameAliveMetrics.items)
+			doPollValue = <-doPoll
+		}
+	}()
+	return out
+}
+
+var keepAliveIn chan bool
+var keepAliveOut <-chan map[int]*item
+
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
+	gatherCallCount++
+
 	metrics := itemList{}
 
 	// Both values are empty in normal use.
@@ -225,10 +278,33 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// We only need to parse the config during the init, it uses the global variable after.
 	if configParsed == false {
 
-		err := m.ParseConfig(&metrics)
+		processAllCounters := func(query string, perfObject perfobject) bool {
+			return true
+		}
+		err := m.ParseConfig(&metrics, processAllCounters)
 		if err != nil {
 			return err
 		}
+		gItemList = mergeMetrics(gItemList, metrics.items)
+
+		keepAliveIn = make(chan bool)
+		keepAliveOut = pollKeepAliveCounters(m, keepAliveIn)
+	}
+
+	// order polling of KeepAlive counters
+	if gatherCallCount%keepAliveFrequency == 0 {
+		keepAliveIn <- true
+		gatherCallCount = 0 // ensure we won't overflow the counter
+	}
+
+	// process polling results if there are any
+	select {
+	case updatedItems, ok := <-keepAliveOut:
+		if ok {
+			gItemList = updatedItems
+		}
+	default:
+		// No value ready, moving on.
 	}
 
 	var bufSize uint32
