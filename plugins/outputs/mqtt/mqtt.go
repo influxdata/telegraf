@@ -25,6 +25,9 @@ var sampleConfig = `
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
+  ## client ID, if not set a random ID is generated
+  # client_id = ""
+
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
@@ -46,7 +49,8 @@ type MQTT struct {
 	Database    string
 	Timeout     internal.Duration
 	TopicPrefix string
-	QoS         int `toml:"qos"`
+	QoS         int    `toml:"qos"`
+	ClientID    string `toml:"client_id"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -155,7 +159,11 @@ func (m *MQTT) publish(topic string, body []byte) error {
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
 
-	opts.SetClientID("Telegraf-Output-" + internal.RandomString(5))
+	if m.ClientID != "" {
+		opts.SetClientID(m.ClientID)
+	} else {
+		opts.SetClientID("Telegraf-Output-" + internal.RandomString(5))
+	}
 
 	tlsCfg, err := internal.GetTLSConfig(
 		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)

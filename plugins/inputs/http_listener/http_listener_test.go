@@ -16,6 +16,8 @@ import (
 const (
 	testMsg = "cpu_load_short,host=server01 value=12.0 1422568543702900257\n"
 
+	testMsgNoNewline = "cpu_load_short,host=server01 value=12.0 1422568543702900257"
+
 	testMsgs = `cpu_load_short,host=server02 value=12.0 1422568543702900257
 cpu_load_short,host=server03 value=12.0 1422568543702900257
 cpu_load_short,host=server04 value=12.0 1422568543702900257
@@ -73,6 +75,28 @@ func TestWriteHTTP(t *testing.T) {
 	resp, err = http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
 	require.EqualValues(t, 400, resp.StatusCode)
+
+	time.Sleep(time.Millisecond * 15)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01"},
+	)
+}
+
+// http listener should add a newline at the end of the buffer if it's not there
+func TestWriteHTTPNoNewline(t *testing.T) {
+	listener := newTestHTTPListener()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+
+	// post single message to listener
+	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
 
 	time.Sleep(time.Millisecond * 15)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",

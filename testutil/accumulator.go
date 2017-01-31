@@ -221,7 +221,7 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 	}
 }
 
-// HasIntValue returns true if the measurement has an Int value
+// HasIntField returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
 	a.Lock()
 	defer a.Unlock()
@@ -230,6 +230,42 @@ func (a *Accumulator) HasIntField(measurement string, field string) bool {
 			for fieldname, value := range p.Fields {
 				if fieldname == field {
 					_, ok := value.(int64)
+					return ok
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// HasInt32Field returns true if the measurement has an Int value
+func (a *Accumulator) HasInt32Field(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(int32)
+					return ok
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// HasStringField returns true if the measurement has an String value
+func (a *Accumulator) HasStringField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(string)
 					return ok
 				}
 			}
