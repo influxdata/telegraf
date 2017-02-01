@@ -11,6 +11,7 @@ It is highly recommended that all users migrate to the new riemann output plugin
 
 ### Features
 
+- [#2204](https://github.com/influxdata/telegraf/pull/2204): Extend http_response to support searching for a substring in response. Return 1 if found, else 0.
 - [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
 - [#2179](https://github.com/influxdata/telegraf/pull/2179): Added more InnoDB metric to MySQL plugin.
 - [#2251](https://github.com/influxdata/telegraf/pull/2251): InfluxDB output: use own client for improved through-put and less allocations.
@@ -54,7 +55,6 @@ plugins, not just statsd.
 
 ### Features
 
-- [#2204](https://github.com/influxdata/telegraf/pull/2204): Extend http_response to support searching for a substring in response. Return 1 if found, else 0.
 - [#2123](https://github.com/influxdata/telegraf/pull/2123): Fix improper calculation of CPU percentages
 - [#1564](https://github.com/influxdata/telegraf/issues/1564): Use RFC3339 timestamps in log output.
 - [#1997](https://github.com/influxdata/telegraf/issues/1997): Non-default HTTP timeouts for RabbitMQ plugin.
