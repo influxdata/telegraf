@@ -28,7 +28,7 @@ func TestCompileAndMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	matches := g1.Match()
-	assert.Len(t, matches, 3)
+	assert.Len(t, matches, 6)
 	matches = g2.Match()
 	assert.Len(t, matches, 2)
 	matches = g3.Match()
@@ -54,6 +54,16 @@ func TestFindRootDir(t *testing.T) {
 		actual := findRootDir(test.input)
 		assert.Equal(t, test.output, actual)
 	}
+}
+
+func TestFindNestedTextFile(t *testing.T) {
+	dir := getTestdataDir()
+	// test super asterisk
+	g1, err := Compile(dir + "/**.txt")
+	require.NoError(t, err)
+
+	matches := g1.Match()
+	assert.Len(t, matches, 1)
 }
 
 func getTestdataDir() string {
