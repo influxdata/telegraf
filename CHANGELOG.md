@@ -24,11 +24,12 @@ It is highly recommended that all users migrate to the new riemann output plugin
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
 
-## v1.2.1 [unreleased]
+## v1.2.1 [2017-02-01]
 
 ### Bugfixes
 
 - [#2317](https://github.com/influxdata/telegraf/issues/2317): Fix segfault on nil metrics with influxdb output.
+- [#2324](https://github.com/influxdata/telegraf/issues/2324): Fix negative number handling.
 
 ## v1.2 [2017-01-00]
 
