@@ -608,9 +608,10 @@ func TestNewMetricPoint(t *testing.T) {
 	assert.NoError(t, err)
 
 	p := m.Point()
+	pfields, _ := p.Fields()
 
 	assert.Equal(t, fields, m.Fields())
-	assert.Equal(t, fields, p.Fields())
+	assert.Equal(t, fields, pfields)
 	assert.Equal(t, "cpu", p.Name())
 }
 

@@ -273,7 +273,6 @@ func (d FakeDockerClient) Info(ctx context.Context) (types.Info, error) {
 		Name:               "absol",
 		SwapLimit:          false,
 		IPv4Forwarding:     true,
-		ExecutionDriver:    "native-0.2",
 		ExperimentalBuild:  false,
 		CPUCfsPeriod:       true,
 		RegistryConfig: &registry.ServiceConfig{
