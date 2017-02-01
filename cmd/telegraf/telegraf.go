@@ -6,18 +6,24 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
+	"path/filepath"
+	"plugin"
 	"runtime"
 	"strings"
 	"syscall"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/aggregators"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	"github.com/influxdata/telegraf/plugins/processors"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"github.com/kardianos/service"
 )
@@ -50,6 +56,8 @@ var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service")
+var fPlugins = flag.String("plugins", "",
+	"path to directory containing external plugins")
 
 // Telegraf version, populated linker.
 //   ie, -ldflags "-X main.version=`git describe --always --tags`"
@@ -304,9 +312,93 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
+// loadExternalPlugins loads external plugins from shared libraries (.so, .dll, etc.)
+// in the specified directory.
+func loadExternalPlugins(dir string) error {
+	return filepath.Walk(dir, func(pth string, info os.FileInfo, err error) error {
+		// Stop if there was an error.
+		if err != nil {
+			return err
+		}
+
+		// Ignore directories.
+		if info.IsDir() {
+			return nil
+		}
+
+		// Ignore files that aren't shared libraries.
+		ext := strings.ToLower(path.Ext(pth))
+		if ext != ".so" && ext != ".dll" {
+			return nil
+		}
+
+		// Load plugin.
+		p, err := plugin.Open(pth)
+		if err != nil {
+			return err
+		}
+
+		// Register plugin.
+		if err := registerPlugin(dir, pth, p); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+// registerPlugin registers an external plugin with telegraf.
+func registerPlugin(pluginsDir, filePath string, p *plugin.Plugin) error {
+	// Clean the file path and make sure it's relative to the root plugins directory.
+	// This is done because plugin names are namespaced using the directory
+	// structure. E.g., if the root plugin directory, passed in the pluginsDir
+	// argument, is '/home/jdoe/bin/telegraf/plugins' and we're registering plugin
+	// '/home/jdoe/bin/telegraf/plugins/input/mysql.so'
+	pluginsDir = filepath.Clean(pluginsDir)
+	parentDir, _ := filepath.Split(pluginsDir)
+	var err error
+	if filePath, err = filepath.Rel(parentDir, filePath); err != nil {
+		return err
+	}
+	// Strip the file extension and save it.
+	ext := path.Ext(filePath)
+	filePath = strings.TrimSuffix(filePath, ext)
+	// Convert path separators to "." to generate a plugin name namespaced by directory names.
+	name := strings.Replace(filePath, string(os.PathSeparator), ".", -1)
+
+	if create, err := p.Lookup("NewInput"); err == nil {
+		inputs.Add(name, inputs.Creator(create.(func() telegraf.Input)))
+	} else if create, err := p.Lookup("NewOutput"); err == nil {
+		outputs.Add(name, outputs.Creator(create.(func() telegraf.Output)))
+	} else if create, err := p.Lookup("NewProcessor"); err == nil {
+		processors.Add(name, processors.Creator(create.(func() telegraf.Processor)))
+	} else if create, err := p.Lookup("NewAggregator"); err == nil {
+		aggregators.Add(name, aggregators.Creator(create.(func() telegraf.Aggregator)))
+	} else {
+		return fmt.Errorf("not a telegraf plugin: %s%s", filePath, ext)
+	}
+
+	log.Printf("I! Registered: %s (from %s%s)\n", name, filePath, ext)
+
+	return nil
+}
+
 func main() {
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
+
+	// Load external plugins, if requested.
+	if *fPlugins != "" {
+		pluginsDir, err := filepath.Abs(*fPlugins)
+		if err != nil {
+			log.Fatal("E! " + err.Error())
+		}
+		log.Printf("I! Loading external plugins from: %s\n", pluginsDir)
+		if err := loadExternalPlugins(*fPlugins); err != nil {
+			log.Fatal("E! " + err.Error())
+		}
+	}
+
 	if runtime.GOOS == "windows" {
 		svcConfig := &service.Config{
 			Name:        "telegraf",
