@@ -25,6 +25,7 @@ type HTTPResponse struct {
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
+	compiledStringMatch *regexp.Regexp
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -58,7 +59,7 @@ var sampleConfig = `
   # {'fake':'data'}
   # '''
 
-	## Optional substring or regex match in body of the response
+  ## Optional substring or regex match in body of the response
   ## response_string_match = "\"service_status\": \"up\""
   ## response_string_match = "ok"
   ## response_string_match = "\".*_status\".?:.?\"up\""
@@ -147,13 +148,17 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	fields["response_time"] = time.Since(start).Seconds()
 	fields["http_response_code"] = resp.StatusCode
 
-	// Check the response for a regex match
+	// Check the response for a regex match.
 	if h.ResponseStringMatch != "" {
-		regex, err := regexp.Compile(h.ResponseStringMatch)
-		if err != nil {
-			log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
-			fields["response_string_match"] = 0
-			return fields, nil
+
+		// Compile once and reuse
+		if h.compiledStringMatch == nil {
+			h.compiledStringMatch = regexp.MustCompile(h.ResponseStringMatch)
+			if err != nil {
+				log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
+				fields["response_string_match"] = 0
+				return fields, nil
+			}
 		}
 
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
@@ -163,7 +168,7 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 			return fields, nil
 		}
 
-		if regex.Match(bodyBytes) {
+		if h.compiledStringMatch.Match(bodyBytes) {
 			fields["response_string_match"] = 1
 		} else {
 			fields["response_string_match"] = 0
