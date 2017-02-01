@@ -2,6 +2,24 @@
 
 ### Release Notes
 
+- Ceph: the `ceph_pgmap_state` metric content has been modified to use a unique field `count`, with each state expressed as a `state` tag.
+
+Telegraf < 1.3:
+
+```
+# field_name             value
+active+clean             123
+active+clean+scrubbing   3
+```
+
+Telegraf >= 1.3:
+
+```
+# field_name    value       tag
+count           123         state=active+clean
+count           3           state=active+clean+scrubbing
+```
+
 - The [Riemann output plugin](./plugins/outputs/riemann) has been rewritten
 and the previous riemann plugin is _incompatible_ with the new one. The reasons
 for this are outlined in issue [#1878](https://github.com/influxdata/telegraf/issues/1878).
@@ -11,17 +29,33 @@ It is highly recommended that all users migrate to the new riemann output plugin
 
 ### Features
 
+- [#2204](https://github.com/influxdata/telegraf/pull/2204): Extend http_response to support searching for a substring in response. Return 1 if found, else 0.
 - [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
 - [#2179](https://github.com/influxdata/telegraf/pull/2179): Added more InnoDB metric to MySQL plugin.
+- [#2229](https://github.com/influxdata/telegraf/pull/2229): `ceph_pgmap_state` metric now uses a single field `count`, with PG state published as `state` tag. 
 - [#2251](https://github.com/influxdata/telegraf/pull/2251): InfluxDB output: use own client for improved through-put and less allocations.
+- [#2330](https://github.com/influxdata/telegraf/pull/2330): Keep -config-directory when running as Windows service.
 - [#1900](https://github.com/influxdata/telegraf/pull/1900): Riemann plugin rewrite.
 - [#1453](https://github.com/influxdata/telegraf/pull/1453): diskio: add support for name templates and udev tags.
 - [#2277](https://github.com/influxdata/telegraf/pull/2277): add integer metrics for Consul check health state.
+- [#2201](https://github.com/influxdata/telegraf/pull/2201): Add lock option to the IPtables input plugin.
 
 ### Bugfixes
 
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
+- [#2287](https://github.com/influxdata/telegraf/issues/2287): Kubernetes input: Handle null startTime for stopped pods
+
+## v1.2.1 [2017-02-01]
+
+### Bugfixes
+
+- [#2317](https://github.com/influxdata/telegraf/issues/2317): Fix segfault on nil metrics with influxdb output.
+- [#2324](https://github.com/influxdata/telegraf/issues/2324): Fix negative number handling.
+
+### Features
+
+- [#2348](https://github.com/influxdata/telegraf/pull/2348): Go version 1.7.4 -> 1.7.5
 
 ## v1.2 [2017-01-00]
 
