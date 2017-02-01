@@ -44,6 +44,9 @@ cpu,host=foo,datacenter=us-east idle=99,busy=1i,b=true,s="string"
 cpu,host=foo,datacenter=us-east idle=99,busy=1i,b=true,s="string"
 `
 
+const negMetrics = `weather,host=local temp=-99i,temp_float=-99.4 1465839830100400200
+`
+
 // some metrics are invalid
 const someInvalid = `cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
@@ -83,6 +86,26 @@ func TestParse(t *testing.T) {
 		assert.True(t, m.Time().After(start))
 		assert.True(t, m.Time().Equal(firstTime))
 	}
+}
+
+func TestParseNegNumbers(t *testing.T) {
+	metrics, err := Parse([]byte(negMetrics))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+
+	assert.Equal(t,
+		map[string]interface{}{
+			"temp":       int64(-99),
+			"temp_float": float64(-99.4),
+		},
+		metrics[0].Fields(),
+	)
+	assert.Equal(t,
+		map[string]string{
+			"host": "local",
+		},
+		metrics[0].Tags(),
+	)
 }
 
 func TestParseErrors(t *testing.T) {

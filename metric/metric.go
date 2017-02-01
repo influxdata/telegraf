@@ -263,7 +263,7 @@ func (m *metric) Fields() map[string]interface{} {
 		case '"':
 			// string field
 			fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = unescape(string(m.fields[i:][i2+1:i3-1]), "fieldval")
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			// number field
 			switch m.fields[i:][i3-1] {
 			case 'i':
