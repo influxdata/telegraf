@@ -171,7 +171,7 @@ func TestHoursNTPQ(t *testing.T) {
 	assert.NoError(t, n.Gather(&acc))
 
 	fields := map[string]interface{}{
-		"when":   int64(720),
+		"when":   int64(7200),
 		"poll":   int64(256),
 		"reach":  int64(37),
 		"delay":  float64(51.016),

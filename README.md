@@ -219,6 +219,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)
+* [riemann_legacy](./plugins/outputs/riemann_legacy)
 
 ## Contributing
 
