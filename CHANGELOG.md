@@ -11,6 +11,7 @@ It is highly recommended that all users migrate to the new riemann output plugin
 
 ### Features
 
+- [#2141](https://github.com/influxdata/telegraf/pull/2141): Logparser handles newly-created files.
 - [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
 - [#2179](https://github.com/influxdata/telegraf/pull/2179): Added more InnoDB metric to MySQL plugin.
 - [#2251](https://github.com/influxdata/telegraf/pull/2251): InfluxDB output: use own client for improved through-put and less allocations.
