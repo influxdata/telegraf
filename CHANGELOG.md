@@ -17,7 +17,6 @@ It is highly recommended that all users migrate to the new riemann output plugin
 - [#1900](https://github.com/influxdata/telegraf/pull/1900): Riemann plugin rewrite.
 - [#1453](https://github.com/influxdata/telegraf/pull/1453): diskio: add support for name templates and udev tags.
 - [#2277](https://github.com/influxdata/telegraf/pull/2277): add integer metrics for Consul check health state.
-- [#2348](https://github.com/influxdata/telegraf/pull/2348): Go version 1.7.4 -> 1.7.5
 
 ### Bugfixes
 
@@ -30,6 +29,10 @@ It is highly recommended that all users migrate to the new riemann output plugin
 
 - [#2317](https://github.com/influxdata/telegraf/issues/2317): Fix segfault on nil metrics with influxdb output.
 - [#2324](https://github.com/influxdata/telegraf/issues/2324): Fix negative number handling.
+
+### Features
+
+- [#2348](https://github.com/influxdata/telegraf/pull/2348): Go version 1.7.4 -> 1.7.5
 
 ## v1.2 [2017-01-00]
 
