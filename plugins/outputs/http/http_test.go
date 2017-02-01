@@ -136,6 +136,20 @@ func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestHttp_Close(t *testing.T) {
+	var tests []string
+
+	tests = append(tests, "1")
+	tests = append(tests, "2")
+	tests = append(tests, "2")
+	tests = append(tests, "2")
+	tests = append(tests, "2")
+	tests = append(tests, "2")
+
+	fmt.Println(len(tests))
+	fmt.Println(cap(tests))
+}
+
 func HTTPServer(t *testing.T, now time.Time, port int) {
 	http.HandleFunc("/metric", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
