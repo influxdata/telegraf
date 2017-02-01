@@ -1,15 +1,17 @@
 package ceph
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -24,15 +26,38 @@ func TestParseSockId(t *testing.T) {
 func TestParseMonDump(t *testing.T) {
 	dump, err := parseDump(monPerfDump)
 	assert.NoError(t, err)
-	assert.InEpsilon(t, 5678670180, (*dump)["cluster"]["osd_kb_used"], epsilon)
-	assert.InEpsilon(t, 6866.540527000, (*dump)["paxos"]["store_state_latency.sum"], epsilon)
+	assert.InEpsilon(t, 5678670180, dump["cluster"]["osd_kb_used"], epsilon)
+	assert.InEpsilon(t, 6866.540527000, dump["paxos"]["store_state_latency.sum"], epsilon)
 }
 
 func TestParseOsdDump(t *testing.T) {
 	dump, err := parseDump(osdPerfDump)
 	assert.NoError(t, err)
-	assert.InEpsilon(t, 552132.109360000, (*dump)["filestore"]["commitcycle_interval.sum"], epsilon)
-	assert.Equal(t, float64(0), (*dump)["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
+	assert.InEpsilon(t, 552132.109360000, dump["filestore"]["commitcycle_interval.sum"], epsilon)
+	assert.Equal(t, float64(0), dump["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
+}
+
+func TestDecodeStatusPgmapState(t *testing.T) {
+	data := make(map[string]interface{})
+	err := json.Unmarshal([]byte(clusterStatusDump), &data)
+	assert.NoError(t, err)
+
+	acc := &testutil.Accumulator{}
+	err = decodeStatusPgmapState(acc, data)
+	assert.NoError(t, err)
+
+	var results = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		{map[string]interface{}{"count": float64(2560)}, map[string]string{"state": "active+clean"}},
+		{map[string]interface{}{"count": float64(10)}, map[string]string{"state": "active+scrubbing"}},
+		{map[string]interface{}{"count": float64(5)}, map[string]string{"state": "active+backfilling"}},
+	}
+
+	for _, r := range results {
+		acc.AssertContainsTaggedFields(t, "ceph_pgmap_state", r.fields, r.tags)
+	}
 }
 
 func TestGather(t *testing.T) {
@@ -684,4 +709,128 @@ var osdPerfDump = `
       "put_sum": 49214,
       "wait": { "avgcount": 0,
           "sum": 0.000000000}}}
+`
+var clusterStatusDump = `
+{
+  "health": {
+    "health": {
+      "health_services": [
+        {
+          "mons": [
+            {
+              "name": "a",
+              "kb_total": 114289256,
+              "kb_used": 26995516,
+              "kb_avail": 81465132,
+              "avail_percent": 71,
+              "last_updated": "2017-01-03 17:20:57.595004",
+              "store_stats": {
+                "bytes_total": 942117141,
+                "bytes_sst": 0,
+                "bytes_log": 4345406,
+                "bytes_misc": 937771735,
+                "last_updated": "0.000000"
+              },
+              "health": "HEALTH_OK"
+            },
+            {
+              "name": "b",
+              "kb_total": 114289256,
+              "kb_used": 27871624,
+              "kb_avail": 80589024,
+              "avail_percent": 70,
+              "last_updated": "2017-01-03 17:20:47.784331",
+              "store_stats": {
+                "bytes_total": 454853104,
+                "bytes_sst": 0,
+                "bytes_log": 5788320,
+                "bytes_misc": 449064784,
+                "last_updated": "0.000000"
+              },
+              "health": "HEALTH_OK"
+            },
+            {
+              "name": "c",
+              "kb_total": 130258508,
+              "kb_used": 38076996,
+              "kb_avail": 85541692,
+              "avail_percent": 65,
+              "last_updated": "2017-01-03 17:21:03.311123",
+              "store_stats": {
+                "bytes_total": 455555199,
+                "bytes_sst": 0,
+                "bytes_log": 6950876,
+                "bytes_misc": 448604323,
+                "last_updated": "0.000000"
+              },
+              "health": "HEALTH_OK"
+            }
+          ]
+        }
+      ]
+    },
+    "timechecks": {
+      "epoch": 504,
+      "round": 34642,
+      "round_status": "finished",
+      "mons": [
+        { "name": "a", "skew": 0, "latency": 0, "health": "HEALTH_OK" },
+        { "name": "b", "skew": -0, "latency": 0.000951, "health": "HEALTH_OK" },
+        { "name": "c", "skew": -0, "latency": 0.000946, "health": "HEALTH_OK" }
+      ]
+    },
+    "summary": [],
+    "overall_status": "HEALTH_OK",
+    "detail": []
+  },
+  "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
+  "election_epoch": 504,
+  "quorum": [ 0, 1, 2 ],
+  "quorum_names": [ "a", "b", "c" ],
+  "monmap": {
+    "epoch": 17,
+    "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
+    "modified": "2016-04-11 14:01:52.600198",
+    "created": "0.000000",
+    "mons": [
+      { "rank": 0, "name": "a", "addr": "192.168.0.1:6789/0" },
+      { "rank": 1, "name": "b", "addr": "192.168.0.2:6789/0" },
+      { "rank": 2, "name": "c", "addr": "192.168.0.3:6789/0" }
+    ]
+  },
+  "osdmap": {
+    "osdmap": {
+      "epoch": 21734,
+      "num_osds": 24,
+      "num_up_osds": 24,
+      "num_in_osds": 24,
+      "full": false,
+      "nearfull": false,
+      "num_remapped_pgs": 0
+    }
+  },
+  "pgmap": {
+    "pgs_by_state": [
+      { "state_name": "active+clean", "count": 2560 },
+      { "state_name": "active+scrubbing", "count": 10 },
+      { "state_name": "active+backfilling", "count": 5 }
+    ],
+    "version": 52314277,
+    "num_pgs": 2560,
+    "data_bytes": 2700031960713,
+    "bytes_used": 7478347665408,
+    "bytes_avail": 9857462382592,
+    "bytes_total": 17335810048000,
+    "read_bytes_sec": 0,
+    "write_bytes_sec": 367217,
+    "op_per_sec": 98
+  },
+  "mdsmap": {
+    "epoch": 1,
+    "up": 0,
+    "in": 0,
+    "max": 0,
+    "by_rank": []
+  }
+}
 `
