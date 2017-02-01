@@ -327,6 +327,9 @@ func main() {
 			if *fConfig != "" {
 				(*svcConfig).Arguments = []string{"-config", *fConfig}
 			}
+			if *fConfigDirectory != "" {
+				(*svcConfig).Arguments = append((*svcConfig).Arguments, "-config-directory", *fConfigDirectory)
+			}
 			err := service.Control(s, *fService)
 			if err != nil {
 				log.Fatal("E! " + err.Error())
