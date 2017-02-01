@@ -90,6 +90,9 @@ func NewRunningOutput(
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
 func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
+	if m == nil {
+		return
+	}
 	// Filter any tagexclude/taginclude parameters before adding metric
 	if ro.Config.Filter.IsActive() {
 		// In order to filter out tags, we need to create a new metric, since
