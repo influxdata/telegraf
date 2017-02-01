@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
@@ -48,12 +49,9 @@ var sampleConfig = `
 const (
 	POST = "POST"
 
-	DEFAULT_TLS_HANDSHAKE_TIMEOUT   = 10
 	DEFAULT_RESPONSE_HEADER_TIMEOUT = 3
 	DEFAULT_DIAL_TIME_OUT           = 3
 	DEFAULT_KEEP_ALIVE              = 3
-	DEFAULT_EXPECT_CONTINUE_TIMEOUT = 3
-	DEFAULT_IDLE_CONN_TIMEOUT       = 3
 )
 
 type Http struct {
@@ -63,16 +61,17 @@ type Http struct {
 	ExpectedStatusCodes []int    `toml:"expected_status_codes"`
 
 	// Option with http default value
-	TLSHandshakeTimeout   int `toml:"tls_handshake_timeout"`
 	ResponseHeaderTimeout int `toml:"response_header_timeout"`
 	DialTimeOut           int `toml:"dial_timeout"`
 	KeepAlive             int `toml:"keepalive"`
-	ExpectContinueTimeout int `toml:"expect_continue_timeout"`
-	IdleConnTimeout       int `toml:"idle_conn_timeout"`
 
 	client                http.Client
 	serializer            serializers.Serializer
 	expectedStatusCodeMap map[int]bool
+
+	// Context for request cancel of client
+	cancelContext context.Context
+	cancel        context.CancelFunc
 }
 
 func (h *Http) SetSerializer(serializer serializers.Serializer) {
@@ -80,25 +79,26 @@ func (h *Http) SetSerializer(serializer serializers.Serializer) {
 }
 
 // Connect to the Output
-func (h Http) Connect() error {
+func (h *Http) Connect() error {
 	h.client = http.Client{
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
 				Timeout:   time.Duration(h.DialTimeOut) * time.Second,
 				KeepAlive: time.Duration(h.KeepAlive) * time.Second,
 			}).Dial,
-			TLSHandshakeTimeout:   time.Duration(h.TLSHandshakeTimeout) * time.Second,
 			ResponseHeaderTimeout: time.Duration(h.ResponseHeaderTimeout) * time.Second,
-			ExpectContinueTimeout: time.Duration(h.ExpectContinueTimeout) * time.Second,
-			IdleConnTimeout:       time.Duration(h.IdleConnTimeout) * time.Second,
 		},
 	}
+
+	h.cancelContext, h.cancel = context.WithCancel(context.TODO())
 
 	return nil
 }
 
-// Close is not implemented. Because http.Client not provided connection close policy. Instead, uses the response.Body.Close() pattern.
+// Close the Client Connection using Context.
 func (h Http) Close() error {
+	h.cancel()
+
 	return nil
 }
 
@@ -125,7 +125,7 @@ func (h Http) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("E! Error serializing some metrics: %s", err.Error())
 		}
 
-		response, err := write(h, buf)
+		response, err := h.write(buf)
 
 		if err := h.isOk(response, err); err != nil {
 			return err
@@ -174,7 +174,7 @@ func validate(h Http) error {
 	return nil
 }
 
-func write(h Http, buf []byte) (*http.Response, error) {
+func (h Http)write(buf []byte) (*http.Response, error) {
 	req, err := http.NewRequest(POST, h.URL, bytes.NewBuffer(buf))
 
 	for _, httpHeader := range h.HttpHeaders {
@@ -182,7 +182,8 @@ func write(h Http, buf []byte) (*http.Response, error) {
 		req.Header.Set(keyAndValue[0], keyAndValue[1])
 	}
 
-	req.Close = true
+	req.Close = false
+	req.WithContext(h.cancelContext)
 
 	response, err := h.client.Do(req)
 
@@ -192,12 +193,9 @@ func write(h Http, buf []byte) (*http.Response, error) {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &Http{
-			TLSHandshakeTimeout:   DEFAULT_TLS_HANDSHAKE_TIMEOUT,
 			ResponseHeaderTimeout: DEFAULT_RESPONSE_HEADER_TIMEOUT,
 			DialTimeOut:           DEFAULT_DIAL_TIME_OUT,
 			KeepAlive:             DEFAULT_KEEP_ALIVE,
-			ExpectContinueTimeout: DEFAULT_EXPECT_CONTINUE_TIMEOUT,
-			IdleConnTimeout:       DEFAULT_IDLE_CONN_TIMEOUT,
 		}
 	})
 }

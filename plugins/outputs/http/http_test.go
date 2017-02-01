@@ -51,7 +51,7 @@ func TestHttpWriteNormalCase(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:                 "http://127.0.0.1:9880/metric1",
+		URL:                 "http://127.0.0.1:9880/metric",
 		HttpHeaders:         []string{"Content-Type:application/json"},
 		ExpectedStatusCodes: []int{200, 204},
 	}
@@ -62,7 +62,9 @@ func TestHttpWriteNormalCase(t *testing.T) {
 	})
 
 	http.Connect()
-	http.Write(metrics)
+	err := http.Write(metrics)
+
+	assert.NoError(t, err)
 }
 
 func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
