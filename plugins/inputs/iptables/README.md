@@ -30,11 +30,17 @@ You may edit your sudo configuration with the following:
 telegraf ALL=(root) NOPASSWD: /usr/bin/iptables -nvL *
 ```
 
+### Using IPtables lock feature
+
+Defining multiple instances of this plugin in telegraf.conf can lead to concurrent IPtables access resulting in "ERROR in input [inputs.iptables]: exit status 4" messages in telegraf.log and missing metrics. Setting 'use_lock = true' in the plugin configuration will run IPtables with the '-w' switch, allowing a lock usage to prevent this error.
+
 ### Configuration:
 
 ```toml
   # use sudo to run iptables
   use_sudo = false
+  # run iptables with the lock option
+  use_lock = false
   # defines the table to monitor:
   table = "filter"
   # defines the chains to monitor:
