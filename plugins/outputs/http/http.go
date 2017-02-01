@@ -229,7 +229,7 @@ func makeJsonFormatRequestBody(h *Http) ([]byte, error) {
 		arrayJsonObject, err := unmarshalArrayJsonObject(serializedMetric)
 
 		if err != nil {
-			fmt.Errorf("E! HTTP json unmarshal is fail! It probably does not seem to fit in the json format. Please check %s", serializedMetric)
+			return nil, fmt.Errorf("E! HTTP json unmarshal is fail! It probably does not seem to fit in the json format. Please check %s", serializedMetric)
 		}
 
 		requestBody = append(requestBody, arrayJsonObject...)
