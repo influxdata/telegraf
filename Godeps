@@ -1,7 +1,7 @@
 github.com/Shopify/sarama 8aadb476e66ca998f2f6bb3c993e9a2daa3666b9
 github.com/Sirupsen/logrus 219c8cb75c258c552e999735be6df753ffc7afdc
 github.com/aerospike/aerospike-client-go 7f3a312c3b2a60ac083ec6da296091c52c795c63
-github.com/amir/raidman 53c1b967405155bfc8758557863bf2e14f814687
+github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
 github.com/aws/aws-sdk-go 13a12060f716145019378a10e2806c174356b857
 github.com/beorn7/perks 3ac7bf7a47d159a033b107610db8a1b6575507a4
 github.com/cenkalti/backoff 4dc77674aceaabba2c7e3da25d4c823edfb73f99
@@ -33,7 +33,6 @@ github.com/kardianos/osext 29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc
 github.com/kardianos/service 5e335590050d6d00f3aa270217d288dda1c94d0a
 github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
-github.com/lib/pq e182dc4027e2ded4b19396d638610f2653295f36
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
 github.com/miekg/dns cce6c130cdb92c752850880fd285bea1d64439dd
 github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
@@ -52,7 +51,7 @@ github.com/soniah/gosnmp 3fe3beb30fa9700988893c56a63b1df8e1b68c26
 github.com/streadway/amqp b4f3ceab0337f013208d31348b578d83c0064744
 github.com/stretchr/testify 1f4a1643a57e798696635ea4c126e9127adb7d3c
 github.com/vjeantet/grok 83bfdfdfd1a8146795b28e547a8e3c8b28a466c2
-github.com/wvanbergen/kafka 46f9a1cf3f670edec492029fadded9c2d9e18866
+github.com/wvanbergen/kafka bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee
 github.com/wvanbergen/kazoo-go 0f768712ae6f76454f987c3356177e138df258f8
 github.com/yuin/gopher-lua bf3808abd44b1e55143a2d7f08571aaa80db1808
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
@@ -63,3 +62,4 @@ gopkg.in/dancannon/gorethink.v1 7d1af5be49cb5ecc7b177bf387d232050299d6ef
 gopkg.in/fatih/pool.v2 cba550ebf9bce999a02e963296d4bc7a486cb715
 gopkg.in/mgo.v2 d90005c5262a3463800497ea5a89aed5fe22c886
 gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4
+github.com/jackc/pgx bb73d8427902891bbad7b949b9c60b32949d935f

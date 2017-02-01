@@ -1,4 +1,29 @@
-## v1.2 [unreleased]
+## v1.3 [unreleased]
+
+### Release Notes
+
+- The [Riemann output plugin](./plugins/outputs/riemann) has been rewritten
+and the previous riemann plugin is _incompatible_ with the new one. The reasons
+for this are outlined in issue [#1878](https://github.com/influxdata/telegraf/issues/1878).
+The previous riemann output will still be available using
+`outputs.riemann_legacy` if needed, but that will eventually be deprecated.
+It is highly recommended that all users migrate to the new riemann output plugin.
+
+### Features
+
+- [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
+- [#2179](https://github.com/influxdata/telegraf/pull/2179): Added more InnoDB metric to MySQL plugin.
+- [#2251](https://github.com/influxdata/telegraf/pull/2251): InfluxDB output: use own client for improved through-put and less allocations.
+- [#1900](https://github.com/influxdata/telegraf/pull/1900): Riemann plugin rewrite.
+- [#1453](https://github.com/influxdata/telegraf/pull/1453): diskio: add support for name templates and udev tags.
+- [#2277](https://github.com/influxdata/telegraf/pull/2277): add integer metrics for Consul check health state.
+
+### Bugfixes
+
+- [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
+- [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
+
+## v1.2 [2017-01-00]
 
 ### Release Notes
 
@@ -44,6 +69,7 @@ plugins, not just statsd.
 - [#1942](https://github.com/influxdata/telegraf/pull/1942): Change Amazon Kinesis output plugin to use the built-in serializer plugins.
 - [#1980](https://github.com/influxdata/telegraf/issues/1980): Hide username/password from elasticsearch error log messages.
 - [#2097](https://github.com/influxdata/telegraf/issues/2097): Configurable HTTP timeouts in Jolokia plugin
+- [#2255](https://github.com/influxdata/telegraf/pull/2255): Allow changing jolokia attribute delimiter
 
 ### Bugfixes
 
@@ -53,7 +79,7 @@ plugins, not just statsd.
 - [#1775](https://github.com/influxdata/telegraf/issues/1775): Cache & expire metrics for delivery to prometheus.
 - [#2146](https://github.com/influxdata/telegraf/issues/2146): Fix potential panic in aggregator plugin metric maker.
 - [#1843](https://github.com/influxdata/telegraf/pull/1843) & [#1668](https://github.com/influxdata/telegraf/issues/1668): Add optional ability to define PID as a tag.
-- [#1730](https://github.com/influxdata/telegraf/issues/1730): Fix win_perf_counters not gathering non-English counters.
+- [#1730](https://github.com/influxdata/telegraf/issues/1730) & [#2261](https://github.com/influxdata/telegraf/pull/2261): Fix win_perf_counters not gathering non-English counters.
 - [#2061](https://github.com/influxdata/telegraf/issues/2061): Fix panic when file stat info cannot be collected due to permissions or other issue(s).
 - [#2045](https://github.com/influxdata/telegraf/issues/2045): Graylog output should set short_message field.
 - [#1904](https://github.com/influxdata/telegraf/issues/1904): Hddtemp always put the value in the field temperature.
@@ -66,6 +92,10 @@ plugins, not just statsd.
 - [#1973](https://github.com/influxdata/telegraf/issues/1973): Partial fix: logparser CLF pattern with IPv6 addresses.
 - [#1975](https://github.com/influxdata/telegraf/issues/1975) & [#2102](https://github.com/influxdata/telegraf/issues/2102): Fix thread-safety when using multiple instances of the statsd input plugin.
 - [#2027](https://github.com/influxdata/telegraf/issues/2027): docker input: interface conversion panic fix.
+- [#1814](https://github.com/influxdata/telegraf/issues/1814): snmp: ensure proper context is present on error messages.
+- [#2299](https://github.com/influxdata/telegraf/issues/2299): opentsdb: add tcp:// prefix if no scheme provided.
+- [#2297](https://github.com/influxdata/telegraf/issues/2297): influx parser: parse line-protocol without newlines.
+- [#2245](https://github.com/influxdata/telegraf/issues/2245): influxdb output: fix field type conflict blocking output buffer.
 
 ## v1.1.2 [2016-12-12]
 
@@ -216,8 +246,11 @@ which can be installed via
 evaluated at every flush interval, rather than once at startup. This makes it
 consistent with the behavior of `collection_jitter`.
 
+- postgresql plugins now handle oid and name typed columns seamlessly, previously they were ignored/skipped.
+
 ### Features
 
+- [#1617](https://github.com/influxdata/telegraf/pull/1617): postgresql_extensible now handles name and oid types correctly.
 - [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
 - [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
 - [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()

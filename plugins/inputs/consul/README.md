@@ -35,12 +35,19 @@ Fields:
 - check_name
 - service_id
 - status
+- passing
+- critical
+- warning
+
+`passing`, `critical`, and `warning` are integer representations of the health
+check state. A value of `1` represents that the status was the state of the
+the health check at this sample.
 
 ## Example output
 
 ```
 $ telegraf --config ./telegraf.conf -input-filter consul -test
 * Plugin: consul, Collection 1
-> consul_health_checks,host=wolfpit,node=consul-server-node,check_id="serfHealth" check_name="Serf Health Status",service_id="",status="passing" 1464698464486439902
-> consul_health_checks,host=wolfpit,node=consul-server-node,service_name=www.example.com,check_id="service:www-example-com.test01" check_name="Service 'www.example.com' check",service_id="www-example-com.test01",status="critical" 1464698464486519036
+> consul_health_checks,host=wolfpit,node=consul-server-node,check_id="serfHealth" check_name="Serf Health Status",service_id="",status="passing",passing=1i,critical=0i,warning=0i 1464698464486439902
+> consul_health_checks,host=wolfpit,node=consul-server-node,service_name=www.example.com,check_id="service:www-example-com.test01" check_name="Service 'www.example.com' check",service_id="www-example-com.test01",status="critical",passing=0i,critical=1i,warning=0i 1464698464486519036
 ```

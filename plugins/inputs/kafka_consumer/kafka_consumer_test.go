@@ -27,7 +27,7 @@ func newTestKafka() (*Kafka, chan *sarama.ConsumerMessage) {
 		Offset:          "oldest",
 		in:              in,
 		doNotCommitMsgs: true,
-		errs:            make(chan *sarama.ConsumerError, 1000),
+		errs:            make(chan error, 1000),
 		done:            make(chan struct{}),
 	}
 	return &k, in

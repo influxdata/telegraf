@@ -33,6 +33,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	for _, col := range p.AllColumns {
 		availableColumns[col] = true
 	}
+
 	intMetrics := []string{
 		"xact_commit",
 		"xact_rollback",
@@ -47,12 +48,20 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		"temp_files",
 		"temp_bytes",
 		"deadlocks",
+	}
+
+	int32Metrics := []string{
 		"numbackends",
 	}
 
 	floatMetrics := []string{
 		"blk_read_time",
 		"blk_write_time",
+	}
+
+	stringMetrics := []string{
+		"datname",
+		"datid",
 	}
 
 	metricsCounted := 0
@@ -65,10 +74,26 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		}
 	}
 
+	for _, metric := range int32Metrics {
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasInt32Field("postgresql", metric))
+			metricsCounted++
+		}
+	}
+
 	for _, metric := range floatMetrics {
 		_, ok := availableColumns[metric]
 		if ok {
 			assert.True(t, acc.HasFloatField("postgresql", metric))
+			metricsCounted++
+		}
+	}
+
+	for _, metric := range stringMetrics {
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasStringField("postgresql", metric))
 			metricsCounted++
 		}
 	}

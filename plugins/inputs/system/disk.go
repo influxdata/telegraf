@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -29,7 +30,7 @@ var diskSampleConfig = `
 
   ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
   ## present on /run, /var/run, /dev/shm or /dev).
-  ignore_fs = ["tmpfs", "devtmpfs"]
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
@@ -82,7 +83,11 @@ type DiskIOStats struct {
 	ps PS
 
 	Devices          []string
+	DeviceTags       []string
+	NameTemplates    []string
 	SkipSerialNumber bool
+
+	infoCache map[string]diskInfoCache
 }
 
 func (_ *DiskIOStats) Description() string {
@@ -96,6 +101,23 @@ var diskIoSampleConfig = `
   # devices = ["sda", "sdb"]
   ## Uncomment the following line if you need disk serial numbers.
   # skip_serial_number = false
+  #
+  ## On systems which support it, device metadata can be added in the form of
+  ## tags.
+  ## Currently only Linux is supported via udev properties. You can view
+  ## available properties for a device by running:
+  ## 'udevadm info -q property -n /dev/sda'
+  # device_tags = ["ID_FS_TYPE", "ID_FS_USAGE"]
+  #
+  ## Using the same metadata source as device_tags, you can also customize the
+  ## name of the device via templates.
+  ## The 'name_templates' parameter is a list of templates to try and apply to
+  ## the device. The template may contain variables in the form of '$PROPERTY' or
+  ## '${PROPERTY}'. The first template which does not contain any variables not
+  ## present for the device is used as the device name tag.
+  ## The typical use case is for LVM volumes, to get the VG/LV name instead of
+  ## the near-meaningless DM-0 name.
+  # name_templates = ["$ID_FS_LABEL","$DM_VG_NAME/$DM_LV_NAME"]
 `
 
 func (_ *DiskIOStats) SampleConfig() string {
@@ -123,7 +145,10 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 		tags := map[string]string{}
-		tags["name"] = io.Name
+		tags["name"] = s.diskName(io.Name)
+		for t, v := range s.diskTags(io.Name) {
+			tags[t] = v
+		}
 		if !s.SkipSerialNumber {
 			if len(io.SerialNumber) != 0 {
 				tags["serial"] = io.SerialNumber
@@ -146,6 +171,64 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+var varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
+
+func (s *DiskIOStats) diskName(devName string) string {
+	di, err := s.diskInfo(devName)
+	if err != nil {
+		// discard error :-(
+		// We can't return error because it's non-fatal to the Gather().
+		// And we have no logger, so we can't log it.
+		return devName
+	}
+	if di == nil {
+		return devName
+	}
+
+	for _, nt := range s.NameTemplates {
+		miss := false
+		name := varRegex.ReplaceAllStringFunc(nt, func(sub string) string {
+			sub = sub[1:] // strip leading '$'
+			if sub[0] == '{' {
+				sub = sub[1 : len(sub)-1] // strip leading & trailing '{' '}'
+			}
+			if v, ok := di[sub]; ok {
+				return v
+			}
+			miss = true
+			return ""
+		})
+
+		if !miss {
+			return name
+		}
+	}
+
+	return devName
+}
+
+func (s *DiskIOStats) diskTags(devName string) map[string]string {
+	di, err := s.diskInfo(devName)
+	if err != nil {
+		// discard error :-(
+		// We can't return error because it's non-fatal to the Gather().
+		// And we have no logger, so we can't log it.
+		return nil
+	}
+	if di == nil {
+		return nil
+	}
+
+	tags := map[string]string{}
+	for _, dt := range s.DeviceTags {
+		if v, ok := di[dt]; ok {
+			tags[dt] = v
+		}
+	}
+
+	return tags
 }
 
 func init() {
