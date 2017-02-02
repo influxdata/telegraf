@@ -70,8 +70,6 @@ type Http struct {
 	// Context for request cancel of client
 	cancelContext context.Context
 	cancel        context.CancelFunc
-	// RequestBodyMetricBuffer is a buffer containing the metrics to be included in the request body up to the buffer limit.
-	requestBodyMetricBuffer [][]byte
 }
 
 func (h *Http) SetSerializer(serializer serializers.Serializer) {
@@ -117,6 +115,8 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
+	var requestBodyBuf [][]byte
+
 	for _, metric := range metrics {
 		buf, err := h.serializer.Serialize(metric)
 
@@ -124,10 +124,10 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("E! Error serializing some metrics: %s", err.Error())
 		}
 
-		h.requestBodyMetricBuffer = append(h.requestBodyMetricBuffer, buf)
+		requestBodyBuf = append(requestBodyBuf, buf)
 
-		if h.BufferLimit <= len(h.requestBodyMetricBuffer) {
-			requestBody, err := h.makeRequestBody()
+		if h.BufferLimit <= len(requestBodyBuf) {
+			requestBody, err := makeRequestBody(h.serializer, requestBodyBuf)
 
 			if err != nil {
 				return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
@@ -145,7 +145,7 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 
 			defer response.Body.Close()
 
-			h.requestBodyMetricBuffer = nil
+			requestBodyBuf = nil
 		}
 	}
 
@@ -214,29 +214,29 @@ func (h *Http) write(buf []byte) (*http.Response, error) {
 // For example, a serialized metric in json.JsonSerializer returns a metric that looks like JsonObject {"key1": "value1"}.
 // In order to accumulate this in the buffer and send it to the request body at once, you need to convert it to Array Json Object [{"key1": "value1"}, {"key2": "value2"}].
 // Thus, makeRequestBody works by making the request body contain the metric returned by each serializer.
-func (h *Http) makeRequestBody() ([]byte, error) {
-	switch h.serializer.(type) {
+func makeRequestBody(serializer serializers.Serializer, requestBodyBuf [][]byte) ([]byte, error) {
+	switch serializer.(type) {
 	case *json.JsonSerializer:
-		return makeJsonFormatRequestBody(h)
+		return makeJsonFormatRequestBody(requestBodyBuf)
 	default:
-		return makePlainTextFormatRequestBody(h)
+		return makePlainTextFormatRequestBody(requestBodyBuf)
 	}
 }
 
-func makePlainTextFormatRequestBody(h *Http) ([]byte, error) {
+func makePlainTextFormatRequestBody(requestBodyBuf [][]byte) ([]byte, error) {
 	var requestBody bytes.Buffer
 
-	for _, serializedMetric := range h.requestBodyMetricBuffer {
+	for _, serializedMetric := range requestBodyBuf {
 		requestBody.Write(serializedMetric)
 	}
 
 	return requestBody.Bytes(), nil
 }
 
-func makeJsonFormatRequestBody(h *Http) ([]byte, error) {
+func makeJsonFormatRequestBody(requestBodyBuf [][]byte) ([]byte, error) {
 	var requestBody []map[string]interface{}
 
-	for _, serializedMetric := range h.requestBodyMetricBuffer {
+	for _, serializedMetric := range requestBodyBuf {
 		arrayJsonObject, err := unmarshalArrayJsonObject(serializedMetric)
 
 		if err != nil {
