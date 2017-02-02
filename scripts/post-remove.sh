@@ -15,28 +15,40 @@ function disable_chkconfig {
     rm -f /etc/init.d/telegraf
 }
 
-if [[ "$1" == "0" ]]; then
-    # RHEL and any distribution that follow RHEL, Amazon Linux covered
-    # telegraf is no longer installed, remove from init system
-    rm -f /etc/default/telegraf
+if [[ -f /etc/redhat-release ]]; then
+    # RHEL-variant logic
+    if [[ "$1" = "0" ]]; then
+        # InfluxDB is no longer installed, remove from init system
+        rm -f /etc/default/telegraf
 
-    which systemctl &>/dev/null
-    if [[ $? -eq 0 ]]; then
-        disable_systemd
-    else
-        # Assuming sysv
-        disable_chkconfig
+        if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+            disable_systemd
+        else
+            # Assuming sysv
+            disable_chkconfig
+        fi
     fi
-elif [ "$1" == "remove" -o "$1" == "purge" ]; then
+elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
-    # Remove/purge
-    rm -f /etc/default/telegraf
+    if [[ "$1" != "upgrade" ]]; then
+        # Remove/purge
+        rm -f /etc/default/telegraf
 
-    which systemctl &>/dev/null
-    if [[ $? -eq 0 ]]; then
-        disable_systemd
-    else
-        # Assuming sysv
-        disable_update_rcd
+        if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+            disable_systemd
+        else
+            # Assuming sysv
+            disable_update_rcd
+        fi
+    fi
+elif [[ -f /etc/os-release ]]; then
+    source /etc/os-release
+    if [[ $ID = "amzn" ]]; then
+        # Amazon Linux logic
+        if [[ "$1" = "0" ]]; then
+            # InfluxDB is no longer installed, remove from init system
+            rm -f /etc/default/telegraf
+            disable_chkconfig
+        fi
     fi
 fi
