@@ -45,6 +45,7 @@ It is highly recommended that all users migrate to the new riemann output plugin
 
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
+- [#2318](https://github.com/influxdata/telegraf/issues/2318): haproxy input - Add missing fields.
 - [#2287](https://github.com/influxdata/telegraf/issues/2287): Kubernetes input: Handle null startTime for stopped pods.
 - [#2356](https://github.com/influxdata/telegraf/issues/2356): cpu input panic when /proc/stat is empty.
 - [#2341](https://github.com/influxdata/telegraf/issues/2341): telegraf swallowing panics in --test mode.
