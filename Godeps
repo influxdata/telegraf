@@ -35,6 +35,7 @@ github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
 github.com/klauspost/crc32 19b0b332c9e4516a6370a0456e6182c3b5036720
 github.com/matttproud/golang_protobuf_extensions d0c3fe89de86839aecf2e0579c40ba3bb336a453
 github.com/miekg/dns cce6c130cdb92c752850880fd285bea1d64439dd
+github.com/miekg/pcap fbfcc463715f6206524a6b1fcc8ed1b9e7567ba5
 github.com/mreiferson/go-snappystream 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/nats ea8b4fd12ebb823073c0004b9f09ac8748f4f165
