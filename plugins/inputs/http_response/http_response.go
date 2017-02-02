@@ -3,8 +3,11 @@ package http_response
 import (
 	"errors"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,12 +18,14 @@ import (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address         string
-	Body            string
-	Method          string
-	ResponseTimeout internal.Duration
-	Headers         map[string]string
-	FollowRedirects bool
+	Address             string
+	Body                string
+	Method              string
+	ResponseTimeout     internal.Duration
+	Headers             map[string]string
+	FollowRedirects     bool
+	ResponseStringMatch string
+	compiledStringMatch *regexp.Regexp
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -53,6 +58,11 @@ var sampleConfig = `
   # body = '''
   # {'fake':'data'}
   # '''
+
+  ## Optional substring or regex match in body of the response
+  ## response_string_match = "\"service_status\": \"up\""
+  ## response_string_match = "ok"
+  ## response_string_match = "\".*_status\".?:.?\"up\""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -137,6 +147,35 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 	}
 	fields["response_time"] = time.Since(start).Seconds()
 	fields["http_response_code"] = resp.StatusCode
+
+	// Check the response for a regex match.
+	if h.ResponseStringMatch != "" {
+
+		// Compile once and reuse
+		if h.compiledStringMatch == nil {
+			h.compiledStringMatch = regexp.MustCompile(h.ResponseStringMatch)
+			if err != nil {
+				log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
+				fields["response_string_match"] = 0
+				return fields, nil
+			}
+		}
+
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("E! Failed to read body of HTTP Response : %s", err)
+			fields["response_string_match"] = 0
+			return fields, nil
+		}
+
+		if h.compiledStringMatch.Match(bodyBytes) {
+			fields["response_string_match"] = 1
+		} else {
+			fields["response_string_match"] = 0
+		}
+
+	}
+
 	return fields, nil
 }
 

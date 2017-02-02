@@ -178,6 +178,48 @@ func (m *metric) Serialize() []byte {
 	return tmp
 }
 
+func (m *metric) SerializeTo(dst []byte) int {
+	i := 0
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.name)
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.tags)
+	if i >= len(dst) {
+		return i
+	}
+
+	dst[i] = ' '
+	i++
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.fields)
+	if i >= len(dst) {
+		return i
+	}
+
+	dst[i] = ' '
+	i++
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.t)
+	if i >= len(dst) {
+		return i
+	}
+	dst[i] = '\n'
+
+	return i + 1
+}
+
 func (m *metric) Split(maxSize int) []telegraf.Metric {
 	if m.Len() < maxSize {
 		return []telegraf.Metric{m}
@@ -263,7 +305,7 @@ func (m *metric) Fields() map[string]interface{} {
 		case '"':
 			// string field
 			fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = unescape(string(m.fields[i:][i2+1:i3-1]), "fieldval")
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			// number field
 			switch m.fields[i:][i3-1] {
 			case 'i':
