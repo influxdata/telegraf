@@ -27,8 +27,15 @@ The previous riemann output will still be available using
 `outputs.riemann_legacy` if needed, but that will eventually be deprecated.
 It is highly recommended that all users migrate to the new riemann output plugin.
 
+- Generic [socket_listener](./plugins/inputs/socket_listener) and
+[socket_writer](./plugins/outputs/socket_writer) plugins have been implemented
+for receiving and sending UDP, TCP, unix, & unix-datagram data. These plugins
+will replace udp_listener and tcp_listener, which are still available but will
+be deprecated eventually.
+
 ### Features
 
+- [#2094](https://github.com/influxdata/telegraf/pull/2094): Add generic socket listener & writer.
 - [#2204](https://github.com/influxdata/telegraf/pull/2204): Extend http_response to support searching for a substring in response. Return 1 if found, else 0.
 - [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
 - [#2179](https://github.com/influxdata/telegraf/pull/2179): Added more InnoDB metric to MySQL plugin.
@@ -112,7 +119,6 @@ plugins, not just statsd.
 - [#1980](https://github.com/influxdata/telegraf/issues/1980): Hide username/password from elasticsearch error log messages.
 - [#2097](https://github.com/influxdata/telegraf/issues/2097): Configurable HTTP timeouts in Jolokia plugin
 - [#2255](https://github.com/influxdata/telegraf/pull/2255): Allow changing jolokia attribute delimiter
-- [#2094](https://github.com/influxdata/telegraf/pull/2094): Add generic socket listener & writer.
 
 ### Bugfixes
 
