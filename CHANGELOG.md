@@ -32,20 +32,25 @@ It is highly recommended that all users migrate to the new riemann output plugin
 - [#2204](https://github.com/influxdata/telegraf/pull/2204): Extend http_response to support searching for a substring in response. Return 1 if found, else 0.
 - [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
 - [#2179](https://github.com/influxdata/telegraf/pull/2179): Added more InnoDB metric to MySQL plugin.
-- [#2229](https://github.com/influxdata/telegraf/pull/2229): `ceph_pgmap_state` metric now uses a single field `count`, with PG state published as `state` tag. 
+- [#2229](https://github.com/influxdata/telegraf/pull/2229): `ceph_pgmap_state` metric now uses a single field `count`, with PG state published as `state` tag.
 - [#2251](https://github.com/influxdata/telegraf/pull/2251): InfluxDB output: use own client for improved through-put and less allocations.
 - [#2330](https://github.com/influxdata/telegraf/pull/2330): Keep -config-directory when running as Windows service.
 - [#1900](https://github.com/influxdata/telegraf/pull/1900): Riemann plugin rewrite.
 - [#1453](https://github.com/influxdata/telegraf/pull/1453): diskio: add support for name templates and udev tags.
 - [#2277](https://github.com/influxdata/telegraf/pull/2277): add integer metrics for Consul check health state.
 - [#2201](https://github.com/influxdata/telegraf/pull/2201): Add lock option to the IPtables input plugin.
+- [#2244](https://github.com/influxdata/telegraf/pull/2244): Support ipmi_sensor plugin querying local ipmi sensors.
 
 ### Bugfixes
 
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
 - [#2287](https://github.com/influxdata/telegraf/issues/2287): Kubernetes input: Handle null startTime for stopped pods
-- [#2206](https://github.com/influxdata/telegraf/pull/2206) & [#1636](https://github.com/influxdata/telegraf/issues/1636): procstat - stop caching PIDs.
+- [#1636](https://github.com/influxdata/telegraf/issues/1636): procstat - stop caching PIDs.
+- [#2318](https://github.com/influxdata/telegraf/issues/2318): haproxy input - Add missing fields.
+- [#2287](https://github.com/influxdata/telegraf/issues/2287): Kubernetes input: Handle null startTime for stopped pods.
+- [#2356](https://github.com/influxdata/telegraf/issues/2356): cpu input panic when /proc/stat is empty.
+- [#2341](https://github.com/influxdata/telegraf/issues/2341): telegraf swallowing panics in --test mode.
 
 ## v1.2.1 [2017-02-01]
 

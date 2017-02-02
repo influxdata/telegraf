@@ -109,6 +109,7 @@ func (k *Kafka) Connect() error {
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 	config.Producer.Retry.Max = k.MaxRetry
+	config.Producer.Return.Successes = true
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
