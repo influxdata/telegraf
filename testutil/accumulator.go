@@ -29,6 +29,7 @@ func (p *Metric) String() string {
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
 	sync.Mutex
+	*sync.Cond
 
 	Metrics  []*Metric
 	nMetrics uint64
@@ -56,11 +57,14 @@ func (a *Accumulator) AddFields(
 	timestamp ...time.Time,
 ) {
 	atomic.AddUint64(&a.nMetrics, 1)
+	a.Lock()
+	defer a.Unlock()
+	if a.Cond != nil {
+		a.Cond.Broadcast()
+	}
 	if a.Discard {
 		return
 	}
-	a.Lock()
-	defer a.Unlock()
 	if tags == nil {
 		tags = map[string]string{}
 	}
@@ -169,6 +173,15 @@ func (a *Accumulator) NFields() int {
 		}
 	}
 	return counter
+}
+
+// Wait waits for a metric to be added to the accumulator.
+// Accumulator must already be locked.
+func (a *Accumulator) Wait() {
+	if a.Cond == nil {
+		a.Cond = sync.NewCond(&a.Mutex)
+	}
+	a.Cond.Wait()
 }
 
 func (a *Accumulator) AssertContainsTaggedFields(

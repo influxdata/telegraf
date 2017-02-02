@@ -110,6 +110,7 @@ plugins, not just statsd.
 - [#1980](https://github.com/influxdata/telegraf/issues/1980): Hide username/password from elasticsearch error log messages.
 - [#2097](https://github.com/influxdata/telegraf/issues/2097): Configurable HTTP timeouts in Jolokia plugin
 - [#2255](https://github.com/influxdata/telegraf/pull/2255): Allow changing jolokia attribute delimiter
+- [#2094](https://github.com/influxdata/telegraf/pull/2094): Add generic socket listener & writer.
 
 ### Bugfixes
 
