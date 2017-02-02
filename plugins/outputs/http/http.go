@@ -135,6 +135,10 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 
 			response, err := h.write(requestBody)
 
+			if err != nil {
+				return err
+			}
+
 			if err := h.isOk(response, err); err != nil {
 				return err
 			}
@@ -188,7 +192,12 @@ func (h *Http) write(buf []byte) (*http.Response, error) {
 
 	for _, httpHeader := range h.HttpHeaders {
 		keyAndValue := strings.Split(httpHeader, ":")
-		req.Header.Set(keyAndValue[0], keyAndValue[1])
+
+		if len(keyAndValue) == 2 {
+			req.Header.Set(keyAndValue[0], keyAndValue[1])
+		} else {
+			return nil, fmt.Errorf("E! http_headers was configured in the wrong format. The header key and value must set based on the delimiter (:).")
+		}
 	}
 
 	req.Close = true
