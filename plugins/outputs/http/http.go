@@ -60,7 +60,7 @@ type Http struct {
 	// Option with http default value
 	ResponseHeaderTimeout int `toml:"response_header_timeout"`
 	DialTimeOut           int `toml:"dial_timeout"`
-	BufferLimit           int `toml:"limit"`
+	BufferLimit           int `toml:"buffer_limit"`
 
 	client     http.Client
 	serializer serializers.Serializer
