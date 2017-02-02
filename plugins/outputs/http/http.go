@@ -144,6 +144,8 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 			}
 
 			defer response.Body.Close()
+
+			h.requestBodyMetricBuffer = nil
 		}
 	}
 
@@ -243,8 +245,6 @@ func makeJsonFormatRequestBody(h *Http) ([]byte, error) {
 
 		requestBody = append(requestBody, arrayJsonObject...)
 	}
-
-	h.requestBodyMetricBuffer = nil
 
 	return ejson.Marshal(requestBody)
 }
