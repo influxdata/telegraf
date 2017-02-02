@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/shirou/gopsutil/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -24,7 +23,6 @@ func TestGather(t *testing.T) {
 	p := Procstat{
 		PidFile: file.Name(),
 		Prefix:  "foo",
-		pidmap:  make(map[int32]*process.Process),
 		tagmap:  make(map[int32]map[string]string),
 	}
 	p.Gather(&acc)
