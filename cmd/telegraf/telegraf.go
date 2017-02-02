@@ -271,14 +271,21 @@ func reloadLoop(stop chan struct{}, s service.Service) {
 		log.Printf("I! Tags enabled: %s", c.ListTags())
 
 		if *fPidfile != "" {
-			f, err := os.Create(*fPidfile)
+			f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Fatalf("E! Unable to create pidfile: %s", err)
+				log.Printf("E! Unable to create pidfile: %s", err)
+			} else {
+				fmt.Fprintf(f, "%d\n", os.Getpid())
+
+				f.Close()
+
+				defer func() {
+					err := os.Remove(*fPidfile)
+					if err != nil {
+						log.Printf("E! Unable to remove pidfile: %s", err)
+					}
+				}()
 			}
-
-			fmt.Fprintf(f, "%d\n", os.Getpid())
-
-			f.Close()
 		}
 
 		ag.Run(shutdown)
