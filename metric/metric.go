@@ -9,9 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	// TODO remove
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 const MaxInt = int(^uint(0) >> 1)
@@ -135,11 +132,6 @@ type metric struct {
 	// cached values for reuse in "get" functions
 	hashID uint64
 	nsec   int64
-}
-
-func (m *metric) Point() *client.Point {
-	c, _ := client.NewPoint(m.Name(), m.Tags(), m.Fields(), m.Time())
-	return c
 }
 
 func (m *metric) String() string {
