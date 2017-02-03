@@ -15,8 +15,8 @@ import (
 type AMQPConsumer struct {
 	Username string
 	Password string
-	AMQPHost string
-	AMQPPort string
+	AmqpHost string
+	AmqpPort string
 	Queue    string
 	Prefetch int
 
@@ -65,7 +65,7 @@ func (rmq *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
 func (rmq *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 
 	// Create queue connection and assign it to AMQPConsumer
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://%v:%v@%v:%v", rmq.Username, rmq.Password, rmq.AMQPHost, rmq.AMQPPort))
+	conn, err := amqp.Dial(fmt.Sprintf("amqp://%v:%v@%v:%v", rmq.Username, rmq.Password, rmq.AmqpHost, rmq.AmqpPort))
 	if err != nil {
 		return fmt.Errorf("%v: Failed to connect to AMQP", err)
 	}
