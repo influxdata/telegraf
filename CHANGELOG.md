@@ -39,13 +39,20 @@ It is highly recommended that all users migrate to the new riemann output plugin
 - [#1453](https://github.com/influxdata/telegraf/pull/1453): diskio: add support for name templates and udev tags.
 - [#2277](https://github.com/influxdata/telegraf/pull/2277): add integer metrics for Consul check health state.
 - [#2201](https://github.com/influxdata/telegraf/pull/2201): Add lock option to the IPtables input plugin.
+- [#2244](https://github.com/influxdata/telegraf/pull/2244): Support ipmi_sensor plugin querying local ipmi sensors.
+- [#2339](https://github.com/influxdata/telegraf/pull/2339): Increment gather_errors for all errors emitted by inputs.
 
 ### Bugfixes
 
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
+- [#2287](https://github.com/influxdata/telegraf/issues/2287): Kubernetes input: Handle null startTime for stopped pods
+- [#1636](https://github.com/influxdata/telegraf/issues/1636): procstat - stop caching PIDs.
+- [#2318](https://github.com/influxdata/telegraf/issues/2318): haproxy input - Add missing fields.
 - [#2287](https://github.com/influxdata/telegraf/issues/2287): Kubernetes input: Handle null startTime for stopped pods.
 - [#2356](https://github.com/influxdata/telegraf/issues/2356): cpu input panic when /proc/stat is empty.
+- [#2341](https://github.com/influxdata/telegraf/issues/2341): telegraf swallowing panics in --test mode.
+- [#2358](https://github.com/influxdata/telegraf/pull/2358): Create pidfile with 644 permissions & defer file deletion.
 - [#2360](https://github.com/influxdata/telegraf/pull/2360): Fixed install/remove of telegraf on non-systemd Debian/Ubuntu systems
 
 ## v1.2.1 [2017-02-01]
@@ -106,6 +113,7 @@ plugins, not just statsd.
 - [#1980](https://github.com/influxdata/telegraf/issues/1980): Hide username/password from elasticsearch error log messages.
 - [#2097](https://github.com/influxdata/telegraf/issues/2097): Configurable HTTP timeouts in Jolokia plugin
 - [#2255](https://github.com/influxdata/telegraf/pull/2255): Allow changing jolokia attribute delimiter
+- [#2094](https://github.com/influxdata/telegraf/pull/2094): Add generic socket listener & writer.
 
 ### Bugfixes
 
