@@ -33,7 +33,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/errchan"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/registry/inputs"
 )
 
 // Might add Lookupd endpoints for cluster discovery

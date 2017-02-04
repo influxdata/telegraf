@@ -11,8 +11,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/registry/inputs"
 	"io/ioutil"
 	"strings"
 )

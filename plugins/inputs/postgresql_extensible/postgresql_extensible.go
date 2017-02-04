@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
+	"github.com/influxdata/telegraf/registry/inputs"
 )
 
 type Postgresql struct {

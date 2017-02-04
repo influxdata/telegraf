@@ -10,7 +10,7 @@ import (
 
 	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/registry/outputs"
 )
 
 type Riemann struct {
