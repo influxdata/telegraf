@@ -91,10 +91,10 @@ func (a *Elasticsearch) Connect() error {
 	client, err := elastic.NewClient(clientOptions...)
 
 	if err != nil {
-		return fmt.Errorf("Elasticsearch connection failed: %s", err)
+		return err
 	}
 
-	// check for version on first node
+	// check for ES version on first node
 	esVersion, err := client.ElasticsearchVersion(a.URLs[0])
 
 	if err != nil {
