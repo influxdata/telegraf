@@ -102,8 +102,9 @@ func (a *Elasticsearch) Connect() error {
 	}
 
 	// quit if ES version is not supported
-	if strconv.Atoi(strings.Split(esVersion, ".")[0]) < 5 {
-		fmt.Errorf("Elasticsearch version not supported: %s" + esVersion)
+	i, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
+	if err != nil || i < 5 {
+		return fmt.Errorf("Elasticsearch version not supported: %s", esVersion)
 	}
 
 	log.Println("I! Elasticsearch version: " + esVersion)
@@ -132,16 +133,27 @@ func (a *Elasticsearch) Connect() error {
 							"@timestamp" : { "type" : "date" },
 							"input_plugin" : { "type" : "keyword" }
 						},
-						"dynamic_templates": [{
-							"tag": {
-								"path_match": "tag.*",
-								"mapping": {
-									"ignore_above": 512,
-									"type": "keyword"
-								},
-								"match_mapping_type": "string"
+						"dynamic_templates": [
+							{
+								"tags": {
+									"match_mapping_type": "string",
+									"path_match": "tag.*",
+									"mapping": {
+										"ignore_above": 512,
+										"type": "keyword"
+									}
+								}
+							},
+							{
+								"metrics": {
+									"match_mapping_type": "long",
+									"mapping": {
+										"type": "float",
+										"index": false
+									}
+								}
 							}
-						}]
+						]
 					}
 				}
 			}`, a.IndexName[0:strings.Index(a.IndexName, "%")])
