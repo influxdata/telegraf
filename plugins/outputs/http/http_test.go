@@ -1,10 +1,14 @@
 package http
 
 import (
+	ejon "encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
@@ -136,6 +140,86 @@ func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 	http.Connect()
 	err := http.Write(metrics)
 
+	assert.Error(t, err)
+}
+
+func TestMakeReqBody(t *testing.T) {
+	// given
+	m, _ := metric.New("cpu", tags, fields, time.Now())
+
+	var reqBodyBuf [][]byte
+
+	jsonSerializer := json.JsonSerializer{}
+	serializedMetric, _ := jsonSerializer.Serialize(m)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric)
+
+	// when
+	reqBody, err := makeReqBody(&jsonSerializer, reqBodyBuf)
+
+	// then
+	assert.NoError(t, err)
+	assert.NotEmpty(t, reqBody)
+}
+
+func TestMakeReqBody2(t *testing.T) {
+	// given
+	m, _ := metric.New("cpu", tags, fields, time.Now())
+
+	var reqBodyBuf [][]byte
+
+	influxSerializer := influx.InfluxSerializer{}
+	serializedMetric, _ := influxSerializer.Serialize(m)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric)
+
+	// when
+	reqBody, err := makeReqBody(&influxSerializer, reqBodyBuf)
+
+	// then
+	assert.NoError(t, err)
+	assert.NotEmpty(t, reqBody)
+}
+
+func TestMakeJsonFormatReqBody(t *testing.T) {
+	// given
+	m, _ := metric.New("cpu", tags, fields, time.Now())
+
+	var reqBodyBuf [][]byte
+
+	jsonSerializer := json.JsonSerializer{}
+	serializedMetric, _ := jsonSerializer.Serialize(m)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric)
+
+	serializedMetric2, _ := jsonSerializer.Serialize(m)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric2)
+
+	// when
+	result, _ := makeJsonFormatReqBody(reqBodyBuf)
+
+	// then
+	var reqBodyArrayJsonO []map[string]interface{}
+	ejon.Unmarshal(result, &reqBodyArrayJsonO)
+
+	assert.Equal(t, 2, len(reqBodyArrayJsonO))
+}
+
+func TestMakeJsonFormatReqBodyWithNotJsonFormat(t *testing.T) {
+	// given
+	m, _ := metric.New("cpu", tags, fields, time.Now())
+
+	var reqBodyBuf [][]byte
+
+	influxSerializer := influx.InfluxSerializer{}
+	serializedMetric, _ := influxSerializer.Serialize(m)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric)
+
+	serializedMetric2, _ := influxSerializer.Serialize(m)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric2)
+
+	// when
+	result, err := makeJsonFormatReqBody(reqBodyBuf)
+
+	// then
+	assert.Equal(t, 0, len(result))
 	assert.Error(t, err)
 }
 

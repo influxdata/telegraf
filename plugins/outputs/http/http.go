@@ -135,15 +135,11 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 
 			res, err := h.write(reqBody)
 
-			if err != nil {
-				return err
-			}
-
 			if err := h.isOk(res, err); err != nil {
 				return err
 			}
 
-			defer res.Body.Close()
+			res.Body.Close()
 
 			reqBodyBuf = nil
 		}
@@ -234,37 +230,18 @@ func makeJsonFormatReqBody(reqBodyBuf [][]byte) ([]byte, error) {
 	var reqBody []map[string]interface{}
 
 	for _, serializedMetric := range reqBodyBuf {
-		arrayJsonObject, err := convertToArrayJsonObject(serializedMetric)
+		var jsonObject map[string]interface{}
+
+		err := ejson.Unmarshal(serializedMetric, &jsonObject)
 
 		if err != nil {
 			return nil, fmt.Errorf("E! HTTP json unmarshal is fail! It probably does not seem to fit in the json format. Please check %s", serializedMetric)
 		}
 
-		reqBody = append(reqBody, arrayJsonObject...)
+		reqBody = append(reqBody, jsonObject)
 	}
 
 	return ejson.Marshal(reqBody)
-}
-
-// guaranteeArrayJsonObject make sure that each serialized metric is a json object or an array and convert it to an array json object.
-func convertToArrayJsonObject(buf []byte) ([]map[string]interface{}, error) {
-	var arrayJsonObject []map[string]interface{}
-
-	err := ejson.Unmarshal(buf, &arrayJsonObject)
-
-	if err == nil {
-		return arrayJsonObject, nil
-	}
-
-	var jsonObject map[string]interface{}
-
-	err = ejson.Unmarshal(buf, &jsonObject)
-
-	if err == nil {
-		return []map[string]interface{}{jsonObject}, nil
-	}
-
-	return nil, err
 }
 
 func init() {
