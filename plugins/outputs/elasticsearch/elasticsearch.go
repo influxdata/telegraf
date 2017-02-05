@@ -229,11 +229,11 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
-			"%Y", eventTime.Format("2006"),
-			"%y", eventTime.Format("06"),
-			"%m", eventTime.Format("01"),
-			"%d", eventTime.Format("02"),
-			"%H", eventTime.Format("15"),
+			"%Y", eventTime.UTC().Format("2006"),
+			"%y", eventTime.UTC().Format("06"),
+			"%m", eventTime.UTC().Format("01"),
+			"%d", eventTime.UTC().Format("02"),
+			"%H", eventTime.UTC().Format("15"),
 		)
 
 		indexName = dateReplacer.Replace(indexName)
