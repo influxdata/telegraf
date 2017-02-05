@@ -101,14 +101,12 @@ func (a *Elasticsearch) Connect() error {
 		return fmt.Errorf("Elasticsearch version check failed: %s", err)
 	}
 
-	// warn about ES version
-	if i, err := strconv.Atoi(strings.Split(esVersion, ".")[0]); err == nil {
-		if i < 5 {
-			log.Println("W! Elasticsearch version not supported: " + esVersion)
-		} else {
-			log.Println("I! Elasticsearch version: " + esVersion)
-		}
+	// quit if ES version is not supported
+	if strconv.Atoi(strings.Split(esVersion, ".")[0]) < 5 {
+		fmt.Errorf("Elasticsearch version not supported: %s" + esVersion)
 	}
+
+	log.Println("I! Elasticsearch version: " + esVersion)
 
 	a.Client = client
 
