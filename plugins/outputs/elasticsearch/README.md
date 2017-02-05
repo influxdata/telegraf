@@ -19,7 +19,54 @@ For more information about this usage on Elasticsearch, check https://www.elasti
 Index templates are used in Elasticsearch to define settings and mappings for the indexes and how the fields should be analyzed.
 For more information on how this works, see https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
 
-This plugin can create a recommended template for use with telegraf metrics. If it already exists, it will not overwrite unless you configure this plugin to do so.
+This plugin can create a working template for use with telegraf metrics. It uses Elasticsearch dynamic templates feature to set proper types for the tags and metrics fields.
+If the template specified already exists, it will not overwrite unless you configure this plugin to do so.
+
+Example of an index template created by telegraf:
+
+```json
+{
+  "order": 0,
+  "template": "telegraf-*",
+  "mappings": {
+    "_default_": {
+      "dynamic_templates": [
+        {
+          "tags": {
+            "path_match": "tag.*",
+            "mapping": {
+              "ignore_above": 512,
+              "type": "keyword"
+            },
+            "match_mapping_type": "string"
+          }
+        },
+        {
+          "metrics": {
+            "mapping": {
+              "index": false,
+              "type": "float"
+            },
+            "match_mapping_type": "long"
+          }
+        }
+      ],
+      "_all": {
+        "enabled": false
+      },
+      "properties": {
+        "input_plugin": {
+          "type": "keyword"
+        },
+        "@timestamp": {
+          "type": "date"
+        }
+      }
+    }
+  }
+}
+
+```
 
 ### Example events:
 
