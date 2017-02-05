@@ -59,7 +59,7 @@ docker-run:
 	docker run --name redis -p "6379:6379" -d redis
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
-	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
 	docker run --name nats -p "4222:4222" -d nats
 
 # Run docker containers necessary for CircleCI unit tests
@@ -73,7 +73,7 @@ docker-run-circle:
 	docker run --name elasticsearch -p "9200:9200" -p "9300:9300" -d elasticsearch:5
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
-	docker run --name riemann -p "5555:5555" -d blalor/riemann
+	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
 	docker run --name nats -p "4222:4222" -d nats
 
 # Kill all docker containers, ignore errors

@@ -124,6 +124,7 @@ configuration options.
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
 * [jolokia](./plugins/inputs/jolokia)
+* [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
@@ -181,6 +182,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [nsq_consumer](./plugins/inputs/nsq_consumer)
 * [logparser](./plugins/inputs/logparser)
 * [statsd](./plugins/inputs/statsd)
+* [socket_listener](./plugins/inputs/socket_listener)
 * [tail](./plugins/inputs/tail)
 * [tcp_listener](./plugins/inputs/tcp_listener)
 * [udp_listener](./plugins/inputs/udp_listener)
@@ -219,7 +221,9 @@ Telegraf can also collect metrics via the following service plugins:
 * [nsq](./plugins/outputs/nsq)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
+* [socket_writer](./plugins/outputs/socket_writer)
 * [riemann](./plugins/outputs/riemann)
+* [riemann_legacy](./plugins/outputs/riemann_legacy)
 
 ## Contributing
 

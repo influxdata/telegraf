@@ -595,25 +595,6 @@ func TestNewMetricAggregate(t *testing.T) {
 	assert.True(t, m.IsAggregate())
 }
 
-func TestNewMetricPoint(t *testing.T) {
-	now := time.Now()
-
-	tags := map[string]string{
-		"host": "localhost",
-	}
-	fields := map[string]interface{}{
-		"usage_idle": float64(99),
-	}
-	m, err := New("cpu", tags, fields, now)
-	assert.NoError(t, err)
-
-	p := m.Point()
-
-	assert.Equal(t, fields, m.Fields())
-	assert.Equal(t, fields, p.Fields())
-	assert.Equal(t, "cpu", p.Name())
-}
-
 func TestNewMetricString(t *testing.T) {
 	now := time.Now()
 

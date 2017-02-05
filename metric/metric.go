@@ -9,9 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	// TODO remove
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 const MaxInt = int(^uint(0) >> 1)
@@ -135,11 +132,6 @@ type metric struct {
 	// cached values for reuse in "get" functions
 	hashID uint64
 	nsec   int64
-}
-
-func (m *metric) Point() *client.Point {
-	c, _ := client.NewPoint(m.Name(), m.Tags(), m.Fields(), m.Time())
-	return c
 }
 
 func (m *metric) String() string {
@@ -305,7 +297,7 @@ func (m *metric) Fields() map[string]interface{} {
 		case '"':
 			// string field
 			fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = unescape(string(m.fields[i:][i2+1:i3-1]), "fieldval")
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			// number field
 			switch m.fields[i:][i3-1] {
 			case 'i':
