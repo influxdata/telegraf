@@ -51,10 +51,10 @@ func TestHttpWriteNormalCase(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:                 "http://127.0.0.1:9880/metric",
-		HttpHeaders:         []string{"Content-Type:application/json"},
-		ExpectedStatusCodes: []int{200, 204},
-		BufferLimit:         1,
+		URL:            "http://127.0.0.1:9880/metric",
+		HttpHeaders:    []string{"Content-Type:application/json"},
+		expStatusCodes: []int{200, 204},
+		BufLimit:       1,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -75,10 +75,10 @@ func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:                 "http://127.0.0.1:9880/incorrect/url",
-		HttpHeaders:         []string{"Content-Type:application/json"},
-		ExpectedStatusCodes: []int{200},
-		BufferLimit:         1,
+		URL:            "http://127.0.0.1:9880/incorrect/url",
+		HttpHeaders:    []string{"Content-Type:application/json"},
+		expStatusCodes: []int{200},
+		BufLimit:       1,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -99,10 +99,10 @@ func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:                 "http://127.0.0.1:9880/incorrect/url",
-		HttpHeaders:         []string{"Content-Type:application/json"},
-		ExpectedStatusCodes: []int{200, 404},
-		BufferLimit:         1,
+		URL:            "http://127.0.0.1:9880/incorrect/url",
+		HttpHeaders:    []string{"Content-Type:application/json"},
+		expStatusCodes: []int{200, 404},
+		BufLimit:       1,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -123,9 +123,9 @@ func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:                 "http://127.0.0.1:56879/incorrect/url",
-		HttpHeaders:         []string{"Content-Type:application/json"},
-		ExpectedStatusCodes: []int{200},
+		URL:            "http://127.0.0.1:56879/incorrect/url",
+		HttpHeaders:    []string{"Content-Type:application/json"},
+		expStatusCodes: []int{200},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{

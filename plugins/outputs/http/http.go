@@ -53,19 +53,19 @@ const (
 
 type Http struct {
 	// http required option
-	URL                 string   `toml:"url"`
-	HttpHeaders         []string `toml:"http_headers"`
-	ExpectedStatusCodes []int    `toml:"expected_status_codes"`
+	URL            string   `toml:"url"`
+	HttpHeaders    []string `toml:"http_headers"`
+	expStatusCodes []int    `toml:"expected_status_codes"`
 
 	// Option with http default value
-	ResponseHeaderTimeout int `toml:"response_header_timeout"`
-	DialTimeOut           int `toml:"dial_timeout"`
-	BufferLimit           int `toml:"buffer_limit"`
+	resHeaderTimeout int `toml:"response_header_timeout"`
+	DialTimeOut      int `toml:"dial_timeout"`
+	BufLimit         int `toml:"buffer_limit"`
 
 	client     http.Client
 	serializer serializers.Serializer
-	// expectedStatusCodeMap that stores option values received with expected_status_codes
-	expectedStatusCodeMap map[int]bool
+	// expStatusCode that stores option values received with expected_status_codes
+	expStatusCode map[int]bool
 
 	// Context for request cancel of client
 	cancelContext context.Context
@@ -83,7 +83,7 @@ func (h *Http) Connect() error {
 			Dial: (&net.Dialer{
 				Timeout: time.Duration(h.DialTimeOut) * time.Second,
 			}).Dial,
-			ResponseHeaderTimeout: time.Duration(h.ResponseHeaderTimeout) * time.Second,
+			ResponseHeaderTimeout: time.Duration(h.resHeaderTimeout) * time.Second,
 		},
 	}
 
@@ -115,7 +115,7 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	var requestBodyBuf [][]byte
+	var reqBodyBuf [][]byte
 
 	for _, metric := range metrics {
 		buf, err := h.serializer.Serialize(metric)
@@ -124,56 +124,56 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("E! Error serializing some metrics: %s", err.Error())
 		}
 
-		requestBodyBuf = append(requestBodyBuf, buf)
+		reqBodyBuf = append(reqBodyBuf, buf)
 
-		if h.BufferLimit <= len(requestBodyBuf) {
-			requestBody, err := makeRequestBody(h.serializer, requestBodyBuf)
+		if h.BufLimit <= len(reqBodyBuf) {
+			reqBody, err := makeReqBody(h.serializer, reqBodyBuf)
 
 			if err != nil {
 				return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
 			}
 
-			response, err := h.write(requestBody)
+			res, err := h.write(reqBody)
 
 			if err != nil {
 				return err
 			}
 
-			if err := h.isOk(response, err); err != nil {
+			if err := h.isOk(res, err); err != nil {
 				return err
 			}
 
-			defer response.Body.Close()
+			defer res.Body.Close()
 
-			requestBodyBuf = nil
+			reqBodyBuf = nil
 		}
 	}
 
 	return nil
 }
 
-func (h *Http) isOk(response *http.Response, err error) error {
-	if response == nil || err != nil {
+func (h *Http) isOk(res *http.Response, err error) error {
+	if res == nil || err != nil {
 		return fmt.Errorf("E! %s request failed! %s.", h.URL, err.Error())
 	}
 
-	if !h.isExpectedStatusCode(response.StatusCode) {
-		return fmt.Errorf("E! %s response is unexpected status code : %d.", h.URL, response.StatusCode)
+	if !h.isExpStatusCode(res.StatusCode) {
+		return fmt.Errorf("E! %s response is unexpected status code : %d.", h.URL, res.StatusCode)
 	}
 
 	return nil
 }
 
-func (h *Http) isExpectedStatusCode(responseStatusCode int) bool {
-	if h.expectedStatusCodeMap == nil {
-		h.expectedStatusCodeMap = make(map[int]bool)
+func (h *Http) isExpStatusCode(resStatusCode int) bool {
+	if h.expStatusCode == nil {
+		h.expStatusCode = make(map[int]bool)
 
-		for _, expectedStatusCode := range h.ExpectedStatusCodes {
-			h.expectedStatusCodeMap[expectedStatusCode] = true
+		for _, expectedStatusCode := range h.expStatusCodes {
+			h.expStatusCode[expectedStatusCode] = true
 		}
 	}
 
-	if h.expectedStatusCodeMap[responseStatusCode] {
+	if h.expStatusCode[resStatusCode] {
 		return true
 	}
 
@@ -182,7 +182,7 @@ func (h *Http) isExpectedStatusCode(responseStatusCode int) bool {
 
 // required option validate
 func validate(h *Http) error {
-	if h.URL == "" || len(h.HttpHeaders) == 0 || len(h.ExpectedStatusCodes) == 0 || h.BufferLimit == 0 {
+	if h.URL == "" || len(h.HttpHeaders) == 0 || len(h.expStatusCodes) == 0 || h.BufLimit == 0 {
 		return errors.New("E! Http ouput plugin is not working. Because your configuration omits the required option. Please check url, http_headers, expected_status_codes, buffer_limit is empty!")
 	}
 
@@ -205,45 +205,45 @@ func (h *Http) write(buf []byte) (*http.Response, error) {
 	req.Close = true
 	req.WithContext(h.cancelContext)
 
-	response, err := h.client.Do(req)
+	res, err := h.client.Do(req)
 
-	return response, err
+	return res, err
 }
 
-// MakeRequestBody translates each serializer's converted metric into a request body.
-func makeRequestBody(serializer serializers.Serializer, requestBodyBuf [][]byte) ([]byte, error) {
+// makeReqBody translates each serializer's converted metric into a request body.
+func makeReqBody(serializer serializers.Serializer, reqBodyBuf [][]byte) ([]byte, error) {
 	switch serializer.(type) {
 	case *json.JsonSerializer:
-		return makeJsonFormatRequestBody(requestBodyBuf)
+		return makeJsonFormatReqBody(reqBodyBuf)
 	default:
-		return makePlainTextFormatRequestBody(requestBodyBuf)
+		return makePlainTextFormatReqBody(reqBodyBuf)
 	}
 }
 
-func makePlainTextFormatRequestBody(requestBodyBuf [][]byte) ([]byte, error) {
-	var requestBody bytes.Buffer
+func makePlainTextFormatReqBody(reqBodyBuf [][]byte) ([]byte, error) {
+	var reqBody bytes.Buffer
 
-	for _, serializedMetric := range requestBodyBuf {
-		requestBody.Write(serializedMetric)
+	for _, serializedMetric := range reqBodyBuf {
+		reqBody.Write(serializedMetric)
 	}
 
-	return requestBody.Bytes(), nil
+	return reqBody.Bytes(), nil
 }
 
-func makeJsonFormatRequestBody(requestBodyBuf [][]byte) ([]byte, error) {
-	var requestBody []map[string]interface{}
+func makeJsonFormatReqBody(reqBodyBuf [][]byte) ([]byte, error) {
+	var reqBody []map[string]interface{}
 
-	for _, serializedMetric := range requestBodyBuf {
+	for _, serializedMetric := range reqBodyBuf {
 		arrayJsonObject, err := convertToArrayJsonObject(serializedMetric)
 
 		if err != nil {
 			return nil, fmt.Errorf("E! HTTP json unmarshal is fail! It probably does not seem to fit in the json format. Please check %s", serializedMetric)
 		}
 
-		requestBody = append(requestBody, arrayJsonObject...)
+		reqBody = append(reqBody, arrayJsonObject...)
 	}
 
-	return ejson.Marshal(requestBody)
+	return ejson.Marshal(reqBody)
 }
 
 // guaranteeArrayJsonObject make sure that each serialized metric is a json object or an array and convert it to an array json object.
@@ -270,9 +270,9 @@ func convertToArrayJsonObject(buf []byte) ([]map[string]interface{}, error) {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &Http{
-			ResponseHeaderTimeout: DEFAULT_RESPONSE_HEADER_TIMEOUT,
-			DialTimeOut:           DEFAULT_DIAL_TIME_OUT,
-			BufferLimit:           DEFAULT_BUFFER_LIMIT,
+			resHeaderTimeout: DEFAULT_RESPONSE_HEADER_TIMEOUT,
+			DialTimeOut:      DEFAULT_DIAL_TIME_OUT,
+			BufLimit:         DEFAULT_BUFFER_LIMIT,
 		}
 	})
 }
