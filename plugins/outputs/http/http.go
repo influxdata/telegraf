@@ -210,10 +210,7 @@ func (h *Http) write(buf []byte) (*http.Response, error) {
 	return response, err
 }
 
-// makeRequestBody does additional work so that each serializer can include serialized metrics in the request body.
-// For example, a serialized metric in json.JsonSerializer returns a metric that looks like JsonObject {"key1": "value1"}.
-// In order to accumulate this in the buffer and send it to the request body at once, you need to convert it to Array Json Object [{"key1": "value1"}, {"key2": "value2"}].
-// Thus, makeRequestBody works by making the request body contain the metric returned by each serializer.
+// MakeRequestBody translates each serializer's converted metric into a request body.
 func makeRequestBody(serializer serializers.Serializer, requestBodyBuf [][]byte) ([]byte, error) {
 	switch serializer.(type) {
 	case *json.JsonSerializer:
@@ -237,7 +234,7 @@ func makeJsonFormatRequestBody(requestBodyBuf [][]byte) ([]byte, error) {
 	var requestBody []map[string]interface{}
 
 	for _, serializedMetric := range requestBodyBuf {
-		arrayJsonObject, err := unmarshalArrayJsonObject(serializedMetric)
+		arrayJsonObject, err := convertToArrayJsonObject(serializedMetric)
 
 		if err != nil {
 			return nil, fmt.Errorf("E! HTTP json unmarshal is fail! It probably does not seem to fit in the json format. Please check %s", serializedMetric)
@@ -249,9 +246,8 @@ func makeJsonFormatRequestBody(requestBodyBuf [][]byte) ([]byte, error) {
 	return ejson.Marshal(requestBody)
 }
 
-// unmarshalArrayJsonObject is a case in the Json objects that is Array and there are cases that are not Array Json Object.
-// This is a function that helps to simplify the logic by replacing it with Array.
-func unmarshalArrayJsonObject(buf []byte) ([]map[string]interface{}, error) {
+// guaranteeArrayJsonObject make sure that each serialized metric is a json object or an array and convert it to an array json object.
+func convertToArrayJsonObject(buf []byte) ([]map[string]interface{}, error) {
 	var arrayJsonObject []map[string]interface{}
 
 	err := ejson.Unmarshal(buf, &arrayJsonObject)
