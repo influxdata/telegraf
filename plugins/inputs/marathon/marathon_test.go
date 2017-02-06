@@ -77,7 +77,7 @@ func TestMetricsFilter(t *testing.T) {
 		"counters", "timers", "meters", "histrograms",
 	}
 
-	m.filterMetrics(&inputMetrics)
+	m.filterMetrics(inputMetrics)
 
 	for _, k := range b {
 		if _, ok := inputMetrics[k]; ok {

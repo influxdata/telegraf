@@ -105,10 +105,10 @@ func contains(strSlice []string, searchStr string) bool {
 	return false
 }
 
-func (m *Marathon) filterMetrics(metrics *map[string]interface{}) {
-	for k, _ := range *metrics {
+func (m *Marathon) filterMetrics(metrics map[string]interface{}) {
+	for k, _ := range metrics {
 		if contains(m.MetricTypes, k) == false {
-			delete(*metrics, k)
+			delete(metrics, k)
 		}
 	}
 }
@@ -141,7 +141,7 @@ func (m *Marathon) gatherMetrics(addr string, defaultPort string, acc telegraf.A
 		return errors.New("Error decoding JSON response")
 	}
 
-	m.filterMetrics(&jsonOut)
+	m.filterMetrics(jsonOut)
 
 	jf := jsonparser.JSONFlattener{}
 	err = jf.FlattenJSON("", jsonOut)
