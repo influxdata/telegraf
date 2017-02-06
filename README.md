@@ -137,6 +137,7 @@ configuration options.
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
+* [marathon](./plugins/inputs/marathon)
 * [memcached](./plugins/inputs/memcached)
 * [mesos](./plugins/inputs/mesos)
 * [mongodb](./plugins/inputs/mongodb)
