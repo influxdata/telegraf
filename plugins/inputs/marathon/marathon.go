@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -56,34 +55,19 @@ func (m *Marathon) SetDefaults() {
 // Gather() metrics from given list of Marathon servers
 func (m *Marathon) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	var errorChannel chan error
 
 	m.SetDefaults()
-
-	errorChannel = make(chan error, len(m.Servers))
 
 	for _, v := range m.Servers {
 		wg.Add(1)
 		go func(c string) {
 			defer wg.Done()
-			errorChannel <- m.gatherMetrics(c, ":8080", acc)
+			acc.AddError(m.gatherMetrics(c, ":8080", acc))
 		}(v)
 	}
 
 	wg.Wait()
-	close(errorChannel)
-	errorStrings := []string{}
 
-	// Gather all errors for returning them at once
-	for err := range errorChannel {
-		if err != nil {
-			errorStrings = append(errorStrings, err.Error())
-		}
-	}
-
-	if len(errorStrings) > 0 {
-		return errors.New(strings.Join(errorStrings, "\n"))
-	}
 	return nil
 }
 
