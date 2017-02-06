@@ -40,6 +40,14 @@ var (
 
 	// envVarRe is a regex to find environment variables in the config file
 	envVarRe = regexp.MustCompile(`\$\w+`)
+
+	// addQuoteRe is a regex for finding and adding quotes around / characters
+	// when they are used for distinguishing external plugins.
+	// ie, a ReplaceAll() with this pattern will be used to turn this:
+	//     [[inputs.external/test/example]]
+	//  to
+	//     [[inputs."external/test/example"]]
+	addQuoteRe = regexp.MustCompile(`(\[?\[?inputs|outputs|processors|aggregators)\.(external\/[^.\]]+)`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -700,6 +708,9 @@ func parseFile(fpath string) (*ast.Table, error) {
 			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
 		}
 	}
+
+	// add quotes around external plugin paths.
+	contents = addQuoteRe.ReplaceAll(contents, []byte(`$1."$2"`))
 
 	return toml.Parse(contents)
 }

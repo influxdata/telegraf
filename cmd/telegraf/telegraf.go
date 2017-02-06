@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/registry"
 	"github.com/influxdata/telegraf/registry/inputs"
 	"github.com/influxdata/telegraf/registry/outputs"
 
@@ -272,6 +273,15 @@ func loadExternalPlugins(rootDir string) error {
 		if ext != ".so" && ext != ".dll" {
 			return nil
 		}
+
+		// name will be the path to the plugin file beginning at the root
+		// directory, minus the extension.
+		// ie, if the plugin file is /opt/telegraf-plugins/group1/foo.so, name
+		//     will be "group1/foo"
+		name := strings.TrimPrefix(strings.TrimPrefix(pth, rootDir), string(os.PathSeparator))
+		name = strings.TrimSuffix(name, filepath.Ext(pth))
+		registry.SetName("external" + string(os.PathSeparator) + name)
+		defer registry.SetName("")
 
 		// Load plugin.
 		_, err = plugin.Open(pth)
