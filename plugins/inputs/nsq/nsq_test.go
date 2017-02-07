@@ -24,7 +24,7 @@ func TestNSQStats(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := n.Gather(&acc)
+	err := acc.GatherError(n.Gather)
 	require.NoError(t, err)
 
 	u, err := url.Parse(ts.URL)

@@ -1,7 +1,7 @@
 package nsq_consumer
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -62,7 +62,7 @@ func (n *NSQConsumer) Start(acc telegraf.Accumulator) error {
 	n.consumer.AddConcurrentHandlers(nsq.HandlerFunc(func(message *nsq.Message) error {
 		metrics, err := n.parser.Parse(message.Body)
 		if err != nil {
-			log.Printf("E! NSQConsumer Parse Error\nmessage:%s\nerror:%s", string(message.Body), err.Error())
+			acc.AddError(fmt.Errorf("E! NSQConsumer Parse Error\nmessage:%s\nerror:%s", string(message.Body), err.Error()))
 			return nil
 		}
 		for _, metric := range metrics {

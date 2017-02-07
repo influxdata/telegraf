@@ -41,7 +41,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := p.Gather(&acc)
+	err := acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))

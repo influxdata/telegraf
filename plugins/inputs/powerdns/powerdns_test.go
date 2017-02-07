@@ -90,7 +90,7 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = p.Gather(&acc)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{"corrupt-packets", "deferred-cache-inserts",

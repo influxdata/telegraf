@@ -26,7 +26,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		},
 	}
 	var acc testutil.Accumulator
-	err := p.Gather(&acc)
+	err := acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	availableColumns := make(map[string]bool)
@@ -114,7 +114,7 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := p.Gather(&acc)
+	err := acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	for col := range p.IgnoredColumns() {

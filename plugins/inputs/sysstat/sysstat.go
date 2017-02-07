@@ -5,7 +5,6 @@ package sysstat
 import (
 	"bufio"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -149,34 +148,20 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	var wg sync.WaitGroup
-	errorChannel := make(chan error, len(s.Options)*2)
 	for option := range s.Options {
 		wg.Add(1)
 		go func(acc telegraf.Accumulator, option string) {
 			defer wg.Done()
-			if err := s.parse(acc, option, ts); err != nil {
-				errorChannel <- err
-			}
+			acc.AddError(s.parse(acc, option, ts))
 		}(acc, option)
 	}
 	wg.Wait()
-	close(errorChannel)
-
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
 
 	if _, err := os.Stat(s.tmpFile); err == nil {
-		if err := os.Remove(s.tmpFile); err != nil {
-			errorStrings = append(errorStrings, err.Error())
-		}
+		acc.AddError(os.Remove(s.tmpFile))
 	}
 
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 // collect collects sysstat data with the collector utility sadc.

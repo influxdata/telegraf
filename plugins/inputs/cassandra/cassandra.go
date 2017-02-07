@@ -7,7 +7,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -123,8 +122,8 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 		}
 		j.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
 	} else {
-		fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-			j.metric, out)
+		j.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
+			j.metric, out))
 	}
 }
 
@@ -155,8 +154,8 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 				addCassandraMetric(k, c, v.(map[string]interface{}))
 			}
 		} else {
-			fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric, out)
+			c.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
+				c.metric, out))
 			return
 		}
 	} else {
@@ -164,8 +163,8 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 			addCassandraMetric(r.(map[string]interface{})["mbean"].(string),
 				c, values.(map[string]interface{}))
 		} else {
-			fmt.Printf("Missing key 'value' in '%s' output response\n%v\n",
-				c.metric, out)
+			c.acc.AddError(fmt.Errorf("Missing key 'value' in '%s' output response\n%v\n",
+				c.metric, out))
 			return
 		}
 	}
@@ -274,8 +273,8 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				m = newCassandraMetric(serverTokens["host"], metric, acc)
 			} else {
 				// unsupported metric type
-				log.Printf("I! Unsupported Cassandra metric [%s], skipping",
-					metric)
+				acc.AddError(fmt.Errorf("E! Unsupported Cassandra metric [%s], skipping",
+					metric))
 				continue
 			}
 
@@ -283,7 +282,8 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 			requestUrl, err := url.Parse("http://" + serverTokens["host"] + ":" +
 				serverTokens["port"] + context + metric)
 			if err != nil {
-				return err
+				acc.AddError(err)
+				continue
 			}
 			if serverTokens["user"] != "" && serverTokens["passwd"] != "" {
 				requestUrl.User = url.UserPassword(serverTokens["user"],
@@ -291,8 +291,12 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 			}
 
 			out, err := c.getAttr(requestUrl)
+			if err != nil {
+				acc.AddError(err)
+				continue
+			}
 			if out["status"] != 200.0 {
-				fmt.Printf("URL returned with status %v\n", out["status"])
+				acc.AddError(fmt.Errorf("URL returned with status %v\n", out["status"]))
 				continue
 			}
 			m.addTagsFields(out)

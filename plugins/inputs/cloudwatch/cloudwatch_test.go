@@ -64,7 +64,7 @@ func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 	c.client = &mockGatherCloudWatchClient{}
 
-	c.Gather(&acc)
+	acc.GatherError(c.Gather)
 
 	fields := map[string]interface{}{}
 	fields["latency_minimum"] = 0.1

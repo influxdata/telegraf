@@ -80,7 +80,6 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	var errS string
 	// Create a "tailer" for each file
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
@@ -97,7 +96,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 					Pipe:      t.Pipe,
 				})
 			if err != nil {
-				errS += err.Error() + " "
+				acc.AddError(err)
 				continue
 			}
 			// create a goroutine for each "tailer"
@@ -107,9 +106,6 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	if errS != "" {
-		return fmt.Errorf(errS)
-	}
 	return nil
 }
 

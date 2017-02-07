@@ -158,7 +158,7 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	jolokia := genJolokiaClientStub(validMultiValueJSON, 200, Servers, []Metric{HeapMetric})
 
 	var acc testutil.Accumulator
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
@@ -210,7 +210,7 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 	jolokia := genJolokiaClientStub(validThreeLevelMultiValueJSON, 200, Servers, []Metric{HeapMetric})
 
 	var acc testutil.Accumulator
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
@@ -238,17 +238,18 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 }
 
 // Test that the proper values are ignored or collected
-func TestHttpJsonOn404(t *testing.T) {
+func TestHttp404(t *testing.T) {
 
-	jolokia := genJolokiaClientStub(validMultiValueJSON, 404, Servers,
+	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers,
 		[]Metric{UsedHeapMetric})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, len(acc.Metrics))
+	assert.Contains(t, err.Error(), "has status code 404")
 }
 
 // Test that the proper values are ignored or collected
@@ -259,8 +260,9 @@ func TestHttpInvalidJson(t *testing.T) {
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, len(acc.Metrics))
+	assert.Contains(t, err.Error(), "Error decoding JSON response")
 }
