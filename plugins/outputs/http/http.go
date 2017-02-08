@@ -172,13 +172,13 @@ func (h *Http) splitWrite(reqBodyBuf [][]byte) error {
 }
 
 func (h *Http) write(reqBodyBuf [][]byte) error {
-	requestBody, err := makeReqBody(h.serializer, reqBodyBuf)
+	reqBody, err := makeReqBody(h.serializer, reqBodyBuf)
 
 	if err != nil {
 		return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
 	}
 
-	req, err := http.NewRequest(POST, h.URL, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest(POST, h.URL, bytes.NewBuffer(reqBody))
 
 	for _, httpHeader := range h.HttpHeaders {
 		keyAndValue := strings.Split(httpHeader, ":")
@@ -188,13 +188,13 @@ func (h *Http) write(reqBodyBuf [][]byte) error {
 	req.Close = true
 	req.WithContext(h.cancelContext)
 
-	response, err := h.client.Do(req)
+	res, err := h.client.Do(req)
 
-	if err := h.isOk(response, err); err != nil {
+	if err := h.isOk(res, err); err != nil {
 		return err
 	}
 
-	response.Body.Close()
+	res.Body.Close()
 
 	return err
 }

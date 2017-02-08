@@ -11,25 +11,60 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
-	"sync"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
 
 var (
-	tags = map[string]string{
+	cpuTags = map[string]string{
 		"host":       "localhost",
 		"cpu":        "cpu0",
 		"datacenter": "us-west-2",
 	}
 
-	fields = map[string]interface{}{
+	cpuField = map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
+
+	memTags = map[string]string{
+		"host":       "localhost",
+		"cpu":        "mem",
+		"datacenter": "us-west-2",
+	}
+
+	memField = map[string]interface{}{
+		"used": float64(91.5),
+	}
+
+	count int
 )
 
-func TestHttpWriteWithoutRequiredOption(t *testing.T) {
-	m, _ := metric.New("cpu", tags, fields, time.Now())
+type TestOkHandler struct {
+	T        *testing.T
+	Expected []string
+}
+
+// The handler gets a new variable each time it receives a request, so it fetches an expected string based on global variable.
+func (h TestOkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	actual, _ := ioutil.ReadAll(r.Body)
+
+	assert.Equal(h.T, h.Expected[count], string(actual), fmt.Sprintf("%d Expected fail!", count))
+
+	count++
+
+	fmt.Fprint(w, "ok")
+}
+
+type TestNotFoundHandler struct {
+}
+
+func (h TestNotFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	http.NotFound(w, r)
+}
+
+func TestWriteWithoutRequiredOption(t *testing.T) {
+	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{}
@@ -46,18 +81,98 @@ func TestHttpWriteWithoutRequiredOption(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestHttpWriteNormalCase(t *testing.T) {
+func TestWriteAllInputMetric(t *testing.T) {
 	now := time.Now()
-	HTTPServer(t, now, 9880)
 
-	m, _ := metric.New("cpu", tags, fields, now)
-	metrics := []telegraf.Metric{m}
+	server := httptest.NewServer(&TestOkHandler{
+		T: t,
+		Expected: []string{
+			fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\ntelegraf.mem.us-west-2.localhost.mem.used 91.5 %d\n", now.Unix(), now.Unix()),
+		},
+	})
+	defer server.Close()
+	defer resetCount()
+
+	m1, _ := metric.New("cpu", cpuTags, cpuField, now)
+	m2, _ := metric.New("mem", memTags, memField, now)
+	metrics := []telegraf.Metric{m1, m2}
 
 	http := &Http{
-		URL:            "http://127.0.0.1:9880/metric",
-		HttpHeaders:    []string{"Content-Type:application/json"},
+		URL:            server.URL,
+		HttpHeaders:    []string{"Content-Type:plain/text"},
+		ExpStatusCodes: []int{200, 204},
+		MaxBulkLimit:   0,
+	}
+
+	http.SetSerializer(&graphite.GraphiteSerializer{
+		Prefix:   "telegraf",
+		Template: "tags.measurement.field",
+	})
+
+	http.Connect()
+	err := http.Write(metrics)
+
+	assert.NoError(t, err)
+}
+
+func TestSplitWriteTwiceCase1(t *testing.T) {
+	now := time.Now()
+
+	server := httptest.NewServer(&TestOkHandler{
+		T: t,
+		Expected: []string{
+			fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\n", now.Unix()),
+			fmt.Sprintf("telegraf.mem.us-west-2.localhost.mem.used 91.5 %d\n", now.Unix()),
+		},
+	})
+	defer server.Close()
+	defer resetCount()
+
+	m1, _ := metric.New("cpu", cpuTags, cpuField, now)
+	m2, _ := metric.New("mem", memTags, memField, now)
+	metrics := []telegraf.Metric{m1, m2}
+
+	http := &Http{
+		URL:            server.URL,
+		HttpHeaders:    []string{"Content-Type:plain/text"},
 		ExpStatusCodes: []int{200, 204},
 		MaxBulkLimit:   1,
+	}
+
+	http.SetSerializer(&graphite.GraphiteSerializer{
+		Prefix:   "telegraf",
+		Template: "tags.measurement.field",
+	})
+
+	http.Connect()
+	err := http.Write(metrics)
+
+	assert.NoError(t, err)
+}
+
+func TestSplitWriteTwiceCase2(t *testing.T) {
+	now := time.Now()
+
+	server := httptest.NewServer(&TestOkHandler{
+		T: t,
+		Expected: []string{
+			fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\ntelegraf.mem.us-west-2.localhost.mem.used 91.5 %d\n", now.Unix(), now.Unix()),
+			fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\n", now.Unix()),
+		},
+	})
+	defer server.Close()
+	defer resetCount()
+
+	m1, _ := metric.New("cpu", cpuTags, cpuField, now)
+	m2, _ := metric.New("mem", memTags, memField, now)
+	m3, _ := metric.New("cpu", cpuTags, cpuField, now)
+	metrics := []telegraf.Metric{m1, m2, m3}
+
+	http := &Http{
+		URL:            server.URL,
+		HttpHeaders:    []string{"Content-Type:plain/text"},
+		ExpStatusCodes: []int{200, 204},
+		MaxBulkLimit:   2,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -74,11 +189,14 @@ func TestHttpWriteNormalCase(t *testing.T) {
 func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 	now := time.Now()
 
-	m, _ := metric.New("cpu", tags, fields, now)
+	server := httptest.NewServer(&TestNotFoundHandler{})
+	defer server.Close()
+
+	m, _ := metric.New("cpu", cpuTags, cpuField, now)
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:            "http://127.0.0.1:9880/incorrect/url",
+		URL:            server.URL,
 		HttpHeaders:    []string{"Content-Type:application/json"},
 		ExpStatusCodes: []int{200},
 		MaxBulkLimit:   1,
@@ -98,11 +216,14 @@ func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
 	now := time.Now()
 
-	m, _ := metric.New("cpu", tags, fields, now)
+	server := httptest.NewServer(&TestNotFoundHandler{})
+	defer server.Close()
+
+	m, _ := metric.New("cpu", cpuTags, cpuField, now)
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:            "http://127.0.0.1:9880/incorrect/url",
+		URL:            server.URL,
 		HttpHeaders:    []string{"Content-Type:application/json"},
 		ExpStatusCodes: []int{200, 404},
 		MaxBulkLimit:   1,
@@ -122,7 +243,7 @@ func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
 func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 	now := time.Now()
 
-	m, _ := metric.New("cpu", tags, fields, now)
+	m, _ := metric.New("cpu", cpuTags, cpuField, now)
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
@@ -144,7 +265,7 @@ func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 
 func TestMakeReqBody(t *testing.T) {
 	// given
-	m, _ := metric.New("cpu", tags, fields, time.Now())
+	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
 
 	var reqBodyBuf [][]byte
 
@@ -162,7 +283,7 @@ func TestMakeReqBody(t *testing.T) {
 
 func TestMakeReqBody2(t *testing.T) {
 	// given
-	m, _ := metric.New("cpu", tags, fields, time.Now())
+	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
 
 	var reqBodyBuf [][]byte
 
@@ -180,7 +301,7 @@ func TestMakeReqBody2(t *testing.T) {
 
 func TestMakeJsonFormatReqBody(t *testing.T) {
 	// given
-	m, _ := metric.New("cpu", tags, fields, time.Now())
+	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
 
 	var reqBodyBuf [][]byte
 
@@ -203,7 +324,7 @@ func TestMakeJsonFormatReqBody(t *testing.T) {
 
 func TestMakeJsonFormatReqBodyWithNotJsonFormat(t *testing.T) {
 	// given
-	m, _ := metric.New("cpu", tags, fields, time.Now())
+	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
 
 	var reqBodyBuf [][]byte
 
@@ -222,17 +343,17 @@ func TestMakeJsonFormatReqBodyWithNotJsonFormat(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func HTTPServer(t *testing.T, now time.Time, port int) {
-	http.HandleFunc("/metric", func(w http.ResponseWriter, r *http.Request) {
-		body, _ := ioutil.ReadAll(r.Body)
+func TestImplementedInterfaceFunction(t *testing.T) {
+	http := &Http{
+		URL:            "http://127.0.0.1:56879/incorrect/url",
+		HttpHeaders:    []string{"Content-Type:application/json"},
+		ExpStatusCodes: []int{200},
+	}
 
-		assert.Equal(t, fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\n", now.Unix()), string(body))
+	assert.NotNil(t, http.SampleConfig())
+	assert.NotNil(t, http.Description())
+}
 
-		fmt.Fprintf(w, "ok")
-	})
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+func resetCount() {
+	count = 0
 }
