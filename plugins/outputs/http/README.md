@@ -25,8 +25,11 @@ Data collected from telegraf is sent in the Request Body.
   response_header_timeout = 3
   ## Configure dial timeout in seconds. Default : 3
   dial_timeout = 3
-  ## Option to set the number of metrics to include in the request body.
-  buffer_limit = 10
+  ## max_bulk_limit defines how much of the metrics will be sent.
+  ## Max_bulk_limit = 0   => Write all metrics collected during flush_interval.
+  ## Max_bulk_limit = 100 => Write 100 of all metrics collected during flush_interval.
+  ## Note that If the amount of metric collected during flush_interval is less than max_bulk_limit, then all of the stacked metrics are sent.
+  max_bulk_limit = 0
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read

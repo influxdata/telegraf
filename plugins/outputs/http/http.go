@@ -33,8 +33,11 @@ var sampleConfig = `
   response_header_timeout = 3
   ## Configure dial timeout in seconds. Default : 3
   dial_timeout = 3
-  ## Option to set the number of metrics to include in the request body.
-  buffer_limit = 10
+  ## max_bulk_limit defines how much of the metrics will be sent.
+  ## Max_bulk_limit = 0   => Write all metrics collected during flush_interval.
+  ## Max_bulk_limit = 100 => Write 100 of all metrics collected during flush_interval.
+  ## Note that If the amount of metric collected during flush_interval is less than max_bulk_limit, then all of the stacked metrics are sent.
+  max_bulk_limit = 0
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
@@ -48,19 +51,19 @@ const (
 
 	DEFAULT_RESPONSE_HEADER_TIMEOUT = 3
 	DEFAULT_DIAL_TIME_OUT           = 3
-	DEFAULT_BUFFER_LIMIT            = 10
+	DEFAULT_MAX_BULK_LIMIT          = 0
 )
 
 type Http struct {
 	// http required option
 	URL            string   `toml:"url"`
 	HttpHeaders    []string `toml:"http_headers"`
-	expStatusCodes []int    `toml:"expected_status_codes"`
+	ExpStatusCodes []int    `toml:"expected_status_codes"`
 
 	// Option with http default value
-	resHeaderTimeout int `toml:"response_header_timeout"`
+	ResHeaderTimeout int `toml:"response_header_timeout"`
 	DialTimeOut      int `toml:"dial_timeout"`
-	BufLimit         int `toml:"buffer_limit"`
+	MaxBulkLimit     int `toml:"max_bulk_limit"`
 
 	client     http.Client
 	serializer serializers.Serializer
@@ -83,7 +86,7 @@ func (h *Http) Connect() error {
 			Dial: (&net.Dialer{
 				Timeout: time.Duration(h.DialTimeOut) * time.Second,
 			}).Dial,
-			ResponseHeaderTimeout: time.Duration(h.resHeaderTimeout) * time.Second,
+			ResponseHeaderTimeout: time.Duration(h.ResHeaderTimeout) * time.Second,
 		},
 	}
 
@@ -125,27 +128,75 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 		}
 
 		reqBodyBuf = append(reqBodyBuf, buf)
+	}
 
-		if h.BufLimit <= len(reqBodyBuf) {
-			reqBody, err := makeReqBody(h.serializer, reqBodyBuf)
-
-			if err != nil {
-				return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
-			}
-
-			res, err := h.write(reqBody)
-
-			if err := h.isOk(res, err); err != nil {
-				return err
-			}
-
-			res.Body.Close()
-
-			reqBodyBuf = nil
+	if h.MaxBulkLimit == 0 || len(reqBodyBuf) <= h.MaxBulkLimit {
+		if err := h.write(reqBodyBuf); err != nil {
+			return err
 		}
+
+		return nil
+	}
+
+	if err := h.splitWrite(reqBodyBuf); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+// splitWrite sends the divided metric by max_bulk_limit.
+func (h *Http) splitWrite(reqBodyBuf [][]byte) error {
+	s := 0
+	e := h.MaxBulkLimit
+	mLength := len(reqBodyBuf)
+
+	for true {
+		if mLength <= e {
+			if err := h.write(reqBodyBuf[s:mLength]); err != nil {
+				return err
+			}
+
+			break
+		} else {
+			if err := h.write(reqBodyBuf[s:e]); err != nil {
+				return err
+			}
+		}
+
+		s += h.MaxBulkLimit
+		e += h.MaxBulkLimit
+	}
+
+	return nil
+}
+
+func (h *Http) write(reqBodyBuf [][]byte) error {
+	requestBody, err := makeReqBody(h.serializer, reqBodyBuf)
+
+	if err != nil {
+		return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
+	}
+
+	req, err := http.NewRequest(POST, h.URL, bytes.NewBuffer(requestBody))
+
+	for _, httpHeader := range h.HttpHeaders {
+		keyAndValue := strings.Split(httpHeader, ":")
+		req.Header.Set(keyAndValue[0], keyAndValue[1])
+	}
+
+	req.Close = true
+	req.WithContext(h.cancelContext)
+
+	response, err := h.client.Do(req)
+
+	if err := h.isOk(response, err); err != nil {
+		return err
+	}
+
+	response.Body.Close()
+
+	return err
 }
 
 func (h *Http) isOk(res *http.Response, err error) error {
@@ -164,7 +215,7 @@ func (h *Http) isExpStatusCode(resStatusCode int) bool {
 	if h.expStatusCode == nil {
 		h.expStatusCode = make(map[int]bool)
 
-		for _, expectedStatusCode := range h.expStatusCodes {
+		for _, expectedStatusCode := range h.ExpStatusCodes {
 			h.expStatusCode[expectedStatusCode] = true
 		}
 	}
@@ -178,32 +229,11 @@ func (h *Http) isExpStatusCode(resStatusCode int) bool {
 
 // required option validate
 func validate(h *Http) error {
-	if h.URL == "" || len(h.HttpHeaders) == 0 || len(h.expStatusCodes) == 0 || h.BufLimit == 0 {
-		return errors.New("E! Http ouput plugin is not working. Because your configuration omits the required option. Please check url, http_headers, expected_status_codes, buffer_limit is empty!")
+	if h.URL == "" || len(h.HttpHeaders) == 0 || len(h.ExpStatusCodes) == 0 {
+		return errors.New("E! Http ouput plugin is not working. Because your configuration omits the required option. Please check url, http_headers, expected_status_codes is empty!")
 	}
 
 	return nil
-}
-
-func (h *Http) write(buf []byte) (*http.Response, error) {
-	req, err := http.NewRequest(POST, h.URL, bytes.NewBuffer(buf))
-
-	for _, httpHeader := range h.HttpHeaders {
-		keyAndValue := strings.Split(httpHeader, ":")
-
-		if len(keyAndValue) == 2 {
-			req.Header.Set(keyAndValue[0], keyAndValue[1])
-		} else {
-			return nil, fmt.Errorf("E! http_headers was configured in the wrong format. The header key and value must set based on the delimiter (:).")
-		}
-	}
-
-	req.Close = true
-	req.WithContext(h.cancelContext)
-
-	res, err := h.client.Do(req)
-
-	return res, err
 }
 
 // makeReqBody translates each serializer's converted metric into a request body.
@@ -247,9 +277,9 @@ func makeJsonFormatReqBody(reqBodyBuf [][]byte) ([]byte, error) {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &Http{
-			resHeaderTimeout: DEFAULT_RESPONSE_HEADER_TIMEOUT,
+			ResHeaderTimeout: DEFAULT_RESPONSE_HEADER_TIMEOUT,
 			DialTimeOut:      DEFAULT_DIAL_TIME_OUT,
-			BufLimit:         DEFAULT_BUFFER_LIMIT,
+			MaxBulkLimit:     DEFAULT_MAX_BULK_LIMIT,
 		}
 	})
 }

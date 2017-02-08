@@ -56,8 +56,8 @@ func TestHttpWriteNormalCase(t *testing.T) {
 	http := &Http{
 		URL:            "http://127.0.0.1:9880/metric",
 		HttpHeaders:    []string{"Content-Type:application/json"},
-		expStatusCodes: []int{200, 204},
-		BufLimit:       1,
+		ExpStatusCodes: []int{200, 204},
+		MaxBulkLimit:   1,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -80,8 +80,8 @@ func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 	http := &Http{
 		URL:            "http://127.0.0.1:9880/incorrect/url",
 		HttpHeaders:    []string{"Content-Type:application/json"},
-		expStatusCodes: []int{200},
-		BufLimit:       1,
+		ExpStatusCodes: []int{200},
+		MaxBulkLimit:   1,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -104,8 +104,8 @@ func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
 	http := &Http{
 		URL:            "http://127.0.0.1:9880/incorrect/url",
 		HttpHeaders:    []string{"Content-Type:application/json"},
-		expStatusCodes: []int{200, 404},
-		BufLimit:       1,
+		ExpStatusCodes: []int{200, 404},
+		MaxBulkLimit:   1,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -128,7 +128,7 @@ func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 	http := &Http{
 		URL:            "http://127.0.0.1:56879/incorrect/url",
 		HttpHeaders:    []string{"Content-Type:application/json"},
-		expStatusCodes: []int{200},
+		ExpStatusCodes: []int{200},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
