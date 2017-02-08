@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"context"
 	ejson "encoding/json"
 	"errors"
 	"fmt"
@@ -69,10 +68,6 @@ type Http struct {
 	serializer serializers.Serializer
 	// expStatusCode that stores option values received with expected_status_codes
 	expStatusCode map[int]bool
-
-	// Context for request cancel of client
-	cancelContext context.Context
-	cancel        context.CancelFunc
 }
 
 func (h *Http) SetSerializer(serializer serializers.Serializer) {
@@ -90,15 +85,11 @@ func (h *Http) Connect() error {
 		},
 	}
 
-	h.cancelContext, h.cancel = context.WithCancel(context.TODO())
-
 	return nil
 }
 
-// Close the Client Connection using Context.
+// Close is not implemented. Because http.Client not provided connection close policy. Instead, uses the response.Body.Close() pattern.
 func (h *Http) Close() error {
-	h.cancel()
-
 	return nil
 }
 
@@ -186,7 +177,6 @@ func (h *Http) write(reqBodyBuf [][]byte) error {
 	}
 
 	req.Close = true
-	req.WithContext(h.cancelContext)
 
 	res, err := h.client.Do(req)
 
