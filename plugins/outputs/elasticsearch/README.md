@@ -55,7 +55,7 @@ Example of an index template created by telegraf:
         "enabled": false
       },
       "properties": {
-        "input_plugin": {
+        "measurement_name": {
           "type": "keyword"
         },
         "@timestamp": {
@@ -75,7 +75,7 @@ This plugin will format the events in the following way:
 ```json
 {
   "@timestamp": "2017-01-01T00:00:00+00:00",
-  "input_plugin": "cpu",
+  "measurement_name": "cpu",
   "cpu": {
     "usage_guest": 0,
     "usage_guest_nice": 0,
@@ -99,7 +99,7 @@ This plugin will format the events in the following way:
 ```json
 {
   "@timestamp": "2017-01-01T00:00:00+00:00",
-  "input_plugin": "system",
+  "measurement_name": "system",
   "system": {
     "load1": 0.78,
     "load15": 0.8,

@@ -131,7 +131,7 @@ func (a *Elasticsearch) Connect() error {
 						"_all": { "enabled": false	},
 						"properties" : {
 							"@timestamp" : { "type" : "date" },
-							"input_plugin" : { "type" : "keyword" }
+							"measurement_name" : { "type" : "keyword" }
 						},
 						"dynamic_templates": [
 							{
@@ -196,7 +196,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		mTag := make(map[string]interface{})
 
 		m["@timestamp"] = metric.Time()
-		m["input_plugin"] = name
+		m["measurement_name"] = name
 
 		for key, value := range metric.Tags() {
 			mTag[key] = value
