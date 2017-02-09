@@ -86,6 +86,7 @@ func TestHistogramWithPeriodAndOneField(t *testing.T) {
 	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "40.0")
 	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), bucketInf)
 }
+
 // TestHistogramWithPeriodAndAllFields tests two metrics for one period and for all fields
 func TestHistogramWithPeriodAndAllFields(t *testing.T) {
 	var cfg []config
