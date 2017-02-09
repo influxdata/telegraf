@@ -192,22 +192,10 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		indexName := a.GetIndexName(a.IndexName, metric.Time())
 
 		m := make(map[string]interface{})
-		mName := make(map[string]interface{})
-		mTag := make(map[string]interface{})
-
 		m["@timestamp"] = metric.Time()
 		m["measurement_name"] = name
-
-		for key, value := range metric.Tags() {
-			mTag[key] = value
-		}
-
-		for key, value := range metric.Fields() {
-			mName[key] = value
-		}
-
-		m["tag"] = mTag
-		m[name] = mName
+		m["tag"] = metric.Tags()
+		m[name] = metric.Fields()
 
 		bulkRequest.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
