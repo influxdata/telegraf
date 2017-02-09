@@ -1,0 +1,239 @@
+package histogram
+
+import (
+	"fmt"
+	"math"
+	"sort"
+	"strconv"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/aggregators"
+)
+
+// bucketTag is the tag, which contains right bucket border
+const bucketTag = "le"
+
+// bucketInf is the right bucket border for infinite values
+const bucketInf = "+Inf"
+
+// HistogramAggregator is aggregator with histogram configs and particular histograms for defined metrics
+type HistogramAggregator struct {
+	Configs []config `toml:"config"`
+
+	buckets bucketsByMetrics
+	cache   map[uint64]metricHistogramCollection
+}
+
+// config is the config, which contains name, field of metric and histogram buckets.
+type config struct {
+	Metric  string  `toml:"metric_name"`
+	Field   string  `toml:"metric_field"`
+	Buckets buckets `toml:"buckets"`
+}
+
+// bucketsByMetrics contains the buckets grouped by metric and field name
+type bucketsByMetrics map[string]bucketsByFields
+
+// bucketsByFields contains the buckets grouped by field name
+type bucketsByFields map[string]buckets
+
+// buckets contains the right borders buckets
+type buckets []float64
+
+// metricHistogramCollection aggregates the histogram data
+type metricHistogramCollection struct {
+	histogramCollection map[string]counts
+	metric              string
+	tags                map[string]string
+}
+
+// counts is the number of hits in the bucket
+type counts []uint64
+
+// NewHistogramAggregator creates new histogram aggregator
+func NewHistogramAggregator() telegraf.Aggregator {
+	h := &HistogramAggregator{}
+	h.buckets = make(bucketsByMetrics)
+	h.resetCache()
+
+	return h
+}
+
+// sampleConfig is config sample of histogram aggregation plugin
+var sampleConfig = `
+  # # Configuration for aggregate histogram metrics
+  # [[aggregators.histogram]]
+  #   ## General Aggregator Arguments:
+  #   ## The period on which to flush & clear the aggregator.
+  #   period = "30s"
+  #   ## If true, the original metric will be dropped by the
+  #   ## aggregator and will not get sent to the output plugins.
+  #   drop_original = false
+  #
+  #   ## The example of config to aggregate histogram for all fields of specified metric.
+  #   [[aggregators.histogram.config]]
+  #     ## The set of buckets.
+  #     buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
+  #     ## The name of metric.
+  #     metric_name = "cpu"
+  #
+  #   ## The example of config to aggregate for specified fields of metric.
+  #   [[aggregators.histogram.config]]
+  #     ## The set of buckets.
+  #     buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
+  #     ## The name of metric.
+  #     metric_name = "system"
+  #     ## The concrete field of metric
+  #     metric_field = "load1"
+`
+
+// SampleConfig returns sample of config
+func (h *HistogramAggregator) SampleConfig() string {
+	return sampleConfig
+}
+
+// Description returns description of aggregator plugin
+func (h *HistogramAggregator) Description() string {
+	return "Keep the aggregate histogram of each metric passing through."
+}
+
+// Add adds new hit to the buckets
+func (h *HistogramAggregator) Add(in telegraf.Metric) {
+	id := in.HashID()
+	agr, ok := h.cache[id]
+	if !ok {
+		agr = metricHistogramCollection{
+			metric:              in.Name(),
+			tags:                in.Tags(),
+			histogramCollection: make(map[string]counts),
+		}
+	}
+
+	for field, value := range in.Fields() {
+		buckets := h.getBuckets(in.Name(), field)
+		if buckets == nil {
+			continue
+		}
+
+		if agr.histogramCollection[field] == nil {
+			agr.histogramCollection[field] = make(counts, len(buckets)+1)
+		}
+
+		if value, ok := convert(value); ok {
+			index := sort.SearchFloat64s(buckets, value)
+			if index < len(agr.histogramCollection[field]) {
+				agr.histogramCollection[field][index]++
+			}
+		}
+	}
+
+	h.cache[id] = agr
+}
+
+// Push returns histogram values for metrics
+func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
+	var isResetNeeded = false
+
+	for _, aggregate := range h.cache {
+		for field, counts := range aggregate.histogramCollection {
+
+			buckets := h.getBuckets(aggregate.metric, field)
+			count := uint64(0)
+
+			for index, bucket := range buckets {
+				count += counts[index]
+				addFields(acc, aggregate, field, strconv.FormatFloat(bucket, 'f', 1, 64), count)
+			}
+
+			// the adding a value to the infinitive bucket
+			count += counts[len(counts)-1]
+			addFields(acc, aggregate, field, bucketInf, count)
+
+			// if count is more than max int 64, then we flush all counts of buckets
+			if count > math.MaxInt64 {
+				isResetNeeded = true
+			}
+		}
+	}
+
+	if isResetNeeded {
+		h.resetCache()
+	}
+}
+
+// Reset does nothing, because we need to collect counts for a long time, otherwise if config parameter 'reset' has
+// small value, we will get a histogram with a small amount of the distribution.
+func (h *HistogramAggregator) Reset() {}
+
+// resetCache resets cached counts(hits) in the buckets
+func (h *HistogramAggregator) resetCache() {
+	h.cache = make(map[uint64]metricHistogramCollection)
+}
+
+// checkAndGetBuckets checks the order of buckets and returns them.
+func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 {
+	if buckets, ok := h.buckets[metric][field]; ok {
+		return buckets
+	}
+
+	for _, config := range h.Configs {
+		if config.Metric == metric && (config.Field == "" || config.Field == field) {
+			if _, ok := h.buckets[metric]; !ok {
+				h.buckets[metric] = make(bucketsByFields)
+			}
+
+			checkOrder(config.Buckets, metric, field)
+
+			h.buckets[metric][field] = config.Buckets
+		}
+	}
+
+	return h.buckets[metric][field]
+}
+
+// addFields adds the field with specified tags to accumulator
+func addFields(acc telegraf.Accumulator, agr metricHistogramCollection, field string, bucketTagVal string, count uint64) {
+	fields := map[string]interface{}{field + "_bucket": count}
+
+	tags := map[string]string{}
+	for key, val := range agr.tags {
+		tags[key] = val
+	}
+	tags[bucketTag] = bucketTagVal
+
+	acc.AddFields(agr.metric, fields, tags)
+}
+
+// checkOrder checks the order of buckets, so that the current value must be more than previous value
+func checkOrder(buckets []float64, metric string, field string) {
+	for i, bucket := range buckets {
+		if i < len(buckets)-1 && bucket >= buckets[i+1] {
+			panic(fmt.Errorf(
+				"histogram buckets must be in increasing order: %.2f >= %.2f, metrics: %s, field: %s",
+				bucket,
+				buckets[i+1],
+				metric,
+				field,
+			))
+		}
+	}
+}
+
+// convert converts interface to concrete type
+func convert(in interface{}) (float64, bool) {
+	switch v := in.(type) {
+	case float64:
+		return v, true
+	case int64:
+		return float64(v), true
+	default:
+		return 0, false
+	}
+}
+
+// init initializes histogram aggregator plugin
+func init() {
+	aggregators.Add("histogram", func() telegraf.Aggregator {
+		return NewHistogramAggregator()
+	})
+}
