@@ -26,7 +26,7 @@ github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
 github.com/hpcloud/tail 915e5feba042395f5fda4dbe9c0e99aeab3088b3
 github.com/influxdata/config 8ec4638a81500c20be24855812bc8498ebe2dc92
-github.com/influxdata/toml ad49a5c2936f96b8f5943c3fdba47630ccf45a0d
+github.com/influxdata/toml 5d1d907f22ead1cd47adde17ceec5bda9cacaf8f
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
 github.com/jackc/pgx c8080fc4a1bfa44bf90383ad0fdce2f68b7d313c
 github.com/kardianos/osext c2c54e542fb797ad986b31721e1baedf214ca413
