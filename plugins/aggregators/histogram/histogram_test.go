@@ -14,7 +14,8 @@ import (
 // NewTestHistogram creates new test histogram aggregation with specified config
 func NewTestHistogram(cfg []config) telegraf.Aggregator {
 	htm := &HistogramAggregator{Configs: cfg}
-	htm.cache = make(map[uint64]metricHistogramCollection)
+	htm.buckets = make(bucketsByMetrics)
+	htm.resetCache()
 
 	return htm
 }
