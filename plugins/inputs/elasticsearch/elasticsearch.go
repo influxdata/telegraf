@@ -40,17 +40,22 @@ type nodeStat struct {
 }
 
 type clusterHealth struct {
-	ClusterName         string                 `json:"cluster_name"`
-	Status              string                 `json:"status"`
-	TimedOut            bool                   `json:"timed_out"`
-	NumberOfNodes       int                    `json:"number_of_nodes"`
-	NumberOfDataNodes   int                    `json:"number_of_data_nodes"`
-	ActivePrimaryShards int                    `json:"active_primary_shards"`
-	ActiveShards        int                    `json:"active_shards"`
-	RelocatingShards    int                    `json:"relocating_shards"`
-	InitializingShards  int                    `json:"initializing_shards"`
-	UnassignedShards    int                    `json:"unassigned_shards"`
-	Indices             map[string]indexHealth `json:"indices"`
+	ClusterName                 string                 `json:"cluster_name"`
+	Status                      string                 `json:"status"`
+	TimedOut                    bool                   `json:"timed_out"`
+	NumberOfNodes               int                    `json:"number_of_nodes"`
+	NumberOfDataNodes           int                    `json:"number_of_data_nodes"`
+	ActivePrimaryShards         int                    `json:"active_primary_shards"`
+	ActiveShards                int                    `json:"active_shards"`
+	RelocatingShards            int                    `json:"relocating_shards"`
+	InitializingShards          int                    `json:"initializing_shards"`
+	UnassignedShards            int                    `json:"unassigned_shards"`
+	DelayedUnassignedShards     int                    `json:"delayed_unassigned_shards"`
+	NumberOfPendingTasks        int                    `json:"number_of_pending_tasks"`
+	NumberOfInFlightFetch       int                    `json:"number_of_in_flight_fetch"`
+	TaskMaxWaitingInQueueMillis int                    `json:"task_max_waiting_in_queue_millis"`
+	ActiveShardsPercent         int                    `json:"active_shards_percent_as_number"`
+	Indices                     map[string]indexHealth `json:"indices"`
 }
 
 type indexHealth struct {
@@ -280,15 +285,20 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	}
 	measurementTime := time.Now()
 	clusterFields := map[string]interface{}{
-		"status":                healthStats.Status,
-		"timed_out":             healthStats.TimedOut,
-		"number_of_nodes":       healthStats.NumberOfNodes,
-		"number_of_data_nodes":  healthStats.NumberOfDataNodes,
-		"active_primary_shards": healthStats.ActivePrimaryShards,
-		"active_shards":         healthStats.ActiveShards,
-		"relocating_shards":     healthStats.RelocatingShards,
-		"initializing_shards":   healthStats.InitializingShards,
-		"unassigned_shards":     healthStats.UnassignedShards,
+		"status":                           healthStats.Status,
+		"timed_out":                        healthStats.TimedOut,
+		"number_of_nodes":                  healthStats.NumberOfNodes,
+		"number_of_data_nodes":             healthStats.NumberOfDataNodes,
+		"active_primary_shards":            healthStats.ActivePrimaryShards,
+		"active_shards":                    healthStats.ActiveShards,
+		"relocating_shards":                healthStats.RelocatingShards,
+		"initializing_shards":              healthStats.InitializingShards,
+		"unassigned_shards":                healthStats.UnassignedShards,
+		"delayed_unassigned_shards":        healthStats.DelayedUnassignedShards,
+		"number_of_pending_tasks":          healthStats.NumberOfPendingTasks,
+		"number_of_in_flight_fetch":        healthStats.NumberOfInFlightFetch,
+		"task_max_waiting_in_queue_millis": healthStats.TaskMaxWaitingInQueueMillis,
+		"active_shards_percent_as_number":  healthStats.ActiveShardsPercent,
 	}
 	acc.AddFields(
 		"elasticsearch_cluster_health",
