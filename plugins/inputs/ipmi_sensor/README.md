@@ -34,7 +34,10 @@ The `server` tag will be made available when retrieving stats from remote server
 [[inputs.ipmi_sensor]]
   ## optionally specify the path to the ipmitool executable
   # path = "/usr/bin/ipmitool"
-  #
+  ##
+  ## optionally force session privilege level. Can be CALLBACK, USER, OPERATOR, ADMINISTRATOR
+  # privilege = "ADMINISTRATOR"
+  ##
   ## optionally specify one or more servers via a url matching
   ##  [username[:password]@][protocol[(address)]]
   ##  e.g.

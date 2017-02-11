@@ -13,8 +13,9 @@ import (
 
 func TestGather(t *testing.T) {
 	i := &Ipmi{
-		Servers: []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
-		path:    "ipmitool",
+		Servers:   []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
+		Path:      "ipmitool",
+		Privilege: "USER",
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
@@ -26,7 +27,7 @@ func TestGather(t *testing.T) {
 
 	assert.Equal(t, acc.NFields(), 266, "non-numeric measurements should be ignored")
 
-	conn := NewConnection(i.Servers[0])
+	conn := NewConnection(i.Servers[0], i.Privilege)
 	assert.Equal(t, "USERID", conn.Username)
 	assert.Equal(t, "lan", conn.Interface)
 
@@ -118,7 +119,7 @@ func TestGather(t *testing.T) {
 	}
 
 	i = &Ipmi{
-		path: "ipmitool",
+		Path: "ipmitool",
 	}
 
 	err = i.Gather(&acc)
