@@ -262,7 +262,9 @@ func (d *Docker) gatherContainer(
 
 	// Add labels to tags
 	for k, label := range container.Labels {
-		tags[k] = label
+		if label != "" {
+			tags[k] = label
+		}
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
