@@ -16,6 +16,7 @@ import (
 // Iptables is a telegraf plugin to gather packets and bytes throughput from Linux's iptables packet filter.
 type Iptables struct {
 	UseSudo bool
+	UseLock bool
 	Table   string
 	Chains  []string
 	lister  chainLister
@@ -32,8 +33,11 @@ func (ipt *Iptables) SampleConfig() string {
   ## iptables require root access on most systems.
   ## Setting 'use_sudo' to true will make use of sudo to run iptables.
   ## Users must configure sudo to allow telegraf user to run iptables with no password.
-  ## iptables can be restricted to only list command  "iptables -nvL"
+  ## iptables can be restricted to only list command "iptables -nvL"
   use_sudo = false
+  ## Setting 'use_lock' to true runs iptables with the "-w" option.
+  ## Adjust your sudo settings appropriately if using this option ("iptables -wnvl")
+  use_lock = false
   ## defines the table to monitor:
   table = "filter"
   ## defines the chains to monitor:
@@ -75,7 +79,11 @@ func (ipt *Iptables) chainList(table, chain string) (string, error) {
 		name = "sudo"
 		args = append(args, iptablePath)
 	}
-	args = append(args, "-nvL", chain, "-t", table, "-x")
+	iptablesBaseArgs := "-nvL"
+	if ipt.UseLock {
+		iptablesBaseArgs = "-wnvL"
+	}
+	args = append(args, iptablesBaseArgs, chain, "-t", table, "-x")
 	c := exec.Command(name, args...)
 	out, err := c.Output()
 	return string(out), err
