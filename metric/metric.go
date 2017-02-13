@@ -44,8 +44,12 @@ func New(
 	// pre-allocate exact size of the tags slice
 	taglen := 0
 	for k, v := range tags {
-		// TODO check that length of tag key & value are > 0
-		taglen += 2 + len(escape(k, "tagkey")) + len(escape(v, "tagval"))
+		vsize := len(escape(v, "tagval"))
+		if vsize > 0 {
+			taglen += 2 + len(escape(k, "tagkey")) + vsize
+		} else {
+			delete(tags, k)
+		}
 	}
 	m.tags = make([]byte, taglen)
 
