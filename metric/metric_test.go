@@ -625,3 +625,26 @@ func TestNewMetricFailNaN(t *testing.T) {
 	_, err := New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 }
+
+func TestEmptyTagValueOrKey(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"host":     "localhost",
+		"emptytag": "",
+		"":         "valuewithoutkey",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": float64(99),
+	}
+	m, err := New("cpu", tags, fields, now)
+
+	assert.True(t, m.HasTag("host"))
+	assert.False(t, m.HasTag("emptytag"))
+	assert.Equal(t,
+		fmt.Sprintf("cpu,host=localhost usage_idle=99 %d\n", now.UnixNano()),
+		m.String())
+
+	assert.NoError(t, err)
+
+}
