@@ -2,7 +2,6 @@ package histogram
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"strconv"
 
@@ -48,7 +47,7 @@ type metricHistogramCollection struct {
 }
 
 // counts is the number of hits in the bucket
-type counts []uint64
+type counts []int64
 
 // NewHistogramAggregator creates new histogram aggregator
 func NewHistogramAggregator() telegraf.Aggregator {
@@ -130,13 +129,11 @@ func (h *HistogramAggregator) Add(in telegraf.Metric) {
 
 // Push returns histogram values for metrics
 func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
-	var isResetNeeded = false
-
 	for _, aggregate := range h.cache {
 		for field, counts := range aggregate.histogramCollection {
 
 			buckets := h.getBuckets(aggregate.metric, field)
-			count := uint64(0)
+			count := int64(0)
 
 			for index, bucket := range buckets {
 				count += counts[index]
@@ -146,16 +143,7 @@ func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
 			// the adding a value to the infinitive bucket
 			count += counts[len(counts)-1]
 			addFields(acc, aggregate, field, bucketInf, count)
-
-			// if count is more than max int 64, then we flush all counts of buckets
-			if count > math.MaxInt64 {
-				isResetNeeded = true
-			}
 		}
-	}
-
-	if isResetNeeded {
-		h.resetCache()
 	}
 }
 
@@ -210,7 +198,7 @@ func isBucketExists(field string, cfg config) bool {
 }
 
 // addFields adds the field with specified tags to accumulator
-func addFields(acc telegraf.Accumulator, agr metricHistogramCollection, field string, bucketTagVal string, count uint64) {
+func addFields(acc telegraf.Accumulator, agr metricHistogramCollection, field string, bucketTagVal string, count int64) {
 	fields := map[string]interface{}{field + "_bucket": count}
 
 	tags := map[string]string{}
