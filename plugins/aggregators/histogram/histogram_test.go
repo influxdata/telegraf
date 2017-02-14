@@ -80,12 +80,12 @@ func TestHistogramWithPeriodAndOneField(t *testing.T) {
 		assert.Fail(t, "Incorrect number of metrics")
 	}
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(0), "10.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "0.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "10.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "20.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "30.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "40.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), bucketInf)
 }
 
 // TestHistogramWithPeriodAndAllFields tests two metrics for one period and for all fields
@@ -106,40 +106,40 @@ func TestHistogramWithPeriodAndAllFields(t *testing.T) {
 		assert.Fail(t, "Incorrect number of metrics")
 	}
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(1), "15.5")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "0.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), "15.5")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "20.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "30.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "40.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), bucketInf)
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", uint64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", uint64(0), "15.5")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", uint64(0), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", uint64(0), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", uint64(1), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", uint64(1), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(0), "0.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(0), "15.5")
+	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(0), "20.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(0), "30.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(1), "40.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(1), bucketInf)
 
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", uint64(0), "0.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", uint64(0), "4.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", uint64(0), "10.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", uint64(0), "23.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", uint64(0), "30.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", uint64(1), bucketInf)
+	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "0.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "4.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "10.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "23.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "30.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(1), bucketInf)
 
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", uint64(0), "0.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", uint64(0), "4.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", uint64(0), "10.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", uint64(0), "23.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", uint64(0), "30.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", uint64(0), bucketInf)
+	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "0.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "4.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "10.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "23.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "30.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), bucketInf)
 
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", uint64(0), "0.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", uint64(0), "4.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", uint64(0), "10.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", uint64(0), "23.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", uint64(0), "30.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", uint64(0), bucketInf)
+	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "0.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "4.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "10.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "23.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "30.0")
+	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), bucketInf)
 }
 
 // TestHistogramDifferentPeriodsAndAllFields tests two metrics getting added with a push/reset in between (simulates
@@ -154,23 +154,23 @@ func TestHistogramDifferentPeriodsAndAllFields(t *testing.T) {
 	histogram.Add(firstMetric1)
 	histogram.Push(acc)
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(0), "10.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(1), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(1), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(1), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(1), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "0.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "10.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), "20.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), "30.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), "40.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), bucketInf)
 
 	acc.ClearMetrics()
 	histogram.Add(firstMetric2)
 	histogram.Push(acc)
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(0), "10.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", uint64(2), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "0.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "10.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "20.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "30.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "40.0")
+	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), bucketInf)
 }
 
 // TestWrongBucketsOrder tests the calling panic with incorrect order of buckets
@@ -192,7 +192,7 @@ func TestWrongBucketsOrder(t *testing.T) {
 }
 
 // assertContainsTaggedField is help functions to test histogram data
-func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricName string, field string, counts uint64, le string) {
+func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricName string, field string, counts int64, le string) {
 	expectedFields := map[string]interface{}{}
 	expectedFields[field] = counts
 
