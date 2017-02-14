@@ -25,9 +25,9 @@ type HistogramAggregator struct {
 
 // config is the config, which contains name, field of metric and histogram buckets.
 type config struct {
-	Metric  string  `toml:"metric_name"`
-	Fields  []string  `toml:"metric_fields"`
-	Buckets buckets `toml:"buckets"`
+	Metric  string   `toml:"metric_name"`
+	Fields  []string `toml:"metric_fields"`
+	Buckets buckets  `toml:"buckets"`
 }
 
 // bucketsByMetrics contains the buckets grouped by metric and field name
@@ -167,7 +167,6 @@ func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 
 			if !isBucketExists(field, config) {
 				continue
 			}
-
 
 			if _, ok := h.buckets[metric]; !ok {
 				h.buckets[metric] = make(bucketsByFields)
