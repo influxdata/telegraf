@@ -27,7 +27,7 @@ type HistogramAggregator struct {
 // config is the config, which contains name, field of metric and histogram buckets.
 type config struct {
 	Metric  string  `toml:"metric_name"`
-	Field   string  `toml:"metric_field"`
+	Fields  []string  `toml:"metric_fields"`
 	Buckets buckets `toml:"buckets"`
 }
 
@@ -82,9 +82,9 @@ var sampleConfig = `
   #     ## The set of buckets.
   #     buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
   #     ## The name of metric.
-  #     metric_name = "system"
-  #     ## The concrete field of metric
-  #     metric_field = "load1"
+  #     metric_name = "diskio"
+  #     ## The concrete fields of metric
+  #     metric_fields = ["io_time", "read_time", "write_time"]
 `
 
 // SampleConfig returns sample of config
@@ -121,9 +121,7 @@ func (h *HistogramAggregator) Add(in telegraf.Metric) {
 
 		if value, ok := convert(value); ok {
 			index := sort.SearchFloat64s(buckets, value)
-			if index < len(agr.histogramCollection[field]) {
-				agr.histogramCollection[field][index]++
-			}
+			agr.histogramCollection[field][index]++
 		}
 	}
 
@@ -177,7 +175,12 @@ func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 
 	}
 
 	for _, config := range h.Configs {
-		if config.Metric == metric && (config.Field == "" || config.Field == field) {
+		if config.Metric == metric {
+			if !isBucketExists(field, config) {
+				continue
+			}
+
+
 			if _, ok := h.buckets[metric]; !ok {
 				h.buckets[metric] = make(bucketsByFields)
 			}
@@ -189,6 +192,21 @@ func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 
 	}
 
 	return h.buckets[metric][field]
+}
+
+// isBucketExists checks if buckets exists for the passed field
+func isBucketExists(field string, cfg config) bool {
+	if len(cfg.Fields) == 0 {
+		return true
+	}
+
+	for _, fl := range cfg.Fields {
+		if fl == field {
+			return true
+		}
+	}
+
+	return false
 }
 
 // addFields adds the field with specified tags to accumulator

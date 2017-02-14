@@ -67,7 +67,7 @@ func BenchmarkApply(b *testing.B) {
 // TestHistogramWithPeriodAndOneField tests metrics for one period and for one field
 func TestHistogramWithPeriodAndOneField(t *testing.T) {
 	var cfg []config
-	cfg = append(cfg, config{Metric: "first_metric_name", Field: "a", Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
+	cfg = append(cfg, config{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
 	histogram := NewTestHistogram(cfg)
 
 	acc := &testutil.Accumulator{}

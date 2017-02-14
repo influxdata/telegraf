@@ -34,7 +34,7 @@ the Prometheus [client](https://github.com/prometheus/client_golang/blob/master/
   ## The example of config to aggregate histogram for all fields of specified metric.
   [[aggregators.histogram.config]]
   ## The set of buckets.
-  buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
+  buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
   ## The name of metric.
   metric_name = "cpu"
 
@@ -44,19 +44,18 @@ the Prometheus [client](https://github.com/prometheus/client_golang/blob/master/
   buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
   ## The name of metric.
   metric_name = "diskio"
-  ## The concrete field of metric.
-  metric_field = "io_time"
+  ## The concrete fields of metric.
+  metric_fields = ["io_time", "read_time", "write_time"]
 ```
 
 #### Explanation
 
-The field `metric_field` is the parameter of metric. For example, the metric `cpu` has the following parameters:
+The field `metric_fields` is the list of metric parameters. For example, the metric `cpu` has the following parameters:
 usage_user, usage_system, usage_idle, usage_nice, usage_iowait, usage_irq, usage_softirq, usage_steal, usage_guest,
 usage_guest_nice.
 
 Note that histogram metrics will be pushed every `period` seconds. 
 As you know telegraf calls aggregator `Reset()` func each `period` seconds. Histogram aggregator ignores `Reset()` and continues to count hits. 
-All counters in histogram will be resetted when one of buckets will be greater than the `math.MaxInt64`.
 
 #### Use cases
 
@@ -83,23 +82,26 @@ The postfix `bucket` will be added to each parameter.
 
 ### Tags:
 
-All measurements have tag `le`. This tag has the border value of bucket.
+All measurements have tag `le`. This tag has the border value of bucket. It means that the metric value is less or equal
+to the value of this tag. For example, let assume that we have the metric value 10 and the following buckets:
+[5, 10, 30, 70, 100]. Then the tag `le` will have the value 10, because the metrics value is passed into bucket with
+right border value `10`.
 
 ### Example Output:
 
 The following output will return to the Prometheus client.
 
 ```
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="0"} 0
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="10"} 24
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="20"} 39
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="30"} 39
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="40"} 39
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="50"} 54
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="60"} 54
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="70"} 54
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="80"} 54
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="90"} 54
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="100"} 54
-cpu_usage_system_bucket{cpu="cpu-total",host="local",le="+Inf"} 54
+cpu,cpu=cpu1,host=localhost,le=0.0 usage_idle_bucket=0i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=10.0 usage_idle_bucket=0i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=20.0 usage_idle_bucket=1i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=30.0 usage_idle_bucket=2i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=40.0 usage_idle_bucket=2i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=50.0 usage_idle_bucket=2i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=60.0 usage_idle_bucket=2i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=70.0 usage_idle_bucket=2i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=80.0 usage_idle_bucket=2i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=90.0 usage_idle_bucket=2i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=100.0 usage_idle_bucket=2i 1486998330000000000
+cpu,cpu=cpu1,host=localhost,le=+Inf usage_idle_bucket=2i 1486998330000000000
 ```
