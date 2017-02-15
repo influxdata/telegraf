@@ -22,6 +22,8 @@ for the stat structure can be found
   endpoint = "unix:///var/run/docker.sock"
   # Only collect metrics for these containers, collect all if empty
   container_names = []
+  # Which environment variables should we use as a tag
+  gather_environment = ["ENV", "DC"]
 ```
 
 ### Measurements & Fields:

@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/docker/engine-api/types"
+	"github.com/docker/engine-api/types/container"
 	"github.com/docker/engine-api/types/registry"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -383,10 +384,24 @@ func (d FakeDockerClient) ContainerStats(ctx context.Context, containerID string
 	return stat, nil
 }
 
+func (d FakeDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+	json := types.ContainerJSON{
+		Config: &container.Config{
+			Env: []string{
+				"ENVVAR1=loremipsum",
+				"ENVVAR2=dolorsitamet",
+				"PATH=/bin:/sbin",
+			},
+		},
+	}
+
+	return json, nil
+}
+
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	client := FakeDockerClient{}
-	d := Docker{client: client}
+	d := Docker{client: client, GatherEnvironment: []string{"ENVVAR1", "ENVVAR2"}}
 
 	err := d.Gather(&acc)
 
@@ -432,6 +447,8 @@ func TestDockerGatherInfo(t *testing.T) {
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
 			"engine_host":       "absol",
+			"ENVVAR1":           "loremipsum",
+			"ENVVAR2":           "dolorsitamet",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -478,6 +495,8 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_name":    "etcd2",
 			"container_image":   "quay.io:4443/coreos/etcd",
 			"container_version": "v2.2.2",
+			"ENVVAR1":           "loremipsum",
+			"ENVVAR2":           "dolorsitamet",
 		},
 	)
 

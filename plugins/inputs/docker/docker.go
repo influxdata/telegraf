@@ -22,11 +22,12 @@ import (
 
 // Docker object
 type Docker struct {
-	Endpoint       string
-	ContainerNames []string
-	Timeout        internal.Duration
-	PerDevice      bool `toml:"perdevice"`
-	Total          bool `toml:"total"`
+	Endpoint          string
+	ContainerNames    []string
+	Timeout           internal.Duration
+	PerDevice         bool     `toml:"perdevice"`
+	Total             bool     `toml:"total"`
+	GatherEnvironment []string `toml:"gather_environment"`
 
 	client      DockerClient
 	engine_host string
@@ -37,6 +38,7 @@ type DockerClient interface {
 	Info(ctx context.Context) (types.Info, error)
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 	ContainerStats(ctx context.Context, containerID string, stream bool) (io.ReadCloser, error)
+	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -67,6 +69,8 @@ var sampleConfig = `
   perdevice = true
   ## Whether to report for each container total blkio and network stats or not
   total = false
+  ## Which environment variables should we use as a tag
+  gather_environment = ["ENV", "DC"]
 
 `
 
@@ -263,6 +267,22 @@ func (d *Docker) gatherContainer(
 	// Add labels to tags
 	for k, label := range container.Labels {
 		tags[k] = label
+	}
+
+	// Add whitelisted environment variables to tags
+	if len(d.GatherEnvironment) > 0 {
+		info, err := d.client.ContainerInspect(ctx, container.ID)
+		if err != nil {
+			return fmt.Errorf("Error getting docker container inspect: %s", err.Error())
+		}
+
+		for _, envvar := range info.Config.Env {
+			kvs := strings.SplitN(envvar, "=", 2)
+			if !sliceContains(kvs[0], d.GatherEnvironment) {
+				continue
+			}
+			tags[kvs[0]] = kvs[1]
+		}
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
