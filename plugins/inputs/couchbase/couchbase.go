@@ -1,10 +1,11 @@
 package couchbase
 
 import (
+	"sync"
+
 	couchbase "github.com/couchbase/go-couchbase"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"sync"
 )
 
 type Couchbase struct {
@@ -92,6 +93,23 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *co
 		fields["disk_used"] = bs["diskUsed"]
 		fields["data_used"] = bs["dataUsed"]
 		fields["mem_used"] = bs["memUsed"]
+
+		fields["ep_dcp_total_queue"] = bs["epDcpTotalQueue"] //Items within the DCP Queue
+		fields["vb_active_num"] = bs["vbActiveNum"]          //Active and Replica vBucket Count
+		fields["vb_replica_num"] = bs["vb_ReplicaNum"]       //Active and Replica vBucket Count
+		fields["curr_items"] = bs["currItems"]
+		fields["ep_bg_fetched"] = bs["epBgFetched"]                             //Number of items fetched from disk (cache misses).
+		fields["vb_active_perc_mem_resident"] = bs["vbActivePercMemResident"]   //Percent of active data in a vBucket that is memory resident.
+		fields["vb_replica_perc_mem_resident"] = bs["vbReplicaPercMemResident"] //Percent of replica data in a vBucket that is memory resident
+		fields["ep_tmp_oom_errors"] = bs["epTmpOomErrors"]                      //Number of times temporary OOMs were sent to a client.  Represents high transient memory pressure within the system.
+		fields["ep_oom_errors"] = bs["epOomErrors"]                             //Number of times permanent OOMs were sent to a client.  Represents very high consistent memory pressure within the system.
+		fields["ep_queue_size"] = bs["epQueueSize"]                             //The amount of data waiting to be written to disk.
+		fields["ep_flusher_todo"] = bs["epFlusherTodo"]                         //The number of items currently being written to disk.
+		fields["ep_io_num_read"] = bs["epIoNumRead"]                            //The number of read operations sent to disk.
+		fields["ep_io_num_write"] = bs["epIoNumWrite"]                          //The number of write operations sent to disk.
+		fields["ep_mem_high_wat "] = bs["epMemHighWatermark "]
+		fields["cmd_get"] = bs["cmdGet"]
+		fields["ep_kv_size"] = bs["epKvSize"]
 		acc.AddFields("couchbase_bucket", fields, tags)
 	}
 	return nil
