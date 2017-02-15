@@ -16,6 +16,11 @@ The each metric is passed to the aggregator and this aggregator searches histogr
 have been specified in the config. If buckets are found, the aggregator will put +1 to appropriate bucket.
 Otherwise, nothing will happen. Every `period` seconds these data will be pushed to output.
 
+Note, that the all hits of current bucket will be also added to all next buckets in final result of distribution.
+Why does it work this way? In configuration you define right borders for each bucket in a ascending sequence.
+Internally buckets are presented as ranges with borders 0..bucketBorder: 0..1, 0..10, 0..50, …, 0..+Inf.
+So the value "+1" will be put into those buckets, in which the metric value fell with such ranges of buckets.
+
 Also, the algorithm of hit counting to buckets was implemented on the base of the algorithm, which is implemented in
 the Prometheus [client](https://github.com/prometheus/client_golang/blob/master/prometheus/histogram.go).
 
