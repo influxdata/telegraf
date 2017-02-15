@@ -44,17 +44,18 @@ func New(
 	// pre-allocate exact size of the tags slice
 	taglen := 0
 	for k, v := range tags {
-		vsize := len(escape(v, "tagval"))
-		if vsize > 0 {
-			taglen += 2 + len(escape(k, "tagkey")) + vsize
-		} else {
-			delete(tags, k)
+		if len(k) == 0 || len(v) == 0 {
+			continue
 		}
+		taglen += 2 + len(escape(k, "tagkey")) + len(escape(v, "tagval"))
 	}
 	m.tags = make([]byte, taglen)
 
 	i := 0
 	for k, v := range tags {
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		m.tags[i] = ','
 		i++
 		i += copy(m.tags[i:], escape(k, "tagkey"))
