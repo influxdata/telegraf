@@ -2,9 +2,6 @@ package telegraf
 
 import (
 	"time"
-
-	// TODO remove
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 // ValueType is an enumeration of metric types that represent a simple value.
@@ -62,8 +59,4 @@ type Metric interface {
 	// aggregator things:
 	SetAggregate(bool)
 	IsAggregate() bool
-
-	// Point returns a influxdb client.Point object
-	// TODO remove this function
-	Point() *client.Point
 }

@@ -191,6 +191,12 @@ func (a *Agent) Test() error {
 	}()
 
 	for _, input := range a.Config.Inputs {
+		if _, ok := input.Input.(telegraf.ServiceInput); ok {
+			fmt.Printf("\nWARNING: skipping plugin [[%s]]: service inputs not supported in --test mode\n",
+				input.Name())
+			continue
+		}
+
 		acc := NewAccumulator(input, metricC)
 		acc.SetPrecision(a.Config.Agent.Precision.Duration,
 			a.Config.Agent.Interval.Duration)
@@ -209,7 +215,7 @@ func (a *Agent) Test() error {
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
 		switch input.Name() {
-		case "cpu", "mongodb", "procstat":
+		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
 			time.Sleep(500 * time.Millisecond)
 			fmt.Printf("* Plugin: %s, Collection 2\n", input.Name())
 			if err := input.Input.Gather(acc); err != nil {

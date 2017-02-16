@@ -25,7 +25,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
-	"github.com/influxdata/config"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
@@ -566,7 +565,7 @@ func (c *Config) LoadConfig(path string) error {
 			if !ok {
 				return fmt.Errorf("%s: invalid configuration", path)
 			}
-			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
+			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("E! Could not parse [global_tags] config\n")
 				return fmt.Errorf("Error parsing %s, %s", path, err)
 			}
@@ -579,7 +578,7 @@ func (c *Config) LoadConfig(path string) error {
 		if !ok {
 			return fmt.Errorf("%s: invalid configuration", path)
 		}
-		if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
+		if err = toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			log.Printf("E! Could not parse [agent] config\n")
 			return fmt.Errorf("Error parsing %s, %s", path, err)
 		}
@@ -716,7 +715,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, aggregator); err != nil {
+	if err := toml.UnmarshalTable(table, aggregator); err != nil {
 		return err
 	}
 
@@ -736,7 +735,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, processor); err != nil {
+	if err := toml.UnmarshalTable(table, processor); err != nil {
 		return err
 	}
 
@@ -776,7 +775,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, output); err != nil {
+	if err := toml.UnmarshalTable(table, output); err != nil {
 		return err
 	}
 
@@ -817,7 +816,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, input); err != nil {
+	if err := toml.UnmarshalTable(table, input); err != nil {
 		return err
 	}
 
@@ -909,7 +908,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
-			if err := config.UnmarshalTable(subtbl, conf.Tags); err != nil {
+			if err := toml.UnmarshalTable(subtbl, conf.Tags); err != nil {
 				log.Printf("Could not parse tags for input %s\n", name)
 			}
 		}
@@ -1146,7 +1145,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
-			if err := config.UnmarshalTable(subtbl, cp.Tags); err != nil {
+			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
 				log.Printf("E! Could not parse tags for input %s\n", name)
 			}
 		}

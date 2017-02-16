@@ -43,7 +43,7 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
 which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.5+.
+if you don't have it already. You also must build with golang version 1.7+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
@@ -184,8 +184,8 @@ Telegraf can also collect metrics via the following service plugins:
 * [statsd](./plugins/inputs/statsd)
 * [socket_listener](./plugins/inputs/socket_listener)
 * [tail](./plugins/inputs/tail)
-* [tcp_listener](./plugins/inputs/tcp_listener)
-* [udp_listener](./plugins/inputs/udp_listener)
+* [tcp_listener](./plugins/inputs/socket_listener)
+* [udp_listener](./plugins/inputs/socket_listener)
 * [webhooks](./plugins/inputs/webhooks)
   * [filestack](./plugins/inputs/webhooks/filestack)
   * [github](./plugins/inputs/webhooks/github)
@@ -220,9 +220,11 @@ Telegraf can also collect metrics via the following service plugins:
 * [nsq](./plugins/outputs/nsq)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
-* [socket_writer](./plugins/outputs/socket_writer)
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
+* [socket_writer](./plugins/outputs/socket_writer)
+* [tcp](./plugins/outputs/socket_writer)
+* [udp](./plugins/outputs/socket_writer)
 
 ## Contributing
 
