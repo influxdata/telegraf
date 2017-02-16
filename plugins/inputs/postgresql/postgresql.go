@@ -24,10 +24,7 @@ var ignoredColumns = map[string]bool{"stats_reset": true}
 
 var sampleConfig = `
   ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
-  ##       ?sslmode=[disable|verify-ca|verify-full]
-  ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   postgres://[username[:password]]@localhost[:port][/dbname]?sslmode=[disable|verify-ca|verify-full]
   ##
   ## All connection parameters are optional.
   ##
@@ -36,7 +33,7 @@ var sampleConfig = `
   ## connection with the server and doesn't restrict the databases we are trying
   ## to grab metrics for.
   ##
-  address = "host=localhost user=postgres sslmode=disable"
+  address = "postgres://postgres@localhost:5432"
 
   ## A  list of databases to explicitly ignore.  If not specified, metrics for all
   ## databases are gathered.  Do NOT use with the 'databases' option.
@@ -59,7 +56,7 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
 }
 
-var localhost = "host=localhost sslmode=disable"
+var localhost = "postgres://localhost:5432?sslmode=disable"
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var query string
