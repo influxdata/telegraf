@@ -109,13 +109,16 @@ func (p *Procstat) pidsFromFile() ([]int32, error) {
 		outerr = fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'",
 			p.PidFile, err)
 	} else {
-		pid, err := strconv.Atoi(strings.TrimSpace(string(pidString)))
-		if err != nil {
-			outerr = err
-		} else {
-			out = append(out, int32(pid))
-			p.tagmap[int32(pid)] = map[string]string{
-				"pidfile": p.PidFile,
+		pids := strings.Fields(string(pidString))
+		for _, pid := range pids {
+			ipid, err := strconv.Atoi(pid)
+			if err == nil {
+				out = append(out, int32(ipid))
+				p.tagmap[int32(ipid)] = map[string]string{
+					"pidfile": p.PidFile,
+				}
+			} else {
+				outerr = err
 			}
 		}
 	}
