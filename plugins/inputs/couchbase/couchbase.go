@@ -3,7 +3,7 @@ package couchbase
 import (
 	couchbase "github.com/couchbase/go-couchbase"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/registry/inputs"
 	"sync"
 )
 

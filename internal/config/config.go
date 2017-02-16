@@ -18,12 +18,12 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
-	"github.com/influxdata/telegraf/plugins/aggregators"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/registry/aggregators"
+	"github.com/influxdata/telegraf/registry/inputs"
+	"github.com/influxdata/telegraf/registry/outputs"
+	"github.com/influxdata/telegraf/registry/processors"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -39,6 +39,14 @@ var (
 
 	// envVarRe is a regex to find environment variables in the config file
 	envVarRe = regexp.MustCompile(`\$\w+`)
+
+	// addQuoteRe is a regex for finding and adding quotes around / characters
+	// when they are used for distinguishing external plugins.
+	// ie, a ReplaceAll() with this pattern will be used to turn this:
+	//     [[inputs.external/test/example]]
+	//  to
+	//     [[inputs."external/test/example"]]
+	addQuoteRe = regexp.MustCompile(`(\[?\[?inputs|outputs|processors|aggregators)\.(external\/[^.\]]+)`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -699,6 +707,9 @@ func parseFile(fpath string) (*ast.Table, error) {
 			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
 		}
 	}
+
+	// add quotes around external plugin paths.
+	contents = addQuoteRe.ReplaceAll(contents, []byte(`$1."$2"`))
 
 	return toml.Parse(contents)
 }

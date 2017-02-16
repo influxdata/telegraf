@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/registry/outputs"
 )
 
 type File struct {

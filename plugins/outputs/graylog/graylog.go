@@ -8,7 +8,7 @@ import (
 	ejson "encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/registry/outputs"
 	"io"
 	"math"
 	"net"

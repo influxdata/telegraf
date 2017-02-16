@@ -9,7 +9,7 @@ import (
 
 	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/registry/outputs"
 )
 
 const deprecationMsg = "E! Error: this Riemann output plugin will be deprecated in a future release, see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
