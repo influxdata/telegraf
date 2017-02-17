@@ -269,8 +269,8 @@ func TestDockerGatherLabels(t *testing.T) {
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
 			"engine_host":       "absol",
-			"label1":           "test_value_1",
-			"label2":           "test_value_2",
+			"label1":            "test_value_1",
+			"label2":            "test_value_2",
 		},
 	)
 
@@ -290,7 +290,7 @@ func TestDockerGatherLabels(t *testing.T) {
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
 			"engine_host":       "absol",
-			"label1":           "test_value_1",
+			"label1":            "test_value_1",
 		},
 	)
 
@@ -305,7 +305,7 @@ func TestDockerGatherInfo(t *testing.T) {
 
 	/* In order to not modify code here, we set this to false since the container structure now has
 	   labels and the default is true.
-	   */
+	*/
 	d.AddLabels = false
 	err := d.Gather(&acc)
 	require.NoError(t, err)

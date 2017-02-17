@@ -25,9 +25,9 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 	Timeout        internal.Duration
-	PerDevice      bool `toml:"perdevice"`
-	Total          bool `toml:"total"`
-	AddLabels      bool `toml:"addlabels"`
+	PerDevice      bool     `toml:"perdevice"`
+	Total          bool     `toml:"total"`
+	AddLabels      bool     `toml:"addlabels"`
 	LabelNames     []string `toml:"label_names"`
 
 	client      *client.Client
@@ -300,12 +300,9 @@ func (d *Docker) gatherContainer(
 	}
 
 	// Add labels to tags if addlabels is true
-	//fmt.Printf("AddLabels is %t:  len of labelnames is %d\n", d.AddLabels, len(d.LabelNames))
 	if d.AddLabels {
 		for k, label := range container.Labels {
-	//		fmt.Printf("Checking tag %s with value %s\n", k, label)
-			if (len(d.LabelNames) == 0 ) || (len(d.LabelNames) > 0 && sliceContains(k, d.LabelNames))  {
-	//			fmt.Printf("Adding tag %s with value %s\n", k, label)
+			if (len(d.LabelNames) == 0) || (len(d.LabelNames) > 0 && sliceContains(k, d.LabelNames)) {
 				tags[k] = label
 			}
 		}
