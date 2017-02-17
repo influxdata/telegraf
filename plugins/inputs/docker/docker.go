@@ -27,6 +27,8 @@ type Docker struct {
 	Timeout        internal.Duration
 	PerDevice      bool `toml:"perdevice"`
 	Total          bool `toml:"total"`
+	AddLabels      bool `toml:"addlabels"`
+	LabelNames     []string `toml:"label_names"`
 
 	client      *client.Client
 	engine_host string
@@ -99,6 +101,12 @@ var sampleConfig = `
   ## Whether to report for each container total blkio and network stats or not
   total = false
 
+  ## Whether to add docker labels as tags
+  addlabels = true
+
+  ## If addlabels is set to true, optionally create an array of labels that are to be added
+  ## An empty array adds all labels
+  label_names = []
 `
 
 // Description returns input description
@@ -291,9 +299,16 @@ func (d *Docker) gatherContainer(
 		return fmt.Errorf("Error decoding: %s", err.Error())
 	}
 
-	// Add labels to tags
-	for k, label := range container.Labels {
-		tags[k] = label
+	// Add labels to tags if addlabels is true
+	//fmt.Printf("AddLabels is %t:  len of labelnames is %d\n", d.AddLabels, len(d.LabelNames))
+	if d.AddLabels {
+		for k, label := range container.Labels {
+	//		fmt.Printf("Checking tag %s with value %s\n", k, label)
+			if (len(d.LabelNames) == 0 ) || (len(d.LabelNames) > 0 && sliceContains(k, d.LabelNames))  {
+	//			fmt.Printf("Adding tag %s with value %s\n", k, label)
+				tags[k] = label
+			}
+		}
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
@@ -604,6 +619,7 @@ func init() {
 		return &Docker{
 			PerDevice: true,
 			Timeout:   internal.Duration{Duration: time.Second * 5},
+			AddLabels: true,
 		}
 	})
 }
