@@ -1,6 +1,7 @@
-package system
+package docker
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,10 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 
-	"github.com/docker/engine-api/client"
-	"github.com/docker/engine-api/types"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -28,15 +28,46 @@ type Docker struct {
 	PerDevice      bool `toml:"perdevice"`
 	Total          bool `toml:"total"`
 
-	client      DockerClient
+	client      *client.Client
 	engine_host string
+
+	testing bool
 }
 
-// DockerClient interface, useful for testing
-type DockerClient interface {
-	Info(ctx context.Context) (types.Info, error)
-	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
-	ContainerStats(ctx context.Context, containerID string, stream bool) (io.ReadCloser, error)
+// infoWrapper wraps client.Client.List for testing.
+func infoWrapper(c *client.Client, ctx context.Context) (types.Info, error) {
+	if c != nil {
+		return c.Info(ctx)
+	}
+	fc := FakeDockerClient{}
+	return fc.Info(ctx)
+}
+
+// listWrapper wraps client.Client.ContainerList for testing.
+func listWrapper(
+	c *client.Client,
+	ctx context.Context,
+	options types.ContainerListOptions,
+) ([]types.Container, error) {
+	if c != nil {
+		return c.ContainerList(ctx, options)
+	}
+	fc := FakeDockerClient{}
+	return fc.ContainerList(ctx, options)
+}
+
+// statsWrapper wraps client.Client.ContainerStats for testing.
+func statsWrapper(
+	c *client.Client,
+	ctx context.Context,
+	containerID string,
+	stream bool,
+) (types.ContainerStats, error) {
+	if c != nil {
+		return c.ContainerStats(ctx, containerID, stream)
+	}
+	fc := FakeDockerClient{}
+	return fc.ContainerStats(ctx, containerID, stream)
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -80,7 +111,7 @@ func (d *Docker) SampleConfig() string { return sampleConfig }
 
 // Gather starts stats collection
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
-	if d.client == nil {
+	if d.client == nil && !d.testing {
 		var c *client.Client
 		var err error
 		defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
@@ -113,7 +144,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	opts := types.ContainerListOptions{}
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	containers, err := d.client.ContainerList(ctx, opts)
+	containers, err := listWrapper(d.client, ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -144,7 +175,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	// Get info from docker daemon
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	info, err := d.client.Info(ctx)
+	info, err := infoWrapper(d.client, ctx)
 	if err != nil {
 		return err
 	}
@@ -247,12 +278,12 @@ func (d *Docker) gatherContainer(
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	r, err := d.client.ContainerStats(ctx, container.ID, false)
+	r, err := statsWrapper(d.client, ctx, container.ID, false)
 	if err != nil {
 		return fmt.Errorf("Error getting docker stats: %s", err.Error())
 	}
-	defer r.Close()
-	dec := json.NewDecoder(r)
+	defer r.Body.Close()
+	dec := json.NewDecoder(r.Body)
 	if err = dec.Decode(&v); err != nil {
 		if err == io.EOF {
 			return nil
