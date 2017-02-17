@@ -28,6 +28,7 @@ const (
 		GET_JVM_STAT = 3
 		GET_DEPLOYMENTS = 4
 		GET_DEPLOYMENT_STAT = 5
+		GET_WEB_STAT = 6
 )
 
 type KeyVal struct {
@@ -102,6 +103,11 @@ type DBPoolStatistics struct {
 type JVMResponse struct {
 	Outcome string `json:"outcome"`
 	Result JVMMetrics `json:"result"`
+}
+
+type WebResponse struct {
+	Outcome string `json:"outcome"`
+	Result map[string]interface{} `json:"result"`
 }
 
 type JVMMetrics struct {
@@ -458,6 +464,8 @@ func (h *JBoss) getServersOnHost(
 	
 					acc.AddFields("jboss_domain", fields, tags)
 					
+					h.getWebStatistics(acc, serverURL, host, server, "ajp")
+					h.getWebStatistics(acc, serverURL, host, server, "http")
 					h.getDatasourceStatistics(acc, serverURL, host, server)
 					h.getJVMStatistics(acc, serverURL, host, server)
 					h.getServerDeploymentStatistics(acc, serverURL, host, server)
@@ -481,7 +489,72 @@ func (h *JBoss) getServersOnHost(
 	return errors.New(strings.Join(errorStrings, "\n"))
 }
 
-// Gathers data from a particular host
+// Gathers web data from a particular host
+// Parameters:
+//     acc      : The telegraf Accumulator to use
+//     serverURL: endpoint to send request to
+//     host     : the host being queried
+//     server   : the server being queried
+//
+// Returns:
+//     error: Any error that may have occurred
+
+func (h *JBoss) getWebStatistics(
+	acc telegraf.Accumulator,
+	serverURL string,
+	host string,
+	serverName string,
+	connector string,
+) error {
+	//fmt.Printf("getDatasourceStatistics %s %s\n", host, serverName)
+	
+	//adr := make(map[string]interface{})
+	adr := OrderedMap{
+		{"host", host},
+		{"server", serverName},
+		{"subsystem", "web"},
+		{"connector", connector},
+	}
+	//adr["host"] = host
+	//adr["server"] = serverName
+	//adr["subsystem"] = "datasources"
+	 
+	bodyContent, err := h.prepareRequest(GET_WEB_STAT, adr);
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	}
+
+	out, err := h.doRequest(serverURL, bodyContent)
+
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	} else {
+		server := WebResponse{}
+		if err = json.Unmarshal(out, &server); err != nil {
+			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		}
+//		fmt.Println(server)
+
+		fields := make(map[string]interface{})
+		for key, value := range server.Result {
+			switch key {
+			case "bytesReceived", "bytesSent", "requestCount", "errorCount", "maxTime", "processingTime":
+				fields[key] = value
+			}
+		}
+		tags := map[string]string{
+			"host":   host,
+			"server": serverName,
+			"type":   connector,
+		}
+		acc.AddFields("jboss_web", fields, tags)
+	}
+	
+	return nil
+}
+
+
+// Gathers database data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
 //     serverURL: endpoint to send request to
@@ -730,16 +803,42 @@ func (h *JBoss) getServerDeploymentStatistics(
 					subsystem := t["subsystem"].(map[string]interface{})
 //					fmt.Println(t["subsystem"])
 					
-					if value, ok := subsystem["ejb"]; ok {
-						fmt.Println("EJB data")
-						fmt.Println(value)
+					if value, ok := subsystem["ejb3"]; ok {
+//						fmt.Println("EJB data" + serverName)
+//						fmt.Println(value)
+						ejb := value.(map[string]interface{})
+						t := ejb["stateless-session-bean"]
+						if t != nil {
+							statelessList := t.(map[string]interface{})
+
+							for stateless, ejbVal := range statelessList {
+								ejbRuntime := ejbVal.(map[string]interface{})
+								fields["invocations"]  = ejbRuntime["invocations"]
+								fields["peak-concurrent-invocations"]  = ejbRuntime["peak-concurrent-invocations"]
+								fields["pool-available-count"]  = ejbRuntime["pool-available-count"]
+								fields["pool-create-count"]  = ejbRuntime["pool-create-count"]
+								fields["pool-current-size"]  = ejbRuntime["pool-current-size"]
+								fields["pool-max-size"]  = ejbRuntime["pool-max-size"]
+								fields["pool-remove-count"]  = ejbRuntime["pool-remove-count"]
+								fields["wait-time"]  = ejbRuntime["wait-time"]
+								tags := map[string]string{
+									"host":   host,
+									"server": serverName,
+									"name":   typeName,
+									"ejb": stateless,
+									"system": deployment.Result.RuntimeName,
+									"type":   "deployment",
+								}
+								acc.AddFields("jboss_ejb", fields, tags)
+							}
+						}
 					}
 					
 					if webValue, ok := subsystem["web"]; ok {
 //						fmt.Println("WEB data")
 //						fmt.Println(webValue)
 						t2 := webValue.(map[string]interface{})
-
+						contextRoot := t2["context-root"].(string)
 						fields["active-sessions"]  = t2["active-sessions"]
 						fields["expired-sessions"]  = t2["expired-sessions"]
 						fields["max-active-sessions"]  = t2["max-active-sessions"]
@@ -748,6 +847,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 							"host":   host,
 							"server": serverName,
 							"name":   typeName,
+							"context-root": contextRoot,
 							"system": deployment.Result.RuntimeName,
 							"type":   "deployment",
 						}
@@ -834,7 +934,13 @@ func (j *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interf
 	case GET_DEPLOYMENT_STAT:
 		bodyContent["operation"] = "read-resource"
 		bodyContent["include-runtime"] = "true"
-		bodyContent["recursive-depth"] = 2
+		bodyContent["recursive-depth"] = 3
+		bodyContent["address"] = adress
+		bodyContent["json.pretty"] = 1
+	case GET_WEB_STAT:
+		bodyContent["operation"] = "read-resource"
+		bodyContent["include-runtime"] = "true"
+		bodyContent["recursive-depth"] = 0
 		bodyContent["address"] = adress
 		bodyContent["json.pretty"] = 1
 	}
@@ -876,7 +982,7 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	// Process response
 	
 	if resp.StatusCode == http.StatusUnauthorized {
-		fmt.Printf("Do digest\n")
+//		fmt.Printf("Do digest\n")
 		digestParts := digestParts(resp)
 		digestParts["uri"] = serverUrl.RequestURI()
 		digestParts["method"] = method
