@@ -30,6 +30,11 @@ for the stat structure can be found
   perdevice = true
   ## Whether to report for each container total blkio and network stats or not
   total = false
+  # Add container labels as tags
+  addlabels = true
+  # If addlabels is set to true, optional array to add specific lables.
+  #   Empty array adds all labels
+  label_names = []
 ```
 
 ### Measurements & Fields:

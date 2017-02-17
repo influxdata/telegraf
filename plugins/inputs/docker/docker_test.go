@@ -244,6 +244,58 @@ func testStats() *types.StatsJSON {
 	return stats
 }
 
+func TestDockerGatherLabels(t *testing.T) {
+	var acc testutil.Accumulator
+	d := Docker{
+		client: nil,
+		testing: true,
+	}
+
+	d.AddLabels = true
+
+	err := d.Gather(&acc)
+
+	require.NoError(t, err)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_container_cpu",
+		map[string]interface{}{
+			"usage_total":  uint64(1231652),
+			"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
+		},
+		map[string]string{
+			"container_name":    "etcd2",
+			"container_image":   "quay.io:4443/coreos/etcd",
+			"cpu":               "cpu3",
+			"container_version": "v2.2.2",
+			"engine_host":       "absol",
+			"label1":           "test_value_1",
+			"label2":           "test_value_2",
+		},
+	)
+
+	d.LabelNames = append(d.LabelNames, "label1")
+	err1 := d.Gather(&acc)
+	require.NoError(t, err1)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_container_cpu",
+		map[string]interface{}{
+			"usage_total":  uint64(1231652),
+			"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
+		},
+		map[string]string{
+			"container_name":    "etcd2",
+			"container_image":   "quay.io:4443/coreos/etcd",
+			"cpu":               "cpu3",
+			"container_version": "v2.2.2",
+			"engine_host":       "absol",
+			"label1":           "test_value_1",
+		},
+	)
+
+}
+
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
@@ -251,6 +303,10 @@ func TestDockerGatherInfo(t *testing.T) {
 		testing: true,
 	}
 
+	/* In order to not modify code here, we set this to false since the container structure now has
+	   labels and the default is true.
+	   */
+	d.AddLabels = false
 	err := d.Gather(&acc)
 	require.NoError(t, err)
 
