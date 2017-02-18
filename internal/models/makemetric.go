@@ -29,6 +29,7 @@ func makemetric(
 	namePrefix string,
 	nameSuffix string,
 	pluginTags map[string]string,
+	daemonFields map[string]interface{},
 	daemonTags map[string]string,
 	filter Filter,
 	applyFilter bool,
@@ -52,6 +53,13 @@ func makemetric(
 	}
 	if len(nameSuffix) != 0 {
 		measurement = measurement + nameSuffix
+	}
+
+	// Apply daemon-wide fields if set
+	for k, v := range daemonFields {
+		if _, ok := fields[k]; !ok {
+			fields[k] = v
+		}
 	}
 
 	// Apply plugin-wide tags if set

@@ -201,6 +201,7 @@ func (a *Agent) Test() error {
 		acc.SetPrecision(a.Config.Agent.Precision.Duration,
 			a.Config.Agent.Interval.Duration)
 		input.SetTrace(true)
+		input.SetDefaultFields(a.Config.Fields)
 		input.SetDefaultTags(a.Config.Tags)
 
 		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name())
@@ -342,6 +343,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 
 	// Start all ServicePlugins
 	for _, input := range a.Config.Inputs {
+		input.SetDefaultFields(a.Config.Fields)
 		input.SetDefaultTags(a.Config.Tags)
 		switch p := input.Input.(type) {
 		case telegraf.ServiceInput:

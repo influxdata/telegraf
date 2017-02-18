@@ -174,3 +174,19 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	assert.Equal(t, pConfig, c.Inputs[3].Config,
 		"Merged Testdata did not produce correct procstat metadata.")
 }
+
+func TestConfig_GlobalIntField(t *testing.T) {
+	c := NewConfig()
+	c.LoadConfig("./testdata/global_int_field.toml")
+
+	assert.Equal(t, int64(383), c.Fields["version"],
+		"Integer field should be loaded")
+}
+
+func TestConfig_GlobalStringField(t *testing.T) {
+	c := NewConfig()
+	c.LoadConfig("./testdata/global_string_field.toml")
+
+	assert.Equal(t, "bar", c.Fields["foo"],
+		"String field should be loaded")
+}
