@@ -27,6 +27,7 @@ build_script:
 
 test_script:
   - go vet ./...
+  - go test ./plugins/inputs/win_perf_counters/...
 
 artifacts:
   - path: telegraf.exe
