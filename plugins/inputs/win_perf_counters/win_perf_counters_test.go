@@ -149,7 +149,7 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 
 	objectname := "Processor Information"
 	instances[0] = "_Total"
-	instances[1] = "0"
+	instances[1] = "0,1"
 	counters[0] = "% Processor Time"
 
 	var measurement string = "test"
@@ -198,7 +198,7 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 
 	objectname := "Processor Information"
 	instances[0] = "_Total"
-	instances[1] = "0"
+	instances[1] = "0,1"
 	counters[0] = "% Processor Time"
 	counters[1] = "% Idle Time"
 
@@ -435,6 +435,8 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 	instances[0] = "_Total"
 	counters[0] = "Parking Status"
 
+	var expectedCounter string = "Parking_Status"
+
 	var measurement string = "test"
 	var warnonmissing bool = false
 	var failonmissing bool = true
@@ -465,7 +467,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 		"objectname": objectname,
 	}
 	fields := map[string]interface{}{
-		counters[0]: float32(0),
+		expectedCounter: float32(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 
@@ -480,6 +482,8 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 	instances[0] = "_Total"
 	instances[1] = "0,0"
 	counters[0] = "Performance Limit Flags"
+
+	var expectedCounter string = "Performance_Limit_Flags"
 
 	var measurement string = "test"
 	var warnonmissing bool = false
@@ -511,7 +515,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 		"objectname": objectname,
 	}
 	fields := map[string]interface{}{
-		counters[0]: float32(0),
+		expectedCounter: float32(0),
 	}
 
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
@@ -520,7 +524,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 		"objectname": objectname,
 	}
 	fields = map[string]interface{}{
-		counters[0]: float32(0),
+		expectedCounter: float32(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 

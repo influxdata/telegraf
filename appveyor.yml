@@ -27,7 +27,7 @@ build_script:
   - nuget pack d2l.telegraf.nuspec -version "%APPVEYOR_BUILD_VERSION%" -properties "gitsha=%APPVEYOR_REPO_COMMIT%"
 
 test_script:
-  - go vet ./...
+  - cmd: C:\GnuWin32\bin\make test-windows
 
 artifacts:
   - path: telegraf.exe
