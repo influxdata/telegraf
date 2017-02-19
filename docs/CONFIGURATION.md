@@ -30,6 +30,12 @@ Global tags can be specified in the `[global_tags]` section of the config file
 in key="value" format. All metrics being gathered on this host will be tagged
 with the tags specified here.
 
+# Global Fields
+
+Global fields can be specified in the `[global_fields]` section of the config file
+in key="value" format. All metrics being gathered on this host will be appended
+with the fields specified here.
+
 ## Agent Configuration
 
 Telegraf has a few options you can configure under the `[agent]` section of the
@@ -150,6 +156,9 @@ fields which begin with `time_`.
 ```toml
 [global_tags]
   dc = "denver-1"
+
+[global_fields]
+  git-sha = "a3537ef2a8e56f9647c1c281d88e092b651c392c"
 
 [agent]
   interval = "10s"

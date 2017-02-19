@@ -167,6 +167,64 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 	assert.Nil(t, m)
 }
 
+func TestMakeMetricWithDaemonFields(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+	ri.SetDefaultFields(map[string]interface{}{
+		"foo": "bar",
+	})
+
+	ri.SetTrace(true)
+	assert.Equal(t, true, ri.Trace())
+
+	m := ri.MakeMetric(
+		"RITest",
+		map[string]interface{}{"value": int(101)},
+		map[string]string{},
+		telegraf.Untyped,
+		now,
+	)
+
+	var expected [2]string
+	expected[0] = fmt.Sprintf("RITest foo=\"bar\",value=101i %d\n", now.UnixNano())
+	expected[1] = fmt.Sprintf("RITest value=101i,foo=\"bar\" %d\n", now.UnixNano())
+
+	assert.Contains(
+		t,
+		expected,
+		m.String(),
+	)
+}
+
+func TestMakeMetricWithConflictingDaemonFields(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+	ri.SetDefaultFields(map[string]interface{}{
+		"value": "fail",
+	})
+
+	ri.SetTrace(true)
+	assert.Equal(t, true, ri.Trace())
+
+	m := ri.MakeMetric(
+		"RITest",
+		map[string]interface{}{"value": int(222)},
+		map[string]string{},
+		telegraf.Untyped,
+		now,
+	)
+
+	assert.Contains(
+		t,
+		fmt.Sprintf("RITest value=222i %d\n", now.UnixNano()),
+		m.String(),
+	)
+}
+
 func TestMakeMetricWithDaemonTags(t *testing.T) {
 	now := time.Now()
 	ri := NewRunningInput(&testInput{}, &InputConfig{
@@ -189,6 +247,40 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 	assert.Equal(
 		t,
 		fmt.Sprintf("RITest,foo=bar value=101i %d\n", now.UnixNano()),
+		m.String(),
+	)
+}
+
+func TestMakeMetricWithDaemonFieldsAndTags(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+	ri.SetDefaultFields(map[string]interface{}{
+		"field": 343,
+	})
+	ri.SetDefaultTags(map[string]string{
+		"tag": "abc",
+	})
+
+	ri.SetTrace(true)
+	assert.Equal(t, true, ri.Trace())
+
+	m := ri.MakeMetric(
+		"RITest",
+		map[string]interface{}{"value": int(33)},
+		map[string]string{},
+		telegraf.Untyped,
+		now,
+	)
+
+	var expected [2]string
+	expected[0] = fmt.Sprintf("RITest,tag=abc field=343i,value=33i %d\n", now.UnixNano())
+	expected[1] = fmt.Sprintf("RITest,tag=abc value=33i,field=343i %d\n", now.UnixNano())
+
+	assert.Contains(
+		t,
+		expected,
 		m.String(),
 	)
 }
