@@ -413,7 +413,8 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 
 func TestTableBuild_walk(t *testing.T) {
 	tbl := Table{
-		Name: "mytable",
+		Name:       "mytable",
+		IndexAsTag: true,
 		Fields: []Field{
 			{
 				Name:  "myfield1",
@@ -442,7 +443,10 @@ func TestTableBuild_walk(t *testing.T) {
 
 	assert.Equal(t, tb.Name, "mytable")
 	rtr1 := RTableRow{
-		Tags: map[string]string{"myfield1": "foo"},
+		Tags: map[string]string{
+			"myfield1": "foo",
+			"index":    "0",
+		},
 		Fields: map[string]interface{}{
 			"myfield2": 1,
 			"myfield3": float64(0.123),
@@ -450,7 +454,10 @@ func TestTableBuild_walk(t *testing.T) {
 		},
 	}
 	rtr2 := RTableRow{
-		Tags: map[string]string{"myfield1": "bar"},
+		Tags: map[string]string{
+			"myfield1": "bar",
+			"index":    "1",
+		},
 		Fields: map[string]interface{}{
 			"myfield2": 2,
 			"myfield3": float64(0.456),
@@ -458,14 +465,18 @@ func TestTableBuild_walk(t *testing.T) {
 		},
 	}
 	rtr3 := RTableRow{
-		Tags: map[string]string{},
+		Tags: map[string]string{
+			"index": "2",
+		},
 		Fields: map[string]interface{}{
 			"myfield2": 0,
 			"myfield3": float64(0.0),
 		},
 	}
 	rtr4 := RTableRow{
-		Tags: map[string]string{},
+		Tags: map[string]string{
+			"index": "3",
+		},
 		Fields: map[string]interface{}{
 			"myfield3": float64(9.999),
 		},

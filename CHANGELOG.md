@@ -48,6 +48,7 @@ be deprecated eventually.
 - [#2201](https://github.com/influxdata/telegraf/pull/2201): Add lock option to the IPtables input plugin.
 - [#2244](https://github.com/influxdata/telegraf/pull/2244): Support ipmi_sensor plugin querying local ipmi sensors.
 - [#2339](https://github.com/influxdata/telegraf/pull/2339): Increment gather_errors for all errors emitted by inputs.
+- [#1948](https://github.com/influxdata/telegraf/pull/1948): Support adding SNMP table indexes as tags.
 
 ### Bugfixes
 
