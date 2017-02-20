@@ -38,18 +38,27 @@ var (
 
 type Smart struct {
 	Path     string
+	Nocheck  string
 	Excludes []string
 	Devices  []string
 }
 
 var sampleConfig = `
-  ## optionally specify the path to the smartctl executable
+  ## Optionally specify the path to the smartctl executable
   # path = "/usr/bin/smartctl"
   #
-  ## optionally specify devices to exclude from reporting.
+  ## Skip checking disks in this power mode. Defaults to
+  ## "standby" to not wake up disks that have stoped rotating.
+  ## See --nockeck in the man pages for smartctl.
+  ## smartctl version 5.41 and 5.42 have faulty detection of
+  ## power mode and might require changing this value to
+  ## "never" depending on your disks.
+  # nocheck = "standby"
+  #
+  ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
   #
-  ## optionally specify devices and device type, if unset
+  ## Optionally specify devices and device type, if unset
   ## a scan (smartctl --scan) for S.M.A.R.T. devices will
   ## done and all found will be included except for the
   ## excluded in excludes.
@@ -126,7 +135,7 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) []erro
 
 	errchan := make(chan error)
 	for _, device := range devices {
-		go gatherDisk(acc, m.Path, device, errchan)
+		go gatherDisk(acc, m.Path, m.Nocheck, device, errchan)
 	}
 
 	var errors []error
@@ -151,9 +160,10 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, path, device string, err chan error) {
+func gatherDisk(acc telegraf.Accumulator, path, nockeck, device string, err chan error) {
 
-	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "--nocheck=standby", "--format=brief"}
+	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
+	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nockeck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
 	cmd := execCommand(path, args...)
 	out, e := internal.CombinedOutputTimeout(cmd, time.Second*5)
@@ -281,6 +291,8 @@ func init() {
 	if len(path) > 0 {
 		m.Path = path
 	}
+	m.Nocheck = "standby"
+
 	inputs.Add("smart", func() telegraf.Input {
 		return &m
 	})
