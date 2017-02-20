@@ -24,6 +24,8 @@ var (
 	usercapacityInInfo = regexp.MustCompile("^User Capacity:\\s+([0-9,]+)\\s+bytes.*$")
 	// SMART support is: Enabled
 	smartEnabledInInfo = regexp.MustCompile("^SMART support is:\\s+(\\w+)$")
+	// SMART overall-health self-assessment test result: PASSED
+	smartOverallHealth = regexp.MustCompile("^SMART overall-health self-assessment test result:\\s+(\\w+).*$")
 
 	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
@@ -120,7 +122,7 @@ func excludedDev(excludes []string, deviceLine string) bool {
 func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) error {
 
 	for _, device := range devices {
-		args := []string{"--info", "--attributes", "--tolerance=verypermissive", "--nocheck=standby", "--format=brief"}
+		args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "--nocheck=standby", "--format=brief"}
 		args = append(args, strings.Split(device, " ")...)
 		cmd := execCommand(m.Path, args...)
 		out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
@@ -150,6 +152,11 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) error 
 			enabled := smartEnabledInInfo.FindStringSubmatch(line)
 			if len(enabled) > 1 {
 				device_tags["enabled"] = enabled[1]
+			}
+
+			health := smartOverallHealth.FindStringSubmatch(line)
+			if len(health) > 1 {
+				device_tags["health"] = health[1]
 			}
 
 			attr := attribute.FindStringSubmatch(line)

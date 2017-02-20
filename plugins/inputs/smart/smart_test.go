@@ -35,6 +35,9 @@ SMART support is: Available - device has SMART capability.
 SMART support is: Enabled
 
 === START OF READ SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+=== START OF READ SMART DATA SECTION ===
 SMART Attributes Data Structure revision number: 1
 Vendor Specific SMART Attributes with Thresholds:
 ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
@@ -78,6 +81,7 @@ func TestGather(t *testing.T) {
 		"serial_no":    "S0X5NZBC422720",
 		"enabled":      "Enabled",
 		"capacity":     "251000193024",
+		"health":       "PASSED",
 	}
 
 	var testsAda0Device = []struct {
