@@ -73,10 +73,11 @@ var testConfigParsed bool
 var testObject string
 
 type Win_PerfCounters struct {
-	PrintValid      bool
-	TestName        string
-	PreVistaSupport bool
-	Object          []perfobject
+	PrintValid         bool
+	TestName           string
+	PreVistaSupport    bool
+	Object             []perfobject
+	ExcludeObjectNames bool
 }
 
 type perfobject struct {
@@ -275,7 +276,9 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 						if s != "" {
 							tags["instance"] = s
 						}
-						tags["objectname"] = metric.objectName
+						if !m.ExcludeObjectNames {
+							tags["objectname"] = metric.objectName
+						}
 						fields[sanitizedChars.Replace(metric.counter)] =
 							float32(c.FmtValue.DoubleValue)
 
