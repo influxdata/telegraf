@@ -1,6 +1,7 @@
 package smart
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -77,9 +78,13 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	err := m.getAttributes(acc, devices)
-	if err != nil {
-		return err
+	errs := m.getAttributes(acc, devices)
+	if len(errs) > 0 {
+		var errStrs []string
+		for _, e := range errs {
+			errStrs = append(errStrs, e.Error())
+		}
+		return errors.New(strings.Join(errStrs, ", "))
 	}
 
 	return nil
@@ -119,79 +124,97 @@ func excludedDev(excludes []string, deviceLine string) bool {
 }
 
 // Get info and attributes for each S.M.A.R.T. device
-func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) error {
+func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) []error {
 
+	errchan := make(chan error)
 	for _, device := range devices {
-		args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "--nocheck=standby", "--format=brief"}
-		args = append(args, strings.Split(device, " ")...)
-		cmd := execCommand(m.Path, args...)
-		out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
+		go gatherDisk(acc, m.Path, device, errchan)
+	}
+
+	var errors []error
+	for i := 0; i < len(devices); i++ {
+		err := <-errchan
 		if err != nil {
-			return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
-		}
-
-		device_tags := map[string]string{}
-		device_tags["device"] = strings.Split(device, " ")[0]
-
-		for _, line := range strings.Split(string(out), "\n") {
-			model := modelInInfo.FindStringSubmatch(line)
-			if len(model) > 1 {
-				device_tags["device_model"] = model[1]
-			}
-
-			serial := serialInInfo.FindStringSubmatch(line)
-			if len(serial) > 1 {
-				device_tags["serial_no"] = serial[1]
-			}
-
-			capacity := usercapacityInInfo.FindStringSubmatch(line)
-			if len(capacity) > 1 {
-				device_tags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
-			}
-
-			enabled := smartEnabledInInfo.FindStringSubmatch(line)
-			if len(enabled) > 1 {
-				device_tags["enabled"] = enabled[1]
-			}
-
-			health := smartOverallHealth.FindStringSubmatch(line)
-			if len(health) > 1 {
-				device_tags["health"] = health[1]
-			}
-
-			attr := attribute.FindStringSubmatch(line)
-
-			if len(attr) > 1 {
-				tags := map[string]string{}
-				for k, v := range device_tags {
-					tags[k] = v
-				}
-				fields := make(map[string]interface{})
-
-				tags["id"] = attr[1]
-				tags["name"] = attr[2]
-				tags["flags"] = attr[3]
-
-				if i, err := strconv.Atoi(attr[4]); err == nil {
-					fields["value"] = i
-				}
-				if i, err := strconv.Atoi(attr[5]); err == nil {
-					fields["worst"] = i
-				}
-				if i, err := strconv.Atoi(attr[6]); err == nil {
-					fields["threshold"] = i
-				}
-
-				tags["fail"] = attr[7]
-				if val, err := parseRawValue(attr[8]); err == nil {
-					fields["raw_value"] = val
-				}
-
-				acc.AddFields("smart", fields, tags)
-			}
+			errors = append(errors, err)
 		}
 	}
-	return nil
+
+	return errors
+}
+
+func gatherDisk(acc telegraf.Accumulator, path, device string, err chan error) {
+
+	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "--nocheck=standby", "--format=brief"}
+	args = append(args, strings.Split(device, " ")...)
+	cmd := execCommand(path, args...)
+	out, e := internal.CombinedOutputTimeout(cmd, time.Second*5)
+	if e != nil {
+
+		err <- fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), e, string(out))
+		return
+	}
+
+	device_tags := map[string]string{}
+	device_tags["device"] = strings.Split(device, " ")[0]
+
+	for _, line := range strings.Split(string(out), "\n") {
+		model := modelInInfo.FindStringSubmatch(line)
+		if len(model) > 1 {
+			device_tags["device_model"] = model[1]
+		}
+
+		serial := serialInInfo.FindStringSubmatch(line)
+		if len(serial) > 1 {
+			device_tags["serial_no"] = serial[1]
+		}
+
+		capacity := usercapacityInInfo.FindStringSubmatch(line)
+		if len(capacity) > 1 {
+			device_tags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
+		}
+
+		enabled := smartEnabledInInfo.FindStringSubmatch(line)
+		if len(enabled) > 1 {
+			device_tags["enabled"] = enabled[1]
+		}
+
+		health := smartOverallHealth.FindStringSubmatch(line)
+		if len(health) > 1 {
+			device_tags["health"] = health[1]
+		}
+
+		attr := attribute.FindStringSubmatch(line)
+
+		if len(attr) > 1 {
+			tags := map[string]string{}
+			for k, v := range device_tags {
+				tags[k] = v
+			}
+			fields := make(map[string]interface{})
+
+			tags["id"] = attr[1]
+			tags["name"] = attr[2]
+			tags["flags"] = attr[3]
+
+			if i, err := strconv.Atoi(attr[4]); err == nil {
+				fields["value"] = i
+			}
+			if i, err := strconv.Atoi(attr[5]); err == nil {
+				fields["worst"] = i
+			}
+			if i, err := strconv.Atoi(attr[6]); err == nil {
+				fields["threshold"] = i
+			}
+
+			tags["fail"] = attr[7]
+			if val, err := parseRawValue(attr[8]); err == nil {
+				fields["raw_value"] = val
+			}
+
+			acc.AddFields("smart", fields, tags)
+		}
+	}
+	err <- nil
 }
 
 func parseRawValue(rawVal string) (int, error) {
