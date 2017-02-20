@@ -110,12 +110,10 @@ func (m *Smart) scan() ([]string, error) {
 }
 
 func excludedDev(excludes []string, deviceLine string) bool {
-	fmt.Printf("DEBUG: %s in %v?\n", deviceLine, excludes)
 	device := strings.Split(deviceLine, " ")
 	if len(device) != 0 {
 		for _, exclude := range excludes {
 			if device[0] == exclude {
-				fmt.Printf("DEBUG: filtered: %s\n", device[0])
 				return true
 			}
 		}
