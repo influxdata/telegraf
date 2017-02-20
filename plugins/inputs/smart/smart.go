@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -64,7 +65,6 @@ func (m *Smart) Description() string {
 }
 
 func (m *Smart) Gather(acc telegraf.Accumulator) error {
-	fmt.Printf("Config: %v\n", m)
 	if len(m.Path) == 0 {
 		return fmt.Errorf("smartctl not found: verify that smartctl is installed and that smartctl is in your PATH")
 	}
@@ -142,22 +142,37 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) []erro
 	return errors
 }
 
+// Command line parse errors are denoted by the exit code having the 0 bit set.
+// All other errors are drive/communication errors and should be ignored.
+func exitStatus(err error) (int, error) {
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			return status.ExitStatus(), nil
+		}
+	}
+	return 0, err
+}
+
 func gatherDisk(acc telegraf.Accumulator, path, device string, err chan error) {
 
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "--nocheck=standby", "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
 	cmd := execCommand(path, args...)
 	out, e := internal.CombinedOutputTimeout(cmd, time.Second*5)
-	if e != nil {
+	outStr := string(out)
 
-		err <- fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), e, string(out))
+	// Ignore all exit statuses except if it is a command line parse error
+	exitStatus, er := exitStatus(e)
+	if er != nil {
+		err <- fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), e, outStr)
 		return
 	}
 
 	device_tags := map[string]string{}
 	device_tags["device"] = strings.Split(device, " ")[0]
 
-	for _, line := range strings.Split(string(out), "\n") {
+	for _, line := range strings.Split(outStr, "\n") {
+
 		model := modelInInfo.FindStringSubmatch(line)
 		if len(model) > 1 {
 			device_tags["device_model"] = model[1]
@@ -196,6 +211,7 @@ func gatherDisk(acc telegraf.Accumulator, path, device string, err chan error) {
 			tags["name"] = attr[2]
 			tags["flags"] = attr[3]
 
+			fields["exit_status"] = exitStatus
 			if i, err := strconv.Atoi(attr[4]); err == nil {
 				fields["value"] = i
 			}

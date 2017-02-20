@@ -73,7 +73,7 @@ func TestGather(t *testing.T) {
 	err := s.Gather(&acc)
 
 	require.NoError(t, err)
-	assert.Equal(t, 48, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 60, acc.NFields(), "Wrong number of fields gathered")
 
 	device_tags := map[string]string{
 		"device":       "/dev/ada0",
@@ -90,10 +90,11 @@ func TestGather(t *testing.T) {
 	}{
 		{
 			map[string]interface{}{
-				"value":     int(200),
-				"worst":     int(200),
-				"threshold": int(0),
-				"raw_value": int(0),
+				"value":       int(200),
+				"worst":       int(200),
+				"threshold":   int(0),
+				"raw_value":   int(0),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "1",
@@ -104,10 +105,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(100),
-				"worst":     int(100),
-				"threshold": int(0),
-				"raw_value": int(0),
+				"value":       int(100),
+				"worst":       int(100),
+				"threshold":   int(0),
+				"raw_value":   int(0),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "5",
@@ -118,10 +120,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(99),
-				"worst":     int(99),
-				"threshold": int(0),
-				"raw_value": int(2988),
+				"value":       int(99),
+				"worst":       int(99),
+				"threshold":   int(0),
+				"raw_value":   int(2988),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "9",
@@ -132,10 +135,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(85),
-				"worst":     int(85),
-				"threshold": int(0),
-				"raw_value": int(14879),
+				"value":       int(85),
+				"worst":       int(85),
+				"threshold":   int(0),
+				"raw_value":   int(14879),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "12",
@@ -146,10 +150,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(253),
-				"worst":     int(253),
-				"threshold": int(10),
-				"raw_value": int(2044932921600),
+				"value":       int(253),
+				"worst":       int(253),
+				"threshold":   int(10),
+				"raw_value":   int(2044932921600),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "169",
@@ -160,10 +165,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(185),
-				"worst":     int(185),
-				"threshold": int(100),
-				"raw_value": int(957808640337),
+				"value":       int(185),
+				"worst":       int(185),
+				"threshold":   int(100),
+				"raw_value":   int(957808640337),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "173",
@@ -174,10 +180,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(55),
-				"worst":     int(40),
-				"threshold": int(45),
-				"raw_value": int(45),
+				"value":       int(55),
+				"worst":       int(40),
+				"threshold":   int(45),
+				"raw_value":   int(45),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "190",
@@ -188,10 +195,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(97),
-				"worst":     int(97),
-				"threshold": int(0),
-				"raw_value": int(14716),
+				"value":       int(97),
+				"worst":       int(97),
+				"threshold":   int(0),
+				"raw_value":   int(14716),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "192",
@@ -202,10 +210,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(66),
-				"worst":     int(21),
-				"threshold": int(0),
-				"raw_value": int(34),
+				"value":       int(66),
+				"worst":       int(21),
+				"threshold":   int(0),
+				"raw_value":   int(34),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "194",
@@ -216,10 +225,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(100),
-				"worst":     int(100),
-				"threshold": int(0),
-				"raw_value": int(0),
+				"value":       int(100),
+				"worst":       int(100),
+				"threshold":   int(0),
+				"raw_value":   int(0),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "197",
@@ -230,10 +240,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(200),
-				"worst":     int(200),
-				"threshold": int(0),
-				"raw_value": int(0),
+				"value":       int(200),
+				"worst":       int(200),
+				"threshold":   int(0),
+				"raw_value":   int(0),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "199",
@@ -244,10 +255,11 @@ func TestGather(t *testing.T) {
 		},
 		{
 			map[string]interface{}{
-				"value":     int(100),
-				"worst":     int(253),
-				"threshold": int(0),
-				"raw_value": int(23709323),
+				"value":       int(100),
+				"worst":       int(253),
+				"threshold":   int(0),
+				"raw_value":   int(23709323),
+				"exit_status": int(0),
 			},
 			map[string]string{
 				"id":    "240",
