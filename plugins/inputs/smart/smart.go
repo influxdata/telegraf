@@ -16,7 +16,6 @@ import (
 var (
 	execCommand = exec.Command // execCommand is used to mock commands in tests.
 
-	deviceInScan = regexp.MustCompile("^(/dev/\\w*)\\s+.*")
 	// Device Model:     APPLE SSD SM256E
 	modelInInfo = regexp.MustCompile("^Device Model:\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
@@ -46,9 +45,11 @@ var sampleConfig = `
   ## optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
   #
-  ## optionally specify devices, if unset a scan (smartctl --scan)
-  ## for S.M.A.R.T. devices will done and all found will be included.
-  # devices = [ "/dev/ada0" ]
+  ## optionally specify devices and device type, if unset
+  ## a scan (smartctl --scan) for S.M.A.R.T. devices will
+  ## done and all found will be included except for the
+  ## excluded in excludes.
+  # devices = [ "/dev/ada0 -d atacam" ]
 `
 
 func (m *Smart) SampleConfig() string {
@@ -93,20 +94,23 @@ func (m *Smart) scan() ([]string, error) {
 
 	devices := []string{}
 	for _, line := range strings.Split(string(out), "\n") {
-		dev := deviceInScan.FindStringSubmatch(line)
-		if len(dev) == 2 && !excludedDev(m.Excludes, dev[1]) {
-			devices = append(devices, dev[1])
+		dev := strings.Split(line, "#")
+		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
+			devices = append(devices, strings.TrimSpace(dev[0]))
 		}
 	}
 	return devices, nil
 }
 
-func excludedDev(excludes []string, device string) bool {
-	fmt.Printf("DEBUG: %s in %v?\n", device, excludes)
-	for _, exclude := range excludes {
-		if device == exclude {
-			fmt.Printf("DEBUG: filtered: %s\n", device)
-			return true
+func excludedDev(excludes []string, deviceLine string) bool {
+	fmt.Printf("DEBUG: %s in %v?\n", deviceLine, excludes)
+	device := strings.Split(deviceLine, " ")
+	if len(device) != 0 {
+		for _, exclude := range excludes {
+			if device[0] == exclude {
+				fmt.Printf("DEBUG: filtered: %s\n", device[0])
+				return true
+			}
 		}
 	}
 	return false
@@ -116,14 +120,16 @@ func excludedDev(excludes []string, device string) bool {
 func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) error {
 
 	for _, device := range devices {
-		cmd := execCommand(m.Path, "--info", "--attributes", "--tolerance=verypermissive", "--nocheck=standby", "--format=brief", device)
+		args := []string{"--info", "--attributes", "--tolerance=verypermissive", "--nocheck=standby", "--format=brief"}
+		args = append(args, strings.Split(device, " ")...)
+		cmd := execCommand(m.Path, args...)
 		out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
 		if err != nil {
 			return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 		}
 
 		device_tags := map[string]string{}
-		device_tags["device"] = device
+		device_tags["device"] = strings.Split(device, " ")[0]
 
 		for _, line := range strings.Split(string(out), "\n") {
 			model := modelInInfo.FindStringSubmatch(line)

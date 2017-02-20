@@ -61,7 +61,7 @@ ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 
 func TestGather(t *testing.T) {
 	s := &Smart{
-		path: "smartctl",
+		Path: "smartctl",
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
@@ -264,9 +264,9 @@ func TestGather(t *testing.T) {
 }
 
 func TestExcludedDev(t *testing.T) {
-	assert.Equal(t, true, excludedDev([]string{"/dev/pass6"}, "/dev/pass6"), "Should be excluded.")
-	assert.Equal(t, false, excludedDev([]string{}, "/dev/pass6"), "Shouldn't be excluded.")
-	assert.Equal(t, false, excludedDev([]string{"/dev/pass6"}, "/dev/pass1"), "Shouldn't be excluded.")
+	assert.Equal(t, true, excludedDev([]string{"/dev/pass6"}, "/dev/pass6 -d atacam"), "Should be excluded.")
+	assert.Equal(t, false, excludedDev([]string{}, "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
+	assert.Equal(t, false, excludedDev([]string{"/dev/pass6"}, "/dev/pass1 -d atacam"), "Shouldn't be excluded.")
 
 }
 
