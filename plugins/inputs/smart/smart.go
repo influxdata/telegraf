@@ -168,6 +168,8 @@ func gatherDisk(acc telegraf.Accumulator, path, device string, err chan error) {
 
 	device_tags := map[string]string{}
 	device_tags["device"] = strings.Split(device, " ")[0]
+	device_fields := make(map[string]interface{})
+	device_fields["exit_status"] = exitStatus
 
 	for _, line := range strings.Split(outStr, "\n") {
 
@@ -200,11 +202,9 @@ func gatherDisk(acc telegraf.Accumulator, path, device string, err chan error) {
 
 		if len(attr) > 1 {
 			tags := map[string]string{}
-			for k, v := range device_tags {
-				tags[k] = v
-			}
 			fields := make(map[string]interface{})
 
+			tags["device"] = strings.Split(device, " ")[0]
 			tags["id"] = attr[1]
 			tags["name"] = attr[2]
 			tags["flags"] = attr[3]
@@ -225,9 +225,11 @@ func gatherDisk(acc telegraf.Accumulator, path, device string, err chan error) {
 				fields["raw_value"] = val
 			}
 
-			acc.AddFields("smart", fields, tags)
+			acc.AddFields("smart_attribute", fields, tags)
 		}
 	}
+	acc.AddFields("smart_device", device_fields, device_tags)
+
 	err <- nil
 }
 

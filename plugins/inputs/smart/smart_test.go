@@ -73,18 +73,9 @@ func TestGather(t *testing.T) {
 	err := s.Gather(&acc)
 
 	require.NoError(t, err)
-	assert.Equal(t, 60, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 61, acc.NFields(), "Wrong number of fields gathered")
 
-	device_tags := map[string]string{
-		"device":       "/dev/ada0",
-		"device_model": "APPLE SSD SM256E",
-		"serial_no":    "S0X5NZBC422720",
-		"enabled":      "Enabled",
-		"capacity":     "251000193024",
-		"health":       "PASSED",
-	}
-
-	var testsAda0Device = []struct {
+	var testsAda0Attributes = []struct {
 		fields map[string]interface{}
 		tags   map[string]string
 	}{
@@ -97,10 +88,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "1",
-				"name":  "Raw_Read_Error_Rate",
-				"flags": "-O-RC-",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "1",
+				"name":   "Raw_Read_Error_Rate",
+				"flags":  "-O-RC-",
+				"fail":   "-",
 			},
 		},
 		{
@@ -112,10 +104,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "5",
-				"name":  "Reallocated_Sector_Ct",
-				"flags": "PO--CK",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "5",
+				"name":   "Reallocated_Sector_Ct",
+				"flags":  "PO--CK",
+				"fail":   "-",
 			},
 		},
 		{
@@ -127,10 +120,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "9",
-				"name":  "Power_On_Hours",
-				"flags": "-O--CK",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "9",
+				"name":   "Power_On_Hours",
+				"flags":  "-O--CK",
+				"fail":   "-",
 			},
 		},
 		{
@@ -142,10 +136,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "12",
-				"name":  "Power_Cycle_Count",
-				"flags": "-O--CK",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "12",
+				"name":   "Power_Cycle_Count",
+				"flags":  "-O--CK",
+				"fail":   "-",
 			},
 		},
 		{
@@ -157,10 +152,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "169",
-				"name":  "Unknown_Attribute",
-				"flags": "PO--C-",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "169",
+				"name":   "Unknown_Attribute",
+				"flags":  "PO--C-",
+				"fail":   "-",
 			},
 		},
 		{
@@ -172,10 +168,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "173",
-				"name":  "Wear_Leveling_Count",
-				"flags": "-O--CK",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "173",
+				"name":   "Wear_Leveling_Count",
+				"flags":  "-O--CK",
+				"fail":   "-",
 			},
 		},
 		{
@@ -187,10 +184,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "190",
-				"name":  "Airflow_Temperature_Cel",
-				"flags": "-O---K",
-				"fail":  "Past",
+				"device": "/dev/ada0",
+				"id":     "190",
+				"name":   "Airflow_Temperature_Cel",
+				"flags":  "-O---K",
+				"fail":   "Past",
 			},
 		},
 		{
@@ -202,10 +200,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "192",
-				"name":  "Power-Off_Retract_Count",
-				"flags": "-O--C-",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "192",
+				"name":   "Power-Off_Retract_Count",
+				"flags":  "-O--C-",
+				"fail":   "-",
 			},
 		},
 		{
@@ -217,10 +216,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "194",
-				"name":  "Temperature_Celsius",
-				"flags": "-O---K",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "194",
+				"name":   "Temperature_Celsius",
+				"flags":  "-O---K",
+				"fail":   "-",
 			},
 		},
 		{
@@ -232,10 +232,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "197",
-				"name":  "Current_Pending_Sector",
-				"flags": "-O---K",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "197",
+				"name":   "Current_Pending_Sector",
+				"flags":  "-O---K",
+				"fail":   "-",
 			},
 		},
 		{
@@ -247,10 +248,11 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "199",
-				"name":  "UDMA_CRC_Error_Count",
-				"flags": "-O-RC-",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "199",
+				"name":   "UDMA_CRC_Error_Count",
+				"flags":  "-O-RC-",
+				"fail":   "-",
 			},
 		},
 		{
@@ -262,21 +264,44 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"id":    "240",
-				"name":  "Head_Flying_Hours",
-				"flags": "------",
-				"fail":  "-",
+				"device": "/dev/ada0",
+				"id":     "240",
+				"name":   "Head_Flying_Hours",
+				"flags":  "------",
+				"fail":   "-",
+			},
+		},
+	}
+
+	for _, test := range testsAda0Attributes {
+		acc.AssertContainsTaggedFields(t, "smart_attribute", test.fields, test.tags)
+	}
+
+	// tags = map[string]string{}
+
+	var testsAda0Device = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		{
+			map[string]interface{}{
+				"exit_status": int(0),
+			},
+			map[string]string{
+				"device":       "/dev/ada0",
+				"device_model": "APPLE SSD SM256E",
+				"serial_no":    "S0X5NZBC422720",
+				"enabled":      "Enabled",
+				"capacity":     "251000193024",
+				"health":       "PASSED",
 			},
 		},
 	}
 
 	for _, test := range testsAda0Device {
-		for k, v := range device_tags {
-			test.tags[k] = v
-		}
-
-		acc.AssertContainsTaggedFields(t, "smart", test.fields, test.tags)
+		acc.AssertContainsTaggedFields(t, "smart_device", test.fields, test.tags)
 	}
+
 }
 
 func TestExcludedDev(t *testing.T) {
