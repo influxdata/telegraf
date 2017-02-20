@@ -132,6 +132,7 @@ configuration options.
 * [mesos](./plugins/inputs/mesos)
 * [mongodb](./plugins/inputs/mongodb)
 * [mysql](./plugins/inputs/mysql)
+* [nats_monitor](./plugins/inputs/nats_monitor)
 * [net_response](./plugins/inputs/net_response)
 * [nginx](./plugins/inputs/nginx)
 * [nsq](./plugins/inputs/nsq)
