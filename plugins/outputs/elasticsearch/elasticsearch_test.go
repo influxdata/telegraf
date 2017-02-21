@@ -2,7 +2,9 @@ package elasticsearch
 
 import (
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -17,10 +19,11 @@ func TestConnectAndWrite(t *testing.T) {
 	e := &Elasticsearch{
 		URLs:                urls,
 		IndexName:           "littletest-%Y.%m.%d",
+		Timeout:             internal.Duration{Duration: time.Second * 5},
 		ManageTemplate:      true,
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   true,
-		HealthCheckInterval: 10,
+		HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
 	}
 
 	// Verify that we can connect to the ElasticSearch

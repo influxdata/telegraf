@@ -2,7 +2,7 @@
 
 This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (http://olivere.github.io/elastic/).
 
-It only supports Elasticsearch 5.x series currently.
+Currently it only supports Elasticsearch 5.x series.
 
 ## Elasticsearch indexes and templates
 
@@ -20,7 +20,7 @@ Index templates are used in Elasticsearch to define settings and mappings for th
 For more information on how this works, see https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
 
 This plugin can create a working template for use with telegraf metrics. It uses Elasticsearch dynamic templates feature to set proper types for the tags and metrics fields.
-If the template specified already exists, it will not overwrite unless you configure this plugin to do so.
+If the template specified already exists, it will not overwrite unless you configure this plugin to do so. Thus you can customize this template after its creation if necessary.
 
 Example of an index template created by telegraf:
 
@@ -28,6 +28,16 @@ Example of an index template created by telegraf:
 {
   "order": 0,
   "template": "telegraf-*",
+  "settings": {
+    "index": {
+      "mapping": {
+        "total_fields": {
+          "limit": "2000"
+        }
+      },
+      "refresh_interval": "10s"
+    }
+  },
   "mappings": {
     "_default_": {
       "dynamic_templates": [
@@ -42,12 +52,29 @@ Example of an index template created by telegraf:
           }
         },
         {
-          "metrics": {
+          "metrics_long": {
             "mapping": {
               "index": false,
               "type": "float"
             },
             "match_mapping_type": "long"
+          }
+        },
+        {
+          "metrics_double": {
+            "mapping": {
+              "index": false,
+              "type": "float"
+            },
+            "match_mapping_type": "double"
+          }
+        },
+        {
+          "text_fields": {
+            "mapping": {
+              "norms": false
+            },
+            "match": "*"
           }
         }
       ],
@@ -55,15 +82,16 @@ Example of an index template created by telegraf:
         "enabled": false
       },
       "properties": {
-        "measurement_name": {
-          "type": "keyword"
-        },
         "@timestamp": {
           "type": "date"
+        },
+        "measurement_name": {
+          "type": "keyword"
         }
       }
     }
-  }
+  },
+  "aliases": {}
 }
 
 ```
@@ -123,17 +151,19 @@ This plugin will format the events in the following way:
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   urls = [ "http://node1.es.example.com:9200" ] # required.
+  ## Elasticsearch client timeout, defaults to "5s" if not set.
+  timeout = "5s"
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
   enable_sniffer = true
-  ## Set the interval to check if the nodes are available, in seconds.
-  ## Setting to 0 will disable the health check (not recommended in production)
-  health_check_interval = 10
+  ## Set the interval to check if the Elasticsearch nodes are available
+  ## Setting to "0s" will disable the health check (not recommended in production)
+  health_check_interval = "10s"
   ## HTTP basic authentication details (eg. when using Shield)
   # username = "telegraf"
   # password = "mypassword"
 
-  # Index Config
+  ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
   ## You can use the date specifiers below to create indexes per time frame.
   ## The metric timestamp will be used to decide the destination index name
@@ -150,7 +180,7 @@ This plugin will format the events in the following way:
   manage_template = true
   ## The template name used for telegraf indexes
   template_name = "telegraf"
-  ## Set to true if you want to overwrite an existing template
+  ## Set to true if you want telegraf to overwrite an existing template
   overwrite_template = false
 ```
 
@@ -168,11 +198,11 @@ This plugin will format the events in the following way:
 ```
 
 ### Optional parameters:
-
+* `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
 * `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster nodes, thus it is not necessary to list all nodes in the urls config option.
 * `health_check_interval`: Set the interval to check if the nodes are available, in seconds. Setting to 0 will disable the health check (not recommended in production).
 * `username`: The username for HTTP basic authentication details (eg. when using Shield).
 * `password`: The password for HTTP basic authentication details (eg. when using Shield).
 * `manage_template`: Set to true if you want telegraf to manage its index template. If enabled it will create a recommended index template for telegraf indexes.
 * `template_name`: The template name used for telegraf indexes.
-* `overwrite_template`: Set to true if you want to overwrite an existing template.
+* `overwrite_template`: Set to true if you want telegraf to overwrite an existing template.

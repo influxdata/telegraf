@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -19,7 +20,8 @@ type Elasticsearch struct {
 	Username            string
 	Password            string
 	EnableSniffer       bool
-	HealthCheckInterval int
+	Timeout             internal.Duration
+	HealthCheckInterval internal.Duration
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
@@ -31,17 +33,19 @@ var sampleConfig = `
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   urls = [ "http://node1.es.example.com:9200" ] # required.
+  ## Elasticsearch client timeout, defaults to "5s" if not set. 
+  timeout = "5s"
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
   enable_sniffer = true
-  ## Set the interval to check if the nodes are available, in seconds
-  ## Setting to 0 will disable the health check (not recommended in production)
-  health_check_interval = 10
+  ## Set the interval to check if the Elasticsearch nodes are available
+  ## Setting to "0s" will disable the health check (not recommended in production)
+  health_check_interval = "10s"
   ## HTTP basic authentication details (eg. when using Shield)
   # username = "telegraf"
   # password = "mypassword"
 
-  # Index Config
+  ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
   ## You can use the date specifiers below to create indexes per time frame.
   ## The metric timestamp will be used to decide the destination index name
@@ -58,7 +62,7 @@ var sampleConfig = `
   manage_template = true
   ## The template name used for telegraf indexes
   template_name = "telegraf"
-  ## Set to true if you want to overwrite an existing template
+  ## Set to true if you want telegraf to overwrite an existing template
   overwrite_template = false
 `
 
@@ -67,13 +71,15 @@ func (a *Elasticsearch) Connect() error {
 		return fmt.Errorf("Elasticsearch urls or index_name is not defined")
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), a.Timeout.Duration)
+	defer cancel()
 
 	var clientOptions []elastic.ClientOptionFunc
 
 	clientOptions = append(clientOptions,
 		elastic.SetSniff(a.EnableSniffer),
 		elastic.SetURL(a.URLs...),
+		elastic.SetHealthcheckInterval(a.HealthCheckInterval.Duration),
 	)
 
 	if a.Username != "" && a.Password != "" {
@@ -82,9 +88,9 @@ func (a *Elasticsearch) Connect() error {
 		)
 	}
 
-	if a.HealthCheckInterval > 0 {
+	if a.HealthCheckInterval.Duration == 0 {
 		clientOptions = append(clientOptions,
-			elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)*time.Second),
+			elastic.SetHealthcheck(false),
 		)
 	}
 
@@ -112,64 +118,9 @@ func (a *Elasticsearch) Connect() error {
 	a.Client = client
 
 	if a.ManageTemplate {
-		if a.TemplateName == "" {
-			return fmt.Errorf("Elasticsearch template_name configuration not defined")
-		}
-
-		templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
-
-		if errExists != nil {
-			return fmt.Errorf("Elasticsearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
-		}
-
-		if (a.OverwriteTemplate) || (!templateExists) {
-			// Create or update the template
-			tmpl := fmt.Sprintf(`
-			{ "template":"%s*",
-				"mappings" : {
-					"_default_" : {
-						"_all": { "enabled": false	},
-						"properties" : {
-							"@timestamp" : { "type" : "date" },
-							"measurement_name" : { "type" : "keyword" }
-						},
-						"dynamic_templates": [
-							{
-								"tags": {
-									"match_mapping_type": "string",
-									"path_match": "tag.*",
-									"mapping": {
-										"ignore_above": 512,
-										"type": "keyword"
-									}
-								}
-							},
-							{
-								"metrics": {
-									"match_mapping_type": "long",
-									"mapping": {
-										"type": "float",
-										"index": false
-									}
-								}
-							}
-						]
-					}
-				}
-			}`, a.IndexName[0:strings.Index(a.IndexName, "%")])
-
-			_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx)
-
-			if errCreateTemplate != nil {
-				return fmt.Errorf("Elasticsearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
-			}
-
-			log.Printf("D! Elasticsearch template %s created or updated\n", a.TemplateName)
-
-		} else {
-
-			log.Println("D! Found existing Elasticsearch template. Skipping template management")
-
+		err := a.manageTemplate(ctx)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -181,7 +132,6 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	ctx := context.Background()
 	bulkRequest := a.Client.Bulk()
 
 	for _, metric := range metrics {
@@ -204,14 +154,117 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 	}
 
-	_, err := bulkRequest.Do(ctx)
+	ctx, cancel := context.WithTimeout(context.Background(), a.Timeout.Duration)
+	defer cancel()
+
+	res, err := bulkRequest.Do(ctx)
 
 	if err != nil {
 		return fmt.Errorf("Error sending bulk request to Elasticsearch: %s", err)
 	}
 
+	if res.Errors {
+		log.Printf("W! Elasticsearch failed to index %d metrics", len(res.Failed()))
+		for id, err := range res.Failed() {
+			log.Printf("D! Document not indexed: %d - error: %s", id, err.Error.Reason)
+		}
+	}
+
 	return nil
 
+}
+
+func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
+	if a.TemplateName == "" {
+		return fmt.Errorf("Elasticsearch template_name configuration not defined")
+	}
+
+	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
+
+	if errExists != nil {
+		return fmt.Errorf("Elasticsearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
+	}
+
+	templatePattern := a.IndexName + "*"
+
+	if strings.Contains(a.IndexName, "%") {
+		templatePattern = a.IndexName[0:strings.Index(a.IndexName, "%")] + "*"
+	}
+
+	if (a.OverwriteTemplate) || (!templateExists) {
+		// Create or update the template
+		tmpl := fmt.Sprintf(`
+                    {
+                            "template":"%s",
+                            "settings": {
+                                    "index": {
+                                            "refresh_interval": "10s",
+                                            "mapping.total_fields.limit": 2000
+                                    }
+                            },
+                            "mappings" : {
+                                    "_default_" : {
+                                            "_all": { "enabled": false      },
+                                            "properties" : {
+                                                    "@timestamp" : { "type" : "date" },
+                                                    "measurement_name" : { "type" : "keyword" }
+                                            },
+                                            "dynamic_templates": [
+                                                    {
+                                                            "tags": {
+                                                                    "match_mapping_type": "string",
+                                                                    "path_match": "tag.*",
+                                                                    "mapping": {
+                                                                            "ignore_above": 512,
+                                                                            "type": "keyword"
+                                                                    }
+                                                            }
+                                                    },
+                                                    {
+                                                            "metrics_long": {
+                                                                    "match_mapping_type": "long",
+                                                                    "mapping": {
+                                                                            "type": "float",
+                                                                            "index": false
+                                                                    }
+                                                            }
+                                                    },
+                                                    {
+                                                            "metrics_double": {
+                                                                    "match_mapping_type": "double",
+                                                                    "mapping": {
+                                                                            "type": "float",
+                                                                            "index": false
+                                                                    }
+                                                            }
+                                                    },
+                                                    {
+                                                            "text_fields": {
+                                                                    "match": "*",
+                                                                    "mapping": {
+                                                                            "norms": false
+                                                                    }
+                                                            }
+                                                    }
+                                            ]
+                                    }
+                            }
+                    }`, templatePattern)
+
+		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx)
+
+		if errCreateTemplate != nil {
+			return fmt.Errorf("Elasticsearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
+		}
+
+		log.Printf("D! Elasticsearch template %s created or updated\n", a.TemplateName)
+
+	} else {
+
+		log.Println("D! Found existing Elasticsearch template. Skipping template management")
+
+	}
+	return nil
 }
 
 func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time) string {
@@ -246,6 +299,9 @@ func (a *Elasticsearch) Close() error {
 
 func init() {
 	outputs.Add("elasticsearch", func() telegraf.Output {
-		return &Elasticsearch{}
+		return &Elasticsearch{
+			Timeout:             internal.Duration{Duration: time.Second * 5},
+			HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
+		}
 	})
 }
