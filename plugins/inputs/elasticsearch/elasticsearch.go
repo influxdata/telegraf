@@ -78,33 +78,33 @@ type clusterStats struct {
 }
 
 type indexStatsMaster struct {
-	Primaries           interface{}     `json:"primaries"`
-	Total               interface{}     `json:"total"`
+	Primaries interface{} `json:"primaries"`
+	Total     interface{} `json:"total"`
 }
 
 type indexStats struct {
-	Docs            interface{}       `json:"docs"`
-	Store           interface{}       `json:"store"`
-	Indexing        interface{}       `json:"indexing"`
-	Get             interface{}       `json:"get"`
-	Search          interface{}       `json:"search"`
-	Merges          interface{}       `json:"merges"`
-	Refresh         interface{}       `json:"refresh"`
-	Flush           interface{}       `json:"flush"`
-	Warmer          interface{}       `json:"warmer"`
-	QueryCache      interface{}       `json:"query_cache"`
-	Fielddata       interface{}       `json:"fielddata"`
-	Completion      interface{}       `json:"docs"`
-	Segments        interface{}       `json:"segments"`
-	Translog        interface{}       `json:"translog"`
-	RequestCache    interface{}       `json:"request_cache"`
-	Recovery        interface{}       `json:"recovery"`
+	Docs         interface{} `json:"docs"`
+	Store        interface{} `json:"store"`
+	Indexing     interface{} `json:"indexing"`
+	Get          interface{} `json:"get"`
+	Search       interface{} `json:"search"`
+	Merges       interface{} `json:"merges"`
+	Refresh      interface{} `json:"refresh"`
+	Flush        interface{} `json:"flush"`
+	Warmer       interface{} `json:"warmer"`
+	QueryCache   interface{} `json:"query_cache"`
+	Fielddata    interface{} `json:"fielddata"`
+	Completion   interface{} `json:"docs"`
+	Segments     interface{} `json:"segments"`
+	Translog     interface{} `json:"translog"`
+	RequestCache interface{} `json:"request_cache"`
+	Recovery     interface{} `json:"recovery"`
 }
 
 type indicesStatsMaster struct {
-	Shards              interface{}                 `json:"_shards"`
-	All                 interface{}                 `json:"_all"`
-	Indices             map[string]interface{}      `json:"indices"`
+	Shards  interface{}            `json:"_shards"`
+	All     interface{}            `json:"_all"`
+	Indices map[string]interface{} `json:"indices"`
 }
 
 type catMaster struct {
@@ -214,8 +214,8 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Always gather node states
-            clusterName, err := e.gatherNodeStats(url, acc)
-            if err != nil {
+			clusterName, err := e.gatherNodeStats(url, acc)
+			if err != nil {
 				err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
 				errChan.C <- err
 				return
@@ -271,14 +271,14 @@ func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
 }
 
 func (e *Elasticsearch) getClusterName(url string) (string, error) {
-    nodeStats := &struct {
-        ClusterName string      `json:"cluster_name"`
-    }{}
-    if err := e.gatherJsonData(url, nodeStats); err != nil {
-        return "", err
-    }
+	nodeStats := &struct {
+		ClusterName string `json:"cluster_name"`
+	}{}
+	if err := e.gatherJsonData(url, nodeStats); err != nil {
+		return "", err
+	}
 
-    return nodeStats.ClusterName, nil
+	return nodeStats.ClusterName, nil
 }
 
 func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) (string, error) {
@@ -325,7 +325,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) (s
 			// parse Json, ignoring strings and bools
 			err := f.FlattenJSON("", s)
 			if err != nil {
-                return "", err
+				return "", err
 			}
 			acc.AddFields("elasticsearch_"+p, f.Fields, tags, now)
 		}
@@ -419,47 +419,47 @@ func (e *Elasticsearch) gatherIndicesStats(clusterName string, url string, acc t
 		return err
 	}
 
-    stats := map[string]interface{}{
-        "shards":                   indicesStatsMaster.Shards,
-        "all":                      indicesStatsMaster.All,
-        "indices":                  indicesStatsMaster.Indices,
-    }
+	stats := map[string]interface{}{
+		"shards":  indicesStatsMaster.Shards,
+		"all":     indicesStatsMaster.All,
+		"indices": indicesStatsMaster.Indices,
+	}
 
-    measurementTime := time.Now()
-    for p, s := range stats {
-        f := jsonparser.JSONFlattener{}
-        // parse json, including bools and strings
-        err := f.FullFlattenJSON(p, s, true, true)
-        if err != nil {
-            return err
-        }
-        acc.AddFields(
-            "elasticsearch_indicesstats",
-            f.Fields,
-            map[string]string{
-                "cluster_name": clusterName,
-                "stat_name": p,
-            },
-            measurementTime)
-    }
+	measurementTime := time.Now()
+	for p, s := range stats {
+		f := jsonparser.JSONFlattener{}
+		// parse json, including bools and strings
+		err := f.FullFlattenJSON(p, s, true, true)
+		if err != nil {
+			return err
+		}
+		acc.AddFields(
+			"elasticsearch_indicesstats",
+			f.Fields,
+			map[string]string{
+				"cluster_name": clusterName,
+				"stat_name":    p,
+			},
+			measurementTime)
+	}
 
-    for index_name, index := range indicesStatsMaster.Indices {
+	for index_name, index := range indicesStatsMaster.Indices {
 		tags := map[string]string{
-            "cluster_name": clusterName,
+			"cluster_name": clusterName,
 			"index":        index_name,
 		}
 
-        f := jsonparser.JSONFlattener{}
-        // parse json, including bools and strings
-        err := f.FullFlattenJSON("", index, true, true)
-        if err != nil {
-            return err
-        }
-        acc.AddFields(
-            "elasticsearch_indicesstats_indices",
-            f.Fields,
-            tags,
-            measurementTime)
+		f := jsonparser.JSONFlattener{}
+		// parse json, including bools and strings
+		err := f.FullFlattenJSON("", index, true, true)
+		if err != nil {
+			return err
+		}
+		acc.AddFields(
+			"elasticsearch_indicesstats_indices",
+			f.Fields,
+			tags,
+			measurementTime)
 	}
 
 	return nil
