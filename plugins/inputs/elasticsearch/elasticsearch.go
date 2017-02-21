@@ -82,25 +82,6 @@ type indexStatsMaster struct {
 	Total     interface{} `json:"total"`
 }
 
-type indexStats struct {
-	Docs         interface{} `json:"docs"`
-	Store        interface{} `json:"store"`
-	Indexing     interface{} `json:"indexing"`
-	Get          interface{} `json:"get"`
-	Search       interface{} `json:"search"`
-	Merges       interface{} `json:"merges"`
-	Refresh      interface{} `json:"refresh"`
-	Flush        interface{} `json:"flush"`
-	Warmer       interface{} `json:"warmer"`
-	QueryCache   interface{} `json:"query_cache"`
-	Fielddata    interface{} `json:"fielddata"`
-	Completion   interface{} `json:"docs"`
-	Segments     interface{} `json:"segments"`
-	Translog     interface{} `json:"translog"`
-	RequestCache interface{} `json:"request_cache"`
-	Recovery     interface{} `json:"recovery"`
-}
-
 type indicesStatsMaster struct {
 	Shards  interface{}            `json:"_shards"`
 	All     interface{}            `json:"_all"`
