@@ -77,6 +77,36 @@ type clusterStats struct {
 	Nodes       interface{} `json:"nodes"`
 }
 
+type indexStatsMaster struct {
+	Primaries           interface{}     `json:"primaries"`
+	Total               interface{}     `json:"total"`
+}
+
+type indexStats struct {
+	Docs            interface{}       `json:"docs"`
+	Store           interface{}       `json:"store"`
+	Indexing        interface{}       `json:"indexing"`
+	Get             interface{}       `json:"get"`
+	Search          interface{}       `json:"search"`
+	Merges          interface{}       `json:"merges"`
+	Refresh         interface{}       `json:"refresh"`
+	Flush           interface{}       `json:"flush"`
+	Warmer          interface{}       `json:"warmer"`
+	QueryCache      interface{}       `json:"query_cache"`
+	Fielddata       interface{}       `json:"fielddata"`
+	Completion      interface{}       `json:"docs"`
+	Segments        interface{}       `json:"segments"`
+	Translog        interface{}       `json:"translog"`
+	RequestCache    interface{}       `json:"request_cache"`
+	Recovery        interface{}       `json:"recovery"`
+}
+
+type indicesStatsMaster struct {
+	Shards              interface{}                 `json:"_shards"`
+	All                 interface{}                 `json:"_all"`
+	Indices             map[string]interface{}      `json:"indices"`
+}
+
 type catMaster struct {
 	NodeID   string `json:"id"`
 	NodeIP   string `json:"ip"`
@@ -104,6 +134,9 @@ const sampleConfig = `
   ## Master node.
   cluster_stats = false
 
+  ## Set indices_stats to true when you want to also obtain statistics on the index level scope.
+  indices_stats = false
+
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
@@ -120,6 +153,7 @@ type Elasticsearch struct {
 	HttpTimeout             internal.Duration
 	ClusterHealth           bool
 	ClusterStats            bool
+	IndicesStats            bool
 	SSLCA                   string `toml:"ssl_ca"`   // Path to CA file
 	SSLCert                 string `toml:"ssl_cert"` // Path to host cert file
 	SSLKey                  string `toml:"ssl_key"`  // Path to cert key file
@@ -180,7 +214,8 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Always gather node states
-			if err := e.gatherNodeStats(url, acc); err != nil {
+            clusterName, err := e.gatherNodeStats(url, acc)
+            if err != nil {
 				err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
 				errChan.C <- err
 				return
@@ -189,6 +224,15 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if e.ClusterHealth {
 				url = s + "/_cluster/health?level=indices"
 				if err := e.gatherClusterHealth(url, acc); err != nil {
+					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
+					errChan.C <- err
+					return
+				}
+			}
+
+			if e.IndicesStats {
+				url = s + "/_stats"
+				if err := e.gatherIndicesStats(clusterName, url, acc); err != nil {
 					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
 					errChan.C <- err
 					return
@@ -226,13 +270,24 @@ func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) error {
+func (e *Elasticsearch) getClusterName(url string) (string, error) {
+    nodeStats := &struct {
+        ClusterName string      `json:"cluster_name"`
+    }{}
+    if err := e.gatherJsonData(url, nodeStats); err != nil {
+        return "", err
+    }
+
+    return nodeStats.ClusterName, nil
+}
+
+func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) (string, error) {
 	nodeStats := &struct {
 		ClusterName string               `json:"cluster_name"`
 		Nodes       map[string]*nodeStat `json:"nodes"`
 	}{}
 	if err := e.gatherJsonData(url, nodeStats); err != nil {
-		return err
+		return "", err
 	}
 
 	for id, n := range nodeStats.Nodes {
@@ -270,12 +325,12 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			// parse Json, ignoring strings and bools
 			err := f.FlattenJSON("", s)
 			if err != nil {
-				return err
+                return "", err
 			}
 			acc.AddFields("elasticsearch_"+p, f.Fields, tags, now)
 		}
 	}
-	return nil
+	return nodeStats.ClusterName, nil
 }
 
 func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator) error {
@@ -353,6 +408,58 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 			return err
 		}
 		acc.AddFields("elasticsearch_clusterstats_"+p, f.Fields, tags, now)
+	}
+
+	return nil
+}
+
+func (e *Elasticsearch) gatherIndicesStats(clusterName string, url string, acc telegraf.Accumulator) error {
+	indicesStatsMaster := &indicesStatsMaster{}
+	if err := e.gatherJsonData(url, indicesStatsMaster); err != nil {
+		return err
+	}
+
+    stats := map[string]interface{}{
+        "shards":                   indicesStatsMaster.Shards,
+        "all":                      indicesStatsMaster.All,
+        "indices":                  indicesStatsMaster.Indices,
+    }
+
+    measurementTime := time.Now()
+    for p, s := range stats {
+        f := jsonparser.JSONFlattener{}
+        // parse json, including bools and strings
+        err := f.FullFlattenJSON(p, s, true, true)
+        if err != nil {
+            return err
+        }
+        acc.AddFields(
+            "elasticsearch_indicesstats",
+            f.Fields,
+            map[string]string{
+                "cluster_name": clusterName,
+                "stat_name": p,
+            },
+            measurementTime)
+    }
+
+    for index_name, index := range indicesStatsMaster.Indices {
+		tags := map[string]string{
+            "cluster_name": clusterName,
+			"index":        index_name,
+		}
+
+        f := jsonparser.JSONFlattener{}
+        // parse json, including bools and strings
+        err := f.FullFlattenJSON("", index, true, true)
+        if err != nil {
+            return err
+        }
+        acc.AddFields(
+            "elasticsearch_indicesstats_indices",
+            f.Fields,
+            tags,
+            measurementTime)
 	}
 
 	return nil
