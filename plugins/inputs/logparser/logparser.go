@@ -226,6 +226,8 @@ func (l *LogParserPlugin) parser() {
 				if m != nil {
 					l.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 				}
+			} else {
+				log.Println("E! Error parsing log line: " + err.Error())
 			}
 		}
 	}
