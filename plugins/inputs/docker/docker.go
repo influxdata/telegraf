@@ -22,11 +22,12 @@ import (
 
 // Docker object
 type Docker struct {
-	Endpoint       string
-	ContainerNames []string
-	Timeout        internal.Duration
-	PerDevice      bool `toml:"perdevice"`
-	Total          bool `toml:"total"`
+	Endpoint        string
+	ContainerNames  []string
+	Timeout         internal.Duration
+	TagEnvWhitelist []string
+	PerDevice       bool `toml:"perdevice"`
+	Total           bool `toml:"total"`
 
 	client      DockerClient
 	engine_host string
@@ -37,6 +38,7 @@ type DockerClient interface {
 	Info(ctx context.Context) (types.Info, error)
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 	ContainerStats(ctx context.Context, containerID string, stream bool) (io.ReadCloser, error)
+	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -61,6 +63,9 @@ var sampleConfig = `
   container_names = []
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
+
+  ## Use certain environment variables as metric tags
+  tag_env_whitelist = []
 
   ## Whether to report for each container per-device blkio (8:0, 8:1...) and
   ## network (eth0, eth1, ...) stats or not
@@ -263,6 +268,30 @@ func (d *Docker) gatherContainer(
 	// Add labels to tags
 	for k, label := range container.Labels {
 		tags[k] = label
+	}
+
+	// Add whitelisted environment variables as tags
+	if len(d.TagEnvWhitelist) > 0 {
+		// Get container environments and split them to key value pairs
+		containerJson, _ := d.client.ContainerInspect(ctx, container.ID)
+		containerEnvMap := make(map[string]string, len(containerJson.Config.Env))
+		for _, value := range containerJson.Config.Env {
+			pair := strings.SplitN(value, "=", 2)
+			if len(pair) == 1 {
+				containerEnvMap[pair[0]] = ""
+			} else {
+				containerEnvMap[pair[0]] = pair[1]
+			}
+		}
+
+		// Add matching environment variables
+		for containerEnvKey, value := range containerEnvMap {
+			for _, whitelistedEnv := range d.TagEnvWhitelist {
+				if whitelistedEnv == containerEnvKey {
+					tags[whitelistedEnv] = value
+				}
+			}
+		}
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)

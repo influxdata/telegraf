@@ -383,6 +383,10 @@ func (d FakeDockerClient) ContainerStats(ctx context.Context, containerID string
 	return stat, nil
 }
 
+func (d FakeDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+	return types.ContainerJSON{}, nil
+}
+
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	client := FakeDockerClient{}
