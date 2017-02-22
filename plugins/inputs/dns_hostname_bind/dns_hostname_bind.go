@@ -30,7 +30,7 @@ type DnsHostnameBind struct {
 
 var sampleConfig = `
   ## servers to query
-  servers = ["8.8.8.8"] # required
+  servers = ["192.203.230.10", "2001:500:1::53"] # required
 
   ## Dns server port. 53 is default
   port = 53 # optional
@@ -44,7 +44,7 @@ func (d *DnsHostnameBind) SampleConfig() string {
 }
 
 func (d *DnsHostnameBind) Description() string {
-	return "Query given DNS server and gives statistics"
+	return "Query given DNS server for hostname.bind in class chaos and gives timing"
 }
 func (d *DnsHostnameBind) Gather(acc telegraf.Accumulator) error {
 	d.setDefaultValues()
