@@ -114,10 +114,10 @@ func (p *SpecProcessor) pushMetrics() error {
 		fields[prefix+"memory_swap"] = mem.Swap
 	}
 
-	memory_perc, err := p.proc.MemoryPercent()
-	if err == nil {
-		fields[prefix+"memory_usage"] = memory_perc
-	}
+        memory_perc, err := p.proc.MemoryPercent()
+        if err == nil {
+                fields[prefix+"memory_usage"] = memory_perc
+        }
 
 	p.acc.AddFields("procstat", fields, p.tags)
 	return nil
