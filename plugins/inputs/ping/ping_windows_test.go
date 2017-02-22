@@ -77,9 +77,9 @@ func TestPingGather(t *testing.T) {
 		"reply_received":      4,
 		"percent_packet_loss": 0.0,
 		"percent_reply_loss":  0.0,
-		"average_response_ms": 50,
-		"minimum_response_ms": 50,
-		"maximum_response_ms": 52,
+		"average_response_ms": 50.0,
+		"minimum_response_ms": 50.0,
+		"maximum_response_ms": 52.0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
