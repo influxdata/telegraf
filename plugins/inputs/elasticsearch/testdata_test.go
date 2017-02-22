@@ -12,6 +12,11 @@ const clusterHealthResponse = `
    "relocating_shards": 0,
    "initializing_shards": 0,
    "unassigned_shards": 0,
+   "delayed_unassigned_shards": 0,
+   "number_of_pending_tasks" : 0,
+   "number_of_in_flight_fetch": 0,
+   "task_max_waiting_in_queue_millis": 0,
+   "active_shards_percent_as_number": 50.0,
    "indices": {
       "v1": {
          "status": "green",
@@ -47,7 +52,7 @@ var clusterHealthExpected = map[string]interface{}{
 	"relocating_shards":                0,
 	"initializing_shards":              0,
 	"unassigned_shards":                0,
-	"active_shards_percent_as_number":  0,
+	"active_shards_percent_as_number":  float64(50),
 	"delayed_unassigned_shards":        0,
 	"number_of_in_flight_fetch":        0,
 	"number_of_pending_tasks":          0,

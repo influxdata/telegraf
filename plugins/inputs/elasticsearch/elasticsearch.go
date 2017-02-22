@@ -8,13 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"io/ioutil"
+	"strings"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
-	"io/ioutil"
-	"strings"
 )
 
 // mask for masking username/password from error messages
@@ -54,7 +55,7 @@ type clusterHealth struct {
 	NumberOfPendingTasks        int                    `json:"number_of_pending_tasks"`
 	NumberOfInFlightFetch       int                    `json:"number_of_in_flight_fetch"`
 	TaskMaxWaitingInQueueMillis int                    `json:"task_max_waiting_in_queue_millis"`
-	ActiveShardsPercent         int                    `json:"active_shards_percent_as_number"`
+	ActiveShardsPercent         float64                `json:"active_shards_percent_as_number"`
 	Indices                     map[string]indexHealth `json:"indices"`
 }
 
