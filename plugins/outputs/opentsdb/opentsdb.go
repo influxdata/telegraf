@@ -22,6 +22,8 @@ type OpenTSDB struct {
 	HttpBatchSize int
 
 	Debug bool
+
+	IgnoreField string
 }
 
 var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
@@ -45,6 +47,9 @@ var sampleConfig = `
 
   ## Debug true - Prints OpenTSDB communication
   debug = false
+
+  ## IgnoreField "" - If fieldName matches this, don't add the field name to the metric passed to TSDB.
+  ignoreField = ""
 `
 
 func ToLineFormat(tags map[string]string) string {
@@ -124,9 +129,15 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 				continue
 			}
 
+			var metricName string
+			if fieldName != o.IgnoreField {
+				metricName = sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName))
+			} else {
+				metricName = sanitizedChars.Replace(fmt.Sprintf("%s%s", o.Prefix, m.Name()))
+			}
+
 			metric := &HttpMetric{
-				Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
-					o.Prefix, m.Name(), fieldName)),
+				Metric:    metricName,
 				Tags:      tags,
 				Timestamp: now,
 				Value:     value,
@@ -175,8 +186,15 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 				continue
 			}
 
+			var metricName string
+			if fieldName != o.IgnoreField {
+				metricName = sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName))
+			} else {
+				metricName = sanitizedChars.Replace(fmt.Sprintf("%s%s", o.Prefix, m.Name()))
+			}
+
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-				sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
+				metricName,
 				now, metricValue, tags)
 
 			_, err := connection.Write([]byte(messageLine))
