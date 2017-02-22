@@ -102,7 +102,7 @@ func (p *SpecProcessor) pushMetrics() error {
 		fields[prefix+"cpu_time_guest_nice"] = cpu_time.GuestNice
 	}
 
-	cpu_perc, err := p.proc.Percent(time.Duration(0))
+	cpu_perc, err := p.proc.Percent(time.Duration(3000 * time.Millisecond))
 	if err == nil && cpu_perc != 0 {
 		fields[prefix+"cpu_usage"] = cpu_perc
 	}
@@ -113,6 +113,11 @@ func (p *SpecProcessor) pushMetrics() error {
 		fields[prefix+"memory_vms"] = mem.VMS
 		fields[prefix+"memory_swap"] = mem.Swap
 	}
+
+        memory_perc, err := p.proc.MemoryPercent()
+        if err == nil {
+                fields[prefix+"memory_usage"] = memory_perc
+        }
 
 	p.acc.AddFields("procstat", fields, p.tags)
 	return nil
