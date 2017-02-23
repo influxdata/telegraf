@@ -32,7 +32,7 @@ Example of an index template created by telegraf:
     "index": {
       "mapping": {
         "total_fields": {
-          "limit": "2000"
+          "limit": "5000"
         }
       },
       "refresh_interval": "10s"
@@ -155,7 +155,7 @@ This plugin will format the events in the following way:
   timeout = "5s"
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
-  enable_sniffer = true
+  enable_sniffer = false
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"

@@ -36,8 +36,8 @@ var sampleConfig = `
   ## Elasticsearch client timeout, defaults to "5s" if not set. 
   timeout = "5s"
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
-  ## thus it is not necessary to list all nodes in the urls config option
-  enable_sniffer = true
+  ## thus it is not necessary to list all nodes in the urls config option.
+  enable_sniffer = false
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
@@ -164,9 +164,11 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	}
 
 	if res.Errors {
+
 		log.Printf("W! Elasticsearch failed to index %d metrics", len(res.Failed()))
+
 		for id, err := range res.Failed() {
-			log.Printf("D! Document not indexed: %d - error: %s", id, err.Error.Reason)
+			log.Printf("E! Elasticsearch indexing failure, id: %d, error: %s", id, err.Error.Reason)
 		}
 	}
 
@@ -194,63 +196,62 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if (a.OverwriteTemplate) || (!templateExists) {
 		// Create or update the template
 		tmpl := fmt.Sprintf(`
-                    {
-                            "template":"%s",
-                            "settings": {
-                                    "index": {
-                                            "refresh_interval": "10s",
-                                            "mapping.total_fields.limit": 2000
-                                    }
-                            },
-                            "mappings" : {
-                                    "_default_" : {
-                                            "_all": { "enabled": false      },
-                                            "properties" : {
-                                                    "@timestamp" : { "type" : "date" },
-                                                    "measurement_name" : { "type" : "keyword" }
-                                            },
-                                            "dynamic_templates": [
-                                                    {
-                                                            "tags": {
-                                                                    "match_mapping_type": "string",
-                                                                    "path_match": "tag.*",
-                                                                    "mapping": {
-                                                                            "ignore_above": 512,
-                                                                            "type": "keyword"
-                                                                    }
-                                                            }
-                                                    },
-                                                    {
-                                                            "metrics_long": {
-                                                                    "match_mapping_type": "long",
-                                                                    "mapping": {
-                                                                            "type": "float",
-                                                                            "index": false
-                                                                    }
-                                                            }
-                                                    },
-                                                    {
-                                                            "metrics_double": {
-                                                                    "match_mapping_type": "double",
-                                                                    "mapping": {
-                                                                            "type": "float",
-                                                                            "index": false
-                                                                    }
-                                                            }
-                                                    },
-                                                    {
-                                                            "text_fields": {
-                                                                    "match": "*",
-                                                                    "mapping": {
-                                                                            "norms": false
-                                                                    }
-                                                            }
-                                                    }
-                                            ]
-                                    }
-                            }
-                    }`, templatePattern)
-
+			{
+				"template":"%s",
+				"settings": {
+					"index": {
+						"refresh_interval": "10s",
+						"mapping.total_fields.limit": 5000
+					}
+				},
+				"mappings" : {
+					"_default_" : {
+						"_all": { "enabled": false	  },
+						"properties" : {
+							"@timestamp" : { "type" : "date" },
+							"measurement_name" : { "type" : "keyword" }
+						},
+						"dynamic_templates": [
+							{
+								"tags": {
+									"match_mapping_type": "string",
+									"path_match": "tag.*",
+									"mapping": {
+										"ignore_above": 512,
+										"type": "keyword"
+									}
+								}
+							},
+							{
+								"metrics_long": {
+									"match_mapping_type": "long",
+									"mapping": {
+										"type": "float",
+										"index": false
+									}
+								}
+							},
+							{
+								"metrics_double": {
+									"match_mapping_type": "double",
+									"mapping": {
+										"type": "float",
+										"index": false
+									}
+								}
+							},
+							{
+								"text_fields": {
+									"match": "*",
+									"mapping": {
+										"norms": false
+									}
+								}
+							}
+						]
+					}
+				}
+			}`, templatePattern)
 		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx)
 
 		if errCreateTemplate != nil {
