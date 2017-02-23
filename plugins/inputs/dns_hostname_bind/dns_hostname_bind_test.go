@@ -8,7 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var servers = []string{"192.203.230.10", "2001:500:1::53"}
+var servers = []string{
+	"198.41.0.4",     // a.root-servers.net.
+	"192.228.79.201", // b.root-servers.net.
+	"192.33.4.12",    // c.root-servers.net.
+	"199.7.91.13",    // d.root-servers.net.
+}
 
 func TestSampleConfig(t *testing.T) {
 	var dnsConfig = DnsHostnameBind{
