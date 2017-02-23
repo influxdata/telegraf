@@ -23,7 +23,6 @@ func TestGather(t *testing.T) {
 	p := Procstat{
 		PidFile: file.Name(),
 		Prefix:  "foo",
-		tagmap:  make(map[int32]map[string]string),
 	}
 	p.Gather(&acc)
 	assert.True(t, acc.HasFloatField("procstat", "foo_cpu_time_user"))
