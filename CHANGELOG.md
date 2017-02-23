@@ -66,6 +66,7 @@ be deprecated eventually.
 - [#2380](https://github.com/influxdata/telegraf/issues/2380): buffer_size field value is negative number from "internal" plugin.
 - [#2414](https://github.com/influxdata/telegraf/issues/2414): Missing error handling in the MySQL plugin leads to segmentation violation.
 - [#2178](https://github.com/influxdata/telegraf/issues/2178): logparser: regexp with lookahead.
+- [#2466](https://github.com/influxdata/telegraf/issues/2466): Telegraf can crash in LoadDirectory on 0600 files.
 
 ## v1.2.1 [2017-02-01]
 
