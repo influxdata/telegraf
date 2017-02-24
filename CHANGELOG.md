@@ -48,6 +48,7 @@ be deprecated eventually.
 - [#2201](https://github.com/influxdata/telegraf/pull/2201): Add lock option to the IPtables input plugin.
 - [#2244](https://github.com/influxdata/telegraf/pull/2244): Support ipmi_sensor plugin querying local ipmi sensors.
 - [#2339](https://github.com/influxdata/telegraf/pull/2339): Increment gather_errors for all errors emitted by inputs.
+- [#2071](https://github.com/influxdata/telegraf/issues/2071): Use official docker SDK.
 
 ### Bugfixes
 
@@ -61,6 +62,10 @@ be deprecated eventually.
 - [#2341](https://github.com/influxdata/telegraf/issues/2341): telegraf swallowing panics in --test mode.
 - [#2358](https://github.com/influxdata/telegraf/pull/2358): Create pidfile with 644 permissions & defer file deletion.
 - [#2360](https://github.com/influxdata/telegraf/pull/2360): Fixed install/remove of telegraf on non-systemd Debian/Ubuntu systems
+- [#2282](https://github.com/influxdata/telegraf/issues/2282): Reloading telegraf freezes prometheus output.
+- [#2390](https://github.com/influxdata/telegraf/issues/2390): Empty tag value causes error on InfluxDB output.
+- [#2380](https://github.com/influxdata/telegraf/issues/2380): buffer_size field value is negative number from "internal" plugin.
+- [#2414](https://github.com/influxdata/telegraf/issues/2414): Missing error handling in the MySQL plugin leads to segmentation violation.
 
 ## v1.2.1 [2017-02-01]
 

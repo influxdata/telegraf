@@ -43,7 +43,7 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
 which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.7+.
+if you don't have it already. You also must build with golang version 1.8+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
@@ -103,6 +103,7 @@ configuration options.
 * [bcache](./plugins/inputs/bcache)
 * [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)
+* [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
 * [consul](./plugins/inputs/consul)
 * [conntrack](./plugins/inputs/conntrack)
