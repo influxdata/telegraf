@@ -65,6 +65,7 @@ be deprecated eventually.
 - [#2390](https://github.com/influxdata/telegraf/issues/2390): Empty tag value causes error on InfluxDB output.
 - [#2380](https://github.com/influxdata/telegraf/issues/2380): buffer_size field value is negative number from "internal" plugin.
 - [#2414](https://github.com/influxdata/telegraf/issues/2414): Missing error handling in the MySQL plugin leads to segmentation violation.
+- [#2463](https://github.com/influxdata/telegraf/issues/2463): Adding more memory variables to input mem plugin
 
 ## v1.2.1 [2017-02-01]
 
