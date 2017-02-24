@@ -103,6 +103,7 @@ configuration options.
 * [bcache](./plugins/inputs/bcache)
 * [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)
+* [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
 * [consul](./plugins/inputs/consul)
 * [conntrack](./plugins/inputs/conntrack)
