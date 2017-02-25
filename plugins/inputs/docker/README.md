@@ -135,30 +135,31 @@ based on the availability of per-cpu stats on your system.
 
 
 ### Tags:
-
+#### Docker Engine tags
 - docker (memory_total)
     - unit=bytes
+    - engine_host
 - docker (pool_blocksize)
     - unit=bytes
+    - engine_host
 - docker_data
     - unit=bytes
+    - engine_host
 - docker_metadata
     - unit=bytes
 
+#### Docker Container tags
+- Tags on all containers:
+    - engine_host
+    - container_image
+    - container_name
+    - container_version
 - docker_container_mem specific:
-    - container_image
-    - container_name
 - docker_container_cpu specific:
-    - container_image
-    - container_name
     - cpu
 - docker_container_net specific:
-    - container_image
-    - container_name
     - network
 - docker_container_blkio specific:
-    - container_image
-    - container_name
     - device
 
 ### Example Output:
