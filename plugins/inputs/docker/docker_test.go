@@ -247,7 +247,7 @@ func testStats() *types.StatsJSON {
 func TestDockerGatherLabels(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
-		client: nil,
+		client:  nil,
 		testing: true,
 	}
 
