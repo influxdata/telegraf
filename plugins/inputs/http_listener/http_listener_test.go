@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 
@@ -43,14 +42,12 @@ func TestWriteHTTP(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
-
 	// post single message to listener
 	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 
-	time.Sleep(time.Millisecond * 15)
+	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
@@ -61,7 +58,7 @@ func TestWriteHTTP(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 
-	time.Sleep(time.Millisecond * 15)
+	acc.Wait(2)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
 	for _, hostTag := range hostTags {
@@ -76,7 +73,7 @@ func TestWriteHTTP(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 400, resp.StatusCode)
 
-	time.Sleep(time.Millisecond * 15)
+	acc.Wait(3)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
@@ -91,14 +88,12 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
-
 	// post single message to listener
 	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(testMsgNoNewline)))
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 
-	time.Sleep(time.Millisecond * 15)
+	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
@@ -114,8 +109,6 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
-
-	time.Sleep(time.Millisecond * 25)
 
 	// Post a gigantic metric to the listener and verify that it writes OK this time:
 	resp, err := http.Post("http://localhost:8296/write?db=mydb", "", bytes.NewBuffer([]byte(hugeMetric)))
@@ -133,8 +126,6 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
-
 	resp, err := http.Post("http://localhost:8297/write", "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
 	require.EqualValues(t, 413, resp.StatusCode)
@@ -150,15 +141,13 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
-
 	resp, err := http.Post("http://localhost:8298/write", "", bytes.NewBuffer([]byte(testMsgs)))
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 
-	time.Sleep(time.Millisecond * 15)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
+	acc.Wait(len(hostTags))
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
@@ -177,15 +166,13 @@ func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
-
 	resp, err := http.Post("http://localhost:8300/write", "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
 	require.NoError(t, err)
 	require.EqualValues(t, 400, resp.StatusCode)
 
-	time.Sleep(time.Millisecond * 15)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
+	acc.Wait(len(hostTags))
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
@@ -204,8 +191,6 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
-
 	data, err := ioutil.ReadFile("./testdata/testmsgs.gz")
 	require.NoError(t, err)
 
@@ -218,9 +203,9 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 
-	time.Sleep(time.Millisecond * 50)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
+	acc.Wait(len(hostTags))
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
@@ -237,8 +222,6 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
-
 	// post many messages to listener
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
@@ -254,9 +237,9 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 	}
 
 	wg.Wait()
-	time.Sleep(time.Millisecond * 250)
 	listener.Gather(acc)
 
+	acc.Wait(25000)
 	require.Equal(t, int64(25000), int64(acc.NMetrics()))
 }
 
@@ -267,8 +250,6 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
-
 	// post single message to listener
 	resp, err := http.Post("http://localhost:8186/foobar", "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
@@ -276,15 +257,11 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 }
 
 func TestWriteHTTPInvalid(t *testing.T) {
-	time.Sleep(time.Millisecond * 250)
-
 	listener := newTestHTTPListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
-
-	time.Sleep(time.Millisecond * 25)
 
 	// post single message to listener
 	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(badMsg)))
@@ -293,15 +270,11 @@ func TestWriteHTTPInvalid(t *testing.T) {
 }
 
 func TestWriteHTTPEmpty(t *testing.T) {
-	time.Sleep(time.Millisecond * 250)
-
 	listener := newTestHTTPListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
-
-	time.Sleep(time.Millisecond * 25)
 
 	// post single message to listener
 	resp, err := http.Post("http://localhost:8186/write?db=mydb", "", bytes.NewBuffer([]byte(emptyMsg)))
@@ -310,15 +283,11 @@ func TestWriteHTTPEmpty(t *testing.T) {
 }
 
 func TestQueryAndPingHTTP(t *testing.T) {
-	time.Sleep(time.Millisecond * 250)
-
 	listener := newTestHTTPListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
-
-	time.Sleep(time.Millisecond * 25)
 
 	// post query to listener
 	resp, err := http.Post("http://localhost:8186/query?db=&q=CREATE+DATABASE+IF+NOT+EXISTS+%22mydb%22", "", nil)
