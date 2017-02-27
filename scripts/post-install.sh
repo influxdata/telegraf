@@ -28,9 +28,9 @@ id telegraf &>/dev/null
 if [[ $? -ne 0 ]]; then
     grep "^telegraf:" /etc/group &>/dev/null
     if [[ $? -ne 0 ]]; then
-        useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf
+        useradd -r -M telegraf -s /bin/false -d /etc/telegraf
     else
-        useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
+        useradd -r -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
     fi
 fi
 
