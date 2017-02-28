@@ -97,9 +97,10 @@ configuration options.
 
 ## Input Plugins
 
-* [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [aerospike](./plugins/inputs/aerospike)
+* [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
+* [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)

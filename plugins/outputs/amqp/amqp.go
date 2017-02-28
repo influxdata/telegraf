@@ -40,6 +40,7 @@ type AMQP struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
+	conn    *amqp.Connection
 	channel *amqp.Channel
 	sync.Mutex
 	headers amqp.Table
@@ -129,6 +130,8 @@ func (q *AMQP) Connect() error {
 	if err != nil {
 		return err
 	}
+	q.conn = connection
+
 	channel, err := connection.Channel()
 	if err != nil {
 		return fmt.Errorf("Failed to open a channel: %s", err)
@@ -160,7 +163,8 @@ func (q *AMQP) Connect() error {
 }
 
 func (q *AMQP) Close() error {
-	return q.channel.Close()
+	q.channel.Close()
+	return q.conn.Close()
 }
 
 func (q *AMQP) SampleConfig() string {
@@ -205,6 +209,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 				Headers:     q.headers,
 				ContentType: "text/plain",
 				Body:        buf,
+				//				DeliveryMode: amqp.Persistent,
 			})
 		if err != nil {
 			return fmt.Errorf("FAILED to send amqp message: %s", err)
