@@ -193,7 +193,16 @@ func TestConnectAndWrite(t *testing.T) {
 	err = r.Write(metrics)
 	require.NoError(t, err)
 
-	time.Sleep(200 * time.Millisecond)
+	start := time.Now()
+	for true {
+		events, _ := r.client.Query(`tagged "docker"`)
+		if len(events) > 0 {
+			break
+		}
+		if time.Since(start) > time.Second {
+			break
+		}
+	}
 
 	// are there any "docker" tagged events in Riemann?
 	events, err := r.client.Query(`tagged "docker"`)
