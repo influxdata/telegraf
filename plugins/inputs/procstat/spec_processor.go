@@ -1,7 +1,6 @@
 package procstat
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/shirou/gopsutil/process"
@@ -10,13 +9,12 @@ import (
 )
 
 type SpecProcessor struct {
-	ProcessName string
-	Prefix      string
-	pid         int32
-	tags        map[string]string
-	fields      map[string]interface{}
-	acc         telegraf.Accumulator
-	proc        *process.Process
+	Prefix string
+	pid    int32
+	tags   map[string]string
+	fields map[string]interface{}
+	acc    telegraf.Accumulator
+	proc   *process.Process
 }
 
 func NewSpecProcessor(
@@ -24,35 +22,29 @@ func NewSpecProcessor(
 	prefix string,
 	pid int32,
 	acc telegraf.Accumulator,
+	p *process.Process,
 	tags map[string]string,
 ) *SpecProcessor {
+	if processName != "" {
+		tags["process_name"] = processName
+	} else {
+		name, err := p.Name()
+		if err == nil {
+			tags["process_name"] = name
+		}
+	}
 	return &SpecProcessor{
-		ProcessName: processName,
-		Prefix:      prefix,
-		pid:         pid,
-		tags:        tags,
-		fields:      make(map[string]interface{}),
-		acc:         acc,
+		Prefix: prefix,
+		pid:    pid,
+		tags:   tags,
+		fields: make(map[string]interface{}),
+		acc:    acc,
+		proc:   p,
 	}
 }
 
-func (p *SpecProcessor) pushMetrics() error {
+func (p *SpecProcessor) pushMetrics() {
 	var prefix string
-	proc, err := process.NewProcess(p.pid)
-	if err != nil {
-		return fmt.Errorf("Failed to open process with pid '%d'. Error: '%s'",
-			p.pid, err)
-	}
-	p.proc = proc
-	if p.ProcessName != "" {
-		p.tags["process_name"] = p.ProcessName
-	} else {
-		name, err := p.proc.Name()
-		if err == nil {
-			p.tags["process_name"] = name
-		}
-	}
-
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
 	}
@@ -115,5 +107,4 @@ func (p *SpecProcessor) pushMetrics() error {
 	}
 
 	p.acc.AddFields("procstat", fields, p.tags)
-	return nil
 }
