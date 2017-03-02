@@ -74,6 +74,7 @@ be deprecated eventually.
 - [#2462](https://github.com/influxdata/telegraf/pull/2462): Fix type conflict in windows ping plugin.
 - [#2178](https://github.com/influxdata/telegraf/issues/2178): logparser: regexp with lookahead.
 - [#2466](https://github.com/influxdata/telegraf/issues/2466): Telegraf can crash in LoadDirectory on 0600 files.
+- [#2215](https://github.com/influxdata/telegraf/issues/2215): Iptables input: document better that rules without a comment are ignored.
 
 ## v1.2.1 [2017-02-01]
 
