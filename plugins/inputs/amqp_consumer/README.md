@@ -1,25 +1,37 @@
 # AMQP Consumer Input Plugin
 
-This plugin reads data from an AMQP Queue ([RabbitMQ](https://www.rabbitmq.com/) being an example) formatted in one of
-the [Telegraf Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+This plugin provides a consumer for use with AMQP 0-9-1, a promenent implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
 
-The following defaults are set to work with RabbitMQ:
+Metrics are read from a topic exchange using the configured queue and binding_key.
 
-```
+Message payload should be formatted in one of the [Telegraf Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+
+For an introduction to AMQP see:
+- https://www.rabbitmq.com/tutorials/amqp-concepts.html
+- https://www.rabbitmq.com/getstarted.html
+
+The following defaults are known to work with RabbitMQ:
+
+```toml
 # AMQP consumer plugin
 [[inputs.amqp_consumer]]
   ## AMQP url
   url = "amqp://localhost:5672/influxdb"
   ## AMQP exchange
   exchange = "telegraf"
-  ## Auth method. PLAIN and EXTERNAL are supported
-  # auth_method = "PLAIN"
+  ## AMQP queue name
+  queue = "telegraf"
   ## Binding Key
   binding_key = "#"
 
-  ## Maximum number of messages server should give to the worker.
-  prefetch = 50
+  ## Controls how many messages the server will try to keep on the network
+  ## for consumers before receiving delivery acks.
+  #prefetch_count = 50
 
+  ## Auth method. PLAIN and EXTERNAL are supported.
+  ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
+  ## described here: https://www.rabbitmq.com/plugins.html
+  # auth_method = "PLAIN"
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
