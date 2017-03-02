@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -92,6 +93,7 @@ func (a *Elasticsearch) Connect() error {
 		clientOptions = append(clientOptions,
 			elastic.SetHealthcheck(false),
 		)
+		log.Printf("D! Elasticsearch output: disabling health check")
 	}
 
 	client, err := elastic.NewClient(clientOptions...)
@@ -142,10 +144,24 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		indexName := a.GetIndexName(a.IndexName, metric.Time())
 
 		m := make(map[string]interface{})
+		mfields := make(map[string]interface{})
+
+		for k, v := range metric.Fields() {
+			switch x := v.(type) {
+			// Truncate values too big/small for Elasticsearch to not complain when creating a dynamic field mapping
+			case float64:
+				if (x > 0 && x > math.MaxFloat32) || (x < 0 && x < math.SmallestNonzeroFloat32) {
+					v = float32(x)
+					log.Printf("W! Elasticsearch output metric %s truncated (value %v is too big or too small, truncating to %v)", k, x, v)
+				}
+			}
+			mfields[k] = v
+		}
+
 		m["@timestamp"] = metric.Time()
 		m["measurement_name"] = name
 		m["tag"] = metric.Tags()
-		m[name] = metric.Fields()
+		m[name] = mfields
 
 		bulkRequest.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
@@ -164,12 +180,10 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	}
 
 	if res.Errors {
-
-		log.Printf("W! Elasticsearch failed to index %d metrics", len(res.Failed()))
-
 		for id, err := range res.Failed() {
 			log.Printf("E! Elasticsearch indexing failure, id: %d, error: %s", id, err.Error.Reason)
 		}
+		return fmt.Errorf("W! Elasticsearch failed to index %d metrics", len(res.Failed()))
 	}
 
 	return nil
