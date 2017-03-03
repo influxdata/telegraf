@@ -1,6 +1,7 @@
 package elasticsearch
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -55,7 +56,14 @@ func TestBigValue(t *testing.T) {
 	m1, _ := metric.New(
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
-		map[string]interface{}{"mymeasurement": float64(-9223372036854776000)},
+		map[string]interface{}{
+			"myvalue1": float64(-9223372036854776000),
+			"myvalue2": float64(math.MaxUint64 * -10),
+			"myvalue3": float64(math.MaxUint64 * 10),
+			"myvalue4": float64(math.MaxFloat64),
+			"myvalue5": float64(0.000000000000000000000000000000000000000000000001),
+			"myvalue6": float64(-0.000000000000000000000000000000000000000000000001),
+		},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	// Prepare point list

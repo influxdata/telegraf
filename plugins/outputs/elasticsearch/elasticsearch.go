@@ -146,14 +146,16 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		m := make(map[string]interface{})
 		mfields := make(map[string]interface{})
 
+		// Elasticsearch/java/json quirks for correct field mapping
+		// value as integer cannot be bigger than MaxInt64 or smaller than MinInt64; as a float it cannot be bigger than float32
 		for k, v := range metric.Fields() {
-			switch x := v.(type) {
-			// Truncate values too big/small for Elasticsearch to not complain when creating a dynamic field mapping
-			case float64:
-				if (x > 0 && x > math.MaxFloat32) || (x < 0 && x < math.SmallestNonzeroFloat32) {
-					v = float32(x)
-					log.Printf("W! Elasticsearch output metric %s truncated (value %v is too big or too small, truncating to %v)", k, x, v)
-				}
+			switch {
+			case v.(float64) > math.MaxInt64:
+				v = math.MaxInt64
+			case v.(float64) < math.MinInt64:
+				v = math.MinInt64
+			default:
+				v = float32(v.(float64))
 			}
 			mfields[k] = v
 		}
@@ -181,7 +183,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 	if res.Errors {
 		for id, err := range res.Failed() {
-			log.Printf("E! Elasticsearch indexing failure, id: %d, error: %s", id, err.Error.Reason)
+			log.Printf("E! Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s", id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"])
 		}
 		return fmt.Errorf("W! Elasticsearch failed to index %d metrics", len(res.Failed()))
 	}
