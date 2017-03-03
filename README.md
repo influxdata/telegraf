@@ -101,6 +101,7 @@ configuration options.
 * [aerospike](./plugins/inputs/aerospike)
 * [apache](./plugins/inputs/apache)
 * [bcache](./plugins/inputs/bcache)
+* [burrow](./plugins/inputs/burrow)
 * [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
