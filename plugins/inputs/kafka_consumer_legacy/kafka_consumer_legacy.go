@@ -1,4 +1,4 @@
-package kafka_consumer
+package kafka_consumer_legacy
 
 import (
 	"fmt"
@@ -7,35 +7,20 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
+	"github.com/wvanbergen/kafka/consumergroup"
 )
 
 type Kafka struct {
-	ConsumerGroup string
-	Topics        []string
-	Brokers       []string
-	MaxMessageLen int
-
-	Cluster *cluster.Consumer
-
-	// Verify Kafka SSL Certificate
-	InsecureSkipVerify bool
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-
-	// SASL Username
-	SASLUsername string `toml:"sasl_username"`
-	// SASL Password
-	SASLPassword string `toml:"sasl_password"`
+	ConsumerGroup   string
+	Topics          []string
+	MaxMessageLen   int
+	ZookeeperPeers  []string
+	ZookeeperChroot string
+	Consumer        *consumergroup.ConsumerGroup
 
 	// Legacy metric buffer support
 	MetricBuffer int
@@ -62,22 +47,12 @@ type Kafka struct {
 }
 
 var sampleConfig = `
-  ## kafka servers
-  brokers = ["localhost:9092"]
   ## topic(s) to consume
   topics = ["telegraf"]
-
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Optional SASL Config
-  # sasl_username = "kafka"
-  # sasl_password = "secret"
-
+  ## an array of Zookeeper connection strings
+  zookeeper_peers = ["localhost:2181"]
+  ## Zookeeper Chroot
+  zookeeper_chroot = ""
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
   ## Offset (must be either "oldest" or "newest")
@@ -109,67 +84,45 @@ func (k *Kafka) SetParser(parser parsers.Parser) {
 func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	k.Lock()
 	defer k.Unlock()
-	var clusterErr error
+	var consumerErr error
 
 	k.acc = acc
 
-	config := cluster.NewConfig()
-	config.Consumer.Return.Errors = true
-
-	tlsConfig, err := internal.GetTLSConfig(
-		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
-	if err != nil {
-		return err
-	}
-
-	if tlsConfig != nil {
-		log.Printf("D! TLS Enabled")
-		config.Net.TLS.Config = tlsConfig
-		config.Net.TLS.Enable = true
-	}
-	if k.SASLUsername != "" && k.SASLPassword != "" {
-		log.Printf("D! Using SASL auth with username '%s',",
-			k.SASLUsername)
-		config.Net.SASL.User = k.SASLUsername
-		config.Net.SASL.Password = k.SASLPassword
-		config.Net.SASL.Enable = true
-	}
-
+	config := consumergroup.NewConfig()
+	config.Zookeeper.Chroot = k.ZookeeperChroot
 	switch strings.ToLower(k.Offset) {
 	case "oldest", "":
-		config.Consumer.Offsets.Initial = sarama.OffsetOldest
+		config.Offsets.Initial = sarama.OffsetOldest
 	case "newest":
-		config.Consumer.Offsets.Initial = sarama.OffsetNewest
+		config.Offsets.Initial = sarama.OffsetNewest
 	default:
 		log.Printf("I! WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
 			k.Offset)
-		config.Consumer.Offsets.Initial = sarama.OffsetOldest
+		config.Offsets.Initial = sarama.OffsetOldest
 	}
 
-	if k.Cluster == nil {
-		k.Cluster, clusterErr = cluster.NewConsumer(
-			k.Brokers,
+	if k.Consumer == nil || k.Consumer.Closed() {
+		k.Consumer, consumerErr = consumergroup.JoinConsumerGroup(
 			k.ConsumerGroup,
 			k.Topics,
+			k.ZookeeperPeers,
 			config,
 		)
-
-		if clusterErr != nil {
-			log.Printf("E! Error when creating Kafka Consumer, brokers: %v, topics: %v\n",
-				k.Brokers, k.Topics)
-			return clusterErr
+		if consumerErr != nil {
+			return consumerErr
 		}
 
 		// Setup message and error channels
-		k.in = k.Cluster.Messages()
-		k.errs = k.Cluster.Errors()
+		k.in = k.Consumer.Messages()
+		k.errs = k.Consumer.Errors()
 	}
 
 	k.done = make(chan struct{})
+
 	// Start the kafka message reader
 	go k.receiver()
-	log.Printf("I! Started the kafka consumer service, brokers: %v, topics: %v\n",
-		k.Brokers, k.Topics)
+	log.Printf("I! Started the kafka consumer service, peers: %v, topics: %v\n",
+		k.ZookeeperPeers, k.Topics)
 	return nil
 }
 
@@ -203,7 +156,7 @@ func (k *Kafka) receiver() {
 				// TODO(cam) this locking can be removed if this PR gets merged:
 				// https://github.com/wvanbergen/kafka/pull/84
 				k.Lock()
-				k.Cluster.MarkOffset(msg, "")
+				k.Consumer.CommitUpto(msg)
 				k.Unlock()
 			}
 		}
@@ -214,7 +167,7 @@ func (k *Kafka) Stop() {
 	k.Lock()
 	defer k.Unlock()
 	close(k.done)
-	if err := k.Cluster.Close(); err != nil {
+	if err := k.Consumer.Close(); err != nil {
 		k.acc.AddError(fmt.Errorf("Error closing consumer: %s\n", err.Error()))
 	}
 }
@@ -224,7 +177,7 @@ func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("kafka_consumer", func() telegraf.Input {
+	inputs.Add("kafka_consumer_legacy", func() telegraf.Input {
 		return &Kafka{}
 	})
 }
