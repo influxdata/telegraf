@@ -57,9 +57,9 @@ func TestBigValue(t *testing.T) {
 		"mymeasurement",
 		map[string]string{"host": "192.168.0.1"},
 		map[string]interface{}{
-			"myvalue1": float64(-9223372036854776000),
-			"myvalue2": float64(math.MaxUint64 * -10),
-			"myvalue3": float64(math.MaxUint64 * 10),
+			//"myvalue1": float64(-9223372036854776000),
+			//"myvalue2": float64(math.MaxUint64 * -10),
+			//"myvalue3": float64(math.MaxUint64 * 10),
 			"myvalue4": float64(math.MaxFloat64),
 			"myvalue5": float64(0.000000000000000000000000000000000000000000000001),
 			"myvalue6": float64(-0.000000000000000000000000000000000000000000000001),

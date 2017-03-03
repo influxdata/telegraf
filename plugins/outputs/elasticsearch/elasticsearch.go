@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -144,26 +143,11 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		indexName := a.GetIndexName(a.IndexName, metric.Time())
 
 		m := make(map[string]interface{})
-		mfields := make(map[string]interface{})
-
-		// Elasticsearch/java/json quirks for correct field mapping
-		// value as integer cannot be bigger than MaxInt64 or smaller than MinInt64; as a float it cannot be bigger than float32
-		for k, v := range metric.Fields() {
-			switch {
-			case v.(float64) > math.MaxInt64:
-				v = math.MaxInt64
-			case v.(float64) < math.MinInt64:
-				v = math.MinInt64
-			default:
-				v = float32(v.(float64))
-			}
-			mfields[k] = v
-		}
 
 		m["@timestamp"] = metric.Time()
 		m["measurement_name"] = name
 		m["tag"] = metric.Tags()
-		m[name] = mfields
+		m[name] = metric.Fields()
 
 		bulkRequest.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
