@@ -67,7 +67,7 @@ func TestParseValidOutput(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"value": float64(0.008457),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"unit": ""}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{}, metrics[0].Tags())
 }
 
 func TestParseInvalidOutput(t *testing.T) {

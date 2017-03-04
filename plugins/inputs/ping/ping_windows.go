@@ -40,10 +40,10 @@ func (s *Ping) Description() string {
 const sampleConfig = `
 	## urls to ping
 	urls = ["www.google.com"] # required
-	
+
 	## number of pings to send per collection (ping -n <COUNT>)
 	count = 4 # required
-	
+
 	## Ping timeout, in seconds. 0 means default timeout (ping -w <TIMEOUT>)
 	Timeout = 0
 `
@@ -64,7 +64,7 @@ func hostPinger(timeout float64, args ...string) (string, error) {
 }
 
 // processPingOutput takes in a string output from the ping command
-// based on linux implementation but using regex ( multilanguage support ) ( shouldn't affect the performance of the program )
+// based on linux implementation but using regex ( multilanguage support )
 // It returns (<transmitted packets>, <received reply>, <received packet>, <average response>, <min response>, <max response>)
 func processPingOutput(out string) (int, int, int, int, int, int, error) {
 	// So find a line contain 3 numbers except reply lines
@@ -189,13 +189,13 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				"percent_reply_loss":  lossReply,
 			}
 			if avg > 0 {
-				fields["average_response_ms"] = avg
+				fields["average_response_ms"] = float64(avg)
 			}
 			if min > 0 {
-				fields["minimum_response_ms"] = min
+				fields["minimum_response_ms"] = float64(min)
 			}
 			if max > 0 {
-				fields["maximum_response_ms"] = max
+				fields["maximum_response_ms"] = float64(max)
 			}
 			acc.AddFields("ping", fields, tags)
 		}(url)
