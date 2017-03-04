@@ -194,7 +194,7 @@ func makeReqBody(serializer serializers.Serializer, reqBodyBuf []byte, mCount in
 		arrayJsonObj = append(arrayJsonObj, []byte("[")...)
 		arrayJsonObj = append(arrayJsonObj, reqBodyBuf...)
 		arrayJsonObj = append(arrayJsonObj, []byte("]")...)
-		return bytes.Replace(arrayJsonObj, []byte("\n"), []byte(","), mCount - 1), nil
+		return bytes.Replace(arrayJsonObj, []byte("\n"), []byte(","), mCount-1), nil
 	default:
 		return reqBodyBuf, nil
 	}
