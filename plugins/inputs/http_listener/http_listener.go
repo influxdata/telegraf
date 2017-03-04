@@ -300,9 +300,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HTTPListener) parse(b []byte, t time.Time) error {
-	if !bytes.HasSuffix(b, []byte("\n")) {
-		b = append(b, '\n')
-	}
 	metrics, err := h.parser.ParseWithDefaultTime(b, t)
 
 	for _, m := range metrics {

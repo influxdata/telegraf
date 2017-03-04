@@ -157,13 +157,13 @@ func gatherWithTimeout(
 		select {
 		case err := <-done:
 			if err != nil {
-				log.Printf("E! ERROR in input [%s]: %s", input.Name(), err)
+				acc.AddError(err)
 			}
 			return
 		case <-ticker.C:
-			log.Printf("E! ERROR: input [%s] took longer to collect than "+
-				"collection interval (%s)",
-				input.Name(), timeout)
+			err := fmt.Errorf("took longer to collect than collection interval (%s)",
+				timeout)
+			acc.AddError(err)
 			continue
 		case <-shutdown:
 			return
@@ -191,6 +191,12 @@ func (a *Agent) Test() error {
 	}()
 
 	for _, input := range a.Config.Inputs {
+		if _, ok := input.Input.(telegraf.ServiceInput); ok {
+			fmt.Printf("\nWARNING: skipping plugin [[%s]]: service inputs not supported in --test mode\n",
+				input.Name())
+			continue
+		}
+
 		acc := NewAccumulator(input, metricC)
 		acc.SetPrecision(a.Config.Agent.Precision.Duration,
 			a.Config.Agent.Interval.Duration)
@@ -209,7 +215,7 @@ func (a *Agent) Test() error {
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
 		switch input.Name() {
-		case "cpu", "mongodb", "procstat":
+		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
 			time.Sleep(500 * time.Millisecond)
 			fmt.Printf("* Plugin: %s, Collection 2\n", input.Name())
 			if err := input.Input.Gather(acc); err != nil {
@@ -286,6 +292,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 	}()
 
 	ticker := time.NewTicker(a.Config.Agent.FlushInterval.Duration)
+	semaphore := make(chan struct{}, 1)
 	for {
 		select {
 		case <-shutdown:
@@ -295,8 +302,18 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			a.flush()
 			return nil
 		case <-ticker.C:
-			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
-			a.flush()
+			go func() {
+				select {
+				case semaphore <- struct{}{}:
+					internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
+					a.flush()
+					<-semaphore
+				default:
+					// skipping this flush because one is already happening
+					log.Println("W! Skipping a scheduled flush because there is" +
+						" already a flush ongoing.")
+				}
+			}()
 		case metric := <-metricC:
 			// NOTE potential bottleneck here as we put each metric through the
 			// processors serially.
@@ -381,5 +398,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	}
 
 	wg.Wait()
+	a.Close()
 	return nil
 }

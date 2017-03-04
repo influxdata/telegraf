@@ -16,12 +16,20 @@ for the stat structure can be found
 ```
 # Read metrics about docker containers
 [[inputs.docker]]
-  # Docker Endpoint
-  #   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  #   To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  ## Docker Endpoint
+  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
+  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
-  # Only collect metrics for these containers, collect all if empty
+  ## Only collect metrics for these containers, collect all if empty
   container_names = []
+  ## Timeout for docker list, info, and stats commands
+  timeout = "5s"
+
+  ## Whether to report for each container per-device blkio (8:0, 8:1...) and
+  ## network (eth0, eth1, ...) stats or not
+  perdevice = true
+  ## Whether to report for each container total blkio and network stats or not
+  total = false
 ```
 
 ### Measurements & Fields:

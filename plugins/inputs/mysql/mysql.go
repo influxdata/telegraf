@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -904,92 +905,98 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 	// gather connection metrics from processlist for each user
 	if m.GatherProcessList {
 		conn_rows, err := db.Query("SELECT user, sum(1) FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
+		if err != nil {
+			log.Printf("E! MySQL Error gathering process list: %s", err)
+		} else {
+			for conn_rows.Next() {
+				var user string
+				var connections int64
 
-		for conn_rows.Next() {
-			var user string
-			var connections int64
+				err = conn_rows.Scan(&user, &connections)
+				if err != nil {
+					return err
+				}
 
-			err = conn_rows.Scan(&user, &connections)
-			if err != nil {
-				return err
+				tags := map[string]string{"server": servtag, "user": user}
+				fields := make(map[string]interface{})
+
+				if err != nil {
+					return err
+				}
+				fields["connections"] = connections
+				acc.AddFields("mysql_users", fields, tags)
 			}
-
-			tags := map[string]string{"server": servtag, "user": user}
-			fields := make(map[string]interface{})
-
-			if err != nil {
-				return err
-			}
-			fields["connections"] = connections
-			acc.AddFields("mysql_users", fields, tags)
 		}
 	}
 
 	// gather connection metrics from user_statistics for each user
 	if m.GatherUserStatistics {
 		conn_rows, err := db.Query("select user, total_connections, concurrent_connections, connected_time, busy_time, cpu_time, bytes_received, bytes_sent, binlog_bytes_written, rows_fetched, rows_updated, table_rows_read, select_commands, update_commands, other_commands, commit_transactions, rollback_transactions, denied_connections, lost_connections, access_denied, empty_queries, total_ssl_connections FROM INFORMATION_SCHEMA.USER_STATISTICS GROUP BY user")
+		if err != nil {
+			log.Printf("E! MySQL Error gathering user stats: %s", err)
+		} else {
+			for conn_rows.Next() {
+				var user string
+				var total_connections int64
+				var concurrent_connections int64
+				var connected_time int64
+				var busy_time int64
+				var cpu_time int64
+				var bytes_received int64
+				var bytes_sent int64
+				var binlog_bytes_written int64
+				var rows_fetched int64
+				var rows_updated int64
+				var table_rows_read int64
+				var select_commands int64
+				var update_commands int64
+				var other_commands int64
+				var commit_transactions int64
+				var rollback_transactions int64
+				var denied_connections int64
+				var lost_connections int64
+				var access_denied int64
+				var empty_queries int64
+				var total_ssl_connections int64
 
-		for conn_rows.Next() {
-			var user string
-			var total_connections int64
-			var concurrent_connections int64
-			var connected_time int64
-			var busy_time int64
-			var cpu_time int64
-			var bytes_received int64
-			var bytes_sent int64
-			var binlog_bytes_written int64
-			var rows_fetched int64
-			var rows_updated int64
-			var table_rows_read int64
-			var select_commands int64
-			var update_commands int64
-			var other_commands int64
-			var commit_transactions int64
-			var rollback_transactions int64
-			var denied_connections int64
-			var lost_connections int64
-			var access_denied int64
-			var empty_queries int64
-			var total_ssl_connections int64
+				err = conn_rows.Scan(&user, &total_connections, &concurrent_connections,
+					&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+					&rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
+					&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+					&empty_queries, &total_ssl_connections,
+				)
 
-			err = conn_rows.Scan(&user, &total_connections, &concurrent_connections,
-				&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
-				&rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
-				&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
-				&empty_queries, &total_ssl_connections,
-			)
+				if err != nil {
+					return err
+				}
 
-			if err != nil {
-				return err
+				tags := map[string]string{"server": servtag, "user": user}
+				fields := map[string]interface{}{
+					"total_connections":      total_connections,
+					"concurrent_connections": concurrent_connections,
+					"connected_time":         connected_time,
+					"busy_time":              busy_time,
+					"cpu_time":               cpu_time,
+					"bytes_received":         bytes_received,
+					"bytes_sent":             bytes_sent,
+					"binlog_bytes_written":   binlog_bytes_written,
+					"rows_fetched":           rows_fetched,
+					"rows_updated":           rows_updated,
+					"table_rows_read":        table_rows_read,
+					"select_commands":        select_commands,
+					"update_commands":        update_commands,
+					"other_commands":         other_commands,
+					"commit_transactions":    commit_transactions,
+					"rollback_transactions":  rollback_transactions,
+					"denied_connections":     denied_connections,
+					"lost_connections":       lost_connections,
+					"access_denied":          access_denied,
+					"empty_queries":          empty_queries,
+					"total_ssl_connections":  total_ssl_connections,
+				}
+
+				acc.AddFields("mysql_user_stats", fields, tags)
 			}
-
-			tags := map[string]string{"server": servtag, "user": user}
-			fields := map[string]interface{}{
-				"total_connections":      total_connections,
-				"concurrent_connections": concurrent_connections,
-				"connected_time":         connected_time,
-				"busy_time":              busy_time,
-				"cpu_time":               cpu_time,
-				"bytes_received":         bytes_received,
-				"bytes_sent":             bytes_sent,
-				"binlog_bytes_written":   binlog_bytes_written,
-				"rows_fetched":           rows_fetched,
-				"rows_updated":           rows_updated,
-				"table_rows_read":        table_rows_read,
-				"select_commands":        select_commands,
-				"update_commands":        update_commands,
-				"other_commands":         other_commands,
-				"commit_transactions":    commit_transactions,
-				"rollback_transactions":  rollback_transactions,
-				"denied_connections":     denied_connections,
-				"lost_connections":       lost_connections,
-				"access_denied":          access_denied,
-				"empty_queries":          empty_queries,
-				"total_ssl_connections":  total_ssl_connections,
-			}
-
-			acc.AddFields("mysql_user_stats", fields, tags)
 		}
 	}
 

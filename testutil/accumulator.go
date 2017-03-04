@@ -29,6 +29,7 @@ func (p *Metric) String() string {
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
 	sync.Mutex
+	*sync.Cond
 
 	Metrics  []*Metric
 	nMetrics uint64
@@ -56,11 +57,14 @@ func (a *Accumulator) AddFields(
 	timestamp ...time.Time,
 ) {
 	atomic.AddUint64(&a.nMetrics, 1)
+	a.Lock()
+	defer a.Unlock()
+	if a.Cond != nil {
+		a.Cond.Broadcast()
+	}
 	if a.Discard {
 		return
 	}
-	a.Lock()
-	defer a.Unlock()
 	if tags == nil {
 		tags = map[string]string{}
 	}
@@ -171,6 +175,15 @@ func (a *Accumulator) NFields() int {
 	return counter
 }
 
+// Wait waits for a metric to be added to the accumulator.
+// Accumulator must already be locked.
+func (a *Accumulator) Wait() {
+	if a.Cond == nil {
+		a.Cond = sync.NewCond(&a.Mutex)
+	}
+	a.Cond.Wait()
+}
+
 func (a *Accumulator) AssertContainsTaggedFields(
 	t *testing.T,
 	measurement string,
@@ -221,7 +234,7 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 	}
 }
 
-// HasIntValue returns true if the measurement has an Int value
+// HasIntField returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
 	a.Lock()
 	defer a.Unlock()
@@ -230,6 +243,42 @@ func (a *Accumulator) HasIntField(measurement string, field string) bool {
 			for fieldname, value := range p.Fields {
 				if fieldname == field {
 					_, ok := value.(int64)
+					return ok
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// HasInt32Field returns true if the measurement has an Int value
+func (a *Accumulator) HasInt32Field(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(int32)
+					return ok
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// HasStringField returns true if the measurement has an String value
+func (a *Accumulator) HasStringField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(string)
 					return ok
 				}
 			}
