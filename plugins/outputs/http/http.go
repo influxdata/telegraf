@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	ejson "encoding/json"
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
@@ -32,11 +31,6 @@ var sampleConfig = `
   response_header_timeout = 3
   ## Configure dial timeout in seconds. Default : 3
   dial_timeout = 3
-  ## max_bulk_limit defines how much of the metrics will be sent.
-  ## Max_bulk_limit = 0   => Write all metrics collected during flush_interval.
-  ## Max_bulk_limit = 100 => Write 100 of all metrics collected during flush_interval.
-  ## Note that If the amount of metric collected during flush_interval is less than max_bulk_limit, then all of the stacked metrics are sent.
-  max_bulk_limit = 0
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
@@ -50,7 +44,6 @@ const (
 
 	DEFAULT_RESPONSE_HEADER_TIMEOUT = 3
 	DEFAULT_DIAL_TIME_OUT           = 3
-	DEFAULT_MAX_BULK_LIMIT          = 0
 )
 
 type Http struct {
@@ -62,7 +55,6 @@ type Http struct {
 	// Option with http default value
 	ResHeaderTimeout int `toml:"response_header_timeout"`
 	DialTimeOut      int `toml:"dial_timeout"`
-	MaxBulkLimit     int `toml:"max_bulk_limit"`
 
 	client     http.Client
 	serializer serializers.Serializer
@@ -109,7 +101,8 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	var reqBodyBuf [][]byte
+	var mCount int
+	var reqBodyBuf []byte
 
 	for _, metric := range metrics {
 		buf, err := h.serializer.Serialize(metric)
@@ -118,57 +111,24 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("E! Error serializing some metrics: %s", err.Error())
 		}
 
-		reqBodyBuf = append(reqBodyBuf, buf)
+		reqBodyBuf = append(reqBodyBuf, buf...)
+		mCount++
 	}
 
-	if h.MaxBulkLimit == 0 || len(reqBodyBuf) <= h.MaxBulkLimit {
-		if err := h.write(reqBodyBuf); err != nil {
-			return err
-		}
+	reqBody, err := makeReqBody(h.serializer, reqBodyBuf, mCount)
 
-		return nil
+	if err != nil {
+		return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
 	}
 
-	if err := h.splitWrite(reqBodyBuf); err != nil {
+	if err := h.write(reqBody); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// splitWrite sends the divided metric by max_bulk_limit.
-func (h *Http) splitWrite(reqBodyBuf [][]byte) error {
-	s := 0
-	e := h.MaxBulkLimit
-	mLength := len(reqBodyBuf)
-
-	for true {
-		if mLength <= e {
-			if err := h.write(reqBodyBuf[s:mLength]); err != nil {
-				return err
-			}
-
-			break
-		} else {
-			if err := h.write(reqBodyBuf[s:e]); err != nil {
-				return err
-			}
-		}
-
-		s += h.MaxBulkLimit
-		e += h.MaxBulkLimit
-	}
-
-	return nil
-}
-
-func (h *Http) write(reqBodyBuf [][]byte) error {
-	reqBody, err := makeReqBody(h.serializer, reqBodyBuf)
-
-	if err != nil {
-		return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
-	}
-
+func (h *Http) write(reqBody []byte) error {
 	req, err := http.NewRequest(POST, h.URL, bytes.NewBuffer(reqBody))
 
 	for _, httpHeader := range h.HttpHeaders {
@@ -227,41 +187,17 @@ func validate(h *Http) error {
 }
 
 // makeReqBody translates each serializer's converted metric into a request body.
-func makeReqBody(serializer serializers.Serializer, reqBodyBuf [][]byte) ([]byte, error) {
+func makeReqBody(serializer serializers.Serializer, reqBodyBuf []byte, mCount int) ([]byte, error) {
 	switch serializer.(type) {
 	case *json.JsonSerializer:
-		return makeJsonFormatReqBody(reqBodyBuf)
+		var arrayJsonObj []byte
+		arrayJsonObj = append(arrayJsonObj, []byte("[")...)
+		arrayJsonObj = append(arrayJsonObj, reqBodyBuf...)
+		arrayJsonObj = append(arrayJsonObj, []byte("]")...)
+		return bytes.Replace(arrayJsonObj, []byte("\n"), []byte(","), mCount - 1), nil
 	default:
-		return makePlainTextFormatReqBody(reqBodyBuf)
+		return reqBodyBuf, nil
 	}
-}
-
-func makePlainTextFormatReqBody(reqBodyBuf [][]byte) ([]byte, error) {
-	var reqBody bytes.Buffer
-
-	for _, serializedMetric := range reqBodyBuf {
-		reqBody.Write(serializedMetric)
-	}
-
-	return reqBody.Bytes(), nil
-}
-
-func makeJsonFormatReqBody(reqBodyBuf [][]byte) ([]byte, error) {
-	var reqBody []map[string]interface{}
-
-	for _, serializedMetric := range reqBodyBuf {
-		var jsonObject map[string]interface{}
-
-		err := ejson.Unmarshal(serializedMetric, &jsonObject)
-
-		if err != nil {
-			return nil, fmt.Errorf("E! HTTP json unmarshal is fail! It probably does not seem to fit in the json format. Please check %s", serializedMetric)
-		}
-
-		reqBody = append(reqBody, jsonObject)
-	}
-
-	return ejson.Marshal(reqBody)
 }
 
 func init() {
@@ -269,7 +205,6 @@ func init() {
 		return &Http{
 			ResHeaderTimeout: DEFAULT_RESPONSE_HEADER_TIMEOUT,
 			DialTimeOut:      DEFAULT_DIAL_TIME_OUT,
-			MaxBulkLimit:     DEFAULT_MAX_BULK_LIMIT,
 		}
 	})
 }

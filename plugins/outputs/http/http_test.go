@@ -1,7 +1,6 @@
 package http
 
 import (
-	ejon "encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -101,78 +100,6 @@ func TestWriteAllInputMetric(t *testing.T) {
 		URL:            server.URL,
 		HttpHeaders:    []string{"Content-Type:plain/text"},
 		ExpStatusCodes: []int{200, 204},
-		MaxBulkLimit:   0,
-	}
-
-	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix:   "telegraf",
-		Template: "tags.measurement.field",
-	})
-
-	http.Connect()
-	err := http.Write(metrics)
-
-	assert.NoError(t, err)
-}
-
-func TestSplitWriteTwiceCase1(t *testing.T) {
-	now := time.Now()
-
-	server := httptest.NewServer(&TestOkHandler{
-		T: t,
-		Expected: []string{
-			fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\n", now.Unix()),
-			fmt.Sprintf("telegraf.mem.us-west-2.localhost.mem.used 91.5 %d\n", now.Unix()),
-		},
-	})
-	defer server.Close()
-	defer resetCount()
-
-	m1, _ := metric.New("cpu", cpuTags, cpuField, now)
-	m2, _ := metric.New("mem", memTags, memField, now)
-	metrics := []telegraf.Metric{m1, m2}
-
-	http := &Http{
-		URL:            server.URL,
-		HttpHeaders:    []string{"Content-Type:plain/text"},
-		ExpStatusCodes: []int{200, 204},
-		MaxBulkLimit:   1,
-	}
-
-	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix:   "telegraf",
-		Template: "tags.measurement.field",
-	})
-
-	http.Connect()
-	err := http.Write(metrics)
-
-	assert.NoError(t, err)
-}
-
-func TestSplitWriteTwiceCase2(t *testing.T) {
-	now := time.Now()
-
-	server := httptest.NewServer(&TestOkHandler{
-		T: t,
-		Expected: []string{
-			fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\ntelegraf.mem.us-west-2.localhost.mem.used 91.5 %d\n", now.Unix(), now.Unix()),
-			fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\n", now.Unix()),
-		},
-	})
-	defer server.Close()
-	defer resetCount()
-
-	m1, _ := metric.New("cpu", cpuTags, cpuField, now)
-	m2, _ := metric.New("mem", memTags, memField, now)
-	m3, _ := metric.New("cpu", cpuTags, cpuField, now)
-	metrics := []telegraf.Metric{m1, m2, m3}
-
-	http := &Http{
-		URL:            server.URL,
-		HttpHeaders:    []string{"Content-Type:plain/text"},
-		ExpStatusCodes: []int{200, 204},
-		MaxBulkLimit:   2,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -199,7 +126,6 @@ func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 		URL:            server.URL,
 		HttpHeaders:    []string{"Content-Type:application/json"},
 		ExpStatusCodes: []int{200},
-		MaxBulkLimit:   1,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -226,7 +152,6 @@ func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
 		URL:            server.URL,
 		HttpHeaders:    []string{"Content-Type:application/json"},
 		ExpStatusCodes: []int{200, 404},
-		MaxBulkLimit:   1,
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -267,14 +192,14 @@ func TestMakeReqBody(t *testing.T) {
 	// given
 	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
 
-	var reqBodyBuf [][]byte
+	var reqBodyBuf []byte
 
 	jsonSerializer := json.JsonSerializer{}
 	serializedMetric, _ := jsonSerializer.Serialize(m)
-	reqBodyBuf = append(reqBodyBuf, serializedMetric)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric...)
 
 	// when
-	reqBody, err := makeReqBody(&jsonSerializer, reqBodyBuf)
+	reqBody, err := makeReqBody(&jsonSerializer, reqBodyBuf, 1)
 
 	// then
 	assert.NoError(t, err)
@@ -285,62 +210,18 @@ func TestMakeReqBody2(t *testing.T) {
 	// given
 	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
 
-	var reqBodyBuf [][]byte
+	var reqBodyBuf []byte
 
 	influxSerializer := influx.InfluxSerializer{}
 	serializedMetric, _ := influxSerializer.Serialize(m)
-	reqBodyBuf = append(reqBodyBuf, serializedMetric)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric...)
 
 	// when
-	reqBody, err := makeReqBody(&influxSerializer, reqBodyBuf)
+	reqBody, err := makeReqBody(&influxSerializer, reqBodyBuf, 1)
 
 	// then
 	assert.NoError(t, err)
 	assert.NotEmpty(t, reqBody)
-}
-
-func TestMakeJsonFormatReqBody(t *testing.T) {
-	// given
-	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
-
-	var reqBodyBuf [][]byte
-
-	jsonSerializer := json.JsonSerializer{}
-	serializedMetric, _ := jsonSerializer.Serialize(m)
-	reqBodyBuf = append(reqBodyBuf, serializedMetric)
-
-	serializedMetric2, _ := jsonSerializer.Serialize(m)
-	reqBodyBuf = append(reqBodyBuf, serializedMetric2)
-
-	// when
-	result, _ := makeJsonFormatReqBody(reqBodyBuf)
-
-	// then
-	var reqBodyArrayJsonO []map[string]interface{}
-	ejon.Unmarshal(result, &reqBodyArrayJsonO)
-
-	assert.Equal(t, 2, len(reqBodyArrayJsonO))
-}
-
-func TestMakeJsonFormatReqBodyWithNotJsonFormat(t *testing.T) {
-	// given
-	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
-
-	var reqBodyBuf [][]byte
-
-	influxSerializer := influx.InfluxSerializer{}
-	serializedMetric, _ := influxSerializer.Serialize(m)
-	reqBodyBuf = append(reqBodyBuf, serializedMetric)
-
-	serializedMetric2, _ := influxSerializer.Serialize(m)
-	reqBodyBuf = append(reqBodyBuf, serializedMetric2)
-
-	// when
-	result, err := makeJsonFormatReqBody(reqBodyBuf)
-
-	// then
-	assert.Equal(t, 0, len(result))
-	assert.Error(t, err)
 }
 
 func TestImplementedInterfaceFunction(t *testing.T) {
