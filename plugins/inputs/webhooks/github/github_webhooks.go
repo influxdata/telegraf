@@ -27,14 +27,14 @@ func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) 
 
 func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	eventType := r.Header["X-Github-Event"][0]
+	eventType := r.Header.Get("X-Github-Event")
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if gh.Secret != "" && !checkSignature(gh.Secret, data, r.Header["X-Hub-Signature"][0]) {
+	if gh.Secret != "" && !checkSignature(gh.Secret, data, r.Header.Get("X-Hub-Signature")) {
 		log.Printf("I! Fail to check the github webhook signature\n")
 		w.WriteHeader(http.StatusBadRequest)
 		return
