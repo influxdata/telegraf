@@ -125,6 +125,7 @@ configuration options.
 * [influxdb](./plugins/inputs/influxdb)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
+* [irqstat](./plugins/inputs/irqstat)
 * [jolokia](./plugins/inputs/jolokia)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
