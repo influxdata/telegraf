@@ -47,6 +47,7 @@ func (wb *Webhooks) SampleConfig() string {
 
   [inputs.webhooks.github]
     path = "/github"
+    # secret = ""
 
   [inputs.webhooks.mandrill]
     path = "/mandrill"
