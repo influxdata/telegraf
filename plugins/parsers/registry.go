@@ -54,6 +54,13 @@ type Config struct {
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
 
+	// Authentication file for collectd
+	CollectdAuthFile string
+	// One of none (default), sign, or encrypt
+	CollectdSecurityLevel string
+	// Dataset specification for collectd
+	CollectdTypesDB []string
+
 	// DataType only applies to value, this will be the type to parse value to
 	DataType string
 
@@ -80,7 +87,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewGraphiteParser(config.Separator,
 			config.Templates, config.DefaultTags)
 	case "collectd":
-		parser, err = NewCollectdParser()
+		parser, err = NewCollectdParser(config.CollectdAuthFile,
+			config.CollectdSecurityLevel, config.CollectdTypesDB)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -128,6 +136,10 @@ func NewValueParser(
 	}, nil
 }
 
-func NewCollectdParser() (Parser, error) {
-	return &collectd.CollectdParser{}, nil
+func NewCollectdParser(
+	authFile string,
+	securityLevel string,
+	typesDB []string,
+) (Parser, error) {
+	return collectd.NewCollectdParser(authFile, securityLevel, typesDB)
 }

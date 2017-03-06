@@ -7,6 +7,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
 1. [Value](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#value), ie: 45 or "booyah"
 1. [Nagios](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#nagios) (exec input only)
+1. [Collectd](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#collectd)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -437,4 +438,44 @@ Note: Nagios Input Data Formats is only supported in `exec` input plugin.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "nagios"
+```
+
+# Collectd:
+
+The collectd format parses the collectd binary network protocol.  Tags are
+created for host, instance, type, and type instance.  All collectd values are
+added as float64 fields.
+
+For more information about the binary network protocol see
+[here](https://collectd.org/wiki/index.php/Binary_protocol).
+
+You can control the cryptographic settings with parser options.  Create an
+authentication file and set `collectd_auth_file` to the path of the file, then
+set the desired security level in `collectd_security_level`.
+
+Additional information including client setup can be found
+[here](https://collectd.org/wiki/index.php/Networking_introduction#Cryptographic_setup).
+
+You can also change the path to the typesdb or add additional typesdb using
+`collectd_typesdb`.
+
+#### Collectd Configuration:
+
+```toml
+[[inputs.socket_listener]]
+  service_address = "udp://127.0.0.1:25826"
+  name_prefix = "collectd_"
+
+  ## Data format to consume.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "collectd"
+
+  ## Authentication file for cryptographic security levels
+  collectd_auth_file = "/etc/collectd/auth_file"
+  ## One of none (default), sign, or encrypt
+  collectd_security_level = "encrypt"
+  ## Path of to TypesDB specifications
+  collectd_typesdb = ["/usr/share/collectd/types.db"]
 ```
