@@ -51,6 +51,19 @@ func TestErrorWriteLogToFile(t *testing.T) {
 	assert.Equal(t, f[19:], []byte("Z E! TEST\n"))
 }
 
+func TestAddDefaultLogLevel(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "")
+	assert.NoError(t, err)
+	defer func() { os.Remove(tmpfile.Name()) }()
+
+	SetupLogging(true, false, tmpfile.Name())
+	log.Printf("TEST")
+
+	f, err := ioutil.ReadFile(tmpfile.Name())
+	assert.NoError(t, err)
+	assert.Equal(t, f[19:], []byte("Z I! TEST\n"))
+}
+
 func BenchmarkTelegrafLogWrite(b *testing.B) {
 	var msg = []byte("test")
 	var buf bytes.Buffer

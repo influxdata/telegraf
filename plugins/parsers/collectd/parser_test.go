@@ -7,7 +7,17 @@ import (
 	"collectd.org/api"
 	"collectd.org/network"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
 )
+
+type AuthMap struct {
+	Passwd map[string]string
+}
+
+func (p *AuthMap) Password(user string) (string, error) {
+	return p.Passwd[user], nil
+}
 
 type metricData struct {
 	name   string
@@ -15,12 +25,44 @@ type metricData struct {
 	fields map[string]interface{}
 }
 
-type testData struct {
+type testCase struct {
 	vl       []api.ValueList
 	expected []metricData
 }
 
-var parseData = testData{
+var singleMetric = testCase{
+	[]api.ValueList{
+		api.ValueList{
+			Identifier: api.Identifier{
+				Host:           "xyzzy",
+				Plugin:         "cpu",
+				PluginInstance: "1",
+				Type:           "cpu",
+				TypeInstance:   "user",
+			},
+			Values: []api.Value{
+				api.Counter(42),
+			},
+			DSNames: []string(nil),
+		},
+	},
+	[]metricData{
+		metricData{
+			"cpu_value",
+			map[string]string{
+				"type_instance": "user",
+				"host":          "xyzzy",
+				"instance":      "1",
+				"type":          "cpu",
+			},
+			map[string]interface{}{
+				"value": float64(42),
+			},
+		},
+	},
+}
+
+var multiMetric = testCase{
 	[]api.ValueList{
 		api.ValueList{
 			Identifier: api.Identifier{
@@ -33,19 +75,6 @@ var parseData = testData{
 			Values: []api.Value{
 				api.Derive(42),
 				api.Gauge(42),
-			},
-			DSNames: []string(nil),
-		},
-		api.ValueList{
-			Identifier: api.Identifier{
-				Host:           "xyzzy",
-				Plugin:         "cpu",
-				PluginInstance: "1",
-				Type:           "cpu",
-				TypeInstance:   "user",
-			},
-			Values: []api.Value{
-				api.Counter(42),
 			},
 			DSNames: []string(nil),
 		},
@@ -75,102 +104,180 @@ var parseData = testData{
 				"value": float64(42),
 			},
 		},
-		metricData{
-			"cpu_value",
-			map[string]string{
-				"type_instance": "user",
-				"host":          "xyzzy",
-				"instance":      "1",
-				"type":          "cpu",
-			},
-			map[string]interface{}{
-				"value": float64(42),
-			},
-		},
 	},
 }
 
+func TestNewCollectdParser(t *testing.T) {
+	parser, err := NewCollectdParser("", "", []string{})
+	require.Nil(t, err)
+	require.Equal(t, parser.popts.SecurityLevel, network.None)
+	require.NotNil(t, parser.popts.PasswordLookup)
+	require.Nil(t, parser.popts.TypesDB)
+}
+
 func TestParse(t *testing.T) {
-	require := require.New(t)
+	cases := []testCase{singleMetric, multiMetric}
 
-	td := parseData
+	for _, tc := range cases {
+		buf, err := writeValueList(tc.vl)
+		require.Nil(t, err)
+		bytes, err := buf.Bytes()
+		require.Nil(t, err)
 
-	bytes, err := serializeValueList(td.vl)
-	require.Nil(err)
+		parser := &CollectdParser{}
+		require.Nil(t, err)
+		metrics, err := parser.Parse(bytes)
+		require.Nil(t, err)
 
-	parser := CollectdParser{}
-	metrics, err := parser.Parse(bytes)
-	require.Nil(err)
-
-	require.Equal(len(td.expected), len(metrics))
-
-	for i, m := range metrics {
-		require.Equal(td.expected[i].name, m.Name())
-		require.Equal(td.expected[i].tags, m.Tags())
-		require.Equal(td.expected[i].fields, m.Fields())
+		assertEqualMetrics(t, tc.expected, metrics)
 	}
 }
 
-func TestParseLine_MultipleMetrics(t *testing.T) {
-	require := require.New(t)
+func TestParse_DefaultTags(t *testing.T) {
+	buf, err := writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	bytes, err := buf.Bytes()
+	require.Nil(t, err)
 
-	bytes, err := serializeValueList(parseData.vl)
-	require.Nil(err)
+	parser := &CollectdParser{}
+	parser.SetDefaultTags(map[string]string{
+		"foo": "bar",
+	})
+	require.Nil(t, err)
+	metrics, err := parser.Parse(bytes)
+	require.Nil(t, err)
 
-	parser := CollectdParser{}
-	_, err = parser.ParseLine(string(bytes))
+	require.Equal(t, "bar", metrics[0].Tags()["foo"])
+}
 
-	require.NotNil(err)
+func TestParse_SignSecurityLevel(t *testing.T) {
+	parser := &CollectdParser{}
+	popts := &network.ParseOpts{
+		SecurityLevel: network.Sign,
+		PasswordLookup: &AuthMap{
+			map[string]string{
+				"user0": "bar",
+			},
+		},
+	}
+	parser.SetParseOpts(popts)
+
+	// Signed data
+	buf, err := writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	buf.Sign("user0", "bar")
+	bytes, err := buf.Bytes()
+	require.Nil(t, err)
+
+	metrics, err := parser.Parse(bytes)
+	require.Nil(t, err)
+	assertEqualMetrics(t, singleMetric.expected, metrics)
+
+	// Encrypted data
+	buf, err = writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	buf.Encrypt("user0", "bar")
+	bytes, err = buf.Bytes()
+	require.Nil(t, err)
+
+	metrics, err = parser.Parse(bytes)
+	require.Nil(t, err)
+	assertEqualMetrics(t, singleMetric.expected, metrics)
+
+	// Plain text data skipped
+	buf, err = writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	bytes, err = buf.Bytes()
+	require.Nil(t, err)
+
+	metrics, err = parser.Parse(bytes)
+	require.Nil(t, err)
+	require.Equal(t, []telegraf.Metric{}, metrics)
+
+	// Wrong password error
+	buf, err = writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	buf.Sign("x", "y")
+	bytes, err = buf.Bytes()
+	require.Nil(t, err)
+
+	metrics, err = parser.Parse(bytes)
+	require.NotNil(t, err)
+}
+
+func TestParse_EncryptSecurityLevel(t *testing.T) {
+	parser := &CollectdParser{}
+	popts := &network.ParseOpts{
+		SecurityLevel: network.Encrypt,
+		PasswordLookup: &AuthMap{
+			map[string]string{
+				"user0": "bar",
+			},
+		},
+	}
+	parser.SetParseOpts(popts)
+
+	// Signed data skipped
+	buf, err := writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	buf.Sign("user0", "bar")
+	bytes, err := buf.Bytes()
+	require.Nil(t, err)
+
+	metrics, err := parser.Parse(bytes)
+	require.Nil(t, err)
+	require.Equal(t, []telegraf.Metric{}, metrics)
+
+	// Encrypted data
+	buf, err = writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	buf.Encrypt("user0", "bar")
+	bytes, err = buf.Bytes()
+	require.Nil(t, err)
+
+	metrics, err = parser.Parse(bytes)
+	require.Nil(t, err)
+	assertEqualMetrics(t, singleMetric.expected, metrics)
+
+	// Plain text data skipped
+	buf, err = writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	bytes, err = buf.Bytes()
+	require.Nil(t, err)
+
+	metrics, err = parser.Parse(bytes)
+	require.Nil(t, err)
+	require.Equal(t, []telegraf.Metric{}, metrics)
+
+	// Wrong password error
+	buf, err = writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	buf.Sign("x", "y")
+	bytes, err = buf.Bytes()
+	require.Nil(t, err)
+
+	metrics, err = parser.Parse(bytes)
+	require.NotNil(t, err)
 }
 
 func TestParseLine(t *testing.T) {
-	require := require.New(t)
+	buf, err := writeValueList(singleMetric.vl)
+	require.Nil(t, err)
+	bytes, err := buf.Bytes()
+	require.Nil(t, err)
 
-	vl := []api.ValueList{
-		api.ValueList{
-			Identifier: api.Identifier{
-				Host:           "xyzzy",
-				Plugin:         "cpu",
-				PluginInstance: "0",
-				Type:           "cpu",
-				TypeInstance:   "user",
-			},
-			Values: []api.Value{
-				api.Derive(42),
-			},
-			DSNames: []string(nil),
-		},
-	}
-
-	expected := metricData{
-		"cpu_value",
-		map[string]string{
-			"type_instance": "user",
-			"host":          "xyzzy",
-			"instance":      "0",
-			"type":          "cpu",
-		},
-		map[string]interface{}{
-			"value": float64(42),
-		},
-	}
-
-	bytes, err := serializeValueList(vl)
-	require.Nil(err)
-
-	parser := CollectdParser{}
+	parser, err := NewCollectdParser("", "", []string{})
+	require.Nil(t, err)
 	metric, err := parser.ParseLine(string(bytes))
-	require.Nil(err)
+	require.Nil(t, err)
 
-	require.Equal(expected.name, metric.Name())
-	require.Equal(expected.tags, metric.Tags())
-	require.Equal(expected.fields, metric.Fields())
+	assertEqualMetrics(t, singleMetric.expected, []telegraf.Metric{metric})
 }
 
-func serializeValueList(valueLists []api.ValueList) ([]byte, error) {
+func writeValueList(valueLists []api.ValueList) (*network.Buffer, error) {
 	buffer := network.NewBuffer(0)
-	ctx := context.Background()
 
+	ctx := context.Background()
 	for _, vl := range valueLists {
 		err := buffer.Write(ctx, &vl)
 		if err != nil {
@@ -178,9 +285,14 @@ func serializeValueList(valueLists []api.ValueList) ([]byte, error) {
 		}
 	}
 
-	bytes, err := buffer.Bytes()
-	if err != nil {
-		return nil, err
+	return buffer, nil
+}
+
+func assertEqualMetrics(t *testing.T, expected []metricData, received []telegraf.Metric) {
+	require.Equal(t, len(expected), len(received))
+	for i, m := range received {
+		require.Equal(t, expected[i].name, m.Name())
+		require.Equal(t, expected[i].tags, m.Tags())
+		require.Equal(t, expected[i].fields, m.Fields())
 	}
-	return bytes, nil
 }

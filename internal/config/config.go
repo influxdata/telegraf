@@ -1229,6 +1229,34 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["collectd_auth_file"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdAuthFile = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["collectd_security_level"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdSecurityLevel = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["collectd_typesdb"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CollectdTypesDB = append(c.CollectdTypesDB, str.Value)
+					}
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1236,6 +1264,9 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
 	delete(tbl.Fields, "data_type")
+	delete(tbl.Fields, "collectd_auth_file")
+	delete(tbl.Fields, "collectd_security_level")
+	delete(tbl.Fields, "collectd_typesdb")
 
 	return parsers.NewParser(c)
 }
