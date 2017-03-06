@@ -25,6 +25,10 @@ func TestCommitCommentEvent(t *testing.T) {
 	GithubWebhookRequest("commit_comment", CommitCommentEventJSON(), t)
 }
 
+func TestPingEvent(t *testing.T) {
+	GithubWebhookRequest("ping", "", t)
+}
+
 func TestDeleteEvent(t *testing.T) {
 	GithubWebhookRequest("delete", DeleteEventJSON(), t)
 }
