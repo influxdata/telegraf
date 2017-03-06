@@ -24,14 +24,13 @@ const (
 
 	defaultFieldName = "value"
 
-	defaultSeparator = "_"
+	defaultSeparator           = "_"
+	defaultAllowPendingMessage = 10000
 )
 
-var dropwarn = "ERROR: statsd message queue full. " +
+var dropwarn = "E! Error: statsd message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
-
-var prevInstance *Statsd
 
 type Statsd struct {
 	// Address & Port to serve from
@@ -85,6 +84,8 @@ type Statsd struct {
 	Templates []string
 
 	listener *net.UDPConn
+
+	graphiteParser *graphite.GraphiteParser
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
@@ -95,6 +96,7 @@ type metric struct {
 	hash       string
 	intvalue   int64
 	floatvalue float64
+	strvalue   string
 	mtype      string
 	additive   bool
 	samplerate float64
@@ -103,7 +105,7 @@ type metric struct {
 
 type cachedset struct {
 	name   string
-	fields map[string]map[int64]bool
+	fields map[string]map[string]bool
 	tags   map[string]string
 }
 
@@ -132,14 +134,19 @@ func (_ *Statsd) Description() string {
 const sampleConfig = `
   ## Address and port to host UDP listener on
   service_address = ":8125"
-  ## Delete gauges every interval (default=false)
-  delete_gauges = false
-  ## Delete counters every interval (default=false)
-  delete_counters = false
-  ## Delete sets every interval (default=false)
-  delete_sets = false
-  ## Delete timings & histograms every interval (default=true)
+
+  ## The following configuration options control when telegraf clears it's cache
+  ## of previous values. If set to false, then telegraf will only clear it's
+  ## cache when the daemon is restarted.
+  ## Reset gauges every interval (default=true)
+  delete_gauges = true
+  ## Reset counters every interval (default=true)
+  delete_counters = true
+  ## Reset sets every interval (default=true)
+  delete_sets = true
+  ## Reset timings & histograms every interval (default=true)
   delete_timings = true
+
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -235,20 +242,13 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	s.done = make(chan struct{})
 	s.in = make(chan []byte, s.AllowedPendingMessages)
 
-	if prevInstance == nil {
-		s.gauges = make(map[string]cachedgauge)
-		s.counters = make(map[string]cachedcounter)
-		s.sets = make(map[string]cachedset)
-		s.timings = make(map[string]cachedtimings)
-	} else {
-		s.gauges = prevInstance.gauges
-		s.counters = prevInstance.counters
-		s.sets = prevInstance.sets
-		s.timings = prevInstance.timings
-	}
+	s.gauges = make(map[string]cachedgauge)
+	s.counters = make(map[string]cachedcounter)
+	s.sets = make(map[string]cachedset)
+	s.timings = make(map[string]cachedtimings)
 
 	if s.ConvertNames {
-		log.Printf("WARNING statsd: convert_names config option is deprecated," +
+		log.Printf("I! WARNING statsd: convert_names config option is deprecated," +
 			" please use metric_separator instead")
 	}
 
@@ -261,8 +261,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	go s.udpListen()
 	// Start the line parser
 	go s.parser()
-	log.Printf("Started the statsd service on %s\n", s.ServiceAddress)
-	prevInstance = s
+	log.Printf("I! Started the statsd service on %s\n", s.ServiceAddress)
 	return nil
 }
 
@@ -275,7 +274,7 @@ func (s *Statsd) udpListen() error {
 	if err != nil {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
-	log.Println("Statsd listener listening on: ", s.listener.LocalAddr().String())
+	log.Println("I! Statsd listener listening on: ", s.listener.LocalAddr().String())
 
 	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
@@ -285,7 +284,7 @@ func (s *Statsd) udpListen() error {
 		default:
 			n, _, err := s.listener.ReadFromUDP(buf)
 			if err != nil && !strings.Contains(err.Error(), "closed network") {
-				log.Printf("ERROR READ: %s\n", err.Error())
+				log.Printf("E! Error READ: %s\n", err.Error())
 				continue
 			}
 			bufCopy := make([]byte, n)
@@ -295,7 +294,7 @@ func (s *Statsd) udpListen() error {
 			case s.in <- bufCopy:
 			default:
 				s.drops++
-				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
+				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
 					log.Printf(dropwarn, s.drops)
 				}
 			}
@@ -346,7 +345,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				tagstr := segment[1:]
 				tags := strings.Split(tagstr, ",")
 				for _, tag := range tags {
-					ts := strings.Split(tag, ":")
+					ts := strings.SplitN(tag, ":", 2)
 					var k, v string
 					switch len(ts) {
 					case 1:
@@ -371,7 +370,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	// Validate splitting the line on ":"
 	bits := strings.Split(line, ":")
 	if len(bits) < 2 {
-		log.Printf("Error: splitting ':', Unable to parse metric: %s\n", line)
+		log.Printf("E! Error: splitting ':', Unable to parse metric: %s\n", line)
 		return errors.New("Error Parsing statsd line")
 	}
 
@@ -387,11 +386,11 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		// Validate splitting the bit on "|"
 		pipesplit := strings.Split(bit, "|")
 		if len(pipesplit) < 2 {
-			log.Printf("Error: splitting '|', Unable to parse metric: %s\n", line)
+			log.Printf("E! Error: splitting '|', Unable to parse metric: %s\n", line)
 			return errors.New("Error Parsing statsd line")
 		} else if len(pipesplit) > 2 {
 			sr := pipesplit[2]
-			errmsg := "Error: parsing sample rate, %s, it must be in format like: " +
+			errmsg := "E! Error: parsing sample rate, %s, it must be in format like: " +
 				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
 			if strings.Contains(sr, "@") && len(sr) > 1 {
 				samplerate, err := strconv.ParseFloat(sr[1:], 64)
@@ -411,14 +410,14 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "g", "c", "s", "ms", "h":
 			m.mtype = pipesplit[1]
 		default:
-			log.Printf("Error: Statsd Metric type %s unsupported", pipesplit[1])
+			log.Printf("E! Error: Statsd Metric type %s unsupported", pipesplit[1])
 			return errors.New("Error Parsing statsd line")
 		}
 
 		// Parse the value
-		if strings.ContainsAny(pipesplit[0], "-+") {
-			if m.mtype != "g" {
-				log.Printf("Error: +- values are only supported for gauges: %s\n", line)
+		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
+			if m.mtype != "g" && m.mtype != "c" {
+				log.Printf("E! Error: +- values are only supported for gauges & counters: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
 			m.additive = true
@@ -428,17 +427,17 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "g", "ms", "h":
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
-				log.Printf("Error: parsing value to float64: %s\n", line)
+				log.Printf("E! Error: parsing value to float64: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
 			m.floatvalue = v
-		case "c", "s":
+		case "c":
 			var v int64
 			v, err := strconv.ParseInt(pipesplit[0], 10, 64)
 			if err != nil {
 				v2, err2 := strconv.ParseFloat(pipesplit[0], 64)
 				if err2 != nil {
-					log.Printf("Error: parsing value to int64: %s\n", line)
+					log.Printf("E! Error: parsing value to int64: %s\n", line)
 					return errors.New("Error Parsing statsd line")
 				}
 				v = int64(v2)
@@ -448,6 +447,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				v = int64(float64(v) / m.samplerate)
 			}
 			m.intvalue = v
+		case "s":
+			m.strvalue = pipesplit[0]
 		}
 
 		// Parse the name & tags from bucket
@@ -505,7 +506,15 @@ func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
 
 	var field string
 	name := bucketparts[0]
-	p, err := graphite.NewGraphiteParser(s.MetricSeparator, s.Templates, nil)
+
+	p := s.graphiteParser
+	var err error
+
+	if p == nil || s.graphiteParser.Separator != s.MetricSeparator {
+		p, err = graphite.NewGraphiteParser(s.MetricSeparator, s.Templates, nil)
+		s.graphiteParser = p
+	}
+
 	if err == nil {
 		p.DefaultTags = tags
 		name, tags, field, _ = p.ApplyTemplate(name)
@@ -614,23 +623,23 @@ func (s *Statsd) aggregate(m metric) {
 		if !ok {
 			s.sets[m.hash] = cachedset{
 				name:   m.name,
-				fields: make(map[string]map[int64]bool),
+				fields: make(map[string]map[string]bool),
 				tags:   m.tags,
 			}
 		}
 		// check if the field exists
 		_, ok = s.sets[m.hash].fields[m.field]
 		if !ok {
-			s.sets[m.hash].fields[m.field] = make(map[int64]bool)
+			s.sets[m.hash].fields[m.field] = make(map[string]bool)
 		}
-		s.sets[m.hash].fields[m.field][m.intvalue] = true
+		s.sets[m.hash].fields[m.field][m.strvalue] = true
 	}
 }
 
 func (s *Statsd) Stop() {
 	s.Lock()
 	defer s.Unlock()
-	log.Println("Stopping the statsd service")
+	log.Println("I! Stopping the statsd service")
 	close(s.done)
 	s.listener.Close()
 	s.wg.Wait()
@@ -640,7 +649,13 @@ func (s *Statsd) Stop() {
 func init() {
 	inputs.Add("statsd", func() telegraf.Input {
 		return &Statsd{
-			MetricSeparator: "_",
+			ServiceAddress:         ":8125",
+			MetricSeparator:        "_",
+			AllowedPendingMessages: defaultAllowPendingMessage,
+			DeleteCounters:         true,
+			DeleteGauges:           true,
+			DeleteSets:             true,
+			DeleteTimings:          true,
 		}
 	})
 }

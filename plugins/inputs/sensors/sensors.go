@@ -1,91 +1,118 @@
-// +build linux,sensors
+// +build linux
 
 package sensors
 
 import (
+	"errors"
+	"fmt"
+	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
-
-	"github.com/md14454/gosensors"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+var (
+	execCommand = exec.Command // execCommand is used to mock commands in tests.
+	numberRegp  = regexp.MustCompile("[0-9]+")
+)
+
 type Sensors struct {
-	Sensors []string
+	RemoveNumbers bool `toml:"remove_numbers"`
+	path          string
 }
 
-func (_ *Sensors) Description() string {
-	return "Monitor sensors using lm-sensors package"
+func (*Sensors) Description() string {
+	return "Monitor sensors, requires lm-sensors package"
 }
 
-var sensorsSampleConfig = `
-  ## By default, telegraf gathers stats from all sensors detected by the
-  ## lm-sensors module.
-  ##
-  ## Only collect stats from the selected sensors. Sensors are listed as
-  ## <chip name>:<feature name>. This information can be found by running the
-  ## sensors command, e.g. sensors -u
-  ##
-  ## A * as the feature name will return all features of the chip
-  ##
-  # sensors = ["coretemp-isa-0000:Core 0", "coretemp-isa-0001:*"]
+func (*Sensors) SampleConfig() string {
+	return `
+  ## Remove numbers from field names.
+  ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
+  # remove_numbers = true
 `
 
-func (_ *Sensors) SampleConfig() string {
-	return sensorsSampleConfig
 }
 
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {
-	gosensors.Init()
-	defer gosensors.Cleanup()
-
-	for _, chip := range gosensors.GetDetectedChips() {
-		for _, feature := range chip.GetFeatures() {
-			chipName := chip.String()
-			featureLabel := feature.GetLabel()
-
-			if len(s.Sensors) != 0 {
-				var found bool
-
-				for _, sensor := range s.Sensors {
-					parts := strings.SplitN(sensor, ":", 2)
-
-					if parts[0] == chipName {
-						if parts[1] == "*" || parts[1] == featureLabel {
-							found = true
-							break
-						}
-					}
-				}
-
-				if !found {
-					continue
-				}
-			}
-
-			tags := map[string]string{
-				"chip":          chipName,
-				"adapter":       chip.AdapterName(),
-				"feature-name":  feature.Name,
-				"feature-label": featureLabel,
-			}
-
-			fieldName := chipName + ":" + featureLabel
-
-			fields := map[string]interface{}{
-				fieldName: feature.GetValue(),
-			}
-
-			acc.AddFields("sensors", fields, tags)
-		}
+	if len(s.path) == 0 {
+		return errors.New("sensors not found: verify that lm-sensors package is installed and that sensors is in your PATH")
 	}
 
+	return s.parse(acc)
+}
+
+// parse forks the command:
+//     sensors -u -A
+// and parses the output to add it to the telegraf.Accumulator.
+func (s *Sensors) parse(acc telegraf.Accumulator) error {
+	tags := map[string]string{}
+	fields := map[string]interface{}{}
+	chip := ""
+	cmd := execCommand(s.path, "-A", "-u")
+	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
+	if err != nil {
+		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	for _, line := range lines {
+		if len(line) == 0 {
+			acc.AddFields("sensors", fields, tags)
+			chip = ""
+			tags = map[string]string{}
+			fields = map[string]interface{}{}
+			continue
+		}
+		if len(chip) == 0 {
+			chip = line
+			tags["chip"] = chip
+			continue
+		}
+		if !strings.HasPrefix(line, "  ") {
+			if len(tags) > 1 {
+				acc.AddFields("sensors", fields, tags)
+			}
+			fields = map[string]interface{}{}
+			tags = map[string]string{
+				"chip":    chip,
+				"feature": strings.TrimRight(snake(line), ":"),
+			}
+		} else {
+			splitted := strings.Split(line, ":")
+			fieldName := strings.TrimSpace(splitted[0])
+			if s.RemoveNumbers {
+				fieldName = numberRegp.ReplaceAllString(fieldName, "")
+			}
+			fieldValue, err := strconv.ParseFloat(strings.TrimSpace(splitted[1]), 64)
+			if err != nil {
+				return err
+			}
+			fields[fieldName] = fieldValue
+		}
+	}
+	acc.AddFields("sensors", fields, tags)
 	return nil
 }
 
 func init() {
+	s := Sensors{
+		RemoveNumbers: true,
+	}
+	path, _ := exec.LookPath("sensors")
+	if len(path) > 0 {
+		s.path = path
+	}
 	inputs.Add("sensors", func() telegraf.Input {
-		return &Sensors{}
+		return &s
 	})
+}
+
+// snake converts string to snake case
+func snake(input string) string {
+	return strings.ToLower(strings.Replace(strings.TrimSpace(input), " ", "_", -1))
 }

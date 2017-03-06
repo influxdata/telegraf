@@ -109,6 +109,7 @@ func (k *Kafka) Connect() error {
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 	config.Producer.Retry.Max = k.MaxRetry
+	config.Producer.Return.Successes = true
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
@@ -154,26 +155,23 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, metric := range metrics {
-		values, err := k.serializer.Serialize(metric)
+		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		var pubErr error
-		for _, value := range values {
-			m := &sarama.ProducerMessage{
-				Topic: k.Topic,
-				Value: sarama.StringEncoder(value),
-			}
-			if h, ok := metric.Tags()[k.RoutingTag]; ok {
-				m.Key = sarama.StringEncoder(h)
-			}
-
-			_, _, pubErr = k.producer.SendMessage(m)
+		m := &sarama.ProducerMessage{
+			Topic: k.Topic,
+			Value: sarama.ByteEncoder(buf),
+		}
+		if h, ok := metric.Tags()[k.RoutingTag]; ok {
+			m.Key = sarama.StringEncoder(h)
 		}
 
-		if pubErr != nil {
-			return fmt.Errorf("FAILED to send kafka message: %s\n", pubErr)
+		_, _, err = k.producer.SendMessage(m)
+
+		if err != nil {
+			return fmt.Errorf("FAILED to send kafka message: %s\n", err)
 		}
 	}
 	return nil

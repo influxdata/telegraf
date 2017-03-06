@@ -6,7 +6,8 @@
 # Read JMX metrics through Jolokia
 [[inputs.jolokia]]
   ## This is the context root used to compose the jolokia url
-  context = "/jolokia"
+  ## NOTE that Jolokia requires a trailing slash at the end of the context root
+  context = "/jolokia/"
 
   ## This specifies the mode used
   # mode = "proxy"
@@ -17,7 +18,16 @@
   # [inputs.jolokia.proxy]
   #   host = "127.0.0.1"
   #   port = "8080"
-
+  
+  ## Optional http timeouts
+  ##
+  ## response_header_timeout, if non-zero, specifies the amount of time to wait
+  ## for a server's response headers after fully writing the request.
+  # response_header_timeout = "3s"
+  ##
+  ## client_timeout specifies a time limit for requests made by this client.
+  ## Includes connection time, any redirects, and reading the response body.
+  # client_timeout = "4s"
 
   ## List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]

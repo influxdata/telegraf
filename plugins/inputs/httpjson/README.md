@@ -2,8 +2,7 @@
 
 The httpjson plugin can collect data from remote URLs which respond with JSON. Then it flattens JSON and finds all numeric values, treating them as floats.
 
-For example, if you have a service called _mycollector_, which has HTTP endpoint for gathering stats at http://my.service.com/_stats, you would configure the HTTP JSON
-plugin like this:
+For example, if you have a service called _mycollector_, which has HTTP endpoint for gathering stats at http://my.service.com/_stats, you would configure the HTTP JSON plugin like this:
 
 ```
 [[inputs.httpjson]]
@@ -15,11 +14,16 @@ plugin like this:
 
   # HTTP method to use (case-sensitive)
   method = "GET"
+
+  # Set response_timeout (default 5 seconds)
+  response_timeout = "5s"
 ```
 
 `name` is used as a prefix for the measurements.
 
 `method` specifies HTTP method to use for requests.
+
+`response_timeout` specifies timeout to wait to get the response
 
 You can also specify which keys from server response should be considered tags:
 
@@ -32,6 +36,8 @@ You can also specify which keys from server response should be considered tags:
     "version"
   ]
 ```
+
+If the JSON response is an array of objects, then each object will be parsed with the same configuration.
 
 You can also specify additional request parameters for the service:
 
@@ -94,8 +100,7 @@ httpjson_mycollector_b_e,service='service01',server='http://my.service.com/_stat
 
 # Example 2, Multiple Services:
 
-There is also the option to collect JSON from multiple services, here is an
-example doing that.
+There is also the option to collect JSON from multiple services, here is an example doing that.
 
 ```
 [[inputs.httpjson]]
@@ -146,4 +151,54 @@ httpjson_mycollector1_b_e,server='http://my.service.com/_stats' value=5
 
 httpjson_mycollector2_load,server='http://service.net/json/stats' value=100
 httpjson_mycollector2_users,server='http://service.net/json/stats' value=1335
+```
+
+# Example 3, Multiple Metrics in Response:
+
+The response JSON can be treated as an array of data points that are all parsed with the same configuration.
+
+```
+[[inputs.httpjson]]
+  name = "mycollector"
+  servers = [
+    "http://my.service.com/_stats"
+  ]
+  # HTTP method to use (case-sensitive)
+  method = "GET"
+  tag_keys = ["service"]
+```
+
+which responds with the following JSON:
+
+```json
+[
+    {
+        "service": "service01",
+        "a": 0.5,
+        "b": {
+            "c": "some text",
+            "d": 0.1,
+            "e": 5
+        }
+    },
+    {
+        "service": "service02",
+        "a": 0.6,
+        "b": {
+            "c": "some text",
+            "d": 0.2,
+            "e": 6
+        }
+    }
+]
+```
+
+The collected metrics will be:
+```
+httpjson_mycollector_a,service='service01',server='http://my.service.com/_stats' value=0.5
+httpjson_mycollector_b_d,service='service01',server='http://my.service.com/_stats' value=0.1
+httpjson_mycollector_b_e,service='service01',server='http://my.service.com/_stats' value=5
+httpjson_mycollector_a,service='service02',server='http://my.service.com/_stats' value=0.6
+httpjson_mycollector_b_d,service='service02',server='http://my.service.com/_stats' value=0.2
+httpjson_mycollector_b_e,service='service02',server='http://my.service.com/_stats' value=6
 ```

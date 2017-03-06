@@ -16,6 +16,7 @@ import (
 type Tail struct {
 	Files         []string
 	FromBeginning bool
+	Pipe          bool
 
 	tailers []*tail.Tail
 	parser  parsers.Parser
@@ -44,6 +45,8 @@ const sampleConfig = `
   files = ["/var/mymetrics.out"]
   ## Read file from beginning.
   from_beginning = false
+  ## Whether file is a named pipe
+  pipe = false
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
@@ -70,10 +73,12 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 	t.acc = acc
 
-	var seek tail.SeekInfo
-	if !t.FromBeginning {
-		seek.Whence = 2
-		seek.Offset = 0
+	var seek *tail.SeekInfo
+	if !t.Pipe && !t.FromBeginning {
+		seek = &tail.SeekInfo{
+			Whence: 2,
+			Offset: 0,
+		}
 	}
 
 	var errS string
@@ -81,15 +86,16 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			log.Printf("ERROR Glob %s failed to compile, %s", filepath, err)
+			log.Printf("E! Error Glob %s failed to compile, %s", filepath, err)
 		}
 		for file, _ := range g.Match() {
 			tailer, err := tail.TailFile(file,
 				tail.Config{
 					ReOpen:    true,
 					Follow:    true,
-					Location:  &seek,
+					Location:  seek,
 					MustExist: true,
+					Pipe:      t.Pipe,
 				})
 			if err != nil {
 				errS += err.Error() + " "
@@ -118,7 +124,7 @@ func (t *Tail) receiver(tailer *tail.Tail) {
 	var line *tail.Line
 	for line = range tailer.Lines {
 		if line.Err != nil {
-			log.Printf("ERROR tailing file %s, Error: %s\n",
+			log.Printf("E! Error tailing file %s, Error: %s\n",
 				tailer.Filename, err)
 			continue
 		}
@@ -126,9 +132,13 @@ func (t *Tail) receiver(tailer *tail.Tail) {
 		if err == nil {
 			t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		} else {
-			log.Printf("Malformed log line in %s: [%s], Error: %s\n",
+			log.Printf("E! Malformed log line in %s: [%s], Error: %s\n",
 				tailer.Filename, line.Text, err)
 		}
+	}
+	if err := tailer.Err(); err != nil {
+		log.Printf("E! Error tailing file %s, Error: %s\n",
+			tailer.Filename, err)
 	}
 }
 
@@ -139,7 +149,7 @@ func (t *Tail) Stop() {
 	for _, t := range t.tailers {
 		err := t.Stop()
 		if err != nil {
-			log.Printf("ERROR stopping tail on file %s\n", t.Filename)
+			log.Printf("E! Error stopping tail on file %s\n", t.Filename)
 		}
 		t.Cleanup()
 	}

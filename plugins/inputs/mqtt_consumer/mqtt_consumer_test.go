@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	testMsg         = "cpu_load_short,host=server01 value=23422.0 1422568543702900257"
+	testMsg         = "cpu_load_short,host=server01 value=23422.0 1422568543702900257\n"
+	testMsgNeg      = "cpu_load_short,host=server01 value=-23422.0 1422568543702900257\n"
 	testMsgGraphite = "cpu.load.short.graphite 23422 1454780029"
 	testMsgJSON     = "{\"a\": 5, \"b\": {\"c\": 6}}\n"
-	invalidMsg      = "cpu_load_short,host=server01 1422568543702900257"
+	invalidMsg      = "cpu_load_short,host=server01 1422568543702900257\n"
 )
 
 func newTestMQTTConsumer() (*MQTTConsumer, chan mqtt.Message) {
@@ -76,8 +77,23 @@ func TestPersistentClientIDFail(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// Test that the parser parses NATS messages into metrics
 func TestRunParser(t *testing.T) {
+	n, in := newTestMQTTConsumer()
+	acc := testutil.Accumulator{}
+	n.acc = &acc
+	defer close(n.done)
+
+	n.parser, _ = parsers.NewInfluxParser()
+	go n.receiver()
+	in <- mqttMsg(testMsgNeg)
+	time.Sleep(time.Millisecond * 250)
+
+	if a := acc.NFields(); a != 1 {
+		t.Errorf("got %v, expected %v", a, 1)
+	}
+}
+
+func TestRunParserNegativeNumber(t *testing.T) {
 	n, in := newTestMQTTConsumer()
 	acc := testutil.Accumulator{}
 	n.acc = &acc

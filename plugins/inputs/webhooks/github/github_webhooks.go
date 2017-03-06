@@ -17,7 +17,7 @@ type GithubWebhook struct {
 
 func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(gh.Path, gh.eventHandler).Methods("POST")
-	log.Printf("Started the webhooks_github on %s\n", gh.Path)
+	log.Printf("I! Started the webhooks_github on %s\n", gh.Path)
 	gh.acc = acc
 }
 
@@ -34,9 +34,10 @@ func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	p := e.NewMetric()
-	gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
+	if e != nil {
+		p := e.NewMetric()
+		gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -58,7 +59,7 @@ func (e *newEventError) Error() string {
 }
 
 func NewEvent(data []byte, name string) (Event, error) {
-	log.Printf("New %v event received", name)
+	log.Printf("D! New %v event received", name)
 	switch name {
 	case "commit_comment":
 		return generateEvent(data, &CommitCommentEvent{})
@@ -84,6 +85,8 @@ func NewEvent(data []byte, name string) (Event, error) {
 		return generateEvent(data, &MembershipEvent{})
 	case "page_build":
 		return generateEvent(data, &PageBuildEvent{})
+	case "ping":
+		return nil, nil
 	case "public":
 		return generateEvent(data, &PublicEvent{})
 	case "pull_request":

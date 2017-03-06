@@ -12,7 +12,7 @@ const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
 var (
 	fieldDeleter   = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
-	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".")
+	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".", `\`, "", ")", "_", "(", "_")
 )
 
 type GraphiteSerializer struct {
@@ -20,8 +20,8 @@ type GraphiteSerializer struct {
 	Template string
 }
 
-func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
-	out := []string{}
+func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+	out := []byte{}
 
 	// Convert UnixNano to Unix timestamps
 	timestamp := metric.UnixNano() / 1000000000
@@ -34,12 +34,12 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]string, error)
 	for fieldName, value := range metric.Fields() {
 		// Convert value to string
 		valueS := fmt.Sprintf("%#v", value)
-		point := fmt.Sprintf("%s %s %d",
+		point := []byte(fmt.Sprintf("%s %s %d\n",
 			// insert "field" section of template
-			InsertField(bucket, fieldName),
-			valueS,
-			timestamp)
-		out = append(out, point)
+			sanitizedChars.Replace(InsertField(bucket, fieldName)),
+			sanitizedChars.Replace(valueS),
+			timestamp))
+		out = append(out, point...)
 	}
 	return out, nil
 }
@@ -100,9 +100,9 @@ func SerializeBucketName(
 	}
 
 	if prefix == "" {
-		return sanitizedChars.Replace(strings.Join(out, "."))
+		return strings.Join(out, ".")
 	}
-	return sanitizedChars.Replace(prefix + "." + strings.Join(out, "."))
+	return prefix + "." + strings.Join(out, ".")
 }
 
 // InsertField takes the bucket string from SerializeBucketName and replaces the

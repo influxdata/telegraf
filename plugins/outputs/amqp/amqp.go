@@ -1,7 +1,6 @@
 package amqp
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"strings"
@@ -29,7 +28,7 @@ type AMQP struct {
 	Database string
 	// InfluxDB retention policy
 	RetentionPolicy string
-	// InfluxDB precision
+	// InfluxDB precision (DEPRECATED)
 	Precision string
 
 	// Path to CA file
@@ -41,6 +40,7 @@ type AMQP struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
+	conn    *amqp.Connection
 	channel *amqp.Channel
 	sync.Mutex
 	headers amqp.Table
@@ -61,7 +61,6 @@ const (
 	DefaultAuthMethod      = "PLAIN"
 	DefaultRetentionPolicy = "default"
 	DefaultDatabase        = "telegraf"
-	DefaultPrecision       = "s"
 )
 
 var sampleConfig = `
@@ -70,6 +69,8 @@ var sampleConfig = `
   ## AMQP exchange
   exchange = "telegraf"
   ## Auth method. PLAIN and EXTERNAL are supported
+  ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
+  ## described here: https://www.rabbitmq.com/plugins.html
   # auth_method = "PLAIN"
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, it's value will be used as the routing key
@@ -79,8 +80,6 @@ var sampleConfig = `
   # retention_policy = "default"
   ## InfluxDB database
   # database = "telegraf"
-  ## InfluxDB precision
-  # precision = "s"
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -105,7 +104,6 @@ func (q *AMQP) Connect() error {
 	defer q.Unlock()
 
 	q.headers = amqp.Table{
-		"precision":        q.Precision,
 		"database":         q.Database,
 		"retention_policy": q.RetentionPolicy,
 	}
@@ -134,6 +132,8 @@ func (q *AMQP) Connect() error {
 	if err != nil {
 		return err
 	}
+	q.conn = connection
+
 	channel, err := connection.Channel()
 	if err != nil {
 		return fmt.Errorf("Failed to open a channel: %s", err)
@@ -153,10 +153,14 @@ func (q *AMQP) Connect() error {
 	}
 	q.channel = channel
 	go func() {
-		log.Printf("Closing: %s", <-connection.NotifyClose(make(chan *amqp.Error)))
-		log.Printf("Trying to reconnect")
+		err := <-connection.NotifyClose(make(chan *amqp.Error))
+		if err == nil {
+			return
+		}
+		log.Printf("I! Closing: %s", err)
+		log.Printf("I! Trying to reconnect")
 		for err := q.Connect(); err != nil; err = q.Connect() {
-			log.Println(err)
+			log.Println("E! ", err.Error())
 			time.Sleep(10 * time.Second)
 		}
 
@@ -165,7 +169,12 @@ func (q *AMQP) Connect() error {
 }
 
 func (q *AMQP) Close() error {
-	return q.channel.Close()
+	err := q.conn.Close()
+	if err != nil && err != amqp.ErrClosed {
+		log.Printf("E! Error closing AMQP connection: %s", err)
+		return err
+	}
+	return nil
 }
 
 func (q *AMQP) SampleConfig() string {
@@ -182,7 +191,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	var outbuf = make(map[string][][]byte)
+	outbuf := make(map[string][]byte)
 
 	for _, metric := range metrics {
 		var key string
@@ -192,14 +201,12 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		values, err := q.serializer.Serialize(metric)
+		buf, err := q.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		for _, value := range values {
-			outbuf[key] = append(outbuf[key], []byte(value))
-		}
+		outbuf[key] = append(outbuf[key], buf...)
 	}
 
 	for key, buf := range outbuf {
@@ -211,10 +218,10 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			amqp.Publishing{
 				Headers:     q.headers,
 				ContentType: "text/plain",
-				Body:        bytes.Join(buf, []byte("\n")),
+				Body:        buf,
 			})
 		if err != nil {
-			return fmt.Errorf("FAILED to send amqp message: %s", err)
+			return fmt.Errorf("Failed to send AMQP message: %s", err)
 		}
 	}
 	return nil
@@ -225,7 +232,6 @@ func init() {
 		return &AMQP{
 			AuthMethod:      DefaultAuthMethod,
 			Database:        DefaultDatabase,
-			Precision:       DefaultPrecision,
 			RetentionPolicy: DefaultRetentionPolicy,
 		}
 	})

@@ -16,12 +16,20 @@ for the stat structure can be found
 ```
 # Read metrics about docker containers
 [[inputs.docker]]
-  # Docker Endpoint
-  #   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  #   To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  ## Docker Endpoint
+  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
+  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
-  # Only collect metrics for these containers, collect all if empty
+  ## Only collect metrics for these containers, collect all if empty
   container_names = []
+  ## Timeout for docker list, info, and stats commands
+  timeout = "5s"
+
+  ## Whether to report for each container per-device blkio (8:0, 8:1...) and
+  ## network (eth0, eth1, ...) stats or not
+  perdevice = true
+  ## Whether to report for each container total blkio and network stats or not
+  total = false
 ```
 
 ### Measurements & Fields:
@@ -103,6 +111,9 @@ based on the availability of per-cpu stats on your system.
     - n_used_file_descriptors
     - n_cpus
     - n_containers
+    - n_containers_running
+    - n_containers_stopped
+    - n_containers_paused
     - n_images
     - n_goroutines
     - n_listener_events
@@ -153,6 +164,9 @@ based on the availability of per-cpu stats on your system.
 > docker n_cpus=8i 1456926671065383978
 > docker n_used_file_descriptors=15i 1456926671065383978
 > docker n_containers=7i 1456926671065383978
+> docker n_containers_running=7i 1456926671065383978
+> docker n_containers_stopped=3i 1456926671065383978
+> docker n_containers_paused=0i 1456926671065383978
 > docker n_images=152i 1456926671065383978
 > docker n_goroutines=36i 1456926671065383978
 > docker n_listener_events=0i 1456926671065383978

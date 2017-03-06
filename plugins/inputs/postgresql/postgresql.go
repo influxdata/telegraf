@@ -2,7 +2,6 @@ package postgresql
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"regexp"
 	"sort"
@@ -10,19 +9,18 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/lib/pq"
 )
 
 type Postgresql struct {
 	Address          string
 	Databases        []string
+	IgnoredDatabases []string
 	OrderedColumns   []string
 	AllColumns       []string
 	sanitizedAddress string
 }
 
-var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
+var ignoredColumns = map[string]bool{"stats_reset": true}
 
 var sampleConfig = `
   ## specify address via a url matching:
@@ -40,8 +38,12 @@ var sampleConfig = `
   ##
   address = "host=localhost user=postgres sslmode=disable"
 
+  ## A  list of databases to explicitly ignore.  If not specified, metrics for all
+  ## databases are gathered.  Do NOT use with the 'databases' option.
+  # ignored_databases = ["postgres", "template0", "template1"]
+
   ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.
+  ## databases are gathered.  Do NOT use with the 'ignore_databases' option.
   # databases = ["app_production", "testing"]
 `
 
@@ -66,15 +68,18 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		p.Address = localhost
 	}
 
-	db, err := sql.Open("postgres", p.Address)
+	db, err := Connect(p.Address)
 	if err != nil {
 		return err
 	}
 
 	defer db.Close()
 
-	if len(p.Databases) == 0 {
+	if len(p.Databases) == 0 && len(p.IgnoredDatabases) == 0 {
 		query = `SELECT * FROM pg_stat_database`
+	} else if len(p.IgnoredDatabases) != 0 {
+		query = fmt.Sprintf(`SELECT * FROM pg_stat_database WHERE datname NOT IN ('%s')`,
+			strings.Join(p.IgnoredDatabases, "','"))
 	} else {
 		query = fmt.Sprintf(`SELECT * FROM pg_stat_database WHERE datname IN ('%s')`,
 			strings.Join(p.Databases, "','"))
@@ -141,7 +146,7 @@ var passwordKVMatcher, _ = regexp.Compile("password=\\S+ ?")
 func (p *Postgresql) SanitizedAddress() (_ string, err error) {
 	var canonicalizedAddress string
 	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
-		canonicalizedAddress, err = pq.ParseURL(p.Address)
+		canonicalizedAddress, err = ParseURL(p.Address)
 		if err != nil {
 			return p.sanitizedAddress, err
 		}
@@ -177,10 +182,7 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	}
 	if columnMap["datname"] != nil {
 		// extract the database name from the column map
-		dbnameChars := (*columnMap["datname"]).([]uint8)
-		for i := 0; i < len(dbnameChars); i++ {
-			dbname.WriteString(string(dbnameChars[i]))
-		}
+		dbname.WriteString((*columnMap["datname"]).(string))
 	} else {
 		dbname.WriteString("postgres")
 	}
