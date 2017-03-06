@@ -35,7 +35,7 @@ func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if gh.Secret != "" && !checkSignature(gh.Secret, data, r.Header.Get("X-Hub-Signature")) {
-		log.Printf("I! Fail to check the github webhook signature\n")
+		log.Printf("E! Fail to check the github webhook signature\n")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
