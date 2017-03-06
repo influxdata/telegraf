@@ -1,7 +1,7 @@
 ## Directions
 
 GitHub Issues are reserved for actionable bug reports and feature requests.
-General questions should be sent to the [InfluxDB mailing list](https://groups.google.com/forum/#!forum/influxdb).
+General questions should be asked at the [InfluxData Community](https://community.influxdata.com) site.
 
 Before opening an issue, search for similar bug reports or feature requests on GitHub Issues.
 If no similar issue can be found, fill out either the "Bug Report" or the "Feature Request" section below.
