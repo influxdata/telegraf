@@ -105,7 +105,7 @@ func (p *Processes) gatherFromPS(fields map[string]interface{}) error {
 		case 'U', 'D', 'L':
 			// Also known as uninterruptible sleep or disk sleep
 			fields["blocked"] = fields["blocked"].(int64) + int64(1)
-		case 'Z':
+		case 'Z', 'X':
 			fields["zombies"] = fields["zombies"].(int64) + int64(1)
 		case 'T':
 			fields["stopped"] = fields["stopped"].(int64) + int64(1)
@@ -162,7 +162,7 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 			fields["sleeping"] = fields["sleeping"].(int64) + int64(1)
 		case 'D':
 			fields["blocked"] = fields["blocked"].(int64) + int64(1)
-		case 'Z':
+		case 'Z','X':
 			fields["zombies"] = fields["zombies"].(int64) + int64(1)
 		case 'T', 't':
 			fields["stopped"] = fields["stopped"].(int64) + int64(1)
