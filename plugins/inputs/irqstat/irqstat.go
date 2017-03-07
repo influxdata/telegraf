@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -65,14 +66,18 @@ func (s *Irqstat) ParseIrqFile(path string) {
 					s.Irqmap[cpukey] = make(map[string]interface{})
 				}
 
-				irqval := "0" // Default an IRQ's value to 0
+				irqval := 0 // Default an IRQ's value to 0
 				if i < len(fields) {
-					irqval = fields[i]
+					irqval, err = strconv.Atoi(fields[i])
+					if err != nil {
+						log.Fatal(err)
+					}
 				}
 				s.Irqmap[cpukey][irqtype] = irqval
 			}
 		}
 	}
+	file.Close()
 }
 
 func stringInSlice(x string, list []string) bool {

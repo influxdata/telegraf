@@ -12,7 +12,7 @@ The above configuration would result in an output similar to:
 ```
 ./telegraf -config ~/irqstat_config.conf -test
 * Plugin: inputs.irqstat, Collection 1
-> irqstat,host=hostname,cpu=CPU0 1="9",0="22" 1488751337000000000
+> irqstat,host=hostname,cpu=CPU0 1=9i,0=22i 1488751337000000000
 ```
 
 # Measurements
