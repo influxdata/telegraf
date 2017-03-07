@@ -11,7 +11,7 @@ function install_init {
 }
 
 function install_systemd {
-    cp -f $SCRIPT_DIR/telegraf.service /lib/systemd/system/telegraf.service
+    cp -f $SCRIPT_DIR/telegraf.service $1
     systemctl enable telegraf || true
     systemctl daemon-reload || true
 }
@@ -58,11 +58,11 @@ if [[ ! -d /etc/telegraf/telegraf.d ]]; then
 fi
 
 # Distribution-specific logic
-if [[ -f /etc/redhat-release ]]; then
+if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
     # RHEL-variant logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-	    install_systemd
+	    install_systemd /usr/lib/systemd/system/telegraf.service
     else
 	    # Assuming sysv
 	    install_init
@@ -72,7 +72,7 @@ elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-	    install_systemd
+	    install_systemd /lib/systemd/system/telegraf.service
 	    systemctl restart telegraf || echo "WARNING: systemd not running."
     else
 	    # Assuming sysv

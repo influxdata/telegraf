@@ -2,7 +2,7 @@
 
 function disable_systemd {
     systemctl disable telegraf
-    rm -f /lib/systemd/system/telegraf.service
+    rm -f $1
 }
 
 function disable_update_rcd {
@@ -22,7 +22,7 @@ if [[ "$1" == "0" ]]; then
 
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-        disable_systemd
+        disable_systemd /usr/lib/systemd/system/telegraf.service
     else
         # Assuming sysv
         disable_chkconfig
@@ -34,7 +34,7 @@ elif [ "$1" == "remove" -o "$1" == "purge" ]; then
 
     which systemctl &>/dev/null
     if [[ $? -eq 0 ]]; then
-        disable_systemd
+        disable_systemd /lib/systemd/system/telegraf.service
     else
         # Assuming sysv
         disable_update_rcd
