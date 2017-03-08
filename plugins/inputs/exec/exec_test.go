@@ -37,6 +37,8 @@ const malformedJson = `
 `
 
 const lineProtocol = "cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1\n"
+const lineProtocolEmpty = ""
+const lineProtocolShort = "ab"
 
 const lineProtocolMulti = `
 cpu,cpu=cpu0,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
@@ -165,6 +167,33 @@ func TestLineProtocolParse(t *testing.T) {
 		"datacenter": "us-east",
 	}
 	acc.AssertContainsTaggedFields(t, "cpu", fields, tags)
+}
+
+func TestLineProtocolEmptyParse(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
+	e := &Exec{
+		runner:   newRunnerMock([]byte(lineProtocolEmpty), nil),
+		Commands: []string{"line-protocol"},
+		parser:   parser,
+	}
+
+	var acc testutil.Accumulator
+	err := e.Gather(&acc)
+	require.NoError(t, err)
+}
+
+func TestLineProtocolShortParse(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
+	e := &Exec{
+		runner:   newRunnerMock([]byte(lineProtocolShort), nil),
+		Commands: []string{"line-protocol"},
+		parser:   parser,
+	}
+
+	var acc testutil.Accumulator
+	err := e.Gather(&acc)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "buffer too short", "A buffer too short error was expected")
 }
 
 func TestLineProtocolParseMultiple(t *testing.T) {
