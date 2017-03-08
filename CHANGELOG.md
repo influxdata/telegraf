@@ -76,6 +76,7 @@ be deprecated eventually.
 - [#2215](https://github.com/influxdata/telegraf/issues/2215): Iptables input: document better that rules without a comment are ignored.
 - [#2483](https://github.com/influxdata/telegraf/pull/2483): Fix win_perf_counters capping values at 100.
 - [#2498](https://github.com/influxdata/telegraf/pull/2498): Exporting Ipmi.Path to be set by config.
+- [#2500](https://github.com/influxdata/telegraf/pull/2500): Remove warning if parse empty content
 
 ## v1.2.1 [2017-02-01]
 

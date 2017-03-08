@@ -44,6 +44,9 @@ func Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
+	if len(buf) == 0 {
+		return []telegraf.Metric{}, nil
+	}
 	if len(buf) <= 6 {
 		return []telegraf.Metric{}, makeError("buffer too short", buf, 0)
 	}
