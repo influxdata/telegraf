@@ -26,7 +26,7 @@ import (
 
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
-var pprofAddr = flag.String("pprofaddr", "",
+var pprofAddr = flag.String("pprof-addr", "",
 	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
@@ -91,6 +91,7 @@ The commands & flags are:
   --output-filter     filter the output plugins to enable, separator is :
   --usage             print usage for a plugin, ie, 'telegraf --usage mysql'
   --debug             print metrics as they're generated to stdout
+  --pprof-addr        pprof address to listen on, format: localhost:6060 or :6060
   --quiet             run in quiet mode
 
 Examples:
@@ -109,6 +110,9 @@ Examples:
 
   # run telegraf, enabling the cpu & memory input, and influxdb output plugins
   telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
+
+  # run telegraf with pprof
+  telegraf --config telegraf.conf --pprof-addr localhost:6060
 `
 
 var stop chan struct{}
@@ -273,7 +277,10 @@ func main() {
 
 	if *pprofAddr != "" {
 		go func() {
-			log.Printf("Starting pprof page at http://%s/debug/pprof", *pprofAddr)
+			log.Printf(
+				"I! Starting pprof on %s. Open profiling tools page in browser: /debug/pprof",
+				*pprofAddr,
+			)
 			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
 				log.Fatal("E! " + err.Error())
 			}
