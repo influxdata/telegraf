@@ -66,6 +66,7 @@ func getEmptyFields() map[string]interface{} {
 	fields := map[string]interface{}{
 		"blocked":  int64(0),
 		"zombies":  int64(0),
+		"dead":     int64(0),
 		"stopped":  int64(0),
 		"running":  int64(0),
 		"sleeping": int64(0),
@@ -105,8 +106,10 @@ func (p *Processes) gatherFromPS(fields map[string]interface{}) error {
 		case 'U', 'D', 'L':
 			// Also known as uninterruptible sleep or disk sleep
 			fields["blocked"] = fields["blocked"].(int64) + int64(1)
-		case 'Z', 'X':
+		case 'Z':
 			fields["zombies"] = fields["zombies"].(int64) + int64(1)
+		case 'X':
+			fields["dead"] = fields["dead"].(int64) + int64(1)
 		case 'T':
 			fields["stopped"] = fields["stopped"].(int64) + int64(1)
 		case 'R':
@@ -162,8 +165,10 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 			fields["sleeping"] = fields["sleeping"].(int64) + int64(1)
 		case 'D':
 			fields["blocked"] = fields["blocked"].(int64) + int64(1)
-		case 'Z', 'X':
+		case 'Z':
 			fields["zombies"] = fields["zombies"].(int64) + int64(1)
+		case 'X':
+			fields["dead"] = fields["dead"].(int64) + int64(1)
 		case 'T', 't':
 			fields["stopped"] = fields["stopped"].(int64) + int64(1)
 		case 'W':
