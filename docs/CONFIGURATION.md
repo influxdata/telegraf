@@ -62,6 +62,7 @@ be used for service inputs, such as logparser and statsd. Valid values are
 "ns", "us" (or "µs"), "ms", "s".
 * **logfile**: Specify the log file name. The empty string means to log to stdout.
 * **debug**: Run telegraf in debug mode.
+* **pprofaddr**: The pprof address to listen on, not activate pprof if empty. You can see more information about profiling here: [Telegraf profiling](https://github.com/influxdata/telegraf/blob/master/docs/PROFILING.md).
 * **quiet**: Run telegraf in quiet mode (error messages only).
 * **hostname**: Override default hostname, if empty use os.Hostname().
 * **omit_hostname**: If true, do no set the "host" tag in the telegraf agent.

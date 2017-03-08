@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"net/http"
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
@@ -24,6 +26,8 @@ import (
 
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
+var pprofAddr = flag.String("pprofaddr", "",
+	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
@@ -265,6 +269,15 @@ func main() {
 	}
 	if *fProcessorFilters != "" {
 		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
+	}
+
+	if *pprofAddr != "" {
+		go func() {
+			log.Printf("Starting pprof page at http://%s/debug/pprof", *pprofAddr)
+			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
+				log.Fatal("E! " + err.Error())
+			}
+		}()
 	}
 
 	if len(args) > 0 {
