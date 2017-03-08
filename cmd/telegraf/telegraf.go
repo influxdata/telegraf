@@ -4,13 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
 	"runtime"
 	"strings"
 	"syscall"
-	"net/http"
-	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal/config"
