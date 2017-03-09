@@ -43,7 +43,7 @@ var sampleConfig = `
   # ignored_databases = ["postgres", "template0", "template1"]
 
   ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.  Do NOT use with the 'ignore_databases' option.
+  ## databases are gathered.  Do NOT use with the 'ignored_databases' option.
   # databases = ["app_production", "testing"]
 `
 
