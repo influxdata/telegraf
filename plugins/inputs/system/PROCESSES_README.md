@@ -23,6 +23,7 @@ it requires access to execute `ps`.
     - stopped
     - total
     - zombie
+    - dead
     - wait (freebsd only)
     - idle (bsd only)
     - paging (linux only)
@@ -39,6 +40,7 @@ Linux  FreeBSD  Darwin  meaning
   R       R       R     running
   S       S       S     sleeping
   Z       Z       Z     zombie
+  X       X       X     dead
   T       T       T     stopped
  none     I       I     idle (sleeping for longer than about 20 seconds)
   D      D,L      U     blocked (waiting in uninterruptible sleep, or locked)
