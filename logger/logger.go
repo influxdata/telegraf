@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/wlog"
 )
 
-var prefixRegex = regexp.MustCompile("[DIWE]!")
+var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
 // newTelegrafWriter returns a logging-wrapped writer.
 func newTelegrafWriter(w io.Writer) io.Writer {
