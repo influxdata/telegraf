@@ -106,9 +106,9 @@ func (c *CloudWatch) SampleConfig() string {
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 400 reqs/sec, so if you define multiple namespaces, these should add up to a
-  ## maximum of 400. Optional - default value is 400.
+  ## maximum of 400. Optional - default value is 200.
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
-  ratelimit = 400
+  ratelimit = 200
 
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
@@ -215,7 +215,7 @@ func init() {
 		ttl, _ := time.ParseDuration("1hr")
 		return &CloudWatch{
 			CacheTTL:  internal.Duration{Duration: ttl},
-			RateLimit: 400,
+			RateLimit: 200,
 		}
 	})
 }
