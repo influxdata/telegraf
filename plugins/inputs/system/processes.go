@@ -66,7 +66,6 @@ func getEmptyFields() map[string]interface{} {
 	fields := map[string]interface{}{
 		"blocked":  int64(0),
 		"zombies":  int64(0),
-		"dead":     int64(0),
 		"stopped":  int64(0),
 		"running":  int64(0),
 		"sleeping": int64(0),
@@ -82,6 +81,7 @@ func getEmptyFields() map[string]interface{} {
 	case "openbsd":
 		fields["idle"] = int64(0)
 	case "linux":
+		fields["dead"] = int64(0)
 		fields["paging"] = int64(0)
 		fields["total_threads"] = int64(0)
 	}
