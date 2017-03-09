@@ -35,16 +35,13 @@ Specify address via a url matching:
 
   `postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]`
 
-All connection parameters are optional. Without the dbname parameter, the driver will default to a database with the same name as the user. This dbname is just for instantiating a connection with the server and doesn't restrict the databases we are trying
-to grab metrics for.
-
-  `address = "host=localhost user=postgres sslmode=disable"`
+All connection parameters are optional. Without the dbname parameter, the driver will default to a database with the same name as the user. This dbname is just for instantiating a connection with the server and doesn't restrict the databases we are trying to grab metrics for.
   
 A  list of databases to explicitly ignore.  If not specified, metrics for all databases are gathered.  Do NOT use with the 'databases' option.
 
   `ignored_databases = ["postgres", "template0", "template1"]`
   
-A list of databases to pull metrics about. If not specified, metrics for all databases are gathered.  Do NOT use with the 'ignore_databases' option.
+A list of databases to pull metrics about. If not specified, metrics for all databases are gathered.  Do NOT use with the 'ignored_databases' option.
 
   `databases = ["app_production", "testing"]`
   
