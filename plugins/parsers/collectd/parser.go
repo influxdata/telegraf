@@ -71,7 +71,7 @@ func NewCollectdParser(
 func (p *CollectdParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	valueLists, err := network.Parse(buf, p.popts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Collectd parser error: %s", err)
 	}
 
 	metrics := []telegraf.Metric{}
