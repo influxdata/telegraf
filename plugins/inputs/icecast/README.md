@@ -1,32 +1,34 @@
-# Example Input Plugin
+# Icecast Input Plugin
 
-The example plugin gathers metrics about example things
+The icecast plugin gathers metrics from the Icecast listmount page enabling to see a detailed report of total listeners
 
 ### Configuration:
 
 ```toml
-# Description
-[[inputs.example]]
-  # SampleConfig
+# Read listeners from an Icecast instance per mount
+[[inputs.icecast]]
+  ## Specify the IP adress to where the 'admin/listmounts' can be found. You can include port if needed.
+  host = "localhost"
+
+  ## The username/password combination needed to read the listmounts page.
+  ## These must be equal to the admin login details specified in your Icecast configuration
+  username = "admin"
+  password = "hackme"
+
+  ## If you wish your host name to be different then the one specified under host, you can change it here
+  alias = ""
 ```
 
 ### Measurements & Fields:
 
-<optional description>
-
-- measurement1
-    - field1 (type, unit)
-    - field2 (float, percent)
-- measurement2
-    - field3 (integer, bytes)
+- listeners
 
 ### Tags:
 
 - All measurements have the following tags:
-    - tag1 (optional description)
-    - tag2
-- measurement2 has the following tags:
-    - tag3
+    - host (can be either hostname/ip or an alias)
+    - mount
+
     
 ### Sample Queries:
 
