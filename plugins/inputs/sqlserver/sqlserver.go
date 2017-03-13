@@ -402,8 +402,8 @@ IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
 	DROP TABLE #baseline;
 SELECT
     DB_NAME(mf.database_id) AS database_name ,
-    mf.size as database_size_8k_pages,
-    mf.max_size as database_max_size_8k_pages,
+    CAST(mf.size AS BIGINT) as database_size_8k_pages,
+    CAST(mf.max_size AS BIGINT) as database_max_size_8k_pages,
     size_on_disk_bytes ,
 	type_desc as datafile_type,
     GETDATE() AS baselineDate

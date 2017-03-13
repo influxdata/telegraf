@@ -4,7 +4,7 @@
 - **urls** []string: List of apache-status URLs to collect from. Default is "http://localhost/server-status?auto".
 - **username** string: Username for HTTP basic authentication
 - **password** string: Password for HTTP basic authentication
-- **timeout** duration: time that the HTTP connection will remain waiting for response. Defalt 4 seconds ("4s")
+- **timeout** duration: time that the HTTP connection will remain waiting for response. Default 4 seconds ("4s")
 
 ##### Optional SSL Config
 

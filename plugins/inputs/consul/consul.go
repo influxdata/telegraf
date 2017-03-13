@@ -97,7 +97,12 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 
 		record["check_name"] = check.Name
 		record["service_id"] = check.ServiceID
+
 		record["status"] = check.Status
+		record["passing"] = 0
+		record["critical"] = 0
+		record["warning"] = 0
+		record[check.Status] = 1
 
 		tags["node"] = check.Node
 		tags["service_name"] = check.ServiceName

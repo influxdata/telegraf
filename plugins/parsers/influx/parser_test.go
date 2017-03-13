@@ -18,10 +18,12 @@ var (
 )
 
 const (
-	validInflux        = "cpu_load_short,cpu=cpu0 value=10 1257894000000000000\n"
-	validInfluxNewline = "\ncpu_load_short,cpu=cpu0 value=10 1257894000000000000\n"
-	invalidInflux      = "I don't think this is line protocol\n"
-	invalidInflux2     = "{\"a\": 5, \"b\": {\"c\": 6}}\n"
+	validInflux          = "cpu_load_short,cpu=cpu0 value=10 1257894000000000000\n"
+	negativeFloat        = "cpu_load_short,cpu=cpu0 value=-13.4 1257894000000000000\n"
+	validInfluxNewline   = "\ncpu_load_short,cpu=cpu0 value=10 1257894000000000000\n"
+	validInfluxNoNewline = "cpu_load_short,cpu=cpu0 value=10 1257894000000000000"
+	invalidInflux        = "I don't think this is line protocol\n"
+	invalidInflux2       = "{\"a\": 5, \"b\": {\"c\": 6}}\n"
 )
 
 const influxMulti = `
@@ -64,6 +66,30 @@ func TestParseValidInflux(t *testing.T) {
 	assert.Equal(t, "cpu_load_short", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
 		"value": float64(10),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{
+		"cpu": "cpu0",
+	}, metrics[0].Tags())
+	assert.Equal(t, exptime, metrics[0].Time().UnixNano())
+
+	metrics, err = parser.Parse([]byte(validInfluxNoNewline))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "cpu_load_short", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"value": float64(10),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{
+		"cpu": "cpu0",
+	}, metrics[0].Tags())
+	assert.Equal(t, exptime, metrics[0].Time().UnixNano())
+
+	metrics, err = parser.Parse([]byte(negativeFloat))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "cpu_load_short", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"value": float64(-13.4),
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{
 		"cpu": "cpu0",

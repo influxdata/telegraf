@@ -1,6 +1,8 @@
 package logparser
 
 import (
+	"io/ioutil"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -78,6 +80,47 @@ func TestGrokParseLogFiles(t *testing.T) {
 			"nomodifier": "nomodifier",
 		},
 		map[string]string{})
+}
+
+func TestGrokParseLogFilesAppearLater(t *testing.T) {
+	emptydir, err := ioutil.TempDir("", "TestGrokParseLogFilesAppearLater")
+	defer os.RemoveAll(emptydir)
+	assert.NoError(t, err)
+
+	thisdir := getCurrentDir()
+	p := &grok.Parser{
+		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
+	}
+
+	logparser := &LogParserPlugin{
+		FromBeginning: true,
+		Files:         []string{emptydir + "/*.log"},
+		GrokParser:    p,
+	}
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, logparser.Start(&acc))
+
+	time.Sleep(time.Millisecond * 500)
+	assert.Equal(t, acc.NFields(), 0)
+
+	os.Symlink(
+		thisdir+"grok/testdata/test_a.log",
+		emptydir+"/test_a.log")
+	assert.NoError(t, logparser.Gather(&acc))
+	time.Sleep(time.Millisecond * 500)
+
+	logparser.Stop()
+
+	acc.AssertContainsTaggedFields(t, "logparser_grok",
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"myfloat":       float64(1.25),
+			"response_time": int64(5432),
+			"myint":         int64(101),
+		},
+		map[string]string{"response_code": "200"})
 }
 
 // Test that test_a.log line gets parsed even though we don't have the correct

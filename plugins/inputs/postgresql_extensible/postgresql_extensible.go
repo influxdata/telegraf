@@ -2,7 +2,6 @@ package postgresql_extensible
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"log"
 	"regexp"
@@ -10,8 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/lib/pq"
+	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
 
 type Postgresql struct {
@@ -40,7 +38,7 @@ type query []struct {
 	Measurement string
 }
 
-var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
+var ignoredColumns = map[string]bool{"stats_reset": true}
 
 var sampleConfig = `
   ## specify address via a url matching:
@@ -126,7 +124,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		p.Address = localhost
 	}
 
-	db, err := sql.Open("postgres", p.Address)
+	db, err := postgresql.Connect(p.Address)
 	if err != nil {
 		return err
 	}
@@ -212,7 +210,7 @@ func (p *Postgresql) SanitizedAddress() (_ string, err error) {
 	}
 	var canonicalizedAddress string
 	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
-		canonicalizedAddress, err = pq.ParseURL(p.Address)
+		canonicalizedAddress, err = postgresql.ParseURL(p.Address)
 		if err != nil {
 			return p.sanitizedAddress, err
 		}
@@ -248,10 +246,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	}
 	if columnMap["datname"] != nil {
 		// extract the database name from the column map
-		dbnameChars := (*columnMap["datname"]).([]uint8)
-		for i := 0; i < len(dbnameChars); i++ {
-			dbname.WriteString(string(dbnameChars[i]))
-		}
+		dbname.WriteString((*columnMap["datname"]).(string))
 	} else {
 		dbname.WriteString("postgres")
 	}
@@ -275,19 +270,23 @@ COLUMN:
 		if ignore || *val == nil {
 			continue
 		}
+
 		for _, tag := range p.AdditionalTags {
 			if col != tag {
 				continue
 			}
 			switch v := (*val).(type) {
+			case string:
+				tags[col] = v
 			case []byte:
 				tags[col] = string(v)
-			case int64:
+			case int64, int32, int:
 				tags[col] = fmt.Sprintf("%d", v)
+			default:
+				log.Println("failed to add additional tag", col)
 			}
 			continue COLUMN
 		}
-
 		if v, ok := (*val).([]byte); ok {
 			fields[col] = string(v)
 		} else {

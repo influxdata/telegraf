@@ -25,65 +25,25 @@ new plugins.
 
 ## Installation:
 
-### Linux deb and rpm Packages:
+You can either download the binaries directly from the
+[downloads](https://www.influxdata.com/downloads) page.
 
-Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.1.1_amd64.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.1.1.x86_64.rpm
-
-Latest (arm):
-* https://dl.influxdata.com/telegraf/releases/telegraf_1.1.1_armhf.deb
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.1.1.armhf.rpm
-
-##### Package Instructions:
-
-* Telegraf binary is installed in `/usr/bin/telegraf`
-* Telegraf daemon configuration file is in `/etc/telegraf/telegraf.conf`
-* On sysv systems, the telegraf daemon can be controlled via
-`service telegraf [action]`
-* On systemd systems (such as Ubuntu 15+), the telegraf daemon can be
-controlled via `systemctl [action] telegraf`
-
-### yum/apt Repositories:
-
-There is a yum/apt repo available for the whole InfluxData stack, see
-[here](https://docs.influxdata.com/influxdb/latest/introduction/installation/#installation)
-for instructions on setting up the repo. Once it is configured, you will be able
-to use this repo to install & update telegraf.
-
-### Linux tarballs:
-
-Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.1.1_linux_amd64.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.1.1_linux_i386.tar.gz
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.1.1_linux_armhf.tar.gz
+A few alternate installs are available here as well:
 
 ### FreeBSD tarball:
 
 Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.1.1_freebsd_amd64.tar.gz
+* https://dl.influxdata.com/telegraf/releases/telegraf-VERSION_freebsd_amd64.tar.gz
 
 ### Ansible Role:
 
 Ansible role: https://github.com/rossmcdonald/telegraf
 
-### OSX via Homebrew:
-
-```
-brew update
-brew install telegraf
-```
-
-### Windows Binaries (EXPERIMENTAL)
-
-Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-1.1.1_windows_amd64.zip
-
 ### From Source:
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
 which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.5+.
+if you don't have it already. You also must build with golang version 1.8+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
@@ -99,31 +59,31 @@ See usage with:
 telegraf --help
 ```
 
-### Generate a telegraf config file:
+#### Generate a telegraf config file:
 
 ```
 telegraf config > telegraf.conf
 ```
 
-### Generate config with only cpu input & influxdb output plugins defined
+#### Generate config with only cpu input & influxdb output plugins defined
 
 ```
 telegraf --input-filter cpu --output-filter influxdb config
 ```
 
-### Run a single telegraf collection, outputing metrics to stdout
+#### Run a single telegraf collection, outputing metrics to stdout
 
 ```
 telegraf --config telegraf.conf -test
 ```
 
-### Run telegraf with all plugins defined in config file
+#### Run telegraf with all plugins defined in config file
 
 ```
 telegraf --config telegraf.conf
 ```
 
-### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
+#### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
 
 ```
 telegraf --config telegraf.conf -input-filter cpu:mem -output-filter influxdb
@@ -137,12 +97,14 @@ configuration options.
 
 ## Input Plugins
 
-* [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [aerospike](./plugins/inputs/aerospike)
+* [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
+* [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)
+* [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
 * [consul](./plugins/inputs/consul)
 * [conntrack](./plugins/inputs/conntrack)
@@ -164,6 +126,7 @@ configuration options.
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
 * [jolokia](./plugins/inputs/jolokia)
+* [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
@@ -221,9 +184,10 @@ Telegraf can also collect metrics via the following service plugins:
 * [nsq_consumer](./plugins/inputs/nsq_consumer)
 * [logparser](./plugins/inputs/logparser)
 * [statsd](./plugins/inputs/statsd)
+* [socket_listener](./plugins/inputs/socket_listener)
 * [tail](./plugins/inputs/tail)
-* [tcp_listener](./plugins/inputs/tcp_listener)
-* [udp_listener](./plugins/inputs/udp_listener)
+* [tcp_listener](./plugins/inputs/socket_listener)
+* [udp_listener](./plugins/inputs/socket_listener)
 * [webhooks](./plugins/inputs/webhooks)
   * [filestack](./plugins/inputs/webhooks/filestack)
   * [github](./plugins/inputs/webhooks/github)
@@ -242,7 +206,7 @@ Telegraf can also collect metrics via the following service plugins:
 
 * [influxdb](./plugins/outputs/influxdb)
 * [amon](./plugins/outputs/amon)
-* [amqp](./plugins/outputs/amqp)
+* [amqp](./plugins/outputs/amqp) (rabbitmq)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [datadog](./plugins/outputs/datadog)
@@ -259,6 +223,10 @@ Telegraf can also collect metrics via the following service plugins:
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)
+* [riemann_legacy](./plugins/outputs/riemann_legacy)
+* [socket_writer](./plugins/outputs/socket_writer)
+* [tcp](./plugins/outputs/socket_writer)
+* [udp](./plugins/outputs/socket_writer)
 
 ## Contributing
 

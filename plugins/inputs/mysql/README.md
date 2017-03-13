@@ -7,7 +7,9 @@ This plugin gathers the statistic data from MySQL server
 * Slave statuses
 * Binlog size
 * Process list
+* User Statistics
 * Info schema auto increment columns
+* InnoDB metrics
 * Table I/O waits
 * Index I/O waits
 * Perf Schema table lock waits
@@ -44,8 +46,14 @@ This plugin gathers the statistic data from MySQL server
   ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
   gather_process_list                       = true
   #
+  ## gather thread state counts from INFORMATION_SCHEMA.USER_STATISTICS
+  gather_user_statistics                    = true
+  #
   ## gather auto_increment columns and max values from information schema
   gather_info_schema_auto_inc               = true
+  #
+  ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
+  gather_innodb_metrics                     = true
   #
   ## gather metrics from SHOW SLAVE STATUS command output
   gather_slave_status                       = true
@@ -89,6 +97,30 @@ Requires to be turned on in configuration.
     * binary_files_count(int, number)
 * Process list - connection metrics from processlist for each user. It has the following tags
     * connections(int, number)
+* User Statistics - connection metrics from user statistics for each user. It has the following fields
+    * access_denied
+    * binlog_bytes_written
+    * busy_time
+    * bytes_received
+    * bytes_sent
+    * commit_transactions
+    * concurrent_connections
+    * connected_time
+    * cpu_time
+    * denied_connections
+    * empty_queries
+    * hostlost_connections
+    * other_commands
+    * rollback_transactions
+    * rows_fetched
+    * rows_updated
+    * select_commands
+    * server
+    * table_rows_read
+    * total_connections
+    * total_ssl_connections
+    * update_commands
+    * user
 * Perf Table IO waits - total count and time of I/O waits event for each table
 and process. It has following fields:
     * table_io_waits_total_fetch(float, number)
@@ -113,6 +145,7 @@ and process. It has following fields:
 for them. It has following fields:
     * auto_increment_column(int, number)
     * auto_increment_column_max(int, number)
+* InnoDB metrics - all metrics of information_schema.INNODB_METRICS with a status "enabled"
 * Perf table lock waits - gathers total number and time for SQL and external
 lock waits events for each table and operation. It has following fields.
 The unit of fields varies by the tags.
@@ -157,6 +190,8 @@ The unit of fields varies by the tags.
 * All measurements has following tags
     * server (the host name from which the metrics are gathered)
 * Process list measurement has following tags
+    * user (username for whom the metrics are gathered)
+* User Statistics measurement has following tags
     * user (username for whom the metrics are gathered)
 * Perf table IO waits measurement has following tags
     * schema

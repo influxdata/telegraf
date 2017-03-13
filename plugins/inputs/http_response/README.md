@@ -23,6 +23,11 @@ This input plugin will test HTTP/HTTPS connections.
   # {'fake':'data'}
   # '''
 
+  ## Optional substring or regex match in body of the response
+  ## response_string_match = "\"service_status\": \"up\""
+  ## response_string_match = "ok"
+  ## response_string_match = "\".*_status\".?:.?\"up\""
+
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"

@@ -16,6 +16,9 @@ type InfluxParser struct {
 }
 
 func (p *InfluxParser) ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
+	if !bytes.HasSuffix(buf, []byte("\n")) {
+		buf = append(buf, '\n')
+	}
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
 	metrics, err := metric.ParseWithDefaultTime(buf, t)

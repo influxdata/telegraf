@@ -9,9 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	// TODO remove
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 const MaxInt = int(^uint(0) >> 1)
@@ -47,13 +44,18 @@ func New(
 	// pre-allocate exact size of the tags slice
 	taglen := 0
 	for k, v := range tags {
-		// TODO check that length of tag key & value are > 0
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		taglen += 2 + len(escape(k, "tagkey")) + len(escape(v, "tagval"))
 	}
 	m.tags = make([]byte, taglen)
 
 	i := 0
 	for k, v := range tags {
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		m.tags[i] = ','
 		i++
 		i += copy(m.tags[i:], escape(k, "tagkey"))
@@ -137,11 +139,6 @@ type metric struct {
 	nsec   int64
 }
 
-func (m *metric) Point() *client.Point {
-	c, _ := client.NewPoint(m.Name(), m.Tags(), m.Fields(), m.Time())
-	return c
-}
-
 func (m *metric) String() string {
 	return string(m.name) + string(m.tags) + " " + string(m.fields) + " " + string(m.t) + "\n"
 }
@@ -176,6 +173,48 @@ func (m *metric) Serialize() []byte {
 	i += copy(tmp[i:], m.t)
 	tmp[i] = '\n'
 	return tmp
+}
+
+func (m *metric) SerializeTo(dst []byte) int {
+	i := 0
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.name)
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.tags)
+	if i >= len(dst) {
+		return i
+	}
+
+	dst[i] = ' '
+	i++
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.fields)
+	if i >= len(dst) {
+		return i
+	}
+
+	dst[i] = ' '
+	i++
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.t)
+	if i >= len(dst) {
+		return i
+	}
+	dst[i] = '\n'
+
+	return i + 1
 }
 
 func (m *metric) Split(maxSize int) []telegraf.Metric {
@@ -263,7 +302,7 @@ func (m *metric) Fields() map[string]interface{} {
 		case '"':
 			// string field
 			fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = unescape(string(m.fields[i:][i2+1:i3-1]), "fieldval")
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			// number field
 			switch m.fields[i:][i3-1] {
 			case 'i':

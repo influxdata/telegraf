@@ -24,6 +24,16 @@ Environment variables can be used anywhere in the config file, simply prepend
 them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
 for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
 
+## Configuration file locations
+
+The location of the configuration file can be set via the `--config` command
+line flag. Telegraf will also pick up all files matching the pattern `*.conf` if
+the `-config-directory` command line flag is used.
+
+On most systems, the default locations are `/etc/telegraf/telegraf.conf` for
+the main configuration file and `/etc/telegraf/telegraf.d` for the directory of
+configuration files.
+
 # Global Tags
 
 Global tags can be specified in the `[global_tags]` section of the config file
