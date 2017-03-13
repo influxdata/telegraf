@@ -58,6 +58,7 @@ be deprecated eventually.
 - [#1678](https://github.com/influxdata/telegraf/pull/1678): Add AMQP consumer input plugin
 - [#2501](https://github.com/influxdata/telegraf/pull/2501): Support DEAD(X) state in system input plugin.
 - [#2522](https://github.com/influxdata/telegraf/pull/2522): Add support for mongodb client certificates.
+- [#2293](https://github.com/influxdata/telegraf/pull/2293): Add TCP listener for statsd input
 
 ### Bugfixes
 
