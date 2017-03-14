@@ -30,11 +30,12 @@ for the stat structure can be found
   perdevice = true
   ## Whether to report for each container total blkio and network stats or not
   total = false
-  # Add container labels as tags
-  addlabels = true
-  # If addlabels is set to true, optional array to add specific lables.
-  #   Empty array adds all labels
-  label_names = []
+  
+  ## docker labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  docker_label_include = []
+  docker_label_exclude = []
+  
 ```
 
 ### Measurements & Fields:

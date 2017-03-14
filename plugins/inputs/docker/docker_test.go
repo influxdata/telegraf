@@ -251,10 +251,8 @@ func TestDockerGatherLabels(t *testing.T) {
 		testing: true,
 	}
 
-	d.AddLabels = true
-
+	// Default case should include both labels
 	err := d.Gather(&acc)
-
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t,
@@ -274,7 +272,8 @@ func TestDockerGatherLabels(t *testing.T) {
 		},
 	)
 
-	d.LabelNames = append(d.LabelNames, "label1")
+	// Include should only include label1
+	d.LabelInclude = append(d.LabelInclude, "label1")
 	err1 := d.Gather(&acc)
 	require.NoError(t, err1)
 
@@ -294,6 +293,28 @@ func TestDockerGatherLabels(t *testing.T) {
 		},
 	)
 
+	// Exclude should only include label2.
+	d.LabelInclude[0] = "*"
+	d.LabelExclude = append(d.LabelExclude, "label1")
+	err2 := d.Gather(&acc)
+	require.NoError(t, err2)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_container_cpu",
+		map[string]interface{}{
+			"usage_total":  uint64(1231652),
+			"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
+		},
+		map[string]string{
+			"container_name":    "etcd2",
+			"container_image":   "quay.io:4443/coreos/etcd",
+			"cpu":               "cpu3",
+			"container_version": "v2.2.2",
+			"engine_host":       "absol",
+			"label2":            "test_value_2",
+		},
+	)
+
 }
 
 func TestDockerGatherInfo(t *testing.T) {
@@ -306,7 +327,8 @@ func TestDockerGatherInfo(t *testing.T) {
 	/* In order to not modify code here, we set this to false since the container structure now has
 	   labels and the default is true.
 	*/
-	d.AddLabels = false
+
+	d.LabelExclude = append(d.LabelExclude, "*")
 	err := d.Gather(&acc)
 	require.NoError(t, err)
 

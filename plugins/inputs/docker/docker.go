@@ -14,11 +14,16 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+type DockerLabelFilter struct {
+	labelInclude   filter.Filter
+	labelExclude   filter.Filter
+}
 
 // Docker object
 type Docker struct {
@@ -27,8 +32,10 @@ type Docker struct {
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
 	Total          bool     `toml:"total"`
-	AddLabels      bool     `toml:"addlabels"`
-	LabelNames     []string `toml:"label_names"`
+	LabelInclude   []string `toml:"docker_label_include"`
+	LabelExclude   []string `toml:"docker_label_exclude"`
+
+	LabelFilter    DockerLabelFilter
 
 	client      *client.Client
 	engine_host string
@@ -101,12 +108,11 @@ var sampleConfig = `
   ## Whether to report for each container total blkio and network stats or not
   total = false
 
-  ## Whether to add docker labels as tags
-  addlabels = true
+  ## docker labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  docker_label_include = []
+  docker_label_exclude = []
 
-  ## If addlabels is set to true, optionally create an array of labels that are to be added
-  ## An empty array adds all labels
-  label_names = []
 `
 
 // Description returns input description
@@ -140,6 +146,15 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 		d.client = c
+	}
+
+	// Create label filters
+	if len(d.LabelInclude) != 0 {
+		d.LabelFilter.labelInclude, _ = filter.Compile(d.LabelInclude)
+	}
+
+	if len(d.LabelExclude) != 0  {
+		d.LabelFilter.labelExclude, _ = filter.Compile(d.LabelExclude)
 	}
 
 	// Get daemon info
@@ -299,10 +314,10 @@ func (d *Docker) gatherContainer(
 		return fmt.Errorf("Error decoding: %s", err.Error())
 	}
 
-	// Add labels to tags if addlabels is true
-	if d.AddLabels {
-		for k, label := range container.Labels {
-			if (len(d.LabelNames) == 0) || (len(d.LabelNames) > 0 && sliceContains(k, d.LabelNames)) {
+	// Add labels to tags
+	for k, label := range container.Labels {
+		if len(d.LabelInclude) == 0 || d.LabelFilter.labelInclude.Match(k) {
+			if len(d.LabelExclude) == 0 || !d.LabelFilter.labelExclude.Match(k) {
 				tags[k] = label
 			}
 		}
@@ -616,7 +631,7 @@ func init() {
 		return &Docker{
 			PerDevice: true,
 			Timeout:   internal.Duration{Duration: time.Second * 5},
-			AddLabels: true,
+			//AddLabels: true,
 		}
 	})
 }
