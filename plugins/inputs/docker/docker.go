@@ -25,8 +25,8 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 	Timeout        internal.Duration
-	PerDevice      bool `toml:"perdevice"`
-	Total          bool `toml:"total"`
+	PerDevice      bool     `toml:"perdevice"`
+	Total          bool     `toml:"total"`
 	EnvToTag       []string `toml:"env_to_tag"`
 
 	client      *client.Client
@@ -281,11 +281,11 @@ func (d *Docker) gatherContainer(
 		"container_version": imageVersion,
 	}
 
-	for _,config_env := range conf.Config.Env {
+	for _, config_env := range conf.Config.Env {
 		ConfNameValue := strings.Split(config_env, "=")
 		ConfName := ConfNameValue[0]
 		ConfValue := ConfNameValue[1]
-		for _,name := range d.EnvToTag {
+		for _, name := range d.EnvToTag {
 			if ConfName == name {
 				tag := "container_env_" + ConfName
 				tags[tag] = ConfValue
