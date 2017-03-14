@@ -161,6 +161,29 @@ func (a *Accumulator) Get(measurement string) (*Metric, bool) {
 	return nil, false
 }
 
+func (a *Accumulator) HasTag(measurement string, key string) bool {
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			_, ok := p.Tags[key]
+			return ok
+		}
+	}
+	return false
+}
+
+func (a *Accumulator) TagValue(measurement string, key string) string {
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			v, ok := p.Tags[key]
+			if !ok {
+				return ""
+			}
+			return v
+		}
+	}
+	return ""
+}
+
 // NFields returns the total number of fields in the accumulator, across all
 // measurements
 func (a *Accumulator) NFields() int {
