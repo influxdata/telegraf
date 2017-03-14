@@ -102,7 +102,7 @@ var sampleConfig = `
   ## List of varibles from container runtime, e.g.: "docker run -e APPLICATION_NAME=shop -e APP_ID=ver1.2 shop"
   ## Names of varibles will be transformed to tags, e.g.: container_env_APPLICATION_NAME container_env_APP_ID
   ## Values of variables will be transformed to values of tags, e.g.: container_env_APPLICATION_NAME=shop, container_env_APP_ID=ver1.2
-  env_to_tags = [ "APPLICATION_NAME", "APP_ID" ]
+  env_to_tag = [ "APPLICATION_NAME", "APP_ID" ]
 
 `
 
