@@ -14,15 +14,15 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type DockerLabelFilter struct {
-	labelInclude   filter.Filter
-	labelExclude   filter.Filter
+	labelInclude filter.Filter
+	labelExclude filter.Filter
 }
 
 // Docker object
@@ -35,7 +35,7 @@ type Docker struct {
 	LabelInclude   []string `toml:"docker_label_include"`
 	LabelExclude   []string `toml:"docker_label_exclude"`
 
-	LabelFilter    DockerLabelFilter
+	LabelFilter DockerLabelFilter
 
 	client      *client.Client
 	engine_host string
@@ -153,7 +153,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		d.LabelFilter.labelInclude, _ = filter.Compile(d.LabelInclude)
 	}
 
-	if len(d.LabelExclude) != 0  {
+	if len(d.LabelExclude) != 0 {
 		d.LabelFilter.labelExclude, _ = filter.Compile(d.LabelExclude)
 	}
 
