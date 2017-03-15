@@ -58,7 +58,7 @@ func TestGather(t *testing.T) {
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
-		RateLimit: 10,
+		RateLimit: 200,
 	}
 
 	var acc testutil.Accumulator
@@ -146,7 +146,7 @@ func TestSelectMetrics(t *testing.T) {
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
-		RateLimit: 10,
+		RateLimit: 200,
 		Metrics: []*Metric{
 			&Metric{
 				MetricNames: []string{"Latency", "RequestCount"},
