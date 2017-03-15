@@ -282,13 +282,13 @@ func (d *Docker) gatherContainer(
 	}
 
 	for _, config_env := range conf.Config.Env {
-		ConfNameValue := strings.Split(config_env, "=")
-		ConfName := ConfNameValue[0]
-		ConfValue := ConfNameValue[1]
+		confNameValue := strings.Split(config_env, "=")
+		confName := confNameValue[0]
+		confValue := confNameValue[1]
 		for _, name := range d.EnvToTag {
-			if ConfName == name {
-				tag := "container_env_" + ConfName
-				tags[tag] = ConfValue
+			if confName == name {
+				tag := "container_env_" + confName
+				tags[tag] = confValue
 			}
 		}
 	}
