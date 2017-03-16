@@ -20,6 +20,7 @@ import (
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+const zeroDuration time.Duration = time.Duration(0)
 
 var (
 	TimeoutErr = errors.New("Command timed out.")
@@ -32,20 +33,51 @@ type Duration struct {
 	Duration time.Duration
 }
 
+func (d *Duration) UnitsToDuration(units string) string {
+	switch units {
+	case "ns":
+		return "1ns"
+	case "us":
+		return "1us"
+	case "µs":
+		return "1µs"
+	case "ms":
+		return "1ms"
+	case "s":
+		return "1s"
+	}
+	return ""
+}
+
+func (d *Duration) ParseDuration(string_val string) (time.Duration, error) {
+	if val := d.UnitsToDuration(string_val); val != "" {
+		duration, err := time.ParseDuration(val)
+		if err != nil {
+			return zeroDuration, err
+		}
+		return duration, nil
+	}
+	duration, err := time.ParseDuration(string_val)
+	if err != nil {
+		return zeroDuration, err
+	}
+	return duration, nil
+}
+
 // UnmarshalTOML parses the duration from the TOML config file
 func (d *Duration) UnmarshalTOML(b []byte) error {
 	var err error
 	b = bytes.Trim(b, `'`)
 
 	// see if we can directly convert it
-	d.Duration, err = time.ParseDuration(string(b))
+	d.Duration, err = d.ParseDuration(string(b))
 	if err == nil {
 		return nil
 	}
 
 	// Parse string duration, ie, "1s"
 	if uq, err := strconv.Unquote(string(b)); err == nil && len(uq) > 0 {
-		d.Duration, err = time.ParseDuration(uq)
+		d.Duration, err = d.ParseDuration(uq)
 		if err == nil {
 			return nil
 		}
