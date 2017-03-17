@@ -81,6 +81,7 @@ be deprecated eventually.
 - [#2500](https://github.com/influxdata/telegraf/pull/2500): Remove warning if parse empty content
 - [#2520](https://github.com/influxdata/telegraf/pull/2520): Update default value for Cloudwatch rate limit
 - [#2513](https://github.com/influxdata/telegraf/issues/2513): create /etc/telegraf/telegraf.d directory in tarball.
+- [#2541](https://github.com/influxdata/telegraf/issues/2541): Return error on unsupported serializer data format.
 
 ## v1.2.1 [2017-02-01]
 
