@@ -1,35 +1,33 @@
 # libvirt plugin
 
-#### Description
+The libvirt plugin collects libvirt domain statistics for the given hypervisor URI.
 
-The libvirt plugin collects libvirt domain statistics.
+This plugin requires that the `libvirt-bin` package is installed. 
 
-To test this plugin set the following configuration:
+It uses `virsh` to gather the metrics instead of using the `libvirt-go` bindings.
+The reasoning behind this is that this way no runtime dependencies on the libvirt C libaries are added to Telegraf.
 
+### Configuration:
 ```toml
-[libvirt]
-  uri = "test:///default"
+[[inputs.libvirt]]
+  ## specify a libvirt connection uri, see https://libvirt.org/uri.html
+  uri = "qemu:///system"
 ```
 
-This mocks a libvirt deamon with one running domain. The URI for a connection to a local qemu would be
-`qemu:///system`.
-
-## Resources
-
-* http://wiki.libvirt.org/page/UbuntuKVMWalkthrough
-* https://godoc.org/github.com/libvirt/libvirt-go
-
-## Measurements:
+### Measurements & Fields:
 - libvirt
-  - cpu_time
-  - max_mem
-  - memory
-  - nr_virt_cpu
+  - cpu_time (float, seconds)
+  - max_memory (uint, KiB)
+  - used_memory (uint, KiB)
+  - n_vcpu (uint, #)
 
-## Tags:
-- domain
+### Tags:
+- libvirt
+  - domain
+  - state
 
-## Example Output:
+### Example Output:
 ```
-libvirt,domain=test,host=dev-vm cpu_time=1489860811102172000i,max_mem=8388608i,memory=2097152i,nr_virt_cpu=2i 1489860811000000000
+$ ./telegraf -config telegraf.conf -input-filter libvirt -test
+libvirt,domain=test,state=running,host=kvm_host cpu_time=1489951430,max_memory=8388608i,used_memory=2097152i,n_vcpu=2i 1489951430000000000
 ```

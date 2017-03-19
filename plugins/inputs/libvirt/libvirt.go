@@ -1,19 +1,26 @@
 package libvirt
 
 import (
-	lv "github.com/libvirt/libvirt-go"
+	"fmt"
+	"os/exec"
+	"strconv"
+	"strings"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `
-  # specify a libvirt connection uri
+  ## specify a libvirt connection uri, see https://libvirt.org/uri.html
   uri = "qemu:///system"
 `
 
 type Libvirt struct {
-	Uri string
+	Uri   string
+	virsh Virsh
 }
+
+type Virsh func(uri string, args ...string) (string, error)
 
 func (l *Libvirt) SampleConfig() string {
 	return sampleConfig
@@ -24,42 +31,104 @@ func (l *Libvirt) Description() string {
 }
 
 func (l *Libvirt) Gather(acc telegraf.Accumulator) error {
-	connection, err := lv.NewConnectReadOnly(l.Uri)
-	if err != nil {
-		return err
-	}
-	defer connection.Close()
+	domains, err := l.listDomains()
 
-	domains, err := connection.ListDomains()
 	if err != nil {
 		return err
 	}
 
-	for _, domainId := range domains {
-		domain, err := connection.LookupDomainById(domainId)
-		if err != nil {
-			return err
-		}
-
-		domainName, _ := domain.GetName()
-		tags := map[string]string{"domain": domainName}
-		l.gatherDomain(acc, domain, tags)
+	for _, domain := range domains {
+		l.gatherDomain(acc, domain)
 	}
 
 	return nil
 }
 
-func (m *Libvirt) gatherDomain(acc telegraf.Accumulator, domain *lv.Domain, tags map[string]string) error {
-	domainInfo, err := domain.GetInfo()
+func (l *Libvirt) listDomains() ([]string, error) {
+	out, err := l.virsh(l.Uri, "list")
+
+	if err != nil {
+		return []string{}, err
+	}
+
+	lines := strings.Split(out, "\n")
+
+	domains := []string{}
+
+	for _, line := range lines[2:] {
+		if len(line) <= 0 {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			return []string{}, fmt.Errorf("failed to read domain list line: %s", line)
+		}
+		domains = append(domains, fields[1])
+	}
+
+	return domains, err
+}
+
+func runVirshCmd(uri string, cmd ...string) (string, error) {
+	args := []string{"-c", uri}
+	out, err := exec.Command("virsh", append(args, cmd...)...).Output()
+	return string(out), err
+}
+
+func (l *Libvirt) gatherDomain(acc telegraf.Accumulator, domain string) error {
+
+	out, err := l.virsh(l.Uri, "dominfo", domain)
+
+	if err != nil {
+		return err
+	}
+
+	domainInfoMap := make(map[string]string)
+
+	for _, line := range strings.Split(out, "\n") {
+		if len(line) <= 0 {
+			continue
+		}
+		kv := strings.SplitN(line, ":", 2)
+
+		if len(kv) != 2 {
+			return fmt.Errorf("failed to read domain info for domain: %s, line: %q", domain, line)
+		}
+		k := strings.TrimSpace(kv[0])
+		v := strings.TrimSpace(kv[1])
+		domainInfoMap[k] = v
+	}
+
+	cpu_time, err := strconv.ParseFloat(strings.Replace(domainInfoMap["CPU time"], "s", "", 1), 64)
+	if err != nil {
+		return err
+	}
+
+	max_mem, err := strconv.ParseUint(strings.Replace(domainInfoMap["Max memory"], " KiB", "", 1), 0, 64)
+	if err != nil {
+		return err
+	}
+
+	used_mem, err := strconv.ParseUint(strings.Replace(domainInfoMap["Used memory"], " KiB", "", 1), 0, 64)
+	if err != nil {
+		return err
+	}
+
+	n_vcpu, err := strconv.ParseUint(domainInfoMap["CPU(s)"], 0, 64)
 	if err != nil {
 		return err
 	}
 
 	fields := map[string]interface{}{
-		"cpu_time":    domainInfo.CpuTime,
-		"max_mem":     domainInfo.MaxMem,
-		"memory":      domainInfo.Memory,
-		"nr_virt_cpu": uint64(domainInfo.NrVirtCpu),
+		"cpu_time":    cpu_time,
+		"max_memory":  max_mem,
+		"used_memory": used_mem,
+		"n_vcpu":      n_vcpu,
+	}
+
+	tags := map[string]string{
+		"domain": domain,
+		"state":  domainInfoMap["State"],
 	}
 
 	acc.AddFields("libvirt", fields, tags)
@@ -69,6 +138,9 @@ func (m *Libvirt) gatherDomain(acc telegraf.Accumulator, domain *lv.Domain, tags
 
 func init() {
 	inputs.Add("libvirt", func() telegraf.Input {
-		return &Libvirt{}
+		return &Libvirt{
+			virsh: runVirshCmd,
+			Uri:   "qemu:///system",
+		}
 	})
 }
