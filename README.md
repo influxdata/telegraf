@@ -118,6 +118,7 @@ configuration options.
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [filestat](./plugins/inputs/filestat)
 * [haproxy](./plugins/inputs/haproxy)
+* [ganglia](http://ganglia.sourceforge.net/)
 * [hddtemp](./plugins/inputs/hddtemp)
 * [http_response](./plugins/inputs/http_response)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
