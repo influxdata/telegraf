@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+  "github.com/influxdata/telegraf/plugins/parsers/ganglia"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 )
 
@@ -78,6 +79,8 @@ func NewParser(config *Config) (Parser, error) {
 	case "graphite":
 		parser, err = NewGraphiteParser(config.Separator,
 			config.Templates, config.DefaultTags)
+  case "ganglia":
+    parser, err = NewGangliaParser()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -111,6 +114,10 @@ func NewGraphiteParser(
 	defaultTags map[string]string,
 ) (Parser, error) {
 	return graphite.NewGraphiteParser(separator, templates, defaultTags)
+}
+
+func NewGangliaParser() (Parser, error) {
+  return &ganglia.GangliaParser{}, nil
 }
 
 func NewValueParser(
