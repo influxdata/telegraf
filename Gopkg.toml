@@ -221,3 +221,7 @@
 [[override]]
   source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
   name = "gopkg.in/fsnotify.v1"
+
+[[constraint]]
+  name = "github.com/mdlayher/apcupsd"
+  revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
