@@ -1,13 +1,11 @@
 package elasticsearch
 
 import (
-	"math"
+	"context"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -21,11 +19,11 @@ func TestConnectAndWrite(t *testing.T) {
 
 	e := &Elasticsearch{
 		URLs:                urls,
-		IndexName:           "littletest-%Y.%m.%d",
+		IndexName:           "test-%Y.%m.%d",
 		Timeout:             internal.Duration{Duration: time.Second * 5},
 		ManageTemplate:      true,
 		TemplateName:        "telegraf",
-		OverwriteTemplate:   true,
+		OverwriteTemplate:   false,
 		HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
 	}
 
@@ -39,43 +37,90 @@ func TestConnectAndWrite(t *testing.T) {
 
 }
 
-func TestBigValue(t *testing.T) {
+func TestTemplateManagementEmptyTemplate(t *testing.T) {
+	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+
+	ctx := context.Background()
+
+	e := &Elasticsearch{
+		URLs:              urls,
+		IndexName:         "test-%Y.%m.%d",
+		Timeout:           internal.Duration{Duration: time.Second * 5},
+		ManageTemplate:    true,
+		TemplateName:      "",
+		OverwriteTemplate: true,
+	}
+
+	err := e.manageTemplate(ctx)
+	require.Error(t, err)
+
+}
+
+func TestTemplateManagement(t *testing.T) {
 	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
 
 	e := &Elasticsearch{
-		URLs:                urls,
-		IndexName:           "littletest-%Y.%m.%d",
-		Timeout:             internal.Duration{Duration: time.Second * 5},
-		ManageTemplate:      true,
-		TemplateName:        "telegraf",
-		OverwriteTemplate:   true,
-		HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
+		URLs:              urls,
+		IndexName:         "test-%Y.%m.%d",
+		Timeout:           internal.Duration{Duration: time.Second * 5},
+		ManageTemplate:    true,
+		TemplateName:      "telegraf",
+		OverwriteTemplate: true,
 	}
 
-	// Init metrics
-	m1, _ := metric.New(
-		"mymeasurement",
-		map[string]string{"host": "192.168.0.1"},
-		map[string]interface{}{
-			//"myvalue1": float64(-9223372036854776000),
-			//"myvalue2": float64(math.MaxUint64 * -10),
-			//"myvalue3": float64(math.MaxUint64 * 10),
-			"myvalue4": float64(math.MaxFloat64),
-			"myvalue5": float64(0.000000000000000000000000000000000000000000000001),
-			"myvalue6": float64(-0.000000000000000000000000000000000000000000000001),
-		},
-		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
-	// Prepare point list
-	var metrics []telegraf.Metric
-	metrics = append(metrics, m1)
+	ctx, cancel := context.WithTimeout(context.Background(), e.Timeout.Duration)
+	defer cancel()
 
-	// Verify that we can connect to Elasticsearch
 	err := e.Connect()
 	require.NoError(t, err)
 
-	// Verify that we can successfully write data to Elasticsearch
-	err = e.Write(metrics)
+	err = e.manageTemplate(ctx)
 	require.NoError(t, err)
+}
 
+func TestGetIndexName(t *testing.T) {
+	e := &Elasticsearch{}
+
+	var tests = []struct {
+		EventTime time.Time
+		IndexName string
+		Expected  string
+	}{
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			"indexname",
+			"indexname",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			"indexname-%Y",
+			"indexname-2014",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			"indexname-%Y-%m",
+			"indexname-2014-12",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			"indexname-%Y-%m-%d",
+			"indexname-2014-12-01",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			"indexname-%Y-%m-%d-%H",
+			"indexname-2014-12-01-23",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			"indexname-%y-%m",
+			"indexname-14-12",
+		},
+	}
+	for _, test := range tests {
+		indexName := e.GetIndexName(test.IndexName, test.EventTime)
+		if indexName != test.Expected {
+			t.Errorf("Expected indexname %s, got %s\n", indexName, test.Expected)
+		}
+	}
 }

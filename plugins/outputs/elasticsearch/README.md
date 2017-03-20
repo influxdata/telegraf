@@ -189,8 +189,7 @@ This plugin will format the events in the following way:
 * `urls`: A list containing the full HTTP URL of one or more nodes from your Elasticsearch instance.
 * `index_name`: The target index for metrics. You can use the date specifiers below to create indexes per time frame.
 
-``` 
-  %Y - year (2017)
+```   %Y - year (2017)
   %y - last two digits of year (00..99)
   %m - month (01..12)
   %d - day of month (e.g., 01)
@@ -198,6 +197,7 @@ This plugin will format the events in the following way:
 ```
 
 ### Optional parameters:
+
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
 * `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster nodes, thus it is not necessary to list all nodes in the urls config option.
 * `health_check_interval`: Set the interval to check if the nodes are available, in seconds. Setting to 0 will disable the health check (not recommended in production).
@@ -206,3 +206,13 @@ This plugin will format the events in the following way:
 * `manage_template`: Set to true if you want telegraf to manage its index template. If enabled it will create a recommended index template for telegraf indexes.
 * `template_name`: The template name used for telegraf indexes.
 * `overwrite_template`: Set to true if you want telegraf to overwrite an existing template.
+
+## Known issues
+
+Integer values collected that are bigger than 2^63 and smaller than 1e21 (or in this exact same window of their negative counterparts) are encoded by golang JSON encoder in decimal format and that is not fully supported by Elasticsearch dynamic field mapping. This causes the metrics with such values to be dropped in case a field mapping has not been created yet on the telegraf index. If that's the case you will see an exception on Elasticsearch side like this:
+
+```{"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed to parse"}],"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token for number_type [BIG_INTEGER]"}},"status":400}```
+
+The correct field mapping will be created on the telegraf index as soon as a supported JSON value is received by Elasticsearch, and subsequent insertions will work because the field mapping will already exist. 
+
+This issue is caused by the way Elasticsearch tries to detect integer fields, and by how golang encodes numbers in JSON. There is no clear workaround for this at the moment.
