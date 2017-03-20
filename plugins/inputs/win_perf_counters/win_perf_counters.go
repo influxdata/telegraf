@@ -266,7 +266,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 						// Catch if we set it to total or some form of it
 						add = true
 					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, s) {
-						// FIX: #1827
 						// phd.dll only returns first 2 characters of the instance name
 						add = true
 						s = metric.instance
