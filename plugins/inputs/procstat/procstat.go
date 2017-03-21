@@ -62,6 +62,13 @@ func (_ *Procstat) Description() string {
 }
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
+	if p.createPIDFinder == nil {
+		p.createPIDFinder = defaultPIDFinder
+	}
+	if p.createProcess == nil {
+		p.createProcess = defaultProcess
+	}
+
 	procs, err := p.updateProcesses(p.procs)
 	if err != nil {
 		return fmt.Errorf(
@@ -235,9 +242,6 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 
 func init() {
 	inputs.Add("procstat", func() telegraf.Input {
-		return &Procstat{
-			createPIDFinder: defaultPIDFinder,
-			createProcess:   defaultProcess,
-		}
+		return &Procstat{}
 	})
 }
