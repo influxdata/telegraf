@@ -62,6 +62,13 @@ func (_ *Procstat) Description() string {
 }
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
+	if p.createPIDFinder == nil {
+		p.createPIDFinder = defaultPIDFinder
+	}
+	if p.createProcess == nil {
+		p.createProcess = defaultProcess
+	}
+
 	procs, err := p.updateProcesses(p.procs)
 	if err != nil {
 		return fmt.Errorf(
