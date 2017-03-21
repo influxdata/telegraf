@@ -235,6 +235,9 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 
 func init() {
 	inputs.Add("procstat", func() telegraf.Input {
-		return &Procstat{}
+		return &Procstat{
+			createPIDFinder: defaultPIDFinder,
+			createProcess:   defaultProcess,
+		}
 	})
 }
