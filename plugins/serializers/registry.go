@@ -1,6 +1,8 @@
 package serializers
 
 import (
+	"fmt"
+
 	"github.com/influxdata/telegraf"
 
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
@@ -49,6 +51,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
 		serializer, err = NewJsonSerializer()
+	default:
+		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
 }

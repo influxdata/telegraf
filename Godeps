@@ -9,10 +9,7 @@ github.com/couchbase/go-couchbase bfe555a140d53dc1adf390f1a1d4b0fd4ceadb28
 github.com/couchbase/gomemcached 4a25d2f4e1dea9ea7dd76dfd943407abf9b07d29
 github.com/couchbase/goutils 5823a0cbaaa9008406021dc5daf80125ea30bba6
 github.com/davecgh/go-spew 346938d642f2ec3594ed81d874461961cd0faa76
-github.com/docker/distribution fb0bebc4b64e3881cc52a2478d749845ed76d2a8
-github.com/docker/engine-api 4290f40c056686fcaa5c9caf02eac1dde9315adf
-github.com/docker/go-connections 9670439d95da2651d9dfc7acc5d2ed92d3f25ee6
-github.com/docker/go-units 0dadbb0345b35ec7ef35e228dabb8de89a65bf52
+github.com/docker/docker b89aff1afa1f61993ab2ba18fd62d9375a195f5d
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/go-xerial-snappy bb955e01b9346ac19dc29eb16586c90ded99a98c
 github.com/eapache/queue 44cc805cf13205b55f69e14bcb69867d1ae92f98
@@ -47,7 +44,7 @@ github.com/prometheus/common dd2f054febf4a6c00f2343686efb775948a8bff4
 github.com/prometheus/procfs 1878d9fbb537119d24b21ca07effd591627cd160
 github.com/rcrowley/go-metrics 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 github.com/samuel/go-zookeeper 1d7be4effb13d2d908342d349d71a284a7542693
-github.com/shirou/gopsutil 77b5d0080adb6f028e457906f1944d9fcca34442
+github.com/shirou/gopsutil d371ba1293cb48fedc6850526ea48b3846c54f2c
 github.com/soniah/gosnmp 5ad50dc75ab389f8a1c9f8a67d3a1cd85f67ed15
 github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
 github.com/stretchr/testify 4d4bfba8f1d1027c4fdbe371823030df51419987
@@ -62,4 +59,5 @@ golang.org/x/text 506f9d5c962f284575e88337e7d9296d27e729d3
 gopkg.in/dancannon/gorethink.v1 edc7a6a68e2d8015f5ffe1b2560eed989f8a45be
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
 gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655
+gopkg.in/olivere/elastic.v5 ee3ebceab960cf68ab9a89ee6d78c031ef5b4a4e
 gopkg.in/yaml.v2 4c78c975fe7c825c6d1466c42be594d1d6f3aba6
