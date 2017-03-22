@@ -9,9 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	// TODO remove
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 const MaxInt = int(^uint(0) >> 1)
@@ -47,13 +44,18 @@ func New(
 	// pre-allocate exact size of the tags slice
 	taglen := 0
 	for k, v := range tags {
-		// TODO check that length of tag key & value are > 0
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		taglen += 2 + len(escape(k, "tagkey")) + len(escape(v, "tagval"))
 	}
 	m.tags = make([]byte, taglen)
 
 	i := 0
 	for k, v := range tags {
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		m.tags[i] = ','
 		i++
 		i += copy(m.tags[i:], escape(k, "tagkey"))
@@ -135,11 +137,6 @@ type metric struct {
 	// cached values for reuse in "get" functions
 	hashID uint64
 	nsec   int64
-}
-
-func (m *metric) Point() *client.Point {
-	c, _ := client.NewPoint(m.Name(), m.Tags(), m.Fields(), m.Time())
-	return c
 }
 
 func (m *metric) String() string {

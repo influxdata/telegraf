@@ -81,6 +81,7 @@ func getEmptyFields() map[string]interface{} {
 	case "openbsd":
 		fields["idle"] = int64(0)
 	case "linux":
+		fields["dead"] = int64(0)
 		fields["paging"] = int64(0)
 		fields["total_threads"] = int64(0)
 	}
@@ -107,6 +108,8 @@ func (p *Processes) gatherFromPS(fields map[string]interface{}) error {
 			fields["blocked"] = fields["blocked"].(int64) + int64(1)
 		case 'Z':
 			fields["zombies"] = fields["zombies"].(int64) + int64(1)
+		case 'X':
+			fields["dead"] = fields["dead"].(int64) + int64(1)
 		case 'T':
 			fields["stopped"] = fields["stopped"].(int64) + int64(1)
 		case 'R':
@@ -164,6 +167,8 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 			fields["blocked"] = fields["blocked"].(int64) + int64(1)
 		case 'Z':
 			fields["zombies"] = fields["zombies"].(int64) + int64(1)
+		case 'X':
+			fields["dead"] = fields["dead"].(int64) + int64(1)
 		case 'T', 't':
 			fields["stopped"] = fields["stopped"].(int64) + int64(1)
 		case 'W':

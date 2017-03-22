@@ -112,6 +112,8 @@ func (i *InfluxDB) Connect() error {
 				Timeout:   i.Timeout.Duration,
 				TLSConfig: tlsConfig,
 				UserAgent: i.UserAgent,
+				Username:  i.Username,
+				Password:  i.Password,
 			}
 			wp := client.WriteParams{
 				Database:        i.Database,

@@ -66,22 +66,9 @@ var malformedwarn = "E! udp_listener has received %d malformed packets" +
 	" thus far."
 
 const sampleConfig = `
-  ## Address and port to host UDP listener on
-  # service_address = ":8092"
-
-  ## Number of UDP messages allowed to queue up. Once filled, the
-  ## UDP listener will start dropping packets.
-  # allowed_pending_messages = 10000
-
-  ## Set the buffer size of the UDP connection outside of OS default (in bytes)
-  ## If set to 0, take OS default
-  udp_buffer_size = 16777216
-
-  ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
+  # DEPRECATED: the TCP listener plugin has been deprecated in favor of the
+  # socket_listener plugin
+  # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener
 `
 
 func (u *UdpListener) SampleConfig() string {
@@ -105,6 +92,10 @@ func (u *UdpListener) SetParser(parser parsers.Parser) {
 func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 	u.Lock()
 	defer u.Unlock()
+
+	log.Println("W! DEPRECATED: the UDP listener plugin has been deprecated " +
+		"in favor of the socket_listener plugin " +
+		"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener)")
 
 	tags := map[string]string{
 		"address": u.ServiceAddress,

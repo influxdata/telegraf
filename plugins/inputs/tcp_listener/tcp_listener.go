@@ -58,21 +58,9 @@ var malformedwarn = "E! tcp_listener has received %d malformed packets" +
 	" thus far."
 
 const sampleConfig = `
-  ## Address and port to host TCP listener on
-  # service_address = ":8094"
-
-  ## Number of TCP messages allowed to queue up. Once filled, the
-  ## TCP listener will start dropping packets.
-  # allowed_pending_messages = 10000
-
-  ## Maximum number of concurrent TCP connections to allow
-  # max_tcp_connections = 250
-
-  ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
+  # DEPRECATED: the TCP listener plugin has been deprecated in favor of the
+  # socket_listener plugin
+  # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener
 `
 
 func (t *TcpListener) SampleConfig() string {
@@ -97,6 +85,10 @@ func (t *TcpListener) SetParser(parser parsers.Parser) {
 func (t *TcpListener) Start(acc telegraf.Accumulator) error {
 	t.Lock()
 	defer t.Unlock()
+
+	log.Println("W! DEPRECATED: the TCP listener plugin has been deprecated " +
+		"in favor of the socket_listener plugin " +
+		"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener)")
 
 	tags := map[string]string{
 		"address": t.ServiceAddress,
