@@ -103,6 +103,9 @@ based on the availability of per-cpu stats on your system.
     - n_used_file_descriptors
     - n_cpus
     - n_containers
+    - n_containers_running
+    - n_containers_stopped
+    - n_containers_paused
     - n_images
     - n_goroutines
     - n_listener_events
@@ -153,6 +156,9 @@ based on the availability of per-cpu stats on your system.
 > docker n_cpus=8i 1456926671065383978
 > docker n_used_file_descriptors=15i 1456926671065383978
 > docker n_containers=7i 1456926671065383978
+> docker n_containers_running=7i 1456926671065383978
+> docker n_containers_stopped=3i 1456926671065383978
+> docker n_containers_paused=0i 1456926671065383978
 > docker n_images=152i 1456926671065383978
 > docker n_goroutines=36i 1456926671065383978
 > docker n_listener_events=0i 1456926671065383978

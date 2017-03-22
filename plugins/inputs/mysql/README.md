@@ -25,8 +25,8 @@ This plugin gathers the statistic data from MySQL server
   ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   ##  e.g.
-  ##    db_user:passwd@tcp(127.0.0.1:3306)/?tls=false
-  ##    db_user@tcp(127.0.0.1:3306)/?tls=false
+  ##    servers = ["user:passwd@tcp(127.0.0.1:3306)/?tls=false"]
+  ##    servers = ["user@tcp(127.0.0.1:3306)/?tls=false"]
   #
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
@@ -133,7 +133,7 @@ The unit of fields varies by the tags.
     * file_events_total(float,number)
     * file_events_seconds_total(float, milliseconds)
     * file_events_bytes_total(float, bytes)
-* Perf file events statements - gathers attributes of each event
+* Perf events statements - gathers attributes of each event
     * events_statements_total(float, number)
     * events_statements_seconds_total(float, millieconds)
     * events_statements_errors_total(float, number)

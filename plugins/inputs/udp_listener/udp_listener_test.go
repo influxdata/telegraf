@@ -106,7 +106,7 @@ func TestConnectUDP(t *testing.T) {
 
 func TestRunParser(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
-	var testmsg = []byte("cpu_load_short,host=server01 value=12.0 1422568543702900257")
+	var testmsg = []byte("cpu_load_short,host=server01 value=12.0 1422568543702900257\n")
 
 	listener, in := newTestUdpListener()
 	acc := testutil.Accumulator{}

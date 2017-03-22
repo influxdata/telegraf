@@ -26,7 +26,7 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("mysql"))
 }
 
-func TestMysqlParseDSN(t *testing.T) {
+func TestMysqlGetDSNTag(t *testing.T) {
 	tests := []struct {
 		input  string
 		output string
@@ -78,9 +78,9 @@ func TestMysqlParseDSN(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		output, _ := parseDSN(test.input)
+		output := getDSNTag(test.input)
 		if output != test.output {
-			t.Errorf("Expected %s, got %s\n", test.output, output)
+			t.Errorf("Input: %s Expected %s, got %s\n", test.input, test.output, output)
 		}
 	}
 }
@@ -92,7 +92,7 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 	}{
 		{
 			"",
-			"/?timeout=5s",
+			"tcp(127.0.0.1:3306)/?timeout=5s",
 		},
 		{
 			"tcp(192.168.1.1:3306)/",
@@ -104,7 +104,19 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 		},
 		{
 			"root:passwd@tcp(192.168.1.1:3306)/?tls=false&timeout=10s",
-			"root:passwd@tcp(192.168.1.1:3306)/?tls=false&timeout=10s",
+			"root:passwd@tcp(192.168.1.1:3306)/?timeout=10s&tls=false",
+		},
+		{
+			"tcp(10.150.1.123:3306)/",
+			"tcp(10.150.1.123:3306)/?timeout=5s",
+		},
+		{
+			"root:@!~(*&$#%(&@#(@&#Password@tcp(10.150.1.123:3306)/",
+			"root:@!~(*&$#%(&@#(@&#Password@tcp(10.150.1.123:3306)/?timeout=5s",
+		},
+		{
+			"root:Test3a#@!@tcp(10.150.1.123:3306)/",
+			"root:Test3a#@!@tcp(10.150.1.123:3306)/?timeout=5s",
 		},
 	}
 

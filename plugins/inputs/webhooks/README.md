@@ -15,6 +15,7 @@ $ sudo service telegraf start
 
 ## Available webhooks
 
+- [Filestack](filestack/)
 - [Github](github/)
 - [Mandrill](mandrill/)
 - [Rollbar](rollbar/)

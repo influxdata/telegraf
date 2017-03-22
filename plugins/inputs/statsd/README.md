@@ -7,14 +7,19 @@
 [[inputs.statsd]]
   ## Address and port to host UDP listener on
   service_address = ":8125"
-  ## Delete gauges every interval (default=false)
-  delete_gauges = false
-  ## Delete counters every interval (default=false)
-  delete_counters = false
-  ## Delete sets every interval (default=false)
-  delete_sets = false
-  ## Delete timings & histograms every interval (default=true)
+
+  ## The following configuration options control when telegraf clears it's cache
+  ## of previous values. If set to false, then telegraf will only clear it's
+  ## cache when the daemon is restarted.
+  ## Reset gauges every interval (default=true)
+  delete_gauges = true
+  ## Reset counters every interval (default=true)
+  delete_counters = true
+  ## Reset sets every interval (default=true)
+  delete_sets = true
+  ## Reset timings & histograms every interval (default=true)
   delete_timings = true
+
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -93,7 +98,6 @@ tags in a manner similar to the line-protocol, like this:
 users.current,service=payroll,region=us-west:32|g
 ```
 
-COMING SOON: there will be a way to specify multiple fields.
 <!-- TODO Second, you can specify multiple fields within a measurement:
 
 ```

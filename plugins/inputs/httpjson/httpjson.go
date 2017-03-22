@@ -16,13 +16,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+// HttpJson struct
 type HttpJson struct {
-	Name       string
-	Servers    []string
-	Method     string
-	TagKeys    []string
-	Parameters map[string]string
-	Headers    map[string]string
+	Name            string
+	Servers         []string
+	Method          string
+	TagKeys         []string
+	ResponseTimeout internal.Duration
+	Parameters      map[string]string
+	Headers         map[string]string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -79,6 +81,8 @@ var sampleConfig = `
     "http://localhost:9999/stats/",
     "http://localhost:9998/stats/",
   ]
+  ## Set response_timeout (default 5 seconds)
+  response_timeout = "5s"
 
   ## HTTP method to use: GET or POST (case-sensitive)
   method = "GET"
@@ -126,12 +130,12 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			ResponseHeaderTimeout: h.ResponseTimeout.Duration,
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+			Timeout:   h.ResponseTimeout.Duration,
 		}
 		h.client.SetHTTPClient(client)
 	}
@@ -291,6 +295,9 @@ func init() {
 	inputs.Add("httpjson", func() telegraf.Input {
 		return &HttpJson{
 			client: &RealHTTPClient{},
+			ResponseTimeout: internal.Duration{
+				Duration: 5 * time.Second,
+			},
 		}
 	})
 }

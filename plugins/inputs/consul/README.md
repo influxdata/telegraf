@@ -29,9 +29,9 @@ to query the data. It will not report the [telemetry](https://www.consul.io/docs
 Tags:
 - node: on which node check/service is registered on
 - service_name: name of the service (this is the service name not the service ID)
+- check_id
 
 Fields:
-- check_id
 - check_name
 - service_id
 - status
@@ -41,6 +41,6 @@ Fields:
 ```
 $ telegraf --config ./telegraf.conf -input-filter consul -test
 * Plugin: consul, Collection 1
-> consul_health_checks,host=wolfpit,node=consul-server-node check_id="serfHealth",check_name="Serf Health Status",service_id="",status="passing" 1464698464486439902
-> consul_health_checks,host=wolfpit,node=consul-server-node,service_name=www.example.com check_id="service:www-example-com.test01",check_name="Service 'www.example.com' check",service_id="www-example-com.test01",status="critical" 1464698464486519036
+> consul_health_checks,host=wolfpit,node=consul-server-node,check_id="serfHealth" check_name="Serf Health Status",service_id="",status="passing" 1464698464486439902
+> consul_health_checks,host=wolfpit,node=consul-server-node,service_name=www.example.com,check_id="service:www-example-com.test01" check_name="Service 'www.example.com' check",service_id="www-example-com.test01",status="critical" 1464698464486519036
 ```

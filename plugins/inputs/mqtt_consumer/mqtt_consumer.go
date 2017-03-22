@@ -133,7 +133,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 func (m *MQTTConsumer) onConnect(c mqtt.Client) {
-	log.Printf("MQTT Client Connected")
+	log.Printf("I! MQTT Client Connected")
 	if !m.PersistentSession || !m.started {
 		topics := make(map[string]byte)
 		for _, topic := range m.Topics {
@@ -142,7 +142,7 @@ func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 		subscribeToken := c.SubscribeMultiple(topics, m.recvMessage)
 		subscribeToken.Wait()
 		if subscribeToken.Error() != nil {
-			log.Printf("MQTT SUBSCRIBE ERROR\ntopics: %s\nerror: %s",
+			log.Printf("E! MQTT Subscribe Error\ntopics: %s\nerror: %s",
 				strings.Join(m.Topics[:], ","), subscribeToken.Error())
 		}
 		m.started = true
@@ -151,7 +151,7 @@ func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 }
 
 func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
-	log.Printf("MQTT Connection lost\nerror: %s\nMQTT Client will try to reconnect", err.Error())
+	log.Printf("E! MQTT Connection lost\nerror: %s\nMQTT Client will try to reconnect", err.Error())
 	return
 }
 
@@ -166,7 +166,7 @@ func (m *MQTTConsumer) receiver() {
 			topic := msg.Topic()
 			metrics, err := m.parser.Parse(msg.Payload())
 			if err != nil {
-				log.Printf("MQTT PARSE ERROR\nmessage: %s\nerror: %s",
+				log.Printf("E! MQTT Parse Error\nmessage: %s\nerror: %s",
 					string(msg.Payload()), err.Error())
 			}
 

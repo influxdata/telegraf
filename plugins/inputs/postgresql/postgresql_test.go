@@ -150,3 +150,75 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 		assert.False(t, acc.HasMeasurement(col))
 	}
 }
+
+func TestPostgresqlDatabaseWhitelistTest(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
+		Databases: []string{"template0"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	var foundTemplate0 = false
+	var foundTemplate1 = false
+
+	for _, pnt := range acc.Metrics {
+		if pnt.Measurement == "postgresql" {
+			if pnt.Tags["db"] == "template0" {
+				foundTemplate0 = true
+			}
+		}
+		if pnt.Measurement == "postgresql" {
+			if pnt.Tags["db"] == "template1" {
+				foundTemplate1 = true
+			}
+		}
+	}
+
+	assert.True(t, foundTemplate0)
+	assert.False(t, foundTemplate1)
+}
+
+func TestPostgresqlDatabaseBlacklistTest(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := &Postgresql{
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
+		IgnoredDatabases: []string{"template0"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	var foundTemplate0 = false
+	var foundTemplate1 = false
+
+	for _, pnt := range acc.Metrics {
+		if pnt.Measurement == "postgresql" {
+			if pnt.Tags["db"] == "template0" {
+				foundTemplate0 = true
+			}
+		}
+		if pnt.Measurement == "postgresql" {
+			if pnt.Tags["db"] == "template1" {
+				foundTemplate1 = true
+			}
+		}
+	}
+
+	assert.False(t, foundTemplate0)
+	assert.True(t, foundTemplate1)
+}

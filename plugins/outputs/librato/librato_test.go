@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
 )
 
@@ -162,31 +163,31 @@ func TestBuildGauge(t *testing.T) {
 	}
 }
 
-func newHostMetric(value interface{}, name, host string) (metric telegraf.Metric) {
-	metric, _ = telegraf.NewMetric(
+func newHostMetric(value interface{}, name, host string) telegraf.Metric {
+	m, _ := metric.New(
 		name,
 		map[string]string{"host": host},
 		map[string]interface{}{"value": value},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	return
+	return m
 }
 
 func TestBuildGaugeWithSource(t *testing.T) {
 	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-	pt1, _ := telegraf.NewMetric(
+	pt1, _ := metric.New(
 		"test1",
 		map[string]string{"hostname": "192.168.0.1", "tag1": "value1"},
 		map[string]interface{}{"value": 0.0},
 		mtime,
 	)
-	pt2, _ := telegraf.NewMetric(
+	pt2, _ := metric.New(
 		"test2",
 		map[string]string{"hostnam": "192.168.0.1", "tag1": "value1"},
 		map[string]interface{}{"value": 1.0},
 		mtime,
 	)
-	pt3, _ := telegraf.NewMetric(
+	pt3, _ := metric.New(
 		"test3",
 		map[string]string{
 			"hostname": "192.168.0.1",
@@ -195,7 +196,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 		map[string]interface{}{"value": 1.0},
 		mtime,
 	)
-	pt4, _ := telegraf.NewMetric(
+	pt4, _ := metric.New(
 		"test4",
 		map[string]string{
 			"hostname": "192.168.0.1",

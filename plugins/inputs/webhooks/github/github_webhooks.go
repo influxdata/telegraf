@@ -17,7 +17,7 @@ type GithubWebhook struct {
 
 func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(gh.Path, gh.eventHandler).Methods("POST")
-	log.Printf("Started the webhooks_github on %s\n", gh.Path)
+	log.Printf("I! Started the webhooks_github on %s\n", gh.Path)
 	gh.acc = acc
 }
 
@@ -58,7 +58,7 @@ func (e *newEventError) Error() string {
 }
 
 func NewEvent(data []byte, name string) (Event, error) {
-	log.Printf("New %v event received", name)
+	log.Printf("D! New %v event received", name)
 	switch name {
 	case "commit_comment":
 		return generateEvent(data, &CommitCommentEvent{})

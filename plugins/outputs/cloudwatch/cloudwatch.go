@@ -30,7 +30,7 @@ type CloudWatch struct {
 
 var sampleConfig = `
   ## Amazon REGION
-  region = 'us-east-1'
+  region = "us-east-1"
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
@@ -48,7 +48,7 @@ var sampleConfig = `
   #shared_credential_file = ""
 
   ## Namespace for the CloudWatch MetricDatums
-  namespace = 'InfluxData/Telegraf'
+  namespace = "InfluxData/Telegraf"
 `
 
 func (c *CloudWatch) SampleConfig() string {
@@ -80,7 +80,7 @@ func (c *CloudWatch) Connect() error {
 	_, err := svc.ListMetrics(params) // Try a read-only call to test connection.
 
 	if err != nil {
-		log.Printf("cloudwatch: Error in ListMetrics API call : %+v \n", err.Error())
+		log.Printf("E! cloudwatch: Error in ListMetrics API call : %+v \n", err.Error())
 	}
 
 	c.svc = svc
@@ -131,7 +131,7 @@ func (c *CloudWatch) WriteToCloudWatch(datums []*cloudwatch.MetricDatum) error {
 	_, err := c.svc.PutMetricData(params)
 
 	if err != nil {
-		log.Printf("CloudWatch: Unable to write to CloudWatch : %+v \n", err.Error())
+		log.Printf("E! CloudWatch: Unable to write to CloudWatch : %+v \n", err.Error())
 	}
 
 	return err

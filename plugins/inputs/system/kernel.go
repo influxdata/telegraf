@@ -81,7 +81,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	acc.AddFields("kernel", fields, map[string]string{})
+	acc.AddCounter("kernel", fields, map[string]string{})
 
 	return nil
 }

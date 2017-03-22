@@ -29,18 +29,24 @@ func (_ *NetResponse) Description() string {
 
 var sampleConfig = `
   ## Protocol, must be "tcp" or "udp"
+  ## NOTE: because the "udp" protocol does not respond to requests, it requires
+  ## a send/expect string pair (see below).
   protocol = "tcp"
   ## Server address (default localhost)
-  address = "github.com:80"
+  address = "localhost:80"
   ## Set timeout
   timeout = "1s"
 
-  ## Optional string sent to the server
-  # send = "ssh"
-  ## Optional expected string in answer
-  # expect = "ssh"
   ## Set read timeout (only used if expecting a response)
   read_timeout = "1s"
+
+  ## The following options are required for UDP checks. For TCP, they are
+  ## optional. The plugin will send the given string to the server and then
+  ## expect to receive the given 'expect' string back.
+  ## string sent to the server
+  # send = "ssh"
+  ## expected string in answer
+  # expect = "ssh"
 `
 
 func (_ *NetResponse) SampleConfig() string {

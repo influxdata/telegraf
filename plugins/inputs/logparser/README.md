@@ -40,8 +40,11 @@ regex patterns.
 ## Grok Parser
 
 The grok parser uses a slightly modified version of logstash "grok" patterns,
-with the format `%{<capture_syntax>[:<semantic_name>][:<modifier>]}`
+with the format
 
+```
+%{<capture_syntax>[:<semantic_name>][:<modifier>]}
+```
 
 Telegraf has many of it's own
 [built-in patterns](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/logparser/grok/patterns/influx-patterns),
@@ -92,4 +95,3 @@ Timestamp modifiers can be used to convert captures to the timestamp of the
 CUSTOM time layouts must be within quotes and be the representation of the
 "reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`
 See https://golang.org/pkg/time/#Parse for more details.
-

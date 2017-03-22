@@ -19,7 +19,7 @@ type RollbarWebhook struct {
 
 func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
-	log.Printf("Started the webhooks_rollbar on %s\n", rb.Path)
+	log.Printf("I! Started the webhooks_rollbar on %s\n", rb.Path)
 	rb.acc = acc
 }
 

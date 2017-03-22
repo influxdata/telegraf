@@ -3,87 +3,60 @@ package telegraf
 import (
 	"time"
 
+	// TODO remove
 	"github.com/influxdata/influxdb/client/v2"
 )
 
+// ValueType is an enumeration of metric types that represent a simple value.
+type ValueType int
+
+// Possible values for the ValueType enum.
+const (
+	_ ValueType = iota
+	Counter
+	Gauge
+	Untyped
+)
+
 type Metric interface {
-	// Name returns the measurement name of the metric
+	Serialize() []byte
+	String() string // convenience function for string(Serialize())
+	Copy() Metric
+	// Split will attempt to return multiple metrics with the same timestamp
+	// whose string representations are no longer than maxSize.
+	// Metrics with a single field may exceed the requested size.
+	Split(maxSize int) []Metric
+
+	// Tag functions
+	HasTag(key string) bool
+	AddTag(key, value string)
+	RemoveTag(key string)
+
+	// Field functions
+	HasField(key string) bool
+	AddField(key string, value interface{})
+	RemoveField(key string) error
+
+	// Name functions
+	SetName(name string)
+	SetPrefix(prefix string)
+	SetSuffix(suffix string)
+
+	// Getting data structure functions
 	Name() string
-
-	// Name returns the tags associated with the metric
 	Tags() map[string]string
-
-	// Time return the timestamp for the metric
-	Time() time.Time
-
-	// UnixNano returns the unix nano time of the metric
-	UnixNano() int64
-
-	// Fields returns the fields for the metric
 	Fields() map[string]interface{}
+	Time() time.Time
+	UnixNano() int64
+	Type() ValueType
+	Len() int // returns the length of the serialized metric, including newline
+	HashID() uint64
 
-	// String returns a line-protocol string of the metric
-	String() string
-
-	// PrecisionString returns a line-protocol string of the metric, at precision
-	PrecisionString(precison string) string
+	// aggregator things:
+	SetAggregate(bool)
+	IsAggregate() bool
 
 	// Point returns a influxdb client.Point object
+	// TODO remove this function
 	Point() *client.Point
-}
-
-// metric is a wrapper of the influxdb client.Point struct
-type metric struct {
-	pt *client.Point
-}
-
-// NewMetric returns a metric with the given timestamp. If a timestamp is not
-// given, then data is sent to the database without a timestamp, in which case
-// the server will assign local time upon reception. NOTE: it is recommended to
-// send data with a timestamp.
-func NewMetric(
-	name string,
-	tags map[string]string,
-	fields map[string]interface{},
-	t time.Time,
-) (Metric, error) {
-	pt, err := client.NewPoint(name, tags, fields, t)
-	if err != nil {
-		return nil, err
-	}
-	return &metric{
-		pt: pt,
-	}, nil
-}
-
-func (m *metric) Name() string {
-	return m.pt.Name()
-}
-
-func (m *metric) Tags() map[string]string {
-	return m.pt.Tags()
-}
-
-func (m *metric) Time() time.Time {
-	return m.pt.Time()
-}
-
-func (m *metric) UnixNano() int64 {
-	return m.pt.UnixNano()
-}
-
-func (m *metric) Fields() map[string]interface{} {
-	return m.pt.Fields()
-}
-
-func (m *metric) String() string {
-	return m.pt.String()
-}
-
-func (m *metric) PrecisionString(precison string) string {
-	return m.pt.PrecisionString(precison)
-}
-
-func (m *metric) Point() *client.Point {
-	return m.pt
 }
