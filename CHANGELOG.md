@@ -80,6 +80,7 @@ be deprecated eventually.
 - [#2635](https://github.com/influxdata/telegraf/issues/2635): add tcp keep-alive to socket_listener & socket_writer
 - [#2031](https://github.com/influxdata/telegraf/pull/2031): Add Kapacitor input plugin
 - [#2732](https://github.com/influxdata/telegraf/pull/2732): Use go 1.8.1
+- [#2109](https://github.com/influxdata/telegraf/issues/2109): Add systemd journal parser.
 
 ### Bugfixes
 

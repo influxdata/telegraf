@@ -11,9 +11,6 @@ import (
 	"time"
 
 	"github.com/vjeantet/grok"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 )
 
 var timeLayouts = map[string]string{
@@ -151,7 +148,7 @@ func (p *Parser) Compile() error {
 	return p.compileCustomPatterns()
 }
 
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (string, map[string]string, map[string]interface{}, time.Time, error) {
 	var err error
 	// values are the parsed fields from the log line
 	var values map[string]string
@@ -159,7 +156,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	var patternName string
 	for _, pattern := range p.namedPatterns {
 		if values, err = p.g.Parse(pattern, line); err != nil {
-			return nil, err
+			return "", nil, nil, time.Time{}, err
 		}
 		if len(values) != 0 {
 			patternName = pattern
@@ -169,12 +166,12 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 	if len(values) == 0 {
 		log.Printf("D! Grok no match found for: %q", line)
-		return nil, nil
+		return "", nil, nil, time.Time{}, nil
 	}
 
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
-	timestamp := time.Now()
+	var timestamp time.Time
 	for k, v := range values {
 		if k == "" || v == "" {
 			continue
@@ -282,7 +279,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
+	return p.Measurement, tags, fields, p.tsModder.tsMod(timestamp), nil
 }
 
 func (p *Parser) addCustomPatterns(scanner *bufio.Scanner) {

@@ -5,12 +5,23 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var benchM telegraf.Metric
+
+func lineMetric(measurement string, tags map[string]string, fields map[string]interface{}, timestamp time.Time, err error) (telegraf.Metric, error) {
+	if err != nil {
+		return nil, err
+	}
+	if measurement == "" {
+		return nil, nil
+	}
+	return metric.New(measurement, tags, fields, timestamp)
+}
 
 func Benchmark_ParseLine_CommonLogFormat(b *testing.B) {
 	p := &Parser{
@@ -20,7 +31,7 @@ func Benchmark_ParseLine_CommonLogFormat(b *testing.B) {
 
 	var m telegraf.Metric
 	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+		m, _ = lineMetric(p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
 	}
 	benchM = m
 }
@@ -33,7 +44,7 @@ func Benchmark_ParseLine_CombinedLogFormat(b *testing.B) {
 
 	var m telegraf.Metric
 	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "-" "Mozilla"`)
+		m, _ = lineMetric(p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "-" "Mozilla"`))
 	}
 	benchM = m
 }
@@ -52,7 +63,7 @@ func Benchmark_ParseLine_CustomPattern(b *testing.B) {
 
 	var m telegraf.Metric
 	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
+		m, _ = lineMetric(p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`))
 	}
 	benchM = m
 }
@@ -67,7 +78,7 @@ func TestSimpleParse(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	m, err := p.ParseLine(`142 bot`)
+	m, err := lineMetric(p.ParseLine(`142 bot`))
 	assert.NoError(t, err)
 	require.NotNil(t, m)
 
@@ -90,7 +101,7 @@ func TestParsePatternsWithLookahead(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	_, err := p.ParseLine(`1466004605359052000 bot`)
+	_, err := lineMetric(p.ParseLine(`1466004605359052000 bot`))
 	assert.Error(t, err)
 }
 
@@ -102,7 +113,7 @@ func TestMeasurementName(t *testing.T) {
 	assert.NoError(t, p.Compile())
 
 	// Parse an influxdb POST request
-	m, err := p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	m, err := lineMetric(p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
 	require.NotNil(t, m)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -126,7 +137,7 @@ func TestCLF_IPv6(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	m, err := p.ParseLine(`2001:0db8:85a3:0000:0000:8a2e:0370:7334 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	m, err := lineMetric(p.ParseLine(`2001:0db8:85a3:0000:0000:8a2e:0370:7334 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
 	require.NotNil(t, m)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -142,7 +153,7 @@ func TestCLF_IPv6(t *testing.T) {
 	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
 	assert.Equal(t, "my_web_log", m.Name())
 
-	m, err = p.ParseLine(`::1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	m, err = lineMetric(p.ParseLine(`::1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
 	require.NotNil(t, m)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -166,7 +177,7 @@ func TestCustomInfluxdbHttpd(t *testing.T) {
 	assert.NoError(t, p.Compile())
 
 	// Parse an influxdb POST request
-	m, err := p.ParseLine(`[httpd] ::1 - - [14/Jun/2016:11:33:29 +0100] "POST /write?consistency=any&db=telegraf&precision=ns&rp= HTTP/1.1" 204 0 "-" "InfluxDBClient" 6f61bc44-321b-11e6-8050-000000000000 2513`)
+	m, err := lineMetric(p.ParseLine(`[httpd] ::1 - - [14/Jun/2016:11:33:29 +0100] "POST /write?consistency=any&db=telegraf&precision=ns&rp= HTTP/1.1" 204 0 "-" "InfluxDBClient" 6f61bc44-321b-11e6-8050-000000000000 2513`))
 	require.NotNil(t, m)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -185,7 +196,7 @@ func TestCustomInfluxdbHttpd(t *testing.T) {
 	assert.Equal(t, map[string]string{"verb": "POST", "resp_code": "204"}, m.Tags())
 
 	// Parse an influxdb GET request
-	m, err = p.ParseLine(`[httpd] ::1 - - [14/Jun/2016:12:10:02 +0100] "GET /query?db=telegraf&q=SELECT+bytes%2Cresponse_time_us+FROM+logparser_grok+WHERE+http_method+%3D+%27GET%27+AND+response_time_us+%3E+0+AND+time+%3E+now%28%29+-+1h HTTP/1.1" 200 578 "http://localhost:8083/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36" 8a3806f1-3220-11e6-8006-000000000000 988`)
+	m, err = lineMetric(p.ParseLine(`[httpd] ::1 - - [14/Jun/2016:12:10:02 +0100] "GET /query?db=telegraf&q=SELECT+bytes%2Cresponse_time_us+FROM+logparser_grok+WHERE+http_method+%3D+%27GET%27+AND+response_time_us+%3E+0+AND+time+%3E+now%28%29+-+1h HTTP/1.1" 200 578 "http://localhost:8083/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36" 8a3806f1-3220-11e6-8006-000000000000 988`))
 	require.NotNil(t, m)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -213,7 +224,7 @@ func TestBuiltinCommonLogFormat(t *testing.T) {
 	assert.NoError(t, p.Compile())
 
 	// Parse an influxdb POST request
-	m, err := p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	m, err := lineMetric(p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
 	require.NotNil(t, m)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -238,7 +249,7 @@ func TestBuiltinCommonLogFormatWithNumbers(t *testing.T) {
 	assert.NoError(t, p.Compile())
 
 	// Parse an influxdb POST request
-	m, err := p.ParseLine(`127.0.0.1 user1234 frank1234 [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
+	m, err := lineMetric(p.ParseLine(`127.0.0.1 user1234 frank1234 [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
 	require.NotNil(t, m)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -263,7 +274,7 @@ func TestBuiltinCombinedLogFormat(t *testing.T) {
 	assert.NoError(t, p.Compile())
 
 	// Parse an influxdb POST request
-	m, err := p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "-" "Mozilla"`)
+	m, err := lineMetric(p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "-" "Mozilla"`))
 	require.NotNil(t, m)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -293,7 +304,7 @@ func TestCompileStringAndParse(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
+	metricA, err := lineMetric(p.ParseLine(`1.25 200 192.168.1.1 5.432µs`))
 	require.NotNil(t, metricA)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -318,7 +329,7 @@ func TestCompileErrorsOnInvalidPattern(t *testing.T) {
 	}
 	assert.Error(t, p.Compile())
 
-	metricA, _ := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
+	metricA, _ := lineMetric(p.ParseLine(`1.25 200 192.168.1.1 5.432µs`))
 	require.Nil(t, metricA)
 }
 
@@ -328,7 +339,7 @@ func TestParsePatternsWithoutCustom(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`1466004605359052000 response_time=20821 mymetric=10890.645`)
+	metricA, err := lineMetric(p.ParseLine(`1466004605359052000 response_time=20821 mymetric=10890.645`))
 	require.NotNil(t, metricA)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -350,7 +361,7 @@ func TestParseEpochNano(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`1466004605359052000 response_time=20821 mymetric=10890.645`)
+	metricA, err := lineMetric(p.ParseLine(`1466004605359052000 response_time=20821 mymetric=10890.645`))
 	require.NotNil(t, metricA)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -372,7 +383,7 @@ func TestParseEpoch(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`1466004605 response_time=20821 mymetric=10890.645`)
+	metricA, err := lineMetric(p.ParseLine(`1466004605 response_time=20821 mymetric=10890.645`))
 	require.NotNil(t, metricA)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -394,7 +405,7 @@ func TestParseEpochErrors(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	_, err := p.ParseLine(`foobar response_time=20821 mymetric=10890.645`)
+	_, err := lineMetric(p.ParseLine(`foobar response_time=20821 mymetric=10890.645`))
 	assert.NoError(t, err)
 
 	p = &Parser{
@@ -405,7 +416,7 @@ func TestParseEpochErrors(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	_, err = p.ParseLine(`foobar response_time=20821 mymetric=10890.645`)
+	_, err = lineMetric(p.ParseLine(`foobar response_time=20821 mymetric=10890.645`))
 	assert.NoError(t, err)
 }
 
@@ -415,7 +426,7 @@ func TestParseGenericTimestamp(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`[09/Jun/2016:03:37:03 +0000] response_time=20821 mymetric=10890.645`)
+	metricA, err := lineMetric(p.ParseLine(`[09/Jun/2016:03:37:03 +0000] response_time=20821 mymetric=10890.645`))
 	require.NotNil(t, metricA)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -427,7 +438,7 @@ func TestParseGenericTimestamp(t *testing.T) {
 	assert.Equal(t, map[string]string{}, metricA.Tags())
 	assert.Equal(t, time.Unix(1465443423, 0).UTC(), metricA.Time().UTC())
 
-	metricB, err := p.ParseLine(`[09/Jun/2016:03:37:04 +0000] response_time=20821 mymetric=10890.645`)
+	metricB, err := lineMetric(p.ParseLine(`[09/Jun/2016:03:37:04 +0000] response_time=20821 mymetric=10890.645`))
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -446,7 +457,7 @@ func TestParseGenericTimestampNotFound(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`[foobar] response_time=20821 mymetric=10890.645`)
+	metricA, err := lineMetric(p.ParseLine(`[foobar] response_time=20821 mymetric=10890.645`))
 	require.NotNil(t, metricA)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -465,7 +476,7 @@ func TestCompileFileAndParse(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
+	metricA, err := lineMetric(p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`))
 	require.NotNil(t, metricA)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -481,7 +492,7 @@ func TestCompileFileAndParse(t *testing.T) {
 		time.Date(2016, time.June, 4, 12, 41, 45, 0, time.FixedZone("foo", 60*60)).Nanosecond(),
 		metricA.Time().Nanosecond())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := lineMetric(p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`))
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -507,7 +518,7 @@ func TestCompileNoModifiersAndParse(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
+	metricA, err := lineMetric(p.ParseLine(`1.25 200 192.168.1.1 5.432µs`))
 	require.NotNil(t, metricA)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -530,7 +541,7 @@ func TestCompileNoNamesAndParse(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
+	metricA, err := lineMetric(p.ParseLine(`1.25 200 192.168.1.1 5.432µs`))
 	require.Nil(t, metricA)
 	assert.NoError(t, err)
 }
@@ -542,7 +553,7 @@ func TestParseNoMatch(t *testing.T) {
 	}
 	assert.NoError(t, p.Compile())
 
-	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
+	metricA, err := lineMetric(p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`))
 	assert.NoError(t, err)
 	assert.Nil(t, metricA)
 }
@@ -574,7 +585,7 @@ func TestParseErrors(t *testing.T) {
 		`,
 	}
 	assert.Error(t, p.Compile())
-	_, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
+	_, err := lineMetric(p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`))
 	assert.Error(t, err)
 
 	// Parse fails because myword is not an int
@@ -585,7 +596,7 @@ func TestParseErrors(t *testing.T) {
 		`,
 	}
 	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
+	_, err = lineMetric(p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`))
 	assert.Error(t, err)
 
 	// Parse fails because myword is not a float
@@ -596,7 +607,7 @@ func TestParseErrors(t *testing.T) {
 		`,
 	}
 	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
+	_, err = lineMetric(p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`))
 	assert.Error(t, err)
 
 	// Parse fails because myword is not a duration
@@ -607,7 +618,7 @@ func TestParseErrors(t *testing.T) {
 		`,
 	}
 	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
+	_, err = lineMetric(p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`))
 	assert.Error(t, err)
 
 	// Parse fails because the time layout is wrong.
@@ -618,7 +629,7 @@ func TestParseErrors(t *testing.T) {
 		`,
 	}
 	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
+	_, err = lineMetric(p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`))
 	assert.Error(t, err)
 }
 
@@ -697,7 +708,7 @@ func TestShortPatternRegression(t *testing.T) {
 	}
 	require.NoError(t, p.Compile())
 
-	metric, err := p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`)
+	metric, err := lineMetric(p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`))
 	require.NoError(t, err)
 	require.NotNil(t, metric)
 

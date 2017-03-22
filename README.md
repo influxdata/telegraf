@@ -127,6 +127,7 @@ configuration options.
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
 * [jolokia](./plugins/inputs/jolokia)
+  [journalparser](./plugins/inputs/journalparser)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)

@@ -5,6 +5,7 @@ import (
 	"log"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/influxdata/tail"
 
@@ -17,7 +18,7 @@ import (
 )
 
 type LogParser interface {
-	ParseLine(line string) (telegraf.Metric, error)
+	ParseLine(line string) (string, map[string]string, map[string]interface{}, time.Time, error)
 	Compile() error
 }
 
@@ -204,8 +205,6 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 func (l *LogParserPlugin) parser() {
 	defer l.wg.Done()
 
-	var m telegraf.Metric
-	var err error
 	var line string
 	for {
 		select {
@@ -218,13 +217,17 @@ func (l *LogParserPlugin) parser() {
 		}
 
 		for _, parser := range l.parsers {
-			m, err = parser.ParseLine(line)
-			if err == nil {
-				if m != nil {
-					l.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-				}
-			} else {
+			measurement, tags, fields, timestamp, err := parser.ParseLine(line)
+			if err != nil {
 				log.Println("E! Error parsing log line: " + err.Error())
+				continue
+			}
+
+			if timestamp.IsZero() {
+				timestamp = time.Now()
+			}
+			if len(fields) != 0 {
+				l.acc.AddFields(measurement, fields, tags, timestamp)
 			}
 		}
 	}
