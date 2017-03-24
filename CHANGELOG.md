@@ -40,6 +40,7 @@
 - [#2973](https://github.com/influxdata/telegraf/pull/2973): Change default prometheus_client port.
 - [#2661](https://github.com/influxdata/telegraf/pull/2661): Add fluentd input plugin.
 - [#2990](https://github.com/influxdata/telegraf/pull/2990): Add result_type field to net_response input plugin.
+- [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 
 ### Bugfixes
 
