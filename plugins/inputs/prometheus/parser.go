@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 
 	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	dto "github.com/prometheus/client_model/go"
@@ -85,7 +86,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				} else {
 					t = time.Now()
 				}
-				metric, err := telegraf.NewMetric(metricName, tags, fields, t)
+				metric, err := metric.New(metricName, tags, fields, t)
 				if err == nil {
 					metrics = append(metrics, metric)
 				}

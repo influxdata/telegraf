@@ -3,7 +3,7 @@
 This input plugin will measures the round-trip
 
 ## Windows:
-### Configration:
+### Configuration:
 ```
 	## urls to ping
 	urls = ["www.google.com"] # required

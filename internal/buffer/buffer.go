@@ -1,16 +1,22 @@
 package buffer
 
 import (
+	"sync"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/selfstat"
+)
+
+var (
+	MetricsWritten = selfstat.Register("agent", "metrics_written", map[string]string{})
+	MetricsDropped = selfstat.Register("agent", "metrics_dropped", map[string]string{})
 )
 
 // Buffer is an object for storing metrics in a circular buffer.
 type Buffer struct {
 	buf chan telegraf.Metric
-	// total dropped metrics
-	drops int
-	// total metrics added
-	total int
+
+	mu sync.Mutex
 }
 
 // NewBuffer returns a Buffer
@@ -32,25 +38,14 @@ func (b *Buffer) Len() int {
 	return len(b.buf)
 }
 
-// Drops returns the total number of dropped metrics that have occured in this
-// buffer since instantiation.
-func (b *Buffer) Drops() int {
-	return b.drops
-}
-
-// Total returns the total number of metrics that have been added to this buffer.
-func (b *Buffer) Total() int {
-	return b.total
-}
-
 // Add adds metrics to the buffer.
 func (b *Buffer) Add(metrics ...telegraf.Metric) {
 	for i, _ := range metrics {
-		b.total++
+		MetricsWritten.Incr(1)
 		select {
 		case b.buf <- metrics[i]:
 		default:
-			b.drops++
+			MetricsDropped.Incr(1)
 			<-b.buf
 			b.buf <- metrics[i]
 		}
@@ -61,11 +56,13 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) {
 // the batch will be of maximum length batchSize. It can be less than batchSize,
 // if the length of Buffer is less than batchSize.
 func (b *Buffer) Batch(batchSize int) []telegraf.Metric {
+	b.mu.Lock()
 	n := min(len(b.buf), batchSize)
 	out := make([]telegraf.Metric, n)
 	for i := 0; i < n; i++ {
 		out[i] = <-b.buf
 	}
+	b.mu.Unlock()
 	return out
 }
 

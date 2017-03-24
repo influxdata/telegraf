@@ -2,6 +2,7 @@ package riemann
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -10,6 +11,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+const deprecationMsg = "I! WARNING: this Riemann output plugin will be deprecated in a future release, see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
 
 type Riemann struct {
 	URL       string
@@ -29,6 +32,7 @@ var sampleConfig = `
 `
 
 func (r *Riemann) Connect() error {
+	log.Printf(deprecationMsg)
 	c, err := raidman.Dial(r.Transport, r.URL)
 
 	if err != nil {
@@ -58,6 +62,7 @@ func (r *Riemann) Description() string {
 }
 
 func (r *Riemann) Write(metrics []telegraf.Metric) error {
+	log.Printf(deprecationMsg)
 	if len(metrics) == 0 {
 		return nil
 	}

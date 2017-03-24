@@ -7,6 +7,27 @@ It can also check response text.
 
 ```
 [[inputs.net_response]]
+  ## Protocol, must be "tcp" or "udp"
+  ## NOTE: because the "udp" protocol does not respond to requests, it requires
+  ## a send/expect string pair (see below).
+  protocol = "tcp"
+  ## Server address (default localhost)
+  address = "localhost:80"
+  ## Set timeout
+  timeout = "1s"
+
+  ## Set read timeout (only used if expecting a response)
+  read_timeout = "1s"
+
+  ## The following options are required for UDP checks. For TCP, they are
+  ## optional. The plugin will send the given string to the server and then
+  ## expect to receive the given 'expect' string back.
+  ## string sent to the server
+  # send = "ssh"
+  ## expected string in answer
+  # expect = "ssh"
+
+[[inputs.net_response]]
   protocol = "tcp"
   address = ":80"
 
@@ -30,6 +51,8 @@ It can also check response text.
   protocol = "udp"
   address = "localhost:161"
   timeout = "2s"
+  send = "hello server"
+  expect = "hello client"
 ```
 
 ### Measurements & Fields:

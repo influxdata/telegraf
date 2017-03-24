@@ -28,7 +28,8 @@ type Docker struct {
 	PerDevice      bool `toml:"perdevice"`
 	Total          bool `toml:"total"`
 
-	client DockerClient
+	client      DockerClient
+	engine_host string
 }
 
 // DockerClient interface, useful for testing
@@ -125,7 +126,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
 			if err != nil {
-				log.Printf("Error gathering container %s stats: %s\n",
+				log.Printf("E! Error gathering container %s stats: %s\n",
 					c.Names, err.Error())
 			}
 		}(container)
@@ -147,11 +148,15 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	d.engine_host = info.Name
 
 	fields := map[string]interface{}{
 		"n_cpus":                  info.NCPU,
 		"n_used_file_descriptors": info.NFd,
 		"n_containers":            info.Containers,
+		"n_containers_running":    info.ContainersRunning,
+		"n_containers_stopped":    info.ContainersStopped,
+		"n_containers_paused":     info.ContainersPaused,
 		"n_images":                info.Images,
 		"n_goroutines":            info.NGoroutines,
 		"n_listener_events":       info.NEventsListener,
@@ -159,11 +164,11 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	// Add metrics
 	acc.AddFields("docker",
 		fields,
-		nil,
+		map[string]string{"engine_host": d.engine_host},
 		now)
 	acc.AddFields("docker",
 		map[string]interface{}{"memory_total": info.MemTotal},
-		map[string]string{"unit": "bytes"},
+		map[string]string{"unit": "bytes", "engine_host": d.engine_host},
 		now)
 	// Get storage metrics
 	for _, rawData := range info.DriverStatus {
@@ -177,7 +182,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 			// pool blocksize
 			acc.AddFields("docker",
 				map[string]interface{}{"pool_blocksize": value},
-				map[string]string{"unit": "bytes"},
+				map[string]string{"unit": "bytes", "engine_host": d.engine_host},
 				now)
 		} else if strings.HasPrefix(name, "data_space_") {
 			// data space
@@ -192,13 +197,13 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	if len(dataFields) > 0 {
 		acc.AddFields("docker_data",
 			dataFields,
-			map[string]string{"unit": "bytes"},
+			map[string]string{"unit": "bytes", "engine_host": d.engine_host},
 			now)
 	}
 	if len(metadataFields) > 0 {
 		acc.AddFields("docker_metadata",
 			metadataFields,
-			map[string]string{"unit": "bytes"},
+			map[string]string{"unit": "bytes", "engine_host": d.engine_host},
 			now)
 	}
 	return nil
@@ -216,15 +221,20 @@ func (d *Docker) gatherContainer(
 		cname = strings.TrimPrefix(container.Names[0], "/")
 	}
 
-	// the image name sometimes has a version part.
-	//   ie, rabbitmq:3-management
-	imageParts := strings.Split(container.Image, ":")
-	imageName := imageParts[0]
+	// the image name sometimes has a version part, or a private repo
+	//   ie, rabbitmq:3-management or docker.someco.net:4443/rabbitmq:3-management
+	imageName := ""
 	imageVersion := "unknown"
-	if len(imageParts) > 1 {
-		imageVersion = imageParts[1]
+	i := strings.LastIndex(container.Image, ":") // index of last ':' character
+	if i > -1 {
+		imageVersion = container.Image[i+1:]
+		imageName = container.Image[:i]
+	} else {
+		imageName = container.Image
 	}
+
 	tags := map[string]string{
+		"engine_host":       d.engine_host,
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,
@@ -358,11 +368,22 @@ func gatherContainerStats(
 				if field == "container_id" {
 					continue
 				}
+
+				var uintV uint64
+				switch v := value.(type) {
+				case uint64:
+					uintV = v
+				case int64:
+					uintV = uint64(v)
+				default:
+					continue
+				}
+
 				_, ok := totalNetworkStatMap[field]
 				if ok {
-					totalNetworkStatMap[field] = totalNetworkStatMap[field].(uint64) + value.(uint64)
+					totalNetworkStatMap[field] = totalNetworkStatMap[field].(uint64) + uintV
 				} else {
-					totalNetworkStatMap[field] = value
+					totalNetworkStatMap[field] = uintV
 				}
 			}
 		}
@@ -481,11 +502,22 @@ func gatherBlockIOMetrics(
 				if field == "container_id" {
 					continue
 				}
+
+				var uintV uint64
+				switch v := value.(type) {
+				case uint64:
+					uintV = v
+				case int64:
+					uintV = uint64(v)
+				default:
+					continue
+				}
+
 				_, ok := totalStatMap[field]
 				if ok {
-					totalStatMap[field] = totalStatMap[field].(uint64) + value.(uint64)
+					totalStatMap[field] = totalStatMap[field].(uint64) + uintV
 				} else {
-					totalStatMap[field] = value
+					totalStatMap[field] = uintV
 				}
 			}
 		}

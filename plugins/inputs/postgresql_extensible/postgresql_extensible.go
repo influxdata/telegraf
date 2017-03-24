@@ -29,6 +29,7 @@ type Postgresql struct {
 		Tagvalue    string
 		Measurement string
 	}
+	Debug bool
 }
 
 type query []struct {
@@ -269,9 +270,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	fields := make(map[string]interface{})
 COLUMN:
 	for col, val := range columnMap {
-		if acc.Debug() {
-			log.Printf("postgresql_extensible: column: %s = %T: %s\n", col, *val, *val)
-		}
+		log.Printf("D! postgresql_extensible: column: %s = %T: %s\n", col, *val, *val)
 		_, ignore := ignoredColumns[col]
 		if ignore || *val == nil {
 			continue

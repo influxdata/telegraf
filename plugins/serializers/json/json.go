@@ -9,9 +9,7 @@ import (
 type JsonSerializer struct {
 }
 
-func (s *JsonSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
-	out := []string{}
-
+func (s *JsonSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	m := make(map[string]interface{})
 	m["tags"] = metric.Tags()
 	m["fields"] = metric.Fields()
@@ -19,9 +17,9 @@ func (s *JsonSerializer) Serialize(metric telegraf.Metric) ([]string, error) {
 	m["timestamp"] = metric.UnixNano() / 1000000000
 	serialized, err := ejson.Marshal(m)
 	if err != nil {
-		return []string{}, err
+		return []byte{}, err
 	}
-	out = append(out, string(serialized))
+	serialized = append(serialized, '\n')
 
-	return out, nil
+	return serialized, nil
 }

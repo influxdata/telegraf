@@ -73,7 +73,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 			tags["chip"] = chip
 			continue
 		}
-		if !strings.HasPrefix(line, " ") {
+		if !strings.HasPrefix(line, "  ") {
 			if len(tags) > 1 {
 				acc.AddFields("sensors", fields, tags)
 			}
@@ -114,5 +114,5 @@ func init() {
 
 // snake converts string to snake case
 func snake(input string) string {
-	return strings.ToLower(strings.Replace(input, " ", "_", -1))
+	return strings.ToLower(strings.Replace(strings.TrimSpace(input), " ", "_", -1))
 }

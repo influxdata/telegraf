@@ -21,9 +21,6 @@ type DbData struct {
 }
 
 func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
-	if statLine.NodeType != "" && statLine.NodeType != "UNK" {
-		tags["state"] = statLine.NodeType
-	}
 	return &MongodbData{
 		StatLine: statLine,
 		Tags:     tags,
@@ -61,6 +58,7 @@ var DefaultReplStats = map[string]string{
 	"repl_getmores_per_sec": "GetMoreR",
 	"repl_commands_per_sec": "CommandR",
 	"member_status":         "NodeType",
+	"state":                 "NodeState",
 	"repl_lag":              "ReplLag",
 }
 
