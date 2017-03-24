@@ -22,7 +22,7 @@ TMP_CONFIG_DIR=./rpm_config
 CONFIG_FILES_DIR=./ConfigFiles
 
 LINUX_CONFIG_FILES_VER=1.6
-CONFIG_FILES_ITER=4
+CONFIG_FILES_ITER=12
 REDIS_CONFIG_FILES_VER=1.6
 PERFORCE_CONFIG_FILES_VER=1.6
 
@@ -84,7 +84,7 @@ CONFIG_FPM_ARGS="\
 --prefix / \
 -a noarch \
 -d telegraf \
---config-files / \
+--config-files /etc/telegraf/ \
 --after-install ./post_install_config.sh \
 --after-remove ./post_uninstall_config.sh \
 $COMMON_FPM_ARGS"
@@ -99,6 +99,8 @@ cp $CONFIG_FILES_DIR/telegraf.logrotate $TMP_CONFIG_DIR/etc/logrotate.d/telegraf
 mkdir -p $TMP_CONFIG_DIR/lib/systemd/system
 cp $CONFIG_FILES_DIR/telegraf-dhclient.service $TMP_CONFIG_DIR/lib/systemd/system/
 cp $CONFIG_FILES_DIR/telegraf-networkd.service $TMP_CONFIG_DIR/lib/systemd/system/
+# To ensure telegraf.service is removed when the rpm itself is removed/uninstalled.
+cp $CONFIG_FILES_DIR/telegraf-networkd.service $TMP_CONFIG_DIR/lib/systemd/system/telegraf.service
 mkdir -p $TMP_CONFIG_DIR/etc/telegraf
 mkdir -p $TMP_CONFIG_DIR/etc/telegraf/telegraf.d
 
