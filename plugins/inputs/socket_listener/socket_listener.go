@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"time"
 )
 
 type setReadBufferer interface {
@@ -75,6 +76,9 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 		for _, m := range metrics {
 			ssl.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
+		if ssl.ReadDeadline > 0 {
+			c.SetReadDeadline(time.Now().Add(time.Duration(ssl.ReadDeadline) * time.Second))
+		}
 	}
 
 	if err := scnr.Err(); err != nil {
@@ -112,6 +116,7 @@ type SocketListener struct {
 	ServiceAddress string
 	MaxConnections int
 	ReadBufferSize int
+	ReadDeadline   int
 
 	parsers.Parser
 	telegraf.Accumulator
