@@ -29,6 +29,7 @@ if [[ "$SYSTEMD_NETWORKD_INUSE" != "$TRUE" ]]; then
   if [[ -f $TELEGRAF_SERVICE ]]; then
   	systemctl disable telegraf
   fi
+
   cp /usr/lib/systemd/system/telegraf-dhclient.service /usr/lib/systemd/system/telegraf.service
   systemctl daemon-reload
   if [[ "$TELEGRAF_IN_DHCLIENT_HOOKS" != "$TRUE"  ]]
