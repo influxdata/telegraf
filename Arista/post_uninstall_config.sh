@@ -12,6 +12,5 @@ fi
 if [[ "$1" == "0" ]]; then 
     systemctl stop telegraf
     systemctl disable telegraf
-    TELEGRAF_SERVICE_OVERRIDE=/usr/lib/systemd/system/telegraf.service
     [[ -f ${DHCLIENT_HOOKS_FILE} ]] && sed -i '/start telegraf/d' ${DHCLIENT_HOOKS_FILE}
 fi
