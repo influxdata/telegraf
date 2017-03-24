@@ -81,42 +81,25 @@ func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 
 	acc := sl.Accumulator.(*testutil.Accumulator)
 
+	acc.Wait(3)
 	acc.Lock()
-	if len(acc.Metrics) < 1 {
-		acc.Wait()
-	}
-	require.True(t, len(acc.Metrics) >= 1)
-	m := acc.Metrics[0]
+	m1 := acc.Metrics[0]
+	m2 := acc.Metrics[1]
+	m3 := acc.Metrics[2]
 	acc.Unlock()
 
-	assert.Equal(t, "test", m.Measurement)
-	assert.Equal(t, map[string]string{"foo": "bar"}, m.Tags)
-	assert.Equal(t, map[string]interface{}{"v": int64(1)}, m.Fields)
-	assert.True(t, time.Unix(0, 123456789).Equal(m.Time))
+	assert.Equal(t, "test", m1.Measurement)
+	assert.Equal(t, map[string]string{"foo": "bar"}, m1.Tags)
+	assert.Equal(t, map[string]interface{}{"v": int64(1)}, m1.Fields)
+	assert.True(t, time.Unix(0, 123456789).Equal(m1.Time))
 
-	acc.Lock()
-	if len(acc.Metrics) < 2 {
-		acc.Wait()
-	}
-	require.True(t, len(acc.Metrics) >= 2)
-	m = acc.Metrics[1]
-	acc.Unlock()
+	assert.Equal(t, "test", m2.Measurement)
+	assert.Equal(t, map[string]string{"foo": "baz"}, m2.Tags)
+	assert.Equal(t, map[string]interface{}{"v": int64(2)}, m2.Fields)
+	assert.True(t, time.Unix(0, 123456790).Equal(m2.Time))
 
-	assert.Equal(t, "test", m.Measurement)
-	assert.Equal(t, map[string]string{"foo": "baz"}, m.Tags)
-	assert.Equal(t, map[string]interface{}{"v": int64(2)}, m.Fields)
-	assert.True(t, time.Unix(0, 123456790).Equal(m.Time))
-
-	acc.Lock()
-	if len(acc.Metrics) < 3 {
-		acc.Wait()
-	}
-	require.True(t, len(acc.Metrics) >= 3)
-	m = acc.Metrics[2]
-	acc.Unlock()
-
-	assert.Equal(t, "test", m.Measurement)
-	assert.Equal(t, map[string]string{"foo": "zab"}, m.Tags)
-	assert.Equal(t, map[string]interface{}{"v": int64(3)}, m.Fields)
-	assert.True(t, time.Unix(0, 123456791).Equal(m.Time))
+	assert.Equal(t, "test", m3.Measurement)
+	assert.Equal(t, map[string]string{"foo": "zab"}, m3.Tags)
+	assert.Equal(t, map[string]interface{}{"v": int64(3)}, m3.Fields)
+	assert.True(t, time.Unix(0, 123456791).Equal(m3.Time))
 }

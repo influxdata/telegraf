@@ -44,9 +44,7 @@ func TestGraphiteOK(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	t.Log("Starting server")
-	go TCPServer1(t, &wg)
-	// Give the fake graphite TCP server some time to start:
-	time.Sleep(time.Millisecond * 100)
+	TCPServer1(t, &wg)
 
 	// Init plugin
 	g := Graphite{
@@ -88,10 +86,8 @@ func TestGraphiteOK(t *testing.T) {
 	t.Log("Finished Waiting for first data")
 	var wg2 sync.WaitGroup
 	// Start TCP server
-	time.Sleep(time.Millisecond * 100)
 	wg2.Add(1)
-	go TCPServer2(t, &wg2)
-	time.Sleep(time.Millisecond * 100)
+	TCPServer2(t, &wg2)
 	//Write but expect an error, but reconnect
 	g.Write(metrics2)
 	err3 := g.Write(metrics2)
@@ -105,27 +101,31 @@ func TestGraphiteOK(t *testing.T) {
 }
 
 func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
-	defer wg.Done()
 	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
-	conn, _ := (tcpServer).Accept()
-	reader := bufio.NewReader(conn)
-	tp := textproto.NewReader(reader)
-	data1, _ := tp.ReadLine()
-	assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
-	conn.Close()
-	tcpServer.Close()
+	go func() {
+		defer wg.Done()
+		conn, _ := (tcpServer).Accept()
+		reader := bufio.NewReader(conn)
+		tp := textproto.NewReader(reader)
+		data1, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
+		conn.Close()
+		tcpServer.Close()
+	}()
 }
 
 func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
-	defer wg.Done()
 	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
-	conn2, _ := (tcpServer).Accept()
-	reader := bufio.NewReader(conn2)
-	tp := textproto.NewReader(reader)
-	data2, _ := tp.ReadLine()
-	assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
-	data3, _ := tp.ReadLine()
-	assert.Equal(t, "my.prefix.192_168_0_1.my_measurement 3.14 1289430000", data3)
-	conn2.Close()
-	tcpServer.Close()
+	go func() {
+		defer wg.Done()
+		conn2, _ := (tcpServer).Accept()
+		reader := bufio.NewReader(conn2)
+		tp := textproto.NewReader(reader)
+		data2, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
+		data3, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.192_168_0_1.my_measurement 3.14 1289430000", data3)
+		conn2.Close()
+		tcpServer.Close()
+	}()
 }

@@ -129,6 +129,9 @@ func (a *Accumulator) AddError(err error) {
 	}
 	a.Lock()
 	a.Errors = append(a.Errors, err)
+	if a.Cond != nil {
+		a.Cond.Broadcast()
+	}
 	a.Unlock()
 }
 
@@ -198,13 +201,28 @@ func (a *Accumulator) NFields() int {
 	return counter
 }
 
-// Wait waits for a metric to be added to the accumulator.
-// Accumulator must already be locked.
-func (a *Accumulator) Wait() {
+// Wait waits for the given number of metrics to be added to the accumulator.
+func (a *Accumulator) Wait(n int) {
+	a.Lock()
 	if a.Cond == nil {
 		a.Cond = sync.NewCond(&a.Mutex)
 	}
-	a.Cond.Wait()
+	for int(a.NMetrics()) < n {
+		a.Cond.Wait()
+	}
+	a.Unlock()
+}
+
+// WaitError waits for the given number of errors to be added to the accumulator.
+func (a *Accumulator) WaitError(n int) {
+	a.Lock()
+	if a.Cond == nil {
+		a.Cond = sync.NewCond(&a.Mutex)
+	}
+	for len(a.Errors) < n {
+		a.Cond.Wait()
+	}
+	a.Unlock()
 }
 
 func (a *Accumulator) AssertContainsTaggedFields(
