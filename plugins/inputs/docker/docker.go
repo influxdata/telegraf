@@ -112,7 +112,6 @@ var sampleConfig = `
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
   docker_label_exclude = []
-
 `
 
 // Description returns input description
@@ -150,11 +149,19 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 
 	// Create label filters
 	if len(d.LabelInclude) != 0 {
-		d.LabelFilter.labelInclude, _ = filter.Compile(d.LabelInclude)
+		var err error
+		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(d.LabelExclude) != 0 {
-		d.LabelFilter.labelExclude, _ = filter.Compile(d.LabelExclude)
+		var err error
+		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Get daemon info
@@ -631,7 +638,6 @@ func init() {
 		return &Docker{
 			PerDevice: true,
 			Timeout:   internal.Duration{Duration: time.Second * 5},
-			//AddLabels: true,
 		}
 	})
 }

@@ -148,6 +148,7 @@ based on the availability of per-cpu stats on your system.
     - engine_host
 - docker_metadata
     - unit=bytes
+    - engine_host
 
 #### Docker Container tags
 - Tags on all containers:
