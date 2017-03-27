@@ -6,9 +6,9 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
+	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/require"
-	"fmt"
 )
 
 func TestDockerGatherContainerStats(t *testing.T) {
@@ -251,16 +251,15 @@ var gatherLabelsTests = []struct {
 	expected    []string
 	notexpected []string
 }{
-	{[]string{},          []string{},         []string{"label1","label2"}, []string{}},
-	{[]string{"*"},       []string{},         []string{"label1","label2"}, []string{}},
-	{[]string{"lab*"},    []string{},         []string{"label1","label2"}, []string{}},
-	{[]string{"label1"},  []string{},         []string{"label1"},          []string{"label2"}},
-	{[]string{"label1*"}, []string{},         []string{"label1"},          []string{"label2"}},
-	{[]string{},          []string{"*"},      []string{},                  []string{"label1","label2"}},
-	{[]string{},          []string{"lab*"},   []string{},                  []string{"label1","label2"}},
-	{[]string{},          []string{"label1"}, []string{"label2"},          []string{"label1"}},
-	{[]string{"*"},       []string{"*"},      []string{},                  []string{"label1","label2"}},
-
+	{[]string{}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"*"}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"lab*"}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"label1"}, []string{}, []string{"label1"}, []string{"label2"}},
+	{[]string{"label1*"}, []string{}, []string{"label1"}, []string{"label2"}},
+	{[]string{}, []string{"*"}, []string{}, []string{"label1", "label2"}},
+	{[]string{}, []string{"lab*"}, []string{}, []string{"label1", "label2"}},
+	{[]string{}, []string{"label1"}, []string{"label2"}, []string{"label1"}},
+	{[]string{"*"}, []string{"*"}, []string{}, []string{"label1", "label2"}},
 }
 
 func TestDockerGatherLabels(t *testing.T) {
