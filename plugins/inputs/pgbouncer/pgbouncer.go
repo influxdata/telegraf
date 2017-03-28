@@ -139,10 +139,7 @@ func (p *Pgbouncer) accRow(row scanner, metric string, acc telegraf.Accumulator)
 	}
 
 	// extract the database name from the column map
-	dbnameChars := (*columnMap["database"]).([]uint8)
-	for i := 0; i < len(dbnameChars); i++ {
-		dbname.WriteString(string(dbnameChars[i]))
-	}
+	dbname.WriteString((*columnMap["database"]).(string))
 
 	if p.ignoreDatabase(dbname.String()) {
 		return nil
@@ -151,18 +148,12 @@ func (p *Pgbouncer) accRow(row scanner, metric string, acc telegraf.Accumulator)
 	tags["db"] = dbname.String()
 
 	if columnMap["user"] != nil {
-		userChars := (*columnMap["user"]).([]uint8)
-		for i := 0; i < len(userChars); i++ {
-			user.WriteString(string(userChars[i]))
-		}
+		user.WriteString((*columnMap["user"]).(string))
 		tags["user"] = user.String()
 	}
 
 	if columnMap["pool_mode"] != nil {
-		poolChars := (*columnMap["pool_mode"]).([]uint8)
-		for i := 0; i < len(poolChars); i++ {
-			poolMode.WriteString(string(poolChars[i]))
-		}
+		poolMode.WriteString((*columnMap["pool_mode"]).(string))
 		tags["pool_mode"] = poolMode.String()
 	}
 
@@ -170,9 +161,8 @@ func (p *Pgbouncer) accRow(row scanner, metric string, acc telegraf.Accumulator)
 	tagAddress, err = p.SanitizedAddress()
 	if err != nil {
 		return err
-	} else {
-		tags["server"] = tagAddress
 	}
+	tags["server"] = tagAddress
 
 	fields := make(map[string]interface{})
 	for col, val := range columnMap {
