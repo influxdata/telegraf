@@ -36,6 +36,8 @@ for the stat structure can be found
   docker_label_include = []
   docker_label_exclude = []
   
+  ## Which environment variables should we use as a tag
+  tag_env = ["JAVA_HOME", "HEAP_SIZE"]
 ```
 
 ### Measurements & Fields:
