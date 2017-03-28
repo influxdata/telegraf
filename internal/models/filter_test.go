@@ -215,7 +215,33 @@ func TestFilter_FieldDrop(t *testing.T) {
 	}
 }
 
-func TestFilter_TagPass(t *testing.T) {
+func TestFilter_TagAlias(t *testing.T) {
+	filters := []TagFilter{
+		TagFilter{
+			Name:   "cpu",
+			Filter: []string{"cpu-*"},
+		},
+		TagFilter{
+			Name:   "mem",
+			Filter: []string{"mem_free"},
+		}}
+	fany := Filter{
+		TagPassAny: filters,
+	}
+
+	f := Filter {
+		TagPass: filters,
+	}
+
+	require.NoError(t, f.Compile())
+	require.NoError(t, fany.Compile())
+
+
+	assert.Equal(t, fany.TagPassAny, f.TagPassAny)
+
+}
+
+func TestFilter_TagPassAny(t *testing.T) {
 	filters := []TagFilter{
 		TagFilter{
 			Name:   "cpu",
@@ -226,8 +252,9 @@ func TestFilter_TagPass(t *testing.T) {
 			Filter: []string{"mem_free"},
 		}}
 	f := Filter{
-		TagPass: filters,
+		TagPassAny: filters,
 	}
+
 	require.NoError(t, f.Compile())
 
 	passes := []map[string]string{
@@ -239,6 +266,102 @@ func TestFilter_TagPass(t *testing.T) {
 	}
 
 	drops := []map[string]string{
+		{"cpu": "cputotal"},
+		{"cpu": "cpu0"},
+		{"cpu": "cpu1"},
+		{"cpu": "cpu2"},
+		{"mem": "mem_used"},
+	}
+
+	for _, tags := range passes {
+		if !f.shouldTagsPass(tags)  {
+			t.Errorf("Expected tags %v to pass", tags)
+		}
+	}
+
+	for _, tags := range drops {
+		if f.shouldTagsPass(tags)  {
+			t.Errorf("Expected tags %v to drop", tags)
+		}
+	}
+}
+
+func TestFilter_TagPassAll(t *testing.T) {
+	filters := []TagFilter{
+		TagFilter{
+			Name:   "cpu",
+			Filter: []string{"cpu-*"},
+		},
+		TagFilter{
+			Name:   "env",
+			Filter: []string{"test", "supertest"},
+		}}
+	f := Filter{
+		TagPassAll: filters,
+	}
+
+	require.NoError(t, f.Compile())
+
+	passes := []map[string]string{
+		{"cpu": "cpu-total", "env": "test"},
+		{"cpu": "cpu-0", "env": "test"},
+		{"cpu": "cpu-0", "env": "supertest"},
+		{"cpu": "cpu-1", "env": "test"},
+		{"cpu": "cpu-2", "env": "test"},
+	}
+
+
+	drops := []map[string]string{
+		{"cpu": "cputotal", "env":"nottest"},
+		{"cpu": "cpu0", "env": "nottest"},
+		{"cpu": "cpu1", "env": "nottest"},
+		{"cpu": "cpu2", "env": "nottest"},
+		{"cpu": "cputotal", "env":"supertest"},
+
+		{"cpu": "cpu-total"},
+		{"cpu": "cpu-0"},
+		{"cpu": "cpu-1"},
+		{"cpu": "cpu-2"},
+	}
+
+	for _, tags := range passes {
+		if !f.shouldTagsPass(tags) {
+			t.Errorf("Expected tags %v to pass", tags)
+		}
+	}
+
+	for _, tags := range drops {
+		if f.shouldTagsPass(tags) {
+			t.Errorf("Expected tags %v to drop", tags)
+		}
+	}
+}
+
+func TestFilter_TagDropAny(t *testing.T) {
+	filters := []TagFilter{
+		TagFilter{
+			Name:   "cpu",
+			Filter: []string{"cpu-*"},
+		},
+		TagFilter{
+			Name:   "mem",
+			Filter: []string{"mem_free", "mem_hog"},
+		}}
+	f := Filter{
+		TagDropAny: filters,
+	}
+	require.NoError(t, f.Compile())
+
+	drops := []map[string]string{
+		{"cpu": "cpu-total"},
+		{"cpu": "cpu-0"},
+		{"cpu": "cpu-1"},
+		{"cpu": "cpu-2"},
+		{"mem": "mem_free"},
+		{"mem": "mem_hog"},
+	}
+
+	passes := []map[string]string{
 		{"cpu": "cputotal"},
 		{"cpu": "cpu0"},
 		{"cpu": "cpu1"},
@@ -259,27 +382,28 @@ func TestFilter_TagPass(t *testing.T) {
 	}
 }
 
-func TestFilter_TagDrop(t *testing.T) {
+func TestFilter_TagDropAll(t *testing.T) {
 	filters := []TagFilter{
 		TagFilter{
 			Name:   "cpu",
 			Filter: []string{"cpu-*"},
 		},
 		TagFilter{
-			Name:   "mem",
-			Filter: []string{"mem_free"},
+			Name:   "env",
+			Filter: []string{"test", "supertest"},
 		}}
 	f := Filter{
-		TagDrop: filters,
+		TagDropAll: filters,
 	}
 	require.NoError(t, f.Compile())
 
-	drops := []map[string]string{
-		{"cpu": "cpu-total"},
-		{"cpu": "cpu-0"},
-		{"cpu": "cpu-1"},
-		{"cpu": "cpu-2"},
-		{"mem": "mem_free"},
+	drops:= []map[string]string{
+		{"cpu": "cpu-total", "env": "test"},
+		{"cpu": "cpu-0", "env": "test"},
+		{"cpu": "cpu-0", "env": "supertest"},
+		{"cpu": "cpu-1", "env": "test"},
+		{"cpu": "cpu-2", "env": "test"},
+
 	}
 
 	passes := []map[string]string{
@@ -288,6 +412,16 @@ func TestFilter_TagDrop(t *testing.T) {
 		{"cpu": "cpu1"},
 		{"cpu": "cpu2"},
 		{"mem": "mem_used"},
+		{"cpu": "cpu-total"},
+		{"cpu": "cpu-0"},
+		{"cpu": "cpu-0", "env": "nottest"},
+		{"cpu": "cpu-1"},
+		{"cpu": "cpu-2"},
+		{"mem": "mem_free", "env": "supertest"},
+		{"mem": "mem_free", "env": "test"},
+		{"mem": "mem_free", "env": "nottest"},
+
+
 	}
 
 	for _, tags := range passes {

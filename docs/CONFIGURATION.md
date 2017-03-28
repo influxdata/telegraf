@@ -133,11 +133,22 @@ current input. Each string in the array is tested as a glob match against field 
 and if it matches, the field is emitted. fieldpass is not available for outputs.
 * **fielddrop**: The inverse of pass, if a field name matches, it is not emitted.
 fielddrop is not available for outputs.
-* **tagpass**: tag names and arrays of strings that are used to filter
-measurements by the current input. Each string in the array is tested as a glob
-match against the tag name, and if it matches the measurement is emitted.
-* **tagdrop**: The inverse of tagpass. If a tag matches, the measurement is not
-emitted. This is tested on measurements that have passed the tagpass test.
+* **tagpassany**: tag names and arrays of strings that are used to filter
+measurements by the current input. Each string in the array for each tag name
+is tested as a glob match against the tag values for the measurement, and if 
+any string for any tag matches the measurement is emitted. (**tagpass** is aliases 
+to this param)
+* **tagpassall**  tag names and arrays of strings that are used to filter 
+measurements by the current input.  Each string in the array for each tag name
+is tested as a glob match against the tag values for the measurement.  Each tag name
+must provide a match for the measurement to be emitted.  If the measurement does not
+have all of the tags specified it will be dropped.  This is tested on measurements
+that have passed the tagpassany test.
+* **tagdropany**: The inverse of tagpassany. If a tag matches, the measurement is not
+emitted. This is tested on measurements that have passed the tagpass* tests.
+* **tagdropall**: The inverse of tagpassall. If all tag names have matches, 
+the measurement is not emitted. This is tested on measurements that have 
+passed the tagpass* and tagdropany tests.
 * **tagexclude**: tagexclude can be used to exclude a tag from measurement(s).
 As opposed to tagdrop, which will drop an entire measurement based on it's
 tags, tagexclude simply strips the given tag keys from the measurement. This
@@ -146,9 +157,9 @@ as it is more efficient to filter out tags at the ingestion point.
 * **taginclude**: taginclude is the inverse of tagexclude. It will only include
 the tag keys in the final measurement.
 
-**NOTE** `tagpass` and `tagdrop` parameters must be defined at the _end_ of
+**NOTE** `tagpass*` and `tagdrop*` parameters must be defined at the _end_ of
 the plugin definition, otherwise subsequent plugin config options will be
-interpreted as part of the tagpass/tagdrop map.
+interpreted as part of the tagpass*/tagdrop* map.
 
 #### Input Configuration Examples
 
@@ -180,9 +191,9 @@ fields which begin with `time_`.
 
 #### Input Config: tagpass and tagdrop
 
-**NOTE** `tagpass` and `tagdrop` parameters must be defined at the _end_ of
+**NOTE** `tagpass*` and `tagdrop*` parameters must be defined at the _end_ of
 the plugin definition, otherwise subsequent plugin config options will be
-interpreted as part of the tagpass/tagdrop map.
+interpreted as part of the tagpass*/tagdrop map*.
 
 ```toml
 [[inputs.cpu]]
@@ -190,17 +201,24 @@ interpreted as part of the tagpass/tagdrop map.
   totalcpu = false
   fielddrop = ["cpu_time"]
   # Don't collect CPU data for cpu6 & cpu7
-  [inputs.cpu.tagdrop]
+  [inputs.cpu.tagdropany]
     cpu = [ "cpu6", "cpu7" ]
 
 [[inputs.disk]]
-  [inputs.disk.tagpass]
+  [inputs.disk.tagpassany]
     # tagpass conditions are OR, not AND.
     # If the (filesystem is ext4 or xfs) OR (the path is /opt or /home)
     # then the metric passes
     fstype = [ "ext4", "xfs" ]
     # Globs can also be used on the tag values
     path = [ "/opt", "/home*" ]
+    
+[[inputs.hddtemp]]
+  [inputs.hddtemp.tagpassall]
+    # tagpassall conditions are OR between tag patterns, but AND between tag names
+    # If the hdd is a western digital or samsung and status=failed
+    model  = [ "WDC*", "SAMSUNG*" ]
+    status = [ "failed" ]    
 ```
 
 #### Input Config: fieldpass and fielddrop
@@ -323,7 +341,7 @@ to avoid measurement collisions:
   database = "telegraf-cpu0-data"
   precision = "s"
   # Only store measurements where the tag "cpu" matches the value "cpu0"
-  [outputs.influxdb.tagpass]
+  [outputs.influxdb.tagpassall]
     cpu = ["cpu0"]
 ```
 

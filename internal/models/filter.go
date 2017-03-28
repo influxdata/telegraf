@@ -25,8 +25,12 @@ type Filter struct {
 	FieldPass []string
 	fieldPass filter.Filter
 
-	TagDrop []TagFilter
-	TagPass []TagFilter
+	TagDrop     []TagFilter
+	TagPass     []TagFilter
+	TagDropAny  []TagFilter
+	TagDropAll  []TagFilter
+	TagPassAny  []TagFilter
+	TagPassAll  []TagFilter
 
 	TagExclude []string
 	tagExclude filter.Filter
@@ -38,14 +42,22 @@ type Filter struct {
 
 // Compile all Filter lists into filter.Filter objects.
 func (f *Filter) Compile() error {
+	if len(f.TagDropAny) == 0 && len(f.TagDrop) > 0 {
+		f.TagDropAny = f.TagDrop
+	}
+	if len(f.TagPassAny) == 0 && len(f.TagPass) > 0 {
+		f.TagPassAny = f.TagPass
+	}
 	if len(f.NameDrop) == 0 &&
 		len(f.NamePass) == 0 &&
 		len(f.FieldDrop) == 0 &&
 		len(f.FieldPass) == 0 &&
 		len(f.TagInclude) == 0 &&
 		len(f.TagExclude) == 0 &&
-		len(f.TagPass) == 0 &&
-		len(f.TagDrop) == 0 {
+		len(f.TagPassAny) == 0 &&
+		len(f.TagPassAll) == 0 &&
+		len(f.TagDropAny) == 0 &&
+		len(f.TagDropAll) == 0 {
 		return nil
 	}
 
@@ -78,16 +90,29 @@ func (f *Filter) Compile() error {
 		return fmt.Errorf("Error compiling 'taginclude', %s", err)
 	}
 
-	for i, _ := range f.TagDrop {
-		f.TagDrop[i].filter, err = filter.Compile(f.TagDrop[i].Filter)
+	for i, _ := range f.TagDropAny {
+		f.TagDropAny[i].filter, err = filter.Compile(f.TagDropAny[i].Filter)
 		if err != nil {
-			return fmt.Errorf("Error compiling 'tagdrop', %s", err)
+			return fmt.Errorf("Error compiling 'tagdrop (any)', %s", err)
 		}
 	}
-	for i, _ := range f.TagPass {
-		f.TagPass[i].filter, err = filter.Compile(f.TagPass[i].Filter)
+	for i, _ := range f.TagPassAny {
+		f.TagPassAny[i].filter, err = filter.Compile(f.TagPassAny[i].Filter)
 		if err != nil {
-			return fmt.Errorf("Error compiling 'tagpass', %s", err)
+			return fmt.Errorf("Error compiling 'tagpass (any)', %s", err)
+		}
+	}
+
+	for i, _ := range f.TagDropAll {
+		f.TagDropAll[i].filter, err = filter.Compile(f.TagDropAll[i].Filter)
+		if err != nil {
+			return fmt.Errorf("Error compiling 'tagdrop (all)', %s", err)
+		}
+	}
+	for i, _ := range f.TagPassAll {
+		f.TagPassAll[i].filter, err = filter.Compile(f.TagPassAll[i].Filter)
+		if err != nil {
+			return fmt.Errorf("Error compiling 'tagpass (all)', %s", err)
 		}
 	}
 	return nil
@@ -175,8 +200,8 @@ func (f *Filter) shouldFieldPass(key string) bool {
 // shouldTagsPass returns true if the metric should pass, false if should drop
 // based on the tagdrop/tagpass filter parameters
 func (f *Filter) shouldTagsPass(tags map[string]string) bool {
-	if f.TagPass != nil {
-		for _, pat := range f.TagPass {
+	if f.TagPassAny != nil {
+		for _, pat := range f.TagPassAny {
 			if pat.filter == nil {
 				continue
 			}
@@ -189,8 +214,25 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 		return false
 	}
 
-	if f.TagDrop != nil {
-		for _, pat := range f.TagDrop {
+	if f.TagPassAll != nil {
+		for _, pat := range f.TagPassAll {
+			if pat.filter == nil {
+				continue
+			}
+			if tagval, ok := tags[pat.Name]; ok {
+				if !pat.filter.Match(tagval) {
+					return false
+				}
+			} else {
+				return false
+			}
+		}
+		return true
+	}
+
+
+	if f.TagDropAny != nil {
+		for _, pat := range f.TagDropAny {
 			if pat.filter == nil {
 				continue
 			}
@@ -201,6 +243,22 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 			}
 		}
 		return true
+	}
+
+	if f.TagDropAll != nil {
+		for _, pat := range f.TagDropAll {
+			if pat.filter == nil {
+				continue
+			}
+			if tagval, ok := tags[pat.Name]; ok {
+				if !pat.filter.Match(tagval) {
+					return true
+				}
+			} else {
+				return true
+			}
+		}
+		return false
 	}
 
 	return true
