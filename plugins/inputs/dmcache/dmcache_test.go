@@ -1,5 +1,3 @@
-// +build linux
-
 package dmcache
 
 import (
@@ -62,6 +60,25 @@ func TestDMCacheStats_1(t *testing.T) {
 		"dirty":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "dmcache", fields2, tags2)
+
+	tags3 := map[string]string{
+		"device": "all",
+	}
+
+	fields3 := map[string]interface{}{
+		"metadata_used": 300523520,
+		"metadata_free": 11216781312,
+		"cache_used":    3538944,
+		"cache_free":    1716188741632,
+		"read_hits":     194314240,
+		"read_misses":   92461989888,
+		"write_hits":    21299200,
+		"write_misses":  34397618176,
+		"demotions":     0,
+		"promotions":    1835008,
+		"dirty":         0,
+	}
+	acc.AssertContainsTaggedFields(t, "dmcache", fields3, tags3)
 }
 
 var dmc2 = &DMCache{
@@ -75,7 +92,9 @@ func TestDMCacheStats_2(t *testing.T) {
 	err := dmc2.Gather(&acc)
 	require.NoError(t, err)
 
-	tags := map[string]string{}
+	tags := map[string]string{
+		"device": "all",
+	}
 
 	fields := map[string]interface{}{
 		"metadata_used": 300523520,
