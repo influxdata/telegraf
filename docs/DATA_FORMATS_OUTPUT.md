@@ -148,3 +148,34 @@ The JSON data format serialized Telegraf metrics in json format. The format is:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "json"
 ```
+
+By default, the timestamp that is output in JSON data format serialized Telegraf
+metrics is a timestamp in seconds. The precision of this timestamp can be adjusted
+for any output by adding the optional `json_timestamp_units` parameter to the
+configuration for that output. For example, the following configuration will
+output the same data shown above with a timestamp in nanoseconds:
+
+```toml
+[[outputs.file]]
+  ## Files to write to, "stdout" is a specially handled file.
+  files = ["stdout", "/tmp/metrics.out"]
+
+  ## Data format to output.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "json"
+  json_timestamp_units = "1ns"
+```
+
+In addition to supporting output of the timestamp in nanoseconds, the units
+of the output timestamp can be changed to microseconds (by setting this
+parameter to `1us` or `1µs`) or milliseconds (by setting this parameter to `1ms`).
+Obviously, by adjusting the number of microseconds or milliseconds in this
+value it is quite simple to output the timestamps in hundredths of a second
+(`10ms`) or tenths of a second (`100ms`).
+
+Note that if a `json_timestamp_units` value is not defined, or if the duration
+defined by that timestamp is less than or equal to zero, then the timestamps
+output in the JSON data format serialized Telegraf metrics will be in seconds
+(the default units for these timestamps).
