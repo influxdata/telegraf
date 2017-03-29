@@ -61,10 +61,9 @@ func NewConfig() *Config {
 	c := &Config{
 		// Agent defaults:
 		Agent: &AgentConfig{
-			Interval:           internal.Duration{Duration: 10 * time.Second},
-			RoundInterval:      true,
-			FlushInterval:      internal.Duration{Duration: 10 * time.Second},
-			JsonTimestampUnits: internal.Duration{Duration: 1 * time.Second},
+			Interval:      internal.Duration{Duration: 10 * time.Second},
+			RoundInterval: true,
+			FlushInterval: internal.Duration{Duration: 10 * time.Second},
 		},
 
 		Tags:          make(map[string]string),
@@ -139,11 +138,6 @@ type AgentConfig struct {
 	Quiet        bool
 	Hostname     string
 	OmitHostname bool
-
-	// The timestamp units that should be used when the output is in JSON format;
-	// valid values are "ns", "us" (or "µs"), "ms", or "s", and the default units
-	// if not specified are "s"
-	JsonTimestampUnits internal.Duration
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -253,11 +247,6 @@ var header = `# Telegraf Configuration
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
-
-  ## used to set the timestamp units that should be used when the output is
-  ## in JSON format; valid values are "ns", "us" (or "µs"), "ms", or "s",
-  ## and the default units if not specified are "s"
-  #json_timestamp_units = "1s"
 
 
 ###############################################################################
@@ -778,7 +767,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	// arbitrary types of output, so build the serializer and set it.
 	switch t := output.(type) {
 	case serializers.SerializerOutput:
-		serializer, err := buildSerializer(name, table, c.Agent)
+		serializer, err := buildSerializer(name, table)
 		if err != nil {
 			return err
 		}
@@ -1254,8 +1243,10 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 // buildSerializer grabs the necessary entries from the ast.Table for creating
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
-func buildSerializer(name string, tbl *ast.Table, agentConfig *AgentConfig) (serializers.Serializer, error) {
+func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error) {
 	c := &serializers.Config{}
+	// set a default duration (in case one was not defined in this output)
+	c.TimestampUnits = time.Duration(1 * time.Second)
 
 	if node, ok := tbl.Fields["data_format"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1285,13 +1276,18 @@ func buildSerializer(name string, tbl *ast.Table, agentConfig *AgentConfig) (ser
 		}
 	}
 
-	if c.DataFormat == "json" {
-		c.TimestampUnits = agentConfig.JsonTimestampUnits.Duration
+	if node, ok := tbl.Fields["json_timestamp_units"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.TimestampUnits, _ = time.ParseDuration(str.Value)
+			}
+		}
 	}
 
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
+	delete(tbl.Fields, "json_timestamp_units")
 	return serializers.NewSerializer(c)
 }
 
