@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -31,10 +33,7 @@ func (c *DMCache) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	var total map[string]interface{}
-	if !c.PerDevice {
-		total = make(map[string]interface{})
-	}
+	total := make(map[string]interface{})
 
 	for _, s := range outputLines {
 		fields := make(map[string]interface{})
@@ -50,56 +49,84 @@ func (c *DMCache) Gather(acc telegraf.Accumulator) error {
 		if c.PerDevice {
 			tags := map[string]string{"device": data["device"].(string)}
 			acc.AddFields(metricName, fields, tags)
-		} else {
-			aggregateStats(total, fields)
 		}
+		aggregateStats(total, fields)
 	}
 
-	if !c.PerDevice {
-		acc.AddFields(metricName, total, nil)
-	}
+	acc.AddFields(metricName, total, map[string]string{"device": "all"})
 
 	return nil
 }
 
-func parseDMSetupStatus(line string) (status map[string]interface{}, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			status = nil
-			err = r.(error)
-		}
-	}()
-
-	values := strings.Split(line, " ")
-	status = make(map[string]interface{})
+func parseDMSetupStatus(line string) (map[string]interface{}, error) {
+	var err error
+	status := make(map[string]interface{})
+	values := strings.Fields(line)
+	if len(values) < 15 {
+		return nil, errors.New("dmsetup status data have invalid format")
+	}
 
 	status["device"] = values[0][:len(values[0])-1]
-	status["length"] = toInt(values[2])
+	status["length"], err = strconv.Atoi(values[2])
+	if err != nil {
+		return nil, err
+	}
 	status["target"] = values[3]
-	status["metadata_blocksize"] = toInt(values[4])
-	status["metadata_used"] = toInt(strings.Split(values[5], "/")[0])
-	status["metadata_total"] = toInt(strings.Split(values[5], "/")[1])
-	status["cache_blocksize"] = toInt(values[6])
-	status["cache_used"] = toInt(strings.Split(values[7], "/")[0])
-	status["cache_total"] = toInt(strings.Split(values[7], "/")[1])
-	status["read_hits"] = toInt(values[8])
-	status["read_misses"] = toInt(values[9])
-	status["write_hits"] = toInt(values[10])
-	status["write_misses"] = toInt(values[11])
-	status["demotions"] = toInt(values[12])
-	status["promotions"] = toInt(values[13])
-	status["dirty"] = toInt(values[14])
+	status["metadata_blocksize"], err = strconv.Atoi(values[4])
+	if err != nil {
+		return nil, err
+	}
+	status["metadata_used"], err = strconv.Atoi(strings.Split(values[5], "/")[0])
+	if err != nil {
+		return nil, err
+	}
+	status["metadata_total"], err = strconv.Atoi(strings.Split(values[5], "/")[1])
+	if err != nil {
+		return nil, err
+	}
+	status["cache_blocksize"], err = strconv.Atoi(values[6])
+	if err != nil {
+		return nil, err
+	}
+	status["cache_used"], err = strconv.Atoi(strings.Split(values[7], "/")[0])
+	if err != nil {
+		return nil, err
+	}
+	status["cache_total"], err = strconv.Atoi(strings.Split(values[7], "/")[1])
+	if err != nil {
+		return nil, err
+	}
+	status["read_hits"], err = strconv.Atoi(values[8])
+	if err != nil {
+		return nil, err
+	}
+	status["read_misses"], err = strconv.Atoi(values[9])
+	if err != nil {
+		return nil, err
+	}
+	status["write_hits"], err = strconv.Atoi(values[10])
+	if err != nil {
+		return nil, err
+	}
+	status["write_misses"], err = strconv.Atoi(values[11])
+	if err != nil {
+		return nil, err
+	}
+	status["demotions"], err = strconv.Atoi(values[12])
+	if err != nil {
+		return nil, err
+	}
+	status["promotions"], err = strconv.Atoi(values[13])
+	if err != nil {
+		return nil, err
+	}
+	status["dirty"], err = strconv.Atoi(values[14])
+	if err != nil {
+		return nil, err
+	}
 	status["blocksize"] = 512
 
 	return status, nil
-}
-
-func toInt(s string) int {
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		panic(err)
-	}
-	return i
 }
 
 func calculateSize(data map[string]interface{}, key string) (value int) {

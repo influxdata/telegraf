@@ -14,8 +14,8 @@ type DMCache struct {
 }
 
 var sampleConfig = `
-	## Whether to report per-device stats or not
-	per_device = true
+  ## Whether to report per-device stats or not
+  per_device = true
 `
 
 func (c *DMCache) SampleConfig() string {
