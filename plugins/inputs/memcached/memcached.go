@@ -51,7 +51,6 @@ var sendMetrics = []string{
 	"decr_misses",
 	"cas_hits",
 	"cas_misses",
-	"evictions",
 	"bytes_read",
 	"bytes_written",
 	"threads",
