@@ -1285,11 +1285,8 @@ func buildSerializer(name string, tbl *ast.Table, agentConfig *AgentConfig) (ser
 		}
 	}
 
-	// if the output data format is JSON, then set the timestamp
-	// units for the serializer configuration to the units that were
-	// defined in the AgentConfig
 	if c.DataFormat == "json" {
-		c.TimestampUnits = agentConfig.JsonTimestampUnits
+		c.TimestampUnits = agentConfig.JsonTimestampUnits.Duration
 	}
 
 	delete(tbl.Fields, "data_format")

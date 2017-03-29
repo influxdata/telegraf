@@ -2,10 +2,10 @@ package serializers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
 
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -41,7 +41,7 @@ type Config struct {
 	Template string
 
 	// Timestamp units to use for JSON formatted output
-	TimestampUnits internal.Duration
+	TimestampUnits time.Duration
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -61,7 +61,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	return serializer, err
 }
 
-func NewJsonSerializer(timestampUnits internal.Duration) (Serializer, error) {
+func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return &json.JsonSerializer{TimestampUnits: timestampUnits}, nil
 }
 
