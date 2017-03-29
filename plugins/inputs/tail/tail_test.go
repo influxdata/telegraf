@@ -5,7 +5,6 @@ import (
 	"os"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -59,7 +58,6 @@ func TestTailFromEnd(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
-	time.Sleep(time.Millisecond * 200) //TODO remove once https://github.com/hpcloud/tail/pull/114 is merged & added to Godeps
 	for _, tailer := range tt.tailers {
 		for n, err := tailer.Tell(); err == nil && n == 0; n, err = tailer.Tell() {
 			// wait for tailer to jump to end
