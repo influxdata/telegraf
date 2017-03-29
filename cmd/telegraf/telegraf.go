@@ -277,10 +277,15 @@ func main() {
 
 	if *pprofAddr != "" {
 		go func() {
-			log.Printf(
-				"I! Starting pprof on %s. Open profiling tools page in browser: /debug/pprof",
-				*pprofAddr,
-			)
+			pprofHostPort := *pprofAddr
+			parts := strings.Split(pprofHostPort, ":")
+			if len(parts) == 2 && parts[0] == "" {
+				pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+			}
+			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
+
+			log.Printf("I! Starting pprof on: %s", pprofHostPort)
+
 			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
 				log.Fatal("E! " + err.Error())
 			}

@@ -56,6 +56,7 @@ be deprecated eventually.
 - [#2339](https://github.com/influxdata/telegraf/pull/2339): Increment gather_errors for all errors emitted by inputs.
 - [#2071](https://github.com/influxdata/telegraf/issues/2071): Use official docker SDK.
 - [#1678](https://github.com/influxdata/telegraf/pull/1678): Add AMQP consumer input plugin
+- [#2512](https://github.com/influxdata/telegraf/pull/2512): Added pprof tool.
 
 ### Bugfixes
 
