@@ -47,6 +47,10 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   ratelimit = 200
 
+  ## Additional tags to add to the metric
+  [inputs.cloudwatch.tags]
+    tag_name = "value"
+
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
   ## Refreshes Namespace available metrics every 1h
