@@ -275,6 +275,19 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 	}
 }
 
+// HasTimestamp returns true if the measurement has a matching Time value
+func (a *Accumulator) HasTimestamp(measurement string, timestamp time.Time) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			return timestamp.Equal(p.Time)
+		}
+	}
+
+	return false
+}
+
 // HasIntField returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
 	a.Lock()

@@ -3,14 +3,15 @@ package prometheus
 import (
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
@@ -91,7 +92,6 @@ var client = &http.Client{
 }
 
 func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
-	collectDate := time.Now()
 	var req, err = http.NewRequest("GET", url, nil)
 	req.Header.Add("Accept", acceptHeader)
 	var token []byte
@@ -145,7 +145,7 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	for _, metric := range metrics {
 		tags := metric.Tags()
 		tags["url"] = url
-		acc.AddFields(metric.Name(), metric.Fields(), tags, collectDate)
+		acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 	}
 
 	return nil
