@@ -229,13 +229,12 @@ func TestFilter_TagAlias(t *testing.T) {
 		TagPassAny: filters,
 	}
 
-	f := Filter {
+	f := Filter{
 		TagPass: filters,
 	}
 
 	require.NoError(t, f.Compile())
 	require.NoError(t, fany.Compile())
-
 
 	assert.Equal(t, fany.TagPassAny, f.TagPassAny)
 
@@ -274,13 +273,13 @@ func TestFilter_TagPassAny(t *testing.T) {
 	}
 
 	for _, tags := range passes {
-		if !f.shouldTagsPass(tags)  {
+		if !f.shouldTagsPass(tags) {
 			t.Errorf("Expected tags %v to pass", tags)
 		}
 	}
 
 	for _, tags := range drops {
-		if f.shouldTagsPass(tags)  {
+		if f.shouldTagsPass(tags) {
 			t.Errorf("Expected tags %v to drop", tags)
 		}
 	}
@@ -310,13 +309,12 @@ func TestFilter_TagPassAll(t *testing.T) {
 		{"cpu": "cpu-2", "env": "test"},
 	}
 
-
 	drops := []map[string]string{
-		{"cpu": "cputotal", "env":"nottest"},
+		{"cpu": "cputotal", "env": "nottest"},
 		{"cpu": "cpu0", "env": "nottest"},
 		{"cpu": "cpu1", "env": "nottest"},
 		{"cpu": "cpu2", "env": "nottest"},
-		{"cpu": "cputotal", "env":"supertest"},
+		{"cpu": "cputotal", "env": "supertest"},
 
 		{"cpu": "cpu-total"},
 		{"cpu": "cpu-0"},
@@ -397,13 +395,12 @@ func TestFilter_TagDropAll(t *testing.T) {
 	}
 	require.NoError(t, f.Compile())
 
-	drops:= []map[string]string{
+	drops := []map[string]string{
 		{"cpu": "cpu-total", "env": "test"},
 		{"cpu": "cpu-0", "env": "test"},
 		{"cpu": "cpu-0", "env": "supertest"},
 		{"cpu": "cpu-1", "env": "test"},
 		{"cpu": "cpu-2", "env": "test"},
-
 	}
 
 	passes := []map[string]string{
@@ -420,8 +417,6 @@ func TestFilter_TagDropAll(t *testing.T) {
 		{"mem": "mem_free", "env": "supertest"},
 		{"mem": "mem_free", "env": "test"},
 		{"mem": "mem_free", "env": "nottest"},
-
-
 	}
 
 	for _, tags := range passes {

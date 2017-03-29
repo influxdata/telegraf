@@ -25,12 +25,12 @@ type Filter struct {
 	FieldPass []string
 	fieldPass filter.Filter
 
-	TagDrop     []TagFilter
-	TagPass     []TagFilter
-	TagDropAny  []TagFilter
-	TagDropAll  []TagFilter
-	TagPassAny  []TagFilter
-	TagPassAll  []TagFilter
+	TagDrop    []TagFilter
+	TagPass    []TagFilter
+	TagDropAny []TagFilter
+	TagDropAll []TagFilter
+	TagPassAny []TagFilter
+	TagPassAll []TagFilter
 
 	TagExclude []string
 	tagExclude filter.Filter
@@ -229,7 +229,6 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 		}
 		return true
 	}
-
 
 	if f.TagDropAny != nil {
 		for _, pat := range f.TagDropAny {
