@@ -284,7 +284,7 @@ func main() {
 			}
 			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
 
-			log.Printf("I! Starting pprof on: %s", pprofHostPort)
+			log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
 
 			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
 				log.Fatal("E! " + err.Error())
