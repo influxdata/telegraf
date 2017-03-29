@@ -1280,8 +1280,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 			if str, ok := kv.Value.(*ast.String); ok {
 				timestampVal, err := time.ParseDuration(str.Value)
 				if err != nil {
-					fmt.Errorf("Unable to parse json_timestamp_units as a duration, %s", err)
-					return nil, err
+					return nil, fmt.Errorf("Unable to parse json_timestamp_units as a duration, %s", err)
 				}
 				// now that we have a duration, truncate it to the nearest
 				// power of ten (just in case)
