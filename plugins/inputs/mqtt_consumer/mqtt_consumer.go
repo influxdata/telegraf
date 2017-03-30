@@ -142,8 +142,8 @@ func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 		subscribeToken := c.SubscribeMultiple(topics, m.recvMessage)
 		subscribeToken.Wait()
 		if subscribeToken.Error() != nil {
-			log.Printf("E! MQTT Subscribe Error\ntopics: %s\nerror: %s",
-				strings.Join(m.Topics[:], ","), subscribeToken.Error())
+			m.acc.AddError(fmt.Errorf("E! MQTT Subscribe Error\ntopics: %s\nerror: %s",
+				strings.Join(m.Topics[:], ","), subscribeToken.Error()))
 		}
 		m.started = true
 	}
@@ -151,7 +151,7 @@ func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 }
 
 func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
-	log.Printf("E! MQTT Connection lost\nerror: %s\nMQTT Client will try to reconnect", err.Error())
+	m.acc.AddError(fmt.Errorf("E! MQTT Connection lost\nerror: %s\nMQTT Client will try to reconnect", err.Error()))
 	return
 }
 
@@ -166,8 +166,8 @@ func (m *MQTTConsumer) receiver() {
 			topic := msg.Topic()
 			metrics, err := m.parser.Parse(msg.Payload())
 			if err != nil {
-				log.Printf("E! MQTT Parse Error\nmessage: %s\nerror: %s",
-					string(msg.Payload()), err.Error())
+				m.acc.AddError(fmt.Errorf("E! MQTT Parse Error\nmessage: %s\nerror: %s",
+					string(msg.Payload()), err.Error()))
 			}
 
 			for _, metric := range metrics {

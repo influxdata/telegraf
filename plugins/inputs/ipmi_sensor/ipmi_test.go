@@ -14,7 +14,7 @@ import (
 func TestGather(t *testing.T) {
 	i := &Ipmi{
 		Servers: []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
-		path:    "ipmitool",
+		Path:    "ipmitool",
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
@@ -118,7 +118,7 @@ func TestGather(t *testing.T) {
 	}
 
 	i = &Ipmi{
-		path: "ipmitool",
+		Path: "ipmitool",
 	}
 
 	err = i.Gather(&acc)

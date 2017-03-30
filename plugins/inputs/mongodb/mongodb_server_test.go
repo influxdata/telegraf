@@ -4,7 +4,6 @@ package mongodb
 
 import (
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -32,12 +31,11 @@ func TestAddDefaultStats(t *testing.T) {
 	err := server.gatherData(&acc, false)
 	require.NoError(t, err)
 
-	time.Sleep(time.Duration(1) * time.Second)
 	// need to call this twice so it can perform the diff
 	err = server.gatherData(&acc, false)
 	require.NoError(t, err)
 
 	for key, _ := range DefaultStats {
-		assert.True(t, acc.HasIntValue(key))
+		assert.True(t, acc.HasIntField("mongodb", key))
 	}
 }

@@ -265,6 +265,11 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 					} else if metric.instance == s {
 						// Catch if we set it to total or some form of it
 						add = true
+					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, s) {
+						// If you are using a multiple instance identifier such as "w3wp#1"
+						// phd.dll returns only the first 2 characters of the identifier.
+						add = true
+						s = metric.instance
 					} else if metric.instance == "------" {
 						add = true
 					}
