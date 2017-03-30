@@ -19,6 +19,16 @@ via raw TCP.
   template = "host.tags.measurement.field"
   ## timeout in seconds for the write connection to graphite
   timeout = 2
+
+  ## Enable secure tunnel
+  # ssl_enabled = true
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 Parameters:
@@ -27,6 +37,19 @@ Parameters:
     Prefix   string
     Timeout  int
     Template string
+    
+    // Path to CA file
+  	SSLCA string `toml:"ssl_ca"`
+  	// Path to host cert file
+  	SSLCert string `toml:"ssl_cert"`
+  	// Path to cert key file
+  	SSLKey string `toml:"ssl_key"`
+  	// Skip SSL verification
+  	InsecureSkipVerify bool
+  	// SSL enabled
+  	SSLEnabled bool `toml:"ssl_enabled"`
+
+### Required parameters:
 
 * `servers`: List of strings, ["mygraphiteserver:2003"].
 * `prefix`: String use to prefix all sent metrics.
@@ -34,3 +57,11 @@ Parameters:
 * `template`: Template for graphite output format, see
 https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
 for more details.
+
+### Optional parameters:
+
+* `ssl_enabled`: Enable secure connection (default: false)
+* `ssl_ca`: SSL CA
+* `ssl_cert`: SSL CERT
+* `ssl_key`: SSL key
+* `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
