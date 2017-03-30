@@ -1,24 +1,56 @@
 package wavefront
 
 import (
-	"reflect"
-	"testing"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
+	"reflect"
 	"strings"
+	"testing"
 	"time"
 )
 
 func defaultWavefront() *Wavefront {
 	return &Wavefront{
-		Host: "localhost",
-		Port: 2878,
-		Prefix: "testWF.",
-		SimpleFields: false,
+		Host:            "localhost",
+		Port:            2878,
+		Prefix:          "testWF.",
+		SimpleFields:    false,
 		MetricSeparator: ".",
-		ConvertPaths: true,
-		UseRegex: false,
-		Debug: true,
+		ConvertPaths:    true,
+		UseRegex:        false,
+	}
+}
+
+func TestSourceTags(t *testing.T) {
+	w := defaultWavefront()
+	w.SourceOverride = []string{"snmp_host", "hostagent"}
+
+	var tagtests = []struct {
+		ptIn    map[string]string
+		outTags []string
+	}{
+		{
+			map[string]string{"snmp_host": "realHost", "host": "origHost"},
+			[]string{"source=\"realHost\"", "telegraf_host=\"origHost\""},
+		},
+		{
+			map[string]string{"hostagent": "realHost", "host": "origHost"},
+			[]string{"source=\"realHost\"", "telegraf_host=\"origHost\""},
+		},
+		{
+			map[string]string{"hostagent": "abc", "snmp_host": "realHost", "host": "origHost"},
+			[]string{"hostagent=\"abc\"", "source=\"realHost\"", "telegraf_host=\"origHost\""},
+		},
+		{
+			map[string]string{"something": "abc", "host": "realHost"},
+			[]string{"something=\"abc\"", "source=\"realHost\""},
+		},
+	}
+	for _, tt := range tagtests {
+		tags := buildTags(tt.ptIn, w)
+		if !reflect.DeepEqual(tags, tt.outTags) {
+			t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", tt.outTags, tags)
+		}
 	}
 }
 
@@ -55,7 +87,7 @@ func TestBuildMetricsNoSimpleFields(t *testing.T) {
 		ml := buildMetrics(mt.metric, w)
 		for i, line := range ml {
 			if mt.metricLines[i].Metric != line.Metric || mt.metricLines[i].Value != line.Value {
-				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric + " " + mt.metricLines[i].Value, line.Metric + " " + line.Value)
+				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric+" "+mt.metricLines[i].Value, line.Metric+" "+line.Value)
 			}
 		}
 	}
@@ -95,7 +127,7 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 		ml := buildMetrics(mt.metric, w)
 		for i, line := range ml {
 			if mt.metricLines[i].Metric != line.Metric || mt.metricLines[i].Value != line.Value {
-				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric + " " + mt.metricLines[i].Value, line.Metric + " " + line.Value)
+				t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", mt.metricLines[i].Metric+" "+mt.metricLines[i].Value, line.Metric+" "+line.Value)
 			}
 		}
 	}
@@ -111,28 +143,24 @@ func TestBuildTags(t *testing.T) {
 		outTags []string
 	}{
 		{
-			map[string]string{"one": "two", "three": "four"},
-			[]string{"one=\"two\"", "three=\"four\""},
+			map[string]string{"one": "two", "three": "four", "host": "testHost"},
+			[]string{"one=\"two\"", "source=\"testHost\"", "three=\"four\""},
 		},
 		{
-			map[string]string{"aaa": "bbb"},
-			[]string{"aaa=\"bbb\""},
+			map[string]string{"aaa": "bbb", "host": "testHost"},
+			[]string{"aaa=\"bbb\"", "source=\"testHost\""},
 		},
 		{
-			map[string]string{"bbb": "789", "aaa": "123"},
-			[]string{"aaa=\"123\"", "bbb=\"789\""},
+			map[string]string{"bbb": "789", "aaa": "123", "host": "testHost"},
+			[]string{"aaa=\"123\"", "bbb=\"789\"", "source=\"testHost\""},
 		},
 		{
 			map[string]string{"host": "aaa", "dc": "bbb"},
 			[]string{"dc=\"bbb\"", "source=\"aaa\""},
 		},
 		{
-			map[string]string{"Sp%ci@l Chars": "\"g$t repl#ced"},
-			[]string{"Sp-ci-l-Chars=\"-g-t-repl-ced\""},
-		},
-		{
-			map[string]string{},
-			[]string{},
+			map[string]string{"Sp%ci@l Chars": "\"g*t repl#ced", "host": "testHost"},
+			[]string{"Sp-ci-l-Chars=\"\\\"g-t repl#ced\"", "source=\"testHost\""},
 		},
 	}
 	for _, tt := range tagtests {
@@ -180,4 +208,3 @@ func TestBuildTags(t *testing.T) {
 // 	err = w.Write(metrics)
 // 	require.NoError(t, err)
 // }
-
