@@ -60,6 +60,7 @@ be deprecated eventually.
 - [#2522](https://github.com/influxdata/telegraf/pull/2522): Add support for mongodb client certificates.
 - [#1948](https://github.com/influxdata/telegraf/pull/1948): Support adding SNMP table indexes as tags.
 - [#2332](https://github.com/influxdata/telegraf/pull/2332): Add Elasticsearch 5.x output
+- [#2587](https://github.com/influxdata/telegraf/pull/2587): Add json timestamp units configurability
 
 ### Bugfixes
 
