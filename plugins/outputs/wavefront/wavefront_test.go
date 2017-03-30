@@ -43,7 +43,7 @@ func TestSourceTags(t *testing.T) {
 		},
 		{
 			map[string]string{"something": "abc", "host": "realHost"},
-			[]string{"something=\"abc\"", "source=\"realHost\"", "telegraf_host=\"realHost\""},
+			[]string{"something=\"abc\"", "source=\"realHost\""},
 		},
 	}
 	for _, tt := range tagtests {
@@ -144,23 +144,23 @@ func TestBuildTags(t *testing.T) {
 	}{
 		{
 			map[string]string{"one": "two", "three": "four", "host": "testHost"},
-			[]string{"one=\"two\"", "source=\"testHost\"", "telegraf_host=\"testHost\"", "three=\"four\""},
+			[]string{"one=\"two\"", "source=\"testHost\"", "three=\"four\""},
 		},
 		{
 			map[string]string{"aaa": "bbb", "host": "testHost"},
-			[]string{"aaa=\"bbb\"", "source=\"testHost\"", "telegraf_host=\"testHost\""},
+			[]string{"aaa=\"bbb\"", "source=\"testHost\""},
 		},
 		{
 			map[string]string{"bbb": "789", "aaa": "123", "host": "testHost"},
-			[]string{"aaa=\"123\"", "bbb=\"789\"", "source=\"testHost\"", "telegraf_host=\"testHost\""},
+			[]string{"aaa=\"123\"", "bbb=\"789\"", "source=\"testHost\""},
 		},
 		{
 			map[string]string{"host": "aaa", "dc": "bbb"},
-			[]string{"dc=\"bbb\"", "source=\"aaa\"", "telegraf_host=\"aaa\""},
+			[]string{"dc=\"bbb\"", "source=\"aaa\""},
 		},
 		{
 			map[string]string{"Sp%ci@l Chars": "\"g*t repl#ced", "host": "testHost"},
-			[]string{"Sp-ci-l-Chars=\"\\\"g-t repl#ced\"", "source=\"testHost\"", "telegraf_host=\"testHost\""},
+			[]string{"Sp-ci-l-Chars=\"\\\"g-t repl#ced\"", "source=\"testHost\""},
 		},
 	}
 	for _, tt := range tagtests {
