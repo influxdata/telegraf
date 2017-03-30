@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1244,7 +1245,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
 func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error) {
-	c := &serializers.Config{}
+	c := &serializers.Config{TimestampUnits: time.Duration(1 * time.Second)}
 
 	if node, ok := tbl.Fields["data_format"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1274,9 +1275,26 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["json_timestamp_units"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				timestampVal, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, fmt.Errorf("Unable to parse json_timestamp_units as a duration, %s", err)
+				}
+				// now that we have a duration, truncate it to the nearest
+				// power of ten (just in case)
+				nearest_exponent := int64(math.Log10(float64(timestampVal.Nanoseconds())))
+				new_nanoseconds := int64(math.Pow(10.0, float64(nearest_exponent)))
+				c.TimestampUnits = time.Duration(new_nanoseconds)
+			}
+		}
+	}
+
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
+	delete(tbl.Fields, "json_timestamp_units")
 	return serializers.NewSerializer(c)
 }
 
