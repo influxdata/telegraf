@@ -136,6 +136,7 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 		for k, v := range mTags {
 			if k == s {
 				mTags["source"] = v
+				mTags["telegraf_host"] = mTags["host"]
 				sourceTagFound = true
 				delete(mTags, k)
 				break
@@ -149,7 +150,6 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 	if !sourceTagFound {
 		mTags["source"] = mTags["host"]
 	}
-	mTags["telegraf_host"] = mTags["host"]
 	delete(mTags, "host")
 
 	tags := make([]string, len(mTags))
