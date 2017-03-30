@@ -121,7 +121,9 @@ func makeBuckets(m *dto.Metric) map[string]interface{} {
 func makeLabels(m *dto.Metric) map[string]string {
 	result := map[string]string{}
 	for _, lp := range m.Label {
-		result[lp.GetName()] = lp.GetValue()
+		if lp.GetValue() != "" {
+			result[lp.GetName()] = lp.GetValue()
+		}
 	}
 	return result
 }
