@@ -37,17 +37,17 @@ Parameters:
     Prefix   string
     Timeout  int
     Template string
-    
+
     // Path to CA file
-  	SSLCA string `toml:"ssl_ca"`
-  	// Path to host cert file
-  	SSLCert string `toml:"ssl_cert"`
-  	// Path to cert key file
-  	SSLKey string `toml:"ssl_key"`
-  	// Skip SSL verification
-  	InsecureSkipVerify bool
-  	// SSL enabled
-  	SSLEnabled bool `toml:"ssl_enabled"`
+    SSLCA string
+    // Path to host cert file
+    SSLCert string
+    // Path to cert key file
+    SSLKey string
+    // Skip SSL verification
+    InsecureSkipVerify bool
+    // SSL enabled
+    SSLEnabled bool
 
 ### Required parameters:
 
