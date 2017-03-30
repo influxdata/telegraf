@@ -1,6 +1,7 @@
 package graphite
 
 import (
+	"crypto/tls"
 	"errors"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -20,6 +22,20 @@ type Graphite struct {
 	Template string
 	Timeout  int
 	conns    []net.Conn
+
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Skip SSL verification
+	InsecureSkipVerify bool
+	// SSL enabled
+	SSLEnabled bool `toml:"ssl_enabled"`
+
+	// tls config
+	tlsConfig *tls.Config
 }
 
 var sampleConfig = `
@@ -34,6 +50,16 @@ var sampleConfig = `
   template = "host.tags.measurement.field"
   ## timeout in seconds for the write connection to graphite
   timeout = 2
+
+	## Enable secure tunnel
+	ssl_enabled = false
+
+	## Optional SSL Config
+	# ssl_ca = "/etc/telegraf/ca.pem"
+	# ssl_cert = "/etc/telegraf/cert.pem"
+	# ssl_key = "/etc/telegraf/key.pem"
+	## Use SSL but skip chain & host verification
+	# insecure_skip_verify = false
 `
 
 func (g *Graphite) Connect() error {
@@ -44,11 +70,28 @@ func (g *Graphite) Connect() error {
 	if len(g.Servers) == 0 {
 		g.Servers = append(g.Servers, "localhost:2003")
 	}
+
+	// Set tls config
+	var err error
+	g.tlsConfig, err = internal.GetTLSConfig(
+		g.SSLCert, g.SSLKey, g.SSLCA, g.InsecureSkipVerify)
+	if err != nil {
+		return err
+	}
+
 	// Get Connections
 	var conns []net.Conn
 	for _, server := range g.Servers {
-		conn, err := net.DialTimeout("tcp", server, time.Duration(g.Timeout)*time.Second)
+		var conn net.Conn
+		if g.SSLEnabled {
+			// If ssl is enabled make secure tcp connection
+			conn, err = tls.Dial("tcp", server, g.tlsConfig)
+		} else {
+			// Create insecure tcp connection by default
+			conn, err = net.DialTimeout("tcp", server, time.Duration(g.Timeout)*time.Second)
+		}
 		if err == nil {
+			// Append successful connections
 			conns = append(conns, conn)
 		}
 	}
