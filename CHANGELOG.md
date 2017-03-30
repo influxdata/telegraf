@@ -56,6 +56,7 @@ be deprecated eventually.
 - [#2339](https://github.com/influxdata/telegraf/pull/2339): Increment gather_errors for all errors emitted by inputs.
 - [#2071](https://github.com/influxdata/telegraf/issues/2071): Use official docker SDK.
 - [#1678](https://github.com/influxdata/telegraf/pull/1678): Add AMQP consumer input plugin
+- [#2512](https://github.com/influxdata/telegraf/pull/2512): Added pprof tool.
 - [#2501](https://github.com/influxdata/telegraf/pull/2501): Support DEAD(X) state in system input plugin.
 - [#2522](https://github.com/influxdata/telegraf/pull/2522): Add support for mongodb client certificates.
 - [#1948](https://github.com/influxdata/telegraf/pull/1948): Support adding SNMP table indexes as tags.
