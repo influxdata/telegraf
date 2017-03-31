@@ -25,8 +25,9 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 	Timeout        internal.Duration
-	PerDevice      bool `toml:"perdevice"`
-	Total          bool `toml:"total"`
+	PerDevice      bool     `toml:"perdevice"`
+	Total          bool     `toml:"total"`
+	EnvToTag       []string `toml:"env_to_tag"`
 
 	client      *client.Client
 	engine_host string
@@ -98,6 +99,10 @@ var sampleConfig = `
   perdevice = true
   ## Whether to report for each container total blkio and network stats or not
   total = false
+  ## List of varibles from container runtime, e.g.: "docker run -e APPLICATION_NAME=shop -e APP_ID=ver1.2 shop"
+  ## Names of varibles will be transformed to tags, e.g.: container_env_APPLICATION_NAME container_env_APP_ID
+  ## Values of variables will be transformed to values of tags, e.g.: container_env_APPLICATION_NAME=shop, container_env_APP_ID=ver1.2
+  env_to_tag = [ "APPLICATION_NAME", "APP_ID" ]
 
 `
 
@@ -251,6 +256,11 @@ func (d *Docker) gatherContainer(
 		// Not sure what to do with other names, just take the first.
 		cname = strings.TrimPrefix(container.Names[0], "/")
 	}
+	// getting container configuration ( container.Config )
+	conf, err := d.client.ContainerInspect(context.TODO(), cname)
+	if err != nil {
+		return err
+	}
 
 	// the image name sometimes has a version part, or a private repo
 	//   ie, rabbitmq:3-management or docker.someco.net:4443/rabbitmq:3-management
@@ -270,6 +280,19 @@ func (d *Docker) gatherContainer(
 		"container_image":   imageName,
 		"container_version": imageVersion,
 	}
+
+	for _, config_env := range conf.Config.Env {
+		confNameValue := strings.Split(config_env, "=")
+		confName := confNameValue[0]
+		confValue := confNameValue[1]
+		for _, name := range d.EnvToTag {
+			if confName == name {
+				tag := "container_env_" + confName
+				tags[tag] = confValue
+			}
+		}
+	}
+
 	if len(d.ContainerNames) > 0 {
 		if !sliceContains(cname, d.ContainerNames) {
 			return nil
