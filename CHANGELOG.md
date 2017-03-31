@@ -89,6 +89,7 @@ be deprecated eventually.
 - [#1827](https://github.com/influxdata/telegraf/issues/1827): Fix Windows Performance Counters multi instance identifier
 - [#2576](https://github.com/influxdata/telegraf/pull/2576): Add write timeout to Riemann output
 - [#2596](https://github.com/influxdata/telegraf/pull/2596): fix timestamp parsing on prometheus plugin
+- [#2610](https://github.com/influxdata/telegraf/pull/2610): Fix deadlock when output cannot write
 
 
 ## v1.2.1 [2017-02-01]
