@@ -62,6 +62,7 @@ be deprecated eventually.
 - [#1948](https://github.com/influxdata/telegraf/pull/1948): Support adding SNMP table indexes as tags.
 - [#2332](https://github.com/influxdata/telegraf/pull/2332): Add Elasticsearch 5.x output
 - [#2587](https://github.com/influxdata/telegraf/pull/2587): Add json timestamp units configurability
+- [#2597](https://github.com/influxdata/telegraf/issues/2597): Add support for Linux sysctl-fs metrics.
 
 ### Bugfixes
 
