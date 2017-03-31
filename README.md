@@ -174,6 +174,7 @@ configuration options.
     * processes
     * kernel (/proc/stat)
     * kernel (/proc/vmstat)
+    * linux_sysctl_fs (/proc/sys/fs)
 
 Telegraf can also collect metrics via the following service plugins:
 
