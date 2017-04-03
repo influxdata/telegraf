@@ -63,6 +63,7 @@ be deprecated eventually.
 - [#2332](https://github.com/influxdata/telegraf/pull/2332): Add Elasticsearch 5.x output
 - [#2587](https://github.com/influxdata/telegraf/pull/2587): Add json timestamp units configurability
 - [#2597](https://github.com/influxdata/telegraf/issues/2597): Add support for Linux sysctl-fs metrics.
+- [#2425](https://github.com/influxdata/telegraf/pull/2425): Support to include/exclude docker container labels as tags
 
 ### Bugfixes
 
