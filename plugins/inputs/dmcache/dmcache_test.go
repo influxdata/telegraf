@@ -1,6 +1,7 @@
 package dmcache
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -15,8 +16,8 @@ func output2Devices() ([]string, error) {
 }
 
 var dmc1 = &DMCache{
-	PerDevice: true,
-	rawStatus: output2Devices,
+	PerDevice:        true,
+	getCurrentStatus: output2Devices,
 }
 
 func TestDMCacheStats_1(t *testing.T) {
@@ -82,8 +83,8 @@ func TestDMCacheStats_1(t *testing.T) {
 }
 
 var dmc2 = &DMCache{
-	PerDevice: false,
-	rawStatus: output2Devices,
+	PerDevice:        false,
+	getCurrentStatus: output2Devices,
 }
 
 func TestDMCacheStats_2(t *testing.T) {
@@ -110,4 +111,54 @@ func TestDMCacheStats_2(t *testing.T) {
 		"dirty":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "dmcache", fields, tags)
+}
+
+func outputNoDevices() ([]string, error) {
+	return []string{}, nil
+}
+
+var dmc3 = &DMCache{
+	PerDevice:        true,
+	getCurrentStatus: outputNoDevices,
+}
+
+func TestDMCacheStats_3(t *testing.T) {
+	var acc testutil.Accumulator
+
+	err := dmc3.Gather(&acc)
+	require.NoError(t, err)
+}
+
+func noDMSetup() ([]string, error) {
+	return []string{}, errors.New("dmsetup doesn't exist")
+}
+
+var dmc4 = &DMCache{
+	PerDevice:        true,
+	getCurrentStatus: noDMSetup,
+}
+
+func TestDMCacheStats_4(t *testing.T) {
+	var acc testutil.Accumulator
+
+	err := dmc4.Gather(&acc)
+	require.Error(t, err)
+}
+
+func badFormat() ([]string, error) {
+	return []string{
+		"cs-1: 0 4883791872 cache 8 1018/1501122 512 7/464962 139 352643 ",
+	}, nil
+}
+
+var dmc5 = &DMCache{
+	PerDevice:        true,
+	getCurrentStatus: badFormat,
+}
+
+func TestDMCacheStats_5(t *testing.T) {
+	var acc testutil.Accumulator
+
+	err := dmc5.Gather(&acc)
+	require.Error(t, err)
 }
