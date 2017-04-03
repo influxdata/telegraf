@@ -1,23 +1,23 @@
 package openldap
 
 import (
+	"crypto/tls"
 	"fmt"
 	"gopkg.in/ldap.v2"
-	"strings"
 	"strconv"
-	"crypto/tls"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Openldap struct {
-	Host string
-	Port int
-	Tls bool
+	Host          string
+	Port          int
+	Tls           bool
 	TlsSkipverify bool
-	BindDn string
-	BindPassword string
+	BindDn        string
+	BindPassword  string
 }
 
 const sampleConfig string = `
@@ -37,7 +37,7 @@ var searchBase = "cn=Monitor"
 var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation))"
 var searchAttrs = []string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted"}
 var attrTranslate = map[string]string{
-	"monitorCounter": "",
+	"monitorCounter":     "",
 	"monitorOpInitiated": "_initiated",
 	"monitorOpCompleted": "_completed",
 }
@@ -53,12 +53,12 @@ func (o *Openldap) Description() string {
 // return an initialized Openldap
 func NewOpenldap() *Openldap {
 	return &Openldap{
-		Host: "localhost",
-		Port: 389,
-		Tls: false,
+		Host:          "localhost",
+		Port:          389,
+		Tls:           false,
 		TlsSkipverify: false,
-		BindDn: "",
-		BindPassword: "",
+		BindDn:        "",
+		BindPassword:  "",
 	}
 }
 
@@ -110,14 +110,14 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
 		"server": o.Host,
-		"port": strconv.Itoa(o.Port),
+		"port":   strconv.Itoa(o.Port),
 	}
 	for _, entry := range sr.Entries {
 		metricName := dnToMetric(entry.DN, searchBase)
 		for _, attr := range entry.Attributes {
 			if len(attr.Values[0]) >= 1 {
 				if v, err := strconv.ParseFloat(attr.Values[0], 64); err == nil {
-					fields[metricName + attrTranslate[attr.Name]] = v
+					fields[metricName+attrTranslate[attr.Name]] = v
 				}
 			}
 		}
