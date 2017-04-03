@@ -28,7 +28,7 @@ var fieldNames = [...]string{
 }
 
 func (c *DMCache) Gather(acc telegraf.Accumulator) error {
-	outputLines, err := c.rawStatus()
+	outputLines, err := c.getCurrentStatus()
 	if err != nil {
 		return err
 	}
@@ -60,13 +60,14 @@ func (c *DMCache) Gather(acc telegraf.Accumulator) error {
 
 func parseDMSetupStatus(line string) (map[string]interface{}, error) {
 	var err error
+	parseError := errors.New("Output from dmsetup could not be parsed")
 	status := make(map[string]interface{})
 	values := strings.Fields(line)
 	if len(values) < 15 {
-		return nil, errors.New("dmsetup status data have invalid format")
+		return nil, parseError
 	}
 
-	status["device"] = values[0][:len(values[0])-1]
+	status["device"] = strings.TrimRight(values[0], ":")
 	status["length"], err = strconv.Atoi(values[2])
 	if err != nil {
 		return nil, err
@@ -76,11 +77,15 @@ func parseDMSetupStatus(line string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	status["metadata_used"], err = strconv.Atoi(strings.Split(values[5], "/")[0])
+	metadata := strings.Split(values[5], "/")
+	if len(metadata) != 2 {
+		return nil, parseError
+	}
+	status["metadata_used"], err = strconv.Atoi(metadata[0])
 	if err != nil {
 		return nil, err
 	}
-	status["metadata_total"], err = strconv.Atoi(strings.Split(values[5], "/")[1])
+	status["metadata_total"], err = strconv.Atoi(metadata[1])
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +93,15 @@ func parseDMSetupStatus(line string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	status["cache_used"], err = strconv.Atoi(strings.Split(values[7], "/")[0])
+	cache := strings.Split(values[7], "/")
+	if len(cache) != 2 {
+		return nil, parseError
+	}
+	status["cache_used"], err = strconv.Atoi(cache[0])
 	if err != nil {
 		return nil, err
 	}
-	status["cache_total"], err = strconv.Atoi(strings.Split(values[7], "/")[1])
+	status["cache_total"], err = strconv.Atoi(cache[1])
 	if err != nil {
 		return nil, err
 	}
