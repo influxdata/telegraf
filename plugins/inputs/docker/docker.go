@@ -40,7 +40,8 @@ type Docker struct {
 	client      *client.Client
 	engine_host string
 
-	testing bool
+	testing             bool
+	labelFiltersCreated bool
 }
 
 // infoWrapper wraps client.Client.List for testing.
@@ -146,22 +147,13 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 		d.client = c
 	}
-
-	// Create label filters
-	if len(d.LabelInclude) != 0 {
-		var err error
-		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
+	// Create label filters if not already created
+	if !d.labelFiltersCreated {
+		err := d.createLabelFilters()
 		if err != nil {
 			return err
 		}
-	}
-
-	if len(d.LabelExclude) != 0 {
-		var err error
-		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
-		if err != nil {
-			return err
-		}
+		d.labelFiltersCreated = true
 	}
 
 	// Get daemon info
@@ -633,11 +625,32 @@ func parseSize(sizeStr string) (int64, error) {
 	return int64(size), nil
 }
 
+func (d *Docker) createLabelFilters() error {
+	if len(d.LabelInclude) != 0 && d.LabelFilter.labelInclude == nil {
+		var err error
+		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(d.LabelExclude) != 0 && d.LabelFilter.labelExclude == nil {
+		var err error
+		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			PerDevice: true,
-			Timeout:   internal.Duration{Duration: time.Second * 5},
+			PerDevice:           true,
+			Timeout:             internal.Duration{Duration: time.Second * 5},
+			labelFiltersCreated: false,
 		}
 	})
 }

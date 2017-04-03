@@ -6,7 +6,6 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/require"
 )
@@ -280,22 +279,18 @@ func TestDockerGatherLabels(t *testing.T) {
 		err := d.Gather(&acc)
 		require.NoError(t, err)
 
-		var expectedErrors []string
 		for _, label := range tt.expected {
 			if !acc.HasTag("docker_container_cpu", label) {
-				expectedErrors = append(expectedErrors, fmt.Sprintf("%s ", label))
+				t.Errorf("Didn't get expected label of %s.  Test was:  Include: %s  Exclude %s",
+					label, tt.include, tt.exclude)
 			}
 		}
 
-		var notexpectedErrors []string
 		for _, label := range tt.notexpected {
 			if acc.HasTag("docker_container_cpu", label) {
-				notexpectedErrors = append(notexpectedErrors, fmt.Sprintf("%s ", label))
+				t.Errorf("Got unexpected label of %s.  Test was:  Include: %s  Exclude %s",
+					label, tt.include, tt.exclude)
 			}
-		}
-
-		if len(expectedErrors) > 0 || len(notexpectedErrors) > 0 {
-			t.Errorf("Failed test for: Include: %s  Exclude:  %s", tt.include, tt.exclude)
 		}
 	}
 }
