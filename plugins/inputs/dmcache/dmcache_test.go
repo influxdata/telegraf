@@ -30,17 +30,22 @@ func TestDMCacheStats_1(t *testing.T) {
 		"device": "cs-1",
 	}
 	fields1 := map[string]interface{}{
-		"metadata_used": 4169728,
-		"metadata_free": 6144425984,
-		"cache_used":    1835008,
-		"cache_free":    121885163520,
-		"read_hits":     36438016,
-		"read_misses":   92443246592,
-		"write_hits":    3932160,
-		"write_misses":  12058624,
-		"demotions":     0,
-		"promotions":    1835008,
-		"dirty":         0,
+		"device":             "cs-1",
+		"length":             4883791872,
+		"target":             "cache",
+		"metadata_blocksize": 8,
+		"metadata_used":      1018,
+		"metadata_total":     1501122,
+		"cache_blocksize":    512,
+		"cache_used":         7,
+		"cache_total":        464962,
+		"read_hits":          139,
+		"read_misses":        352643,
+		"write_hits":         15,
+		"write_misses":       46,
+		"demotions":          0,
+		"promotions":         7,
+		"dirty":              0,
 	}
 	acc.AssertContainsTaggedFields(t, "dmcache", fields1, tags1)
 
@@ -48,17 +53,22 @@ func TestDMCacheStats_1(t *testing.T) {
 		"device": "cs-2",
 	}
 	fields2 := map[string]interface{}{
-		"metadata_used": 296353792,
-		"metadata_free": 5072355328,
-		"cache_used":    1703936,
-		"cache_free":    1594303578112,
-		"read_hits":     157876224,
-		"read_misses":   18743296,
-		"write_hits":    17367040,
-		"write_misses":  34385559552,
-		"demotions":     0,
-		"promotions":    0,
-		"dirty":         0,
+		"device":             "cs-2",
+		"length":             4294967296,
+		"target":             "cache",
+		"metadata_blocksize": 8,
+		"metadata_used":      72352,
+		"metadata_total":     1310720,
+		"cache_blocksize":    128,
+		"cache_used":         26,
+		"cache_total":        24327168,
+		"read_hits":          2409,
+		"read_misses":        286,
+		"write_hits":         265,
+		"write_misses":       524682,
+		"demotions":          0,
+		"promotions":         0,
+		"dirty":              0,
 	}
 	acc.AssertContainsTaggedFields(t, "dmcache", fields2, tags2)
 
@@ -67,17 +77,20 @@ func TestDMCacheStats_1(t *testing.T) {
 	}
 
 	fields3 := map[string]interface{}{
-		"metadata_used": 300523520,
-		"metadata_free": 11216781312,
-		"cache_used":    3538944,
-		"cache_free":    1716188741632,
-		"read_hits":     194314240,
-		"read_misses":   92461989888,
-		"write_hits":    21299200,
-		"write_misses":  34397618176,
-		"demotions":     0,
-		"promotions":    1835008,
-		"dirty":         0,
+		"length":             9178759168,
+		"metadata_blocksize": 16,
+		"metadata_used":      73370,
+		"metadata_total":     2811842,
+		"cache_blocksize":    640,
+		"cache_used":         33,
+		"cache_total":        24792130,
+		"read_hits":          2548,
+		"read_misses":        352929,
+		"write_hits":         280,
+		"write_misses":       524728,
+		"demotions":          0,
+		"promotions":         7,
+		"dirty":              0,
 	}
 	acc.AssertContainsTaggedFields(t, "dmcache", fields3, tags3)
 }
@@ -98,17 +111,20 @@ func TestDMCacheStats_2(t *testing.T) {
 	}
 
 	fields := map[string]interface{}{
-		"metadata_used": 300523520,
-		"metadata_free": 11216781312,
-		"cache_used":    3538944,
-		"cache_free":    1716188741632,
-		"read_hits":     194314240,
-		"read_misses":   92461989888,
-		"write_hits":    21299200,
-		"write_misses":  34397618176,
-		"demotions":     0,
-		"promotions":    1835008,
-		"dirty":         0,
+		"length":             9178759168,
+		"metadata_blocksize": 16,
+		"metadata_used":      73370,
+		"metadata_total":     2811842,
+		"cache_blocksize":    640,
+		"cache_used":         33,
+		"cache_total":        24792130,
+		"read_hits":          2548,
+		"read_misses":        352929,
+		"write_hits":         280,
+		"write_misses":       524728,
+		"demotions":          0,
+		"promotions":         7,
+		"dirty":              0,
 	}
 	acc.AssertContainsTaggedFields(t, "dmcache", fields, tags)
 }
