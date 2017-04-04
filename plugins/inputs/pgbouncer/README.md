@@ -20,7 +20,6 @@ This pgbouncer plugin provides metrics for your pgbouncer connection information
   ## A list of databases to pull metrics about. If not specified, metrics for all
   ## databases are gathered.
   # databases = ["app_production", "testing"]
-`
 ```
 
 ### Measurements & Fields:
