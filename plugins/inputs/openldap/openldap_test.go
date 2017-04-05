@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	//"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,13 +14,15 @@ func TestOpenldapNoConnection(t *testing.T) {
 	}
 
 	o := &Openldap {
-		Host: "nosuchhost",
+		Host: "127.0.0.1",
+		Port: 389,
 	}
 
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
-	require.NoError(t, err) // test that we handled the error
-	require.Zero(t, acc.NFields()) // test that we didn't get anything back
+	require.NoError(t, err) // test that we didn't return an error
+	assert.Zero(t, acc.NFields()) // test that we set an error
+	assert.NotEmpty(t, acc.Errors) // test that we set an error
 }
 
 func TestOpenldapGeneratesMetrics(t *testing.T) {
