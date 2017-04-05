@@ -6,7 +6,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -17,12 +16,13 @@ type Irqstat struct {
 
 type IRQ struct {
 	ID     string
-	Fields map[string]interface{}
-	Tags   map[string]string
+	Type   string
+	Device string
+	Values map[string]interface{}
 }
 
 func NewIRQ(id string) *IRQ {
-	return &IRQ{ID: id, Fields: make(map[string]interface{}), Tags: make(map[string]string)}
+	return &IRQ{ID: id, Values: make(map[string]interface{})}
 }
 
 const sampleConfig = `
@@ -39,7 +39,8 @@ func (s *Irqstat) SampleConfig() string {
 	return sampleConfig
 }
 
-func parseInterrupts(irqdata string, include []string) []IRQ {
+func parseInterrupts(irqdata string, include []string) ([]IRQ, error) {
+	var err error
 	var irqs []IRQ
 	var cpucount int
 	scanner := bufio.NewScanner(strings.NewReader(irqdata))
@@ -47,49 +48,41 @@ func parseInterrupts(irqdata string, include []string) []IRQ {
 		var irqval, irqtotal int64
 		var irqtype, irqdevice string
 		fields := strings.Fields(scanner.Text())
-		ff := fields[0]
-		if ff == "CPU0" {
+		if len(fields) > 0 && fields[0] == "CPU0" {
 			cpucount = len(fields)
 		}
-
-		if ff[len(ff)-1:] == ":" {
-			fields = fields[1:len(fields)]
-			irqid := ff[:len(ff)-1]
-			irq := NewIRQ(irqid)
-			_, err := strconv.ParseInt(irqid, 10, 64)
-			if err == nil {
-				irqtype = fields[cpucount]
-				irqdevice = strings.Join(fields[cpucount+1:], " ")
-			} else {
-				if len(fields) > cpucount {
-					irqtype = strings.Join(fields[cpucount:], " ")
+		if !strings.HasSuffix(fields[0], ":") {
+			continue
+		}
+		irqid := strings.TrimRight(fields[0], ":")
+		irq := NewIRQ(irqid)
+		_, err := strconv.ParseInt(irqid, 10, 64)
+		if err == nil && len(fields) > cpucount {
+			irqtype = fields[cpucount+1]
+			irqdevice = strings.Join(fields[cpucount+2:], " ")
+		} else if len(fields) > cpucount {
+			irqtype = strings.Join(fields[cpucount+1:], " ")
+		}
+		fields = fields[1:len(fields)]
+		for i := 0; i < cpucount; i++ {
+			cpu := fmt.Sprintf("CPU%d", i)
+			if i < len(fields) {
+				irqval, err = strconv.ParseInt(fields[i], 10, 64)
+				if err != nil {
+					return irqs, err
 				}
+				irq.Values[cpu] = irqval
 			}
-			for i := 0; i < cpucount; i++ {
-				cpu := fmt.Sprintf("CPU%d", i)
-				irq.Tags["irq"] = irqid
-				if i < len(fields) {
-					irqval, err = strconv.ParseInt(fields[i], 10, 64)
-					if err != nil {
-						log.Fatal(err)
-					}
-					irq.Fields[cpu] = irqval
-				}
-				irqtotal = irqval + irqtotal
-			}
-			irq.Tags["type"] = irqtype
-			irq.Tags["device"] = irqdevice
-			irq.Fields["total"] = irqtotal
-			if len(include) == 0 {
-				irqs = append(irqs, *irq)
-			} else {
-				if stringInSlice(irq.ID, include) {
-					irqs = append(irqs, *irq)
-				}
-			}
+			irqtotal = irqval + irqtotal
+		}
+		irq.Type = irqtype
+		irq.Device = irqdevice
+		irq.Values["total"] = irqtotal
+		if len(include) == 0 || stringInSlice(irq.ID, include) {
+			irqs = append(irqs, *irq)
 		}
 	}
-	return irqs
+	return irqs, err
 }
 
 func stringInSlice(x string, list []string) bool {
@@ -106,15 +99,20 @@ func (s *Irqstat) Gather(acc telegraf.Accumulator) error {
 	for _, file := range files {
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
-			log.Fatal(err)
+			acc.AddError(err)
 		}
 		irqdata := string(data)
-		irqs := parseInterrupts(irqdata, s.Include)
+		irqs, err := parseInterrupts(irqdata, s.Include)
+		if err != nil {
+			acc.AddError(err)
+		}
 		for _, irq := range irqs {
+			tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device}
+			fields := irq.Values
 			if file == "/proc/softirqs" {
-				acc.AddFields("soft_interrupts", irq.Fields, irq.Tags)
+				acc.AddFields("soft_interrupts", fields, tags)
 			} else {
-				acc.AddFields("interrupts", irq.Fields, irq.Tags)
+				acc.AddFields("interrupts", fields, tags)
 			}
 		}
 	}
