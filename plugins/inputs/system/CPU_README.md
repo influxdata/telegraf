@@ -7,10 +7,13 @@
 
 ##### Configuration:
 ```
-# read cpu metrics
 [[inputs.cpu]]
+  ## Whether to report per-cpu stats or not
+  percpu = true
+  ## Whether to report total system cpu stats or not
   totalcpu = true
-  percpu = false
+  ## If true, collect raw CPU time metrics.
+  collect_cpu_time = false
 ```
 
 #### Description
