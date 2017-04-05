@@ -65,11 +65,11 @@ func NewOpenldap() *Openldap {
 // gather metrics
 func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
-	defer l.Close()
 	if err != nil {
 		acc.AddError(err)
 		return nil
 	}
+	defer l.Close()
 
 	// TLS
 	if o.Tls {
