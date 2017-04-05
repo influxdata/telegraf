@@ -30,9 +30,7 @@ func TestDMCacheStats_1(t *testing.T) {
 		"device": "cs-1",
 	}
 	fields1 := map[string]interface{}{
-		"device":             "cs-1",
 		"length":             4883791872,
-		"target":             "cache",
 		"metadata_blocksize": 8,
 		"metadata_used":      1018,
 		"metadata_total":     1501122,
@@ -53,9 +51,7 @@ func TestDMCacheStats_1(t *testing.T) {
 		"device": "cs-2",
 	}
 	fields2 := map[string]interface{}{
-		"device":             "cs-2",
 		"length":             4294967296,
-		"target":             "cache",
 		"metadata_blocksize": 8,
 		"metadata_used":      72352,
 		"metadata_total":     1310720,
