@@ -2,10 +2,14 @@ package postgresql
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
+
+	// register in driver.
+	_ "github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -62,17 +66,19 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 var localhost = "host=localhost sslmode=disable"
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	var query string
+	var (
+		err   error
+		db    *sql.DB
+		query string
+	)
 
 	if p.Address == "" || p.Address == "localhost" {
 		p.Address = localhost
 	}
 
-	db, err := Connect(p.Address)
-	if err != nil {
+	if db, err = sql.Open("pgx", p.Address); err != nil {
 		return err
 	}
-
 	defer db.Close()
 
 	if len(p.Databases) == 0 && len(p.IgnoredDatabases) == 0 {
@@ -107,7 +113,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	//return rows.Err()
+
 	query = `SELECT * FROM pg_stat_bgwriter`
 
 	bg_writer_row, err := db.Query(query)
