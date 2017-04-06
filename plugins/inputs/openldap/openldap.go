@@ -107,6 +107,12 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
+	gatherSearchResult(sr, o, acc)
+
+	return nil
+}
+
+func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
 		"server": o.Host,
@@ -123,7 +129,6 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	acc.AddFields("openldap", fields, tags)
-
 	return nil
 }
 
