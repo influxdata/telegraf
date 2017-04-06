@@ -21,10 +21,10 @@ github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
-github.com/hpcloud/tail 915e5feba042395f5fda4dbe9c0e99aeab3088b3
+github.com/influxdata/tail e9ef7e826dafcb3093b40b989fefa90eeb9a8ca1
 github.com/influxdata/toml 5d1d907f22ead1cd47adde17ceec5bda9cacaf8f
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
-github.com/jackc/pgx c8080fc4a1bfa44bf90383ad0fdce2f68b7d313c
+github.com/jackc/pgx b84338d7d62598f75859b2b146d830b22f1b9ec8
 github.com/kardianos/osext c2c54e542fb797ad986b31721e1baedf214ca413
 github.com/kardianos/service 6d3a0ee7d3425d9d835debc51a0ca1ffa28f4893
 github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
@@ -44,7 +44,7 @@ github.com/prometheus/common dd2f054febf4a6c00f2343686efb775948a8bff4
 github.com/prometheus/procfs 1878d9fbb537119d24b21ca07effd591627cd160
 github.com/rcrowley/go-metrics 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 github.com/samuel/go-zookeeper 1d7be4effb13d2d908342d349d71a284a7542693
-github.com/shirou/gopsutil 77b5d0080adb6f028e457906f1944d9fcca34442
+github.com/shirou/gopsutil d371ba1293cb48fedc6850526ea48b3846c54f2c
 github.com/soniah/gosnmp 5ad50dc75ab389f8a1c9f8a67d3a1cd85f67ed15
 github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
 github.com/stretchr/testify 4d4bfba8f1d1027c4fdbe371823030df51419987
@@ -59,4 +59,5 @@ golang.org/x/text 506f9d5c962f284575e88337e7d9296d27e729d3
 gopkg.in/dancannon/gorethink.v1 edc7a6a68e2d8015f5ffe1b2560eed989f8a45be
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
 gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655
+gopkg.in/olivere/elastic.v5 ee3ebceab960cf68ab9a89ee6d78c031ef5b4a4e
 gopkg.in/yaml.v2 4c78c975fe7c825c6d1466c42be594d1d6f3aba6

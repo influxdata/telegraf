@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"sync"
 
@@ -34,7 +35,9 @@ func (ssl *streamSocketListener) listen() {
 	for {
 		c, err := ssl.Accept()
 		if err != nil {
-			ssl.AddError(err)
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				ssl.AddError(err)
+			}
 			break
 		}
 
@@ -83,7 +86,9 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	}
 
 	if err := scnr.Err(); err != nil {
-		ssl.AddError(err)
+		if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+			ssl.AddError(err)
+		}
 	}
 }
 
@@ -97,7 +102,9 @@ func (psl *packetSocketListener) listen() {
 	for {
 		n, _, err := psl.ReadFrom(buf)
 		if err != nil {
-			psl.AddError(err)
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				psl.AddError(err)
+			}
 			break
 		}
 
@@ -176,6 +183,13 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("invalid service address: %s", sl.ServiceAddress)
 	}
 
+	if spl[0] == "unix" || spl[0] == "unixpacket" || spl[0] == "unixgram" {
+		// no good way of testing for "file does not exist".
+		// Instead just ignore error and blow up when we try to listen, which will
+		// indicate "address already in use" if file existed and we couldn't remove.
+		os.Remove(spl[1])
+	}
+
 	switch spl[0] {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		l, err := net.Listen(spl[0], spl[1])
@@ -223,6 +237,10 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("unknown protocol '%s' in '%s'", spl[0], sl.ServiceAddress)
 	}
 
+	if spl[0] == "unix" || spl[0] == "unixpacket" || spl[0] == "unixgram" {
+		sl.Closer = unixCloser{path: spl[1], closer: sl.Closer}
+	}
+
 	return nil
 }
 
@@ -239,6 +257,17 @@ func newSocketListener() *SocketListener {
 	return &SocketListener{
 		Parser: parser,
 	}
+}
+
+type unixCloser struct {
+	path   string
+	closer io.Closer
+}
+
+func (uc unixCloser) Close() error {
+	err := uc.closer.Close()
+	os.Remove(uc.path) // ignore error
+	return err
 }
 
 func init() {

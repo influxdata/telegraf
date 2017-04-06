@@ -1,10 +1,15 @@
 package tcp_listener
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"io"
+	"log"
 	"net"
+	"os"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -54,7 +59,6 @@ func BenchmarkTCP(b *testing.B) {
 			panic(err)
 		}
 
-		time.Sleep(time.Millisecond * 25)
 		conn, err := net.Dial("tcp", "127.0.0.1:8198")
 		if err != nil {
 			panic(err)
@@ -62,8 +66,10 @@ func BenchmarkTCP(b *testing.B) {
 		for i := 0; i < 100000; i++ {
 			fmt.Fprintf(conn, testMsg)
 		}
-		// wait for 100,000 metrics to get added to accumulator
-		time.Sleep(time.Millisecond)
+		conn.(*net.TCPConn).CloseWrite()
+		// wait for all 100,000 metrics to be processed
+		buf := []byte{0}
+		conn.Read(buf) // will EOF when completed
 		listener.Stop()
 	}
 }
@@ -81,16 +87,18 @@ func TestHighTrafficTCP(t *testing.T) {
 	err := listener.Start(acc)
 	require.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 25)
 	conn, err := net.Dial("tcp", "127.0.0.1:8199")
 	require.NoError(t, err)
 	for i := 0; i < 100000; i++ {
 		fmt.Fprintf(conn, testMsg)
 	}
-	time.Sleep(time.Millisecond)
+	conn.(*net.TCPConn).CloseWrite()
+	buf := []byte{0}
+	_, err = conn.Read(buf)
+	assert.Equal(t, err, io.EOF)
 	listener.Stop()
 
-	assert.Equal(t, 100000, len(acc.Metrics))
+	assert.Equal(t, 100000, int(acc.NMetrics()))
 }
 
 func TestConnectTCP(t *testing.T) {
@@ -105,13 +113,12 @@ func TestConnectTCP(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
 	conn, err := net.Dial("tcp", "127.0.0.1:8194")
 	require.NoError(t, err)
 
 	// send single message to socket
 	fmt.Fprintf(conn, testMsg)
-	time.Sleep(time.Millisecond * 15)
+	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
@@ -119,7 +126,7 @@ func TestConnectTCP(t *testing.T) {
 
 	// send multiple messages to socket
 	fmt.Fprintf(conn, testMsgs)
-	time.Sleep(time.Millisecond * 15)
+	acc.Wait(6)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
 	for _, hostTag := range hostTags {
@@ -143,7 +150,6 @@ func TestConcurrentConns(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
 	_, err := net.Dial("tcp", "127.0.0.1:8195")
 	assert.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8195")
@@ -162,10 +168,8 @@ func TestConcurrentConns(t *testing.T) {
 			" the Telegraf tcp listener configuration.\n",
 		string(buf[:n]))
 
-	_, err = conn.Write([]byte(testMsg))
-	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 10)
-	assert.Zero(t, acc.NFields())
+	_, err = conn.Read(buf)
+	assert.Equal(t, io.EOF, err)
 }
 
 // Test that MaxTCPConections is respected when max==1
@@ -181,7 +185,6 @@ func TestConcurrentConns1(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
 	_, err := net.Dial("tcp", "127.0.0.1:8196")
 	assert.NoError(t, err)
 
@@ -198,10 +201,8 @@ func TestConcurrentConns1(t *testing.T) {
 			" the Telegraf tcp listener configuration.\n",
 		string(buf[:n]))
 
-	_, err = conn.Write([]byte(testMsg))
-	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 10)
-	assert.Zero(t, acc.NFields())
+	_, err = conn.Read(buf)
+	assert.Equal(t, io.EOF, err)
 }
 
 // Test that MaxTCPConections is respected
@@ -216,7 +217,6 @@ func TestCloseConcurrentConns(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 
-	time.Sleep(time.Millisecond * 25)
 	_, err := net.Dial("tcp", "127.0.0.1:8195")
 	assert.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8195")
@@ -238,13 +238,9 @@ func TestRunParser(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	time.Sleep(time.Millisecond * 25)
 	listener.Gather(&acc)
 
-	if a := acc.NFields(); a != 1 {
-		t.Errorf("got %v, expected %v", a, 1)
-	}
-
+	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
@@ -263,11 +259,16 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
+	buf := bytes.NewBuffer(nil)
+	log.SetOutput(buf)
+	defer log.SetOutput(os.Stderr)
 	in <- testmsg
-	time.Sleep(time.Millisecond * 25)
 
-	if a := acc.NFields(); a != 0 {
-		t.Errorf("got %v, expected %v", a, 0)
+	scnr := bufio.NewScanner(buf)
+	for scnr.Scan() {
+		if strings.Contains(scnr.Text(), fmt.Sprintf(malformedwarn, 1)) {
+			break
+		}
 	}
 }
 
@@ -284,9 +285,9 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	time.Sleep(time.Millisecond * 25)
 	listener.Gather(&acc)
 
+	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_graphite",
 		map[string]interface{}{"value": float64(12)})
 }
@@ -304,9 +305,9 @@ func TestRunParserJSONMsg(t *testing.T) {
 	go listener.tcpParser()
 
 	in <- testmsg
-	time.Sleep(time.Millisecond * 25)
 	listener.Gather(&acc)
 
+	acc.Wait(1)
 	acc.AssertContainsFields(t, "udp_json_test",
 		map[string]interface{}{
 			"a":   float64(5),

@@ -1,6 +1,7 @@
 package kafka_consumer
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -129,13 +130,13 @@ func (k *Kafka) receiver() {
 			return
 		case err := <-k.errs:
 			if err != nil {
-				log.Printf("E! Kafka Consumer Error: %s\n", err)
+				k.acc.AddError(fmt.Errorf("Kafka Consumer Error: %s\n", err))
 			}
 		case msg := <-k.in:
 			metrics, err := k.parser.Parse(msg.Value)
 			if err != nil {
-				log.Printf("E! Kafka Message Parse Error\nmessage: %s\nerror: %s",
-					string(msg.Value), err.Error())
+				k.acc.AddError(fmt.Errorf("E! Kafka Message Parse Error\nmessage: %s\nerror: %s",
+					string(msg.Value), err.Error()))
 			}
 
 			for _, metric := range metrics {
@@ -158,7 +159,7 @@ func (k *Kafka) Stop() {
 	defer k.Unlock()
 	close(k.done)
 	if err := k.Consumer.Close(); err != nil {
-		log.Printf("E! Error closing kafka consumer: %s\n", err.Error())
+		k.acc.AddError(fmt.Errorf("E! Error closing kafka consumer: %s\n", err.Error()))
 	}
 }
 

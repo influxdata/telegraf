@@ -44,7 +44,10 @@ type InfluxDB struct {
 }
 
 var sampleConfig = `
-  ## The full HTTP or UDP endpoint URL for your InfluxDB instance.
+  ## The HTTP or UDP URL for your InfluxDB instance.  Each item should be
+  ## of the form:
+  ##   scheme "://" host [ ":" port]
+  ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   # urls = ["udp://localhost:8089"] # UDP endpoint example
