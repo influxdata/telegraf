@@ -74,10 +74,12 @@ func (s *systemPS) DiskUsage(
 	var partitions []*disk.PartitionStat
 
 	for _, p := range parts {
-		// If the mount point is not a member of the filter set,
-		// don't gather info on it.
-		if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
-			continue
+		if len(mountPointFilter) > 0 {
+			// If the mount point is not a member of the filter set,
+			// don't gather info on it.
+			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
+				continue
+			}
 		}
 
 		// If the mount point is a member of the exclude set,
@@ -87,14 +89,17 @@ func (s *systemPS) DiskUsage(
 		}
 
 		mountpoint := os.Getenv("HOST_MOUNT_PREFIX") + p.Mountpoint
-		if _, err := os.Stat(mountpoint); err == nil {
-			if du, err := disk.Usage(mountpoint); err == nil {
-				du.Path = p.Mountpoint
-				du.Fstype = p.Fstype
-				usage = append(usage, du)
-				partitions = append(partitions, &p)
-			}
+		if _, err := os.Stat(mountpoint); err != nil {
+			continue
 		}
+		du, err := disk.Usage(mountpoint)
+		if err != nil {
+			continue
+		}
+		du.Path = p.Mountpoint
+		du.Fstype = p.Fstype
+		usage = append(usage, du)
+		partitions = append(partitions, &p)
 	}
 
 	return usage, partitions, nil
