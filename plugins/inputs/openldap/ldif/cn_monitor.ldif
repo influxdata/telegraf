@@ -1,0 +1,10 @@
+dn: cn=module,cn=config
+changetype: add
+objectClass: olcModuleList
+olcModuleLoad: back_monitor
+
+dn: olcdatabase=monitor,cn=config
+changetype: add
+objectclass: olcDatabaseConfig
+olcDatabase: monitor
+olcAccess: to dn.subtree=cn=monitor by * read
