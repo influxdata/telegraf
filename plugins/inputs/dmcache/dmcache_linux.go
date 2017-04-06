@@ -39,7 +39,7 @@ func (c *DMCache) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	total := make(map[string]interface{})
+	totalStatus := cacheStatus{}
 
 	for _, s := range outputLines {
 		status, err := parseDMSetupStatus(s)
@@ -47,30 +47,14 @@ func (c *DMCache) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		fields := make(map[string]interface{})
-		fields["length"] = status.length
-		fields["metadata_blocksize"] = status.metadataBlocksize
-		fields["metadata_used"] = status.metadataUsed
-		fields["metadata_total"] = status.metadataTotal
-		fields["cache_blocksize"] = status.cacheBlocksize
-		fields["cache_used"] = status.cacheUsed
-		fields["cache_total"] = status.cacheTotal
-		fields["read_hits"] = status.readHits
-		fields["read_misses"] = status.readMisses
-		fields["write_hits"] = status.writeHits
-		fields["write_misses"] = status.writeMisses
-		fields["demotions"] = status.demotions
-		fields["promotions"] = status.promotions
-		fields["dirty"] = status.dirty
-
 		if c.PerDevice {
 			tags := map[string]string{"device": status.device}
-			acc.AddFields(metricName, fields, tags)
+			acc.AddFields(metricName, toFields(status), tags)
 		}
-		aggregateStats(total, fields)
+		aggregateStats(&totalStatus, status)
 	}
 
-	acc.AddFields(metricName, total, map[string]string{"device": "all"})
+	acc.AddFields(metricName, toFields(totalStatus), map[string]string{"device": "all"})
 
 	return nil
 }
@@ -154,14 +138,40 @@ func parseDMSetupStatus(line string) (cacheStatus, error) {
 	return status, nil
 }
 
-func aggregateStats(total, fields map[string]interface{}) {
-	for key, value := range fields {
-		if _, ok := total[key]; ok {
-			total[key] = total[key].(int) + value.(int)
-		} else {
-			total[key] = value.(int)
-		}
-	}
+func aggregateStats(totalStatus *cacheStatus, status cacheStatus) {
+	totalStatus.length += status.length
+	totalStatus.metadataBlocksize += status.metadataBlocksize
+	totalStatus.metadataUsed += status.metadataUsed
+	totalStatus.metadataTotal += status.metadataTotal
+	totalStatus.cacheBlocksize += status.cacheBlocksize
+	totalStatus.cacheUsed += status.cacheUsed
+	totalStatus.cacheTotal += status.cacheTotal
+	totalStatus.readHits += status.readHits
+	totalStatus.readMisses += status.readMisses
+	totalStatus.writeHits += status.writeHits
+	totalStatus.writeMisses += status.writeMisses
+	totalStatus.demotions += status.demotions
+	totalStatus.promotions += status.promotions
+	totalStatus.dirty += status.dirty
+}
+
+func toFields(status cacheStatus) map[string]interface{} {
+	fields := make(map[string]interface{})
+	fields["length"] = status.length
+	fields["metadata_blocksize"] = status.metadataBlocksize
+	fields["metadata_used"] = status.metadataUsed
+	fields["metadata_total"] = status.metadataTotal
+	fields["cache_blocksize"] = status.cacheBlocksize
+	fields["cache_used"] = status.cacheUsed
+	fields["cache_total"] = status.cacheTotal
+	fields["read_hits"] = status.readHits
+	fields["read_misses"] = status.readMisses
+	fields["write_hits"] = status.writeHits
+	fields["write_misses"] = status.writeMisses
+	fields["demotions"] = status.demotions
+	fields["promotions"] = status.promotions
+	fields["dirty"] = status.dirty
+	return fields
 }
 
 func dmSetupStatus() ([]string, error) {

@@ -43,5 +43,5 @@ This plugin requires sudo, that is why you should setup and be sure that the tel
 ```
 $ ./telegraf --test --config /etc/telegraf/telegraf.conf --input-filter dmcache
 * Plugin: inputs.dmcache, Collection 1
-> dmcache,bu=linux,cls=server,dc=colo,device=vg02-splunk_data_lv,env=production,host=hostname,sr=splunk_indexer,trd=false cache_free=0i,cache_used=1099511627776i,demotions=3265223720960i,dirty=0i,metadata_free=1060880384i,metadata_used=12861440i,promotions=3265223720960i,read_hits=995134034411520i,read_misses=916807089127424i,write_hits=195107267543040i,write_misses=563725346013184i 1491362011000000000
+> dmcache,device=example cache_blocksize=0i,read_hits=995134034411520i,read_misses=916807089127424i,write_hits=195107267543040i,metadata_used=12861440i,write_misses=563725346013184i,promotions=3265223720960i,dirty=0i,metadata_blocksize=0i,cache_used=1099511627776ii,cache_total=0i,length=0i,metadata_total=1073741824i,demotions=3265223720960i 1491482035000000000
 ```
