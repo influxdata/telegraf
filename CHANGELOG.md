@@ -49,6 +49,7 @@ be deprecated eventually.
 - [#2244](https://github.com/influxdata/telegraf/pull/2244): Support ipmi_sensor plugin querying local ipmi sensors.
 - [#2339](https://github.com/influxdata/telegraf/pull/2339): Increment gather_errors for all errors emitted by inputs.
 - [#2071](https://github.com/influxdata/telegraf/issues/2071): Use official docker SDK.
+- [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 
 ### Bugfixes
 

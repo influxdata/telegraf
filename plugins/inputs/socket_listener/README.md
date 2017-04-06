@@ -30,10 +30,10 @@ This is a sample configuration for the plugin.
   ## 0 (default) is unlimited.
   # max_connections = 1024
   
-  ## Read deadline (timeout).
+  ## Read timeout.
   ## Only applies to stream sockets (e.g. TCP).
   ## 0 (default) is unlimited.
-  # read_deadline = 30
+  # read_timeout = "30s"
 
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
