@@ -70,7 +70,13 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	defer c.Close()
 
 	scnr := bufio.NewScanner(c)
-	for scnr.Scan() {
+	for {
+		if ssl.ReadTimeout.Duration > 0 {
+			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
+		}
+		if !scnr.Scan() {
+			break
+		}
 		metrics, err := ssl.Parse(scnr.Bytes())
 		if err != nil {
 			ssl.AddError(fmt.Errorf("unable to parse incoming line"))
@@ -79,9 +85,6 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 		}
 		for _, m := range metrics {
 			ssl.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-		}
-		if ssl.ReadTimeout.Duration > 0 {
-			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration * time.Second))
 		}
 	}
 
