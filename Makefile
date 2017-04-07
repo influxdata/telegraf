@@ -80,6 +80,11 @@ docker-run-circle:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
 	docker run --name nats -p "4222:4222" -d nats
+	docker run --name openldap \
+		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
+		-e SLAPD_CONFIG_ROOTPW="secret" \
+		-p "389:389" \
+		-d cobaugh/openldap-alpine
 
 # Kill all docker containers, ignore errors
 docker-kill:
