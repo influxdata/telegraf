@@ -2,6 +2,7 @@ package openldap
 
 import (
 	"testing"
+	"strconv"
 	"gopkg.in/ldap.v2"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -31,8 +32,7 @@ func TestOpenldapMockResult(t *testing.T) {
 	err := gatherSearchResult(&mockSearchResult, o, &acc)
 
 	require.NoError(t, err)
-	assert.NotZero(t, acc.NFields())
-	assert.True(t, acc.HasFloatField("openldap", "total_connections"))
+	commonTests(t, o, &acc)
 }
 
 func TestOpenldapNoConnection(t *testing.T) {
@@ -41,7 +41,7 @@ func TestOpenldapNoConnection(t *testing.T) {
 	}
 
 	o := &Openldap {
-		Host: testutil.GetLocalHost(),
+		Host: "nosuchhost",
 		Port: 389,
 	}
 
@@ -59,21 +59,23 @@ func TestOpenldapGeneratesMetrics(t *testing.T) {
 
 	o := &Openldap {
 		Host: testutil.GetLocalHost(),
+		Port: 389,
 	}
 
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
-
 	require.NoError(t, err)
-	assert.Empty(t, acc.Errors)
+	commonTests(t, o, &acc)
 }
 
 func TestOpenldapStartTLS(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
 	o := &Openldap {
 		Host: testutil.GetLocalHost(),
+		Port: 389,
 		Tls: true,
 		TlsSkipverify: true,
 	}
@@ -81,6 +83,7 @@ func TestOpenldapStartTLS(t *testing.T) {
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
 	require.NoError(t, err)
+	commonTests(t, o, &acc)
 }
 
 func TestOpenldapBind(t *testing.T) {
@@ -90,6 +93,7 @@ func TestOpenldapBind(t *testing.T) {
 
 	o := &Openldap {
 		Host: testutil.GetLocalHost(),
+		Port: 389,
 		Tls: true,
 		TlsSkipverify: true,
 		BindDn: "cn=manager,cn=config",
@@ -99,11 +103,13 @@ func TestOpenldapBind(t *testing.T) {
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
 	require.NoError(t, err)
+	commonTests(t, o, &acc)
 }
 
-func runTests(t *testing.T, acc *testutil.Accumulator) {
+func commonTests(t *testing.T, o *Openldap, acc *testutil.Accumulator) {
+	assert.Empty(t, acc.Errors)
 	assert.True(t, acc.HasMeasurement("openldap"))
-	assert.True(t, acc.HasTag("host", testutil.GetLocalHost()))
-	assert.True(t, acc.HasTag("port", "389"))
-	assert.NotZero(t, acc.NFields())
+	assert.Equal(t, o.Host, acc.TagValue("openldap", "server"))
+	assert.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"))
+	assert.True(t, acc.HasFloatField("openldap", "total_connections"))
 }
