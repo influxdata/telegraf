@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/regex"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 )
 
@@ -56,6 +57,9 @@ type Config struct {
 	// DataType only applies to value, this will be the type to parse value to
 	DataType string
 
+	//  RegexExpr only applies to regex matcher
+	RegexExpr map[string][]string
+
 	// DefaultTags are the default tags that will be added to all parsed metrics.
 	DefaultTags map[string]string
 }
@@ -65,6 +69,8 @@ func NewParser(config *Config) (Parser, error) {
 	var err error
 	var parser Parser
 	switch config.DataFormat {
+	case "regex":
+		parser, err = NewREGEXParser(config.RegexExpr, config.DefaultTags)
 	case "json":
 		parser, err = NewJSONParser(config.MetricName,
 			config.TagKeys, config.DefaultTags)
@@ -82,6 +88,16 @@ func NewParser(config *Config) (Parser, error) {
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return parser, err
+}
+func NewREGEXParser(
+	regexExpr map[string][]string,
+	defaultTags map[string]string,
+) (Parser, error) {
+	parser := &regex_parser.REGEXParser{
+		RegexEXPRList: regexExpr,
+		DefaultTags:   defaultTags,
+	}
+	return parser, nil
 }
 
 func NewJSONParser(
