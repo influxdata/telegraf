@@ -1,6 +1,7 @@
 package kafka_consumer
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -57,6 +58,23 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	k.parser, _ = parsers.NewInfluxParser()
 	go k.receiver()
 	in <- saramaMsg(invalidMsg)
+	acc.WaitError(1)
+
+	assert.Equal(t, acc.NFields(), 0)
+}
+
+// Test that
+func TestDropOverlongMsg(t *testing.T) {
+	const maxMessageLen = 64 * 1024
+	k, in := newTestKafka()
+	k.MaxMessageLen = maxMessageLen
+	acc := testutil.Accumulator{}
+	k.acc = &acc
+	defer close(k.done)
+	overlongMsg := strings.Repeat("v", maxMessageLen+1)
+
+	go k.receiver()
+	in <- saramaMsg(overlongMsg)
 	acc.WaitError(1)
 
 	assert.Equal(t, acc.NFields(), 0)
