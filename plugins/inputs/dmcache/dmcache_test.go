@@ -8,22 +8,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func output2Devices() ([]string, error) {
-	return []string{
+var (
+	measurement              = "dmcache"
+	badFormatOutput          = []string{"cs-1: 0 4883791872 cache 8 1018/1501122 512 7/464962 139 352643 "}
+	good2DevicesFormatOutput = []string{
 		"cs-1: 0 4883791872 cache 8 1018/1501122 512 7/464962 139 352643 15 46 0 7 0 1 writeback 2 migration_threshold 2048 mq 10 random_threshold 4 sequential_threshold 512 discard_promote_adjustment 1 read_promote_adjustment 4 write_promote_adjustment 8",
 		"cs-2: 0 4294967296 cache 8 72352/1310720 128 26/24327168 2409 286 265 524682 0 0 0 1 writethrough 2 migration_threshold 2048 mq 10 random_threshold 4 sequential_threshold 512 discard_promote_adjustment 1 read_promote_adjustment 4 write_promote_adjustment 8",
-	}, nil
-}
+	}
+)
 
-var dmc1 = &DMCache{
-	PerDevice:        true,
-	getCurrentStatus: output2Devices,
-}
-
-func TestDMCacheStats_1(t *testing.T) {
+func TestPerDeviceGoodOutput(t *testing.T) {
 	var acc testutil.Accumulator
+	var plugin = &DMCache{
+		PerDevice: true,
+		getCurrentStatus: func() ([]string, error) {
+			return good2DevicesFormatOutput, nil
+		},
+	}
 
-	err := dmc1.Gather(&acc)
+	err := plugin.Gather(&acc)
 	require.NoError(t, err)
 
 	tags1 := map[string]string{
@@ -45,7 +48,7 @@ func TestDMCacheStats_1(t *testing.T) {
 		"promotions":         7,
 		"dirty":              0,
 	}
-	acc.AssertContainsTaggedFields(t, "dmcache", fields1, tags1)
+	acc.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
 	tags2 := map[string]string{
 		"device": "cs-2",
@@ -66,7 +69,7 @@ func TestDMCacheStats_1(t *testing.T) {
 		"promotions":         0,
 		"dirty":              0,
 	}
-	acc.AssertContainsTaggedFields(t, "dmcache", fields2, tags2)
+	acc.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 
 	tags3 := map[string]string{
 		"device": "all",
@@ -88,18 +91,19 @@ func TestDMCacheStats_1(t *testing.T) {
 		"promotions":         7,
 		"dirty":              0,
 	}
-	acc.AssertContainsTaggedFields(t, "dmcache", fields3, tags3)
+	acc.AssertContainsTaggedFields(t, measurement, fields3, tags3)
 }
 
-var dmc2 = &DMCache{
-	PerDevice:        false,
-	getCurrentStatus: output2Devices,
-}
-
-func TestDMCacheStats_2(t *testing.T) {
+func TestNotPerDeviceGoodOutput(t *testing.T) {
 	var acc testutil.Accumulator
+	var plugin = &DMCache{
+		PerDevice: false,
+		getCurrentStatus: func() ([]string, error) {
+			return good2DevicesFormatOutput, nil
+		},
+	}
 
-	err := dmc2.Gather(&acc)
+	err := plugin.Gather(&acc)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -122,55 +126,44 @@ func TestDMCacheStats_2(t *testing.T) {
 		"promotions":         7,
 		"dirty":              0,
 	}
-	acc.AssertContainsTaggedFields(t, "dmcache", fields, tags)
+	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 }
 
-func outputNoDevices() ([]string, error) {
-	return []string{}, nil
-}
-
-var dmc3 = &DMCache{
-	PerDevice:        true,
-	getCurrentStatus: outputNoDevices,
-}
-
-func TestDMCacheStats_3(t *testing.T) {
+func TestNoDevicesOutput(t *testing.T) {
 	var acc testutil.Accumulator
+	var plugin = &DMCache{
+		PerDevice: true,
+		getCurrentStatus: func() ([]string, error) {
+			return []string{}, nil
+		},
+	}
 
-	err := dmc3.Gather(&acc)
+	err := plugin.Gather(&acc)
 	require.NoError(t, err)
 }
 
-func noDMSetup() ([]string, error) {
-	return []string{}, errors.New("dmsetup doesn't exist")
-}
-
-var dmc4 = &DMCache{
-	PerDevice:        true,
-	getCurrentStatus: noDMSetup,
-}
-
-func TestDMCacheStats_4(t *testing.T) {
+func TestErrorDuringGettingStatus(t *testing.T) {
 	var acc testutil.Accumulator
+	var plugin = &DMCache{
+		PerDevice: true,
+		getCurrentStatus: func() ([]string, error) {
+			return nil, errors.New("dmsetup doesn't exist")
+		},
+	}
 
-	err := dmc4.Gather(&acc)
+	err := plugin.Gather(&acc)
 	require.Error(t, err)
 }
 
-func badFormat() ([]string, error) {
-	return []string{
-		"cs-1: 0 4883791872 cache 8 1018/1501122 512 7/464962 139 352643 ",
-	}, nil
-}
-
-var dmc5 = &DMCache{
-	PerDevice:        true,
-	getCurrentStatus: badFormat,
-}
-
-func TestDMCacheStats_5(t *testing.T) {
+func TestBadFormatOfStatus(t *testing.T) {
 	var acc testutil.Accumulator
+	var plugin = &DMCache{
+		PerDevice: true,
+		getCurrentStatus: func() ([]string, error) {
+			return badFormatOutput, nil
+		},
+	}
 
-	err := dmc5.Gather(&acc)
+	err := plugin.Gather(&acc)
 	require.Error(t, err)
 }
