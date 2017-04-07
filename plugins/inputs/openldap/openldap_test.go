@@ -1,9 +1,9 @@
 package openldap
 
 import (
-	"testing"
-	"strconv"
 	"gopkg.in/ldap.v2"
+	"strconv"
+	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -16,15 +16,15 @@ func TestOpenldapMockResult(t *testing.T) {
 	mockSearchResult := ldap.SearchResult{
 		Entries: []*ldap.Entry{
 			{
-				DN: "cn=Total,cn=Connections,cn=Monitor",
+				DN:         "cn=Total,cn=Connections,cn=Monitor",
 				Attributes: []*ldap.EntryAttribute{{Name: "monitorCounter", Values: []string{"1"}}},
 			},
 		},
 		Referrals: []string{},
-		Controls: []ldap.Control{},
+		Controls:  []ldap.Control{},
 	}
 
-	o := &Openldap {
+	o := &Openldap{
 		Host: "localhost",
 		Port: 389,
 	}
@@ -40,15 +40,15 @@ func TestOpenldapNoConnection(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	o := &Openldap {
+	o := &Openldap{
 		Host: "nosuchhost",
 		Port: 389,
 	}
 
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
-	require.NoError(t, err) // test that we didn't return an error
-	assert.Zero(t, acc.NFields()) // test that we didn't return any fields
+	require.NoError(t, err)        // test that we didn't return an error
+	assert.Zero(t, acc.NFields())  // test that we didn't return any fields
 	assert.NotEmpty(t, acc.Errors) // test that we set an error
 }
 
@@ -57,7 +57,7 @@ func TestOpenldapGeneratesMetrics(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	o := &Openldap {
+	o := &Openldap{
 		Host: testutil.GetLocalHost(),
 		Port: 389,
 	}
@@ -73,10 +73,10 @@ func TestOpenldapStartTLS(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	o := &Openldap {
-		Host: testutil.GetLocalHost(),
-		Port: 389,
-		Tls: true,
+	o := &Openldap{
+		Host:          testutil.GetLocalHost(),
+		Port:          389,
+		Tls:           true,
 		TlsSkipverify: true,
 	}
 
@@ -91,13 +91,13 @@ func TestOpenldapBind(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	o := &Openldap {
-		Host: testutil.GetLocalHost(),
-		Port: 389,
-		Tls: true,
+	o := &Openldap{
+		Host:          testutil.GetLocalHost(),
+		Port:          389,
+		Tls:           true,
 		TlsSkipverify: true,
-		BindDn: "cn=manager,cn=config",
-		BindPassword: "secret",
+		BindDn:        "cn=manager,cn=config",
+		BindPassword:  "secret",
 	}
 
 	var acc testutil.Accumulator
