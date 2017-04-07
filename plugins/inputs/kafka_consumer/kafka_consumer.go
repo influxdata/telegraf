@@ -64,8 +64,9 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
-  ## Maximum length of a message to consume, in bytes (default 0/unlimited); larger messages are dropped
-  max_message_len = 65536
+  ## Maximum length of a message to consume, in bytes (default 0/unlimited);
+  ## larger messages are dropped
+  max_message_len = 64 * 1024
 `
 
 func (k *Kafka) SampleConfig() string {

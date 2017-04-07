@@ -63,7 +63,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	assert.Equal(t, acc.NFields(), 0)
 }
 
-// Test that
+// Test that overlong messages are dropped
 func TestDropOverlongMsg(t *testing.T) {
 	const maxMessageLen = 64 * 1024
 	k, in := newTestKafka()
