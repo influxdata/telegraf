@@ -36,6 +36,10 @@ package:
 prepare:
 	go get github.com/sparrc/gdm
 	gdm restore
+	# TODO remove
+	cd "$(GOPATH)/src/github.com/shirou/gopsutil" && \
+	git checkout -b io-counters-for-names && \
+	git pull https://github.com/danielnelson/gopsutil.git io-counters-for-names
 
 # Use the windows godeps file to prepare dependencies
 prepare-windows:
