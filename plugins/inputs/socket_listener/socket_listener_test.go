@@ -18,6 +18,7 @@ func TestSocketListener_tcp(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
+	defer sl.Stop()
 
 	client, err := net.Dial("tcp", sl.Closer.(net.Listener).Addr().String())
 	require.NoError(t, err)
@@ -32,6 +33,7 @@ func TestSocketListener_udp(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
+	defer sl.Stop()
 
 	client, err := net.Dial("udp", sl.Closer.(net.PacketConn).LocalAddr().String())
 	require.NoError(t, err)
@@ -40,13 +42,14 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
-	defer os.Remove("/tmp/telegraf_test.sock")
+	os.Create("/tmp/telegraf_test.sock")
 	sl := newSocketListener()
 	sl.ServiceAddress = "unix:///tmp/telegraf_test.sock"
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
+	defer sl.Stop()
 
 	client, err := net.Dial("unix", "/tmp/telegraf_test.sock")
 	require.NoError(t, err)
@@ -55,13 +58,14 @@ func TestSocketListener_unix(t *testing.T) {
 }
 
 func TestSocketListener_unixgram(t *testing.T) {
-	defer os.Remove("/tmp/telegraf_test.sock")
+	os.Create("/tmp/telegraf_test.sock")
 	sl := newSocketListener()
 	sl.ServiceAddress = "unixgram:///tmp/telegraf_test.sock"
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
+	defer sl.Stop()
 
 	client, err := net.Dial("unixgram", "/tmp/telegraf_test.sock")
 	require.NoError(t, err)

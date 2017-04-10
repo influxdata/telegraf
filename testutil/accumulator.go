@@ -43,9 +43,9 @@ func (a *Accumulator) NMetrics() uint64 {
 }
 
 func (a *Accumulator) ClearMetrics() {
-	atomic.StoreUint64(&a.nMetrics, 0)
 	a.Lock()
 	defer a.Unlock()
+	atomic.StoreUint64(&a.nMetrics, 0)
 	a.Metrics = make([]*Metric, 0)
 }
 
@@ -56,9 +56,9 @@ func (a *Accumulator) AddFields(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	atomic.AddUint64(&a.nMetrics, 1)
 	a.Lock()
 	defer a.Unlock()
+	atomic.AddUint64(&a.nMetrics, 1)
 	if a.Cond != nil {
 		a.Cond.Broadcast()
 	}
@@ -273,6 +273,19 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 			assert.Fail(t, msg)
 		}
 	}
+}
+
+// HasTimestamp returns true if the measurement has a matching Time value
+func (a *Accumulator) HasTimestamp(measurement string, timestamp time.Time) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			return timestamp.Equal(p.Time)
+		}
+	}
+
+	return false
 }
 
 // HasIntField returns true if the measurement has an Int value

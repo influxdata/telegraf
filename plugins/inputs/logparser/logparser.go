@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/hpcloud/tail"
+	"github.com/influxdata/tail"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/errchan"

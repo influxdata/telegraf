@@ -27,7 +27,7 @@ The example plugin gathers metrics about example things
     - tag2
 - measurement2 has the following tags:
     - tag3
-    
+
 ### Sample Queries:
 
 These are some useful queries (to generate dashboards or other) to run against data from this plugin:
