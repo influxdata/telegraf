@@ -139,7 +139,8 @@ func (k *Kafka) receiver() {
 			}
 		case msg := <-k.in:
 			if k.MaxMessageLen != 0 && len(msg.Value) > k.MaxMessageLen {
-				k.acc.AddError(fmt.Errorf("Message longer than max_message_len (%d)", k.MaxMessageLen))
+				k.acc.AddError(fmt.Errorf("Message longer than max_message_len (%d > %d)",
+					len(msg.Value), k.MaxMessageLen))
 			} else {
 				metrics, err := k.parser.Parse(msg.Value)
 				if err != nil {
