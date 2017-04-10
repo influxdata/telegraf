@@ -35,6 +35,7 @@ type HTTPListener struct {
 	WriteTimeout   internal.Duration
 	MaxBodySize    int64
 	MaxLineSize    int
+	Port           int
 
 	mu sync.Mutex
 	wg sync.WaitGroup
@@ -124,6 +125,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 	h.listener = listener
+	h.Port = listener.Addr().(*net.TCPAddr).Port
 
 	h.wg.Add(1)
 	go func() {
