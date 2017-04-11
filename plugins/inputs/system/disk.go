@@ -125,25 +125,12 @@ func (_ *DiskIOStats) SampleConfig() string {
 }
 
 func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
-	diskio, err := s.ps.DiskIO()
+	diskio, err := s.ps.DiskIO(s.Devices)
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %s", err)
 	}
 
-	var restrictDevices bool
-	devices := make(map[string]bool)
-	if len(s.Devices) != 0 {
-		restrictDevices = true
-		for _, dev := range s.Devices {
-			devices[dev] = true
-		}
-	}
-
 	for _, io := range diskio {
-		_, member := devices[io.Name]
-		if restrictDevices && !member {
-			continue
-		}
 		tags := map[string]string{}
 		tags["name"] = s.diskName(io.Name)
 		for t, v := range s.diskTags(io.Name) {
