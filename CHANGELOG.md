@@ -66,6 +66,7 @@ be deprecated eventually.
 - [#2425](https://github.com/influxdata/telegraf/pull/2425): Support to include/exclude docker container labels as tags
 - [#1667](https://github.com/influxdata/telegraf/pull/1667): dmcache input plugin
 - [#2637](https://github.com/influxdata/telegraf/issues/2637): Add support for precision in http_listener
+- [#2636](https://github.com/influxdata/telegraf/pull/2636): Add `message_len_max` option to `kafka_consumer` input
 
 ### Bugfixes
 
