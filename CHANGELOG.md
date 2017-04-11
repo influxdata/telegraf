@@ -65,6 +65,7 @@ be deprecated eventually.
 - [#2597](https://github.com/influxdata/telegraf/issues/2597): Add support for Linux sysctl-fs metrics.
 - [#2425](https://github.com/influxdata/telegraf/pull/2425): Support to include/exclude docker container labels as tags
 - [#1667](https://github.com/influxdata/telegraf/pull/1667): dmcache input plugin
+- [#2637](https://github.com/influxdata/telegraf/issues/2637): Add support for precision in http_listener
 
 ### Bugfixes
 
@@ -95,6 +96,7 @@ be deprecated eventually.
 - [#2596](https://github.com/influxdata/telegraf/pull/2596): fix timestamp parsing on prometheus plugin
 - [#2610](https://github.com/influxdata/telegraf/pull/2610): Fix deadlock when output cannot write
 - [#2410](https://github.com/influxdata/telegraf/issues/2410): Fix connection leak in postgresql.
+- [#2628](https://github.com/influxdata/telegraf/issues/2628): Set default measurement name for snmp input.
 
 ## v1.2.1 [2017-02-01]
 
