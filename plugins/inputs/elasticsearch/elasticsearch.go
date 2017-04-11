@@ -240,7 +240,9 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 
 		if e.ClusterStats {
 			// check for master
-			e.isMaster = (id == e.catMasterResponseTokens[0])
+			if id == e.catMasterResponseTokens[0] {
+				e.isMaster = true
+			}
 		}
 
 		for k, v := range n.Attributes {
