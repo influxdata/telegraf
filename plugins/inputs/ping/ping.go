@@ -49,7 +49,7 @@ const sampleConfig = `
   ## NOTE: this plugin forks the ping command. You may need to set capabilities
   ## via setcap cap_net_raw+p /bin/ping
   #
-  ## urls to ping
+  ## List of urls to ping
   urls = ["www.google.com"] # required
   ## number of pings to send per collection (ping -c <COUNT>)
   # count = 1
