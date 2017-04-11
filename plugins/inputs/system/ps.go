@@ -23,6 +23,13 @@ type PS interface {
 	NetConnections() ([]net.ConnectionStat, error)
 }
 
+type PSDiskDeps interface {
+	Partitions(all bool) ([]disk.PartitionStat, error)
+	OSGetenv(key string) string
+	OSStat(name string) (os.FileInfo, error)
+	PSDiskUsage(path string) (*disk.UsageStat, error)
+}
+
 func add(acc telegraf.Accumulator,
 	name string, val float64, tags map[string]string) {
 	if val >= 0 {
@@ -30,7 +37,15 @@ func add(acc telegraf.Accumulator,
 	}
 }
 
-type systemPS struct{}
+func newSystemPS() *systemPS {
+	return &systemPS{&systemPSDisk{}}
+}
+
+type systemPS struct {
+	PSDiskDeps
+}
+
+type systemPSDisk struct{}
 
 func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	var cpuTimes []cpu.TimesStat
@@ -55,7 +70,7 @@ func (s *systemPS) DiskUsage(
 	mountPointFilter []string,
 	fstypeExclude []string,
 ) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
-	parts, err := disk.Partitions(true)
+	parts, err := s.Partitions(true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -73,7 +88,9 @@ func (s *systemPS) DiskUsage(
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
 
-	for _, p := range parts {
+	for i := range parts {
+		p := parts[i]
+
 		if len(mountPointFilter) > 0 {
 			// If the mount point is not a member of the filter set,
 			// don't gather info on it.
@@ -88,11 +105,11 @@ func (s *systemPS) DiskUsage(
 			continue
 		}
 
-		mountpoint := os.Getenv("HOST_MOUNT_PREFIX") + p.Mountpoint
-		if _, err := os.Stat(mountpoint); err != nil {
+		mountpoint := s.OSGetenv("HOST_MOUNT_PREFIX") + p.Mountpoint
+		if _, err := s.OSStat(mountpoint); err != nil {
 			continue
 		}
-		du, err := disk.Usage(mountpoint)
+		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
 			continue
 		}
@@ -132,4 +149,20 @@ func (s *systemPS) VMStat() (*mem.VirtualMemoryStat, error) {
 
 func (s *systemPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	return mem.SwapMemory()
+}
+
+func (s *systemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
+	return disk.Partitions(all)
+}
+
+func (s *systemPSDisk) OSGetenv(key string) string {
+	return os.Getenv(key)
+}
+
+func (s *systemPSDisk) OSStat(name string) (os.FileInfo, error) {
+	return os.Stat(name)
+}
+
+func (s *systemPSDisk) PSDiskUsage(path string) (*disk.UsageStat, error) {
+	return disk.Usage(path)
 }
