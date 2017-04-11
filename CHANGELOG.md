@@ -97,6 +97,7 @@ be deprecated eventually.
 - [#2610](https://github.com/influxdata/telegraf/pull/2610): Fix deadlock when output cannot write
 - [#2410](https://github.com/influxdata/telegraf/issues/2410): Fix connection leak in postgresql.
 - [#2628](https://github.com/influxdata/telegraf/issues/2628): Set default measurement name for snmp input.
+- [#2649](https://github.com/influxdata/telegraf/pull/2649): Improve performance of diskio with many disks
 
 ## v1.2.1 [2017-02-01]
 
