@@ -17,6 +17,7 @@ import (
 type Kafka struct {
 	ConsumerGroup   string
 	Topics          []string
+	MaxMessageLen   int
 	ZookeeperPeers  []string
 	ZookeeperChroot string
 	Consumer        *consumergroup.ConsumerGroup
@@ -58,10 +59,14 @@ var sampleConfig = `
   offset = "oldest"
 
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Maximum length of a message to consume, in bytes (default 0/unlimited);
+  ## larger messages are dropped
+  max_message_len = 65536
 `
 
 func (k *Kafka) SampleConfig() string {
@@ -130,17 +135,21 @@ func (k *Kafka) receiver() {
 			return
 		case err := <-k.errs:
 			if err != nil {
-				k.acc.AddError(fmt.Errorf("Kafka Consumer Error: %s\n", err))
+				k.acc.AddError(fmt.Errorf("Consumer Error: %s\n", err))
 			}
 		case msg := <-k.in:
-			metrics, err := k.parser.Parse(msg.Value)
-			if err != nil {
-				k.acc.AddError(fmt.Errorf("E! Kafka Message Parse Error\nmessage: %s\nerror: %s",
-					string(msg.Value), err.Error()))
-			}
-
-			for _, metric := range metrics {
-				k.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+			if k.MaxMessageLen != 0 && len(msg.Value) > k.MaxMessageLen {
+				k.acc.AddError(fmt.Errorf("Message longer than max_message_len (%d > %d)",
+					len(msg.Value), k.MaxMessageLen))
+			} else {
+				metrics, err := k.parser.Parse(msg.Value)
+				if err != nil {
+					k.acc.AddError(fmt.Errorf("Message Parse Error\nmessage: %s\nerror: %s",
+						string(msg.Value), err.Error()))
+				}
+				for _, metric := range metrics {
+					k.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+				}
 			}
 
 			if !k.doNotCommitMsgs {
@@ -159,7 +168,7 @@ func (k *Kafka) Stop() {
 	defer k.Unlock()
 	close(k.done)
 	if err := k.Consumer.Close(); err != nil {
-		k.acc.AddError(fmt.Errorf("E! Error closing kafka consumer: %s\n", err.Error()))
+		k.acc.AddError(fmt.Errorf("Error closing consumer: %s\n", err.Error()))
 	}
 }
 
