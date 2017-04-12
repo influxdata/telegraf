@@ -22,9 +22,12 @@ TMP_CONFIG_DIR=./rpm_config
 CONFIG_FILES_DIR=./ConfigFiles
 
 LINUX_CONFIG_FILES_VER=1.6
-CONFIG_FILES_ITER=12
+CONFIG_FILES_ITER=13
 REDIS_CONFIG_FILES_VER=1.6
 PERFORCE_CONFIG_FILES_VER=1.6
+QUBIT_SCYLLA_CONFIG_FILES_VER=1.6
+QUBIT_WORKER_CONFIG_FILES_VER=1.6
+QUBIT_SPIN_CONFIG_FILES_VER=1.6
 
 BIN_RPM_ITER=1
 
@@ -118,6 +121,22 @@ fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$REDIS_C
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$PERFORCE_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
+
+# QUBIT Scylla config
+rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
+cp $CONFIG_FILES_DIR/telegraf-qubit-scylla.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SCYLLA_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-scylla" etc lib || cleanup_exit 1
+
+# QUBIT Worker config
+rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
+cp $CONFIG_FILES_DIR/telegraf-qubit-worker.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_WORKER_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-worker" etc lib || cleanup_exit 1
+
+# QUBIT Spin config
+rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
+cp $CONFIG_FILES_DIR/telegraf-qubit-spin.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SPIN_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-spin" etc lib || cleanup_exit 1
+
 
 mv ./*.rpm RPMS
 
