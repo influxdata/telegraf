@@ -234,7 +234,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		opts.AddBroker(server)
 	}
 	opts.SetAutoReconnect(true)
-	opts.SetKeepAlive(time.Second * 60)
+	opts.SetKeepAlive(time.Duration(0))
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetOnConnectHandler(m.onConnect)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
