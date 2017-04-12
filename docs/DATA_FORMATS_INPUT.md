@@ -427,7 +427,7 @@ Note: Nagios Input Data Formats is only supported in `exec` input plugin.
 ```toml
 [[inputs.exec]]
   ## Commands array
-  commands = ["/usr/lib/nagios/plugins/check_load", "-w 5,6,7 -c 7,8,9"]
+  commands = ["/usr/lib/nagios/plugins/check_load -w 5,6,7 -c 7,8,9"]
 
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
