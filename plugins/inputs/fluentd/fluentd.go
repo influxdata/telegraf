@@ -17,20 +17,19 @@ const (
 	measurement  = "fluentd"
 	description  = "Read metrics exposed by fluentd in_monitor plugin"
 	sampleConfig = `
-    ##
-    ## This plugin only reads information exposed by fluentd using /api/plugins.json.
-    ## Tested using 'fluentd' version '0.14.9'
+	## This plugin only reads information exposed by fluentd using /api/plugins.json.
+	## Tested using 'fluentd' version '0.14.9'
 	##
-    ## Endpoint: 
+	## Endpoint: 
 	## - only one URI is allowed
 	## - https is not supported
-    # Endpoint = "http://localhost:24220/api/plugins.json"
+	endpoint = "http://localhost:24220/api/plugins.json"
 	
 	## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
-	# exclude = [
-	#	"monitor_agent",
-	#	"dummy",
-	# ]
+	exclude = [
+		"monitor_agent",
+		"dummy",
+	]
 `
 )
 
