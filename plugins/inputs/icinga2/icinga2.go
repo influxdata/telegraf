@@ -3,6 +3,7 @@ package icinga2
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/influxdata/telegraf"
@@ -11,6 +12,7 @@ import (
 
 type Icinga2 struct {
 	Server   string
+	Filter   string
 	Username string
 	Password string
 }
@@ -44,6 +46,8 @@ type ObjectType string
 var sampleConfig = `
 	## Required Icinga2 server address (default: "https://localhost:5665")
 	# server = "https://localhost:5665"
+	## Required Icinga2 object type ("services" or "hosts, default "services")
+	# filter = "services"
 	## Required username used for request HTTP Basic Authentication (default: "")
 	# username = ""
 	## Required password used for HTTP Basic Authentication (default: "")
@@ -65,12 +69,15 @@ func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
 
 	client := &http.Client{Transport: tr}
 
-	req, err := http.NewRequest("GET", s.Server+"/v1/objects/services?attrs=name&attrs=display_name&attrs=state&attrs=check_command", nil)
-	req.SetBasicAuth(s.Username, s.Password)
+	url := fmt.Sprintf("%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command", s.Server, s.Filter)
+
+	req, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
 		return err
 	}
+
+	req.SetBasicAuth(s.Username, s.Password)
 
 	resp, err := client.Do(req)
 
@@ -79,6 +86,7 @@ func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	defer resp.Body.Close()
+
 	result := Result{}
 	json.NewDecoder(resp.Body).Decode(&result)
 
@@ -96,7 +104,7 @@ func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
 		tags["display_name"] = check.Attrs.DisplayName
 		tags["check_command"] = check.Attrs.CheckCommand
 
-		acc.AddFields("icinga2_services_status", record, tags)
+		acc.AddFields(fmt.Sprintf("icinga2_%s_status", s.Filter), record, tags)
 	}
 
 	return nil
