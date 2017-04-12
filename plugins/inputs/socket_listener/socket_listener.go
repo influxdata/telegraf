@@ -71,7 +71,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	for scnr.Scan() {
 		metrics, err := ssl.Parse(scnr.Bytes())
 		if err != nil {
-			ssl.AddError(fmt.Errorf("unable to parse incoming line"))
+			ssl.AddError(fmt.Errorf("unable to parse incoming line: %s", err))
 			//TODO rate limit
 			continue
 		}
@@ -105,7 +105,7 @@ func (psl *packetSocketListener) listen() {
 
 		metrics, err := psl.Parse(buf[:n])
 		if err != nil {
-			psl.AddError(fmt.Errorf("unable to parse incoming packet"))
+			psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 			//TODO rate limit
 			continue
 		}
