@@ -85,8 +85,8 @@ type AgentConfig struct {
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
-	// By default, precision will be set to the same timestamp order as the
-	// collection interval, with the maximum being 1s.
+	// By default or when set to "0s", precision will be set to the same
+	// timestamp order as the collection interval, with the maximum being 1s.
 	//   ie, when interval = "10s", precision will be "1s"
 	//       when interval = "250ms", precision will be "1ms"
 	// Precision will NOT be used for service inputs. It is up to each individual
@@ -230,10 +230,13 @@ var header = `# Telegraf Configuration
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
-  ## By default, precision will be set to the same timestamp order as the
-  ## collection interval, with the maximum being 1s.
-  ## Precision will NOT be used for service inputs, such as logparser and statsd.
-  ## Valid values are "ns", "us" (or "µs"), "ms", "s".
+  ## By default or when set to "0s", precision will be set to the same
+  ## timestamp order as the collection interval, with the maximum being 1s.
+  ##   ie, when interval = "10s", precision will be "1s"
+  ##       when interval = "250ms", precision will be "1ms"
+  ## Precision will NOT be used for service inputs. It is up to each individual
+  ## service input to set the timestamp at the appropriate precision.
+  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
 
   ## Logging configuration:
