@@ -123,7 +123,7 @@ func Test_parse(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(pluginOutput, expectedOutput) {
-		t.Errorf("pluginOutput: expected\n %s, \nactual\n %s\n", pluginOutput, expectedOutput)
+        t.Errorf("pluginOutput is different from expectedOutput")
 	}
 
 }
