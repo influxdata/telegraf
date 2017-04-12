@@ -1,10 +1,12 @@
-package main
+package icinga2
 
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"net/http"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Icinga2 struct {
@@ -14,7 +16,7 @@ type Icinga2 struct {
 }
 
 type Result struct {
-	Results []Object
+	Results []Object `json:"results"`
 }
 
 type Object struct {
@@ -41,7 +43,7 @@ type ObjectType string
 
 var sampleConfig = `
 	## Required Icinga2 server address (default: "https://localhost:5665")
-	# server = "localhost"
+	# server = "https://localhost:5665"
 	## Required username used for request HTTP Basic Authentication (default: "")
 	# username = ""
 	## Required password used for HTTP Basic Authentication (default: "")
@@ -57,37 +59,42 @@ func (s *Icinga2) SampleConfig() string {
 }
 
 func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
-	icinga2 := Icinga2{Server: "https://url:5665/v1/objects/services?attrs=name&attrs=display_name&attrs=state&attrs=check_command", Username: "root", Password: "icinga"}
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
+
 	client := &http.Client{Transport: tr}
-	req, err := http.NewRequest("GET", icinga2.Server, nil)
-	req.SetBasicAuth(icinga2.Username, icinga2.Password)
-	resp, err := client.Do(req)
+
+	req, err := http.NewRequest("GET", s.Server+"/v1/objects/services?attrs=name&attrs=display_name&attrs=state&attrs=check_command", nil)
+	req.SetBasicAuth(s.Username, s.Password)
+
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return err
+	}
+
 	defer resp.Body.Close()
 	result := Result{}
 	json.NewDecoder(resp.Body).Decode(&result)
+
 	if err != nil {
-		panic(err)
-	}
-	for _, item := range result.Results {
-		res := fmt.Sprintf("services_status,name=\"%s\",display_name=\"%s\",check_command=\"%s\" state=%f", item.Attrs.Name, item.Attrs.DisplayName, item.Attrs.CheckCommand, item.Attrs.State)
-		fmt.Println(res)
+		return err
 	}
 
-	for _, check := range checks {
+	for _, check := range result.Results {
 		record := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		record["name"] = item.Attrs.Name
-		record["status"] = item.Attrs.State
+		record["name"] = check.Attrs.Name
+		record["status"] = check.Attrs.State
 
-		tags["display_name"] = item.Attrs.DisplayName
-		tags["check_command"] = item.Attrs.CheckCommand
+		tags["display_name"] = check.Attrs.DisplayName
+		tags["check_command"] = check.Attrs.CheckCommand
 
 		acc.AddFields("icinga2_services_status", record, tags)
 	}
