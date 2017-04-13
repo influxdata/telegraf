@@ -168,6 +168,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(values) == 0 {
+		log.Printf("D! Grok no match found for: %q", line)
 		return nil, nil
 	}
 
