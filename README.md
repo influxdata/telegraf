@@ -43,7 +43,7 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
 which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.7+.
+if you don't have it already. You also must build with golang version 1.8+.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
@@ -97,12 +97,14 @@ configuration options.
 
 ## Input Plugins
 
-* [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [aerospike](./plugins/inputs/aerospike)
+* [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
+* [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)
+* [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
 * [consul](./plugins/inputs/consul)
 * [conntrack](./plugins/inputs/conntrack)
@@ -172,6 +174,7 @@ configuration options.
     * processes
     * kernel (/proc/stat)
     * kernel (/proc/vmstat)
+    * linux_sysctl_fs (/proc/sys/fs)
 
 Telegraf can also collect metrics via the following service plugins:
 
@@ -192,6 +195,16 @@ Telegraf can also collect metrics via the following service plugins:
   * [mandrill](./plugins/inputs/webhooks/mandrill)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
 
+Telegraf is able to parse the following input data formats into metrics, these
+formats may be used with input plugins supporting the `data_format` option:
+
+* [InfluxDB Line Protocol](./docs/DATA_FORMATS_INPUT.md#influx)
+* [JSON](./docs/DATA_FORMATS_INPUT.md#json)
+* [Graphite](./docs/DATA_FORMATS_INPUT.md#graphite)
+* [Value](./docs/DATA_FORMATS_INPUT.md#value)
+* [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
+* [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
+
 ## Processor Plugins
 
 * [printer](./plugins/processors/printer)
@@ -209,6 +222,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
+* [elasticsearch](./plugins/outputs/elasticsearch)
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)

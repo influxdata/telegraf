@@ -40,6 +40,7 @@ type AMQP struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
+	conn    *amqp.Connection
 	channel *amqp.Channel
 	sync.Mutex
 	headers amqp.Table
@@ -68,6 +69,8 @@ var sampleConfig = `
   ## AMQP exchange
   exchange = "telegraf"
   ## Auth method. PLAIN and EXTERNAL are supported
+  ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
+  ## described here: https://www.rabbitmq.com/plugins.html
   # auth_method = "PLAIN"
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, it's value will be used as the routing key
@@ -129,6 +132,8 @@ func (q *AMQP) Connect() error {
 	if err != nil {
 		return err
 	}
+	q.conn = connection
+
 	channel, err := connection.Channel()
 	if err != nil {
 		return fmt.Errorf("Failed to open a channel: %s", err)
@@ -148,7 +153,11 @@ func (q *AMQP) Connect() error {
 	}
 	q.channel = channel
 	go func() {
-		log.Printf("I! Closing: %s", <-connection.NotifyClose(make(chan *amqp.Error)))
+		err := <-connection.NotifyClose(make(chan *amqp.Error))
+		if err == nil {
+			return
+		}
+		log.Printf("I! Closing: %s", err)
 		log.Printf("I! Trying to reconnect")
 		for err := q.Connect(); err != nil; err = q.Connect() {
 			log.Println("E! ", err.Error())
@@ -160,7 +169,12 @@ func (q *AMQP) Connect() error {
 }
 
 func (q *AMQP) Close() error {
-	return q.channel.Close()
+	err := q.conn.Close()
+	if err != nil && err != amqp.ErrClosed {
+		log.Printf("E! Error closing AMQP connection: %s", err)
+		return err
+	}
+	return nil
 }
 
 func (q *AMQP) SampleConfig() string {
@@ -207,7 +221,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 				Body:        buf,
 			})
 		if err != nil {
-			return fmt.Errorf("FAILED to send amqp message: %s", err)
+			return fmt.Errorf("Failed to send AMQP message: %s", err)
 		}
 	}
 	return nil

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -40,10 +41,21 @@ const (
 )
 
 func Parse(buf []byte) ([]telegraf.Metric, error) {
-	return ParseWithDefaultTime(buf, time.Now())
+	return ParseWithDefaultTimePrecision(buf, time.Now(), "")
 }
 
 func ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
+	return ParseWithDefaultTimePrecision(buf, t, "")
+}
+
+func ParseWithDefaultTimePrecision(
+	buf []byte,
+	t time.Time,
+	precision string,
+) ([]telegraf.Metric, error) {
+	if len(buf) == 0 {
+		return []telegraf.Metric{}, nil
+	}
 	if len(buf) <= 6 {
 		return []telegraf.Metric{}, makeError("buffer too short", buf, 0)
 	}
@@ -60,7 +72,7 @@ func ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
 			continue
 		}
 
-		m, err := parseMetric(buf[i:i+j], t)
+		m, err := parseMetric(buf[i:i+j], t, precision)
 		if err != nil {
 			i += j + 1 // increment i past the previous newline
 			errStr += " " + err.Error()
@@ -77,7 +89,10 @@ func ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func parseMetric(buf []byte, defaultTime time.Time) (telegraf.Metric, error) {
+func parseMetric(buf []byte,
+	defaultTime time.Time,
+	precision string,
+) (telegraf.Metric, error) {
 	var dTime string
 	// scan the first block which is measurement[,tag1=value1,tag2=value=2...]
 	pos, key, err := scanKey(buf, 0)
@@ -111,9 +126,23 @@ func parseMetric(buf []byte, defaultTime time.Time) (telegraf.Metric, error) {
 		return nil, err
 	}
 
+	// apply precision multiplier
+	var nsec int64
+	multiplier := getPrecisionMultiplier(precision)
+	if multiplier > 1 {
+		tsint, err := parseIntBytes(ts, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		nsec := multiplier * tsint
+		ts = []byte(strconv.FormatInt(nsec, 10))
+	}
+
 	m := &metric{
 		fields: fields,
 		t:      ts,
+		nsec:   nsec,
 	}
 
 	// parse out the measurement name
@@ -624,4 +653,22 @@ func skipWhitespace(buf []byte, i int) int {
 func makeError(reason string, buf []byte, i int) error {
 	return fmt.Errorf("metric parsing error, reason: [%s], buffer: [%s], index: [%d]",
 		reason, buf, i)
+}
+
+// getPrecisionMultiplier will return a multiplier for the precision specified.
+func getPrecisionMultiplier(precision string) int64 {
+	d := time.Nanosecond
+	switch precision {
+	case "u":
+		d = time.Microsecond
+	case "ms":
+		d = time.Millisecond
+	case "s":
+		d = time.Second
+	case "m":
+		d = time.Minute
+	case "h":
+		d = time.Hour
+	}
+	return int64(d)
 }

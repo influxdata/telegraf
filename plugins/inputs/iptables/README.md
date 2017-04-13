@@ -2,7 +2,11 @@
 
 The iptables plugin gathers packets and bytes counters for rules within a set of table and chain from the Linux's iptables firewall.
 
-Rules are identified through associated comment. Rules without comment are ignored.
+Rules are identified through associated comment. **Rules without comment are ignored**.
+Indeed we need a unique ID for the rule and the rule number is not a constant: it may vary when rules are inserted/deleted at start-up or by automatic tools (interactive firewalls, fail2ban, ...).
+Also when the rule set is becoming big (hundreds of lines) most people are interested in monitoring only a small part of the rule set.
+
+Before using this plugin **you must ensure that the rules you want to monitor are named with a unique comment**. Comments are added using the `-m comment --comment "my comment"` iptables options.
 
 The iptables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities. You have several options to grant telegraf to run iptables:
 

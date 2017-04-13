@@ -1,6 +1,7 @@
-package system
+package docker
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,32 +12,72 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-
-	"github.com/docker/engine-api/client"
-	"github.com/docker/engine-api/types"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+type DockerLabelFilter struct {
+	labelInclude filter.Filter
+	labelExclude filter.Filter
+}
 
 // Docker object
 type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 	Timeout        internal.Duration
-	PerDevice      bool `toml:"perdevice"`
-	Total          bool `toml:"total"`
+	PerDevice      bool     `toml:"perdevice"`
+	Total          bool     `toml:"total"`
+	LabelInclude   []string `toml:"docker_label_include"`
+	LabelExclude   []string `toml:"docker_label_exclude"`
 
-	client      DockerClient
+	LabelFilter DockerLabelFilter
+
+	client      *client.Client
 	engine_host string
+
+	testing             bool
+	labelFiltersCreated bool
 }
 
-// DockerClient interface, useful for testing
-type DockerClient interface {
-	Info(ctx context.Context) (types.Info, error)
-	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
-	ContainerStats(ctx context.Context, containerID string, stream bool) (io.ReadCloser, error)
+// infoWrapper wraps client.Client.List for testing.
+func infoWrapper(c *client.Client, ctx context.Context) (types.Info, error) {
+	if c != nil {
+		return c.Info(ctx)
+	}
+	fc := FakeDockerClient{}
+	return fc.Info(ctx)
+}
+
+// listWrapper wraps client.Client.ContainerList for testing.
+func listWrapper(
+	c *client.Client,
+	ctx context.Context,
+	options types.ContainerListOptions,
+) ([]types.Container, error) {
+	if c != nil {
+		return c.ContainerList(ctx, options)
+	}
+	fc := FakeDockerClient{}
+	return fc.ContainerList(ctx, options)
+}
+
+// statsWrapper wraps client.Client.ContainerStats for testing.
+func statsWrapper(
+	c *client.Client,
+	ctx context.Context,
+	containerID string,
+	stream bool,
+) (types.ContainerStats, error) {
+	if c != nil {
+		return c.ContainerStats(ctx, containerID, stream)
+	}
+	fc := FakeDockerClient{}
+	return fc.ContainerStats(ctx, containerID, stream)
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -68,6 +109,10 @@ var sampleConfig = `
   ## Whether to report for each container total blkio and network stats or not
   total = false
 
+  ## docker labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  docker_label_include = []
+  docker_label_exclude = []
 `
 
 // Description returns input description
@@ -80,7 +125,7 @@ func (d *Docker) SampleConfig() string { return sampleConfig }
 
 // Gather starts stats collection
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
-	if d.client == nil {
+	if d.client == nil && !d.testing {
 		var c *client.Client
 		var err error
 		defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
@@ -102,6 +147,14 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 		d.client = c
 	}
+	// Create label filters if not already created
+	if !d.labelFiltersCreated {
+		err := d.createLabelFilters()
+		if err != nil {
+			return err
+		}
+		d.labelFiltersCreated = true
+	}
 
 	// Get daemon info
 	err := d.gatherInfo(acc)
@@ -113,7 +166,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	opts := types.ContainerListOptions{}
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	containers, err := d.client.ContainerList(ctx, opts)
+	containers, err := listWrapper(d.client, ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -144,7 +197,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	// Get info from docker daemon
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	info, err := d.client.Info(ctx)
+	info, err := infoWrapper(d.client, ctx)
 	if err != nil {
 		return err
 	}
@@ -247,12 +300,12 @@ func (d *Docker) gatherContainer(
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	r, err := d.client.ContainerStats(ctx, container.ID, false)
+	r, err := statsWrapper(d.client, ctx, container.ID, false)
 	if err != nil {
 		return fmt.Errorf("Error getting docker stats: %s", err.Error())
 	}
-	defer r.Close()
-	dec := json.NewDecoder(r)
+	defer r.Body.Close()
+	dec := json.NewDecoder(r.Body)
 	if err = dec.Decode(&v); err != nil {
 		if err == io.EOF {
 			return nil
@@ -262,7 +315,11 @@ func (d *Docker) gatherContainer(
 
 	// Add labels to tags
 	for k, label := range container.Labels {
-		tags[k] = label
+		if len(d.LabelInclude) == 0 || d.LabelFilter.labelInclude.Match(k) {
+			if len(d.LabelExclude) == 0 || !d.LabelFilter.labelExclude.Match(k) {
+				tags[k] = label
+			}
+		}
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
@@ -568,11 +625,32 @@ func parseSize(sizeStr string) (int64, error) {
 	return int64(size), nil
 }
 
+func (d *Docker) createLabelFilters() error {
+	if len(d.LabelInclude) != 0 && d.LabelFilter.labelInclude == nil {
+		var err error
+		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(d.LabelExclude) != 0 && d.LabelFilter.labelExclude == nil {
+		var err error
+		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			PerDevice: true,
-			Timeout:   internal.Duration{Duration: time.Second * 5},
+			PerDevice:           true,
+			Timeout:             internal.Duration{Duration: time.Second * 5},
+			labelFiltersCreated: false,
 		}
 	})
 }

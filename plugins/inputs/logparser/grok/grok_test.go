@@ -57,6 +57,43 @@ func Benchmark_ParseLine_CustomPattern(b *testing.B) {
 	benchM = m
 }
 
+// Test a very simple parse pattern.
+func TestSimpleParse(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TESTLOG}"},
+		CustomPatterns: `
+			TESTLOG %{NUMBER:num:int} %{WORD:client}
+		`,
+	}
+	assert.NoError(t, p.Compile())
+
+	m, err := p.ParseLine(`142 bot`)
+	assert.NoError(t, err)
+	require.NotNil(t, m)
+
+	assert.Equal(t,
+		map[string]interface{}{
+			"num":    int64(142),
+			"client": "bot",
+		},
+		m.Fields())
+}
+
+// Verify that patterns with a regex lookahead fail at compile time.
+func TestParsePatternsWithLookahead(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{MYLOG}"},
+		CustomPatterns: `
+			NOBOT ((?!bot|crawl).)*
+			MYLOG %{NUMBER:num:int} %{NOBOT:client}
+		`,
+	}
+	assert.NoError(t, p.Compile())
+
+	_, err := p.ParseLine(`1466004605359052000 bot`)
+	assert.Error(t, err)
+}
+
 func TestMeasurementName(t *testing.T) {
 	p := &Parser{
 		Measurement: "my_web_log",
@@ -649,4 +686,24 @@ func TestTsModder_Rollover(t *testing.T) {
 		modt = tsm.tsMod(reftime)
 	}
 	assert.Equal(t, reftime.Add(time.Nanosecond*1000), modt)
+}
+
+func TestShortPatternRegression(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TS_UNIX:timestamp:ts-unix} %{NUMBER:value:int}"},
+		CustomPatterns: `
+		  TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
+		`,
+	}
+	require.NoError(t, p.Compile())
+
+	metric, err := p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`)
+	require.NoError(t, err)
+	require.NotNil(t, metric)
+
+	require.Equal(t,
+		map[string]interface{}{
+			"value": int64(42),
+		},
+		metric.Fields())
 }

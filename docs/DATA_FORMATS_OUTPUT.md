@@ -147,4 +147,14 @@ The JSON data format serialized Telegraf metrics in json format. The format is:
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "json"
+  json_timestamp_units = "1ns"
 ```
+
+By default, the timestamp that is output in JSON data format serialized Telegraf
+metrics is in seconds. The precision of this timestamp can be adjusted for any output
+by adding the optional `json_timestamp_units` parameter to the configuration for
+that output. This parameter can be used to set the timestamp units to  nanoseconds (`ns`),
+microseconds (`us` or `µs`), milliseconds (`ms`), or seconds (`s`). Note that this
+parameter will be truncated to the nearest power of 10 that, so if the `json_timestamp_units`
+are set to `15ms` the timestamps for the JSON format serialized Telegraf metrics will be
+output in hundredths of a second (`10ms`).

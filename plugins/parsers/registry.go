@@ -5,6 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -53,6 +54,13 @@ type Config struct {
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
 
+	// Authentication file for collectd
+	CollectdAuthFile string
+	// One of none (default), sign, or encrypt
+	CollectdSecurityLevel string
+	// Dataset specification for collectd
+	CollectdTypesDB []string
+
 	// DataType only applies to value, this will be the type to parse value to
 	DataType string
 
@@ -78,6 +86,9 @@ func NewParser(config *Config) (Parser, error) {
 	case "graphite":
 		parser, err = NewGraphiteParser(config.Separator,
 			config.Templates, config.DefaultTags)
+	case "collectd":
+		parser, err = NewCollectdParser(config.CollectdAuthFile,
+			config.CollectdSecurityLevel, config.CollectdTypesDB)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -123,4 +134,12 @@ func NewValueParser(
 		DataType:    dataType,
 		DefaultTags: defaultTags,
 	}, nil
+}
+
+func NewCollectdParser(
+	authFile string,
+	securityLevel string,
+	typesDB []string,
+) (Parser, error) {
+	return collectd.NewCollectdParser(authFile, securityLevel, typesDB)
 }
