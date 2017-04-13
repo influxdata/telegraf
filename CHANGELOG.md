@@ -63,9 +63,15 @@ be deprecated eventually.
 - [#2332](https://github.com/influxdata/telegraf/pull/2332): Add Elasticsearch 5.x output
 - [#2587](https://github.com/influxdata/telegraf/pull/2587): Add json timestamp units configurability
 - [#2597](https://github.com/influxdata/telegraf/issues/2597): Add support for Linux sysctl-fs metrics.
+- [#2425](https://github.com/influxdata/telegraf/pull/2425): Support to include/exclude docker container labels as tags
+- [#1667](https://github.com/influxdata/telegraf/pull/1667): dmcache input plugin
+- [#2637](https://github.com/influxdata/telegraf/issues/2637): Add support for precision in http_listener
+- [#2636](https://github.com/influxdata/telegraf/pull/2636): Add `message_len_max` option to `kafka_consumer` input
+- [#1100](https://github.com/influxdata/telegraf/issues/1100): Add collectd parser
 
 ### Bugfixes
 
+- [#2633](https://github.com/influxdata/telegraf/pull/2633): ipmi_sensor: allow @ symbol in password
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
 - [#2318](https://github.com/influxdata/telegraf/issues/2318): haproxy input - Add missing fields.
@@ -91,7 +97,9 @@ be deprecated eventually.
 - [#2576](https://github.com/influxdata/telegraf/pull/2576): Add write timeout to Riemann output
 - [#2596](https://github.com/influxdata/telegraf/pull/2596): fix timestamp parsing on prometheus plugin
 - [#2610](https://github.com/influxdata/telegraf/pull/2610): Fix deadlock when output cannot write
-
+- [#2410](https://github.com/influxdata/telegraf/issues/2410): Fix connection leak in postgresql.
+- [#2628](https://github.com/influxdata/telegraf/issues/2628): Set default measurement name for snmp input.
+- [#2649](https://github.com/influxdata/telegraf/pull/2649): Improve performance of diskio with many disks
 
 ## v1.2.1 [2017-02-01]
 

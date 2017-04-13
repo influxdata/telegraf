@@ -44,6 +44,7 @@ func TestSocketWriter_udp(t *testing.T) {
 }
 
 func TestSocketWriter_unix(t *testing.T) {
+	os.Remove("/tmp/telegraf_test.sock")
 	defer os.Remove("/tmp/telegraf_test.sock")
 	listener, err := net.Listen("unix", "/tmp/telegraf_test.sock")
 	require.NoError(t, err)
@@ -61,6 +62,7 @@ func TestSocketWriter_unix(t *testing.T) {
 }
 
 func TestSocketWriter_unixgram(t *testing.T) {
+	os.Remove("/tmp/telegraf_test.sock")
 	defer os.Remove("/tmp/telegraf_test.sock")
 	listener, err := net.ListenPacket("unixgram", "/tmp/telegraf_test.sock")
 	require.NoError(t, err)

@@ -314,6 +314,7 @@ func Errorf(err error, msg string, format ...interface{}) error {
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{
+			Name:           "snmp",
 			Retries:        3,
 			MaxRepetitions: 10,
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
