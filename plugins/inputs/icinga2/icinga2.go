@@ -36,11 +36,6 @@ type Attribute struct {
 	State        float32 `json:"state"`
 }
 
-const (
-	SERVICE = "Service"
-	HOST    = "Host"
-)
-
 type ObjectType string
 
 var sampleConfig = `
@@ -62,7 +57,31 @@ func (s *Icinga2) SampleConfig() string {
 	return sampleConfig
 }
 
+func (s *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
+	for _, check := range checks {
+		record := make(map[string]interface{})
+		tags := make(map[string]string)
+
+		record["name"] = check.Attrs.Name
+		record["status"] = check.Attrs.State
+
+		tags["display_name"] = check.Attrs.DisplayName
+		tags["check_command"] = check.Attrs.CheckCommand
+
+		acc.AddFields(fmt.Sprintf("icinga2_%s_status", s.Filter), record, tags)
+	}
+}
+
 func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
+
+	if s.Server == "" {
+		s.Server = "https://localhost:5665"
+	}
+
+	if s.Filter == "" {
+		s.Filter = "services"
+	}
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -94,18 +113,7 @@ func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	for _, check := range result.Results {
-		record := make(map[string]interface{})
-		tags := make(map[string]string)
-
-		record["name"] = check.Attrs.Name
-		record["status"] = check.Attrs.State
-
-		tags["display_name"] = check.Attrs.DisplayName
-		tags["check_command"] = check.Attrs.CheckCommand
-
-		acc.AddFields(fmt.Sprintf("icinga2_%s_status", s.Filter), record, tags)
-	}
+	s.GatherStatus(acc, result.Results)
 
 	return nil
 }
