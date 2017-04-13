@@ -3,6 +3,8 @@ package interrupts
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -15,7 +17,18 @@ LOC: 2338608687 2334309625   Local timer interrupts
 MIS:          0
 NET_RX:     867028		225
 TASKLET:	205			0`
+	tmpfile, err := ioutil.TempFile("", "interrupts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
 
+	if _, err := tmpfile.Write([]byte(interruptStr)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
 	parsed := []IRQ{
 		IRQ{
 			ID: "0", Type: "IO-APIC-edge", Device: "timer",
@@ -46,7 +59,7 @@ TASKLET:	205			0`
 			Total: int64(205),
 		},
 	}
-	got, err := parseInterrupts(interruptStr)
+	got, err := parseInterrupts(tmpfile.Name())
 	require.Equal(t, nil, err)
 	require.NotEqual(t, 0, len(got))
 	require.Equal(t, len(got), len(parsed))
