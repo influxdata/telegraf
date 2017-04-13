@@ -2,14 +2,22 @@
 
 This plugin gather services & hosts status using Icinga2 Remote API.
 
+The icinga2 plugin uses the icinga2 remote API to gather status on running
+services and hosts. You can read Icinga2's documentation for their remote API
+[here](https://docs.icinga.com/icinga2/latest/doc/module/icinga2/chapter/icinga2-api)
+
 ### Configuration:
 
 ```toml
 # Description
 [[inputs.icinga2]]
+    ## Icing2 Endpoint
     server = "https://127.0.0.1:5665"
+    ## Required Icinga2 object type ("services" or "hosts, default "services")
     filter = "services"
+    ## Required username used for request HTTP Basic Authentication (default: "")
     username = "root"
+    ## Required password used for HTTP Basic Authentication (default: "")
     password = "icinga"
 ```
 
@@ -22,7 +30,7 @@ This plugin gather services & hosts status using Icinga2 Remote API.
 ### Tags:
 
 - All measurements have the following tags:
-    - check_command (optional description)
+    - check_command
     - display_name
 
 ### Sample Queries:
@@ -40,34 +48,3 @@ SELECT * FROM "icinga2_services_status" WHERE status = 3 AND time > now() - 24h 
 $ ./telegraf -config telegraf.conf -input-filter icinga2 -test
 icinga2_hosts_status,display_name=router-fr.eqx.fr,check_command=hostalive-custom,host=test-vm name="router-fr.eqx.fr",status=0 1492021603000000000
 ```
-
-
-
-[
-  {
-    "attrs": {
-      "check_command": "check-bgp-juniper-netconf",
-      "display_name": "tsh-core1.intercloud.fr - VRF-CSP-GOOGLE--TSH.inet6.0",
-      "last_check": 1491827091.4058940411,
-      "name": "ef017af8-c684-4f3f-bb20-0dfe9fcd3dbe",
-      "state": 0
-    },
-    "joins": {},
-    "meta": {},
-    "name": "tsh-core1.intercloud.fr!ef017af8-c684-4f3f-bb20-0dfe9fcd3dbe",
-    "type": "Service"
-  },
-  {
-    "attrs": {
-      "check_command": "hostalive-custom",
-      "display_name": "cpe-mgmt1.intercloud-test-dev.fr-vty.intercloud.fr",
-      "last_check": 1491827181.4462339878,
-      "name": "1bc2c4b7-6523-4d4d-a8ce-45a357ccd700",
-      "state": 0
-    },
-    "joins": {},
-    "meta": {},
-    "name": "1bc2c4b7-6523-4d4d-a8ce-45a357ccd700",
-    "type": "Host"
-  }
-]
