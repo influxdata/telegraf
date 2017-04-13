@@ -39,34 +39,26 @@ regex patterns.
 
 ### Grok Parser
 
-The grok parser uses a slightly modified version of logstash "grok" patterns,
-with the format
+The best way to get acquainted with grok patterns is to read the logstash docs,
+which are available here:
+  https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
+
+The Telegraf grok parser uses a slightly modified version of logstash "grok"
+patterns, with the format
 
 ```
 %{<capture_syntax>[:<semantic_name>][:<modifier>]}
 ```
 
-Telegraf has many of it's own
-[built-in patterns](./grok/patterns/influx-patterns),
-as well as supporting
-[logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
-
-
-The best way to get acquainted with grok patterns is to read the logstash docs,
-which are available here:
-  https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
-
-
-If you need help building patterns to match your logs,
-you will find the https://grokdebug.herokuapp.com application quite useful!
-
+The `capture_syntax` defines the grok pattern that used to parse the input
+line and the `semantic_name` is used to name the field or tag.  The extention
+`modifier` controls the data type that the parsed item is converted to or
+other special handling.
 
 By default all named captures are converted into string fields.
-Modifiers can be used to convert captures to other types or tags.
 Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will created using the
 current time.
-
 
 - Available modifiers:
   - string   (default if nothing is specified)
@@ -92,10 +84,17 @@ current time.
   - ts-epochnano     (nanoseconds since unix epoch)
   - ts-"CUSTOM"
 
-
 CUSTOM time layouts must be within quotes and be the representation of the
 "reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`
 See https://golang.org/pkg/time/#Parse for more details.
+
+Telegraf has many of it's own
+[built-in patterns](./grok/patterns/influx-patterns),
+as well as supporting
+[logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
+
+If you need help building patterns to match your logs,
+you will find the https://grokdebug.herokuapp.com application quite useful!
 
 #### Timestamp Examples
 
