@@ -687,3 +687,23 @@ func TestTsModder_Rollover(t *testing.T) {
 	}
 	assert.Equal(t, reftime.Add(time.Nanosecond*1000), modt)
 }
+
+func TestShortPatternRegression(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TS_UNIX:timestamp:ts-unix} %{NUMBER:value:int}"},
+		CustomPatterns: `
+		  TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
+		`,
+	}
+	require.NoError(t, p.Compile())
+
+	metric, err := p.ParseLine(`Wed Apr 12 13:10:34 PST 2017 42`)
+	require.NoError(t, err)
+	require.NotNil(t, metric)
+
+	require.Equal(t,
+		map[string]interface{}{
+			"value": int64(42),
+		},
+		metric.Fields())
+}
