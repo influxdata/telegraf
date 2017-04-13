@@ -29,9 +29,7 @@ func TestOpenldapMockResult(t *testing.T) {
 		Port: 389,
 	}
 
-	err := gatherSearchResult(&mockSearchResult, o, &acc)
-
-	require.NoError(t, err)
+	gatherSearchResult(&mockSearchResult, o, &acc)
 	commonTests(t, o, &acc)
 }
 

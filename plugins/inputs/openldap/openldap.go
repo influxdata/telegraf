@@ -112,7 +112,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumulator) error {
+func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
 		"server": o.Host,
@@ -129,7 +129,7 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 		}
 	}
 	acc.AddFields("openldap", fields, tags)
-	return nil
+	return
 }
 
 // Convert a DN to metric name, eg cn=Read,cn=Waiters,cn=Monitor to read_waiters
