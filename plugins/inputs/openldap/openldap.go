@@ -122,7 +122,7 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 		metricName := dnToMetric(entry.DN, searchBase)
 		for _, attr := range entry.Attributes {
 			if len(attr.Values[0]) >= 1 {
-				if v, err := strconv.ParseFloat(attr.Values[0], 64); err == nil {
+				if v, err := strconv.ParseInt(attr.Values[0], 10, 64); err == nil {
 					fields[metricName+attrTranslate[attr.Name]] = v
 				}
 			}
