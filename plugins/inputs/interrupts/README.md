@@ -1,10 +1,10 @@
-# irqstat Input Plugin
+# Interrupts Input Plugin
 
-The irqstat plugin gathers metrics about IRQs from `/proc/interrupts` and `/proc/softirqs`.
+The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and `/proc/softirqs`.
 
 ### Configuration
 ```
-[[inputs.irqstat]]
+[[inputs.interrupts]]
   ## A list of IRQs to include for metric ingestion, if not specified
   ## will default to collecting all IRQs.
   include = ["0", "1", "30", "NET_RX"]
@@ -26,8 +26,8 @@ There are two measurements reported by this plugin.
 
 ### Example Output
 ```
-./telegraf -config ~/irqstat_config.conf -test
-* Plugin: inputs.irqstat, Collection 1
+./telegraf -config ~/interrupts_config.conf -test
+* Plugin: inputs.interrupts, Collection 1
 > interrupts,irq=0,type=IO-APIC,device=2-edge\ timer,host=hostname CPU0=23i,total=23i 1489346531000000000
 > interrupts,irq=1,host=hostname,type=IO-APIC,device=1-edge\ i8042 CPU0=9i,total=9i 1489346531000000000
 > interrupts,irq=30,type=PCI-MSI,device=65537-edge\ virtio1-input.0,host=hostname CPU0=1i,total=1i 1489346531000000000
