@@ -174,6 +174,7 @@ configuration options.
     * processes
     * kernel (/proc/stat)
     * kernel (/proc/vmstat)
+    * linux_sysctl_fs (/proc/sys/fs)
 
 Telegraf can also collect metrics via the following service plugins:
 
@@ -194,6 +195,16 @@ Telegraf can also collect metrics via the following service plugins:
   * [mandrill](./plugins/inputs/webhooks/mandrill)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
 
+Telegraf is able to parse the following input data formats into metrics, these
+formats may be used with input plugins supporting the `data_format` option:
+
+* [InfluxDB Line Protocol](./docs/DATA_FORMATS_INPUT.md#influx)
+* [JSON](./docs/DATA_FORMATS_INPUT.md#json)
+* [Graphite](./docs/DATA_FORMATS_INPUT.md#graphite)
+* [Value](./docs/DATA_FORMATS_INPUT.md#value)
+* [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
+* [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
+
 ## Processor Plugins
 
 * [printer](./plugins/processors/printer)
@@ -211,6 +222,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
+* [elasticsearch](./plugins/outputs/elasticsearch)
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)

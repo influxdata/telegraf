@@ -17,7 +17,7 @@ type PS interface {
 	DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error)
 	NetIO() ([]net.IOCountersStat, error)
 	NetProto() ([]net.ProtoCountersStat, error)
-	DiskIO() (map[string]disk.IOCountersStat, error)
+	DiskIO(names []string) (map[string]disk.IOCountersStat, error)
 	VMStat() (*mem.VirtualMemoryStat, error)
 	SwapStat() (*mem.SwapMemoryStat, error)
 	NetConnections() ([]net.ConnectionStat, error)
@@ -120,8 +120,8 @@ func (s *systemPS) NetConnections() ([]net.ConnectionStat, error) {
 	return net.Connections("all")
 }
 
-func (s *systemPS) DiskIO() (map[string]disk.IOCountersStat, error) {
-	m, err := disk.IOCounters()
+func (s *systemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
+	m, err := disk.IOCountersForNames(names)
 	if err == internal.NotImplementedError {
 		return nil, nil
 	}

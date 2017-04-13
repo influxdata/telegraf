@@ -58,7 +58,7 @@ func TestGather(t *testing.T) {
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
-		RateLimit: 10,
+		RateLimit: 200,
 	}
 
 	var acc testutil.Accumulator
@@ -146,7 +146,7 @@ func TestSelectMetrics(t *testing.T) {
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
-		RateLimit: 10,
+		RateLimit: 200,
 		Metrics: []*Metric{
 			&Metric{
 				MetricNames: []string{"Latency", "RequestCount"},
@@ -207,14 +207,13 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 }
 
 func TestMetricsCacheTimeout(t *testing.T) {
-	ttl, _ := time.ParseDuration("5ms")
 	cache := &MetricCache{
 		Metrics: []*cloudwatch.Metric{},
 		Fetched: time.Now(),
-		TTL:     ttl,
+		TTL:     time.Minute,
 	}
 
 	assert.True(t, cache.IsValid())
-	time.Sleep(ttl)
+	cache.Fetched = time.Now().Add(-time.Minute)
 	assert.False(t, cache.IsValid())
 }

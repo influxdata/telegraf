@@ -14,24 +14,34 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+type DockerLabelFilter struct {
+	labelInclude filter.Filter
+	labelExclude filter.Filter
+}
 
 // Docker object
 type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 	Timeout        internal.Duration
-	PerDevice      bool `toml:"perdevice"`
-	Total          bool `toml:"total"`
+	PerDevice      bool     `toml:"perdevice"`
+	Total          bool     `toml:"total"`
+	LabelInclude   []string `toml:"docker_label_include"`
+	LabelExclude   []string `toml:"docker_label_exclude"`
+
+	LabelFilter DockerLabelFilter
 
 	client      *client.Client
 	engine_host string
 
-	testing bool
+	testing             bool
+	labelFiltersCreated bool
 }
 
 // infoWrapper wraps client.Client.List for testing.
@@ -99,6 +109,10 @@ var sampleConfig = `
   ## Whether to report for each container total blkio and network stats or not
   total = false
 
+  ## docker labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  docker_label_include = []
+  docker_label_exclude = []
 `
 
 // Description returns input description
@@ -132,6 +146,14 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 		d.client = c
+	}
+	// Create label filters if not already created
+	if !d.labelFiltersCreated {
+		err := d.createLabelFilters()
+		if err != nil {
+			return err
+		}
+		d.labelFiltersCreated = true
 	}
 
 	// Get daemon info
@@ -293,7 +315,11 @@ func (d *Docker) gatherContainer(
 
 	// Add labels to tags
 	for k, label := range container.Labels {
-		tags[k] = label
+		if len(d.LabelInclude) == 0 || d.LabelFilter.labelInclude.Match(k) {
+			if len(d.LabelExclude) == 0 || !d.LabelFilter.labelExclude.Match(k) {
+				tags[k] = label
+			}
+		}
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
@@ -599,11 +625,32 @@ func parseSize(sizeStr string) (int64, error) {
 	return int64(size), nil
 }
 
+func (d *Docker) createLabelFilters() error {
+	if len(d.LabelInclude) != 0 && d.LabelFilter.labelInclude == nil {
+		var err error
+		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(d.LabelExclude) != 0 && d.LabelFilter.labelExclude == nil {
+		var err error
+		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			PerDevice: true,
-			Timeout:   internal.Duration{Duration: time.Second * 5},
+			PerDevice:           true,
+			Timeout:             internal.Duration{Duration: time.Second * 5},
+			labelFiltersCreated: false,
 		}
 	})
 }

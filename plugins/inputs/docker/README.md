@@ -30,6 +30,12 @@ for the stat structure can be found
   perdevice = true
   ## Whether to report for each container total blkio and network stats or not
   total = false
+  
+  ## docker labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  docker_label_include = []
+  docker_label_exclude = []
+  
 ```
 
 ### Measurements & Fields:
@@ -130,30 +136,32 @@ based on the availability of per-cpu stats on your system.
 
 
 ### Tags:
-
+#### Docker Engine tags
 - docker (memory_total)
     - unit=bytes
+    - engine_host
 - docker (pool_blocksize)
     - unit=bytes
+    - engine_host
 - docker_data
     - unit=bytes
+    - engine_host
 - docker_metadata
     - unit=bytes
+    - engine_host
 
+#### Docker Container tags
+- Tags on all containers:
+    - engine_host
+    - container_image
+    - container_name
+    - container_version
 - docker_container_mem specific:
-    - container_image
-    - container_name
 - docker_container_cpu specific:
-    - container_image
-    - container_name
     - cpu
 - docker_container_net specific:
-    - container_image
-    - container_name
     - network
 - docker_container_blkio specific:
-    - container_image
-    - container_name
     - device
 
 ### Example Output:
