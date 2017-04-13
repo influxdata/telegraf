@@ -83,43 +83,52 @@ func parseInterrupts(irqdata string) ([]IRQ, error) {
 	return irqs, nil
 }
 
+func fileToString(path string) (string, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	content := string(data)
+	return content, nil
+}
+
+func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
+	tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device}
+	fields := map[string]interface{}{"total": irq.Total}
+	for i := 0; i < len(irq.Cpus); i++ {
+		cpu := fmt.Sprintf("CPU%d", i)
+		fields[cpu] = irq.Cpus[i]
+	}
+	return tags, fields
+}
+
 func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
-	data, err := ioutil.ReadFile("/proc/interrupts")
+	irqdata, err := fileToString("/proc/interrupts")
 	if err != nil {
 		acc.AddError(fmt.Errorf("Reading %s: %s", "/proc/interrupts", err))
 	}
-	irqdata := string(data)
 	irqs, err := parseInterrupts(irqdata)
 	if err != nil {
 		acc.AddError(fmt.Errorf("Parsing %s: %s", "/proc/interrupts", err))
-	}
-	for _, irq := range irqs {
-		tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device}
-		fields := map[string]interface{}{"total": irq.Total}
-		for i := 0; i < len(irq.Cpus); i++ {
-			cpu := fmt.Sprintf("CPU%d", i)
-			fields[cpu] = irq.Cpus[i]
+	} else {
+		for _, irq := range irqs {
+			tags, fields := gatherTagsFields(irq)
+			acc.AddFields("interrupts", fields, tags)
 		}
-		acc.AddFields("interrupts", fields, tags)
 	}
 
-	data, err = ioutil.ReadFile("/proc/softirqs")
+	irqdata, err = fileToString("/proc/softirqs")
 	if err != nil {
 		acc.AddError(fmt.Errorf("Reading %s: %s", "/proc/softirqs", err))
 	}
-	irqdata = string(data)
 	irqs, err = parseInterrupts(irqdata)
 	if err != nil {
 		acc.AddError(fmt.Errorf("Parsing %s: %s", "/proc/softirqs", err))
-	}
-	for _, irq := range irqs {
-		tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device}
-		fields := map[string]interface{}{"total": irq.Total}
-		for i := 0; i < len(irq.Cpus); i++ {
-			cpu := fmt.Sprintf("CPU%d", i)
-			fields[cpu] = irq.Cpus[i]
+	} else {
+		for _, irq := range irqs {
+			tags, fields := gatherTagsFields(irq)
+			acc.AddFields("softirqs", fields, tags)
 		}
-		acc.AddFields("soft_interrupts", fields, tags)
 	}
 	return nil
 }
