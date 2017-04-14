@@ -1,4 +1,4 @@
-# Example Input Plugin
+# Telegraf Input Plugin: Icinga2
 
 This plugin gather services & hosts status using Icinga2 Remote API.
 
