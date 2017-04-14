@@ -28,11 +28,11 @@ func TestGatherStatus(t *testing.T) {
 	json.Unmarshal([]byte(s), &checks)
 	records := map[string]interface{}{
 		"name":   "ef017af8-c684-4f3f-bb20-0dfe9fcd3dbe",
-		"status": float32(0)
+		"status": float32(0),
 	}
 	tags := map[string]string{
 		"display_name":  "eq-par.dc2.fr",
-		"check_command": "check-bgp-juniper-netconf"
+		"check_command": "check-bgp-juniper-netconf",
 	}
 
 	var acc testutil.Accumulator
