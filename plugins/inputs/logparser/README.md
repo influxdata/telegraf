@@ -50,14 +50,14 @@ patterns, with the format
 %{<capture_syntax>[:<semantic_name>][:<modifier>]}
 ```
 
-The `capture_syntax` defines the grok pattern that used to parse the input
-line and the `semantic_name` is used to name the field or tag.  The extention
+The `capture_syntax` defines the grok pattern that's used to parse the input
+line and the `semantic_name` is used to name the field or tag.  The extension
 `modifier` controls the data type that the parsed item is converted to or
 other special handling.
 
 By default all named captures are converted into string fields.
 Timestamp modifiers can be used to convert captures to the timestamp of the
-parsed metric.  If no timestamp is parsed the metric will created using the
+parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.
 
 - Available modifiers:
@@ -88,7 +88,7 @@ CUSTOM time layouts must be within quotes and be the representation of the
 "reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`
 See https://golang.org/pkg/time/#Parse for more details.
 
-Telegraf has many of it's own
+Telegraf has many of its own
 [built-in patterns](./grok/patterns/influx-patterns),
 as well as supporting
 [logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
@@ -98,7 +98,7 @@ you will find the https://grokdebug.herokuapp.com application quite useful!
 
 #### Timestamp Examples
 
-This example input and config parses a file using a custom timestamp convertion:
+This example input and config parses a file using a custom timestamp conversion:
 
 ```
 2017-02-21 13:10:34 value=42
@@ -139,7 +139,7 @@ The following config examples will parse this input file:
 |42|\uD83D\uDC2F|'telegraf'|
 ```
 
-Since `|` is a special character in the grok langauge, we must escape it to
+Since `|` is a special character in the grok language, we must escape it to
 get a literal `|`.  With a basic TOML string, special characters such as
 backslash must be escaped, requiring us to escape the backslash a second time.
 
