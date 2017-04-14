@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -38,15 +39,10 @@ func (s *Interrupts) SampleConfig() string {
 	return sampleConfig
 }
 
-func parseInterrupts(irqfile string) ([]IRQ, error) {
+func parseInterrupts(r io.Reader) ([]IRQ, error) {
 	var irqs []IRQ
 	var cpucount int
-	f, err := os.Open(irqfile)
-	if err != nil {
-		return nil, fmt.Errorf("Could not open file: %s", irqfile)
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 	if scanner.Scan() {
 		cpus := strings.Fields(scanner.Text())
 		if cpus[0] != "CPU0" {
@@ -100,15 +96,21 @@ func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
 }
 
 func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
-	for key, file := range map[string]string{"interrupts": "/proc/interrupts", "soft_interrupts": "/proc/softirqs"} {
-		irqs, err := parseInterrupts(file)
+	for measurement, file := range map[string]string{"interrupts": "/proc/interrupts", "soft_interrupts": "/proc/softirqs"} {
+		f, err := os.Open(file)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Could not open file: %s", file))
+			continue
+		}
+		defer f.Close()
+		irqs, err := parseInterrupts(f)
 		if err != nil {
 			acc.AddError(fmt.Errorf("Parsing %s: %s", file, err))
 			continue
 		}
 		for _, irq := range irqs {
 			tags, fields := gatherTagsFields(irq)
-			acc.AddFields(key, fields, tags)
+			acc.AddFields(measurement, fields, tags)
 		}
 	}
 	return nil
