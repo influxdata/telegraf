@@ -94,11 +94,7 @@ func TestErrorHandling(t *testing.T) {
 
 func TestErrorHandling404(t *testing.T) {
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte(basicJSON))
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
+		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer badServer.Close()
 
@@ -111,51 +107,6 @@ func TestErrorHandling404(t *testing.T) {
 	acc.WaitError(1)
 	require.Equal(t, uint64(0), acc.NMetrics())
 }
-
-const basicJSON = `
-{
-  "_1": {
-    "name": "foo",
-    "tags": {
-      "id": "ex1"
-    },
-    "values": {
-      "i": -1,
-      "f": 0.5,
-      "b": true,
-      "s": "string"
-    }
-  },
-  "ignored": {
-    "willBeRecorded": false
-  },
-  "ignoredAndNested": {
-    "hash": {
-      "is": "nested"
-    }
-  },
-  "array": [
-   "makes parsing more difficult than necessary"
-  ],
-  "string": "makes parsing more difficult than necessary",
-  "_2": {
-    "name": "bar",
-    "tags": {
-      "id": "ex2"
-    },
-    "values": {
-      "x": "x"
-    }
-  },
-  "pointWithoutFields_willNotBeIncluded": {
-    "name": "asdf",
-    "tags": {
-      "id": "ex3"
-    },
-    "values": {}
-  }
-}
-`
 
 const kapacitorReturn = `{
 "cluster_id": "aaa1cb78-8277-4886-a8ea-4706bca20842",
