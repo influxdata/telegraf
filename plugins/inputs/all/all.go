@@ -2,6 +2,7 @@ package all
 
 import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/aerospike"
+	_ "github.com/influxdata/telegraf/plugins/inputs/amqp_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/apache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
@@ -15,6 +16,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchbase"
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disque"
+	_ "github.com/influxdata/telegraf/plugins/inputs/dmcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dns_query"
 	_ "github.com/influxdata/telegraf/plugins/inputs/docker"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dovecot"
@@ -28,6 +30,8 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_response"
 	_ "github.com/influxdata/telegraf/plugins/inputs/httpjson"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
+	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
+	_ "github.com/influxdata/telegraf/plugins/inputs/interrupts"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ipmi_sensor"
 	_ "github.com/influxdata/telegraf/plugins/inputs/iptables"
 	_ "github.com/influxdata/telegraf/plugins/inputs/jolokia"
@@ -66,6 +70,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/sensors"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp_legacy"
+	_ "github.com/influxdata/telegraf/plugins/inputs/socket_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
 	_ "github.com/influxdata/telegraf/plugins/inputs/statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sysstat"

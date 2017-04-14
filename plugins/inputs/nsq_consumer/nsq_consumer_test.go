@@ -20,7 +20,7 @@ import (
 // This test is modeled after the kafka consumer integration test
 func TestReadsMetricsFromNSQ(t *testing.T) {
 	msgID := nsq.MessageID{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 's', 'd', 'f', 'g', 'h'}
-	msg := nsq.NewMessage(msgID, []byte("cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257"))
+	msg := nsq.NewMessage(msgID, []byte("cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257\n"))
 
 	script := []instruction{
 		// SUB

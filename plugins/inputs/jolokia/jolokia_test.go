@@ -12,6 +12,37 @@ import (
 	_ "github.com/stretchr/testify/require"
 )
 
+const validThreeLevelMultiValueJSON = `
+{
+  "request":{
+    "mbean":"java.lang:type=*",
+    "type":"read"
+  },
+  "value":{
+		"java.lang:type=Memory":{
+			"ObjectPendingFinalizationCount":0,
+			"Verbose":false,
+			"HeapMemoryUsage":{
+				"init":134217728,
+				"committed":173015040,
+				"max":1908932608,
+				"used":16840016
+			},
+			"NonHeapMemoryUsage":{
+				"init":2555904,
+				"committed":51380224,
+				"max":-1,
+				"used":49944048
+			},
+			"ObjectName":{
+				"objectName":"java.lang:type=Memory"
+			}
+		}
+  },
+  "timestamp":1446129191,
+  "status":200
+}`
+
 const validMultiValueJSON = `
 {
   "request":{
@@ -73,9 +104,10 @@ func (c jolokiaClientStub) MakeRequest(req *http.Request) (*http.Response, error
 //     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
 func genJolokiaClientStub(response string, statusCode int, servers []Server, metrics []Metric) *Jolokia {
 	return &Jolokia{
-		jClient: jolokiaClientStub{responseBody: response, statusCode: statusCode},
-		Servers: servers,
-		Metrics: metrics,
+		jClient:   jolokiaClientStub{responseBody: response, statusCode: statusCode},
+		Servers:   servers,
+		Metrics:   metrics,
+		Delimiter: "_",
 	}
 }
 
@@ -95,6 +127,38 @@ func TestHttpJsonMultiValue(t *testing.T) {
 		"heap_memory_usage_max":       477626368.0,
 		"heap_memory_usage_used":      203288528.0,
 	}
+	tags := map[string]string{
+		"jolokia_host": "127.0.0.1",
+		"jolokia_port": "8080",
+		"jolokia_name": "as1",
+	}
+	acc.AssertContainsTaggedFields(t, "jolokia", fields, tags)
+}
+
+// Test that the proper values are ignored or collected
+func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
+	jolokia := genJolokiaClientStub(validThreeLevelMultiValueJSON, 200, Servers, []Metric{HeapMetric})
+
+	var acc testutil.Accumulator
+	err := jolokia.Gather(&acc)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(acc.Metrics))
+
+	fields := map[string]interface{}{
+		"heap_memory_usage_java.lang:type=Memory_ObjectPendingFinalizationCount": 0.0,
+		"heap_memory_usage_java.lang:type=Memory_Verbose":                        false,
+		"heap_memory_usage_java.lang:type=Memory_HeapMemoryUsage_init":           134217728.0,
+		"heap_memory_usage_java.lang:type=Memory_HeapMemoryUsage_max":            1908932608.0,
+		"heap_memory_usage_java.lang:type=Memory_HeapMemoryUsage_used":           16840016.0,
+		"heap_memory_usage_java.lang:type=Memory_HeapMemoryUsage_committed":      173015040.0,
+		"heap_memory_usage_java.lang:type=Memory_NonHeapMemoryUsage_init":        2555904.0,
+		"heap_memory_usage_java.lang:type=Memory_NonHeapMemoryUsage_committed":   51380224.0,
+		"heap_memory_usage_java.lang:type=Memory_NonHeapMemoryUsage_max":         -1.0,
+		"heap_memory_usage_java.lang:type=Memory_NonHeapMemoryUsage_used":        49944048.0,
+		"heap_memory_usage_java.lang:type=Memory_ObjectName_objectName":          "java.lang:type=Memory",
+	}
+
 	tags := map[string]string{
 		"jolokia_host": "127.0.0.1",
 		"jolokia_port": "8080",

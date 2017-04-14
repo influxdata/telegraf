@@ -136,7 +136,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 							continue
 						}
 						// seconds in an hour
-						mFields[key] = int64(m) * 360
+						mFields[key] = int64(m) * 3600
 						continue
 					case strings.HasSuffix(when, "d"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "d"))

@@ -1,6 +1,6 @@
 package elasticsearch
 
-const clusterResponse = `
+const clusterHealthResponse = `
 {
    "cluster_name": "elasticsearch_telegraf",
    "status": "green",
@@ -71,7 +71,7 @@ var v2IndexExpected = map[string]interface{}{
 	"unassigned_shards":     20,
 }
 
-const statsResponse = `
+const nodeStatsResponse = `
 {
   "cluster_name": "es-testcluster",
   "nodes": {
@@ -489,7 +489,7 @@ const statsResponse = `
 }
 `
 
-var indicesExpected = map[string]interface{}{
+var nodestatsIndicesExpected = map[string]interface{}{
 	"id_cache_memory_size_in_bytes":             float64(0),
 	"completion_size_in_bytes":                  float64(0),
 	"suggest_total":                             float64(0),
@@ -561,7 +561,7 @@ var indicesExpected = map[string]interface{}{
 	"segments_fixed_bit_set_memory_in_bytes":    float64(0),
 }
 
-var osExpected = map[string]interface{}{
+var nodestatsOsExpected = map[string]interface{}{
 	"load_average_0":           float64(0.01),
 	"load_average_1":           float64(0.04),
 	"load_average_2":           float64(0.05),
@@ -576,7 +576,7 @@ var osExpected = map[string]interface{}{
 	"mem_used_in_bytes":        float64(1621868544),
 }
 
-var processExpected = map[string]interface{}{
+var nodestatsProcessExpected = map[string]interface{}{
 	"mem_total_virtual_in_bytes": float64(4747890688),
 	"timestamp":                  float64(1436460392945),
 	"open_file_descriptors":      float64(160),
@@ -586,7 +586,7 @@ var processExpected = map[string]interface{}{
 	"cpu_user_in_millis":         float64(13610),
 }
 
-var jvmExpected = map[string]interface{}{
+var nodestatsJvmExpected = map[string]interface{}{
 	"timestamp":                                     float64(1436460392945),
 	"uptime_in_millis":                              float64(202245),
 	"mem_non_heap_used_in_bytes":                    float64(39634576),
@@ -621,7 +621,7 @@ var jvmExpected = map[string]interface{}{
 	"buffer_pools_mapped_total_capacity_in_bytes":   float64(0),
 }
 
-var threadPoolExpected = map[string]interface{}{
+var nodestatsThreadPoolExpected = map[string]interface{}{
 	"merge_threads":                 float64(6),
 	"merge_queue":                   float64(4),
 	"merge_active":                  float64(5),
@@ -726,7 +726,7 @@ var threadPoolExpected = map[string]interface{}{
 	"flush_completed":               float64(3),
 }
 
-var fsExpected = map[string]interface{}{
+var nodestatsFsExpected = map[string]interface{}{
 	"data_0_total_in_bytes":     float64(19507089408),
 	"data_0_free_in_bytes":      float64(16909316096),
 	"data_0_available_in_bytes": float64(15894814720),
@@ -736,7 +736,7 @@ var fsExpected = map[string]interface{}{
 	"total_total_in_bytes":      float64(19507089408),
 }
 
-var transportExpected = map[string]interface{}{
+var nodestatsTransportExpected = map[string]interface{}{
 	"server_open":      float64(13),
 	"rx_count":         float64(6),
 	"rx_size_in_bytes": float64(1380),
@@ -744,12 +744,12 @@ var transportExpected = map[string]interface{}{
 	"tx_size_in_bytes": float64(1380),
 }
 
-var httpExpected = map[string]interface{}{
+var nodestatsHttpExpected = map[string]interface{}{
 	"current_open": float64(3),
 	"total_opened": float64(3),
 }
 
-var breakersExpected = map[string]interface{}{
+var nodestatsBreakersExpected = map[string]interface{}{
 	"fielddata_estimated_size_in_bytes": float64(0),
 	"fielddata_overhead":                float64(1.03),
 	"fielddata_tripped":                 float64(0),
@@ -763,3 +763,273 @@ var breakersExpected = map[string]interface{}{
 	"parent_limit_size_in_bytes":        float64(727213670),
 	"parent_estimated_size_in_bytes":    float64(0),
 }
+
+const clusterStatsResponse = `
+{
+   "host":"ip-10-0-1-214",
+   "log_type":"metrics",
+   "timestamp":1475767451229,
+   "log_level":"INFO",
+   "node_name":"test.host.com",
+   "cluster_name":"es-testcluster",
+   "status":"red",
+   "indices":{
+      "count":1,
+      "shards":{
+         "total":4,
+         "primaries":4,
+         "replication":0.0,
+         "index":{
+            "shards":{
+               "min":4,
+               "max":4,
+               "avg":4.0
+            },
+            "primaries":{
+               "min":4,
+               "max":4,
+               "avg":4.0
+            },
+            "replication":{
+               "min":0.0,
+               "max":0.0,
+               "avg":0.0
+            }
+         }
+      },
+      "docs":{
+         "count":4,
+         "deleted":0
+      },
+      "store":{
+         "size_in_bytes":17084,
+         "throttle_time_in_millis":0
+      },
+      "fielddata":{
+         "memory_size_in_bytes":0,
+         "evictions":0
+      },
+      "query_cache":{
+         "memory_size_in_bytes":0,
+         "total_count":0,
+         "hit_count":0,
+         "miss_count":0,
+         "cache_size":0,
+         "cache_count":0,
+         "evictions":0
+      },
+      "completion":{
+         "size_in_bytes":0
+      },
+      "segments":{
+         "count":4,
+         "memory_in_bytes":11828,
+         "terms_memory_in_bytes":8932,
+         "stored_fields_memory_in_bytes":1248,
+         "term_vectors_memory_in_bytes":0,
+         "norms_memory_in_bytes":1280,
+         "doc_values_memory_in_bytes":368,
+         "index_writer_memory_in_bytes":0,
+         "index_writer_max_memory_in_bytes":2048000,
+         "version_map_memory_in_bytes":0,
+         "fixed_bit_set_memory_in_bytes":0
+      },
+      "percolate":{
+         "total":0,
+         "time_in_millis":0,
+         "current":0,
+         "memory_size_in_bytes":-1,
+         "memory_size":"-1b",
+         "queries":0
+      }
+   },
+   "nodes":{
+      "count":{
+         "total":1,
+         "master_only":0,
+         "data_only":0,
+         "master_data":1,
+         "client":0
+      },
+      "versions":[
+         {
+         "version": "2.3.3"
+         }
+      ],
+      "os":{
+         "available_processors":1,
+         "allocated_processors":1,
+         "mem":{
+            "total_in_bytes":593301504
+         },
+         "names":[
+            {
+               "name":"Linux",
+               "count":1
+            }
+         ]
+      },
+      "process":{
+         "cpu":{
+            "percent":0
+         },
+         "open_file_descriptors":{
+            "min":145,
+            "max":145,
+            "avg":145
+         }
+      },
+      "jvm":{
+         "max_uptime_in_millis":11580527,
+         "versions":[
+            {
+               "version":"1.8.0_101",
+               "vm_name":"OpenJDK 64-Bit Server VM",
+               "vm_version":"25.101-b13",
+               "vm_vendor":"Oracle Corporation",
+               "count":1
+            }
+         ],
+         "mem":{
+            "heap_used_in_bytes":70550288,
+            "heap_max_in_bytes":1065025536
+         },
+         "threads":30
+      },
+      "fs":{
+         "total_in_bytes":8318783488,
+         "free_in_bytes":6447439872,
+         "available_in_bytes":6344785920
+      },
+      "plugins":[
+         {
+            "name":"cloud-aws",
+            "version":"2.3.3",
+            "description":"The Amazon Web Service (AWS) Cloud plugin allows to use AWS API for the unicast discovery mechanism and add S3 repositories.",
+            "jvm":true,
+            "classname":"org.elasticsearch.plugin.cloud.aws.CloudAwsPlugin",
+            "isolated":true,
+            "site":false
+         },
+         {
+            "name":"kopf",
+            "version":"2.0.1",
+            "description":"kopf - simple web administration tool for Elasticsearch",
+            "url":"/_plugin/kopf/",
+            "jvm":false,
+            "site":true
+         },
+         {
+            "name":"tr-metrics",
+            "version":"7bd5b4b",
+            "description":"Logs cluster and node stats for performance monitoring.",
+            "jvm":true,
+            "classname":"com.trgr.elasticsearch.plugin.metrics.MetricsPlugin",
+            "isolated":true,
+            "site":false
+         }
+      ]
+   }
+}
+`
+
+var clusterstatsIndicesExpected = map[string]interface{}{
+	"completion_size_in_bytes":                  float64(0),
+	"count":                                     float64(1),
+	"docs_count":                                float64(4),
+	"docs_deleted":                              float64(0),
+	"fielddata_evictions":                       float64(0),
+	"fielddata_memory_size_in_bytes":            float64(0),
+	"percolate_current":                         float64(0),
+	"percolate_memory_size_in_bytes":            float64(-1),
+	"percolate_queries":                         float64(0),
+	"percolate_time_in_millis":                  float64(0),
+	"percolate_total":                           float64(0),
+	"percolate_memory_size":                     "-1b",
+	"query_cache_cache_count":                   float64(0),
+	"query_cache_cache_size":                    float64(0),
+	"query_cache_evictions":                     float64(0),
+	"query_cache_hit_count":                     float64(0),
+	"query_cache_memory_size_in_bytes":          float64(0),
+	"query_cache_miss_count":                    float64(0),
+	"query_cache_total_count":                   float64(0),
+	"segments_count":                            float64(4),
+	"segments_doc_values_memory_in_bytes":       float64(368),
+	"segments_fixed_bit_set_memory_in_bytes":    float64(0),
+	"segments_index_writer_max_memory_in_bytes": float64(2.048e+06),
+	"segments_index_writer_memory_in_bytes":     float64(0),
+	"segments_memory_in_bytes":                  float64(11828),
+	"segments_norms_memory_in_bytes":            float64(1280),
+	"segments_stored_fields_memory_in_bytes":    float64(1248),
+	"segments_term_vectors_memory_in_bytes":     float64(0),
+	"segments_terms_memory_in_bytes":            float64(8932),
+	"segments_version_map_memory_in_bytes":      float64(0),
+	"shards_index_primaries_avg":                float64(4),
+	"shards_index_primaries_max":                float64(4),
+	"shards_index_primaries_min":                float64(4),
+	"shards_index_replication_avg":              float64(0),
+	"shards_index_replication_max":              float64(0),
+	"shards_index_replication_min":              float64(0),
+	"shards_index_shards_avg":                   float64(4),
+	"shards_index_shards_max":                   float64(4),
+	"shards_index_shards_min":                   float64(4),
+	"shards_primaries":                          float64(4),
+	"shards_replication":                        float64(0),
+	"shards_total":                              float64(4),
+	"store_size_in_bytes":                       float64(17084),
+	"store_throttle_time_in_millis":             float64(0),
+}
+
+var clusterstatsNodesExpected = map[string]interface{}{
+	"count_client":                      float64(0),
+	"count_data_only":                   float64(0),
+	"count_master_data":                 float64(1),
+	"count_master_only":                 float64(0),
+	"count_total":                       float64(1),
+	"fs_available_in_bytes":             float64(6.34478592e+09),
+	"fs_free_in_bytes":                  float64(6.447439872e+09),
+	"fs_total_in_bytes":                 float64(8.318783488e+09),
+	"jvm_max_uptime_in_millis":          float64(1.1580527e+07),
+	"jvm_mem_heap_max_in_bytes":         float64(1.065025536e+09),
+	"jvm_mem_heap_used_in_bytes":        float64(7.0550288e+07),
+	"jvm_threads":                       float64(30),
+	"jvm_versions_0_count":              float64(1),
+	"jvm_versions_0_version":            "1.8.0_101",
+	"jvm_versions_0_vm_name":            "OpenJDK 64-Bit Server VM",
+	"jvm_versions_0_vm_vendor":          "Oracle Corporation",
+	"jvm_versions_0_vm_version":         "25.101-b13",
+	"os_allocated_processors":           float64(1),
+	"os_available_processors":           float64(1),
+	"os_mem_total_in_bytes":             float64(5.93301504e+08),
+	"os_names_0_count":                  float64(1),
+	"os_names_0_name":                   "Linux",
+	"process_cpu_percent":               float64(0),
+	"process_open_file_descriptors_avg": float64(145),
+	"process_open_file_descriptors_max": float64(145),
+	"process_open_file_descriptors_min": float64(145),
+	"versions_0_version":                "2.3.3",
+	"plugins_0_classname":               "org.elasticsearch.plugin.cloud.aws.CloudAwsPlugin",
+	"plugins_0_description":             "The Amazon Web Service (AWS) Cloud plugin allows to use AWS API for the unicast discovery mechanism and add S3 repositories.",
+	"plugins_0_isolated":                true,
+	"plugins_0_jvm":                     true,
+	"plugins_0_name":                    "cloud-aws",
+	"plugins_0_site":                    false,
+	"plugins_0_version":                 "2.3.3",
+	"plugins_1_description":             "kopf - simple web administration tool for Elasticsearch",
+	"plugins_1_jvm":                     false,
+	"plugins_1_name":                    "kopf",
+	"plugins_1_site":                    true,
+	"plugins_1_url":                     "/_plugin/kopf/",
+	"plugins_1_version":                 "2.0.1",
+	"plugins_2_classname":               "com.trgr.elasticsearch.plugin.metrics.MetricsPlugin",
+	"plugins_2_description":             "Logs cluster and node stats for performance monitoring.",
+	"plugins_2_isolated":                true,
+	"plugins_2_jvm":                     true,
+	"plugins_2_name":                    "tr-metrics",
+	"plugins_2_site":                    false,
+	"plugins_2_version":                 "7bd5b4b",
+}
+
+const IsMasterResult = "SDFsfSDFsdfFSDSDfSFDSDF 10.206.124.66 10.206.124.66 test.host.com "
+
+const IsNotMasterResult = "junk 10.206.124.66 10.206.124.66 test.junk.com "

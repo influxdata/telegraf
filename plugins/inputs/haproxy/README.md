@@ -10,7 +10,10 @@
   servers = ["http://1.2.3.4/haproxy?stats", "/var/run/haproxy*.sock"]
 ```
 
+#### `servers`
 Server addresses need to explicitly start with 'http' if you wish to use HAproxy status page. Otherwise, address will be assumed to be an UNIX socket and protocol (if present) will be discarded.
+
+For basic authentication you need to add username and password in the URL: `http://user:password@1.2.3.4/haproxy?stats`.
 
 Following examples will all resolve to the same socket:
 ```
@@ -24,9 +27,12 @@ When using socket names, wildcard expansion is supported so plugin can gather st
 
 If no servers are specified, then the default address of `http://127.0.0.1:1936/haproxy?stats` will be used.
 
+#### `keep_field_names`
+By default, some of the fields are renamed from what haproxy calls them. Setting the `keep_field_names` parameter to `true` will result in the plugin keeping the original field names.
+
 ### Measurements & Fields:
 
-Plugin will gather measurements outlined in [HAproxy CSV format documentation](https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1).
+Plugin will gather measurements outlined in [HAproxy CSV format documentation](https://cbonte.github.io/haproxy-dconv/1.7/management.html#9.1).
 
 ### Tags:
 

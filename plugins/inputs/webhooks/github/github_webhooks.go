@@ -34,9 +34,10 @@ func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	p := e.NewMetric()
-	gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
+	if e != nil {
+		p := e.NewMetric()
+		gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -84,6 +85,8 @@ func NewEvent(data []byte, name string) (Event, error) {
 		return generateEvent(data, &MembershipEvent{})
 	case "page_build":
 		return generateEvent(data, &PageBuildEvent{})
+	case "ping":
+		return nil, nil
 	case "public":
 		return generateEvent(data, &PublicEvent{})
 	case "pull_request":

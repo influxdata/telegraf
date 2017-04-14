@@ -1,7 +1,6 @@
 github.com/Microsoft/go-winio ce2922f643c8fd76b46cadc7f404a06282678b34
 github.com/StackExchange/wmi f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
-github.com/lxn/win 950a0e81e7678e63d8e6cd32412bdecb325ccd88
 github.com/shirou/w32 3c9377fc6748f222729a8270fe2775d149a249ad
 golang.org/x/sys a646d33e2ee3172a661fc09bca23bb4889a41bc8
 github.com/go-ini/ini 9144852efba7c4daf409943ee90767da62d55438

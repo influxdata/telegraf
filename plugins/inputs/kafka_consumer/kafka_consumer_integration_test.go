@@ -23,7 +23,7 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	testTopic := fmt.Sprintf("telegraf_test_topic_%d", time.Now().Unix())
 
 	// Send a Kafka message to the kafka host
-	msg := "cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257"
+	msg := "cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257\n"
 	producer, err := sarama.NewSyncProducer(brokerPeers, nil)
 	require.NoError(t, err)
 	_, _, err = producer.SendMessage(

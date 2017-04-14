@@ -5,6 +5,8 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
+	_ "github.com/influxdata/telegraf/plugins/outputs/discard"
+	_ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graylog"
@@ -19,4 +21,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/opentsdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
+	_ "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy"
+	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
 )

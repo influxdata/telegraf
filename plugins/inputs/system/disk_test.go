@@ -50,9 +50,33 @@ func TestDiskStats(t *testing.T) {
 		},
 	}
 
-	mps.On("DiskUsage", []string(nil), []string(nil)).Return(duAll, nil)
-	mps.On("DiskUsage", []string{"/", "/dev"}, []string(nil)).Return(duFiltered, nil)
-	mps.On("DiskUsage", []string{"/", "/home"}, []string(nil)).Return(duAll, nil)
+	psAll := []*disk.PartitionStat{
+		{
+			Device:     "/dev/sda",
+			Mountpoint: "/",
+			Fstype:     "ext4",
+			Opts:       "",
+		},
+		{
+			Device:     "/dev/sdb",
+			Mountpoint: "/home",
+			Fstype:     "ext4",
+			Opts:       "",
+		},
+	}
+
+	psFiltered := []*disk.PartitionStat{
+		{
+			Device:     "/dev/sda",
+			Mountpoint: "/",
+			Fstype:     "ext4",
+			Opts:       "",
+		},
+	}
+
+	mps.On("DiskUsage", []string(nil), []string(nil)).Return(duAll, psAll, nil)
+	mps.On("DiskUsage", []string{"/", "/dev"}, []string(nil)).Return(duFiltered, psFiltered, nil)
+	mps.On("DiskUsage", []string{"/", "/home"}, []string(nil)).Return(duAll, psAll, nil)
 
 	err = (&DiskStats{ps: &mps}).Gather(&acc)
 	require.NoError(t, err)
@@ -64,10 +88,12 @@ func TestDiskStats(t *testing.T) {
 	tags1 := map[string]string{
 		"path":   "/",
 		"fstype": "ext4",
+		"device": "sda",
 	}
 	tags2 := map[string]string{
 		"path":   "/home",
 		"fstype": "ext4",
+		"device": "sdb",
 	}
 
 	fields1 := map[string]interface{}{

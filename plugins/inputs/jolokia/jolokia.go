@@ -11,8 +11,13 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// Default http timeouts
+var DefaultResponseHeaderTimeout = internal.Duration{Duration: 3 * time.Second}
+var DefaultClientTimeout = internal.Duration{Duration: 4 * time.Second}
 
 type Server struct {
 	Name     string
@@ -42,18 +47,23 @@ func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error
 }
 
 type Jolokia struct {
-	jClient JolokiaClient
-	Context string
-	Mode    string
-	Servers []Server
-	Metrics []Metric
-	Proxy   Server
+	jClient   JolokiaClient
+	Context   string
+	Mode      string
+	Servers   []Server
+	Metrics   []Metric
+	Proxy     Server
+	Delimiter string
+
+	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
+	ClientTimeout         internal.Duration `toml:"client_timeout"`
 }
 
 const sampleConfig = `
   ## This is the context root used to compose the jolokia url
+  ## NOTE that Jolokia requires a trailing slash at the end of the context root
   ## NOTE that your jolokia security policy must allow for POST requests.
-  context = "/jolokia"
+  context = "/jolokia/"
 
   ## This specifies the mode used
   # mode = "proxy"
@@ -65,6 +75,22 @@ const sampleConfig = `
   #   host = "127.0.0.1"
   #   port = "8080"
 
+  ## Optional http timeouts
+  ##
+  ## response_header_timeout, if non-zero, specifies the amount of time to wait
+  ## for a server's response headers after fully writing the request.
+  # response_header_timeout = "3s"
+  ##
+  ## client_timeout specifies a time limit for requests made by this client.
+  ## Includes connection time, any redirects, and reading the response body.
+  # client_timeout = "4s"
+
+  ## Attribute delimiter
+  ##
+  ## When multiple attributes are returned for a single
+  ## [inputs.jolokia.metrics], the field name is a concatenation of the metric
+  ## name, and the attribute name, separated by the given delimiter.
+  # delimiter = "_"
 
   ## List of servers exposing jolokia read service
   [[inputs.jolokia.servers]]
@@ -148,7 +174,7 @@ func (j *Jolokia) doRequest(req *http.Request) (map[string]interface{}, error) {
 
 func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, error) {
 	var jolokiaUrl *url.URL
-	context := j.Context // Usually "/jolokia"
+	context := j.Context // Usually "/jolokia/"
 
 	// Create bodyContent
 	bodyContent := map[string]interface{}{
@@ -220,7 +246,26 @@ func (j *Jolokia) prepareRequest(server Server, metric Metric) (*http.Request, e
 	return req, nil
 }
 
+func (j *Jolokia) extractValues(measurement string, value interface{}, fields map[string]interface{}) {
+	if mapValues, ok := value.(map[string]interface{}); ok {
+		for k2, v2 := range mapValues {
+			j.extractValues(measurement+j.Delimiter+k2, v2, fields)
+		}
+	} else {
+		fields[measurement] = value
+	}
+}
+
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
+
+	if j.jClient == nil {
+		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
+		j.jClient = &JolokiaClientImpl{&http.Client{
+			Transport: tr,
+			Timeout:   j.ClientTimeout.Duration,
+		}}
+	}
+
 	servers := j.Servers
 	metrics := j.Metrics
 	tags := make(map[string]string)
@@ -244,23 +289,8 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				fmt.Printf("Error handling response: %s\n", err)
 			} else {
-
 				if values, ok := out["value"]; ok {
-					switch t := values.(type) {
-					case map[string]interface{}:
-						for k, v := range t {
-							switch t2 := v.(type) {
-							case map[string]interface{}:
-								for k2, v2 := range t2 {
-									fields[measurement+"_"+k+"_"+k2] = v2
-								}
-							case interface{}:
-								fields[measurement+"_"+k] = t2
-							}
-						}
-					case interface{}:
-						fields[measurement] = t
-					}
+					j.extractValues(measurement, values, fields)
 				} else {
 					fmt.Printf("Missing key 'value' in output response\n")
 				}
@@ -276,11 +306,10 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("jolokia", func() telegraf.Input {
-		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
-		client := &http.Client{
-			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+		return &Jolokia{
+			ResponseHeaderTimeout: DefaultResponseHeaderTimeout,
+			ClientTimeout:         DefaultClientTimeout,
+			Delimiter:             "_",
 		}
-		return &Jolokia{jClient: &JolokiaClientImpl{client: client}}
 	})
 }

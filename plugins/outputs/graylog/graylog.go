@@ -154,7 +154,7 @@ type Graylog struct {
 }
 
 var sampleConfig = `
-  ## Udp endpoint for your graylog instance.
+  ## UDP endpoint for your graylog instance.
   servers = ["127.0.0.1:12201", "192.168.1.1:12201"]
 `
 
@@ -213,7 +213,7 @@ func serialize(metric telegraf.Metric) ([]string, error) {
 	m := make(map[string]interface{})
 	m["version"] = "1.1"
 	m["timestamp"] = metric.UnixNano() / 1000000000
-	m["short_message"] = " "
+	m["short_message"] = "telegraf"
 	m["name"] = metric.Name()
 
 	if host, ok := metric.Tags()["host"]; ok {
