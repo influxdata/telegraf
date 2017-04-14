@@ -123,6 +123,7 @@ configuration options.
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [internal](./plugins/inputs/internal)
 * [influxdb](./plugins/inputs/influxdb)
+* [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
 * [jolokia](./plugins/inputs/jolokia)
@@ -195,6 +196,16 @@ Telegraf can also collect metrics via the following service plugins:
   * [github](./plugins/inputs/webhooks/github)
   * [mandrill](./plugins/inputs/webhooks/mandrill)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
+
+Telegraf is able to parse the following input data formats into metrics, these
+formats may be used with input plugins supporting the `data_format` option:
+
+* [InfluxDB Line Protocol](./docs/DATA_FORMATS_INPUT.md#influx)
+* [JSON](./docs/DATA_FORMATS_INPUT.md#json)
+* [Graphite](./docs/DATA_FORMATS_INPUT.md#graphite)
+* [Value](./docs/DATA_FORMATS_INPUT.md#value)
+* [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
+* [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
 
 ## Processor Plugins
 

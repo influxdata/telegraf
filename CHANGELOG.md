@@ -41,6 +41,7 @@ be deprecated eventually.
 
 ### Features
 
+- [#2494](https://github.com/influxdata/telegraf/pull/2494): Add interrupts input plugin.
 - [#2094](https://github.com/influxdata/telegraf/pull/2094): Add generic socket listener & writer.
 - [#2204](https://github.com/influxdata/telegraf/pull/2204): Extend http_response to support searching for a substring in response. Return 1 if found, else 0.
 - [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
@@ -65,6 +66,10 @@ be deprecated eventually.
 - [#2597](https://github.com/influxdata/telegraf/issues/2597): Add support for Linux sysctl-fs metrics.
 - [#2425](https://github.com/influxdata/telegraf/pull/2425): Support to include/exclude docker container labels as tags
 - [#1667](https://github.com/influxdata/telegraf/pull/1667): dmcache input plugin
+- [#2637](https://github.com/influxdata/telegraf/issues/2637): Add support for precision in http_listener
+- [#2636](https://github.com/influxdata/telegraf/pull/2636): Add `message_len_max` option to `kafka_consumer` input
+- [#1100](https://github.com/influxdata/telegraf/issues/1100): Add collectd parser
+- [#1820](https://github.com/influxdata/telegraf/issues/1820): easier plugin testing without outputs
 
 ### Bugfixes
 
@@ -95,6 +100,8 @@ be deprecated eventually.
 - [#2596](https://github.com/influxdata/telegraf/pull/2596): fix timestamp parsing on prometheus plugin
 - [#2610](https://github.com/influxdata/telegraf/pull/2610): Fix deadlock when output cannot write
 - [#2410](https://github.com/influxdata/telegraf/issues/2410): Fix connection leak in postgresql.
+- [#2628](https://github.com/influxdata/telegraf/issues/2628): Set default measurement name for snmp input.
+- [#2649](https://github.com/influxdata/telegraf/pull/2649): Improve performance of diskio with many disks
 
 ## v1.2.1 [2017-02-01]
 
