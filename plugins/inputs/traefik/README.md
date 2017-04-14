@@ -1,4 +1,4 @@
-# Example Input Plugin
+# Telegraf Input Plugin: Traefik
 
 This plugin gather health check status from services registered in Traefik.
 
