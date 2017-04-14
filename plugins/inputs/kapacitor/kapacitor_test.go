@@ -87,7 +87,9 @@ func TestErrorHandling(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.Error(t, plugin.Gather(&acc))
+	plugin.Gather(&acc)
+	acc.WaitError(1)
+	require.Equal(t, uint64(0), acc.NMetrics())
 }
 
 func TestErrorHandling404(t *testing.T) {
@@ -105,7 +107,9 @@ func TestErrorHandling404(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.Error(t, plugin.Gather(&acc))
+	plugin.Gather(&acc)
+	acc.WaitError(1)
+	require.Equal(t, uint64(0), acc.NMetrics())
 }
 
 const basicJSON = `
