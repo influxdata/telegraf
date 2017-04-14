@@ -30,45 +30,45 @@ func TestKapacitor(t *testing.T) {
 	require.Len(t, acc.Metrics, 63)
 
 	fields := map[string]interface{}{
-		"heap_inuse":      int64(9166848),
-		"heap_released":   int64(0),
-		"mspan_inuse":     int64(105600),
-		"total_alloc":     int64(13475176),
-		"sys":             int64(14625016),
-		"mallocs":         int64(157726),
-		"frees":           int64(129656),
-		"heap_idle":       int64(499712),
-		"pause_total_ns":  int64(767327),
-		"lookups":         int64(40),
-		"heap_sys":        int64(9666560),
-		"mcache_sys":      int64(16384),
-		"next_gc":         int64(10996691),
-		"gcc_pu_fraction": float64(0.006757149597237818),
-		"other_sys":       int64(1985959),
-		"alloc":           int64(6950624),
-		"stack_inuse":     int64(819200),
-		"stack_sys":       int64(819200),
-		"buck_hash_sys":   int64(1446737),
-		"gc_sys":          int64(575488),
-		"num_gc":          int64(4),
-		"heap_alloc":      int64(6950624),
-		"heap_objects":    int64(28070),
-		"mspan_sys":       int64(114688),
-		"mcache_inuse":    int64(9600),
-		"last_gc":         int64(1478813691405406556),
+		"alloc_bytes":         int64(6950624),
+		"buck_hash_sys_bytes": int64(1446737),
+		"frees":               int64(129656),
+		"gcc_pu_fraction":     float64(0.006757149597237818),
+		"gc_sys_bytes":        int64(575488),
+		"heap_alloc_bytes":    int64(6950624),
+		"heap_idle_bytes":     int64(499712),
+		"heap_in_use_bytes":   int64(9166848),
+		"heap_objects":        int64(28070),
+		"heap_released_bytes": int64(0),
+		"heap_sys_bytes":      int64(9666560),
+		"last_gc_ns":          int64(1478813691405406556),
+		"lookups":             int64(40),
+		"mallocs":             int64(157726),
+		"mcache_in_use_bytes": int64(9600),
+		"mcache_sys_bytes":    int64(16384),
+		"mspan_in_use_bytes":  int64(105600),
+		"mspan_sys_bytes":     int64(114688),
+		"next_gc_ns":          int64(10996691),
+		"num_gc":              int64(4),
+		"other_sys_bytes":     int64(1985959),
+		"pause_total_ns":      int64(767327),
+		"stack_in_use_bytes":  int64(819200),
+		"stack_sys_bytes":     int64(819200),
+		"sys_bytes":           int64(14625016),
+		"total_alloc_bytes":   int64(13475176),
 	}
 
 	tags := map[string]string{
-		"url":         fakeInfluxServer.URL + "/endpoint",
 		"kap_version": "1.1.0~rc2",
+		"url":         fakeInfluxServer.URL + "/endpoint",
 	}
 	acc.AssertContainsTaggedFields(t, "kapacitor_memstats", fields, tags)
 
 	acc.AssertContainsTaggedFields(t, "kapacitor",
 		map[string]interface{}{
 			"num_enabled_tasks": 5,
-			"num_tasks":         5,
 			"num_subscriptions": 6,
+			"num_tasks":         5,
 		}, tags)
 }
 

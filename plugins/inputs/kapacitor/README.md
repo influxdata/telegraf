@@ -16,56 +16,56 @@ The Kapacitor plugin will collect metrics from the given Kapacitor instances.
 ### Measurements & Fields
 
 - kapacitor
-    - num_enabled_tasks,integer
-    - num_subscriptions,integer
-    - num_tasks,integer
+    - num_enabled_tasks, integer
+    - num_subscriptions, integer
+    - num_tasks, integer
 - kapacitor_edges
-    - collected,float
-    - emitted,float
+    - collected, float
+    - emitted, float
 - kapacitor_ingress
-    - points_received,float
+    - points_received, float
 - kapacitor_memstats
-    - alloc,integer
-    - buck_hash_sys,integer
-    - frees,integer
-    - gc_sys,integer
-    - gcc_pu_fraction,float
-    - heap_alloc,integer
-    - heap_idle,integer
-    - heap_inuse,integer
-    - heap_objects,integer
-    - heap_released,integer
-    - heap_sys,integer
-    - last_gc,integer
-    - lookups,integer
-    - mallocs,integer
-    - mcache_inuse,integer
-    - mcache_sys,integer
-    - mspan_inuse,integer
-    - mspan_sys,integer
-    - next_gc,integer
-    - num_gc,integer
-    - other_sys,integer
-    - pause_total_ns,integer
-    - stack_inuse,integer
-    - stack_sys,integer
-    - sys,integer
-    - total_alloc, integer
+    - alloc_bytes, integer
+    - buck_hash_sys_bytes, integer
+    - frees, integer
+    - gcc_pu_fraction, float
+    - gc_sys_bytes, integer
+    - heap_alloc_bytes, integer
+    - heap_idle_bytes, integer
+    - heap_inuse_bytes, integer
+    - heap_objects, integer
+    - heap_released_bytes, integer
+    - heap_sys_bytes, integer
+    - last_gc_ns, integer
+    - lookups, integer
+    - mallocs, integer
+    - mcache_in_use_bytes, integer
+    - mcache_sys_bytes, integer
+    - mspan_in_use_bytes, integer
+    - mspan_sys_bytes, integer
+    - next_gc_ns, integer
+    - num_gc, integer
+    - other_sys_bytes, integer
+    - pause_total_ns, integer
+    - stack_in_use_bytes, integer
+    - stack_sys_bytes, integer
+    - sys_bytes, integer
+    - total_alloc_bytes, integer
 - kapacitor_nodes
-    - alerts_triggered,float
-    - avg_exec_time_ns,integer
-    - batches_queried,float
-    - crits_triggered,float
-    - eval_errors,float
-    - fields_defaulted,float
-    - infos_triggered,float
-    - oks_triggered,float
-    - points_queried,float
-    - points_written,float
-    - query_errors,float
-    - tags_defaulted,float
-    - warns_triggered,float
-    - write_errors,float
+    - alerts_triggered, float
+    - avg_exec_time_ns, integer
+    - batches_queried, float
+    - crits_triggered, float
+    - eval_errors, float
+    - fields_defaulted, float
+    - infos_triggered, float
+    - oks_triggered, float
+    - points_queried, float
+    - points_written, float
+    - query_errors, float
+    - tags_defaulted, float
+    - warns_triggered, float
+    - write_errors, float
 
 *Note:* The Kapacitor variables `host`, `cluster_id`, and `server_id`
 are currently not recorded due to the potential high cardinality of
@@ -76,7 +76,7 @@ these values.
 ```
 $ telegraf -config /etc/telegraf.conf -input-filter kapacitor -test
 * Plugin: inputs.kapacitor, Collection 1
-> kapacitor_memstats,host=hostname.local,kap_version=1.1.0~rc2,url=http://localhost:9092/kapacitor/v1/debug/vars alloc=6974808i,buck_hash_sys=1452609i,frees=207281i,gc_sys=802816i,gcc_pu_fraction=0.00004693548939673313,heap_alloc=6974808i,heap_idle=6742016i,heap_inuse=9183232i,heap_objects=23216i,heap_released=0i,heap_sys=15925248i,last_gc=1478791460012676997i,lookups=88i,mallocs=230497i,mcache_inuse=9600i,mcache_sys=16384i,mspan_inuse=98560i,mspan_sys=131072i,next_gc=11467528i,num_gc=8i,other_sys=2236087i,pause_total_ns=2994110i,stack_inuse=1900544i,stack_sys=1900544i,sys=22464760i,total_alloc=35023600i 1478791462000000000
+> kapacitor_memstats,host=hostname.local,kap_version=1.1.0~rc2,url=http://localhost:9092/kapacitor/v1/debug/vars alloc_bytes=6974808i,buck_hash_sys_bytes=1452609i,frees=207281i,gc_sys_bytes=802816i,gcc_pu_fraction=0.00004693548939673313,heap_alloc_bytes=6974808i,heap_idle_bytes=6742016i,heap_in_use_bytes=9183232i,heap_objects=23216i,heap_released_bytes=0i,heap_sys_bytes=15925248i,last_gc_ns=1478791460012676997i,lookups=88i,mallocs=230497i,mcache_in_use_bytes=9600i,mcache_sys_bytes=16384i,mspan_in_use_bytes=98560i,mspan_sys_bytes=131072i,next_gc_ns=11467528i,num_gc=8i,other_sys_bytes=2236087i,pause_total_ns=2994110i,stack_in_use_bytes=1900544i,stack_sys_bytes=1900544i,sys_bytes=22464760i,total_alloc_bytes=35023600i 1478791462000000000
 > kapacitor,host=hostname.local,kap_version=1.1.0~rc2,url=http://localhost:9092/kapacitor/v1/debug/vars num_enabled_tasks=5i,num_subscriptions=5i,num_tasks=5i 1478791462000000000
 > kapacitor_edges,child=stream0,host=hostname.local,parent=stream,task=deadman-test,type=stream collected=0,emitted=0 1478791462000000000
 > kapacitor_ingress,database=_internal,host=hostname.local,measurement=shard,retention_policy=monitor,task_master=main points_received=120 1478791462000000000
