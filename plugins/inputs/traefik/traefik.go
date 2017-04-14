@@ -59,7 +59,7 @@ func (t *Traefik) GatherHealthCheck(acc telegraf.Accumulator, check HealthCheck)
 	}
 
 	records["total_response_time_sec"] = check.TotalResponseTimeSec
-	records["average_reponse_time_sec"] = check.AverageResponseTimeSec
+	records["average_response_time_sec"] = check.AverageResponseTimeSec
 	records["total_count"] = check.TotalCount
 
 	tags["instance"] = t.Instance
