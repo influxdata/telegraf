@@ -56,8 +56,6 @@ func (d *DnsQuery) Description() string {
 	return "Query given DNS server and gives statistics"
 }
 func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
-	d.setDefaultValues()
-
 	errChan := errchan.New(len(d.Domains) * len(d.Servers))
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
@@ -75,25 +73,6 @@ func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return errChan.Error()
-}
-
-func (d *DnsQuery) setDefaultValues() {
-	if len(d.RecordType) == 0 {
-		d.RecordType = "NS"
-	}
-
-	if len(d.Domains) == 0 {
-		d.Domains = []string{"."}
-		d.RecordType = "NS"
-	}
-
-	if d.Port == 0 {
-		d.Port = 53
-	}
-
-	if d.Timeout == 0 {
-		d.Timeout = 2
-	}
 }
 
 func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, error) {
@@ -157,6 +136,11 @@ func (d *DnsQuery) parseRecordType() (uint16, error) {
 
 func init() {
 	inputs.Add("dns_query", func() telegraf.Input {
-		return &DnsQuery{}
+		return &DnsQuery{
+			RecordType: "NS",
+			Port:       53,
+			Timeout:    2,
+			Domains:    []string{"."},
+		}
 	})
 }

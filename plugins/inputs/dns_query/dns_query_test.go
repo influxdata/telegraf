@@ -137,18 +137,10 @@ func TestGatheringTimeout(t *testing.T) {
 func TestSettingDefaultValues(t *testing.T) {
 	dnsConfig := DnsQuery{}
 
-	dnsConfig.setDefaultValues()
-
 	assert.Equal(t, []string{"."}, dnsConfig.Domains, "Default domain not equal \".\"")
 	assert.Equal(t, "NS", dnsConfig.RecordType, "Default record type not equal 'NS'")
 	assert.Equal(t, 53, dnsConfig.Port, "Default port number not equal 53")
 	assert.Equal(t, 2, dnsConfig.Timeout, "Default timeout not equal 2")
-
-	dnsConfig = DnsQuery{Domains: []string{"."}}
-
-	dnsConfig.setDefaultValues()
-
-	assert.Equal(t, "NS", dnsConfig.RecordType, "Default record type not equal 'NS'")
 }
 
 func TestRecordTypeParser(t *testing.T) {
