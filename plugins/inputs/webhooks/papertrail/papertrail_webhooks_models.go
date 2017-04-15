@@ -19,9 +19,9 @@ type Event struct {
 }
 
 type Count struct {
-	SourceName string       `json:"source_name"`
-	SourceID   int64        `json:"source_id"`
-	TimeSeries *map[int]int `json:"timeseries"`
+	SourceName string            `json:"source_name"`
+	SourceID   int64             `json:"source_id"`
+	TimeSeries *map[int64]uint64 `json:"timeseries"`
 }
 
 type SavedSearch struct {

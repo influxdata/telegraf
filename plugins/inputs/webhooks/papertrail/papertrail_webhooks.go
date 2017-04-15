@@ -2,10 +2,8 @@ package papertrail
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -19,39 +17,31 @@ type PapertrailWebhook struct {
 
 func (pt *PapertrailWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(pt.Path, pt.eventHandler).Methods("POST")
-	log.Printf("I! Started the papertrail_webhook on %s\n", pt.Path)
+	log.Printf("I! Started the papertrail_webhook on %s", pt.Path)
 	pt.acc = acc
 }
 
 func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		http.NotFound(w, r)
-	}
-
-	defer r.Body.Close()
-	reqBody, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Invalid request", 400)
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	data, err := url.QueryUnescape(string(reqBody))
-	if err != nil {
-		http.Error(w, "Invalid request", 400)
+	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+		http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	data := r.PostFormValue("payload")
+	if data == "" {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
 	var payload Payload
-	// JSON payload is x-www-form-urlencoded, remove this string when unmarshaling
-	remove := "payload="
-	if len(data) > 0 && data[0:len(remove)] == remove {
-		err = json.Unmarshal([]byte(data[len(remove):len(data)]), &payload)
-		if err != nil {
-			http.Error(w, "Unable to parse request body", 400)
-			return
-		}
-	} else {
-		http.Error(w, "Invalid request", 400)
+	err := json.Unmarshal([]byte(data), &payload)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
@@ -59,13 +49,13 @@ func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request
 
 		// Handle event-based payload
 		for _, e := range payload.Events {
-			// FIXME: Duplicate event timestamps will overwrite each other
+			// Warning: Duplicate event timestamps will overwrite each other
 			tags := map[string]string{
 				"host":  e.Hostname,
 				"event": payload.SavedSearch.Name,
 			}
 			fields := map[string]interface{}{
-				"count": 1,
+				"count": uint64(1),
 			}
 			pt.acc.AddFields("papertrail", fields, tags, e.ReceivedAt)
 		}
@@ -82,11 +72,11 @@ func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request
 				fields := map[string]interface{}{
 					"count": count,
 				}
-				pt.acc.AddFields("papertrail", fields, tags, time.Unix(int64(ts), 0))
+				pt.acc.AddFields("papertrail", fields, tags, time.Unix(ts, 0))
 			}
 		}
 	} else {
-		http.Error(w, "Invalid request", 400)
+		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 

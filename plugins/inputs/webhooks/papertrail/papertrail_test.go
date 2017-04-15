@@ -8,28 +8,82 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
-func postWebhooks(pt *PapertrailWebhook, payloadBody string) *httptest.ResponseRecorder {
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(payloadBody))
+const (
+	contentType = "application/x-www-form-urlencoded"
+)
+
+func post(pt *PapertrailWebhook, contentType string, body string) *httptest.ResponseRecorder {
+	req, _ := http.NewRequest("POST", "/", strings.NewReader(body))
+	req.Header.Set("Content-Type", contentType)
 	w := httptest.NewRecorder()
-	w.Code = 500
+	pt.eventHandler(w, req)
+	return w
+}
+
+func TestWrongMethod(t *testing.T) {
+	var acc testutil.Accumulator
+	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	form := url.Values{}
+	form.Set("payload", sampleEventPayload)
+	data := form.Encode()
+
+	req, _ := http.NewRequest("PUT", "/", strings.NewReader(data))
+	req.Header.Set("Content-Type", contentType)
+	w := httptest.NewRecorder()
 	pt.eventHandler(w, req)
 
-	return w
+	require.Equal(t, http.StatusMethodNotAllowed, w.Code)
+}
+
+func TestWrongContentType(t *testing.T) {
+	var acc testutil.Accumulator
+	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	form := url.Values{}
+	form.Set("payload", sampleEventPayload)
+	data := form.Encode()
+
+	resp := post(pt, "", data)
+	require.Equal(t, http.StatusUnsupportedMediaType, resp.Code)
+}
+
+func TestMissingPayload(t *testing.T) {
+	var acc testutil.Accumulator
+	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+
+	resp := post(pt, contentType, "")
+	require.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestPayloadNotJSON(t *testing.T) {
+	var acc testutil.Accumulator
+	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+
+	resp := post(pt, contentType, "payload={asdf]")
+	require.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestPayloadInvalidJSON(t *testing.T) {
+	var acc testutil.Accumulator
+	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+
+	resp := post(pt, contentType, `payload={"value": 42}`)
+	require.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
 func TestEventPayload(t *testing.T) {
 	var acc testutil.Accumulator
 	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
-	payload := url.QueryEscape(sampleEventPayload)
-	resp := postWebhooks(pt, payload)
-	if resp.Code != http.StatusOK {
-		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
-	}
+
+	form := url.Values{}
+	form.Set("payload", sampleEventPayload)
+	resp := post(pt, contentType, form.Encode())
+	require.Equal(t, http.StatusOK, resp.Code)
 
 	fields := map[string]interface{}{
-		"count": 1,
+		"count": uint64(1),
 	}
 
 	tags1 := map[string]string{
@@ -41,7 +95,6 @@ func TestEventPayload(t *testing.T) {
 		"host":  "def",
 	}
 
-	t.Logf("%v", acc.Metrics)
 	acc.AssertContainsTaggedFields(t, "papertrail", fields, tags1)
 	acc.AssertContainsTaggedFields(t, "papertrail", fields, tags2)
 }
@@ -49,17 +102,16 @@ func TestEventPayload(t *testing.T) {
 func TestCountPayload(t *testing.T) {
 	var acc testutil.Accumulator
 	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
-	payload := url.QueryEscape(sampleCountPayload)
-	resp := postWebhooks(pt, payload)
-	if resp.Code != http.StatusOK {
-		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
-	}
+	form := url.Values{}
+	form.Set("payload", sampleCountPayload)
+	resp := post(pt, contentType, form.Encode())
+	require.Equal(t, http.StatusOK, resp.Code)
 
 	fields1 := map[string]interface{}{
-		"count": 5,
+		"count": uint64(5),
 	}
 	fields2 := map[string]interface{}{
-		"count": 3,
+		"count": uint64(3),
 	}
 
 	tags1 := map[string]string{
@@ -75,7 +127,7 @@ func TestCountPayload(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "papertrail", fields2, tags2)
 }
 
-const sampleEventPayload = `payload={
+const sampleEventPayload = `{
   "events": [
     {
       "id": 7711561783320576,
@@ -115,7 +167,7 @@ const sampleEventPayload = `payload={
   "min_id": "7711561783320576"
 }`
 
-const sampleCountPayload = `payload={
+const sampleCountPayload = `{
    "counts": [
      {
        "source_name": "arthur",
