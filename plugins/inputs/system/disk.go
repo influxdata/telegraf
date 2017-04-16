@@ -59,13 +59,14 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"fstype": du.Fstype,
 		}
 		var used_percent float64
-		if du.Total > 0 {
-			used_percent = float64(du.Used) / float64(du.Total) * 100
+		if du.Used+du.Free > 0 {
+			used_percent = float64(du.Used) /
+				(float64(du.Used) + float64(du.Free)) * 100
 		}
 
 		var inodes_used_percent float64
-		if du.InodesTotal > 0 {
-			inodes_used_percent = float64(du.InodesUsed) / float64(du.InodesTotal) * 100
+		if du.InodesUsed+du.InodesFree > 0 {
+			inodes_used_percent = float64(du.InodesUsed) / (float64(du.InodesUsed) + float64(du.InodesFree)) * 100
 		}
 
 		fields := map[string]interface{}{
