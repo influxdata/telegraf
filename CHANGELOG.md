@@ -70,6 +70,7 @@ be deprecated eventually.
 - [#2636](https://github.com/influxdata/telegraf/pull/2636): Add `message_len_max` option to `kafka_consumer` input
 - [#1100](https://github.com/influxdata/telegraf/issues/1100): Add collectd parser
 - [#1820](https://github.com/influxdata/telegraf/issues/1820): easier plugin testing without outputs
+- [#2493](https://github.com/influxdata/telegraf/pull/2493): Check signature in the GitHub webhook plugin
 
 ### Bugfixes
 
