@@ -8,13 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"io/ioutil"
+	"strings"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
-	"io/ioutil"
-	"strings"
 )
 
 // mask for masking username/password from error messages
@@ -281,6 +282,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	measurementTime := time.Now()
 	clusterFields := map[string]interface{}{
 		"status":                healthStats.Status,
+		"status_code":           statusToCode(healthStats.Status),
 		"timed_out":             healthStats.TimedOut,
 		"number_of_nodes":       healthStats.NumberOfNodes,
 		"number_of_data_nodes":  healthStats.NumberOfDataNodes,
@@ -300,6 +302,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	for name, health := range healthStats.Indices {
 		indexFields := map[string]interface{}{
 			"status":                health.Status,
+			"status_code":           statusToCode(health.Status),
 			"number_of_shards":      health.NumberOfShards,
 			"number_of_replicas":    health.NumberOfReplicas,
 			"active_primary_shards": health.ActivePrimaryShards,
@@ -396,4 +399,16 @@ func init() {
 	inputs.Add("elasticsearch", func() telegraf.Input {
 		return NewElasticsearch()
 	})
+}
+
+func statusToCode(status string) int {
+	switch status {
+	case "green":
+		return 3
+	case "yellow":
+		return 2
+	case "red":
+		return 1
+	}
+	return 0
 }
