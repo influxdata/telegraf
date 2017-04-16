@@ -58,9 +58,13 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"fstype": du.Fstype,
 		}
 		var used_percent float64
-		if du.Used+du.Free > 0 {
-			used_percent = float64(du.Used) /
-				(float64(du.Used) + float64(du.Free)) * 100
+		if du.Total > 0 {
+			used_percent = float64(du.Used) / float64(du.Total) * 100
+		}
+
+		var inodes_used_percent float64
+		if du.InodesTotal > 0 {
+			inodes_used_percent = float64(du.InodesUsed) / float64(du.InodesTotal) * 100
 		}
 
 		fields := map[string]interface{}{
@@ -71,6 +75,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"inodes_total": du.InodesTotal,
 			"inodes_free":  du.InodesFree,
 			"inodes_used":  du.InodesUsed,
+			"inodes_used_percent":  inodes_used_percent,
 		}
 		acc.AddGauge("disk", fields, tags)
 	}
