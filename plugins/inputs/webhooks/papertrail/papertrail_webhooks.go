@@ -22,11 +22,6 @@ func (pt *PapertrailWebhook) Register(router *mux.Router, acc telegraf.Accumulat
 }
 
 func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
 		http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
 		return

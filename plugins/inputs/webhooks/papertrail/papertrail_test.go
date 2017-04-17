@@ -23,21 +23,6 @@ func post(pt *PapertrailWebhook, contentType string, body string) *httptest.Resp
 	return w
 }
 
-func TestWrongMethod(t *testing.T) {
-	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
-	form := url.Values{}
-	form.Set("payload", sampleEventPayload)
-	data := form.Encode()
-
-	req, _ := http.NewRequest("PUT", "/", strings.NewReader(data))
-	req.Header.Set("Content-Type", contentType)
-	w := httptest.NewRecorder()
-	pt.eventHandler(w, req)
-
-	require.Equal(t, http.StatusMethodNotAllowed, w.Code)
-}
-
 func TestWrongContentType(t *testing.T) {
 	var acc testutil.Accumulator
 	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
