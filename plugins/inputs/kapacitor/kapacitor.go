@@ -12,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	defaultURL = "http://localhost:9092/kapacitor/v1/debug/vars"
+)
+
 type Kapacitor struct {
 	URLs []string `toml:"urls"`
 
@@ -38,10 +42,6 @@ func (*Kapacitor) SampleConfig() string {
 }
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
-	if len(k.URLs) == 0 {
-		k.URLs = []string{"http://localhost:9092/kapacitor/v1/debug/vars"}
-	}
-
 	if k.client == nil {
 		k.client = &http.Client{Timeout: k.Timeout.Duration}
 	}
@@ -217,6 +217,7 @@ func (k *Kapacitor) gatherURL(
 func init() {
 	inputs.Add("kapacitor", func() telegraf.Input {
 		return &Kapacitor{
+			URLs:    []string{defaultURL},
 			Timeout: internal.Duration{Duration: time.Second * 5},
 		}
 	})
