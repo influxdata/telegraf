@@ -159,6 +159,7 @@ configuration options.
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [twemproxy](./plugins/inputs/twemproxy)
 * [varnish](./plugins/inputs/varnish)
+* [vsphere](./plugins/inputs/vsphere)
 * [zfs](./plugins/inputs/zfs)
 * [zookeeper](./plugins/inputs/zookeeper)
 * [win_perf_counters ](./plugins/inputs/win_perf_counters) (windows performance counters)
