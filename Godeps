@@ -72,6 +72,7 @@ github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
 github.com/stretchr/objx 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 github.com/stretchr/testify 4d4bfba8f1d1027c4fdbe371823030df51419987
 github.com/vjeantet/grok d73e972b60935c7fec0b4ffbc904ed39ecaf7efe
+github.com/vmware/govmomi 9bfdc5ce62c0585b48b154cc460f8664dcd124c3
 github.com/wvanbergen/kafka bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee
 github.com/wvanbergen/kazoo-go 968957352185472eacb69215fa3dbfcfdbac1096
 github.com/yuin/gopher-lua 66c871e454fcf10251c61bf8eff02d0978cae75a
