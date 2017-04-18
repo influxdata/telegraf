@@ -11,6 +11,9 @@ The Kapacitor plugin will collect metrics from the given Kapacitor instances.
   urls = [
     "http://localhost:9092/kapacitor/v1/debug/vars"
   ]
+
+  ## Time limit for http requests
+  timeout = "5s"
 ```
 
 ### Measurements & Fields

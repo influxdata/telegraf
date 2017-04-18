@@ -32,7 +32,7 @@ func (*Kapacitor) SampleConfig() string {
     "http://localhost:9092/kapacitor/v1/debug/vars"
   ]
 
-  ## http request & header timeout
+  ## Time limit for http requests
   timeout = "5s"
 `
 }
@@ -43,12 +43,7 @@ func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if k.client == nil {
-		k.client = &http.Client{
-			Transport: &http.Transport{
-				ResponseHeaderTimeout: k.Timeout.Duration,
-			},
-			Timeout: k.Timeout.Duration,
-		}
+		k.client = &http.Client{Timeout: k.Timeout.Duration}
 	}
 
 	var wg sync.WaitGroup
