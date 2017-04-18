@@ -219,11 +219,12 @@ func (s *DiskIOStats) diskTags(devName string) map[string]string {
 }
 
 func init() {
+	ps := newSystemPS()
 	inputs.Add("disk", func() telegraf.Input {
-		return &DiskStats{ps: &systemPS{}}
+		return &DiskStats{ps: ps}
 	})
 
 	inputs.Add("diskio", func() telegraf.Input {
-		return &DiskIOStats{ps: &systemPS{}, SkipSerialNumber: true}
+		return &DiskIOStats{ps: ps, SkipSerialNumber: true}
 	})
 }

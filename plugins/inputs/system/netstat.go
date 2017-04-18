@@ -66,6 +66,6 @@ func (s *NetStats) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("netstat", func() telegraf.Input {
-		return &NetStats{ps: &systemPS{}}
+		return &NetStats{ps: newSystemPS()}
 	})
 }
