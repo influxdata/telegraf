@@ -127,6 +127,7 @@ configuration options.
 
 ## Input Plugins
 
+* [activemq](./plugins/inputs/activemq)
 * [aerospike](./plugins/inputs/aerospike)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
