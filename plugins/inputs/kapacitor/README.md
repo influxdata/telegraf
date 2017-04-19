@@ -23,10 +23,10 @@ The Kapacitor plugin will collect metrics from the given Kapacitor instances.
     - num_subscriptions, integer
     - num_tasks, integer
 - kapacitor_edges
-    - collected, float
-    - emitted, float
+    - collected, integer
+    - emitted, integer
 - kapacitor_ingress
-    - points_received, float
+    - points_received, integer
 - kapacitor_memstats
     - alloc_bytes, integer
     - buck_hash_sys_bytes, integer
@@ -55,20 +55,20 @@ The Kapacitor plugin will collect metrics from the given Kapacitor instances.
     - sys_bytes, integer
     - total_alloc_bytes, integer
 - kapacitor_nodes
-    - alerts_triggered, float
+    - alerts_triggered, integer
     - avg_exec_time_ns, integer
-    - batches_queried, float
-    - crits_triggered, float
-    - eval_errors, float
-    - fields_defaulted, float
-    - infos_triggered, float
-    - oks_triggered, float
-    - points_queried, float
-    - points_written, float
-    - query_errors, float
-    - tags_defaulted, float
-    - warns_triggered, float
-    - write_errors, float
+    - batches_queried, integer
+    - crits_triggered, integer
+    - eval_errors, integer
+    - fields_defaulted, integer
+    - infos_triggered, integer
+    - oks_triggered, integer
+    - points_queried, integer
+    - points_written, integer
+    - query_errors, integer
+    - tags_defaulted, integer
+    - warns_triggered, integer
+    - write_errors, integer
 
 *Note:* The Kapacitor variables `host`, `cluster_id`, and `server_id`
 are currently not recorded due to the potential high cardinality of
