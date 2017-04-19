@@ -144,7 +144,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     ObjectName = "System"
-    Counters = ["Context Switches/sec","System Calls/sec"]
+    Counters = ["Context Switches/sec","System Calls/sec", "Processor Queue Length"]
     Instances = ["------"]
     Measurement = "win_system"
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).

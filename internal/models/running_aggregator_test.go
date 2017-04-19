@@ -184,8 +184,8 @@ func TestMakeMetricA(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,
@@ -202,8 +202,8 @@ func TestMakeMetricA(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,
@@ -220,8 +220,8 @@ func TestMakeMetricA(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,

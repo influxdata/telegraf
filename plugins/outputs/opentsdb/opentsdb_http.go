@@ -23,6 +23,8 @@ type HttpMetric struct {
 type openTSDBHttp struct {
 	Host      string
 	Port      int
+	Scheme    string
+	User      *url.Userinfo
 	BatchSize int
 	Debug     bool
 
@@ -118,7 +120,8 @@ func (o *openTSDBHttp) flush() error {
 	o.body.close()
 
 	u := url.URL{
-		Scheme: "http",
+		Scheme: o.Scheme,
+		User:   o.User,
 		Host:   fmt.Sprintf("%s:%d", o.Host, o.Port),
 		Path:   "/api/put",
 	}
@@ -131,7 +134,7 @@ func (o *openTSDBHttp) flush() error {
 	if err != nil {
 		return fmt.Errorf("Error when building request: %s", err.Error())
 	}
-	req.Header.Set("Content-Type", "applicaton/json")
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
 	if o.Debug {

@@ -158,7 +158,7 @@ func gatherInfoOutput(
 	tags map[string]string,
 ) error {
 	var section string
-	var keyspace_hits, keyspace_misses uint64 = 0, 0
+	var keyspace_hits, keyspace_misses int64
 
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]interface{})
@@ -210,8 +210,8 @@ func gatherInfoOutput(
 
 		val := strings.TrimSpace(parts[1])
 
-		// Try parsing as a uint
-		if ival, err := strconv.ParseUint(val, 10, 64); err == nil {
+		// Try parsing as int
+		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			switch name {
 			case "keyspace_hits":
 				keyspace_hits = ival
@@ -219,14 +219,8 @@ func gatherInfoOutput(
 				keyspace_misses = ival
 			case "rdb_last_save_time":
 				// influxdb can't calculate this, so we have to do it
-				fields["rdb_last_save_time_elapsed"] = uint64(time.Now().Unix()) - ival
+				fields["rdb_last_save_time_elapsed"] = time.Now().Unix() - ival
 			}
-			fields[metric] = ival
-			continue
-		}
-
-		// Try parsing as an int
-		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			fields[metric] = ival
 			continue
 		}
@@ -275,7 +269,7 @@ func gatherKeyspaceLine(
 		dbparts := strings.Split(line, ",")
 		for _, dbp := range dbparts {
 			kv := strings.Split(dbp, "=")
-			ival, err := strconv.ParseUint(kv[1], 10, 64)
+			ival, err := strconv.ParseInt(kv[1], 10, 64)
 			if err == nil {
 				fields[kv[0]] = ival
 			}

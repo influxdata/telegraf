@@ -94,32 +94,33 @@ type point struct {
 }
 
 type memstats struct {
-	Alloc         int64   `json:"Alloc"`
-	TotalAlloc    int64   `json:"TotalAlloc"`
-	Sys           int64   `json:"Sys"`
-	Lookups       int64   `json:"Lookups"`
-	Mallocs       int64   `json:"Mallocs"`
-	Frees         int64   `json:"Frees"`
-	HeapAlloc     int64   `json:"HeapAlloc"`
-	HeapSys       int64   `json:"HeapSys"`
-	HeapIdle      int64   `json:"HeapIdle"`
-	HeapInuse     int64   `json:"HeapInuse"`
-	HeapReleased  int64   `json:"HeapReleased"`
-	HeapObjects   int64   `json:"HeapObjects"`
-	StackInuse    int64   `json:"StackInuse"`
-	StackSys      int64   `json:"StackSys"`
-	MSpanInuse    int64   `json:"MSpanInuse"`
-	MSpanSys      int64   `json:"MSpanSys"`
-	MCacheInuse   int64   `json:"MCacheInuse"`
-	MCacheSys     int64   `json:"MCacheSys"`
-	BuckHashSys   int64   `json:"BuckHashSys"`
-	GCSys         int64   `json:"GCSys"`
-	OtherSys      int64   `json:"OtherSys"`
-	NextGC        int64   `json:"NextGC"`
-	LastGC        int64   `json:"LastGC"`
-	PauseTotalNs  int64   `json:"PauseTotalNs"`
-	NumGC         int64   `json:"NumGC"`
-	GCCPUFraction float64 `json:"GCCPUFraction"`
+	Alloc         int64      `json:"Alloc"`
+	TotalAlloc    int64      `json:"TotalAlloc"`
+	Sys           int64      `json:"Sys"`
+	Lookups       int64      `json:"Lookups"`
+	Mallocs       int64      `json:"Mallocs"`
+	Frees         int64      `json:"Frees"`
+	HeapAlloc     int64      `json:"HeapAlloc"`
+	HeapSys       int64      `json:"HeapSys"`
+	HeapIdle      int64      `json:"HeapIdle"`
+	HeapInuse     int64      `json:"HeapInuse"`
+	HeapReleased  int64      `json:"HeapReleased"`
+	HeapObjects   int64      `json:"HeapObjects"`
+	StackInuse    int64      `json:"StackInuse"`
+	StackSys      int64      `json:"StackSys"`
+	MSpanInuse    int64      `json:"MSpanInuse"`
+	MSpanSys      int64      `json:"MSpanSys"`
+	MCacheInuse   int64      `json:"MCacheInuse"`
+	MCacheSys     int64      `json:"MCacheSys"`
+	BuckHashSys   int64      `json:"BuckHashSys"`
+	GCSys         int64      `json:"GCSys"`
+	OtherSys      int64      `json:"OtherSys"`
+	NextGC        int64      `json:"NextGC"`
+	LastGC        int64      `json:"LastGC"`
+	PauseTotalNs  int64      `json:"PauseTotalNs"`
+	PauseNs       [256]int64 `json:"PauseNs"`
+	NumGC         int64      `json:"NumGC"`
+	GCCPUFraction float64    `json:"GCCPUFraction"`
 }
 
 // Gathers data from a particular URL
@@ -202,6 +203,7 @@ func (i *InfluxDB) gatherURL(
 						"next_gc":         m.NextGC,
 						"last_gc":         m.LastGC,
 						"pause_total_ns":  m.PauseTotalNs,
+						"pause_ns":        m.PauseNs[(m.NumGC+255)%256],
 						"num_gc":          m.NumGC,
 						"gcc_pu_fraction": m.GCCPUFraction,
 					},

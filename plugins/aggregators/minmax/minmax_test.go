@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var m1, _ = telegraf.NewMetric("m1",
+var m1, _ = metric.New("m1",
 	map[string]string{"foo": "bar"},
 	map[string]interface{}{
 		"a": int64(1),
@@ -24,7 +24,7 @@ var m1, _ = telegraf.NewMetric("m1",
 	},
 	time.Now(),
 )
-var m2, _ = telegraf.NewMetric("m1",
+var m2, _ = metric.New("m1",
 	map[string]string{"foo": "bar"},
 	map[string]interface{}{
 		"a":        int64(1),

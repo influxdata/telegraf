@@ -143,6 +143,10 @@ func TestDuration(t *testing.T) {
 	assert.Equal(t, time.Second, d.Duration)
 
 	d = Duration{}
+	d.UnmarshalTOML([]byte(`'1s'`))
+	assert.Equal(t, time.Second, d.Duration)
+
+	d = Duration{}
 	d.UnmarshalTOML([]byte(`10`))
 	assert.Equal(t, 10*time.Second, d.Duration)
 

@@ -13,11 +13,9 @@ import (
 
 func TestMakeMetricNoFields(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -32,11 +30,9 @@ func TestMakeMetricNoFields(t *testing.T) {
 // nil fields should get dropped
 func TestMakeMetricNilFields(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -50,7 +46,7 @@ func TestMakeMetricNilFields(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
 	)
 }
@@ -58,13 +54,10 @@ func TestMakeMetricNilFields(t *testing.T) {
 // make an untyped, counter, & gauge metric
 func TestMakeMetric(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 	assert.Equal(t, "inputs.TestRunningInput", ri.Name())
@@ -78,8 +71,8 @@ func TestMakeMetric(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,
@@ -96,8 +89,8 @@ func TestMakeMetric(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,
@@ -114,8 +107,8 @@ func TestMakeMetric(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 	assert.Equal(
 		t,
@@ -126,16 +119,13 @@ func TestMakeMetric(t *testing.T) {
 
 func TestMakeMetricWithPluginTags(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-			Tags: map[string]string{
-				"foo": "bar",
-			},
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"foo": "bar",
 		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 
@@ -148,24 +138,21 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest,foo=bar value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest,foo=bar value=101i %d", now.UnixNano()),
 	)
 }
 
 func TestMakeMetricFilteredOut(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-			Tags: map[string]string{
-				"foo": "bar",
-			},
-			Filter: Filter{NamePass: []string{"foobar"}},
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+		Tags: map[string]string{
+			"foo": "bar",
 		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+		Filter: Filter{NamePass: []string{"foobar"}},
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 	assert.NoError(t, ri.Config.Filter.Compile())
@@ -182,16 +169,13 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 
 func TestMakeMetricWithDaemonTags(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
 	ri.SetDefaultTags(map[string]string{
 		"foo": "bar",
 	})
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 
@@ -204,8 +188,8 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest,foo=bar value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest,foo=bar value=101i %d", now.UnixNano()),
 	)
 }
 
@@ -214,13 +198,10 @@ func TestMakeMetricInfFields(t *testing.T) {
 	inf := math.Inf(1)
 	ninf := math.Inf(-1)
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 
@@ -237,20 +218,17 @@ func TestMakeMetricInfFields(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest value=101i %d", now.UnixNano()),
 	)
 }
 
 func TestMakeMetricAllFieldTypes(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name: "TestRunningInput",
-		},
-	}
-	ri.SetDebug(true)
-	assert.Equal(t, true, ri.Debug())
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+
 	ri.SetTrace(true)
 	assert.Equal(t, true, ri.Trace())
 
@@ -275,21 +253,28 @@ func TestMakeMetricAllFieldTypes(t *testing.T) {
 		telegraf.Untyped,
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest a=10i,b=10i,c=10i,d=10i,e=10i,f=10i,g=10i,h=10i,i=10i,j=10,k=9223372036854775807i,l=\"foobar\",m=true %d", now.UnixNano()),
-		m.String(),
-	)
+	assert.Contains(t, m.String(), "a=10i")
+	assert.Contains(t, m.String(), "b=10i")
+	assert.Contains(t, m.String(), "c=10i")
+	assert.Contains(t, m.String(), "d=10i")
+	assert.Contains(t, m.String(), "e=10i")
+	assert.Contains(t, m.String(), "f=10i")
+	assert.Contains(t, m.String(), "g=10i")
+	assert.Contains(t, m.String(), "h=10i")
+	assert.Contains(t, m.String(), "i=10i")
+	assert.Contains(t, m.String(), "j=10")
+	assert.NotContains(t, m.String(), "j=10i")
+	assert.Contains(t, m.String(), "k=9223372036854775807i")
+	assert.Contains(t, m.String(), "l=\"foobar\"")
+	assert.Contains(t, m.String(), "m=true")
 }
 
 func TestMakeMetricNameOverride(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name:         "TestRunningInput",
-			NameOverride: "foobar",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:         "TestRunningInput",
+		NameOverride: "foobar",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -300,19 +285,17 @@ func TestMakeMetricNameOverride(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("foobar value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("foobar value=101i %d", now.UnixNano()),
 	)
 }
 
 func TestMakeMetricNamePrefix(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name:              "TestRunningInput",
-			MeasurementPrefix: "foobar_",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:              "TestRunningInput",
+		MeasurementPrefix: "foobar_",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -323,19 +306,17 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("foobar_RITest value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("foobar_RITest value=101i %d", now.UnixNano()),
 	)
 }
 
 func TestMakeMetricNameSuffix(t *testing.T) {
 	now := time.Now()
-	ri := RunningInput{
-		Config: &InputConfig{
-			Name:              "TestRunningInput",
-			MeasurementSuffix: "_foobar",
-		},
-	}
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:              "TestRunningInput",
+		MeasurementSuffix: "_foobar",
+	})
 
 	m := ri.MakeMetric(
 		"RITest",
@@ -346,7 +327,13 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 	)
 	assert.Equal(
 		t,
+		fmt.Sprintf("RITest_foobar value=101i %d\n", now.UnixNano()),
 		m.String(),
-		fmt.Sprintf("RITest_foobar value=101i %d", now.UnixNano()),
 	)
 }
+
+type testInput struct{}
+
+func (t *testInput) Description() string                   { return "" }
+func (t *testInput) SampleConfig() string                  { return "" }
+func (t *testInput) Gather(acc telegraf.Accumulator) error { return nil }

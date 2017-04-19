@@ -1,24 +1,33 @@
 package prometheus_client
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
-type PrometheusClient struct {
-	Listen string
+type MetricWithExpiration struct {
+	Metric     prometheus.Metric
+	Expiration time.Time
+}
 
-	metrics     map[string]prometheus.Metric
-	lastMetrics map[string]prometheus.Metric
+type PrometheusClient struct {
+	Listen             string
+	ExpirationInterval internal.Duration `toml:"expiration_interval"`
+	server             *http.Server
+
+	metrics map[string]*MetricWithExpiration
 
 	sync.Mutex
 }
@@ -26,36 +35,33 @@ type PrometheusClient struct {
 var sampleConfig = `
   ## Address to listen on
   # listen = ":9126"
+
+  ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
+  # expiration_interval = "60s"
 `
 
 func (p *PrometheusClient) Start() error {
-	p.metrics = make(map[string]prometheus.Metric)
-	p.lastMetrics = make(map[string]prometheus.Metric)
+	p.metrics = make(map[string]*MetricWithExpiration)
 	prometheus.Register(p)
-	defer func() {
-		if r := recover(); r != nil {
-			// recovering from panic here because there is no way to stop a
-			// running http go server except by a kill signal. Since the server
-			// does not stop on SIGHUP, Start() will panic when the process
-			// is reloaded.
-		}
-	}()
+
 	if p.Listen == "" {
 		p.Listen = "localhost:9126"
 	}
 
-	http.Handle("/metrics", prometheus.Handler())
-	server := &http.Server{
-		Addr: p.Listen,
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", prometheus.Handler())
+
+	p.server = &http.Server{
+		Addr:    p.Listen,
+		Handler: mux,
 	}
 
-	go server.ListenAndServe()
+	go p.server.ListenAndServe()
 	return nil
 }
 
 func (p *PrometheusClient) Stop() {
-	// TODO: Use a listener for http.Server that counts active connections
-	//       that can be stopped and closed gracefully
+	// plugin gets cleaned up in Close() already.
 }
 
 func (p *PrometheusClient) Connect() error {
@@ -64,8 +70,9 @@ func (p *PrometheusClient) Connect() error {
 }
 
 func (p *PrometheusClient) Close() error {
-	// This service output does not need to close any of its connections
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	return p.server.Shutdown(ctx)
 }
 
 func (p *PrometheusClient) SampleConfig() string {
@@ -86,16 +93,11 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	p.Lock()
 	defer p.Unlock()
 
-	if len(p.metrics) > 0 {
-		p.lastMetrics = make(map[string]prometheus.Metric)
-		for k, m := range p.metrics {
-			ch <- m
-			p.lastMetrics[k] = m
-		}
-		p.metrics = make(map[string]prometheus.Metric)
-	} else {
-		for _, m := range p.lastMetrics {
-			ch <- m
+	for key, m := range p.metrics {
+		if p.ExpirationInterval.Duration != 0 && time.Now().After(m.Expiration) {
+			delete(p.metrics, key)
+		} else {
+			ch <- m.Metric
 		}
 	}
 }
@@ -171,7 +173,11 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 					"key: %s, labels: %v,\nerr: %s\n",
 					mname, l, err.Error())
 			}
-			p.metrics[desc.String()] = metric
+
+			p.metrics[desc.String()] = &MetricWithExpiration{
+				Metric:     metric,
+				Expiration: time.Now().Add(p.ExpirationInterval.Duration),
+			}
 		}
 	}
 	return nil
@@ -179,6 +185,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("prometheus_client", func() telegraf.Output {
-		return &PrometheusClient{}
+		return &PrometheusClient{
+			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+		}
 	})
 }

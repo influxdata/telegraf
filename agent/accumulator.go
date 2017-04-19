@@ -2,10 +2,14 @@ package agent
 
 import (
 	"log"
-	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/selfstat"
+)
+
+var (
+	NErrors = selfstat.Register("agent", "gather_errors", map[string]string{})
 )
 
 type MetricMaker interface {
@@ -37,8 +41,6 @@ type accumulator struct {
 	maker MetricMaker
 
 	precision time.Duration
-
-	errCount uint64
 }
 
 func (ac *accumulator) AddFields(
@@ -80,7 +82,7 @@ func (ac *accumulator) AddError(err error) {
 	if err == nil {
 		return
 	}
-	atomic.AddUint64(&ac.errCount, 1)
+	NErrors.Incr(1)
 	//TODO suppress/throttle consecutive duplicate errors?
 	log.Printf("E! Error in plugin [%s]: %s", ac.maker.Name(), err)
 }

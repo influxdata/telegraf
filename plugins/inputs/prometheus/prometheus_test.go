@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -23,6 +24,9 @@ go_gc_duration_seconds_count 7
 # HELP go_goroutines Number of goroutines that currently exist.
 # TYPE go_goroutines gauge
 go_goroutines 15
+# HELP test_metric An untyped metric with a timestamp
+# TYPE test_metric untyped
+test_metric{label="value"} 1.0 1490802350000
 `
 
 func TestPrometheusGeneratesMetrics(t *testing.T) {
@@ -42,4 +46,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 
 	assert.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
 	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
+	assert.True(t, acc.HasFloatField("test_metric", "value"))
+	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+
 }

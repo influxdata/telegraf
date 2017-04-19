@@ -236,3 +236,18 @@ func TestParseValidValuesDefaultTags(t *testing.T) {
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{"test": "tag"}, metrics[0].Tags())
 }
+
+func TestParseValuesWithNullCharacter(t *testing.T) {
+	parser := ValueParser{
+		MetricName: "value_test",
+		DataType:   "integer",
+	}
+	metrics, err := parser.Parse([]byte("55\x00"))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "value_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"value": int64(55),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+}

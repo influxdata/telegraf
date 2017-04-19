@@ -22,6 +22,7 @@ INSTALL_ROOT_DIR = "/usr/bin"
 LOG_DIR = "/var/log/telegraf"
 SCRIPT_DIR = "/usr/lib/telegraf/scripts"
 CONFIG_DIR = "/etc/telegraf"
+CONFIG_DIR_D = "/etc/telegraf/telegraf.d"
 LOGROTATE_DIR = "/etc/logrotate.d"
 
 INIT_SCRIPT = "scripts/init.sh"
@@ -83,9 +84,9 @@ targets = {
 }
 
 supported_builds = {
-    "windows": [ "amd64" ],
+    "windows": [ "amd64", "i386" ],
     "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64" ],
-    "freebsd": [ "amd64" ]
+    "freebsd": [ "amd64", "i386" ]
 }
 
 supported_packages = {
@@ -115,7 +116,7 @@ def create_package_fs(build_root):
     logging.debug("Creating a filesystem hierarchy from directory: {}".format(build_root))
     # Using [1:] for the path names due to them being absolute
     # (will overwrite previous paths, per 'os.path.join' documentation)
-    dirs = [ INSTALL_ROOT_DIR[1:], LOG_DIR[1:], SCRIPT_DIR[1:], CONFIG_DIR[1:], LOGROTATE_DIR[1:] ]
+    dirs = [ INSTALL_ROOT_DIR[1:], LOG_DIR[1:], SCRIPT_DIR[1:], CONFIG_DIR[1:], LOGROTATE_DIR[1:], CONFIG_DIR_D[1:] ]
     for d in dirs:
         os.makedirs(os.path.join(build_root, d))
         os.chmod(os.path.join(build_root, d), 0o755)
@@ -583,6 +584,8 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     if "static_" in arch:
                         # Remove the "static_" from the displayed arch on the package
                         package_arch = arch.replace("static_", "")
+                    elif package_type == "rpm" and arch == 'armhf':
+                        package_arch = 'armv6hl'
                     else:
                         package_arch = arch
                     if not release and not nightly:

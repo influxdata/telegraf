@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 // makemetric is used by both RunningAggregator & RunningInput
@@ -31,7 +32,6 @@ func makemetric(
 	daemonTags map[string]string,
 	filter Filter,
 	applyFilter bool,
-	debug bool,
 	mType telegraf.ValueType,
 	t time.Time,
 ) telegraf.Metric {
@@ -122,11 +122,9 @@ func makemetric(
 		case float64:
 			// NaNs are invalid values in influxdb, skip measurement
 			if math.IsNaN(val) || math.IsInf(val, 0) {
-				if debug {
-					log.Printf("Measurement [%s] field [%s] has a NaN or Inf "+
-						"field, skipping",
-						measurement, k)
-				}
+				log.Printf("D! Measurement [%s] field [%s] has a NaN or Inf "+
+					"field, skipping",
+					measurement, k)
 				delete(fields, k)
 				continue
 			}
@@ -135,16 +133,7 @@ func makemetric(
 		}
 	}
 
-	var m telegraf.Metric
-	var err error
-	switch mType {
-	case telegraf.Counter:
-		m, err = telegraf.NewCounterMetric(measurement, tags, fields, t)
-	case telegraf.Gauge:
-		m, err = telegraf.NewGaugeMetric(measurement, tags, fields, t)
-	default:
-		m, err = telegraf.NewMetric(measurement, tags, fields, t)
-	}
+	m, err := metric.New(measurement, tags, fields, t, mType)
 	if err != nil {
 		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
 		return nil
