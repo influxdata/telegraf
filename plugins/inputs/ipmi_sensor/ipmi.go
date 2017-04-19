@@ -146,12 +146,13 @@ func transform(s string) string {
 }
 
 func init() {
+	m := Ipmi{}
+	path, _ := exec.LookPath("ipmitool")
+	if len(path) > 0 {
+		m.Path = path
+	}
 	inputs.Add("ipmi_sensor", func() telegraf.Input {
-		m := Ipmi{}
-		path, _ := exec.LookPath("ipmitool")
-		if len(path) > 0 {
-			m.Path = path
-		}
+		m := m
 		return &m
 	})
 }
