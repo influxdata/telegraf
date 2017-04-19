@@ -71,6 +71,16 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 
 	procs, err := p.updateProcesses(p.procs)
 	if err != nil {
+		if p.ProcessName != "" {
+			var prefix string
+			if p.Prefix != "" {
+				prefix = p.Prefix + "_"
+			}
+			tags := map[string]string{"process_name": p.ProcessName}
+			fields := map[string]interface{}{prefix + "running": 0}
+			acc.AddFields("procstat", fields, tags)
+		}
+
 		return fmt.Errorf(
 			"E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error())
@@ -91,7 +101,7 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		prefix = p.Prefix + "_"
 	}
 
-	fields := map[string]interface{}{}
+	fields := map[string]interface{}{prefix + "running": 1}
 
 	//If process_name tag is not already set, set to actual name
 	if _, nameInTags := proc.Tags()["process_name"]; !nameInTags {
