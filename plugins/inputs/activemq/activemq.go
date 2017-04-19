@@ -1,4 +1,4 @@
-package main
+package activemq
 
 import (
 	"encoding/xml"
