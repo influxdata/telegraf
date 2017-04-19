@@ -38,7 +38,12 @@ elif [[ -f /etc/debian_version ]]; then
             disable_systemd
         else
             # Assuming sysv
-            disable_update_rcd
+            # Run update-rc.d or fallback to chkconfig if not available
+            if which update-rc.d &>/dev/null; then
+                disable_update_rcd
+            else
+                disable_chkconfig
+            fi
         fi
     fi
 elif [[ -f /etc/os-release ]]; then
