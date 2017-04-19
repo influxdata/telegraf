@@ -72,6 +72,23 @@ func TestKapacitor(t *testing.T) {
 		}, tags)
 }
 
+func TestMissingStats(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	plugin := &kapacitor.Kapacitor{
+		URLs: []string{server.URL},
+	}
+
+	var acc testutil.Accumulator
+	plugin.Gather(&acc)
+
+	require.False(t, acc.HasField("kapacitor_memstats", "alloc_bytes"))
+	require.True(t, acc.HasField("kapacitor", "num_tasks"))
+}
+
 func TestErrorHandling(t *testing.T) {
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {

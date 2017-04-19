@@ -137,40 +137,42 @@ func (k *Kapacitor) gatherURL(
 		return err
 	}
 
-	acc.AddFields("kapacitor_memstats",
-		map[string]interface{}{
-			"alloc_bytes":         s.MemStats.Alloc,
-			"buck_hash_sys_bytes": s.MemStats.BuckHashSys,
-			"frees":               s.MemStats.Frees,
-			"gcc_pu_fraction":     s.MemStats.GCCPUFraction,
-			"gc_sys_bytes":        s.MemStats.GCSys,
-			"heap_alloc_bytes":    s.MemStats.HeapAlloc,
-			"heap_idle_bytes":     s.MemStats.HeapIdle,
-			"heap_in_use_bytes":   s.MemStats.HeapInuse,
-			"heap_objects":        s.MemStats.HeapObjects,
-			"heap_released_bytes": s.MemStats.HeapReleased,
-			"heap_sys_bytes":      s.MemStats.HeapSys,
-			"last_gc_ns":          s.MemStats.LastGC,
-			"lookups":             s.MemStats.Lookups,
-			"mallocs":             s.MemStats.Mallocs,
-			"mcache_in_use_bytes": s.MemStats.MCacheInuse,
-			"mcache_sys_bytes":    s.MemStats.MCacheSys,
-			"mspan_in_use_bytes":  s.MemStats.MSpanInuse,
-			"mspan_sys_bytes":     s.MemStats.MSpanSys,
-			"next_gc_ns":          s.MemStats.NextGC,
-			"num_gc":              s.MemStats.NumGC,
-			"other_sys_bytes":     s.MemStats.OtherSys,
-			"pause_total_ns":      s.MemStats.PauseTotalNs,
-			"stack_in_use_bytes":  s.MemStats.StackInuse,
-			"stack_sys_bytes":     s.MemStats.StackSys,
-			"sys_bytes":           s.MemStats.Sys,
-			"total_alloc_bytes":   s.MemStats.TotalAlloc,
-		},
-		map[string]string{
-			"kap_version": s.Version,
-			"url":         url,
-		},
-		now)
+	if s.MemStats != nil {
+		acc.AddFields("kapacitor_memstats",
+			map[string]interface{}{
+				"alloc_bytes":         s.MemStats.Alloc,
+				"buck_hash_sys_bytes": s.MemStats.BuckHashSys,
+				"frees":               s.MemStats.Frees,
+				"gcc_pu_fraction":     s.MemStats.GCCPUFraction,
+				"gc_sys_bytes":        s.MemStats.GCSys,
+				"heap_alloc_bytes":    s.MemStats.HeapAlloc,
+				"heap_idle_bytes":     s.MemStats.HeapIdle,
+				"heap_in_use_bytes":   s.MemStats.HeapInuse,
+				"heap_objects":        s.MemStats.HeapObjects,
+				"heap_released_bytes": s.MemStats.HeapReleased,
+				"heap_sys_bytes":      s.MemStats.HeapSys,
+				"last_gc_ns":          s.MemStats.LastGC,
+				"lookups":             s.MemStats.Lookups,
+				"mallocs":             s.MemStats.Mallocs,
+				"mcache_in_use_bytes": s.MemStats.MCacheInuse,
+				"mcache_sys_bytes":    s.MemStats.MCacheSys,
+				"mspan_in_use_bytes":  s.MemStats.MSpanInuse,
+				"mspan_sys_bytes":     s.MemStats.MSpanSys,
+				"next_gc_ns":          s.MemStats.NextGC,
+				"num_gc":              s.MemStats.NumGC,
+				"other_sys_bytes":     s.MemStats.OtherSys,
+				"pause_total_ns":      s.MemStats.PauseTotalNs,
+				"stack_in_use_bytes":  s.MemStats.StackInuse,
+				"stack_sys_bytes":     s.MemStats.StackSys,
+				"sys_bytes":           s.MemStats.Sys,
+				"total_alloc_bytes":   s.MemStats.TotalAlloc,
+			},
+			map[string]string{
+				"kap_version": s.Version,
+				"url":         url,
+			},
+			now)
+	}
 
 	acc.AddFields("kapacitor",
 		map[string]interface{}{
@@ -184,31 +186,33 @@ func (k *Kapacitor) gatherURL(
 		},
 		now)
 
-	for _, obj := range *s.Kapacitor {
+	if s.Kapacitor != nil {
+		for _, obj := range *s.Kapacitor {
 
-		// Strip out high-cardinality or duplicative tags
-		excludeTags := []string{"host", "cluster_id", "server_id"}
-		for _, key := range excludeTags {
-			if _, ok := obj.Tags[key]; ok {
-				delete(obj.Tags, key)
+			// Strip out high-cardinality or duplicative tags
+			excludeTags := []string{"host", "cluster_id", "server_id"}
+			for _, key := range excludeTags {
+				if _, ok := obj.Tags[key]; ok {
+					delete(obj.Tags, key)
+				}
 			}
-		}
 
-		// Convert time-related string field to int
-		if _, ok := obj.Values["avg_exec_time_ns"]; ok {
-			d, err := time.ParseDuration(obj.Values["avg_exec_time_ns"].(string))
-			if err != nil {
-				continue
+			// Convert time-related string field to int
+			if _, ok := obj.Values["avg_exec_time_ns"]; ok {
+				d, err := time.ParseDuration(obj.Values["avg_exec_time_ns"].(string))
+				if err != nil {
+					continue
+				}
+				obj.Values["avg_exec_time_ns"] = d.Nanoseconds()
 			}
-			obj.Values["avg_exec_time_ns"] = d.Nanoseconds()
-		}
 
-		acc.AddFields(
-			"kapacitor_"+obj.Name,
-			obj.Values,
-			obj.Tags,
-			now,
-		)
+			acc.AddFields(
+				"kapacitor_"+obj.Name,
+				obj.Values,
+				obj.Tags,
+				now,
+			)
+		}
 	}
 
 	return nil

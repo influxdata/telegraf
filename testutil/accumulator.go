@@ -299,6 +299,22 @@ func (a *Accumulator) HasTimestamp(measurement string, timestamp time.Time) bool
 	return false
 }
 
+// HasField returns true if the given measurement has a field with the given
+// name
+func (a *Accumulator) HasField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			if _, ok := p.Fields[field]; ok {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // HasIntField returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
 	a.Lock()
