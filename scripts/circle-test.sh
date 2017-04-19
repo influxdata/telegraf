@@ -82,6 +82,6 @@ if [ $? -eq 0 ]; then
     unset GOGC
     tag=$(git describe --exact-match HEAD)
     echo $tag
-    exit_if_fail ./scripts/build.py --release --package --version=$tag --platform=all --arch=all --upload --bucket=dl.influxdata.com/telegraf/releases
+    exit_if_fail ./scripts/build.py --release --package --platform=all --arch=all --upload --bucket=dl.influxdata.com/telegraf/releases
     mv build $CIRCLE_ARTIFACTS
 fi

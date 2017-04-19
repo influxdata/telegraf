@@ -7,10 +7,12 @@ import (
 )
 
 const (
-	validJSON        = "{\"a\": 5, \"b\": {\"c\": 6}}"
-	validJSONNewline = "\n{\"d\": 7, \"b\": {\"d\": 8}}\n"
-	invalidJSON      = "I don't think this is JSON"
-	invalidJSON2     = "{\"a\": 5, \"b\": \"c\": 6}}"
+	validJSON              = "{\"a\": 5, \"b\": {\"c\": 6}}"
+	validJSONNewline       = "\n{\"d\": 7, \"b\": {\"d\": 8}}\n"
+	validJSONArray         = "[{\"a\": 5, \"b\": {\"c\": 6}}]"
+	validJSONArrayMultiple = "[{\"a\": 5, \"b\": {\"c\": 6}}, {\"a\": 7, \"b\": {\"c\": 8}}]"
+	invalidJSON            = "I don't think this is JSON"
+	invalidJSON2           = "{\"a\": 5, \"b\": \"c\": 6}}"
 )
 
 const validJSONTags = `
@@ -22,6 +24,27 @@ const validJSONTags = `
     "mytag": "foobar",
     "othertag": "baz"
 }
+`
+
+const validJSONArrayTags = `
+[
+{
+    "a": 5,
+    "b": {
+        "c": 6
+    },
+    "mytag": "foo",
+    "othertag": "baz"
+},
+{
+    "a": 7,
+    "b": {
+        "c": 8
+    },
+    "mytag": "bar",
+    "othertag": "baz"
+}
+]
 `
 
 func TestParseValidJSON(t *testing.T) {
@@ -281,4 +304,117 @@ func TestParseValidJSONDefaultTagsOverride(t *testing.T) {
 	assert.Equal(t, map[string]string{
 		"mytag": "foobar",
 	}, metrics[0].Tags())
+}
+
+// Test that json arrays can be parsed
+func TestParseValidJSONArray(t *testing.T) {
+	parser := JSONParser{
+		MetricName: "json_array_test",
+	}
+
+	// Most basic vanilla test
+	metrics, err := parser.Parse([]byte(validJSONArray))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "json_array_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+
+	// Basic multiple datapoints
+	metrics, err = parser.Parse([]byte(validJSONArrayMultiple))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 2)
+	assert.Equal(t, "json_array_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{}, metrics[1].Tags())
+	assert.Equal(t, "json_array_test", metrics[1].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(7),
+		"b_c": float64(8),
+	}, metrics[1].Fields())
+	assert.Equal(t, map[string]string{}, metrics[1].Tags())
+}
+
+func TestParseArrayWithTagKeys(t *testing.T) {
+	// Test that strings not matching tag keys are ignored
+	parser := JSONParser{
+		MetricName: "json_array_test",
+		TagKeys:    []string{"wrongtagkey"},
+	}
+	metrics, err := parser.Parse([]byte(validJSONArrayTags))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 2)
+	assert.Equal(t, "json_array_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+
+	assert.Equal(t, "json_array_test", metrics[1].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(7),
+		"b_c": float64(8),
+	}, metrics[1].Fields())
+	assert.Equal(t, map[string]string{}, metrics[1].Tags())
+
+	// Test that single tag key is found and applied
+	parser = JSONParser{
+		MetricName: "json_array_test",
+		TagKeys:    []string{"mytag"},
+	}
+	metrics, err = parser.Parse([]byte(validJSONArrayTags))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 2)
+	assert.Equal(t, "json_array_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{
+		"mytag": "foo",
+	}, metrics[0].Tags())
+
+	assert.Equal(t, "json_array_test", metrics[1].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(7),
+		"b_c": float64(8),
+	}, metrics[1].Fields())
+	assert.Equal(t, map[string]string{
+		"mytag": "bar",
+	}, metrics[1].Tags())
+
+	// Test that both tag keys are found and applied
+	parser = JSONParser{
+		MetricName: "json_array_test",
+		TagKeys:    []string{"mytag", "othertag"},
+	}
+	metrics, err = parser.Parse([]byte(validJSONArrayTags))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 2)
+	assert.Equal(t, "json_array_test", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(5),
+		"b_c": float64(6),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{
+		"mytag":    "foo",
+		"othertag": "baz",
+	}, metrics[0].Tags())
+
+	assert.Equal(t, "json_array_test", metrics[1].Name())
+	assert.Equal(t, map[string]interface{}{
+		"a":   float64(7),
+		"b_c": float64(8),
+	}, metrics[1].Fields())
+	assert.Equal(t, map[string]string{
+		"mytag":    "bar",
+		"othertag": "baz",
+	}, metrics[1].Tags())
 }

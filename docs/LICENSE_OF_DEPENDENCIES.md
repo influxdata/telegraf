@@ -1,4 +1,5 @@
 # List
+- collectd.org [MIT LICENSE](https://github.com/collectd/go-collectd/blob/master/LICENSE)
 - github.com/Shopify/sarama [MIT LICENSE](https://github.com/Shopify/sarama/blob/master/MIT-LICENSE)
 - github.com/Sirupsen/logrus [MIT LICENSE](https://github.com/Sirupsen/logrus/blob/master/LICENSE)
 - github.com/armon/go-metrics [MIT LICENSE](https://github.com/armon/go-metrics/blob/master/LICENSE)
@@ -12,11 +13,11 @@
 - github.com/gogo/protobuf [BSD LICENSE](https://github.com/gogo/protobuf/blob/master/LICENSE)
 - github.com/golang/protobuf [BSD LICENSE](https://github.com/golang/protobuf/blob/master/LICENSE)
 - github.com/golang/snappy [BSD LICENSE](https://github.com/golang/snappy/blob/master/LICENSE)
-- github.com/gonuts/go-shellquote (No License, but the project it was forked from https://github.com/kballard/go-shellquote is [MIT](https://github.com/kballard/go-shellquote/blob/master/LICENSE)).
 - github.com/hashicorp/go-msgpack [BSD LICENSE](https://github.com/hashicorp/go-msgpack/blob/master/LICENSE)
 - github.com/hashicorp/raft [MPL LICENSE](https://github.com/hashicorp/raft/blob/master/LICENSE)
 - github.com/hashicorp/raft-boltdb [MPL LICENSE](https://github.com/hashicorp/raft-boltdb/blob/master/LICENSE)
 - github.com/kardianos/service [ZLIB LICENSE](https://github.com/kardianos/service/blob/master/LICENSE) (License not named but matches word for word with ZLib)
+- github.com/kballard/go-shellquote [MIT LICENSE](https://github.com/kballard/go-shellquote/blob/master/LICENSE)
 - github.com/lib/pq [MIT LICENSE](https://github.com/lib/pq/blob/master/LICENSE.md)
 - github.com/matttproud/golang_protobuf_extensions [APACHE LICENSE](https://github.com/matttproud/golang_protobuf_extensions/blob/master/LICENSE)
 - github.com/naoina/go-stringutil [MIT LICENSE](https://github.com/naoina/go-stringutil/blob/master/LICENSE)
@@ -30,4 +31,3 @@
 - gopkg.in/dancannon/gorethink.v1 [APACHE LICENSE](https://github.com/dancannon/gorethink/blob/v1.1.2/LICENSE)
 - gopkg.in/mgo.v2 [BSD LICENSE](https://github.com/go-mgo/mgo/blob/v2/LICENSE)
 - golang.org/x/crypto/ [BSD LICENSE](https://github.com/golang/crypto/blob/master/LICENSE)
-

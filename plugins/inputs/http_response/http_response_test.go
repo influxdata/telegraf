@@ -22,6 +22,9 @@ func setUpTestMux() http.Handler {
 	mux.HandleFunc("/good", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "hit the good page!")
 	})
+	mux.HandleFunc("/jsonresponse", func(w http.ResponseWriter, req *http.Request) {
+		fmt.Fprintf(w, "\"service_status\": \"up\", \"healthy\" : \"true\"")
+	})
 	mux.HandleFunc("/badredirect", func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/badredirect", http.StatusMovedPermanently)
 	})
@@ -236,6 +239,87 @@ func TestBody(t *testing.T) {
 	}
 }
 
+func TestStringMatch(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Address:             ts.URL + "/good",
+		Body:                "{ 'test': 'data'}",
+		Method:              "GET",
+		ResponseStringMatch: "hit the good page",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+	}
+	fields, err := h.HTTPGather()
+	require.NoError(t, err)
+	assert.NotEmpty(t, fields)
+	if assert.NotNil(t, fields["http_response_code"]) {
+		assert.Equal(t, http.StatusOK, fields["http_response_code"])
+	}
+	assert.Equal(t, 1, fields["response_string_match"])
+	assert.NotNil(t, fields["response_time"])
+
+}
+
+func TestStringMatchJson(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Address:             ts.URL + "/jsonresponse",
+		Body:                "{ 'test': 'data'}",
+		Method:              "GET",
+		ResponseStringMatch: "\"service_status\": \"up\"",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+	}
+	fields, err := h.HTTPGather()
+	require.NoError(t, err)
+	assert.NotEmpty(t, fields)
+	if assert.NotNil(t, fields["http_response_code"]) {
+		assert.Equal(t, http.StatusOK, fields["http_response_code"])
+	}
+	assert.Equal(t, 1, fields["response_string_match"])
+	assert.NotNil(t, fields["response_time"])
+
+}
+
+func TestStringMatchFail(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Address:             ts.URL + "/good",
+		Body:                "{ 'test': 'data'}",
+		Method:              "GET",
+		ResponseStringMatch: "hit the bad page",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+	}
+	fields, err := h.HTTPGather()
+	require.NoError(t, err)
+	assert.NotEmpty(t, fields)
+	if assert.NotNil(t, fields["http_response_code"]) {
+		assert.Equal(t, http.StatusOK, fields["http_response_code"])
+	}
+	assert.Equal(t, 0, fields["response_string_match"])
+	assert.NotNil(t, fields["response_time"])
+
+}
+
 func TestTimeout(t *testing.T) {
 	mux := setUpTestMux()
 	ts := httptest.NewServer(mux)
@@ -245,7 +329,7 @@ func TestTimeout(t *testing.T) {
 		Address:         ts.URL + "/twosecondnap",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 1},
+		ResponseTimeout: internal.Duration{Duration: time.Millisecond},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},

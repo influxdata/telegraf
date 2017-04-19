@@ -103,9 +103,13 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 			tags["stratum"] = valueFields[0]
 			continue
 		}
+		if strings.Contains(strings.ToLower(name), "reference_id") {
+			tags["reference_id"] = valueFields[0]
+			continue
+		}
 		value, err := strconv.ParseFloat(valueFields[0], 64)
 		if err != nil {
-			tags[name] = strings.ToLower(valueFields[0])
+			tags[name] = strings.ToLower(strings.Join(valueFields, " "))
 			continue
 		}
 		if strings.Contains(stats[1], "slow") {

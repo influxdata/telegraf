@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 type RunningAggregator struct {
@@ -65,12 +66,13 @@ func (r *RunningAggregator) MakeMetric(
 		nil,
 		r.Config.Filter,
 		false,
-		false,
 		mType,
 		t,
 	)
 
-	m.SetAggregate(true)
+	if m != nil {
+		m.SetAggregate(true)
+	}
 
 	return m
 }
@@ -90,7 +92,7 @@ func (r *RunningAggregator) Add(in telegraf.Metric) bool {
 			return false
 		}
 
-		in, _ = telegraf.NewMetric(name, tags, fields, t)
+		in, _ = metric.New(name, tags, fields, t)
 	}
 
 	r.metrics <- in

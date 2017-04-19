@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +42,7 @@ func TestAdd(t *testing.T) {
 	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", now.UnixNano()),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", now.UnixNano()),
 		actual)
 }
 
@@ -69,7 +70,7 @@ func TestAddFields(t *testing.T) {
 	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test usage=99 %d", now.UnixNano()),
+		fmt.Sprintf("acctest,acc=test usage=99 %d\n", now.UnixNano()),
 		actual)
 }
 
@@ -87,7 +88,7 @@ func TestAccAddError(t *testing.T) {
 	a.AddError(fmt.Errorf("baz"))
 
 	errs := bytes.Split(errBuf.Bytes(), []byte{'\n'})
-	assert.EqualValues(t, 3, a.errCount)
+	assert.EqualValues(t, int64(3), NErrors.Get())
 	require.Len(t, errs, 4) // 4 because of trailing newline
 	assert.Contains(t, string(errs[0]), "TestPlugin")
 	assert.Contains(t, string(errs[0]), "foo")
@@ -125,7 +126,7 @@ func TestAddNoIntervalWithPrecision(t *testing.T) {
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800000000000)),
 		actual)
 }
 
@@ -157,7 +158,7 @@ func TestAddDisablePrecision(t *testing.T) {
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082912748)),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800082912748)),
 		actual)
 }
 
@@ -189,7 +190,7 @@ func TestAddNoPrecisionWithInterval(t *testing.T) {
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800000000000)),
 		actual)
 }
 
@@ -206,7 +207,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	testm := <-a.metrics
 	actual := testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800000000000)),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800000000000)),
 		actual)
 
 	a.SetPrecision(0, time.Millisecond)
@@ -216,7 +217,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800083000000)),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800083000000)),
 		actual)
 
 	a.SetPrecision(0, time.Microsecond)
@@ -226,7 +227,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082913000)),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800082913000)),
 		actual)
 
 	a.SetPrecision(0, time.Nanosecond)
@@ -236,7 +237,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	testm = <-a.metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", int64(1139572800082912748)),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800082912748)),
 		actual)
 }
 
@@ -269,7 +270,7 @@ func TestAddGauge(t *testing.T) {
 	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", now.UnixNano()),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", now.UnixNano()),
 		actual)
 	assert.Equal(t, testm.Type(), telegraf.Gauge)
 }
@@ -303,7 +304,7 @@ func TestAddCounter(t *testing.T) {
 	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
-		fmt.Sprintf("acctest,acc=test value=101 %d", now.UnixNano()),
+		fmt.Sprintf("acctest,acc=test value=101 %d\n", now.UnixNano()),
 		actual)
 	assert.Equal(t, testm.Type(), telegraf.Counter)
 }
@@ -323,15 +324,15 @@ func (tm *TestMetricMaker) MakeMetric(
 ) telegraf.Metric {
 	switch mType {
 	case telegraf.Untyped:
-		if m, err := telegraf.NewMetric(measurement, tags, fields, t); err == nil {
+		if m, err := metric.New(measurement, tags, fields, t); err == nil {
 			return m
 		}
 	case telegraf.Counter:
-		if m, err := telegraf.NewCounterMetric(measurement, tags, fields, t); err == nil {
+		if m, err := metric.New(measurement, tags, fields, t, telegraf.Counter); err == nil {
 			return m
 		}
 	case telegraf.Gauge:
-		if m, err := telegraf.NewGaugeMetric(measurement, tags, fields, t); err == nil {
+		if m, err := metric.New(measurement, tags, fields, t, telegraf.Gauge); err == nil {
 			return m
 		}
 	}

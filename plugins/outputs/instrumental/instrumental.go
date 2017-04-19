@@ -1,6 +1,7 @@
 package instrumental
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -10,9 +11,15 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
+)
+
+var (
+	ValueIncludesBadChar = regexp.MustCompile("[^[:digit:].]")
+	MetricNameReplacer   = regexp.MustCompile("[^-[:alnum:]_.]+")
 )
 
 type Instrumental struct {
@@ -32,11 +39,6 @@ const (
 	HelloMessage    = "hello version go/telegraf/1.1\n"
 	AuthFormat      = "authenticate %s\n"
 	HandshakeFormat = HelloMessage + AuthFormat
-)
-
-var (
-	ValueIncludesBadChar = regexp.MustCompile("[^[:digit:].]")
-	MetricNameReplacer   = regexp.MustCompile("[^-[:alnum:]_.]+")
 )
 
 var sampleConfig = `
@@ -94,7 +96,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	var toSerialize telegraf.Metric
 	var newTags map[string]string
 
-	for _, metric := range metrics {
+	for _, m := range metrics {
 		// Pull the metric_type out of the metric's tags. We don't want the type
 		// to show up with the other tags pulled from the system, as they go in the
 		// beginning of the line instead.
@@ -106,18 +108,18 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		//
 		//  increment some_prefix.host.tag1.tag2.tag3.counter.field value timestamp
 		//
-		newTags = metric.Tags()
+		newTags = m.Tags()
 		metricType = newTags["metric_type"]
 		delete(newTags, "metric_type")
 
-		toSerialize, _ = telegraf.NewMetric(
-			metric.Name(),
+		toSerialize, _ = metric.New(
+			m.Name(),
 			newTags,
-			metric.Fields(),
-			metric.Time(),
+			m.Fields(),
+			m.Time(),
 		)
 
-		stats, err := s.Serialize(toSerialize)
+		buf, err := s.Serialize(toSerialize)
 		if err != nil {
 			log.Printf("E! Error serializing a metric to Instrumental: %s", err)
 		}
@@ -131,28 +133,31 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 			metricType = "gauge"
 		}
 
-		for _, stat := range stats {
+		buffer := bytes.NewBuffer(buf)
+		for {
+			line, err := buffer.ReadBytes('\n')
+			if err != nil {
+				break
+			}
+			stat := string(line)
+
 			// decompose "metric.name value time"
 			splitStat := strings.SplitN(stat, " ", 3)
-			metric := splitStat[0]
+			name := splitStat[0]
 			value := splitStat[1]
 			time := splitStat[2]
 
 			// replace invalid components of metric name with underscore
-			clean_metric := MetricNameReplacer.ReplaceAllString(metric, "_")
+			clean_metric := MetricNameReplacer.ReplaceAllString(name, "_")
 
 			if !ValueIncludesBadChar.MatchString(value) {
 				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, clean_metric, value, time))
-			} else if i.Debug {
-				log.Printf("E! Instrumental unable to send bad stat: %s", stat)
 			}
 		}
 	}
 
-	allPoints := strings.Join(points, "\n") + "\n"
+	allPoints := strings.Join(points, "")
 	_, err = fmt.Fprintf(i.conn, allPoints)
-
-	log.Println("D! Instrumental: " + allPoints)
 
 	if err != nil {
 		if err == io.EOF {

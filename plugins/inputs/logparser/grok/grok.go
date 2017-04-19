@@ -13,6 +13,7 @@ import (
 	"github.com/vjeantet/grok"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 var timeLayouts = map[string]string{
@@ -167,6 +168,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(values) == 0 {
+		log.Printf("D! Grok no match found for: %q", line)
 		return nil, nil
 	}
 
@@ -280,7 +282,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	return telegraf.NewMetric(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
+	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
 }
 
 func (p *Parser) addCustomPatterns(scanner *bufio.Scanner) {

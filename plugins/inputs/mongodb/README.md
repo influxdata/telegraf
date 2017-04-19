@@ -11,9 +11,16 @@
   ##   10.0.0.1:10000, etc.
   servers = ["127.0.0.1:27017"]
   gather_perdb_stats = false
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
-For authenticated mongodb istances use connection mongdb connection URI
+For authenticated mongodb instances use `mongodb://` connection URI
 
 ```toml
 [[inputs.mongodb]]

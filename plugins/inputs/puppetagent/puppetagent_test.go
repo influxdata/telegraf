@@ -28,7 +28,7 @@ func TestGather(t *testing.T) {
 		"resources_outofsync":       int64(0),
 		"changes_total":             int64(0),
 		"time_lastrun":              int64(1444936531),
-		"version_config":            int64(1444936521),
+		"version_configstring":      "environment:d6018ce",
 		"time_user":                 float64(0.004331),
 		"time_schedule":             float64(0.001123),
 		"time_filebucket":           float64(0.000353),

@@ -3,14 +3,15 @@ package prometheus
 import (
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
@@ -20,6 +21,8 @@ type Prometheus struct {
 
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
+
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -37,6 +40,9 @@ var sampleConfig = `
 
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
+
+  ## Specify timeout duration for slower prometheus clients (default is 3s)
+  # response_timeout = "3s"
 
   ## Optional SSL Config
   # ssl_ca = /path/to/cafile
@@ -86,7 +92,6 @@ var client = &http.Client{
 }
 
 func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
-	collectDate := time.Now()
 	var req, err = http.NewRequest("GET", url, nil)
 	req.Header.Add("Accept", acceptHeader)
 	var token []byte
@@ -105,7 +110,7 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 		}).Dial,
 		TLSHandshakeTimeout:   5 * time.Second,
 		TLSClientConfig:       tlsCfg,
-		ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		ResponseHeaderTimeout: p.ResponseTimeout.Duration,
 		DisableKeepAlives:     true,
 	}
 
@@ -140,7 +145,7 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	for _, metric := range metrics {
 		tags := metric.Tags()
 		tags["url"] = url
-		acc.AddFields(metric.Name(), metric.Fields(), tags, collectDate)
+		acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 	}
 
 	return nil
@@ -148,6 +153,6 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
-		return &Prometheus{}
+		return &Prometheus{ResponseTimeout: internal.Duration{Duration: time.Second * 3}}
 	})
 }

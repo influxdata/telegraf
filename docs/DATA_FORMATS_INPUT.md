@@ -7,6 +7,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
 1. [Value](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#value), ie: 45 or "booyah"
 1. [Nagios](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#nagios) (exec input only)
+1. [Collectd](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#collectd)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -145,6 +146,62 @@ Your Telegraf metrics would get tagged with "my_tag_1"
 
 ```
 exec_mycollector,my_tag_1=foo a=5,b_c=6
+```
+
+If the JSON data is an array, then each element of the array is parsed with the configured settings.
+Each resulting metric will be output with the same timestamp.
+
+For example, if the following configuration:
+
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/usr/bin/mycollector --foo=bar"]
+
+  ## measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
+
+  ## Data format to consume.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "json"
+
+  ## List of tag names to extract from top-level of JSON server response
+  tag_keys = [
+    "my_tag_1",
+    "my_tag_2"
+  ]
+```
+
+with this JSON output from a command:
+
+```json
+[
+    {
+        "a": 5,
+        "b": {
+            "c": 6
+        },
+        "my_tag_1": "foo",
+        "my_tag_2": "baz"
+    },
+    {
+        "a": 7,
+        "b": {
+            "c": 8
+        },
+        "my_tag_1": "bar",
+        "my_tag_2": "baz"
+    }
+]
+```
+
+Your Telegraf metrics would get tagged with "my_tag_1" and "my_tag_2"
+
+```
+exec_mycollector,my_tag_1=foo,my_tag_2=baz a=5,b_c=6
+exec_mycollector,my_tag_1=bar,my_tag_2=baz a=7,b_c=8
 ```
 
 # Value:
@@ -371,14 +428,54 @@ Note: Nagios Input Data Formats is only supported in `exec` input plugin.
 ```toml
 [[inputs.exec]]
   ## Commands array
-  commands = ["/usr/lib/nagios/plugins/check_load", "-w 5,6,7 -c 7,8,9"]
+  commands = ["/usr/lib/nagios/plugins/check_load -w 5,6,7 -c 7,8,9"]
 
   ## measurement name suffix (for separating different commands)
   name_suffix = "_mycollector"
 
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "nagios"
+```
+
+# Collectd:
+
+The collectd format parses the collectd binary network protocol.  Tags are
+created for host, instance, type, and type instance.  All collectd values are
+added as float64 fields.
+
+For more information about the binary network protocol see
+[here](https://collectd.org/wiki/index.php/Binary_protocol).
+
+You can control the cryptographic settings with parser options.  Create an
+authentication file and set `collectd_auth_file` to the path of the file, then
+set the desired security level in `collectd_security_level`.
+
+Additional information including client setup can be found
+[here](https://collectd.org/wiki/index.php/Networking_introduction#Cryptographic_setup).
+
+You can also change the path to the typesdb or add additional typesdb using
+`collectd_typesdb`.
+
+#### Collectd Configuration:
+
+```toml
+[[inputs.socket_listener]]
+  service_address = "udp://127.0.0.1:25826"
+  name_prefix = "collectd_"
+
+  ## Data format to consume.
+  ## Each data format has it's own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "collectd"
+
+  ## Authentication file for cryptographic security levels
+  collectd_auth_file = "/etc/collectd/auth_file"
+  ## One of none (default), sign, or encrypt
+  collectd_security_level = "encrypt"
+  ## Path of to TypesDB specifications
+  collectd_typesdb = ["/usr/share/collectd/types.db"]
 ```

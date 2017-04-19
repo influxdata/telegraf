@@ -14,13 +14,20 @@ import (
 
 type PS interface {
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error)
-	DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, error)
+	DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error)
 	NetIO() ([]net.IOCountersStat, error)
 	NetProto() ([]net.ProtoCountersStat, error)
-	DiskIO() (map[string]disk.IOCountersStat, error)
+	DiskIO(names []string) (map[string]disk.IOCountersStat, error)
 	VMStat() (*mem.VirtualMemoryStat, error)
 	SwapStat() (*mem.SwapMemoryStat, error)
 	NetConnections() ([]net.ConnectionStat, error)
+}
+
+type PSDiskDeps interface {
+	Partitions(all bool) ([]disk.PartitionStat, error)
+	OSGetenv(key string) string
+	OSStat(name string) (os.FileInfo, error)
+	PSDiskUsage(path string) (*disk.UsageStat, error)
 }
 
 func add(acc telegraf.Accumulator,
@@ -30,7 +37,15 @@ func add(acc telegraf.Accumulator,
 	}
 }
 
-type systemPS struct{}
+func newSystemPS() *systemPS {
+	return &systemPS{&systemPSDisk{}}
+}
+
+type systemPS struct {
+	PSDiskDeps
+}
+
+type systemPSDisk struct{}
 
 func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	var cpuTimes []cpu.TimesStat
@@ -54,10 +69,10 @@ func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 func (s *systemPS) DiskUsage(
 	mountPointFilter []string,
 	fstypeExclude []string,
-) ([]*disk.UsageStat, error) {
-	parts, err := disk.Partitions(true)
+) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
+	parts, err := s.Partitions(true)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Make a "set" out of the filter slice
@@ -71,35 +86,40 @@ func (s *systemPS) DiskUsage(
 	}
 
 	var usage []*disk.UsageStat
+	var partitions []*disk.PartitionStat
 
-	for _, p := range parts {
+	for i := range parts {
+		p := parts[i]
+
 		if len(mountPointFilter) > 0 {
 			// If the mount point is not a member of the filter set,
 			// don't gather info on it.
-			_, ok := mountPointFilterSet[p.Mountpoint]
-			if !ok {
+			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
 				continue
 			}
 		}
-		mountpoint := os.Getenv("HOST_MOUNT_PREFIX") + p.Mountpoint
-		if _, err := os.Stat(mountpoint); err == nil {
-			du, err := disk.Usage(mountpoint)
-			if err != nil {
-				return nil, err
-			}
-			du.Path = p.Mountpoint
-			// If the mount point is a member of the exclude set,
-			// don't gather info on it.
-			_, ok := fstypeExcludeSet[p.Fstype]
-			if ok {
-				continue
-			}
-			du.Fstype = p.Fstype
-			usage = append(usage, du)
+
+		// If the mount point is a member of the exclude set,
+		// don't gather info on it.
+		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
+			continue
 		}
+
+		mountpoint := s.OSGetenv("HOST_MOUNT_PREFIX") + p.Mountpoint
+		if _, err := s.OSStat(mountpoint); err != nil {
+			continue
+		}
+		du, err := s.PSDiskUsage(mountpoint)
+		if err != nil {
+			continue
+		}
+		du.Path = p.Mountpoint
+		du.Fstype = p.Fstype
+		usage = append(usage, du)
+		partitions = append(partitions, &p)
 	}
 
-	return usage, nil
+	return usage, partitions, nil
 }
 
 func (s *systemPS) NetProto() ([]net.ProtoCountersStat, error) {
@@ -114,8 +134,8 @@ func (s *systemPS) NetConnections() ([]net.ConnectionStat, error) {
 	return net.Connections("all")
 }
 
-func (s *systemPS) DiskIO() (map[string]disk.IOCountersStat, error) {
-	m, err := disk.IOCounters()
+func (s *systemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
+	m, err := disk.IOCounters(names...)
 	if err == internal.NotImplementedError {
 		return nil, nil
 	}
@@ -129,4 +149,20 @@ func (s *systemPS) VMStat() (*mem.VirtualMemoryStat, error) {
 
 func (s *systemPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	return mem.SwapMemory()
+}
+
+func (s *systemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
+	return disk.Partitions(all)
+}
+
+func (s *systemPSDisk) OSGetenv(key string) string {
+	return os.Getenv(key)
+}
+
+func (s *systemPSDisk) OSStat(name string) (os.FileInfo, error) {
+	return os.Stat(name)
+}
+
+func (s *systemPSDisk) PSDiskUsage(path string) (*disk.UsageStat, error) {
+	return disk.Usage(path)
 }
