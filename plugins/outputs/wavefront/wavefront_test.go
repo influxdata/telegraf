@@ -2,6 +2,7 @@ package wavefront
 
 import (
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"reflect"
 	"strings"
@@ -62,7 +63,7 @@ func TestBuildMetricsNoSimpleFields(t *testing.T) {
 
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 
-	testMetric1, _ := telegraf.NewMetric(
+	testMetric1, _ := metric.New(
 		"test.simple.metric",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"value": 123},
@@ -102,7 +103,7 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 
-	testMetric1, _ := telegraf.NewMetric(
+	testMetric1, _ := metric.New(
 		"test.simple.metric",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"value": 123},
