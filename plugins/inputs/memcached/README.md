@@ -55,7 +55,7 @@ Description of gathered fields taken from [here](https://github.com/memcached/me
 
 ### Sample Queries:
 
-These are some useful queries (to generate dashboards or other) to run against data from this plugin:
+You can use the following query to get the average get hit and miss ratio, as well as the total average size of cached items, number of cached items and average connection counts per server.
 
 ```
 SELECT mean(get_hits) / mean(cmd_get) as get_ratio, mean(get_misses) / mean(cmd_get) as get_misses_ratio, mean(bytes), mean(curr_items), mean(curr_connections) FROM memcached WHERE time > now() - 1h GROUP BY server
