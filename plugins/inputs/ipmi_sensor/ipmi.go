@@ -152,6 +152,7 @@ func init() {
 		m.Path = path
 	}
 	inputs.Add("ipmi_sensor", func() telegraf.Input {
+		m := m
 		return &m
 	})
 }
