@@ -210,11 +210,26 @@ func (s *Sysstat) collect() error {
 	return nil
 }
 
+func filterEnviron(env []string, prefix string) []string {
+	newenv := env[:0]
+	for _, envvar := range env {
+		if !strings.HasPrefix(envvar, prefix) {
+			newenv = append(newenv, envvar)
+		}
+	}
+	return newenv
+}
+
 // parse runs Sadf on the previously saved tmpFile:
 //    Sadf -p -- -p <option> tmpFile
 // and parses the output to add it to the telegraf.Accumulator acc.
 func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) error {
 	cmd := execCommand(s.Sadf, s.sadfOptions(option)...)
+	env := os.Environ()
+	env = filterEnviron(env, "LANG")
+	env = filterEnviron(env, "LC_")
+	env = append(env, "LANG=C")
+	cmd.Env = env
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
