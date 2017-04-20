@@ -109,6 +109,7 @@ be deprecated eventually.
 - [#2649](https://github.com/influxdata/telegraf/pull/2649): Improve performance of diskio with many disks
 - [#2671](https://github.com/influxdata/telegraf/issues/2671): The internal input plugin uses the wrong units for `heap_objects`
 - [#2684](https://github.com/influxdata/telegraf/pull/2684): Fix ipmi_sensor config is shared between all plugin instances
+- [#2450](https://github.com/influxdata/telegraf/issues/2450): Network statistics not collected when system has alias interfaces
 
 ## v1.2.1 [2017-02-01]
 
