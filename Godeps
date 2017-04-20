@@ -22,7 +22,7 @@ github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
-github.com/influxdata/tail e9ef7e826dafcb3093b40b989fefa90eeb9a8ca1
+github.com/influxdata/tail a395bf99fe07c233f41fba0735fa2b13b58588ea
 github.com/influxdata/toml 5d1d907f22ead1cd47adde17ceec5bda9cacaf8f
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
 github.com/jackc/pgx b84338d7d62598f75859b2b146d830b22f1b9ec8
