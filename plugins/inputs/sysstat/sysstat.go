@@ -220,16 +220,27 @@ func filterEnviron(env []string, prefix string) []string {
 	return newenv
 }
 
+// Return the Cmd with its environment configured to use the C locale
+func withCLocale(cmd *exec.Cmd) *exec.Cmd {
+	var env []string
+	if cmd.Env != nil {
+		env = cmd.Env
+	} else {
+		env = os.Environ()
+	}
+	env = filterEnviron(env, "LANG")
+	env = filterEnviron(env, "LC_")
+	env = append(env, "LANG=C")
+	cmd.Env = env
+	return cmd
+}
+
 // parse runs Sadf on the previously saved tmpFile:
 //    Sadf -p -- -p <option> tmpFile
 // and parses the output to add it to the telegraf.Accumulator acc.
 func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) error {
 	cmd := execCommand(s.Sadf, s.sadfOptions(option)...)
-	env := os.Environ()
-	env = filterEnviron(env, "LANG")
-	env = filterEnviron(env, "LC_")
-	env = append(env, "LANG=C")
-	cmd.Env = env
+	cmd = withCLocale(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
