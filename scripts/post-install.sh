@@ -24,10 +24,8 @@ function install_chkconfig {
     chkconfig --add telegraf
 }
 
-id telegraf &>/dev/null
-if [[ $? -ne 0 ]]; then
-    grep "^telegraf:" /etc/group &>/dev/null
-    if [[ $? -ne 0 ]]; then
+if ! id telegraf &>/dev/null; then
+    if ! grep "^telegraf:" /etc/group &>/dev/null; then
         useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf
     else
         useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
@@ -60,31 +58,44 @@ fi
 # Distribution-specific logic
 if [[ -f /etc/redhat-release ]]; then
     # RHEL-variant logic
-    which systemctl &>/dev/null
-    if [[ $? -eq 0 ]]; then
-	    install_systemd
+    if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+        install_systemd
     else
-	    # Assuming sysv
-	    install_init
-	    install_chkconfig
+        # Assuming SysVinit
+        install_init
+        # Run update-rc.d or fallback to chkconfig if not available
+        if which update-rc.d &>/dev/null; then
+            install_update_rcd
+        else
+            install_chkconfig
+        fi
     fi
 elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
-    which systemctl &>/dev/null
-    if [[ $? -eq 0 ]]; then
-	    install_systemd
-	    systemctl restart telegraf || echo "WARNING: systemd not running."
+    if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+        install_systemd
+        systemctl restart telegraf || echo "WARNING: systemd not running."
     else
-	    # Assuming sysv
-	    install_init
-	    install_update_rcd
-	    invoke-rc.d telegraf restart
+	    # Assuming SysVinit
+        install_init
+        # Run update-rc.d or fallback to chkconfig if not available
+        if which update-rc.d &>/dev/null; then
+            install_update_rcd
+        else
+            install_chkconfig
+        fi
+        invoke-rc.d telegraf restart
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
     if [[ $ID = "amzn" ]]; then
 	    # Amazon Linux logic
-	    install_init
-	    install_chkconfig
+        install_init
+        # Run update-rc.d or fallback to chkconfig if not available
+        if which update-rc.d &>/dev/null; then
+            install_update_rcd
+        else
+            install_chkconfig
+        fi
     fi
 fi
