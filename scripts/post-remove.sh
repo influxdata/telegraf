@@ -30,7 +30,7 @@ if [[ -f /etc/redhat-release ]]; then
     fi
 elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
-    if [[ "$1" != "upgrade" ]]; then
+    if [ "$1" == "remove" -o "$1" == "purge" ]; then
         # Remove/purge
         rm -f /etc/default/telegraf
 
