@@ -2,14 +2,19 @@
 
 The [elasticsearch](https://www.elastic.co/) plugin queries endpoints to obtain
 [node](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
-and optionally [cluster-health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
-or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html) metrics.
+and optionally
+ [cluster-health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html),
+ [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html),
+ [indices-stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html) or
+metrics.
 
 ### Configuration:
 
 ```
 [[inputs.elasticsearch]]
   ## specify a list of one or more Elasticsearch servers
+  ## you can add username and password to your url to use basic authentication:
+  ## servers = ["http://user:pass@localhost:9200"]
   servers = ["http://localhost:9200"]
 
   ## Timeout for HTTP requests to the elastic search server(s)
@@ -20,12 +25,23 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## of the cluster. 
   local = true
 
-  ## Set cluster_health to true when you want to also obtain cluster health stats
+  ## Set cluster_health to true when you want to obtain cluster health stats
   cluster_health = false
 
-  ## Set cluster_stats to true when you want to obtain cluster stats from the 
-  ## Master node. 
+  ## Set cluster_stats to true when you want to obtain cluster stats from the Master node. 
   cluster_stats = false
+
+  ## Set indices_stats to true when you want to obtain indices stats from the Master node.
+  indices_stats = false
+
+  ## Set shards_stats to true when you want to obtain shards stats from the Master node.
+  ## If set, then indices_stats is considered true as they are also provided with shard stats.
+  shards_stats = false
+
+  ## Multiplier of the elasticsearch interval to be used to reduce the frequency of
+  ## indices_stats and shards_stats reports. The default interval is 10 seconds, and this
+  ## multiplier is defaulted to 6 to cause these metrics to be taken once per minute by default.
+  indices_interval_multiplier = 6
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
