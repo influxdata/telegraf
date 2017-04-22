@@ -8,13 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"io/ioutil"
+	"strings"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
-	"io/ioutil"
-	"strings"
 )
 
 // mask for masking username/password from error messages
@@ -40,17 +41,22 @@ type nodeStat struct {
 }
 
 type clusterHealth struct {
-	ClusterName         string                 `json:"cluster_name"`
-	Status              string                 `json:"status"`
-	TimedOut            bool                   `json:"timed_out"`
-	NumberOfNodes       int                    `json:"number_of_nodes"`
-	NumberOfDataNodes   int                    `json:"number_of_data_nodes"`
-	ActivePrimaryShards int                    `json:"active_primary_shards"`
-	ActiveShards        int                    `json:"active_shards"`
-	RelocatingShards    int                    `json:"relocating_shards"`
-	InitializingShards  int                    `json:"initializing_shards"`
-	UnassignedShards    int                    `json:"unassigned_shards"`
-	Indices             map[string]indexHealth `json:"indices"`
+	ClusterName                 string                 `json:"cluster_name"`
+	Status                      string                 `json:"status"`
+	TimedOut                    bool                   `json:"timed_out"`
+	NumberOfNodes               int                    `json:"number_of_nodes"`
+	NumberOfDataNodes           int                    `json:"number_of_data_nodes"`
+	ActivePrimaryShards         int                    `json:"active_primary_shards"`
+	ActiveShards                int                    `json:"active_shards"`
+	RelocatingShards            int                    `json:"relocating_shards"`
+	InitializingShards          int                    `json:"initializing_shards"`
+	UnassignedShards            int                    `json:"unassigned_shards"`
+	DelayedUnassignedShards     int                    `json:"delayed_unassigned_shards"`
+	NumberOfPendingTasks        int                    `json:"number_of_pending_tasks"`
+	NumberOfInFlightFetch       int                    `json:"number_of_in_flight_fetch"`
+	TaskMaxWaitingInQueueMillis int                    `json:"task_max_waiting_in_queue_millis"`
+	ActiveShardsPercent         float64                `json:"active_shards_percent_as_number"`
+	Indices                     map[string]indexHealth `json:"indices"`
 }
 
 type indexHealth struct {
@@ -70,6 +76,17 @@ type clusterStats struct {
 	Status      string      `json:"status"`
 	Indices     interface{} `json:"indices"`
 	Nodes       interface{} `json:"nodes"`
+}
+
+type indexStatsMaster struct {
+	Primaries interface{} `json:"primaries"`
+	Total     interface{} `json:"total"`
+}
+
+type indicesStatsMaster struct {
+	Shards  interface{}            `json:"_shards"`
+	All     interface{}            `json:"_all"`
+	Indices map[string]interface{} `json:"indices"`
 }
 
 type catMaster struct {
@@ -99,6 +116,9 @@ const sampleConfig = `
   ## Master node.
   cluster_stats = false
 
+  ## Set indices_stats to true when you want to also obtain statistics on the index level scope.
+  indices_stats = false
+
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
@@ -115,6 +135,7 @@ type Elasticsearch struct {
 	HttpTimeout             internal.Duration
 	ClusterHealth           bool
 	ClusterStats            bool
+	IndicesStats            bool
 	SSLCA                   string `toml:"ssl_ca"`   // Path to CA file
 	SSLCert                 string `toml:"ssl_cert"` // Path to host cert file
 	SSLKey                  string `toml:"ssl_key"`  // Path to cert key file
@@ -175,7 +196,8 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			}
 
 			// Always gather node states
-			if err := e.gatherNodeStats(url, acc); err != nil {
+			clusterName, err := e.gatherNodeStats(url, acc)
+			if err != nil {
 				err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
 				errChan.C <- err
 				return
@@ -184,6 +206,15 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if e.ClusterHealth {
 				url = s + "/_cluster/health?level=indices"
 				if err := e.gatherClusterHealth(url, acc); err != nil {
+					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
+					errChan.C <- err
+					return
+				}
+			}
+
+			if e.IndicesStats {
+				url = s + "/_stats"
+				if err := e.gatherIndicesStats(clusterName, url, acc); err != nil {
 					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
 					errChan.C <- err
 					return
@@ -221,13 +252,24 @@ func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) error {
+func (e *Elasticsearch) getClusterName(url string) (string, error) {
+	nodeStats := &struct {
+		ClusterName string `json:"cluster_name"`
+	}{}
+	if err := e.gatherJsonData(url, nodeStats); err != nil {
+		return "", err
+	}
+
+	return nodeStats.ClusterName, nil
+}
+
+func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) (string, error) {
 	nodeStats := &struct {
 		ClusterName string               `json:"cluster_name"`
 		Nodes       map[string]*nodeStat `json:"nodes"`
 	}{}
 	if err := e.gatherJsonData(url, nodeStats); err != nil {
-		return err
+		return "", err
 	}
 
 	for id, n := range nodeStats.Nodes {
@@ -265,12 +307,12 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			// parse Json, ignoring strings and bools
 			err := f.FlattenJSON("", s)
 			if err != nil {
-				return err
+				return "", err
 			}
 			acc.AddFields("elasticsearch_"+p, f.Fields, tags, now)
 		}
 	}
-	return nil
+	return nodeStats.ClusterName, nil
 }
 
 func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator) error {
@@ -280,15 +322,20 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	}
 	measurementTime := time.Now()
 	clusterFields := map[string]interface{}{
-		"status":                healthStats.Status,
-		"timed_out":             healthStats.TimedOut,
-		"number_of_nodes":       healthStats.NumberOfNodes,
-		"number_of_data_nodes":  healthStats.NumberOfDataNodes,
-		"active_primary_shards": healthStats.ActivePrimaryShards,
-		"active_shards":         healthStats.ActiveShards,
-		"relocating_shards":     healthStats.RelocatingShards,
-		"initializing_shards":   healthStats.InitializingShards,
-		"unassigned_shards":     healthStats.UnassignedShards,
+		"status":                           healthStats.Status,
+		"timed_out":                        healthStats.TimedOut,
+		"number_of_nodes":                  healthStats.NumberOfNodes,
+		"number_of_data_nodes":             healthStats.NumberOfDataNodes,
+		"active_primary_shards":            healthStats.ActivePrimaryShards,
+		"active_shards":                    healthStats.ActiveShards,
+		"relocating_shards":                healthStats.RelocatingShards,
+		"initializing_shards":              healthStats.InitializingShards,
+		"unassigned_shards":                healthStats.UnassignedShards,
+		"delayed_unassigned_shards":        healthStats.DelayedUnassignedShards,
+		"number_of_pending_tasks":          healthStats.NumberOfPendingTasks,
+		"number_of_in_flight_fetch":        healthStats.NumberOfInFlightFetch,
+		"task_max_waiting_in_queue_millis": healthStats.TaskMaxWaitingInQueueMillis,
+		"active_shards_percent_as_number":  healthStats.ActiveShardsPercent,
 	}
 	acc.AddFields(
 		"elasticsearch_cluster_health",
@@ -343,6 +390,58 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 			return err
 		}
 		acc.AddFields("elasticsearch_clusterstats_"+p, f.Fields, tags, now)
+	}
+
+	return nil
+}
+
+func (e *Elasticsearch) gatherIndicesStats(clusterName string, url string, acc telegraf.Accumulator) error {
+	indicesStatsMaster := &indicesStatsMaster{}
+	if err := e.gatherJsonData(url, indicesStatsMaster); err != nil {
+		return err
+	}
+
+	stats := map[string]interface{}{
+		"shards":  indicesStatsMaster.Shards,
+		"all":     indicesStatsMaster.All,
+		"indices": indicesStatsMaster.Indices,
+	}
+
+	measurementTime := time.Now()
+	for p, s := range stats {
+		f := jsonparser.JSONFlattener{}
+		// parse json, including bools and strings
+		err := f.FullFlattenJSON(p, s, true, true)
+		if err != nil {
+			return err
+		}
+		acc.AddFields(
+			"elasticsearch_indicesstats",
+			f.Fields,
+			map[string]string{
+				"cluster_name": clusterName,
+				"stat_name":    p,
+			},
+			measurementTime)
+	}
+
+	for index_name, index := range indicesStatsMaster.Indices {
+		tags := map[string]string{
+			"cluster_name": clusterName,
+			"index":        index_name,
+		}
+
+		f := jsonparser.JSONFlattener{}
+		// parse json, including bools and strings
+		err := f.FullFlattenJSON("", index, true, true)
+		if err != nil {
+			return err
+		}
+		acc.AddFields(
+			"elasticsearch_indicesstats_indices",
+			f.Fields,
+			tags,
+			measurementTime)
 	}
 
 	return nil
