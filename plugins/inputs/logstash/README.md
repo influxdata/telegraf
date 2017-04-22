@@ -15,7 +15,34 @@ This plugin reads metrics exposed by Logstash Monitoring API.
 ### Measurements & Fields:
 
 - logstash_jvm
-    - Several fields related to running JVM
+    - threads_peak_count
+    - mem_pools_survivor_peak_max_in_bytes
+    - mem_pools_survivor_max_in_bytes
+    - mem_pools_old_peak_used_in_bytes
+    - mem_pools_young_used_in_bytes
+    - mem_non_heap_committed_in_bytes
+    - threads_count
+    - mem_pools_old_committed_in_bytes
+    - mem_pools_young_peak_max_in_bytes
+    - mem_heap_used_percent
+    - gc_collectors_young_collection_time_in_millis
+    - mem_pools_survivor_peak_used_in_bytes
+    - mem_pools_young_committed_in_bytes
+    - gc_collectors_old_collection_time_in_millis
+    - gc_collectors_old_collection_count
+    - mem_pools_survivor_used_in_bytes
+    - mem_pools_old_used_in_bytes
+    - mem_pools_young_max_in_bytes
+    - mem_heap_max_in_bytes
+    - mem_non_heap_used_in_bytes
+    - mem_pools_survivor_committed_in_bytes
+    - mem_pools_old_max_in_bytes
+    - mem_heap_committed_in_bytes
+    - mem_pools_old_peak_max_in_bytes
+    - mem_pools_young_peak_used_in_bytes
+    - mem_heap_used_in_bytes
+    - gc_collectors_young_collection_count
+    - uptime_in_millis
 
 - logstash_process
     - open_file_descriptors
