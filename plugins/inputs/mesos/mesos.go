@@ -3,10 +3,12 @@ package mesos
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,15 +19,20 @@ import (
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
+// Role definition like 'master' or 'slave'
 type Role string
 
+// Master is the default Role
 const (
 	MASTER Role = "master"
 	SLAVE       = "slave"
 )
 
+// Mesos struct
 type Mesos struct {
 	Timeout    int
+	Username   string
+	Password   string
 	Masters    []string
 	MasterCols []string `toml:"master_collections"`
 	Slaves     []string
@@ -42,7 +49,11 @@ var sampleConfig = `
   ## Timeout, in ms.
   timeout = 100
   ## A list of Mesos masters.
-  masters = ["localhost:5050"]
+  masters = ["http://localhost:5050"]
+  # Authentication username
+  username = ""
+  # Authentication password
+  password = ""
   ## Master metrics groups to be collected, by default, all enabled.
   master_collections = [
     "resources",
@@ -78,6 +89,7 @@ func (m *Mesos) Description() string {
 	return "Telegraf plugin for gathering metrics from N Mesos masters"
 }
 
+// SetDefaults Setting the defaults
 func (m *Mesos) SetDefaults() {
 	if len(m.MasterCols) == 0 {
 		m.MasterCols = allMetrics[MASTER]
@@ -93,7 +105,25 @@ func (m *Mesos) SetDefaults() {
 	}
 }
 
-// Gather() metrics from given list of Mesos Masters
+func prepareAddress(address string) (prepared, host string) {
+	if strings.HasPrefix(address, "http") != true {
+		address = "http://" + address
+	}
+
+	u, err := url.Parse(address)
+	if err != nil {
+		panic(err)
+	}
+
+	host, _, err = net.SplitHostPort(u.Host)
+	if err != nil {
+		panic(err)
+	}
+
+	return address, host
+}
+
+// Gather metrics from given list of Mesos Masters
 func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var errorChannel chan error
@@ -105,7 +135,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	for _, v := range m.Masters {
 		wg.Add(1)
 		go func(c string) {
-			errorChannel <- m.gatherMainMetrics(c, ":5050", MASTER, acc)
+			errorChannel <- m.gatherMainMetrics(c, m.Username, m.Password, MASTER, acc)
 			wg.Done()
 			return
 		}(v)
@@ -114,7 +144,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	for _, v := range m.Slaves {
 		wg.Add(1)
 		go func(c string) {
-			errorChannel <- m.gatherMainMetrics(c, ":5051", SLAVE, acc)
+			errorChannel <- m.gatherMainMetrics(c, m.Username, m.Password, SLAVE, acc)
 			wg.Done()
 			return
 		}(v)
@@ -425,22 +455,22 @@ type TaskStats struct {
 	Statistics  map[string]interface{} `json:"statistics"`
 }
 
-func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc telegraf.Accumulator) error {
+func (m *Mesos) gatherSlaveTaskMetrics(address, username, password string, acc telegraf.Accumulator) error {
 	var metrics []TaskStats
-
-	host, _, err := net.SplitHostPort(address)
-	if err != nil {
-		host = address
-		address = address + defaultPort
-	}
+	address, host := prepareAddress(address)
 
 	tags := map[string]string{
 		"server": host,
 	}
 
-	ts := strconv.Itoa(m.Timeout) + "ms"
+	requestURL := fmt.Sprintf("%s/monitor/statistics?timeout=%sms", address, strconv.Itoa(m.Timeout))
+	req, err := http.NewRequest("GET", requestURL, nil)
 
-	resp, err := client.Get("http://" + address + "/monitor/statistics?timeout=" + ts)
+	if len(username) > 0 && len(password) > 0 {
+		req.SetBasicAuth(username, password)
+	}
+
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return err
@@ -476,23 +506,23 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 }
 
 // This should not belong to the object
-func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc telegraf.Accumulator) error {
+func (m *Mesos) gatherMainMetrics(address, username, password string, role Role, acc telegraf.Accumulator) error {
 	var jsonOut map[string]interface{}
-
-	host, _, err := net.SplitHostPort(a)
-	if err != nil {
-		host = a
-		a = a + defaultPort
-	}
+	address, host := prepareAddress(address)
 
 	tags := map[string]string{
 		"server": host,
 		"role":   string(role),
 	}
 
-	ts := strconv.Itoa(m.Timeout) + "ms"
+	requestURL := fmt.Sprintf("%s/metrics/snapshot?timeout=%sms", address, strconv.Itoa(m.Timeout))
+	req, err := http.NewRequest("GET", requestURL, nil)
 
-	resp, err := client.Get("http://" + a + "/metrics/snapshot?timeout=" + ts)
+	if len(username) > 0 && len(password) > 0 {
+		req.SetBasicAuth(username, password)
+	}
+
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return err
