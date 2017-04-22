@@ -18,7 +18,7 @@ var sampleConfig = `
 
   ## By default, telegraf gather all zfs stats
   ## If not specified, then default is:
-  # kstatMetrics = ["arcstats", "zfetchstats", "vdev_cache_stats"]
+  # kstatMetrics = ["arcstats", "zfetchstats", "vdev_cache_stats", "zil"]
 
   ## By default, don't gather zpool stats
   # poolMetrics = false
@@ -29,5 +29,5 @@ func (z *Zfs) SampleConfig() string {
 }
 
 func (z *Zfs) Description() string {
-	return "Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, and pools"
+	return "Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, zil, and pools"
 }
