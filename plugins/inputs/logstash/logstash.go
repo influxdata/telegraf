@@ -51,9 +51,9 @@ type ProcessStats struct {
 
 //PluginEvents data structure
 type PluginEvents struct {
-	DurationInMillis int `json:"duration_in_millis"`
-	In               int `json:"in"`
-	Out              int `json:"out"`
+	DurationInMillis float64 `json:"duration_in_millis"`
+	In               float64 `json:"in"`
+	Out              float64 `json:"out"`
 }
 
 //Plugin data structure
@@ -72,7 +72,7 @@ type PipelinePlugins struct {
 
 //PipelineQueue data structure
 type PipelineQueue struct {
-	Events   int         `json:"events"`
+	Events   float64     `json:"events"`
 	Qtype    string      `json:"type"`
 	Capacity interface{} `json:"capacity"`
 	Data     interface{} `json:"data"`

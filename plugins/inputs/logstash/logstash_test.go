@@ -204,16 +204,16 @@ var eventsStatsExpected = map[string]interface{}{
 
 var outputS3StatsExpected = map[string]interface{}{
 	"name":               "s3",
-	"duration_in_millis": 228,
-	"in":                 1269,
-	"out":                1269,
+	"duration_in_millis": 228.0,
+	"in":                 1269.0,
+	"out":                1269.0,
 }
 
 var outputStdoutStatsExpected = map[string]interface{}{
-	"in":                 1269,
-	"out":                1269,
+	"in":                 1269.0,
+	"out":                1269.0,
 	"name":               "stdout",
-	"duration_in_millis": 360,
+	"duration_in_millis": 360.0,
 }
 
 var logstashTest = &Logstash{
