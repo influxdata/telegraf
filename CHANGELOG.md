@@ -9,6 +9,10 @@
   `use_random_partitionkey` options has been deprecated in favor of the
   `partition` subtable.  This allows for more flexible methods to set the
   partition key such as by metric name or by tag.
+- `postgresql` plugins will now default to using a persistent connection to the database.
+  `Important` In environments TCP connections are terminated when idle for periods shorter than 15 minutes
+  and the collection interval is longer than the termination period then max_lifetime
+  should be set to be less than the collection interval to pervent errors when collecting metrics.
 
 ### Features
 
@@ -30,7 +34,7 @@
 
 - [#3136](https://github.com/influxdata/telegraf/issues/3136): Fix webhooks input address in use during reload.
 - [#3258](https://github.com/influxdata/telegraf/issues/3258): Unlock Statsd when stopping to prevent deadlock.
-
+- [#1977](https://github.com/influxdata/telegraf/issues/1977): make postgresql connection pool persist between intervals.
 
 ## v1.4.1 [unreleased]
 
