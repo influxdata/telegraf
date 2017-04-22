@@ -19,6 +19,12 @@ It can output data in any of the [supported output formats](https://github.com/i
   # address = "unix:///tmp/telegraf.sock"
   # address = "unixgram:///tmp/telegraf.sock"
 
+  ## Period between keep alive probes.
+  ## Only applies to TCP sockets.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  # keep_alive_period = "5m"
+
   ## Data format to generate.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
