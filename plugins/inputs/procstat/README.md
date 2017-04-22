@@ -39,8 +39,8 @@ Example:
 The above configuration would result in output like:
 
 ```
-> procstat,name="dnsmasq",pid="44979" cpu_user=0.14,cpu_system=0.07
-> procstat,name="influxd",pid="34337" influxd_cpu_user=25.43,influxd_cpu_system=21.82
+> procstat,pidfile=/var/run/lxc/dnsmasq.pid,process_name=dnsmasq,pid=44979 cpu_user=0.14,cpu_system=0.07
+> procstat,exe=influxd,process_name=influxd,pid=34337 influxd_cpu_user=25.43,influxd_cpu_system=21.82
 ```
 
 # Measurements
