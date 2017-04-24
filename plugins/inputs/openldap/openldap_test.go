@@ -29,9 +29,7 @@ func TestOpenldapMockResult(t *testing.T) {
 		Port: 389,
 	}
 
-	err := gatherSearchResult(&mockSearchResult, o, &acc)
-
-	require.NoError(t, err)
+	gatherSearchResult(&mockSearchResult, o, &acc)
 	commonTests(t, o, &acc)
 }
 
@@ -111,5 +109,5 @@ func commonTests(t *testing.T, o *Openldap, acc *testutil.Accumulator) {
 	assert.True(t, acc.HasMeasurement("openldap"))
 	assert.Equal(t, o.Host, acc.TagValue("openldap", "server"))
 	assert.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"))
-	assert.True(t, acc.HasFloatField("openldap", "total_connections"))
+	assert.True(t, acc.HasIntField("openldap", "total_connections"))
 }
