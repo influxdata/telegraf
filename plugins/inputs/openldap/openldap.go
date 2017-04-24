@@ -17,7 +17,7 @@ type Openldap struct {
 	Host             string
 	Port             int
 	Tls              bool
-	TlsSkipverify    bool `toml:"tls_skipverify"`
+	TlsSkipverify    bool   `toml:"tls_skipverify"`
 	TlsCACertificate string `toml:"tls_cacertificate"`
 	BindDn           string `toml:"bind_dn"`
 	BindPassword     string `toml:"bind_password"`
