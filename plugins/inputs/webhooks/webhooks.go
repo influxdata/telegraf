@@ -79,7 +79,7 @@ func (wb *Webhooks) Listen(acc telegraf.Accumulator) {
 
 	err := http.ListenAndServe(fmt.Sprintf("%s", wb.ServiceAddress), r)
 	if err != nil {
-		log.Printf("E! Error starting server: %v", err)
+		acc.AddError(fmt.Errorf("E! Error starting server: %v", err))
 	}
 }
 

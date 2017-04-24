@@ -67,19 +67,17 @@ var ErrProtocolError = errors.New("prometheus protocol error")
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	var outerr error
-
 	for _, serv := range p.Urls {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = p.gatherURL(serv, acc)
+			acc.AddError(p.gatherURL(serv, acc))
 		}(serv)
 	}
 
 	wg.Wait()
 
-	return outerr
+	return nil
 }
 
 var tr = &http.Transport{

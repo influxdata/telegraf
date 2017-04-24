@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -136,7 +135,7 @@ type Node struct {
 }
 
 // gatherFunc ...
-type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error)
+type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
 var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
 
@@ -198,16 +197,15 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 	wg.Add(len(gatherFunctions))
-	errChan := errchan.New(len(gatherFunctions))
 	for _, f := range gatherFunctions {
 		go func(gf gatherFunc) {
 			defer wg.Done()
-			gf(r, acc, errChan.C)
+			gf(r, acc)
 		}(f)
 	}
 	wg.Wait()
 
-	return errChan.Error()
+	return nil
 }
 
 func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
@@ -245,17 +243,17 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 	return nil
 }
 
-func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
+func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 	overview := &OverviewResponse{}
 
 	err := r.requestJSON("/api/overview", &overview)
 	if err != nil {
-		errChan <- err
+		acc.AddError(err)
 		return
 	}
 
 	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil {
-		errChan <- fmt.Errorf("Wrong answer from rabbitmq. Probably auth issue")
+		acc.AddError(fmt.Errorf("Wrong answer from rabbitmq. Probably auth issue"))
 		return
 	}
 
@@ -277,16 +275,14 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 		"messages_published": overview.MessageStats.Publish,
 	}
 	acc.AddFields("rabbitmq_overview", fields, tags)
-
-	errChan <- nil
 }
 
-func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
+func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 	nodes := make([]Node, 0)
 	// Gather information about nodes
 	err := r.requestJSON("/api/nodes", &nodes)
 	if err != nil {
-		errChan <- err
+		acc.AddError(err)
 		return
 	}
 	now := time.Now()
@@ -314,16 +310,14 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 		}
 		acc.AddFields("rabbitmq_node", fields, tags, now)
 	}
-
-	errChan <- nil
 }
 
-func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
+func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 	// Gather information about queues
 	queues := make([]Queue, 0)
 	err := r.requestJSON("/api/queues", &queues)
 	if err != nil {
-		errChan <- err
+		acc.AddError(err)
 		return
 	}
 
@@ -371,8 +365,6 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator, errChan chan error) {
 			tags,
 		)
 	}
-
-	errChan <- nil
 }
 
 func (r *RabbitMQ) shouldGatherNode(node Node) bool {

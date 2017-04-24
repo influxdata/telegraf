@@ -154,15 +154,16 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 	var wg sync.WaitGroup
-	var outerr error
 	for _, endpoint := range l.Servers {
 		_, err := url.Parse(endpoint)
 		if err != nil {
-			return fmt.Errorf("Unable to parse the address:%s, err:%s", endpoint, err)
+			acc.AddError(fmt.Errorf("Unable to parse the address:%s, err:%s", endpoint, err))
+			continue
 		}
 		port, err := retrieveTokenAfterColon(endpoint)
 		if err != nil {
-			return err
+			acc.AddError(err)
+			continue
 		}
 		st, ok := serverTypeMapping[port]
 		if !ok {
@@ -171,11 +172,11 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(endpoint string, st ServerType) {
 			defer wg.Done()
-			outerr = l.gatherServer(endpoint, st, acc)
+			acc.AddError(l.gatherServer(endpoint, st, acc))
 		}(endpoint, st)
 	}
 	wg.Wait()
-	return outerr
+	return nil
 }
 
 func (l *LeoFS) gatherServer(

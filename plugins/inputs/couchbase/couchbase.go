@@ -42,19 +42,17 @@ func (r *Couchbase) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	var outerr error
-
 	for _, serv := range r.Servers {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = r.gatherServer(serv, acc, nil)
+			acc.AddError(r.gatherServer(serv, acc, nil))
 		}(serv)
 	}
 
 	wg.Wait()
 
-	return outerr
+	return nil
 }
 
 func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *couchbase.Pool) error {
