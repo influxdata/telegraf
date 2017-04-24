@@ -56,10 +56,10 @@ var sampleConfig = `
   streamname = "StreamName"
   ## PartitionKey as used for sharding data.
   partitionkey = "PartitionKey"
-	## If set the paritionKey will be a random UUID on every put.
-	## This allows for scaling across multiple shards in a stream.
-	## This will cause issues with ordering.
-	randomize_partitionKey = false
+  ## If set the paritionKey will be a random UUID on every put.
+  ## This allows for scaling across multiple shards in a stream.
+  ## This will cause issues with ordering.
+  randomize_partitionKey = false
 
 
   ## Data format to output.
