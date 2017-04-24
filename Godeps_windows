@@ -1,5 +1,5 @@
 github.com/Microsoft/go-winio ce2922f643c8fd76b46cadc7f404a06282678b34
-github.com/StackExchange/wmi f3e2bae1e0cb5aef83e319133eabfee30013a4a5
+github.com/StackExchange/wmi e54cbda6595d7293a7a468ccf9525f6bc8887f99
 github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
 github.com/shirou/w32 3c9377fc6748f222729a8270fe2775d149a249ad
 golang.org/x/sys a646d33e2ee3172a661fc09bca23bb4889a41bc8
