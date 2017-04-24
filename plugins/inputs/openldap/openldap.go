@@ -17,10 +17,10 @@ type Openldap struct {
 	Host             string
 	Port             int
 	Tls              bool
-	TlsSkipverify    bool
-	TlsCACertificate string
-	BindDn           string
-	BindPassword     string
+	TlsSkipverify    bool `toml:"tls_skipverify"`
+	TlsCACertificate string `toml:"tls_cacertificate"`
+	BindDn           string `toml:"bind_dn"`
+	BindPassword     string `toml:"bind_password"`
 }
 
 const sampleConfig string = `
@@ -31,7 +31,7 @@ const sampleConfig string = `
   # skip peer certificate verification. Default is false.
   tls_skipverify = false
   # Path to PEM-encoded Root certificate to use to verify server certificate
-  tls_cacertificate = /etc/ssl/certs.pem
+  tls_cacertificate = "/etc/ssl/certs.pem"
 
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""
@@ -79,7 +79,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 
 	// TLS
 	if o.Tls {
-		tlsConfig := &tls.Config{InsecureSkipVerify: o.TlsSkipverify}
+		tlsConfig := &tls.Config{InsecureSkipVerify: o.TlsSkipverify, ServerName: o.Host}
 		if o.TlsCACertificate != "" {
 			var caData []byte
 			if caData, err = ioutil.ReadFile(o.TlsCACertificate); err != nil {
