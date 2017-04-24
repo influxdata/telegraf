@@ -37,7 +37,7 @@ func (t *telegrafLog) Write(b []byte) (n int, err error) {
 //   debug   will set the log level to DEBUG
 //   quiet   will set the log level to ERROR
 //   logfile will direct the logging output to a file. Empty string is
-//           interpreted as stderr. If there is an error opening the file the
+//           interpreted as stdout. If there is an error opening the file the
 //           logger will fallback to stderr.
 func SetupLogging(debug, quiet bool, logfile string) {
 	log.SetFlags(0)
