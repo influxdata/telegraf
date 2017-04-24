@@ -2,8 +2,10 @@ package openldap
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"gopkg.in/ldap.v2"
+	"io/ioutil"
 	"strconv"
 	"strings"
 
@@ -12,12 +14,13 @@ import (
 )
 
 type Openldap struct {
-	Host          string
-	Port          int
-	Tls           bool
-	TlsSkipverify bool
-	BindDn        string
-	BindPassword  string
+	Host             string
+	Port             int
+	Tls              bool
+	TlsSkipverify    bool
+	TlsCACertificate string
+	BindDn           string
+	BindPassword     string
 }
 
 const sampleConfig string = `
@@ -27,6 +30,8 @@ const sampleConfig string = `
   tls = false
   # skip peer certificate verification. Default is false.
   tls_skipverify = false
+  # Path to PEM-encoded Root certificate to use to verify server certificate
+  tls_cacertificate = /etc/ssl/certs.pem
 
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""
@@ -53,12 +58,13 @@ func (o *Openldap) Description() string {
 // return an initialized Openldap
 func NewOpenldap() *Openldap {
 	return &Openldap{
-		Host:          "localhost",
-		Port:          389,
-		Tls:           false,
-		TlsSkipverify: false,
-		BindDn:        "",
-		BindPassword:  "",
+		Host:             "localhost",
+		Port:             389,
+		Tls:              false,
+		TlsSkipverify:    false,
+		TlsCACertificate: "",
+		BindDn:           "",
+		BindPassword:     "",
 	}
 }
 
@@ -73,7 +79,22 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 
 	// TLS
 	if o.Tls {
-		err = l.StartTLS(&tls.Config{InsecureSkipVerify: o.TlsSkipverify})
+		tlsConfig := &tls.Config{InsecureSkipVerify: o.TlsSkipverify}
+		if o.TlsCACertificate != "" {
+			var caData []byte
+			if caData, err = ioutil.ReadFile(o.TlsCACertificate); err != nil {
+				acc.AddError(err)
+				return err
+			}
+			rootCAs := x509.NewCertPool()
+			if !rootCAs.AppendCertsFromPEM(caData) {
+				acc.AddError(err)
+				return err
+			}
+			tlsConfig.RootCAs = rootCAs
+		}
+
+		err = l.StartTLS(tlsConfig)
 		if err != nil {
 			acc.AddError(err)
 			return nil
