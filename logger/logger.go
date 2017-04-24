@@ -62,7 +62,7 @@ func SetupLogging(debug, quiet bool, logfile string) {
 			}
 		}
 	} else {
-		oFile = os.Stderr
+		oFile = os.Stdout
 	}
 
 	log.SetOutput(newTelegrafWriter(oFile))
