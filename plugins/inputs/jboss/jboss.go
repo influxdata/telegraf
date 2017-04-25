@@ -29,6 +29,8 @@ const (
 		GET_DEPLOYMENTS = 4
 		GET_DEPLOYMENT_STAT = 5
 		GET_WEB_STAT = 6
+		GET_JMS_QUEUE_STAT = 7
+		GET_JMS_TOPIC_STAT = 8
 )
 
 type KeyVal struct {
@@ -78,8 +80,17 @@ type DatasourceResponse struct {
 	Result DatabaseMetrics `json:"result"`
 }
 
+type JMSResponse struct {
+	Outcome string `json:"outcome"`
+	Result map[string]interface{} `json:"result"`
+}
+
+type JMSMetrics struct {
+	Count string `json:"message-count"`
+	Added string `json:"messages-added"`
+}
+
 type DatabaseMetrics struct {
-//	InstalledDrivers interface `json:"installed-drivers"`
 	DataSource  map[string]DataSourceMetrics `json:"data-source"`
 	XaDataSource  map[string]DataSourceMetrics `json:"xa-data-source"`
 }
@@ -133,11 +144,6 @@ type WebMetrics struct {
 	MaxActiveSessions string `json:"max-active-sessions"`
 	SessionsCreated string `json:"sessions-created"`
 	Servlet map[string]interface{} `json:"servlet"`
-}
-
-type ResponseMetrics struct {
-	outcome string `json:"outcome"`
-	Metrics []Metric `json:"result"`
 }
 
 type Metric struct {
@@ -467,6 +473,8 @@ func (h *JBoss) getServersOnHost(
 					h.getWebStatistics(acc, serverURL, host, server, "ajp")
 					h.getWebStatistics(acc, serverURL, host, server, "http")
 					h.getDatasourceStatistics(acc, serverURL, host, server)
+					h.getJMSStatistics(acc, serverURL, host, server, GET_JMS_QUEUE_STAT)
+					h.getJMSStatistics(acc, serverURL, host, server, GET_JMS_TOPIC_STAT)
 					h.getJVMStatistics(acc, serverURL, host, server)
 					h.getServerDeploymentStatistics(acc, serverURL, host, server)
 				}
@@ -533,13 +541,22 @@ func (h *JBoss) getWebStatistics(
 		if err = json.Unmarshal(out, &server); err != nil {
 			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
 		}
-//		fmt.Println(server)
+		fmt.Println(server)
 
 		fields := make(map[string]interface{})
 		for key, value := range server.Result {
 			switch key {
 			case "bytesReceived", "bytesSent", "requestCount", "errorCount", "maxTime", "processingTime":
-				fields[key] = value
+				if value != nil {
+					switch value.(type) {
+					case int:
+						fields[key] = value.(float64)
+					case float64:
+						fields[key] = value.(float64)
+					case string:
+						fmt.Errorf("Error decoding Float value: %s = %s\n", key, value.(string))
+					}
+				}
 			}
 		}
 		tags := map[string]string{
@@ -630,6 +647,78 @@ func (h *JBoss) getDatasourceStatistics(
 	return nil
 }
 
+// Gathers JMS data from a particular host
+// Parameters:
+//     acc      : The telegraf Accumulator to use
+//     serverURL: endpoint to send request to
+//     host     : the host being queried
+//     server   : the server being queried
+//
+// Returns:
+//     error: Any error that may have occurred
+
+func (h *JBoss) getJMSStatistics(
+	acc telegraf.Accumulator,
+	serverURL string,
+	host string,
+	serverName string,
+	opType int,
+) error {
+	//fmt.Printf("getDatasourceStatistics %s %s\n", host, serverName)
+	
+	adr := OrderedMap{
+		{"host", host},
+		{"server", serverName},
+		{"subsystem", "messaging"},
+		{"hornetq-server", "default"},
+	}
+	 
+	bodyContent, err := h.prepareRequest(opType, adr);
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	}
+
+	fmt.Println(bodyContent)
+
+	out, err := h.doRequest(serverURL, bodyContent)
+
+//	fmt.Println("err: %s", err)
+//	fmt.Println("out: %s", out)
+
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	} else {
+		jmsresponse := JMSResponse{}
+		if err = json.Unmarshal(out, &jmsresponse); err != nil {
+			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		}
+		fmt.Println("server:")
+		fmt.Println(jmsresponse)
+		
+
+	
+		for jmsQueue, value := range jmsresponse.Result {
+			fields := make(map[string]interface{})
+			v := value.(map[string]interface{})
+			fields["message-count"] = v["message-count"]
+			fields["messages-added"] = v["messages-added"]
+			if opType == GET_JMS_QUEUE_STAT {
+				fields["consumer-count"] = v["consumer-count"]
+			} else {
+				fields["subscription-count"] = v["subscription-count"]
+			}
+			tags := map[string]string{
+				"host":   host,
+				"server": serverName,
+				"name":   jmsQueue,
+				"type":   "jms",
+			}
+			acc.AddFields("jboss_jms", fields, tags)
+		}
+	}
+		
+	return nil
+}
 // Gathers JVM data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
@@ -943,6 +1032,20 @@ func (j *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interf
 		bodyContent["recursive-depth"] = 0
 		bodyContent["address"] = adress
 		bodyContent["json.pretty"] = 1
+	case GET_JMS_QUEUE_STAT:
+		bodyContent["operation"] = "read-children-resources"
+		bodyContent["child-type"] = "jms-queue"
+		bodyContent["include-runtime"] = "true"
+		bodyContent["recursive-depth"] = 2
+		bodyContent["address"] = adress
+		bodyContent["json.pretty"] = 1
+	case GET_JMS_TOPIC_STAT:
+		bodyContent["operation"] = "read-children-resources"
+		bodyContent["child-type"] = "jms-topic"
+		bodyContent["include-runtime"] = "true"
+		bodyContent["recursive-depth"] = 2
+		bodyContent["address"] = adress
+		bodyContent["json.pretty"] = 1
 	}
 
 	return bodyContent, nil
@@ -958,7 +1061,7 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	method := "POST"
 
 	// Debug JSON request
-//	fmt.Printf("Req: %s\n", requestBody)
+	fmt.Printf("Req: %s\n", requestBody)
 
 	req, err := http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -1026,7 +1129,7 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	}
 
 	// Debug response
-//	fmt.Printf("body: %s", body)
+	fmt.Printf("body: %s\n", body)
 
 	return []byte(body), nil
 }
