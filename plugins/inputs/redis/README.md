@@ -93,8 +93,6 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
 
     - cluster_enabled
 
-Additionally the input plugin gathers separate measurments for  database related statistics.
-
 - redis_keyspace
     - keys
 		- expires
