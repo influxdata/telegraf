@@ -95,8 +95,8 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
 
 - redis_keyspace
     - keys
-		- expires
-		- avg_ttl
+    - expires
+    - avg_ttl
 
 ### Tags:
 
