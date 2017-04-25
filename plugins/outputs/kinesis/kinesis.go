@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
-	"github.com/google/uuid"
+	"github.com/satori/go.uuid"
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
@@ -26,7 +26,7 @@ type KinesisOutput struct {
 
 	StreamName         string `toml:"streamname"`
 	PartitionKey       string `toml:"partitionkey"`
-	RandomPartitionKey bool   `toml:"randomize_partitionKey"`
+	RandomPartitionKey bool   `toml:"use_random_partitionkey"`
 	Debug              bool   `toml:"debug"`
 	svc                *kinesis.Kinesis
 
@@ -59,7 +59,7 @@ var sampleConfig = `
   ## If set the paritionKey will be a random UUID on every put.
   ## This allows for scaling across multiple shards in a stream.
   ## This will cause issues with ordering.
-  randomize_partitionKey = false
+  use_random_partitionkey = false
 
 
   ## Data format to output.
@@ -182,10 +182,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		partitionKey := k.PartitionKey
 		if k.RandomPartitionKey {
-			u, err := uuid.NewRandom()
-			if err != nil {
-				return err
-			}
+			u := uuid.NewV4()
 			partitionKey = u.String()
 		}
 
