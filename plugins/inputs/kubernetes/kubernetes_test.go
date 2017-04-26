@@ -22,7 +22,7 @@ func TestKubernetesStats(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := k.Gather(&acc)
+	err := acc.GatherError(k.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{

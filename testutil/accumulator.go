@@ -187,6 +187,17 @@ func (a *Accumulator) TagValue(measurement string, key string) string {
 	return ""
 }
 
+// Calls the given Gather function and returns the first error found.
+func (a *Accumulator) GatherError(gf func(telegraf.Accumulator) error) error {
+	if err := gf(a); err != nil {
+		return err
+	}
+	if len(a.Errors) > 0 {
+		return a.Errors[0]
+	}
+	return nil
+}
+
 // NFields returns the total number of fields in the accumulator, across all
 // measurements
 func (a *Accumulator) NFields() int {

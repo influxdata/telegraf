@@ -75,6 +75,7 @@ be deprecated eventually.
 - [#2253](https://github.com/influxdata/telegraf/pull/2253): Change jolokia plugin to use bulk requests.
 - [#2575](https://github.com/influxdata/telegraf/issues/2575) Add diskio input for Darwin
 - [#2705](https://github.com/influxdata/telegraf/pull/2705): Kinesis output: add use_random_partitionkey option
+- [#2635](https://github.com/influxdata/telegraf/issues/2635): add tcp keep-alive to socket_listener & socket_writer
 
 ### Bugfixes
 
@@ -112,6 +113,7 @@ be deprecated eventually.
 - [#2684](https://github.com/influxdata/telegraf/pull/2684): Fix ipmi_sensor config is shared between all plugin instances
 - [#2450](https://github.com/influxdata/telegraf/issues/2450): Network statistics not collected when system has alias interfaces
 - [#1911](https://github.com/influxdata/telegraf/issues/1911): Sysstat plugin needs LANG=C or similar locale
+- [#2528](https://github.com/influxdata/telegraf/issues/2528): File output closes standard streams on reload.
 
 ## v1.2.1 [2017-02-01]
 

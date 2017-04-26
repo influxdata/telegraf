@@ -9,7 +9,6 @@ import (
 	"github.com/influxdata/tail"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
@@ -118,14 +117,15 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	}
 
 	// compile log parser patterns:
-	errChan := errchan.New(len(l.parsers))
+	var haveError bool
 	for _, parser := range l.parsers {
 		if err := parser.Compile(); err != nil {
-			errChan.C <- err
+			acc.AddError(err)
+			haveError = true
 		}
 	}
-	if err := errChan.Error(); err != nil {
-		return err
+	if haveError {
+		return nil
 	}
 
 	l.wg.Add(1)
@@ -143,8 +143,6 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		seek.Offset = 0
 	}
 
-	errChan := errchan.New(len(l.Files))
-
 	// Create a "tailer" for each file
 	for _, filepath := range l.Files {
 		g, err := globpath.Compile(filepath)
@@ -153,7 +151,6 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 			continue
 		}
 		files := g.Match()
-		errChan = errchan.New(len(files))
 
 		for file, _ := range files {
 			if _, ok := l.tailers[file]; ok {
@@ -168,7 +165,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Location:  &seek,
 					MustExist: true,
 				})
-			errChan.C <- err
+			l.acc.AddError(err)
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
@@ -177,7 +174,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		}
 	}
 
-	return errChan.Error()
+	return nil
 }
 
 // receiver is launched as a goroutine to continuously watch a tailed logfile

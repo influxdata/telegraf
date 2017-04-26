@@ -59,7 +59,7 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	waitForPoint(&acc, t)
 
 	// Gather points
-	err = k.Gather(&acc)
+	err = acc.GatherError(k.Gather)
 	require.NoError(t, err)
 	if len(acc.Metrics) == 1 {
 		point := acc.Metrics[0]

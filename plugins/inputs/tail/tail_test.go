@@ -30,7 +30,7 @@ func TestTailFromBeginning(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
-	require.NoError(t, tt.Gather(&acc))
+	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu",
@@ -67,7 +67,7 @@ func TestTailFromEnd(t *testing.T) {
 
 	_, err = tmpfile.WriteString("cpu,othertag=foo usage_idle=100\n")
 	require.NoError(t, err)
-	require.NoError(t, tt.Gather(&acc))
+	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu",
@@ -98,7 +98,7 @@ func TestTailBadLine(t *testing.T) {
 
 	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
 	require.NoError(t, err)
-	require.NoError(t, tt.Gather(&acc))
+	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.WaitError(1)
 	assert.Contains(t, acc.Errors[0].Error(), "E! Malformed log line")

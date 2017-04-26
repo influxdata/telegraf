@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -159,7 +158,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	// Get daemon info
 	err := d.gatherInfo(acc)
 	if err != nil {
-		fmt.Println(err.Error())
+		acc.AddError(err)
 	}
 
 	// List containers
@@ -179,8 +178,8 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
 			if err != nil {
-				log.Printf("E! Error gathering container %s stats: %s\n",
-					c.Names, err.Error())
+				acc.AddError(fmt.Errorf("E! Error gathering container %s stats: %s\n",
+					c.Names, err.Error()))
 			}
 		}(container)
 	}

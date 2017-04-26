@@ -1,7 +1,6 @@
 package httpjson
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -145,31 +144,17 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 		h.client.SetHTTPClient(client)
 	}
 
-	errorChannel := make(chan error, len(h.Servers))
-
 	for _, server := range h.Servers {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			if err := h.gatherServer(acc, server); err != nil {
-				errorChannel <- err
-			}
+			acc.AddError(h.gatherServer(acc, server))
 		}(server)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 // Gathers data from a particular server

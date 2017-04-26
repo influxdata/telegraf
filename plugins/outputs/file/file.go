@@ -44,7 +44,6 @@ func (f *File) Connect() error {
 	for _, file := range f.Files {
 		if file == "stdout" {
 			writers = append(writers, os.Stdout)
-			f.closers = append(f.closers, os.Stdout)
 		} else {
 			var of *os.File
 			var err error
