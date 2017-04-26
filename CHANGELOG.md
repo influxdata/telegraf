@@ -74,6 +74,7 @@ be deprecated eventually.
 - [#2038](https://github.com/influxdata/telegraf/issues/2038): Add papertrail support to webhooks
 - [#2253](https://github.com/influxdata/telegraf/pull/2253): Change jolokia plugin to use bulk requests.
 - [#2575](https://github.com/influxdata/telegraf/issues/2575) Add diskio input for Darwin
+- [#2705](https://github.com/influxdata/telegraf/pull/2705): Kinesis output: add use_random_partitionkey option
 - [#2635](https://github.com/influxdata/telegraf/issues/2635): add tcp keep-alive to socket_listener & socket_writer
 
 ### Bugfixes
