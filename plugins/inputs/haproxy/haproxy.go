@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -25,6 +26,15 @@ type haproxy struct {
 	client *http.Client
 
 	KeepFieldNames bool
+
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 }
 
 var sampleConfig = `
@@ -45,6 +55,13 @@ var sampleConfig = `
   ## Setting this option to true results in the plugin keeping the original
   ## field names.
   ## keep_field_names = true
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (r *haproxy) SampleConfig() string {
@@ -127,7 +144,15 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	}
 
 	if g.client == nil {
-		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		tlsCfg, err := internal.GetTLSConfig(
+			g.SSLCert, g.SSLKey, g.SSLCA, g.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
+		tr := &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			TLSClientConfig:       tlsCfg,
+		}
 		client := &http.Client{
 			Transport: tr,
 			Timeout:   time.Duration(4 * time.Second),

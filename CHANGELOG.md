@@ -41,6 +41,7 @@ be deprecated eventually.
 
 ### Features
 
+- [#2723](https://github.com/influxdata/telegraf/pull/2723): Added SSL configuration for input haproxy.
 - [#2494](https://github.com/influxdata/telegraf/pull/2494): Add interrupts input plugin.
 - [#2094](https://github.com/influxdata/telegraf/pull/2094): Add generic socket listener & writer.
 - [#2204](https://github.com/influxdata/telegraf/pull/2204): Extend http_response to support searching for a substring in response. Return 1 if found, else 0.
