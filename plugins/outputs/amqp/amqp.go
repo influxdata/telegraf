@@ -80,7 +80,7 @@ var sampleConfig = `
   ## described here: https://www.rabbitmq.com/plugins.html
   # auth_method = "PLAIN"
   ## Telegraf tag to use as a routing key
-  ##  ie, if this tag exists, it's value will be used as the routing key
+  ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
 
   ## InfluxDB retention policy
@@ -100,7 +100,7 @@ var sampleConfig = `
   # insecure_skip_verify = false
 
   ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
