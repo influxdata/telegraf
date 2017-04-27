@@ -79,6 +79,7 @@ be deprecated eventually.
 - [#2705](https://github.com/influxdata/telegraf/pull/2705): Kinesis output: add use_random_partitionkey option
 - [#2635](https://github.com/influxdata/telegraf/issues/2635): add tcp keep-alive to socket_listener & socket_writer
 - [#2031](https://github.com/influxdata/telegraf/pull/2031): Add Kapacitor input plugin
+- [#2732](https://github.com/influxdata/telegraf/pull/2732): Use go 1.8.1
 
 ### Bugfixes
 
