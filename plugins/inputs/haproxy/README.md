@@ -8,6 +8,12 @@
 # SampleConfig
 [[inputs.haproxy]]
   servers = ["http://1.2.3.4/haproxy?stats", "/var/run/haproxy*.sock"]
+#  ssl_ca = "/etc/telegraf/ca.pem"
+#  ssl_cert = "/etc/telegraf/cert.pem"
+#  ssl_key = "/etc/telegraf/key.pem"
+## Use SSL but skip chain & host verification
+#  insecure_skip_verify = false
+
 ```
 
 #### `servers`
