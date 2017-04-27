@@ -114,6 +114,7 @@ be deprecated eventually.
 - [#2450](https://github.com/influxdata/telegraf/issues/2450): Network statistics not collected when system has alias interfaces
 - [#1911](https://github.com/influxdata/telegraf/issues/1911): Sysstat plugin needs LANG=C or similar locale
 - [#2528](https://github.com/influxdata/telegraf/issues/2528): File output closes standard streams on reload.
+- [#2603](https://github.com/influxdata/telegraf/issues/2603): AMQP output disconnect blocks all outputs
 
 ## v1.2.1 [2017-02-01]
 

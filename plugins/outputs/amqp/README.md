@@ -35,6 +35,10 @@ For an introduction to AMQP see:
   ## InfluxDB database
   # database = "telegraf"
 
+  ## Write timeout, formatted as a string.  If not provided, will default
+  ## to 5s. 0s means no timeout (not recommended).
+  # timeout = "5s"
+
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
