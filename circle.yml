@@ -3,6 +3,9 @@ machine:
     version: 1.8.1
   services:
     - docker
+    - memcached
+    - redis
+    - rabbitmq
 
 dependencies:
   override:
