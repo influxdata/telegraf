@@ -41,6 +41,7 @@ be deprecated eventually.
 
 ### Features
 
+- [#2721](https://github.com/influxdata/telegraf/pull/2721): Added SASL options for kafka output plugin.
 - [#2723](https://github.com/influxdata/telegraf/pull/2723): Added SSL configuration for input haproxy.
 - [#2494](https://github.com/influxdata/telegraf/pull/2494): Add interrupts input plugin.
 - [#2094](https://github.com/influxdata/telegraf/pull/2094): Add generic socket listener & writer.

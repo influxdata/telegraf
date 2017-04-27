@@ -45,6 +45,10 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SASL Config
+  # sasl_username = "kafka"
+  # sasl_password = "secret"
+
   data_format = "influx"
 ```
 

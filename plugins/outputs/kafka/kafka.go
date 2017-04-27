@@ -44,6 +44,11 @@ type Kafka struct {
 	// Skip SSL verification
 	InsecureSkipVerify bool
 
+	// SASL Username
+	SASLUsername string `toml:"sasl_username"`
+	// SASL Password
+	SASLPassword string `toml:"sasl_password"`
+
 	tlsConfig tls.Config
 	producer  sarama.SyncProducer
 
@@ -92,6 +97,10 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SASL Config
+  # sasl_username = "kafka"
+  # sasl_password = "secret"
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -127,6 +136,12 @@ func (k *Kafka) Connect() error {
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
 		config.Net.TLS.Enable = true
+	}
+
+	if k.SASLUsername != "" && k.SASLPassword != "" {
+		config.Net.SASL.User = k.SASLUsername
+		config.Net.SASL.Password = k.SASLPassword
+		config.Net.SASL.Enable = true
 	}
 
 	producer, err := sarama.NewSyncProducer(k.Brokers, config)
