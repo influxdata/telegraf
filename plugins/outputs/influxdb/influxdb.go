@@ -132,7 +132,9 @@ func (i *InfluxDB) Connect() error {
 
 			err = c.Query("CREATE DATABASE " + i.Database)
 			if err != nil {
-				log.Println("E! Database creation failed: " + err.Error())
+				if !strings.Contains(err.Error(), "Status Code [403]") {
+					log.Println("I! Database creation failed: " + err.Error())
+				}
 				continue
 			}
 		}
