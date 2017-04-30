@@ -72,10 +72,10 @@ func TestOpenldapStartTLS(t *testing.T) {
 	}
 
 	o := &Openldap{
-		Host:          testutil.GetLocalHost(),
-		Port:          389,
-		Tls:           true,
-		TlsSkipverify: true,
+		Host:               testutil.GetLocalHost(),
+		Port:               389,
+		Ssl:                true,
+		InsecureSkipverify: true,
 	}
 
 	var acc testutil.Accumulator
@@ -90,12 +90,12 @@ func TestOpenldapBind(t *testing.T) {
 	}
 
 	o := &Openldap{
-		Host:          testutil.GetLocalHost(),
-		Port:          389,
-		Tls:           true,
-		TlsSkipverify: true,
-		BindDn:        "cn=manager,cn=config",
-		BindPassword:  "secret",
+		Host:               testutil.GetLocalHost(),
+		Port:               389,
+		Ssl:                true,
+		InsecureSkipverify: true,
+		BindDn:             "cn=manager,cn=config",
+		BindPassword:       "secret",
 	}
 
 	var acc testutil.Accumulator

@@ -1,26 +1,24 @@
 package openldap
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"gopkg.in/ldap.v2"
-	"io/ioutil"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Openldap struct {
-	Host             string
-	Port             int
-	Tls              bool
-	TlsSkipverify    bool   `toml:"tls_skipverify"`
-	TlsCACertificate string `toml:"tls_cacertificate"`
-	BindDn           string `toml:"bind_dn"`
-	BindPassword     string `toml:"bind_password"`
+	Host               string
+	Port               int
+	Ssl                bool
+	InsecureSkipverify bool
+	SslCA              string
+	BindDn             string
+	BindPassword       string
 }
 
 const sampleConfig string = `
@@ -58,13 +56,13 @@ func (o *Openldap) Description() string {
 // return an initialized Openldap
 func NewOpenldap() *Openldap {
 	return &Openldap{
-		Host:             "localhost",
-		Port:             389,
-		Tls:              false,
-		TlsSkipverify:    false,
-		TlsCACertificate: "",
-		BindDn:           "",
-		BindPassword:     "",
+		Host:               "localhost",
+		Port:               389,
+		Ssl:                false,
+		InsecureSkipverify: false,
+		SslCA:              "",
+		BindDn:             "",
+		BindPassword:       "",
 	}
 }
 
@@ -78,22 +76,15 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	defer l.Close()
 
 	// TLS
-	if o.Tls {
-		tlsConfig := &tls.Config{InsecureSkipVerify: o.TlsSkipverify, ServerName: o.Host}
-		if o.TlsCACertificate != "" {
-			var caData []byte
-			if caData, err = ioutil.ReadFile(o.TlsCACertificate); err != nil {
-				acc.AddError(err)
-				return err
-			}
-			rootCAs := x509.NewCertPool()
-			if !rootCAs.AppendCertsFromPEM(caData) {
-				acc.AddError(err)
-				return err
-			}
-			tlsConfig.RootCAs = rootCAs
+	if o.Ssl {
+		// build tls config
+		tlsConfig, err := internal.GetTLSConfig("", "", o.SslCA, o.InsecureSkipverify)
+		if err != nil {
+			acc.AddError(err)
+			return nil
 		}
 
+		// configure StartTLS
 		err = l.StartTLS(tlsConfig)
 		if err != nil {
 			acc.AddError(err)
