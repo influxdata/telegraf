@@ -24,79 +24,79 @@ There are two separate measurements: _redis_ and _redis\_keyspace_, the latter i
 Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
 
 - redis
-    - keyspace_hitrate
-    - rdb_last_save_time_elapsed
+    - keyspace_hitrate(float, number)
+    - rdb_last_save_time_elapsed(int, seconds)
 
-    - uptime
-    - lru_clock
+    - uptime(int, seconds)
+    - lru_clock(int, number)
 
-    - clients
-    - client_longest_output_list
-    - client_biggest_input_buf
-    - blocked_clients
+    - clients(int, number)
+    - client_longest_output_list(int, number)
+    - client_biggest_input_buf(int, number)
+    - blocked_clients(int, number)
 
-    - used_memory
-    - used_memory_rss
-    - used_memory_peak
-    - total_system_memory
-    - used_memory_lua
-    - maxmemory
-    - maxmemory_policy
-    - mem_fragmentation_ratio
+    - used_memory(int, bytes)
+    - used_memory_rss(int, bytes)
+    - used_memory_peak(int, bytes)
+    - total_system_memory(int, bytes)
+    - used_memory_lua(int, bytes)
+    - maxmemory(int, bytes)
+    - maxmemory_policy(string)
+    - mem_fragmentation_ratio(float, number)
 
-    - loading
-    - rdb_changes_since_last_save
-    - rdb_bgsave_in_progress
-    - rdb_last_save_time
-    - rdb_last_bgsave_status
-    - rdb_last_bgsave_time_sec
-    - rdb_current_bgsave_time_sec
-    - aof_enabled
-    - aof_rewrite_in_progress
-    - aof_rewrite_scheduled
-    - aof_last_rewrite_time_sec
-    - aof_current_rewrite_time_sec
-    - aof_last_bgrewrite_status
-    - aof_last_write_status
+    - loading(int,flag)
+    - rdb_changes_since_last_save(int, number)
+    - rdb_bgsave_in_progress(int, flag)
+    - rdb_last_save_time(int, seconds)
+    - rdb_last_bgsave_status(string)
+    - rdb_last_bgsave_time_sec(int, seconds)
+    - rdb_current_bgsave_time_sec(int, seconds)
+    - aof_enabled(int, flag)
+    - aof_rewrite_in_progress(int, flag)
+    - aof_rewrite_scheduled(int, flag)
+    - aof_last_rewrite_time_sec(int, seconds)
+    - aof_current_rewrite_time_sec(int, seconds)
+    - aof_last_bgrewrite_status(string)
+    - aof_last_write_status(string)
 
-    - total_connections_received
-    - total_commands_processed
-    - instantaneous_ops_per_sec
-    - total_net_input_bytes
-    - total_net_output_bytes
-    - instantaneous_input_kbps
-    - instantaneous_output_kbps
-    - rejected_connections
-    - sync_full
-    - sync_partial_ok
-    - sync_partial_err
-    - expired_keys
-    - evicted_keys
-    - keyspace_hits
-    - keyspace_misses
-    - pubsub_channels
-    - pubsub_patterns
-    - latest_fork_usec
-    - migrate_cached_sockets
+    - total_connections_received(int, number)
+    - total_commands_processed(int, number)
+    - instantaneous_ops_per_sec(int, number)
+    - total_net_input_bytes(int, bytes)
+    - total_net_output_bytes(int, bytes)
+    - instantaneous_input_kbps(float, bytes)
+    - instantaneous_output_kbps(float, bytes)
+    - rejected_connections(int, number)
+    - sync_full(int, number)
+    - sync_partial_ok(int, number)
+    - sync_partial_err(int, number)
+    - expired_keys(int, number)
+    - evicted_keys(int, number)
+    - keyspace_hits(int, number)
+    - keyspace_misses(int, number)
+    - pubsub_channels(int, number)
+    - pubsub_patterns(int, number)
+    - latest_fork_usec(int, microseconds)
+    - migrate_cached_sockets(int, number)
 
-    - connected_slaves
-    - master_repl_offset
-    - repl_backlog_active
-    - repl_backlog_size
-    - repl_backlog_first_byte_offset
-    - repl_backlog_histlen
+    - connected_slaves(int, number)
+    - master_repl_offset(int, number)
+    - repl_backlog_active(int, number)
+    - repl_backlog_size(int, bytes)
+    - repl_backlog_first_byte_offset(int, number)
+    - repl_backlog_histlen(int, bytes)
 
-    - used_cpu_sys
-    - used_cpu_user
-    - used_cpu_sys_children
-    - used_cpu_user_children
+    - used_cpu_sys(float, number)
+    - used_cpu_user(float, number)
+    - used_cpu_sys_children(float, number)
+    - used_cpu_user_children(float, number)
 
-    - cluster_enabled
+    - cluster_enabled(int, flag)
 
 - redis_keyspace
-    - keys
-    - expires
-    - avg_ttl
+    - keys(int, number)
+    - expires(int, number)
+    - avg_ttl(int, number)
 
 ### Tags:
 
