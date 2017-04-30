@@ -27,14 +27,17 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - keyspace_hitrate(float, number)
     - rdb_last_save_time_elapsed(int, seconds)
 
+    **Server**
     - uptime(int, seconds)
     - lru_clock(int, number)
 
+    **Clients**
     - clients(int, number)
     - client_longest_output_list(int, number)
     - client_biggest_input_buf(int, number)
     - blocked_clients(int, number)
 
+    **Memory**
     - used_memory(int, bytes)
     - used_memory_rss(int, bytes)
     - used_memory_peak(int, bytes)
@@ -44,6 +47,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - maxmemory_policy(string)
     - mem_fragmentation_ratio(float, number)
 
+    **Persistance**
     - loading(int,flag)
     - rdb_changes_since_last_save(int, number)
     - rdb_bgsave_in_progress(int, flag)
@@ -59,6 +63,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - aof_last_bgrewrite_status(string)
     - aof_last_write_status(string)
 
+    **Stats**
     - total_connections_received(int, number)
     - total_commands_processed(int, number)
     - instantaneous_ops_per_sec(int, number)
@@ -79,6 +84,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - latest_fork_usec(int, microseconds)
     - migrate_cached_sockets(int, number)
 
+    **Replication**
     - connected_slaves(int, number)
     - master_repl_offset(int, number)
     - repl_backlog_active(int, number)
@@ -86,11 +92,13 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - repl_backlog_first_byte_offset(int, number)
     - repl_backlog_histlen(int, bytes)
 
+    **CPU**
     - used_cpu_sys(float, number)
     - used_cpu_user(float, number)
     - used_cpu_sys_children(float, number)
     - used_cpu_user_children(float, number)
 
+    **Cluster**
     - cluster_enabled(int, flag)
 
 - redis_keyspace
