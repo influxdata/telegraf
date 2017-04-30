@@ -25,11 +25,11 @@ const sampleConfig string = `
   host = "localhost"
   port = 389
   # starttls. Default is false.
-  tls = false
+  ssl = false
   # skip peer certificate verification. Default is false.
-  tls_skipverify = false
+  insecure_skip_verify = false
   # Path to PEM-encoded Root certificate to use to verify server certificate
-  tls_cacertificate = "/etc/ssl/certs.pem"
+  ssl_ca = "/etc/ssl/certs.pem"
 
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""
