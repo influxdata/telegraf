@@ -38,12 +38,8 @@ func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	logparser.Start(&acc)
-	if assert.NotEmpty(t, acc.Errors) {
-		assert.Error(t, acc.Errors[0])
-	}
-
-	logparser.Stop()
+	err := logparser.Start(&acc)
+	assert.Error(t, err)
 }
 
 func TestGrokParseLogFiles(t *testing.T) {
