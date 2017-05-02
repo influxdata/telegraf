@@ -843,7 +843,7 @@ FROM (SELECT DISTINCT DatabaseName FROM #Databases) AS bl
 SET @DynamicPivotQuery = N'
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -856,7 +856,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -869,7 +869,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -883,7 +883,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -896,7 +896,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -909,7 +909,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -922,7 +922,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -935,7 +935,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -948,7 +948,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -961,7 +961,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
