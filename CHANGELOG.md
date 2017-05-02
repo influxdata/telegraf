@@ -84,7 +84,7 @@ be deprecated eventually.
 
 ### Bugfixes
 
-- [#xxxx](https://github.com/influxdata/telegraf/pull/xxxx): allow running as console application on Windows
+- [#2754](https://github.com/influxdata/telegraf/pull/2754): allow running as console application on Windows
 - [#2633](https://github.com/influxdata/telegraf/pull/2633): ipmi_sensor: allow @ symbol in password
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
