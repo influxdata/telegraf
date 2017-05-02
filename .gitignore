@@ -1,0 +1,7 @@
+build
+tivan
+.vagrant
+/telegraf
+.idea
+*~
+*#

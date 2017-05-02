@@ -1,0 +1,11 @@
+/var/log/telegraf/telegraf.log 
+{
+    rotate 6
+    daily
+    missingok
+    dateext
+    copytruncate
+    notifempty
+    compress
+}
+

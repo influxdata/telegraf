@@ -1,0 +1,34 @@
+---
+  events:
+    failure: 0
+    total: 0
+    success: 0
+  resources:
+    failed: 0
+    scheduled: 0
+    changed: 0
+    skipped: 0
+    total: 109
+    failed_to_restart: 0
+    restarted: 0
+    out_of_sync: 0
+  changes:
+    total: 0
+  time:
+    user: 0.004331
+    schedule: 0.001123
+    filebucket: 0.000353
+    file: 0.441472
+    exec: 0.508123
+    anchor: 0.000555
+    yumrepo: 0.006989
+    ssh_authorized_key: 0.000764
+    service: 1.807795
+    package: 1.325788
+    total: 8.85354707064819
+    config_retrieval: 4.75567007064819
+    last_run: 1444936531
+    cron: 0.000584
+  version:
+    config: "environment:d6018ce"
+    puppet: "3.7.5"
