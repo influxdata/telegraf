@@ -140,8 +140,11 @@ type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
 
 var sampleConfig = `
+  ## Management Plugin url. (default: http://localhost:15672)
   # url = "http://localhost:15672"
-  # name = "rmq-server-1" # optional tag
+  ## Tag added to rabbitmq_overview series; deprecated: use tags
+  # name = "rmq-server-1"
+  ## Credentials
   # username = "guest"
   # password = "guest"
 
@@ -174,7 +177,7 @@ func (r *RabbitMQ) SampleConfig() string {
 
 // Description ...
 func (r *RabbitMQ) Description() string {
-	return "Read metrics from one or many RabbitMQ servers via the management API"
+	return "Reads metrics from RabbitMQ servers via the Management Plugin"
 }
 
 // Gather ...
