@@ -124,6 +124,16 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+// Close closes the connection. Noop if already closed.
+func (sw *SocketWriter) Close() error {
+	if sw.Conn == nil {
+		return nil
+	}
+	err := sw.Conn.Close()
+	sw.Conn = nil
+	return err
+}
+
 func newSocketWriter() *SocketWriter {
 	s, _ := serializers.NewInfluxSerializer()
 	return &SocketWriter{
