@@ -120,6 +120,7 @@ be deprecated eventually.
 - [#1911](https://github.com/influxdata/telegraf/issues/1911): Sysstat plugin needs LANG=C or similar locale
 - [#2528](https://github.com/influxdata/telegraf/issues/2528): File output closes standard streams on reload.
 - [#2603](https://github.com/influxdata/telegraf/issues/2603): AMQP output disconnect blocks all outputs
+- [#2706](https://github.com/influxdata/telegraf/issues/2706): Improve documentation for redis input plugin
 
 ## v1.2.1 [2017-02-01]
 
