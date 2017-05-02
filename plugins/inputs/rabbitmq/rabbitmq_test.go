@@ -399,7 +399,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{

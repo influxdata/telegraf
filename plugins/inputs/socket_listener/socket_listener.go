@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -47,6 +48,11 @@ func (ssl *streamSocketListener) listen() {
 		}
 		ssl.connections[c.RemoteAddr().String()] = c
 		ssl.connectionsMtx.Unlock()
+
+		if err := ssl.setKeepAlive(c); err != nil {
+			ssl.AddError(fmt.Errorf("unable to configure keep alive (%s): %s", ssl.ServiceAddress, err))
+		}
+
 		go ssl.read(c)
 	}
 
@@ -55,6 +61,23 @@ func (ssl *streamSocketListener) listen() {
 		c.Close()
 	}
 	ssl.connectionsMtx.Unlock()
+}
+
+func (ssl *streamSocketListener) setKeepAlive(c net.Conn) error {
+	if ssl.KeepAlivePeriod == nil {
+		return nil
+	}
+	tcpc, ok := c.(*net.TCPConn)
+	if !ok {
+		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(ssl.ServiceAddress, "://", 2)[0])
+	}
+	if ssl.KeepAlivePeriod.Duration == 0 {
+		return tcpc.SetKeepAlive(false)
+	}
+	if err := tcpc.SetKeepAlive(true); err != nil {
+		return err
+	}
+	return tcpc.SetKeepAlivePeriod(ssl.KeepAlivePeriod.Duration)
 }
 
 func (ssl *streamSocketListener) removeConnection(c net.Conn) {
@@ -116,9 +139,10 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress string
-	MaxConnections int
-	ReadBufferSize int
+	ServiceAddress  string
+	MaxConnections  int
+	ReadBufferSize  int
+	KeepAlivePeriod *internal.Duration
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -154,8 +178,14 @@ func (sl *SocketListener) SampleConfig() string {
   ## Defaults to the OS default.
   # read_buffer_size = 65535
 
+  ## Period between keep alive probes.
+  ## Only applies to TCP sockets.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  # keep_alive_period = "5m"
+
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"

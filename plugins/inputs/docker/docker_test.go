@@ -302,7 +302,7 @@ func TestDockerGatherInfo(t *testing.T) {
 		testing: true,
 	}
 
-	err := d.Gather(&acc)
+	err := acc.GatherError(d.Gather)
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t,

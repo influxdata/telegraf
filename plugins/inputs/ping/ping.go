@@ -68,7 +68,6 @@ func (_ *Ping) SampleConfig() string {
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
-	errorChannel := make(chan error, len(p.Urls)*2)
 
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
@@ -80,14 +79,14 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			out, err := p.pingHost(totalTimeout, args...)
 			if err != nil {
 				// Combine go err + stderr output
-				errorChannel <- errors.New(
-					strings.TrimSpace(out) + ", " + err.Error())
+				acc.AddError(errors.New(
+					strings.TrimSpace(out) + ", " + err.Error()))
 			}
 			tags := map[string]string{"url": u}
 			trans, rec, avg, stddev, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
-				errorChannel <- err
+				acc.AddError(err)
 				return
 			}
 			// Calculate packet loss percentage
@@ -108,18 +107,8 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 func hostPinger(timeout float64, args ...string) (string, error) {

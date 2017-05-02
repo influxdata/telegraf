@@ -19,8 +19,7 @@ func TestZookeeperGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := z.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(z.Gather))
 
 	intMetrics := []string{
 		"avg_latency",

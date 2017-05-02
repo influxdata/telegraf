@@ -170,7 +170,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		if p.Query[i].Version <= db_version {
 			rows, err := db.Query(sql_query)
 			if err != nil {
-				return err
+				acc.AddError(err)
+				continue
 			}
 
 			defer rows.Close()
@@ -178,7 +179,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			// grab the column information from the result
 			p.OrderedColumns, err = rows.Columns()
 			if err != nil {
-				return err
+				acc.AddError(err)
+				continue
 			} else {
 				for _, v := range p.OrderedColumns {
 					p.AllColumns = append(p.AllColumns, v)
@@ -195,7 +197,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			for rows.Next() {
 				err = p.accRow(meas_name, rows, acc)
 				if err != nil {
-					return err
+					acc.AddError(err)
+					break
 				}
 			}
 		}

@@ -26,14 +26,14 @@ func TestInterval(t *testing.T) {
 	s.interval = 0
 	wantedInterval := 3
 
-	err := s.Gather(&acc)
+	err := acc.GatherError(s.Gather)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(time.Duration(wantedInterval) * time.Second)
 
-	err = s.Gather(&acc)
+	err = acc.GatherError(s.Gather)
 	if err != nil {
 		t.Fatal(err)
 	}
