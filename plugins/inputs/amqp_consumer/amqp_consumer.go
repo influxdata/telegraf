@@ -86,7 +86,11 @@ func (a *AMQPConsumer) SampleConfig() string {
   # insecure_skip_verify = false
 
   ## Data format to output.
+<<<<<<< HEAD
   ## Each data format has it's own unique set of configuration options, read
+=======
+  ## Each data format has its own unique set of configuration options, read
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"

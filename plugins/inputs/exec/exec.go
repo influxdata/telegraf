@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -36,7 +35,7 @@ const sampleConfig = `
   name_suffix = "_mycollector"
 
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
@@ -49,8 +48,7 @@ type Exec struct {
 
 	parser parsers.Parser
 
-	runner  Runner
-	errChan chan error
+	runner Runner
 }
 
 func NewExec() *Exec {
@@ -150,13 +148,13 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 
 	out, err := e.runner.Run(e, command, acc)
 	if err != nil {
-		e.errChan <- err
+		acc.AddError(err)
 		return
 	}
 
 	metrics, err := e.parser.Parse(out)
 	if err != nil {
-		e.errChan <- err
+		acc.AddError(err)
 	} else {
 		for _, metric := range metrics {
 			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
@@ -193,7 +191,8 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 
 		matches, err := filepath.Glob(cmdAndArgs[0])
 		if err != nil {
-			return err
+			acc.AddError(err)
+			continue
 		}
 
 		if len(matches) == 0 {
@@ -214,15 +213,12 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	errChan := errchan.New(len(commands))
-	e.errChan = errChan.C
-
 	wg.Add(len(commands))
 	for _, command := range commands {
 		go e.ProcessCommand(command, acc, &wg)
 	}
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func init() {

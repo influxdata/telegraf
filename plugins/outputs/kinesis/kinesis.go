@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/satori/go.uuid"
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
@@ -23,10 +24,18 @@ type KinesisOutput struct {
 	Filename  string `toml:"shared_credential_file"`
 	Token     string `toml:"token"`
 
+<<<<<<< HEAD
 	StreamName   string `toml:"streamname"`
 	PartitionKey string `toml:"partitionkey"`
 	Debug        bool   `toml:"debug"`
 	svc          *kinesis.Kinesis
+=======
+	StreamName         string `toml:"streamname"`
+	PartitionKey       string `toml:"partitionkey"`
+	RandomPartitionKey bool   `toml:"use_random_partitionkey"`
+	Debug              bool   `toml:"debug"`
+	svc                *kinesis.Kinesis
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	serializer serializers.Serializer
 }
@@ -54,9 +63,20 @@ var sampleConfig = `
   streamname = "StreamName"
   ## PartitionKey as used for sharding data.
   partitionkey = "PartitionKey"
+<<<<<<< HEAD
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
+=======
+  ## If set the paritionKey will be a random UUID on every put.
+  ## This allows for scaling across multiple shards in a stream.
+  ## This will cause issues with ordering.
+  use_random_partitionkey = false
+
+
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
@@ -172,10 +192,23 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			return err
 		}
+<<<<<<< HEAD
 
 		d := kinesis.PutRecordsRequestEntry{
 			Data:         values,
 			PartitionKey: aws.String(k.PartitionKey),
+=======
+
+		partitionKey := k.PartitionKey
+		if k.RandomPartitionKey {
+			u := uuid.NewV4()
+			partitionKey = u.String()
+		}
+
+		d := kinesis.PutRecordsRequestEntry{
+			Data:         values,
+			PartitionKey: aws.String(partitionKey),
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		}
 
 		r = append(r, &d)

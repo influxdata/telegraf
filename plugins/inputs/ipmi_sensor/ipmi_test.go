@@ -20,11 +20,16 @@ func TestGather(t *testing.T) {
 	execCommand = fakeExecCommand
 	var acc testutil.Accumulator
 
+<<<<<<< HEAD
 	err := i.Gather(&acc)
+=======
+	err := acc.GatherError(i.Gather)
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	require.NoError(t, err)
 
 	assert.Equal(t, acc.NFields(), 266, "non-numeric measurements should be ignored")
+<<<<<<< HEAD
 
 	conn := NewConnection(i.Servers[0])
 	assert.Equal(t, "USERID", conn.Username)
@@ -113,6 +118,96 @@ func TestGather(t *testing.T) {
 		},
 	}
 
+=======
+
+	conn := NewConnection(i.Servers[0])
+	assert.Equal(t, "USERID", conn.Username)
+	assert.Equal(t, "lan", conn.Interface)
+
+	var testsWithServer = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		{
+			map[string]interface{}{
+				"value":  float64(20),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "ambient_temp",
+				"server": "192.168.1.1",
+				"unit":   "degrees_c",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(80),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "altitude",
+				"server": "192.168.1.1",
+				"unit":   "feet",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(210),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "avg_power",
+				"server": "192.168.1.1",
+				"unit":   "watts",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(4.9),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "planar_5v",
+				"server": "192.168.1.1",
+				"unit":   "volts",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(3.05),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "planar_vbat",
+				"server": "192.168.1.1",
+				"unit":   "volts",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(2610),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "fan_1a_tach",
+				"server": "192.168.1.1",
+				"unit":   "rpm",
+			},
+		},
+		{
+			map[string]interface{}{
+				"value":  float64(1775),
+				"status": int(1),
+			},
+			map[string]string{
+				"name":   "fan_1b_tach",
+				"server": "192.168.1.1",
+				"unit":   "rpm",
+			},
+		},
+	}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	for _, test := range testsWithServer {
 		acc.AssertContainsTaggedFields(t, "ipmi_sensor", test.fields, test.tags)
 	}
@@ -121,7 +216,11 @@ func TestGather(t *testing.T) {
 		Path: "ipmitool",
 	}
 
+<<<<<<< HEAD
 	err = i.Gather(&acc)
+=======
+	err = acc.GatherError(i.Gather)
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}
@@ -359,6 +458,7 @@ OS RealTime Mod  | 0x00              | ok
 `
 
 	args := os.Args
+<<<<<<< HEAD
 
 	// Previous arguments are tests stuff, that looks like :
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
@@ -370,6 +470,19 @@ OS RealTime Mod  | 0x00              | ok
 		fmt.Fprint(os.Stdout, "command not found")
 		os.Exit(1)
 
+=======
+
+	// Previous arguments are tests stuff, that looks like :
+	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
+	cmd, args := args[3], args[4:]
+
+	if cmd == "ipmitool" {
+		fmt.Fprint(os.Stdout, mockData)
+	} else {
+		fmt.Fprint(os.Stdout, "command not found")
+		os.Exit(1)
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	}
 	os.Exit(0)
 }

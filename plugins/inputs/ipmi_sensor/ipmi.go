@@ -52,7 +52,12 @@ func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 		for _, server := range m.Servers {
 			err := m.parse(acc, server)
 			if err != nil {
+<<<<<<< HEAD
 				return err
+=======
+				acc.AddError(err)
+				continue
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 			}
 		}
 	} else {
@@ -152,6 +157,10 @@ func init() {
 		m.Path = path
 	}
 	inputs.Add("ipmi_sensor", func() telegraf.Input {
+<<<<<<< HEAD
+=======
+		m := m
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		return &m
 	})
 }

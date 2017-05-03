@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -66,17 +65,16 @@ func (n *NSQ) Description() string {
 
 func (n *NSQ) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(n.Endpoints))
 	for _, e := range n.Endpoints {
 		wg.Add(1)
 		go func(e string) {
 			defer wg.Done()
-			errChan.C <- n.gatherEndpoint(e, acc)
+			acc.AddError(n.gatherEndpoint(e, acc))
 		}(e)
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 var tr = &http.Transport{

@@ -92,6 +92,13 @@ func (d FakeDockerClient) ContainerList(octx context.Context, options types.Cont
 				IP:          "0.0.0.0",
 			},
 		},
+<<<<<<< HEAD
+=======
+		Labels: map[string]string{
+			"label1": "test_value_1",
+			"label2": "test_value_2",
+		},
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		SizeRw:     0,
 		SizeRootFs: 0,
 	}
@@ -125,6 +132,13 @@ func (d FakeDockerClient) ContainerList(octx context.Context, options types.Cont
 				IP:          "0.0.0.0",
 			},
 		},
+<<<<<<< HEAD
+=======
+		Labels: map[string]string{
+			"label1": "test_value_1",
+			"label2": "test_value_2",
+		},
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		SizeRw:     0,
 		SizeRootFs: 0,
 	}

@@ -50,6 +50,11 @@ This is used to group data within a stream. Currently this plugin only supports 
 Manually configuring different hosts, or groups of hosts with manually selected partitionkeys might be a workable
 solution to scale out.
 
+### use_random_partitionkey
+
+When true a random UUID will be generated and used as the partitionkey when sending data to Kinesis. This allows data to evenly spread across multiple shards in the stream. Due to using a random paritionKey there can be no guarantee of ordering when consuming the data off the shards.
+If true then the partitionkey option will be ignored.
+
 ### format
 
 The format configuration value has been designated to allow people to change the format of the Point as written to

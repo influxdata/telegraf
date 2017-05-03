@@ -66,7 +66,10 @@ func TestUDPClient_Write(t *testing.T) {
 	}()
 
 	// test sending simple metric
+<<<<<<< HEAD
 	time.Sleep(time.Second)
+=======
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	n, err := client.Write([]byte("cpu value=99\n"))
 	assert.Equal(t, n, 13)
 	assert.NoError(t, err)

@@ -88,7 +88,53 @@ func TestGatherNodeStats(t *testing.T) {
 	if err := es.gatherNodeStats("junk", &acc); err != nil {
 		t.Fatal(err)
 	}
+}
 
+func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
+	tags := map[string]string{
+		"cluster_name":          "es-testcluster",
+		"node_attribute_master": "true",
+		"node_id":               "SDFsfSDFsdfFSDSDfSFDSDF",
+		"node_name":             "test.host.com",
+		"node_host":             "test",
+	}
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+}
+
+func TestGather(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+
+	var acc testutil.Accumulator
+	if err := acc.GatherError(es.Gather); err != nil {
+		t.Fatal(err)
+	}
+
+	checkIsMaster(es, false, t)
+	checkNodeStatsResult(t, &acc)
+}
+
+func TestGatherNodeStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+
+	var acc testutil.Accumulator
+	if err := es.gatherNodeStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	checkIsMaster(es, false, t)
 	checkNodeStatsResult(t, &acc)
 }

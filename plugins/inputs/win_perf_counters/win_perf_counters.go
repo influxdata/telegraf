@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var sampleConfig string = `
+var sampleConfig = `
   ## By default this plugin returns basic CPU and Disk statistics.
   ## See the README file for more examples.
   ## Uncomment examples below or write your own as you see fit. If the system
@@ -124,8 +124,13 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 	// Call PdhCollectQueryData one time to check existance of the counter
 	ret = PdhCollectQueryData(handle)
 	if ret != ERROR_SUCCESS {
+<<<<<<< HEAD
 		ret = PdhCloseQuery(handle)
 		return errors.New("Invalid query for Performance Counters")
+=======
+		PdhCloseQuery(handle)
+		return errors.New(PdhFormatError(ret))
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	}
 
 	temp := &item{query, objectName, counter, instance, measurement,
@@ -174,7 +179,11 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						}
 					} else {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
+<<<<<<< HEAD
 							fmt.Printf("Invalid query: %s\n", query)
+=======
+							fmt.Printf("Invalid query: '%s'. Error: %s", query, err.Error())
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 						}
 						if PerfObject.FailOnMissing {
 							return err
@@ -265,6 +274,11 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 					} else if metric.instance == s {
 						// Catch if we set it to total or some form of it
 						add = true
+					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, s) {
+						// If you are using a multiple instance identifier such as "w3wp#1"
+						// phd.dll returns only the first 2 characters of the identifier.
+						add = true
+						s = metric.instance
 					} else if metric.instance == "------" {
 						add = true
 					}
@@ -293,7 +307,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				bufCount = 0
 				bufSize = 0
 			}
-
 		}
 	}
 

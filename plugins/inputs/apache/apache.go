@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -65,30 +66,51 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
 
-	var outerr error
-	var errch = make(chan error)
-
+	var wg sync.WaitGroup
+	wg.Add(len(n.Urls))
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
+			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
 		}
 
 		go func(addr *url.URL) {
-			errch <- n.gatherUrl(addr, acc)
+			defer wg.Done()
+			acc.AddError(n.gatherUrl(addr, acc))
 		}(addr)
 	}
 
-	// Drain channel, waiting for all requests to finish and save last error.
-	for range n.Urls {
-		if err := <-errch; err != nil {
-			outerr = err
+	wg.Wait()
+	return nil
+}
+
+func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+
+	var tr *http.Transport
+
+	if addr.Scheme == "https" {
+		tlsCfg, err := internal.GetTLSConfig(
+			n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
+		tr = &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			TLSClientConfig:       tlsCfg,
+		}
+	} else {
+		tr = &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
 		}
 	}
 
-	return outerr
-}
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   n.ResponseTimeout.Duration,
+	}
 
+<<<<<<< HEAD
 func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 
 	var tr *http.Transport
@@ -125,6 +147,19 @@ func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 
 	resp, err := client.Do(req)
 	if err != nil {
+=======
+	req, err := http.NewRequest("GET", addr.String(), nil)
+	if err != nil {
+		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
+	}
+
+	if len(n.Username) != 0 && len(n.Password) != 0 {
+		req.SetBasicAuth(n.Username, n.Password)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
 	}
 	defer resp.Body.Close()

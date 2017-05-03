@@ -7,6 +7,9 @@ import (
 	"sort"
 	"strings"
 
+	// register in driver.
+	_ "github.com/jackc/pgx/stdlib"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -43,7 +46,7 @@ var sampleConfig = `
   # ignored_databases = ["postgres", "template0", "template1"]
 
   ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.  Do NOT use with the 'ignore_databases' option.
+  ## databases are gathered.  Do NOT use with the 'ignored_databases' option.
   # databases = ["app_production", "testing"]
 `
 
@@ -62,17 +65,24 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 var localhost = "host=localhost sslmode=disable"
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	var query string
+	var (
+		err   error
+		db    *sql.DB
+		query string
+	)
 
 	if p.Address == "" || p.Address == "localhost" {
 		p.Address = localhost
 	}
 
+<<<<<<< HEAD
 	db, err := Connect(p.Address)
 	if err != nil {
+=======
+	if db, err = sql.Open("pgx", p.Address); err != nil {
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		return err
 	}
-
 	defer db.Close()
 
 	if len(p.Databases) == 0 && len(p.IgnoredDatabases) == 0 {
@@ -107,7 +117,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	//return rows.Err()
+
 	query = `SELECT * FROM pg_stat_bgwriter`
 
 	bg_writer_row, err := db.Query(query)

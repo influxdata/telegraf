@@ -7,6 +7,9 @@ import (
 	"regexp"
 	"strings"
 
+	// register in driver.
+	_ "github.com/jackc/pgx/stdlib"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
@@ -112,23 +115,29 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 var localhost = "host=localhost sslmode=disable"
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-
-	var sql_query string
-	var query_addon string
-	var db_version int
-	var query string
-	var tag_value string
-	var meas_name string
+	var (
+		err         error
+		db          *sql.DB
+		sql_query   string
+		query_addon string
+		db_version  int
+		query       string
+		tag_value   string
+		meas_name   string
+	)
 
 	if p.Address == "" || p.Address == "localhost" {
 		p.Address = localhost
 	}
 
+<<<<<<< HEAD
 	db, err := postgresql.Connect(p.Address)
 	if err != nil {
+=======
+	if db, err = sql.Open("pgx", p.Address); err != nil {
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		return err
 	}
-
 	defer db.Close()
 
 	// Retreiving the database version
@@ -165,7 +174,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		if p.Query[i].Version <= db_version {
 			rows, err := db.Query(sql_query)
 			if err != nil {
-				return err
+				acc.AddError(err)
+				continue
 			}
 
 			defer rows.Close()
@@ -173,7 +183,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			// grab the column information from the result
 			p.OrderedColumns, err = rows.Columns()
 			if err != nil {
-				return err
+				acc.AddError(err)
+				continue
 			} else {
 				for _, v := range p.OrderedColumns {
 					p.AllColumns = append(p.AllColumns, v)
@@ -190,7 +201,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			for rows.Next() {
 				err = p.accRow(meas_name, rows, acc)
 				if err != nil {
-					return err
+					acc.AddError(err)
+					break
 				}
 			}
 		}

@@ -2,11 +2,11 @@ package natsconsumer
 
 import (
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/nats-io/nats"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -42,11 +42,8 @@ func TestRunParser(t *testing.T) {
 	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsg)
-	time.Sleep(time.Millisecond * 25)
 
-	if acc.NFields() != 1 {
-		t.Errorf("got %v, expected %v", acc.NFields(), 1)
-	}
+	acc.Wait(1)
 }
 
 // Test that the parser ignores invalid messages
@@ -60,11 +57,10 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(invalidMsg)
-	time.Sleep(time.Millisecond * 25)
 
-	if acc.NFields() != 0 {
-		t.Errorf("got %v, expected %v", acc.NFields(), 0)
-	}
+	acc.WaitError(1)
+	assert.Contains(t, acc.Errors[0].Error(), "E! subject: telegraf, error:  metric parsing error")
+	assert.EqualValues(t, 0, acc.NMetrics())
 }
 
 // Test that the parser parses line format messages into metrics
@@ -78,10 +74,10 @@ func TestRunParserAndGather(t *testing.T) {
 	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsg)
-	time.Sleep(time.Millisecond * 25)
 
 	n.Gather(&acc)
 
+	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(23422)})
 }
@@ -97,10 +93,10 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsgGraphite)
-	time.Sleep(time.Millisecond * 25)
 
 	n.Gather(&acc)
 
+	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_short_graphite",
 		map[string]interface{}{"value": float64(23422)})
 }
@@ -116,10 +112,10 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsgJSON)
-	time.Sleep(time.Millisecond * 25)
 
 	n.Gather(&acc)
 
+	acc.Wait(1)
 	acc.AssertContainsFields(t, "nats_json_test",
 		map[string]interface{}{
 			"a":   float64(5),

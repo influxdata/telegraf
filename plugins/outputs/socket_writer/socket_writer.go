@@ -2,16 +2,29 @@ package socket_writer
 
 import (
 	"fmt"
+<<<<<<< HEAD
+=======
+	"log"
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	"net"
 	"strings"
 
 	"github.com/influxdata/telegraf"
+<<<<<<< HEAD
+=======
+	"github.com/influxdata/telegraf/internal"
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type SocketWriter struct {
+<<<<<<< HEAD
 	Address string
+=======
+	Address         string
+	KeepAlivePeriod *internal.Duration
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	serializers.Serializer
 
@@ -36,8 +49,19 @@ func (sw *SocketWriter) SampleConfig() string {
   # address = "unix:///tmp/telegraf.sock"
   # address = "unixgram:///tmp/telegraf.sock"
 
+<<<<<<< HEAD
   ## Data format to generate.
   ## Each data format has it's own unique set of configuration options, read
+=======
+  ## Period between keep alive probes.
+  ## Only applies to TCP sockets.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  # keep_alive_period = "5m"
+
+  ## Data format to generate.
+  ## Each data format has its own unique set of configuration options, read
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
@@ -59,10 +83,37 @@ func (sw *SocketWriter) Connect() error {
 		return err
 	}
 
+<<<<<<< HEAD
+=======
+	if err := sw.setKeepAlive(c); err != nil {
+		log.Printf("unable to configure keep alive (%s): %s", sw.Address, err)
+	}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	sw.Conn = c
 	return nil
 }
 
+<<<<<<< HEAD
+=======
+func (sw *SocketWriter) setKeepAlive(c net.Conn) error {
+	if sw.KeepAlivePeriod == nil {
+		return nil
+	}
+	tcpc, ok := c.(*net.TCPConn)
+	if !ok {
+		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(sw.Address, "://", 2)[0])
+	}
+	if sw.KeepAlivePeriod.Duration == 0 {
+		return tcpc.SetKeepAlive(false)
+	}
+	if err := tcpc.SetKeepAlive(true); err != nil {
+		return err
+	}
+	return tcpc.SetKeepAlivePeriod(sw.KeepAlivePeriod.Duration)
+}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 // Write writes the given metrics to the destination.
 // If an error is encountered, it is up to the caller to retry the same write again later.
 // Not parallel safe.
@@ -94,6 +145,19 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+<<<<<<< HEAD
+=======
+// Close closes the connection. Noop if already closed.
+func (sw *SocketWriter) Close() error {
+	if sw.Conn == nil {
+		return nil
+	}
+	err := sw.Conn.Close()
+	sw.Conn = nil
+	return err
+}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 func newSocketWriter() *SocketWriter {
 	s, _ := serializers.NewInfluxSerializer()
 	return &SocketWriter{

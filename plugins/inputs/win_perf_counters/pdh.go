@@ -33,8 +33,16 @@
 package win_perf_counters
 
 import (
+<<<<<<< HEAD
 	"syscall"
 	"unsafe"
+=======
+	"fmt"
+	"syscall"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 )
 
 // Error codes
@@ -417,3 +425,16 @@ func UTF16PtrToString(s *uint16) string {
 	}
 	return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
 }
+<<<<<<< HEAD
+=======
+
+func PdhFormatError(msgId uint32) string {
+	var flags uint32 = windows.FORMAT_MESSAGE_FROM_HMODULE | windows.FORMAT_MESSAGE_ARGUMENT_ARRAY | windows.FORMAT_MESSAGE_IGNORE_INSERTS
+	buf := make([]uint16, 300)
+	_, err := windows.FormatMessage(flags, uintptr(libpdhDll.Handle), msgId, 0, buf, nil)
+	if err == nil {
+		return fmt.Sprintf("%s", UTF16PtrToString(&buf[0]))
+	}
+	return fmt.Sprintf("(pdhErr=%d) %s", msgId, err.Error())
+}
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc

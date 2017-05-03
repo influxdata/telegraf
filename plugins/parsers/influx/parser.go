@@ -15,13 +15,21 @@ type InfluxParser struct {
 	DefaultTags map[string]string
 }
 
+<<<<<<< HEAD
 func (p *InfluxParser) ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf.Metric, error) {
+=======
+func (p *InfluxParser) ParseWithDefaultTimePrecision(buf []byte, t time.Time, precision string) ([]telegraf.Metric, error) {
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	if !bytes.HasSuffix(buf, []byte("\n")) {
 		buf = append(buf, '\n')
 	}
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
+<<<<<<< HEAD
 	metrics, err := metric.ParseWithDefaultTime(buf, t)
+=======
+	metrics, err := metric.ParseWithDefaultTimePrecision(buf, t, precision)
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	if len(p.DefaultTags) > 0 {
 		for _, m := range metrics {
 			for k, v := range p.DefaultTags {
@@ -41,7 +49,7 @@ func (p *InfluxParser) ParseWithDefaultTime(buf []byte, t time.Time) ([]telegraf
 // a non-nil error will be returned in addition to the metrics that parsed
 // successfully.
 func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	return p.ParseWithDefaultTime(buf, time.Now())
+	return p.ParseWithDefaultTimePrecision(buf, time.Now(), "")
 }
 
 func (p *InfluxParser) ParseLine(line string) (telegraf.Metric, error) {

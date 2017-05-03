@@ -7,9 +7,11 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -22,6 +24,10 @@ type Riemann struct {
 	TagKeys                []string
 	Tags                   []string
 	DescriptionText        string
+<<<<<<< HEAD
+=======
+	Timeout                internal.Duration
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	client *raidman.Client
 }
@@ -54,6 +60,12 @@ var sampleConfig = `
 
   ## Description for Riemann event
   # description_text = "metrics collected from telegraf"
+<<<<<<< HEAD
+=======
+
+  ## Riemann client write timeout, defaults to "5s" if not set.
+  # timeout = "5s"
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 `
 
 func (r *Riemann) Connect() error {
@@ -62,7 +74,11 @@ func (r *Riemann) Connect() error {
 		return err
 	}
 
+<<<<<<< HEAD
 	client, err := raidman.Dial(parsed_url.Scheme, parsed_url.Host)
+=======
+	client, err := raidman.DialWithTimeout(parsed_url.Scheme, parsed_url.Host, r.Timeout.Duration)
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	if err != nil {
 		r.client = nil
 		return err
@@ -199,6 +215,7 @@ func (r *Riemann) tags(tags map[string]string) []string {
 	var keys []string
 	for key := range tags {
 		keys = append(keys, key)
+<<<<<<< HEAD
 	}
 	sort.Strings(keys)
 
@@ -207,11 +224,23 @@ func (r *Riemann) tags(tags map[string]string) []string {
 			values = append(values, tags[key])
 		}
 	}
+=======
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		if key != "host" { // exclude 'host' tag
+			values = append(values, tags[key])
+		}
+	}
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	return values
 }
 
 func init() {
 	outputs.Add("riemann", func() telegraf.Output {
-		return &Riemann{}
+		return &Riemann{
+			Timeout: internal.Duration{Duration: time.Second * 5},
+		}
 	})
 }

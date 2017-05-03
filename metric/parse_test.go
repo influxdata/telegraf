@@ -364,6 +364,30 @@ func TestParseNegativeTimestamps(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
+=======
+func TestParsePrecision(t *testing.T) {
+	for _, tt := range []struct {
+		line      string
+		precision string
+		expected  int64
+	}{
+		{"test v=42 1491847420", "s", 1491847420000000000},
+		{"test v=42 1491847420123", "ms", 1491847420123000000},
+		{"test v=42 1491847420123456", "u", 1491847420123456000},
+		{"test v=42 1491847420123456789", "ns", 1491847420123456789},
+
+		{"test v=42 1491847420123456789", "1s", 1491847420123456789},
+		{"test v=42 1491847420123456789", "asdf", 1491847420123456789},
+	} {
+		metrics, err := ParseWithDefaultTimePrecision(
+			[]byte(tt.line+"\n"), time.Now(), tt.precision)
+		assert.NoError(t, err, tt)
+		assert.Equal(t, tt.expected, metrics[0].UnixNano())
+	}
+}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 func TestParseMaxKeyLength(t *testing.T) {
 	key := ""
 	for {

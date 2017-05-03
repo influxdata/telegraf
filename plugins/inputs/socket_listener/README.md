@@ -38,6 +38,14 @@ This is a sample configuration for the plugin.
 
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
+  ## Period between keep alive probes.
+  ## Only applies to TCP sockets.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  # keep_alive_period = "5m"
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"

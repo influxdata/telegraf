@@ -6,10 +6,18 @@ import (
 	"io"
 	"log"
 	"net"
+<<<<<<< HEAD
+=======
+	"os"
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
+<<<<<<< HEAD
+=======
+	"github.com/influxdata/telegraf/internal"
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -32,7 +40,13 @@ func (ssl *streamSocketListener) listen() {
 	for {
 		c, err := ssl.Accept()
 		if err != nil {
+<<<<<<< HEAD
 			ssl.AddError(err)
+=======
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				ssl.AddError(err)
+			}
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 			break
 		}
 
@@ -44,6 +58,14 @@ func (ssl *streamSocketListener) listen() {
 		}
 		ssl.connections[c.RemoteAddr().String()] = c
 		ssl.connectionsMtx.Unlock()
+<<<<<<< HEAD
+=======
+
+		if err := ssl.setKeepAlive(c); err != nil {
+			ssl.AddError(fmt.Errorf("unable to configure keep alive (%s): %s", ssl.ServiceAddress, err))
+		}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		go ssl.read(c)
 	}
 
@@ -54,6 +76,26 @@ func (ssl *streamSocketListener) listen() {
 	ssl.connectionsMtx.Unlock()
 }
 
+<<<<<<< HEAD
+=======
+func (ssl *streamSocketListener) setKeepAlive(c net.Conn) error {
+	if ssl.KeepAlivePeriod == nil {
+		return nil
+	}
+	tcpc, ok := c.(*net.TCPConn)
+	if !ok {
+		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(ssl.ServiceAddress, "://", 2)[0])
+	}
+	if ssl.KeepAlivePeriod.Duration == 0 {
+		return tcpc.SetKeepAlive(false)
+	}
+	if err := tcpc.SetKeepAlive(true); err != nil {
+		return err
+	}
+	return tcpc.SetKeepAlivePeriod(ssl.KeepAlivePeriod.Duration)
+}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 func (ssl *streamSocketListener) removeConnection(c net.Conn) {
 	ssl.connectionsMtx.Lock()
 	delete(ssl.connections, c.RemoteAddr().String())
@@ -68,7 +110,11 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	for scnr.Scan() {
 		metrics, err := ssl.Parse(scnr.Bytes())
 		if err != nil {
+<<<<<<< HEAD
 			ssl.AddError(fmt.Errorf("unable to parse incoming line"))
+=======
+			ssl.AddError(fmt.Errorf("unable to parse incoming line: %s", err))
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 			//TODO rate limit
 			continue
 		}
@@ -78,7 +124,13 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	}
 
 	if err := scnr.Err(); err != nil {
+<<<<<<< HEAD
 		ssl.AddError(err)
+=======
+		if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+			ssl.AddError(err)
+		}
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	}
 }
 
@@ -92,13 +144,23 @@ func (psl *packetSocketListener) listen() {
 	for {
 		n, _, err := psl.ReadFrom(buf)
 		if err != nil {
+<<<<<<< HEAD
 			psl.AddError(err)
+=======
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				psl.AddError(err)
+			}
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 			break
 		}
 
 		metrics, err := psl.Parse(buf[:n])
 		if err != nil {
+<<<<<<< HEAD
 			psl.AddError(fmt.Errorf("unable to parse incoming packet"))
+=======
+			psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 			//TODO rate limit
 			continue
 		}
@@ -109,9 +171,16 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
+<<<<<<< HEAD
 	ServiceAddress string
 	MaxConnections int
 	ReadBufferSize int
+=======
+	ServiceAddress  string
+	MaxConnections  int
+	ReadBufferSize  int
+	KeepAlivePeriod *internal.Duration
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -147,8 +216,19 @@ func (sl *SocketListener) SampleConfig() string {
   ## Defaults to the OS default.
   # read_buffer_size = 65535
 
+<<<<<<< HEAD
   ## Data format to consume.
   ## Each data format has it's own unique set of configuration options, read
+=======
+  ## Period between keep alive probes.
+  ## Only applies to TCP sockets.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  # keep_alive_period = "5m"
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
@@ -170,6 +250,16 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("invalid service address: %s", sl.ServiceAddress)
 	}
 
+<<<<<<< HEAD
+=======
+	if spl[0] == "unix" || spl[0] == "unixpacket" || spl[0] == "unixgram" {
+		// no good way of testing for "file does not exist".
+		// Instead just ignore error and blow up when we try to listen, which will
+		// indicate "address already in use" if file existed and we couldn't remove.
+		os.Remove(spl[1])
+	}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	switch spl[0] {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		l, err := net.Listen(spl[0], spl[1])
@@ -217,6 +307,13 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("unknown protocol '%s' in '%s'", spl[0], sl.ServiceAddress)
 	}
 
+<<<<<<< HEAD
+=======
+	if spl[0] == "unix" || spl[0] == "unixpacket" || spl[0] == "unixgram" {
+		sl.Closer = unixCloser{path: spl[1], closer: sl.Closer}
+	}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	return nil
 }
 
@@ -235,6 +332,20 @@ func newSocketListener() *SocketListener {
 	}
 }
 
+<<<<<<< HEAD
+=======
+type unixCloser struct {
+	path   string
+	closer io.Closer
+}
+
+func (uc unixCloser) Close() error {
+	err := uc.closer.Close()
+	os.Remove(uc.path) // ignore error
+	return err
+}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 func init() {
 	inputs.Add("socket_listener", func() telegraf.Input { return newSocketListener() })
 }

@@ -21,14 +21,14 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := m.Gather(&acc)
+	err := acc.GatherError(m.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{"get_hits", "get_misses", "evictions",
 		"limit_maxbytes", "bytes", "uptime", "curr_items", "total_items",
 		"curr_connections", "total_connections", "connection_structures", "cmd_get",
 		"cmd_set", "delete_hits", "delete_misses", "incr_hits", "incr_misses",
-		"decr_hits", "decr_misses", "cas_hits", "cas_misses", "evictions",
+		"decr_hits", "decr_misses", "cas_hits", "cas_misses",
 		"bytes_read", "bytes_written", "threads", "conn_yields"}
 
 	for _, metric := range intMetrics {

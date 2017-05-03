@@ -193,6 +193,7 @@ func TestConnectAndWrite(t *testing.T) {
 	err = r.Write(metrics)
 	require.NoError(t, err)
 
+<<<<<<< HEAD
 	start := time.Now()
 	for true {
 		events, _ := r.client.Query(`tagged "docker"`)
@@ -204,6 +205,8 @@ func TestConnectAndWrite(t *testing.T) {
 		}
 	}
 
+=======
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	// are there any "docker" tagged events in Riemann?
 	events, err := r.client.Query(`tagged "docker"`)
 	require.NoError(t, err)

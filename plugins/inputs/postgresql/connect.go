@@ -1,15 +1,21 @@
 package postgresql
 
 import (
+<<<<<<< HEAD
 	"database/sql"
+=======
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	"fmt"
 	"net"
 	"net/url"
 	"sort"
 	"strings"
+<<<<<<< HEAD
 
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/stdlib"
+=======
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 )
 
 // pulled from lib/pq
@@ -79,6 +85,7 @@ func ParseURL(uri string) (string, error) {
 	sort.Strings(kvs) // Makes testing easier (not a performance concern)
 	return strings.Join(kvs, " "), nil
 }
+<<<<<<< HEAD
 
 func Connect(address string) (*sql.DB, error) {
 	if strings.HasPrefix(address, "postgres://") || strings.HasPrefix(address, "postgresql://") {
@@ -97,3 +104,5 @@ func Connect(address string) (*sql.DB, error) {
 
 	return stdlib.OpenFromConnPool(pool)
 }
+=======
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc

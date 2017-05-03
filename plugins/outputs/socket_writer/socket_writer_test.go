@@ -44,6 +44,10 @@ func TestSocketWriter_udp(t *testing.T) {
 }
 
 func TestSocketWriter_unix(t *testing.T) {
+<<<<<<< HEAD
+=======
+	os.Remove("/tmp/telegraf_test.sock")
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	defer os.Remove("/tmp/telegraf_test.sock")
 	listener, err := net.Listen("unix", "/tmp/telegraf_test.sock")
 	require.NoError(t, err)
@@ -61,6 +65,10 @@ func TestSocketWriter_unix(t *testing.T) {
 }
 
 func TestSocketWriter_unixgram(t *testing.T) {
+<<<<<<< HEAD
+=======
+	os.Remove("/tmp/telegraf_test.sock")
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	defer os.Remove("/tmp/telegraf_test.sock")
 	listener, err := net.ListenPacket("unixgram", "/tmp/telegraf_test.sock")
 	require.NoError(t, err)
@@ -141,7 +149,11 @@ func TestSocketWriter_Write_err(t *testing.T) {
 
 	// close the socket to generate an error
 	lconn.Close()
+<<<<<<< HEAD
 	sw.Close()
+=======
+	sw.Conn.Close()
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	err = sw.Write(metrics)
 	require.Error(t, err)
 	assert.Nil(t, sw.Conn)

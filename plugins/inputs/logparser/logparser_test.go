@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 
@@ -39,10 +38,8 @@ func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, logparser.Start(&acc))
-
-	time.Sleep(time.Millisecond * 500)
-	logparser.Stop()
+	err := logparser.Start(&acc)
+	assert.Error(t, err)
 }
 
 func TestGrokParseLogFiles(t *testing.T) {
@@ -61,7 +58,8 @@ func TestGrokParseLogFiles(t *testing.T) {
 	acc := testutil.Accumulator{}
 	assert.NoError(t, logparser.Start(&acc))
 
-	time.Sleep(time.Millisecond * 500)
+	acc.Wait(2)
+
 	logparser.Stop()
 
 	acc.AssertContainsTaggedFields(t, "logparser_grok",
@@ -102,14 +100,22 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 	acc := testutil.Accumulator{}
 	assert.NoError(t, logparser.Start(&acc))
 
+<<<<<<< HEAD
 	time.Sleep(time.Millisecond * 500)
+=======
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	assert.Equal(t, acc.NFields(), 0)
 
 	os.Symlink(
 		thisdir+"grok/testdata/test_a.log",
 		emptydir+"/test_a.log")
+<<<<<<< HEAD
 	assert.NoError(t, logparser.Gather(&acc))
 	time.Sleep(time.Millisecond * 500)
+=======
+	assert.NoError(t, acc.GatherError(logparser.Gather))
+	acc.Wait(1)
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	logparser.Stop()
 
@@ -143,7 +149,7 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 	acc.SetDebug(true)
 	assert.NoError(t, logparser.Start(&acc))
 
-	time.Sleep(time.Millisecond * 500)
+	acc.Wait(1)
 	logparser.Stop()
 
 	acc.AssertContainsTaggedFields(t, "logparser_grok",

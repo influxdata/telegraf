@@ -18,6 +18,10 @@ func TestSocketListener_tcp(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
+<<<<<<< HEAD
+=======
+	defer sl.Stop()
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	client, err := net.Dial("tcp", sl.Closer.(net.Listener).Addr().String())
 	require.NoError(t, err)
@@ -32,6 +36,10 @@ func TestSocketListener_udp(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
+<<<<<<< HEAD
+=======
+	defer sl.Stop()
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	client, err := net.Dial("udp", sl.Closer.(net.PacketConn).LocalAddr().String())
 	require.NoError(t, err)
@@ -40,13 +48,21 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
+<<<<<<< HEAD
 	defer os.Remove("/tmp/telegraf_test.sock")
+=======
+	os.Create("/tmp/telegraf_test.sock")
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	sl := newSocketListener()
 	sl.ServiceAddress = "unix:///tmp/telegraf_test.sock"
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
+<<<<<<< HEAD
+=======
+	defer sl.Stop()
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	client, err := net.Dial("unix", "/tmp/telegraf_test.sock")
 	require.NoError(t, err)
@@ -55,13 +71,21 @@ func TestSocketListener_unix(t *testing.T) {
 }
 
 func TestSocketListener_unixgram(t *testing.T) {
+<<<<<<< HEAD
 	defer os.Remove("/tmp/telegraf_test.sock")
+=======
+	os.Create("/tmp/telegraf_test.sock")
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	sl := newSocketListener()
 	sl.ServiceAddress = "unixgram:///tmp/telegraf_test.sock"
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
+<<<<<<< HEAD
+=======
+	defer sl.Stop()
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	client, err := net.Dial("unixgram", "/tmp/telegraf_test.sock")
 	require.NoError(t, err)
@@ -81,6 +105,7 @@ func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 
 	acc := sl.Accumulator.(*testutil.Accumulator)
 
+<<<<<<< HEAD
 	acc.Lock()
 	if len(acc.Metrics) < 1 {
 		acc.Wait()
@@ -119,4 +144,27 @@ func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 	assert.Equal(t, map[string]string{"foo": "zab"}, m.Tags)
 	assert.Equal(t, map[string]interface{}{"v": int64(3)}, m.Fields)
 	assert.True(t, time.Unix(0, 123456791).Equal(m.Time))
+=======
+	acc.Wait(3)
+	acc.Lock()
+	m1 := acc.Metrics[0]
+	m2 := acc.Metrics[1]
+	m3 := acc.Metrics[2]
+	acc.Unlock()
+
+	assert.Equal(t, "test", m1.Measurement)
+	assert.Equal(t, map[string]string{"foo": "bar"}, m1.Tags)
+	assert.Equal(t, map[string]interface{}{"v": int64(1)}, m1.Fields)
+	assert.True(t, time.Unix(0, 123456789).Equal(m1.Time))
+
+	assert.Equal(t, "test", m2.Measurement)
+	assert.Equal(t, map[string]string{"foo": "baz"}, m2.Tags)
+	assert.Equal(t, map[string]interface{}{"v": int64(2)}, m2.Fields)
+	assert.True(t, time.Unix(0, 123456790).Equal(m2.Time))
+
+	assert.Equal(t, "test", m3.Measurement)
+	assert.Equal(t, map[string]string{"foo": "zab"}, m3.Tags)
+	assert.Equal(t, map[string]interface{}{"v": int64(3)}, m3.Fields)
+	assert.True(t, time.Unix(0, 123456791).Equal(m3.Time))
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 }

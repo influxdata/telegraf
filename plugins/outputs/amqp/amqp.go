@@ -3,6 +3,7 @@ package amqp
 import (
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -14,6 +15,12 @@ import (
 
 	"github.com/streadway/amqp"
 )
+
+type client struct {
+	conn    *amqp.Connection
+	channel *amqp.Channel
+	headers amqp.Table
+}
 
 type AMQP struct {
 	// AMQP brokers to send metrics to
@@ -30,6 +37,8 @@ type AMQP struct {
 	RetentionPolicy string
 	// InfluxDB precision (DEPRECATED)
 	Precision string
+	// Connection timeout
+	Timeout internal.Duration
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -40,10 +49,13 @@ type AMQP struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
+<<<<<<< HEAD
 	conn    *amqp.Connection
 	channel *amqp.Channel
+=======
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	sync.Mutex
-	headers amqp.Table
+	c *client
 
 	serializer serializers.Serializer
 }
@@ -73,13 +85,20 @@ var sampleConfig = `
   ## described here: https://www.rabbitmq.com/plugins.html
   # auth_method = "PLAIN"
   ## Telegraf tag to use as a routing key
-  ##  ie, if this tag exists, it's value will be used as the routing key
+  ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
 
   ## InfluxDB retention policy
   # retention_policy = "default"
   ## InfluxDB database
   # database = "telegraf"
+<<<<<<< HEAD
+=======
+
+  ## Write timeout, formatted as a string.  If not provided, will default
+  ## to 5s. 0s means no timeout (not recommended).
+  # timeout = "5s"
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -89,7 +108,7 @@ var sampleConfig = `
   # insecure_skip_verify = false
 
   ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
@@ -100,10 +119,14 @@ func (a *AMQP) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (q *AMQP) Connect() error {
+<<<<<<< HEAD
 	q.Lock()
 	defer q.Unlock()
 
 	q.headers = amqp.Table{
+=======
+	headers := amqp.Table{
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		"database":         q.Database,
 		"retention_policy": q.RetentionPolicy,
 	}
@@ -126,13 +149,19 @@ func (q *AMQP) Connect() error {
 	amqpConf := amqp.Config{
 		TLSClientConfig: tls,
 		SASL:            sasl, // if nil, it will be PLAIN
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.DialTimeout(network, addr, q.Timeout.Duration)
+		},
 	}
 
 	connection, err = amqp.DialConfig(q.URL, amqpConf)
 	if err != nil {
 		return err
 	}
+<<<<<<< HEAD
 	q.conn = connection
+=======
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 
 	channel, err := connection.Channel()
 	if err != nil {
@@ -151,25 +180,45 @@ func (q *AMQP) Connect() error {
 	if err != nil {
 		return fmt.Errorf("Failed to declare an exchange: %s", err)
 	}
-	q.channel = channel
+
+	q.setClient(&client{
+		conn:    connection,
+		channel: channel,
+		headers: headers,
+	})
+
 	go func() {
 		err := <-connection.NotifyClose(make(chan *amqp.Error))
 		if err == nil {
 			return
 		}
+<<<<<<< HEAD
+=======
+
+		q.setClient(nil)
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 		log.Printf("I! Closing: %s", err)
 		log.Printf("I! Trying to reconnect")
 		for err := q.Connect(); err != nil; err = q.Connect() {
 			log.Println("E! ", err.Error())
 			time.Sleep(10 * time.Second)
 		}
-
 	}()
 	return nil
 }
 
 func (q *AMQP) Close() error {
+<<<<<<< HEAD
 	err := q.conn.Close()
+=======
+	c := q.getClient()
+	if c == nil {
+		return nil
+	}
+
+	err := c.conn.Close()
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	if err != nil && err != amqp.ErrClosed {
 		log.Printf("E! Error closing AMQP connection: %s", err)
 		return err
@@ -186,11 +235,18 @@ func (q *AMQP) Description() string {
 }
 
 func (q *AMQP) Write(metrics []telegraf.Metric) error {
-	q.Lock()
-	defer q.Unlock()
 	if len(metrics) == 0 {
 		return nil
 	}
+<<<<<<< HEAD
+=======
+
+	c := q.getClient()
+	if c == nil {
+		return fmt.Errorf("connection is not open")
+	}
+
+>>>>>>> 613de8a80dbb12a2211a878b777771fc0af143bc
 	outbuf := make(map[string][]byte)
 
 	for _, metric := range metrics {
@@ -210,13 +266,15 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	}
 
 	for key, buf := range outbuf {
-		err := q.channel.Publish(
+		// Note that since the channel is not in confirm mode, the absence of
+		// an error does not indicate successful delivery.
+		err := c.channel.Publish(
 			q.Exchange, // exchange
 			key,        // routing key
 			false,      // mandatory
 			false,      // immediate
 			amqp.Publishing{
-				Headers:     q.headers,
+				Headers:     c.headers,
 				ContentType: "text/plain",
 				Body:        buf,
 			})
@@ -227,12 +285,25 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+func (q *AMQP) getClient() *client {
+	q.Lock()
+	defer q.Unlock()
+	return q.c
+}
+
+func (q *AMQP) setClient(c *client) {
+	q.Lock()
+	q.c = c
+	q.Unlock()
+}
+
 func init() {
 	outputs.Add("amqp", func() telegraf.Output {
 		return &AMQP{
 			AuthMethod:      DefaultAuthMethod,
 			Database:        DefaultDatabase,
 			RetentionPolicy: DefaultRetentionPolicy,
+			Timeout:         internal.Duration{Duration: time.Second * 5},
 		}
 	})
 }
