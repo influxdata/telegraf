@@ -15,6 +15,8 @@ from the same topic in parallel.
   topics = ["telegraf"]
   ## an array of Zookeeper connection strings
   zookeeper_peers = ["localhost:2181"]
+  ## Zookeeper Chroot
+  zookeeper_chroot = ""
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
   ## Maximum number of metrics to buffer between collection intervals
