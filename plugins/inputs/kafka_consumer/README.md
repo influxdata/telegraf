@@ -15,15 +15,14 @@ from the same topic in parallel.
   topics = ["telegraf"]
   ## an array of Zookeeper connection strings
   zookeeper_peers = ["localhost:2181"]
+  ## Zookeeper Chroot
+  zookeeper_chroot = ""
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
-  ## Maximum number of metrics to buffer between collection intervals
-  metric_buffer = 100000
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
   ## Data format to consume.
-
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
