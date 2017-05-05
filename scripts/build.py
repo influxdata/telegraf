@@ -85,7 +85,7 @@ targets = {
 
 supported_builds = {
     "windows": [ "amd64", "i386" ],
-    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64" ],
+    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x"],
     "freebsd": [ "amd64", "i386" ]
 }
 
