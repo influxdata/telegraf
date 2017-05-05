@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/errchan"
@@ -14,11 +15,12 @@ import (
 
 // Icecast is an icecast plugin
 type Icecast struct {
-	Host				string
-	Username		string
-	Password		string
-	Alias				string
-	Slash				bool
+	Host						string
+	ResponseTimeout internal.Duration
+	Username				string
+	Password				string
+	Alias						string
+	Slash						bool
 }
 
 // SourceListmounts holds single listener elements from the Icecast XML
@@ -37,6 +39,9 @@ type Listmounts struct {
 var sampleConfig = `
   ## Specify the IP adress to where the 'admin/listmounts' can be found. You can include port if needed.
   host = "localhost"
+
+	## Timeout to the complete conection and reponse time in seconds. Default (5 seconds)
+  response_timeout = "25s"
 
   ## The username/password combination needed to read the listmounts page.
   ## These must be equal to the admin login details specified in your Icecast configuration
@@ -69,11 +74,15 @@ func (ice *Icecast) SampleConfig() string {
 
 // Gather reads stats from all configured servers mount stats
 func (ice *Icecast) Gather(acc telegraf.Accumulator) error {
+	if ice.ResponseTimeout.Duration < time.Second {
+		ice.ResponseTimeout.Duration = time.Second * 5
+	}
+
   errChan := errchan.New(len(ice.Host))
 
   // Check to see if the needed fields are filled in, and if so, connect.
   if len(ice.Host) != 0 && len(ice.Username) != 0 && len(ice.Password) != 0 {
-    errChan.C <- ice.gatherServer(ice.Host, ice.Username , ice.Password, ice.Alias, ice.Slash, acc)
+    errChan.C <- ice.gatherServer(ice.Host, ice.Username , ice.Password, ice.Alias, ice.Slash, ice.ResponseTimeout, acc)
   }
 
 	return errChan.Error()
@@ -86,15 +95,25 @@ func (ice *Icecast) gatherServer(
 	password string,
 	alias string,
 	slash bool,
+	timeout time.Duration,
 	acc telegraf.Accumulator,
 ) error {
 	var err error
 	var listmounts Listmounts
 	var total int32
 
+	// Checking URL
+	u := fmt.Sprintf("http://%s/admin/listmounts", host)
+	addr, err := url.Parse(u)
+	if err != nil {
+		return fmt.Errorf("Unable to parse address '%s': %s", u, err)
+	}
+
   // Create HTTP client to fetch the listmounts stats
-  httpClientIcecast := &http.Client{}
-  req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/admin/listmounts", host), nil)
+  httpClientIcecast := &http.Client{
+			Timeout:   timeout,
+	}
+  req, err := http.NewRequest("GET", u, nil)
   if err != nil {
     fmt.Errorf("HTTP request error: %s", err)
   }
