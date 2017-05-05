@@ -46,6 +46,6 @@ SELECT last("listeners") FROM "icecast" WHERE "host" = "host" AND $timeFilter GR
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter icecast -test
-icecast,host=hostname,mount=/mountname listeners=408 1453831884664956455
+> icecast,host=Server1 E2,mount=Stream1.mp3 listeners=220i 1493979352000000000
 
 ```
