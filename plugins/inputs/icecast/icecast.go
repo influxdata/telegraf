@@ -18,7 +18,7 @@ type Icecast struct {
 	Username		string
 	Password		string
 	Alias				string
-	Trimslash		bool
+	Slash				bool
 }
 
 // SourceListmounts holds single listener elements from the Icecast XML
@@ -46,8 +46,8 @@ var sampleConfig = `
   ## If you wish your host name to be different then the one specified under host, you can change it here
   alias = ""
 
-	## Trim forward slash from mountpoint names
-	# trimslash = false
+	## Include the slash in mountpoint names or not
+	slash = false
 `
 
 // Description returns description of Icecast plugin
@@ -73,7 +73,7 @@ func (ice *Icecast) Gather(acc telegraf.Accumulator) error {
 
   // Check to see if the needed fields are filled in, and if so, connect.
   if len(ice.Host) != 0 && len(ice.Username) != 0 && len(ice.Password) != 0 {
-    errChan.C <- ice.gatherServer(ice.Host, ice.Username , ice.Password, ice.Alias, ice.Trimslash, acc)
+    errChan.C <- ice.gatherServer(ice.Host, ice.Username , ice.Password, ice.Alias, ice.Slash, acc)
   }
 
 	return errChan.Error()
@@ -85,7 +85,7 @@ func (ice *Icecast) gatherServer(
 	username string,
 	password string,
 	alias string,
-	trimslash bool,
+	slash bool,
 	acc telegraf.Accumulator,
 ) error {
 	var err error
@@ -126,9 +126,9 @@ func (ice *Icecast) gatherServer(
 
   // Run trough each mountpoint
   for _, sources := range listmounts.Sources {
-		mountname := ""
+		var mountname string
 
-		if trimslash == true {
+		if slash == false {
 			mountname = strings.Trim(sources.Mount,"/")
 		} else {
 			mountname = sources.Mount

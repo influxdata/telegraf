@@ -18,8 +18,8 @@ The icecast plugin gathers metrics from the Icecast listmount page enabling to s
   ## If you wish your host name to be different then the one specified under host, you can change it here
   alias = ""
 
-  ## Trim forward slash from mountpoint names
-	# trimslash = false  
+  ## Include the slash in mountpoint names or not
+	slash = false
 ```
 
 ### Measurements & Fields:
