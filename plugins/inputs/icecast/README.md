@@ -45,7 +45,7 @@ SELECT last("listeners") FROM "icecast" WHERE "host" = "host" AND $timeFilter GR
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter example -test
-measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
-measurement2,tag1=foo,tag2=bar,tag3=baz field3=1i 1453831884664956455
+$ ./telegraf -config telegraf.conf -input-filter icecast -test
+icecast,host=hostname,mount=/mountname listeners=408 1453831884664956455
+
 ```
