@@ -2,7 +2,7 @@
 
 function disable_systemd {
     systemctl disable telegraf
-    rm -f /lib/systemd/system/telegraf.service
+    rm -f $1
 }
 
 function disable_update_rcd {
@@ -15,14 +15,14 @@ function disable_chkconfig {
     rm -f /etc/init.d/telegraf
 }
 
-if [[ -f /etc/redhat-release ]]; then
+if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
     # RHEL-variant logic
     if [[ "$1" = "0" ]]; then
         # InfluxDB is no longer installed, remove from init system
         rm -f /etc/default/telegraf
 
         if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
-            disable_systemd
+            disable_systemd /usr/lib/systemd/system/telegraf.service
         else
             # Assuming sysv
             disable_chkconfig
@@ -35,7 +35,7 @@ elif [[ -f /etc/debian_version ]]; then
         rm -f /etc/default/telegraf
 
         if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
-            disable_systemd
+            disable_systemd /lib/systemd/system/telegraf.service
         else
             # Assuming sysv
             # Run update-rc.d or fallback to chkconfig if not available
