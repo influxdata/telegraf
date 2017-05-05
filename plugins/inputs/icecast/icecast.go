@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"encoding/xml"
 	"io/ioutil"
-	"log"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/errchan"
@@ -18,6 +18,7 @@ type Icecast struct {
 	Username		string
 	Password		string
 	Alias				string
+	Trimslash		bool
 }
 
 // SourceListmounts holds single listener elements from the Icecast XML
@@ -44,6 +45,9 @@ var sampleConfig = `
 
   ## If you wish your host name to be different then the one specified under host, you can change it here
   alias = ""
+
+	## Trim forward slash from mountpoint names
+	# trimslash = false
 `
 
 // Description returns description of Icecast plugin
@@ -69,7 +73,7 @@ func (ice *Icecast) Gather(acc telegraf.Accumulator) error {
 
   // Check to see if the needed fields are filled in, and if so, connect.
   if len(ice.Host) != 0 && len(ice.Username) != 0 && len(ice.Password) != 0 {
-    errChan.C <- ice.gatherServer(ice.Host, ice.Username , ice.Password, ice.Alias, acc)
+    errChan.C <- ice.gatherServer(ice.Host, ice.Username , ice.Password, ice.Alias, ice.Trimslash, acc)
   }
 
 	return errChan.Error()
@@ -79,12 +83,13 @@ func (ice *Icecast) Gather(acc telegraf.Accumulator) error {
 func (ice *Icecast) gatherServer(
 	host string,
 	username string,
-  password string,
-  alias string,
+	password string,
+	alias string,
+	trimslash bool,
 	acc telegraf.Accumulator,
 ) error {
 	var err error
-  var listmounts Listmounts
+	var listmounts Listmounts
 	var total int32
 
   // Create HTTP client to fetch the listmounts stats
@@ -121,10 +126,17 @@ func (ice *Icecast) gatherServer(
 
   // Run trough each mountpoint
   for _, sources := range listmounts.Sources {
+		mountname := ""
+
+		if trimslash == true {
+			mountname = strings.Trim(sources.Mount,"/")
+		} else {
+			mountname = sources.Mount
+		}
 
     tags := map[string]string{
       "host": host,
-      "mount": strings.Trim(sources.Mount,"/"),
+			"mount": mountname,
     }
     fields := map[string]interface{}{
       "listeners":   sources.Listeners,
