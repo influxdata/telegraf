@@ -17,6 +17,9 @@ The icecast plugin gathers metrics from the Icecast listmount page enabling to s
 
   ## If you wish your host name to be different then the one specified under host, you can change it here
   alias = ""
+
+  ## Trim forward slash from mountpoint names
+	# trimslash = false  
 ```
 
 ### Measurements & Fields:
@@ -30,14 +33,13 @@ The icecast plugin gathers metrics from the Icecast listmount page enabling to s
     - mount
 
 
-    
+
 ### Sample Queries:
 
 These are some useful queries (to generate dashboards or other) to run against data from this plugin:
 
 ```
 SELECT last("listeners") FROM "icecast" WHERE "host" = "host" AND $timeFilter GROUP BY time($interval), "host" fill(null)
-SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar AND time > now() - 1h GROUP BY tag
 ```
 
 ### Example Output:
