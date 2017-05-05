@@ -23,6 +23,7 @@ it requires access to execute `ps`.
     - stopped
     - total
     - zombie
+    - dead
     - wait (freebsd only)
     - idle (bsd only)
     - paging (linux only)
@@ -39,6 +40,7 @@ Linux  FreeBSD  Darwin  meaning
   R       R       R     running
   S       S       S     sleeping
   Z       Z       Z     zombie
+  X      none    none   dead
   T       T       T     stopped
  none     I       I     idle (sleeping for longer than about 20 seconds)
   D      D,L      U     blocked (waiting in uninterruptible sleep, or locked)
@@ -54,5 +56,5 @@ None
 ```
 $ telegraf -config ~/ws/telegraf.conf -input-filter processes -test
 * Plugin: processes, Collection 1
-> processes blocked=8i,running=1i,sleeping=265i,stopped=0i,total=274i,zombie=0i,paging=0i,total_threads=687i 1457478636980905042
+> processes blocked=8i,running=1i,sleeping=265i,stopped=0i,total=274i,zombie=0i,dead=0i,paging=0i,total_threads=687i 1457478636980905042
 ```

@@ -14,13 +14,13 @@ import (
 func TestGather(t *testing.T) {
 	i := &Ipmi{
 		Servers: []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
-		path:    "ipmitool",
+		Path:    "ipmitool",
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
 	var acc testutil.Accumulator
 
-	err := i.Gather(&acc)
+	err := acc.GatherError(i.Gather)
 
 	require.NoError(t, err)
 
@@ -118,10 +118,10 @@ func TestGather(t *testing.T) {
 	}
 
 	i = &Ipmi{
-		path: "ipmitool",
+		Path: "ipmitool",
 	}
 
-	err = i.Gather(&acc)
+	err = acc.GatherError(i.Gather)
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}

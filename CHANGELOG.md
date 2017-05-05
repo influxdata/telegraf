@@ -1,3 +1,11 @@
+## v1.4 [unreleased]
+
+### Release Notes
+### Features
+### Bugfixes
+
+- [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
+
 ## v1.3 [unreleased]
 
 ### Release Notes
@@ -41,6 +49,9 @@ be deprecated eventually.
 
 ### Features
 
+- [#2721](https://github.com/influxdata/telegraf/pull/2721): Added SASL options for kafka output plugin.
+- [#2723](https://github.com/influxdata/telegraf/pull/2723): Added SSL configuration for input haproxy.
+- [#2494](https://github.com/influxdata/telegraf/pull/2494): Add interrupts input plugin.
 - [#2094](https://github.com/influxdata/telegraf/pull/2094): Add generic socket listener & writer.
 - [#2204](https://github.com/influxdata/telegraf/pull/2204): Extend http_response to support searching for a substring in response. Return 1 if found, else 0.
 - [#2137](https://github.com/influxdata/telegraf/pull/2137): Added userstats to mysql input plugin.
@@ -56,9 +67,32 @@ be deprecated eventually.
 - [#2339](https://github.com/influxdata/telegraf/pull/2339): Increment gather_errors for all errors emitted by inputs.
 - [#2071](https://github.com/influxdata/telegraf/issues/2071): Use official docker SDK.
 - [#1678](https://github.com/influxdata/telegraf/pull/1678): Add AMQP consumer input plugin
+- [#2512](https://github.com/influxdata/telegraf/pull/2512): Added pprof tool.
+- [#2501](https://github.com/influxdata/telegraf/pull/2501): Support DEAD(X) state in system input plugin.
+- [#2522](https://github.com/influxdata/telegraf/pull/2522): Add support for mongodb client certificates.
+- [#1948](https://github.com/influxdata/telegraf/pull/1948): Support adding SNMP table indexes as tags.
+- [#2332](https://github.com/influxdata/telegraf/pull/2332): Add Elasticsearch 5.x output
+- [#2587](https://github.com/influxdata/telegraf/pull/2587): Add json timestamp units configurability
+- [#2597](https://github.com/influxdata/telegraf/issues/2597): Add support for Linux sysctl-fs metrics.
+- [#2425](https://github.com/influxdata/telegraf/pull/2425): Support to include/exclude docker container labels as tags
+- [#1667](https://github.com/influxdata/telegraf/pull/1667): dmcache input plugin
+- [#2637](https://github.com/influxdata/telegraf/issues/2637): Add support for precision in http_listener
+- [#2636](https://github.com/influxdata/telegraf/pull/2636): Add `message_len_max` option to `kafka_consumer` input
+- [#1100](https://github.com/influxdata/telegraf/issues/1100): Add collectd parser
+- [#1820](https://github.com/influxdata/telegraf/issues/1820): easier plugin testing without outputs
+- [#2493](https://github.com/influxdata/telegraf/pull/2493): Check signature in the GitHub webhook plugin
+- [#2038](https://github.com/influxdata/telegraf/issues/2038): Add papertrail support to webhooks
+- [#2253](https://github.com/influxdata/telegraf/pull/2253): Change jolokia plugin to use bulk requests.
+- [#2575](https://github.com/influxdata/telegraf/issues/2575) Add diskio input for Darwin
+- [#2705](https://github.com/influxdata/telegraf/pull/2705): Kinesis output: add use_random_partitionkey option
+- [#2635](https://github.com/influxdata/telegraf/issues/2635): add tcp keep-alive to socket_listener & socket_writer
+- [#2031](https://github.com/influxdata/telegraf/pull/2031): Add Kapacitor input plugin
+- [#2732](https://github.com/influxdata/telegraf/pull/2732): Use go 1.8.1
+- [#2712](https://github.com/influxdata/telegraf/issues/2712): Documentation for rabbitmq input plugin
 
 ### Bugfixes
 
+- [#2633](https://github.com/influxdata/telegraf/pull/2633): ipmi_sensor: allow @ symbol in password
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
 - [#2318](https://github.com/influxdata/telegraf/issues/2318): haproxy input - Add missing fields.
@@ -66,6 +100,7 @@ be deprecated eventually.
 - [#2356](https://github.com/influxdata/telegraf/issues/2356): cpu input panic when /proc/stat is empty.
 - [#2341](https://github.com/influxdata/telegraf/issues/2341): telegraf swallowing panics in --test mode.
 - [#2358](https://github.com/influxdata/telegraf/pull/2358): Create pidfile with 644 permissions & defer file deletion.
+- [#2360](https://github.com/influxdata/telegraf/pull/2360): Fixed install/remove of telegraf on non-systemd Debian/Ubuntu systems
 - [#2282](https://github.com/influxdata/telegraf/issues/2282): Reloading telegraf freezes prometheus output.
 - [#2390](https://github.com/influxdata/telegraf/issues/2390): Empty tag value causes error on InfluxDB output.
 - [#2380](https://github.com/influxdata/telegraf/issues/2380): buffer_size field value is negative number from "internal" plugin.
@@ -74,6 +109,26 @@ be deprecated eventually.
 - [#2178](https://github.com/influxdata/telegraf/issues/2178): logparser: regexp with lookahead.
 - [#2466](https://github.com/influxdata/telegraf/issues/2466): Telegraf can crash in LoadDirectory on 0600 files.
 - [#2215](https://github.com/influxdata/telegraf/issues/2215): Iptables input: document better that rules without a comment are ignored.
+- [#2483](https://github.com/influxdata/telegraf/pull/2483): Fix win_perf_counters capping values at 100.
+- [#2498](https://github.com/influxdata/telegraf/pull/2498): Exporting Ipmi.Path to be set by config.
+- [#2500](https://github.com/influxdata/telegraf/pull/2500): Remove warning if parse empty content
+- [#2520](https://github.com/influxdata/telegraf/pull/2520): Update default value for Cloudwatch rate limit
+- [#2513](https://github.com/influxdata/telegraf/issues/2513): create /etc/telegraf/telegraf.d directory in tarball.
+- [#2541](https://github.com/influxdata/telegraf/issues/2541): Return error on unsupported serializer data format.
+- [#1827](https://github.com/influxdata/telegraf/issues/1827): Fix Windows Performance Counters multi instance identifier
+- [#2576](https://github.com/influxdata/telegraf/pull/2576): Add write timeout to Riemann output
+- [#2596](https://github.com/influxdata/telegraf/pull/2596): fix timestamp parsing on prometheus plugin
+- [#2610](https://github.com/influxdata/telegraf/pull/2610): Fix deadlock when output cannot write
+- [#2410](https://github.com/influxdata/telegraf/issues/2410): Fix connection leak in postgresql.
+- [#2628](https://github.com/influxdata/telegraf/issues/2628): Set default measurement name for snmp input.
+- [#2649](https://github.com/influxdata/telegraf/pull/2649): Improve performance of diskio with many disks
+- [#2671](https://github.com/influxdata/telegraf/issues/2671): The internal input plugin uses the wrong units for `heap_objects`
+- [#2684](https://github.com/influxdata/telegraf/pull/2684): Fix ipmi_sensor config is shared between all plugin instances
+- [#2450](https://github.com/influxdata/telegraf/issues/2450): Network statistics not collected when system has alias interfaces
+- [#1911](https://github.com/influxdata/telegraf/issues/1911): Sysstat plugin needs LANG=C or similar locale
+- [#2528](https://github.com/influxdata/telegraf/issues/2528): File output closes standard streams on reload.
+- [#2603](https://github.com/influxdata/telegraf/issues/2603): AMQP output disconnect blocks all outputs
+- [#2706](https://github.com/influxdata/telegraf/issues/2706): Improve documentation for redis input plugin
 
 ## v1.2.1 [2017-02-01]
 

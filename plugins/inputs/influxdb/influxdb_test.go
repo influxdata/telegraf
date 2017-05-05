@@ -25,7 +25,7 @@ func TestBasic(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	require.Len(t, acc.Metrics, 3)
 	fields := map[string]interface{}{
@@ -72,7 +72,7 @@ func TestInfluxDB(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	require.Len(t, acc.Metrics, 34)
 
@@ -132,7 +132,7 @@ func TestInfluxDB2(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	require.Len(t, acc.Metrics, 34)
 
@@ -157,7 +157,7 @@ func TestErrorHandling(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.Error(t, plugin.Gather(&acc))
+	require.Error(t, acc.GatherError(plugin.Gather))
 }
 
 func TestErrorHandling404(t *testing.T) {
@@ -175,7 +175,7 @@ func TestErrorHandling404(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	require.Error(t, plugin.Gather(&acc))
+	require.Error(t, acc.GatherError(plugin.Gather))
 }
 
 const basicJSON = `

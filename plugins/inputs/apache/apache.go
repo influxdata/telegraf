@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -65,28 +66,23 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
 
-	var outerr error
-	var errch = make(chan error)
-
+	var wg sync.WaitGroup
+	wg.Add(len(n.Urls))
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
+			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
 		}
 
 		go func(addr *url.URL) {
-			errch <- n.gatherUrl(addr, acc)
+			defer wg.Done()
+			acc.AddError(n.gatherUrl(addr, acc))
 		}(addr)
 	}
 
-	// Drain channel, waiting for all requests to finish and save last error.
-	for range n.Urls {
-		if err := <-errch; err != nil {
-			outerr = err
-		}
-	}
-
-	return outerr
+	wg.Wait()
+	return nil
 }
 
 func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {

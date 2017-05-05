@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -57,34 +56,20 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	errorChannel := make(chan error, len(i.URLs))
-
 	var wg sync.WaitGroup
 	for _, u := range i.URLs {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
 			if err := i.gatherURL(acc, url); err != nil {
-				errorChannel <- fmt.Errorf("[url=%s]: %s", url, err)
+				acc.AddError(fmt.Errorf("[url=%s]: %s", url, err))
 			}
 		}(u)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// If there weren't any errors, we can return nil now.
-	if len(errorChannel) == 0 {
-		return nil
-	}
-
-	// There were errors, so join them all together as one big error.
-	errorStrings := make([]string, 0, len(errorChannel))
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 type point struct {
