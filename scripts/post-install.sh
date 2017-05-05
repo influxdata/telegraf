@@ -24,12 +24,12 @@ function install_chkconfig {
     chkconfig --add telegraf
 }
 
+if ! grep "^telegraf:" /etc/group &>/dev/null; then
+    groupadd -r telegraf
+fi
+
 if ! id telegraf &>/dev/null; then
-    if ! grep "^telegraf:" /etc/group &>/dev/null; then
-        useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf
-    else
-        useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
-    fi
+    useradd -r -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
 fi
 
 test -d $LOG_DIR || mkdir -p $LOG_DIR
@@ -76,7 +76,7 @@ elif [[ -f /etc/debian_version ]]; then
         install_systemd /lib/systemd/system/telegraf.service
         systemctl restart telegraf || echo "WARNING: systemd not running."
     else
-	    # Assuming SysVinit
+        # Assuming SysVinit
         install_init
         # Run update-rc.d or fallback to chkconfig if not available
         if which update-rc.d &>/dev/null; then
@@ -89,7 +89,7 @@ elif [[ -f /etc/debian_version ]]; then
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
     if [[ $ID = "amzn" ]]; then
-	    # Amazon Linux logic
+        # Amazon Linux logic
         install_init
         # Run update-rc.d or fallback to chkconfig if not available
         if which update-rc.d &>/dev/null; then
@@ -97,5 +97,6 @@ elif [[ -f /etc/os-release ]]; then
         else
             install_chkconfig
         fi
+        /etc/init.d/telegraf restart
     fi
 fi
