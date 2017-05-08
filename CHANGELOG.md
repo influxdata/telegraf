@@ -2,6 +2,9 @@
 
 ### Release Notes
 ### Features
+
+- [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
+
 ### Bugfixes
 
 - [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
