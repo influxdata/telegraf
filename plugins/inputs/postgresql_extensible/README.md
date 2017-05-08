@@ -130,7 +130,7 @@ create extension pg_proctab;
  - pg_stat_kcache is available on the postgresql.org yum repo
  - pg_proctab is available at : https://github.com/markwkm/pg_proctab
 
- ##Views
+ ## Views
  - Blocking sessions
 ```
 CREATE OR REPLACE VIEW public.blocking_procs AS
