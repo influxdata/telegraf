@@ -5,6 +5,7 @@
 ### Bugfixes
 
 - [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
+- [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
 
 ## v1.3 [unreleased]
 
