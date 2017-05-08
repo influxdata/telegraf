@@ -121,6 +121,7 @@ configuration options.
 * [hddtemp](./plugins/inputs/hddtemp)
 * [http_response](./plugins/inputs/http_response)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
+* [icecast](./plugins/inputs/icecast)
 * [internal](./plugins/inputs/internal)
 * [influxdb](./plugins/inputs/influxdb)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
