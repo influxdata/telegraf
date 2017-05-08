@@ -132,7 +132,7 @@ create extension pg_proctab;
 
  ## Views
  - Blocking sessions
-```
+```sql
 CREATE OR REPLACE VIEW public.blocking_procs AS
  SELECT a.datname AS db,
     kl.pid AS blocking_pid,
@@ -156,7 +156,7 @@ CREATE OR REPLACE VIEW public.blocking_procs AS
   ORDER BY a.query_start;
 ```
   - Sessions Statistics
-```
+```sql
 CREATE OR REPLACE VIEW public.sessions AS
  WITH proctab AS (
          SELECT pg_proctab.pid,
