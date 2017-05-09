@@ -112,9 +112,10 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
 		}
+		tempUrl := u
 
 		go func(addr *url.URL) {
-			errch <- n.gatherUrl(addr, u, alias, acc)
+			errch <- n.gatherUrl(addr, tempUrl, alias, acc)
 		}(addr)
 	}
 
