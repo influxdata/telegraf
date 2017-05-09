@@ -43,9 +43,9 @@ func (a *Accumulator) NMetrics() uint64 {
 }
 
 func (a *Accumulator) ClearMetrics() {
-	atomic.StoreUint64(&a.nMetrics, 0)
 	a.Lock()
 	defer a.Unlock()
+	atomic.StoreUint64(&a.nMetrics, 0)
 	a.Metrics = make([]*Metric, 0)
 }
 
@@ -56,9 +56,9 @@ func (a *Accumulator) AddFields(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	atomic.AddUint64(&a.nMetrics, 1)
 	a.Lock()
 	defer a.Unlock()
+	atomic.AddUint64(&a.nMetrics, 1)
 	if a.Cond != nil {
 		a.Cond.Broadcast()
 	}
@@ -129,6 +129,9 @@ func (a *Accumulator) AddError(err error) {
 	}
 	a.Lock()
 	a.Errors = append(a.Errors, err)
+	if a.Cond != nil {
+		a.Cond.Broadcast()
+	}
 	a.Unlock()
 }
 
@@ -161,6 +164,40 @@ func (a *Accumulator) Get(measurement string) (*Metric, bool) {
 	return nil, false
 }
 
+func (a *Accumulator) HasTag(measurement string, key string) bool {
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			_, ok := p.Tags[key]
+			return ok
+		}
+	}
+	return false
+}
+
+func (a *Accumulator) TagValue(measurement string, key string) string {
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			v, ok := p.Tags[key]
+			if !ok {
+				return ""
+			}
+			return v
+		}
+	}
+	return ""
+}
+
+// Calls the given Gather function and returns the first error found.
+func (a *Accumulator) GatherError(gf func(telegraf.Accumulator) error) error {
+	if err := gf(a); err != nil {
+		return err
+	}
+	if len(a.Errors) > 0 {
+		return a.Errors[0]
+	}
+	return nil
+}
+
 // NFields returns the total number of fields in the accumulator, across all
 // measurements
 func (a *Accumulator) NFields() int {
@@ -175,13 +212,28 @@ func (a *Accumulator) NFields() int {
 	return counter
 }
 
-// Wait waits for a metric to be added to the accumulator.
-// Accumulator must already be locked.
-func (a *Accumulator) Wait() {
+// Wait waits for the given number of metrics to be added to the accumulator.
+func (a *Accumulator) Wait(n int) {
+	a.Lock()
 	if a.Cond == nil {
 		a.Cond = sync.NewCond(&a.Mutex)
 	}
-	a.Cond.Wait()
+	for int(a.NMetrics()) < n {
+		a.Cond.Wait()
+	}
+	a.Unlock()
+}
+
+// WaitError waits for the given number of errors to be added to the accumulator.
+func (a *Accumulator) WaitError(n int) {
+	a.Lock()
+	if a.Cond == nil {
+		a.Cond = sync.NewCond(&a.Mutex)
+	}
+	for len(a.Errors) < n {
+		a.Cond.Wait()
+	}
+	a.Unlock()
 }
 
 func (a *Accumulator) AssertContainsTaggedFields(
@@ -232,6 +284,35 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 			assert.Fail(t, msg)
 		}
 	}
+}
+
+// HasTimestamp returns true if the measurement has a matching Time value
+func (a *Accumulator) HasTimestamp(measurement string, timestamp time.Time) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			return timestamp.Equal(p.Time)
+		}
+	}
+
+	return false
+}
+
+// HasField returns true if the given measurement has a field with the given
+// name
+func (a *Accumulator) HasField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			if _, ok := p.Fields[field]; ok {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // HasIntField returns true if the measurement has an Int value

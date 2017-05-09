@@ -2,13 +2,11 @@ package couchdb
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"net/http"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 )
@@ -83,34 +81,20 @@ func (*CouchDB) SampleConfig() string {
 }
 
 func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
-	errorChannel := make(chan error, len(c.HOSTs))
 	var wg sync.WaitGroup
 	for _, u := range c.HOSTs {
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
 			if err := c.fetchAndInsertData(accumulator, host); err != nil {
-				errorChannel <- fmt.Errorf("[host=%s]: %s", host, err)
+				accumulator.AddError(fmt.Errorf("[host=%s]: %s", host, err))
 			}
 		}(u)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// If there weren't any errors, we can return nil now.
-	if len(errorChannel) == 0 {
-		return nil
-	}
-
-	// There were errors, so join them all together as one big error.
-	errorStrings := make([]string, 0, len(errorChannel))
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	return errors.New(strings.Join(errorStrings, "\n"))
-
+	return nil
 }
 
 var tr = &http.Transport{

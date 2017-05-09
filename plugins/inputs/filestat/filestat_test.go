@@ -19,7 +19,7 @@ func TestGatherNoMd5(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	fs.Gather(&acc)
+	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
 		"file": dir + "log1.log",
@@ -59,7 +59,7 @@ func TestGatherExplicitFiles(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	fs.Gather(&acc)
+	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
 		"file": dir + "log1.log",
@@ -99,7 +99,7 @@ func TestGatherGlob(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	fs.Gather(&acc)
+	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
 		"file": dir + "log1.log",
@@ -131,7 +131,7 @@ func TestGatherSuperAsterisk(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	fs.Gather(&acc)
+	acc.GatherError(fs.Gather)
 
 	tags1 := map[string]string{
 		"file": dir + "log1.log",

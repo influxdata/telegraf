@@ -1,13 +1,11 @@
 machine:
+  go:
+    version: 1.8.1
   services:
     - docker
-  post:
-    - sudo service zookeeper stop
-    - go version
-    - sudo rm -rf /usr/local/go
-    - wget https://storage.googleapis.com/golang/go1.8.linux-amd64.tar.gz
-    - sudo tar -C /usr/local -xzf go1.8.linux-amd64.tar.gz
-    - go version
+    - memcached
+    - redis
+    - rabbitmq-server
 
 dependencies:
   override:

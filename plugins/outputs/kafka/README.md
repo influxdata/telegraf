@@ -9,7 +9,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Kafka topic for producer messages
   topic = "telegraf"
   ## Telegraf tag to use as a routing key
-  ##  ie, if this tag exists, it's value will be used as the routing key
+  ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
 
   ## CompressionCodec represents the various compression codecs recognized by
@@ -45,6 +45,10 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SASL Config
+  # sasl_username = "kafka"
+  # sasl_password = "secret"
+
   data_format = "influx"
 ```
 
@@ -56,7 +60,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 
 ### Optional parameters:
 
-* `routing_tag`:  if this tag exists, it's value will be used as the routing key
+* `routing_tag`:  if this tag exists, its value will be used as the routing key
 * `compression_codec`: What level of compression to use: `0` -> no compression, `1` -> gzip compression, `2` -> snappy compression
 * `required_acks`: a setting for how may `acks` required from the `kafka` broker cluster.
 * `max_retry`: Max number of times to retry failed write

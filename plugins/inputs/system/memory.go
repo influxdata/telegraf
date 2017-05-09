@@ -73,11 +73,12 @@ func (s *SwapStats) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
+	ps := newSystemPS()
 	inputs.Add("mem", func() telegraf.Input {
-		return &MemStats{ps: &systemPS{}}
+		return &MemStats{ps: ps}
 	})
 
 	inputs.Add("swap", func() telegraf.Input {
-		return &SwapStats{ps: &systemPS{}}
+		return &SwapStats{ps: ps}
 	})
 }
