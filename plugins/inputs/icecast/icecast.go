@@ -1,24 +1,25 @@
 package icecast
 
 import (
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-  "encoding/xml"
-	"io/ioutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
 // SourceListmounts holds single listener elements from the Icecast XML
 type SourceListmounts struct {
-	Mount					string		`xml:"mount,attr"`
-	Listeners			int32			`xml:"listeners"`
-	Connected			int32			`xml:"connected"`
-	ContentType		string		`xml:"content-type"`
+	Mount       string `xml:"mount,attr"`
+	Listeners   int32  `xml:"listeners"`
+	Connected   int32  `xml:"connected"`
+	ContentType string `xml:"content-type"`
 }
 
 // Listmounts main structure of the icecast XML
@@ -31,7 +32,7 @@ type Icecast struct {
 	Username        string
 	Password        string
 	ResponseTimeout internal.Duration
-	Slash						bool
+	Slash           bool
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
 	// Path to host cert file
@@ -87,7 +88,7 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 	var errch = make(chan error)
 
 	for _, u := range n.Urls {
-    // Default admin listmounts page of Icecast
+		// Default admin listmounts page of Icecast
 		adminPageUrl := "/admin/listmounts"
 
 		// Check to see if there is an alias
@@ -95,17 +96,17 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 		if strings.Contains(u, ";") {
 			urlAlais := strings.Split(u, ";")
 			alias = urlAlais[1]
-			u = urlAlais [0]
+			u = urlAlais[0]
 		}
 
-    // Check to see if the user isn't adding a / at the end
-    if u[len(u)-1:] == "/" {
-      if last := len(u) - 1; last >= 0 && u[last] == '/' {
-        u = u[:last]
-      }
-    }
+		// Check to see if the user isn't adding a / at the end
+		if u[len(u)-1:] == "/" {
+			if last := len(u) - 1; last >= 0 && u[last] == '/' {
+				u = u[:last]
+			}
+		}
 
-    // Parsing the URL to see if it's ok
+		// Parsing the URL to see if it's ok
 		hosturl := u + adminPageUrl
 		addr, err := url.Parse(hosturl)
 		if err != nil {
@@ -128,13 +129,13 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *Icecast) gatherUrl(
-  addr 		*url.URL,
-  host		string,
-  alias 	string,
-  acc 		telegraf.Accumulator,
-  ) error {
+	addr *url.URL,
+	host string,
+	alias string,
+	acc telegraf.Accumulator,
+) error {
 	var tr *http.Transport
-  var listmounts Listmounts
+	var listmounts Listmounts
 	var total int32
 
 	if addr.Scheme == "https" {
@@ -177,55 +178,53 @@ func (n *Icecast) gatherUrl(
 		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
 	}
 
-  // Processing XML response
-  if body, err := ioutil.ReadAll(resp.Body); err == nil {
-    if err := xml.Unmarshal(body, &listmounts); err != nil {
-      return fmt.Errorf("XML error: %s", err)
-    }
-  } else {
-    return fmt.Errorf("Read error: %s", err)
-  }
+	// Processing XML response
+	if body, err := ioutil.ReadAll(resp.Body); err == nil {
+		if err := xml.Unmarshal(body, &listmounts); err != nil {
+			return fmt.Errorf("XML error: %s", err)
+		}
+	} else {
+		return fmt.Errorf("Read error: %s", err)
+	}
 
 	// Setting alias if availible
 	if len(alias) != 0 {
 		host = alias
 	}
 
-  // Run trough each mountpoint
-  for _, sources := range listmounts.Sources {
+	// Run trough each mountpoint
+	for _, sources := range listmounts.Sources {
 		var mountname string
 
 		if n.Slash == false {
-			mountname = strings.Trim(sources.Mount,"/")
+			mountname = strings.Trim(sources.Mount, "/")
 		} else {
 			mountname = sources.Mount
 		}
 
-    tags := map[string]string{
-      "host": host,
+		tags := map[string]string{
+			"host":  host,
 			"mount": mountname,
-    }
-    fields := map[string]interface{}{
-      "listeners": sources.Listeners,
-    }
+		}
+		fields := map[string]interface{}{
+			"listeners": sources.Listeners,
+		}
 		acc.AddFields("icecast", fields, tags)
-    total += sources.Listeners
-  }
+		total += sources.Listeners
+	}
 
-  // Report total listeners as well
-  tags_total := map[string]string{
-    "host": host,
-    "mount": "Total",
-  }
-  fields_total := map[string]interface{}{
-    "listeners":   total,
-  }
+	// Report total listeners as well
+	tags_total := map[string]string{
+		"host":  host,
+		"mount": "Total",
+	}
+	fields_total := map[string]interface{}{
+		"listeners": total,
+	}
 	acc.AddFields("icecast", fields_total, tags_total)
-
 
 	return nil
 }
-
 
 func init() {
 	inputs.Add("icecast", func() telegraf.Input {

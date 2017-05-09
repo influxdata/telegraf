@@ -38,10 +38,10 @@ func TestHTTPicecast(t *testing.T) {
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
-    "Mount":					      string("/mount.aac"),
-	  "Listeners":            int32(420),
-    "Connected":            int32(806794),
-    "ContentType"		        string("audio/aacp"),
+		"Mount":       string("/mount.aac"),
+		"Listeners":   int32(420),
+		"Connected":   int32(806794),
+		"ContentType": string("audio/aacp"),
 	}
 	acc.AssertContainsFields(t, "icecast", fields)
 }
