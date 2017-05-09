@@ -245,4 +245,4 @@ formats may be used with input plugins supporting the `data_format` option:
 
 Please see the
 [contributing guide](CONTRIBUTING.md)
-for details on contributing a plugin to Telegraf.
+for details on contributing a plugin to Telegraf
