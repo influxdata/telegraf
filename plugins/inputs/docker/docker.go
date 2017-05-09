@@ -29,10 +29,11 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 	Timeout        internal.Duration
-	PerDevice      bool     `toml:"perdevice"`
-	Total          bool     `toml:"total"`
-	LabelInclude   []string `toml:"docker_label_include"`
-	LabelExclude   []string `toml:"docker_label_exclude"`
+	PerDevice      bool              `toml:"perdevice"`
+	Total          bool              `toml:"total"`
+	LabelInclude   []string          `toml:"docker_label_include"`
+	LabelExclude   []string          `toml:"docker_label_exclude"`
+	Envs           map[string]string `toml:"envs"`
 
 	LabelFilter DockerLabelFilter
 
@@ -63,6 +64,19 @@ func listWrapper(
 	}
 	fc := FakeDockerClient{}
 	return fc.ContainerList(ctx, options)
+}
+
+// inspectWrapper wraps client.Client.ContainerInspect
+func inspectWrapper(
+	c *client.Client,
+	ctx context.Context,
+	id string,
+) (types.ContainerJSON, error) {
+	if c != nil {
+		return c.ContainerInspect(ctx, id)
+	}
+	fc := FakeDockerClient{}
+	return fc.ContainerInspect(ctx, id)
 }
 
 // statsWrapper wraps client.Client.ContainerStats for testing.
@@ -112,6 +126,11 @@ var sampleConfig = `
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
   docker_label_exclude = []
+
+  ## List of environment variables to add 
+  [inputs.docker.envs]
+    foo1 = "bar1"
+    foo2 = "bar2"
 `
 
 // Description returns input description
@@ -276,7 +295,7 @@ func (d *Docker) gatherContainer(
 	// the image name sometimes has a version part, or a private repo
 	//   ie, rabbitmq:3-management or docker.someco.net:4443/rabbitmq:3-management
 	imageName := ""
-	imageVersion := "unknown"
+	imageVersion := "latest"
 	i := strings.LastIndex(container.Image, ":") // index of last ':' character
 	if i > -1 {
 		imageVersion = container.Image[i+1:]
@@ -294,6 +313,25 @@ func (d *Docker) gatherContainer(
 	if len(d.ContainerNames) > 0 {
 		if !sliceContains(cname, d.ContainerNames) {
 			return nil
+		}
+	}
+
+	inspectCtx, inspectCancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	defer inspectCancel()
+	ic, err := inspectWrapper(d.client, inspectCtx, container.ID)
+	if err != nil {
+		return err
+	}
+	// Iterate over the container environment variables and see if there are any variables to be tagged
+	for _, env := range ic.Config.Env {
+		equalsIdx := strings.Index(env, "=")
+		// Check if there isn't an equals sign or it ends with an equals sign
+		if equalsIdx == -1 || strings.HasSuffix(env, "=") {
+			continue
+		}
+		prefix := env[:equalsIdx]
+		if associatedTag, ok := d.Envs[prefix]; ok {
+			tags[associatedTag] = env[equalsIdx+1:]
 		}
 	}
 
@@ -389,16 +427,6 @@ func gatherContainerStats(
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
 	acc.AddFields("docker_container_cpu", cpufields, cputags, now)
-
-	for i, percpu := range stat.CPUStats.CPUUsage.PercpuUsage {
-		percputags := copyTags(tags)
-		percputags["cpu"] = fmt.Sprintf("cpu%d", i)
-		fields := map[string]interface{}{
-			"usage_total":  percpu,
-			"container_id": id,
-		}
-		acc.AddFields("docker_container_cpu", fields, percputags, now)
-	}
 
 	totalNetworkStatMap := make(map[string]interface{})
 	for network, netstats := range stat.Networks {
