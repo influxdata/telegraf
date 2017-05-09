@@ -35,6 +35,7 @@ type HTTPListener struct {
 	WriteTimeout   internal.Duration
 	MaxBodySize    int64
 	MaxLineSize    int
+	Port           int
 
 	mu sync.Mutex
 	wg sync.WaitGroup
@@ -124,6 +125,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 	h.listener = listener
+	h.Port = listener.Addr().(*net.TCPAddr).Port
 
 	h.wg.Add(1)
 	go func() {
@@ -205,10 +207,12 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 	now := time.Now()
 
+	precision := req.URL.Query().Get("precision")
+
 	// Handle gzip request bodies
 	body := req.Body
-	var err error
 	if req.Header.Get("Content-Encoding") == "gzip" {
+		var err error
 		body, err = gzip.NewReader(req.Body)
 		defer body.Close()
 		if err != nil {
@@ -261,7 +265,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
-			if err := h.parse(buf[:n+bufStart], now); err != nil {
+			if err := h.parse(buf[:n+bufStart], now, precision); err != nil {
 				log.Println("E! " + err.Error())
 				return400 = true
 			}
@@ -286,7 +290,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			bufStart = 0
 			continue
 		}
-		if err := h.parse(buf[:i+1], now); err != nil {
+		if err := h.parse(buf[:i+1], now, precision); err != nil {
 			log.Println("E! " + err.Error())
 			return400 = true
 		}
@@ -299,8 +303,8 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListener) parse(b []byte, t time.Time) error {
-	metrics, err := h.parser.ParseWithDefaultTime(b, t)
+func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
+	metrics, err := h.parser.ParseWithDefaultTimePrecision(b, t, precision)
 
 	for _, m := range metrics {
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())

@@ -44,12 +44,11 @@ func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	var outerr error
-
 	for _, serv := range r.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
+			acc.AddError(fmt.Errorf("Unable to parse to address '%s': %s", serv, err))
+			continue
 		} else if u.Scheme == "" {
 			// fallback to simple string based address (i.e. "10.0.0.1:10000")
 			u.Host = serv
@@ -57,13 +56,13 @@ func (r *RethinkDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = r.gatherServer(&Server{Url: u}, acc)
+			acc.AddError(r.gatherServer(&Server{Url: u}, acc))
 		}(serv)
 	}
 
 	wg.Wait()
 
-	return outerr
+	return nil
 }
 
 func (r *RethinkDB) gatherServer(server *Server, acc telegraf.Accumulator) error {

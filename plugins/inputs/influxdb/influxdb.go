@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +15,14 @@ import (
 
 type InfluxDB struct {
 	URLs []string `toml:"urls"`
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 
 	Timeout internal.Duration
 
@@ -38,6 +45,13 @@ func (*InfluxDB) SampleConfig() string {
     "http://localhost:8086/debug/vars"
   ]
 
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## http request & header timeout
   timeout = "5s"
 `
@@ -49,15 +63,19 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if i.client == nil {
+		tlsCfg, err := internal.GetTLSConfig(
+			i.SSLCert, i.SSLKey, i.SSLCA, i.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
 		i.client = &http.Client{
 			Transport: &http.Transport{
 				ResponseHeaderTimeout: i.Timeout.Duration,
+				TLSClientConfig:       tlsCfg,
 			},
 			Timeout: i.Timeout.Duration,
 		}
 	}
-
-	errorChannel := make(chan error, len(i.URLs))
 
 	var wg sync.WaitGroup
 	for _, u := range i.URLs {
@@ -65,26 +83,14 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 		go func(url string) {
 			defer wg.Done()
 			if err := i.gatherURL(acc, url); err != nil {
-				errorChannel <- fmt.Errorf("[url=%s]: %s", url, err)
+				acc.AddError(fmt.Errorf("[url=%s]: %s", url, err))
 			}
 		}(u)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// If there weren't any errors, we can return nil now.
-	if len(errorChannel) == 0 {
-		return nil
-	}
-
-	// There were errors, so join them all together as one big error.
-	errorStrings := make([]string, 0, len(errorChannel))
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 type point struct {

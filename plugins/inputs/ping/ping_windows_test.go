@@ -69,7 +69,7 @@ func TestPingGather(t *testing.T) {
 		pingHost: mockHostPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,
@@ -112,7 +112,7 @@ func TestBadPingGather(t *testing.T) {
 		pingHost: mockErrorHostPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.amazon.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,
@@ -155,7 +155,7 @@ func TestLossyPingGather(t *testing.T) {
 		pingHost: mockLossyHostPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 9,
@@ -214,7 +214,7 @@ func TestFatalPingGather(t *testing.T) {
 		pingHost: mockFatalHostPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 	assert.True(t, acc.HasFloatField("ping", "errors"),
 		"Fatal ping should have packet measurements")
 	assert.False(t, acc.HasIntField("ping", "packets_transmitted"),
@@ -259,7 +259,7 @@ func TestUnreachablePingGather(t *testing.T) {
 		pingHost: mockUnreachableHostPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
@@ -305,7 +305,7 @@ func TestTTLExpiredPingGather(t *testing.T) {
 		pingHost: mockTTLExpiredPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{

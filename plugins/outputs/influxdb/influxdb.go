@@ -44,7 +44,10 @@ type InfluxDB struct {
 }
 
 var sampleConfig = `
-  ## The full HTTP or UDP endpoint URL for your InfluxDB instance.
+  ## The HTTP or UDP URL for your InfluxDB instance.  Each item should be
+  ## of the form:
+  ##   scheme "://" host [ ":" port]
+  ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   # urls = ["udp://localhost:8089"] # UDP endpoint example
@@ -52,7 +55,8 @@ var sampleConfig = `
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
-  ## Retention policy to write to. Empty string writes to the default rp.
+  ## Name of existing retention policy to write to.  Empty string writes to
+  ## the default retention policy.
   retention_policy = ""
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
   write_consistency = "any"
@@ -128,7 +132,9 @@ func (i *InfluxDB) Connect() error {
 
 			err = c.Query("CREATE DATABASE " + i.Database)
 			if err != nil {
-				log.Println("E! Database creation failed: " + err.Error())
+				if !strings.Contains(err.Error(), "Status Code [403]") {
+					log.Println("I! Database creation failed: " + err.Error())
+				}
 				continue
 			}
 		}

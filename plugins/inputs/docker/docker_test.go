@@ -244,6 +244,57 @@ func testStats() *types.StatsJSON {
 	return stats
 }
 
+var gatherLabelsTests = []struct {
+	include     []string
+	exclude     []string
+	expected    []string
+	notexpected []string
+}{
+	{[]string{}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"*"}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"lab*"}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"label1"}, []string{}, []string{"label1"}, []string{"label2"}},
+	{[]string{"label1*"}, []string{}, []string{"label1"}, []string{"label2"}},
+	{[]string{}, []string{"*"}, []string{}, []string{"label1", "label2"}},
+	{[]string{}, []string{"lab*"}, []string{}, []string{"label1", "label2"}},
+	{[]string{}, []string{"label1"}, []string{"label2"}, []string{"label1"}},
+	{[]string{"*"}, []string{"*"}, []string{}, []string{"label1", "label2"}},
+}
+
+func TestDockerGatherLabels(t *testing.T) {
+	for _, tt := range gatherLabelsTests {
+		var acc testutil.Accumulator
+		d := Docker{
+			client:  nil,
+			testing: true,
+		}
+
+		for _, label := range tt.include {
+			d.LabelInclude = append(d.LabelInclude, label)
+		}
+		for _, label := range tt.exclude {
+			d.LabelExclude = append(d.LabelExclude, label)
+		}
+
+		err := d.Gather(&acc)
+		require.NoError(t, err)
+
+		for _, label := range tt.expected {
+			if !acc.HasTag("docker_container_cpu", label) {
+				t.Errorf("Didn't get expected label of %s.  Test was:  Include: %s  Exclude %s",
+					label, tt.include, tt.exclude)
+			}
+		}
+
+		for _, label := range tt.notexpected {
+			if acc.HasTag("docker_container_cpu", label) {
+				t.Errorf("Got unexpected label of %s.  Test was:  Include: %s  Exclude %s",
+					label, tt.include, tt.exclude)
+			}
+		}
+	}
+}
+
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
@@ -251,7 +302,7 @@ func TestDockerGatherInfo(t *testing.T) {
 		testing: true,
 	}
 
-	err := d.Gather(&acc)
+	err := acc.GatherError(d.Gather)
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t,
@@ -294,6 +345,8 @@ func TestDockerGatherInfo(t *testing.T) {
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
 			"engine_host":       "absol",
+			"label1":            "test_value_1",
+			"label2":            "test_value_2",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -340,6 +393,8 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_name":    "etcd2",
 			"container_image":   "quay.io:4443/coreos/etcd",
 			"container_version": "v2.2.2",
+			"label1":            "test_value_1",
+			"label2":            "test_value_2",
 		},
 	)
 

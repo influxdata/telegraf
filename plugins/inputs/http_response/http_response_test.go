@@ -329,7 +329,7 @@ func TestTimeout(t *testing.T) {
 		Address:         ts.URL + "/twosecondnap",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 1},
+		ResponseTimeout: internal.Duration{Duration: time.Millisecond},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
