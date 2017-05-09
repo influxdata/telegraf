@@ -111,6 +111,7 @@ configuration options.
 * [couchbase](./plugins/inputs/couchbase)
 * [couchdb](./plugins/inputs/couchdb)
 * [disque](./plugins/inputs/disque)
+* [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
 * [docker](./plugins/inputs/docker)
 * [dovecot](./plugins/inputs/dovecot)
@@ -127,6 +128,7 @@ configuration options.
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
 * [jolokia](./plugins/inputs/jolokia)
+* [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
@@ -195,6 +197,7 @@ Telegraf can also collect metrics via the following service plugins:
   * [github](./plugins/inputs/webhooks/github)
   * [mandrill](./plugins/inputs/webhooks/mandrill)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
+  * [papertrail](./plugins/inputs/webhooks/papertrail)
 
 Telegraf is able to parse the following input data formats into metrics, these
 formats may be used with input plugins supporting the `data_format` option:
