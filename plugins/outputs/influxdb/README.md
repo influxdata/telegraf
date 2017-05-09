@@ -18,7 +18,8 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
-  ## Retention policy to write to. Empty string writes to the default rp.
+  ## Name of existing retention policy to write to.  Empty string writes to
+  ## the default retention policy.
   retention_policy = ""
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
   write_consistency = "any"
@@ -52,7 +53,7 @@ to write to. Each URL should start with either `http://` or `udp://`
 ### Optional parameters:
 
 * `write_consistency`: Write consistency (clusters only), can be: "any", "one", "quorum", "all".
-* `retention_policy`:  Retention policy to write to.
+* `retention_policy`:  Name of existing retention policy to write to.  Empty string writes to the default retention policy.
 * `timeout`: Write timeout (for the InfluxDB client), formatted as a string. If not provided, will default to 5s. 0s means no timeout (not recommended).
 * `username`: Username for influxdb
 * `password`: Password for influxdb

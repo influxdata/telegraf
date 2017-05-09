@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
@@ -73,11 +72,11 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(m.Servers))
 	for _, serv := range m.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
+			acc.AddError(fmt.Errorf("Unable to parse to address '%s': %s", serv, err))
+			continue
 		} else if u.Scheme == "" {
 			u.Scheme = "mongodb"
 			// fallback to simple string based address (i.e. "10.0.0.1:10000")
@@ -89,12 +88,12 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
-			errChan.C <- m.gatherServer(srv, acc)
+			acc.AddError(m.gatherServer(srv, acc))
 		}(m.getMongoServer(u))
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func (m *MongoDB) getMongoServer(url *url.URL) *Server {

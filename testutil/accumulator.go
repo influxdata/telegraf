@@ -187,6 +187,17 @@ func (a *Accumulator) TagValue(measurement string, key string) string {
 	return ""
 }
 
+// Calls the given Gather function and returns the first error found.
+func (a *Accumulator) GatherError(gf func(telegraf.Accumulator) error) error {
+	if err := gf(a); err != nil {
+		return err
+	}
+	if len(a.Errors) > 0 {
+		return a.Errors[0]
+	}
+	return nil
+}
+
 // NFields returns the total number of fields in the accumulator, across all
 // measurements
 func (a *Accumulator) NFields() int {
@@ -282,6 +293,22 @@ func (a *Accumulator) HasTimestamp(measurement string, timestamp time.Time) bool
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			return timestamp.Equal(p.Time)
+		}
+	}
+
+	return false
+}
+
+// HasField returns true if the given measurement has a field with the given
+// name
+func (a *Accumulator) HasField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			if _, ok := p.Fields[field]; ok {
+				return true
+			}
 		}
 	}
 

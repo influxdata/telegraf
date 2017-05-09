@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -58,11 +57,10 @@ func (d *DnsQuery) Description() string {
 func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 	d.setDefaultValues()
 
-	errChan := errchan.New(len(d.Domains) * len(d.Servers))
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
 			dnsQueryTime, err := d.getDnsQueryTime(domain, server)
-			errChan.C <- err
+			acc.AddError(err)
 			tags := map[string]string{
 				"server":      server,
 				"domain":      domain,
@@ -74,7 +72,7 @@ func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	return errChan.Error()
+	return nil
 }
 
 func (d *DnsQuery) setDefaultValues() {

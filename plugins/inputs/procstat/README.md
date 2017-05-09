@@ -5,14 +5,25 @@
 The procstat plugin can be used to monitor system resource usage by an
 individual process using their /proc data.
 
-The plugin will tag processes by their PID and their process name.
-
 Processes can be specified either by pid file, by executable name, by command
 line pattern matching, or by username (in this order or priority. Procstat
 plugin will use `pgrep` when executable name is provided to obtain the pid.
 Procstat plugin will transmit IO, memory, cpu, file descriptor related
 measurements for every process specified. A prefix can be set to isolate
 individual process specific measurements.
+
+The plugin will tag processes according to how they are specified in the configuration. If a pid file is used, a "pidfile" tag will be generated.
+On the other hand, if an executable is used an "exe" tag will be generated. Possible tag names:
+
+* pidfile
+* exe
+* pattern
+* user
+
+Additionally the plugin will tag processes by their PID (pid_tag = true in the config) and their process name:
+
+* pid
+* process_name
 
 Example:
 
@@ -28,8 +39,8 @@ Example:
 The above configuration would result in output like:
 
 ```
-> procstat,name="dnsmasq",pid="44979" cpu_user=0.14,cpu_system=0.07
-> procstat,name="influxd",pid="34337" influxd_cpu_user=25.43,influxd_cpu_system=21.82
+> procstat,pidfile=/var/run/lxc/dnsmasq.pid,process_name=dnsmasq,pid=44979 cpu_user=0.14,cpu_system=0.07
+> procstat,exe=influxd,process_name=influxd,pid=34337 influxd_cpu_user=25.43,influxd_cpu_system=21.82
 ```
 
 # Measurements

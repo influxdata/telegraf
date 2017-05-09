@@ -5,9 +5,9 @@ The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and `/p
 ### Configuration
 ```
 [[inputs.interrupts]]
-  ## A list of IRQs to include for metric ingestion, if not specified
-  ## will default to collecting all IRQs.
-  include = ["0", "1", "30", "NET_RX"]
+  ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
+  # [inputs.interrupts.tagdrop]
+    # irq = [ "NET_RX", "TASKLET" ]
 ```
 
 ### Measurements
