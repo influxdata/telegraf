@@ -25,7 +25,6 @@ type HTTPResponse struct {
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
-	compiledStringMatch *regexp.Regexp
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -35,6 +34,9 @@ type HTTPResponse struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+
+	compiledStringMatch *regexp.Regexp
+	client              *http.Client
 }
 
 // Description returns the plugin Description
@@ -88,13 +90,11 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	tr := &http.Transport{
-		ResponseHeaderTimeout: h.ResponseTimeout.Duration,
-		TLSClientConfig:       tlsCfg,
-	}
 	client := &http.Client{
-		Transport: tr,
-		Timeout:   h.ResponseTimeout.Duration,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: h.ResponseTimeout.Duration,
 	}
 
 	if h.FollowRedirects == false {
@@ -106,14 +106,9 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 }
 
 // HTTPGather gathers all fields and returns any errors it encounters
-func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
+func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 	// Prepare fields
 	fields := make(map[string]interface{})
-
-	client, err := h.createHttpClient()
-	if err != nil {
-		return nil, err
-	}
 
 	var body io.Reader
 	if h.Body != "" {
@@ -133,7 +128,7 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 
 	// Start Timer
 	start := time.Now()
-	resp, err := client.Do(request)
+	resp, err := h.client.Do(request)
 	if err != nil {
 		if h.FollowRedirects {
 			return nil, err
@@ -202,8 +197,17 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	// Prepare data
 	tags := map[string]string{"server": h.Address, "method": h.Method}
 	var fields map[string]interface{}
+
+	if h.client == nil {
+		client, err := h.createHttpClient()
+		if err != nil {
+			return err
+		}
+		h.client = client
+	}
+
 	// Gather data
-	fields, err = h.HTTPGather()
+	fields, err = h.httpGather()
 	if err != nil {
 		return err
 	}
