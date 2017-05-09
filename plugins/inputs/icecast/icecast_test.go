@@ -11,14 +11,8 @@ import (
 )
 
 var icecastStatus = `
-<icestats>
-	<source mount="/mount.aac">
-		<fallback>/mount-fallback.aac</fallback>
-		<listeners>420</listeners>
-		<Connected>806794</Connected>
-		<content-type>audio/aacp</content-type>
-	</source>
-</icestats>
+<?xml version="1.0" encoding="UTF-8"?>
+<icestats><source mount="/mount.aac"><fallback/><listeners>420</listeners><Connected>806794</Connected><content-type>audio/aacp</content-type></source></icestats>
 `
 
 func TestHTTPicecast(t *testing.T) {
@@ -34,7 +28,7 @@ func TestHTTPicecast(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := a.Gather(&acc)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
