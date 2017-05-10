@@ -92,7 +92,8 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	}
 	client := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
+			DisableKeepAlives: true,
+			TLSClientConfig:   tlsCfg,
 		},
 		Timeout: h.ResponseTimeout.Duration,
 	}
@@ -140,6 +141,11 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 			return nil, err
 		}
 	}
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
 	fields["response_time"] = time.Since(start).Seconds()
 	fields["http_response_code"] = resp.StatusCode
 
