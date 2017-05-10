@@ -25,6 +25,7 @@ LINUX_CONFIG_FILES_VER=1.6
 CONFIG_FILES_ITER=13
 REDIS_CONFIG_FILES_VER=1.6
 PERFORCE_CONFIG_FILES_VER=1.6
+SWIFT_CONFIG_FILES_VER=1.0
 QUBIT_SCYLLA_CONFIG_FILES_VER=1.7
 QUBIT_WORKER_CONFIG_FILES_VER=1.6
 QUBIT_SPIN_CONFIG_FILES_VER=1.6
@@ -121,6 +122,11 @@ fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$REDIS_C
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$PERFORCE_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
+
+# Swift-Config
+rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
+cp $CONFIG_FILES_DIR/telegraf-swift.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$SWIFT_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Swift" etc lib || cleanup_exit 1
 
 # QUBIT Scylla config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
