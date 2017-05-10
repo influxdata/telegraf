@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"github.com/gchaincl/dotsql"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"log"
@@ -29,22 +30,24 @@ const TYPE_TIME = 5
 const TYPE_AUTO = 0
 
 var Debug = false
+var qindex = 0
 
 type Query struct {
 	Query       string
 	Measurement string
 
-	TagCols     []string
+	TagCols   []string
+	FieldCols []string
+	//
 	IntFields   []string
 	FloatFields []string
 	BoolFields  []string
 	TimeFields  []string
-	RawFields   []string
 	//
 	FieldsName  []string
 	FieldsValue []string
 	//
-	ZeroizeNull       bool
+	NullAsZero        bool
 	IgnoreOtherFields bool
 	//
 	QueryScript string
@@ -58,13 +61,33 @@ type Query struct {
 	cells       []interface{}
 
 	field_count int
-	field_idx   []int	//Column indexes of fields
-	field_type  []int	//Column types of fields
+	field_idx   []int //Column indexes of fields
+	field_type  []int //Column types of fields
 
 	tag_count int
-	tag_idx   []int 	//Column indexes of tags (strings)
+	tag_idx   []int //Column indexes of tags (strings)
+
+	index int
 }
 
+//type Database struct {
+//	Hosts          []string
+//	Driver         string
+//	Servers        []string
+//	KeepConnection bool
+//
+//	Query []Query
+//
+//	// internal
+//	connections  []*sql.DB
+//	_initialized bool
+//}
+//
+//type Sql struct {
+//	Instance []Database
+//	// internal
+//	Debug bool
+//}
 type Sql struct {
 	Hosts []string
 
@@ -93,29 +116,30 @@ func contains_str(key string, str_array []string) bool {
 
 func (s *Sql) SampleConfig() string {
 	var sampleConfig = `
-	[[inputs.sqlquery]]
+	[[inputs.sql]]
 		debug=false
 	
 		## DB Driver
-		driver = "" # required. Options: oci8 (Oracle), postgres
-		# keep_connection = false # keeps the connection with database
+		driver = "oci8" 					# required. Options: go-mssqldb (sqlserver) , oci8 ora.v4 (Oracle), mysql, pq (Postgres)
+		# keep_connection = false 			# keeps the connection with database instead to reconnect at each poll
 		
 		## Server URLs
-		servers  = ["telegraf/monitor@10.62.6.1:1522/tunapit"] # required. Connection URL to pass to the DB driver
-		hosts=["pbzasplx001.wp.lan"]
+		servers  = ["telegraf/monitor@10.0.0.5:1521/thesid", "telegraf/monitor@orahost:1521/anothersid"] # required. Connection URL to pass to the DB driver
+		hosts=["oraserver1", "oraserver2"]	# for each server a relative host entry should be specified and will be added as host tag
 	
 		## Queries to perform (block below can be repeated)
-		[[inputs.sqlquery.query]]
-			query_script = "/path/to/sql/script.sql"
+		[[inputs.sql.query]]
 			query="select GROUP#,MEMBERS,STATUS,FIRST_TIME,FIRST_CHANGE#,BYTES,ARCHIVED from v$log"
+			query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
 			measurement="log"				# destination measurement
-			tag_cols=["GROUP#","STATUS","NAME"]						#
-			int_fields=["MEMBERS","FIRST_CHANGE#","BYTES","VALUE"]	#
-			raw_fields=["UNIT"]				#
-			time_fields=["FIRST_TIME"]		#
-			ignore_other_fields = false 	#
-			zeroize_null = false			# true: Push null results as zeros/empty strings (false: ignore fields)
-	
+			tag_cols=["GROUP#","NAME"]		# colums used as tags
+			field_cols=["UNIT"]				# select fields and use the database driver automatic datatype conversion
+			#bool_fields=["ON"]				# adds fields and forces his value as bool
+			#int_fields=["MEMBERS","BYTES"]	# adds fields and forces his value as integer
+			#float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
+			#time_fields=["FIRST_TIME"]		# adds fields and forces his value as time
+			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
+			null_as_zero = false			# true: Push null results as zeros/empty strings (false: ignore fields)
 	`
 	return sampleConfig
 }
@@ -124,15 +148,19 @@ func (_ *Sql) Description() string {
 	return "SQL Plugin"
 }
 
-func (s *Sql) initPlugin() {
+func (s *Sql) Init() {
 	Debug = s.Debug
 
 	if Debug {
 		log.Printf("I! Init %d servers %d queries", len(s.Servers), len(s.Query))
 	}
-	//	s.query_cache = make([]Query, len(s.Queries))
 	if s.KeepConnection {
 		s.connections = make([]*sql.DB, len(s.Servers))
+		//		for _, q := range s.Query {
+		//			q.statements = make([]*sql.Stmt, len(s.Servers))
+		for i := 0; i < len(s.Query); i++ {
+			s.Query[i].statements = make([]*sql.Stmt, len(s.Servers))
+		}
 	}
 	for i := 0; i < len(s.Servers); i++ {
 		//TODO get host from server
@@ -143,9 +171,12 @@ func (s *Sql) initPlugin() {
 	}
 }
 
-func (s *Query) initQuery(cols []string) error {
+func (s *Query) Init(cols []string) error {
+	qindex++
+	s.index = qindex
+
 	if Debug {
-		log.Printf("I! Init Query with %d columns", len(cols))
+		log.Printf("I! Init Query %d with %d columns", s.index, len(cols))
 	}
 	s.column_name = cols
 	//Define index of tags and fields and keep it for reuse
@@ -154,18 +185,18 @@ func (s *Query) initQuery(cols []string) error {
 	expected_tag_count := len(s.TagCols)
 	var expected_field_count int
 	if !s.IgnoreOtherFields {
-		expected_field_count = col_count - expected_tag_count
+		expected_field_count = col_count // - expected_tag_count
 	} else {
-		expected_field_count = len(s.BoolFields) + len(s.IntFields) + len(s.FloatFields) + len(s.TimeFields) + len(s.RawFields)
+		expected_field_count = len(s.FieldCols) + len(s.BoolFields) + len(s.IntFields) + len(s.FloatFields) + len(s.TimeFields)
 	}
 
 	if Debug {
 		log.Printf("I! Extpected %d tags and %d fields", expected_tag_count, expected_field_count)
 	}
 
-	s.tag_idx = make([]int, expected_tag_count)      //Column indexes of tags (strings)
-	s.field_idx = make([]int, expected_field_count)  //Column indexes of fields
-	s.field_type = make([]int, expected_field_count) //Column types of fields
+	s.tag_idx = make([]int, expected_tag_count)
+	s.field_idx = make([]int, expected_field_count)
+	s.field_type = make([]int, expected_field_count)
 	s.tag_count = 0
 	s.field_count = 0
 
@@ -201,7 +232,7 @@ func (s *Query) initQuery(cols []string) error {
 			s.field_type[s.field_count] = TYPE_BOOL
 			//				cell = new(bool);
 			cell = new(sql.RawBytes)
-		} else if contains_str(s.column_name[i], s.RawFields) {
+		} else if contains_str(s.column_name[i], s.FieldCols) {
 			s.field_type[s.field_count] = TYPE_AUTO
 			cell = new(sql.RawBytes)
 		} else if !s.IgnoreOtherFields {
@@ -229,7 +260,7 @@ func (s *Query) initQuery(cols []string) error {
 	return nil
 }
 
-func (s *Query) convertField(name string, cell interface{}, field_type int, NullAsZero bool) (interface{}, error) {
+func (s *Query) ConvertField(name string, cell interface{}, field_type int, NullAsZero bool) (interface{}, error) {
 	var value interface{}
 	var ok bool
 	var str string
@@ -267,7 +298,15 @@ func (s *Query) convertField(name string, cell interface{}, field_type int, Null
 		}
 
 	} else if NullAsZero {
-		value = 0
+		switch field_type {
+		case TYPE_AUTO:
+		case TYPE_STRING:
+			value = ""
+			break
+		default:
+			value = 0
+		}
+
 		if Debug {
 			log.Printf("I! forcing to 0 field name '%s' type %d", name, field_type)
 		}
@@ -290,7 +329,7 @@ func (s *Query) convertField(name string, cell interface{}, field_type int, Null
 	return value, nil
 }
 
-func (s *Query) parseRow(query_time time.Time, host string, acc telegraf.Accumulator) error {
+func (s *Query) ParseRow(query_time time.Time, host string, acc telegraf.Accumulator) error {
 	tags := map[string]string{}
 	fields := map[string]interface{}{}
 
@@ -318,7 +357,7 @@ func (s *Query) parseRow(query_time time.Time, host string, acc telegraf.Accumul
 	for i := 0; i < s.field_count; i++ {
 		cell := s.cells[s.field_idx[i]]
 		name := s.column_name[s.field_idx[i]]
-		value, err := s.convertField(name, cell, s.field_type[i], s.ZeroizeNull)
+		value, err := s.ConvertField(name, cell, s.field_type[i], s.NullAsZero)
 		if err != nil {
 			return err
 		}
@@ -329,7 +368,7 @@ func (s *Query) parseRow(query_time time.Time, host string, acc telegraf.Accumul
 	return nil
 }
 
-func (p *Sql) connect(si int) (*sql.DB, error) {
+func (p *Sql) Connect(si int) (*sql.DB, error) {
 	var err error
 
 	// create connection to db server if not already done
@@ -364,15 +403,81 @@ func (p *Sql) connect(si int) (*sql.DB, error) {
 
 	if p.KeepConnection {
 		p.connections[si] = db
-	} else {
-		defer db.Close()
 	}
 	return db, nil
 }
 
+func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, error) {
+	var err error
+	var rows *sql.Rows
+	// read query from sql script and put it in query string
+	if len(q.QueryScript) > 0 && len(q.Query) == 0 {
+		if _, err := os.Stat(q.QueryScript); os.IsNotExist(err) {
+			log.Printf("E! SQL script not exists '%s'...", q.QueryScript)
+			return nil, err
+		}
+		filerc, err := os.Open(q.QueryScript)
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+		defer filerc.Close()
+
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(filerc)
+		q.Query = buf.String()
+		if Debug {
+			log.Printf("I! Read %d bytes SQL script from '%s' for query %d ...", len(q.Query), q.QueryScript, q.index)
+		}
+	}
+	if len(q.Query) > 0 {
+		if KeepConnection {
+			// prepare statement if not already done
+			if q.statements[si] == nil {
+				if Debug {
+					log.Printf("I! Preparing statement query %d...", q.index)
+				}
+				q.statements[si], err = db.Prepare(q.Query)
+				if err != nil {
+					return nil, err
+				}
+				//defer stmt.Close()
+			}
+
+			// execute prepared statement
+			if Debug {
+				log.Printf("I! Performing query '%s'...", q.Query)
+			}
+			rows, err = q.statements[si].Query()
+		} else {
+			// execute query
+			if Debug {
+				log.Printf("I! Performing query '%s'...", q.Query)
+			}
+			rows, err = db.Query(q.Query)
+		}
+	} else if len(q.QueryScript) > 0 {
+		// Loads queries from file
+		var dot *dotsql.DotSql
+		dot, err = dotsql.LoadFromFile(q.QueryScript)
+		if err != nil {
+			return nil, err
+		}
+		rows, err = dot.Query(db, "find-users-by-email")
+	} else {
+		log.Printf("E! No query to execute %d", q.index)
+		//				err = errors.New("No query to execute")
+		//				return err
+		return nil, nil
+	}
+
+	return rows, err
+}
+
 func (p *Sql) Gather(acc telegraf.Accumulator) error {
 	if !p._initialized {
-		p.initPlugin()
+		//	if len(p.connections) == 0 {
+		p.Init()
 		p._initialized = true
 	}
 
@@ -382,7 +487,7 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 	for si := 0; si < len(p.Servers); si++ {
 		var err error
 		var db *sql.DB
-		db, err = p.connect(si)
+		db, err = p.Connect(si)
 		if err != nil {
 			return err
 		}
@@ -396,72 +501,89 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 			var query_time time.Time
 			q := &p.Query[qi]
 
-			// read query from sql script and put it in query string
-			if len(q.QueryScript) > 0 && len(q.Query) == 0 {
-				if _, err := os.Stat(q.QueryScript); os.IsNotExist(err) {
-					log.Printf("E! SQL script not exists '%s'...", q.QueryScript)
-					return err
-				}
-				filerc, err := os.Open(q.QueryScript)
-				if err != nil {
-					log.Fatal(err)
-					return err
-				}
-				defer filerc.Close()
+			query_time = time.Now()
+			rows, err = q.Execute(db, si, p.KeepConnection)
 
-				buf := new(bytes.Buffer)
-				buf.ReadFrom(filerc)
-				q.Query = buf.String()
-				if Debug {
-					log.Printf("I! Read %d bytes SQL script from '%s' for query %d ...", len(q.Query), q.QueryScript, qi)
-				}
-			}
-
-			if p.KeepConnection {
-				// prepare statement if not already done
-				if len(q.statements) == 0 {
-					q.statements = make([]*sql.Stmt, len(p.Servers))
-				}
-
-				if q.statements[si] == nil {
-					if Debug {
-						log.Printf("I! Preparing statement query %d...", qi)
-					}
-					q.statements[si], err = db.Prepare(q.Query)
-					if err != nil {
-						return err
-					}
-					//					defer stmt.Close()
-				}
-
-				// execute prepared statement
-				if Debug {
-					log.Printf("I! Performing query '%s'...", q.Query)
-				}
-				query_time = time.Now()
-				rows, err = q.statements[si].Query()
-				//			err = stmt.QueryRow(1)
-			} else {
-				// execute query
-				if Debug {
-					log.Printf("I! Performing query '%s'...", q.Query)
-				}
-				query_time = time.Now()
-				rows, err = db.Query(q.Query)
-			}
+			//			// read query from sql script and put it in query string
+			//			if len(q.QueryScript) > 0 && len(q.Query) == 0 {
+			//				if _, err := os.Stat(q.QueryScript); os.IsNotExist(err) {
+			//					log.Printf("E! SQL script not exists '%s'...", q.QueryScript)
+			//					return err
+			//				}
+			//				filerc, err := os.Open(q.QueryScript)
+			//				if err != nil {
+			//					log.Fatal(err)
+			//					return err
+			//				}
+			//				defer filerc.Close()
+			//
+			//				buf := new(bytes.Buffer)
+			//				buf.ReadFrom(filerc)
+			//				q.Query = buf.String()
+			//				if Debug {
+			//					log.Printf("I! Read %d bytes SQL script from '%s' for query %d ...", len(q.Query), q.QueryScript, q.index)
+			//				}
+			//			}
+			//			if len(q.Query) > 0 {
+			//				if p.KeepConnection {
+			//					// prepare statement if not already done
+			//					if q.statements[si] == nil {
+			//						if Debug {
+			//							log.Printf("I! Preparing statement query %d...", q.index)
+			//						}
+			//						q.statements[si], err = db.Prepare(q.Query)
+			//						if err != nil {
+			//							return err
+			//						}
+			//						//					defer stmt.Close()
+			//					}
+			//
+			//					// execute prepared statement
+			//					if Debug {
+			//						log.Printf("I! Performing query '%s'...", q.Query)
+			//					}
+			//					query_time = time.Now()
+			//					rows, err = q.statements[si].Query()
+			//					//			err = stmt.QueryRow(1)
+			//				} else {
+			//					// execute query
+			//					if Debug {
+			//						log.Printf("I! Performing query '%s'...", q.Query)
+			//					}
+			//					query_time = time.Now()
+			//					rows, err = db.Query(q.Query)
+			//				}
+			//			} else if len(q.QueryScript) > 0 {
+			//				// Loads queries from file
+			//				var dot *dotsql.DotSql
+			//				dot, err = dotsql.LoadFromFile(q.QueryScript)
+			//				if err != nil {
+			//					return err
+			//				}
+			//				rows, err = dot.Query(db, "find-users-by-email")
+			//			} else {
+			//				log.Printf("E! No query to execute %d", q.index)
+			//				//				err = errors.New("No query to execute")
+			//				//				return err
+			//				continue
+			//			}
 
 			if err != nil {
 				return err
 			}
+			if rows == nil {
+				continue
+			}
 			defer rows.Close()
 
 			if q.field_count == 0 {
+				// initialize once the structure of query
 				var cols []string
 				cols, err = rows.Columns()
 				if err != nil {
 					return err
 				}
-				q.initQuery(cols)
+				q.Init(cols)
 			}
 
 			row_count := 0
@@ -475,14 +597,14 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 				if err != nil {
 					return err
 				}
-				err = q.parseRow(query_time, p.Hosts[si], acc)
+				err = q.ParseRow(query_time, p.Hosts[si], acc)
 				if err != nil {
 					return err
 				}
 				row_count += 1
 			}
 			//			if Debug {
-			log.Printf("I! Query %d on %s found %d rows written in %s...", qi, p.Hosts[si], row_count, q.Measurement)
+			log.Printf("I! Query %d on %s found %d rows written in %s...", q.index, p.Hosts[si], row_count, q.Measurement)
 			//			}
 		}
 	}
