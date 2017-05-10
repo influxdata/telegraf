@@ -28,14 +28,15 @@ func TestHTTPicecast(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(a.Gather)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(a.Gather))
 
-	fields := map[string]interface{}{
-		"Mount":       string("/mount.aac"),
-		"Listeners":   int32(420),
-		"Connected":   int32(806794),
-		"ContentType": string("audio/aacp"),
+	// Report total listeners as well
+	tags := map[string]string{
+		"host":  string("localhost"),
+		"mount": string("/mount.aac"),
 	}
-	acc.AssertContainsFields(t, "icecast", fields)
+	fields := map[string]interface{}{
+		"listeners": int32(420),
+	}
+	acc.AssertContainsTaggedFields(t, "icecast", fields, tags)
 }

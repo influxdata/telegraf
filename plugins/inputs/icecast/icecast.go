@@ -28,19 +28,15 @@ type Listmounts struct {
 }
 
 type Icecast struct {
-	Urls            []string
-	Username        string
-	Password        string
-	ResponseTimeout internal.Duration
-	Slash           bool
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	Urls               []string          `toml:"urls"`
+	ResponseTimeout    internal.Duration `toml:"response_timeout"`
+	Username           string            `toml:"username"`
+	Password           string            `toml:"password"`
+	Slash              bool              `toml:"slash"`
+	SSLCA              string            `toml:"ssl_ca"`   // Path to CA file
+	SSLCert            string            `toml:"ssl_cert"` // Path to host cert file
+	SSLKey             string            `toml:"ssl_key"`  // Path to cert key file
+	InsecureSkipVerify bool              // Use SSL but skip chain & host verification
 }
 
 var sampleConfig = `
