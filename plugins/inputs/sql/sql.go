@@ -156,7 +156,7 @@ func (s *Sql) SampleConfig() string {
 			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
 
 			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
-			null_as_zero = false			# true: Push null results as zeros/empty strings (false: ignore fields)
+			null_as_zero = false			# true: converts null values into zero or empty strings (false: ignore fields)
 			sanitize = false				# true: will perform some chars substitutions (false: use value as is)
 	`
 	return sampleConfig
@@ -170,12 +170,10 @@ func (s *Sql) Init() error {
 	Debug = s.Debug
 
 	if Debug {
-		log.Printf("I! Init %d servers %d queries", len(s.Servers), len(s.Query))
+		log.Printf("I! Init %d servers %d queries, driver %s", len(s.Servers), len(s.Query), s.Driver)
 	}
 	if s.KeepConnection {
 		s.connections = make([]*sql.DB, len(s.Servers))
-		//		for _, q := range s.Query {
-		//			q.statements = make([]*sql.Stmt, len(s.Servers))
 		for i := 0; i < len(s.Query); i++ {
 			s.Query[i].statements = make([]*sql.Stmt, len(s.Servers))
 		}
@@ -230,10 +228,13 @@ func (s *Query) Init(cols []string) error {
 	s.field_value_idx = -1
 	s.field_timestamp_idx = -1
 
+	if len(s.FieldTimestamp) > 0 && !contains_str(s.FieldTimestamp, s.column_name) {
+		log.Printf("E! Missing given field_timestamp in columns: %s", s.FieldTimestamp)
+		return errors.New("Missing given field_timestamp in columns")
+	}
 	if len(s.FieldName) > 0 && !contains_str(s.FieldName, s.column_name) {
 		log.Printf("E! Missing given field_name in columns: %s", s.FieldName)
-		err := errors.New("Missing given field_name in columns")
-		return err
+		return errors.New("Missing given field_name in columns")
 	}
 	if len(s.FieldValue) > 0 && !contains_str(s.FieldValue, s.column_name) {
 		log.Printf("E! Missing given field_value in columns: %s", s.FieldValue)
@@ -306,6 +307,7 @@ func (s *Query) Init(cols []string) error {
 		s.cells[i] = cell
 		s.cell_refs[i] = &s.cells[i]
 	}
+
 	if Debug {
 		log.Printf("I! Query received %d tags and %d fields on %d columns...", s.tag_count, s.field_count, col_count)
 	}
@@ -632,7 +634,10 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 				if err != nil {
 					return err
 				}
-				q.Init(cols)
+				err = q.Init(cols)
+				if err != nil {
+					return err
+				}
 			}
 
 			row_count := 0

@@ -9,10 +9,12 @@ Supported drivers are  go-mssqldb (sqlserver) , oci8 ora.v4 (Oracle), mysql (MyS
 ## Getting started :
 
 First you need to grant read/select privileges on queried tables to the database user you use for the connection
-For some not pure go drivers you may need external shared libraries and environment variables: look at sql driver implementation site   
+For some not pure go drivers you may need external shared libraries and environment variables: look at sql driver implementation site 
+For instance using oracle driver on rh linux you need to install oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm package and set 
 ```
+export ORACLE_HOME=/usr/lib/oracle/12.2/client64
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ORACLE_HOME/lib 
 ```
-
 
 ## Configuration:
 
@@ -50,7 +52,7 @@ For some not pure go drivers you may need external shared libraries and environm
 			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
 			
 			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
-			null_as_zero = false			# true: Push null results as zeros/empty strings (false: ignore fields)
+			null_as_zero = false			# true: converts null values into zero or empty strings (false: ignore fields)
 			sanitize = false				# true: will perform some chars substitutions (false: use value as is)
 
 
@@ -58,11 +60,18 @@ For some not pure go drivers you may need external shared libraries and environm
 
 
 ## Datatypes:
+Using field_cols list the values are converted by the go database driver implementation. 
+In some cases this automatic conversion is not what we wxpect, therefore you can force the destination datatypes specifing the columns in the bool/int/float/time_fields lists, then if possible the plugin converts the data.
+If an error in conversion occurs then telegraf exits, therefore a --test run is suggested.
 
+## Tested Databases
+Actually I run the plugin using oci8,mysql and mssql
+The mechanism for get the timestamp from a table column has known problems
 
 ## Example for collect multiple counters defined as COLUMNS in a table:
 Here we read a table where each counter is on a different row. Each row contains a column with the name of the counter (counter_name) and a column with his value (cntr_value) and some other columns that we use as tags  (instance_name,object_name)
 
+###Config
 ```
 [[inputs.sql]]
 	interval = "60s"
@@ -97,6 +106,7 @@ Here we read multiple counters defined on same row where the counter name is the
 In this example we force some counters datatypes: "MEMBERS","FIRST_CHANGE#" as integer, "BYTES" as float, "FIRST_TIME" as time. The field "UNIT" is used with the automatic driver datatype conversion.
 The column "ARCHIVED" is ignored
 
+###Config
 ```
 [[inputs.sql]]
 	interval = "20s"
