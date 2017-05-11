@@ -16,15 +16,15 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	// database drivers here:
-//	_ "bitbucket.org/phiggins/db2cli" //
-//	_ "github.com/SAP/go-hdb"
+	//	_ "bitbucket.org/phiggins/db2cli" //
+	//	_ "github.com/SAP/go-hdb"
 	_ "github.com/mattn/go-sqlite3"
-//	_ "github.com/a-palchikov/sqlago"
+	//	_ "github.com/a-palchikov/sqlago"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq" // pure go
-// oracle commented because of the external proprietary libraries
-//	_ "github.com/mattn/go-oci8"
-//	_ "gopkg.in/rana/ora.v4"
+	// oracle commented because of the external proprietary libraries
+	//	_ "github.com/mattn/go-oci8"
+	//	_ "gopkg.in/rana/ora.v4"
 	//	_ "github.com/denisenkom/go-mssqldb" // pure go
 	_ "github.com/zensqlmonitor/go-mssqldb" // pure go
 )
