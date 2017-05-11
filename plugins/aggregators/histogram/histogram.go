@@ -201,8 +201,15 @@ func isBucketExists(field string, cfg config) bool {
 
 // addFields adds the field with specified tags to accumulator
 func addFields(acc telegraf.Accumulator, agr metricHistogramCollection, field string, bucketTagVal string, count int64) {
-	agr.tags[bucketTag] = bucketTagVal
-	acc.AddFields(agr.name, map[string]interface{}{field + "_bucket": count}, agr.tags)
+	fields := map[string]interface{}{field + "_bucket": count}
+
+	tags := map[string]string{}
+	for key, val := range agr.tags {
+		tags[key] = val
+	}
+	tags[bucketTag] = bucketTagVal
+
+	acc.AddFields(agr.name, fields, tags)
 }
 
 // sortBuckets sorts the buckets if it is needed

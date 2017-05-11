@@ -199,17 +199,17 @@ func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricNa
 	acc.Lock()
 	defer acc.Unlock()
 
-	for _, metric := range acc.Metrics {
-		if metric.Measurement != metricName {
+	for _, item := range acc.Metrics {
+		if item.Measurement != metricName {
 			continue
 		}
 
-		if _, ok := metric.Fields[field]; !ok {
+		if _, ok := item.Fields[field]; !ok {
 			continue
 		}
 
-		if metric.Tags[bucketTag] == le {
-			if assert.Equal(t, expectedFields, metric.Fields) {
+		if item.Tags[bucketTag] == le {
+			if assert.Equal(t, expectedFields, item.Fields) {
 				return
 			}
 
