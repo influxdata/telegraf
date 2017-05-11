@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	// database drivers here:
 //	_ "bitbucket.org/phiggins/db2cli" //
-	_ "github.com/SAP/go-hdb"
+//	_ "github.com/SAP/go-hdb"
 	_ "github.com/mattn/go-sqlite3"
 //	_ "github.com/a-palchikov/sqlago"
 	_ "github.com/go-sql-driver/mysql"
