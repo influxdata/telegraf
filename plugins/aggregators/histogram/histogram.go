@@ -42,7 +42,7 @@ type buckets []float64
 // metricHistogramCollection aggregates the histogram data
 type metricHistogramCollection struct {
 	histogramCollection map[string]counts
-	metric              string
+	name                string
 	tags                map[string]string
 }
 
@@ -58,32 +58,29 @@ func NewHistogramAggregator() telegraf.Aggregator {
 	return h
 }
 
-// sampleConfig is config sample of histogram aggregation plugin
 var sampleConfig = `
-  # # Configuration for aggregate histogram metrics
-  # [[aggregators.histogram]]
-  #   ## General Aggregator Arguments:
-  #   ## The period on which to flush & clear the aggregator.
-  #   period = "30s"
-  #   ## If true, the original metric will be dropped by the
-  #   ## aggregator and will not get sent to the output plugins.
-  #   drop_original = false
-  #
-  #   ## The example of config to aggregate histogram for all fields of specified metric.
-  #   [[aggregators.histogram.config]]
-  #     ## The set of buckets.
-  #     buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
-  #     ## The name of metric.
-  #     metric_name = "cpu"
-  #
-  #   ## The example of config to aggregate for specified fields of metric.
-  #   [[aggregators.histogram.config]]
-  #     ## The set of buckets.
-  #     buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
-  #     ## The name of metric.
-  #     metric_name = "diskio"
-  #     ## The concrete fields of metric
-  #     metric_fields = ["io_time", "read_time", "write_time"]
+  ## General Aggregator Arguments:
+  ## The period on which to flush & clear the aggregator.
+  period = "30s"
+  ## If true, the original metric will be dropped by the
+  ## aggregator and will not get sent to the output plugins.
+  drop_original = false
+
+  ## The example of config to aggregate histogram for all fields of specified metric.
+  [[aggregators.histogram.config]]
+  ## The set of buckets.
+  buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
+  ## The name of metric.
+  metric_name = "cpu"
+
+  ## The example of config to aggregate for specified fields of metric.
+  [[aggregators.histogram.config]]
+  ## The set of buckets.
+  buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
+  ## The name of metric.
+  metric_name = "diskio"
+  ## The concrete fields of metric
+  metric_fields = ["io_time", "read_time", "write_time"]
 `
 
 // SampleConfig returns sample of config
@@ -98,29 +95,38 @@ func (h *HistogramAggregator) Description() string {
 
 // Add adds new hit to the buckets
 func (h *HistogramAggregator) Add(in telegraf.Metric) {
+	var bucketsByField = make(map[string][]float64)
+	for field := range in.Fields() {
+		buckets := h.getBuckets(in.Name(), field)
+		if buckets != nil {
+			bucketsByField[field] = buckets
+		}
+	}
+
+	if len(bucketsByField) == 0 {
+		return
+	}
+
 	id := in.HashID()
 	agr, ok := h.cache[id]
 	if !ok {
 		agr = metricHistogramCollection{
-			metric:              in.Name(),
+			name:                in.Name(),
 			tags:                in.Tags(),
 			histogramCollection: make(map[string]counts),
 		}
 	}
 
 	for field, value := range in.Fields() {
-		buckets := h.getBuckets(in.Name(), field)
-		if buckets == nil {
-			continue
-		}
+		if buckets, ok := bucketsByField[field]; ok {
+			if agr.histogramCollection[field] == nil {
+				agr.histogramCollection[field] = make(counts, len(buckets)+1)
+			}
 
-		if agr.histogramCollection[field] == nil {
-			agr.histogramCollection[field] = make(counts, len(buckets)+1)
-		}
-
-		if value, ok := convert(value); ok {
-			index := sort.SearchFloat64s(buckets, value)
-			agr.histogramCollection[field][index]++
+			if value, ok := convert(value); ok {
+				index := sort.SearchFloat64s(buckets, value)
+				agr.histogramCollection[field][index]++
+			}
 		}
 	}
 
@@ -132,7 +138,7 @@ func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range h.cache {
 		for field, counts := range aggregate.histogramCollection {
 
-			buckets := h.getBuckets(aggregate.metric, field)
+			buckets := h.getBuckets(aggregate.name, field)
 			count := int64(0)
 
 			for index, bucket := range buckets {
@@ -206,7 +212,7 @@ func addFields(acc telegraf.Accumulator, agr metricHistogramCollection, field st
 	}
 	tags[bucketTag] = bucketTagVal
 
-	acc.AddFields(agr.metric, fields, tags)
+	acc.AddFields(agr.name, fields, tags)
 }
 
 // checkOrder checks the order of buckets, so that the current value must be more than previous value
