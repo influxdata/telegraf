@@ -166,6 +166,7 @@ configuration options.
 * [sensors](./plugins/inputs/sensors)
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
+* [sql](./plugins/inputs/sql) (sql generic)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [twemproxy](./plugins/inputs/twemproxy)
 * [varnish](./plugins/inputs/varnish)

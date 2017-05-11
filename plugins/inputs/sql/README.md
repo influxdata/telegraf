@@ -17,6 +17,7 @@ For some not pure go drivers you may need external shared libraries and environm
 ## Configuration:
 
 ``` 
+
 	[[inputs.sql]]
 		# debug=false						# Enables very verbose output
 	
@@ -38,10 +39,15 @@ For some not pure go drivers you may need external shared libraries and environm
 			tag_cols=["GROUP#","NAME"]		# colums used as tags
 			field_cols=["UNIT"]				# select fields and use the database driver automatic datatype conversion
 			#
-			#bool_fields=["ON"]				# adds fields and forces his value as bool
-			#int_fields=["MEMBERS","BYTES"]	# adds fields and forces his value as integer
-			#float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
-			#time_fields=["FIRST_TIME"]		# adds fields and forces his value as time
+			# bool_fields=["ON"]				# adds fields and forces his value as bool
+			# int_fields=["MEMBERS","BYTES"]	# adds fields and forces his value as integer
+			# float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
+			# time_fields=["FIRST_TIME"]		# adds fields and forces his value as time
+			#
+			# field_name = "counter_name"		# the column that contains the name of the counter
+			# field_value = "counter_value"		# the column that contains the value of the counter
+			#
+			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
 			
 			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
 			null_as_zero = false			# true: Push null results as zeros/empty strings (false: ignore fields)
