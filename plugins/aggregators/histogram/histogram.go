@@ -1,7 +1,6 @@
 package histogram
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 
@@ -162,7 +161,7 @@ func (h *HistogramAggregator) resetCache() {
 	h.cache = make(map[uint64]metricHistogramCollection)
 }
 
-// checkAndGetBuckets checks the order of buckets and returns them.
+// getBuckets finds buckets and returns them
 func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 {
 	if buckets, ok := h.buckets[metric][field]; ok {
 		return buckets
@@ -178,9 +177,7 @@ func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 
 				h.buckets[metric] = make(bucketsByFields)
 			}
 
-			checkOrder(config.Buckets, metric, field)
-
-			h.buckets[metric][field] = config.Buckets
+			h.buckets[metric][field] = sortBuckets(config.Buckets)
 		}
 	}
 
@@ -204,30 +201,20 @@ func isBucketExists(field string, cfg config) bool {
 
 // addFields adds the field with specified tags to accumulator
 func addFields(acc telegraf.Accumulator, agr metricHistogramCollection, field string, bucketTagVal string, count int64) {
-	fields := map[string]interface{}{field + "_bucket": count}
-
-	tags := map[string]string{}
-	for key, val := range agr.tags {
-		tags[key] = val
-	}
-	tags[bucketTag] = bucketTagVal
-
-	acc.AddFields(agr.name, fields, tags)
+	agr.tags[bucketTag] = bucketTagVal
+	acc.AddFields(agr.name, map[string]interface{}{field + "_bucket": count}, agr.tags)
 }
 
-// checkOrder checks the order of buckets, so that the current value must be more than previous value
-func checkOrder(buckets []float64, metric string, field string) {
+// sortBuckets sorts the buckets if it is needed
+func sortBuckets(buckets []float64) []float64 {
 	for i, bucket := range buckets {
 		if i < len(buckets)-1 && bucket >= buckets[i+1] {
-			panic(fmt.Errorf(
-				"histogram buckets must be in increasing order: %.2f >= %.2f, metrics: %s, field: %s",
-				bucket,
-				buckets[i+1],
-				metric,
-				field,
-			))
+			sort.Float64s(buckets)
+			break
 		}
 	}
+
+	return buckets
 }
 
 // convert converts interface to concrete type

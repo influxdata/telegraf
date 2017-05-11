@@ -27,6 +27,10 @@ sequence. Internally buckets are presented as ranges with borders
 put into those buckets, in which the metric value fell with such ranges of
 buckets.
 
+This plugin creates cumulative histograms. It means, that the hits in the 
+buckets will always increase from the moment of telegraf start. But if you
+restart telegraf, all hits in the buckets will be reset to 0.
+
 Also, the algorithm of hit counting to buckets was implemented on the base
 of the algorithm, which is implemented in the Prometheus
 [client](https://github.com/prometheus/client_golang/blob/master/prometheus/histogram.go).
