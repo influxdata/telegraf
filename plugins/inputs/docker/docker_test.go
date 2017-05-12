@@ -300,6 +300,10 @@ func TestDockerGatherInfo(t *testing.T) {
 	d := Docker{
 		client:  nil,
 		testing: true,
+		Envs: map[string]string{
+			"FOO_VARIABLE": "foo_tag",
+			"BAR_VARIABLE": "bar_tag",
+		},
 	}
 
 	err := acc.GatherError(d.Gather)
@@ -331,22 +335,6 @@ func TestDockerGatherInfo(t *testing.T) {
 		map[string]string{
 			"unit":        "bytes",
 			"engine_host": "absol",
-		},
-	)
-	acc.AssertContainsTaggedFields(t,
-		"docker_container_cpu",
-		map[string]interface{}{
-			"usage_total":  uint64(1231652),
-			"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
-		},
-		map[string]string{
-			"container_name":    "etcd2",
-			"container_image":   "quay.io:4443/coreos/etcd",
-			"cpu":               "cpu3",
-			"container_version": "v2.2.2",
-			"engine_host":       "absol",
-			"label1":            "test_value_1",
-			"label2":            "test_value_2",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -395,6 +383,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_version": "v2.2.2",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
+			"foo_tag":           "foo_value",
 		},
 	)
 

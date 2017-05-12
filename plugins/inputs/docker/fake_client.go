@@ -2,10 +2,12 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/registry"
 )
 
@@ -148,4 +150,21 @@ func (d FakeDockerClient) ContainerStats(ctx context.Context, containerID string
 	jsonStat := `{"read":"2016-02-24T11:42:27.472459608-05:00","memory_stats":{"stats":{},"limit":18935443456},"blkio_stats":{"io_service_bytes_recursive":[{"major":252,"minor":1,"op":"Read","value":753664},{"major":252,"minor":1,"op":"Write"},{"major":252,"minor":1,"op":"Sync"},{"major":252,"minor":1,"op":"Async","value":753664},{"major":252,"minor":1,"op":"Total","value":753664}],"io_serviced_recursive":[{"major":252,"minor":1,"op":"Read","value":26},{"major":252,"minor":1,"op":"Write"},{"major":252,"minor":1,"op":"Sync"},{"major":252,"minor":1,"op":"Async","value":26},{"major":252,"minor":1,"op":"Total","value":26}]},"cpu_stats":{"cpu_usage":{"percpu_usage":[17871,4959158,1646137,1231652,11829401,244656,369972,0],"usage_in_usermode":10000000,"total_usage":20298847},"system_cpu_usage":24052607520000000,"throttling_data":{}},"precpu_stats":{"cpu_usage":{"percpu_usage":[17871,4959158,1646137,1231652,11829401,244656,369972,0],"usage_in_usermode":10000000,"total_usage":20298847},"system_cpu_usage":24052599550000000,"throttling_data":{}}}`
 	stat.Body = ioutil.NopCloser(strings.NewReader(jsonStat))
 	return stat, nil
+}
+
+func (d FakeDockerClient) ContainerInspect(octx context.Context, id string) (types.ContainerJSON, error) {
+	switch id {
+	case "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb":
+		return types.ContainerJSON{
+			Config: &container.Config{},
+		}, nil
+	case "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173":
+		return types.ContainerJSON{
+			Config: &container.Config{
+				Env: []string{"FOO_VARIABLE=foo_value"},
+			},
+		}, nil
+	default:
+		return types.ContainerJSON{}, fmt.Errorf("Couldn't inspect a container with id %s", id)
+	}
 }
