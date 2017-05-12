@@ -47,7 +47,7 @@ Using this configuration:
 When run with:
 
 ```
-./telegraf -config telegraf.conf -input-filter phpfpm -test
+./telegraf --config telegraf.conf --input-filter phpfpm --test
 ```
 
 It produces:

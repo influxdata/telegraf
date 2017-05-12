@@ -54,7 +54,7 @@ None
 ### Example Output:
 
 ```
-$ telegraf -config ~/ws/telegraf.conf -input-filter processes -test
+$ telegraf --config ~/ws/telegraf.conf --input-filter processes --test
 * Plugin: processes, Collection 1
 > processes blocked=8i,running=1i,sleeping=265i,stopped=0i,total=274i,zombie=0i,dead=0i,paging=0i,total_threads=687i 1457478636980905042
 ```

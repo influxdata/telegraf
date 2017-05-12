@@ -74,7 +74,7 @@ InfluxDB-formatted endpoints. See below for more information.
 ### Example Output:
 
 ```
-telegraf -config ~/ws/telegraf.conf -input-filter influxdb -test
+telegraf --config ~/ws/telegraf.conf --input-filter influxdb --test
 * Plugin: influxdb, Collection 1
 > influxdb_database,database=_internal,host=tyrion,url=http://localhost:8086/debug/vars numMeasurements=10,numSeries=29 1463590500247354636
 > influxdb_httpd,bind=:8086,host=tyrion,url=http://localhost:8086/debug/vars req=7,reqActive=1,reqDurationNs=14227734 1463590500247354636

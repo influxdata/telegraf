@@ -167,7 +167,7 @@ based on the availability of per-cpu stats on your system.
 ### Example Output:
 
 ```
-% ./telegraf -config ~/ws/telegraf.conf -input-filter docker -test
+% ./telegraf --config ~/ws/telegraf.conf --input-filter docker --test
 * Plugin: docker, Collection 1
 > docker n_cpus=8i 1456926671065383978
 > docker n_used_file_descriptors=15i 1456926671065383978
