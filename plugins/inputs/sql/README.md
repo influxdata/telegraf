@@ -27,7 +27,7 @@ Actually the dependencies to all those drivers (oracle,db2,sap) are commented in
 		# debug=false						# Enables very verbose output
 	
 		## Database Driver
-		driver = "oci8" 					# required. Valid options: go-mssqldb (sqlserver) , oci8 ora.v4 (Oracle), mysql, pq (Postgres)
+		driver = "oci8" 					# required. Valid options: go-mssqldb (sqlserver) , oci8 | ora.v4 (Oracle), mysql, postgres
 		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
 		
 		## Server DSNs
@@ -62,6 +62,8 @@ Actually the dependencies to all those drivers (oracle,db2,sap) are commented in
 ```
 sql_script is read only once, if you change the script you need to restart telegraf
 
+## Field names
+Field names are the same of the relative column name or taken from value of a column. If there is the need of rename the fields, just do it in the sql, try to use an ' AS ' .
 
 ## Datatypes:
 Using field_cols list the values are converted by the go database driver implementation. 
@@ -72,7 +74,7 @@ If an error in conversion occurs then telegraf exits, therefore a --test run is 
 Actually I run the plugin using oci8,mysql and mssql
 The mechanism for get the timestamp from a table column has known problems
 
-## Example for collect multiple counters defined as COLUMNS in a table:
+## Example for collect multiple counters defined as COLUMNS in a table (vertical counter structure):
 Here we read a table where each counter is on a different row. Each row contains a column with the name of the counter (counter_name) and a column with his value (cntr_value) and some other columns that we use as tags  (instance_name,object_name)
 
 ###Config
@@ -105,7 +107,7 @@ Here we read a table where each counter is on a different row. Each row contains
 ...
 
 ```
-## Example for collect multiple counters defined as ROWS in a table:
+## Example for collect multiple counters defined as ROWS in a table (horizontal counter structure):
 Here we read multiple counters defined on same row where the counter name is the name of his column.
 In this example we force some counters datatypes: "MEMBERS","FIRST_CHANGE#" as integer, "BYTES" as float, "FIRST_TIME" as time. The field "UNIT" is used with the automatic driver datatype conversion.
 The column "ARCHIVED" is ignored
@@ -138,4 +140,9 @@ The column "ARCHIVED" is ignored
 
 
 ```
+
+## TODO
+Give the possibility to define parameters to pass to the prepared statement
+Get the host tag value automatically parsing the connection DSN string
+Implement tests
 

@@ -62,9 +62,9 @@ type Query struct {
 	//
 	QueryScript string
 
-	// internal data
+	// -------- internal data -----------
 	statements []*sql.Stmt
-	//	Parameters []string
+	//	Parameters []string	//TODO
 
 	column_name []string
 	cell_refs   []interface{}
@@ -79,6 +79,7 @@ type Query struct {
 
 	field_name_idx      int
 	field_value_idx     int
+	field_value_type    int
 	field_timestamp_idx int
 
 	index int
@@ -202,10 +203,16 @@ func (s *Query) Init(cols []string) error {
 	if Debug {
 		log.Printf("I! Init Query %d with %d columns", s.index, len(cols))
 	}
-	s.column_name = cols
-	//Define index of tags and fields and keep it for reuse
-	col_count := len(s.column_name)
 
+	//Define index of tags and fields and keep it for reuse
+	s.column_name = cols
+
+	// init the arrays for store row data
+	col_count := len(s.column_name)
+	s.cells = make([]interface{}, col_count)
+	s.cell_refs = make([]interface{}, col_count)
+
+	// init the arrays for store field/tag infos
 	expected_tag_count := len(s.TagCols)
 	var expected_field_count int
 	if !s.IgnoreOtherFields {
@@ -224,9 +231,7 @@ func (s *Query) Init(cols []string) error {
 	s.tag_count = 0
 	s.field_count = 0
 
-	s.cells = make([]interface{}, col_count)
-	s.cell_refs = make([]interface{}, col_count)
-
+	// prepare vars for vertical counter parsing
 	s.field_name_idx = -1
 	s.field_value_idx = -1
 	s.field_timestamp_idx = -1
@@ -247,23 +252,14 @@ func (s *Query) Init(cols []string) error {
 		return errors.New("Both field_name and field_value should be set")
 	}
 
+	// fill columns info
 	var cell interface{}
 	for i := 0; i < col_count; i++ {
-		if Debug {
-			log.Printf("I! Field %s %d", s.column_name[i], i)
-		}
+		dest_type := TYPE_AUTO
 		field_matched := true
 
-		if s.column_name[i] == s.FieldName {
-			s.field_name_idx = i
-		}
-		if s.column_name[i] == s.FieldValue {
-			s.field_value_idx = i
-			//			TODO force datatype?
-		}
-		if s.column_name[i] == s.FieldTimestamp {
-			s.field_timestamp_idx = i
-			//			TODO force datatype?
+		if Debug {
+			log.Printf("I! Field %s %d", s.column_name[i], i)
 		}
 
 		if contains_str(s.column_name[i], s.TagCols) {
@@ -273,27 +269,27 @@ func (s *Query) Init(cols []string) error {
 			//			cell = new(sql.RawBytes)
 			cell = new(string)
 		} else if contains_str(s.column_name[i], s.IntFields) {
-			s.field_type[s.field_count] = TYPE_INT
+			dest_type = TYPE_INT
 			cell = new(sql.RawBytes)
 			//				cell = new(int);
 		} else if contains_str(s.column_name[i], s.FloatFields) {
-			s.field_type[s.field_count] = TYPE_FLOAT
+			dest_type = TYPE_FLOAT
 			//				cell = new(float64);
 			cell = new(sql.RawBytes)
 		} else if contains_str(s.column_name[i], s.TimeFields) {
 			//TODO as number?
-			s.field_type[s.field_count] = TYPE_TIME
-			cell = new(string)
-			//				cell = new(sql.RawBytes)
+			dest_type = TYPE_TIME
+			//			cell = new(string)
+			cell = new(sql.RawBytes)
 		} else if contains_str(s.column_name[i], s.BoolFields) {
-			s.field_type[s.field_count] = TYPE_BOOL
+			dest_type = TYPE_BOOL
 			//				cell = new(bool);
 			cell = new(sql.RawBytes)
 		} else if contains_str(s.column_name[i], s.FieldCols) {
-			s.field_type[s.field_count] = TYPE_AUTO
+			dest_type = TYPE_AUTO
 			cell = new(sql.RawBytes)
 		} else if !s.IgnoreOtherFields {
-			s.field_type[s.field_count] = TYPE_AUTO
+			dest_type = TYPE_AUTO
 			cell = new(sql.RawBytes)
 			//				cell = new(string);
 		} else {
@@ -303,7 +299,23 @@ func (s *Query) Init(cols []string) error {
 				log.Printf("I! Skipped field %s", s.column_name[i])
 			}
 		}
+
+		if s.column_name[i] == s.FieldName {
+			s.field_name_idx = i
+			field_matched = false
+		}
+		if s.column_name[i] == s.FieldValue {
+			s.field_value_idx = i
+			s.field_value_type = dest_type
+			field_matched = false
+		}
+		if s.column_name[i] == s.FieldTimestamp {
+			s.field_timestamp_idx = i
+			field_matched = false
+		}
+
 		if field_matched {
+			s.field_type[s.field_count] = dest_type
 			s.field_idx[s.field_count] = i
 			s.field_count++
 		}
@@ -368,9 +380,7 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 			if !ok {
 				var intvalue int64
 				intvalue, ok = value.(int64)
-				if !ok {
-					log.Printf("E! Unable to convert timestamp '%s' type %s", s.column_name[s.field_timestamp_idx], reflect.TypeOf(cell).Kind())
-				} else {
+				if ok {
 					value = time.Unix(intvalue, 0)
 				}
 			}
@@ -386,6 +396,15 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 		case TYPE_AUTO:
 		case TYPE_STRING:
 			value = ""
+			break
+		case TYPE_INT:
+			value = 0i
+		case TYPE_FLOAT:
+			value = 0.0
+		case TYPE_BOOL:
+			value = false
+		case TYPE_TIME:
+			value = time.Unix(0, 0)
 			break
 		default:
 			value = 0
@@ -419,68 +438,34 @@ func (s *Query) ParseRow(tags map[string]string, fields map[string]interface{}, 
 			return timestamp, errors.New("Cannot convert timestamp")
 		}
 		timestamp, _ = value.(time.Time)
-
-		//		var ok bool
-		//		value, err := s.ConvertField(s.column_name[s.field_timestamp_idx], cell, TYPE_AUTO, s.NullAsZero)
-		//		if err != nil {
-		//			return timestamp, err
-		//		}
-		//		timestamp, ok = value.(time.Time)
-		//		// TODO convert to ns/ms/s/us??
-		//		if !ok {
-		//			log.Printf("W! Unable to convert timestamp '%s' to time.Time", s.column_name[s.field_timestamp_idx])
-		//			var intvalue int64
-		//			intvalue, ok = value.(int64)
-		//			if !ok {
-		//				cell_type := reflect.TypeOf(cell).Kind()
-		//				log.Printf("E! Unable to convert timestamp '%s' type %s", s.column_name[s.field_timestamp_idx], cell_type)
-		//				return timestamp, errors.New("Cannot convert timestamp")
-		//			}
-		//			timestamp = time.Unix(intvalue, 0)
-		//		}
 	}
 
 	// fill tags
 	for i := 0; i < s.tag_count; i++ {
 		cell := s.cells[s.tag_idx[i]]
-		if cell != nil {
-			// tags should be always strings
-			name := s.column_name[s.tag_idx[i]]
-
-			//			//TODO set flag for force tag data conversion?
-			//			value, ok := cell.(string)
-			//			if !ok {
-			//				barr, ok := cell.([]byte)
-			//				value = string(barr)
-			//				if !ok {
-			//					value = fmt.Sprintf("%v", cell)
-			//					log.Printf("W! converting tag %d '%s' type %s", s.tag_idx[i], name, reflect.TypeOf(cell).Kind())
-			//					//				return nil	// skips the row
-			//					//				return errors.New("Cannot convert tag")	// break the run
-			//				}
-			//			}
-
-			value, ok := ConvertString(name, cell)
-			if !ok {
-				log.Printf("W! ignored tag %s", name)
-				// ignoring tag is correct?
-				//				return nil	// skips the row
-				//				return errors.New("Cannot convert tag")	// break the run
+		//		if cell != nil {
+		// tags should be always strings
+		name := s.column_name[s.tag_idx[i]]
+		value, ok := ConvertString(name, cell)
+		if !ok {
+			log.Printf("W! ignored tag %s", name)
+			// ignoring tag is correct?
+			//				return nil	// skips the row
+			//				return errors.New("Cannot convert tag")	// break the run
+		} else {
+			if s.Sanitize {
+				tags[name] = sanitize(value)
 			} else {
-				if s.Sanitize {
-					tags[name] = sanitize(value)
-				} else {
-					tags[name] = value
-				}
+				tags[name] = value
 			}
 		}
+		//		}
 	}
 
 	if s.field_name_idx >= 0 {
 		// get the name of the field from value on column
 		cell := s.cells[s.field_name_idx]
 		name, ok := ConvertString(s.column_name[s.field_name_idx], cell)
-		//		name, ok := cell.(string)
 		if !ok {
 			log.Printf("W! converting field name '%s'", s.column_name[s.field_name_idx])
 			return timestamp, nil
@@ -493,23 +478,24 @@ func (s *Query) ParseRow(tags map[string]string, fields map[string]interface{}, 
 
 		// get the value of field
 		cell = s.cells[s.field_value_idx]
-		value, err := s.ConvertField(s.column_name[s.field_value_idx], cell, TYPE_AUTO, s.NullAsZero) // TODO set forced field type
+		value, err := s.ConvertField(s.column_name[s.field_value_idx], cell, s.field_value_type, s.NullAsZero) // TODO set forced field type
 		if err != nil {
 			return timestamp, err
 		}
 		fields[name] = value
-	} else {
-		// fill fields from column values
-		for i := 0; i < s.field_count; i++ {
-			cell := s.cells[s.field_idx[i]]
-			name := s.column_name[s.field_idx[i]]
-			value, err := s.ConvertField(name, cell, s.field_type[i], s.NullAsZero)
-			if err != nil {
-				return timestamp, err
-			}
-			fields[name] = value
-		}
 	}
+	//	else {
+	// fill fields from column values
+	for i := 0; i < s.field_count; i++ {
+		cell := s.cells[s.field_idx[i]]
+		name := s.column_name[s.field_idx[i]]
+		value, err := s.ConvertField(name, cell, s.field_type[i], s.NullAsZero)
+		if err != nil {
+			return timestamp, err
+		}
+		fields[name] = value
+	}
+	//	}
 	return timestamp, nil
 }
 
