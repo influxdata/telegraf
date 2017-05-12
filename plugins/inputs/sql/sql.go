@@ -321,12 +321,15 @@ func (s *Query) Init(cols []string) error {
 func ConvertString(name string, cell interface{}) (string, bool) {
 	value, ok := cell.(string)
 	if !ok {
-		barr, ok := cell.([]byte)
+		var barr []byte
+		barr, ok = cell.([]byte)
 		value = string(barr)
 		if !ok {
 			value = fmt.Sprintf("%v", cell)
 			ok = true
-			log.Printf("W! converting '%s' type %s raw data '%s'", name, reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
+			if Debug {
+				log.Printf("W! converting '%s' type %s raw data '%s'", name, reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
+			}
 		}
 	}
 	return value, ok
