@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb/client"
 )
 
+// InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
 	// URL is only for backwards compatability
 	URL              string
@@ -79,11 +80,10 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
+// Connect initiates the primary connection to the range of provided URLs
 func (i *InfluxDB) Connect() error {
 	var urls []string
-	for _, u := range i.URLs {
-		urls = append(urls, u)
-	}
+	urls = append(urls, i.URLs...)
 
 	// Backward-compatability with single Influx URL config files
 	// This could eventually be removed in favor of specifying the urls as a list
@@ -144,26 +144,32 @@ func (i *InfluxDB) Connect() error {
 	return nil
 }
 
+// Close will terminate the session to the backend, returning error if an issue arises
 func (i *InfluxDB) Close() error {
 	return nil
 }
 
+// SampleConfig returns the formatted sample configuration for the plugin
 func (i *InfluxDB) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns the human-readable function definition of the plugin
 func (i *InfluxDB) Description() string {
 	return "Configuration for influxdb server to send metrics to"
 }
 
-// Choose a random server in the cluster to write to until a successful write
+// Write will choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	bufsize := 0
+	splitData := make([]telegraf.Metric, 0)
+
 	for _, m := range metrics {
 		bufsize += m.Len()
+		splitData = append(splitData, m.Split(i.UDPPayload)...)
 	}
-	r := metric.NewReader(metrics)
+	r := metric.NewReader(splitData)
 
 	// This will get set to nil if a successful write occurs
 	err := fmt.Errorf("Could not write to any InfluxDB server in cluster")
