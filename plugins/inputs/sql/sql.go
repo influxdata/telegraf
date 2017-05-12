@@ -4,29 +4,28 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	//	"github.com/gchaincl/dotsql"
 	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"log"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	// database drivers here:
-	//	_ "bitbucket.org/phiggins/db2cli" //
-	//	_ "github.com/SAP/go-hdb"
 	_ "github.com/mattn/go-sqlite3"
 	//	_ "github.com/a-palchikov/sqlago"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq" // pure go
-	// oracle commented because of the external proprietary libraries
-	//	_ "github.com/mattn/go-oci8"
-	//	_ "gopkg.in/rana/ora.v4"
 	//	_ "github.com/denisenkom/go-mssqldb" // pure go
 	_ "github.com/zensqlmonitor/go-mssqldb" // pure go
+	// oracle commented because of the external proprietary libraries dependencies
+	//	_ "github.com/mattn/go-oci8"
+	//	_ "gopkg.in/rana/ora.v4"
+	// the following commented because of the external proprietary libraries dependencies
+	//	_ "bitbucket.org/phiggins/db2cli" //
+	//	_ "github.com/SAP/go-hdb"
 )
 
 const TYPE_STRING = 1
@@ -271,8 +270,8 @@ func (s *Query) Init(cols []string) error {
 			field_matched = false
 			s.tag_idx[s.tag_count] = i
 			s.tag_count++
-			cell = new(sql.RawBytes)
-			//				cell = new(string);
+			//			cell = new(sql.RawBytes)
+			cell = new(string)
 		} else if contains_str(s.column_name[i], s.IntFields) {
 			s.field_type[s.field_count] = TYPE_INT
 			cell = new(sql.RawBytes)
@@ -319,6 +318,20 @@ func (s *Query) Init(cols []string) error {
 	return nil
 }
 
+func ConvertString(name string, cell interface{}) (string, bool) {
+	value, ok := cell.(string)
+	if !ok {
+		barr, ok := cell.([]byte)
+		value = string(barr)
+		if !ok {
+			value = fmt.Sprintf("%v", cell)
+			ok = true
+			log.Printf("W! converting '%s' type %s raw data '%s'", name, reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
+		}
+	}
+	return value, ok
+}
+
 func (s *Query) ConvertField(name string, cell interface{}, field_type int, NullAsZero bool) (interface{}, error) {
 	var value interface{}
 	var ok bool
@@ -346,16 +359,25 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 				value, err = strconv.ParseBool(str)
 			}
 			break
-			//					case TYPE_TIME:
-			//						value = cell
-			//						break
-			//					case TYPE_STRING:
-			//						value = cell
-			//						break
+		case TYPE_TIME:
+			value, ok = cell.(time.Time)
+			// TODO convert to ns/ms/s/us??
+			if !ok {
+				var intvalue int64
+				intvalue, ok = value.(int64)
+				if !ok {
+					log.Printf("E! Unable to convert timestamp '%s' type %s", s.column_name[s.field_timestamp_idx], reflect.TypeOf(cell).Kind())
+				} else {
+					value = time.Unix(intvalue, 0)
+				}
+			}
+			break
+		case TYPE_STRING:
+			value, ok = ConvertString(name, cell)
+			break
 		default:
 			value = cell
 		}
-
 	} else if NullAsZero {
 		switch field_type {
 		case TYPE_AUTO:
@@ -376,13 +398,10 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 		}
 	}
 	if !ok {
-		cell_type := reflect.TypeOf(cell).Kind()
-
-		log.Printf("E! converting field name '%s' type %d %s into string", name, field_type, cell_type)
 		err = errors.New("Error converting field into string")
-		return nil, err
 	}
 	if err != nil {
+		log.Printf("E! converting name '%s' type %s into type %d, raw data '%s'", name, reflect.TypeOf(cell).Kind(), field_type, fmt.Sprintf("%v", cell))
 		return nil, err
 	}
 	return value, nil
@@ -390,48 +409,66 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 
 func (s *Query) ParseRow(tags map[string]string, fields map[string]interface{}, timestamp time.Time) (time.Time, error) {
 	if s.field_timestamp_idx >= 0 {
-		var ok bool
 		// get the value of timestamp field
 		cell := s.cells[s.field_timestamp_idx]
-		value, err := s.ConvertField(s.column_name[s.field_timestamp_idx], cell, TYPE_AUTO, s.NullAsZero)
+		value, err := s.ConvertField(s.column_name[s.field_timestamp_idx], cell, TYPE_TIME, false)
 		if err != nil {
-			return timestamp, err
+			return timestamp, errors.New("Cannot convert timestamp")
 		}
-		timestamp, ok = value.(time.Time)
-		// TODO convert to ns/ms/s/us??
-		if !ok {
-			log.Printf("W! Unable to convert timestamp '%s' to time.Time", s.column_name[s.field_timestamp_idx])
-			var intvalue int64
-			intvalue, ok = value.(int64)
-			if !ok {
-				cell_type := reflect.TypeOf(cell).Kind()
+		timestamp, _ = value.(time.Time)
 
-				log.Printf("E! Unable to convert timestamp '%s' type %s", s.column_name[s.field_timestamp_idx], cell_type)
-				return timestamp, errors.New("Cannot convert timestamp")
-			}
-			timestamp = time.Unix(intvalue, 0)
-		}
+		//		var ok bool
+		//		value, err := s.ConvertField(s.column_name[s.field_timestamp_idx], cell, TYPE_AUTO, s.NullAsZero)
+		//		if err != nil {
+		//			return timestamp, err
+		//		}
+		//		timestamp, ok = value.(time.Time)
+		//		// TODO convert to ns/ms/s/us??
+		//		if !ok {
+		//			log.Printf("W! Unable to convert timestamp '%s' to time.Time", s.column_name[s.field_timestamp_idx])
+		//			var intvalue int64
+		//			intvalue, ok = value.(int64)
+		//			if !ok {
+		//				cell_type := reflect.TypeOf(cell).Kind()
+		//				log.Printf("E! Unable to convert timestamp '%s' type %s", s.column_name[s.field_timestamp_idx], cell_type)
+		//				return timestamp, errors.New("Cannot convert timestamp")
+		//			}
+		//			timestamp = time.Unix(intvalue, 0)
+		//		}
 	}
 
 	// fill tags
 	for i := 0; i < s.tag_count; i++ {
 		cell := s.cells[s.tag_idx[i]]
 		if cell != nil {
-			// tags are always strings
+			// tags should be always strings
 			name := s.column_name[s.tag_idx[i]]
 
-			//TODO set flag for force tag data conversion?
+			//			//TODO set flag for force tag data conversion?
 			//			value, ok := cell.(string)
 			//			if !ok {
-			//				log.Printf("W! converting tag %d '%s' type %d", s.tag_idx[i], name, TYPE_STRING)
-			//				return nil
-			//				//				return errors.New("Cannot convert tag")
+			//				barr, ok := cell.([]byte)
+			//				value = string(barr)
+			//				if !ok {
+			//					value = fmt.Sprintf("%v", cell)
+			//					log.Printf("W! converting tag %d '%s' type %s", s.tag_idx[i], name, reflect.TypeOf(cell).Kind())
+			//					//				return nil	// skips the row
+			//					//				return errors.New("Cannot convert tag")	// break the run
+			//				}
 			//			}
-			value := fmt.Sprintf("%v", cell)
-			if s.Sanitize {
-				tags[name] = sanitize(value)
+
+			value, ok := ConvertString(name, cell)
+			if !ok {
+				log.Printf("W! ignored tag %s", name)
+				// ignoring tag is correct?
+				//				return nil	// skips the row
+				//				return errors.New("Cannot convert tag")	// break the run
 			} else {
-				tags[name] = value
+				if s.Sanitize {
+					tags[name] = sanitize(value)
+				} else {
+					tags[name] = value
+				}
 			}
 		}
 	}
@@ -439,7 +476,8 @@ func (s *Query) ParseRow(tags map[string]string, fields map[string]interface{}, 
 	if s.field_name_idx >= 0 {
 		// get the name of the field from value on column
 		cell := s.cells[s.field_name_idx]
-		name, ok := cell.(string)
+		name, ok := ConvertString(s.column_name[s.field_name_idx], cell)
+		//		name, ok := cell.(string)
 		if !ok {
 			log.Printf("W! converting field name '%s'", s.column_name[s.field_name_idx])
 			return timestamp, nil
@@ -560,14 +598,6 @@ func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, err
 			}
 			rows, err = db.Query(q.Query)
 		}
-		//	} else if len(q.QueryScript) > 0 {
-		//		// Loads queries from file
-		//		var dot *dotsql.DotSql
-		//		dot, err = dotsql.LoadFromFile(q.QueryScript)
-		//		if err != nil {
-		//			return nil, err
-		//		}
-		//		rows, err = dot.Query(db, "find-users-by-email")
 	} else {
 		log.Printf("W! No query to execute %d", q.index)
 		//				err = errors.New("No query to execute")
@@ -670,6 +700,11 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 				}
 
 				acc.AddFields(q.Measurement, fields, tags, timestamp)
+
+				//		fieldsG := map[string]interface{}{
+				//			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
+				//		}
+				//		acc.AddGauge("cpu", fieldsG, tags, now)
 
 				row_count += 1
 			}

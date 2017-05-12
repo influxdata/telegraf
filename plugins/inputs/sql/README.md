@@ -7,14 +7,17 @@ Supported drivers are  go-mssqldb (sqlserver) , oci8 ora.v4 (Oracle), mysql (MyS
 ```
 
 ## Getting started :
-
 First you need to grant read/select privileges on queried tables to the database user you use for the connection
+
+### Non pure go drivers
 For some not pure go drivers you may need external shared libraries and environment variables: look at sql driver implementation site 
 For instance using oracle driver on rh linux you need to install oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm package and set 
 ```
 export ORACLE_HOME=/usr/lib/oracle/12.2/client64
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ORACLE_HOME/lib 
 ```
+Actually the dependencies to all those drivers (oracle,db2,sap) are commented in the sql.go source. You can enable it, just remove the comment and perform a 'go get <driver git url>' and recompile telegraf
+
 
 ## Configuration:
 
@@ -57,6 +60,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ORACLE_HOME/lib
 
 
 ```
+sql_script is read only once, if you change the script you need to restart telegraf
 
 
 ## Datatypes:
