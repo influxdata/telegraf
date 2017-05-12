@@ -134,7 +134,7 @@ Using this configuration:
 
 When run with:
 ```
-./telegraf -config telegraf.conf -input-filter redis -test
+./telegraf --config telegraf.conf --input-filter redis --test
 ```
 
 It produces:

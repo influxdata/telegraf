@@ -145,6 +145,6 @@ Tag Dimension names are represented in [snake case](https://en.wikipedia.org/wik
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter cloudwatch -test
+$ ./telegraf --config telegraf.conf --input-filter cloudwatch --test
 > cloudwatch_aws_elb,load_balancer_name=p-example,region=us-east-1,unit=seconds latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875,latency_sample_count=4029,latency_sum=19.382705211639404 1459542420000000000
 ```

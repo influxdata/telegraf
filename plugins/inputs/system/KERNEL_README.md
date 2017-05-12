@@ -58,7 +58,7 @@ None
 ### Example Output:
 
 ```
-$ telegraf -config ~/ws/telegraf.conf -input-filter kernel -test
+$ telegraf --config ~/ws/telegraf.conf --input-filter kernel --test
 * Plugin: kernel, Collection 1
 > kernel boot_time=1457505775i,context_switches=2626618i,disk_pages_in=5741i,disk_pages_out=1808i,interrupts=1472736i,processes_forked=10673i 1457613402960879816
 ```
