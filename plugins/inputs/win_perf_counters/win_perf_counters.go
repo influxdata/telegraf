@@ -95,6 +95,19 @@ type itemList struct {
 	items map[int]*item
 }
 
+func (i *itemList) ItemExists(query, objectName, counter, instance string) bool {
+	for _, item := range i.items {
+		if item.query == query &&
+			item.objectName == objectName &&
+			item.counter == counter &&
+			item.instance == instance {
+			return true
+		}
+	}
+
+	return false
+}
+
 type item struct {
 	query         string
 	objectName    string
@@ -111,6 +124,10 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 
 func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
 	measurement string, include_total bool) error {
+
+	if gItemList.ItemExists(query, objectName, counter, instance) {
+		return nil
+	}
 
 	var handle PDH_HQUERY
 	var counterHandle PDH_HCOUNTER
