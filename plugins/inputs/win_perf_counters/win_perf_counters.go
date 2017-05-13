@@ -68,7 +68,6 @@ var sampleConfig = `
 // Valid queries end up in this map.
 var gItemList itemList
 
-var configParsed bool
 var testConfigParsed bool
 var testObject string
 
@@ -164,8 +163,6 @@ func (m *Win_PerfCounters) SampleConfig() string {
 func (m *Win_PerfCounters) ParseConfig() error {
 	var query string
 
-	configParsed = true
-
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
 			for _, counter := range PerfObject.Counters {
@@ -225,16 +222,12 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		gItemList.items = make(map[int]*item)
 		testObject = m.TestName
 		testConfigParsed = true
-		configParsed = false
 	}
 
-	// We only need to parse the config during the init, it uses the global variable after.
-	if configParsed == false {
-
-		err := m.ParseConfig()
-		if err != nil {
-			return err
-		}
+	// Parse the config
+	err := m.ParseConfig()
+	if err != nil {
+		return err
 	}
 
 	var bufSize uint32
