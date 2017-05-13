@@ -66,7 +66,7 @@ var sampleConfig = `
 `
 
 // Valid queries end up in this map.
-var gItemList = make(map[int]*item)
+var gItemList itemList
 
 var configParsed bool
 var testConfigParsed bool
@@ -130,8 +130,8 @@ func (m *Win_PerfCounters) AddItem(query string, objectName string, counter stri
 
 	temp := &item{query, objectName, counter, instance, measurement,
 		include_total, handle, counterHandle}
-	index := len(gItemList)
-	gItemList[index] = temp
+	index := len(gItemList.items)
+	gItemList.items[index] = temp
 
 	return nil
 }
@@ -187,30 +187,25 @@ func (m *Win_PerfCounters) ParseConfig() error {
 	}
 }
 
-func (m *Win_PerfCounters) Cleanup(metrics *itemList) {
-	// Cleanup
-
-	for _, metric := range metrics.items {
-		ret := PdhCloseQuery(metric.handle)
-		_ = ret
-	}
-}
-
 func (m *Win_PerfCounters) CleanupTestMode() {
 	// Cleanup for the testmode.
 
-	for _, metric := range gItemList {
+	for _, metric := range gItemList.items {
 		ret := PdhCloseQuery(metric.handle)
 		_ = ret
 	}
 }
 
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
+	if gItemList.items == nil {
+		gItemList.items = make(map[int]*item)
+	}
+
 	// Both values are empty in normal use.
 	if m.TestName != testObject {
 		// Cleanup any handles before emptying the global variable containing valid queries.
 		m.CleanupTestMode()
-		gItemList = make(map[int]*item)
+		gItemList.items = make(map[int]*item)
 		testObject = m.TestName
 		testConfigParsed = true
 		configParsed = false
@@ -231,7 +226,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
 
 	// For iterate over the known metrics and get the samples.
-	for _, metric := range gItemList {
+	for _, metric := range gItemList.items {
 		// collect
 		ret := PdhCollectQueryData(metric.handle)
 		if ret == ERROR_SUCCESS {
