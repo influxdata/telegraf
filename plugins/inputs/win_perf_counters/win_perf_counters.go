@@ -109,7 +109,7 @@ type item struct {
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
-func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName string, counter string, instance string,
+func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
 	measurement string, include_total bool) error {
 
 	var handle PDH_HQUERY
@@ -133,10 +133,6 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 	index := len(gItemList)
 	gItemList[index] = temp
 
-	if metrics.items == nil {
-		metrics.items = make(map[int]*item)
-	}
-	metrics.items[index] = temp
 	return nil
 }
 
@@ -148,7 +144,7 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
+func (m *Win_PerfCounters) ParseConfig() error {
 	var query string
 
 	configParsed = true
@@ -165,7 +161,7 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						query = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					err := m.AddItem(metrics, query, objectname, counter, instance,
+					err := m.AddItem(query, objectname, counter, instance,
 						PerfObject.Measurement, PerfObject.IncludeTotal)
 
 					if err == nil {
@@ -210,8 +206,6 @@ func (m *Win_PerfCounters) CleanupTestMode() {
 }
 
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
-	metrics := itemList{}
-
 	// Both values are empty in normal use.
 	if m.TestName != testObject {
 		// Cleanup any handles before emptying the global variable containing valid queries.
@@ -225,7 +219,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// We only need to parse the config during the init, it uses the global variable after.
 	if configParsed == false {
 
-		err := m.ParseConfig(&metrics)
+		err := m.ParseConfig()
 		if err != nil {
 			return err
 		}
