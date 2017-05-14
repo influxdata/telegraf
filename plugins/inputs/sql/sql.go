@@ -182,13 +182,13 @@ func (s *Sql) Init() error {
 			s.Query[i].statements = make([]*sql.Stmt, len(s.Servers))
 		}
 	}
-	for i := 0; i < len(s.Servers); i++ {
-		//TODO get host from server
-		//		match, _ := regexp.MatchString(".*@([0-9.a-zA-Z]*)[:]?[0-9]*/.*", "peach")
-		//    fmt.Println(match)
-		//				addr, err := net.LookupHost("198.252.206.16")
+	//	for i := 0; i < len(s.Servers); i++ {
+	//TODO get host from server
+	//		match, _ := regexp.MatchString(".*@([0-9.a-zA-Z]*)[:]?[0-9]*/.*", "peach")
+	//    fmt.Println(match)
+	//				addr, err := net.LookupHost("198.252.206.16")
 
-	}
+	//	}
 	if len(s.Servers) > 0 && len(s.Servers) != len(s.Hosts) {
 		return errors.New("For each server a host should be specified")
 
@@ -219,10 +219,6 @@ func (s *Query) Init(cols []string) error {
 		expected_field_count = col_count // - expected_tag_count
 	} else {
 		expected_field_count = len(s.FieldCols) + len(s.BoolFields) + len(s.IntFields) + len(s.FloatFields) + len(s.TimeFields)
-	}
-
-	if Debug {
-		log.Printf("I! Extpected %d tags and %d fields", expected_tag_count, expected_field_count)
 	}
 
 	s.tag_idx = make([]int, expected_tag_count)
@@ -257,10 +253,6 @@ func (s *Query) Init(cols []string) error {
 	for i := 0; i < col_count; i++ {
 		dest_type := TYPE_AUTO
 		field_matched := true
-
-		if Debug {
-			log.Printf("I! Field %s %d", s.column_name[i], i)
-		}
 
 		if contains_str(s.column_name[i], s.TagCols) {
 			field_matched = false
@@ -298,6 +290,10 @@ func (s *Query) Init(cols []string) error {
 			if Debug {
 				log.Printf("I! Skipped field %s", s.column_name[i])
 			}
+		}
+
+		if Debug && !field_matched {
+			log.Printf("I! Column %d '%s' dest type  %d", i, s.column_name[i], dest_type)
 		}
 
 		if s.column_name[i] == s.FieldName {
@@ -376,7 +372,7 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 			break
 		case TYPE_TIME:
 			value, ok = cell.(time.Time)
-			// TODO convert to ns/ms/s/us??
+			// TODO convert to s/ms/us/ns??
 			if !ok {
 				var intvalue int64
 				intvalue, ok = value.(int64)
@@ -411,7 +407,7 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 		}
 
 		if Debug {
-			log.Printf("I! forcing to 0 field name '%s' type %d", name, field_type)
+			log.Printf("I! forcing to %s field name '%s' type %d", fmt.Sprintf("%v", value), name, field_type)
 		}
 	} else {
 		value = nil
@@ -478,13 +474,13 @@ func (s *Query) ParseRow(tags map[string]string, fields map[string]interface{}, 
 
 		// get the value of field
 		cell = s.cells[s.field_value_idx]
-		value, err := s.ConvertField(s.column_name[s.field_value_idx], cell, s.field_value_type, s.NullAsZero) // TODO set forced field type
+		value, err := s.ConvertField(s.column_name[s.field_value_idx], cell, s.field_value_type, s.NullAsZero)
 		if err != nil {
 			return timestamp, err
 		}
 		fields[name] = value
 	}
-	//	else {
+
 	// fill fields from column values
 	for i := 0; i < s.field_count; i++ {
 		cell := s.cells[s.field_idx[i]]
@@ -495,7 +491,7 @@ func (s *Query) ParseRow(tags map[string]string, fields map[string]interface{}, 
 		}
 		fields[name] = value
 	}
-	//	}
+
 	return timestamp, nil
 }
 
@@ -544,7 +540,7 @@ func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, err
 	// read query from sql script and put it in query string
 	if len(q.QueryScript) > 0 && len(q.Query) == 0 {
 		if _, err := os.Stat(q.QueryScript); os.IsNotExist(err) {
-			log.Printf("E! SQL script not exists '%s'...", q.QueryScript)
+			log.Printf("E! SQL script file not exists '%s'...", q.QueryScript)
 			return nil, err
 		}
 		filerc, err := os.Open(q.QueryScript)
@@ -577,7 +573,7 @@ func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, err
 
 			// execute prepared statement
 			if Debug {
-				log.Printf("I! Performing query '%s'...", q.Query)
+				log.Printf("I! Performing query:\n\t\t%s\n...", q.Query)
 			}
 			rows, err = q.statements[si].Query()
 		} else {
@@ -637,8 +633,7 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 			query_time = time.Now()
 			rows, err = q.Execute(db, si, p.KeepConnection)
 			if Debug {
-				duration := time.Since(query_time)
-				log.Printf("I! Query %d exectution time: %s", q.index, duration)
+				log.Printf("I! Query %d exectution time: %s", q.index, time.Since(query_time))
 			}
 			query_time = time.Now()
 
@@ -693,13 +688,12 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 				//		fieldsG := map[string]interface{}{
 				//			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
 				//		}
-				//		acc.AddGauge("cpu", fieldsG, tags, now)
+				//		acc.AddGauge("cpu", fieldsG, tags, now) // TODO use gauge too?
 
 				row_count += 1
 			}
 			if Debug {
-				duration := time.Since(query_time)
-				log.Printf("I! Query %d on %s found %d rows written in %s... processing duration %s", q.index, p.Hosts[si], row_count, q.Measurement, duration)
+				log.Printf("I! Query %d on %s found %d rows written in %s... processing duration %s", q.index, p.Hosts[si], row_count, q.Measurement, time.Since(query_time))
 			}
 		}
 	}
