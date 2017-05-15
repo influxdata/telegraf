@@ -20,8 +20,9 @@ import (
 	_ "github.com/lib/pq" // pure go
 	//	_ "github.com/denisenkom/go-mssqldb" // pure go
 	_ "github.com/zensqlmonitor/go-mssqldb" // pure go
+	"plugin"
 	// oracle commented because of the external proprietary libraries dependencies
-	//	_ "github.com/mattn/go-oci8"
+	//	_ "github.com/mattn/go-oci8" // TODO use golang 1.8 plugins for load dyn the shared lib?
 	//	_ "gopkg.in/rana/ora.v4"
 	// the following commented because of the external proprietary libraries dependencies
 	//	_ "bitbucket.org/phiggins/db2cli" //
@@ -61,10 +62,10 @@ type Query struct {
 	Sanitize          bool
 	//
 	QueryScript string
+	//	Parameters []string	//TODO
 
 	// -------- internal data -----------
 	statements []*sql.Stmt
-	//	Parameters []string	//TODO
 
 	column_name []string
 	cell_refs   []interface{}
@@ -89,6 +90,7 @@ type Sql struct {
 	Hosts []string
 
 	Driver         string
+	SharedLib      string
 	Servers        []string
 	KeepConnection bool
 
@@ -176,6 +178,17 @@ func (s *Sql) Init() error {
 	if Debug {
 		log.Printf("I! Init %d servers %d queries, driver %s", len(s.Servers), len(s.Query), s.Driver)
 	}
+
+	if len(s.SharedLib) > 0 {
+		_, err := plugin.Open(s.SharedLib)
+		if err != nil {
+			panic(err)
+		}
+		if Debug {
+			log.Printf("I! Loaded shared lib %s '%s'", s.SharedLib)
+		}
+	}
+
 	if s.KeepConnection {
 		s.connections = make([]*sql.DB, len(s.Servers))
 		for i := 0; i < len(s.Query); i++ {

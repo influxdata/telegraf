@@ -10,13 +10,48 @@ Supported drivers are  go-mssqldb (sqlserver) , oci8 ora.v4 (Oracle), mysql (MyS
 First you need to grant read/select privileges on queried tables to the database user you use for the connection
 
 ### Non pure go drivers
-For some not pure go drivers you may need external shared libraries and environment variables: look at sql driver implementation site 
-For instance using oracle driver on rh linux you need to install oracle-instantclient12.2-basic-12.2.0.1.0-1.x86_64.rpm package and set 
+For some not pure go drivers you may need external shared libraries and environment variables: look at sql driver implementation site
+Actually the dependencies to all those drivers (oracle,db2,sap) are commented in the sql.go source. You can enable it, just remove the comment and perform a 'go get <driver git url>' and recompile telegraf. As alternative you can use the 'golang 1.8 plugins feature'like described here below
+
+### Oracle driver with golang 1.8 plugins feature
+Follow the docu in https://github.com/mattn/go-oci8 for build the oci8 driver.
+If all is going well now golang oci8 driver is compiled and linked against oracle shared libs. But not linked in telegraf.
+
+For let i use in telegraf, do the following:
+create a file plugin.go with this content:
+
 ```
-export ORACLE_HOME=/usr/lib/oracle/12.2/client64
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ORACLE_HOME/lib 
+package main
+
+import "C"
+
+import (
+	"log"
+	"fmt"
+	"github.com/mattn/go-oci8"
+	// .. here you can agg other proprietary driver
+)
+
+func main() {
+	o := oci8.OCI8Driver{}
+	log.Printf("I! Loaded shared lib '%s'", fmt.Sprintf("%v", o))
+}
+``` 
+build it with
+``` 
+mkdir $GOPATH/lib
+go build -buildmode=plugin -o $GOPATH/lib/oci8_go.so plugin.go
 ```
-Actually the dependencies to all those drivers (oracle,db2,sap) are commented in the sql.go source. You can enable it, just remove the comment and perform a 'go get <driver git url>' and recompile telegraf
+in the input plugin configuration specigy the path of the created shared lib 
+``` 
+[[inputs.sql]]
+	...
+	driver = "oci8"
+	shared_lib = "/home/luca/.gocode/lib/oci8_go.so"
+	...
+``` 
+
+The steps of above can be reused in a similar way for other proprietary and non proprietary drivers
 
 
 ## Configuration:
@@ -28,6 +63,7 @@ Actually the dependencies to all those drivers (oracle,db2,sap) are commented in
 	
 		## Database Driver
 		driver = "oci8" 					# required. Valid options: go-mssqldb (sqlserver) , oci8 | ora.v4 (Oracle), mysql, postgres
+		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# path to the golang 1.8 plugin shared lib
 		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
 		
 		## Server DSNs
