@@ -81,6 +81,7 @@ be deprecated eventually.
 - [#2031](https://github.com/influxdata/telegraf/pull/2031): Add Kapacitor input plugin
 - [#2732](https://github.com/influxdata/telegraf/pull/2732): Use go 1.8.1
 - [#2712](https://github.com/influxdata/telegraf/issues/2712): Documentation for rabbitmq input plugin
+- [#2141](https://github.com/influxdata/telegraf/pull/2141): Logparser handles newly-created files.
 
 ### Bugfixes
 
