@@ -8,7 +8,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"log"
+	//	"net/url"
 	"os"
+	"plugin"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,7 +22,6 @@ import (
 	_ "github.com/lib/pq" // pure go
 	//	_ "github.com/denisenkom/go-mssqldb" // pure go
 	_ "github.com/zensqlmonitor/go-mssqldb" // pure go
-	"plugin"
 	// oracle commented because of the external proprietary libraries dependencies
 	//	_ "github.com/mattn/go-oci8" // TODO use golang 1.8 plugins for load dyn the shared lib?
 	//	_ "gopkg.in/rana/ora.v4"
@@ -172,6 +173,30 @@ func (_ *Sql) Description() string {
 	return "SQL Plugin"
 }
 
+type DSN struct {
+	host   string
+	dbname string
+}
+
+//func ParseDSN(dsn string) (*DSN, error) {
+//
+//	url, err := url.Parse(dsn)
+//	if err != nil {
+//		return nil, err
+//	}
+//	pdsn := &DSN{}
+//	pdsn.host = url.Host
+//	pdsn.dbname = url.Path
+//	return pdsn, err
+//
+//	//	prm := &p.SessionPrm{Host: url.Host}
+//	//
+//	//	if url.User != nil {
+//	//		pdsn.Username = url.User.Username()
+//	//		prm.Password, _ = url.User.Password()
+//	//	}
+//}
+
 func (s *Sql) Init() error {
 	Debug = s.Debug
 
@@ -185,7 +210,7 @@ func (s *Sql) Init() error {
 			panic(err)
 		}
 		if Debug {
-			log.Printf("I! Loaded shared lib %s '%s'", s.SharedLib)
+			log.Printf("I! Loaded shared lib '%s'", s.SharedLib)
 		}
 	}
 
@@ -195,13 +220,23 @@ func (s *Sql) Init() error {
 			s.Query[i].statements = make([]*sql.Stmt, len(s.Servers))
 		}
 	}
-	//	for i := 0; i < len(s.Servers); i++ {
-	//TODO get host from server
-	//		match, _ := regexp.MatchString(".*@([0-9.a-zA-Z]*)[:]?[0-9]*/.*", "peach")
-	//    fmt.Println(match)
-	//				addr, err := net.LookupHost("198.252.206.16")
+	for i := 0; i < len(s.Servers); i++ {
+		//		c, err := ParseDSN(s.Servers[i])
+		//		if err == nil {
+		//			log.Printf("Host %s Database %s", c.host, c.dbname)
+		//		} else {
+		//			panic(err)
+		//		}
 
-	//	}
+		//TODO get host from server
+		// mysql servers  = ["nprobe:nprobe@tcp(neteye.wp.lan:3307)/nprobe"]
+		// "postgres://nprobe:nprobe@rue-test/nprobe?sslmode=disable"
+		// oracle telegraf/monitor@10.62.6.1:1522/tunapit
+		//		match, _ := regexp.MatchString(".*@([0-9.a-zA-Z]*)[:]?[0-9]*/.*", "peach")
+		//    fmt.Println(match)
+		//				addr, err := net.LookupHost("198.252.206.16")
+
+	}
 	if len(s.Servers) > 0 && len(s.Servers) != len(s.Hosts) {
 		return errors.New("For each server a host should be specified")
 
