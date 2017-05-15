@@ -52,11 +52,13 @@ func (d *DnsHostnameBind) Gather(acc telegraf.Accumulator) error {
 	errChan := errchan.New(len(d.Servers))
 	for _, server := range d.Servers {
 		dnsQueryTime, hostname, err := d.getDnsQueryTime(server)
-		errChan.C <- err
+		if err != nil {
+			errChan.C <- err
+			continue
+		}
 		tags := map[string]string{
 			"server": server,
 		}
-
 		fields := map[string]interface{}{"query_time_ms": dnsQueryTime, "hostname": hostname}
 		acc.AddFields("dns_hostname_bind", fields, tags)
 	}
