@@ -27,14 +27,11 @@ import "C"
 
 import (
 	"log"
-	"fmt"
-	"github.com/mattn/go-oci8"
-	// .. here you can agg other proprietary driver
+	_ "github.com/mattn/go-oci8"
+	// .. here you can add import to other drivers
 )
-
 func main() {
-	o := oci8.OCI8Driver{}
-	log.Printf("I! Loaded shared lib '%s'", fmt.Sprintf("%v", o))
+	log.Printf("I! Loaded plugin of shared libs")
 }
 ``` 
 build it with

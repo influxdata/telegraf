@@ -16,18 +16,17 @@ import (
 	"strings"
 	"time"
 	// database drivers here:
-	_ "github.com/mattn/go-sqlite3"
-	//	_ "github.com/a-palchikov/sqlago"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq" // pure go
+	_ "github.com/mattn/go-sqlite3"
 	//	_ "github.com/denisenkom/go-mssqldb" // pure go
 	_ "github.com/zensqlmonitor/go-mssqldb" // pure go
-	// oracle commented because of the external proprietary libraries dependencies
-	//	_ "github.com/mattn/go-oci8" // TODO use golang 1.8 plugins for load dyn the shared lib?
-	//	_ "gopkg.in/rana/ora.v4"
 	// the following commented because of the external proprietary libraries dependencies
+	//	_ "github.com/mattn/go-oci8"
+	//	_ "gopkg.in/rana/ora.v4"
 	//	_ "bitbucket.org/phiggins/db2cli" //
 	//	_ "github.com/SAP/go-hdb"
+	//	_ "github.com/a-palchikov/sqlago"
 )
 
 const TYPE_STRING = 1
@@ -88,12 +87,14 @@ type Query struct {
 }
 
 type Sql struct {
-	Hosts []string
+	Driver    string
+	SharedLib string
 
-	Driver         string
-	SharedLib      string
-	Servers        []string
 	KeepConnection bool
+
+	Servers []string
+	Hosts   []string
+	DbNames []string
 
 	Query []Query
 
@@ -136,11 +137,13 @@ func (s *Sql) SampleConfig() string {
 
 		## Database Driver
 		driver = "oci8" 					# required. Valid options: go-mssqldb (sqlserver) , oci8 ora.v4 (Oracle), mysql, pq (Postgres)
+		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# optional: path to the golang 1.8 plugin shared lib
 		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
 
 		## Server DSNs
 		servers  = ["telegraf/monitor@10.0.0.5:1521/thesid", "telegraf/monitor@orahost:1521/anothersid"] # required. Connection DSN to pass to the DB driver
-		hosts=["oraserver1", "oraserver2"]	# for each server a relative host entry should be specified and will be added as host tag
+		# hosts=["oraserver1", "oraserver2"]	# optional: for each server a relative host entry should be specified and will be added as host tag
+		# db_names=["oraserver1", "oraserver2"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
 
 		## Queries to perform (block below can be repeated)
 		[[inputs.sql.query]]
@@ -178,6 +181,7 @@ type DSN struct {
 	dbname string
 }
 
+//
 //func ParseDSN(dsn string) (*DSN, error) {
 //
 //	url, err := url.Parse(dsn)
@@ -189,6 +193,24 @@ type DSN struct {
 //	pdsn.dbname = url.Path
 //	return pdsn, err
 //
+//	res = map[string]string{}
+//	parts := strings.Split(dsn, ";")
+//	for _, part := range parts {
+//		if len(part) == 0 {
+//			continue
+//		}
+//		lst := strings.SplitN(part, "=", 2)
+//		name := strings.TrimSpace(strings.ToLower(lst[0]))
+//		if len(name) == 0 {
+//			continue
+//		}
+//		var value string = ""
+//		if len(lst) > 1 {
+//			value = strings.TrimSpace(lst[1])
+//		}
+//		res[name] = value
+//	}
+//	return res
 //	//	prm := &p.SessionPrm{Host: url.Host}
 //	//
 //	//	if url.User != nil {
@@ -220,26 +242,28 @@ func (s *Sql) Init() error {
 			s.Query[i].statements = make([]*sql.Stmt, len(s.Servers))
 		}
 	}
-	for i := 0; i < len(s.Servers); i++ {
-		//		c, err := ParseDSN(s.Servers[i])
-		//		if err == nil {
-		//			log.Printf("Host %s Database %s", c.host, c.dbname)
-		//		} else {
-		//			panic(err)
-		//		}
-
-		//TODO get host from server
-		// mysql servers  = ["nprobe:nprobe@tcp(neteye.wp.lan:3307)/nprobe"]
-		// "postgres://nprobe:nprobe@rue-test/nprobe?sslmode=disable"
-		// oracle telegraf/monitor@10.62.6.1:1522/tunapit
-		//		match, _ := regexp.MatchString(".*@([0-9.a-zA-Z]*)[:]?[0-9]*/.*", "peach")
-		//    fmt.Println(match)
-		//				addr, err := net.LookupHost("198.252.206.16")
-
-	}
-	if len(s.Servers) > 0 && len(s.Servers) != len(s.Hosts) {
+	//	for i := 0; i < len(s.Servers); i++ {
+	//		c, err := ParseDSN(s.Servers[i])
+	//		if err == nil {
+	//			log.Printf("Host %s Database %s", c.host, c.dbname)
+	//		} else {
+	//			panic(err)
+	//		}
+	//
+	//		//TODO get host from server
+	//		// mysql servers  = ["nprobe:nprobe@tcp(neteye.wp.lan:3307)/nprobe"]
+	//		// "postgres://nprobe:nprobe@rue-test/nprobe?sslmode=disable"
+	//		// oracle telegraf/monitor@10.62.6.1:1522/tunapit
+	//		//		match, _ := regexp.MatchString(".*@([0-9.a-zA-Z]*)[:]?[0-9]*/.*", "peach")
+	//		//    fmt.Println(match)
+	//		//				addr, err := net.LookupHost("198.252.206.16")
+	//
+	//	}
+	if len(s.Servers) > 0 && len(s.Hosts) > 0 && len(s.Hosts) != len(s.Servers) {
 		return errors.New("For each server a host should be specified")
-
+	}
+	if len(s.Servers) > 0 && len(s.DbNames) > 0 && len(s.DbNames) != len(s.Servers) {
+		return errors.New("For each server a db name should be specified")
 	}
 	return nil
 }
@@ -375,17 +399,28 @@ func (s *Query) Init(cols []string) error {
 }
 
 func ConvertString(name string, cell interface{}) (string, bool) {
+	if cell == nil {
+		return "", false
+	}
+
 	value, ok := cell.(string)
 	if !ok {
 		var barr []byte
 		barr, ok = cell.([]byte)
-		value = string(barr)
 		if !ok {
-			value = fmt.Sprintf("%v", cell)
-			ok = true
-			if Debug {
-				log.Printf("W! converting '%s' type %s raw data '%s'", name, reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
+			var ivalue int64
+			ivalue, ok = cell.(int64)
+			if !ok {
+				value = fmt.Sprintf("%v", cell)
+				ok = true
+				if Debug {
+					log.Printf("W! converting '%s' type %s raw data '%s'", name, reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
+				}
+			} else {
+				value = string(ivalue)
 			}
+		} else {
+			value = string(barr)
 		}
 	}
 	return value, ok
@@ -487,23 +522,27 @@ func (s *Query) ParseRow(tags map[string]string, fields map[string]interface{}, 
 	// fill tags
 	for i := 0; i < s.tag_count; i++ {
 		cell := s.cells[s.tag_idx[i]]
-		//		if cell != nil {
-		// tags should be always strings
 		name := s.column_name[s.tag_idx[i]]
-		value, ok := ConvertString(name, cell)
-		if !ok {
-			log.Printf("W! ignored tag %s", name)
-			// ignoring tag is correct?
-			//				return nil	// skips the row
-			//				return errors.New("Cannot convert tag")	// break the run
-		} else {
-			if s.Sanitize {
-				tags[name] = sanitize(value)
+		if cell != nil {
+			// tags should be always strings
+			value, ok := ConvertString(name, cell)
+			if ok {
+				if s.Sanitize {
+					tags[name] = sanitize(value)
+				} else {
+					tags[name] = value
+				}
 			} else {
-				tags[name] = value
+				log.Printf("W! ignored tag %s", name)
+				// ignoring tag is correct?
+				//				return nil	// skips the row
+				//				return errors.New("Cannot convert tag")	// break the run
+			}
+		} else {
+			if s.NullAsZero {
+				tags[name] = ""
 			}
 		}
-		//		}
 	}
 
 	if s.field_name_idx >= 0 {
@@ -644,6 +683,8 @@ func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, err
 func (p *Sql) Gather(acc telegraf.Accumulator) error {
 	var err error
 
+	start_time := time.Now()
+
 	if !p.initialized {
 		err = p.Init()
 		if err != nil {
@@ -719,12 +760,25 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 				if err != nil {
 					return err
 				}
+
 				// collect tags and fields
 				tags := map[string]string{}
 				fields := map[string]interface{}{}
 
 				// use database server as host, not the local host
-				tags["host"] = p.Hosts[si]
+				if len(p.Hosts) > 0 {
+					_, ok := tags["host"]
+					if !ok {
+						tags["host"] = p.Hosts[si]
+					}
+				}
+				// add dbname tag
+				if len(p.DbNames) > 0 {
+					_, ok := tags["dbname"]
+					if !ok {
+						tags["dbname"] = p.DbNames[si]
+					}
+				}
 
 				timestamp, err = q.ParseRow(tags, fields, query_time)
 				if err != nil {
@@ -746,8 +800,9 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	if Debug {
-		log.Printf("I! Poll done")
+		log.Printf("I! Poll done, duration %s", time.Since(start_time))
 	}
+
 	return nil
 }
 
