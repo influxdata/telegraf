@@ -119,7 +119,8 @@ func (s *systemPS) DiskUsage(
 		if err != nil {
 			continue
 		}
-		du.Path = p.Mountpoint
+
+		du.Path = strings.TrimPrefix(p.Mountpoint, hostMountPrefix)
 		du.Fstype = p.Fstype
 		usage = append(usage, du)
 		partitions = append(partitions, &p)
