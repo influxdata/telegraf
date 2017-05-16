@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"log"
+	"regexp"
 	//	"net/url"
 	"os"
 	"plugin"
@@ -54,12 +55,14 @@ type Query struct {
 	BoolFields  []string
 	TimeFields  []string
 	//
-	FieldName  string
-	FieldValue string
+	FieldName        string
+	FieldValue       string
+	FieldMeasurement string
 	//
 	NullAsZero        bool
 	IgnoreOtherFields bool
 	Sanitize          bool
+	IgnoreRowErrors   bool
 	//
 	QueryScript string
 	//	Parameters []string	//TODO
@@ -78,10 +81,11 @@ type Query struct {
 	tag_count int
 	tag_idx   []int //Column indexes of tags (strings)
 
-	field_name_idx      int
-	field_value_idx     int
-	field_value_type    int
-	field_timestamp_idx int
+	field_measurement_idx int
+	field_name_idx        int
+	field_value_idx       int
+	field_value_type      int
+	field_timestamp_idx   int
 
 	index int
 }
@@ -121,9 +125,13 @@ func sanitize(text string) string {
 	return text
 }
 
-func contains_str(key string, str_array []string) bool {
-	for _, b := range str_array {
-		if b == key {
+func match_str(key string, str_array []string) bool {
+	for _, pattern := range str_array {
+		if pattern == key {
+			return true
+		}
+		matched, _ := regexp.MatchString(pattern, key)
+		if matched {
 			return true
 		}
 	}
@@ -136,38 +144,40 @@ func (s *Sql) SampleConfig() string {
 		# debug=false						# Enables very verbose output
 
 		## Database Driver
-		driver = "oci8" 					# required. Valid options: go-mssqldb (sqlserver) , oci8 ora.v4 (Oracle), mysql, pq (Postgres)
+		driver = "mysql" 					# required. Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
 		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# optional: path to the golang 1.8 plugin shared lib
 		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
 
 		## Server DSNs
-		servers  = ["telegraf/monitor@10.0.0.5:1521/thesid", "telegraf/monitor@orahost:1521/anothersid"] # required. Connection DSN to pass to the DB driver
-		# hosts=["oraserver1", "oraserver2"]	# optional: for each server a relative host entry should be specified and will be added as host tag
-		# db_names=["oraserver1", "oraserver2"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
+		servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
+		hosts=["neteye", "hostmysql"]	# optional: for each server a relative host entry should be specified and will be added as host tag
+		db_names=["rue", "monitoring"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
 
 		## Queries to perform (block below can be repeated)
 		[[inputs.sql.query]]
 			# query has precedence on query_script, if both query and query_script are defined only query is executed
-			query="select GROUP#,MEMBERS,STATUS,FIRST_TIME,FIRST_CHANGE#,BYTES,ARCHIVED from v$log"
+			query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
 			# query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
 			#
-			measurement="log"				# destination measurement
-			tag_cols=["GROUP#","NAME"]		# colums used as tags
-			field_cols=["UNIT"]				# select fields and use the database driver automatic datatype conversion
+			measurement="connection_errors"	# destination measurement
+			tag_cols=["application"]		# colums used as tags
+			field_cols=["avg_application_latency","avg_bytes","act_throughput"]	# select fields and use the database driver automatic datatype conversion
 			#
 			# bool_fields=["ON"]				# adds fields and forces his value as bool
-			# int_fields=["MEMBERS","BYTES"]	# adds fields and forces his value as integer
+			# int_fields=["MEMBERS",".*BYTES"]	# adds fields and forces his value as integer
 			# float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
-			# time_fields=["FIRST_TIME"]		# adds fields and forces his value as time
+			# time_fields=[".*_TIME"]		# adds fields and forces his value as time
 			#
+			# field_measurement = "CLASS"		# the golumn that contains the name of the measurement
 			# field_name = "counter_name"		# the column that contains the name of the counter
 			# field_value = "counter_value"		# the column that contains the value of the counter
 			#
 			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
-
+			#
 			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
 			null_as_zero = false			# true: converts null values into zero or empty strings (false: ignore fields)
 			sanitize = false				# true: will perform some chars substitutions (false: use value as is)
+			ignore_row_errors				# true: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
 	`
 	return sampleConfig
 }
@@ -260,10 +270,10 @@ func (s *Sql) Init() error {
 	//
 	//	}
 	if len(s.Servers) > 0 && len(s.Hosts) > 0 && len(s.Hosts) != len(s.Servers) {
-		return errors.New("For each server a host should be specified")
+		return fmt.Errorf("For each server a host should be specified (%d/%d)", len(s.Hosts), len(s.Servers))
 	}
 	if len(s.Servers) > 0 && len(s.DbNames) > 0 && len(s.DbNames) != len(s.Servers) {
-		return errors.New("For each server a db name should be specified")
+		return fmt.Errorf("For each server a db name should be specified (%d/%d)", len(s.DbNames), len(s.Servers))
 	}
 	return nil
 }
@@ -285,13 +295,16 @@ func (s *Query) Init(cols []string) error {
 	s.cell_refs = make([]interface{}, col_count)
 
 	// init the arrays for store field/tag infos
-	expected_tag_count := len(s.TagCols)
-	var expected_field_count int
-	if !s.IgnoreOtherFields {
-		expected_field_count = col_count // - expected_tag_count
-	} else {
-		expected_field_count = len(s.FieldCols) + len(s.BoolFields) + len(s.IntFields) + len(s.FloatFields) + len(s.TimeFields)
-	}
+	//	expected_tag_count := len(s.TagCols)
+	//	var expected_field_count int
+	//	if !s.IgnoreOtherFields {
+	//		expected_field_count = col_count // - expected_tag_count
+	//	} else {
+	//		expected_field_count = len(s.FieldCols) + len(s.BoolFields) + len(s.IntFields) + len(s.FloatFields) + len(s.TimeFields)
+	//	}
+	// because of regex, now we must assume the max cols
+	expected_field_count := col_count
+	expected_tag_count := col_count
 
 	s.tag_idx = make([]int, expected_tag_count)
 	s.field_idx = make([]int, expected_field_count)
@@ -303,21 +316,22 @@ func (s *Query) Init(cols []string) error {
 	s.field_name_idx = -1
 	s.field_value_idx = -1
 	s.field_timestamp_idx = -1
+	s.field_measurement_idx = -1
 
-	if len(s.FieldTimestamp) > 0 && !contains_str(s.FieldTimestamp, s.column_name) {
-		log.Printf("E! Missing given field_timestamp in columns: %s", s.FieldTimestamp)
-		return errors.New("Missing given field_timestamp in columns")
+	if len(s.FieldMeasurement) > 0 && !match_str(s.FieldMeasurement, s.column_name) {
+		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldMeasurement)
 	}
-	if len(s.FieldName) > 0 && !contains_str(s.FieldName, s.column_name) {
-		log.Printf("E! Missing given field_name in columns: %s", s.FieldName)
-		return errors.New("Missing given field_name in columns")
+	if len(s.FieldTimestamp) > 0 && !match_str(s.FieldTimestamp, s.column_name) {
+		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldTimestamp)
 	}
-	if len(s.FieldValue) > 0 && !contains_str(s.FieldValue, s.column_name) {
-		log.Printf("E! Missing given field_value in columns: %s", s.FieldValue)
-		return errors.New("Missing given field_value in columns")
+	if len(s.FieldName) > 0 && !match_str(s.FieldName, s.column_name) {
+		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldName)
+	}
+	if len(s.FieldValue) > 0 && !match_str(s.FieldValue, s.column_name) {
+		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldValue)
 	}
 	if (len(s.FieldValue) > 0 && len(s.FieldName) == 0) || (len(s.FieldName) > 0 && len(s.FieldValue) == 0) {
-		return errors.New("Both field_name and field_value should be set")
+		return fmt.Errorf("Both field_name and field_value should be set")
 	}
 
 	// fill columns info
@@ -326,30 +340,30 @@ func (s *Query) Init(cols []string) error {
 		dest_type := TYPE_AUTO
 		field_matched := true
 
-		if contains_str(s.column_name[i], s.TagCols) {
+		if match_str(s.column_name[i], s.TagCols) {
 			field_matched = false
 			s.tag_idx[s.tag_count] = i
 			s.tag_count++
 			//			cell = new(sql.RawBytes)
 			cell = new(string)
-		} else if contains_str(s.column_name[i], s.IntFields) {
+		} else if match_str(s.column_name[i], s.IntFields) {
 			dest_type = TYPE_INT
 			cell = new(sql.RawBytes)
 			//				cell = new(int);
-		} else if contains_str(s.column_name[i], s.FloatFields) {
+		} else if match_str(s.column_name[i], s.FloatFields) {
 			dest_type = TYPE_FLOAT
 			//				cell = new(float64);
 			cell = new(sql.RawBytes)
-		} else if contains_str(s.column_name[i], s.TimeFields) {
+		} else if match_str(s.column_name[i], s.TimeFields) {
 			//TODO as number?
 			dest_type = TYPE_TIME
 			//			cell = new(string)
 			cell = new(sql.RawBytes)
-		} else if contains_str(s.column_name[i], s.BoolFields) {
+		} else if match_str(s.column_name[i], s.BoolFields) {
 			dest_type = TYPE_BOOL
 			//				cell = new(bool);
 			cell = new(sql.RawBytes)
-		} else if contains_str(s.column_name[i], s.FieldCols) {
+		} else if match_str(s.column_name[i], s.FieldCols) {
 			dest_type = TYPE_AUTO
 			cell = new(sql.RawBytes)
 		} else if !s.IgnoreOtherFields {
@@ -368,6 +382,10 @@ func (s *Query) Init(cols []string) error {
 			log.Printf("I! Column %d '%s' dest type  %d", i, s.column_name[i], dest_type)
 		}
 
+		if s.column_name[i] == s.FieldMeasurement {
+			s.field_measurement_idx = i
+			field_matched = false
+		}
 		if s.column_name[i] == s.FieldName {
 			s.field_name_idx = i
 			field_matched = false
@@ -392,17 +410,13 @@ func (s *Query) Init(cols []string) error {
 	}
 
 	if Debug {
-		log.Printf("I! Query received %d tags and %d fields on %d columns...", s.tag_count, s.field_count, col_count)
+		log.Printf("I! Query structure with %d tags and %d fields on %d columns...", s.tag_count, s.field_count, col_count)
 	}
 
 	return nil
 }
 
 func ConvertString(name string, cell interface{}) (string, bool) {
-	if cell == nil {
-		return "", false
-	}
-
 	value, ok := cell.(string)
 	if !ok {
 		var barr []byte
@@ -417,7 +431,7 @@ func ConvertString(name string, cell interface{}) (string, bool) {
 					log.Printf("W! converting '%s' type %s raw data '%s'", name, reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
 				}
 			} else {
-				value = string(ivalue)
+				value = strconv.FormatInt(ivalue, 10)
 			}
 		} else {
 			value = string(barr)
@@ -490,16 +504,16 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 		}
 
 		if Debug {
-			log.Printf("I! forcing to %s field name '%s' type %d", fmt.Sprintf("%v", value), name, field_type)
+			log.Printf("I! forcing nil value of field '%s' type %d to %s", name, field_type, fmt.Sprintf("%v", value))
 		}
 	} else {
 		value = nil
 		if Debug {
-			log.Printf("I! nil value for field name '%s' type %d", name, field_type)
+			//			log.Printf("I! nil value for field name '%s' type %d", name, field_type)
 		}
 	}
 	if !ok {
-		err = errors.New("Error converting field into string")
+		err = fmt.Errorf("Error by converting field %s", name)
 	}
 	if err != nil {
 		log.Printf("E! converting name '%s' type %s into type %d, raw data '%s'", name, reflect.TypeOf(cell).Kind(), field_type, fmt.Sprintf("%v", cell))
@@ -508,78 +522,97 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 	return value, nil
 }
 
-func (s *Query) ParseRow(tags map[string]string, fields map[string]interface{}, timestamp time.Time) (time.Time, error) {
+func (s *Query) GetStringFieldValue(index int) (string, error) {
+	cell := s.cells[index]
+	if cell == nil {
+		if s.NullAsZero {
+			return "", nil
+		} else {
+			return "", fmt.Errorf("Error converting name '%s' is nil", s.column_name[index])
+		}
+	}
+
+	value, ok := ConvertString(s.column_name[index], cell)
+	if !ok {
+		return "", fmt.Errorf("Error converting name '%s' type %s, raw data '%s'", s.column_name[index], reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
+	}
+
+	if s.Sanitize {
+		value = sanitize(value)
+	}
+	return value, nil
+}
+
+func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[string]string, fields map[string]interface{}) (time.Time, string, error) {
 	if s.field_timestamp_idx >= 0 {
 		// get the value of timestamp field
-		cell := s.cells[s.field_timestamp_idx]
-		value, err := s.ConvertField(s.column_name[s.field_timestamp_idx], cell, TYPE_TIME, false)
+		value, err := s.ConvertField(s.column_name[s.field_timestamp_idx], s.cells[s.field_timestamp_idx], TYPE_TIME, false)
 		if err != nil {
-			return timestamp, errors.New("Cannot convert timestamp")
+			return timestamp, measurement, errors.New("Cannot convert timestamp")
 		}
 		timestamp, _ = value.(time.Time)
 	}
-
-	// fill tags
-	for i := 0; i < s.tag_count; i++ {
-		cell := s.cells[s.tag_idx[i]]
-		name := s.column_name[s.tag_idx[i]]
-		if cell != nil {
-			// tags should be always strings
-			value, ok := ConvertString(name, cell)
-			if ok {
-				if s.Sanitize {
-					tags[name] = sanitize(value)
-				} else {
-					tags[name] = value
-				}
-			} else {
-				log.Printf("W! ignored tag %s", name)
-				// ignoring tag is correct?
-				//				return nil	// skips the row
-				//				return errors.New("Cannot convert tag")	// break the run
-			}
-		} else {
-			if s.NullAsZero {
-				tags[name] = ""
-			}
+	// get measurement from row
+	if s.field_measurement_idx >= 0 {
+		var err error
+		measurement, err = s.GetStringFieldValue(s.field_measurement_idx)
+		if err != nil {
+			log.Printf("E! converting field measurement '%s'", s.column_name[s.field_measurement_idx])
+			//cannot put data in correct measurement, skip line
+			return timestamp, measurement, err
 		}
 	}
-
-	if s.field_name_idx >= 0 {
-		// get the name of the field from value on column
-		cell := s.cells[s.field_name_idx]
-		name, ok := ConvertString(s.column_name[s.field_name_idx], cell)
-		if !ok {
-			log.Printf("W! converting field name '%s'", s.column_name[s.field_name_idx])
-			return timestamp, nil
-			//			return errors.New("Cannot convert tag")
+	// fill tags
+	for i := 0; i < s.tag_count; i++ {
+		index := s.tag_idx[i]
+		name := s.column_name[index]
+		value, err := s.GetStringFieldValue(index)
+		if err != nil {
+			log.Printf("E! ignored tag %s", name)
+			// cannot put data in correct series, skip line
+			return timestamp, measurement, err
+		} else {
+			//			log.Printf("******! tag %s=%s %s %s", name, value, , reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
+			tags[name] = value
 		}
-
-		if s.Sanitize {
-			name = sanitize(name)
+	}
+	// vertical counters
+	if s.field_name_idx >= 0 {
+		// get the name of the field
+		name, err := s.GetStringFieldValue(s.field_name_idx)
+		if err != nil {
+			log.Printf("E! converting field name '%s'", s.column_name[s.field_name_idx])
+			// cannot get name of field, skip line
+			return timestamp, measurement, err
 		}
 
 		// get the value of field
-		cell = s.cells[s.field_value_idx]
-		value, err := s.ConvertField(s.column_name[s.field_value_idx], cell, s.field_value_type, s.NullAsZero)
+		var value interface{}
+		value, err = s.ConvertField(s.column_name[s.field_value_idx], s.cells[s.field_value_idx], s.field_value_type, s.NullAsZero)
 		if err != nil {
-			return timestamp, err
+			// cannot get value of column with expected datatype, skip line
+			return timestamp, measurement, err
 		}
+
+		// fill the field
 		fields[name] = value
 	}
-
+	// horizontal counters
 	// fill fields from column values
 	for i := 0; i < s.field_count; i++ {
-		cell := s.cells[s.field_idx[i]]
 		name := s.column_name[s.field_idx[i]]
-		value, err := s.ConvertField(name, cell, s.field_type[i], s.NullAsZero)
+		// get the value of field
+		value, err := s.ConvertField(name, s.cells[s.field_idx[i]], s.field_type[i], s.NullAsZero)
 		if err != nil {
-			return timestamp, err
+			// cannot get value of column with expected datatype, warning and continue
+			log.Printf("W! converting value of field '%s'", name)
+			//			return timestamp, measurement, err
+		} else {
+			fields[name] = value
 		}
-		fields[name] = value
 	}
 
-	return timestamp, nil
+	return timestamp, measurement, nil
 }
 
 func (p *Sql) Connect(si int) (*sql.DB, error) {
@@ -761,9 +794,19 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 					return err
 				}
 
+				//	for debug purposes...
+				//				if row_count == 0 && Debug {
+				//					for ci := 0; ci < len(q.cells); ci++ {
+				//						if q.cells[ci] != nil {
+				//							log.Printf("I! Column '%s' type %s, raw data '%s'", q.column_name[ci], reflect.TypeOf(q.cells[ci]).Kind(), fmt.Sprintf("%v", q.cells[ci]))
+				//						}
+				//					}
+				//				}
+
 				// collect tags and fields
 				tags := map[string]string{}
 				fields := map[string]interface{}{}
+				var measurement string
 
 				// use database server as host, not the local host
 				if len(p.Hosts) > 0 {
@@ -780,12 +823,16 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 					}
 				}
 
-				timestamp, err = q.ParseRow(tags, fields, query_time)
+				timestamp, measurement, err = q.ParseRow(query_time, q.Measurement, tags, fields)
 				if err != nil {
-					return err
+					if q.IgnoreRowErrors {
+						log.Printf("W! Ignored error on row %d: %s", row_count, err)
+					} else {
+						return err
+					}
 				}
 
-				acc.AddFields(q.Measurement, fields, tags, timestamp)
+				acc.AddFields(measurement, fields, tags, timestamp)
 
 				//		fieldsG := map[string]interface{}{
 				//			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
@@ -795,7 +842,7 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 				row_count += 1
 			}
 			if Debug {
-				log.Printf("I! Query %d on %s found %d rows written in %s... processing duration %s", q.index, p.Hosts[si], row_count, q.Measurement, time.Since(query_time))
+				log.Printf("I! Query %d on %s found %d rows written, processing duration %s", q.index, p.Hosts[si], row_count, time.Since(query_time))
 			}
 		}
 	}

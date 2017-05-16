@@ -2,9 +2,8 @@
 
 The plugin executes simple queries or query scripts on multiple servers.
 It permits to select the tags and the fields to export, if is needed fields can be forced to a choosen datatype. 
-Supported drivers are  go-mssqldb (sqlserver) , oci8 ora.v4 (Oracle), mysql (MySQL), pq (Postgres) 
-```
-```
+Supported/integrated drivers are mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite)
+Activable drivers (read below) are all golang SQL compliant drivers (see https://github.com/golang/go/wiki/SQLDrivers): for instance oci8 for Oracle
 
 ## Getting started :
 First you need to grant read/select privileges on queried tables to the database user you use for the connection
@@ -53,45 +52,45 @@ The steps of above can be reused in a similar way for other proprietary and non 
 
 ## Configuration:
 
-``` 
-
+```
 	[[inputs.sql]]
 		# debug=false						# Enables very verbose output
-	
+
 		## Database Driver
-		driver = "oci8" 					# required. Valid options: go-mssqldb (sqlserver) , oci8 | ora.v4 (Oracle), mysql, postgres
-		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# path to the golang 1.8 plugin shared lib
+		driver = "mysql" 					# required. Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
+		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# optional: path to the golang 1.8 plugin shared lib
 		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
-		
+
 		## Server DSNs
-		servers  = ["telegraf/monitor@10.0.0.5:1521/thesid", "telegraf/monitor@orahost:1521/anothersid"] # required. Connection DSN to pass to the DB driver
-		hosts=["oraserver1", "oraserver2"]	# for each server a relative host entry should be specified and will be added as host tag
-	
+		servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
+		hosts=["neteye", "hostmysql"]	# optional: for each server a relative host entry should be specified and will be added as host tag
+		db_names=["rue", "monitoring"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
+
 		## Queries to perform (block below can be repeated)
 		[[inputs.sql.query]]
 			# query has precedence on query_script, if both query and query_script are defined only query is executed
-			query="select GROUP#,MEMBERS,STATUS,FIRST_TIME,FIRST_CHANGE#,BYTES,ARCHIVED from v$log"  
+			query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
 			# query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
 			#
-			measurement="log"				# destination measurement
-			tag_cols=["GROUP#","NAME"]		# colums used as tags
-			field_cols=["UNIT"]				# select fields and use the database driver automatic datatype conversion
+			measurement="connection_errors"	# destination measurement
+			tag_cols=["application"]		# colums used as tags
+			field_cols=["avg_application_latency","avg_bytes","act_throughput"]	# select fields and use the database driver automatic datatype conversion
 			#
-			# bool_fields=["ON"]				# adds fields and forces his value as bool
-			# int_fields=["MEMBERS","BYTES"]	# adds fields and forces his value as integer
+			# bool_fields=["ON"]			# adds fields and forces his value as bool
+			# int_fields=["MEMBERS",".*BYTES"]	# adds fields and forces his value as integer
 			# float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
-			# time_fields=["FIRST_TIME"]		# adds fields and forces his value as time
+			# time_fields=[".*_TIME"]		# adds fields and forces his value as time
 			#
+			# field_measurement = "CLASS"		# the golumn that contains the name of the measurement
 			# field_name = "counter_name"		# the column that contains the name of the counter
 			# field_value = "counter_value"		# the column that contains the value of the counter
 			#
 			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
-			
+			#
 			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
 			null_as_zero = false			# true: converts null values into zero or empty strings (false: ignore fields)
 			sanitize = false				# true: will perform some chars substitutions (false: use value as is)
-
-
+			ignore_row_errors				# true: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
 ```
 sql_script is read only once, if you change the script you need to restart telegraf
 
@@ -100,12 +99,13 @@ Field names are the same of the relative column name or taken from value of a co
 
 ## Datatypes:
 Using field_cols list the values are converted by the go database driver implementation. 
-In some cases this automatic conversion is not what we wxpect, therefore you can force the destination datatypes specifing the columns in the bool/int/float/time_fields lists, then if possible the plugin converts the data.
+In some cases this automatic conversion is not what we expect, therefore you can force the destination datatypes specifing the columns in the bool/int/float/time_fields lists, then if possible the plugin converts the data.
+All field lists can contain an regex for column name matching.
 If an error in conversion occurs then telegraf exits, therefore a --test run is suggested.
 
 ## Tested Databases
-Actually I run the plugin using oci8,mysql and mssql
-The mechanism for get the timestamp from a table column has known problems
+Actually I run the plugin using oci8,mysql,mssql,postgres,sqlite3
+
 
 ## Example for collect multiple counters defined as COLUMNS in a table (vertical counter structure):
 Here we read a table where each counter is on a different row. Each row contains a column with the name of the counter (counter_name) and a column with his value (cntr_value) and some other columns that we use as tags  (instance_name,object_name)
@@ -178,4 +178,7 @@ The column "ARCHIVED" is ignored
 Give the possibility to define parameters to pass to the prepared statement
 Get the host tag value automatically parsing the connection DSN string
 Implement tests
+
+## ENJOY
+Luca
 
