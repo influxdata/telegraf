@@ -1,6 +1,7 @@
 package all
 
 import (
+	_ "github.com/influxdata/telegraf/plugins/inputs/aurora"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aerospike"
 	_ "github.com/influxdata/telegraf/plugins/inputs/amqp_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/apache"
