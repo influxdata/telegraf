@@ -1045,6 +1045,40 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 			}
 		}
 	}
+	if node, ok := tbl.Fields["tagpassany"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					tagfilter := &models.TagFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								tagfilter.Filter = append(tagfilter.Filter, str.Value)
+							}
+						}
+					}
+					f.TagPassAny = append(f.TagPassAny, *tagfilter)
+				}
+			}
+		}
+	}
+	if node, ok := tbl.Fields["tagpassall"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					tagfilter := &models.TagFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								tagfilter.Filter = append(tagfilter.Filter, str.Value)
+							}
+						}
+					}
+					f.TagPassAll = append(f.TagPassAll, *tagfilter)
+				}
+			}
+		}
+	}
 
 	if node, ok := tbl.Fields["tagdrop"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1059,6 +1093,42 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 						}
 					}
 					f.TagDrop = append(f.TagDrop, *tagfilter)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["tagdropany"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					tagfilter := &models.TagFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								tagfilter.Filter = append(tagfilter.Filter, str.Value)
+							}
+						}
+					}
+					f.TagDropAny = append(f.TagDropAny, *tagfilter)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["tagdropall"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					tagfilter := &models.TagFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								tagfilter.Filter = append(tagfilter.Filter, str.Value)
+							}
+						}
+					}
+					f.TagDropAll = append(f.TagDropAll, *tagfilter)
 				}
 			}
 		}
@@ -1098,7 +1168,11 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 	delete(tbl.Fields, "drop")
 	delete(tbl.Fields, "pass")
 	delete(tbl.Fields, "tagdrop")
+	delete(tbl.Fields, "tagdropany")
+	delete(tbl.Fields, "tagdropall")
 	delete(tbl.Fields, "tagpass")
+	delete(tbl.Fields, "tagpassany")
+	delete(tbl.Fields, "tagpassall")
 	delete(tbl.Fields, "tagexclude")
 	delete(tbl.Fields, "taginclude")
 	return f, nil
