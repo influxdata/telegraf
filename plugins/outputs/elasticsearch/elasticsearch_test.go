@@ -57,6 +57,10 @@ func TestTemplateManagementEmptyTemplate(t *testing.T) {
 }
 
 func TestTemplateManagement(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
 
 	e := &Elasticsearch{

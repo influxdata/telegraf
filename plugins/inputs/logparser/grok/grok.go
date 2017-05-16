@@ -118,11 +118,18 @@ func (p *Parser) Compile() error {
 
 	// Give Patterns fake names so that they can be treated as named
 	// "custom patterns"
-	p.namedPatterns = make([]string, len(p.Patterns))
+	p.namedPatterns = make([]string, 0, len(p.Patterns))
 	for i, pattern := range p.Patterns {
+		if pattern == "" {
+			continue
+		}
 		name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
 		p.CustomPatterns += "\n" + name + " " + pattern + "\n"
-		p.namedPatterns[i] = "%{" + name + "}"
+		p.namedPatterns = append(p.namedPatterns, "%{"+name+"}")
+	}
+
+	if len(p.namedPatterns) == 0 {
+		return fmt.Errorf("pattern required")
 	}
 
 	// Combine user-supplied CustomPatterns with DEFAULT_PATTERNS and parse
@@ -168,6 +175,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(values) == 0 {
+		log.Printf("D! Grok no match found for: %q", line)
 		return nil, nil
 	}
 

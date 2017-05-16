@@ -21,7 +21,7 @@ func TestSingleNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -51,7 +51,7 @@ func TestMissingJitterField(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -80,7 +80,7 @@ func TestBadIntNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -109,7 +109,7 @@ func TestBadFloatNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(2),
@@ -138,7 +138,7 @@ func TestDaysNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(172800),
@@ -168,7 +168,7 @@ func TestHoursNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(7200),
@@ -198,7 +198,7 @@ func TestMinutesNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(120),
@@ -228,7 +228,7 @@ func TestBadWhenNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"poll":   int64(256),
@@ -257,7 +257,7 @@ func TestMultiNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"delay":  float64(54.033),
@@ -303,7 +303,7 @@ func TestBadHeaderNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -333,7 +333,7 @@ func TestMissingDelayColumnNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -361,7 +361,7 @@ func TestFailedNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, n.Gather(&acc))
+	assert.Error(t, acc.GatherError(n.Gather))
 }
 
 type tester struct {

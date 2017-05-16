@@ -1,6 +1,7 @@
 package kafka_consumer
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -62,6 +63,23 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	assert.Equal(t, acc.NFields(), 0)
 }
 
+// Test that overlong messages are dropped
+func TestDropOverlongMsg(t *testing.T) {
+	const maxMessageLen = 64 * 1024
+	k, in := newTestKafka()
+	k.MaxMessageLen = maxMessageLen
+	acc := testutil.Accumulator{}
+	k.acc = &acc
+	defer close(k.done)
+	overlongMsg := strings.Repeat("v", maxMessageLen+1)
+
+	go k.receiver()
+	in <- saramaMsg(overlongMsg)
+	acc.WaitError(1)
+
+	assert.Equal(t, acc.NFields(), 0)
+}
+
 // Test that the parser parses kafka messages into points
 func TestRunParserAndGather(t *testing.T) {
 	k, in := newTestKafka()
@@ -74,7 +92,7 @@ func TestRunParserAndGather(t *testing.T) {
 	in <- saramaMsg(testMsg)
 	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 1)
 	acc.AssertContainsFields(t, "cpu_load_short",
@@ -93,7 +111,7 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	in <- saramaMsg(testMsgGraphite)
 	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 1)
 	acc.AssertContainsFields(t, "cpu_load_short_graphite",
@@ -112,7 +130,7 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	in <- saramaMsg(testMsgJSON)
 	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 2)
 	acc.AssertContainsFields(t, "kafka_json_test",

@@ -44,7 +44,7 @@ In this case, the host's root volume should be mounted into the container and th
 ### Example Output:
 
 ```
-% ./telegraf -config ~/ws/telegraf.conf -input-filter disk -test
+% ./telegraf --config ~/ws/telegraf.conf --input-filter disk --test
 * Plugin: disk, Collection 1
 > disk,fstype=hfs,path=/ free=398407520256i,inodes_free=97267461i,inodes_total=121847806i,inodes_used=24580345i,total=499088621568i,used=100418957312i,used_percent=20.131039916242397 1453832006274071563
 > disk,fstype=devfs,path=/dev free=0i,inodes_free=0i,inodes_total=628i,inodes_used=628i,total=185856i,used=185856i,used_percent=100 1453832006274137913

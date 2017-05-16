@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -28,6 +29,8 @@ type Apache struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+
+	client *http.Client
 }
 
 var sampleConfig = `
@@ -65,55 +68,51 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
 
-	var outerr error
-	var errch = make(chan error)
-
-	for _, u := range n.Urls {
-		addr, err := url.Parse(u)
-		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
-		}
-
-		go func(addr *url.URL) {
-			errch <- n.gatherUrl(addr, acc)
-		}(addr)
-	}
-
-	// Drain channel, waiting for all requests to finish and save last error.
-	for range n.Urls {
-		if err := <-errch; err != nil {
-			outerr = err
-		}
-	}
-
-	return outerr
-}
-
-func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-
-	var tr *http.Transport
-
-	if addr.Scheme == "https" {
-		tlsCfg, err := internal.GetTLSConfig(
-			n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	if n.client == nil {
+		client, err := n.createHttpClient()
 		if err != nil {
 			return err
 		}
-		tr = &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-			TLSClientConfig:       tlsCfg,
+		n.client = client
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(n.Urls))
+	for _, u := range n.Urls {
+		addr, err := url.Parse(u)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
 		}
-	} else {
-		tr = &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-		}
+
+		go func(addr *url.URL) {
+			defer wg.Done()
+			acc.AddError(n.gatherUrl(addr, acc))
+		}(addr)
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func (n *Apache) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := internal.GetTLSConfig(
+		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
 	}
 
 	client := &http.Client{
-		Transport: tr,
-		Timeout:   n.ResponseTimeout.Duration,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: n.ResponseTimeout.Duration,
 	}
 
+	return client, nil
+}
+
+func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
 		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
@@ -123,7 +122,7 @@ func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		req.SetBasicAuth(n.Username, n.Password)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := n.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
 	}

@@ -18,7 +18,7 @@ type Connection struct {
 
 func NewConnection(server string) *Connection {
 	conn := &Connection{}
-	inx1 := strings.Index(server, "@")
+	inx1 := strings.LastIndex(server, "@")
 	inx2 := strings.Index(server, "(")
 	inx3 := strings.Index(server, ")")
 

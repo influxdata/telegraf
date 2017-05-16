@@ -47,9 +47,7 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, serverAddress := range z.Servers {
-		if err := z.gatherServer(serverAddress, acc); err != nil {
-			return err
-		}
+		acc.AddError(z.gatherServer(serverAddress, acc))
 	}
 	return nil
 }

@@ -19,7 +19,7 @@ func TestAerospikeStatistics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := a.Gather(&acc)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("aerospike_node"))
@@ -41,8 +41,7 @@ func TestAerospikeStatisticsPartialErr(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := a.Gather(&acc)
-	require.Error(t, err)
+	require.Error(t, acc.GatherError(a.Gather))
 
 	assert.True(t, acc.HasMeasurement("aerospike_node"))
 	assert.True(t, acc.HasMeasurement("aerospike_namespace"))

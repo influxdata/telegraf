@@ -5,7 +5,6 @@ import (
 	"os"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -31,7 +30,7 @@ func TestTailFromBeginning(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
-	require.NoError(t, tt.Gather(&acc))
+	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu",
@@ -59,7 +58,6 @@ func TestTailFromEnd(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
-	time.Sleep(time.Millisecond * 200) //TODO remove once https://github.com/hpcloud/tail/pull/114 is merged & added to Godeps
 	for _, tailer := range tt.tailers {
 		for n, err := tailer.Tell(); err == nil && n == 0; n, err = tailer.Tell() {
 			// wait for tailer to jump to end
@@ -69,7 +67,7 @@ func TestTailFromEnd(t *testing.T) {
 
 	_, err = tmpfile.WriteString("cpu,othertag=foo usage_idle=100\n")
 	require.NoError(t, err)
-	require.NoError(t, tt.Gather(&acc))
+	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu",
@@ -100,7 +98,7 @@ func TestTailBadLine(t *testing.T) {
 
 	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
 	require.NoError(t, err)
-	require.NoError(t, tt.Gather(&acc))
+	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.WaitError(1)
 	assert.Contains(t, acc.Errors[0].Error(), "E! Malformed log line")

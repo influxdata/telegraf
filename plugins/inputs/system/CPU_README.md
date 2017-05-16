@@ -4,6 +4,18 @@
 - **totalcpu** boolean: If true, include `cpu-total` data
 - **percpu** boolean: If true, include data on a per-cpu basis `cpu0, cpu1, etc.`
 
+
+##### Configuration:
+```
+[[inputs.cpu]]
+  ## Whether to report per-cpu stats or not
+  percpu = true
+  ## Whether to report total system cpu stats or not
+  totalcpu = true
+  ## If true, collect raw CPU time metrics.
+  collect_cpu_time = false
+```
+
 #### Description
 
 The CPU plugin collects standard CPU metrics as defined in `man proc`. All

@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -72,14 +71,13 @@ func (k *Kubernetes) Description() string {
 //Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	errChan := errchan.New(1)
 	wg.Add(1)
 	go func(k *Kubernetes) {
 		defer wg.Done()
-		errChan.C <- k.gatherSummary(k.URL, acc)
+		acc.AddError(k.gatherSummary(k.URL, acc))
 	}(k)
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func buildURL(endpoint string, base string) (*url.URL, error) {

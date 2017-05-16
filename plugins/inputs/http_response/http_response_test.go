@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,13 +74,13 @@ func TestHeaders(t *testing.T) {
 			"Host":         "Hello",
 		},
 	}
-	fields, err := h.HTTPGather()
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusOK, fields["http_response_code"])
-	}
-	assert.NotNil(t, fields["response_time"])
+
+	value, ok := acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusOK, value)
 }
 
 func TestFields(t *testing.T) {
@@ -97,13 +98,14 @@ func TestFields(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err := h.HTTPGather()
+
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusOK, fields["http_response_code"])
-	}
-	assert.NotNil(t, fields["response_time"])
+
+	value, ok := acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusOK, value)
 }
 
 func TestRedirects(t *testing.T) {
@@ -121,12 +123,13 @@ func TestRedirects(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err := h.HTTPGather()
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusOK, fields["http_response_code"])
-	}
+
+	value, ok := acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusOK, value)
 
 	h = &HTTPResponse{
 		Address:         ts.URL + "/badredirect",
@@ -138,8 +141,12 @@ func TestRedirects(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err = h.HTTPGather()
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
 	require.Error(t, err)
+
+	value, ok = acc.IntField("http_response", "http_response_code")
+	require.False(t, ok)
 }
 
 func TestMethod(t *testing.T) {
@@ -157,12 +164,13 @@ func TestMethod(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err := h.HTTPGather()
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusOK, fields["http_response_code"])
-	}
+
+	value, ok := acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusOK, value)
 
 	h = &HTTPResponse{
 		Address:         ts.URL + "/mustbepostmethod",
@@ -174,12 +182,13 @@ func TestMethod(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err = h.HTTPGather()
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusMethodNotAllowed, fields["http_response_code"])
-	}
+
+	value, ok = acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusMethodNotAllowed, value)
 
 	//check that lowercase methods work correctly
 	h = &HTTPResponse{
@@ -192,12 +201,13 @@ func TestMethod(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err = h.HTTPGather()
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusMethodNotAllowed, fields["http_response_code"])
-	}
+
+	value, ok = acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusMethodNotAllowed, value)
 }
 
 func TestBody(t *testing.T) {
@@ -215,12 +225,13 @@ func TestBody(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err := h.HTTPGather()
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusOK, fields["http_response_code"])
-	}
+
+	value, ok := acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusOK, value)
 
 	h = &HTTPResponse{
 		Address:         ts.URL + "/musthaveabody",
@@ -231,12 +242,13 @@ func TestBody(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err = h.HTTPGather()
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusBadRequest, fields["http_response_code"])
-	}
+
+	value, ok = acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusBadRequest, value)
 }
 
 func TestStringMatch(t *testing.T) {
@@ -255,15 +267,18 @@ func TestStringMatch(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err := h.HTTPGather()
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusOK, fields["http_response_code"])
-	}
-	assert.Equal(t, 1, fields["response_string_match"])
-	assert.NotNil(t, fields["response_time"])
 
+	value, ok := acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusOK, value)
+	value, ok = acc.IntField("http_response", "response_string_match")
+	require.True(t, ok)
+	require.Equal(t, 1, value)
+	_, ok = acc.FloatField("http_response", "response_time")
+	require.True(t, ok)
 }
 
 func TestStringMatchJson(t *testing.T) {
@@ -282,15 +297,18 @@ func TestStringMatchJson(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err := h.HTTPGather()
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
 	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusOK, fields["http_response_code"])
-	}
-	assert.Equal(t, 1, fields["response_string_match"])
-	assert.NotNil(t, fields["response_time"])
 
+	value, ok := acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusOK, value)
+	value, ok = acc.IntField("http_response", "response_string_match")
+	require.True(t, ok)
+	require.Equal(t, 1, value)
+	_, ok = acc.FloatField("http_response", "response_time")
+	require.True(t, ok)
 }
 
 func TestStringMatchFail(t *testing.T) {
@@ -309,18 +327,26 @@ func TestStringMatchFail(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	fields, err := h.HTTPGather()
-	require.NoError(t, err)
-	assert.NotEmpty(t, fields)
-	if assert.NotNil(t, fields["http_response_code"]) {
-		assert.Equal(t, http.StatusOK, fields["http_response_code"])
-	}
-	assert.Equal(t, 0, fields["response_string_match"])
-	assert.NotNil(t, fields["response_time"])
 
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	value, ok := acc.IntField("http_response", "http_response_code")
+	require.True(t, ok)
+	require.Equal(t, http.StatusOK, value)
+	value, ok = acc.IntField("http_response", "response_string_match")
+	require.True(t, ok)
+	require.Equal(t, 0, value)
+	_, ok = acc.FloatField("http_response", "response_time")
+	require.True(t, ok)
 }
 
 func TestTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test with sleep in short mode.")
+	}
+
 	mux := setUpTestMux()
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
@@ -335,6 +361,10 @@ func TestTimeout(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
-	_, err := h.HTTPGather()
-	require.Error(t, err)
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	ok := acc.HasIntField("http_response", "http_response_code")
+	require.False(t, ok)
 }

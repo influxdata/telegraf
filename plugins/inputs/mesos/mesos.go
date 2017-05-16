@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -96,16 +95,13 @@ func (m *Mesos) SetDefaults() {
 // Gather() metrics from given list of Mesos Masters
 func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	var errorChannel chan error
 
 	m.SetDefaults()
-
-	errorChannel = make(chan error, len(m.Masters)+2*len(m.Slaves))
 
 	for _, v := range m.Masters {
 		wg.Add(1)
 		go func(c string) {
-			errorChannel <- m.gatherMainMetrics(c, ":5050", MASTER, acc)
+			acc.AddError(m.gatherMainMetrics(c, ":5050", MASTER, acc))
 			wg.Done()
 			return
 		}(v)
@@ -114,7 +110,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	for _, v := range m.Slaves {
 		wg.Add(1)
 		go func(c string) {
-			errorChannel <- m.gatherMainMetrics(c, ":5051", SLAVE, acc)
+			acc.AddError(m.gatherMainMetrics(c, ":5051", SLAVE, acc))
 			wg.Done()
 			return
 		}(v)
@@ -125,26 +121,14 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 
 		// wg.Add(1)
 		// go func(c string) {
-		// 	errorChannel <- m.gatherSlaveTaskMetrics(c, ":5051", acc)
+		// 	acc.AddError(m.gatherSlaveTaskMetrics(c, ":5051", acc))
 		// 	wg.Done()
 		// 	return
 		// }(v)
 	}
 
 	wg.Wait()
-	close(errorChannel)
-	errorStrings := []string{}
 
-	// Gather all errors for returning them at once
-	for err := range errorChannel {
-		if err != nil {
-			errorStrings = append(errorStrings, err.Error())
-		}
-	}
-
-	if len(errorStrings) > 0 {
-		return errors.New(strings.Join(errorStrings, "\n"))
-	}
 	return nil
 }
 

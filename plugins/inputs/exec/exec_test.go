@@ -101,7 +101,7 @@ func TestExec(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
+	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
 	assert.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
 
@@ -127,8 +127,7 @@ func TestExecMalformed(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
-	require.Error(t, err)
+	require.Error(t, acc.GatherError(e.Gather))
 	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
 }
 
@@ -141,8 +140,7 @@ func TestCommandError(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
-	require.Error(t, err)
+	require.Error(t, acc.GatherError(e.Gather))
 	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
 }
 
@@ -155,8 +153,7 @@ func TestLineProtocolParse(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, acc.GatherError(e.Gather))
 
 	fields := map[string]interface{}{
 		"usage_idle": float64(99),
@@ -191,7 +188,7 @@ func TestLineProtocolShortParse(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
+	err := acc.GatherError(e.Gather)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "buffer too short", "A buffer too short error was expected")
 }
@@ -205,7 +202,7 @@ func TestLineProtocolParseMultiple(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
+	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
@@ -231,7 +228,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
+	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
@@ -247,7 +244,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
+	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
@@ -263,7 +260,7 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator
-	err := e.Gather(&acc)
+	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{

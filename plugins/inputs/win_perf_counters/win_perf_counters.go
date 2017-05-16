@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var sampleConfig string = `
+var sampleConfig = `
   ## By default this plugin returns basic CPU and Disk statistics.
   ## See the README file for more examples.
   ## Uncomment examples below or write your own as you see fit. If the system
@@ -124,8 +124,8 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 	// Call PdhCollectQueryData one time to check existance of the counter
 	ret = PdhCollectQueryData(handle)
 	if ret != ERROR_SUCCESS {
-		ret = PdhCloseQuery(handle)
-		return errors.New("Invalid query for Performance Counters")
+		PdhCloseQuery(handle)
+		return errors.New(PdhFormatError(ret))
 	}
 
 	temp := &item{query, objectName, counter, instance, measurement,
@@ -174,7 +174,7 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						}
 					} else {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							fmt.Printf("Invalid query: %s\n", query)
+							fmt.Printf("Invalid query: '%s'. Error: %s", query, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err
@@ -298,7 +298,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				bufCount = 0
 				bufSize = 0
 			}
-
 		}
 	}
 
