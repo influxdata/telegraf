@@ -2,6 +2,7 @@ package system
 
 import (
 	"os"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -87,6 +88,7 @@ func (s *systemPS) DiskUsage(
 
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
+	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
 	for i := range parts {
 		p := parts[i]
@@ -99,17 +101,21 @@ func (s *systemPS) DiskUsage(
 			}
 		}
 
+		// If there's a host mount prefix, exclude other paths
+		if len(hostMountPrefix) > 0 && !strings.HasPrefix(p.Mountpoint, hostMountPrefix) {
+			continue
+		}
+
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
 		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
 			continue
 		}
 
-		mountpoint := s.OSGetenv("HOST_MOUNT_PREFIX") + p.Mountpoint
-		if _, err := s.OSStat(mountpoint); err != nil {
+		if _, err := s.OSStat(p.Mountpoint); err != nil {
 			continue
 		}
-		du, err := s.PSDiskUsage(mountpoint)
+		du, err := s.PSDiskUsage(p.Mountpoint)
 		if err != nil {
 			continue
 		}
