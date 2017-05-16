@@ -32,7 +32,7 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 		"bytes_read", "bytes_written", "threads", "conn_yields"}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("memcached", metric), metric)
+		assert.True(t, acc.HasInt64Field("memcached", metric), metric)
 	}
 }
 

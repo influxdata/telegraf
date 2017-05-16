@@ -355,7 +355,7 @@ func TestTimeout(t *testing.T) {
 		Address:         ts.URL + "/twosecondnap",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Millisecond},
+		ResponseTimeout: internal.Duration{Duration: time.Second},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -363,7 +363,7 @@ func TestTimeout(t *testing.T) {
 	}
 	var acc testutil.Accumulator
 	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.Error(t, err)
 
 	ok := acc.HasIntField("http_response", "http_response_code")
 	require.False(t, ok)
