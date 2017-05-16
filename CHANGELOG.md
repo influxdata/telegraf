@@ -11,7 +11,7 @@
 - [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
 - [#2782](https://github.com/influxdata/telegraf/pull/2782): Reuse transports in input plugins
 
-## v1.3 [unreleased]
+## v1.3 [2017-05-15]
 
 ### Release Notes
 
