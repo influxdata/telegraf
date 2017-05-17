@@ -1,6 +1,7 @@
 package snmp_legacy
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -394,16 +395,16 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// only if len(s.OidInstanceMapping) == 0
 		if len(host.OidInstanceMapping) >= 0 {
 			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
-				log.Printf("E! SNMP Mapping error for host '%s': %s", host.Address, err)
+				acc.AddError(fmt.Errorf("E! SNMP Mapping error for host '%s': %s", host.Address, err))
 				continue
 			}
 		}
 		// Launch Get requests
 		if err := host.SNMPGet(acc, s.initNode); err != nil {
-			log.Printf("E! SNMP Error for host '%s': %s", host.Address, err)
+			acc.AddError(fmt.Errorf("E! SNMP Error for host '%s': %s", host.Address, err))
 		}
 		if err := host.SNMPBulk(acc, s.initNode); err != nil {
-			log.Printf("E! SNMP Error for host '%s': %s", host.Address, err)
+			acc.AddError(fmt.Errorf("E! SNMP Error for host '%s': %s", host.Address, err))
 		}
 	}
 	return nil

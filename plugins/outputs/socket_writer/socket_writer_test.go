@@ -143,7 +143,7 @@ func TestSocketWriter_Write_err(t *testing.T) {
 
 	// close the socket to generate an error
 	lconn.Close()
-	sw.Close()
+	sw.Conn.Close()
 	err = sw.Write(metrics)
 	require.Error(t, err)
 	assert.Nil(t, sw.Conn)

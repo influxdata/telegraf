@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/satori/go.uuid"
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
@@ -23,10 +24,11 @@ type KinesisOutput struct {
 	Filename  string `toml:"shared_credential_file"`
 	Token     string `toml:"token"`
 
-	StreamName   string `toml:"streamname"`
-	PartitionKey string `toml:"partitionkey"`
-	Debug        bool   `toml:"debug"`
-	svc          *kinesis.Kinesis
+	StreamName         string `toml:"streamname"`
+	PartitionKey       string `toml:"partitionkey"`
+	RandomPartitionKey bool   `toml:"use_random_partitionkey"`
+	Debug              bool   `toml:"debug"`
+	svc                *kinesis.Kinesis
 
 	serializer serializers.Serializer
 }
@@ -54,9 +56,14 @@ var sampleConfig = `
   streamname = "StreamName"
   ## PartitionKey as used for sharding data.
   partitionkey = "PartitionKey"
+  ## If set the paritionKey will be a random UUID on every put.
+  ## This allows for scaling across multiple shards in a stream.
+  ## This will cause issues with ordering.
+  use_random_partitionkey = false
+
 
   ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
@@ -173,9 +180,15 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
+		partitionKey := k.PartitionKey
+		if k.RandomPartitionKey {
+			u := uuid.NewV4()
+			partitionKey = u.String()
+		}
+
 		d := kinesis.PutRecordsRequestEntry{
 			Data:         values,
-			PartitionKey: aws.String(k.PartitionKey),
+			PartitionKey: aws.String(partitionKey),
 		}
 
 		r = append(r, &d)

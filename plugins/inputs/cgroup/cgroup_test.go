@@ -24,7 +24,7 @@ var cg1 = &CGroup{
 func TestCgroupStatistics_1(t *testing.T) {
 	var acc testutil.Accumulator
 
-	err := cg1.Gather(&acc)
+	err := acc.GatherError(cg1.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -56,7 +56,7 @@ var cg2 = &CGroup{
 func TestCgroupStatistics_2(t *testing.T) {
 	var acc testutil.Accumulator
 
-	err := cg2.Gather(&acc)
+	err := acc.GatherError(cg2.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -81,7 +81,7 @@ var cg3 = &CGroup{
 func TestCgroupStatistics_3(t *testing.T) {
 	var acc testutil.Accumulator
 
-	err := cg3.Gather(&acc)
+	err := acc.GatherError(cg3.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -108,7 +108,7 @@ var cg4 = &CGroup{
 func TestCgroupStatistics_4(t *testing.T) {
 	var acc testutil.Accumulator
 
-	err := cg4.Gather(&acc)
+	err := acc.GatherError(cg4.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -140,7 +140,7 @@ var cg5 = &CGroup{
 func TestCgroupStatistics_5(t *testing.T) {
 	var acc testutil.Accumulator
 
-	err := cg5.Gather(&acc)
+	err := acc.GatherError(cg5.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -167,7 +167,7 @@ var cg6 = &CGroup{
 func TestCgroupStatistics_6(t *testing.T) {
 	var acc testutil.Accumulator
 
-	err := cg6.Gather(&acc)
+	err := acc.GatherError(cg6.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{

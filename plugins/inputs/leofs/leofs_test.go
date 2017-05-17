@@ -146,7 +146,7 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
 
-	err := l.Gather(&acc)
+	err := acc.GatherError(l.Gather)
 	require.NoError(t, err)
 
 	floatMetrics := KeyMapping[serverType]

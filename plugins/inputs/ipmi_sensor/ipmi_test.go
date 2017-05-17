@@ -20,7 +20,7 @@ func TestGather(t *testing.T) {
 	execCommand = fakeExecCommand
 	var acc testutil.Accumulator
 
-	err := i.Gather(&acc)
+	err := acc.GatherError(i.Gather)
 
 	require.NoError(t, err)
 
@@ -121,7 +121,7 @@ func TestGather(t *testing.T) {
 		Path: "ipmitool",
 	}
 
-	err = i.Gather(&acc)
+	err = acc.GatherError(i.Gather)
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}

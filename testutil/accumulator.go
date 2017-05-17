@@ -187,6 +187,17 @@ func (a *Accumulator) TagValue(measurement string, key string) string {
 	return ""
 }
 
+// Calls the given Gather function and returns the first error found.
+func (a *Accumulator) GatherError(gf func(telegraf.Accumulator) error) error {
+	if err := gf(a); err != nil {
+		return err
+	}
+	if len(a.Errors) > 0 {
+		return a.Errors[0]
+	}
+	return nil
+}
+
 // NFields returns the total number of fields in the accumulator, across all
 // measurements
 func (a *Accumulator) NFields() int {
@@ -288,8 +299,42 @@ func (a *Accumulator) HasTimestamp(measurement string, timestamp time.Time) bool
 	return false
 }
 
+// HasField returns true if the given measurement has a field with the given
+// name
+func (a *Accumulator) HasField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			if _, ok := p.Fields[field]; ok {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // HasIntField returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					_, ok := value.(int)
+					return ok
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// HasInt64Field returns true if the measurement has an Int64 value
+func (a *Accumulator) HasInt64Field(measurement string, field string) bool {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -389,4 +434,54 @@ func (a *Accumulator) HasMeasurement(measurement string) bool {
 		}
 	}
 	return false
+}
+
+func (a *Accumulator) IntField(measurement string, field string) (int, bool) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					v, ok := value.(int)
+					return v, ok
+				}
+			}
+		}
+	}
+
+	return 0, false
+}
+
+func (a *Accumulator) FloatField(measurement string, field string) (float64, bool) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					v, ok := value.(float64)
+					return v, ok
+				}
+			}
+		}
+	}
+
+	return 0.0, false
+}
+
+func (a *Accumulator) StringField(measurement string, field string) (string, bool) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					v, ok := value.(string)
+					return v, ok
+				}
+			}
+		}
+	}
+	return "", false
 }

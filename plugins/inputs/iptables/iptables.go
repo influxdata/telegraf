@@ -54,20 +54,19 @@ func (ipt *Iptables) Gather(acc telegraf.Accumulator) error {
 	}
 	// best effort : we continue through the chains even if an error is encountered,
 	// but we keep track of the last error.
-	var err error
 	for _, chain := range ipt.Chains {
 		data, e := ipt.lister(ipt.Table, chain)
 		if e != nil {
-			err = e
+			acc.AddError(e)
 			continue
 		}
 		e = ipt.parseAndGather(data, acc)
 		if e != nil {
-			err = e
+			acc.AddError(e)
 			continue
 		}
 	}
-	return err
+	return nil
 }
 
 func (ipt *Iptables) chainList(table, chain string) (string, error) {

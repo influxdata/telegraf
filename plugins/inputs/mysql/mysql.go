@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/go-sql-driver/mysql"
@@ -137,19 +136,18 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 		m.InitMysql()
 	}
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(m.Servers))
 
 	// Loop through each server and collect metrics
 	for _, server := range m.Servers {
 		wg.Add(1)
 		go func(s string) {
 			defer wg.Done()
-			errChan.C <- m.gatherServer(s, acc)
+			acc.AddError(m.gatherServer(s, acc))
 		}(server)
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 type mapping struct {
