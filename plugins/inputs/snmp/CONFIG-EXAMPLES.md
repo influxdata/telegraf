@@ -25,7 +25,7 @@ Here is the configuration that you add to your `telegraf.conf`:
 
   [[inputs.snmp.field]]
     name = "uptime"
-    oid = "DISMAN-EXPRESSION-MIB::sysUpTimeInstance"
+    oid = "DISMAN-EVENT-MIB::sysUpTimeInstance"
 
   # IF-MIB::ifTable contains counters on input and output traffic as well as errors and discards.
   [[inputs.snmp.table]]
