@@ -4,6 +4,7 @@
 ### Features
 
 - [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
+- [#2293](https://github.com/influxdata/telegraf/pull/2293): Add TCP listener for statsd input
 
 ### Bugfixes
 
@@ -76,7 +77,6 @@ be deprecated eventually.
 - [#2512](https://github.com/influxdata/telegraf/pull/2512): Added pprof tool.
 - [#2501](https://github.com/influxdata/telegraf/pull/2501): Support DEAD(X) state in system input plugin.
 - [#2522](https://github.com/influxdata/telegraf/pull/2522): Add support for mongodb client certificates.
-- [#2293](https://github.com/influxdata/telegraf/pull/2293): Add TCP listener for statsd input
 - [#1948](https://github.com/influxdata/telegraf/pull/1948): Support adding SNMP table indexes as tags.
 - [#2332](https://github.com/influxdata/telegraf/pull/2332): Add Elasticsearch 5.x output
 - [#2587](https://github.com/influxdata/telegraf/pull/2587): Add json timestamp units configurability
