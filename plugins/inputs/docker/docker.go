@@ -359,13 +359,14 @@ func (d *Docker) gatherContainer(
 		}
 	}
 
-	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
+	gatherContainerStats(v, &ic, acc, tags, container.ID, d.PerDevice, d.Total)
 
 	return nil
 }
 
 func gatherContainerStats(
 	stat *types.StatsJSON,
+	inspect *types.ContainerJSON,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	id string,
@@ -423,7 +424,9 @@ func gatherContainerStats(
 		"throttling_throttled_time":    stat.CPUStats.ThrottlingData.ThrottledTime,
 		"usage_percent":                calculateCPUPercent(stat),
 		"container_id":                 id,
+		"limit":                        float64(inspect.HostConfig.CPUShares) / 1024.0,
 	}
+
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
 	acc.AddFields("docker_container_cpu", cpufields, cputags, now)
