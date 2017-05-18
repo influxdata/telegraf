@@ -37,6 +37,6 @@ func TestZookeeperGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("zookeeper", metric), metric)
+		assert.True(t, acc.HasInt64Field("zookeeper", metric), metric)
 	}
 }
