@@ -82,6 +82,8 @@ The steps of above can be reused in a similar way for other proprietary and non 
 			# time_fields=[".*_TIME"]		# adds fields and forces his value as time
 			#
 			# field_measurement = "CLASS"		# the golumn that contains the name of the measurement
+			# field_host = "DBHOST"				# the column that contains the name of the database host used for host tag value
+			# field_database = "DBHOST"			# the column that contains the name of the database used for dbname tag value
 			# field_name = "counter_name"		# the column that contains the name of the counter
 			# field_value = "counter_value"		# the column that contains the value of the counter
 			#
@@ -175,9 +177,13 @@ The column "ARCHIVED" is ignored
 ```
 
 ## TODO
-Give the possibility to define parameters to pass to the prepared statement
-Get the host tag value automatically parsing the connection DSN string
-Implement tests
+1) Implement tests
+2) Keep trace of timestamp of last poll for use in the where statement
+3) Group by serie if timestamp and measurement are the same within a query for perform single insert in db instead of multiple
+4) Give the possibility to define parameters to pass to the prepared statement
+5) Get the host and database tag value automatically parsing the connection DSN string
+6) Add option for parse tags once and reuse it for all rows in a query
+X) Add your needs here .....
 
 ## ENJOY
 Luca

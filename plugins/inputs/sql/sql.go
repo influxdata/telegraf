@@ -55,8 +55,10 @@ type Query struct {
 	BoolFields  []string
 	TimeFields  []string
 	//
+	FieldHost        string
 	FieldName        string
 	FieldValue       string
+	FieldDatabase    string
 	FieldMeasurement string
 	//
 	NullAsZero        bool
@@ -65,7 +67,7 @@ type Query struct {
 	IgnoreRowErrors   bool
 	//
 	QueryScript string
-	//	Parameters []string	//TODO
+	Parameters  []string //TODO
 
 	// -------- internal data -----------
 	statements []*sql.Stmt
@@ -81,6 +83,8 @@ type Query struct {
 	tag_count int
 	tag_idx   []int //Column indexes of tags (strings)
 
+	field_host_idx        int
+	field_database_idx    int
 	field_measurement_idx int
 	field_name_idx        int
 	field_value_idx       int
@@ -97,6 +101,7 @@ type Sql struct {
 	KeepConnection bool
 
 	Servers []string
+
 	Hosts   []string
 	DbNames []string
 
@@ -150,8 +155,8 @@ func (s *Sql) SampleConfig() string {
 
 		## Server DSNs
 		servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
-		hosts=["neteye", "hostmysql"]	# optional: for each server a relative host entry should be specified and will be added as host tag
-		db_names=["rue", "monitoring"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
+		#hosts=["neteye", "hostmysql"]	# optional: for each server a relative host entry should be specified and will be added as host tag
+		#db_names=["rue", "monitoring"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
 
 		## Queries to perform (block below can be repeated)
 		[[inputs.sql.query]]
@@ -168,7 +173,9 @@ func (s *Sql) SampleConfig() string {
 			# float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
 			# time_fields=[".*_TIME"]		# adds fields and forces his value as time
 			#
-			# field_measurement = "CLASS"		# the golumn that contains the name of the measurement
+			# field_measurement = "CLASS"		# the column that contains the name of the measurement
+			# field_host = "DBHOST"				# the column that contains the name of the database host used for host tag value
+			# field_database = "DBHOST"			# the column that contains the name of the database used for dbname tag value
 			# field_name = "counter_name"		# the column that contains the name of the counter
 			# field_value = "counter_value"		# the column that contains the value of the counter
 			#
@@ -317,7 +324,15 @@ func (s *Query) Init(cols []string) error {
 	s.field_value_idx = -1
 	s.field_timestamp_idx = -1
 	s.field_measurement_idx = -1
+	s.field_database_idx = -1
+	s.field_host_idx = -1
 
+	if len(s.FieldHost) > 0 && !match_str(s.FieldHost, s.column_name) {
+		return fmt.Errorf("Missing column %s for given field_host", s.FieldHost)
+	}
+	if len(s.FieldDatabase) > 0 && !match_str(s.FieldDatabase, s.column_name) {
+		return fmt.Errorf("Missing column %s for given field_database", s.FieldDatabase)
+	}
 	if len(s.FieldMeasurement) > 0 && !match_str(s.FieldMeasurement, s.column_name) {
 		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldMeasurement)
 	}
@@ -355,7 +370,6 @@ func (s *Query) Init(cols []string) error {
 			//				cell = new(float64);
 			cell = new(sql.RawBytes)
 		} else if match_str(s.column_name[i], s.TimeFields) {
-			//TODO as number?
 			dest_type = TYPE_TIME
 			//			cell = new(string)
 			cell = new(sql.RawBytes)
@@ -382,6 +396,14 @@ func (s *Query) Init(cols []string) error {
 			log.Printf("I! Column %d '%s' dest type  %d", i, s.column_name[i], dest_type)
 		}
 
+		if s.column_name[i] == s.FieldHost {
+			s.field_host_idx = i
+			field_matched = false
+		}
+		if s.column_name[i] == s.FieldDatabase {
+			s.field_database_idx = i
+			field_matched = false
+		}
 		if s.column_name[i] == s.FieldMeasurement {
 			s.field_measurement_idx = i
 			field_matched = false
@@ -469,10 +491,10 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 			break
 		case TYPE_TIME:
 			value, ok = cell.(time.Time)
-			// TODO convert to s/ms/us/ns??
 			if !ok {
 				var intvalue int64
 				intvalue, ok = value.(int64)
+				// TODO convert to s/ms/us/ns??
 				if ok {
 					value = time.Unix(intvalue, 0)
 				}
@@ -560,6 +582,28 @@ func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[strin
 			log.Printf("E! converting field measurement '%s'", s.column_name[s.field_measurement_idx])
 			//cannot put data in correct measurement, skip line
 			return timestamp, measurement, err
+		}
+	}
+	// get dbname from row
+	if s.field_database_idx >= 0 {
+		dbname, err := s.GetStringFieldValue(s.field_database_idx)
+		if err != nil {
+			log.Printf("E! converting field dbname '%s'", s.column_name[s.field_database_idx])
+			//cannot put data in correct, skip line
+			return timestamp, measurement, err
+		} else {
+			tags["dbname"] = dbname
+		}
+	}
+	// get host from row
+	if s.field_host_idx >= 0 {
+		host, err := s.GetStringFieldValue(s.field_host_idx)
+		if err != nil {
+			log.Printf("E! converting field host '%s'", s.column_name[s.field_host_idx])
+			//cannot put data in correct, skip line
+			return timestamp, measurement, err
+		} else {
+			tags["host"] = host
 		}
 	}
 	// fill tags
@@ -832,6 +876,10 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 					}
 				}
 
+				//import "reflect"
+				//// m1 and m2 are the maps we want to compare
+				//eq := reflect.DeepEqual(m1, m2)
+
 				acc.AddFields(measurement, fields, tags, timestamp)
 
 				//		fieldsG := map[string]interface{}{
@@ -842,7 +890,7 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 				row_count += 1
 			}
 			if Debug {
-				log.Printf("I! Query %d on %s found %d rows written, processing duration %s", q.index, p.Hosts[si], row_count, time.Since(query_time))
+				log.Printf("I! Query %d found %d rows written, processing duration %s", q.index, row_count, time.Since(query_time))
 			}
 		}
 	}
