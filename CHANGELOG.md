@@ -7,6 +7,7 @@
 
 ### Bugfixes
 
+- [#2819](https://github.com/influxdata/telegraf/pull/2819): [enh] set db_version at 0 if query version fails
 - [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
 - [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
 - [#2782](https://github.com/influxdata/telegraf/pull/2782): Reuse transports in input plugins
