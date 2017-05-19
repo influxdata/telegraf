@@ -1,6 +1,6 @@
 # Telegraf Input Plugin: Consul
 
-This plugin will collect statistics about all helath checks registered in the Consul. It uses [Consul API](https://www.consul.io/docs/agent/http/health.html#health_state)
+This plugin will collect statistics about all health checks registered in the Consul. It uses [Consul API](https://www.consul.io/docs/agent/http/health.html#health_state)
 to query the data. It will not report the [telemetry](https://www.consul.io/docs/agent/telemetry.html) but Consul can report those stats already using StatsD protocol if needed.
 
 ## Configuration:
