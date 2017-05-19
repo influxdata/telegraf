@@ -1,3 +1,9 @@
+## v1.3.1 [unreleased]
+
+### Bugfixes
+
+- [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
+
 ## v1.3 [2017-05-15]
 
 ### Release Notes
