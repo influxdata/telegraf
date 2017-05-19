@@ -65,12 +65,8 @@ var sampleConfig = `
     Measurement = "win_mem"
 `
 
-var testConfigParsed bool
-var testObject string
-
 type Win_PerfCounters struct {
 	PrintValid      bool
-	TestName        string
 	PreVistaSupport bool
 	Object          []perfobject
 
@@ -86,12 +82,6 @@ type perfobject struct {
 	WarnOnMissing bool
 	FailOnMissing bool
 	IncludeTotal  bool
-}
-
-// Parsed configuration ends up here after it has been validated for valid
-// Performance Counter paths
-type itemList struct {
-	items map[int]*item
 }
 
 type item struct {
@@ -183,24 +173,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 	}
 }
 
-func (m *Win_PerfCounters) CleanupTestMode() {
-	// Cleanup for the testmode.
-	for _, metric := range m.itemCache {
-		ret := PdhCloseQuery(metric.handle)
-		_ = ret
-	}
-}
-
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
-	// Both values are empty in normal use.
-	if m.TestName != testObject {
-		// Cleanup any handles before emptying the global variable containing valid queries.
-		m.CleanupTestMode()
-		m.itemCache = m.itemCache[:0]
-		testObject = m.TestName
-		testConfigParsed = true
-	}
-
 	// Parse the config once
 	if !m.configParsed {
 		err := m.ParseConfig()
