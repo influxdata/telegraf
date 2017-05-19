@@ -4,6 +4,7 @@
 
 - [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
 - [#2782](https://github.com/influxdata/telegraf/pull/2782): Reuse transports in input plugins
+- [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
 
 ## v1.3 [2017-05-15]
 
