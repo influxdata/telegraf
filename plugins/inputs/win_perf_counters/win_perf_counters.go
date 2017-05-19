@@ -65,9 +65,6 @@ var sampleConfig = `
     Measurement = "win_mem"
 `
 
-// Valid queries end up in this map.
-var gItemList itemList
-
 var testConfigParsed bool
 var testObject string
 
@@ -76,6 +73,9 @@ type Win_PerfCounters struct {
 	TestName        string
 	PreVistaSupport bool
 	Object          []perfobject
+
+	configParsed bool
+	itemCache    []*item
 }
 
 type perfobject struct {
@@ -92,19 +92,6 @@ type perfobject struct {
 // Performance Counter paths
 type itemList struct {
 	items map[int]*item
-}
-
-func (i *itemList) ItemExists(query, objectName, counter, instance string) bool {
-	for _, item := range i.items {
-		if item.query == query &&
-			item.objectName == objectName &&
-			item.counter == counter &&
-			item.instance == instance {
-			return true
-		}
-	}
-
-	return false
 }
 
 type item struct {
@@ -124,10 +111,6 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
 	measurement string, include_total bool) error {
 
-	if gItemList.ItemExists(query, objectName, counter, instance) {
-		return nil
-	}
-
 	var handle PDH_HQUERY
 	var counterHandle PDH_HCOUNTER
 	ret := PdhOpenQuery(0, 0, &handle)
@@ -144,10 +127,9 @@ func (m *Win_PerfCounters) AddItem(query string, objectName string, counter stri
 		return errors.New(PdhFormatError(ret))
 	}
 
-	temp := &item{query, objectName, counter, instance, measurement,
+	newItem := &item{query, objectName, counter, instance, measurement,
 		include_total, handle, counterHandle}
-	index := len(gItemList.items)
-	gItemList.items[index] = temp
+	m.itemCache = append(m.itemCache, newItem)
 
 	return nil
 }
@@ -203,31 +185,29 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 func (m *Win_PerfCounters) CleanupTestMode() {
 	// Cleanup for the testmode.
-
-	for _, metric := range gItemList.items {
+	for _, metric := range m.itemCache {
 		ret := PdhCloseQuery(metric.handle)
 		_ = ret
 	}
 }
 
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
-	if gItemList.items == nil {
-		gItemList.items = make(map[int]*item)
-	}
-
 	// Both values are empty in normal use.
 	if m.TestName != testObject {
 		// Cleanup any handles before emptying the global variable containing valid queries.
 		m.CleanupTestMode()
-		gItemList.items = make(map[int]*item)
+		m.itemCache = m.itemCache[:0]
 		testObject = m.TestName
 		testConfigParsed = true
 	}
 
-	// Parse the config
-	err := m.ParseConfig()
-	if err != nil {
-		return err
+	// Parse the config once
+	if !m.configParsed {
+		err := m.ParseConfig()
+		m.configParsed = true
+		if err != nil {
+			return err
+		}
 	}
 
 	var bufSize uint32
@@ -236,7 +216,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
 
 	// For iterate over the known metrics and get the samples.
-	for _, metric := range gItemList.items {
+	for _, metric := range m.itemCache {
 		// collect
 		ret := PdhCollectQueryData(metric.handle)
 		if ret == ERROR_SUCCESS {
