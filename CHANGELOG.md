@@ -13,6 +13,7 @@
 - [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
 - [#2782](https://github.com/influxdata/telegraf/pull/2782): Reuse transports in input plugins
 - [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
+- [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
 
 ## v1.3.1 [unreleased]
 
