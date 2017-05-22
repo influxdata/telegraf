@@ -523,5 +523,56 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 		counters[0]: float32(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
+}
 
+func TestWinPerfcountersCollectExcludeObjectNames(t *testing.T) {
+
+	var instances = make([]string, 1)
+	var counters = make([]string, 1)
+	var perfobjects = make([]perfobject, 1)
+
+	objectname := "Processor Information"
+	instances[0] = "_Total"
+	counters[0] = "Parking Status"
+
+	var expectedCounterName = "Parking_Status"
+
+	var measurement string = "test"
+	var warnonmissing bool = false
+	var failonmissing bool = true
+	var includetotal bool = false
+
+	PerfObject := perfobject{
+		ObjectName:    objectname,
+		Instances:     instances,
+		Counters:      counters,
+		Measurement:   measurement,
+		WarnOnMissing: warnonmissing,
+		FailOnMissing: failonmissing,
+		IncludeTotal:  includetotal,
+	}
+
+	perfobjects[0] = PerfObject
+
+	m := Win_PerfCounters{
+		ExcludeObjectNames: true,
+		PrintValid:         false,
+		TestName:           "CollectExcludeObjectName",
+		Object:             perfobjects,
+	}
+	var acc testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+
+	time.Sleep(2000 * time.Millisecond)
+	err = m.Gather(&acc)
+
+	tags := map[string]string{
+		"instance": instances[0],
+	}
+	fields := map[string]interface{}{
+		expectedCounterName: float32(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 }

@@ -22,6 +22,11 @@ as counters used when performance monitoring
 
 Plugin wide entries are underneath `[[inputs.win_perf_counters]]`.
 
+#### ExcludeObjectNames
+*Optional*
+
+Bool, if set to `true` will not tag the ObjectName of the counters.
+
 #### PrintValid
 
 Bool, if set to `true` will print out all matching performance objects.
