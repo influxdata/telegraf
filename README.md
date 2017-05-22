@@ -256,6 +256,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [Value](./docs/DATA_FORMATS_INPUT.md#value)
 * [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
 * [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
+* [Dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard)
 
 ## Processor Plugins
 
