@@ -65,18 +65,13 @@ var sampleConfig = `
     Measurement = "win_mem"
 `
 
-// Valid queries end up in this map.
-var gItemList = make(map[int]*item)
-
-var configParsed bool
-var testConfigParsed bool
-var testObject string
-
 type Win_PerfCounters struct {
 	PrintValid      bool
-	TestName        string
 	PreVistaSupport bool
 	Object          []perfobject
+
+	configParsed bool
+	itemCache    []*item
 }
 
 type perfobject struct {
@@ -87,12 +82,6 @@ type perfobject struct {
 	WarnOnMissing bool
 	FailOnMissing bool
 	IncludeTotal  bool
-}
-
-// Parsed configuration ends up here after it has been validated for valid
-// Performance Counter paths
-type itemList struct {
-	items map[int]*item
 }
 
 type item struct {
@@ -109,7 +98,7 @@ type item struct {
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
-func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName string, counter string, instance string,
+func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
 	measurement string, include_total bool) error {
 
 	var handle PDH_HQUERY
@@ -128,15 +117,10 @@ func (m *Win_PerfCounters) AddItem(metrics *itemList, query string, objectName s
 		return errors.New(PdhFormatError(ret))
 	}
 
-	temp := &item{query, objectName, counter, instance, measurement,
+	newItem := &item{query, objectName, counter, instance, measurement,
 		include_total, handle, counterHandle}
-	index := len(gItemList)
-	gItemList[index] = temp
+	m.itemCache = append(m.itemCache, newItem)
 
-	if metrics.items == nil {
-		metrics.items = make(map[int]*item)
-	}
-	metrics.items[index] = temp
 	return nil
 }
 
@@ -148,10 +132,8 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
+func (m *Win_PerfCounters) ParseConfig() error {
 	var query string
-
-	configParsed = true
 
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
@@ -165,7 +147,7 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 						query = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					err := m.AddItem(metrics, query, objectname, counter, instance,
+					err := m.AddItem(query, objectname, counter, instance,
 						PerfObject.Measurement, PerfObject.IncludeTotal)
 
 					if err == nil {
@@ -191,41 +173,11 @@ func (m *Win_PerfCounters) ParseConfig(metrics *itemList) error {
 	}
 }
 
-func (m *Win_PerfCounters) Cleanup(metrics *itemList) {
-	// Cleanup
-
-	for _, metric := range metrics.items {
-		ret := PdhCloseQuery(metric.handle)
-		_ = ret
-	}
-}
-
-func (m *Win_PerfCounters) CleanupTestMode() {
-	// Cleanup for the testmode.
-
-	for _, metric := range gItemList {
-		ret := PdhCloseQuery(metric.handle)
-		_ = ret
-	}
-}
-
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
-	metrics := itemList{}
-
-	// Both values are empty in normal use.
-	if m.TestName != testObject {
-		// Cleanup any handles before emptying the global variable containing valid queries.
-		m.CleanupTestMode()
-		gItemList = make(map[int]*item)
-		testObject = m.TestName
-		testConfigParsed = true
-		configParsed = false
-	}
-
-	// We only need to parse the config during the init, it uses the global variable after.
-	if configParsed == false {
-
-		err := m.ParseConfig(&metrics)
+	// Parse the config once
+	if !m.configParsed {
+		err := m.ParseConfig()
+		m.configParsed = true
 		if err != nil {
 			return err
 		}
@@ -237,7 +189,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
 
 	// For iterate over the known metrics and get the samples.
-	for _, metric := range gItemList {
+	for _, metric := range m.itemCache {
 		// collect
 		ret := PdhCollectQueryData(metric.handle)
 		if ret == ERROR_SUCCESS {
