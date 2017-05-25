@@ -858,42 +858,45 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 		case "Queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["queries"] = i
 			}
-
-			fields["queries"] = i
 		case "Questions":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["questions"] = i
 			}
-
-			fields["questions"] = i
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["slow_queries"] = i
 			}
-
-			fields["slow_queries"] = i
 		case "Connections":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["connections"] = i
 			}
-			fields["connections"] = i
 		case "Syncs":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["syncs"] = i
 			}
-			fields["syncs"] = i
 		case "Uptime":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["uptime"] = i
 			}
-			fields["uptime"] = i
 		}
 	}
 	// Send any remaining fields
