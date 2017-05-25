@@ -19,14 +19,15 @@ import (
 	// database drivers here:
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq" // pure go
-	_ "github.com/mattn/go-sqlite3"
 	//	_ "github.com/denisenkom/go-mssqldb" // pure go
 	_ "github.com/zensqlmonitor/go-mssqldb" // pure go
+	//
 	// the following commented because of the external proprietary libraries dependencies
-	//	_ "github.com/mattn/go-oci8"
-	//	_ "gopkg.in/rana/ora.v4"
-	//	_ "bitbucket.org/phiggins/db2cli" //
-	//	_ "github.com/SAP/go-hdb"
+	//	_ "github.com/mattn/go-sqlite3" // builds only on linux
+	//	_ "github.com/mattn/go-oci8"	// requires external prorietary libs
+	//	_ "gopkg.in/rana/ora.v4"		// requires external prorietary libs
+	//	_ "bitbucket.org/phiggins/db2cli" // requires external prorietary libs
+	//	_ "github.com/SAP/go-hdb"		// requires external prorietary libs
 	//	_ "github.com/a-palchikov/sqlago"
 )
 
@@ -39,6 +40,49 @@ const TYPE_AUTO = 0
 
 var Debug = false
 var qindex = 0
+
+var sampleConfig = `
+	[[inputs.sql]]
+		# debug=false						# Enables very verbose output
+
+		## Database Driver
+		driver = "mysql" 					# required. Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
+		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# optional: path to the golang 1.8 plugin shared lib
+		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
+
+		## Server DSNs
+		servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
+		#hosts=["neteye", "hostmysql"]	# optional: for each server a relative host entry should be specified and will be added as host tag
+		#db_names=["rue", "monitoring"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
+
+		## Queries to perform (block below can be repeated)
+		[[inputs.sql.query]]
+			# query has precedence on query_script, if both query and query_script are defined only query is executed
+			query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
+			# query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
+			#
+			measurement="connection_errors"	# destination measurement
+			tag_cols=["application"]		# colums used as tags
+			field_cols=["avg_application_latency","avg_bytes","act_throughput"]	# select fields and use the database driver automatic datatype conversion
+			#
+			# bool_fields=["ON"]				# adds fields and forces his value as bool
+			# int_fields=["MEMBERS",".*BYTES"]	# adds fields and forces his value as integer
+			# float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
+			# time_fields=[".*_TIME"]		# adds fields and forces his value as time
+			#
+			# field_measurement = "CLASS"		# the column that contains the name of the measurement
+			# field_host = "DBHOST"				# the column that contains the name of the database host used for host tag value
+			# field_database = "DBHOST"			# the column that contains the name of the database used for dbname tag value
+			# field_name = "counter_name"		# the column that contains the name of the counter
+			# field_value = "counter_value"		# the column that contains the value of the counter
+			#
+			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
+			#
+			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
+			null_as_zero = false			# true: converts null values into zero or empty strings (false: ignore fields)
+			sanitize = false				# true: will perform some chars substitutions (false: use value as is)
+			ignore_row_errors				# true: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
+	`
 
 type Query struct {
 	Query       string
@@ -65,9 +109,10 @@ type Query struct {
 	IgnoreOtherFields bool
 	Sanitize          bool
 	IgnoreRowErrors   bool
+	ParseTagsOnce     bool
 	//
 	QueryScript string
-	Parameters  []string //TODO
+	//	Parameters  []string //TODO
 
 	// -------- internal data -----------
 	statements []*sql.Stmt
@@ -90,6 +135,8 @@ type Query struct {
 	field_value_idx       int
 	field_value_type      int
 	field_timestamp_idx   int
+
+	last_poll_ts time.Time
 
 	index int
 }
@@ -144,48 +191,6 @@ func match_str(key string, str_array []string) bool {
 }
 
 func (s *Sql) SampleConfig() string {
-	var sampleConfig = `
-	[[inputs.sql]]
-		# debug=false						# Enables very verbose output
-
-		## Database Driver
-		driver = "mysql" 					# required. Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
-		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# optional: path to the golang 1.8 plugin shared lib
-		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
-
-		## Server DSNs
-		servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
-		#hosts=["neteye", "hostmysql"]	# optional: for each server a relative host entry should be specified and will be added as host tag
-		#db_names=["rue", "monitoring"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
-
-		## Queries to perform (block below can be repeated)
-		[[inputs.sql.query]]
-			# query has precedence on query_script, if both query and query_script are defined only query is executed
-			query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
-			# query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
-			#
-			measurement="connection_errors"	# destination measurement
-			tag_cols=["application"]		# colums used as tags
-			field_cols=["avg_application_latency","avg_bytes","act_throughput"]	# select fields and use the database driver automatic datatype conversion
-			#
-			# bool_fields=["ON"]				# adds fields and forces his value as bool
-			# int_fields=["MEMBERS",".*BYTES"]	# adds fields and forces his value as integer
-			# float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
-			# time_fields=[".*_TIME"]		# adds fields and forces his value as time
-			#
-			# field_measurement = "CLASS"		# the column that contains the name of the measurement
-			# field_host = "DBHOST"				# the column that contains the name of the database host used for host tag value
-			# field_database = "DBHOST"			# the column that contains the name of the database used for dbname tag value
-			# field_name = "counter_name"		# the column that contains the name of the counter
-			# field_value = "counter_value"		# the column that contains the value of the counter
-			#
-			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
-			#
-			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
-			null_as_zero = false			# true: converts null values into zero or empty strings (false: ignore fields)
-			sanitize = false				# true: will perform some chars substitutions (false: use value as is)
-			ignore_row_errors				# true: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
-	`
 	return sampleConfig
 }
 
@@ -802,6 +807,7 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 				log.Printf("I! Query %d exectution time: %s", q.index, time.Since(query_time))
 			}
 			query_time = time.Now()
+			q.last_poll_ts = query_time
 
 			if err != nil {
 				return err

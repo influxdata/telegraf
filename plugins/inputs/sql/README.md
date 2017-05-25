@@ -2,8 +2,8 @@
 
 The plugin executes simple queries or query scripts on multiple servers.
 It permits to select the tags and the fields to export, if is needed fields can be forced to a choosen datatype. 
-Supported/integrated drivers are mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite)
-Activable drivers (read below) are all golang SQL compliant drivers (see https://github.com/golang/go/wiki/SQLDrivers): for instance oci8 for Oracle
+Supported/integrated drivers are mssql (SQLServer), mysql (MySQL), postgres (Postgres)
+Activable drivers (read below) are all golang SQL compliant drivers (see https://github.com/golang/go/wiki/SQLDrivers): for instance oci8 for Oracle or sqlite3 (SQLite)
 
 ## Getting started :
 First you need to grant read/select privileges on queried tables to the database user you use for the connection
@@ -26,8 +26,10 @@ import "C"
 
 import (
 	"log"
-	_ "github.com/mattn/go-oci8"
 	// .. here you can add import to other drivers
+	_ "github.com/mattn/go-oci8" // requires external prorietary libs
+	// _ "bitbucket.org/phiggins/db2cli" // requires external prorietary libs
+	// _ "github.com/mattn/go-sqlite3" // not compiles on windows
 )
 func main() {
 	log.Printf("I! Loaded plugin of shared libs")
