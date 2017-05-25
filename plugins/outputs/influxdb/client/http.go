@@ -16,7 +16,6 @@ var (
 	defaultRequestTimeout = time.Second * 5
 )
 
-//
 func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 	// validate required parameters:
 	if len(config.URL) == 0 {
