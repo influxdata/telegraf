@@ -156,7 +156,7 @@ configuration options.
 * [postgresql_extensible](./plugins/inputs/postgresql_extensible)
 * [powerdns](./plugins/inputs/powerdns)
 * [procstat](./plugins/inputs/procstat)
-* [prometheus](./plugins/inputs/prometheus)
+* [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
 * [puppetagent](./plugins/inputs/puppetagent)
 * [rabbitmq](./plugins/inputs/rabbitmq)
 * [raindrops](./plugins/inputs/raindrops)
