@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var masterMetrics map[string]interface{}
@@ -377,4 +379,13 @@ func TestSlaveFilter(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestHTTPPrefix(t *testing.T) {
+	m := Mesos{
+		SSL: true,
+	}
+	assert.Equal(t, "https://", m.getHTTPPrefix())
+	m.SSL = false
+	assert.Equal(t, "http://", m.getHTTPPrefix())
 }
