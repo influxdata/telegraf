@@ -105,7 +105,7 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 		"meta-cache-size", "qsize-q", "signature-cache-size", "sys-msec", "uptime", "user-msec"}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("powerdns", metric), metric)
+		assert.True(t, acc.HasInt64Field("powerdns", metric), metric)
 	}
 }
 

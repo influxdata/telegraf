@@ -46,6 +46,6 @@ For querying more than one record type make:
 ### Example output:
 
 ```
-./telegraf -config telegraf.conf -test -input-filter dns_query -test
+./telegraf --config telegraf.conf --input-filter dns_query --test
 > dns_query,domain=mjasion.pl,record_type=A,server=8.8.8.8 query_time_ms=67.189842 1456082743585760680
 ```

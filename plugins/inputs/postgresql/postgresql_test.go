@@ -74,7 +74,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	for _, metric := range intMetrics {
 		_, ok := availableColumns[metric]
 		if ok {
-			assert.True(t, acc.HasIntField("postgresql", metric))
+			assert.True(t, acc.HasInt64Field("postgresql", metric))
 			metricsCounted++
 		}
 	}

@@ -29,6 +29,8 @@ type Apache struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+
+	client *http.Client
 }
 
 var sampleConfig = `
@@ -66,6 +68,14 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
 
+	if n.client == nil {
+		client, err := n.createHttpClient()
+		if err != nil {
+			return err
+		}
+		n.client = client
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(len(n.Urls))
 	for _, u := range n.Urls {
@@ -85,31 +95,24 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-
-	var tr *http.Transport
-
-	if addr.Scheme == "https" {
-		tlsCfg, err := internal.GetTLSConfig(
-			n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
-		if err != nil {
-			return err
-		}
-		tr = &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-			TLSClientConfig:       tlsCfg,
-		}
-	} else {
-		tr = &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-		}
+func (n *Apache) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := internal.GetTLSConfig(
+		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
 	}
 
 	client := &http.Client{
-		Transport: tr,
-		Timeout:   n.ResponseTimeout.Duration,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: n.ResponseTimeout.Duration,
 	}
 
+	return client, nil
+}
+
+func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
 		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
@@ -119,7 +122,7 @@ func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		req.SetBasicAuth(n.Username, n.Password)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := n.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
 	}

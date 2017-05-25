@@ -26,7 +26,7 @@ There are two measurements reported by this plugin.
 
 ### Example Output
 ```
-./telegraf -config ~/interrupts_config.conf -test
+./telegraf --config ~/interrupts_config.conf --test
 * Plugin: inputs.interrupts, Collection 1
 > interrupts,irq=0,type=IO-APIC,device=2-edge\ timer,host=hostname CPU0=23i,total=23i 1489346531000000000
 > interrupts,irq=1,host=hostname,type=IO-APIC,device=1-edge\ i8042 CPU0=9i,total=9i 1489346531000000000

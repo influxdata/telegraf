@@ -136,7 +136,7 @@ Full view
 ## Example Output:
 
 ``` 
-./telegraf -config telegraf.conf -test 
+./telegraf --config telegraf.conf --test 
 * Plugin: sqlserver, Collection 1
 > Memory\ breakdown\ (%),servername=WIN8-DEV,type=Memory\ clerk Buffer\ pool=27.20,Cache\ (objects)=6.50,Cache\ (sql\ plans)=31.50,Other=34.80 1453876411474582877
 > Memory\ breakdown\ (bytes),servername=WIN8-DEV,type=Memory\ clerk Buffer\ pool=100016128.00,Cache\ (objects)=23904256.00,Cache\ (sql\ plans)=115621888.00,Other=127942656.00 1453876411474655779

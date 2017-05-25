@@ -300,6 +300,8 @@ func TestDockerGatherInfo(t *testing.T) {
 	d := Docker{
 		client:  nil,
 		testing: true,
+		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
+			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
 	}
 
 	err := acc.GatherError(d.Gather)
@@ -345,6 +347,10 @@ func TestDockerGatherInfo(t *testing.T) {
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
 			"engine_host":       "absol",
+			"ENVVAR1":           "loremipsum",
+			"ENVVAR2":           "dolorsitamet",
+			"ENVVAR3":           "=ubuntu:10.04",
+			"ENVVAR7":           "ENVVAR8=ENVVAR9",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
 		},
@@ -393,6 +399,10 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_name":    "etcd2",
 			"container_image":   "quay.io:4443/coreos/etcd",
 			"container_version": "v2.2.2",
+			"ENVVAR1":           "loremipsum",
+			"ENVVAR2":           "dolorsitamet",
+			"ENVVAR3":           "=ubuntu:10.04",
+			"ENVVAR7":           "ENVVAR8=ENVVAR9",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
 		},

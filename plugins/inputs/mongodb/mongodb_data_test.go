@@ -42,7 +42,7 @@ func TestAddNonReplStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key, _ := range DefaultStats {
-		assert.True(t, acc.HasIntField("mongodb", key))
+		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
 
@@ -63,7 +63,7 @@ func TestAddReplStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key, _ := range MmapStats {
-		assert.True(t, acc.HasIntField("mongodb", key))
+		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
 
