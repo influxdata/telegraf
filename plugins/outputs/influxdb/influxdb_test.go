@@ -8,8 +8,43 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestIdentQuoting(t *testing.T) {
+	var testCases = []struct {
+		database string
+		expected string
+	}{
+		{"x-y", `CREATE DATABASE "x-y"`},
+		{`x"y`, `CREATE DATABASE "x\"y"`},
+		{"x\ny", `CREATE DATABASE "x\ny"`},
+		{`x\y`, `CREATE DATABASE "x\\y"`},
+	}
+
+	for _, tc := range testCases {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.ParseForm()
+			q := r.Form.Get("q")
+			assert.Equal(t, tc.expected, q)
+
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintln(w, `{"results":[{}]}`)
+		}))
+		defer ts.Close()
+
+		i := InfluxDB{
+			URLs:     []string{ts.URL},
+			Database: tc.database,
+		}
+
+		err := i.Connect()
+		require.NoError(t, err)
+		require.NoError(t, i.Close())
+	}
+}
 
 func TestUDPInflux(t *testing.T) {
 	i := InfluxDB{

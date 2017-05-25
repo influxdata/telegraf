@@ -16,6 +16,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb/client"
 )
 
+var (
+	// Quote Ident replacer.
+	qiReplacer = strings.NewReplacer("\n", `\n`, `\`, `\\`, `"`, `\"`)
+)
+
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
 	// URL is only for backwards compatability
@@ -133,7 +138,7 @@ func (i *InfluxDB) Connect() error {
 			}
 			i.clients = append(i.clients, c)
 
-			err = c.Query("CREATE DATABASE " + i.Database)
+			err = c.Query(fmt.Sprintf(`CREATE DATABASE "%s"`, qiReplacer.Replace(i.Database)))
 			if err != nil {
 				if !strings.Contains(err.Error(), "Status Code [403]") {
 					log.Println("I! Database creation failed: " + err.Error())
@@ -191,7 +196,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		if _, e := i.clients[n].WriteStream(r, bufsize); e != nil {
 			// If the database was not found, try to recreate it:
 			if strings.Contains(e.Error(), "database not found") {
-				if errc := i.clients[n].Query("CREATE DATABASE  " + i.Database); errc != nil {
+				errc := i.clients[n].Query(fmt.Sprintf(`CREATE DATABASE "%s"`, qiReplacer.Replace(i.Database)))
+				if errc != nil {
 					log.Printf("E! Error: Database %s not found and failed to recreate\n",
 						i.Database)
 				}
