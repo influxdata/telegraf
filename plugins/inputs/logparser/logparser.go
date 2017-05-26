@@ -82,7 +82,8 @@ func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
 	defer l.Unlock()
 
 	// always start from the beginning of files that appear while we're running
-	return l.tailNewfiles(true)
+	// why need to set true? It's ok to set l.FromBeginning.
+	return l.tailNewfiles(l.FromBeginning)
 }
 
 func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
@@ -147,7 +148,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		}
 		files := g.Match()
 
-		for file, _ := range files {
+		for file := range files {
 			if _, ok := l.tailers[file]; ok {
 				// we're already tailing this file
 				continue
@@ -159,6 +160,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Follow:    true,
 					Location:  &seek,
 					MustExist: true,
+					Poll:      true, //inotify(default) not work in macos(darwin). poll test ok.
 				})
 			l.acc.AddError(err)
 
