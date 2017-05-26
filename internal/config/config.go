@@ -46,6 +46,7 @@ var (
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
+	Fields        map[string]interface{}
 	Tags          map[string]string
 	InputFilters  []string
 	OutputFilters []string
@@ -67,6 +68,7 @@ func NewConfig() *Config {
 			FlushInterval: internal.Duration{Duration: 10 * time.Second},
 		},
 
+		Fields:        make(map[string]interface{}),
 		Tags:          make(map[string]string),
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
@@ -196,6 +198,8 @@ var header = `# Telegraf Configuration
   ## Environment variables can be used as tags, and throughout the config file
   # user = "$USER"
 
+[global_fields]
+  # git-sha = "a3537ef2a8e56f9647c1c281d88e092b651c392c"
 
 # Configuration for telegraf agent
 [agent]
@@ -580,6 +584,18 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 
+	// Parse global fields
+	if val, ok := tbl.Fields["global_fields"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("%s: invalid configuration", path)
+		}
+		if err = toml.UnmarshalTable(subTable, c.Fields); err != nil {
+			log.Printf("E! Could not parse [global_fields] config\n")
+			return fmt.Errorf("Error parsing %s, %s", path, err)
+		}
+	}
+
 	// Parse agent table:
 	if val, ok := tbl.Fields["agent"]; ok {
 		subTable, ok := val.(*ast.Table)
@@ -600,7 +616,7 @@ func (c *Config) LoadConfig(path string) error {
 		}
 
 		switch name {
-		case "agent", "global_tags", "tags":
+		case "agent", "global_fields", "global_tags", "tags":
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {

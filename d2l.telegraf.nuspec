@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>d2l.telegraf</id>
+        <version>$version$</version>
+        <title>Telegraf</title>
+        <authors>Telegraf Community</authors>
+        <owners>D2L Corporation</owners>
+        <licenseUrl>https://github.com/Brightspace/telegraf/blob/master/LICENSE</licenseUrl>
+        <projectUrl>https://github.com/Brightspace/telegraf</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Telegraf is an agent written in Go for collecting metrics from the system it's running on, or from other services, and writing them into InfluxDB or other outputs.
+
+Design goals are to have a minimal memory footprint with a plugin system so that developers in the community can easily add support for collecting metrics from well known services (like Hadoop, Postgres, or Redis) and third party APIs (like Mailchimp, AWS CloudWatch, or Google Analytics).</description>
+        <summary>Telegraf is an agent written in Go for collecting metrics from the system it's running on, or from other services, and writing them into InfluxDB or other outputs.</summary>
+        <copyright>2015 InfluxDB</copyright>
+        <releaseNotes>Build of $gitsha$</releaseNotes>
+    </metadata>
+    <files>
+        <file src="telegraf.exe" target="tools\telegraf.exe" />
+    </files>
+</package>

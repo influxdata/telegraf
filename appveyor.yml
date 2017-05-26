@@ -1,0 +1,34 @@
+version: 1.3-rc{build}
+
+cache:
+ - C:\Cache
+
+clone_folder: C:\gopath\src\github.com\influxdata\telegraf
+
+environment:
+  GOPATH: C:\gopath
+
+platform: x64
+
+install:
+  - IF NOT EXIST "C:\Cache" mkdir C:\Cache
+  - IF NOT EXIST "C:\Cache\go1.8.msi" curl -o "C:\Cache\go1.8.msi" https://storage.googleapis.com/golang/go1.8.windows-amd64.msi
+  - IF NOT EXIST "C:\Cache\gnuwin32-bin.zip" curl -o "C:\Cache\gnuwin32-bin.zip" https://dronedata.dl.sourceforge.net/project/gnuwin32/make/3.81/make-3.81-bin.zip
+  - IF NOT EXIST "C:\Cache\gnuwin32-dep.zip" curl -o "C:\Cache\gnuwin32-dep.zip" https://dronedata.dl.sourceforge.net/project/gnuwin32/make/3.81/make-3.81-dep.zip
+  - IF EXIST "C:\Go" rmdir /S /Q C:\Go
+  - msiexec.exe /i "C:\Cache\go1.8.msi" /quiet
+  - 7z x "C:\Cache\gnuwin32-bin.zip" -oC:\GnuWin32 -y
+  - 7z x "C:\Cache\gnuwin32-dep.zip" -oC:\GnuWin32 -y
+  - go version
+  - go env
+
+build_script:
+  - cmd: C:\GnuWin32\bin\make windows
+  - nuget pack d2l.telegraf.nuspec -version "%APPVEYOR_BUILD_VERSION%" -properties "gitsha=%APPVEYOR_REPO_COMMIT%"
+
+test_script:
+  - cmd: C:\GnuWin32\bin\make test-windows
+
+artifacts:
+  - path: telegraf.exe
+  - path: '*.nupkg'
