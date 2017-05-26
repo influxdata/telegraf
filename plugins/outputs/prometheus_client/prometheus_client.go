@@ -102,6 +102,10 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
+func sanitize(value string) string {
+	return invalidNameCharRE.ReplaceAllString(value, "_")
+}
+
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	p.Lock()
 	defer p.Unlock()
@@ -110,20 +114,36 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	// Since each metric must have a consistent set of labels, we collect the
+	// tag keys for each measurement so that we can ensure they are all set.
+	tagsByName := make(map[string][]string)
 	for _, point := range metrics {
-		key := point.Name()
-		key = invalidNameCharRE.ReplaceAllString(key, "_")
-
-		// convert tags into prometheus labels
-		var labels []string
-		l := prometheus.Labels{}
-		for k, v := range point.Tags() {
-			k = invalidNameCharRE.ReplaceAllString(k, "_")
-			if len(k) == 0 {
+		tags := []string{}
+		for tagKey, _ := range point.Tags() {
+			if len(tagKey) == 0 {
 				continue
 			}
-			labels = append(labels, k)
-			l[k] = v
+			tags = append(tags, tagKey)
+		}
+		name := point.Name()
+		tagsByName[name] = tags
+	}
+
+	for _, point := range metrics {
+		name := point.Name()
+
+		// Convert tags into prometheus labels
+		l := prometheus.Labels{}
+		tagSet := point.Tags()
+		tagKeys := tagsByName[name]
+		for _, tagKey := range tagKeys {
+			tagValue, ok := tagSet[tagKey]
+			if !ok {
+				// Tags missing from this measurement are labeled with a empty
+				// string value.
+				tagValue = ""
+			}
+			l[sanitize(tagKey)] = tagValue
 		}
 
 		// Get a type if it's available, defaulting to Untyped
@@ -137,7 +157,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			mType = prometheus.UntypedValue
 		}
 
-		for n, val := range point.Fields() {
+		for fieldKey, val := range point.Fields() {
 			// Ignore string and bool fields.
 			switch val.(type) {
 			case string:
@@ -146,13 +166,11 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
-			// sanitize the measurement name
-			n = invalidNameCharRE.ReplaceAllString(n, "_")
-			var mname string
-			if n == "value" {
-				mname = key
-			} else {
-				mname = fmt.Sprintf("%s_%s", key, n)
+			// sanitize the field key
+			fieldKey = sanitize(fieldKey)
+			mname := sanitize(name)
+			if fieldKey != "value" {
+				mname = fmt.Sprintf("%s_%s", mname, fieldKey)
 			}
 
 			desc := prometheus.NewDesc(mname, "Telegraf collected metric", nil, l)
