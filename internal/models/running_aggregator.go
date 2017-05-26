@@ -64,6 +64,7 @@ func (r *RunningAggregator) MakeMetric(
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
 		nil,
+		nil,
 		r.Config.Filter,
 		false,
 		mType,

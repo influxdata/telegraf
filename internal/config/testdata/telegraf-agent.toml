@@ -23,6 +23,9 @@
 [global_tags]
   dc = "us-east-1"
 
+[global_fields]
+  git-sha = "a3537ef2a8e56f9647c1c281d88e092b651c392c"
+
 # Configuration for telegraf agent
 [agent]
   # Default data collection interval for all plugins

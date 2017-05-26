@@ -14,8 +14,9 @@ type RunningInput struct {
 	Input  telegraf.Input
 	Config *InputConfig
 
-	trace       bool
-	defaultTags map[string]string
+	trace         bool
+	defaultFields map[string]interface{}
+	defaultTags   map[string]string
 
 	MetricsGathered selfstat.Stat
 }
@@ -67,6 +68,7 @@ func (r *RunningInput) MakeMetric(
 		r.Config.MeasurementPrefix,
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
+		r.defaultFields,
 		r.defaultTags,
 		r.Config.Filter,
 		true,
@@ -89,6 +91,10 @@ func (r *RunningInput) Trace() bool {
 
 func (r *RunningInput) SetTrace(trace bool) {
 	r.trace = trace
+}
+
+func (r *RunningInput) SetDefaultFields(fields map[string]interface{}) {
+	r.defaultFields = fields
 }
 
 func (r *RunningInput) SetDefaultTags(tags map[string]string) {
