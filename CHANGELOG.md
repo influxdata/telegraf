@@ -15,6 +15,7 @@
 - [#2782](https://github.com/influxdata/telegraf/pull/2782): Reuse transports in input plugins
 - [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
 - [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
+- [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
 
 ## v1.3.1 [unreleased]
 
