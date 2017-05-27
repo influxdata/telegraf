@@ -70,7 +70,7 @@ Using this configuration:
 When run with:
 
 ```
-./telegraf -config telegraf.conf -input-filter bcache -test
+./telegraf --config telegraf.conf --input-filter bcache --test
 ```
 
 It produces:

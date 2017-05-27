@@ -282,7 +282,7 @@ func TestMesosMaster(t *testing.T) {
 		Timeout: 10,
 	}
 
-	err := m.Gather(&acc)
+	err := acc.GatherError(m.Gather)
 
 	if err != nil {
 		t.Errorf(err.Error())
@@ -330,7 +330,7 @@ func TestMesosSlave(t *testing.T) {
 		Timeout: 10,
 	}
 
-	err := m.Gather(&acc)
+	err := acc.GatherError(m.Gather)
 
 	if err != nil {
 		t.Errorf(err.Error())

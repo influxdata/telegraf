@@ -141,7 +141,7 @@ func TestIptables_Gather(t *testing.T) {
 			},
 		}
 		acc := new(testutil.Accumulator)
-		err := ipt.Gather(acc)
+		err := acc.GatherError(ipt.Gather)
 		if !reflect.DeepEqual(tt.err, err) {
 			t.Errorf("%d: expected error '%#v' got '%#v'", i, tt.err, err)
 		}
@@ -199,7 +199,7 @@ func TestIptables_Gather_listerError(t *testing.T) {
 		},
 	}
 	acc := new(testutil.Accumulator)
-	err := ipt.Gather(acc)
+	err := acc.GatherError(ipt.Gather)
 	if !reflect.DeepEqual(err, errFoo) {
 		t.Errorf("Expected error %#v got\n%#v\n", errFoo, err)
 	}

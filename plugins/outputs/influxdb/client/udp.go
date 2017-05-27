@@ -25,6 +25,7 @@ type UDPConfig struct {
 	PayloadSize int
 }
 
+// NewUDP will return an instance of the telegraf UDP output plugin for influxdb
 func NewUDP(config UDPConfig) (Client, error) {
 	p, err := url.Parse(config.URL)
 	if err != nil {
@@ -55,20 +56,22 @@ type udpClient struct {
 	buffer []byte
 }
 
+// Query will send the provided query command to the client, returning an error if any issues arise
 func (c *udpClient) Query(command string) error {
 	return nil
 }
 
+// Write will send the byte stream to the given UDP client endpoint
 func (c *udpClient) Write(b []byte) (int, error) {
 	return c.WriteStream(bytes.NewReader(b), -1)
 }
 
-// write params are ignored by the UDP client
+// WriteWithParams are ignored by the UDP client, will forward to WriteStream
 func (c *udpClient) WriteWithParams(b []byte, wp WriteParams) (int, error) {
 	return c.WriteStream(bytes.NewReader(b), -1)
 }
 
-// contentLength is ignored by the UDP client.
+// WriteStream will send the provided data through to the client, contentLength is ignored by the UDP client
 func (c *udpClient) WriteStream(r io.Reader, contentLength int) (int, error) {
 	var totaln int
 	for {
@@ -88,12 +91,13 @@ func (c *udpClient) WriteStream(r io.Reader, contentLength int) (int, error) {
 	return totaln, nil
 }
 
-// contentLength is ignored by the UDP client.
+// WriteStreamWithParams will forward the stream to the client backend, contentLength is ignored by the UDP client
 // write params are ignored by the UDP client
 func (c *udpClient) WriteStreamWithParams(r io.Reader, contentLength int, wp WriteParams) (int, error) {
 	return c.WriteStream(r, -1)
 }
 
+// Close will terminate the provided client connection
 func (c *udpClient) Close() error {
 	return c.conn.Close()
 }

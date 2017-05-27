@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -35,23 +34,22 @@ func (n *Nginx) Description() string {
 
 func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(n.Urls))
 
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
+			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
 		}
 
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			errChan.C <- n.gatherUrl(addr, acc)
+			acc.AddError(n.gatherUrl(addr, acc))
 		}(addr)
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 var tr = &http.Transport{

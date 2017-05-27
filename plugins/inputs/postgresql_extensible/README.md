@@ -1,16 +1,15 @@
 # PostgreSQL plugin
 
 This postgresql plugin provides metrics for your postgres database. It has been
-designed to parse ithe sql queries in the plugin section of your telegraf.conf.
+designed to parse SQL queries in the plugin section of your `telegraf.conf`.
 
-For now only two queries are specified and it's up to you to add more; some per
-query parameters have been added :
+The example below has two queries are specified, with the following parameters:
 
-* The SQl query itself
-* The minimum version supported (here in numeric display visible in pg_settings)
-* A boolean to define if the query have to be run against some specific
-* variables (defined in the databaes variable of the plugin section)
-* The list of the column that have to be defined has tags
+* The SQL query itself
+* The minimum PostgreSQL version supported (the numeric display visible in pg_settings)
+* A boolean to define if the query has to be run against some specific database (defined in the `databases` variable of the plugin section)
+* The name of the measurement
+* A list of the columns to be defined as tags
 
 ```
 [[inputs.postgresql_extensible]]
@@ -19,7 +18,7 @@ query parameters have been added :
   # or a simple string:
   #   host=localhost user=pqotest password=... sslmode=... dbname=app_production
   #
-  # All connection parameters are optional.  #
+  # All connection parameters are optional.  
   # Without the dbname parameter, the driver will default to a database
   # with the same name as the user. This dbname is just for instantiating a
   # connection with the server and doesn't restrict the databases we are trying
@@ -65,7 +64,7 @@ query parameters have been added :
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab),[powa](http://dalibo.github.io/powa/)...)
+using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
 
 # Sample Queries :
 - telegraf.conf postgresql_extensible queries (assuming that you have configured
@@ -131,9 +130,9 @@ create extension pg_proctab;
  - pg_stat_kcache is available on the postgresql.org yum repo
  - pg_proctab is available at : https://github.com/markwkm/pg_proctab
 
- ##Views
+ ## Views
  - Blocking sessions
-```
+```sql
 CREATE OR REPLACE VIEW public.blocking_procs AS
  SELECT a.datname AS db,
     kl.pid AS blocking_pid,
@@ -157,7 +156,7 @@ CREATE OR REPLACE VIEW public.blocking_procs AS
   ORDER BY a.query_start;
 ```
   - Sessions Statistics
-```
+```sql
 CREATE OR REPLACE VIEW public.sessions AS
  WITH proctab AS (
          SELECT pg_proctab.pid,

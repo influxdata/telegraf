@@ -121,7 +121,7 @@ func init() {
 		return &CPUStats{
 			PerCPU:   true,
 			TotalCPU: true,
-			ps:       &systemPS{},
+			ps:       newSystemPS(),
 		}
 	})
 }

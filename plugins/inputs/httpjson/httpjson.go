@@ -1,7 +1,6 @@
 package httpjson
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -73,7 +72,10 @@ var sampleConfig = `
   ## NOTE This plugin only reads numerical measurements, strings and booleans
   ## will be ignored.
 
-  ## a name for the service being polled
+  ## Name for the service being polled.  Will be appended to the name of the
+  ## measurement e.g. httpjson_webserver_stats
+  ##
+  ## Deprecated (1.3.0): Use name_override, name_suffix, name_prefix instead.
   name = "webserver_stats"
 
   ## URL of each server in the service's cluster
@@ -93,12 +95,14 @@ var sampleConfig = `
   #   "my_tag_2"
   # ]
 
-  ## HTTP parameters (all values must be strings)
-  [inputs.httpjson.parameters]
-    event_type = "cpu_spike"
-    threshold = "0.75"
+  ## HTTP parameters (all values must be strings).  For "GET" requests, data
+  ## will be included in the query.  For "POST" requests, data will be included
+  ## in the request body as "x-www-form-urlencoded".
+  # [inputs.httpjson.parameters]
+  #   event_type = "cpu_spike"
+  #   threshold = "0.75"
 
-  ## HTTP Header parameters (all values must be strings)
+  ## HTTP Headers (all values must be strings)
   # [inputs.httpjson.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
@@ -140,31 +144,17 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 		h.client.SetHTTPClient(client)
 	}
 
-	errorChannel := make(chan error, len(h.Servers))
-
 	for _, server := range h.Servers {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			if err := h.gatherServer(acc, server); err != nil {
-				errorChannel <- err
-			}
+			acc.AddError(h.gatherServer(acc, server))
 		}(server)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 // Gathers data from a particular server

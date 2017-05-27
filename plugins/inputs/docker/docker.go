@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,24 +13,35 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+type DockerLabelFilter struct {
+	labelInclude filter.Filter
+	labelExclude filter.Filter
+}
 
 // Docker object
 type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 	Timeout        internal.Duration
-	PerDevice      bool `toml:"perdevice"`
-	Total          bool `toml:"total"`
+	PerDevice      bool     `toml:"perdevice"`
+	Total          bool     `toml:"total"`
+	TagEnvironment []string `toml:"tag_env"`
+	LabelInclude   []string `toml:"docker_label_include"`
+	LabelExclude   []string `toml:"docker_label_exclude"`
+
+	LabelFilter DockerLabelFilter
 
 	client      *client.Client
 	engine_host string
 
-	testing bool
+	testing             bool
+	labelFiltersCreated bool
 }
 
 // infoWrapper wraps client.Client.List for testing.
@@ -70,6 +80,18 @@ func statsWrapper(
 	return fc.ContainerStats(ctx, containerID, stream)
 }
 
+func inspectWrapper(
+	c *client.Client,
+	ctx context.Context,
+	containerID string,
+) (types.ContainerJSON, error) {
+	if c != nil {
+		return c.ContainerInspect(ctx, containerID)
+	}
+	fc := FakeDockerClient{}
+	return fc.ContainerInspect(ctx, containerID)
+}
+
 // KB, MB, GB, TB, PB...human friendly
 const (
 	KB = 1000
@@ -98,7 +120,13 @@ var sampleConfig = `
   perdevice = true
   ## Whether to report for each container total blkio and network stats or not
   total = false
+  ## Which environment variables should we use as a tag
+  ##tag_env = ["JAVA_HOME", "HEAP_SIZE"]
 
+  ## docker labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  docker_label_include = []
+  docker_label_exclude = []
 `
 
 // Description returns input description
@@ -133,11 +161,19 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 		d.client = c
 	}
+	// Create label filters if not already created
+	if !d.labelFiltersCreated {
+		err := d.createLabelFilters()
+		if err != nil {
+			return err
+		}
+		d.labelFiltersCreated = true
+	}
 
 	// Get daemon info
 	err := d.gatherInfo(acc)
 	if err != nil {
-		fmt.Println(err.Error())
+		acc.AddError(err)
 	}
 
 	// List containers
@@ -157,8 +193,8 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := d.gatherContainer(c, acc)
 			if err != nil {
-				log.Printf("E! Error gathering container %s stats: %s\n",
-					c.Names, err.Error())
+				acc.AddError(fmt.Errorf("E! Error gathering container %s stats: %s\n",
+					c.Names, err.Error()))
 			}
 		}(container)
 	}
@@ -293,7 +329,28 @@ func (d *Docker) gatherContainer(
 
 	// Add labels to tags
 	for k, label := range container.Labels {
-		tags[k] = label
+		if len(d.LabelInclude) == 0 || d.LabelFilter.labelInclude.Match(k) {
+			if len(d.LabelExclude) == 0 || !d.LabelFilter.labelExclude.Match(k) {
+				tags[k] = label
+			}
+		}
+	}
+
+	// Add whitelisted environment variables to tags
+	if len(d.TagEnvironment) > 0 {
+		info, err := inspectWrapper(d.client, ctx, container.ID)
+		if err != nil {
+			return fmt.Errorf("Error inspecting docker container: %s", err.Error())
+		}
+		for _, envvar := range info.Config.Env {
+			for _, configvar := range d.TagEnvironment {
+				dock_env := strings.SplitN(envvar, "=", 2)
+				//check for presence of tag in whitelist
+				if len(dock_env) == 2 && len(strings.TrimSpace(dock_env[1])) != 0 && configvar == dock_env[0] {
+					tags[dock_env[0]] = dock_env[1]
+				}
+			}
+		}
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
@@ -599,11 +656,32 @@ func parseSize(sizeStr string) (int64, error) {
 	return int64(size), nil
 }
 
+func (d *Docker) createLabelFilters() error {
+	if len(d.LabelInclude) != 0 && d.LabelFilter.labelInclude == nil {
+		var err error
+		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(d.LabelExclude) != 0 && d.LabelFilter.labelExclude == nil {
+		var err error
+		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			PerDevice: true,
-			Timeout:   internal.Duration{Duration: time.Second * 5},
+			PerDevice:           true,
+			Timeout:             internal.Duration{Duration: time.Second * 5},
+			labelFiltersCreated: false,
 		}
 	})
 }
