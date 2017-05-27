@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -97,10 +96,6 @@ func (h *Http) SampleConfig() string {
 
 // Writes metrics over HTTP POST
 func (h *Http) Write(metrics []telegraf.Metric) error {
-	if err := validate(h); err != nil {
-		return err
-	}
-
 	var mCount int
 	var reqBodyBuf []byte
 
@@ -175,15 +170,6 @@ func (h *Http) isExpStatusCode(resStatusCode int) bool {
 	}
 
 	return false
-}
-
-// required option validate
-func validate(h *Http) error {
-	if h.URL == "" || len(h.HttpHeaders) == 0 || len(h.ExpStatusCodes) == 0 {
-		return errors.New("E! Http ouput plugin is not working. Because your configuration omits the required option. Please check url, http_headers, expected_status_codes is empty!")
-	}
-
-	return nil
 }
 
 // makeReqBody translates each serializer's converted metric into a request body.

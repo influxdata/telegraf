@@ -62,24 +62,6 @@ func (h TestNotFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
-func TestWriteWithoutRequiredOption(t *testing.T) {
-	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
-	metrics := []telegraf.Metric{m}
-
-	http := &Http{}
-
-	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix:   "telegraf",
-		Template: "tags.measurement.field",
-	})
-
-	http.Connect()
-
-	err := http.Write(metrics)
-
-	assert.Error(t, err)
-}
-
 func TestWriteAllInputMetric(t *testing.T) {
 	now := time.Now()
 
