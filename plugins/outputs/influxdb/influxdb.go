@@ -2,7 +2,6 @@ package influxdb
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"math/rand"
 	"strings"
@@ -167,26 +166,29 @@ func (i *InfluxDB) Description() string {
 	return "Configuration for influxdb server to send metrics to"
 }
 
-func (i *InfluxDB) getReader(metrics []telegraf.Metric) io.Reader {
+func (i *InfluxDB) split(metrics []telegraf.Metric) []telegraf.Metric {
 	if !i.splitPayload {
-		return metric.NewReader(metrics)
+		return metrics
 	}
 
-	splitData := make([]telegraf.Metric, 0)
+	split := make([]telegraf.Metric, 0)
 	for _, m := range metrics {
-		splitData = append(splitData, m.Split(i.UDPPayload)...)
+		split = append(split, m.Split(i.UDPPayload)...)
 	}
-	return metric.NewReader(splitData)
+	return split
 }
 
 // Write will choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
+	metrics = i.split(metrics)
+
 	bufsize := 0
 	for _, m := range metrics {
 		bufsize += m.Len()
 	}
-	r := i.getReader(metrics)
+
+	r := metric.NewReader(metrics)
 
 	// This will get set to nil if a successful write occurs
 	err := fmt.Errorf("Could not write to any InfluxDB server in cluster")
