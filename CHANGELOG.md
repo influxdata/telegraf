@@ -8,6 +8,7 @@
 - [#2851](https://github.com/influxdata/telegraf/pull/2851): Fix InfluxDB output database quoting.
 - [#2856](https://github.com/influxdata/telegraf/issues/2856): Fix net input on older Linux kernels.
 - [#2848](https://github.com/influxdata/telegraf/pull/2848): Fix panic in mongo input.
+- [#2869](https://github.com/influxdata/telegraf/pull/2869): Fix length calculation of split metric buffer.
 
 ## v1.3 [2017-05-15]
 
