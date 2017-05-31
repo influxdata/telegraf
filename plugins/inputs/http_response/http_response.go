@@ -3,8 +3,11 @@ package http_response
 import (
 	"errors"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,12 +18,13 @@ import (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address         string
-	Body            string
-	Method          string
-	ResponseTimeout internal.Duration
-	Headers         map[string]string
-	FollowRedirects bool
+	Address             string
+	Body                string
+	Method              string
+	ResponseTimeout     internal.Duration
+	Headers             map[string]string
+	FollowRedirects     bool
+	ResponseStringMatch string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -30,6 +34,9 @@ type HTTPResponse struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+
+	compiledStringMatch *regexp.Regexp
+	client              *http.Client
 }
 
 // Description returns the plugin Description
@@ -53,6 +60,11 @@ var sampleConfig = `
   # body = '''
   # {'fake':'data'}
   # '''
+
+  ## Optional substring or regex match in body of the response
+  ## response_string_match = "\"service_status\": \"up\""
+  ## response_string_match = "ok"
+  ## response_string_match = "\".*_status\".?:.?\"up\""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -78,13 +90,12 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	tr := &http.Transport{
-		ResponseHeaderTimeout: h.ResponseTimeout.Duration,
-		TLSClientConfig:       tlsCfg,
-	}
 	client := &http.Client{
-		Transport: tr,
-		Timeout:   h.ResponseTimeout.Duration,
+		Transport: &http.Transport{
+			DisableKeepAlives: true,
+			TLSClientConfig:   tlsCfg,
+		},
+		Timeout: h.ResponseTimeout.Duration,
 	}
 
 	if h.FollowRedirects == false {
@@ -96,14 +107,9 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 }
 
 // HTTPGather gathers all fields and returns any errors it encounters
-func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
+func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 	// Prepare fields
 	fields := make(map[string]interface{})
-
-	client, err := h.createHttpClient()
-	if err != nil {
-		return nil, err
-	}
 
 	var body io.Reader
 	if h.Body != "" {
@@ -123,7 +129,7 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 
 	// Start Timer
 	start := time.Now()
-	resp, err := client.Do(request)
+	resp, err := h.client.Do(request)
 	if err != nil {
 		if h.FollowRedirects {
 			return nil, err
@@ -135,8 +141,42 @@ func (h *HTTPResponse) HTTPGather() (map[string]interface{}, error) {
 			return nil, err
 		}
 	}
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
 	fields["response_time"] = time.Since(start).Seconds()
 	fields["http_response_code"] = resp.StatusCode
+
+	// Check the response for a regex match.
+	if h.ResponseStringMatch != "" {
+
+		// Compile once and reuse
+		if h.compiledStringMatch == nil {
+			h.compiledStringMatch = regexp.MustCompile(h.ResponseStringMatch)
+			if err != nil {
+				log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
+				fields["response_string_match"] = 0
+				return fields, nil
+			}
+		}
+
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("E! Failed to read body of HTTP Response : %s", err)
+			fields["response_string_match"] = 0
+			return fields, nil
+		}
+
+		if h.compiledStringMatch.Match(bodyBytes) {
+			fields["response_string_match"] = 1
+		} else {
+			fields["response_string_match"] = 0
+		}
+
+	}
+
 	return fields, nil
 }
 
@@ -163,8 +203,17 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	// Prepare data
 	tags := map[string]string{"server": h.Address, "method": h.Method}
 	var fields map[string]interface{}
+
+	if h.client == nil {
+		client, err := h.createHttpClient()
+		if err != nil {
+			return err
+		}
+		h.client = client
+	}
+
 	// Gather data
-	fields, err = h.HTTPGather()
+	fields, err = h.httpGather()
 	if err != nil {
 		return err
 	}

@@ -13,65 +13,105 @@ import (
 )
 
 const validThreeLevelMultiValueJSON = `
-{
-  "request":{
-    "mbean":"java.lang:type=*",
-    "type":"read"
+[
+  {
+    "request":{
+      "mbean":"java.lang:type=*",
+      "type":"read"
+    },
+    "value":{
+      "java.lang:type=Memory":{
+        "ObjectPendingFinalizationCount":0,
+        "Verbose":false,
+        "HeapMemoryUsage":{
+          "init":134217728,
+          "committed":173015040,
+          "max":1908932608,
+          "used":16840016
+        },
+        "NonHeapMemoryUsage":{
+          "init":2555904,
+          "committed":51380224,
+          "max":-1,
+          "used":49944048
+        },
+        "ObjectName":{
+          "objectName":"java.lang:type=Memory"
+        }
+      }
+    },
+    "timestamp":1446129191,
+    "status":200
+  }
+]`
+
+const validBulkResponseJSON = `
+[
+  {
+    "request":{
+      "mbean":"java.lang:type=Memory",
+      "attribute":"HeapMemoryUsage",
+      "type":"read"
+    },
+    "value":{
+      "init":67108864,
+      "committed":456130560,
+      "max":477626368,
+      "used":203288528
+    },
+    "timestamp":1446129191,
+    "status":200
   },
-  "value":{
-		"java.lang:type=Memory":{
-			"ObjectPendingFinalizationCount":0,
-			"Verbose":false,
-			"HeapMemoryUsage":{
-				"init":134217728,
-				"committed":173015040,
-				"max":1908932608,
-				"used":16840016
-			},
-			"NonHeapMemoryUsage":{
-				"init":2555904,
-				"committed":51380224,
-				"max":-1,
-				"used":49944048
-			},
-			"ObjectName":{
-				"objectName":"java.lang:type=Memory"
-			}
-		}
-  },
-  "timestamp":1446129191,
-  "status":200
-}`
+  {
+    "request":{
+      "mbean":"java.lang:type=Memory",
+      "attribute":"NonHeapMemoryUsage",
+      "type":"read"
+    },
+    "value":{
+      "init":2555904,
+      "committed":51380224,
+      "max":-1,
+      "used":49944048
+    },
+    "timestamp":1446129191,
+    "status":200
+  }
+]`
 
 const validMultiValueJSON = `
-{
-  "request":{
-    "mbean":"java.lang:type=Memory",
-    "attribute":"HeapMemoryUsage",
-    "type":"read"
-  },
-  "value":{
-    "init":67108864,
-    "committed":456130560,
-    "max":477626368,
-    "used":203288528
-  },
-  "timestamp":1446129191,
-  "status":200
-}`
+[
+  {
+    "request":{
+      "mbean":"java.lang:type=Memory",
+      "attribute":"HeapMemoryUsage",
+      "type":"read"
+    },
+    "value":{
+      "init":67108864,
+      "committed":456130560,
+      "max":477626368,
+      "used":203288528
+    },
+    "timestamp":1446129191,
+    "status":200
+  }
+]`
 
 const validSingleValueJSON = `
-{
-  "request":{
-    "path":"used",
-    "mbean":"java.lang:type=Memory",
-    "attribute":"HeapMemoryUsage",
-    "type":"read"
-  },
-  "value":209274376,
-  "timestamp":1446129256,
-  "status":200
-}`
+[
+  {
+    "request":{
+      "path":"used",
+      "mbean":"java.lang:type=Memory",
+      "attribute":"HeapMemoryUsage",
+      "type":"read"
+    },
+    "value":209274376,
+    "timestamp":1446129256,
+    "status":200
+  }
+]`
 
 const invalidJSON = "I don't think this is JSON"
 
@@ -82,6 +122,8 @@ var HeapMetric = Metric{Name: "heap_memory_usage",
 	Mbean: "java.lang:type=Memory", Attribute: "HeapMemoryUsage"}
 var UsedHeapMetric = Metric{Name: "heap_memory_usage",
 	Mbean: "java.lang:type=Memory", Attribute: "HeapMemoryUsage"}
+var NonHeapMetric = Metric{Name: "non_heap_memory_usage",
+	Mbean: "java.lang:type=Memory", Attribute: "NonHeapMemoryUsage"}
 
 type jolokiaClientStub struct {
 	responseBody string
@@ -116,7 +158,7 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	jolokia := genJolokiaClientStub(validMultiValueJSON, 200, Servers, []Metric{HeapMetric})
 
 	var acc testutil.Accumulator
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
@@ -135,12 +177,40 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "jolokia", fields, tags)
 }
 
+// Test that bulk responses are handled
+func TestHttpJsonBulkResponse(t *testing.T) {
+	jolokia := genJolokiaClientStub(validBulkResponseJSON, 200, Servers, []Metric{HeapMetric, NonHeapMetric})
+
+	var acc testutil.Accumulator
+	err := jolokia.Gather(&acc)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(acc.Metrics))
+
+	fields := map[string]interface{}{
+		"heap_memory_usage_init":          67108864.0,
+		"heap_memory_usage_committed":     456130560.0,
+		"heap_memory_usage_max":           477626368.0,
+		"heap_memory_usage_used":          203288528.0,
+		"non_heap_memory_usage_init":      2555904.0,
+		"non_heap_memory_usage_committed": 51380224.0,
+		"non_heap_memory_usage_max":       -1.0,
+		"non_heap_memory_usage_used":      49944048.0,
+	}
+	tags := map[string]string{
+		"jolokia_host": "127.0.0.1",
+		"jolokia_port": "8080",
+		"jolokia_name": "as1",
+	}
+	acc.AssertContainsTaggedFields(t, "jolokia", fields, tags)
+}
+
 // Test that the proper values are ignored or collected
 func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 	jolokia := genJolokiaClientStub(validThreeLevelMultiValueJSON, 200, Servers, []Metric{HeapMetric})
 
 	var acc testutil.Accumulator
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
@@ -168,17 +238,18 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 }
 
 // Test that the proper values are ignored or collected
-func TestHttpJsonOn404(t *testing.T) {
+func TestHttp404(t *testing.T) {
 
-	jolokia := genJolokiaClientStub(validMultiValueJSON, 404, Servers,
+	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers,
 		[]Metric{UsedHeapMetric})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, len(acc.Metrics))
+	assert.Contains(t, err.Error(), "has status code 404")
 }
 
 // Test that the proper values are ignored or collected
@@ -189,8 +260,9 @@ func TestHttpInvalidJson(t *testing.T) {
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
-	err := jolokia.Gather(&acc)
+	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, len(acc.Metrics))
+	assert.Contains(t, err.Error(), "Error decoding JSON response")
 }

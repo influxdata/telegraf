@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/papertrail"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
 
@@ -23,6 +24,12 @@ func TestAvailableWebhooks(t *testing.T) {
 
 	wb.Rollbar = &rollbar.RollbarWebhook{Path: "/rollbar"}
 	expected = append(expected, wb.Rollbar)
+	if !reflect.DeepEqual(wb.AvailableWebhooks(), expected) {
+		t.Errorf("expected to be %v.\nGot %v", expected, wb.AvailableWebhooks())
+	}
+
+	wb.Papertrail = &papertrail.PapertrailWebhook{Path: "/papertrail"}
+	expected = append(expected, wb.Papertrail)
 	if !reflect.DeepEqual(wb.AvailableWebhooks(), expected) {
 		t.Errorf("expected to be %v.\nGot %v", expected, wb.AvailableWebhooks())
 	}

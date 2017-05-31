@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,7 +26,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
-	"github.com/influxdata/config"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
@@ -85,8 +85,8 @@ type AgentConfig struct {
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
-	// By default, precision will be set to the same timestamp order as the
-	// collection interval, with the maximum being 1s.
+	// By default or when set to "0s", precision will be set to the same
+	// timestamp order as the collection interval, with the maximum being 1s.
 	//   ie, when interval = "10s", precision will be "1s"
 	//       when interval = "250ms", precision will be "1ms"
 	// Precision will NOT be used for service inputs. It is up to each individual
@@ -230,10 +230,13 @@ var header = `# Telegraf Configuration
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
-  ## By default, precision will be set to the same timestamp order as the
-  ## collection interval, with the maximum being 1s.
-  ## Precision will NOT be used for service inputs, such as logparser and statsd.
-  ## Valid values are "ns", "us" (or "µs"), "ms", "s".
+  ## By default or when set to "0s", precision will be set to the same
+  ## timestamp order as the collection interval, with the maximum being 1s.
+  ##   ie, when interval = "10s", precision will be "1s"
+  ##       when interval = "250ms", precision will be "1ms"
+  ## Precision will NOT be used for service inputs. It is up to each individual
+  ## service input to set the timestamp at the appropriate precision.
+  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
 
   ## Logging configuration:
@@ -506,6 +509,10 @@ func PrintOutputConfig(name string) error {
 
 func (c *Config) LoadDirectory(path string) error {
 	walkfn := func(thispath string, info os.FileInfo, _ error) error {
+		if info == nil {
+			log.Printf("W! Telegraf is not permitted to read %s", thispath)
+			return nil
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -566,7 +573,7 @@ func (c *Config) LoadConfig(path string) error {
 			if !ok {
 				return fmt.Errorf("%s: invalid configuration", path)
 			}
-			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
+			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("E! Could not parse [global_tags] config\n")
 				return fmt.Errorf("Error parsing %s, %s", path, err)
 			}
@@ -579,7 +586,7 @@ func (c *Config) LoadConfig(path string) error {
 		if !ok {
 			return fmt.Errorf("%s: invalid configuration", path)
 		}
-		if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
+		if err = toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			log.Printf("E! Could not parse [agent] config\n")
 			return fmt.Errorf("Error parsing %s, %s", path, err)
 		}
@@ -716,7 +723,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, aggregator); err != nil {
+	if err := toml.UnmarshalTable(table, aggregator); err != nil {
 		return err
 	}
 
@@ -736,7 +743,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, processor); err != nil {
+	if err := toml.UnmarshalTable(table, processor); err != nil {
 		return err
 	}
 
@@ -776,7 +783,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, output); err != nil {
+	if err := toml.UnmarshalTable(table, output); err != nil {
 		return err
 	}
 
@@ -817,7 +824,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, input); err != nil {
+	if err := toml.UnmarshalTable(table, input); err != nil {
 		return err
 	}
 
@@ -909,7 +916,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
-			if err := config.UnmarshalTable(subtbl, conf.Tags); err != nil {
+			if err := toml.UnmarshalTable(subtbl, conf.Tags); err != nil {
 				log.Printf("Could not parse tags for input %s\n", name)
 			}
 		}
@@ -1146,7 +1153,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
-			if err := config.UnmarshalTable(subtbl, cp.Tags); err != nil {
+			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
 				log.Printf("E! Could not parse tags for input %s\n", name)
 			}
 		}
@@ -1226,6 +1233,34 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["collectd_auth_file"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdAuthFile = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["collectd_security_level"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdSecurityLevel = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["collectd_typesdb"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CollectdTypesDB = append(c.CollectdTypesDB, str.Value)
+					}
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1233,6 +1268,9 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
 	delete(tbl.Fields, "data_type")
+	delete(tbl.Fields, "collectd_auth_file")
+	delete(tbl.Fields, "collectd_security_level")
+	delete(tbl.Fields, "collectd_typesdb")
 
 	return parsers.NewParser(c)
 }
@@ -1241,7 +1279,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
 func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error) {
-	c := &serializers.Config{}
+	c := &serializers.Config{TimestampUnits: time.Duration(1 * time.Second)}
 
 	if node, ok := tbl.Fields["data_format"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1271,9 +1309,26 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["json_timestamp_units"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				timestampVal, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, fmt.Errorf("Unable to parse json_timestamp_units as a duration, %s", err)
+				}
+				// now that we have a duration, truncate it to the nearest
+				// power of ten (just in case)
+				nearest_exponent := int64(math.Log10(float64(timestampVal.Nanoseconds())))
+				new_nanoseconds := int64(math.Pow(10.0, float64(nearest_exponent)))
+				c.TimestampUnits = time.Duration(new_nanoseconds)
+			}
+		}
+	}
+
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
+	delete(tbl.Fields, "json_timestamp_units")
 	return serializers.NewSerializer(c)
 }
 

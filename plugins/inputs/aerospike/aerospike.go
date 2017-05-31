@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	as "github.com/aerospike/aerospike-client-go"
@@ -41,17 +40,16 @@ func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(a.Servers))
 	wg.Add(len(a.Servers))
 	for _, server := range a.Servers {
 		go func(serv string) {
 			defer wg.Done()
-			errChan.C <- a.gatherServer(serv, acc)
+			acc.AddError(a.gatherServer(serv, acc))
 		}(server)
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) error {

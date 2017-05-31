@@ -37,7 +37,7 @@ Using this configuration:
 
 When run with:
 ```
-./telegraf -config telegraf.conf -input-filter nginx -test
+./telegraf --config telegraf.conf --input-filter nginx --test
 ```
 
 It produces:

@@ -399,7 +399,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{
@@ -419,7 +419,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("rabbitmq_overview", metric))
+		assert.True(t, acc.HasInt64Field("rabbitmq_overview", metric))
 	}
 
 	nodeIntMetrics := []string{
@@ -437,7 +437,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	}
 
 	for _, metric := range nodeIntMetrics {
-		assert.True(t, acc.HasIntField("rabbitmq_node", metric))
+		assert.True(t, acc.HasInt64Field("rabbitmq_node", metric))
 	}
 
 	assert.True(t, acc.HasMeasurement("rabbitmq_queue"))

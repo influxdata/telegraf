@@ -1,128 +1,79 @@
-# HTTP JSON Plugin
+# HTTP JSON Input Plugin
 
-The httpjson plugin can collect data from remote URLs which respond with JSON. Then it flattens JSON and finds all numeric values, treating them as floats.
+The httpjson plugin collects data from HTTP URLs which respond with JSON.  It flattens the JSON and finds all numeric values, treating them as floats.
 
-For example, if you have a service called _mycollector_, which has HTTP endpoint for gathering stats at http://my.service.com/_stats, you would configure the HTTP JSON plugin like this:
+### Configuration:
 
-```
+```toml
 [[inputs.httpjson]]
-  name = "mycollector"
+  ## NOTE This plugin only reads numerical measurements, strings and booleans
+  ## will be ignored.
 
+  ## Name for the service being polled.  Will be appended to the name of the
+  ## measurement e.g. "httpjson_webserver_stats".
+  ##
+  ## Deprecated (1.3.0): Use name_override, name_suffix, name_prefix instead.
+  name = "webserver_stats"
+
+  ## URL of each server in the service's cluster
   servers = [
-    "http://my.service.com/_stats"
+    "http://localhost:9999/stats/",
+    "http://localhost:9998/stats/",
   ]
-
-  # HTTP method to use (case-sensitive)
-  method = "GET"
-
-  # Set response_timeout (default 5 seconds)
+  ## Set response_timeout (default 5 seconds)
   response_timeout = "5s"
-```
 
-`name` is used as a prefix for the measurements.
-
-`method` specifies HTTP method to use for requests.
-
-`response_timeout` specifies timeout to wait to get the response
-
-You can also specify which keys from server response should be considered tags:
-
-```
-[[inputs.httpjson]]
-  ...
-
-  tag_keys = [
-    "role",
-    "version"
-  ]
-```
-
-If the JSON response is an array of objects, then each object will be parsed with the same configuration.
-
-You can also specify additional request parameters for the service:
-
-```
-[[inputs.httpjson]]
-  ...
-
- [inputs.httpjson.parameters]
-    event_type = "cpu_spike"
-    threshold = "0.75"
-
-```
-
-You can also specify additional request header parameters for the service:
-
-```
-[[inputs.httpjson]]
-  ...
-
- [inputs.httpjson.headers]
-    X-Auth-Token = "my-xauth-token"
-    apiVersion = "v1"
-```
-
-# Example:
-
-Let's say that we have a service named "mycollector" configured like this:
-
-```
-[[inputs.httpjson]]
-  name = "mycollector"
-  servers = [
-    "http://my.service.com/_stats"
-  ]
-  # HTTP method to use (case-sensitive)
-  method = "GET"
-  tag_keys = ["service"]
-```
-
-which responds with the following JSON:
-
-```json
-{
-    "service": "service01",
-    "a": 0.5,
-    "b": {
-        "c": "some text",
-        "d": 0.1,
-        "e": 5
-    }
-}
-```
-
-The collected metrics will be:
-```
-httpjson_mycollector_a,service='service01',server='http://my.service.com/_stats' value=0.5
-httpjson_mycollector_b_d,service='service01',server='http://my.service.com/_stats' value=0.1
-httpjson_mycollector_b_e,service='service01',server='http://my.service.com/_stats' value=5
-```
-
-# Example 2, Multiple Services:
-
-There is also the option to collect JSON from multiple services, here is an example doing that.
-
-```
-[[inputs.httpjson]]
-  name = "mycollector1"
-  servers = [
-    "http://my.service1.com/_stats"
-  ]
-  # HTTP method to use (case-sensitive)
+  ## HTTP method to use: GET or POST (case-sensitive)
   method = "GET"
 
-[[inputs.httpjson]]
-  name = "mycollector2"
-  servers = [
-    "http://service.net/json/stats"
-  ]
-  # HTTP method to use (case-sensitive)
-  method = "POST"
+  ## Tags to extract from top-level of JSON server response.
+  # tag_keys = [
+  #   "my_tag_1",
+  #   "my_tag_2"
+  # ]
+
+  ## HTTP Request Parameters (all values must be strings).  For "GET" requests, data
+  ## will be included in the query.  For "POST" requests, data will be included
+  ## in the request body as "x-www-form-urlencoded".
+  # [inputs.httpjson.parameters]
+  #   event_type = "cpu_spike"
+  #   threshold = "0.75"
+
+  ## HTTP Request Headers (all values must be strings).
+  # [inputs.httpjson.headers]
+  #   X-Auth-Token = "my-xauth-token"
+  #   apiVersion = "v1"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
-The services respond with the following JSON:
+### Measurements & Fields:
 
-mycollector1:
+- httpjson
+	- response_time (float): Response time in seconds
+
+Additional fields are dependant on the response of the remote service being polled.
+
+### Tags:
+
+- All measurements have the following tags:
+	- server: HTTP origin as defined in configuration as `servers`.
+
+Any top level keys listed under `tag_keys` in the configuration are added as tags.  Top level keys are defined as keys in the root level of the object in a single object response, or in the root level of each object within an array of objects.
+
+
+### Examples Output:
+
+This plugin understands responses containing a single JSON object, or a JSON Array of Objects.
+
+**Object Output:**
+
+Given the following response body:
 ```json
 {
     "a": 0.5,
@@ -130,45 +81,30 @@ mycollector1:
         "c": "some text",
         "d": 0.1,
         "e": 5
-    }
+    },
+    "service": "service01"
 }
 ```
+The following metric is produced:
 
-mycollector2:
-```json
-{
-    "load": 100,
-    "users": 1335
-}
-```
+`httpjson,server=http://localhost:9999/stats/ b_d=0.1,a=0.5,b_e=5,response_time=0.001`
 
-The collected metrics will be:
+Note that only numerical values are extracted and the type is float.
 
-```
-httpjson_mycollector1_a,server='http://my.service.com/_stats' value=0.5
-httpjson_mycollector1_b_d,server='http://my.service.com/_stats' value=0.1
-httpjson_mycollector1_b_e,server='http://my.service.com/_stats' value=5
+If `tag_keys` is included in the configuration:
 
-httpjson_mycollector2_load,server='http://service.net/json/stats' value=100
-httpjson_mycollector2_users,server='http://service.net/json/stats' value=1335
-```
-
-# Example 3, Multiple Metrics in Response:
-
-The response JSON can be treated as an array of data points that are all parsed with the same configuration.
-
-```
+```toml
 [[inputs.httpjson]]
-  name = "mycollector"
-  servers = [
-    "http://my.service.com/_stats"
-  ]
-  # HTTP method to use (case-sensitive)
-  method = "GET"
   tag_keys = ["service"]
 ```
 
-which responds with the following JSON:
+Then the `service` tag will also be added:
+
+`httpjson,server=http://localhost:9999/stats/,service=service01 b_d=0.1,a=0.5,b_e=5,response_time=0.001`
+
+**Array Output:**
+
+If the service returns an array of objects, one metric is be created for each object:
 
 ```json
 [
@@ -193,12 +129,5 @@ which responds with the following JSON:
 ]
 ```
 
-The collected metrics will be:
-```
-httpjson_mycollector_a,service='service01',server='http://my.service.com/_stats' value=0.5
-httpjson_mycollector_b_d,service='service01',server='http://my.service.com/_stats' value=0.1
-httpjson_mycollector_b_e,service='service01',server='http://my.service.com/_stats' value=5
-httpjson_mycollector_a,service='service02',server='http://my.service.com/_stats' value=0.6
-httpjson_mycollector_b_d,service='service02',server='http://my.service.com/_stats' value=0.2
-httpjson_mycollector_b_e,service='service02',server='http://my.service.com/_stats' value=6
-```
+`httpjson,server=http://localhost:9999/stats/,service=service01 a=0.5,b_d=0.1,b_e=5,response_time=0.003`
+`httpjson,server=http://localhost:9999/stats/,service=service02 a=0.6,b_d=0.2,b_e=6,response_time=0.003`

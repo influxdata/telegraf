@@ -6,10 +6,9 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/hpcloud/tail"
+	"github.com/influxdata/tail"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
@@ -26,7 +25,7 @@ type LogParserPlugin struct {
 	Files         []string
 	FromBeginning bool
 
-	tailers []*tail.Tail
+	tailers map[string]*tail.Tail
 	lines   chan string
 	done    chan struct{}
 	wg      sync.WaitGroup
@@ -46,7 +45,9 @@ const sampleConfig = `
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
   ##   /var/log/apache.log -> only tail the apache log file
   files = ["/var/log/apache/access.log"]
-  ## Read file from beginning.
+  ## Read files that currently exist from the beginning. Files that are created
+  ## while telegraf is running (and that match the "files" globs) will always
+  ## be read from the beginning.
   from_beginning = false
 
   ## Parse logstash-style "grok" patterns:
@@ -77,7 +78,11 @@ func (l *LogParserPlugin) Description() string {
 }
 
 func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
-	return nil
+	l.Lock()
+	defer l.Unlock()
+
+	// always start from the beginning of files that appear while we're running
+	return l.tailNewfiles(true)
 }
 
 func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
@@ -87,6 +92,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.acc = acc
 	l.lines = make(chan string, 1000)
 	l.done = make(chan struct{})
+	l.tailers = make(map[string]*tail.Tail)
 
 	// Looks for fields which implement LogParser interface
 	l.parsers = []LogParser{}
@@ -111,24 +117,26 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	}
 
 	// compile log parser patterns:
-	errChan := errchan.New(len(l.parsers))
 	for _, parser := range l.parsers {
 		if err := parser.Compile(); err != nil {
-			errChan.C <- err
+			return err
 		}
-	}
-	if err := errChan.Error(); err != nil {
-		return err
-	}
-
-	var seek tail.SeekInfo
-	if !l.FromBeginning {
-		seek.Whence = 2
-		seek.Offset = 0
 	}
 
 	l.wg.Add(1)
 	go l.parser()
+
+	return l.tailNewfiles(l.FromBeginning)
+}
+
+// check the globs against files on disk, and start tailing any new files.
+// Assumes l's lock is held!
+func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
+	var seek tail.SeekInfo
+	if !fromBeginning {
+		seek.Whence = 2
+		seek.Offset = 0
+	}
 
 	// Create a "tailer" for each file
 	for _, filepath := range l.Files {
@@ -138,8 +146,13 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 			continue
 		}
 		files := g.Match()
-		errChan = errchan.New(len(files))
+
 		for file, _ := range files {
+			if _, ok := l.tailers[file]; ok {
+				// we're already tailing this file
+				continue
+			}
+
 			tailer, err := tail.TailFile(file,
 				tail.Config{
 					ReOpen:    true,
@@ -147,16 +160,16 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 					Location:  &seek,
 					MustExist: true,
 				})
-			errChan.C <- err
+			l.acc.AddError(err)
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
 			go l.receiver(tailer)
-			l.tailers = append(l.tailers, tailer)
+			l.tailers[file] = tailer
 		}
 	}
 
-	return errChan.Error()
+	return nil
 }
 
 // receiver is launched as a goroutine to continuously watch a tailed logfile
@@ -166,6 +179,7 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 
 	var line *tail.Line
 	for line = range tailer.Lines {
+
 		if line.Err != nil {
 			log.Printf("E! Error tailing file %s, Error: %s\n",
 				tailer.Filename, line.Err)
@@ -204,6 +218,8 @@ func (l *LogParserPlugin) parser() {
 				if m != nil {
 					l.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 				}
+			} else {
+				log.Println("E! Error parsing log line: " + err.Error())
 			}
 		}
 	}

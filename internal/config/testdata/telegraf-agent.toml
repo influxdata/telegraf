@@ -60,7 +60,7 @@
   # Kafka topic for producer messages
   topic = "telegraf"
   # Telegraf tag to use as a routing key
-  #  ie, if this tag exists, it's value will be used as the routing key
+  #  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
 
 
