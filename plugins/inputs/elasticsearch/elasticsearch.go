@@ -299,10 +299,9 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 		return err
 	}
 	measurementTime := time.Now()
-	tags := map[string]string{"name": healthStats.ClusterName}
+	tags := map[string]string{"cluster_name": healthStats.ClusterName}
 
 	clusterFields := map[string]interface{}{
-		"cluster_name":          healthStats.ClusterName,
 		"status":                healthStats.Status,
 		"timed_out":             healthStats.TimedOut,
 		"number_of_nodes":       healthStats.NumberOfNodes,
@@ -321,9 +320,8 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	)
 
 	for name, health := range healthStats.Indices {
-		tags := map[string]string{"name": healthStats.ClusterName, "index_name": name}
+		tags := map[string]string{"cluster_name": healthStats.ClusterName, "index_name": name}
 		indexFields := map[string]interface{}{
-			"index_name":            name,
 			"status":                health.Status,
 			"number_of_shards":      health.NumberOfShards,
 			"number_of_replicas":    health.NumberOfReplicas,

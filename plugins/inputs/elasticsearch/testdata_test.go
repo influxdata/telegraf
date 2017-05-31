@@ -38,7 +38,6 @@ const clusterHealthResponse = `
 `
 
 var clusterHealthExpected = map[string]interface{}{
-	"cluster_name":          "elasticsearch_telegraf",
 	"status":                "green",
 	"timed_out":             false,
 	"number_of_nodes":       3,
@@ -51,7 +50,6 @@ var clusterHealthExpected = map[string]interface{}{
 }
 
 var v1IndexExpected = map[string]interface{}{
-	"index_name":            "v1",
 	"status":                "green",
 	"number_of_shards":      10,
 	"number_of_replicas":    1,
@@ -63,7 +61,6 @@ var v1IndexExpected = map[string]interface{}{
 }
 
 var v2IndexExpected = map[string]interface{}{
-	"index_name":            "v2",
 	"status":                "red",
 	"number_of_shards":      10,
 	"number_of_replicas":    1,
