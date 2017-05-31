@@ -499,13 +499,12 @@ def build(version=None,
         logging.info("Time taken: {}s".format((end_time - start_time).total_seconds()))
     return True
 
-def generate_md5_from_file(path):
-    """Generate MD5 signature based on the contents of the file at path.
+def generate_sha256_from_file(path):
+    """Generate SHA256 hash signature based on the contents of the file at path.
     """
-    m = hashlib.md5()
+    m = hashlib.sha256()
     with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            m.update(chunk)
+        m.update(f.read())
     return m.hexdigest()
 
 def generate_sig_from_file(path):
@@ -790,9 +789,10 @@ def main(args):
             if not upload_packages(packages, bucket_name=args.bucket, overwrite=args.upload_overwrite):
                 return 1
         logging.info("Packages created:")
-        for p in packages:
-            logging.info("{} (MD5={})".format(p.split('/')[-1:][0],
-                                              generate_md5_from_file(p)))
+        for filename in packages:
+            logging.info("%s (SHA256=%s)",
+                         os.path.basename(filename),
+                         generate_sha256_from_file(filename))
     if orig_branch != get_current_branch():
         logging.info("Moving back to original git branch: {}".format(args.branch))
         run("git checkout {}".format(orig_branch))
