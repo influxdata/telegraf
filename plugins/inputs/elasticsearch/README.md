@@ -371,10 +371,11 @@ field cache size, merges and flushes measurement names:
 
 [Cluster-Health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html) information:
 - ES Endpoint: _cluster/health?level=indices
-- Measurement: elasticsearch_cluster_health
-- Tag : Name (the index name)
+- Measurement: elasticsearch_cluster_health and elasticsearch_cluster_health_indices
+- Tag : cluster_name on all, plus index_name for elasticsearch_cluster_health_indices
 
-Specific information includes:
+Specific elasticsearch_cluster_health information includes:
+- Tag : cluster_name 
 - Cluster info
   - cluster_name
   - timed_out
@@ -382,6 +383,9 @@ Specific information includes:
 - Node info
   - number_of_nodes
   - number_of_data_nodes
+
+Specific elasticsearch_cluster_health_indices information includes:
+- Tags : cluster_name and index_name
 - Shard info
   - active_primary_shards
   - active_shards
