@@ -8,27 +8,17 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"log"
-	"regexp"
-	//	"net/url"
 	"os"
 	"plugin"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	// database drivers here:
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq" // pure go
-	//	_ "github.com/denisenkom/go-mssqldb" // pure go
-	_ "github.com/zensqlmonitor/go-mssqldb" // pure go
-	//
-	// the following commented because of the external proprietary libraries dependencies
-	//	_ "github.com/mattn/go-sqlite3" // builds only on linux
-	//	_ "github.com/mattn/go-oci8"	// requires external prorietary libs
-	//	_ "gopkg.in/rana/ora.v4"		// requires external prorietary libs
-	//	_ "bitbucket.org/phiggins/db2cli" // requires external prorietary libs
-	//	_ "github.com/SAP/go-hdb"		// requires external prorietary libs
-	//	_ "github.com/a-palchikov/sqlago"
+	_ "github.com/lib/pq"
+	_ "github.com/zensqlmonitor/go-mssqldb"
 )
 
 const TYPE_STRING = 1
@@ -42,47 +32,47 @@ var Debug = false
 var qindex = 0
 
 var sampleConfig = `
-	[[inputs.sql]]
-		# debug=false						# Enables very verbose output
-
-		## Database Driver
-		driver = "mysql" 					# required. Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
-		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# optional: path to the golang 1.8 plugin shared lib
-		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
-
-		## Server DSNs
-		servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
-		#hosts=["neteye", "hostmysql"]	# optional: for each server a relative host entry should be specified and will be added as host tag
-		#db_names=["rue", "monitoring"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
-
-		## Queries to perform (block below can be repeated)
-		[[inputs.sql.query]]
-			# query has precedence on query_script, if both query and query_script are defined only query is executed
-			query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
-			# query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
-			#
-			measurement="connection_errors"	# destination measurement
-			tag_cols=["application"]		# colums used as tags
-			field_cols=["avg_application_latency","avg_bytes","act_throughput"]	# select fields and use the database driver automatic datatype conversion
-			#
-			# bool_fields=["ON"]				# adds fields and forces his value as bool
-			# int_fields=["MEMBERS",".*BYTES"]	# adds fields and forces his value as integer
-			# float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
-			# time_fields=[".*_TIME"]		# adds fields and forces his value as time
-			#
-			# field_measurement = "CLASS"		# the column that contains the name of the measurement
-			# field_host = "DBHOST"				# the column that contains the name of the database host used for host tag value
-			# field_database = "DBHOST"			# the column that contains the name of the database used for dbname tag value
-			# field_name = "counter_name"		# the column that contains the name of the counter
-			# field_value = "counter_value"		# the column that contains the value of the counter
-			#
-			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
-			#
-			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
-			null_as_zero = false			# true: converts null values into zero or empty strings (false: ignore fields)
-			sanitize = false				# true: will perform some chars substitutions (false: use value as is)
-			ignore_row_errors				# true: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
-	`
+[[inputs.sql]]
+  # debug=false                         # Enables very verbose output
+  
+  ## Database Driver
+  driver = "mysql"                      # required. Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
+  # shared_lib = "/home/luca/.gocode/lib/oci8_go.so"    # optional: path to the golang 1.8 plugin shared lib
+  # keep_connection = false             # true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
+  
+  ## Server DSNs
+  servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
+  #hosts=["neteye", "hostmysql"]        # optional: for each server a relative host entry should be specified and will be added as host tag
+  #db_names=["rue", "monitoring"]       # optional: for each server a relative db name entry should be specified and will be added as dbname tag
+  
+  ## Queries to perform (block below can be repeated)
+  [[inputs.sql.query]]
+    # query has precedence on query_script, if both query and query_script are defined only query is executed
+    query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
+    # query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
+    #
+    measurement="connection_errors"     # destination measurement
+    tag_cols=["application"]            # colums used as tags
+    field_cols=["avg_application_latency","avg_bytes","act_throughput"]  # select fields and use the database driver automatic datatype conversion
+    #
+    # bool_fields=["ON"]                # adds fields and forces his value as bool
+    # int_fields=["MEMBERS",".*BYTES"]  # adds fields and forces his value as integer
+    # float_fields=["TEMPERATURE"]      # adds fields and forces his value as float
+    # time_fields=[".*_TIME"]           # adds fields and forces his value as time
+    #
+    # field_measurement = "CLASS"       # the column that contains the name of the measurement
+    # field_host = "DBHOST"             # the column that contains the name of the database host used for host tag value
+    # field_database = "DBHOST"         # the column that contains the name of the database used for dbname tag value
+    # field_name = "counter_name"       # the column that contains the name of the counter
+    # field_value = "counter_value"     # the column that contains the value of the counter
+    #
+    # field_timestamp = "sample_time"   # the column where is to find the time of sample (should be a date datatype)
+    #
+    ignore_other_fields = false         # false: if query returns columns not defined, they are automatically added (true: ignore columns)
+    null_as_zero = false                # true: converts null values into zero or empty strings (false: ignore fields)
+    sanitize = false                    # true: will perform some chars substitutions (false: use value as is)
+    ignore_row_errors                   # true: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
+`
 
 type Query struct {
 	Query       string
@@ -112,7 +102,6 @@ type Query struct {
 	ParseTagsOnce     bool
 	//
 	QueryScript string
-	//	Parameters  []string //TODO
 
 	// -------- internal data -----------
 	statements []*sql.Stmt
@@ -122,11 +111,11 @@ type Query struct {
 	cells       []interface{}
 
 	field_count int
-	field_idx   []int //Column indexes of fields
-	field_type  []int //Column types of fields
+	field_idx   []int // Column indexes of fields
+	field_type  []int // Column types of fields
 
 	tag_count int
-	tag_idx   []int //Column indexes of tags (strings)
+	tag_idx   []int // Column indexes of tags (strings)
 
 	field_host_idx        int
 	field_database_idx    int
@@ -203,44 +192,6 @@ type DSN struct {
 	dbname string
 }
 
-//
-//func ParseDSN(dsn string) (*DSN, error) {
-//
-//	url, err := url.Parse(dsn)
-//	if err != nil {
-//		return nil, err
-//	}
-//	pdsn := &DSN{}
-//	pdsn.host = url.Host
-//	pdsn.dbname = url.Path
-//	return pdsn, err
-//
-//	res = map[string]string{}
-//	parts := strings.Split(dsn, ";")
-//	for _, part := range parts {
-//		if len(part) == 0 {
-//			continue
-//		}
-//		lst := strings.SplitN(part, "=", 2)
-//		name := strings.TrimSpace(strings.ToLower(lst[0]))
-//		if len(name) == 0 {
-//			continue
-//		}
-//		var value string = ""
-//		if len(lst) > 1 {
-//			value = strings.TrimSpace(lst[1])
-//		}
-//		res[name] = value
-//	}
-//	return res
-//	//	prm := &p.SessionPrm{Host: url.Host}
-//	//
-//	//	if url.User != nil {
-//	//		pdsn.Username = url.User.Username()
-//	//		prm.Password, _ = url.User.Password()
-//	//	}
-//}
-
 func (s *Sql) Init() error {
 	Debug = s.Debug
 
@@ -264,23 +215,7 @@ func (s *Sql) Init() error {
 			s.Query[i].statements = make([]*sql.Stmt, len(s.Servers))
 		}
 	}
-	//	for i := 0; i < len(s.Servers); i++ {
-	//		c, err := ParseDSN(s.Servers[i])
-	//		if err == nil {
-	//			log.Printf("Host %s Database %s", c.host, c.dbname)
-	//		} else {
-	//			panic(err)
-	//		}
-	//
-	//		//TODO get host from server
-	//		// mysql servers  = ["nprobe:nprobe@tcp(neteye.wp.lan:3307)/nprobe"]
-	//		// "postgres://nprobe:nprobe@rue-test/nprobe?sslmode=disable"
-	//		// oracle telegraf/monitor@10.62.6.1:1522/tunapit
-	//		//		match, _ := regexp.MatchString(".*@([0-9.a-zA-Z]*)[:]?[0-9]*/.*", "peach")
-	//		//    fmt.Println(match)
-	//		//				addr, err := net.LookupHost("198.252.206.16")
-	//
-	//	}
+
 	if len(s.Servers) > 0 && len(s.Hosts) > 0 && len(s.Hosts) != len(s.Servers) {
 		return fmt.Errorf("For each server a host should be specified (%d/%d)", len(s.Hosts), len(s.Servers))
 	}
@@ -298,7 +233,7 @@ func (s *Query) Init(cols []string) error {
 		log.Printf("I! Init Query %d with %d columns", s.index, len(cols))
 	}
 
-	//Define index of tags and fields and keep it for reuse
+	// Define index of tags and fields and keep it for reuse
 	s.column_name = cols
 
 	// init the arrays for store row data
@@ -306,14 +241,6 @@ func (s *Query) Init(cols []string) error {
 	s.cells = make([]interface{}, col_count)
 	s.cell_refs = make([]interface{}, col_count)
 
-	// init the arrays for store field/tag infos
-	//	expected_tag_count := len(s.TagCols)
-	//	var expected_field_count int
-	//	if !s.IgnoreOtherFields {
-	//		expected_field_count = col_count // - expected_tag_count
-	//	} else {
-	//		expected_field_count = len(s.FieldCols) + len(s.BoolFields) + len(s.IntFields) + len(s.FloatFields) + len(s.TimeFields)
-	//	}
 	// because of regex, now we must assume the max cols
 	expected_field_count := col_count
 	expected_tag_count := col_count
@@ -364,23 +291,18 @@ func (s *Query) Init(cols []string) error {
 			field_matched = false
 			s.tag_idx[s.tag_count] = i
 			s.tag_count++
-			//			cell = new(sql.RawBytes)
 			cell = new(string)
 		} else if match_str(s.column_name[i], s.IntFields) {
 			dest_type = TYPE_INT
 			cell = new(sql.RawBytes)
-			//				cell = new(int);
 		} else if match_str(s.column_name[i], s.FloatFields) {
 			dest_type = TYPE_FLOAT
-			//				cell = new(float64);
 			cell = new(sql.RawBytes)
 		} else if match_str(s.column_name[i], s.TimeFields) {
 			dest_type = TYPE_TIME
-			//			cell = new(string)
 			cell = new(sql.RawBytes)
 		} else if match_str(s.column_name[i], s.BoolFields) {
 			dest_type = TYPE_BOOL
-			//				cell = new(bool);
 			cell = new(sql.RawBytes)
 		} else if match_str(s.column_name[i], s.FieldCols) {
 			dest_type = TYPE_AUTO
@@ -388,7 +310,6 @@ func (s *Query) Init(cols []string) error {
 		} else if !s.IgnoreOtherFields {
 			dest_type = TYPE_AUTO
 			cell = new(sql.RawBytes)
-			//				cell = new(string);
 		} else {
 			field_matched = false
 			cell = new(sql.RawBytes)
@@ -499,8 +420,8 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 			if !ok {
 				var intvalue int64
 				intvalue, ok = value.(int64)
-				// TODO convert to s/ms/us/ns??
 				if ok {
+					// TODO convert to s/ms/us/ns??
 					value = time.Unix(intvalue, 0)
 				}
 			}
@@ -535,9 +456,6 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int, Null
 		}
 	} else {
 		value = nil
-		if Debug {
-			//			log.Printf("I! nil value for field name '%s' type %d", name, field_type)
-		}
 	}
 	if !ok {
 		err = fmt.Errorf("Error by converting field %s", name)
@@ -621,7 +539,6 @@ func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[strin
 			// cannot put data in correct series, skip line
 			return timestamp, measurement, err
 		} else {
-			//			log.Printf("******! tag %s=%s %s %s", name, value, , reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
 			tags[name] = value
 		}
 	}
@@ -655,7 +572,6 @@ func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[strin
 		if err != nil {
 			// cannot get value of column with expected datatype, warning and continue
 			log.Printf("W! converting value of field '%s'", name)
-			//			return timestamp, measurement, err
 		} else {
 			fields[name] = value
 		}
@@ -737,7 +653,6 @@ func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, err
 				if err != nil {
 					return nil, err
 				}
-				//defer stmt.Close()
 			}
 
 			// execute prepared statement
@@ -754,8 +669,6 @@ func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, err
 		}
 	} else {
 		log.Printf("W! No query to execute %d", q.index)
-		//				err = errors.New("No query to execute")
-		//				return nil, err
 		return nil, nil
 	}
 
@@ -844,15 +757,6 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 					return err
 				}
 
-				//	for debug purposes...
-				//				if row_count == 0 && Debug {
-				//					for ci := 0; ci < len(q.cells); ci++ {
-				//						if q.cells[ci] != nil {
-				//							log.Printf("I! Column '%s' type %s, raw data '%s'", q.column_name[ci], reflect.TypeOf(q.cells[ci]).Kind(), fmt.Sprintf("%v", q.cells[ci]))
-				//						}
-				//					}
-				//				}
-
 				// collect tags and fields
 				tags := map[string]string{}
 				fields := map[string]interface{}{}
@@ -882,16 +786,7 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 					}
 				}
 
-				//import "reflect"
-				//// m1 and m2 are the maps we want to compare
-				//eq := reflect.DeepEqual(m1, m2)
-
 				acc.AddFields(measurement, fields, tags, timestamp)
-
-				//		fieldsG := map[string]interface{}{
-				//			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
-				//		}
-				//		acc.AddGauge("cpu", fieldsG, tags, now) // TODO use gauge too?
 
 				row_count += 1
 			}
