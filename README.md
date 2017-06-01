@@ -195,6 +195,7 @@ configuration options.
 * [smart](./plugins/inputs/smart)
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
+* [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [teamspeak](./plugins/inputs/teamspeak)
 * [tomcat](./plugins/inputs/tomcat)
