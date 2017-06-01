@@ -139,6 +139,9 @@ type AgentConfig struct {
 	Quiet        bool
 	Hostname     string
 	OmitHostname bool
+
+	// query the AWS instance ID using the metadata API
+	AWSInstanceID bool `toml:"aws_instance_id"`
 }
 
 // Inputs returns a list of strings of the configured inputs.

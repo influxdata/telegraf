@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
@@ -37,6 +39,17 @@ func NewAgent(config *config.Config) (*Agent, error) {
 		}
 
 		config.Tags["host"] = a.Config.Agent.Hostname
+	}
+
+	if a.Config.Agent.AWSInstanceID {
+		svc := ec2metadata.New(session.New())
+		if svc.Available() {
+			instanceid, err := svc.GetMetadata("instance-id")
+			if err != nil {
+				return nil, err
+			}
+			config.Tags["InstanceId"] = instanceid
+		}
 	}
 
 	return a, nil
