@@ -59,6 +59,9 @@ func TestGather(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
+		Tags: map[string]string{
+			"top_level_tag": "tag_value",
+		},
 	}
 
 	var acc testutil.Accumulator
@@ -77,6 +80,7 @@ func TestGather(t *testing.T) {
 	tags["unit"] = "seconds"
 	tags["region"] = "us-east-1"
 	tags["load_balancer_name"] = "p-example"
+	tags["top_level_tag"] = "tag_value"
 
 	assert.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)

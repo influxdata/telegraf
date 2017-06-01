@@ -31,6 +31,7 @@ type (
 		Delay       internal.Duration `toml:"delay"`
 		Namespace   string            `toml:"namespace"`
 		Metrics     []*Metric         `toml:"metrics"`
+		Tags        map[string]string `toml:"tags"`
 		CacheTTL    internal.Duration `toml:"cache_ttl"`
 		RateLimit   int               `toml:"ratelimit"`
 		client      cloudwatchClient
@@ -108,6 +109,10 @@ func (c *CloudWatch) SampleConfig() string {
   ## maximum of 400. Optional - default value is 200.
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   ratelimit = 200
+
+	## Additional tags to add to the metric
+	#[inputs.cloudwatch.tags]
+	#  tag_name = "value"
 
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
@@ -297,6 +302,11 @@ func (c *CloudWatch) gatherMetric(
 
 		for _, d := range metric.Dimensions {
 			tags[snakeCase(*d.Name)] = *d.Value
+		}
+
+		// merge tags from inputs.cloudwatch.tags config
+		for k, v := range c.Tags {
+			tags[k] = v
 		}
 
 		// record field for each statistic
