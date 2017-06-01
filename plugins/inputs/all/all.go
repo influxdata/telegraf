@@ -21,6 +21,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/dovecot"
 	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
+	_ "github.com/influxdata/telegraf/plugins/inputs/fail2ban"
 	_ "github.com/influxdata/telegraf/plugins/inputs/filestat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
