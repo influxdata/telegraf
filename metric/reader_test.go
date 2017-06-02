@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkMetricReader(b *testing.B) {
@@ -113,6 +113,41 @@ func TestMetricReader_OverflowMetric(t *testing.T) {
 		assert.Equal(t, test.n, n)
 		assert.Equal(t, test.exp, string(buf[0:n]))
 		assert.Equal(t, test.err, err)
+	}
+}
+
+// Regression test for when a metric requires to be split and one of the
+// split metrics is exactly the size of the buffer.
+//
+// Previously a empty string would be returned on the next Read without error,
+// and then next Read call would panic.
+func TestMetricReader_SplitWithExactLengthSplit(t *testing.T) {
+	ts := time.Unix(1481032190, 0)
+	m1, _ := New("foo", map[string]string{},
+		map[string]interface{}{"a": int64(1), "bb": int64(2)}, ts)
+	metrics := []telegraf.Metric{m1}
+
+	r := NewReader(metrics)
+	buf := make([]byte, 30)
+
+	//  foo a=1i,bb=2i 1481032190000000000\n // len 35
+	//
+	// Requires this specific split order:
+	//  foo a=1i 1481032190000000000\n  // len 29
+	//  foo bb=2i 1481032190000000000\n // len 30
+
+	for {
+		n, err := r.Read(buf)
+		// Should never read 0 bytes unless at EOF, unless input buffer is 0 length
+		if n == 0 {
+			require.Equal(t, io.EOF, err)
+		}
+		// Lines should be terminated with a LF
+		if err == io.EOF {
+			require.Equal(t, uint8('\n'), buf[n-1])
+			break
+		}
+		require.NoError(t, err)
 	}
 }
 

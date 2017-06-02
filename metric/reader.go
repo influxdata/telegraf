@@ -99,7 +99,7 @@ func (r *reader) Read(p []byte) (n int, err error) {
 		}
 
 	case split:
-		if r.splitMetrics[r.iSM].Len() < len(p) {
+		if r.splitMetrics[r.iSM].Len() <= len(p) {
 			// write the current split metric
 			i += r.splitMetrics[r.iSM].SerializeTo(p)
 			r.iSM++
