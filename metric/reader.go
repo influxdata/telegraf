@@ -76,7 +76,7 @@ func (r *reader) Read(p []byte) (n int, err error) {
 			if len(tmp) > 1 {
 				r.splitMetrics = tmp
 				r.state = split
-				if r.splitMetrics[0].Len() < len(p) {
+				if r.splitMetrics[0].Len() <= len(p) {
 					i += r.splitMetrics[0].SerializeTo(p)
 					r.iSM = 1
 				} else {
