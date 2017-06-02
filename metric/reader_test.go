@@ -116,10 +116,38 @@ func TestMetricReader_OverflowMetric(t *testing.T) {
 	}
 }
 
+// Regression test for when a metric is the same size as the buffer.
+//
+// Previously EOF would not be set until the next call to Read.
+func TestMetricReader_MetricSizeEqualsBufferSize(t *testing.T) {
+	ts := time.Unix(1481032190, 0)
+	m1, _ := New("foo", map[string]string{},
+		map[string]interface{}{"a": int64(1)}, ts)
+	metrics := []telegraf.Metric{m1}
+
+	r := NewReader(metrics)
+	buf := make([]byte, m1.Len())
+
+	for {
+		n, err := r.Read(buf)
+		// Should never read 0 bytes unless at EOF, unless input buffer is 0 length
+		if n == 0 {
+			require.Equal(t, io.EOF, err)
+			break
+		}
+		// Lines should be terminated with a LF
+		if err == io.EOF {
+			require.Equal(t, uint8('\n'), buf[n-1])
+			break
+		}
+		require.NoError(t, err)
+	}
+}
+
 // Regression test for when a metric requires to be split and one of the
 // split metrics is exactly the size of the buffer.
 //
-// Previously a empty string would be returned on the next Read without error,
+// Previously an empty string would be returned on the next Read without error,
 // and then next Read call would panic.
 func TestMetricReader_SplitWithExactLengthSplit(t *testing.T) {
 	ts := time.Unix(1481032190, 0)
@@ -141,6 +169,7 @@ func TestMetricReader_SplitWithExactLengthSplit(t *testing.T) {
 		// Should never read 0 bytes unless at EOF, unless input buffer is 0 length
 		if n == 0 {
 			require.Equal(t, io.EOF, err)
+			break
 		}
 		// Lines should be terminated with a LF
 		if err == io.EOF {

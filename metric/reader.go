@@ -57,7 +57,7 @@ func (r *reader) Read(p []byte) (n int, err error) {
 			// this for-loop is the sunny-day scenario, where we are given a
 			// buffer that is large enough to hold at least a single metric.
 			// all of the cases below it are edge-cases.
-			if r.metrics[r.iM].Len() < len(p[i:]) {
+			if r.metrics[r.iM].Len() <= len(p[i:]) {
 				i += r.metrics[r.iM].SerializeTo(p[i:])
 			} else {
 				break
