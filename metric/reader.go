@@ -131,6 +131,10 @@ func (r *reader) Read(p []byte) (n int, err error) {
 			r.iSM++
 			if r.iSM == len(r.splitMetrics) {
 				r.iM++
+				if r.iM == len(r.metrics) {
+					r.state = done
+					return i, io.EOF
+				}
 				r.state = normal
 			} else {
 				r.state = split

@@ -180,6 +180,43 @@ func TestMetricReader_SplitWithExactLengthSplit(t *testing.T) {
 	}
 }
 
+// Regresssion test for when a metric requires to be split and one of the
+// split metrics is larger than the buffer.
+//
+// Previously the metric index would be set incorrectly causing a panic.
+func TestMetricReader_SplitOverflowOversized(t *testing.T) {
+	ts := time.Unix(1481032190, 0)
+	m1, _ := New("foo", map[string]string{},
+		map[string]interface{}{
+			"a":   int64(1),
+			"bbb": int64(2),
+		}, ts)
+	metrics := []telegraf.Metric{m1}
+
+	r := NewReader(metrics)
+	buf := make([]byte, 30)
+
+	// foo a=1i,bbb=2i 1481032190000000000\n // len 36
+	//
+	// foo a=1i 1481032190000000000\n  // len 29
+	// foo bbb=2i 1481032190000000000\n // len 31
+
+	for {
+		n, err := r.Read(buf)
+		// Should never read 0 bytes unless at EOF, unless input buffer is 0 length
+		if n == 0 {
+			require.Equal(t, io.EOF, err)
+			break
+		}
+		// Lines should be terminated with a LF
+		if err == io.EOF {
+			require.Equal(t, uint8('\n'), buf[n-1])
+			break
+		}
+		require.NoError(t, err)
+	}
+}
+
 func TestMetricReader_OverflowMultipleMetrics(t *testing.T) {
 	ts := time.Unix(1481032190, 0)
 	m, _ := New("foo", map[string]string{},
