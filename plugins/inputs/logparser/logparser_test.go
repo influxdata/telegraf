@@ -102,9 +102,7 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 
 	assert.Equal(t, acc.NFields(), 0)
 
-	os.Symlink(
-		thisdir+"grok/testdata/test_a.log",
-		emptydir+"/test_a.log")
+	_ = os.Symlink(thisdir+"grok/testdata/test_a.log", emptydir+"/test_a.log")
 	assert.NoError(t, acc.GatherError(logparser.Gather))
 	acc.Wait(1)
 

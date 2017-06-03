@@ -1,6 +1,6 @@
 package grok
 
-// THIS SHOULD BE KEPT IN-SYNC WITH patterns/influx-patterns
+// DEFAULT_PATTERNS SHOULD BE KEPT IN-SYNC WITH patterns/influx-patterns
 const DEFAULT_PATTERNS = `
 # Captures are a slightly modified version of logstash "grok" patterns, with
 #  the format %{<capture syntax>[:<semantic name>][:<modifier>]}
