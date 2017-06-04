@@ -9,8 +9,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 	"path"
+	"time"
 )
 
 var (
