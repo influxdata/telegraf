@@ -5,7 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,6 +17,7 @@ func TestGather(t *testing.T) {
 	i := &Ipmi{
 		Servers: []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
 		Path:    "ipmitool",
+		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
@@ -118,7 +121,8 @@ func TestGather(t *testing.T) {
 	}
 
 	i = &Ipmi{
-		Path: "ipmitool",
+		Path:    "ipmitool",
+		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
 
 	err = acc.GatherError(i.Gather)

@@ -63,7 +63,7 @@ httpd statistics:
 ### Example output:
 
 ```
-➜  telegraf git:(master) ✗ ./telegraf -config ./config.conf  -input-filter couchdb -test
+➜  telegraf git:(master) ✗ ./telegraf --config ./config.conf  --input-filter couchdb --test
 * Plugin: couchdb,
  Collection 1
 > couchdb,server=http://localhost:5984/_stats couchdb_auth_cache_hits_current=0,

@@ -2,14 +2,54 @@ package influxdb
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/outputs/influxdb/client"
 	"github.com/influxdata/telegraf/testutil"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestIdentQuoting(t *testing.T) {
+	var testCases = []struct {
+		database string
+		expected string
+	}{
+		{"x-y", `CREATE DATABASE "x-y"`},
+		{`x"y`, `CREATE DATABASE "x\"y"`},
+		{"x\ny", `CREATE DATABASE "x\ny"`},
+		{`x\y`, `CREATE DATABASE "x\\y"`},
+	}
+
+	for _, tc := range testCases {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.ParseForm()
+			q := r.Form.Get("q")
+			assert.Equal(t, tc.expected, q)
+
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintln(w, `{"results":[{}]}`)
+		}))
+		defer ts.Close()
+
+		i := InfluxDB{
+			URLs:     []string{ts.URL},
+			Database: tc.database,
+		}
+
+		err := i.Connect()
+		require.NoError(t, err)
+		require.NoError(t, i.Close())
+	}
+}
 
 func TestUDPInflux(t *testing.T) {
 	i := InfluxDB{
@@ -21,6 +61,35 @@ func TestUDPInflux(t *testing.T) {
 	err = i.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 	require.NoError(t, i.Close())
+}
+
+func TestBasicSplit(t *testing.T) {
+	c := &MockClient{}
+	i := InfluxDB{
+		clients:      []client.Client{c},
+		UDPPayload:   50,
+		splitPayload: true,
+	}
+
+	// Input metrics:
+	// test1,tag1=value1 value1=1 value2=2 1257894000000000000\n
+	//
+	// Split metrics:
+	// test1,tag1=value1 value1=1 1257894000000000000\n
+	// test1,tag1=value1 value2=2 1257894000000000000\n
+	m, err := metric.New("test1",
+		map[string]string{"tag1": "value1"},
+		map[string]interface{}{"value1": 1.0, "value2": 2.0},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	require.NoError(t, err)
+
+	metrics := []telegraf.Metric{m}
+	err = i.Write(metrics)
+	require.Equal(t, 1, c.writeStreamCalled)
+	require.Equal(t, 94, c.contentLength)
+
+	require.NoError(t, err)
 }
 
 func TestHTTPInflux(t *testing.T) {
@@ -163,4 +232,35 @@ func TestHTTPError_FieldTypeConflict(t *testing.T) {
 	err = i.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 	require.NoError(t, i.Close())
+}
+
+type MockClient struct {
+	writeStreamCalled int
+	contentLength     int
+}
+
+func (m *MockClient) Query(command string) error {
+	panic("not implemented")
+}
+
+func (m *MockClient) Write(b []byte) (int, error) {
+	panic("not implemented")
+}
+
+func (m *MockClient) WriteWithParams(b []byte, params client.WriteParams) (int, error) {
+	panic("not implemented")
+}
+
+func (m *MockClient) WriteStream(b io.Reader, contentLength int) (int, error) {
+	m.writeStreamCalled++
+	m.contentLength = contentLength
+	return 0, nil
+}
+
+func (m *MockClient) WriteStreamWithParams(b io.Reader, contentLength int, params client.WriteParams) (int, error) {
+	panic("not implemented")
+}
+
+func (m *MockClient) Close() error {
+	panic("not implemented")
 }

@@ -1,4 +1,35 @@
-## v1.3 [unreleased]
+## v1.4 [unreleased]
+
+### Release Notes
+### Features
+
+- [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
+- [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
+- [#2817](https://github.com/influxdata/telegraf/pull/2817): Added timeout option to IPMI sensor plugin
+
+### Bugfixes
+
+- [#2819](https://github.com/influxdata/telegraf/pull/2819): [enh] set db_version at 0 if query version fails
+- [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
+- [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
+- [#2782](https://github.com/influxdata/telegraf/pull/2782): Reuse transports in input plugins
+- [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
+- [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
+- [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
+
+## v1.3.1 [2017-05-31]
+
+### Bugfixes
+
+- [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
+- [#2782](https://github.com/influxdata/telegraf/pull/2782): Reuse transports in input plugins
+- [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
+- [#2851](https://github.com/influxdata/telegraf/pull/2851): Fix InfluxDB output database quoting.
+- [#2856](https://github.com/influxdata/telegraf/issues/2856): Fix net input on older Linux kernels.
+- [#2848](https://github.com/influxdata/telegraf/pull/2848): Fix panic in mongo input.
+- [#2869](https://github.com/influxdata/telegraf/pull/2869): Fix length calculation of split metric buffer.
+
+## v1.3 [2017-05-15]
 
 ### Release Notes
 
@@ -81,6 +112,7 @@ be deprecated eventually.
 - [#2031](https://github.com/influxdata/telegraf/pull/2031): Add Kapacitor input plugin
 - [#2732](https://github.com/influxdata/telegraf/pull/2732): Use go 1.8.1
 - [#2712](https://github.com/influxdata/telegraf/issues/2712): Documentation for rabbitmq input plugin
+- [#2141](https://github.com/influxdata/telegraf/pull/2141): Logparser handles newly-created files.
 
 ### Bugfixes
 
@@ -120,6 +152,7 @@ be deprecated eventually.
 - [#1911](https://github.com/influxdata/telegraf/issues/1911): Sysstat plugin needs LANG=C or similar locale
 - [#2528](https://github.com/influxdata/telegraf/issues/2528): File output closes standard streams on reload.
 - [#2603](https://github.com/influxdata/telegraf/issues/2603): AMQP output disconnect blocks all outputs
+- [#2706](https://github.com/influxdata/telegraf/issues/2706): Improve documentation for redis input plugin
 
 ## v1.2.1 [2017-02-01]
 

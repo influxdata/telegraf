@@ -51,6 +51,6 @@ This input plugin will test HTTP/HTTPS connections.
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter http_response -test
+$ ./telegraf --config telegraf.conf --input-filter http_response --test
 http_response,method=GET,server=http://www.github.com http_response_code=200i,response_time=6.223266528 1459419354977857955
 ```

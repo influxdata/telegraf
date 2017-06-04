@@ -323,6 +323,24 @@ func (a *Accumulator) HasIntField(measurement string, field string) bool {
 		if p.Measurement == measurement {
 			for fieldname, value := range p.Fields {
 				if fieldname == field {
+					_, ok := value.(int)
+					return ok
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// HasInt64Field returns true if the measurement has an Int64 value
+func (a *Accumulator) HasInt64Field(measurement string, field string) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
 					_, ok := value.(int64)
 					return ok
 				}
@@ -416,4 +434,54 @@ func (a *Accumulator) HasMeasurement(measurement string) bool {
 		}
 	}
 	return false
+}
+
+func (a *Accumulator) IntField(measurement string, field string) (int, bool) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					v, ok := value.(int)
+					return v, ok
+				}
+			}
+		}
+	}
+
+	return 0, false
+}
+
+func (a *Accumulator) FloatField(measurement string, field string) (float64, bool) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					v, ok := value.(float64)
+					return v, ok
+				}
+			}
+		}
+	}
+
+	return 0.0, false
+}
+
+func (a *Accumulator) StringField(measurement string, field string) (string, bool) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					v, ok := value.(string)
+					return v, ok
+				}
+			}
+		}
+	}
+	return "", false
 }

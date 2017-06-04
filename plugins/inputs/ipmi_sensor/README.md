@@ -43,6 +43,13 @@ The `server` tag will be made available when retrieving stats from remote server
   ## if no servers are specified, local machine sensor stats will be queried
   ##
   # servers = ["USERID:PASSW0RD@lan(192.168.1.1)"]
+
+  ## Recomended: use metric 'interval' that is a multiple of 'timeout' to avoid
+  ## gaps or overlap in pulled data
+  interval = "30s"
+
+  ## Timeout for the ipmitool command to complete. Default is 20 seconds.
+  timeout = "20s"
 ```
 
 ## Output

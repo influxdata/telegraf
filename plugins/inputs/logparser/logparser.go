@@ -117,15 +117,10 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	}
 
 	// compile log parser patterns:
-	var haveError bool
 	for _, parser := range l.parsers {
 		if err := parser.Compile(); err != nil {
-			acc.AddError(err)
-			haveError = true
+			return err
 		}
-	}
-	if haveError {
-		return nil
 	}
 
 	l.wg.Add(1)

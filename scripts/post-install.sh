@@ -11,7 +11,7 @@ function install_init {
 }
 
 function install_systemd {
-    cp -f $SCRIPT_DIR/telegraf.service /lib/systemd/system/telegraf.service
+    cp -f $SCRIPT_DIR/telegraf.service $1
     systemctl enable telegraf || true
     systemctl daemon-reload || true
 }
@@ -24,12 +24,12 @@ function install_chkconfig {
     chkconfig --add telegraf
 }
 
+if ! grep "^telegraf:" /etc/group &>/dev/null; then
+    groupadd -r telegraf
+fi
+
 if ! id telegraf &>/dev/null; then
-    if ! grep "^telegraf:" /etc/group &>/dev/null; then
-        useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf
-    else
-        useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
-    fi
+    useradd -r -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
 fi
 
 test -d $LOG_DIR || mkdir -p $LOG_DIR
@@ -56,10 +56,10 @@ if [[ ! -d /etc/telegraf/telegraf.d ]]; then
 fi
 
 # Distribution-specific logic
-if [[ -f /etc/redhat-release ]]; then
+if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
     # RHEL-variant logic
     if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
-        install_systemd
+        install_systemd /usr/lib/systemd/system/telegraf.service
     else
         # Assuming SysVinit
         install_init
@@ -73,10 +73,10 @@ if [[ -f /etc/redhat-release ]]; then
 elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
-        install_systemd
+        install_systemd /lib/systemd/system/telegraf.service
         systemctl restart telegraf || echo "WARNING: systemd not running."
     else
-	    # Assuming SysVinit
+        # Assuming SysVinit
         install_init
         # Run update-rc.d or fallback to chkconfig if not available
         if which update-rc.d &>/dev/null; then
@@ -89,7 +89,7 @@ elif [[ -f /etc/debian_version ]]; then
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
     if [[ $ID = "amzn" ]]; then
-	    # Amazon Linux logic
+        # Amazon Linux logic
         install_init
         # Run update-rc.d or fallback to chkconfig if not available
         if which update-rc.d &>/dev/null; then
@@ -97,5 +97,6 @@ elif [[ -f /etc/os-release ]]; then
         else
             install_chkconfig
         fi
+        /etc/init.d/telegraf restart
     fi
 fi

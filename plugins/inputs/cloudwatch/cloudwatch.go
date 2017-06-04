@@ -81,7 +81,7 @@ func (c *CloudWatch) SampleConfig() string {
 
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
-  # 3 minute and 5 minutes intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
+  # 3 minute, 5 minute, or larger intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
   # Note that if a period is configured that is smaller than the minimum for a
   # particular metric, that metric will not be returned by the Cloudwatch API
   # and will not be collected by Telegraf.
