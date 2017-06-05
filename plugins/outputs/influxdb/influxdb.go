@@ -46,8 +46,7 @@ type InfluxDB struct {
 	// Precision is only here for legacy support. It will be ignored.
 	Precision string
 
-	clients      []client.Client
-	splitPayload bool
+	clients []client.Client
 }
 
 var sampleConfig = `
@@ -115,7 +114,6 @@ func (i *InfluxDB) Connect() error {
 				return fmt.Errorf("Error creating UDP Client [%s]: %s", u, err)
 			}
 			i.clients = append(i.clients, c)
-			i.splitPayload = true
 		default:
 			// If URL doesn't start with "udp", assume HTTP client
 			config := client.HTTPConfig{
@@ -166,22 +164,9 @@ func (i *InfluxDB) Description() string {
 	return "Configuration for influxdb server to send metrics to"
 }
 
-func (i *InfluxDB) split(metrics []telegraf.Metric) []telegraf.Metric {
-	if !i.splitPayload {
-		return metrics
-	}
-
-	split := make([]telegraf.Metric, 0)
-	for _, m := range metrics {
-		split = append(split, m.Split(i.UDPPayload)...)
-	}
-	return split
-}
-
 // Write will choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
-	metrics = i.split(metrics)
 
 	bufsize := 0
 	for _, m := range metrics {
