@@ -1,3 +1,9 @@
+## v1.3.2 [unreleased]
+
+### Bugfixes
+
+- [#2880](https://github.com/influxdata/telegraf/pull/2880): Fix InfluxDB UDP metric splitting.
+
 ## v1.3.1 [2017-05-31]
 
 ### Bugfixes
