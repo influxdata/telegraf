@@ -17,6 +17,12 @@
 - [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
 - [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
 
+## v1.3.2 [unreleased]
+
+### Bugfixes
+
+- [#2880](https://github.com/influxdata/telegraf/pull/2880): Fix InfluxDB UDP metric splitting.
+
 ## v1.3.1 [2017-05-31]
 
 ### Bugfixes
