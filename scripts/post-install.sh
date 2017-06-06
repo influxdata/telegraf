@@ -55,6 +55,13 @@ if [[ ! -d /etc/telegraf/telegraf.d ]]; then
     mkdir -p /etc/telegraf/telegraf.d
 fi
 
+# Secure file permissions for telegraf.conf
+if [[ -f /etc/telegraf/telegraf.conf ]]; then
+    chmod 600 /etc/telegraf/telegraf.conf
+    chown telegraf /etc/telegraf/telegraf.conf
+    chgrp telegraf /etc/telegraf/telegraf.conf
+fi
+
 # Distribution-specific logic
 if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
     # RHEL-variant logic
