@@ -39,6 +39,7 @@ const clusterHealthResponse = `
 
 var clusterHealthExpected = map[string]interface{}{
 	"status":                "green",
+	"status_code":           3,
 	"timed_out":             false,
 	"number_of_nodes":       3,
 	"number_of_data_nodes":  3,
@@ -51,6 +52,7 @@ var clusterHealthExpected = map[string]interface{}{
 
 var v1IndexExpected = map[string]interface{}{
 	"status":                "green",
+	"status_code":           3,
 	"number_of_shards":      10,
 	"number_of_replicas":    1,
 	"active_primary_shards": 10,
@@ -62,6 +64,7 @@ var v1IndexExpected = map[string]interface{}{
 
 var v2IndexExpected = map[string]interface{}{
 	"status":                "red",
+	"status_code":           1,
 	"number_of_shards":      10,
 	"number_of_replicas":    1,
 	"active_primary_shards": 0,

@@ -327,3 +327,17 @@ Transport statistics about sent and received bytes in cluster communication meas
   - rx_size_in_bytes value=1380
   - tx_count value=6
   - tx_size_in_bytes value=1380
+
+Cluster health:
+- elasticsearch_indices
+- elasticsearch_clusterstats
+- elasticsearch_cluster_health
+  - status value=green
+  - status_code value=3 (1=red,2=yellow,3=green)
+  - number_of_shards value=6
+  - number_of_replicas value=2
+  - active_primary_shards value=4
+  - active_shards value=5
+  - relocating_shards value=0
+  - initializing_shards value=1
+  - unassigned_shards value=0

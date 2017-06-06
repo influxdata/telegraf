@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 
 	"fmt"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
