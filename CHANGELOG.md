@@ -17,6 +17,7 @@
 - [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
 - [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
 - [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
+- [#2885](https://github.com/influxdata/telegraf/pull/2885): Fix timeout option in Windows ping input sample configuration.
 
 ## v1.3.2 [unreleased]
 
