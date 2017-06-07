@@ -7,6 +7,8 @@
 - [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
 - [#2817](https://github.com/influxdata/telegraf/pull/2817): Added timeout option to IPMI sensor plugin
 - [#2883](https://github.com/influxdata/telegraf/pull/2883): Add support for an optional SSL/TLS configuration to nginx input plugin
+- [#2882](https://github.com/influxdata/telegraf/pull/2882): Add timezone support for logparser timestamps.
+- [#2814](https://github.com/influxdata/telegraf/pull/2814): Add result_type field for http_response input.
 
 ### Bugfixes
 
@@ -17,6 +19,13 @@
 - [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
 - [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
 - [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
+- [#2885](https://github.com/influxdata/telegraf/pull/2885): Fix timeout option in Windows ping input sample configuration.
+
+## v1.3.2 [unreleased]
+
+### Bugfixes
+
+- [#2880](https://github.com/influxdata/telegraf/pull/2880): Fix InfluxDB UDP metric splitting.
 
 ## v1.3.1 [2017-05-31]
 
