@@ -218,7 +218,7 @@ func (m *metric) SerializeTo(dst []byte) int {
 }
 
 func (m *metric) Split(maxSize int) []telegraf.Metric {
-	if m.Len() < maxSize {
+	if m.Len() <= maxSize {
 		return []telegraf.Metric{m}
 	}
 	var out []telegraf.Metric
@@ -248,7 +248,7 @@ func (m *metric) Split(maxSize int) []telegraf.Metric {
 
 		// if true, then we need to create a metric _not_ including the currently
 		// selected field
-		if len(m.fields[i:j])+len(fields)+constant > maxSize {
+		if len(m.fields[i:j])+len(fields)+constant >= maxSize {
 			// if false, then we'll create a metric including the currently
 			// selected field anyways. This means that the given maxSize is too
 			// small for a single field to fit.
