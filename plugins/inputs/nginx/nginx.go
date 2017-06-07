@@ -27,18 +27,26 @@ type Nginx struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+	// HTTP client
+	client *http.Client
+	// Response timeout
+	ResponseTimeout internal.Duration
 }
 
 var sampleConfig = `
-  ## An array of Nginx stub_status URI to gather stats.
-  urls = ["http://localhost/status"]
+  # Read Nginx's basic status information (ngx_http_stub_status_module)
+  [[inputs.nginx]]
+    # An array of Nginx stub_status URI to gather stats.
+    urls = ["http://localhost/server_status"]
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
+    # TLS/SSL configuration
+    ssl_ca = "var/security/ca.pem"
+    ssl_cert = "var/security/cert.cer"
+    ssl_key = "var/security/key.key"
+    insecure_skip_verify = false
+
+    # HTTP response timeout (default: 5s)
+    response_timeout = "10s"
 `
 
 func (n *Nginx) SampleConfig() string {
@@ -52,20 +60,14 @@ func (n *Nginx) Description() string {
 func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	tlsCfg, err := internal.GetTLSConfig(
-		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
-	if err != nil {
-		return err
-	}
-
-	var tr = &http.Transport{
-		ResponseHeaderTimeout: time.Duration(3 * time.Second),
-		TLSClientConfig:       tlsCfg,
-	}
-
-	var client = &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(4 * time.Second),
+	// Create an HTTP client that is re-used for each
+	// collection interval
+	if n.client == nil {
+		client, err := n.createHttpClient()
+		if err != nil {
+			return err
+		}
+		n.client = client
 	}
 
 	for _, u := range n.Urls {
@@ -77,7 +79,7 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc, client))
+			acc.AddError(n.gatherUrl(addr, acc))
 		}(addr)
 	}
 
@@ -85,8 +87,29 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator, client *http.Client) error {
-	resp, err := client.Get(addr.String())
+func (n *Nginx) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := internal.GetTLSConfig(
+		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
+	}
+
+	if n.ResponseTimeout.Duration < time.Second {
+		n.ResponseTimeout.Duration = time.Second * 5
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: n.ResponseTimeout.Duration,
+	}
+
+	return client, nil
+}
+
+func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+	resp, err := n.client.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
 	}
