@@ -9,6 +9,7 @@
 - [#2882](https://github.com/influxdata/telegraf/pull/2882): Add timezone support for logparser timestamps.
 - [#2814](https://github.com/influxdata/telegraf/pull/2814): Add result_type field for http_response input.
 
+
 ### Bugfixes
 
 - [#2819](https://github.com/influxdata/telegraf/pull/2819): [enh] set db_version at 0 if query version fails
@@ -24,7 +25,7 @@
 
 ### Bugfixes
 
-- [#2880](https://github.com/influxdata/telegraf/pull/2880): Fix InfluxDB UDP metric splitting.
+- [#2862](https://github.com/influxdata/telegraf/issue/2862): Fix InfluxDB UDP metric splitting.
 
 ## v1.3.1 [2017-05-31]
 
