@@ -3,6 +3,7 @@
 ### Release Notes
 ### Features
 
+- [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
 - [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
 - [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
 - [#2817](https://github.com/influxdata/telegraf/pull/2817): Added timeout option to IPMI sensor plugin

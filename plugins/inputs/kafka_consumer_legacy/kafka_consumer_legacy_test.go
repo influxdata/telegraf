@@ -1,4 +1,4 @@
-package kafka_consumer
+package kafka_consumer_legacy
 
 import (
 	"strings"
@@ -23,7 +23,7 @@ func newTestKafka() (*Kafka, chan *sarama.ConsumerMessage) {
 	k := Kafka{
 		ConsumerGroup:   "test",
 		Topics:          []string{"telegraf"},
-		Brokers:         []string{"localhost:9092"},
+		ZookeeperPeers:  []string{"localhost:2181"},
 		Offset:          "oldest",
 		in:              in,
 		doNotCommitMsgs: true,

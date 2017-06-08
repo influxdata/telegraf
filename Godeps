@@ -1,5 +1,5 @@
 collectd.org 2ce144541b8903101fb8f1483cc0497a68798122
-github.com/Shopify/sarama 574d3147eee384229bf96a5d12c207fe7b5234f3
+github.com/Shopify/sarama c01858abb625b73a3af51d0798e4ad42c8147093
 github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 github.com/aerospike/aerospike-client-go 95e1ad7791bdbca44707fedbb29be42024900d9c
 github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
@@ -52,6 +52,7 @@ github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
 github.com/stretchr/testify 4d4bfba8f1d1027c4fdbe371823030df51419987
 github.com/vjeantet/grok d73e972b60935c7fec0b4ffbc904ed39ecaf7efe
 github.com/wvanbergen/kafka bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee
+github.com/bsm/sarama-cluster ccdc0803695fbce22f1706d04ded46cd518fd832
 github.com/wvanbergen/kazoo-go 968957352185472eacb69215fa3dbfcfdbac1096
 github.com/yuin/gopher-lua 66c871e454fcf10251c61bf8eff02d0978cae75a
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
