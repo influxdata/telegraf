@@ -34,19 +34,17 @@ type Nginx struct {
 }
 
 var sampleConfig = `
-  # Read Nginx's basic status information (ngx_http_stub_status_module)
-  [[inputs.nginx]]
-    # An array of Nginx stub_status URI to gather stats.
-    urls = ["http://localhost/server_status"]
+  # An array of Nginx stub_status URI to gather stats.
+  urls = ["http://localhost/server_status"]
 
-    # TLS/SSL configuration
-    ssl_ca = "var/security/ca.pem"
-    ssl_cert = "var/security/cert.cer"
-    ssl_key = "var/security/key.key"
-    insecure_skip_verify = false
+  # TLS/SSL configuration
+  ssl_ca = "/etc/telegraf/ca.pem"
+  ssl_cert = "/etc/telegraf/cert.cer"
+  ssl_key = "/etc/telegraf/key.key"
+  insecure_skip_verify = false
 
-    # HTTP response timeout (default: 5s)
-    response_timeout = "10s"
+  # HTTP response timeout (default: 5s)
+  response_timeout = "5s"
 `
 
 func (n *Nginx) SampleConfig() string {
