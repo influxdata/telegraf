@@ -64,7 +64,7 @@ COMMON_FPM_ARGS="\
 # Create Binary RPMS
 BINARY_FPM_ARGS="\
  -C $TMP_BIN_DIR \
---prefix /usr/bin \
+--prefix / \
 -a $ARCH \
 -v $version \
 --iteration $BIN_RPM_ITER \
@@ -73,12 +73,17 @@ $COMMON_FPM_ARGS"
 # Make a copy of the generated binaries into a tmp directory bin
 echo "Seting up temporary bin directory"
 mkdir $TMP_BIN_DIR > /dev/null 2>&1 || rm -rf $TMP_BIN_DIR/*
+mkdir -p $TMP_BIN_DIR/usr/bin/
 for binary in "telegraf"
 do
-    cp $GOBIN/$binary $TMP_BIN_DIR
+    cp $GOBIN/$binary $TMP_BIN_DIR/usr/bin/
 done
 
-fpm -s dir -t rpm $BINARY_FPM_ARGS --description "$DESCRIPTION" -n "telegraf" telegraf || cleanup_exit 1
+# Add a default telegraf configig
+mkdir -p $TMP_BIN_DIR/etc/telegraf/
+cp $CONFIG_FILES_DIR/telegraf-default.conf $TMP_BIN_DIR/etc/telegraf/telegraf.conf
+
+fpm -s dir -t rpm $BINARY_FPM_ARGS --description "$DESCRIPTION" -n "telegraf" . || cleanup_exit 1
 
 mv ./*.rpm RPMS
 
@@ -110,37 +115,37 @@ mkdir -p $TMP_CONFIG_DIR/etc/telegraf/telegraf.d
 
 # Linux-Config
 rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
-cp $CONFIG_FILES_DIR/telegraf-linux.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+cp $CONFIG_FILES_DIR/telegraf-linux.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$LINUX_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Linux" etc lib || cleanup_exit 1
 
 # Redis-Config
 rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
-cp $CONFIG_FILES_DIR/telegraf-redis.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d
+cp $CONFIG_FILES_DIR/telegraf-redis.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$REDIS_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Redis" etc lib || cleanup_exit 1
 
 # Perforce-Config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
-cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$PERFORCE_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
 
 # Swift-Config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
-cp $CONFIG_FILES_DIR/telegraf-swift.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+cp $CONFIG_FILES_DIR/telegraf-swift.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$SWIFT_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Swift" etc lib || cleanup_exit 1
 
 # QUBIT Scylla config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
-cp $CONFIG_FILES_DIR/telegraf-qubit-scylla.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+cp $CONFIG_FILES_DIR/telegraf-qubit-scylla.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SCYLLA_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-scylla" etc lib || cleanup_exit 1
 
 # QUBIT Worker config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
-cp $CONFIG_FILES_DIR/telegraf-qubit-worker.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+cp $CONFIG_FILES_DIR/telegraf-qubit-worker.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_WORKER_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-worker" etc lib || cleanup_exit 1
 
 # QUBIT Spin config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
-cp $CONFIG_FILES_DIR/telegraf-qubit-spin.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.conf
+cp $CONFIG_FILES_DIR/telegraf-qubit-spin.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SPIN_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-spin" etc lib || cleanup_exit 1
 
 
