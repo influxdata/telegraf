@@ -152,6 +152,7 @@ configuration options.
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
 * [ping](./plugins/inputs/ping)
+* [pgbouncer](./plugins/inputs/pgbouncer)
 * [postgresql](./plugins/inputs/postgresql)
 * [postgresql_extensible](./plugins/inputs/postgresql_extensible)
 * [powerdns](./plugins/inputs/powerdns)
