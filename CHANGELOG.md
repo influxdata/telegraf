@@ -6,6 +6,7 @@
 - [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
 - [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
 - [#2817](https://github.com/influxdata/telegraf/pull/2817): Added timeout option to IPMI sensor plugin
+- [#2883](https://github.com/influxdata/telegraf/pull/2883): Add support for an optional SSL/TLS configuration to nginx input plugin
 - [#2882](https://github.com/influxdata/telegraf/pull/2882): Add timezone support for logparser timestamps.
 - [#2814](https://github.com/influxdata/telegraf/pull/2814): Add result_type field for http_response input.
 
