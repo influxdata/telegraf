@@ -20,6 +20,7 @@ github.com/gobwas/glob bea32b9cd2d6f55753d94a28e959b13f0244797a
 github.com/golang/protobuf 8ee79997227bf9b34611aee7946ae64735e6fd93
 github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
+github.com/gropensourcedev/go-ntlm-auth 6314d66e1d8ffd12a8da4be59eb4467b60dde719
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
 github.com/influxdata/tail a395bf99fe07c233f41fba0735fa2b13b58588ea

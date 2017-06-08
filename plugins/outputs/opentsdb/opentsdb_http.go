@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+
+	"github.com/gropensourcedev/go-ntlm-auth/ntlm"
 )
 
 type HttpMetric struct {
@@ -25,6 +27,7 @@ type openTSDBHttp struct {
 	Port      int
 	Scheme    string
 	User      *url.Userinfo
+	UseNtlm   bool
 	BatchSize int
 	Debug     bool
 
@@ -144,12 +147,26 @@ func (o *openTSDBHttp) flush() error {
 		}
 
 		fmt.Printf("Sending metrics:\n%s", dump)
+		if o.UseNtlm {
+			fmt.Printf("Using NTLM auth\n")
+		}
 		fmt.Printf("Body:\n%s\n\n", o.body.dbgB.String())
 	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("Error when sending metrics: %s", err.Error())
+	var resp *http.Response
+	if o.UseNtlm {
+		resp, err = ntlm.DoNTLMRequest(http.DefaultClient, req)
+		if err != nil || resp == nil {
+			return fmt.Errorf("Error when sending metrics: %s", err.Error())
+		}
+		if resp.StatusCode == 401 {
+			return fmt.Errorf("Unauthorized to post metrics to OpenTSDB: %s", err.Error())
+		}
+	} else {
+		resp, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("Error when sending metrics: %s", err.Error())
+		}
 	}
 	defer resp.Body.Close()
 

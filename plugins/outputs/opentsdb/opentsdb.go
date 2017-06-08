@@ -16,8 +16,9 @@ import (
 type OpenTSDB struct {
 	Prefix string
 
-	Host string
-	Port int
+	Host    string
+	Port    int
+	UseNtlm bool
 
 	HttpBatchSize int
 
@@ -38,6 +39,9 @@ var sampleConfig = `
 
   ## Port of the OpenTSDB server
   port = 4242
+
+  ## Whether to use NTLM to authenticate with OpenTSDB (Windows only)
+  useNtlm = false
 
   ## Number of data points to send to OpenTSDB in Http requests.
   ## Not used with telnet API.
@@ -105,6 +109,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		Host:      u.Host,
 		Port:      o.Port,
 		Scheme:    u.Scheme,
+		UseNtlm:   o.UseNtlm,
 		User:      u.User,
 		BatchSize: o.HttpBatchSize,
 		Debug:     o.Debug,
