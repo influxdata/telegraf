@@ -1,6 +1,12 @@
 ## v1.4 [unreleased]
 
 ### Release Notes
+
+- The `kafka_consumer` input has been updated to support Kafka 0.9 and
+  above style consumer offset handling.  The previous version of this plugin
+  supporting Kafka 0.8 and below is available as the `kafka_consumer_legacy`
+  plugin.
+
 ### Features
 
 - [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
@@ -10,7 +16,6 @@
 - [#2883](https://github.com/influxdata/telegraf/pull/2883): Add support for an optional SSL/TLS configuration to nginx input plugin
 - [#2882](https://github.com/influxdata/telegraf/pull/2882): Add timezone support for logparser timestamps.
 - [#2814](https://github.com/influxdata/telegraf/pull/2814): Add result_type field for http_response input.
-
 
 ### Bugfixes
 
