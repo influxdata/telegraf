@@ -91,6 +91,33 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"used_cpu_sys_children":          float64(0.00),
 		"used_cpu_user_children":         float64(0.00),
 		"keyspace_hitrate":               float64(0.50),
+		"cmdstat_delusec_per_call":       float64(7.89),
+		"cmdstat_expireusec_per_call":    float64(1.55),
+		"cmdstat_getusec_per_call":       float64(4.35),
+		"cmdstat_infousec_per_call":      float64(145.92),
+		"cmdstat_mgetusec_per_call":      float64(7.72),
+		"cmdstat_msetusec_per_call":      float64(7.03),
+		"cmdstat_selectusec_per_call":    float64(1.47),
+		"cmdstat_setexusec_per_call":     float64(5.15),
+		"cmdstat_setnxusec_per_call":     float64(4.42),
+		"cmdstat_delcalls":               int64(28393),
+		"cmdstat_delusec":                int64(224118),
+		"cmdstat_expirecalls":            int64(524193),
+		"cmdstat_expireusec":             int64(811227),
+		"cmdstat_getcalls":               int64(18708243),
+		"cmdstat_getusec":                int64(81317810),
+		"cmdstat_infocalls":              int64(7734),
+		"cmdstat_infousec":               int64(1128518),
+		"cmdstat_mgetcalls":              int64(3136449),
+		"cmdstat_mgetusec":               int64(24200188),
+		"cmdstat_msetcalls":              int64(118074),
+		"cmdstat_msetusec":               int64(830158),
+		"cmdstat_selectcalls":            int64(252265),
+		"cmdstat_selectusec":             int64(371753),
+		"cmdstat_setexcalls":             int64(1342574),
+		"cmdstat_setexusec":              int64(6917848),
+		"cmdstat_setnxcalls":             int64(12),
+		"cmdstat_setnxusec":              int64(53),
 	}
 
 	// We have to test rdb_last_save_time_offset manually because the value is based on the time when gathered
@@ -184,6 +211,17 @@ keyspace_misses:1
 pubsub_channels:0
 pubsub_patterns:0
 latest_fork_usec:0
+
+# Commandstats
+cmdstat_get:calls=18708243,usec=81317810,usec_per_call=4.35
+cmdstat_setnx:calls=12,usec=53,usec_per_call=4.42
+cmdstat_setex:calls=1342574,usec=6917848,usec_per_call=5.15
+cmdstat_del:calls=28393,usec=224118,usec_per_call=7.89
+cmdstat_mget:calls=3136449,usec=24200188,usec_per_call=7.72
+cmdstat_mset:calls=118074,usec=830158,usec_per_call=7.03
+cmdstat_select:calls=252265,usec=371753,usec_per_call=1.47
+cmdstat_expire:calls=524193,usec=811227,usec_per_call=1.55
+cmdstat_info:calls=7734,usec=1128518,usec_per_call=145.92
 
 # Replication
 role:master

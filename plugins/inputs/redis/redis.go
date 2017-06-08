@@ -132,7 +132,7 @@ func (r *Redis) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 		}
 	}
 
-	c.Write([]byte("INFO\r\n"))
+	c.Write([]byte("INFO ALL\r\n"))
 	c.Write([]byte("EOF\r\n"))
 	rdr := bufio.NewReader(c)
 
@@ -187,6 +187,24 @@ func gatherInfoOutput(
 			if name != "lru_clock" && name != "uptime_in_seconds" {
 				continue
 			}
+		}
+
+		if section == "Commandstats" {
+			//#cmdstat_get:calls=63102137,usec=166854619,usec_per_call=2.64
+			tmp := strings.Split(line, ":")
+			tmp_metrics := strings.Split(tmp[1], ",")
+			for _, element := range tmp_metrics {
+				mdata := strings.Split(element, "=")
+				if ival, err := strconv.ParseInt(mdata[1], 10, 64); err == nil {
+					fields[tmp[0]+mdata[0]] = ival
+				} else if fval, err := strconv.ParseFloat(mdata[1], 64); err == nil {
+					fields[tmp[0]+mdata[0]] = fval
+				} else {
+					fields[tmp[0]+mdata[0]] = mdata[1]
+				}
+
+			}
+			continue
 		}
 
 		if name == "mem_allocator" {
