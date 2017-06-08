@@ -20,14 +20,22 @@ for the stat structure can be found
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
-  ## Only collect metrics for these containers, collect all if empty
+
+  ## Only collect metrics for these containers. Values will be appended to container_name_include.
+  ## Deprecated (1.4.0), use container_name_include
   container_names = []
+
+  ## Containers to include and exclude. Collect all if empty. Globs accepted.
+  container_name_include = []
+  container_name_exclude = []
+
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 
   ## Whether to report for each container per-device blkio (8:0, 8:1...) and
   ## network (eth0, eth1, ...) stats or not
   perdevice = true
+
   ## Whether to report for each container total blkio and network stats or not
   total = false
   
