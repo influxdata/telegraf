@@ -54,6 +54,8 @@ var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf -usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service")
+var fNoService = flag.Bool("no-service", false,
+	"bypass windows service components and execute directly")
 
 // Telegraf version, populated linker.
 //   ie, -ldflags "-X main.version=`git describe --always --tags`"
@@ -342,7 +344,7 @@ func main() {
 		return
 	}
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && *fNoService == false {
 		svcConfig := &service.Config{
 			Name:        "telegraf",
 			DisplayName: "Telegraf Data Collector Service",
