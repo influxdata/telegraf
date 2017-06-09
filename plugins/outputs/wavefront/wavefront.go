@@ -20,8 +20,10 @@ type Wavefront struct {
 	SimpleFields    bool
 	MetricSeparator string
 	ConvertPaths    bool
+	ConvertBool     bool
 	UseRegex        bool
 	SourceOverride  []string
+	StringToNumber  map[string][]map[string]float64
 	DebugAll        bool
 }
 
@@ -50,7 +52,7 @@ var sampleConfig = `
   ## Port that the Wavefront proxy server listens on
   port = 2878
 
-  ## wether to use "value" for name of simple fields
+  ## whether to use "value" for name of simple fields
   #simple_fields = false
 
   ## character to use between metric and field name.  defaults to . (dot)
@@ -67,6 +69,17 @@ var sampleConfig = `
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
   #source_override = ["hostname", "snmp_host", "node_host"]
 
+  ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0.  default true
+  #convert_bool = true
+
+  ## Define a mapping, namespaced by metric prefix, from string values to numeric values
+  ## The example below maps "green" -> 1.0, "yellow" -> 0.5, "red" -> 0.0 for
+  ## any metrics beginning with "elasticsearch"
+  #[[outputs.wavefront.string_to_number.elasticsearch]]
+  #  green = 1.0
+  #  yellow = 0.5
+  #  red = 0.0
+
   ## Print additional debug information requires debug = true at the agent level
   #debug_all = false
 `
@@ -79,7 +92,6 @@ type MetricLine struct {
 }
 
 func (w *Wavefront) Connect() error {
-
 	if w.ConvertPaths && w.MetricSeparator == "_" {
 		w.ConvertPaths = false
 	}
@@ -200,9 +212,11 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 			Metric:    name,
 			Timestamp: m.UnixNano() / 1000000000,
 		}
-		metricValue, buildError := buildValue(value, metric.Metric)
+		metricValue, buildError := buildValue(value, metric.Metric, w)
 		if buildError != nil {
-			log.Printf("E! Output [wavefront] %s\n", buildError.Error())
+			if w.DebugAll {
+				log.Printf("D! Output [wavefront] %s\n", buildError.Error())
+			}
 			continue
 		}
 		metric.Value = metricValue
@@ -213,15 +227,36 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 	return ret
 }
 
-func buildValue(v interface{}, name string) (string, error) {
+func buildValue(v interface{}, name string, w *Wavefront) (string, error) {
 	var retv string
 	switch p := v.(type) {
+	case bool:
+		if w.ConvertBool {
+			if bool(p) {
+				return "1.0", nil
+			} else {
+				return "0.0", nil
+			}
+		}
 	case int64:
 		retv = IntToString(int64(p))
 	case uint64:
 		retv = UIntToString(uint64(p))
 	case float64:
 		retv = FloatToString(float64(p))
+	case string:
+		for prefix, mappings := range w.StringToNumber {
+			if strings.HasPrefix(name, prefix) {
+				for _, mapping := range mappings {
+					val, hasVal := mapping[string(p)]
+					if (hasVal) {
+						retv = FloatToString(val)
+						return retv, nil
+					}
+				}
+			}
+		}
+		return retv, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	default:
 		return retv, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	}
@@ -257,6 +292,7 @@ func init() {
 		return &Wavefront{
 			MetricSeparator: ".",
 			ConvertPaths:    true,
+			ConvertBool:     true,
 		}
 	})
 }

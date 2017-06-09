@@ -50,6 +50,17 @@ The `use_regex` setting can be used to ensure all illegal characters are properl
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
   source_override = ["hostname", "snmp_host", "node_host"]
 
+  ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0.  default true
+  convert_bool = true
+
+  ## Define a mapping, namespaced by metric prefix, from string values to numeric values
+  ## The example below maps "green" -> 1.0, "yellow" -> 0.5, "red" -> 0.0 for
+  ## any metrics beginning with "elasticsearch"
+  [[outputs.wavefront.string_to_number.elasticsearch]]
+    green = 1.0
+    yellow = 0.5
+    red = 0.0
+
   ## Print additional debug information requires debug = true at the agent level
   debug_all = false
 ```
@@ -62,8 +73,10 @@ Parameters:
 	SimpleFields    bool
 	MetricSeparator string
 	ConvertPaths    bool
-	UseRegex    	bool
-	SourceOverride  string
+	ConvertBool     bool
+	UseRegex        bool
+	SourceOverride  []string
+	StringToNumber  map[string][]map[string]float64
 	DebugAll        bool
 
 * `prefix`: String to use as a prefix for all sent metrics.
@@ -72,8 +85,11 @@ Parameters:
 * `simple_fields`: if false (default) metric field names called `value` are converted to empty strings
 * `metric_separator`: character to use to separate metric and field names. (default is `_`)
 * `convert_paths`: if true (default) will convert all `_` in metric and field names to `metric_seperator`
+* `convert_bool`: if true (default) will convert all boolean metric values to numbers, t->1.0, f->0.0
 * `use_regex`: if true (default is false) will use regex to ensure all illegal characters are converted to `-`.  Regex is much slower than the default mode which will catch most illegal characters.  Use with caution.
 * `source_override`: ordered list of point tags to use as the source name for Wavefront. Once a match is found, that tag is used as the source for that point.  If no tags are found the host tag will be used.
+* `string_to_number`: config structure that controls how certain string values are mapped to numeric values for particular
+metric namespaces.  See example above.
 * `debug_all`: Will output additional debug information.  Requires `debug = true` to be configured at the agent level
 
 
@@ -114,4 +130,6 @@ func main() {
 
 ## Allowed values for metrics
 
-Wavefront allows `integers` and `floats` as input values
+Wavefront allows `integers` and `floats` as input values.  It will ignore most `strings`, but when configured
+will map certain `strings` to numeric values.  By default it also maps `bool` values to numeric, false -> 0.0, 
+true -> 1.0
