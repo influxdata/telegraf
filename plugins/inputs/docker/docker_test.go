@@ -18,6 +18,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_name":  "redis",
 		"container_image": "redis/image",
 	}
+
 	gatherContainerStats(stats, &acc, tags, "123456789", true, true)
 
 	// test docker_container_net measurement
@@ -290,6 +291,73 @@ func TestDockerGatherLabels(t *testing.T) {
 			if acc.HasTag("docker_container_cpu", label) {
 				t.Errorf("Got unexpected label of %s.  Test was:  Include: %s  Exclude %s",
 					label, tt.include, tt.exclude)
+			}
+		}
+	}
+}
+
+var gatherContainerNames = []struct {
+	include     []string
+	exclude     []string
+	expected    []string
+	notexpected []string
+}{
+	{[]string{}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+	{[]string{"*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+	{[]string{"etc*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+	{[]string{"etcd"}, []string{}, []string{"etcd"}, []string{"etcd2"}},
+	{[]string{"etcd2*"}, []string{}, []string{"etcd2"}, []string{"etcd"}},
+	{[]string{}, []string{"etc*"}, []string{}, []string{"etcd", "etcd2"}},
+	{[]string{}, []string{"etcd"}, []string{"etcd2"}, []string{"etcd"}},
+	{[]string{"*"}, []string{"*"}, []string{"etcd", "etcd2"}, []string{}},
+	{[]string{}, []string{"*"}, []string{""}, []string{"etcd", "etcd2"}},
+}
+
+func TestContainerNames(t *testing.T) {
+	for _, tt := range gatherContainerNames {
+		var acc testutil.Accumulator
+
+		d := Docker{
+			client:           nil,
+			testing:          true,
+			ContainerInclude: tt.include,
+			ContainerExclude: tt.exclude,
+		}
+
+		err := d.Gather(&acc)
+		require.NoError(t, err)
+
+		for _, metric := range acc.Metrics {
+			if metric.Measurement == "docker_container_cpu" {
+				if val, ok := metric.Tags["container_name"]; ok {
+					var found bool = false
+					for _, cname := range tt.expected {
+						if val == cname {
+							found = true
+							break
+						}
+					}
+					if !found {
+						t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
+					}
+				}
+			}
+		}
+
+		for _, metric := range acc.Metrics {
+			if metric.Measurement == "docker_container_cpu" {
+				if val, ok := metric.Tags["container_name"]; ok {
+					var found bool = false
+					for _, cname := range tt.notexpected {
+						if val == cname {
+							found = true
+							break
+						}
+					}
+					if found {
+						t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
+					}
+				}
 			}
 		}
 	}
