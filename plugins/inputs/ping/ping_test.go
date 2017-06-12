@@ -154,9 +154,9 @@ func TestPingGather(t *testing.T) {
 		"packets_transmitted":   5,
 		"packets_received":      5,
 		"percent_packet_loss":   0.0,
-		"minimum_response_ms":	 35.225,
+		"minimum_response_ms":   35.225,
 		"average_response_ms":   43.628,
-		"maximum_response_ms":	 51.806,
+		"maximum_response_ms":   51.806,
 		"standard_deviation_ms": 5.325,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
@@ -194,9 +194,9 @@ func TestLossyPingGather(t *testing.T) {
 		"packets_transmitted":   5,
 		"packets_received":      3,
 		"percent_packet_loss":   40.0,
-		"minimum_response_ms":	 35.225,
+		"minimum_response_ms":   35.225,
 		"average_response_ms":   44.033,
-		"maximum_response_ms":	 51.806,
+		"maximum_response_ms":   51.806,
 		"standard_deviation_ms": 5.325,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
