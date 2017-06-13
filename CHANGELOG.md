@@ -17,6 +17,7 @@
 - [#2882](https://github.com/influxdata/telegraf/pull/2882): Add timezone support for logparser timestamps.
 - [#2814](https://github.com/influxdata/telegraf/pull/2814): Add result_type field for http_response input.
 - [#2734](https://github.com/influxdata/telegraf/pull/2734): Add include/exclude filters for docker containers.
+- [#2602](https://github.com/influxdata/telegraf/pull/2602): Add secure connection support to graphite output.
 
 ### Bugfixes
 
