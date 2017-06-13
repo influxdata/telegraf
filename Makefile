@@ -46,11 +46,15 @@ prepare-windows:
 # Run all docker containers necessary for unit tests
 docker-run:
 	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server:3.9.0
+	docker run --name zookeeper -p "2181:2181" -d wurstmeister/zookeeper
 	docker run --name kafka \
-		-e ADVERTISED_HOST=localhost \
-		-e ADVERTISED_PORT=9092 \
-		-p "2181:2181" -p "9092:9092" \
-		-d spotify/kafka
+		--link zookeeper:zookeeper \
+		-e KAFKA_ADVERTISED_HOST_NAME=localhost \
+		-e KAFKA_ADVERTISED_PORT=9092 \
+		-e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
+		-e KAFKA_CREATE_TOPICS="test:1:1" \
+		-p "9092:9092" \
+		-d wurstmeister/kafka
 	docker run --name elasticsearch -p "9200:9200" -p "9300:9300" -d elasticsearch:5
 	docker run --name mysql -p "3306:3306" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql
 	docker run --name memcached -p "11211:11211" -d memcached
@@ -65,11 +69,15 @@ docker-run:
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
 	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server:3.9.0
+	docker run --name zookeeper -p "2181:2181" -d wurstmeister/zookeeper
 	docker run --name kafka \
-		-e ADVERTISED_HOST=localhost \
-		-e ADVERTISED_PORT=9092 \
-		-p "2181:2181" -p "9092:9092" \
-		-d spotify/kafka
+		--link zookeeper:zookeeper \
+		-e KAFKA_ADVERTISED_HOST_NAME=localhost \
+		-e KAFKA_ADVERTISED_PORT=9092 \
+		-e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
+		-e KAFKA_CREATE_TOPICS="test:1:1" \
+		-p "9092:9092" \
+		-d wurstmeister/kafka
 	docker run --name elasticsearch -p "9200:9200" -p "9300:9300" -d elasticsearch:5
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
@@ -78,8 +86,8 @@ docker-run-circle:
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats elasticsearch
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann nats elasticsearch
+	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch
+	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: vet docker-kill docker-run

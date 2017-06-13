@@ -38,9 +38,8 @@ func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, logparser.Start(&acc))
-
-	logparser.Stop()
+	err := logparser.Start(&acc)
+	assert.Error(t, err)
 }
 
 func TestGrokParseLogFiles(t *testing.T) {
@@ -103,10 +102,8 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 
 	assert.Equal(t, acc.NFields(), 0)
 
-	os.Symlink(
-		thisdir+"grok/testdata/test_a.log",
-		emptydir+"/test_a.log")
-	assert.NoError(t, logparser.Gather(&acc))
+	_ = os.Symlink(thisdir+"grok/testdata/test_a.log", emptydir+"/test_a.log")
+	assert.NoError(t, acc.GatherError(logparser.Gather))
 	acc.Wait(1)
 
 	logparser.Stop()

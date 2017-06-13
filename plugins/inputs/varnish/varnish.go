@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -124,8 +123,8 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 
 		sectionMap[section][field], err = strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Expected a numeric value for %s = %v\n",
-				stat, value)
+			acc.AddError(fmt.Errorf("Expected a numeric value for %s = %v\n",
+				stat, value))
 		}
 	}
 

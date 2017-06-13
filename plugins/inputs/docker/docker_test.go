@@ -18,6 +18,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_name":  "redis",
 		"container_image": "redis/image",
 	}
+
 	gatherContainerStats(stats, &acc, tags, "123456789", true, true)
 
 	// test docker_container_net measurement
@@ -244,14 +245,134 @@ func testStats() *types.StatsJSON {
 	return stats
 }
 
+var gatherLabelsTests = []struct {
+	include     []string
+	exclude     []string
+	expected    []string
+	notexpected []string
+}{
+	{[]string{}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"*"}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"lab*"}, []string{}, []string{"label1", "label2"}, []string{}},
+	{[]string{"label1"}, []string{}, []string{"label1"}, []string{"label2"}},
+	{[]string{"label1*"}, []string{}, []string{"label1"}, []string{"label2"}},
+	{[]string{}, []string{"*"}, []string{}, []string{"label1", "label2"}},
+	{[]string{}, []string{"lab*"}, []string{}, []string{"label1", "label2"}},
+	{[]string{}, []string{"label1"}, []string{"label2"}, []string{"label1"}},
+	{[]string{"*"}, []string{"*"}, []string{}, []string{"label1", "label2"}},
+}
+
+func TestDockerGatherLabels(t *testing.T) {
+	for _, tt := range gatherLabelsTests {
+		var acc testutil.Accumulator
+		d := Docker{
+			client:  nil,
+			testing: true,
+		}
+
+		for _, label := range tt.include {
+			d.LabelInclude = append(d.LabelInclude, label)
+		}
+		for _, label := range tt.exclude {
+			d.LabelExclude = append(d.LabelExclude, label)
+		}
+
+		err := d.Gather(&acc)
+		require.NoError(t, err)
+
+		for _, label := range tt.expected {
+			if !acc.HasTag("docker_container_cpu", label) {
+				t.Errorf("Didn't get expected label of %s.  Test was:  Include: %s  Exclude %s",
+					label, tt.include, tt.exclude)
+			}
+		}
+
+		for _, label := range tt.notexpected {
+			if acc.HasTag("docker_container_cpu", label) {
+				t.Errorf("Got unexpected label of %s.  Test was:  Include: %s  Exclude %s",
+					label, tt.include, tt.exclude)
+			}
+		}
+	}
+}
+
+var gatherContainerNames = []struct {
+	include     []string
+	exclude     []string
+	expected    []string
+	notexpected []string
+}{
+	{[]string{}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+	{[]string{"*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+	{[]string{"etc*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+	{[]string{"etcd"}, []string{}, []string{"etcd"}, []string{"etcd2"}},
+	{[]string{"etcd2*"}, []string{}, []string{"etcd2"}, []string{"etcd"}},
+	{[]string{}, []string{"etc*"}, []string{}, []string{"etcd", "etcd2"}},
+	{[]string{}, []string{"etcd"}, []string{"etcd2"}, []string{"etcd"}},
+	{[]string{"*"}, []string{"*"}, []string{"etcd", "etcd2"}, []string{}},
+	{[]string{}, []string{"*"}, []string{""}, []string{"etcd", "etcd2"}},
+}
+
+func TestContainerNames(t *testing.T) {
+	for _, tt := range gatherContainerNames {
+		var acc testutil.Accumulator
+
+		d := Docker{
+			client:           nil,
+			testing:          true,
+			ContainerInclude: tt.include,
+			ContainerExclude: tt.exclude,
+		}
+
+		err := d.Gather(&acc)
+		require.NoError(t, err)
+
+		for _, metric := range acc.Metrics {
+			if metric.Measurement == "docker_container_cpu" {
+				if val, ok := metric.Tags["container_name"]; ok {
+					var found bool = false
+					for _, cname := range tt.expected {
+						if val == cname {
+							found = true
+							break
+						}
+					}
+					if !found {
+						t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
+					}
+				}
+			}
+		}
+
+		for _, metric := range acc.Metrics {
+			if metric.Measurement == "docker_container_cpu" {
+				if val, ok := metric.Tags["container_name"]; ok {
+					var found bool = false
+					for _, cname := range tt.notexpected {
+						if val == cname {
+							found = true
+							break
+						}
+					}
+					if found {
+						t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
 		client:  nil,
 		testing: true,
+		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
+			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
 	}
 
-	err := d.Gather(&acc)
+	err := acc.GatherError(d.Gather)
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t,
@@ -294,6 +415,12 @@ func TestDockerGatherInfo(t *testing.T) {
 			"cpu":               "cpu3",
 			"container_version": "v2.2.2",
 			"engine_host":       "absol",
+			"ENVVAR1":           "loremipsum",
+			"ENVVAR2":           "dolorsitamet",
+			"ENVVAR3":           "=ubuntu:10.04",
+			"ENVVAR7":           "ENVVAR8=ENVVAR9",
+			"label1":            "test_value_1",
+			"label2":            "test_value_2",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -340,6 +467,12 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_name":    "etcd2",
 			"container_image":   "quay.io:4443/coreos/etcd",
 			"container_version": "v2.2.2",
+			"ENVVAR1":           "loremipsum",
+			"ENVVAR2":           "dolorsitamet",
+			"ENVVAR3":           "=ubuntu:10.04",
+			"ENVVAR7":           "ENVVAR8=ENVVAR9",
+			"label1":            "test_value_1",
+			"label2":            "test_value_2",
 		},
 	)
 

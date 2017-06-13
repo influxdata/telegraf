@@ -100,7 +100,7 @@ Using this configuration:
 When run with:
 
 ```
-./telegraf -config telegraf.conf -test -input-filter passenger
+./telegraf --config telegraf.conf --input-filter passenger --test
 ```
 
 It produces:
