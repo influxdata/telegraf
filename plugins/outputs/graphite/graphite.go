@@ -49,12 +49,12 @@ var sampleConfig = `
   ## timeout in seconds for the write connection to graphite
   timeout = 2
 
-	## Optional SSL Config
-	# ssl_ca = "/etc/telegraf/ca.pem"
-	# ssl_cert = "/etc/telegraf/cert.pem"
-	# ssl_key = "/etc/telegraf/key.pem"
-	## Use SSL but skip chain & host verification
-	# insecure_skip_verify = false
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (g *Graphite) Connect() error {
@@ -78,7 +78,7 @@ func (g *Graphite) Connect() error {
 	var conns []net.Conn
 	for _, server := range g.Servers {
 		// Dialer with timeout
-		d := net.Dialer{Timeout: time.Duration(g.Timeout)*time.Second}
+		d := net.Dialer{Timeout: time.Duration(g.Timeout) * time.Second}
 
 		// Get secure connection if tls config is set
 		var conn net.Conn
