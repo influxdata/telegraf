@@ -124,6 +124,29 @@ func TestWrite_Counter(t *testing.T) {
 	require.Equal(t, prometheus.CounterValue, fam.ValueType)
 }
 
+func TestWrite_Sanitize(t *testing.T) {
+	client := NewClient()
+
+	p1, err := metric.New(
+		"foo.bar",
+		map[string]string{"tag-with-dash": "localhost.local"},
+		map[string]interface{}{"field-with-dash": 42},
+		time.Now(),
+		telegraf.Counter)
+	err = client.Write([]telegraf.Metric{p1})
+	require.NoError(t, err)
+
+	fam, ok := client.fam["foo_bar_field_with_dash"]
+	require.True(t, ok)
+	require.Equal(t, map[string]int{"tag_with_dash": 1}, fam.LabelSet)
+
+	sample1, ok := fam.Samples[CreateSampleID(p1.Tags())]
+	require.True(t, ok)
+
+	require.Equal(t, map[string]string{
+		"tag_with_dash": "localhost_local"}, sample1.Labels)
+}
+
 func TestWrite_Gauge(t *testing.T) {
 	client := NewClient()
 
