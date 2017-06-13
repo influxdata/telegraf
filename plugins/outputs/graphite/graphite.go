@@ -31,8 +31,6 @@ type Graphite struct {
 	SSLKey string `toml:"ssl_key"`
 	// Skip SSL verification
 	InsecureSkipVerify bool
-	// SSL enabled
-	SSLEnabled bool `toml:"ssl_enabled"`
 
 	// tls config
 	tlsConfig *tls.Config
@@ -50,9 +48,6 @@ var sampleConfig = `
   template = "host.tags.measurement.field"
   ## timeout in seconds for the write connection to graphite
   timeout = 2
-
-	## Enable secure tunnel
-	ssl_enabled = false
 
 	## Optional SSL Config
 	# ssl_ca = "/etc/telegraf/ca.pem"
@@ -82,16 +77,18 @@ func (g *Graphite) Connect() error {
 	// Get Connections
 	var conns []net.Conn
 	for _, server := range g.Servers {
+		// Dialer with timeout
+		d := net.Dialer{Timeout: time.Duration(g.Timeout)*time.Second}
+
+		// Get secure connection if tls config is set
 		var conn net.Conn
-		if g.SSLEnabled {
-			// If ssl is enabled make secure tcp connection
-			conn, err = tls.Dial("tcp", server, g.tlsConfig)
+		if g.tlsConfig != nil {
+			conn, err = tls.DialWithDialer(&d, "tcp", server, g.tlsConfig)
 		} else {
-			// Create insecure tcp connection by default
-			conn, err = net.DialTimeout("tcp", server, time.Duration(g.Timeout)*time.Second)
+			conn, err = d.Dial("tcp", server)
 		}
+
 		if err == nil {
-			// Append successful connections
 			conns = append(conns, conn)
 		}
 	}

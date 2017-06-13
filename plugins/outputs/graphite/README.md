@@ -20,9 +20,6 @@ via raw TCP.
   ## timeout in seconds for the write connection to graphite
   timeout = 2
 
-  ## Enable secure tunnel
-  # ssl_enabled = true
-
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
@@ -46,8 +43,6 @@ Parameters:
     SSLKey string
     // Skip SSL verification
     InsecureSkipVerify bool
-    // SSL enabled
-    SSLEnabled bool
 
 ### Required parameters:
 
@@ -60,7 +55,6 @@ for more details.
 
 ### Optional parameters:
 
-* `ssl_enabled`: Enable secure connection (default: false)
 * `ssl_ca`: SSL CA
 * `ssl_cert`: SSL CERT
 * `ssl_key`: SSL key
