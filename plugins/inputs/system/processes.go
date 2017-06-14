@@ -20,6 +20,7 @@ import (
 
 type Processes struct {
 	execPS       func() ([]byte, error)
+	getHostProc  func() string
 	readProcFile func(filename string) ([]byte, error)
 
 	forcePS   bool
@@ -60,6 +61,14 @@ func (p *Processes) Gather(acc telegraf.Accumulator) error {
 
 	acc.AddGauge("processes", fields, nil)
 	return nil
+}
+
+func GetHostProc() string {
+	procPath := "/proc"
+	if os.Getenv("HOST_PROC") != "" {
+		procPath = os.Getenv("HOST_PROC")
+	}
+	return procPath
 }
 
 // Gets empty fields of metrics based on the OS
@@ -132,14 +141,14 @@ func (p *Processes) gatherFromPS(fields map[string]interface{}) error {
 
 // get process states from /proc/(pid)/stat files
 func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
-	filenames, err := filepath.Glob("/proc/[0-9]*/stat")
+	filenames, err := filepath.Glob(GetHostProc() + "/[0-9]*/stat")
+
 	if err != nil {
 		return err
 	}
 
 	for _, filename := range filenames {
 		_, err := os.Stat(filename)
-
 		data, err := p.readProcFile(filename)
 		if err != nil {
 			return err
