@@ -148,10 +148,10 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress string
-	MaxConnections int
-	ReadBufferSize int
-	ReadTimeout    internal.Duration
+	ServiceAddress  string
+	MaxConnections  int
+	ReadBufferSize  int
+	ReadTimeout     *internal.Duration
 	KeepAlivePeriod *internal.Duration
 
 	parsers.Parser
@@ -181,6 +181,11 @@ func (sl *SocketListener) SampleConfig() string {
   ## Only applies to stream sockets (e.g. TCP).
   ## 0 (default) is unlimited.
   # max_connections = 1024
+
+  ## Read timeout.
+  ## Only applies to stream sockets (e.g. TCP).
+  ## 0 (default) is unlimited.
+  # read_timeout = "30s"
 
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
