@@ -9,8 +9,8 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
 2. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
 3. Shared profile from `profile` attribute
-4. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
-5. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
+4. [Environment Variables](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#environment-variables)
+5. [Shared Credentials](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#shared-credentials-file)
 6. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
 ### Configuration:
@@ -20,9 +20,24 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Amazon Region (required)
   region = "us-east-1"
 
+  ## Amazon Credentials
+  ## Credentials are loaded in the following order
+  ## 1) Assumed credentials via STS if role_arn is specified
+  ## 2) explicit credentials from 'access_key' and 'secret_key'
+  ## 3) shared profile from 'profile'
+  ## 4) environment variables
+  ## 5) shared credentials file
+  ## 6) EC2 Instance Profile
+  #access_key = ""
+  #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #profile = ""
+  #shared_credential_file = ""
+
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
-  # 3 minute and 5 minutes intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
+  # 3 minute, 5 minute, or larger intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
   # Note that if a period is configured that is smaller than the minimum for a
   # particular metric, that metric will not be returned by the Cloudwatch API
   # and will not be collected by Telegraf.
@@ -57,10 +72,6 @@ API endpoint. In the following order the plugin will attempt to authenticate.
     [[inputs.cloudwatch.metrics.dimensions]]
       name = "LoadBalancerName"
       value = "p-example"
-
-    [[inputs.cloudwatch.metrics.dimensions]]
-      name = "AvailabilityZone"
-      value = "*"
 ```
 #### Requirements and Terminology
 
@@ -134,6 +145,6 @@ Tag Dimension names are represented in [snake case](https://en.wikipedia.org/wik
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter cloudwatch -test
+$ ./telegraf --config telegraf.conf --input-filter cloudwatch --test
 > cloudwatch_aws_elb,load_balancer_name=p-example,region=us-east-1,unit=seconds latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875,latency_sample_count=4029,latency_sum=19.382705211639404 1459542420000000000
 ```

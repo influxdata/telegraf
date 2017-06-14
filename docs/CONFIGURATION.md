@@ -70,7 +70,7 @@ ie, a jitter of 5s and flush_interval 10s means flushes will happen every 10-15s
 as the collection interval, with the maximum being 1s. Precision will NOT
 be used for service inputs, such as logparser and statsd. Valid values are
 "ns", "us" (or "µs"), "ms", "s".
-* **logfile**: Specify the log file name. The empty string means to log to stdout.
+* **logfile**: Specify the log file name. The empty string means to log to stderr.
 * **debug**: Run telegraf in debug mode.
 * **quiet**: Run telegraf in quiet mode (error messages only).
 * **hostname**: Override default hostname, if empty use os.Hostname().

@@ -71,7 +71,7 @@ It can also check response text.
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter net_response -test
+$ ./telegraf --config telegraf.conf --input-filter net_response --test
 net_response,server=192.168.2.2,port=22,protocol=tcp response_time=0.18070360500000002,string_found=true 1454785464182527094
 net_response,server=192.168.2.2,port=2222,protocol=tcp response_time=1.090124776,string_found=false 1454784433658942325
 

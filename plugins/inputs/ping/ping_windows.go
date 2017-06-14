@@ -44,8 +44,8 @@ const sampleConfig = `
 	## number of pings to send per collection (ping -n <COUNT>)
 	count = 4 # required
 
-	## Ping timeout, in seconds. 0 means default timeout (ping -w <TIMEOUT>)
-	Timeout = 0
+	## Ping timeout, in seconds. 0.0 means default timeout (ping -w <TIMEOUT>)
+	#timeout = 0.0
 `
 
 func (s *Ping) SampleConfig() string {

@@ -3,6 +3,7 @@ package leofs
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net/url"
 	"os/exec"
 	"strconv"
@@ -18,7 +19,7 @@ import (
 const oid = ".1.3.6.1.4.1.35450"
 
 // For Manager Master
-const defaultEndpoint = "127.0.0.1:4020"
+const defaultEndpoint = "udp://127.0.0.1:4020"
 
 type ServerType int
 
@@ -135,9 +136,9 @@ var serverTypeMapping = map[string]ServerType{
 }
 
 var sampleConfig = `
-  ## An array of URI to gather stats about LeoFS.
-  ## Specify an ip or hostname with port. ie 127.0.0.1:4020
-  servers = ["127.0.0.1:4021"]
+  ## An array of URLs of the form:
+  ##   "udp://" host [ ":" port]
+  servers = ["udp://127.0.0.1:4020"]
 `
 
 func (l *LeoFS) SampleConfig() string {
@@ -154,15 +155,27 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 	var wg sync.WaitGroup
-	var outerr error
-	for _, endpoint := range l.Servers {
-		_, err := url.Parse(endpoint)
-		if err != nil {
-			return fmt.Errorf("Unable to parse the address:%s, err:%s", endpoint, err)
+	for i, endpoint := range l.Servers {
+		if !strings.HasPrefix(endpoint, "udp://") {
+			// Preserve backwards compatibility for hostnames without a
+			// scheme, broken in go 1.8. Remove in Telegraf 2.0
+			endpoint = "udp://" + endpoint
+			log.Printf("W! [inputs.mongodb] Using %q as connection URL; please update your configuration to use an URL", endpoint)
+			l.Servers[i] = endpoint
 		}
-		port, err := retrieveTokenAfterColon(endpoint)
+		u, err := url.Parse(endpoint)
 		if err != nil {
-			return err
+			acc.AddError(fmt.Errorf("Unable to parse address %q: %s", endpoint, err))
+			continue
+		}
+		if u.Host == "" {
+			acc.AddError(fmt.Errorf("Unable to parse address %q", endpoint))
+			continue
+		}
+
+		port := u.Port()
+		if port == "" {
+			port = "4020"
 		}
 		st, ok := serverTypeMapping[port]
 		if !ok {
@@ -171,11 +184,11 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(endpoint string, st ServerType) {
 			defer wg.Done()
-			outerr = l.gatherServer(endpoint, st, acc)
+			acc.AddError(l.gatherServer(endpoint, st, acc))
 		}(endpoint, st)
 	}
 	wg.Wait()
-	return outerr
+	return nil
 }
 
 func (l *LeoFS) gatherServer(

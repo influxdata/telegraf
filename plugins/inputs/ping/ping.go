@@ -49,7 +49,7 @@ const sampleConfig = `
   ## NOTE: this plugin forks the ping command. You may need to set capabilities
   ## via setcap cap_net_raw+p /bin/ping
   #
-  ## urls to ping
+  ## List of urls to ping
   urls = ["www.google.com"] # required
   ## number of pings to send per collection (ping -c <COUNT>)
   # count = 1
@@ -68,7 +68,6 @@ func (_ *Ping) SampleConfig() string {
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
-	errorChannel := make(chan error, len(p.Urls)*2)
 
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
@@ -80,14 +79,14 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			out, err := p.pingHost(totalTimeout, args...)
 			if err != nil {
 				// Combine go err + stderr output
-				errorChannel <- errors.New(
-					strings.TrimSpace(out) + ", " + err.Error())
+				acc.AddError(errors.New(
+					strings.TrimSpace(out) + ", " + err.Error()))
 			}
 			tags := map[string]string{"url": u}
-			trans, rec, avg, stddev, err := processPingOutput(out)
+			trans, rec, min, avg, max, stddev, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
-				errorChannel <- err
+				acc.AddError(err)
 				return
 			}
 			// Calculate packet loss percentage
@@ -97,8 +96,14 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				"packets_received":    rec,
 				"percent_packet_loss": loss,
 			}
+			if min > 0 {
+				fields["minimum_response_ms"] = min
+			}
 			if avg > 0 {
 				fields["average_response_ms"] = avg
+			}
+			if max > 0 {
+				fields["maximum_response_ms"] = max
 			}
 			if stddev > 0 {
 				fields["standard_deviation_ms"] = stddev
@@ -108,18 +113,8 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 func hostPinger(timeout float64, args ...string) (string, error) {
@@ -169,9 +164,9 @@ func (p *Ping) args(url string) []string {
 //     round-trip min/avg/max/stddev = 34.843/43.508/52.172/8.664 ms
 //
 // It returns (<transmitted packets>, <received packets>, <average response>)
-func processPingOutput(out string) (int, int, float64, float64, error) {
+func processPingOutput(out string) (int, int, float64, float64, float64, float64, error) {
 	var trans, recv int
-	var avg, stddev float64
+	var min, avg, max, stddev float64
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("Fatal error processing ping output")
 	lines := strings.Split(out, "\n")
@@ -183,23 +178,25 @@ func processPingOutput(out string) (int, int, float64, float64, error) {
 			// Transmitted packets
 			trans, err = strconv.Atoi(strings.Split(stats[0], " ")[0])
 			if err != nil {
-				return trans, recv, avg, stddev, err
+				return trans, recv, min, avg, max, stddev, err
 			}
 			// Received packets
 			recv, err = strconv.Atoi(strings.Split(stats[1], " ")[0])
 			if err != nil {
-				return trans, recv, avg, stddev, err
+				return trans, recv, min, avg, max, stddev, err
 			}
 		} else if strings.Contains(line, "min/avg/max") {
 			stats := strings.Split(line, " ")[3]
+			min, err = strconv.ParseFloat(strings.Split(stats, "/")[0], 64)
 			avg, err = strconv.ParseFloat(strings.Split(stats, "/")[1], 64)
+			max, err = strconv.ParseFloat(strings.Split(stats, "/")[2], 64)
 			stddev, err = strconv.ParseFloat(strings.Split(stats, "/")[3], 64)
 			if err != nil {
-				return trans, recv, avg, stddev, err
+				return trans, recv, min, avg, max, stddev, err
 			}
 		}
 	}
-	return trans, recv, avg, stddev, err
+	return trans, recv, min, avg, max, stddev, err
 }
 
 func init() {

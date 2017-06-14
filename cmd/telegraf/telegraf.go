@@ -144,7 +144,7 @@ func reloadLoop(
 				log.Fatal("E! " + err.Error())
 			}
 		}
-		if len(c.Outputs) == 0 {
+		if !*fTest && len(c.Outputs) == 0 {
 			log.Fatalf("E! Error: no outputs found, did you provide a valid config file?")
 		}
 		if len(c.Inputs) == 0 {

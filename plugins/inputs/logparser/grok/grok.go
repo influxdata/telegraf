@@ -59,6 +59,7 @@ var (
 	patternOnlyRe = regexp.MustCompile(`%{(\w+)}`)
 )
 
+// Parser is the primary struct to handle and grok-patterns defined in the config toml
 type Parser struct {
 	Patterns []string
 	// namedPatterns is a list of internally-assigned names to the patterns
@@ -69,6 +70,16 @@ type Parser struct {
 	CustomPatterns     string
 	CustomPatternFiles []string
 	Measurement        string
+
+	// Timezone is an optional component to help render log dates to
+	// your chosen zone.
+	// Default: "" which renders UTC
+	// Options are as follows:
+	// 1. Local             -- interpret based on machine localtime
+	// 2. "America/Chicago" -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+	// 3. UTC               -- or blank/unspecified, will return timestamp in UTC
+	Timezone string
+	loc      *time.Location
 
 	// typeMap is a map of patterns -> capture name -> modifier,
 	//   ie, {
@@ -105,6 +116,7 @@ type Parser struct {
 	tsModder *tsModder
 }
 
+// Compile is a bound method to Parser which will process the options for our parser
 func (p *Parser) Compile() error {
 	p.typeMap = make(map[string]map[string]string)
 	p.tsMap = make(map[string]map[string]string)
@@ -118,11 +130,18 @@ func (p *Parser) Compile() error {
 
 	// Give Patterns fake names so that they can be treated as named
 	// "custom patterns"
-	p.namedPatterns = make([]string, len(p.Patterns))
+	p.namedPatterns = make([]string, 0, len(p.Patterns))
 	for i, pattern := range p.Patterns {
+		if pattern == "" {
+			continue
+		}
 		name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
 		p.CustomPatterns += "\n" + name + " " + pattern + "\n"
-		p.namedPatterns[i] = "%{" + name + "}"
+		p.namedPatterns = append(p.namedPatterns, "%{"+name+"}")
+	}
+
+	if len(p.namedPatterns) == 0 {
+		return fmt.Errorf("pattern required")
 	}
 
 	// Combine user-supplied CustomPatterns with DEFAULT_PATTERNS and parse
@@ -135,9 +154,9 @@ func (p *Parser) Compile() error {
 
 	// Parse any custom pattern files supplied.
 	for _, filename := range p.CustomPatternFiles {
-		file, err := os.Open(filename)
-		if err != nil {
-			return err
+		file, fileErr := os.Open(filename)
+		if fileErr != nil {
+			return fileErr
 		}
 
 		scanner := bufio.NewScanner(bufio.NewReader(file))
@@ -148,9 +167,16 @@ func (p *Parser) Compile() error {
 		p.Measurement = "logparser_grok"
 	}
 
+	p.loc, err = time.LoadLocation(p.Timezone)
+	if err != nil {
+		log.Printf("W! improper timezone supplied (%s), setting loc to UTC", p.Timezone)
+		p.loc, _ = time.LoadLocation("UTC")
+	}
+
 	return p.compileCustomPatterns()
 }
 
+// ParseLine is the primary function to process individual lines, returning the metrics
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	var err error
 	// values are the parsed fields from the log line
@@ -168,6 +194,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(values) == 0 {
+		log.Printf("D! Grok no match found for: %q", line)
 		return nil, nil
 	}
 
@@ -243,7 +270,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			var foundTs bool
 			// first try timestamp layouts that we've already found
 			for _, layout := range p.foundTsLayouts {
-				ts, err := time.Parse(layout, v)
+				ts, err := time.ParseInLocation(layout, v, p.loc)
 				if err == nil {
 					timestamp = ts
 					foundTs = true
@@ -254,7 +281,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			// layouts.
 			if !foundTs {
 				for _, layout := range timeLayouts {
-					ts, err := time.Parse(layout, v)
+					ts, err := time.ParseInLocation(layout, v, p.loc)
 					if err == nil {
 						timestamp = ts
 						foundTs = true
@@ -272,7 +299,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case DROP:
 		// goodbye!
 		default:
-			ts, err := time.Parse(t, v)
+			ts, err := time.ParseInLocation(t, v, p.loc)
 			if err == nil {
 				timestamp = ts
 			} else {

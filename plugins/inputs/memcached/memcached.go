@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -73,16 +72,15 @@ func (m *Memcached) Gather(acc telegraf.Accumulator) error {
 		return m.gatherServer(":11211", false, acc)
 	}
 
-	errChan := errchan.New(len(m.Servers) + len(m.UnixSockets))
 	for _, serverAddress := range m.Servers {
-		errChan.C <- m.gatherServer(serverAddress, false, acc)
+		acc.AddError(m.gatherServer(serverAddress, false, acc))
 	}
 
 	for _, unixAddress := range m.UnixSockets {
-		errChan.C <- m.gatherServer(unixAddress, true, acc)
+		acc.AddError(m.gatherServer(unixAddress, true, acc))
 	}
 
-	return errChan.Error()
+	return nil
 }
 
 func (m *Memcached) gatherServer(

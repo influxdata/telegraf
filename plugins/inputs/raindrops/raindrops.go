@@ -35,24 +35,24 @@ func (r *Raindrops) Description() string {
 
 func (r *Raindrops) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	var outerr error
 
 	for _, u := range r.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
+			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
 		}
 
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			outerr = r.gatherUrl(addr, acc)
+			acc.AddError(r.gatherUrl(addr, acc))
 		}(addr)
 	}
 
 	wg.Wait()
 
-	return outerr
+	return nil
 }
 
 func (r *Raindrops) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {

@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"io/ioutil"
@@ -153,7 +152,6 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 		e.client = client
 	}
 
-	errChan := errchan.New(len(e.Servers) * 3)
 	var wg sync.WaitGroup
 	wg.Add(len(e.Servers))
 
@@ -176,24 +174,21 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 			// Always gather node states
 			if err := e.gatherNodeStats(url, acc); err != nil {
-				err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
-				errChan.C <- err
+				acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 				return
 			}
 
 			if e.ClusterHealth {
 				url = s + "/_cluster/health?level=indices"
 				if err := e.gatherClusterHealth(url, acc); err != nil {
-					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
-					errChan.C <- err
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
 
 			if e.ClusterStats && e.isMaster {
 				if err := e.gatherClusterStats(s+"/_cluster/stats", acc); err != nil {
-					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
-					errChan.C <- err
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
@@ -201,7 +196,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func (e *Elasticsearch) createHttpClient() (*http.Client, error) {

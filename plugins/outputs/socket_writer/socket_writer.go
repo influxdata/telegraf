@@ -2,16 +2,19 @@ package socket_writer
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type SocketWriter struct {
-	Address string
+	Address         string
+	KeepAlivePeriod *internal.Duration
 
 	serializers.Serializer
 
@@ -36,8 +39,14 @@ func (sw *SocketWriter) SampleConfig() string {
   # address = "unix:///tmp/telegraf.sock"
   # address = "unixgram:///tmp/telegraf.sock"
 
+  ## Period between keep alive probes.
+  ## Only applies to TCP sockets.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  # keep_alive_period = "5m"
+
   ## Data format to generate.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
@@ -59,8 +68,29 @@ func (sw *SocketWriter) Connect() error {
 		return err
 	}
 
+	if err := sw.setKeepAlive(c); err != nil {
+		log.Printf("unable to configure keep alive (%s): %s", sw.Address, err)
+	}
+
 	sw.Conn = c
 	return nil
+}
+
+func (sw *SocketWriter) setKeepAlive(c net.Conn) error {
+	if sw.KeepAlivePeriod == nil {
+		return nil
+	}
+	tcpc, ok := c.(*net.TCPConn)
+	if !ok {
+		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(sw.Address, "://", 2)[0])
+	}
+	if sw.KeepAlivePeriod.Duration == 0 {
+		return tcpc.SetKeepAlive(false)
+	}
+	if err := tcpc.SetKeepAlive(true); err != nil {
+		return err
+	}
+	return tcpc.SetKeepAlivePeriod(sw.KeepAlivePeriod.Duration)
 }
 
 // Write writes the given metrics to the destination.
@@ -92,6 +122,16 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
+}
+
+// Close closes the connection. Noop if already closed.
+func (sw *SocketWriter) Close() error {
+	if sw.Conn == nil {
+		return nil
+	}
+	err := sw.Conn.Close()
+	sw.Conn = nil
+	return err
 }
 
 func newSocketWriter() *SocketWriter {

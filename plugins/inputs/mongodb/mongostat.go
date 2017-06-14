@@ -564,7 +564,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		// BEGIN code modification
 		if newStat.Repl.IsMaster.(bool) {
 			returnVal.NodeType = "PRI"
-		} else if newStat.Repl.Secondary.(bool) {
+		} else if newStat.Repl.Secondary != nil && newStat.Repl.Secondary.(bool) {
 			returnVal.NodeType = "SEC"
 		} else if newStat.Repl.ArbiterOnly != nil && newStat.Repl.ArbiterOnly.(bool) {
 			returnVal.NodeType = "ARB"

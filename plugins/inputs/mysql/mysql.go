@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/go-sql-driver/mysql"
@@ -137,19 +136,18 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 		m.InitMysql()
 	}
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(m.Servers))
 
 	// Loop through each server and collect metrics
 	for _, server := range m.Servers {
 		wg.Add(1)
 		go func(s string) {
 			defer wg.Done()
-			errChan.C <- m.gatherServer(s, acc)
+			acc.AddError(m.gatherServer(s, acc))
 		}(server)
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 type mapping struct {
@@ -860,42 +858,45 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 		case "Queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["queries"] = i
 			}
-
-			fields["queries"] = i
 		case "Questions":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["questions"] = i
 			}
-
-			fields["questions"] = i
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["slow_queries"] = i
 			}
-
-			fields["slow_queries"] = i
 		case "Connections":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["connections"] = i
 			}
-			fields["connections"] = i
 		case "Syncs":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["syncs"] = i
 			}
-			fields["syncs"] = i
 		case "Uptime":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["uptime"] = i
 			}
-			fields["uptime"] = i
 		}
 	}
 	// Send any remaining fields
