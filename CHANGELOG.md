@@ -40,8 +40,9 @@
 
 ### Bugfixes
 
-- [#2862](https://github.com/influxdata/telegraf/issue/2862): Fix InfluxDB UDP metric splitting.
-- [#2888](https://github.com/influxdata/telegraf/issue/2888): Fix mongodb/leofs urls without scheme.
+- [#2862](https://github.com/influxdata/telegraf/issues/2862): Fix InfluxDB UDP metric splitting.
+- [#2888](https://github.com/influxdata/telegraf/issues/2888): Fix mongodb/leofs urls without scheme.
+- [#2822](https://github.com/influxdata/telegraf/issues/2822): Fix inconsistent label dimensions in prometheus output.
 
 ## v1.3.1 [2017-05-31]
 
