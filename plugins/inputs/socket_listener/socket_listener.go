@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"time"
 )
 
 type setReadBufferer interface {
@@ -91,7 +92,13 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	defer c.Close()
 
 	scnr := bufio.NewScanner(c)
-	for scnr.Scan() {
+	for {
+		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
+			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
+		}
+		if !scnr.Scan() {
+			break
+		}
 		metrics, err := ssl.Parse(scnr.Bytes())
 		if err != nil {
 			ssl.AddError(fmt.Errorf("unable to parse incoming line: %s", err))
@@ -104,7 +111,9 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	}
 
 	if err := scnr.Err(); err != nil {
-		if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			log.Printf("D! Timeout in plugin [input.socket_listener]: %s", err)
+		} else if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 			ssl.AddError(err)
 		}
 	}
@@ -142,6 +151,7 @@ type SocketListener struct {
 	ServiceAddress  string
 	MaxConnections  int
 	ReadBufferSize  int
+	ReadTimeout     *internal.Duration
 	KeepAlivePeriod *internal.Duration
 
 	parsers.Parser
@@ -171,6 +181,11 @@ func (sl *SocketListener) SampleConfig() string {
   ## Only applies to stream sockets (e.g. TCP).
   ## 0 (default) is unlimited.
   # max_connections = 1024
+
+  ## Read timeout.
+  ## Only applies to stream sockets (e.g. TCP).
+  ## 0 (default) is unlimited.
+  # read_timeout = "30s"
 
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
