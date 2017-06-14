@@ -22,6 +22,7 @@
 - [#2734](https://github.com/influxdata/telegraf/pull/2734): Add include/exclude filters for docker containers.
 - [#2602](https://github.com/influxdata/telegraf/pull/2602): Add secure connection support to graphite output.
 - [#2908](https://github.com/influxdata/telegraf/pull/2908): Add min/max response time on linux/darwin to ping.
+- [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 
 ### Bugfixes
 
@@ -125,7 +126,6 @@ be deprecated eventually.
 - [#2587](https://github.com/influxdata/telegraf/pull/2587): Add json timestamp units configurability
 - [#2597](https://github.com/influxdata/telegraf/issues/2597): Add support for Linux sysctl-fs metrics.
 - [#2425](https://github.com/influxdata/telegraf/pull/2425): Support to include/exclude docker container labels as tags
-- [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 - [#1667](https://github.com/influxdata/telegraf/pull/1667): dmcache input plugin
 - [#2637](https://github.com/influxdata/telegraf/issues/2637): Add support for precision in http_listener
 - [#2636](https://github.com/influxdata/telegraf/pull/2636): Add `message_len_max` option to `kafka_consumer` input
