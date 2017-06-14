@@ -7,6 +7,9 @@
   supporting Kafka 0.8 and below is available as the `kafka_consumer_legacy`
   plugin.
 
+- In the `aerospike` input the `node_name` field has been changed to be a tag
+  for both the `aerospike_node` and `aerospike_namespace` measurements.
+
 ### Features
 
 - [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
@@ -31,6 +34,7 @@
 - [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
 - [#2885](https://github.com/influxdata/telegraf/pull/2885): Fix timeout option in Windows ping input sample configuration.
 - [#2911](https://github.com/influxdata/telegraf/issues/2911): Fix Kinesis output plugin in govcloud.
+- [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
 
 ## v1.3.2 [unreleased]
 
