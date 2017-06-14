@@ -93,7 +93,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 
 	scnr := bufio.NewScanner(c)
 	for {
-		if ssl.ReadTimeout.Duration > 0 {
+		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
 			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
 		}
 		if !scnr.Scan() {
