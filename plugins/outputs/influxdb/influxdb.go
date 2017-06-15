@@ -33,6 +33,7 @@ type InfluxDB struct {
 	WriteConsistency string
 	Timeout          internal.Duration
 	UDPPayload       int `toml:"udp_payload"`
+	Proxy            string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -83,6 +84,9 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Proxy Config
+  # proxy = "http://corporate.proxy:3128"
 `
 
 // Connect initiates the primary connection to the range of provided URLs
@@ -123,6 +127,7 @@ func (i *InfluxDB) Connect() error {
 				UserAgent: i.UserAgent,
 				Username:  i.Username,
 				Password:  i.Password,
+				Proxy:     i.Proxy,
 			}
 			wp := client.WriteParams{
 				Database:        i.Database,
