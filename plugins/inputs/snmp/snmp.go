@@ -45,6 +45,9 @@ const sampleConfig = `
 
   ## measurement name
   name = "system"
+  [[inputs.snmp.top_tags]]
+    blah = "blerg"
+
   [[inputs.snmp.field]]
     name = "hostname"
     oid = ".1.0.0.1.1"
@@ -354,14 +357,23 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			Name:   s.Name,
 			Fields: s.Fields,
 		}
+
+		defaultTags := map[string]string{}
+		octets := strings.Split(agent, ".")
+		// validate that it's an ip and not localhost or a DNS name
+		if len(octets) == 4 {
+			defaultTags["rack"] = octets[2]
+			defaultTags["unit"] = octets[3]
+		}
+
 		topTags := map[string]string{}
-		if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
+		if err := s.gatherTable(acc, gs, t, defaultTags, topTags, false); err != nil {
 			acc.AddError(Errorf(err, "agent %s", agent))
 		}
 
 		// Now is the real tables.
 		for _, t := range s.Tables {
-			if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
+			if err := s.gatherTable(acc, gs, t, defaultTags, topTags, true); err != nil {
 				acc.AddError(Errorf(err, "agent %s: gathering table %s", agent, t.Name))
 			}
 		}
@@ -370,7 +382,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table, topTags map[string]string, walk bool) error {
+func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table, defaultTags map[string]string, topTags map[string]string, walk bool) error {
 	rt, err := t.Build(gs, walk)
 	if err != nil {
 		return err
@@ -392,6 +404,9 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 		}
 		if _, ok := tr.Tags["agent_host"]; !ok {
 			tr.Tags["agent_host"] = gs.Host()
+		}
+		for k, v := range defaultTags {
+			tr.Tags[k] = v
 		}
 		acc.AddFields(rt.Name, tr.Fields, tr.Tags, rt.Time)
 	}
