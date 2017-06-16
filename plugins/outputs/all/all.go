@@ -19,9 +19,9 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/outputs/nsq"
 	_ "github.com/influxdata/telegraf/plugins/outputs/opentsdb"
+	_ "github.com/influxdata/telegraf/plugins/outputs/orangesys"
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
-	_ "github.com/influxdata/telegraf/plugins/outputs/orangesys"
 )
