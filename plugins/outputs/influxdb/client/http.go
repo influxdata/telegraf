@@ -39,29 +39,29 @@ func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 		return nil, fmt.Errorf("config.URL scheme must be http(s), got %s", u.Scheme)
 	}
 
-        var transport http.Transport
-	if len(config.Proxy) > 0 {
-            proxyURL, err := url.Parse(config.Proxy)
-            if err != nil {
-		return nil, fmt.Errorf("error parsing config.Proxy: %s", err)
-            }
+	var transport http.Transport
+	if len(config.HTTPProxy) > 0 {
+		proxyURL, err := url.Parse(config.HTTPProxy)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing config.HTTPProxy: %s", err)
+		}
 
-            transport = http.Transport{
-                Proxy: http.ProxyURL(proxyURL),
-                TLSClientConfig: config.TLSConfig,
-            }
+		transport = http.Transport{
+			Proxy:           http.ProxyURL(proxyURL),
+			TLSClientConfig: config.TLSConfig,
+		}
 	} else {
-            transport = http.Transport{
-                TLSClientConfig: config.TLSConfig,
-            }
-        }
+		transport = http.Transport{
+			TLSClientConfig: config.TLSConfig,
+		}
+	}
 
 	return &httpClient{
 		writeURL: writeURL(u, defaultWP),
 		config:   config,
 		url:      u,
 		client: &http.Client{
-			Timeout: config.Timeout,
+			Timeout:   config.Timeout,
 			Transport: &transport,
 		},
 	}, nil
@@ -92,7 +92,7 @@ type HTTPConfig struct {
 	TLSConfig *tls.Config
 
 	// Proxy URL should be of the form "http://host:port"
-	Proxy string
+	HTTPProxy string
 
 	// Gzip, if true, compresses each payload using gzip.
 	// TODO
