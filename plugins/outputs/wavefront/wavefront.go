@@ -33,6 +33,7 @@ var sanitizedChars = strings.NewReplacer(
 	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
 	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
 	">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
+	"=", "-",
 )
 
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
