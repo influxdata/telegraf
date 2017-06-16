@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/influxdata/tail"
@@ -45,6 +46,7 @@ const sampleConfig = `
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
   ##   /var/log/apache.log -> only tail the apache log file
   files = ["/var/log/apache/access.log"]
+
   ## Read files that currently exist from the beginning. Files that are created
   ## while telegraf is running (and that match the "files" globs) will always
   ## be read from the beginning.
@@ -186,9 +188,12 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 			continue
 		}
 
+		// Fix up files with Windows line endings.
+		text := strings.TrimRight(line.Text, "\r")
+
 		select {
 		case <-l.done:
-		case l.lines <- line.Text:
+		case l.lines <- text:
 		}
 	}
 }
