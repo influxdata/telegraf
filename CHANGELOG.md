@@ -1,3 +1,9 @@
+## v1.3.3 [unreleased]
+
+### Bugfixes
+
+- [#2915](https://github.com/influxdata/telegraf/issues/2915): Allow dos line endings in tail and logparser.
+
 ## v1.3.2 [2017-06-14]
 
 ### Bugfixes
