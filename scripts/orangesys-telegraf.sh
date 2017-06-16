@@ -70,6 +70,7 @@ go build -o telegraf-race -race -ldflags "-X main.version=${VERSION}-RACE" cmd/t
 cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
 
 eval "git describe --exact-match HEAD"
+/bin/true
 if [ $? -eq 0 ]; then
     # install fpm (packaging dependency)
     exit_if_fail gem install fpm
