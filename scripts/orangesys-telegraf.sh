@@ -65,20 +65,20 @@ telegraf -sample-config > $tmpdir/config.toml
 exit_if_fail telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
-cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
+#cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
 go build -o telegraf-race -race -ldflags "-X main.version=${VERSION}-RACE" cmd/telegraf/telegraf.go
-cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
+#cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
 
-eval "git describe --exact-match HEAD"
-/bin/true
-if [ $? -eq 0 ]; then
+#eval "git describe --exact-match HEAD"
+#/bin/true
+#if [ $? -eq 0 ]; then
     # install fpm (packaging dependency)
 #    exit_if_fail gem install fpm
     # install boto & rpm (packaging & AWS dependencies)
 #    exit_if_fail sudo apt-get install -y rpm python-boto
-    unset GOGC
-    tag=$(git describe --exact-match HEAD)
-    echo $tag
+#    unset GOGC
+#    tag=$(git describe --exact-match HEAD)
+#    echo $tag
 #    exit_if_fail ./scripts/build.py --release --package --platform=linux --arch=amd64
 #    mv build $CIRCLE_ARTIFACTS
-fi
+#fi
