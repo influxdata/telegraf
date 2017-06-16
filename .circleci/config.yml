@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: ubuntu:14.04
+      - image: buildpack-deps:trusty
 
     working_directory: /go/src/github.com/influxdata/telegraf
 
