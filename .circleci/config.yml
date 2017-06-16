@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: circleci/golang:1.8.3
 
-    working_directory: /go/src/github.com/influxdb/telegraf
+    working_directory: /go/src/github.com/influxdata/telegraf
 
     steps:
       - checkout
