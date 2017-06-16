@@ -11,6 +11,11 @@ dependencies:
   override:
     - docker info
 
+checkout:
+  post:
+    - git submodule sync --recursive
+    - git submodule update --recursive --init
+
 test:
   override:
     - bash scripts/circle-test.sh
