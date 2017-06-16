@@ -1,6 +1,8 @@
 package mysql
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"bytes"
 	"database/sql"
 	"fmt"
@@ -9,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"io/ioutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -36,11 +39,14 @@ type Mysql struct {
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
 	IntervalSlow                        string   `toml:"interval_slow"`
+	SSLCA 				    string   `toml:"ssl_ca"`
+	SSLCert 			    string   `toml:"ssl_cert"`
+	SSLKey 			 	    string   `toml:"ssl_key"`
 }
 
 var sampleConfig = `
   ## specify servers via a url matching:
-  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   ##  e.g.
   ##    servers = ["user:passwd@tcp(127.0.0.1:3306)/?tls=false"]
@@ -97,6 +103,11 @@ var sampleConfig = `
   #
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
   interval_slow                   = "30m"
+
+  ## Optional SSL Config (will be used if tls=custom parameter specified in server uri)
+  ssl_ca = "/etc/telegraf/ca.pem"
+  ssl_cert = "/etc/telegraf/cert.pem"
+  ssl_key = "/etc/telegraf/key.pem"
 `
 
 var defaultTimeout = time.Second * time.Duration(5)
@@ -135,6 +146,12 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	if !initDone {
 		m.InitMysql()
 	}
+
+	err := registerTLSConfig(m)
+	if err != nil {
+		log.Printf("E! MySQL Error registering TLS config: %s", err)
+	}
+
 	var wg sync.WaitGroup
 
 	// Loop through each server and collect metrics
@@ -1769,6 +1786,38 @@ func getDSNTag(dsn string) string {
 		return "127.0.0.1:3306"
 	}
 	return conf.Addr
+}
+
+func registerTLSConfig (m* Mysql) error {
+	if m.SSLCert == "" || m.SSLKey == "" || m.SSLCA == "" {
+		return nil;
+	}
+
+	rootCertPool := x509.NewCertPool()
+	pem, err := ioutil.ReadFile(m.SSLCA)
+
+	if err != nil {
+		return err
+	}
+
+	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+		log.Fatal("Failed to append PEM.")
+	}
+
+	clientCert := make([]tls.Certificate, 0, 1)
+	certs, err := tls.LoadX509KeyPair(m.SSLCert, m.SSLKey)
+
+	if err != nil {
+		return err
+	}
+
+	clientCert = append(clientCert, certs)
+	mysql.RegisterTLSConfig("custom", &tls.Config{
+		RootCAs: rootCertPool,
+		Certificates: clientCert,
+	})
+
+	return nil
 }
 
 func init() {
