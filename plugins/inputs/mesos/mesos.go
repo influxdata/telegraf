@@ -1,6 +1,7 @@
 package mesos
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -30,6 +31,8 @@ type Mesos struct {
 	Slaves     []string
 	SlaveCols  []string `toml:"slave_collections"`
 	//SlaveTasks bool
+	SSL      bool `toml:"ssl"`
+	Insecure bool `toml:"insecure"`
 }
 
 var allMetrics = map[Role][]string{
@@ -65,6 +68,8 @@ var sampleConfig = `
   #   "tasks",
   #   "messages",
   # ]
+  # enable SSL
+  # ssl = false
 `
 
 // SampleConfig returns a sample configuration block
@@ -393,13 +398,8 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 	}
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
 var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
+	Timeout: time.Duration(4 * time.Second),
 }
 
 // TaskStats struct for JSON API output /monitor/statistics
@@ -407,6 +407,13 @@ type TaskStats struct {
 	ExecutorID  string                 `json:"executor_id"`
 	FrameworkID string                 `json:"framework_id"`
 	Statistics  map[string]interface{} `json:"statistics"`
+}
+
+func (m *Mesos) getHTTPPrefix() string {
+	if m.SSL {
+		return "https://"
+	}
+	return "http://"
 }
 
 func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc telegraf.Accumulator) error {
@@ -424,7 +431,12 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 
 	ts := strconv.Itoa(m.Timeout) + "ms"
 
-	resp, err := client.Get("http://" + address + "/monitor/statistics?timeout=" + ts)
+	// client is global so need to set the insecure flag here if necessary
+	client.Transport = &http.Transport{
+		ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: m.Insecure},
+	}
+	resp, err := client.Get(m.getHTTPPrefix() + address + "/monitor/statistics?timeout=" + ts)
 
 	if err != nil {
 		return err
@@ -476,7 +488,11 @@ func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc t
 
 	ts := strconv.Itoa(m.Timeout) + "ms"
 
-	resp, err := client.Get("http://" + a + "/metrics/snapshot?timeout=" + ts)
+	client.Transport = &http.Transport{
+		ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: m.Insecure},
+	}
+	resp, err := client.Get(m.getHTTPPrefix() + a + "/metrics/snapshot?timeout=" + ts)
 
 	if err != nil {
 		return err
