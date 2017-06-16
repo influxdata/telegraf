@@ -10,3 +10,4 @@ jobs:
       - checkout
       - run: git submodule sync --recursive
       - run: git submodule update --recursive --init
+      - run: ./scripts/orangesys-telegraf.sh
