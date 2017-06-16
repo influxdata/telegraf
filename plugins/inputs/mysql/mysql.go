@@ -1,17 +1,17 @@
 package mysql
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"bytes"
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"io/ioutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -39,9 +39,9 @@ type Mysql struct {
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
 	IntervalSlow                        string   `toml:"interval_slow"`
-	SSLCA 				    string   `toml:"ssl_ca"`
-	SSLCert 			    string   `toml:"ssl_cert"`
-	SSLKey 			 	    string   `toml:"ssl_key"`
+	SSLCA                               string   `toml:"ssl_ca"`
+	SSLCert                             string   `toml:"ssl_cert"`
+	SSLKey                              string   `toml:"ssl_key"`
 }
 
 var sampleConfig = `
@@ -1788,9 +1788,9 @@ func getDSNTag(dsn string) string {
 	return conf.Addr
 }
 
-func registerTLSConfig (m* Mysql) error {
+func registerTLSConfig(m *Mysql) error {
 	if m.SSLCert == "" || m.SSLKey == "" || m.SSLCA == "" {
-		return nil;
+		return nil
 	}
 
 	rootCertPool := x509.NewCertPool()
@@ -1813,7 +1813,7 @@ func registerTLSConfig (m* Mysql) error {
 
 	clientCert = append(clientCert, certs)
 	mysql.RegisterTLSConfig("custom", &tls.Config{
-		RootCAs: rootCertPool,
+		RootCAs:      rootCertPool,
 		Certificates: clientCert,
 	})
 
