@@ -22,6 +22,7 @@
 - [#2734](https://github.com/influxdata/telegraf/pull/2734): Add include/exclude filters for docker containers.
 - [#2602](https://github.com/influxdata/telegraf/pull/2602): Add secure connection support to graphite output.
 - [#2908](https://github.com/influxdata/telegraf/pull/2908): Add min/max response time on linux/darwin to ping.
+- [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
 
 ### Bugfixes
 
