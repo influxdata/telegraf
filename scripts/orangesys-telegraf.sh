@@ -73,12 +73,12 @@ eval "git describe --exact-match HEAD"
 /bin/true
 if [ $? -eq 0 ]; then
     # install fpm (packaging dependency)
-    exit_if_fail gem install fpm
+#    exit_if_fail gem install fpm
     # install boto & rpm (packaging & AWS dependencies)
-    exit_if_fail sudo apt-get install -y rpm python-boto
+#    exit_if_fail sudo apt-get install -y rpm python-boto
     unset GOGC
     tag=$(git describe --exact-match HEAD)
     echo $tag
-    exit_if_fail ./scripts/build.py --release --package --platform=linux --arch=amd64
-    mv build $CIRCLE_ARTIFACTS
+#    exit_if_fail ./scripts/build.py --release --package --platform=linux --arch=amd64
+#    mv build $CIRCLE_ARTIFACTS
 fi
