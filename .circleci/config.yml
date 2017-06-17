@@ -8,8 +8,11 @@ jobs:
 
     steps:
       - checkout
+
       - run: git submodule sync --recursive
+
       - run: git submodule update --recursive --init
+
       - run:
           name: Check that go fmt has been run.
           command: |
@@ -17,8 +20,10 @@ jobs:
             if [ $fmtcount -gt 0 ]; then
               echo "run 'go fmt ./...' to format your source code."
               exit 1
-            fi && exit 0
+            fi
+
       - run: ./scripts/orangesys-telegraf.sh
+
       - run: make
+
       - run: go vet ./...
-      
