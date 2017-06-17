@@ -41,16 +41,14 @@ echo "\$HOME: $HOME"
 echo "\$GOPATH: $GOPATH"
 echo "\$CIRCLE_BRANCH: $CIRCLE_BRANCH"
 
-pwd
-
 # Verify that go fmt has been run
-check_go_fmt
+#check_go_fmt
 
 # Build the code
-exit_if_fail make
+#exit_if_fail make
 
 # Run the tests
-exit_if_fail go vet ./...
+#exit_if_fail go vet ./...
 #exit_if_fail make docker-run-circle
 # Sleep for OpenTSDB leadership election, aerospike cluster, etc.
 #exit_if_fail sleep 60

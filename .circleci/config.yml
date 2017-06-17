@@ -19,3 +19,5 @@ jobs:
               exit 1
             fi && exit 0
       - run: ./scripts/orangesys-telegraf.sh
+      - run: make
+      - run: go vet ./...
