@@ -18,4 +18,4 @@ checkout:
 
 test:
   override:
-    - bash scripts/circle-test.sh
+    - bash scripts/orangesys-telegraf.sh
