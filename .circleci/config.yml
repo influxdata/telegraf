@@ -22,10 +22,6 @@ jobs:
               exit 1
             fi
 
-      - run: ./scripts/orangesys-telegraf.sh
-
-      - run:
-          name: make telegraf
-          command: make
-
+      - run: make
       - run: go vet ./...
+      - run: ./scripts/orangesys-telegraf.sh
