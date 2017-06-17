@@ -4,7 +4,7 @@ jobs:
   build:
     working_directory: ~/.go_workspace/src/github.com/influxdata/telegraf
     environment:
-      GOPATH: ~/.go_workspace
+      GOPATH: /home/circleci/.go_workspace
     docker:
       - image: circleci/golang:1.8.3
     steps:
@@ -38,7 +38,7 @@ jobs:
   deploy:
     working_directory: ~/.go_workspace/src/github.com/influxdata/telegraf
     environment:
-      GOPATH: ~/.go_workspace
+      GOPATH: /home/circleci/.go_workspace
     machine:
       enabled: true
     steps:
