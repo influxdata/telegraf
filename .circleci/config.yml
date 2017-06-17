@@ -6,13 +6,16 @@ jobs:
 
     working_directory: /go/src/github.com/influxdata/telegraf
 
+    environment:
+      TEST_RESULTS: /tmp/test-results
+
+
     steps:
       - checkout
-
       - run: git submodule sync --recursive
-
       - run: git submodule update --recursive --init
-
+      - run: mkdir -p $TEST_RESULTS
+      
       - run:
           name: Check that go fmt has been run.
           command: |
@@ -26,14 +29,21 @@ jobs:
       - run:
           name: Run the tests
           command: go vet ./...
-          
+
       - run:
           name: Simple Integration Tests \n check that version was properly set
           command: |
             telegraf -version
             tmpdir=$(mktemp -d)
             telegraf -sample-config > $tmpdir/config.toml
-            exit_if_fail telegraf -config $tmpdir/config.toml \
-                -test -input-filter cpu:mem
+            telegraf -config $tmpdir/config.toml \
+              -test -input-filter cpu:mem
 
       - run: ./scripts/orangesys-telegraf.sh
+
+      - store_artifacts:
+          path: /tmp/test-results
+          destination: raw-test-output
+
+      - store_test_results:
+          path: /tmp/test-results
