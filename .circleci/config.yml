@@ -9,7 +9,6 @@ jobs:
     environment:
       TEST_RESULTS: /tmp/test-results
 
-
     steps:
       - checkout
       - run: git submodule sync --recursive
@@ -38,11 +37,10 @@ jobs:
             telegraf -sample-config > $tmpdir/config.toml
             telegraf -config $tmpdir/config.toml \
               -test -input-filter cpu:mem
-            build-package-fpm
-            
-  build-package-fpm:
-    docker:
-      - image: circleci/ruby:2.4.1-node
+
+  deploy:
+    machine:
+      enabled: true
     working_directory: /go/src/github.com/influxdata/telegraf
 
     steps:
@@ -50,3 +48,12 @@ jobs:
           command: |
             sudo apt-get install -y rpm python-boto
             ./scripts/build.py --release --package --platform=linux --arch=amd64
+
+  workflows:
+    version: 2
+    build_and_deploy:
+      jobs:
+        - build
+        - deploy:
+            requires:
+              - build
