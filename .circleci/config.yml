@@ -21,3 +21,4 @@ jobs:
       - run: ./scripts/orangesys-telegraf.sh
       - run: make
       - run: go vet ./...
+      
