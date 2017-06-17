@@ -9,7 +9,6 @@ jobs:
       - checkout
       - run: git submodule sync --recursive
       - run: git submodule update --recursive --init
-      - run: mkdir -p $TEST_RESULTS
 
       - run:
           name: Check that go fmt has been run.
