@@ -2,9 +2,10 @@ version: 2
 
 jobs:
   build:
-    working_directory: ~/.go_workspace/src/github.com/influxdata/telegraf
+    working_directory: ~/telegraf-build/src/github.com/influxdata/telegraf
     environment:
-      GOPATH: /home/circleci/.go_workspace
+      GOPATH: /telegraf-build
+      PATH: "/telegraf-build/bin:$PATH"
     docker:
       - image: circleci/golang:1.8.3
     steps:
@@ -28,8 +29,6 @@ jobs:
 
       - run:
           name: Simple Integration Tests check that version was properly set
-          environment:
-            PATH: "$GOPATH/bin:$PATH"
           command: |
             telegraf -version
             tmpdir=$(mktemp -d)
@@ -38,10 +37,10 @@ jobs:
               -test -input-filter cpu:mem
 
   deploy:
-    working_directory: ~/.go_workspace/src/github.com/influxdata/telegraf
+    working_directory: ~/telegraf-build
     environment:
-      GOPATH: /home/circleci/.go_workspace
-      PATH: "$GOPATH/bin:$PATH"
+      GOPATH: /telegraf-build
+      PATH: "/telegraf-build/bin:$PATH"
     machine:
       enabled: true
     steps:
