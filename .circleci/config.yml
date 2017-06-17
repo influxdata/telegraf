@@ -1,14 +1,10 @@
 version: 2
+
 jobs:
   build:
+    working_directory: /go/src/github.com/influxdata/telegraf
     docker:
       - image: circleci/golang:1.8.3
-
-    working_directory: /go/src/github.com/influxdata/telegraf
-
-    environment:
-      TEST_RESULTS: /tmp/test-results
-
     steps:
       - checkout
       - run: git submodule sync --recursive
@@ -39,11 +35,13 @@ jobs:
               -test -input-filter cpu:mem
 
   deploy:
+    working_directory: /go/src/github.com/influxdata/telegraf
     machine:
       enabled: true
-    working_directory: /go/src/github.com/influxdata/telegraf
-
     steps:
+      - checkout
+      - run: git submodule sync --recursive
+      - run: git submodule update --recursive --init
       - run:
           command: |
             sudo apt-get install -y rpm python-boto
@@ -57,3 +55,6 @@ jobs:
         - deploy:
             requires:
               - build
+            filters:
+              branches:
+                only: master
