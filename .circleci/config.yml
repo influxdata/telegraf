@@ -2,7 +2,7 @@ version: 2
 
 jobs:
   build:
-    working_directory: ~/telegraf-build
+    working_directory: /go/src/github.com/influxdata/telegraf
     docker:
       - image: circleci/golang:1.8.3
     steps:
