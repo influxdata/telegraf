@@ -41,6 +41,9 @@ jobs:
   build-package-fpm:
     docker:
       - image: circleci/ruby:2.4.1-node
+    working_directory: /go/src/github.com/influxdata/telegraf
+      
+    steps:
       - run:
           command: |
             sudo apt-get install -y rpm python-boto
