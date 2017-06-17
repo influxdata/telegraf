@@ -2,7 +2,7 @@ version: 2
 
 jobs:
   build:
-    working_directory: /go/src/github.com/influxdata/telegraf
+    working_directory: ~/.go_workspace/src/github.com/influxdata/telegraf
     docker:
       - image: circleci/golang:1.8.3
     steps:
@@ -34,7 +34,7 @@ jobs:
               -test -input-filter cpu:mem
 
   deploy:
-    working_directory: ~/telegraf-build
+    working_directory: ~/.go_workspace/src/github.com/influxdata/telegraf
     machine:
       enabled: true
     steps:
