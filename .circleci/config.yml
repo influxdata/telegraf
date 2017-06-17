@@ -23,5 +23,17 @@ jobs:
             fi
 
       - run: make
-      - run: go vet ./...
+      - run:
+          name: Run the tests
+          command: go vet ./...
+          
+      - run:
+          name: Simple Integration Tests \n check that version was properly set
+          command: |
+            telegraf -version
+            tmpdir=$(mktemp -d)
+            telegraf -sample-config > $tmpdir/config.toml
+            exit_if_fail telegraf -config $tmpdir/config.toml \
+                -test -input-filter cpu:mem
+
       - run: ./scripts/orangesys-telegraf.sh
