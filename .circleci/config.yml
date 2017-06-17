@@ -15,7 +15,7 @@ jobs:
       - run: git submodule sync --recursive
       - run: git submodule update --recursive --init
       - run: mkdir -p $TEST_RESULTS
-      
+
       - run:
           name: Check that go fmt has been run.
           command: |
@@ -31,19 +31,17 @@ jobs:
           command: go vet ./...
 
       - run:
-          name: Simple Integration Tests \n check that version was properly set
+          name: Simple Integration Tests check that version was properly set
           command: |
             telegraf -version
             tmpdir=$(mktemp -d)
             telegraf -sample-config > $tmpdir/config.toml
             telegraf -config $tmpdir/config.toml \
               -test -input-filter cpu:mem
-
-      - run: ./scripts/orangesys-telegraf.sh
-
-      - store_artifacts:
-          path: /tmp/test-results
-          destination: raw-test-output
-
-      - store_test_results:
-          path: /tmp/test-results
+  build-package-fpm:
+    docker:
+      - image: circleci/ruby:2.4.1-node
+      - run:
+          command: |
+            sudo apt-get install -y rpm python-boto
+            ./scripts/build.py --release --package --platform=linux --arch=amd64
