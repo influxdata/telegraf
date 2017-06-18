@@ -86,27 +86,3 @@ if [ $? -eq 0 ]; then
     exit_if_fail ./scripts/build.py --release --package --platform=linux --arch=amd64
     mv build $CIRCLE_ARTIFACTS
 fi
-
-#intall github-release cmd
-go get github.com/aktau/github-release
-cd $GOPATH/src/github.com/influxdata/telegraf/build
-
-#
-# Create a release page
-#
-github-release release \
-  --user $CIRCLE_PROJECT_USERNAME \
-  --repo $CIRCLE_RELEASE_URL \
-  --tag $VERSION \
-  --name "Orangesys-telegraf-${VERSION}"
-  --description "telegraf output orangesys"
-
-#
-# Upload package files and build a release note
-#
-github-release upload \
-  --user $CIRCLE_PROJECT_USERNAME \
-  --repo $CIRCLE_RELEASE_URL \
-  --tag $VERSION \
-  --name "telegraf-output-orangesys"
-  --file telegraf*
