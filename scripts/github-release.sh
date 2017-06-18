@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ex
+
 BUILD_DIR=$HOME/telegraf-build
 VERSION=`git describe --always --tags`
 
@@ -8,7 +10,7 @@ export PATH=$GOPATH/bin:$PATH
 
 #intall github-release cmd
 go get github.com/aktau/github-release
-cd $CIRCLE_ARTIFACTS/build && rm -f telegraf
+cd ${CIRCLE_ARTIFACTS}/build && rm -rf telegraf
 
 #
 # Create a release page
