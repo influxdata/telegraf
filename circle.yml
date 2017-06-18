@@ -2,7 +2,8 @@ machine:
   go:
     version: 1.8.1
   environment:
-    CIRCLE_RELEASE_URL: "https://github.com/orangesys/telegraf-output-orangesys"
+    CIRCLE_RELEASE_USER: "orangesys"
+    CIRCLE_RELEASE_REPO: "telegraf-output-orangesys"
   services:
     - docker
     - memcached
@@ -20,4 +21,4 @@ checkout:
 
 test:
   override:
-    - bash scripts/orangesys-telegraf.sh
+    - bash scripts/github-release.sh
