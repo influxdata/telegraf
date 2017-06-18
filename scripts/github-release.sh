@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ex
+
 VERSION="1.3.2"
 BUILD_DIR=$HOME/telegraf-build
 
@@ -49,10 +51,18 @@ sudo apt-get install -y rpm
 unset GOGC
 ./scripts/build.py --release --package --platform=linux \
   --arch=amd64 --version=${VERSION}
+rm build/telegraf
 mv build $CIRCLE_ARTIFACTS
 
 #intall github-release cmd
 go get github.com/aktau/github-release
+
+github-release release \
+  --user $CIRCLE_RELEASE_USER \
+  --repo $CIRCLE_RELEASE_REPO \
+  --tag $VERSION \
+  --name "orangesys-telegraf-${VERSION}" \
+  --description "telegraf output orangesys"
 
 upload_file() {
   _FILE=$1
@@ -63,7 +73,8 @@ upload_file() {
     --name "$_FILE" \
     --file $_FILE
 }
-cd ${CIRCLE_ARTIFACTS}/build && rm -fr telegraf
+
+cd ${CIRCLE_ARTIFACTS}/build
 
 for i in `ls`; do
   upload_file $i
