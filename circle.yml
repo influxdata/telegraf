@@ -21,4 +21,4 @@ checkout:
 
 test:
   override:
-    - bash scripts/github-release.sh
+    - bash scripts/orangesys-telegraf.sh
