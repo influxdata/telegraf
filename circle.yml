@@ -26,7 +26,7 @@ test:
 deployment:
   master:
     branch: master
-    commads:
+    commands:
       - bash scripts/orangesys-telegraf.sh
 
   release:
