@@ -98,7 +98,7 @@ github-release release \
   --user $CIRCLE_PROJECT_USERNAME \
   --repo $CIRCLE_RELEASE_URL \
   --tag $VERSION \
-  --name "Orangesys-telegraf-${VERSION}"
+  --name "Orangesys-telegraf-${VERSION}" \
   --description "telegraf output orangesys"
 
 #
@@ -108,5 +108,5 @@ github-release upload \
   --user $CIRCLE_PROJECT_USERNAME \
   --repo $CIRCLE_RELEASE_URL \
   --tag $VERSION \
-  --name "telegraf-output-orangesys"
+  --name "telegraf-output-orangesys" \
   --file telegraf*
