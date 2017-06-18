@@ -1,6 +1,8 @@
 machine:
   go:
     version: 1.8.1
+  environment:
+    CIRCLE_RELEASE_URL: "https://github.com/orangesys/telegraf-output-orangesys"
   services:
     - docker
     - memcached
