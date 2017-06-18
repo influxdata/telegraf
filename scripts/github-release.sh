@@ -1,7 +1,16 @@
 #!/bin/bash
 
-BUILD_DIR=$HOME/telegraf-build
 VERSION="1.3.2"
+BUILD_DIR=$HOME/telegraf-build
+export GOPATH=$BUILD_DIR
+export PATH=$GOPATH/bin:$PATH
+
+# Dump some test config to the log.
+echo "Test configuration"
+echo "========================================"
+echo "\$HOME: $HOME"
+echo "\$GOPATH: $GOPATH"
+echo "\$CIRCLE_BRANCH: $CIRCLE_BRANCH"
 
 gem instal fpm
 
