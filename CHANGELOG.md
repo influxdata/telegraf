@@ -7,16 +7,22 @@
   supporting Kafka 0.8 and below is available as the `kafka_consumer_legacy`
   plugin.
 
+- In the `aerospike` input the `node_name` field has been changed to be a tag
+  for both the `aerospike_node` and `aerospike_namespace` measurements.
+
 ### Features
 
 - [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
 - [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
 - [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
-- [#2817](https://github.com/influxdata/telegraf/pull/2817): Added timeout option to IPMI sensor plugin
+- [#2817](https://github.com/influxdata/telegraf/pull/2817): Add timeout option to IPMI sensor plugin
 - [#2883](https://github.com/influxdata/telegraf/pull/2883): Add support for an optional SSL/TLS configuration to nginx input plugin
 - [#2882](https://github.com/influxdata/telegraf/pull/2882): Add timezone support for logparser timestamps.
 - [#2814](https://github.com/influxdata/telegraf/pull/2814): Add result_type field for http_response input.
 - [#2734](https://github.com/influxdata/telegraf/pull/2734): Add include/exclude filters for docker containers.
+- [#2602](https://github.com/influxdata/telegraf/pull/2602): Add secure connection support to graphite output.
+- [#2908](https://github.com/influxdata/telegraf/pull/2908): Add min/max response time on linux/darwin to ping.
+- [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
 
 ### Bugfixes
 
@@ -28,13 +34,22 @@
 - [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
 - [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
 - [#2885](https://github.com/influxdata/telegraf/pull/2885): Fix timeout option in Windows ping input sample configuration.
+- [#2911](https://github.com/influxdata/telegraf/issues/2911): Fix Kinesis output plugin in govcloud.
+- [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
 
-## v1.3.2 [unreleased]
+## v1.3.3 [unreleased]
 
 ### Bugfixes
 
-- [#2862](https://github.com/influxdata/telegraf/issue/2862): Fix InfluxDB UDP metric splitting.
-- [#2888](https://github.com/influxdata/telegraf/issue/2888): Fix mongodb/leofs urls without scheme.
+- [#2915](https://github.com/influxdata/telegraf/issues/2915): Allow dos line endings in tail and logparser.
+
+## v1.3.2 [2017-06-14]
+
+### Bugfixes
+
+- [#2862](https://github.com/influxdata/telegraf/issues/2862): Fix InfluxDB UDP metric splitting.
+- [#2888](https://github.com/influxdata/telegraf/issues/2888): Fix mongodb/leofs urls without scheme.
+- [#2822](https://github.com/influxdata/telegraf/issues/2822): Fix inconsistent label dimensions in prometheus output.
 
 ## v1.3.1 [2017-05-31]
 

@@ -73,10 +73,9 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 	for _, n := range nodes {
 		tags := map[string]string{
 			"aerospike_host": hostport,
+			"node_name":      n.GetName(),
 		}
-		fields := map[string]interface{}{
-			"node_name": n.GetName(),
-		}
+		fields := make(map[string]interface{})
 		stats, err := as.RequestNodeStats(n)
 		if err != nil {
 			return err
@@ -100,11 +99,10 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 		for _, namespace := range namespaces {
 			nTags := map[string]string{
 				"aerospike_host": hostport,
+				"node_name":      n.GetName(),
 			}
 			nTags["namespace"] = namespace
-			nFields := map[string]interface{}{
-				"node_name": n.GetName(),
-			}
+			nFields := make(map[string]interface{})
 			info, err := as.RequestNodeInfo(n, "namespace/"+namespace)
 			if err != nil {
 				continue
