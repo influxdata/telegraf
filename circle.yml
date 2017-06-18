@@ -21,9 +21,3 @@ checkout:
 test:
   override:
     - bash scripts/orangesys-telegraf.sh
-
-deployment:
-  master:
-    branch: master
-    commands:
-      - bash scripts/github-release.sh
