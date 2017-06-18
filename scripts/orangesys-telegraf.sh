@@ -51,27 +51,27 @@ exit_if_fail cd $GOPATH/src/github.com/influxdata/telegraf
 check_go_fmt
 
 # Build the code
-exit_if_fail make
+#exit_if_fail make
 
 # Run the tests
-exit_if_fail go vet ./...
-exit_if_fail make docker-run-circle
+#exit_if_fail go vet ./...
+#exit_if_fail make docker-run-circle
 # Sleep for OpenTSDB leadership election, aerospike cluster, etc.
-exit_if_fail sleep 60
-exit_if_fail go test -race ./...
+#exit_if_fail sleep 60
+#exit_if_fail go test -race ./...
 
 # Simple Integration Tests
 #   check that version was properly set
-exit_if_fail "telegraf -version | grep $VERSION"
+#exit_if_fail "telegraf -version | grep $VERSION"
 #   check that one test cpu & mem output work
-tmpdir=$(mktemp -d)
-telegraf -sample-config > $tmpdir/config.toml
-exit_if_fail telegraf -config $tmpdir/config.toml \
-    -test -input-filter cpu:mem
+#tmpdir=$(mktemp -d)
+#telegraf -sample-config > $tmpdir/config.toml
+#exit_if_fail telegraf -config $tmpdir/config.toml \
+#    -test -input-filter cpu:mem
 
-cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
-go build -o telegraf-race -race -ldflags "-X main.version=${VERSION}-RACE" cmd/telegraf/telegraf.go
-cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
+#cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
+#go build -o telegraf-race -race -ldflags "-X main.version=${VERSION}-RACE" cmd/telegraf/telegraf.go
+#cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
 
 #eval "git describe --exact-match HEAD"
 true
@@ -89,15 +89,15 @@ fi
 
 #intall github-release cmd
 go get github.com/aktau/github-release
-cd ${CIRCLE_ARTIFACTS}/build && rm -rf telegraf
+cd ${CIRCLE_ARTIFACTS}/build
 
 #
 # Create a release page
 #
 github-release release \
-  --user $CIRCLE_PROJECT_USERNAME \
-  --repo $CIRCLE_RELEASE_URL \
-  --tag $VERSION \
+  --user orangesys \
+  --repo telegraf-output-orangesys \
+  --tag 1.3.2 \
   --name "Orangesys-telegraf-${VERSION}" \
   --description "telegraf output orangesys"
 
@@ -105,8 +105,8 @@ github-release release \
 # Upload package files and build a release note
 #
 github-release upload \
-  --user $CIRCLE_PROJECT_USERNAME \
-  --repo $CIRCLE_RELEASE_URL \
-  --tag $VERSION \
+--user orangesys \
+--repo telegraf-output-orangesys \
+  --tag 1.3.2 \
   --name "telegraf-output-orangesys" \
-  --file telegraf*
+  --file telegraf*.rpm
