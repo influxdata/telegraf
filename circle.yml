@@ -22,3 +22,9 @@ checkout:
 test:
   override:
     - bash scripts/orangesys-telegraf.sh
+
+deployment:
+  release:
+    tag: /v[0-9]+(\.[0-9]+)*/
+    commands:
+      - scripts/github-release.sh

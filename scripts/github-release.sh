@@ -2,7 +2,7 @@
 
 set -ex
 
-VERSION="1.3.2"
+VERSION=${CIRCLE_TAG##*v}
 BUILD_DIR=$HOME/telegraf-build
 
 # Executes the given statement, and exits if the command returns a non-zero code.
