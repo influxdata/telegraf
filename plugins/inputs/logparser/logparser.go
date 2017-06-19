@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/influxdata/tail"
@@ -47,7 +48,7 @@ const sampleConfig = `
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
   ##   /var/log/apache.log -> only tail the apache log file
   files = ["/var/log/apache/access.log"]
-  
+
   ## Read files that currently exist from the beginning. Files that are created
   ## while telegraf is running (and that match the "files" globs) will always
   ## be read from the beginning.
@@ -63,17 +64,17 @@ const sampleConfig = `
     ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
     ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
     patterns = ["%{COMBINED_LOG_FORMAT}"]
-    
+
     ## Name of the outputted measurement name.
     measurement = "apache_access_log"
-    
+
     ## Full path(s) to custom pattern files.
     custom_pattern_files = []
-    
+
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
-    
-    ## Timezone allows you to provide an override for timestamps that 
+
+    ## Timezone allows you to provide an override for timestamps that
     ## don't already include an offset
     ## e.g. 04/06/2016 12:41:45 data one two 5.43µs
     ##
@@ -207,9 +208,12 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 			continue
 		}
 
+		// Fix up files with Windows line endings.
+		text := strings.TrimRight(line.Text, "\r")
+
 		select {
 		case <-l.done:
-		case l.lines <- line.Text:
+		case l.lines <- text:
 		}
 	}
 }
