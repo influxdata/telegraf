@@ -23,10 +23,11 @@
 - [#2602](https://github.com/influxdata/telegraf/pull/2602): Add secure connection support to graphite output.
 - [#2908](https://github.com/influxdata/telegraf/pull/2908): Add min/max response time on linux/darwin to ping.
 - [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
+- [#2933](https://github.com/influxdata/telegraf/pull/2933): Add standard SSL options to mysql input.
 
 ### Bugfixes
 
-- [#2607](https://github.com/influxdata/telegraf/issues/2607): Errors in log should be more explicit
+- [#2607](https://github.com/influxdata/telegraf/issues/2607): Improve logging of errors in Cassandra input.
 - [#2819](https://github.com/influxdata/telegraf/pull/2819): [enh] set db_version at 0 if query version fails
 - [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
 - [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
@@ -37,6 +38,7 @@
 - [#2885](https://github.com/influxdata/telegraf/pull/2885): Fix timeout option in Windows ping input sample configuration.
 - [#2911](https://github.com/influxdata/telegraf/issues/2911): Fix Kinesis output plugin in govcloud.
 - [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
+- [#2452](https://github.com/influxdata/telegraf/pull/2452): Improve Prometheus Client output documentation.
 
 ## v1.3.3 [unreleased]
 
