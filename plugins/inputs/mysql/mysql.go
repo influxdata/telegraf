@@ -2,11 +2,8 @@ package mysql
 
 import (
 	"bytes"
-	"crypto/tls"
-	"crypto/x509"
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
@@ -14,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/go-sql-driver/mysql"
@@ -147,9 +145,13 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 		m.InitMysql()
 	}
 
-	err := registerTLSConfig(m)
+	tlsConfig, err := internal.GetTLSConfig(m.SSLCert, m.SSLKey, m.SSLCA, false)
 	if err != nil {
 		log.Printf("E! MySQL Error registering TLS config: %s", err)
+	}
+
+	if tlsConfig != nil {
+		mysql.RegisterTLSConfig("custom", tlsConfig)
 	}
 
 	var wg sync.WaitGroup
@@ -1786,38 +1788,6 @@ func getDSNTag(dsn string) string {
 		return "127.0.0.1:3306"
 	}
 	return conf.Addr
-}
-
-func registerTLSConfig(m *Mysql) error {
-	if m.SSLCert == "" || m.SSLKey == "" || m.SSLCA == "" {
-		return nil
-	}
-
-	rootCertPool := x509.NewCertPool()
-	pem, err := ioutil.ReadFile(m.SSLCA)
-
-	if err != nil {
-		return err
-	}
-
-	if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
-		log.Fatal("Failed to append PEM.")
-	}
-
-	clientCert := make([]tls.Certificate, 0, 1)
-	certs, err := tls.LoadX509KeyPair(m.SSLCert, m.SSLKey)
-
-	if err != nil {
-		return err
-	}
-
-	clientCert = append(clientCert, certs)
-	mysql.RegisterTLSConfig("custom", &tls.Config{
-		RootCAs:      rootCertPool,
-		Certificates: clientCert,
-	})
-
-	return nil
 }
 
 func init() {
