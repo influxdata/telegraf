@@ -144,7 +144,7 @@ func TestWrite_Sanitize(t *testing.T) {
 	require.True(t, ok)
 
 	require.Equal(t, map[string]string{
-		"tag_with_dash": "localhost_local"}, sample1.Labels)
+		"tag_with_dash": "localhost.local"}, sample1.Labels)
 }
 
 func TestWrite_Gauge(t *testing.T) {

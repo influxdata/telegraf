@@ -205,7 +205,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 		labels := make(map[string]string)
 		for k, v := range tags {
-			labels[sanitize(k)] = sanitize(v)
+			labels[sanitize(k)] = v
 		}
 
 		for fn, fv := range point.Fields() {
