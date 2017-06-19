@@ -33,14 +33,16 @@ func (ipt *Iptables) SampleConfig() string {
   ## iptables require root access on most systems.
   ## Setting 'use_sudo' to true will make use of sudo to run iptables.
   ## Users must configure sudo to allow telegraf user to run iptables with no password.
-  ## iptables can be restricted to only list command "iptables -nvL"
+  ## iptables can be restricted to only list command "iptables -nvL".
   use_sudo = false
   ## Setting 'use_lock' to true runs iptables with the "-w" option.
   ## Adjust your sudo settings appropriately if using this option ("iptables -wnvl")
   use_lock = false
   ## defines the table to monitor:
   table = "filter"
-  ## defines the chains to monitor:
+  ## defines the chains to monitor.
+  ## NOTE: iptables rules without a comment will not be monitored.
+  ## Read the plugin documentation for more information.
   chains = [ "INPUT" ]
 `
 }
@@ -52,20 +54,19 @@ func (ipt *Iptables) Gather(acc telegraf.Accumulator) error {
 	}
 	// best effort : we continue through the chains even if an error is encountered,
 	// but we keep track of the last error.
-	var err error
 	for _, chain := range ipt.Chains {
 		data, e := ipt.lister(ipt.Table, chain)
 		if e != nil {
-			err = e
+			acc.AddError(e)
 			continue
 		}
 		e = ipt.parseAndGather(data, acc)
 		if e != nil {
-			err = e
+			acc.AddError(e)
 			continue
 		}
 	}
-	return err
+	return nil
 }
 
 func (ipt *Iptables) chainList(table, chain string) (string, error) {

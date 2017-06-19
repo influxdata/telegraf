@@ -168,6 +168,9 @@ type Table struct {
 	// Which tags to inherit from the top-level config.
 	InheritTags []string
 
+	// Adds each row's table index as a tag.
+	IndexAsTag bool
+
 	// Fields is the tags and values to look up.
 	Fields []Field `toml:"field"`
 
@@ -311,6 +314,7 @@ func Errorf(err error, msg string, format ...interface{}) error {
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{
+			Name:           "snmp",
 			Retries:        3,
 			MaxRepetitions: 10,
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
@@ -464,13 +468,19 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			}
 		}
 
-		for i, v := range ifv {
-			rtr, ok := rows[i]
+		for idx, v := range ifv {
+			rtr, ok := rows[idx]
 			if !ok {
 				rtr = RTableRow{}
 				rtr.Tags = map[string]string{}
 				rtr.Fields = map[string]interface{}{}
-				rows[i] = rtr
+				rows[idx] = rtr
+			}
+			if t.IndexAsTag && idx != "" {
+				if idx[0] == '.' {
+					idx = idx[1:]
+				}
+				rtr.Tags["index"] = idx
 			}
 			// don't add an empty string
 			if vs, ok := v.(string); !ok || vs != "" {

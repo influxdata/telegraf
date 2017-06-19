@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
 	"runtime"
@@ -24,6 +26,8 @@ import (
 
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
+var pprofAddr = flag.String("pprof-addr", "",
+	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
@@ -87,6 +91,7 @@ The commands & flags are:
   --output-filter     filter the output plugins to enable, separator is :
   --usage             print usage for a plugin, ie, 'telegraf --usage mysql'
   --debug             print metrics as they're generated to stdout
+  --pprof-addr        pprof address to listen on, format: localhost:6060 or :6060
   --quiet             run in quiet mode
 
 Examples:
@@ -105,6 +110,9 @@ Examples:
 
   # run telegraf, enabling the cpu & memory input, and influxdb output plugins
   telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
+
+  # run telegraf with pprof
+  telegraf --config telegraf.conf --pprof-addr localhost:6060
 `
 
 var stop chan struct{}
@@ -136,7 +144,7 @@ func reloadLoop(
 				log.Fatal("E! " + err.Error())
 			}
 		}
-		if len(c.Outputs) == 0 {
+		if !*fTest && len(c.Outputs) == 0 {
 			log.Fatalf("E! Error: no outputs found, did you provide a valid config file?")
 		}
 		if len(c.Inputs) == 0 {
@@ -265,6 +273,23 @@ func main() {
 	}
 	if *fProcessorFilters != "" {
 		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
+	}
+
+	if *pprofAddr != "" {
+		go func() {
+			pprofHostPort := *pprofAddr
+			parts := strings.Split(pprofHostPort, ":")
+			if len(parts) == 2 && parts[0] == "" {
+				pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+			}
+			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
+
+			log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
+
+			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
+				log.Fatal("E! " + err.Error())
+			}
+		}()
 	}
 
 	if len(args) > 0 {
