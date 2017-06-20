@@ -62,6 +62,7 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 				"time_user":       cts.User,
 				"time_system":     cts.System,
 				"time_idle":       cts.Idle,
+				"time_busy":       total - cts.Idle,
 				"time_nice":       cts.Nice,
 				"time_iowait":     cts.Iowait,
 				"time_irq":        cts.Irq,
@@ -90,10 +91,14 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 		if totalDelta == 0 {
 			continue
 		}
+
+		usage_idle := 100 * (cts.Idle - lastCts.Idle) / totalDelta
+
 		fieldsG := map[string]interface{}{
 			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
 			"usage_system":     100 * (cts.System - lastCts.System) / totalDelta,
-			"usage_idle":       100 * (cts.Idle - lastCts.Idle) / totalDelta,
+			"usage_idle":       usage_idle,
+			"usage_busy":       100 - usage_idle,
 			"usage_nice":       100 * (cts.Nice - lastCts.Nice - (cts.GuestNice - lastCts.GuestNice)) / totalDelta,
 			"usage_iowait":     100 * (cts.Iowait - lastCts.Iowait) / totalDelta,
 			"usage_irq":        100 * (cts.Irq - lastCts.Irq) / totalDelta,
