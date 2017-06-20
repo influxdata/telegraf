@@ -1,6 +1,7 @@
 package models
 
 import (
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -140,27 +141,48 @@ func (r *RunningAggregator) Run(
 	periodT := time.NewTicker(r.Config.Period)
 	defer periodT.Stop()
 
-	for {
-		select {
-		case <-shutdown:
-			if len(r.metrics) > 0 {
-				// wait until metrics are flushed before exiting
-				continue
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-shutdown:
+				if len(r.metrics) > 0 {
+					// wait until metrics are flushed before exiting
+					continue
+				}
+				return
+			case m := <-r.metrics:
+				if m.Time().Before(r.periodStart) ||
+					m.Time().After(r.periodEnd.Add(truncation).Add(r.Config.Delay)) {
+					// the metric is outside the current aggregation period, so
+					// skip it.
+					continue
+				}
+				r.add(m)
 			}
-			return
-		case m := <-r.metrics:
-			if m.Time().Before(r.periodStart) ||
-				m.Time().After(r.periodEnd.Add(truncation).Add(r.Config.Delay)) {
-				// the metric is outside the current aggregation period, so
-				// skip it.
-				continue
-			}
-			r.add(m)
-		case <-periodT.C:
-			r.periodStart = r.periodEnd
-			r.periodEnd = r.periodStart.Add(r.Config.Period)
-			r.push(acc)
-			r.reset()
 		}
-	}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-shutdown:
+				if len(r.metrics) > 0 {
+					// wait until metrics are flushed before exiting
+					continue
+				}
+				return
+			case <-periodT.C:
+				r.periodStart = r.periodEnd
+				r.periodEnd = r.periodStart.Add(r.Config.Period)
+				r.push(acc)
+				r.reset()
+			}
+		}
+	}()
+	wg.Wait()
 }
