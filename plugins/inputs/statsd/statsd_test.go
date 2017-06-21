@@ -929,7 +929,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 		// plus the last bit of value 1
 		// which adds up to 12 individual datapoints to be cached
 		if cachedtiming.fields[defaultFieldName].n != 12 {
-			t.Errorf("Expected 11 additions, got %d", cachedtiming.fields[defaultFieldName].n)
+			t.Errorf("Expected 12 additions, got %d", cachedtiming.fields[defaultFieldName].n)
 		}
 
 		if cachedtiming.fields[defaultFieldName].upper != 1 {
