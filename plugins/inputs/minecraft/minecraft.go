@@ -3,6 +3,7 @@ package minecraft
 // minecraft.go
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/influxdata/telegraf"
@@ -42,12 +43,14 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func ParseUsername(input string) string {
+func ParseUsername(input string) (string, error) {
 	var re = regexp.MustCompile(`for\s(.*):-`)
 
 	usernameMatches := re.FindAllStringSubmatch(input, -1)
-
-	return usernameMatches[0][1]
+	if usernameMatches == nil {
+		return "", fmt.Errorf("no username was matched")
+	}
+	return usernameMatches[0][1], nil
 }
 
 func init() {
