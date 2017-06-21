@@ -3,8 +3,10 @@ package minecraft
 // minecraft.go
 
 import (
-    "github.com/influxdata/telegraf"
-    "github.com/influxdata/telegraf/plugins/inputs"
+	"regexp"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `
@@ -17,29 +19,37 @@ const sampleConfig = `
 `
 
 type Minecraft struct {
-    Server string
-    Port string
-    Password string
+	Server   string
+	Port     string
+	Password string
 }
 
 func (s *Minecraft) Description() string {
-    return "it collects stats from Minecraft servers"
+	return "it collects stats from Minecraft servers"
 }
 
 func (s *Minecraft) SampleConfig() string {
-    return sampleConfig
+	return sampleConfig
 }
 
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
-    if s.Port == " " {
-        acc.AddFields("state", map[string]interface{}{"value": "pretty good"}, nil)
-    } else {
-        acc.AddFields("state", map[string]interface{}{"value": "not great"}, nil)
-    }
+	if s.Port == " " {
+		acc.AddFields("state", map[string]interface{}{"value": "pretty good"}, nil)
+	} else {
+		acc.AddFields("state", map[string]interface{}{"value": "not great"}, nil)
+	}
 
-    return nil
+	return nil
+}
+
+func ParseUsername(input string) string {
+	var re = regexp.MustCompile(`for\s(.*):-`)
+
+	usernameMatches := re.FindAllStringSubmatch(input, -1)
+
+	return usernameMatches[0][1]
 }
 
 func init() {
-    inputs.Add("minecraft", func() telegraf.Input { return &Minecraft{} })
+	inputs.Add("minecraft", func() telegraf.Input { return &Minecraft{} })
 }

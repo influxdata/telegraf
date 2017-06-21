@@ -1,11 +1,11 @@
-package main
+package minecraft
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
-	"./internal/rcon"
+	"github.com/influxdata/telegraf/plugins/inputs/minecraft/internal/rcon"
 )
 
 const (
