@@ -129,6 +129,7 @@ func init() {
 		f.path = path
 	}
 	inputs.Add("fail2ban", func() telegraf.Input {
+		f := f
 		return &f
 	})
 }
