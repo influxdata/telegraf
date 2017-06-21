@@ -2,35 +2,28 @@ package statsd
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
-
-	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 )
 
 const (
 	// UDP packet limit, see
 	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
-	UDP_MAX_PACKET_SIZE int = 64 * 1024
+	UDP_MAX_PACKET_SIZE int = ((64 * 1024) - 8) - 20
 
 	defaultFieldName = "value"
 
 	defaultSeparator           = "_"
 	defaultAllowPendingMessage = 10000
 )
-
-var dropwarn = "E! Error: statsd message queue full. " +
-	"We have dropped %d messages so far. " +
-	"You may want to increase allowed_pending_messages in the config\n"
 
 type Statsd struct {
 	// Address & Port to serve from
@@ -63,27 +56,26 @@ type Statsd struct {
 	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize int `toml:"udp_packet_size"`
 
-	sync.Mutex
-	wg sync.WaitGroup
 	// drops tracks the number of dropped metrics.
 	drops int
 
-	// Channel for all incoming statsd packets
-	in   chan []byte
+	// Kill switch
 	done chan struct{}
 
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
 	// gauges and counters map measurement/tags hash -> field name -> metrics
 	// sets and timings map measurement/tags hash -> metrics
-	gauges   map[string]cachedgauge
-	counters map[string]cachedcounter
-	sets     map[string]cachedset
-	timings  map[string]cachedtimings
+	gauges        chan map[string]cachedgauge
+	gaugesReset   chan struct{}
+	counters      chan map[string]cachedcounter
+	countersReset chan struct{}
+	sets          chan map[string]cachedset
+	setsReset     chan struct{}
+	timings       chan map[string]cachedtimings
+	timingsReset  chan struct{}
 
 	// bucket -> influx templates
 	Templates []string
-
-	listener *net.UDPConn
 
 	graphiteParser *graphite.GraphiteParser
 }
@@ -177,159 +169,176 @@ func (_ *Statsd) SampleConfig() string {
 	return sampleConfig
 }
 
+type accumulator struct {
+	measurement string
+	fields      map[string]interface{}
+	tags        map[string]string
+	t           []time.Time
+}
+
 func (s *Statsd) Gather(acc telegraf.Accumulator) error {
-	s.Lock()
-	defer s.Unlock()
 	now := time.Now()
+	log.Printf("D! Statsd.Gather() started")
 
-	for _, metric := range s.timings {
-		// Defining a template to parse field names for timers allows us to split
-		// out multiple fields per timer. In this case we prefix each stat with the
-		// field name and store these all in a single measurement.
-		fields := make(map[string]interface{})
-		for fieldName, stats := range metric.fields {
-			var prefix string
-			if fieldName != defaultFieldName {
-				prefix = fieldName + "_"
-			}
-			fields[prefix+"mean"] = stats.Mean()
-			fields[prefix+"stddev"] = stats.Stddev()
-			fields[prefix+"upper"] = stats.Upper()
-			fields[prefix+"lower"] = stats.Lower()
-			fields[prefix+"count"] = stats.Count()
-			for _, percentile := range s.Percentiles {
-				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
-				fields[name] = stats.Percentile(percentile)
+	// The order of funcs/maps here is important
+	var gathers = []func(time.Time) []*accumulator{s.gatherCounters, s.gatherSets, s.gatherGauges, s.gatherTimings}
+	a := make([]*accumulator, 0)
+	for pos := range gathers {
+		accumulatorArray := gathers[pos](now)
+		for p := range accumulatorArray {
+			if accumulatorArray[p] != nil {
+				a = append(a, accumulatorArray[p])
 			}
 		}
+	}
+	log.Printf("D! Statsd.Gather() took %fs", time.Since(now).Seconds())
 
-		acc.AddFields(metric.name, fields, metric.tags, now)
+	now = time.Now()
+	for _, v := range a {
+		acc.AddFields(v.measurement, v.fields, v.tags, now)
 	}
-	if s.DeleteTimings {
-		s.timings = make(map[string]cachedtimings)
-	}
-
-	for _, metric := range s.gauges {
-		acc.AddFields(metric.name, metric.fields, metric.tags, now)
-	}
-	if s.DeleteGauges {
-		s.gauges = make(map[string]cachedgauge)
-	}
-
-	for _, metric := range s.counters {
-		acc.AddFields(metric.name, metric.fields, metric.tags, now)
-	}
-	if s.DeleteCounters {
-		s.counters = make(map[string]cachedcounter)
-	}
-
-	for _, metric := range s.sets {
-		fields := make(map[string]interface{})
-		for field, set := range metric.fields {
-			fields[field] = int64(len(set))
-		}
-		acc.AddFields(metric.name, fields, metric.tags, now)
-	}
-	if s.DeleteSets {
-		s.sets = make(map[string]cachedset)
-	}
+	log.Printf("D! Statsd.Gather().Accumulator took %fs", time.Since(now).Seconds())
 
 	return nil
 }
 
-func (s *Statsd) Start(_ telegraf.Accumulator) error {
-	// Make data structures
-	s.done = make(chan struct{})
-	s.in = make(chan []byte, s.AllowedPendingMessages)
+type metricChannels struct {
+	gaugeMetricChannel, timingsMetricChannel, countersMetricChannel, setsMetricChannel chan *metric
+}
 
-	s.gauges = make(map[string]cachedgauge)
-	s.counters = make(map[string]cachedcounter)
-	s.sets = make(map[string]cachedset)
-	s.timings = make(map[string]cachedtimings)
+func (s *Statsd) Start(_ telegraf.Accumulator) error {
+	s.done = make(chan struct{})
+	done := make(chan struct{})
+	msg := make(chan []byte, s.AllowedPendingMessages)
 
 	if s.ConvertNames {
-		log.Printf("I! WARNING statsd: convert_names config option is deprecated," +
-			" please use metric_separator instead")
+		log.Printf("I! WARNING statsd: convert_names config option is deprecated, please use metric_separator instead")
 	}
 
 	if s.MetricSeparator == "" {
 		s.MetricSeparator = defaultSeparator
 	}
 
-	s.wg.Add(2)
-	// Start the UDP listener
-	go s.udpListen()
+	// Start metric ephemeral storage
+	mC := new(metricChannels)
+	s.gaugesReset, mC.gaugeMetricChannel, s.gauges = s.gaugesC()
+	s.timingsReset, mC.timingsMetricChannel, s.timings = s.timingsC(s.PercentileLimit)
+	s.countersReset, mC.countersMetricChannel, s.counters = s.countersC()
+	s.setsReset, mC.setsMetricChannel, s.sets = s.setsC()
+
 	// Start the line parser
-	go s.parser()
-	log.Printf("I! Started the statsd service on %s\n", s.ServiceAddress)
+	go func() {
+		if err := s.parser(
+			mC,
+			done,
+			msg,
+		); err != nil {
+			log.Printf("E! Parser exit: %s", err)
+		}
+	}()
+	// Start the udpListern parser
+	go func() {
+		if err := s.udpListen(done, msg); err != nil {
+			log.Printf("E! udpListen exit: %s", err)
+		}
+	}()
+	// Prepare for the end of times
+	go func() {
+		<-s.done
+		close(done)
+		close(mC.gaugeMetricChannel)
+		close(mC.timingsMetricChannel)
+		close(mC.countersMetricChannel)
+		close(mC.setsMetricChannel)
+	}()
+
 	return nil
 }
 
+var dropWarn = "E! Error: statsd message queue full. We have dropped %d messages so far. You may want to increase allowed_pending_messages in the config\n"
+
 // udpListen starts listening for udp packets on the configured port.
-func (s *Statsd) udpListen() error {
-	defer s.wg.Done()
-	var err error
-	address, _ := net.ResolveUDPAddr("udp", s.ServiceAddress)
-	s.listener, err = net.ListenUDP("udp", address)
+func (s *Statsd) udpListen(done chan struct{}, msg chan []byte) error {
+	address, err := net.ResolveUDPAddr("udp", s.ServiceAddress)
+	if err != nil {
+		log.Fatalf("E! ERROR: ResolveUDPAddr - %s", err)
+	}
+	listener, err := net.ListenUDP("udp", address)
 	if err != nil {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
-	log.Println("I! Statsd listener listening on: ", s.listener.LocalAddr().String())
+	defer func() {
+		if err = listener.Close(); err != nil {
+			log.Printf("E! Error: %s", err)
+		}
+	}()
+	log.Println("I! Statsd listener listening on: ", listener.LocalAddr().String())
 
 	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
 		select {
-		case <-s.done:
+		case <-done:
 			return nil
 		default:
-			n, _, err := s.listener.ReadFromUDP(buf)
-			if err != nil && !strings.Contains(err.Error(), "closed network") {
-				log.Printf("E! Error READ: %s\n", err.Error())
+			n, _, err := listener.ReadFromUDP(buf)
+			if err != nil {
+				log.Printf("E! Error: READ: %s\n", err)
 				continue
 			}
 			bufCopy := make([]byte, n)
-			copy(bufCopy, buf[:n])
+			copy(bufCopy, buf)
 
 			select {
-			case s.in <- bufCopy:
+			case msg <- bufCopy:
+				s.drops = len(msg)
 			default:
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
-					log.Printf(dropwarn, s.drops)
+					log.Printf(dropWarn, s.drops)
 				}
 			}
 		}
 	}
 }
 
-// parser monitors the s.in channel, if there is a packet ready, it parses the
+// parser monitors the msg channel, if there is a packet ready, it parses the
 // packet into statsd strings and then calls parseStatsdLine, which parses a
 // single statsd metric into a struct.
-func (s *Statsd) parser() error {
-	defer s.wg.Done()
-	var packet []byte
+func (s *Statsd) parser(
+	mC *metricChannels,
+	done chan struct{},
+	msg chan []byte,
+) error {
 	for {
 		select {
-		case <-s.done:
+		case <-done:
 			return nil
-		case packet = <-s.in:
+		case packet := <-msg:
 			lines := strings.Split(string(packet), "\n")
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
 				if line != "" {
-					s.parseStatsdLine(line)
+					s.parseStatsdLine(
+						mC,
+						line,
+					)
 				}
 			}
 		}
 	}
 }
 
+var (
+	errParseStatsdLine = errors.New("E! Error: Parsing statsd line")
+	errmsg             = "E! Error: parsing sample rate, %q, it must be in format like: @0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
+)
+
 // parseStatsdLine will parse the given statsd line, validating it as it goes.
 // If the line is valid, it will be cached for the next call to Gather()
-func (s *Statsd) parseStatsdLine(line string) error {
-	s.Lock()
-	defer s.Unlock()
-
+func (s *Statsd) parseStatsdLine(
+	mC *metricChannels,
+	line string,
+) error {
 	lineTags := make(map[string]string)
 	if s.ParseDataDogTags {
 		recombinedSegments := make([]string, 0)
@@ -370,8 +379,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	// Validate splitting the line on ":"
 	bits := strings.Split(line, ":")
 	if len(bits) < 2 {
-		log.Printf("E! Error: splitting ':', Unable to parse metric: %s\n", line)
-		return errors.New("Error Parsing statsd line")
+		log.Printf("E! Error: splitting ':', Unable to parse metric: %q\n", line)
+		return errParseStatsdLine
 	}
 
 	// Extract bucket name from individual metric bits
@@ -379,66 +388,69 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 	// Add a metric for each bit available
 	for _, bit := range bits {
-		m := metric{}
+		m := &metric{}
 
 		m.bucket = bucketName
 
 		// Validate splitting the bit on "|"
 		pipesplit := strings.Split(bit, "|")
-		if len(pipesplit) < 2 {
-			log.Printf("E! Error: splitting '|', Unable to parse metric: %s\n", line)
-			return errors.New("Error Parsing statsd line")
-		} else if len(pipesplit) > 2 {
-			sr := pipesplit[2]
-			errmsg := "E! Error: parsing sample rate, %s, it must be in format like: " +
-				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
-			if strings.Contains(sr, "@") && len(sr) > 1 {
-				samplerate, err := strconv.ParseFloat(sr[1:], 64)
+		l := len(pipesplit)
+		switch {
+		case l < 2:
+			log.Printf("E! Error: splitting '|', Unable to parse metric: %q\n", line)
+			return errParseStatsdLine
+		case l > 2:
+			samplerate := pipesplit[2]
+			if strings.Contains(samplerate, "@") && len(samplerate) > 1 {
+				sr, err := strconv.ParseFloat(samplerate[1:], 64)
 				if err != nil {
 					log.Printf(errmsg, err.Error(), line)
 				} else {
 					// sample rate successfully parsed
-					m.samplerate = samplerate
+					m.samplerate = sr
 				}
 			} else {
-				log.Printf(errmsg, "", line)
+				log.Printf("E! Error: Missing @ or too short, sampleRate: %q line: %q\n", samplerate, line)
 			}
-		}
-
-		// Validate metric type
-		switch pipesplit[1] {
-		case "g", "c", "s", "ms", "h":
-			m.mtype = pipesplit[1]
-		default:
-			log.Printf("E! Error: Statsd Metric type %s unsupported", pipesplit[1])
-			return errors.New("Error Parsing statsd line")
 		}
 
 		// Parse the value
 		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
-			if m.mtype != "g" && m.mtype != "c" {
-				log.Printf("E! Error: +- values are only supported for gauges & counters: %s\n", line)
-				return errors.New("Error Parsing statsd line")
+			if pipesplit[1] != "g" && pipesplit[1] != "c" {
+				log.Printf("E! Error: +- values are only supported for gauges & counters: %q\n", line)
+				return errParseStatsdLine
 			}
 			m.additive = true
 		}
 
-		switch m.mtype {
-		case "g", "ms", "h":
+		switch pipesplit[1] {
+		case "g":
+			m.mtype = pipesplit[1]
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
-				log.Printf("E! Error: parsing value to float64: %s\n", line)
-				return errors.New("Error Parsing statsd line")
+				log.Printf("E! Error: parsing value to float64: %q\n", line)
+				return errParseStatsdLine
 			}
 			m.floatvalue = v
+			mC.gaugeMetricChannel <- s.parseNameAndTags(m, lineTags)
+		case "ms", "h":
+			m.mtype = pipesplit[1]
+			v, err := strconv.ParseFloat(pipesplit[0], 64)
+			if err != nil {
+				log.Printf("E! Error: parsing value to float64: %q\n", line)
+				return errParseStatsdLine
+			}
+			m.floatvalue = v
+			mC.timingsMetricChannel <- s.parseNameAndTags(m, lineTags)
 		case "c":
+			m.mtype = pipesplit[1]
 			var v int64
 			v, err := strconv.ParseInt(pipesplit[0], 10, 64)
 			if err != nil {
 				v2, err2 := strconv.ParseFloat(pipesplit[0], 64)
 				if err2 != nil {
-					log.Printf("E! Error: parsing value to int64: %s\n", line)
-					return errors.New("Error Parsing statsd line")
+					log.Printf("E! Error: parsing value to int64: %q\n", line)
+					return errParseStatsdLine
 				}
 				v = int64(v2)
 			}
@@ -447,43 +459,57 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				v = int64(float64(v) / m.samplerate)
 			}
 			m.intvalue = v
+			mC.countersMetricChannel <- s.parseNameAndTags(m, lineTags)
 		case "s":
+			m.mtype = pipesplit[1]
 			m.strvalue = pipesplit[0]
+			mC.setsMetricChannel <- s.parseNameAndTags(m, lineTags)
+		default:
+			log.Printf("E! Error: Statsd Metric type %q unsupported, line: %q", pipesplit[1], line)
+			return errParseStatsdLine
 		}
-
-		// Parse the name & tags from bucket
-		m.name, m.field, m.tags = s.parseName(m.bucket)
-		switch m.mtype {
-		case "c":
-			m.tags["metric_type"] = "counter"
-		case "g":
-			m.tags["metric_type"] = "gauge"
-		case "s":
-			m.tags["metric_type"] = "set"
-		case "ms":
-			m.tags["metric_type"] = "timing"
-		case "h":
-			m.tags["metric_type"] = "histogram"
-		}
-
-		if len(lineTags) > 0 {
-			for k, v := range lineTags {
-				m.tags[k] = v
-			}
-		}
-
-		// Make a unique key for the measurement name/tags
-		var tg []string
-		for k, v := range m.tags {
-			tg = append(tg, fmt.Sprintf("%s=%s", k, v))
-		}
-		sort.Strings(tg)
-		m.hash = fmt.Sprintf("%s%s", strings.Join(tg, ""), m.name)
-
-		s.aggregate(m)
 	}
 
 	return nil
+}
+
+// Parse the name & tags from bucket
+func (s *Statsd) parseNameAndTags(m *metric, lineTags map[string]string) *metric {
+	m.name, m.field, m.tags = s.parseName(m.bucket)
+	if m.mtype == "c" {
+		m.tags["metric_type"] = "counter"
+	}
+	if m.mtype == "g" {
+		m.tags["metric_type"] = "gauge"
+	}
+	if m.mtype == "s" {
+		m.tags["metric_type"] = "set"
+	}
+	if m.mtype == "ms" {
+		m.tags["metric_type"] = "timing"
+	}
+	if m.mtype == "h" {
+		m.tags["metric_type"] = "histogram"
+	}
+
+	// Data dog tags
+	if len(lineTags) > 0 {
+		for k, v := range lineTags {
+			m.tags[k] = v
+		}
+	}
+
+	// Make a unique key for the measurement name/tags
+	tg := make([]string, len(m.tags))
+	var i int
+	for k, v := range m.tags {
+		tg[i] = strings.Join([]string{k, v}, "=")
+		i++
+	}
+	sort.Strings(tg)
+	m.hash = strings.Join([]string{strings.Join(tg, ""), m.name}, "")
+
+	return m
 }
 
 // parseName parses the given bucket name with the list of bucket maps in the
@@ -547,103 +573,9 @@ func parseKeyValue(keyvalue string) (string, string) {
 	return key, val
 }
 
-// aggregate takes in a metric. It then
-// aggregates and caches the current value(s). It does not deal with the
-// Delete* options, because those are dealt with in the Gather function.
-func (s *Statsd) aggregate(m metric) {
-	switch m.mtype {
-	case "ms", "h":
-		// Check if the measurement exists
-		cached, ok := s.timings[m.hash]
-		if !ok {
-			cached = cachedtimings{
-				name:   m.name,
-				fields: make(map[string]RunningStats),
-				tags:   m.tags,
-			}
-		}
-		// Check if the field exists. If we've not enabled multiple fields per timer
-		// this will be the default field name, eg. "value"
-		field, ok := cached.fields[m.field]
-		if !ok {
-			field = RunningStats{
-				PercLimit: s.PercentileLimit,
-			}
-		}
-		if m.samplerate > 0 {
-			for i := 0; i < int(1.0/m.samplerate); i++ {
-				field.AddValue(m.floatvalue)
-			}
-		} else {
-			field.AddValue(m.floatvalue)
-		}
-		cached.fields[m.field] = field
-		s.timings[m.hash] = cached
-	case "c":
-		// check if the measurement exists
-		_, ok := s.counters[m.hash]
-		if !ok {
-			s.counters[m.hash] = cachedcounter{
-				name:   m.name,
-				fields: make(map[string]interface{}),
-				tags:   m.tags,
-			}
-		}
-		// check if the field exists
-		_, ok = s.counters[m.hash].fields[m.field]
-		if !ok {
-			s.counters[m.hash].fields[m.field] = int64(0)
-		}
-		s.counters[m.hash].fields[m.field] =
-			s.counters[m.hash].fields[m.field].(int64) + m.intvalue
-	case "g":
-		// check if the measurement exists
-		_, ok := s.gauges[m.hash]
-		if !ok {
-			s.gauges[m.hash] = cachedgauge{
-				name:   m.name,
-				fields: make(map[string]interface{}),
-				tags:   m.tags,
-			}
-		}
-		// check if the field exists
-		_, ok = s.gauges[m.hash].fields[m.field]
-		if !ok {
-			s.gauges[m.hash].fields[m.field] = float64(0)
-		}
-		if m.additive {
-			s.gauges[m.hash].fields[m.field] =
-				s.gauges[m.hash].fields[m.field].(float64) + m.floatvalue
-		} else {
-			s.gauges[m.hash].fields[m.field] = m.floatvalue
-		}
-	case "s":
-		// check if the measurement exists
-		_, ok := s.sets[m.hash]
-		if !ok {
-			s.sets[m.hash] = cachedset{
-				name:   m.name,
-				fields: make(map[string]map[string]bool),
-				tags:   m.tags,
-			}
-		}
-		// check if the field exists
-		_, ok = s.sets[m.hash].fields[m.field]
-		if !ok {
-			s.sets[m.hash].fields[m.field] = make(map[string]bool)
-		}
-		s.sets[m.hash].fields[m.field][m.strvalue] = true
-	}
-}
-
 func (s *Statsd) Stop() {
-	s.Lock()
-	defer s.Unlock()
-	log.Println("I! Stopping the statsd service")
 	close(s.done)
-	s.listener.Close()
-	s.wg.Wait()
-	close(s.in)
+	log.Println("I! Stopped the statsd service")
 }
 
 func init() {
