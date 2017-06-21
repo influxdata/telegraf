@@ -1,4 +1,4 @@
-package kafka_consumer
+package kafka_consumer_legacy
 
 import (
 	"fmt"
@@ -17,10 +17,10 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	t.Skip("Skipping test due to circleci issue; ref #2487")
 
 	brokerPeers := []string{testutil.GetLocalHost() + ":9092"}
-	testTopic := fmt.Sprintf("telegraf_test_topic_%d", time.Now().Unix())
+	zkPeers := []string{testutil.GetLocalHost() + ":2181"}
+	testTopic := fmt.Sprintf("telegraf_test_topic_legacy_%d", time.Now().Unix())
 
 	// Send a Kafka message to the kafka host
 	msg := "cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257\n"
@@ -36,11 +36,11 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 
 	// Start the Kafka Consumer
 	k := &Kafka{
-		ConsumerGroup: "telegraf_test_consumers",
-		Topics:        []string{testTopic},
-		Brokers:       brokerPeers,
-		PointBuffer:   100000,
-		Offset:        "oldest",
+		ConsumerGroup:  "telegraf_test_consumers",
+		Topics:         []string{testTopic},
+		ZookeeperPeers: zkPeers,
+		PointBuffer:    100000,
+		Offset:         "oldest",
 	}
 	p, _ := parsers.NewInfluxParser()
 	k.SetParser(p)

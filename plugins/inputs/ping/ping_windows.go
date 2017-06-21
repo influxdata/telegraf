@@ -3,15 +3,16 @@ package ping
 
 import (
 	"errors"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // HostPinger is a function that runs the "ping" function using a list of
@@ -38,14 +39,14 @@ func (s *Ping) Description() string {
 }
 
 const sampleConfig = `
-	## urls to ping
-	urls = ["www.google.com"] # required
+	## List of urls to ping
+	urls = ["www.google.com"]
 
 	## number of pings to send per collection (ping -n <COUNT>)
-	count = 4 # required
+	# count = 1
 
-	## Ping timeout, in seconds. 0 means default timeout (ping -w <TIMEOUT>)
-	Timeout = 0
+	## Ping timeout, in seconds. 0.0 means default timeout (ping -w <TIMEOUT>)
+	# timeout = 0.0
 `
 
 func (s *Ping) SampleConfig() string {
@@ -145,6 +146,9 @@ func (p *Ping) args(url string) []string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
+	if p.Count < 1 {
+		p.Count = 1
+	}
 	var wg sync.WaitGroup
 	errorChannel := make(chan error, len(p.Urls)*2)
 	var pendingError error = nil
@@ -218,6 +222,9 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
-		return &Ping{pingHost: hostPinger}
+		return &Ping{
+			pingHost: hostPinger,
+			Count:    1,
+		}
 	})
 }

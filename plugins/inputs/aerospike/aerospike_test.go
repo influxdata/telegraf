@@ -23,7 +23,9 @@ func TestAerospikeStatistics(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("aerospike_node"))
+	assert.True(t, acc.HasTag("aerospike_node", "node_name"))
 	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
+	assert.True(t, acc.HasTag("aerospike_namespace", "node_name"))
 	assert.True(t, acc.HasInt64Field("aerospike_node", "batch_error"))
 }
 

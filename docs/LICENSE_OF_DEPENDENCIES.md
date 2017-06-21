@@ -10,6 +10,7 @@ works:
 - github.com/aws/aws-sdk-go [APACHE](https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)
 - github.com/beorn7/perks [MIT](https://github.com/beorn7/perks/blob/master/LICENSE)
 - github.com/boltdb/bolt [MIT](https://github.com/boltdb/bolt/blob/master/LICENSE)
+- github.com/bsm/sarama-cluster [MIT](https://github.com/bsm/sarama-cluster/blob/master/LICENSE)
 - github.com/cenkalti/backoff [MIT](https://github.com/cenkalti/backoff/blob/master/LICENSE)
 - github.com/couchbase/go-couchbase [MIT](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT](https://github.com/couchbase/gomemcached/blob/master/LICENSE)

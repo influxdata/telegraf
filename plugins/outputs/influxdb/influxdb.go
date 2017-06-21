@@ -32,7 +32,8 @@ type InfluxDB struct {
 	RetentionPolicy  string
 	WriteConsistency string
 	Timeout          internal.Duration
-	UDPPayload       int `toml:"udp_payload"`
+	UDPPayload       int    `toml:"udp_payload"`
+	HTTPProxy        string `toml:"http_proxy"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -46,8 +47,7 @@ type InfluxDB struct {
 	// Precision is only here for legacy support. It will be ignored.
 	Precision string
 
-	clients      []client.Client
-	splitPayload bool
+	clients []client.Client
 }
 
 var sampleConfig = `
@@ -84,6 +84,9 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Proxy Config
+  # http_proxy = "http://corporate.proxy:3128"
 `
 
 // Connect initiates the primary connection to the range of provided URLs
@@ -115,7 +118,6 @@ func (i *InfluxDB) Connect() error {
 				return fmt.Errorf("Error creating UDP Client [%s]: %s", u, err)
 			}
 			i.clients = append(i.clients, c)
-			i.splitPayload = true
 		default:
 			// If URL doesn't start with "udp", assume HTTP client
 			config := client.HTTPConfig{
@@ -125,6 +127,7 @@ func (i *InfluxDB) Connect() error {
 				UserAgent: i.UserAgent,
 				Username:  i.Username,
 				Password:  i.Password,
+				HTTPProxy: i.HTTPProxy,
 			}
 			wp := client.WriteParams{
 				Database:        i.Database,
@@ -166,22 +169,9 @@ func (i *InfluxDB) Description() string {
 	return "Configuration for influxdb server to send metrics to"
 }
 
-func (i *InfluxDB) split(metrics []telegraf.Metric) []telegraf.Metric {
-	if !i.splitPayload {
-		return metrics
-	}
-
-	split := make([]telegraf.Metric, 0)
-	for _, m := range metrics {
-		split = append(split, m.Split(i.UDPPayload)...)
-	}
-	return split
-}
-
 // Write will choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
-	metrics = i.split(metrics)
 
 	bufsize := 0
 	for _, m := range metrics {

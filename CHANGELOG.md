@@ -1,14 +1,33 @@
 ## v1.4 [unreleased]
 
 ### Release Notes
+
+- The `kafka_consumer` input has been updated to support Kafka 0.9 and
+  above style consumer offset handling.  The previous version of this plugin
+  supporting Kafka 0.8 and below is available as the `kafka_consumer_legacy`
+  plugin.
+
+- In the `aerospike` input the `node_name` field has been changed to be a tag
+  for both the `aerospike_node` and `aerospike_namespace` measurements.
+
 ### Features
 
+- [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
 - [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
 - [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
-- [#2817](https://github.com/influxdata/telegraf/pull/2817): Added timeout option to IPMI sensor plugin
+- [#2817](https://github.com/influxdata/telegraf/pull/2817): Add timeout option to IPMI sensor plugin
+- [#2883](https://github.com/influxdata/telegraf/pull/2883): Add support for an optional SSL/TLS configuration to nginx input plugin
+- [#2882](https://github.com/influxdata/telegraf/pull/2882): Add timezone support for logparser timestamps.
+- [#2814](https://github.com/influxdata/telegraf/pull/2814): Add result_type field for http_response input.
+- [#2734](https://github.com/influxdata/telegraf/pull/2734): Add include/exclude filters for docker containers.
+- [#2602](https://github.com/influxdata/telegraf/pull/2602): Add secure connection support to graphite output.
+- [#2908](https://github.com/influxdata/telegraf/pull/2908): Add min/max response time on linux/darwin to ping.
+- [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
+- [#2933](https://github.com/influxdata/telegraf/pull/2933): Add standard SSL options to mysql input.
 
 ### Bugfixes
 
+- [#2607](https://github.com/influxdata/telegraf/issues/2607): Improve logging of errors in Cassandra input.
 - [#2819](https://github.com/influxdata/telegraf/pull/2819): [enh] set db_version at 0 if query version fails
 - [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
 - [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
@@ -16,6 +35,24 @@
 - [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
 - [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
 - [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
+- [#2885](https://github.com/influxdata/telegraf/pull/2885): Fix timeout option in Windows ping input sample configuration.
+- [#2911](https://github.com/influxdata/telegraf/issues/2911): Fix Kinesis output plugin in govcloud.
+- [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
+- [#2452](https://github.com/influxdata/telegraf/pull/2452): Improve Prometheus Client output documentation.
+
+## v1.3.3 [unreleased]
+
+### Bugfixes
+
+- [#2915](https://github.com/influxdata/telegraf/issues/2915): Allow dos line endings in tail and logparser.
+
+## v1.3.2 [2017-06-14]
+
+### Bugfixes
+
+- [#2862](https://github.com/influxdata/telegraf/issues/2862): Fix InfluxDB UDP metric splitting.
+- [#2888](https://github.com/influxdata/telegraf/issues/2888): Fix mongodb/leofs urls without scheme.
+- [#2822](https://github.com/influxdata/telegraf/issues/2822): Fix inconsistent label dimensions in prometheus output.
 
 ## v1.3.1 [2017-05-31]
 

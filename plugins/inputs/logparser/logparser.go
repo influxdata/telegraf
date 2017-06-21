@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/influxdata/tail"
@@ -16,11 +17,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/logparser/grok"
 )
 
+// LogParser in the primary interface for the plugin
 type LogParser interface {
 	ParseLine(line string) (telegraf.Metric, error)
 	Compile() error
 }
 
+// LogParserPlugin is the primary struct to implement the interface for logparser plugin
 type LogParserPlugin struct {
 	Files         []string
 	FromBeginning bool
@@ -45,6 +48,7 @@ const sampleConfig = `
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
   ##   /var/log/apache.log -> only tail the apache log file
   files = ["/var/log/apache/access.log"]
+
   ## Read files that currently exist from the beginning. Files that are created
   ## while telegraf is running (and that match the "files" globs) will always
   ## be read from the beginning.
@@ -60,23 +64,40 @@ const sampleConfig = `
     ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
     ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
     patterns = ["%{COMBINED_LOG_FORMAT}"]
+
     ## Name of the outputted measurement name.
     measurement = "apache_access_log"
+
     ## Full path(s) to custom pattern files.
     custom_pattern_files = []
+
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
+
+    ## Timezone allows you to provide an override for timestamps that
+    ## don't already include an offset
+    ## e.g. 04/06/2016 12:41:45 data one two 5.43µs
+    ##
+    ## Default: "" which renders UTC
+    ## Options are as follows:
+    ##   1. Local             -- interpret based on machine localtime
+    ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+    ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
+    timezone = "Canada/Eastern"
     '''
 `
 
+// SampleConfig returns the sample configuration for the plugin
 func (l *LogParserPlugin) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns the human readable description for the plugin
 func (l *LogParserPlugin) Description() string {
 	return "Stream and parse log file(s)."
 }
 
+// Gather is the primary function to collect the metrics for the plugin
 func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
@@ -85,6 +106,7 @@ func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
 	return l.tailNewfiles(true)
 }
 
+// Start kicks off collection of stats for the plugin
 func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
@@ -113,7 +135,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	}
 
 	if len(l.parsers) == 0 {
-		return fmt.Errorf("ERROR: logparser input plugin: no parser defined.")
+		return fmt.Errorf("logparser input plugin: no parser defined")
 	}
 
 	// compile log parser patterns:
@@ -147,7 +169,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		}
 		files := g.Match()
 
-		for file, _ := range files {
+		for file := range files {
 			if _, ok := l.tailers[file]; ok {
 				// we're already tailing this file
 				continue
@@ -186,9 +208,12 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 			continue
 		}
 
+		// Fix up files with Windows line endings.
+		text := strings.TrimRight(line.Text, "\r")
+
 		select {
 		case <-l.done:
-		case l.lines <- line.Text:
+		case l.lines <- text:
 		}
 	}
 }
@@ -225,6 +250,7 @@ func (l *LogParserPlugin) parser() {
 	}
 }
 
+// Stop will end the metrics collection process on file tailers
 func (l *LogParserPlugin) Stop() {
 	l.Lock()
 	defer l.Unlock()

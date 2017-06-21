@@ -24,24 +24,33 @@ type DockerLabelFilter struct {
 	labelExclude filter.Filter
 }
 
+type DockerContainerFilter struct {
+	containerInclude filter.Filter
+	containerExclude filter.Filter
+}
+
 // Docker object
 type Docker struct {
 	Endpoint       string
 	ContainerNames []string
+
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
 	Total          bool     `toml:"total"`
 	TagEnvironment []string `toml:"tag_env"`
 	LabelInclude   []string `toml:"docker_label_include"`
 	LabelExclude   []string `toml:"docker_label_exclude"`
+	LabelFilter    DockerLabelFilter
 
-	LabelFilter DockerLabelFilter
+	ContainerInclude []string `toml:"container_name_include"`
+	ContainerExclude []string `toml:"container_name_exclude"`
+	ContainerFilter  DockerContainerFilter
 
 	client      *client.Client
 	engine_host string
 
-	testing             bool
-	labelFiltersCreated bool
+	testing        bool
+	filtersCreated bool
 }
 
 // infoWrapper wraps client.Client.List for testing.
@@ -110,8 +119,15 @@ var sampleConfig = `
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
+
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
+
+  ## Containers to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all containers
+  container_name_include = []
+  container_name_exclude = []
+
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 
@@ -161,13 +177,18 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 		d.client = c
 	}
+
 	// Create label filters if not already created
-	if !d.labelFiltersCreated {
+	if !d.filtersCreated {
 		err := d.createLabelFilters()
 		if err != nil {
 			return err
 		}
-		d.labelFiltersCreated = true
+		err = d.createContainerFilters()
+		if err != nil {
+			return err
+		}
+		d.filtersCreated = true
 	}
 
 	// Get daemon info
@@ -306,9 +327,12 @@ func (d *Docker) gatherContainer(
 		"container_image":   imageName,
 		"container_version": imageVersion,
 	}
-	if len(d.ContainerNames) > 0 {
-		if !sliceContains(cname, d.ContainerNames) {
-			return nil
+
+	if len(d.ContainerInclude) > 0 || len(d.ContainerExclude) > 0 {
+		if len(d.ContainerInclude) == 0 || !d.ContainerFilter.containerInclude.Match(cname) {
+			if len(d.ContainerExclude) == 0 || d.ContainerFilter.containerExclude.Match(cname) {
+				return nil
+			}
 		}
 	}
 
@@ -656,8 +680,32 @@ func parseSize(sizeStr string) (int64, error) {
 	return int64(size), nil
 }
 
+func (d *Docker) createContainerFilters() error {
+	if len(d.ContainerNames) > 0 {
+		d.ContainerInclude = append(d.ContainerInclude, d.ContainerNames...)
+	}
+
+	if len(d.ContainerInclude) != 0 {
+		var err error
+		d.ContainerFilter.containerInclude, err = filter.Compile(d.ContainerInclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(d.ContainerExclude) != 0 {
+		var err error
+		d.ContainerFilter.containerExclude, err = filter.Compile(d.ContainerExclude)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (d *Docker) createLabelFilters() error {
-	if len(d.LabelInclude) != 0 && d.LabelFilter.labelInclude == nil {
+	if len(d.LabelInclude) != 0 {
 		var err error
 		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
 		if err != nil {
@@ -665,7 +713,7 @@ func (d *Docker) createLabelFilters() error {
 		}
 	}
 
-	if len(d.LabelExclude) != 0 && d.LabelFilter.labelExclude == nil {
+	if len(d.LabelExclude) != 0 {
 		var err error
 		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
 		if err != nil {
@@ -679,9 +727,9 @@ func (d *Docker) createLabelFilters() error {
 func init() {
 	inputs.Add("docker", func() telegraf.Input {
 		return &Docker{
-			PerDevice:           true,
-			Timeout:             internal.Duration{Duration: time.Second * 5},
-			labelFiltersCreated: false,
+			PerDevice:      true,
+			Timeout:        internal.Duration{Duration: time.Second * 5},
+			filtersCreated: false,
 		}
 	})
 }
