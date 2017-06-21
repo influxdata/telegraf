@@ -19,8 +19,13 @@ telegraf ALL=(root) NOPASSWD: /usr/bin/fail2ban-client status *
 ### Configuration:
 
 ``` toml
-# use sudo to run fail2ban-client
-use_sudo = false
+# Read metrics from fail2ban.
+[[inputs.fail2ban]]
+  ## fail2ban-client require root access.
+  ## Setting 'use_sudo' to true will make use of sudo to run fail2ban-client.
+  ## Users must configure sudo to allow telegraf user to run fail2ban-client with no password.
+  ## This plugin run only "fail2ban-client status".
+  use_sudo = false
 ```
 
 ### Measurements & Fields:
