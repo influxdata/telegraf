@@ -10,6 +10,10 @@
 - In the `aerospike` input the `node_name` field has been changed to be a tag
   for both the `aerospike_node` and `aerospike_namespace` measurements.
 
+### New Plugins
+
+- [fail2ban](./plugins/inputs/fail2ban/README.md)
+
 ### Features
 
 - [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
@@ -24,6 +28,7 @@
 - [#2908](https://github.com/influxdata/telegraf/pull/2908): Add min/max response time on linux/darwin to ping.
 - [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
 - [#2933](https://github.com/influxdata/telegraf/pull/2933): Add standard SSL options to mysql input.
+- [#2875](https://github.com/influxdata/telegraf/pull/2875): Add input plugin for fail2ban.
 
 ### Bugfixes
 

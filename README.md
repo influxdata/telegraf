@@ -124,6 +124,7 @@ configuration options.
 * [dovecot](./plugins/inputs/dovecot)
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
+* [fail2ban](./plugins/inputs/fail2ban)
 * [filestat](./plugins/inputs/filestat)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
