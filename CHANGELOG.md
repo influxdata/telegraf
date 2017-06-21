@@ -45,6 +45,7 @@
 ### Bugfixes
 
 - [#2915](https://github.com/influxdata/telegraf/issues/2915): Allow dos line endings in tail and logparser.
+- [#2937](https://github.com/influxdata/telegraf/issues/2937): Remove label value sanitization in prometheus output.
 
 ## v1.3.2 [2017-06-14]
 
