@@ -17,24 +17,23 @@ const (
 )
 
 type RCON struct {
-	Host   string
-	Port   string
-	Passwd string
+	Server   string
+	Port     string
+	Password string
 }
 
 func (r *RCON) Gather() ([]string, error) {
-
 	port, err := strconv.Atoi(r.Port)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := rcon.NewClient(r.Host, port)
+	client, err := rcon.NewClient(r.Server, port)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err = client.Authorize(r.Passwd); err != nil {
+	if _, err = client.Authorize(r.Password); err != nil {
 		return nil, err
 	}
 
