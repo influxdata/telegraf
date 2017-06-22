@@ -22,7 +22,7 @@ type RCON struct {
 	Password string
 }
 
-// Gather recieves all player scoreboard information and returns it per user.
+// Gather recieves all player scoreboard information and returns it per player.
 func (r *RCON) Gather() ([]string, error) {
 	port, err := strconv.Atoi(r.Port)
 	if err != nil {
@@ -44,9 +44,9 @@ func (r *RCON) Gather() ([]string, error) {
 	}
 
 	if !strings.Contains(packet.Body, NoMatches) {
-		users := strings.Split(packet.Body, "Showing")
-		if len(users) > 1 {
-			return users[1:], nil
+		players := strings.Split(packet.Body, "Showing")
+		if len(players) > 1 {
+			return players[1:], nil
 		}
 	}
 

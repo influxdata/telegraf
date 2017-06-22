@@ -37,7 +37,7 @@ func (s *Minecraft) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather uses the RCON protocal to collect username and
+// Gather uses the RCON protocal to collect playerName and
 // scoreboard stats from a minecraft server.
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	client := &RCON{
@@ -52,13 +52,13 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, score := range scores {
-		username, err := ParseUsername(score)
+		playerName, err := ParsePlayerName(score)
 		if err != nil {
 			return err
 		}
 		tags := map[string]string{
-			"username": username,
-			"server":   client.Server,
+			"playerName": playerName,
+			"server":     client.Server,
 		}
 
 		stats, err := ParseScoreboard(score)
@@ -76,16 +76,16 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// ParseUsername takes an input string from rcon, to parse
-// the username.
-func ParseUsername(input string) (string, error) {
+// ParsePlayerName takes an input string from rcon, to parse
+// the playerName.
+func ParsePlayerName(input string) (string, error) {
 	var re = regexp.MustCompile(`for\s(.*):-`)
 
-	usernameMatches := re.FindAllStringSubmatch(input, -1)
-	if usernameMatches == nil {
-		return "", fmt.Errorf("no username was matched")
+	playerNameMatches := re.FindAllStringSubmatch(input, -1)
+	if playerNameMatches == nil {
+		return "", fmt.Errorf("no playerName was matched")
 	}
-	return usernameMatches[0][1], nil
+	return playerNameMatches[0][1], nil
 }
 
 // Score is an individual tracked scoreboard stat.
