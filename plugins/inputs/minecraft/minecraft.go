@@ -40,10 +40,37 @@ func (s *Minecraft) SampleConfig() string {
 // Gather uses the RCON protocal to collect username and
 // scoreboard stats from a minecraft server.
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
-	if s.Port == " " {
-		acc.AddFields("state", map[string]interface{}{"value": "pretty good"}, nil)
-	} else {
-		acc.AddFields("state", map[string]interface{}{"value": "not great"}, nil)
+	client := &RCON{
+		Server:   s.Server,
+		Port:     s.Port,
+		Password: s.Password,
+	}
+
+	scores, err := client.Gather()
+	if err != nil {
+		return err
+	}
+
+	for _, score := range scores {
+		username, err := ParseUsername(score)
+		if err != nil {
+			return err
+		}
+		tags := map[string]string{
+			"username": username,
+			"server":   client.Server,
+		}
+
+		stats, err := ParseScoreboard(score)
+		if err != nil {
+			return err
+		}
+		var fields map[string]interface{}
+		for _, stat := range stats {
+			fields[stat.Name] = stat.Value
+		}
+
+		acc.AddFields("minecraft", fields, tags)
 	}
 
 	return nil
