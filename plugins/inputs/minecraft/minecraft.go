@@ -65,7 +65,7 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		var fields map[string]interface{}
+		var fields = make(map[string]interface{}, len(stats))
 		for _, stat := range stats {
 			fields[stat.Name] = stat.Value
 		}
