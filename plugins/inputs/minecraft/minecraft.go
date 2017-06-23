@@ -47,10 +47,10 @@ func (s *Minecraft) SampleConfig() string {
 // scoreboard stats from a minecraft server.
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
-		s.client = &RCON{
-			Server:   s.Server,
-			Port:     s.Port,
-			Password: s.Password,
+		var err error
+		s.client, err = NewRCON(s.Server, s.Port, s.Password)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -114,7 +114,6 @@ func ParseScoreboard(input string) ([]Score, error) {
 	var scores []Score
 
 	for _, match := range scoreMatches {
-		//fmt.Println(match)
 		number := match[1]
 		name := match[2]
 		n, err := strconv.Atoi(number)
@@ -128,10 +127,8 @@ func ParseScoreboard(input string) ([]Score, error) {
 			Name:  name,
 			Value: n,
 		}
-		//	fmt.Println(s)
 		scores = append(scores, s)
 	}
-	//fmt.Println(scores)
 	return scores, nil
 }
 

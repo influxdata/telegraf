@@ -49,9 +49,6 @@ func TestParseScoreboard(t *testing.T) {
 	// test a valid input string to ensure stats are parsed correctly.
 	input := `1 tracked objective(s) for divislight:- jumps: 178 (jumps)- sword: 5 (sword)`
 	got, err := ParseScoreboard(input)
-
-	fmt.Println(got)
-
 	if err != nil {
 		t.Fatal("Unexpected error")
 	}
@@ -75,8 +72,6 @@ func TestParseScoreboard(t *testing.T) {
 	input = `1 tracked objective(s) for divislight:- jumps: (jumps)- sword: 5 (sword)`
 	got, err = ParseScoreboard(input)
 
-	fmt.Println(got)
-
 	if err != nil {
 		t.Fatal("Unexpected error")
 	}
@@ -95,9 +90,6 @@ func TestParseScoreboard(t *testing.T) {
 	// Tests an empty string.
 	input = ``
 	got, err = ParseScoreboard(input)
-
-	fmt.Println(got)
-
 	if err == nil {
 		t.Fatal("Expected input error, but error was nil")
 	}
@@ -105,9 +97,6 @@ func TestParseScoreboard(t *testing.T) {
 	// Tests when a number isn't an integer.
 	input = `1 tracked objective(s) for divislight:- jumps: 178.5 (jumps)- sword: 5 (sword)`
 	got, err = ParseScoreboard(input)
-
-	fmt.Println(got)
-
 	if err != nil {
 		t.Fatal("Unexpected error")
 	}
@@ -126,9 +115,6 @@ func TestParseScoreboard(t *testing.T) {
 	//Testing a real life data scenario with unicode characters
 	input = `7 tracked objective(s) for mauxlaim:- total_kills: 39 (total_kills)- "howdy doody": 37 (dalevel)- howdy: 37 (lvl)- jumps: 1290 (jumps)- iron_pickaxe: 284 (iron_pickaxe)- cow_kills: 1 (cow_kills)- "asdf": 37 (😂)`
 	got, err = ParseScoreboard(input)
-
-	fmt.Println(got)
-
 	if err != nil {
 		t.Fatal("Unexpected error")
 	}

@@ -15,30 +15,47 @@ const (
 	ScoreboardPlayerList = `scoreboard players list *`
 )
 
+// RCONClient is a representation of RCON command authorizaiton and exectution
+type RCONClient interface {
+	Authorize(password string) (*rcon.Packet, error)
+	Execute(command string) (*rcon.Packet, error)
+}
+
 // RCON represents a RCON server connection
 type RCON struct {
 	Server   string
 	Port     string
 	Password string
+	client   RCONClient
+}
+
+// NewRCON creates a new RCON
+func NewRCON(server, port, password string) (*RCON, error) {
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := rcon.NewClient(server, p)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RCON{
+		Server:   server,
+		Port:     port,
+		Password: password,
+		client:   client,
+	}, nil
 }
 
 // Gather recieves all player scoreboard information and returns it per player.
 func (r *RCON) Gather() ([]string, error) {
-	port, err := strconv.Atoi(r.Port)
-	if err != nil {
+	if _, err := r.client.Authorize(r.Password); err != nil {
 		return nil, err
 	}
 
-	client, err := rcon.NewClient(r.Server, port)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err = client.Authorize(r.Password); err != nil {
-		return nil, err
-	}
-
-	packet, err := client.Execute(ScoreboardPlayerList)
+	packet, err := r.client.Execute(ScoreboardPlayerList)
 	if err != nil {
 		return nil, err
 	}
