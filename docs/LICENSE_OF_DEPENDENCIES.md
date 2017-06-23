@@ -12,6 +12,7 @@ works:
 - github.com/boltdb/bolt [MIT](https://github.com/boltdb/bolt/blob/master/LICENSE)
 - github.com/bsm/sarama-cluster [MIT](https://github.com/bsm/sarama-cluster/blob/master/LICENSE)
 - github.com/cenkalti/backoff [MIT](https://github.com/cenkalti/backoff/blob/master/LICENSE)
+- github.com/chuckpreslar/rcon [MIT](https://github.com/chuckpreslar/rcon#license)
 - github.com/couchbase/go-couchbase [MIT](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
 - github.com/couchbase/goutils [MIT](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
