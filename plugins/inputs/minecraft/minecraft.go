@@ -20,11 +20,17 @@ const sampleConfig = `
   password = "replace_me"
 `
 
+// Client is an interface for a client which gathers data from a minecraft server
+type Client interface {
+	Gather() ([]string, error)
+}
+
 // Minecraft represents a connection to a minecraft server
 type Minecraft struct {
 	Server   string
 	Port     string
 	Password string
+	client   Client
 }
 
 // Description gives a brief description.
@@ -40,13 +46,15 @@ func (s *Minecraft) SampleConfig() string {
 // Gather uses the RCON protocal to collect playerName and
 // scoreboard stats from a minecraft server.
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
-	client := &RCON{
-		Server:   s.Server,
-		Port:     s.Port,
-		Password: s.Password,
+	if s.client == nil {
+		s.client = &RCON{
+			Server:   s.Server,
+			Port:     s.Port,
+			Password: s.Password,
+		}
 	}
 
-	scores, err := client.Gather()
+	scores, err := s.client.Gather()
 	if err != nil {
 		return err
 	}
@@ -58,7 +66,7 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 		}
 		tags := map[string]string{
 			"playerName": playerName,
-			"server":     client.Server,
+			"server":     s.Server,
 		}
 
 		stats, err := ParseScoreboard(score)

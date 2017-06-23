@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // TestParsePlayerName tests different Minecraft RCON inputs for playerNames
@@ -165,5 +167,75 @@ func TestParseScoreboard(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Got: \n%#v\nWant: %#v", got, want)
 	}
+
+}
+
+type MockClient struct {
+	Result []string
+	Err    error
+}
+
+func (m *MockClient) Gather() ([]string, error) {
+	return m.Result, m.Err
+}
+
+func TestGather(t *testing.T) {
+	var acc testutil.Accumulator
+	testConfig := Minecraft{
+		Server: "biffsgang.net",
+		client: &MockClient{
+			Result: []string{
+				`1 tracked objective(s) for divislight:- jumps: 178 (jumps)`,
+				`7 tracked objective(s) for mauxlaim:- total_kills: 39 (total_kills)- "howdy doody": 37 (dalevel)- howdy: 37 (lvl)- jumps: 1290 (jumps)- iron_pickaxe: 284 (iron_pickaxe)- cow_kills: 1 (cow_kills)- "asdf": 37 (😂)`,
+				`5 tracked objective(s) for torham:- total_kills: 29 (total_kills)- "howdy doody": 33 (dalevel)- howdy: 33 (lvl)- jumps: 263 (jumps)- "asdf": 33 (😂)`,
+			},
+			Err: nil,
+		},
+	}
+
+	err := testConfig.Gather(&acc)
+	if err != nil {
+		t.Fatalf("gather returned error. Error: %s\n", err)
+	}
+
+	tags := map[string]string{
+		"playerName": "divislight",
+		"server":     "biffsgang.net",
+	}
+
+	assertContainsTaggedStat(t, &acc, "minecraft", "jumps", 178, tags)
+	tags["playerName"] = "mauxlaim"
+	assertContainsTaggedStat(t, &acc, "minecraft", "cow_kills", 1, tags)
+	tags["playerName"] = "torham"
+	assertContainsTaggedStat(t, &acc, "minecraft", "total_kills", 29, tags)
+
+}
+
+func assertContainsTaggedStat(
+	t *testing.T,
+	acc *testutil.Accumulator,
+	measurement string,
+	field string,
+	expectedValue int,
+	tags map[string]string,
+) {
+	var actualValue int
+	for _, pt := range acc.Metrics {
+		if pt.Measurement == measurement && reflect.DeepEqual(pt.Tags, tags) {
+			for fieldname, value := range pt.Fields {
+				if fieldname == field {
+					actualValue = value.(int)
+					if value == expectedValue {
+						return
+					}
+					t.Errorf("Expected value %d\n got value %d\n", expectedValue, value)
+				}
+			}
+		}
+	}
+	msg := fmt.Sprintf(
+		"Could not find measurement \"%s\" with requested tags within %s, Actual: %d",
+		measurement, field, actualValue)
+	t.Fatal(msg)
 
 }
