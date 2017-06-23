@@ -119,11 +119,11 @@ func ParseScoreboard(input string) ([]Score, error) {
 		number := match[1]
 		name := match[2]
 		n, err := strconv.Atoi(number)
-		//Not necessary in current state, because regex can only match integers,
+		// Not necessary in current state, because regex can only match integers,
 		// maybe become necessary if regex is modified to match more types of
-		//numbers
+		// numbers
 		if err != nil {
-			return nil, fmt.Errorf("Failed to parse statistic")
+			return nil, fmt.Errorf("Failed to parse score")
 		}
 		s := Score{
 			Name:  name,
