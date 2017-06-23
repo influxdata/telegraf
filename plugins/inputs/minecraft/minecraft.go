@@ -135,5 +135,10 @@ func ParseScoreboard(input string) ([]Score, error) {
 }
 
 func init() {
-	inputs.Add("minecraft", func() telegraf.Input { return &Minecraft{} })
+	inputs.Add("minecraft", func() telegraf.Input {
+		return &Minecraft{
+			Server: "localhost",
+			Port:   "25575",
+		}
+	})
 }
