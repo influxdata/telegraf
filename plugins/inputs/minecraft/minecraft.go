@@ -12,12 +12,12 @@ import (
 )
 
 const sampleConfig = `
-  # server address for minecraft
-  server = "localhost"
-  # port for RCON
-  port = "25575"
-  # password RCON for mincraft server
-  password = "replace_me"
+## server address for minecraft
+server = "localhost"
+## port for RCON
+port = "25575"
+## password RCON for mincraft server
+password = "replace_me"
 `
 
 // Client is an interface for a client which gathers data from a minecraft server
@@ -35,7 +35,7 @@ type Minecraft struct {
 
 // Description gives a brief description.
 func (s *Minecraft) Description() string {
-	return "it collects stats from Minecraft servers"
+	return "Collects scores from a minecraft server's scoreboard using the RCON protocol"
 }
 
 // SampleConfig returns our sampleConfig.
@@ -43,7 +43,7 @@ func (s *Minecraft) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather uses the RCON protocal to collect playerName and
+// Gather uses the RCON protocal to collect player and
 // scoreboard stats from a minecraft server.
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
@@ -60,13 +60,13 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, score := range scores {
-		playerName, err := ParsePlayerName(score)
+		player, err := ParsePlayerName(score)
 		if err != nil {
 			return err
 		}
 		tags := map[string]string{
-			"playerName": playerName,
-			"server":     s.Server,
+			"player": player,
+			"server": s.Server,
 		}
 
 		stats, err := ParseScoreboard(score)
@@ -85,15 +85,15 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 }
 
 // ParsePlayerName takes an input string from rcon, to parse
-// the playerName.
+// the player.
 func ParsePlayerName(input string) (string, error) {
 	var re = regexp.MustCompile(`for\s(.*):-`)
 
-	playerNameMatches := re.FindAllStringSubmatch(input, -1)
-	if playerNameMatches == nil {
-		return "", fmt.Errorf("no playerName was matched")
+	playerMatches := re.FindAllStringSubmatch(input, -1)
+	if playerMatches == nil {
+		return "", fmt.Errorf("no player was matched")
 	}
-	return playerNameMatches[0][1], nil
+	return playerMatches[0][1], nil
 }
 
 // Score is an individual tracked scoreboard stat.

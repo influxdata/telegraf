@@ -8,14 +8,14 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// TestParsePlayerName tests different Minecraft RCON inputs for playerNames
+// TestParsePlayerName tests different Minecraft RCON inputs for players
 func TestParsePlayerName(t *testing.T) {
-	// Test a valid input string to ensure playerName is extracted
+	// Test a valid input string to ensure player is extracted
 	input := "1 tracked objective(s) for divislight:- jumps: 178 (jumps)"
 	got, err := ParsePlayerName(input)
 	want := "divislight"
 	if err != nil {
-		t.Fatalf("playerName returned error. Error: %s\n", err)
+		t.Fatalf("player returned error. Error: %s\n", err)
 	}
 	if got != want {
 		t.Errorf("got %s\nwant %s\n", got, want)
@@ -26,7 +26,7 @@ func TestParsePlayerName(t *testing.T) {
 	got, err = ParsePlayerName(input)
 	want = ""
 	if err == nil {
-		t.Fatal("Expected error when playerName not present. No error found.")
+		t.Fatal("Expected error when player not present. No error found.")
 	}
 	if got != want {
 		t.Errorf("got %s\n want %s\n", got, want)
@@ -37,7 +37,7 @@ func TestParsePlayerName(t *testing.T) {
 	got, err = ParsePlayerName(input)
 	want = "😂"
 	if err != nil {
-		t.Fatalf("playerName returned error. Error: %s\n", err)
+		t.Fatalf("player returned error. Error: %s\n", err)
 	}
 	if got != want {
 		t.Errorf("got %s\n want %s\n", got, want)
@@ -185,14 +185,14 @@ func TestGather(t *testing.T) {
 	}
 
 	tags := map[string]string{
-		"playerName": "divislight",
-		"server":     "biffsgang.net",
+		"player": "divislight",
+		"server": "biffsgang.net",
 	}
 
 	assertContainsTaggedStat(t, &acc, "minecraft", "jumps", 178, tags)
-	tags["playerName"] = "mauxlaim"
+	tags["player"] = "mauxlaim"
 	assertContainsTaggedStat(t, &acc, "minecraft", "cow_kills", 1, tags)
-	tags["playerName"] = "torham"
+	tags["player"] = "torham"
 	assertContainsTaggedStat(t, &acc, "minecraft", "total_kills", 29, tags)
 
 }
