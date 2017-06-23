@@ -169,6 +169,7 @@ func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 	testConfig := Minecraft{
 		Server: "biffsgang.net",
+		Port:   "25575",
 		client: &MockClient{
 			Result: []string{
 				`1 tracked objective(s) for divislight:- jumps: 178 (jumps)`,
@@ -186,7 +187,7 @@ func TestGather(t *testing.T) {
 
 	tags := map[string]string{
 		"player": "divislight",
-		"server": "biffsgang.net",
+		"server": "biffsgang.net:25575",
 	}
 
 	assertContainsTaggedStat(t, &acc, "minecraft", "jumps", 178, tags)

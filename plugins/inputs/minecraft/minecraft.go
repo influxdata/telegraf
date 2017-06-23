@@ -66,7 +66,7 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 		}
 		tags := map[string]string{
 			"player": player,
-			"server": s.Server,
+			"server": s.Server + ":" + s.Port,
 		}
 
 		stats, err := ParseScoreboard(score)
