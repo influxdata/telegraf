@@ -3,7 +3,7 @@
 This plugin uses the RCON protocol to collect [statistics](http://minecraft.gamepedia.com/Statistics) from a [scoreboard](http://minecraft.gamepedia.com/Scoreboard) on a
 Minecraft server.
 
-To enable [RCON](http://wiki.vg/RCON) on the minecraft server, add this to your server configuration:
+To enable [RCON](http://wiki.vg/RCON) on the minecraft server, add this to your server configuration in the `server.properties` file:
 
 ```
   enable-rcon=true
