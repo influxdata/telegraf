@@ -6,19 +6,19 @@ Minecraft server.
 To enable [RCON](http://wiki.vg/RCON) on the minecraft server, add this to your server configuration in the `server.properties` file:
 
 ```
-  enable-rcon=true
-  rcon.password=<your password>
-  rcon.port=<1-65535>
+enable-rcon=true
+rcon.password=<your password>
+rcon.port=<1-65535>
 ```
 
-To create a new scoreboard objective called `jump` on a minecraft server tracking the `jump` stat, run this command
+To create a new scoreboard objective called `jump` on a minecraft server tracking the `stat.jump` criteria, run this command
 in the Minecraft console:
 
 `/scoreboard objectives add jump stat.jump`
 
 Stats are collected with the following RCON command, issued by the plugin:
 
-`scoreboard players list *`
+`/scoreboard players list *`
 
 ### Configuration:
 ```
@@ -60,7 +60,7 @@ SELECT SPREAD("jump") FROM "minecraft" WHERE time > now() - 1h GROUP BY "player"
 ```
 $ telegraf --input-filter minecraft --test
 * Plugin: inputs.minecraft, Collection 1
-> minecraft,host=InfluxDatas-MacBook-Air.local,playerName=notch,server=127.0.0.1 jumps=178i 1498254216000000000
-> minecraft,playerName=dinnerbone,server=127.0.0.1,host=InfluxDatas-MacBook-Air.local jumps=1821i,cow_kills=1i,😂=7i,lvl=7i,deaths=1i,iron_pickaxe=3260i,total_kills=40i,dalevel=7i 1498254216000000000
-> minecraft,playerName=jeb,server=127.0.0.1,host=InfluxDatas-MacBook-Air.local total_kills=29i,dalevel=33i,lvl=33i,jumps=263i,😂=33i 1498254216000000000
+> minecraft,host=InfluxDatas-MacBook-Air.local,player=notch,server=127.0.0.1 jumps=178i 1498254216000000000
+> minecraft,player=dinnerbone,server=127.0.0.1,host=InfluxDatas-MacBook-Air.local jumps=1821i,cow_kills=1i,😂=7i,lvl=7i,deaths=1i,iron_pickaxe=3260i,total_kills=40i,dalevel=7i 1498254216000000000
+> minecraft,player=jeb,server=127.0.0.1,host=InfluxDatas-MacBook-Air.local total_kills=29i,dalevel=33i,lvl=33i,jumps=263i,😂=33i 1498254216000000000
 ```
