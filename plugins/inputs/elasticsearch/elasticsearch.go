@@ -169,7 +169,11 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if e.ClusterStats {
 				// get cat/master information here so NodeStats can determine
 				// whether this node is the Master
-				e.setCatMaster(s + "/_cat/master")
+				if err := e.setCatMaster(s + "/_cat/master"); err != nil {
+					acc.AddError(fmt.Errorf("Unable to retrieve master node information."))
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					return
+				}
 			}
 
 			// Always gather node states
