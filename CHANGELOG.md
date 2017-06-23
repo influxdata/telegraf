@@ -29,6 +29,7 @@
 - [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
 - [#2933](https://github.com/influxdata/telegraf/pull/2933): Add standard SSL options to mysql input.
 - [#2875](https://github.com/influxdata/telegraf/pull/2875): Add input plugin for fail2ban.
+- [#2924](https://github.com/influxdata/telegraf/pull/2924): Support HOST_PROC in processes and linux_sysctl_fs inputs.
 
 ### Bugfixes
 
