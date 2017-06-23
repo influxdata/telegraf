@@ -1,7 +1,5 @@
 package minecraft
 
-// minecraft.go
-
 import (
 	"fmt"
 	"regexp"
@@ -12,12 +10,12 @@ import (
 )
 
 const sampleConfig = `
-## server address for minecraft
-server = "localhost"
-## port for RCON
-port = "25575"
-## password RCON for mincraft server
-password = "replace_me"
+  ## server address for minecraft
+  server = "localhost"
+  ## port for RCON
+  port = "25575"
+  ## password RCON for mincraft server
+  password = "replace_me"
 `
 
 var (
