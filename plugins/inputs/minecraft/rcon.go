@@ -31,12 +31,7 @@ type RCON struct {
 
 // NewRCON creates a new RCON
 func NewRCON(server, port, password string) (*RCON, error) {
-	p, err := strconv.Atoi(port)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := rcon.NewClient(server, p)
+	client, err := newClient(server, port)
 	if err != nil {
 		return nil, err
 	}
@@ -49,14 +44,36 @@ func NewRCON(server, port, password string) (*RCON, error) {
 	}, nil
 }
 
+func newClient(server, port string) (*rcon.Client, error) {
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		return nil, err
+	}
+
+	return rcon.NewClient(server, p)
+}
+
 // Gather recieves all player scoreboard information and returns it per player.
 func (r *RCON) Gather() ([]string, error) {
+	if r.client == nil {
+		var err error
+		r.client, err = newClient(r.Server, r.Port)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if _, err := r.client.Authorize(r.Password); err != nil {
+		// Potentially a network problem where the client will need to be
+		// re-initialized
+		r.client = nil
 		return nil, err
 	}
 
 	packet, err := r.client.Execute(ScoreboardPlayerList)
 	if err != nil {
+		// Potentially a network problem where the client will need to be
+		// re-initialized
+		r.client = nil
 		return nil, err
 	}
 
