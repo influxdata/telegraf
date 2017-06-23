@@ -89,7 +89,7 @@ func TestParseScoreboard(t *testing.T) {
 
 	// Tests an empty string.
 	input = ``
-	got, err = ParseScoreboard(input)
+	_, err = ParseScoreboard(input)
 	if err == nil {
 		t.Fatal("Expected input error, but error was nil")
 	}
