@@ -130,7 +130,7 @@ func totalCpuTime(t cpu.TimesStat) float64 {
 }
 
 func activeCpuTime(t cpu.TimesStat) float64 {
-	active := totalCpuTime(t) - t.Idle - t.Iowait
+	active := totalCpuTime(t) - t.Idle
 	return active
 }
 
