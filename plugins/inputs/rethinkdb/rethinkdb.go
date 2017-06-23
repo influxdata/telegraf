@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"gopkg.in/dancannon/gorethink.v1"
+	"gopkg.in/gorethink/gorethink.v3"
 )
 
 type RethinkDB struct {
@@ -74,7 +74,8 @@ func (r *RethinkDB) gatherServer(server *Server, acc telegraf.Accumulator) error
 	if server.Url.User != nil {
 		pwd, set := server.Url.User.Password()
 		if set && pwd != "" {
-			connectOpts.AuthKey = pwd
+			connectOpts.Username = server.Url.User.Username()
+			connectOpts.Password = pwd
 		}
 	}
 	server.session, err = gorethink.Connect(connectOpts)
