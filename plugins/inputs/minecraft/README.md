@@ -60,7 +60,7 @@ SELECT SPREAD("jump") FROM "minecraft" WHERE time > now() - 1h GROUP BY "player"
 ```
 $ telegraf --input-filter minecraft --test
 * Plugin: inputs.minecraft, Collection 1
-> minecraft,host=InfluxDatas-MacBook-Air.local,player=notch,server=127.0.0.1:25575 jumps=178i 1498254216000000000
-> minecraft,player=dinnerbone,server=127.0.0.1:25575,host=InfluxDatas-MacBook-Air.local jumps=1821i,cow_kills=1i,😂=7i,lvl=7i,deaths=1i,iron_pickaxe=3260i,total_kills=40i,dalevel=7i 1498254216000000000
-> minecraft,player=jeb,server=127.0.0.1:25575,host=InfluxDatas-MacBook-Air.local total_kills=29i,dalevel=33i,lvl=33i,jumps=263i,😂=33i 1498254216000000000
+> minecraft,player=notch,server=127.0.0.1:25575 jumps=178i 1498261397000000000
+> minecraft,player=dinnerbone,server=127.0.0.1:25575 deaths=1i,jumps=1999i,cow_kills=1i 1498261397000000000
+> minecraft,player=jeb,server=127.0.0.1:25575 d_pickaxe=1i,damage_dealt=80i,d_sword=2i,hunger=20i,health=20i,kills=1i,level=33i,jumps=264i,armor=15i 1498261397000000000
 ```
