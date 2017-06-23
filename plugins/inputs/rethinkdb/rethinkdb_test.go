@@ -1,5 +1,3 @@
-// +build integration
-
 package rethinkdb
 
 import (
@@ -10,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/dancannon/gorethink.v1"
+	"gopkg.in/gorethink/gorethink.v3"
 )
 
-var connect_url, authKey string
+var connect_url, authKey, username, password string
 var server *Server
 
 func init() {
@@ -22,7 +20,8 @@ func init() {
 		connect_url = "127.0.0.1:28015"
 	}
 	authKey = os.Getenv("RETHINKDB_AUTHKEY")
-
+	username = os.Getenv("RETHINKDB_USERNAME")
+	password = os.Getenv("RETHINKDB_PASSWORD")
 }
 
 func testSetup(m *testing.M) {
@@ -30,7 +29,8 @@ func testSetup(m *testing.M) {
 	server = &Server{Url: &url.URL{Host: connect_url}}
 	server.session, _ = gorethink.Connect(gorethink.ConnectOpts{
 		Address:       server.Url.Host,
-		AuthKey:       authKey,
+		Username:      username,
+		Password:      password,
 		DiscoverHosts: false,
 	})
 	if err != nil {
