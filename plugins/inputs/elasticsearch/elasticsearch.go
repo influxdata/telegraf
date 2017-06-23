@@ -1,13 +1,14 @@
 package elasticsearch
 
 import (
+	"errors"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
 	"sync"
 	"time"
-
+	
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -169,7 +170,10 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if e.ClusterStats {
 				// get cat/master information here so NodeStats can determine
 				// whether this node is the Master
-				e.setCatMaster(s + "/_cat/master")
+				if err := e.setCatMaster(s + "/_cat/master"); err != nil {
+					e.ClusterStats = false
+					acc.AddError(fmt.Errorf("Unable to retrieve master node information. Cluster stats collection was skipped for this interval."))
+				}
 			}
 
 			// Always gather node states
@@ -362,6 +366,10 @@ func (e *Elasticsearch) setCatMaster(url string) error {
 	}
 
 	e.catMasterResponseTokens = strings.Split(string(response), " ")
+
+	if len(e.catMasterResponseTokens) == 0 {
+		return errors.New("Master not discovered")
+	}
 
 	return nil
 }
