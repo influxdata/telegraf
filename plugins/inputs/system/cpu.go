@@ -23,7 +23,7 @@ func NewCPUStats(ps PS) *CPUStats {
 	return &CPUStats{
 		ps:             ps,
 		CollectCPUTime: true,
-		ReportActive: true,
+		ReportActive:   true,
 	}
 }
 
