@@ -1,18 +1,5 @@
 #  Minecraft Plugin
 
-## Configuration:
-```
-[[inputs.minecraft]]
-   # server address for minecraft
-   server = "localhost"
-   # port for RCON
-   port = "25575"
-   # password RCON for mincraft server
-   password = "replace_me"
-```
-
-## Description
-
 This plugin uses the RCON protocol to collect [statistics](http://minecraft.gamepedia.com/Statistics) from a [scoreboard](http://minecraft.gamepedia.com/Scoreboard) on a
 Minecraft server.
 
@@ -33,11 +20,26 @@ Stats are collected with the following RCON command, issued by the plugin:
 
 `scoreboard players list *`
 
-## Measurements:
-### Minecraft measurement
+### Configuration:
+```
+[[inputs.minecraft]]
+   # server address for minecraft
+   server = "localhost"
+   # port for RCON
+   port = "25575"
+   # password RCON for mincraft server
+   password = "replace_me"
+```
+
+### Measurements & Fields:
 
 *This plugin uses only one measurement, titled* `minecraft`
 
+- The field name is the scoreboard objective name.
+- The field value is the count of the scoreboard objective
+
+- `minecraft`
+    - `<objective_name>` (integer, count)
 
 ### Tags:
 
@@ -46,7 +48,19 @@ Stats are collected with the following RCON command, issued by the plugin:
     - `player`: the Minecraft player
 
 
+### Sample Queries:
 
-### Fields:
-- The field name is the scoreboard objective name.
-- The field value is the count of the scoreboard objective
+Get the number of jumps per player in the last hour:
+```
+SELECT SPREAD("jump") FROM "minecraft" WHERE time > now() - 1h GROUP BY "player"
+```
+
+### Example Output:
+
+```
+$ telegraf --input-filter minecraft --test
+* Plugin: inputs.minecraft, Collection 1
+> minecraft,host=InfluxDatas-MacBook-Air.local,playerName=notch,server=127.0.0.1 jumps=178i 1498254216000000000
+> minecraft,playerName=dinnerbone,server=127.0.0.1,host=InfluxDatas-MacBook-Air.local jumps=1821i,cow_kills=1i,😂=7i,lvl=7i,deaths=1i,iron_pickaxe=3260i,total_kills=40i,dalevel=7i 1498254216000000000
+> minecraft,playerName=jeb,server=127.0.0.1,host=InfluxDatas-MacBook-Air.local total_kills=29i,dalevel=33i,lvl=33i,jumps=263i,😂=33i 1498254216000000000
+```
