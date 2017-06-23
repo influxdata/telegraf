@@ -11,11 +11,11 @@ import (
 
 const sampleConfig = `
   ## server address for minecraft
-  server = "localhost"
+  # server = "localhost"
   ## port for RCON
-  port = "25575"
+  # port = "25575"
   ## password RCON for mincraft server
-  password = "replace_me"
+  # password = ""
 `
 
 var (
