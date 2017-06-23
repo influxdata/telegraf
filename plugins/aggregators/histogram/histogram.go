@@ -142,7 +142,7 @@ func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
 
 			for index, bucket := range buckets {
 				count += counts[index]
-				addFields(acc, aggregate, field, strconv.FormatFloat(bucket, 'f', 1, 64), count)
+				addFields(acc, aggregate, field, strconv.FormatFloat(bucket, 'f', -1, 64), count)
 			}
 
 			// the adding a value to the infinitive bucket
