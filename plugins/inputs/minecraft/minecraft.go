@@ -20,6 +20,11 @@ port = "25575"
 password = "replace_me"
 `
 
+var (
+	playerNameRegex = regexp.MustCompile(`for\s([^:]+):-`)
+	scoreboardRegex = regexp.MustCompile(`(?U):\s(\d+)\s\((.*)\)`)
+)
+
 // Client is an interface for a client which gathers data from a minecraft server
 type Client interface {
 	Gather() ([]string, error)
@@ -87,9 +92,7 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 // ParsePlayerName takes an input string from rcon, to parse
 // the player.
 func ParsePlayerName(input string) (string, error) {
-	var re = regexp.MustCompile(`for\s(.*):-`)
-
-	playerMatches := re.FindAllStringSubmatch(input, -1)
+	playerMatches := playerNameRegex.FindAllStringSubmatch(input, -1)
 	if playerMatches == nil {
 		return "", fmt.Errorf("no player was matched")
 	}
@@ -105,8 +108,7 @@ type Score struct {
 // ParseScoreboard takes an input string from rcon, to parse
 // scoreboard stats.
 func ParseScoreboard(input string) ([]Score, error) {
-	var re = regexp.MustCompile(`(?U):\s(\d+)\s\((.*)\)`)
-	scoreMatches := re.FindAllStringSubmatch(input, -1)
+	scoreMatches := scoreboardRegex.FindAllStringSubmatch(input, -1)
 	if scoreMatches == nil {
 		return nil, fmt.Errorf("No scores found")
 	}
