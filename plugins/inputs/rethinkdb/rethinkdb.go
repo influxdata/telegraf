@@ -16,8 +16,6 @@ type RethinkDB struct {
 }
 
 var sampleConfig = `
-# # Read metrics from one or many RethinkDB servers
-# [[inputs.rethinkdb]]
 #   ## An array of URI to gather stats about. Specify an ip or hostname
 #   ## with optional port add password. ie,
 #   ##   rethinkdb://user:auth_key@10.10.3.30:28105,
