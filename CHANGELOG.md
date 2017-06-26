@@ -13,6 +13,7 @@
 ### New Plugins
 
 - [fail2ban](./plugins/inputs/fail2ban/README.md)
+- [minecraft](./plugins/inputs/minecraft/README.md)
 
 ### Features
 
@@ -29,6 +30,8 @@
 - [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
 - [#2933](https://github.com/influxdata/telegraf/pull/2933): Add standard SSL options to mysql input.
 - [#2875](https://github.com/influxdata/telegraf/pull/2875): Add input plugin for fail2ban.
+- [#2924](https://github.com/influxdata/telegraf/pull/2924): Support HOST_PROC in processes and linux_sysctl_fs inputs.
+- [#2960](https://github.com/influxdata/telegraf/pull/2960): Add Minecraft input plugin.
 
 ### Bugfixes
 
@@ -51,6 +54,7 @@
 
 - [#2915](https://github.com/influxdata/telegraf/issues/2915): Allow dos line endings in tail and logparser.
 - [#2937](https://github.com/influxdata/telegraf/issues/2937): Remove label value sanitization in prometheus output.
+- [#2948](https://github.com/influxdata/telegraf/issues/2948): Fix bug parsing default timestamps with modified precision.
 
 ## v1.3.2 [2017-06-14]
 

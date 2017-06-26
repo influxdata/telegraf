@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"path"
 )
 
 // https://www.kernel.org/doc/Documentation/sysctl/fs.txt
@@ -80,9 +81,10 @@ func (sfs *SysctlFS) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
+
 	inputs.Add("linux_sysctl_fs", func() telegraf.Input {
 		return &SysctlFS{
-			path: "/proc/sys/fs",
+			path: path.Join(GetHostProc(), "/sys/fs"),
 		}
 	})
 }
