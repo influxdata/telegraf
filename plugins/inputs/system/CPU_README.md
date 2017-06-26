@@ -3,6 +3,8 @@
 #### Plugin arguments:
 - **totalcpu** boolean: If true, include `cpu-total` data
 - **percpu** boolean: If true, include data on a per-cpu basis `cpu0, cpu1, etc.`
+- **collect_cpu_time** boolean: If true, collect raw CPU time metrics `cpu_usage_total`
+- **collect_summary_cpu_usage** boolean: If true, include summary CPU usage `cpu_usage_total`
 
 
 ##### Configuration:
@@ -93,3 +95,4 @@ Measurement names:
 - cpu_usage_steal
 - cpu_usage_guest
 - cpu_usage_guest_nice
+- cpu_usage_total
