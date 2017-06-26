@@ -33,6 +33,7 @@
 - [#2924](https://github.com/influxdata/telegraf/pull/2924): Support HOST_PROC in processes and linux_sysctl_fs inputs.
 - [#2960](https://github.com/influxdata/telegraf/pull/2960): Add Minecraft input plugin.
 - [#2963](https://github.com/influxdata/telegraf/pull/2963): Add support for RethinkDB 1.0 handshake protocol.
+- [#2943](https://github.com/influxdata/telegraf/pull/2943): Add optional usage_active and time_active CPU metrics.
 
 ### Bugfixes
 
