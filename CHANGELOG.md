@@ -32,6 +32,7 @@
 - [#2875](https://github.com/influxdata/telegraf/pull/2875): Add input plugin for fail2ban.
 - [#2924](https://github.com/influxdata/telegraf/pull/2924): Support HOST_PROC in processes and linux_sysctl_fs inputs.
 - [#2960](https://github.com/influxdata/telegraf/pull/2960): Add Minecraft input plugin.
+- [#2963](https://github.com/influxdata/telegraf/pull/2963): Add support for RethinkDB 1.0 handshake protocol.
 
 ### Bugfixes
 
