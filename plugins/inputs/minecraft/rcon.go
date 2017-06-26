@@ -1,6 +1,7 @@
 package minecraft
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -56,21 +57,29 @@ func newClient(server, port string) (*rcon.Client, error) {
 // Gather recieves all player scoreboard information and returns it per player.
 func (r *RCON) Gather() ([]string, error) {
 	if r.client == nil {
+		fmt.Println("1")
 		var err error
 		r.client, err = newClient(r.Server, r.Port)
 		if err != nil {
+			fmt.Println("2")
 			return nil, err
 		}
+	}
+
+	if r.client == nil {
+		fmt.Println("3")
 	}
 	if _, err := r.client.Authorize(r.Password); err != nil {
 		// Potentially a network problem where the client will need to be
 		// re-initialized
+		fmt.Println("3.5")
 		r.client = nil
 		return nil, err
 	}
 
 	packet, err := r.client.Execute(ScoreboardPlayerList)
 	if err != nil {
+		fmt.Println("4: execute error")
 		// Potentially a network problem where the client will need to be
 		// re-initialized
 		r.client = nil

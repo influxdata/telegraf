@@ -137,6 +137,7 @@ func (c *Client) Send(typ int32, command string) (response *Packet, err error) {
 	} else if n, err = c.Connection.Write(payload); nil != err {
 		return
 	} else if n != len(payload) {
+		fmt.Println("erroing on invalid write!")
 		err = ErrInvalidWrite
 		return
 	}
@@ -172,11 +173,25 @@ func (c *Client) Send(typ int32, command string) (response *Packet, err error) {
 
 	body := make([]byte, header.Size-int32(PacketHeaderSize))
 
+	fmt.Printf("header.Size: %d, PacketHeaderSize: %d\n", header.Size, PacketHeaderSize)
+
 	n, err = c.Connection.Read(body)
+
+	for n < len(body) {
+		var nBytes int
+		nBytes, err = c.Connection.Read(body[n:])
+		fmt.Println("Number of bytes read: ", nBytes)
+		if err != nil {
+			return
+		}
+		n += nBytes
+	}
 
 	if nil != err {
 		return
 	} else if n != len(body) {
+		fmt.Printf("n: %d, body: %d\n", n, len(body))
+		fmt.Println("erroring on invalid read!")
 		err = ErrInvalidRead
 		return
 	}
