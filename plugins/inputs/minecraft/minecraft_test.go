@@ -161,7 +161,7 @@ type MockClient struct {
 	Err    error
 }
 
-func (m *MockClient) Gather() ([]string, error) {
+func (m *MockClient) Gather(d RCONClientProducer) ([]string, error) {
 	return m.Result, m.Err
 }
 
@@ -178,11 +178,17 @@ func TestGather(t *testing.T) {
 			},
 			Err: nil,
 		},
+		clientSet: true,
 	}
 
 	err := testConfig.Gather(&acc)
+
 	if err != nil {
 		t.Fatalf("gather returned error. Error: %s\n", err)
+	}
+
+	if !testConfig.clientSet {
+		t.Fatalf("clientSet should be true, client should be set")
 	}
 
 	tags := map[string]string{
