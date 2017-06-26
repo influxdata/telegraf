@@ -57,6 +57,7 @@
 - [#2915](https://github.com/influxdata/telegraf/issues/2915): Allow dos line endings in tail and logparser.
 - [#2937](https://github.com/influxdata/telegraf/issues/2937): Remove label value sanitization in prometheus output.
 - [#2948](https://github.com/influxdata/telegraf/issues/2948): Fix bug parsing default timestamps with modified precision.
+- [#2954](https://github.com/influxdata/telegraf/issues/2954): Fix panic in elasticsearch input if cannot determine master.
 
 ## v1.3.2 [2017-06-14]
 
