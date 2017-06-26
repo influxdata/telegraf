@@ -1,7 +1,6 @@
 package minecraft
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,6 +29,22 @@ type RCON struct {
 	client   RCONClient
 }
 
+// RCONClientProducer is an interface which defines how a new client will be
+// produced in the event of a network disconnect. It exists mainly for
+// testing purposes
+type RCONClientProducer interface {
+	newClient() (RCONClient, error)
+}
+
+type defaultClientProducer struct {
+	Server string
+	Port   string
+}
+
+func (d defaultClientProducer) newClient() (RCONClient, error) {
+	return newClient(d.Server, d.Port)
+}
+
 // NewRCON creates a new RCON
 func NewRCON(server, port, password string) (*RCON, error) {
 	client, err := newClient(server, port)
@@ -51,35 +66,35 @@ func newClient(server, port string) (*rcon.Client, error) {
 		return nil, err
 	}
 
-	return rcon.NewClient(server, p)
+	client, err := rcon.NewClient(server, p)
+
+	// If we've encountered any error, the contents of `client` could be corrupted,
+	// so we must return nil, err
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 // Gather recieves all player scoreboard information and returns it per player.
-func (r *RCON) Gather() ([]string, error) {
+func (r *RCON) Gather(producer RCONClientProducer) ([]string, error) {
 	if r.client == nil {
-		fmt.Println("1")
 		var err error
-		r.client, err = newClient(r.Server, r.Port)
+		r.client, err = producer.newClient()
 		if err != nil {
-			fmt.Println("2")
 			return nil, err
 		}
 	}
 
-	if r.client == nil {
-		fmt.Println("3")
-	}
 	if _, err := r.client.Authorize(r.Password); err != nil {
 		// Potentially a network problem where the client will need to be
 		// re-initialized
-		fmt.Println("3.5")
 		r.client = nil
 		return nil, err
 	}
 
 	packet, err := r.client.Execute(ScoreboardPlayerList)
 	if err != nil {
-		fmt.Println("4: execute error")
 		// Potentially a network problem where the client will need to be
 		// re-initialized
 		r.client = nil
