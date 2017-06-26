@@ -15,8 +15,7 @@ windows: prepare-windows build-windows
 
 # Only run the build (no dependency grabbing)
 build:
-	go install -ldflags \
-		"-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" ./...
+	go install -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" ./...
 
 build-windows:
 	GOOS=windows GOARCH=amd64 go build -o telegraf.exe -ldflags \
