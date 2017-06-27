@@ -32,6 +32,8 @@
 - [#2875](https://github.com/influxdata/telegraf/pull/2875): Add input plugin for fail2ban.
 - [#2924](https://github.com/influxdata/telegraf/pull/2924): Support HOST_PROC in processes and linux_sysctl_fs inputs.
 - [#2960](https://github.com/influxdata/telegraf/pull/2960): Add Minecraft input plugin.
+- [#2963](https://github.com/influxdata/telegraf/pull/2963): Add support for RethinkDB 1.0 handshake protocol.
+- [#2943](https://github.com/influxdata/telegraf/pull/2943): Add optional usage_active and time_active CPU metrics.
 
 ### Bugfixes
 
@@ -55,6 +57,7 @@
 - [#2915](https://github.com/influxdata/telegraf/issues/2915): Allow dos line endings in tail and logparser.
 - [#2937](https://github.com/influxdata/telegraf/issues/2937): Remove label value sanitization in prometheus output.
 - [#2948](https://github.com/influxdata/telegraf/issues/2948): Fix bug parsing default timestamps with modified precision.
+- [#2954](https://github.com/influxdata/telegraf/issues/2954): Fix panic in elasticsearch input if cannot determine master.
 
 ## v1.3.2 [2017-06-14]
 
