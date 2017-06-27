@@ -1,11 +1,17 @@
-VERSION := $(shell sh -c 'git describe --always --tags')
-BRANCH := $(shell sh -c 'git rev-parse --abbrev-ref HEAD')
-COMMIT := $(shell sh -c 'git rev-parse --short HEAD')
+VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+COMMIT := $(shell git rev-parse --short HEAD)
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
 else
 PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
+
+LDFLAGS := -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
+ifdef VERSION
+	LDFLAGS += -X main.version=$(VERSION)
+endif
+
 
 # Standard Telegraf build
 default: prepare build
@@ -15,17 +21,16 @@ windows: prepare-windows build-windows
 
 # Only run the build (no dependency grabbing)
 build:
-	go install -ldflags \
-		"-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" ./...
+	go install -ldflags "$(LDFLAGS)" ./...
 
 build-windows:
-	GOOS=windows GOARCH=amd64 go build -o telegraf.exe -ldflags \
-		"-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" \
+	GOOS=windows GOARCH=amd64 go build -o telegraf.exe \
+		 -ldflags "$(LDFLAGS)" \
 		./cmd/telegraf/telegraf.go
 
 build-for-docker:
-	CGO_ENABLED=0 GOOS=linux go build -installsuffix cgo -o telegraf -ldflags \
-		"-s -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" \
+	CGO_ENABLED=0 GOOS=linux go build -installsuffix cgo -o telegraf \
+		 -ldflags "$(LDFLAGS)" \
 		./cmd/telegraf/telegraf.go
 
 # run package script
