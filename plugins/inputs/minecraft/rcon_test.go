@@ -40,7 +40,8 @@ func TestRCONGather(t *testing.T) {
 		client:   mock,
 	}
 
-	got, err := client.Gather()
+	d := defaultClientProducer{}
+	got, err := client.Gather(d)
 	if err != nil {
 		t.Fatalf("Gather returned an error. Error %s\n", err)
 	}
@@ -57,7 +58,7 @@ func TestRCONGather(t *testing.T) {
 		Err: nil,
 	}
 
-	got, err = client.Gather()
+	got, err = client.Gather(defaultClientProducer{})
 	if err != nil {
 		t.Fatalf("Gather returned an error. Error %s\n", err)
 	}

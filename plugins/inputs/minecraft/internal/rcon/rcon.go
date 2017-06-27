@@ -171,8 +171,16 @@ func (c *Client) Send(typ int32, command string) (response *Packet, err error) {
 	}
 
 	body := make([]byte, header.Size-int32(PacketHeaderSize))
-
 	n, err = c.Connection.Read(body)
+
+	for n < len(body) {
+		var nBytes int
+		nBytes, err = c.Connection.Read(body[n:])
+		if err != nil {
+			return
+		}
+		n += nBytes
+	}
 
 	if nil != err {
 		return

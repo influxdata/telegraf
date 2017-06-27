@@ -25,15 +25,16 @@ var (
 
 // Client is an interface for a client which gathers data from a minecraft server
 type Client interface {
-	Gather() ([]string, error)
+	Gather(producer RCONClientProducer) ([]string, error)
 }
 
 // Minecraft represents a connection to a minecraft server
 type Minecraft struct {
-	Server   string
-	Port     string
-	Password string
-	client   Client
+	Server    string
+	Port      string
+	Password  string
+	client    Client
+	clientSet bool
 }
 
 // Description gives a brief description.
@@ -48,16 +49,26 @@ func (s *Minecraft) SampleConfig() string {
 
 // Gather uses the RCON protocal to collect player and
 // scoreboard stats from a minecraft server.
+//var hasClient bool = false
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
-	if s.client == nil {
+	// can't simply compare s.client to nil, because comparing an interface
+	// to nil often does not produce the desired result
+	if !s.clientSet {
 		var err error
 		s.client, err = NewRCON(s.Server, s.Port, s.Password)
 		if err != nil {
 			return err
 		}
+		s.clientSet = true
 	}
 
-	scores, err := s.client.Gather()
+	// (*RCON).Gather() takes an RCONClientProducer for testing purposes
+	d := defaultClientProducer{
+		Server: s.Server,
+		Port:   s.Port,
+	}
+
+	scores, err := s.client.Gather(d)
 	if err != nil {
 		return err
 	}
