@@ -10,6 +10,8 @@
 - In the `aerospike` input the `node_name` field has been changed to be a tag
   for both the `aerospike_node` and `aerospike_namespace` measurements.
 
+- **breaking change** Change default prometheus_client port to 9273. To play well with Prometheus [port-allocations](https://github.com/prometheus/prometheus/wiki/Default-port-allocations)
+
 ### New Plugins
 
 - [fail2ban](./plugins/inputs/fail2ban/README.md)
