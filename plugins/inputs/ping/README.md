@@ -13,6 +13,7 @@ urls = ["www.google.com"] # required
 ## number of pings to send per collection (ping -c <COUNT>)
 # count = 1
 ## interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
+## Not available in Windows.
 # ping_interval = 1.0
 ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
 # timeout = 1.0
@@ -41,7 +42,7 @@ urls = ["www.google.com"] # required
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter ping -test
+$ ./telegraf --config telegraf.conf --input-filter ping --test
 * Plugin: ping, Collection 1
 ping,host=WIN-PBAPLP511R7,url=www.google.com average_response_ms=7i,maximum_response_ms=9i,minimum_response_ms=7i,packets_received=4i,packets_transmitted=4i,percent_packet_loss=0,percent_reply_loss=0,reply_received=4i 1469879119000000000
 ```

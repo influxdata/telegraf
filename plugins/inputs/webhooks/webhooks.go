@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/papertrail"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
 
@@ -27,10 +28,11 @@ func init() {
 type Webhooks struct {
 	ServiceAddress string
 
-	Github    *github.GithubWebhook
-	Filestack *filestack.FilestackWebhook
-	Mandrill  *mandrill.MandrillWebhook
-	Rollbar   *rollbar.RollbarWebhook
+	Github     *github.GithubWebhook
+	Filestack  *filestack.FilestackWebhook
+	Mandrill   *mandrill.MandrillWebhook
+	Rollbar    *rollbar.RollbarWebhook
+	Papertrail *papertrail.PapertrailWebhook
 }
 
 func NewWebhooks() *Webhooks {
@@ -47,12 +49,16 @@ func (wb *Webhooks) SampleConfig() string {
 
   [inputs.webhooks.github]
     path = "/github"
+    # secret = ""
 
   [inputs.webhooks.mandrill]
     path = "/mandrill"
 
   [inputs.webhooks.rollbar]
     path = "/rollbar"
+
+  [inputs.webhooks.papertrail]
+    path = "/papertrail"
  `
 }
 
@@ -73,7 +79,7 @@ func (wb *Webhooks) Listen(acc telegraf.Accumulator) {
 
 	err := http.ListenAndServe(fmt.Sprintf("%s", wb.ServiceAddress), r)
 	if err != nil {
-		log.Printf("E! Error starting server: %v", err)
+		acc.AddError(fmt.Errorf("E! Error starting server: %v", err))
 	}
 }
 

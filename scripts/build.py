@@ -85,7 +85,7 @@ targets = {
 
 supported_builds = {
     "windows": [ "amd64", "i386" ],
-    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64" ],
+    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x"],
     "freebsd": [ "amd64", "i386" ]
 }
 
@@ -499,13 +499,12 @@ def build(version=None,
         logging.info("Time taken: {}s".format((end_time - start_time).total_seconds()))
     return True
 
-def generate_md5_from_file(path):
-    """Generate MD5 signature based on the contents of the file at path.
+def generate_sha256_from_file(path):
+    """Generate SHA256 hash signature based on the contents of the file at path.
     """
-    m = hashlib.md5()
+    m = hashlib.sha256()
     with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            m.update(chunk)
+        m.update(f.read())
     return m.hexdigest()
 
 def generate_sig_from_file(path):
@@ -636,6 +635,10 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     elif package_type not in ['zip', 'tar'] and static or "static_" in arch:
                         logging.info("Skipping package type '{}' for static builds.".format(package_type))
                     else:
+                        if package_type == 'rpm' and release and '~' in package_version:
+                            package_version, suffix = package_version.split('~', 1)
+                            # The ~ indicatees that this is a prerelease so we give it a leading 0.
+                            package_iteration = "0.%s" % suffix
                         fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
                             fpm_common_args,
                             name,
@@ -664,9 +667,6 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                                 if package_type == 'rpm':
                                     # rpm's convert any dashes to underscores
                                     package_version = package_version.replace("-", "_")
-                                new_outfile = outfile.replace("{}-{}".format(package_version, package_iteration), package_version)
-                                os.rename(outfile, new_outfile)
-                                outfile = new_outfile
                             outfiles.append(os.path.join(os.getcwd(), outfile))
         logging.debug("Produced package files: {}".format(outfiles))
         return outfiles
@@ -789,9 +789,10 @@ def main(args):
             if not upload_packages(packages, bucket_name=args.bucket, overwrite=args.upload_overwrite):
                 return 1
         logging.info("Packages created:")
-        for p in packages:
-            logging.info("{} (MD5={})".format(p.split('/')[-1:][0],
-                                              generate_md5_from_file(p)))
+        for filename in packages:
+            logging.info("%s (SHA256=%s)",
+                         os.path.basename(filename),
+                         generate_sha256_from_file(filename))
     if orig_branch != get_current_branch():
         logging.info("Moving back to original git branch: {}".format(args.branch))
         run("git checkout {}".format(orig_branch))

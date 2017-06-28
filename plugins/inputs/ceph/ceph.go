@@ -101,12 +101,12 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 	for _, s := range sockets {
 		dump, err := perfDump(c.CephBinary, s)
 		if err != nil {
-			log.Printf("E! error reading from socket '%s': %v", s.socket, err)
+			acc.AddError(fmt.Errorf("E! error reading from socket '%s': %v", s.socket, err))
 			continue
 		}
 		data, err := parseDump(dump)
 		if err != nil {
-			log.Printf("E! error parsing dump from socket '%s': %v", s.socket, err)
+			acc.AddError(fmt.Errorf("E! error parsing dump from socket '%s': %v", s.socket, err))
 			continue
 		}
 		for tag, metrics := range data {

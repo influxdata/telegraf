@@ -15,6 +15,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb/client"
 )
 
+var (
+	// Quote Ident replacer.
+	qiReplacer = strings.NewReplacer("\n", `\n`, `\`, `\\`, `"`, `\"`)
+)
+
+// InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
 	// URL is only for backwards compatability
 	URL              string
@@ -26,7 +32,8 @@ type InfluxDB struct {
 	RetentionPolicy  string
 	WriteConsistency string
 	Timeout          internal.Duration
-	UDPPayload       int `toml:"udp_payload"`
+	UDPPayload       int    `toml:"udp_payload"`
+	HTTPProxy        string `toml:"http_proxy"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -55,7 +62,8 @@ var sampleConfig = `
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
-  ## Retention policy to write to. Empty string writes to the default rp.
+  ## Name of existing retention policy to write to.  Empty string writes to
+  ## the default retention policy.
   retention_policy = ""
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
   write_consistency = "any"
@@ -76,13 +84,15 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Proxy Config
+  # http_proxy = "http://corporate.proxy:3128"
 `
 
+// Connect initiates the primary connection to the range of provided URLs
 func (i *InfluxDB) Connect() error {
 	var urls []string
-	for _, u := range i.URLs {
-		urls = append(urls, u)
-	}
+	urls = append(urls, i.URLs...)
 
 	// Backward-compatability with single Influx URL config files
 	// This could eventually be removed in favor of specifying the urls as a list
@@ -117,6 +127,7 @@ func (i *InfluxDB) Connect() error {
 				UserAgent: i.UserAgent,
 				Username:  i.Username,
 				Password:  i.Password,
+				HTTPProxy: i.HTTPProxy,
 			}
 			wp := client.WriteParams{
 				Database:        i.Database,
@@ -129,9 +140,11 @@ func (i *InfluxDB) Connect() error {
 			}
 			i.clients = append(i.clients, c)
 
-			err = c.Query("CREATE DATABASE " + i.Database)
+			err = c.Query(fmt.Sprintf(`CREATE DATABASE "%s"`, qiReplacer.Replace(i.Database)))
 			if err != nil {
-				log.Println("E! Database creation failed: " + err.Error())
+				if !strings.Contains(err.Error(), "Status Code [403]") {
+					log.Println("I! Database creation failed: " + err.Error())
+				}
 				continue
 			}
 		}
@@ -141,25 +154,30 @@ func (i *InfluxDB) Connect() error {
 	return nil
 }
 
+// Close will terminate the session to the backend, returning error if an issue arises
 func (i *InfluxDB) Close() error {
 	return nil
 }
 
+// SampleConfig returns the formatted sample configuration for the plugin
 func (i *InfluxDB) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns the human-readable function definition of the plugin
 func (i *InfluxDB) Description() string {
 	return "Configuration for influxdb server to send metrics to"
 }
 
-// Choose a random server in the cluster to write to until a successful write
+// Write will choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
+
 	bufsize := 0
 	for _, m := range metrics {
 		bufsize += m.Len()
 	}
+
 	r := metric.NewReader(metrics)
 
 	// This will get set to nil if a successful write occurs
@@ -170,7 +188,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		if _, e := i.clients[n].WriteStream(r, bufsize); e != nil {
 			// If the database was not found, try to recreate it:
 			if strings.Contains(e.Error(), "database not found") {
-				if errc := i.clients[n].Query("CREATE DATABASE  " + i.Database); errc != nil {
+				errc := i.clients[n].Query(fmt.Sprintf(`CREATE DATABASE "%s"`, qiReplacer.Replace(i.Database)))
+				if errc != nil {
 					log.Printf("E! Error: Database %s not found and failed to recreate\n",
 						i.Database)
 				}

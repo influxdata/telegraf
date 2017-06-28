@@ -23,7 +23,7 @@ func newTestKafka() (*Kafka, chan *sarama.ConsumerMessage) {
 	k := Kafka{
 		ConsumerGroup:   "test",
 		Topics:          []string{"telegraf"},
-		ZookeeperPeers:  []string{"localhost:2181"},
+		Brokers:         []string{"localhost:9092"},
 		Offset:          "oldest",
 		in:              in,
 		doNotCommitMsgs: true,
@@ -92,7 +92,7 @@ func TestRunParserAndGather(t *testing.T) {
 	in <- saramaMsg(testMsg)
 	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 1)
 	acc.AssertContainsFields(t, "cpu_load_short",
@@ -111,7 +111,7 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	in <- saramaMsg(testMsgGraphite)
 	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 1)
 	acc.AssertContainsFields(t, "cpu_load_short_graphite",
@@ -130,7 +130,7 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	in <- saramaMsg(testMsgJSON)
 	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 2)
 	acc.AssertContainsFields(t, "kafka_json_test",

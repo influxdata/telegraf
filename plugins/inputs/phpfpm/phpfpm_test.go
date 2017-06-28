@@ -35,7 +35,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -75,7 +75,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = r.Gather(&acc)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -119,7 +119,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -163,7 +163,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
@@ -193,7 +193,7 @@ func TestPhpFpmDefaultGetFromLocalhost(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "127.0.0.1/status")
 }
@@ -205,7 +205,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `Unable to connect to phpfpm status page 'http://aninvalidone': Get http://aninvalidone: dial tcp: lookup aninvalidone`)
 }
@@ -217,7 +217,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
 	assert.Equal(t, `Socket doesn't exist  '/tmp/invalid.sock': stat /tmp/invalid.sock: no such file or directory`, err.Error())
 

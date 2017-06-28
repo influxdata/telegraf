@@ -21,6 +21,19 @@ func GithubWebhookRequest(event string, jsonString string, t *testing.T) {
 	}
 }
 
+func GithubWebhookRequestWithSignature(event string, jsonString string, t *testing.T, signature string, expectedStatus int) {
+	var acc testutil.Accumulator
+	gh := &GithubWebhook{Path: "/github", Secret: "signature", acc: &acc}
+	req, _ := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
+	req.Header.Add("X-Github-Event", event)
+	req.Header.Add("X-Hub-Signature", signature)
+	w := httptest.NewRecorder()
+	gh.eventHandler(w, req)
+	if w.Code != expectedStatus {
+		t.Errorf("POST "+event+" returned HTTP status code %v.\nExpected %v", w.Code, expectedStatus)
+	}
+}
+
 func TestCommitCommentEvent(t *testing.T) {
 	GithubWebhookRequest("commit_comment", CommitCommentEventJSON(), t)
 }
@@ -99,4 +112,24 @@ func TestTeamAddEvent(t *testing.T) {
 
 func TestWatchEvent(t *testing.T) {
 	GithubWebhookRequest("watch", WatchEventJSON(), t)
+}
+
+func TestEventWithSignatureFail(t *testing.T) {
+	GithubWebhookRequestWithSignature("watch", WatchEventJSON(), t, "signature", http.StatusBadRequest)
+}
+
+func TestEventWithSignatureSuccess(t *testing.T) {
+	GithubWebhookRequestWithSignature("watch", WatchEventJSON(), t, generateSignature("signature", []byte(WatchEventJSON())), http.StatusOK)
+}
+
+func TestCheckSignatureSuccess(t *testing.T) {
+	if !checkSignature("my_little_secret", []byte("random-signature-body"), "sha1=3dca279e731c97c38e3019a075dee9ebbd0a99f0") {
+		t.Errorf("check signature failed")
+	}
+}
+
+func TestCheckSignatureFailed(t *testing.T) {
+	if checkSignature("m_little_secret", []byte("random-signature-body"), "sha1=3dca279e731c97c38e3019a075dee9ebbd0a99f0") {
+		t.Errorf("check signature failed")
+	}
 }

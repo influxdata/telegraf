@@ -129,7 +129,7 @@ func parseMetric(buf []byte,
 	// apply precision multiplier
 	var nsec int64
 	multiplier := getPrecisionMultiplier(precision)
-	if multiplier > 1 {
+	if len(ts) > 0 && multiplier > 1 {
 		tsint, err := parseIntBytes(ts, 10, 64)
 		if err != nil {
 			return nil, err

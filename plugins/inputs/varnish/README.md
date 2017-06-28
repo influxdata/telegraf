@@ -333,7 +333,7 @@ the following values:
 ### Example Output:
 
 ```
- telegraf -test -config etc/telegraf.conf  -input-filter varnish
+ telegraf --config etc/telegraf.conf --input-filter varnish --test
 * Plugin: varnish, Collection 1
 > varnish,host=rpercy-VirtualBox,section=MAIN cache_hit=0i,cache_miss=0i,uptime=8416i 1462765437090957980
 ```

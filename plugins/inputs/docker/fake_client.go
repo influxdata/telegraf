@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/registry"
 )
 
@@ -148,4 +149,24 @@ func (d FakeDockerClient) ContainerStats(ctx context.Context, containerID string
 	jsonStat := `{"read":"2016-02-24T11:42:27.472459608-05:00","memory_stats":{"stats":{},"limit":18935443456},"blkio_stats":{"io_service_bytes_recursive":[{"major":252,"minor":1,"op":"Read","value":753664},{"major":252,"minor":1,"op":"Write"},{"major":252,"minor":1,"op":"Sync"},{"major":252,"minor":1,"op":"Async","value":753664},{"major":252,"minor":1,"op":"Total","value":753664}],"io_serviced_recursive":[{"major":252,"minor":1,"op":"Read","value":26},{"major":252,"minor":1,"op":"Write"},{"major":252,"minor":1,"op":"Sync"},{"major":252,"minor":1,"op":"Async","value":26},{"major":252,"minor":1,"op":"Total","value":26}]},"cpu_stats":{"cpu_usage":{"percpu_usage":[17871,4959158,1646137,1231652,11829401,244656,369972,0],"usage_in_usermode":10000000,"total_usage":20298847},"system_cpu_usage":24052607520000000,"throttling_data":{}},"precpu_stats":{"cpu_usage":{"percpu_usage":[17871,4959158,1646137,1231652,11829401,244656,369972,0],"usage_in_usermode":10000000,"total_usage":20298847},"system_cpu_usage":24052599550000000,"throttling_data":{}}}`
 	stat.Body = ioutil.NopCloser(strings.NewReader(jsonStat))
 	return stat, nil
+}
+
+func (d FakeDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+	json := types.ContainerJSON{
+		Config: &container.Config{
+			Env: []string{
+				"ENVVAR1=loremipsum",
+				"ENVVAR1FOO=loremipsum",
+				"ENVVAR2=dolorsitamet",
+				"ENVVAR3==ubuntu:10.04",
+				"ENVVAR4",
+				"ENVVAR5=",
+				"ENVVAR6= ",
+				"ENVVAR7=ENVVAR8=ENVVAR9",
+				"PATH=/bin:/sbin",
+			},
+		},
+	}
+
+	return json, nil
 }

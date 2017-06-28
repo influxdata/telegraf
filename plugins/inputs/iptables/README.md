@@ -78,7 +78,7 @@ pkts bytes target     prot opt in     out     source               destination
 ```
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter iptables -test
+$ ./telegraf --config telegraf.conf --input-filter iptables --test
 iptables,table=filter,chain=INPUT,ruleid=ssh pkts=100i,bytes=1024i 1453831884664956455
 iptables,table=filter,chain=INPUT,ruleid=httpd pkts=42i,bytes=2048i 1453831884664956455
 ```

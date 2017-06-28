@@ -18,7 +18,8 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
-  ## Retention policy to write to. Empty string writes to the default rp.
+  ## Name of existing retention policy to write to.  Empty string writes to
+  ## the default retention policy.
   retention_policy = ""
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
   write_consistency = "any"
@@ -39,6 +40,9 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Proxy Config
+  # http_proxy = "http://corporate.proxy:3128"
 ```
 
 ### Required parameters:
@@ -52,7 +56,7 @@ to write to. Each URL should start with either `http://` or `udp://`
 ### Optional parameters:
 
 * `write_consistency`: Write consistency (clusters only), can be: "any", "one", "quorum", "all".
-* `retention_policy`:  Retention policy to write to.
+* `retention_policy`:  Name of existing retention policy to write to.  Empty string writes to the default retention policy.
 * `timeout`: Write timeout (for the InfluxDB client), formatted as a string. If not provided, will default to 5s. 0s means no timeout (not recommended).
 * `username`: Username for influxdb
 * `password`: Password for influxdb
@@ -62,3 +66,4 @@ to write to. Each URL should start with either `http://` or `udp://`
 * `ssl_cert`: SSL CERT
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
+* `http_proxy`: HTTP Proxy URI

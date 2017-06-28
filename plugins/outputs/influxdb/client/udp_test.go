@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"net"
 	"testing"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUDPClient(t *testing.T) {
@@ -72,63 +72,7 @@ func TestUDPClient_Write(t *testing.T) {
 	pkt := <-packets
 	assert.Equal(t, "cpu value=99\n", pkt)
 
-	metrics := `cpu value=99
-cpu value=55
-cpu value=44
-cpu value=101
-cpu value=91
-cpu value=92
-`
-	// test sending packet with 6 metrics in a stream.
-	reader := bytes.NewReader([]byte(metrics))
-	// contentLength is ignored:
-	n, err = client.WriteStream(reader, 10)
-	assert.Equal(t, n, len(metrics))
-	assert.NoError(t, err)
-	pkt = <-packets
-	assert.Equal(t, "cpu value=99\ncpu value=55\ncpu value=44\ncpu value=101\ncpu value=91\ncpu value=92\n", pkt)
-
-	//
-	// Test that UDP packets get broken up properly:
-	config2 := UDPConfig{
-		URL:         "udp://localhost:8199",
-		PayloadSize: 25,
-	}
-	client2, err := NewUDP(config2)
-	assert.NoError(t, err)
-
 	wp := WriteParams{}
-
-	//
-	// Using Write():
-	buf := []byte(metrics)
-	n, err = client2.WriteWithParams(buf, wp)
-	assert.Equal(t, n, len(metrics))
-	assert.NoError(t, err)
-	pkt = <-packets
-	assert.Equal(t, "cpu value=99\ncpu value=55", pkt)
-	pkt = <-packets
-	assert.Equal(t, "\ncpu value=44\ncpu value=1", pkt)
-	pkt = <-packets
-	assert.Equal(t, "01\ncpu value=91\ncpu value", pkt)
-	pkt = <-packets
-	assert.Equal(t, "=92\n", pkt)
-
-	//
-	// Using WriteStream():
-	reader = bytes.NewReader([]byte(metrics))
-	n, err = client2.WriteStreamWithParams(reader, 10, wp)
-	assert.Equal(t, n, len(metrics))
-	assert.NoError(t, err)
-	pkt = <-packets
-	assert.Equal(t, "cpu value=99\ncpu value=55", pkt)
-	pkt = <-packets
-	assert.Equal(t, "\ncpu value=44\ncpu value=1", pkt)
-	pkt = <-packets
-	assert.Equal(t, "01\ncpu value=91\ncpu value", pkt)
-	pkt = <-packets
-	assert.Equal(t, "=92\n", pkt)
-
 	//
 	// Using WriteStream() & a metric.Reader:
 	config3 := UDPConfig{
@@ -159,4 +103,27 @@ cpu value=92
 	assert.Equal(t, "test value=1.1 1484142942000000000\n", pkt)
 
 	assert.NoError(t, client.Close())
+
+	config = UDPConfig{
+		URL:         "udp://localhost:8199",
+		PayloadSize: 40,
+	}
+	client4, err := NewUDP(config)
+	assert.NoError(t, err)
+
+	ts := time.Unix(1484142943, 0)
+	m1, _ = metric.New("test", map[string]string{},
+		map[string]interface{}{"this_is_a_very_long_field_name": 1.1}, ts)
+	m2, _ = metric.New("test", map[string]string{},
+		map[string]interface{}{"value": 1.1}, ts)
+	ms = []telegraf.Metric{m1, m2}
+	reader := metric.NewReader(ms)
+	n, err = client4.WriteStream(reader, 0)
+	assert.NoError(t, err)
+	require.Equal(t, 35, n)
+	assert.NoError(t, err)
+	pkt = <-packets
+	assert.Equal(t, "test value=1.1 1484142943000000000\n", pkt)
+
+	assert.NoError(t, client4.Close())
 }
