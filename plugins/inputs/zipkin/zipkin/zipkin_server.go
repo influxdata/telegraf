@@ -26,8 +26,12 @@ type Server struct {
 	listener  net.Listener
 }
 
+// SpanData is an alias for a slice of references to zipkincore.Span
+// created for better abstraction of internal package types
 type SpanData []*zipkincore.Span
 
+// NewHTTPServer creates a new Zipkin http server given a port and a set of
+// channels
 func NewHTTPServer(port int, e chan error, d chan SpanData, f chan struct{}) *Server {
 	return &Server{
 		errorChan: e,
@@ -105,6 +109,10 @@ func (s *Server) MainHandler() http.Handler {
 	return http.HandlerFunc(fn)
 }
 
+// HandleZipkinRequests starts a zipkin http server on the port specified
+// wthin the *Server it is called on. It receives data from zipkin, and sends
+// it back to the caller over the channels the caller constructed the *Server
+// with
 func (s *Server) HandleZipkinRequests() {
 	log.Printf("Starting zipkin HTTP server on %s\n", s.Port)
 	mux := http.NewServeMux()
@@ -134,6 +142,8 @@ func (s *Server) addListener(l net.Listener) {
 	s.listener = l
 }
 
+// ListenForStop selects over the Server.Done channel, and stops the
+// server's internal net.Listener when a singnal is received.
 func (s *Server) ListenForStop() {
 	if s.listener == nil {
 		log.Fatal("Listen called without listener instance")
@@ -147,19 +157,10 @@ func (s *Server) ListenForStop() {
 	}
 }
 
+// CloseAllChannels closes the Server's communication channels on the server's end.
 func (s *Server) CloseAllChannels() {
 	log.Printf("Closing all communication channels...\n")
 	close(s.dataChan)
 	close(s.errorChan)
 	close(s.Done)
 }
-
-/*func main() {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		server()
-	}()
-	wg.Wait()
-}*/
