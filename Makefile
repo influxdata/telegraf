@@ -64,7 +64,7 @@ docker-run:
 	docker run --name openldap \
 		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
 		-e SLAPD_CONFIG_ROOTPW="secret" \
-		-p "389:389" \
+		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
 
 # Run docker containers necessary for CircleCI unit tests
@@ -83,7 +83,7 @@ docker-run-circle:
 	docker run --name openldap \
 		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
 		-e SLAPD_CONFIG_ROOTPW="secret" \
-		-p "389:389" \
+		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
 
 # Kill all docker containers, ignore errors
