@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/influxdata/telegraf/plugins/inputs/zipkin/zipkin"
+	"github.com/influxdata/telegraf/plugins/inputs/zipkin"
 )
 
 func main() {
