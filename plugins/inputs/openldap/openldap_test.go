@@ -142,9 +142,9 @@ func TestOpenldapBind(t *testing.T) {
 }
 
 func commonTests(t *testing.T, o *Openldap, acc *testutil.Accumulator) {
-	assert.Empty(t, acc.Errors)
-	assert.True(t, acc.HasMeasurement("openldap"))
-	assert.Equal(t, o.Host, acc.TagValue("openldap", "server"))
-	assert.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"))
-	assert.True(t, acc.HasIntField("openldap", "total_connections"))
+	assert.Empty(t, acc.Errors, "accumulator had no errors")
+	assert.True(t, acc.HasMeasurement("openldap"), "Has a measurement called 'openldap'")
+	assert.Equal(t, o.Host, acc.TagValue("openldap", "server"), "Has a tag value of server=o.Host")
+	assert.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"), "Has a tag value of port=o.Port")
+	assert.True(t, acc.HasIntField("openldap", "total_connections"), "Has an integer field called total_connections")
 }
