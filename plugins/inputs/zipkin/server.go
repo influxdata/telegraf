@@ -75,17 +75,22 @@ func (s *Server) MainHandler() http.Handler {
 			e := fmt.Errorf("Encoutered error: %s", err)
 			log.Println(e)
 			s.errorChan <- e
+			w.WriteHeader(http.StatusNoContent)
+			return
 		}
 		buffer := thrift.NewTMemoryBuffer()
 		if _, err = buffer.Write(body); err != nil {
 			log.Println(err)
 			s.errorChan <- err
+			w.WriteHeader(http.StatusNoContent)
+			return
 		}
 		transport := thrift.NewTBinaryProtocolTransport(buffer)
 		_, size, err := transport.ReadListBegin()
 		if err != nil {
 			log.Printf("%s", err)
 			s.errorChan <- err
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		var spans []*zipkincore.Span
@@ -94,6 +99,7 @@ func (s *Server) MainHandler() http.Handler {
 			if err = zs.Read(transport); err != nil {
 				log.Printf("%s", err)
 				s.errorChan <- err
+				w.WriteHeader(http.StatusNoContent)
 				return
 			}
 			spans = append(spans, zs)
@@ -102,6 +108,7 @@ func (s *Server) MainHandler() http.Handler {
 		if err != nil {
 			log.Printf("%s", err)
 			s.errorChan <- err
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		out, _ := json.MarshalIndent(spans, "", "    ")
