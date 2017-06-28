@@ -9,10 +9,14 @@ This plugin gathers metrics from OpenLDAP's cn=Monitor backend.
 [[inputs.openldap]]
   host = "localhost"
   port = 389
-  # starttls. Default is false.
-  ssl = false
+
+  # ldaps, starttls. default is an empty string, disabling all encryption.
+  # note that port will likely need to be changed to 636 for ldaps
+  ssl = "" | "starttls" | "ldaps"
+  
   # skip peer certificate verification. Default is false.
   insecure_skip_verify = false
+ 
   # Path to PEM-encoded Root certificate to use to verify server certificate
   ssl_ca = "/etc/ssl/certs.pem"
 
