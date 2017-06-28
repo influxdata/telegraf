@@ -42,6 +42,7 @@ func NewHTTPServer(port int, e chan error, d chan SpanData, f chan struct{}) *Se
 }
 
 // Version adds a version header to response
+// Delete later
 func Version(h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("X-Proxy-Version", version)
@@ -51,6 +52,8 @@ func Version(h http.Handler) http.Handler {
 }
 
 // Logger is middleware that logs the request
+// delete later, re-implement in a better way
+// inspired by the httptrace package
 func Logger(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received request from url %s\n", r.URL.String())
@@ -129,13 +132,23 @@ func (s *Server) HandleZipkinRequests() {
 	}
 
 	s.addListener(listener)
+	//TODO: put a sync group around this ListenForStop()
+	// create wait group; add to wait group (wg.Add(1))
+	// pass in to ListenForStop()
+	//wg.Add()
+	//go func(){
 	go s.ListenForStop()
+	//wg.Done()
+	//}()
 
+	// TODO: don't need to use graceful anymore in go 1.8 (there is graceful Server
+	// shutdown)
 	httpServer := &graceful.Server{Server: new(http.Server)}
 	httpServer.SetKeepAlivesEnabled(true)
 	httpServer.TCPKeepAlive = 5 * time.Second
 	httpServer.Handler = Version(Logger(mux))
 	log.Fatal(httpServer.Serve(listener))
+
 }
 
 func (s *Server) addListener(l net.Listener) {
