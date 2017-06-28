@@ -74,7 +74,7 @@ func TestOpenldapStartTLS(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
-		Ssl:                true,
+		Ssl:                "starttls",
 		InsecureSkipverify: true,
 	}
 
@@ -82,6 +82,43 @@ func TestOpenldapStartTLS(t *testing.T) {
 	err := o.Gather(&acc)
 	require.NoError(t, err)
 	commonTests(t, o, &acc)
+}
+
+func TestOpenldapLDAPS(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	o := &Openldap{
+		Host:               testutil.GetLocalHost(),
+		Port:               636,
+		Ssl:                "ldaps",
+		InsecureSkipverify: true,
+	}
+
+	var acc testutil.Accumulator
+	err := o.Gather(&acc)
+	require.NoError(t, err)
+	commonTests(t, o, &acc)
+}
+
+func TestOpenldapInvalidSSL(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	o := &Openldap{
+		Host:               testutil.GetLocalHost(),
+		Port:               636,
+		Ssl:                "invalid",
+		InsecureSkipverify: true,
+	}
+
+	var acc testutil.Accumulator
+	err := o.Gather(&acc)
+	require.NoError(t, err)        // test that we didn't return an error
+	assert.Zero(t, acc.NFields())  // test that we didn't return any fields
+	assert.NotEmpty(t, acc.Errors) // test that we set an error
 }
 
 func TestOpenldapBind(t *testing.T) {
@@ -92,7 +129,7 @@ func TestOpenldapBind(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
-		Ssl:                true,
+		Ssl:                "",
 		InsecureSkipverify: true,
 		BindDn:             "cn=manager,cn=config",
 		BindPassword:       "secret",

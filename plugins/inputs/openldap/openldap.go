@@ -14,7 +14,7 @@ import (
 type Openldap struct {
 	Host               string
 	Port               int
-	Ssl                bool
+	Ssl                string
 	InsecureSkipverify bool
 	SslCA              string
 	BindDn             string
@@ -24,10 +24,14 @@ type Openldap struct {
 const sampleConfig string = `
   host = "localhost"
   port = 389
-  # starttls. Default is false.
-  ssl = false
+
+  # ldaps, starttls. default is an empty string, disabling all encryption.
+  # note that port will likely need to be changed to 636 for ldaps
+  ssl = "" | "starttls" | "ldaps"
+  
   # skip peer certificate verification. Default is false.
   insecure_skip_verify = false
+ 
   # Path to PEM-encoded Root certificate to use to verify server certificate
   ssl_ca = "/etc/ssl/certs.pem"
 
@@ -58,7 +62,7 @@ func NewOpenldap() *Openldap {
 	return &Openldap{
 		Host:               "localhost",
 		Port:               389,
-		Ssl:                false,
+		Ssl:                "",
 		InsecureSkipverify: false,
 		SslCA:              "",
 		BindDn:             "",
@@ -68,29 +72,41 @@ func NewOpenldap() *Openldap {
 
 // gather metrics
 func (o *Openldap) Gather(acc telegraf.Accumulator) error {
-	l, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
-	if err != nil {
-		acc.AddError(err)
-		return nil
-	}
-	defer l.Close()
-
-	// TLS
-	if o.Ssl {
+	var err error
+	var l *ldap.Conn
+	if o.Ssl != "" {
 		// build tls config
 		tlsConfig, err := internal.GetTLSConfig("", "", o.SslCA, o.InsecureSkipverify)
 		if err != nil {
 			acc.AddError(err)
 			return nil
 		}
-
-		// configure StartTLS
-		err = l.StartTLS(tlsConfig)
-		if err != nil {
-			acc.AddError(err)
+		if o.Ssl == "ldaps" {
+			l, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port), tlsConfig)
+			if err != nil {
+				acc.AddError(err)
+				return nil
+			}
+		} else if o.Ssl == "starttls" {
+			l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
+			if err != nil {
+				acc.AddError(err)
+				return nil
+			}
+			err = l.StartTLS(tlsConfig)
+		} else {
+			acc.AddError(fmt.Errorf("Invalid setting for ssl: %s", o.Ssl))
 			return nil
 		}
+	} else {
+		l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
 	}
+
+	if err != nil {
+		acc.AddError(err)
+		return nil
+	}
+	defer l.Close()
 
 	// username/password bind
 	if o.BindDn != "" && o.BindPassword != "" {
