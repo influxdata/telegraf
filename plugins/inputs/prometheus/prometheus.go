@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
+const AcceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
 
 type Prometheus struct {
 	Urls []string
@@ -118,7 +118,7 @@ func (p *Prometheus) createHttpClient() (*http.Client, error) {
 
 func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	var req, err = http.NewRequest("GET", url, nil)
-	req.Header.Add("Accept", acceptHeader)
+	req.Header.Add("Accept", AcceptHeader)
 	var token []byte
 	var resp *http.Response
 
