@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	//TODO: must add below deps to Godeps file
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
