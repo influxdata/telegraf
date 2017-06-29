@@ -3,6 +3,7 @@ github.com/Shopify/sarama c01858abb625b73a3af51d0798e4ad42c8147093
 github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 github.com/aerospike/aerospike-client-go 95e1ad7791bdbca44707fedbb29be42024900d9c
 github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
+github.com/apache/thrift 4aaa92ece8503a6da9bc6701604f69acf2b99d07
 github.com/aws/aws-sdk-go c861d27d0304a79f727e9a8a4e2ac1e74602fdc0
 github.com/beorn7/perks 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
 github.com/bsm/sarama-cluster ccdc0803695fbce22f1706d04ded46cd518fd832
@@ -37,6 +38,7 @@ github.com/nats-io/go-nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nuid 289cccf02c178dc782430d534e3c1f5b72af807f
 github.com/nsqio/go-nsq a53d495e81424aaf7a7665a9d32a97715c40e953
+github.com/openzipkin/zipkin-go-opentracing 1cafbdfde94fbf2b373534764e0863aa3bd0bf7b
 github.com/pierrec/lz4 5c9560bfa9ace2bf86080bf40d46b34ae44604df
 github.com/pierrec/xxHash 5a004441f897722c627870a981d02b29924215fa
 github.com/pkg/errors 645ef00459ed84a119197bfb8d8205042c6df63d
