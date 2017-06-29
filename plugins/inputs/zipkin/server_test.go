@@ -15,8 +15,8 @@ func TestMainHandler(t *testing.T) {
 	}
 	e := make(chan error, 1)
 	d := make(chan SpanData, 1)
-	f := make(chan struct{}, 1)
-	s := NewHTTPServer(9411, e, d, f)
+	//f := make(chan struct{}, 1)
+	s := NewHTTPServer(9411, e, d)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		"POST",
