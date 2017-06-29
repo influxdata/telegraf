@@ -10,7 +10,7 @@
 - In the `aerospike` input the `node_name` field has been changed to be a tag
   for both the `aerospike_node` and `aerospike_namespace` measurements.
 
-- **breaking change** Change default prometheus_client port to 9273. To play well with Prometheus [port-allocations](https://github.com/prometheus/prometheus/wiki/Default-port-allocations)
+- The default prometheus_client port has been changed to 9273.
 
 ### New Plugins
 
@@ -36,6 +36,7 @@
 - [#2960](https://github.com/influxdata/telegraf/pull/2960): Add Minecraft input plugin.
 - [#2963](https://github.com/influxdata/telegraf/pull/2963): Add support for RethinkDB 1.0 handshake protocol.
 - [#2943](https://github.com/influxdata/telegraf/pull/2943): Add optional usage_active and time_active CPU metrics.
+- [#2973](https://github.com/influxdata/telegraf/pull/2973): Change default prometheus_client port.
 
 ### Bugfixes
 
