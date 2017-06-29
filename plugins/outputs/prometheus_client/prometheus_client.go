@@ -57,7 +57,7 @@ type PrometheusClient struct {
 
 var sampleConfig = `
   ## Address to listen on
-  # listen = ":9126"
+  # listen = ":9273"
 
   ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
   # expiration_interval = "60s"
@@ -67,7 +67,7 @@ func (p *PrometheusClient) Start() error {
 	prometheus.Register(p)
 
 	if p.Listen == "" {
-		p.Listen = "localhost:9126"
+		p.Listen = "localhost:9273"
 	}
 
 	mux := http.NewServeMux()
