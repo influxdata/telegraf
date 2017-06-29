@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"net"
 	"time"
@@ -74,7 +73,6 @@ func (c *CheckExpire) checkHost(server string) ([]*x509.Certificate, error) {
 
 // Gather gets all metric fields and tags and returns any errors it encounters
 func (c *CheckExpire) Gather(acc telegraf.Accumulator) error {
-	errChan := errchan.New(len(c.Servers))
 	for _, server := range c.Servers {
 		// Prepare data
 		tags := map[string]string{"server": server}
@@ -82,7 +80,7 @@ func (c *CheckExpire) Gather(acc telegraf.Accumulator) error {
 		var timeToExpire time.Duration
 		timeNow := time.Now()
 		certs, err := c.checkHost(server)
-		errChan.C <- err
+		acc.AddError(err)
 		if err != nil {
 			timeToExpire = 0
 		} else {
@@ -92,7 +90,7 @@ func (c *CheckExpire) Gather(acc telegraf.Accumulator) error {
 		// Add metrics
 		acc.AddFields("ssl_cert", fields, tags)
 	}
-	return errChan.Error()
+	return nil
 }
 
 func init() {
