@@ -11,9 +11,8 @@ import (
 func main() {
 	e := make(chan error)
 	d := make(chan zipkin.SpanData)
-	f := make(chan struct{})
-	s := zipkin.NewHTTPServer(9411, e, d, f)
-	go s.HandleZipkinRequests()
+	s := zipkin.NewHTTPServer(9411, e, d)
+	go s.Serve()
 
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, os.Interrupt)
@@ -34,7 +33,8 @@ func sigHandle(c chan os.Signal, server *zipkin.Server) {
 	select {
 	case <-c:
 		fmt.Println("received SIGINT, stopping server")
-		server.Done <- struct{}{}
+		//server.Done <- struct{}{}
+		server.Shutdown()
 		server.CloseAllChannels()
 	}
 }
