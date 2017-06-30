@@ -29,7 +29,7 @@ func (m *MockTracer) Error(err error) {
 func TestZipkinServer(t *testing.T) {
 	dat, err := ioutil.ReadFile("test/threespans.dat")
 	if err != nil {
-		t.Fatal("Could not find file %s\n", "test/threespans.dat")
+		t.Fatalf("Could not find file %s\n", "test/threespans.dat")
 	}
 
 	s := NewServer("/api/v1/spans", 9411)
