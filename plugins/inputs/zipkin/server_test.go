@@ -1,14 +1,6 @@
 package zipkin
 
-import (
-	"bytes"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-)
-
-func TestMainHandler(t *testing.T) {
+/*func TestMainHandler(t *testing.T) {
 	dat, err := ioutil.ReadFile("test/threespans.dat")
 	if err != nil {
 		t.Fatal("Could not find threespans.dat")
@@ -57,4 +49,4 @@ func TestMainHandler(t *testing.T) {
 	if spans[0].GetDuration() != 53106 {
 		t.Errorf("Expected duration %d but recieved duration %d", 53106, spans[0].GetDuration())
 	}
-}
+}*/
