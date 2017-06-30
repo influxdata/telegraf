@@ -28,6 +28,10 @@ const (
 	DefaultRoute = "/api/v1/spans"
 )
 
+// TODO: connect methods lexically; method implementations should go right under
+// struct definition. Maybe change order of structs, organize where structs are
+// declared based on when their type is used
+
 // Tracer represents a type which can record zipkin trace data as well as
 // any accompanying errors, and process that data.
 type Tracer interface {
@@ -95,6 +99,7 @@ func NewServer(path string) *Server {
 // Register allows server to implement the Service interface. Server's register metod
 // registers its handler on mux, and sets the servers tracer with tracer
 func (s *Server) Register(router *mux.Router, tracer Tracer) error {
+	// TODO: potentially move router into Server if appropriate
 	router.HandleFunc(s.Path, s.SpanHandler).Methods("POST")
 	s.tracer = tracer
 	return nil
@@ -215,9 +220,10 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		e := fmt.Errorf("Encoutered error: %s", err)
+		e := fmt.Errorf("Encountered error: %s", err)
 		log.Println(e)
 		s.tracer.Error(e)
+		//TODO: Change http status that is sent back to client
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -327,7 +333,7 @@ type Zipkin struct {
 
 // Description: necessary method implementation from telegraf.ServiceInput
 func (z Zipkin) Description() string {
-	return "Allows for the collection of zipkin tracing spans for storage in influxdb"
+	return "Allows for the collection of zipkin tracing spans for storage in InfluxDB"
 }
 
 const sampleConfig = `
