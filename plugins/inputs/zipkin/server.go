@@ -25,7 +25,7 @@ const DefaultRoute = "/api/v1/spans"
 // Provides a shutdown timout in order to gracefully shutdown our http server
 const DefaultShutdownTimeout = 5 * time.Second
 
-type Server struct {
+type ZipkinServer struct {
 	errorChan chan error
 	dataChan  chan SpanData
 	Port      string
@@ -41,9 +41,9 @@ type SpanData []*zipkincore.Span
 
 // NewHTTPServer creates a new Zipkin http server given a port and a set of
 // channels
-func NewHTTPServer(port int, e chan error, d chan SpanData) *Server {
+func NewHTTPServer(port int, e chan error, d chan SpanData) *ZipkinServer {
 	logger := log.New(os.Stdout, "", 0)
-	return &Server{
+	return &ZipkinServer{
 		errorChan: e,
 		dataChan:  d,
 		Port:      strconv.Itoa(port),
@@ -72,9 +72,9 @@ func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(fn)
 }
 
-// MainHandler returns a closure with access to a *Server pointer
-// for use as an http server handler
-func (s *Server) MainHandler() http.Handler {
+// MainHandler returns a closure with access to a *ZipkinServer pointer
+// for use as an http ZipkinServer handler
+func (s *ZipkinServer) MainHandler() http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
 		s.logger.Printf("Received request from: %s", r.URL.String())
@@ -131,7 +131,7 @@ func (s *Server) MainHandler() http.Handler {
 
 // Serve creates an internal http.Server and calls its ListenAndServe method to
 // start serving. It uses the MainHandler as the route handler.
-func (s *Server) Serve() {
+func (s *ZipkinServer) Serve() {
 	mux := http.NewServeMux()
 	mux.Handle(DefaultRoute, s.MainHandler())
 
@@ -145,7 +145,7 @@ func (s *Server) Serve() {
 }
 
 // Shutdown gracefully shuts down the internal http server
-func (s *Server) Shutdown() {
+func (s *ZipkinServer) Shutdown() {
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTimeout)
 	defer cancel()
 
@@ -213,7 +213,7 @@ func (s *Server) Shutdown() {
 }*/
 
 // CloseAllChannels closes the Server's communication channels on the server's end.
-func (s *Server) CloseAllChannels() {
+func (s *ZipkinServer) CloseAllChannels() {
 	log.Printf("Closing all communication channels...\n")
 	close(s.dataChan)
 	close(s.errorChan)
