@@ -62,7 +62,7 @@ exit_if_fail go test -race ./...
 
 # Simple Integration Tests
 #   check that version was properly set
-exit_if_fail "telegraf -version | grep $VERSION"
+#exit_if_fail "telegraf -version | grep $VERSION"
 #   check that one test cpu & mem output work
 tmpdir=$(mktemp -d)
 telegraf -sample-config > $tmpdir/config.toml
