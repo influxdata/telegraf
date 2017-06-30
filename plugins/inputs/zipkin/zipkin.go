@@ -1,6 +1,7 @@
 package zipkin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,8 +14,12 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
+
+const DefaultPort = 9411
+const DefaultRoute = "/api/v1/spans"
 
 type BinaryAnnotation struct {
 	Key         string
@@ -50,14 +55,16 @@ type Tracer interface {
 }
 
 type Service interface {
-	Register(router *mux.Router, tracer Tracer)
+	Register(router *mux.Router, tracer Tracer) error
 }
 
 type Zipkin struct {
 	ServiceAddress string
+	Port           int
 	Path           string
 	tracing        Service
 	server         *http.Server
+	waitGroup      *sync.WaitGroup
 }
 
 type Server struct {
@@ -254,7 +261,8 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 
 const sampleConfig = `
   ##
-  # field = value
+  # path = /path/your/zipkin/impl/posts/to
+  # port = <port_your_zipkin_impl_uses>
 `
 
 func (z Zipkin) Description() string {
@@ -265,14 +273,75 @@ func (z Zipkin) SampleConfig() string {
 	return sampleConfig
 }
 
-func (z *Zipkin) Gather(acc telegraf.Accumulator) {
+func (z *Zipkin) Gather(acc telegraf.Accumulator) error { return nil }
 
-}
+func (z *Zipkin) Start(acc telegraf.Accumulator) error {
+	if z.tracing == nil {
+		t := NewServer(z.Path, z.Port)
+		z.tracing = t
+	}
 
-func (z *Zipkin) Start(acc telegraf.Accumulator) {
-	//start collecting data
+	var wg sync.WaitGroup
+	z.waitGroup = &wg
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+
+		z.Listen(acc)
+	}()
+
+	return nil
 }
 
 func (z *Zipkin) Stop() {
-	//clean up any channels, etc.
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTimeout)
+	defer cancel()
+
+	defer z.waitGroup.Wait()
+	z.server.Shutdown(ctx)
+}
+
+type LineProtocolConverter struct {
+	acc telegraf.Accumulator
+}
+
+func (l *LineProtocolConverter) Record(t Trace) error {
+	log.Printf("received trace: %#+v\n", t)
+	return nil
+}
+
+func (l *LineProtocolConverter) Error(err error) {
+
+}
+
+func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
+	return &LineProtocolConverter{
+		acc: acc,
+	}
+}
+
+func (z *Zipkin) Listen(acc telegraf.Accumulator) {
+	r := mux.NewRouter()
+	converter := NewLineProtocolConverter(acc)
+	z.tracing.Register(r, converter)
+
+	if z.server == nil {
+		z.server = &http.Server{
+			Addr:    ":" + strconv.Itoa(z.Port),
+			Handler: r,
+		}
+	}
+	if err := z.server.ListenAndServe(); err != nil {
+		acc.AddError(fmt.Errorf("E! Error listening: %v\n", err))
+	}
+}
+
+func init() {
+	inputs.Add("zipkin", func() telegraf.Input {
+		return &Zipkin{
+			Path: DefaultRoute,
+			Port: DefaultPort,
+		}
+	})
 }
