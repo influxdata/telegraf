@@ -20,7 +20,7 @@ const version = "1.0"
 const port = "9411"
 
 // Zipkin writes to this route by default
-const DefaultRoute = "/api/v1/spans"
+//const DefaultRoute = "/api/v1/spans"
 
 // Provides a shutdown timout in order to gracefully shutdown our http server
 const DefaultShutdownTimeout = 5 * time.Second
