@@ -17,7 +17,11 @@ import (
 )
 
 type BinaryAnnotation struct {
-	//stuff
+	Key         string
+	Value       string
+	Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
+	ServiceName string
+	Type        string
 }
 
 type Annotation struct {
@@ -28,13 +32,14 @@ type Annotation struct {
 }
 
 type Span struct {
-	ID          string // zipkin traceid high concat with traceid
-	Name        string
-	ParentID    *int64
-	Timestamp   time.Time // If zipkin input is nil then time.Now()
-	Duration    *int64
-	TraceIDHigh *int64
-	Annotations []Annotation
+	ID                string // zipkin traceid high concat with traceid
+	Name              string
+	ParentID          *int64
+	Timestamp         time.Time // If zipkin input is nil then time.Now()
+	Duration          *int64
+	TraceIDHigh       *int64
+	Annotations       []Annotation
+	BinaryAnnotations []BinaryAnnotation
 }
 
 type Trace []Span
@@ -79,9 +84,15 @@ func UnmarshalZipkinResponse(spans []*zipkincore.Span) (Trace, error) {
 	var trace Trace
 	for _, span := range spans {
 
-		s := &Span{}
+		s := Span{}
 		s.ID = strconv.FormatInt(span.GetID(), 10)
 		s.Annotations = UnmarshalAnnotations(span.GetAnnotations())
+
+		var err error
+		s.BinaryAnnotations, err = UnmarshalBinaryAnnotations(span.GetBinaryAnnotations())
+		if err != nil {
+			return nil, err
+		}
 		s.Name = span.GetName()
 		if span.GetTimestamp() == 0 {
 			s.Timestamp = time.Now()
@@ -95,20 +106,25 @@ func UnmarshalZipkinResponse(spans []*zipkincore.Span) (Trace, error) {
 		// these values. Otherwise, we just leave them as nil
 
 		duration := span.GetDuration()
+		fmt.Println("Duration: ", duration)
 		if duration != 0 {
 			s.Duration = &duration
 		}
 
 		parentID := span.GetParentID()
+		fmt.Println("Parent ID: ", parentID)
 		if parentID != 0 {
-			s.ID += strconv.FormatInt(parentID, 10)
 			s.ParentID = &parentID
 		}
 
 		traceIDHIGH := span.GetTraceIDHigh()
+		fmt.Println("Trace id high: ", traceIDHIGH)
 		if traceIDHIGH != 0 {
+			s.ID += strconv.FormatInt(traceIDHIGH, 10)
 			s.TraceIDHigh = &traceIDHIGH
 		}
+		fmt.Println("ID:", s.ID)
+		trace = append(trace, s)
 	}
 
 	return trace, nil
@@ -120,7 +136,7 @@ func UnmarshalAnnotations(annotations []*zipkincore.Annotation) []Annotation {
 		a := Annotation{}
 		endpoint := annotation.GetHost()
 		if endpoint != nil {
-			a.Host = strconv.Itoa(int(endpoint.GetIpv4()))
+			a.Host = strconv.Itoa(int(endpoint.GetIpv4())) + ":" + strconv.Itoa(int(endpoint.GetPort()))
 			a.ServiceName = endpoint.GetServiceName()
 		} else {
 			a.Host, a.ServiceName = "", ""
@@ -130,7 +146,39 @@ func UnmarshalAnnotations(annotations []*zipkincore.Annotation) []Annotation {
 		a.Value = annotation.GetValue()
 		formatted = append(formatted, a)
 	}
+	fmt.Println("formatted annotations: ", formatted)
 	return formatted
+}
+
+func UnmarshalBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]BinaryAnnotation, error) {
+	var formatted []BinaryAnnotation
+	for _, annotation := range annotations {
+		b := BinaryAnnotation{}
+		endpoint := annotation.GetHost()
+		if endpoint != nil {
+			b.Host = strconv.Itoa(int(endpoint.GetIpv4())) + ":" + strconv.Itoa(int(endpoint.GetPort()))
+			b.ServiceName = endpoint.GetServiceName()
+
+			fmt.Println("Binary Annotation host and service name: ", b.Host, b.ServiceName)
+		} else {
+			b.Host, b.ServiceName = "", ""
+		}
+
+		val := annotation.GetValue()
+		/*log.Println("Value: ", string(val))
+		dst := make([]byte, base64.StdEncoding.DecodedLen(len(val)))
+		_, err := base64.StdEncoding.Decode(dst, annotation.GetValue())
+		if err != nil {
+			return nil, err
+		}*/
+
+		b.Key = annotation.GetKey()
+		b.Value = string(val)
+		b.Type = annotation.GetAnnotationType().String()
+		formatted = append(formatted, b)
+	}
+
+	return formatted, nil
 }
 
 func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
