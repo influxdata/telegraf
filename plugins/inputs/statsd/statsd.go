@@ -475,10 +475,11 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		// Make a unique key for the measurement name/tags
 		var tg []string
 		for k, v := range m.tags {
-			tg = append(tg, fmt.Sprintf("%s=%s", k, v))
+			tg = append(tg, k+"="+v)
 		}
 		sort.Strings(tg)
-		m.hash = fmt.Sprintf("%s%s", strings.Join(tg, ""), m.name)
+		tg = append(tg, m.name)
+		m.hash = strings.Join(tg, "")
 
 		s.aggregate(m)
 	}

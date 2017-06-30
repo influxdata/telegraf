@@ -10,6 +10,13 @@
 - In the `aerospike` input the `node_name` field has been changed to be a tag
   for both the `aerospike_node` and `aerospike_namespace` measurements.
 
+- The default prometheus_client port has been changed to 9273.
+
+### New Plugins
+
+- [fail2ban](./plugins/inputs/fail2ban/README.md)
+- [minecraft](./plugins/inputs/minecraft/README.md)
+
 ### Features
 
 - [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
@@ -23,9 +30,17 @@
 - [#2602](https://github.com/influxdata/telegraf/pull/2602): Add secure connection support to graphite output.
 - [#2908](https://github.com/influxdata/telegraf/pull/2908): Add min/max response time on linux/darwin to ping.
 - [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
+- [#2933](https://github.com/influxdata/telegraf/pull/2933): Add standard SSL options to mysql input.
+- [#2875](https://github.com/influxdata/telegraf/pull/2875): Add input plugin for fail2ban.
+- [#2924](https://github.com/influxdata/telegraf/pull/2924): Support HOST_PROC in processes and linux_sysctl_fs inputs.
+- [#2960](https://github.com/influxdata/telegraf/pull/2960): Add Minecraft input plugin.
+- [#2963](https://github.com/influxdata/telegraf/pull/2963): Add support for RethinkDB 1.0 handshake protocol.
+- [#2943](https://github.com/influxdata/telegraf/pull/2943): Add optional usage_active and time_active CPU metrics.
+- [#2973](https://github.com/influxdata/telegraf/pull/2973): Change default prometheus_client port.
 
 ### Bugfixes
 
+- [#2607](https://github.com/influxdata/telegraf/issues/2607): Improve logging of errors in Cassandra input.
 - [#2819](https://github.com/influxdata/telegraf/pull/2819): [enh] set db_version at 0 if query version fails
 - [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
 - [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
@@ -36,12 +51,16 @@
 - [#2885](https://github.com/influxdata/telegraf/pull/2885): Fix timeout option in Windows ping input sample configuration.
 - [#2911](https://github.com/influxdata/telegraf/issues/2911): Fix Kinesis output plugin in govcloud.
 - [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
+- [#2452](https://github.com/influxdata/telegraf/pull/2452): Improve Prometheus Client output documentation.
 
-## v1.3.3 [unreleased]
+## v1.3.3 [2017-06-28]
 
 ### Bugfixes
 
 - [#2915](https://github.com/influxdata/telegraf/issues/2915): Allow dos line endings in tail and logparser.
+- [#2937](https://github.com/influxdata/telegraf/issues/2937): Remove label value sanitization in prometheus output.
+- [#2948](https://github.com/influxdata/telegraf/issues/2948): Fix bug parsing default timestamps with modified precision.
+- [#2954](https://github.com/influxdata/telegraf/issues/2954): Fix panic in elasticsearch input if cannot determine master.
 
 ## v1.3.2 [2017-06-14]
 

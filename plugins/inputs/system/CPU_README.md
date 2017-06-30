@@ -14,6 +14,8 @@
   totalcpu = true
   ## If true, collect raw CPU time metrics.
   collect_cpu_time = false
+  ## If true, compute and report the sum of all non-idle CPU states.
+  report_active = false
 ```
 
 #### Description
@@ -68,6 +70,7 @@ Measurement names:
 - cpu_time_user
 - cpu_time_system
 - cpu_time_idle
+- cpu_time_active (must be explicitly enabled by setting `report_active = true`)
 - cpu_time_nice
 - cpu_time_iowait
 - cpu_time_irq
@@ -86,6 +89,7 @@ Measurement names:
 - cpu_usage_user
 - cpu_usage_system
 - cpu_usage_idle
+- cpu_usage_active (must be explicitly enabled by setting `report_active = true`)
 - cpu_usage_nice
 - cpu_usage_iowait
 - cpu_usage_irq
