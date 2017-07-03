@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -340,4 +341,23 @@ func TestHTTPClient_Query_JSONDecodeError(t *testing.T) {
 	err = client.Query(command)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "json")
+}
+
+func TestGzipCompression(t *testing.T) {
+	// Compress the payload using GZIP.
+	payload := []byte("cpu value=99\n")
+	compressed, err := compressWithGzip(payload)
+	assert.Nil(t, err)
+
+	// GUNZIP the compressed payload and make sure
+	// that its original value has not changed.
+	r, err := gzip.NewReader(bytes.NewReader(compressed))
+	assert.Nil(t, err)
+	r.Close()
+
+	var uncompressed bytes.Buffer
+	_, err = uncompressed.ReadFrom(r)
+	assert.Nil(t, err)
+
+	assert.Equal(t, payload, uncompressed.Bytes())
 }
