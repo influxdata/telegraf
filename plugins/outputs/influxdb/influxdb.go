@@ -34,6 +34,7 @@ type InfluxDB struct {
 	Timeout          internal.Duration
 	UDPPayload       int    `toml:"udp_payload"`
 	HTTPProxy        string `toml:"http_proxy"`
+	Gzip             bool
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -87,6 +88,9 @@ var sampleConfig = `
 
   ## HTTP Proxy Config
   # http_proxy = "http://corporate.proxy:3128"
+  
+  ## Compress each HTTP request payload using GZIP, defaults to false.
+  # gzip = false
 `
 
 // Connect initiates the primary connection to the range of provided URLs
@@ -128,6 +132,7 @@ func (i *InfluxDB) Connect() error {
 				Username:  i.Username,
 				Password:  i.Password,
 				HTTPProxy: i.HTTPProxy,
+				Gzip:      i.Gzip,
 			}
 			wp := client.WriteParams{
 				Database:        i.Database,

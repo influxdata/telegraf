@@ -43,6 +43,9 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
 
   ## HTTP Proxy Config
   # http_proxy = "http://corporate.proxy:3128"
+
+  ## Compress each HTTP request payload using GZIP, defaults to false.
+  # gzip = false
 ```
 
 ### Required parameters:
@@ -67,3 +70,4 @@ to write to. Each URL should start with either `http://` or `udp://`
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
 * `http_proxy`: HTTP Proxy URI
+* `gzip`: Compress each HTTP request payload using gzip (default: false)

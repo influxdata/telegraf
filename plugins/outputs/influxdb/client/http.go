@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -95,8 +96,7 @@ type HTTPConfig struct {
 	HTTPProxy string
 
 	// Gzip, if true, compresses each payload using gzip.
-	// TODO
-	// Gzip bool
+	Gzip bool
 }
 
 // Response represents a list of statement results.
@@ -233,15 +233,27 @@ func (c *httpClient) makeWriteRequest(
 		return nil, err
 	}
 	req.Header.Set("Content-Length", fmt.Sprint(contentLength))
-	// TODO
-	// if gzip {
-	// 	req.Header.Set("Content-Encoding", "gzip")
-	// }
+	if c.config.Gzip {
+		req.Header.Set("Content-Encoding", "gzip")
+	}
 	return req, nil
 }
 
 func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest("POST", uri, body)
+	var req *http.Request
+	var err error
+	if c.config.Gzip {
+		// If gzip is set to true, then compress
+		// the payload.
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(body)
+		compressed, err := compressWithGzip(buf.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		body = bytes.NewBuffer(compressed)
+	}
+	req, err = http.NewRequest("POST", uri, body)
 	if err != nil {
 		return nil, err
 	}
@@ -251,6 +263,18 @@ func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, err
 		req.SetBasicAuth(c.config.Username, c.config.Password)
 	}
 	return req, nil
+}
+
+func compressWithGzip(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write(data); err != nil {
+		return nil, err
+	}
+	if err := gz.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func (c *httpClient) Close() error {
