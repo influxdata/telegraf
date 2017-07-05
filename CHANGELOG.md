@@ -52,6 +52,7 @@
 - [#2911](https://github.com/influxdata/telegraf/issues/2911): Fix Kinesis output plugin in govcloud.
 - [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
 - [#2452](https://github.com/influxdata/telegraf/pull/2452): Improve Prometheus Client output documentation.
+- [#2984](https://github.com/influxdata/telegraf/pull/2984): Display error message if prometheus output fails to listen.
 
 ## v1.3.3 [2017-06-28]
 
