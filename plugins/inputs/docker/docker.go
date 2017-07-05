@@ -309,6 +309,7 @@ func (d *Docker) gatherContainer(
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,
+		"container_id":      container.ID,
 	}
 	if len(d.ContainerNames) > 0 {
 		if !sliceContains(cname, d.ContainerNames) {
@@ -358,9 +359,7 @@ func (d *Docker) gatherContainer(
 			}
 		}
 	}
-
 	gatherContainerStats(v, &ic, acc, tags, container.ID, d.PerDevice, d.Total)
-
 	return nil
 }
 
