@@ -2,16 +2,13 @@ package zipkin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -80,30 +77,6 @@ type Span struct {
 
 // Trace is an array (or a series) of spans
 type Trace []Span
-
-// Server is an implementation of tracer which is a helper for running an
-// http server which accepts zipkin requests
-type Server struct {
-	Path      string
-	tracer    Tracer
-	waitGroup *sync.WaitGroup
-}
-
-//NewServer returns a new server instance given path to handle
-func NewServer(path string) *Server {
-	return &Server{
-		Path: path,
-	}
-}
-
-// Register allows server to implement the Service interface. Server's register metod
-// registers its handler on mux, and sets the servers tracer with tracer
-func (s *Server) Register(router *mux.Router, tracer Tracer) error {
-	// TODO: potentially move router into Server if appropriate
-	router.HandleFunc(s.Path, s.SpanHandler).Methods("POST")
-	s.tracer = tracer
-	return nil
-}
 
 //UnmarshalZipkinResponse is a helper method for unmarhsalling a slice of []*zipkincore.Spans
 // into a Trace (technically a []Span)
@@ -212,79 +185,6 @@ func UnmarshalBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]B
 	return formatted, nil
 }
 
-// SpanHandler is the handler Server uses for handling zipkin POST requests
-func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Received request from: %s", r.URL.String())
-	log.Printf("Raw request data is: %#+v", r)
-	defer r.Body.Close()
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		e := fmt.Errorf("Encountered error: %s", err)
-		log.Println(e)
-		s.tracer.Error(e)
-		//TODO: Change http status that is sent back to client
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	buffer := thrift.NewTMemoryBuffer()
-	if _, err = buffer.Write(body); err != nil {
-		log.Println(err)
-		s.tracer.Error(err)
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	transport := thrift.NewTBinaryProtocolTransport(buffer)
-	_, size, err := transport.ReadListBegin()
-	if err != nil {
-		log.Printf("%s", err)
-		s.tracer.Error(err)
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	var spans []*zipkincore.Span
-	for i := 0; i < size; i++ {
-		zs := &zipkincore.Span{}
-		if err = zs.Read(transport); err != nil {
-			log.Printf("%s", err)
-			s.tracer.Error(err)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		spans = append(spans, zs)
-	}
-
-	err = transport.ReadListEnd()
-	if err != nil {
-		log.Printf("%s", err)
-		s.tracer.Error(err)
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	//marshal json for debugging purposes
-	out, _ := json.MarshalIndent(spans, "", "    ")
-	log.Println(string(out))
-
-	trace, err := UnmarshalZipkinResponse(spans)
-	if err != nil {
-		log.Println("Error: ", err)
-		s.tracer.Error(err)
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	if err = s.tracer.Record(trace); err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
 type LineProtocolConverter struct {
 	acc telegraf.Accumulator
 }
@@ -319,6 +219,12 @@ func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
 	}
 }
 
+const sampleConfig = `
+  ##
+  # path = /path/your/zipkin/impl/posts/to
+  # port = <port_your_zipkin_impl_uses>
+`
+
 // Zipkin is a telegraf configuration structure for the zipkin input plugin,
 // but it also contains fields for the management of a separate, concurrent
 // zipkin http server
@@ -331,18 +237,12 @@ type Zipkin struct {
 	waitGroup      *sync.WaitGroup
 }
 
-// Description: necessary method implementation from telegraf.ServiceInput
+// Description is a necessary method implementation from telegraf.ServiceInput
 func (z Zipkin) Description() string {
 	return "Allows for the collection of zipkin tracing spans for storage in InfluxDB"
 }
 
-const sampleConfig = `
-  ##
-  # path = /path/your/zipkin/impl/posts/to
-  # port = <port_your_zipkin_impl_uses>
-`
-
-// SampleConfig: necessary  method implementation from telegraf.ServiceInput
+// SampleConfig is a  necessary  method implementation from telegraf.ServiceInput
 func (z Zipkin) SampleConfig() string {
 	return sampleConfig
 }
@@ -350,24 +250,6 @@ func (z Zipkin) SampleConfig() string {
 // Gather is empty for the zipkin plugin; all gathering is done through
 // the separate goroutine launched in (*Zipkin).Start()
 func (z *Zipkin) Gather(acc telegraf.Accumulator) error { return nil }
-
-// Listen creates an http server on the zipkin instance it is called with, and
-// serves http until it is stopped by Zipkin's (*Zipkin).Stop()  method.
-func (z *Zipkin) Listen(acc telegraf.Accumulator) {
-	r := mux.NewRouter()
-	converter := NewLineProtocolConverter(acc)
-	z.tracing.Register(r, converter)
-
-	if z.server == nil {
-		z.server = &http.Server{
-			Addr:    ":" + strconv.Itoa(z.Port),
-			Handler: r,
-		}
-	}
-	if err := z.server.ListenAndServe(); err != nil {
-		acc.AddError(fmt.Errorf("E! Error listening: %v\n", err))
-	}
-}
 
 // Start launches a separate goroutine for collecting zipkin client http requests,
 // passing in a telegraf.Accumulator such that data can be collected.
@@ -388,6 +270,24 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	}()
 
 	return nil
+}
+
+// Listen creates an http server on the zipkin instance it is called with, and
+// serves http until it is stopped by Zipkin's (*Zipkin).Stop()  method.
+func (z *Zipkin) Listen(acc telegraf.Accumulator) {
+	r := mux.NewRouter()
+	converter := NewLineProtocolConverter(acc)
+	z.tracing.Register(r, converter)
+
+	if z.server == nil {
+		z.server = &http.Server{
+			Addr:    ":" + strconv.Itoa(z.Port),
+			Handler: r,
+		}
+	}
+	if err := z.server.ListenAndServe(); err != nil {
+		acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+	}
 }
 
 // Stop shuts the internal http server down with via context.Context
