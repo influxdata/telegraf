@@ -138,7 +138,8 @@ func buildTags(mTags map[string]string, w *Wavefront) []string {
 				mTags["source"] = v
 				mTags["telegraf_host"] = mTags["host"]
 				sourceTagFound = true
-				delete(mTags, k)
+				// Commenting this out because we want the source tag to also appear as a tag
+				// delete(mTags, k)
 				break
 			}
 		}
