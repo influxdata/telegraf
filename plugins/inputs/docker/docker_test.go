@@ -7,18 +7,20 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDockerGatherContainerStats(t *testing.T) {
 	var acc testutil.Accumulator
 	stats := testStats()
+	inspect := testInspect()
 
 	tags := map[string]string{
 		"container_name":  "redis",
 		"container_image": "redis/image",
 	}
-	gatherContainerStats(stats, &acc, tags, "123456789", true, true)
+	gatherContainerStats(stats, inspect, &acc, tags, "123456789", true, true)
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
@@ -124,22 +126,21 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"throttling_throttled_time":    uint64(0),
 		"usage_percent":                float64(400.0),
 		"container_id":                 "123456789",
+		"limit":                        float64(2),
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpufields, cputags)
+}
 
-	cputags["cpu"] = "cpu0"
-	cpu0fields := map[string]interface{}{
-		"usage_total":  uint64(1),
-		"container_id": "123456789",
+func testInspect() *types.ContainerJSON {
+	return &types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			HostConfig: &container.HostConfig{
+				Resources: container.Resources{
+					CPUShares: 2048,
+				},
+			},
+		},
 	}
-	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu0fields, cputags)
-
-	cputags["cpu"] = "cpu1"
-	cpu1fields := map[string]interface{}{
-		"usage_total":  uint64(1002),
-		"container_id": "123456789",
-	}
-	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu1fields, cputags)
 }
 
 func testStats() *types.StatsJSON {

@@ -157,11 +157,25 @@ func (d FakeDockerClient) ContainerInspect(octx context.Context, id string) (typ
 	case "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb":
 		return types.ContainerJSON{
 			Config: &container.Config{},
+			ContainerJSONBase: &types.ContainerJSONBase{
+				HostConfig: &container.HostConfig{
+					Resources: container.Resources{
+						CPUShares: 2048,
+					},
+				},
+			},
 		}, nil
 	case "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173":
 		return types.ContainerJSON{
 			Config: &container.Config{
 				Env: []string{"FOO_VARIABLE=foo_value"},
+			},
+			ContainerJSONBase: &types.ContainerJSONBase{
+				HostConfig: &container.HostConfig{
+					Resources: container.Resources{
+						CPUShares: 2048,
+					},
+				},
 			},
 		}, nil
 	default:
