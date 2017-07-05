@@ -42,7 +42,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(e)
 		s.tracer.Error(e)
 		//TODO: Change http status that is sent back to client
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -50,7 +50,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err = buffer.Write(body); err != nil {
 		log.Println(err)
 		s.tracer.Error(err)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -59,7 +59,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("%s", err)
 		s.tracer.Error(err)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 		if err = zs.Read(transport); err != nil {
 			log.Printf("%s", err)
 			s.tracer.Error(err)
-			w.WriteHeader(http.StatusNoContent)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		spans = append(spans, zs)
@@ -79,7 +79,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("%s", err)
 		s.tracer.Error(err)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error: ", err)
 		s.tracer.Error(err)
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
