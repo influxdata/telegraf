@@ -78,7 +78,12 @@ func (p *PrometheusClient) Start() error {
 		Handler: mux,
 	}
 
-	go p.server.ListenAndServe()
+	go func() {
+		if err := p.server.ListenAndServe(); err != nil {
+			log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
+				err.Error())
+		}
+	}()
 	return nil
 }
 
