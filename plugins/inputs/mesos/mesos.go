@@ -95,6 +95,14 @@ func (m *Mesos) SetDefaults() {
 		log.Println("I! [mesos] Missing timeout value, setting default value (100ms)")
 		m.Timeout = 100
 	}
+	if client.Transport == nil {
+		// client is global so need to set the insecure flag here if necessary
+		client.Transport = &http.Transport{
+			ResponseHeaderTimeout: time.Duration(m.Timeout) * time.Millisecond,
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: m.Insecure},
+		}
+	}
+
 }
 
 // Gather() metrics from given list of Mesos Masters
@@ -431,13 +439,7 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 
 	ts := strconv.Itoa(m.Timeout) + "ms"
 
-	// client is global so need to set the insecure flag here if necessary
-	client.Transport = &http.Transport{
-		ResponseHeaderTimeout: time.Duration(3 * time.Second),
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: m.Insecure},
-	}
 	resp, err := client.Get(m.getHTTPPrefix() + address + "/monitor/statistics?timeout=" + ts)
-
 	if err != nil {
 		return err
 	}
@@ -488,10 +490,6 @@ func (m *Mesos) gatherMainMetrics(a string, defaultPort string, role Role, acc t
 
 	ts := strconv.Itoa(m.Timeout) + "ms"
 
-	client.Transport = &http.Transport{
-		ResponseHeaderTimeout: time.Duration(3 * time.Second),
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: m.Insecure},
-	}
 	resp, err := client.Get(m.getHTTPPrefix() + a + "/metrics/snapshot?timeout=" + ts)
 
 	if err != nil {
