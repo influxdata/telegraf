@@ -191,10 +191,12 @@ type LineProtocolConverter struct {
 
 func (l *LineProtocolConverter) Record(t Trace) error {
 	log.Printf("received trace: %#+v\n", t)
-	log.Printf("...But converter implementation is not yet done. Here's some example data")
+	//log.Printf("...But converter implementation is not yet done. Here's some example data")
+	log.Printf("Writing to telegraf...\n")
 
-	fields := map[string]interface{}{
-		"Duration":           "1060",
+	// Example fields and tags
+	/*fields := map[string]interface{}{
+		"Duration":           "1060", //
 		"Timestamp":          time.Unix(1498852876, 0),
 		"Annotations":        []string{"An annotation"},
 		"binary_annotations": []string{"A binary annotation"},
@@ -203,14 +205,100 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 	tags := map[string]string{
 		"host": "http://hostname.com",
 		"port": "5555",
+	}*/
+	//l.acc.AddFields("zipkin", fields, tags)
+	/* type Span struct {
+		ID                string // zipkin traceid high concat with traceid Done
+		Name              string Done
+		ParentID          *int64 Done
+		Timestamp         time.Time // If zipkin input is nil then time.Now() Done
+		Duration          *int64 Done
+		TraceIDHigh       *int64 Don't worry about
+		Annotations       []Annotation
+		BinaryAnnotations []BinaryAnnotation
 	}
 
-	l.acc.AddFields("zipkin", fields, tags)
+	*/
+
+	/*
+		type BinaryAnnotation struct {
+			Key         string
+			Value       string
+			Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
+			ServiceName string
+			Type        string
+		}
+	*/
+
+	for _, s := range t {
+		//Do some conversion
+
+		fields := map[string]interface{}{
+			"timestamp": s.Timestamp.Unix(),
+		}
+
+		if s.Duration != nil {
+			fields["Duration"] = *s.Duration
+			log.Printf("Duration is: %d", *s.Duration)
+		}
+
+		tags := map[string]string{
+			"id":   s.ID,
+			"name": s.Name,
+		}
+
+		if s.ParentID == nil {
+			tags["parent_id"] = s.ID
+		} else {
+			tags["parent_id"] = strconv.Itoa(int(*s.ParentID))
+		}
+		l.acc.AddFields("zipkin", fields, tags)
+
+		/*
+			type Annotation struct {
+				Timestamp   time.Time
+				Value       string
+				Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
+				ServiceName string
+			}
+
+		*/
+		for _, a := range s.Annotations {
+			tags = map[string]string{
+				"span_id":      s.ID,
+				"host":         a.Host,
+				"service_name": a.ServiceName,
+			}
+
+			fields = map[string]interface{}{
+				"timestamp": a.Timestamp.Unix(),
+				"value":     a.Value,
+			}
+			l.acc.AddFields("zipkin_annotations", fields, tags)
+		}
+
+		for _, b := range s.BinaryAnnotations {
+			tags = map[string]string{
+				"annotation_type": "binary",
+				"host":            b.Host,
+				"service_name":    b.ServiceName,
+				"type":            b.Type,
+				"span_id":         s.ID,
+			}
+
+			fields = map[string]interface{}{
+				"value": b.Value,
+				"key":   b.Key,
+			}
+			l.acc.AddFields("zipkin_binary_annotations", fields, tags)
+		}
+	}
+
 	return nil
 }
 
 func (l *LineProtocolConverter) Error(err error) {
-
+	l.acc.AddError(err)
 }
 
 func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
@@ -272,6 +360,15 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// Stop shuts the internal http server down with via context.Context
+func (z *Zipkin) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTimeout)
+	defer cancel()
+
+	defer z.waitGroup.Wait()
+	z.server.Shutdown(ctx)
+}
+
 // Listen creates an http server on the zipkin instance it is called with, and
 // serves http until it is stopped by Zipkin's (*Zipkin).Stop()  method.
 func (z *Zipkin) Listen(acc telegraf.Accumulator) {
@@ -288,15 +385,6 @@ func (z *Zipkin) Listen(acc telegraf.Accumulator) {
 	if err := z.server.ListenAndServe(); err != nil {
 		acc.AddError(fmt.Errorf("E! Error listening: %v", err))
 	}
-}
-
-// Stop shuts the internal http server down with via context.Context
-func (z *Zipkin) Stop() {
-	ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTimeout)
-	defer cancel()
-
-	defer z.waitGroup.Wait()
-	z.server.Shutdown(ctx)
 }
 
 func init() {
