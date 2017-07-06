@@ -64,7 +64,12 @@ func (n *NetResponse) TcpGather() (map[string]interface{}, error) {
 	responseTime := time.Since(start).Seconds()
 	// Handle error
 	if err != nil {
-		return nil, err
+		if e, ok := err.(net.Error); ok && e.Timeout() {
+			fields["result_type"] = "timeout"
+		} else {
+			fields["result_type"] = "connection_failed"
+		}
+		return fields, nil
 	}
 	defer conn.Close()
 	// Send string if needed
@@ -87,18 +92,19 @@ func (n *NetResponse) TcpGather() (map[string]interface{}, error) {
 		responseTime = time.Since(start).Seconds()
 		// Handle error
 		if err != nil {
-			fields["string_found"] = false
+			fields["result_type"] = "read_failed"
 		} else {
 			// Looking for string in answer
 			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
 			find := RegEx.FindString(string(data))
 			if find != "" {
-				fields["string_found"] = true
+				fields["result_type"] = "success"
 			} else {
-				fields["string_found"] = false
+				fields["result_type"] = "string_mismatch"
 			}
 		}
-
+	} else {
+		fields["result_type"] = "success"
 	}
 	fields["response_time"] = responseTime
 	return fields, nil
@@ -114,11 +120,16 @@ func (n *NetResponse) UdpGather() (map[string]interface{}, error) {
 	LocalAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
 	// Connecting
 	conn, err := net.DialUDP("udp", LocalAddr, udpAddr)
-	defer conn.Close()
 	// Handle error
 	if err != nil {
-		return nil, err
+		if e, ok := err.(net.Error); ok && e.Timeout() {
+			fields["result_type"] = "timeout"
+		} else {
+			fields["result_type"] = "connection_failed"
+		}
+		return fields, nil
 	}
+	defer conn.Close()
 	// Send string
 	msg := []byte(n.Send)
 	conn.Write(msg)
@@ -132,15 +143,16 @@ func (n *NetResponse) UdpGather() (map[string]interface{}, error) {
 	responseTime := time.Since(start).Seconds()
 	// Handle error
 	if err != nil {
-		return nil, err
+		fields["result_type"] = "read_failed"
+		return fields, nil
 	} else {
 		// Looking for string in answer
 		RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
 		find := RegEx.FindString(string(buf))
 		if find != "" {
-			fields["string_found"] = true
+			fields["result_type"] = "success"
 		} else {
-			fields["string_found"] = false
+			fields["result_type"] = "string_mismatch"
 		}
 	}
 	fields["response_time"] = responseTime

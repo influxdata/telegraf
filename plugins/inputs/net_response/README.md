@@ -59,7 +59,7 @@ It can also check response text.
 
 - net_response
     - response_time (float, seconds)
-    - string_found (bool) # Only if "expected: option is set
+    - result_type (string) # success, timeout, connection_failed, read_failed, string_mismatch
 
 ### Tags:
 
