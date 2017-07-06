@@ -1,4 +1,4 @@
-# Example Input Plugin
+# Network Response Input Plugin
 
 The input plugin test UDP/TCP connections response time.
 It can also check response text.
