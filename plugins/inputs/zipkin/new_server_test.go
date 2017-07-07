@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -55,12 +56,11 @@ func TestZipkinServer(t *testing.T) {
 	parentID1 := int64(22964302721410078)
 	want := Trace{
 		Span{
-			Name:        "Child",
-			ID:          "8090652509916334619",
-			TraceIDHigh: nil,
-			ParentID:    &parentID1,
-			Timestamp:   time.Unix(1498688360851331, 0),
-			Duration:    &d,
+			Name:      "Child",
+			ID:        "8090652509916334619",
+			ParentID:  strconv.FormatInt(parentID1, 10),
+			Timestamp: time.Unix(1498688360851331, 0),
+			Duration:  time.Duration(d),
 			//note: []Annotation(nil) is different than
 			// []Annotation{}
 			Annotations: []Annotation(nil),
@@ -77,10 +77,9 @@ func TestZipkinServer(t *testing.T) {
 		Span{
 			Name:        "Child",
 			ID:          "103618986556047333",
-			TraceIDHigh: nil,
-			ParentID:    &parentID1,
+			ParentID:    strconv.FormatInt(parentID1, 10),
 			Timestamp:   time.Unix(1498688360904552, 0),
-			Duration:    &d1,
+			Duration:    time.Duration(d1),
 			Annotations: []Annotation(nil),
 			BinaryAnnotations: []BinaryAnnotation{
 				BinaryAnnotation{
@@ -96,7 +95,7 @@ func TestZipkinServer(t *testing.T) {
 			Name:      "Parent",
 			ID:        "22964302721410078",
 			Timestamp: time.Unix(1498688360851318, 0),
-			Duration:  &d2,
+			Duration:  time.Duration(d2),
 			Annotations: []Annotation{
 				Annotation{
 					Timestamp:   time.Unix(1498688360851325, 0),
