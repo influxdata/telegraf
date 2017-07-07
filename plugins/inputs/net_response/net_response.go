@@ -99,8 +99,10 @@ func (n *NetResponse) TcpGather() (map[string]interface{}, error) {
 			find := RegEx.FindString(string(data))
 			if find != "" {
 				fields["result_type"] = "success"
+				fields["string_match"] = true // WARNING: This field will be deprecated in a future release.
 			} else {
 				fields["result_type"] = "string_mismatch"
+				fields["string_match"] = false // WARNING: This field will be deprecated in a future release.
 			}
 		}
 	} else {
@@ -151,8 +153,10 @@ func (n *NetResponse) UdpGather() (map[string]interface{}, error) {
 		find := RegEx.FindString(string(buf))
 		if find != "" {
 			fields["result_type"] = "success"
+			fields["string_match"] = true // WARNING: This field will be deprecated in a future release.
 		} else {
 			fields["result_type"] = "string_mismatch"
+			fields["string_match"] = false // WARNING: This field will be deprecated in a future release.
 		}
 	}
 	fields["response_time"] = responseTime
