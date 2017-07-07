@@ -52,6 +52,16 @@ type BinaryAnnotation struct {
 	Type        string
 }
 
+func (b BinaryAnnotation) ToMeta() MetaAnnotation {
+	return MetaAnnotation{
+		Key:         b.Key,
+		Value:       b.Value,
+		Host:        b.Host,
+		ServiceName: b.ServiceName,
+		Type:        b.Type,
+	}
+}
+
 // Annotation represents an ordinary zipkin annotation. It contains the data fields
 // which will become fields/tags in influxdb
 type Annotation struct {
@@ -61,16 +71,37 @@ type Annotation struct {
 	ServiceName string
 }
 
+func (a Annotation) ToMeta() MetaAnnotation {
+	return MetaAnnotation{
+		Key:         a.Value,
+		Value:       "NONE",
+		Type:        "NONE",
+		Timestamp:   a.Timestamp,
+		Host:        a.Host,
+		ServiceName: a.ServiceName,
+	}
+}
+
+type MetaAnnotation struct {
+	Key         string
+	Value       string
+	Type        string
+	Timestamp   time.Time
+	Host        string
+	HostIPV6    string
+	ServiceName string
+}
+
 //Span represents a specific zipkin span. It holds the majority of the same
 // data as a zipkin span sent via the thrift protocol, but is presented in a
 // format which is more straightforward for storage purposes.
 type Span struct {
-	ID                string // zipkin traceid high concat with traceid
+	ID                string
+	TraceID           string // zipkin traceid high concat with traceid
 	Name              string
-	ParentID          *int64
+	ParentID          string
 	Timestamp         time.Time // If zipkin input is nil then time.Now()
-	Duration          *int64
-	TraceIDHigh       *int64
+	Duration          time.Duration
 	Annotations       []Annotation
 	BinaryAnnotations []BinaryAnnotation
 }
@@ -86,6 +117,8 @@ func UnmarshalZipkinResponse(spans []*zipkincore.Span) (Trace, error) {
 
 		s := Span{}
 		s.ID = strconv.FormatInt(span.GetID(), 10)
+		s.TraceID = strconv.FormatInt(span.GetTraceIDHigh(), 10) + strconv.FormatInt(span.GetTraceID(), 10)
+
 		s.Annotations = UnmarshalAnnotations(span.GetAnnotations())
 
 		var err error
@@ -97,7 +130,7 @@ func UnmarshalZipkinResponse(spans []*zipkincore.Span) (Trace, error) {
 		if span.GetTimestamp() == 0 {
 			s.Timestamp = time.Now()
 		} else {
-			s.Timestamp = time.Unix(span.GetTimestamp(), 0)
+			s.Timestamp = time.Unix(0, span.GetTimestamp()*int64(time.Microsecond))
 		}
 
 		//duration, parent id, and trace id high are all optional fields.
@@ -105,24 +138,18 @@ func UnmarshalZipkinResponse(spans []*zipkincore.Span) (Trace, error) {
 		// we set the repsective fields in our Span structure to the address of
 		// these values. Otherwise, we just leave them as nil
 
-		duration := span.GetDuration()
+		duration := time.Duration(span.GetDuration())
 		fmt.Println("Duration: ", duration)
-		if duration != 0 {
-			s.Duration = &duration
-		}
+		s.Duration = duration * time.Microsecond
 
 		parentID := span.GetParentID()
 		fmt.Println("Parent ID: ", parentID)
-		if parentID != 0 {
-			s.ParentID = &parentID
+		if parentID == 0 {
+			s.ParentID = s.ID
+		} else {
+			s.ParentID = strconv.FormatInt(parentID, 10)
 		}
 
-		traceIDHIGH := span.GetTraceIDHigh()
-		fmt.Println("Trace id high: ", traceIDHIGH)
-		if traceIDHIGH != 0 {
-			s.ID += strconv.FormatInt(traceIDHIGH, 10)
-			s.TraceIDHigh = &traceIDHIGH
-		}
 		fmt.Println("ID:", s.ID)
 		trace = append(trace, s)
 	}
@@ -150,6 +177,9 @@ func UnmarshalAnnotations(annotations []*zipkincore.Annotation) []Annotation {
 	}
 	fmt.Println("formatted annotations: ", formatted)
 	return formatted
+}
+
+func (s Span) MergeAnnotations() {
 }
 
 // UnmarshalBinaryAnnotations is very similar to UnmarshalAnnotations, but it
@@ -189,81 +219,81 @@ type LineProtocolConverter struct {
 	acc telegraf.Accumulator
 }
 
-func (l *LineProtocolConverter) Record(t Trace) error {
-	log.Printf("received trace: %#+v\n", t)
-	//log.Printf("...But converter implementation is not yet done. Here's some example data")
-	log.Printf("Writing to telegraf...\n")
+/*func (l *LineProtocolConverter) Record(t Trace) error {
+log.Printf("received trace: %#+v\n", t)
+//log.Printf("...But converter implementation is not yet done. Here's some example data")
+log.Printf("Writing to telegraf...\n")
 
-	// Example fields and tags
-	/*fields := map[string]interface{}{
-		"Duration":           "1060", //
-		"Timestamp":          time.Unix(1498852876, 0),
-		"Annotations":        []string{"An annotation"},
-		"binary_annotations": []string{"A binary annotation"},
+// Example fields and tags
+/*fields := map[string]interface{}{
+	"Duration":           "1060", //
+	"Timestamp":          time.Unix(1498852876, 0),
+	"Annotations":        []string{"An annotation"},
+	"binary_annotations": []string{"A binary annotation"},
+}
+
+tags := map[string]string{
+	"host": "http://hostname.com",
+	"port": "5555",
+}*/
+//l.acc.AddFields("zipkin", fields, tags)
+/* type Span struct {
+	ID                string // zipkin traceid high concat with traceid Done
+	Name              string Done
+	ParentID          *int64 Done
+	Timestamp         time.Time // If zipkin input is nil then time.Now() Done
+	Duration          *int64 Done
+	TraceIDHigh       *int64 Don't worry about
+	Annotations       []Annotation
+	BinaryAnnotations []BinaryAnnotation
+}
+
+*/
+
+/*
+	type BinaryAnnotation struct {
+		Key         string
+		Value       string
+		Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
+		ServiceName string
+		Type        string
+	}
+*/
+
+/*for _, s := range t {
+//Do some conversion
+
+fields := map[string]interface{}{
+	"timestamp": s.Timestamp.Unix(),
+}
+
+if s.Duration != nil {
+	fields["Duration"] = *s.Duration
+	log.Printf("Duration is: %d", *s.Duration)
+}
+
+tags := map[string]string{
+	"id":   s.ID,
+	"name": s.Name,
+}
+
+if s.ParentID == nil {
+	tags["parent_id"] = s.ID
+} else {
+	tags["parent_id"] = strconv.Itoa(int(*s.ParentID))
+}
+l.acc.AddFields("zipkin", fields, tags)
+
+/*
+	type Annotation struct {
+		Timestamp   time.Time
+		Value       string
+		Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
+		ServiceName string
 	}
 
-	tags := map[string]string{
-		"host": "http://hostname.com",
-		"port": "5555",
-	}*/
-	//l.acc.AddFields("zipkin", fields, tags)
-	/* type Span struct {
-		ID                string // zipkin traceid high concat with traceid Done
-		Name              string Done
-		ParentID          *int64 Done
-		Timestamp         time.Time // If zipkin input is nil then time.Now() Done
-		Duration          *int64 Done
-		TraceIDHigh       *int64 Don't worry about
-		Annotations       []Annotation
-		BinaryAnnotations []BinaryAnnotation
-	}
-
-	*/
-
-	/*
-		type BinaryAnnotation struct {
-			Key         string
-			Value       string
-			Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
-			ServiceName string
-			Type        string
-		}
-	*/
-
-	for _, s := range t {
-		//Do some conversion
-
-		fields := map[string]interface{}{
-			"timestamp": s.Timestamp.Unix(),
-		}
-
-		if s.Duration != nil {
-			fields["Duration"] = *s.Duration
-			log.Printf("Duration is: %d", *s.Duration)
-		}
-
-		tags := map[string]string{
-			"id":   s.ID,
-			"name": s.Name,
-		}
-
-		if s.ParentID == nil {
-			tags["parent_id"] = s.ID
-		} else {
-			tags["parent_id"] = strconv.Itoa(int(*s.ParentID))
-		}
-		l.acc.AddFields("zipkin", fields, tags)
-
-		/*
-			type Annotation struct {
-				Timestamp   time.Time
-				Value       string
-				Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
-				ServiceName string
-			}
-
-		*/
-		for _, a := range s.Annotations {
+*/
+/*	for _, a := range s.Annotations {
 			tags = map[string]string{
 				"span_id":      s.ID,
 				"host":         a.Host,
@@ -295,6 +325,96 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 	}
 
 	return nil
+}*/
+
+func (l *LineProtocolConverter) Record(t Trace) error {
+	log.Printf("received trace: %#+v\n", t)
+	//log.Printf("...But converter implementation is not yet done. Here's some example data")
+	log.Printf("Writing to telegraf...\n")
+	for _, s := range t {
+		//Do some conversion
+
+		//l.acc.AddFields("zipkin", fields, tags)
+
+		/*
+			type Annotation struct {
+				Timestamp   time.Time
+				Value       string
+				Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
+				ServiceName string
+			}
+
+		*/
+		for _, a := range s.Annotations {
+			/*tags = map[string]string{
+				"span_id":      s.ID,
+				"host":         a.Host,
+				"service_name": a.ServiceName,
+			}
+
+			fields = map[string]interface{}{
+				"timestamp": a.Timestamp.Unix(),
+				"value":     a.Value,
+			}*/
+
+			fields := map[string]interface{}{
+				// Maybe we don't need "annotation_timestamp"?
+				"annotation_timestamp": a.Timestamp.Unix(),
+				"duration":             s.Duration,
+			}
+
+			log.Printf("Duration is: %d", s.Duration)
+
+			tags := map[string]string{
+				"id":               s.ID,
+				"parent_id":        s.ParentID,
+				"trace_id":         s.TraceID,
+				"name":             s.Name,
+				"service_name":     a.ServiceName,
+				"annotation_value": a.Value,
+				"endpoint_host":    a.Host,
+			}
+			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
+		}
+
+		for _, b := range s.BinaryAnnotations {
+			/*tags := map[string]string{
+				"annotation_type": "binary",
+				"host":            b.Host,
+				"service_name":    b.ServiceName,
+				"type":            b.Type,
+				"span_id":         s.ID,
+			}
+
+			fields := map[string]interface{}{
+				"value": b.Value,
+				"key":   b.Key,
+			}*/
+
+			fields := map[string]interface{}{
+				"duration": s.Duration,
+			}
+
+			log.Printf("Duration is: %d", s.Duration)
+
+			tags := map[string]string{
+				"id":               s.ID,
+				"parent_id":        s.ParentID,
+				"trace_id":         s.TraceID,
+				"name":             s.Name,
+				"service_name":     b.ServiceName,
+				"annotation_value": b.Value,
+				"endpoint_host":    b.Host,
+				"key":              b.Key,
+				"type":             b.Type,
+			}
+
+			l.acc.AddFields("zipkin_binary_annotations", fields, tags, s.Timestamp)
+		}
+	}
+
+	return nil
+
 }
 
 func (l *LineProtocolConverter) Error(err error) {
