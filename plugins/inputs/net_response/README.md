@@ -77,7 +77,7 @@ net_response,server=influxdata.com,port=8080,protocol=tcp,host=localhost result_
 net_response,server=influxdata.com,port=443,protocol=tcp,host=localhost result_type="success",response_time=0.088703864 1499310361000000000
 net_response,protocol=tcp,host=localhost,server=this.domain.does.not.exist,port=443 result_type="connection_failed" 1499310361000000000
 net_response,protocol=udp,host=localhost,server=influxdata.com,port=8080 result_type="read_failed" 1499310362000000000
-net_response,port=31338,protocol=udp,host=localhost,server=localhost result_type="string_mismatch",string_match=false,response_time=0.00242682 1499310362000000000
+net_response,port=31338,protocol=udp,host=localhost,server=localhost result_type="string_mismatch",string_found=false,response_time=0.00242682 1499310362000000000
 net_response,protocol=udp,host=localhost,server=localhost,port=31338 response_time=0.001128598,result_type="success" 1499310362000000000
 net_response,server=this.domain.does.not.exist,port=443,protocol=udp,host=localhost result_type="connection_failed" 1499310362000000000
 ```
