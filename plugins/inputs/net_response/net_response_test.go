@@ -78,6 +78,7 @@ func TestTCPOK1(t *testing.T) {
 		"net_response",
 		map[string]interface{}{
 			"result_type":   "success",
+                        "string_found":  true,
 			"response_time": 1.0,
 		},
 		map[string]string{"server": "127.0.0.1",
@@ -118,6 +119,7 @@ func TestTCPOK2(t *testing.T) {
 		"net_response",
 		map[string]interface{}{
 			"result_type":   "string_mismatch",
+                        "string_found": false,
 			"response_time": 1.0,
 		},
 		map[string]string{"server": "127.0.0.1",
@@ -189,6 +191,7 @@ func TestUDPOK1(t *testing.T) {
 		"net_response",
 		map[string]interface{}{
 			"result_type":   "success",
+                        "string_found": true,
 			"response_time": 1.0,
 		},
 		map[string]string{"server": "127.0.0.1",
