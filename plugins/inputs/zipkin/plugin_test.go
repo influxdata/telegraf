@@ -115,6 +115,10 @@ func testBasicSpans(t *testing.T) {
 	}
 	// test for existence of span time stamp in third span, using binary annotation specific values.
 	assertContainsTaggedDuration(t, &acc, "zipkin", "duration", time.Duration(103680)*time.Microsecond, tags)
+	log.Println("end")
+	log.Println("TIMESTAMP: ", acc.Metrics[5].Time)
+	assertTimeIs(t, &acc, "zipkin", time.Unix(1498688360, 851318*int64(time.Microsecond)), tags)
+
 }
 
 func TestZipkinPlugin(t *testing.T) {
@@ -124,6 +128,29 @@ func TestZipkinPlugin(t *testing.T) {
 	for _, test := range tests {
 		t.Run("Trivial Test", test)
 	}
+}
+
+func assertTimeIs(t *testing.T, acc *testutil.Accumulator,
+	measurement string,
+	expectedValue time.Time,
+	tags map[string]string) {
+	var actualValue time.Time
+	for _, pt := range acc.Metrics {
+		if pt.Measurement == measurement && reflect.DeepEqual(pt.Tags, tags) {
+			actualValue = pt.Time
+			if actualValue == expectedValue {
+				return
+			}
+
+			t.Errorf("Expected value %d\n got value %d\n", expectedValue, actualValue)
+
+		}
+	}
+
+	msg := fmt.Sprintf(
+		"Could not find measurement \"%s\" with requested tags and time: %v, Actual: %v",
+		measurement, expectedValue, actualValue)
+	t.Fatal(msg)
 }
 
 func assertContainsTaggedDuration(
