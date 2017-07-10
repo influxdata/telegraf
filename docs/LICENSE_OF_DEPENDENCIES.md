@@ -53,6 +53,7 @@ works:
 - github.com/nsqio/go-nsq [MIT](https://github.com/nsqio/go-nsq/blob/master/LICENSE)
 - github.com/pierrec/lz4 [BSD](https://github.com/pierrec/lz4/blob/master/LICENSE)
 - github.com/pierrec/xxHash [BSD](https://github.com/pierrec/xxHash/blob/master/LICENSE)
+- github.com/pkg/errors [BSD](https://github.com/pkg/errors/blob/master/LICENSE)
 - github.com/prometheus/client_golang [APACHE](https://github.com/prometheus/client_golang/blob/master/LICENSE)
 - github.com/prometheus/client_model [APACHE](https://github.com/prometheus/client_model/blob/master/LICENSE)
 - github.com/prometheus/common [APACHE](https://github.com/prometheus/common/blob/master/LICENSE)
