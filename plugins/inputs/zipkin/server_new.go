@@ -37,6 +37,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	body, err := ioutil.ReadAll(r.Body)
+	log.Printf("body=%s\n", string(body))
 	if err != nil {
 		e := fmt.Errorf("Encountered error: %s", err)
 		log.Println(e)
