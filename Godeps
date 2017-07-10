@@ -39,6 +39,7 @@ github.com/nats-io/nuid 289cccf02c178dc782430d534e3c1f5b72af807f
 github.com/nsqio/go-nsq a53d495e81424aaf7a7665a9d32a97715c40e953
 github.com/pierrec/lz4 5c9560bfa9ace2bf86080bf40d46b34ae44604df
 github.com/pierrec/xxHash 5a004441f897722c627870a981d02b29924215fa
+github.com/pkg/errors 645ef00459ed84a119197bfb8d8205042c6df63d
 github.com/prometheus/client_golang c317fb74746eac4fc65fe3909195f4cf67c5562a
 github.com/prometheus/client_model fa8ad6fec33561be4280a8f0514318c79d7f6cb6
 github.com/prometheus/common dd2f054febf4a6c00f2343686efb775948a8bff4
@@ -61,5 +62,5 @@ golang.org/x/text 506f9d5c962f284575e88337e7d9296d27e729d3
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
 gopkg.in/gorethink/gorethink.v3 7ab832f7b65573104a555d84a27992ae9ea1f659
 gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655
-gopkg.in/olivere/elastic.v5 ee3ebceab960cf68ab9a89ee6d78c031ef5b4a4e
+gopkg.in/olivere/elastic.v5 3113f9b9ad37509fe5f8a0e5e91c96fdc4435e26
 gopkg.in/yaml.v2 4c78c975fe7c825c6d1466c42be594d1d6f3aba6
