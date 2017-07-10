@@ -42,7 +42,6 @@ works:
 - github.com/kardianos/osext [BSD](https://github.com/kardianos/osext/blob/master/LICENSE)
 - github.com/kardianos/service [ZLIB](https://github.com/kardianos/service/blob/master/LICENSE) (License not named but matches word for word with ZLib)
 - github.com/kballard/go-shellquote [MIT](https://github.com/kballard/go-shellquote/blob/master/LICENSE)
-- github.com/klauspost/crc32 [BSD](https://github.com/klauspost/crc32/blob/master/LICENSE)
 - github.com/lib/pq [MIT](https://github.com/lib/pq/blob/master/LICENSE.md)
 - github.com/matttproud/golang_protobuf_extensions [APACHE](https://github.com/matttproud/golang_protobuf_extensions/blob/master/LICENSE)
 - github.com/miekg/dns [BSD](https://github.com/miekg/dns/blob/master/LICENSE)
