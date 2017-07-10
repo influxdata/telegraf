@@ -260,7 +260,7 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 				"type":             b.Type,
 			}
 
-			l.acc.AddFields("zipkin_binary_annotations", fields, tags, s.Timestamp)
+			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
 		}
 	}
 
@@ -313,6 +313,7 @@ func (z *Zipkin) Gather(acc telegraf.Accumulator) error { return nil }
 // Start launches a separate goroutine for collecting zipkin client http requests,
 // passing in a telegraf.Accumulator such that data can be collected.
 func (z *Zipkin) Start(acc telegraf.Accumulator) error {
+	log.Println("starting...")
 	if z.tracing == nil {
 		t := NewServer(z.Path)
 		z.tracing = t
