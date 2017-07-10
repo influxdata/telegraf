@@ -58,9 +58,10 @@ func TestZipkinServer(t *testing.T) {
 		Span{
 			Name:      "Child",
 			ID:        "8090652509916334619",
+			TraceID:   "2505404965370368069",
 			ParentID:  strconv.FormatInt(parentID1, 10),
-			Timestamp: time.Unix(1498688360851331, 0),
-			Duration:  time.Duration(d),
+			Timestamp: time.Unix(0, 1498688360851331*int64(time.Microsecond)),
+			Duration:  time.Duration(d) * time.Microsecond,
 			//note: []Annotation(nil) is different than
 			// []Annotation{}
 			Annotations: []Annotation(nil),
@@ -77,9 +78,10 @@ func TestZipkinServer(t *testing.T) {
 		Span{
 			Name:        "Child",
 			ID:          "103618986556047333",
+			TraceID:     "2505404965370368069",
 			ParentID:    strconv.FormatInt(parentID1, 10),
-			Timestamp:   time.Unix(1498688360904552, 0),
-			Duration:    time.Duration(d1),
+			Timestamp:   time.Unix(0, 1498688360904552*int64(time.Microsecond)),
+			Duration:    time.Duration(d1) * time.Microsecond,
 			Annotations: []Annotation(nil),
 			BinaryAnnotations: []BinaryAnnotation{
 				BinaryAnnotation{
@@ -94,8 +96,10 @@ func TestZipkinServer(t *testing.T) {
 		Span{
 			Name:      "Parent",
 			ID:        "22964302721410078",
-			Timestamp: time.Unix(1498688360851318, 0),
-			Duration:  time.Duration(d2),
+			TraceID:   "2505404965370368069",
+			ParentID:  "22964302721410078",
+			Timestamp: time.Unix(0, 1498688360851318*int64(time.Microsecond)),
+			Duration:  time.Duration(d2) * time.Microsecond,
 			Annotations: []Annotation{
 				Annotation{
 					Timestamp:   time.Unix(1498688360851325, 0),
@@ -131,7 +135,15 @@ func TestZipkinServer(t *testing.T) {
 	fmt.Println("BINARY ANNOTATIONS FOR TESTING: ")
 	fmt.Println(got[0].BinaryAnnotations, want[0].BinaryAnnotations)
 
-	if !reflect.DeepEqual(got, want) {
+	/*	if !reflect.DeepEqual(got, want) {
 		t.Fatal("Got != want, Fields weren't unmarshalled correctly")
+	}*/
+
+	for i, s := range got {
+		if !reflect.DeepEqual(s, want[i]) {
+			fmt.Printf("index %d wasn't equal", i)
+			fmt.Println(s, want[i])
+			t.Fatal("Got != want, Fields weren't unmarshalled correctly")
+		}
 	}
 }
