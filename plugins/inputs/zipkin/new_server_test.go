@@ -132,9 +132,6 @@ func TestZipkinServer(t *testing.T) {
 		},
 	}
 
-	fmt.Println("BINARY ANNOTATIONS FOR TESTING: ")
-	fmt.Println(got[0].BinaryAnnotations, want[0].BinaryAnnotations)
-
 	/*	if !reflect.DeepEqual(got, want) {
 		t.Fatal("Got != want, Fields weren't unmarshalled correctly")
 	}*/
