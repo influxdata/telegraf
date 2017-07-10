@@ -142,18 +142,18 @@ func UnmarshalZipkinResponse(spans []*zipkincore.Span) (Trace, error) {
 		// these values. Otherwise, we just leave them as nil
 
 		duration := time.Duration(span.GetDuration())
-		fmt.Println("Duration: ", duration)
+		//	fmt.Println("Duration: ", duration)
 		s.Duration = duration * time.Microsecond
 
 		parentID := span.GetParentID()
-		fmt.Println("Parent ID: ", parentID)
+		//	fmt.Println("Parent ID: ", parentID)
 		if parentID == 0 {
 			s.ParentID = s.ID
 		} else {
 			s.ParentID = strconv.FormatInt(parentID, 10)
 		}
 
-		fmt.Println("ID:", s.ID)
+		//	fmt.Println("ID:", s.ID)
 		trace = append(trace, s)
 	}
 
@@ -178,7 +178,7 @@ func UnmarshalAnnotations(annotations []*zipkincore.Annotation) []Annotation {
 		a.Value = annotation.GetValue()
 		formatted = append(formatted, a)
 	}
-	fmt.Println("formatted annotations: ", formatted)
+	//fmt.Println("formatted annotations: ", formatted)
 	return formatted
 }
 
@@ -195,8 +195,6 @@ func UnmarshalBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]B
 		if endpoint != nil {
 			b.Host = strconv.Itoa(int(endpoint.GetIpv4())) + ":" + strconv.Itoa(int(endpoint.GetPort()))
 			b.ServiceName = endpoint.GetServiceName()
-
-			fmt.Println("Binary Annotation host and service name: ", b.Host, b.ServiceName)
 		} else {
 			b.Host, b.ServiceName = "", ""
 		}
@@ -238,6 +236,7 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 				"annotation_value": a.Value,
 				"endpoint_host":    a.Host,
 			}
+			log.Println("adding data")
 			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
 		}
 
@@ -259,7 +258,7 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 				"key":              b.Key,
 				"type":             b.Type,
 			}
-
+			log.Printf("adding data")
 			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
 		}
 	}
