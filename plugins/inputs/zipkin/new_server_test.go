@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -28,6 +29,7 @@ func (m *MockTracer) Error(err error) {
 }
 
 func TestZipkinServer(t *testing.T) {
+	log.Println("testing server unmarshalling")
 	dat, err := ioutil.ReadFile("testdata/threespans.dat")
 	if err != nil {
 		t.Fatalf("Could not find file %s\n", "test/threespans.dat")
