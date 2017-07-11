@@ -1,3 +1,9 @@
+## v1.3.4 [unreleased]
+
+### Bugfixes
+
+- [#3001](https://github.com/influxdata/telegraf/issues/3001): Fix handling of escape characters within fields.
+
 ## v1.3.3 [2017-06-28]
 
 ### Bugfixes
