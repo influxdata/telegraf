@@ -61,6 +61,7 @@
 
 - [#3001](https://github.com/influxdata/telegraf/issues/3001): Fix handling of escape characters within fields.
 - [#2988](https://github.com/influxdata/telegraf/issues/2988): Fix chrony plugin does not track system time offset.
+- [#3004](https://github.com/influxdata/telegraf/issues/3004): Do not allow metrics with trailing slashes.
 
 ## v1.3.3 [2017-06-28]
 
