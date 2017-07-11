@@ -23,6 +23,8 @@ const (
 	// DefaultRoute is the default route zipkin uses, and zipkin implementations
 	// expect.
 	DefaultRoute = "/api/v1/spans"
+
+	DefaultShutdownTimeout = 5
 )
 
 // TODO: connect methods lexically; method implementations should go right under
