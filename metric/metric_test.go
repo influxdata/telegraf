@@ -250,11 +250,13 @@ func TestNewMetric_Fields(t *testing.T) {
 		"host": "localhost",
 	}
 	fields := map[string]interface{}{
-		"float":  float64(1),
-		"int":    int64(1),
-		"bool":   true,
-		"false":  false,
-		"string": "test",
+		"float":                  float64(1),
+		"int":                    int64(1),
+		"bool":                   true,
+		"false":                  false,
+		"string":                 "test",
+		"quote_string":           `x"y`,
+		"backslash_quote_string": `x\"y`,
 	}
 	m, err := New("cpu", tags, fields, now)
 	assert.NoError(t, err)
@@ -367,7 +369,7 @@ func TestIndexUnescapedByte(t *testing.T) {
 		{
 			in:       []byte(`foo\\bar`),
 			b:        'b',
-			expected: 5,
+			expected: -1,
 		},
 		{
 			in:       []byte(`foobar`),
