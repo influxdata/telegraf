@@ -98,31 +98,13 @@ func indexUnescapedByte(buf []byte, b byte) int {
 			break
 		}
 		keyi += i
-		if countBackslashes(buf, keyi-1)%2 == 0 {
+		if buf[keyi-1] != '\\' {
 			break
 		} else {
 			keyi++
 		}
 	}
 	return keyi
-}
-
-// countBackslashes counts the number of preceding backslashes starting at
-// the 'start' index.
-func countBackslashes(buf []byte, index int) int {
-	var count int
-	for {
-		if index < 0 {
-			return count
-		}
-		if buf[index] == '\\' {
-			count++
-			index--
-		} else {
-			break
-		}
-	}
-	return count
 }
 
 type metric struct {
