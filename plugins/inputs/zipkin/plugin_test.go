@@ -13,9 +13,58 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var tests []func(*testing.T)
+//expectedTags[0] expectedValues[0]
+
+func (u UnitTest) Run(t *testing.T, acc *testutil.Accumulator) {
+	log.Println("running!")
+	postTestData(t, u.datafile)
+	log.Println("LENGTH:", len(u.expected))
+	//acc.Wait(len(u.expected))
+	for _, data := range u.expected {
+		for key, value := range data.expectedValues {
+			switch value.(type) {
+			case int64:
+				assertContainsTaggedInt64(t, acc, u.measurement, key, value.(int64), data.expectedTags)
+				break
+			case time.Duration:
+				assertContainsTaggedDuration(t, acc, u.measurement, key, value.(time.Duration), data.expectedTags)
+				break
+			case time.Time:
+				if key == "time" {
+					assertTimeIs(t, acc, u.measurement, value.(time.Time), data.expectedTags)
+				} else {
+					assertContainsTaggedTime(t, acc, u.measurement, key, value.(time.Time), data.expectedTags)
+				}
+				break
+			default:
+				t.Fatalf("Invalid type for field %v\n", reflect.TypeOf(value))
+				break
+			}
+		}
+	}
+}
+
+func TestZipkin(t *testing.T) {
+	log.Println("testing zipkin...")
+	var acc testutil.Accumulator
+	z := &Zipkin{
+		Path: "/api/v1/test",
+		Port: 9411,
+	}
+	err := z.Start(&acc)
+	if err != nil {
+		t.Fatal("Failed to start zipkin server")
+	}
+	defer z.Stop()
+	//t.Fatal("failed!!!")
+
+	for _, test := range tests {
+		test.Run(t, &acc)
+	}
+}
 
 func testBasicSpans(t *testing.T) {
+	log.Println("testing basic spans...")
 	var acc testutil.Accumulator
 	z := &Zipkin{
 		Path: "/api/v1/test",
@@ -118,16 +167,6 @@ func testBasicSpans(t *testing.T) {
 	log.Println("end")
 	log.Println("TIMESTAMP: ", acc.Metrics[5].Time)
 	assertTimeIs(t, &acc, "zipkin", time.Unix(1498688360, 851318*int64(time.Microsecond)), tags)
-
-}
-
-func TestZipkinPlugin(t *testing.T) {
-	tests = append(tests, testBasicSpans)
-
-	// iterate through all tests to run each test in sequence
-	for _, test := range tests {
-		t.Run("Trivial Test", test)
-	}
 }
 
 func assertTimeIs(t *testing.T, acc *testutil.Accumulator,
@@ -195,6 +234,42 @@ func assertContainsTaggedInt64(
 	measurement string,
 	field string,
 	expectedValue int64,
+	tags map[string]string,
+) {
+	log.Println("going through tagged ")
+	var actualValue interface{}
+	log.Println(acc.Metrics)
+	for _, pt := range acc.Metrics {
+		log.Println("looping, point is : ", pt)
+		log.Println("point tags are : ", pt.Tags)
+		if pt.Measurement == measurement && reflect.DeepEqual(pt.Tags, tags) {
+			log.Println("found measurement")
+			for fieldname, value := range pt.Fields {
+				fmt.Println("looping through fields")
+				if fieldname == field {
+					fmt.Println("found field: ", field)
+					actualValue = value
+					fmt.Println("Value: ", value)
+					if value == expectedValue {
+						return
+					}
+					t.Errorf("Expected value %v\n got value %v\n", expectedValue, value)
+				}
+			}
+		}
+	}
+	msg := fmt.Sprintf(
+		"Could not find measurement \"%s\" with requested tags within %s, Actual: %d",
+		measurement, field, actualValue)
+	t.Fatal(msg)
+}
+
+func assertContainsTaggedTime(
+	t *testing.T,
+	acc *testutil.Accumulator,
+	measurement string,
+	field string,
+	expectedValue time.Time,
 	tags map[string]string,
 ) {
 	log.Println("going through tagged ")
