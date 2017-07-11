@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -26,6 +27,9 @@ func New(
 	if len(name) == 0 {
 		return nil, fmt.Errorf("Metric cannot be made with an empty name")
 	}
+	if strings.HasSuffix(name, `\`) {
+		return nil, fmt.Errorf("Metric cannot have measurement name ending with a backslash")
+	}
 
 	var thisType telegraf.ValueType
 	if len(mType) > 0 {
@@ -44,6 +48,13 @@ func New(
 	// pre-allocate exact size of the tags slice
 	taglen := 0
 	for k, v := range tags {
+		if strings.HasSuffix(k, `\`) {
+			return nil, fmt.Errorf("Metric cannot have tag key ending with a backslash")
+		}
+		if strings.HasSuffix(v, `\`) {
+			return nil, fmt.Errorf("Metric cannot have tag value ending with a backslash")
+		}
+
 		if len(k) == 0 || len(v) == 0 {
 			continue
 		}
@@ -66,7 +77,17 @@ func New(
 
 	// pre-allocate capacity of the fields slice
 	fieldlen := 0
-	for k, _ := range fields {
+	for k, v := range fields {
+		if strings.HasSuffix(k, `\`) {
+			return nil, fmt.Errorf("Metric cannot have field key ending with a backslash")
+		}
+		switch val := v.(type) {
+		case string:
+			if strings.HasSuffix(val, `\`) {
+				return nil, fmt.Errorf("Metric cannot have field value ending with a backslash")
+			}
+		}
+
 		// 10 bytes is completely arbitrary, but will at least prevent some
 		// amount of allocations. There's a small possibility this will create
 		// slightly more allocations for a metric that has many short fields.
