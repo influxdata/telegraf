@@ -687,3 +687,55 @@ func TestEmptyTagValueOrKey(t *testing.T) {
 	assert.NoError(t, err)
 
 }
+
+func TestNewMetric_TrailingSlash(t *testing.T) {
+	now := time.Now()
+
+	tests := []struct {
+		name   string
+		tags   map[string]string
+		fields map[string]interface{}
+	}{
+		{
+			name: `cpu\`,
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+		},
+		{
+			name: "cpu",
+			fields: map[string]interface{}{
+				`value\`: "x",
+			},
+		},
+		{
+			name: "cpu",
+			fields: map[string]interface{}{
+				"value": `x\`,
+			},
+		},
+		{
+			name: "cpu",
+			tags: map[string]string{
+				`host\`: "localhost",
+			},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+		},
+		{
+			name: "cpu",
+			tags: map[string]string{
+				"host": `localhost\`,
+			},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		_, err := New(tc.name, tc.tags, tc.fields, now)
+		assert.Error(t, err)
+	}
+}
