@@ -3,10 +3,11 @@
 package win_services
 
 import (
-	"log"
-	"math/rand"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"golang.org/x/sys/windows/svc/mgr"
+    "strconv"
+    "errors"
 )
 
 var sampleConfig = `
@@ -17,30 +18,28 @@ var sampleConfig = `
   ## agent, it will not be gathered.
   ## Settings:
 
-  # Names of services to monitor
+  # Names of services to monitor. Empty for all
   Services = [
     "Server"
   ]
-  Measurement = "win_services"
   # CustomTagName=Group
   # CustomTagValue=alpha
 `
 
-var description = "Input plugin to report Windows services info: name, state, startup mode, hostname"
+var description = "Input plugin to report Windows services info: name, display name, state, startup mode"
 
 type Win_Services struct {
 	Services    []string
-	Measurement     string
 	CustomTagName	string
 	CustomTagValue  string
-
-	configParsed bool
 }
 
-type service struct {
+type ServiceInfo struct {
 	ServiceName		string
+	DisplayName		string
 	State      		int
 	StartUpMode     int
+    Error           error
 }
 
 
@@ -52,37 +51,79 @@ func (m *Win_Services) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_Services) ParseConfig() error {
-	log.Printf("win_services: parse config: %v\n", *m)
+
+func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
+
+    serviceInfos, err := listServices(m.Services)
+
+    if err != nil {
+        return err
+    }
+
+    for _, service := range serviceInfos {
+        fields := make(map[string]interface{})
+        tags := make(map[string]string)
+        if service.Error == nil {
+            fields["displayname"] = service.DisplayName
+            tags["state"] = strconv.Itoa(service.State)
+            tags["startupMode"] = strconv.Itoa(service.StartUpMode)
+        } else {
+            fields["service"] = service.ServiceName
+            tags["error"] = service.Error.Error()
+
+        }
+        acc.AddFields(service.ServiceName, fields, tags)
+    }
+
 	return nil
 }
 
-func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
-	// Parse the config once
-	if !m.configParsed {
-		err := m.ParseConfig()
-		m.configParsed = true
-		if err != nil {
-			return err
-		}
-	}
+func listServices(userServices []string) ([]ServiceInfo, error) {
 
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
-	tags["service"] = "Server";
-	fields["state"] = rand.Int()%3;
-	fields["startupMode"] = 3;
+    scmgr, err := mgr.Connect()
+    if err != nil {
+        return nil, errors.New("Could not open service manager: " + err.Error());
+    }
+    defer scmgr.Disconnect()
 
-	measurement := m.Measurement
-	if measurement == "" {
-		measurement = "win_services"
-	}
-	acc.AddFields(measurement, fields, tags)
+    var serviceNames []string
+    if len(userServices) == 0 {
+        //Listing service names from system
+        serviceNames, err = scmgr.ListServices()
+        if err != nil {
+            return nil, errors.New("Could not list services: " + err.Error());
+        }
+    } else {
+        serviceNames = userServices
+    }
+    serviceInfos := make([]ServiceInfo, len(serviceNames))
 
-	return nil
+    for i, srvName := range serviceNames {
+        serviceInfos[i].ServiceName = srvName
+        srv, err := scmgr.OpenService(srvName)
+        if err != nil {
+            serviceInfos[i].Error = errors.New("Could not open service: " + err.Error());
+            continue
+        }
+        srvStatus, err := srv.Query()
+        if err == nil {
+            serviceInfos[i].State = int(srvStatus.State)
+        } else {
+            serviceInfos[i].Error = errors.New("Could not query service: " + err.Error());
+        }
+
+        srvCfg, err := srv.Config()
+        if err == nil {
+            serviceInfos[i].DisplayName = srvCfg.DisplayName
+            serviceInfos[i].StartUpMode = int(srvCfg.StartType)
+        } else {
+            serviceInfos[i].Error = errors.New("Could not get service config: " + err.Error());
+        }
+        srv.Close()
+    }
+    return serviceInfos, nil
 }
 
 func init() {
-	log.Println("win_services: init")
 	inputs.Add("win_services", func() telegraf.Input { return &Win_Services{} })
 }
