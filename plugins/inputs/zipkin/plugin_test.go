@@ -13,8 +13,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-//expectedTags[0] expectedValues[0]
-
 func (u UnitTest) Run(t *testing.T, acc *testutil.Accumulator) {
 	log.Println("running!")
 	postTestData(t, u.datafile)
@@ -62,14 +60,11 @@ func TestZipkin(t *testing.T) {
 	}
 	defer z.Stop()
 
-	/*for _, test := range tests {
-		log.Println("testing next file...")
-		log.Println("running test %v\n", test)
+	for _, test := range tests {
 		test.Run(t, &acc)
-	}*/
+	}
 
 	//t.Fatal("ERROR!")
-	tests[1].Run(t, &acc)
 }
 
 func testBasicSpans(t *testing.T) {
@@ -251,11 +246,13 @@ func assertContainsTaggedInt64(
 	for _, pt := range acc.Metrics {
 		log.Println("looping, point is : ", pt)
 		log.Println("point tags are : ", pt.Tags)
+		log.Println("point fields are:", pt.Fields)
 		log.Println("tags are: ", tags)
 		if pt.Measurement == measurement && reflect.DeepEqual(pt.Tags, tags) {
 			log.Println("found measurement")
 			for fieldname, value := range pt.Fields {
-				fmt.Println("looping through fields")
+				fmt.Println("looping through fields, fieldname is: ", fieldname)
+				fmt.Println("user input field is: ", field)
 				if fieldname == field {
 					fmt.Println("found field: ", field)
 					actualValue = value
@@ -321,6 +318,8 @@ func postTestData(t *testing.T, datafile string) {
 	if err != nil {
 		t.Fatal("bad http request")
 	}
+
+	req.Header.Set("Content-Type", "application/x-thrift")
 	client := &http.Client{}
 	_, err = client.Do(req)
 	if err != nil {
