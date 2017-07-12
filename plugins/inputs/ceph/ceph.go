@@ -339,6 +339,11 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 		return err
 	}
 
+	err = decodeClusterState(acc, data)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -421,6 +426,37 @@ func decodeStatusPgmapState(acc telegraf.Accumulator, data map[string]interface{
 	return nil
 }
 
+func decodeClusterState(acc telegraf.Accumulator, data map[string]interface{}) error {
+	status_map, ok := data["health"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode cluster state", measurement)
+	}
+	summary, ok := status_map["summary"]
+	if !ok {
+		fmt.Println(ok)
+		return fmt.Errorf("WARNING %s - unable to decode cluster summary ", measurement)
+	}
+
+	var buffer bytes.Buffer
+	if ok {
+		for _, s := range summary.([]interface{}) {
+			stateMap, ok := s.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("WARNING %s - unable to decode pg state", measurement)
+			}
+			buffer.WriteString(stateMap["summary"].(string))
+			buffer.WriteString(",")
+		}
+	}
+
+	health_map := make(map[string]interface{})
+	health_map["summary"] = buffer.String()
+	health_fields := status_map["overall_status"]
+	health_map["health"] = health_fields.(string)
+	acc.AddFields("ceph_health", health_map, map[string]string{})
+	return nil
+}
+
 func decodeDf(acc telegraf.Accumulator, input string) error {
 	data := make(map[string]interface{})
 	err := json.Unmarshal([]byte(input), &data)
@@ -487,9 +523,28 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 			if !ok {
 				return fmt.Errorf("WARNING %s - unable to decode osd pool stats", measurement)
 			}
+
+			if len(perfdata) == 0 {
+				if object == "client_io_rate" {
+					fields["read_bytes_sec"] = 0.0
+					fields["write_bytes_sec"] = 0.0
+					fields["op_per_sec"] = 0.0
+					fields["write_op_per_sec"] = 0.0
+					fields["read_op_per_sec"] = 0.0
+				}
+				if object == "recovery_rate" {
+					fields["recovering_objects_per_sec"] = 0.0
+					fields["recovering_bytes_per_sec"] = 0.0
+					fields["recovering_keys_per_sec"] = 0.0
+					fields["num_objects_recovered"] = 0.0
+					fields["num_bytes_recovered"] = 0.0
+					fields["num_keys_recovered"] = 0.0
+				}
+			}
 			for key, value := range perfdata {
 				fields[key] = value
 			}
+
 		}
 		tags := map[string]string{
 			"name": pool_name,
