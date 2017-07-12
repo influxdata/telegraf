@@ -37,12 +37,19 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	body, err := ioutil.ReadAll(r.Body)
+	//	err = ioutil.WriteFile(fmt.Sprintf("plugins/inputs/zipkin/testdata/file.dat"), body, 0644)
+	/*	f, err := os.OpenFile("plugins/inputs/zipkin/testdata/file.dat", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+		defer f.Close()
+		_, err = f.Write(body)
+		if err != nil {
+			log.Printf("Could not write to data file")
+		}*/
+
 	log.Printf("body=%s\n", string(body))
 	if err != nil {
 		e := fmt.Errorf("Encountered error: %s", err)
 		log.Println(e)
 		s.tracer.Error(e)
-		//TODO: Change http status that is sent back to client
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -87,6 +94,12 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	//marshal json for debugging purposes
 	out, _ := json.MarshalIndent(spans, "", "    ")
 	log.Println(string(out))
+	/*f, err = os.OpenFile("plugins/inputs/zipkin/testdata/json/file.json", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+	defer f.Close()
+	_, err = f.Write(out)
+	if err != nil {
+		log.Printf("Could not write to data file")
+	}*/
 
 	trace, err := UnmarshalZipkinResponse(spans)
 	if err != nil {
