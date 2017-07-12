@@ -19,7 +19,12 @@ func (u UnitTest) Run(t *testing.T, acc *testutil.Accumulator) {
 	log.Println("running!")
 	postTestData(t, u.datafile)
 	log.Println("LENGTH:", len(u.expected))
-	//acc.Wait(len(u.expected))
+	if u.waitPoints == 0 {
+		acc.Wait(len(u.expected))
+	} else {
+		acc.Wait(u.waitPoints)
+	}
+
 	for _, data := range u.expected {
 		for key, value := range data.expectedValues {
 			switch value.(type) {
@@ -56,11 +61,15 @@ func TestZipkin(t *testing.T) {
 		t.Fatal("Failed to start zipkin server")
 	}
 	defer z.Stop()
-	//t.Fatal("failed!!!")
 
-	for _, test := range tests {
+	/*for _, test := range tests {
+		log.Println("testing next file...")
+		log.Println("running test %v\n", test)
 		test.Run(t, &acc)
-	}
+	}*/
+
+	//t.Fatal("ERROR!")
+	tests[1].Run(t, &acc)
 }
 
 func testBasicSpans(t *testing.T) {
@@ -181,7 +190,7 @@ func assertTimeIs(t *testing.T, acc *testutil.Accumulator,
 				return
 			}
 
-			t.Errorf("Expected value %d\n got value %d\n", expectedValue, actualValue)
+			t.Errorf("Expected value %v\n got value %v\n", expectedValue, actualValue)
 
 		}
 	}
@@ -242,6 +251,7 @@ func assertContainsTaggedInt64(
 	for _, pt := range acc.Metrics {
 		log.Println("looping, point is : ", pt)
 		log.Println("point tags are : ", pt.Tags)
+		log.Println("tags are: ", tags)
 		if pt.Measurement == measurement && reflect.DeepEqual(pt.Tags, tags) {
 			log.Println("found measurement")
 			for fieldname, value := range pt.Fields {
