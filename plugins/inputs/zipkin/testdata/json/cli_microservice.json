@@ -221,7 +221,9 @@
         "duration": 50014,
         "trace_id_high": 8269862291023777619
     }
-][
+]
+
+[
     {
         "trace_id": 243463817635710260,
         "name": "myComplexQuery",
