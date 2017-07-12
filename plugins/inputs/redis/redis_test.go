@@ -116,6 +116,15 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "redis_keyspace", keyspaceFields, keyspaceTags)
 }
 
+func TestRedis_ParseMetricsError(t *testing.T) {
+	var acc testutil.Accumulator
+	tags := map[string]string{"host": "redis.net"}
+	rdr := bufio.NewReader(strings.NewReader(testOutputError))
+
+	err := gatherInfoOutput(rdr, &acc, tags)
+	require.Error(t, err)
+}
+
 const testOutput = `# Server
 redis_version:2.8.9
 redis_git_sha1:00000000
@@ -202,6 +211,7 @@ used_cpu_user_children:0.00
 
 # Keyspace
 db0:keys=2,expires=0,avg_ttl=0
+`
 
-(error) ERR unknown command 'eof'
+const testOutputError = `(error) ERR unknown command 'eof'
 `
