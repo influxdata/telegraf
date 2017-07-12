@@ -164,7 +164,7 @@ func gatherInfoOutput(
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "ERR") {
-			break
+			return errors.New(strings.TrimSpace(line))
 		}
 
 		if len(line) == 0 {
