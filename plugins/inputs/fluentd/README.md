@@ -28,26 +28,26 @@ This plugin understands data provided by /api/plugin.json resource (/api/config.
 Fields may vary depends on type of the plugin
 
 - fluentd
-    - RetryCount            (float, unit)
-    - BufferQueueLength     (float, unit)
-    - BufferTotalQueuedSize (float, unit)
+    - retry_count            (float, unit)
+    - buffer_queue_length     (float, unit)
+    - buffer_total_queued_size (float, unit)
 
 ### Tags:
 
 - All measurements have the following tags:
-	- PluginID        (unique plugin id)
-	- PluginType      (type of the plugin e.g. s3)
-    - PluginCategory  (plugin category e.g. output)
+	- plugin_id        (unique plugin id)
+	- plugin_type      (type of the plugin e.g. s3)
+    - plugin_category  (plugin category e.g. output)
 
 ### Example Output:
 
 ```
 $ telegraf --config fluentd.conf --input-filter fluentd --test
 * Plugin: inputs.fluentd, Collection 1
-> fluentd,host=T440s,PluginID=object:9f748c,PluginCategory=input,PluginType=dummy BufferTotalQueuedSize=0,BufferQueueLength=0,RetryCount=0 1492006105000000000
-> fluentd,PluginCategory=input,PluginType=dummy,host=T440s,PluginID=object:8da98c BufferQueueLength=0,RetryCount=0,BufferTotalQueuedSize=0 1492006105000000000
-> fluentd,PluginID=object:820190,PluginCategory=input,PluginType=monitor_agent,host=T440s RetryCount=0,BufferTotalQueuedSize=0,BufferQueueLength=0 1492006105000000000
-> fluentd,PluginID=object:c5e054,PluginCategory=output,PluginType=stdout,host=T440s BufferQueueLength=0,RetryCount=0,BufferTotalQueuedSize=0 1492006105000000000
-> fluentd,PluginType=s3,host=T440s,PluginID=object:bd7a90,PluginCategory=output BufferQueueLength=0,RetryCount=0,BufferTotalQueuedSize=0 1492006105000000000
+> fluentd,host=T440s,plugin_id=object:9f748c,plugin_category=input,plugin_type=dummy buffer_total_queued_size=0,buffer_queue_length=0,retry_count=0 1492006105000000000
+> fluentd,plugin_category=input,plugin_type=dummy,host=T440s,plugin_id=object:8da98c buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
+> fluentd,plugin_id=object:820190,plugin_category=input,plugin_type=monitor_agent,host=T440s retry_count=0,buffer_total_queued_size=0,buffer_queue_length=0 1492006105000000000
+> fluentd,plugin_id=object:c5e054,plugin_category=output,plugin_type=stdout,host=T440s buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
+> fluentd,plugin_type=s3,host=T440s,plugin_id=object:bd7a90,plugin_category=output buffer_queue_length=0,retry_count=0,buffer_total_queued_size=0 1492006105000000000
 
 ```

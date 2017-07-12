@@ -18,7 +18,6 @@ const (
 	description  = "Read metrics exposed by fluentd in_monitor plugin"
 	sampleConfig = `
 	## This plugin only reads information exposed by fluentd using /api/plugins.json.
-	## Tested using 'fluentd' version '0.14.9'
 	##
 	## Endpoint: 
 	## - only one URI is allowed
@@ -174,14 +173,14 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 			tmpFields := make(map[string]interface{})
 
 			tmpTags := map[string]string{
-				"PluginID":       p.PluginID,
-				"PluginCategory": p.PluginCategory,
-				"PluginType":     p.PluginType,
+				"plugin_id":       p.PluginID,
+				"plugin_category": p.PluginCategory,
+				"plugin_type":     p.PluginType,
 			}
 
-			tmpFields["BufferQueueLength"] = p.BufferQueueLength
-			tmpFields["RetryCount"] = p.RetryCount
-			tmpFields["BufferTotalQueuedSize"] = p.BufferTotalQueuedSize
+			tmpFields["buffer_queue_length"] = p.BufferQueueLength
+			tmpFields["retry_count"] = p.RetryCount
+			tmpFields["buffer_total_queued_size"] = p.BufferTotalQueuedSize
 
 			acc.AddFields(measurement, tmpFields, tmpTags)
 		}

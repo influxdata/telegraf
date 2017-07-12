@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// sampleJSON from fluentd version '0.14.9'
 const sampleJSON = `
 {
   "plugins": [
@@ -166,12 +167,12 @@ func Test_Gather(t *testing.T) {
 	}
 
 	for i := 0; i < len(acc.Metrics); i++ {
-		assert.Equal(t, expectedOutput[i].PluginID, acc.Metrics[i].Tags["PluginID"])
-		assert.Equal(t, expectedOutput[i].PluginType, acc.Metrics[i].Tags["PluginType"])
-		assert.Equal(t, expectedOutput[i].PluginCategory, acc.Metrics[i].Tags["PluginCategory"])
-		assert.Equal(t, expectedOutput[i].RetryCount, acc.Metrics[i].Fields["RetryCount"])
-		assert.Equal(t, expectedOutput[i].BufferQueueLength, acc.Metrics[i].Fields["BufferQueueLength"])
-		assert.Equal(t, expectedOutput[i].BufferTotalQueuedSize, acc.Metrics[i].Fields["BufferTotalQueuedSize"])
+		assert.Equal(t, expectedOutput[i].PluginID, acc.Metrics[i].Tags["plugin_id"])
+		assert.Equal(t, expectedOutput[i].PluginType, acc.Metrics[i].Tags["plugin_type"])
+		assert.Equal(t, expectedOutput[i].PluginCategory, acc.Metrics[i].Tags["plugin_category"])
+		assert.Equal(t, expectedOutput[i].RetryCount, acc.Metrics[i].Fields["retry_count"])
+		assert.Equal(t, expectedOutput[i].BufferQueueLength, acc.Metrics[i].Fields["buffer_queue_length"])
+		assert.Equal(t, expectedOutput[i].BufferTotalQueuedSize, acc.Metrics[i].Fields["buffer_total_queued_size"])
 	}
 
 }
