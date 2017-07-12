@@ -37,17 +37,17 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	body, err := ioutil.ReadAll(r.Body)
-	//	err = ioutil.WriteFile(fmt.Sprintf("plugins/inputs/zipkin/testdata/file.dat"), body, 0644)
-	/*	f, err := os.OpenFile("plugins/inputs/zipkin/testdata/file.dat", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
-		defer f.Close()
-		_, err = f.Write(body)
-		if err != nil {
-			log.Printf("Could not write to data file")
-		}*/
+
+	/*f, err := os.OpenFile("plugins/inputs/zipkin/testdata/file.dat", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+	defer f.Close()
+	_, err = f.Write(body)
+	if err != nil {
+		log.Printf("Could not write to data file")
+	}*/
 
 	log.Printf("body=%s\n", string(body))
 	if err != nil {
-		e := fmt.Errorf("Encountered error: %s", err)
+		e := fmt.Errorf("Encountered error reading: %s", err)
 		log.Println(e)
 		s.tracer.Error(e)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -56,7 +56,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 
 	buffer := thrift.NewTMemoryBuffer()
 	if _, err = buffer.Write(body); err != nil {
-		log.Println(err)
+		log.Println("Error in buffer write: ", err)
 		s.tracer.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -65,7 +65,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	transport := thrift.NewTBinaryProtocolTransport(buffer)
 	_, size, err := transport.ReadListBegin()
 	if err != nil {
-		log.Printf("%s", err)
+		log.Printf("Error in ReadListBegin: %s", err)
 		s.tracer.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -75,7 +75,7 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < size; i++ {
 		zs := &zipkincore.Span{}
 		if err = zs.Read(transport); err != nil {
-			log.Printf("%s", err)
+			log.Printf("Error reading into zipkin struct: %s", err)
 			s.tracer.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -94,12 +94,13 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 	//marshal json for debugging purposes
 	out, _ := json.MarshalIndent(spans, "", "    ")
 	log.Println(string(out))
-	/*f, err = os.OpenFile("plugins/inputs/zipkin/testdata/json/file.json", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
-	defer f.Close()
-	_, err = f.Write(out)
-	if err != nil {
-		log.Printf("Could not write to data file")
-	}*/
+
+	/*	f, err = os.OpenFile("plugins/inputs/zipkin/testdata/json/file.json", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+		defer f.Close()
+		_, err = f.Write(out)
+		if err != nil {
+			log.Printf("Could not write to data file")
+		}*/
 
 	trace, err := UnmarshalZipkinResponse(spans)
 	if err != nil {
