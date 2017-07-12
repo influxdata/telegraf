@@ -2,6 +2,8 @@ package zipkin
 
 import "time"
 
+// UnitTest represents contains expected test values and a data file to be
+// written to the zipkin http server.
 type UnitTest struct {
 	expected    []TestData
 	measurement string
@@ -9,16 +11,23 @@ type UnitTest struct {
 	waitPoints  int
 }
 
+// TestData contains the expected tags and values that the telegraf plugin
+// should output
 type TestData struct {
 	expectedTags   map[string]string
 	expectedValues map[string]interface{}
 }
 
+// Store all unit tests in an array to allow for iteration over all tests
 var tests = []UnitTest{
 	UnitTest{
 		measurement: "zipkin",
 		datafile:    "testdata/threespans.dat",
 		expected: []TestData{
+			// zipkin data points are stored in InfluxDB tagged partly //annotation specific
+			//values, and partly on span specific values,
+			// so there are many repeated tags. Fields have very similar tags, which is why
+			// tags are relatively redundant in these tests.
 			{
 				expectedTags: map[string]string{
 					"id":               "8090652509916334619",
