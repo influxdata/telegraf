@@ -113,10 +113,11 @@ var tests = []UnitTest{
 		},
 	},
 
-	// Test data from the cli app
+	// Test data from zipkin cli app:
+	//https://github.com/openzipkin/zipkin-go-opentracing/tree/master/examples/cli_with_2_services
 	UnitTest{
 		measurement: "zipkin",
-		datafile:    "testdata/file.dat",
+		datafile:    "testdata/cli_microservice.dat",
 		expected: []TestData{
 			{
 				expectedTags: map[string]string{
@@ -130,6 +131,43 @@ var tests = []UnitTest{
 				},
 				expectedValues: map[string]interface{}{
 					"annotation_timestamp": int64(1499817952283903),
+				},
+			},
+		},
+	},
+
+	// Test data from distributed trace repo sample json
+	// https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json
+	UnitTest{
+		measurement: "zipkin",
+		datafile:    "testdata/distributed_trace_sample.dat",
+		expected: []TestData{
+			{
+				expectedTags: map[string]string{
+					"id":               "6802735349851856000",
+					"parent_id":        "6802735349851856000",
+					"trace_id":         "6802735349851856000",
+					"name":             "main.dud",
+					"service_name":     "go-zipkin-testclient",
+					"annotation_value": "cs",
+					"endpoint_host":    "0:9410",
+				},
+				expectedValues: map[string]interface{}{
+					"annotation_timestamp": int64(1433330263415871),
+				},
+			},
+			{
+				expectedTags: map[string]string{
+					"id":               "6802735349851856000",
+					"parent_id":        "6802735349851856000",
+					"trace_id":         "6802735349851856000",
+					"name":             "main.dud",
+					"service_name":     "go-zipkin-testclient",
+					"annotation_value": "cr",
+					"endpoint_host":    "0:9410",
+				},
+				expectedValues: map[string]interface{}{
+					"annotation_timestamp": int64(1433330263415872),
 				},
 			},
 		},
