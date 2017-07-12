@@ -138,17 +138,17 @@ func UnmarshalZipkinResponse(spans []*zipkincore.Span) (Trace, error) {
 			s.Timestamp = time.Unix(0, span.GetTimestamp()*int64(time.Microsecond))
 		}
 
-		//duration, parent id, and trace id high are all optional fields.
-		// below, we check to see if any of these fields are non-zero, and if they are,
-		// we set the repsective fields in our Span structure to the address of
-		// these values. Otherwise, we just leave them as nil
-
 		duration := time.Duration(span.GetDuration())
 		//	fmt.Println("Duration: ", duration)
 		s.Duration = duration * time.Microsecond
 
 		parentID := span.GetParentID()
 		//	fmt.Println("Parent ID: ", parentID)
+
+		// A parent ID of 0 means that this is a parent span. In this case,
+		// we set the parent ID of the span to be its own id, so it points to
+		// itself.
+
 		if parentID == 0 {
 			s.ParentID = s.ID
 		} else {
