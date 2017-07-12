@@ -6,6 +6,7 @@ type UnitTest struct {
 	expected    []TestData
 	measurement string
 	datafile    string
+	waitPoints  int
 }
 
 type TestData struct {
@@ -107,6 +108,28 @@ var tests = []UnitTest{
 				expectedValues: map[string]interface{}{
 					"duration": time.Duration(103680) * time.Microsecond,
 					"time":     time.Unix(1498688360, 851318*int64(time.Microsecond)),
+				},
+			},
+		},
+	},
+
+	// Test data from the cli app
+	UnitTest{
+		measurement: "zipkin",
+		datafile:    "testdata/file.dat",
+		expected: []TestData{
+			{
+				expectedTags: map[string]string{
+					"id":               "3383422996321511664",
+					"parent_id":        "4574092882326506380",
+					"trace_id":         "8269862291023777619243463817635710260",
+					"name":             "Concat",
+					"service_name":     "cli",
+					"annotation_value": "cs",
+					"endpoint_host":    "0:0",
+				},
+				expectedValues: map[string]interface{}{
+					"annotation_timestamp": int64(1499817952283903),
 				},
 			},
 		},
