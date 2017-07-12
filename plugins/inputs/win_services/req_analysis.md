@@ -38,7 +38,7 @@ Option 1. has the biggest benefit that user can easily query info about all serv
 
 Option 2. diversifies the data but makes it difficult to query multiple services
 
-Q: What is best practise? is would prefer option 1.. Also, it could be configurable.
+_Q: What is the best practise? is would prefer option 1.. Also, it could be configurable._
 
 #### Properties
 
@@ -106,7 +106,7 @@ Services in example should be available on all Windows edition and versions.
      use _error_ tag for error message and _state_ tag with a special value (e.g. -1) to denote an error  
   3. Store it repeatedly, in each measurement cycle, to retain this info.
    
-   Q: What is the best practise? I would go with 3.
+   _Q: What is the best practise? I would go with 3._
       
  ### Caching
   Most service info is almost static and it could be cached. But as all the info about requested services Windows Service Manager stores in memory, even full listing takes just 8ms on Windows 10 on Core i5 (2 cores) laptop,
