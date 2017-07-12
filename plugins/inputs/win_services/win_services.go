@@ -30,6 +30,7 @@ var description = "Input plugin to report Windows services info: name, display n
 
 type Win_Services struct {
 	Services    []string
+    Measurement     string
 	CustomTagName	string
 	CustomTagValue  string
 }
@@ -60,19 +61,23 @@ func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
         return err
     }
 
+    if m.Measurement == "" {
+        m.Measurement = "win_services"
+    }
+
     for _, service := range serviceInfos {
         fields := make(map[string]interface{})
         tags := make(map[string]string)
+        tags["service"] = service.ServiceName
         if service.Error == nil {
-            fields["displayname"] = service.DisplayName
+            fields["displayName"] = service.DisplayName
             tags["state"] = strconv.Itoa(service.State)
             tags["startupMode"] = strconv.Itoa(service.StartUpMode)
         } else {
-            fields["service"] = service.ServiceName
-            tags["error"] = service.Error.Error()
-
+            fields["error"] = service.Error.Error()
+            tags["state"] = strconv.Itoa(-1) //indicate error state
         }
-        acc.AddFields(service.ServiceName, fields, tags)
+        acc.AddFields(m.Measurement, fields, tags)
     }
 
 	return nil
