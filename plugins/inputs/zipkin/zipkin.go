@@ -24,6 +24,8 @@ const (
 	// expect.
 	DefaultRoute = "/api/v1/spans"
 
+	// DefaultShutdownTimeout is the max amount of time telegraf will wait
+	// for the plugin to shutdown
 	DefaultShutdownTimeout = 5
 )
 
@@ -54,43 +56,12 @@ type BinaryAnnotation struct {
 	Type        string
 }
 
-func (b BinaryAnnotation) ToMeta() MetaAnnotation {
-	return MetaAnnotation{
-		Key:         b.Key,
-		Value:       b.Value,
-		Host:        b.Host,
-		ServiceName: b.ServiceName,
-		Type:        b.Type,
-	}
-}
-
 // Annotation represents an ordinary zipkin annotation. It contains the data fields
 // which will become fields/tags in influxdb
 type Annotation struct {
 	Timestamp   time.Time
 	Value       string
 	Host        string // annotation.endpoint.ipv4 + ":" + annotation.endpoint.port
-	ServiceName string
-}
-
-func (a Annotation) ToMeta() MetaAnnotation {
-	return MetaAnnotation{
-		Key:         a.Value,
-		Value:       "NONE",
-		Type:        "NONE",
-		Timestamp:   a.Timestamp,
-		Host:        a.Host,
-		ServiceName: a.ServiceName,
-	}
-}
-
-type MetaAnnotation struct {
-	Key         string
-	Value       string
-	Type        string
-	Timestamp   time.Time
-	Host        string
-	HostIPV6    string
 	ServiceName string
 }
 
