@@ -10,7 +10,7 @@ import (
 )
 
 var sampleConfig = `
-  ## Name of services to monitor. Set empty to monitor all the available services on the host
+  ## Names of the services to monitor. Leave empty to monitor all the available services on the host
   service_names = [
     "LanmanServer",
     "TermService",

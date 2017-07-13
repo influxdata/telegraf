@@ -5,7 +5,7 @@ Input plugin to report Windows services info: service name, display name, state,
 
 ```toml
 [[inputs.win_services]]
-  ## Name of services to monitor. Set empty to monitor all the available services on the host
+  ## Names of the services to monitor. Leave empty to monitor all the available services on the host
   service_names = [
     "LanmanServer",
     "TermService",
@@ -24,7 +24,7 @@ Input plugin to report Windows services info: service name, display name, state,
     - state
     - startup_mode
 
-The `state` tag can have following values:
+The `state` tag can have the following values:
 * _service_stopped_         
 * _service_start_pending_   
 * _service_stop_pending_    
@@ -32,8 +32,8 @@ The `state` tag can have following values:
 * _service_continue_pending_
 * _service_pause_pending_   
 * _service_paused_
-          
-The `startup_mode` tag can have following values:
+
+The `startup_mode` tag can have the following values:
 * _service_boot_start_  
 * _service_system_start_
 * _service_auto_start_  
@@ -42,7 +42,7 @@ The `startup_mode` tag can have following values:
 
 ### Example Output:
 
-Using default configuration:
+Using the default configuration:
 
 When run with:
 ```
