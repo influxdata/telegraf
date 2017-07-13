@@ -126,6 +126,7 @@ configuration options.
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [filestat](./plugins/inputs/filestat)
+* [fluentd](./plugins/inputs/fluentd)
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)

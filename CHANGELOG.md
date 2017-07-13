@@ -16,6 +16,7 @@
 
 - [fail2ban](./plugins/inputs/fail2ban/README.md)
 - [minecraft](./plugins/inputs/minecraft/README.md)
+- [fluentd](./plugins/inputs/fluentd/README.md)
 
 ### Features
 
@@ -37,6 +38,7 @@
 - [#2963](https://github.com/influxdata/telegraf/pull/2963): Add support for RethinkDB 1.0 handshake protocol.
 - [#2943](https://github.com/influxdata/telegraf/pull/2943): Add optional usage_active and time_active CPU metrics.
 - [#2973](https://github.com/influxdata/telegraf/pull/2973): Change default prometheus_client port.
+- [#2661](https://github.com/influxdata/telegraf/pull/2661): Add fluentd input plugin.
 
 ### Bugfixes
 
