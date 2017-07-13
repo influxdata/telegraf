@@ -121,7 +121,7 @@ func assertContainsTaggedDuration(
 		}
 	}
 	msg := fmt.Sprintf(
-		"Could not find measurement \"%s\" with requested tags within %s, Actual: %d",
+		"assertContainsTaggedDuration: Could not find measurement \"%s\" with requested tags within %s, Actual: %d",
 		measurement, field, actualValue)
 	t.Fatal(msg)
 }
@@ -160,7 +160,7 @@ func assertContainsTaggedInt64(
 		}
 	}
 	msg := fmt.Sprintf(
-		"Could not find measurement \"%s\" with requested tags within %s, Actual: %d",
+		"assertContainsTaggedInt64: Could not find measurement \"%s\" with requested tags within %s, Actual: %d",
 		measurement, field, actualValue)
 	t.Fatal(msg)
 }
@@ -196,7 +196,7 @@ func assertContainsTaggedTime(
 		}
 	}
 	msg := fmt.Sprintf(
-		"Could not find measurement \"%s\" with requested tags within %s, Actual: %d",
+		"assertContainsTaggedTime: Could not find measurement \"%s\" with requested tags within %s, Actual: %d",
 		measurement, field, actualValue)
 	t.Fatal(msg)
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -28,45 +27,40 @@ func (m *MockRecorder) Error(err error) {
 	m.Err = err
 }
 
-func TestZipkinServer(t *testing.T) {
-	log.Println("testing server unmarshalling")
+func TestSpanHandler(t *testing.T) {
 	dat, err := ioutil.ReadFile("testdata/threespans.dat")
 	if err != nil {
-		t.Fatalf("Could not find file %s\n", "test/threespans.dat")
+		t.Fatalf("Could not find file %s\n", "testdata/threespans.dat")
 	}
 
-	s := NewSpanHandler("/api/v1/spans")
-	mockRecorder := &MockRecorder{}
-	s.recorder = mockRecorder
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		"POST",
 		"http://server.local/api/v1/spans",
 		ioutil.NopCloser(
 			bytes.NewReader(dat)))
-	handler := s.Spans
-	handler(w, r)
+
+	handler := NewSpanHandler("/api/v1/spans")
+	mockRecorder := &MockRecorder{}
+	handler.recorder = mockRecorder
+
+	handler.Spans(w, r)
 	if w.Code != http.StatusNoContent {
 		t.Errorf("MainHandler did not return StatusNoContent %d", w.Code)
 	}
 
 	got := mockRecorder.Data
 
-	d := int64(53106)
-	d1 := int64(50410)
-	d2 := int64(103680)
-	parentID1 := int64(22964302721410078)
+	parentID := strconv.FormatInt(22964302721410078, 10)
 	want := Trace{
 		Span{
-			Name:      "Child",
-			ID:        "8090652509916334619",
-			TraceID:   "2505404965370368069",
-			ParentID:  strconv.FormatInt(parentID1, 10),
-			Timestamp: time.Unix(0, 1498688360851331*int64(time.Microsecond)),
-			Duration:  time.Duration(d) * time.Microsecond,
-			//note: []Annotation(nil) is different than
-			// []Annotation{}
-			Annotations: []Annotation(nil),
+			Name:        "Child",
+			ID:          "8090652509916334619",
+			TraceID:     "2505404965370368069",
+			ParentID:    parentID,
+			Timestamp:   time.Unix(0, 1498688360851331*int64(time.Microsecond)),
+			Duration:    time.Duration(53106) * time.Microsecond,
+			Annotations: nil,
 			BinaryAnnotations: []BinaryAnnotation{
 				BinaryAnnotation{
 					Key:         "lc",
@@ -81,10 +75,10 @@ func TestZipkinServer(t *testing.T) {
 			Name:        "Child",
 			ID:          "103618986556047333",
 			TraceID:     "2505404965370368069",
-			ParentID:    strconv.FormatInt(parentID1, 10),
+			ParentID:    parentID,
 			Timestamp:   time.Unix(0, 1498688360904552*int64(time.Microsecond)),
-			Duration:    time.Duration(d1) * time.Microsecond,
-			Annotations: []Annotation(nil),
+			Duration:    time.Duration(50410) * time.Microsecond,
+			Annotations: nil,
 			BinaryAnnotations: []BinaryAnnotation{
 				BinaryAnnotation{
 					Key:         "lc",
@@ -101,7 +95,7 @@ func TestZipkinServer(t *testing.T) {
 			TraceID:   "2505404965370368069",
 			ParentID:  "22964302721410078",
 			Timestamp: time.Unix(0, 1498688360851318*int64(time.Microsecond)),
-			Duration:  time.Duration(d2) * time.Microsecond,
+			Duration:  time.Duration(103680) * time.Microsecond,
 			Annotations: []Annotation{
 				Annotation{
 					Timestamp:   time.Unix(1498688360851325, 0),
@@ -133,10 +127,6 @@ func TestZipkinServer(t *testing.T) {
 			},
 		},
 	}
-
-	/*	if !reflect.DeepEqual(got, want) {
-		t.Fatal("Got != want, Fields weren't unmarshalled correctly")
-	}*/
 
 	for i, s := range got {
 		if !reflect.DeepEqual(s, want[i]) {

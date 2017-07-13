@@ -4,8 +4,71 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
+
+// LineProtocolConverter implements the Recorder interface; it is a
+// type meant to encapsulate the storage of zipkin tracing data in
+// telegraf as line protocol.
+type LineProtocolConverter struct {
+	acc telegraf.Accumulator
+}
+
+// NewLineProtocolConverter returns an instance of LineProtocolConverter that
+// will add to the given telegraf.Accumulator
+func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
+	return &LineProtocolConverter{
+		acc: acc,
+	}
+}
+
+// Record is LineProtocolConverter's implementation of the Record method of
+// the Recorder interface; it takes a trace as input, and adds it to an internal
+// telegraf.Accumulator.
+func (l *LineProtocolConverter) Record(t Trace) error {
+	for _, s := range t {
+		fields := map[string]interface{}{
+			"duration": s.Duration,
+		}
+
+		tags := map[string]string{
+			"id":        s.ID,
+			"parent_id": s.ParentID,
+			"trace_id":  s.TraceID,
+			"name":      s.Name,
+		}
+
+		for _, a := range s.Annotations {
+			fields["annotation_timestamp"] = a.Timestamp.Unix()
+			tags["service_name"] = a.ServiceName
+			tags["annotation_value"] = a.Value
+			tags["endpoint_host"] = a.Host
+			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
+		}
+
+		for _, b := range s.BinaryAnnotations {
+			tags := map[string]string{
+				"id":               s.ID,
+				"parent_id":        s.ParentID,
+				"trace_id":         s.TraceID,
+				"name":             s.Name,
+				"service_name":     b.ServiceName,
+				"annotation_value": b.Value,
+				"endpoint_host":    b.Host,
+				"key":              b.Key,
+				"type":             b.Type,
+			}
+			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
+		}
+	}
+
+	return nil
+}
+
+func (l *LineProtocolConverter) Error(err error) {
+	l.acc.AddError(err)
+}
 
 // NewTrace converts a slice of []*zipkincore.Spans into a new Trace
 func NewTrace(spans []*zipkincore.Span) (Trace, error) {
