@@ -29,10 +29,6 @@ const (
 	DefaultShutdownTimeout = 5
 )
 
-// TODO: connect methods lexically; method implementations should go right under
-// struct definition. Maybe change order of structs, organize where structs are
-// declared based on when their type is used
-
 // Tracer represents a type which can record zipkin trace data as well as
 // any accompanying errors, and process that data.
 type Tracer interface {
@@ -155,9 +151,6 @@ func UnmarshalAnnotations(annotations []*zipkincore.Annotation) []Annotation {
 	return formatted
 }
 
-func (s Span) MergeAnnotations() {
-}
-
 // UnmarshalBinaryAnnotations is very similar to UnmarshalAnnotations, but it
 // Unmarshalls zipkincore.BinaryAnnotations instead of the normal zipkincore.Annotation
 func UnmarshalBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]BinaryAnnotation, error) {
@@ -182,10 +175,16 @@ func UnmarshalBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]B
 	return formatted, nil
 }
 
+// LineProtocolConverter implements the Tracer interface; it is a
+// type meant to encapsulate the storage of zipkin tracing data in
+// telegraf as line protocol.
 type LineProtocolConverter struct {
 	acc telegraf.Accumulator
 }
 
+// Record is LineProtocolConverter's implementation of the Record method of
+// the Tracer iterface; it takes a span as input, and adds it to an internal
+// telegraf.Accumulator.
 func (l *LineProtocolConverter) Record(t Trace) error {
 	log.Printf("received trace: %#+v\n", t)
 	//log.Printf("...But converter implementation is not yet done. Here's some example data")
@@ -244,6 +243,8 @@ func (l *LineProtocolConverter) Error(err error) {
 	l.acc.AddError(err)
 }
 
+// NewLineProtocolConverter returns an instance of LineProtocolConverter that
+// will add to the given telegraf.Accumulator
 func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
 	return &LineProtocolConverter{
 		acc: acc,
