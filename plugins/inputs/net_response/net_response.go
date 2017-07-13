@@ -92,17 +92,17 @@ func (n *NetResponse) TcpGather() (map[string]interface{}, error) {
 		responseTime = time.Since(start).Seconds()
 		// Handle error
 		if err != nil {
-			fields["result_type"] = "read_failed"
+			fields["result_type"] = "string_mismatch"
 		} else {
 			// Looking for string in answer
 			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
 			find := RegEx.FindString(string(data))
 			if find != "" {
 				fields["result_type"] = "success"
-				fields["string_found"] = true // WARNING: This field will be deprecated in a future release.
+				fields["string_found"] = true
 			} else {
 				fields["result_type"] = "string_mismatch"
-				fields["string_found"] = false // WARNING: This field will be deprecated in a future release.
+				fields["string_found"] = false
 			}
 		}
 	} else {
@@ -153,10 +153,10 @@ func (n *NetResponse) UdpGather() (map[string]interface{}, error) {
 		find := RegEx.FindString(string(buf))
 		if find != "" {
 			fields["result_type"] = "success"
-			fields["string_found"] = true // WARNING: This field will be deprecated in a future release.
+			fields["string_found"] = true
 		} else {
 			fields["result_type"] = "string_mismatch"
-			fields["string_found"] = false // WARNING: This field will be deprecated in a future release.
+			fields["string_found"] = false
 		}
 	}
 	fields["response_time"] = responseTime

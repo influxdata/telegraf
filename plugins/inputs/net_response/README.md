@@ -60,7 +60,7 @@ It can also check response text.
 - net_response
     - response_time (float, seconds)
     - result_type (string) # success, timeout, connection_failed, read_failed, string_mismatch
-    - [**DEPRECATED**] string_mismatch (boolean)
+    - [**DEPRECATED**] string_found (boolean)
 
 ### Tags:
 
