@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"reflect"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -17,18 +16,18 @@ const (
 	measurement  = "fluentd"
 	description  = "Read metrics exposed by fluentd in_monitor plugin"
 	sampleConfig = `
-	## This plugin only reads information exposed by fluentd using /api/plugins.json.
-	##
-	## Endpoint: 
-	## - only one URI is allowed
-	## - https is not supported
-	endpoint = "http://localhost:24220/api/plugins.json"
-	
-	## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
-	exclude = [
-		"monitor_agent",
-		"dummy",
-	]
+  ## This plugin reads information exposed by fluentd (using /api/plugins.json endpoint).
+  ##
+  ## Endpoint: 
+  ## - only one URI is allowed
+  ## - https is not supported
+  endpoint = "http://localhost:24220/api/plugins.json"
+  	
+  ## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
+  exclude = [
+	  "monitor_agent",
+	  "dummy",
+  ]
 `
 )
 
@@ -37,6 +36,10 @@ type Fluentd struct {
 	Endpoint string
 	Exclude  []string
 	client   *http.Client
+}
+
+type endpointInfo struct {
+	Payload []pluginData `json:"plugins"`
 }
 
 type pluginData struct {
@@ -55,53 +58,19 @@ type pluginData struct {
 // Returns:
 //		pluginData:		slice that contains parsed plugins
 //		error:			error that may have occurred
-func parse(data []byte) ([]pluginData, error) {
-	var (
-		pdPoint      pluginData
-		pdPointArray []pluginData
-		parsed       map[string]interface{}
-		err          error
-	)
+func parse(data []byte) (datapointArray []pluginData, err error) {
+	var endpointData endpointInfo
 
-	if err = json.Unmarshal(data, &parsed); err != nil {
-		return pdPointArray, err
+	if err = json.Unmarshal(data, &endpointData); err != nil {
+		err = fmt.Errorf("Processing JSON structure")
+		return
 	}
 
-	switch parsed["plugins"].(type) {
-	case []interface{}:
-		// Iterate through all plugins in array
-		for _, plugin := range parsed["plugins"].([]interface{}) {
-
-			tmpInterface := make(map[string]interface{})
-
-			// Go through all fields in plugin
-			for name, value := range plugin.(map[string]interface{}) {
-
-				tags := reflect.ValueOf(pdPoint)
-				// Iterate through pluginData structure and assign field in case
-				// when we have field that name is coresponing with field tagged in JSON structure
-				for i := 0; i < tags.Type().NumField(); i++ {
-					if tag, ok := tags.Type().Field(i).Tag.Lookup("json"); ok {
-						if tag == name && value != nil {
-							tmpInterface[tag] = value
-						}
-					}
-				}
-			}
-
-			// Marshal each plugin and Unmarshal it to fit into pluginData structure
-			tmpByte, err := json.Marshal(tmpInterface)
-			if err = json.Unmarshal(tmpByte, &pdPoint); err != nil {
-				return pdPointArray, fmt.Errorf("Processing JSON structure")
-			}
-
-			pdPointArray = append(pdPointArray, pdPoint)
-		}
-	default:
-		return pdPointArray, fmt.Errorf("Unknown JSON structure")
+	for _, point := range endpointData.Payload {
+		datapointArray = append(datapointArray, point)
 	}
 
-	return pdPointArray, err
+	return
 }
 
 // Description - display description

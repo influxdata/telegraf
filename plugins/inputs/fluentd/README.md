@@ -8,19 +8,18 @@ This plugin understands data provided by /api/plugin.json resource (/api/config.
 ```toml
 # Read metrics exposed by fluentd in_monitor plugin
 [[inputs.fluentd]]
-	## This plugin only reads information exposed by fluentd using /api/plugins.json.
-	## Tested using 'fluentd' version '0.14.9'
-	##
-	## Endpoint: 
-	## - only one URI is allowed
-	## - https is not supported
-	endpoint = "http://localhost:24220/api/plugins.json"
-	
-	## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
-	exclude = [
-		"monitor_agent",
-		"dummy",
-	]
+  ## This plugin reads information exposed by fluentd (using /api/plugins.json endpoint).
+  ##
+  ## Endpoint: 
+  ## - only one URI is allowed
+  ## - https is not supported
+  endpoint = "http://localhost:24220/api/plugins.json"
+  
+  ## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
+  exclude = [
+	  "monitor_agent",
+	  "dummy",
+  ]
 ```
 
 ### Measurements & Fields:
