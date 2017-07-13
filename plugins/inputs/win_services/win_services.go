@@ -79,7 +79,7 @@ func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
 
             acc.AddFields("win_services", fields, tags)
         } else {
-            acc.AddError(err)
+            acc.AddError(service.Error)
         }
     }
 
