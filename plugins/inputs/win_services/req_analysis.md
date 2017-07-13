@@ -20,7 +20,7 @@ originally requested in [telegraf issue #2714](https://github.com/influxdata/tel
  Defined by Windows Service API, used for querying services, availability
 
 ### Admin rights
-Admin privileges are required to read service info. However, as telegraf mostly runs as a service under a local system account, it should be no problem.
+Admin privileges are required to read service info. However, as telegraf mostly runs as a service under the Local System account, it should be no problem.
 
 ### Deployment
 Feature request mentions the monitoring of 5000 servers. This either means:
