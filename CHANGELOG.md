@@ -14,9 +14,9 @@
 
 ### New Plugins
 
-- [fail2ban](./plugins/inputs/fail2ban/README.md)
-- [minecraft](./plugins/inputs/minecraft/README.md)
-- [fluentd](./plugins/inputs/fluentd/README.md)
+- [fail2ban](./plugins/inputs/fail2ban/README.md) - Thanks to @grugrut
+- [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
+- [fluentd](./plugins/inputs/fluentd/README.md) - Thanks to @DanKans
 
 ### Features
 
