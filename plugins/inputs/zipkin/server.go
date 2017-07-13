@@ -24,10 +24,40 @@ type Server struct {
 // Register allows server to implement the Service interface. Server's register metod
 // registers its handler on mux, and sets the servers tracer with tracer
 func (s *Server) Register(router *mux.Router, tracer Tracer) error {
-	// TODO: potentially move router into Server if appropriate
 	router.HandleFunc(s.Path, s.SpanHandler).Methods("POST")
 	s.tracer = tracer
 	return nil
+}
+
+func unmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
+	buffer := thrift.NewTMemoryBuffer()
+	if _, err := buffer.Write(body); err != nil {
+		log.Println("Error in buffer write: ", err)
+		return nil, err
+	}
+
+	transport := thrift.NewTBinaryProtocolTransport(buffer)
+	_, size, err := transport.ReadListBegin()
+	if err != nil {
+		log.Printf("Error in ReadListBegin: %s", err)
+		return nil, err
+	}
+	var spans []*zipkincore.Span
+	for i := 0; i < size; i++ {
+		zs := &zipkincore.Span{}
+		if err = zs.Read(transport); err != nil {
+			log.Printf("Error reading into zipkin struct: %s", err)
+			return nil, err
+		}
+		spans = append(spans, zs)
+	}
+
+	err = transport.ReadListEnd()
+	if err != nil {
+		log.Printf("%s", err)
+		return nil, err
+	}
+	return spans, nil
 }
 
 // SpanHandler is the handler Server uses for handling zipkin POST requests
@@ -45,7 +75,6 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Could not write to data file")
 	}*/
 
-	log.Printf("body=%s\n", string(body))
 	if err != nil {
 		e := fmt.Errorf("Encountered error reading: %s", err)
 		log.Println(e)
@@ -53,39 +82,9 @@ func (s *Server) SpanHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	buffer := thrift.NewTMemoryBuffer()
-	if _, err = buffer.Write(body); err != nil {
-		log.Println("Error in buffer write: ", err)
-		s.tracer.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	transport := thrift.NewTBinaryProtocolTransport(buffer)
-	_, size, err := transport.ReadListBegin()
+	spans, err := unmarshalThrift(body)
 	if err != nil {
-		log.Printf("Error in ReadListBegin: %s", err)
-		s.tracer.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	var spans []*zipkincore.Span
-	for i := 0; i < size; i++ {
-		zs := &zipkincore.Span{}
-		if err = zs.Read(transport); err != nil {
-			log.Printf("Error reading into zipkin struct: %s", err)
-			s.tracer.Error(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		spans = append(spans, zs)
-	}
-
-	err = transport.ReadListEnd()
-	if err != nil {
-		log.Printf("%s", err)
+		log.Println("Error: ", err)
 		s.tracer.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
