@@ -43,12 +43,12 @@ type endpointInfo struct {
 }
 
 type pluginData struct {
-	PluginID              string  `json:"plugin_id"`
-	PluginType            string  `json:"type"`
-	PluginCategory        string  `json:"plugin_category"`
-	RetryCount            float64 `json:"retry_count"`
-	BufferQueueLength     float64 `json:"buffer_queue_length"`
-	BufferTotalQueuedSize float64 `json:"buffer_total_queued_size"`
+	PluginID              string   `json:"plugin_id"`
+	PluginType            string   `json:"type"`
+	PluginCategory        string   `json:"plugin_category"`
+	RetryCount            *float64 `json:"retry_count"`
+	BufferQueueLength     *float64 `json:"buffer_queue_length"`
+	BufferTotalQueuedSize *float64 `json:"buffer_total_queued_size"`
 }
 
 // parse JSON from fluentd Endpoint
@@ -147,11 +147,21 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 				"plugin_type":     p.PluginType,
 			}
 
-			tmpFields["buffer_queue_length"] = p.BufferQueueLength
-			tmpFields["retry_count"] = p.RetryCount
-			tmpFields["buffer_total_queued_size"] = p.BufferTotalQueuedSize
+			if p.BufferQueueLength != nil {
+				tmpFields["buffer_queue_length"] = p.BufferQueueLength
 
-			acc.AddFields(measurement, tmpFields, tmpTags)
+			}
+			if p.RetryCount != nil {
+				tmpFields["retry_count"] = p.RetryCount
+			}
+
+			if p.BufferTotalQueuedSize != nil {
+				tmpFields["buffer_total_queued_size"] = p.BufferTotalQueuedSize
+			}
+
+			if !((p.BufferQueueLength == nil) && (p.RetryCount == nil) && (p.BufferTotalQueuedSize == nil)) {
+				acc.AddFields(measurement, tmpFields, tmpTags)
+			}
 		}
 	}
 

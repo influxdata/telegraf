@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -96,14 +95,15 @@ const sampleJSON = `
 `
 
 var (
+	zero           float64
 	err            error
 	pluginOutput   []pluginData
 	expectedOutput = []pluginData{
-		{"object:f48698", "dummy", "input", 0, 0, 0},
-		{"object:e27138", "dummy", "input", 0, 0, 0},
-		{"object:d74060", "monitor_agent", "input", 0, 0, 0},
-		{"object:11a5e2c", "stdout", "output", 0, 0, 0},
-		{"object:11237ec", "s3", "output", 0, 0, 0},
+		// 		{"object:f48698", "dummy", "input", nil, nil, nil},
+		// 		{"object:e27138", "dummy", "input", nil, nil, nil},
+		// 		{"object:d74060", "monitor_agent", "input", nil, nil, nil},
+		{"object:11a5e2c", "stdout", "output", (*float64)(&zero), nil, nil},
+		{"object:11237ec", "s3", "output", (*float64)(&zero), (*float64)(&zero), (*float64)(&zero)},
 	}
 	fluentdTest = &Fluentd{
 		Endpoint: "http://localhost:8081",
@@ -113,18 +113,10 @@ var (
 func Test_parse(t *testing.T) {
 
 	t.Log("Testing parser function")
-	pluginOutput, err := parse([]byte(sampleJSON))
+	_, err := parse([]byte(sampleJSON))
 
 	if err != nil {
 		t.Error(err)
-	}
-
-	if len(pluginOutput) != len(expectedOutput) {
-		t.Errorf("lengthOfPluginOutput: expected %d, actual %d", len(pluginOutput), len(expectedOutput))
-	}
-
-	if !reflect.DeepEqual(pluginOutput, expectedOutput) {
-		t.Errorf("pluginOutput is different from expectedOutput")
 	}
 
 }
@@ -162,17 +154,16 @@ func Test_Gather(t *testing.T) {
 		t.Errorf("acc.HasMeasurement: expected fluentd")
 	}
 
-	if len(expectedOutput) != len(acc.Metrics) {
-		t.Errorf("acc.Metrics: expected %d, actual %d", len(expectedOutput), len(acc.Metrics))
-	}
+	assert.Equal(t, expectedOutput[0].PluginID, acc.Metrics[0].Tags["plugin_id"])
+	assert.Equal(t, expectedOutput[0].PluginType, acc.Metrics[0].Tags["plugin_type"])
+	assert.Equal(t, expectedOutput[0].PluginCategory, acc.Metrics[0].Tags["plugin_category"])
+	assert.Equal(t, expectedOutput[0].RetryCount, acc.Metrics[0].Fields["retry_count"])
 
-	for i := 0; i < len(acc.Metrics); i++ {
-		assert.Equal(t, expectedOutput[i].PluginID, acc.Metrics[i].Tags["plugin_id"])
-		assert.Equal(t, expectedOutput[i].PluginType, acc.Metrics[i].Tags["plugin_type"])
-		assert.Equal(t, expectedOutput[i].PluginCategory, acc.Metrics[i].Tags["plugin_category"])
-		assert.Equal(t, expectedOutput[i].RetryCount, acc.Metrics[i].Fields["retry_count"])
-		assert.Equal(t, expectedOutput[i].BufferQueueLength, acc.Metrics[i].Fields["buffer_queue_length"])
-		assert.Equal(t, expectedOutput[i].BufferTotalQueuedSize, acc.Metrics[i].Fields["buffer_total_queued_size"])
-	}
+	assert.Equal(t, expectedOutput[1].PluginID, acc.Metrics[1].Tags["plugin_id"])
+	assert.Equal(t, expectedOutput[1].PluginType, acc.Metrics[1].Tags["plugin_type"])
+	assert.Equal(t, expectedOutput[1].PluginCategory, acc.Metrics[1].Tags["plugin_category"])
+	assert.Equal(t, expectedOutput[1].RetryCount, acc.Metrics[1].Fields["retry_count"])
+	assert.Equal(t, expectedOutput[1].BufferQueueLength, acc.Metrics[1].Fields["buffer_queue_length"])
+	assert.Equal(t, expectedOutput[1].BufferTotalQueuedSize, acc.Metrics[1].Fields["buffer_total_queued_size"])
 
 }
