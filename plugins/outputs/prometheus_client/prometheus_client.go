@@ -57,7 +57,7 @@ type PrometheusClient struct {
 
 var sampleConfig = `
   ## Address to listen on
-  # listen = ":9273"
+  # listen = ":9126"
 
   ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
   # expiration_interval = "60s"
@@ -67,7 +67,7 @@ func (p *PrometheusClient) Start() error {
 	prometheus.Register(p)
 
 	if p.Listen == "" {
-		p.Listen = "localhost:9273"
+		p.Listen = "localhost:9126"
 	}
 
 	mux := http.NewServeMux()
@@ -78,12 +78,7 @@ func (p *PrometheusClient) Start() error {
 		Handler: mux,
 	}
 
-	go func() {
-		if err := p.server.ListenAndServe(); err != nil {
-			log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
-				err.Error())
-		}
-	}()
+	go p.server.ListenAndServe()
 	return nil
 }
 
@@ -169,41 +164,6 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 
 			ch <- metric
 		}
-		desc := prometheus.NewDesc(name, "Telegraf collected metric", labelNames, nil)
-
-		for _, sample := range family.Samples {
-			// Get labels for this sample; unset labels will be set to the
-			// empty string
-			var labels []string
-			for _, label := range labelNames {
-				v := sample.Labels[label]
-				labels = append(labels, v)
-			}
-
-			metric, err := prometheus.NewConstMetric(desc, family.ValueType, sample.Value, labels...)
-			if err != nil {
-				log.Printf("E! Error creating prometheus metric, "+
-					"key: %s, labels: %v,\nerr: %s\n",
-					name, labels, err.Error())
-			}
-
-			ch <- metric
-		}
-	}
-}
-
-func sanitize(value string) string {
-	return invalidNameCharRE.ReplaceAllString(value, "_")
-}
-
-func valueType(tt telegraf.ValueType) prometheus.ValueType {
-	switch tt {
-	case telegraf.Counter:
-		return prometheus.CounterValue
-	case telegraf.Gauge:
-		return prometheus.GaugeValue
-	default:
-		return prometheus.UntypedValue
 	}
 }
 
