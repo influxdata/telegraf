@@ -153,10 +153,6 @@ func TestRedirects(t *testing.T) {
 	response_value, ok := acc.StringField("http_response", "result_type")
 	require.True(t, ok)
 	require.Equal(t, "connection_failed", response_value)
-	require.Error(t, err)
-
-	value, ok = acc.IntField("http_response", "http_response_code")
-	require.False(t, ok)
 }
 
 func TestMethod(t *testing.T) {
