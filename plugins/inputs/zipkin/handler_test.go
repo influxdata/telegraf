@@ -13,18 +13,18 @@ import (
 	"time"
 )
 
-type MockTracer struct {
+type MockRecorder struct {
 	Data Trace
 	Err  error
 }
 
-func (m *MockTracer) Record(t Trace) error {
+func (m *MockRecorder) Record(t Trace) error {
 	fmt.Println("Adding trace ", t)
 	m.Data = t
 	return nil
 }
 
-func (m *MockTracer) Error(err error) {
+func (m *MockRecorder) Error(err error) {
 	m.Err = err
 }
 
@@ -35,22 +35,22 @@ func TestZipkinServer(t *testing.T) {
 		t.Fatalf("Could not find file %s\n", "test/threespans.dat")
 	}
 
-	s := NewServer("/api/v1/spans")
-	mockTracer := &MockTracer{}
-	s.tracer = mockTracer
+	s := NewSpanHandler("/api/v1/spans")
+	mockRecorder := &MockRecorder{}
+	s.recorder = mockRecorder
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(
 		"POST",
 		"http://server.local/api/v1/spans",
 		ioutil.NopCloser(
 			bytes.NewReader(dat)))
-	handler := s.SpanHandler
+	handler := s.Spans
 	handler(w, r)
 	if w.Code != http.StatusNoContent {
 		t.Errorf("MainHandler did not return StatusNoContent %d", w.Code)
 	}
 
-	got := mockTracer.Data
+	got := mockRecorder.Data
 
 	d := int64(53106)
 	d1 := int64(50410)

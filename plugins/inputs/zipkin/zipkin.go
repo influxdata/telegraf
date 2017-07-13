@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
 
 const (
@@ -29,17 +28,17 @@ const (
 	DefaultShutdownTimeout = 5
 )
 
-// Tracer represents a type which can record zipkin trace data as well as
+// Recorder represents a type which can record zipkin trace data as well as
 // any accompanying errors, and process that data.
-type Tracer interface {
+type Recorder interface {
 	Record(Trace) error
 	Error(error)
 }
 
-// Service represents a type which can register itself with a router for
-// http routing, and a Tracer for trace data collection.
-type Service interface {
-	Register(router *mux.Router, tracer Tracer) error
+// Handler represents a type which can register itself with a router for
+// http routing, and a Recorder for trace data collection.
+type Handler interface {
+	Register(router *mux.Router, recorder Recorder) error
 }
 
 // BinaryAnnotation represents a zipkin binary annotation. It contains
@@ -78,103 +77,7 @@ type Span struct {
 // Trace is an array (or a series) of spans
 type Trace []Span
 
-//UnmarshalZipkinResponse is a helper method for unmarhsalling a slice of []*zipkincore.Spans
-// into a Trace (technically a []Span)
-func UnmarshalZipkinResponse(spans []*zipkincore.Span) (Trace, error) {
-	var trace Trace
-	for _, span := range spans {
-
-		s := Span{}
-		s.ID = strconv.FormatInt(span.GetID(), 10)
-		s.TraceID = strconv.FormatInt(span.GetTraceID(), 10)
-		if span.GetTraceIDHigh() != 0 {
-			s.TraceID = strconv.FormatInt(span.GetTraceIDHigh(), 10) + s.TraceID
-		}
-
-		s.Annotations = UnmarshalAnnotations(span.GetAnnotations())
-
-		var err error
-		s.BinaryAnnotations, err = UnmarshalBinaryAnnotations(span.GetBinaryAnnotations())
-		if err != nil {
-			return nil, err
-		}
-		s.Name = span.GetName()
-		if span.GetTimestamp() == 0 {
-			s.Timestamp = time.Now()
-		} else {
-			s.Timestamp = time.Unix(0, span.GetTimestamp()*int64(time.Microsecond))
-		}
-
-		duration := time.Duration(span.GetDuration())
-		//	fmt.Println("Duration: ", duration)
-		s.Duration = duration * time.Microsecond
-
-		parentID := span.GetParentID()
-		//	fmt.Println("Parent ID: ", parentID)
-
-		// A parent ID of 0 means that this is a parent span. In this case,
-		// we set the parent ID of the span to be its own id, so it points to
-		// itself.
-
-		if parentID == 0 {
-			s.ParentID = s.ID
-		} else {
-			s.ParentID = strconv.FormatInt(parentID, 10)
-		}
-
-		//	fmt.Println("ID:", s.ID)
-		trace = append(trace, s)
-	}
-
-	return trace, nil
-}
-
-// UnmarshalAnnotations is a helper method for unmarshalling a slice of
-// *zipkincore.Annotation into a slice of Annotations
-func UnmarshalAnnotations(annotations []*zipkincore.Annotation) []Annotation {
-	var formatted []Annotation
-	for _, annotation := range annotations {
-		a := Annotation{}
-		endpoint := annotation.GetHost()
-		if endpoint != nil {
-			a.Host = strconv.Itoa(int(endpoint.GetIpv4())) + ":" + strconv.Itoa(int(endpoint.GetPort()))
-			a.ServiceName = endpoint.GetServiceName()
-		} else {
-			a.Host, a.ServiceName = "", ""
-		}
-
-		a.Timestamp = time.Unix(annotation.GetTimestamp(), 0)
-		a.Value = annotation.GetValue()
-		formatted = append(formatted, a)
-	}
-	//fmt.Println("formatted annotations: ", formatted)
-	return formatted
-}
-
-// UnmarshalBinaryAnnotations is very similar to UnmarshalAnnotations, but it
-// Unmarshalls zipkincore.BinaryAnnotations instead of the normal zipkincore.Annotation
-func UnmarshalBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]BinaryAnnotation, error) {
-	var formatted []BinaryAnnotation
-	for _, annotation := range annotations {
-		b := BinaryAnnotation{}
-		endpoint := annotation.GetHost()
-		if endpoint != nil {
-			b.Host = strconv.Itoa(int(endpoint.GetIpv4())) + ":" + strconv.Itoa(int(endpoint.GetPort()))
-			b.ServiceName = endpoint.GetServiceName()
-		} else {
-			b.Host, b.ServiceName = "", ""
-		}
-
-		b.Key = annotation.GetKey()
-		b.Value = string(annotation.GetValue())
-		b.Type = annotation.GetAnnotationType().String()
-		formatted = append(formatted, b)
-	}
-
-	return formatted, nil
-}
-
-// LineProtocolConverter implements the Tracer interface; it is a
+// LineProtocolConverter implements the Recorder interface; it is a
 // type meant to encapsulate the storage of zipkin tracing data in
 // telegraf as line protocol.
 type LineProtocolConverter struct {
@@ -182,7 +85,7 @@ type LineProtocolConverter struct {
 }
 
 // Record is LineProtocolConverter's implementation of the Record method of
-// the Tracer iterface; it takes a span as input, and adds it to an internal
+// the Recorder interface; it takes a trace as input, and adds it to an internal
 // telegraf.Accumulator.
 func (l *LineProtocolConverter) Record(t Trace) error {
 	log.Printf("received trace: %#+v\n", t)
@@ -261,7 +164,7 @@ type Zipkin struct {
 	ServiceAddress string
 	Port           int
 	Path           string
-	tracing        Service
+	handler        Handler
 	server         *http.Server
 	waitGroup      *sync.WaitGroup
 }
@@ -284,9 +187,8 @@ func (z *Zipkin) Gather(acc telegraf.Accumulator) error { return nil }
 // passing in a telegraf.Accumulator such that data can be collected.
 func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	log.Println("starting...")
-	if z.tracing == nil {
-		t := NewServer(z.Path)
-		z.tracing = t
+	if z.handler == nil {
+		z.handler = NewSpanHandler(z.Path)
 	}
 
 	var wg sync.WaitGroup
@@ -314,14 +216,14 @@ func (z *Zipkin) Stop() {
 // Listen creates an http server on the zipkin instance it is called with, and
 // serves http until it is stopped by Zipkin's (*Zipkin).Stop()  method.
 func (z *Zipkin) Listen(acc telegraf.Accumulator) {
-	r := mux.NewRouter()
+	router := mux.NewRouter()
 	converter := NewLineProtocolConverter(acc)
-	z.tracing.Register(r, converter)
+	z.handler.Register(router, converter)
 
 	if z.server == nil {
 		z.server = &http.Server{
 			Addr:    ":" + strconv.Itoa(z.Port),
-			Handler: r,
+			Handler: router,
 		}
 	}
 	if err := z.server.ListenAndServe(); err != nil {
