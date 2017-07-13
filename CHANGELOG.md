@@ -55,7 +55,7 @@
 - [#2984](https://github.com/influxdata/telegraf/pull/2984): Display error message if prometheus output fails to listen.
 - [#2997](https://github.com/influxdata/telegraf/issues/2997): Fix elasticsearch output content type detection warning.
 
-## v1.3.4 [unreleased]
+## v1.3.4 [2017-07-12]
 
 ### Bugfixes
 
