@@ -88,14 +88,8 @@ Services in example should be available on all Windows edition and versions.
   * A service require special privileges
   
   This should be reported as a warning, not complete error of the Gather function
-  
-  Possible solutions:
-  1. Report it once to log/console, in first run of Gather 
-  2. Store it once as a measurement, in first run of Gather
-     use _error_ tag for error message and _state_ tag with a special value (e.g. -1) to denote an error  
-  3. Store it repeatedly, in each measurement cycle, to retain this info.
-   
-   _Q: What is the best practise? I would go with 3._
+    
+   As stated by Daniel, best practice is to use Accumulator.AddError and log it every time. Telegraf should handle multiple same errors.
       
  ### Caching
   Most service info is almost static and it could be cached. But as all the info about requested services Windows Service Manager stores in memory, even full listing takes just 8ms on Windows 10 on Core i5 (2 cores) laptop,
