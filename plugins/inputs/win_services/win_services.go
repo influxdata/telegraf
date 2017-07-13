@@ -6,33 +6,21 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/sys/windows/svc/mgr"
-    "strconv"
-    "errors"
+    "fmt"
 )
 
 var sampleConfig = `
-  ## This plugin returns by default service state and startup mode
-  ## See the README file for more examples.
-  ## Uncomment examples below or write your own as you see fit. If the system
-  ## being polled for data does not have the Object at startup of the Telegraf
-  ## agent, it will not be gathered.
-  ## Settings:
-
-  # Names of services to monitor. Empty for all
-  Services = [
-    "Server"
+  ## Name of services to monitor. Set empty to monitor all the available services on the host
+  service_names = [
+    "LanmanServer",
+    "TermService",
   ]
-  # CustomTagName=Group
-  # CustomTagValue=alpha
 `
 
-var description = "Input plugin to report Windows services info: name, display name, state, startup mode"
+var description = "Input plugin to report Windows services info: service name, display name, state, startup mode"
 
 type Win_Services struct {
-	Services    []string
-    Measurement     string
-	CustomTagName	string
-	CustomTagValue  string
+	ServiceNames []string `toml:"service_names"`
 }
 
 type ServiceInfo struct {
@@ -43,6 +31,24 @@ type ServiceInfo struct {
     Error           error
 }
 
+var  ServiceStatesMap = map [int]string{
+    0x00000001: "service_stopped",
+    0x00000002: "service_start_pending",
+    0x00000003: "service_stop_pending",
+    0x00000004: "service_running",
+    0x00000005: "service_continue_pending",
+    0x00000006: "service_pause_pending",
+    0x00000007: "service_paused",
+}
+
+var  ServiceStartupModeMap = map [int]string{
+    0x00000000: "service_boot_start",
+    0x00000001: "service_system_start",
+    0x00000002: "service_auto_start",
+    0x00000003: "service_demand_start",
+    0x00000004: "service_disabled",
+
+}
 
 func (m *Win_Services) Description() string {
 	return description
@@ -55,29 +61,26 @@ func (m *Win_Services) SampleConfig() string {
 
 func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
 
-    serviceInfos, err := listServices(m.Services)
+    serviceInfos, err := listServices(m.ServiceNames)
 
     if err != nil {
         return err
     }
 
-    if m.Measurement == "" {
-        m.Measurement = "win_services"
-    }
-
     for _, service := range serviceInfos {
-        fields := make(map[string]interface{})
-        tags := make(map[string]string)
-        tags["service"] = service.ServiceName
         if service.Error == nil {
-            fields["displayName"] = service.DisplayName
-            tags["state"] = strconv.Itoa(service.State)
-            tags["startupMode"] = strconv.Itoa(service.StartUpMode)
+            fields := make(map[string]interface{})
+            tags := make(map[string]string)
+
+            fields["display_name"] = service.DisplayName
+            tags["service_name"] = service.ServiceName
+            tags["state"] = ServiceStatesMap[service.State]
+            tags["startup_mode"] = ServiceStartupModeMap[service.StartUpMode]
+
+            acc.AddFields("win_services", fields, tags)
         } else {
-            fields["error"] = service.Error.Error()
-            tags["state"] = strconv.Itoa(-1) //indicate error state
+            acc.AddError(err)
         }
-        acc.AddFields(m.Measurement, fields, tags)
     }
 
 	return nil
@@ -87,7 +90,7 @@ func listServices(userServices []string) ([]ServiceInfo, error) {
 
     scmgr, err := mgr.Connect()
     if err != nil {
-        return nil, errors.New("Could not open service manager: " + err.Error());
+        return nil, fmt.Errorf("Could not open service manager: %s", err)
     }
     defer scmgr.Disconnect()
 
@@ -96,7 +99,7 @@ func listServices(userServices []string) ([]ServiceInfo, error) {
         //Listing service names from system
         serviceNames, err = scmgr.ListServices()
         if err != nil {
-            return nil, errors.New("Could not list services: " + err.Error());
+            return nil, fmt.Errorf("Could not list services: %s", err)
         }
     } else {
         serviceNames = userServices
@@ -107,14 +110,14 @@ func listServices(userServices []string) ([]ServiceInfo, error) {
         serviceInfos[i].ServiceName = srvName
         srv, err := scmgr.OpenService(srvName)
         if err != nil {
-            serviceInfos[i].Error = errors.New("Could not open service: " + err.Error());
+            serviceInfos[i].Error = fmt.Errorf("Could not open service '%s': %s",srvName, err)
             continue
         }
         srvStatus, err := srv.Query()
         if err == nil {
             serviceInfos[i].State = int(srvStatus.State)
         } else {
-            serviceInfos[i].Error = errors.New("Could not query service: " + err.Error());
+            serviceInfos[i].Error = fmt.Errorf("Could not query service '%s': %s",srvName, err)
         }
 
         srvCfg, err := srv.Config()
@@ -122,7 +125,7 @@ func listServices(userServices []string) ([]ServiceInfo, error) {
             serviceInfos[i].DisplayName = srvCfg.DisplayName
             serviceInfos[i].StartUpMode = int(srvCfg.StartType)
         } else {
-            serviceInfos[i].Error = errors.New("Could not get service config: " + err.Error());
+            serviceInfos[i].Error = fmt.Errorf("Could not get config of service '%s': %s", srvName, err)
         }
         srv.Close()
     }
