@@ -3,6 +3,18 @@
 The fluentd plugin gathers metrics from plugin endpoint provided by [in_monitor plugin](http://docs.fluentd.org/v0.12/articles/monitoring).
 This plugin understands data provided by /api/plugin.json resource (/api/config.json is not covered).
 
+You might need to adjust your fluentd configuration, in order to reduce series cardinality in case whene your fluentd restarts frequently. Every time when fluentd starts, `plugin_id` value is given a new random value.
+According to [fluentd documentation](http://docs.fluentd.org/v0.12/articles/config-file), you are able to add `@id`  parameter for each plugin to avoid this behaviour and define custom `plugin_id`.
+
+example configuratio with `@id` parameter for http plugin:
+```
+<source>
+  @type http
+  @id http
+  port 8888
+</source>
+```
+
 ### Configuration:
 
 ```toml
