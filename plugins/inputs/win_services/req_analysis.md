@@ -64,34 +64,23 @@ So mapping to tag or field would be:
  
  Property|Key | Type
   ---- |----- | ---
- service name| service | string
- display name| displayName | string
- startup mode| startupMode | number
- actual state| state | number
+ service name| service_name | string
+ display name| display_name | string
+ startup mode| startup_mode | string
+ actual state| state | string
 
-Keys _startupMode_ and _state_ could be also string, a human readable representation of the attribute, but number are preferred by convention, as they can be mapped to string in visualization tools
-
-Mapping to text will be described in the plugin readme.
+Keys _startupMode_ and _state_ will be  a human readable representation of the attribute.
 
  ### Configuration
  * User must be able to set what services to be monitored:
   ````
   # Case-insensitive name of services to monitor. Empty of all services
-  Services = [
+  service_names = [
     "LanmanServer",
     "TermService"
   ]
  ````
 Services in example should be available on all Windows edition and versions. 
- 
- * Configure measurement name
-  ````
-   # Custom measurement. Default is win_services
-   Measurement = "MyServerServices"
-  ````
-   As discussed in the [measurement]((#measurement)) paragraph we could have here configuration whether to store services info in one measurement.
-  
-   For the first version we can keep that hardcoded and based on feedback it could be changed.
  
  ### Storing Errors
   There are basically two possible errors:
