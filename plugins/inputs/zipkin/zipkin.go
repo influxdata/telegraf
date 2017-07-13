@@ -165,9 +165,8 @@ func UnmarshalBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]B
 			b.Host, b.ServiceName = "", ""
 		}
 
-		val := annotation.GetValue()
 		b.Key = annotation.GetKey()
-		b.Value = string(val)
+		b.Value = string(annotation.GetValue())
 		b.Type = annotation.GetAnnotationType().String()
 		formatted = append(formatted, b)
 	}
@@ -187,7 +186,6 @@ type LineProtocolConverter struct {
 // telegraf.Accumulator.
 func (l *LineProtocolConverter) Record(t Trace) error {
 	log.Printf("received trace: %#+v\n", t)
-	//log.Printf("...But converter implementation is not yet done. Here's some example data")
 	log.Printf("Writing to telegraf...\n")
 	for _, s := range t {
 		for _, a := range s.Annotations {
@@ -236,7 +234,6 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 	}
 
 	return nil
-
 }
 
 func (l *LineProtocolConverter) Error(err error) {
@@ -254,7 +251,7 @@ func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
 const sampleConfig = `
   ##
   # path = /path/your/zipkin/impl/posts/to
-  # port = <port_your_zipkin_impl_uses>
+  # port = <port your service posts to>
 `
 
 // Zipkin is a telegraf configuration structure for the zipkin input plugin,
