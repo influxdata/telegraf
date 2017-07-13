@@ -169,6 +169,41 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 
 			ch <- metric
 		}
+		desc := prometheus.NewDesc(name, "Telegraf collected metric", labelNames, nil)
+
+		for _, sample := range family.Samples {
+			// Get labels for this sample; unset labels will be set to the
+			// empty string
+			var labels []string
+			for _, label := range labelNames {
+				v := sample.Labels[label]
+				labels = append(labels, v)
+			}
+
+			metric, err := prometheus.NewConstMetric(desc, family.ValueType, sample.Value, labels...)
+			if err != nil {
+				log.Printf("E! Error creating prometheus metric, "+
+					"key: %s, labels: %v,\nerr: %s\n",
+					name, labels, err.Error())
+			}
+
+			ch <- metric
+		}
+	}
+}
+
+func sanitize(value string) string {
+	return invalidNameCharRE.ReplaceAllString(value, "_")
+}
+
+func valueType(tt telegraf.ValueType) prometheus.ValueType {
+	switch tt {
+	case telegraf.Counter:
+		return prometheus.CounterValue
+	case telegraf.Gauge:
+		return prometheus.GaugeValue
+	default:
+		return prometheus.UntypedValue
 	}
 }
 

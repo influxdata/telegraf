@@ -53,6 +53,14 @@
 - [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
 - [#2452](https://github.com/influxdata/telegraf/pull/2452): Improve Prometheus Client output documentation.
 - [#2984](https://github.com/influxdata/telegraf/pull/2984): Display error message if prometheus output fails to listen.
+## v1.3.4 [2017-07-12]
+
+### Bugfixes
+
+- [#3001](https://github.com/influxdata/telegraf/issues/3001): Fix handling of escape characters within fields.
+- [#2988](https://github.com/influxdata/telegraf/issues/2988): Fix chrony plugin does not track system time offset.
+- [#3004](https://github.com/influxdata/telegraf/issues/3004): Do not allow metrics with trailing slashes.
+- [#3011](https://github.com/influxdata/telegraf/issues/3011): Prevent Write from being called concurrently.
 
 ## v1.3.3 [2017-06-28]
 
