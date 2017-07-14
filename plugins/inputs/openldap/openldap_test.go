@@ -75,7 +75,7 @@ func TestOpenldapStartTLS(t *testing.T) {
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
 		Ssl:                "starttls",
-		InsecureSkipverify: true,
+		InsecureSkipVerify: true,
 	}
 
 	var acc testutil.Accumulator
@@ -93,7 +93,7 @@ func TestOpenldapLDAPS(t *testing.T) {
 		Host:               testutil.GetLocalHost(),
 		Port:               636,
 		Ssl:                "ldaps",
-		InsecureSkipverify: true,
+		InsecureSkipVerify: true,
 	}
 
 	var acc testutil.Accumulator
@@ -111,7 +111,7 @@ func TestOpenldapInvalidSSL(t *testing.T) {
 		Host:               testutil.GetLocalHost(),
 		Port:               636,
 		Ssl:                "invalid",
-		InsecureSkipverify: true,
+		InsecureSkipVerify: true,
 	}
 
 	var acc testutil.Accumulator
@@ -130,7 +130,7 @@ func TestOpenldapBind(t *testing.T) {
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
 		Ssl:                "",
-		InsecureSkipverify: true,
+		InsecureSkipVerify: true,
 		BindDn:             "cn=manager,cn=config",
 		BindPassword:       "secret",
 	}

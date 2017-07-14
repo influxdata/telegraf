@@ -15,8 +15,8 @@ type Openldap struct {
 	Host               string
 	Port               int
 	Ssl                string
-	InsecureSkipverify bool
-	SslCA              string
+	InsecureSkipVerify bool
+	SslCa              string
 	BindDn             string
 	BindPassword       string
 }
@@ -63,8 +63,8 @@ func NewOpenldap() *Openldap {
 		Host:               "localhost",
 		Port:               389,
 		Ssl:                "",
-		InsecureSkipverify: false,
-		SslCA:              "",
+		InsecureSkipVerify: false,
+		SslCa:              "",
 		BindDn:             "",
 		BindPassword:       "",
 	}
@@ -76,7 +76,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	var l *ldap.Conn
 	if o.Ssl != "" {
 		// build tls config
-		tlsConfig, err := internal.GetTLSConfig("", "", o.SslCA, o.InsecureSkipverify)
+		tlsConfig, err := internal.GetTLSConfig("", "", o.SslCa, o.InsecureSkipVerify)
 		if err != nil {
 			acc.AddError(err)
 			return nil
