@@ -25,9 +25,10 @@ const sampleConfig string = `
   host = "localhost"
   port = 389
 
-  # ldaps, starttls. default is an empty string, disabling all encryption.
+  # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
   # note that port will likely need to be changed to 636 for ldaps
-  ssl = "" | "starttls" | "ldaps"
+  # valid options: "" | "starttls" | "ldaps"
+  ssl = ""
   
   # skip peer certificate verification. Default is false.
   insecure_skip_verify = false
