@@ -126,6 +126,7 @@ func (c *Ceph) gatherClusterStats(acc telegraf.Accumulator) error {
 		{"status", decodeStatus},
 		{"df", decodeDf},
 		{"osd pool stats", decodeOsdPoolStats},
+		{"osd df", decodeOsdDf},
 	}
 
 	// For each job, execute against the cluster, parse and accumulate the data points
@@ -552,5 +553,36 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 		acc.AddFields("ceph_pool_stats", fields, tags)
 	}
 
+	return nil
+}
+
+func decodeOsdDf(acc telegraf.Accumulator, input string) error {
+	data := make(map[string]interface{})
+	err := json.Unmarshal([]byte(input), &data)
+	if err != nil {
+		return fmt.Errorf("failed to parse json: '%s': %v", input, err)
+	}
+
+	// ceph.osd.usage: records per osd utilization and number of objects
+	osds, ok := data["nodes"].([]interface{})
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode df osds", measurement)
+	}
+
+	for _, osd := range osds {
+		osd_map, ok := osd.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("WARNING %s - unable to decode df osd", measurement)
+		}
+		osd_name, ok := osd_map["name"].(string)
+		if !ok {
+			return fmt.Errorf("WARNING %s - unable to decode df osd name", measurement)
+		}
+
+		tags := map[string]string{
+			"name": osd_name,
+		}
+		acc.AddFields("ceph_osd_usage", osd_map, tags)
+	}
 	return nil
 }

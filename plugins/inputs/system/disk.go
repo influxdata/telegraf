@@ -7,6 +7,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"os/exec"
+	"strconv"
 )
 
 type DiskStats struct {
@@ -125,6 +127,7 @@ func (_ *DiskIOStats) SampleConfig() string {
 }
 
 func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
+	fmt.Println(s.Devices)
 	diskio, err := s.ps.DiskIO(s.Devices)
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %s", err)
@@ -156,7 +159,7 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddCounter("diskio", fields, tags)
 	}
-
+	extractDiskIOStates(acc,s.Devices)
 	return nil
 }
 
@@ -217,6 +220,63 @@ func (s *DiskIOStats) diskTags(devName string) map[string]string {
 
 	return tags
 }
+
+func extractDiskIOStates(acc telegraf.Accumulator,name []string) error {
+	iostat_path := "/usr/bin/iostat"
+	if len(iostat_path) == 0 {
+		return fmt.Errorf("iostat not found: verify that iostat is installed and that iostat is in your PATH")
+	}
+	for _, item := range name{
+		cmd := exec.Command("/usr/bin/iostat", "-x",item)
+		out, err := cmd.Output()
+
+		if err != nil {
+			return fmt.Errorf("WARNING %s - unable to decode extract DiskIO States", err)
+		}
+
+		stats := strings.Trim(string(out), "\n")
+		lines := strings.Split(stats, "\n")
+
+		for _, ln := range lines[6:] {
+
+			tags := map[string]string{}
+
+			parts := PrepString(ln)
+
+			name := parts[0]
+			tags["name"] = name
+
+			await, _ := strconv.ParseFloat(parts[9], 64)
+			await_r, _ := strconv.ParseFloat(parts[10], 64)
+			await_w, _ := strconv.ParseFloat(parts[11], 64)
+			svctm, _ := strconv.ParseFloat(parts[12], 64)
+			util, _ := strconv.ParseFloat(parts[13], 64)
+
+			device := map[string]interface{}{
+				"await":             await,
+				"await_read":         await_r,
+				"await_write":        await_w,
+				"svctm":             svctm,
+				"util":              util,
+			}
+
+
+			acc.AddCounter("disk_latency", device, tags)
+		}
+	}
+
+	return nil
+}
+
+func PrepString(str string) []string {
+
+	str = strings.Trim(str, " ")
+
+	re_whitespace := regexp.MustCompile(`\s+`)
+	return re_whitespace.Split(str, -1)
+}
+
+
 
 func init() {
 	ps := newSystemPS()
