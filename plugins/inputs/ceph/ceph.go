@@ -367,6 +367,15 @@ func decodeStatusPgmap(acc telegraf.Accumulator, data map[string]interface{}) er
 			fields[key] = value
 		}
 	}
+
+	misseditems := []string{"write_op_per_sec", "read_op_per_sec", "degraded_objects", "degraded_ratio", "degraded_total", "inactive_pgs_ratio", "write_bytes_sec"}
+
+	for _, item := range misseditems {
+		if _, ok := fields[item]; !ok {
+			fields[item] = 0.0
+		}
+	}
+
 	acc.AddFields("ceph_pgmap", fields, map[string]string{})
 	return nil
 }
@@ -396,6 +405,9 @@ func decodeStatusPgmapState(acc telegraf.Accumulator, data map[string]interface{
 	if err != nil {
 		return err
 	}
+	errorpg := 0.0
+	warningpg := 0.0
+	healthpg := 0.0
 	for _, state := range states {
 		stateMap, ok := state.(map[string]interface{})
 		if !ok {
@@ -416,8 +428,20 @@ func decodeStatusPgmapState(acc telegraf.Accumulator, data map[string]interface{
 		fields := map[string]interface{}{
 			"count": stateCount,
 		}
+
+		//three kinds of pgs: healthpg(active+clean), warningpg(active but not clean), inactivepg(not active at all)
+		if strings.HasPrefix(stateName, "active+clean") {
+			healthpg += stateCount
+		} else if strings.HasPrefix(stateName, "active") {
+			warningpg += stateCount
+		} else {
+			errorpg += stateCount
+		}
 		acc.AddFields("ceph_pgmap_state", fields, tags)
 	}
+	acc.AddFields("ceph_pgmap_state", map[string]interface{}{"warningpg": warningpg}, map[string]string{})
+	acc.AddFields("ceph_pgmap_state", map[string]interface{}{"healthpgs": healthpg}, map[string]string{})
+	acc.AddFields("ceph_pgmap_state", map[string]interface{}{"errorpg": errorpg}, map[string]string{})
 	return nil
 }
 
@@ -489,6 +513,13 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 			}
 			for key, value := range perfdata {
 				fields[key] = value
+			}
+			misseditems := []string{"write_op_per_sec", "read_op_per_sec", "write_bytes_sec", "read_bytes_sec"}
+
+			for _, item := range misseditems {
+				if _, ok := fields[item]; !ok {
+					fields[item] = 0.0
+				}
 			}
 		}
 		tags := map[string]string{
