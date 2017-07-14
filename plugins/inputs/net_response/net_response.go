@@ -92,7 +92,8 @@ func (n *NetResponse) TcpGather() (map[string]interface{}, error) {
 		responseTime = time.Since(start).Seconds()
 		// Handle error
 		if err != nil {
-			fields["result_type"] = "string_mismatch"
+			fields["string_found"] = false
+			fields["result_type"] = "read_failed"
 		} else {
 			// Looking for string in answer
 			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
@@ -124,11 +125,7 @@ func (n *NetResponse) UdpGather() (map[string]interface{}, error) {
 	conn, err := net.DialUDP("udp", LocalAddr, udpAddr)
 	// Handle error
 	if err != nil {
-		if e, ok := err.(net.Error); ok && e.Timeout() {
-			fields["result_type"] = "timeout"
-		} else {
-			fields["result_type"] = "connection_failed"
-		}
+		fields["result_type"] = "connection_failed"
 		return fields, nil
 	}
 	defer conn.Close()
