@@ -39,6 +39,7 @@
 - [#2943](https://github.com/influxdata/telegraf/pull/2943): Add optional usage_active and time_active CPU metrics.
 - [#2973](https://github.com/influxdata/telegraf/pull/2973): Change default prometheus_client port.
 - [#2661](https://github.com/influxdata/telegraf/pull/2661): Add fluentd input plugin.
+- [#2990](https://github.com/influxdata/telegraf/pull/2990): Add result_type field to net_response input plugin.
 
 ### Bugfixes
 
