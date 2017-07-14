@@ -15,15 +15,9 @@ Input plugin to report Windows services info: service name, display name, state,
 ### Measurements & Fields:
 
 - win_services
-  - display_name
-
-### Tags:
-
-- All measurements have the following tags:
-    - service_name
     - state
     - startup_mode
-
+  
 The `state` tag can have the following values:
 * _service_stopped_         
 * _service_start_pending_   
@@ -38,7 +32,13 @@ The `startup_mode` tag can have the following values:
 * _service_system_start_
 * _service_auto_start_  
 * _service_demand_start_
-* _service_disabled_    
+* _service_disabled_
+
+### Tags:
+
+- All measurements have the following tags:
+    - service_name
+    - display_name
 
 ### Example Output:
 
@@ -51,6 +51,6 @@ E:\Telegraf>telegraf.exe -config telegraf.conf -test
 It produces:
 ```
 * Plugin: inputs.win_services, Collection 1
-> win_services,state=service_running,startup_mode=service_auto_start,host=WIN2008R2H401,service_name=LanmanServer display_name="Server" 1499947615000000000
-> win_services,service_name=TermService,state=service_stopped,startup_mode=service_demand_start,host=WIN2008R2H401 display_name="Remote Desktop Services" 1499947615000000000
+> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state="service_running",startup_mode="service_auto_start" 15 00040669000000000
+> win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state="service_stopped",startup_mode="service_demand_start" 1500040669000000000
 ```

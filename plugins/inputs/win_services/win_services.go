@@ -72,10 +72,11 @@ func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
             fields := make(map[string]interface{})
             tags := make(map[string]string)
 
-            fields["display_name"] = service.DisplayName
+            tags["display_name"] = service.DisplayName
             tags["service_name"] = service.ServiceName
-            tags["state"] = ServiceStatesMap[service.State]
-            tags["startup_mode"] = ServiceStartupModeMap[service.StartUpMode]
+
+            fields["state"] = ServiceStatesMap[service.State]
+            fields["startup_mode"] = ServiceStartupModeMap[service.StartUpMode]
 
             acc.AddFields("win_services", fields, tags)
         } else {
