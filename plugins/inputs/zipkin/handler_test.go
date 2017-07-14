@@ -18,7 +18,6 @@ type MockRecorder struct {
 }
 
 func (m *MockRecorder) Record(t Trace) error {
-	fmt.Println("Adding trace ", t)
 	m.Data = t
 	return nil
 }

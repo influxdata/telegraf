@@ -28,26 +28,30 @@ func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
 // telegraf.Accumulator.
 func (l *LineProtocolConverter) Record(t Trace) error {
 	for _, s := range t {
-		fields := map[string]interface{}{
-			"duration": s.Duration,
-		}
-
-		tags := map[string]string{
-			"id":        s.ID,
-			"parent_id": s.ParentID,
-			"trace_id":  s.TraceID,
-			"name":      s.Name,
-		}
-
 		for _, a := range s.Annotations {
-			fields["annotation_timestamp"] = a.Timestamp.Unix()
-			tags["service_name"] = a.ServiceName
-			tags["annotation_value"] = a.Value
-			tags["endpoint_host"] = a.Host
+			fields := map[string]interface{}{
+				// TODO: Maybe we don't need "annotation_timestamp"?
+				"annotation_timestamp": a.Timestamp.Unix(),
+				"duration":             s.Duration,
+			}
+
+			tags := map[string]string{
+				"id":               s.ID,
+				"parent_id":        s.ParentID,
+				"trace_id":         s.TraceID,
+				"name":             s.Name,
+				"service_name":     a.ServiceName,
+				"annotation_value": a.Value,
+				"endpoint_host":    a.Host,
+			}
 			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
 		}
 
 		for _, b := range s.BinaryAnnotations {
+			fields := map[string]interface{}{
+				"duration": s.Duration,
+			}
+
 			tags := map[string]string{
 				"id":               s.ID,
 				"parent_id":        s.ParentID,
