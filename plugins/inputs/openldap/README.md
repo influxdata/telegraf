@@ -5,18 +5,18 @@ This plugin gathers metrics from OpenLDAP's cn=Monitor backend.
 ### Configuration:
 
 ```toml
-# Description
 [[inputs.openldap]]
   host = "localhost"
   port = 389
 
-  # ldaps, starttls. default is an empty string, disabling all encryption.
+  # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
   # note that port will likely need to be changed to 636 for ldaps
-  ssl = "" | "starttls" | "ldaps"
-  
+  # valid options: "" | "starttls" | "ldaps"
+  ssl = ""
+
   # skip peer certificate verification. Default is false.
   insecure_skip_verify = false
- 
+
   # Path to PEM-encoded Root certificate to use to verify server certificate
   ssl_ca = "/etc/ssl/certs.pem"
 
@@ -78,5 +78,5 @@ An OpenLDAP 2.4 server will provide these metrics:
 ```
 $ telegraf -config telegraf.conf -input-filter openldap -test --debug
 * Plugin: inputs.openldap, Collection 1
-> openldap,port=389,host=localhost,server=localhost abandon_operations_initiated=4,extended_operations_completed=125963,bytes_statistics=595939321,pdu_statistics=17028251,modify_operations_initiated=0,delete_operations_completed=0,compare_operations_completed=0,max_file_descriptors_connections=4096,unbind_operations_completed=7981688,extended_operations_initiated=125963,referrals_statistics=0,modify_operations_completed=0,delete_operations_initiated=0,bind_operations_completed=8115329,search_operations_completed=4385841,add_operations_completed=0,abandon_operations_completed=4,write_waiters=0,bind_operations_initiated=8115329,modrdn_operations_initiated=0,compare_operations_initiated=0,entries_statistics=4401128,read_waiters=1,current_connections=3,search_operations_initiated=4385842,modrdn_operations_completed=0,add_operations_initiated=0,total_connections=8147531,unbind_operations_initiated=7981688 1491189665000000000
+> openldap,server=localhost,port=389,host=zirzla search_operations_completed=2i,delete_operations_completed=0i,read_waiters=1i,total_connections=1004i,bind_operations_completed=3i,unbind_operations_completed=3i,referrals_statistics=0i,current_connections=1i,bind_operations_initiated=3i,compare_operations_completed=0i,add_operations_completed=2i,delete_operations_initiated=0i,unbind_operations_initiated=3i,search_operations_initiated=3i,add_operations_initiated=2i,max_file_descriptors_connections=4096i,abandon_operations_initiated=0i,write_waiters=0i,modrdn_operations_completed=0i,abandon_operations_completed=0i,pdu_statistics=23i,modify_operations_initiated=0i,bytes_statistics=1660i,entries_statistics=17i,compare_operations_initiated=0i,modrdn_operations_initiated=0i,extended_operations_completed=0i,modify_operations_completed=0i,extended_operations_initiated=0i 1499990455000000000
 ```
