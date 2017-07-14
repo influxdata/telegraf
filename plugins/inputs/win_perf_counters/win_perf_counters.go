@@ -173,16 +173,15 @@ func (m *Win_PerfCounters) ParseConfig() error {
 					expandedQueries, err := expandQuery(query, PerfObject.Expand)
 
 					for _, expandedQuery := range expandedQueries {
-						fmt.Printf(expandedQuery)
 						err = m.AddItem(expandedQuery, objectname, counter, instance,
 							PerfObject.Measurement, PerfObject.IncludeTotal)
 						if err == nil {
 							if m.PrintValid {
-								fmt.Printf("Valid: %s\n", query)
+								fmt.Printf("Valid: %s\n", expandedQuery)
 							}
 						} else {
 							if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-								fmt.Printf("Invalid query: '%s'. Error: %s", query, err.Error())
+								fmt.Printf("Invalid query: '%s'. Error: %s", expandedQuery, err.Error())
 							}
 						}
 					}
