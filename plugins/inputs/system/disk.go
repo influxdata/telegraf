@@ -53,10 +53,12 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
 			continue
 		}
+		mountOpts := parseOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,
 			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
 			"fstype": du.Fstype,
+			"mode":   mountOpts.Mode(),
 		}
 		var used_percent float64
 		if du.Used+du.Free > 0 {
@@ -217,6 +219,31 @@ func (s *DiskIOStats) diskTags(devName string) map[string]string {
 	}
 
 	return tags
+}
+
+type MountOptions []string
+
+func (opts MountOptions) Mode() string {
+	if opts.exists("rw") {
+		return "rw"
+	} else if opts.exists("ro") {
+		return "ro"
+	} else {
+		return "unknown"
+	}
+}
+
+func (opts MountOptions) exists(opt string) bool {
+	for _, o := range opts {
+		if o == opt {
+			return true
+		}
+	}
+	return false
+}
+
+func parseOptions(opts string) MountOptions {
+	return strings.Split(opts, ",")
 }
 
 func init() {
