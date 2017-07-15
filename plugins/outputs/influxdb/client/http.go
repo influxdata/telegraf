@@ -245,13 +245,10 @@ func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, err
 	if c.config.Gzip {
 		// If gzip is set to true, then compress
 		// the payload.
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(body)
-		compressed, err := compressWithGzip(buf.Bytes())
+		body, err = compressWithGzip(body)
 		if err != nil {
 			return nil, err
 		}
-		body = bytes.NewBuffer(compressed)
 	}
 	req, err = http.NewRequest("POST", uri, body)
 	if err != nil {
@@ -265,16 +262,18 @@ func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, err
 	return req, nil
 }
 
-func compressWithGzip(data []byte) ([]byte, error) {
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	if _, err := gz.Write(data); err != nil {
-		return nil, err
-	}
-	if err := gz.Close(); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+func compressWithGzip(data io.Reader) (io.Reader, error) {
+	pr, pw := io.Pipe()
+	gw := gzip.NewWriter(pw)
+	var err error
+
+	go func() {
+		_, err = io.Copy(gw, data)
+		gw.Close()
+		pw.Close()
+	}()
+
+	return pr, err
 }
 
 func (c *httpClient) Close() error {

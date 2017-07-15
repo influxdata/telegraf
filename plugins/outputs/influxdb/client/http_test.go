@@ -344,20 +344,22 @@ func TestHTTPClient_Query_JSONDecodeError(t *testing.T) {
 }
 
 func TestGzipCompression(t *testing.T) {
+	influxLine := "cpu value=99\n"
+
 	// Compress the payload using GZIP.
-	payload := []byte("cpu value=99\n")
+	payload := bytes.NewReader([]byte(influxLine))
 	compressed, err := compressWithGzip(payload)
 	assert.Nil(t, err)
 
-	// GUNZIP the compressed payload and make sure
+	// Decompress the compressed payload and make sure
 	// that its original value has not changed.
-	r, err := gzip.NewReader(bytes.NewReader(compressed))
+	gr, err := gzip.NewReader(compressed)
 	assert.Nil(t, err)
-	r.Close()
+	gr.Close()
 
 	var uncompressed bytes.Buffer
-	_, err = uncompressed.ReadFrom(r)
+	_, err = uncompressed.ReadFrom(gr)
 	assert.Nil(t, err)
 
-	assert.Equal(t, payload, uncompressed.Bytes())
+	assert.Equal(t, []byte(influxLine), uncompressed.Bytes())
 }
