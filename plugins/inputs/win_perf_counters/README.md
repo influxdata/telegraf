@@ -1,7 +1,5 @@
 # win_perf_counters readme
 
-vh: TODO
-
 The way this plugin works is that on load of Telegraf,
 the plugin will be handed configuration from Telegraf.
 This configuration is parsed and then tested for validity such as
