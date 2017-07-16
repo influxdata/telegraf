@@ -57,8 +57,8 @@ Services most probably won't be filtered according to display name.
 
 So the mapping to a tag or a field would be:
 
-* **Field** = displayName
-* **Tag** = service name, startup mode, actual state
+* **Field** = actual state, startup mode, 
+* **Tag** = service name, displayName
 
  Let's use the following key name and 'types':
 
