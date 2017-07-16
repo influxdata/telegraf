@@ -32,21 +32,21 @@ type ServiceInfo struct {
 }
 
 var  ServiceStatesMap = map [int]string{
-    0x00000001: "service_stopped",
-    0x00000002: "service_start_pending",
-    0x00000003: "service_stop_pending",
-    0x00000004: "service_running",
-    0x00000005: "service_continue_pending",
-    0x00000006: "service_pause_pending",
-    0x00000007: "service_paused",
+    0x00000001: "stopped",
+    0x00000002: "start_pending",
+    0x00000003: "stop_pending",
+    0x00000004: "running",
+    0x00000005: "continue_pending",
+    0x00000006: "pause_pending",
+    0x00000007: "paused",
 }
 
 var  ServiceStartupModeMap = map [int]string{
-    0x00000000: "service_boot_start",
-    0x00000001: "service_system_start",
-    0x00000002: "service_auto_start",
-    0x00000003: "service_demand_start",
-    0x00000004: "service_disabled",
+    0x00000000: "boot_start",
+    0x00000001: "system_start",
+    0x00000002: "auto_start",
+    0x00000003: "demand_start",
+    0x00000004: "disabled",
 
 }
 
