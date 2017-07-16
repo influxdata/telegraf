@@ -19,20 +19,20 @@ Input plugin to report Windows services info: service name, display name, state,
     - startup_mode
   
 The `state` tag can have the following values:
-* _service_stopped_         
-* _service_start_pending_   
-* _service_stop_pending_    
-* _service_running_         
-* _service_continue_pending_
-* _service_pause_pending_   
-* _service_paused_
+* _stopped_         
+* _start_pending_   
+* _stop_pending_    
+* _running_         
+* _continue_pending_
+* _pause_pending_   
+* _paused_
 
 The `startup_mode` tag can have the following values:
-* _service_boot_start_  
-* _service_system_start_
-* _service_auto_start_  
-* _service_demand_start_
-* _service_disabled_
+* _boot_start_  
+* _system_start_
+* _auto_start_  
+* _demand_start_
+* _disabled_
 
 ### Tags:
 
@@ -51,6 +51,22 @@ E:\Telegraf>telegraf.exe -config telegraf.conf -test
 It produces:
 ```
 * Plugin: inputs.win_services, Collection 1
-> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state="service_running",startup_mode="service_auto_start" 15 00040669000000000
-> win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state="service_stopped",startup_mode="service_demand_start" 1500040669000000000
+> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state="running",startup_mode="auto_start" 15 00040669000000000
+> win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state="stopped",startup_mode="demand_start" 1500040669000000000
+```
+### TICK Scripts
+
+A sample TICK script for notification about a not running service and about its changing back to the running state via HTTP post:
+
+```
+stream
+    |from()
+        .database('telegraf')
+        .retentionPolicy('autogen')
+        .measurement('win_services')
+    |alert()
+        .crit(lambda: "state" != 'running')
+        .stateChangesOnly()
+        .message('Service {{ index .Tags "service_name" }} on Host {{ index .Tags "host" }} {{ index .Fields "state" }} ')
+        .post('http://localhost:666/alert/cpu')
 ```
