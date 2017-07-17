@@ -56,7 +56,9 @@ It produces:
 ```
 ### TICK Scripts
 
-A sample TICK script for notification about a not running service and about its changing back to the running state via HTTP post:
+A sample TICK script for a notification about a not running service. 
+It notifies when any service changes its state to be not _running_ and when it changes state back to _running_. 
+The notification is sent via HTTP POST call.
 
 ```
 stream
@@ -67,6 +69,6 @@ stream
     |alert()
         .crit(lambda: "state" != 'running')
         .stateChangesOnly()
-        .message('Service {{ index .Tags "service_name" }} on Host {{ index .Tags "host" }} {{ index .Fields "state" }} ')
+        .message('Service {{ index .Tags "service_name" }} on Host {{ index .Tags "host" }} is {{ index .Fields "state" }} ')
         .post('http://localhost:666/alert/cpu')
 ```
