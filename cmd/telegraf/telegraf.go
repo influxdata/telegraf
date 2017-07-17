@@ -153,6 +153,16 @@ func reloadLoop(
 			log.Fatalf("E! Error: no inputs found, did you provide a valid config file?")
 		}
 
+		if int64(c.Agent.Interval.Duration) <= 0 {
+			log.Fatalf("E! Agent interval must be positive, found %s",
+				c.Agent.Interval.Duration)
+		}
+
+		if int64(c.Agent.FlushInterval.Duration) <= 0 {
+			log.Fatalf("E! Agent flush_interval must be positive; found %s",
+				c.Agent.Interval.Duration)
+		}
+
 		ag, err := agent.NewAgent(c)
 		if err != nil {
 			log.Fatal("E! " + err.Error())
