@@ -58,6 +58,7 @@
 - [#2984](https://github.com/influxdata/telegraf/pull/2984): Display error message if prometheus output fails to listen.
 - [#2997](https://github.com/influxdata/telegraf/issues/2997): Fix elasticsearch output content type detection warning.
 - [#2914](https://github.com/influxdata/telegraf/issues/2914): Prevent possible deadlock when using aggregators.
+- [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
 
 ## v1.3.4 [2017-07-12]
 
