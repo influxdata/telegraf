@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testContainerID = "123456789987654321"
+
 func TestDockerGatherContainerStats(t *testing.T) {
 	var acc testutil.Accumulator
 	stats := testStats()
@@ -20,7 +22,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_name":  "redis",
 		"container_image": "redis/image",
 	}
-	gatherContainerStats(stats, inspect, &acc, tags, "123456789", true, true)
+	gatherContainerStats(stats, inspect, &acc, tags, testContainerID, true, true)
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
@@ -32,7 +34,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"rx_packets":   uint64(2),
 		"tx_errors":    uint64(3),
 		"tx_bytes":     uint64(4),
-		"container_id": "123456789",
+		"container_id": testContainerID,
 	}
 	nettags := copyTags(tags)
 	nettags["network"] = "eth0"
@@ -47,7 +49,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"rx_packets":   uint64(8),
 		"tx_errors":    uint64(10),
 		"tx_bytes":     uint64(12),
-		"container_id": "123456789",
+		"container_id": testContainerID,
 	}
 	nettags = copyTags(tags)
 	nettags["network"] = "total"
@@ -59,7 +61,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	blkiofields := map[string]interface{}{
 		"io_service_bytes_recursive_read": uint64(100),
 		"io_serviced_recursive_write":     uint64(101),
-		"container_id":                    "123456789",
+		"container_id":                    testContainerID,
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
 
@@ -68,7 +70,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	blkiofields = map[string]interface{}{
 		"io_service_bytes_recursive_read": uint64(100),
 		"io_serviced_recursive_write":     uint64(302),
-		"container_id":                    "123456789",
+		"container_id":                    testContainerID,
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_blkio", blkiofields, blkiotags)
 
@@ -108,7 +110,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"inactive_file":             uint64(3),
 		"total_pgpgin":              uint64(4),
 		"usage_percent":             float64(55.55),
-		"container_id":              "123456789",
+		"container_id":              testContainerID,
 	}
 
 	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
@@ -125,7 +127,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"throttling_throttled_periods": uint64(0),
 		"throttling_throttled_time":    uint64(0),
 		"usage_percent":                float64(400.0),
-		"container_id":                 "123456789",
+		"container_id":                 testContainerID,
 		"limit":                        float64(2),
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpufields, cputags)
@@ -385,6 +387,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
 			"foo_tag":           "foo_value",
+			"container_id":      "b7dfbb9478a6",
 		},
 	)
 

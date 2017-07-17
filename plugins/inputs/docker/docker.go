@@ -280,6 +280,13 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func shortenID(containerID string) string {
+	if len(containerID) > 12 {
+		return containerID[:12]
+	}
+	return containerID
+}
+
 func (d *Docker) gatherContainer(
 	container types.Container,
 	acc telegraf.Accumulator,
@@ -309,7 +316,7 @@ func (d *Docker) gatherContainer(
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,
-		"container_id":      container.ID,
+		"container_id":      shortenID(container.ID),
 	}
 	if len(d.ContainerNames) > 0 {
 		if !sliceContains(cname, d.ContainerNames) {
