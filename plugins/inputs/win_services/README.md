@@ -1,7 +1,7 @@
 # Telegraf Plugin: win_services
 Input plugin to report Windows services info: service name, display name, state, startup mode
 
-It requires that Telegraf must be running under administrator privileges.
+It requires that Telegraf must be running under the administrator privileges.
 ### Configuration:
 
 ```toml
