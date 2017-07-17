@@ -93,30 +93,27 @@ func NewTrace(spans []*zipkincore.Span) (Trace, error) {
 			return nil, err
 		}
 		s.Name = span.GetName()
+		//TODO: find out what zipkin does with a timestamp of zero
 		if span.GetTimestamp() == 0 {
 			s.Timestamp = time.Now()
 		} else {
-			s.Timestamp = time.Unix(0, span.GetTimestamp()*int64(time.Microsecond))
+			s.Timestamp = microToTime(span.GetTimestamp())
 		}
 
 		duration := time.Duration(span.GetDuration())
-		//	fmt.Println("Duration: ", duration)
 		s.Duration = duration * time.Microsecond
 
 		parentID := span.GetParentID()
-		//	fmt.Println("Parent ID: ", parentID)
 
 		// A parent ID of 0 means that this is a parent span. In this case,
 		// we set the parent ID of the span to be its own id, so it points to
 		// itself.
-
 		if parentID == 0 {
 			s.ParentID = s.ID
 		} else {
 			s.ParentID = strconv.FormatInt(parentID, 10)
 		}
 
-		//	fmt.Println("ID:", s.ID)
 		trace = append(trace, s)
 	}
 
@@ -131,13 +128,14 @@ func NewAnnotations(annotations []*zipkincore.Annotation) []Annotation {
 		a := Annotation{}
 		endpoint := annotation.GetHost()
 		if endpoint != nil {
+			//TODO: Fix Ipv4 hostname to bit shifted
 			a.Host = strconv.Itoa(int(endpoint.GetIpv4())) + ":" + strconv.Itoa(int(endpoint.GetPort()))
 			a.ServiceName = endpoint.GetServiceName()
 		} else {
 			a.Host, a.ServiceName = "", ""
 		}
 
-		a.Timestamp = time.Unix(annotation.GetTimestamp(), 0)
+		a.Timestamp = microToTime(annotation.GetTimestamp())
 		a.Value = annotation.GetValue()
 		formatted = append(formatted, a)
 	}
@@ -166,4 +164,8 @@ func NewBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]BinaryA
 	}
 
 	return formatted, nil
+}
+
+func microToTime(micro int64) time.Time {
+	return time.Unix(0, micro*int64(time.Microsecond))
 }

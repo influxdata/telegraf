@@ -97,19 +97,19 @@ func TestSpanHandler(t *testing.T) {
 			Duration:  time.Duration(103680) * time.Microsecond,
 			Annotations: []Annotation{
 				Annotation{
-					Timestamp:   time.Unix(1498688360851325, 0),
+					Timestamp:   time.Unix(0, 1498688360851325*int64(time.Microsecond)),
 					Value:       "Starting child #0",
 					Host:        "2130706433:0",
 					ServiceName: "trivial",
 				},
 				Annotation{
-					Timestamp:   time.Unix(1498688360904545, 0),
+					Timestamp:   time.Unix(0, 1498688360904545*int64(time.Microsecond)),
 					Value:       "Starting child #1",
 					Host:        "2130706433:0",
 					ServiceName: "trivial",
 				},
 				Annotation{
-					Timestamp:   time.Unix(1498688360954992, 0),
+					Timestamp:   time.Unix(0, 1498688360954992*int64(time.Microsecond)),
 					Value:       "A Log",
 					Host:        "2130706433:0",
 					ServiceName: "trivial",
