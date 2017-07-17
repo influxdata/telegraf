@@ -66,6 +66,7 @@ stream
         .database('telegraf')
         .retentionPolicy('autogen')
         .measurement('win_services')
+        .groupBy('host','service_name')
     |alert()
         .crit(lambda: "state" != 'running')
         .stateChangesOnly()
