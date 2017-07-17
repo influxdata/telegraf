@@ -17,7 +17,7 @@ Input plugin to report Windows services info: service name, display name, state,
 - win_services
     - state
     - startup_mode
-  
+
 The `state` tag can have the following values:
 * _stopped_         
 * _start_pending_   
@@ -56,9 +56,9 @@ It produces:
 ```
 ### TICK Scripts
 
-A sample TICK script for a notification about a not running service. 
-It notifies when any service changes its state to be not _running_ and when it changes state back to _running_. 
-The notification is sent via HTTP POST call.
+A sample TICK script for a notification about a not running service.
+It sends a notification whenever any service changes its state to be not _running_ and when it changes that state back to _running_. 
+The notification is sent via an HTTP POST call.
 
 ```
 stream
