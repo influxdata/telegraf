@@ -239,52 +239,11 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 							Host:        "0:0",
 							ServiceName: "cli",
 						},
-						Annotaitons{
-							Timestamp:   time.Unix(0, 1499817952286792000),
-							Value:       "cr",
-							Host:        "0:0",
-							ServiceName: "cli",
-						},
 				},
 					BinaryAnnotations: []BinaryAnnotation{
 						BinaryAnnotation{
-							Key:         "http.path",
-							Value:       "L2NvbmNhdC8=",
-							Host:        "0:0",
-							ServiceName: "cli",
-							Type:        "STRING",
-						},
-						BinaryAnnotation{
 							Key:         "http.url",
 							Value:       "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
-							Host:        "0:0",
-							ServiceName: "cli",
-							Type:        "STRING",
-						},
-						BinaryAnnotation{
-							Key:         "peer.hostname",
-							Value:       "bG9jYWxob3N0",
-							Host:        "0:0",
-							ServiceName: "cli",
-							Type:        "STRING",
-						},
-						BinaryAnnotation{
-							Key:         "span.kind",
-							Value:       "Y2xpZW50",
-							Host:        "0:0",
-							ServiceName: "cli",
-							Type:        "STRING",
-						},
-						BinaryAnnotation{
-							Key:         "http.method",
-							Value:       "R0VU",
-							Host:        "0:0",
-							ServiceName: "cli",
-							Type:        "STRING",
-						},
-						BinaryAnnotation{
-							Key:         "http.host",
-							Value:       "bG9jYWxob3N0OjYxMDAx",
 							Host:        "0:0",
 							ServiceName: "cli",
 							Type:        "STRING",
@@ -297,16 +256,30 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			Tags: map[string]string{
 				"id":               "3383422996321511664",
 				"parent_id":        "4574092882326506380",
-				//TODO: Can trace_id be this long?
-				"trace_id":         "8269862291023777619243463817635710260",
+				"trace_id":         "8269862291023777619:243463817635710260",
 				"name":             "Concat",
 				"service_name":     "cli",
-				//TODO: Do we need annotation_timestamp?
 				"annotation_value": "cs",
-				//TODO: Multiple binary_annotations
-				//"endpoint_host":    "0:0",
-				//"key":              "lc",
-				//"type":             "STRING",
+				"endpoint_host":    "0:0",
+			},
+			Fields: map[string]interface{}{
+			"annotation_timestamp": int64(149981795),
+				"duration": time.Duration(2888) * time.Microsecond,
+			},
+			Time: time.Unix(0, 1499817952283903000),
+		},
+		testutil.Metric{
+			Measurement: "zipkin",
+			Tags: map[string]string{
+			"trace_id":         "2505404965370368069",
+			"service_name":     "cli",
+			"annotation_value": "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
+			"key":              "http.url",
+			"type":             "STRING",
+			"id":               "22964302721410078",
+			"parent_id":        "22964302721410078",
+			"name":             "Concat",
+			"endpoint_host":    "0:0",
 			},
 			Fields: map[string]interface{}{
 				"duration": time.Duration(2888) * time.Microsecond,
@@ -318,35 +291,52 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 
 		//// Test data from distributed trace repo sample json
 		// https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json
-		/*{
-			name: "distributed_trace_sample"
+		{
+			name: "distributed_trace_sample",
 			fields: fields{
 				acc: &mockAcc,
 			},
 			args: args{
 				t: Trace{
 					Span{
-						ID: "6802735349851856000",
-						TraceID: "6802735349851856000",
-						Name:"main.dud",
-						//TODO: ParentID nil or itself
-						ParentID:
-						//TODO: No Timestamp? or duraiton?
-						Timestamp:
-						Duration:
-						Annotation: []Annotation{
+						ID:        "6802735349851856000",
+						TraceID:   "0:6802735349851856000",
+						Name:      "main.dud",
+						ParentID:  "6802735349851856000",
+						Timestamp: time.Unix(1, 0),
+						Duration:  1,
+						Annotations: []Annotation{
 							Annotation{
-								Timestamp: "1433330263415871",
-								Value: "cs",
-								Host: "0:9410",
+								Timestamp:   time.Unix(0, 1433330263415871000),
+								Value:       "cs",
+								Host:        "0:9410",
 								ServiceName: "go-zipkin-testclient",
-							}
-						}
-						BinaryAnnotation: []BinaryAnnotation{},
+							},
+						},
+						BinaryAnnotations: []BinaryAnnotation{},
 					},
 				},
 			},
-		},*/
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation_value": "cs",
+						"endpoint_host":    "0:9410",
+						"id":               "6802735349851856000",
+						"parent_id":        "6802735349851856000",
+						"trace_id":         "0:6802735349851856000",
+						"name":             "main.dud",
+						"service_name":     "go-zipkin-testclient",
+					},
+					Fields: map[string]interface{}{
+						"annotation_timestamp": int64(1433330263),
+						"duration":             time.Duration(1) * time.Nanosecond,
+					},
+					Time: time.Unix(1, 0),
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

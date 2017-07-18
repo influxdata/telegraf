@@ -55,7 +55,7 @@ func TestSpanHandler(t *testing.T) {
 		Span{
 			Name:        "Child",
 			ID:          "8090652509916334619",
-			TraceID:     "2505404965370368069",
+			TraceID:     "0:2505404965370368069",
 			ParentID:    parentID,
 			Timestamp:   time.Unix(0, 1498688360851331*int64(time.Microsecond)),
 			Duration:    time.Duration(53106) * time.Microsecond,
@@ -73,7 +73,7 @@ func TestSpanHandler(t *testing.T) {
 		Span{
 			Name:        "Child",
 			ID:          "103618986556047333",
-			TraceID:     "2505404965370368069",
+			TraceID:     "0:2505404965370368069",
 			ParentID:    parentID,
 			Timestamp:   time.Unix(0, 1498688360904552*int64(time.Microsecond)),
 			Duration:    time.Duration(50410) * time.Microsecond,
@@ -91,7 +91,7 @@ func TestSpanHandler(t *testing.T) {
 		Span{
 			Name:      "Parent",
 			ID:        "22964302721410078",
-			TraceID:   "2505404965370368069",
+			TraceID:   "0:2505404965370368069",
 			ParentID:  "22964302721410078",
 			Timestamp: time.Unix(0, 1498688360851318*int64(time.Microsecond)),
 			Duration:  time.Duration(103680) * time.Microsecond,
@@ -131,7 +131,7 @@ func TestSpanHandler(t *testing.T) {
 		if !reflect.DeepEqual(s, want[i]) {
 			fmt.Printf("index %d wasn't equal", i)
 			fmt.Println(s, want[i])
-			t.Fatal("Got != want, Fields weren't unmarshalled correctly")
+			t.Fatalf("Got %#v\n != want %#v\n, Fields weren't unmarshalled correctly", s, want[i])
 		}
 	}
 }

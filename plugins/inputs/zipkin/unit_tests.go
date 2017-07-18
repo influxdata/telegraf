@@ -32,7 +32,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "8090652509916334619",
 					"parent_id":        "22964302721410078",
-					"trace_id":         "2505404965370368069",
+					"trace_id":         "0:2505404965370368069",
 					"name":             "Child",
 					"service_name":     "trivial",
 					"annotation_value": "trivial",
@@ -48,7 +48,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "103618986556047333",
 					"parent_id":        "22964302721410078",
-					"trace_id":         "2505404965370368069",
+					"trace_id":         "0:2505404965370368069",
 					"name":             "Child",
 					"service_name":     "trivial",
 					"annotation_value": "trivial",
@@ -64,7 +64,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "22964302721410078",
 					"parent_id":        "22964302721410078",
-					"trace_id":         "2505404965370368069",
+					"trace_id":         "0:2505404965370368069",
 					"name":             "Parent",
 					"service_name":     "trivial",
 					"annotation_value": "Starting child #0",
@@ -78,7 +78,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "22964302721410078",
 					"parent_id":        "22964302721410078",
-					"trace_id":         "2505404965370368069",
+					"trace_id":         "0:2505404965370368069",
 					"name":             "Parent",
 					"service_name":     "trivial",
 					"annotation_value": "Starting child #1",
@@ -92,7 +92,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "22964302721410078",
 					"parent_id":        "22964302721410078",
-					"trace_id":         "2505404965370368069",
+					"trace_id":         "0:2505404965370368069",
 					"name":             "Parent",
 					"service_name":     "trivial",
 					"annotation_value": "A Log",
@@ -106,7 +106,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "22964302721410078",
 					"parent_id":        "22964302721410078",
-					"trace_id":         "2505404965370368069",
+					"trace_id":         "0:2505404965370368069",
 					"name":             "Parent",
 					"service_name":     "trivial",
 					"annotation_value": "trivial",
@@ -132,7 +132,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "3383422996321511664",
 					"parent_id":        "4574092882326506380",
-					"trace_id":         "8269862291023777619243463817635710260",
+					"trace_id":         "0:8269862291023777619243463817635710260",
 					"name":             "Concat",
 					"service_name":     "cli",
 					"annotation_value": "cs",
@@ -155,7 +155,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "6802735349851856000",
 					"parent_id":        "6802735349851856000",
-					"trace_id":         "6802735349851856000",
+					"trace_id":         "0:6802735349851856000",
 					"name":             "main.dud",
 					"service_name":     "go-zipkin-testclient",
 					"annotation_value": "cs",
@@ -169,7 +169,7 @@ var tests = []UnitTest{
 				expectedTags: map[string]string{
 					"id":               "6802735349851856000",
 					"parent_id":        "6802735349851856000",
-					"trace_id":         "6802735349851856000",
+					"trace_id":         "0:6802735349851856000",
 					"name":             "main.dud",
 					"service_name":     "go-zipkin-testclient",
 					"annotation_value": "cr",
