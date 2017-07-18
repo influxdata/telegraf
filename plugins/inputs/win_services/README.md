@@ -1,5 +1,5 @@
 # Telegraf Plugin: win_services
-Input plugin to report Windows services info: service name, display name, state, startup mode
+Input plugin to report Windows services info.
 
 It requires that Telegraf must be running under the administrator privileges.
 ### Configuration:
@@ -19,7 +19,7 @@ It requires that Telegraf must be running under the administrator privileges.
     - state
     - startup_mode
 
-The `state` tag can have the following values:
+The `state` field can have the following values:
 * _stopped_         
 * _start_pending_   
 * _stop_pending_    
@@ -28,7 +28,7 @@ The `state` tag can have the following values:
 * _pause_pending_   
 * _paused_
 
-The `startup_mode` tag can have the following values:
+The `startup_mode` field can have the following values:
 * _boot_start_  
 * _system_start_
 * _auto_start_  
@@ -42,17 +42,9 @@ The `startup_mode` tag can have the following values:
     - display_name
 
 ### Example Output:
-
-Using the default configuration:
-
-When run with:
-```
-E:\Telegraf>telegraf.exe -config telegraf.conf -test
-```
-It produces:
 ```
 * Plugin: inputs.win_services, Collection 1
-> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state="running",startup_mode="auto_start" 15 00040669000000000
+> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state="running",startup_mode="auto_start" 1500040669000000000
 > win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state="stopped",startup_mode="demand_start" 1500040669000000000
 ```
 ### TICK Scripts
@@ -72,5 +64,5 @@ stream
         .crit(lambda: "state" != 'running')
         .stateChangesOnly()
         .message('Service {{ index .Tags "service_name" }} on Host {{ index .Tags "host" }} is {{ index .Fields "state" }} ')
-        .post('http://localhost:666/alert/cpu')
+        .post('http://localhost:666/alert/service')
 ```
