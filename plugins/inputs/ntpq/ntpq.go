@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -67,6 +68,14 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	// Due to problems with a parsing, we have to use regexp expression in order
+	// to remove string that starts from '(' and ends with space
+	// see: https://github.com/influxdata/telegraf/issues/2386
+	reg, err := regexp.Compile("\\([\\S]*")
+	if err != nil {
+		return err
+	}
+
 	lineCounter := 0
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
@@ -79,6 +88,8 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 			tags["state_prefix"] = string(line[0])
 			line = strings.TrimLeft(line, "*#o+x.-")
 		}
+
+		line = reg.ReplaceAllString(line, "")
 
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
