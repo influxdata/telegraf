@@ -360,12 +360,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
-	if int64(a.Config.Agent.Interval.Duration) <= 0 {
-		log.Printf("E! Wrong Interval value (%s) in agent configuration. Please set bigger value.\n",
-			a.Config.Agent.Interval.Duration)
-		return nil
-	}
-
 	// channel shared between all input threads for accumulating metrics
 	metricC := make(chan telegraf.Metric, 100)
 	aggC := make(chan telegraf.Metric, 100)
