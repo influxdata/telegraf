@@ -79,11 +79,8 @@ func NewTrace(spans []*zipkincore.Span) (Trace, error) {
 	var trace Trace
 	for _, span := range spans {
 		s := Span{}
-		s.ID = strconv.FormatInt(span.GetID(), 10)
-		s.TraceID = strconv.FormatInt(span.GetTraceID(), 10)
-		if span.GetTraceIDHigh() != 0 {
-			s.TraceID = strconv.FormatInt(span.GetTraceIDHigh(), 10) + s.TraceID
-		}
+		s.ID = formatID(span.GetID())
+		s.TraceID = formatTraceID(span.GetTraceIDHigh(), span.GetTraceID())
 
 		s.Annotations = NewAnnotations(span.GetAnnotations())
 
@@ -93,12 +90,7 @@ func NewTrace(spans []*zipkincore.Span) (Trace, error) {
 			return nil, err
 		}
 		s.Name = span.GetName()
-		//TODO: find out what zipkin does with a timestamp of zero
-		if span.GetTimestamp() == 0 {
-			s.Timestamp = time.Now()
-		} else {
-			s.Timestamp = microToTime(span.GetTimestamp())
-		}
+		s.Timestamp = guessTimestamp(span)
 
 		duration := time.Duration(span.GetDuration())
 		s.Duration = duration * time.Microsecond
@@ -111,7 +103,7 @@ func NewTrace(spans []*zipkincore.Span) (Trace, error) {
 		if parentID == 0 {
 			s.ParentID = s.ID
 		} else {
-			s.ParentID = strconv.FormatInt(parentID, 10)
+			s.ParentID = formatID(parentID)
 		}
 
 		trace = append(trace, s)
@@ -168,4 +160,27 @@ func NewBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]BinaryA
 
 func microToTime(micro int64) time.Time {
 	return time.Unix(0, micro*int64(time.Microsecond))
+}
+
+func formatID(id int64) string {
+	return strconv.FormatInt(id, 10)
+}
+
+func formatTraceID(high, low int64) string {
+	return formatID(high) + ":" + formatID(low)
+}
+
+func guessTimestamp(span *zipkincore.Span) time.Time {
+	if span.GetTimestamp() != 0 {
+		return microToTime(span.GetTimestamp())
+	}
+
+	minTimestamp := time.Now()
+	for _, annotation := range span.Annotations {
+		ts := microToTime(annotation.GetTimestamp())
+		if !ts.IsZero() && ts.Before(minTimestamp) {
+			minTimestamp = ts
+		}
+	}
+	return minTimestamp
 }
