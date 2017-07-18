@@ -1,0 +1,35 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.8.3
+      - image: aerospike/aerospike-server:3.9.0
+      - image: wurstmeister/zookeeper
+      - image: wurstmeister/kafka
+        environment:
+          KAFKA_ADVERTISED_HOST_NAME: localhost
+          KAFKA_ADVERTISED_PORT: 9092
+          KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+          KAFKA_CREATE_TOPICS: test:1:1
+      - image: mysql
+        environment:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+      - image: memcached
+      - image: postgres
+      - image: rabbitmq:3-management
+      - image: redis
+      - image: nsqio/nsq
+        command: /nsqd
+      - image: ncarlier/mqtt
+      - image: nats
+
+      - image: stealthly/docker-riemann
+      - image: elasticsearch:5
+        environment:
+          ES_JAVA_OPTS: -Xms512m -Xmx512m
+    working_directory: /go/src/github.com/influxdata/telegraf
+    steps:
+      - checkout
+      - run: make prepare
+      - run: make vet
+      - run: go test -race ./...
