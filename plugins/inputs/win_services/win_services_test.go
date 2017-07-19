@@ -51,8 +51,8 @@ func TestGather(t *testing.T) {
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
 		si := getServiceInfo(KnownServices[i])
-		fields["state"] = ServiceStatesMap[si.State]
-		fields["startup_mode"] = ServiceStartupModeMap[si.StartUpMode]
+		fields["state"] = int(si.State)
+		fields["startup_mode"] = int(si.StartUpMode)
 		tags["service_name"] = si.ServiceName
 		tags["display_name"] = si.DisplayName
 		acc.AssertContainsTaggedFields(t, "win_services", fields, tags)
