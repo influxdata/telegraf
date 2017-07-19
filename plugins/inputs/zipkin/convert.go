@@ -75,87 +75,53 @@ func (l *LineProtocolConverter) Error(err error) {
 }
 
 // NewTrace converts a slice of []*zipkincore.Spans into a new Trace
-func NewTrace(spans []*zipkincore.Span) (Trace, error) {
-	var trace Trace
-	for _, span := range spans {
-		s := Span{}
-		s.ID = formatID(span.GetID())
-		s.TraceID = formatTraceID(span.GetTraceIDHigh(), span.GetTraceID())
-
-		s.Annotations = NewAnnotations(span.GetAnnotations())
-
-		var err error
-		s.BinaryAnnotations, err = NewBinaryAnnotations(span.GetBinaryAnnotations())
-		if err != nil {
-			return nil, err
+func NewTrace(spans []*zipkincore.Span) Trace {
+	trace := make(Trace, len(spans))
+	for i, span := range spans {
+		trace[i] = Span{
+			ID:                formatID(span.GetID()),
+			TraceID:           formatTraceID(span.GetTraceIDHigh(), span.GetTraceID()),
+			Name:              span.GetName(),
+			Timestamp:         guessTimestamp(span),
+			Duration:          convertDuration(span),
+			ParentID:          parentID(span),
+			Annotations:       NewAnnotations(span.GetAnnotations()),
+			BinaryAnnotations: NewBinaryAnnotations(span.GetBinaryAnnotations()),
 		}
-		s.Name = span.GetName()
-		s.Timestamp = guessTimestamp(span)
-
-		duration := time.Duration(span.GetDuration())
-		s.Duration = duration * time.Microsecond
-
-		parentID := span.GetParentID()
-
-		// A parent ID of 0 means that this is a parent span. In this case,
-		// we set the parent ID of the span to be its own id, so it points to
-		// itself.
-		if parentID == 0 {
-			s.ParentID = s.ID
-		} else {
-			s.ParentID = formatID(parentID)
-		}
-
-		trace = append(trace, s)
 	}
-
-	return trace, nil
+	return trace
 }
 
 // NewAnnotations converts a slice of *zipkincore.Annotation into a slice
 // of new Annotations
 func NewAnnotations(annotations []*zipkincore.Annotation) []Annotation {
-	var formatted []Annotation
-	for _, annotation := range annotations {
-		a := Annotation{}
-		endpoint := annotation.GetHost()
-		if endpoint != nil {
-			//TODO: Fix Ipv4 hostname to bit shifted
-			a.Host = strconv.Itoa(int(endpoint.GetIpv4())) + ":" + strconv.Itoa(int(endpoint.GetPort()))
-			a.ServiceName = endpoint.GetServiceName()
-		} else {
-			a.Host, a.ServiceName = "", ""
+	formatted := make([]Annotation, len(annotations))
+	for i, annotation := range annotations {
+		formatted[i] = Annotation{
+			Host:        host(annotation.GetHost()),
+			ServiceName: serviceName(annotation.GetHost()),
+			Timestamp:   microToTime(annotation.GetTimestamp()),
+			Value:       annotation.GetValue(),
 		}
-
-		a.Timestamp = microToTime(annotation.GetTimestamp())
-		a.Value = annotation.GetValue()
-		formatted = append(formatted, a)
 	}
-	//fmt.Println("formatted annotations: ", formatted)
+
 	return formatted
 }
 
 // NewBinaryAnnotations is very similar to NewAnnotations, but it
 // converts zipkincore.BinaryAnnotations instead of the normal zipkincore.Annotation
-func NewBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) ([]BinaryAnnotation, error) {
-	var formatted []BinaryAnnotation
-	for _, annotation := range annotations {
-		b := BinaryAnnotation{}
-		endpoint := annotation.GetHost()
-		if endpoint != nil {
-			b.Host = strconv.Itoa(int(endpoint.GetIpv4())) + ":" + strconv.Itoa(int(endpoint.GetPort()))
-			b.ServiceName = endpoint.GetServiceName()
-		} else {
-			b.Host, b.ServiceName = "", ""
+func NewBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) []BinaryAnnotation {
+	formatted := make([]BinaryAnnotation, len(annotations))
+	for i, annotation := range annotations {
+		formatted[i] = BinaryAnnotation{
+			Host:        host(annotation.GetHost()),
+			ServiceName: serviceName(annotation.GetHost()),
+			Key:         annotation.GetKey(),
+			Value:       string(annotation.GetValue()),
+			Type:        annotation.GetAnnotationType().String(),
 		}
-
-		b.Key = annotation.GetKey()
-		b.Value = string(annotation.GetValue())
-		b.Type = annotation.GetAnnotationType().String()
-		formatted = append(formatted, b)
 	}
-
-	return formatted, nil
+	return formatted
 }
 
 func microToTime(micro int64) time.Time {
@@ -170,17 +136,62 @@ func formatTraceID(high, low int64) string {
 	return formatID(high) + ":" + formatID(low)
 }
 
+func minMax(span *zipkincore.Span) (time.Time, time.Time) {
+	min := time.Now()
+	max := time.Unix(0, 0)
+	for _, annotation := range span.Annotations {
+		ts := microToTime(annotation.GetTimestamp())
+		if !ts.IsZero() && ts.Before(min) {
+			min = ts
+		}
+		if !ts.IsZero() && ts.After(max) {
+			max = ts
+		}
+	}
+	if max.IsZero() {
+		max = min
+	}
+	return min, max
+}
+
 func guessTimestamp(span *zipkincore.Span) time.Time {
 	if span.GetTimestamp() != 0 {
 		return microToTime(span.GetTimestamp())
 	}
+	min, _ := minMax(span)
+	return min
+}
 
-	minTimestamp := time.Now()
-	for _, annotation := range span.Annotations {
-		ts := microToTime(annotation.GetTimestamp())
-		if !ts.IsZero() && ts.Before(minTimestamp) {
-			minTimestamp = ts
-		}
+func convertDuration(span *zipkincore.Span) time.Duration {
+	duration := time.Duration(span.GetDuration()) * time.Microsecond
+	if duration != 0 {
+		return duration
 	}
-	return minTimestamp
+	min, max := minMax(span)
+	return max.Sub(min)
+}
+
+func parentID(span *zipkincore.Span) string {
+	// A parent ID of 0 means that this is a parent span. In this case,
+	// we set the parent ID of the span to be its own id, so it points to
+	// itself.
+	id := span.GetParentID()
+	if id != 0 {
+		return formatID(id)
+	}
+	return formatID(span.ID)
+}
+
+func host(h *zipkincore.Endpoint) string {
+	if h == nil {
+		return ""
+	}
+	return strconv.Itoa(int(h.GetIpv4())) + ":" + strconv.Itoa(int(h.GetPort()))
+}
+
+func serviceName(h *zipkincore.Endpoint) string {
+	if h == nil {
+		return ""
+	}
+	return h.GetServiceName()
 }
