@@ -61,6 +61,7 @@
 - [#2914](https://github.com/influxdata/telegraf/issues/2914): Prevent possible deadlock when using aggregators.
 - [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
 - [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
+- [#2860](https://github.com/influxdata/telegraf/issues/2860): Fix combined tagdrop/tagpass filtering.
 
 ## v1.3.4 [2017-07-12]
 
