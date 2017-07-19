@@ -11,7 +11,7 @@ github.com/couchbase/go-couchbase bfe555a140d53dc1adf390f1a1d4b0fd4ceadb28
 github.com/couchbase/gomemcached 4a25d2f4e1dea9ea7dd76dfd943407abf9b07d29
 github.com/couchbase/goutils 5823a0cbaaa9008406021dc5daf80125ea30bba6
 github.com/davecgh/go-spew 346938d642f2ec3594ed81d874461961cd0faa76
-github.com/docker/docker b89aff1afa1f61993ab2ba18fd62d9375a195f5d
+github.com/docker/docker f5ec1e2936dcbe7b5001c2b817188b095c700c27
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/go-xerial-snappy bb955e01b9346ac19dc29eb16586c90ded99a98c
 github.com/eapache/queue 44cc805cf13205b55f69e14bcb69867d1ae92f98
