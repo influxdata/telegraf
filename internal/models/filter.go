@@ -175,7 +175,8 @@ func (f *Filter) shouldFieldPass(key string) bool {
 // shouldTagsPass returns true if the metric should pass, false if should drop
 // based on the tagdrop/tagpass filter parameters
 func (f *Filter) shouldTagsPass(tags map[string]string) bool {
-	if f.TagPass != nil {
+
+	tagPass := func(f *Filter) bool {
 		for _, pat := range f.TagPass {
 			if pat.filter == nil {
 				continue
@@ -189,7 +190,7 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 		return false
 	}
 
-	if f.TagDrop != nil {
+	tagDrop := func(f *Filter) bool {
 		for _, pat := range f.TagDrop {
 			if pat.filter == nil {
 				continue
@@ -201,6 +202,18 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 			}
 		}
 		return true
+	}
+
+	// Add additional logic in case where both parameters are set.
+	// see: https://github.com/influxdata/telegraf/issues/2860
+	if f.TagPass != nil && f.TagDrop != nil {
+		// return true only in case when tag pass and won't be dropped (true, true).
+		// in case when the same tag should be passed and dropped it will be dropped (true, false).
+		return tagPass(f) && tagDrop(f)
+	} else if f.TagPass != nil {
+		return tagPass(f)
+	} else if f.TagDrop != nil {
+		return tagDrop(f)
 	}
 
 	return true
