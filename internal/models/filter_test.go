@@ -357,3 +357,48 @@ func TestFilter_FilterTagsMatches(t *testing.T) {
 		"mytag": "foobar",
 	}, pretags)
 }
+
+// TestFilter_FilterTagsPassAndDrop used for check case when
+// both parameters were defined
+// see: https://github.com/influxdata/telegraf/issues/2860
+func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
+
+	inputData := []map[string]string{
+		{"tag1": "1", "tag2": "3"},
+		{"tag1": "1", "tag2": "2"},
+		{"tag1": "2", "tag2": "1"},
+		{"tag1": "4", "tag2": "1"},
+	}
+
+	expectedResult := []bool{false, true, false, false}
+
+	filterPass := []TagFilter{
+		TagFilter{
+			Name:   "tag1",
+			Filter: []string{"1", "4"},
+		},
+	}
+
+	filterDrop := []TagFilter{
+		TagFilter{
+			Name:   "tag1",
+			Filter: []string{"4"},
+		},
+		TagFilter{
+			Name:   "tag2",
+			Filter: []string{"3"},
+		},
+	}
+
+	f := Filter{
+		TagDrop: filterDrop,
+		TagPass: filterPass,
+	}
+
+	require.NoError(t, f.Compile())
+
+	for i, tag := range inputData {
+		assert.Equal(t, f.shouldTagsPass(tag), expectedResult[i])
+	}
+
+}
