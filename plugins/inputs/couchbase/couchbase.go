@@ -1,10 +1,11 @@
 package couchbase
 
 import (
+	"sync"
+
 	couchbase "github.com/couchbase/go-couchbase"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"sync"
 )
 
 type Couchbase struct {
@@ -71,15 +72,17 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *co
 		}
 		pool = &p
 	}
+
 	for i := 0; i < len(pool.Nodes); i++ {
 		node := pool.Nodes[i]
-		tags := map[string]string{"cluster": addr, "hostname": node.Hostname}
+		tags := map[string]string{"cluster": node.CouchAPIBase, "hostname": node.Hostname}
 		fields := make(map[string]interface{})
 		fields["memory_free"] = node.MemoryFree
 		fields["memory_total"] = node.MemoryTotal
 		acc.AddFields("couchbase_node", fields, tags)
 	}
-	for bucketName, _ := range pool.BucketMap {
+
+	for bucketName := range pool.BucketMap {
 		tags := map[string]string{"cluster": addr, "bucket": bucketName}
 		bs := pool.BucketMap[bucketName].BasicStats
 		fields := make(map[string]interface{})
