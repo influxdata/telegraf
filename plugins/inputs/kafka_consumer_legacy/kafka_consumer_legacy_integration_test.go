@@ -17,6 +17,7 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+	t.Skip("Skipping test due to circleci issue; ref #2487")
 
 	brokerPeers := []string{testutil.GetLocalHost() + ":9092"}
 	zkPeers := []string{testutil.GetLocalHost() + ":2181"}

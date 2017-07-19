@@ -40,6 +40,7 @@
 - [#2973](https://github.com/influxdata/telegraf/pull/2973): Change default prometheus_client port.
 - [#2661](https://github.com/influxdata/telegraf/pull/2661): Add fluentd input plugin.
 - [#2990](https://github.com/influxdata/telegraf/pull/2990): Add result_type field to net_response input plugin.
+- [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 
 ### Bugfixes
 
@@ -58,6 +59,8 @@
 - [#2984](https://github.com/influxdata/telegraf/pull/2984): Display error message if prometheus output fails to listen.
 - [#2997](https://github.com/influxdata/telegraf/issues/2997): Fix elasticsearch output content type detection warning.
 - [#2914](https://github.com/influxdata/telegraf/issues/2914): Prevent possible deadlock when using aggregators.
+- [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
+- [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
 
 ## v1.3.4 [2017-07-12]
 

@@ -32,15 +32,8 @@ There are many ways to contribute:
 
 ## Installation:
 
-You can either download the binaries directly from the
-[downloads](https://www.influxdata.com/downloads) page.
-
-A few alternate installs are available here as well:
-
-### FreeBSD tarball:
-
-Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-VERSION_freebsd_amd64.tar.gz
+You can download the binaries directly from the [downloads](https://www.influxdata.com/downloads) page
+or from the [releases](https://github.com/influxdata/telegraf/releases) section.
 
 ### Ansible Role:
 
@@ -81,7 +74,7 @@ telegraf --input-filter cpu --output-filter influxdb config
 #### Run a single telegraf collection, outputing metrics to stdout
 
 ```
-telegraf --config telegraf.conf -test
+telegraf --config telegraf.conf --test
 ```
 
 #### Run telegraf with all plugins defined in config file
@@ -93,7 +86,7 @@ telegraf --config telegraf.conf
 #### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
 
 ```
-telegraf --config telegraf.conf -input-filter cpu:mem -output-filter influxdb
+telegraf --config telegraf.conf -input-filter cpu:mem --output-filter influxdb
 ```
 
 
