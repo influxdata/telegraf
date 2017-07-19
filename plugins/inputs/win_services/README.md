@@ -16,24 +16,24 @@ It requires that Telegraf must be running under the administrator privileges.
 ### Measurements & Fields:
 
 - win_services
-    - state
-    - startup_mode
+    - state : integer
+    - startup_mode : integer
 
 The `state` field can have the following values:
-* _stopped_         
-* _start_pending_   
-* _stop_pending_    
-* _running_         
-* _continue_pending_
-* _pause_pending_   
-* _paused_
+- 1 - stopped
+- 2 - start pending
+- 3 - stop pending
+- 4 - running
+- 5 - continue pending
+- 6 - pause pending 
+- 7 - paused
 
 The `startup_mode` field can have the following values:
-* _boot_start_  
-* _system_start_
-* _auto_start_  
-* _demand_start_
-* _disabled_
+- 0 - boot start
+- 1 - system start
+- 2 - auto start
+- 3 - demand start
+- 4 - disabled   
 
 ### Tags:
 
@@ -44,8 +44,8 @@ The `startup_mode` field can have the following values:
 ### Example Output:
 ```
 * Plugin: inputs.win_services, Collection 1
-> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state="running",startup_mode="auto_start" 1500040669000000000
-> win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state="stopped",startup_mode="demand_start" 1500040669000000000
+> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state=4i,startup_mode=2i 1500040669000000000
+> win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state=1i,startup_mode=3i 1500040669000000000
 ```
 ### TICK Scripts
 
@@ -61,8 +61,8 @@ stream
         .measurement('win_services')
         .groupBy('host','service_name')
     |alert()
-        .crit(lambda: "state" != 'running')
+        .crit(lambda: "state" != 4)
         .stateChangesOnly()
-        .message('Service {{ index .Tags "service_name" }} on Host {{ index .Tags "host" }} is {{ index .Fields "state" }} ')
+        .message('Service {{ index .Tags "service_name" }} on Host {{ index .Tags "host" }} is in state {{ index .Fields "state" }} ')
         .post('http://localhost:666/alert/service')
 ```
