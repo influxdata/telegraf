@@ -50,12 +50,7 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trace, err := NewTrace(spans)
-	if err != nil {
-		s.recorder.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	trace := NewTrace(spans)
 
 	if err = s.recorder.Record(trace); err != nil {
 		s.recorder.Error(err)
