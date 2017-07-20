@@ -405,6 +405,7 @@ func Test_minMax(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
+		now     func() time.Time
 		wantMin time.Time
 		wantMax time.Time
 	}{
@@ -434,21 +435,40 @@ func Test_minMax(t *testing.T) {
 			wantMin: time.Unix(1, 0).UTC(),
 			wantMax: time.Unix(3, 0).UTC(),
 		},
-		/*{
-			name: "zero time annotation",
+		{
+			name: "Annotations are in the future",
 			args: args{
 				span: &zipkincore.Span{
 					Annotations: []*zipkincore.Annotation{
-						newAnnotation(0),
+						newAnnotation(3000000),
 					},
 				},
 			},
-			wantMin: time.Unix(0, 0).UTC(),
-			wantMax: time.Unix(1, 0).UTC(),
-		},*/
+			wantMin: time.Unix(2, 0).UTC(),
+			wantMax: time.Unix(3, 0).UTC(),
+			now: func() time.Time {
+				return time.Unix(2, 0).UTC()
+			},
+		},
+		{
+			name: "No Annotations",
+			args: args{
+				span: &zipkincore.Span{
+					Annotations: []*zipkincore.Annotation{},
+				},
+			},
+			wantMin: time.Unix(2, 0).UTC(),
+			wantMax: time.Unix(2, 0).UTC(),
+			now: func() time.Time {
+				return time.Unix(2, 0).UTC()
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.now != nil {
+				now = tt.now
+			}
 			got, got1 := minMax(tt.args.span)
 			if !reflect.DeepEqual(got, tt.wantMin) {
 				t.Errorf("minMax() got = %v, want %v", got, tt.wantMin)
@@ -456,6 +476,7 @@ func Test_minMax(t *testing.T) {
 			if !reflect.DeepEqual(got1, tt.wantMax) {
 				t.Errorf("minMax() got1 = %v, want %v", got1, tt.wantMax)
 			}
+			now = time.Now
 		})
 	}
 }
@@ -470,7 +491,7 @@ func Test_host(t *testing.T) {
 		want string
 	}{
 		{
-			name: "No host",
+			name: "Host Found",
 			args: args{
 				h: &zipkincore.Endpoint{
 					Ipv4: 1234,
@@ -480,7 +501,7 @@ func Test_host(t *testing.T) {
 			want: "1234:8888",
 		},
 		{
-			name: "Host",
+			name: "No Host",
 			args: args{
 				h: nil,
 			},
@@ -496,7 +517,6 @@ func Test_host(t *testing.T) {
 	}
 }
 
-/*
 func Test_serviceName(t *testing.T) {
 	type args struct {
 		h *zipkincore.Endpoint
@@ -506,10 +526,22 @@ func Test_serviceName(t *testing.T) {
 		args args
 		want string
 	}{
-	name: "no serviceName"
-	args: args{
-		h: &zipkincore.Endpoint{},
-	},
+		{
+			name: "Found ServiceName",
+			args: args{
+				h: &zipkincore.Endpoint{
+					ServiceName: "zipkin",
+				},
+			},
+			want: "zipkin",
+		},
+		{
+			name: "No ServiceName",
+			args: args{
+				h: nil,
+			},
+			want: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -519,4 +551,3 @@ func Test_serviceName(t *testing.T) {
 		})
 	}
 }
-*/

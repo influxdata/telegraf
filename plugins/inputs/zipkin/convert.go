@@ -8,6 +8,9 @@ import (
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
 
+//now is a moackable time for now
+var now = time.Now
+
 // LineProtocolConverter implements the Recorder interface; it is a
 // type meant to encapsulate the storage of zipkin tracing data in
 // telegraf as line protocol.
@@ -137,7 +140,7 @@ func formatTraceID(high, low int64) string {
 }
 
 func minMax(span *zipkincore.Span) (time.Time, time.Time) {
-	min := time.Now().UTC()
+	min := now().UTC()
 	max := time.Time{}.UTC()
 	for _, annotation := range span.Annotations {
 		ts := microToTime(annotation.GetTimestamp())
