@@ -1,6 +1,6 @@
 package zipkin
 
-import "time"
+/*import "time"
 
 // UnitTest represents contains expected test values and a data file to be
 // written to the zipkin http server.
@@ -182,3 +182,4 @@ var tests = []UnitTest{
 		},
 	},
 }
+*/
