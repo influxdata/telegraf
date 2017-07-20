@@ -293,7 +293,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx.processes",
+		"nginx_processes",
 		map[string]interface{}{
 			"respawned": func() *int {
 				v := 9999
@@ -307,7 +307,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx.connections",
+		"nginx_connections",
 		map[string]interface{}{
 			"accepted": int(1234567890000),
 			"dropped":  int(2345678900000),
@@ -321,7 +321,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx.ssl",
+		"nginx_ssl",
 		map[string]interface{}{
 			"handshakes":        int64(1234567800000),
 			"handshakes_failed": int64(5432100000000),
@@ -334,7 +334,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx.requests",
+		"nginx_requests",
 		map[string]interface{}{
 			"total":   int64(9876543210000),
 			"current": int(98),
@@ -350,12 +350,12 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 		map[string]interface{}{
 			"processing":      int(12),
 			"requests":        int64(34),
-			"responses.1xx":   int64(111),
-			"responses.2xx":   int64(222),
-			"responses.3xx":   int64(333),
-			"responses.4xx":   int64(444),
-			"responses.5xx":   int64(555),
-			"responses.total": int64(999),
+			"responses_1xx":   int64(111),
+			"responses_2xx":   int64(222),
+			"responses_3xx":   int64(333),
+			"responses_4xx":   int64(444),
+			"responses_5xx":   int64(555),
+			"responses_total": int64(999),
 			"discarded":       int64(11),
 			"received":        int64(22),
 			"sent":            int64(33),
@@ -368,7 +368,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx.upstream",
+		"nginx_upstream",
 		map[string]interface{}{
 			"keepalive": int(1),
 			"zombies":   int(2),
@@ -381,26 +381,26 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx.upstream.peer",
+		"nginx_upstream_peer",
 		map[string]interface{}{
 			"backup":                 false,
 			"weight":                 int(1),
 			"state":                  "up",
 			"active":                 int(0),
 			"requests":               int64(9876),
-			"responses.1xx":          int64(1111),
-			"responses.2xx":          int64(2222),
-			"responses.3xx":          int64(3333),
-			"responses.4xx":          int64(4444),
-			"responses.5xx":          int64(5555),
-			"responses.total":        int64(987654),
+			"responses_1xx":          int64(1111),
+			"responses_2xx":          int64(2222),
+			"responses_3xx":          int64(3333),
+			"responses_4xx":          int64(4444),
+			"responses_5xx":          int64(5555),
+			"responses_total":        int64(987654),
 			"sent":                   int64(987654321),
 			"received":               int64(87654321),
 			"fails":                  int64(98),
 			"unavail":                int64(65),
-			"healthchecks.checks":    int64(54),
-			"healthchecks.fails":     int64(32),
-			"healthchecks.unhealthy": int64(21),
+			"healthchecks_checks":    int64(54),
+			"healthchecks_fails":     int64(32),
+			"healthchecks_unhealthy": int64(21),
 			"downtime":               int64(5432),
 			"downstart":              int64(4321),
 			"selected": func() *int64 {
