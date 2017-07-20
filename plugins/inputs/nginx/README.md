@@ -55,3 +55,24 @@ It produces:
 * Plugin: nginx, Collection 1
 > nginx,port=80,server=localhost accepts=605i,active=2i,handled=605i,reading=0i,requests=12132i,waiting=1i,writing=1i 1456690994701784331
 ```
+
+### Reference material
+
+Structures for Nginx Plus have been built based on history of
+[status module documentation](http://nginx.org/en/docs/http/ngx_http_status_module.html)
+
+Subsequent versions of status response structure available here:
+
+- [version 1](http://web.archive.org/web/20130805111222/http://nginx.org/en/docs/http/ngx_http_status_module.html)
+
+- [version 2](http://web.archive.org/web/20131218101504/http://nginx.org/en/docs/http/ngx_http_status_module.html)
+
+- version 3 - not available
+
+- [version 4](http://web.archive.org/web/20141218170938/http://nginx.org/en/docs/http/ngx_http_status_module.html)
+
+- [version 5](http://web.archive.org/web/20150414043916/http://nginx.org/en/docs/http/ngx_http_status_module.html)
+
+- [version 6](http://web.archive.org/web/20150918163811/http://nginx.org/en/docs/http/ngx_http_status_module.html)
+
+- [version 7](http://web.archive.org/web/20161107221028/http://nginx.org/en/docs/http/ngx_http_status_module.html)
