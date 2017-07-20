@@ -57,7 +57,7 @@ func TestSpanHandler(t *testing.T) {
 			ID:          "8090652509916334619",
 			TraceID:     "0:2505404965370368069",
 			ParentID:    parentID,
-			Timestamp:   time.Unix(0, 1498688360851331*int64(time.Microsecond)),
+			Timestamp:   time.Unix(0, 1498688360851331*int64(time.Microsecond)).UTC(),
 			Duration:    time.Duration(53106) * time.Microsecond,
 			Annotations: []Annotation{},
 			BinaryAnnotations: []BinaryAnnotation{
@@ -75,7 +75,7 @@ func TestSpanHandler(t *testing.T) {
 			ID:          "103618986556047333",
 			TraceID:     "0:2505404965370368069",
 			ParentID:    parentID,
-			Timestamp:   time.Unix(0, 1498688360904552*int64(time.Microsecond)),
+			Timestamp:   time.Unix(0, 1498688360904552*int64(time.Microsecond)).UTC(),
 			Duration:    time.Duration(50410) * time.Microsecond,
 			Annotations: []Annotation{},
 			BinaryAnnotations: []BinaryAnnotation{
@@ -93,23 +93,23 @@ func TestSpanHandler(t *testing.T) {
 			ID:        "22964302721410078",
 			TraceID:   "0:2505404965370368069",
 			ParentID:  "22964302721410078",
-			Timestamp: time.Unix(0, 1498688360851318*int64(time.Microsecond)),
+			Timestamp: time.Unix(0, 1498688360851318*int64(time.Microsecond)).UTC(),
 			Duration:  time.Duration(103680) * time.Microsecond,
 			Annotations: []Annotation{
 				Annotation{
-					Timestamp:   time.Unix(0, 1498688360851325*int64(time.Microsecond)),
+					Timestamp:   time.Unix(0, 1498688360851325*int64(time.Microsecond)).UTC(),
 					Value:       "Starting child #0",
 					Host:        "2130706433:0",
 					ServiceName: "trivial",
 				},
 				Annotation{
-					Timestamp:   time.Unix(0, 1498688360904545*int64(time.Microsecond)),
+					Timestamp:   time.Unix(0, 1498688360904545*int64(time.Microsecond)).UTC(),
 					Value:       "Starting child #1",
 					Host:        "2130706433:0",
 					ServiceName: "trivial",
 				},
 				Annotation{
-					Timestamp:   time.Unix(0, 1498688360954992*int64(time.Microsecond)),
+					Timestamp:   time.Unix(0, 1498688360954992*int64(time.Microsecond)).UTC(),
 					Value:       "A Log",
 					Host:        "2130706433:0",
 					ServiceName: "trivial",
