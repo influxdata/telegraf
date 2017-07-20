@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
 
 func TestLineProtocolConverter_Record(t *testing.T) {
@@ -36,7 +37,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						TraceID:     "2505404965370368069",
 						Name:        "Child",
 						ParentID:    "22964302721410078",
-						Timestamp:   time.Unix(0, 1498688360851331000),
+						Timestamp:   time.Unix(0, 1498688360851331000).UTC(),
 						Duration:    time.Duration(53106) * time.Microsecond,
 						Annotations: []Annotation{},
 						BinaryAnnotations: []BinaryAnnotation{
@@ -54,7 +55,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						TraceID:     "2505404965370368069",
 						Name:        "Child",
 						ParentID:    "22964302721410078",
-						Timestamp:   time.Unix(0, 1498688360904552000),
+						Timestamp:   time.Unix(0, 1498688360904552000).UTC(),
 						Duration:    time.Duration(50410) * time.Microsecond,
 						Annotations: []Annotation{},
 						BinaryAnnotations: []BinaryAnnotation{
@@ -72,23 +73,23 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						TraceID:   "2505404965370368069",
 						Name:      "Parent",
 						ParentID:  "22964302721410078",
-						Timestamp: time.Unix(0, 1498688360851318000),
+						Timestamp: time.Unix(0, 1498688360851318000).UTC(),
 						Duration:  time.Duration(103680) * time.Microsecond,
 						Annotations: []Annotation{
 							Annotation{
-								Timestamp:   time.Unix(0, 1498688360851325000),
+								Timestamp:   time.Unix(0, 1498688360851325000).UTC(),
 								Value:       "Starting child #0",
 								Host:        "2130706433:0",
 								ServiceName: "trivial",
 							},
 							Annotation{
-								Timestamp:   time.Unix(0, 1498688360904545000),
+								Timestamp:   time.Unix(0, 1498688360904545000).UTC(),
 								Value:       "Starting child #1",
 								Host:        "2130706433:0",
 								ServiceName: "trivial",
 							},
 							Annotation{
-								Timestamp:   time.Unix(0, 1498688360954992000),
+								Timestamp:   time.Unix(0, 1498688360954992000).UTC(),
 								Value:       "A Log",
 								Host:        "2130706433:0",
 								ServiceName: "trivial",
@@ -123,7 +124,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					Fields: map[string]interface{}{
 						"duration": time.Duration(53106) * time.Microsecond,
 					},
-					Time: time.Unix(0, 1498688360851331000),
+					Time: time.Unix(0, 1498688360851331000).UTC(),
 				},
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -141,7 +142,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					Fields: map[string]interface{}{
 						"duration": time.Duration(50410) * time.Microsecond,
 					},
-					Time: time.Unix(0, 1498688360904552000),
+					Time: time.Unix(0, 1498688360904552000).UTC(),
 				},
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -158,7 +159,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"annotation_timestamp": int64(1498688360),
 						"duration":             time.Duration(103680) * time.Microsecond,
 					},
-					Time: time.Unix(0, 1498688360851318000),
+					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -175,7 +176,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"annotation_timestamp": int64(1498688360),
 						"duration":             time.Duration(103680) * time.Microsecond,
 					},
-					Time: time.Unix(0, 1498688360851318000),
+					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -192,7 +193,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"annotation_timestamp": int64(1498688360),
 						"duration":             time.Duration(103680) * time.Microsecond,
 					},
-					Time: time.Unix(0, 1498688360851318000),
+					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -210,7 +211,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					Fields: map[string]interface{}{
 						"duration": time.Duration(103680) * time.Microsecond,
 					},
-					Time: time.Unix(0, 1498688360851318000),
+					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
 			},
 			wantErr: false,
@@ -230,11 +231,11 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					TraceID:     "243463817635710260",
 					Name:        "Concat",
 					ParentID:    "4574092882326506380",
-					Timestamp:   time.Unix(0, 1499817952283903000),
+					Timestamp:   time.Unix(0, 1499817952283903000).UTC(),
 					Duration:    time.Duration(2888) * time.Microsecond,
 					Annotations: []Annotation{
 						Annotaitons{
-							Timestamp:   time.Unix(0, 1499817952283903000),
+							Timestamp:   time.Unix(0, 1499817952283903000).UTC(),
 							Value:       "cs",
 							Host:        "0:0",
 							ServiceName: "cli",
@@ -266,7 +267,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			"annotation_timestamp": int64(149981795),
 				"duration": time.Duration(2888) * time.Microsecond,
 			},
-			Time: time.Unix(0, 1499817952283903000),
+			Time: time.Unix(0, 1499817952283903000).UTC(),
 		},
 		testutil.Metric{
 			Measurement: "zipkin",
@@ -284,7 +285,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			Fields: map[string]interface{}{
 				"duration": time.Duration(2888) * time.Microsecond,
 			},
-			Time: time.Unix(0, 1499817952283903000),
+			Time: time.Unix(0, 1499817952283903000).UTC(),
 		},
 			wantErr: false,
 		},*/
@@ -303,11 +304,11 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						TraceID:   "0:6802735349851856000",
 						Name:      "main.dud",
 						ParentID:  "6802735349851856000",
-						Timestamp: time.Unix(1, 0),
+						Timestamp: time.Unix(1, 0).UTC(),
 						Duration:  1,
 						Annotations: []Annotation{
 							Annotation{
-								Timestamp:   time.Unix(0, 1433330263415871000),
+								Timestamp:   time.Unix(0, 1433330263415871000).UTC(),
 								Value:       "cs",
 								Host:        "0:9410",
 								ServiceName: "go-zipkin-testclient",
@@ -333,7 +334,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"annotation_timestamp": int64(1433330263),
 						"duration":             time.Duration(1) * time.Nanosecond,
 					},
-					Time: time.Unix(1, 0),
+					Time: time.Unix(1, 0).UTC(),
 				},
 			},
 		},
@@ -357,3 +358,165 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 		})
 	}
 }
+
+func Test_microToTime(t *testing.T) {
+	type args struct {
+		micro int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want time.Time
+	}{
+		{
+			name: "given zero micro seconds expected unix time zero",
+			args: args{
+				micro: 0,
+			},
+			want: time.Unix(0, 0).UTC(),
+		},
+		{
+			name: "given a million micro seconds expected unix time one",
+			args: args{
+				micro: 1000000,
+			},
+			want: time.Unix(1, 0).UTC(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := microToTime(tt.args.micro); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("microToTime() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func newAnnotation(micro int64) *zipkincore.Annotation {
+	return &zipkincore.Annotation{
+		Timestamp: micro,
+	}
+}
+
+func Test_minMax(t *testing.T) {
+	type args struct {
+		span *zipkincore.Span
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantMin time.Time
+		wantMax time.Time
+	}{
+		{
+			name: "Single annotation",
+			args: args{
+				span: &zipkincore.Span{
+					Annotations: []*zipkincore.Annotation{
+						newAnnotation(1000000),
+					},
+				},
+			},
+			wantMin: time.Unix(1, 0).UTC(),
+			wantMax: time.Unix(1, 0).UTC(),
+		},
+		{
+			name: "Three annotations",
+			args: args{
+				span: &zipkincore.Span{
+					Annotations: []*zipkincore.Annotation{
+						newAnnotation(1000000),
+						newAnnotation(2000000),
+						newAnnotation(3000000),
+					},
+				},
+			},
+			wantMin: time.Unix(1, 0).UTC(),
+			wantMax: time.Unix(3, 0).UTC(),
+		},
+		/*{
+			name: "zero time annotation",
+			args: args{
+				span: &zipkincore.Span{
+					Annotations: []*zipkincore.Annotation{
+						newAnnotation(0),
+					},
+				},
+			},
+			wantMin: time.Unix(0, 0).UTC(),
+			wantMax: time.Unix(1, 0).UTC(),
+		},*/
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := minMax(tt.args.span)
+			if !reflect.DeepEqual(got, tt.wantMin) {
+				t.Errorf("minMax() got = %v, want %v", got, tt.wantMin)
+			}
+			if !reflect.DeepEqual(got1, tt.wantMax) {
+				t.Errorf("minMax() got1 = %v, want %v", got1, tt.wantMax)
+			}
+		})
+	}
+}
+
+func Test_host(t *testing.T) {
+	type args struct {
+		h *zipkincore.Endpoint
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "No host",
+			args: args{
+				h: &zipkincore.Endpoint{
+					Ipv4: 1234,
+					Port: 8888,
+				},
+			},
+			want: "1234:8888",
+		},
+		{
+			name: "Host",
+			args: args{
+				h: nil,
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := host(tt.args.h); got != tt.want {
+				t.Errorf("host() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+/*
+func Test_serviceName(t *testing.T) {
+	type args struct {
+		h *zipkincore.Endpoint
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+	name: "no serviceName"
+	args: args{
+		h: &zipkincore.Endpoint{},
+	},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := serviceName(tt.args.h); got != tt.want {
+				t.Errorf("serviceName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+*/

@@ -125,7 +125,7 @@ func NewBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) []BinaryAn
 }
 
 func microToTime(micro int64) time.Time {
-	return time.Unix(0, micro*int64(time.Microsecond))
+	return time.Unix(0, micro*int64(time.Microsecond)).UTC()
 }
 
 func formatID(id int64) string {
@@ -137,8 +137,8 @@ func formatTraceID(high, low int64) string {
 }
 
 func minMax(span *zipkincore.Span) (time.Time, time.Time) {
-	min := time.Now()
-	max := time.Unix(0, 0)
+	min := time.Now().UTC()
+	max := time.Time{}.UTC()
 	for _, annotation := range span.Annotations {
 		ts := microToTime(annotation.GetTimestamp())
 		if !ts.IsZero() && ts.Before(min) {
