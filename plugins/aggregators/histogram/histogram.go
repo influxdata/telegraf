@@ -48,6 +48,13 @@ type metricHistogramCollection struct {
 // counts is the number of hits in the bucket
 type counts []int64
 
+type groupedByCountFields struct {
+	name   string
+	fields []string
+	tags   map[string]string
+	count  int64
+}
+
 // NewHistogramAggregator creates new histogram aggregator
 func NewHistogramAggregator() telegraf.Aggregator {
 	h := &HistogramAggregator{}
@@ -94,7 +101,7 @@ func (h *HistogramAggregator) Description() string {
 
 // Add adds new hit to the buckets
 func (h *HistogramAggregator) Add(in telegraf.Metric) {
-	var bucketsByField = make(map[string][]float64)
+	bucketsByField := make(map[string][]float64)
 	for field := range in.Fields() {
 		buckets := h.getBuckets(in.Name(), field)
 		if buckets != nil {
@@ -134,22 +141,58 @@ func (h *HistogramAggregator) Add(in telegraf.Metric) {
 
 // Push returns histogram values for metrics
 func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
+	metricsWithGroupedFields := []groupedByCountFields{}
+
 	for _, aggregate := range h.cache {
 		for field, counts := range aggregate.histogramCollection {
-
-			buckets := h.getBuckets(aggregate.name, field)
-			count := int64(0)
-
-			for index, bucket := range buckets {
-				count += counts[index]
-				addFields(acc, aggregate, field, strconv.FormatFloat(bucket, 'f', -1, 64), count)
-			}
-
-			// the adding a value to the infinitive bucket
-			count += counts[len(counts)-1]
-			addFields(acc, aggregate, field, bucketInf, count)
+			h.groupFieldsByCount(&metricsWithGroupedFields, aggregate.name, field, copyTags(aggregate.tags), counts)
 		}
 	}
+
+	for _, metric := range metricsWithGroupedFields {
+		acc.AddFields(metric.name, makeFieldsWithCount(metric.fields, metric.count), metric.tags)
+	}
+}
+
+func (h *HistogramAggregator) groupFieldsByCount(
+	metricsWithGroupedFields *[]groupedByCountFields,
+	name string,
+	field string,
+	tags map[string]string,
+	counts []int64,
+) {
+	count := int64(0)
+	for index, bucket := range h.getBuckets(name, field) {
+		count += counts[index]
+
+		tags[bucketTag] = strconv.FormatFloat(bucket, 'f', -1, 64)
+		h.groupField(metricsWithGroupedFields, name, field, count, copyTags(tags))
+	}
+
+	count += counts[len(counts)-1]
+	tags[bucketTag] = bucketInf
+
+	h.groupField(metricsWithGroupedFields, name, field, count, tags)
+}
+
+func (h *HistogramAggregator) groupField(
+	metricsWithGroupedFields *[]groupedByCountFields,
+	name string,
+	field string,
+	count int64,
+	tags map[string]string,
+) {
+	for key, metric := range *metricsWithGroupedFields {
+		if count == metric.count && isTagsIdentical(tags, metric.tags) {
+			(*metricsWithGroupedFields)[key].fields = append(metric.fields, field)
+			return
+		}
+	}
+
+	*metricsWithGroupedFields = append(
+		*metricsWithGroupedFields,
+		groupedByCountFields{name: name, fields: []string{field}, count: count, tags: tags},
+	)
 }
 
 // Reset does nothing, because we need to collect counts for a long time, otherwise if config parameter 'reset' has
@@ -199,19 +242,6 @@ func isBucketExists(field string, cfg config) bool {
 	return false
 }
 
-// addFields adds the field with specified tags to accumulator
-func addFields(acc telegraf.Accumulator, agr metricHistogramCollection, field string, bucketTagVal string, count int64) {
-	fields := map[string]interface{}{field + "_bucket": count}
-
-	tags := map[string]string{}
-	for key, val := range agr.tags {
-		tags[key] = val
-	}
-	tags[bucketTag] = bucketTagVal
-
-	acc.AddFields(agr.name, fields, tags)
-}
-
 // sortBuckets sorts the buckets if it is needed
 func sortBuckets(buckets []float64) []float64 {
 	for i, bucket := range buckets {
@@ -234,6 +264,38 @@ func convert(in interface{}) (float64, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func copyTags(tags map[string]string) map[string]string {
+	copiedTags := map[string]string{}
+	for key, val := range tags {
+		copiedTags[key] = val
+	}
+
+	return copiedTags
+}
+
+func isTagsIdentical(originalTags, checkedTags map[string]string) bool {
+	if len(originalTags) != len(checkedTags) {
+		return false
+	}
+
+	for tagName, tagValue := range originalTags {
+		if tagValue != checkedTags[tagName] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func makeFieldsWithCount(fields []string, count int64) map[string]interface{} {
+	fieldsWithCount := map[string]interface{}{}
+	for _, field := range fields {
+		fieldsWithCount[field+"_bucket"] = count
+	}
+
+	return fieldsWithCount
 }
 
 // init initializes histogram aggregator plugin
