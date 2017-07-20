@@ -141,6 +141,21 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_id": "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu1fields, cputags)
+	
+    // Those tagged filed should not be present because of offline CPUs
+	cputags["cpu"] = "cpu2"
+	cpu2fields := map[string]interface{}{
+		"usage_total":  uint64(0),
+		"container_id": "123456789",
+	}
+	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu2fields, cputags)
+
+	cputags["cpu"] = "cpu3"
+	cpu3fields := map[string]interface{}{
+		"usage_total":  uint64(0),
+		"container_id": "123456789",
+	}
+	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu3fields, cputags)
 }
 
 func testStats() *types.StatsJSON {
