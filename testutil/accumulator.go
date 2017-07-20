@@ -273,7 +273,7 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 
 		if p.Measurement == measurement {
 			assert.Equal(t, fields, p.Fields)
-			msg := fmt.Sprintf("found measurement %s with tags %v which shloud not be there", measurement, tags)
+			msg := fmt.Sprintf("found measurement %s with tags %v which should not be there", measurement, tags)
 			assert.Fail(t, msg)
 		}
 	}
