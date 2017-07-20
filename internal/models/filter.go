@@ -132,6 +132,7 @@ func (f *Filter) Apply(
 	return true
 }
 
+// IsActive checking if filter is active
 func (f *Filter) IsActive() bool {
 	return f.isActive
 }
@@ -139,36 +140,58 @@ func (f *Filter) IsActive() bool {
 // shouldNamePass returns true if the metric should pass, false if should drop
 // based on the drop/pass filter parameters
 func (f *Filter) shouldNamePass(key string) bool {
-	if f.namePass != nil {
+
+	pass := func(f *Filter) bool {
 		if f.namePass.Match(key) {
 			return true
 		}
 		return false
 	}
 
-	if f.nameDrop != nil {
+	drop := func(f *Filter) bool {
 		if f.nameDrop.Match(key) {
 			return false
 		}
+		return true
 	}
+
+	if f.namePass != nil && f.nameDrop != nil {
+		return pass(f) && drop(f)
+	} else if f.namePass != nil {
+		return pass(f)
+	} else if f.nameDrop != nil {
+		return drop(f)
+	}
+
 	return true
 }
 
 // shouldFieldPass returns true if the metric should pass, false if should drop
 // based on the drop/pass filter parameters
 func (f *Filter) shouldFieldPass(key string) bool {
-	if f.fieldPass != nil {
+
+	pass := func(f *Filter) bool {
 		if f.fieldPass.Match(key) {
 			return true
 		}
 		return false
 	}
 
-	if f.fieldDrop != nil {
+	drop := func(f *Filter) bool {
 		if f.fieldDrop.Match(key) {
 			return false
 		}
+		return true
 	}
+
+	if f.fieldPass != nil && f.fieldDrop != nil {
+		return pass(f) && drop(f)
+	} else if f.fieldPass != nil {
+		return pass(f)
+	} else if f.fieldDrop != nil {
+		return drop(f)
+	}
+
 	return true
 }
 
@@ -176,7 +199,7 @@ func (f *Filter) shouldFieldPass(key string) bool {
 // based on the tagdrop/tagpass filter parameters
 func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 
-	tagPass := func(f *Filter) bool {
+	pass := func(f *Filter) bool {
 		for _, pat := range f.TagPass {
 			if pat.filter == nil {
 				continue
@@ -190,7 +213,7 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 		return false
 	}
 
-	tagDrop := func(f *Filter) bool {
+	drop := func(f *Filter) bool {
 		for _, pat := range f.TagDrop {
 			if pat.filter == nil {
 				continue
@@ -209,11 +232,11 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 	if f.TagPass != nil && f.TagDrop != nil {
 		// return true only in case when tag pass and won't be dropped (true, true).
 		// in case when the same tag should be passed and dropped it will be dropped (true, false).
-		return tagPass(f) && tagDrop(f)
+		return pass(f) && drop(f)
 	} else if f.TagPass != nil {
-		return tagPass(f)
+		return pass(f)
 	} else if f.TagDrop != nil {
-		return tagDrop(f)
+		return drop(f)
 	}
 
 	return true
