@@ -1,6 +1,6 @@
 package zipkin
 
-/*import "time"
+import "time"
 
 // UnitTest represents contains expected test values and a data file to be
 // written to the zipkin http server.
@@ -116,7 +116,7 @@ var tests = []UnitTest{
 				},
 				expectedValues: map[string]interface{}{
 					"duration": time.Duration(103680) * time.Microsecond,
-					"time":     time.Unix(1498688360, 851318*int64(time.Microsecond)),
+					"time":     time.Unix(1498688360, 851318*int64(time.Microsecond)).UTC(),
 				},
 			},
 		},
@@ -182,4 +182,3 @@ var tests = []UnitTest{
 		},
 	},
 }
-*/

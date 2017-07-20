@@ -1,6 +1,5 @@
 package zipkin
 
-/*
 import (
 	"bytes"
 	"fmt"
@@ -206,4 +205,3 @@ func postTestData(t *testing.T, datafile string) {
 		t.Fatal("http request failed")
 	}
 }
-*/
