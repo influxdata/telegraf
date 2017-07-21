@@ -141,14 +141,29 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_id": "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu1fields, cputags)
+
+	// Those tagged filed should not be present because of offline CPUs
+	cputags["cpu"] = "cpu2"
+	cpu2fields := map[string]interface{}{
+		"usage_total":  uint64(0),
+		"container_id": "123456789",
+	}
+	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu2fields, cputags)
+
+	cputags["cpu"] = "cpu3"
+	cpu3fields := map[string]interface{}{
+		"usage_total":  uint64(0),
+		"container_id": "123456789",
+	}
+	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu3fields, cputags)
 }
 
 func testStats() *types.StatsJSON {
 	stats := &types.StatsJSON{}
 	stats.Read = time.Now()
 	stats.Networks = make(map[string]types.NetworkStats)
-
-	stats.CPUStats.CPUUsage.PercpuUsage = []uint64{1, 1002}
+	stats.CPUStats.OnlineCPUs = 2
+	stats.CPUStats.CPUUsage.PercpuUsage = []uint64{1, 1002, 0, 0}
 	stats.CPUStats.CPUUsage.UsageInUsermode = 100
 	stats.CPUStats.CPUUsage.TotalUsage = 500
 	stats.CPUStats.CPUUsage.UsageInKernelmode = 200

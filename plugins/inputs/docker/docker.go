@@ -446,7 +446,16 @@ func gatherContainerStats(
 	cputags["cpu"] = "cpu-total"
 	acc.AddFields("docker_container_cpu", cpufields, cputags, now)
 
-	for i, percpu := range stat.CPUStats.CPUUsage.PercpuUsage {
+	// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
+	// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
+	var percpuusage []uint64
+	if stat.CPUStats.OnlineCPUs > 0 {
+		percpuusage = stat.CPUStats.CPUUsage.PercpuUsage[:stat.CPUStats.OnlineCPUs]
+	} else {
+		percpuusage = stat.CPUStats.CPUUsage.PercpuUsage
+	}
+
+	for i, percpu := range percpuusage {
 		percputags := copyTags(tags)
 		percputags["cpu"] = fmt.Sprintf("cpu%d", i)
 		fields := map[string]interface{}{
@@ -527,7 +536,11 @@ func calculateCPUPercent(stat *types.StatsJSON) float64 {
 	systemDelta := float64(stat.CPUStats.SystemUsage) - float64(stat.PreCPUStats.SystemUsage)
 
 	if systemDelta > 0.0 && cpuDelta > 0.0 {
-		cpuPercent = (cpuDelta / systemDelta) * float64(len(stat.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+		if stat.CPUStats.OnlineCPUs > 0 {
+			cpuPercent = (cpuDelta / systemDelta) * float64(stat.CPUStats.OnlineCPUs) * 100.0
+		} else {
+			cpuPercent = (cpuDelta / systemDelta) * float64(len(stat.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+		}
 	}
 	return cpuPercent
 }
