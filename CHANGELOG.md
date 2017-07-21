@@ -62,6 +62,7 @@
 - [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
 - [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
 - [#2860](https://github.com/influxdata/telegraf/issues/2860): Fix combined tagdrop/tagpass filtering.
+- [#3036](https://github.com/influxdata/telegraf/pull/3036): Fix filtering when both pass and drop match an item.
 
 ## v1.3.4 [2017-07-12]
 
