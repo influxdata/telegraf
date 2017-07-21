@@ -141,7 +141,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_id": "123456789",
 	}
 	acc.AssertContainsTaggedFields(t, "docker_container_cpu", cpu1fields, cputags)
-	
+
 	// Those tagged filed should not be present because of offline CPUs
 	cputags["cpu"] = "cpu2"
 	cpu2fields := map[string]interface{}{
