@@ -358,6 +358,46 @@ func TestFilter_FilterTagsMatches(t *testing.T) {
 	}, pretags)
 }
 
+// TestFilter_FilterNamePassAndDrop used for check case when
+// both parameters were defined
+// see: https://github.com/influxdata/telegraf/issues/2860
+func TestFilter_FilterNamePassAndDrop(t *testing.T) {
+
+	inputData := []string{"name1", "name2", "name3", "name4"}
+	expectedResult := []bool{false, true, false, false}
+
+	f := Filter{
+		NamePass: []string{"name1", "name2"},
+		NameDrop: []string{"name1", "name3"},
+	}
+
+	require.NoError(t, f.Compile())
+
+	for i, name := range inputData {
+		assert.Equal(t, f.shouldNamePass(name), expectedResult[i])
+	}
+}
+
+// TestFilter_FilterFieldPassAndDrop used for check case when
+// both parameters were defined
+// see: https://github.com/influxdata/telegraf/issues/2860
+func TestFilter_FilterFieldPassAndDrop(t *testing.T) {
+
+	inputData := []string{"field1", "field2", "field3", "field4"}
+	expectedResult := []bool{false, true, false, false}
+
+	f := Filter{
+		FieldPass: []string{"field1", "field2"},
+		FieldDrop: []string{"field1", "field3"},
+	}
+
+	require.NoError(t, f.Compile())
+
+	for i, field := range inputData {
+		assert.Equal(t, f.shouldFieldPass(field), expectedResult[i])
+	}
+}
+
 // TestFilter_FilterTagsPassAndDrop used for check case when
 // both parameters were defined
 // see: https://github.com/influxdata/telegraf/issues/2860
