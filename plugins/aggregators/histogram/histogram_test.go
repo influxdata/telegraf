@@ -37,6 +37,7 @@ var firstMetric2, _ = metric.New(
 	map[string]string{"tag_name": "tag_value"},
 	map[string]interface{}{
 		"a": float64(15.9),
+		"c": float64(40),
 	},
 	time.Now(),
 )
@@ -79,13 +80,12 @@ func TestHistogramWithPeriodAndOneField(t *testing.T) {
 	if len(acc.Metrics) != 6 {
 		assert.Fail(t, "Incorrect number of metrics")
 	}
-
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "10.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0)}, "0")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0)}, "10")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "20")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "30")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "40")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, bucketInf)
 }
 
 // TestHistogramWithPeriodAndAllFields tests two metrics for one period and for all fields
@@ -102,44 +102,30 @@ func TestHistogramWithPeriodAndAllFields(t *testing.T) {
 	histogram.Add(secondMetric)
 	histogram.Push(acc)
 
-	if len(acc.Metrics) != 30 {
+	if len(acc.Metrics) != 18 {
 		assert.Fail(t, "Incorrect number of metrics")
 	}
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), "15.5")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, "0")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1)}, "15.5")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "20")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "30")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "40")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, bucketInf)
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(0), "15.5")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(0), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(0), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(1), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "b_bucket", int64(1), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(0), "c_bucket": int64(0)}, "15.5")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(0), "c_bucket": int64(0)}, "20")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(0), "c_bucket": int64(0)}, "30")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(1), "c_bucket": int64(1)}, "40")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(1), "c_bucket": int64(1)}, bucketInf)
 
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "0.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "4.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "10.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "23.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(0), "30.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "a_bucket", int64(1), bucketInf)
-
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "0.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "4.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "10.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "23.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), "30.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "ignoreme_bucket", int64(0), bucketInf)
-
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "0.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "4.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "10.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "23.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), "30.0")
-	assertContainsTaggedField(t, acc, "second_metric_name", "andme_bucket", int64(0), bucketInf)
+	assertContainsTaggedField(t, acc, "second_metric_name", map[string]interface{}{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, "0")
+	assertContainsTaggedField(t, acc, "second_metric_name", map[string]interface{}{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, "4")
+	assertContainsTaggedField(t, acc, "second_metric_name", map[string]interface{}{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, "10")
+	assertContainsTaggedField(t, acc, "second_metric_name", map[string]interface{}{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, "23")
+	assertContainsTaggedField(t, acc, "second_metric_name", map[string]interface{}{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, "30")
+	assertContainsTaggedField(t, acc, "second_metric_name", map[string]interface{}{"a_bucket": int64(1)}, bucketInf)
+	assertContainsTaggedField(t, acc, "second_metric_name", map[string]interface{}{"ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, bucketInf)
 }
 
 // TestHistogramDifferentPeriodsAndAllFields tests two metrics getting added with a push/reset in between (simulates
@@ -154,23 +140,29 @@ func TestHistogramDifferentPeriodsAndAllFields(t *testing.T) {
 	histogram.Add(firstMetric1)
 	histogram.Push(acc)
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "10.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(1), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0), "b_bucket": int64(0)}, "0")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0), "b_bucket": int64(0)}, "10")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1)}, "20")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(0)}, "20")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1)}, "30")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(0)}, "30")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1), "b_bucket": int64(1)}, "40")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1), "b_bucket": int64(1)}, bucketInf)
 
 	acc.ClearMetrics()
 	histogram.Add(firstMetric2)
 	histogram.Push(acc)
 
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "0.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(0), "10.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "20.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "30.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), "40.0")
-	assertContainsTaggedField(t, acc, "first_metric_name", "a_bucket", int64(2), bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, "0")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, "10")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "20")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "30")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, "40")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, bucketInf)
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(0), "c_bucket": int64(0)}, "20")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(0), "c_bucket": int64(0)}, "30")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(1), "c_bucket": int64(1)}, "40")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"b_bucket": int64(1), "c_bucket": int64(1)}, bucketInf)
 }
 
 // TestWrongBucketsOrder tests the calling panic with incorrect order of buckets
@@ -192,30 +184,40 @@ func TestWrongBucketsOrder(t *testing.T) {
 }
 
 // assertContainsTaggedField is help functions to test histogram data
-func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricName string, field string, counts int64, le string) {
-	expectedFields := map[string]interface{}{}
-	expectedFields[field] = counts
-
+func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricName string, fields map[string]interface{}, le string) {
 	acc.Lock()
 	defer acc.Unlock()
 
-	for _, metric := range acc.Metrics {
-		if metric.Measurement != metricName {
+	for _, checkedMetric := range acc.Metrics {
+		// check metric name
+		if checkedMetric.Measurement != metricName {
 			continue
 		}
 
-		if _, ok := metric.Fields[field]; !ok {
+		// check "le" tag
+		if checkedMetric.Tags[bucketTag] != le {
 			continue
 		}
 
-		if metric.Tags[bucketTag] == le {
-			if assert.Equal(t, expectedFields, metric.Fields) {
-				return
+		// check fields
+		isFieldsIdentical := true
+		for field := range fields {
+			if _, ok := checkedMetric.Fields[field]; !ok {
+				isFieldsIdentical = false
+				break
 			}
-
-			assert.Fail(t, fmt.Sprintf("incorrect fields %v of metric %s", expectedFields, metricName))
 		}
+		if !isFieldsIdentical {
+			continue
+		}
+
+		// check fields with their counts
+		if assert.Equal(t, fields, checkedMetric.Fields) {
+			return
+		}
+
+		assert.Fail(t, fmt.Sprintf("incorrect fields %v of metric %s", fields, metricName))
 	}
 
-	assert.Fail(t, fmt.Sprintf("unknown measurement %s with tags %v", metricName, []string{"tag_name", "le"}))
+	assert.Fail(t, fmt.Sprintf("unknown measurement '%s' with tags: %v, fields: %v", metricName, map[string]string{"le": le}, fields))
 }

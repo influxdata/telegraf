@@ -48,6 +48,7 @@ type metricHistogramCollection struct {
 // counts is the number of hits in the bucket
 type counts []int64
 
+// groupedByCountFields contains grouped fields by their count and fields values
 type groupedByCountFields struct {
 	name   string
 	fields []string
@@ -154,6 +155,7 @@ func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
 	}
 }
 
+// groupFieldsByCount groups fields by count value
 func (h *HistogramAggregator) groupFieldsByCount(
 	metricsWithGroupedFields *[]groupedByCountFields,
 	name string,
@@ -175,6 +177,7 @@ func (h *HistogramAggregator) groupFieldsByCount(
 	h.groupField(metricsWithGroupedFields, name, field, count, tags)
 }
 
+// groupField groups field by count value
 func (h *HistogramAggregator) groupField(
 	metricsWithGroupedFields *[]groupedByCountFields,
 	name string,
@@ -183,7 +186,7 @@ func (h *HistogramAggregator) groupField(
 	tags map[string]string,
 ) {
 	for key, metric := range *metricsWithGroupedFields {
-		if count == metric.count && isTagsIdentical(tags, metric.tags) {
+		if name == metric.name && count == metric.count && isTagsIdentical(tags, metric.tags) {
 			(*metricsWithGroupedFields)[key].fields = append(metric.fields, field)
 			return
 		}
@@ -266,6 +269,7 @@ func convert(in interface{}) (float64, bool) {
 	}
 }
 
+// copyTags copies tags
 func copyTags(tags map[string]string) map[string]string {
 	copiedTags := map[string]string{}
 	for key, val := range tags {
@@ -275,6 +279,7 @@ func copyTags(tags map[string]string) map[string]string {
 	return copiedTags
 }
 
+// isTagsIdentical checks the identity of two list of tags
 func isTagsIdentical(originalTags, checkedTags map[string]string) bool {
 	if len(originalTags) != len(checkedTags) {
 		return false
@@ -289,6 +294,7 @@ func isTagsIdentical(originalTags, checkedTags map[string]string) bool {
 	return true
 }
 
+// makeFieldsWithCount assigns count value to all metric fields
 func makeFieldsWithCount(fields []string, count int64) map[string]interface{} {
 	fieldsWithCount := map[string]interface{}{}
 	for _, field := range fields {
