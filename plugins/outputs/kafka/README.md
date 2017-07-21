@@ -8,6 +8,10 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
+  ## If true, topic name will be substituted with topic_prefix + metric name
+  use_metric_name_as_topic = false
+  ## Prefix to use if the above option is true
+  topic_prefix = "my_beautiful_metrics"
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
@@ -57,6 +61,8 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 * `brokers`: List of strings, this is for speaking to a cluster of `kafka` brokers. On each flush interval, Telegraf will randomly choose one of the urls to write to. Each URL should just include host and port e.g. -> `["{host}:{port}","{host2}:{port2}"]`
 * `topic`: The `kafka` topic to publish to.
 
+You can also set `use_metric_name_as_topic` to true, then topic is chosen in a dynamic manner and `topic` parameter is not required.
+
 
 ### Optional parameters:
 
@@ -69,3 +75,5 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
+* `use_metric_name_as_topic`:  If true, topic name will be substituted with topic_prefix + metric name
+* `topic_prefix`: Prefix to use if the use_metric_name_as_topic option is enabled
