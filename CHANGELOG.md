@@ -44,6 +44,7 @@
 - [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 - [#2612](https://github.com/influxdata/telegraf/pull/2612): Add input plugin for OpenLDAP.
 - [#3042](https://github.com/influxdata/telegraf/pull/3042): Add network option to dns_query.
+- [#2387](https://github.com/influxdata/telegraf/pull/2387): Added histogram aggregator plugin.
 
 ### Bugfixes
 
@@ -191,7 +192,6 @@ be deprecated eventually.
 - [#2732](https://github.com/influxdata/telegraf/pull/2732): Use go 1.8.1
 - [#2712](https://github.com/influxdata/telegraf/issues/2712): Documentation for rabbitmq input plugin
 - [#2141](https://github.com/influxdata/telegraf/pull/2141): Logparser handles newly-created files.
-- [#2387](https://github.com/influxdata/telegraf/pull/2387): Added histogram aggregator plugin.
 
 ### Bugfixes
 
