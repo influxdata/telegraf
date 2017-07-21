@@ -43,6 +43,7 @@
 - [#2990](https://github.com/influxdata/telegraf/pull/2990): Add result_type field to net_response input plugin.
 - [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 - [#2612](https://github.com/influxdata/telegraf/pull/2612): Add input plugin for OpenLDAP.
+- [#3042](https://github.com/influxdata/telegraf/pull/3042): Add network option to dns_query.
 
 ### Bugfixes
 
