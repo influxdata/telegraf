@@ -17,6 +17,7 @@
 - [fail2ban](./plugins/inputs/fail2ban/README.md) - Thanks to @grugrut
 - [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
 - [fluentd](./plugins/inputs/fluentd/README.md) - Thanks to @DanKans
+- [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
 
 ### Features
 
@@ -41,6 +42,7 @@
 - [#2661](https://github.com/influxdata/telegraf/pull/2661): Add fluentd input plugin.
 - [#2990](https://github.com/influxdata/telegraf/pull/2990): Add result_type field to net_response input plugin.
 - [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
+- [#2612](https://github.com/influxdata/telegraf/pull/2612): Add input plugin for OpenLDAP.
 
 ### Bugfixes
 
