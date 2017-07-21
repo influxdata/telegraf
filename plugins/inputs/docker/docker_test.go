@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -9,6 +10,43 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/require"
 )
+
+type MockClient struct {
+	InfoF             func(ctx context.Context) (types.Info, error)
+	ContainerListF    func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	ContainerStatsF   func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
+	ContainerInspectF func(ctx context.Context, containerID string) (types.ContainerJSON, error)
+}
+
+func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
+	return c.InfoF(ctx)
+}
+func (c *MockClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+	return c.ContainerListF(ctx, options)
+}
+func (c *MockClient) ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+	return c.ContainerStatsF(ctx, containerID, stream)
+}
+func (c *MockClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+	return c.ContainerInspectF(ctx, containerID)
+}
+
+func newClient(host string) (Client, error) {
+	return &MockClient{
+		InfoF: func(ctx context.Context) (types.Info, error) {
+			return info, nil
+		},
+		ContainerListF: func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+			return containerList, nil
+		},
+		ContainerStatsF: func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+			return containerStats(), nil
+		},
+		ContainerInspectF: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+			return containerInspect, nil
+		},
+	}, nil
+}
 
 func TestDockerGatherContainerStats(t *testing.T) {
 	var acc testutil.Accumulator
@@ -260,129 +298,130 @@ func testStats() *types.StatsJSON {
 	return stats
 }
 
-var gatherLabelsTests = []struct {
-	include     []string
-	exclude     []string
-	expected    []string
-	notexpected []string
-}{
-	{[]string{}, []string{}, []string{"label1", "label2"}, []string{}},
-	{[]string{"*"}, []string{}, []string{"label1", "label2"}, []string{}},
-	{[]string{"lab*"}, []string{}, []string{"label1", "label2"}, []string{}},
-	{[]string{"label1"}, []string{}, []string{"label1"}, []string{"label2"}},
-	{[]string{"label1*"}, []string{}, []string{"label1"}, []string{"label2"}},
-	{[]string{}, []string{"*"}, []string{}, []string{"label1", "label2"}},
-	{[]string{}, []string{"lab*"}, []string{}, []string{"label1", "label2"}},
-	{[]string{}, []string{"label1"}, []string{"label2"}, []string{"label1"}},
-	{[]string{"*"}, []string{"*"}, []string{}, []string{"label1", "label2"}},
-}
-
 func TestDockerGatherLabels(t *testing.T) {
+	var gatherLabelsTests = []struct {
+		include     []string
+		exclude     []string
+		expected    []string
+		notexpected []string
+	}{
+		{[]string{}, []string{}, []string{"label1", "label2"}, []string{}},
+		{[]string{"*"}, []string{}, []string{"label1", "label2"}, []string{}},
+		{[]string{"lab*"}, []string{}, []string{"label1", "label2"}, []string{}},
+		{[]string{"label1"}, []string{}, []string{"label1"}, []string{"label2"}},
+		{[]string{"label1*"}, []string{}, []string{"label1"}, []string{"label2"}},
+		{[]string{}, []string{"*"}, []string{}, []string{"label1", "label2"}},
+		{[]string{}, []string{"lab*"}, []string{}, []string{"label1", "label2"}},
+		{[]string{}, []string{"label1"}, []string{"label2"}, []string{"label1"}},
+		{[]string{"*"}, []string{"*"}, []string{}, []string{"label1", "label2"}},
+	}
+
 	for _, tt := range gatherLabelsTests {
-		var acc testutil.Accumulator
-		d := Docker{
-			client:  nil,
-			testing: true,
-		}
-
-		for _, label := range tt.include {
-			d.LabelInclude = append(d.LabelInclude, label)
-		}
-		for _, label := range tt.exclude {
-			d.LabelExclude = append(d.LabelExclude, label)
-		}
-
-		err := d.Gather(&acc)
-		require.NoError(t, err)
-
-		for _, label := range tt.expected {
-			if !acc.HasTag("docker_container_cpu", label) {
-				t.Errorf("Didn't get expected label of %s.  Test was:  Include: %s  Exclude %s",
-					label, tt.include, tt.exclude)
+		t.Run("", func(t *testing.T) {
+			var acc testutil.Accumulator
+			d := Docker{
+				newClient: newClient,
 			}
-		}
 
-		for _, label := range tt.notexpected {
-			if acc.HasTag("docker_container_cpu", label) {
-				t.Errorf("Got unexpected label of %s.  Test was:  Include: %s  Exclude %s",
-					label, tt.include, tt.exclude)
+			for _, label := range tt.include {
+				d.LabelInclude = append(d.LabelInclude, label)
 			}
-		}
+			for _, label := range tt.exclude {
+				d.LabelExclude = append(d.LabelExclude, label)
+			}
+
+			err := d.Gather(&acc)
+			require.NoError(t, err)
+
+			for _, label := range tt.expected {
+				if !acc.HasTag("docker_container_cpu", label) {
+					t.Errorf("Didn't get expected label of %s.  Test was:  Include: %s  Exclude %s",
+						label, tt.include, tt.exclude)
+				}
+			}
+
+			for _, label := range tt.notexpected {
+				if acc.HasTag("docker_container_cpu", label) {
+					t.Errorf("Got unexpected label of %s.  Test was:  Include: %s  Exclude %s",
+						label, tt.include, tt.exclude)
+				}
+			}
+		})
 	}
 }
 
-var gatherContainerNames = []struct {
-	include     []string
-	exclude     []string
-	expected    []string
-	notexpected []string
-}{
-	{[]string{}, []string{}, []string{"etcd", "etcd2"}, []string{}},
-	{[]string{"*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
-	{[]string{"etc*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
-	{[]string{"etcd"}, []string{}, []string{"etcd"}, []string{"etcd2"}},
-	{[]string{"etcd2*"}, []string{}, []string{"etcd2"}, []string{"etcd"}},
-	{[]string{}, []string{"etc*"}, []string{}, []string{"etcd", "etcd2"}},
-	{[]string{}, []string{"etcd"}, []string{"etcd2"}, []string{"etcd"}},
-	{[]string{"*"}, []string{"*"}, []string{"etcd", "etcd2"}, []string{}},
-	{[]string{}, []string{"*"}, []string{""}, []string{"etcd", "etcd2"}},
-}
-
 func TestContainerNames(t *testing.T) {
+	var gatherContainerNames = []struct {
+		include     []string
+		exclude     []string
+		expected    []string
+		notexpected []string
+	}{
+		{[]string{}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+		{[]string{"*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+		{[]string{"etc*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
+		{[]string{"etcd"}, []string{}, []string{"etcd"}, []string{"etcd2"}},
+		{[]string{"etcd2*"}, []string{}, []string{"etcd2"}, []string{"etcd"}},
+		{[]string{}, []string{"etc*"}, []string{}, []string{"etcd", "etcd2"}},
+		{[]string{}, []string{"etcd"}, []string{"etcd2"}, []string{"etcd"}},
+		{[]string{"*"}, []string{"*"}, []string{"etcd", "etcd2"}, []string{}},
+		{[]string{}, []string{"*"}, []string{""}, []string{"etcd", "etcd2"}},
+	}
+
 	for _, tt := range gatherContainerNames {
-		var acc testutil.Accumulator
+		t.Run("", func(t *testing.T) {
+			var acc testutil.Accumulator
 
-		d := Docker{
-			client:           nil,
-			testing:          true,
-			ContainerInclude: tt.include,
-			ContainerExclude: tt.exclude,
-		}
+			d := Docker{
+				newClient:        newClient,
+				ContainerInclude: tt.include,
+				ContainerExclude: tt.exclude,
+			}
 
-		err := d.Gather(&acc)
-		require.NoError(t, err)
+			err := d.Gather(&acc)
+			require.NoError(t, err)
 
-		for _, metric := range acc.Metrics {
-			if metric.Measurement == "docker_container_cpu" {
-				if val, ok := metric.Tags["container_name"]; ok {
-					var found bool = false
-					for _, cname := range tt.expected {
-						if val == cname {
-							found = true
-							break
+			for _, metric := range acc.Metrics {
+				if metric.Measurement == "docker_container_cpu" {
+					if val, ok := metric.Tags["container_name"]; ok {
+						var found bool = false
+						for _, cname := range tt.expected {
+							if val == cname {
+								found = true
+								break
+							}
 						}
-					}
-					if !found {
-						t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
+						if !found {
+							t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
+						}
 					}
 				}
 			}
-		}
 
-		for _, metric := range acc.Metrics {
-			if metric.Measurement == "docker_container_cpu" {
-				if val, ok := metric.Tags["container_name"]; ok {
-					var found bool = false
-					for _, cname := range tt.notexpected {
-						if val == cname {
-							found = true
-							break
+			for _, metric := range acc.Metrics {
+				if metric.Measurement == "docker_container_cpu" {
+					if val, ok := metric.Tags["container_name"]; ok {
+						var found bool = false
+						for _, cname := range tt.notexpected {
+							if val == cname {
+								found = true
+								break
+							}
 						}
-					}
-					if found {
-						t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
+						if found {
+							t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
+						}
 					}
 				}
 			}
-		}
+		})
 	}
 }
 
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
-		client:  nil,
-		testing: true,
+		newClient: newClient,
 		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
 			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
 	}
@@ -490,6 +529,4 @@ func TestDockerGatherInfo(t *testing.T) {
 			"label2":            "test_value_2",
 		},
 	)
-
-	//fmt.Print(info)
 }

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
@@ -46,59 +45,12 @@ type Docker struct {
 	ContainerExclude []string `toml:"container_name_exclude"`
 	ContainerFilter  DockerContainerFilter
 
-	client      *client.Client
-	engine_host string
+	newEnvClient func() (Client, error)
+	newClient    func(host string) (Client, error)
 
-	testing        bool
+	client         Client
+	engine_host    string
 	filtersCreated bool
-}
-
-// infoWrapper wraps client.Client.List for testing.
-func infoWrapper(c *client.Client, ctx context.Context) (types.Info, error) {
-	if c != nil {
-		return c.Info(ctx)
-	}
-	fc := FakeDockerClient{}
-	return fc.Info(ctx)
-}
-
-// listWrapper wraps client.Client.ContainerList for testing.
-func listWrapper(
-	c *client.Client,
-	ctx context.Context,
-	options types.ContainerListOptions,
-) ([]types.Container, error) {
-	if c != nil {
-		return c.ContainerList(ctx, options)
-	}
-	fc := FakeDockerClient{}
-	return fc.ContainerList(ctx, options)
-}
-
-// statsWrapper wraps client.Client.ContainerStats for testing.
-func statsWrapper(
-	c *client.Client,
-	ctx context.Context,
-	containerID string,
-	stream bool,
-) (types.ContainerStats, error) {
-	if c != nil {
-		return c.ContainerStats(ctx, containerID, stream)
-	}
-	fc := FakeDockerClient{}
-	return fc.ContainerStats(ctx, containerID, stream)
-}
-
-func inspectWrapper(
-	c *client.Client,
-	ctx context.Context,
-	containerID string,
-) (types.ContainerJSON, error) {
-	if c != nil {
-		return c.ContainerInspect(ctx, containerID)
-	}
-	fc := FakeDockerClient{}
-	return fc.ContainerInspect(ctx, containerID)
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -145,32 +97,28 @@ var sampleConfig = `
   docker_label_exclude = []
 `
 
-// Description returns input description
 func (d *Docker) Description() string {
 	return "Read metrics about docker containers"
 }
 
-// SampleConfig prints sampleConfig
 func (d *Docker) SampleConfig() string { return sampleConfig }
 
-// Gather starts stats collection
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
-	if d.client == nil && !d.testing {
-		var c *client.Client
+	if d.client == nil {
+		var c Client
 		var err error
-		defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
 		if d.Endpoint == "ENV" {
-			c, err = client.NewEnvClient()
+			c, err = d.newEnvClient()
 			if err != nil {
 				return err
 			}
 		} else if d.Endpoint == "" {
-			c, err = client.NewClient("unix:///var/run/docker.sock", "", nil, defaultHeaders)
+			c, err = d.newClient("unix:///var/run/docker.sock")
 			if err != nil {
 				return err
 			}
 		} else {
-			c, err = client.NewClient(d.Endpoint, "", nil, defaultHeaders)
+			c, err = d.newClient(d.Endpoint)
 			if err != nil {
 				return err
 			}
@@ -201,7 +149,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	opts := types.ContainerListOptions{}
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	containers, err := listWrapper(d.client, ctx, opts)
+	containers, err := d.client.ContainerList(ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -232,7 +180,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	// Get info from docker daemon
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	info, err := infoWrapper(d.client, ctx)
+	info, err := d.client.Info(ctx)
 	if err != nil {
 		return err
 	}
@@ -338,7 +286,7 @@ func (d *Docker) gatherContainer(
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
-	r, err := statsWrapper(d.client, ctx, container.ID, false)
+	r, err := d.client.ContainerStats(ctx, container.ID, false)
 	if err != nil {
 		return fmt.Errorf("Error getting docker stats: %s", err.Error())
 	}
@@ -362,7 +310,7 @@ func (d *Docker) gatherContainer(
 
 	// Add whitelisted environment variables to tags
 	if len(d.TagEnvironment) > 0 {
-		info, err := inspectWrapper(d.client, ctx, container.ID)
+		info, err := d.client.ContainerInspect(ctx, container.ID)
 		if err != nil {
 			return fmt.Errorf("Error inspecting docker container: %s", err.Error())
 		}
@@ -742,6 +690,8 @@ func init() {
 		return &Docker{
 			PerDevice:      true,
 			Timeout:        internal.Duration{Duration: time.Second * 5},
+			newEnvClient:   NewEnvClient,
+			newClient:      NewClient,
 			filtersCreated: false,
 		}
 	})
