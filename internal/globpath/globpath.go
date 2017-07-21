@@ -45,7 +45,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 	if !g.hasMeta {
 		out := make(map[string]os.FileInfo)
 		info, err := os.Stat(g.path)
-		if !os.IsNotExist(err) {
+		if err == nil {
 			out[g.path] = info
 		}
 		return out
@@ -55,7 +55,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 		files, _ := filepath.Glob(g.path)
 		for _, file := range files {
 			info, err := os.Stat(file)
-			if !os.IsNotExist(err) {
+			if err == nil {
 				out[file] = info
 			}
 		}
