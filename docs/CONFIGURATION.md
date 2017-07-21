@@ -135,7 +135,8 @@ An array of glob pattern strings.  Only fields whose field key matches a
 pattern in this list are emitted.  Not available for outputs.
 * **fielddrop**:
 The inverse of `fieldpass`.  Fields with a field key matching one of the
-patterns will be discarded from the point.  This is tested on points after they have passed the `fieldpass` test.  Not available for outputs.
+patterns will be discarded from the point.  This is tested on points after
+they have passed the `fieldpass` test.  Not available for outputs.
 * **tagpass**:
 A table mapping tag keys to arrays of glob pattern strings.  Only points
 that contain a tag key in the table and a tag value matching one of its
