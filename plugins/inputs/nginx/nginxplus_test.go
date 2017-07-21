@@ -346,7 +346,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx.zone",
+		"nginx_zone",
 		map[string]interface{}{
 			"processing":      int(12),
 			"requests":        int64(34),
