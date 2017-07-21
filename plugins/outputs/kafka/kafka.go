@@ -3,6 +3,7 @@ package kafka
 import (
 	"crypto/tls"
 	"fmt"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -12,54 +13,107 @@ import (
 	"github.com/Shopify/sarama"
 )
 
-type Kafka struct {
-	// Kafka brokers to send metrics to
-	Brokers []string
-	// Kafka topic
-	Topic string
-	// Routing Key Tag
-	RoutingTag string `toml:"routing_tag"`
-	// Compression Codec Tag
-	CompressionCodec int
-	// RequiredAcks Tag
-	RequiredAcks int
-	// MaxRetry Tag
-	MaxRetry int
+const (
+	TOPIC_SUFFIX_METHOD_EMPTY       uint8 = iota
+	TOPIC_SUFFIX_METHOD_MEASUREMENT
+	TOPIC_SUFFIX_METHOD_TAG
+	TOPIC_SUFFIX_METHOD_TAGS
+)
 
-	// Legacy SSL config options
-	// TLS client certificate
-	Certificate string
-	// TLS client key
-	Key string
-	// TLS certificate authority
-	CA string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-
-	// Skip SSL verification
-	InsecureSkipVerify bool
-
-	// SASL Username
-	SASLUsername string `toml:"sasl_username"`
-	// SASL Password
-	SASLPassword string `toml:"sasl_password"`
-
-	tlsConfig tls.Config
-	producer  sarama.SyncProducer
-
-	serializer serializers.Serializer
+var TopicSuffixMethodStringToUID = map[string]uint8{
+	"":            TOPIC_SUFFIX_METHOD_EMPTY,
+	"measurement": TOPIC_SUFFIX_METHOD_MEASUREMENT,
+	"tag":         TOPIC_SUFFIX_METHOD_TAG,
+	"tags":        TOPIC_SUFFIX_METHOD_TAGS,
 }
+
+type (
+	Kafka struct {
+		// Kafka brokers to send metrics to
+		Brokers []string
+		// Kafka topic
+		Topic string
+		// Kafka topic suffix option
+		TopicSuffix TopicSuffix `toml:"topic_suffix"`
+		// Routing Key Tag
+		RoutingTag string `toml:"routing_tag"`
+		// Compression Codec Tag
+		CompressionCodec int
+		// RequiredAcks Tag
+		RequiredAcks int
+		// MaxRetry Tag
+		MaxRetry int
+
+		// Legacy SSL config options
+		// TLS client certificate
+		Certificate string
+		// TLS client key
+		Key string
+		// TLS certificate authority
+		CA string
+
+		// Path to CA file
+		SSLCA string `toml:"ssl_ca"`
+		// Path to host cert file
+		SSLCert string `toml:"ssl_cert"`
+		// Path to cert key file
+		SSLKey string `toml:"ssl_key"`
+
+		// Skip SSL verification
+		InsecureSkipVerify bool
+
+		// SASL Username
+		SASLUsername string `toml:"sasl_username"`
+		// SASL Password
+		SASLPassword string `toml:"sasl_password"`
+
+		tlsConfig tls.Config
+		producer  sarama.SyncProducer
+
+		serializer serializers.Serializer
+
+		topicSuffixMethodUID uint8
+	}
+	TopicSuffix struct {
+		Method       string `toml:"method"`
+		Key          string `toml:"key"`
+		Keys         []string `toml:"keys"`
+		KeySeparator string `toml:"key_separator"`
+	}
+)
 
 var sampleConfig = `
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
+
+  ## Optional topic suffix configuration.
+  ## If the section is omitted, no suffix is used.
+  ## Following topic suffix methods are supported:
+  ##   measurement - suffix equals to measurement's name
+  ##   tag         - suffix equals to specified tag's value
+  ##   tags        - suffix equals to specified tags' values
+  ##                 interleaved with key_separator
+
+  ## Suffix equals to measurement name to topic
+  # [outputs.kafka.topic_suffix]
+  #   method = "measurement"
+
+  ## Suffix equals to measurement's "foo" tag value.
+  ##   If there's no such a tag, suffix equals to an empty string
+  # [outputs.kafka.topic_suffix]
+  #   method = "tag"
+  #   key = "foo"
+
+  ## Suffix equals to measurement's "foo" and "bar"
+  ##   tag values, separated by "_". If there is no such tags,
+  ##   their values treated as empty strings.
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo", "bar"]
+  #   key_separator = "_"
+
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
@@ -108,11 +162,44 @@ var sampleConfig = `
   data_format = "influx"
 `
 
+func GetTopicSuffixMethodUID(method string) (uint8, error) {
+	methodUID, ok := TopicSuffixMethodStringToUID[method]
+	if !ok {
+		return 0, fmt.Errorf("Unkown topic suffix method provided: %s", method)
+	}
+	return methodUID, nil
+}
+
+func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
+	var topicName string
+	switch k.topicSuffixMethodUID {
+	case TOPIC_SUFFIX_METHOD_MEASUREMENT:
+		topicName = k.Topic + metric.Name()
+	case TOPIC_SUFFIX_METHOD_TAG:
+		topicName = k.Topic + metric.Tags()[k.TopicSuffix.Key]
+	case TOPIC_SUFFIX_METHOD_TAGS:
+		var tags_values []string
+		for _, tag := range k.TopicSuffix.Keys {
+			tags_values = append(tags_values, metric.Tags()[tag])
+		}
+		topicName = k.Topic + strings.Join(tags_values, k.TopicSuffix.KeySeparator)
+	default:
+		topicName = k.Topic
+	}
+	return topicName
+}
+
 func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
 func (k *Kafka) Connect() error {
+	topicSuffixMethod, err := GetTopicSuffixMethodUID(k.TopicSuffix.Method)
+	if err != nil {
+		return err
+	}
+	k.topicSuffixMethodUID = topicSuffixMethod
+
 	config := sarama.NewConfig()
 
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
@@ -175,8 +262,10 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
+		topicName := k.GetTopicName(metric)
+
 		m := &sarama.ProducerMessage{
-			Topic: k.Topic,
+			Topic: topicName,
 			Value: sarama.ByteEncoder(buf),
 		}
 		if h, ok := metric.Tags()[k.RoutingTag]; ok {
