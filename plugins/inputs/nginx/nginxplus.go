@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-type HttpResponsesStats struct {
+type ResponseStats struct {
 	Responses1xx int64 `json:"1xx"`
 	Responses2xx int64 `json:"2xx"`
 	Responses3xx int64 `json:"3xx"`
@@ -68,36 +68,36 @@ type Status struct {
 	} `json:"requests"`
 
 	ServerZones map[string]struct { // added in version 2
-		Processing int                `json:"processing"`
-		Requests   int64              `json:"requests"`
-		Responses  HttpResponsesStats `json:"responses"`
-		Discarded  *int64             `json:"discarded"` // added in version 6
-		Received   int64              `json:"received"`
-		Sent       int64              `json:"sent"`
+		Processing int           `json:"processing"`
+		Requests   int64         `json:"requests"`
+		Responses  ResponseStats `json:"responses"`
+		Discarded  *int64        `json:"discarded"` // added in version 6
+		Received   int64         `json:"received"`
+		Sent       int64         `json:"sent"`
 	} `json:"server_zones"`
 
 	Upstreams map[string]struct {
 		Peers []struct {
-			ID           *int               `json:"id"` // added in version 3
-			Server       string             `json:"server"`
-			Backup       bool               `json:"backup"`
-			Weight       int                `json:"weight"`
-			State        string             `json:"state"`
-			Active       int                `json:"active"`
-			Keepalive    *int               `json:"keepalive"` // removed in version 5
-			MaxConns     *int               `json:"max_conns"` // added in version 3
-			Requests     int64              `json:"requests"`
-			Responses    HttpResponsesStats `json:"responses"`
-			Sent         int64              `json:"sent"`
-			Received     int64              `json:"received"`
-			Fails        int64              `json:"fails"`
-			Unavail      int64              `json:"unavail"`
-			HealthChecks HealthCheckStats   `json:"health_checks"`
-			Downtime     int64              `json:"downtime"`
-			Downstart    int64              `json:"downstart"`
-			Selected     *int64             `json:"selected"`      // added in version 4
-			HeaderTime   *int64             `json:"header_time"`   // added in version 5
-			ResponseTime *int64             `json:"response_time"` // added in version 5
+			ID           *int             `json:"id"` // added in version 3
+			Server       string           `json:"server"`
+			Backup       bool             `json:"backup"`
+			Weight       int              `json:"weight"`
+			State        string           `json:"state"`
+			Active       int              `json:"active"`
+			Keepalive    *int             `json:"keepalive"` // removed in version 5
+			MaxConns     *int             `json:"max_conns"` // added in version 3
+			Requests     int64            `json:"requests"`
+			Responses    ResponseStats    `json:"responses"`
+			Sent         int64            `json:"sent"`
+			Received     int64            `json:"received"`
+			Fails        int64            `json:"fails"`
+			Unavail      int64            `json:"unavail"`
+			HealthChecks HealthCheckStats `json:"health_checks"`
+			Downtime     int64            `json:"downtime"`
+			Downstart    int64            `json:"downstart"`
+			Selected     *int64           `json:"selected"`      // added in version 4
+			HeaderTime   *int64           `json:"header_time"`   // added in version 5
+			ResponseTime *int64           `json:"response_time"` // added in version 5
 		} `json:"peers"`
 		Keepalive int       `json:"keepalive"`
 		Zombies   int       `json:"zombies"` // added in version 6
@@ -123,19 +123,12 @@ type Status struct {
 
 	Stream struct {
 		ServerZones map[string]struct {
-			Processing  int `json:"processing"`
-			Connections int `json:"connections"`
-			Sessions    *struct {
-				Total       int64 `json:"total"`
-				Sessions1xx int64 `json:"1xx"`
-				Sessions2xx int64 `json:"2xx"`
-				Sessions3xx int64 `json:"3xx"`
-				Sessions4xx int64 `json:"4xx"`
-				Sessions5xx int64 `json:"5xx"`
-			} `json:"sessions"`
-			Discarded *int64 `json:"discarded"` // added in version 7
-			Received  int64  `json:"received"`
-			Sent      int64  `json:"sent"`
+			Processing  int            `json:"processing"`
+			Connections int            `json:"connections"`
+			Sessions    *ResponseStats `json:"sessions"`
+			Discarded   *int64         `json:"discarded"` // added in version 7
+			Received    int64          `json:"received"`
+			Sent        int64          `json:"sent"`
 		} `json:"server_zones"`
 		Upstreams map[string]struct {
 			Peers []struct {
