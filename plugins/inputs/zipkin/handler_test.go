@@ -64,7 +64,7 @@ func TestSpanHandler(t *testing.T) {
 				BinaryAnnotation{
 					Key:         "lc",
 					Value:       "trivial",
-					Host:        "2130706433:0",
+					Host:        "127.0.0.1:0",
 					ServiceName: "trivial",
 					Type:        "STRING",
 				},
@@ -82,7 +82,7 @@ func TestSpanHandler(t *testing.T) {
 				BinaryAnnotation{
 					Key:         "lc",
 					Value:       "trivial",
-					Host:        "2130706433:0",
+					Host:        "127.0.0.1:0",
 					ServiceName: "trivial",
 					Type:        "STRING",
 				},
@@ -99,19 +99,19 @@ func TestSpanHandler(t *testing.T) {
 				Annotation{
 					Timestamp:   time.Unix(0, 1498688360851325*int64(time.Microsecond)).UTC(),
 					Value:       "Starting child #0",
-					Host:        "2130706433:0",
+					Host:        "127.0.0.1:0",
 					ServiceName: "trivial",
 				},
 				Annotation{
 					Timestamp:   time.Unix(0, 1498688360904545*int64(time.Microsecond)).UTC(),
 					Value:       "Starting child #1",
-					Host:        "2130706433:0",
+					Host:        "127.0.0.1:0",
 					ServiceName: "trivial",
 				},
 				Annotation{
 					Timestamp:   time.Unix(0, 1498688360954992*int64(time.Microsecond)).UTC(),
 					Value:       "A Log",
-					Host:        "2130706433:0",
+					Host:        "127.0.0.1:0",
 					ServiceName: "trivial",
 				},
 			},
@@ -119,7 +119,7 @@ func TestSpanHandler(t *testing.T) {
 				BinaryAnnotation{
 					Key:         "lc",
 					Value:       "trivial",
-					Host:        "2130706433:0",
+					Host:        "127.0.0.1:0",
 					ServiceName: "trivial",
 					Type:        "STRING",
 				},

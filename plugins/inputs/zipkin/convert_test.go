@@ -498,7 +498,7 @@ func Test_host(t *testing.T) {
 					Port: 8888,
 				},
 			},
-			want: "1234:8888",
+			want: "0.0.4.210:8888",
 		},
 		{
 			name: "No Host",
