@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -13,8 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const AcceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
+const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
 
+// Prometheus input
 type Prometheus struct {
 	Urls []string
 
@@ -31,6 +33,12 @@ type Prometheus struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+
+	// SocketPaths contains all directories from which sockets are harvested
+	SocketPaths []string `toml:"socket_paths"`
+
+	// SocketURLPath socket_url_path is the path of the socket handlers
+	SocketURLPath string `toml:"socket_url"`
 
 	client *http.Client
 }
@@ -51,23 +59,32 @@ var sampleConfig = `
   # ssl_key = /path/to/keyfile
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## An array of directories from which sockets are harvested
+  socket_paths = ["/var/run/prometheus_sockets", "/tmp/sockets/prometheus"]
+
+  # socket_url_path is the path of the socket handlers
+  socket_url = /path/to/bearer/token
 `
 
+// SampleConfig of the prometheus input
 func (p *Prometheus) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description of the prometheus input
 func (p *Prometheus) Description() string {
 	return "Read metrics from one or many prometheus clients"
 }
 
+// ErrProtocolError is the protocol error
 var ErrProtocolError = errors.New("prometheus protocol error")
 
-// Reads stats from all configured servers accumulates stats.
+// Gather reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	if p.client == nil {
-		client, err := p.createHttpClient()
+		client, err := p.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -84,6 +101,15 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 		}(serv)
 	}
 
+	for _, dir := range p.SocketPaths {
+		wg.Add(1)
+		go func(dir string) {
+			defer wg.Done()
+			// walk our directory and harvest the sockets
+			acc.AddError(filepath.Walk(dir, p.harvestSocket(acc)))
+		}(dir)
+	}
+
 	wg.Wait()
 
 	return nil
@@ -98,7 +124,7 @@ var client = &http.Client{
 	Timeout:   time.Duration(4 * time.Second),
 }
 
-func (p *Prometheus) createHttpClient() (*http.Client, error) {
+func (p *Prometheus) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := internal.GetTLSConfig(
 		p.SSLCert, p.SSLKey, p.SSLCA, p.InsecureSkipVerify)
 	if err != nil {
@@ -118,7 +144,7 @@ func (p *Prometheus) createHttpClient() (*http.Client, error) {
 
 func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	var req, err = http.NewRequest("GET", url, nil)
-	req.Header.Add("Accept", AcceptHeader)
+	req.Header.Add("Accept", acceptHeader)
 	var token []byte
 	var resp *http.Response
 

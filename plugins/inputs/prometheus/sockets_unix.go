@@ -1,6 +1,6 @@
 // +build darwin freebsd linux netbsd openbsd
 
-package prometheus_sockets
+package prometheus
 
 import (
 	"fmt"
@@ -11,27 +11,12 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/prometheus"
 )
 
-// Gather the measurements
-func (p *PrometheusSocketWalker) Gather(acc telegraf.Accumulator) error {
-
-	for _, dir := range p.SocketPaths {
-
-		// walk our directory and harvest the sockets
-		acc.AddError(filepath.Walk(dir, p.harvestSocket(acc)))
-	}
-
-	return nil
-}
-
-func (p *PrometheusSocketWalker) harvestSocket(acc telegraf.Accumulator) filepath.WalkFunc {
+func (p *Prometheus) harvestSocket(acc telegraf.Accumulator) filepath.WalkFunc {
 	return func(file string, fileInfo os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -42,11 +27,11 @@ func (p *PrometheusSocketWalker) harvestSocket(acc telegraf.Accumulator) filepat
 			return nil
 		}
 
-		return p.gatherURL(file, p.URL, acc)
+		return p.gatherSocketURL(file, acc)
 	}
 }
 
-func (p *PrometheusSocketWalker) createHTTPSocketClient(socket string) (*http.Client, error) {
+func (p *Prometheus) createHTTPSocketClient(socket string) (*http.Client, error) {
 	tlsCfg, err := internal.GetTLSConfig(
 		p.SSLCert, p.SSLKey, p.SSLCA, p.InsecureSkipVerify)
 	if err != nil {
@@ -68,7 +53,8 @@ func (p *PrometheusSocketWalker) createHTTPSocketClient(socket string) (*http.Cl
 	return client, nil
 }
 
-func (p *PrometheusSocketWalker) gatherURL(socket string, url string, acc telegraf.Accumulator) error {
+func (p *Prometheus) gatherSocketURL(socket string, acc telegraf.Accumulator) error {
+	url := p.SocketURLPath
 
 	socketName := path.Base(socket)
 
@@ -87,7 +73,7 @@ func (p *PrometheusSocketWalker) gatherURL(socket string, url string, acc telegr
 
 	// Prepare the request
 	req, err := http.NewRequest("GET", "http://"+socketName+url, nil)
-	req.Header.Add("Accept", prometheus.AcceptHeader)
+	req.Header.Add("Accept", acceptHeader)
 
 	// Send the request
 	resp, err := client.Do(req)
@@ -105,7 +91,7 @@ func (p *PrometheusSocketWalker) gatherURL(socket string, url string, acc telegr
 		return fmt.Errorf("error reading body: %s", err)
 	}
 
-	metrics, err := prometheus.Parse(body, resp.Header)
+	metrics, err := Parse(body, resp.Header)
 	if err != nil {
 		return fmt.Errorf("error reading metrics for %s: %s",
 			url, err)
@@ -118,10 +104,4 @@ func (p *PrometheusSocketWalker) gatherURL(socket string, url string, acc telegr
 	}
 
 	return nil
-}
-
-func init() {
-	inputs.Add("prometheus_sockets", func() telegraf.Input {
-		return &PrometheusSocketWalker{ResponseTimeout: internal.Duration{Duration: time.Second * 1}}
-	})
 }

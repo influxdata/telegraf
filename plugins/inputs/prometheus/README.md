@@ -61,6 +61,19 @@ to filter and some tags
   ssl_key = '/path/to/keyfile'
 ```
 
+#### Prometheus Socket Harvester
+
+You can specify a directory containing UNIX sockets for prometheus handlers to fetch metrics from.
+All sockets must have a common socket_url where they expose the prometheus metrics.
+
+```toml
+[[inputs.prometheus]]
+  ## An array of directories from which sockets are harvested
+  socket_paths = ["/var/run/prometheus_sockets", "/tmp/sockets/prometheus"]
+  # socket_url_path is the path of the socket handlers
+  socket_url = /metrics
+```
+
 ### Usage for Caddy HTTP server
 
 If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:

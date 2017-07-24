@@ -1,4 +1,6 @@
-package prometheus_sockets
+// +build darwin freebsd linux netbsd openbsd
+
+package prometheus
 
 import (
 	"fmt"
@@ -15,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const sampleTextFormat = `# HELP go_gc_duration_seconds A summary of the GC invocation durations.
+const sampleSocketTextFormat = `# HELP go_gc_duration_seconds A summary of the GC invocation durations.
 # TYPE go_gc_duration_seconds summary
 go_gc_duration_seconds{quantile="0"} 0.00010425500000000001
 go_gc_duration_seconds{quantile="0.25"} 0.000139108
@@ -41,7 +43,7 @@ func TestPrometheusSocketsGeneratesMetrics(t *testing.T) {
 
 	// get an unstarted http test server as we want to set the listener to an UNIX socket
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, sampleTextFormat)
+		fmt.Fprintln(w, sampleSocketTextFormat)
 	}))
 
 	// create the unix socket and set the test server listener
@@ -52,9 +54,9 @@ func TestPrometheusSocketsGeneratesMetrics(t *testing.T) {
 	ts.Start()
 	defer ts.Close()
 
-	p := &PrometheusSocketWalker{
-		SocketPaths: []string{dir},
-		URL:         "/metrics",
+	p := &Prometheus{
+		SocketPaths:   []string{dir},
+		SocketURLPath: "/metrics",
 	}
 
 	var acc testutil.Accumulator
