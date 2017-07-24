@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -21,9 +22,9 @@ type Bind struct {
 var sampleConfig = `
   ## An array of BIND XML statistics URI to gather stats.
   ## Default is "http://localhost:8053/".
-  urls = ["http://localhost:8053/"]
-  gather_memory_contexts = false
-  gather_views = false
+  # urls = ["http://localhost:8053/"]
+  # gather_memory_contexts = false
+  # gather_views = false
 `
 
 var client = &http.Client{
@@ -39,28 +40,28 @@ func (b *Bind) SampleConfig() string {
 }
 
 func (b *Bind) Gather(acc telegraf.Accumulator) error {
-	var outerr error
-	var errch = make(chan error)
+	var wg sync.WaitGroup
+
+	if len(b.Urls) == 0 {
+		b.Urls = []string{"http://localhost:8053/"}
+	}
+
+	wg.Add(len(b.Urls))
 
 	for _, u := range b.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
+			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
 		}
 
 		go func(addr *url.URL) {
-			errch <- b.GatherUrl(addr, acc)
+			defer wg.Done()
+			acc.AddError(b.GatherUrl(addr, acc))
 		}(addr)
 	}
 
-	// Drain channel, waiting for all requests to finish and save last error
-	for range b.Urls {
-		if err := <-errch; err != nil {
-			outerr = err
-		}
-	}
-
-	return outerr
+	wg.Wait()
+	return nil
 }
 
 func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
