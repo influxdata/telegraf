@@ -219,77 +219,80 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 
 		// Test data from zipkin cli app:
 		//https://github.com/openzipkin/zipkin-go-opentracing/tree/master/examples/cli_with_2_services
-		/*{
-			name:    "cli",
-			fields:  fields{
-			acc: &mockAcc,
-		},
-			args:    args{
-			t: Trace{
-				Span{
-					ID:          "3383422996321511664",
-					TraceID:     "243463817635710260",
-					Name:        "Concat",
-					ParentID:    "4574092882326506380",
-					Timestamp:   time.Unix(0, 1499817952283903000).UTC(),
-					Duration:    time.Duration(2888) * time.Microsecond,
-					Annotations: []Annotation{
-						Annotaitons{
-							Timestamp:   time.Unix(0, 1499817952283903000).UTC(),
-							Value:       "cs",
-							Host:        "0:0",
-							ServiceName: "cli",
-						},
+		/*	{
+				name: "cli",
+				fields: fields{
+					acc: &mockAcc,
 				},
-					BinaryAnnotations: []BinaryAnnotation{
-						BinaryAnnotation{
-							Key:         "http.url",
-							Value:       "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
-							Host:        "0:0",
-							ServiceName: "cli",
-							Type:        "STRING",
+				args: args{
+					t: Trace{
+						Span{
+							ID:        "3383422996321511664",
+							TraceID:   "243463817635710260",
+							Name:      "Concat",
+							ParentID:  "4574092882326506380",
+							Timestamp: time.Unix(0, 1499817952283903000).UTC(),
+							Duration:  time.Duration(2888) * time.Microsecond,
+							Annotations: []Annotation{
+								Annotation{
+									Timestamp:   time.Unix(0, 1499817952283903000).UTC(),
+									Value:       "cs",
+									Host:        "0:0",
+									ServiceName: "cli",
+								},
+							},
+							BinaryAnnotations: []BinaryAnnotation{
+								BinaryAnnotation{
+									Key:         "http.url",
+									Value:       "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
+									Host:        "0:0",
+									ServiceName: "cli",
+									Type:        "STRING",
+								},
+							},
 						},
 					},
-		},
-		want: []testutil.Metric{
-		testutil.Metric{
-			Measurement: "zipkin",
-			Tags: map[string]string{
-				"id":               "3383422996321511664",
-				"parent_id":        "4574092882326506380",
-				"trace_id":         "8269862291023777619:243463817635710260",
-				"name":             "Concat",
-				"service_name":     "cli",
-				"annotation_value": "cs",
-				"endpoint_host":    "0:0",
+				},
+				want: []testutil.Metric{
+					testutil.Metric{
+						Measurement: "zipkin",
+						Tags: map[string]string{
+							"id":               "3383422996321511664",
+							"parent_id":        "4574092882326506380",
+							"trace_id":         "8269862291023777619:243463817635710260",
+							"name":             "Concat",
+							"service_name":     "cli",
+							"annotation_value": "cs",
+							"endpoint_host":    "0:0",
+						},
+						Fields: map[string]interface{}{
+							"annotation_timestamp": int64(149981795),
+							"duration":             time.Duration(2888) * time.Microsecond,
+						},
+						Time: time.Unix(0, 1499817952283903000).UTC(),
+					},
+					testutil.Metric{
+						Measurement: "zipkin",
+						Tags: map[string]string{
+							"trace_id":         "2505404965370368069",
+							"service_name":     "cli",
+							"annotation_value": "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
+							"key":              "http.url",
+							"type":             "STRING",
+							"id":               "22964302721410078",
+							"parent_id":        "22964302721410078",
+							"name":             "Concat",
+							"endpoint_host":    "0:0",
+						},
+						Fields: map[string]interface{}{
+							"duration": time.Duration(2888) * time.Microsecond,
+						},
+						Time: time.Unix(0, 1499817952283903000).UTC(),
+					},
+				},
+				wantErr: false,
 			},
-			Fields: map[string]interface{}{
-			"annotation_timestamp": int64(149981795),
-				"duration": time.Duration(2888) * time.Microsecond,
-			},
-			Time: time.Unix(0, 1499817952283903000).UTC(),
-		},
-		testutil.Metric{
-			Measurement: "zipkin",
-			Tags: map[string]string{
-			"trace_id":         "2505404965370368069",
-			"service_name":     "cli",
-			"annotation_value": "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
-			"key":              "http.url",
-			"type":             "STRING",
-			"id":               "22964302721410078",
-			"parent_id":        "22964302721410078",
-			"name":             "Concat",
-			"endpoint_host":    "0:0",
-			},
-			Fields: map[string]interface{}{
-				"duration": time.Duration(2888) * time.Microsecond,
-			},
-			Time: time.Unix(0, 1499817952283903000).UTC(),
-		},
-			wantErr: false,
-		},*/
-
+		*/
 		//// Test data from distributed trace repo sample json
 		// https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json
 		{
