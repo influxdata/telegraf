@@ -191,7 +191,7 @@ func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		h.PingsRecv.Incr(1)
 		defer h.PingsServed.Incr(1)
 		// respond to ping requests
-		res.WriteHeader(http.StatusNoContent)
+		res.WriteHeader(http.StatusOK)
 	default:
 		defer h.NotFoundsServed.Incr(1)
 		// Don't know how to respond to calls to other endpoints
