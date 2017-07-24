@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func (u UnitTest) Run(t *testing.T, acc *testutil.Accumulator) {
+/*func (u UnitTest) Run(t *testing.T, acc *testutil.Accumulator) {
 	postTestData(t, u.datafile)
 	if u.waitPoints == 0 {
 		acc.Wait(len(u.expected))
@@ -385,4 +385,313 @@ var tests = []UnitTest{
 			},
 		},
 	},
+}*/
+
+func TestZipkinPlugin(t *testing.T) {
+	mockAcc := testutil.Accumulator{}
+	type fields struct {
+		acc telegraf.Accumulator
+	}
+	type args struct {
+		t Trace
+	}
+	tests := []struct {
+		name           string
+		fields         fields
+		thriftDataFile string //pathname to a binary thrift data file which contains test data
+		wantErr        bool
+		want           []testutil.Metric
+	}{
+		{
+			name: "threespan",
+			fields: fields{
+				acc: &mockAcc,
+			},
+			thriftDataFile: "testdata/threespans.dat",
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":               "8090652509916334619",
+						"parent_id":        "22964302721410078",
+						"trace_id":         "0:2505404965370368069",
+						"name":             "Child",
+						"service_name":     "trivial",
+						"annotation_value": "trivial", //base64: dHJpdmlhbA==
+						"endpoint_host":    "2130706433:0",
+						"key":              "lc",
+						"type":             "STRING",
+					},
+					Fields: map[string]interface{}{
+						"duration": time.Duration(53106) * time.Microsecond,
+					},
+					Time: time.Unix(0, 1498688360851331000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":               "103618986556047333",
+						"parent_id":        "22964302721410078",
+						"trace_id":         "0:2505404965370368069",
+						"name":             "Child",
+						"service_name":     "trivial",
+						"annotation_value": "trivial", //base64: dHJpdmlhbA==
+						"endpoint_host":    "2130706433:0",
+						"key":              "lc",
+						"type":             "STRING",
+					},
+					Fields: map[string]interface{}{
+						"duration": time.Duration(50410) * time.Microsecond,
+					},
+					Time: time.Unix(0, 1498688360904552000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"service_name":     "trivial",
+						"annotation_value": "Starting child #0",
+						"endpoint_host":    "2130706433:0",
+						"id":               "22964302721410078",
+						"parent_id":        "22964302721410078",
+						"trace_id":         "0:2505404965370368069",
+						"name":             "Parent",
+					},
+					Fields: map[string]interface{}{
+						"annotation_timestamp": int64(1498688360),
+						"duration":             time.Duration(103680) * time.Microsecond,
+					},
+					Time: time.Unix(0, 1498688360851318000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"service_name":     "trivial",
+						"annotation_value": "Starting child #1",
+						"endpoint_host":    "2130706433:0",
+						"id":               "22964302721410078",
+						"parent_id":        "22964302721410078",
+						"trace_id":         "0:2505404965370368069",
+						"name":             "Parent",
+					},
+					Fields: map[string]interface{}{
+						"annotation_timestamp": int64(1498688360),
+						"duration":             time.Duration(103680) * time.Microsecond,
+					},
+					Time: time.Unix(0, 1498688360851318000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"parent_id":        "22964302721410078",
+						"trace_id":         "0:2505404965370368069",
+						"name":             "Parent",
+						"service_name":     "trivial",
+						"annotation_value": "A Log",
+						"endpoint_host":    "2130706433:0",
+						"id":               "22964302721410078",
+					},
+					Fields: map[string]interface{}{
+						"annotation_timestamp": int64(1498688360),
+						"duration":             time.Duration(103680) * time.Microsecond,
+					},
+					Time: time.Unix(0, 1498688360851318000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"trace_id":         "0:2505404965370368069",
+						"service_name":     "trivial",
+						"annotation_value": "trivial", //base64: dHJpdmlhbA==
+						"key":              "lc",
+						"type":             "STRING",
+						"id":               "22964302721410078",
+						"parent_id":        "22964302721410078",
+						"name":             "Parent",
+						"endpoint_host":    "2130706433:0",
+					},
+					Fields: map[string]interface{}{
+						"duration": time.Duration(103680) * time.Microsecond,
+					},
+					Time: time.Unix(0, 1498688360851318000).UTC(),
+				},
+			},
+			wantErr: false,
+		},
+
+		// Test data from zipkin cli app:
+		//https://github.com/openzipkin/zipkin-go-opentracing/tree/master/examples/cli_with_2_services
+		/*{
+			name:    "cli",
+			fields:  fields{
+			acc: &mockAcc,
+		},
+			args:    args{
+			t: Trace{
+				Span{
+					ID:          "3383422996321511664",
+					TraceID:     "243463817635710260",
+					Name:        "Concat",
+					ParentID:    "4574092882326506380",
+					Timestamp:   time.Unix(0, 1499817952283903000).UTC(),
+					Duration:    time.Duration(2888) * time.Microsecond,
+					Annotations: []Annotation{
+						Annotaitons{
+							Timestamp:   time.Unix(0, 1499817952283903000).UTC(),
+							Value:       "cs",
+							Host:        "0:0",
+							ServiceName: "cli",
+						},
+				},
+					BinaryAnnotations: []BinaryAnnotation{
+						BinaryAnnotation{
+							Key:         "http.url",
+							Value:       "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
+							Host:        "0:0",
+							ServiceName: "cli",
+							Type:        "STRING",
+						},
+					},
+		},
+		want: []testutil.Metric{
+		testutil.Metric{
+			Measurement: "zipkin",
+			Tags: map[string]string{
+				"id":               "3383422996321511664",
+				"parent_id":        "4574092882326506380",
+				"trace_id":         "8269862291023777619:243463817635710260",
+				"name":             "Concat",
+				"service_name":     "cli",
+				"annotation_value": "cs",
+				"endpoint_host":    "0:0",
+			},
+			Fields: map[string]interface{}{
+			"annotation_timestamp": int64(149981795),
+				"duration": time.Duration(2888) * time.Microsecond,
+			},
+			Time: time.Unix(0, 1499817952283903000).UTC(),
+		},
+		testutil.Metric{
+			Measurement: "zipkin",
+			Tags: map[string]string{
+			"trace_id":         "2505404965370368069",
+			"service_name":     "cli",
+			"annotation_value": "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
+			"key":              "http.url",
+			"type":             "STRING",
+			"id":               "22964302721410078",
+			"parent_id":        "22964302721410078",
+			"name":             "Concat",
+			"endpoint_host":    "0:0",
+			},
+			Fields: map[string]interface{}{
+				"duration": time.Duration(2888) * time.Microsecond,
+			},
+			Time: time.Unix(0, 1499817952283903000).UTC(),
+		},
+			wantErr: false,
+		},*/
+
+		//// Test data from distributed trace repo sample json
+		// https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json
+		{
+			name: "distributed_trace_sample",
+			fields: fields{
+				acc: &mockAcc,
+			},
+			thriftDataFile: "testdata/distributed_trace_sample.dat",
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation_value": "cs",
+						"endpoint_host":    "0:9410",
+						"id":               "6802735349851856000",
+						"parent_id":        "6802735349851856000",
+						"trace_id":         "0:6802735349851856000",
+						"name":             "main.dud",
+						"service_name":     "go-zipkin-testclient",
+					},
+					Fields: map[string]interface{}{
+						"annotation_timestamp": int64(1433330263),
+						"duration":             time.Duration(1) * time.Microsecond,
+					},
+					//Time: time.Unix(1, 0).UTC(),
+					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation_value": "cr",
+						"endpoint_host":    "0:9410",
+						"id":               "6802735349851856000",
+						"parent_id":        "6802735349851856000",
+						"trace_id":         "0:6802735349851856000",
+						"name":             "main.dud",
+						"service_name":     "go-zipkin-testclient",
+					},
+					Fields: map[string]interface{}{
+						"annotation_timestamp": int64(1433330263),
+						"duration":             time.Duration(1) * time.Microsecond,
+					},
+					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
+				},
+			},
+		},
+	}
+
+	z := &Zipkin{
+		Path: "/api/v1/spans",
+		Port: 9411,
+	}
+
+	err := z.Start(&mockAcc)
+	if err != nil {
+		t.Fatal("Failed to start zipkin server")
+	}
+
+	defer z.Stop()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockAcc.ClearMetrics()
+			if err := postThriftData(tt.thriftDataFile); err != nil {
+				t.Fatalf("Posting data to http endpoint /api/v1/spans failed. Error: %s\n", err)
+			}
+			mockAcc.Wait(len(tt.want)) //Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
+			if len(mockAcc.Errors) > 0 != tt.wantErr {
+				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tt.wantErr, mockAcc.Errors)
+			}
+
+			var got []testutil.Metric
+			for _, m := range mockAcc.Metrics {
+				got = append(got, *m)
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("Got != Want\n Got: %#v\n, Want: %#v\n", got, tt.want)
+			}
+		})
+	}
+}
+
+func postThriftData(datafile string) error {
+	dat, err := ioutil.ReadFile(datafile)
+	if err != nil {
+		return fmt.Errorf("could not read from data file %s", datafile)
+	}
+
+	req, err := http.NewRequest("POST", "http://localhost:9411/api/v1/spans", bytes.NewReader(dat))
+
+	if err != nil {
+		return fmt.Errorf("HTTP request creation failed")
+	}
+
+	req.Header.Set("Content-Type", "application/x-thrift")
+	client := &http.Client{}
+	_, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("HTTP POST request to zipkin endpoint http://localhost:/9411/v1/spans failed")
+	}
+
+	return nil
 }
