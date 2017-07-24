@@ -52,8 +52,7 @@ type Query struct {
 	FieldDatabase    string
 	FieldMeasurement string
 	//
-	Sanitize        bool
-	IgnoreRowErrors bool
+	Sanitize bool
 	//
 	QueryScript string
 
@@ -383,19 +382,16 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int) (int
 			if ok {
 				value, err = strconv.ParseInt(str, 10, 64)
 			}
-			break
 		case TYPE_FLOAT:
 			str, ok = cell.(string)
 			if ok {
 				value, err = strconv.ParseFloat(str, 64)
 			}
-			break
 		case TYPE_BOOL:
 			str, ok = cell.(string)
 			if ok {
 				value, err = strconv.ParseBool(str)
 			}
-			break
 		case TYPE_TIME:
 			value, ok = cell.(time.Time)
 			if !ok {
@@ -406,10 +402,8 @@ func (s *Query) ConvertField(name string, cell interface{}, field_type int) (int
 					value = time.Unix(intvalue, 0)
 				}
 			}
-			break
 		case TYPE_STRING:
 			value, ok = ConvertString(name, cell)
-			break
 		default:
 			value = cell
 		}
@@ -445,6 +439,7 @@ func (s *Query) GetStringFieldValue(index int) (string, error) {
 
 func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[string]string, fields map[string]interface{}) (time.Time, string, error) {
 	// Vertical structure
+	// get timestamp from row
 	if s.field_timestamp_idx >= 0 {
 		// get the value of timestamp field
 		value, err := s.ConvertField(s.column_name[s.field_timestamp_idx], s.cells[s.field_timestamp_idx], TYPE_TIME)
@@ -474,7 +469,7 @@ func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[strin
 			tags["dbname"] = dbname
 		}
 	}
-	// get host from row
+	// get server from row
 	if s.field_host_idx >= 0 {
 		server, err := s.GetStringFieldValue(s.field_host_idx)
 		if err != nil {
@@ -485,7 +480,7 @@ func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[strin
 			tags["server"] = server
 		}
 	}
-	// vertical counters
+	// vertical counter
 	if s.field_name_idx >= 0 {
 		// get the name of the field
 		name, err := s.GetStringFieldValue(s.field_name_idx)
@@ -712,15 +707,10 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 
 				timestamp, measurement, err = q.ParseRow(query_time, q.Measurement, tags, fields)
 				if err != nil {
-					if q.IgnoreRowErrors {
-						log.Printf("W! Ignored error on row %d: %s", row_count, err)
-					} else {
-						return err
-					}
+					log.Printf("W! Ignored error on row %d: %s", row_count, err)
+				} else {
+					acc.AddFields(measurement, fields, tags, timestamp)
 				}
-
-				acc.AddFields(measurement, fields, tags, timestamp)
-
 				row_count += 1
 			}
 			log.Printf("D! Query %d found %d rows written, processing duration %s", q.index, row_count, time.Since(query_time))
