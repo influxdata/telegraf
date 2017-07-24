@@ -418,7 +418,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"name":             "Child",
 						"service_name":     "trivial",
 						"annotation_value": "trivial", //base64: dHJpdmlhbA==
-						"endpoint_host":    "2130706433:0",
+						"endpoint_host":    "127.0.0.1:0",
 						"key":              "lc",
 						"type":             "STRING",
 					},
@@ -436,7 +436,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"name":             "Child",
 						"service_name":     "trivial",
 						"annotation_value": "trivial", //base64: dHJpdmlhbA==
-						"endpoint_host":    "2130706433:0",
+						"endpoint_host":    "127.0.0.1:0",
 						"key":              "lc",
 						"type":             "STRING",
 					},
@@ -450,7 +450,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"service_name":     "trivial",
 						"annotation_value": "Starting child #0",
-						"endpoint_host":    "2130706433:0",
+						"endpoint_host":    "127.0.0.1:0",
 						"id":               "22964302721410078",
 						"parent_id":        "22964302721410078",
 						"trace_id":         "0:2505404965370368069",
@@ -467,7 +467,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"service_name":     "trivial",
 						"annotation_value": "Starting child #1",
-						"endpoint_host":    "2130706433:0",
+						"endpoint_host":    "127.0.0.1:0",
 						"id":               "22964302721410078",
 						"parent_id":        "22964302721410078",
 						"trace_id":         "0:2505404965370368069",
@@ -487,7 +487,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"name":             "Parent",
 						"service_name":     "trivial",
 						"annotation_value": "A Log",
-						"endpoint_host":    "2130706433:0",
+						"endpoint_host":    "127.0.0.1:0",
 						"id":               "22964302721410078",
 					},
 					Fields: map[string]interface{}{
@@ -507,7 +507,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"id":               "22964302721410078",
 						"parent_id":        "22964302721410078",
 						"name":             "Parent",
-						"endpoint_host":    "2130706433:0",
+						"endpoint_host":    "127.0.0.1:0",
 					},
 					Fields: map[string]interface{}{
 						"duration": time.Duration(103680) * time.Microsecond,
@@ -604,7 +604,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation_value": "cs",
-						"endpoint_host":    "0:9410",
+						"endpoint_host":    "0.0.0.0:9410",
 						"id":               "6802735349851856000",
 						"parent_id":        "6802735349851856000",
 						"trace_id":         "0:6802735349851856000",
@@ -622,7 +622,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation_value": "cr",
-						"endpoint_host":    "0:9410",
+						"endpoint_host":    "0.0.0.0:9410",
 						"id":               "6802735349851856000",
 						"parent_id":        "6802735349851856000",
 						"trace_id":         "0:6802735349851856000",
