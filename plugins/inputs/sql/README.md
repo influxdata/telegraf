@@ -55,48 +55,47 @@ The steps of above can be reused in a similar way for other proprietary and non 
 ## Configuration:
 
 ```
-	[[inputs.sql]]
-		# debug=false						# Enables very verbose output
-
-		## Database Driver
-		driver = "mysql" 					# required. Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
-		# shared_lib = "/home/luca/.gocode/lib/oci8_go.so"		# optional: path to the golang 1.8 plugin shared lib
-		# keep_connection = false 			# true: keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
-
-		## Server DSNs
-		servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
-		hosts=["neteye", "hostmysql"]	# optional: for each server a relative host entry should be specified and will be added as host tag
-		db_names=["rue", "monitoring"]	# optional: for each server a relative db name entry should be specified and will be added as dbname tag
-
-		## Queries to perform (block below can be repeated)
-		[[inputs.sql.query]]
-			# query has precedence on query_script, if both query and query_script are defined only query is executed
-			query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
-			# query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
-			#
-			measurement="connection_errors"	# destination measurement
-			tag_cols=["application"]		# colums used as tags
-			field_cols=["avg_application_latency","avg_bytes","act_throughput"]	# select fields and use the database driver automatic datatype conversion
-			#
-			# bool_fields=["ON"]			# adds fields and forces his value as bool
-			# int_fields=["MEMBERS",".*BYTES"]	# adds fields and forces his value as integer
-			# float_fields=["TEMPERATURE"]	# adds fields and forces his value as float
-			# time_fields=[".*_TIME"]		# adds fields and forces his value as time
-			#
-			# field_measurement = "CLASS"		# the golumn that contains the name of the measurement
-			# field_host = "DBHOST"				# the column that contains the name of the database host used for host tag value
-			# field_database = "DBHOST"			# the column that contains the name of the database used for dbname tag value
-			# field_name = "counter_name"		# the column that contains the name of the counter
-			# field_value = "counter_value"		# the column that contains the value of the counter
-			#
-			# field_timestamp = "sample_time"	# the column where is to find the time of sample (should be a date datatype)
-			#
-			ignore_other_fields = false 	# false: if query returns columns not defined, they are automatically added (true: ignore columns)
-			null_as_zero = false			# true: converts null values into zero or empty strings (false: ignore fields)
-			sanitize = false				# true: will perform some chars substitutions (false: use value as is)
-			ignore_row_errors				# true: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
+  # debug=false                         # Enables very verbose output
+  
+  ## Database Driver
+  driver = "mysql"                      # required. Valid options: mssql (SQLServer), mysql (MySQL), postgres (Postgres), sqlite3 (SQLite), [oci8 ora.v4 (Oracle)]
+  # shared_lib = "/home/luca/.gocode/lib/oci8_go.so"    # optional: path to the golang 1.8 plugin shared lib
+  # keep_connection = false             # optional: if true keeps the connection with database instead to reconnect at each poll and uses prepared statements (false: reconnection at each poll, no prepared statements)
+  
+  ## Server DSNs
+  servers  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"] # required. Connection DSN to pass to the DB driver
+  #hosts=["neteye", "hostmysql"]        # optional: for each server a relative host entry should be specified and will be added as host tag
+  #db_names=["rue", "monitoring"]       # optional: for each server a relative db name entry should be specified and will be added as dbname tag
+  
+  ## Queries to perform (block below can be repeated)
+  [[inputs.sql.query]]
+    # query has precedence on query_script, if both query and query_script are defined only query is executed
+    query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
+    # query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
+    #
+    measurement="connection_errors"     # destination measurement
+    tag_cols=["application"]            # colums used as tags
+    field_cols=["avg_application_latency","avg_bytes","act_throughput"]  # select fields and use the database driver automatic datatype conversion
+    #
+    # bool_fields=["ON"]                # adds fields and forces his value as bool
+    # int_fields=["MEMBERS",".*BYTES"]  # adds fields and forces his value as integer
+    # float_fields=["TEMPERATURE"]      # adds fields and forces his value as float
+    # time_fields=[".*_TIME"]           # adds fields and forces his value as time
+    #
+    # field_measurement = "CLASS"       # the column that contains the name of the measurement
+    # field_host = "DBHOST"             # the column that contains the name of the database host used for host tag value
+    # field_database = "DBHOST"         # the column that contains the name of the database used for dbname tag value
+    # field_name = "counter_name"       # the column that contains the name of the counter
+    # field_value = "counter_value"     # the column that contains the value of the counter
+    #
+    # field_timestamp = "sample_time"   # the column where is to find the time of sample (should be a date datatype)
+    #
+    # ignore_other_fields = false         # optional: if query returns columns not defined, they are automatically added (true: ignore columns)
+    # sanitize = false                    # optional: will perform some chars substitutions (false: use value as is)
+    # null_as_zero = false                # optional: converts null values into zero or empty strings (false: ignore fields)
+    # ignore_row_errors                   # optional: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
 ```
-sql_script is read only once, if you change the script you need to restart telegraf
+sql_script is read only once, if you change the script you need to reload telegraf
 
 ## Field names
 Field names are the same of the relative column name or taken from value of a column. If there is the need of rename the fields, just do it in the sql, try to use an ' AS ' .
