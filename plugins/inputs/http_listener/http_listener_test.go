@@ -309,7 +309,7 @@ func TestQueryAndPingHTTP(t *testing.T) {
 	// post ping to listener
 	resp, err = http.Post(createURL(listener, "/ping", ""), "", nil)
 	require.NoError(t, err)
-	require.EqualValues(t, 204, resp.StatusCode)
+	require.EqualValues(t, 200, resp.StatusCode)
 }
 
 func TestWriteWithPrecision(t *testing.T) {
