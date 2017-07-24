@@ -1,8 +1,8 @@
 package zipkin
 
 import (
-	"bytes"
 	"encoding/binary"
+	"net"
 	"strconv"
 	"time"
 
@@ -188,16 +188,9 @@ func parentID(span *zipkincore.Span) string {
 }
 
 func ipv4(addr int32) string {
-	var buf [4]byte
-	binary.BigEndian.PutUint32(buf[:], uint32(addr))
-	var sBuf bytes.Buffer
-	for i, b := range buf {
-		if i > 0 {
-			sBuf.WriteRune('.')
-		}
-		sBuf.WriteString(strconv.FormatUint(uint64(b), 10))
-	}
-	return sBuf.String()
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, uint32(addr))
+	return net.IP(buf).String()
 }
 
 func host(h *zipkincore.Endpoint) string {
