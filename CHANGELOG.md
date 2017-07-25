@@ -1,3 +1,9 @@
+## v1.3.5 [unreleased]
+
+### Bugfixes
+
+- [#3049](https://github.com/influxdata/telegraf/issues/3049): Fix prometheus output cannot be reloaded.
+
 ## v1.3.4 [2017-07-12]
 
 ### Bugfixes
