@@ -15,6 +15,7 @@ type v3Stats struct {
 		CounterGroups []v3Counters `xml:"counters"`
 	} `xml:"server"`
 	Views []struct {
+		// Omitted branches: zones
 		Name          string       `xml:"name,attr"`
 		CounterGroups []v3Counters `xml:"counters"`
 		Caches        []struct {
