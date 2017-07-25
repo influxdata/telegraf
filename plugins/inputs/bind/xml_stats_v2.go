@@ -60,12 +60,18 @@ type v2Counter struct {
 }
 
 // addCounter adds a v2Counter array to a Telegraf Accumulator, with the specified tags
-func addCounter(acc telegraf.Accumulator, tags map[string]string, stats []v2Counter) {
-	fields := make(map[string]interface{})
-
+func addCounter(acc telegraf.Accumulator, commonTags map[string]string, stats []v2Counter) {
 	for _, c := range stats {
+		tags := make(map[string]string)
+
+		// Create local copy of tags since maps are reference types
+		for k, v := range commonTags {
+			tags[k] = v
+		}
+
 		tags["name"] = c.Name
-		fields["value"] = c.Value
+		fields := map[string]interface{}{"value": c.Value}
+
 		acc.AddCounter("bind_counter", fields, tags)
 	}
 }
@@ -112,12 +118,10 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator, url string) er
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
-		tags := map[string]string{"url": url}
-
 		for _, c := range stats.Statistics.Memory.Contexts {
-			tags["id"] = c.Id
-			tags["name"] = c.Name
+			tags := map[string]string{"url": url, "id": c.Id, "name": c.Name}
 			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
+
 			acc.AddGauge("bind_memory_context", fields, tags)
 		}
 	}

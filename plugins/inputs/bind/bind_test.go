@@ -24,6 +24,52 @@ func TestBindXmlStatsV2(t *testing.T) {
 	err := acc.GatherError(b.Gather)
 
 	assert.Nil(t, err)
+
+	// Use subtests for counters, since they are similar structure
+	testCases := []struct {
+		counterType string
+		counterName string
+		want        int
+	}{
+		{"opcode", "QUERY", 102312374},
+		{"qtype", "PTR", 4211487},
+		{"nsstat", "QrySuccess", 63811668},
+		{"zonestat", "NotifyOutv4", 663},
+		{"sockstat", "UDP4Conn", 3764828},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.counterType, func(t *testing.T) {
+			tags := map[string]string{
+				"url":  ts.Listener.Addr().String(),
+				"type": tc.counterType,
+				"name": tc.counterName,
+			}
+
+			fields := map[string]interface{}{
+				"value": tc.want,
+			}
+
+			acc.AssertContainsTaggedFields(t, "bind_counter", fields, tags)
+		})
+	}
+
+	// Subtest for memory stats
+	t.Run("memory", func(t *testing.T) {
+		tags := map[string]string{
+			"url": ts.Listener.Addr().String(),
+		}
+
+		fields := map[string]interface{}{
+			"BlockSize":   77070336,
+			"ContextSize": 6663840,
+			"InUse":       20772579,
+			"Lost":        0,
+			"TotalUse":    81804609,
+		}
+
+		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
+	})
 }
 
 func TestBindXmlStatsV3(t *testing.T) {
