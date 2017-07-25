@@ -298,6 +298,7 @@ func (d *Docker) gatherContainer(
 		}
 		return fmt.Errorf("Error decoding: %s", err.Error())
 	}
+	daemonOSType := r.OSType
 
 	// Add labels to tags
 	for k, label := range container.Labels {
@@ -325,7 +326,7 @@ func (d *Docker) gatherContainer(
 		}
 	}
 
-	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total)
+	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
 
 	return nil
 }
@@ -337,6 +338,7 @@ func gatherContainerStats(
 	id string,
 	perDevice bool,
 	total bool,
+	daemonOSType string,
 ) {
 	now := stat.Read
 
@@ -380,31 +382,23 @@ func gatherContainerStats(
 			memfields[field] = value
 		}
 	}
-
-	// These fields are OS specific and marked as omitempty, so skip reporting
-	// if they are zero valued.
-	if stat.MemoryStats.Usage != 0 {
-		memfields["usage"] = stat.MemoryStats.Usage
-	}
-	if stat.MemoryStats.MaxUsage != 0 {
-		memfields["max_usage"] = stat.MemoryStats.MaxUsage
-	}
 	if stat.MemoryStats.Failcnt != 0 {
 		memfields["fail_count"] = stat.MemoryStats.Failcnt
 	}
-	if stat.MemoryStats.Limit != 0 {
+
+	if daemonOSType != "windows" {
 		memfields["limit"] = stat.MemoryStats.Limit
-	}
-	if stat.MemoryStats.Commit != 0 {
+		memfields["usage"] = stat.MemoryStats.Usage
+		memfields["max_usage"] = stat.MemoryStats.MaxUsage
+
+		mem := calculateMemUsageUnixNoCache(stat.MemoryStats)
+		memLimit := float64(stat.MemoryStats.Limit)
+		memfields["usage_percent"] = calculateMemPercentUnixNoCache(memLimit, mem)
+	} else {
 		memfields["commit_bytes"] = stat.MemoryStats.Commit
-	}
-	if stat.MemoryStats.CommitPeak != 0 {
 		memfields["commit_peak_bytes"] = stat.MemoryStats.CommitPeak
-	}
-	if stat.MemoryStats.PrivateWorkingSet != 0 {
 		memfields["private_working_set"] = stat.MemoryStats.PrivateWorkingSet
 	}
-	memfields["usage_percent"] = calculateMemPercent(stat)
 
 	acc.AddFields("docker_container_mem", memfields, tags, now)
 
@@ -416,9 +410,19 @@ func gatherContainerStats(
 		"throttling_periods":           stat.CPUStats.ThrottlingData.Periods,
 		"throttling_throttled_periods": stat.CPUStats.ThrottlingData.ThrottledPeriods,
 		"throttling_throttled_time":    stat.CPUStats.ThrottlingData.ThrottledTime,
-		"usage_percent":                calculateCPUPercent(stat),
 		"container_id":                 id,
 	}
+
+	if daemonOSType != "windows" {
+		previousCPU := stat.PreCPUStats.CPUUsage.TotalUsage
+		previousSystem := stat.PreCPUStats.SystemUsage
+		cpuPercent := calculateCPUPercentUnix(previousCPU, previousSystem, stat)
+		cpufields["usage_percent"] = cpuPercent
+	} else {
+		cpuPercent := calculateCPUPercentWindows(stat)
+		cpufields["usage_percent"] = cpuPercent
+	}
+
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
 	acc.AddFields("docker_container_cpu", cpufields, cputags, now)
@@ -496,30 +500,6 @@ func gatherContainerStats(
 	}
 
 	gatherBlockIOMetrics(stat, acc, tags, now, id, perDevice, total)
-}
-
-func calculateMemPercent(stat *types.StatsJSON) float64 {
-	var memPercent = 0.0
-	if stat.MemoryStats.Limit > 0 {
-		memPercent = float64(stat.MemoryStats.Usage) / float64(stat.MemoryStats.Limit) * 100.0
-	}
-	return memPercent
-}
-
-func calculateCPUPercent(stat *types.StatsJSON) float64 {
-	var cpuPercent = 0.0
-	// calculate the change for the cpu and system usage of the container in between readings
-	cpuDelta := float64(stat.CPUStats.CPUUsage.TotalUsage) - float64(stat.PreCPUStats.CPUUsage.TotalUsage)
-	systemDelta := float64(stat.CPUStats.SystemUsage) - float64(stat.PreCPUStats.SystemUsage)
-
-	if systemDelta > 0.0 && cpuDelta > 0.0 {
-		if stat.CPUStats.OnlineCPUs > 0 {
-			cpuPercent = (cpuDelta / systemDelta) * float64(stat.CPUStats.OnlineCPUs) * 100.0
-		} else {
-			cpuPercent = (cpuDelta / systemDelta) * float64(len(stat.CPUStats.CPUUsage.PercpuUsage)) * 100.0
-		}
-	}
-	return cpuPercent
 }
 
 func gatherBlockIOMetrics(
