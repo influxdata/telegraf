@@ -2,6 +2,8 @@ package docker
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
@@ -27,8 +29,13 @@ func NewEnvClient() (Client, error) {
 	return &SocketClient{client}, nil
 }
 
-func NewClient(host string) (Client, error) {
-	client, err := docker.NewClient(host, version, nil, defaultHeaders)
+func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+	client, err := docker.NewClient(host, version, httpClient, defaultHeaders)
 	if err != nil {
 		return nil, err
 	}

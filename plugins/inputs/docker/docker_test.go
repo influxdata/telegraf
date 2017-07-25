@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"crypto/tls"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -43,7 +44,7 @@ func (c *MockClient) ContainerInspect(
 	return c.ContainerInspectF(ctx, containerID)
 }
 
-func newClient(host string) (Client, error) {
+func newClient(host string, tlsConfig *tls.Config) (Client, error) {
 	return &MockClient{
 		InfoF: func(context.Context) (types.Info, error) {
 			return info, nil
