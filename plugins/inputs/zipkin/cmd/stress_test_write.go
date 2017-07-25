@@ -27,8 +27,8 @@ func main() {
 		log.Fatalf("Error: %v\n", err)
 	}
 
-	log.Println("Writing 1,000,000 spans to zipkin impl...")
-	for i := 0; i < 1000000; i++ {
+	log.Println("Writing 100 spans to zipkin impl...")
+	for i := 0; i < 100; i++ {
 		parent := tracer.StartSpan("Parent")
 		parent.LogEvent(fmt.Sprintf("Trace %d\n", i))
 		parent.Finish()
