@@ -101,7 +101,9 @@ func (p *PrometheusClient) Connect() error {
 func (p *PrometheusClient) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	return p.server.Shutdown(ctx)
+	err := p.server.Shutdown(ctx)
+	prometheus.Unregister(p)
+	return err
 }
 
 func (p *PrometheusClient) SampleConfig() string {
