@@ -30,6 +30,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     **Server**
     - uptime(int, seconds)
     - lru_clock(int, number)
+    - redis_version(string)
 
     **Clients**
     - clients(int, number)
