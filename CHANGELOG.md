@@ -3,6 +3,9 @@
 ### Bugfixes
 
 - [#3049](https://github.com/influxdata/telegraf/issues/3049): Fix prometheus output cannot be reloaded.
+- [#3037](https://github.com/influxdata/telegraf/issues/3037): Fix filestat reporting exists when cannot list directory.
+- [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
+- [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
 
 ## v1.3.4 [2017-07-12]
 
