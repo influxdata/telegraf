@@ -3,6 +3,7 @@ package docker
 import (
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -134,7 +135,256 @@ var containerList = []types.Container{
 
 func containerStats() types.ContainerStats {
 	var stat types.ContainerStats
-	jsonStat := `{"read":"2016-02-24T11:42:27.472459608-05:00","memory_stats":{"stats":{},"limit":18935443456},"blkio_stats":{"io_service_bytes_recursive":[{"major":252,"minor":1,"op":"Read","value":753664},{"major":252,"minor":1,"op":"Write"},{"major":252,"minor":1,"op":"Sync"},{"major":252,"minor":1,"op":"Async","value":753664},{"major":252,"minor":1,"op":"Total","value":753664}],"io_serviced_recursive":[{"major":252,"minor":1,"op":"Read","value":26},{"major":252,"minor":1,"op":"Write"},{"major":252,"minor":1,"op":"Sync"},{"major":252,"minor":1,"op":"Async","value":26},{"major":252,"minor":1,"op":"Total","value":26}]},"cpu_stats":{"cpu_usage":{"percpu_usage":[17871,4959158,1646137,1231652,11829401,244656,369972,0],"usage_in_usermode":10000000,"total_usage":20298847},"system_cpu_usage":24052607520000000,"throttling_data":{}},"precpu_stats":{"cpu_usage":{"percpu_usage":[17871,4959158,1646137,1231652,11829401,244656,369972,0],"usage_in_usermode":10000000,"total_usage":20298847},"system_cpu_usage":24052599550000000,"throttling_data":{}}}`
+	jsonStat := `
+{
+    "blkio_stats": {
+        "io_service_bytes_recursive": [
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Read",
+                "value": 753664
+            },
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Write"
+            },
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Sync"
+            },
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Async",
+                "value": 753664
+            },
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Total",
+                "value": 753664
+            }
+        ],
+        "io_serviced_recursive": [
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Read",
+                "value": 26
+            },
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Write"
+            },
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Sync"
+            },
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Async",
+                "value": 26
+            },
+            {
+                "major": 252,
+                "minor": 1,
+                "op": "Total",
+                "value": 26
+            }
+        ]
+    },
+    "cpu_stats": {
+        "cpu_usage": {
+            "percpu_usage": [
+                17871,
+                4959158,
+                1646137,
+                1231652,
+                11829401,
+                244656,
+                369972,
+                0
+            ],
+            "total_usage": 20298847,
+            "usage_in_usermode": 10000000
+        },
+        "system_cpu_usage": 24052607520000000,
+        "throttling_data": {}
+    },
+    "memory_stats": {
+        "limit": 18935443456,
+        "stats": {}
+    },
+    "precpu_stats": {
+        "cpu_usage": {
+            "percpu_usage": [
+                17871,
+                4959158,
+                1646137,
+                1231652,
+                11829401,
+                244656,
+                369972,
+                0
+            ],
+            "total_usage": 20298847,
+            "usage_in_usermode": 10000000
+        },
+        "system_cpu_usage": 24052599550000000,
+        "throttling_data": {}
+    },
+    "read": "2016-02-24T11:42:27.472459608-05:00"
+}`
+	stat.Body = ioutil.NopCloser(strings.NewReader(jsonStat))
+	return stat
+}
+
+func testStats() *types.StatsJSON {
+	stats := &types.StatsJSON{}
+	stats.Read = time.Now()
+	stats.Networks = make(map[string]types.NetworkStats)
+	stats.CPUStats.OnlineCPUs = 2
+	stats.CPUStats.CPUUsage.PercpuUsage = []uint64{1, 1002, 0, 0}
+	stats.CPUStats.CPUUsage.UsageInUsermode = 100
+	stats.CPUStats.CPUUsage.TotalUsage = 500
+	stats.CPUStats.CPUUsage.UsageInKernelmode = 200
+	stats.CPUStats.SystemUsage = 100
+	stats.CPUStats.ThrottlingData.Periods = 1
+
+	stats.PreCPUStats.CPUUsage.TotalUsage = 400
+	stats.PreCPUStats.SystemUsage = 50
+
+	stats.MemoryStats.Stats = make(map[string]uint64)
+	stats.MemoryStats.Stats["active_anon"] = 0
+	stats.MemoryStats.Stats["active_file"] = 1
+	stats.MemoryStats.Stats["cache"] = 0
+	stats.MemoryStats.Stats["hierarchical_memory_limit"] = 0
+	stats.MemoryStats.Stats["inactive_anon"] = 0
+	stats.MemoryStats.Stats["inactive_file"] = 3
+	stats.MemoryStats.Stats["mapped_file"] = 0
+	stats.MemoryStats.Stats["pgfault"] = 2
+	stats.MemoryStats.Stats["pgmajfault"] = 0
+	stats.MemoryStats.Stats["pgpgin"] = 0
+	stats.MemoryStats.Stats["pgpgout"] = 0
+	stats.MemoryStats.Stats["rss"] = 0
+	stats.MemoryStats.Stats["rss_huge"] = 0
+	stats.MemoryStats.Stats["total_active_anon"] = 0
+	stats.MemoryStats.Stats["total_active_file"] = 0
+	stats.MemoryStats.Stats["total_cache"] = 0
+	stats.MemoryStats.Stats["total_inactive_anon"] = 0
+	stats.MemoryStats.Stats["total_inactive_file"] = 0
+	stats.MemoryStats.Stats["total_mapped_file"] = 0
+	stats.MemoryStats.Stats["total_pgfault"] = 0
+	stats.MemoryStats.Stats["total_pgmajfault"] = 0
+	stats.MemoryStats.Stats["total_pgpgin"] = 4
+	stats.MemoryStats.Stats["total_pgpgout"] = 0
+	stats.MemoryStats.Stats["total_rss"] = 44
+	stats.MemoryStats.Stats["total_rss_huge"] = 444
+	stats.MemoryStats.Stats["total_unevictable"] = 0
+	stats.MemoryStats.Stats["total_writeback"] = 55
+	stats.MemoryStats.Stats["unevictable"] = 0
+	stats.MemoryStats.Stats["writeback"] = 0
+
+	stats.MemoryStats.MaxUsage = 1001
+	stats.MemoryStats.Usage = 1111
+	stats.MemoryStats.Failcnt = 1
+	stats.MemoryStats.Limit = 2000
+
+	stats.Networks["eth0"] = types.NetworkStats{
+		RxDropped: 1,
+		RxBytes:   2,
+		RxErrors:  3,
+		TxPackets: 4,
+		TxDropped: 1,
+		RxPackets: 2,
+		TxErrors:  3,
+		TxBytes:   4,
+	}
+
+	stats.Networks["eth1"] = types.NetworkStats{
+		RxDropped: 5,
+		RxBytes:   6,
+		RxErrors:  7,
+		TxPackets: 8,
+		TxDropped: 5,
+		RxPackets: 6,
+		TxErrors:  7,
+		TxBytes:   8,
+	}
+
+	sbr := types.BlkioStatEntry{
+		Major: 6,
+		Minor: 0,
+		Op:    "read",
+		Value: 100,
+	}
+	sr := types.BlkioStatEntry{
+		Major: 6,
+		Minor: 0,
+		Op:    "write",
+		Value: 101,
+	}
+	sr2 := types.BlkioStatEntry{
+		Major: 6,
+		Minor: 1,
+		Op:    "write",
+		Value: 201,
+	}
+
+	stats.BlkioStats.IoServiceBytesRecursive = append(
+		stats.BlkioStats.IoServiceBytesRecursive, sbr)
+	stats.BlkioStats.IoServicedRecursive = append(
+		stats.BlkioStats.IoServicedRecursive, sr)
+	stats.BlkioStats.IoServicedRecursive = append(
+		stats.BlkioStats.IoServicedRecursive, sr2)
+
+	return stats
+}
+
+func containerStatsWindows() types.ContainerStats {
+	var stat types.ContainerStats
+	jsonStat := `
+{
+	"read":"2017-01-11T08:32:46.2413794Z",
+	"preread":"0001-01-01T00:00:00Z",
+	"num_procs":64,
+	"cpu_stats":{
+		"cpu_usage":{
+			"total_usage":536718750,
+			"usage_in_kernelmode":390468750,
+			"usage_in_usermode":390468750
+		},
+		"throttling_data":{
+			"periods":0,
+			"throttled_periods":0,
+			"throttled_time":0
+		}
+	},
+	"precpu_stats":{
+		"cpu_usage":{
+			"total_usage":0,
+			"usage_in_kernelmode":0,
+			"usage_in_usermode":0
+		},
+		"throttling_data":{
+			"periods":0,
+			"throttled_periods":0,
+			"throttled_time":0
+		}
+	},
+	"memory_stats":{
+		"commitbytes":77160448,
+		"commitpeakbytes":105000960,
+		"privateworkingset":59961344
+	},
+	"name":"/gt_test_iis",
+}`
 	stat.Body = ioutil.NopCloser(strings.NewReader(jsonStat))
 	return stat
 }

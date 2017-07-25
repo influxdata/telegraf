@@ -341,42 +341,71 @@ func gatherContainerStats(
 	now := stat.Read
 
 	memfields := map[string]interface{}{
-		"max_usage":                 stat.MemoryStats.MaxUsage,
-		"usage":                     stat.MemoryStats.Usage,
-		"fail_count":                stat.MemoryStats.Failcnt,
-		"limit":                     stat.MemoryStats.Limit,
-		"total_pgmafault":           stat.MemoryStats.Stats["total_pgmajfault"],
-		"cache":                     stat.MemoryStats.Stats["cache"],
-		"mapped_file":               stat.MemoryStats.Stats["mapped_file"],
-		"total_inactive_file":       stat.MemoryStats.Stats["total_inactive_file"],
-		"pgpgout":                   stat.MemoryStats.Stats["pagpgout"],
-		"rss":                       stat.MemoryStats.Stats["rss"],
-		"total_mapped_file":         stat.MemoryStats.Stats["total_mapped_file"],
-		"writeback":                 stat.MemoryStats.Stats["writeback"],
-		"unevictable":               stat.MemoryStats.Stats["unevictable"],
-		"pgpgin":                    stat.MemoryStats.Stats["pgpgin"],
-		"total_unevictable":         stat.MemoryStats.Stats["total_unevictable"],
-		"pgmajfault":                stat.MemoryStats.Stats["pgmajfault"],
-		"total_rss":                 stat.MemoryStats.Stats["total_rss"],
-		"total_rss_huge":            stat.MemoryStats.Stats["total_rss_huge"],
-		"total_writeback":           stat.MemoryStats.Stats["total_write_back"],
-		"total_inactive_anon":       stat.MemoryStats.Stats["total_inactive_anon"],
-		"rss_huge":                  stat.MemoryStats.Stats["rss_huge"],
-		"hierarchical_memory_limit": stat.MemoryStats.Stats["hierarchical_memory_limit"],
-		"total_pgfault":             stat.MemoryStats.Stats["total_pgfault"],
-		"total_active_file":         stat.MemoryStats.Stats["total_active_file"],
-		"active_anon":               stat.MemoryStats.Stats["active_anon"],
-		"total_active_anon":         stat.MemoryStats.Stats["total_active_anon"],
-		"total_pgpgout":             stat.MemoryStats.Stats["total_pgpgout"],
-		"total_cache":               stat.MemoryStats.Stats["total_cache"],
-		"inactive_anon":             stat.MemoryStats.Stats["inactive_anon"],
-		"active_file":               stat.MemoryStats.Stats["active_file"],
-		"pgfault":                   stat.MemoryStats.Stats["pgfault"],
-		"inactive_file":             stat.MemoryStats.Stats["inactive_file"],
-		"total_pgpgin":              stat.MemoryStats.Stats["total_pgpgin"],
-		"usage_percent":             calculateMemPercent(stat),
-		"container_id":              id,
+		"container_id": id,
 	}
+
+	memstats := []string{
+		"active_anon",
+		"active_file",
+		"cache",
+		"hierarchical_memory_limit",
+		"inactive_anon",
+		"inactive_file",
+		"mapped_file",
+		"pgfault",
+		"pgmajfault",
+		"pgpgin",
+		"pgpgout",
+		"rss",
+		"rss_huge",
+		"total_active_anon",
+		"total_active_file",
+		"total_cache",
+		"total_inactive_anon",
+		"total_inactive_file",
+		"total_mapped_file",
+		"total_pgfault",
+		"total_pgmajfault",
+		"total_pgpgin",
+		"total_pgpgout",
+		"total_rss",
+		"total_rss_huge",
+		"total_unevictable",
+		"total_writeback",
+		"unevictable",
+		"writeback",
+	}
+	for _, field := range memstats {
+		if value, ok := stat.MemoryStats.Stats[field]; ok {
+			memfields[field] = value
+		}
+	}
+
+	// These fields are OS specific and marked as omitempty, so skip reporting
+	// if they are zero valued.
+	if stat.MemoryStats.Usage != 0 {
+		memfields["usage"] = stat.MemoryStats.Usage
+	}
+	if stat.MemoryStats.MaxUsage != 0 {
+		memfields["max_usage"] = stat.MemoryStats.MaxUsage
+	}
+	if stat.MemoryStats.Failcnt != 0 {
+		memfields["fail_count"] = stat.MemoryStats.Failcnt
+	}
+	if stat.MemoryStats.Limit != 0 {
+		memfields["limit"] = stat.MemoryStats.Limit
+	}
+	if stat.MemoryStats.Commit != 0 {
+		memfields["commit_bytes"] = stat.MemoryStats.Commit
+	}
+	if stat.MemoryStats.CommitPeak != 0 {
+		memfields["commit_peak_bytes"] = stat.MemoryStats.CommitPeak
+	}
+	if stat.MemoryStats.PrivateWorkingSet != 0 {
+		memfields["private_working_set"] = stat.MemoryStats.PrivateWorkingSet
+	}
+	memfields["usage_percent"] = calculateMemPercent(stat)
+
 	acc.AddFields("docker_container_mem", memfields, tags, now)
 
 	cpufields := map[string]interface{}{

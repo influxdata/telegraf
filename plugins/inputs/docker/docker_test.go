@@ -3,7 +3,6 @@ package docker
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 
@@ -21,28 +20,41 @@ type MockClient struct {
 func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
 	return c.InfoF(ctx)
 }
-func (c *MockClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+
+func (c *MockClient) ContainerList(
+	ctx context.Context,
+	options types.ContainerListOptions,
+) ([]types.Container, error) {
 	return c.ContainerListF(ctx, options)
 }
-func (c *MockClient) ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+
+func (c *MockClient) ContainerStats(
+	ctx context.Context,
+	containerID string,
+	stream bool,
+) (types.ContainerStats, error) {
 	return c.ContainerStatsF(ctx, containerID, stream)
 }
-func (c *MockClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+
+func (c *MockClient) ContainerInspect(
+	ctx context.Context,
+	containerID string,
+) (types.ContainerJSON, error) {
 	return c.ContainerInspectF(ctx, containerID)
 }
 
 func newClient(host string) (Client, error) {
 	return &MockClient{
-		InfoF: func(ctx context.Context) (types.Info, error) {
+		InfoF: func(context.Context) (types.Info, error) {
 			return info, nil
 		},
-		ContainerListF: func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+		ContainerListF: func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
 			return containerList, nil
 		},
-		ContainerStatsF: func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+		ContainerStatsF: func(context.Context, string, bool) (types.ContainerStats, error) {
 			return containerStats(), nil
 		},
-		ContainerInspectF: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
 			return containerInspect, nil
 		},
 	}, nil
@@ -111,41 +123,41 @@ func TestDockerGatherContainerStats(t *testing.T) {
 
 	// test docker_container_mem measurement
 	memfields := map[string]interface{}{
-		"max_usage":                 uint64(1001),
-		"usage":                     uint64(1111),
-		"fail_count":                uint64(1),
-		"limit":                     uint64(2000),
-		"total_pgmafault":           uint64(0),
-		"cache":                     uint64(0),
-		"mapped_file":               uint64(0),
-		"total_inactive_file":       uint64(0),
-		"pgpgout":                   uint64(0),
-		"rss":                       uint64(0),
-		"total_mapped_file":         uint64(0),
-		"writeback":                 uint64(0),
-		"unevictable":               uint64(0),
-		"pgpgin":                    uint64(0),
-		"total_unevictable":         uint64(0),
-		"pgmajfault":                uint64(0),
-		"total_rss":                 uint64(44),
-		"total_rss_huge":            uint64(444),
-		"total_writeback":           uint64(55),
-		"total_inactive_anon":       uint64(0),
-		"rss_huge":                  uint64(0),
-		"hierarchical_memory_limit": uint64(0),
-		"total_pgfault":             uint64(0),
-		"total_active_file":         uint64(0),
 		"active_anon":               uint64(0),
-		"total_active_anon":         uint64(0),
-		"total_pgpgout":             uint64(0),
-		"total_cache":               uint64(0),
-		"inactive_anon":             uint64(0),
 		"active_file":               uint64(1),
-		"pgfault":                   uint64(2),
-		"inactive_file":             uint64(3),
-		"total_pgpgin":              uint64(4),
-		"usage_percent":             float64(55.55),
+		"cache":                     uint64(0),
 		"container_id":              "123456789",
+		"fail_count":                uint64(1),
+		"hierarchical_memory_limit": uint64(0),
+		"inactive_anon":             uint64(0),
+		"inactive_file":             uint64(3),
+		"limit":                     uint64(2000),
+		"mapped_file":               uint64(0),
+		"max_usage":                 uint64(1001),
+		"pgfault":                   uint64(2),
+		"pgmajfault":                uint64(0),
+		"pgpgin":                    uint64(0),
+		"pgpgout":                   uint64(0),
+		"rss_huge":                  uint64(0),
+		"rss":                       uint64(0),
+		"total_active_anon":         uint64(0),
+		"total_active_file":         uint64(0),
+		"total_cache":               uint64(0),
+		"total_inactive_anon":       uint64(0),
+		"total_inactive_file":       uint64(0),
+		"total_mapped_file":         uint64(0),
+		"total_pgfault":             uint64(0),
+		"total_pgmajfault":          uint64(0),
+		"total_pgpgin":              uint64(4),
+		"total_pgpgout":             uint64(0),
+		"total_rss_huge":            uint64(444),
+		"total_rss":                 uint64(44),
+		"total_unevictable":         uint64(0),
+		"total_writeback":           uint64(55),
+		"unevictable":               uint64(0),
+		"usage_percent":             float64(55.55),
+		"usage":                     uint64(1111),
+		"writeback":                 uint64(0),
 	}
 
 	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
@@ -196,106 +208,29 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu3fields, cputags)
 }
 
-func testStats() *types.StatsJSON {
-	stats := &types.StatsJSON{}
-	stats.Read = time.Now()
-	stats.Networks = make(map[string]types.NetworkStats)
-	stats.CPUStats.OnlineCPUs = 2
-	stats.CPUStats.CPUUsage.PercpuUsage = []uint64{1, 1002, 0, 0}
-	stats.CPUStats.CPUUsage.UsageInUsermode = 100
-	stats.CPUStats.CPUUsage.TotalUsage = 500
-	stats.CPUStats.CPUUsage.UsageInKernelmode = 200
-	stats.CPUStats.SystemUsage = 100
-	stats.CPUStats.ThrottlingData.Periods = 1
+func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
+	var acc testutil.Accumulator
 
-	stats.PreCPUStats.CPUUsage.TotalUsage = 400
-	stats.PreCPUStats.SystemUsage = 50
-
-	stats.MemoryStats.Stats = make(map[string]uint64)
-	stats.MemoryStats.Stats["total_pgmajfault"] = 0
-	stats.MemoryStats.Stats["cache"] = 0
-	stats.MemoryStats.Stats["mapped_file"] = 0
-	stats.MemoryStats.Stats["total_inactive_file"] = 0
-	stats.MemoryStats.Stats["pagpgout"] = 0
-	stats.MemoryStats.Stats["rss"] = 0
-	stats.MemoryStats.Stats["total_mapped_file"] = 0
-	stats.MemoryStats.Stats["writeback"] = 0
-	stats.MemoryStats.Stats["unevictable"] = 0
-	stats.MemoryStats.Stats["pgpgin"] = 0
-	stats.MemoryStats.Stats["total_unevictable"] = 0
-	stats.MemoryStats.Stats["pgmajfault"] = 0
-	stats.MemoryStats.Stats["total_rss"] = 44
-	stats.MemoryStats.Stats["total_rss_huge"] = 444
-	stats.MemoryStats.Stats["total_write_back"] = 55
-	stats.MemoryStats.Stats["total_inactive_anon"] = 0
-	stats.MemoryStats.Stats["rss_huge"] = 0
-	stats.MemoryStats.Stats["hierarchical_memory_limit"] = 0
-	stats.MemoryStats.Stats["total_pgfault"] = 0
-	stats.MemoryStats.Stats["total_active_file"] = 0
-	stats.MemoryStats.Stats["active_anon"] = 0
-	stats.MemoryStats.Stats["total_active_anon"] = 0
-	stats.MemoryStats.Stats["total_pgpgout"] = 0
-	stats.MemoryStats.Stats["total_cache"] = 0
-	stats.MemoryStats.Stats["inactive_anon"] = 0
-	stats.MemoryStats.Stats["active_file"] = 1
-	stats.MemoryStats.Stats["pgfault"] = 2
-	stats.MemoryStats.Stats["inactive_file"] = 3
-	stats.MemoryStats.Stats["total_pgpgin"] = 4
-
-	stats.MemoryStats.MaxUsage = 1001
-	stats.MemoryStats.Usage = 1111
-	stats.MemoryStats.Failcnt = 1
-	stats.MemoryStats.Limit = 2000
-
-	stats.Networks["eth0"] = types.NetworkStats{
-		RxDropped: 1,
-		RxBytes:   2,
-		RxErrors:  3,
-		TxPackets: 4,
-		TxDropped: 1,
-		RxPackets: 2,
-		TxErrors:  3,
-		TxBytes:   4,
+	d := Docker{
+		newClient: func(string, *tls.Config) (Client, error) {
+			return &MockClient{
+				InfoF: func(ctx context.Context) (types.Info, error) {
+					return info, nil
+				},
+				ContainerListF: func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+					return containerList, nil
+				},
+				ContainerStatsF: func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+					return containerStatsWindows(), nil
+				},
+				ContainerInspectF: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+					return containerInspect, nil
+				},
+			}, nil
+		},
 	}
-
-	stats.Networks["eth1"] = types.NetworkStats{
-		RxDropped: 5,
-		RxBytes:   6,
-		RxErrors:  7,
-		TxPackets: 8,
-		TxDropped: 5,
-		RxPackets: 6,
-		TxErrors:  7,
-		TxBytes:   8,
-	}
-
-	sbr := types.BlkioStatEntry{
-		Major: 6,
-		Minor: 0,
-		Op:    "read",
-		Value: 100,
-	}
-	sr := types.BlkioStatEntry{
-		Major: 6,
-		Minor: 0,
-		Op:    "write",
-		Value: 101,
-	}
-	sr2 := types.BlkioStatEntry{
-		Major: 6,
-		Minor: 1,
-		Op:    "write",
-		Value: 201,
-	}
-
-	stats.BlkioStats.IoServiceBytesRecursive = append(
-		stats.BlkioStats.IoServiceBytesRecursive, sbr)
-	stats.BlkioStats.IoServicedRecursive = append(
-		stats.BlkioStats.IoServicedRecursive, sr)
-	stats.BlkioStats.IoServicedRecursive = append(
-		stats.BlkioStats.IoServicedRecursive, sr2)
-
-	return stats
+	err := d.Gather(&acc)
+	require.NoError(t, err)
 }
 
 func TestDockerGatherLabels(t *testing.T) {
@@ -480,41 +415,9 @@ func TestDockerGatherInfo(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"docker_container_mem",
 		map[string]interface{}{
-			"total_pgpgout":             uint64(0),
-			"usage_percent":             float64(0),
-			"rss":                       uint64(0),
-			"total_writeback":           uint64(0),
-			"active_anon":               uint64(0),
-			"total_pgmafault":           uint64(0),
-			"total_rss":                 uint64(0),
-			"total_unevictable":         uint64(0),
-			"active_file":               uint64(0),
-			"total_mapped_file":         uint64(0),
-			"pgpgin":                    uint64(0),
-			"total_active_file":         uint64(0),
-			"total_active_anon":         uint64(0),
-			"total_cache":               uint64(0),
-			"inactive_anon":             uint64(0),
-			"pgmajfault":                uint64(0),
-			"total_inactive_anon":       uint64(0),
-			"total_rss_huge":            uint64(0),
-			"rss_huge":                  uint64(0),
-			"hierarchical_memory_limit": uint64(0),
-			"pgpgout":                   uint64(0),
-			"unevictable":               uint64(0),
-			"total_inactive_file":       uint64(0),
-			"writeback":                 uint64(0),
-			"total_pgfault":             uint64(0),
-			"total_pgpgin":              uint64(0),
-			"cache":                     uint64(0),
-			"mapped_file":               uint64(0),
-			"inactive_file":             uint64(0),
-			"max_usage":                 uint64(0),
-			"fail_count":                uint64(0),
-			"pgfault":                   uint64(0),
-			"usage":                     uint64(0),
-			"limit":                     uint64(18935443456),
-			"container_id":              "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
+			"container_id":  "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
+			"limit":         uint64(18935443456),
+			"usage_percent": float64(0),
 		},
 		map[string]string{
 			"engine_host":       "absol",
