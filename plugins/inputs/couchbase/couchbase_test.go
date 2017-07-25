@@ -23,10 +23,10 @@ func TestGatherServer(t *testing.T) {
 	cb.gatherServer("mycluster", &acc, &pool)
 	acc.AssertContainsTaggedFields(t, "couchbase_node",
 		map[string]interface{}{"memory_free": 23181365248.0, "memory_total": 64424656896.0},
-		map[string]string{"cluster": "http://172.16.10.187:8092/", "hostname": "172.16.10.187:8091"})
+		map[string]string{"cluster": "mycluster", "hostname": "172.16.10.187:8091"})
 	acc.AssertContainsTaggedFields(t, "couchbase_node",
 		map[string]interface{}{"memory_free": 23665811456.0, "memory_total": 64424656896.0},
-		map[string]string{"cluster": "http://172.16.10.65:8092/", "hostname": "172.16.10.65:8091"})
+		map[string]string{"cluster": "mycluster", "hostname": "172.16.10.65:8091"})
 	acc.AssertContainsTaggedFields(t, "couchbase_bucket",
 		map[string]interface{}{
 			"quota_percent_used": 68.85424936294555,
@@ -38,6 +38,32 @@ func TestGatherServer(t *testing.T) {
 			"mem_used":           202156957464.0,
 		},
 		map[string]string{"cluster": "mycluster", "bucket": "blastro-df"})
+}
+
+func TestSanitizeURI(t *testing.T) {
+
+	var sanitizeTest = []struct {
+		input    string
+		expected string
+	}{
+		{"http://user:password@localhost:121", "localhost:121"},
+		{"user:password@localhost:12/endpoint", "localhost:12/endpoint"},
+		{"https://mail@address.com:password@localhost", "localhost"},
+		{"localhost", "localhost"},
+		{"user:password@localhost:2321", "localhost:2321"},
+	}
+
+	for _, test := range sanitizeTest {
+		result, err := sanitizeURI(test.input)
+
+		if err != nil {
+			t.Error(err)
+		}
+
+		if result != test.expected {
+			t.Errorf("TestSanitizeAddress: input %s, expected %s, actual %s", test.input, test.expected, result)
+		}
+	}
 }
 
 // From `/pools/default` on a real cluster
