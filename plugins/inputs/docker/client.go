@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
+	"github.com/docker/go-connections/sockets"
 )
 
 var (
@@ -30,11 +31,17 @@ func NewEnvClient() (Client, error) {
 }
 
 func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
+	proto, addr, _, err := docker.ParseHost(host)
+	if err != nil {
+		return nil, err
 	}
+
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+	sockets.ConfigureTransport(transport, proto, addr)
+	httpClient := &http.Client{Transport: transport}
+
 	client, err := docker.NewClient(host, version, httpClient, defaultHeaders)
 	if err != nil {
 		return nil, err
