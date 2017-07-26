@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
 )
@@ -16,10 +15,13 @@ func main() {
 		os.Exit(0)
 	}
 	collector, err := zipkin.NewHTTPCollector(
-		fmt.Sprintf("http://%s:9411/api/v1/spans", os.Args[1]))
+		fmt.Sprintf("http://%s:9411/api/v1/spans", os.Args[1]), zipkin.HTTPBatchSize(1), zipkin.HTTPMaxBacklog(100000))
+	defer collector.Close()
 	if err != nil {
 		log.Fatalf("error: ", err)
 	}
+
+	//zipkin.HTTPMaxBacklog(1000000)(collector.(*zipkin.HTTPCollector))
 	tracer, err := zipkin.NewTracer(
 		zipkin.NewRecorder(collector, false, "127.0.0.1:0", "trivial"))
 
@@ -27,13 +29,24 @@ func main() {
 		log.Fatalf("Error: %v\n", err)
 	}
 
-	log.Println("Writing 100 spans to zipkin impl...")
-	for i := 0; i < 100; i++ {
+	log.Println("Writing 1000000 spans to zipkin impl...")
+	//var wg sync.WaitGroup
+	for i := 0; i < 100000; i++ {
+
+		log.Printf("Writing span %d\n", i)
+		/*go func(i int) {
+			wg.Add(1)
+			defer wg.Done()
+			log.Println("Writing span %d\n", i)
+			parent := tracer.StartSpan("Parent")
+			parent.LogEvent(fmt.Sprintf("Trace%d", i))
+			parent.Finish()
+			time.Sleep(2 * time.Second)
+		}(i)*/
 		parent := tracer.StartSpan("Parent")
-		parent.LogEvent(fmt.Sprintf("Trace %d\n", i))
+		parent.LogEvent(fmt.Sprintf("Trace%d", i))
 		parent.Finish()
-		time.Sleep(10 * time.Microsecond)
+		//	time.Sleep(2 * time.Second)
 	}
 	log.Println("Done!")
-
 }
