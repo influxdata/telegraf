@@ -68,7 +68,7 @@ func sanitizeURI(uri string) (result string, err error) {
 		return
 	}
 
-	result = re.ReplaceAllString(uri, "")
+	result = re.ReplaceAllString(uri, "${1}")
 
 	return
 }

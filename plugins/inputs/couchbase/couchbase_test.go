@@ -46,11 +46,12 @@ func TestSanitizeURI(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"http://user:password@localhost:121", "localhost:121"},
+		{"http://user:password@localhost:121", "http://localhost:121"},
 		{"user:password@localhost:12/endpoint", "localhost:12/endpoint"},
-		{"https://mail@address.com:password@localhost", "localhost"},
+		{"https://mail@address.com:password@localhost", "https://localhost"},
 		{"localhost", "localhost"},
 		{"user:password@localhost:2321", "localhost:2321"},
+		{"http://user:password@couchbase-0.example.com:8091/endpoint", "http://couchbase-0.example.com:8091/endpoint"},
 	}
 
 	for _, test := range sanitizeTest {

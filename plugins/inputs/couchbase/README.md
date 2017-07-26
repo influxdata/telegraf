@@ -22,7 +22,7 @@
 ### couchbase_node
 
 Tags:
-- cluster: sanitized and scheme less string from `servers` configuration field e.g.: `http://user:password@couchbase-0.example.com:8091/endpoint` -> `couchbase-0.example.com:8091/endpoint`
+- cluster: sanitized string from `servers` configuration field e.g.: `http://user:password@couchbase-0.example.com:8091/endpoint` -> `http://couchbase-0.example.com:8091/endpoint`
 - hostname: Couchbase's name for the node and port, e.g., `172.16.10.187:8091`
 
 Fields:
