@@ -50,10 +50,9 @@ type counts []int64
 
 // groupedByCountFields contains grouped fields by their count and fields values
 type groupedByCountFields struct {
-	name   string
-	fields []string
-	tags   map[string]string
-	count  int64
+	name            string
+	tags            map[string]string
+	fieldsWithCount map[string]int64
 }
 
 // NewHistogramAggregator creates new histogram aggregator
@@ -146,17 +145,17 @@ func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
 
 	for _, aggregate := range h.cache {
 		for field, counts := range aggregate.histogramCollection {
-			h.groupFieldsByCount(&metricsWithGroupedFields, aggregate.name, field, copyTags(aggregate.tags), counts)
+			h.groupFieldsByBuckets(&metricsWithGroupedFields, aggregate.name, field, copyTags(aggregate.tags), counts)
 		}
 	}
 
 	for _, metric := range metricsWithGroupedFields {
-		acc.AddFields(metric.name, makeFieldsWithCount(metric.fields, metric.count), metric.tags)
+		acc.AddFields(metric.name, makeFieldsWithCount(metric.fieldsWithCount), metric.tags)
 	}
 }
 
-// groupFieldsByCount groups fields by count value
-func (h *HistogramAggregator) groupFieldsByCount(
+// groupFieldsByBuckets groups fields by metric buckets which are represented as tags
+func (h *HistogramAggregator) groupFieldsByBuckets(
 	metricsWithGroupedFields *[]groupedByCountFields,
 	name string,
 	field string,
@@ -186,15 +185,19 @@ func (h *HistogramAggregator) groupField(
 	tags map[string]string,
 ) {
 	for key, metric := range *metricsWithGroupedFields {
-		if name == metric.name && count == metric.count && isTagsIdentical(tags, metric.tags) {
-			(*metricsWithGroupedFields)[key].fields = append(metric.fields, field)
+		if name == metric.name && isTagsIdentical(tags, metric.tags) {
+			(*metricsWithGroupedFields)[key].fieldsWithCount[field] = count
 			return
 		}
 	}
 
+	fieldsWithCount := map[string]int64{
+		field: count,
+	}
+
 	*metricsWithGroupedFields = append(
 		*metricsWithGroupedFields,
-		groupedByCountFields{name: name, fields: []string{field}, count: count, tags: tags},
+		groupedByCountFields{name: name, tags: tags, fieldsWithCount: fieldsWithCount},
 	)
 }
 
@@ -295,13 +298,13 @@ func isTagsIdentical(originalTags, checkedTags map[string]string) bool {
 }
 
 // makeFieldsWithCount assigns count value to all metric fields
-func makeFieldsWithCount(fields []string, count int64) map[string]interface{} {
-	fieldsWithCount := map[string]interface{}{}
-	for _, field := range fields {
-		fieldsWithCount[field+"_bucket"] = count
+func makeFieldsWithCount(fieldsWithCountIn map[string]int64) map[string]interface{} {
+	fieldsWithCountOut := map[string]interface{}{}
+	for field, count := range fieldsWithCountIn {
+		fieldsWithCountOut[field+"_bucket"] = count
 	}
 
-	return fieldsWithCount
+	return fieldsWithCountOut
 }
 
 // init initializes histogram aggregator plugin
