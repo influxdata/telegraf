@@ -17,8 +17,10 @@ github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/go-xerial-snappy bb955e01b9346ac19dc29eb16586c90ded99a98c
 github.com/eapache/queue 44cc805cf13205b55f69e14bcb69867d1ae92f98
 github.com/eclipse/paho.mqtt.golang d4f545eb108a2d19f9b1a735689dbfb719bc21fb
+github.com/go-logfmt/logfmt 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/gobwas/glob bea32b9cd2d6f55753d94a28e959b13f0244797a
+github.com/gogo/protobuf 7b6c6391c4ff245962047fc1e2c6e08b1cdfa0e8
 github.com/golang/protobuf 8ee79997227bf9b34611aee7946ae64735e6fd93
 github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
@@ -38,6 +40,8 @@ github.com/nats-io/go-nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nuid 289cccf02c178dc782430d534e3c1f5b72af807f
 github.com/nsqio/go-nsq a53d495e81424aaf7a7665a9d32a97715c40e953
+github.com/opentracing-contrib/go-observer a52f2342449246d5bcc273e65cbdcfa5f7d6c63c
+github.com/opentracing/opentracing-go 06f47b42c792fef2796e9681353e1d908c417827
 github.com/openzipkin/zipkin-go-opentracing 1cafbdfde94fbf2b373534764e0863aa3bd0bf7b
 github.com/pierrec/lz4 5c9560bfa9ace2bf86080bf40d46b34ae44604df
 github.com/pierrec/xxHash 5a004441f897722c627870a981d02b29924215fa
