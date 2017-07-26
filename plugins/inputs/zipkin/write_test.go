@@ -13,7 +13,7 @@ func BenchmarkWrites(b *testing.B) {
 	collector, err := zipkin.NewHTTPCollector(
 		fmt.Sprintf("http://%s:9411/api/v1/spans", "localhost"))
 	if err != nil {
-		log.Fatalf("error: ", err)
+		log.Fatalf("error: %v", err)
 	}
 	tracer, err := zipkin.NewTracer(
 		zipkin.NewRecorder(collector, false, "127.0.0.1:0", "trivial"))
