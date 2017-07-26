@@ -70,7 +70,7 @@
 - [#2906](https://github.com/influxdata/telegraf/issues/2906): Fix panic in logparser if file cannot be opened.
 - [#2886](https://github.com/influxdata/telegraf/issues/2886): Default to localhost if zookeeper has no servers set.
 
-## v1.3.5 [unreleased]
+## v1.3.5 [2017-07-26]
 
 ### Bugfixes
 
