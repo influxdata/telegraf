@@ -62,16 +62,14 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) er
 
 	// Counter groups
 	for _, cg := range stats.Server.CounterGroups {
-		tags := map[string]string{"url": url, "type": cg.Type}
-		fields := make(map[string]interface{})
-
 		for _, c := range cg.Counters {
 			if cg.Type == "opcode" && strings.HasPrefix(c.Name, "RESERVED") {
 				continue
 			}
 
-			tags["name"] = c.Name
-			fields["value"] = c.Value
+			tags := map[string]string{"url": url, "type": cg.Type, "name": c.Name}
+			fields := map[string]interface{}{"value": c.Value}
+
 			acc.AddCounter("bind_counter", fields, tags)
 		}
 	}
@@ -88,12 +86,10 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) er
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
-		tags := map[string]string{"url": url}
-
 		for _, c := range stats.Memory.Contexts {
-			tags["id"] = c.Id
-			tags["name"] = c.Name
+			tags := map[string]string{"url": url, "id": c.Id, "name": c.Name}
 			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
+
 			acc.AddGauge("bind_memory_context", fields, tags)
 		}
 	}
@@ -101,15 +97,16 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) er
 	// Detailed, per-view stats
 	if b.GatherViews {
 		for _, v := range stats.Views {
-			tags := map[string]string{"url": url, "view": v.Name}
-			fields := make(map[string]interface{})
-
 			for _, cg := range v.CounterGroups {
-				tags["type"] = cg.Type
-
 				for _, c := range cg.Counters {
-					tags["name"] = c.Name
-					fields["value"] = c.Value
+					tags := map[string]string{
+						"url":  url,
+						"view": v.Name,
+						"type": cg.Type,
+						"name": c.Name,
+					}
+					fields := map[string]interface{}{"value": c.Value}
+
 					acc.AddCounter("bind_counter", fields, tags)
 				}
 			}

@@ -1,12 +1,12 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="/bind9.xsl"?>
 <statistics version="3.6">
   <server>
-    <boot-time>2016-10-23T21:58:54Z</boot-time>
-    <config-time>2016-10-23T21:58:54Z</config-time>
-    <current-time>2016-10-23T21:59:15Z</current-time>
+    <boot-time>2017-07-21T11:53:28Z</boot-time>
+    <config-time>2017-07-21T11:53:28Z</config-time>
+    <current-time>2017-07-25T23:47:08Z</current-time>
     <counters type="opcode">
-      <counter name="QUERY">1</counter>
+      <counter name="QUERY">74941</counter>
       <counter name="IQUERY">0</counter>
       <counter name="STATUS">0</counter>
       <counter name="RESERVED3">0</counter>
@@ -24,38 +24,47 @@
       <counter name="RESERVED15">0</counter>
     </counters>
     <counters type="qtype">
-      <counter name="A">1</counter>
+      <counter name="A">63672</counter>
+      <counter name="NS">373</counter>
+      <counter name="SOA">18</counter>
+      <counter name="PTR">3393</counter>
+      <counter name="MX">618</counter>
+      <counter name="TXT">970</counter>
+      <counter name="AAAA">5735</counter>
+      <counter name="SRV">139</counter>
+      <counter name="RRSIG">1</counter>
+      <counter name="ANY">22</counter>
     </counters>
     <counters type="nsstat">
-      <counter name="Requestv4">1</counter>
+      <counter name="Requestv4">74942</counter>
       <counter name="Requestv6">0</counter>
-      <counter name="ReqEdns0">0</counter>
+      <counter name="ReqEdns0">9250</counter>
       <counter name="ReqBadEDNSVer">0</counter>
       <counter name="ReqTSIG">0</counter>
       <counter name="ReqSIG0">0</counter>
       <counter name="ReqBadSIG">0</counter>
-      <counter name="ReqTCP">0</counter>
+      <counter name="ReqTCP">260</counter>
       <counter name="AuthQryRej">0</counter>
-      <counter name="RecQryRej">0</counter>
+      <counter name="RecQryRej">35</counter>
       <counter name="XfrRej">0</counter>
       <counter name="UpdateRej">0</counter>
-      <counter name="Response">1</counter>
-      <counter name="TruncatedResp">0</counter>
-      <counter name="RespEDNS0">0</counter>
+      <counter name="Response">63264</counter>
+      <counter name="TruncatedResp">365</counter>
+      <counter name="RespEDNS0">9250</counter>
       <counter name="RespTSIG">0</counter>
       <counter name="RespSIG0">0</counter>
-      <counter name="QrySuccess">1</counter>
-      <counter name="QryAuthAns">0</counter>
-      <counter name="QryNoauthAns">1</counter>
+      <counter name="QrySuccess">49044</counter>
+      <counter name="QryAuthAns">2752</counter>
+      <counter name="QryNoauthAns">60354</counter>
       <counter name="QryReferral">0</counter>
-      <counter name="QryNxrrset">0</counter>
-      <counter name="QrySERVFAIL">0</counter>
+      <counter name="QryNxrrset">2452</counter>
+      <counter name="QrySERVFAIL">122</counter>
       <counter name="QryFORMERR">0</counter>
-      <counter name="QryNXDOMAIN">0</counter>
-      <counter name="QryRecursion">1</counter>
-      <counter name="QryDuplicate">0</counter>
-      <counter name="QryDropped">0</counter>
-      <counter name="QryFailure">0</counter>
+      <counter name="QryNXDOMAIN">11610</counter>
+      <counter name="QryRecursion">53750</counter>
+      <counter name="QryDuplicate">11667</counter>
+      <counter name="QryDropped">11</counter>
+      <counter name="QryFailure">35</counter>
       <counter name="XfrReqDone">0</counter>
       <counter name="UpdateReqFwd">0</counter>
       <counter name="UpdateRespFwd">0</counter>
@@ -68,11 +77,11 @@
       <counter name="RateDropped">0</counter>
       <counter name="RateSlipped">0</counter>
       <counter name="RPZRewrites">0</counter>
-      <counter name="QryUDP">1</counter>
-      <counter name="QryTCP">0</counter>
+      <counter name="QryUDP">74648</counter>
+      <counter name="QryTCP">258</counter>
       <counter name="NSIDOpt">0</counter>
       <counter name="ExpireOpt">0</counter>
-      <counter name="OtherOpt">0</counter>
+      <counter name="OtherOpt">59</counter>
       <counter name="SitOpt">0</counter>
       <counter name="SitNew">0</counter>
       <counter name="SitBadSize">0</counter>
@@ -97,10 +106,10 @@
     </counters>
     <counters type="resstat"/>
     <counters type="sockstat">
-      <counter name="UDP4Open">17</counter>
-      <counter name="UDP6Open">2</counter>
-      <counter name="TCP4Open">7</counter>
-      <counter name="TCP6Open">2</counter>
+      <counter name="UDP4Open">92542</counter>
+      <counter name="UDP6Open">0</counter>
+      <counter name="TCP4Open">48</counter>
+      <counter name="TCP6Open">0</counter>
       <counter name="UnixOpen">0</counter>
       <counter name="RawOpen">1</counter>
       <counter name="UDP4OpenFail">0</counter>
@@ -109,14 +118,14 @@
       <counter name="TCP6OpenFail">0</counter>
       <counter name="UnixOpenFail">0</counter>
       <counter name="RawOpenFail">0</counter>
-      <counter name="UDP4Close">13</counter>
+      <counter name="UDP4Close">92538</counter>
       <counter name="UDP6Close">0</counter>
-      <counter name="TCP4Close">3</counter>
+      <counter name="TCP4Close">336</counter>
       <counter name="TCP6Close">0</counter>
       <counter name="UnixClose">0</counter>
       <counter name="FDWatchClose">0</counter>
       <counter name="RawClose">0</counter>
-      <counter name="UDP4BindFail">0</counter>
+      <counter name="UDP4BindFail">1</counter>
       <counter name="UDP6BindFail">0</counter>
       <counter name="TCP4BindFail">0</counter>
       <counter name="TCP6BindFail">0</counter>
@@ -128,16 +137,16 @@
       <counter name="TCP6ConnFail">0</counter>
       <counter name="UnixConnFail">0</counter>
       <counter name="FDwatchConnFail">0</counter>
-      <counter name="UDP4Conn">11</counter>
+      <counter name="UDP4Conn">92535</counter>
       <counter name="UDP6Conn">0</counter>
-      <counter name="TCP4Conn">3</counter>
+      <counter name="TCP4Conn">44</counter>
       <counter name="TCP6Conn">0</counter>
       <counter name="UnixConn">0</counter>
       <counter name="FDwatchConn">0</counter>
       <counter name="TCP4AcceptFail">0</counter>
       <counter name="TCP6AcceptFail">0</counter>
       <counter name="UnixAcceptFail">0</counter>
-      <counter name="TCP4Accept">1</counter>
+      <counter name="TCP4Accept">293</counter>
       <counter name="TCP6Accept">0</counter>
       <counter name="UnixAccept">0</counter>
       <counter name="UDP4SendErr">0</counter>
@@ -146,7 +155,7 @@
       <counter name="TCP6SendErr">0</counter>
       <counter name="UnixSendErr">0</counter>
       <counter name="FDwatchSendErr">0</counter>
-      <counter name="UDP4RecvErr">0</counter>
+      <counter name="UDP4RecvErr">14</counter>
       <counter name="UDP6RecvErr">0</counter>
       <counter name="TCP4RecvErr">0</counter>
       <counter name="TCP6RecvErr">0</counter>
@@ -154,9 +163,9 @@
       <counter name="FDwatchRecvErr">0</counter>
       <counter name="RawRecvErr">0</counter>
       <counter name="UDP4Active">4</counter>
-      <counter name="UDP6Active">2</counter>
-      <counter name="TCP4Active">5</counter>
-      <counter name="TCP6Active">2</counter>
+      <counter name="UDP6Active">0</counter>
+      <counter name="TCP4Active">297</counter>
+      <counter name="TCP6Active">0</counter>
       <counter name="UnixActive">0</counter>
       <counter name="RawActive">1</counter>
     </counters>
@@ -164,47 +173,52 @@
   <views>
     <view name="_default">
       <counters type="resqtype">
-        <counter name="A">2</counter>
-        <counter name="NS">2</counter>
-        <counter name="DS">2</counter>
-        <counter name="DNSKEY">2</counter>
+        <counter name="A">61568</counter>
+        <counter name="NS">9126</counter>
+        <counter name="PTR">1249</counter>
+        <counter name="MX">286</counter>
+        <counter name="TXT">942</counter>
+        <counter name="AAAA">3933</counter>
+        <counter name="SRV">21</counter>
+        <counter name="DS">13749</counter>
+        <counter name="DNSKEY">1699</counter>
       </counters>
       <counters type="resstats">
-        <counter name="Queryv4">8</counter>
+        <counter name="Queryv4">92573</counter>
         <counter name="Queryv6">0</counter>
-        <counter name="Responsev4">8</counter>
+        <counter name="Responsev4">92135</counter>
         <counter name="Responsev6">0</counter>
-        <counter name="NXDOMAIN">0</counter>
-        <counter name="SERVFAIL">0</counter>
+        <counter name="NXDOMAIN">8182</counter>
+        <counter name="SERVFAIL">318</counter>
         <counter name="FORMERR">0</counter>
         <counter name="OtherError">0</counter>
         <counter name="EDNS0Fail">0</counter>
         <counter name="Mismatch">0</counter>
-        <counter name="Truncated">1</counter>
-        <counter name="Lame">0</counter>
-        <counter name="Retry">1</counter>
+        <counter name="Truncated">42</counter>
+        <counter name="Lame">12</counter>
+        <counter name="Retry">800</counter>
         <counter name="QueryAbort">0</counter>
         <counter name="QuerySockFail">0</counter>
         <counter name="QueryCurUDP">0</counter>
         <counter name="QueryCurTCP">0</counter>
-        <counter name="QueryTimeout">0</counter>
-        <counter name="GlueFetchv4">0</counter>
+        <counter name="QueryTimeout">490</counter>
+        <counter name="GlueFetchv4">1398</counter>
         <counter name="GlueFetchv6">0</counter>
-        <counter name="GlueFetchv4Fail">0</counter>
+        <counter name="GlueFetchv4Fail">3</counter>
         <counter name="GlueFetchv6Fail">0</counter>
-        <counter name="ValAttempt">7</counter>
-        <counter name="ValOk">6</counter>
-        <counter name="ValNegOk">1</counter>
-        <counter name="ValFail">0</counter>
+        <counter name="ValAttempt">90256</counter>
+        <counter name="ValOk">67322</counter>
+        <counter name="ValNegOk">22850</counter>
+        <counter name="ValFail">6</counter>
         <counter name="QryRTT10">0</counter>
-        <counter name="QryRTT100">8</counter>
-        <counter name="QryRTT500">0</counter>
-        <counter name="QryRTT800">0</counter>
-        <counter name="QryRTT1600">0</counter>
+        <counter name="QryRTT100">45760</counter>
+        <counter name="QryRTT500">45543</counter>
+        <counter name="QryRTT800">743</counter>
+        <counter name="QryRTT1600">75</counter>
         <counter name="QryRTT1600+">0</counter>
         <counter name="NumFetch">0</counter>
         <counter name="BucketSize">31</counter>
-        <counter name="REFUSED">0</counter>
+        <counter name="REFUSED">34</counter>
         <counter name="SitClientOut">0</counter>
         <counter name="SitOut">0</counter>
         <counter name="SitIn">0</counter>
@@ -216,54 +230,78 @@
       <cache name="internal">
         <rrset>
           <name>A</name>
-          <counter>1</counter>
+          <counter>195</counter>
         </rrset>
         <rrset>
           <name>NS</name>
-          <counter>1</counter>
+          <counter>42</counter>
         </rrset>
         <rrset>
           <name>CNAME</name>
-          <counter>1</counter>
+          <counter>7</counter>
         </rrset>
         <rrset>
-          <name>DS</name>
-          <counter>1</counter>
+          <name>PTR</name>
+          <counter>48</counter>
         </rrset>
         <rrset>
-          <name>RRSIG</name>
+          <name>MX</name>
+          <counter>7</counter>
+        </rrset>
+        <rrset>
+          <name>TXT</name>
+          <counter>6</counter>
+        </rrset>
+        <rrset>
+          <name>AAAA</name>
           <counter>4</counter>
         </rrset>
         <rrset>
+          <name>DS</name>
+          <counter>97</counter>
+        </rrset>
+        <rrset>
+          <name>RRSIG</name>
+          <counter>258</counter>
+        </rrset>
+        <rrset>
+          <name>NSEC</name>
+          <counter>89</counter>
+        </rrset>
+        <rrset>
           <name>DNSKEY</name>
-          <counter>2</counter>
+          <counter>60</counter>
         </rrset>
         <rrset>
           <name>!DS</name>
-          <counter>1</counter>
+          <counter>29</counter>
+        </rrset>
+        <rrset>
+          <name>NXDOMAIN</name>
+          <counter>25</counter>
         </rrset>
       </cache>
       <counters type="adbstat">
         <counter name="nentries">1021</counter>
-        <counter name="entriescnt">26</counter>
+        <counter name="entriescnt">314</counter>
         <counter name="nnames">1021</counter>
-        <counter name="namescnt">13</counter>
+        <counter name="namescnt">316</counter>
       </counters>
       <counters type="cachestats">
-        <counter name="CacheHits">54</counter>
-        <counter name="CacheMisses">36</counter>
-        <counter name="QueryHits">0</counter>
-        <counter name="QueryMisses">15</counter>
+        <counter name="CacheHits">1904593</counter>
+        <counter name="CacheMisses">96</counter>
+        <counter name="QueryHits">336094</counter>
+        <counter name="QueryMisses">369336</counter>
         <counter name="DeleteLRU">0</counter>
-        <counter name="DeleteTTL">0</counter>
-        <counter name="CacheNodes">5</counter>
-        <counter name="CacheBuckets">64</counter>
-        <counter name="TreeMemTotal">287392</counter>
-        <counter name="TreeMemInUse">34936</counter>
-        <counter name="TreeMemMax">35656</counter>
-        <counter name="HeapMemTotal">286720</counter>
-        <counter name="HeapMemInUse">25600</counter>
-        <counter name="HeapMemMax">25600</counter>
+        <counter name="DeleteTTL">47518</counter>
+        <counter name="CacheNodes">769</counter>
+        <counter name="CacheBuckets">519</counter>
+        <counter name="TreeMemTotal">1464363</counter>
+        <counter name="TreeMemInUse">392128</counter>
+        <counter name="TreeMemMax">828966</counter>
+        <counter name="HeapMemTotal">393216</counter>
+        <counter name="HeapMemInUse">132096</counter>
+        <counter name="HeapMemMax">132096</counter>
       </counters>
     </view>
     <view name="_bind">
@@ -355,10 +393,10 @@
     <contexts>
     </contexts>
     <summary>
-      <TotalUse>15149051</TotalUse>
-      <InUse>4203528</InUse>
-      <BlockSize>8650752</BlockSize>
-      <ContextSize>5195560</ContextSize>
+      <TotalUse>777821909</TotalUse>
+      <InUse>6000232</InUse>
+      <BlockSize>45875200</BlockSize>
+      <ContextSize>10037400</ContextSize>
       <Lost>0</Lost>
     </summary>
   </memory>
