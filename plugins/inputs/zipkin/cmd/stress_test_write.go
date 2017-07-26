@@ -1,27 +1,45 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"os"
+	"time"
 
 	zipkin "github.com/openzipkin/zipkin-go-opentracing"
 )
 
+var (
+	BatchSize         int
+	MaxBackLog        int
+	BatchTimeInterval int
+	SpanCount         int
+	ZipkinServerHost  string
+)
+
+const usage = `./stress_test_write -batch_size=<batch_size> -max_backlog=<max_span_buffer_backlog> -batch_interval=<batch_interval_in_seconds> -span_count<number_of_spans_to_write> -zipkin_host=<zipkin_service_hostname>`
+
+func init() {
+	flag.IntVar(&BatchSize, "batch_size", 10000, usage)
+	flag.IntVar(&MaxBackLog, "max_backlog", 100000, usage)
+	flag.IntVar(&BatchTimeInterval, "batch_interval", 1, usage)
+	flag.IntVar(&SpanCount, "span_count", 100000, usage)
+	flag.StringVar(&ZipkinServerHost, "zipkin_host", "localhost", usage)
+}
+
 func main() {
-	// 1) Create a opentracing.Tracer that sends data to Zipkin
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Need 1 argument\n")
-		os.Exit(0)
-	}
+	flag.Parse()
+	var hostname = fmt.Sprintf("http://%s:9411/api/v1/spans", ZipkinServerHost)
 	collector, err := zipkin.NewHTTPCollector(
-		fmt.Sprintf("http://%s:9411/api/v1/spans", os.Args[1]), zipkin.HTTPBatchSize(1), zipkin.HTTPMaxBacklog(100000))
+		hostname,
+		zipkin.HTTPBatchSize(BatchSize),
+		zipkin.HTTPMaxBacklog(MaxBackLog),
+		zipkin.HTTPBatchInterval(time.Duration(BatchTimeInterval)*time.Second))
 	defer collector.Close()
 	if err != nil {
-		log.Fatalf("error: ", err)
+		log.Fatalf("Error intializing zipkin http collector: %v\n", err)
 	}
 
-	//zipkin.HTTPMaxBacklog(1000000)(collector.(*zipkin.HTTPCollector))
 	tracer, err := zipkin.NewTracer(
 		zipkin.NewRecorder(collector, false, "127.0.0.1:0", "trivial"))
 
@@ -29,24 +47,11 @@ func main() {
 		log.Fatalf("Error: %v\n", err)
 	}
 
-	log.Println("Writing 1000000 spans to zipkin impl...")
-	//var wg sync.WaitGroup
-	for i := 0; i < 100000; i++ {
-
-		log.Printf("Writing span %d\n", i)
-		/*go func(i int) {
-			wg.Add(1)
-			defer wg.Done()
-			log.Println("Writing span %d\n", i)
-			parent := tracer.StartSpan("Parent")
-			parent.LogEvent(fmt.Sprintf("Trace%d", i))
-			parent.Finish()
-			time.Sleep(2 * time.Second)
-		}(i)*/
+	log.Printf("Writing %d spans to zipkin server at %s\n", SpanCount, hostname)
+	for i := 0; i < SpanCount; i++ {
 		parent := tracer.StartSpan("Parent")
 		parent.LogEvent(fmt.Sprintf("Trace%d", i))
 		parent.Finish()
-		//	time.Sleep(2 * time.Second)
 	}
-	log.Println("Done!")
+	log.Println("Done. Flushing remaining spans...")
 }
