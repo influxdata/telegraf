@@ -1,6 +1,7 @@
 package zipkin
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"sync"
@@ -35,6 +36,7 @@ func (s *SpanHandler) Register(router *mux.Router, recorder Recorder) error {
 
 // Spans handles zipkin thrift spans
 func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Got request from host: ", r.Host)
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
