@@ -44,6 +44,7 @@
 - [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 - [#2612](https://github.com/influxdata/telegraf/pull/2612): Add input plugin for OpenLDAP.
 - [#3042](https://github.com/influxdata/telegraf/pull/3042): Add network option to dns_query.
+- [#3054](https://github.com/influxdata/telegraf/pull/3054): Add redis_version field to redis input.
 
 ### Bugfixes
 
@@ -66,6 +67,8 @@
 - [#3036](https://github.com/influxdata/telegraf/pull/3036): Fix filtering when both pass and drop match an item.
 - [#2964](https://github.com/influxdata/telegraf/issues/2964): Only report cpu usage for online cpus in docker input.
 - [#3050](https://github.com/influxdata/telegraf/pull/3050): Start first aggregator period at startup time.
+- [#2906](https://github.com/influxdata/telegraf/issues/2906): Fix panic in logparser if file cannot be opened.
+- [#2886](https://github.com/influxdata/telegraf/issues/2886): Default to localhost if zookeeper has no servers set.
 
 ## v1.3.5 [unreleased]
 
