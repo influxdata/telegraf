@@ -112,7 +112,7 @@ func (z *Zipkin) Gather(acc telegraf.Accumulator) error { return nil }
 // Start launches a separate goroutine for collecting zipkin client http requests,
 // passing in a telegraf.Accumulator such that data can be collected.
 func (z *Zipkin) Start(acc telegraf.Accumulator) error {
-	log.Println("starting...")
+	log.Println("starting zipkin plugin...")
 	if z.handler == nil {
 		z.handler = NewSpanHandler(z.Path)
 	}
