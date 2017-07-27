@@ -20,7 +20,7 @@ type LibratoWithTags struct {
 	APIToken  string `toml:"api_token"`
 	Debug     bool
 	Timeout   internal.Duration
-	Prefix  string
+	Prefix    string
 
 	APIUrl string
 	client *http.Client
