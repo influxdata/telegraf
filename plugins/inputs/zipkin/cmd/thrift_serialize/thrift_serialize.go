@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -24,8 +23,6 @@ var (
 const usage = `./json_serialize -input <input> -output output`*/
 
 func main() {
-
-	flag.Parse()
 	b, err := ioutil.ReadFile("../testdata/json/distributed_trace_sample.json")
 	if err != nil {
 		log.Fatalf("error: %v\n", err)
