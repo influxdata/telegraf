@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/NYTimes/gziphandler"
@@ -27,11 +28,41 @@ func NewSpanHandler(path string) *SpanHandler {
 	}
 }
 
+func cors(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if origin := r.Header.Get("Origin"); origin != "" {
+			w.Header().Set(`Access-Control-Allow-Origin`, origin)
+			w.Header().Set(`Access-Control-Allow-Methods`, strings.Join([]string{
+				`GET`,
+				`OPTIONS`,
+			}, ", "))
+
+			w.Header().Set(`Access-Control-Allow-Headers`, strings.Join([]string{
+				`Accept`,
+				`Accept-Encoding`,
+				`Content-Length`,
+				`Content-Type`,
+			}, ", "))
+
+			w.Header().Set(`Access-Control-Expose-Headers`, strings.Join([]string{
+				`Date`,
+			}, ", "))
+		}
+
+		if r.Method == "OPTIONS" {
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
+
 // Register implements the Service interface. Register accepts zipkin thrift data
 // POSTed to the path of the mux router
 func (s *SpanHandler) Register(router *mux.Router, recorder Recorder) error {
 	handler := gziphandler.GzipHandler(http.HandlerFunc(s.Spans))
-	//TODO: add more middleware
+	//TODO: add more cors middleware
+
 	router.Handle(s.Path, handler).Methods("POST")
 	s.recorder = recorder
 	return nil
