@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/NYTimes/gziphandler"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/gorilla/mux"
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
@@ -29,7 +30,9 @@ func NewSpanHandler(path string) *SpanHandler {
 // Register implements the Service interface. Register accepts zipkin thrift data
 // POSTed to the path of the mux router
 func (s *SpanHandler) Register(router *mux.Router, recorder Recorder) error {
-	router.HandleFunc(s.Path, s.Spans).Methods("POST")
+	handler := gziphandler.GzipHandler(http.HandlerFunc(s.Spans))
+	//TODO: add more middleware
+	router.Handle(s.Path, handler).Methods("POST")
 	s.recorder = recorder
 	return nil
 }
