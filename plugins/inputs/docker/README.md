@@ -21,7 +21,8 @@ for the stat structure can be found
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
 
-  ## Only collect metrics for these containers. Values will be appended to container_name_include.
+  ## Only collect metrics for these containers. Values will be appended to
+  ## container_name_include.
   ## Deprecated (1.4.0), use container_name_include
   container_names = []
 
@@ -38,7 +39,10 @@ for the stat structure can be found
 
   ## Whether to report for each container total blkio and network stats or not
   total = false
-  
+
+  ## Which environment variables should we use as a tag
+  tag_env = ["JAVA_HOME", "HEAP_SIZE"]
+
   ## docker labels to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
@@ -46,6 +50,13 @@ for the stat structure can be found
   
   ## Which environment variables should we use as a tag
   tag_env = ["JAVA_HOME", "HEAP_SIZE"]
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 ### Measurements & Fields:
