@@ -20,7 +20,7 @@ type LibratoWithTags struct {
 	APIToken  string `toml:"api_token"`
 	Debug     bool
 	Timeout   internal.Duration
-	Template  string
+	Prefix  string
 
 	APIUrl string
 	client *http.Client
@@ -40,8 +40,8 @@ var sampleConfig = `
   # debug = false
   ## Connection timeout.
   # timeout = "5s"
-  ## Output source Templat
-  template = "host"
+  ## Metrics prefix, used for the metric/measurement name prefix
+  prefix = "telegraf"
 `
 
 // Ligrato API endpoint
@@ -63,11 +63,11 @@ type Measurement struct {
 	MeasureTime int64   `json:"time"`
 }
 
-// NewLibratoWithTags is the main constructor for librato output plugins
+// NewLibratoWithTags is the main constructor for librato output plugin
 func NewLibratoWithTags(apiURL string) *LibratoWithTags {
 	return &LibratoWithTags{
 		APIUrl:   apiURL,
-		Template: "host",
+		Prefix: "telegraf",
 	}
 }
 
@@ -89,9 +89,7 @@ func (l *LibratoWithTags) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	if l.Template == "" {
-		l.Template = "host"
-	}
+
 
 	tempMeasurements := []*Measurement{}
 
@@ -99,12 +97,12 @@ func (l *LibratoWithTags) Write(metrics []telegraf.Metric) error {
 		if measurements, err := l.buildMeasurements(m); err == nil {
 			for _, measurement := range measurements {
 				tempMeasurements = append(tempMeasurements, measurement)
-				log.Printf("D! Got a gauge: %v\n", measurement)
+				log.Printf("D! Got a measurement: %v\n", measurement)
 
 			}
 		} else {
-			log.Printf("I! unable to build Gauge for %s, skipping\n", m.Name())
-			log.Printf("D! Couldn't build gauge: %v\n", err)
+			log.Printf("I! unable to build Measurement for %s, skipping\n", m.Name())
+			log.Printf("D! Couldn't build Measurement: %v\n", err)
 
 		}
 	}
@@ -182,10 +180,17 @@ func (l *LibratoWithTags) buildMeasurements(m telegraf.Metric) ([]*Measurement, 
 
 	for fieldName, value := range m.Fields() {
 
+    if l.Prefix == "" {
+		  l.Prefix = "telegraf"
+	  }
+
+    // prepare metric name:
 		metricName := m.Name()
-		if fieldName != "value" {
-			metricName = fmt.Sprintf("%s.%s", m.Name(), fieldName)
-		}
+    if fieldName != "value" {
+      metricName = fmt.Sprintf("%s.%s.%s", l.Prefix, m.Name(), fieldName)
+    } else {
+      metricName = fmt.Sprintf("%s.%s", l.Prefix, m.Name())
+    }
 
 		measurement := &Measurement{
 			Name:        reUnacceptedChar.ReplaceAllString(metricName, "-"),
@@ -240,7 +245,7 @@ func (l *LibratoWithTags) Close() error {
 }
 
 func init() {
-	outputs.Add("librato", func() telegraf.Output {
+	outputs.Add("librato_with_tags", func() telegraf.Output {
 		return NewLibratoWithTags(libratoAPI)
 	})
 }
