@@ -19,6 +19,7 @@ var (
 type Ipmi struct {
 	Path    string
 	Servers []string
+	Timeout internal.Duration
 }
 
 var sampleConfig = `
@@ -33,6 +34,13 @@ var sampleConfig = `
   ## if no servers are specified, local machine sensor stats will be queried
   ##
   # servers = ["USERID:PASSW0RD@lan(192.168.1.1)"]
+
+  ## Recomended: use metric 'interval' that is a multiple of 'timeout' to avoid
+  ## gaps or overlap in pulled data
+  interval = "30s"
+
+  ## Timeout for the ipmitool command to complete
+  timeout = "20s"
 `
 
 func (m *Ipmi) SampleConfig() string {
@@ -78,7 +86,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 
 	opts = append(opts, "sdr")
 	cmd := execCommand(m.Path, opts...)
-	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
+	out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
@@ -152,6 +160,7 @@ func init() {
 	if len(path) > 0 {
 		m.Path = path
 	}
+	m.Timeout = internal.Duration{Duration: time.Second * 20}
 	inputs.Add("ipmi_sensor", func() telegraf.Input {
 		m := m
 		return &m

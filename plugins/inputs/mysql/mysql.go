@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/go-sql-driver/mysql"
@@ -36,11 +37,14 @@ type Mysql struct {
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
 	IntervalSlow                        string   `toml:"interval_slow"`
+	SSLCA                               string   `toml:"ssl_ca"`
+	SSLCert                             string   `toml:"ssl_cert"`
+	SSLKey                              string   `toml:"ssl_key"`
 }
 
 var sampleConfig = `
   ## specify servers via a url matching:
-  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
   ##  e.g.
   ##    servers = ["user:passwd@tcp(127.0.0.1:3306)/?tls=false"]
@@ -97,6 +101,11 @@ var sampleConfig = `
   #
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
   interval_slow                   = "30m"
+
+  ## Optional SSL Config (will be used if tls=custom parameter specified in server uri)
+  ssl_ca = "/etc/telegraf/ca.pem"
+  ssl_cert = "/etc/telegraf/cert.pem"
+  ssl_key = "/etc/telegraf/key.pem"
 `
 
 var defaultTimeout = time.Second * time.Duration(5)
@@ -135,6 +144,16 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	if !initDone {
 		m.InitMysql()
 	}
+
+	tlsConfig, err := internal.GetTLSConfig(m.SSLCert, m.SSLKey, m.SSLCA, false)
+	if err != nil {
+		log.Printf("E! MySQL Error registering TLS config: %s", err)
+	}
+
+	if tlsConfig != nil {
+		mysql.RegisterTLSConfig("custom", tlsConfig)
+	}
+
 	var wg sync.WaitGroup
 
 	// Loop through each server and collect metrics
@@ -858,42 +877,45 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 		case "Queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["queries"] = i
 			}
-
-			fields["queries"] = i
 		case "Questions":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["questions"] = i
 			}
-
-			fields["questions"] = i
 		case "Slow_queries":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["slow_queries"] = i
 			}
-
-			fields["slow_queries"] = i
 		case "Connections":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["connections"] = i
 			}
-			fields["connections"] = i
 		case "Syncs":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["syncs"] = i
 			}
-			fields["syncs"] = i
 		case "Uptime":
 			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
 			if err != nil {
-				return err
+				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
+			} else {
+				fields["uptime"] = i
 			}
-			fields["uptime"] = i
 		}
 	}
 	// Send any remaining fields

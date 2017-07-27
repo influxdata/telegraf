@@ -141,7 +141,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	query = `select substring(setting from 1 for 3) as version from pg_settings where name='server_version_num'`
 	err = db.QueryRow(query).Scan(&db_version)
 	if err != nil {
-		return err
+		db_version = 0
 	}
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.

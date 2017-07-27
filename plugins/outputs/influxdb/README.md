@@ -40,6 +40,9 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Proxy Config
+  # http_proxy = "http://corporate.proxy:3128"
 ```
 
 ### Required parameters:
@@ -63,3 +66,4 @@ to write to. Each URL should start with either `http://` or `udp://`
 * `ssl_cert`: SSL CERT
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
+* `http_proxy`: HTTP Proxy URI

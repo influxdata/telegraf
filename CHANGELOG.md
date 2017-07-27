@@ -7,6 +7,61 @@
 - [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
 - [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
 
+## v1.4 [unreleased]
+
+### Release Notes
+
+- The `kafka_consumer` input has been updated to support Kafka 0.9 and
+  above style consumer offset handling.  The previous version of this plugin
+  supporting Kafka 0.8 and below is available as the `kafka_consumer_legacy`
+  plugin.
+
+- In the `aerospike` input the `node_name` field has been changed to be a tag
+  for both the `aerospike_node` and `aerospike_namespace` measurements.
+
+- The default prometheus_client port has been changed to 9273.
+
+### New Plugins
+
+- [fail2ban](./plugins/inputs/fail2ban/README.md)
+- [minecraft](./plugins/inputs/minecraft/README.md)
+
+### Features
+
+- [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
+- [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
+- [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
+- [#2817](https://github.com/influxdata/telegraf/pull/2817): Add timeout option to IPMI sensor plugin
+- [#2883](https://github.com/influxdata/telegraf/pull/2883): Add support for an optional SSL/TLS configuration to nginx input plugin
+- [#2882](https://github.com/influxdata/telegraf/pull/2882): Add timezone support for logparser timestamps.
+- [#2814](https://github.com/influxdata/telegraf/pull/2814): Add result_type field for http_response input.
+- [#2734](https://github.com/influxdata/telegraf/pull/2734): Add include/exclude filters for docker containers.
+- [#2602](https://github.com/influxdata/telegraf/pull/2602): Add secure connection support to graphite output.
+- [#2908](https://github.com/influxdata/telegraf/pull/2908): Add min/max response time on linux/darwin to ping.
+- [#2929](https://github.com/influxdata/telegraf/pull/2929): Add HTTP Proxy support to influxdb output.
+- [#2933](https://github.com/influxdata/telegraf/pull/2933): Add standard SSL options to mysql input.
+- [#2875](https://github.com/influxdata/telegraf/pull/2875): Add input plugin for fail2ban.
+- [#2924](https://github.com/influxdata/telegraf/pull/2924): Support HOST_PROC in processes and linux_sysctl_fs inputs.
+- [#2960](https://github.com/influxdata/telegraf/pull/2960): Add Minecraft input plugin.
+- [#2963](https://github.com/influxdata/telegraf/pull/2963): Add support for RethinkDB 1.0 handshake protocol.
+- [#2943](https://github.com/influxdata/telegraf/pull/2943): Add optional usage_active and time_active CPU metrics.
+- [#2973](https://github.com/influxdata/telegraf/pull/2973): Change default prometheus_client port.
+
+### Bugfixes
+
+- [#2607](https://github.com/influxdata/telegraf/issues/2607): Improve logging of errors in Cassandra input.
+- [#2819](https://github.com/influxdata/telegraf/pull/2819): [enh] set db_version at 0 if query version fails
+- [#2749](https://github.com/influxdata/telegraf/pull/2749): Fixed sqlserver input to work with case sensitive server collation.
+- [#2716](https://github.com/influxdata/telegraf/pull/2716): Systemd does not see all shutdowns as failures
+- [#2782](https://github.com/influxdata/telegraf/pull/2782): Reuse transports in input plugins
+- [#2815](https://github.com/influxdata/telegraf/issues/2815): Inputs processes fails with "no such process".
+- [#1137](https://github.com/influxdata/telegraf/issues/1137): Fix multiple plugin loading in win_perf_counters.
+- [#2855](https://github.com/influxdata/telegraf/pull/2855):  MySQL input: log and continue on field parse error.
+- [#2885](https://github.com/influxdata/telegraf/pull/2885): Fix timeout option in Windows ping input sample configuration.
+- [#2911](https://github.com/influxdata/telegraf/issues/2911): Fix Kinesis output plugin in govcloud.
+- [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
+- [#2452](https://github.com/influxdata/telegraf/pull/2452): Improve Prometheus Client output documentation.
+- [#2984](https://github.com/influxdata/telegraf/pull/2984): Display error message if prometheus output fails to listen.
 ## v1.3.4 [2017-07-12]
 
 ### Bugfixes

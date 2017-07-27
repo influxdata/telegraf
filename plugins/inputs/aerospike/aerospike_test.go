@@ -23,8 +23,10 @@ func TestAerospikeStatistics(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("aerospike_node"))
+	assert.True(t, acc.HasTag("aerospike_node", "node_name"))
 	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
-	assert.True(t, acc.HasIntField("aerospike_node", "batch_error"))
+	assert.True(t, acc.HasTag("aerospike_namespace", "node_name"))
+	assert.True(t, acc.HasInt64Field("aerospike_node", "batch_error"))
 }
 
 func TestAerospikeStatisticsPartialErr(t *testing.T) {
@@ -45,7 +47,7 @@ func TestAerospikeStatisticsPartialErr(t *testing.T) {
 
 	assert.True(t, acc.HasMeasurement("aerospike_node"))
 	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
-	assert.True(t, acc.HasIntField("aerospike_node", "batch_error"))
+	assert.True(t, acc.HasInt64Field("aerospike_node", "batch_error"))
 }
 
 func TestAerospikeParseValue(t *testing.T) {

@@ -20,8 +20,15 @@ For more information on Processor and Aggregator plugins please [read this](./do
 New plugins are designed to be easy to contribute,
 we'll eagerly accept pull
 requests and will manage the set of plugins that Telegraf supports.
-See the [contributing guide](CONTRIBUTING.md) for instructions on writing
-new plugins.
+
+## Contributing
+
+There are many ways to contribute:
+- Fix and [report bugs](https://github.com/influxdata/telegraf/issues/new)
+- [Improve documentation](https://github.com/influxdata/telegraf/issues?q=is%3Aopen+label%3Adocumentation)
+- [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
+- Answer questions on github and on the [Community Site](https://community.influxdata.com/)
+- [Contribute plugins](CONTRIBUTING.md)
 
 ## Installation:
 
@@ -117,6 +124,7 @@ configuration options.
 * [dovecot](./plugins/inputs/dovecot)
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
+* [fail2ban](./plugins/inputs/fail2ban)
 * [filestat](./plugins/inputs/filestat)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
@@ -149,7 +157,7 @@ configuration options.
 * [postgresql_extensible](./plugins/inputs/postgresql_extensible)
 * [powerdns](./plugins/inputs/powerdns)
 * [procstat](./plugins/inputs/procstat)
-* [prometheus](./plugins/inputs/prometheus)
+* [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
 * [puppetagent](./plugins/inputs/puppetagent)
 * [rabbitmq](./plugins/inputs/rabbitmq)
 * [raindrops](./plugins/inputs/raindrops)
@@ -243,9 +251,3 @@ formats may be used with input plugins supporting the `data_format` option:
 * [socket_writer](./plugins/outputs/socket_writer)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
-
-## Contributing
-
-Please see the
-[contributing guide](CONTRIBUTING.md)
-for details on contributing a plugin to Telegraf.

@@ -9,6 +9,7 @@ User=telegraf
 ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d ${TELEGRAF_OPTS}
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
+RestartForceExitStatus=SIGPIPE
 KillMode=control-group
 
 [Install]

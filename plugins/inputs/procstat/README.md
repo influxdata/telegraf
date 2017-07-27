@@ -50,14 +50,14 @@ Note: prefix can be set by the user, per process.
 Threads related measurement names:
 - procstat_[prefix_]num_threads value=5
 
-File descriptor related measurement names:
+File descriptor related measurement names (*telegraf* needs to run as **root**):
 - procstat_[prefix_]num_fds value=4
 
 Context switch related measurement names:
 - procstat_[prefix_]voluntary_context_switches value=250
 - procstat_[prefix_]involuntary_context_switches value=0
 
-I/O related measurement names:
+I/O related measurement names (*telegraf* needs to run as **root**):
 - procstat_[prefix_]read_count value=396
 - procstat_[prefix_]write_count value=1
 - procstat_[prefix_]read_bytes value=1019904
