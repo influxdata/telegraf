@@ -1,15 +1,11 @@
 # Docker Input Plugin
 
-The docker plugin uses the docker remote API to gather metrics on running
-docker containers. You can read Docker's documentation for their remote API
-[here](https://docs.docker.com/engine/reference/api/docker_remote_api_v1.20/#get-container-stats-based-on-resource-usage)
+The docker plugin uses the Docker Engine API to gather metrics on running
+docker containers.
 
-The docker plugin uses the excellent
-[docker engine-api](https://github.com/docker/engine-api) library to
-gather stats. Documentation for the library can be found
-[here](https://godoc.org/github.com/docker/engine-api) and documentation
-for the stat structure can be found
-[here](https://godoc.org/github.com/docker/engine-api/types#Stats)
+The docker plugin uses the [Official Docker Client](https://github.com/moby/moby/tree/master/client)
+to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.20/).
+[Library Documentation](https://godoc.org/github.com/moby/moby/client)
 
 ### Configuration:
 
@@ -47,7 +43,7 @@ for the stat structure can be found
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
   docker_label_exclude = []
-  
+
   ## Which environment variables should we use as a tag
   tag_env = ["JAVA_HOME", "HEAP_SIZE"]
 
@@ -58,6 +54,11 @@ for the stat structure can be found
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 ```
+
+#### Environment Configuration
+
+When using the `"ENV"` endpoint, the connection is configured using the
+[cli Docker environment variables](https://godoc.org/github.com/moby/moby/client#NewEnvClient).
 
 ### Measurements & Fields:
 
