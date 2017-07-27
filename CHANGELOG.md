@@ -70,6 +70,7 @@
 - [#2906](https://github.com/influxdata/telegraf/issues/2906): Fix panic in logparser if file cannot be opened.
 - [#2886](https://github.com/influxdata/telegraf/issues/2886): Default to localhost if zookeeper has no servers set.
 - [#2457](https://github.com/influxdata/telegraf/issues/2457): Fix docker memory and cpu reporting in Windows.
+- [#3058](https://github.com/influxdata/telegraf/issues/3058): Allow iptable entries with trailing text.
 
 ## v1.3.5 [2017-07-26]
 
