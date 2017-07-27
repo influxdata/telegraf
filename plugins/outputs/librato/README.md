@@ -10,3 +10,6 @@ Point Tags to the API.
 If the point value being sent cannot be converted to a float64, the metric is skipped.
 
 Currently, the plugin does not send any associated Point Tags.
+
+If your account already supports [the new tagging API](https://www.librato.com/docs/kb/faq/account_questions/tags_or_sources/),
+you might want to consider using the `librato_with_tags` plugin instead.
