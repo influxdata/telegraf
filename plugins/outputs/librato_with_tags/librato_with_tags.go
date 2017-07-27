@@ -16,11 +16,11 @@ import (
 
 // Librato structure for configuration and client
 type LibratoWithTags struct {
-	APIUser   string `toml:"api_user"`
-	APIToken  string `toml:"api_token"`
-	Debug     bool
-	Timeout   internal.Duration
-	Prefix    string
+	APIUser  string `toml:"api_user"`
+	APIToken string `toml:"api_token"`
+	Debug    bool
+	Timeout  internal.Duration
+	Prefix   string
 
 	APIUrl string
 	client *http.Client
@@ -50,23 +50,23 @@ const libratoAPI = "https://metrics-api.librato.com/v1/measurements"
 
 // LMeasurement is the default struct for Librato APIs toplevel JSON format
 type LMeasurements struct {
-  // List of global tags
-  Tags map[string]string  `json:"tags"`
-	Measurements []*Measurement `json:"measurements"`
+	// List of global tags
+	Tags         map[string]string `json:"tags"`
+	Measurements []*Measurement    `json:"measurements"`
 }
 
 // Measurement is one item in the list of measurements that can be sent in one request
 type Measurement struct {
-	Name        string  `json:"name"`
-	Value       float64 `json:"value"`
-  Tags        map[string]string `json:"tags"`
-	MeasureTime int64   `json:"time"`
+	Name        string            `json:"name"`
+	Value       float64           `json:"value"`
+	Tags        map[string]string `json:"tags"`
+	MeasureTime int64             `json:"time"`
 }
 
 // NewLibratoWithTags is the main constructor for librato output plugin
 func NewLibratoWithTags(apiURL string) *LibratoWithTags {
 	return &LibratoWithTags{
-		APIUrl:   apiURL,
+		APIUrl: apiURL,
 		Prefix: "telegraf",
 	}
 }
@@ -89,7 +89,6 @@ func (l *LibratoWithTags) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-
 
 	tempMeasurements := []*Measurement{}
 
@@ -180,22 +179,22 @@ func (l *LibratoWithTags) buildMeasurements(m telegraf.Metric) ([]*Measurement, 
 
 	for fieldName, value := range m.Fields() {
 
-    if l.Prefix == "" {
-		  l.Prefix = "telegraf"
-	  }
+		if l.Prefix == "" {
+			l.Prefix = "telegraf"
+		}
 
-    // prepare metric name:
+		// prepare metric name:
 		metricName := m.Name()
-    if fieldName != "value" {
-      metricName = fmt.Sprintf("%s.%s.%s", l.Prefix, m.Name(), fieldName)
-    } else {
-      metricName = fmt.Sprintf("%s.%s", l.Prefix, m.Name())
-    }
+		if fieldName != "value" {
+			metricName = fmt.Sprintf("%s.%s.%s", l.Prefix, m.Name(), fieldName)
+		} else {
+			metricName = fmt.Sprintf("%s.%s", l.Prefix, m.Name())
+		}
 
 		measurement := &Measurement{
-			Name:        reUnacceptedChar.ReplaceAllString(metricName, "-"),
-      // Value: setting it below
-      Tags:        m.Tags(),
+			Name: reUnacceptedChar.ReplaceAllString(metricName, "-"),
+			// Value: setting it below
+			Tags:        m.Tags(),
 			MeasureTime: m.Time().Unix(),
 		}
 		if !verifyValue(value) {

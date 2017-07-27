@@ -69,9 +69,9 @@ func TestBuildMeasurements(t *testing.T) {
 
 	mtime := time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()
 	var measurementTests = []struct {
-		ptIn     telegraf.Metric
+		ptIn           telegraf.Metric
 		outMeasurement *Measurement
-		err      error
+		err            error
 	}{
 		{
 			newHostMetric(0.0, "test1", "host1"),
@@ -79,7 +79,7 @@ func TestBuildMeasurements(t *testing.T) {
 				Name:        "telegraf.test1",
 				MeasureTime: mtime,
 				Value:       0.0,
-        Tags:   		 map[string]string{"host": "host1"},
+				Tags:        map[string]string{"host": "host1"},
 			},
 			nil,
 		},
@@ -89,7 +89,7 @@ func TestBuildMeasurements(t *testing.T) {
 				Name:        "telegraf.test2",
 				MeasureTime: mtime,
 				Value:       1.0,
-        Tags:   		 map[string]string{"host": "host2"},
+				Tags:        map[string]string{"host": "host2"},
 			},
 			nil,
 		},
@@ -99,7 +99,7 @@ func TestBuildMeasurements(t *testing.T) {
 				Name:        "telegraf.test3",
 				MeasureTime: mtime,
 				Value:       10.0,
-        Tags:   		 map[string]string{"host": "host3"},
+				Tags:        map[string]string{"host": "host3"},
 			},
 			nil,
 		},
@@ -109,7 +109,7 @@ func TestBuildMeasurements(t *testing.T) {
 				Name:        "telegraf.test4",
 				MeasureTime: mtime,
 				Value:       112345.0,
-        Tags:   		 map[string]string{"host": "host4"},
+				Tags:        map[string]string{"host": "host4"},
 			},
 			nil,
 		},
@@ -119,7 +119,7 @@ func TestBuildMeasurements(t *testing.T) {
 				Name:        "telegraf.test5",
 				MeasureTime: mtime,
 				Value:       112345.0,
-        Tags:   		 map[string]string{"host": "host5"},
+				Tags:        map[string]string{"host": "host5"},
 			},
 			nil,
 		},
@@ -129,7 +129,7 @@ func TestBuildMeasurements(t *testing.T) {
 				Name:        "telegraf.test6",
 				MeasureTime: mtime,
 				Value:       11234.5,
-        Tags:   		 map[string]string{"host": "host6"},
+				Tags:        map[string]string{"host": "host6"},
 			},
 			nil,
 		},
@@ -206,10 +206,10 @@ func TestBuildMeasurementWithTags(t *testing.T) {
 		mtime,
 	)
 	var measurementTests = []struct {
-		ptIn     telegraf.Metric
-		prefix   string
+		ptIn           telegraf.Metric
+		prefix         string
 		outMeasurement *Measurement
-		err      error
+		err            error
 	}{
 
 		{
@@ -219,7 +219,7 @@ func TestBuildMeasurementWithTags(t *testing.T) {
 				Name:        "telegraf.test1",
 				MeasureTime: mtime.Unix(),
 				Value:       0.0,
-        Tags:        map[string]string{"hostname": "192.168.0.1", "tag1": "value1"},
+				Tags:        map[string]string{"hostname": "192.168.0.1", "tag1": "value1"},
 			},
 			nil,
 		},
@@ -230,9 +230,9 @@ func TestBuildMeasurementWithTags(t *testing.T) {
 				Name:        "ownprefix.test2.measurement1",
 				MeasureTime: mtime.Unix(),
 				Value:       1.0,
-        Tags:        map[string]string{"hostnam": "192.168.0.1", "tag1": "value1"},
+				Tags:        map[string]string{"hostnam": "192.168.0.1", "tag1": "value1"},
 			},
-      nil,
+			nil,
 		},
 		{
 			pt3,
@@ -241,10 +241,10 @@ func TestBuildMeasurementWithTags(t *testing.T) {
 				Name:        "telegraf.test3",
 				MeasureTime: mtime.Unix(),
 				Value:       1.0,
-        Tags:        map[string]string{
-          "hostname": "192.168.0.1",
-          "tag2": "value2",
-          "tag1": "value1"},
+				Tags: map[string]string{
+					"hostname": "192.168.0.1",
+					"tag2":     "value2",
+					"tag1":     "value1"},
 			},
 			nil,
 		},
@@ -255,10 +255,10 @@ func TestBuildMeasurementWithTags(t *testing.T) {
 				Name:        "telegraf.production.test4",
 				MeasureTime: mtime.Unix(),
 				Value:       100.5,
-				Tags:   		 map[string]string{
-    			"hostname": "192.168.0.1",
-		    	"tag2":     "value2",
-    			"tag1":     "value1"},
+				Tags: map[string]string{
+					"hostname": "192.168.0.1",
+					"tag2":     "value2",
+					"tag1":     "value1"},
 			},
 			nil,
 		},
