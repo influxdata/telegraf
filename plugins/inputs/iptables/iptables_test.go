@@ -142,6 +142,18 @@ func TestIptables_Gather(t *testing.T) {
 				{map[string]interface{}{"pkts": uint64(0), "bytes": uint64(0)}},
 			},
 		},
+		{ // 11 - invalid pkts/bytes
+			table:  "mangle",
+			chains: []string{"SHAPER"},
+			values: []string{
+				`Chain SHAPER (policy ACCEPT 58 packets, 5096 bytes)
+		                pkts      bytes target     prot opt in     out     source               destination
+						a a ACCEPT all -- * * 1.3.5.7 0.0.0.0/0 /* test */
+						a a CLASSIFY all -- * * 1.3.5.7 0.0.0.0/0 /* test2 */ CLASSIFY set 1:4
+						`},
+			tags:   []map[string]string{},
+			fields: [][]map[string]interface{}{},
+		},
 	}
 
 	for i, tt := range tests {

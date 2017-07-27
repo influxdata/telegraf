@@ -128,10 +128,16 @@ func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error
 
 		tags := map[string]string{"table": ipt.Table, "chain": mchain[1], "ruleid": comment}
 		fields := make(map[string]interface{})
-		// since parse error is already catched by the regexp,
-		// we never enter ther error case here => no error check (but still need a test to cover the case)
-		fields["pkts"], _ = strconv.ParseUint(pkts, 10, 64)
-		fields["bytes"], _ = strconv.ParseUint(bytes, 10, 64)
+
+		var err error
+		fields["pkts"], err = strconv.ParseUint(pkts, 10, 64)
+		if err != nil {
+			continue
+		}
+		fields["bytes"], err = strconv.ParseUint(bytes, 10, 64)
+		if err != nil {
+			continue
+		}
 		acc.AddFields(measurement, fields, tags)
 	}
 	return nil
