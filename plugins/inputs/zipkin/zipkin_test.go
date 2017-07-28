@@ -40,7 +40,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"id":        "8090652509916334619",
 						"parent_id": "22964302721410078",
-						"trace_id":  "0:2505404965370368069",
+						"trace_id":  "22c4fc8ab3669045",
 						"name":      "Child",
 					},
 					Fields: map[string]interface{}{
@@ -53,7 +53,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"id":             "8090652509916334619",
 						"parent_id":      "22964302721410078",
-						"trace_id":       "0:2505404965370368069",
+						"trace_id":       "22c4fc8ab3669045",
 						"name":           "Child",
 						"service_name":   "trivial",
 						"annotation":     "trivial", //base64: dHJpdmlhbA==
@@ -70,7 +70,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"id":        "103618986556047333",
 						"parent_id": "22964302721410078",
-						"trace_id":  "0:2505404965370368069",
+						"trace_id":  "22c4fc8ab3669045",
 						"name":      "Child",
 					},
 					Fields: map[string]interface{}{
@@ -83,7 +83,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"id":             "103618986556047333",
 						"parent_id":      "22964302721410078",
-						"trace_id":       "0:2505404965370368069",
+						"trace_id":       "22c4fc8ab3669045",
 						"name":           "Child",
 						"service_name":   "trivial",
 						"annotation":     "trivial", //base64: dHJpdmlhbA==
@@ -100,7 +100,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"id":        "22964302721410078",
 						"parent_id": "22964302721410078",
-						"trace_id":  "0:2505404965370368069",
+						"trace_id":  "22c4fc8ab3669045",
 						"name":      "Parent",
 					},
 					Fields: map[string]interface{}{
@@ -116,7 +116,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"endpoint_host": "127.0.0.1:0",
 						"id":            "22964302721410078",
 						"parent_id":     "22964302721410078",
-						"trace_id":      "0:2505404965370368069",
+						"trace_id":      "22c4fc8ab3669045",
 						"name":          "Parent",
 					},
 					Fields: map[string]interface{}{
@@ -132,7 +132,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"endpoint_host": "127.0.0.1:0",
 						"id":            "22964302721410078",
 						"parent_id":     "22964302721410078",
-						"trace_id":      "0:2505404965370368069",
+						"trace_id":      "22c4fc8ab3669045",
 						"name":          "Parent",
 					},
 					Fields: map[string]interface{}{
@@ -144,7 +144,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"parent_id":     "22964302721410078",
-						"trace_id":      "0:2505404965370368069",
+						"trace_id":      "22c4fc8ab3669045",
 						"name":          "Parent",
 						"service_name":  "trivial",
 						"annotation":    "A Log",
@@ -159,7 +159,7 @@ func TestZipkinPlugin(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"trace_id":       "0:2505404965370368069",
+						"trace_id":       "22c4fc8ab3669045",
 						"service_name":   "trivial",
 						"annotation":     "trivial", //base64: dHJpdmlhbA==
 						"annotation_key": "lc",
@@ -188,7 +188,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"id":        "6802735349851856000",
 						"parent_id": "6802735349851856000",
-						"trace_id":  "0:6802735349851856000",
+						"trace_id":  "5e682bc21ce99c80",
 						"name":      "main.dud",
 					},
 					Fields: map[string]interface{}{
@@ -204,7 +204,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"endpoint_host": "0.0.0.0:9410",
 						"id":            "6802735349851856000",
 						"parent_id":     "6802735349851856000",
-						"trace_id":      "0:6802735349851856000",
+						"trace_id":      "5e682bc21ce99c80",
 						"name":          "main.dud",
 						"service_name":  "go-zipkin-testclient",
 					},
@@ -221,7 +221,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"endpoint_host": "0.0.0.0:9410",
 						"id":            "6802735349851856000",
 						"parent_id":     "6802735349851856000",
-						"trace_id":      "0:6802735349851856000",
+						"trace_id":      "5e682bc21ce99c80",
 						"name":          "main.dud",
 						"service_name":  "go-zipkin-testclient",
 					},

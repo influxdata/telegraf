@@ -2,6 +2,7 @@ package zipkin
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -138,7 +139,10 @@ func formatID(id int64) string {
 }
 
 func formatTraceID(high, low int64) string {
-	return formatID(high) + ":" + formatID(low)
+	if high == 0 {
+		return fmt.Sprintf("%x", low)
+	}
+	return fmt.Sprintf("%x%016x", high, low)
 }
 
 func minMax(span *zipkincore.Span) (time.Time, time.Time) {
