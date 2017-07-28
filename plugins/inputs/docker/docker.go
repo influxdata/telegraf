@@ -2,9 +2,11 @@ package docker
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -45,10 +47,16 @@ type Docker struct {
 	ContainerExclude []string `toml:"container_name_exclude"`
 	ContainerFilter  DockerContainerFilter
 
+	SSLCA              string `toml:"ssl_ca"`
+	SSLCert            string `toml:"ssl_cert"`
+	SSLKey             string `toml:"ssl_key"`
+	InsecureSkipVerify bool
+
 	newEnvClient func() (Client, error)
-	newClient    func(host string) (Client, error)
+	newClient    func(string, *tls.Config) (Client, error)
 
 	client         Client
+	httpClient     *http.Client
 	engine_host    string
 	filtersCreated bool
 }
@@ -60,6 +68,8 @@ const (
 	GB = 1000 * MB
 	TB = 1000 * GB
 	PB = 1000 * TB
+
+	defaultEndpoint = "unix:///var/run/docker.sock"
 )
 
 var (
@@ -95,6 +105,13 @@ var sampleConfig = `
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
   docker_label_exclude = []
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (d *Docker) Description() string {
@@ -109,19 +126,17 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		var err error
 		if d.Endpoint == "ENV" {
 			c, err = d.newEnvClient()
-			if err != nil {
-				return err
-			}
-		} else if d.Endpoint == "" {
-			c, err = d.newClient("unix:///var/run/docker.sock")
-			if err != nil {
-				return err
-			}
 		} else {
-			c, err = d.newClient(d.Endpoint)
+			tlsConfig, err := internal.GetTLSConfig(
+				d.SSLCert, d.SSLKey, d.SSLCA, d.InsecureSkipVerify)
 			if err != nil {
 				return err
 			}
+
+			c, err = d.newClient(d.Endpoint, tlsConfig)
+		}
+		if err != nil {
+			return err
 		}
 		d.client = c
 	}
@@ -699,6 +714,7 @@ func init() {
 		return &Docker{
 			PerDevice:      true,
 			Timeout:        internal.Duration{Duration: time.Second * 5},
+			Endpoint:       defaultEndpoint,
 			newEnvClient:   NewEnvClient,
 			newClient:      NewClient,
 			filtersCreated: false,

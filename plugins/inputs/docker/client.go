@@ -2,9 +2,12 @@ package docker
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
+	"github.com/docker/go-connections/sockets"
 )
 
 var (
@@ -27,8 +30,19 @@ func NewEnvClient() (Client, error) {
 	return &SocketClient{client}, nil
 }
 
-func NewClient(host string) (Client, error) {
-	client, err := docker.NewClient(host, version, nil, defaultHeaders)
+func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
+	proto, addr, _, err := docker.ParseHost(host)
+	if err != nil {
+		return nil, err
+	}
+
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+	sockets.ConfigureTransport(transport, proto, addr)
+	httpClient := &http.Client{Transport: transport}
+
+	client, err := docker.NewClient(host, version, httpClient, defaultHeaders)
 	if err != nil {
 		return nil, err
 	}
