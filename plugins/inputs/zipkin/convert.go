@@ -35,7 +35,7 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 	for _, s := range t {
 		for _, a := range s.Annotations {
 			fields := map[string]interface{}{
-				"duration":             s.Duration,
+				"duration_ns":             s.Duration.Nanoseconds(),
 			}
 
 			tags := map[string]string{
@@ -52,7 +52,7 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 
 		for _, b := range s.BinaryAnnotations {
 			fields := map[string]interface{}{
-				"duration": s.Duration,
+				"duration_ns": s.Duration.Nanoseconds(),
 			}
 
 			tags := map[string]string{

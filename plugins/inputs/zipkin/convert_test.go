@@ -122,7 +122,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"type":             "STRING",
 					},
 					Fields: map[string]interface{}{
-						"duration": time.Duration(53106) * time.Microsecond,
+						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851331000).UTC(),
 				},
@@ -140,7 +140,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"type":             "STRING",
 					},
 					Fields: map[string]interface{}{
-						"duration": time.Duration(50410) * time.Microsecond,
+						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
 				},
@@ -156,7 +156,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"name":             "Parent",
 					},
 					Fields: map[string]interface{}{
-						"duration": time.Duration(103680) * time.Microsecond,
+						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
@@ -172,7 +172,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"name":             "Parent",
 					},
 					Fields: map[string]interface{}{
-						"duration": time.Duration(103680) * time.Microsecond,
+						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
@@ -188,7 +188,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"id":               "22964302721410078",
 					},
 					Fields: map[string]interface{}{
-						"duration": time.Duration(103680) * time.Microsecond,
+						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
@@ -206,7 +206,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"endpoint_host":    "2130706433:0",
 					},
 					Fields: map[string]interface{}{
-						"duration": time.Duration(103680) * time.Microsecond,
+						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
@@ -263,7 +263,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 							"endpoint_host":    "0:0",
 						},
 						Fields: map[string]interface{}{
-							"duration":             time.Duration(2888) * time.Microsecond,
+							"duration_ns":             (time.Duration(2888) * time.Microsecond).Nanoseconds(),
 						},
 						Time: time.Unix(0, 1499817952283903000).UTC(),
 					},
@@ -281,7 +281,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 							"endpoint_host":    "0:0",
 						},
 						Fields: map[string]interface{}{
-							"duration": time.Duration(2888) * time.Microsecond,
+							"duration_ns": (time.Duration(2888) * time.Microsecond).Nanoseconds(),
 						},
 						Time: time.Unix(0, 1499817952283903000).UTC(),
 					},
@@ -330,7 +330,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"service_name":     "go-zipkin-testclient",
 					},
 					Fields: map[string]interface{}{
-						"duration": time.Duration(1) * time.Nanosecond,
+						"duration_ns": (time.Duration(1) * time.Nanosecond).Nanoseconds(),
 					},
 					Time: time.Unix(1, 0).UTC(),
 				},
