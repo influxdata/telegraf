@@ -35,8 +35,6 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 	for _, s := range t {
 		for _, a := range s.Annotations {
 			fields := map[string]interface{}{
-				// TODO: Maybe we don't need "annotation_timestamp"?
-				"annotation_timestamp": a.Timestamp.Unix(),
 				"duration":             s.Duration,
 			}
 
