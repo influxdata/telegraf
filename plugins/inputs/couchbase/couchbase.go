@@ -1,7 +1,6 @@
 package couchbase
 
 import (
-	"log"
 	"regexp"
 	"sync"
 
@@ -26,6 +25,8 @@ var sampleConfig = `
   ## If no port is specified, 8091 is used.
   servers = ["http://localhost:8091"]
 `
+
+var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
 
 func (r *Couchbase) SampleConfig() string {
 	return sampleConfig
@@ -58,21 +59,6 @@ func (r *Couchbase) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// sanitizeURI by removing information about user and/or password from string
-// it also removes schema name from URI
-func sanitizeURI(uri string) (result string, err error) {
-
-	re, err := regexp.Compile("(\\S+:\\/\\/)?(\\S+\\:\\S+@)")
-
-	if err != nil {
-		return
-	}
-
-	result = re.ReplaceAllString(uri, "${1}")
-
-	return
-}
-
 func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *couchbase.Pool) error {
 	if pool == nil {
 		client, err := couchbase.Connect(addr)
@@ -90,18 +76,9 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *co
 		pool = &p
 	}
 
-	sanitizedAddress, err := sanitizeURI(addr)
-	if err != nil {
-		return err
-	}
-
-	if len(sanitizedAddress) <= 1 {
-		log.Printf("I! WARNING: Cluster address tag \"'%s'\" is too short.", sanitizedAddress)
-	}
-
 	for i := 0; i < len(pool.Nodes); i++ {
 		node := pool.Nodes[i]
-		tags := map[string]string{"cluster": sanitizedAddress, "hostname": node.Hostname}
+		tags := map[string]string{"cluster": regexpURI.ReplaceAllString(addr, "${1}"), "hostname": node.Hostname}
 		fields := make(map[string]interface{})
 		fields["memory_free"] = node.MemoryFree
 		fields["memory_total"] = node.MemoryTotal

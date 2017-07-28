@@ -52,14 +52,11 @@ func TestSanitizeURI(t *testing.T) {
 		{"localhost", "localhost"},
 		{"user:password@localhost:2321", "localhost:2321"},
 		{"http://user:password@couchbase-0.example.com:8091/endpoint", "http://couchbase-0.example.com:8091/endpoint"},
+		{" ", " "},
 	}
 
 	for _, test := range sanitizeTest {
-		result, err := sanitizeURI(test.input)
-
-		if err != nil {
-			t.Error(err)
-		}
+		result := regexpURI.ReplaceAllString(test.input, "${1}")
 
 		if result != test.expected {
 			t.Errorf("TestSanitizeAddress: input %s, expected %s, actual %s", test.input, test.expected, result)
