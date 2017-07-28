@@ -50,8 +50,6 @@ const libratoAPI = "https://metrics-api.librato.com/v1/measurements"
 
 // LMeasurement is the default struct for Librato APIs toplevel JSON format
 type LMeasurements struct {
-	// List of global tags
-	Tags         map[string]string `json:"tags"`
 	Measurements []*Measurement    `json:"measurements"`
 }
 
