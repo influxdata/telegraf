@@ -28,5 +28,5 @@ ___Add___ the following to your config file, under the `[data]` tab:
 
 ___Update___ your retention policy:
 ```sql
-ALTER RETENTION POLICY "retention_policy" ON "telegraf" DURATION 3w SHARD DURATION 30m DEFAULT
+ALTER RETENTION POLICY "autogen" ON "telegraf" DURATION 1d SHARD DURATION 30m
 ```

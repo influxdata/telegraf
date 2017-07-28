@@ -1,0 +1,39 @@
+recommendations:
+1. batch size should be large (e.g. 1000)
+
+
+profiling:
+telegraf to file 200000 points (100k spans) in 3 seconds
+
+telegraf to influx not able to finish so far (buffering?)
+
+Empirical results of default indexing vs. tsi
+
+Write:
+Default: finished in 11.278 seconds (2.7 user)
+TSI: Didn't finish
+TSI(master): 1:37 (9.3 user)
+
+select * from zipkin where "id"='trace_id'
+Default:  instantaneous
+TSI: No data
+TSI(master):
+
+select count("duration") from zipkin
+Default: ~1s
+TSI: 30s
+
+show tag values with key="service_name":
+Default:
+nearly instantaneous
+TSI: Significant delay
+
+show tag values with key="name" where "service_name"='trivial':
+Default:
+Nearly instantaneous
+TSI:
+Significant Delay
+
+select count("duration") from zipkin where time > now() - 30m and time < now() group by "id","parent_id", time(1d):
+Default: ~10 seconds
+TSI: Didn't finish
