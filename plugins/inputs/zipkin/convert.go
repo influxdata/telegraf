@@ -35,17 +35,17 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 	for _, s := range t {
 		for _, a := range s.Annotations {
 			fields := map[string]interface{}{
-				"duration_ns":             s.Duration.Nanoseconds(),
+				"duration_ns": s.Duration.Nanoseconds(),
 			}
 
 			tags := map[string]string{
-				"id":               s.ID,
-				"parent_id":        s.ParentID,
-				"trace_id":         s.TraceID,
-				"name":             s.Name,
-				"service_name":     a.ServiceName,
-				"annotation_value": a.Value,
-				"endpoint_host":    a.Host,
+				"id":            s.ID,
+				"parent_id":     s.ParentID,
+				"trace_id":      s.TraceID,
+				"name":          s.Name,
+				"service_name":  a.ServiceName,
+				"annotation":    a.Value,
+				"endpoint_host": a.Host,
 			}
 			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
 		}
@@ -56,15 +56,15 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 			}
 
 			tags := map[string]string{
-				"id":               s.ID,
-				"parent_id":        s.ParentID,
-				"trace_id":         s.TraceID,
-				"name":             s.Name,
-				"service_name":     b.ServiceName,
-				"annotation_value": b.Value,
-				"endpoint_host":    b.Host,
-				"annotation_key":   b.Key,
-				"type":             b.Type,
+				"id":             s.ID,
+				"parent_id":      s.ParentID,
+				"trace_id":       s.TraceID,
+				"name":           s.Name,
+				"service_name":   b.ServiceName,
+				"annotation":     b.Value,
+				"endpoint_host":  b.Host,
+				"annotation_key": b.Key,
+				"type":           b.Type,
 			}
 			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
 		}
