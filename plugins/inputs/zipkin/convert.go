@@ -63,7 +63,7 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 				"service_name":     b.ServiceName,
 				"annotation_value": b.Value,
 				"endpoint_host":    b.Host,
-				"key":              b.Key,
+				"annotation_key":   b.Key,
 				"type":             b.Type,
 			}
 			l.acc.AddFields("zipkin", fields, tags, s.Timestamp)

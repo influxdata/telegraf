@@ -45,7 +45,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"service_name":     "trivial",
 						"annotation_value": "trivial", //base64: dHJpdmlhbA==
 						"endpoint_host":    "127.0.0.1:0",
-						"key":              "lc",
+						"annotation_key":   "lc",
 						"type":             "STRING",
 					},
 					Fields: map[string]interface{}{
@@ -63,7 +63,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"service_name":     "trivial",
 						"annotation_value": "trivial", //base64: dHJpdmlhbA==
 						"endpoint_host":    "127.0.0.1:0",
-						"key":              "lc",
+						"annotation_key":   "lc",
 						"type":             "STRING",
 					},
 					Fields: map[string]interface{}{
@@ -125,7 +125,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"trace_id":         "0:2505404965370368069",
 						"service_name":     "trivial",
 						"annotation_value": "trivial", //base64: dHJpdmlhbA==
-						"key":              "lc",
+						"annotation_key":   "lc",
 						"type":             "STRING",
 						"id":               "22964302721410078",
 						"parent_id":        "22964302721410078",
