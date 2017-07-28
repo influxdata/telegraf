@@ -50,7 +50,7 @@ const libratoAPI = "https://metrics-api.librato.com/v1/measurements"
 
 // LMeasurement is the default struct for Librato APIs toplevel JSON format
 type LMeasurements struct {
-	Measurements []*Measurement    `json:"measurements"`
+	Measurements []*Measurement `json:"measurements"`
 }
 
 // Measurement is one item in the list of measurements that can be sent in one request
