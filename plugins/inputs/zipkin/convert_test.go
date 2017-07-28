@@ -119,7 +119,6 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"annotation":     "dHJpdmlhbA==",
 						"endpoint_host":  "2130706433:0",
 						"annotation_key": "lc",
-						"type":           "STRING",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
@@ -137,7 +136,6 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"annotation":     "dHJpdmlhbA==",
 						"endpoint_host":  "2130706433:0",
 						"annotation_key": "lc",
-						"type":           "STRING",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
@@ -199,7 +197,6 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"service_name":   "trivial",
 						"annotation":     "dHJpdmlhbA==",
 						"annotation_key": "lc",
-						"type":           "STRING",
 						"id":             "22964302721410078",
 						"parent_id":      "22964302721410078",
 						"name":           "Parent",
@@ -274,7 +271,6 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 							"service_name":     "cli",
 							"annotation": "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
 							"annotation_key":              "http.url",
-							"type":             "STRING",
 							"id":               "22964302721410078",
 							"parent_id":        "22964302721410078",
 							"name":             "Concat",

@@ -46,7 +46,6 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "trivial", //base64: dHJpdmlhbA==
 						"endpoint_host":  "127.0.0.1:0",
 						"annotation_key": "lc",
-						"type":           "STRING",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
@@ -64,7 +63,6 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "trivial", //base64: dHJpdmlhbA==
 						"endpoint_host":  "127.0.0.1:0",
 						"annotation_key": "lc",
-						"type":           "STRING",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
@@ -126,7 +124,6 @@ func TestZipkinPlugin(t *testing.T) {
 						"service_name":   "trivial",
 						"annotation":     "trivial", //base64: dHJpdmlhbA==
 						"annotation_key": "lc",
-						"type":           "STRING",
 						"id":             "22964302721410078",
 						"parent_id":      "22964302721410078",
 						"name":           "Parent",
