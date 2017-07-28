@@ -45,6 +45,7 @@
 - [#2612](https://github.com/influxdata/telegraf/pull/2612): Add input plugin for OpenLDAP.
 - [#3042](https://github.com/influxdata/telegraf/pull/3042): Add network option to dns_query.
 - [#3054](https://github.com/influxdata/telegraf/pull/3054): Add redis_version field to redis input.
+- [#3063](https://github.com/influxdata/telegraf/pull/3063): Add tls options to docker input.
 
 ### Bugfixes
 
