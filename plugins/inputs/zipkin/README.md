@@ -13,7 +13,7 @@ This plugin implements the Zipkin http server to gather trace and timing data ne
 
 ### Tracing:
 
-*This plugin uses Annotations tags and fields to track data from spans
+This plugin uses Annotations tags and fields to track data from spans
 
 - TRACE : is a set of spans that share a single root span.
 Traces are built by collecting all Spans that share a traceId.
@@ -33,28 +33,26 @@ Traces are built by collecting all Spans that share a traceId.
       RPC is considered complete with this annotation
 
 - TAGS:
-      _"id":_               The 64 or 128-bit ID of the trace. Every span in a trace shares this ID.
+      "id"               The 64 or 128-bit ID of the trace. Every span in a trace shares this ID.
       _"parent_id":_        An ID associated with a particular child span.  If there is no child span, the parent ID is set to itself.
       _"trace_id":_        The 64 or 128-bit ID of a particular trace. Trace ID High concat Trace ID Low.
       _"name":_             Defines a span
-      _"service_name":_     Defines a service
-      _"annotation_value":_ Defines each individual annotation
-      _"endpoint_host":_    listening port concat with IPV4
+      "__service_name__":   Defines a service
+      _"annotation":_       The value of an annotation
+      _"endpoint_host":_    Listening port concat with IPV4
 
 -FIELDS
-      "annotation_timestamp": Start time of an annotation.  If time is nil we set it to the current UTC time.
-      "duration":             The time in microseconds between the end and beginning of a span.
+      "duration_ns":             The time in nanoseconds between the end and beginning of a span.
 
 ### BINARY ANNOTATIONS:
 
 -TAGS: Contains the same tags as annotations plus these additions
 
-      "key": Acts as a pointer to some address which houses the value
-      _"type"_: Given data type
+      "annotation_key": label describing the annotation
 
 -FIELDS:
 
-      "duration": The time in microseconds between the end and beginning of a span.
+      "duration_ns": The time in nanoseconds between the end and beginning of a span.
 
 
 
@@ -62,7 +60,7 @@ Traces are built by collecting all Spans that share a traceId.
 
 - Get All Span Names for Service `my_web_server`
 ```sql
-SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_server'```
+SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_server' ```
     - __Description:__  returns a list containing the names of the spans which have annotations with the given `service_name` of `my_web_server`.
 
 - Get All Service Names
@@ -72,7 +70,7 @@ SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_ser
 
 - Find spans with longest duration
     ```sql
-    SELECT max("duration") FROM "zipkin" WHERE "service_name" = 'my_service' AND "name" = 'my_span_name' AND time > now() - 20m GROUP BY "trace_id",time(30s) LIMIT 5
+    SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND "name" = 'my_span_name' AND time > now() - 20m GROUP BY "trace_id",time(30s) LIMIT 5
     ```
     - __Description:__  In the last 20 minutes find the top 5 longest span durations for service `my_server` and span name `my_span_name`
 
@@ -84,7 +82,7 @@ SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_ser
 - [Test data from distributed trace repo sample json](https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json)
 
 #### Trace Example
-``` {
+```{
       "traceId": "bd7a977555f6b982",
       "name": "query",
       "id": "be2d01e33cc78d97",
@@ -131,6 +129,7 @@ SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_ser
           }
         }
       ]
-    },```
+    },
+    ```
 
 ### Recommended installation
