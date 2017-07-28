@@ -1,13 +1,12 @@
 package zipkin
 
 import (
-	"fmt"
+	"compress/gzip"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
 
-	"github.com/NYTimes/gziphandler"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/gorilla/mux"
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
@@ -33,8 +32,8 @@ func cors(next http.HandlerFunc) http.HandlerFunc {
 		if origin := r.Header.Get("Origin"); origin != "" {
 			w.Header().Set(`Access-Control-Allow-Origin`, origin)
 			w.Header().Set(`Access-Control-Allow-Methods`, strings.Join([]string{
-				`GET`,
 				`OPTIONS`,
+				`POST`,
 			}, ", "))
 
 			w.Header().Set(`Access-Control-Allow-Headers`, strings.Join([]string{
@@ -60,26 +59,36 @@ func cors(next http.HandlerFunc) http.HandlerFunc {
 // Register implements the Service interface. Register accepts zipkin thrift data
 // POSTed to the path of the mux router
 func (s *SpanHandler) Register(router *mux.Router, recorder Recorder) error {
-	handler := gziphandler.GzipHandler(http.HandlerFunc(s.Spans))
-	//TODO: add more cors middleware
-
-	router.Handle(s.Path, handler).Methods("POST")
+	handler := cors(http.HandlerFunc(s.Spans))
+	router.Handle(s.Path, handler).Methods("POST", "OPTIONS")
 	s.recorder = recorder
 	return nil
 }
 
 // Spans handles zipkin thrift spans
 func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Got request from host: ", r.Host)
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body := r.Body
+	var err error
+	// Handle gzip decoding of the body
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		body, err = gzip.NewReader(r.Body)
+		if err != nil {
+			s.recorder.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer body.Close()
+	}
+
+	octets, err := ioutil.ReadAll(body)
 	if err != nil {
 		s.recorder.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	spans, err := unmarshalThrift(body)
+	spans, err := unmarshalThrift(octets)
 	if err != nil {
 		s.recorder.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
