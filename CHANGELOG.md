@@ -44,7 +44,6 @@
 - [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 - [#2612](https://github.com/influxdata/telegraf/pull/2612): Add input plugin for OpenLDAP.
 - [#3042](https://github.com/influxdata/telegraf/pull/3042): Add network option to dns_query.
-- [#2387](https://github.com/influxdata/telegraf/pull/2387): Added histogram aggregator plugin.
 
 ### Bugfixes
 
