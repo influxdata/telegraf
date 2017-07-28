@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -38,6 +38,19 @@ func TestZipkinPlugin(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
+						"id":        "8090652509916334619",
+						"parent_id": "22964302721410078",
+						"trace_id":  "0:2505404965370368069",
+						"name":      "Child",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
+					},
+					Time: time.Unix(0, 1498688360851331000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
 						"id":             "8090652509916334619",
 						"parent_id":      "22964302721410078",
 						"trace_id":       "0:2505404965370368069",
@@ -55,6 +68,19 @@ func TestZipkinPlugin(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
+						"id":        "103618986556047333",
+						"parent_id": "22964302721410078",
+						"trace_id":  "0:2505404965370368069",
+						"name":      "Child",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
+					},
+					Time: time.Unix(0, 1498688360904552000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
 						"id":             "103618986556047333",
 						"parent_id":      "22964302721410078",
 						"trace_id":       "0:2505404965370368069",
@@ -68,6 +94,19 @@ func TestZipkinPlugin(t *testing.T) {
 						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":        "22964302721410078",
+						"parent_id": "22964302721410078",
+						"trace_id":  "0:2505404965370368069",
+						"name":      "Parent",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
+					},
+					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -147,6 +186,20 @@ func TestZipkinPlugin(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
+						"id":        "6802735349851856000",
+						"parent_id": "6802735349851856000",
+						"trace_id":  "0:6802735349851856000",
+						"name":      "main.dud",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": (time.Duration(1) * time.Microsecond).Nanoseconds(),
+					},
+					//Time: time.Unix(1, 0).UTC(),
+					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
 						"annotation":    "cs",
 						"endpoint_host": "0.0.0.0:9410",
 						"id":            "6802735349851856000",
@@ -209,8 +262,8 @@ func TestZipkinPlugin(t *testing.T) {
 				got = append(got, *m)
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("Got != Want\n Got: %#v\n, Want: %#v\n", got, tt.want)
+			if !cmp.Equal(got, tt.want) {
+				t.Fatalf("Got != Want\n %s", cmp.Diff(got, tt.want))
 			}
 		})
 	}

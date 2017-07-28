@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
@@ -111,6 +112,19 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
+						"id":        "8090652509916334619",
+						"parent_id": "22964302721410078",
+						"trace_id":  "2505404965370368069",
+						"name":      "Child",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
+					},
+					Time: time.Unix(0, 1498688360851331000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
 						"id":             "8090652509916334619",
 						"parent_id":      "22964302721410078",
 						"trace_id":       "2505404965370368069",
@@ -128,6 +142,19 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
+						"id":        "103618986556047333",
+						"parent_id": "22964302721410078",
+						"trace_id":  "2505404965370368069",
+						"name":      "Child",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
+					},
+					Time: time.Unix(0, 1498688360904552000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
 						"id":             "103618986556047333",
 						"parent_id":      "22964302721410078",
 						"trace_id":       "2505404965370368069",
@@ -141,6 +168,19 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":        "22964302721410078",
+						"parent_id": "22964302721410078",
+						"trace_id":  "2505404965370368069",
+						"name":      "Parent",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
+					},
+					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -317,6 +357,19 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
+						"id":        "6802735349851856000",
+						"parent_id": "6802735349851856000",
+						"trace_id":  "0:6802735349851856000",
+						"name":      "main.dud",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": (time.Duration(1) * time.Nanosecond).Nanoseconds(),
+					},
+					Time: time.Unix(1, 0).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
 						"annotation":    "cs",
 						"endpoint_host": "0:9410",
 						"id":            "6802735349851856000",
@@ -333,7 +386,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
+	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAcc.ClearMetrics()
 			l := &LineProtocolConverter{
@@ -346,8 +399,8 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			for _, metric := range mockAcc.Metrics {
 				got = append(got, *metric)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("LineProtocolConverter.Record() error = \n%#v\n, want \n%#v\n", got, tt.want)
+			if !cmp.Equal(got, tt.want) {
+				t.Errorf("LineProtocolConverter.Record()/%s/%d error = %s ", tt.name, i, cmp.Diff(got, tt.want))
 			}
 		})
 	}

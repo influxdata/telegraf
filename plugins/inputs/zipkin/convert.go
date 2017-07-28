@@ -33,11 +33,18 @@ func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
 // telegraf.Accumulator.
 func (l *LineProtocolConverter) Record(t Trace) error {
 	for _, s := range t {
-		for _, a := range s.Annotations {
-			fields := map[string]interface{}{
-				"duration_ns": s.Duration.Nanoseconds(),
-			}
+		fields := map[string]interface{}{
+			"duration_ns": s.Duration.Nanoseconds(),
+		}
+		tags := map[string]string{
+			"id":        s.ID,
+			"parent_id": s.ParentID,
+			"trace_id":  s.TraceID,
+			"name":      s.Name,
+		}
+		l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
 
+		for _, a := range s.Annotations {
 			tags := map[string]string{
 				"id":            s.ID,
 				"parent_id":     s.ParentID,
@@ -51,10 +58,6 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 		}
 
 		for _, b := range s.BinaryAnnotations {
-			fields := map[string]interface{}{
-				"duration_ns": s.Duration.Nanoseconds(),
-			}
-
 			tags := map[string]string{
 				"id":             s.ID,
 				"parent_id":      s.ParentID,
