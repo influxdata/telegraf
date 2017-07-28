@@ -1,16 +1,25 @@
 # BIND 9 Nameserver Statistics Input Plugin
 
-This plugin decodes the XML statistics provided by BIND 9 nameservers. Version 2 statistics
-(BIND 9.6+) and version 3 statistics (BIND 9.9+) are supported. Note that for BIND 9.9 to support
-version 3 statistics, it must be built with the `--enable-newstats` compile flag, and it must be
-specifically requested via the correct URL. Version 3 statistics are the default format in BIND
-9.10+.
+This plugin decodes the statistics provided by BIND 9 nameservers. The plugin will attempt to
+identify the statistics format based on the HTTP response Content-Type header. In the case of an
+XML response, the plugin attempts to identify the schema version by sniffing the first few XML
+nodes.
 
-JSON statistics are not currently supported.
+## XML Statistics Channel
+
+Version 2 statistics (BIND 9.6+) and version 3 statistics (BIND 9.9+) are supported. Note that for
+BIND 9.9 to support version 3 statistics, it must be built with the `--enable-newstats` compile
+flag, and it must be specifically requested via the correct URL. Version 3 statistics are the
+default format in BIND 9.10+.
+
+## JSON Statistics Channel
+
+JSON statistics schema version 1 (BIND 9.10+) is supported. As of writing, most distros do not
+currently enable support for JSON statistics in their BIND packages.
 
 ### Configuration:
 
-- **urls** []string: List of BIND XML statistics URLs to collect from. Default is
+- **urls** []string: List of BIND statistics channel URLs to collect from. Default is
   "http://localhost:8053/".
 - **gather_memory_contexts** bool: Report per-context memory statistics.
 - **gather_views** bool: Report per-view query statistics.

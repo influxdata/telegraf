@@ -59,8 +59,8 @@ type v2Counter struct {
 	Value int    `xml:"counter"`
 }
 
-// addCounter adds a v2Counter array to a Telegraf Accumulator, with the specified tags
-func addCounter(acc telegraf.Accumulator, commonTags map[string]string, stats []v2Counter) {
+// addXmlCounter adds a v2Counter array to a Telegraf Accumulator, with the specified tags
+func addXmlCounter(acc telegraf.Accumulator, commonTags map[string]string, stats []v2Counter) {
 	for _, c := range stats {
 		tags := make(map[string]string)
 
@@ -88,23 +88,23 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator, url string) er
 
 	// Opcodes
 	tags["type"] = "opcode"
-	addCounter(acc, tags, stats.Statistics.Server.OpCodes)
+	addXmlCounter(acc, tags, stats.Statistics.Server.OpCodes)
 
 	// Query RDATA types
 	tags["type"] = "qtype"
-	addCounter(acc, tags, stats.Statistics.Server.RdTypes)
+	addXmlCounter(acc, tags, stats.Statistics.Server.RdTypes)
 
 	// Nameserver stats
 	tags["type"] = "nsstat"
-	addCounter(acc, tags, stats.Statistics.Server.NSStats)
+	addXmlCounter(acc, tags, stats.Statistics.Server.NSStats)
 
 	// Zone stats
 	tags["type"] = "zonestat"
-	addCounter(acc, tags, stats.Statistics.Server.ZoneStats)
+	addXmlCounter(acc, tags, stats.Statistics.Server.ZoneStats)
 
 	// Socket statistics
 	tags["type"] = "sockstat"
-	addCounter(acc, tags, stats.Statistics.Server.SockStats)
+	addXmlCounter(acc, tags, stats.Statistics.Server.SockStats)
 
 	// Memory stats
 	fields := map[string]interface{}{
@@ -133,11 +133,11 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator, url string) er
 
 			// Query RDATA types
 			tags["type"] = "qtype"
-			addCounter(acc, tags, v.RdTypes)
+			addXmlCounter(acc, tags, v.RdTypes)
 
 			// Resolver stats
 			tags["type"] = "resstats"
-			addCounter(acc, tags, v.ResStats)
+			addXmlCounter(acc, tags, v.ResStats)
 		}
 	}
 

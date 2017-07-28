@@ -10,9 +10,72 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBindJsonStats(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		http.ServeFile(w, r, "testdata/bindstats-v1.json")
+	}))
+	defer ts.Close()
+
+	b := Bind{
+		Urls: []string{ts.URL},
+	}
+
+	var acc testutil.Accumulator
+	err := acc.GatherError(b.Gather)
+
+	assert.Nil(t, err)
+
+	// Use subtests for counters, since they are similar structure
+	testCases := []struct {
+		counterType string
+		counterName string
+		want        int
+	}{
+		{"opcode", "QUERY", 13},
+		{"qtype", "PTR", 7},
+		{"nsstat", "QrySuccess", 6},
+		{"sockstat", "UDP4Conn", 333},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.counterType, func(t *testing.T) {
+			tags := map[string]string{
+				"url":  ts.Listener.Addr().String(),
+				"type": tc.counterType,
+				"name": tc.counterName,
+			}
+
+			fields := map[string]interface{}{
+				"value": tc.want,
+			}
+
+			acc.AssertContainsTaggedFields(t, "bind_counter", fields, tags)
+		})
+	}
+
+	// Subtest for memory stats
+	t.Run("memory", func(t *testing.T) {
+		tags := map[string]string{
+			"url": ts.Listener.Addr().String(),
+		}
+
+		fields := map[string]interface{}{
+			"BlockSize":   13893632,
+			"ContextSize": 3685480,
+			"InUse":       3064368,
+			"Lost":        0,
+			"TotalUse":    18206566,
+		}
+
+		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
+	})
+}
+
 func TestBindXmlStatsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "bindstats-v2.xml")
+		w.Header().Set("Content-Type", "text/xml")
+		http.ServeFile(w, r, "testdata/bindstats-v2.xml")
 	}))
 	defer ts.Close()
 
@@ -74,7 +137,8 @@ func TestBindXmlStatsV2(t *testing.T) {
 
 func TestBindXmlStatsV3(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "bindstats-v3.xml")
+		w.Header().Set("Content-Type", "text/xml")
+		http.ServeFile(w, r, "testdata/bindstats-v3.xml")
 	}))
 	defer ts.Close()
 

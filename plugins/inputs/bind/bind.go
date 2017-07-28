@@ -76,31 +76,39 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
 	}
 
-	// Wrap reader in a buffered reader so that we can peek ahead to determine schema version
-	br := bufio.NewReader(resp.Body)
+	contentType := resp.Header.Get("Content-Type")
 
-	if p, err := br.Peek(256); err != nil {
-		return fmt.Errorf("Unable to peek ahead in stream to determine statistics version: %s", err)
-	} else {
-		var xmlRoot struct {
-			XMLName xml.Name
-			Version float64 `xml:"version,attr"`
-		}
+	if contentType == "text/xml" {
+		// Wrap reader in a buffered reader so that we can peek ahead to determine schema version
+		br := bufio.NewReader(resp.Body)
 
-		err := xml.Unmarshal(p, &xmlRoot)
+		if p, err := br.Peek(256); err != nil {
+			return fmt.Errorf("Unable to peek ahead in stream to determine statistics version: %s", err)
+		} else {
+			var xmlRoot struct {
+				XMLName xml.Name
+				Version float64 `xml:"version,attr"`
+			}
 
-		if err != nil {
-			// We expect an EOF error since we only fed the decoder a small fragment
-			if _, ok := err.(*xml.SyntaxError); !ok {
-				return fmt.Errorf("XML syntax error: %s", err)
+			err := xml.Unmarshal(p, &xmlRoot)
+
+			if err != nil {
+				// We expect an EOF error since we only fed the decoder a small fragment
+				if _, ok := err.(*xml.SyntaxError); !ok {
+					return fmt.Errorf("XML syntax error: %s", err)
+				}
+			}
+
+			if (xmlRoot.XMLName.Local == "statistics") && (int(xmlRoot.Version) == 3) {
+				return b.readStatsV3(br, acc, addr.Host)
+			} else {
+				return b.readStatsV2(br, acc, addr.Host)
 			}
 		}
-
-		if (xmlRoot.XMLName.Local == "statistics") && (int(xmlRoot.Version) == 3) {
-			return b.readStatsV3(br, acc, addr.Host)
-		} else {
-			return b.readStatsV2(br, acc, addr.Host)
-		}
+	} else if contentType == "application/json" {
+		return b.readStatsJson(resp.Body, acc, addr.Host)
+	} else {
+		return fmt.Errorf("Unsupported Content-Type in response: %#v", contentType)
 	}
 }
 
