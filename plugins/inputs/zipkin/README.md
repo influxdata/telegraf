@@ -33,9 +33,9 @@ Traces are built by collecting all Spans that share a traceId.
       RPC is considered complete with this annotation
 
 - TAGS:
-      "id"               The 64 or 128-bit ID of the trace. Every span in a trace shares this ID.
-      _"parent_id":_        An ID associated with a particular child span.  If there is no child span, the parent ID is set to itself.
-      _"trace_id":_        The 64 or 128-bit ID of a particular trace. Trace ID High concat Trace ID Low.
+      "id"               The 64 bit ID of the span.
+      _"parent_id":_        An ID associated with a particular child span.  If there is no child span, the parent ID is set to ID.
+      _"trace_id":_        The 64 or 128-bit ID of a particular trace. Every span in a trace shares this ID. Concatenation of high and low and converted to hexadecimal.
       _"name":_             Defines a span
       "__service_name__":   Defines a service
       _"annotation":_       The value of an annotation
