@@ -9,42 +9,53 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+// XML path: //statistics
 // Omitted branches: socketmgr, taskmgr
 type v3Stats struct {
-	Server struct {
-		CounterGroups []v3Counters `xml:"counters"`
-	} `xml:"server"`
-	Views []struct {
-		// Omitted branches: zones
-		Name          string       `xml:"name,attr"`
-		CounterGroups []v3Counters `xml:"counters"`
-		Caches        []struct {
-			Name   string `xml:"name,attr"`
-			RRSets []struct {
-				Name  string `xml:"name"`
-				Value int    `xml:"counter"`
-			} `xml:"rrset"`
-		} `xml:"cache"`
-	} `xml:"views>view"`
-	Memory struct {
-		Contexts []struct {
-			// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
-			Id    string `xml:"id"`
-			Name  string `xml:"name"`
-			Total int    `xml:"total"`
-			InUse int    `xml:"inuse"`
-		} `xml:"contexts>context"`
-		Summary struct {
-			TotalUse    int
-			InUse       int
-			BlockSize   int
-			ContextSize int
-			Lost        int
-		} `xml:"summary"`
-	} `xml:"memory"`
+	Server v3Server `xml:"server"`
+	Views  []v3View `xml:"views>view"`
+	Memory v3Memory `xml:"memory"`
 }
 
-type v3Counters struct {
+// XML path: //statistics/memory
+type v3Memory struct {
+	Contexts []struct {
+		// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
+		Id    string `xml:"id"`
+		Name  string `xml:"name"`
+		Total int    `xml:"total"`
+		InUse int    `xml:"inuse"`
+	} `xml:"contexts>context"`
+	Summary struct {
+		TotalUse    int
+		InUse       int
+		BlockSize   int
+		ContextSize int
+		Lost        int
+	} `xml:"summary"`
+}
+
+// XML path: //statistics/server
+type v3Server struct {
+	CounterGroups []v3CounterGroup `xml:"counters"`
+}
+
+// XML path: //statistics/views/view
+type v3View struct {
+	// Omitted branches: zones
+	Name          string           `xml:"name,attr"`
+	CounterGroups []v3CounterGroup `xml:"counters"`
+	Caches        []struct {
+		Name   string `xml:"name,attr"`
+		RRSets []struct {
+			Name  string `xml:"name"`
+			Value int    `xml:"counter"`
+		} `xml:"rrset"`
+	} `xml:"cache"`
+}
+
+// Generic XML v3 doc fragment used in multiple places
+type v3CounterGroup struct {
 	Type     string `xml:"type,attr"`
 	Counters []struct {
 		Name  string `xml:"name,attr"`

@@ -14,22 +14,26 @@ type jsonStats struct {
 	QTypes    map[string]int
 	NSStats   map[string]int
 	SockStats map[string]int
-	Views     map[string]struct {
-		Resolver map[string]map[string]int
+	Views     map[string]jsonView
+	Memory    jsonMemory
+}
+
+type jsonMemory struct {
+	TotalUse    int
+	InUse       int
+	BlockSize   int
+	ContextSize int
+	Lost        int
+	Contexts    []struct {
+		Id    string
+		Name  string
+		Total int
+		InUse int
 	}
-	Memory struct {
-		TotalUse    int
-		InUse       int
-		BlockSize   int
-		ContextSize int
-		Lost        int
-		Contexts    []struct {
-			Id    string
-			Name  string
-			Total int
-			InUse int
-		}
-	}
+}
+
+type jsonView struct {
+	Resolver map[string]map[string]int
 }
 
 // addCounter adds a counter array to a Telegraf Accumulator, with the specified tags

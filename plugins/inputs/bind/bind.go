@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/xml"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -67,14 +68,16 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	resp, err := client.Get(addr.String())
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
+		return fmt.Errorf("error making HTTP request to %s: %s", addr, err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
+		return fmt.Errorf("%s returned HTTP status: %s", addr, resp.Status)
 	}
+
+	log.Printf("D! Response content length: %d", resp.ContentLength)
 
 	contentType := resp.Header.Get("Content-Type")
 
