@@ -3,7 +3,6 @@ package bind
 import (
 	"encoding/xml"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -143,24 +142,11 @@ func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
 			return fmt.Errorf("%s returned HTTP status: %s", scrapeUrl, resp.Status)
 		}
 
-		log.Printf("D! Response content length: %d", resp.ContentLength)
+		log.Printf("D! HTTP response content length: %d", resp.ContentLength)
 
 		if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
 			return fmt.Errorf("Unable to decode XML document: %s", err)
 		}
-	}
-
-	b.addStatsXMLv3(stats, acc, addr.Host)
-	return nil
-}
-
-// readStatsXMLv3Complete is similar to readStatsXMLv3, but takes an io.Reader HTTP response body
-// as a result of attempting to auto-detect the statistics format of a URL.
-func (b *Bind) readStatsXMLv3Complete(addr *url.URL, acc telegraf.Accumulator, r io.Reader) error {
-	var stats v3Stats
-
-	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
-		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
 	b.addStatsXMLv3(stats, acc, addr.Host)

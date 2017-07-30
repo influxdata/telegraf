@@ -3,8 +3,9 @@ package bind
 import (
 	"encoding/xml"
 	"fmt"
+	"log"
+	"net/http"
 	"net/url"
-	"io"
 
 	"github.com/influxdata/telegraf"
 )
@@ -60,8 +61,8 @@ type v2Counter struct {
 	Value int    `xml:"counter"`
 }
 
-// addXmlCounter adds a v2Counter array to a Telegraf Accumulator, with the specified tags
-func addXmlCounter(acc telegraf.Accumulator, commonTags map[string]string, stats []v2Counter) {
+// addXMLv2Counter adds a v2Counter array to a Telegraf Accumulator, with the specified tags
+func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, stats []v2Counter) {
 	for _, c := range stats {
 		tags := make(map[string]string)
 
@@ -77,11 +78,25 @@ func addXmlCounter(acc telegraf.Accumulator, commonTags map[string]string, stats
 	}
 }
 
-// readStatsXMLv2 decodes a BIND9 XML statistics version 2 document.
-func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator, r io.Reader) error {
+// readStatsXMLv2 decodes a BIND9 XML statistics version 2 document. Unlike the XML v3 statistics
+// format, the v2 format does not support broken-out subsets.
+func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	var stats v2Root
 
-	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
+	resp, err := client.Get(addr.String())
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s returned HTTP status: %s", addr, resp.Status)
+	}
+
+	log.Printf("D! HTTP response content length: %d", resp.ContentLength)
+
+	if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
 		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
@@ -89,23 +104,23 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator, r io.Read
 
 	// Opcodes
 	tags["type"] = "opcode"
-	addXmlCounter(acc, tags, stats.Statistics.Server.OpCodes)
+	addXMLv2Counter(acc, tags, stats.Statistics.Server.OpCodes)
 
 	// Query RDATA types
 	tags["type"] = "qtype"
-	addXmlCounter(acc, tags, stats.Statistics.Server.RdTypes)
+	addXMLv2Counter(acc, tags, stats.Statistics.Server.RdTypes)
 
 	// Nameserver stats
 	tags["type"] = "nsstat"
-	addXmlCounter(acc, tags, stats.Statistics.Server.NSStats)
+	addXMLv2Counter(acc, tags, stats.Statistics.Server.NSStats)
 
 	// Zone stats
 	tags["type"] = "zonestat"
-	addXmlCounter(acc, tags, stats.Statistics.Server.ZoneStats)
+	addXMLv2Counter(acc, tags, stats.Statistics.Server.ZoneStats)
 
 	// Socket statistics
 	tags["type"] = "sockstat"
-	addXmlCounter(acc, tags, stats.Statistics.Server.SockStats)
+	addXMLv2Counter(acc, tags, stats.Statistics.Server.SockStats)
 
 	// Memory stats
 	fields := map[string]interface{}{
@@ -134,11 +149,11 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator, r io.Read
 
 			// Query RDATA types
 			tags["type"] = "qtype"
-			addXmlCounter(acc, tags, v.RdTypes)
+			addXMLv2Counter(acc, tags, v.RdTypes)
 
 			// Resolver stats
 			tags["type"] = "resstats"
-			addXmlCounter(acc, tags, v.ResStats)
+			addXMLv2Counter(acc, tags, v.ResStats)
 		}
 	}
 

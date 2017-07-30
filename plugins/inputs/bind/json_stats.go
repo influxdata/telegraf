@@ -3,7 +3,6 @@ package bind
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -39,8 +38,8 @@ type jsonView struct {
 	Resolver map[string]map[string]int
 }
 
-// addJsonCounter adds a counter array to a Telegraf Accumulator, with the specified tags.
-func addJsonCounter(acc telegraf.Accumulator, commonTags map[string]string, stats map[string]int) {
+// addJSONCounter adds a counter array to a Telegraf Accumulator, with the specified tags.
+func addJSONCounter(acc telegraf.Accumulator, commonTags map[string]string, stats map[string]int) {
 	for name, value := range stats {
 		if commonTags["type"] == "opcode" && strings.HasPrefix(name, "RESERVED") {
 			continue
@@ -61,24 +60,24 @@ func addJsonCounter(acc telegraf.Accumulator, commonTags map[string]string, stat
 }
 
 // addStatsJson walks a jsonStats struct and adds the values to the telegraf.Accumulator.
-func (b *Bind) addStatsJson(stats jsonStats, acc telegraf.Accumulator, urlTag string) {
+func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag string) {
 	tags := map[string]string{"url": urlTag}
 
 	// Opcodes
 	tags["type"] = "opcode"
-	addJsonCounter(acc, tags, stats.OpCodes)
+	addJSONCounter(acc, tags, stats.OpCodes)
 
 	// Query RDATA types
 	tags["type"] = "qtype"
-	addJsonCounter(acc, tags, stats.QTypes)
+	addJSONCounter(acc, tags, stats.QTypes)
 
 	// Nameserver stats
 	tags["type"] = "nsstat"
-	addJsonCounter(acc, tags, stats.NSStats)
+	addJSONCounter(acc, tags, stats.NSStats)
 
 	// Socket statistics
 	tags["type"] = "sockstat"
-	addJsonCounter(acc, tags, stats.SockStats)
+	addJSONCounter(acc, tags, stats.SockStats)
 
 	// Memory stats
 	fields := map[string]interface{}{
@@ -120,10 +119,10 @@ func (b *Bind) addStatsJson(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	}
 }
 
-// readStatsJson takes a base URL to probe, and requests the individual statistics blobs that we
+// readStatsJSON takes a base URL to probe, and requests the individual statistics blobs that we
 // are interested in. These individual blobs have a combined size which is significantly smaller
 // than if we requested everything at once (e.g. taskmgr and socketmgr can be omitted).
-func (b *Bind) readStatsJson(addr *url.URL, acc telegraf.Accumulator) error {
+func (b *Bind) readStatsJSON(addr *url.URL, acc telegraf.Accumulator) error {
 	var stats jsonStats
 
 	// Progressively build up full jsonStats struct by parsing the individual HTTP responses
@@ -141,26 +140,13 @@ func (b *Bind) readStatsJson(addr *url.URL, acc telegraf.Accumulator) error {
 			return fmt.Errorf("%s returned HTTP status: %s", scrapeUrl, resp.Status)
 		}
 
-		log.Printf("D! Response content length: %d", resp.ContentLength)
+		log.Printf("D! HTTP response content length: %d", resp.ContentLength)
 
 		if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
 			return fmt.Errorf("Unable to decode JSON blob: %s", err)
 		}
 	}
 
-	b.addStatsJson(stats, acc, addr.Host)
-	return nil
-}
-
-// readStatsJsonComplete is similar to readStatsJson, but takes an io.Reader HTTP response body
-// as a result of attempting to auto-detect the statistics format of a URL.
-func (b *Bind) readStatsJsonComplete(addr *url.URL, acc telegraf.Accumulator, r io.Reader) error {
-	var stats jsonStats
-
-	if err := json.NewDecoder(r).Decode(&stats); err != nil {
-		return fmt.Errorf("Unable to decode JSON blob: %s", err)
-	}
-
-	b.addStatsJson(stats, acc, addr.Host)
+	b.addStatsJSON(stats, acc, addr.Host)
 	return nil
 }

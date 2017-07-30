@@ -1,10 +1,7 @@
 package bind
 
 import (
-	"bufio"
-	"encoding/xml"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -57,7 +54,7 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(b.GatherUrl(addr, acc))
+			acc.AddError(b.gatherUrl(addr, acc))
 		}(addr)
 	}
 
@@ -65,62 +62,18 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	// If URL is unambiguous, call the format-specific read function to take advantage of the
-	// broken-out subsets of statistics.
+func (b *Bind) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	switch addr.Path {
 	case "/json/v1":
-		return b.readStatsJson(addr, acc)
+		return b.readStatsJSON(addr, acc)
+	case "/xml/v2":
+		return b.readStatsXMLv2(addr, acc)
 	case "/xml/v3":
 		return b.readStatsXMLv3(addr, acc)
+	default:
+		return fmt.Errorf("URL %s is ambiguous. Please include a /json/v1, /xml/v2, or /xml/v3 path component.",
+			addr)
 	}
-
-	// Otherwise, perform HTTP GET and try to auto-detect format by Content-Type and optionally
-	// sniffing first few nodes of XML tree.
-	resp, err := client.Get(addr.String())
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s returned HTTP status: %s", addr, resp.Status)
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	log.Printf("D! Response content length: %d, content type: %s", resp.ContentLength, contentType)
-
-	if contentType == "application/json" {
-		return b.readStatsJsonComplete(addr, acc, resp.Body)
-	} else if contentType == "text/xml" {
-		// Wrap reader in a buffered reader so that we can peek ahead to determine schema version
-		br := bufio.NewReader(resp.Body)
-
-		if p, err := br.Peek(256); err != nil {
-			return fmt.Errorf("Unable to peek ahead in stream to determine statistics version: %s", err)
-		} else {
-			var xmlRoot struct {
-				XMLName xml.Name
-				Version float64 `xml:"version,attr"`
-			}
-
-			if err := xml.Unmarshal(p, &xmlRoot); err != nil {
-				// We expect an EOF error since we only fed the decoder a small fragment
-				if _, ok := err.(*xml.SyntaxError); !ok {
-					return fmt.Errorf("XML syntax error: %s", err)
-				}
-			}
-
-			if (xmlRoot.XMLName.Local == "statistics") && (int(xmlRoot.Version) == 3) {
-				return b.readStatsXMLv3Complete(addr, acc, br)
-			} else {
-				return b.readStatsXMLv2(addr, acc, br)
-			}
-		}
-	}
-
-	return fmt.Errorf("Unsupported content type in response: %#v", contentType)
 }
 
 func init() {

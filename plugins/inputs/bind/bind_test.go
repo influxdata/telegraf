@@ -80,7 +80,7 @@ func TestBindXmlStatsV2(t *testing.T) {
 	defer ts.Close()
 
 	b := Bind{
-		Urls: []string{ts.URL},
+		Urls: []string{ts.URL + "/xml/v2"},
 	}
 
 	var acc testutil.Accumulator
