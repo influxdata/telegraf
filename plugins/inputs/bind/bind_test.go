@@ -18,7 +18,7 @@ func TestBindJsonStats(t *testing.T) {
 	defer ts.Close()
 
 	b := Bind{
-		Urls: []string{ts.URL},
+		Urls: []string{ts.URL + "/json/v1"},
 	}
 
 	var acc testutil.Accumulator

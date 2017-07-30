@@ -66,9 +66,17 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 }
 
 func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+	// If URL is unambiguous, call the format-specific read function to take advantage of the
+	// broken-out subsets of statistics.
+	if addr.Path == "/json/v1" {
+		return b.readStatsJson(addr, acc)
+	}
+
+	// Otherwise, perform HTTP GET and try to auto-detect format by Content-Type and optionally
+	// sniffing first few nodes of XML tree.
 	resp, err := client.Get(addr.String())
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", addr, err)
+		return err
 	}
 
 	defer resp.Body.Close()
@@ -77,11 +85,12 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s returned HTTP status: %s", addr, resp.Status)
 	}
 
-	log.Printf("D! Response content length: %d", resp.ContentLength)
-
 	contentType := resp.Header.Get("Content-Type")
+	log.Printf("D! Response content length: %d, content type: %s", resp.ContentLength, contentType)
 
-	if contentType == "text/xml" {
+	if contentType == "application/json" {
+		return b.readStatsJsonComplete(addr, acc, resp.Body)
+	} else if contentType == "text/xml" {
 		// Wrap reader in a buffered reader so that we can peek ahead to determine schema version
 		br := bufio.NewReader(resp.Body)
 
@@ -93,9 +102,7 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 				Version float64 `xml:"version,attr"`
 			}
 
-			err := xml.Unmarshal(p, &xmlRoot)
-
-			if err != nil {
+			if err := xml.Unmarshal(p, &xmlRoot); err != nil {
 				// We expect an EOF error since we only fed the decoder a small fragment
 				if _, ok := err.(*xml.SyntaxError); !ok {
 					return fmt.Errorf("XML syntax error: %s", err)
@@ -108,11 +115,9 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 				return b.readStatsV2(br, acc, addr.Host)
 			}
 		}
-	} else if contentType == "application/json" {
-		return b.readStatsJson(resp.Body, acc, addr.Host)
-	} else {
-		return fmt.Errorf("Unsupported Content-Type in response: %#v", contentType)
 	}
+
+	return fmt.Errorf("Unsupported content type in response: %#v", contentType)
 }
 
 func init() {
