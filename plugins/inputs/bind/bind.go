@@ -19,8 +19,8 @@ type Bind struct {
 
 var sampleConfig = `
   ## An array of BIND XML statistics URI to gather stats.
-  ## Default is "http://localhost:8053/".
-  # urls = ["http://localhost:8053/"]
+  ## Default is "http://localhost:8053/xml/v3".
+  # urls = ["http://localhost:8053/xml/v3"]
   # gather_memory_contexts = false
   # gather_views = false
 `
@@ -41,7 +41,7 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if len(b.Urls) == 0 {
-		b.Urls = []string{"http://localhost:8053/"}
+		b.Urls = []string{"http://localhost:8053/xml/v3"}
 	}
 
 	for _, u := range b.Urls {
@@ -64,14 +64,20 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 
 func (b *Bind) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	switch addr.Path {
+	case "":
+		// BIND 9.6 - 9.8
+		return b.readStatsXMLv2(addr, acc)
 	case "/json/v1":
+		// BIND 9.10+
 		return b.readStatsJSON(addr, acc)
 	case "/xml/v2":
+		// BIND 9.9
 		return b.readStatsXMLv2(addr, acc)
 	case "/xml/v3":
+		// BIND 9.9+
 		return b.readStatsXMLv3(addr, acc)
 	default:
-		return fmt.Errorf("URL %s is ambiguous. Please include a /json/v1, /xml/v2, or /xml/v3 path component.",
+		return fmt.Errorf("URL %s is ambiguous. Please check plugin documentation for supported URL formats.",
 			addr)
 	}
 }
