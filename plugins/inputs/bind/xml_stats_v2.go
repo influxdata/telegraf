@@ -3,6 +3,7 @@ package bind
 import (
 	"encoding/xml"
 	"fmt"
+	"net/url"
 	"io"
 
 	"github.com/influxdata/telegraf"
@@ -76,15 +77,15 @@ func addXmlCounter(acc telegraf.Accumulator, commonTags map[string]string, stats
 	}
 }
 
-// readStatsV2 decodes a BIND9 XML statistics version 2 document
-func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator, url string) error {
+// readStatsXMLv2 decodes a BIND9 XML statistics version 2 document.
+func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator, r io.Reader) error {
 	var stats v2Root
 
 	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
 		return fmt.Errorf("Unable to decode XML document: %s", err)
 	}
 
-	tags := map[string]string{"url": url}
+	tags := map[string]string{"url": addr.Host}
 
 	// Opcodes
 	tags["type"] = "opcode"
@@ -114,12 +115,12 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator, url string) er
 		"ContextSize": stats.Statistics.Memory.Summary.ContextSize,
 		"Lost":        stats.Statistics.Memory.Summary.Lost,
 	}
-	acc.AddGauge("bind_memory", fields, map[string]string{"url": url})
+	acc.AddGauge("bind_memory", fields, map[string]string{"url": addr.Host})
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Statistics.Memory.Contexts {
-			tags := map[string]string{"url": url, "id": c.Id, "name": c.Name}
+			tags := map[string]string{"url": addr.Host, "id": c.Id, "name": c.Name}
 			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
@@ -129,7 +130,7 @@ func (b *Bind) readStatsV2(r io.Reader, acc telegraf.Accumulator, url string) er
 	// Detailed, per-view stats
 	if b.GatherViews {
 		for _, v := range stats.Statistics.Views {
-			tags := map[string]string{"url": url, "view": v.Name}
+			tags := map[string]string{"url": addr.Host, "view": v.Name}
 
 			// Query RDATA types
 			tags["type"] = "qtype"

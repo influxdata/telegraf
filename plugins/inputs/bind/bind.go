@@ -68,8 +68,11 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	// If URL is unambiguous, call the format-specific read function to take advantage of the
 	// broken-out subsets of statistics.
-	if addr.Path == "/json/v1" {
+	switch addr.Path {
+	case "/json/v1":
 		return b.readStatsJson(addr, acc)
+	case "/xml/v3":
+		return b.readStatsXMLv3(addr, acc)
 	}
 
 	// Otherwise, perform HTTP GET and try to auto-detect format by Content-Type and optionally
@@ -110,9 +113,9 @@ func (b *Bind) GatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 			}
 
 			if (xmlRoot.XMLName.Local == "statistics") && (int(xmlRoot.Version) == 3) {
-				return b.readStatsV3(br, acc, addr.Host)
+				return b.readStatsXMLv3Complete(addr, acc, br)
 			} else {
-				return b.readStatsV2(br, acc, addr.Host)
+				return b.readStatsXMLv2(addr, acc, br)
 			}
 		}
 	}

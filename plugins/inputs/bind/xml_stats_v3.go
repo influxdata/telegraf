@@ -4,6 +4,9 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -63,14 +66,8 @@ type v3CounterGroup struct {
 	} `xml:"counter"`
 }
 
-// readStatsV3 decodes a BIND9 XML statistics version 3 document
-func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) error {
-	var stats v3Stats
-
-	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
-		return fmt.Errorf("Unable to decode XML document: %s", err)
-	}
-
+// addStatsXMLv3 walks a v3Stats struct and adds the values to the telegraf.Accumulator.
+func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, urlTag string) {
 	// Counter groups
 	for _, cg := range stats.Server.CounterGroups {
 		for _, c := range cg.Counters {
@@ -78,7 +75,7 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) er
 				continue
 			}
 
-			tags := map[string]string{"url": url, "type": cg.Type, "name": c.Name}
+			tags := map[string]string{"url": urlTag, "type": cg.Type, "name": c.Name}
 			fields := map[string]interface{}{"value": c.Value}
 
 			acc.AddCounter("bind_counter", fields, tags)
@@ -93,12 +90,12 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) er
 		"ContextSize": stats.Memory.Summary.ContextSize,
 		"Lost":        stats.Memory.Summary.Lost,
 	}
-	acc.AddGauge("bind_memory", fields, map[string]string{"url": url})
+	acc.AddGauge("bind_memory", fields, map[string]string{"url": urlTag})
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Memory.Contexts {
-			tags := map[string]string{"url": url, "id": c.Id, "name": c.Name}
+			tags := map[string]string{"url": urlTag, "id": c.Id, "name": c.Name}
 			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
@@ -111,7 +108,7 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) er
 			for _, cg := range v.CounterGroups {
 				for _, c := range cg.Counters {
 					tags := map[string]string{
-						"url":  url,
+						"url":  urlTag,
 						"view": v.Name,
 						"type": cg.Type,
 						"name": c.Name,
@@ -123,6 +120,49 @@ func (b *Bind) readStatsV3(r io.Reader, acc telegraf.Accumulator, url string) er
 			}
 		}
 	}
+}
 
+// readStatsXMLv3 takes a base URL to probe, and requests the individual statistics documents that
+// we are interested in. These individual documents have a combined size which is significantly
+// smaller than if we requested everything at once (e.g. taskmgr and socketmgr can be omitted).
+func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
+	var stats v3Stats
+
+	// Progressively build up full v3Stats struct by parsing the individual HTTP responses
+	for _, suffix := range [...]string{"/server", "/net", "/mem"} {
+		scrapeUrl := addr.String() + suffix
+
+		resp, err := client.Get(scrapeUrl)
+		if err != nil {
+			return err
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("%s returned HTTP status: %s", scrapeUrl, resp.Status)
+		}
+
+		log.Printf("D! Response content length: %d", resp.ContentLength)
+
+		if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
+			return fmt.Errorf("Unable to decode XML document: %s", err)
+		}
+	}
+
+	b.addStatsXMLv3(stats, acc, addr.Host)
+	return nil
+}
+
+// readStatsXMLv3Complete is similar to readStatsXMLv3, but takes an io.Reader HTTP response body
+// as a result of attempting to auto-detect the statistics format of a URL.
+func (b *Bind) readStatsXMLv3Complete(addr *url.URL, acc telegraf.Accumulator, r io.Reader) error {
+	var stats v3Stats
+
+	if err := xml.NewDecoder(r).Decode(&stats); err != nil {
+		return fmt.Errorf("Unable to decode XML document: %s", err)
+	}
+
+	b.addStatsXMLv3(stats, acc, addr.Host)
 	return nil
 }
