@@ -197,3 +197,13 @@ func TestBindXmlStatsV3(t *testing.T) {
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
 	})
 }
+
+func TestBindUnparseableURL(t *testing.T) {
+	b := Bind{
+		Urls: []string{"://example.com"},
+	}
+
+	var acc testutil.Accumulator
+	err := acc.GatherError(b.Gather)
+	assert.Contains(t, err.Error(), "Unable to parse address")
+}

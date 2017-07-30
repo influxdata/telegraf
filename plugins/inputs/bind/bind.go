@@ -47,14 +47,14 @@ func (b *Bind) Gather(acc telegraf.Accumulator) error {
 		b.Urls = []string{"http://localhost:8053/"}
 	}
 
-	wg.Add(len(b.Urls))
-
 	for _, u := range b.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
 			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
 		}
 
+		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
 			acc.AddError(b.GatherUrl(addr, acc))
