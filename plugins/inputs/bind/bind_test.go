@@ -11,10 +11,7 @@ import (
 )
 
 func TestBindJsonStats(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		http.ServeFile(w, r, "testdata/bindstats-v1.json")
-	}))
+	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
 	defer ts.Close()
 
 	b := Bind{
@@ -73,10 +70,7 @@ func TestBindJsonStats(t *testing.T) {
 }
 
 func TestBindXmlStatsV2(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/xml")
-		http.ServeFile(w, r, "testdata/bindstats-v2.xml")
-	}))
+	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
 	defer ts.Close()
 
 	b := Bind{
@@ -136,10 +130,7 @@ func TestBindXmlStatsV2(t *testing.T) {
 }
 
 func TestBindXmlStatsV3(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/xml")
-		http.ServeFile(w, r, "testdata/bindstats-v3.xml")
-	}))
+	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
 	defer ts.Close()
 
 	b := Bind{

@@ -105,70 +105,6 @@
       <counter name="XfrFail">0</counter>
     </counters>
     <counters type="resstat"/>
-    <counters type="sockstat">
-      <counter name="UDP4Open">92542</counter>
-      <counter name="UDP6Open">0</counter>
-      <counter name="TCP4Open">48</counter>
-      <counter name="TCP6Open">0</counter>
-      <counter name="UnixOpen">0</counter>
-      <counter name="RawOpen">1</counter>
-      <counter name="UDP4OpenFail">0</counter>
-      <counter name="UDP6OpenFail">0</counter>
-      <counter name="TCP4OpenFail">0</counter>
-      <counter name="TCP6OpenFail">0</counter>
-      <counter name="UnixOpenFail">0</counter>
-      <counter name="RawOpenFail">0</counter>
-      <counter name="UDP4Close">92538</counter>
-      <counter name="UDP6Close">0</counter>
-      <counter name="TCP4Close">336</counter>
-      <counter name="TCP6Close">0</counter>
-      <counter name="UnixClose">0</counter>
-      <counter name="FDWatchClose">0</counter>
-      <counter name="RawClose">0</counter>
-      <counter name="UDP4BindFail">1</counter>
-      <counter name="UDP6BindFail">0</counter>
-      <counter name="TCP4BindFail">0</counter>
-      <counter name="TCP6BindFail">0</counter>
-      <counter name="UnixBindFail">0</counter>
-      <counter name="FdwatchBindFail">0</counter>
-      <counter name="UDP4ConnFail">0</counter>
-      <counter name="UDP6ConnFail">0</counter>
-      <counter name="TCP4ConnFail">0</counter>
-      <counter name="TCP6ConnFail">0</counter>
-      <counter name="UnixConnFail">0</counter>
-      <counter name="FDwatchConnFail">0</counter>
-      <counter name="UDP4Conn">92535</counter>
-      <counter name="UDP6Conn">0</counter>
-      <counter name="TCP4Conn">44</counter>
-      <counter name="TCP6Conn">0</counter>
-      <counter name="UnixConn">0</counter>
-      <counter name="FDwatchConn">0</counter>
-      <counter name="TCP4AcceptFail">0</counter>
-      <counter name="TCP6AcceptFail">0</counter>
-      <counter name="UnixAcceptFail">0</counter>
-      <counter name="TCP4Accept">293</counter>
-      <counter name="TCP6Accept">0</counter>
-      <counter name="UnixAccept">0</counter>
-      <counter name="UDP4SendErr">0</counter>
-      <counter name="UDP6SendErr">0</counter>
-      <counter name="TCP4SendErr">0</counter>
-      <counter name="TCP6SendErr">0</counter>
-      <counter name="UnixSendErr">0</counter>
-      <counter name="FDwatchSendErr">0</counter>
-      <counter name="UDP4RecvErr">14</counter>
-      <counter name="UDP6RecvErr">0</counter>
-      <counter name="TCP4RecvErr">0</counter>
-      <counter name="TCP6RecvErr">0</counter>
-      <counter name="UnixRecvErr">0</counter>
-      <counter name="FDwatchRecvErr">0</counter>
-      <counter name="RawRecvErr">0</counter>
-      <counter name="UDP4Active">4</counter>
-      <counter name="UDP6Active">0</counter>
-      <counter name="TCP4Active">297</counter>
-      <counter name="TCP6Active">0</counter>
-      <counter name="UnixActive">0</counter>
-      <counter name="RawActive">1</counter>
-    </counters>
   </server>
   <views>
     <view name="_default">
@@ -389,15 +325,4 @@
       </counters>
     </view>
   </views>
-  <memory>
-    <contexts>
-    </contexts>
-    <summary>
-      <TotalUse>777821909</TotalUse>
-      <InUse>6000232</InUse>
-      <BlockSize>45875200</BlockSize>
-      <ContextSize>10037400</ContextSize>
-      <Lost>0</Lost>
-    </summary>
-  </memory>
 </statistics>

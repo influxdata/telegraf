@@ -137,34 +137,5 @@
         }
       }
     }
-  },
-  "sockstats":{
-    "UDP4Open":335,
-    "UDP6Open":113,
-    "TCP4Open":118,
-    "TCP6Open":2,
-    "RawOpen":1,
-    "UDP4Close":333,
-    "UDP6Close":112,
-    "TCP4Close":119,
-    "UDP6ConnFail":112,
-    "UDP4Conn":333,
-    "TCP4Conn":114,
-    "TCP4Accept":6,
-    "UDP6SendErr":112,
-    "UDP4RecvErr":1,
-    "UDP4Active":2,
-    "UDP6Active":1,
-    "TCP4Active":10,
-    "TCP6Active":2,
-    "RawActive":1
-  },
-  "memory":{
-    "TotalUse":18206566,
-    "InUse":3064368,
-    "BlockSize":13893632,
-    "ContextSize":3685480,
-    "Lost":0,
-    "contexts":[]
   }
 }
