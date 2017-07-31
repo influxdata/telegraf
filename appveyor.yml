@@ -1,4 +1,4 @@
-version: {build}
+version: "{build}"
 
 cache:
  - C:\Cache
