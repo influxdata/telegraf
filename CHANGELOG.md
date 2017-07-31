@@ -18,6 +18,7 @@
 - [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
 - [fluentd](./plugins/inputs/fluentd/README.md) - Thanks to @DanKans
 - [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
+- [histogram](./plugins/aggregators/histogram/README.md) - Thanks to @vlamug
 
 ### Features
 
@@ -46,6 +47,7 @@
 - [#3042](https://github.com/influxdata/telegraf/pull/3042): Add network option to dns_query.
 - [#3054](https://github.com/influxdata/telegraf/pull/3054): Add redis_version field to redis input.
 - [#3063](https://github.com/influxdata/telegraf/pull/3063): Add tls options to docker input.
+- [#2387](https://github.com/influxdata/telegraf/pull/2387): Add histogram aggregator plugin.
 
 ### Bugfixes
 
