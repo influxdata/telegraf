@@ -79,8 +79,8 @@ type Trace []Span
 
 const sampleConfig = `
   ##
-  # path = /path/your/zipkin/impl/posts/to
-  # port = <port your service posts to>
+  # path = "/api/v1/spans" # URL path for span data
+  # port = 9411            # Port on which Telegraf listens
 `
 
 // Zipkin is a telegraf configuration structure for the zipkin input plugin,
@@ -97,7 +97,7 @@ type Zipkin struct {
 
 // Description is a necessary method implementation from telegraf.ServiceInput
 func (z Zipkin) Description() string {
-	return "Allows for the collection of zipkin tracing spans for storage in InfluxDB"
+	return "This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures."
 }
 
 // SampleConfig is a  necessary  method implementation from telegraf.ServiceInput

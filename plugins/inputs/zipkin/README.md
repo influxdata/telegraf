@@ -7,7 +7,7 @@ This plugin implements the Zipkin http server to gather trace and timing data ne
 ### Configuration:
 ```toml
 [[inputs.zipkin]]
-    path = "/api/v1/spans" #Path on which Telegraf listens for spans
+    path = "/api/v1/spans" # URL path for span data
     port = 9411 # Port on which Telegraf listens
 ```
 
@@ -60,7 +60,7 @@ Traces are built by collecting all Spans that share a traceId.
 
 __Get All Span Names for Service__ `my_web_server`
 ```sql
-SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_server' 
+SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_server'
 ```
   - _Description:_  returns a list containing the names of the spans which have annotations with the given `service_name` of `my_web_server`.
 
@@ -149,17 +149,7 @@ ___Add___ the following to your config file, under the `[data]` tab:
 
 ```toml
 [data]
-    dir = "/Users/goller/.influxdb/data"
     index-version = "tsi1"
-    wal-dir = "/Users/goller/.influxdb/wal"
-    query-log-enabled = true
-    cache-max-memory-size = 1073741824
-    cache-snapshot-memory-size = 26214400
-    cache-snapshot-write-cold-duration = "10m0s"
-    compact-full-write-cold-duration = "4h0m0s"
-    max-series-per-database = 1000000
-    max-values-per-tag = 100000
-    trace-logging-enabled = false
  ```
 
  ___Start___ `influxd` with your new config file:
