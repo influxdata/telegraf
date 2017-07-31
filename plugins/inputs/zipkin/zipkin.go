@@ -68,6 +68,7 @@ type Span struct {
 	TraceID           string // zipkin traceid high concat with traceid
 	Name              string
 	ParentID          string
+	ServiceName       string
 	Timestamp         time.Time // If zipkin input is nil then time.Now()
 	Duration          time.Duration
 	Annotations       []Annotation
