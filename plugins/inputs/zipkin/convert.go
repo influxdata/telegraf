@@ -92,6 +92,7 @@ func NewTrace(spans []*zipkincore.Span) Trace {
 			Timestamp:         guessTimestamp(span),
 			Duration:          convertDuration(span),
 			ParentID:          parentID(span),
+			ServiceName:       serviceName(endpoint),
 			Annotations:       NewAnnotations(span.GetAnnotations(), endpoint),
 			BinaryAnnotations: NewBinaryAnnotations(span.GetBinaryAnnotations(), endpoint),
 		}
