@@ -202,6 +202,9 @@ func host(h *zipkincore.Endpoint) string {
 	if h == nil {
 		return ""
 	}
+	if h.GetPort() == 0 {
+		return ipv4(h.GetIpv4())
+	}
 	// Zipkin uses a signed int16 for the port, but, warns us that they actually treat it
 	// as an unsigned int16. So, we convert from int16 to int32 followed by taking & 0xffff
 	// to convert from signed to unsigned

@@ -57,7 +57,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"name":           "Child",
 						"service_name":   "trivial",
 						"annotation":     "trivial", //base64: dHJpdmlhbA==
-						"endpoint_host":  "127.0.0.1:0",
+						"endpoint_host":  "127.0.0.1",
 						"annotation_key": "lc",
 					},
 					Fields: map[string]interface{}{
@@ -87,7 +87,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"name":           "Child",
 						"service_name":   "trivial",
 						"annotation":     "trivial", //base64: dHJpdmlhbA==
-						"endpoint_host":  "127.0.0.1:0",
+						"endpoint_host":  "127.0.0.1",
 						"annotation_key": "lc",
 					},
 					Fields: map[string]interface{}{
@@ -113,7 +113,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"service_name":  "trivial",
 						"annotation":    "Starting child #0",
-						"endpoint_host": "127.0.0.1:0",
+						"endpoint_host": "127.0.0.1",
 						"id":            "22964302721410078",
 						"parent_id":     "22964302721410078",
 						"trace_id":      "22c4fc8ab3669045",
@@ -129,7 +129,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"service_name":  "trivial",
 						"annotation":    "Starting child #1",
-						"endpoint_host": "127.0.0.1:0",
+						"endpoint_host": "127.0.0.1",
 						"id":            "22964302721410078",
 						"parent_id":     "22964302721410078",
 						"trace_id":      "22c4fc8ab3669045",
@@ -148,7 +148,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"name":          "Parent",
 						"service_name":  "trivial",
 						"annotation":    "A Log",
-						"endpoint_host": "127.0.0.1:0",
+						"endpoint_host": "127.0.0.1",
 						"id":            "22964302721410078",
 					},
 					Fields: map[string]interface{}{
@@ -166,7 +166,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"id":             "22964302721410078",
 						"parent_id":      "22964302721410078",
 						"name":           "Parent",
-						"endpoint_host":  "127.0.0.1:0",
+						"endpoint_host":  "127.0.0.1",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
