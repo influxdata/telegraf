@@ -38,10 +38,11 @@ func TestZipkinPlugin(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"id":        "8090652509916334619",
-						"parent_id": "22964302721410078",
-						"trace_id":  "22c4fc8ab3669045",
-						"name":      "Child",
+						"id":           "8090652509916334619",
+						"parent_id":    "22964302721410078",
+						"trace_id":     "22c4fc8ab3669045",
+						"service_name": "trivial",
+						"name":         "Child",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
@@ -68,10 +69,11 @@ func TestZipkinPlugin(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"id":        "103618986556047333",
-						"parent_id": "22964302721410078",
-						"trace_id":  "22c4fc8ab3669045",
-						"name":      "Child",
+						"id":           "103618986556047333",
+						"parent_id":    "22964302721410078",
+						"trace_id":     "22c4fc8ab3669045",
+						"service_name": "trivial",
+						"name":         "Child",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
@@ -98,10 +100,11 @@ func TestZipkinPlugin(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"id":        "22964302721410078",
-						"parent_id": "22964302721410078",
-						"trace_id":  "22c4fc8ab3669045",
-						"name":      "Parent",
+						"id":           "22964302721410078",
+						"parent_id":    "22964302721410078",
+						"trace_id":     "22c4fc8ab3669045",
+						"service_name": "trivial",
+						"name":         "Parent",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
@@ -186,10 +189,11 @@ func TestZipkinPlugin(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"id":        "6802735349851856000",
-						"parent_id": "6802735349851856000",
-						"trace_id":  "5e682bc21ce99c80",
-						"name":      "main.dud",
+						"id":           "6802735349851856000",
+						"parent_id":    "6802735349851856000",
+						"trace_id":     "5e682bc21ce99c80",
+						"service_name": "go-zipkin-testclient",
+						"name":         "main.dud",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(1) * time.Microsecond).Nanoseconds(),
@@ -262,8 +266,8 @@ func TestZipkinPlugin(t *testing.T) {
 				got = append(got, *m)
 			}
 
-			if !cmp.Equal(got, tt.want) {
-				t.Fatalf("Got != Want\n %s", cmp.Diff(got, tt.want))
+			if !cmp.Equal(tt.want, got) {
+				t.Fatalf("Got != Want\n %s", cmp.Diff(tt.want, got))
 			}
 		})
 	}
