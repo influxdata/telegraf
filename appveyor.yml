@@ -1,4 +1,4 @@
-version: 1.4-rc{build}
+version: {build}
 
 cache:
  - C:\Cache
