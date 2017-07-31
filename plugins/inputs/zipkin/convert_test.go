@@ -554,6 +554,16 @@ func Test_host(t *testing.T) {
 			},
 			want: "",
 		},
+		{
+			name: "int overflow zipkin uses an int16 type as an unsigned int 16.",
+			args: args{
+				h: &zipkincore.Endpoint{
+					Ipv4: 1234,
+					Port: -1,
+				},
+			},
+			want: "0.0.4.210:65535",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
