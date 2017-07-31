@@ -84,6 +84,7 @@ func (l *LineProtocolConverter) Error(err error) {
 func NewTrace(spans []*zipkincore.Span) Trace {
 	trace := make(Trace, len(spans))
 	for i, span := range spans {
+		endpoint := serviceEndpoint(span.GetAnnotations(), span.GetBinaryAnnotations())
 		trace[i] = Span{
 			ID:                formatID(span.GetID()),
 			TraceID:           formatTraceID(span.GetTraceIDHigh(), span.GetTraceID()),
@@ -91,8 +92,8 @@ func NewTrace(spans []*zipkincore.Span) Trace {
 			Timestamp:         guessTimestamp(span),
 			Duration:          convertDuration(span),
 			ParentID:          parentID(span),
-			Annotations:       NewAnnotations(span.GetAnnotations()),
-			BinaryAnnotations: NewBinaryAnnotations(span.GetBinaryAnnotations()),
+			Annotations:       NewAnnotations(span.GetAnnotations(), endpoint),
+			BinaryAnnotations: NewBinaryAnnotations(span.GetBinaryAnnotations(), endpoint),
 		}
 	}
 	return trace
@@ -100,12 +101,12 @@ func NewTrace(spans []*zipkincore.Span) Trace {
 
 // NewAnnotations converts a slice of *zipkincore.Annotation into a slice
 // of new Annotations
-func NewAnnotations(annotations []*zipkincore.Annotation) []Annotation {
+func NewAnnotations(annotations []*zipkincore.Annotation, endpoint *zipkincore.Endpoint) []Annotation {
 	formatted := make([]Annotation, len(annotations))
 	for i, annotation := range annotations {
 		formatted[i] = Annotation{
-			Host:        host(annotation.GetHost()),
-			ServiceName: serviceName(annotation.GetHost()),
+			Host:        host(endpoint),
+			ServiceName: serviceName(endpoint),
 			Timestamp:   microToTime(annotation.GetTimestamp()),
 			Value:       annotation.GetValue(),
 		}
@@ -116,12 +117,12 @@ func NewAnnotations(annotations []*zipkincore.Annotation) []Annotation {
 
 // NewBinaryAnnotations is very similar to NewAnnotations, but it
 // converts zipkincore.BinaryAnnotations instead of the normal zipkincore.Annotation
-func NewBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation) []BinaryAnnotation {
+func NewBinaryAnnotations(annotations []*zipkincore.BinaryAnnotation, endpoint *zipkincore.Endpoint) []BinaryAnnotation {
 	formatted := make([]BinaryAnnotation, len(annotations))
 	for i, annotation := range annotations {
 		formatted[i] = BinaryAnnotation{
-			Host:        host(annotation.GetHost()),
-			ServiceName: serviceName(annotation.GetHost()),
+			Host:        host(endpoint),
+			ServiceName: serviceName(endpoint),
 			Key:         annotation.GetKey(),
 			Value:       string(annotation.GetValue()),
 			Type:        annotation.GetAnnotationType().String(),
@@ -209,4 +210,28 @@ func serviceName(h *zipkincore.Endpoint) string {
 		return ""
 	}
 	return h.GetServiceName()
+}
+
+func serviceEndpoint(ann []*zipkincore.Annotation, bann []*zipkincore.BinaryAnnotation) *zipkincore.Endpoint {
+	for _, a := range ann {
+		switch a.Value {
+		case zipkincore.SERVER_RECV, zipkincore.SERVER_SEND, zipkincore.CLIENT_RECV, zipkincore.CLIENT_SEND:
+			if a.Host != nil && a.Host.ServiceName != "" {
+				return a.Host
+			}
+		}
+	}
+
+	for _, a := range bann {
+		if a.Key == zipkincore.LOCAL_COMPONENT && a.Host != nil && a.Host.ServiceName != "" {
+			return a.Host
+		}
+	}
+	// Unable to find any "standard" endpoint host, so, use any that exist in the regular annotations
+	for _, a := range ann {
+		if a.Host != nil && a.Host.ServiceName != "" {
+			return a.Host
+		}
+	}
+	return nil
 }
