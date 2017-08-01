@@ -210,6 +210,7 @@ func host(h *zipkincore.Endpoint) string {
 	// Zipkin uses a signed int16 for the port, but, warns us that they actually treat it
 	// as an unsigned int16. So, we convert from int16 to int32 followed by taking & 0xffff
 	// to convert from signed to unsigned
+	// https://github.com/openzipkin/zipkin/blob/57dc2ec9c65fe6144e401c0c933b4400463a69df/zipkin/src/main/java/zipkin/Endpoint.java#L44
 	return ipv4(h.GetIpv4()) + ":" + strconv.FormatInt(int64(int(h.GetPort())&0xffff), 10)
 }
 
