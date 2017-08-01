@@ -19,7 +19,7 @@ var sampleConfig = `
 
 var description = "Input plugin to report Windows services info."
 
-type Win_Services struct {
+type WinServices struct {
 	ServiceNames []string `toml:"service_names"`
 }
 
@@ -31,33 +31,15 @@ type ServiceInfo struct {
 	Error       error
 }
 
-var ServiceStatesMap = map[int]string{
-	0x00000001: "stopped",
-	0x00000002: "start_pending",
-	0x00000003: "stop_pending",
-	0x00000004: "running",
-	0x00000005: "continue_pending",
-	0x00000006: "pause_pending",
-	0x00000007: "paused",
-}
-
-var ServiceStartupModeMap = map[int]string{
-	0x00000000: "boot_start",
-	0x00000001: "system_start",
-	0x00000002: "auto_start",
-	0x00000003: "demand_start",
-	0x00000004: "disabled",
-}
-
-func (m *Win_Services) Description() string {
+func (m *WinServices) Description() string {
 	return description
 }
 
-func (m *Win_Services) SampleConfig() string {
+func (m *WinServices) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
+func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 
 	serviceInfos, err := listServices(m.ServiceNames)
 
@@ -70,7 +52,10 @@ func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
 			fields := make(map[string]interface{})
 			tags := make(map[string]string)
 
-			tags["display_name"] = service.DisplayName
+			//display name could be empty, but still valid service
+			if len(service.DisplayName) > 0 {
+				tags["display_name"] = service.DisplayName
+			}
 			tags["service_name"] = service.ServiceName
 
 			fields["state"] = service.State
@@ -85,6 +70,7 @@ func (m *Win_Services) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+//listServices gathers info about given services. If userServices is empty, it return info about all services on current Windows host.  Any a critical error is returned.
 func listServices(userServices []string) ([]ServiceInfo, error) {
 	scmgr, err := mgr.Connect()
 	if err != nil {
@@ -111,6 +97,7 @@ func listServices(userServices []string) ([]ServiceInfo, error) {
 	return serviceInfos, nil
 }
 
+//collectServiceInfo gathers info about a  service from WindowsAPI
 func collectServiceInfo(scmgr *mgr.Mgr, serviceName string) (serviceInfo ServiceInfo) {
 
 	serviceInfo.ServiceName = serviceName
@@ -121,18 +108,9 @@ func collectServiceInfo(scmgr *mgr.Mgr, serviceName string) (serviceInfo Service
 	}
 	defer srv.Close()
 
-	//While getting service info there could a theoretically a lot of errors on different places.
-	//However in reality if there is a problem with a service then usually openService fails and if it passes, other calls will most probably be ok
-	//So, following error checking is just for sake
 	srvStatus, err := srv.Query()
 	if err == nil {
-		state := int(srvStatus.State)
-		if !checkState(state) {
-			serviceInfo.Error = fmt.Errorf("Uknown state of Service %s: %d", serviceName, state)
-			//finish collecting info on first found error
-			return
-		}
-		serviceInfo.State = state
+		serviceInfo.State = int(srvStatus.State)
 	} else {
 		serviceInfo.Error = fmt.Errorf("Could not query service '%s': %s", serviceName, err)
 		//finish collecting info on first found error
@@ -141,32 +119,14 @@ func collectServiceInfo(scmgr *mgr.Mgr, serviceName string) (serviceInfo Service
 
 	srvCfg, err := srv.Config()
 	if err == nil {
-		startupMode := int(srvCfg.StartType)
-		if !checkStartupMode(startupMode) {
-			serviceInfo.Error = fmt.Errorf("Uknown startup mode of Service %s: %d", serviceName, startupMode)
-			//finish collecting info on first found error
-			return
-		}
 		serviceInfo.DisplayName = srvCfg.DisplayName
-		serviceInfo.StartUpMode = startupMode
+		serviceInfo.StartUpMode = int(srvCfg.StartType)
 	} else {
 		serviceInfo.Error = fmt.Errorf("Could not get config of service '%s': %s", serviceName, err)
 	}
 	return
 }
 
-//returns true of state is in valid range
-func checkState(state int) bool {
-	_, ok := ServiceStatesMap[state]
-	return ok
-}
-
-//returns true of startup mode is in valid range
-func checkStartupMode(startupMode int) bool {
-	_, ok := ServiceStartupModeMap[startupMode]
-	return ok
-}
-
 func init() {
-	inputs.Add("win_services", func() telegraf.Input { return &Win_Services{} })
+	inputs.Add("win_services", func() telegraf.Input { return &WinServices{} })
 }
