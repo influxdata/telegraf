@@ -40,6 +40,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						ParentID:    "22964302721410078",
 						Timestamp:   time.Unix(0, 1498688360851331000).UTC(),
 						Duration:    time.Duration(53106) * time.Microsecond,
+						ServiceName: "trivial",
 						Annotations: []Annotation{},
 						BinaryAnnotations: []BinaryAnnotation{
 							BinaryAnnotation{
@@ -58,6 +59,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						ParentID:    "22964302721410078",
 						Timestamp:   time.Unix(0, 1498688360904552000).UTC(),
 						Duration:    time.Duration(50410) * time.Microsecond,
+						ServiceName: "trivial",
 						Annotations: []Annotation{},
 						BinaryAnnotations: []BinaryAnnotation{
 							BinaryAnnotation{
@@ -70,12 +72,13 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						},
 					},
 					Span{
-						ID:        "22964302721410078",
-						TraceID:   "2505404965370368069",
-						Name:      "Parent",
-						ParentID:  "22964302721410078",
-						Timestamp: time.Unix(0, 1498688360851318000).UTC(),
-						Duration:  time.Duration(103680) * time.Microsecond,
+						ID:          "22964302721410078",
+						TraceID:     "2505404965370368069",
+						Name:        "Parent",
+						ParentID:    "22964302721410078",
+						Timestamp:   time.Unix(0, 1498688360851318000).UTC(),
+						Duration:    time.Duration(103680) * time.Microsecond,
+						ServiceName: "trivial",
 						Annotations: []Annotation{
 							Annotation{
 								Timestamp:   time.Unix(0, 1498688360851325000).UTC(),
@@ -112,10 +115,11 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"id":        "8090652509916334619",
-						"parent_id": "22964302721410078",
-						"trace_id":  "2505404965370368069",
-						"name":      "Child",
+						"id":           "8090652509916334619",
+						"parent_id":    "22964302721410078",
+						"trace_id":     "2505404965370368069",
+						"service_name": "trivial",
+						"name":         "Child",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
@@ -142,10 +146,11 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"id":        "103618986556047333",
-						"parent_id": "22964302721410078",
-						"trace_id":  "2505404965370368069",
-						"name":      "Child",
+						"id":           "103618986556047333",
+						"parent_id":    "22964302721410078",
+						"trace_id":     "2505404965370368069",
+						"service_name": "trivial",
+						"name":         "Child",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
@@ -172,10 +177,11 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"id":        "22964302721410078",
-						"parent_id": "22964302721410078",
-						"trace_id":  "2505404965370368069",
-						"name":      "Parent",
+						"id":           "22964302721410078",
+						"parent_id":    "22964302721410078",
+						"trace_id":     "2505404965370368069",
+						"service_name": "trivial",
+						"name":         "Parent",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
@@ -251,80 +257,6 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			wantErr: false,
 		},
 
-		// Test data from zipkin cli app:
-		//https://github.com/openzipkin/zipkin-go-opentracing/tree/master/examples/cli_with_2_services
-		/*	{
-				name: "cli",
-				fields: fields{
-					acc: &mockAcc,
-				},
-				args: args{
-					t: Trace{
-						Span{
-							ID:        "3383422996321511664",
-							TraceID:   "243463817635710260",
-							Name:      "Concat",
-							ParentID:  "4574092882326506380",
-							Timestamp: time.Unix(0, 1499817952283903000).UTC(),
-							Duration:  time.Duration(2888) * time.Microsecond,
-							Annotations: []Annotation{
-								Annotation{
-									Timestamp:   time.Unix(0, 1499817952283903000).UTC(),
-									Value:       "cs",
-									Host:        "0:0",
-									ServiceName: "cli",
-								},
-							},
-							BinaryAnnotations: []BinaryAnnotation{
-								BinaryAnnotation{
-									Key:         "http.url",
-									Value:       "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
-									Host:        "0:0",
-									ServiceName: "cli",
-									Type:        "STRING",
-								},
-							},
-						},
-					},
-				},
-				want: []testutil.Metric{
-					testutil.Metric{
-						Measurement: "zipkin",
-						Tags: map[string]string{
-							"id":               "3383422996321511664",
-							"parent_id":        "4574092882326506380",
-							"trace_id":         "8269862291023777619:243463817635710260",
-							"name":             "Concat",
-							"service_name":     "cli",
-							"annotation": "cs",
-							"endpoint_host":    "0:0",
-						},
-						Fields: map[string]interface{}{
-							"duration_ns":             (time.Duration(2888) * time.Microsecond).Nanoseconds(),
-						},
-						Time: time.Unix(0, 1499817952283903000).UTC(),
-					},
-					testutil.Metric{
-						Measurement: "zipkin",
-						Tags: map[string]string{
-							"trace_id":         "2505404965370368069",
-							"service_name":     "cli",
-							"annotation": "aHR0cDovL2xvY2FsaG9zdDo2MTAwMS9jb25jYXQv",
-							"annotation_key":              "http.url",
-							"id":               "22964302721410078",
-							"parent_id":        "22964302721410078",
-							"name":             "Concat",
-							"endpoint_host":    "0:0",
-						},
-						Fields: map[string]interface{}{
-							"duration_ns": (time.Duration(2888) * time.Microsecond).Nanoseconds(),
-						},
-						Time: time.Unix(0, 1499817952283903000).UTC(),
-					},
-				},
-				wantErr: false,
-			},
-		*/
 		//// Test data from distributed trace repo sample json
 		// https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json
 		{
@@ -335,12 +267,13 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			args: args{
 				t: Trace{
 					Span{
-						ID:        "6802735349851856000",
-						TraceID:   "0:6802735349851856000",
-						Name:      "main.dud",
-						ParentID:  "6802735349851856000",
-						Timestamp: time.Unix(1, 0).UTC(),
-						Duration:  1,
+						ID:          "6802735349851856000",
+						TraceID:     "0:6802735349851856000",
+						Name:        "main.dud",
+						ParentID:    "6802735349851856000",
+						Timestamp:   time.Unix(1, 0).UTC(),
+						Duration:    1,
+						ServiceName: "trivial",
 						Annotations: []Annotation{
 							Annotation{
 								Timestamp:   time.Unix(0, 1433330263415871000).UTC(),
@@ -357,10 +290,11 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				testutil.Metric{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-						"id":        "6802735349851856000",
-						"parent_id": "6802735349851856000",
-						"trace_id":  "0:6802735349851856000",
-						"name":      "main.dud",
+						"id":           "6802735349851856000",
+						"parent_id":    "6802735349851856000",
+						"trace_id":     "0:6802735349851856000",
+						"name":         "main.dud",
+						"service_name": "trivial",
 					},
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(1) * time.Nanosecond).Nanoseconds(),

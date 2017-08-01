@@ -2,14 +2,14 @@ package zipkin
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 type MockRecorder struct {
@@ -59,6 +59,7 @@ func TestSpanHandler(t *testing.T) {
 			ParentID:    parentID,
 			Timestamp:   time.Unix(0, 1498688360851331*int64(time.Microsecond)).UTC(),
 			Duration:    time.Duration(53106) * time.Microsecond,
+			ServiceName: "trivial",
 			Annotations: []Annotation{},
 			BinaryAnnotations: []BinaryAnnotation{
 				BinaryAnnotation{
@@ -77,6 +78,7 @@ func TestSpanHandler(t *testing.T) {
 			ParentID:    parentID,
 			Timestamp:   time.Unix(0, 1498688360904552*int64(time.Microsecond)).UTC(),
 			Duration:    time.Duration(50410) * time.Microsecond,
+			ServiceName: "trivial",
 			Annotations: []Annotation{},
 			BinaryAnnotations: []BinaryAnnotation{
 				BinaryAnnotation{
@@ -89,12 +91,13 @@ func TestSpanHandler(t *testing.T) {
 			},
 		},
 		Span{
-			Name:      "Parent",
-			ID:        "22964302721410078",
-			TraceID:   "22c4fc8ab3669045",
-			ParentID:  "22964302721410078",
-			Timestamp: time.Unix(0, 1498688360851318*int64(time.Microsecond)).UTC(),
-			Duration:  time.Duration(103680) * time.Microsecond,
+			Name:        "Parent",
+			ID:          "22964302721410078",
+			TraceID:     "22c4fc8ab3669045",
+			ParentID:    "22964302721410078",
+			Timestamp:   time.Unix(0, 1498688360851318*int64(time.Microsecond)).UTC(),
+			Duration:    time.Duration(103680) * time.Microsecond,
+			ServiceName: "trivial",
 			Annotations: []Annotation{
 				Annotation{
 					Timestamp:   time.Unix(0, 1498688360851325*int64(time.Microsecond)).UTC(),
@@ -127,11 +130,7 @@ func TestSpanHandler(t *testing.T) {
 		},
 	}
 
-	for i, s := range got {
-		if !reflect.DeepEqual(s, want[i]) {
-			fmt.Printf("index %d wasn't equal", i)
-			fmt.Println(s, want[i])
-			t.Fatalf("Got %#v\n != want %#v\n, Fields weren't unmarshalled correctly", s, want[i])
-		}
+	if !cmp.Equal(got, want) {
+		t.Fatalf("Got != Want\n %s", cmp.Diff(got, want))
 	}
 }

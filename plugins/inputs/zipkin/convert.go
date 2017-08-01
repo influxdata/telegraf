@@ -38,10 +38,11 @@ func (l *LineProtocolConverter) Record(t Trace) error {
 			"duration_ns": s.Duration.Nanoseconds(),
 		}
 		tags := map[string]string{
-			"id":        s.ID,
-			"parent_id": s.ParentID,
-			"trace_id":  s.TraceID,
-			"name":      s.Name,
+			"id":           s.ID,
+			"parent_id":    s.ParentID,
+			"trace_id":     s.TraceID,
+			"name":         s.Name,
+			"service_name": s.ServiceName,
 		}
 		l.acc.AddFields("zipkin", fields, tags, s.Timestamp)
 
@@ -92,6 +93,7 @@ func NewTrace(spans []*zipkincore.Span) Trace {
 			Timestamp:         guessTimestamp(span),
 			Duration:          convertDuration(span),
 			ParentID:          parentID(span),
+			ServiceName:       serviceName(endpoint),
 			Annotations:       NewAnnotations(span.GetAnnotations(), endpoint),
 			BinaryAnnotations: NewBinaryAnnotations(span.GetBinaryAnnotations(), endpoint),
 		}
