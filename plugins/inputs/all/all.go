@@ -57,6 +57,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/nsq_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ntpq"
+	_ "github.com/influxdata/telegraf/plugins/inputs/openldap"
 	_ "github.com/influxdata/telegraf/plugins/inputs/passenger"
 	_ "github.com/influxdata/telegraf/plugins/inputs/phpfpm"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ping"

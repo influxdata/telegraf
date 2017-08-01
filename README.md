@@ -41,9 +41,10 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
-which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.8+.
+Telegraf requires golang version 1.8+, the Makefile requires GNU make.
+
+Dependencies are managed with [gdm](https://github.com/sparrc/gdm),
+which is installed by the Makefile if you don't have it already.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)

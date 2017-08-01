@@ -70,6 +70,11 @@ docker-run:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
 	docker run --name nats -p "4222:4222" -d nats
+	docker run --name openldap \
+		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
+		-e SLAPD_CONFIG_ROOTPW="secret" \
+		-p "389:389" -p "636:636" \
+		-d cobaugh/openldap-alpine
 
 # Run docker containers necessary for CircleCI unit tests
 docker-run-circle:
@@ -88,11 +93,16 @@ docker-run-circle:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
 	docker run --name nats -p "4222:4222" -d nats
+	docker run --name openldap \
+		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
+		-e SLAPD_CONFIG_ROOTPW="secret" \
+		-p "389:389" -p "636:636" \
+		-d cobaugh/openldap-alpine
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch
+	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch openldap
+	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch openldap
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: vet docker-kill docker-run
@@ -104,6 +114,11 @@ test: vet docker-kill docker-run
 # Run "short" unit tests
 test-short: vet
 	go test -short ./...
+
+# Run windows specific tests
+test-windows: vet
+	go test ./plugins/inputs/ping/...
+	go test ./plugins/inputs/win_perf_counters/...
 
 vet:
 	go vet ./...

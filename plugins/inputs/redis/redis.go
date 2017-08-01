@@ -184,7 +184,7 @@ func gatherInfoOutput(
 		name := string(parts[0])
 
 		if section == "Server" {
-			if name != "lru_clock" && name != "uptime_in_seconds" {
+			if name != "lru_clock" && name != "uptime_in_seconds" && name != "redis_version" {
 				continue
 			}
 		}

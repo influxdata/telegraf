@@ -80,8 +80,10 @@ func (p *PrometheusClient) Start() error {
 
 	go func() {
 		if err := p.server.ListenAndServe(); err != nil {
-			log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
-				err.Error())
+			if err != http.ErrServerClosed {
+				log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
+					err.Error())
+			}
 		}
 	}()
 	return nil
@@ -99,7 +101,9 @@ func (p *PrometheusClient) Connect() error {
 func (p *PrometheusClient) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	return p.server.Shutdown(ctx)
+	err := p.server.Shutdown(ctx)
+	prometheus.Unregister(p)
+	return err
 }
 
 func (p *PrometheusClient) SampleConfig() string {

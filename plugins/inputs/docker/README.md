@@ -1,15 +1,11 @@
 # Docker Input Plugin
 
-The docker plugin uses the docker remote API to gather metrics on running
-docker containers. You can read Docker's documentation for their remote API
-[here](https://docs.docker.com/engine/reference/api/docker_remote_api_v1.20/#get-container-stats-based-on-resource-usage)
+The docker plugin uses the Docker Engine API to gather metrics on running
+docker containers.
 
-The docker plugin uses the excellent
-[docker engine-api](https://github.com/docker/engine-api) library to
-gather stats. Documentation for the library can be found
-[here](https://godoc.org/github.com/docker/engine-api) and documentation
-for the stat structure can be found
-[here](https://godoc.org/github.com/docker/engine-api/types#Stats)
+The docker plugin uses the [Official Docker Client](https://github.com/moby/moby/tree/master/client)
+to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.20/).
+[Library Documentation](https://godoc.org/github.com/moby/moby/client)
 
 ### Configuration:
 
@@ -21,7 +17,8 @@ for the stat structure can be found
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
 
-  ## Only collect metrics for these containers. Values will be appended to container_name_include.
+  ## Only collect metrics for these containers. Values will be appended to
+  ## container_name_include.
   ## Deprecated (1.4.0), use container_name_include
   container_names = []
 
@@ -38,15 +35,30 @@ for the stat structure can be found
 
   ## Whether to report for each container total blkio and network stats or not
   total = false
-  
+
+  ## Which environment variables should we use as a tag
+  tag_env = ["JAVA_HOME", "HEAP_SIZE"]
+
   ## docker labels to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
   docker_label_exclude = []
-  
+
   ## Which environment variables should we use as a tag
   tag_env = ["JAVA_HOME", "HEAP_SIZE"]
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
+
+#### Environment Configuration
+
+When using the `"ENV"` endpoint, the connection is configured using the
+[cli Docker environment variables](https://godoc.org/github.com/moby/moby/client#NewEnvClient).
 
 ### Measurements & Fields:
 

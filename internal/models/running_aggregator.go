@@ -114,6 +114,7 @@ func (r *RunningAggregator) reset() {
 // for period ticks to tell it when to push and reset the aggregator.
 func (r *RunningAggregator) Run(
 	acc telegraf.Accumulator,
+	now time.Time,
 	shutdown chan struct{},
 ) {
 	// The start of the period is truncated to the nearest second.
@@ -132,7 +133,6 @@ func (r *RunningAggregator) Run(
 	// 2nd interval: 00:10 - 00:20.5
 	// etc.
 	//
-	now := time.Now()
 	r.periodStart = now.Truncate(time.Second)
 	truncation := now.Sub(r.periodStart)
 	r.periodEnd = r.periodStart.Add(r.Config.Period)
