@@ -1,58 +1,58 @@
 # Zipkin Plugin
 
-This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
+*This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.*
 
 
 
-### Configuration:
+## Configuration:
 ```toml
 [[inputs.zipkin]]
     path = "/api/v1/spans" # URL path for span data
     port = 9411 # Port on which Telegraf listens
 ```
 
-### Tracing:
+## Tracing:
 
 This plugin uses Annotations tags and fields to track data from spans
 
-- TRACE : is a set of spans that share a single root span.
+- __TRACE:__ is a set of spans that share a single root span.
 Traces are built by collecting all Spans that share a traceId.
 
-- SPAN : is a set of Annotations and BinaryAnnotations that correspond to a particular RPC.
+- __SPAN:__ is a set of Annotations and BinaryAnnotations that correspond to a particular RPC.
 
-- Annotations : for each annotation & binary annotation of a span a metric is output
+- __Annotations:__ for each annotation & binary annotation of a span a metric is output
 
 
-#### Annotations: records an occurrence in time at the beginning and end of a request
-    - CS (client start) : beginning of span, request is made.
-    - SR (server receive): server receives request and will start processing it
-      network latency & clock jitters differ it from cs
-    - SS (server send) : server is done processing and sends request back to client
-      amount of time it took to process request will differ it from sr
-    - CR (client receive): end of span, client receives response from server
-      RPC is considered complete with this annotation
+### Annotations:
+*Records an occurrence in time at the beginning and end of a request*
+  - __CS (client start):__ beginning of span, request is made.
+  - __SR (server receive):__ server receives request and will start processing it
+    network latency & clock jitters differ it from cs
+  - __SS (server send):__ server is done processing and sends request back to client
+    amount of time it took to process request will differ it from sr
+  - __CR (client receive):__ end of span, client receives response from server
+    RPC is considered complete with this annotation
 
-- TAGS:
+- __TAGS:__
   * __"id":__               The 64 bit ID of the span.
   * __"parent_id":__        An ID associated with a particular child span.  If there is no child span, the parent ID is set to ID.
   * __"trace_id":__        The 64 or 128-bit ID of a particular trace. Every span in a trace shares this ID. Concatenation of high and low and converted to hexadecimal.
   * __"name":__             Defines a span
   * __"service_name":__     Defines a service
   * __"annotation":__       The value of an annotation
-  * __"endpoint_host":__    Listening port concat with IPV4
+  * __"endpoint_host":__    Listening port concat with IPV4, if port is not present it will not be concatenated
 
--FIELDS
-      "duration_ns":             The time in nanoseconds between the end and beginning of a span.
 
-### BINARY ANNOTATIONS:
+### Binary Annotations:
 
--TAGS: Contains the same tags as annotations plus these additions
+- __TAGS:__ Contains the same tags as annotations plus these additions
 
-      "annotation_key": label describing the annotation
+  * __"annotation_key":__ label describing the annotation
 
--FIELDS:
 
-      "duration_ns": The time in nanoseconds between the end and beginning of a span.
+- __FIELDS:__ *are the same for both annotations and binary annotations*
+
+  * __"duration_ns":__ The time in nanoseconds between the end and beginning of a span.
 
 
 
@@ -62,19 +62,19 @@ __Get All Span Names for Service__ `my_web_server`
 ```sql
 SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_server'
 ```
-  - _Description:_  returns a list containing the names of the spans which have annotations with the given `service_name` of `my_web_server`.
+  - __Description:__  returns a list containing the names of the spans which have annotations with the given `service_name` of `my_web_server`.
 
 __Get All Service Names__
 ```sql
 SHOW TAG VALUES FROM "zipkin" WITH KEY = "service_name"
 ```
-  - _Description:_  returns a list of all `distinct` endpoint service names.
+  - __Description:__  returns a list of all `distinct` endpoint service names.
 
 __Find spans with longest duration__
 ```sql
 SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND "name" = 'my_span_name' AND time > now() - 20m GROUP BY "trace_id",time(30s) LIMIT 5
 ```
-  - _Description:_  In the last 20 minutes find the top 5 longest span durations for service `my_server` and span name `my_span_name`
+  - __Description:__  In the last 20 minutes find the top 5 longest span durations for service `my_server` and span name `my_span_name`
 
 
 
@@ -139,23 +139,26 @@ SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND 
 We recomend using the [tsi influxDB engine](https://www.influxdata.com/path-1-billion-time-series-influxdb-high-cardinality-indexing-ready-testing/) as it can accept high cardinality data.
 #### How To Set Up InfluxDB For Work With Zipkin
 
-##### Steps
-___Update___ InfluxDB to >= 1.3, in order to use the new tsi engine.
+  ##### Steps
+  1. ___Update___ InfluxDB to >= 1.3, in order to use the new tsi engine.
 
-___Generate___ a config file with the following command:
-    `influxd config > /path/for/config/file`
+  2. ___Generate___ a config file with the following command:
+  ```sql
+      `influxd config > /path/for/config/file`
+  ```
+  3. ___Add___ the following to your config file, under the `[data]` tab:
 
-___Add___ the following to your config file, under the `[data]` tab:
+    ```toml
+    [data]
+        index-version = "tsi1"
+     ```
 
-```toml
-[data]
-    index-version = "tsi1"
- ```
+  4. ___Start___ `influxd` with your new config file:
+  ```sql
+   `$ influxd -config=/path/to/your/config/file`
+   ```
 
- ___Start___ `influxd` with your new config file:
- `$ influxd -config=/path/to/your/config/file`
-
-___Update___ your retention policy:
-```sql
-ALTER RETENTION POLICY "autogen" ON "telegraf" DURATION 1d SHARD DURATION 30m
-```
+  5. ___Update___ your retention policy:
+  ```sql
+  ALTER RETENTION POLICY "autogen" ON "telegraf" DURATION 1d SHARD DURATION 30m
+  ```
