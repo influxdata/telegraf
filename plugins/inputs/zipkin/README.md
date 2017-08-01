@@ -20,38 +20,39 @@ Traces are built by collecting all Spans that share a traceId.
 
 - __SPAN:__ is a set of Annotations and BinaryAnnotations that correspond to a particular RPC.
 
-- __Annotations:__ for each annotation & binary annotation of a span a metric is output
+- __Annotations:__ for each annotation & binary annotation of a span a metric is output. *Records an occurrence in time at the beginning and end of a request.*
 
+  Annotations may have the following values:
 
-### Annotations:
-*Records an occurrence in time at the beginning and end of a request*
-  - __CS (client start):__ beginning of span, request is made.
-  - __SR (server receive):__ server receives request and will start processing it
-    network latency & clock jitters differ it from cs
-  - __SS (server send):__ server is done processing and sends request back to client
-    amount of time it took to process request will differ it from sr
-  - __CR (client receive):__ end of span, client receives response from server
-    RPC is considered complete with this annotation
+    - __CS (client start):__ beginning of span, request is made.
+    - __SR (server receive):__ server receives request and will start processing it
+      network latency & clock jitters differ it from cs
+    - __SS (server send):__ server is done processing and sends request back to client
+      amount of time it took to process request will differ it from sr
+    - __CR (client receive):__ end of span, client receives response from server
+      RPC is considered complete with this annotation
 
-- __TAGS:__
-  * __"id":__               The 64 bit ID of the span.
-  * __"parent_id":__        An ID associated with a particular child span.  If there is no child span, the parent ID is set to ID.
-  * __"trace_id":__        The 64 or 128-bit ID of a particular trace. Every span in a trace shares this ID. Concatenation of high and low and converted to hexadecimal.
-  * __"name":__             Defines a span
+### Tags
+* __"id":__               The 64 bit ID of the span.
+* __"parent_id":__        An ID associated with a particular child span.  If there is no child span, the parent ID is set to ID.
+* __"trace_id":__        The 64 or 128-bit ID of a particular trace. Every span in a trace shares this ID. Concatenation of high and low and converted to hexadecimal.
+* __"name":__             Defines a span
+
+##### Annotations have these additional tags:
+
+* __"service_name":__     Defines a service
+* __"annotation":__       The value of an annotation
+* __"endpoint_host":__    Listening port concat with IPV4, if port is not present it will not be concatenated
+
+##### Binary Annotations have these additional tag:
+
   * __"service_name":__     Defines a service
   * __"annotation":__       The value of an annotation
   * __"endpoint_host":__    Listening port concat with IPV4, if port is not present it will not be concatenated
-
-
-### Binary Annotations:
-
-- __TAGS:__ Contains the same tags as annotations plus these additions
-
   * __"annotation_key":__ label describing the annotation
 
 
-- __FIELDS:__ *are the same for both annotations and binary annotations*
-
+### Fields:
   * __"duration_ns":__ The time in nanoseconds between the end and beginning of a span.
 
 
