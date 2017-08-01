@@ -112,7 +112,7 @@ func TestBasicInfo(t *testing.T) {
 
 	winServices := &WinServices{nil, &FakeMgProvider{testErrors[0]}}
 	assert.NotEmpty(t, winServices.SampleConfig())
-	assert.NotEmpty(t, winServices.SampleConfig())
+	assert.NotEmpty(t, winServices.Description())
 }
 
 func TestMgrErrors(t *testing.T) {
