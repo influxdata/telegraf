@@ -84,55 +84,56 @@ SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND 
 - [Test data from distributed trace repo sample json](https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json)
 
 #### Trace Example
-```{
-      "traceId": "bd7a977555f6b982",
-      "name": "query",
-      "id": "be2d01e33cc78d97",
-      "parentId": "ebf33e1a81dc6f71",
+```json
+{
+  "traceId": "bd7a977555f6b982",
+  "name": "query",
+  "id": "be2d01e33cc78d97",
+  "parentId": "ebf33e1a81dc6f71",
+  "timestamp": 1458702548786000,
+  "duration": 13000,
+  "annotations": [
+    {
+      "endpoint": {
+        "serviceName": "zipkin-query",
+        "ipv4": "192.168.1.2",
+        "port": 9411
+      },
       "timestamp": 1458702548786000,
-      "duration": 13000,
-      "annotations": [
-        {
-          "endpoint": {
-            "serviceName": "zipkin-query",
-            "ipv4": "192.168.1.2",
-            "port": 9411
-          },
-          "timestamp": 1458702548786000,
-          "value": "cs"
-        },
-        {
-          "endpoint": {
-            "serviceName": "zipkin-query",
-            "ipv4": "192.168.1.2",
-            "port": 9411
-          },
-          "timestamp": 1458702548799000,
-          "value": "cr"
-        }
-      ],
-      "binaryAnnotations": [
-        {
-          "key": "jdbc.query",
-          "value": "select distinct `zipkin_spans`.`trace_id` from `zipkin_spans` join `zipkin_annotations` on (`zipkin_spans`.`trace_id` = `zipkin_annotations`.`trace_id` and `zipkin_spans`.`id` = `zipkin_annotations`.`span_id`) where (`zipkin_annotations`.`endpoint_service_name` = ? and `zipkin_spans`.`start_ts` between ? and ?) order by `zipkin_spans`.`start_ts` desc limit ?",
-          "endpoint": {
-            "serviceName": "zipkin-query",
-            "ipv4": "192.168.1.2",
-            "port": 9411
-          }
-        },
-        {
-          "key": "sa",
-          "value": true,
-          "endpoint": {
-            "serviceName": "spanstore-jdbc",
-            "ipv4": "127.0.0.1",
-            "port": 3306
-          }
-        }
-      ]
+      "value": "cs"
     },
-    ```
+    {
+      "endpoint": {
+        "serviceName": "zipkin-query",
+        "ipv4": "192.168.1.2",
+        "port": 9411
+      },
+      "timestamp": 1458702548799000,
+      "value": "cr"
+    }
+  ],
+  "binaryAnnotations": [
+    {
+      "key": "jdbc.query",
+      "value": "select distinct `zipkin_spans`.`trace_id` from `zipkin_spans` join `zipkin_annotations` on (`zipkin_spans`.`trace_id` = `zipkin_annotations`.`trace_id` and `zipkin_spans`.`id` = `zipkin_annotations`.`span_id`) where (`zipkin_annotations`.`endpoint_service_name` = ? and `zipkin_spans`.`start_ts` between ? and ?) order by `zipkin_spans`.`start_ts` desc limit ?",
+      "endpoint": {
+        "serviceName": "zipkin-query",
+        "ipv4": "192.168.1.2",
+        "port": 9411
+      }
+    },
+    {
+      "key": "sa",
+      "value": true,
+      "endpoint": {
+        "serviceName": "spanstore-jdbc",
+        "ipv4": "127.0.0.1",
+        "port": 3306
+      }
+    }
+  ]
+}
+```
 
 ### Recommended installation
 
@@ -143,22 +144,21 @@ We recomend using the [tsi influxDB engine](https://www.influxdata.com/path-1-bi
   1. ___Update___ InfluxDB to >= 1.3, in order to use the new tsi engine.
 
   2. ___Generate___ a config file with the following command:
-  ```sql
-      `influxd config > /path/for/config/file`
-  ```
+```sh
+influxd config > /path/for/config/file
+```
   3. ___Add___ the following to your config file, under the `[data]` tab:
-
-    ```toml
-    [data]
-        index-version = "tsi1"
-     ```
+```toml
+[data]
+  index-version = "tsi1"
+```
 
   4. ___Start___ `influxd` with your new config file:
-  ```sql
-   `$ influxd -config=/path/to/your/config/file`
-   ```
+```sh
+influxd -config=/path/to/your/config/file
+```
 
   5. ___Update___ your retention policy:
-  ```sql
-  ALTER RETENTION POLICY "autogen" ON "telegraf" DURATION 1d SHARD DURATION 30m
-  ```
+```sql
+ALTER RETENTION POLICY "autogen" ON "telegraf" DURATION 1d SHARD DURATION 30m
+```
