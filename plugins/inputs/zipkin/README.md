@@ -1,6 +1,6 @@
 # Zipkin Plugin
 
-*This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.*
+This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
 
 
 
@@ -78,13 +78,39 @@ SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND 
   - __Description:__  In the last 20 minutes find the top 5 longest span durations for service `my_server` and span name `my_span_name`
 
 
+### Recommended InfluxDB setup
+
+This test will create high cardinality data so we reccomend using the [tsi influxDB engine](https://www.influxdata.com/path-1-billion-time-series-influxdb-high-cardinality-indexing-ready-testing/).
+#### How To Set Up InfluxDB For Work With Zipkin
+
+  ##### Steps
+  1. ___Update___ InfluxDB to >= 1.3, in order to use the new tsi engine.
+
+  2. ___Generate___ a config file with the following command:
+```sh
+influxd config > /path/for/config/file
+```
+  3. ___Add___ the following to your config file, under the `[data]` tab:
+```toml
+[data]
+  index-version = "tsi1"
+```
+
+  4. ___Start___ `influxd` with your new config file:
+```sh
+influxd -config=/path/to/your/config/file
+```
+
+  5. ___Update___ your retention policy:
+```sql
+ALTER RETENTION POLICY "autogen" ON "telegraf" DURATION 1d SHARD DURATION 30m
+```
 
 ### Example Input Trace:
 
 - [Cli microservice with two services Test](https://github.com/openzipkin/zipkin-go-opentracing/tree/master/examples/cli_with_2_services)
 - [Test data from distributed trace repo sample json](https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json)
-
-#### Trace Example
+#### [Trace Example from Zipkin model](http://zipkin.io/pages/data_model.html)
 ```json
 {
   "traceId": "bd7a977555f6b982",
@@ -134,32 +160,4 @@ SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND 
     }
   ]
 }
-```
-
-### Recommended installation
-
-We recomend using the [tsi influxDB engine](https://www.influxdata.com/path-1-billion-time-series-influxdb-high-cardinality-indexing-ready-testing/) as it can accept high cardinality data.
-#### How To Set Up InfluxDB For Work With Zipkin
-
-  ##### Steps
-  1. ___Update___ InfluxDB to >= 1.3, in order to use the new tsi engine.
-
-  2. ___Generate___ a config file with the following command:
-```sh
-influxd config > /path/for/config/file
-```
-  3. ___Add___ the following to your config file, under the `[data]` tab:
-```toml
-[data]
-  index-version = "tsi1"
-```
-
-  4. ___Start___ `influxd` with your new config file:
-```sh
-influxd -config=/path/to/your/config/file
-```
-
-  5. ___Update___ your retention policy:
-```sql
-ALTER RETENTION POLICY "autogen" ON "telegraf" DURATION 1d SHARD DURATION 30m
 ```
