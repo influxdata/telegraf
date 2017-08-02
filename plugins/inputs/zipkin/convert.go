@@ -11,6 +11,8 @@ import (
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
 
+const DefaultServiceName = "unknown"
+
 //now is a moackable time for now
 var now = time.Now
 
@@ -202,7 +204,7 @@ func ipv4(addr int32) string {
 
 func host(h *zipkincore.Endpoint) string {
 	if h == nil {
-		return ""
+		return ipv4(int32(0))
 	}
 	if h.GetPort() == 0 {
 		return ipv4(h.GetIpv4())
@@ -216,7 +218,7 @@ func host(h *zipkincore.Endpoint) string {
 
 func serviceName(h *zipkincore.Endpoint) string {
 	if h == nil {
-		return ""
+		return DefaultServiceName
 	}
 	return h.GetServiceName()
 }

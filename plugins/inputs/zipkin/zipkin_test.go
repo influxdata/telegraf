@@ -9,28 +9,20 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestZipkinPlugin(t *testing.T) {
 	mockAcc := testutil.Accumulator{}
-	type fields struct {
-		acc telegraf.Accumulator
-	}
 
 	tests := []struct {
 		name           string
-		fields         fields
 		thriftDataFile string //path name to a binary thrift data file which contains test data
 		wantErr        bool
 		want           []testutil.Metric
 	}{
 		{
-			name: "threespan",
-			fields: fields{
-				acc: &mockAcc,
-			},
+			name:           "threespan",
 			thriftDataFile: "testdata/threespans.dat",
 			want: []testutil.Metric{
 				testutil.Metric{
@@ -178,10 +170,7 @@ func TestZipkinPlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "distributed_trace_sample",
-			fields: fields{
-				acc: &mockAcc,
-			},
+			name:           "distributed_trace_sample",
 			thriftDataFile: "testdata/distributed_trace_sample.dat",
 			want: []testutil.Metric{
 				testutil.Metric{
@@ -268,6 +257,12 @@ func TestZipkinPlugin(t *testing.T) {
 				t.Fatalf("Got != Want\n %s", cmp.Diff(tt.want, got))
 			}
 		})
+	}
+	mockAcc.ClearMetrics()
+	z.Stop()
+	// Make sure there is no erroneous error on shutdown
+	if len(mockAcc.Errors) != 0 {
+		t.Fatal("Expected no errors on shutdown")
 	}
 }
 
