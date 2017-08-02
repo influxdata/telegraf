@@ -58,7 +58,7 @@ type Measurement struct {
 	Name        string            `json:"name"`
 	Value       float64           `json:"value"`
 	Tags        map[string]string `json:"tags"`
-	MeasureTime int64             `json:"time"`
+//	MeasureTime int64             `json:"time"`
 }
 
 // NewLibratoWithTags is the main constructor for librato output plugin
@@ -105,8 +105,8 @@ func (l *LibratoWithTags) Write(metrics []telegraf.Metric) error {
 	}
 
 	measurementCounter := len(tempMeasurements)
-	// make sure we send a batch of maximum 300
-	sizeBatch := 300
+	// make sure we send a batch of maximum 500
+	sizeBatch := 500
 	for start := 0; start < measurementCounter; start += sizeBatch {
 		lmeasurements := LMeasurements{}
 		end := start + sizeBatch
@@ -193,7 +193,7 @@ func (l *LibratoWithTags) buildMeasurements(m telegraf.Metric) ([]*Measurement, 
 			Name: reUnacceptedChar.ReplaceAllString(metricName, "-"),
 			// Value: setting it below
 			Tags:        m.Tags(),
-			MeasureTime: m.Time().Unix(),
+//			MeasureTime: m.Time().Unix(),
 		}
 		if !verifyValue(value) {
 			continue
