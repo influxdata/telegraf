@@ -11,6 +11,7 @@ import (
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
 
+// DefaultServiceName when the span does not have any serviceName
 const DefaultServiceName = "unknown"
 
 //now is a moackable time for now
