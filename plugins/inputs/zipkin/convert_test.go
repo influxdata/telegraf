@@ -486,7 +486,7 @@ func Test_host(t *testing.T) {
 			args: args{
 				h: nil,
 			},
-			want: "",
+			want: "0.0.0.0",
 		},
 		{
 			name: "int overflow zipkin uses an int16 type as an unsigned int 16.",
