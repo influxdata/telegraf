@@ -18,9 +18,7 @@ func TestZipkinPlugin(t *testing.T) {
 	type fields struct {
 		acc telegraf.Accumulator
 	}
-	type args struct {
-		t Trace
-	}
+
 	tests := []struct {
 		name           string
 		fields         fields

@@ -3,7 +3,6 @@ package zipkin
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"sync"
@@ -79,7 +78,6 @@ type Span struct {
 type Trace []Span
 
 const sampleConfig = `
-  ##
   # path = "/api/v1/spans" # URL path for span data
   # port = 9411            # Port on which Telegraf listens
 `
@@ -113,7 +111,6 @@ func (z *Zipkin) Gather(acc telegraf.Accumulator) error { return nil }
 // Start launches a separate goroutine for collecting zipkin client http requests,
 // passing in a telegraf.Accumulator such that data can be collected.
 func (z *Zipkin) Start(acc telegraf.Accumulator) error {
-	log.Println("starting zipkin plugin...")
 	if z.handler == nil {
 		z.handler = NewSpanHandler(z.Path)
 	}
