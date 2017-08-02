@@ -531,7 +531,7 @@ func Test_serviceName(t *testing.T) {
 			args: args{
 				h: nil,
 			},
-			want: "",
+			want: "unknown",
 		},
 	}
 	for _, tt := range tests {
