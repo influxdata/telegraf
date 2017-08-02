@@ -2,7 +2,8 @@
 
 This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
 
-
+*Please Note: This plugin is experimental; Its data schema may be subject to change
+based on its main usage cases and the evolution of the OpenTracing standard.*
 
 ## Configuration:
 ```toml
