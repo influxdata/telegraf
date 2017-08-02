@@ -14,15 +14,16 @@ import (
 	"testing"
 )
 
-type TestData struct {
-	//collection that will be returned in ListServices if service arrays passed into WinServices constructor is empty
+//testData is DD wrapper for unit testing of WinServices
+type testData struct {
+	//collection that will be returned in ListServices if service array passed into WinServices constructor is empty
 	queryServiceList     []string
 	mgrConnectError      error
 	mgrListServicesError error
-	services             []ServiceTestInfo
+	services             []serviceTestInfo
 }
 
-type ServiceTestInfo struct {
+type serviceTestInfo struct {
 	serviceOpenError   error
 	serviceQueryError  error
 	serviceConfigError error
@@ -33,7 +34,7 @@ type ServiceTestInfo struct {
 }
 
 type FakeSvcMgr struct {
-	testData TestData
+	testData testData
 }
 
 func (m *FakeSvcMgr) Disconnect() error {
@@ -62,7 +63,7 @@ func (m *FakeSvcMgr) ListServices() ([]string, error) {
 }
 
 type FakeMgProvider struct {
-	testData TestData
+	testData testData
 }
 
 func (m *FakeMgProvider) Connect() (WinServiceManager, error) {
@@ -74,7 +75,7 @@ func (m *FakeMgProvider) Connect() (WinServiceManager, error) {
 }
 
 type FakeWinSvc struct {
-	testData ServiceTestInfo
+	testData serviceTestInfo
 }
 
 func (m *FakeWinSvc) Close() error {
@@ -95,15 +96,15 @@ func (m *FakeWinSvc) Query() (svc.Status, error) {
 	}
 }
 
-var testErrors = []TestData{
+var testErrors = []testData{
 	{nil, errors.New("Fake mgr connect error"), nil, nil},
 	{nil, nil, errors.New("Fake mgr list services error"), nil},
-	{[]string{"Fake service 1", "Fake service 2", "Fake service 3"}, nil, nil, []ServiceTestInfo{
+	{[]string{"Fake service 1", "Fake service 2", "Fake service 3"}, nil, nil, []serviceTestInfo{
 		{errors.New("Fake srv open error"), nil, nil, "Fake service 1", "", 0, 0},
 		{nil, errors.New("Fake srv query error"), nil, "Fake service 2", "", 0, 0},
 		{nil, nil, errors.New("Fake srv config error"), "Fake service 3", "", 0, 0},
 	}},
-	{nil, nil, nil, []ServiceTestInfo{
+	{nil, nil, nil, []serviceTestInfo{
 		{errors.New("Fake srv open error"), nil, nil, "Fake service 1", "", 0, 0},
 	}},
 }
@@ -153,8 +154,8 @@ func TestServiceErrors(t *testing.T) {
 
 }
 
-var testSimpleData = []TestData{
-	{[]string{"Service 1", "Service 2"}, nil, nil, []ServiceTestInfo{
+var testSimpleData = []testData{
+	{[]string{"Service 1", "Service 2"}, nil, nil, []serviceTestInfo{
 		{nil, nil, nil, "Service 1", "Fake service 1", 1, 2},
 		{nil, nil, nil, "Service 2", "Fake service 2", 1, 2},
 	}},
