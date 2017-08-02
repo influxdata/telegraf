@@ -1,4 +1,4 @@
-{
+[{
   "trace_id": 6802735349851856000,
   "name": "main.dud",
   "id": 6802735349851856000,
@@ -27,4 +27,4 @@
   ],
   "binary_annotations": [],
   "debug": true
-}
+}]
