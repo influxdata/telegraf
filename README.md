@@ -48,7 +48,7 @@ which is installed by the Makefile if you don't have it already.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
-3. Run `go get github.com/influxdata/telegraf`
+3. Run `go get -d github.com/influxdata/telegraf`
 4. Run `cd $GOPATH/src/github.com/influxdata/telegraf`
 5. Run `make`
 
@@ -57,37 +57,37 @@ which is installed by the Makefile if you don't have it already.
 See usage with:
 
 ```
-telegraf --help
+./telegraf --help
 ```
 
 #### Generate a telegraf config file:
 
 ```
-telegraf config > telegraf.conf
+./telegraf config > telegraf.conf
 ```
 
-#### Generate config with only cpu input & influxdb output plugins defined
+#### Generate config with only cpu input & influxdb output plugins defined:
 
 ```
-telegraf --input-filter cpu --output-filter influxdb config
+./telegraf --input-filter cpu --output-filter influxdb config
 ```
 
-#### Run a single telegraf collection, outputing metrics to stdout
+#### Run a single telegraf collection, outputing metrics to stdout:
 
 ```
-telegraf --config telegraf.conf --test
+./telegraf --config telegraf.conf --test
 ```
 
-#### Run telegraf with all plugins defined in config file
+#### Run telegraf with all plugins defined in config file:
 
 ```
-telegraf --config telegraf.conf
+./telegraf --config telegraf.conf
 ```
 
-#### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
+#### Run telegraf, enabling the cpu & memory input, and influxdb output plugins:
 
 ```
-telegraf --config telegraf.conf -input-filter cpu:mem --output-filter influxdb
+./telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 ```
 
 
