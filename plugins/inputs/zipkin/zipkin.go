@@ -114,12 +114,20 @@ func (z *Zipkin) Gather(acc telegraf.Accumulator) error { return nil }
 // passing in a telegraf.Accumulator such that data can be collected.
 func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	log.Println("starting zipkin plugin...")
-	if z.handler == nil {
-		z.handler = NewSpanHandler(z.Path)
-	}
+
+	z.handler = NewSpanHandler(z.Path)
 
 	var wg sync.WaitGroup
 	z.waitGroup = &wg
+
+	router := mux.NewRouter()
+	converter := NewLineProtocolConverter(acc)
+	z.handler.Register(router, converter)
+
+	z.server = &http.Server{
+		Addr:    ":" + strconv.Itoa(z.Port),
+		Handler: router,
+	}
 
 	go func() {
 		wg.Add(1)
@@ -134,27 +142,25 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 // Stop shuts the internal http server down with via context.Context
 func (z *Zipkin) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultShutdownTimeout)
-	defer cancel()
 
 	defer z.waitGroup.Wait()
+	defer cancel()
+
 	z.server.Shutdown(ctx)
 }
 
 // Listen creates an http server on the zipkin instance it is called with, and
 // serves http until it is stopped by Zipkin's (*Zipkin).Stop()  method.
 func (z *Zipkin) Listen(acc telegraf.Accumulator) {
-	router := mux.NewRouter()
-	converter := NewLineProtocolConverter(acc)
-	z.handler.Register(router, converter)
-
-	if z.server == nil {
-		z.server = &http.Server{
-			Addr:    ":" + strconv.Itoa(z.Port),
-			Handler: router,
-		}
-	}
 	if err := z.server.ListenAndServe(); err != nil {
-		acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+		// Because of the clean shutdown in `(*Zipkin).Stop()`
+		// We're expecting a server closed error at some point
+		// So we don't want to display it as an error.
+		// This interferes with telegraf's internal data collection,
+		// by making it appear as if a serious error occurred.
+		if err != http.ErrServerClosed {
+			acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+		}
 	}
 }
 
