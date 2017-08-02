@@ -202,7 +202,7 @@ func ipv4(addr int32) string {
 
 func host(h *zipkincore.Endpoint) string {
 	if h == nil {
-		return ""
+		return ipv4(int32(0))
 	}
 	if h.GetPort() == 0 {
 		return ipv4(h.GetIpv4())
