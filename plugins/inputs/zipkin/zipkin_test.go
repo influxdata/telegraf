@@ -227,7 +227,7 @@ func TestZipkinPlugin(t *testing.T) {
 
 	z := &Zipkin{
 		Path: "/api/v1/spans",
-		Port: 9411,
+		Port: 0,
 	}
 
 	err := z.Start(&mockAcc)
@@ -240,7 +240,7 @@ func TestZipkinPlugin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAcc.ClearMetrics()
-			if err := postThriftData(tt.thriftDataFile); err != nil {
+			if err := postThriftData(tt.thriftDataFile, z.address); err != nil {
 				t.Fatalf("Posting data to http endpoint /api/v1/spans failed. Error: %s\n", err)
 			}
 			mockAcc.Wait(len(tt.want)) //Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
@@ -266,13 +266,13 @@ func TestZipkinPlugin(t *testing.T) {
 	}
 }
 
-func postThriftData(datafile string) error {
+func postThriftData(datafile, address string) error {
 	dat, err := ioutil.ReadFile(datafile)
 	if err != nil {
 		return fmt.Errorf("could not read from data file %s", datafile)
 	}
 
-	req, err := http.NewRequest("POST", "http://localhost:9411/api/v1/spans", bytes.NewReader(dat))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/v1/spans", address), bytes.NewReader(dat))
 
 	if err != nil {
 		return fmt.Errorf("HTTP request creation failed")
@@ -282,7 +282,7 @@ func postThriftData(datafile string) error {
 	client := &http.Client{}
 	_, err = client.Do(req)
 	if err != nil {
-		return fmt.Errorf("HTTP POST request to zipkin endpoint http://localhost:/9411/v1/spans failed")
+		return fmt.Errorf("HTTP POST request to zipkin endpoint %s failed %v", address, err)
 	}
 
 	return nil

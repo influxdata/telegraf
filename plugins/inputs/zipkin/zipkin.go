@@ -3,6 +3,8 @@ package zipkin
 import (
 	"context"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"sync"
@@ -89,9 +91,11 @@ type Zipkin struct {
 	ServiceAddress string
 	Port           int
 	Path           string
-	handler        Handler
-	server         *http.Server
-	waitGroup      *sync.WaitGroup
+
+	address   string
+	handler   Handler
+	server    *http.Server
+	waitGroup *sync.WaitGroup
 }
 
 // Description is a necessary method implementation from telegraf.ServiceInput
@@ -121,15 +125,23 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	z.handler.Register(router, converter)
 
 	z.server = &http.Server{
-		Addr:    ":" + strconv.Itoa(z.Port),
 		Handler: router,
 	}
+
+	addr := ":" + strconv.Itoa(z.Port)
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	z.address = ln.Addr().String()
+	log.Printf("I! Started the zipkin listener on %s", z.address)
 
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
 
-		z.Listen(acc)
+		z.Listen(ln, acc)
 	}()
 
 	return nil
@@ -147,8 +159,8 @@ func (z *Zipkin) Stop() {
 
 // Listen creates an http server on the zipkin instance it is called with, and
 // serves http until it is stopped by Zipkin's (*Zipkin).Stop()  method.
-func (z *Zipkin) Listen(acc telegraf.Accumulator) {
-	if err := z.server.ListenAndServe(); err != nil {
+func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
+	if err := z.server.Serve(ln); err != nil {
 		// Because of the clean shutdown in `(*Zipkin).Stop()`
 		// We're expecting a server closed error at some point
 		// So we don't want to display it as an error.
