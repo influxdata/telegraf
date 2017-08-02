@@ -10,45 +10,26 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-var sampleConfig = `
-  ## Names of the services to monitor. Leave empty to monitor all the available services on the host
-  service_names = [
-    "LanmanServer",
-    "TermService",
-  ]
-`
-
-var description = "Input plugin to report Windows services info."
-
-type WinServices struct {
-	ServiceNames []string `toml:"service_names"`
-	mgrProvider  WinServiceManagerProvider
-}
-
-type ServiceInfo struct {
-	ServiceName string
-	DisplayName string
-	State       int
-	StartUpMode int
-	Error       error
-}
-
+//WinService provides interface for svc.Service
 type WinService interface {
 	Close() error
 	Config() (mgr.Config, error)
 	Query() (svc.Status, error)
 }
 
+//WinServiceManagerProvider sets interface for acquiring manager instance, like mgr.Mgr
 type WinServiceManagerProvider interface {
 	Connect() (WinServiceManager, error)
 }
 
+//WinServiceManager provides interface for mgr.Mgr
 type WinServiceManager interface {
 	Disconnect() error
 	OpenService(name string) (WinService, error)
 	ListServices() ([]string, error)
 }
 
+//WinSvcMgr is wrapper for mgr.Mgr implementing WinServiceManager interface
 type WinSvcMgr struct {
 	realMgr *mgr.Mgr
 }
@@ -64,6 +45,7 @@ func (m *WinSvcMgr) ListServices() ([]string, error) {
 	return m.realMgr.ListServices()
 }
 
+//MgProvider is an implementation of WinServiceManagerProvider interface returning WinSvcMgr
 type MgProvider struct {
 }
 
@@ -74,6 +56,30 @@ func (rmr *MgProvider) Connect() (WinServiceManager, error) {
 	} else {
 		return &WinSvcMgr{scmgr}, nil
 	}
+}
+
+var sampleConfig = `
+  ## Names of the services to monitor. Leave empty to monitor all the available services on the host
+  service_names = [
+    "LanmanServer",
+    "TermService",
+  ]
+`
+
+var description = "Input plugin to report Windows services info."
+
+//WinServices is an implementation if telegraf.Input interface, providing info about Windows Services
+type WinServices struct {
+	ServiceNames []string `toml:"service_names"`
+	mgrProvider  WinServiceManagerProvider
+}
+
+type ServiceInfo struct {
+	ServiceName string
+	DisplayName string
+	State       int
+	StartUpMode int
+	Error       error
 }
 
 func (m *WinServices) Description() string {
