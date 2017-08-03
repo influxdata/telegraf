@@ -62,17 +62,14 @@ exit_if_fail go test -race ./...
 
 # Simple Integration Tests
 #   check that version was properly set
-exit_if_fail "telegraf -version | grep $VERSION"
+exit_if_fail "./telegraf -version | grep $VERSION"
 #   check that one test cpu & mem output work
 tmpdir=$(mktemp -d)
-telegraf -sample-config > $tmpdir/config.toml
-exit_if_fail telegraf -config $tmpdir/config.toml \
+./telegraf -sample-config > $tmpdir/config.toml
+exit_if_fail ./telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
-cat $GOPATH/bin/telegraf | gzip > $CIRCLE_ARTIFACTS/telegraf.gz
-go build -o telegraf-race -race -ldflags "-X main.version=${VERSION}-RACE" cmd/telegraf/telegraf.go
-cat telegraf-race | gzip > $CIRCLE_ARTIFACTS/telegraf-race.gz
-
+gzip telegraf -c "$CIRCLE_ARTIFACTS/telegraf.gz"
 
 if git describe --exact-match HEAD; then
     # install fpm (packaging dependency)
