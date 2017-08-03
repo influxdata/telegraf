@@ -185,7 +185,7 @@ func gatherDisk(acc telegraf.Accumulator, path, nockeck, device string, err chan
 
 		model := modelInInfo.FindStringSubmatch(line)
 		if len(model) > 1 {
-			device_tags["device_model"] = model[1]
+			device_tags["model"] = model[1]
 		}
 
 		serial := serialInInfo.FindStringSubmatch(line)

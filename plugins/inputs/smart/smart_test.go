@@ -288,12 +288,12 @@ func TestGather(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":       "/dev/ada0",
-				"device_model": "APPLE SSD SM256E",
-				"serial_no":    "S0X5NZBC422720",
-				"enabled":      "Enabled",
-				"capacity":     "251000193024",
-				"health":       "PASSED",
+				"device":    "/dev/ada0",
+				"model":     "APPLE SSD SM256E",
+				"serial_no": "S0X5NZBC422720",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
+				"health":    "PASSED",
 			},
 		},
 	}
