@@ -364,6 +364,8 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	metricC := make(chan telegraf.Metric, 100)
 	aggC := make(chan telegraf.Metric, 100)
 
+	now := time.Now()
+
 	// Start all ServicePlugins
 	for _, input := range a.Config.Inputs {
 		input.SetDefaultTags(a.Config.Tags)
@@ -404,7 +406,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			acc := NewAccumulator(agg, aggC)
 			acc.SetPrecision(a.Config.Agent.Precision.Duration,
 				a.Config.Agent.Interval.Duration)
-			agg.Run(acc, shutdown)
+			agg.Run(acc, now, shutdown)
 		}(aggregator)
 	}
 

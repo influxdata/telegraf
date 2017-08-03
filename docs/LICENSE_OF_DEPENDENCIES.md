@@ -19,6 +19,7 @@ works:
 - github.com/dancannon/gorethink [APACHE](https://github.com/dancannon/gorethink/blob/master/LICENSE)
 - github.com/davecgh/go-spew [ISC](https://github.com/davecgh/go-spew/blob/master/LICENSE)
 - github.com/docker/docker [APACHE](https://github.com/docker/docker/blob/master/LICENSE)
+- github.com/docker/cli [APACHE](https://github.com/docker/cli/blob/master/LICENSE)
 - github.com/eapache/go-resiliency [MIT](https://github.com/eapache/go-resiliency/blob/master/LICENSE)
 - github.com/eapache/go-xerial-snappy [MIT](https://github.com/eapache/go-xerial-snappy/blob/master/LICENSE)
 - github.com/eapache/queue [MIT](https://github.com/eapache/queue/blob/master/LICENSE)

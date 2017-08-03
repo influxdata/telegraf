@@ -18,6 +18,7 @@
 - [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
 - [fluentd](./plugins/inputs/fluentd/README.md) - Thanks to @DanKans
 - [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
+- [histogram](./plugins/aggregators/histogram/README.md) - Thanks to @vlamug
 
 ### Features
 
@@ -44,6 +45,9 @@
 - [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
 - [#2612](https://github.com/influxdata/telegraf/pull/2612): Add input plugin for OpenLDAP.
 - [#3042](https://github.com/influxdata/telegraf/pull/3042): Add network option to dns_query.
+- [#3054](https://github.com/influxdata/telegraf/pull/3054): Add redis_version field to redis input.
+- [#3063](https://github.com/influxdata/telegraf/pull/3063): Add tls options to docker input.
+- [#2387](https://github.com/influxdata/telegraf/pull/2387): Add histogram aggregator plugin.
 
 ### Bugfixes
 
@@ -62,12 +66,24 @@
 - [#2984](https://github.com/influxdata/telegraf/pull/2984): Display error message if prometheus output fails to listen.
 - [#2997](https://github.com/influxdata/telegraf/issues/2997): Fix elasticsearch output content type detection warning.
 - [#2914](https://github.com/influxdata/telegraf/issues/2914): Prevent possible deadlock when using aggregators.
-- [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
-- [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
 - [#2860](https://github.com/influxdata/telegraf/issues/2860): Fix combined tagdrop/tagpass filtering.
 - [#3036](https://github.com/influxdata/telegraf/pull/3036): Fix filtering when both pass and drop match an item.
 - [#2964](https://github.com/influxdata/telegraf/issues/2964): Only report cpu usage for online cpus in docker input.
+- [#3050](https://github.com/influxdata/telegraf/pull/3050): Start first aggregator period at startup time.
+- [#2906](https://github.com/influxdata/telegraf/issues/2906): Fix panic in logparser if file cannot be opened.
+- [#2886](https://github.com/influxdata/telegraf/issues/2886): Default to localhost if zookeeper has no servers set.
+- [#2457](https://github.com/influxdata/telegraf/issues/2457): Fix docker memory and cpu reporting in Windows.
+- [#3058](https://github.com/influxdata/telegraf/issues/3058): Allow iptable entries with trailing text.
+- [#1680](https://github.com/influxdata/telegraf/issues/1680): Sanitize password from couchbase metric.
+
+## v1.3.5 [2017-07-26]
+
+### Bugfixes
+
+- [#3049](https://github.com/influxdata/telegraf/issues/3049): Fix prometheus output cannot be reloaded.
 - [#3037](https://github.com/influxdata/telegraf/issues/3037): Fix filestat reporting exists when cannot list directory.
+- [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
+- [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
 
 ## v1.3.4 [2017-07-12]
 

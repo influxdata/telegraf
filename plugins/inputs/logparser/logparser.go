@@ -182,7 +182,10 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Location:  &seek,
 					MustExist: true,
 				})
-			l.acc.AddError(err)
+			if err != nil {
+				l.acc.AddError(err)
+				continue
+			}
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
