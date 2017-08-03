@@ -139,6 +139,7 @@ configuration options.
 * [mailchimp](./plugins/inputs/mailchimp)
 * [memcached](./plugins/inputs/memcached)
 * [mesos](./plugins/inputs/mesos)
+* [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
 * [mysql](./plugins/inputs/mysql)
 * [net_response](./plugins/inputs/net_response)
@@ -146,6 +147,7 @@ configuration options.
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
+* [openldap](./plugins/inputs/openldap)
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
 * [ping](./plugins/inputs/ping)
@@ -202,6 +204,7 @@ Telegraf can also collect metrics via the following service plugins:
   * [mandrill](./plugins/inputs/webhooks/mandrill)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
   * [papertrail](./plugins/inputs/webhooks/papertrail)
+* [zipkin](./plugins/inputs/zipkin)
 
 Telegraf is able to parse the following input data formats into metrics, these
 formats may be used with input plugins supporting the `data_format` option:
@@ -220,6 +223,7 @@ formats may be used with input plugins supporting the `data_format` option:
 ## Aggregator Plugins
 
 * [minmax](./plugins/aggregators/minmax)
+* [histogram](./plugins/aggregators/histogram)
 
 ## Output Plugins
 
