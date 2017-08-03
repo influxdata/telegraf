@@ -49,7 +49,7 @@ var sampleConfig = `
   #
   ## Skip checking disks in this power mode. Defaults to
   ## "standby" to not wake up disks that have stoped rotating.
-  ## See --nockeck in the man pages for smartctl.
+  ## See --nocheck in the man pages for smartctl.
   ## smartctl version 5.41 and 5.42 have faulty detection of
   ## power mode and might require changing this value to
   ## "never" depending on your disks.
