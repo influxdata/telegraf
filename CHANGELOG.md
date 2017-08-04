@@ -51,6 +51,7 @@
 - [#3063](https://github.com/influxdata/telegraf/pull/3063): Add tls options to docker input.
 - [#2387](https://github.com/influxdata/telegraf/pull/2387): Add histogram aggregator plugin.
 - [#3080](https://github.com/influxdata/telegraf/pull/3080): Add zipkin input plugin.
+- [#2293](https://github.com/influxdata/telegraf/pull/2293): Add TCP listener for statsd input
 
 ### Bugfixes
 
@@ -210,7 +211,6 @@ be deprecated eventually.
 - [#2732](https://github.com/influxdata/telegraf/pull/2732): Use go 1.8.1
 - [#2712](https://github.com/influxdata/telegraf/issues/2712): Documentation for rabbitmq input plugin
 - [#2141](https://github.com/influxdata/telegraf/pull/2141): Logparser handles newly-created files.
-- [#2293](https://github.com/influxdata/telegraf/pull/2293): Add TCP listener for statsd input
 
 ### Bugfixes
 
