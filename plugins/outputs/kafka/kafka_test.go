@@ -32,8 +32,8 @@ func TestConnectAndWrite(t *testing.T) {
 
 	// Test with UseMetricNameAsTopic set to true, without Topic
 	k = &Kafka{
-		Brokers:    brokers,
-		serializer: s,
+		Brokers:              brokers,
+		serializer:           s,
 		UseMetricNameAsTopic: true,
 	}
 
