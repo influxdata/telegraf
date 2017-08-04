@@ -791,10 +791,6 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
-	// Tell the connection why we are closing.
-	fmt.Fprintf(conn, "Telegraf maximum concurrent TCP connections (%d)"+
-		" reached, closing.\nYou may want to increase max_tcp_connections in"+
-		" the Telegraf tcp listener configuration.\n", s.MaxTCPConnections)
 	conn.Close()
 	log.Printf("I! Refused TCP Connection from %s", conn.RemoteAddr())
 	log.Printf("I! WARNING: Maximum TCP Connections reached, you may want to" +
