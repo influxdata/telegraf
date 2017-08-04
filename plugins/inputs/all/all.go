@@ -90,5 +90,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_services"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
+	_ "github.com/influxdata/telegraf/plugins/inputs/zipkin"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
 )

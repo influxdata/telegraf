@@ -1,3 +1,4 @@
+PREFIX := /usr/local
 VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
@@ -7,48 +8,51 @@ else
 PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
 
+TELEGRAF := telegraf$(shell go tool dist env | grep -q 'GOOS=.windows.' && echo .exe)
+
 LDFLAGS := -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
 ifdef VERSION
 	LDFLAGS += -X main.version=$(VERSION)
 endif
 
 
-# Standard Telegraf build
-default: prepare build
+all: | deps telegraf
 
-# Windows build
-windows: prepare-windows build-windows
+deps:
+	go get github.com/sparrc/gdm
+	gdm restore
 
-# Only run the build (no dependency grabbing)
-build:
-	go install -ldflags "$(LDFLAGS)" ./...
+telegraf:
+	go build -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
 
-build-windows:
-	GOOS=windows GOARCH=amd64 go build -o telegraf.exe \
-		 -ldflags "$(LDFLAGS)" \
-		./cmd/telegraf/telegraf.go
+go-install:
+	go install -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-build-for-docker:
-	CGO_ENABLED=0 GOOS=linux go build -installsuffix cgo -o telegraf \
-		 -ldflags "$(LDFLAGS)" \
-		./cmd/telegraf/telegraf.go
+install: telegraf
+	mkdir -p $(DESTDIR)$(PREFIX)/bin/
+	cp $(TELEGRAF) $(DESTDIR)$(PREFIX)/bin/
 
-# run package script
+test:
+	go test -short ./...
+
+test-windows:
+	go test ./plugins/inputs/ping/...
+	go test ./plugins/inputs/win_perf_counters/...
+
+lint:
+	go vet ./...
+
+test-all: lint
+	go test ./...
+
 package:
 	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all --upload
 
-# Get dependencies and use gdm to checkout changesets
-prepare:
-	go get github.com/sparrc/gdm
-	gdm restore
+clean:
+	-rm -f telegraf
+	-rm -f telegraf.exe
 
-# Use the windows godeps file to prepare dependencies
-prepare-windows:
-	go get github.com/sparrc/gdm
-	gdm restore
-	gdm restore -f Godeps_windows
-
-# Run all docker containers necessary for unit tests
+# Run all docker containers necessary for integration tests
 docker-run:
 	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server:3.9.0
 	docker run --name zookeeper -p "2181:2181" -d wurstmeister/zookeeper
@@ -76,7 +80,8 @@ docker-run:
 		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
 
-# Run docker containers necessary for CircleCI unit tests
+# Run docker containers necessary for integration tests; skipping services provided
+# by CircleCI
 docker-run-circle:
 	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server:3.9.0
 	docker run --name zookeeper -p "2181:2181" -d wurstmeister/zookeeper
@@ -99,28 +104,11 @@ docker-run-circle:
 		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
 
-# Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch openldap
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch openldap
+	-docker kill aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
+		openldap postgres rabbitmq redis riemann zookeeper
+	-docker rm aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
+		openldap postgres rabbitmq redis riemann zookeeper
 
-# Run full unit tests using docker containers (includes setup and teardown)
-test: vet docker-kill docker-run
-	# Sleeping for kafka leadership election, TSDB setup, etc.
-	sleep 60
-	# SUCCESS, running tests
-	go test -race ./...
-
-# Run "short" unit tests
-test-short: vet
-	go test -short ./...
-
-# Run windows specific tests
-test-windows: vet
-	go test ./plugins/inputs/ping/...
-	go test ./plugins/inputs/win_perf_counters/...
-
-vet:
-	go vet ./...
-
-.PHONY: test test-short vet build default
+.PHONY: deps telegraf telegraf.exe install test test-windows lint test-all \
+	package clean docker-run docker-run-circle docker-kill
