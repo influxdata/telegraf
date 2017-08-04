@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/url"
 )
@@ -82,10 +83,28 @@ func (c *udpClient) WriteStream(r io.Reader, contentLength int) (int, error) {
 		if err != io.EOF && err != nil {
 			return totaln, err
 		}
-		nW, err := c.conn.Write(c.buffer[0:nR])
-		totaln += nW
-		if err != nil {
-			return totaln, err
+
+		if c.buffer[nR-1] == uint8('\n') {
+			nW, err := c.conn.Write(c.buffer[0:nR])
+			totaln += nW
+			if err != nil {
+				return totaln, err
+			}
+		} else {
+			log.Printf("E! Could not fit point into UDP payload; dropping")
+			// Scan forward until next line break to realign.
+			for {
+				nR, err := r.Read(c.buffer)
+				if nR == 0 {
+					break
+				}
+				if err != io.EOF && err != nil {
+					return totaln, err
+				}
+				if c.buffer[nR-1] == uint8('\n') {
+					break
+				}
+			}
 		}
 	}
 	return totaln, nil

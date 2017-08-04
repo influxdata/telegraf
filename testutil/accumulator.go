@@ -258,6 +258,28 @@ func (a *Accumulator) AssertContainsTaggedFields(
 	assert.Fail(t, msg)
 }
 
+func (a *Accumulator) AssertDoesNotContainsTaggedFields(
+	t *testing.T,
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
+		}
+
+		if p.Measurement == measurement {
+			assert.Equal(t, fields, p.Fields)
+			msg := fmt.Sprintf("found measurement %s with tags %v which should not be there", measurement, tags)
+			assert.Fail(t, msg)
+		}
+	}
+	return
+}
+
 func (a *Accumulator) AssertContainsFields(
 	t *testing.T,
 	measurement string,

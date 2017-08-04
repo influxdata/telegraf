@@ -41,6 +41,7 @@ This input plugin will test HTTP/HTTPS connections.
 - http_response
     - response_time (float, seconds)
     - http_response_code (int) #The code received
+	- result_type (string) # success, timeout, response_string_mismatch, connection_failed
 
 ### Tags:
 

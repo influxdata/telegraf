@@ -380,8 +380,22 @@ func TestParsePrecision(t *testing.T) {
 	} {
 		metrics, err := ParseWithDefaultTimePrecision(
 			[]byte(tt.line+"\n"), time.Now(), tt.precision)
-		assert.NoError(t, err, tt)
+		assert.NoError(t, err)
 		assert.Equal(t, tt.expected, metrics[0].UnixNano())
+	}
+}
+
+func TestParsePrecisionUnsetTime(t *testing.T) {
+	for _, tt := range []struct {
+		line      string
+		precision string
+	}{
+		{"test v=42", "s"},
+		{"test v=42", "ns"},
+	} {
+		_, err := ParseWithDefaultTimePrecision(
+			[]byte(tt.line+"\n"), time.Now(), tt.precision)
+		assert.NoError(t, err)
 	}
 }
 

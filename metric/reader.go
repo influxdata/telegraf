@@ -57,7 +57,7 @@ func (r *reader) Read(p []byte) (n int, err error) {
 			// this for-loop is the sunny-day scenario, where we are given a
 			// buffer that is large enough to hold at least a single metric.
 			// all of the cases below it are edge-cases.
-			if r.metrics[r.iM].Len() < len(p[i:]) {
+			if r.metrics[r.iM].Len() <= len(p[i:]) {
 				i += r.metrics[r.iM].SerializeTo(p[i:])
 			} else {
 				break
@@ -76,7 +76,7 @@ func (r *reader) Read(p []byte) (n int, err error) {
 			if len(tmp) > 1 {
 				r.splitMetrics = tmp
 				r.state = split
-				if r.splitMetrics[0].Len() < len(p) {
+				if r.splitMetrics[0].Len() <= len(p) {
 					i += r.splitMetrics[0].SerializeTo(p)
 					r.iSM = 1
 				} else {
@@ -99,7 +99,7 @@ func (r *reader) Read(p []byte) (n int, err error) {
 		}
 
 	case split:
-		if r.splitMetrics[r.iSM].Len() < len(p) {
+		if r.splitMetrics[r.iSM].Len() <= len(p) {
 			// write the current split metric
 			i += r.splitMetrics[r.iSM].SerializeTo(p)
 			r.iSM++
@@ -131,6 +131,10 @@ func (r *reader) Read(p []byte) (n int, err error) {
 			r.iSM++
 			if r.iSM == len(r.splitMetrics) {
 				r.iM++
+				if r.iM == len(r.metrics) {
+					r.state = done
+					return i, io.EOF
+				}
 				r.state = normal
 			} else {
 				r.state = split

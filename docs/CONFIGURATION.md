@@ -66,10 +66,13 @@ interval. Maximum flush_interval will be flush_interval + flush_jitter
 This is primarily to avoid
 large write spikes for users running a large number of telegraf instances.
 ie, a jitter of 5s and flush_interval 10s means flushes will happen every 10-15s.
-* **precision**: By default, precision will be set to the same timestamp order
-as the collection interval, with the maximum being 1s. Precision will NOT
-be used for service inputs, such as logparser and statsd. Valid values are
-"ns", "us" (or "µs"), "ms", "s".
+* **precision**:
+   By default or when set to "0s", precision will be set to the same
+   timestamp order as the collection interval, with the maximum being 1s.
+   Precision will NOT be used for service inputs. It is up to each individual
+   service input to set the timestamp at the appropriate precision.
+   Valid time units are "ns", "us" (or "µs"), "ms", "s".
+
 * **logfile**: Specify the log file name. The empty string means to log to stderr.
 * **debug**: Run telegraf in debug mode.
 * **quiet**: Run telegraf in quiet mode (error messages only).
@@ -134,8 +137,9 @@ is tested on points after they have passed the `namepass` test.
 An array of glob pattern strings.  Only fields whose field key matches a
 pattern in this list are emitted.  Not available for outputs.
 * **fielddrop**:
-The inverse of `fieldpass`. Fields with a field key matching one of the
-patterns will be discarded from the point.  Not available for outputs.
+The inverse of `fieldpass`.  Fields with a field key matching one of the
+patterns will be discarded from the point.  This is tested on points after
+they have passed the `fieldpass` test.  Not available for outputs.
 * **tagpass**:
 A table mapping tag keys to arrays of glob pattern strings.  Only points
 that contain a tag key in the table and a tag value matching one of its
@@ -177,7 +181,6 @@ fields which begin with `time_`.
 [[outputs.influxdb]]
   url = "http://192.168.59.103:8086" # required.
   database = "telegraf" # required.
-  precision = "s"
 
 # INPUTS
 [[inputs.cpu]]
@@ -316,21 +319,18 @@ to avoid measurement collisions:
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
   database = "telegraf"
-  precision = "s"
   # Drop all measurements that start with "aerospike"
   namedrop = ["aerospike*"]
 
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
   database = "telegraf-aerospike-data"
-  precision = "s"
   # Only accept aerospike data:
   namepass = ["aerospike*"]
 
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
   database = "telegraf-cpu0-data"
-  precision = "s"
   # Only store measurements where the tag "cpu" matches the value "cpu0"
   [outputs.influxdb.tagpass]
     cpu = ["cpu0"]

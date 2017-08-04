@@ -61,6 +61,24 @@ to filter and some tags
   ssl_key = '/path/to/keyfile'
 ```
 
+### Usage for Caddy HTTP server
+
+If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:
+
+* Download Caddy+Prometheus plugin [here](https://caddyserver.com/download/linux/amd64?plugins=http.prometheus)
+* Add the `prometheus` directive in your `CaddyFile`
+* Restart Caddy
+* Configure Telegraf to fetch metrics on it:
+
+```
+[[inputs.prometheus]]
+#   ## An array of urls to scrape metrics from.
+  urls = ["http://localhost:9180/metrics"]
+```
+
+> This is the default URL where Caddy Prometheus plugin will send data.
+> For more details, please read the [Caddy Prometheus documentation](https://github.com/miekg/caddy-prometheus/blob/master/README.md).
+
 ### Measurements & Fields & Tags:
 
 Measurements and fields could be any thing.

@@ -169,7 +169,10 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if e.ClusterStats {
 				// get cat/master information here so NodeStats can determine
 				// whether this node is the Master
-				e.setCatMaster(s + "/_cat/master")
+				if err := e.setCatMaster(s + "/_cat/master"); err != nil {
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					return
+				}
 			}
 
 			// Always gather node states
@@ -353,7 +356,7 @@ func (e *Elasticsearch) setCatMaster(url string) error {
 		// NOTE: we are not going to read/discard r.Body under the assumption we'd prefer
 		// to let the underlying transport close the connection and re-establish a new one for
 		// future calls.
-		return fmt.Errorf("status-code %d, expected %d", r.StatusCode, http.StatusOK)
+		return fmt.Errorf("elasticsearch: Unable to retrieve master node information. API responded with status-code %d, expected %d", r.StatusCode, http.StatusOK)
 	}
 	response, err := ioutil.ReadAll(r.Body)
 

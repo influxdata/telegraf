@@ -31,6 +31,7 @@ func TestGather(t *testing.T) {
 		"stratum":      "3",
 	}
 	fields := map[string]interface{}{
+		"system_time":     0.000020390,
 		"last_offset":     0.000012651,
 		"rms_offset":      0.000025577,
 		"frequency":       -16.001,

@@ -16,7 +16,6 @@ var (
 	defaultRequestTimeout = time.Second * 5
 )
 
-//
 func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 	// validate required parameters:
 	if len(config.URL) == 0 {
@@ -40,15 +39,30 @@ func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 		return nil, fmt.Errorf("config.URL scheme must be http(s), got %s", u.Scheme)
 	}
 
+	var transport http.Transport
+	if len(config.HTTPProxy) > 0 {
+		proxyURL, err := url.Parse(config.HTTPProxy)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing config.HTTPProxy: %s", err)
+		}
+
+		transport = http.Transport{
+			Proxy:           http.ProxyURL(proxyURL),
+			TLSClientConfig: config.TLSConfig,
+		}
+	} else {
+		transport = http.Transport{
+			TLSClientConfig: config.TLSConfig,
+		}
+	}
+
 	return &httpClient{
 		writeURL: writeURL(u, defaultWP),
 		config:   config,
 		url:      u,
 		client: &http.Client{
-			Timeout: config.Timeout,
-			Transport: &http.Transport{
-				TLSClientConfig: config.TLSConfig,
-			},
+			Timeout:   config.Timeout,
+			Transport: &transport,
 		},
 	}, nil
 }
@@ -76,6 +90,9 @@ type HTTPConfig struct {
 
 	// TLSConfig is the tls auth settings to use for each request.
 	TLSConfig *tls.Config
+
+	// Proxy URL should be of the form "http://host:port"
+	HTTPProxy string
 
 	// Gzip, if true, compresses each payload using gzip.
 	// TODO
