@@ -91,6 +91,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"used_cpu_sys_children":          float64(0.00),
 		"used_cpu_user_children":         float64(0.00),
 		"keyspace_hitrate":               float64(0.50),
+		"redis_version":                  "2.8.9",
 	}
 
 	// We have to test rdb_last_save_time_offset manually because the value is based on the time when gathered

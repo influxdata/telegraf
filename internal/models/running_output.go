@@ -2,6 +2,7 @@ package models
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -34,6 +35,9 @@ type RunningOutput struct {
 
 	metrics     *buffer.Buffer
 	failMetrics *buffer.Buffer
+
+	// Guards against concurrent calls to the Output as described in #3009
+	sync.Mutex
 }
 
 func NewRunningOutput(
@@ -169,6 +173,8 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	if nMetrics == 0 {
 		return nil
 	}
+	ro.Lock()
+	defer ro.Unlock()
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)

@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewMetric(t *testing.T) {
@@ -249,11 +250,13 @@ func TestNewMetric_Fields(t *testing.T) {
 		"host": "localhost",
 	}
 	fields := map[string]interface{}{
-		"float":  float64(1),
-		"int":    int64(1),
-		"bool":   true,
-		"false":  false,
-		"string": "test",
+		"float":                  float64(1),
+		"int":                    int64(1),
+		"bool":                   true,
+		"false":                  false,
+		"string":                 "test",
+		"quote_string":           `x"y`,
+		"backslash_quote_string": `x\"y`,
 	}
 	m, err := New("cpu", tags, fields, now)
 	assert.NoError(t, err)
@@ -366,7 +369,7 @@ func TestIndexUnescapedByte(t *testing.T) {
 		{
 			in:       []byte(`foo\\bar`),
 			b:        'b',
-			expected: 5,
+			expected: -1,
 		},
 		{
 			in:       []byte(`foobar`),
@@ -458,7 +461,7 @@ func TestSplitMetric(t *testing.T) {
 	assert.Len(t, split70, 3)
 
 	split60 := m.Split(60)
-	assert.Len(t, split60, 4)
+	assert.Len(t, split60, 5)
 }
 
 // test splitting metric into various max lengths
@@ -578,6 +581,42 @@ func TestSplitMetric_OneField(t *testing.T) {
 	assert.Equal(t, "cpu,host=localhost float=100001 1480940990034083306\n", split[0].String())
 }
 
+func TestSplitMetric_ExactSize(t *testing.T) {
+	now := time.Unix(0, 1480940990034083306)
+	tags := map[string]string{
+		"host": "localhost",
+	}
+	fields := map[string]interface{}{
+		"float":  float64(100001),
+		"int":    int64(100001),
+		"bool":   true,
+		"false":  false,
+		"string": "test",
+	}
+	m, err := New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+	actual := m.Split(m.Len())
+	// check that no copy was made
+	require.Equal(t, &m, &actual[0])
+}
+
+func TestSplitMetric_NoRoomForNewline(t *testing.T) {
+	now := time.Unix(0, 1480940990034083306)
+	tags := map[string]string{
+		"host": "localhost",
+	}
+	fields := map[string]interface{}{
+		"float": float64(100001),
+		"int":   int64(100001),
+		"bool":  true,
+		"false": false,
+	}
+	m, err := New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+	actual := m.Split(m.Len() - 1)
+	require.Equal(t, 2, len(actual))
+}
+
 func TestNewMetricAggregate(t *testing.T) {
 	now := time.Now()
 
@@ -647,4 +686,56 @@ func TestEmptyTagValueOrKey(t *testing.T) {
 
 	assert.NoError(t, err)
 
+}
+
+func TestNewMetric_TrailingSlash(t *testing.T) {
+	now := time.Now()
+
+	tests := []struct {
+		name   string
+		tags   map[string]string
+		fields map[string]interface{}
+	}{
+		{
+			name: `cpu\`,
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+		},
+		{
+			name: "cpu",
+			fields: map[string]interface{}{
+				`value\`: "x",
+			},
+		},
+		{
+			name: "cpu",
+			fields: map[string]interface{}{
+				"value": `x\`,
+			},
+		},
+		{
+			name: "cpu",
+			tags: map[string]string{
+				`host\`: "localhost",
+			},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+		},
+		{
+			name: "cpu",
+			tags: map[string]string{
+				"host": `localhost\`,
+			},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		_, err := New(tc.name, tc.tags, tc.fields, now)
+		assert.Error(t, err)
+	}
 }

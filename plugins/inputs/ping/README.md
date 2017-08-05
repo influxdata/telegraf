@@ -13,6 +13,7 @@ urls = ["www.google.com"] # required
 ## number of pings to send per collection (ping -c <COUNT>)
 # count = 1
 ## interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
+## Not available in Windows.
 # ping_interval = 1.0
 ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
 # timeout = 1.0
