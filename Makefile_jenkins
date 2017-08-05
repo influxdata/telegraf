@@ -1,0 +1,31 @@
+PREFIX := /usr/local
+VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+COMMIT := $(shell git rev-parse --short HEAD)
+ifdef GOBIN
+PATH := $(GOBIN):$(PATH)
+else
+PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
+endif
+
+LDFLAGS := -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
+ifdef VERSION
+	LDFLAGS += -X main.version=$(VERSION)
+endif
+
+linux: deps build-linux
+linux_arm: deps linux_arm-build
+windows: deps build-windows
+
+deps:
+	go get github.com/sparrc/gdm
+	gdm restore
+
+build-windows:
+	GOOS=windows GOARCH=amd64 go build -o telegraf.exe -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
+
+build-linux:		
+	go build -o telegraf -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
+
+linux_arm-build:
+	GOARM=7 GOARCH=arm go build -o telegraf.arm -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go

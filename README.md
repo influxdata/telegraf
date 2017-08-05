@@ -147,6 +147,7 @@ configuration options.
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
+* [open_hardware_monitor](./plugins/inputs/open_hardware_monitor)
 * [openldap](./plugins/inputs/openldap)
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
