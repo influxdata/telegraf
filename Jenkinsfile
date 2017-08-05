@@ -11,17 +11,20 @@ pipeline
 	
 	stages
 	{
-		stage('Prepare')
+		stage('Checkout')
 		{
 			steps
 			{
+				cleanWs()
 				dir('src/github.com/influxdata/telegraf') 
 				{
 					checkout scm
 				}
+				sh 'mkdir ./release'
 			}
 		}
-		stage('Build') 
+		
+		stage('Prepare deps') 
 		{
 			steps
 			{
@@ -30,24 +33,75 @@ pipeline
 					export PATH=$PATH:$GOROOT/bin
 					export GOPATH=${WORKSPACE}
 					cd ./src/github.com/influxdata/telegraf
-					export GIT_SHORT="$(git rev-parse --short HEAD)"
-					export BUILD_DATE=$(date +"%Y%m%d")
-					make windows
-					mv telegraf.exe telegraf-${BUILD_DATE}-${GIT_SHORT}.exe'''
+					make -f Makefile_jenkins deps'''
 			}
 		}
+		
+		stage('Build-Windows') 
+		{
+			steps
+			{
+				sh '''
+					export GOROOT=/usr/local/go
+					export PATH=$PATH:$GOROOT/bin
+					export GOPATH=${WORKSPACE}
+					workspace=`pwd`
+					cd ./src/github.com/influxdata/telegraf
+					export GIT_SHORT="$(git rev-parse --short HEAD)"
+					export BUILD_DATE=$(date +"%Y%m%d")
+					make -f Makefile_jenkins build-windows
+					cd $workspace
+					mv ./src/github.com/influxdata/telegraf/telegraf.exe ./release/telegraf-${BUILD_DATE}-${GIT_SHORT}.exe'''
+			}
+		}
+		stage('Build-Linux') 
+		{
+			steps
+			{
+				sh '''
+					export GOROOT=/usr/local/go
+					export PATH=$PATH:$GOROOT/bin
+					export GOPATH=${WORKSPACE}
+					workspace=`pwd`
+					cd ./src/github.com/influxdata/telegraf
+					export GIT_SHORT="$(git rev-parse --short HEAD)"
+					export BUILD_DATE=$(date +"%Y%m%d")
+					make -f Makefile_jenkins build-linux
+					cd $workspace
+					mv ./src/github.com/influxdata/telegraf/telegraf ./release/telegraf-${BUILD_DATE}-${GIT_SHORT}'''
+			}
+		}
+		
+		stage('Build-Linux-arm') 
+		{
+			steps
+			{
+				sh '''
+					export GOROOT=/usr/local/go
+					export PATH=$PATH:$GOROOT/bin
+					export GOPATH=${WORKSPACE}
+					workspace=`pwd`
+					cd ./src/github.com/influxdata/telegraf
+					export GIT_SHORT="$(git rev-parse --short HEAD)"
+					export BUILD_DATE=$(date +"%Y%m%d")
+					make -f Makefile_jenkins linux_arm-build
+					cd $workspace
+					mv ./src/github.com/influxdata/telegraf/telegraf.arm ./release/telegraf-${BUILD_DATE}-${GIT_SHORT}.arm'''
+			}
+		}
+		
 		stage('Archive')
 		{
 			steps
 			{
-				archiveArtifacts artifacts: 'src/github.com/influxdata/telegraf/telegraf*.exe', onlyIfSuccessful: true
+				archiveArtifacts artifacts: 'release/telegraf*', onlyIfSuccessful: true
 			}
 		}
 		stage('CleanUp')
 		{
 			steps
 			{
-				deleteDir()
+				cleanWs()
 				notifySuccessful()
 			}
 		}
