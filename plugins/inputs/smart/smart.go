@@ -1,12 +1,12 @@
 package smart
 
 import (
-	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -87,15 +87,7 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	errs := m.getAttributes(acc, devices)
-	if len(errs) > 0 {
-		var errStrs []string
-		for _, e := range errs {
-			errStrs = append(errStrs, e.Error())
-		}
-		return errors.New(strings.Join(errStrs, ", "))
-	}
-
+	m.getAttributes(acc, devices)
 	return nil
 }
 
@@ -131,22 +123,16 @@ func excludedDev(excludes []string, deviceLine string) bool {
 }
 
 // Get info and attributes for each S.M.A.R.T. device
-func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) []error {
+func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
 
-	errchan := make(chan error)
+	var wg sync.WaitGroup
+	wg.Add(len(devices))
+
 	for _, device := range devices {
-		go gatherDisk(acc, m.Path, m.Nocheck, device, errchan)
+		go gatherDisk(acc, m.Path, m.Nocheck, device, &wg)
 	}
 
-	var errors []error
-	for i := 0; i < len(devices); i++ {
-		err := <-errchan
-		if err != nil {
-			errors = append(errors, err)
-		}
-	}
-
-	return errors
+	wg.Wait()
 }
 
 // Command line parse errors are denoted by the exit code having the 0 bit set.
@@ -160,8 +146,9 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, path, nockeck, device string, err chan error) {
+func gatherDisk(acc telegraf.Accumulator, path, nockeck, device string, wg *sync.WaitGroup) {
 
+	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nockeck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
@@ -172,7 +159,7 @@ func gatherDisk(acc telegraf.Accumulator, path, nockeck, device string, err chan
 	// Ignore all exit statuses except if it is a command line parse error
 	exitStatus, er := exitStatus(e)
 	if er != nil {
-		err <- fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), e, outStr)
+		acc.AddError(fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), e, outStr))
 		return
 	}
 
@@ -239,8 +226,6 @@ func gatherDisk(acc telegraf.Accumulator, path, nockeck, device string, err chan
 		}
 	}
 	acc.AddFields("smart_device", device_fields, device_tags)
-
-	err <- nil
 }
 
 func parseRawValue(rawVal string) (int, error) {
