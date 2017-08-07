@@ -71,6 +71,12 @@ The interpretation of the tag `flags` is:
   ## Optionally specify the path to the smartctl executable
   # path = "/usr/bin/smartctl"
   #
+  ## On most platforms smartctl requires root access.
+  ## Setting 'use_sudo' to true will make use of sudo to run smartctl.
+  ## Sudo must be configured to to allow the telegraf user to run smartctl
+  ## with out password.
+  # use_sudo = false
+  #
   ## Skip checking disks in this power mode. Defaults to
   ## "standby" to not wake up disks that have stoped rotating.
   ## See --nockeck in the man pages for smartctl.

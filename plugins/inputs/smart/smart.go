@@ -41,11 +41,18 @@ type Smart struct {
 	Nocheck  string
 	Excludes []string
 	Devices  []string
+	UseSudo  bool
 }
 
 var sampleConfig = `
   ## Optionally specify the path to the smartctl executable
   # path = "/usr/bin/smartctl"
+  #
+  ## On most platforms smartctl requires root access.
+  ## Setting 'use_sudo' to true will make use of sudo to run smartctl.
+  ## Sudo must be configured to to allow the telegraf user to run smartctl
+  ## with out password.
+  # use_sudo = false
   #
   ## Skip checking disks in this power mode. Defaults to
   ## "standby" to not wake up disks that have stoped rotating.
@@ -91,10 +98,19 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// Wrap with sudo
+func sudo(sudo bool, command string, args ...string) *exec.Cmd {
+	if sudo {
+		return execCommand("sudo", append([]string{"-n", command}, args...)...)
+	}
+
+	return execCommand(command, args...)
+}
+
 // Scan for S.M.A.R.T. devices
 func (m *Smart) scan() ([]string, error) {
 
-	cmd := execCommand(m.Path, "--scan")
+	cmd := sudo(m.UseSudo, m.Path, "--scan")
 	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
@@ -129,7 +145,7 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
 	wg.Add(len(devices))
 
 	for _, device := range devices {
-		go gatherDisk(acc, m.Path, m.Nocheck, device, &wg)
+		go gatherDisk(acc, m.UseSudo, m.Path, m.Nocheck, device, &wg)
 	}
 
 	wg.Wait()
@@ -146,13 +162,13 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, path, nockeck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, usesudo bool, path, nockeck, device string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nockeck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
-	cmd := execCommand(path, args...)
+	cmd := sudo(usesudo, path, args...)
 	out, e := internal.CombinedOutputTimeout(cmd, time.Second*5)
 	outStr := string(out)
 
