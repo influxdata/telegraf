@@ -52,6 +52,7 @@
 - [#2387](https://github.com/influxdata/telegraf/pull/2387): Add histogram aggregator plugin.
 - [#3080](https://github.com/influxdata/telegraf/pull/3080): Add zipkin input plugin.
 - [#3023](https://github.com/influxdata/telegraf/pull/3023): Add Windows Services input plugin.
+- [#3098](https://github.com/influxdata/telegraf/pull/3098): Add path tag to logparser containing path of logfile.
 
 ### Bugfixes
 
