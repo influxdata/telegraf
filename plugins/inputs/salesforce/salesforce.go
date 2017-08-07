@@ -8,11 +8,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -95,7 +95,7 @@ func (s *Salesforce) Gather(acc telegraf.Accumulator) error {
 
 	fields := make(map[string]interface{})
 	for k, v := range limits {
-		key := toSnakeCase(k)
+		key := internal.SnakeCase(k)
 		fields[key+"_max"] = v.Max
 		fields[key+"_remaining"] = v.Remaining
 	}
@@ -146,7 +146,7 @@ func (s *Salesforce) fetchLimits() (limits, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return l, fmt.Errorf("Salesforce responded  with unexpected status code %d", resp.StatusCode)
+		return l, fmt.Errorf("Salesforce responded with unexpected status code %d", resp.StatusCode)
 	}
 
 	l = limits{}
@@ -242,14 +242,4 @@ func init() {
 	inputs.Add("salesforce", func() telegraf.Input {
 		return NewSalesforce()
 	})
-}
-
-var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
-
-// convet a string to snake_case
-func toSnakeCase(str string) string {
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
 }
