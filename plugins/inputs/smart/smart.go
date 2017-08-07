@@ -27,6 +27,7 @@ var (
 	// SMART support is: Enabled
 	smartEnabledInInfo = regexp.MustCompile("^SMART support is:\\s+(\\w+)$")
 	// SMART overall-health self-assessment test result: PASSED
+	// PASSED, FAILED, UNKNOWN
 	smartOverallHealth = regexp.MustCompile("^SMART overall-health self-assessment test result:\\s+(\\w+).*$")
 
 	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
@@ -208,7 +209,7 @@ func gatherDisk(acc telegraf.Accumulator, usesudo bool, path, nockeck, device st
 
 		health := smartOverallHealth.FindStringSubmatch(line)
 		if len(health) > 1 {
-			device_tags["health"] = health[1]
+			device_fields["health_ok"] = (health[1] == "PASSED")
 		}
 
 		attr := attribute.FindStringSubmatch(line)

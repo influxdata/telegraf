@@ -73,7 +73,7 @@ func TestGather(t *testing.T) {
 	err := s.Gather(&acc)
 
 	require.NoError(t, err)
-	assert.Equal(t, 61, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 62, acc.NFields(), "Wrong number of fields gathered")
 
 	var testsAda0Attributes = []struct {
 		fields map[string]interface{}
@@ -286,6 +286,7 @@ func TestGather(t *testing.T) {
 		{
 			map[string]interface{}{
 				"exit_status": int(0),
+				"health_ok":   bool(true),
 			},
 			map[string]string{
 				"device":    "/dev/ada0",
@@ -293,7 +294,6 @@ func TestGather(t *testing.T) {
 				"serial_no": "S0X5NZBC422720",
 				"enabled":   "Enabled",
 				"capacity":  "251000193024",
-				"health":    "PASSED",
 			},
 		},
 	}
