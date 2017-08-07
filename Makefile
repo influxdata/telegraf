@@ -26,7 +26,7 @@ telegraf:
 	go build -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
 
 go-install:
-	go install -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 install: telegraf
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
