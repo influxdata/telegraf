@@ -1,6 +1,5 @@
 // +build windows
 
-//this test must be run under administrator account
 package win_services
 
 import (
