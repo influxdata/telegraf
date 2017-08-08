@@ -69,7 +69,7 @@ tmpdir=$(mktemp -d)
 exit_if_fail ./telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
-gzip telegraf -c "$CIRCLE_ARTIFACTS/telegraf.gz"
+gzip telegraf -c > "$CIRCLE_ARTIFACTS/telegraf.gz"
 
 if git describe --exact-match HEAD; then
     # install fpm (packaging dependency)
