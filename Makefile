@@ -26,7 +26,7 @@ telegraf:
 	go build -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
 
 go-install:
-	go install -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 install: telegraf
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
@@ -38,6 +38,7 @@ test:
 test-windows:
 	go test ./plugins/inputs/ping/...
 	go test ./plugins/inputs/win_perf_counters/...
+	go test ./plugins/inputs/win_services/...
 
 lint:
 	go vet ./...
