@@ -158,7 +158,6 @@ def go_get(branch, update=False, no_uncommitted=False):
         get_command = "go get github.com/sparrc/gdm"
         run(get_command)
     logging.info("Retrieving dependencies with `gdm`...")
-    run("{}/bin/gdm restore -v -f Godeps_windows".format(os.environ.get("GOPATH")))
     run("{}/bin/gdm restore -v".format(os.environ.get("GOPATH")))
     return True
 
