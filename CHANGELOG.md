@@ -15,12 +15,13 @@
 ### New Plugins
 
 - [fail2ban](./plugins/inputs/fail2ban/README.md) - Thanks to @grugrut
-- [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
 - [fluentd](./plugins/inputs/fluentd/README.md) - Thanks to @DanKans
-- [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
 - [histogram](./plugins/aggregators/histogram/README.md) - Thanks to @vlamug
-- [zipkin](./plugins/inputs/zipkin/README.md) - Thanks to @adamperlin & @Ayrdrie
+- [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
+- [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
+- [salesforce](./plugins/inputs/salesforce/README.md) - Thanks to @rody
 - [win_services](./plugins/inputs/win_services/README.md) - Thanks to @vlastahajek
+- [zipkin](./plugins/inputs/zipkin/README.md) - Thanks to @adamperlin & @Ayrdrie
 
 ### Features
 
@@ -54,6 +55,7 @@
 - [#3080](https://github.com/influxdata/telegraf/pull/3080): Add zipkin input plugin.
 - [#3023](https://github.com/influxdata/telegraf/pull/3023): Add Windows Services input plugin.
 - [#3098](https://github.com/influxdata/telegraf/pull/3098): Add path tag to logparser containing path of logfile.
+- [#3075](https://github.com/influxdata/telegraf/pull/3075): Add salesforce input plugin.
 
 ### Bugfixes
 

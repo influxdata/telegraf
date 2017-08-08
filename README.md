@@ -162,6 +162,7 @@ configuration options.
 * [redis](./plugins/inputs/redis)
 * [rethinkdb](./plugins/inputs/rethinkdb)
 * [riak](./plugins/inputs/riak)
+* [salesforce](./plugins/inputs/salesforce)
 * [sensors](./plugins/inputs/sensors)
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
