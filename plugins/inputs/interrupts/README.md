@@ -16,10 +16,10 @@ There are two measurements reported by this plugin.
 - `soft_interrupts` gathers metrics from the `/proc/softirqs` file
 
 ### Fields
-- CPUx: the amount of interrupts for the IRQ handled by that CPU
-- total: total amount of interrupts for all CPUs
+- cpu: the amount of interrupts for the IRQ handled by the CPU in the cpu tag, or the total amount of interrupts for all CPUs (cpu-total)
 
 ### Tags
+- cpu: the cpu associated with the interrupt, or "cpu-total" representing all CPU's
 - irq: the IRQ
 - type: the type of interrupt
 - device: the name of the device that is located at that IRQ
@@ -28,8 +28,17 @@ There are two measurements reported by this plugin.
 ```
 ./telegraf --config ~/interrupts_config.conf --test
 * Plugin: inputs.interrupts, Collection 1
-> interrupts,irq=0,type=IO-APIC,device=2-edge\ timer,host=hostname CPU0=23i,total=23i 1489346531000000000
-> interrupts,irq=1,host=hostname,type=IO-APIC,device=1-edge\ i8042 CPU0=9i,total=9i 1489346531000000000
-> interrupts,irq=30,type=PCI-MSI,device=65537-edge\ virtio1-input.0,host=hostname CPU0=1i,total=1i 1489346531000000000
-> soft_interrupts,irq=NET_RX,host=hostname CPU0=280879i,total=280879i 1489346531000000000
+* Plugin: inputs.interrupts, Collection 1
+> soft_interrupts,irq=HI,cpu=cpu0,host=etl cpu=0i 1502206961000000000
+> soft_interrupts,irq=HI,cpu=cpu1,host=etl cpu=0i 1502206961000000000
+> soft_interrupts,host=etl,cpu=cpu-total,irq=HI cpu=0i 1502206961000000000
+> soft_interrupts,cpu=cpu0,host=etl,irq=TIMER cpu=3160625i 1502206961000000000
+> soft_interrupts,irq=TIMER,cpu=cpu1,host=etl cpu=1863935i 1502206961000000000
+> soft_interrupts,irq=TIMER,host=etl,cpu=cpu-total cpu=5024560i 1502206961000000000
+> interrupts,irq=0,type=IO-APIC-edge,device=timer,cpu=cpu0,host=etl cpu=121i 1502206961000000000
+> interrupts,cpu=cpu1,host=etl,irq=0,type=IO-APIC-edge,device=timer cpu=0i 1502206961000000000
+> interrupts,type=IO-APIC-edge,device=timer,host=etl,cpu=cpu-total,irq=0 cpu=121i 1502206961000000000
+> interrupts,irq=1,type=IO-APIC-edge,device=i8042,cpu=cpu0,host=etl cpu=10i 1502206961000000000
+> interrupts,irq=1,type=IO-APIC-edge,device=i8042,cpu=cpu1,host=etl cpu=0i 1502206961000000000
+> interrupts,cpu=cpu-total,irq=1,type=IO-APIC-edge,device=i8042,host=etl cpu=10i 1502206961000000000
 ```
