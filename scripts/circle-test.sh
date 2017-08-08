@@ -87,6 +87,6 @@ elif [ -n "${PACKAGE}" ]; then
     # install boto & rpm (packaging & AWS dependencies)
     exit_if_fail sudo apt-get install -y rpm python-boto
     unset GOGC
-    exit_if_fail ./scripts/build.py --package --platform=all --arch=all
+    exit_if_fail ./scripts/build.py --nightly --package --platform=all --arch=all --upload --bucket=dl.influxdata.com/telegraf/nightlies
     mv build $CIRCLE_ARTIFACTS
 fi
