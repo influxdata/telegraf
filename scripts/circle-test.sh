@@ -69,7 +69,7 @@ tmpdir=$(mktemp -d)
 exit_if_fail ./telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
-gzip telegraf -c "$CIRCLE_ARTIFACTS/telegraf.gz"
+gzip telegraf -c > "$CIRCLE_ARTIFACTS/telegraf.gz"
 
 if git describe --exact-match HEAD; then
     # install fpm (packaging dependency)
@@ -87,6 +87,11 @@ elif [ -n "${PACKAGE}" ]; then
     # install boto & rpm (packaging & AWS dependencies)
     exit_if_fail sudo apt-get install -y rpm python-boto
     unset GOGC
-    exit_if_fail ./scripts/build.py --package --platform=all --arch=all
+    if [ "$(git rev-parse --abbrev-ref HEAD)" = master ]
+    then
+        exit_if_fail ./scripts/build.py --nightly --package --platform=all --arch=all --upload --bucket=dl.influxdata.com/telegraf/nightlies
+    else
+        exit_if_fail ./scripts/build.py --package --platform=all --arch=all
+    fi
     mv build $CIRCLE_ARTIFACTS
 fi

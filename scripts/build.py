@@ -158,7 +158,6 @@ def go_get(branch, update=False, no_uncommitted=False):
         get_command = "go get github.com/sparrc/gdm"
         run(get_command)
     logging.info("Retrieving dependencies with `gdm`...")
-    run("{}/bin/gdm restore -v -f Godeps_windows".format(os.environ.get("GOPATH")))
     run("{}/bin/gdm restore -v".format(os.environ.get("GOPATH")))
     return True
 
@@ -470,26 +469,11 @@ def build(version=None,
             build_command += "-race "
         if len(tags) > 0:
             build_command += "-tags {} ".format(','.join(tags))
-        if "1.4" in get_go_version():
-            if static:
-                build_command += "-ldflags=\"-s -X main.version {} -X main.branch {} -X main.commit {}\" ".format(version,
-                                                                                                                  get_current_branch(),
-                                                                                                                  get_current_commit())
-            else:
-                build_command += "-ldflags=\"-X main.version {} -X main.branch {} -X main.commit {}\" ".format(version,
-                                                                                                               get_current_branch(),
-                                                                                                               get_current_commit())
 
-        else:
-            # Starting with Go 1.5, the linker flag arguments changed to 'name=value' from 'name value'
-            if static:
-                build_command += "-ldflags=\"-s -X main.version={} -X main.branch={} -X main.commit={}\" ".format(version,
-                                                                                                                  get_current_branch(),
-                                                                                                                  get_current_commit())
-            else:
-                build_command += "-ldflags=\"-X main.version={} -X main.branch={} -X main.commit={}\" ".format(version,
-                                                                                                               get_current_branch(),
-                                                                                                               get_current_commit())
+        build_command += "-ldflags=\"-w -s -X main.version={} -X main.branch={} -X main.commit={}\" ".format(
+                version,
+                get_current_branch(),
+                get_current_commit())
         if static:
             build_command += "-a -installsuffix cgo "
         build_command += path
