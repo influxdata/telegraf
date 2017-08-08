@@ -48,7 +48,7 @@ github.com/nsqio/go-nsq a53d495e81424aaf7a7665a9d32a97715c40e953
 github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
 github.com/opentracing-contrib/go-observer a52f2342449246d5bcc273e65cbdcfa5f7d6c63c
 github.com/opentracing/opentracing-go 06f47b42c792fef2796e9681353e1d908c417827
-github.com/openzipkin/zipkin-go-opentracing 1cafbdfde94fbf2b373534764e0863aa3bd0bf7b
+github.com/openzipkin/zipkin-go-opentracing a3f24586d6771f7a52012fc17b05a3f781592173
 github.com/pierrec/lz4 5c9560bfa9ace2bf86080bf40d46b34ae44604df
 github.com/pierrec/xxHash 5a004441f897722c627870a981d02b29924215fa
 github.com/pkg/errors 645ef00459ed84a119197bfb8d8205042c6df63d

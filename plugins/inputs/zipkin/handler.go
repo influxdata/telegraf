@@ -9,7 +9,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/gorilla/mux"
-	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
+	"github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore"
 )
 
 // SpanHandler is an implementation of a Handler which accepts zipkin thrift
