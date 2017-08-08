@@ -85,16 +85,6 @@ func parseInterrupts(r io.Reader) ([]IRQ, error) {
 	return irqs, nil
 }
 
-func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
-	tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device}
-	fields := map[string]interface{}{"total": irq.Total}
-	for i := 0; i < len(irq.Cpus); i++ {
-		cpu := fmt.Sprintf("CPU%d", i)
-		fields[cpu] = irq.Cpus[i]
-	}
-	return tags, fields
-}
-
 func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 	for measurement, file := range map[string]string{"interrupts": "/proc/interrupts", "soft_interrupts": "/proc/softirqs"} {
 		f, err := os.Open(file)
@@ -108,8 +98,17 @@ func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Parsing %s: %s", file, err))
 			continue
 		}
+		fields := map[string]interface{}{}
 		for _, irq := range irqs {
-			tags, fields := gatherTagsFields(irq)
+			for i := 0; i < len(irq.Cpus); i++ {
+				cpu := fmt.Sprintf("cpu%d", i)
+				tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device, "cpu": cpu}
+				fields["cpu"] = irq.Cpus[i]
+				acc.AddFields(measurement, fields, tags)
+			}
+			// And one more for cpu-total
+			tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device, "cpu": "cpu-total"}
+			fields["cpu"] = irq.Total
 			acc.AddFields(measurement, fields, tags)
 		}
 	}
