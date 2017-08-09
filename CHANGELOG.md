@@ -56,6 +56,7 @@
 - [#3023](https://github.com/influxdata/telegraf/pull/3023): Add Windows Services input plugin.
 - [#3098](https://github.com/influxdata/telegraf/pull/3098): Add path tag to logparser containing path of logfile.
 - [#3075](https://github.com/influxdata/telegraf/pull/3075): Add salesforce input plugin.
+- [#3097](https://github.com/influxdata/telegraf/pull/3097): Add option to run varnish under sudo.
 
 ### Bugfixes
 
