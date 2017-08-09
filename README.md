@@ -247,6 +247,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [nsq](./plugins/outputs/nsq)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
+* [redis](./plugins/outputs/redis)
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
 * [socket_writer](./plugins/outputs/socket_writer)
