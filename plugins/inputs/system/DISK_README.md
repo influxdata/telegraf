@@ -92,6 +92,13 @@ Data collection is based on github.com/shirou/gopsutil. This package handles pla
 - If configured to use serial numbers (default: disabled):
     - serial (device serial number)
 
+### Sample Queries:
+
+Calculate percent IO utilization per disk and host:
+```
+SELECT derivative(last("io_time"),1ms) FROM "diskio" WHERE time > now() - 30m GROUP BY "host","name",time(60s)
+```
+
 ### Example Output:
 
 ```
