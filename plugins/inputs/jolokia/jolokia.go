@@ -46,13 +46,14 @@ func (c JolokiaClientImpl) MakeRequest(req *http.Request) (*http.Response, error
 }
 
 type Jolokia struct {
-	jClient   JolokiaClient
-	Context   string
-	Mode      string
-	Servers   []Server
-	Metrics   []Metric
-	Proxy     Server
-	Delimiter string
+	jClient    JolokiaClient
+	Context    string
+	Mesurement string
+	Mode       string
+	Servers    []Server
+	Metrics    []Metric
+	Proxy      Server
+	Delimiter  string
 
 	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
@@ -63,6 +64,9 @@ const sampleConfig = `
   ## NOTE that Jolokia requires a trailing slash at the end of the context root
   ## NOTE that your jolokia security policy must allow for POST requests.
   context = "/jolokia/"
+
+  #Note infludb mesurements target
+  mesurement = "jolokia"
 
   ## This specifies the mode used
   # mode = "proxy"
@@ -252,6 +256,7 @@ func (j *Jolokia) extractValues(measurement string, value interface{}, fields ma
 }
 
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
+	mesurement := j.Mesurement
 
 	if j.jClient == nil {
 		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
@@ -303,7 +308,7 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		acc.AddFields("jolokia", fields, tags)
+		acc.AddFields(mesurement, fields, tags)
 	}
 
 	return nil
@@ -315,6 +320,7 @@ func init() {
 			ResponseHeaderTimeout: DefaultResponseHeaderTimeout,
 			ClientTimeout:         DefaultClientTimeout,
 			Delimiter:             "_",
+			Mesurement:            "jolokia",
 		}
 	})
 }
