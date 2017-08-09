@@ -36,9 +36,6 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.20/)
   ## Whether to report for each container total blkio and network stats or not
   total = false
 
-  ## Which environment variables should we use as a tag
-  tag_env = ["JAVA_HOME", "HEAP_SIZE"]
-
   ## docker labels to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
