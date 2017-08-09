@@ -22,6 +22,8 @@ type OpenTSDB struct {
 	HttpBatchSize int
 
 	Debug bool
+
+	Separator string
 }
 
 var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
@@ -45,6 +47,9 @@ var sampleConfig = `
 
   ## Debug true - Prints OpenTSDB communication
   debug = false
+
+  ## Separator separates measurements
+  separator = "."
 `
 
 func ToLineFormat(tags map[string]string) string {
@@ -125,8 +130,8 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			metric := &HttpMetric{
-				Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
-					o.Prefix, m.Name(), fieldName)),
+				Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s%s%s",
+					o.Prefix, m.Name(), o.Separator, fieldName)),
 				Tags:      tags,
 				Timestamp: now,
 				Value:     value,
@@ -176,7 +181,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-				sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
+				sanitizedChars.Replace(fmt.Sprintf("%s%s%s%s", o.Prefix, m.Name(), o.Separator, fieldName)),
 				now, metricValue, tags)
 
 			_, err := connection.Write([]byte(messageLine))
