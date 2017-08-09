@@ -374,18 +374,17 @@ other::---
 ```
 
 **Sudo privileges**:
-```bash
-# If you use this method, you will need the following in your telegraf config:
+If you use this method, you will need the following in your telegraf config:
+```toml
 [[inputs.varnish]]
   use_sudo = true
+```
 
+You will also need to update your sudoers file:
+```bash
 $ visudo
-
 # Add the following line:
 telegraf ALL=(ALL) NOPASSWD: /usr/bin/varnishstat
-
-$ grep varnish /etc/sudoers
-telegraf ALL = NOPASSWD: /usr/bin/varnishstat
 ```
 
 Please use the solution you see as most appropriate.
