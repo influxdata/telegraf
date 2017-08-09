@@ -16,7 +16,9 @@ ifdef VERSION
 endif
 
 
-all: | deps telegraf
+all:
+	$(MAKE) deps
+	$(MAKE) telegraf
 
 deps:
 	go get github.com/sparrc/gdm
