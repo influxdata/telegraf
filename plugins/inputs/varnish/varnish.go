@@ -17,12 +17,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string) (*bytes.Buffer, error)
+type runner func(cmdName string, UseSudo bool) (*bytes.Buffer, error)
 
 // Varnish is used to store configuration values
 type Varnish struct {
-	Stats  []string
-	Binary string
+	Stats   []string
+	Binary  string
+	UseSudo bool
 
 	filter filter.Filter
 	run    runner
@@ -32,6 +33,9 @@ var defaultStats = []string{"MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"}
 var defaultBinary = "/usr/bin/varnishstat"
 
 var sampleConfig = `
+  ## If running as a restricted user you can prepend sudo for additional access:
+  #use_sudo = false
+
   ## The default location of the varnishstat binary can be overridden with:
   binary = "/usr/bin/varnishstat"
 
@@ -52,10 +56,16 @@ func (s *Varnish) SampleConfig() string {
 }
 
 // Shell out to varnish_stat and return the output
-func varnishRunner(cmdName string) (*bytes.Buffer, error) {
+func varnishRunner(cmdName string, UseSudo bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"-1"}
-
 	cmd := exec.Command(cmdName, cmdArgs...)
+
+	if UseSudo {
+		cmdArgs = append([]string{cmdName}, cmdArgs...)
+		cmdArgs = append([]string{"-n"}, cmdArgs...)
+		cmd = exec.Command("sudo", cmdArgs...)
+	}
+
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := internal.RunTimeout(cmd, time.Millisecond*200)
@@ -89,7 +99,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	out, err := s.run(s.Binary)
+	out, err := s.run(s.Binary, s.UseSudo)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
@@ -145,9 +155,10 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("varnish", func() telegraf.Input {
 		return &Varnish{
-			run:    varnishRunner,
-			Stats:  defaultStats,
-			Binary: defaultBinary,
+			run:     varnishRunner,
+			Stats:   defaultStats,
+			Binary:  defaultBinary,
+			UseSudo: false,
 		}
 	})
 }
