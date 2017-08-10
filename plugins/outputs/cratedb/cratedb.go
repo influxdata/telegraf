@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -34,15 +35,13 @@ func (c *CrateDB) Connect() error {
 	if err != nil {
 		return err
 	} else if c.TableCreate {
-		// Insert
+		// TODO(fg) PRIMARY KEY based on hash value
 		sql := `
 CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
-  "timestamp" TIMESTAMP,
-  "name" STRING,
-  "tags_hash" STRING,
-  "tags" OBJECT(DYNAMIC),
-  "value" DOUBLE,
-  PRIMARY KEY ("timestamp", "tags_hash")
+	"timestamp" TIMESTAMP NOT NULL,
+	"name" STRING,
+	"tags" OBJECT(DYNAMIC),
+	"fields" OBJECT(DYNAMIC)
 );
 `
 		ctx, _ := context.WithTimeout(context.Background(), c.Timeout.Duration)
@@ -55,25 +54,15 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 }
 
 func (c *CrateDB) Write(metrics []telegraf.Metric) error {
-	sql := `
-INSERT INTO ` + c.Table + ` ("name", "timestamp", "tags", "tags_hash")
-VALUES ($1, $2, $3, $4);
-`
-
+	// TODO(fg) test timeouts
 	ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
 	defer cancel()
 
-	stmt, err := c.DB.PrepareContext(ctx, sql)
-	if err != nil {
+	if sql, err := insertSQL(c.Table, metrics); err != nil {
 		return err
-	}
-	defer stmt.Close()
-
-	//_ = stmt
-	for _, m := range metrics {
-		if _, err := stmt.ExecContext(ctx, m.Name(), m.Time(), 1, 2); err != nil {
-			return err
-		}
+	} else if _, err := c.DB.ExecContext(ctx, sql); err != nil {
+		fmt.Printf("%s\n", sql)
+		return err
 	}
 	return nil
 }
@@ -82,10 +71,12 @@ func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
 		cols := []interface{}{
-			m.Name(),
 			m.Time(),
+			m.Name(),
 			m.Tags(),
+			m.Fields(),
 		}
+
 		escapedCols := make([]string, len(cols))
 		for i, col := range cols {
 			escaped, err := escapeValue(col)
@@ -94,11 +85,11 @@ func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 			}
 			escapedCols[i] = escaped
 		}
-		rows[i] = `(` + strings.Join(escapedCols, ",") + `)`
+		rows[i] = `(` + strings.Join(escapedCols, ", ") + `)`
 	}
-	sql := `INSERT INTO ` + table + ` ("name", "timestamp", "tags", "tags_hash", "value")
+	sql := `INSERT INTO ` + table + ` ("timestamp", "name", "tags", "fields")
 VALUES
-` + strings.Join(rows, "  ,\n") + `;`
+` + strings.Join(rows, " ,\n") + `;`
 	return sql, nil
 }
 
@@ -114,33 +105,62 @@ func escapeValue(val interface{}) (string, error) {
 	switch t := val.(type) {
 	case string:
 		return escapeString(t, `'`), nil
+	case int, int32, int64, float32, float64:
+		return fmt.Sprint(t), nil
 	case time.Time:
 		// see https://crate.io/docs/crate/reference/sql/data_types.html#timestamp
 		return escapeValue(t.Format("2006-01-02T15:04:05.999-0700"))
 	case map[string]string:
-		// There is a decent chance that the implementation below doesn't catch all
-		// edge cases, but it's hard to tell since the format seems to be a bit
-		// underspecified. Anyway, luckily we only have to deal with a
-		// map[string]string here, giving a higher chance that the code below is
-		// correct.
-		// See https://crate.io/docs/crate/reference/sql/data_types.html#object
-		pairs := make([]string, 0, len(t))
-		for k, v := range t {
-			val, err := escapeValue(v)
-			if err != nil {
-				return "", err
-			}
-			pairs = append(pairs, escapeString(k, `"`)+" = "+val)
-		}
-		return `{` + strings.Join(pairs, ", ") + `}`, nil
+		return escapeObject(convertMap(t))
+	case map[string]interface{}:
+		return escapeObject(t)
 	default:
 		// This might be panic worthy under normal circumstances, but it's probably
 		// better to not shut down the entire telegraf process because of one
 		// misbehaving plugin.
-		return "", fmt.Errorf("unexpected type: %#v", t)
+		return "", fmt.Errorf("unexpected type: %T: %#v", t, t)
 	}
 }
 
+// convertMap converts m from map[string]string to map[string]interface{} by
+// copying it. Generics, oh generics where art thou?
+func convertMap(m map[string]string) map[string]interface{} {
+	c := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		c[k] = v
+	}
+	return c
+}
+
+func escapeObject(m map[string]interface{}) (string, error) {
+	// There is a decent chance that the implementation below doesn't catch all
+	// edge cases, but it's hard to tell since the format seems to be a bit
+	// underspecified.
+	// See https://crate.io/docs/crate/reference/sql/data_types.html#object
+
+	// We find all keys and sort them first because iterating a map in go is
+	// randomized and we need consistent output for our unit tests.
+	keys := make([]string, 0, len(m))
+	for k, _ := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Now we build our key = val pairs
+	pairs := make([]string, 0, len(m))
+	for _, k := range keys {
+		// escape the value of our key k (potentially recursive)
+		val, err := escapeValue(m[k])
+		if err != nil {
+			return "", err
+		}
+		pairs = append(pairs, escapeString(k, `"`)+" = "+val)
+	}
+	return `{` + strings.Join(pairs, ", ") + `}`, nil
+}
+
+// escapeString wraps s in the given quote string and replaces all occurences
+// of it inside of s with a double quote.
 func escapeString(s string, quote string) string {
 	return quote + strings.Replace(s, quote, quote+quote, -1) + quote
 }
