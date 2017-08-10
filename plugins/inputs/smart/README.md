@@ -63,6 +63,12 @@ The interpretation of the tag `flags` is:
  - *O* updated online
  - *P* prefailure warning
 
+### Exit Status
+
+The `exit_status` field captures the exit status of the smartctl command which
+is defined by a bitmask. For the interpretation of the bitmask see the man page for
+smartctl.
+
 ## Configuration
 
 ```toml
