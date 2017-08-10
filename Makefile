@@ -10,7 +10,7 @@ endif
 
 TELEGRAF := telegraf$(shell go tool dist env | grep -q 'GOOS=.windows.' && echo .exe)
 
-LDFLAGS := -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
+LDFLAGS := $(LDFLAGS) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
 ifdef VERSION
 	LDFLAGS += -X main.version=$(VERSION)
 endif
