@@ -124,11 +124,11 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 
 	// Memory stats
 	fields := map[string]interface{}{
-		"TotalUse":    stats.Statistics.Memory.Summary.TotalUse,
-		"InUse":       stats.Statistics.Memory.Summary.InUse,
-		"BlockSize":   stats.Statistics.Memory.Summary.BlockSize,
-		"ContextSize": stats.Statistics.Memory.Summary.ContextSize,
-		"Lost":        stats.Statistics.Memory.Summary.Lost,
+		"total_use":    stats.Statistics.Memory.Summary.TotalUse,
+		"in_use":       stats.Statistics.Memory.Summary.InUse,
+		"block_size":   stats.Statistics.Memory.Summary.BlockSize,
+		"context_size": stats.Statistics.Memory.Summary.ContextSize,
+		"lost":         stats.Statistics.Memory.Summary.Lost,
 	}
 	acc.AddGauge("bind_memory", fields, map[string]string{"url": addr.Host})
 
@@ -136,7 +136,7 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Statistics.Memory.Contexts {
 			tags := map[string]string{"url": addr.Host, "id": c.Id, "name": c.Name}
-			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
+			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
 		}

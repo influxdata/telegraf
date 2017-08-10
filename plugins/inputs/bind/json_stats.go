@@ -81,11 +81,11 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 
 	// Memory stats
 	fields := map[string]interface{}{
-		"TotalUse":    stats.Memory.TotalUse,
-		"InUse":       stats.Memory.InUse,
-		"BlockSize":   stats.Memory.BlockSize,
-		"ContextSize": stats.Memory.ContextSize,
-		"Lost":        stats.Memory.Lost,
+		"total_use":    stats.Memory.TotalUse,
+		"in_use":       stats.Memory.InUse,
+		"block_size":   stats.Memory.BlockSize,
+		"context_size": stats.Memory.ContextSize,
+		"lost":         stats.Memory.Lost,
 	}
 	acc.AddGauge("bind_memory", fields, map[string]string{"url": urlTag})
 
@@ -93,7 +93,7 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Memory.Contexts {
 			tags := map[string]string{"url": urlTag, "id": c.Id, "name": c.Name}
-			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
+			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
 		}

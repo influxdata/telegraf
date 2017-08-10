@@ -83,11 +83,11 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, urlTag str
 
 	// Memory stats
 	fields := map[string]interface{}{
-		"TotalUse":    stats.Memory.Summary.TotalUse,
-		"InUse":       stats.Memory.Summary.InUse,
-		"BlockSize":   stats.Memory.Summary.BlockSize,
-		"ContextSize": stats.Memory.Summary.ContextSize,
-		"Lost":        stats.Memory.Summary.Lost,
+		"total_use":    stats.Memory.Summary.TotalUse,
+		"in_use":       stats.Memory.Summary.InUse,
+		"block_size":   stats.Memory.Summary.BlockSize,
+		"context_size": stats.Memory.Summary.ContextSize,
+		"lost":         stats.Memory.Summary.Lost,
 	}
 	acc.AddGauge("bind_memory", fields, map[string]string{"url": urlTag})
 
@@ -95,7 +95,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, urlTag str
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Memory.Contexts {
 			tags := map[string]string{"url": urlTag, "id": c.Id, "name": c.Name}
-			fields := map[string]interface{}{"Total": c.Total, "InUse": c.InUse}
+			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
 		}

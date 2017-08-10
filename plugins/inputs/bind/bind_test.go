@@ -58,11 +58,11 @@ func TestBindJsonStats(t *testing.T) {
 		}
 
 		fields := map[string]interface{}{
-			"BlockSize":   13893632,
-			"ContextSize": 3685480,
-			"InUse":       3064368,
-			"Lost":        0,
-			"TotalUse":    18206566,
+			"block_size":   13893632,
+			"context_size": 3685480,
+			"in_use":       3064368,
+			"lost":         0,
+			"total_use":    18206566,
 		}
 
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
@@ -118,11 +118,11 @@ func TestBindXmlStatsV2(t *testing.T) {
 		}
 
 		fields := map[string]interface{}{
-			"BlockSize":   77070336,
-			"ContextSize": 6663840,
-			"InUse":       20772579,
-			"Lost":        0,
-			"TotalUse":    81804609,
+			"block_size":   77070336,
+			"context_size": 6663840,
+			"in_use":       20772579,
+			"lost":         0,
+			"total_use":    81804609,
 		}
 
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
@@ -178,11 +178,11 @@ func TestBindXmlStatsV3(t *testing.T) {
 		}
 
 		fields := map[string]interface{}{
-			"BlockSize":   45875200,
-			"ContextSize": 10037400,
-			"InUse":       6000232,
-			"Lost":        0,
-			"TotalUse":    777821909,
+			"block_size":   45875200,
+			"context_size": 10037400,
+			"in_use":       6000232,
+			"lost":         0,
+			"total_use":    777821909,
 		}
 
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
