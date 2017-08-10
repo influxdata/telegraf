@@ -876,6 +876,42 @@
       </server>
       <memory>
         <contexts>
+          <context>
+            <id>0x7f8a94e061d0</id>
+            <name>main</name>
+            <references>229</references>
+            <total>5002528</total>
+            <inuse>3662792</inuse>
+            <maxinuse>4848264</maxinuse>
+            <blocksize>2359296</blocksize>
+            <pools>75</pools>
+            <hiwater>0</hiwater>
+            <lowater>0</lowater>
+          </context>
+          <context>
+            <id>0x7f8a94e13830</id>
+            <name>dst</name>
+            <references>1</references>
+            <total>133486</total>
+            <inuse>96456</inuse>
+            <maxinuse>102346</maxinuse>
+            <blocksize>-</blocksize>
+            <pools>0</pools>
+            <hiwater>0</hiwater>
+            <lowater>0</lowater>
+          </context>
+          <context>
+            <id>0x7f8a94e401c0</id>
+            <name>zonemgr-pool</name>
+            <references>501</references>
+            <total>6339848</total>
+            <inuse>4384240</inuse>
+            <maxinuse>5734049</maxinuse>
+            <blocksize>6029312</blocksize>
+            <pools>0</pools>
+            <hiwater>0</hiwater>
+            <lowater>0</lowater>
+          </context>
         </contexts>
         <summary>
           <TotalUse>81804609</TotalUse>

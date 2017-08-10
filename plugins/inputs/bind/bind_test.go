@@ -15,7 +15,9 @@ func TestBindJsonStats(t *testing.T) {
 	defer ts.Close()
 
 	b := Bind{
-		Urls: []string{ts.URL + "/json/v1"},
+		Urls:                 []string{ts.URL + "/json/v1"},
+		GatherMemoryContexts: true,
+		GatherViews:          true,
 	}
 
 	var acc testutil.Accumulator
@@ -67,6 +69,12 @@ func TestBindJsonStats(t *testing.T) {
 
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
 	})
+
+	// Subtest for per-context memory stats
+	t.Run("memory_context", func(t *testing.T) {
+		assert.True(t, acc.HasIntField("bind_memory_context", "total"))
+		assert.True(t, acc.HasIntField("bind_memory_context", "in_use"))
+	})
 }
 
 func TestBindXmlStatsV2(t *testing.T) {
@@ -74,7 +82,9 @@ func TestBindXmlStatsV2(t *testing.T) {
 	defer ts.Close()
 
 	b := Bind{
-		Urls: []string{ts.URL + "/xml/v2"},
+		Urls:                 []string{ts.URL + "/xml/v2"},
+		GatherMemoryContexts: true,
+		GatherViews:          true,
 	}
 
 	var acc testutil.Accumulator
@@ -127,6 +137,12 @@ func TestBindXmlStatsV2(t *testing.T) {
 
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
 	})
+
+	// Subtest for per-context memory stats
+	t.Run("memory_context", func(t *testing.T) {
+		assert.True(t, acc.HasIntField("bind_memory_context", "total"))
+		assert.True(t, acc.HasIntField("bind_memory_context", "in_use"))
+	})
 }
 
 func TestBindXmlStatsV3(t *testing.T) {
@@ -134,7 +150,9 @@ func TestBindXmlStatsV3(t *testing.T) {
 	defer ts.Close()
 
 	b := Bind{
-		Urls: []string{ts.URL + "/xml/v3"},
+		Urls:                 []string{ts.URL + "/xml/v3"},
+		GatherMemoryContexts: true,
+		GatherViews:          true,
 	}
 
 	var acc testutil.Accumulator
@@ -186,6 +204,12 @@ func TestBindXmlStatsV3(t *testing.T) {
 		}
 
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
+	})
+
+	// Subtest for per-context memory stats
+	t.Run("memory_context", func(t *testing.T) {
+		assert.True(t, acc.HasIntField("bind_memory_context", "total"))
+		assert.True(t, acc.HasIntField("bind_memory_context", "in_use"))
 	})
 }
 
