@@ -84,6 +84,7 @@
 - [#2457](https://github.com/influxdata/telegraf/issues/2457): Fix docker memory and cpu reporting in Windows.
 - [#3058](https://github.com/influxdata/telegraf/issues/3058): Allow iptable entries with trailing text.
 - [#1680](https://github.com/influxdata/telegraf/issues/1680): Sanitize password from couchbase metric.
+- [#3104](https://github.com/influxdata/telegraf/issues/3104): Converge to typed value in prometheus output.
 
 ## v1.3.5 [2017-07-26]
 
