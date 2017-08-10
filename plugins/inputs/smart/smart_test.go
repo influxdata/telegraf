@@ -62,9 +62,10 @@ ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 `
 )
 
-func TestGather(t *testing.T) {
+func TestGatherAttributes(t *testing.T) {
 	s := &Smart{
-		Path: "smartctl",
+		Path:       "smartctl",
+		Attributes: true,
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
@@ -73,7 +74,7 @@ func TestGather(t *testing.T) {
 	err := s.Gather(&acc)
 
 	require.NoError(t, err)
-	assert.Equal(t, 62, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 65, acc.NFields(), "Wrong number of fields gathered")
 
 	var testsAda0Attributes = []struct {
 		fields map[string]interface{}
@@ -285,8 +286,56 @@ func TestGather(t *testing.T) {
 	}{
 		{
 			map[string]interface{}{
-				"exit_status": int(0),
-				"health_ok":   bool(true),
+				"exit_status":     int(0),
+				"health_ok":       bool(true),
+				"read_error_rate": int(0),
+				"temp_c":          int(34),
+				"udma_crc_errors": int(0),
+			},
+			map[string]string{
+				"device":    "/dev/ada0",
+				"model":     "APPLE SSD SM256E",
+				"serial_no": "S0X5NZBC422720",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
+			},
+		},
+	}
+
+	for _, test := range testsAda0Device {
+		acc.AssertContainsTaggedFields(t, "smart_device", test.fields, test.tags)
+	}
+
+}
+
+func TestGatherNoAttributes(t *testing.T) {
+	s := &Smart{
+		Path:       "smartctl",
+		Attributes: false,
+	}
+	// overwriting exec commands with mock commands
+	execCommand = fakeExecCommand
+	var acc testutil.Accumulator
+
+	err := s.Gather(&acc)
+
+	require.NoError(t, err)
+	assert.Equal(t, 5, acc.NFields(), "Wrong number of fields gathered")
+	acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
+
+	// tags = map[string]string{}
+
+	var testsAda0Device = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		{
+			map[string]interface{}{
+				"exit_status":     int(0),
+				"health_ok":       bool(true),
+				"read_error_rate": int(0),
+				"temp_c":          int(34),
+				"udma_crc_errors": int(0),
 			},
 			map[string]string{
 				"device":    "/dev/ada0",

@@ -35,14 +35,22 @@ var (
 	//   5 Reallocated_Sector_Ct   PO--CK   100   100   000    -    0
 	// 192 Power-Off_Retract_Count -O--C-   097   097   000    -    14716
 	attribute = regexp.MustCompile("^\\s*([0-9]+)\\s(\\S+)\\s+([-P][-O][-S][-R][-C][-K])\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([-\\w]+)\\s+([\\w\\+\\.]+).*$")
+
+	deviceFieldIds = map[string]string{
+		"1":   "read_error_rate",
+		"7":   "seek_error_rate",
+		"194": "temp_c",
+		"199": "udma_crc_errors",
+	}
 )
 
 type Smart struct {
-	Path     string
-	Nocheck  string
-	Excludes []string
-	Devices  []string
-	UseSudo  bool
+	Path       string
+	Nocheck    string
+	Attributes bool
+	Excludes   []string
+	Devices    []string
+	UseSudo    bool
 }
 
 var sampleConfig = `
@@ -62,6 +70,11 @@ var sampleConfig = `
   ## power mode and might require changing this value to
   ## "never" depending on your disks.
   # nocheck = "standby"
+  #
+  ## Gather detailed metrics for each SMART Attribute.
+  ## Defaults to "false"
+  ##
+  # attributes = false
   #
   ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
@@ -146,7 +159,7 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
 	wg.Add(len(devices))
 
 	for _, device := range devices {
-		go gatherDisk(acc, m.UseSudo, m.Path, m.Nocheck, device, &wg)
+		go gatherDisk(acc, m.UseSudo, m.Attributes, m.Path, m.Nocheck, device, &wg)
 	}
 
 	wg.Wait()
@@ -163,7 +176,7 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, usesudo bool, path, nockeck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockeck, device string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
@@ -215,31 +228,42 @@ func gatherDisk(acc telegraf.Accumulator, usesudo bool, path, nockeck, device st
 		attr := attribute.FindStringSubmatch(line)
 
 		if len(attr) > 1 {
-			tags := map[string]string{}
-			fields := make(map[string]interface{})
 
-			tags["device"] = strings.Split(device, " ")[0]
-			tags["id"] = attr[1]
-			tags["name"] = attr[2]
-			tags["flags"] = attr[3]
+			if attributes {
+				tags := map[string]string{}
+				fields := make(map[string]interface{})
 
-			fields["exit_status"] = exitStatus
-			if i, err := strconv.Atoi(attr[4]); err == nil {
-				fields["value"] = i
-			}
-			if i, err := strconv.Atoi(attr[5]); err == nil {
-				fields["worst"] = i
-			}
-			if i, err := strconv.Atoi(attr[6]); err == nil {
-				fields["threshold"] = i
+				tags["device"] = strings.Split(device, " ")[0]
+				tags["id"] = attr[1]
+				tags["name"] = attr[2]
+				tags["flags"] = attr[3]
+
+				fields["exit_status"] = exitStatus
+				if i, err := strconv.Atoi(attr[4]); err == nil {
+					fields["value"] = i
+				}
+				if i, err := strconv.Atoi(attr[5]); err == nil {
+					fields["worst"] = i
+				}
+				if i, err := strconv.Atoi(attr[6]); err == nil {
+					fields["threshold"] = i
+				}
+
+				tags["fail"] = attr[7]
+				if val, err := parseRawValue(attr[8]); err == nil {
+					fields["raw_value"] = val
+				}
+
+				acc.AddFields("smart_attribute", fields, tags)
 			}
 
-			tags["fail"] = attr[7]
-			if val, err := parseRawValue(attr[8]); err == nil {
-				fields["raw_value"] = val
+			// If the attribute matches on the one in deviceFieldIds
+			// save the raw value to a field.
+			if field, ok := deviceFieldIds[attr[1]]; ok {
+				if val, err := parseRawValue(attr[8]); err == nil {
+					device_fields[field] = val
+				}
 			}
-
-			acc.AddFields("smart_attribute", fields, tags)
 		}
 	}
 	acc.AddFields("smart_device", device_fields, device_tags)

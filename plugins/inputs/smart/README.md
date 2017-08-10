@@ -37,6 +37,11 @@ smartctl -s on <device>
       - `serial_no`
     * Fields:
       - `exit_status`
+      - `health_ok`
+      - `read_error_rate`
+      - `seek_error`
+      - `temp_c`
+      - `udma_crc_errors`
 
 - smart_attribute:
 
@@ -91,6 +96,11 @@ smartctl.
   ## "never" depending on your storage device.
   # nocheck = "standby"
   #
+  ## Gather detailed metrics for each SMART Attribute.
+  ## Defaults to "false"
+  ##
+  # attributes = false
+  #
   ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
   #
@@ -111,5 +121,5 @@ Example output from an _Apple SSD_:
 > smart_attribute,device=/dev/rdisk0,id=194,name=Temperature_Celsius,flags=-O---K,fail=-,host=STIZ0039.lan exit_status=0i,value=64i,worst=21i,threshold=0i,raw_value=36i 1487632495000000000
 > smart_attribute,device=/dev/rdisk0,id=197,name=Current_Pending_Sector,flags=-O---K,fail=-,host=STIZ0039.lan exit_status=0i,value=100i,worst=100i,threshold=0i,raw_value=0i 1487632495000000000
 > smart_attribute,device=/dev/rdisk0,id=199,name=UDMA_CRC_Error_Count,flags=-O-RC-,fail=-,host=STIZ0039.lan exit_status=0i,value=200i,worst=200i,threshold=0i,raw_value=0i 1487632495000000000
-> smart_device,device_model=APPLE\ SSD\ SM256E,serial_no=S0X5NZBC422720,capacity=251000193024,enabled=Enabled,health=PASSED,host=STIZ0039.lan,device=/dev/rdisk0 exit_status=0i 1487632495000000000
+> smart_device,host=mbpro.local,device=/dev/rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,capacity=500277790720,enabled=Enabled temp_c=39i,udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i 1502255921000000000
 ```
