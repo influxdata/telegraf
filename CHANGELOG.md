@@ -57,6 +57,7 @@
 - [#3098](https://github.com/influxdata/telegraf/pull/3098): Add path tag to logparser containing path of logfile.
 - [#3075](https://github.com/influxdata/telegraf/pull/3075): Add salesforce input plugin.
 - [#3097](https://github.com/influxdata/telegraf/pull/3097): Add option to run varnish under sudo.
+- [#3119](https://github.com/influxdata/telegraf/pull/3119): Add weighted_io_time to diskio input.
 
 ### Bugfixes
 
