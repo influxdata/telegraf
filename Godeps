@@ -88,6 +88,3 @@ gopkg.in/olivere/elastic.v5 3113f9b9ad37509fe5f8a0e5e91c96fdc4435e26
 gopkg.in/tomb.v1 dd632973f1e7218eb1089048e0798ec9ae7dceb8
 gopkg.in/yaml.v2 4c78c975fe7c825c6d1466c42be594d1d6f3aba6
 github.com/garyburd/redigo 9e66b83d15a259978be267d0b61838c42c3904e3
-github.com/tidwall/gjson c784c417818f59d6597274642d8ac1d09efc9b01
-github.com/tidwall/sjson 6a22caf2fd45d5e2119bfc3717e984f15a7eb7ee
-github.com/tidwall/match 173748da739a410c5b0b813b956f89ff94730b4c
