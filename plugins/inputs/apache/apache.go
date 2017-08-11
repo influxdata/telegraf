@@ -34,15 +34,17 @@ type Apache struct {
 }
 
 var sampleConfig = `
-  ## An array of Apache status URI to gather stats.
+  ## An array of URLs to gather from, must be directed at the machine
+  ## readable version of the mod_status page including the auto query string.
   ## Default is "http://localhost/server-status?auto".
   urls = ["http://localhost/server-status?auto"]
-  ## user credentials for basic HTTP authentication
-  username = "myuser"
-  password = "mypassword"
 
-  ## Timeout to the complete conection and reponse time in seconds
-  response_timeout = "25s" ## default to 5 seconds
+  ## Credentials for basic HTTP authentication.
+  # username = "myuser"
+  # password = "mypassword"
+
+  ## Maximum time to receive response.
+  # response_timeout = "5s"
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
