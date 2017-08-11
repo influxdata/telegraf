@@ -51,7 +51,7 @@ var fAggregatorFilters = flag.String("aggregator-filter", "",
 var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
 var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf -usage mysql'")
+	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service")
 
@@ -83,8 +83,8 @@ Usage:
 
 The commands & flags are:
 
-  config             print out full sample configuration to stdout
-  version            print the version to stdout
+  config              print out full sample configuration to stdout
+  version             print the version to stdout
 
   --config <file>     configuration file to load
   --test              gather metrics once, print them to stdout, and exit
@@ -105,7 +105,7 @@ Examples:
   telegraf --input-filter cpu --output-filter influxdb config
 
   # run a single telegraf collection, outputing metrics to stdout
-  telegraf --config telegraf.conf -test
+  telegraf --config telegraf.conf --test
 
   # run telegraf with all plugins defined in config file
   telegraf --config telegraf.conf
