@@ -29,12 +29,16 @@ func TestCleanTags(t *testing.T) {
 			map[string]string{"aaa": "bbb"},
 		},
 		{
-			map[string]string{"Sp%ci@l Chars": "g$t repl#ced"},
-			map[string]string{"Sp-ci-l_Chars": "g-t_repl-ced"},
+			map[string]string{"sp%ci@l chars": "g$t repl#ced"},
+			map[string]string{"sp-ci-l_chars": "g-t_repl-ced"},
 		},
 		{
 			map[string]string{},
 			map[string]string{},
+		},
+		{
+			map[string]string{"CAPSGET": "LOWERCASED"},
+			map[string]string{"capsget": "lowercased"},
 		},
 	}
 	for _, tt := range tagtests {
