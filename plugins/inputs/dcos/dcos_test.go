@@ -11,7 +11,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"time"
 )
 
 var MESOS_MASTER_STATE_SUMMARY_JSON_OK = `{"hostname":"192.168.65.90","cluster":"dcos-vagrant","slaves":[{"id":"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0","hostname":"192.168.65.111","port":5051,"attributes":{},"pid":"slave(1)@192.168.65.111:5051","registered_time":1502176250.51955,"reregistered_time":1502176250.51985,"resources":{"disk":48393.0,"mem":5632.0,"gpus":0.0,"cpus":4.0,"ports":"[1025-2180, 2182-3887, 3889-5049, 5052-8079, 8082-8180, 8182-32000]"},"used_resources":{"disk":0.0,"mem":266.0,"gpus":0.0,"cpus":2.1,"ports":"[16721-16721, 18137-18137, 20497-20497]"},"offered_resources":{"disk":0.0,"mem":0.0,"gpus":0.0,"cpus":0.0},"reserved_resources":{},"unreserved_resources":{"disk":48393.0,"mem":5632.0,"gpus":0.0,"cpus":4.0,"ports":"[1025-2180, 2182-3887, 3889-5049, 5052-8079, 8082-8180, 8182-32000]"},"active":true,"version":"1.2.1","TASK_STAGING":0,"TASK_STARTING":0,"TASK_RUNNING":3,"TASK_KILLING":0,"TASK_FINISHED":0,"TASK_KILLED":0,"TASK_FAILED":0,"TASK_LOST":0,"TASK_ERROR":0,"TASK_UNREACHABLE":0,"framework_ids":["a52c2640-d3b9-49c8-b92f-a17b2c25cd70-0001"]},{"id":"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S1","hostname":"192.168.65.60","port":5051,"attributes":{"public_ip":"true"},"pid":"slave(1)@192.168.65.60:5051","registered_time":1502176250.10554,"reregistered_time":1502176250.10562,"resources":{"disk":48393.0,"mem":1024.0,"gpus":0.0,"cpus":2.0,"ports":"[1-21, 23-5050, 5052-32000]"},"used_resources":{"disk":0.0,"mem":0.0,"gpus":0.0,"cpus":0.0},"offered_resources":{"disk":0.0,"mem":0.0,"gpus":0.0,"cpus":0.0},"reserved_resources":{"slave_public":{"disk":48393.0,"mem":1024.0,"gpus":0.0,"cpus":2.0,"ports":"[1-21, 23-5050, 5052-32000]"}},"unreserved_resources":{"disk":0.0,"mem":0.0,"gpus":0.0,"cpus":0.0},"active":true,"version":"1.2.1","TASK_STAGING":0,"TASK_STARTING":0,"TASK_RUNNING":0,"TASK_KILLING":0,"TASK_FINISHED":0,"TASK_KILLED":0,"TASK_FAILED":0,"TASK_LOST":0,"TASK_ERROR":0,"TASK_UNREACHABLE":0,"framework_ids":[]}],"frameworks":[{"id":"a52c2640-d3b9-49c8-b92f-a17b2c25cd70-0001","name":"marathon","pid":"scheduler-f34373eb-6c78-4347-b7ca-20a3c104dad3@192.168.65.90:15101","used_resources":{"disk":0.0,"mem":266.0,"gpus":0.0,"cpus":2.1,"ports":"[16721-16721, 18137-18137, 20497-20497]"},"offered_resources":{"disk":0.0,"mem":0.0,"gpus":0.0,"cpus":0.0},"capabilities":["TASK_KILLING_STATE","GPU_RESOURCES","PARTITION_AWARE"],"hostname":"192.168.65.90","webui_url":"http:\/\/192.168.65.90:8080","active":true,"connected":true,"recovered":false,"TASK_STAGING":0,"TASK_STARTING":0,"TASK_RUNNING":3,"TASK_KILLING":0,"TASK_FINISHED":0,"TASK_KILLED":0,"TASK_FAILED":0,"TASK_LOST":0,"TASK_ERROR":0,"TASK_UNREACHABLE":0,"slave_ids":["b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0"]},{"id":"a52c2640-d3b9-49c8-b92f-a17b2c25cd70-0000","name":"metronome","pid":"scheduler-a55ffe5e-f468-4c61-8bf7-4f34f021171c@192.168.65.90:15201","used_resources":{"disk":0.0,"mem":0.0,"gpus":0.0,"cpus":0.0},"offered_resources":{"disk":0.0,"mem":0.0,"gpus":0.0,"cpus":0.0},"capabilities":[],"hostname":"192.168.65.90","webui_url":"http:\/\/192.168.65.90:9000","active":true,"connected":true,"recovered":false,"TASK_STAGING":0,"TASK_STARTING":0,"TASK_RUNNING":0,"TASK_KILLING":0,"TASK_FINISHED":0,"TASK_KILLED":0,"TASK_FAILED":0,"TASK_LOST":0,"TASK_ERROR":0,"TASK_UNREACHABLE":0,"slave_ids":[]}]}`
@@ -191,11 +190,11 @@ func TestGatherAll(t *testing.T) {
 		"filesystem.capacity.free_":                        50612805632.,
 	}
 	tagsNode1 := map[string]string{
-		"mesos_id":     "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
-		"cluster_id":   "2f4b3291-ee34-4779-b7bd-015f6594e9c0",
-		"hostname":     "192.168.65.111",
-		"cluster_url":  clusterUrl,
-		"metric_scope": "node",
+		"mesos_id":    "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
+		"cluster_id":  "2f4b3291-ee34-4779-b7bd-015f6594e9c0",
+		"hostname":    "192.168.65.111",
+		"cluster_url": clusterUrl,
+		"scope":       "node",
 	}
 	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsNode1, tagsNode1)
 	fieldsContainer1 := map[string]interface{}{
@@ -216,7 +215,7 @@ func TestGatherAll(t *testing.T) {
 		"executor_name":       "Command Executor (Task: basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001) (Command: sh -c 'while [ true...')",
 		"source":              "basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001",
 		"cluster_url":         clusterUrl,
-		"metric_scope":        "container",
+		"scope":               "container",
 	}
 	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsContainer1, tagsContainer1)
 }
@@ -237,11 +236,11 @@ func TestGatherFiltered(t *testing.T) {
 	}
 
 	tagsNode1 := map[string]string{
-		"mesos_id":     "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
-		"cluster_id":   "2f4b3291-ee34-4779-b7bd-015f6594e9c0",
-		"hostname":     "192.168.65.111",
-		"cluster_url":  clusterUrl,
-		"metric_scope": "node",
+		"mesos_id":    "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
+		"cluster_id":  "2f4b3291-ee34-4779-b7bd-015f6594e9c0",
+		"hostname":    "192.168.65.111",
+		"cluster_url": clusterUrl,
+		"scope":       "node",
 	}
 
 	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsNode1, tagsNode1)
@@ -263,7 +262,7 @@ func TestGatherFiltered(t *testing.T) {
 		"executor_name":       "Command Executor (Task: basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001) (Command: sh -c 'while [ true...')",
 		"source":              "basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001",
 		"cluster_url":         clusterUrl,
-		"metric_scope":        "container",
+		"scope":               "container",
 	}
 	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsContainer1, tagsContainer1)
 

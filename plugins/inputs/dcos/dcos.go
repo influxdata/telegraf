@@ -217,7 +217,7 @@ func (m *Dcos) handleJsonRequest(url string, obj interface{}) error {
 	if resp.StatusCode/100 != 2 {
 		switch resp.StatusCode {
 		case 401:
-			return fmt.Errorf("Authentication error. Verify the auth_token is correct")
+			return fmt.Errorf("Authentication error. Verify the auth_token parameter is correct")
 		default:
 			return fmt.Errorf("HTTP request to %s has failed. HTTP status code: %d", url, resp.StatusCode)
 		}
@@ -245,7 +245,7 @@ func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricTyp
 	for k, v := range metric.Dimensions {
 		tags[k] = v
 	}
-	tags["metric_scope"] = metricType
+	tags["scope"] = metricType
 	tags["cluster_url"] = m.ClusterURL
 
 	//fmt.Println("Datapoints")
