@@ -35,6 +35,7 @@ smartctl -s on <device>
       - `enabled`
       - `health`
       - `serial_no`
+      - `wwn`
     * Fields:
       - `exit_status`
       - `health_ok`
@@ -51,6 +52,8 @@ smartctl -s on <device>
       - `flags`
       - `id`
       - `name`
+      - `serial_no`
+      - `wwn`
     * Fields:
       - `exit_status`
       - `raw_value`
@@ -73,6 +76,14 @@ The interpretation of the tag `flags` is:
 The `exit_status` field captures the exit status of the smartctl command which
 is defined by a bitmask. For the interpretation of the bitmask see the man page for
 smartctl.
+
+### Device Names
+
+Device names, e.g., `/dev/sda`, are *not persistent*, and may be
+subject to change across reboots or system changes. Instead, you can the
+*World Wide Name* (WWN) or serial number to identify devices. On Linux block
+devices can be referenced by the WWN in the following location:
+`/dev/disk/by-id/`.
 
 ## Configuration
 
@@ -118,8 +129,7 @@ the configuration to execute that.
 
 Example output from an _Apple SSD_:
 ```
-> smart_attribute,device=/dev/rdisk0,id=194,name=Temperature_Celsius,flags=-O---K,fail=-,host=STIZ0039.lan exit_status=0i,value=64i,worst=21i,threshold=0i,raw_value=36i 1487632495000000000
-> smart_attribute,device=/dev/rdisk0,id=197,name=Current_Pending_Sector,flags=-O---K,fail=-,host=STIZ0039.lan exit_status=0i,value=100i,worst=100i,threshold=0i,raw_value=0i 1487632495000000000
-> smart_attribute,device=/dev/rdisk0,id=199,name=UDMA_CRC_Error_Count,flags=-O-RC-,fail=-,host=STIZ0039.lan exit_status=0i,value=200i,worst=200i,threshold=0i,raw_value=0i 1487632495000000000
-> smart_device,host=mbpro.local,device=/dev/rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,capacity=500277790720,enabled=Enabled temp_c=39i,udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i 1502255921000000000
+> smart_attribute,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=199,name=UDMA_CRC_Error_Count,flags=-O-RC-,fail=-,host=mbpro.local,device=/dev/rdisk0 threshold=0i,raw_value=0i,exit_status=0i,value=200i,worst=200i 1502536854000000000
+> smart_attribute,device=/dev/rdisk0,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=240,name=Unknown_SSD_Attribute,flags=-O---K,fail=-,host=mbpro.local exit_status=0i,value=100i,worst=100i,threshold=0i,raw_value=0i 1502536854000000000
+> smart_device,enabled=Enabled,host=mbpro.local,device=/dev/rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,wwn=5002538655584d30,capacity=500277790720 udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i,temp_c=40i 1502536854000000000
 ```

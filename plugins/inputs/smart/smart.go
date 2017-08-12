@@ -22,6 +22,8 @@ var (
 	modelInInfo = regexp.MustCompile("^Device Model:\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
 	serialInInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
+	// LU WWN Device Id: 5 002538 655584d30
+	wwnInInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
 	// User Capacity:    251,000,193,024 bytes [251 GB]
 	usercapacityInInfo = regexp.MustCompile("^User Capacity:\\s+([0-9,]+)\\s+bytes.*$")
 	// SMART support is: Enabled
@@ -210,6 +212,11 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockec
 			device_tags["serial_no"] = serial[1]
 		}
 
+		wwn := wwnInInfo.FindStringSubmatch(line)
+		if len(wwn) > 1 {
+			device_tags["wwn"] = strings.Replace(wwn[1], " ", "", -1)
+		}
+
 		capacity := usercapacityInInfo.FindStringSubmatch(line)
 		if len(capacity) > 1 {
 			device_tags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
@@ -234,6 +241,13 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockec
 				fields := make(map[string]interface{})
 
 				tags["device"] = strings.Split(device, " ")[0]
+
+				if serial, ok := device_tags["serial_no"]; ok {
+					tags["serial_no"] = serial
+				}
+				if wwn, ok := device_tags["wwn"]; ok {
+					tags["wwn"] = wwn
+				}
 				tags["id"] = attr[1]
 				tags["name"] = attr[2]
 				tags["flags"] = attr[3]
