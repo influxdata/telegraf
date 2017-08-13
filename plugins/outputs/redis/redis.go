@@ -2,19 +2,21 @@ package redis
 
 import (
 	"fmt"
-	"time"
 
 	redigo "github.com/garyburd/redigo/redis"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //use the redis service LIST struct as telegraf output
 type RedisOutput struct {
-	Addr     string `toml:"server_addr"`
-	Password string `toml:"server_passwd"`
-	Queue    string `toml:"queue_name"`
+	Server      string            `toml:"server"`
+	Password    string            `toml:"password"`
+	IdleTimeout internal.Duration `toml:"idle_timeout"`
+	Timeout     internal.Duration `toml:"timeout"`
+	Queue       string            `toml:"queue_name"`
 
 	server     *redigo.Pool
 	serializer serializers.Serializer
@@ -22,16 +24,22 @@ type RedisOutput struct {
 
 var sampleConfig = `
   ## redis service listen addr:port, default 127.0.0.1
-  # server_addr = "127.0.0.1:6379"
+  # server = "127.0.0.1:6379"
   ## redis service login password
-  # server_passwd = ""
+  # password = ""
+  ## redis close connections after remaining idle for this duration.
+  ## if the value is zero, then idleconnections are not closed.
+  ## shoud set the timeout to a value lessthan the redis server's timeout.
+  # idle_timeout = "1s" 
+  ## specifies the timeout for reading/writing a single command.
+  # timeout = "1s"
   ## redis list name, defalut telegraf/output
   # queue_name = "telegraf/output"
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "json"
+  # data_format = "influx"
 `
 
 func (p *RedisOutput) SetSerializer(serializer serializers.Serializer) {
@@ -47,15 +55,15 @@ func (p *RedisOutput) Description() string {
 }
 
 func (p *RedisOutput) Connect() error {
-	if p.Addr == "" {
-		p.Addr = "localhost:6379"
+	if p.Server == "" {
+		p.Server = "localhost:6379"
 	}
 
 	if p.Queue == "" {
 		p.Queue = "telegraf/output"
 	}
 
-	p.server = p.initRedis()
+	p.server = p.pool()
 	return nil
 }
 
@@ -74,47 +82,47 @@ func (p *RedisOutput) Write(metrics []telegraf.Metric) error {
 	conn := p.server.Get()
 	defer conn.Close()
 
+	err := conn.Send("MULTI")
+	if err != nil {
+		return fmt.Errorf("failed to send MULTI: %s", err)
+	}
+
 	for _, metric := range metrics {
 		b, err := p.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("redis-output failed to serialize message: %s", err)
+			return fmt.Errorf("failed to serialize message: %s", err)
 		}
 
-		_, err = conn.Do("LPUSH", p.Queue, string(b))
+		err = conn.Send("LPUSH", p.Queue, string(b))
 		if err != nil {
-			return fmt.Errorf("redis-output plugin LPUSH %s %s %s error, %s", p.Addr, p.Queue, string(b), err)
+			return fmt.Errorf("failed to send LPUSH: %s", err)
 		}
+	}
+
+	_, err = conn.Do("EXEC")
+	if err != nil {
+		return fmt.Errorf("failed to write metric: %s", err)
 	}
 
 	return nil
 }
 
-func (p *RedisOutput) initRedis() *redigo.Pool {
+func (p *RedisOutput) pool() *redigo.Pool {
 	return &redigo.Pool{
-		MaxIdle:     10,
-		IdleTimeout: 240 * time.Second,
+		MaxActive:   1,
+		MaxIdle:     1,
+		IdleTimeout: p.IdleTimeout.Duration,
 		Dial: func() (redigo.Conn, error) {
-			c, err := redigo.Dial("tcp", p.Addr)
+			c, err := redigo.Dial("tcp", p.Server,
+				redigo.DialPassword(p.Password),
+				redigo.DialReadTimeout(p.Timeout.Duration),
+				redigo.DialWriteTimeout(p.Timeout.Duration),
+			)
 			if err != nil {
 				return nil, err
 			}
 
-			if p.Password != "" {
-				_, err := c.Do("AUTH", p.Password)
-				if err != nil {
-					return nil, err
-				}
-			}
-
 			return c, err
-		},
-		TestOnBorrow: func(c redigo.Conn, t time.Time) error {
-			if time.Since(t) < time.Minute {
-				return nil
-			}
-			_, err := redigo.String(c.Do("PING"))
-
-			return err
 		},
 	}
 }

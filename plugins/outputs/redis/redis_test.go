@@ -6,6 +6,7 @@ import (
 	"time"
 
 	redigo "github.com/garyburd/redigo/redis"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -24,14 +25,25 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 
 	s, _ := serializers.NewJsonSerializer(time.Second)
+
+	idleTimeout := internal.Duration{}
+	err := idleTimeout.UnmarshalTOML([]byte("0s"))
+	require.NoError(t, err)
+
+	rwTimeout := internal.Duration{}
+	err = rwTimeout.UnmarshalTOML([]byte("1s"))
+	require.NoError(t, err)
+
 	r := &RedisOutput{
-		Addr:       "127.0.0.1:6379",
-		Password:   "",
-		Queue:      "",
-		serializer: s,
+		Server:      "127.0.0.1:6379",
+		Password:    "",
+		Queue:       "telegraf/redis_test",
+		IdleTimeout: idleTimeout,
+		Timeout:     rwTimeout,
+		serializer:  s,
 	}
 
-	err := r.Connect()
+	err = r.Connect()
 	require.NoError(t, err)
 
 	err = r.Write(testutil.MockMetrics())
