@@ -95,8 +95,8 @@ type HTTPConfig struct {
 	// Proxy URL should be of the form "http://host:port"
 	HTTPProxy string
 
-	// Gzip, if true, compresses each payload using gzip.
-	Gzip bool
+	// The content encoding mechanism to use for each request.
+	ContentEncoding string
 }
 
 // Response represents a list of statement results.
@@ -232,9 +232,10 @@ func (c *httpClient) makeWriteRequest(
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Length", fmt.Sprint(contentLength))
-	if c.config.Gzip {
+	if c.config.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
+	} else {
+		req.Header.Set("Content-Length", fmt.Sprint(contentLength))
 	}
 	return req, nil
 }
@@ -242,9 +243,7 @@ func (c *httpClient) makeWriteRequest(
 func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, error) {
 	var req *http.Request
 	var err error
-	if c.config.Gzip {
-		// If gzip is set to true, then compress
-		// the payload.
+	if c.config.ContentEncoding == "gzip" {
 		body, err = compressWithGzip(body)
 		if err != nil {
 			return nil, err
