@@ -177,7 +177,7 @@ func TestMain(m *testing.M) {
 
 func TestGatherAll(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/1"
-	dcos := &Dcos{clusterUrl, "token", []string{}, []string{}}
+	dcos := &Dcos{clusterUrl, "token", []string{}, []string{}, []string{}}
 	var acc testutil.Accumulator
 	require.NoError(t, dcos.Gather(&acc))
 	assert.Equal(t, acc.NMetrics(), uint64(8))
@@ -186,8 +186,8 @@ func TestGatherAll(t *testing.T) {
 		"network.in.packets.docker0": 31.,
 		"network.out.lo":             338336992.,
 		"swap.free":                  2147479552.,
-		"filesystem.capacity.total_var_lib_docker_overlay": 53660876800.,
-		"filesystem.capacity.free_":                        50612805632.,
+		"filesystem.capacity.total#var#lib#docker#overlay": 53660876800.,
+		"filesystem.capacity.free#":                        50612805632.,
 	}
 	tagsNode1 := map[string]string{
 		"mesos_id":    "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
@@ -222,7 +222,7 @@ func TestGatherAll(t *testing.T) {
 
 func TestGatherFiltered(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/1"
-	dcos := &Dcos{clusterUrl, "token", []string{"/", "/boot"}, []string{"lo", "docker0"}}
+	dcos := &Dcos{clusterUrl, "token", []string{}, []string{"/", "/boot"}, []string{"lo", "docker0"}}
 	var acc testutil.Accumulator
 	require.NoError(t, dcos.Gather(&acc))
 	assert.Equal(t, acc.NMetrics(), uint64(8))
@@ -231,8 +231,8 @@ func TestGatherFiltered(t *testing.T) {
 		"network.in.packets.docker0":  31.,
 		"network.out.lo":              338336992.,
 		"swap.free":                   2147479552.,
-		"filesystem.capacity.free_":   50612805632.,
-		"filesystem.inode.total_boot": 524288.,
+		"filesystem.capacity.free#":   50612805632.,
+		"filesystem.inode.total#boot": 524288.,
 	}
 
 	tagsNode1 := map[string]string{
@@ -267,7 +267,7 @@ func TestGatherFiltered(t *testing.T) {
 	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsContainer1, tagsContainer1)
 
 	fieldsNode1Not := map[string]interface{}{
-		"filesystem.capacity.total_var_lib_docker_overlay": 53660876800.,
+		"filesystem.capacity.total#var#lib#docker#overlay": 53660876800.,
 		"filesystem.inode.free_home":                       34333.,
 		"network.in.vtep1024":                              0,
 		"network.in.minuteman":                             0,
@@ -282,7 +282,7 @@ func TestGatherFiltered(t *testing.T) {
 
 func TestGatherErrors(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/2"
-	dcos := &Dcos{clusterUrl, "token", []string{"/", "/boot"}, []string{"lo, docker0"}}
+	dcos := &Dcos{clusterUrl, "token", []string{}, []string{"/", "/boot"}, []string{"lo, docker0"}}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.NoError(t, err)
@@ -292,7 +292,7 @@ func TestGatherErrors(t *testing.T) {
 
 func TestNoSlaves(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/4"
-	dcos := &Dcos{clusterUrl, "token", []string{"/", "/boot"}, []string{"lo, docker0"}}
+	dcos := &Dcos{clusterUrl, "token", []string{}, []string{"/", "/boot"}, []string{"lo, docker0"}}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.Error(t, err)
@@ -300,7 +300,7 @@ func TestNoSlaves(t *testing.T) {
 }
 
 func TestConfigError(t *testing.T) {
-	dcos := &Dcos{"", "", []string{"/", "/boot"}, []string{"lo, docker0"}}
+	dcos := &Dcos{"", "", []string{}, []string{"/", "/boot"}, []string{"lo, docker0"}}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.Error(t, err)
@@ -309,7 +309,7 @@ func TestConfigError(t *testing.T) {
 
 func TestGatherUnauthorized(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/3"
-	dcos := &Dcos{clusterUrl, "token", []string{"/", "/boot"}, []string{"lo, docker0"}}
+	dcos := &Dcos{clusterUrl, "token", []string{}, []string{"/", "/boot"}, []string{"lo, docker0"}}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.Error(t, err)

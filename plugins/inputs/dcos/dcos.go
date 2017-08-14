@@ -16,7 +16,7 @@ import (
 type Dcos struct {
 	ClusterURL        string   `toml:"cluster_url"`
 	AuthToken         string   `toml:"auth_token"`
-	Agents            string   `toml:"agents"`
+	Agents            []string `toml:"agents"`
 	FileSystemMounts  []string `toml:"file_system_mounts"`
 	NetworkInterfaces []string `toml:"network_interfaces"`
 }
@@ -42,7 +42,7 @@ func (m *Dcos) SampleConfig() string {
 	return sampleConfig
 }
 
-var nameSanitizer = strings.NewReplacer("/", "_", `\`, "_")
+var nameSanitizer = strings.NewReplacer("/", "#", `\`, "#")
 
 var tr = &http.Transport{
 	ResponseHeaderTimeout: time.Duration(3 * time.Second),
