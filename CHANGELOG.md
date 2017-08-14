@@ -58,6 +58,7 @@
 - [#3075](https://github.com/influxdata/telegraf/pull/3075): Add salesforce input plugin.
 - [#3097](https://github.com/influxdata/telegraf/pull/3097): Add option to run varnish under sudo.
 - [#3119](https://github.com/influxdata/telegraf/pull/3119): Add weighted_io_time to diskio input.
+- [#2978](https://github.com/influxdata/telegraf/pull/2978): Add gzip content-encoding support to influxdb output.
 
 ### Bugfixes
 
