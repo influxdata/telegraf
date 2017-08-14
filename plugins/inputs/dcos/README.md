@@ -1,6 +1,6 @@
 # DC/OS Input Plugin
 
-This input plugin gathers metrics from DC/OS cluster.
+This input plugin gathers metrics from a DC/OS cluster.
 For more information, please check the [DC/OS Metrics Reference](https://dcos.io/docs/1.9/metrics/reference//) page.
 
 ### Configuration:
@@ -22,10 +22,10 @@ For more information, please check the [DC/OS Metrics Reference](https://dcos.io
 
 ### Measurements & Fields
 
-Below are enumerated metrics returned by version 1.9 of DC/OS. See [DC/OS Metrics Reference](https://dcos.io/docs/1.9/metrics/reference//) for description of those metrics.
-Note, please, that the official documentation differs a bit with comparision of what it actually provided by DC/OS system:
+Below are enumerated the metrics returned by version 1.9 of DC/OS. See [DC/OS Metrics Reference](https://dcos.io/docs/1.9/metrics/reference//) for a description of those metrics.
+Please note that the official documentation differs a bit in comparision with what is actually provided by the DC/OS system:
 
-- Container metrics are described with underscores in name in the docs, but they are sent with the dot character words separator
+- Container metrics are described with underscores in their names in the docs, but they are sent with the dot character words separator
 - Fields described in the Dimensions section are in fact sent as container metrics, whereas the real dimensions (tags) are container_id, framework_id, etc
 
 #### Node (Agent) metric fields
@@ -50,27 +50,27 @@ Note, please, that the official documentation differs a bit with comparision of 
 
 Per each filesystem mount:
 
-  * filesystem.capacity.total<mount-path>
-  * filesystem.capacity.used<mount-path>
-  * filesystem.capacity.free<mount-path>
-  * filesystem.inode.total<mount-path>
-  * filesystem.inode.used<mount-path>
-  * filesystem.inode.free<mount-path>
+  * filesystem.capacity.total&lt;mount-path&gt;
+  * filesystem.capacity.used&lt;mount-path&gt;
+  * filesystem.capacity.free&lt;mount-path&gt;
+  * filesystem.inode.total&lt;mount-path&gt;
+  * filesystem.inode.used&lt;mount-path&gt;
+  * filesystem.inode.free&lt;mount-path&gt;
 
-The _mount-path_ is encoded a path of mount for which the metrics is returned, eg. /, /boot, /home. The '/' character is replaced by '#'. So final name is, for example: _filesystem.capacity.total#boot_ 
+The _mount-path_ is an encoded path to the mount point for which the metrics are returned, eg. /, /boot, /home. The '/' character is replaced by '#'. So the final name is, for example: _filesystem.capacity.total#boot_
 
 Per each network interface:
 
-  * network.in.<interface-name>
-  * network.out.<interface-name>
-  * network.in.packets.<interface-name>
-  * network.out.packets.<interface-name>
-  * network.in.dropped.<interface-name>
-  * network.out.dropped.<interface-name>
-  * network.in.errors.<interface-name>
-  * network.out.errors.<interface-name>
+  * network.in.&lt;interface-name&gt;
+  * network.out.&lt;interface-name&gt;
+  * network.in.packets.&lt;interface-name&gt;
+  * network.out.packets.&lt;interface-name&gt;
+  * network.in.dropped.&lt;interface-name&gt;
+  * network.out.dropped.&lt;interface-name&gt;
+  * network.in.errors.&lt;interface-name&gt;
+  * network.out.errors.&lt;interface-name&gt;
 
-The _interface-name_ is name of the network interface available on the agent host, eg. lo, eth0.
+The _interface-name_ is the name of the network interface available on the agent host, eg. lo, eth0.
 #### Container metric fields
 - dcos
   * cpus.user.time
@@ -89,7 +89,7 @@ The _interface-name_ is name of the network interface available on the agent hos
   * net.tx.bytes
   * net.tx.errors
   * net.tx.dropped
-  
+
 ### Tags
 #### Node (Agent) metric tags
 * cluster_id
@@ -126,4 +126,3 @@ The _interface-name_ is name of the network interface available on the agent hos
 > dcos,container_id=f94cee4f-155d-430b-9d35-83441367820e,framework_principal=dcos_marathon,cluster_url=http://m1.dcos,mesos_id=b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0,framework_role=slave_public,executor_id=mynginxserver.5189c2f3-7b67-11e7-be7d-70b3d5800001,host=GAMGEE,hostname=192.168.65.111,framework_name=marathon,scope=container,executor_name=Command\ Executor\ (Task:\ mynginxserver.5189c2f3-7b67-11e7-be7d-70b3d5800001)\ (Command:\ NO\ EXECUTABLE),source=mynginxserver.5189c2f3-7b67-11e7-be7d-70b3d5800001,framework_id=a52c2640-d3b9-49c8-b92f-a17b2c25cd70-0001,cluster_id=2f4b3291-ee34-4779-b7bd-015f6594e9c0 cpus.limit=1.1,net.rx.packets=0,net.rx.dropped=0,net.tx.packets=0,net.tx.dropped=0,net.tx.errors=0,cpus.system.time=0.01,mem.limit=167772160,disk.limit=0,disk.used=0,net.rx.errors=0,mem.total=6987776,net.rx.bytes=0,cpus.user.time=0.03,cpus.throttled.time=0,net.tx.bytes=0 1502440898000000000
 > dcos,framework_id=a52c2640-d3b9-49c8-b92f-a17b2c25cd70-0001,cluster_url=http://m1.dcos,executor_name=Command\ Executor\ (Task:\ basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001)\ (Command:\ sh\ -c\ 'while\ [\ true...'),host=GAMGEE,mesos_id=b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0,framework_name=marathon,cluster_id=2f4b3291-ee34-4779-b7bd-015f6594e9c0,container_id=619e0c1a-a059-4801-ae60-75f022f89df7,executor_id=basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001,scope=container,source=basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001,framework_role=slave_public,framework_principal=dcos_marathon,hostname=192.168.65.111 cpus.system.time=111.31,net.rx.bytes=0,net.rx.dropped=0,net.tx.errors=0,mem.total=7401472,disk.used=0,cpus.user.time=78.5,disk.limit=0,net.tx.bytes=0,net.tx.dropped=0,net.tx.packets=0,cpus.limit=0.2,cpus.throttled.time=2.715591212,mem.limit=44040192,net.rx.packets=0,net.rx.errors=0 1502440898000000000
 ```
-
