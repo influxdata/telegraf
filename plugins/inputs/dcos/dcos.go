@@ -16,23 +16,26 @@ import (
 type Dcos struct {
 	ClusterURL        string   `toml:"cluster_url"`
 	AuthToken         string   `toml:"auth_token"`
+	Agents            string   `toml:"agents"`
 	FileSystemMounts  []string `toml:"file_system_mounts"`
 	NetworkInterfaces []string `toml:"network_interfaces"`
 }
 
 var sampleConfig = `
-	# Base URL of DC/OS cluster, e.g. http://dcos.example.com
-	cluster_url=
-	# Authentication token, obtained by running: dcos config show core.dcos_acs_token
-	auth_token=
-	# DC/OS agent node file system mount for which related metrics should be gathered
-	file_system_mounts = []
-	# DC/OS agent node network interface names for which related metrics should be gathered
-	network_interfaces = []
+  # Base URL of DC/OS cluster, e.g. http://dcos.example.com
+  cluster_url=""
+  # Authentication token, obtained by running: dcos config show core.dcos_acs_token
+  auth_token=""
+  # List of  DC/OS agent hostnames from which the metrics should be gathers. Leave empty for all.
+  agents = []
+  # DC/OS agent node file system mount for which related metrics should be gathered. Leave empty for all.
+  file_system_mounts = []
+  # DC/OS agent node network interface names for which related metrics should be gathered. Leave empty for all.
+  network_interfaces = []
 `
 
 func (m *Dcos) Description() string {
-	return "Input plugin for gathering DCOS agent metrics"
+	return "Input plugin for gathering DC/OS agent metrics"
 }
 
 func (m *Dcos) SampleConfig() string {
@@ -255,20 +258,10 @@ func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricTyp
 			continue
 		}
 		fields[d.Name] = d.Value
-		//fmt.Printf(" - [ %s: %v%s\n", d.Name, d.Value, d.Unit)
-		//fmt.Printf("      %v]\n", d.Tags)
 		for k, v := range d.Tags {
 			tags[k] = v
 		}
 	}
-	//fmt.Println("Dimensions")
-	//fmt.Printf("  %v\n", metric.Dimensions)
-	//fmt.Println("AllTags")
-	//fmt.Printf("  %v\n", tags)
-	//fmt.Println("Fields")
-	//fmt.Printf("  %v\n",fields)
-	//fmt.Println("Tags")
-	//fmt.Printf("  %v\n", tags)
 	acc.AddFields("dcos", fields, tags)
 }
 
