@@ -188,6 +188,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Follow:    true,
 					Location:  &seek,
 					MustExist: true,
+					Logger:    tail.DiscardingLogger,
 				})
 			if err != nil {
 				l.acc.AddError(err)
