@@ -3,11 +3,11 @@ package redis
 import (
 	"fmt"
 
-	redigo "github.com/garyburd/redigo/redis"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"gopkg.in/redis.v4"
 )
 
 //use the redis service LIST struct as telegraf output
@@ -18,7 +18,7 @@ type RedisOutput struct {
 	Timeout     internal.Duration `toml:"timeout"`
 	Queue       string            `toml:"queue_name"`
 
-	server     *redigo.Pool
+	server     *redis.Client
 	serializer serializers.Serializer
 }
 
@@ -63,7 +63,21 @@ func (p *RedisOutput) Connect() error {
 		p.Queue = "telegraf/output"
 	}
 
-	p.server = p.pool()
+	client := redis.NewClient(
+		&redis.Options{
+			Network:      "tcp",
+			Addr:         p.Server,
+			IdleTimeout:  p.IdleTimeout.Duration,
+			ReadTimeout:  p.Timeout.Duration,
+			WriteTimeout: p.Timeout.Duration,
+		})
+
+	if _, err := client.Ping().Result(); err != nil {
+		return fmt.Errorf("failed to connect redis: %s", err)
+	}
+
+	p.server = client
+
 	return nil
 }
 
@@ -79,52 +93,21 @@ func (p *RedisOutput) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	conn := p.server.Get()
-	defer conn.Close()
-
-	err := conn.Send("MULTI")
-	if err != nil {
-		return fmt.Errorf("failed to send MULTI: %s", err)
-	}
-
+	pipe := p.server.Pipeline()
 	for _, metric := range metrics {
 		b, err := p.serializer.Serialize(metric)
 		if err != nil {
 			return fmt.Errorf("failed to serialize message: %s", err)
 		}
 
-		err = conn.Send("LPUSH", p.Queue, string(b))
-		if err != nil {
-			return fmt.Errorf("failed to send LPUSH: %s", err)
-		}
+		pipe.LPush(p.Queue, string(b))
 	}
-
-	_, err = conn.Do("EXEC")
+	_, err := pipe.Exec()
 	if err != nil {
 		return fmt.Errorf("failed to write metric: %s", err)
 	}
 
 	return nil
-}
-
-func (p *RedisOutput) pool() *redigo.Pool {
-	return &redigo.Pool{
-		MaxActive:   1,
-		MaxIdle:     1,
-		IdleTimeout: p.IdleTimeout.Duration,
-		Dial: func() (redigo.Conn, error) {
-			c, err := redigo.Dial("tcp", p.Server,
-				redigo.DialPassword(p.Password),
-				redigo.DialReadTimeout(p.Timeout.Duration),
-				redigo.DialWriteTimeout(p.Timeout.Duration),
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			return c, err
-		},
-	}
 }
 
 func init() {

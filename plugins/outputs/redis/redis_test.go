@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	redigo "github.com/garyburd/redigo/redis"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
@@ -60,14 +59,12 @@ func TestConnectAndWrite(t *testing.T) {
 	//    },
 	//    "timestamp": 1257894000
 	//}
-	conn := r.server.Get()
-	defer conn.Close()
 
-	bs, err := redigo.Bytes(conn.Do("RPOP", r.Queue))
+	bs, err := r.server.RPop(r.Queue).Result()
 	require.NoError(t, err)
 
 	m := T_redisoutput{}
-	json.Unmarshal(bs, &m)
+	json.Unmarshal([]byte(bs), &m)
 
 	require.Equal(t, m.Fields["value"], float64(1), "field value 1 == 1")
 	require.Equal(t, m.Tags["tag1"], "value1", "tag tag1 values == values")
