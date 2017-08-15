@@ -254,9 +254,9 @@ func (l *LogParserPlugin) parser() {
 		for _, parser := range l.parsers {
 			m, err = parser.ParseLine(entry.line)
 			if err == nil {
-				tags := m.Tags()
-				tags["path"] = entry.path
 				if m != nil {
+					tags := m.Tags()
+					tags["path"] = entry.path
 					l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 				}
 			} else {
