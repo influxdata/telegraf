@@ -20,6 +20,7 @@
 - [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
 - [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
 - [salesforce](./plugins/inputs/salesforce/README.md) - Thanks to @rody
+- [tomcat](./plugins/inputs/tomcat/README.md) - Thanks to @mlindes
 - [win_services](./plugins/inputs/win_services/README.md) - Thanks to @vlastahajek
 - [zipkin](./plugins/inputs/zipkin/README.md) - Thanks to @adamperlin & @Ayrdrie
 
@@ -60,6 +61,7 @@
 - [#3119](https://github.com/influxdata/telegraf/pull/3119): Add weighted_io_time to diskio input.
 - [#2978](https://github.com/influxdata/telegraf/pull/2978): Add gzip content-encoding support to influxdb output.
 - [#3127](https://github.com/influxdata/telegraf/pull/3127): Allow using system plugin in Windows.
+- [#3112](https://github.com/influxdata/telegraf/pull/3112): Add tomcat input plugin.
 
 ### Bugfixes
 
