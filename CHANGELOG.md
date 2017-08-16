@@ -59,6 +59,7 @@
 - [#3097](https://github.com/influxdata/telegraf/pull/3097): Add option to run varnish under sudo.
 - [#3119](https://github.com/influxdata/telegraf/pull/3119): Add weighted_io_time to diskio input.
 - [#2978](https://github.com/influxdata/telegraf/pull/2978): Add gzip content-encoding support to influxdb output.
+- [#3127](https://github.com/influxdata/telegraf/pull/3127): Allow using system plugin in Windows.
 
 ### Bugfixes
 
@@ -88,6 +89,8 @@
 - [#1680](https://github.com/influxdata/telegraf/issues/1680): Sanitize password from couchbase metric.
 - [#3104](https://github.com/influxdata/telegraf/issues/3104): Converge to typed value in prometheus output.
 - [#2899](https://github.com/influxdata/telegraf/issues/2899): Skip compilcation of logparser and tail on solaris.
+- [#2951](https://github.com/influxdata/telegraf/issues/2951): Discard logging from tail library.
+- [#3126](https://github.com/influxdata/telegraf/pull/3126): Remove log message on ping timeout.
 
 ## v1.3.5 [2017-07-26]
 
