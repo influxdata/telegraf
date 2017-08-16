@@ -4,11 +4,13 @@ package ping
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -76,17 +78,36 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			args := p.args(u)
 			totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
+
 			out, err := p.pingHost(totalTimeout, args...)
 			if err != nil {
-				// Combine go err + stderr output
-				acc.AddError(errors.New(
-					strings.TrimSpace(out) + ", " + err.Error()))
+				// Some implementations of ping return a 1 exit code on
+				// timeout, if this occurs we will not exit and try to parse
+				// the output.
+				status := -1
+				if exitError, ok := err.(*exec.ExitError); ok {
+					if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
+						status = ws.ExitStatus()
+					}
+				}
+
+				if status != 1 {
+					// Combine go err + stderr output
+					out = strings.TrimSpace(out)
+					if len(out) > 0 {
+						acc.AddError(fmt.Errorf("%s, %s", out, err))
+					} else {
+						acc.AddError(err)
+					}
+					return
+				}
 			}
+
 			tags := map[string]string{"url": u}
 			trans, rec, min, avg, max, stddev, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
-				acc.AddError(err)
+				acc.AddError(fmt.Errorf("%s: %s", err, u))
 				return
 			}
 			// Calculate packet loss percentage
