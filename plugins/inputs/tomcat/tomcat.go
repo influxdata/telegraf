@@ -3,12 +3,13 @@ package tomcat
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -61,20 +62,38 @@ type Tomcat struct {
 	URL      string
 	Username string
 	Password string
+	Timeout  internal.Duration
+
+	SSLCA              string `toml:"ssl_ca"`
+	SSLCert            string `toml:"ssl_cert"`
+	SSLKey             string `toml:"ssl_key"`
+	InsecureSkipVerify bool
+
+	client  *http.Client
+	request *http.Request
 }
 
 var sampleconfig = `
-  ## A Tomcat status URI to gather stats.
-  ## Default is "http://127.0.0.1:8080/manager/status/all?XML=true".
-  url = "http://127.0.0.1:8080/manager/status/all?XML=true"
-  ## Credentials for status URI.
-  ## Default is tomcat/s3cret.
-  username = "tomcat"
-  password = "s3cret"
+  ## URL of the Tomcat server status
+  # url = "http://127.0.0.1:8080/manager/status/all?XML=true"
+
+  ## HTTP Basic Auth Credentials
+  # username = "tomcat"
+  # password = "s3cret"
+
+  ## Request timeout
+  # timeout = "5s"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (s *Tomcat) Description() string {
-	return "A Telegraf plugin to collect tomcat metrics."
+	return "Gather metrics from the Tomcat server status page."
 }
 
 func (s *Tomcat) SampleConfig() string {
@@ -82,36 +101,40 @@ func (s *Tomcat) SampleConfig() string {
 }
 
 func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
-
-	if s.URL == "" {
-		s.URL = "http://127.0.0.1:8080/manager/status/all?XML=true"
+	if s.client == nil {
+		client, err := s.createHttpClient()
+		if err != nil {
+			return err
+		}
+		s.client = client
 	}
 
-	if s.Username == "" {
-		s.Username = "tomcat"
+	if s.request == nil {
+		_, err := url.Parse(s.URL)
+		if err != nil {
+			return err
+		}
+		request, err := http.NewRequest("GET", s.URL, nil)
+		if err != nil {
+			return err
+		}
+		request.SetBasicAuth(s.Username, s.Password)
+		s.request = request
 	}
 
-	if s.Password == "" {
-		s.Password = "s3cret"
-	}
-
-	_, err := url.Parse(s.URL)
+	resp, err := s.client.Do(s.request)
 	if err != nil {
-		return fmt.Errorf("Unable to parse address '%s': %s", s.URL, err)
-	}
-
-	req, err := http.NewRequest("GET", s.URL, nil)
-	req.SetBasicAuth(s.Username, s.Password)
-	cli := &http.Client{}
-	resp, err := cli.Do(req)
-	if err != nil {
-		return fmt.Errorf("Unable to call URL '%s': %s", s.URL, err)
+		return err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("received HTTP status code %d from %q; expected 200",
+			resp.StatusCode, s.URL)
+	}
 
 	var status TomcatStatus
-	xml.Unmarshal(body, &status)
+	xml.NewDecoder(resp.Body).Decode(&status)
 
 	// add tomcat_jvm_memory measurements
 	tcm := map[string]interface{}{
@@ -123,7 +146,6 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 
 	// add tomcat_jvm_memorypool measurements
 	for _, mp := range status.TomcatJvm.JvmMemoryPools {
-
 		tcmpTags := map[string]string{
 			"name": mp.Name,
 			"type": mp.Type,
@@ -137,12 +159,10 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		}
 
 		acc.AddFields("tomcat_jvm_memorypool", tcmpFields, tcmpTags)
-
 	}
 
 	// add tomcat_connector measurements
 	for _, c := range status.TomcatConnectors {
-
 		name, err := strconv.Unquote(c.Name)
 		if err != nil {
 			return fmt.Errorf("Unable to unquote name '%s': %s", c.Name, err)
@@ -165,12 +185,35 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		}
 
 		acc.AddFields("tomcat_connector", tccFields, tccTags)
-
 	}
 
 	return nil
 }
 
+func (s *Tomcat) createHttpClient() (*http.Client, error) {
+	tlsConfig, err := internal.GetTLSConfig(
+		s.SSLCert, s.SSLKey, s.SSLCA, s.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+		Timeout: s.Timeout.Duration,
+	}
+
+	return client, nil
+}
+
 func init() {
-	inputs.Add("tomcat", func() telegraf.Input { return &Tomcat{} })
+	inputs.Add("tomcat", func() telegraf.Input {
+		return &Tomcat{
+			URL:      "http://127.0.0.1:8080/manager/status/all?XML=true",
+			Username: "tomcat",
+			Password: "s3cret",
+			Timeout:  internal.Duration{Duration: 5 * time.Second},
+		}
+	})
 }
