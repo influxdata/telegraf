@@ -75,6 +75,10 @@ func (p *testProc) Name() (string, error) {
 	return "test_proc", nil
 }
 
+func (p *testProc) Cmdline() (string, error) {
+	return "test_proc", nil
+}
+
 func (p *testProc) NumCtxSwitches() (*process.NumCtxSwitchesStat, error) {
 	return &process.NumCtxSwitchesStat{}, nil
 }
