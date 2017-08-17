@@ -65,28 +65,28 @@ func NewHistogramAggregator() telegraf.Aggregator {
 }
 
 var sampleConfig = `
-  ## General Aggregator Arguments:
-  ## The period on which to flush & clear the aggregator.
+  ## The period in which to flush the aggregator.
   period = "30s"
+
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
-  drop_original = false
+  # drop_original = false
 
-  ## The example of config to aggregate histogram for all fields of specified metric.
-  [[aggregators.histogram.config]]
-  ## The set of buckets.
-  buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
-  ## The name of metric.
-  metric_name = "cpu"
+  ## Example config that aggregates all fields of the metric.
+  # [[aggregators.histogram.config]]
+  #   ## The set of buckets.
+  #   buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
+  #   ## The name of metric.
+  #   metric_name = "cpu"
 
-  ## The example of config to aggregate for specified fields of metric.
-  [[aggregators.histogram.config]]
-  ## The set of buckets.
-  buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
-  ## The name of metric.
-  metric_name = "diskio"
-  ## The concrete fields of metric
-  metric_fields = ["io_time", "read_time", "write_time"]
+  ## Example config that aggregates only specific fields of the metric.
+  # [[aggregators.histogram.config]]
+  #   ## The set of buckets.
+  #   buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
+  #   ## The name of metric.
+  #   metric_name = "diskio"
+  #   ## The concrete fields of metric
+  #   metric_fields = ["io_time", "read_time", "write_time"]
 `
 
 // SampleConfig returns sample of config
