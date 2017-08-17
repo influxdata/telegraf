@@ -24,8 +24,8 @@ type HistogramAggregator struct {
 
 // config is the config, which contains name, field of metric and histogram buckets.
 type config struct {
-	Metric  string   `toml:"metric_name"`
-	Fields  []string `toml:"metric_fields"`
+	Metric  string   `toml:"measurement_name"`
+	Fields  []string `toml:"fields"`
 	Buckets buckets  `toml:"buckets"`
 }
 
@@ -70,23 +70,23 @@ var sampleConfig = `
 
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
-  # drop_original = false
+  drop_original = false
 
   ## Example config that aggregates all fields of the metric.
   # [[aggregators.histogram.config]]
   #   ## The set of buckets.
   #   buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
   #   ## The name of metric.
-  #   metric_name = "cpu"
+  #   measurement_name = "cpu"
 
   ## Example config that aggregates only specific fields of the metric.
   # [[aggregators.histogram.config]]
   #   ## The set of buckets.
   #   buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
   #   ## The name of metric.
-  #   metric_name = "diskio"
+  #   measurement_name = "diskio"
   #   ## The concrete fields of metric
-  #   metric_fields = ["io_time", "read_time", "write_time"]
+  #   fields = ["io_time", "read_time", "write_time"]
 `
 
 // SampleConfig returns sample of config
@@ -96,7 +96,7 @@ func (h *HistogramAggregator) SampleConfig() string {
 
 // Description returns description of aggregator plugin
 func (h *HistogramAggregator) Description() string {
-	return "Keep the aggregate histogram of each metric passing through."
+	return "Create aggregate histograms."
 }
 
 // Add adds new hit to the buckets

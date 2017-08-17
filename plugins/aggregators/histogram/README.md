@@ -39,24 +39,24 @@ of the algorithm which is implemented in the Prometheus
   #   ## The set of buckets.
   #   buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
   #   ## The name of metric.
-  #   metric_name = "cpu"
+  #   measurement_name = "cpu"
 
   ## Example config that aggregates only specific fields of the metric.
   # [[aggregators.histogram.config]]
   #   ## The set of buckets.
   #   buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
   #   ## The name of metric.
-  #   metric_name = "diskio"
+  #   measurement_name = "diskio"
   #   ## The concrete fields of metric
-  #   metric_fields = ["io_time", "read_time", "write_time"]
+  #   fields = ["io_time", "read_time", "write_time"]
 ```
 
 The user is responsible for defining the bounds of the histogram bucket as
 well as the measurement name and fields to aggregate.
 
-Each histogram config section must contain a `buckets` and `metric_name`
-option.  Optionally, if `metric_fields` is set only the fields listed will be
-aggregated.  If `metric_fields` is not set all fields are aggregated.
+Each histogram config section must contain a `buckets` and `measurement_name`
+option.  Optionally, if `fields` is set only the fields listed will be
+aggregated.  If `fields` is not set all fields are aggregated.
 
 The `buckets` option contains a list of floats which specify the bucket
 boundaries.  Each float value defines the inclusive upper bound of the bucket.
