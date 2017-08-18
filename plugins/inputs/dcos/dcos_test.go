@@ -67,6 +67,7 @@ var masterTestServer *httptest.Server
 func TestMain(m *testing.M) {
 
 	masterRouter := mux.NewRouter()
+	// /1 routes are for OK reposnses
 	masterRouter.HandleFunc("/1/mesos/master/state-summary", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
@@ -113,12 +114,20 @@ func TestMain(m *testing.M) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
+	masterRouter.HandleFunc("/1/system/v1/agent/{agentId}/metrics/v0/containers/{containerId}/app", func(w http.ResponseWriter, r *http.Request) {
+		//params := mux.Vars(r)
+		//agentId := params["agentId"]
+		//containerId := params["containerId"]
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	masterRouter.HandleFunc("/2/mesos/master/state-summary", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(MESOS_MASTER_STATE_SUMMARY_JSON_FAIL))
 	})
 
+	// /3 routes are for some 404 responses
 	masterRouter.HandleFunc("/2/system/v1/agent/{agentId}/metrics/v0/node", func(w http.ResponseWriter, r *http.Request) {
 		params := mux.Vars(r)
 		agentId := params["agentId"]
@@ -159,9 +168,18 @@ func TestMain(m *testing.M) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
+	masterRouter.HandleFunc("/2/system/v1/agent/{agentId}/metrics/v0/containers/{containerId}/app", func(w http.ResponseWriter, r *http.Request) {
+		//params := mux.Vars(r)
+		//agentId := params["agentId"]
+		//containerId := params["containerId"]
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	// /3 route is for testing unauthorized
 	masterRouter.HandleFunc("/3/mesos/master/state-summary", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	})
+	// route /4 for empty slaves
 	masterRouter.HandleFunc("/4/mesos/master/state-summary", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
@@ -175,34 +193,145 @@ func TestMain(m *testing.M) {
 	os.Exit(rc)
 }
 
-func TestGatherAll(t *testing.T) {
+func TestGatherNodeMetrics(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/1"
-	dcos := &Dcos{clusterUrl, "token", []string{}, []string{}, []string{}}
+	dcos := &Dcos{
+		ClusterURL:        clusterUrl,
+		AuthToken:         "token",
+		Agents:            []string{},
+		FileSystemMounts:  []string{},
+		NetworkInterfaces: []string{},
+	}
 	var acc testutil.Accumulator
 	require.NoError(t, dcos.Gather(&acc))
-	assert.Equal(t, acc.NMetrics(), uint64(8))
+	//there must be 40 measurements for nodes (2)(6*various system metrics per each +4*filesystem for each +11*networks for node1 + 9 netwowks of node2) + 4 measurements per each container (4)
+	assert.Equal(t, acc.NMetrics(), uint64(64))
 
-	fieldsNode1 := map[string]interface{}{
-		"network.in.packets.docker0": 31.,
-		"network.out.lo":             338336992.,
-		"swap.free":                  2147479552.,
-		"filesystem.capacity.total#var#lib#docker#overlay": 53660876800.,
-		"filesystem.capacity.free#":                        50612805632.,
+	fieldsNode := map[string]interface{}{
+		"uptime": 42457.,
 	}
-	tagsNode1 := map[string]string{
+	tagsNode := map[string]string{
 		"mesos_id":    "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
 		"cluster_id":  "2f4b3291-ee34-4779-b7bd-015f6594e9c0",
 		"hostname":    "192.168.65.111",
 		"cluster_url": clusterUrl,
 		"scope":       "node",
 	}
-	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsNode1, tagsNode1)
-	fieldsContainer1 := map[string]interface{}{
-		"disk.limit":       0.,
-		"mem.total":        6938624.,
-		"cpus.system.time": 29.95,
+	acc.AssertContainsTaggedFields(t, "dcos_system", fieldsNode, tagsNode)
+
+	fieldsNode = map[string]interface{}{
+		"cores":  4.,
+		"total":  1.35,
+		"user":   0.83,
+		"system": 0.52,
+		"idle":   98.6,
+		"wait":   0.,
 	}
-	tagsContainer1 := map[string]string{
+	acc.AssertContainsTaggedFields(t, "dcos_cpu", fieldsNode, tagsNode)
+
+	fieldsNode = map[string]interface{}{
+		"1min":  0.23,
+		"5min":  0.13,
+		"15min": 0.14,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_load", fieldsNode, tagsNode)
+
+	fieldsNode = map[string]interface{}{
+		"total":   6088818688.,
+		"free":    5148024832.,
+		"buffers": 970752.,
+		"cached":  415162368.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_memory", fieldsNode, tagsNode)
+
+	fieldsNode = map[string]interface{}{
+		"total": 2147479552.,
+		"free":  2147479552.,
+		"used":  0.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_swap", fieldsNode, tagsNode)
+
+	fieldsNode = map[string]interface{}{
+		"count": 215.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_process", fieldsNode, tagsNode)
+
+	tagsNode["path"] = "/"
+	fieldsNode = map[string]interface{}{
+		"capacity_total": 53660876800.,
+		"capacity_used":  3048071168.,
+		"capacity_free":  50612805632.,
+		"inode_total":    26214400.,
+		"inode_used":     111584.,
+		"inode_free":     26102816.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
+
+	tagsNode["path"] = "/"
+	fieldsNode = map[string]interface{}{
+		"capacity_total": 53660876800.,
+		"capacity_used":  3048071168.,
+		"capacity_free":  50612805632.,
+		"inode_total":    26214400.,
+		"inode_used":     111584.,
+		"inode_free":     26102816.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
+
+	tagsNode["path"] = "/var/lib/docker/overlay"
+	fieldsNode = map[string]interface{}{
+		"capacity_total": 53660876800.,
+		"capacity_used":  3048071168.,
+		"capacity_free":  50612805632.,
+		"inode_total":    26214400.,
+		"inode_used":     111584.,
+		"inode_free":     26102816.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
+	delete(tagsNode, "path")
+
+	tagsNode["interface"] = "spartan"
+	fieldsNode = map[string]interface{}{
+		"in":          0.,
+		"out":         0.,
+		"in_packets":  0.,
+		"out_packets": 0.,
+		"in_dropped":  0.,
+		"out_dropped": 0.,
+		"in_errors":   0.,
+		"out_errors":  0.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_network", fieldsNode, tagsNode)
+
+	tagsNode["interface"] = "enp0s8"
+	fieldsNode = map[string]interface{}{
+		"in":          152540929.,
+		"out":         181719668.,
+		"in_packets":  1155484.,
+		"out_packets": 1190033.,
+		"in_dropped":  0.,
+		"out_dropped": 0.,
+		"in_errors":   0.,
+		"out_errors":  0.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_network", fieldsNode, tagsNode)
+
+}
+
+func TestGatherContainerMetrics(t *testing.T) {
+	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/1"
+	dcos := &Dcos{
+		ClusterURL:        clusterUrl,
+		AuthToken:         "token",
+		Agents:            []string{},
+		FileSystemMounts:  []string{},
+		NetworkInterfaces: []string{},
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, dcos.Gather(&acc))
+	assert.Equal(t, acc.NMetrics(), uint64(64))
+
+	tagsContainer := map[string]string{
 		"mesos_id":            "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
 		"cluster_id":          "2f4b3291-ee34-4779-b7bd-015f6594e9c0",
 		"container_id":        "619e0c1a-a059-4801-ae60-75f022f89df7",
@@ -217,82 +346,170 @@ func TestGatherAll(t *testing.T) {
 		"cluster_url":         clusterUrl,
 		"scope":               "container",
 	}
-	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsContainer1, tagsContainer1)
+	fieldsContainer := map[string]interface{}{
+		"user_time":      20.74,
+		"system_time":    29.95,
+		"limit":          0.2,
+		"throttled_time": 1.75146987,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_cpus", fieldsContainer, tagsContainer)
+
+	fieldsContainer = map[string]interface{}{
+		"total": 6938624.,
+		"limit": 44040192.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_mem", fieldsContainer, tagsContainer)
+	fieldsContainer = map[string]interface{}{
+		"limit": 0.,
+		"used":  0.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_disk", fieldsContainer, tagsContainer)
+	fieldsContainer = map[string]interface{}{
+		"rx_packets": 0.,
+		"rx_bytes":   0.,
+		"rx_errors":  0.,
+		"rx_dropped": 0.,
+		"tx_packets": 0.,
+		"tx_bytes":   0.,
+		"tx_errors":  0.,
+		"tx_dropped": 0.,
+	}
+	acc.AssertContainsTaggedFields(t, "dcos_net", fieldsContainer, tagsContainer)
 }
 
 func TestGatherFiltered(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/1"
-	dcos := &Dcos{clusterUrl, "token", []string{}, []string{"/", "/boot"}, []string{"lo", "docker0"}}
+	dcos := &Dcos{
+		ClusterURL:        clusterUrl,
+		AuthToken:         "token",
+		Agents:            []string{},
+		FileSystemMounts:  []string{"/", "/boot"},
+		NetworkInterfaces: []string{"lo", "docker0"},
+	}
 	var acc testutil.Accumulator
 	require.NoError(t, dcos.Gather(&acc))
-	assert.Equal(t, acc.NMetrics(), uint64(8))
+	//there must be 20 measurements for  nodes (2)(6*varioous system metrics+2*filesystem per each node (filetered 2 of 4) +2*network (filtered 2 of 11 for node 1, 2 of 9 for node 2)) + 4 measurements per each container (6)
+	assert.Equal(t, acc.NMetrics(), uint64(44))
 
-	fieldsNode1 := map[string]interface{}{
-		"network.in.packets.docker0":  31.,
-		"network.out.lo":              338336992.,
-		"swap.free":                   2147479552.,
-		"filesystem.capacity.free#":   50612805632.,
-		"filesystem.inode.total#boot": 524288.,
-	}
-
-	tagsNode1 := map[string]string{
+	tagsNode := map[string]string{
 		"mesos_id":    "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
 		"cluster_id":  "2f4b3291-ee34-4779-b7bd-015f6594e9c0",
 		"hostname":    "192.168.65.111",
 		"cluster_url": clusterUrl,
 		"scope":       "node",
+		"path":        "/",
+	}
+	fieldsNode := map[string]interface{}{
+		"capacity_total": 53660876800.,
+		"capacity_used":  3048071168.,
+		"capacity_free":  50612805632.,
+		"inode_total":    26214400.,
+		"inode_used":     111584.,
+		"inode_free":     26102816.,
 	}
 
-	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsNode1, tagsNode1)
-	fieldsContainer1 := map[string]interface{}{
-		"disk.limit":       0.,
-		"mem.total":        6938624.,
-		"cpus.system.time": 29.95,
-	}
-	tagsContainer1 := map[string]string{
-		"mesos_id":            "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
-		"cluster_id":          "2f4b3291-ee34-4779-b7bd-015f6594e9c0",
-		"container_id":        "619e0c1a-a059-4801-ae60-75f022f89df7",
-		"executor_id":         "basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001",
-		"framework_name":      "marathon",
-		"framework_id":        "a52c2640-d3b9-49c8-b92f-a17b2c25cd70-0001",
-		"framework_role":      "slave_public",
-		"framework_principal": "dcos_marathon",
-		"hostname":            "192.168.65.111",
-		"executor_name":       "Command Executor (Task: basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001) (Command: sh -c 'while [ true...')",
-		"source":              "basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001",
-		"cluster_url":         clusterUrl,
-		"scope":               "container",
-	}
-	assertAccumulatorIncludesTaggedFields(t, acc, "dcos", fieldsContainer1, tagsContainer1)
+	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
 
-	fieldsNode1Not := map[string]interface{}{
-		"filesystem.capacity.total#var#lib#docker#overlay": 53660876800.,
-		"filesystem.inode.free_home":                       34333.,
-		"network.in.vtep1024":                              0,
-		"network.in.minuteman":                             0,
-		"network.out.dummy0":                               0,
-		"network.in.veth7134f20":                           0,
-		"network.out.enp0s8":                               0,
-		"network.in.d-dcos":                                0,
-		"network.out.spartan":                              0,
+	tagsNode["path"] = "/boot"
+	fieldsNode = map[string]interface{}{
+		"capacity_total": 1063256064.,
+		"capacity_used":  144031744.,
+		"capacity_free":  919224320.,
+		"inode_total":    524288.,
+		"inode_used":     328.,
+		"inode_free":     523960.,
 	}
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos", fieldsNode1Not, tagsNode1)
+	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
+
+	tagsNode["path"] = "/var/lib/docker/overlay"
+	fieldsNodeNot := map[string]interface{}{
+		"capacity_total": 53660876800.,
+		"capacity_used":  3048071168.,
+		"capacity_free":  50612805632.,
+		"inode_total":    26214400.,
+		"inode_used":     111584.,
+		"inode_free":     26102816.,
+	}
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_filesystem", fieldsNodeNot, tagsNode)
+	tagsNode["path"] = "/home"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_filesystem", fieldsNodeNot, tagsNode)
+
+	delete(tagsNode, "path")
+
+	fieldsNode = map[string]interface{}{
+		"in":          338336992.,
+		"out":         338336992.,
+		"in_packets":  161857.,
+		"out_packets": 161857.,
+		"in_dropped":  0.,
+		"out_dropped": 0.,
+		"in_errors":   0.,
+		"out_errors":  0.,
+	}
+	tagsNode["interface"] = "lo"
+
+	acc.AssertContainsTaggedFields(t, "dcos_network", fieldsNode, tagsNode)
+
+	fieldsNode = map[string]interface{}{
+		"in":          2068.,
+		"out":         0.,
+		"in_packets":  31.,
+		"out_packets": 0.,
+		"in_dropped":  0.,
+		"out_dropped": 0.,
+		"in_errors":   0.,
+		"out_errors":  0.,
+	}
+	tagsNode["interface"] = "docker0"
+
+	acc.AssertContainsTaggedFields(t, "dcos_network", fieldsNode, tagsNode)
+
+	tagsNode["interface"] = "spartan"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	tagsNode["interface"] = "d-dcos"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	tagsNode["interface"] = "enp0s3"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	tagsNode["interface"] = "enp0s8"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	tagsNode["interface"] = "minuteman"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	tagsNode["interface"] = "vtep1024"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	tagsNode["interface"] = "dummy0"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	tagsNode["interface"] = "veth7134f20"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	tagsNode["interface"] = "veth0a57a71"
+	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
 }
 
 func TestGatherErrors(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/2"
-	dcos := &Dcos{clusterUrl, "token", []string{}, []string{"/", "/boot"}, []string{"lo, docker0"}}
+	dcos := &Dcos{
+		ClusterURL:        clusterUrl,
+		AuthToken:         "token",
+		Agents:            []string{},
+		FileSystemMounts:  []string{"/", "/boot"},
+		NetworkInterfaces: []string{"lo", "docker0"},
+	}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.NoError(t, err)
 	assert.Len(t, acc.Errors, 3, "There should be 3 errors")
-	assert.Equal(t, acc.NMetrics(), uint64(6))
+	//10 filtered metrics for node 1 (node2 missing) +5*containers (1 missing)
+	assert.Equal(t, acc.NMetrics(), uint64(30))
 }
 
 func TestNoSlaves(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/4"
-	dcos := &Dcos{clusterUrl, "token", []string{}, []string{"/", "/boot"}, []string{"lo, docker0"}}
+	dcos := &Dcos{
+		ClusterURL:        clusterUrl,
+		AuthToken:         "token",
+		Agents:            []string{},
+		FileSystemMounts:  []string{"/", "/boot"},
+		NetworkInterfaces: []string{"lo, docker0"},
+	}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.Error(t, err)
@@ -300,7 +517,11 @@ func TestNoSlaves(t *testing.T) {
 }
 
 func TestConfigError(t *testing.T) {
-	dcos := &Dcos{"", "", []string{}, []string{"/", "/boot"}, []string{"lo, docker0"}}
+	dcos := &Dcos{
+		Agents:            []string{},
+		FileSystemMounts:  []string{"/", "/boot"},
+		NetworkInterfaces: []string{"lo, docker0"},
+	}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.Error(t, err)
@@ -309,30 +530,17 @@ func TestConfigError(t *testing.T) {
 
 func TestGatherUnauthorized(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/3"
-	dcos := &Dcos{clusterUrl, "token", []string{}, []string{"/", "/boot"}, []string{"lo, docker0"}}
+	dcos := &Dcos{
+		ClusterURL:        clusterUrl,
+		AuthToken:         "token",
+		Agents:            []string{},
+		FileSystemMounts:  []string{"/", "/boot"},
+		NetworkInterfaces: []string{"lo, docker0"},
+	}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Authentication")
-}
-
-func assertAccumulatorIncludesTaggedFields(t *testing.T, a testutil.Accumulator, measurement string, fields map[string]interface{}, tags map[string]string) {
-	a.Lock()
-	defer a.Unlock()
-	for _, p := range a.Metrics {
-		if !reflect.DeepEqual(tags, p.Tags) {
-			continue
-		}
-
-		if p.Measurement == measurement {
-			for f, v := range fields {
-				assert.Equal(t, v, p.Fields[f], "Field %s", f)
-			}
-			return
-		}
-	}
-	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
-	assert.Fail(t, msg)
 }
 
 func assertAccumulatorDoesNotIncludesTaggedFields(t *testing.T, a testutil.Accumulator, measurement string, fields map[string]interface{}, tags map[string]string) {
