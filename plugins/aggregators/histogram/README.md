@@ -15,8 +15,8 @@ increasing while Telegraf is running.
 Each metric is passed to the aggregator and this aggregator searches
 histogram buckets for those fields, which have been specified in the
 config. If buckets are found, the aggregator will increment +1 to the appropriate
-bucket. Otherwise, nothing will happen.  Every `period` seconds this data
-will be forwarded to the outputs.
+bucket otherwise it will be added to the `+Inf` bucket.  Every `period`
+seconds this data will be forwarded to the outputs.
 
 The algorithm of hit counting to buckets was implemented on the base
 of the algorithm which is implemented in the Prometheus
