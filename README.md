@@ -172,7 +172,8 @@ configuration options.
 * [varnish](./plugins/inputs/varnish)
 * [zfs](./plugins/inputs/zfs)
 * [zookeeper](./plugins/inputs/zookeeper)
-* [win_perf_counters ](./plugins/inputs/win_perf_counters) (windows performance counters)
+* [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
+* [win_services](./plugins/inputs/win_services)
 * [sysstat](./plugins/inputs/sysstat)
 * [system](./plugins/inputs/system)
     * cpu
