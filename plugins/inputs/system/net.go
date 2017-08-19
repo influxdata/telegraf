@@ -12,7 +12,7 @@ import (
 
 type NetIOStats struct {
 	patterns []glob.Glob
-	ps PS
+	ps       PS
 
 	skipChecks bool
 	Interfaces []string
