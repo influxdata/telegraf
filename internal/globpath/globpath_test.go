@@ -1,6 +1,7 @@
 package globpath
 
 import (
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -69,4 +70,21 @@ func TestFindNestedTextFile(t *testing.T) {
 func getTestdataDir() string {
 	_, filename, _, _ := runtime.Caller(1)
 	return strings.Replace(filename, "globpath_test.go", "testdata", 1)
+}
+
+func TestMatch_ErrPermission(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected map[string]os.FileInfo
+	}{
+		{"/root/foo", map[string]os.FileInfo{}},
+		{"/root/f*", map[string]os.FileInfo{}},
+	}
+
+	for _, test := range tests {
+		glob, err := Compile(test.input)
+		require.NoError(t, err)
+		actual := glob.Match()
+		require.Equal(t, test.expected, actual)
+	}
 }

@@ -173,6 +173,10 @@ func (m *Win_PerfCounters) ParseConfig() error {
 	}
 }
 
+func (m *Win_PerfCounters) GetParsedItemsForTesting() []*item {
+	return m.itemCache
+}
+
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	if !m.configParsed {

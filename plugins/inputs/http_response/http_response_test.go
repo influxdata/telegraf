@@ -106,6 +106,9 @@ func TestFields(t *testing.T) {
 	value, ok := acc.IntField("http_response", "http_response_code")
 	require.True(t, ok)
 	require.Equal(t, http.StatusOK, value)
+	response_value, ok := acc.StringField("http_response", "result_type")
+	require.True(t, ok)
+	require.Equal(t, "success", response_value)
 }
 
 func TestRedirects(t *testing.T) {
@@ -143,10 +146,13 @@ func TestRedirects(t *testing.T) {
 	}
 	acc = testutil.Accumulator{}
 	err = h.Gather(&acc)
-	require.Error(t, err)
+	require.NoError(t, err)
 
 	value, ok = acc.IntField("http_response", "http_response_code")
 	require.False(t, ok)
+	response_value, ok := acc.StringField("http_response", "result_type")
+	require.True(t, ok)
+	require.Equal(t, "connection_failed", response_value)
 }
 
 func TestMethod(t *testing.T) {
@@ -277,6 +283,9 @@ func TestStringMatch(t *testing.T) {
 	value, ok = acc.IntField("http_response", "response_string_match")
 	require.True(t, ok)
 	require.Equal(t, 1, value)
+	response_value, ok := acc.StringField("http_response", "result_type")
+	require.True(t, ok)
+	require.Equal(t, "success", response_value)
 	_, ok = acc.FloatField("http_response", "response_time")
 	require.True(t, ok)
 }
@@ -307,6 +316,9 @@ func TestStringMatchJson(t *testing.T) {
 	value, ok = acc.IntField("http_response", "response_string_match")
 	require.True(t, ok)
 	require.Equal(t, 1, value)
+	response_value, ok := acc.StringField("http_response", "result_type")
+	require.True(t, ok)
+	require.Equal(t, "success", response_value)
 	_, ok = acc.FloatField("http_response", "response_time")
 	require.True(t, ok)
 }
@@ -338,6 +350,9 @@ func TestStringMatchFail(t *testing.T) {
 	value, ok = acc.IntField("http_response", "response_string_match")
 	require.True(t, ok)
 	require.Equal(t, 0, value)
+	response_value, ok := acc.StringField("http_response", "result_type")
+	require.True(t, ok)
+	require.Equal(t, "response_string_mismatch", response_value)
 	_, ok = acc.FloatField("http_response", "response_time")
 	require.True(t, ok)
 }
@@ -363,8 +378,13 @@ func TestTimeout(t *testing.T) {
 	}
 	var acc testutil.Accumulator
 	err := h.Gather(&acc)
-	require.Error(t, err)
+	require.NoError(t, err)
 
-	ok := acc.HasIntField("http_response", "http_response_code")
+	_, ok := acc.IntField("http_response", "http_response_code")
+	require.False(t, ok)
+	response_value, ok := acc.StringField("http_response", "result_type")
+	require.True(t, ok)
+	require.Equal(t, "timeout", response_value)
+	_, ok = acc.FloatField("http_response", "response_time")
 	require.False(t, ok)
 }

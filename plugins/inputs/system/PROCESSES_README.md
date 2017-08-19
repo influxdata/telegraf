@@ -14,6 +14,11 @@ it requires access to execute `ps`.
   # no configuration
 ```
 
+Another possible configuration is to define an alternative path for resolving the /proc location.
+Using the environment variable `HOST_PROC` the plugin will retrieve process information from the specified location.
+
+`docker run -v /proc:/rootfs/proc:ro -e HOST_PROC=/rootfs/proc`
+
 ### Measurements & Fields:
 
 - processes

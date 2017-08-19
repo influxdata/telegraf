@@ -45,7 +45,6 @@ SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar A
 ### Example Output:
 
 ```
-$ telegraf --input-filter example --test
 measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
 measurement2,tag1=foo,tag2=bar,tag3=baz field3=1i 1453831884664956455
 ```

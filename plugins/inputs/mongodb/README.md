@@ -4,12 +4,12 @@
 
 ```toml
 [[inputs.mongodb]]
-  ## An array of URI to gather stats about. Specify an ip or hostname
-  ## with optional port add password. ie,
+  ## An array of URLs of the form:
+  ##   "mongodb://" [user ":" pass "@"] host [ ":" port]
+  ## For example:
   ##   mongodb://user:auth_key@10.10.3.30:27017,
   ##   mongodb://10.10.3.33:18832,
-  ##   10.0.0.1:10000, etc.
-  servers = ["127.0.0.1:27017"]
+  servers = ["mongodb://127.0.0.1:27017"]
   gather_perdb_stats = false
 
   ## Optional SSL Config
@@ -19,15 +19,8 @@
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 ```
-
-For authenticated mongodb instances use `mongodb://` connection URI
-
-```toml
-[[inputs.mongodb]]
-  servers = ["mongodb://username:password@10.XX.XX.XX:27101/mydatabase?authSource=admin"]
-```
-This connection uri may be different based on your environement and mongodb
-setup. If the user doesn't have the required privilege to execute serverStatus 
+This connection uri may be different based on your environment and mongodb
+setup. If the user doesn't have the required privilege to execute serverStatus
 command the you will get this error on telegraf
 
 ```

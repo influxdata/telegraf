@@ -158,7 +158,6 @@ def go_get(branch, update=False, no_uncommitted=False):
         get_command = "go get github.com/sparrc/gdm"
         run(get_command)
     logging.info("Retrieving dependencies with `gdm`...")
-    run("{}/bin/gdm restore -v -f Godeps_windows".format(os.environ.get("GOPATH")))
     run("{}/bin/gdm restore -v".format(os.environ.get("GOPATH")))
     return True
 
@@ -470,26 +469,11 @@ def build(version=None,
             build_command += "-race "
         if len(tags) > 0:
             build_command += "-tags {} ".format(','.join(tags))
-        if "1.4" in get_go_version():
-            if static:
-                build_command += "-ldflags=\"-s -X main.version {} -X main.branch {} -X main.commit {}\" ".format(version,
-                                                                                                                  get_current_branch(),
-                                                                                                                  get_current_commit())
-            else:
-                build_command += "-ldflags=\"-X main.version {} -X main.branch {} -X main.commit {}\" ".format(version,
-                                                                                                               get_current_branch(),
-                                                                                                               get_current_commit())
 
-        else:
-            # Starting with Go 1.5, the linker flag arguments changed to 'name=value' from 'name value'
-            if static:
-                build_command += "-ldflags=\"-s -X main.version={} -X main.branch={} -X main.commit={}\" ".format(version,
-                                                                                                                  get_current_branch(),
-                                                                                                                  get_current_commit())
-            else:
-                build_command += "-ldflags=\"-X main.version={} -X main.branch={} -X main.commit={}\" ".format(version,
-                                                                                                               get_current_branch(),
-                                                                                                               get_current_commit())
+        build_command += "-ldflags=\"-w -s -X main.version={} -X main.branch={} -X main.commit={}\" ".format(
+                version,
+                get_current_branch(),
+                get_current_commit())
         if static:
             build_command += "-a -installsuffix cgo "
         build_command += path
@@ -499,13 +483,12 @@ def build(version=None,
         logging.info("Time taken: {}s".format((end_time - start_time).total_seconds()))
     return True
 
-def generate_md5_from_file(path):
-    """Generate MD5 signature based on the contents of the file at path.
+def generate_sha256_from_file(path):
+    """Generate SHA256 hash signature based on the contents of the file at path.
     """
-    m = hashlib.md5()
+    m = hashlib.sha256()
     with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            m.update(chunk)
+        m.update(f.read())
     return m.hexdigest()
 
 def generate_sig_from_file(path):
@@ -790,9 +773,10 @@ def main(args):
             if not upload_packages(packages, bucket_name=args.bucket, overwrite=args.upload_overwrite):
                 return 1
         logging.info("Packages created:")
-        for p in packages:
-            logging.info("{} (MD5={})".format(p.split('/')[-1:][0],
-                                              generate_md5_from_file(p)))
+        for filename in packages:
+            logging.info("%s (SHA256=%s)",
+                         os.path.basename(filename),
+                         generate_sha256_from_file(filename))
     if orig_branch != get_current_branch():
         logging.info("Moving back to original git branch: {}".format(args.branch))
         run("git checkout {}".format(orig_branch))

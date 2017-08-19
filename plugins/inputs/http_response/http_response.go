@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -46,25 +47,26 @@ func (h *HTTPResponse) Description() string {
 
 var sampleConfig = `
   ## Server address (default http://localhost)
-  address = "http://github.com"
+  # address = "http://localhost"
+
   ## Set response_timeout (default 5 seconds)
-  response_timeout = "5s"
+  # response_timeout = "5s"
+
   ## HTTP Request Method
-  method = "GET"
+  # method = "GET"
+
   ## Whether to follow redirects from the server (defaults to false)
-  follow_redirects = true
-  ## HTTP Request Headers (all values must be strings)
-  # [inputs.http_response.headers]
-  #   Host = "github.com"
+  # follow_redirects = false
+
   ## Optional HTTP Request Body
   # body = '''
   # {'fake':'data'}
   # '''
 
   ## Optional substring or regex match in body of the response
-  ## response_string_match = "\"service_status\": \"up\""
-  ## response_string_match = "ok"
-  ## response_string_match = "\".*_status\".?:.?\"up\""
+  # response_string_match = "\"service_status\": \"up\""
+  # response_string_match = "ok"
+  # response_string_match = "\".*_status\".?:.?\"up\""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -72,6 +74,10 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Request Headers (all values must be strings)
+  # [inputs.http_response.headers]
+  #   Host = "github.com"
 `
 
 // SampleConfig returns the plugin SampleConfig
@@ -130,15 +136,21 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 	// Start Timer
 	start := time.Now()
 	resp, err := h.client.Do(request)
+
 	if err != nil {
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			fields["result_type"] = "timeout"
+			return fields, nil
+		}
+		fields["result_type"] = "connection_failed"
 		if h.FollowRedirects {
-			return nil, err
+			return fields, nil
 		}
 		if urlError, ok := err.(*url.Error); ok &&
 			urlError.Err == ErrRedirectAttempted {
 			err = nil
 		} else {
-			return nil, err
+			return fields, nil
 		}
 	}
 	defer func() {
@@ -157,7 +169,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 			h.compiledStringMatch = regexp.MustCompile(h.ResponseStringMatch)
 			if err != nil {
 				log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
-				fields["response_string_match"] = 0
+				fields["result_type"] = "response_string_mismatch"
 				return fields, nil
 			}
 		}
@@ -165,16 +177,20 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Printf("E! Failed to read body of HTTP Response : %s", err)
+			fields["result_type"] = "response_string_mismatch"
 			fields["response_string_match"] = 0
 			return fields, nil
 		}
 
 		if h.compiledStringMatch.Match(bodyBytes) {
+			fields["result_type"] = "success"
 			fields["response_string_match"] = 1
 		} else {
+			fields["result_type"] = "response_string_mismatch"
 			fields["response_string_match"] = 0
 		}
-
+	} else {
+		fields["result_type"] = "success"
 	}
 
 	return fields, nil
