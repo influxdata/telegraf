@@ -1,5 +1,27 @@
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 
+---
+!WARN! - This is a kentik fork of the telegraf library which was made to accomodate for our 
+	 custom go-metrics library. This fork has a modified opentsdb.go output plugin file
+         which allows the user to exclude field keys from sanitization by telegraf ("value"). 
+	 To sync with the parent/upstream:
+
+```
+git clone git@github.com:Kentik/telegraf.git && \
+ cd ./telegraf && \
+ git remote add upstream https://github.com/influxdata/telegraf.git
+
+git checkout -b "sync_to_master_v${v}"
+
+git fetch upstream && \
+ git merge --no-log --no-ff --no-commit upstream/branch && \
+ git reset plugins/outputs/opentsdb/opentsdb.go && \
+ git checkout plugins/outputs/opentsdb/opentsdb.go && \
+ git reset README.md && \
+ git checkout README.md 
+```
+---
+
 Telegraf is an agent written in Go for collecting, processing, aggregating,
 and writing metrics.
 
