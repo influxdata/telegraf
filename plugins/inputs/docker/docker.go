@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
@@ -34,6 +35,8 @@ type DockerContainerFilter struct {
 type Docker struct {
 	Endpoint       string
 	ContainerNames []string
+
+	SwarmEnabled   bool `toml:swarm_enabled`
 
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
@@ -82,6 +85,9 @@ var sampleConfig = `
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
 
+  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
+  swarm_enabled = false
+  
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
 
@@ -160,6 +166,13 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(err)
 	}
 
+	if d.SwarmEnabled {
+		err := d.gatherSwarmInfo(acc)
+		if err != nil {
+			acc.AddError(err)
+		}
+	}
+
 	// List containers
 	opts := types.ContainerListOptions{}
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
@@ -184,6 +197,74 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 	wg.Wait()
 
+	return nil
+}
+
+func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
+	
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	defer cancel()
+	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
+	if err != nil {
+		return err
+	}
+
+	if len(services) > 0 {
+
+		tasks, err := d.client.TaskList(ctx, types.TaskListOptions{})
+		if err != nil {
+			return err
+		}
+
+		nodes, err := d.client.NodeList(ctx, types.NodeListOptions{})
+		if err != nil {
+			return err
+		}
+
+		running := map[string]int{}
+		tasksNoShutdown := map[string]int{}
+
+		activeNodes := make(map[string]struct{})
+		for _, n := range nodes {
+			if n.Status.State != swarm.NodeStateDown {
+				activeNodes[n.ID] = struct{}{}
+			}
+		}
+
+		for _, task := range tasks {
+			if task.DesiredState != swarm.TaskStateShutdown {
+				tasksNoShutdown[task.ServiceID]++
+			}
+
+			if _, nodeActive := activeNodes[task.NodeID]; nodeActive && task.Status.State == swarm.TaskStateRunning {
+				running[task.ServiceID]++
+			}
+		}
+
+		
+		for _, service := range services {
+			tags := map[string]string{}
+			fields := make(map[string]interface{})
+			now := time.Now()
+			tags["swarm_service_id"] = service.ID
+			tags["swarm_service_name"] = service.Spec.Name
+			if service.Spec.Mode.Replicated != nil && service.Spec.Mode.Replicated.Replicas != nil {
+				fields["swarm_service_mode"] = "replicated"
+				fields["swarm_tasks_running"] = running[service.ID]
+				fields["swarm_tasks_desired"] = *service.Spec.Mode.Replicated.Replicas
+			} else if service.Spec.Mode.Global != nil {
+				fields["swarm_service_mode"] = "global"
+				fields["swarm_tasks_running"] = running[service.ID]
+				fields["swarm_tasks_desired"] = tasksNoShutdown[service.ID]
+			}
+			// Add metrics
+			acc.AddFields("docker_swarm",
+				fields,
+				tags,
+				now)
+		}
+	}
+	
 	return nil
 }
 
