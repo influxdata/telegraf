@@ -36,7 +36,7 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 
-	SwarmEnabled   bool `toml:swarm_enabled`
+	SwarmEnabled bool `toml:swarm_enabled`
 
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
@@ -201,7 +201,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
@@ -241,7 +241,6 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 			}
 		}
 
-		
 		for _, service := range services {
 			tags := map[string]string{}
 			fields := make(map[string]interface{})
@@ -264,7 +263,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 				now)
 		}
 	}
-	
+
 	return nil
 }
 
