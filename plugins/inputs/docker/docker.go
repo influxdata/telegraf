@@ -36,7 +36,7 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 
-	SwarmEnabled bool `toml:swarm_enabled`
+	SwarmEnabled bool `toml:"swarm_enabled"`
 
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
