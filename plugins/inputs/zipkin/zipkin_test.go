@@ -16,14 +16,16 @@ func TestZipkinPlugin(t *testing.T) {
 	mockAcc := testutil.Accumulator{}
 
 	tests := []struct {
-		name           string
-		thriftDataFile string //path name to a binary thrift data file which contains test data
-		wantErr        bool
-		want           []testutil.Metric
+		name        string
+		datafile    string // data file which contains test data
+		contentType string
+		wantErr     bool
+		want        []testutil.Metric
 	}{
 		{
-			name:           "threespan",
-			thriftDataFile: "testdata/threespans.dat",
+			name:        "threespan",
+			datafile:    "testdata/threespans.dat",
+			contentType: "application/x-thrift",
 			want: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -170,8 +172,9 @@ func TestZipkinPlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:           "distributed_trace_sample",
-			thriftDataFile: "testdata/distributed_trace_sample.dat",
+			name:        "distributed_trace_sample",
+			datafile:    "testdata/distributed_trace_sample.dat",
+			contentType: "application/x-thrift",
 			want: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -223,6 +226,12 @@ func TestZipkinPlugin(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "JSON rather than thrift",
+			datafile:    "testdata/json/brave-tracer-example.json",
+			contentType: "application/json",
+			want:        []testutil.Metric{},
+		},
 	}
 
 	z := &Zipkin{
@@ -240,7 +249,7 @@ func TestZipkinPlugin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAcc.ClearMetrics()
-			if err := postThriftData(tt.thriftDataFile, z.address); err != nil {
+			if err := postThriftData(tt.datafile, z.address, tt.contentType); err != nil {
 				t.Fatalf("Posting data to http endpoint /api/v1/spans failed. Error: %s\n", err)
 			}
 			mockAcc.Wait(len(tt.want)) //Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
@@ -266,19 +275,18 @@ func TestZipkinPlugin(t *testing.T) {
 	}
 }
 
-func postThriftData(datafile, address string) error {
+func postThriftData(datafile, address, contentType string) error {
 	dat, err := ioutil.ReadFile(datafile)
 	if err != nil {
 		return fmt.Errorf("could not read from data file %s", datafile)
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/v1/spans", address), bytes.NewReader(dat))
-
 	if err != nil {
 		return fmt.Errorf("HTTP request creation failed")
 	}
 
-	req.Header.Set("Content-Type", "application/x-thrift")
+	req.Header.Set("Content-Type", contentType)
 	client := &http.Client{}
 	_, err = client.Do(req)
 	if err != nil {
