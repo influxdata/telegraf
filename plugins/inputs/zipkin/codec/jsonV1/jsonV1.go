@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
-	"github.com/uber/jaeger/thrift-gen/zipkincore"
+	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
 
 // JSON decodes spans from  bodies `POST`ed to the spans endpoint
@@ -20,12 +20,13 @@ func (j *JSON) Decode(octets []byte) ([]codec.Span, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	res := make([]codec.Span, len(spans))
-	for i, s := range spans {
-		if err := s.Validate(); err != nil {
+	for i := range spans {
+		if err := spans[i].Validate(); err != nil {
 			return nil, err
 		}
-		res[i] = &s
+		res[i] = &spans[i]
 	}
 	return res, nil
 }
@@ -89,8 +90,8 @@ func (s *span) Name() string {
 
 func (s *span) Annotations() []codec.Annotation {
 	res := make([]codec.Annotation, len(s.Anno))
-	for i, a := range s.Anno {
-		res[i] = &a
+	for i := range s.Anno {
+		res[i] = &s.Anno[i]
 	}
 	return res
 }
@@ -104,7 +105,7 @@ func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 		if a.Value() != "" && a.Key() == "" {
 			return nil, fmt.Errorf("No at binaryAnnotations[%d]", i)
 		}
-		res[i] = &a
+		res[i] = &s.BAnno[i]
 	}
 	return res, nil
 }

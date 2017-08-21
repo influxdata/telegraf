@@ -11,6 +11,7 @@ import (
 )
 
 func TestJSON_Decode(t *testing.T) {
+	addr := func(i int64) *int64 { return &i }
 	tests := []struct {
 		name    string
 		octets  []byte
@@ -40,6 +41,58 @@ func TestJSON_Decode(t *testing.T) {
 					TraceID:  "6b221d5bc9e6496c",
 					SpanName: "get-traces",
 					ID:       "6b221d5bc9e6496c",
+				},
+			},
+		},
+		{
+			name: "Decodes two spans",
+			octets: []byte(`
+			[
+				{
+				  "traceId": "6b221d5bc9e6496c",
+				  "name": "get-traces",
+				  "id": "6b221d5bc9e6496c"
+				},
+				{
+					"traceId": "6b221d5bc9e6496c",
+					"name": "get-traces",
+					"id": "c6946e9cb5d122b6",
+					"parentId": "6b221d5bc9e6496c",
+					"duration": 10000
+				}
+			]`),
+			want: []codec.Span{
+				&span{
+					TraceID:  "6b221d5bc9e6496c",
+					SpanName: "get-traces",
+					ID:       "6b221d5bc9e6496c",
+				},
+				&span{
+					TraceID:  "6b221d5bc9e6496c",
+					SpanName: "get-traces",
+					ID:       "c6946e9cb5d122b6",
+					ParentID: "6b221d5bc9e6496c",
+					Dur:      addr(10000),
+				},
+			},
+		},
+		{
+			name: "Decodes trace with timestamp",
+			octets: []byte(`
+			[
+				{
+				  "traceId": "6b221d5bc9e6496c",
+				  "name": "get-traces",
+				  "id": "6b221d5bc9e6496c",
+				  "timestamp": 1503031538791000
+				}
+			]`),
+			want: []codec.Span{
+				&span{
+					TraceID:  "6b221d5bc9e6496c",
+					SpanName: "get-traces",
+					ID:       "6b221d5bc9e6496c",
+					Time:     addr(1503031538791000),
 				},
 			},
 		},
@@ -471,6 +524,11 @@ func Test_span_SpanID(t *testing.T) {
 			name:    "Span IDs cannot be null",
 			ID:      "",
 			wantErr: true,
+		},
+		{
+			name: "converts known id correctly",
+			ID:   "b26412d1ac16767d",
+			want: "12854419928166856317",
 		},
 		{
 			name: "converts hex string correctly",
