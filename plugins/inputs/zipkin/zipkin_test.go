@@ -224,12 +224,337 @@ func TestZipkinPlugin(t *testing.T) {
 				},
 			},
 		},
-		/*{
+		{
 			name:        "JSON rather than thrift",
 			datafile:    "testdata/json/brave-tracer-example.json",
 			contentType: "application/json",
-			want:        []testutil.Metric{},
-		},*/
+			want: []testutil.Metric{
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":           "12854419928166856317",
+						"name":         "http:/hi2",
+						"parent_id":    "8291962692415852504",
+						"service_name": "test",
+						"trace_id":     "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					}, Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "sr",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "12854419928166856317",
+						"name":          "http:/hi2",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "ss",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "12854419928166856317",
+						"name":          "http:/hi2",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "Demo2Application",
+						"annotation_key": "mvc.controller.class",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "hi2",
+						"annotation_key": "mvc.controller.method",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "192.168.0.8:test:8010",
+						"annotation_key": "spring.instance_id",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":           "12854419928166856317",
+						"name":         "http:/hi2",
+						"parent_id":    "8291962692415852504",
+						"service_name": "test",
+						"trace_id":     "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "cs",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "12854419928166856317",
+						"name":          "http:/hi2",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "cr",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "12854419928166856317",
+						"name":          "http:/hi2",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "localhost",
+						"annotation_key": "http.host",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "GET",
+						"annotation_key": "http.method",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "/hi2",
+						"annotation_key": "http.path",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "http://localhost:8010/hi2",
+						"annotation_key": "http.url",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "192.168.0.8:test:8010",
+						"annotation_key": "spring.instance_id",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":           "8291962692415852504",
+						"name":         "http:/hi",
+						"parent_id":    "8291962692415852504",
+						"service_name": "test",
+						"trace_id":     "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "sr",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "8291962692415852504",
+						"name":          "http:/hi",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "ss",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "8291962692415852504",
+						"name":          "http:/hi",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "Demo2Application",
+						"annotation_key": "mvc.controller.class",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "8291962692415852504",
+						"name":           "http:/hi",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "hi",
+						"annotation_key": "mvc.controller.method",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "8291962692415852504",
+						"name":           "http:/hi",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "192.168.0.8:test:8010",
+						"annotation_key": "spring.instance_id",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "8291962692415852504",
+						"name":           "http:/hi",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+			},
+		},
 	}
 
 	z := &Zipkin{
@@ -259,7 +584,6 @@ func TestZipkinPlugin(t *testing.T) {
 			for _, m := range mockAcc.Metrics {
 				got = append(got, *m)
 			}
-
 			if !cmp.Equal(tt.want, got) {
 				t.Fatalf("Got != Want\n %s", cmp.Diff(tt.want, got))
 			}
