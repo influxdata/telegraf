@@ -7,7 +7,6 @@ import (
 	"mime"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
@@ -18,9 +17,8 @@ import (
 // SpanHandler is an implementation of a Handler which accepts zipkin thrift
 // span data and sends it to the recorder
 type SpanHandler struct {
-	Path      string
-	recorder  Recorder
-	waitGroup *sync.WaitGroup
+	Path     string
+	recorder Recorder
 }
 
 // NewSpanHandler returns a new server instance given path to handle

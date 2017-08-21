@@ -85,7 +85,9 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 
 	router := mux.NewRouter()
 	converter := NewLineProtocolConverter(acc)
-	z.handler.Register(router, converter)
+	if err := z.handler.Register(router, converter); err != nil {
+		return err
+	}
 
 	z.server = &http.Server{
 		Handler: router,
