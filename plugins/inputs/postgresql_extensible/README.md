@@ -41,7 +41,7 @@ The example below has two queries are specified, with the following parameters:
   # "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
   # because the databases variable was set to ['postgres', 'pgbench' ] and the
   # withdbname was true.
-  # Be careful that if the withdbname is set to false you d'ont have to define
+  # Be careful that if the withdbname is set to false you don't have to define
   # the where clause (aka with the dbname)
   # the tagvalue field is used to define custom tags (separated by comas)
   #

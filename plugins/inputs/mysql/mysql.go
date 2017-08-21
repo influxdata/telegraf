@@ -21,7 +21,7 @@ type Mysql struct {
 	Servers                             []string `toml:"servers"`
 	PerfEventsStatementsDigestTextLimit int64    `toml:"perf_events_statements_digest_text_limit"`
 	PerfEventsStatementsLimit           int64    `toml:"perf_events_statements_limit"`
-	PerfEventsStatementsTimeLimit       int64    `toml:"perf_events_statemetns_time_limit"`
+	PerfEventsStatementsTimeLimit       int64    `toml:"perf_events_statements_time_limit"`
 	TableSchemaDatabases                []string `toml:"table_schema_databases"`
 	GatherProcessList                   bool     `toml:"gather_process_list"`
 	GatherUserStatistics                bool     `toml:"gather_user_statistics"`
