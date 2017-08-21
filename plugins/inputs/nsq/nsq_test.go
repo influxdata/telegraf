@@ -45,7 +45,7 @@ func TestNSQStats(t *testing.T) {
 			},
 			map[string]string{
 				"server_host":    host,
-				"server_version": "0.3.6",
+				"server_version": "1.0.0-compat",
 			},
 		},
 		{
@@ -58,7 +58,7 @@ func TestNSQStats(t *testing.T) {
 			},
 			map[string]string{
 				"server_host":    host,
-				"server_version": "0.3.6",
+				"server_version": "1.0.0-compat",
 				"topic":          "t1"},
 		},
 		{
@@ -75,7 +75,7 @@ func TestNSQStats(t *testing.T) {
 			},
 			map[string]string{
 				"server_host":    host,
-				"server_version": "0.3.6",
+				"server_version": "1.0.0-compat",
 				"topic":          "t1",
 				"channel":        "c1",
 			},
@@ -89,8 +89,8 @@ func TestNSQStats(t *testing.T) {
 				"finish_count":   int64(9),
 				"requeue_count":  int64(10),
 			},
-			map[string]string{"server_host": host, "server_version": "0.3.6",
-				"topic": "t1", "channel": "c1", "client_name": "373a715cd990",
+			map[string]string{"server_host": host, "server_version": "1.0.0-compat",
+				"topic": "t1", "channel": "c1",
 				"client_id": "373a715cd990", "client_hostname": "373a715cd990",
 				"client_version": "V2", "client_address": "172.17.0.11:35560",
 				"client_tls": "false", "client_snappy": "false",
@@ -107,7 +107,7 @@ func TestNSQStats(t *testing.T) {
 			},
 			map[string]string{
 				"server_host":    host,
-				"server_version": "0.3.6",
+				"server_version": "1.0.0-compat",
 				"topic":          "t2"},
 		},
 		{
@@ -124,7 +124,7 @@ func TestNSQStats(t *testing.T) {
 			},
 			map[string]string{
 				"server_host":    host,
-				"server_version": "0.3.6",
+				"server_version": "1.0.0-compat",
 				"topic":          "t2",
 				"channel":        "c2",
 			},
@@ -138,8 +138,8 @@ func TestNSQStats(t *testing.T) {
 				"finish_count":   int64(25),
 				"requeue_count":  int64(26),
 			},
-			map[string]string{"server_host": host, "server_version": "0.3.6",
-				"topic": "t2", "channel": "c2", "client_name": "377569bd462b",
+			map[string]string{"server_host": host, "server_version": "1.0.0-compat",
+				"topic": "t2", "channel": "c2",
 				"client_id": "377569bd462b", "client_hostname": "377569bd462b",
 				"client_version": "V2", "client_address": "172.17.0.8:48145",
 				"client_user_agent": "go-nsq/1.0.5", "client_tls": "true",
@@ -154,10 +154,7 @@ func TestNSQStats(t *testing.T) {
 
 var response = `
 {
-  "status_code": 200,
-  "status_txt": "OK",
-  "data": {
-    "version": "0.3.6",
+    "version": "1.0.0-compat",
     "health": "OK",
     "start_time": 1452021674,
     "topics": [
@@ -175,7 +172,6 @@ var response = `
             "timeout_count": 6,
             "clients": [
               {
-                "name": "373a715cd990",
                 "client_id": "373a715cd990",
                 "hostname": "373a715cd990",
                 "version": "V2",
@@ -228,7 +224,6 @@ var response = `
             "timeout_count": 21,
             "clients": [
               {
-                "name": "377569bd462b",
                 "client_id": "377569bd462b",
                 "hostname": "377569bd462b",
                 "version": "V2",
@@ -269,5 +264,5 @@ var response = `
       }
     ]
   }
-}
+
 `

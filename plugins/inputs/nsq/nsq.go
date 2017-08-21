@@ -101,7 +101,7 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s returned HTTP status %s", u.String(), r.Status)
 	}
 
-	s := &NSQStats{}
+	s := &NSQStatsData{}
 	err = json.NewDecoder(r.Body).Decode(s)
 	if err != nil {
 		return fmt.Errorf(`Error parsing response: %s`, err)
@@ -109,20 +109,20 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 
 	tags := map[string]string{
 		`server_host`:    u.Host,
-		`server_version`: s.Data.Version,
+		`server_version`: s.Version,
 	}
 
 	fields := make(map[string]interface{})
-	if s.Data.Health == `OK` {
+	if s.Health == `OK` {
 		fields["server_count"] = int64(1)
 	} else {
 		fields["server_count"] = int64(0)
 	}
-	fields["topic_count"] = int64(len(s.Data.Topics))
+	fields["topic_count"] = int64(len(s.Topics))
 
 	acc.AddFields("nsq_server", fields, tags)
-	for _, t := range s.Data.Topics {
-		topicStats(t, acc, u.Host, s.Data.Version)
+	for _, t := range s.Topics {
+		topicStats(t, acc, u.Host, s.Version)
 	}
 
 	return nil
@@ -189,7 +189,6 @@ func clientStats(c ClientStats, acc telegraf.Accumulator, host, version, topic, 
 		"server_version":    version,
 		"topic":             topic,
 		"channel":           channel,
-		"client_name":       c.Name,
 		"client_id":         c.ID,
 		"client_hostname":   c.Hostname,
 		"client_version":    c.Version,
@@ -208,12 +207,6 @@ func clientStats(c ClientStats, acc telegraf.Accumulator, host, version, topic, 
 		"requeue_count":  c.RequeueCount,
 	}
 	acc.AddFields("nsq_client", fields, tags)
-}
-
-type NSQStats struct {
-	Code int64        `json:"status_code"`
-	Txt  string       `json:"status_txt"`
-	Data NSQStatsData `json:"data"`
 }
 
 type NSQStatsData struct {
@@ -248,7 +241,6 @@ type ChannelStats struct {
 }
 
 type ClientStats struct {
-	Name                          string `json:"name"`
 	ID                            string `json:"client_id"`
 	Hostname                      string `json:"hostname"`
 	Version                       string `json:"version"`
