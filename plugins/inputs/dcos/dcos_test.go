@@ -41,7 +41,7 @@ var AGENT_CONTAINER_METRICS_JSON_OK = map[string]map[string]string{
 
 var AGENT_CONTAINER_APP_METRICS_JSON_OK = map[string]map[string]string{
 	"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0": {
-		"619e0c1a-a059-4801-ae60-75f022f89df7": `{"datapoints":[{"name":"dcos.metrics.module.container_received_bytes_per_sec","value":0,"unit":"","timestamp":"2017-08-21T08:22:42Z"},{"name":"dcos.metrics.module.container_throttled_bytes_per_sec","value":0,"unit":"","timestamp":"2017-08-21T08:22:42Z"}],"dimensions":{"mesos_id":"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0","cluster_id":"2f4b3291-ee34-4779-b7bd-015f6594e9c0","container_id":"619e0c1a-a059-4801-ae60-75f022f89df7","executor_id":"basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001","framework_id":"a52c2640-d3b9-49c8-b92f-a17b2c25cd70-0001","hostname":"192.168.65.111"}
+		"619e0c1a-a059-4801-ae60-75f022f89df7": `{"datapoints":[{"name":"dcos.metrics.module.container_received_bytes_per_sec","value":0,"unit":"","timestamp":"2017-08-21T08:22:42Z"},{"name":"dcos.metrics.module.container_throttled_bytes_per_sec","value":0,"unit":"","timestamp":"2017-08-21T08:22:42Z"}],"dimensions":{"mesos_id":"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0","cluster_id":"2f4b3291-ee34-4779-b7bd-015f6594e9c0","container_id":"619e0c1a-a059-4801-ae60-75f022f89df7","executor_id":"basic-0.1b75af51-7b65-11e7-be7d-70b3d5800001","framework_id":"a52c2640-d3b9-49c8-b92f-a17b2c25cd70-0001","hostname":"192.168.65.111","tag_to_remove": ""}
 }`,
 	},
 }

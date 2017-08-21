@@ -246,7 +246,9 @@ func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricTyp
 			fields := make(map[string]interface{})
 
 			for k, v := range metric.Dimensions {
-				tags[k] = v
+				if v != "" { //remove tags with empty value
+					tags[k] = v
+				}
 			}
 			tags["scope"] = metricType
 			tags["cluster_url"] = m.ClusterURL
@@ -254,9 +256,12 @@ func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricTyp
 			for _, dp := range points {
 				fields[dp.Name] = dp.Value
 				for k, v := range dp.Tags {
-					tags[k] = v
+					if v != "" { //remove tags with empty value
+						tags[k] = v
+					}
 				}
 			}
+			//fmt.Println(measurementSuffix, fields, tags)
 			acc.AddFields("dcos_"+measurementSuffix, fields, tags, now)
 		}
 	}
@@ -296,11 +301,6 @@ func (m *Dcos) prepareMetric(metric *metric, metricType string, acc telegraf.Acc
 //preProcessDataPoint checks fields and tags, modifies data if needed, and filters metric Return true if a datapoint should be added to measurement
 func (m *Dcos) preProcessDataPoint(datapoint *datapoint, metricType string) bool {
 	for k, v := range datapoint.Tags {
-		if v == "" {
-			//remove tags with empty value
-			delete(datapoint.Tags, k)
-			continue
-		}
 		switch k {
 		case "interface": //filter network interfaces
 			if isItemFiltered(m.NetworkInterfaces, v) {
