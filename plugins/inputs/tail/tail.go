@@ -1,3 +1,5 @@
+// +build !solaris
+
 package tail
 
 import (
@@ -95,6 +97,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 					Location:  seek,
 					MustExist: true,
 					Pipe:      t.Pipe,
+					Logger:    tail.DiscardingLogger,
 				})
 			if err != nil {
 				acc.AddError(err)

@@ -34,6 +34,7 @@ type InfluxDB struct {
 	Timeout          internal.Duration
 	UDPPayload       int    `toml:"udp_payload"`
 	HTTPProxy        string `toml:"http_proxy"`
+	ContentEncoding  string `toml:"content_encoding"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -87,6 +88,9 @@ var sampleConfig = `
 
   ## HTTP Proxy Config
   # http_proxy = "http://corporate.proxy:3128"
+  
+  ## Compress each HTTP request payload using GZIP.
+  # content_encoding = "gzip"
 `
 
 // Connect initiates the primary connection to the range of provided URLs
@@ -121,13 +125,14 @@ func (i *InfluxDB) Connect() error {
 		default:
 			// If URL doesn't start with "udp", assume HTTP client
 			config := client.HTTPConfig{
-				URL:       u,
-				Timeout:   i.Timeout.Duration,
-				TLSConfig: tlsConfig,
-				UserAgent: i.UserAgent,
-				Username:  i.Username,
-				Password:  i.Password,
-				HTTPProxy: i.HTTPProxy,
+				URL:             u,
+				Timeout:         i.Timeout.Duration,
+				TLSConfig:       tlsConfig,
+				UserAgent:       i.UserAgent,
+				Username:        i.Username,
+				Password:        i.Password,
+				HTTPProxy:       i.HTTPProxy,
+				ContentEncoding: i.ContentEncoding,
 			}
 			wp := client.WriteParams{
 				Database:        i.Database,

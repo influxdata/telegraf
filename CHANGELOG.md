@@ -1,3 +1,5 @@
+## v1.5 [unreleased]
+
 ## v1.4 [unreleased]
 
 ### Release Notes
@@ -15,17 +17,20 @@
 ### New Plugins
 
 - [fail2ban](./plugins/inputs/fail2ban/README.md) - Thanks to @grugrut
-- [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
 - [fluentd](./plugins/inputs/fluentd/README.md) - Thanks to @DanKans
-- [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
 - [histogram](./plugins/aggregators/histogram/README.md) - Thanks to @vlamug
-- [zipkin](./plugins/inputs/zipkin/README.md) - Thanks to @adamperlin & @Ayrdrie
+- [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
+- [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
+- [salesforce](./plugins/inputs/salesforce/README.md) - Thanks to @rody
+- [tomcat](./plugins/inputs/tomcat/README.md) - Thanks to @mlindes
 - [win_services](./plugins/inputs/win_services/README.md) - Thanks to @vlastahajek
+- [zipkin](./plugins/inputs/zipkin/README.md) - Thanks to @adamperlin & @Ayrdrie
 
 ### Features
 
 - [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
 - [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
+- [#2293](https://github.com/influxdata/telegraf/pull/2293): Add TCP listener for statsd input
 - [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
 - [#2817](https://github.com/influxdata/telegraf/pull/2817): Add timeout option to IPMI sensor plugin
 - [#2883](https://github.com/influxdata/telegraf/pull/2883): Add support for an optional SSL/TLS configuration to nginx input plugin
@@ -53,6 +58,12 @@
 - [#3080](https://github.com/influxdata/telegraf/pull/3080): Add zipkin input plugin.
 - [#3023](https://github.com/influxdata/telegraf/pull/3023): Add Windows Services input plugin.
 - [#3098](https://github.com/influxdata/telegraf/pull/3098): Add path tag to logparser containing path of logfile.
+- [#3075](https://github.com/influxdata/telegraf/pull/3075): Add salesforce input plugin.
+- [#3097](https://github.com/influxdata/telegraf/pull/3097): Add option to run varnish under sudo.
+- [#3119](https://github.com/influxdata/telegraf/pull/3119): Add weighted_io_time to diskio input.
+- [#2978](https://github.com/influxdata/telegraf/pull/2978): Add gzip content-encoding support to influxdb output.
+- [#3127](https://github.com/influxdata/telegraf/pull/3127): Allow using system plugin in Windows.
+- [#3112](https://github.com/influxdata/telegraf/pull/3112): Add tomcat input plugin.
 
 ### Bugfixes
 
@@ -80,6 +91,10 @@
 - [#2457](https://github.com/influxdata/telegraf/issues/2457): Fix docker memory and cpu reporting in Windows.
 - [#3058](https://github.com/influxdata/telegraf/issues/3058): Allow iptable entries with trailing text.
 - [#1680](https://github.com/influxdata/telegraf/issues/1680): Sanitize password from couchbase metric.
+- [#3104](https://github.com/influxdata/telegraf/issues/3104): Converge to typed value in prometheus output.
+- [#2899](https://github.com/influxdata/telegraf/issues/2899): Skip compilcation of logparser and tail on solaris.
+- [#2951](https://github.com/influxdata/telegraf/issues/2951): Discard logging from tail library.
+- [#3126](https://github.com/influxdata/telegraf/pull/3126): Remove log message on ping timeout.
 
 ## v1.3.5 [2017-07-26]
 

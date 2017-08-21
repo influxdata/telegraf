@@ -254,7 +254,17 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				}
 				p.fam[mname] = fam
 			} else {
-				if fam.ValueType != vt {
+				// Metrics can be untyped even though the corresponding plugin
+				// creates them with a type.  This happens when the metric was
+				// transferred over the network in a format that does not
+				// preserve value type and received using an input such as a
+				// queue consumer.  To avoid issues we automatically upgrade
+				// value type from untyped to a typed metric.
+				if fam.ValueType == prometheus.UntypedValue {
+					fam.ValueType = vt
+				}
+
+				if vt != prometheus.UntypedValue && fam.ValueType != vt {
 					// Don't return an error since this would be a permanent error
 					log.Printf("Mixed ValueType for measurement %q; dropping point", point.Name())
 					break

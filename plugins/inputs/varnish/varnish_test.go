@@ -11,8 +11,8 @@ import (
 	"testing"
 )
 
-func fakeVarnishStat(output string) func(string) (*bytes.Buffer, error) {
-	return func(string) (*bytes.Buffer, error) {
+func fakeVarnishStat(output string, useSudo bool) func(string, bool) (*bytes.Buffer, error) {
+	return func(string, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -20,7 +20,7 @@ func fakeVarnishStat(output string) func(string) (*bytes.Buffer, error) {
 func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(smOutput),
+		run:   fakeVarnishStat(smOutput, false),
 		Stats: []string{"*"},
 	}
 	v.Gather(acc)
@@ -36,7 +36,7 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput),
+		run:   fakeVarnishStat(fullOutput, true),
 		Stats: []string{"*"},
 	}
 	err := v.Gather(acc)
@@ -51,7 +51,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput),
+		run:   fakeVarnishStat(fullOutput, false),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
 	err := v.Gather(acc)
@@ -74,7 +74,7 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Varnish{
-			run:   fakeVarnishStat(fullOutput),
+			run:   fakeVarnishStat(fullOutput, true),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)
