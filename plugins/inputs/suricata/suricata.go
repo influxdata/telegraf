@@ -52,17 +52,19 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 	var err error
 	s.Lock()
 	defer s.Unlock()
-	os.Remove(s.Source)
-	s.InputListener, err = net.ListenUnix("unix", &net.UnixAddr{
-		Name: s.Source,
-		Net:  "unix",
-	})
-	if err != nil {
-		return err
+	if s.InputListener == nil {
+		os.Remove(s.Source)
+		s.InputListener, err = net.ListenUnix("unix", &net.UnixAddr{
+			Name: s.Source,
+			Net:  "unix",
+		})
+		if err != nil {
+			return err
+		}
+		s.CloseChan = make(chan bool)
+		s.InputListener.SetUnlinkOnClose(true)
+		go s.handleServerConnection(acc)
 	}
-	s.CloseChan = make(chan bool)
-	s.InputListener.SetUnlinkOnClose(true)
-	go s.handleServerConnection(acc)
 	return nil
 }
 
@@ -84,6 +86,7 @@ func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 	for {
 		select {
 		case <-s.CloseChan:
+			s.InputListener = nil
 			close(s.ClosedChan)
 			return
 		default:
@@ -99,6 +102,7 @@ func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 				case <-s.CloseChan:
 					conn.Close()
 					s.InputListener.Close()
+					s.InputListener = nil
 					close(s.ClosedChan)
 					return
 				default:
