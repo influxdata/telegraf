@@ -172,16 +172,16 @@ func (s *span) Name() string {
 
 func (s *span) Annotations() []codec.Annotation {
 	res := make([]codec.Annotation, len(s.Span.Annotations))
-	for i, a := range s.Span.Annotations {
-		res[i] = &annotation{a}
+	for i := range s.Span.Annotations {
+		res[i] = &annotation{s.Span.Annotations[i]}
 	}
 	return res
 }
 
 func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 	res := make([]codec.BinaryAnnotation, len(s.Span.BinaryAnnotations))
-	for i, a := range s.Span.BinaryAnnotations {
-		res[i] = &binaryAnnotation{a}
+	for i := range s.Span.BinaryAnnotations {
+		res[i] = &binaryAnnotation{s.Span.BinaryAnnotations[i]}
 	}
 	return res, nil
 }
