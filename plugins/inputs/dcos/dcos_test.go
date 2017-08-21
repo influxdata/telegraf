@@ -49,7 +49,7 @@ var MESOS_MASTER_STATE_SUMMARY_JSON_FAIL = `{"hostname":"192.168.65.90","cluster
 
 //missing definition for b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S1
 var AGENT_METRICS_JSON_FAIL = map[string]string{
-	"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0": `{"datapoints":[{"name":"system.uptime","value":42457,"unit":"count","timestamp":"2017-08-08T13:14:55.293813024Z"},{"name":"cpu.cores","value":4,"unit":"count","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.total","value":1.35,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.user","value":0.83,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.system","value":0.52,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.idle","value":98.6,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.wait","value":0,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"load.1min","value":0.23,"unit":"count","timestamp":"2017-08-08T13:14:55.295350679Z"},{"name":"load.5min","value":0.13,"unit":"count","timestamp":"2017-08-08T13:14:55.295350679Z"},{"name":"load.15min","value":0.14,"unit":"count","timestamp":"2017-08-08T13:14:55.295350679Z"},{"name":"filesystem.capacity.total","value":53660876800,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.capacity.used","value":3048071168,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.capacity.free","value":50612805632,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.inode.total","value":26214400,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.inode.used","value":111584,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.inode.free","value":26102816,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.capacity.total","value":1063256064,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.capacity.used","value":144031744,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.capacity.free","value":919224320,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.inode.total","value":524288,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.inode.used","value":328,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.inode.free","value":523960,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.capacity.total","value":50432839680,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.capacity.used","value":93216768,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.capacity.free","value":50339622912,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.inode.total","value":24637440,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.inode.used","value":17,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.inode.free","value":24637423,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.capacity.total","value":53660876800,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.capacity.used","value":3048071168,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.capacity.free","value":50612805632,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.inode.total","value":26214400,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.inode.used","value":111584,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.inode.free","value":26102816,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"memory.total","value":6088818688,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"memory.free","value":5148024832,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"memory.buffers","value":970752,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"memory.cached","value":415162368,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"swap.total","value":2147479552,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"swap.free","value":2147479552,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"swap.used","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.in","value":614077,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.out","value":605619,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.in.packets","value":7675,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.out.packets","value":7386,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.in","value":152540929,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.out","value":181719668,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.in.packets","value":1155484,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.out.packets","value":1190033,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.in","value":648,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.out","value":648,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.in.packets","value":8,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.out.packets","value":8,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.in","value":648,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.out","value":648,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.in.packets","value":8,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.out.packets","value":8,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.in","value":338336992,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.out","value":338336992,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.in.packets","value":161857,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.out.packets","value":161857,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.in","value":2068,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.in.packets","value":31,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"process.count","value":215,"unit":"count","timestamp":"2017-08-08T13:14:55.31709865Z"}],"dimensions":{"mesos_id":"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0","cluster_id":"2f4b3291-ee34-4779-b7bd-015f6594e9c0","hostname":"192.168.65.111"}}`,
+	"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0": `{"datapoints":[{"name":"system.uptime","value":42457,"unit":"count","timestamp":"2017-08-08T13:14:55.293813024Z"},{"name":"cpu.cores","value":4,"unit":"count","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.total","value":1.35,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.user","value":0.83,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.system","value":0.52,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.idle","value":98.6,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"cpu.wait","value":0,"unit":"percent","timestamp":"2017-08-08T13:14:55.293833731Z"},{"name":"load.1min","value":0.23,"unit":"count","timestamp":"2017-08-08T13:14:55.295350679Z"},{"name":"load.5min","value":0.13,"unit":"count","timestamp":"2017-08-08T13:14:55.295350679Z"},{"name":"load.15min","value":0.14,"unit":"count","timestamp":"2017-08-08T13:14:55.295350679Z"},{"name":"filesystem.capacity.total","value":53660876800,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.capacity.used","value":3048071168,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.capacity.free","value":50612805632,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.inode.total","value":26214400,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.inode.used","value":111584,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.inode.free","value":26102816,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/"}},{"name":"filesystem.capacity.total","value":1063256064,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.capacity.used","value":144031744,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.capacity.free","value":919224320,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.inode.total","value":524288,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.inode.used","value":328,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.inode.free","value":523960,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/boot"}},{"name":"filesystem.capacity.total","value":50432839680,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.capacity.used","value":93216768,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.capacity.free","value":50339622912,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.inode.total","value":24637440,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.inode.used","value":17,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.inode.free","value":24637423,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/home"}},{"name":"filesystem.capacity.total","value":53660876800,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.capacity.used","value":3048071168,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.capacity.free","value":50612805632,"unit":"bytes","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.inode.total","value":26214400,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.inode.used","value":111584,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"filesystem.inode.free","value":26102816,"unit":"count","timestamp":"2017-08-08T13:14:55.295481144Z","tags":{"path":"/var/lib/docker/overlay"}},{"name":"memory.total","value":6088818688,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"memory.free","value":5148024832,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"memory.buffers","value":970752,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"memory.cached","value":415162368,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"swap.total","value":2147479552,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"swap.free","value":2147479552,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"swap.used","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.297092962Z"},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"spartan"}},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"d-dcos"}},{"name":"network.in","value":614077,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.out","value":605619,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.in.packets","value":7675,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.out.packets","value":7386,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s3"}},{"name":"network.in","value":152540929,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.out","value":181719668,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.in.packets","value":1155484,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.out.packets","value":1190033,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"enp0s8"}},{"name":"network.in","value":648,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.out","value":648,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.in.packets","value":8,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.out.packets","value":8,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth0a57a71"}},{"name":"network.in","value":648,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.out","value":648,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.in.packets","value":8,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.out.packets","value":8,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"veth7134f20"}},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"dummy0"}},{"name":"network.in","value":338336992,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.out","value":338336992,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.in.packets","value":161857,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.out.packets","value":161857,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"lo"}},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"vtep1024"}},{"name":"network.in","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.in.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"minuteman"}},{"name":"network.in","value":2068,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.out","value":0,"unit":"bytes","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.in.packets","value":31,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.out.packets","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.in.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.out.dropped","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.in.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"network.out.errors","value":0,"unit":"count","timestamp":"2017-08-08T13:14:55.298229692Z","tags":{"interface":"docker0"}},{"name":"process_count","value":215,"unit":"count","timestamp":"2017-08-08T13:14:55.31709865Z"}],"dimensions":{"mesos_id":"b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0","cluster_id":"2f4b3291-ee34-4779-b7bd-015f6594e9c0","hostname":"192.168.65.111"}}`,
 }
 
 //missing definition for b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S1
@@ -211,6 +211,12 @@ func TestMain(m *testing.M) {
 	os.Exit(rc)
 }
 
+func TestInfo(t *testing.T) {
+	dcos := &Dcos{}
+	assert.NotEmpty(t, dcos.SampleConfig())
+	assert.NotEmpty(t, dcos.Description())
+}
+
 func TestGatherNodeMetrics(t *testing.T) {
 	clusterUrl := "http://" + masterTestServer.Listener.Addr().String() + "/1"
 	dcos := &Dcos{
@@ -226,7 +232,7 @@ func TestGatherNodeMetrics(t *testing.T) {
 	assert.Equal(t, acc.NMetrics(), uint64(65))
 
 	fieldsNode := map[string]interface{}{
-		"uptime": 42457.,
+		"uptime_count": 42457.,
 	}
 	tagsNode := map[string]string{
 		"mesos_id":    "b0da75eb-bbe7-4ad9-80a2-582890b16a1b-S0",
@@ -238,34 +244,34 @@ func TestGatherNodeMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "dcos_system", fieldsNode, tagsNode)
 
 	fieldsNode = map[string]interface{}{
-		"cores":  4.,
-		"total":  1.35,
-		"user":   0.83,
-		"system": 0.52,
-		"idle":   98.6,
-		"wait":   0.,
+		"cores_count":    4.,
+		"total_percent":  1.35,
+		"user_percent":   0.83,
+		"system_percent": 0.52,
+		"idle_percent":   98.6,
+		"wait_percent":   0.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_cpu", fieldsNode, tagsNode)
 
 	fieldsNode = map[string]interface{}{
-		"1min":  0.23,
-		"5min":  0.13,
-		"15min": 0.14,
+		"1min_count":  0.23,
+		"5min_count":  0.13,
+		"15min_count": 0.14,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_load", fieldsNode, tagsNode)
 
 	fieldsNode = map[string]interface{}{
-		"total":   6088818688.,
-		"free":    5148024832.,
-		"buffers": 970752.,
-		"cached":  415162368.,
+		"total_bytes":   6088818688.,
+		"free_bytes":    5148024832.,
+		"buffers_bytes": 970752.,
+		"cached_bytes":  415162368.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_memory", fieldsNode, tagsNode)
 
 	fieldsNode = map[string]interface{}{
-		"total": 2147479552.,
-		"free":  2147479552.,
-		"used":  0.,
+		"total_bytes": 2147479552.,
+		"free_bytes":  2147479552.,
+		"used_bytes":  0.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_swap", fieldsNode, tagsNode)
 
@@ -276,61 +282,61 @@ func TestGatherNodeMetrics(t *testing.T) {
 
 	tagsNode["path"] = "/"
 	fieldsNode = map[string]interface{}{
-		"capacity_total": 53660876800.,
-		"capacity_used":  3048071168.,
-		"capacity_free":  50612805632.,
-		"inode_total":    26214400.,
-		"inode_used":     111584.,
-		"inode_free":     26102816.,
+		"capacity_total_bytes": 53660876800.,
+		"capacity_used_bytes":  3048071168.,
+		"capacity_free_bytes":  50612805632.,
+		"inode_total_count":    26214400.,
+		"inode_used_count":     111584.,
+		"inode_free_count":     26102816.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
 
 	tagsNode["path"] = "/"
 	fieldsNode = map[string]interface{}{
-		"capacity_total": 53660876800.,
-		"capacity_used":  3048071168.,
-		"capacity_free":  50612805632.,
-		"inode_total":    26214400.,
-		"inode_used":     111584.,
-		"inode_free":     26102816.,
+		"capacity_total_bytes": 53660876800.,
+		"capacity_used_bytes":  3048071168.,
+		"capacity_free_bytes":  50612805632.,
+		"inode_total_count":    26214400.,
+		"inode_used_count":     111584.,
+		"inode_free_count":     26102816.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
 
 	tagsNode["path"] = "/var/lib/docker/overlay"
 	fieldsNode = map[string]interface{}{
-		"capacity_total": 53660876800.,
-		"capacity_used":  3048071168.,
-		"capacity_free":  50612805632.,
-		"inode_total":    26214400.,
-		"inode_used":     111584.,
-		"inode_free":     26102816.,
+		"capacity_total_bytes": 53660876800.,
+		"capacity_used_bytes":  3048071168.,
+		"capacity_free_bytes":  50612805632.,
+		"inode_total_count":    26214400.,
+		"inode_used_count":     111584.,
+		"inode_free_count":     26102816.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
 	delete(tagsNode, "path")
 
 	tagsNode["interface"] = "spartan"
 	fieldsNode = map[string]interface{}{
-		"in":          0.,
-		"out":         0.,
-		"in_packets":  0.,
-		"out_packets": 0.,
-		"in_dropped":  0.,
-		"out_dropped": 0.,
-		"in_errors":   0.,
-		"out_errors":  0.,
+		"in_bytes":          0.,
+		"out_bytes":         0.,
+		"in_packets_count":  0.,
+		"out_packets_count": 0.,
+		"in_dropped_count":  0.,
+		"out_dropped_count": 0.,
+		"in_errors_count":   0.,
+		"out_errors_count":  0.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_network", fieldsNode, tagsNode)
 
 	tagsNode["interface"] = "enp0s8"
 	fieldsNode = map[string]interface{}{
-		"in":          152540929.,
-		"out":         181719668.,
-		"in_packets":  1155484.,
-		"out_packets": 1190033.,
-		"in_dropped":  0.,
-		"out_dropped": 0.,
-		"in_errors":   0.,
-		"out_errors":  0.,
+		"in_bytes":          152540929.,
+		"out_bytes":         181719668.,
+		"in_packets_count":  1155484.,
+		"out_packets_count": 1190033.,
+		"in_dropped_count":  0.,
+		"out_dropped_count": 0.,
+		"in_errors_count":   0.,
+		"out_errors_count":  0.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_network", fieldsNode, tagsNode)
 
@@ -366,32 +372,32 @@ func TestGatherContainerMetrics(t *testing.T) {
 		"scope":               "container",
 	}
 	fieldsContainer := map[string]interface{}{
-		"user_time":      20.74,
-		"system_time":    29.95,
-		"limit":          0.2,
-		"throttled_time": 1.75146987,
+		"user_time_seconds":      20.74,
+		"system_time_seconds":    29.95,
+		"limit_count":            0.2,
+		"throttled_time_seconds": 1.75146987,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_cpus", fieldsContainer, tagsContainer)
 
 	fieldsContainer = map[string]interface{}{
-		"total": 6938624.,
-		"limit": 44040192.,
+		"total_bytes": 6938624.,
+		"limit_bytes": 44040192.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_mem", fieldsContainer, tagsContainer)
 	fieldsContainer = map[string]interface{}{
-		"limit": 0.,
-		"used":  0.,
+		"limit_bytes": 0.,
+		"used_bytes":  0.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_disk", fieldsContainer, tagsContainer)
 	fieldsContainer = map[string]interface{}{
-		"rx_packets": 0.,
-		"rx_bytes":   0.,
-		"rx_errors":  0.,
-		"rx_dropped": 0.,
-		"tx_packets": 0.,
-		"tx_bytes":   0.,
-		"tx_errors":  0.,
-		"tx_dropped": 0.,
+		"rx_packets_count": 0.,
+		"rx_bytes":         0.,
+		"rx_errors_count":  0.,
+		"rx_dropped_count": 0.,
+		"tx_packets_count": 0.,
+		"tx_bytes":         0.,
+		"tx_errors_count":  0.,
+		"tx_dropped_count": 0.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_net", fieldsContainer, tagsContainer)
 
@@ -435,88 +441,88 @@ func TestGatherFiltered(t *testing.T) {
 		"path":        "/",
 	}
 	fieldsNode := map[string]interface{}{
-		"capacity_total": 53660876800.,
-		"capacity_used":  3048071168.,
-		"capacity_free":  50612805632.,
-		"inode_total":    26214400.,
-		"inode_used":     111584.,
-		"inode_free":     26102816.,
+		"capacity_total_bytes": 53660876800.,
+		"capacity_used_bytes":  3048071168.,
+		"capacity_free_bytes":  50612805632.,
+		"inode_total_count":    26214400.,
+		"inode_used_count":     111584.,
+		"inode_free_count":     26102816.,
 	}
 
 	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
 
 	tagsNode["path"] = "/boot"
 	fieldsNode = map[string]interface{}{
-		"capacity_total": 1063256064.,
-		"capacity_used":  144031744.,
-		"capacity_free":  919224320.,
-		"inode_total":    524288.,
-		"inode_used":     328.,
-		"inode_free":     523960.,
+		"capacity_total_bytes": 1063256064.,
+		"capacity_used_bytes":  144031744.,
+		"capacity_free_bytes":  919224320.,
+		"inode_total_count":    524288.,
+		"inode_used_count":     328.,
+		"inode_free_count":     523960.,
 	}
 	acc.AssertContainsTaggedFields(t, "dcos_filesystem", fieldsNode, tagsNode)
 
 	tagsNode["path"] = "/var/lib/docker/overlay"
 	fieldsNodeNot := map[string]interface{}{
-		"capacity_total": 53660876800.,
-		"capacity_used":  3048071168.,
-		"capacity_free":  50612805632.,
-		"inode_total":    26214400.,
-		"inode_used":     111584.,
-		"inode_free":     26102816.,
+		"capacity_total_bytes": 53660876800.,
+		"capacity_used_bytes":  3048071168.,
+		"capacity_free_bytes":  50612805632.,
+		"inode_total_count":    26214400.,
+		"inode_used_count":     111584.,
+		"inode_free_count":     26102816.,
 	}
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_filesystem", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_filesystem", fieldsNodeNot, tagsNode)
 	tagsNode["path"] = "/home"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_filesystem", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_filesystem", fieldsNodeNot, tagsNode)
 
 	delete(tagsNode, "path")
 
 	fieldsNode = map[string]interface{}{
-		"in":          338336992.,
-		"out":         338336992.,
-		"in_packets":  161857.,
-		"out_packets": 161857.,
-		"in_dropped":  0.,
-		"out_dropped": 0.,
-		"in_errors":   0.,
-		"out_errors":  0.,
+		"in_bytes":          338336992.,
+		"out_bytes":         338336992.,
+		"in_packets_count":  161857.,
+		"out_packets_count": 161857.,
+		"in_dropped_count":  0.,
+		"out_dropped_count": 0.,
+		"in_errors_count":   0.,
+		"out_errors_count":  0.,
 	}
 	tagsNode["interface"] = "lo"
 
 	acc.AssertContainsTaggedFields(t, "dcos_network", fieldsNode, tagsNode)
 
 	fieldsNode = map[string]interface{}{
-		"in":          2068.,
-		"out":         0.,
-		"in_packets":  31.,
-		"out_packets": 0.,
-		"in_dropped":  0.,
-		"out_dropped": 0.,
-		"in_errors":   0.,
-		"out_errors":  0.,
+		"in_bytes":          2068.,
+		"out_bytes":         0.,
+		"in_packets_count":  31.,
+		"out_packets_count": 0.,
+		"in_dropped_count":  0.,
+		"out_dropped_count": 0.,
+		"in_errors_count":   0.,
+		"out_errors_count":  0.,
 	}
 	tagsNode["interface"] = "docker0"
 
 	acc.AssertContainsTaggedFields(t, "dcos_network", fieldsNode, tagsNode)
 
 	tagsNode["interface"] = "spartan"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 	tagsNode["interface"] = "d-dcos"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 	tagsNode["interface"] = "enp0s3"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 	tagsNode["interface"] = "enp0s8"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 	tagsNode["interface"] = "minuteman"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 	tagsNode["interface"] = "vtep1024"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 	tagsNode["interface"] = "dummy0"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 	tagsNode["interface"] = "veth7134f20"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 	tagsNode["interface"] = "veth0a57a71"
-	assertAccumulatorDoesNotIncludesTaggedFields(t, acc, "dcos_network", fieldsNodeNot, tagsNode)
+	assertAccumulatorDoesNotIncludesTaggedFields(t, &acc, "dcos_network", fieldsNodeNot, tagsNode)
 }
 
 func TestGatherErrors(t *testing.T) {
@@ -583,7 +589,7 @@ func TestGatherUnauthorized(t *testing.T) {
 	assert.Contains(t, err.Error(), "Authentication")
 }
 
-func assertAccumulatorDoesNotIncludesTaggedFields(t *testing.T, a testutil.Accumulator, measurement string, fields map[string]interface{}, tags map[string]string) {
+func assertAccumulatorDoesNotIncludesTaggedFields(t *testing.T, a *testutil.Accumulator, measurement string, fields map[string]interface{}, tags map[string]string) {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {

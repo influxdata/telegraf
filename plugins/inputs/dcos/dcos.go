@@ -34,7 +34,7 @@ var sampleConfig = `
   file_system_mounts = []
   # DC/OS agent node network interface names for which related metrics should be gathered. Leave empty for all.
   network_interfaces = []
-  # HTTP Response timeout, more than a second
+  # HTTP Response timeout, value must be more than a second
   #client_timeout = 4s
 `
 
@@ -276,7 +276,7 @@ func (m *Dcos) prepareMetric(metric *metric, metricType string, acc telegraf.Acc
 			nameSegs[1] = snakeCaser.Replace(nameSegs[1])
 		} else {
 			//metric name could be already divided  by '_'
-			nameSegs := strings.SplitN(d.Name, "_", 2)
+			nameSegs = strings.SplitN(d.Name, "_", 2)
 			if len(nameSegs) != 2 {
 				acc.AddError(fmt.Errorf("Uknown metric: '%s'", d.Name))
 				continue
@@ -318,6 +318,11 @@ func (m *Dcos) preProcessDataPoint(datapoint *datapoint, metricType string) bool
 		//(e.g. dcos.metrics.module.container_received_bytes_per_sec -> metrics_module.container_received_bytes_per_sec
 		if strings.HasPrefix(datapoint.Name, "dcos.metrics.module.") {
 			datapoint.Name = "metrics_module" + strings.TrimPrefix(datapoint.Name, "dcos.metrics.module")
+		}
+	default:
+		//add units to name, in case if name already doesn't have that
+		if len(datapoint.Unit) > 0 && !strings.HasSuffix(datapoint.Name, datapoint.Unit) {
+			datapoint.Name = strings.Join([]string{datapoint.Name, datapoint.Unit}, ".")
 		}
 	}
 	return false
