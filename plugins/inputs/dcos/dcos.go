@@ -34,8 +34,8 @@ var sampleConfig = `
   file_system_mounts = []
   # DC/OS agent node network interface names for which related metrics should be gathered. Leave empty for all.
   network_interfaces = []
-  # HTTP Response timeout
-  #client_timeout = 3s
+  # HTTP Response timeout, more than a second
+  #client_timeout = 4s
 `
 
 func (m *Dcos) Description() string {
@@ -90,7 +90,7 @@ func getClient(timeout time.Duration) *http.Client {
 
 	if client == nil {
 		tr = &http.Transport{
-			ResponseHeaderTimeout: timeout + time.Second,
+			ResponseHeaderTimeout: timeout - time.Second,
 		}
 		client = &http.Client{
 			Transport: tr,
@@ -112,7 +112,9 @@ func (m *Dcos) validateConfiguration() error {
 	}
 
 	if m.ClientTimeout.Duration.Seconds() == 0 {
-		m.ClientTimeout.Duration = time.Second * 3
+		m.ClientTimeout.Duration = time.Second * 4
+	} else if m.ClientTimeout.Duration.Seconds() <= 1 {
+		errorStrings = append(errorStrings, "Invalid configuration, timeout value must be grater than a second")
 	}
 
 	if len(errorStrings) > 0 {
@@ -143,6 +145,9 @@ func (m *Dcos) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, a := range state.Slaves {
+		if isItemFiltered(m.Agents, a.Hostname) {
+			continue
+		}
 		wg.Add(1)
 		go func(agent slave) {
 			acc.AddError(m.gatherAgentMetrics(agent, acc))
@@ -229,6 +234,95 @@ func (m *Dcos) gatherContainerAppMetrics(agentId string, containerId string, acc
 	return nil
 }
 
+//processMetric validated metric and fills accumulator with metric data
+func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricType string) {
+
+	measurementData := m.prepareMetric(metric, metricType, acc)
+	//store current timestamp so all measurements for current set of metrics have the same timestamp
+	now := time.Now()
+	for measurementSuffix, tagPoints := range measurementData {
+		for _, points := range tagPoints {
+			tags := make(map[string]string)
+			fields := make(map[string]interface{})
+
+			for k, v := range metric.Dimensions {
+				tags[k] = v
+			}
+			tags["scope"] = metricType
+			tags["cluster_url"] = m.ClusterURL
+
+			for _, dp := range points {
+				fields[dp.Name] = dp.Value
+				for k, v := range dp.Tags {
+					tags[k] = v
+				}
+			}
+			acc.AddFields("dcos_"+measurementSuffix, fields, tags, now)
+		}
+	}
+
+}
+
+//prepareMetric sorts datapoints according to prefix and optional tag
+func (m *Dcos) prepareMetric(metric *metric, metricType string, acc telegraf.Accumulator) map[string]map[string][]datapoint {
+	//map measurement->(grouping)tag->datapoints
+	measurementData := make(map[string]map[string][]datapoint)
+	for _, d := range metric.Datapoints {
+		if m.preProcessDataPoint(&d, metricType) {
+			continue
+		}
+		nameSegs := strings.SplitN(d.Name, ".", 2)
+		if len(nameSegs) == 2 {
+			nameSegs[1] = snakeCaser.Replace(nameSegs[1])
+		} else {
+			//metric name could be already divided  by '_'
+			nameSegs := strings.SplitN(d.Name, "_", 2)
+			if len(nameSegs) != 2 {
+				acc.AddError(fmt.Errorf("Uknown metric: '%s'", d.Name))
+				continue
+			}
+		}
+		measurementSuffix := nameSegs[0]
+		d.Name = nameSegs[1]
+		mainTag := getMainTag(d)
+		if _, ok := measurementData[measurementSuffix]; !ok {
+			measurementData[measurementSuffix] = make(map[string][]datapoint)
+		}
+		measurementData[measurementSuffix][mainTag] = append(measurementData[measurementSuffix][mainTag], d)
+	}
+	return measurementData
+}
+
+//preProcessDataPoint checks fields and tags, modifies data if needed, and filters metric Return true if a datapoint should be added to measurement
+func (m *Dcos) preProcessDataPoint(datapoint *datapoint, metricType string) bool {
+	for k, v := range datapoint.Tags {
+		if v == "" {
+			//remove tags with empty value
+			delete(datapoint.Tags, k)
+			continue
+		}
+		switch k {
+		case "interface": //filter network interfaces
+			if isItemFiltered(m.NetworkInterfaces, v) {
+				return true
+			}
+		case "path": //path
+			if isItemFiltered(m.FileSystemMounts, v) {
+				return true
+			}
+		}
+	}
+	switch metricType {
+	case App:
+		//transform app metric name  to be consistent with others
+		//(e.g. dcos.metrics.module.container_received_bytes_per_sec -> metrics_module.container_received_bytes_per_sec
+		if strings.HasPrefix(datapoint.Name, "dcos.metrics.module.") {
+			datapoint.Name = "metrics_module" + strings.TrimPrefix(datapoint.Name, "dcos.metrics.module")
+		}
+	}
+	return false
+}
+
 //newRequest creates http request object to given url with common headers required by DCOS
 func (m *Dcos) newRequest(url string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
@@ -277,86 +371,6 @@ func (m *Dcos) handleJsonRequest(url string, obj interface{}) error {
 		}
 	}
 	return nil
-}
-
-//processMetric validated metric and fills accumulator with metric data
-func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricType string) {
-
-	measurementData := m.prepareMetric(metric, metricType, acc)
-	//store current timestamp so all measurements for current set of metrics have the same timestamp
-	now := time.Now()
-	for measurementSuffix, tagPoints := range measurementData {
-		for _, points := range tagPoints {
-			tags := make(map[string]string)
-			fields := make(map[string]interface{})
-
-			for k, v := range metric.Dimensions {
-				tags[k] = v
-			}
-			tags["scope"] = metricType
-			tags["cluster_url"] = m.ClusterURL
-
-			for _, dp := range points {
-				fields[dp.Name] = dp.Value
-				for k, v := range dp.Tags {
-					tags[k] = v
-				}
-			}
-			acc.AddFields("dcos_"+measurementSuffix, fields, tags, now)
-		}
-	}
-
-}
-
-//prepareMetric sorts datapoints according to prefix and optional tag
-func (m *Dcos) prepareMetric(metric *metric, metricType string, acc telegraf.Accumulator) map[string]map[string][]datapoint {
-	//map measurement->(grouping)tag->datapoints
-	measurementData := make(map[string]map[string][]datapoint)
-	for _, d := range metric.Datapoints {
-		if m.preProcessDataPoint(&d, metricType) {
-			continue
-		}
-		nameSegs := strings.SplitN(d.Name, ".", 2)
-		if len(nameSegs) == 2 {
-			nameSegs[1] = snakeCaser.Replace(nameSegs[1])
-		} else {
-			//metric name could be already divided already by '_'
-			nameSegs := strings.SplitN(d.Name, "_", 2)
-			if len(nameSegs) != 2 {
-				acc.AddError(fmt.Errorf("Uknown metric: '%s'", d.Name))
-				continue
-			}
-		}
-		measurementSuffix := nameSegs[0]
-		d.Name = nameSegs[1]
-		mainTag := getMainTag(d)
-		if _, ok := measurementData[measurementSuffix]; !ok {
-			measurementData[measurementSuffix] = make(map[string][]datapoint)
-		}
-		measurementData[measurementSuffix][mainTag] = append(measurementData[measurementSuffix][mainTag], d)
-	}
-	return measurementData
-}
-
-//preProcessDataPoint checks and filters metric and modifies name in case of group metrics for file system and network. Return true if datapoint  should be added to measurement
-func (m *Dcos) preProcessDataPoint(datapoint *datapoint, metricType string) bool {
-	for k, v := range datapoint.Tags {
-		if v == "" { //remove tags with empty value
-			delete(datapoint.Tags, k)
-			continue
-		}
-		switch k {
-		case "interface":
-			if isItemFiltered(m.NetworkInterfaces, v) {
-				return true
-			}
-		case "path":
-			if isItemFiltered(m.FileSystemMounts, v) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 //isItemFiltered tests whether item is part of non empty array, if not, returns true
