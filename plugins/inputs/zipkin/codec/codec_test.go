@@ -30,6 +30,11 @@ func Test_MicroToTime(t *testing.T) {
 			micro: 1000000,
 			want:  time.Unix(1, 0).UTC(),
 		},
+		{
+			name:  "given a million micro seconds expected unix time one",
+			micro: 1503031538791000,
+			want:  time.Unix(0, 1503031538791000000).UTC(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
