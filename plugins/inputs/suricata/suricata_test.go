@@ -118,6 +118,19 @@ func TestSuricataInvalid(t *testing.T) {
 	s.Stop()
 }
 
+func TestSuricataInvalidPath(t *testing.T) {
+	tmpfn := fmt.Sprintf("/t%d/X", rand.Int63())
+
+	s := Suricata{
+		Source: tmpfn,
+	}
+
+	acc := testutil.Accumulator{}
+	acc.SetDebug(true)
+
+	assert.Error(t, s.Start(&acc))
+}
+
 func TestSuricataTooLongLine(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
