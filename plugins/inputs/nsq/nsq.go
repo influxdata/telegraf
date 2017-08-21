@@ -25,6 +25,7 @@ package nsq
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -101,28 +102,42 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s returned HTTP status %s", u.String(), r.Status)
 	}
 
-	s := &NSQStatsData{}
-	err = json.NewDecoder(r.Body).Decode(s)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return fmt.Errorf(`Error reading body: %s`, err)
+	}
+
+	data := &NSQStatsData{}
+	err = json.Unmarshal(body, data)
 	if err != nil {
 		return fmt.Errorf(`Error parsing response: %s`, err)
+	}
+	// Data was not parsed correctly attempt to use old format.
+	if len(data.Version) < 1 {
+		wrapper := &NSQStats{}
+		err = json.Unmarshal(body, wrapper)
+		if err != nil {
+			return fmt.Errorf(`Error parsing response: %s`, err)
+		}
+		data = &wrapper.Data
 	}
 
 	tags := map[string]string{
 		`server_host`:    u.Host,
-		`server_version`: s.Version,
+		`server_version`: data.Version,
 	}
 
 	fields := make(map[string]interface{})
-	if s.Health == `OK` {
+	if data.Health == `OK` {
 		fields["server_count"] = int64(1)
 	} else {
 		fields["server_count"] = int64(0)
 	}
-	fields["topic_count"] = int64(len(s.Topics))
+	fields["topic_count"] = int64(len(data.Topics))
 
 	acc.AddFields("nsq_server", fields, tags)
-	for _, t := range s.Topics {
-		topicStats(t, acc, u.Host, s.Version)
+	for _, t := range data.Topics {
+		topicStats(t, acc, u.Host, data.Version)
 	}
 
 	return nil
@@ -198,6 +213,9 @@ func clientStats(c ClientStats, acc telegraf.Accumulator, host, version, topic, 
 		"client_snappy":     strconv.FormatBool(c.Snappy),
 		"client_deflate":    strconv.FormatBool(c.Deflate),
 	}
+	if len(c.Name) > 0 {
+		tags["client_name"] = c.Name
+	}
 
 	fields := map[string]interface{}{
 		"ready_count":    c.ReadyCount,
@@ -207,6 +225,12 @@ func clientStats(c ClientStats, acc telegraf.Accumulator, host, version, topic, 
 		"requeue_count":  c.RequeueCount,
 	}
 	acc.AddFields("nsq_client", fields, tags)
+}
+
+type NSQStats struct {
+	Code int64        `json:"status_code"`
+	Txt  string       `json:"status_txt"`
+	Data NSQStatsData `json:"data"`
 }
 
 type NSQStatsData struct {
@@ -241,6 +265,7 @@ type ChannelStats struct {
 }
 
 type ClientStats struct {
+	Name                          string `json:"name"`
 	ID                            string `json:"client_id"`
 	Hostname                      string `json:"hostname"`
 	Version                       string `json:"version"`
