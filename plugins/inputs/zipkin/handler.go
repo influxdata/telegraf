@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
-	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/json"
+	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/jsonV1"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift"
 )
 
@@ -126,7 +126,7 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 func ContentType(r *http.Request) (codec.Decoder, error) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
-		return &json.JSON{}, nil
+		return &jsonV1.JSON{}, nil
 	}
 
 	for _, v := range strings.Split(contentType, ",") {
@@ -135,7 +135,7 @@ func ContentType(r *http.Request) (codec.Decoder, error) {
 			break
 		}
 		if t == "application/json" {
-			return &json.JSON{}, nil
+			return &jsonV1.JSON{}, nil
 		} else if t == "application/x-thrift" {
 			return &thrift.Thrift{}, nil
 		}
