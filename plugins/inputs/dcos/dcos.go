@@ -28,7 +28,7 @@ var sampleConfig = `
   cluster_url=""
   # Authentication token, obtained by running: dcos config show core.dcos_acs_token
   auth_token=""
-  # List of  DC/OS agent hostnames from which the metrics should be gathers. Leave empty for all.
+  # List of  DC/OS agent hostnames from which the metrics should be gathered. Leave empty for all.
   agents = []
   # DC/OS agent node file system mount for which related metrics should be gathered. Leave empty for all.
   file_system_mounts = []
@@ -114,7 +114,7 @@ func (m *Dcos) validateConfiguration() error {
 	if m.ClientTimeout.Duration.Seconds() == 0 {
 		m.ClientTimeout.Duration = time.Second * 4
 	} else if m.ClientTimeout.Duration.Seconds() <= 1 {
-		errorStrings = append(errorStrings, "Invalid configuration, timeout value must be grater than a second")
+		errorStrings = append(errorStrings, "Invalid configuration, timeout value must be greater than a second")
 	}
 
 	if len(errorStrings) > 0 {
@@ -278,7 +278,7 @@ func (m *Dcos) prepareMetric(metric *metric, metricType string, acc telegraf.Acc
 			//metric name could be already divided  by '_'
 			nameSegs = strings.SplitN(d.Name, "_", 2)
 			if len(nameSegs) != 2 {
-				acc.AddError(fmt.Errorf("Uknown metric: '%s'", d.Name))
+				acc.AddError(fmt.Errorf("Unknown metric: '%s'", d.Name))
 				continue
 			}
 		}
@@ -358,7 +358,7 @@ func (m *Dcos) handleJsonRequest(url string, obj interface{}) error {
 	if resp.StatusCode/100 != 2 {
 		switch resp.StatusCode {
 		case 401:
-			return fmt.Errorf("Authentication error. Verify the auth_token parameter is correct")
+			return fmt.Errorf("Authentication error. Verify that the auth_token parameter is correct")
 		default:
 			return fmt.Errorf("HTTP request to %s has failed. HTTP status code: %d", url, resp.StatusCode)
 		}

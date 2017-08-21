@@ -24,8 +24,8 @@ For more information, please check the [DC/OS Metrics](https://dcos.io/docs/1.9/
 
 ### Measurements & Fields
 
-Below are enumerated the metrics taken from version 1.9 of DC/OS. See [DC/OS Metrics Reference](https://dcos.io/docs/1.9/metrics/reference//) for a description of those metrics.
-Name of field has added suffix meaning unit of metric value.
+Below are enumerated the metrics taken from version 1.9 of DC/OS. For a description of those metrics, please see the [DC/OS Metrics Reference](https://dcos.io/docs/1.9/metrics/reference//).
+Each field name has an additional suffix following the final underscore to indicate the unit of metric value.
 
 #### Node (Agent) metric fields
 - dcos_system
@@ -95,7 +95,7 @@ Name of field has added suffix meaning unit of metric value.
 - dcos_metrics_module
   - container_received_bytes_per_sec
   - container_throttled_bytes_per_sec
-  
+
 ### Tags
 #### Node (Agent) metric tags
 * cluster_id
