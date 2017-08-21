@@ -19,34 +19,48 @@ type Decoder interface {
 	Decode(octets []byte) ([]Span, error)
 }
 
+// Span are created by instrumentation in RPC clients or servers
 type Span interface {
 	Trace() (string, error)
 	SpanID() (string, error)
 	Parent() (string, error)
 	Name() string
 	Annotations() []Annotation
-	BinaryAnnotations() []BinaryAnnotation
+	BinaryAnnotations() ([]BinaryAnnotation, error)
 	Timestamp() time.Time
 	Duration() time.Duration
 }
 
+// Annotation represents an event that explains latency with a timestamp.
 type Annotation interface {
 	Timestamp() time.Time
 	Value() string
 	Host() Endpoint
 }
 
+// BinaryAnnotation represent tags applied to a Span to give it context
 type BinaryAnnotation interface {
 	Key() string
 	Value() string
 	Host() Endpoint
 }
 
+// Endpoint represents the network context of a service recording an annotation
 type Endpoint interface {
 	Host() string
 	Name() string
 }
 
+// DefaultEndpoint is used if the annotations have no endpoints
+type DefaultEndpoint struct{}
+
+// Host returns 0.0.0.0; used when the host is unknown
+func (d *DefaultEndpoint) Host() string { return "0.0.0.0" }
+
+// Name returns "unknown" when an endpoint doesn't exist
+func (d *DefaultEndpoint) Name() string { return DefaultServiceName }
+
+// MicroToTime converts zipkin's native time of microseconds into time.Time
 func MicroToTime(micro int64) time.Time {
 	return time.Unix(0, micro*int64(time.Microsecond)).UTC()
 }
@@ -55,7 +69,11 @@ func MicroToTime(micro int64) time.Time {
 func NewTrace(spans []Span) (trace.Trace, error) {
 	tr := make(trace.Trace, len(spans))
 	for i, span := range spans {
-		endpoint := serviceEndpoint(span.Annotations(), span.BinaryAnnotations())
+		bin, err := span.BinaryAnnotations()
+		if err != nil {
+			return nil, err
+		}
+		endpoint := serviceEndpoint(span.Annotations(), bin)
 		id, err := span.SpanID()
 		if err != nil {
 			return nil, err
@@ -80,7 +98,7 @@ func NewTrace(spans []Span) (trace.Trace, error) {
 			ParentID:          pid,
 			ServiceName:       endpoint.Name(),
 			Annotations:       NewAnnotations(span.Annotations(), endpoint),
-			BinaryAnnotations: NewBinaryAnnotations(span.BinaryAnnotations(), endpoint),
+			BinaryAnnotations: NewBinaryAnnotations(bin, endpoint),
 		}
 	}
 	return tr, nil
@@ -173,7 +191,6 @@ func parentID(span Span) (string, error) {
 }
 
 func serviceEndpoint(ann []Annotation, bann []BinaryAnnotation) Endpoint {
-
 	for _, a := range ann {
 		switch a.Value() {
 		case zipkincore.SERVER_RECV, zipkincore.SERVER_SEND, zipkincore.CLIENT_RECV, zipkincore.CLIENT_SEND:
@@ -194,5 +211,5 @@ func serviceEndpoint(ann []Annotation, bann []BinaryAnnotation) Endpoint {
 			return a.Host()
 		}
 	}
-	return nil
+	return &DefaultEndpoint{}
 }

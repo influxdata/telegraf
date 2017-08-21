@@ -13,6 +13,34 @@ import (
 	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
 )
 
+// UnmarshalThrift converts raw bytes in thrift format to a slice of spans
+func UnmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
+	buffer := thrift.NewTMemoryBuffer()
+	if _, err := buffer.Write(body); err != nil {
+		return nil, err
+	}
+
+	transport := thrift.NewTBinaryProtocolTransport(buffer)
+	_, size, err := transport.ReadListBegin()
+	if err != nil {
+		return nil, err
+	}
+
+	spans := make([]*zipkincore.Span, size)
+	for i := 0; i < size; i++ {
+		zs := &zipkincore.Span{}
+		if err = zs.Read(transport); err != nil {
+			return nil, err
+		}
+		spans[i] = zs
+	}
+
+	if err = transport.ReadListEnd(); err != nil {
+		return nil, err
+	}
+	return spans, nil
+}
+
 // Thrift decodes binary data to create a Trace
 type Thrift struct{}
 
@@ -150,49 +178,24 @@ func (s *span) Annotations() []codec.Annotation {
 	return res
 }
 
-func (s *span) BinaryAnnotations() []codec.BinaryAnnotation {
+func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 	res := make([]codec.BinaryAnnotation, len(s.Span.BinaryAnnotations))
 	for i, a := range s.Span.BinaryAnnotations {
 		res[i] = &binaryAnnotation{a}
 	}
-	return res
+	return res, nil
 }
 
 func (s *span) Timestamp() time.Time {
-	return codec.MicroToTime(s.Span.GetTimestamp())
+	ts := s.Span.GetTimestamp()
+	if ts == 0 {
+		return time.Time{}
+	}
+	return codec.MicroToTime(ts)
 }
 
 func (s *span) Duration() time.Duration {
 	return time.Duration(s.Span.GetDuration()) * time.Microsecond
-}
-
-// UnmarshalThrift converts raw bytes in thrift format to a slice of spans
-func UnmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
-	buffer := thrift.NewTMemoryBuffer()
-	if _, err := buffer.Write(body); err != nil {
-		return nil, err
-	}
-
-	transport := thrift.NewTBinaryProtocolTransport(buffer)
-	_, size, err := transport.ReadListBegin()
-	if err != nil {
-		return nil, err
-	}
-
-	spans := make([]*zipkincore.Span, size)
-	for i := 0; i < size; i++ {
-		zs := &zipkincore.Span{}
-		if err = zs.Read(transport); err != nil {
-			return nil, err
-		}
-		spans[i] = zs
-	}
-
-	if err = transport.ReadListEnd(); err != nil {
-		return nil, err
-	}
-
-	return spans, nil
 }
 
 func formatID(id int64) string {

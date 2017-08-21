@@ -188,7 +188,6 @@ func TestZipkinPlugin(t *testing.T) {
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(1) * time.Microsecond).Nanoseconds(),
 					},
-					//Time: time.Unix(1, 0).UTC(),
 					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
 				},
 				testutil.Metric{
@@ -205,7 +204,6 @@ func TestZipkinPlugin(t *testing.T) {
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(1) * time.Microsecond).Nanoseconds(),
 					},
-					//Time: time.Unix(1, 0).UTC(),
 					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
 				},
 				testutil.Metric{
@@ -226,12 +224,12 @@ func TestZipkinPlugin(t *testing.T) {
 				},
 			},
 		},
-		{
+		/*{
 			name:        "JSON rather than thrift",
 			datafile:    "testdata/json/brave-tracer-example.json",
 			contentType: "application/json",
 			want:        []testutil.Metric{},
-		},
+		},*/
 	}
 
 	z := &Zipkin{

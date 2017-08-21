@@ -5,6 +5,10 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+
+	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
 
 func Test_MicroToTime(t *testing.T) {
@@ -317,7 +321,7 @@ func Test_serviceEndpoint(t *testing.T) {
 					Val: "noop",
 				},
 			},
-			want: nil,
+			want: &DefaultEndpoint{},
 		},
 		{
 			name: "Binary annotation with local component",
@@ -345,6 +349,189 @@ func Test_serviceEndpoint(t *testing.T) {
 			if got := serviceEndpoint(tt.ann, tt.bann); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("serviceEndpoint() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestNewBinaryAnnotations(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations []BinaryAnnotation
+		endpoint    Endpoint
+		want        []trace.BinaryAnnotation
+	}{
+		{
+			name: "Should override annotation with endpoint",
+			annotations: []BinaryAnnotation{
+				&MockBinaryAnnotation{
+					K: "mykey",
+					V: "myvalue",
+					H: &MockEndpoint{
+						host: "noop",
+						name: "noop",
+					},
+				},
+			},
+			endpoint: &MockEndpoint{
+				host: "myhost",
+				name: "myservice",
+			},
+			want: []trace.BinaryAnnotation{
+				trace.BinaryAnnotation{
+					Host:        "myhost",
+					ServiceName: "myservice",
+					Key:         "mykey",
+					Value:       "myvalue",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewBinaryAnnotations(tt.annotations, tt.endpoint); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewBinaryAnnotations() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewAnnotations(t *testing.T) {
+	tests := []struct {
+		name        string
+		annotations []Annotation
+		endpoint    Endpoint
+		want        []trace.Annotation
+	}{
+		{
+			name: "Should override annotation with endpoint",
+			annotations: []Annotation{
+				&MockAnnotation{
+					Time: time.Unix(0, 0).UTC(),
+					Val:  "myvalue",
+					H: &MockEndpoint{
+						host: "noop",
+						name: "noop",
+					},
+				},
+			},
+			endpoint: &MockEndpoint{
+				host: "myhost",
+				name: "myservice",
+			},
+			want: []trace.Annotation{
+				trace.Annotation{
+					Host:        "myhost",
+					ServiceName: "myservice",
+					Timestamp:   time.Unix(0, 0).UTC(),
+					Value:       "myvalue",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewAnnotations(tt.annotations, tt.endpoint); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewAnnotations() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewTrace(t *testing.T) {
+	tests := []struct {
+		name    string
+		spans   []Span
+		now     func() time.Time
+		want    trace.Trace
+		wantErr bool
+	}{
+		{
+			name: "empty span",
+			spans: []Span{
+				&MockSpan{},
+			},
+			now: func() time.Time {
+				return time.Unix(0, 0).UTC()
+			},
+			want: trace.Trace{
+				trace.Span{
+					ServiceName:       "unknown",
+					Timestamp:         time.Unix(0, 0).UTC(),
+					Annotations:       []trace.Annotation{},
+					BinaryAnnotations: []trace.BinaryAnnotation{},
+				},
+			},
+		},
+		{
+			name: "span has no id",
+			spans: []Span{
+				&MockSpan{
+					Error: fmt.Errorf("Span has no id"),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "complete span",
+			spans: []Span{
+				&MockSpan{
+					TraceID:     "tid",
+					ID:          "id",
+					ParentID:    "",
+					ServiceName: "me",
+					Anno: []Annotation{
+						&MockAnnotation{
+							Time: time.Unix(1, 0).UTC(),
+							Val:  "myval",
+							H: &MockEndpoint{
+								host: "myhost",
+								name: "myname",
+							},
+						},
+					},
+					Time: time.Unix(0, 0).UTC(),
+					Dur:  2 * time.Second,
+				},
+			},
+			now: func() time.Time {
+				return time.Unix(0, 0).UTC()
+			},
+			want: trace.Trace{
+				trace.Span{
+					ID:          "id",
+					ParentID:    "id",
+					TraceID:     "tid",
+					Name:        "me",
+					ServiceName: "myname",
+					Timestamp:   time.Unix(0, 0).UTC(),
+					Duration:    2 * time.Second,
+					Annotations: []trace.Annotation{
+						{
+							Timestamp:   time.Unix(1, 0).UTC(),
+							Value:       "myval",
+							Host:        "myhost",
+							ServiceName: "myname",
+						},
+					},
+					BinaryAnnotations: []trace.BinaryAnnotation{},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.now != nil {
+				now = tt.now
+			}
+			got, err := NewTrace(tt.spans)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewTrace() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !cmp.Equal(tt.want, got) {
+				t.Errorf("NewTrace() = %s", cmp.Diff(tt.want, got))
+			}
+			now = time.Now
 		})
 	}
 }
@@ -381,8 +568,8 @@ func (m *MockSpan) Annotations() []Annotation {
 	return m.Anno
 }
 
-func (m *MockSpan) BinaryAnnotations() []BinaryAnnotation {
-	return m.BinAnno
+func (m *MockSpan) BinaryAnnotations() ([]BinaryAnnotation, error) {
+	return m.BinAnno, m.Error
 }
 
 func (m *MockSpan) Timestamp() time.Time {

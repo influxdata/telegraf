@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
+	"github.com/uber/jaeger/thrift-gen/zipkincore"
 )
 
 // JSON decodes spans from  bodies `POST`ed to the spans endpoint
@@ -21,6 +22,9 @@ func (j *JSON) Decode(octets []byte) ([]codec.Span, error) {
 	}
 	res := make([]codec.Span, len(spans))
 	for i, s := range spans {
+		if err := s.Validate(); err != nil {
+			return nil, err
+		}
 		res[i] = &s
 	}
 	return res, nil
@@ -38,11 +42,37 @@ type span struct {
 	BAnno    []binaryAnnotation `json:"binaryAnnotations"`
 }
 
+func (s *span) Validate() error {
+	var err error
+	check := func(f func() (string, error)) {
+		if err != nil {
+			return
+		}
+		_, err = f()
+	}
+
+	check(s.Trace)
+	check(s.SpanID)
+	check(s.Parent)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.BinaryAnnotations()
+	return err
+}
+
 func (s *span) Trace() (string, error) {
+	if s.TraceID == "" {
+		return "", fmt.Errorf("Trace ID cannot be null")
+	}
 	return TraceIDFromString(s.TraceID)
 }
 
 func (s *span) SpanID() (string, error) {
+	if s.ID == "" {
+		return "", fmt.Errorf("Span ID cannot be null")
+	}
 	return IDFromString(s.ID)
 }
 
@@ -65,12 +95,18 @@ func (s *span) Annotations() []codec.Annotation {
 	return res
 }
 
-func (s *span) BinaryAnnotations() []codec.BinaryAnnotation {
+func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 	res := make([]codec.BinaryAnnotation, len(s.BAnno))
 	for i, a := range s.BAnno {
+		if a.Key() != "" && a.Value() == "" {
+			return nil, fmt.Errorf("No value for key %s at binaryAnnotations[%d]", a.K, i)
+		}
+		if a.Value() != "" && a.Key() == "" {
+			return nil, fmt.Errorf("No at binaryAnnotations[%d]", i)
+		}
 		res[i] = &a
 	}
-	return res
+	return res, nil
 }
 
 func (s *span) Timestamp() time.Time {
@@ -106,9 +142,10 @@ func (a *annotation) Host() codec.Endpoint {
 }
 
 type binaryAnnotation struct {
-	K        string    `json:"key"`
-	V        string    `json:"value"`
-	Endpoint *endpoint `json:"endpoint,omitempty"`
+	K        string          `json:"key"`
+	V        json.RawMessage `json:"value"`
+	Type     string          `json:"type"`
+	Endpoint *endpoint       `json:"endpoint,omitempty"`
 }
 
 func (b *binaryAnnotation) Key() string {
@@ -116,7 +153,42 @@ func (b *binaryAnnotation) Key() string {
 }
 
 func (b *binaryAnnotation) Value() string {
-	return b.V
+	t, err := zipkincore.AnnotationTypeFromString(b.Type)
+	// Assume this is a string if we cannot tell the type
+	if err != nil {
+		t = zipkincore.AnnotationType_STRING
+	}
+
+	switch t {
+	case zipkincore.AnnotationType_BOOL:
+		var v bool
+		err := json.Unmarshal(b.V, &v)
+		if err == nil {
+			return strconv.FormatBool(v)
+		}
+	case zipkincore.AnnotationType_BYTES:
+		return string(b.V)
+	case zipkincore.AnnotationType_I16, zipkincore.AnnotationType_I32, zipkincore.AnnotationType_I64:
+		var v int64
+		err := json.Unmarshal(b.V, &v)
+		if err == nil {
+			return strconv.FormatInt(v, 10)
+		}
+	case zipkincore.AnnotationType_DOUBLE:
+		var v float64
+		err := json.Unmarshal(b.V, &v)
+		if err == nil {
+			return strconv.FormatFloat(v, 'f', -1, 64)
+		}
+	case zipkincore.AnnotationType_STRING:
+		var v string
+		err := json.Unmarshal(b.V, &v)
+		if err == nil {
+			return v
+		}
+	}
+
+	return ""
 }
 
 func (b *binaryAnnotation) Host() codec.Endpoint {
