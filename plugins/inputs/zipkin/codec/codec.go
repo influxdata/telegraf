@@ -1,7 +1,6 @@
 package codec
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
@@ -132,10 +131,6 @@ func NewBinaryAnnotations(annotations []BinaryAnnotation, endpoint Endpoint) []t
 		}
 	}
 	return formatted
-}
-
-func formatID(id int64) string {
-	return strconv.FormatInt(id, 10)
 }
 
 func minMax(span Span) (time.Time, time.Time) {
