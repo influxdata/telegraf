@@ -49,21 +49,21 @@ func (c *MockClient) ContainerInspect(
 }
 
 func (c *MockClient) ServiceList(
-	ctx context.Context, 
+	ctx context.Context,
 	options types.ServiceListOptions,
 ) ([]swarm.Service, error) {
 	return c.ServiceListF(ctx, options)
 }
 
 func (c *MockClient) TaskList(
-	ctx context.Context, 
+	ctx context.Context,
 	options types.TaskListOptions,
 ) ([]swarm.Task, error) {
 	return c.TaskListF(ctx, options)
 }
 
 func (c *MockClient) NodeList(
-	ctx context.Context, 
+	ctx context.Context,
 	options types.NodeListOptions,
 ) ([]swarm.Node, error) {
 	return c.NodeListF(ctx, options)
@@ -492,18 +492,17 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 	//gatherSwarmInfo(&acc)
 
 	// test docker_container_net measurement
-	
+
 	acc.AssertContainsTaggedFields(t,
 		"docker_swarm",
 		map[string]interface{}{
-			"swarm_service_mode":      "replicated",
-			"swarm_tasks_running":     int(3),
-			"swarm_tasks_desired":     int(3),
+			"swarm_service_mode":  "replicated",
+			"swarm_tasks_running": int(3),
+			"swarm_tasks_desired": int(3),
 		},
 		map[string]string{
-			"swarm_service_id":  "qolkls9g5iasdiuihcyz9rnx2",
+			"swarm_service_id":   "qolkls9g5iasdiuihcyz9rnx2",
 			"swarm_service_name": "jenkins",
 		},
 	)
 }
-

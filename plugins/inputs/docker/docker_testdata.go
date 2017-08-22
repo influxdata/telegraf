@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/registry"
+	"github.com/docker/docker/api/types/swarm"
 )
 
 var info = types.Info{
@@ -138,61 +138,61 @@ var four = uint64(4)
 var ServiceList = []swarm.Service{
 	swarm.Service{
 		ID: "qolkls9g5iasdiuihcyz9rnx2",
-    	Spec: swarm.ServiceSpec{
-      		Annotations: swarm.Annotations{
-				Name:   "test1",
+		Spec: swarm.ServiceSpec{
+			Annotations: swarm.Annotations{
+				Name: "test1",
 			},
-      		Mode: swarm.ServiceMode{
-        		Replicated: &swarm.ReplicatedService{
-          			Replicas: &four,
-        		},
-      		},
-    	},
+			Mode: swarm.ServiceMode{
+				Replicated: &swarm.ReplicatedService{
+					Replicas: &four,
+				},
+			},
+		},
 	},
 	swarm.Service{
 		ID: "qolkls9g5iasdiuihcyz9rn3",
-    	Spec: swarm.ServiceSpec{
-      		Annotations: swarm.Annotations{
-				Name:   "test2",
+		Spec: swarm.ServiceSpec{
+			Annotations: swarm.Annotations{
+				Name: "test2",
 			},
-      		Mode: swarm.ServiceMode{
-        		Global: &swarm.GlobalService{},
-      		},
-    	},
+			Mode: swarm.ServiceMode{
+				Global: &swarm.GlobalService{},
+			},
+		},
 	},
 }
 
 var TaskList = []swarm.Task{
 	swarm.Task{
-  		ServiceID: "qolkls9g5iasdiuihcyz9rnx2",
-  		NodeID: "0cl4jturcyd1ks3fwpd010kor",
-  		Status: swarm.TaskStatus{
-    		State: "running",
-  		},
-  		DesiredState: "running",
+		ServiceID: "qolkls9g5iasdiuihcyz9rnx2",
+		NodeID:    "0cl4jturcyd1ks3fwpd010kor",
+		Status: swarm.TaskStatus{
+			State: "running",
+		},
+		DesiredState: "running",
 	},
 	swarm.Task{
-		ID: "pswshkmzoaht6e0i9pqqdmdg8",
-  		NodeID: "0cl4jturcyd1ks3fwpd010kor",
-  		Status: swarm.TaskStatus{
-    		State: "running",
-  		},
-  		DesiredState: "running",
+		ID:     "pswshkmzoaht6e0i9pqqdmdg8",
+		NodeID: "0cl4jturcyd1ks3fwpd010kor",
+		Status: swarm.TaskStatus{
+			State: "running",
+		},
+		DesiredState: "running",
 	},
 }
 
 var NodeList = []swarm.Node{
 	swarm.Node{
 		ID: "0cl4jturcyd1ks3fwpd010kor",
-    	Status: swarm.NodeStatus{
-      		State: "ready",   
-    	},
+		Status: swarm.NodeStatus{
+			State: "ready",
+		},
 	},
 	swarm.Node{
 		ID: "0cl4jturcyd1ks3fwpd010kor",
-    	Status: swarm.NodeStatus{
-      		State: "ready",   
-    	},
+		Status: swarm.NodeStatus{
+			State: "ready",
+		},
 	},
 }
 
