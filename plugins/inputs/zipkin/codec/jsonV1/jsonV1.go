@@ -103,7 +103,7 @@ func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 			return nil, fmt.Errorf("No value for key %s at binaryAnnotations[%d]", a.K, i)
 		}
 		if a.Value() != "" && a.Key() == "" {
-			return nil, fmt.Errorf("No at binaryAnnotations[%d]", i)
+			return nil, fmt.Errorf("No key at binaryAnnotations[%d]", i)
 		}
 		res[i] = &s.BAnno[i]
 	}
