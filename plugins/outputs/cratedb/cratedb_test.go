@@ -53,9 +53,9 @@ func Test_insertSQL(t *testing.T) {
 		{
 			Metrics: testutil.MockMetrics(),
 			Want: strings.TrimSpace(`
-INSERT INTO my_table ("timestamp", "name", "tags", "fields")
+INSERT INTO my_table ("hash_id", "timestamp", "name", "tags", "fields")
 VALUES
-('2009-11-11T00:00:00+0100', 'test1', {"tag1" = 'value1'}, {"value" = 1});
+(1845393540509842047, '2009-11-11T00:00:00+0100', 'test1', {"tag1" = 'value1'}, {"value" = 1});
 `),
 		},
 	}

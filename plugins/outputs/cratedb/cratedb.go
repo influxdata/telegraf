@@ -35,13 +35,14 @@ func (c *CrateDB) Connect() error {
 	if err != nil {
 		return err
 	} else if c.TableCreate {
-		// TODO(fg) PRIMARY KEY based on hash value
 		sql := `
 CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
+	"hash_id" LONG,
 	"timestamp" TIMESTAMP NOT NULL,
 	"name" STRING,
 	"tags" OBJECT(DYNAMIC),
-	"fields" OBJECT(DYNAMIC)
+	"fields" OBJECT(DYNAMIC),
+	 PRIMARY KEY ("timestamp", "hash_id")
 );
 `
 		ctx, _ := context.WithTimeout(context.Background(), c.Timeout.Duration)
@@ -70,7 +71,9 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
+		m.HashID()
 		cols := []interface{}{
+			m.HashID(),
 			m.Time(),
 			m.Name(),
 			m.Tags(),
@@ -87,7 +90,7 @@ func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 		}
 		rows[i] = `(` + strings.Join(escapedCols, ", ") + `)`
 	}
-	sql := `INSERT INTO ` + table + ` ("timestamp", "name", "tags", "fields")
+	sql := `INSERT INTO ` + table + ` ("hash_id", "timestamp", "name", "tags", "fields")
 VALUES
 ` + strings.Join(rows, " ,\n") + `;`
 	return sql, nil
@@ -105,7 +108,7 @@ func escapeValue(val interface{}) (string, error) {
 	switch t := val.(type) {
 	case string:
 		return escapeString(t, `'`), nil
-	case int, int32, int64, float32, float64:
+	case int, uint, int32, uint32, int64, uint64, float32, float64:
 		return fmt.Sprint(t), nil
 	case time.Time:
 		// see https://crate.io/docs/crate/reference/sql/data_types.html#timestamp
