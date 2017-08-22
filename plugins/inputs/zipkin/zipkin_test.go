@@ -16,14 +16,16 @@ func TestZipkinPlugin(t *testing.T) {
 	mockAcc := testutil.Accumulator{}
 
 	tests := []struct {
-		name           string
-		thriftDataFile string //path name to a binary thrift data file which contains test data
-		wantErr        bool
-		want           []testutil.Metric
+		name        string
+		datafile    string // data file which contains test data
+		contentType string
+		wantErr     bool
+		want        []testutil.Metric
 	}{
 		{
-			name:           "threespan",
-			thriftDataFile: "testdata/threespans.dat",
+			name:        "threespan",
+			datafile:    "testdata/threespans.dat",
+			contentType: "application/x-thrift",
 			want: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -170,8 +172,9 @@ func TestZipkinPlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:           "distributed_trace_sample",
-			thriftDataFile: "testdata/distributed_trace_sample.dat",
+			name:        "distributed_trace_sample",
+			datafile:    "testdata/distributed_trace_sample.dat",
+			contentType: "application/x-thrift",
 			want: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "zipkin",
@@ -185,7 +188,6 @@ func TestZipkinPlugin(t *testing.T) {
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(1) * time.Microsecond).Nanoseconds(),
 					},
-					//Time: time.Unix(1, 0).UTC(),
 					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
 				},
 				testutil.Metric{
@@ -202,7 +204,6 @@ func TestZipkinPlugin(t *testing.T) {
 					Fields: map[string]interface{}{
 						"duration_ns": (time.Duration(1) * time.Microsecond).Nanoseconds(),
 					},
-					//Time: time.Unix(1, 0).UTC(),
 					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
 				},
 				testutil.Metric{
@@ -223,6 +224,337 @@ func TestZipkinPlugin(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "JSON rather than thrift",
+			datafile:    "testdata/json/brave-tracer-example.json",
+			contentType: "application/json",
+			want: []testutil.Metric{
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":           "12854419928166856317",
+						"name":         "http:/hi2",
+						"parent_id":    "8291962692415852504",
+						"service_name": "test",
+						"trace_id":     "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					}, Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "sr",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "12854419928166856317",
+						"name":          "http:/hi2",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "ss",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "12854419928166856317",
+						"name":          "http:/hi2",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "Demo2Application",
+						"annotation_key": "mvc.controller.class",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "hi2",
+						"annotation_key": "mvc.controller.method",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "192.168.0.8:test:8010",
+						"annotation_key": "spring.instance_id",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(3000000),
+					},
+					Time: time.Unix(0, 1503031538791000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":           "12854419928166856317",
+						"name":         "http:/hi2",
+						"parent_id":    "8291962692415852504",
+						"service_name": "test",
+						"trace_id":     "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "cs",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "12854419928166856317",
+						"name":          "http:/hi2",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "cr",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "12854419928166856317",
+						"name":          "http:/hi2",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "localhost",
+						"annotation_key": "http.host",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "GET",
+						"annotation_key": "http.method",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "/hi2",
+						"annotation_key": "http.path",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "http://localhost:8010/hi2",
+						"annotation_key": "http.url",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "192.168.0.8:test:8010",
+						"annotation_key": "spring.instance_id",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "12854419928166856317",
+						"name":           "http:/hi2",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(10000000),
+					},
+					Time: time.Unix(0, 1503031538786000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"id":           "8291962692415852504",
+						"name":         "http:/hi",
+						"parent_id":    "8291962692415852504",
+						"service_name": "test",
+						"trace_id":     "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "sr",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "8291962692415852504",
+						"name":          "http:/hi",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":    "ss",
+						"endpoint_host": "192.168.0.8:8010",
+						"id":            "8291962692415852504",
+						"name":          "http:/hi",
+						"parent_id":     "8291962692415852504",
+						"service_name":  "test",
+						"trace_id":      "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "Demo2Application",
+						"annotation_key": "mvc.controller.class",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "8291962692415852504",
+						"name":           "http:/hi",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "hi",
+						"annotation_key": "mvc.controller.method",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "8291962692415852504",
+						"name":           "http:/hi",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+				testutil.Metric{
+					Measurement: "zipkin",
+					Tags: map[string]string{
+						"annotation":     "192.168.0.8:test:8010",
+						"annotation_key": "spring.instance_id",
+						"endpoint_host":  "192.168.0.8:8010",
+						"id":             "8291962692415852504",
+						"name":           "http:/hi",
+						"parent_id":      "8291962692415852504",
+						"service_name":   "test",
+						"trace_id":       "7312f822d43d0fd8",
+					},
+					Fields: map[string]interface{}{
+						"duration_ns": int64(23393000),
+					},
+					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
+				},
+			},
+		},
 	}
 
 	z := &Zipkin{
@@ -240,7 +572,7 @@ func TestZipkinPlugin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAcc.ClearMetrics()
-			if err := postThriftData(tt.thriftDataFile, z.address); err != nil {
+			if err := postThriftData(tt.datafile, z.address, tt.contentType); err != nil {
 				t.Fatalf("Posting data to http endpoint /api/v1/spans failed. Error: %s\n", err)
 			}
 			mockAcc.Wait(len(tt.want)) //Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
@@ -252,7 +584,6 @@ func TestZipkinPlugin(t *testing.T) {
 			for _, m := range mockAcc.Metrics {
 				got = append(got, *m)
 			}
-
 			if !cmp.Equal(tt.want, got) {
 				t.Fatalf("Got != Want\n %s", cmp.Diff(tt.want, got))
 			}
@@ -266,19 +597,18 @@ func TestZipkinPlugin(t *testing.T) {
 	}
 }
 
-func postThriftData(datafile, address string) error {
+func postThriftData(datafile, address, contentType string) error {
 	dat, err := ioutil.ReadFile(datafile)
 	if err != nil {
 		return fmt.Errorf("could not read from data file %s", datafile)
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/v1/spans", address), bytes.NewReader(dat))
-
 	if err != nil {
 		return fmt.Errorf("HTTP request creation failed")
 	}
 
-	req.Header.Set("Content-Type", "application/x-thrift")
+	req.Header.Set("Content-Type", contentType)
 	client := &http.Client{}
 	_, err = client.Do(req)
 	if err != nil {
