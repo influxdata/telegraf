@@ -55,9 +55,7 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 }
 
 func (c *CrateDB) Write(metrics []telegraf.Metric) error {
-	ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
-	defer cancel()
-
+	ctx, _ := context.WithTimeout(context.Background(), c.Timeout.Duration)
 	if sql, err := insertSQL(c.Table, metrics); err != nil {
 		return err
 	} else if _, err := c.DB.ExecContext(ctx, sql); err != nil {
