@@ -71,9 +71,16 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
-		m.HashID()
+		// Note: We have to convert HashID from uint64 to int64 below because
+		// CrateDB only supports a signed 64 bit LONG type which would give us
+		// problems, e.g.:
+		//
+		// CREATE TABLE my_long (val LONG);
+		// INSERT INTO my_long(val) VALUES (14305102049502225714);
+		// -> ERROR:  SQLParseException: For input string: "14305102049502225714"
+
 		cols := []interface{}{
-			m.HashID(),
+			int64(m.HashID()),
 			m.Time(),
 			m.Name(),
 			m.Tags(),
@@ -108,7 +115,10 @@ func escapeValue(val interface{}) (string, error) {
 	switch t := val.(type) {
 	case string:
 		return escapeString(t, `'`), nil
-	case int, uint, int32, uint32, int64, uint64, float32, float64:
+	// We don't handle uint, uint32 and uint64 here because CrateDB doesn't
+	// seem to support unsigned types. But it seems like input plugins don't
+	// produce those types, so it's hopefully ok.
+	case int, int32, int64, float32, float64:
 		return fmt.Sprint(t), nil
 	case time.Time:
 		// see https://crate.io/docs/crate/reference/sql/data_types.html#timestamp

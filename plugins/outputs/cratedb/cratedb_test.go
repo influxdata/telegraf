@@ -45,12 +45,12 @@ func TestConnectAndWrite(t *testing.T) {
 	// the rows using their primary keys in order to take advantage of
 	// read-after-write consistency in CrateDB.
 	for _, m := range metrics {
-		hashID, err := escapeValue(m.HashID())
+		hashID, err := escapeValue(int64(m.HashID()))
 		require.NoError(t, err)
 		timestamp, err := escapeValue(m.Time())
 		require.NoError(t, err)
 
-		var id uint64
+		var id int64
 		row := db.QueryRow(
 			"SELECT hash_id FROM " + escapeString(table, `"`) + " " +
 				"WHERE hash_id = " + hashID + " " +
@@ -59,7 +59,7 @@ func TestConnectAndWrite(t *testing.T) {
 		require.NoError(t, row.Scan(&id))
 		// We could check the whole row, but this is meant to be more of a smoke
 		// test, so just checking the HashID seems fine.
-		require.Equal(t, id, m.HashID())
+		require.Equal(t, id, int64(m.HashID()))
 	}
 
 	require.NoError(t, c.Close())
