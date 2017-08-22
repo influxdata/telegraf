@@ -18,16 +18,20 @@ type CrateDB struct {
 	URL         string
 	Timeout     internal.Duration
 	Table       string
-	TableCreate bool
+	TableCreate bool `toml:"table_create"`
 	DB          *sql.DB
 }
 
 var sampleConfig = `
   # A lib/pq connection string.
   # See http://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters
-  url = "postgres://user:password@localhost/?sslmode=disable.
-  # The timouet for writing metrics.
+  url = "postgres://user:password@localhost/schema?sslmode=disable"
+  # Timeout for all CrateDB queries.
   timeout = "5s"
+  # Name of the table to store metrics in.
+  table = "metrics"
+  # If true, and the metrics table does not exist, create it automatically.
+  table_create = true
 `
 
 func (c *CrateDB) Connect() error {
