@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 	"name" STRING,
 	"tags" OBJECT(DYNAMIC),
 	"fields" OBJECT(DYNAMIC),
-	 PRIMARY KEY ("timestamp", "hash_id")
+	PRIMARY KEY ("timestamp", "hash_id")
 );
 `
 		ctx, _ := context.WithTimeout(context.Background(), c.Timeout.Duration)
