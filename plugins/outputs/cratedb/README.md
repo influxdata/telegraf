@@ -18,8 +18,8 @@ CREATE TABLE my_metrics (
 );
 ```
 
-The plugin can also create this table for you automatically via the
-`table_create` config option, see below.
+The plugin can create this table for you automatically via the `table_create`
+config option, see below.
 
 ## Configuration
 
