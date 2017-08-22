@@ -6,6 +6,7 @@
 - [#3037](https://github.com/influxdata/telegraf/issues/3037): Fix filestat reporting exists when cannot list directory.
 - [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
 - [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
+## v1.5 [unreleased]
 
 ## v1.4 [unreleased]
 
@@ -23,13 +24,21 @@
 
 ### New Plugins
 
-- [fail2ban](./plugins/inputs/fail2ban/README.md)
-- [minecraft](./plugins/inputs/minecraft/README.md)
+- [fail2ban](./plugins/inputs/fail2ban/README.md) - Thanks to @grugrut
+- [fluentd](./plugins/inputs/fluentd/README.md) - Thanks to @DanKans
+- [histogram](./plugins/aggregators/histogram/README.md) - Thanks to @vlamug
+- [minecraft](./plugins/inputs/minecraft/README.md) - Thanks to @adamperlin & @Ayrdrie
+- [openldap](./plugins/inputs/openldap/README.md) - Thanks to @cobaugh
+- [salesforce](./plugins/inputs/salesforce/README.md) - Thanks to @rody
+- [tomcat](./plugins/inputs/tomcat/README.md) - Thanks to @mlindes
+- [win_services](./plugins/inputs/win_services/README.md) - Thanks to @vlastahajek
+- [zipkin](./plugins/inputs/zipkin/README.md) - Thanks to @adamperlin & @Ayrdrie
 
 ### Features
 
 - [#2487](https://github.com/influxdata/telegraf/pull/2487): Add Kafka 0.9+ consumer support
 - [#2773](https://github.com/influxdata/telegraf/pull/2773): Add support for self-signed certs to InfluxDB input plugin
+- [#2293](https://github.com/influxdata/telegraf/pull/2293): Add TCP listener for statsd input
 - [#2581](https://github.com/influxdata/telegraf/pull/2581): Add Docker container environment variables as tags. Only whitelisted
 - [#2817](https://github.com/influxdata/telegraf/pull/2817): Add timeout option to IPMI sensor plugin
 - [#2883](https://github.com/influxdata/telegraf/pull/2883): Add support for an optional SSL/TLS configuration to nginx input plugin
@@ -46,6 +55,23 @@
 - [#2963](https://github.com/influxdata/telegraf/pull/2963): Add support for RethinkDB 1.0 handshake protocol.
 - [#2943](https://github.com/influxdata/telegraf/pull/2943): Add optional usage_active and time_active CPU metrics.
 - [#2973](https://github.com/influxdata/telegraf/pull/2973): Change default prometheus_client port.
+- [#2661](https://github.com/influxdata/telegraf/pull/2661): Add fluentd input plugin.
+- [#2990](https://github.com/influxdata/telegraf/pull/2990): Add result_type field to net_response input plugin.
+- [#2571](https://github.com/influxdata/telegraf/pull/2571): Add read timeout to socket_listener
+- [#2612](https://github.com/influxdata/telegraf/pull/2612): Add input plugin for OpenLDAP.
+- [#3042](https://github.com/influxdata/telegraf/pull/3042): Add network option to dns_query.
+- [#3054](https://github.com/influxdata/telegraf/pull/3054): Add redis_version field to redis input.
+- [#3063](https://github.com/influxdata/telegraf/pull/3063): Add tls options to docker input.
+- [#2387](https://github.com/influxdata/telegraf/pull/2387): Add histogram aggregator plugin.
+- [#3080](https://github.com/influxdata/telegraf/pull/3080): Add zipkin input plugin.
+- [#3023](https://github.com/influxdata/telegraf/pull/3023): Add Windows Services input plugin.
+- [#3098](https://github.com/influxdata/telegraf/pull/3098): Add path tag to logparser containing path of logfile.
+- [#3075](https://github.com/influxdata/telegraf/pull/3075): Add salesforce input plugin.
+- [#3097](https://github.com/influxdata/telegraf/pull/3097): Add option to run varnish under sudo.
+- [#3119](https://github.com/influxdata/telegraf/pull/3119): Add weighted_io_time to diskio input.
+- [#2978](https://github.com/influxdata/telegraf/pull/2978): Add gzip content-encoding support to influxdb output.
+- [#3127](https://github.com/influxdata/telegraf/pull/3127): Allow using system plugin in Windows.
+- [#3112](https://github.com/influxdata/telegraf/pull/3112): Add tomcat input plugin.
 
 ### Bugfixes
 
@@ -62,6 +88,31 @@
 - [#2917](https://github.com/influxdata/telegraf/issues/2917): Fix Aerospike input adds all nodes to a single series.
 - [#2452](https://github.com/influxdata/telegraf/pull/2452): Improve Prometheus Client output documentation.
 - [#2984](https://github.com/influxdata/telegraf/pull/2984): Display error message if prometheus output fails to listen.
+- [#2997](https://github.com/influxdata/telegraf/issues/2997): Fix elasticsearch output content type detection warning.
+- [#2914](https://github.com/influxdata/telegraf/issues/2914): Prevent possible deadlock when using aggregators.
+- [#2860](https://github.com/influxdata/telegraf/issues/2860): Fix combined tagdrop/tagpass filtering.
+- [#3036](https://github.com/influxdata/telegraf/pull/3036): Fix filtering when both pass and drop match an item.
+- [#2964](https://github.com/influxdata/telegraf/issues/2964): Only report cpu usage for online cpus in docker input.
+- [#3050](https://github.com/influxdata/telegraf/pull/3050): Start first aggregator period at startup time.
+- [#2906](https://github.com/influxdata/telegraf/issues/2906): Fix panic in logparser if file cannot be opened.
+- [#2886](https://github.com/influxdata/telegraf/issues/2886): Default to localhost if zookeeper has no servers set.
+- [#2457](https://github.com/influxdata/telegraf/issues/2457): Fix docker memory and cpu reporting in Windows.
+- [#3058](https://github.com/influxdata/telegraf/issues/3058): Allow iptable entries with trailing text.
+- [#1680](https://github.com/influxdata/telegraf/issues/1680): Sanitize password from couchbase metric.
+- [#3104](https://github.com/influxdata/telegraf/issues/3104): Converge to typed value in prometheus output.
+- [#2899](https://github.com/influxdata/telegraf/issues/2899): Skip compilcation of logparser and tail on solaris.
+- [#2951](https://github.com/influxdata/telegraf/issues/2951): Discard logging from tail library.
+- [#3126](https://github.com/influxdata/telegraf/pull/3126): Remove log message on ping timeout.
+
+## v1.3.5 [2017-07-26]
+
+### Bugfixes
+
+- [#3049](https://github.com/influxdata/telegraf/issues/3049): Fix prometheus output cannot be reloaded.
+- [#3037](https://github.com/influxdata/telegraf/issues/3037): Fix filestat reporting exists when cannot list directory.
+- [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
+- [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
+
 ## v1.3.4 [2017-07-12]
 
 ### Bugfixes

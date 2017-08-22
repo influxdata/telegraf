@@ -7,6 +7,9 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
 ```toml
  # A plugin to collect stats from Varnish HTTP Cache
  [[inputs.varnish]]
+   ## If running as a restricted user you can prepend sudo for additional access:
+   #use_sudo = false
+
    ## The default location of the varnishstat binary can be overridden with:
    binary = "/usr/bin/varnishstat"
 
@@ -330,6 +333,62 @@ the following values:
   - LCK
   
   
+
+### Permissions:
+
+It's important to note that this plugin references varnishstat, which may require additional permissions to execute successfully.
+Depending on the user/group permissions of the telegraf user executing this plugin, you may need to alter the group membership, set facls, or use sudo.
+
+**Group membership (Recommended)**:
+```bash
+$ groups telegraf
+telegraf : telegraf
+
+$ usermod -a -G varnish telegraf
+
+$ groups telegraf
+telegraf : telegraf varnish
+```
+
+**Extended filesystem ACL's**:
+```bash
+$ getfacl /var/lib/varnish/<hostname>/_.vsm
+# file: var/lib/varnish/<hostname>/_.vsm
+# owner: root
+# group: root
+user::rw-
+group::r--
+other::---
+
+$ setfacl -m u:telegraf:r /var/lib/varnish/<hostname>/_.vsm
+
+$ getfacl /var/lib/varnish/<hostname>/_.vsm
+# file: var/lib/varnish/<hostname>/_.vsm
+# owner: root
+# group: root
+user::rw-
+user:telegraf:r--
+group::r--
+mask::r--
+other::---
+```
+
+**Sudo privileges**:
+If you use this method, you will need the following in your telegraf config:
+```toml
+[[inputs.varnish]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+```bash
+$ visudo
+# Add the following line:
+telegraf ALL=(ALL) NOPASSWD: /usr/bin/varnishstat
+```
+
+Please use the solution you see as most appropriate.
+
 ### Example Output:
 
 ```

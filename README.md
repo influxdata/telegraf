@@ -32,15 +32,8 @@ There are many ways to contribute:
 
 ## Installation:
 
-You can either download the binaries directly from the
-[downloads](https://www.influxdata.com/downloads) page.
-
-A few alternate installs are available here as well:
-
-### FreeBSD tarball:
-
-Latest:
-* https://dl.influxdata.com/telegraf/releases/telegraf-VERSION_freebsd_amd64.tar.gz
+You can download the binaries directly from the [downloads](https://www.influxdata.com/downloads) page
+or from the [releases](https://github.com/influxdata/telegraf/releases) section.
 
 ### Ansible Role:
 
@@ -48,13 +41,14 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf manages dependencies via [gdm](https://github.com/sparrc/gdm),
-which gets installed via the Makefile
-if you don't have it already. You also must build with golang version 1.8+.
+Telegraf requires golang version 1.8+, the Makefile requires GNU make.
+
+Dependencies are managed with [gdm](https://github.com/sparrc/gdm),
+which is installed by the Makefile if you don't have it already.
 
 1. [Install Go](https://golang.org/doc/install)
 2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
-3. Run `go get github.com/influxdata/telegraf`
+3. Run `go get -d github.com/influxdata/telegraf`
 4. Run `cd $GOPATH/src/github.com/influxdata/telegraf`
 5. Run `make`
 
@@ -63,37 +57,37 @@ if you don't have it already. You also must build with golang version 1.8+.
 See usage with:
 
 ```
-telegraf --help
+./telegraf --help
 ```
 
 #### Generate a telegraf config file:
 
 ```
-telegraf config > telegraf.conf
+./telegraf config > telegraf.conf
 ```
 
-#### Generate config with only cpu input & influxdb output plugins defined
+#### Generate config with only cpu input & influxdb output plugins defined:
 
 ```
-telegraf --input-filter cpu --output-filter influxdb config
+./telegraf --input-filter cpu --output-filter influxdb config
 ```
 
-#### Run a single telegraf collection, outputing metrics to stdout
+#### Run a single telegraf collection, outputing metrics to stdout:
 
 ```
-telegraf --config telegraf.conf -test
+./telegraf --config telegraf.conf --test
 ```
 
-#### Run telegraf with all plugins defined in config file
+#### Run telegraf with all plugins defined in config file:
 
 ```
-telegraf --config telegraf.conf
+./telegraf --config telegraf.conf
 ```
 
-#### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
+#### Run telegraf, enabling the cpu & memory input, and influxdb output plugins:
 
 ```
-telegraf --config telegraf.conf -input-filter cpu:mem -output-filter influxdb
+./telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 ```
 
 
@@ -126,6 +120,8 @@ configuration options.
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [filestat](./plugins/inputs/filestat)
+* [fluentd](./plugins/inputs/fluentd)
+* [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
 * [http_response](./plugins/inputs/http_response)
@@ -143,6 +139,7 @@ configuration options.
 * [mailchimp](./plugins/inputs/mailchimp)
 * [memcached](./plugins/inputs/memcached)
 * [mesos](./plugins/inputs/mesos)
+* [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
 * [mysql](./plugins/inputs/mysql)
 * [net_response](./plugins/inputs/net_response)
@@ -150,6 +147,7 @@ configuration options.
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
+* [openldap](./plugins/inputs/openldap)
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
 * [ping](./plugins/inputs/ping)
@@ -164,15 +162,18 @@ configuration options.
 * [redis](./plugins/inputs/redis)
 * [rethinkdb](./plugins/inputs/rethinkdb)
 * [riak](./plugins/inputs/riak)
+* [salesforce](./plugins/inputs/salesforce)
 * [sensors](./plugins/inputs/sensors)
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
 * [varnish](./plugins/inputs/varnish)
 * [zfs](./plugins/inputs/zfs)
 * [zookeeper](./plugins/inputs/zookeeper)
-* [win_perf_counters ](./plugins/inputs/win_perf_counters) (windows performance counters)
+* [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
+* [win_services](./plugins/inputs/win_services)
 * [sysstat](./plugins/inputs/sysstat)
 * [system](./plugins/inputs/system)
     * cpu
@@ -206,6 +207,7 @@ Telegraf can also collect metrics via the following service plugins:
   * [mandrill](./plugins/inputs/webhooks/mandrill)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
   * [papertrail](./plugins/inputs/webhooks/papertrail)
+* [zipkin](./plugins/inputs/zipkin)
 
 Telegraf is able to parse the following input data formats into metrics, these
 formats may be used with input plugins supporting the `data_format` option:
@@ -224,6 +226,7 @@ formats may be used with input plugins supporting the `data_format` option:
 ## Aggregator Plugins
 
 * [minmax](./plugins/aggregators/minmax)
+* [histogram](./plugins/aggregators/histogram)
 
 ## Output Plugins
 

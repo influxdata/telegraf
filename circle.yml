@@ -21,14 +21,9 @@ checkout:
 
 test:
   override:
-    - /bin/true
+    - bash scripts/orangesys-telegraf.sh
 
 deployment:
-  master:
-    branch: master
-    commands:
-      - bash scripts/orangesys-telegraf.sh
-
   release:
     tag: /v[0-9]+(\.[0-9]+)*/
     commands:
