@@ -55,7 +55,6 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 }
 
 func (c *CrateDB) Write(metrics []telegraf.Metric) error {
-	// TODO(fg) test timeouts
 	ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
 	defer cancel()
 
