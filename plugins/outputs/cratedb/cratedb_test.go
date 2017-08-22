@@ -25,13 +25,10 @@ func TestConnectAndWrite(t *testing.T) {
 	// schema during development :).
 	dropSQL := "DROP TABLE IF EXISTS " + escapeString(table, `"`)
 	db, err := sql.Open("postgres", url)
-	if err != nil {
-		t.Fatal(err)
-	} else if _, err := db.Exec(dropSQL); err != nil {
-		t.Fatal(err)
-	} else if err := db.Close(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	_, err = db.Exec(dropSQL)
+	require.NoError(t, err)
+	defer db.Close()
 
 	c := &CrateDB{
 		URL:         url,
@@ -40,8 +37,31 @@ func TestConnectAndWrite(t *testing.T) {
 		TableCreate: true,
 	}
 
+	metrics := testutil.MockMetrics()
 	require.NoError(t, c.Connect())
-	require.NoError(t, c.Write(testutil.MockMetrics()))
+	require.NoError(t, c.Write(metrics))
+
+	// The code below verifies that the metrics were written. We have to select
+	// the rows using their primary keys in order to take advantage of
+	// read-after-write consistency in CrateDB.
+	for _, m := range metrics {
+		hashID, err := escapeValue(m.HashID())
+		require.NoError(t, err)
+		timestamp, err := escapeValue(m.Time())
+		require.NoError(t, err)
+
+		var id uint64
+		row := db.QueryRow(
+			"SELECT hash_id FROM " + escapeString(table, `"`) + " " +
+				"WHERE hash_id = " + hashID + " " +
+				"AND timestamp = " + timestamp,
+		)
+		require.NoError(t, row.Scan(&id))
+		// We could check the whole row, but this is meant to be more of a smoke
+		// test, so just checking the HashID seems fine.
+		require.Equal(t, id, m.HashID())
+	}
+
 	require.NoError(t, c.Close())
 }
 
