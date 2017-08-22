@@ -132,8 +132,7 @@ func Test_escapeValue(t *testing.T) {
 func testURL() string {
 	url := os.Getenv("CRATE_URL")
 	if url == "" {
-		// @TODO use telegraf helper func for hostname
-		return "postgres://localhost:6543/test?sslmode=disable"
+		return "postgres://" + testutil.GetLocalHost() + ":6543/test?sslmode=disable"
 	}
 	return url
 }
