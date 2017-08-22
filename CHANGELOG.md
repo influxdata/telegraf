@@ -93,6 +93,7 @@
 - [#2899](https://github.com/influxdata/telegraf/issues/2899): Skip compilcation of logparser and tail on solaris.
 - [#2951](https://github.com/influxdata/telegraf/issues/2951): Discard logging from tail library.
 - [#3126](https://github.com/influxdata/telegraf/pull/3126): Remove log message on ping timeout.
+- [#3144](https://github.com/influxdata/telegraf/issues/3144): Don't retry points beyond retention policy.
 
 ## v1.3.5 [2017-07-26]
 
