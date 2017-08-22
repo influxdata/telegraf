@@ -82,7 +82,7 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 		defer body.Close()
 	}
 
-	decoder, err := ContentType(r)
+	decoder, err := ContentDecoder(r)
 	if err != nil {
 		s.recorder.Error(err)
 		w.WriteHeader(http.StatusUnsupportedMediaType)
@@ -118,10 +118,10 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ContentType returns a Decoder that is able to produce Traces from bytes.
+// ContentDecoer returns a Decoder that is able to produce Traces from bytes.
 // Failure should yield an HTTP 415 (`http.StatusUnsupportedMediaType`)
 // If a Content-Type is not set, zipkin assumes application/json
-func ContentType(r *http.Request) (codec.Decoder, error) {
+func ContentDecoder(r *http.Request) (codec.Decoder, error) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
 		return &jsonV1.JSON{}, nil
