@@ -425,9 +425,10 @@ func TestGatherContainerMetrics(t *testing.T) {
 		"scope":        "app",
 	}
 	fieldsContainerApp := map[string]interface{}{
-		"dcos.metrics.module.container_received_bytes_per_sec":  "NaN",
 		"dcos.metrics.module.container_throttled_bytes_per_sec": 0.,
 	}
+	assert.Len(t, acc.Errors, 1, "There should be one error")
+	assert.Contains(t, acc.Errors[0].Error(), "NaN")
 	acc.AssertContainsTaggedFields(t, "dcos_app", fieldsContainerApp, tagsContainerApp)
 }
 

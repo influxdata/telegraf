@@ -251,8 +251,13 @@ func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricTyp
 			tags["cluster_url"] = m.ClusterURL
 
 			for _, dp := range points {
-				fields[dp.Name] = dp.Value
-				fillTags(tags, dp.Tags)
+				switch t := dp.Value.(type) {
+				case string: //field values come as real numbers, string is usually "NaN'
+					acc.AddError(fmt.Errorf("Invalid value of field %s: '%s'", dp.Name, t))
+				default:
+					fields[dp.Name] = t
+					fillTags(tags, dp.Tags)
+				}
 			}
 			//fmt.Println(measurementSuffix, fields, tags)
 			acc.AddFields("dcos_"+measurementSuffix, fields, tags, now)
