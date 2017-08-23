@@ -82,6 +82,7 @@ docker-run:
 		-e SLAPD_CONFIG_ROOTPW="secret" \
 		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
+	docker run --name libvirt -p "16509:16509" -d owlet123/libvirt:latest
 
 # Run docker containers necessary for integration tests; skipping services provided
 # by CircleCI
@@ -99,19 +100,20 @@ docker-run-circle:
 	docker run --name elasticsearch -p "9200:9200" -p "9300:9300" -d elasticsearch:5
 	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
-	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
+	docker run --name riemann -p "5555:5555" -d steal thly/docker-riemann
 	docker run --name nats -p "4222:4222" -d nats
 	docker run --name openldap \
 		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
 		-e SLAPD_CONFIG_ROOTPW="secret" \
 		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
+	docker run --name libvirt -p "16509:16509" -d owlet123/libvirt
 
 docker-kill:
 	-docker kill aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
-		openldap postgres rabbitmq redis riemann zookeeper
+		openldap postgres rabbitmq redis riemann zookeeper libvirt
 	-docker rm aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
-		openldap postgres rabbitmq redis riemann zookeeper
+		openldap postgres rabbitmq redis riemann zookeeper libvirt
 
 .PHONY: deps telegraf telegraf.exe install test test-windows lint test-all \
 	package clean docker-run docker-run-circle docker-kill

@@ -135,6 +135,7 @@ configuration options.
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
+* [libvirt](./plugins/inputs/libvirt)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
 * [memcached](./plugins/inputs/memcached)

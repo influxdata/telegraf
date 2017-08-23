@@ -41,6 +41,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/kapacitor"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kubernetes"
 	_ "github.com/influxdata/telegraf/plugins/inputs/leofs"
+	_ "github.com/influxdata/telegraf/plugins/inputs/libvirt"
 	_ "github.com/influxdata/telegraf/plugins/inputs/logparser"
 	_ "github.com/influxdata/telegraf/plugins/inputs/lustre2"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mailchimp"
