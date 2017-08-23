@@ -250,7 +250,7 @@ func buildValue(v interface{}, name string, w *Wavefront) (string, error) {
 			if strings.HasPrefix(name, prefix) {
 				for _, mapping := range mappings {
 					val, hasVal := mapping[string(p)]
-					if (hasVal) {
+					if hasVal {
 						retv = FloatToString(val)
 						return retv, nil
 					}
