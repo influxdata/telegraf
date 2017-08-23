@@ -95,7 +95,7 @@ Each field name has an additional suffix following the final underscore to indic
 - dcos_app
   - _app specific metrics_ 
   
-Set of DC/OS app metrics depend on the metrics exposed by an application running inside the container.
+The set of DC/OS app metrics depends on the metrics exposed by an application running inside the container.
 
 ### Tags
 #### Node (Agent) metric tags

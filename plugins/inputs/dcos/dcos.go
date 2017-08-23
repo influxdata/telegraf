@@ -253,7 +253,7 @@ func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricTyp
 			for _, dp := range points {
 				switch t := dp.Value.(type) {
 				case string: //field values come as real numbers, string is usually "NaN'
-					acc.AddError(fmt.Errorf("Invalid value of field %s: '%s'", dp.Name, t))
+					acc.AddError(fmt.Errorf("Invalid value for field %s: '%s'", dp.Name, t))
 				default:
 					fields[dp.Name] = t
 					fillTags(tags, dp.Tags)
