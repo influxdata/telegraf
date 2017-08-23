@@ -87,7 +87,7 @@ var sampleConfig = `
 
   ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
   swarm_enabled = false
-  
+
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
 

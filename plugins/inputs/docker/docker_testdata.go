@@ -134,7 +134,7 @@ var containerList = []types.Container{
 	},
 }
 
-var four = uint64(4)
+var two = uint64(2)
 var ServiceList = []swarm.Service{
 	swarm.Service{
 		ID: "qolkls9g5iasdiuihcyz9rnx2",
@@ -144,7 +144,7 @@ var ServiceList = []swarm.Service{
 			},
 			Mode: swarm.ServiceMode{
 				Replicated: &swarm.ReplicatedService{
-					Replicas: &four,
+					Replicas: &two,
 				},
 			},
 		},
@@ -164,6 +164,7 @@ var ServiceList = []swarm.Service{
 
 var TaskList = []swarm.Task{
 	swarm.Task{
+		ID:        "kwh0lv7hwwbh",
 		ServiceID: "qolkls9g5iasdiuihcyz9rnx2",
 		NodeID:    "0cl4jturcyd1ks3fwpd010kor",
 		Status: swarm.TaskStatus{
@@ -172,8 +173,18 @@ var TaskList = []swarm.Task{
 		DesiredState: "running",
 	},
 	swarm.Task{
-		ID:     "pswshkmzoaht6e0i9pqqdmdg8",
-		NodeID: "0cl4jturcyd1ks3fwpd010kor",
+		ID:        "u78m5ojbivc3",
+		ServiceID: "qolkls9g5iasdiuihcyz9rnx2",
+		NodeID:    "0cl4jturcyd1ks3fwpd010kor",
+		Status: swarm.TaskStatus{
+			State: "running",
+		},
+		DesiredState: "running",
+	},
+	swarm.Task{
+		ID:        "1n1uilkhr98l",
+		ServiceID: "qolkls9g5iasdiuihcyz9rn3",
+		NodeID:    "0cl4jturcyd1ks3fwpd010kor",
 		Status: swarm.TaskStatus{
 			State: "running",
 		},

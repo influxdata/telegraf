@@ -489,20 +489,32 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 	err := acc.GatherError(d.Gather)
 	require.NoError(t, err)
 
-	//gatherSwarmInfo(&acc)
+	d.gatherSwarmInfo(&acc)
 
 	// test docker_container_net measurement
-
 	acc.AssertContainsTaggedFields(t,
 		"docker_swarm",
 		map[string]interface{}{
 			"swarm_service_mode":  "replicated",
-			"swarm_tasks_running": int(3),
-			"swarm_tasks_desired": int(3),
+			"swarm_tasks_running": int(2),
+			"swarm_tasks_desired": uint64(2),
 		},
 		map[string]string{
 			"swarm_service_id":   "qolkls9g5iasdiuihcyz9rnx2",
-			"swarm_service_name": "jenkins",
+			"swarm_service_name": "test1",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_swarm",
+		map[string]interface{}{
+			"swarm_service_mode":  "global",
+			"swarm_tasks_running": int(1),
+			"swarm_tasks_desired": int(1),
+		},
+		map[string]string{
+			"swarm_service_id":   "qolkls9g5iasdiuihcyz9rn3",
+			"swarm_service_name": "test2",
 		},
 	)
 }
