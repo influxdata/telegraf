@@ -59,16 +59,16 @@ type slave struct {
 }
 
 type datapoint struct {
-	Name      string            `json:"name"`
-	Value     float64           `json:"value"`
-	Unit      string            `json:"unit"`
-	TimeStamp string            `json:"timestamp"`
-	Tags      map[string]string `json:"tags"`
+	Name      string                 `json:"name"`
+	Value     interface{}            `json:"value"`
+	Unit      string                 `json:"unit"`
+	TimeStamp string                 `json:"timestamp"`
+	Tags      map[string]interface{} `json:"tags"`
 }
 
 type metric struct {
-	Datapoints []datapoint       `json:"datapoints"`
-	Dimensions map[string]string `json:"dimensions"`
+	Datapoints []datapoint            `json:"datapoints"`
+	Dimensions map[string]interface{} `json:"dimensions"`
 }
 
 const (
@@ -245,27 +245,37 @@ func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricTyp
 			tags := make(map[string]string)
 			fields := make(map[string]interface{})
 
-			for k, v := range metric.Dimensions {
-				if v != "" { //remove tags with empty value
-					tags[k] = v
-				}
-			}
+			fillTags(tags, metric.Dimensions)
+
 			tags["scope"] = metricType
 			tags["cluster_url"] = m.ClusterURL
 
 			for _, dp := range points {
 				fields[dp.Name] = dp.Value
-				for k, v := range dp.Tags {
-					if v != "" { //remove tags with empty value
-						tags[k] = v
-					}
-				}
+				fillTags(tags, dp.Tags)
 			}
 			//fmt.Println(measurementSuffix, fields, tags)
 			acc.AddFields("dcos_"+measurementSuffix, fields, tags, now)
 		}
 	}
 
+}
+
+//fillTags traverses source map and fills tags with non map values
+func fillTags(tags map[string]string, source map[string]interface{}) {
+	for k, v := range source {
+		var s string
+		if v != "" { //remove tags with empty value
+			switch t := v.(type) {
+			case map[string]interface{}:
+				fillTags(tags, t)
+			default:
+				s = interfaceToString(v)
+				tags[k] = s
+			}
+
+		}
+	}
 }
 
 //prepareMetric sorts datapoints according to prefix and optional tag
@@ -276,19 +286,24 @@ func (m *Dcos) prepareMetric(metric *metric, metricType string, acc telegraf.Acc
 		if m.preProcessDataPoint(&d, metricType) {
 			continue
 		}
-		nameSegs := strings.SplitN(d.Name, ".", 2)
-		if len(nameSegs) == 2 {
-			nameSegs[1] = snakeCaser.Replace(nameSegs[1])
-		} else {
-			//metric name could be already divided  by '_'
-			nameSegs = strings.SplitN(d.Name, "_", 2)
-			if len(nameSegs) != 2 {
-				acc.AddError(fmt.Errorf("Unknown metric: '%s'", d.Name))
-				continue
+		var measurementSuffix string
+		if metricType != App {
+			nameSegs := strings.SplitN(d.Name, ".", 2)
+			if len(nameSegs) == 2 {
+				nameSegs[1] = snakeCaser.Replace(nameSegs[1])
+			} else {
+				//metric name could be already divided  by '_'
+				nameSegs = strings.SplitN(d.Name, "_", 2)
+				if len(nameSegs) != 2 {
+					acc.AddError(fmt.Errorf("Unknown metric: '%s'", d.Name))
+					continue
+				}
 			}
+			measurementSuffix = nameSegs[0]
+			d.Name = nameSegs[1]
+		} else {
+			measurementSuffix = "app"
 		}
-		measurementSuffix := nameSegs[0]
-		d.Name = nameSegs[1]
 		mainTag := getMainTag(d)
 		if _, ok := measurementData[measurementSuffix]; !ok {
 			measurementData[measurementSuffix] = make(map[string][]datapoint)
@@ -303,27 +318,18 @@ func (m *Dcos) preProcessDataPoint(datapoint *datapoint, metricType string) bool
 	for k, v := range datapoint.Tags {
 		switch k {
 		case "interface": //filter network interfaces
-			if isItemFiltered(m.NetworkInterfaces, v) {
+			if isItemFiltered(m.NetworkInterfaces, interfaceToString(v)) {
 				return true
 			}
 		case "path": //path
-			if isItemFiltered(m.FileSystemMounts, v) {
+			if isItemFiltered(m.FileSystemMounts, interfaceToString(v)) {
 				return true
 			}
 		}
 	}
-	switch metricType {
-	case App:
-		//transform app metric name  to be consistent with others
-		//(e.g. dcos.metrics.module.container_received_bytes_per_sec -> metrics_module.container_received_bytes_per_sec
-		if strings.HasPrefix(datapoint.Name, "dcos.metrics.module.") {
-			datapoint.Name = "metrics_module" + strings.TrimPrefix(datapoint.Name, "dcos.metrics.module")
-		}
-	default:
-		//add units to name, in case if name already doesn't have that
-		if len(datapoint.Unit) > 0 && !strings.HasSuffix(datapoint.Name, datapoint.Unit) {
-			datapoint.Name = strings.Join([]string{datapoint.Name, datapoint.Unit}, ".")
-		}
+	//add units to name, in case if name already doesn't have that
+	if len(datapoint.Unit) > 0 && !strings.HasSuffix(datapoint.Name, datapoint.Unit) {
+		datapoint.Name = strings.Join([]string{datapoint.Name, datapoint.Unit}, ".")
 	}
 	return false
 }
@@ -372,10 +378,15 @@ func (m *Dcos) handleJsonRequest(url string, obj interface{}) error {
 	if len(body) > 0 {
 		err = json.Unmarshal(body, &obj)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error parsing data from %s:  %s", url, err.Error())
 		}
 	}
 	return nil
+}
+
+//interfaceToString returns string representation of given interface
+func interfaceToString(v interface{}) string {
+	return fmt.Sprintf("%v", v)
 }
 
 //isItemFiltered tests whether item is part of non empty array, if not, returns true
@@ -393,7 +404,7 @@ func isItemFiltered(array []string, item string) bool {
 
 //getMainTag returns value of a tag determining membership of datapoint to a group
 func getMainTag(datapoint datapoint) string {
-	var mainTag string
+	var mainTag interface{}
 	if v, ok := datapoint.Tags["path"]; ok {
 		mainTag = v
 	} else if v, ok := datapoint.Tags["interface"]; ok {
@@ -401,7 +412,7 @@ func getMainTag(datapoint datapoint) string {
 	} else if v, ok := datapoint.Tags["container_id"]; ok {
 		mainTag = v
 	}
-	return mainTag
+	return interfaceToString(mainTag)
 }
 
 func init() {
