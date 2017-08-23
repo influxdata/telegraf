@@ -77,15 +77,9 @@ func New(
 
 	// pre-allocate capacity of the fields slice
 	fieldlen := 0
-	for k, v := range fields {
+	for k, _ := range fields {
 		if strings.HasSuffix(k, `\`) {
 			return nil, fmt.Errorf("Metric cannot have field key ending with a backslash")
-		}
-		switch val := v.(type) {
-		case string:
-			if strings.HasSuffix(val, `\`) {
-				return nil, fmt.Errorf("Metric cannot have field value ending with a backslash")
-			}
 		}
 
 		// 10 bytes is completely arbitrary, but will at least prevent some
