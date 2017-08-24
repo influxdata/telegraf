@@ -2,6 +2,7 @@ package snmp
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -247,6 +248,8 @@ type Field struct {
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	Conversion string
 
+	UseShell bool // Shell out to external snmpget or snmpwalk utility.
+
 	initialized bool
 }
 
@@ -383,7 +386,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 }
 
 func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table, defaultTags map[string]string, topTags map[string]string, walk bool) error {
-	rt, err := t.Build(gs, walk)
+	rt, err := t.Build(gs, walk, s.Version, s.Community)
 	if err != nil {
 		return err
 	}
@@ -415,7 +418,7 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 }
 
 // Build retrieves all the fields specified in the table and constructs the RTable.
-func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
+func (t Table) Build(gs snmpConnection, walk bool, version uint8, community string) (*RTable, error) {
 	rows := map[string]RTableRow{}
 
 	tagCount := 0
@@ -439,20 +442,40 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		ifv := map[string]interface{}{}
 
 		if !walk {
-			// This is used when fetching non-table fields. Fields configured a the top
-			// scope of the plugin.
-			// We fetch the fields directly, and add them to ifv as if the index were an
-			// empty string. This results in all the non-table fields sharing the same
-			// index, and being added on the same row.
-			if pkt, err := gs.Get([]string{oid}); err != nil {
-				return nil, Errorf(err, "performing get on field %s", f.Name)
-			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
-				ent := pkt.Variables[0]
-				fv, err := fieldConvert(f.Conversion, ent.Value)
+			if f.UseShell {
+				v, err := snmpVersion(version)
 				if err != nil {
-					return nil, Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
+					return nil, err
 				}
-				ifv[""] = fv
+				out, err := execCmd("snmpget", "-v", v, "-c", community, gs.Host(), oid)
+				if err != nil {
+					return nil, Errorf(err, "performing get on field %s (output=%v)", f.Name, string(out))
+				}
+				if pieces := strings.SplitN(strings.Trim(string(out), "\n"), " ", 4); len(pieces) == 4 {
+					fv, err := fieldConvert(f.Conversion, pieces[3])
+					if err != nil {
+						return nil, Errorf(err, "converting %q (OID %s) for field %s", pieces[3], f.Name, f.Name)
+					}
+					ifv[""] = fv
+				} else {
+					return nil, fmt.Errorf("malformed response from snmpget, expected components length=4 but actual=%v (contents=%v)", len(pieces), string(out))
+				}
+			} else {
+				// This is used when fetching non-table fields. Fields configured a the top
+				// scope of the plugin.
+				// We fetch the fields directly, and add them to ifv as if the index were an
+				// empty string. This results in all the non-table fields sharing the same
+				// index, and being added on the same row.
+				if pkt, err := gs.Get([]string{oid}); err != nil {
+					return nil, Errorf(err, "performing get on field %s", f.Name)
+				} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
+					ent := pkt.Variables[0]
+					fv, err := fieldConvert(f.Conversion, ent.Value)
+					if err != nil {
+						return nil, Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
+					}
+					ifv[""] = fv
+				}
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
@@ -521,6 +544,20 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		rt.Rows = append(rt.Rows, r)
 	}
 	return &rt, nil
+}
+
+// snmpVersion converts a uint8 to the corresponding SNMP version string.
+func snmpVersion(version uint8) (string, error) {
+	switch version {
+	case 3:
+		return "3", nil
+	case 2, 0:
+		return "2c", nil
+	case 1:
+		return "1", nil
+	default:
+		return "", errors.New("invalid version")
+	}
 }
 
 // snmpConnection is an interface which wraps a *gosnmp.GoSNMP object.
