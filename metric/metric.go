@@ -6,12 +6,10 @@ import (
 	"hash/fnv"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	// TODO remove
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 const MaxInt = int(^uint(0) >> 1)
@@ -28,6 +26,9 @@ func New(
 	}
 	if len(name) == 0 {
 		return nil, fmt.Errorf("Metric cannot be made with an empty name")
+	}
+	if strings.HasSuffix(name, `\`) {
+		return nil, fmt.Errorf("Metric cannot have measurement name ending with a backslash")
 	}
 
 	var thisType telegraf.ValueType
@@ -47,13 +48,25 @@ func New(
 	// pre-allocate exact size of the tags slice
 	taglen := 0
 	for k, v := range tags {
-		// TODO check that length of tag key & value are > 0
+		if strings.HasSuffix(k, `\`) {
+			return nil, fmt.Errorf("Metric cannot have tag key ending with a backslash")
+		}
+		if strings.HasSuffix(v, `\`) {
+			return nil, fmt.Errorf("Metric cannot have tag value ending with a backslash")
+		}
+
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		taglen += 2 + len(escape(k, "tagkey")) + len(escape(v, "tagval"))
 	}
 	m.tags = make([]byte, taglen)
 
 	i := 0
 	for k, v := range tags {
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		m.tags[i] = ','
 		i++
 		i += copy(m.tags[i:], escape(k, "tagkey"))
@@ -64,7 +77,17 @@ func New(
 
 	// pre-allocate capacity of the fields slice
 	fieldlen := 0
-	for k, _ := range fields {
+	for k, v := range fields {
+		if strings.HasSuffix(k, `\`) {
+			return nil, fmt.Errorf("Metric cannot have field key ending with a backslash")
+		}
+		switch val := v.(type) {
+		case string:
+			if strings.HasSuffix(val, `\`) {
+				return nil, fmt.Errorf("Metric cannot have field value ending with a backslash")
+			}
+		}
+
 		// 10 bytes is completely arbitrary, but will at least prevent some
 		// amount of allocations. There's a small possibility this will create
 		// slightly more allocations for a metric that has many short fields.
@@ -96,31 +119,13 @@ func indexUnescapedByte(buf []byte, b byte) int {
 			break
 		}
 		keyi += i
-		if countBackslashes(buf, keyi-1)%2 == 0 {
+		if buf[keyi-1] != '\\' {
 			break
 		} else {
 			keyi++
 		}
 	}
 	return keyi
-}
-
-// countBackslashes counts the number of preceding backslashes starting at
-// the 'start' index.
-func countBackslashes(buf []byte, index int) int {
-	var count int
-	for {
-		if index < 0 {
-			return count
-		}
-		if buf[index] == '\\' {
-			count++
-			index--
-		} else {
-			break
-		}
-	}
-	return count
 }
 
 type metric struct {
@@ -135,11 +140,6 @@ type metric struct {
 	// cached values for reuse in "get" functions
 	hashID uint64
 	nsec   int64
-}
-
-func (m *metric) Point() *client.Point {
-	c, _ := client.NewPoint(m.Name(), m.Tags(), m.Fields(), m.Time())
-	return c
 }
 
 func (m *metric) String() string {
@@ -221,7 +221,7 @@ func (m *metric) SerializeTo(dst []byte) int {
 }
 
 func (m *metric) Split(maxSize int) []telegraf.Metric {
-	if m.Len() < maxSize {
+	if m.Len() <= maxSize {
 		return []telegraf.Metric{m}
 	}
 	var out []telegraf.Metric
@@ -251,7 +251,7 @@ func (m *metric) Split(maxSize int) []telegraf.Metric {
 
 		// if true, then we need to create a metric _not_ including the currently
 		// selected field
-		if len(m.fields[i:j])+len(fields)+constant > maxSize {
+		if len(m.fields[i:j])+len(fields)+constant >= maxSize {
 			// if false, then we'll create a metric including the currently
 			// selected field anyways. This means that the given maxSize is too
 			// small for a single field to fit.

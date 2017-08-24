@@ -15,6 +15,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb/client"
 )
 
+var (
+	// Quote Ident replacer.
+	qiReplacer = strings.NewReplacer("\n", `\n`, `\`, `\\`, `"`, `\"`)
+)
+
+// InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
 	// URL is only for backwards compatability
 	URL              string
@@ -26,7 +32,9 @@ type InfluxDB struct {
 	RetentionPolicy  string
 	WriteConsistency string
 	Timeout          internal.Duration
-	UDPPayload       int `toml:"udp_payload"`
+	UDPPayload       int    `toml:"udp_payload"`
+	HTTPProxy        string `toml:"http_proxy"`
+	ContentEncoding  string `toml:"content_encoding"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -44,7 +52,10 @@ type InfluxDB struct {
 }
 
 var sampleConfig = `
-  ## The full HTTP or UDP endpoint URL for your InfluxDB instance.
+  ## The HTTP or UDP URL for your InfluxDB instance.  Each item should be
+  ## of the form:
+  ##   scheme "://" host [ ":" port]
+  ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   # urls = ["udp://localhost:8089"] # UDP endpoint example
@@ -52,7 +63,8 @@ var sampleConfig = `
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
-  ## Retention policy to write to. Empty string writes to the default rp.
+  ## Name of existing retention policy to write to.  Empty string writes to
+  ## the default retention policy.
   retention_policy = ""
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
   write_consistency = "any"
@@ -73,13 +85,18 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Proxy Config
+  # http_proxy = "http://corporate.proxy:3128"
+
+  ## Compress each HTTP request payload using GZIP.
+  # content_encoding = "gzip"
 `
 
+// Connect initiates the primary connection to the range of provided URLs
 func (i *InfluxDB) Connect() error {
 	var urls []string
-	for _, u := range i.URLs {
-		urls = append(urls, u)
-	}
+	urls = append(urls, i.URLs...)
 
 	// Backward-compatability with single Influx URL config files
 	// This could eventually be removed in favor of specifying the urls as a list
@@ -108,10 +125,14 @@ func (i *InfluxDB) Connect() error {
 		default:
 			// If URL doesn't start with "udp", assume HTTP client
 			config := client.HTTPConfig{
-				URL:       u,
-				Timeout:   i.Timeout.Duration,
-				TLSConfig: tlsConfig,
-				UserAgent: i.UserAgent,
+				URL:             u,
+				Timeout:         i.Timeout.Duration,
+				TLSConfig:       tlsConfig,
+				UserAgent:       i.UserAgent,
+				Username:        i.Username,
+				Password:        i.Password,
+				HTTPProxy:       i.HTTPProxy,
+				ContentEncoding: i.ContentEncoding,
 			}
 			wp := client.WriteParams{
 				Database:        i.Database,
@@ -124,9 +145,11 @@ func (i *InfluxDB) Connect() error {
 			}
 			i.clients = append(i.clients, c)
 
-			err = c.Query("CREATE DATABASE " + i.Database)
+			err = c.Query(fmt.Sprintf(`CREATE DATABASE "%s"`, qiReplacer.Replace(i.Database)))
 			if err != nil {
-				log.Println("E! Database creation failed: " + err.Error())
+				if !strings.Contains(err.Error(), "Status Code [403]") {
+					log.Println("I! Database creation failed: " + err.Error())
+				}
 				continue
 			}
 		}
@@ -136,25 +159,30 @@ func (i *InfluxDB) Connect() error {
 	return nil
 }
 
+// Close will terminate the session to the backend, returning error if an issue arises
 func (i *InfluxDB) Close() error {
 	return nil
 }
 
+// SampleConfig returns the formatted sample configuration for the plugin
 func (i *InfluxDB) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns the human-readable function definition of the plugin
 func (i *InfluxDB) Description() string {
 	return "Configuration for influxdb server to send metrics to"
 }
 
-// Choose a random server in the cluster to write to until a successful write
+// Write will choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
+
 	bufsize := 0
 	for _, m := range metrics {
 		bufsize += m.Len()
 	}
+
 	r := metric.NewReader(metrics)
 
 	// This will get set to nil if a successful write occurs
@@ -165,11 +193,13 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		if _, e := i.clients[n].WriteStream(r, bufsize); e != nil {
 			// If the database was not found, try to recreate it:
 			if strings.Contains(e.Error(), "database not found") {
-				if errc := i.clients[n].Query("CREATE DATABASE  " + i.Database); errc != nil {
+				errc := i.clients[n].Query(fmt.Sprintf(`CREATE DATABASE "%s"`, qiReplacer.Replace(i.Database)))
+				if errc != nil {
 					log.Printf("E! Error: Database %s not found and failed to recreate\n",
 						i.Database)
 				}
 			}
+
 			if strings.Contains(e.Error(), "field type conflict") {
 				log.Printf("E! Field type conflict, dropping conflicted points: %s", e)
 				// setting err to nil, otherwise we will keep retrying and points
@@ -177,6 +207,31 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 				err = nil
 				break
 			}
+
+			if strings.Contains(e.Error(), "points beyond retention policy") {
+				log.Printf("W! Points beyond retention policy: %s", e)
+				// This error is indicates the point is older than the
+				// retention policy permits, and is probably not a cause for
+				// concern.  Retrying will not help unless the retention
+				// policy is modified.
+				err = nil
+				break
+			}
+
+			if strings.Contains(e.Error(), "unable to parse") {
+				log.Printf("E! Parse error; dropping points: %s", e)
+				// This error indicates a bug in Telegraf or InfluxDB parsing
+				// of line protocol.  Retries will not be successful.
+				err = nil
+				break
+			}
+
+			if strings.Contains(e.Error(), "hinted handoff queue not empty") {
+				// This is an informational message
+				err = nil
+				break
+			}
+
 			// Log write failure
 			log.Printf("E! InfluxDB Output Error: %s", e)
 		} else {

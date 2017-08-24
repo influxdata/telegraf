@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -16,7 +17,6 @@ var (
 	defaultRequestTimeout = time.Second * 5
 )
 
-//
 func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 	// validate required parameters:
 	if len(config.URL) == 0 {
@@ -40,15 +40,30 @@ func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 		return nil, fmt.Errorf("config.URL scheme must be http(s), got %s", u.Scheme)
 	}
 
+	var transport http.Transport
+	if len(config.HTTPProxy) > 0 {
+		proxyURL, err := url.Parse(config.HTTPProxy)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing config.HTTPProxy: %s", err)
+		}
+
+		transport = http.Transport{
+			Proxy:           http.ProxyURL(proxyURL),
+			TLSClientConfig: config.TLSConfig,
+		}
+	} else {
+		transport = http.Transport{
+			TLSClientConfig: config.TLSConfig,
+		}
+	}
+
 	return &httpClient{
 		writeURL: writeURL(u, defaultWP),
 		config:   config,
 		url:      u,
 		client: &http.Client{
-			Timeout: config.Timeout,
-			Transport: &http.Transport{
-				TLSClientConfig: config.TLSConfig,
-			},
+			Timeout:   config.Timeout,
+			Transport: &transport,
 		},
 	}, nil
 }
@@ -77,9 +92,11 @@ type HTTPConfig struct {
 	// TLSConfig is the tls auth settings to use for each request.
 	TLSConfig *tls.Config
 
-	// Gzip, if true, compresses each payload using gzip.
-	// TODO
-	// Gzip bool
+	// Proxy URL should be of the form "http://host:port"
+	HTTPProxy string
+
+	// The content encoding mechanism to use for each request.
+	ContentEncoding string
 }
 
 // Response represents a list of statement results.
@@ -215,16 +232,24 @@ func (c *httpClient) makeWriteRequest(
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Length", fmt.Sprint(contentLength))
-	// TODO
-	// if gzip {
-	// 	req.Header.Set("Content-Encoding", "gzip")
-	// }
+	if c.config.ContentEncoding == "gzip" {
+		req.Header.Set("Content-Encoding", "gzip")
+	} else {
+		req.Header.Set("Content-Length", fmt.Sprint(contentLength))
+	}
 	return req, nil
 }
 
 func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest("POST", uri, body)
+	var req *http.Request
+	var err error
+	if c.config.ContentEncoding == "gzip" {
+		body, err = compressWithGzip(body)
+		if err != nil {
+			return nil, err
+		}
+	}
+	req, err = http.NewRequest("POST", uri, body)
 	if err != nil {
 		return nil, err
 	}
@@ -234,6 +259,20 @@ func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, err
 		req.SetBasicAuth(c.config.Username, c.config.Password)
 	}
 	return req, nil
+}
+
+func compressWithGzip(data io.Reader) (io.Reader, error) {
+	pr, pw := io.Pipe()
+	gw := gzip.NewWriter(pw)
+	var err error
+
+	go func() {
+		_, err = io.Copy(gw, data)
+		gw.Close()
+		pw.Close()
+	}()
+
+	return pr, err
 }
 
 func (c *httpClient) Close() error {

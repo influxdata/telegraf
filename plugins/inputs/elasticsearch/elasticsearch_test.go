@@ -71,7 +71,7 @@ func TestGather(t *testing.T) {
 	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
 
 	var acc testutil.Accumulator
-	if err := es.Gather(&acc); err != nil {
+	if err := acc.GatherError(es.Gather); err != nil {
 		t.Fatal(err)
 	}
 

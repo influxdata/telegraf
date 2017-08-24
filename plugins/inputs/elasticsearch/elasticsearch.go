@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"io/ioutil"
@@ -153,7 +152,6 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 		e.client = client
 	}
 
-	errChan := errchan.New(len(e.Servers) * 3)
 	var wg sync.WaitGroup
 	wg.Add(len(e.Servers))
 
@@ -171,29 +169,29 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if e.ClusterStats {
 				// get cat/master information here so NodeStats can determine
 				// whether this node is the Master
-				e.setCatMaster(s + "/_cat/master")
+				if err := e.setCatMaster(s + "/_cat/master"); err != nil {
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					return
+				}
 			}
 
 			// Always gather node states
 			if err := e.gatherNodeStats(url, acc); err != nil {
-				err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
-				errChan.C <- err
+				acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 				return
 			}
 
 			if e.ClusterHealth {
 				url = s + "/_cluster/health?level=indices"
 				if err := e.gatherClusterHealth(url, acc); err != nil {
-					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
-					errChan.C <- err
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
 
 			if e.ClusterStats && e.isMaster {
 				if err := e.gatherClusterStats(s+"/_cluster/stats", acc); err != nil {
-					err = fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@"))
-					errChan.C <- err
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
@@ -201,7 +199,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
@@ -358,7 +356,7 @@ func (e *Elasticsearch) setCatMaster(url string) error {
 		// NOTE: we are not going to read/discard r.Body under the assumption we'd prefer
 		// to let the underlying transport close the connection and re-establish a new one for
 		// future calls.
-		return fmt.Errorf("status-code %d, expected %d", r.StatusCode, http.StatusOK)
+		return fmt.Errorf("elasticsearch: Unable to retrieve master node information. API responded with status-code %d, expected %d", r.StatusCode, http.StatusOK)
 	}
 	response, err := ioutil.ReadAll(r.Body)
 

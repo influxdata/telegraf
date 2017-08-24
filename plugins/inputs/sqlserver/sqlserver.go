@@ -79,20 +79,19 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	var outerr error
 
 	for _, serv := range s.Servers {
 		for _, query := range queries {
 			wg.Add(1)
 			go func(serv string, query Query) {
 				defer wg.Done()
-				outerr = s.gatherServer(serv, query, acc)
+				acc.AddError(s.gatherServer(serv, query, acc))
 			}(serv, query)
 		}
 	}
 
 	wg.Wait()
-	return outerr
+	return nil
 }
 
 func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumulator) error {
@@ -844,7 +843,7 @@ FROM (SELECT DISTINCT DatabaseName FROM #Databases) AS bl
 SET @DynamicPivotQuery = N'
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -857,7 +856,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -870,7 +869,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -884,7 +883,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -897,7 +896,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -910,7 +909,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -923,7 +922,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -936,7 +935,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -949,7 +948,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)
@@ -962,7 +961,7 @@ UNION ALL
 
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
-, ' + @ColumnName + ', total FROM
+, ' + @ColumnName + ', Total FROM
 (
 SELECT Measurement, DatabaseName, Value
 , Total = (SELECT SUM(Value) FROM #Databases WHERE Measurement = d.Measurement)

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/load"
@@ -23,7 +24,7 @@ func (_ *SystemStats) SampleConfig() string { return "" }
 
 func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return err
 	}
 
