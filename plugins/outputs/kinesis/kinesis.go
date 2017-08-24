@@ -54,7 +54,7 @@ var sampleConfig = `
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
-  ## PartitionKey as used for sharding data.
+  ## PartitionKey as used for sharding data, if not set the metric name will be used.
   partitionkey = "PartitionKey"
   ## If set the paritionKey will be a random UUID on every put.
   ## This allows for scaling across multiple shards in a stream.
@@ -163,6 +163,21 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 	return time.Since(start)
 }
 
+func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
+	if k.RandomPartitionKey {
+		u := uuid.NewV4()
+		return u.String()
+	}
+	if k.PartitionKey != "" {
+		return k.PartitionKey
+	}
+	if len(metric.Name()) > 256 {
+		// PartitionKeys have a max length of 256, truncate name if longers
+		return metric.Name()[:256]
+	}
+	return metric.Name()
+}
+
 func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 	var sz uint32
 
@@ -180,11 +195,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
-		partitionKey := k.PartitionKey
-		if k.RandomPartitionKey {
-			u := uuid.NewV4()
-			partitionKey = u.String()
-		}
+		partitionKey := k.getPartitionKey(metric)
 
 		d := kinesis.PutRecordsRequestEntry{
 			Data:         values,
@@ -202,8 +213,10 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		}
 
 	}
-
-	writekinesis(k, r)
+	if sz > 0 {
+		elapsed := writekinesis(k, r)
+		log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
+	}
 
 	return nil
 }
