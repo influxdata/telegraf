@@ -27,7 +27,6 @@ For this output plugin to function correctly the following variables must be con
 
 * region
 * streamname
-* partitionkey
 
 ### region
 
@@ -46,9 +45,8 @@ plugin will result in telegraf exiting with an exit code of 1.
 
 ### partitionkey
 
-This is used to group data within a stream. Currently this plugin only supports a single partitionkey.
-Manually configuring different hosts, or groups of hosts with manually selected partitionkeys might be a workable
-solution to scale out.
+This is used to group data within a stream. If not set, and use_random_partitionkey is false, the metric name will
+be used as the partitionkey.
 
 ### use_random_partitionkey
 
