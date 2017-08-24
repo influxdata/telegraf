@@ -53,6 +53,10 @@ type mesosMasterStateSummary struct {
 	Slaves   []slave `json:"slaves"`
 }
 
+type mesosAgentContainer struct {
+	Id string `json:"container_id"`
+}
+
 type slave struct {
 	Id       string `json:"id"`
 	Hostname string `json:"hostname"`
@@ -78,6 +82,7 @@ const (
 )
 
 const MesosMasterStateSummaryUrl = "/mesos/master/state-summary"
+const MesosSlaveContainersUrl = "/agent/%s/containers"
 const AgentContainersUrl = "/system/v1/agent/%s/metrics/v0/containers"
 const AgentContainerMetricsUrl = "/system/v1/agent/%s/metrics/v0/containers/%s"
 const AgentContainerAppMetricsUrl = "/system/v1/agent/%s/metrics/v0/containers/%s/app"
@@ -188,23 +193,46 @@ func (m *Dcos) gatherAgentContainers(agent slave, acc telegraf.Accumulator) erro
 		return err
 	}
 
+	agentContainers, err := m.getMesosAgentContainers(agent.Id)
+	if err != nil {
+		return err
+	}
+
 	var wg sync.WaitGroup
 
 	for _, c := range containerIds {
-		wg.Add(1)
-		go func(cid string) {
-			acc.AddError(m.gatherContainerMetrics(agent.Id, cid, acc))
-			wg.Done()
-		}(c)
-		wg.Add(1)
-		go func(cid string) {
-			acc.AddError(m.gatherContainerAppMetrics(agent.Id, cid, acc))
-			wg.Done()
-		}(c)
+		//metrics are returned also for removed/not running containers, so filter such containers out
+		if !isItemFiltered(agentContainers, c) {
+			wg.Add(1)
+			go func(cid string) {
+				acc.AddError(m.gatherContainerMetrics(agent.Id, cid, acc))
+				wg.Done()
+			}(c)
+			wg.Add(1)
+			go func(cid string) {
+				acc.AddError(m.gatherContainerAppMetrics(agent.Id, cid, acc))
+				wg.Done()
+			}(c)
+		}
 	}
 	wg.Wait()
 
 	return nil
+}
+
+//getMesosAgentContainers gathers ids of running mesos container
+func (m *Dcos) getMesosAgentContainers(agentId string) ([]string, error) {
+	url := m.ClusterURL + fmt.Sprintf(MesosSlaveContainersUrl, agentId)
+	var agentContainers []mesosAgentContainer
+	err := m.handleJsonRequest(url, &agentContainers)
+	if err != nil {
+		return nil, err
+	}
+	agentContainerIds := make([]string, len(agentContainers))
+	for _, a := range agentContainers {
+		agentContainerIds = append(agentContainerIds, a.Id)
+	}
+	return agentContainerIds, nil
 }
 
 //gatherContainerMetrics collects metric for given container
