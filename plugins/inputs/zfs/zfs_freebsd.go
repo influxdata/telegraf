@@ -35,7 +35,7 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 
 			if tags["health"] == "UNAVAIL" {
 
-				fields["size"] = 0
+				fields["size"] = int64(0)
 
 			} else {
 
