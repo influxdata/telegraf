@@ -14,7 +14,7 @@ import (
 )
 
 var sampleConfig = `
-  servers = ["localhost:1883"] # required.
+  servers = ["tcp://localhost:1883","ssl://localhost:1883"] # required.
 
   ## MQTT outputs send metrics to this topic format
   ##    "<topic_prefix>/<hostname>/<pluginname>/"
@@ -171,9 +171,7 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 		return nil, err
 	}
 
-	scheme := "tcp"
 	if tlsCfg != nil {
-		scheme = "ssl"
 		opts.SetTLSConfig(tlsCfg)
 	}
 
@@ -189,9 +187,7 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	if len(m.Servers) == 0 {
 		return opts, fmt.Errorf("could not get host infomations")
 	}
-	for _, host := range m.Servers {
-		server := fmt.Sprintf("%s://%s", scheme, host)
-
+	for _, server := range m.Servers {
 		opts.AddBroker(server)
 	}
 	opts.SetAutoReconnect(true)
