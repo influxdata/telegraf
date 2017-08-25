@@ -33,41 +33,48 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 			tags := map[string]string{"pool": col[0], "health": col[8]}
 			fields := map[string]interface{}{}
 
-			size, err := strconv.ParseInt(col[1], 10, 64)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing size: %s", err)
-			}
-			fields["size"] = size
+			if tags["health"] == "UNAVAIL" {
 
-			alloc, err := strconv.ParseInt(col[2], 10, 64)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing allocation: %s", err)
-			}
-			fields["allocated"] = alloc
+				fields["size"] = int64(0)
 
-			free, err := strconv.ParseInt(col[3], 10, 64)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing free: %s", err)
-			}
-			fields["free"] = free
+			} else {
 
-			frag, err := strconv.ParseInt(strings.TrimSuffix(col[5], "%"), 10, 0)
-			if err != nil { // This might be - for RO devs
-				frag = 0
-			}
-			fields["fragmentation"] = frag
+				size, err := strconv.ParseInt(col[1], 10, 64)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing size: %s", err)
+				}
+				fields["size"] = size
 
-			capval, err := strconv.ParseInt(col[6], 10, 0)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing capacity: %s", err)
-			}
-			fields["capacity"] = capval
+				alloc, err := strconv.ParseInt(col[2], 10, 64)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing allocation: %s", err)
+				}
+				fields["allocated"] = alloc
 
-			dedup, err := strconv.ParseFloat(strings.TrimSuffix(col[7], "x"), 32)
-			if err != nil {
-				return "", fmt.Errorf("Error parsing dedupratio: %s", err)
+				free, err := strconv.ParseInt(col[3], 10, 64)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing free: %s", err)
+				}
+				fields["free"] = free
+
+				frag, err := strconv.ParseInt(strings.TrimSuffix(col[5], "%"), 10, 0)
+				if err != nil { // This might be - for RO devs
+					frag = 0
+				}
+				fields["fragmentation"] = frag
+
+				capval, err := strconv.ParseInt(col[6], 10, 0)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing capacity: %s", err)
+				}
+				fields["capacity"] = capval
+
+				dedup, err := strconv.ParseFloat(strings.TrimSuffix(col[7], "x"), 32)
+				if err != nil {
+					return "", fmt.Errorf("Error parsing dedupratio: %s", err)
+				}
+				fields["dedupratio"] = dedup
 			}
-			fields["dedupratio"] = dedup
 
 			acc.AddFields("zfs_pool", fields, tags)
 		}
