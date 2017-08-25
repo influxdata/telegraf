@@ -71,23 +71,23 @@ var sampleConfig = `
 	## The partition key can be calculated using one of several methods:
 	##
 	## Use a static value for all writes:
-	# [[outputs.kinesis.partition]]
-	#   method = "static"
-	#   key = "howdy"
+	#  [outputs.kinesis.partition]
+	#    method = "static"
+	#    key = "howdy"
 	#
 	## Use a random partition key on each write:
-	# [outputs.kinesis.partition]
-	#   method = "random"
+	#  [outputs.kinesis.partition]
+	#    method = "random"
 	#
 	## Use the measurement name as the partition key:
-	# [[outputs.kinesis.partition]]
-	#   method = "measurement"
+	#  [outputs.kinesis.partition]
+	#    method = "measurement"
 	#
 	## Use the value of a tag for all writes, if the tag is not set the empty
 	## string will be used:
-	# [[outputs.kinesis.partition]]
-	#   method = "tag"
-	#   key = "host"
+	#  [outputs.kinesis.partition]
+	#    method = "tag"
+	#    key = "host"
 
 
   ## Data format to output.
@@ -190,7 +190,6 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 		if err != nil {
 			log.Printf("E! kinesis: Unable to write to Kinesis : %+v \n", err.Error())
 		}
-
 	}
 	return time.Since(start)
 }
