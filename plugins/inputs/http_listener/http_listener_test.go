@@ -58,6 +58,7 @@ func TestWriteHTTP(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -69,6 +70,7 @@ func TestWriteHTTP(t *testing.T) {
 	// post multiple message to listener
 	resp, err = http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(2)
@@ -84,6 +86,7 @@ func TestWriteHTTP(t *testing.T) {
 	// Post a gigantic metric to the listener and verify that an error is returned:
 	resp, err = http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
 
 	acc.Wait(3)
@@ -104,6 +107,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -126,6 +130,7 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 	// Post a gigantic metric to the listener and verify that it writes OK this time:
 	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -141,6 +146,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 
 	resp, err := http.Post(createURL(listener, "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 413, resp.StatusCode)
 }
 
@@ -156,6 +162,7 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 
 	resp, err := http.Post(createURL(listener, "/write", ""), "", bytes.NewBuffer([]byte(testMsgs)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	hostTags := []string{"server02", "server03",
@@ -181,6 +188,7 @@ func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
 
 	resp, err := http.Post(createURL(listener, "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
 
 	hostTags := []string{"server02", "server03",
@@ -242,6 +250,7 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 			for i := 0; i < 500; i++ {
 				resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
 				require.NoError(t, err)
+				resp.Body.Close()
 				require.EqualValues(t, 204, resp.StatusCode)
 			}
 		}(&wg)
@@ -264,6 +273,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 404, resp.StatusCode)
 }
 
@@ -277,6 +287,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(badMsg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
 }
 
@@ -290,6 +301,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -309,6 +321,7 @@ func TestQueryAndPingHTTP(t *testing.T) {
 	// post ping to listener
 	resp, err = http.Post(createURL(listener, "/ping", ""), "", nil)
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -323,6 +336,7 @@ func TestWriteWithPrecision(t *testing.T) {
 	resp, err := http.Post(
 		createURL(listener, "/write", "precision=s"), "", bytes.NewBuffer([]byte(msg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
