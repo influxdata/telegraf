@@ -28,12 +28,14 @@ build-for-docker:
 		"-s -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)" \
 		./cmd/telegraf/telegraf.go
 
+ARCH ?= all
+
 # run package script
 package:
-	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all --upload
+	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=$(ARCH) --upload
 
 package-no-upload:
-	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all
+	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=$(ARCH)
 
 # Get dependencies and use gdm to checkout changesets
 prepare:

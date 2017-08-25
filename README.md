@@ -1,3 +1,22 @@
+# Connor's release instructions
+
+* Use Ubuntu
+
+```bash
+# Install FPM
+sudo aptitude install ruby ruby-dev rubygems build-essential rpm
+sudo gem install --no-ri --no-rdoc fpm
+make package-no-upload
+```
+
+Then upload the artifacts from the build directory to packagecloud, e.g.:
+
+https://packagecloud.io/medallia/ops/packages/el/7/telegraf-1.3.0_medallia_2~db1e208-0.x86_64.rpm
+
+and
+
+https://packagecloud.io/medallia/ops/packages/ubuntu/xenial/telegraf_1.3.0-medallia-2~db1e208-0_amd64.deb
+
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 
 Telegraf is an agent written in Go for collecting, processing, aggregating,
