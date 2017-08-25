@@ -48,7 +48,7 @@ func TestSupervisor_ValidateMetrics(t *testing.T) {
 
 	var metricsCounted = 0
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("supervisor", metric))
+		assert.True(t, acc.HasInt64Field("supervisor", metric))
 		metricsCounted++
 	}
 
