@@ -97,6 +97,7 @@
 - [#3015](https://github.com/influxdata/telegraf/issues/3015): Don't start Telegraf on install in Amazon Linux.
 - [#3153](https://github.com/influxdata/telegraf/issues/3053): Enable hddtemp input on all platforms.
 - [#3142](https://github.com/influxdata/telegraf/issues/3142): Escape backslash within string fields.
+- [#3162](https://github.com/influxdata/telegraf/issues/3162): Fix parsing of SHM remotes in ntpq input
 
 ## v1.3.5 [2017-07-26]
 
