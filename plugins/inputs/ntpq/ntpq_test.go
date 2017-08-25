@@ -229,6 +229,22 @@ func TestBadWhenNTPQ(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	assert.Error(t, acc.GatherError(n.Gather))
+
+	fields := map[string]interface{}{
+		"poll":   int64(256),
+		"reach":  int64(37),
+		"delay":  float64(51.016),
+		"offset": float64(233.010),
+		"jitter": float64(17.462),
+	}
+	tags := map[string]string{
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
 
 // TestParserNTPQ - realated to:
