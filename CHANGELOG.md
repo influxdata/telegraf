@@ -101,6 +101,7 @@
 - [#3142](https://github.com/influxdata/telegraf/issues/3142): Escape backslash within string fields.
 - [#3162](https://github.com/influxdata/telegraf/issues/3162): Fix parsing of SHM remotes in ntpq input
 - [#3149](https://github.com/influxdata/telegraf/issues/3149): Don't fail parsing zpool stats if pool health is UNAVAIL on FreeBSD.
+- [#2672](https://github.com/influxdata/telegraf/issues/2672): Fix NSQ input plugin when used with version 1.0.0-compat.
 
 ## v1.3.5 [2017-07-26]
 
