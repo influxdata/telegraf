@@ -55,6 +55,13 @@ func TestHTTPClient_Write(t *testing.T) {
 				fmt.Fprintln(w, `{"results":[{}],"error":"basic auth incorrect"}`)
 			}
 
+			// test that user-specified http header is set properly
+			if r.Header.Get("X-Test-Header") != "Test-Value" {
+				w.WriteHeader(http.StatusTeapot)
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprintln(w, `{"results":[{}],"error":"wrong http header value"}`)
+			}
+
 			// Validate Content-Length Header
 			if r.ContentLength != 13 {
 				w.WriteHeader(http.StatusTeapot)
@@ -90,6 +97,9 @@ func TestHTTPClient_Write(t *testing.T) {
 		UserAgent: "test-agent",
 		Username:  "test-user",
 		Password:  "test-password",
+		HTTPHeaders: HTTPHeaders{
+			"X-Test-Header": "Test-Value",
+		},
 	}
 	wp := WriteParams{
 		Database:        "test",

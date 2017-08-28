@@ -32,9 +32,10 @@ type InfluxDB struct {
 	RetentionPolicy  string
 	WriteConsistency string
 	Timeout          internal.Duration
-	UDPPayload       int    `toml:"udp_payload"`
-	HTTPProxy        string `toml:"http_proxy"`
-	ContentEncoding  string `toml:"content_encoding"`
+	UDPPayload       int               `toml:"udp_payload"`
+	HTTPProxy        string            `toml:"http_proxy"`
+	HTTPHeaders      map[string]string `toml:"http_headers"`
+	ContentEncoding  string            `toml:"content_encoding"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -89,6 +90,9 @@ var sampleConfig = `
   ## HTTP Proxy Config
   # http_proxy = "http://corporate.proxy:3128"
 
+  ## Optional HTTP headers
+  # http_headers = {"X-Special-Header" = "Special-Value"}
+
   ## Compress each HTTP request payload using GZIP.
   # content_encoding = "gzip"
 `
@@ -132,7 +136,11 @@ func (i *InfluxDB) Connect() error {
 				Username:        i.Username,
 				Password:        i.Password,
 				HTTPProxy:       i.HTTPProxy,
+				HTTPHeaders:     client.HTTPHeaders{},
 				ContentEncoding: i.ContentEncoding,
+			}
+			for header, value := range i.HTTPHeaders {
+				config.HTTPHeaders[header] = value
 			}
 			wp := client.WriteParams{
 				Database:        i.Database,
