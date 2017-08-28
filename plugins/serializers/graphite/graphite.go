@@ -32,10 +32,10 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	}
 
 	for fieldName, value := range metric.Fields() {
-		//switch value.(type) {
-		//case string:
-		//	continue
-		//}
+		switch value.(type) {
+		case string:
+			continue
+		}
 		metricString := fmt.Sprintf("%s %#v %d\n",
 			// insert "field" section of template
 			sanitizedChars.Replace(InsertField(bucket, fieldName)),
