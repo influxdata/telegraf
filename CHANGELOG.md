@@ -1,5 +1,11 @@
 ## v1.5 [unreleased]
 
+### Features
+
+- [#3182](https://github.com/influxdata/telegraf/pull/3182): HTTP headers can be added to InfluxDB output.
+
+### Bugfixes
+
 ## v1.4 [unreleased]
 
 ### Release Notes
