@@ -1,8 +1,16 @@
 ## v1.5 [unreleased]
 
+### Release Notes
+
+- In the `kinesis` output, use of the `partition_key` and
+  `use_random_partitionkey` options has been deprecated in favor of the
+  `partition` subtable.  This allows for more flexible methods to set the
+  partition key such as by metric name or by tag.
+
 ### Features
 
 - [#3182](https://github.com/influxdata/telegraf/pull/3182): HTTP headers can be added to InfluxDB output.
+- [#3170](https://github.com/influxdata/telegraf/pull/3170): Add support for sharding based on metric name.
 
 ### Bugfixes
 
