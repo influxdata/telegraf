@@ -62,7 +62,7 @@ var sampleConfig = `
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
-  ## DEPRECATED: PartitionKey as used for sharding data, if not set the metric name will be used.
+  ## DEPRECATED: PartitionKey as used for sharding data.
   partitionkey = "PartitionKey"
   ## DEPRECATED: If set the paritionKey will be a random UUID on every put.
   ## This allows for scaling across multiple shards in a stream.
