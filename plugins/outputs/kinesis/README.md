@@ -27,7 +27,6 @@ For this output plugin to function correctly the following variables must be con
 
 * region
 * streamname
-* partitionkey
 
 ### region
 
@@ -44,16 +43,39 @@ The streamname is used by the plugin to ensure that data is sent to the correct 
 note that the stream *MUST* be pre-configured for this plugin to function correctly. If the stream does not exist the
 plugin will result in telegraf exiting with an exit code of 1.
 
-### partitionkey
+### partitionkey [DEPRECATED]
 
 This is used to group data within a stream. Currently this plugin only supports a single partitionkey.
 Manually configuring different hosts, or groups of hosts with manually selected partitionkeys might be a workable
 solution to scale out.
 
-### use_random_partitionkey
+### use_random_partitionkey [DEPRECATED]
 
 When true a random UUID will be generated and used as the partitionkey when sending data to Kinesis. This allows data to evenly spread across multiple shards in the stream. Due to using a random paritionKey there can be no guarantee of ordering when consuming the data off the shards.
 If true then the partitionkey option will be ignored.
+
+### partition
+
+This is used to group data within a stream. Currently four methods are supported: random, static, tag or measurement
+
+#### random
+
+This will generate a UUIDv4 for each metric to spread them across shards.
+Any guarantee of ordering is lost with this method
+
+#### static
+
+This uses a static string as a partitionkey.
+All metrics will be mapped to the same shard which may limit throughput.
+
+#### tag
+
+This will take the value of the specified tag from each metric as the paritionKey.
+If the tag is not found an empty string will be used.
+
+#### measurement
+
+This will use the measurement's name as the partitionKey.
 
 ### format
 
