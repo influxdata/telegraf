@@ -62,32 +62,32 @@ var sampleConfig = `
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
-	## DEPRECATED: PartitionKey as used for sharding data, if not set the metric name will be used.
+  ## DEPRECATED: PartitionKey as used for sharding data, if not set the metric name will be used.
   partitionkey = "PartitionKey"
   ## DEPRECATED: If set the paritionKey will be a random UUID on every put.
   ## This allows for scaling across multiple shards in a stream.
   ## This will cause issues with ordering.
   use_random_partitionkey = false
-	## The partition key can be calculated using one of several methods:
-	##
-	## Use a static value for all writes:
-	#  [outputs.kinesis.partition]
-	#    method = "static"
-	#    key = "howdy"
-	#
-	## Use a random partition key on each write:
-	#  [outputs.kinesis.partition]
-	#    method = "random"
-	#
-	## Use the measurement name as the partition key:
-	#  [outputs.kinesis.partition]
-	#    method = "measurement"
-	#
-	## Use the value of a tag for all writes, if the tag is not set the empty
-	## string will be used:
-	#  [outputs.kinesis.partition]
-	#    method = "tag"
-	#    key = "host"
+  ## The partition key can be calculated using one of several methods:
+  ##
+  ## Use a static value for all writes:
+  #  [outputs.kinesis.partition]
+  #    method = "static"
+  #    key = "howdy"
+  #
+  ## Use a random partition key on each write:
+  #  [outputs.kinesis.partition]
+  #    method = "random"
+  #
+  ## Use the measurement name as the partition key:
+  #  [outputs.kinesis.partition]
+  #    method = "measurement"
+  #
+  ## Use the value of a tag for all writes, if the tag is not set the empty
+  ## string will be used:
+  #  [outputs.kinesis.partition]
+  #    method = "tag"
+  #    key = "host"
 
 
   ## Data format to output.
