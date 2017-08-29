@@ -96,6 +96,8 @@ tars.cpu-total.us-east-1.cpu.usage_user 0.89 1455320690
 tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
 ```
 
+Fields with non-numeric values will be skipped.
+
 ### Graphite Configuration:
 
 ```toml

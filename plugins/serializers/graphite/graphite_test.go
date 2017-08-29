@@ -165,6 +165,28 @@ func TestSerializeValueField2(t *testing.T) {
 	assert.Equal(t, expS, mS)
 }
 
+func TestSerializeValueString(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"value": "asdasd",
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{
+		Template: "host.field.tags.measurement",
+	}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+	assert.Equal(t, "", mS[0])
+}
+
 // test that fields with spaces get fixed.
 func TestSerializeFieldWithSpaces(t *testing.T) {
 	now := time.Now()
