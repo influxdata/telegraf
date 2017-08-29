@@ -32,9 +32,15 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	}
 
 	for fieldName, value := range metric.Fields() {
-		switch value.(type) {
+		switch v := value.(type) {
 		case string:
 			continue
+		case bool:
+			if v {
+				value = 1
+			} else {
+				value = 0
+			}
 		}
 		metricString := fmt.Sprintf("%s %#v %d\n",
 			// insert "field" section of template
