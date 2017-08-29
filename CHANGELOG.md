@@ -9,7 +9,6 @@
 
 ### Features
 
-- [#3182](https://github.com/influxdata/telegraf/pull/3182): HTTP headers can be added to InfluxDB output.
 - [#3170](https://github.com/influxdata/telegraf/pull/3170): Add support for sharding based on metric name.
 
 ### Bugfixes
@@ -78,6 +77,7 @@
 - [#2978](https://github.com/influxdata/telegraf/pull/2978): Add gzip content-encoding support to influxdb output.
 - [#3127](https://github.com/influxdata/telegraf/pull/3127): Allow using system plugin in Windows.
 - [#3112](https://github.com/influxdata/telegraf/pull/3112): Add tomcat input plugin.
+- [#3182](https://github.com/influxdata/telegraf/pull/3182): HTTP headers can be added to InfluxDB output.
 
 ### Bugfixes
 
