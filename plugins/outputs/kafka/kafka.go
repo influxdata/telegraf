@@ -17,6 +17,10 @@ type Kafka struct {
 	Brokers []string
 	// Kafka topic
 	Topic string
+	// Change topic name to topic_prefix + metric name
+	UseMetricNameAsTopic bool `toml:"use_metric_name_as_topic"`
+	// Prefix to append
+	TopicPrefix string `toml:"topic_prefix"`
 	// Routing Key Tag
 	RoutingTag string `toml:"routing_tag"`
 	// Compression Codec Tag
@@ -60,6 +64,10 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
+  ## If true, topic name will be substituted with topic_prefix + metric name
+  use_metric_name_as_topic = false
+  ## Prefix to use if the use_metric_name_as_topic option is enabled
+  topic_prefix = ""
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
@@ -169,14 +177,22 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	var topicName string
+
 	for _, metric := range metrics {
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
+		if k.UseMetricNameAsTopic {
+			topicName = k.TopicPrefix + metric.Name()
+		} else {
+			topicName = k.Topic
+		}
+
 		m := &sarama.ProducerMessage{
-			Topic: k.Topic,
+			Topic: topicName,
 			Value: sarama.ByteEncoder(buf),
 		}
 		if h, ok := metric.Tags()[k.RoutingTag]; ok {
