@@ -33,7 +33,6 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 
 	emptyMsg = ""
 
-
 	// These dummy certificates and keys are good for 10 years
 	serviceRootPEM = `-----BEGIN CERTIFICATE-----
 MIIDRTCCAi2gAwIBAgIUenakcvMDj2URxBvUHBe0Mfhac0cwDQYJKoZIhvcNAQEL
@@ -287,7 +286,7 @@ func TestDisabledClientAuth(t *testing.T) {
 	noClientAuthClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs:            cas,
+				RootCAs: cas,
 			},
 		},
 	}
@@ -316,7 +315,6 @@ func TestWriteHTTPS(t *testing.T) {
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
 	)
-	
 
 	// post multiple message to listener
 	resp, err = getClient().Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
