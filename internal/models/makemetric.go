@@ -150,12 +150,6 @@ func makemetric(
 				continue
 			}
 		case string:
-			if strings.HasSuffix(val, `\`) {
-				log.Printf("D! Measurement [%s] field [%s] has a value "+
-					"ending with a backslash, skipping", measurement, k)
-				delete(fields, k)
-				continue
-			}
 			fields[k] = v
 		default:
 			fields[k] = v
