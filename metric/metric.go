@@ -102,7 +102,8 @@ func New(
 }
 
 // indexUnescapedByte finds the index of the first byte equal to b in buf that
-// is not escaped. Returns -1 if not found.
+// is not escaped.  Does not allow the escape char to be escaped. Returns -1 if
+// not found.
 func indexUnescapedByte(buf []byte, b byte) int {
 	var keyi int
 	for {
@@ -120,6 +121,46 @@ func indexUnescapedByte(buf []byte, b byte) int {
 		}
 	}
 	return keyi
+}
+
+// indexUnescapedByteBackslashEscaping finds the index of the first byte equal
+// to b in buf that is not escaped.  Allows for the escape char `\` to be
+// escaped.  Returns -1 if not found.
+func indexUnescapedByteBackslashEscaping(buf []byte, b byte) int {
+	var keyi int
+	for {
+		i := bytes.IndexByte(buf[keyi:], b)
+		if i == -1 {
+			return -1
+		} else if i == 0 {
+			break
+		}
+		keyi += i
+		if countBackslashes(buf, keyi-1)%2 == 0 {
+			break
+		} else {
+			keyi++
+		}
+	}
+	return keyi
+}
+
+// countBackslashes counts the number of preceding backslashes starting at
+// the 'start' index.
+func countBackslashes(buf []byte, index int) int {
+	var count int
+	for {
+		if index < 0 {
+			return count
+		}
+		if buf[index] == '\\' {
+			count++
+			index--
+		} else {
+			break
+		}
+	}
+	return count
 }
 
 type metric struct {
@@ -283,7 +324,7 @@ func (m *metric) Fields() map[string]interface{} {
 		// end index of field value
 		var i3 int
 		if m.fields[i:][i2] == '"' {
-			i3 = indexUnescapedByte(m.fields[i:][i2+1:], '"')
+			i3 = indexUnescapedByteBackslashEscaping(m.fields[i:][i2+1:], '"')
 			if i3 == -1 {
 				i3 = len(m.fields[i:])
 			}

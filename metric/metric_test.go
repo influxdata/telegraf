@@ -258,6 +258,7 @@ func TestNewMetric_Fields(t *testing.T) {
 		"quote_string":           `x"y`,
 		"backslash_quote_string": `x\"y`,
 		"backslash":              `x\y`,
+		"ends_with_backslash":    `x\`,
 	}
 	m, err := New("cpu", tags, fields, now)
 	assert.NoError(t, err)
