@@ -3,7 +3,10 @@ package http_listener
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/tls"
+	"crypto/x509"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -36,6 +39,11 @@ type HTTPListener struct {
 	MaxBodySize    int64
 	MaxLineSize    int
 	Port           int
+
+	SslAllowedClientCertificateAuthorities []string
+	SslCertificateAuthorities              []string
+	SslCertificate                         string
+	SslKey                                 string
 
 	mu sync.Mutex
 	wg sync.WaitGroup
@@ -75,6 +83,18 @@ const sampleConfig = `
   ## Maximum line size allowed to be sent in bytes.
   ## 0 means to use the default of 65536 bytes (64 kibibytes)
   max_line_size = 0
+
+  ## Set one or more allowed client CA certificate file names to 
+  ## enable mutually authenticated TLS connections
+  ssl_allowed_client_certificate_authorities = ["/etc/ca.crt"]
+
+  ## Add non-public root of trust certificate authorities
+  ssl_certificate_authorities = ["/etc/ca.crt"]
+
+  ## Add service certificate and key
+  ssl_certificate = "/etc/service.crt"
+  ssl_key = "/etc/service.key"
+
 `
 
 func (h *HTTPListener) SampleConfig() string {
@@ -117,10 +137,33 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		h.MaxLineSize = DEFAULT_MAX_LINE_SIZE
 	}
 
+	if h.ReadTimeout.Duration < time.Second {
+		h.ReadTimeout.Duration = time.Second * 10
+	}
+	if h.WriteTimeout.Duration < time.Second {
+		h.WriteTimeout.Duration = time.Second * 10
+	}
+
 	h.acc = acc
 	h.pool = NewPool(200, h.MaxLineSize)
 
-	var listener, err = net.Listen("tcp", h.ServiceAddress)
+	tlsConf := h.getTLSConfig()
+
+	server := &http.Server{
+		Addr:         h.ServiceAddress,
+		Handler:      h,
+		ReadTimeout:  h.ReadTimeout.Duration,
+		WriteTimeout: h.WriteTimeout.Duration,
+		TLSConfig:    tlsConf,
+	}
+
+	var err error
+	var listener net.Listener
+	if tlsConf != nil {
+		listener, err = tls.Listen("tcp", h.ServiceAddress, tlsConf)
+	} else {
+		listener, err = net.Listen("tcp", h.ServiceAddress)
+	}
 	if err != nil {
 		return err
 	}
@@ -130,7 +173,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
-		h.httpListen()
+		server.Serve(h.listener)
 	}()
 
 	log.Printf("I! Started HTTP listener service on %s\n", h.ServiceAddress)
@@ -147,27 +190,6 @@ func (h *HTTPListener) Stop() {
 	h.wg.Wait()
 
 	log.Println("I! Stopped HTTP listener service on ", h.ServiceAddress)
-}
-
-// httpListen sets up an http.Server and calls server.Serve.
-// like server.Serve, httpListen will always return a non-nil error, for this
-// reason, the error returned should probably be ignored.
-// see https://golang.org/pkg/net/http/#Server.Serve
-func (h *HTTPListener) httpListen() error {
-	if h.ReadTimeout.Duration < time.Second {
-		h.ReadTimeout.Duration = time.Second * 10
-	}
-	if h.WriteTimeout.Duration < time.Second {
-		h.WriteTimeout.Duration = time.Second * 10
-	}
-
-	var server = http.Server{
-		Handler:      h,
-		ReadTimeout:  h.ReadTimeout.Duration,
-		WriteTimeout: h.WriteTimeout.Duration,
-	}
-
-	return server.Serve(h.listener)
 }
 
 func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -325,6 +347,48 @@ func badRequest(res http.ResponseWriter) {
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.WriteHeader(http.StatusBadRequest)
 	res.Write([]byte(`{"error":"http: bad request"}`))
+}
+
+func (h *HTTPListener) getTLSConfig() *tls.Config {
+	tlsConf := &tls.Config{
+		InsecureSkipVerify: false,
+		Renegotiation:      tls.RenegotiateNever,
+	}
+
+	if len(h.SslCertificate) == 0 || len(h.SslKey) == 0 {
+		return nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(h.SslCertificate, h.SslKey)
+	if err != nil {
+		return nil
+	}
+	tlsConf.Certificates = []tls.Certificate{cert}
+
+	roots := x509.NewCertPool()
+	for _, ca := range h.SslCertificateAuthorities {
+		c, err := ioutil.ReadFile(ca)
+		if err != nil {
+			continue
+		}
+		roots.AppendCertsFromPEM(c)
+	}
+	tlsConf.RootCAs = roots
+
+	if h.SslAllowedClientCertificateAuthorities != nil {
+		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+		clientPool := x509.NewCertPool()
+		for _, ca := range h.SslAllowedClientCertificateAuthorities {
+			c, err := ioutil.ReadFile(ca)
+			if err != nil {
+				continue
+			}
+			clientPool.AppendCertsFromPEM(c)
+		}
+		tlsConf.ClientCAs = clientPool
+	}
+
+	return tlsConf
 }
 
 func init() {
