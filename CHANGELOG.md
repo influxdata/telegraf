@@ -118,6 +118,7 @@
 - [#2672](https://github.com/influxdata/telegraf/issues/2672): Fix NSQ input plugin when used with version 1.0.0-compat.
 - [#2523](https://github.com/influxdata/telegraf/issues/2523): Added CloudWatch metric constraint validation.
 - [#3179](https://github.com/influxdata/telegraf/issues/3179): Skip non-numerical values in graphite format.
+- [#3187](https://github.com/influxdata/telegraf/issues/3187): Fix panic when handling string fields with escapes.
 
 ## v1.3.5 [2017-07-26]
 
