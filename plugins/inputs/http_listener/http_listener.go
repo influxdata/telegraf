@@ -41,7 +41,6 @@ type HTTPListener struct {
 	Port           int
 
 	SslAllowedClientCertificateAuthorities []string
-	SslCertificateAuthorities              []string
 	SslCertificate                         string
 	SslKey                                 string
 
@@ -87,9 +86,6 @@ const sampleConfig = `
   ## Set one or more allowed client CA certificate file names to 
   ## enable mutually authenticated TLS connections
   ssl_allowed_client_certificate_authorities = ["/etc/ca.crt"]
-
-  ## Add non-public root of trust certificate authorities
-  ssl_certificate_authorities = ["/etc/ca.crt"]
 
   ## Add service certificate and key
   ssl_certificate = "/etc/service.crt"
@@ -364,16 +360,6 @@ func (h *HTTPListener) getTLSConfig() *tls.Config {
 		return nil
 	}
 	tlsConf.Certificates = []tls.Certificate{cert}
-
-	roots := x509.NewCertPool()
-	for _, ca := range h.SslCertificateAuthorities {
-		c, err := ioutil.ReadFile(ca)
-		if err != nil {
-			continue
-		}
-		roots.AppendCertsFromPEM(c)
-	}
-	tlsConf.RootCAs = roots
 
 	if h.SslAllowedClientCertificateAuthorities != nil {
 		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert

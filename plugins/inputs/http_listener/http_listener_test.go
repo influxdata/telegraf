@@ -223,7 +223,6 @@ func newTestHTTPSListener() *HTTPListener {
 	listener := &HTTPListener{
 		ServiceAddress:                         ":0",
 		SslAllowedClientCertificateAuthorities: allowedCAFiles,
-		SslCertificateAuthorities:              serviceCAFiles,
 		SslCertificate:                         serviceCertFile,
 		SslKey:                                 serviceKeyFile,
 	}
