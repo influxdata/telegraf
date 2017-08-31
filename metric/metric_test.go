@@ -329,56 +329,9 @@ func TestValueType(t *testing.T) {
 	assert.Equal(t, telegraf.Gauge, m.Type())
 }
 
-<<<<<<< HEAD
 func TestCopyAggreate(t *testing.T) {
 	m1 := baseMetric()
 	m1.SetAggregate(true)
 	m2 := m1.Copy()
 	assert.True(t, m2.IsAggregate())
-=======
-func TestNewMetric_TrailingSlash(t *testing.T) {
-	now := time.Now()
-
-	tests := []struct {
-		name   string
-		tags   map[string]string
-		fields map[string]interface{}
-	}{
-		{
-			name: `cpu\`,
-			fields: map[string]interface{}{
-				"value": int64(42),
-			},
-		},
-		{
-			name: "cpu",
-			fields: map[string]interface{}{
-				`value\`: "x",
-			},
-		},
-		{
-			name: "cpu",
-			tags: map[string]string{
-				`host\`: "localhost",
-			},
-			fields: map[string]interface{}{
-				"value": int64(42),
-			},
-		},
-		{
-			name: "cpu",
-			tags: map[string]string{
-				"host": `localhost\`,
-			},
-			fields: map[string]interface{}{
-				"value": int64(42),
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		_, err := New(tc.name, tc.tags, tc.fields, now)
-		assert.Error(t, err)
-	}
->>>>>>> Escape backslash within string fields (#3161)
 }
