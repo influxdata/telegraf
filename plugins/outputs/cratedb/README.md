@@ -9,8 +9,8 @@ The plugin requires a a table with the following schema.
 
 ```sql
 CREATE TABLE my_metrics (
-  "hash_id" LONG,
-  "timestamp" TIMESTAMP NOT NULL,
+  "hash_id" LONG INDEX OFF,
+  "timestamp" TIMESTAMP,
   "name" STRING,
   "tags" OBJECT(DYNAMIC),
   "fields" OBJECT(DYNAMIC),

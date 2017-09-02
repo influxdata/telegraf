@@ -41,8 +41,8 @@ func (c *CrateDB) Connect() error {
 	} else if c.TableCreate {
 		sql := `
 CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
-	"hash_id" LONG,
-	"timestamp" TIMESTAMP NOT NULL,
+	"hash_id" LONG INDEX OFF,
+	"timestamp" TIMESTAMP,
 	"name" STRING,
 	"tags" OBJECT(DYNAMIC),
 	"fields" OBJECT(DYNAMIC),
