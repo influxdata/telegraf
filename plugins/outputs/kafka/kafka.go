@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	TOPIC_SUFFIX_METHOD_EMPTY       uint8 = iota
+	TOPIC_SUFFIX_METHOD_EMPTY uint8 = iota
 	TOPIC_SUFFIX_METHOD_MEASUREMENT
 	TOPIC_SUFFIX_METHOD_TAG
 	TOPIC_SUFFIX_METHOD_TAGS
@@ -75,10 +75,10 @@ type (
 		topicSuffixMethodUID uint8
 	}
 	TopicSuffix struct {
-		Method       string `toml:"method"`
-		Key          string `toml:"key"`
+		Method       string   `toml:"method"`
+		Key          string   `toml:"key"`
 		Keys         []string `toml:"keys"`
-		KeySeparator string `toml:"key_separator"`
+		KeySeparator string   `toml:"key_separator"`
 	}
 )
 
