@@ -74,6 +74,7 @@ func (s *Suricata) Stop() {
 	s.Lock()
 	defer s.Unlock()
 	if s.CloseChan != nil {
+		s.InputListener.Close()
 		s.ClosedChan = make(chan bool)
 		close(s.CloseChan)
 		<-s.ClosedChan
@@ -93,10 +94,10 @@ func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 			var conn net.Conn
 			conn, err = s.InputListener.Accept()
 			if err != nil {
-				acc.AddError(err)
 				continue
 			}
 			reader := bufio.NewReaderSize(conn, 10485760)
+		out:
 			for {
 				select {
 				case <-s.CloseChan:
@@ -107,13 +108,15 @@ func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 					return
 				default:
 					line, isPrefix, rerr := reader.ReadLine()
-					if rerr == nil || rerr != io.EOF {
+					if rerr == nil {
 						if isPrefix {
 							acc.AddError(errors.New("incomplete line read from input"))
 							continue
 						} else {
 							s.parse(acc, line)
 						}
+					} else if rerr == io.EOF {
+						break out
 					}
 				}
 			}

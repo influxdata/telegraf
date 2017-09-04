@@ -160,6 +160,43 @@ func TestSuricataTooLongLine(t *testing.T) {
 	s.Stop()
 }
 
+func TestSuricataDisconnectSocket(t *testing.T) {
+	dir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+
+	s := Suricata{
+		Source: tmpfn,
+	}
+	acc := testutil.Accumulator{}
+	acc.SetDebug(true)
+
+	assert.NoError(t, s.Start(&acc))
+
+	c, err := net.Dial("unix", tmpfn)
+	if err != nil {
+		log.Println(err)
+	}
+	c.Write([]byte(ex2))
+	c.Write([]byte("\n"))
+	c.Close()
+
+	c, err = net.Dial("unix", tmpfn)
+	if err != nil {
+		log.Println(err)
+	}
+	c.Write([]byte(ex3))
+	c.Write([]byte("\n"))
+	c.Close()
+
+	acc.Wait(2)
+
+	s.Stop()
+}
+
 func TestSuricataPluginDesc(t *testing.T) {
 	v, ok := inputs.Inputs["suricata"]
 	if !ok {
