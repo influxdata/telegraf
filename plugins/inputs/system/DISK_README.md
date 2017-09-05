@@ -22,7 +22,7 @@ The prefix is stripped from the reported `path` in the measurement.
 This settings is useful when running `telegraf` inside a docker container to report host machine metrics.
 In this case, the host's root volume should be mounted into the container and the `HOST_MOUNT_PREFIX` and `HOST_ETC` environment variables set.
 
-`docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_ETC=/hostfs/etc telegraf-docker`
+`docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_ETC=/hostfs/etc telegraf`
 
 ### Measurements & Fields:
 
