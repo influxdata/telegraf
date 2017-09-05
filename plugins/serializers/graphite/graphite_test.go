@@ -212,6 +212,10 @@ func TestSerializeValueBoolean(t *testing.T) {
 		fmt.Sprintf("localhost.enabled.cpu0.us-west-2.cpu 1 %d", now.Unix()),
 		fmt.Sprintf("localhost.disabled.cpu0.us-west-2.cpu 0 %d", now.Unix()),
 	}
+
+	sort.Strings(expS)
+	sort.Strings(mS)
+
 	assert.Equal(t, expS, mS)
 }
 
