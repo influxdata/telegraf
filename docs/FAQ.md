@@ -1,0 +1,21 @@
+# Frequently Asked Questions
+
+### Q: Telegraf cannot resolve hostnames that are resolvable via `dig`, `host`, `nslookup`, etc.
+
+Go uses a pure Go resolver by default for [name resolution](https://golang.org/pkg/net/#hdr-Name_Resolution).
+This resolver behaves differently than the C library functions but is more
+efficient when used with the Go runtime.
+
+If you encounter problems or want to use more advanced name resolution methods
+that are unsupported by the pure Go resolver, you can switch to the cgo
+resolver.
+
+If running manually set:
+```
+export GODEBUG=netdns=cgo
+```
+
+If running as a service add the environment variable to `/etc/default/telegraf`:
+```
+GODEBUG=netdns=cgo
+```
