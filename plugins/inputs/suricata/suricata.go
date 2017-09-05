@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/nytlabs/gojsonexplode"
 )
+
+var singleDotRegexp = regexp.MustCompilePOSIX(`[^.]\.[^.]`)
 
 // Suricata is a Telegraf input plugin for Suricata runtime statistics.
 type Suricata struct {
@@ -124,6 +127,20 @@ func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 	}
 }
 
+func splitAtSingleDot(in string) []string {
+	res := singleDotRegexp.FindAllStringIndex(in, -1)
+	if res == nil {
+		return []string{in}
+	}
+	ret := make([]string, 0)
+	startpos := 0
+	for _, v := range res {
+		ret = append(ret, in[startpos:v[0]+1])
+		startpos = v[1] - 1
+	}
+	return append(ret, in[startpos:])
+}
+
 func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 	if len(sjson) == 0 {
 		return
@@ -148,11 +165,12 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 		key := strings.Replace(k, "stats.", "", 1)
 		if strings.HasPrefix(key, "threads.") {
 			key = strings.Replace(key, "threads.", "", 1)
-			threadkeys := strings.Split(key, ".")
-			if _, ok := fields[threadkeys[0]]; !ok {
-				fields[threadkeys[0]] = make(map[string]interface{})
+			threadkeys := splitAtSingleDot(key)
+			threadkey := threadkeys[0]
+			if _, ok := fields[threadkey]; !ok {
+				fields[threadkey] = make(map[string]interface{})
 			}
-			fields[threadkeys[0]][strings.Join(threadkeys[1:], ".")] = v
+			fields[threadkey][strings.Join(threadkeys[1:], ".")] = v
 		} else {
 			if _, ok := fields["total"]; !ok {
 				fields["total"] = make(map[string]interface{})

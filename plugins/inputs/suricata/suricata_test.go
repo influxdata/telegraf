@@ -19,6 +19,7 @@ import (
 
 var ex2 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"capture":{"kernel_packets":905344474,"kernel_drops":78355440}}}`
 var ex3 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"threads": { "foo": { "capture":{"kernel_packets":905344474,"kernel_drops":78355440}}}}}`
+var ex4 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"threads": { "W1#en..bar1": { "capture":{"kernel_packets":905344474,"kernel_drops":78355440}}}}}`
 
 func TestSuricata(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
@@ -115,6 +116,49 @@ func TestSuricataInvalid(t *testing.T) {
 	c.Close()
 
 	acc.WaitError(1)
+	s.Stop()
+}
+
+func TestSuricataSplitDots(t *testing.T) {
+	dir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+
+	out := splitAtSingleDot("foo")
+	if len(out) != 1 {
+		t.Fatalf("splitting 'foo' should yield one result")
+	}
+	if out[0] != "foo" {
+		t.Fatalf("splitting 'foo' should yield one result, 'foo'")
+	}
+
+	s := Suricata{
+		Source: tmpfn,
+	}
+	acc := testutil.Accumulator{}
+	acc.SetDebug(true)
+
+	assert.NoError(t, s.Start(&acc))
+
+	c, err := net.Dial("unix", tmpfn)
+	if err != nil {
+		log.Println(err)
+	}
+	c.Write([]byte(ex4))
+	c.Write([]byte("\n"))
+	c.Close()
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "suricata",
+		map[string]interface{}{
+			"capture.kernel_packets": float64(905344474),
+			"capture.kernel_drops":   float64(78355440),
+		},
+		map[string]string{"thread": "W1#en..bar1"})
+
 	s.Stop()
 }
 
