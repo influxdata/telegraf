@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var ex2 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"capture":{"kernel_packets":905344474,"kernel_drops":78355440}}}`
+var ex2 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"capture":{"kernel_packets":905344474,"kernel_drops":78355440,"kernel_packets_delta":2376742,"kernel_drops_delta":82049}}}`
 var ex3 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"threads": { "foo": { "capture":{"kernel_packets":905344474,"kernel_drops":78355440}}}}}`
 var ex4 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"threads": { "W1#en..bar1": { "capture":{"kernel_packets":905344474,"kernel_drops":78355440}}}}}`
 
@@ -51,10 +51,14 @@ func TestSuricata(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "suricata",
 		map[string]interface{}{
-			"capture.kernel_packets": float64(905344474),
-			"capture.kernel_drops":   float64(78355440),
-			"event_type":             "stats",
-			"timestamp":              "2017-03-06T07:43:39.000397+0000",
+			"capture.kernel_packets":               float64(905344474),
+			"capture.kernel_drops":                 float64(78355440),
+			"capture.kernel_packets_delta":         float64(2376742),
+			"capture.kernel_drops_delta":           float64(82049),
+			"capture.kernel_drop_percentage":       float64(0.07965380385303154),
+			"capture.kernel_drop_delta_percentage": float64(0.033369651995635255),
+			"event_type":                           "stats",
+			"timestamp":                            "2017-03-06T07:43:39.000397+0000",
 		},
 		map[string]string{"thread": "total"})
 

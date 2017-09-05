@@ -141,6 +141,17 @@ func splitAtSingleDot(in string) []string {
 	return append(ret, in[startpos:])
 }
 
+func addPercentage(thread string, val1 string, val2 string, valt string,
+	fields map[string](map[string]interface{})) {
+	if _, ok := fields[thread][val1]; ok {
+		if _, ok := fields[thread][val2]; ok {
+			f1 := fields[thread][val1].(float64)
+			f2 := fields[thread][val2].(float64)
+			fields[thread][valt] = f2 / (f1 + f2)
+		}
+	}
+}
+
 func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 	if len(sjson) == 0 {
 		return
@@ -178,6 +189,12 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 			fields["total"][key] = v
 		}
 	}
+
+	addPercentage("total", "capture.kernel_packets", "capture.kernel_drops",
+		"capture.kernel_drop_percentage", fields)
+	addPercentage("total", "capture.kernel_packets_delta", "capture.kernel_drops_delta",
+		"capture.kernel_drop_delta_percentage", fields)
+
 	for k := range fields {
 		acc.AddFields("suricata", fields[k], map[string]string{"thread": k})
 	}
