@@ -13,8 +13,8 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
   ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
-  # urls = ["udp://localhost:8089"] # UDP endpoint example
-  urls = ["http://localhost:8086"] # required
+  # urls = ["udp://127.0.0.1:8089"] # UDP endpoint example
+  urls = ["http://127.0.0.1:8086"] # required
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
