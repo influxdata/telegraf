@@ -41,7 +41,7 @@ func TestTopicSuffixes(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	topic := "Test_"
+	topic := "Test"
 
 	metric := testutil.TestMetric(1)
 	metricTagName := "tag1"
@@ -49,12 +49,20 @@ func TestTopicSuffixes(t *testing.T) {
 	metricName := metric.Name()
 
 	var testcases = []topicSuffixTestpair{
+		// This ensures empty separator is okay
 		{TopicSuffix{Method: "measurement"},
 			topic + metricName},
-		{TopicSuffix{Method: "tags", Keys: []string{metricTagName}},
-			topic + metricTagValue},
+		{TopicSuffix{Method: "measurement", Separator: "sep"},
+			topic + "sep" + metricName},
+		{TopicSuffix{Method: "tags", Keys: []string{metricTagName}, Separator: "_"},
+			topic + "_" + metricTagValue},
 		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}, Separator: "___"},
-			topic + metricTagValue + "___" + metricTagValue + "___" + metricTagValue},
+			topic + "___" + metricTagValue + "___" + metricTagValue + "___" + metricTagValue},
+		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}},
+			topic + metricTagValue + metricTagValue + metricTagValue},
+		// This ensures non-existing tags are ignored
+		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, "non_existing_tag"}, Separator: "___"},
+			topic + "___" + metricTagValue},
 		// This ensures backward compatibility
 		{TopicSuffix{},
 			topic},

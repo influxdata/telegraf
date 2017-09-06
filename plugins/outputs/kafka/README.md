@@ -12,21 +12,23 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
   ## Following topic suffix methods are supported:
-  ##   measurement - suffix equals to measurement's name
-  ##   tags        - suffix equals to specified tags' values
+  ##   measurement - suffix equals to separator + measurement's name
+  ##   tags        - suffix equals to separator + specified tags' values
   ##                 interleaved with separator
 
-  ## Suffix equals to measurement name to topic
+  ## Suffix equals to "_" + measurement's name
   # [outputs.kafka.topic_suffix]
   #   method = "measurement"
+  #   separator = "_"
 
-  ## Suffix equals to measurement's "foo" tag value.
+  ## Suffix equals to "__" + measurement's "foo" tag value.
   ##   If there's no such a tag, suffix equals to an empty string
   # [outputs.kafka.topic_suffix]
   #   method = "tags"
   #   keys = ["foo"]
+  #   separator = "__"
 
-  ## Suffix equals to measurement's "foo" and "bar"
+  ## Suffix equals to "_" + measurement's "foo" and "bar"
   ##   tag values, separated by "_". If there is no such tags,
   ##   their values treated as empty strings.
   # [outputs.kafka.topic_suffix]

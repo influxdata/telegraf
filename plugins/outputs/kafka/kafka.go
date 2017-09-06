@@ -80,21 +80,23 @@ var sampleConfig = `
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
   ## Following topic suffix methods are supported:
-  ##   measurement - suffix equals to measurement's name
-  ##   tags        - suffix equals to specified tags' values
+  ##   measurement - suffix equals to separator + measurement's name
+  ##   tags        - suffix equals to separator + specified tags' values
   ##                 interleaved with separator
 
-  ## Suffix equals to measurement name to topic
+  ## Suffix equals to "_" + measurement name
   # [outputs.kafka.topic_suffix]
   #   method = "measurement"
+  #   separator = "_"
 
-  ## Suffix equals to measurement's "foo" tag value.
+  ## Suffix equals to "__" + measurement's "foo" tag value.
   ##   If there's no such a tag, suffix equals to an empty string
   # [outputs.kafka.topic_suffix]
   #   method = "tags"
   #   keys = ["foo"]
+  #   separator = "__"
 
-  ## Suffix equals to measurement's "foo" and "bar"
+  ## Suffix equals to "_" + measurement's "foo" and "bar"
   ##   tag values, separated by "_". If there is no such tags,
   ##   their values treated as empty strings.
   # [outputs.kafka.topic_suffix]
@@ -163,13 +165,17 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 	var topicName string
 	switch k.TopicSuffix.Method {
 	case "measurement":
-		topicName = k.Topic + metric.Name()
+		topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
 	case "tags":
-		var tags_values []string
+		var topicNameComponents []string
+		topicNameComponents = append(topicNameComponents, k.Topic)
 		for _, tag := range k.TopicSuffix.Keys {
-			tags_values = append(tags_values, metric.Tags()[tag])
+			tagValue := metric.Tags()[tag]
+			if tagValue != "" {
+				topicNameComponents = append(topicNameComponents, tagValue)
+			}
 		}
-		topicName = k.Topic + strings.Join(tags_values, k.TopicSuffix.Separator)
+		topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
 	default:
 		topicName = k.Topic
 	}
