@@ -139,18 +139,41 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			spathSplit := strings.SplitN(sensor, " ", -1)
 			var sensorName string
 			var pathlist []*telemetry.Path
+			customReportingRate := false
+			var reportingRate uint64
+
+			reportingRate = uint64(m.SampleFrequency)
 
 			if len(spathSplit) > 1 {
 				for i, path := range spathSplit {
+					// We allow custom reporting rate per sensor by specifying rate in milliseconds
+					// followed by measurement name or sensor path
 					if i == 0 {
 						sensorName = path
+						reportingRate, err = strconv.ParseUint(path, 10, 32)
+						if err == nil {
+							customReportingRate = true
+						} else {
+							reportingRate = uint64(m.SampleFrequency)
+							// If the first word is not an integer and starts with /, we treat it as both sensor and a measurement name
+							if strings.HasPrefix(sensorName, "/") {
+								pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: uint32(reportingRate)})
+							}
+						}
+					} else if customReportingRate && i == 1 {
+						// If our first word is reporting rate for this list of sensors, we treat second word as measurement name and if it has /
+						// we treat it as another sensor to be monitored
+						sensorName = path
+						if strings.HasPrefix(path, "/") {
+							pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: uint32(reportingRate)})
+						}
 					} else {
-						pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: m.SampleFrequency})
+						pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: uint32(reportingRate)})
 					}
 				}
 			} else {
 				sensorName = sensor
-				pathlist = append(pathlist, &telemetry.Path{Path: sensor, SampleFrequency: m.SampleFrequency})
+				pathlist = append(pathlist, &telemetry.Path{Path: sensor, SampleFrequency: uint32(reportingRate)})
 			}
 			stream, err := c.TelemetrySubscribe(context.Background(),
 				&telemetry.SubscriptionRequest{PathList: pathlist})
@@ -226,7 +249,19 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 						kv[xmlpath] = v.GetBytesValue()
 						break
 					}
+
+					// Insert other tags from message
+					finaltags["_system_id"] = r.SystemId
+					finaltags["_path"] = r.Path
+
+					// Insert derived key and value
 					dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
+
+					// Insert data from message header
+					dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_sequence": r.SequenceNumber})
+					dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_timestamp": r.Timestamp})
+					dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_component_id": r.ComponentId})
+					dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_subcomponent_id": r.SubComponentId})
 				}
 
 				// Print final data collection
