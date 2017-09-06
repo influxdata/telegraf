@@ -13,18 +13,10 @@ import (
 	"github.com/Shopify/sarama"
 )
 
-const (
-	TOPIC_SUFFIX_METHOD_EMPTY uint8 = iota
-	TOPIC_SUFFIX_METHOD_MEASUREMENT
-	TOPIC_SUFFIX_METHOD_TAG
-	TOPIC_SUFFIX_METHOD_TAGS
-)
-
-var TopicSuffixMethodStringToUID = map[string]uint8{
-	"":            TOPIC_SUFFIX_METHOD_EMPTY,
-	"measurement": TOPIC_SUFFIX_METHOD_MEASUREMENT,
-	"tag":         TOPIC_SUFFIX_METHOD_TAG,
-	"tags":        TOPIC_SUFFIX_METHOD_TAGS,
+var ValidTopicSuffixMethods = []string{
+	"",
+	"measurement",
+	"tags",
 }
 
 type (
@@ -71,14 +63,11 @@ type (
 		producer  sarama.SyncProducer
 
 		serializer serializers.Serializer
-
-		topicSuffixMethodUID uint8
 	}
 	TopicSuffix struct {
-		Method       string   `toml:"method"`
-		Key          string   `toml:"key"`
-		Keys         []string `toml:"keys"`
-		KeySeparator string   `toml:"key_separator"`
+		Method    string   `toml:"method"`
+		Keys      []string `toml:"keys"`
+		Separator string   `toml:"separator"`
 	}
 )
 
@@ -92,9 +81,8 @@ var sampleConfig = `
   ## If the section is omitted, no suffix is used.
   ## Following topic suffix methods are supported:
   ##   measurement - suffix equals to measurement's name
-  ##   tag         - suffix equals to specified tag's value
   ##   tags        - suffix equals to specified tags' values
-  ##                 interleaved with key_separator
+  ##                 interleaved with separator
 
   ## Suffix equals to measurement name to topic
   # [outputs.kafka.topic_suffix]
@@ -103,8 +91,8 @@ var sampleConfig = `
   ## Suffix equals to measurement's "foo" tag value.
   ##   If there's no such a tag, suffix equals to an empty string
   # [outputs.kafka.topic_suffix]
-  #   method = "tag"
-  #   key = "foo"
+  #   method = "tags"
+  #   keys = ["foo"]
 
   ## Suffix equals to measurement's "foo" and "bar"
   ##   tag values, separated by "_". If there is no such tags,
@@ -112,7 +100,7 @@ var sampleConfig = `
   # [outputs.kafka.topic_suffix]
   #   method = "tags"
   #   keys = ["foo", "bar"]
-  #   key_separator = "_"
+  #   separator = "_"
 
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
@@ -162,27 +150,26 @@ var sampleConfig = `
   data_format = "influx"
 `
 
-func GetTopicSuffixMethodUID(method string) (uint8, error) {
-	methodUID, ok := TopicSuffixMethodStringToUID[method]
-	if !ok {
-		return 0, fmt.Errorf("Unkown topic suffix method provided: %s", method)
+func ValidateTopicSuffixMethod(method string) error {
+	for _, validMethod := range ValidTopicSuffixMethods {
+		if method == validMethod {
+			return nil
+		}
 	}
-	return methodUID, nil
+	return fmt.Errorf("Unkown topic suffix method provided: %s", method)
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 	var topicName string
-	switch k.topicSuffixMethodUID {
-	case TOPIC_SUFFIX_METHOD_MEASUREMENT:
+	switch k.TopicSuffix.Method {
+	case "measurement":
 		topicName = k.Topic + metric.Name()
-	case TOPIC_SUFFIX_METHOD_TAG:
-		topicName = k.Topic + metric.Tags()[k.TopicSuffix.Key]
-	case TOPIC_SUFFIX_METHOD_TAGS:
+	case "tags":
 		var tags_values []string
 		for _, tag := range k.TopicSuffix.Keys {
 			tags_values = append(tags_values, metric.Tags()[tag])
 		}
-		topicName = k.Topic + strings.Join(tags_values, k.TopicSuffix.KeySeparator)
+		topicName = k.Topic + strings.Join(tags_values, k.TopicSuffix.Separator)
 	default:
 		topicName = k.Topic
 	}
@@ -194,12 +181,10 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (k *Kafka) Connect() error {
-	topicSuffixMethod, err := GetTopicSuffixMethodUID(k.TopicSuffix.Method)
+	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
 	if err != nil {
 		return err
 	}
-	k.topicSuffixMethodUID = topicSuffixMethod
-
 	config := sarama.NewConfig()
 
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)

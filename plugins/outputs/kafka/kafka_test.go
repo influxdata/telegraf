@@ -41,9 +41,6 @@ func TestTopicSuffixes(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	brokers := []string{testutil.GetLocalHost() + ":9092"}
-	s, _ := serializers.NewInfluxSerializer()
-
 	topic := "Test_"
 
 	metric := testutil.TestMetric(1)
@@ -54,9 +51,9 @@ func TestTopicSuffixes(t *testing.T) {
 	var testcases = []topicSuffixTestpair{
 		{TopicSuffix{Method: "measurement"},
 			topic + metricName},
-		{TopicSuffix{Method: "tag", Key: metricTagName},
+		{TopicSuffix{Method: "tags", Keys: []string{metricTagName}},
 			topic + metricTagValue},
-		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}, KeySeparator: "___"},
+		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}, Separator: "___"},
 			topic + metricTagValue + "___" + metricTagValue + "___" + metricTagValue},
 		// This ensures backward compatibility
 		{TopicSuffix{},
@@ -67,17 +64,25 @@ func TestTopicSuffixes(t *testing.T) {
 		topicSuffix := testcase.topicSuffix
 		expectedTopic := testcase.expectedTopic
 		k := &Kafka{
-			Brokers:     brokers,
 			Topic:       topic,
-			serializer:  s,
 			TopicSuffix: topicSuffix,
 		}
 
-		err := k.Connect()
-		require.NoError(t, err)
-
 		topic := k.GetTopicName(metric)
 		require.Equal(t, expectedTopic, topic)
-		k.Close()
+	}
+}
+
+func TestValidateTopicSuffixMethod(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	err := ValidateTopicSuffixMethod("invalid_topic_suffix_method")
+	require.Error(t, err, "Topic suffix method used should be invalid.")
+
+	for _, method := range ValidTopicSuffixMethods {
+		err := ValidateTopicSuffixMethod(method)
+		require.NoError(t, err, "Topic suffix method used should be valid.")
 	}
 }

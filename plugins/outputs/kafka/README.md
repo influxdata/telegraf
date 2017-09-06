@@ -13,9 +13,8 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## If the section is omitted, no suffix is used.
   ## Following topic suffix methods are supported:
   ##   measurement - suffix equals to measurement's name
-  ##   tag         - suffix equals to specified tag's value
   ##   tags        - suffix equals to specified tags' values
-  ##                 interleaved with key_separator
+  ##                 interleaved with separator
 
   ## Suffix equals to measurement name to topic
   # [outputs.kafka.topic_suffix]
@@ -24,8 +23,8 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Suffix equals to measurement's "foo" tag value.
   ##   If there's no such a tag, suffix equals to an empty string
   # [outputs.kafka.topic_suffix]
-  #   method = "tag"
-  #   key = "foo"
+  #   method = "tags"
+  #   keys = ["foo"]
 
   ## Suffix equals to measurement's "foo" and "bar"
   ##   tag values, separated by "_". If there is no such tags,
@@ -33,7 +32,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   # [outputs.kafka.topic_suffix]
   #   method = "tags"
   #   keys = ["foo", "bar"]
-  #   key_separator = "_"
+  #   separator = "_"
 
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
