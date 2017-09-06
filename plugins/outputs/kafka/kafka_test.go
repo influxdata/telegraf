@@ -61,6 +61,8 @@ func TestTopicSuffixes(t *testing.T) {
 		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, metricTagName, metricTagName}},
 			topic + metricTagValue + metricTagValue + metricTagValue},
 		// This ensures non-existing tags are ignored
+		{TopicSuffix{Method: "tags", Keys: []string{"non_existing_tag", "non_existing_tag"}, Separator: "___"},
+			topic},
 		{TopicSuffix{Method: "tags", Keys: []string{metricTagName, "non_existing_tag"}, Separator: "___"},
 			topic + "___" + metricTagValue},
 		// This ensures backward compatibility
