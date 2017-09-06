@@ -26,7 +26,9 @@ func newTestMQTTConsumer() (*MQTTConsumer, chan mqtt.Message) {
 		Servers: []string{"localhost:1883"},
 		in:      in,
 		done:    make(chan struct{}),
+		started: true,
 	}
+
 	return n, in
 }
 
@@ -131,6 +133,7 @@ func TestRunParserAndGather(t *testing.T) {
 	n, in := newTestMQTTConsumer()
 	acc := testutil.Accumulator{}
 	n.acc = &acc
+
 	defer close(n.done)
 
 	n.parser, _ = parsers.NewInfluxParser()
