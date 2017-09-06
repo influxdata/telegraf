@@ -214,6 +214,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 					if v.Key == "__prefix__" {
 						prefix = v.GetStrValue()
+						continue
 					}
 
 					// Also, lets use prefix if there is one
@@ -227,7 +228,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 						if val, err := strconv.ParseInt(v.GetStrValue(), 10, 64); err == nil {
 							kv[xmlpath] = val
 						} else {
-							tags[v.Key] = v.GetStrValue()
+							finaltags[xmlpath] = v.GetStrValue()
 						}
 						break
 					case *telemetry.KeyValue_DoubleValue:
