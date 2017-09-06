@@ -66,6 +66,7 @@ exit_if_fail go test -race ./...
 #   check that one test cpu & mem output work
 tmpdir=$(mktemp -d)
 ./telegraf -sample-config > $tmpdir/config.toml
+exit_if_fail grep outputs.orangesys $tmpdir/config.toml
 exit_if_fail ./telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 
