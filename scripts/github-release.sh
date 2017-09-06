@@ -18,7 +18,6 @@ function exit_if_fail {
 }
 
 # Set up the build directory, and then GOPATH.
-exit_if_fail mkdir $BUILD_DIR
 export GOPATH=$BUILD_DIR
 # Turning off GOGC speeds up build times
 export GOGC=off
