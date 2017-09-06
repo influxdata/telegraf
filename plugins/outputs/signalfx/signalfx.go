@@ -39,7 +39,7 @@ var sampleConfig = `
 	## with the exception of host property events which are emitted by 
 	## the SignalFx Metadata Plugin.  If you require a string typed metric
 	## you must specify the metric name in the following list
-	Include = ["docker_container_mem.container_id", ""]
+	Include = ["plugin.metric_name", ""]
 `
 
 // NewSignalFx - returns a new context for the SignalFx output plugin
