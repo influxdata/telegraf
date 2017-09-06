@@ -257,6 +257,8 @@ func TestNewMetric_Fields(t *testing.T) {
 		"string":                 "test",
 		"quote_string":           `x"y`,
 		"backslash_quote_string": `x\"y`,
+		"backslash":              `x\y`,
+		"ends_with_backslash":    `x\`,
 	}
 	m, err := New("cpu", tags, fields, now)
 	assert.NoError(t, err)
@@ -706,12 +708,6 @@ func TestNewMetric_TrailingSlash(t *testing.T) {
 			name: "cpu",
 			fields: map[string]interface{}{
 				`value\`: "x",
-			},
-		},
-		{
-			name: "cpu",
-			fields: map[string]interface{}{
-				"value": `x\`,
 			},
 		},
 		{

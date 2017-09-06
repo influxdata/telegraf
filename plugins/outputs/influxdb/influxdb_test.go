@@ -178,28 +178,107 @@ func TestHTTPError_DatabaseNotFound(t *testing.T) {
 	require.NoError(t, i.Close())
 }
 
-// field type conflict does not return an error, instead we
-func TestHTTPError_FieldTypeConflict(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/write":
-			w.WriteHeader(http.StatusNotFound)
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintln(w, `{"results":[{}],"error":"field type conflict: input field \"value\" on measurement \"test\" is type integer, already exists as type float dropped=1"}`)
-		}
-	}))
-	defer ts.Close()
-
-	i := InfluxDB{
-		URLs:     []string{ts.URL},
-		Database: "test",
+func TestHTTPError_WriteErrors(t *testing.T) {
+	var testCases = []struct {
+		name        string
+		status      int
+		contentType string
+		body        string
+		err         error
+	}{
+		{
+			// HTTP/1.1 400 Bad Request
+			// Content-Type: application/json
+			// X-Influxdb-Version: 1.3.3
+			//
+			// {
+			//     "error": "partial write: points beyond retention policy dropped=1"
+			// }
+			name:        "beyond retention policy is not an error",
+			status:      http.StatusBadRequest,
+			contentType: "application/json",
+			body:        `{"error":"partial write: points beyond retention policy dropped=1"}`,
+			err:         nil,
+		},
+		{
+			// HTTP/1.1 400 Bad Request
+			// Content-Type: application/json
+			// X-Influxdb-Version: 1.3.3
+			//
+			// {
+			//     "error": "unable to parse 'foo bar=': missing field value"
+			// }
+			name:        "unable to parse is not an error",
+			status:      http.StatusBadRequest,
+			contentType: "application/json",
+			body:        `{"error":"unable to parse 'foo bar=': missing field value"}`,
+			err:         nil,
+		},
+		{
+			// HTTP/1.1 400 Bad Request
+			// Content-Type: application/json
+			// X-Influxdb-Version: 1.3.3
+			//
+			// {
+			//     "error": "partial write: field type conflict: input field \"bar\" on measurement \"foo\" is type float, already exists as type integer dropped=1"
+			// }
+			name:        "field type conflict is not an error",
+			status:      http.StatusBadRequest,
+			contentType: "application/json",
+			body:        `{"error": "partial write: field type conflict: input field \"bar\" on measurement \"foo\" is type float, already exists as type integer dropped=1"}`,
+			err:         nil,
+		},
+		{
+			// HTTP/1.1 500 Internal Server Error
+			// Content-Type: application/json
+			// X-Influxdb-Version: 1.3.3-c1.3.3
+			//
+			// {
+			//     "error": "write failed: hinted handoff queue not empty"
+			// }
+			name:        "hinted handoff queue not empty is not an error",
+			status:      http.StatusInternalServerError,
+			contentType: "application/json",
+			body:        `{"error":"write failed: hinted handoff queue not empty"}`,
+			err:         nil,
+		},
+		{
+			// HTTP/1.1 500 Internal Server Error
+			// Content-Type: application/json
+			// X-Influxdb-Version: 1.3.3-c1.3.3
+			//
+			// {
+			//     "error": "partial write"
+			// }
+			name:        "plain partial write is an error",
+			status:      http.StatusInternalServerError,
+			contentType: "application/json",
+			body:        `{"error":"partial write"}`,
+			err:         fmt.Errorf("Could not write to any InfluxDB server in cluster"),
+		},
 	}
 
-	err := i.Connect()
-	require.NoError(t, err)
-	err = i.Write(testutil.MockMetrics())
-	require.NoError(t, err)
-	require.NoError(t, i.Close())
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+				rw.WriteHeader(tt.status)
+				rw.Header().Set("Content-Type", tt.contentType)
+				fmt.Fprintln(rw, tt.body)
+			}))
+			defer ts.Close()
+
+			influx := InfluxDB{
+				URLs:     []string{ts.URL},
+				Database: "test",
+			}
+
+			err := influx.Connect()
+			require.NoError(t, err)
+			err = influx.Write(testutil.MockMetrics())
+			require.Equal(t, tt.err, err)
+			require.NoError(t, influx.Close())
+		})
+	}
 }
 
 type MockClient struct {

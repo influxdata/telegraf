@@ -68,6 +68,8 @@ func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 	}, nil
 }
 
+type HTTPHeaders map[string]string
+
 type HTTPConfig struct {
 	// URL should be of the form "http://host:port" (REQUIRED)
 	URL string
@@ -94,6 +96,9 @@ type HTTPConfig struct {
 
 	// Proxy URL should be of the form "http://host:port"
 	HTTPProxy string
+
+	// HTTP headers to append to HTTP requests.
+	HTTPHeaders HTTPHeaders
 
 	// The content encoding mechanism to use for each request.
 	ContentEncoding string
@@ -253,6 +258,11 @@ func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, err
 	if err != nil {
 		return nil, err
 	}
+
+	for header, value := range c.config.HTTPHeaders {
+		req.Header.Set(header, value)
+	}
+
 	req.Header.Set("Content-Type", "text/plain")
 	req.Header.Set("User-Agent", c.config.UserAgent)
 	if c.config.Username != "" && c.config.Password != "" {

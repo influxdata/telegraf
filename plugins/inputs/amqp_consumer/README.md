@@ -39,9 +39,9 @@ The following defaults are known to work with RabbitMQ:
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Data format to output.
+  ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
