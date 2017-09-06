@@ -16,11 +16,12 @@ import (
 )
 
 type MQTTConsumer struct {
-	Servers  []string
-	Topics   []string
-	Username string
-	Password string
-	QoS      int `toml:"qos"`
+	Servers           []string
+	Topics            []string
+	Username          string
+	Password          string
+	QoS               int `toml:"qos"`
+	ConnectionTimeout int `toml:"connection_timeout"`
 
 	parser parsers.Parser
 
@@ -55,6 +56,8 @@ var sampleConfig = `
   servers = ["localhost:1883"]
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
+  ## Connection timeout in seconds
+  connection_timeout = 30
 
   ## Topics to subscribe to
   topics = [
@@ -115,23 +118,41 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("MQTT Consumer, invalid QoS value: %d", m.QoS)
 	}
 
+	if m.ConnectionTimeout <= 0 {
+		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %d", m.ConnectionTimeout)
+	}
+
 	opts, err := m.createOpts()
 	if err != nil {
 		return err
 	}
 
 	m.client = mqtt.NewClient(opts)
+
+	log.Printf("%v", m.connect())
+
+	return nil
+}
+
+func (m *MQTTConsumer) connect() error {
+
+	if m.in == nil {
+		m.in = make(chan mqtt.Message, 1000)
+	}
+
+	if m.done == nil {
+		m.done = make(chan struct{})
+	}
+
 	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-
-	m.in = make(chan mqtt.Message, 1000)
-	m.done = make(chan struct{})
 
 	go m.receiver()
 
 	return nil
 }
+
 func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 	log.Printf("I! MQTT Client Connected")
 	if !m.PersistentSession || !m.started {
@@ -186,17 +207,27 @@ func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 func (m *MQTTConsumer) Stop() {
 	m.Lock()
 	defer m.Unlock()
-	close(m.done)
-	m.client.Disconnect(200)
-	m.started = false
+
+	if m.started {
+		close(m.done)
+		m.client.Disconnect(200)
+		m.started = false
+	}
 }
 
 func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
+
+	if !m.started {
+		log.Printf("%v", m.connect())
+	}
+
 	return nil
 }
 
 func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
+
+	opts.ConnectTimeout = time.Duration(m.ConnectionTimeout * int(time.Second))
 
 	if m.ClientID == "" {
 		opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))
@@ -238,6 +269,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetOnConnectHandler(m.onConnect)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
+
 	return opts, nil
 }
 
