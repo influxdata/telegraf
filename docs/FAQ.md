@@ -1,6 +1,7 @@
 # Frequently Asked Questions
 
-### Q: Telegraf cannot resolve hostnames that are resolvable via `dig`, `host`, `nslookup`, etc.
+### Q: Why do I get a "no such host" error resolving hostnames that other
+programs can resolve?
 
 Go uses a pure Go resolver by default for [name resolution](https://golang.org/pkg/net/#hdr-Name_Resolution).
 This resolver behaves differently than the C library functions but is more
