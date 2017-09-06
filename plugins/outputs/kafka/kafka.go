@@ -158,7 +158,7 @@ func ValidateTopicSuffixMethod(method string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Unkown topic suffix method provided: %s", method)
+	return fmt.Errorf("Unknown topic suffix method provided: %s", method)
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
