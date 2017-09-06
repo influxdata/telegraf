@@ -19,6 +19,7 @@ type SignalFx struct {
 	DatapointIngestURL string
 	EventIngestURL     string
 	Exclude            []string
+	Include            []string
 	ctx                context.Context
 	client             *sfxclient.HTTPSink
 }
@@ -32,7 +33,13 @@ var sampleConfig = `
     EventIngestURL = "https://ingest.signalfx.com/v2/event"
     
     ## Exclude metrics by metric name
-    Exclude = ["system.uptime_format", ""]
+	Exclude = ["plugin.metric_name", ""]
+
+	## Events or String typed metrics are omitted by default,
+	## with the exception of host property events which are emitted by 
+	## the SignalFx Metadata Plugin.  If you require a string typed metric
+	## you must specify the metric name in the following list
+	Include = ["docker_container_mem.container_id", ""]
 `
 
 // NewSignalFx - returns a new context for the SignalFx output plugin
@@ -42,6 +49,7 @@ func NewSignalFx() *SignalFx {
 		DatapointIngestURL: "https://ingest.signalfx.com/v2/datapoint",
 		EventIngestURL:     "https://ingest.signalfx.com/v2/event",
 		Exclude:            []string{""},
+		Include:            []string{""},
 	}
 }
 
@@ -112,12 +120,8 @@ func getMetricTypeAsString(metric telegraf.Metric) (string, error) {
 	return metricType, err
 }
 
-/*Determine and assign the datapoint value based on the telegraf value type*/
-func getMetricValue(metric telegraf.Metric,
-	field string) (datapoint.Value, error) {
-	var err error
+func getIntegerValue(value interface{}) datapoint.Value {
 	var metricValue datapoint.Value
-	var value = metric.Fields()[field]
 	switch value.(type) {
 	case int64:
 		metricValue = datapoint.NewIntValue(value.(int64))
@@ -129,6 +133,13 @@ func getMetricValue(metric telegraf.Metric,
 		metricValue = datapoint.NewIntValue(int64(value.(int8)))
 	case int:
 		metricValue = datapoint.NewIntValue(int64(value.(int)))
+	}
+	return metricValue
+}
+
+func getUnsignedIntegerValue(value interface{}) datapoint.Value {
+	var metricValue datapoint.Value
+	switch value.(type) {
 	case uint64:
 		metricValue = datapoint.NewIntValue(int64(value.(uint64)))
 	case uint32:
@@ -139,10 +150,34 @@ func getMetricValue(metric telegraf.Metric,
 		metricValue = datapoint.NewIntValue(int64(value.(uint8)))
 	case uint:
 		metricValue = datapoint.NewIntValue(int64(value.(uint)))
+	}
+	return metricValue
+}
+
+func getFloatingValue(value interface{}) datapoint.Value {
+	var metricValue datapoint.Value
+	switch value.(type) {
 	case float64:
 		metricValue = datapoint.NewFloatValue(value.(float64))
 	case float32:
 		metricValue = datapoint.NewFloatValue(float64(value.(float32)))
+	}
+	return metricValue
+}
+
+/*Determine and assign the datapoint value based on the telegraf value type*/
+func getMetricValue(metric telegraf.Metric,
+	field string) (datapoint.Value, error) {
+	var err error
+	var metricValue datapoint.Value
+	var value = metric.Fields()[field]
+	switch value.(type) {
+	case int64, int32, int16, int8, int:
+		metricValue = getIntegerValue(value)
+	case uint64, uint32, uint16, uint8, uint:
+		metricValue = getUnsignedIntegerValue(value)
+	case float64, float32:
+		metricValue = getFloatingValue(value)
 	default:
 		err = fmt.Errorf("unknown metric value type %s", reflect.TypeOf(value))
 	}
@@ -161,8 +196,7 @@ func parseMetricType(metric telegraf.Metric) (datapoint.MetricType, string, erro
 }
 
 func getMetricName(metric telegraf.Metric, field string, dims map[string]string, props map[string]interface{}) string {
-	var name string
-	name = metric.Name()
+	var name = metric.Name()
 
 	// If sf_prefix is provided
 	if metric.HasTag("sf_prefix") {
@@ -219,6 +253,21 @@ func modifyDimensions(name string, metricType string, dims map[string]string, pr
 	return err
 }
 
+func (s *SignalFx) shouldSkipMetric(metricName string, metricTypeString string, metricDims map[string]string, metricProps map[string]interface{}) bool {
+	// Check if the metric is explicitly excluded
+	if excluded := s.isExcluded(metricName); excluded {
+		log.Println("D! Outputs [signalfx] excluding the following metric: ", metricName)
+		return true
+	}
+
+	// Modify the dimensions of the metric and skip the metric if the dimensions are malformed
+	if err := modifyDimensions(metricName, metricTypeString, metricDims, metricProps); err != nil {
+		return true
+	}
+
+	return false
+}
+
 /*Write call back for writing metrics*/
 func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
@@ -244,14 +293,7 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 			// Get metric name
 			metricName = getMetricName(metric, field, metricDims, metricProps)
 
-			// Check if the metric is explicitly excluded
-			if excluded := s.isExcluded(metricName); excluded {
-				log.Println("D! Outputs [signalfx] excluding the following metric: ", metricName)
-				continue
-			}
-
-			// Modify the dimensions of the metric and skip the metric if the dimensions are malformed
-			if err = modifyDimensions(metric.Name(), metricTypeString, metricDims, metricProps); err != nil {
+			if s.shouldSkipMetric(metric.Name(), metricTypeString, metricDims, metricProps) {
 				continue
 			}
 
@@ -269,6 +311,12 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 				// Add metric as a datapoint
 				datapoints = append(datapoints, datapoint)
 			} else {
+
+				// Skip if it's not an sfx metric and it's not included
+				if _, isSFX := metricDims["sf_metric"]; !isSFX && !s.isIncluded(metricName) {
+					continue
+				}
+
 				// We've already type checked field, so set property with value
 				metricProps["message"] = metric.Fields()[field]
 				var event = event.NewWithProperties(metricName,
@@ -300,6 +348,16 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 func (s *SignalFx) isExcluded(name string) bool {
 	for _, exclude := range s.Exclude {
 		if name == exclude {
+			return true
+		}
+	}
+	return false
+}
+
+// isIncluded - checks whether a metric name was put on the include list
+func (s *SignalFx) isIncluded(name string) bool {
+	for _, include := range s.Include {
+		if name == include {
 			return true
 		}
 	}
