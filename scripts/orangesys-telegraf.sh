@@ -58,7 +58,7 @@ exit_if_fail go vet ./...
 exit_if_fail make docker-run-circle
 # Sleep for OpenTSDB leadership election, aerospike cluster, etc.
 exit_if_fail sleep 60
-exit_if_fail go test -race ./...
+exit_if_fail go test -race ./... -timeout 20m
 
 # Simple Integration Tests
 #   check that version was properly set
