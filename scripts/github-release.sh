@@ -27,12 +27,12 @@ function check_go_fmt {
 }
 
 # Set up the build directory, and then GOPATH.
-exit_if_fail mkdir $BUILD_DIR
+#exit_if_fail mkdir $BUILD_DIR
 export GOPATH=$BUILD_DIR
 # Turning off GOGC speeds up build times
 export GOGC=off
 export PATH=$GOPATH/bin:$PATH
-exit_if_fail mkdir -p $GOPATH/src/github.com/influxdata
+#exit_if_fail mkdir -p $GOPATH/src/github.com/influxdata
 
 # Dump some test config to the log.
 echo "Test configuration"
