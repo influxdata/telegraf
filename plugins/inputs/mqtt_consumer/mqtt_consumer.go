@@ -20,8 +20,8 @@ type MQTTConsumer struct {
 	Topics            []string
 	Username          string
 	Password          string
-	QoS               int `toml:"qos"`
-	ConnectionTimeout int `toml:"connection_timeout"`
+	QoS               int               `toml:"qos"`
+	ConnectionTimeout internal.Duration `toml:"connection_timeout"`
 
 	parser parsers.Parser
 
@@ -49,7 +49,8 @@ type MQTTConsumer struct {
 	// keep the accumulator internally:
 	acc telegraf.Accumulator
 
-	started bool
+	connected bool
+	Debug     bool `toml:"debug"`
 }
 
 var sampleConfig = `
@@ -89,6 +90,9 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Print additional information
+  debug = "false"
 `
 
 func (m *MQTTConsumer) SampleConfig() string {
@@ -106,7 +110,7 @@ func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.Lock()
 	defer m.Unlock()
-	m.started = false
+	m.connected = false
 
 	if m.PersistentSession && m.ClientID == "" {
 		return fmt.Errorf("ERROR MQTT Consumer: When using persistent_session" +
@@ -118,7 +122,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("MQTT Consumer, invalid QoS value: %d", m.QoS)
 	}
 
-	if m.ConnectionTimeout <= 0 {
+	if int(m.ConnectionTimeout.Duration) <= 0 {
 		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %d", m.ConnectionTimeout)
 	}
 
@@ -128,24 +132,23 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	}
 
 	m.client = mqtt.NewClient(opts)
+	m.in = make(chan mqtt.Message, 1000)
+	m.done = make(chan struct{})
 
-	log.Printf("%v", m.connect())
+	m.connect()
 
 	return nil
 }
 
 func (m *MQTTConsumer) connect() error {
-
-	if m.in == nil {
-		m.in = make(chan mqtt.Message, 1000)
-	}
-
-	if m.done == nil {
-		m.done = make(chan struct{})
-	}
-
 	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
-		return token.Error()
+		err := token.Error()
+
+		if m.Debug {
+			log.Printf("MQTT Consumer, connection error - %v", err)
+		}
+
+		return err
 	}
 
 	go m.receiver()
@@ -155,7 +158,7 @@ func (m *MQTTConsumer) connect() error {
 
 func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 	log.Printf("I! MQTT Client Connected")
-	if !m.PersistentSession || !m.started {
+	if !m.PersistentSession || !m.connected {
 		topics := make(map[string]byte)
 		for _, topic := range m.Topics {
 			topics[topic] = byte(m.QoS)
@@ -166,7 +169,7 @@ func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 			m.acc.AddError(fmt.Errorf("E! MQTT Subscribe Error\ntopics: %s\nerror: %s",
 				strings.Join(m.Topics[:], ","), subscribeToken.Error()))
 		}
-		m.started = true
+		m.connected = true
 	}
 	return
 }
@@ -208,17 +211,16 @@ func (m *MQTTConsumer) Stop() {
 	m.Lock()
 	defer m.Unlock()
 
-	if m.started {
+	if m.connected {
 		close(m.done)
 		m.client.Disconnect(200)
-		m.started = false
+		m.connected = false
 	}
 }
 
 func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
-
-	if !m.started {
-		log.Printf("%v", m.connect())
+	if !m.connected {
+		m.connect()
 	}
 
 	return nil
@@ -227,7 +229,7 @@ func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
 func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 
-	opts.ConnectTimeout = time.Duration(m.ConnectionTimeout * int(time.Second))
+	opts.ConnectTimeout = m.ConnectionTimeout.Duration
 
 	if m.ClientID == "" {
 		opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))

@@ -46,6 +46,9 @@ The plugin expects messages in the
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Print additional information
+  debug = "false"
 ```
 
 ### Tags:

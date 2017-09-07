@@ -22,11 +22,12 @@ const (
 func newTestMQTTConsumer() (*MQTTConsumer, chan mqtt.Message) {
 	in := make(chan mqtt.Message, 100)
 	n := &MQTTConsumer{
-		Topics:  []string{"telegraf"},
-		Servers: []string{"localhost:1883"},
-		in:      in,
-		done:    make(chan struct{}),
-		started: true,
+		Topics:    []string{"telegraf"},
+		Servers:   []string{"localhost:1883"},
+		in:        in,
+		done:      make(chan struct{}),
+		connected: true,
+		Debug:     false,
 	}
 
 	return n, in
