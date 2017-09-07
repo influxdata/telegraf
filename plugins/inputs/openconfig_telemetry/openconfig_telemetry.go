@@ -24,6 +24,7 @@ type OpenConfigTelemetry struct {
 	SampleFrequency uint32
 	CertFile        string
 	Debug           bool
+	StrAsTags       bool
 
 	parser parsers.Parser
 	sync.Mutex
@@ -56,6 +57,9 @@ var sampleConfig = `
 
   ## To see data being received from gRPC server, set debug to true
   debug = true
+
+  ## To treat all string values as tags, set this to true
+  strAsTags = false
 `
 
 func (m *OpenConfigTelemetry) SampleConfig() string {
@@ -223,12 +227,11 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 					switch v.Value.(type) {
 					case *telemetry.KeyValue_StrValue:
-						// If this is actually a integer value but wrongly encoded as string,
-						// convert and use it as value to field
-						if val, err := strconv.ParseInt(v.GetStrValue(), 10, 64); err == nil {
-							kv[xmlpath] = val
-						} else {
+						// If StrAsTags is set, we treat all string values as tags
+						if m.StrAsTags {
 							finaltags[xmlpath] = v.GetStrValue()
+						} else {
+							kv[xmlpath] = v.GetStrValue()
 						}
 						break
 					case *telemetry.KeyValue_DoubleValue:
