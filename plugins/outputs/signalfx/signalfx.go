@@ -33,13 +33,13 @@ var sampleConfig = `
     EventIngestURL = "https://ingest.signalfx.com/v2/event"
     
     ## Exclude metrics by metric name
-	Exclude = ["plugin.metric_name", ""]
+    Exclude = ["plugin.metric_name", ""]
 
-	## Events or String typed metrics are omitted by default,
-	## with the exception of host property events which are emitted by 
-	## the SignalFx Metadata Plugin.  If you require a string typed metric
-	## you must specify the metric name in the following list
-	Include = ["plugin.metric_name", ""]
+    ## Events or String typed metrics are omitted by default,
+    ## with the exception of host property events which are emitted by 
+    ## the SignalFx Metadata Plugin.  If you require a string typed metric
+    ## you must specify the metric name in the following list
+    Include = ["plugin.metric_name", ""]
 `
 
 // NewSignalFx - returns a new context for the SignalFx output plugin
@@ -313,7 +313,7 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 			} else {
 
 				// Skip if it's not an sfx metric and it's not included
-				if _, isSFX := metricDims["sf_metric"]; !isSFX && !s.isIncluded(metricName) {
+				if _, isSFX := metric.Tags()["sf_metric"]; !isSFX && !s.isIncluded(metricName) {
 					continue
 				}
 
