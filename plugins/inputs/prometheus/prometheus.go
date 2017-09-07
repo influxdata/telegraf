@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -17,6 +20,8 @@ const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client
 
 type Prometheus struct {
 	Urls []string
+
+	DoDnsLookup bool
 
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
@@ -38,6 +43,9 @@ type Prometheus struct {
 var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
+
+  ## Resolve URLs and gather from all IPs
+  do_dns_lookup = false
 
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
@@ -76,12 +84,43 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	for _, serv := range p.Urls {
-		wg.Add(1)
-		go func(serv string) {
-			defer wg.Done()
-			acc.AddError(p.gatherURL(serv, acc))
-		}(serv)
+	for _, possibleServ := range p.Urls {
+		addresses := p.Urls
+		if p.DoDnsLookup {
+			u, err := url.Parse(possibleServ)
+			if err != nil {
+				return err
+			}
+			host := u.Host
+			hostPort := ""
+			hostSplit := strings.Split(u.Host, ":")
+			if len(hostSplit) == 2 {
+				host = hostSplit[0]
+				hostPort = hostSplit[1]
+			}
+			resolvedAddresses, err := net.LookupHost(host)
+			if err != nil {
+				return err
+			}
+			for index, resolved := range resolvedAddresses {
+				reconstructed := u.Scheme + "://" + resolved + u.Path
+				if hostPort != "" {
+					reconstructed = u.Scheme + "://" + resolved + ":" + hostPort + u.Path
+				}
+				if u.RawQuery != "" {
+					reconstructed = reconstructed + "?" + u.RawQuery
+				}
+				resolvedAddresses[index] = reconstructed
+			}
+			addresses = resolvedAddresses
+		}
+		for _, serv := range addresses {
+			wg.Add(1)
+			go func(serviceUrl string) {
+				defer wg.Done()
+				acc.AddError(p.gatherURL(serviceUrl, acc))
+			}(serv)
+		}
 	}
 
 	wg.Wait()

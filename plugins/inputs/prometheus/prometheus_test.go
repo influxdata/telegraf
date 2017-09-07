@@ -37,6 +37,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 
 	p := &Prometheus{
 		Urls: []string{ts.URL},
+		DoDnsLookup: true,
 	}
 
 	var acc testutil.Accumulator
