@@ -221,10 +221,10 @@ func newTestHTTPSListener() *HTTPListener {
 	})
 
 	listener := &HTTPListener{
-		ServiceAddress:                         ":0",
-		SslAllowedClientCertificateAuthorities: allowedCAFiles,
-		SslCertificate:                         serviceCertFile,
-		SslKey:                                 serviceKeyFile,
+		ServiceAddress:    ":0",
+		TlsAllowedCacerts: allowedCAFiles,
+		TlsCert:           serviceCertFile,
+		TlsKey:            serviceKeyFile,
 	}
 
 	return listener
@@ -267,7 +267,7 @@ func createURL(listener *HTTPListener, scheme string, path string, rawquery stri
 
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	listener := newTestHTTPSListener()
-	listener.SslAllowedClientCertificateAuthorities = nil
+	listener.TlsAllowedCacerts = nil
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))

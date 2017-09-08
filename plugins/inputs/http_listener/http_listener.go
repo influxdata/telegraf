@@ -40,9 +40,9 @@ type HTTPListener struct {
 	MaxLineSize    int
 	Port           int
 
-	SslAllowedClientCertificateAuthorities []string
-	SslCertificate                         string
-	SslKey                                 string
+	TlsAllowedCacerts []string
+	TlsCert           string
+	TlsKey            string
 
 	mu sync.Mutex
 	wg sync.WaitGroup
@@ -85,12 +85,11 @@ const sampleConfig = `
 
   ## Set one or more allowed client CA certificate file names to 
   ## enable mutually authenticated TLS connections
-  ssl_allowed_client_certificate_authorities = ["/etc/ca.crt"]
+  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
   ## Add service certificate and key
-  ssl_certificate = "/etc/service.crt"
-  ssl_key = "/etc/service.key"
-
+  tls_cert = "/etc/telegraf/cert.pem"
+  tls_key = "/etc/telegraf/key.pem"
 `
 
 func (h *HTTPListener) SampleConfig() string {
@@ -351,20 +350,20 @@ func (h *HTTPListener) getTLSConfig() *tls.Config {
 		Renegotiation:      tls.RenegotiateNever,
 	}
 
-	if len(h.SslCertificate) == 0 || len(h.SslKey) == 0 {
+	if len(h.TlsCert) == 0 || len(h.TlsKey) == 0 {
 		return nil
 	}
 
-	cert, err := tls.LoadX509KeyPair(h.SslCertificate, h.SslKey)
+	cert, err := tls.LoadX509KeyPair(h.TlsCert, h.TlsKey)
 	if err != nil {
 		return nil
 	}
 	tlsConf.Certificates = []tls.Certificate{cert}
 
-	if h.SslAllowedClientCertificateAuthorities != nil {
+	if h.TlsAllowedCacerts != nil {
 		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 		clientPool := x509.NewCertPool()
-		for _, ca := range h.SslAllowedClientCertificateAuthorities {
+		for _, ca := range h.TlsAllowedCacerts {
 			c, err := ioutil.ReadFile(ca)
 			if err != nil {
 				continue
