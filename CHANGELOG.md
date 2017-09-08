@@ -433,6 +433,13 @@
 - [#3175](https://github.com/influxdata/telegraf/issues/3175): Fix duplicate keys in perf counters sqlserver query.
 - [#3230](https://github.com/influxdata/telegraf/issues/3230): Fix panic in statsd p100 calculation.
 - [#3242](https://github.com/influxdata/telegraf/issues/3242): Fix arm64 packages contain 32-bit executable.
+## v1.4.0.sfx0 [2017-09-08]
+
+### Release Notes
+
+- This update disables all string type metrics (emitted as events) by default.
+  Please refer to the example config for information on enabling specific 
+  string metrics / events.
 
 ## v1.4 [2017-09-05]
 
