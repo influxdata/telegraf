@@ -34,9 +34,9 @@ This is a sample configuration for the plugin.
   write_timeout = "10s"
 
   ## HTTPS
-  ssl_certificate = "/etc/service.crt"
-  ssl_key = "/etc/service.key"
+  tls_cert= "/etc/telegraf/cert.pem"
+  tls_key = "/etc/telegraf/key.pem"
 
   ## MTLS
-  ssl_allowed_client_certificate_authorities = ["/etc/ca.crt"]
+  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 ```
