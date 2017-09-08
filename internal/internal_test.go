@@ -100,7 +100,7 @@ func TestCombinedOutputError(t *testing.T) {
 
 func TestRunError(t *testing.T) {
 	if shell == "" {
-		t.Skip("'sleep' binary not available on OS, skipping.")
+		t.Skip("'sh' binary not available on OS, skipping.")
 	}
 	cmd := exec.Command(shell, "-c", "false")
 	err := RunTimeout(cmd, time.Second)
