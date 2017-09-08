@@ -1,3 +1,11 @@
+## v1.4.0.sfx0 [2017-09-08]
+
+### Release Notes
+
+- This update disables all string type metrics (emitted as events) by default.
+  Please refer to the example config for information on enabling specific 
+  string metrics / events.
+
 ## v1.4 [2017-09-05]
 
 ### Release Notes
