@@ -1,18 +1,36 @@
-## Steps for Contributing:
+# Contributing
 
-1. [Sign the CLA](http://influxdb.com/community/cla.html)
-1. Make changes or write plugin (see below for details)
-1. Add your plugin to one of: `plugins/{inputs,outputs,aggregators,processors}/all/all.go`
-1. If your plugin requires a new Go package,
-[add it](https://github.com/influxdata/telegraf/blob/master/CONTRIBUTING.md#adding-a-dependency)
-1. Write a README for your plugin, if it's an input plugin, it should be structured
-like the [input example here](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/EXAMPLE_README.md).
-Output plugins READMEs are less structured,
-but any information you can provide on how the data will look is appreciated.
-See the [OpenTSDB output](https://github.com/influxdata/telegraf/tree/master/plugins/outputs/opentsdb)
-for a good example.
-1. **Optional:** Help users of your plugin by including example queries for populating dashboards. Include these sample queries in the `README.md` for the plugin.
-1. **Optional:** Write a [tickscript](https://docs.influxdata.com/kapacitor/v1.0/tick/syntax/) for your plugin and add it to [Kapacitor](https://github.com/influxdata/kapacitor/tree/master/examples/telegraf).
+Contributions unrelated to the SignalFx authored plugins should be submitted directly to the [upstream](https://github.com/influxdata/telegraf) Telegraf project.  
+
+Please make changes on a branch cut from the upstream project.  The code for the SignalFx plugins have not be contributed back to the upstream project.
+
+For any enhancements to the SignalFx authored plugins, please open a pull request based on the [signalfx-integration](https://github.com/signalfx/telegraf) branch.
+
+## Checking Out Code
+
+1. Clone this repo into the source directory under your $GOPATH
+
+1. Create the following directories under your $GOPATH
+    ```BASH
+    mkdir -p $GOPATH/src/github.com/influxdata
+    ```
+
+1. Link this repo to `$GOPATH/src/github.com/influxdata/telegraf`
+
+    ```BASH
+    ln -s $GOPATH/src/github.com/signalfx/telegraf $GOPATH/src/github.com/influxdata/telegraf
+    ```
+
+1. Go to the linked directory
+    ```BASH
+    cd $GOPATH/src/github.com/influxdata/telegraf
+    ```
+
+1. Make the project
+    ```BASH
+    make
+    ```
+
 
 ## GoDoc
 
@@ -20,11 +38,6 @@ Public interfaces for inputs, outputs, processors, aggregators, metrics,
 and the accumulator can be found on the GoDoc
 
 [![GoDoc](https://godoc.org/github.com/influxdata/telegraf?status.svg)](https://godoc.org/github.com/influxdata/telegraf)
-
-## Sign the CLA
-
-Before we can merge a pull request, you will need to sign the CLA,
-which can be found [on our website](http://influxdb.com/community/cla.html)
 
 ## Adding a dependency
 
@@ -50,9 +63,9 @@ and submit new inputs.
 * Input Plugins should call `inputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * Input Plugins must be added to the
-`github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
+`./plugins/inputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-plugin can be configured. This is include in `telegraf config`.
+plugin can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this plugin does.
 
 Let's say you've written a plugin that emits metrics about processes on the
@@ -184,9 +197,9 @@ similar constructs.
 * Outputs should call `outputs.Add` in their `init` function to register themselves.
 See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
-`github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
+`./plugins/outputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-output can be configured. This is include in `telegraf config`.
+output can be configured. This is include in `telegraf -sample-config`.
 * The `Description` function should say in one line what this output does.
 
 ### Output Example
