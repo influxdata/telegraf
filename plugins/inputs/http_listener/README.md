@@ -10,7 +10,7 @@ When chaining Telegraf instances using this plugin, CREATE DATABASE requests rec
 
 Enable TLS by specifying the file names of a service TLS certificate and key.
 
-Enable mutually authenticated TLS and authorize client connections by signing certificate authority by including a list of allowed CA certificate file names in ````ssl_allowed_client_certificate_authorities````.
+Enable mutually authenticated TLS and authorize client connections by signing certificate authority by including a list of allowed CA certificate file names in ````tls_allowed_cacerts````.
 
 See: [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx).
 
