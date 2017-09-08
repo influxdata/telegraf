@@ -12,6 +12,7 @@
 - [#3170](https://github.com/influxdata/telegraf/pull/3170): Add support for sharding based on metric name.
 - [#3196](https://github.com/influxdata/telegraf/pull/3196): Add Kafka output plugin topic_suffix option.
 - [#3027](https://github.com/influxdata/telegraf/pull/3027): Include mount mode option in disk metrics.
+- [#3212](https://github.com/influxdata/telegraf/pull/3212): Add support for standard proxy env vars in outputs.
 
 ### Bugfixes
 
