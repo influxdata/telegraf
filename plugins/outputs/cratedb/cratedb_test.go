@@ -75,13 +75,13 @@ func Test_insertSQL(t *testing.T) {
 			Want: strings.TrimSpace(`
 INSERT INTO my_table ("hash_id", "timestamp", "name", "tags", "fields")
 VALUES
-(1845393540509842047, '2009-11-11T00:00:00+0100', 'test1', {"tag1" = 'value1'}, {"value" = 1});
+(1845393540509842047, '2009-11-10T23:00:00+0000', 'test1', {"tag1" = 'value1'}, {"value" = 1});
 `),
 		},
 	}
 
 	for _, test := range tests {
-		if got, err := insertSQL("my_table", test.Metrics); err != nil {
+		if got, err := insertSQL("my_table", test.Metrics, time.UTC); err != nil {
 			t.Error(err)
 		} else if got != test.Want {
 			t.Errorf("got:\n%s\n\nwant:\n%s", got, test.Want)
