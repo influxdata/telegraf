@@ -1,7 +1,9 @@
 ## Directions
 
+Issues unrelated to the SignalFx authored plugins should be submitted directly to the [upstream](https://github.com/influxdata/telegraf/issues/new) Telegraf project.
+
 GitHub Issues are reserved for actionable bug reports and feature requests.
-General questions should be asked at the [InfluxData Community](https://community.influxdata.com) site.
+General questions should be asked at the [SignalFx Community](https://community.signalfx.com) site.
 
 Before opening an issue, search for similar bug reports or feature requests on GitHub Issues.
 If no similar issue can be found, fill out either the "Bug Report" or the "Feature Request" section below.
