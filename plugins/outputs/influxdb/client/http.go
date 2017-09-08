@@ -53,6 +53,7 @@ func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 		}
 	} else {
 		transport = http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: config.TLSConfig,
 		}
 	}
