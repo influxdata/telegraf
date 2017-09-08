@@ -38,6 +38,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	p := &Prometheus{
 		Urls: []string{ts.URL},
 		DoDnsLookup: true,
+		AddHostTag: false,
 	}
 
 	var acc testutil.Accumulator
@@ -49,5 +50,29 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	assert.True(t, acc.HasFloatField("test_metric", "value"))
 	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+	assert.False(t, acc.HasTag("test_metric", "host"))
+}
 
+func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, sampleTextFormat)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Urls: []string{ts.URL},
+		DoDnsLookup: true,
+		AddHostTag: true,
+	}
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
+	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
+	assert.True(t, acc.HasFloatField("test_metric", "value"))
+	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+	assert.True(t, acc.TagValue("test_metric", "host") == ts.Listener.Addr().String())
 }

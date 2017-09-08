@@ -21,7 +21,11 @@ const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client
 type Prometheus struct {
 	Urls []string
 
+	// Lookup IP addresses behind URL and gather from them one by one
 	DoDnsLookup bool
+
+	// Add a tag named host in the form of 'host:port'
+	AddHostTag bool
 
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
@@ -44,8 +48,11 @@ var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
 
-  ## Resolve URLs and gather from all IPs
+  ## Lookup IP addresses behind URL and gather from them one by one
   do_dns_lookup = false
+
+  ## Add a tag named host in the form of 'host:port'
+  add_host_tag = false
 
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
@@ -71,6 +78,28 @@ func (p *Prometheus) Description() string {
 
 var ErrProtocolError = errors.New("prometheus protocol error")
 
+func (p *Prometheus) SplitHostAndPort(host string) (string, string) {
+	hostPort := ""
+	hostSplit := strings.Split(host, ":")
+	if len(hostSplit) == 2 {
+		host = hostSplit[0]
+		hostPort = hostSplit[1]
+	}
+	return host, hostPort
+}
+
+func (p *Prometheus) AddressToURL(u *url.URL, address string) string {
+	_, port := p.SplitHostAndPort(u.Host)
+	reconstructed := u.Scheme + "://" + address + u.Path
+	if port != "" {
+		reconstructed = u.Scheme + "://" + address + ":" + port + u.Path
+	}
+	if u.RawQuery != "" {
+		reconstructed = reconstructed + "?" + u.RawQuery
+	}
+	return reconstructed
+}
+
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
@@ -85,36 +114,23 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, possibleServ := range p.Urls {
-		addresses := p.Urls
+		urls := p.Urls
 		if p.DoDnsLookup {
 			u, err := url.Parse(possibleServ)
 			if err != nil {
 				return err
 			}
-			host := u.Host
-			hostPort := ""
-			hostSplit := strings.Split(u.Host, ":")
-			if len(hostSplit) == 2 {
-				host = hostSplit[0]
-				hostPort = hostSplit[1]
-			}
+			host, _ := p.SplitHostAndPort(u.Host)
 			resolvedAddresses, err := net.LookupHost(host)
 			if err != nil {
 				return err
 			}
+			urls = make([]string, len(resolvedAddresses), len(resolvedAddresses))
 			for index, resolved := range resolvedAddresses {
-				reconstructed := u.Scheme + "://" + resolved + u.Path
-				if hostPort != "" {
-					reconstructed = u.Scheme + "://" + resolved + ":" + hostPort + u.Path
-				}
-				if u.RawQuery != "" {
-					reconstructed = reconstructed + "?" + u.RawQuery
-				}
-				resolvedAddresses[index] = reconstructed
+				urls[index] = p.AddressToURL(u, resolved)
 			}
-			addresses = resolvedAddresses
 		}
-		for _, serv := range addresses {
+		for _, serv := range urls {
 			wg.Add(1)
 			go func(serviceUrl string) {
 				defer wg.Done()
@@ -192,6 +208,9 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	for _, metric := range metrics {
 		tags := metric.Tags()
 		tags["url"] = url
+		if p.AddHostTag {
+			tags["host"] = req.Host
+		}
 		acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 	}
 
