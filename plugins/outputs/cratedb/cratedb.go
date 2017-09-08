@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 	PRIMARY KEY ("timestamp", "hash_id")
 );
 `
-		ctx, _ := context.WithTimeout(context.Background(), c.Timeout.Duration)
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
+		defer cancel()
 		if _, err := db.ExecContext(ctx, sql); err != nil {
 			return err
 		}
@@ -59,7 +60,8 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 }
 
 func (c *CrateDB) Write(metrics []telegraf.Metric) error {
-	ctx, _ := context.WithTimeout(context.Background(), c.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
+	defer cancel()
 	if sql, err := insertSQL(c.Table, metrics); err != nil {
 		return err
 	} else if _, err := c.DB.ExecContext(ctx, sql); err != nil {
