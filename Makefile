@@ -106,7 +106,7 @@ docker-run-circle:
 		-e SLAPD_CONFIG_ROOTPW="secret" \
 		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
-	docker run --name cratedb -p "6543:5432" -d crate crate -Cnetwork.host=0.0.0.0 -Ctransport.host=localhost
+	docker run --name cratedb -p "6543:5432" -d crate crate -Cnetwork.host=0.0.0.0 -Ctransport.host=localhost -Clicense.enterprise=false
 
 docker-kill:
 	-docker kill aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
