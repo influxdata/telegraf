@@ -39,6 +39,9 @@ The plugin expects messages in one of the
   ## Whether file is a named pipe
   pipe = false
 
+  ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  # watch_method = "inotify"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
