@@ -1,4 +1,4 @@
-package nginx
+package nginx_plus
 
 import (
 	"fmt"
@@ -264,7 +264,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	n := &Nginx{
+	n := &NginxPlus{
 		Urls: []string{fmt.Sprintf("%s/status", ts.URL)},
 	}
 
