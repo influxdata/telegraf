@@ -184,9 +184,65 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 		})
 }
 
+func TestTopicTags(t *testing.T) {
+	m, in := newTestMQTTConsumer()
+	acc := testutil.Accumulator{}
+	m.acc = &acc
+	m.TopicTags = []TopicTag{
+		{Tag: "source", Index: 0},
+		{Tag: "device", Index: 1},
+	}
+	defer close(m.done)
+
+	m.parser, _ = parsers.NewInfluxParser()
+	go m.receiver()
+	in <- mqttTopicMsg("test/device1", testMsg)
+	time.Sleep(time.Millisecond * 25)
+
+	acc.AssertContainsTaggedFields(t,
+		"cpu_load_short",
+		map[string]interface{}{"value": 23422.0},
+		map[string]string{
+			"source": "test",
+			"device": "device1",
+			"host":   "server01",
+			"topic":  "test/device1",
+		},
+	)
+}
+
+func TestTopicTagsFail(t *testing.T) {
+	acc := testutil.Accumulator{}
+
+	m1 := &MQTTConsumer{
+		Topics: []string{"test"},
+		TopicTags: []TopicTag{
+			{Tag: "negative", Index: -1},
+		},
+	}
+	err := m1.Start(&acc)
+	assert.Error(t, err)
+
+	m2 := &MQTTConsumer{
+		Topics: []string{"test"},
+		TopicTags: []TopicTag{
+			{Tag: "outofrange", Index: 1},
+		},
+	}
+	err = m2.Start(&acc)
+	assert.Error(t, err)
+}
+
 func mqttMsg(val string) mqtt.Message {
 	return &message{
 		topic:   "telegraf/unit_test",
+		payload: []byte(val),
+	}
+}
+
+func mqttTopicMsg(topic, val string) mqtt.Message {
+	return &message{
+		topic:   topic,
 		payload: []byte(val),
 	}
 }
