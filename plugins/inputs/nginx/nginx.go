@@ -52,7 +52,7 @@ func (n *Nginx) SampleConfig() string {
 }
 
 func (n *Nginx) Description() string {
-	return "Read Nginx's basic status information (ngx_http_stub_status_module)"
+	return "Read Nginx's basic status information (ngx_http_stub_status_module) or Nginx's Plus full status information (ngx_http_status_module)"
 }
 
 func (n *Nginx) Gather(acc telegraf.Accumulator) error {
@@ -115,10 +115,20 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
 	}
-	r := bufio.NewReader(resp.Body)
+	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
+	switch contentType {
+	case "text/plain":
+		return gatherStubStatusUrl(bufio.NewReader(resp.Body), getTags(addr), acc)
+	case "application/json":
+		return gatherStatusUrl(bufio.NewReader(resp.Body), getTags(addr), acc)
+	default:
+		return fmt.Errorf("%s returned unexpected content type %s", addr.String(), contentType)
+	}
+}
 
+func gatherStubStatusUrl(r *bufio.Reader, tags map[string]string, acc telegraf.Accumulator) error {
 	// Active connections
-	_, err = r.ReadString(':')
+	_, err := r.ReadString(':')
 	if err != nil {
 		return err
 	}
@@ -174,7 +184,6 @@ func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	tags := getTags(addr)
 	fields := map[string]interface{}{
 		"active":   active,
 		"accepts":  accepts,
