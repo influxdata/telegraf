@@ -11,20 +11,70 @@
 
 ### Measurements & Fields:
 
-- Measurement
-    - accepts
-    - active
-    - handled
-    - reading
-    - requests
-    - waiting
-    - writing
+- nginx_processes
+  - respawned
+- nginx_connections
+  - accepted
+  - dropped
+  - active
+  - idle
+- nginx_ssl
+  - handshakes
+  - handshakes_failed
+  - session_reuses
+- nginx_requests
+  - total
+  - current
+- nginx_upstream
+  - keepalive
+  - zombies
+- nginx_upstream_peer
+  - requests
+  - unavail
+  - healthchecks_checks
+  - header_time
+  - response_time
+  - state
+  - active
+  - downstart
+  - healthchecks_last_passed
+  - weight
+  - responses_1xx
+  - responses_2xx
+  - responses_3xx
+  - responses_4xx
+  - responses_5xx
+  - received
+  - selected
+  - healthchecks_fails
+  - healthchecks_unhealthy
+  - backup
+  - responses_total
+  - sent
+  - fails
+  - downtime
+
 
 ### Tags:
 
-- All measurements have the following tags:
-    - port
-    - server
+- nginx_processes, nginx_connections, nginx_ssl, nginx_requests
+  - server
+  - port
+  - host
+
+- nginx_upstream
+  - host
+  - upstream
+  - server
+  - port
+
+- nginx_upstream_peer
+  - id
+  - host
+  - upstream
+  - server
+  - port
+  - serverAddress
 
 ### Example Output:
 
