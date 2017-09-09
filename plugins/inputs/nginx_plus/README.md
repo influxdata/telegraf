@@ -25,10 +25,10 @@
 - nginx_requests
   - total
   - current
-- nginx_upstream
+- nginx_upstream, nginx_stream_upstream
   - keepalive
   - zombies
-- nginx_upstream_peer
+- nginx_upstream_peer, nginx_stream_upstream_peer
   - requests
   - unavail
   - healthchecks_checks
@@ -62,13 +62,13 @@
   - port
   - host
 
-- nginx_upstream
+- nginx_upstream, nginx_stream_upstream
   - host
   - upstream
   - server
   - port
 
-- nginx_upstream_peer
+- nginx_upstream_peer, nginx_stream_upstream_peer
   - id
   - host
   - upstream
