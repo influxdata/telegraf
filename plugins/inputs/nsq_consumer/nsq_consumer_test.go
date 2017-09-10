@@ -36,10 +36,11 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 	newMockNSQD(script, addr.String())
 
 	consumer := &NSQConsumer{
-		Server:      "127.0.0.1:4155",
+		Server:      []string{"127.0.0.1:4155"},
 		Topic:       "telegraf",
 		Channel:     "consume",
 		MaxInFlight: 1,
+		Nsqlookupd:  false,
 	}
 
 	p, _ := parsers.NewInfluxParser()

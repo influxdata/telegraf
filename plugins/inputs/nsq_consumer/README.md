@@ -1,18 +1,20 @@
 # NSQ Consumer Input Plugin
 
 The [NSQ](http://nsq.io/) consumer plugin polls a specified NSQD
-topic and adds messages to InfluxDB. This plugin allows a message to be in any of the supported `data_format` types. 
+topic and adds messages to InfluxDB. This plugin allows a message to be in any of the supported `data_format` types.
 
 ## Configuration
 
 ```toml
 # Read metrics from NSQD topic(s)
 [[inputs.nsq_consumer]]
-  ## An array of NSQD HTTP API endpoints
-  server = "localhost:4150"
+  ## An string representing the NSQD TCP/NSQLookupd HTTP Endpoints
+  server = ["localhost:4150"]
   topic = "telegraf"
   channel = "consumer"
   max_in_flight = 100
+  ## If nsqlookupd = true, servers are NSQLookupd HTTP API endpoints
+  nsqlookupd = false
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

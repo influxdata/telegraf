@@ -44,7 +44,7 @@ github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/go-nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nuid 289cccf02c178dc782430d534e3c1f5b72af807f
-github.com/nsqio/go-nsq a53d495e81424aaf7a7665a9d32a97715c40e953
+github.com/nsqio/go-nsq eee57a3ac4174c55924125bb15eeeda8cffb6e6f
 github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
 github.com/opentracing-contrib/go-observer a52f2342449246d5bcc273e65cbdcfa5f7d6c63c
 github.com/opentracing/opentracing-go 06f47b42c792fef2796e9681353e1d908c417827
