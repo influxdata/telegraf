@@ -73,14 +73,6 @@ func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (wb *Webhooks) listen(ln net.Listener, acc telegraf.Accumulator) {
-	if err := wb.srv.Serve(ln); err != nil {
-		if err != http.ErrServerClosed {
-			acc.AddError(fmt.Errorf("E! Error listening: %v", err))
-		}
-	}
-}
-
 // Looks for fields which implement Webhook interface
 func (wb *Webhooks) AvailableWebhooks() []Webhook {
 	webhooks := make([]Webhook, 0)
@@ -113,10 +105,18 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s", wb.ServiceAddress))
 	if err != nil {
-		acc.AddError(fmt.Errorf("E! Error starting server: %v", err))
+		log.Fatalf("E! Error starting server: %v", err)
+		return err
+
 	}
 
-	go wb.listen(ln, acc)
+	go func() {
+		if err := wb.srv.Serve(ln); err != nil {
+			if err != http.ErrServerClosed {
+				acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+			}
+		}
+	}()
 
 	log.Printf("I! Started the webhooks service on %s\n", wb.ServiceAddress)
 
