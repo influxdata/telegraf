@@ -14,6 +14,7 @@
 - [#3027](https://github.com/influxdata/telegraf/pull/3027): Include mount mode option in disk metrics.
 - [#3212](https://github.com/influxdata/telegraf/pull/3212): Add support for standard proxy env vars in outputs.
 - [#3191](https://github.com/influxdata/telegraf/pull/3191): TLS and MTLS enhancements to HTTPListener input plugin.
+- [#3213](https://github.com/influxdata/telegraf/pull/3213): Add polling method to logparser and tail inputs.
 
 ### Bugfixes
 
