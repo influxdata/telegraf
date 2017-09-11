@@ -293,7 +293,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx_processes",
+		"nginx_plus_processes",
 		map[string]interface{}{
 			"respawned": func() *int {
 				v := 9999
@@ -307,7 +307,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx_connections",
+		"nginx_plus_connections",
 		map[string]interface{}{
 			"accepted": int(1234567890000),
 			"dropped":  int(2345678900000),
@@ -321,7 +321,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx_ssl",
+		"nginx_plus_ssl",
 		map[string]interface{}{
 			"handshakes":        int64(1234567800000),
 			"handshakes_failed": int64(5432100000000),
@@ -334,7 +334,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx_requests",
+		"nginx_plus_requests",
 		map[string]interface{}{
 			"total":   int64(9876543210000),
 			"current": int(98),
@@ -346,7 +346,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx_zone",
+		"nginx_plus_zone",
 		map[string]interface{}{
 			"processing":      int(12),
 			"requests":        int64(34),
@@ -368,7 +368,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx_upstream",
+		"nginx_plus_upstream",
 		map[string]interface{}{
 			"keepalive": int(1),
 			"zombies":   int(2),
@@ -381,7 +381,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(
 		t,
-		"nginx_upstream_peer",
+		"nginx_plus_upstream_peer",
 		map[string]interface{}{
 			"backup":                 false,
 			"weight":                 int(1),

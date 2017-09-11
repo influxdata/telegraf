@@ -11,24 +11,24 @@
 
 ### Measurements & Fields:
 
-- nginx_processes
+- nginx_plus_processes
   - respawned
-- nginx_connections
+- nginx_plus_connections
   - accepted
   - dropped
   - active
   - idle
-- nginx_ssl
+- nginx_plus_ssl
   - handshakes
   - handshakes_failed
   - session_reuses
-- nginx_requests
+- nginx_plus_requests
   - total
   - current
-- nginx_upstream, nginx_stream_upstream
+- nginx_plus_upstream, nginx_plus_stream_upstream
   - keepalive
   - zombies
-- nginx_upstream_peer, nginx_stream_upstream_peer
+- nginx_plus_upstream_peer, nginx_plus_stream_upstream_peer
   - requests
   - unavail
   - healthchecks_checks
@@ -57,18 +57,18 @@
 
 ### Tags:
 
-- nginx_processes, nginx_connections, nginx_ssl, nginx_requests
+- nginx_plus_processes, nginx_plus_connections, nginx_plus_ssl, nginx_plus_requests
   - server
   - port
   - host
 
-- nginx_upstream, nginx_stream_upstream
+- nginx_plus_upstream, nginx_plus_stream_upstream
   - host
   - upstream
   - server
   - port
 
-- nginx_upstream_peer, nginx_stream_upstream_peer
+- nginx_plus_upstream_peer, nginx_plus_stream_upstream_peer
   - id
   - host
   - upstream
@@ -93,12 +93,12 @@ When run with:
 It produces:
 ```
 * Plugin: inputs.nginx_plus, Collection 1
-> nginx_processes,server=localhost,port=12021,host=word.local respawned="0xc420075538" 1504922954000000000
-> nginx_connections,server=localhost,port=12021,host=word.local accepted=4458727685i,dropped=10138424i,active=10256i,idle=29390i 1504922954000000000
-> nginx_ssl,server=localhost,port=12021,host=word.local handshakes=0i,handshakes_failed=0i,session_reuses=0i 1504922954000000000
-> nginx_requests,host=word.local,server=localhost,port=12021 total=147885504244i,current=10019i 1504922954000000000
-> nginx_upstream,host=word.local,upstream=dataserver80,server=localhost,port=12021 zombies=0i,keepalive=0i 1504922954000000000
-> nginx_upstream_peer,id=0,server=localhost,port=12021,host=word.local,upstream=dataserver80,serverAddress=10.10.102.181:80 responses_5xx=27831i,healthchecks_unhealthy=1i,downtime=484817i,healthchecks_last_passed=true,responses_1xx=0i,active=22i,requests=2620930i,responses_total=2620652i,fails=4i,downstart=0i,state="up",responses_4xx=16i,healthchecks_checks=14133i,selected="0xc4201b22e8",response_time=95i,responses_2xx=2592805i,weight=1i,responses_3xx=0i,sent=3802831967i,received=536695496i,unavail=4i,healthchecks_fails=27i,header_time=94i,backup=false 1504922954000000000
+> nginx_plus_processes,server=localhost,port=12021,host=word.local respawned="0xc420075538" 1504922954000000000
+> nginx_plus_connections,server=localhost,port=12021,host=word.local accepted=4458727685i,dropped=10138424i,active=10256i,idle=29390i 1504922954000000000
+> nginx_plus_ssl,server=localhost,port=12021,host=word.local handshakes=0i,handshakes_failed=0i,session_reuses=0i 1504922954000000000
+> nginx_plus_requests,host=word.local,server=localhost,port=12021 total=147885504244i,current=10019i 1504922954000000000
+> nginx_plus_upstream,host=word.local,upstream=dataserver80,server=localhost,port=12021 zombies=0i,keepalive=0i 1504922954000000000
+> nginx_plus_upstream_peer,id=0,server=localhost,port=12021,host=word.local,upstream=dataserver80,serverAddress=10.10.102.181:80 responses_5xx=27831i,healthchecks_unhealthy=1i,downtime=484817i,healthchecks_last_passed=true,responses_1xx=0i,active=22i,requests=2620930i,responses_total=2620652i,fails=4i,downstart=0i,state="up",responses_4xx=16i,healthchecks_checks=14133i,selected="0xc4201b22e8",response_time=95i,responses_2xx=2592805i,weight=1i,responses_3xx=0i,sent=3802831967i,received=536695496i,unavail=4i,healthchecks_fails=27i,header_time=94i,backup=false 1504922954000000000
 ```
 
 ### Reference material
