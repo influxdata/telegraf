@@ -1,3 +1,9 @@
+## v1.4.1 [unreleased]
+
+### Bugfixes
+
+- [#3167](https://github.com/influxdata/telegraf/issues/3167): Fix MQTT input exits if Broker is not available on startup.
+
 ## v1.4 [2017-09-05]
 
 ### Release Notes
