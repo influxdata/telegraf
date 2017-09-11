@@ -19,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/logparser/grok"
 )
 
+const (
+	defaultWatchMethod = "inotify"
+)
+
 // LogParser in the primary interface for the plugin
 type LogParser interface {
 	ParseLine(line string) (telegraf.Metric, error)
@@ -34,6 +38,7 @@ type logEntry struct {
 type LogParserPlugin struct {
 	Files         []string
 	FromBeginning bool
+	WatchMethod   string
 
 	tailers map[string]*tail.Tail
 	lines   chan logEntry
@@ -60,6 +65,9 @@ const sampleConfig = `
   ## while telegraf is running (and that match the "files" globs) will always
   ## be read from the beginning.
   from_beginning = false
+
+  ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  # watch_method = "inotify"
 
   ## Parse logstash-style "grok" patterns:
   ##   Telegraf built-in parsing patterns: https://goo.gl/dkay10
@@ -167,6 +175,11 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		seek.Offset = 0
 	}
 
+	var poll bool
+	if l.WatchMethod == "poll" {
+		poll = true
+	}
+
 	// Create a "tailer" for each file
 	for _, filepath := range l.Files {
 		g, err := globpath.Compile(filepath)
@@ -188,6 +201,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Follow:    true,
 					Location:  &seek,
 					MustExist: true,
+					Poll:      poll,
 					Logger:    tail.DiscardingLogger,
 				})
 			if err != nil {
@@ -285,6 +299,8 @@ func (l *LogParserPlugin) Stop() {
 
 func init() {
 	inputs.Add("logparser", func() telegraf.Input {
-		return &LogParserPlugin{}
+		return &LogParserPlugin{
+			WatchMethod: defaultWatchMethod,
+		}
 	})
 }
