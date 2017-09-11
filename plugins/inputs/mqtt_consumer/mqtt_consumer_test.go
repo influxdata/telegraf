@@ -27,7 +27,6 @@ func newTestMQTTConsumer() (*MQTTConsumer, chan mqtt.Message) {
 		in:        in,
 		done:      make(chan struct{}),
 		connected: true,
-		Debug:     false,
 	}
 
 	return n, in

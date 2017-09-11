@@ -50,14 +50,13 @@ type MQTTConsumer struct {
 	acc telegraf.Accumulator
 
 	connected bool
-	Debug     bool `toml:"debug"`
 }
 
 var sampleConfig = `
   servers = ["localhost:1883"]
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
-  ## Connection timeout in seconds
+  ## Connection timeout for initial connection in seconds
   connection_timeout = 30
 
   ## Topics to subscribe to
@@ -90,9 +89,6 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-
-  ## Print additional information
-  debug = "false"
 `
 
 func (m *MQTTConsumer) SampleConfig() string {
@@ -143,10 +139,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 func (m *MQTTConsumer) connect() error {
 	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
 		err := token.Error()
-
-		if m.Debug {
-			log.Printf("MQTT Consumer, connection error - %v", err)
-		}
+		log.Printf("D! MQTT Consumer, connection error - %v", err)
 
 		return err
 	}

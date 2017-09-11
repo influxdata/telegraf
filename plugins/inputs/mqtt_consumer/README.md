@@ -13,7 +13,7 @@ The plugin expects messages in the
   servers = ["localhost:1883"]
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
-  ## Connection timeout in seconds
+  ## Connection timeout for initial connection in seconds
   connection_timeout = 30
 
   ## Topics to subscribe to
@@ -46,9 +46,6 @@ The plugin expects messages in the
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-
-  ## Print additional information
-  debug = "false"
 ```
 
 ### Tags:
