@@ -17,6 +17,8 @@
 
 ### Bugfixes
 
+- [#3136](https://github.com/influxdata/telegraf/issues/3136): Fix webhooks input address in use during reload.
+
 ## v1.4 [2017-09-05]
 
 ### Release Notes
