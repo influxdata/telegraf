@@ -13,6 +13,8 @@ The plugin expects messages in the
   servers = ["localhost:1883"]
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
+  ## Connection timeout for initial connection in seconds
+  connection_timeout = 30
 
   ## Topics to subscribe to
   topics = [
