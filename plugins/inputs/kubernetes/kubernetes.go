@@ -111,9 +111,6 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 		if k.ResponseTimeout.Duration < time.Second {
 			k.ResponseTimeout.Duration = time.Second * 5
 		}
-		if err != nil {
-			return err
-		}
 		k.RoundTripper = &http.Transport{
 			TLSHandshakeTimeout:   5 * time.Second,
 			TLSClientConfig:       tlsCfg,
