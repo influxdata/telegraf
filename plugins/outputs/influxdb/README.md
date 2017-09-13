@@ -7,9 +7,7 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
 ```toml
 # Configuration for influxdb server to send metrics to
 [[outputs.influxdb]]
-  ## The HTTP or UDP URL for your InfluxDB instance.  Each item should be
-  ## of the form:
-  ##   scheme "://" host [ ":" port]
+  ## The full HTTP or UDP URL for your InfluxDB instance.
   ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
