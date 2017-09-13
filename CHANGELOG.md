@@ -3,6 +3,7 @@
 ### Bugfixes
 
 - [#3167](https://github.com/influxdata/telegraf/issues/3167): Fix MQTT input exits if Broker is not available on startup.
+- [#3217](https://github.com/influxdata/telegraf/issues/3217): Fix optional field value conversions in fluentd input.
 
 ## v1.4 [2017-09-05]
 
