@@ -1,5 +1,10 @@
 # Telegraf Plugin: nginx_plus
 
+Nginx Plus is a commercial version of the open source web server Nginx. The use this plugin you will need a license. For more information about the differences between Nginx (F/OSS) and Nginx Plus, [click here](https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/).
+
+Structures for Nginx Plus have been built based on history of
+[status module documentation](http://nginx.org/en/docs/http/ngx_http_status_module.html)
+
 ### Configuration:
 
 ```
@@ -102,9 +107,6 @@ It produces:
 ```
 
 ### Reference material
-
-Structures for Nginx Plus have been built based on history of
-[status module documentation](http://nginx.org/en/docs/http/ngx_http_status_module.html)
 
 Subsequent versions of status response structure available here:
 

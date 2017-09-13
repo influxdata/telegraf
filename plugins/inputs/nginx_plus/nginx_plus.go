@@ -13,16 +13,24 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type NginxPlus struct {
 	Urls []string
+
+	client *http.Client
+
+	ResponseTimeout internal.Duration
 }
 
 var sampleConfig = `
   ## An array of ngx_http_status_module or status URI to gather stats.
   urls = ["http://localhost/status"]
+
+  # HTTP response timeout (default: 5s)
+  response_timeout = "5s"
 `
 
 func (n *NginxPlus) SampleConfig() string {
@@ -53,17 +61,17 @@ func (n *NginxPlus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
-}
-
 func (n *NginxPlus) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+	if n.ResponseTimeout.Duration < time.Second {
+		n.ResponseTimeout.Duration = time.Second * 5
+	}
+
+	client := &http.Client{
+		Timeout: n.ResponseTimeout.Duration,
+	}
+
 	resp, err := client.Get(addr.String())
+
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
 	}
