@@ -1,7 +1,7 @@
 # HTTP listener service input plugin
 
 The HTTP listener is a service input plugin that listens for messages sent via HTTP POST.
-The plugin expects messages in the InfluxDB line-protocol ONLY, other Telegraf input data formats are not supported.
+The plugin expects messages in the one of the Telegraf input data formats.
 The intent of the plugin is to allow Telegraf to serve as a proxy/router for the `/write` endpoint of the InfluxDB HTTP API.
 
 The `/write` endpoint supports the `precision` query parameter and can be set to one of `ns`, `u`, `ms`, `s`, `m`, `h`.  All other parameters are ignored and defer to the output plugins configuration.

@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -49,7 +50,7 @@ type HTTPListener struct {
 
 	listener net.Listener
 
-	parser influx.InfluxParser
+	parser parsers.Parser
 	acc    telegraf.Accumulator
 	pool   *pool
 
@@ -90,6 +91,12 @@ const sampleConfig = `
   ## Add service certificate and key
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "influx"
 `
 
 func (h *HTTPListener) SampleConfig() string {
@@ -321,13 +328,25 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
-	metrics, err := h.parser.ParseWithDefaultTimePrecision(b, t, precision)
+	var metrics []telegraf.Metric
+	var err error
+
+	switch h.parser.(type) {
+	case *influx.InfluxParser:
+		metrics, err = h.parser.(*influx.InfluxParser).ParseWithDefaultTimePrecision(b, t, precision)
+	default:
+		metrics, err = h.parser.Parse(b)
+	}
 
 	for _, m := range metrics {
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 
 	return err
+}
+
+func (h *HTTPListener) SetParser(parser parsers.Parser) {
+	h.parser = parser
 }
 
 func tooLarge(res http.ResponseWriter) {

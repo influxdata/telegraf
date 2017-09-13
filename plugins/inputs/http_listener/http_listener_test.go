@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/mazebuhu/telegraf/plugins/parsers"
 
 	"github.com/stretchr/testify/require"
 )
@@ -179,8 +180,10 @@ var (
 )
 
 func newTestHTTPListener() *HTTPListener {
+	parser, _ := parsers.NewInfluxParser()
 	listener := &HTTPListener{
 		ServiceAddress: ":0",
+		parser:         parser,
 	}
 	return listener
 }
@@ -220,11 +223,13 @@ func newTestHTTPSListener() *HTTPListener {
 		serviceKeyFile = skf.Name()
 	})
 
+	parser, _ := parsers.NewInfluxParser()
 	listener := &HTTPListener{
 		ServiceAddress:    ":0",
 		TlsAllowedCacerts: allowedCAFiles,
 		TlsCert:           serviceCertFile,
 		TlsKey:            serviceKeyFile,
+		parser:            parser,
 	}
 
 	return listener
@@ -374,10 +379,8 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 }
 
 func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
-	listener := &HTTPListener{
-		ServiceAddress: ":0",
-		MaxLineSize:    128 * 1000,
-	}
+	listener := newTestHTTPListener()
+	listener.MaxLineSize = 128 * 1000
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -391,10 +394,8 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 }
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
-	listener := &HTTPListener{
-		ServiceAddress: ":0",
-		MaxBodySize:    4096,
-	}
+	listener := newTestHTTPListener()
+	listener.MaxBodySize = 4096
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -407,10 +408,8 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 }
 
 func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
-	listener := &HTTPListener{
-		ServiceAddress: ":0",
-		MaxLineSize:    70,
-	}
+	listener := newTestHTTPListener()
+	listener.MaxLineSize = 70
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -433,10 +432,8 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 }
 
 func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
-	listener := &HTTPListener{
-		ServiceAddress: ":0",
-		MaxLineSize:    100,
-	}
+	listener := newTestHTTPListener()
+	listener.MaxLineSize = 100
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
