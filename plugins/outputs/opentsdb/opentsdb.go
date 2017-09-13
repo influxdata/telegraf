@@ -24,8 +24,17 @@ type OpenTSDB struct {
 	Debug bool
 }
 
-var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
-	`%`, "-", "#", "-", "$", "-", ":", "_")
+var sanitizedChars = strings.NewReplacer(
+	"@", "-",
+	"*", "-",
+	" ", "_",
+	`%`, "-",
+	"#", "-",
+	"$", "-",
+	":", "_",
+	"(", "",
+	")", "",
+	"|", "")
 
 var sampleConfig = `
   ## prefix for metrics keys
@@ -124,9 +133,10 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 				continue
 			}
 
+			metricName := strings.ToLower(sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
+				o.Prefix, m.Name(), fieldName)))
 			metric := &HttpMetric{
-				Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
-					o.Prefix, m.Name(), fieldName)),
+				Metric:    metricName,
 				Tags:      tags,
 				Timestamp: now,
 				Value:     value,
@@ -175,9 +185,10 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 				continue
 			}
 
+			metricName := strings.ToLower(sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
+				o.Prefix, m.Name(), fieldName)))
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-				sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
-				now, metricValue, tags)
+				metricName, now, metricValue, tags)
 
 			_, err := connection.Write([]byte(messageLine))
 			if err != nil {
@@ -192,7 +203,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 func cleanTags(tags map[string]string) map[string]string {
 	tagSet := make(map[string]string, len(tags))
 	for k, v := range tags {
-		tagSet[sanitizedChars.Replace(k)] = sanitizedChars.Replace(v)
+		tagSet[strings.ToLower(sanitizedChars.Replace(k))] = strings.ToLower(sanitizedChars.Replace(v))
 	}
 	return tagSet
 }
