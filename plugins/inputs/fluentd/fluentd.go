@@ -148,15 +148,15 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if p.BufferQueueLength != nil {
-				tmpFields["buffer_queue_length"] = p.BufferQueueLength
+				tmpFields["buffer_queue_length"] = *p.BufferQueueLength
 
 			}
 			if p.RetryCount != nil {
-				tmpFields["retry_count"] = p.RetryCount
+				tmpFields["retry_count"] = *p.RetryCount
 			}
 
 			if p.BufferTotalQueuedSize != nil {
-				tmpFields["buffer_total_queued_size"] = p.BufferTotalQueuedSize
+				tmpFields["buffer_total_queued_size"] = *p.BufferTotalQueuedSize
 			}
 
 			if !((p.BufferQueueLength == nil) && (p.RetryCount == nil) && (p.BufferTotalQueuedSize == nil)) {
