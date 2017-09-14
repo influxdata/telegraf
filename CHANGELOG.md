@@ -17,6 +17,7 @@
 - [#3213](https://github.com/influxdata/telegraf/pull/3213): Add polling method to logparser and tail inputs.
 - [#3211](https://github.com/influxdata/telegraf/pull/3211): Add timeout option for kubernetes input.
 - [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
+- [#3234](https://github.com/influxdata/telegraf/pull/3234): Add support for timing sums in statsd input.
 
 ### Bugfixes
 
