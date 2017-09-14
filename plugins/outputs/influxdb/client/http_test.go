@@ -373,3 +373,39 @@ func TestGzipCompression(t *testing.T) {
 
 	assert.Equal(t, []byte(influxLine), uncompressed.Bytes())
 }
+
+func TestHTTPClient_PathPrefix(t *testing.T) {
+	prefix := "/some/random/prefix"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case prefix + "/write":
+			w.WriteHeader(http.StatusNoContent)
+			w.Header().Set("Content-Type", "application/json")
+		case prefix + "/query":
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintln(w, `{"results":[{}]}`)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			msg := fmt.Sprintf("Path not found: %s", r.URL.Path)
+			fmt.Fprintln(w, msg)
+		}
+	}))
+	defer ts.Close()
+
+	config := HTTPConfig{
+		URL: ts.URL + prefix,
+	}
+	wp := WriteParams{
+		Database: "test",
+	}
+	client, err := NewHTTP(config, wp)
+	defer client.Close()
+	assert.NoError(t, err)
+	err = client.Query("CREATE DATABASE test")
+	assert.NoError(t, err)
+	_, err = client.Write([]byte("cpu value=99\n"))
+	assert.NoError(t, err)
+	_, err = client.WriteStream(bytes.NewReader([]byte("cpu value=99\n")), 13)
+	assert.NoError(t, err)
+}

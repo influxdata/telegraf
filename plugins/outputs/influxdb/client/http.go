@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"time"
 )
 
@@ -305,8 +306,11 @@ func writeURL(u *url.URL, wp WriteParams) string {
 	}
 
 	u.RawQuery = params.Encode()
-	u.Path = "write"
-	return u.String()
+	p := u.Path
+	u.Path = path.Join(p, "write")
+	s := u.String()
+	u.Path = p
+	return s
 }
 
 func queryURL(u *url.URL, command string) string {
@@ -314,6 +318,9 @@ func queryURL(u *url.URL, command string) string {
 	params.Set("q", command)
 
 	u.RawQuery = params.Encode()
-	u.Path = "query"
-	return u.String()
+	p := u.Path
+	u.Path = path.Join(p, "query")
+	s := u.String()
+	u.Path = p
+	return s
 }
