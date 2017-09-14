@@ -110,8 +110,15 @@ func (rs *RunningStats) Percentile(n int) float64 {
 	}
 
 	i := int(float64(len(rs.perc)) * float64(n) / float64(100))
-	if i < 0 {
-		i = 0
+	return rs.perc[clamp(i, 0, len(rs.perc)-1)]
+}
+
+func clamp(i int, min int, max int) int {
+	if i < min {
+		return min
 	}
-	return rs.perc[i]
+	if i > max {
+		return max
+	}
+	return i
 }
