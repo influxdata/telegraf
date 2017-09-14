@@ -8,6 +8,7 @@
 - [#3232](https://github.com/influxdata/telegraf/issues/3232): Fix counter and gauge metric types.
 - [#3235](https://github.com/influxdata/telegraf/issues/3235): Fix skipped line with empty target in iptables.
 - [#3175](https://github.com/influxdata/telegraf/issues/3175): Fix duplicate keys in perf counters sqlserver query.
+- [#3230](https://github.com/influxdata/telegraf/issues/3230): Fix panic in statsd p100 calculation.
 
 ## v1.4 [2017-09-05]
 
