@@ -1022,7 +1022,7 @@ CREATE TABLE #PCounters
 	Primary Key(object_name, counter_name, instance_name)
 );
 INSERT #PCounters
-SELECT RTrim(spi.object_name) object_name
+SELECT DISTINCT RTrim(spi.object_name) object_name
 , RTrim(spi.counter_name) counter_name
 , RTrim(spi.instance_name) instance_name
 , spi.cntr_value
@@ -1044,7 +1044,7 @@ CREATE TABLE #CCounters
 	Primary Key(object_name, counter_name, instance_name)
 );
 INSERT #CCounters
-SELECT RTrim(spi.object_name) object_name
+SELECT DISTINCT RTrim(spi.object_name) object_name
 , RTrim(spi.counter_name) counter_name
 , RTrim(spi.instance_name) instance_name
 , spi.cntr_value
