@@ -3,5 +3,8 @@ tivan
 .vagrant
 /telegraf
 .idea
+src
+pkg
+bin
 *~
 *#
