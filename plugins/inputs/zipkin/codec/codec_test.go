@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
+	"github.com/masami10/telegraf/plugins/inputs/zipkin/trace"
 )
 
 func Test_MicroToTime(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/masami10/telegraf/internal"
+	"github.com/masami10/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 

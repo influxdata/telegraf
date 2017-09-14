@@ -16,18 +16,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/models"
-	"github.com/influxdata/telegraf/plugins/aggregators"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/internal"
+	"github.com/masami10/telegraf/internal/models"
+	"github.com/masami10/telegraf/plugins/aggregators"
+	"github.com/masami10/telegraf/plugins/inputs"
+	"github.com/masami10/telegraf/plugins/outputs"
+	"github.com/masami10/telegraf/plugins/parsers"
+	"github.com/masami10/telegraf/plugins/processors"
+	"github.com/masami10/telegraf/plugins/serializers"
 
-	"github.com/influxdata/toml"
-	"github.com/influxdata/toml/ast"
+	"github.com/masami10/toml"
+	"github.com/masami10/toml/ast"
 )
 
 var (
@@ -684,7 +684,7 @@ func (c *Config) LoadConfig(path string) error {
 
 // trimBOM trims the Byte-Order-Marks from the beginning of the file.
 // this is for Windows compatability only.
-// see https://github.com/influxdata/telegraf/issues/1378
+// see https://github.com/masami10/telegraf/issues/1378
 func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }

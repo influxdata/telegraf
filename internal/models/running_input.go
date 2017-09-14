@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/selfstat"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/selfstat"
 )
 
 var GlobalMetricsGathered = selfstat.Register("agent", "metrics_gathered", map[string]string{})

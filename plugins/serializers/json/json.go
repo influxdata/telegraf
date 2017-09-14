@@ -4,7 +4,7 @@ import (
 	ejson "encoding/json"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/masami10/telegraf"
 )
 
 type JsonSerializer struct {

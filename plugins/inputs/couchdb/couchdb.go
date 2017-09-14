@@ -3,8 +3,8 @@ package couchdb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/plugins/inputs"
 	"net/http"
 	"reflect"
 	"sync"

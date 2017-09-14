@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/parsers/graphite"
+	"github.com/masami10/telegraf/plugins/parsers/graphite"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/selfstat"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/internal"
+	"github.com/masami10/telegraf/plugins/inputs"
+	"github.com/masami10/telegraf/selfstat"
 )
 
 const (
@@ -72,7 +72,7 @@ type Statsd struct {
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
-	// see https://github.com/influxdata/telegraf/pull/992
+	// see https://github.com/masami10/telegraf/pull/992
 	UDPPacketSize int `toml:"udp_packet_size"`
 
 	sync.Mutex
@@ -199,7 +199,7 @@ const sampleConfig = `
   parse_data_dog_tags = false
 
   ## Statsd data translation templates, more info can be read here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
+  ## https://github.com/masami10/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
   # templates = [
   #     "cpu.* measurement*"
   # ]

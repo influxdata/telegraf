@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/metric"
 )
 
 // InfluxParser is an object for Parsing incoming metrics.

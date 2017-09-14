@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf"
+	"github.com/masami10/telegraf"
 
 	"gopkg.in/gorethink/gorethink.v3"
 )

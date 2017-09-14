@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"github.com/amir/raidman"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/plugins/outputs"
 )
 
-const deprecationMsg = "E! Error: this Riemann output plugin will be deprecated in a future release, see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
+const deprecationMsg = "E! Error: this Riemann output plugin will be deprecated in a future release, see https://github.com/masami10/telegraf/issues/1878 for more details & discussion."
 
 type Riemann struct {
 	URL       string

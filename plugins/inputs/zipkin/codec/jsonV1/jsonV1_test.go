@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
+	"github.com/masami10/telegraf/plugins/inputs/zipkin/codec"
 )
 
 func TestJSON_Decode(t *testing.T) {

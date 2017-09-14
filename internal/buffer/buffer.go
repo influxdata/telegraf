@@ -3,8 +3,8 @@ package buffer
 import (
 	"sync"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/selfstat"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/selfstat"
 )
 
 var (

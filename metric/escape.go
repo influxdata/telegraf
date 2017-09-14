@@ -9,17 +9,17 @@ var (
 	//   - tag keys
 	//   - tag values
 	//   - field keys
-	// see https://docs.influxdata.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
+	// see https://docs.masami10.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
 	escaper   = strings.NewReplacer(`,`, `\,`, `"`, `\"`, ` `, `\ `, `=`, `\=`)
 	unEscaper = strings.NewReplacer(`\,`, `,`, `\"`, `"`, `\ `, ` `, `\=`, `=`)
 
 	// nameEscaper is for escaping measurement names only.
-	// see https://docs.influxdata.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
+	// see https://docs.masami10.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
 	nameEscaper   = strings.NewReplacer(`,`, `\,`, ` `, `\ `)
 	nameUnEscaper = strings.NewReplacer(`\,`, `,`, `\ `, ` `)
 
 	// stringFieldEscaper is for escaping string field values only.
-	// see https://docs.influxdata.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
+	// see https://docs.masami10.com/influxdb/v1.0/write_protocols/line_protocol_tutorial/#special-characters-and-keywords
 	stringFieldEscaper = strings.NewReplacer(
 		`"`, `\"`,
 		`\`, `\\`,

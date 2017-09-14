@@ -9,14 +9,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/influxdata/tail"
+	"github.com/masami10/tail"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/globpath"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/internal/globpath"
+	"github.com/masami10/telegraf/plugins/inputs"
 
 	// Parsers
-	"github.com/influxdata/telegraf/plugins/inputs/logparser/grok"
+	"github.com/masami10/telegraf/plugins/inputs/logparser/grok"
 )
 
 const (

@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/amir/raidman"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/metric"
+	"github.com/masami10/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 

@@ -3,7 +3,7 @@ package models
 import (
 	"fmt"
 
-	"github.com/influxdata/telegraf/filter"
+	"github.com/masami10/telegraf/filter"
 )
 
 // TagFilter is the name of a tag, and the values on which to filter
@@ -228,7 +228,7 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 	}
 
 	// Add additional logic in case where both parameters are set.
-	// see: https://github.com/influxdata/telegraf/issues/2860
+	// see: https://github.com/masami10/telegraf/issues/2860
 	if f.TagPass != nil && f.TagDrop != nil {
 		// return true only in case when tag pass and won't be dropped (true, true).
 		// in case when the same tag should be passed and dropped it will be dropped (true, false).
