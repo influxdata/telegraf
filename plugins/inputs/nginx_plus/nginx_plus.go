@@ -293,7 +293,7 @@ func (s *Status) gatherProcessesMetrics(tags map[string]string, acc telegraf.Acc
 	acc.AddFields(
 		"nginx_plus_processes",
 		map[string]interface{}{
-			"respawned": s.Processes.Respawned,
+			"respawned": *s.Processes.Respawned,
 		},
 		tags,
 	)
@@ -411,7 +411,7 @@ func (s *Status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 				"healthchecks_unhealthy": peer.HealthChecks.Unhealthy,
 				"downtime":               peer.Downtime,
 				"downstart":              peer.Downstart,
-				"selected":               peer.Selected,
+				"selected":               *peer.Selected,
 			}
 			if peer.HealthChecks.LastPassed != nil {
 				peerFields["healthchecks_last_passed"] = *peer.HealthChecks.LastPassed

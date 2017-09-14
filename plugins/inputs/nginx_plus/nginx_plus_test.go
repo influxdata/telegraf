@@ -295,10 +295,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 		t,
 		"nginx_plus_processes",
 		map[string]interface{}{
-			"respawned": func() *int {
-				v := 9999
-				return &v
-			}(),
+			"respawned": int(9999),
 		},
 		map[string]string{
 			"server": host,
@@ -403,17 +400,14 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"healthchecks_unhealthy": int64(21),
 			"downtime":               int64(5432),
 			"downstart":              int64(4321),
-			"selected": func() *int64 {
-				var v int64 = 1451606400000
-				return &v
-			}(),
+			"selected":               int64(1451606400000),
 		},
 		map[string]string{
-			"server":         host,
-			"port":           port,
-			"upstream":       "first_upstream",
+			"server":           host,
+			"port":             port,
+			"upstream":         "first_upstream",
 			"upstream_address": "1.2.3.123:80",
-			"id":             "0",
+			"id":               "0",
 		})
 
 }
