@@ -16,6 +16,7 @@
 - [#3191](https://github.com/influxdata/telegraf/pull/3191): TLS and MTLS enhancements to HTTPListener input plugin.
 - [#3213](https://github.com/influxdata/telegraf/pull/3213): Add polling method to logparser and tail inputs.
 - [#3211](https://github.com/influxdata/telegraf/pull/3211): Add timeout option for kubernetes input.
+- [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
 
 ### Bugfixes
 
