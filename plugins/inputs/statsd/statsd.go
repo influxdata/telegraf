@@ -251,14 +251,14 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, metric := range s.gauges {
-		acc.AddFields(metric.name, metric.fields, metric.tags, now)
+		acc.AddGauge(metric.name, metric.fields, metric.tags, now)
 	}
 	if s.DeleteGauges {
 		s.gauges = make(map[string]cachedgauge)
 	}
 
 	for _, metric := range s.counters {
-		acc.AddFields(metric.name, metric.fields, metric.tags, now)
+		acc.AddCounter(metric.name, metric.fields, metric.tags, now)
 	}
 	if s.DeleteCounters {
 		s.counters = make(map[string]cachedcounter)
