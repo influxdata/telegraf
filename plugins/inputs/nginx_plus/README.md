@@ -65,7 +65,6 @@ Structures for Nginx Plus have been built based on history of
 - nginx_plus_processes, nginx_plus_connections, nginx_plus_ssl, nginx_plus_requests
   - server
   - port
-  - host
 
 - nginx_plus_upstream, nginx_plus_stream_upstream
   - host
@@ -79,7 +78,7 @@ Structures for Nginx Plus have been built based on history of
   - upstream
   - server
   - port
-  - serverAddress
+  - upstream_address
 
 ### Example Output:
 

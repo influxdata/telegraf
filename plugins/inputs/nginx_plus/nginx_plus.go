@@ -44,6 +44,17 @@ func (n *NginxPlus) Description() string {
 func (n *NginxPlus) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
+	// Create an HTTP client that is re-used for each
+	// collection interval
+
+	if n.client == nil {
+		client, err := n.createHttpClient()
+		if err != nil {
+			return err
+		}
+		n.client = client
+	}
+
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
@@ -61,16 +72,22 @@ func (n *NginxPlus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NginxPlus) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *NginxPlus) createHttpClient() (*http.Client, error) {
+
 	if n.ResponseTimeout.Duration < time.Second {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
 
 	client := &http.Client{
-		Timeout: n.ResponseTimeout.Duration,
+		Transport: &http.Transport{},
+		Timeout:   n.ResponseTimeout.Duration,
 	}
 
-	resp, err := client.Get(addr.String())
+	return client, nil
+}
+
+func (n *NginxPlus) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+	resp, err := n.client.Get(addr.String())
 
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
@@ -412,7 +429,7 @@ func (s *Status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 			for k, v := range upstreamTags {
 				peerTags[k] = v
 			}
-			peerTags["serverAddress"] = peer.Server
+			peerTags["upstream_address"] = peer.Server
 			if peer.ID != nil {
 				peerTags["id"] = strconv.Itoa(*peer.ID)
 			}
@@ -525,7 +542,7 @@ func (s *Status) gatherStreamMetrics(tags map[string]string, acc telegraf.Accumu
 			for k, v := range upstreamTags {
 				peerTags[k] = v
 			}
-			peerTags["serverAddress"] = peer.Server
+			peerTags["upstream_address"] = peer.Server
 			peerTags["id"] = strconv.Itoa(peer.ID)
 			acc.AddFields("nginx_plus_stream_upstream_peer", peerFields, peerTags)
 		}

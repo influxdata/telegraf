@@ -409,11 +409,11 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			}(),
 		},
 		map[string]string{
-			"server":        host,
-			"port":          port,
-			"upstream":      "first_upstream",
-			"serverAddress": "1.2.3.123:80",
-			"id":            "0",
+			"server":         host,
+			"port":           port,
+			"upstream":       "first_upstream",
+			"upstream_address": "1.2.3.123:80",
+			"id":             "0",
 		})
 
 }
