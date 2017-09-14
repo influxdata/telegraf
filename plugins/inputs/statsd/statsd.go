@@ -235,6 +235,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			}
 			fields[prefix+"mean"] = stats.Mean()
 			fields[prefix+"stddev"] = stats.Stddev()
+			fields[prefix+"sum"] = stats.Sum()
 			fields[prefix+"upper"] = stats.Upper()
 			fields[prefix+"lower"] = stats.Lower()
 			fields[prefix+"count"] = stats.Count()

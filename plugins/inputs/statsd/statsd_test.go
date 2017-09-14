@@ -407,6 +407,7 @@ func TestParse_Timings(t *testing.T) {
 		"lower":         float64(1),
 		"mean":          float64(3),
 		"stddev":        float64(4),
+		"sum":           float64(15),
 		"upper":         float64(11),
 	}
 
@@ -1154,6 +1155,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 		"success_lower":         float64(1),
 		"success_mean":          float64(3),
 		"success_stddev":        float64(4),
+		"success_sum":           float64(15),
 		"success_upper":         float64(11),
 
 		"error_90_percentile": float64(22),
@@ -1161,6 +1163,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 		"error_lower":         float64(2),
 		"error_mean":          float64(6),
 		"error_stddev":        float64(8),
+		"error_sum":           float64(30),
 		"error_upper":         float64(22),
 	}
 
@@ -1203,6 +1206,7 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 		"lower":         float64(1),
 		"mean":          float64(3),
 		"stddev":        float64(4),
+		"sum":           float64(15),
 		"upper":         float64(11),
 	}
 	expectedError := map[string]interface{}{
@@ -1211,6 +1215,7 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 		"lower":         float64(2),
 		"mean":          float64(6),
 		"stddev":        float64(8),
+		"sum":           float64(30),
 		"upper":         float64(22),
 	}
 
