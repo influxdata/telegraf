@@ -14,8 +14,8 @@ CREATE TABLE my_metrics (
   "name" STRING,
   "tags" OBJECT(DYNAMIC),
   "fields" OBJECT(DYNAMIC),
-  PRIMARY KEY ("timestamp", "hash_id")
-);
+	PRIMARY KEY ("timestamp", "hash_id","day")
+)PARTITIONED BY("day");
 ```
 
 The plugin can create this table for you automatically via the `table_create`
