@@ -6,30 +6,37 @@ additional information can be found.
 
 ### Configuration:
 
+This section contains the default TOML to configure the plugin.  You can
+generate it using `telegraf --usage <plugin-name>`.
+
 ```toml
 # Description
 [[inputs.example]]
-  # SampleConfig
+  example_option = "example_value"
 ```
 
-### Measurements & Fields:
+### Metrics:
 
 Here you should add an optional description and links to where the user can
 get more information about the measurements.
 
+If the output is determined dynamically based on the input source, or there
+are more metrics than can reasonably be listed, describe how the input is
+mapped to the output.
+
 - measurement1
-    - field1 (type, unit)
-    - field2 (float, percent)
-- measurement2
-    - field3 (integer, bytes)
-
-### Tags:
-
-- All measurements have the following tags:
+  - tags:
     - tag1 (optional description)
     - tag2
-- measurement2 has the following tags:
+  - fields:
+    - field1 (type, unit)
+    - field2 (float, percent)
+
+- measurement2
+  - tags:
     - tag3
+  - fields:
+    - field3 (integer, bytes)
 
 ### Sample Queries:
 
@@ -43,6 +50,10 @@ SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar A
 ```
 
 ### Example Output:
+
+This section shows example output in Line Protocol format.  You can often use
+`telegraf --input-filter <plugin-name> --test` or use the `file` output to get
+this information.
 
 ```
 measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
