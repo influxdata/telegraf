@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/masami10/tail"
+	"github.com/influxdata/tail"
 
 	"github.com/masami10/telegraf"
 	"github.com/masami10/telegraf/internal/globpath"

@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/masami10/wlog"
+	"github.com/influxdata/wlog"
 )
 
 var prefixRegex = regexp.MustCompile("^[DIWE]!")

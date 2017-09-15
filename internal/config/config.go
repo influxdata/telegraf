@@ -26,8 +26,8 @@ import (
 	"github.com/masami10/telegraf/plugins/processors"
 	"github.com/masami10/telegraf/plugins/serializers"
 
-	"github.com/masami10/toml"
-	"github.com/masami10/toml/ast"
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
 )
 
 var (
