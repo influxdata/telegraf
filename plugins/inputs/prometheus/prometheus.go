@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 	"strings"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -123,7 +124,8 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 			host, _ := p.SplitHostAndPort(u.Host)
 			resolvedAddresses, err := net.LookupHost(host)
 			if err != nil {
-				return err
+				log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", u.Host, err)
+				continue
 			}
 			urls = make([]string, len(resolvedAddresses), len(resolvedAddresses))
 			for index, resolved := range resolvedAddresses {
